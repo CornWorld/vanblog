@@ -1,13 +1,13 @@
 @import (reference) '../../theme/index.less';
 
 .container {
+  background: @layout-body-background;
   display: flex;
   flex-direction: column;
   height: 100vh;
+  justify-content: center;
   min-height: 100vh;
   overflow: auto;
-  background: @layout-body-background;
-  justify-content: center;
 }
 
 .content {
@@ -19,8 +19,8 @@
 @media (min-width: @screen-md-min) {
   .container {
     background-image: url('/background.svg');
-    background-repeat: no-repeat;
     background-position: center 110px;
+    background-repeat: no-repeat;
     background-size: 100%;
   }
 
@@ -30,12 +30,12 @@
 }
 
 .icon {
-  margin-left: 8px;
-  color: rgba(0, 0, 0, 0.2);
-  font-size: 24px;
-  vertical-align: middle;
+  color: rgb(0 0 0 / 20%);
   cursor: pointer;
+  font-size: 24px;
+  margin-left: 8px;
   transition: color 0.3s;
+  vertical-align: middle;
 
   &:hover {
     color: @primary-color;

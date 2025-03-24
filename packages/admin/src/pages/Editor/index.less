@@ -3,7 +3,7 @@
     .ant-pro-page-container {
       height: 100vh;
       overflow: visible;
-      
+
       // Hide the footer
       .ant-pro-footer-bar {
         display: none !important;
@@ -14,52 +14,52 @@
     .ant-pro-page-container-children-container,
     .ant-pro-page-container-children-container {
       height: calc(100vh - 120px);
-      padding: 0 !important;
       margin: 0 !important;
+      padding: 0 !important;
     }
 
     // Target the Ant Design Pro grid content to remove padding
     .ant-pro-grid-content {
-      padding: 0 !important;
       margin: 0 !important;
+      padding: 0 !important;
     }
 
     // Main container styles
     .ant-spin-nested-loading,
     .ant-spin-container {
-      height: 100%;
       display: flex;
       flex-direction: column;
+      height: 100%;
     }
 
     .editor-wrapper {
-      height: 100%;
       display: flex;
-      flex-direction: column;
       flex: 1;
+      flex-direction: column;
+      height: 100%;
     }
 
     .bytemd {
-      height: 100% !important;
       border: 1px solid #d9d9d9;
       border-radius: 2px;
       display: flex;
-      flex-direction: column;
-      margin: 0 !important;
       flex: 1;
+      flex-direction: column;
+      height: 100% !important;
+      margin: 0 !important;
     }
 
     .bytemd-toolbar {
-      flex: none;
       border-bottom: 1px solid #d9d9d9;
+      flex: none;
       position: relative;
     }
 
     .bytemd-body {
-      flex: 1 !important;
-      min-height: 0;
-      height: 100% !important;
       display: flex;
+      flex: 1 !important;
+      height: 100% !important;
+      min-height: 0;
     }
 
     .bytemd-split {
@@ -68,11 +68,11 @@
     }
 
     .bytemd-editor {
-      flex: 1;
-      overflow: visible;
       display: flex;
+      flex: 1;
       flex-direction: column;
       height: 100% !important;
+      overflow: visible;
     }
 
     .CodeMirror {
@@ -83,22 +83,22 @@
 
     .bytemd-preview {
       flex: 1;
+      height: 100% !important;
       overflow: auto;
       padding: 0 8px;
-      height: 100% !important;
     }
 
     // Fix for the emoji panel
     .emoji-container {
-      display: none;
-      position: fixed;
-      z-index: 1050;
       background: var(--background-color, #fff);
       border: 1px solid var(--border-color, #d9d9d9);
       border-radius: 4px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+      box-shadow: 0 2px 8px rgb(0 0 0 / 15%);
+      display: none;
+      position: fixed;
       top: 40px;
-      
+      z-index: 1050;
+
       &.active {
         display: block;
       }
@@ -108,4 +108,4 @@
       }
     }
   }
-} 
+}

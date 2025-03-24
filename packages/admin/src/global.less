@@ -1,12 +1,18 @@
 /* commented out since it doesn't exist in antd v5 */
+
 /* @import 'antd/es/style/themes/default.less'; */
 
 /* Define screen breakpoints directly */
 @screen-xs: 480px;
+
 @screen-sm: 576px;
+
 @screen-md: 768px;
+
 @screen-lg: 992px;
+
 @screen-xl: 1200px;
+
 @screen-xxl: 1600px;
 
 html,
@@ -22,6 +28,7 @@ body,
 .ant-layout {
   min-height: 100vh;
 }
+
 .ant-pro-sider.ant-layout-sider.ant-pro-sider-fixed {
   left: unset;
 }
@@ -30,120 +37,121 @@ body,
 .ant-layout-sider-children {
   display: flex;
   flex-direction: column;
-  
+
   .ant-pro-sider-logo {
-    padding: 16px !important; 
     align-items: center !important;
     justify-content: flex-start !important;
-    
+    padding: 16px !important;
+
     a {
-      display: flex !important;
       align-items: center !important;
+      display: flex !important;
     }
-    
+
     h1 {
-      margin: 0 !important;
       color: #1890ff !important; /* Blue color for light theme */
-      font-weight: bold !important;
-      white-space: nowrap !important;
       font-size: 18px !important;
+      font-weight: bold !important;
+      margin: 0 !important;
+      white-space: nowrap !important;
     }
-    
+
     img {
       height: 28px !important;
       margin-right: 12px !important;
     }
   }
-  
+
   /* Menu items styling - to be consistent with bottom links */
   .ant-menu-item {
-    display: flex;
     align-items: center;
-    
+    display: flex;
+
     .anticon {
-      display: flex;
       align-items: center;
+      display: flex;
       justify-content: center;
     }
-    
+
     .ant-menu-title-content {
       font-weight: normal;
     }
   }
-  
+
   /* Custom bottom links styles */
   .custom-bottom-links {
+    border-top: 1px solid rgb(0 0 0 / 6%);
     margin-top: auto;
-    border-top: 1px solid rgba(0, 0, 0, 0.06);
-    
+
     // Remove excess padding to match main menu
     .ant-menu {
       border-right: none !important;
     }
-    
+
     // Style the theme button container
-    .ant-menu-item:nth-last-child(2), 
+    .ant-menu-item:nth-last-child(2),
     .ant-menu-item:last-child {
       padding-left: 0 !important;
       padding-right: 0 !important;
-      
+
       div {
-        width: 100%;
-        height: 100%;
-        display: flex;
         align-items: center;
+        display: flex;
+        height: 100%;
+        width: 100%;
       }
     }
   }
 }
 
 /* Fix title color for dark themes */
-[data-theme='dark'], 
+[data-theme='dark'],
 .ant-layout-sider-dark,
 .dark-theme-body {
   .ant-pro-sider-logo h1 {
     color: #1890ff !important; /* Brighter blue for dark theme */
   }
-  
+
   /* Dark theme for custom bottom links */
   .custom-bottom-links {
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
-    
+    border-top: 1px solid rgb(255 255 255 / 8%);
+
     // Make sure menu background matches sidebar in dark mode
     .ant-menu {
       background: transparent !important;
     }
   }
-  
+
   /* ByteMD dark theme styles */
   .bytemd {
     --bg-color: #141414 !important;
     --border-color: #303030 !important;
-    --color: rgba(255, 255, 255, 0.65) !important;
+    --color: rgb(255 255 255 / 65%) !important;
+
     border-color: #303030 !important;
-    
+
     .bytemd-toolbar {
       background-color: #141414 !important;
       border-color: #303030 !important;
-      
+
       .bytemd-toolbar-left {
-        color: rgba(255, 255, 255, 0.65) !important;
-        
+        color: rgb(255 255 255 / 65%) !important;
+
         svg {
-          color: rgba(255, 255, 255, 0.65) !important;
-          fill: rgba(255, 255, 255, 0.65) !important;
+          color: rgb(255 255 255 / 65%) !important;
+          fill: rgb(255 255 255 / 65%) !important;
         }
       }
     }
-    
+
     .CodeMirror {
       background-color: #141414 !important;
-      color: rgba(255, 255, 255, 0.65) !important;
-      
+      color: rgb(255 255 255 / 65%) !important;
+
       .CodeMirror-cursor {
-        border-left-color: rgba(255, 255, 255, 0.85) !important;
+        border-left-color: rgb(255 255 255 / 85%) !important;
       }
-      
+
       .cm-s-default {
         .cm-header,
         .cm-variable-2,
@@ -151,14 +159,14 @@ body,
         .cm-link,
         .cm-url,
         .cm-string {
-          color: rgba(255, 255, 255, 0.65) !important;
+          color: rgb(255 255 255 / 65%) !important;
         }
       }
     }
-    
+
     .bytemd-preview {
       background-color: #141414 !important;
-      color: rgba(255, 255, 255, 0.65) !important;
+      color: rgb(255 255 255 / 65%) !important;
     }
   }
 }
@@ -166,23 +174,25 @@ body,
 /* Fix for collapsed logo */
 .ant-layout-sider-collapsed {
   .ant-pro-sider-logo {
-    padding: 16px 8px !important;
     justify-content: center !important;
-    
+    padding: 16px 8px !important;
+
     h1 {
       display: none !important;
     }
   }
-  
+
   /* Fix for collapsed bottom links */
   .custom-bottom-links {
-    a, .ant-menu-item, div[style*="menuItemStyle"] {
-      padding-left: 0 !important;
-      padding-right: 0 !important;
+    a,
+    .ant-menu-item,
+    div[style*='menuItemStyle'] {
       justify-content: center !important;
       margin-left: 8px !important;
       margin-right: 8px !important;
-      
+      padding-left: 0 !important;
+      padding-right: 0 !important;
+
       span:not(:first-child) {
         display: none !important;
       }
@@ -195,16 +205,19 @@ canvas {
 }
 
 body {
-  text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  transition: background-color 0.3s ease-in-out, color 0.3s ease-in-out;
+  text-rendering: optimizelegibility;
+  transition:
+    background-color 0.3s ease-in-out,
+    color 0.3s ease-in-out;
 }
 
 ul,
 ol {
   list-style: none;
 }
+
 .vditor {
   ul,
   ol {
@@ -214,13 +227,15 @@ ol {
 
 @media (max-width: @screen-xs) {
   .ant-table {
-    width: 100%;
     overflow-x: auto;
+    width: 100%;
+
     &-thead > tr,
     &-tbody > tr {
       > th,
       > td {
         white-space: pre;
+
         > span {
           display: block;
         }
@@ -238,18 +253,20 @@ ol {
 
 @media (max-width: @screen-xs) {
   .ant-pro-page-container-children-content {
-    margin-top: 12px;
-    margin-right: 6px;
     margin-left: 6px;
+    margin-right: 6px;
+    margin-top: 12px;
   }
 }
+
 @media (max-width: @screen-md) and (min-width: @screen-xs) {
   .ant-pro-page-container-children-content {
-    margin-top: 18px;
-    margin-right: 10px;
     margin-left: 10px;
+    margin-right: 10px;
+    margin-top: 18px;
   }
 }
+
 @media (max-width: @screen-sm) {
   .searchCard {
     .ant-form-item {
@@ -261,24 +278,28 @@ ol {
 .ant-pro-setting-drawer-handle {
   visibility: hidden;
 }
+
 .hover-gray {
-  transition-property: all;
   transition-duration: 150ms;
+  transition-property: all;
   transition-timing-function: cubic-bezier(0.075, 0.82, 0.165, 1);
 }
+
 .hover-gray:hover {
-  background-color: rgb(223, 223, 223);
+  background-color: rgb(223 223 223);
 }
 
 .dark-switch[aria-checked='true'] {
-  background: rgb(23, 114, 180);
+  background: rgb(23 114 180);
+
   .ant-switch-handle::before {
-    background-color: rgb(36, 37, 37);
+    background-color: rgb(36 37 37);
   }
 }
 
 body .dark-switch {
   background: black;
+
   .ant-switch-handle::before {
     background-color: rgb(162 162 162);
   }
@@ -288,13 +309,16 @@ body .dark-switch {
   display: flex;
   flex-direction: column;
   height: 100%;
+
   .ant-pro-grid-content {
-    max-width: 50000px !important;
     height: 100%;
+    max-width: 50000px !important;
   }
+
   .ant-pro-page-container-children-content {
     margin: 0 !important;
   }
+
   .ant-pro-grid-content-children,
   .ant-pro-page-container-children-content,
   .ant-spin-nested-loading,
@@ -302,18 +326,23 @@ body .dark-switch {
     height: 100%;
   }
 }
+
 .ant-pro-grid-content.wide {
   max-width: 50000px !important;
 }
+
 .t-24 .ant-pro-grid-content.wide {
   transform: translateY(-24px);
 }
+
 .t-8 .ant-pro-grid-content.wide {
   transform: translateY(-8px);
 }
+
 .t-0 .ant-pro-grid-content.wide {
   transform: translateY(0);
 }
+
 body .ant-pro-table .ant-pro-table-search {
   margin-bottom: 22px;
 }
@@ -322,15 +351,14 @@ body .ant-pro-table .ant-pro-table-search {
   height: 100%;
   position: relative;
 }
+
 body .bytemd {
-  z-index: 999;
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  right: 0;
   height: 100%;
+  inset: 0;
+  position: absolute;
+  z-index: 999;
 }
+
 .medium-zoom-image,
 .medium-zoom-overlay {
   z-index: 999;
@@ -344,34 +372,43 @@ body .ant-page-header-heading-title {
   overflow: auto;
   text-overflow: unset;
 }
+
 .markdown-body ul {
   list-style: unset;
 }
+
 .markdown-body ol {
   list-style: decimal;
 }
+
 .more-hover {
-  cursor: pointer;
   border-radius: 2px;
+  cursor: pointer;
+
   :hover {
     background-color: #f5f5f5;
   }
 }
+
 /* 滚动槽 */
 ::-webkit-scrollbar {
-  width: 10px;
-  height: 6px;
+  border-radius: 4px;
   // border-radius: 4px;
+  height: 6px;
+  width: 10px;
 }
+
 ::-webkit-scrollbar-track {
+  background: rgb(0 0 0 / 6%);
   border-radius: 2px;
-  background: rgba(0, 0, 0, 0.06);
 }
+
 /* 滚动条滑块 */
 ::-webkit-scrollbar-thumb {
-  border-radius: 2px;
   background: #d7d7d7;
+  border-radius: 2px;
 }
+
 .card-body-full {
   .ant-card-body {
     padding: 0;
@@ -387,10 +424,10 @@ body .ant-page-header-heading-title {
 }
 
 // Fix SVG data URL handling
-img[src^="data:image/svg+xml"] {
+img[src^='data:image/svg+xml'] {
   display: inline-block;
-  width: auto;
   height: auto;
+  width: auto;
 }
 
 .ant-layout-sider,
@@ -401,25 +438,29 @@ img[src^="data:image/svg+xml"] {
 .ant-form-item,
 .ant-input,
 .ant-btn {
-  transition: background-color 0.3s ease-in-out, border-color 0.3s ease-in-out, color 0.3s ease-in-out !important;
+  transition:
+    background-color 0.3s ease-in-out,
+    border-color 0.3s ease-in-out,
+    color 0.3s ease-in-out !important;
 }
 
 /* Add specific class for dark theme links */
 .dark-theme-link {
-  color: rgba(255, 255, 255, 0.9) !important;
-  
+  color: rgb(255 255 255 / 90%) !important;
+
   svg {
-    color: rgba(255, 255, 255, 0.9) !important;
+    color: rgb(255 255 255 / 90%) !important;
   }
-  
+
   span {
-    color: rgba(255, 255, 255, 0.9) !important;
+    color: rgb(255 255 255 / 90%) !important;
   }
-  
+
   &:hover {
     color: #40a9ff !important;
-    
-    svg, span {
+
+    svg,
+    span {
       color: #40a9ff !important;
     }
   }
