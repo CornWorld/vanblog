@@ -59,7 +59,7 @@ export default function UnlockCard(props: {
     <>
       <Loading loading={loading}>
         <div className="mb-2">
-          <p className="mb-2 text-gray-600 dark:text-dark ">文章已解锁，请输入密码后查看：</p>
+          <p className="mb-2 text-gray-600 dark:text-dark ">文章已加密，请输入密码后查看：</p>
           <div className="flex items-center">
             <div className=" bg-gray-100 rounded-md dark:bg-dark-2 overflow-hidden flex-grow">
               <input
