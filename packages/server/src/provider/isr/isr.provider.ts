@@ -36,12 +36,14 @@ export class ISRProvider {
     // ! 配置差的机器可能并发多了会卡，所以改成串行的。
 
     await this.activeUrls(this.urlList, false);
-    let postId: any = null;
+    let postId: number | string | null = null;
     const articleWithThisId = await this.articleProvider.getById(postId, 'list');
     if (articleWithThisId) {
       postId = articleWithThisId.pathname || articleWithThisId.id;
     }
-    await this.activePath('post', postId || undefined);
+    // Convert postId to number if needed or pass undefined
+    const numericPostId = typeof postId === 'number' ? postId : undefined;
+    await this.activePath('post', numericPostId);
     await this.activePath('page');
     await this.activePath('category');
     await this.activePath('tag');
@@ -71,7 +73,7 @@ export class ISRProvider {
       return false;
     }
   }
-  async activeWithRetry(fn: any, info?: string) {
+  async activeWithRetry(fn: () => Promise<void> | void, info?: string) {
     const max = 6;
     const delay = 3000;
     let succ = false;
@@ -81,7 +83,7 @@ export class ISRProvider {
         this.logger.warn(`第${t}次重试触发增量渲染！来源：${info || '首次启动触发全量渲染！'}`);
       }
       if (r) {
-        fn(info);
+        fn();
         succ = true;
         break;
       } else {
@@ -100,19 +102,22 @@ export class ISRProvider {
   }
   async activePath(type: 'category' | 'tag' | 'page' | 'post', postId?: number) {
     switch (type) {
-      case 'category':
+      case 'category': {
         const categoryUrls = await this.sitemapProvider.getCategoryUrls();
         await this.activeUrls(categoryUrls, false);
         break;
-      case 'page':
+      }
+      case 'page': {
         const pageUrls = await this.sitemapProvider.getPageUrls();
         await this.activeUrls(pageUrls, false);
         break;
-      case 'tag':
+      }
+      case 'tag': {
         const tagUrls = await this.sitemapProvider.getTagUrls();
         await this.activeUrls(tagUrls, false);
         break;
-      case 'post':
+      }
+      case 'post': {
         const articleUrls = await this.getArticleUrls();
         if (postId) {
           const urlsWithoutThisId = articleUrls.filter((u) => u !== `/post/${postId}`);
@@ -121,6 +126,7 @@ export class ISRProvider {
           await this.activeUrls(articleUrls, false);
         }
         break;
+      }
     }
   }
 
@@ -193,9 +199,8 @@ export class ISRProvider {
       if (log) {
         this.logger.log(`触发增量渲染成功！ ${url}`);
       }
-    } catch (err) {
-      // console.log(err);
-      this.logger.error(`触发增量渲染失败！ ${url}`);
+    } catch (error) {
+      this.logger.error(`触发增量渲染失败！ ${url} ${error}`);
     }
   }
 
