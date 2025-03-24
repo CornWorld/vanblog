@@ -3,10 +3,16 @@ import { PageLoading } from '@ant-design/pro-layout';
 import { message, Modal, notification } from 'antd';
 import moment from 'moment';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { fetchAllMeta } from '../services/van-blog/api';
+import { fetchAllMeta, fetchLatestVersionInfo } from '../services/van-blog/api';
 import { checkUrl } from '../services/van-blog/checkUrl';
 import { beforeSwitchTheme, getInitTheme, mapTheme } from '../services/van-blog/theme';
-import { checkRedirectCycle, getAccessToken, removeAccessToken, isLoggedIn, resetRedirectCycle } from '../utils/auth';
+import {
+  checkRedirectCycle,
+  getAccessToken,
+  removeAccessToken,
+  isLoggedIn,
+  resetRedirectCycle,
+} from '../utils/auth';
 
 const AppContext = createContext(null);
 
@@ -28,14 +34,15 @@ export const AppProvider = ({ children }) => {
   const initPath = '/init';
 
   // Detect if we're in development mode
-  const isDevelopment = process.env.NODE_ENV === 'development' || window.location.hostname === 'localhost';
+  const isDevelopment =
+    process.env.NODE_ENV === 'development' || window.location.hostname === 'localhost';
 
   const fetchInitData = async (option) => {
     try {
       console.log('[DEBUG] Fetching init data with options:', option);
       const msg = await fetchAllMeta(option);
       console.log('[DEBUG] Init data response status:', msg.statusCode);
-      
+
       // 如果需要初始化并且不在初始化页面，就重定向到初始化页面
       if (msg.statusCode === 233) {
         console.log('[DEBUG] App needs initialization');
@@ -50,7 +57,7 @@ export const AppProvider = ({ children }) => {
         console.log('[DEBUG] On init page but app is initialized, redirecting to home');
         navigate('/', { replace: true });
       }
-      
+
       if (msg.statusCode === 200 && msg.data) {
         console.log('[DEBUG] Init data successfully fetched');
         return msg.data;
@@ -60,7 +67,7 @@ export const AppProvider = ({ children }) => {
       }
     } catch (error) {
       console.error('[DEBUG] Error fetching init data:', error);
-      
+
       // 如果状态码是 233，表示需要初始化
       if (error.response?.status === 233 || error.data?.statusCode === 233) {
         console.log('[DEBUG] System needs initialization');
@@ -70,7 +77,7 @@ export const AppProvider = ({ children }) => {
         }
         return {};
       }
-      
+
       // In development mode, provide default data instead of redirecting to login
       if (isDevelopment) {
         console.warn('[DEBUG] Using mock data for development');
@@ -79,21 +86,73 @@ export const AppProvider = ({ children }) => {
           updatedAt: new Date().toISOString(),
           baseUrl: 'http://localhost',
           version: 'dev',
-          user: { username: 'dev-user', type: 'admin' }
+          user: { username: 'dev-user', type: 'admin' },
         };
       }
-      
+
       // Don't redirect to login if already on login page or in the login process
-      const isAuthPage = location.pathname.includes(loginPath) || location.pathname.includes(initPath);
-      
+      const isAuthPage =
+        location.pathname.includes(loginPath) || location.pathname.includes(initPath);
+
       if (!isAuthPage) {
         console.log('[DEBUG] Not on auth page, redirecting to login');
         navigate(loginPath, { replace: true });
       } else {
         console.log('[DEBUG] Already on auth page, not redirecting');
       }
-      
+
       return {};
+    }
+  };
+
+  // 检查版本更新
+  const checkVersionUpdate = async (currentVersion) => {
+    try {
+      if (!currentVersion || currentVersion.includes('dev')) {
+        return; // 开发版本不检查更新
+      }
+
+      const { data } = await fetchLatestVersionInfo();
+
+      if (data && data.version && data.version !== currentVersion) {
+        console.log('[DEBUG] New version available:', data.version);
+
+        Modal.info({
+          title: '版本更新',
+          content: (
+            <div>
+              <p style={{ marginBottom: 4 }}>有新版本！</p>
+              <p style={{ marginBottom: 4 }}>{`当前版本:\t${currentVersion}`}</p>
+              <p style={{ marginBottom: 4 }}>{`最新版本:\t${data.version}`}</p>
+              <p style={{ marginBottom: 4 }}>{`更新时间:\t${moment(data.updatedAt).format(
+                'YYYY-MM-DD HH:mm:ss',
+              )}`}</p>
+              <p style={{ marginBottom: 4 }}>
+                {`更新日志:\t`}
+                <a
+                  target={'_blank'}
+                  href="https://vanblog.mereith.com/ref/changelog.html"
+                  rel="noreferrer"
+                >
+                  点击查看
+                </a>
+              </p>
+              <p style={{ marginBottom: 4 }}>
+                {`更新方法:\t`}
+                <a
+                  target={'_blank'}
+                  href="https://vanblog.mereith.com/guide/update.html#%E5%8D%87%E7%BA%A7%E6%96%B9%E6%B3%95"
+                  rel="noreferrer"
+                >
+                  点击查看
+                </a>
+              </p>
+            </div>
+          ),
+        });
+      }
+    } catch (error) {
+      console.error('[DEBUG] Error checking version update:', error);
     }
   };
 
@@ -102,7 +161,7 @@ export const AppProvider = ({ children }) => {
     const init = async () => {
       console.log('[DEBUG] Starting app initialization');
       setLoading(true);
-      
+
       try {
         // 定义重要路径的检查函数
         const isLoginPage = location.pathname.includes(loginPath);
@@ -110,13 +169,13 @@ export const AppProvider = ({ children }) => {
         const isRestorePage = location.pathname.includes('/user/restore');
         const isAuthPage = isLoginPage || isInitPage || isRestorePage;
         const isAuthenticated = isLoggedIn();
-        
-        console.log('[DEBUG] Init context:', { 
-          path: location.pathname, 
+
+        console.log('[DEBUG] Init context:', {
+          path: location.pathname,
           isAuthPage,
-          isAuthenticated 
+          isAuthenticated,
         });
-        
+
         // 检查重定向循环
         if (!isAuthPage && !isAuthenticated && checkRedirectCycle()) {
           console.error('[DEBUG] Breaking redirect cycle during initialization');
@@ -133,13 +192,13 @@ export const AppProvider = ({ children }) => {
           setLoading(false);
           return;
         }
-        
+
         // 重置重定向循环计数，特别是在认证页面
         if (isAuthPage) {
           console.log('[DEBUG] On auth page, resetting redirect cycle');
           resetRedirectCycle();
         }
-        
+
         // 如果在初始化页面，设置最小状态
         if (isInitPage) {
           console.log('[DEBUG] On init page, setting minimal state');
@@ -152,32 +211,33 @@ export const AppProvider = ({ children }) => {
             },
           });
           setLoading(false);
-          
+
           // 尝试获取初始化数据以检查是否需要初始化
           console.log('[DEBUG] Checking if initialization is needed');
-          fetchInitData().catch(err => {
+          fetchInitData().catch((err) => {
             console.warn('[DEBUG] Error checking initialization status:', err);
           });
           return;
         }
-        
+
         // 首先检查用户是否已登录
         if (!isAuthenticated && !isAuthPage) {
           console.log('[DEBUG] Not authenticated, redirecting to login from:', location.pathname);
           setLoading(false);
           // 将当前路径添加为重定向参数
-          const redirectParam = location.pathname !== '/' ? `?redirect=${encodeURIComponent(location.pathname)}` : '';
+          const redirectParam =
+            location.pathname !== '/' ? `?redirect=${encodeURIComponent(location.pathname)}` : '';
           navigate(`${loginPath}${redirectParam}`, { replace: true });
           return;
         }
-        
+
         // 只有在非认证页面且已认证时才获取初始化数据
         let meta = {};
         if (!isAuthPage || isAuthenticated) {
           // 获取初始化数据
           meta = await fetchInitData();
         }
-        
+
         // 检查获取的数据
         if (!meta || Object.keys(meta).length === 0) {
           console.warn('[DEBUG] Empty meta data received');
@@ -186,7 +246,7 @@ export const AppProvider = ({ children }) => {
             // 不立即重定向，让页面级检查处理，避免循环
           }
         }
-        
+
         // 验证BaseURL的有效性
         if (meta.baseUrl && !meta.baseUrl.startsWith('http')) {
           // URL格式无效，显示警告
@@ -195,18 +255,7 @@ export const AppProvider = ({ children }) => {
             content: `您的网站URL配置错误: ${meta.baseUrl}, 请更正为包含 http:// 或 https:// 的完整URL`,
           });
         }
-        
-        // 检查版本更新
-        if (meta.latestVersion && meta.version && meta.latestVersion !== meta.version) {
-          console.log('[DEBUG] New version available:', meta.latestVersion);
-          if (!meta.version.includes('dev')) {
-            Modal.info({
-              title: '版本更新',
-              content: `新版本可用: ${meta.latestVersion}, 当前版本: ${meta.version}`,
-            });
-          }
-        }
-        
+
         // 更新应用状态
         setInitialState({
           ...meta,
@@ -217,6 +266,11 @@ export const AppProvider = ({ children }) => {
             headerRender: false,
           },
         });
+
+        // 异步检查版本更新信息
+        if (meta.version) {
+          checkVersionUpdate(meta.version);
+        }
       } catch (error) {
         console.error('[DEBUG] Error during app initialization:', error);
         // 避免非认证页面的自动重定向，防止循环
@@ -240,29 +294,29 @@ export const AppProvider = ({ children }) => {
 
     init();
   }, [location.pathname]);
-  
+
   // Handle page change logic (previously in onPageChange)
   useEffect(() => {
     if (!initialState) return;
-    
+
     // Add detailed debugging of route changes
     console.debug('[DEBUG] Current path:', location.pathname);
     console.debug('[DEBUG] Query params:', location.search);
     console.debug('[DEBUG] User state:', initialState.user ? 'Logged in' : 'Not logged in');
-    
+
     if (location.pathname === '/init' && !initialState.user) {
       return;
     }
-    
+
     if (!initialState.user && ![loginPath, '/user/restore'].includes(location.pathname)) {
       navigate(loginPath);
     }
-    
+
     if (location.pathname === loginPath && Boolean(initialState.user)) {
       navigate('/');
     }
   }, [location.pathname, location.search, initialState]);
-  
+
   // Handle window resize
   useEffect(() => {
     const handleSizeChange = () => {
@@ -283,7 +337,7 @@ export const AppProvider = ({ children }) => {
 
     window.addEventListener('resize', handleSizeChange);
     handleSizeChange();
-    
+
     return () => {
       window.removeEventListener('resize', handleSizeChange);
     };
@@ -297,16 +351,12 @@ export const AppProvider = ({ children }) => {
       fetchInitData,
       loading,
     }),
-    [initialState, loading]
+    [initialState, loading],
   );
 
   if (loading) {
     return <PageLoading />;
   }
 
-  return (
-    <AppContext.Provider value={appContextValue}>
-      {children}
-    </AppContext.Provider>
-  );
-}; 
+  return <AppContext.Provider value={appContextValue}>{children}</AppContext.Provider>;
+};

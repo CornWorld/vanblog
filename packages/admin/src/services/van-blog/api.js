@@ -8,6 +8,13 @@ export async function fetchAllMeta(options) {
     ...(options || {}),
   });
 }
+
+export async function fetchLatestVersionInfo() {
+  return request('/api/admin/meta/upstream', {
+    method: 'GET',
+  });
+}
+
 export async function activeISR() {
   return request('/api/admin/isr', {
     method: 'POST',
@@ -112,21 +119,30 @@ export async function exportAllImgs() {
 export async function login(body, options) {
   body.username = body.username.toLowerCase();
   body.password = encryptPwd(body.username, body.password);
-  console.log('[DEBUG] API login called with body structure:', 
-    JSON.stringify({
-      ...body,
-      username: body.username,
-      password: body.password
-    }, null, 2)
+  console.log(
+    '[DEBUG] API login called with body structure:',
+    JSON.stringify(
+      {
+        ...body,
+        username: body.username,
+        password: body.password,
+      },
+      null,
+      2,
+    ),
   );
-  
+
   const payload = {
     username: body.username,
-    password: body.password
+    password: body.password,
   };
-  
-  console.log('[DEBUG] Sending login request with username:', payload.username, '(using pre-encrypted password)');
-  
+
+  console.log(
+    '[DEBUG] Sending login request with username:',
+    payload.username,
+    '(using pre-encrypted password)',
+  );
+
   // 使用POST方法发送登录请求
   return request('/api/admin/auth/login', {
     method: 'POST',

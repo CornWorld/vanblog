@@ -16,11 +16,8 @@ export class MetaController {
   @Get()
   async getAllMeta(@Req() req: Request) {
     const meta = await this.metaProvider.getAll();
-    const serverData = await getVersionFromServer();
     const data = {
       version: version,
-      latestVersion: serverData?.version || version,
-      updatedAt: serverData?.updatedAt || new Date(),
       user: req.user,
       baseUrl: meta.siteInfo.baseUrl,
       enableComment: meta.siteInfo.enableComment || 'true',
@@ -29,6 +26,18 @@ export class MetaController {
     return {
       statusCode: 200,
       data,
+    };
+  }
+
+  @Get('upstream')
+  async getUpstreamInfo() {
+    const serverData = await getVersionFromServer();
+    return {
+      statusCode: 200,
+      data: {
+        version: serverData?.version || version,
+        updatedAt: serverData?.updatedAt || new Date(),
+      },
     };
   }
 }
