@@ -1,11 +1,48 @@
+# Dependencies
 node_modules/
+.pnp
+.pnp.js
 
-# Dist files
-packages/admin/dist/
+# Build files
+dist/
+build/
+coverage/
+.nyc_output/
+.cache/
+.parcel-cache/
+.next/
+out/
+.nuxt/
+.vuepress/dist/
+.docusaurus/
+.serverless/
+.fusebox/
+.dynamodb/
 
-# TODO: Introduce prettier v3
-packages/waline/
-packages/website/
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
 
+# Environment variables
+.env
+.env.*
+
+# Editor directories and files
+.idea/
+.vscode
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Project specific
 caddyTemplate.json
 pnpm-lock.yaml
+packages/waline/
+CHANGELOG.md

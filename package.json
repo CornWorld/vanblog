@@ -25,20 +25,36 @@
     "release-patch": "standard-version --release-as patch",
     "prepare-release": "node scripts/prepare-release.js",
     "sync-aliyun": "bash scripts/sync-aliyuncs.sh",
-    "webhook": "node scripts/webhook.js"
+    "webhook": "node scripts/webhook.js",
+    "prepare": "husky",
+    "lint-staged": "lint-staged"
   },
   "packageManager": "pnpm@10.6.2",
   "devDependencies": {
+    "@eslint/js": "^9.23.0",
     "@typescript-eslint/eslint-plugin": "^8.26.1",
     "@typescript-eslint/parser": "^8.26.1",
-    "@umijs/fabric": "^4.0.1",
     "cross-env": "^7.0.3",
     "eslint": "^9.22.0",
     "eslint-config-prettier": "^10.1.1",
     "eslint-plugin-prettier": "^5.2.3",
+    "globals": "^16.0.0",
+    "husky": "^9.0.7",
+    "is-ci": "^3.0.1",
+    "lint-staged": "^15.2.2",
     "nan": "^2.22.2",
     "patch-package": "^8.0.0",
     "prettier": "^3.5.3",
-    "standard-version": "^9.5.0"
+    "standard-version": "^9.5.0",
+    "typescript-eslint": "^8.27.0"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,css,less,scss,md}": [
+      "prettier --write"
+    ]
   }
 }

@@ -1,4 +1,4 @@
-# http://editorconfig.org
+# https://editorconfig.org
 root = true
 
 [*]
@@ -8,9 +8,17 @@ end_of_line = lf
 charset = utf-8
 trim_trailing_whitespace = true
 insert_final_newline = true
+max_line_length = 100
 
-[*.md]
+[*.{js,jsx,ts,tsx,mjs,cjs}]
+quote_type = single
+
+[*.{md,mdx}]
 trim_trailing_whitespace = false
+max_line_length = off
+
+[*.{json,yml,yaml}]
+insert_final_newline = false
 
 [Makefile]
 indent_style = tab

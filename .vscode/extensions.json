@@ -1,0 +1,12 @@
+{
+  "recommendations": [
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "stylelint.vscode-stylelint",
+    "editorconfig.editorconfig",
+    "mikestead.dotenv",
+    "christian-kohler.path-intellisense",
+    "vitest.explorer",
+    "antfu.vite"
+  ]
+} 

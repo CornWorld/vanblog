@@ -9,6 +9,13 @@
     "noUnusedLocals": true,
     "skipLibCheck": true,
     "sourceMap": true,
-    "incremental": true
+    "incremental": true,
+    "resolveJsonModule": true,
+    "moduleResolution": "NodeNext",
+    "target": "ES2022",
+    "module": "NodeNext",
+    "lib": ["DOM", "DOM.Iterable", "ESNext"],
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true
   }
 }
