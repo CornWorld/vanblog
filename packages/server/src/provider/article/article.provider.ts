@@ -1,6 +1,6 @@
 import { Inject, Injectable, forwardRef, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Document, SortOrder, Types } from 'mongoose';
 import { CreateArticleDto, SearchArticleOption, UpdateArticleDto } from 'src/types/article.dto';
 import { Article, ArticleDocument } from 'src/scheme/article.schema';
 import { parseImgLinksOfMarkdown } from 'src/utils/parseImgOfMarkdown';
@@ -11,6 +11,13 @@ import { sleep } from 'src/utils/sleep';
 import { CategoryDocument } from 'src/scheme/category.schema';
 
 export type ArticleView = 'admin' | 'public' | 'list';
+
+// Define a type for the Mongoose document with _doc property
+type MongooseDocument<T> = T & Document<Types.ObjectId> & { _doc?: T };
+type ArticleDocumentType = MongooseDocument<Article>;
+
+// Define sort type compatible with Mongoose
+type MongooseSortOption = Record<string, SortOrder>;
 
 @Injectable()
 export class ArticleProvider {
@@ -307,7 +314,7 @@ export class ArticleProvider {
   async countTotalWords() {
     //! 默认不保存 hidden 文章的！
     let total = 0;
-    const $and: any = [
+    const $and: Array<Record<string, unknown>> = [
       {
         $or: [
           {
@@ -340,7 +347,7 @@ export class ArticleProvider {
     return total;
   }
   async getTotalNum(includeHidden: boolean) {
-    const $and: any = [
+    const $and: Array<Record<string, unknown>> = [
       {
         $or: [
           {
@@ -372,7 +379,7 @@ export class ArticleProvider {
   }
 
   getView(view: ArticleView) {
-    let thisView: any = this.adminView;
+    let thisView: Record<string, number> = this.adminView;
     switch (view) {
       case 'admin':
         thisView = this.adminView;
@@ -391,8 +398,8 @@ export class ArticleProvider {
     includeHidden: boolean,
     includeDelete?: boolean,
   ): Promise<Article[]> {
-    const thisView: any = this.getView(view);
-    const $and: any = [];
+    const thisView: Record<string, number> = this.getView(view);
+    const $and: Array<Record<string, unknown>> = [];
     if (!includeDelete) {
       $and.push({
         $or: [
@@ -476,8 +483,8 @@ export class ArticleProvider {
     option: SearchArticleOption,
     isPublic: boolean,
   ): Promise<{ articles: Article[]; total: number; totalWordCount?: number }> {
-    const query: any = {};
-    const $and: any = [
+    const query: Record<string, unknown> = {};
+    const $and: Array<Record<string, unknown>> = [
       {
         $or: [
           {
@@ -490,7 +497,7 @@ export class ArticleProvider {
       },
     ];
     const and = [];
-    let sort: any = { createdAt: -1 };
+    let sort: MongooseSortOption = { createdAt: -1 as SortOrder };
     if (isPublic) {
       $and.push({
         $or: [
@@ -525,7 +532,7 @@ export class ArticleProvider {
     }
     if (option.tags) {
       const tags = option.tags.split(',');
-      const or: any = [];
+      const or: Array<Record<string, unknown>> = [];
       tags.forEach((t) => {
         if (option.regMatch) {
           or.push({
@@ -556,7 +563,7 @@ export class ArticleProvider {
       });
     }
     if (option.startTime || option.endTime) {
-      const obj: any = {};
+      const obj: Record<string, unknown> = {};
       if (option.startTime) {
         obj['$gte'] = new Date(option.startTime);
       }
@@ -573,7 +580,7 @@ export class ArticleProvider {
     query.$and = $and;
     // console.log(JSON.stringify(query, null, 2));
     // console.log(JSON.stringify(sort, null, 2));
-    let view: any = isPublic ? this.publicView : this.adminView;
+    let view: Record<string, number> = isPublic ? this.publicView : this.adminView;
     if (option.toListView) {
       view = this.listView;
     }
@@ -591,17 +598,21 @@ export class ArticleProvider {
     // public 下 包括所有的，
     if (isPublic && option.pageSize != -1) {
       // 把 top 的诺到前面去
-      const topArticles = articles.filter((a: any) => {
-        const top = a?._doc?.top || a?.top;
+      const topArticles = articles.filter((a) => {
+        const doc = a as ArticleDocumentType;
+        const top = doc._doc?.top || doc.top;
         return Boolean(top) && top != '';
       });
-      const notTopArticles = articles.filter((a: any) => {
-        const top = a?._doc?.top || a?.top;
-        return !Boolean(top) || top == '';
+      const notTopArticles = articles.filter((a) => {
+        const doc = a as ArticleDocumentType;
+        const top = doc._doc?.top || doc.top;
+        return !top || top == '';
       });
-      const sortedTopArticles = topArticles.sort((a: any, b: any) => {
-        const topA = a?._doc?.top || a?.top;
-        const topB = b?._doc?.top || b?.top;
+      const sortedTopArticles = topArticles.sort((a, b) => {
+        const docA = a as ArticleDocumentType;
+        const docB = b as ArticleDocumentType;
+        const topA = docA._doc?.top || docA.top;
+        const topB = docB._doc?.top || docB.top;
         if (topA > topB) {
           return -1;
         } else if (topB > topA) {
@@ -621,34 +632,34 @@ export class ArticleProvider {
     const total = await this.articleModel.countDocuments(query).exec();
     // 过滤私有文章
     if (isPublic) {
-      const tmpArticles: any[] = [];
+      const tmpArticles: Article[] = [];
       for (const a of articles) {
-        //@ts-ignore
-        const isPrivateInArticle = a?._doc?.private || a?.private;
+        const doc = a as ArticleDocumentType;
+        const isPrivateInArticle = doc._doc?.private || doc.private;
         const category = await this.categoryModal.findOne({
-          //@ts-ignore
-          name: a?._doc?.category || a?.category,
+          name: doc._doc?.category || doc.category,
         });
         const isPrivateInCategory = category?.private || false;
         const isPrivate = isPrivateInArticle || isPrivateInCategory;
         if (isPrivate) {
           tmpArticles.push({
-            //@ts-ignore
-            ...(a?._doc || a),
+            ...(doc._doc || (doc as unknown as Article)),
             content: undefined,
             password: undefined,
             private: true,
-          });
+          } as Article);
         } else {
           tmpArticles.push({
-            //@ts-ignore
-            ...(a?._doc || a),
-          });
+            ...(doc._doc || (doc as unknown as Article)),
+          } as Article);
         }
       }
-      articles = tmpArticles;
+      articles = tmpArticles as unknown as typeof articles;
     }
-    const resData: any = {};
+    const resData: { articles: Article[]; total: number; totalWordCount?: number } = {
+      articles: [],
+      total: 0,
+    };
     if (option.withWordCount) {
       let totalWordCount = 0;
       articles.forEach((a) => {
@@ -658,13 +669,16 @@ export class ArticleProvider {
     }
     if (option.withWordCount && option.toListView) {
       // 重置视图
-      resData.articles = articles.map((a: any) => ({
-        ...(a?._doc || a),
-        content: undefined,
-        password: undefined,
-      }));
+      resData.articles = articles.map((a) => {
+        const doc = a as ArticleDocumentType;
+        return {
+          ...(doc._doc || (doc as unknown as Article)),
+          content: undefined,
+          password: undefined,
+        } as Article;
+      });
     } else {
-      resData.articles = articles;
+      resData.articles = articles as unknown as Article[];
     }
 
     resData.total = total;
@@ -699,7 +713,7 @@ export class ArticleProvider {
       return null;
     }
 
-    const $and: any = [
+    const $and: Array<Record<string, unknown>> = [
       {
         $or: [
           {
@@ -721,11 +735,7 @@ export class ArticleProvider {
         .findOne(
           {
             $and,
-            $or: [
-              { pathname: decodedPath },
-              { pathname: encodedPath },
-              { pathname: pathname }
-            ]
+            $or: [{ pathname: decodedPath }, { pathname: encodedPath }, { pathname: pathname }],
           },
           this.getView(view),
         )
@@ -746,13 +756,13 @@ export class ArticleProvider {
 
     // Convert string id to number if needed
     const numericId = typeof id === 'string' ? parseInt(id, 10) : id;
-    
+
     // Handle NaN and invalid numbers
     if (typeof numericId !== 'number' || isNaN(numericId)) {
       return null;
     }
 
-    const $and: any = [
+    const $and: Array<Record<string, unknown>> = [
       {
         $or: [
           {
@@ -775,8 +785,8 @@ export class ArticleProvider {
       )
       .exec();
   }
-  async getByIdWithPassword(id: number | string, password: string): Promise<any> {
-    const article: any = await this.getByIdOrPathname(id, 'admin');
+  async getByIdWithPassword(id: number | string, password: string): Promise<Article | null> {
+    const article = await this.getByIdOrPathname(id, 'admin');
     if (!password) {
       return null;
     }
@@ -786,15 +796,24 @@ export class ArticleProvider {
     const category =
       (await this.categoryModal.findOne({
         name: article.category,
-      })) || ({} as any);
+      })) || ({} as CategoryDocument);
 
     const categoryPassword = category.private ? category.password : undefined;
     const targetPassword = categoryPassword ? categoryPassword : article.password;
+
     if (!targetPassword || targetPassword == '') {
-      return { ...(article?._doc || article), password: undefined };
+      const doc = article as ArticleDocumentType;
+      return {
+        ...(doc._doc || (doc as unknown as Article)),
+        password: undefined,
+      } as Article;
     } else {
       if (targetPassword == password) {
-        return { ...(article?._doc || article), password: undefined };
+        const doc = article as ArticleDocumentType;
+        return {
+          ...(doc._doc || (doc as unknown as Article)),
+          password: undefined,
+        } as Article;
       } else {
         return null;
       }
@@ -824,7 +843,7 @@ export class ArticleProvider {
         curArticle.content = undefined;
       }
     }
-    const res: any = { article: curArticle };
+    const res: { article: Article; pre?: Article; next?: Article } = { article: curArticle };
     // 找它的前一个和后一个。
     const preArticle = await this.getPreArticleByArticle(curArticle, 'list');
     const nextArticle = await this.getNextArticleByArticle(curArticle, 'list');
@@ -837,7 +856,7 @@ export class ArticleProvider {
     return res;
   }
   async getPreArticleByArticle(article: Article, view: ArticleView, includeHidden?: boolean) {
-    const $and: any = [
+    const $and: Array<Record<string, unknown>> = [
       {
         $or: [
           {
@@ -877,7 +896,7 @@ export class ArticleProvider {
     return null;
   }
   async getNextArticleByArticle(article: Article, view: ArticleView, includeHidden?: boolean) {
-    const $and: any = [
+    const $and: Array<Record<string, unknown>> = [
       {
         $or: [
           {
@@ -924,7 +943,7 @@ export class ArticleProvider {
   toSearchResult(articles: Article[]) {
     return articles.map((each) => ({
       title: each.title,
-      id: each.id,
+      id: each.pathname ? each.pathname : each.id,
       category: each.category,
       tags: each.tags,
       updatedAt: each.updatedAt,
@@ -933,7 +952,7 @@ export class ArticleProvider {
   }
 
   async searchByString(str: string, includeHidden: boolean): Promise<Article[]> {
-    const $and: any = [
+    const $and: Array<Record<string, unknown>> = [
       {
         $or: [
           { content: { $regex: `${str}`, $options: 'i' } },
