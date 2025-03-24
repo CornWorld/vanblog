@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ChildProcess, spawn } from 'node:child_process';
 import path from 'node:path';
+import { writeFileSync } from 'fs';
 import { MetaProvider } from '../meta/meta.provider';
 import { SettingProvider } from '../setting/setting.provider';
 
@@ -18,10 +19,24 @@ export class WebsiteProvider {
   // constructor() {}
   ctx: ChildProcess = null;
   logger = new Logger(WebsiteProvider.name);
+  logPath = process.env.VAN_BLOG_LOG || '/var/log/';
+
   constructor(
     private metaProvider: MetaProvider,
     private settingProvider: SettingProvider,
   ) {}
+
+  printLog(string: string, isError = false) {
+    const logName = `website-${isError ? 'stderr' : 'stdout'}.log`;
+    const logNameNormal = `website-stdio.log`;
+    try {
+      writeFileSync(path.join(this.logPath, logName), string, { flag: 'a' });
+      writeFileSync(path.join(this.logPath, logNameNormal), string, { flag: 'a' });
+    } catch (error) {
+      this.logger.error(`Failed to write logs: ${error.message}`);
+    }
+  }
+
   async init() {
     this.run();
   }
@@ -51,6 +66,7 @@ export class WebsiteProvider {
           }
         }
       } catch (err) {
+        console.log(err);
         return null;
       }
     };
@@ -92,7 +108,7 @@ export class WebsiteProvider {
       this.logger.log('website 停止成功！');
     }
   }
-  async run(): Promise<any> {
+  async run(): Promise<void> {
     if (process.env['VANBLOG_DISABLE_WEBSITE'] === 'true') {
       this.logger.log('无 website 模式');
       return;
@@ -122,13 +138,16 @@ export class WebsiteProvider {
       });
       this.ctx.on('message', (message) => {
         this.logger.log(message);
+        this.printLog(`[Website] ${message}\n`, false);
       });
       this.ctx.on('exit', async () => {
+        this.printLog(`[Website] website 进程退出，自动重启\n`, false);
         await this.restore('website 进程退出，自动重启');
       });
       this.ctx.stdout.on('data', (data) => {
         const t: string = data.toString();
         this.logger.log(t.substring(0, t.length - 1));
+        this.printLog(`[Website] ${t}`, false);
       });
       this.ctx.stderr.on('data', (data) => {
         const t: string = data.toString();
@@ -139,6 +158,7 @@ export class WebsiteProvider {
         }
         if (showLog) {
           this.logger.error(t.substring(0, t.length - 1));
+          this.printLog(`[Website] ${t}`, true);
         }
       });
     } else {

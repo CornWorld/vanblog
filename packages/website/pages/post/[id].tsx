@@ -256,9 +256,14 @@ export async function getStaticProps({
       };
     }
 
+    // Ensure all properties are serializable by converting undefined values to null
+    const sanitizedProps = JSON.parse(
+      JSON.stringify(props, (_, value) => (value === undefined ? null : value)),
+    );
+
     console.log(`[getStaticProps] Successfully fetched article: ${props.article.title}`);
     return {
-      props,
+      props: sanitizedProps,
       revalidate: typeof revalidate === 'number' ? revalidate : 60,
     };
   } catch (error) {
