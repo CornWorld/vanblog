@@ -6,18 +6,18 @@ export interface NavItem {
 }
 
 export const washMarkdownContent = (source: string) => {
-  if (!source) return "";
+  if (!source) return '';
   return (
     source
-      .replace(/```([\s\S]*?)```[\s]*/g, "")
-      .replace(/`#/g, "")
-      .replace(/^[^#]+\n/g, "")
-      .replace(/(?:[^\n#]+)#+\s([^#\n]+)\n*/g, "") // 匹配行内出现 # 号的情况
-      .replace(/```[^`\n]*\n+[^```]+```\n+/g, "")
-      .replace(/`([^`\n]+)`/g, "$1")
-      .replace(/\*\*?([^*\n]+)\*\*?/g, "$1")
-      .replace(/__?([^_\n]+)__?/g, "$1")
-      .trim() + "\n"
+      .replace(/```([\s\S]*?)```[\s]*/g, '')
+      .replace(/`#/g, '')
+      .replace(/^[^#]+\n/g, '')
+      .replace(/(?:[^\n#]+)#+\s([^#\n]+)\n*/g, '') // 匹配行内出现 # 号的情况
+      .replace(/```[^`\n]*\n+[^```]+```\n+/g, '')
+      .replace(/`([^`\n]+)`/g, '$1')
+      .replace(/\*\*?([^*\n]+)\*\*?/g, '$1')
+      .replace(/__?([^_\n]+)__?/g, '$1')
+      .trim() + '\n'
   );
 };
 
@@ -31,21 +31,26 @@ export const parseNavStructure = (source: string): NavItem[] => {
   }
 
   const navData = matchResult.map((r, i) => {
-    let titleText = r.replace(pattOfTitle, "$1");
+    let titleText = r.replace(pattOfTitle, '$1');
     const urlReg = /\[[\s\S]*?\]\([\s\S]*?\)/g;
     const results = titleText.match(urlReg);
     if (results) {
       results.forEach((r) => {
         const srcText = r;
-        const dstText = r.split("]")[0].substring(1);
+        const dstText = r.split(']')[0].substring(1);
         titleText = titleText.replace(srcText, dstText);
       });
     }
+
+    // Extract heading level (number of #)
+    const headingMatch = r.match(/^#+/g);
+    const level = headingMatch && headingMatch[0] ? headingMatch[0].length : 1;
+
     return {
       index: i,
-      //@ts-ignore
-      level: r.match(/^#+/g)[0].length,
-      text: titleText as string,
+      level,
+      text: titleText,
+      listNo: '', // Initialize with empty string, will be set later
     };
   });
 
@@ -55,15 +60,12 @@ export const parseNavStructure = (source: string): NavItem[] => {
       maxLevel = t.level;
     }
   });
-  let matchStack = [];
+  const matchStack: Array<{ level: number; arr: number[] }> = [];
   // 此部分重构，原有方法会出现次级标题后再次出现高级标题时，listNo重复的bug
   for (let i = 0; i < navData.length; i++) {
-    const t: any = navData[i];
+    const t = navData[i];
     const { level } = t;
-    while (
-      matchStack.length &&
-      matchStack[matchStack.length - 1].level > level
-    ) {
+    while (matchStack.length && matchStack[matchStack.length - 1].level > level) {
       matchStack.pop();
     }
     if (matchStack.length === 0) {
@@ -73,22 +75,22 @@ export const parseNavStructure = (source: string): NavItem[] => {
         level,
         arr,
       });
-      t.listNo = trimArrZero(arr).join(".");
+      t.listNo = trimArrZero(arr).join('.');
       continue;
     }
-    const { arr } = matchStack[matchStack.length - 1] as any;
+    const { arr } = matchStack[matchStack.length - 1];
     const newArr = arr.slice();
     newArr[level - 1] += 1;
     matchStack.push({
       level,
       arr: newArr,
     });
-    t.listNo = trimArrZero(newArr).join(".");
+    t.listNo = trimArrZero(newArr).join('.');
   }
-  return navData as NavItem[];
+  return navData;
 };
 
-const trimArrZero = (arr: any) => {
+const trimArrZero = (arr: number[]) => {
   let start, end;
   for (start = 0; start < arr.length; start++) {
     if (arr[start]) {
@@ -102,7 +104,7 @@ const trimArrZero = (arr: any) => {
   }
   return arr.slice(start, end + 1);
 };
-export const getEl = (item: NavItem, all: NavItem[]) => {
+export const getEl = (item: NavItem, all: NavItem[]): HTMLElement | null => {
   const tagName = `h${item.level}`;
   const els = document.querySelectorAll(`${tagName}[data-id="${item.text}"]`);
   if (els.length > 1) {
@@ -117,8 +119,8 @@ export const getEl = (item: NavItem, all: NavItem[]) => {
         }
         return false;
       });
-    return els[index];
+    return (els[index] as HTMLElement) || null;
   } else {
-    return els[0];
+    return (els[0] as HTMLElement) || null;
   }
 };

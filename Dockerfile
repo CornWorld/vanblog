@@ -89,14 +89,12 @@ ENV ESBUILD_SKIP_DOWNLOAD="1"
 COPY packages/admin ./packages/admin
 
 # 在 admin 目录中执行构建
-RUN cd packages/admin && \
-    # 确保使用生产模式构建
-    export NODE_ENV=production && \
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+    cd packages/admin && \
     # 安装依赖并跳过 husky 安装
     npm config set ignore-scripts true && \
     pnpm install --frozen-lockfile && \
     # 确保 vite.config.ts 文件存在且可读
-    ls -la vite.config.ts && \
     echo "====== 开始构建 ======" && \
     # 直接使用 Vite 构建，确保使用正确的配置文件
     pnpm build && \
@@ -117,7 +115,8 @@ WORKDIR /app
 ENV NODE_OPTIONS="--max_old_space_size=4096"
 ENV NODE_ENV="production"
 COPY packages/server ./packages/server
-RUN cd packages/server && \
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+    cd packages/server && \
     # 确保安装所有依赖，包括 @nestjs/core
     pnpm install --frozen-lockfile && \
     pnpm build && \
@@ -135,7 +134,9 @@ ENV NODE_OPTIONS="--max_old_space_size=4096"
 ENV NODE_ENV="production"
 ENV VAN_BLOG_ALLOW_DOMAINS="pic.mereith.com"
 COPY packages/website ./packages/website
-RUN cd packages/website && pnpm build
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+    cd packages/website && \
+    DOCKER_BUILD=true pnpm build --no-lint
 
 # CLI 构建
 FROM deps AS cli-builder
@@ -143,7 +144,8 @@ WORKDIR /app
 ENV NODE_OPTIONS="--max_old_space_size=4096"
 ENV NODE_ENV="production"
 COPY packages/cli ./packages/cli
-RUN cd packages/cli && \
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+    cd packages/cli && \
     mkdir -p /prod/cli && \
     cp -r . /prod/cli/ && \
     cd /prod/cli && \
@@ -155,7 +157,8 @@ WORKDIR /app
 ENV NODE_OPTIONS="--max_old_space_size=4096"
 ENV NODE_ENV="production"
 COPY packages/waline ./packages/waline
-RUN cd packages/waline && \
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+    cd packages/waline && \
     mkdir -p /prod/waline && \
     cp -r . /prod/waline/ && \
     cd /prod/waline && \

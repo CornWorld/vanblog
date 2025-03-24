@@ -1,7 +1,6 @@
-export default function (props: {
-  children: any;
-  sideBar: any;
-}) {
+import { ReactNode } from 'react';
+
+export default function LayoutBody(props: { children: ReactNode; sideBar: ReactNode }) {
   return (
     <>
       <div className="flex mx-auto justify-center">
@@ -10,7 +9,7 @@ export default function (props: {
         </div>
         <div
           className={`hidden lg:block flex-shrink-0 flex-grow-0 vanblog-sider ${
-            Boolean(props.sideBar) ? "w-52" : ""
+            props.sideBar ? 'w-52' : ''
           }`}
         >
           {props.sideBar}

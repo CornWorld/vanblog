@@ -1,54 +1,68 @@
-import { useContext, useLayoutEffect, useRef } from "react";
-import { applyTheme, getTheme, initTheme } from "../../utils/theme";
-import { RealThemeType, ThemeContext } from "../../utils/themeContext";
+import { useContext, useLayoutEffect, useRef } from 'react';
+import { applyTheme, getTheme, initTheme } from '../../utils/theme';
+import { RealThemeType, ThemeContext } from '../../utils/themeContext';
 
-export type ThemeType = "auto" | "dark" | "light";
+export type ThemeType = 'auto' | 'dark' | 'light';
 
-export default function (props: { defaultTheme: ThemeType }) {
-  const { current } = useRef<any>({ hasInit: false });
-  const { current: currentTimer } = useRef<any>({ timer: null });
+interface ThemeButtonProps {
+  defaultTheme: ThemeType;
+}
+
+interface ThemeRef {
+  hasInit: boolean;
+}
+
+interface TimerRef {
+  timer: NodeJS.Timeout | null;
+}
+
+export default function ThemeButton(props: ThemeButtonProps) {
+  const { current } = useRef<ThemeRef>({ hasInit: false });
+  const { current: currentTimer } = useRef<TimerRef>({ timer: null });
   const { theme, setTheme: setState } = useContext(ThemeContext);
 
   const setTheme = (newTheme: ThemeType) => {
     clearTimer();
-    localStorage.setItem("theme", newTheme);
+    localStorage.setItem('theme', newTheme);
     // 设置真实的主题，然后把真实的主题搞到 state 里。
-    const realTheme = getTheme(newTheme === "auto" ? "auto-light" : newTheme as RealThemeType);
+    const realTheme = getTheme(newTheme === 'auto' ? 'auto-light' : (newTheme as RealThemeType));
     applyTheme(realTheme);
     setState(realTheme);
-    if (realTheme.includes("auto")) {
+    if (realTheme.includes('auto')) {
       setTimer();
     }
   };
 
   const clearTimer = () => {
-    clearInterval(currentTimer.timer);
-    currentTimer.timer = null;
+    if (currentTimer.timer) {
+      clearInterval(currentTimer.timer);
+      currentTimer.timer = null;
+    }
   };
 
   const setTimer = () => {
     clearTimer();
     currentTimer.timer = setInterval(() => {
-      const realTheme = getTheme("auto-light");
+      const realTheme = getTheme('auto-light');
       applyTheme(realTheme);
     }, 10000);
   };
 
   const getThemeTitleAuto = () => {
-    if (theme.includes("auto")) {
-      if (theme === "auto-light") {
-        return "自动模式-亮色";
+    if (theme.includes('auto')) {
+      if (theme === 'auto-light') {
+        return '自动模式-亮色';
       } else {
-        return "自动模式-暗色";
+        return '自动模式-暗色';
       }
     }
-    return "自动模式";
+    return '自动模式';
   };
 
   useLayoutEffect(() => {
     if (!current.hasInit) {
       current.hasInit = true;
-      if (!localStorage.getItem("theme")) {
+      if (!localStorage.getItem('theme')) {
         // 第一次用默认的
         setTheme(props.defaultTheme);
         clearTimer();
@@ -59,17 +73,19 @@ export default function (props: { defaultTheme: ThemeType }) {
       }
     }
     return () => {
-      clearInterval(currentTimer.timer);
+      if (currentTimer.timer) {
+        clearInterval(currentTimer.timer);
+      }
     };
-  }, [current, setTheme, props, currentTimer, theme]);
+  }, [current, props, currentTimer, theme]);
 
   const handleSwitch = () => {
-    if (theme === "light" || theme === "auto-light") {
-      setTheme("dark");
-    } else if (theme === "dark" || theme === "auto-dark") {
-      setTheme("auto");
+    if (theme === 'light' || theme === 'auto-light') {
+      setTheme('dark');
+    } else if (theme === 'dark' || theme === 'auto-dark') {
+      setTheme('auto');
     } else {
-      setTheme("light");
+      setTheme('light');
     }
   };
 
@@ -80,7 +96,7 @@ export default function (props: { defaultTheme: ThemeType }) {
     >
       <div
         style={{
-          display: (theme === "light" || theme === "auto-light") ? "block" : "none",
+          display: theme === 'light' || theme === 'auto-light' ? 'block' : 'none',
           height: 20,
         }}
         className="dark:text-dark"
@@ -101,7 +117,7 @@ export default function (props: { defaultTheme: ThemeType }) {
       <div
         className="dark:text-dark fill-gray-600"
         style={{
-          display: (theme === "dark" || theme === "auto-dark") ? "block" : "none",
+          display: theme === 'dark' || theme === 'auto-dark' ? 'block' : 'none',
           height: 20,
         }}
         title="暗色模式"
@@ -120,7 +136,7 @@ export default function (props: { defaultTheme: ThemeType }) {
       <div
         className="dark:text-dark fill-gray-600"
         style={{
-          display: theme.includes("auto") ? "block" : "none",
+          display: theme.includes('auto') ? 'block' : 'none',
           height: 20,
         }}
         title={getThemeTitleAuto()}

@@ -2,11 +2,11 @@
   "private": true,
   "name": "@vanblog/theme-default",
   "scripts": {
-    "anlysis": "cross-env ANALYZE=true next build",
-    "build": "cross-env DOCKER_BUILD=true next build",
-    "dev": "cross-env NODE_ENV=development next dev -p 3001 --hostname 0.0.0.0",
+    "anlysis": "pnpm next build",
+    "build": "npx cross-env NODE_ENV=production pnpm next build",
+    "dev": "pnpm next dev -p 3001 --hostname 0.0.0.0",
     "test": "vitest",
-    "start": "next start"
+    "start": "pnpm next start"
   },
   "dependencies": {
     "@bytemd/plugin-gfm": "^1.22.0",
@@ -20,6 +20,7 @@
     "@waline/client": "^3.5.5",
     "bytemd": "^1.22.0",
     "client-only": "^0.0.1",
+    "clsx": "^2.1.1",
     "copy-to-clipboard": "^3.3.3",
     "dayjs": "^1.11.13",
     "eslint-config-next": "^15.2.1",

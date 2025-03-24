@@ -1,84 +1,94 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { searchArticles } from "../../api/search";
-import { useDebounce } from "react-use";
-import ArticleList from "../ArticleList";
-import KeyCard from "../KeyCard";
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { searchArticles } from '../../api/search';
+import { useDebounce } from 'react-use';
+import ArticleList from '../ArticleList';
+import KeyCard from '../KeyCard';
+import { Article } from '../../types/article';
 
-export default function (props: {
+interface SearchCardProps {
   visible: boolean;
   setVisible: (v: boolean) => void;
   openArticleLinksInNewWindow: boolean;
-}) {
-  const [result, setResult] = useState<any>([]);
-  const [search, setSearch] = useState("");
+}
+
+export default function SearchCard(props: SearchCardProps) {
+  const [result, setResult] = useState<Article[]>([]);
+  const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(false);
   const [typing, setTyping] = useState(false);
-  const innerRef = useRef(null);
+  const innerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener('keydown', onKeyDown);
     return () => {
-      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener('keydown', onKeyDown);
     };
   }, []);
-  const onKeyDown = (ev: KeyboardEvent) => {
-    if (ev.key == "Escape") {
+
+  const onKeyDown = (e: KeyboardEvent) => {
+    if (e.key === 'Escape') {
       props.setVisible(false);
-      event?.preventDefault();
-      document.body.style.overflow = "auto";
-    }
-    if (ev.ctrlKey == true || ev.metaKey == true) {
-      if (ev.key.toLocaleLowerCase() == "k") {
-        props.setVisible(true);
-        event?.preventDefault();
-        document.body.style.overflow = "hidden";
+      document.body.style.overflow = 'auto';
+    } else if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault();
+      props.setVisible(!props.visible);
+      if (!props.visible) {
+        document.body.style.overflow = 'hidden';
       }
     }
     return false;
   };
+
   const onSearch = async (search: string) => {
     setTyping(false);
     setLoading(true);
     const resultFromServer = await searchArticles(search);
-    setResult(resultFromServer);
+    // Extract articles from the response
+    setResult(resultFromServer.data || []);
     setLoading(false);
   };
+
   useDebounce(
     () => {
-      if (search.trim() !== "") {
-        onSearch(search);
+      if (search) {
+        if (typing) {
+          onSearch(search);
+        }
+      } else {
+        setResult([]);
       }
     },
     500,
-    [search]
+    [search, typing],
   );
 
   const showClear = useMemo(() => {
-    return search.trim() !== "";
+    return search.trim() !== '';
   }, [search]);
+
   const renderResult = () => {
-    let text = "";
+    let text = '';
     if (loading) {
-      text = "搜索中...";
+      text = '搜索中...';
     } else {
-      if (search.trim() == "") {
-        text = "请输入并搜索";
+      if (search.trim() == '') {
+        text = '请输入并搜索';
       } else {
         // 有数字，有结果
         if (result.length) {
-          text = "有结果";
+          text = '有结果';
         } else {
           // 可能是暂无结果或者输入中
           if (typing) {
-            text = "输入中";
+            text = '输入中';
           } else {
-            text = "暂无结果";
+            text = '暂无结果';
           }
         }
       }
     }
-    if (text == "有结果") {
+    if (text == '有结果') {
       return (
         <div>
           <ArticleList
@@ -87,7 +97,7 @@ export default function (props: {
             openArticleLinksInNewWindow={props.openArticleLinksInNewWindow}
             onClick={() => {
               props.setVisible(false);
-              document.body.style.overflow = "auto";
+              document.body.style.overflow = 'auto';
             }}
           ></ArticleList>
         </div>
@@ -106,16 +116,14 @@ export default function (props: {
       className="fixed w-full h-full top-0 left-0 right-0 bottom-0  justify-center items-center flex"
       style={{
         zIndex: 100,
-        backgroundColor: "rgba(0,0,0,0.4)",
-        visibility: props.visible ? "visible" : "hidden",
+        backgroundColor: 'rgba(0,0,0,0.4)',
+        visibility: props.visible ? 'visible' : 'hidden',
       }}
       onClick={(ev) => {
-        if (innerRef.current) {
-          if (!(innerRef.current as any).contains(ev.target as any)) {
-            // 外
-            document.body.style.overflow = "auto";
-            props.setVisible(false);
-          }
+        if (innerRef.current && !innerRef.current.contains(ev.target as Node)) {
+          // 外
+          document.body.style.overflow = 'auto';
+          props.setVisible(false);
         }
       }}
     >
@@ -123,10 +131,10 @@ export default function (props: {
         ref={innerRef}
         className="bg-white w-3/4  p-4 rounded-xl card-shadow dark:card-shadow-dark transition-all dark:bg-dark"
         style={{
-          minHeight: "280px",
+          minHeight: '280px',
           minWidth: 360,
-          maxWidth: "710px",
-          transform: props.visible ? "scale(100%)" : "scale(0)",
+          maxWidth: '710px',
+          transform: props.visible ? 'scale(100%)' : 'scale(0)',
         }}
         onTransitionEnd={() => {
           if (props.visible) {
@@ -159,28 +167,28 @@ export default function (props: {
             onChange={(ev) => {
               setTyping(true);
               setSearch(ev.currentTarget.value);
-              if (ev.currentTarget.value.trim() == "") {
+              if (ev.currentTarget.value.trim() == '') {
                 setResult([]);
               }
             }}
-            placeholder={"搜索内容"}
+            placeholder={'搜索内容'}
             className="w-full ml-2 text-base "
             style={{
               height: 32,
-              appearance: "none",
-              border: "none",
-              outline: "medium",
-              backgroundColor: "inherit",
+              appearance: 'none',
+              border: 'none',
+              outline: 'medium',
+              backgroundColor: 'inherit',
             }}
           ></input>
 
           <div
             className="transition-all transform hover:scale-125 text-gray-600 dark:text-dark"
             style={{
-              visibility: showClear ? "visible" : "hidden",
+              visibility: showClear ? 'visible' : 'hidden',
             }}
             onClick={() => {
-              setSearch("");
+              setSearch('');
               setResult([]);
             }}
           >
@@ -203,10 +211,7 @@ export default function (props: {
           <KeyCard type="esc"></KeyCard>
         </div>
         <hr className="my-2 dark:border-hr-dark"></hr>
-        <div
-          className="dark:text-dark"
-          style={{ maxHeight: 400, overflowY: "auto" }}
-        >
+        <div className="dark:text-dark" style={{ maxHeight: 400, overflowY: 'auto' }}>
           {renderResult()}
         </div>
       </div>

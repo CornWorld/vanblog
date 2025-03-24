@@ -1,42 +1,42 @@
-import { useState } from "react";
-import { getEncryptedArticleByIdOrPathname } from "../../api/getArticles";
-import toast from "react-hot-toast";
-import Loading from "../Loading";
+import { useState } from 'react';
+import { getEncryptedArticleByIdOrPathname } from '../../api/getArticles';
+import toast from 'react-hot-toast';
+import Loading from '../Loading';
 
-export default function (props: {
+export default function UnlockCard(props: {
   id: number | string;
   setLock: (l: boolean) => void;
   setContent: (s: string) => void;
 }) {
-  const [value, setValue] = useState("");
+  const [value, setValue] = useState('');
   const [loading, setLoading] = useState(false);
 
   const onSuccess = (message: string) => {
     toast.success(message, {
-      className: "toast",
+      className: 'toast',
     });
   };
   const onError = (message: string) => {
     toast.error(message, {
-      className: "toast",
+      className: 'toast',
     });
   };
   const fetchArticle = async () => {
     try {
       const res = await getEncryptedArticleByIdOrPathname(props.id, value);
-      if (!res || !res.article || !res.article.content) {
-        onError("密码错误！请重试！");
+      if (!res || !res.content) {
+        onError('密码错误！请重试！');
         return null;
       }
-      return res.article;
-    } catch (err) {
-      onError("密码错误！请重试！");
+      return res;
+    } catch {
+      onError('密码错误！请重试！');
       return null;
     }
   };
   const handleClick = async () => {
-    if (value == "") {
-      onError("输入不能为空！");
+    if (value == '') {
+      onError('输入不能为空！');
       return;
     }
     setLoading(true);
@@ -44,14 +44,14 @@ export default function (props: {
       const article = await fetchArticle();
       if (article) {
         setLoading(false);
-        onSuccess("解锁成功！");
+        onSuccess('解锁成功！');
         props.setContent(article.content);
         props.setLock(false);
       } else {
         setLoading(false);
       }
-    } catch (err) {
-      onError("解锁失败！");
+    } catch {
+      onError('解锁失败！');
       setLoading(false);
     }
   };
@@ -59,9 +59,7 @@ export default function (props: {
     <>
       <Loading loading={loading}>
         <div className="mb-2">
-          <p className="mb-2 text-gray-600 dark:text-dark ">
-            文章已解锁，请输入密码后查看：
-          </p>
+          <p className="mb-2 text-gray-600 dark:text-dark ">文章已解锁，请输入密码后查看：</p>
           <div className="flex items-center">
             <div className=" bg-gray-100 rounded-md dark:bg-dark-2 overflow-hidden flex-grow">
               <input
@@ -70,14 +68,14 @@ export default function (props: {
                 onChange={(ev) => {
                   setValue(ev.currentTarget.value);
                 }}
-                placeholder={"请输入密码"}
+                placeholder={'请输入密码'}
                 className="ml-2 w-full text-base dark:text-dark "
                 style={{
                   height: 32,
-                  appearance: "none",
-                  border: "none",
-                  outline: "medium",
-                  backgroundColor: "inherit",
+                  appearance: 'none',
+                  border: 'none',
+                  outline: 'medium',
+                  backgroundColor: 'inherit',
                 }}
               ></input>
             </div>

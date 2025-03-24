@@ -1,18 +1,15 @@
 import { Article } from './article';
 import { HeadTag } from '../utils/getLayoutProps';
 
-export type SortOrder = 'asc' | 'desc';
+export interface SortOrder {
+  field: string;
+  order: 'asc' | 'desc';
+}
 
 export interface GetArticleOption {
-  page: number;
-  pageSize: number;
-  toListView?: boolean;
-  category?: string;
-  tags?: string;
-  sortCreatedAt?: SortOrder;
-  sortTop?: SortOrder;
-  sortViewer?: SortOrder;
-  withWordCount?: boolean;
+  page?: number;
+  pageSize?: number;
+  sort?: SortOrder;
 }
 
 export interface SocialItem {
@@ -123,13 +120,15 @@ export interface CustomPage extends CustomPageList {
 }
 
 export interface ArticleResponse {
-  articles: Article[];
+  data: Article[];
   total: number;
-  totalWordCount?: number;
+  page: number;
+  pageSize: number;
 }
 
-export interface ArticleDetail {
-  article: Article;
-  pre?: { id: number; title: string; pathname?: string };
-  next?: { id: number; title: string; pathname?: string };
-} 
+export interface ArticleDetail extends Article {
+  content: string;
+  toc?: string;
+  next?: { id: string; title: string; pathname?: string };
+  prev?: { id: string; title: string; pathname?: string };
+}

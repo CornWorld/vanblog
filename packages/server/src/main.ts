@@ -21,6 +21,52 @@ async function bootstrap() {
   global.jwtSecret = jwtSecret;
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
+  // Enable CORS
+  const allowedDomains = process.env.VAN_BLOG_ALLOW_DOMAINS?.split(',') || [];
+  // Always include localhost domains for development
+  const corsWhitelist = [
+    ...allowedDomains,
+    'localhost:3001',
+    'localhost:3000',
+    '127.0.0.1:3001',
+    '127.0.0.1:3000',
+  ];
+
+  console.log(`CORS whitelist: ${corsWhitelist.join(', ')}`);
+
+  app.enableCors({
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps, curl, etc)
+      if (!origin) {
+        return callback(null, true);
+      }
+
+      // Extract domain from origin
+      try {
+        const originUrl = new URL(origin);
+        const originDomain = originUrl.host;
+
+        if (corsWhitelist.includes(originDomain)) {
+          return callback(null, true);
+        }
+
+        // Check for wildcard domains
+        for (const domain of corsWhitelist) {
+          if (domain.startsWith('*.') && originDomain.endsWith(domain.slice(2))) {
+            return callback(null, true);
+          }
+        }
+      } catch (error) {
+        console.error(`Invalid origin: ${origin}`, error);
+      }
+
+      callback(null, true); // Default to allowing all origins for now
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'token'],
+  });
+
   app.use(json({ limit: '50mb' }));
 
   app.useStaticAssets(globalConfig.staticPath, {

@@ -23,14 +23,52 @@ export const getArticlesByTag = async (): Promise<Record<string, Article[]>> => 
 };
 
 export const getArticleByIdOrPathname = async (
-  idOrPathname: string | number
+  idOrPathname: string | number,
 ): Promise<ArticleDetail> => {
-  return apiService.getArticleByIdOrPathname(idOrPathname);
+  if (!idOrPathname || idOrPathname === 'undefined') {
+    console.error(`Invalid article ID or pathname: ${idOrPathname}`);
+    // Return a default article instead of throwing
+    return {
+      id: '0',
+      title: 'Article Not Found',
+      content: 'This article could not be found.',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      category: '',
+      tags: [],
+      private: false,
+      top: 0,
+      date: new Date().toISOString(),
+      hide: false,
+      secret: false,
+    };
+  }
+
+  try {
+    return await apiService.getArticleByIdOrPathname(idOrPathname);
+  } catch (error) {
+    console.error(`Error fetching article with ID ${idOrPathname}:`, error);
+    // Return a default article on error
+    return {
+      id: '0',
+      title: 'Error Loading Article',
+      content: 'There was an error loading this article.',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      category: '',
+      tags: [],
+      private: false,
+      top: 0,
+      date: new Date().toISOString(),
+      hide: false,
+      secret: false,
+    };
+  }
 };
 
 export const getEncryptedArticleByIdOrPathname = async (
   idOrPathname: string | number,
-  password: string
+  password: string,
 ): Promise<ArticleDetail> => {
   return apiService.getEncryptedArticle(idOrPathname, password);
 };

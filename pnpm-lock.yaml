@@ -571,6 +571,9 @@ importers:
       client-only:
         specifier: ^0.0.1
         version: 0.0.1
+      clsx:
+        specifier: ^2.1.1
+        version: 2.1.1
       copy-to-clipboard:
         specifier: ^3.3.3
         version: 3.3.3
@@ -6170,6 +6173,10 @@ packages:
 
   clsx@1.2.1:
     resolution: {integrity: sha512-EcR6r5a8bj6pu3ycsa/E/cKVGuTgZJZdsyUYHOksG/UHIiKfjxzRxYJpyVBwYaQeOvghal9fcc4PidlgzugAQg==}
+    engines: {node: '>=6'}
+
+  clsx@2.1.1:
+    resolution: {integrity: sha512-eYm0QWBtUrBWZWG0d386OGAw16Z995PiOVo2B7bjWSbHedGl5e0ZWaq65kOGgUSNesEIDkB9ISbTg/JK9dhCZA==}
     engines: {node: '>=6'}
 
   cmd-shim@5.0.0:
@@ -22449,6 +22456,8 @@ snapshots:
       readable-stream: 2.3.8
 
   clsx@1.2.1: {}
+
+  clsx@2.1.1: {}
 
   cmd-shim@5.0.0:
     dependencies:

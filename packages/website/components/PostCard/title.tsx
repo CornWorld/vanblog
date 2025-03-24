@@ -1,13 +1,13 @@
-import dayjs from "dayjs";
-import Link from "next/link";
-import { useMemo } from "react";
-import { encodeQuerystring } from "../../utils/encode";
-import PostViewer from "../PostViewer";
-import { getTarget } from "../Link/tools";
-import { checkLogin } from "../../utils/auth";
+import dayjs from 'dayjs';
+import Link from 'next/link';
+import { useMemo } from 'react';
+import { encodeQuerystring } from '../../utils/encode';
+import PostViewer from '../PostViewer';
+import { getTarget } from '../Link/tools';
+import { checkLogin } from '../../utils/auth';
 
 export function Title(props: {
-  type: "article" | "about" | "overview";
+  type: 'article' | 'about' | 'overview';
   id: number | string;
   title: string;
   openArticleLinksInNewWindow: boolean;
@@ -15,19 +15,24 @@ export function Title(props: {
 }) {
   const showEditButton = props.showEditButton && checkLogin();
   const newTab = useMemo(() => {
-    if (props.type == "overview" && props.openArticleLinksInNewWindow) {
+    if (props.type == 'overview' && props.openArticleLinksInNewWindow) {
       return true;
     }
     return false;
   }, [props]);
   return (
     <div className="flex justify-center post-card-title ">
-      {props.type != "about" ? (
-        <Link href={`/post/${props.id}`} target={getTarget(newTab)} style={{width:"90%"}} title={props.title}>
+      {props.type != 'about' ? (
+        <Link
+          href={`/post/${props.id}`}
+          target={getTarget(newTab)}
+          style={{ width: '90%' }}
+          title={props.title}
+        >
           <div
             className={`text-lg block font-medium overflow-hidden text-ellipsis whitespace-nowrap px-5  text-center mb-2 mt-2 dark:text-dark text-gray-700 ${
-              showEditButton ? "ml-8" : ""
-            } md:text-${props.type == "overview" ? "xl" : "2xl"} ua ua-link`}
+              showEditButton ? 'ml-8' : ''
+            } md:text-${props.type == 'overview' ? 'xl' : '2xl'} ua ua-link`}
           >
             {props.title}
           </div>
@@ -35,7 +40,7 @@ export function Title(props: {
       ) : (
         <div
           className={`text-lg block font-medium mb-2 mt-2 dark:text-dark text-gray-700 md:text-2xl ua ua-link  select-none ${
-            showEditButton ? "ml-12 mr-4" : ""
+            showEditButton ? 'ml-12 mr-4' : ''
           }`}
         >
           {props.title}
@@ -45,8 +50,8 @@ export function Title(props: {
         <a
           className="flex items-center"
           href={
-            props.type === "about"
-              ? "/admin/editor?type=about"
+            props.type === 'about'
+              ? '/admin/editor?type=about'
               : `/admin/editor?type=article&id=${props.id}`
           }
           target="_blank"
@@ -60,23 +65,23 @@ export function Title(props: {
   );
 }
 export function SubTitle(props: {
-  type: "article" | "about" | "overview";
+  type: 'article' | 'about' | 'overview';
   updatedAt: Date;
   createdAt: Date;
   catelog: string;
-  enableComment: "true" | "false";
+  enableComment: 'true' | 'false';
   id: number | string;
   openArticleLinksInNewWindow: boolean;
 }) {
-  const iconSize = "16";
+  const iconSize = '16';
   const iconClass =
-    "mr-1 fill-gray-400 dark:text-dark dark:group-hover:text-dark-hover group-hover:text-gray-900 ";
+    'mr-1 fill-gray-400 dark:text-dark dark:group-hover:text-dark-hover group-hover:text-gray-900 ';
 
   const dataPath = useMemo(() => {
-    if (props.type == "about") {
-      return "/about";
+    if (props.type == 'about') {
+      return '/about';
     } else {
-      return "/post/" + props.id;
+      return '/post/' + props.id;
     }
   }, [props]);
   return (
@@ -96,17 +101,17 @@ export function SubTitle(props: {
               p-id="11558"
             ></path>
             <path
-              d="M405.333333 484.266667l-32 125.866666c-2.133333 10.666667 0 23.466667 8.533334 29.866667 6.4 6.4 14.933333 8.533333 23.466666 8.533333h8.533334l125.866666-32c6.4-2.133333 10.666667-4.266667 14.933334-8.533333l300.8-300.8c38.4-38.4 38.4-102.4 0-140.8-38.4-38.4-102.4-38.4-140.8 0L413.866667 469.333333c-4.266667 4.266667-6.4 8.533333-8.533334 14.933334z m59.733334 23.466666L761.6 213.333333c12.8-12.8 36.266667-12.8 49.066667 0 12.8 12.8 12.8 36.266667 0 49.066667L516.266667 558.933333l-66.133334 17.066667 14.933334-68.266667z"
+              d="M405.333333 484.266666l-32 125.866666c-2.133333 10.666667 0 23.466667 8.533334 29.866667 6.4 6.4 14.933333 8.533333 23.466666 8.533333h8.533334l125.866666-32c6.4-2.133333 10.666667-4.266667 14.933334-8.533333l300.8-300.8c38.4-38.4 38.4-102.4 0-140.8-38.4-38.4-102.4-38.4-140.8 0L413.866667 469.333333c-4.266667 4.266667-6.4 8.533333-8.533334 14.933334z m59.733334 23.466666L761.6 213.333333c12.8-12.8 36.266667-12.8 49.066667 0 12.8 12.8 12.8 36.266667 0 49.066667L516.266667 558.933333l-66.133334 17.066667 14.933334-68.266667z"
               p-id="11559"
             ></path>
           </svg>
         </span>
-        {props.type != "about"
-          ? `${dayjs(props.createdAt).format("YYYY-MM-DD")}`
-          : ` ${dayjs(props.updatedAt).format("YYYY-MM-DD")}`}
+        {props.type != 'about'
+          ? `${dayjs(props.createdAt).format('YYYY-MM-DD')}`
+          : ` ${dayjs(props.updatedAt).format('YYYY-MM-DD')}`}
       </span>
 
-      {props.type != "about" && (
+      {props.type != 'about' && (
         <span className="inline-flex px-2 items-center group dark:group cursor-pointer">
           <span className={iconClass}>
             <svg
@@ -152,9 +157,9 @@ export function SubTitle(props: {
             ></path>
           </svg>
         </span>
-        <PostViewer shouldAddViewer={props.type != "overview"} id={props.id} />
+        <PostViewer shouldAddViewer={props.type != 'overview'} />
       </span>
-      {props.enableComment != "false" && (
+      {props.enableComment != 'false' && (
         <span className="inline-flex px-2 items-center">
           <span className={iconClass}>
             <svg

@@ -1,14 +1,19 @@
 export interface Article {
-  content: string;
+  id: string;
+  title: string;
+  date: string;
+  createdAt: string;
+  updatedAt: string;
+  pathname?: string;
   category: string;
   tags: string[];
-  createdAt: string;
-  title: string;
-  updatedAt: string;
-  id: number;
-  top?: number;
+  top: boolean | number;
+  hide: boolean;
+  secret: boolean;
   private: boolean;
-  author?: string;
   copyright?: string;
-  pathname?: string;
+  content?: string;
+  summary?: string;
+  wordCount?: number;
+  viewer?: number;
 }

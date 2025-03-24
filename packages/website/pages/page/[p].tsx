@@ -1,17 +1,17 @@
-import Head from "next/head";
-import { getPublicMeta } from "../../api/getAllData";
-import AuthorCard, { AuthorCardProps } from "../../components/AuthorCard";
-import Layout from "../../components/Layout";
-import PageNav from "../../components/PageNav";
-import PostCard from "../../components/PostCard";
-import Waline from "../../components/WaLine";
-import { Article } from "../../types/article";
-import { getArticlePath } from "../../utils/getArticlePath";
-import { LayoutProps } from "../../utils/getLayoutProps";
-import { getPagePagesProps } from "../../utils/getPageProps";
-import { getArticlesKeyWord } from "../../utils/keywords";
-import { revalidate } from "../../utils/loadConfig";
-import Custom404 from "../404";
+import Head from 'next/head';
+import { getPublicMeta } from '../../api/getAllData';
+import AuthorCard, { AuthorCardProps } from '../../components/AuthorCard';
+import Layout from '../../components/Layout';
+import PageNav from '../../components/PageNav';
+import PostCard from '../../components/PostCard';
+import Waline from '../../components/WaLine';
+import { Article } from '../../types/article';
+import { getArticlePath } from '../../utils/getArticlePath';
+import { LayoutProps } from '../../utils/getLayoutProps';
+import { getPagePagesProps } from '../../utils/getPageProps';
+import { getArticlesKeyWord } from '../../utils/keywords';
+import { revalidate } from '../../utils/loadConfig';
+import Custom404 from '../404';
 export interface PagePagesProps {
   layoutProps: LayoutProps;
   authorCardProps: AuthorCardProps;
@@ -19,7 +19,10 @@ export interface PagePagesProps {
   articles: Article[];
 }
 const PagePages = (props: PagePagesProps) => {
-  if (props.articles.length == 0) {
+  // Add safety check for articles array
+  const articles = props.articles || [];
+
+  if (!articles || articles.length === 0) {
     return <Custom404 name="页码" />;
   }
   return (
@@ -29,34 +32,26 @@ const PagePages = (props: PagePagesProps) => {
       sideBar={<AuthorCard option={props.authorCardProps}></AuthorCard>}
     >
       <Head>
-        <meta
-          name="keywords"
-          content={getArticlesKeyWord(props.articles).join(",")}
-        ></meta>
+        <meta name="keywords" content={getArticlesKeyWord(articles).join(',')}></meta>
       </Head>
       <div className="space-y-2 md:space-y-4">
-        {props.articles.map((article) => (
+        {articles.map((article) => (
           <PostCard
-          
-            showEditButton={props.layoutProps.showEditButton === "true"}
+            showEditButton={props.layoutProps.showEditButton === 'true'}
             setContent={() => {}}
-            showExpirationReminder={
-              props.layoutProps.showExpirationReminder == "true"
-            }
+            showExpirationReminder={props.layoutProps.showExpirationReminder == 'true'}
             copyrightAggreement={props.layoutProps.copyrightAggreement}
-            openArticleLinksInNewWindow={
-              props.layoutProps.openArticleLinksInNewWindow == "true"
-            }
+            openArticleLinksInNewWindow={props.layoutProps.openArticleLinksInNewWindow == 'true'}
             customCopyRight={null}
-            top={article.top || 0}
+            top={typeof article.top === 'number' ? article.top : article.top ? 1 : 0}
             id={getArticlePath(article)}
             key={article.id}
             title={article.title}
             updatedAt={new Date(article.updatedAt)}
             createdAt={new Date(article.createdAt)}
             catelog={article.category}
-            content={article.content || ""}
-            type={"overview"}
+            content={article.content || ''}
+            type={'overview'}
             enableComment={props.layoutProps.enableComment}
             private={article.private}
           ></PostCard>
@@ -65,8 +60,8 @@ const PagePages = (props: PagePagesProps) => {
       <PageNav
         total={props.authorCardProps.postNum}
         current={props.currPage}
-        base={"/"}
-        more={"/page"}
+        base={'/'}
+        more={'/page'}
       ></PageNav>
       <Waline enable={props.layoutProps.enableComment} visible={false} />
     </Layout>
@@ -89,15 +84,33 @@ export async function getStaticPaths() {
   }
   return {
     paths,
-    fallback: "blocking",
+    fallback: 'blocking',
   };
 }
 
 export async function getStaticProps({
   params,
-}: any): Promise<{ props: PagePagesProps; revalidate?: number }> {
-  return {
-    props: await getPagePagesProps(params.p),
-    ...revalidate,
-  };
+}: {
+  params: { p: string };
+}): Promise<{ props: PagePagesProps; revalidate?: number } | { notFound: true }> {
+  try {
+    // Check if params.p exists
+    if (!params || !params.p) {
+      console.error('Error: Page number is undefined');
+      return {
+        notFound: true,
+      };
+    }
+
+    const props = await getPagePagesProps(params.p);
+    return {
+      props,
+      ...revalidate,
+    };
+  } catch (error) {
+    console.error('Error getting page props:', error);
+    return {
+      notFound: true,
+    };
+  }
 }
