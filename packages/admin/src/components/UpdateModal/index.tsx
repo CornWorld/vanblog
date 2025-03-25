@@ -1,15 +1,19 @@
 import { getAllCategories, getTags, updateArticle, updateDraft } from '@/services/van-blog/api';
 import { ModalForm, ProFormDateTimePicker, ProFormSelect, ProFormText } from '@ant-design/pro-form';
-import { Form, message, Modal } from 'antd';
-import moment from 'moment';
+import { Form, message, Modal, Button } from 'antd';
+import dayjs from 'dayjs';
 import { useEffect } from 'react';
+import { history } from '@/utils/umiCompat';
 import AuthorField from '../AuthorField';
-export default function (props: {
-  currObj: any;
-  setLoading: any;
-  onFinish: any;
+
+interface UpdateModalProps {
+  currObj: Record<string, unknown>;
+  setLoading: (loading: boolean) => void;
+  onFinish: () => void;
   type: 'article' | 'draft' | 'about';
-}) {
+}
+
+export default function (props: UpdateModalProps) {
   const { currObj, setLoading, type, onFinish } = props;
   const [form] = Form.useForm();
   useEffect(() => {
@@ -72,15 +76,17 @@ export default function (props: {
       />
       <AuthorField />
       <ProFormSelect
-        mode="tags"
-        tokenSeparators={[',']}
         width="md"
         name="tags"
         label="标签"
         placeholder="请选择或输入标签"
+        fieldProps={{
+          mode: 'tags',
+          tokenSeparators: [','],
+        }}
         request={async () => {
           const msg = await getTags();
-          return msg?.data?.map((item) => ({ label: item, value: item })) || [];
+          return msg?.data?.map((item: string) => ({ label: item, value: item })) || [];
         }}
       />
       <ProFormSelect
@@ -94,12 +100,31 @@ export default function (props: {
         rules={[{ required: true, message: '这是必填项' }]}
         request={async () => {
           const { data: categories } = await getAllCategories();
-          return categories?.map((e) => {
+          return categories?.map((e: string) => {
             return {
               label: e,
               value: e,
             };
           });
+        }}
+        showSearch
+        fieldProps={{
+          dropdownRender: (menu) => (
+            <>
+              {menu}
+              <div style={{ padding: '8px', borderTop: '1px solid #e8e8e8' }}>
+                <Button
+                  type="link"
+                  style={{ width: '100%', textAlign: 'left' }}
+                  onClick={() => {
+                    history.push('/site/data?tab=category');
+                  }}
+                >
+                  → 前往数据管理页面创建新分类
+                </Button>
+              </div>
+            </>
+          ),
         }}
       />
       <ProFormDateTimePicker
@@ -108,8 +133,10 @@ export default function (props: {
         id="createdAt"
         label="创建时间"
         placeholder="不填默认为此刻"
-        showTime={{
-          defaultValue: moment('00:00:00', 'HH:mm:ss'),
+        fieldProps={{
+          showTime: {
+            defaultValue: dayjs('00:00:00', 'HH:mm:ss'),
+          },
         }}
       />
       {type == 'article' && (
