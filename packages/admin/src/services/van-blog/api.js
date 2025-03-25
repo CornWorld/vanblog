@@ -175,7 +175,9 @@ export async function createArticle(body) {
 }
 
 export async function deleteArticle(id) {
-  return request(`/api/admin/article/${id}`, {
+  // ID can be numeric or a pathname (string)
+  const encodedId = typeof id === 'string' ? encodeQuerystring(id) : id;
+  return request(`/api/admin/article/${encodedId}`, {
     method: 'DELETE',
   });
 }
@@ -264,6 +266,13 @@ export async function getAllCategories(withAllData = false) {
     method: 'GET',
   });
 }
+
+export async function getArticlesByCategory(name) {
+  return request(`/api/admin/category/${encodeQuerystring(name)}`, {
+    method: 'GET',
+  });
+}
+
 export async function getLog(type, page, pageSize = 10) {
   return request(`/api/admin/log?event=${type}&pageSize=${pageSize}&page=${page}`, {
     method: 'GET',
@@ -288,7 +297,7 @@ export async function createCategory(body) {
   });
 }
 export async function updateCategory(name, value) {
-  return request(`/api/admin/category/${name}`, {
+  return request(`/api/admin/category/${encodeQuerystring(name)}`, {
     method: 'PUT',
     body: value,
   });
@@ -425,7 +434,9 @@ export async function deleteSocial(name) {
   });
 }
 export async function updateArticle(id, body) {
-  return request(`/api/admin/article/${id}`, {
+  // ID can be numeric or a pathname (string)
+  const encodedId = typeof id === 'string' ? encodeQuerystring(id) : id;
+  return request(`/api/admin/article/${encodedId}`, {
     method: 'PUT',
     body: body,
   });
@@ -448,7 +459,9 @@ export async function getAbout() {
   });
 }
 export async function getArticleById(id) {
-  return request(`/api/admin/article/${id}`, {
+  // ID can be numeric or a pathname (string)
+  const encodedId = typeof id === 'string' ? encodeQuerystring(id) : id;
+  return request(`/api/admin/article/${encodedId}`, {
     method: 'GET',
   });
 }
