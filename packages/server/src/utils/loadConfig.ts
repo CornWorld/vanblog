@@ -1,7 +1,7 @@
 import * as yaml from 'yaml';
 import * as path from 'path';
 import * as fs from 'fs';
-import * as _ from 'lodash';
+import { merge, get } from 'lodash-es';
 // 解析配置文件
 let rawConfigs = [];
 if (process.env.VAN_BLOG_CONFIG_FILE) {
@@ -24,7 +24,7 @@ if (rawConfigs.length === 0) {
 // 递归合并
 // 优先级 env > config.{NODE_ENV}.yaml > config.yaml > /etc/authing/config.yaml > 默认值
 const config = [...rawConfigs].reduce((prev, curr) => {
-  return _.merge(prev, curr);
+  return merge(prev, curr);
 });
 
 /**
@@ -32,7 +32,7 @@ const config = [...rawConfigs].reduce((prev, curr) => {
  * @param key 配置项的 key，可以通过 . 来选择子项，比如 app.port
  * @param defaultValue 默认值
  */
-export const loadConfig = (key: string, defaultValue?: any) => {
+export const loadConfig = (key: string, defaultValue?: unknown) => {
   const envKey =
     'VAN_BLOG_' +
     key
@@ -41,9 +41,9 @@ export const loadConfig = (key: string, defaultValue?: any) => {
       .join('_');
 
   if (typeof defaultValue !== 'function') {
-    return process.env[envKey] || _.get(config, key, defaultValue);
+    return process.env[envKey] || get(config, key, defaultValue);
   } else {
-    return process.env[envKey] || _.get(config, key, false) || defaultValue();
+    return process.env[envKey] || get(config, key, false) || defaultValue();
   }
 };
 export const version = process.env['VAN_BLOG_VERSION'] || 'dev';

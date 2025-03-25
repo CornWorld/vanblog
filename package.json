@@ -30,6 +30,10 @@
     "lint-staged": "lint-staged"
   },
   "packageManager": "pnpm@10.6.2",
+  "resolutions": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
   "devDependencies": {
     "@eslint/js": "^9.23.0",
     "@typescript-eslint/eslint-plugin": "^8.27.0",

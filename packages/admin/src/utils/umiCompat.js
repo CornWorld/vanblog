@@ -1,7 +1,7 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
 import { Link as RouterLink } from 'react-router-dom';
-import { useRef, useEffect } from 'react';
+import { useEffect } from 'react';
 
 // Export Link component from react-router-dom
 export const Link = RouterLink;
@@ -11,15 +11,15 @@ const parsePathConfig = (path) => {
   if (typeof path === 'string') {
     return path;
   }
-  
+
   // Handle object path config
   if (typeof path === 'object') {
     const { pathname, query } = path;
-    
+
     if (!query || Object.keys(query).length === 0) {
       return pathname;
     }
-    
+
     // Build query string
     const queryParams = new URLSearchParams();
     Object.entries(query).forEach(([key, value]) => {
@@ -27,11 +27,11 @@ const parsePathConfig = (path) => {
         queryParams.append(key, value);
       }
     });
-    
+
     const queryString = queryParams.toString();
     return queryString ? `${pathname}?${queryString}` : pathname;
   }
-  
+
   return path;
 };
 
@@ -46,7 +46,9 @@ const createHistory = (navigate, location) => {
       const parsedPath = parsePathConfig(path);
       navigate(parsedPath, { replace: true });
     },
+    go: (step) => navigate(step),
     goBack: () => navigate(-1),
+    navigate,
     location,
   };
 };
@@ -67,14 +69,13 @@ const BASE_PATH = '/admin';
 
 // Function to add base path properly to the URL
 const addBasePath = (path) => {
-  const pathString = typeof path === 'string' ? path : 
-                    (path?.pathname || '/');
-  
+  const pathString = typeof path === 'string' ? path : path?.pathname || '/';
+
   // Don't modify paths that already have the base path
   if (pathString.startsWith(BASE_PATH + '/') || pathString === BASE_PATH) {
     return path;
   }
-  
+
   // Add base path to relative paths
   if (pathString.startsWith('/')) {
     if (typeof path === 'string') {
@@ -82,11 +83,11 @@ const addBasePath = (path) => {
     } else if (typeof path === 'object') {
       return {
         ...path,
-        pathname: `${BASE_PATH}${path.pathname}`
+        pathname: `${BASE_PATH}${path.pathname}`,
       };
     }
   }
-  
+
   // Return external URLs as-is
   return path;
 };
@@ -95,7 +96,7 @@ const addBasePath = (path) => {
 export const history = {
   push: (path) => {
     console.log('[DEBUG] history.push called with path:', path);
-    
+
     if (singletonHistory) {
       // When used within React components, rely on React Router
       singletonHistory.push(path);
@@ -109,7 +110,7 @@ export const history = {
   },
   replace: (path) => {
     console.log('[DEBUG] history.replace called with path:', path);
-    
+
     if (singletonHistory) {
       // When used within React components, rely on React Router
       singletonHistory.replace(path);
@@ -119,6 +120,17 @@ export const history = {
       const urlString = parsePathConfig(fullPath);
       console.log('[DEBUG] Replacing with:', urlString);
       window.location.replace(urlString);
+    }
+  },
+  go: (step) => {
+    console.log('[DEBUG] history.go called with step:', step);
+
+    if (singletonHistory) {
+      // Use React Router's navigate function with relative step
+      singletonHistory.go(step);
+    } else {
+      // Fallback for outside React components
+      window.history.go(step);
     }
   },
   goBack: () => {
@@ -132,7 +144,7 @@ export const history = {
   get location() {
     // Convert search params to query object for Umi compatibility
     const locationWithQuery = { ...window.location };
-    
+
     // Create query object from search string
     const searchParams = new URLSearchParams(window.location.search);
     const query = {};
@@ -140,7 +152,7 @@ export const history = {
       query[key] = value;
     }
     locationWithQuery.query = query;
-    
+
     return locationWithQuery;
   },
 };
@@ -149,11 +161,11 @@ export const history = {
 export const useInitHistory = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  
+
   useEffect(() => {
     singletonHistory = createHistory(navigate, location);
   }, [navigate, location]);
-  
+
   return singletonHistory;
 };
 
@@ -163,10 +175,10 @@ export const useModel = () => {
   // Ensure these are objects/functions that can be safely called
   const initialState = context?.initialState || {};
   const setInitialState = context?.setInitialState || ((state) => state);
-  
+
   return {
     initialState,
     setInitialState,
     loading: !initialState,
   };
-}; 
+};

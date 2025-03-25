@@ -6,6 +6,14 @@
   min-height: 600px !important;
   width: 100%;
   overflow: visible;
+  border: 1px solid #eee;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.editor-container.dark {
+  border-color: #333;
+  background-color: #1f1f1f;
 }
 
 .editor-wrapper {
@@ -15,6 +23,8 @@
   height: 100% !important;
   min-height: 500px !important;
   overflow: visible;
+  width: 100%;
+  height: 100%;
 }
 
 /* ByteMD editor specific styles */
@@ -27,6 +37,8 @@
   border: 1px solid #d9d9d9;
   border-radius: 2px;
   margin: 0 !important;
+  height: calc(100vh - 200px) !important;
+  min-height: 400px;
 }
 
 .editor-container .bytemd-toolbar {
@@ -157,4 +169,44 @@
   position: absolute;
   overflow: visible;
   visibility: visible;
-} 
+}
+
+/* Custom styles for toast UI editor compatibility */
+.toastui-editor-contents {
+  font-size: 13px;
+  margin: 0;
+  padding: 0;
+}
+
+/* Different color for code blocks */
+.markdown-body pre {
+  background-color: #f6f8fa;
+}
+
+.dark .markdown-body pre {
+  background-color: #282c34;
+}
+
+/* Make sure images don't overflow */
+.markdown-body img {
+  max-width: 100%;
+}
+
+/* Better styling for tables */
+.markdown-body table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 10px 0;
+}
+
+.markdown-body table th,
+.markdown-body table td {
+  border: 1px solid #ddd;
+  padding: 8px;
+}
+
+/* Dark mode table */
+.dark .markdown-body table th,
+.dark .markdown-body table td {
+  border-color: #444;
+}

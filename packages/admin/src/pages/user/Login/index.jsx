@@ -12,14 +12,14 @@ import { useEffect } from 'react';
 const Login = () => {
   const type = 'account';
   const { initialState, setInitialState } = useModel();
-  
+
   // 页面加载时重置重定向循环检测和清理可能过期的token
   useEffect(() => {
     console.log('[DEBUG] Login page loaded');
-    
+
     // 重置可能导致循环的状态
     resetRedirectCycle();
-    
+
     // 清除可能存在的过期token
     // 注意：仅在处于redirect循环时清除token，避免正常登录流程被干扰
     const count = parseInt(sessionStorage.getItem('vanblog_redirect_count') || '0', 10);
@@ -34,54 +34,59 @@ const Login = () => {
   // 处理登录表单提交
   const handleSubmit = async (values) => {
     console.log('[DEBUG] Login form submitted');
-    
+
     // 再次重置重定向循环检测
     resetRedirectCycle();
-    
+
     try {
       // 显示加载消息
       message.loading('登录中...', 0.5);
       // 发送登录请求
-      const msg = await login({
-        username: values.username,
-        password: values.password 
-      }, { skipErrorHandler: true }); // 跳过默认错误处理
-      
+      const msg = await login(
+        {
+          username: values.username,
+          password: values.password,
+        },
+        { skipErrorHandler: true },
+      ); // 跳过默认错误处理
+
       // 处理成功响应
       if (msg.statusCode === 200 && msg.data?.token) {
         // 显示成功消息
         message.success('登录成功！');
-        
+
         // 获取用户信息和令牌
         const token = msg.data.token;
-        const user = msg.data.user ? {
-          name: msg.data.user.name,
-          id: msg.data.user.id,
-          type: msg.data.user.type,
-        } : null;
-        
+        const user = msg.data.user
+          ? {
+              name: msg.data.user.name,
+              id: msg.data.user.id,
+              type: msg.data.user.type,
+            }
+          : null;
+
         if (!user) {
           console.error('[DEBUG] Login response missing user data');
           message.error('登录响应缺少用户信息');
           return;
         }
-        
+
         // 保存令牌
         console.log('[DEBUG] Saving token and user data');
         setAccessToken(token);
-        
+
         // 更新应用状态
         await setInitialState((s) => ({
           ...s,
           token: token,
           user: user,
         }));
-        
+
         // 获取初始化数据
         console.log('[DEBUG] Fetching initial data');
         try {
           const meta = await initialState?.fetchInitData();
-          
+
           if (meta) {
             console.log('[DEBUG] Updated app state with meta data');
             await setInitialState((s) => ({
@@ -95,7 +100,7 @@ const Login = () => {
           console.error('[DEBUG] Error fetching meta data:', metaError);
           // 继续处理，即使获取元数据失败
         }
-        
+
         // 处理重定向
         console.log('[DEBUG] Handling redirect after login');
         // 检查history对象
@@ -104,13 +109,13 @@ const Login = () => {
           window.location.href = '/admin/';
           return;
         }
-        
+
         try {
           // 获取查询参数中的重定向URL
           const { query } = history.location;
           const { redirect } = query || {};
           const targetPath = redirect || '/';
-          
+
           console.log('[DEBUG] Redirecting to:', targetPath);
           history.push(targetPath);
         } catch (navError) {
@@ -118,7 +123,7 @@ const Login = () => {
           // 如果路由跳转失败，使用直接URL导航
           window.location.href = '/admin/';
         }
-        
+
         return;
       } else if (msg.statusCode === 401 || msg.response?.status === 401) {
         // 处理认证失败
@@ -132,7 +137,7 @@ const Login = () => {
     } catch (error) {
       // 处理请求异常
       console.error('[DEBUG] Login error:', error);
-      
+
       if (error.response?.status === 401) {
         console.log('[DEBUG] Caught 401 error @auth.controller.ts @auth.provider.ts');
         message.error('用户名或密码错误');
@@ -156,7 +161,7 @@ const Login = () => {
             autoLogin: true,
           }}
           onFinish={async (values) => {
-            try {  
+            try {
               await handleSubmit({
                 username: values.username,
                 password: values.password,
@@ -171,31 +176,29 @@ const Login = () => {
             <>
               <ProFormText
                 name="username"
-                autoComplete="off"
                 fieldProps={{
                   size: 'large',
-                  prefix: <UserOutlined className="prefixIcon" />,
+                  prefix: <UserOutlined className={'prefixIcon'} />,
                 }}
-                placeholder={'用户名'}
+                placeholder="管理员账号"
                 rules={[
                   {
                     required: true,
-                    message: '用户名是必填项！',
+                    message: '请输入管理员账号',
                   },
                 ]}
               />
               <ProFormText.Password
                 name="password"
-                autoComplete="off"
                 fieldProps={{
                   size: 'large',
-                  prefix: <LockOutlined className="prefixIcon" />,
+                  prefix: <LockOutlined className={'prefixIcon'} />,
                 }}
-                placeholder={'密码'}
+                placeholder="管理员密码"
                 rules={[
                   {
                     required: true,
-                    message: '密码是必填项！',
+                    message: '请输入管理员密码',
                   },
                 ]}
               />

@@ -601,12 +601,12 @@ export class ArticleProvider {
       const topArticles = articles.filter((a) => {
         const doc = a as ArticleDocumentType;
         const top = doc._doc?.top || doc.top;
-        return Boolean(top) && top != '';
+        return Boolean(top) && top !== 0;
       });
       const notTopArticles = articles.filter((a) => {
         const doc = a as ArticleDocumentType;
         const top = doc._doc?.top || doc.top;
-        return !top || top == '';
+        return !top || top === 0;
       });
       const sortedTopArticles = topArticles.sort((a, b) => {
         const docA = a as ArticleDocumentType;

@@ -7,7 +7,7 @@ import {
 } from '@/services/van-blog/api';
 import ProForm, { ProFormSwitch } from '@ant-design/pro-form';
 import { Alert, Button, Card, Input, message, Modal, Row, Space, Spin } from 'antd';
-import lodash from 'lodash';
+import { isEqual } from 'lodash-es';
 import { useMemo, useState, useEffect } from 'react';
 import { useForm } from 'antd/lib/form/Form';
 import { useModel } from '@/utils/umiCompat';
@@ -138,7 +138,7 @@ export default function (props) {
               setLoading(false);
               return;
             }
-            const eq = lodash.isEqual(curData, data);
+            const eq = isEqual(curData, data);
 
             if (eq) {
               Modal.warning({

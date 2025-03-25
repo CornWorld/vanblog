@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { throttle } from 'lodash';
+import { throttle } from 'lodash-es';
 
 export const scrollToTop = () => {
   const currentPosition = document.documentElement.scrollTop || document.body.scrollTop;

@@ -19,13 +19,14 @@ import { parseMarkdownFile, parseObjToMarkdown } from '@/services/van-blog/parse
 import { useCacheState } from '@/services/van-blog/useCacheState';
 import { DownOutlined } from '@ant-design/icons';
 import { PageContainer } from '@ant-design/pro-layout';
-import { Button, Dropdown, Input, Menu, message, Modal, Space, Tag, Upload, Spin } from 'antd';
+import { App, Button, Dropdown, Input, Menu, message, Modal, Space, Tag, Upload, Spin } from 'antd';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { history } from '@/utils/umiCompat';
 import moment from 'moment';
 import './index.less';
 
 export default function () {
+  const { modal } = App.useApp();
   const [value, setValue] = useState('');
   const [currObj, setCurrObj] = useState({});
   const [loading, setLoading] = useState(true);
@@ -191,7 +192,7 @@ export default function () {
 
   const handleSave = async () => {
     if (location.hostname == 'blog-demo.mereith.com' && type != 'draft') {
-      Modal.info({
+      modal.info({
         title: '演示站禁止修改此信息！',
         content: '本来是可以的，但有个人在演示站首页放黄色信息，所以关了这个权限了。',
       });
@@ -211,7 +212,7 @@ export default function () {
     if (history.location.query?.type == 'about') {
       hasTags = true;
     }
-    Modal.confirm({
+    modal.confirm({
       title: `确定保存吗？${hasTags ? '' : '此文章还没设置标签呢'}`,
       content: hasMore ? undefined : (
         <div style={{ marginTop: 8 }}>
@@ -247,7 +248,7 @@ export default function () {
     setLoading(true);
     try {
       const { content } = await parseMarkdownFile(file);
-      Modal.confirm({
+      modal.confirm({
         title: '确认内容',
         content: <Input.TextArea value={content} autoSize={{ maxRows: 10, minRows: 5 }} />,
         onOk: () => {
@@ -256,9 +257,10 @@ export default function () {
         },
       });
     } catch (err) {
-      message.error('导入失败！请检查文件格式！');
+      message.error('解析失败！');
     }
     setLoading(false);
+    return false;
   };
   const actionMenu = (
     <Menu
@@ -469,37 +471,37 @@ export default function () {
       }}
       footer={null}
     >
-        <div style={{ display: 'none' }}>
-          <Upload
-            showUploadList={false}
-            multiple={false}
-            accept={'.md'}
-            beforeUpload={handleImport}
-            style={{ display: 'none' }}
-          >
-            <a key="importBtn" type="link" style={{ display: 'none' }} id="importBtn">
-              导入内容
-            </a>
-          </Upload>
-        </div>
-        <div className="editor-wrapper">
-          <Editor
-            loading={loading}
-            setLoading={setLoading}
-            value={value}
-            onChange={(v) => {
-              setValue(v);
-              const date = new Date();
-              window.localStorage.setItem(
-                getCacheKey(),
-                JSON.stringify({
-                  content: v,
-                  time: date,
-                }),
-              );
-            }}
-          />
-        </div>
+      <div style={{ display: 'none' }}>
+        <Upload
+          showUploadList={false}
+          multiple={false}
+          accept={'.md'}
+          beforeUpload={handleImport}
+          style={{ display: 'none' }}
+        >
+          <a key="importBtn" type="link" style={{ display: 'none' }} id="importBtn">
+            导入内容
+          </a>
+        </Upload>
+      </div>
+      <div className="editor-wrapper">
+        <Editor
+          loading={loading}
+          setLoading={setLoading}
+          value={value}
+          onChange={(v) => {
+            setValue(v);
+            const date = new Date();
+            window.localStorage.setItem(
+              getCacheKey(),
+              JSON.stringify({
+                content: v,
+                time: date,
+              }),
+            );
+          }}
+        />
+      </div>
     </PageContainer>
   );
 }

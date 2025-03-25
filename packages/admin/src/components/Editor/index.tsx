@@ -6,14 +6,17 @@ import math from '@bytemd/plugin-math-ssr';
 import mediumZoom from '@bytemd/plugin-medium-zoom';
 import mermaid from '@bytemd/plugin-mermaid';
 import { Editor } from '@bytemd/react';
-import { Spin, Button, Dropdown, message, Modal, Space, Tooltip } from 'antd';
-import 'bytemd/dist/index.css';
-import 'katex/dist/katex.css';
-import React, { MutableRefObject, useCallback, useEffect, useRef, useState, useMemo } from 'react';
+import { Spin } from 'antd';
+import React, { useMemo } from 'react';
+
+// Continue to import styles for markdown and code themes
 import '../../style/github-markdown.css';
 import '../../style/code-light.css';
 import '../../style/code-dark.css';
 import '../../style/custom-container.css';
+import 'bytemd/dist/index.css';
+
+// Import custom plugins
 import { emoji } from './emoji';
 import { imgUploadPlugin, uploadImg } from './imgUpload';
 import { insertMore } from './insertMore';
@@ -26,14 +29,11 @@ import { Heading } from './plugins/heading';
 import { customCodeBlock } from './plugins/codeBlock';
 import { LinkTarget } from './plugins/linkTarget';
 
-// Toast UI editor styles (needed for reference in production)
-import './style.less';
-import './diff-style.css';
-
 // Add custom styles for the editor
 import './editor.css';
 
 // Add type declaration for sanitize
+/* eslint-disable @typescript-eslint/no-explicit-any */
 const sanitize = (schema: any) => {
   // Allow specific tags and attributes for SVG
   schema.svg = {
@@ -49,12 +49,12 @@ const sanitize = (schema: any) => {
       'stroke-linejoin': true,
       stroke: true,
       fill: true,
-      'class': true,
+      class: true,
       'font-size': true,
       'text-anchor': true,
       style: true,
     },
-    children: ['path', 'polygon', 'rect', 'text', 'line', 'circle', 'defs', 'marker', 'g', 'tspan']
+    children: ['path', 'polygon', 'rect', 'text', 'line', 'circle', 'defs', 'marker', 'g', 'tspan'],
   };
 
   // Allow SVG path element
@@ -70,12 +70,12 @@ const sanitize = (schema: any) => {
       'stroke-linecap': true,
       'stroke-linejoin': true,
       'data-id': true,
-    }
+    },
   };
 
   // Allow data URIs in src attributes
   schema.protocols.src.push('data');
-  
+
   // Add SVG-specific tags
   schema.tagNames.push('center');
   schema.tagNames.push('iframe');
@@ -88,7 +88,7 @@ const sanitize = (schema: any) => {
   schema.tagNames.push('line');
   schema.tagNames.push('polyline');
   schema.tagNames.push('polygon');
-  
+
   // Add SVG-specific attributes
   schema.attributes['*'].push('style');
   schema.attributes['*'].push('src');
@@ -107,10 +107,11 @@ const sanitize = (schema: any) => {
   schema.attributes['*'].push('focusable');
   schema.attributes['*'].push('data-icon');
   schema.attributes['*'].push('aria-hidden');
-  
+
   schema.strip = [];
   return schema;
 };
+/* eslint-enable @typescript-eslint/no-explicit-any */
 
 export default function EditorComponent(props: {
   value: string;
@@ -119,19 +120,19 @@ export default function EditorComponent(props: {
   setLoading: (l: boolean) => void;
 }) {
   const { loading, setLoading } = props;
-  // @ts-ignore
+  // @ts-expect-error Library compatibility issue
   const { initialState } = useModel('@@initialState');
   const navTheme = initialState?.settings?.navTheme || 'light';
   const themeClass = navTheme.toLowerCase().includes('dark') ? 'dark' : 'light';
   const plugins = useMemo(() => {
     return [
       customContainer(),
-      gfm({ locale: cn }),
+      gfm(),
       highlight(),
       frontmatter(),
-      math({ locale: cn }),
+      math(),
       mediumZoom(),
-      mermaid({ locale: cn }),
+      mermaid(),
       imgUploadPlugin(setLoading),
       emoji(),
       insertMore(),
@@ -159,8 +160,6 @@ export default function EditorComponent(props: {
               for (const each of files) {
                 const url = await uploadImg(each);
                 if (url) {
-                  // For SVG files, don't apply encodeURI as the data URI is already properly formatted
-                  const isSvg = each.type === 'image/svg+xml';
                   // If it's already a data URI, use it as is
                   if (url.startsWith('data:')) {
                     res.push({ url });
