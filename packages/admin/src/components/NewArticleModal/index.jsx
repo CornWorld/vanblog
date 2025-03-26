@@ -6,7 +6,7 @@ import {
   ProFormText,
 } from '@ant-design/pro-components';
 import { Button, Modal } from 'antd';
-import moment from 'moment';
+import dayjs from '@/utils/dayjs';
 import AuthorField from '../AuthorField';
 
 export default function (props) {
@@ -109,7 +109,7 @@ export default function (props) {
         label="创建时间"
         width="md"
         showTime={{
-          defaultValue: moment('00:00:00', 'HH:mm:ss'),
+          defaultValue: dayjs('00:00:00', 'HH:mm:ss'),
         }}
       />
 

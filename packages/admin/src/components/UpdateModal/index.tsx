@@ -1,7 +1,7 @@
 import { getAllCategories, getTags, updateArticle, updateDraft } from '@/services/van-blog/api';
 import { ModalForm, ProFormDateTimePicker, ProFormSelect, ProFormText } from '@ant-design/pro-form';
 import { Form, message, Modal, Button } from 'antd';
-import dayjs from 'dayjs';
+import dayjs from '@/utils/dayjs';
 import { useEffect } from 'react';
 import { history } from '@/utils/umiCompat';
 import AuthorField from '../AuthorField';

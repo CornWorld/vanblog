@@ -1,4 +1,4 @@
-import moment from 'moment';
+import dayjs from '@/utils/dayjs';
 
 export const randomKey = () => {
   return (Math.random() * 1000000).toFixed(0);
@@ -8,13 +8,15 @@ export const getTime = (str) => {
   if (!str) {
     return '-';
   }
-  return moment(str).format(formatStr);
+  return dayjs(str).format(formatStr);
 };
 export const formatTimes = (...args) => {
   for (const each of args) {
     try {
-      return moment(each).format(formatStr);
-    } catch {}
+      return dayjs(each).format(formatStr);
+    } catch {
+      // Ignore formatting errors and try next date
+    }
   }
   return '-';
 };
@@ -22,7 +24,7 @@ export const getRecentTimeDes = (timestr) => {
   if (!timestr || timestr == '') {
     return '-';
   }
-  const c = moment().diff(moment(timestr), 'seconds');
+  const c = dayjs().diff(dayjs(timestr), 'second');
   if (c <= 60) {
     return c + '秒前';
   } else if (c <= 60 * 60) {

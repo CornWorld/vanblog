@@ -64,6 +64,7 @@
     "bytemd": "1.22.0",
     "classnames": "^2.5.1",
     "copy-to-clipboard": "^3.3.3",
+    "dayjs": "^1.11.13",
     "emoji-mart": "^5.6.0",
     "front-matter": "^4.0.2",
     "highlight.js": "^11.11.1",

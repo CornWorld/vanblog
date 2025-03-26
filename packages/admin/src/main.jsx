@@ -5,14 +5,10 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { ConfigProvider } from 'antd';
 import zhCN from 'antd/lib/locale/zh_CN';
-import moment from 'moment';
-import 'moment/locale/zh-cn';
 import { HelmetProvider } from 'react-helmet-async';
 import App from './App';
 import './global.less';
-
-// Set moment locale
-moment.locale('zh-cn');
+import './utils/dayjs'; // Import the dayjs config, no need to assign it to a variable
 
 // Base path for admin routes
 const basename = '/admin';

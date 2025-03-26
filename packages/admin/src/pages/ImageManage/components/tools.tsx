@@ -51,7 +51,7 @@ export const mergeMetaInfo = (item: StaticItem) => {
   const KeyDic = {
     local: '本地',
   };
-  let url = getImgLink(item.realPath);
+  const url = getImgLink(item.realPath);
   const rawObj = {
     name: item.name,
     ...item.meta,
@@ -59,7 +59,7 @@ export const mergeMetaInfo = (item: StaticItem) => {
     storageType: item.storageType,
     url,
   };
-  const res: Record<string, any> = {};
+  const res: Record<string, unknown> = {};
 
   for (const [k, v] of Object.entries(rawObj)) {
     res[Dic[k as keyof typeof Dic] || k] = KeyDic[v as keyof typeof KeyDic] || v;
@@ -74,4 +74,4 @@ export const downloadImg = (name: string, url: string) => {
   const link = getImgLink(url);
   tag.href = link;
   tag.dispatchEvent(new MouseEvent('click'));
-}; 
+};

@@ -1,4 +1,4 @@
-import moment from 'moment';
+import dayjs from '@/utils/dayjs';
 import copy from 'copy-to-clipboard';
 export async function getClipboardContents() {
   try {
@@ -9,7 +9,7 @@ export async function getClipboardContents() {
           const blob = await clipboardItem.getType(type);
           return new File(
             [blob],
-            `clipboard-${moment().format('YYYY-MM-DD')}.${type.replace('image/', '')}`,
+            `clipboard-${dayjs().format('YYYY-MM-DD')}.${type.replace('image/', '')}`,
           );
         }
       }

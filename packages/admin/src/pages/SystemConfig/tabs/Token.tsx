@@ -1,16 +1,23 @@
 import { createApiToken, getAllApiTokens, deleteApiToken } from '@/services/van-blog/api';
 import { ModalForm, ProFormText, ProTable } from '@ant-design/pro-components';
+import type { ActionType } from '@ant-design/pro-components';
 import { Button, Card, message, Modal, Space, Typography } from 'antd';
 
 import { useRef } from 'react';
-import { history } from '@/utils/umiCompat';
+
+interface TokenRecord {
+  _id: string;
+  name: string;
+  token: string;
+}
+
 const columns = [
   { dataIndex: '_id', title: 'ID' },
   { dataIndex: 'name', title: '名称' },
   {
     dataIndex: 'token',
     title: '内容',
-    render: (token) => {
+    render: (token: string) => {
       return (
         <Typography.Text style={{ maxWidth: 250 }} ellipsis={true} copyable={true}>
           {token}
@@ -20,7 +27,7 @@ const columns = [
   },
   {
     title: '操作',
-    render: (text, record, _, action) => [
+    render: (_: unknown, record: TokenRecord, __: unknown, action?: ActionType) => [
       <a
         key="delete"
         style={{ marginLeft: 8 }}
@@ -41,8 +48,9 @@ const columns = [
     ],
   },
 ];
+
 export default function () {
-  const actionRef = useRef();
+  const actionRef = useRef<ActionType>();
   return (
     <>
       <Card
@@ -112,8 +120,8 @@ export default function () {
             hideOnSinglePage: true,
             simple: true,
           }}
-          request={async (params = {}) => {
-            let { data } = await getAllApiTokens();
+          request={async () => {
+            const { data } = await getAllApiTokens();
             return {
               data,
               // success 请返回 true，

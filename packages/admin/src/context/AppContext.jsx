@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { PageLoading } from '@ant-design/pro-layout';
 import { message, Modal, notification } from 'antd';
-import moment from 'moment';
+import dayjs from '@/utils/dayjs';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { fetchAllMeta, fetchLatestVersionInfo } from '../services/van-blog/api';
 import { checkUrl } from '../services/van-blog/checkUrl';
@@ -124,7 +124,7 @@ export const AppProvider = ({ children }) => {
               <p style={{ marginBottom: 4 }}>有新版本！</p>
               <p style={{ marginBottom: 4 }}>{`当前版本:\t${currentVersion}`}</p>
               <p style={{ marginBottom: 4 }}>{`最新版本:\t${data.version}`}</p>
-              <p style={{ marginBottom: 4 }}>{`更新时间:\t${moment(data.updatedAt).format(
+              <p style={{ marginBottom: 4 }}>{`更新时间:\t${dayjs(data.updatedAt).format(
                 'YYYY-MM-DD HH:mm:ss',
               )}`}</p>
               <p style={{ marginBottom: 4 }}>

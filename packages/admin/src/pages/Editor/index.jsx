@@ -22,7 +22,7 @@ import { PageContainer } from '@ant-design/pro-layout';
 import { App, Button, Dropdown, Input, Menu, message, Modal, Space, Tag, Upload, Spin } from 'antd';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { history } from '@/utils/umiCompat';
-import moment from 'moment';
+import dayjs from '@/utils/dayjs';
 import './index.less';
 
 export default function () {
@@ -99,7 +99,7 @@ export default function () {
           return false;
         }
         const cacheTime = cacheObj?.time;
-        if (moment(updatedAt).isAfter(cacheTime)) {
+        if (dayjs(updatedAt).isAfter(cacheTime)) {
           clear();
           return false;
         } else {

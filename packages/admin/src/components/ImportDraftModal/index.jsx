@@ -8,7 +8,7 @@ import {
   ProFormTextArea,
 } from '@ant-design/pro-components';
 import { Button, Form, Upload } from 'antd';
-import moment from 'moment';
+import dayjs from '@/utils/dayjs';
 import { useState } from 'react';
 export default function (props) {
   const { onFinish } = props;
@@ -114,7 +114,7 @@ export default function (props) {
           id="createdAt"
           label="创建时间"
           showTime={{
-            defaultValue: moment('00:00:00', 'HH:mm:ss'),
+            defaultValue: dayjs('00:00:00', 'HH:mm:ss'),
           }}
         />
         <ProFormTextArea

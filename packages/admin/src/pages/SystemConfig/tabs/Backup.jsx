@@ -1,6 +1,6 @@
 import { exportAll } from '@/services/van-blog/api';
 import { Alert, Button, Card, message, Modal, Space, Spin, Upload } from 'antd';
-import moment from 'moment';
+import dayjs from '@/utils/dayjs';
 import { useState } from 'react';
 
 export default function (props) {
@@ -11,7 +11,7 @@ export default function (props) {
     const url = URL.createObjectURL(data);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `备份-${moment().format('YYYY-MM-DD')}.json`;
+    link.download = `备份-${dayjs().format('YYYY-MM-DD')}.json`;
     link.click();
     setLoading(false);
   };
