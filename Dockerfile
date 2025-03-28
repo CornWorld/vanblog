@@ -85,7 +85,7 @@ ENV npm_config_husky_skip_install="1"
 # 禁用 esbuild 服务
 ENV ESBUILD_SKIP_DOWNLOAD="1"
 
-# 复制 admin 包源码和所需依赖 
+# 复制 admin 包源码和所需依赖
 COPY packages/admin ./packages/admin
 
 # 在 admin 目录中执行构建
@@ -200,7 +200,6 @@ RUN mkdir -p /app/admin/admin && \
 
 # 复制配置文件
 WORKDIR /app
-COPY caddyTemplate.json ./
 COPY Caddyfile* ./
 COPY scripts/start.js ./
 COPY entrypoint.sh ./

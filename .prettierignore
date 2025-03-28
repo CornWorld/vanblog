@@ -42,7 +42,6 @@ lerna-debug.log*
 *.sw?
 
 # Project specific
-caddyTemplate.json
 pnpm-lock.yaml
 packages/waline/
 CHANGELOG.md
