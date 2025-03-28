@@ -27,7 +27,7 @@
     "sync-aliyun": "bash scripts/sync-aliyuncs.sh",
     "webhook": "node scripts/webhook.js",
     "prepare": "husky",
-    "lint-staged": "lint-staged"
+    "nano-staged": "nano-staged"
   },
   "packageManager": "pnpm@10.6.2",
   "resolutions": {
@@ -45,14 +45,15 @@
     "globals": "^16.0.0",
     "husky": "^9.1.7",
     "is-ci": "^4.1.0",
-    "lint-staged": "^15.5.0",
     "nan": "^2.22.2",
+    "nano-staged": "^0.8.0",
     "patch-package": "^8.0.0",
     "prettier": "^3.5.3",
     "standard-version": "^9.5.0",
+    "ts-node-dev": "^2.0.0",
     "typescript-eslint": "^8.27.0"
   },
-  "lint-staged": {
+  "nano-staged": {
     "*.{js,jsx,ts,tsx}": [
       "eslint --fix",
       "prettier --write"
@@ -60,5 +61,8 @@
     "*.{json,css,less,scss,md}": [
       "prettier --write"
     ]
+  },
+  "dependencies": {
+    "js-base64": "^3.7.7"
   }
 }
