@@ -3,7 +3,7 @@
 </h3>
 
 <p align="center">
-	<img src="/img/logo.svg" style="width: 200px"></img>
+	<img src="/.github/img/logo.svg" style="width: 200px"></img>
 </p>
 <p align="center">
 	<strong>VanBlog是一款简洁、实用、优雅的个人博客系统，支持全自动按需申请HTTPS证书、黑暗模式、移动端自适应和评论功能。它内置了流量统计和图床，并集成了评论系统。此外，VanBlog还具有无限的可扩展性，提供完备的后台管理面板，支持黑暗模式、移动端、一键上传剪贴板图片到图床，并带有强大的编辑器。</strong>
@@ -27,7 +27,7 @@
 
 ## 预览图
 
-![前台-白色](/img/合并.png)
+![前台-白色](/.github/img/合并.png)
 
 ## 特性
 
@@ -66,10 +66,14 @@
 - 与上游的差异报告: [查看实时对比](https://github.com/CornWorld/vanblog/compare/upstream-baseline..main)
 
 ### TODO
-- [] 迁移所有包的依赖到最新版本
+
+- [x] 迁移所有包的依赖到最新版本
 - [] 修复 Mermaid 渲染问题
 - [] 删除冗余文件
-- [] 重构 admin 包，抛弃 Umijs
+- [x] 重构 admin 包，抛弃 Umijs
+- [] 设计 v2 API
+- [] 分离成多个 docker 镜像，提供 分离 + 多合一 两种部署方式
+- [] 重写 admin 包，缩减体积
 
 <!-- ## 快速上手/部署教程
 
@@ -146,7 +150,7 @@ curl -L https://vanblog.mereith.com/vanblog.sh -o vanblog.sh && chmod +x vanblog
 - [Mereith's Blog](https://www.mereith.com)
 - [handy 的小窝](https://www.handyzyg.cn)
 - [GT 的官方博客](https://gt-it.net)
-- [無糧不聚兵‘s Blog](https://www.wongcw.cn)
+- [無糧不聚兵's Blog](https://www.wongcw.cn)
 - [oldmoon](https://oldmoon.top)
 - [seek.wiki](https://seek.wiki)
 - [joker's blog](https://jingjianqian.top)
@@ -218,6 +222,7 @@ curl -L https://vanblog.mereith.com/vanblog.sh -o vanblog.sh && chmod +x vanblog
 - [ ] 国际化
 
 ## 问题反馈
+
 请提 [Issue](https://github.com/CornWorld/vanblog/issues/new/choose) ，如无特殊情况会在一天内解决。
 
 <!-- ## 打赏
@@ -227,8 +232,8 @@ curl -L https://vanblog.mereith.com/vanblog.sh -o vanblog.sh && chmod +x vanblog
 打赏时您可以备注名称，我会将您添加至打赏列表中。
 
 <p align="center">
-  <img alt="打赏-微信" src="/img/wechat.jpg" style="width: 200px;margin-right: 4px;" />
-  <img alt="打赏-支付宝" src="/img/ali-pay.jpg" style="width: 200px" />
+  <img alt="打赏-微信" src="/.github/img/wechat.jpg" style="width: 200px;margin-right: 4px;" />
+  <img alt="打赏-支付宝" src="/.github/img/ali-pay.jpg" style="width: 200px" />
 </p>
 
 ## 捐赠信息
@@ -252,8 +257,8 @@ PS：如果打赏时请备注捐赠者，如有遗漏请联系我添加（有时
 
 ## LightHouse 截图
 
-<p align="center"> 
-  <img src="/img/lighthouse.png" style="width: 400px"></img>
+<p align="center">
+  <img src="/.github/img/lighthouse.png" style="width: 400px"></img>
 </p>
 
 ## 多说一句
