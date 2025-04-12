@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import throttle from 'lodash/throttle';
+import { throttle } from 'lodash-es';
 import { getEl, NavItem } from './tools';
 import { scrollTo } from '../../utils/scroll';
 
