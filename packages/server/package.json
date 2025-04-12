@@ -60,6 +60,7 @@
     "picgo": "^1.5.8",
     "pino": "^9.6.0",
     "reflect-metadata": "^0.2.2",
+    "rimraf": "^6.0.1",
     "rxjs": "^7.8.2",
     "sitemap": "^8.0.0",
     "yaml": "^2.7.1"
