@@ -9,13 +9,12 @@
 	<strong>VanBlog是一款简洁、实用、优雅的个人博客系统，支持全自动按需申请HTTPS证书、黑暗模式、移动端自适应和评论功能。它内置了流量统计和图床，并集成了评论系统。此外，VanBlog还具有无限的可扩展性，提供完备的后台管理面板，支持黑暗模式、移动端、一键上传剪贴板图片到图床，并带有强大的编辑器。</strong>
 </p>
 <p align="center">
-  <img src="https://img.shields.io/github/v/release/CornWorld/vanblog?display_name=tag" />
-  <img src="https://img.shields.io/docker/pulls/cornworld/vanblog" />
-  <img src="https://img.shields.io/github/stars/CornWorld/vanblog" />
-  <img src="https://img.shields.io/bitbucket/issues/CornWorld/vanblog" />
-  <img src="https://github.com/CornWorld/vanblog/workflows/release/badge.svg" />
+  <img src="https://img.shields.io/github/v/release/CornWorld/vanblog?display_name=tag" alt="release" />
+  <img src="https://img.shields.io/docker/pulls/cornworld/vanblog" alt="docker pulls" />
+  <img src="https://img.shields.io/github/stars/CornWorld/vanblog" alt="stars" />
+  <img src="https://img.shields.io/bitbucket/issues/CornWorld/vanblog" alt="issues" />
   <img src="https://img.shields.io/badge/license-GPL%20v3-yellow.svg" />
-  <a href="https://github.com/CornWorld/vanblog"><img src="https://img.shields.io/badge/Derivative_Fork-CornWorld-critical?logo=git" /></a>
+  <a href="https://github.com/CornWorld/vanblog"><img src="https://img.shields.io/badge/Derivative_Fork-CornWorld-critical?logo=git" alt=""/></a>
 </p>
 
 <!-- <p align="center">
@@ -68,20 +67,22 @@
 ### TODO
 
 - [x] 迁移所有包的依赖到最新版本
-- [] 修复 Mermaid 渲染问题
-- [] 删除冗余文件
+- [ ] 修复 Mermaid 渲染问题
+- [x] 删除冗余文件
 - [x] 重构 admin 包，抛弃 Umijs
-- [] 设计 v2 API
-- [] 分离成多个 docker 镜像，提供 分离 + 多合一 两种部署方式
-- [] 重写 admin 包，缩减体积
+- [ ] 设计 v2 API
+- [ ] 分离成多个 docker 镜像，提供 分离 + 多合一 两种部署方式
+- [ ] 重写 admin 包
 
-<!-- ## 快速上手/部署教程
+## 快速上手/部署教程
 
 ### 一键脚本部署
 
 ```bash
-curl -L https://vanblog.mereith.com/vanblog.sh -o vanblog.sh && chmod +x vanblog.sh && ./vanblog.sh
+curl -L https://raw.githubusercontent.com/CornWorld/vanblog/refs/heads/main/scripts/vanblog.sh -o vanblog.sh && chmod +x vanblog.sh && ./vanblog.sh
 ```
+
+<!--
 
 将来如果需要再次运行脚本，可以运行：
 
