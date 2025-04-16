@@ -1,6 +1,6 @@
 {
   "name": "vanblog-cli",
-  "version": "0.54.0-corn.4",
+  "version": "0.54.0-corn.5",
   "description": "",
   "main": "index.js",
   "scripts": {

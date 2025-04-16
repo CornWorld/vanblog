@@ -1,6 +1,6 @@
 {
   "name": "@vanblog/waline",
-  "version": "0.54.0-corn.4",
+  "version": "0.54.0-corn.5",
   "main": "index.js",
   "type": "module",
   "license": "MIT",

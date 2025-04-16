@@ -1,4 +1,4 @@
-module.exports = {
+export default {
   header: '# Changelog',
   commitUrlFormat: '{{host}}/{{owner}}/{{repository}}/commit/{{hash}}',
   types: [
