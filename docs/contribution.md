@@ -20,17 +20,13 @@ order: 7
 
 ### 整体架构
 
-Vanblog 分为以下几个部分，构建后将整合到一个 `docker` 容器内：
+Vanblog 分为以下几大服务，构建后将整合到一个 `docker` 容器内：
 
-> website: Vanblog 默认的主题，使用了 `nextjs` 框架，有运行时。
->
-> server: Vanblog 的后端服务，有运行时。
->
-> waline: Vanblog 内嵌的评论服务，有运行时。
->
-> admin: Vanblog 后台面板，打包后为静态页面，无运行时。
->
-> caddy: 作为对外的网关，按照规则反代上述几个服务，并提供全自动的 https。
+- website: Vanblog 默认的主题，使用了 `nextjs` 框架，有运行时。
+- server: Vanblog 的后端服务，提供 API 服务器，实现与数据库的交互能力，有运行时。
+- waline: Vanblog 内嵌的评论服务，有运行时。
+- admin: Vanblog 后台面板，打包后为静态页面，无运行时。目前使用 caddy 作为 web server。
+- caddy: 作为对外的网关，按照规则反代上述几个服务，并提供全自动的 https。
 
 ### 进程依赖和启动关系
 
@@ -64,11 +60,11 @@ Vanblog 分为以下几个部分，构建后将整合到一个 `docker` 容器�
 
 只列出大体上框架级别的，一些细节就直接看代码吧。
 
-- 前台： [next.js](https://nextjs.org/)、[react.js](https://reactjs.org/)、[tailwind-css](https://tailwindcss.com/)
-- 后台： [ant design pro](https://pro.ant.design/zh-CN/)、[ant design](https://ant.design/)
-- 后端： [nest.js](https://nestjs.com/)、[mongoDB](https://www.mongodb.com/)
+- 前台（website）： [next.js](https://nextjs.org/)、[react.js](https://reactjs.org/)、[tailwind-css](https://tailwindcss.com/)
+- 管理后台（admin）： [ant design pro](https://pro.ant.design/zh-CN/)、[ant design](https://ant.design/)
+- 后端（server）： [nest.js](https://nestjs.com/)、[mongoDB](https://www.mongodb.com/)
 - CI： [docker](https://www.docker.com/)、[nginx](https://www.nginx.com/)、[github-actions](https://docs.github.com/cn/actions)
-- 文档： [vuepress](https://vuejs.press/zh/)、[vuepress-theme-hope](https://theme-hope.vuejs.press/zh/)
+- 文档（docs）： [vuepress](https://vuejs.press/zh/)、[vuepress-theme-hope](https://theme-hope.vuejs.press/zh/)
 
 ## 本地开发
 

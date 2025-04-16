@@ -4,7 +4,7 @@ icon: plug
 order: 6
 ---
 
-目前还没写专门的 API 参考，但是可以用生成的 `swagger` 做为参考。其中 `public` 标签下的都是不需要鉴权的。
+目前还没写专门的 API 参考，但是可以使用自动生成的 `swagger` 服务做为参考。在 Vanblog API 中 `public` 标签（路径以 `/public` 为前缀）的都是不需要鉴权的。
 
 ## API 文档入口
 
