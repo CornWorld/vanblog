@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
-import bundleAnalyzer from '@next/bundle-analyzer';
-import i18nConfig from './next-i18next.config.mjs';
+const bundleAnalyzer = require('@next/bundle-analyzer');
+const i18nConfig = require('./next-i18next.config.js');
 
 const withBundleAnalyzer = bundleAnalyzer({
   enabled: process.env.ANALYZE === 'true',
@@ -111,4 +111,4 @@ const config = withBundleAnalyzer({
   i18n: i18nConfig.i18n,
 });
 
-export default config;
+module.exports = config;
