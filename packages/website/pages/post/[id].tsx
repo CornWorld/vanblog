@@ -12,7 +12,7 @@ import { hasToc } from '../../utils/hasToc';
 import { getArticlesKeyWord } from '../../utils/keywords';
 import { revalidate, isBuildTime, isDevelopment } from '../../utils/loadConfig';
 import Custom404 from '../404';
-
+import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
 // Default layout props for loading state
 const defaultLayoutProps: LayoutProps = {
   description: '',
@@ -234,57 +234,34 @@ export async function getStaticPaths() {
 
 export async function getStaticProps({
   params,
+  locale,
 }: {
   params: { id: string };
-}): Promise<{ props: PostPagesProps; revalidate?: number } | { notFound: true }> {
+  locale: string;
+}) {
   try {
     // If params.id is undefined, return notFound
     if (!params || !params.id) {
-      console.error('[getStaticProps] Error: Article ID is undefined');
-      return {
-        notFound: true,
-      };
+      throw new Error('Article ID is undefined');
     }
 
-    console.log(`[getStaticProps] Fetching post props for ID: ${params.id}`);
-    const props = await getPostPagesProps(params.id);
+    const pageProps = await getPostPagesProps(params.id);
 
-    if (!props || !props.article || !props.article.id) {
-      console.error(`[getStaticProps] Failed to get valid article data for ID: ${params.id}`);
-      return {
-        notFound: true,
-      };
+    if (!pageProps || !pageProps.article || !pageProps.article.id) {
+      throw new Error('Article ID is undefined');
     }
 
-    // Ensure all properties are serializable by converting undefined values to null
-    const sanitizedProps = JSON.parse(
-      JSON.stringify(props, (_, value) => (value === undefined ? null : value)),
-    );
-
-    console.log(`[getStaticProps] Successfully fetched article: ${props.article.title}`);
     return {
-      props: sanitizedProps,
-      revalidate: typeof revalidate === 'number' ? revalidate : 60,
+      props: {
+        ...pageProps,
+        ...(await serverSideTranslations(locale)),
+      },
+      ...revalidate,
     };
   } catch (error) {
     console.error(`[getStaticProps] Error getting post props: ${error}`);
-    // Instead of returning notFound, return a valid props object with error information
-    // This helps with debugging while still showing something to the user
-    try {
-      // Get basic layout props to render a minimal error page
-      const props = await getPostPagesProps('error');
-      return {
-        props: {
-          ...props,
-          error: error instanceof Error ? error.message : String(error),
-        },
-        revalidate: 30, // Try again sooner
-      };
-    } catch {
-      // If we can't even get basic props, then return notFound
-      return {
-        notFound: true,
-      };
-    }
+    return {
+      notFound: true,
+    };
   }
 }

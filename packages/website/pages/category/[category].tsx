@@ -1,11 +1,12 @@
-import { getPublicMeta } from "../../api/getAllData";
-import AuthorCard, { AuthorCardProps } from "../../components/AuthorCard";
-import Layout from "../../components/Layout";
-import TimeLineItem from "../../components/TimeLineItem";
-import { Article } from "../../types/article";
-import { LayoutProps } from "../../utils/getLayoutProps";
-import { getCategoryPagesProps } from "../../utils/getPageProps";
-import { revalidate } from "../../utils/loadConfig";
+import { getPublicMeta } from '../../api/getAllData';
+import AuthorCard, { AuthorCardProps } from '../../components/AuthorCard';
+import Layout from '../../components/Layout';
+import TimeLineItem from '../../components/TimeLineItem';
+import { Article } from '../../types/article';
+import { LayoutProps } from '../../utils/getLayoutProps';
+import { getCategoryPagesProps } from '../../utils/getPageProps';
+import { revalidate } from '../../utils/loadConfig';
+import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
 export interface CategoryPagesProps {
   layoutProps: LayoutProps;
   authorCardProps: AuthorCardProps;
@@ -35,7 +36,7 @@ const CategoryPages = (props: CategoryPagesProps) => {
               return (
                 <TimeLineItem
                   openArticleLinksInNewWindow={
-                    props.layoutProps.openArticleLinksInNewWindow == "true"
+                    props.layoutProps.openArticleLinksInNewWindow == 'true'
                   }
                   defaultOpen={true}
                   key={eachDate}
@@ -64,14 +65,21 @@ export async function getStaticPaths() {
 
   return {
     paths,
-    fallback: "blocking",
+    fallback: 'blocking',
   };
 }
 export async function getStaticProps({
   params,
-}: any): Promise<{ props: CategoryPagesProps; revalidate?: number }> {
+  locale,
+}: {
+  params: { category: string };
+  locale: string;
+}): Promise<{ props: CategoryPagesProps; revalidate?: number }> {
   return {
-    props: await getCategoryPagesProps(params.category),
+    props: {
+      ...(await getCategoryPagesProps(params.category)),
+      ...(await serverSideTranslations(locale)),
+    },
     ...revalidate,
   };
 }

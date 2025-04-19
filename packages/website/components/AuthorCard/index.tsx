@@ -1,10 +1,12 @@
-import Link from "next/link";
-import { useContext, useEffect, useMemo } from "react";
-import Headroom from "headroom.js";
-import { SocialItem } from "../../api/getAllData";
-import SocialCard from "../SocialCard";
-import { ThemeContext } from "../../utils/themeContext";
-import ImageBox from "../ImageBox";
+import Link from 'next/link';
+import { useContext, useEffect, useMemo } from 'react';
+import Headroom from 'headroom.js';
+import { SocialItem } from '../../api/getAllData';
+import SocialCard from '../SocialCard';
+import { ThemeContext } from '../../utils/themeContext';
+import ImageBox from '../ImageBox';
+import { useTranslation } from 'next-i18next';
+
 export interface AuthorCardProps {
   author: string;
   desc: string;
@@ -13,36 +15,32 @@ export interface AuthorCardProps {
   postNum: number;
   catelogNum: number;
   tagNum: number;
-  enableComment?: "true" | "false";
+  enableComment?: 'true' | 'false';
   socials: SocialItem[];
-  showSubMenu: "true" | "false";
-  showRSS: "true" | "false";
+  showSubMenu: 'true' | 'false';
+  showRSS: 'true' | 'false';
 }
 
 export default function (props: { option: AuthorCardProps }) {
   const { theme } = useContext(ThemeContext);
+  const { t } = useTranslation();
 
   const logoUrl = useMemo(() => {
-    if (
-      theme.includes("dark") &&
-      props.option.logoDark &&
-      props.option.logoDark != ""
-    ) {
+    if (theme.includes('dark') && props.option.logoDark && props.option.logoDark != '') {
       return props.option.logoDark;
     }
     return props.option.logo;
   }, [theme, props]);
   useEffect(() => {
-    const el = document.querySelector("#author-card");
+    const el = document.querySelector('#author-card');
     if (el) {
       const headroom = new Headroom(el, {
         classes: {
-          initial: `side-bar${props.option.showSubMenu == "true" ? "" : " no-submenu"
-            }`,
-          pinned: "side-bar-pinned",
-          unpinned: "side-bar-unpinned",
-          top: "side-bar-top",
-          notTop: "side-bar-not-top",
+          initial: `side-bar${props.option.showSubMenu == 'true' ? '' : ' no-submenu'}`,
+          pinned: 'side-bar-pinned',
+          unpinned: 'side-bar-unpinned',
+          top: 'side-bar-top',
+          notTop: 'side-bar-not-top',
         },
       });
       headroom.init();
@@ -64,9 +62,7 @@ export default function (props: { option: AuthorCardProps }) {
           <div className="mt-2 font-semibold text-gray-600 mb-2 dark:text-dark">
             {props.option.author}
           </div>
-          <div className="text-sm text-gray-500 mb-2 dark:text-dark-light">
-            {props.option.desc}
-          </div>
+          <div className="text-sm text-gray-500 mb-2 dark:text-dark-light">{props.option.desc}</div>
           <div className="flex">
             <Link href="/timeline">
               <div className="group flex flex-col justify-center items-center text-gray-600 text-sm px-1 dark:text-dark ">
@@ -74,7 +70,7 @@ export default function (props: { option: AuthorCardProps }) {
                   {props.option.postNum}
                 </div>
                 <div className="group-hover:text-gray-900 group-hover:font-normal text-gray-500 dark:text-dark-light dark:group-hover:text-dark-hover">
-                  日志
+                  {t('stats.posts', '日志')}
                 </div>
               </div>
             </Link>
@@ -84,7 +80,7 @@ export default function (props: { option: AuthorCardProps }) {
                   {props.option.catelogNum}
                 </div>
                 <div className="group-hover:text-gray-900 group-hover:font-normal text-gray-500 dark:text-dark-light dark:group-hover:text-dark-hover">
-                  分类
+                  {t('stats.categories', '分类')}
                 </div>
               </div>
             </Link>
@@ -94,7 +90,7 @@ export default function (props: { option: AuthorCardProps }) {
                   {props.option.tagNum}
                 </div>
                 <div className=" group-hover:text-gray-900 group-hover:font-normal text-gray-500 dark:text-dark-light dark:group-hover:text-dark-hover">
-                  标签
+                  {t('stats.tags', '标签')}
                 </div>
               </div>
             </Link>

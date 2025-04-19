@@ -1,13 +1,15 @@
-import dayjs from "dayjs";
-import { useMemo } from "react";
-import { DonateItem } from "../api/getAllData";
-import AuthorCard, { AuthorCardProps } from "../components/AuthorCard";
-import Layout from "../components/Layout";
-import PostCard from "../components/PostCard";
-import { LayoutProps } from "../utils/getLayoutProps";
-import { getAboutPageProps } from "../utils/getPageProps";
-import { revalidate } from "../utils/loadConfig";
-import { PageViewData } from "../api/pageView";
+import dayjs from 'dayjs';
+import { useMemo } from 'react';
+import { DonateItem } from '../api/getAllData';
+import AuthorCard, { AuthorCardProps } from '../components/AuthorCard';
+import Layout from '../components/Layout';
+import PostCard from '../components/PostCard';
+import { LayoutProps } from '../utils/getLayoutProps';
+import { getAboutPageProps } from '../utils/getPageProps';
+import { revalidate } from '../utils/loadConfig';
+import { PageViewData } from '../api/pageView';
+import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
+import { useTranslation } from 'next-i18next';
 
 export interface About {
   updatedAt: string;
@@ -20,76 +22,76 @@ export interface AboutPageProps {
   about: About;
   pay: string[];
   payDark: string[];
-  showDonateInfo: "true" | "false";
-  showDonateInAbout: "true" | "false";
+  showDonateInfo: 'true' | 'false';
+  showDonateInAbout: 'true' | 'false';
   pageViewData: PageViewData;
 }
-const getDonateTableMarkdown = (donates: DonateItem[]) => {
+const getDonateTableMarkdown = (donates: DonateItem[], t) => {
   let content = `
-## 捐赠信息
+## ${t('donate.info')}
 
-| 捐赠人 | 捐赠金额|捐赠时间|
+| ${t('donate.name')} | ${t('donate.amount')}|${t('donate.time')}|
 |---|---|---|
   `;
   for (const each of donates) {
     content =
       content +
-      `|${each.name}|${each.value} 元|${dayjs(each.updatedAt).format(
-        "YYYY-MM-DD HH:mm:ss"
+      `|${each.name}|${each.value} ${t('donate.unit')}|${dayjs(each.updatedAt).format(
+        'YYYY-MM-DD HH:mm:ss',
       )}|\n`;
   }
   return content;
 };
 const AboutPage = (props: AboutPageProps) => {
+  const { t } = useTranslation();
+
   const content = useMemo(() => {
-    if (props.donates.length == 0 || props.showDonateInfo == "false") {
+    if (props.donates.length == 0 || props.showDonateInfo == 'false') {
       return props.about.content;
     } else {
-      return `${props.about.content}${getDonateTableMarkdown(props.donates)}`;
+      return `${props.about.content}${getDonateTableMarkdown(props.donates, t)}`;
     }
-  }, [props]);
+  }, [props, t]);
 
   return (
     <Layout
-      title="关于我"
+      title={t('pages.about.title')}
       option={props.layoutProps}
       sideBar={<AuthorCard option={props.authorCardProps} />}
     >
       <PostCard
         setContent={() => {}}
-        showExpirationReminder={
-          props.layoutProps.showExpirationReminder == "true"
-        }
+        showExpirationReminder={props.layoutProps.showExpirationReminder == 'true'}
         openArticleLinksInNewWindow={false}
         id={0}
-        key={"about"}
+        key={'about'}
         private={false}
-        title={"关于我"}
+        title={t('pages.about.title')}
         updatedAt={new Date(props.about.updatedAt)}
         createdAt={new Date(props.about.updatedAt)}
         pay={props.pay}
         payDark={props.payDark}
-        catelog={"about"}
+        catelog={'about'}
         content={content}
-        type={"about"}
+        type={'about'}
         enableComment={props.layoutProps.enableComment}
         top={0}
         customCopyRight={null}
-        showDonateInAbout={props.showDonateInAbout == "true"}
+        showDonateInAbout={props.showDonateInAbout == 'true'}
         copyrightAggreement={props.layoutProps.copyrightAggreement}
-        showEditButton={props.layoutProps.showEditButton === "true"}
+        showEditButton={props.layoutProps.showEditButton === 'true'}
       ></PostCard>
     </Layout>
   );
 };
 
 export default AboutPage;
-export async function getStaticProps(): Promise<{
-  props: AboutPageProps;
-  revalidate?: number;
-}> {
+export async function getStaticProps({ locale }) {
   return {
-    props: await getAboutPageProps(),
+    props: {
+      ...(await getAboutPageProps()),
+      ...(await serverSideTranslations(locale)),
+    },
     ...revalidate,
   };
 }

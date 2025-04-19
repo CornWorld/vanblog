@@ -1,6 +1,7 @@
-import { Article } from "../../types/article";
-import { useState } from "react";
-import ArticleList from "../ArticleList";
+import { Article } from '../../types/article';
+import { useState } from 'react';
+import ArticleList from '../ArticleList';
+import { useTranslation } from 'next-i18next';
 
 export default function (props: {
   date: string;
@@ -11,14 +12,16 @@ export default function (props: {
 }) {
   const [visible, setVisible] = useState(Boolean(props.defaultOpen));
   const calMaxHeight = props.articles.length * 50;
+  const { t } = useTranslation();
+
   return (
     <div className="mb-4 overflow-hidden">
       <div className="flex items-center mb-4 z-50 ">
-        <div className="text-xl md:text-2xl font-bold dark:text-dark">
-          {props.date}
-        </div>
+        <div className="text-xl md:text-2xl font-bold dark:text-dark">{props.date}</div>
 
-        <div className="ml-2 text-sm md:text-base text-gray-400 font-normal dark:text-dark-400">{`${props.articles.length}篇`}</div>
+        <div className="ml-2 text-sm md:text-base text-gray-400 font-normal dark:text-dark-400">
+          {t('timeline.articles', '{{count}}篇', { count: props.articles.length })}
+        </div>
         <div
           onClick={() => {
             setVisible(!visible);
@@ -31,7 +34,7 @@ export default function (props: {
       </div>
       <div
         className="transition-all z-0 "
-        style={{ maxHeight: visible ? `${calMaxHeight}px` : "0" }}
+        style={{ maxHeight: visible ? `${calMaxHeight}px` : '0' }}
       >
         <ArticleList
           articles={props.articles}

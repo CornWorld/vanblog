@@ -11,6 +11,8 @@ import Head from 'next/head';
 import { getArticlesKeyWord } from '../utils/keywords';
 import { getArticlePath } from '../utils/getArticlePath';
 import { PageViewData } from '../api/pageView';
+import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
+import { useTranslation } from 'next-i18next';
 
 export interface IndexPageProps {
   layoutProps: LayoutProps;
@@ -21,6 +23,7 @@ export interface IndexPageProps {
 }
 
 const Home = (props: IndexPageProps) => {
+  const { t } = useTranslation();
   const { articles = [] } = props;
 
   return (
@@ -34,7 +37,9 @@ const Home = (props: IndexPageProps) => {
       </Head>
       <div className="space-y-2 md:space-y-4">
         {!articles || articles.length === 0 ? (
-          <div className="text-center text-gray-500 dark:text-gray-400 py-8">暂无文章</div>
+          <div className="text-center text-gray-500 dark:text-gray-400 py-8">
+            {t('pages.home.emptyMessage')}
+          </div>
         ) : (
           articles.map((article) => (
             <PostCard
@@ -72,12 +77,12 @@ const Home = (props: IndexPageProps) => {
 
 export default Home;
 
-export async function getStaticProps(): Promise<{
-  props: IndexPageProps;
-  revalidate?: number;
-}> {
+export async function getStaticProps({ locale }) {
   return {
-    props: await getIndexPageProps(),
+    props: {
+      ...(await getIndexPageProps()),
+      ...(await serverSideTranslations(locale)),
+    },
     ...revalidate,
   };
 }

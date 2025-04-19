@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { throttle } from 'lodash-es';
 import { getEl, NavItem } from './tools';
 import { scrollTo } from '../../utils/scroll';
+import { useTranslation } from 'next-i18next';
 
 interface MarkdownTocBarProps {
   items: NavItem[];
@@ -12,6 +13,7 @@ interface MarkdownTocBarProps {
 export default function MarkdownTocBar(props: MarkdownTocBarProps) {
   const { items } = props;
   const [currIndex, setCurrIndex] = useState(-1);
+  const { t } = useTranslation();
 
   const updateHash = (hash: string) => {
     if (hash) {
@@ -117,7 +119,7 @@ export default function MarkdownTocBar(props: MarkdownTocBarProps) {
               style={{ fontWeight: 600, fontSize: '1.5em', marginBottom: 4 }}
               className="text-gray-700 dark:text-dark "
             >
-              目录
+              {t('toc.title', '目录')}
             </h2>
           </>
         ) : (
@@ -131,7 +133,7 @@ export default function MarkdownTocBar(props: MarkdownTocBarProps) {
               });
             }}
           >
-            目录
+            {t('toc.title', '目录')}
           </div>
         )}
 

@@ -1,6 +1,7 @@
 import { useContext, useLayoutEffect, useRef } from 'react';
 import { applyTheme, getTheme, initTheme } from '../../utils/theme';
 import { RealThemeType, ThemeContext } from '../../utils/themeContext';
+import { useTranslation } from 'next-i18next';
 
 export type ThemeType = 'auto' | 'dark' | 'light';
 
@@ -17,6 +18,7 @@ interface TimerRef {
 }
 
 export default function ThemeButton(props: ThemeButtonProps) {
+  const { t } = useTranslation();
   const { current } = useRef<ThemeRef>({ hasInit: false });
   const { current: currentTimer } = useRef<TimerRef>({ timer: null });
   const { theme, setTheme: setState } = useContext(ThemeContext);
@@ -51,12 +53,12 @@ export default function ThemeButton(props: ThemeButtonProps) {
   const getThemeTitleAuto = () => {
     if (theme.includes('auto')) {
       if (theme === 'auto-light') {
-        return '自动模式-亮色';
+        return t('theme.autoLight');
       } else {
-        return '自动模式-暗色';
+        return t('theme.autoDark');
       }
     }
-    return '自动模式';
+    return t('theme.auto');
   };
 
   useLayoutEffect(() => {
@@ -100,7 +102,7 @@ export default function ThemeButton(props: ThemeButtonProps) {
           height: 20,
         }}
         className="dark:text-dark"
-        title="亮色模式"
+        title={t('theme.light')}
       >
         <svg
           className="fill-gray-600"
@@ -120,7 +122,7 @@ export default function ThemeButton(props: ThemeButtonProps) {
           display: theme === 'dark' || theme === 'auto-dark' ? 'block' : 'none',
           height: 20,
         }}
-        title="暗色模式"
+        title={t('theme.dark')}
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"

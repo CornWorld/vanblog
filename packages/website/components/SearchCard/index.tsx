@@ -4,6 +4,7 @@ import { useDebounce } from 'react-use';
 import ArticleList from '../ArticleList';
 import KeyCard from '../KeyCard';
 import { Article } from '../../types/article';
+import { useTranslation } from 'next-i18next';
 
 interface SearchCardProps {
   visible: boolean;
@@ -18,6 +19,7 @@ export default function SearchCard(props: SearchCardProps) {
   const [typing, setTyping] = useState(false);
   const innerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const { t } = useTranslation();
 
   useEffect(() => {
     window.addEventListener('keydown', onKeyDown);
@@ -70,25 +72,25 @@ export default function SearchCard(props: SearchCardProps) {
   const renderResult = () => {
     let text = '';
     if (loading) {
-      text = '搜索中...';
+      text = t('search.searching', '搜索中...');
     } else {
       if (search.trim() == '') {
-        text = '请输入并搜索';
+        text = t('search.inputPrompt', '请输入并搜索');
       } else {
         // 有数字，有结果
         if (result.length) {
-          text = '有结果';
+          text = t('search.hasResults', '有结果');
         } else {
           // 可能是暂无结果或者输入中
           if (typing) {
-            text = '输入中';
+            text = t('search.typing', '输入中');
           } else {
-            text = '暂无结果';
+            text = t('search.noResults', '暂无结果');
           }
         }
       }
     }
-    if (text == '有结果') {
+    if (text == t('search.hasResults', '有结果')) {
       return (
         <div>
           <ArticleList
@@ -171,7 +173,7 @@ export default function SearchCard(props: SearchCardProps) {
                 setResult([]);
               }
             }}
-            placeholder={'搜索内容'}
+            placeholder={t('search.placeholder', '搜索内容')}
             className="w-full ml-2 text-base "
             style={{
               height: 32,

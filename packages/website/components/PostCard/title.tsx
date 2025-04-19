@@ -1,10 +1,16 @@
+import React from 'react';
 import dayjs from 'dayjs';
 import Link from 'next/link';
 import { useMemo } from 'react';
 import { encodeQuerystring } from '../../utils/encode';
 import PostViewer from '../PostViewer';
-import { getTarget } from '../Link/tools';
 import { checkLogin } from '../../utils/auth';
+import { useTranslation } from 'next-i18next';
+
+// Define getTarget inline
+const getTarget = (newTab: boolean) => {
+  return newTab ? '_blank' : '_self';
+};
 
 export function Title(props: {
   type: 'article' | 'about' | 'overview';
@@ -13,6 +19,7 @@ export function Title(props: {
   openArticleLinksInNewWindow: boolean;
   showEditButton: boolean;
 }) {
+  const { t } = useTranslation();
   const showEditButton = props.showEditButton && checkLogin();
   const newTab = useMemo(() => {
     if (props.type == 'overview' && props.openArticleLinksInNewWindow) {
@@ -57,7 +64,7 @@ export function Title(props: {
           target="_blank"
         >
           <div className=" text-dark dark:text-gray-700">
-            <div>编辑</div>
+            <div>{t('post.edit')}</div>
           </div>
         </a>
       )}
@@ -73,6 +80,7 @@ export function SubTitle(props: {
   id: number | string;
   openArticleLinksInNewWindow: boolean;
 }) {
+  const { t } = useTranslation();
   const iconSize = '16';
   const iconClass =
     'mr-1 fill-gray-400 dark:text-dark dark:group-hover:text-dark-hover group-hover:text-gray-900 ';
@@ -86,7 +94,10 @@ export function SubTitle(props: {
   }, [props]);
   return (
     <div className="text-center text-xs md:text-sm divide-x divide-gray-400 text-gray-400 dark:text-dark post-card-sub-title">
-      <span className="inline-flex px-2 items-center">
+      <span
+        className="inline-flex px-2 items-center"
+        title={props.type != 'about' ? t('meta.createdAt') : t('meta.updatedAt')}
+      >
         <span className={iconClass}>
           <svg
             viewBox="0 0 1024 1024"
@@ -137,7 +148,7 @@ export function SubTitle(props: {
           </Link>
         </span>
       )}
-      <span className="inline-flex px-2 items-center">
+      <span className="inline-flex px-2 items-center" title={t('stats.viewer')}>
         <span className={iconClass}>
           <svg
             viewBox="0 0 1024 1024"
@@ -160,7 +171,7 @@ export function SubTitle(props: {
         <PostViewer shouldAddViewer={props.type != 'overview'} />
       </span>
       {props.enableComment != 'false' && (
-        <span className="inline-flex px-2 items-center">
+        <span className="inline-flex px-2 items-center" title={t('post.comments')}>
           <span className={iconClass}>
             <svg
               viewBox="0 0 1024 1024"

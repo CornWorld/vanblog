@@ -1,12 +1,13 @@
-import { getPublicMeta } from "../../api/getAllData";
-import AuthorCard, { AuthorCardProps } from "../../components/AuthorCard";
-import Layout from "../../components/Layout";
-import TimeLineItem from "../../components/TimeLineItem";
-import { Article } from "../../types/article";
-import { LayoutProps } from "../../utils/getLayoutProps";
-import { getTagPagesProps } from "../../utils/getPageProps";
-import { revalidate } from "../../utils/loadConfig";
-import Custom404 from "../404";
+import { getPublicMeta } from '../../api/getAllData';
+import AuthorCard, { AuthorCardProps } from '../../components/AuthorCard';
+import Layout from '../../components/Layout';
+import TimeLineItem from '../../components/TimeLineItem';
+import { Article } from '../../types/article';
+import { LayoutProps } from '../../utils/getLayoutProps';
+import { getTagPagesProps } from '../../utils/getPageProps';
+import { revalidate } from '../../utils/loadConfig';
+import Custom404 from '../404';
+import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
 export interface TagPagesProps {
   layoutProps: LayoutProps;
   authorCardProps: AuthorCardProps;
@@ -39,7 +40,7 @@ const TagPages = (props: TagPagesProps) => {
               return (
                 <TimeLineItem
                   openArticleLinksInNewWindow={
-                    props.layoutProps.openArticleLinksInNewWindow == "true"
+                    props.layoutProps.openArticleLinksInNewWindow == 'true'
                   }
                   defaultOpen={true}
                   key={eachDate}
@@ -65,14 +66,21 @@ export async function getStaticPaths() {
   }));
   return {
     paths,
-    fallback: "blocking",
+    fallback: 'blocking',
   };
 }
 export async function getStaticProps({
   params,
-}: any): Promise<{ props: TagPagesProps; revalidate?: number }> {
+  locale,
+}: {
+  params: { tag: string };
+  locale: string;
+}) {
   return {
-    props: await getTagPagesProps(params.tag),
+    props: {
+      ...(await getTagPagesProps(params.tag)),
+      ...(await serverSideTranslations(locale)),
+    },
     ...revalidate,
   };
 }
