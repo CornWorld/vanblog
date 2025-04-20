@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { 
-  HomeOutlined, 
-  LogoutOutlined, 
+import {
+  HomeOutlined,
+  LogoutOutlined,
   ProjectOutlined,
   SmileOutlined,
   FormOutlined,
   ContainerOutlined,
   PictureOutlined,
-  ToolOutlined
+  ToolOutlined,
 } from '@ant-design/icons';
 import { PageLoading, ProLayout, SettingDrawer } from '@ant-design/pro-layout';
 import { Menu } from 'antd';
@@ -17,6 +17,7 @@ import Footer from '@/components/Footer';
 import LogoutButton from '@/components/LogoutButton';
 import ThemeButton from '@/components/ThemeButton';
 import { beforeSwitchTheme } from '@/services/van-blog/theme';
+import { useTranslation } from 'react-i18next';
 
 // Route config
 import routes from './routes';
@@ -33,11 +34,15 @@ const IconMap = {
 // Custom logo and title component
 const LogoTitle = ({ logo, title, collapsed }) => {
   return (
-    <div style={{ 
-      display: 'flex', 
-      alignItems: 'center', 
-    }}>
-      {logo && <img src={logo} alt="logo" style={{ height: 28, marginRight: collapsed ? 0 : 12 }} />}
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+      }}
+    >
+      {logo && (
+        <img src={logo} alt="logo" style={{ height: 28, marginRight: collapsed ? 0 : 12 }} />
+      )}
       {!collapsed && <strong style={{ margin: 0, color: '#1890ff', fontSize: 16 }}>{title}</strong>}
     </div>
   );
@@ -47,7 +52,8 @@ const LogoTitle = ({ logo, title, collapsed }) => {
 const CustomBottomLinks = ({ collapsed }) => {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const navigate = useNavigate();
-  
+  const { t } = useTranslation();
+
   // Effect to detect theme changes
   useEffect(() => {
     // Check initial theme
@@ -55,10 +61,10 @@ const CustomBottomLinks = ({ collapsed }) => {
       const theme = document.documentElement.getAttribute('data-theme') === 'dark';
       setIsDarkMode(theme);
     };
-    
+
     // Check initial theme
     checkTheme();
-    
+
     // Create observer to detect theme attribute changes
     const observer = new MutationObserver((mutations) => {
       mutations.forEach((mutation) => {
@@ -67,16 +73,16 @@ const CustomBottomLinks = ({ collapsed }) => {
         }
       });
     });
-    
+
     // Start observing
     observer.observe(document.documentElement, { attributes: true });
-    
+
     // Cleanup
     return () => observer.disconnect();
   }, []);
-  
+
   const menuTheme = isDarkMode ? 'dark' : 'light';
-  
+
   // Handle menu clicks
   const handleMenuClick = ({ key }) => {
     if (key === 'home') {
@@ -85,14 +91,14 @@ const CustomBottomLinks = ({ collapsed }) => {
       navigate('/about');
     }
   };
-  
+
   // Theme button menu item
   const ThemeMenuItem = () => (
     <div style={{ padding: collapsed ? '0' : '0 8px 0 6px' }}>
       <ThemeButton showText={!collapsed} />
     </div>
   );
-  
+
   // Logout button menu item
   const LogoutMenuItem = () => (
     <div style={{ padding: collapsed ? '0' : '0 8px 0 6px' }}>
@@ -100,13 +106,13 @@ const CustomBottomLinks = ({ collapsed }) => {
         trigger={
           <a style={{ display: 'flex', alignItems: 'center' }}>
             <LogoutOutlined style={{ marginRight: collapsed ? 0 : 10 }} />
-            {!collapsed && <span>登出</span>}
+            {!collapsed && <span>{t('common.logout') || '退出登录'}</span>}
           </a>
         }
       />
     </div>
   );
-  
+
   return (
     <div className="custom-bottom-links">
       <Menu
@@ -119,12 +125,12 @@ const CustomBottomLinks = ({ collapsed }) => {
           {
             key: 'home',
             icon: <HomeOutlined />,
-            label: '主站',
+            label: t('common.home') || '主站',
           },
           {
             key: 'about',
             icon: <ProjectOutlined />,
-            label: '关于',
+            label: t('common.about') || '关于',
           },
           {
             key: 'theme',
@@ -135,7 +141,7 @@ const CustomBottomLinks = ({ collapsed }) => {
             key: 'logout',
             icon: null,
             label: <LogoutMenuItem />,
-          }
+          },
         ]}
       />
     </div>
@@ -146,7 +152,7 @@ const BasicLayout = () => {
   const { initialState, setInitialState } = useAppContext();
   const location = useLocation();
   const navigate = useNavigate();
-  
+
   if (!initialState) {
     return <PageLoading />;
   }
@@ -161,10 +167,10 @@ const BasicLayout = () => {
         logo={'/logo.svg'}
         headerRender={false}
         menuHeaderRender={(logoDom, titleDom, props) => (
-          <LogoTitle 
-            logo={logoDom.props.src} 
-            title={initialState.settings.title || titleDom} 
-            collapsed={props?.collapsed} 
+          <LogoTitle
+            logo={logoDom.props.src}
+            title={initialState.settings.title || titleDom}
+            collapsed={props?.collapsed}
           />
         )}
         menuItemRender={(menuItemProps, defaultDom) => {
@@ -174,11 +180,11 @@ const BasicLayout = () => {
           return <Link to={menuItemProps.path}>{defaultDom}</Link>;
         }}
         menuDataRender={(menuData) => {
-          return menuData.map(item => {
+          return menuData.map((item) => {
             if (item.icon && typeof item.icon === 'string') {
               return {
                 ...item,
-                icon: IconMap[item.icon]
+                icon: IconMap[item.icon],
               };
             }
             return item;
@@ -186,15 +192,13 @@ const BasicLayout = () => {
         }}
         // Replace default links with custom component
         links={null}
-        menuFooterRender={(props) => (
-          <CustomBottomLinks collapsed={props?.collapsed} />
-        )}
+        menuFooterRender={(props) => <CustomBottomLinks collapsed={props?.collapsed} />}
         footerRender={() => <Footer />}
         onMenuHeaderClick={() => navigate('/')}
         layout="side"
       >
         <Outlet />
-        
+
         <SettingDrawer
           disableUrlParams
           enableDarkTheme
@@ -220,4 +224,4 @@ const BasicLayout = () => {
   );
 };
 
-export default BasicLayout; 
+export default BasicLayout;

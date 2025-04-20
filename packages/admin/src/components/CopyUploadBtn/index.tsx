@@ -1,17 +1,19 @@
 import { Button, message } from 'antd';
-
 import { getClipboardContents } from '@/services/van-blog/clipboard';
+import { useTranslation } from 'react-i18next';
 
 export interface CopyUploadBtnProps {
   url: string;
   accept: string;
-  text: string;
+  text?: string;
   setLoading: (loading: boolean) => void;
   onFinish: (data: unknown) => void;
   onError: () => void;
 }
 
 export default function (props: CopyUploadBtnProps) {
+  const { t } = useTranslation();
+
   const handleClick = async () => {
     props.setLoading(true);
 
@@ -38,11 +40,11 @@ export default function (props: CopyUploadBtnProps) {
         if (statusCode === 200) {
           props?.onFinish(data);
         } else {
-          message.error('上传失败！');
+          message.error(t('upload.fail'));
         }
       })
       .catch(() => {
-        message.error('上传失败！');
+        message.error(t('upload.fail'));
       })
       .finally(() => {
         props.setLoading(false);
@@ -52,7 +54,7 @@ export default function (props: CopyUploadBtnProps) {
   return (
     <div>
       <Button onClick={handleClick} type="primary">
-        {props.text}
+        {props.text || t('upload.clipboardImage')}
       </Button>
     </div>
   );

@@ -2,6 +2,7 @@ import { useRef, useEffect } from 'react';
 import { useModel } from '@/utils/umiCompat';
 import { readTheme, writeTheme } from '@/utils/theme';
 import VanBlog from '@/types/initialState';
+import { useTranslation } from 'react-i18next';
 import './index.less';
 
 interface ThemeButtonProps {
@@ -13,12 +14,13 @@ export default function ThemeButton({ showText, className = '' }: ThemeButtonPro
   const { current } = useRef<any>({ hasInit: false });
   const { current: currentTimer } = useRef<any>({ timer: null });
   const { initialState, setInitialState } = useModel();
+  const { t } = useTranslation();
 
   // Apply theme change to DOM
   const applyThemeToDOM = (newTheme: string) => {
     const body = document.body;
     body.classList.remove('light-theme', 'dark-theme');
-    
+
     if (newTheme === 'dark') {
       body.classList.add('dark-theme');
       body.classList.add('dark-theme-body'); // Additional class for custom styles
@@ -28,7 +30,7 @@ export default function ThemeButton({ showText, className = '' }: ThemeButtonPro
       body.classList.remove('dark-theme-body');
       document.documentElement.setAttribute('data-theme', 'light');
     }
-    
+
     // Also update Ant Design's theme
     if (newTheme === 'dark') {
       document.documentElement.classList.add('dark');
@@ -37,7 +39,7 @@ export default function ThemeButton({ showText, className = '' }: ThemeButtonPro
       document.documentElement.classList.remove('dark');
       document.documentElement.style.colorScheme = 'light';
     }
-    
+
     // Special handling for ByteMD
     const applyBytemdDarkMode = (isDark: boolean) => {
       try {
@@ -59,7 +61,7 @@ export default function ThemeButton({ showText, className = '' }: ThemeButtonPro
         console.warn('Failed to apply ByteMD theme:', e);
       }
     };
-    
+
     // Apply ByteMD theme changes
     applyBytemdDarkMode(newTheme === 'dark');
   };
@@ -71,7 +73,7 @@ export default function ThemeButton({ showText, className = '' }: ThemeButtonPro
       curInitialState.settings.navTheme = newTheme === 'dark' ? 'realDark' : 'light';
       setInitialState(curInitialState);
       writeTheme(newTheme);
-      
+
       // Apply the theme to DOM immediately
       if (newTheme === 'auto') {
         // For auto, detect system preference
@@ -80,7 +82,7 @@ export default function ThemeButton({ showText, className = '' }: ThemeButtonPro
       } else {
         applyThemeToDOM(newTheme);
       }
-      
+
       console.log('[Theme] Changed to:', newTheme);
     }
   };
@@ -90,11 +92,11 @@ export default function ThemeButton({ showText, className = '' }: ThemeButtonPro
     const theme = initialState?.settings?.theme || readTheme() || 'auto';
     if (theme === 'auto') {
       const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-      
+
       const handleChange = (e: MediaQueryListEvent) => {
         applyThemeToDOM(e.matches ? 'dark' : 'light');
       };
-      
+
       mediaQuery.addEventListener('change', handleChange);
       return () => mediaQuery.removeEventListener('change', handleChange);
     }
@@ -119,14 +121,14 @@ export default function ThemeButton({ showText, className = '' }: ThemeButtonPro
   // Initialize theme on component mount
   useEffect(() => {
     const savedTheme = readTheme() || 'auto';
-    
+
     if (savedTheme === 'auto') {
       const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
       applyThemeToDOM(prefersDark ? 'dark' : 'light');
     } else {
       applyThemeToDOM(savedTheme);
     }
-    
+
     // Sync theme with initialState if needed
     if (initialState?.settings && initialState.settings.theme !== savedTheme) {
       setTheme(savedTheme);
@@ -146,7 +148,7 @@ export default function ThemeButton({ showText, className = '' }: ThemeButtonPro
   };
 
   const iconSize = 16;
-  
+
   // Create an icon component matching the structure of other menu items
   const ThemeIcon = () => {
     if (theme === 'light') {
@@ -200,9 +202,9 @@ export default function ThemeButton({ showText, className = '' }: ThemeButtonPro
       <ThemeIcon />
       {showText && (
         <span style={{ marginLeft: '10px', transition: 'opacity 0.3s' }}>
-          {theme === 'light' && '日间'}
-          {theme === 'dark' && '夜间'}
-          {theme === 'auto' && '自动'}
+          {theme === 'light' && t('common.lightMode', '日间')}
+          {theme === 'dark' && t('common.darkMode', '夜间')}
+          {theme === 'auto' && t('common.autoMode', '自动')}
         </span>
       )}
     </a>
