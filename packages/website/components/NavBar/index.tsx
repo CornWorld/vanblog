@@ -1,15 +1,15 @@
-import Link from "next/link";
-import Headroom from "headroom.js";
-import { useContext, useEffect, useMemo, useState } from "react";
-import SearchCard from "../SearchCard";
-import ThemeButton from "../ThemeButton";
-import KeyCard from "../KeyCard";
-import { MenuItem } from "../../api/getAllData";
-import AdminButton from "../AdminButton";
-import { ThemeContext } from "../../utils/themeContext";
-import RssButton from "../RssButton";
-import Item from "./item";
-import { encodeQuerystring } from "../../utils/encode";
+import Link from 'next/link';
+import Headroom from 'headroom.js';
+import { useContext, useEffect, useMemo, useState } from 'react';
+import SearchCard from '../SearchCard';
+import ThemeButton from '../ThemeButton';
+import KeyCard from '../KeyCard';
+import { MenuItem } from '../../api/getAllData';
+import AdminButton from '../AdminButton';
+import { ThemeContext } from '../../utils/themeContext';
+import RssButton from '../RssButton';
+import Item from './item';
+import { encodeQuerystring } from '../../utils/encode';
 export default function (props: {
   logo: string;
   logoDark: string;
@@ -18,12 +18,12 @@ export default function (props: {
   isOpen: boolean;
   siteName: string;
   menus: MenuItem[];
-  showSubMenu: "true" | "false";
-  showAdminButton: "true" | "false";
-  showFriends: "true" | "false";
-  showRSS: "true" | "false";
-  headerLeftContent: "siteName" | "siteLogo";
-  defaultTheme: "dark" | "auto" | "light";
+  showSubMenu: 'true' | 'false';
+  showAdminButton: 'true' | 'false';
+  showFriends: 'true' | 'false';
+  showRSS: 'true' | 'false';
+  headerLeftContent: 'siteName' | 'siteLogo';
+  defaultTheme: 'dark' | 'auto' | 'light';
   subMenuOffset: number;
   openArticleLinksInNewWindow: boolean;
 }) {
@@ -32,13 +32,13 @@ export default function (props: {
   const { theme } = useContext(ThemeContext);
 
   const picUrl = useMemo(() => {
-    if (theme.includes("dark") && props.logoDark && props.logoDark != "") {
+    if (theme.includes('dark') && props.logoDark && props.logoDark != '') {
       return props.logoDark;
     }
     return props.logo;
   }, [theme, props]);
   useEffect(() => {
-    const el = document.querySelector("#nav");
+    const el = document.querySelector('#nav');
     if (el && !headroom) {
       const headroom = new Headroom(el);
       headroom.init();
@@ -58,12 +58,12 @@ export default function (props: {
       ></SearchCard>
       <div
         id="nav"
-        className=" bg-white sticky top-0 dark:bg-dark nav-shadow dark:nav-shadow-dark"
+        className="bg-white sticky top-0 dark:bg-dark nav-shadow dark:nav-shadow-dark"
         style={{ zIndex: 90 }}
       >
         {/* 上面的导航栏 */}
         <div
-          className=" flex  items-center w-full border-b border-gray-200 h-14 dark:border-nav-dark"
+          className="flex items-center w-full border-b border-gray-200 h-14 dark:border-nav-dark"
           style={{ height: 56 }}
         >
           <div className="mx-4 flex items-center">
@@ -94,19 +94,13 @@ export default function (props: {
                 </svg>
               </span>
             </div>
-            {props.headerLeftContent == "siteLogo" && (
+            {props.headerLeftContent == 'siteLogo' && (
               <div className="hidden md:block transform translate-x-2">
-                <img
-                  alt="site logo"
-                  src={picUrl}
-                  width={52}
-                  height={52}
-                  className=""
-                />
+                <img alt="site logo" src={picUrl} width={52} height={52} className="" />
               </div>
             )}
           </div>
-          {props.headerLeftContent == "siteName" && (
+          {props.headerLeftContent == 'siteName' && (
             <Link href="/">
               <div className="text-gray-800 cursor-pointer select-none text-lg dark:text-dark lg:text-xl font-medium  mr-4 hidden md:block">
                 {props.siteName}
@@ -116,7 +110,7 @@ export default function (props: {
           {/* 第二个flex */}
           <div className="flex justify-between h-full flex-grow nav-content">
             <div
-              style={{ transform: "translateX(30px)" }}
+              style={{ transform: 'translateX(30px)' }}
               className="cursor-pointer md:hidden  flex-grow text-center  flex items-center justify-center select-none dark:text-dark"
             >
               <Link href="/">
@@ -132,7 +126,7 @@ export default function (props: {
               <div
                 onClick={() => {
                   setShowSearch(true);
-                  document.body.style.overflow = "hidden";
+                  document.body.style.overflow = 'hidden';
                 }}
                 title="搜索"
                 className="flex group transform hover:scale-110 transition-all select-none cursor-pointer"
@@ -161,19 +155,16 @@ export default function (props: {
                 </div>
               </div>
               <ThemeButton defaultTheme={props.defaultTheme} />
-              {props.showRSS == "true" && (
-                <RssButton showAdminButton={props.showAdminButton == "true"} />
+              {props.showRSS == 'true' && (
+                <RssButton showAdminButton={props.showAdminButton == 'true'} />
               )}
-              {props.showAdminButton == "true" && <AdminButton />}
+              {props.showAdminButton == 'true' && <AdminButton />}
             </div>
           </div>
         </div>
-        {Boolean(props.categories.length) && props.showSubMenu == "true" && (
+        {Boolean(props.categories.length) && props.showSubMenu == 'true' && (
           <div className="h-10 items-center hidden md:flex border-b border-gray-200 dark:border-nav-dark overflow-hidden">
-            <div
-              className="mx-5"
-              style={{ width: 52 + props.subMenuOffset }}
-            ></div>
+            <div className="mx-5" style={{ width: 52 + props.subMenuOffset }}></div>
             <ul className="flex h-full items-center text-sm text-gray-600 dark:text-dark ">
               {props.categories.map((catelog) => {
                 return (

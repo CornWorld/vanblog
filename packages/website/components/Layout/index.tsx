@@ -25,7 +25,16 @@ export default function Layout(props: {
   // console.log("script", decode(props.option.customScript as string));
   const [isOpen, setIsOpen] = useState(false);
   const { current } = useRef({ hasInit: false });
-  const [theme, setTheme] = useState<RealThemeType>(getTheme('auto-light'));
+  // Initialize theme with a default value that's safe for SSR
+  const [theme, setTheme] = useState<RealThemeType>('light');
+
+  // Update theme after hydration on client side
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setTheme(getTheme('auto-light'));
+    }
+  }, []);
+
   const handleClose = () => {
     console.log('关闭或刷新页面');
     localStorage.removeItem('saidHello');
