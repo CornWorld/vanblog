@@ -1,17 +1,21 @@
 import { Button, Result } from 'antd';
-import { history } from '@/utils/umiCompat';
+import React from 'react';
 
-const NoFoundPage = () => (
+const trans_zh = {
+  'error.404.title': '404',
+  'error.404.subtitle': '抱歉，您访问的页面不存在。',
+  'error.404.button': '返回首页',
+};
+
+export default () => (
   <Result
     status="404"
-    title="404"
-    subTitle="Sorry, the page you visited does not exist."
+    title={trans_zh['error.404.title']}
+    subTitle={trans_zh['error.404.subtitle']}
     extra={
-      <Button type="primary" onClick={() => history.push('/')}>
-        Back Home
+      <Button type="primary" href="/">
+        {trans_zh['error.404.button']}
       </Button>
     }
   />
 );
-
-export default NoFoundPage;

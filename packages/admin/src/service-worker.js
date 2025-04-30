@@ -1,4 +1,5 @@
 /* globals workbox */
+
 workbox.core.setCacheNameDetails({
   prefix: 'van-blog-admin',
   suffix: 'v0',

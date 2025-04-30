@@ -1,15 +1,52 @@
 import TipTitle from '@/components/TipTitle';
 import { PageContainer } from '@ant-design/pro-layout';
-import ProTable from '@ant-design/pro-table';
+import ProTable, { ActionType } from '@ant-design/pro-table';
 import { Button, message, Modal, Space, Tag } from 'antd';
 import { getPiplelines, getPipelineConfig, deletePipelineById } from '@/services/van-blog/api';
 import PipelineModal from './components/PipelineModal';
 import { useEffect, useRef, useState } from 'react';
 import { history } from '@/utils/umiCompat';
 
+const trans_zh = {
+  'pipeline.title': '流水线',
+  'pipeline.tip': '流水线允许用户在特定事件时，自动触发执行自定义代码。',
+  'pipeline.column.id': 'ID',
+  'pipeline.column.name': '名称',
+  'pipeline.column.is_async': '是否异步',
+  'pipeline.column.is_async.yes': '异步',
+  'pipeline.column.is_async.no': '阻塞',
+  'pipeline.column.event': '触发事件',
+  'pipeline.column.status': '状态',
+  'pipeline.column.status.enabled': '启用',
+  'pipeline.column.status.disabled': '禁用',
+  'pipeline.column.actions': '操作',
+  'pipeline.action.edit_script': '编辑脚本',
+  'pipeline.action.edit_info': '修改信息',
+  'pipeline.action.delete': '删除',
+  'pipeline.modal.delete.title': '确定删除该流水线吗？ ',
+  'pipeline.message.delete.success': '删除成功！',
+  'pipeline.button.docs': '帮助文档',
+  'pipeline.table.title': '流水线列表',
+  'pipeline.button.new': '新建',
+  'pipeline.button.logs': '运行日志',
+};
+
+interface PipelineConfig {
+  eventName: string;
+  eventNameChinese: string;
+  passive: boolean;
+}
+
+interface Pipeline {
+  id: number;
+  name: string;
+  eventName: string;
+  enabled: boolean;
+}
+
 export default function () {
-  const [pipelineConfig, setPipelineConfig] = useState<any[]>([]);
-  const actionRef = useRef<any>();
+  const [pipelineConfig, setPipelineConfig] = useState<PipelineConfig[]>([]);
+  const actionRef = useRef<ActionType>();
 
   useEffect(() => {
     getPipelineConfig().then(({ data }) => {
@@ -21,44 +58,60 @@ export default function () {
     {
       dataIndex: 'id',
       valueType: 'number',
-      title: 'ID',
+      title: trans_zh['pipeline.column.id'],
       width: 48,
     },
     {
       dataIndex: 'name',
       valueType: 'text',
-      title: '名称',
+      title: trans_zh['pipeline.column.name'],
       width: 120,
     },
     {
-      title: '是否异步',
+      title: trans_zh['pipeline.column.is_async'],
       width: 60,
-      render: (_, record) => {
+      render: (_, record: Pipeline) => {
         const passive = pipelineConfig.find((item) => item.eventName === record.eventName)?.passive;
-        return <Tag children={passive ? '异步' : '阻塞'} color={passive ? 'green' : 'red'} />;
+        return (
+          <Tag
+            children={
+              passive
+                ? trans_zh['pipeline.column.is_async.yes']
+                : trans_zh['pipeline.column.is_async.no']
+            }
+            color={passive ? 'green' : 'red'}
+          />
+        );
       },
     },
     {
       dataIndex: 'eventName',
       valueType: 'text',
-      title: '触发事件',
+      title: trans_zh['pipeline.column.event'],
       width: 120,
-      render: (eventName) => {
+      render: (eventName: string) => {
         return pipelineConfig.find((item) => item.eventName === eventName)?.eventNameChinese;
       },
     },
     {
       dataIndex: 'enabled',
-      title: '状态',
+      title: trans_zh['pipeline.column.status'],
       width: 60,
       render: (enabled: boolean) => (
-        <Tag children={enabled ? '启用' : '禁用'} color={enabled ? 'green' : 'gray'} />
+        <Tag
+          children={
+            enabled
+              ? trans_zh['pipeline.column.status.enabled']
+              : trans_zh['pipeline.column.status.disabled']
+          }
+          color={enabled ? 'green' : 'gray'}
+        />
       ),
     },
     {
-      title: '操作',
+      title: trans_zh['pipeline.column.actions'],
       width: 180,
-      render: (_, record, action) => {
+      render: (_, record: Pipeline) => {
         return (
           <>
             <Space>
@@ -67,11 +120,11 @@ export default function () {
                   history.push('/code?type=pipeline&id=' + record.id);
                 }}
               >
-                编辑脚本
+                {trans_zh['pipeline.action.edit_script']}
               </a>
               <PipelineModal
                 mode="edit"
-                trigger={<a>修改信息</a>}
+                trigger={<a>{trans_zh['pipeline.action.edit_info']}</a>}
                 initialValues={record}
                 onFinish={() => {
                   actionRef.current?.reload();
@@ -81,17 +134,18 @@ export default function () {
               <a
                 onClick={async () => {
                   Modal.confirm({
-                    title: '确定删除该流水线吗？ ',
+                    title: trans_zh['pipeline.modal.delete.title'],
                     onOk: async () => {
                       await deletePipelineById(record.id);
-                      console.log(action);
-                      actionRef.current.reload();
-                      message.success('删除成功！');
+                      if (actionRef.current) {
+                        actionRef.current.reload();
+                      }
+                      message.success(trans_zh['pipeline.message.delete.success']);
                     },
                   });
                 }}
               >
-                删除
+                {trans_zh['pipeline.action.delete']}
               </a>
             </Space>
           </>
@@ -103,9 +157,7 @@ export default function () {
   return (
     <PageContainer
       header={{
-        title: (
-          <TipTitle title="流水线" tip="流水线允许用户在特定事件时，自动触发执行自定义代码。" />
-        ),
+        title: <TipTitle title={trans_zh['pipeline.title']} tip={trans_zh['pipeline.tip']} />,
       }}
       extra={
         <Button
@@ -113,7 +165,7 @@ export default function () {
             window.open('https://vanblog.mereith.com/features/pipeline.html', '_blank');
           }}
         >
-          帮助文档
+          {trans_zh['pipeline.button.docs']}
         </Button>
       }
     >
@@ -127,7 +179,7 @@ export default function () {
             <PipelineModal
               mode="create"
               key="createPipelineBtn1"
-              trigger={<Button type="primary">新建</Button>}
+              trigger={<Button type="primary">{trans_zh['pipeline.button.new']}</Button>}
               onFinish={() => {
                 action.reload();
               }}
@@ -138,11 +190,11 @@ export default function () {
                 history.push('/site/log?tab=pipeline');
               }}
             >
-              运行日志
+              {trans_zh['pipeline.button.logs']}
             </Button>,
           ];
         }}
-        headerTitle="流水线列表"
+        headerTitle={trans_zh['pipeline.table.title']}
         columns={columns}
         search={false}
         rowKey="id"

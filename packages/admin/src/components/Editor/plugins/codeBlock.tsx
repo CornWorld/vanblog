@@ -2,12 +2,34 @@ import type { BytemdPlugin } from 'bytemd';
 import { visit } from 'unist-util-visit';
 import copy from 'copy-to-clipboard';
 import { message } from 'antd';
-// FIXME: Addd Types
-const codeBlockPlugin = () => (tree) => {
-  visit(tree, (node) => {
+
+const trans_zh = {
+  'editor.codeBlock.copySuccess': '复制成功',
+};
+
+interface CodeProperties {
+  className?: string[];
+  [key: string]: unknown;
+}
+
+// Define the Node interface for the AST tree
+interface Node {
+  type: string;
+  tagName?: string;
+  properties?: Record<string, unknown>;
+  children?: Node[];
+}
+
+// Plugin for customizing code blocks
+const codeBlockPlugin = () => (tree: Node) => {
+  visit(tree, (node: Node) => {
     if (node.type === 'element' && node.tagName === 'pre') {
       const oldChildren = JSON.parse(JSON.stringify(node.children));
-      const codeProperties = oldChildren.find((child: any) => child.tagName === 'code').properties;
+      const codeElement = oldChildren.find(
+        (child: { tagName: string }) => child.tagName === 'code',
+      );
+      const codeProperties = codeElement.properties as CodeProperties;
+
       let language = '';
       if (codeProperties.className) {
         for (const each of codeProperties.className) {
@@ -65,11 +87,11 @@ const codeBlockPlugin = () => (tree) => {
   });
 };
 
-const onClickCopyCode = (e: PointerEvent) => {
+const onClickCopyCode = (e: MouseEvent) => {
   const copyBtn = e.target as HTMLElement;
-  const code = copyBtn.parentElement?.parentElement?.querySelector('code')?.innerText;
+  const code = copyBtn.parentElement?.parentElement?.querySelector('code')?.innerText || '';
   copy(code);
-  message.success('复制成功');
+  message.success(trans_zh['editor.codeBlock.copySuccess']);
 };
 
 export function customCodeBlock(): BytemdPlugin {
@@ -78,9 +100,11 @@ export function customCodeBlock(): BytemdPlugin {
     viewerEffect: ({ markdownBody }) => {
       markdownBody.querySelectorAll('.code-block-wrapper').forEach((codeBlock) => {
         const copyBtn = codeBlock.querySelector('.code-copy-btn');
-        //remove first
-        copyBtn.removeEventListener('click', onClickCopyCode);
-        copyBtn.addEventListener('click', onClickCopyCode);
+        if (copyBtn) {
+          // Remove first to avoid duplicate event listeners
+          copyBtn.removeEventListener('click', onClickCopyCode as EventListener);
+          copyBtn.addEventListener('click', onClickCopyCode as EventListener);
+        }
       });
     },
   };

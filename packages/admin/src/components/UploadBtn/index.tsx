@@ -1,10 +1,18 @@
 import { Button, message, Upload } from 'antd';
 import ImgCrop from 'antd-img-crop';
 import { RcFile } from 'antd/lib/upload';
+import { UploadFile } from 'antd/lib/upload/interface';
+
+const trans_zh = {
+  'upload.button': '上传',
+  'upload.success': '{name} 上传成功!',
+  'upload.fail': '{name} 上传失败!',
+};
+
 export default function (props: {
   setLoading: (loading: boolean) => void;
   text: string;
-  onFinish: Function;
+  onFinish: (file: UploadFile | RcFile, name?: string) => void;
   url: string;
   accept: string;
   muti: boolean;
@@ -34,10 +42,10 @@ export default function (props: {
     })
       .then((res) => res.json())
       .then(() => {
-        props?.onFinish(file, name);
+        props?.onFinish(file, fileName);
       })
       .catch(() => {
-        message.error(`${name} 上传失败!`);
+        message.error(trans_zh['upload.fail'].replace('{name}', fileName));
       })
       .finally(() => {
         props.setLoading(false);
@@ -53,7 +61,7 @@ export default function (props: {
       directory={props.folder}
       beforeUpload={
         props.customUpload
-          ? (file, fileList) => {
+          ? (file) => {
               let rPath = file.webkitRelativePath;
               if (rPath && rPath.split('/').length >= 2) {
                 rPath = rPath.split('/').slice(1).join('/');
@@ -77,7 +85,7 @@ export default function (props: {
           props?.setLoading(false);
           props?.onFinish(info.file);
         } else if (info.file.status === 'error') {
-          message.error(`${info.file.name} 上传失败!`);
+          message.error(trans_zh['upload.fail'].replace('{name}', info.file.name));
           props?.setLoading(false);
         }
       }}

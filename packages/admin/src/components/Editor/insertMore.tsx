@@ -1,9 +1,14 @@
 import { BytemdPlugin } from 'bytemd';
+
+const trans_zh = {
+  'editor.insertMore.title': '插入 more 标记',
+};
+
 export function insertMore(): BytemdPlugin {
   return {
     actions: [
       {
-        title: '插入 more 标记',
+        title: trans_zh['editor.insertMore.title'],
         icon: icon, // 16x16 SVG icon
         handler: {
           type: 'action',

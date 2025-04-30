@@ -2,7 +2,7 @@ export const checkUrl = (url) => {
   let ok = true;
   try {
     new URL(url);
-  } catch (err) {
+  } catch {
     ok = false;
   }
   return ok;

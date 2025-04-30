@@ -1,4 +1,9 @@
-export const getPathname = (obj: any) => {
+interface PathObject {
+  pathname?: string;
+  id: string;
+}
+
+export const getPathname = (obj: PathObject) => {
   if (!obj.pathname) {
     return obj.id;
   }

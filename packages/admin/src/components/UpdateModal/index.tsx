@@ -13,6 +13,14 @@ interface UpdateModalProps {
   type: 'article' | 'draft' | 'about';
 }
 
+interface TagsResponse {
+  data?: string[];
+}
+
+interface CategoriesResponse {
+  data?: string[];
+}
+
 export default function (props: UpdateModalProps) {
   const { currObj, setLoading, type, onFinish } = props;
   const [form] = Form.useForm();
@@ -85,7 +93,7 @@ export default function (props: UpdateModalProps) {
           tokenSeparators: [','],
         }}
         request={async () => {
-          const msg = await getTags();
+          const msg = (await getTags()) as TagsResponse;
           return msg?.data?.map((item: string) => ({ label: item, value: item })) || [];
         }}
       />
@@ -99,13 +107,15 @@ export default function (props: UpdateModalProps) {
         placeholder="请选择分类"
         rules={[{ required: true, message: '这是必填项' }]}
         request={async () => {
-          const { data: categories } = await getAllCategories();
-          return categories?.map((e: string) => {
-            return {
-              label: e,
-              value: e,
-            };
-          });
+          const { data: categories } = (await getAllCategories()) as CategoriesResponse;
+          return (
+            categories?.map((e: string) => {
+              return {
+                label: e,
+                value: e,
+              };
+            }) || []
+          );
         }}
         showSearch
         fieldProps={{

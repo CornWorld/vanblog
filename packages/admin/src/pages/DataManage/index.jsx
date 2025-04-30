@@ -8,6 +8,15 @@ import Menu from './tabs/Menu';
 import Social from './tabs/Social';
 import Tag from './tabs/Tag';
 
+const trans_zh = {
+  'data.tabs.category': '分类管理',
+  'data.tabs.tag': '标签管理',
+  'data.tabs.menu': '导航配置',
+  'data.tabs.donate': '捐赠管理',
+  'data.tabs.link': '友情链接',
+  'data.tabs.social': '联系方式',
+};
+
 export default function () {
   const tabMap = {
     category: <Category />,
@@ -28,27 +37,27 @@ export default function () {
       tabActiveKey={tab}
       tabList={[
         {
-          tab: '分类管理',
+          tab: trans_zh['data.tabs.category'],
           key: 'category',
         },
         {
-          tab: '标签管理',
+          tab: trans_zh['data.tabs.tag'],
           key: 'tag',
         },
         {
-          tab: '导航配置',
+          tab: trans_zh['data.tabs.menu'],
           key: 'menuConfig',
         },
         {
-          tab: '捐赠管理',
+          tab: trans_zh['data.tabs.donate'],
           key: 'donateInfo',
         },
         {
-          tab: '友情链接',
+          tab: trans_zh['data.tabs.link'],
           key: 'links',
         },
         {
-          tab: '联系方式',
+          tab: trans_zh['data.tabs.social'],
           key: 'socials',
         },
       ]}

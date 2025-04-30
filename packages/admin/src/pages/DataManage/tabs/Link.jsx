@@ -3,6 +3,21 @@ import { EditableProTable } from '@ant-design/pro-components';
 import { Modal, Spin } from 'antd';
 import { useRef, useState } from 'react';
 
+const trans_zh = {
+  'link.table.header': '友情链接',
+  'link.column.name': '伙伴名',
+  'link.column.url': '地址',
+  'link.column.desc': '简介',
+  'link.column.logo': 'Logo',
+  'link.column.updatedAt': '最后设置时间',
+  'link.column.actions': '操作',
+  'link.action.edit': '编辑',
+  'link.action.delete': '删除',
+  'link.message.required': '此项为必填项',
+  'link.modal.deleteConfirm': '确认删除"{name}"吗?',
+  'link.modal.demoRestriction': '演示站禁止修改此项！',
+};
+
 export default function () {
   const [loading, setLoading] = useState(true);
   const [editableKeys, setEditableRowKeys] = useState([]);
@@ -15,54 +30,54 @@ export default function () {
   };
   const columns = [
     {
-      title: '伙伴名',
+      title: trans_zh['link.column.name'],
       dataIndex: 'name',
-      formItemProps: (form, { rowIndex }) => {
+      formItemProps: () => {
         return {
-          rules: [{ required: true, message: '此项为必填项' }],
+          rules: [{ required: true, message: trans_zh['link.message.required'] }],
         };
       },
     },
     {
-      title: '地址',
+      title: trans_zh['link.column.url'],
       dataIndex: 'url',
-      formItemProps: (form, { rowIndex }) => {
+      formItemProps: () => {
         return {
-          rules: [{ required: true, message: '此项为必填项' }],
+          rules: [{ required: true, message: trans_zh['link.message.required'] }],
         };
       },
     },
     {
-      title: '简介',
+      title: trans_zh['link.column.desc'],
       dataIndex: 'desc',
-      formItemProps: (form, { rowIndex }) => {
+      formItemProps: () => {
         return {
-          rules: [{ required: true, message: '此项为必填项' }],
+          rules: [{ required: true, message: trans_zh['link.message.required'] }],
         };
       },
     },
     {
-      title: 'Logo',
+      title: trans_zh['link.column.logo'],
       dataIndex: 'logo',
-      formItemProps: (form, { rowIndex }) => {
+      formItemProps: () => {
         return {
-          rules: [{ required: true, message: '此项为必填项' }],
+          rules: [{ required: true, message: trans_zh['link.message.required'] }],
         };
       },
     },
     {
-      title: '最后设置时间',
+      title: trans_zh['link.column.updatedAt'],
       valueType: 'date',
       editable: false,
       dataIndex: 'updatedAt',
-      formItemProps: (form, { rowIndex }) => {
+      formItemProps: () => {
         return {
-          rules: [{ required: true, message: '此项为必填项' }],
+          rules: [{ required: true, message: trans_zh['link.message.required'] }],
         };
       },
     },
     {
-      title: '操作',
+      title: trans_zh['link.column.actions'],
       valueType: 'option',
       key: 'option',
       width: 200,
@@ -73,7 +88,7 @@ export default function () {
             action?.startEditable?.(record.name);
           }}
         >
-          编辑
+          {trans_zh['link.action.edit']}
         </a>,
         <a
           key="delete"
@@ -83,11 +98,11 @@ export default function () {
                 await deleteLink(record.name);
                 action?.reload();
               },
-              title: `确认删除"${record.name}"吗?`,
+              title: trans_zh['link.modal.deleteConfirm'].replace('{name}', record.name),
             });
           }}
         >
-          删除
+          {trans_zh['link.action.delete']}
         </a>,
       ],
     },
@@ -97,7 +112,7 @@ export default function () {
       <Spin spinning={loading}>
         <EditableProTable
           rowKey="key"
-          headerTitle="友情链接"
+          headerTitle={trans_zh['link.table.header']}
           actionRef={actionRef}
           scroll={{
             x: 960,
@@ -119,9 +134,9 @@ export default function () {
           editable={{
             type: 'multiple',
             editableKeys,
-            onSave: async (rowKey, data, row) => {
+            onSave: async (rowKey, data) => {
               if (location.hostname == 'blog-demo.mereith.com') {
-                Modal.info({ title: '演示站禁止修改此项！' });
+                Modal.info({ title: trans_zh['link.modal.demoRestriction'] });
                 return;
               }
               const toSaveObj = {
@@ -131,7 +146,6 @@ export default function () {
                 desc: data.desc,
               };
               await updateLink(toSaveObj);
-              // await waitTime(500);
               actionRef?.current?.reload();
             },
             onChange: setEditableRowKeys,

@@ -1,13 +1,17 @@
 import { getRecentTimeDes } from '@/services/van-blog/tool';
 import './index.css';
 
+const trans_zh = {
+  'articlelist.view_count': '{count}人次',
+};
+
 export default ({
   articles,
   showViewerNum,
   showRecentViewTime,
 }: {
   // FIXME: Add Article type
-  articles: any[];
+  articles: unknown[];
   showViewerNum: boolean;
   showRecentViewTime: boolean;
 }) => (
@@ -22,7 +26,9 @@ export default ({
         rel="noreferrer"
       >
         <div className="">{title}</div>
-        {showViewerNum && <div>{`${viewer || 0}人次`}</div>}
+        {showViewerNum && (
+          <div>{trans_zh['articlelist.view_count'].replace('{count}', viewer || 0)}</div>
+        )}
         {showRecentViewTime && <div>{getRecentTimeDes(lastVisitedTime)}</div>}
       </a>
     ))}

@@ -2,6 +2,11 @@ import { Button, message } from 'antd';
 import { getClipboardContents } from '@/services/van-blog/clipboard';
 import { useTranslation } from 'react-i18next';
 
+const trans_zh = {
+  'copy_upload.button': '上传剪贴板图片',
+  'copy_upload.fail': '上传失败',
+};
+
 export interface CopyUploadBtnProps {
   url: string;
   accept: string;
@@ -40,11 +45,11 @@ export default function (props: CopyUploadBtnProps) {
         if (statusCode === 200) {
           props?.onFinish(data);
         } else {
-          message.error(t('upload.fail'));
+          message.error(t('upload.fail') || trans_zh['copy_upload.fail']);
         }
       })
       .catch(() => {
-        message.error(t('upload.fail'));
+        message.error(t('upload.fail') || trans_zh['copy_upload.fail']);
       })
       .finally(() => {
         props.setLoading(false);
@@ -54,7 +59,7 @@ export default function (props: CopyUploadBtnProps) {
   return (
     <div>
       <Button onClick={handleClick} type="primary">
-        {props.text || t('upload.clipboardImage')}
+        {props.text || t('upload.clipboardImage') || trans_zh['copy_upload.button']}
       </Button>
     </div>
   );

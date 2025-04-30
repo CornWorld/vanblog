@@ -1,90 +1,161 @@
-import { getLog } from '@/services/van-blog/api';
+import { getLoginRecords } from '@/services/van-blog/api';
+import { useNum } from '@/services/van-blog/useNum';
 import { ProTable } from '@ant-design/pro-components';
-import { Tag } from 'antd';
-import { useRef } from 'react';
+import React from 'react';
 
-const columns = [
-  {
-    title: '序号',
-    align: 'center',
-    width: 50,
-    render: (text, record, index) => {
-      return index + 1;
-    },
-  },
-  {
-    title: '登录时间',
-    dataIndex: 'time',
-    key: 'time',
-    align: 'center',
-    render: (text, record) => {
-      return new Date(record.time).toLocaleString();
-    },
-  },
-  {
-    title: '登录地址',
-    dataIndex: 'address',
-    key: 'address',
-    align: 'center',
-  },
-  {
-    title: '登录IP',
-    dataIndex: 'ip',
-    key: 'ip',
-    align: 'center',
-  },
-  {
-    title: '登录设备',
-    dataIndex: 'platform',
-    key: 'platform',
-    align: 'center',
-  },
-  {
-    title: '登录状态',
-    dataIndex: 'success',
-    key: 'success',
-    align: 'center',
-    render: (text, record) => {
-      return (
-        <Tag color={record.success ? 'success' : 'error'} style={{ marginRight: 0 }}>
-          {record.success ? '成功' : '失败'}
-        </Tag>
-      );
-    },
-  },
-];
+const trans_zh = {
+  'login.column.id': 'ID',
+  'login.column.createdAt': '登录时间',
+  'login.column.ip': 'IP',
+  'login.column.location': '地理位置',
+  'login.column.range': '时间范围',
+  'login.column.time': '时间',
+  'login.message.log.unavailable': '无此数据',
+  'login.status.success': '成功',
+  'login.status.fail': '失败',
+  'login.column.username': '用户名',
+  'login.column.result': '结果',
+  'login.column.userAgent': '浏览器 UA',
+};
+
 export default function () {
-  const actionRef = useRef();
+  const [pageSize, setPageSize] = useNum(10, 'login-record-page-size');
+
+  const columns = [
+    {
+      dataIndex: 'id',
+      title: trans_zh['login.column.id'],
+      search: false,
+    },
+    {
+      dataIndex: 'createdAt',
+      valueType: 'dateTime',
+      title: trans_zh['login.column.createdAt'],
+      sorter: true,
+    },
+    {
+      dataIndex: 'ip',
+      title: trans_zh['login.column.ip'],
+      search: false,
+    },
+    {
+      dataIndex: 'location',
+      title: trans_zh['login.column.location'],
+      search: false,
+    },
+    {
+      title: trans_zh['login.column.range'],
+      key: 'dateTimeRange',
+      dataIndex: 'createdAt',
+      valueType: 'dateTimeRange',
+      hideInTable: true,
+      search: {
+        transform: (value) => {
+          return {
+            startTime: value?.[0],
+            endTime: value?.[1],
+          };
+        },
+      },
+    },
+    {
+      title: trans_zh['login.column.time'],
+      dataIndex: 'time',
+      valueType: 'dateTime',
+      hideInTable: true,
+      search: {
+        transform: (value) => {
+          return {
+            startTime: value,
+            endTime: value,
+          };
+        },
+      },
+    },
+    {
+      dataIndex: 'username',
+      title: trans_zh['login.column.username'],
+      search: false,
+    },
+    {
+      dataIndex: 'result',
+      title: trans_zh['login.column.result'],
+      valueEnum: {
+        true: {
+          text: trans_zh['login.status.success'],
+          status: 'Success',
+        },
+        false: {
+          text: trans_zh['login.status.fail'],
+          status: 'Error',
+        },
+      },
+    },
+    {
+      dataIndex: 'browser',
+      title: trans_zh['login.column.userAgent'],
+      search: false,
+      ellipsis: true,
+    },
+  ];
+
   return (
     <>
       <ProTable
-        // ghost
-        cardBordered
-        rowKey="time"
         columns={columns}
-        search={false}
-        dateFormatter="string"
-        actionRef={actionRef}
-        options={true}
-        headerTitle="登录日志"
+        request={async (params, sort) => {
+          const option = {};
+          if (params.current) {
+            option.page = params.current;
+          }
+          if (params.pageSize) {
+            option.pageSize = params.pageSize;
+          }
+          if (params.startTime && params.endTime) {
+            option.startTime = params.startTime;
+            option.endTime = params.endTime;
+          }
+          if (sort && Object.keys(sort).length > 0) {
+            const keys = Object.keys(sort);
+            if (sort[keys[0]] == 'ascend') {
+              option.sort = 'asc';
+            } else {
+              option.sort = 'desc';
+            }
+          }
+          try {
+            const { data } = await getLoginRecords(option);
+            return {
+              data: data?.data || [],
+              success: Boolean(data),
+              total: data?.total || 0,
+            };
+          } catch (error) {
+            console.error('Error fetching login records:', error);
+            return {
+              data: [],
+              success: false,
+              total: 0,
+              errorMessage: trans_zh['login.message.log.unavailable'],
+            };
+          }
+        }}
         pagination={{
-          pageSize: 10,
-          simple: true,
-          hideOnSinglePage: true,
+          pageSize: pageSize,
+          onChange: (p, ps) => {
+            if (ps != pageSize) {
+              setPageSize(ps);
+            }
+          },
         }}
-        request={async (params) => {
-          // console.log(params);
-          // const data = await fetchData();
-          const { data } = await getLog('login', params.current, params.pageSize);
-          return {
-            data: data.data,
-            // success 请返回 true，
-            // 不然 table 会停止解析数据，即使有数据
-            success: true,
-            // 不传会使用 data 的长度，如果是分页一定要传
-            total: data.total,
-          };
+        rowKey="id"
+        search={{
+          labelWidth: 'auto',
+          defaultCollapsed: false,
         }}
+        dateFormatter="string"
+        headerTitle={null}
+        options={false}
       />
     </>
   );

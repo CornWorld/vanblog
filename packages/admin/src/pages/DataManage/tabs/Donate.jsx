@@ -3,6 +3,18 @@ import { EditableProTable } from '@ant-design/pro-components';
 import { Modal, Spin } from 'antd';
 import { useRef, useState } from 'react';
 
+const trans_zh = {
+  'donate.table.header': '捐赠详情',
+  'donate.column.name': '捐赠人',
+  'donate.column.value': '金额',
+  'donate.column.updatedAt': '最后捐赠时间',
+  'donate.column.actions': '操作',
+  'donate.action.edit': '编辑',
+  'donate.action.delete': '删除',
+  'donate.message.required': '此项为必填项',
+  'donate.modal.deleteConfirm': '确认删除"{name}"的捐赠吗?',
+};
+
 export default function () {
   const [loading, setLoading] = useState(true);
   const [editableKeys, setEditableRowKeys] = useState([]);
@@ -15,37 +27,37 @@ export default function () {
   };
   const columns = [
     {
-      title: '捐赠人',
+      title: trans_zh['donate.column.name'],
       dataIndex: 'name',
-      formItemProps: (form, { rowIndex }) => {
+      formItemProps: () => {
         return {
-          rules: [{ required: true, message: '此项为必填项' }],
+          rules: [{ required: true, message: trans_zh['donate.message.required'] }],
         };
       },
     },
     {
-      title: '金额',
+      title: trans_zh['donate.column.value'],
       valueType: 'money',
       dataIndex: 'value',
-      formItemProps: (form, { rowIndex }) => {
+      formItemProps: () => {
         return {
-          rules: [{ required: true, message: '此项为必填项' }],
+          rules: [{ required: true, message: trans_zh['donate.message.required'] }],
         };
       },
     },
     {
-      title: '最后捐赠时间',
+      title: trans_zh['donate.column.updatedAt'],
       valueType: 'date',
       editable: false,
       dataIndex: 'updatedAt',
-      formItemProps: (form, { rowIndex }) => {
+      formItemProps: () => {
         return {
-          rules: [{ required: true, message: '此项为必填项' }],
+          rules: [{ required: true, message: trans_zh['donate.message.required'] }],
         };
       },
     },
     {
-      title: '操作',
+      title: trans_zh['donate.column.actions'],
       valueType: 'option',
       key: 'option',
       width: 200,
@@ -56,7 +68,7 @@ export default function () {
             action?.startEditable?.(record.name);
           }}
         >
-          编辑
+          {trans_zh['donate.action.edit']}
         </a>,
         <a
           key="delete"
@@ -66,11 +78,11 @@ export default function () {
                 await deleteDonate(record.name);
                 action?.reload();
               },
-              title: `确认删除"${record.name}"的捐赠吗?`,
+              title: trans_zh['donate.modal.deleteConfirm'].replace('{name}', record.name),
             });
           }}
         >
-          删除
+          {trans_zh['donate.action.delete']}
         </a>,
       ],
     },
@@ -81,7 +93,7 @@ export default function () {
         <EditableProTable
           actionRef={actionRef}
           rowKey="key"
-          headerTitle="捐赠详情"
+          headerTitle={trans_zh['donate.table.header']}
           scroll={{
             x: 960,
           }}
@@ -102,7 +114,7 @@ export default function () {
           editable={{
             type: 'multiple',
             editableKeys,
-            onSave: async (rowKey, data, row) => {
+            onSave: async (rowKey, data) => {
               await updateDonate(data);
               actionRef?.current?.reload();
             },

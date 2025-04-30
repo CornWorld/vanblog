@@ -1,3 +1,10 @@
+const trans_zh = {
+  'global.offline.warning': '当前处于离线状态',
+  'global.refresh.button': '刷新',
+  'global.update.message': '有新内容',
+  'global.update.description': '请点击"刷新"按钮或者手动刷新页面',
+};
+
 import { Button, message, notification } from 'antd';
 import defaultSettings from '../config/defaultSettings';
 const { pwa } = defaultSettings;
@@ -20,7 +27,7 @@ const clearCache = () => {
 if (pwa) {
   // Notify user if offline now
   window.addEventListener('sw.offline', () => {
-    message.warning('当前处于离线状态');
+    message.warning(trans_zh['global.offline.warning']);
   }); // Pop up a prompt on the page asking the user if they want to use the latest version
 
   window.addEventListener('sw.updated', (event) => {
@@ -67,12 +74,12 @@ if (pwa) {
           reloadSW();
         }}
       >
-        {'刷新'}
+        {trans_zh['global.refresh.button']}
       </Button>
     );
     notification.open({
-      message: '有新内容',
-      description: '请点击“刷新”按钮或者手动刷新页面',
+      message: trans_zh['global.update.message'],
+      description: trans_zh['global.update.description'],
       btn,
       key,
       onClose: async () => null,

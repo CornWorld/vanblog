@@ -4,37 +4,54 @@ import UpdateModal from '@/components/UpdateModal';
 import { genActiveObj } from '@/services/van-blog/activeColTools';
 import { deleteDraft, getAllCategories, getDraftById, getTags } from '@/services/van-blog/api';
 import { parseObjToMarkdown } from '@/services/van-blog/parseMarkdownFile';
-import { message, Modal, Tag, Button, Skeleton, Space } from 'antd';
+import { message, Modal, Tag } from 'antd';
 import { history } from '@/utils/umiCompat';
-import PublishModal from '@/components/PublishDraftModal';
 import { withoutKey } from '@/utils/props';
+
+const trans_zh = {
+  'draft.column.id': 'ID',
+  'draft.column.title': '标题',
+  'draft.column.title.tip': '标题过长会自动收缩',
+  'draft.column.required': '此项为必填项',
+  'draft.column.category': '分类',
+  'draft.column.tags': '标签',
+  'draft.column.tags.placeholder': '请搜索或选择',
+  'draft.column.created_time': '创建时间',
+  'draft.column.operation': '操作',
+  'draft.action.edit': '编辑',
+  'draft.action.publish': '发布',
+  'draft.action.export': '导出',
+  'draft.action.delete': '删除',
+  'draft.modal.delete.title': '确定删除草稿',
+  'draft.message.delete.success': '删除成功!',
+};
 
 export const columns = [
   {
     dataIndex: 'id',
     valueType: 'number',
-    title: 'ID',
+    title: trans_zh['draft.column.id'],
     width: 48,
     search: false,
   },
   {
-    title: '标题',
+    title: trans_zh['draft.column.title'],
     dataIndex: 'title',
     copyable: true,
     ellipsis: true,
     width: 150,
-    tip: '标题过长会自动收缩',
+    tip: trans_zh['draft.column.title.tip'],
     formItemProps: {
       rules: [
         {
           required: true,
-          message: '此项为必填项',
+          message: trans_zh['draft.column.required'],
         },
       ],
     },
   },
   {
-    title: '分类',
+    title: trans_zh['draft.column.category'],
     dataIndex: 'category',
     width: 120,
     valueType: 'select',
@@ -49,10 +66,10 @@ export const columns = [
     },
   },
   {
-    title: '标签',
+    title: trans_zh['draft.column.tags'],
     dataIndex: 'tags',
     search: true,
-    fieldProps: { showSearch: true, placeholder: '请搜索或选择' },
+    fieldProps: { showSearch: true, placeholder: trans_zh['draft.column.tags.placeholder'] },
     valueType: 'select',
     width: 120,
     renderFormItem: (item, { defaultRender }) => {
@@ -79,7 +96,7 @@ export const columns = [
     },
   },
   {
-    title: '创建时间',
+    title: trans_zh['draft.column.created_time'],
     key: 'showTime',
     dataIndex: 'createdAt',
     valueType: 'dateTime',
@@ -88,7 +105,7 @@ export const columns = [
     width: 150,
   },
   {
-    title: '创建时间',
+    title: trans_zh['draft.column.created_time'],
     dataIndex: 'createdAt',
     valueType: 'dateRange',
     hideInTable: true,
@@ -102,7 +119,7 @@ export const columns = [
     },
   },
   {
-    title: '操作',
+    title: trans_zh['draft.column.operation'],
     valueType: 'option',
     key: 'option',
     width: 120,
@@ -116,15 +133,14 @@ export const columns = [
                 history.push(`/editor?type=draft&id=${record.id}`);
               }}
             >
-              编辑
+              {trans_zh['draft.action.edit']}
             </a>,
-            ,
             <PublishDraftModal
               key="publishRecord1213"
               title={record.title}
               id={record.id}
               action={action}
-              trigger={<a key="publishRecord123">发布</a>}
+              trigger={<a key="publishRecord123">{trans_zh['draft.action.publish']}</a>}
             />,
           ]}
           nodes={[
@@ -149,22 +165,22 @@ export const columns = [
                 link.click();
               }}
             >
-              导出
+              {trans_zh['draft.action.export']}
             </a>,
             <a
               key={'deleteDraft' + record.id}
               onClick={() => {
                 Modal.confirm({
-                  title: `确定删除草稿 "${record.title}" 吗？`,
+                  title: `${trans_zh['draft.modal.delete.title']} "${record.title}" 吗？`,
                   onOk: async () => {
                     await deleteDraft(record.id);
-                    message.success('删除成功!');
+                    message.success(trans_zh['draft.message.delete.success']);
                     action?.reload();
                   },
                 });
               }}
             >
-              删除
+              {trans_zh['draft.action.delete']}
             </a>,
           ]}
         ></ColumnsToolBar>

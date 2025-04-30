@@ -3,6 +3,23 @@ import { Button, Modal, Space, Spin } from 'antd';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { history, useModel } from '@/utils/umiCompat';
 import TipTitle from '../../components/TipTitle';
+
+const trans_zh = {
+  'comment.title': '评论管理',
+  'comment.tip': '基于内嵌的 Waline，首个注册的用户即为管理员。未来会用自己的实现替代 Waline',
+  'comment.button.setting': '设置',
+  'comment.button.help': '帮助',
+  'comment.modal.title': '使用说明',
+  'comment.modal.content1': 'Vanblog 内嵌了',
+  'comment.modal.waline': 'Waline',
+  'comment.modal.content2': '作为评论系统。',
+  'comment.modal.content3': '本管理页面也是内嵌的 Waline 后台管理页面。',
+  'comment.modal.content4': '首次使用请先注册，首个注册的用户将默认成为管理员。',
+  'comment.modal.content5':
+    'PS: 评论功能默认开启，关闭请前往站点设置->系统设置->站点配置->高级设置->是否开启评论系统',
+  'comment.modal.docs': '帮助文档',
+};
+
 export default function () {
   const { initialState } = useModel('@@initialState');
   const [loading, setLoading] = useState(true);
@@ -16,29 +33,26 @@ export default function () {
   }, [initialState]);
   const showTips = () => {
     Modal.info({
-      title: '使用说明',
+      title: trans_zh['comment.modal.title'],
       content: (
         <div>
           <p>
-            Vanblog 内嵌了{' '}
+            {trans_zh['comment.modal.content1']}{' '}
             <a target={'_blank'} rel="noreferrer" href="https://waline.js.org/">
-              Waline
+              {trans_zh['comment.modal.waline']}
             </a>{' '}
-            作为评论系统。
+            {trans_zh['comment.modal.content2']}
           </p>
-          <p>本管理页面也是内嵌的 Waline 后台管理页面。</p>
-          <p>首次使用请先注册，首个注册的用户将默认成为管理员。</p>
-          <p>
-            PS: 评论功能默认开启，关闭请前往站点设置-{'>'} 系统设置
-            -{'>'}站点配置-{'>'} 高级设置-{'>'} 是否开启评论系统
-          </p>
+          <p>{trans_zh['comment.modal.content3']}</p>
+          <p>{trans_zh['comment.modal.content4']}</p>
+          <p>{trans_zh['comment.modal.content5']}</p>
           <p>
             <a
               target={'_blank'}
               rel="noreferrer"
               href="https://vanblog.mereith.com/feature/basic/comment.html"
             >
-              帮助文档
+              {trans_zh['comment.modal.docs']}
             </a>
           </p>
         </div>
@@ -67,18 +81,13 @@ export default function () {
               history.push(`/site/setting?tab=waline`);
             }}
           >
-            设置
+            {trans_zh['comment.button.setting']}
           </Button>
-          <Button onClick={showTips}>帮助</Button>
+          <Button onClick={showTips}>{trans_zh['comment.button.help']}</Button>
         </Space>
       }
       header={{
-        title: (
-          <TipTitle
-            title="评论管理"
-            tip="基于内嵌的 Waline，首个注册的用户即为管理员。未来会用自己的实现替代 Waline"
-          />
-        ),
+        title: <TipTitle title={trans_zh['comment.title']} tip={trans_zh['comment.tip']} />,
       }}
     >
       <Spin spinning={loading}>

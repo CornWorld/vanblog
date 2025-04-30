@@ -3,21 +3,50 @@ import UpdateModal from '@/components/UpdateModal';
 import { deleteArticle, getAllCategories, getArticleById, getTags } from '@/services/van-blog/api';
 import { getPathname } from '@/services/van-blog/getPathname';
 import { parseObjToMarkdown } from '@/services/van-blog/parseMarkdownFile';
-import { message, Modal, Space, Tag, Button, Typography, Skeleton, notification } from 'antd';
+import { message, Modal, Space, Tag, Button } from 'antd';
 import { history } from '@/utils/umiCompat';
 import { genActiveObj } from '../../services/van-blog/activeColTools';
 import { withoutKey } from '@/utils/props';
+
+const trans_zh = {
+  'article.column.id': 'ID',
+  'article.column.title': '标题',
+  'article.column.required': '此项为必填项',
+  'article.column.category': '分类',
+  'article.column.tags': '标签',
+  'article.column.tags.placeholder': '请搜索或选择',
+  'article.column.created_time': '创建时间',
+  'article.column.top': '顶置',
+  'article.column.viewer': '浏览量',
+  'article.action.edit': '编辑',
+  'article.action.view': '查看',
+  'article.modal.hidden_title': '此文章为隐藏文章！',
+  'article.modal.hidden_content1':
+    '隐藏文章在未开启通过 URL 访问的情况下（默认关闭），会出现 404 页面！',
+  'article.modal.hidden_content2': '您可以在',
+  'article.modal.hidden_content3': '布局配置',
+  'article.modal.hidden_content4': '中修改此项。',
+  'article.modal.hidden_ok': '仍然访问',
+  'article.modal.hidden_cancel': '返回',
+  'article.action.export': '导出',
+  'article.modal.delete_title': '确定删除此文章吗？',
+  'article.modal.delete_content': '此操作将删除文章及其所有相关数据，包括评论、访问记录等。',
+  'article.modal.delete_ok': '确定',
+  'article.modal.delete_cancel': '取消',
+  'article.message.delete_success': '文章删除成功！',
+  'article.message.delete_error': '文章删除失败，请稍后再试。',
+};
 
 export const columns = [
   {
     dataIndex: 'id',
     valueType: 'number',
-    title: 'ID',
+    title: trans_zh['article.column.id'],
     width: 48,
     search: false,
   },
   {
-    title: '标题',
+    title: trans_zh['article.column.title'],
     dataIndex: 'title',
     width: 150,
     copyable: true,
@@ -26,13 +55,13 @@ export const columns = [
       rules: [
         {
           required: true,
-          message: '此项为必填项',
+          message: trans_zh['article.column.required'],
         },
       ],
     },
   },
   {
-    title: '分类',
+    title: trans_zh['article.column.category'],
     dataIndex: 'category',
     valueType: 'select',
     width: 100,
@@ -46,10 +75,10 @@ export const columns = [
     },
   },
   {
-    title: '标签',
+    title: trans_zh['article.column.tags'],
     dataIndex: 'tags',
     valueType: 'select',
-    fieldProps: { showSearch: true, placeholder: '请搜索或选择' },
+    fieldProps: { showSearch: true, placeholder: trans_zh['article.column.tags.placeholder'] },
     width: 120,
     search: true,
     renderFormItem: (item, { defaultRender }) => {
@@ -76,7 +105,7 @@ export const columns = [
     },
   },
   {
-    title: '创建时间',
+    title: trans_zh['article.column.created_time'],
     key: 'showTime',
     dataIndex: 'createdAt',
     valueType: 'dateTime',
@@ -85,7 +114,7 @@ export const columns = [
     width: 150,
   },
   {
-    title: '顶置',
+    title: trans_zh['article.column.top'],
     key: 'top',
     dataIndex: 'top',
     valueType: 'number',
@@ -94,7 +123,7 @@ export const columns = [
     hideInSearch: true,
   },
   {
-    title: '浏览量',
+    title: trans_zh['article.column.viewer'],
     key: 'viewer',
     dataIndex: 'viewer',
     valueType: 'number',
@@ -103,7 +132,7 @@ export const columns = [
     hideInSearch: true,
   },
   {
-    title: '创建时间',
+    title: trans_zh['article.column.created_time'],
     dataIndex: 'createdAt',
     valueType: 'dateRange',
     hideInTable: true,
@@ -134,29 +163,27 @@ export const columns = [
                   );
                 }}
               >
-                编辑
+                {trans_zh['article.action.edit']}
               </a>,
               <a
                 href={`/post/${getPathname(record)}`}
                 onClick={(ev) => {
                   if (record?.hidden) {
                     Modal.confirm({
-                      title: '此文章为隐藏文章！',
+                      title: trans_zh['article.modal.hidden_title'],
                       content: (
                         <div>
+                          <p>{trans_zh['article.modal.hidden_content1']}</p>
                           <p>
-                            隐藏文章在未开启通过 URL 访问的情况下（默认关闭），会出现 404 页面！
-                          </p>
-                          <p>
-                            您可以在{' '}
+                            {trans_zh['article.modal.hidden_content2']}
                             <a
                               onClick={() => {
                                 history.push('/site/setting?subTab=layout');
                               }}
                             >
-                              布局配置
-                            </a>{' '}
-                            中修改此项。
+                              {trans_zh['article.modal.hidden_content3']}
+                            </a>
+                            {trans_zh['article.modal.hidden_content4']}
                           </p>
                         </div>
                       ),
@@ -164,8 +191,8 @@ export const columns = [
                         window.open(`/post/${getPathname(record)}`, '_blank');
                         return true;
                       },
-                      okText: '仍然访问',
-                      cancelText: '返回',
+                      okText: trans_zh['article.modal.hidden_ok'],
+                      cancelText: trans_zh['article.modal.hidden_cancel'],
                     });
                     ev.preventDefault();
                   }
@@ -174,7 +201,7 @@ export const columns = [
                 rel="noopener noreferrer"
                 key={'view' + record.id}
               >
-                查看
+                {trans_zh['article.action.view']}
               </a>,
             ]}
             nodes={[
@@ -199,29 +226,32 @@ export const columns = [
                   link.click();
                 }}
               >
-                导出
+                {trans_zh['article.action.export']}
               </a>,
-              <a
-                key={'deleteArticle' + record.id}
+              <Button
+                key={'deleteBtn' + record.id}
+                type="link"
+                danger
                 onClick={() => {
                   Modal.confirm({
-                    title: `确定删除 "${record.title}"吗？`,
+                    title: trans_zh['article.modal.delete_title'],
+                    content: trans_zh['article.modal.delete_content'],
+                    okText: trans_zh['article.modal.delete_ok'],
+                    cancelText: trans_zh['article.modal.delete_cancel'],
                     onOk: async () => {
-                      if (location.hostname == 'blog-demo.mereith.com') {
-                        if ([28, 29].includes(record.id)) {
-                          message.warn('演示站禁止删除此文章！');
-                          return false;
-                        }
+                      try {
+                        await deleteArticle(record.id);
+                        message.success(trans_zh['article.message.delete_success']);
+                        action?.reload();
+                      } catch {
+                        message.error(trans_zh['article.message.delete_error']);
                       }
-                      await deleteArticle(record.id);
-                      message.success('删除成功!');
-                      action?.reload();
                     },
                   });
                 }}
               >
-                删除
-              </a>,
+                {trans_zh['article.action.delete']}
+              </Button>,
             ]}
           />
         </Space>

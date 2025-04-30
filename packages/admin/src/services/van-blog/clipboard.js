@@ -1,5 +1,6 @@
 import dayjs from '@/utils/dayjs';
 import copy from 'copy-to-clipboard';
+
 export async function getClipboardContents() {
   try {
     const clipboardItems = await navigator.clipboard.read();

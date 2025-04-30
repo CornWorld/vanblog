@@ -2,13 +2,22 @@ import { copyImgLink, getImgLink } from '@/pages/ImageManage/components/tools';
 import { getClipboardContents } from '@/services/van-blog/clipboard';
 import { message } from 'antd';
 import { BytemdPlugin } from 'bytemd';
+
+const trans_zh = {
+  'editor.imgUpload.title': '剪切板图片上传',
+  'editor.imgUpload.success': '上传成功！',
+  'editor.imgUpload.fail': '上传失败！',
+  'editor.imgUpload.noImage': '剪切板没的图片！',
+  'editor.imgUpload.uploadFail': '剪切板图片上传失败！',
+};
+
 export const uploadImg = async (file: File) => {
   const formData = new FormData();
   formData.append('file', file);
   try {
     // Check if the file is an SVG
     const isSvg = file.type === 'image/svg+xml';
-    
+
     // For SVGs, read the file directly and return as a data URI to avoid server upload issues
     if (isSvg) {
       return new Promise<string>((resolve, reject) => {
@@ -31,7 +40,7 @@ export const uploadImg = async (file: File) => {
         reader.readAsText(file);
       });
     }
-    
+
     // For non-SVG files, proceed with normal upload
     const res = await fetch('/api/admin/img/upload?withWaterMark=true', {
       method: 'POST',
@@ -45,23 +54,24 @@ export const uploadImg = async (file: File) => {
     const data = await res.json();
     if (data && data.statusCode == 200) {
       const url = getImgLink(data.data.src, false);
-      copyImgLink(data.data.src, true, '上传成功！ ');
+      copyImgLink(data.data.src, true, trans_zh['editor.imgUpload.success']);
       return url;
     } else {
-      message.error('上传失败！');
+      message.error(trans_zh['editor.imgUpload.fail']);
       return null;
     }
-  } catch (err) {
-    message.error('上传失败！');
+  } catch {
+    // Log a general error message without exposing error details to the user
+    message.error(trans_zh['editor.imgUpload.fail']);
     return null;
-  } finally {
   }
 };
+
 export function imgUploadPlugin(setLoading: (loading: boolean) => void): BytemdPlugin {
   return {
     actions: [
       {
-        title: '剪切板图片上传',
+        title: trans_zh['editor.imgUpload.title'],
         icon: icon, // 16x16 SVG icon
         handler: {
           type: 'action',
@@ -70,12 +80,12 @@ export function imgUploadPlugin(setLoading: (loading: boolean) => void): BytemdP
             getClipboardContents()
               .then((file) => {
                 if (file) {
-                  uploadImg(file).then((url: string) => {
+                  uploadImg(file).then((url) => {
                     if (url) {
                       const imgs = [{ url: url, alt: file.name, title: file.name }];
                       const pos = ctx.appendBlock(
                         imgs
-                          .map(({ url, alt, title }, i) => {
+                          .map(({ url, alt, title }) => {
                             return `![${alt}](${url}${title ? ` "${title}"` : ''})`;
                           })
                           .join('\n\n'),
@@ -88,26 +98,23 @@ export function imgUploadPlugin(setLoading: (loading: boolean) => void): BytemdP
                     }
                   });
                 } else {
-                  message.warn('剪切板没的图片！');
+                  message.warning(trans_zh['editor.imgUpload.noImage']);
                 }
               })
-              .catch(() => {
-                message.warn('剪切板图片上传失败！');
+              .catch((error) => {
+                console.error('Failed to process clipboard contents:', error);
+                message.warning(trans_zh['editor.imgUpload.uploadFail']);
               })
               .finally(() => {
                 setLoading(false);
               });
-            // to be implement:
-            // the `ctx` is an instance of `BytemdEditorContext`, which has
-            // several utility methods to help operate the CodeMirror editor state.
-            // remember to call `focus` to avoid lost of focus
-            // editor.focus()
           },
         },
       },
     ],
   };
 }
+
 const icon = `<svg
 viewBox="0 0 1024 1024"
 version="1.1"

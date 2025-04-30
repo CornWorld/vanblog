@@ -1,7 +1,7 @@
 import { Dropdown, Space } from 'antd';
 import { useMemo } from 'react';
 
-export default function (props: { nodes: any[]; outs: any[] }) {
+export default function (props: { nodes: unknown[]; outs: unknown[] }) {
   const items = useMemo(
     () =>
       props.nodes.map((val, index) => ({

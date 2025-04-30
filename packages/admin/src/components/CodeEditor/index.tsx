@@ -13,8 +13,8 @@ export interface CodeEditorProps {
   style?: React.CSSProperties;
 }
 
-export default function ({ style, width, height, language, onChange, value }: CodeEditorProps) {
-  const { initialState } = useModel();
+export default function ({ style, width, height, onChange, value }: CodeEditorProps) {
+  useModel();
 
   return (
     <div style={style}>

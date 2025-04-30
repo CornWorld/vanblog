@@ -2,23 +2,23 @@ import React from 'react';
 import { Pagination } from 'antd';
 import { PaginationProps } from '../types';
 
-export const PaginationComponent: React.FC<PaginationProps> = ({ 
-  page, 
-  pageSize, 
-  total, 
-  handlePageChange 
+export const PaginationComponent: React.FC<PaginationProps> = ({
+  total,
+  page,
+  pageSize,
+  handlePageChange,
 }) => {
   return (
-    <div style={{ textAlign: 'right', marginTop: 16 }}>
+    <div className="pagination-container">
       <Pagination
+        total={total}
         current={page}
         pageSize={pageSize}
-        total={total}
         onChange={handlePageChange}
         showSizeChanger
         showQuickJumper
-        showTotal={(t) => `共 ${t} 张`}
+        showTotal={(t) => `总计 ${t} 个图片`}
       />
     </div>
   );
-}; 
+};

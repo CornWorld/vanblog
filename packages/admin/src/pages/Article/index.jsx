@@ -10,6 +10,16 @@ import { useMemo, useRef, useState } from 'react';
 import { history } from '@/utils/umiCompat';
 import { articleObjAll, articleObjSmall, columns } from './columns';
 
+const trans_zh = {
+  'article.title': '文章管理',
+  'article.action.batch_delete': '批量删除',
+  'article.action.batch_export': '批量导出',
+  'article.action.cancel_select': '取消选择',
+  'article.action.edit_about': '编辑关于',
+  'article.message.batch_delete_success': '批量删除成功！',
+  'article.message.import_success': '导入成功！',
+};
+
 export default () => {
   const actionRef = useRef();
   const [colKeys, setColKeys] = useState(articleObjAll);
@@ -60,12 +70,12 @@ export default () => {
                 <a
                   onClick={async () => {
                     await batchDelete(selectedRowKeys);
-                    message.success('批量删除成功！');
+                    message.success(trans_zh['article.message.batch_delete_success']);
                     actionRef.current.reload();
                     onCleanSelected();
                   }}
                 >
-                  批量删除
+                  {trans_zh['article.action.batch_delete']}
                 </a>
                 <a
                   onClick={() => {
@@ -73,13 +83,13 @@ export default () => {
                     onCleanSelected();
                   }}
                 >
-                  批量导出
+                  {trans_zh['article.action.batch_export']}
                 </a>
-                <a onClick={onCleanSelected}>取消选择</a>
+                <a onClick={onCleanSelected}>{trans_zh['article.action.cancel_select']}</a>
               </Space>
             );
           }}
-          request={async (params = {}, sort, filter) => {
+          request={async (params = {}, sort) => {
             const option = {};
             if (sort.createdAt) {
               if (sort.createdAt == 'ascend') {
@@ -172,7 +182,7 @@ export default () => {
             },
           }}
           dateFormatter="string"
-          headerTitle={simpleSearch ? undefined : '文章管理'}
+          headerTitle={simpleSearch ? undefined : trans_zh['article.title']}
           options={simpleSearch ? false : true}
           toolBarRender={() => [
             <Button
@@ -181,7 +191,7 @@ export default () => {
                 history.push(`/editor?type=about&id=${0}`);
               }}
             >
-              {`编辑关于`}
+              {trans_zh['article.action.edit_about']}
             </Button>,
             <NewArticleModal
               key="newArticle123"
@@ -194,7 +204,7 @@ export default () => {
               key="importArticleBtn"
               onFinish={() => {
                 actionRef?.current?.reload();
-                message.success('导入成功！');
+                message.success(trans_zh['article.message.import_success']);
               }}
             />,
           ]}

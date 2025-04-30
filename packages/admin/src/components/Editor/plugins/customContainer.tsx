@@ -34,9 +34,21 @@ const CUSTOM_CONTAINER_TITLE: Record<string, string> = {
   tip: '提示',
 };
 
-// FIXME: Addd Types
-const customContainerPlugin = () => (tree) => {
-  visit(tree, (node) => {
+// Define interfaces for tree structure
+interface NodeAttributes {
+  title?: string;
+}
+
+interface TreeNode {
+  type: string;
+  data?: Record<string, unknown>;
+  attributes?: NodeAttributes;
+  name?: string;
+  children?: TreeNode[];
+}
+
+const customContainerPlugin = () => (tree: TreeNode) => {
+  visit(tree, (node: TreeNode) => {
     if (
       node.type === 'textDirective' ||
       node.type === 'leafDirective' ||
@@ -45,8 +57,8 @@ const customContainerPlugin = () => (tree) => {
       if (node.type == 'containerDirective') {
         const { attributes, name: tagName } = node;
         const data = (node.data ??= {});
-        const title = attributes?.title || CUSTOM_CONTAINER_TITLE[tagName];
-        const cls = `custom-container ${tagName}`;
+        const title = attributes?.title || (tagName ? CUSTOM_CONTAINER_TITLE[tagName] : undefined);
+        const cls = `custom-container ${tagName || ''}`;
 
         data.hName = 'div';
         data.hProperties = {
@@ -57,17 +69,17 @@ const customContainerPlugin = () => (tree) => {
           type: 'paragraph',
           data: {
             hProperties: {
-              class: `custom-container-title ${tagName}`,
+              class: `custom-container-title ${tagName || ''}`,
             },
           },
           children: [
             {
               type: 'text',
-              value: title,
+              value: title || '',
             },
           ],
         };
-        node.children = [toAppendP, ...node.children];
+        node.children = [toAppendP, ...(node.children || [])];
       }
     }
   });

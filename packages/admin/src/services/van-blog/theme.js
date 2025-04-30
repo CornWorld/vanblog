@@ -37,26 +37,29 @@ export const mapTheme = (theme) => {
 export const beforeSwitchTheme = (to) => {
   // Save to localStorage
   localStorage.theme = to;
-  
+
   // Apply theme to document
   applyThemeToDOM(to);
-  
+
   return mapTheme(to);
 };
 
 export const applyThemeToDOM = (theme) => {
   // Get actual theme (accounting for auto)
-  const effectiveTheme = theme === 'auto' 
-    ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
-    : theme;
-    
+  const effectiveTheme =
+    theme === 'auto'
+      ? window.matchMedia('(prefers-color-scheme: dark)').matches
+        ? 'dark'
+        : 'light'
+      : theme;
+
   // Update body classes
   document.body.classList.remove('light-theme', 'dark-theme');
   document.body.classList.add(`${effectiveTheme}-theme`);
-  
+
   // Update data-theme attribute
   document.documentElement.setAttribute('data-theme', effectiveTheme);
-  
+
   // Update Ant Design theme
   if (effectiveTheme === 'dark') {
     document.documentElement.classList.add('dark');
@@ -65,7 +68,7 @@ export const applyThemeToDOM = (theme) => {
     document.documentElement.classList.remove('dark');
     document.documentElement.style.colorScheme = 'light';
   }
-  
+
   console.log('[Theme] Applied:', effectiveTheme);
 };
 

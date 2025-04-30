@@ -7,8 +7,18 @@ import RcResizeObserver from 'rc-resize-observer';
 import { useMemo, useRef, useState } from 'react';
 import { history } from '@/utils/umiCompat';
 import { columns, draftKeysObj, draftKeysObjSmall } from './columes';
-import { Button, Space, message } from 'antd';
+import { Space, message } from 'antd';
 import { batchExport, batchDelete } from '@/services/van-blog/batch';
+
+const trans_zh = {
+  'draft.title': '草稿管理',
+  'draft.action.batch_delete': '批量删除',
+  'draft.action.batch_export': '批量导出',
+  'draft.action.cancel_select': '取消选择',
+  'draft.message.batch_delete.success': '批量删除成功！',
+  'draft.message.import.success': '导入成功！',
+};
+
 export default () => {
   const actionRef = useRef();
   const [colKeys, setColKeys] = useState(draftKeysObj);
@@ -58,12 +68,12 @@ export default () => {
                 <a
                   onClick={async () => {
                     await batchDelete(selectedRowKeys, true);
-                    message.success('批量删除成功！');
+                    message.success(trans_zh['draft.message.batch_delete.success']);
                     actionRef.current.reload();
                     onCleanSelected();
                   }}
                 >
-                  批量删除
+                  {trans_zh['draft.action.batch_delete']}
                 </a>
                 <a
                   onClick={() => {
@@ -71,13 +81,13 @@ export default () => {
                     onCleanSelected();
                   }}
                 >
-                  批量导出
+                  {trans_zh['draft.action.batch_export']}
                 </a>
-                <a onClick={onCleanSelected}>取消选择</a>
+                <a onClick={onCleanSelected}>{trans_zh['draft.action.cancel_select']}</a>
               </Space>
             );
           }}
-          request={async (params = {}, sort, filter) => {
+          request={async (params = {}, sort) => {
             const option = {};
             if (sort.createdAt) {
               if (sort.createdAt == 'ascend') {
@@ -164,7 +174,7 @@ export default () => {
             simple: simplePage,
           }}
           dateFormatter="string"
-          headerTitle={simpleSearch ? undefined : '草稿管理'}
+          headerTitle={simpleSearch ? undefined : trans_zh['draft.title']}
           options={simpleSearch ? false : true}
           toolBarRender={() => [
             <NewDraftModal
@@ -178,7 +188,7 @@ export default () => {
               key="importDraftMarkdown"
               onFinish={() => {
                 actionRef?.current?.reload();
-                message.success('导入成功！');
+                message.success(trans_zh['draft.message.import.success']);
               }}
             />,
           ]}

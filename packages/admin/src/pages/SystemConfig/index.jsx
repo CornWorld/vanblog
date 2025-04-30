@@ -11,6 +11,20 @@ import SiteInfo from './tabs/SiteInfo';
 import User from './tabs/User';
 import WalineTab from './tabs/WalineTab';
 import Token from './tabs/Token';
+
+const trans_zh = {
+  'system.tabs.site_info': '站点配置',
+  'system.tabs.customizing': '客制化',
+  'system.tabs.user': '用户设置',
+  'system.tabs.img': '图床设置',
+  'system.tabs.waline': '评论设置',
+  'system.tabs.backup': '备份恢复',
+  'system.tabs.token': 'Token 管理',
+  'system.tabs.caddy': 'HTTPS',
+  'system.tabs.advance': '高级设置',
+  'system.tabs.migrate': '迁移助手',
+};
+
 export default function () {
   const tabMap = {
     siteInfo: <SiteInfo />,
@@ -35,43 +49,43 @@ export default function () {
       tabActiveKey={tab}
       tabList={[
         {
-          tab: '站点配置',
+          tab: trans_zh['system.tabs.site_info'],
           key: 'siteInfo',
         },
         {
-          tab: '客制化',
+          tab: trans_zh['system.tabs.customizing'],
           key: 'customizing',
         },
         {
-          tab: '用户设置',
+          tab: trans_zh['system.tabs.user'],
           key: 'user',
         },
         {
-          tab: '图床设置',
+          tab: trans_zh['system.tabs.img'],
           key: 'img',
         },
         {
-          tab: '评论设置',
+          tab: trans_zh['system.tabs.waline'],
           key: 'waline',
         },
         {
-          tab: '备份恢复',
+          tab: trans_zh['system.tabs.backup'],
           key: 'backup',
         },
         {
-          tab: 'Token 管理',
+          tab: trans_zh['system.tabs.token'],
           key: 'token',
         },
         {
-          tab: 'HTTPS',
+          tab: trans_zh['system.tabs.caddy'],
           key: 'caddy',
         },
         {
-          tab: '高级设置',
+          tab: trans_zh['system.tabs.advance'],
           key: 'advance',
         },
         {
-          tab: '迁移助手',
+          tab: trans_zh['system.tabs.migrate'],
           key: 'migrate',
         },
       ]}

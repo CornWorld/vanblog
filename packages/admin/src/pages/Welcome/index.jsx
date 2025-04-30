@@ -6,29 +6,35 @@ import OverView from './tabs/overview';
 import Viewer from './tabs/viewer';
 import { useModel } from '@/utils/umiCompat';
 
+const trans_zh = {
+  'welcome.tabs.overview': '总览',
+  'welcome.tabs.article': '文章数据',
+  'welcome.tabs.viewer': '访问数据',
+};
+
 export default () => {
   const { initialState } = useModel('@@initialState');
   const isDarkMode = initialState?.settings?.navTheme?.toLowerCase().includes('dark');
-  
+
   const navs = useRef([
     {
       key: 'overview',
-      tab: '总览',
+      tab: trans_zh['welcome.tabs.overview'],
     },
     {
       key: 'article',
-      tab: '文章数据',
+      tab: trans_zh['welcome.tabs.article'],
     },
     {
       key: 'viewer',
-      tab: '访问数据',
+      tab: trans_zh['welcome.tabs.viewer'],
     },
   ]);
   const [key, setKey] = useState('overview');
-  
+
   // Use appropriate background color based on theme
   const backgroundColor = isDarkMode ? '#141414' : '#f0f2f5';
-  
+
   return (
     <div style={{ background: backgroundColor, margin: -24, padding: 24 }}>
       <PageContainer

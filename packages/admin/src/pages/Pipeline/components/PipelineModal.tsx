@@ -1,24 +1,47 @@
 import { ModalForm, ProFormSelect, ProFormSwitch, ProFormText } from '@ant-design/pro-form';
-
 import { getPipelineConfig, createPipeline, updatePipelineById } from '@/services/van-blog/api';
 import { useEffect, useState } from 'react';
 import { Form, message } from 'antd';
-export default function ({
+
+interface PipelineConfig {
+  eventName: string;
+  eventNameChinese: string;
+  eventDescription?: string;
+  passive?: boolean;
+}
+
+interface PipelineData {
+  id: string;
+  name: string;
+  description: string;
+  eventName: string;
+  enabled: boolean;
+  deps?: string[];
+}
+
+interface PipelineConfigResponse {
+  data: PipelineConfig[];
+  [key: string]: unknown;
+}
+
+interface PipelineModalProps {
+  mode: 'edit' | 'create';
+  trigger: React.ReactNode;
+  initialValues?: PipelineData;
+  onFinish: (vals: PipelineData) => void;
+}
+
+export default function PipelineModal({
   mode,
   trigger,
   initialValues,
   onFinish,
-}: {
-  mode: 'edit' | 'create';
-  trigger: any;
-  initialValues?: any;
-  onFinish: (vals: any) => void;
-}) {
+}: PipelineModalProps) {
   const isEdit = mode === 'edit';
   const [des, setDes] = useState<string>('选择触发事件后讲展示详情');
-  const [config, setConfig] = useState<any[]>([]);
+  const [config, setConfig] = useState<PipelineConfig[]>([]);
 
-  const check = (vals: any) => {
+  const check = (vals: PipelineData) => {
     const keys = Object.keys(vals);
     const mustKeys = ['name', 'description', 'eventName', 'enabled'];
     for (let i = 0; i < mustKeys.length; i++) {
@@ -31,8 +54,9 @@ export default function ({
 
   useEffect(() => {
     if (!initialValues || !initialValues.eventName) return;
-    const targetDes = config.find((item) => item.eventName === initialValues.eventName)
-      ?.eventDescription;
+    const targetDes = config.find(
+      (item) => item.eventName === initialValues.eventName,
+    )?.eventDescription;
     setDes(targetDes || '选择触发事件后讲展示详情');
   }, [initialValues, config]);
 
@@ -41,19 +65,19 @@ export default function ({
       trigger={trigger}
       onFinish={async (vals) => {
         console.log(vals);
-        if (!check(vals)) {
+        if (!check(vals as PipelineData)) {
           message.error('请填写完整信息后提交！');
           return false;
         } else {
           if (mode == 'create') {
             await createPipeline(vals);
             message.success('提交成功！');
-            onFinish(vals);
+            onFinish(vals as PipelineData);
             return true;
           } else {
-            await updatePipelineById(initialValues.id, vals);
+            await updatePipelineById(initialValues!.id, vals);
             message.success('提交成功！');
-            onFinish(vals);
+            onFinish(vals as PipelineData);
             return true;
           }
         }
@@ -72,9 +96,10 @@ export default function ({
         tooltip="选择后可以看到事件的说明"
         required
         request={async () => {
-          const { data } = await getPipelineConfig();
-          setConfig(data);
-          return data?.map((item) => ({
+          const response = (await getPipelineConfig()) as PipelineConfigResponse;
+          const configData = response.data || [];
+          setConfig(configData);
+          return configData.map((item: PipelineConfig) => ({
             label: item.eventNameChinese,
             value: item.eventName,
           }));

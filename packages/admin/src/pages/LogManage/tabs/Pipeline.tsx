@@ -1,136 +1,180 @@
 import { getLog, getPipelineConfig } from '@/services/van-blog/api';
-import { ProTable } from '@ant-design/pro-components';
+import { ProTable, type ActionType, type ProColumns } from '@ant-design/pro-components';
 import { Modal, Tag } from 'antd';
 import { useEffect, useRef, useState } from 'react';
 import { history } from '@/utils/umiCompat';
+import type { AlignType } from 'rc-table/lib/interface';
 
-export default function () {
-  const actionRef = useRef();
-  const [pipelineConfig, setPipelineConfig] = useState<any[]>([]);
+const trans_zh = {
+  'pipeline.table.index': '序号',
+  'pipeline.table.id': '流水线 id',
+  'pipeline.table.name': '名称',
+  'pipeline.table.event': '触发事件',
+  'pipeline.table.result': '结果',
+  'pipeline.table.result.success': '成功',
+  'pipeline.table.result.fail': '失败',
+  'pipeline.table.detail': '详情',
+  'pipeline.modal.title': '详情',
+  'pipeline.modal.logs': '脚本日志：',
+  'pipeline.modal.input': '输入：',
+  'pipeline.modal.output': '输出：',
+  'pipeline.header.title': '流水线日志',
+};
+
+interface PipelineRecord {
+  pipelineId: string;
+  pipelineName: string;
+  eventName: string;
+  success: boolean;
+  logs: string[];
+  input: Record<string, unknown>;
+  output: Record<string, unknown>;
+  time?: string;
+}
+
+interface PipelineConfig {
+  eventName: string;
+  eventNameChinese: string;
+}
+
+interface LogResponse {
+  data: PipelineRecord[];
+  total: number;
+}
+
+export default function Pipeline() {
+  const actionRef = useRef<ActionType>();
+  const [pipelineConfig, setPipelineConfig] = useState<PipelineConfig[]>([]);
+
   useEffect(() => {
-    getPipelineConfig().then(({ data }) => {
-      setPipelineConfig(data);
+    getPipelineConfig().then((response) => {
+      if (response && typeof response === 'object' && 'data' in response) {
+        setPipelineConfig(response.data as PipelineConfig[]);
+      }
     });
   }, []);
-  const columns = [
+
+  const columns: ProColumns<PipelineRecord>[] = [
     {
-      title: '序号',
-      align: 'center',
+      title: trans_zh['pipeline.table.index'],
+      align: 'center' as AlignType,
       width: 50,
-      render: (text, record, index) => {
-        return index + 1;
-      },
+      render: (_, __, index) => index + 1,
     },
     {
-      title: '流水线 id',
+      title: trans_zh['pipeline.table.id'],
       dataIndex: 'pipelineId',
       key: 'pipelineId',
-      align: 'center',
+      align: 'center' as AlignType,
     },
     {
-      title: '名称',
+      title: trans_zh['pipeline.table.name'],
       dataIndex: 'pipelineName',
       key: 'pipelineName',
-      align: 'center',
-      render: (name, record) => (
+      align: 'center' as AlignType,
+      render: (_, record) => (
         <a
           onClick={() => {
             history.push('/code?type=pipeline&id=' + record.pipelineId);
           }}
         >
-          {name}
+          {record.pipelineName}
         </a>
       ),
     },
     {
-      title: '触发事件',
+      title: trans_zh['pipeline.table.event'],
       dataIndex: 'eventName',
       key: 'eventName',
-      align: 'center',
-      render: (eventName) => {
-        return (
-          <Tag color="blue">
-            {pipelineConfig?.find((item) => item.eventName == eventName)?.eventNameChinese}
-          </Tag>
-        );
-      },
+      align: 'center' as AlignType,
+      render: (_, record) => (
+        <Tag color="blue">
+          {pipelineConfig?.find((item) => item.eventName === record.eventName)?.eventNameChinese}
+        </Tag>
+      ),
     },
     {
-      title: '结果',
+      title: trans_zh['pipeline.table.result'],
       dataIndex: 'success',
       key: 'success',
-      align: 'center',
-      render: (success) => {
-        return success ? <Tag color="green">成功</Tag> : <Tag color="red">失败</Tag>;
-      },
+      align: 'center' as AlignType,
+      render: (_, record) =>
+        record.success ? (
+          <Tag color="green">{trans_zh['pipeline.table.result.success']}</Tag>
+        ) : (
+          <Tag color="red">{trans_zh['pipeline.table.result.fail']}</Tag>
+        ),
     },
     {
-      title: '详情',
+      title: trans_zh['pipeline.table.detail'],
       dataIndex: 'detail',
       key: 'detail',
-      render: (_, record) => {
-        return (
-          <a
-            onClick={() => {
-              Modal.info({
-                title: '详情',
-                width: 800,
-                content: (
-                  <div
-                    style={{
-                      maxHeight: '60vh',
-                      overflow: 'auto',
-                    }}
-                  >
-                    <p>脚本日志：</p>
-                    <pre>
-                      {record.logs.map((l) => (
-                        <p>{l}</p>
-                      ))}
-                    </pre>
-                    <p>输入：</p>
-                    <pre>{JSON.stringify(record.input, null, 2)}</pre>
-                    <p>输出：</p>
-                    <pre>{JSON.stringify(record.output, null, 2)}</pre>
-                  </div>
-                ),
-              });
-            }}
-          >
-            详情
-          </a>
-        );
-      },
+      render: (_, record) => (
+        <a
+          onClick={() => {
+            Modal.info({
+              title: trans_zh['pipeline.modal.title'],
+              width: 800,
+              content: (
+                <div
+                  style={{
+                    maxHeight: '60vh',
+                    overflow: 'auto',
+                  }}
+                >
+                  <p>{trans_zh['pipeline.modal.logs']}</p>
+                  <pre>
+                    {record.logs.map((l, i) => (
+                      <p key={i}>{l}</p>
+                    ))}
+                  </pre>
+                  <p>{trans_zh['pipeline.modal.input']}</p>
+                  <pre>{JSON.stringify(record.input, null, 2)}</pre>
+                  <p>{trans_zh['pipeline.modal.output']}</p>
+                  <pre>{JSON.stringify(record.output, null, 2)}</pre>
+                </div>
+              ),
+            });
+          }}
+        >
+          {trans_zh['pipeline.table.detail']}
+        </a>
+      ),
     },
   ];
+
   return (
     <>
-      <ProTable
-        // ghost
+      <ProTable<PipelineRecord>
         cardBordered
         rowKey="time"
         columns={columns}
         search={false}
         dateFormatter="string"
         actionRef={actionRef}
-        options={true}
-        headerTitle="流水线日志"
+        options={false}
+        headerTitle={trans_zh['pipeline.header.title']}
         pagination={{
           pageSize: 10,
           simple: true,
           hideOnSinglePage: true,
         }}
         request={async (params) => {
-          // console.log(params);
-          // const data = await fetchData();
-          const { data } = await getLog('runPipeline', params.current, params.pageSize);
+          const response = await getLog('runPipeline', params.current, params.pageSize);
+
+          if (response && typeof response === 'object' && 'data' in response) {
+            const logData = response.data as LogResponse;
+            return {
+              data: logData.data || [],
+              success: true,
+              total: logData.total || 0,
+            };
+          }
+
           return {
-            data: data.data,
-            // success 请返回 true，
-            // 不然 table 会停止解析数据，即使有数据
+            data: [],
             success: true,
-            // 不传会使用 data 的长度，如果是分页一定要传
-            total: data.total,
+            total: 0,
           };
         }}
       />

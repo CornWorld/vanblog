@@ -1,18 +1,33 @@
-import { useRef, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useModel } from '@/utils/umiCompat';
 import { readTheme, writeTheme } from '@/utils/theme';
 import VanBlog from '@/types/initialState';
 import { useTranslation } from 'react-i18next';
 import './index.less';
 
+const trans_zh = {
+  'theme.light': '亮色',
+  'theme.dark': '暗色',
+  'theme.auto': '自动',
+  'theme.switch_to': '切换主题',
+  'theme.mode.light': '日间',
+  'theme.mode.dark': '夜间',
+  'theme.mode.auto': '自动',
+};
+
 interface ThemeButtonProps {
   showText: boolean;
   className?: string;
 }
 
+// Extended settings interface with theme properties
+interface ExtendedSettings {
+  theme?: 'auto' | 'light' | 'dark';
+  navTheme?: string;
+  [key: string]: unknown;
+}
+
 export default function ThemeButton({ showText, className = '' }: ThemeButtonProps) {
-  const { current } = useRef<any>({ hasInit: false });
-  const { current: currentTimer } = useRef<any>({ timer: null });
   const { initialState, setInitialState } = useModel();
   const { t } = useTranslation();
 
@@ -45,7 +60,7 @@ export default function ThemeButton({ showText, className = '' }: ThemeButtonPro
       try {
         const bytemdElements = document.querySelectorAll('.bytemd');
         if (bytemdElements && bytemdElements.length > 0) {
-          bytemdElements.forEach(editor => {
+          bytemdElements.forEach((editor) => {
             if (isDark) {
               (editor as HTMLElement).style.setProperty('--bg-color', '#141414');
               (editor as HTMLElement).style.setProperty('--border-color', '#303030');
@@ -69,8 +84,10 @@ export default function ThemeButton({ showText, className = '' }: ThemeButtonPro
   const setTheme = (newTheme: 'auto' | 'light' | 'dark') => {
     const curInitialState: VanBlog.InitialState = { ...initialState };
     if (curInitialState.settings) {
-      curInitialState.settings.theme = newTheme;
-      curInitialState.settings.navTheme = newTheme === 'dark' ? 'realDark' : 'light';
+      // Using the extended settings interface
+      const settings = curInitialState.settings as ExtendedSettings;
+      settings.theme = newTheme;
+      settings.navTheme = newTheme === 'dark' ? 'realDark' : 'light';
       setInitialState(curInitialState);
       writeTheme(newTheme);
 
@@ -89,7 +106,8 @@ export default function ThemeButton({ showText, className = '' }: ThemeButtonPro
 
   // Add effect to listen for system theme changes when in auto mode
   useEffect(() => {
-    const theme = initialState?.settings?.theme || readTheme() || 'auto';
+    const settings = initialState?.settings as ExtendedSettings;
+    const theme = settings?.theme || readTheme() || 'auto';
     if (theme === 'auto') {
       const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
 
@@ -100,23 +118,10 @@ export default function ThemeButton({ showText, className = '' }: ThemeButtonPro
       mediaQuery.addEventListener('change', handleChange);
       return () => mediaQuery.removeEventListener('change', handleChange);
     }
-  }, [initialState?.settings?.theme]);
+  }, [initialState?.settings]);
 
-  const setTimer = (callback: Function, delay: number) => {
-    currentTimer.timer = setTimeout(() => {
-      callback();
-    }, delay);
-  };
-
-  const clearTimer = () => {
-    if (currentTimer.timer) {
-      clearTimeout(currentTimer.timer);
-      currentTimer.timer = null;
-    }
-  };
-
-  const theme =
-    initialState?.settings?.theme || readTheme() || 'auto';
+  const settings = initialState?.settings as ExtendedSettings;
+  const theme = settings?.theme || readTheme() || 'auto';
 
   // Initialize theme on component mount
   useEffect(() => {
@@ -130,7 +135,8 @@ export default function ThemeButton({ showText, className = '' }: ThemeButtonPro
     }
 
     // Sync theme with initialState if needed
-    if (initialState?.settings && initialState.settings.theme !== savedTheme) {
+    const settings = initialState?.settings as ExtendedSettings;
+    if (settings && settings.theme !== savedTheme) {
       setTheme(savedTheme);
     }
   }, []);
@@ -153,7 +159,15 @@ export default function ThemeButton({ showText, className = '' }: ThemeButtonPro
   const ThemeIcon = () => {
     if (theme === 'light') {
       return (
-        <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: '14px', fontSize: '14px' }}>
+        <span
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            minWidth: '14px',
+            fontSize: '14px',
+          }}
+        >
           <svg
             viewBox="0 0 24 24"
             width={iconSize}
@@ -167,7 +181,15 @@ export default function ThemeButton({ showText, className = '' }: ThemeButtonPro
       );
     } else if (theme === 'dark') {
       return (
-        <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: '14px', fontSize: '14px' }}>
+        <span
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            minWidth: '14px',
+            fontSize: '14px',
+          }}
+        >
           <svg
             viewBox="0 0 24 24"
             width={iconSize}
@@ -181,7 +203,15 @@ export default function ThemeButton({ showText, className = '' }: ThemeButtonPro
       );
     } else {
       return (
-        <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: '14px', fontSize: '14px' }}>
+        <span
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            minWidth: '14px',
+            fontSize: '14px',
+          }}
+        >
           <svg
             viewBox="0 0 24 24"
             width={iconSize}
@@ -198,13 +228,17 @@ export default function ThemeButton({ showText, className = '' }: ThemeButtonPro
 
   // Use the same structure as other menu links
   return (
-    <a className={`theme-link ${className}`} onClick={handleSwitch} style={{ display: 'flex', alignItems: 'center', width: '100%', height: '100%' }}>
+    <a
+      className={`theme-link ${className}`}
+      onClick={handleSwitch}
+      style={{ display: 'flex', alignItems: 'center', width: '100%', height: '100%' }}
+    >
       <ThemeIcon />
       {showText && (
         <span style={{ marginLeft: '10px', transition: 'opacity 0.3s' }}>
-          {theme === 'light' && t('common.lightMode', '日间')}
-          {theme === 'dark' && t('common.darkMode', '夜间')}
-          {theme === 'auto' && t('common.autoMode', '自动')}
+          {theme === 'light' && t('common.lightMode', trans_zh['theme.mode.light'])}
+          {theme === 'dark' && t('common.darkMode', trans_zh['theme.mode.dark'])}
+          {theme === 'auto' && t('common.autoMode', trans_zh['theme.mode.auto'])}
         </span>
       )}
     </a>

@@ -1,14 +1,11 @@
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { PageLoading } from '@ant-design/pro-layout';
-import { message, Modal, notification } from 'antd';
+import { message, Modal } from 'antd';
 import dayjs from '@/utils/dayjs';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { fetchAllMeta, fetchLatestVersionInfo } from '../services/van-blog/api';
-import { checkUrl } from '../services/van-blog/checkUrl';
-import { beforeSwitchTheme, getInitTheme, mapTheme } from '../services/van-blog/theme';
 import {
   checkRedirectCycle,
-  getAccessToken,
   removeAccessToken,
   isLoggedIn,
   resetRedirectCycle,
@@ -91,10 +88,10 @@ export const AppProvider = ({ children }) => {
       }
 
       // Don't redirect to login if already on login page or in the login process
-      const isAuthPage =
+      const isOnAuthPage =
         location.pathname.includes(loginPath) || location.pathname.includes(initPath);
 
-      if (!isAuthPage) {
+      if (!isOnAuthPage) {
         console.log('[DEBUG] Not on auth page, redirecting to login');
         navigate(loginPath, { replace: true });
       } else {
@@ -167,17 +164,17 @@ export const AppProvider = ({ children }) => {
         const isLoginPage = location.pathname.includes(loginPath);
         const isInitPage = location.pathname.includes(initPath);
         const isRestorePage = location.pathname.includes('/user/restore');
-        const isAuthPage = isLoginPage || isInitPage || isRestorePage;
+        const isOnAuthPage = isLoginPage || isInitPage || isRestorePage;
         const isAuthenticated = isLoggedIn();
 
         console.log('[DEBUG] Init context:', {
           path: location.pathname,
-          isAuthPage,
+          isOnAuthPage,
           isAuthenticated,
         });
 
         // 检查重定向循环
-        if (!isAuthPage && !isAuthenticated && checkRedirectCycle()) {
+        if (!isOnAuthPage && !isAuthenticated && checkRedirectCycle()) {
           console.error('[DEBUG] Breaking redirect cycle during initialization');
           message.error('检测到重定向循环，请刷新页面或清除浏览器缓存', 10);
           removeAccessToken();
@@ -194,7 +191,7 @@ export const AppProvider = ({ children }) => {
         }
 
         // 重置重定向循环计数，特别是在认证页面
-        if (isAuthPage) {
+        if (isOnAuthPage) {
           console.log('[DEBUG] On auth page, resetting redirect cycle');
           resetRedirectCycle();
         }
@@ -221,7 +218,7 @@ export const AppProvider = ({ children }) => {
         }
 
         // 首先检查用户是否已登录
-        if (!isAuthenticated && !isAuthPage) {
+        if (!isAuthenticated && !isOnAuthPage) {
           console.log('[DEBUG] Not authenticated, redirecting to login from:', location.pathname);
           setLoading(false);
           // 将当前路径添加为重定向参数
@@ -233,7 +230,7 @@ export const AppProvider = ({ children }) => {
 
         // 只有在非认证页面且已认证时才获取初始化数据
         let meta = {};
-        if (!isAuthPage || isAuthenticated) {
+        if (!isOnAuthPage || isAuthenticated) {
           // 获取初始化数据
           meta = await fetchInitData();
         }
@@ -241,24 +238,32 @@ export const AppProvider = ({ children }) => {
         // 检查获取的数据
         if (!meta || Object.keys(meta).length === 0) {
           console.warn('[DEBUG] Empty meta data received');
-          if (isAuthenticated && !isAuthPage) {
+          if (isAuthenticated && !isOnAuthPage) {
             console.log('[DEBUG] Token might be invalid, but not redirecting to avoid loops');
             // 不立即重定向，让页面级检查处理，避免循环
           }
         }
 
-        // 验证BaseURL的有效性
-        if (meta.baseUrl && !meta.baseUrl.startsWith('http')) {
-          // URL格式无效，显示警告
-          Modal.warning({
-            title: '警告',
-            content: `您的网站URL配置错误: ${meta.baseUrl}, 请更正为包含 http:// 或 https:// 的完整URL`,
-          });
-        }
-
-        // 更新应用状态
+        // 设置完整状态
+        console.log('[DEBUG] Setting complete initial state');
         setInitialState({
           ...meta,
+          fetchInitData,
+          checkVersionUpdate,
+          settings: {
+            navTheme: 'light',
+            layout: 'side',
+          },
+        });
+
+        // 检查版本更新
+        if (meta.version) {
+          checkVersionUpdate(meta.version);
+        }
+      } catch (error) {
+        console.error('[DEBUG] Error during initialization:', error);
+        // 设置默认状态作为回退
+        setInitialState({
           fetchInitData,
           settings: {
             navTheme: 'light',
@@ -266,97 +271,67 @@ export const AppProvider = ({ children }) => {
             headerRender: false,
           },
         });
-
-        // 异步检查版本更新信息
-        if (meta.version) {
-          checkVersionUpdate(meta.version);
-        }
-      } catch (error) {
-        console.error('[DEBUG] Error during app initialization:', error);
-        // 避免非认证页面的自动重定向，防止循环
-        if (!isAuthPage && !checkRedirectCycle()) {
-          navigate(loginPath, { replace: true });
-        } else {
-          // 提供最小状态以便应用能够运行
-          setInitialState({
-            fetchInitData,
-            settings: {
-              navTheme: 'light',
-              layout: 'side',
-              headerRender: false,
-            },
-          });
-        }
       } finally {
+        console.log('[DEBUG] Initialization finished');
         setLoading(false);
       }
     };
 
     init();
-  }, [location.pathname]);
+  }, [location.pathname, navigate]);
 
-  // Handle page change logic (previously in onPageChange)
-  useEffect(() => {
-    if (!initialState) return;
-
-    // Add detailed debugging of route changes
-    console.debug('[DEBUG] Current path:', location.pathname);
-    console.debug('[DEBUG] Query params:', location.search);
-    console.debug('[DEBUG] User state:', initialState.user ? 'Logged in' : 'Not logged in');
-
-    if (location.pathname === '/init' && !initialState.user) {
-      return;
-    }
-
-    if (!initialState.user && ![loginPath, '/user/restore'].includes(location.pathname)) {
-      navigate(loginPath);
-    }
-
-    if (location.pathname === loginPath && Boolean(initialState.user)) {
-      navigate('/');
-    }
-  }, [location.pathname, location.search, initialState]);
-
-  // Handle window resize
+  // 处理窗口大小变化
   useEffect(() => {
     const handleSizeChange = () => {
-      const headerPoint = 768;
-      const show = window.innerWidth > headerPoint ? false : true;
-      if (show) {
-        const el = document.querySelector('header.ant-layout-header');
-        if (el) {
-          el.style.display = 'block';
-        }
-      } else {
-        const el = document.querySelector('header.ant-layout-header');
-        if (el) {
-          el.style.display = 'none';
-        }
+      try {
+        // 尝试设置CSS变量
+        document.documentElement.style.setProperty('--vh', `${window.innerHeight * 0.01}px`);
+        document.documentElement.style.setProperty('--window-height', `${window.innerHeight}px`);
+      } catch (error) {
+        console.error('[DEBUG] Error setting viewport height variables:', error);
       }
     };
 
-    window.addEventListener('resize', handleSizeChange);
+    // 初始设置
     handleSizeChange();
 
+    // 监听窗口大小变化
+    window.addEventListener('resize', handleSizeChange);
+
+    // 清理函数
     return () => {
       window.removeEventListener('resize', handleSizeChange);
     };
   }, []);
 
-  // 只有在初始化数据加载完成后才渲染子组件，否则显示加载中
-  const appContextValue = useMemo(
-    () => ({
-      initialState,
-      setInitialState,
-      fetchInitData,
-      loading,
-    }),
-    [initialState, loading],
-  );
+  // 本地存储颜色主题绑定
+  const colorPrimary = useMemo(() => {
+    try {
+      const root = getComputedStyle(document.documentElement);
+      return root.getPropertyValue('--color-primary').trim();
+    } catch {
+      return '#1677FF'; // 默认蓝色
+    }
+  }, []);
 
+  // 在加载中状态，显示加载器
   if (loading) {
     return <PageLoading />;
   }
 
-  return <AppContext.Provider value={appContextValue}>{children}</AppContext.Provider>;
+  // 提供上下文
+  return (
+    <AppContext.Provider
+      value={{
+        initialState,
+        setInitialState,
+        loading,
+        colorPrimary,
+      }}
+    >
+      {children}
+    </AppContext.Provider>
+  );
 };
+
+export default AppContext;

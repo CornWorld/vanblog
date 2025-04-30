@@ -1,3 +1,7 @@
+const trans_zh = {
+  'safeimgpage.empty': '暂无图片',
+};
+
 import React, { useCallback, useEffect, useState } from 'react';
 import { Empty, Image, Spin } from 'antd';
 import { getImgLink } from './tools';
@@ -14,16 +18,7 @@ interface SafeImgPageProps {
   displayMenu: (e: React.MouseEvent, item: StaticItem) => void;
 }
 
-export const SafeImgPage: React.FC<SafeImgPageProps> = ({
-  data,
-  loading,
-  total,
-  page,
-  pageSize,
-  handlePageChange,
-  responsive,
-  displayMenu,
-}) => {
+export const SafeImgPage: React.FC<SafeImgPageProps> = ({ data, loading, displayMenu }) => {
   const [shouldRender, setShouldRender] = useState(false);
 
   useEffect(() => {
@@ -38,7 +33,7 @@ export const SafeImgPage: React.FC<SafeImgPageProps> = ({
       e.preventDefault();
       displayMenu(e, item);
     },
-    [displayMenu]
+    [displayMenu],
   );
 
   if (!shouldRender) {
@@ -47,7 +42,7 @@ export const SafeImgPage: React.FC<SafeImgPageProps> = ({
 
   return (
     <Spin spinning={loading}>
-      {(!data || data.length === 0) && <Empty description="暂无图片" />}
+      {(!data || data.length === 0) && <Empty description={trans_zh['safeimgpage.empty']} />}
       <Image.PreviewGroup>
         {data.map((item) => (
           <Image
@@ -61,4 +56,4 @@ export const SafeImgPage: React.FC<SafeImgPageProps> = ({
       </Image.PreviewGroup>
     </Spin>
   );
-}; 
+};

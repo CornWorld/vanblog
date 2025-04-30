@@ -1,10 +1,16 @@
 import { BytemdPlugin } from 'bytemd';
+
+const trans_zh = {
+  'editor.history.undo': '撤销',
+  'editor.history.redo': '重做',
+};
+
 export function historyIcon(): BytemdPlugin {
   return {
     actions: [
       {
         position: 'left',
-        title: '撤销',
+        title: trans_zh['editor.history.undo'],
         icon: undoIcon, // 16x16 SVG icon
 
         handler: {
@@ -16,7 +22,7 @@ export function historyIcon(): BytemdPlugin {
       },
       {
         position: 'left',
-        title: '重做',
+        title: trans_zh['editor.history.redo'],
         icon: redoIcon, // 16x16 SVG icon
         handler: {
           type: 'action',

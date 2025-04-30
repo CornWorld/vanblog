@@ -1,5 +1,5 @@
 import React, { lazy, Suspense, useEffect } from 'react';
-import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { PageLoading } from '@ant-design/pro-layout';
 import { App as AntApp } from 'antd';
 
@@ -8,6 +8,14 @@ import { getAccessToken } from './utils/auth';
 import { useInitHistory } from './utils/umiCompat';
 import BasicLayout from './layouts/BasicLayout';
 import BlankLayout from './layouts/BlankLayout';
+
+const trans_zh = {
+  'app.debug.route_check': '[DEBUG] ProtectedRoute check:',
+  'app.debug.no_token': '[DEBUG] No token found, redirecting to login',
+  'app.debug.admin_denied': '[DEBUG] Admin route access denied',
+  'app.debug.route_granted': '[DEBUG] Route access granted',
+  'app.debug.checking_admin': '[DEBUG] Checking admin status',
+};
 
 // Preload SVG resources
 function preloadSvgIcons() {
@@ -59,7 +67,7 @@ const ProtectedRoute = ({ isAdmin, children }) => {
   const location = useLocation();
   const token = getAccessToken();
 
-  console.log('[DEBUG] ProtectedRoute check:', {
+  console.log(trans_zh['app.debug.route_check'], {
     path: location.pathname,
     hasToken: !!token,
     isAdminRoute: !!isAdmin,
@@ -67,7 +75,7 @@ const ProtectedRoute = ({ isAdmin, children }) => {
 
   // 如果没有令牌，重定向到登录页面并保存当前路径
   if (!token) {
-    console.log('[DEBUG] No token found, redirecting to login');
+    console.log(trans_zh['app.debug.no_token']);
     return (
       <Navigate to={`/user/login?redirect=${encodeURIComponent(location.pathname)}`} replace />
     );
@@ -75,18 +83,18 @@ const ProtectedRoute = ({ isAdmin, children }) => {
 
   // 如果是管理员路由，但用户不是管理员
   if (isAdmin && !isAdmin()) {
-    console.log('[DEBUG] Admin route access denied');
+    console.log(trans_zh['app.debug.admin_denied']);
     return <Navigate to="/404" replace />;
   }
 
   // 通过验证，渲染子组件
-  console.log('[DEBUG] Route access granted');
+  console.log(trans_zh['app.debug.route_granted']);
   return children;
 };
 
 // isAdmin check function
 const isAdmin = () => {
-  console.log('[DEBUG] Checking admin status');
+  console.log(trans_zh['app.debug.checking_admin']);
   // Implement your admin check logic here
   // This would typically check the user type in the app context
   return true; // Simplified for now, you'll need to implement actual check

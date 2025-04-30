@@ -3,7 +3,21 @@ import { parseMarkdownFile } from '@/services/van-blog/parseMarkdownFile';
 import { Alert, Button, Card, message, Space, Spin, Upload } from 'antd';
 import { useState } from 'react';
 
-const BatchImport = (props: { type: 'article' | 'draft'; beforeUpload: any }) => {
+const trans_zh = {
+  'migrate.batch.article': '批量导入文章',
+  'migrate.batch.draft': '批量导入草稿',
+  'migrate.message.complete': '批量上传完成！',
+  'migrate.card.title': '迁移助手',
+  'migrate.alert.message':
+    '注意：使用迁移助手批量导入文章或草稿时，可能分类会为空，后期需要手动修改哦',
+};
+
+interface BatchImportProps {
+  type: 'article' | 'draft';
+  beforeUpload: (type: 'article' | 'draft', file: File) => Promise<void>;
+}
+
+const BatchImport = (props: BatchImportProps) => {
   return (
     <Upload
       showUploadList={false}
@@ -12,22 +26,26 @@ const BatchImport = (props: { type: 'article' | 'draft'; beforeUpload: any }) =>
       beforeUpload={async (file, files) => {
         await props.beforeUpload(props.type, file);
         if (files[files.length - 1] == file) {
-          message.success('批量上传完成！');
+          message.success(trans_zh['migrate.message.complete']);
         }
         return false;
       }}
     >
-      <Button type="primary">{props.type == 'article' ? '批量导入文章' : '批量导入草稿'}</Button>
+      <Button type="primary">
+        {props.type == 'article'
+          ? trans_zh['migrate.batch.article']
+          : trans_zh['migrate.batch.draft']}
+      </Button>
     </Upload>
   );
 };
 
-export default function (props) {
+export default function MigrateTab() {
   const [loading, setLoading] = useState(false);
-  const handleImport = async (type, file) => {
+  const handleImport = async (type: 'article' | 'draft', file: File) => {
     setLoading(true);
     try {
-      const vals = await parseMarkdownFile(file, true);
+      const vals = await parseMarkdownFile(file);
       if (vals) {
         if (type == 'article') {
           await createArticle(vals);
@@ -35,16 +53,19 @@ export default function (props) {
           await createDraft(vals);
         }
       }
-    } catch (err) {}
+    } catch (error) {
+      console.error('Error importing file:', error);
+      message.error('导入失败，请检查文件格式');
+    }
     setLoading(false);
   };
 
   return (
     <>
-      <Card title="迁移助手">
+      <Card title={trans_zh['migrate.card.title']}>
         <Alert
           type="info"
-          message="注意：使用迁移助手批量导入文章或草稿时，可能分类会为空，后期需要手动修改哦"
+          message={trans_zh['migrate.alert.message']}
           style={{ marginBottom: 20 }}
         />
         <Spin spinning={loading}>

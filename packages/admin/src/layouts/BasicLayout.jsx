@@ -19,6 +19,13 @@ import ThemeButton from '@/components/ThemeButton';
 import { beforeSwitchTheme } from '@/services/van-blog/theme';
 import { useTranslation } from 'react-i18next';
 
+const trans_zh = {
+  'common.logout': '退出登录',
+  'common.home': '主站',
+  'common.about': '关于',
+  'layout.collaborator_mode': '协作模式',
+};
+
 // Route config
 import routes from './routes';
 
@@ -106,7 +113,7 @@ const CustomBottomLinks = ({ collapsed }) => {
         trigger={
           <a style={{ display: 'flex', alignItems: 'center' }}>
             <LogoutOutlined style={{ marginRight: collapsed ? 0 : 10 }} />
-            {!collapsed && <span>{t('common.logout') || '退出登录'}</span>}
+            {!collapsed && <span>{t('common.logout') || trans_zh['common.logout']}</span>}
           </a>
         }
       />
@@ -125,12 +132,12 @@ const CustomBottomLinks = ({ collapsed }) => {
           {
             key: 'home',
             icon: <HomeOutlined />,
-            label: t('common.home') || '主站',
+            label: t('common.home') || trans_zh['common.home'],
           },
           {
             key: 'about',
             icon: <ProjectOutlined />,
-            label: t('common.about') || '关于',
+            label: t('common.about') || trans_zh['common.about'],
           },
           {
             key: 'theme',
@@ -207,7 +214,7 @@ const BasicLayout = () => {
             const user = initialState?.user;
             const isCollaborator = user?.type && user?.type === 'collaborator';
             if (isCollaborator) {
-              settings.title = '协作模式';
+              settings.title = trans_zh['layout.collaborator_mode'];
             }
             if (settings.navTheme !== initialState?.settings?.navTheme) {
               // 切换了主题

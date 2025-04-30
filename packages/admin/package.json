@@ -16,7 +16,7 @@
     "lint:fix": "eslint --fix --cache --ext .js,.jsx,.ts,.tsx --max-warnings=1000 --format=pretty ./src && pnpm run lint:style",
     "lint:js": "eslint --cache --ext .js,.jsx,.ts,.tsx --max-warnings=1000 --format=pretty ./src",
     "lint:prettier": "prettier -c --write \"src/**/*\" --end-of-line auto",
-    "lint:style": "stylelint --fix \"src/**/*.less\"",
+    "lint:style": "stylelint --fix \"src/**/*.less\" --config ./.stylelintrc.json",
     "playwright": "playwright install && playwright test",
     "prepare": "echo 'pre'",
     "prettier": "prettier -c --write \"src/**/*\"",

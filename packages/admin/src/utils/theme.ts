@@ -13,12 +13,12 @@ export const readTheme = (): ThemeType | null => {
   if (typeof window === 'undefined') {
     return null;
   }
-  
+
   const theme = localStorage.getItem(THEME_KEY);
   if (theme && ['light', 'dark', 'auto'].includes(theme)) {
     return theme as ThemeType;
   }
-  
+
   return null;
 };
 
@@ -29,6 +29,6 @@ export const writeTheme = (theme: ThemeType): void => {
   if (typeof window === 'undefined') {
     return;
   }
-  
+
   localStorage.setItem(THEME_KEY, theme);
-}; 
+};
