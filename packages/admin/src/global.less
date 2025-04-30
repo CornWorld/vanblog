@@ -104,6 +104,53 @@ body,
   }
 }
 
+/* 添加针对所有主题的ProCard通用样式 */
+.ant-pro-card {
+  transition: background-color 0.3s ease-in-out !important;
+
+  .ant-pro-card-body {
+    transition: background-color 0.3s ease-in-out !important;
+  }
+
+  .ant-pro-card-header {
+    transition: background-color 0.3s ease-in-out !important;
+  }
+}
+
+/* 针对默认日间模式的ProCard样式 */
+:root:not([data-theme='dark']) .ant-pro-card,
+:root:not([data-theme='dark']) .css-dev-only-do-not-override-spi69h.ant-pro-card,
+:root[data-theme='light'] .ant-pro-card,
+:root[data-theme='light'] .css-dev-only-do-not-override-spi69h.ant-pro-card {
+  background-color: #fff !important;
+
+  .ant-pro-card-body {
+    background-color: #fff !important;
+  }
+
+  .ant-pro-card-header {
+    background-color: #fff !important;
+  }
+}
+
+/* 针对暗黑模式的ProCard样式 */
+:root[data-theme='dark'] .ant-pro-card,
+:root[data-theme='dark'] .css-dev-only-do-not-override-spi69h.ant-pro-card,
+[data-theme='dark'] .ant-pro-card,
+[data-theme='dark'] .css-dev-only-do-not-override-spi69h.ant-pro-card,
+.dark-theme-body .ant-pro-card,
+.dark-theme-body .css-dev-only-do-not-override-spi69h.ant-pro-card {
+  background-color: #1f1f1f !important;
+
+  .ant-pro-card-body {
+    background-color: #1f1f1f !important;
+  }
+
+  .ant-pro-card-header {
+    background-color: #1f1f1f !important;
+  }
+}
+
 /* Fix title color for dark themes */
 [data-theme='dark'],
 .ant-layout-sider-dark,
@@ -120,6 +167,11 @@ body,
     .ant-menu {
       background: transparent !important;
     }
+  }
+
+  /* CSS 覆盖以修复主题类名问题 */
+  .css-dev-only-do-not-override-spi69h.ant-pro-card-body {
+    background-color: #1f1f1f !important;
   }
 
   /* ByteMD dark theme styles */

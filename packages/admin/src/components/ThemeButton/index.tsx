@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useModel } from '@/utils/umiCompat';
-import { readTheme, writeTheme } from '@/utils/theme';
+import { readTheme, setTheme } from '@/utils/theme';
+import { applyThemeToDOM, decodeAutoTheme } from '@/services/van-blog/theme';
 import VanBlog from '@/types/initialState';
 import { useTranslation } from 'react-i18next';
 import './index.less';
@@ -31,74 +32,22 @@ export default function ThemeButton({ showText, className = '' }: ThemeButtonPro
   const { initialState, setInitialState } = useModel();
   const { t } = useTranslation();
 
-  // Apply theme change to DOM
-  const applyThemeToDOM = (newTheme: string) => {
-    const body = document.body;
-    body.classList.remove('light-theme', 'dark-theme');
-
-    if (newTheme === 'dark') {
-      body.classList.add('dark-theme');
-      body.classList.add('dark-theme-body'); // Additional class for custom styles
-      document.documentElement.setAttribute('data-theme', 'dark');
-    } else {
-      body.classList.add('light-theme');
-      body.classList.remove('dark-theme-body');
-      document.documentElement.setAttribute('data-theme', 'light');
-    }
-
-    // Also update Ant Design's theme
-    if (newTheme === 'dark') {
-      document.documentElement.classList.add('dark');
-      document.documentElement.style.colorScheme = 'dark';
-    } else {
-      document.documentElement.classList.remove('dark');
-      document.documentElement.style.colorScheme = 'light';
-    }
-
-    // Special handling for ByteMD
-    const applyBytemdDarkMode = (isDark: boolean) => {
-      try {
-        const bytemdElements = document.querySelectorAll('.bytemd');
-        if (bytemdElements && bytemdElements.length > 0) {
-          bytemdElements.forEach((editor) => {
-            if (isDark) {
-              (editor as HTMLElement).style.setProperty('--bg-color', '#141414');
-              (editor as HTMLElement).style.setProperty('--border-color', '#303030');
-              (editor as HTMLElement).style.setProperty('--color', 'rgba(255, 255, 255, 0.65)');
-            } else {
-              (editor as HTMLElement).style.removeProperty('--bg-color');
-              (editor as HTMLElement).style.removeProperty('--border-color');
-              (editor as HTMLElement).style.removeProperty('--color');
-            }
-          });
-        }
-      } catch (e) {
-        console.warn('Failed to apply ByteMD theme:', e);
-      }
-    };
-
-    // Apply ByteMD theme changes
-    applyBytemdDarkMode(newTheme === 'dark');
-  };
-
-  const setTheme = (newTheme: 'auto' | 'light' | 'dark') => {
+  const updateTheme = (newTheme: 'auto' | 'light' | 'dark') => {
     const curInitialState: VanBlog.InitialState = { ...initialState };
     if (curInitialState.settings) {
       // Using the extended settings interface
       const settings = curInitialState.settings as ExtendedSettings;
       settings.theme = newTheme;
-      settings.navTheme = newTheme === 'dark' ? 'realDark' : 'light';
-      setInitialState(curInitialState);
-      writeTheme(newTheme);
 
-      // Apply the theme to DOM immediately
-      if (newTheme === 'auto') {
-        // For auto, detect system preference
-        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        applyThemeToDOM(prefersDark ? 'dark' : 'light');
-      } else {
-        applyThemeToDOM(newTheme);
-      }
+      // Update navTheme based on the effective theme (accounting for auto mode)
+      const effectiveTheme = newTheme === 'auto' ? decodeAutoTheme() : newTheme;
+      settings.navTheme = effectiveTheme === 'dark' ? 'realDark' : 'light';
+
+      // Update context state
+      setInitialState(curInitialState);
+
+      // Apply theme via utility function (also updates localStorage)
+      setTheme(newTheme);
 
       console.log('[Theme] Changed to:', newTheme);
     }
@@ -106,18 +55,8 @@ export default function ThemeButton({ showText, className = '' }: ThemeButtonPro
 
   // Add effect to listen for system theme changes when in auto mode
   useEffect(() => {
-    const settings = initialState?.settings as ExtendedSettings;
-    const theme = settings?.theme || readTheme() || 'auto';
-    if (theme === 'auto') {
-      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-
-      const handleChange = (e: MediaQueryListEvent) => {
-        applyThemeToDOM(e.matches ? 'dark' : 'light');
-      };
-
-      mediaQuery.addEventListener('change', handleChange);
-      return () => mediaQuery.removeEventListener('change', handleChange);
-    }
+    // This is now handled by setupThemeListener in theme service
+    // No need for duplicate listeners here
   }, [initialState?.settings]);
 
   const settings = initialState?.settings as ExtendedSettings;
@@ -127,17 +66,13 @@ export default function ThemeButton({ showText, className = '' }: ThemeButtonPro
   useEffect(() => {
     const savedTheme = readTheme() || 'auto';
 
-    if (savedTheme === 'auto') {
-      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      applyThemeToDOM(prefersDark ? 'dark' : 'light');
-    } else {
-      applyThemeToDOM(savedTheme);
-    }
+    // Apply theme via service function
+    applyThemeToDOM(savedTheme);
 
     // Sync theme with initialState if needed
     const settings = initialState?.settings as ExtendedSettings;
     if (settings && settings.theme !== savedTheme) {
-      setTheme(savedTheme);
+      updateTheme(savedTheme);
     }
   }, []);
 
@@ -145,11 +80,11 @@ export default function ThemeButton({ showText, className = '' }: ThemeButtonPro
     if (!initialState || !initialState.settings) return;
     // light -> dark -> auto -> light
     if (theme === 'light') {
-      setTheme('dark');
+      updateTheme('dark');
     } else if (theme === 'dark') {
-      setTheme('auto');
+      updateTheme('auto');
     } else {
-      setTheme('light');
+      updateTheme('light');
     }
   };
 

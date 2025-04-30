@@ -9,6 +9,7 @@ import { useInitHistory } from './utils/umiCompat';
 import { ROUTES } from './utils/routes';
 import BasicLayout from './layouts/BasicLayout';
 import BlankLayout from './layouts/BlankLayout';
+import { setupThemeListener } from './services/van-blog/theme';
 
 const trans_zh = {
   'app.debug.route_check': '[DEBUG] ProtectedRoute check:',
@@ -108,6 +109,15 @@ const App = () => {
   // Preload SVG icons and editor assets
   useEffect(() => {
     preloadSvgIcons();
+  }, []);
+
+  // Setup theme listener for auto theme mode
+  useEffect(() => {
+    // 设置主题监听器并在组件卸载时清理
+    const cleanupThemeListener = setupThemeListener();
+    return () => {
+      cleanupThemeListener();
+    };
   }, []);
 
   return (

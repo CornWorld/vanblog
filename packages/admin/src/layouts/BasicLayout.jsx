@@ -16,7 +16,7 @@ import { useAppContext } from '../context/AppContext';
 import Footer from '@/components/Footer';
 import LogoutButton from '@/components/LogoutButton';
 import ThemeButton from '@/components/ThemeButton';
-import { beforeSwitchTheme } from '@/services/van-blog/theme';
+import { mapTheme, writeTheme } from '@/services/van-blog/theme';
 import { useTranslation } from 'react-i18next';
 
 const trans_zh = {
@@ -218,7 +218,8 @@ const BasicLayout = () => {
             }
             if (settings.navTheme !== initialState?.settings?.navTheme) {
               // 切换了主题
-              beforeSwitchTheme(settings.navTheme);
+              settings.navTheme = mapTheme(settings.theme || 'auto');
+              writeTheme(settings.theme || 'auto');
             }
             setInitialState((prev) => ({
               ...prev,
