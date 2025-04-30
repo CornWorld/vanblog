@@ -10,7 +10,7 @@ import {
   isLoggedIn,
   resetRedirectCycle,
 } from '../utils/auth';
-import { ROUTES, isAuthPage } from '../utils/routes';
+import { ROUTES } from '../router';
 
 const AppContext = createContext(null);
 

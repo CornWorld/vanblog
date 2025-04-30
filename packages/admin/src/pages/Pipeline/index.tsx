@@ -5,7 +5,7 @@ import { Button, message, Modal, Space, Tag } from 'antd';
 import { getPiplelines, getPipelineConfig, deletePipelineById } from '@/services/van-blog/api';
 import PipelineModal from './components/PipelineModal';
 import { useEffect, useRef, useState } from 'react';
-import { history } from '@/utils/umiCompat';
+import { history } from '@/router';
 
 const trans_zh = {
   'pipeline.title': '流水线',

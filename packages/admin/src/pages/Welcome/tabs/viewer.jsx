@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { getWelcomeData } from '@/services/van-blog/api';
 import ArticleList from '@/components/ArticleList';
 import { getRecentTimeDes } from '@/services/van-blog/tool';
-import { Link } from '@/utils/umiCompat';
+import { Link } from '@/router';
 import TipTitle from '@/components/TipTitle';
 import '../index.less';
 import NumSelect from '@/components/NumSelect';

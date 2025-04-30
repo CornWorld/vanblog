@@ -1,8 +1,8 @@
 import { useEffect, useRef, useMemo } from 'react';
-import { useModel } from '@/utils/umiCompat';
+import { useModel } from '@/router';
 import { useLocation } from 'react-router-dom';
 import './index.css';
-import { ROUTES } from '@/utils/routes';
+import { ROUTES } from '@/router';
 
 const trans_zh = {
   'footer.powered_by': 'Powered By',

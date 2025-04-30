@@ -9,7 +9,7 @@ import ProForm, { ProFormSwitch } from '@ant-design/pro-form';
 import { Alert, Button, Card, Input, message, Modal, Row, Space, Spin } from 'antd';
 import { isEqual } from 'lodash-es';
 import { useMemo, useState } from 'react';
-import { useModel } from '@/utils/umiCompat';
+import { useModel } from '@/router';
 
 const trans_zh = {
   'caddy.title': 'HTTPS 相关配置',

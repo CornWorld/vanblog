@@ -3,7 +3,7 @@ import { deleteCustomPageByPath, getCustomPages } from '@/services/van-blog/api'
 import { ProTable } from '@ant-design/pro-components';
 import { Button, Card, message, Modal, Space } from 'antd';
 import { useRef } from 'react';
-import { Link } from '@/utils/umiCompat';
+import { Link } from '@/router';
 
 const trans_zh = {
   'custompage.column.index': '序号',

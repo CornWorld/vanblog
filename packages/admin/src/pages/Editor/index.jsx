@@ -21,7 +21,7 @@ import { DownOutlined } from '@ant-design/icons';
 import { PageContainer } from '@ant-design/pro-layout';
 import { App, Button, Dropdown, Input, Menu, message, Modal, Space, Tag, Upload } from 'antd';
 import { useCallback, useEffect, useState } from 'react';
-import { history } from '@/utils/umiCompat';
+import { history } from '@/router';
 import dayjs from '@/utils/dayjs';
 import './index.less';
 

@@ -21,7 +21,7 @@ import { emoji } from './emoji';
 import { imgUploadPlugin, uploadImg } from './imgUpload';
 import { insertMore } from './insertMore';
 import { cn } from './locales';
-import { useModel } from '@/utils/umiCompat';
+import { useModel } from '@/router';
 import { customContainer } from './plugins/customContainer';
 import { historyIcon } from './history';
 import rawHTML from './rawHTML';

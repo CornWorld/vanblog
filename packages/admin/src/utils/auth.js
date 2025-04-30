@@ -4,7 +4,7 @@
  * 处理用户token存储、检索和有效性检查
  */
 
-import { isAuthPage as isAuthRoute } from './routes';
+import { isAuthPage as isAuthRoute } from '../router';
 
 const trans_zh = {
   'auth.debug.reset_redirect_cycle': '[DEBUG] 重置重定向循环检测（超时）',

@@ -5,7 +5,7 @@ import { genActiveObj } from '@/services/van-blog/activeColTools';
 import { deleteDraft, getAllCategories, getDraftById, getTags } from '@/services/van-blog/api';
 import { parseObjToMarkdown } from '@/services/van-blog/parseMarkdownFile';
 import { message, Modal, Tag } from 'antd';
-import { history } from '@/utils/umiCompat';
+import { history } from '@/router';
 import { withoutKey } from '@/utils/props';
 
 const trans_zh = {

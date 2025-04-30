@@ -5,7 +5,7 @@ import { encryptPwd } from '@/services/van-blog/encryptPwd';
 import { ProForm, ProFormText, ProTable } from '@ant-design/pro-components';
 import { Button, Card, message, Modal, Space } from 'antd';
 import { useRef } from 'react';
-import { history, useModel } from '@/utils/umiCompat';
+import { history, useModel } from '@/router';
 
 const trans_zh = {
   'user.id': 'ID',

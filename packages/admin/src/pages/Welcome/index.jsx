@@ -4,7 +4,7 @@ import './index.less';
 import ArticleTab from './tabs/article';
 import OverView from './tabs/overview';
 import Viewer from './tabs/viewer';
-import { useModel } from '@/utils/umiCompat';
+import { useModel } from '@/router';
 
 const trans_zh = {
   'welcome.tabs.overview': '总览',
@@ -13,7 +13,7 @@ const trans_zh = {
 };
 
 export default () => {
-  const { initialState } = useModel('@@initialState');
+  const { initialState } = useModel();
   const isDarkMode = initialState?.settings?.navTheme?.toLowerCase().includes('dark');
 
   const navs = useRef([

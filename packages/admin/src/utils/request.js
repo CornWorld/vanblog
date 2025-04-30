@@ -1,6 +1,6 @@
 import { notification } from 'antd';
 import { isLoggedIn, removeAccessToken } from './auth';
-import { ROUTES, withPrefix } from './routes';
+import { ROUTES, withPrefix } from '../router';
 
 const trans_zh = {
   'request.message.network_error': '网络异常',

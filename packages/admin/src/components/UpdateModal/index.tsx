@@ -3,7 +3,7 @@ import { ModalForm, ProFormDateTimePicker, ProFormSelect, ProFormText } from '@a
 import { Form, message, Modal, Button } from 'antd';
 import dayjs from '@/utils/dayjs';
 import { useEffect } from 'react';
-import { history } from '@/utils/umiCompat';
+import { history } from '@/router';
 import AuthorField from '../AuthorField';
 
 interface UpdateModalProps {

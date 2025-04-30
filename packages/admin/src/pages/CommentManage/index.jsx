@@ -1,7 +1,7 @@
 import { PageContainer } from '@ant-design/pro-layout';
 import { Button, Modal, Space, Spin } from 'antd';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { history, useModel } from '@/utils/umiCompat';
+import { history, useModel } from '@/router';
 import TipTitle from '../../components/TipTitle';
 
 const trans_zh = {

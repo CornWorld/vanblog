@@ -1,7 +1,6 @@
 import { logout } from '@/services/van-blog/api';
 import { Modal, message } from 'antd';
-import { history } from '@/utils/umiCompat';
-import { ROUTES } from '@/utils/routes';
+import { history, ROUTES } from '@/router';
 
 const trans_zh = {
   'logout.modal.title': '确定要退出登录吗？',

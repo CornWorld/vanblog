@@ -2,7 +2,7 @@ import { getLog, getPipelineConfig } from '@/services/van-blog/api';
 import { ProTable, type ActionType, type ProColumns } from '@ant-design/pro-components';
 import { Modal, Tag } from 'antd';
 import { useEffect, useRef, useState } from 'react';
-import { history } from '@/utils/umiCompat';
+import { history } from '@/router';
 import type { AlignType } from 'rc-table/lib/interface';
 
 const trans_zh = {

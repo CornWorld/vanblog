@@ -103,7 +103,7 @@ export default function () {
     <>
       <ProTable
         columns={columns}
-        request={async (params, sort) => {
+        request={async (params) => {
           try {
             const { data } = await getLog('login', params.current, params.pageSize);
             return {

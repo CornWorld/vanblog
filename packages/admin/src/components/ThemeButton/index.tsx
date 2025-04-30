@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useModel } from '@/utils/umiCompat';
+import { useModel } from '@/router';
 import { readTheme, setTheme } from '@/utils/theme';
 import { applyThemeToDOM, decodeAutoTheme } from '@/services/van-blog/theme';
 import VanBlog from '@/types/initialState';

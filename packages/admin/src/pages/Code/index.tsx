@@ -16,7 +16,7 @@ import { Button, Dropdown, Menu, message, Modal, Space, Spin, Tag, Tree } from '
 import type { DataNode } from 'antd/es/tree';
 import type { Key } from 'react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { history } from '@/utils/umiCompat';
+import { history } from '@/router';
 import PipelineModal from '../Pipeline/components/PipelineModal';
 import RunCodeModal from '../Pipeline/components/RunCodeModal';
 import './index.less';

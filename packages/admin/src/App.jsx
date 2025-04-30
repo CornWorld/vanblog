@@ -1,12 +1,11 @@
 import React, { lazy, Suspense, useEffect } from 'react';
-import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { PageLoading } from '@ant-design/pro-layout';
 import { App as AntApp } from 'antd';
 
 import { AppProvider } from './context/AppContext';
 import { getAccessToken } from './utils/auth';
-import { useInitHistory } from './utils/umiCompat';
-import { ROUTES } from './utils/routes';
+import { ROUTES, initGlobalHistory } from './router';
 import BasicLayout from './layouts/BasicLayout';
 import BlankLayout from './layouts/BlankLayout';
 import { setupThemeListener } from './services/van-blog/theme';
@@ -103,8 +102,10 @@ const isAdmin = () => {
 };
 
 const App = () => {
-  // Initialize history singleton for compatibility
-  useInitHistory();
+  // Initialize global history for compatibility
+  const navigate = useNavigate();
+  const location = useLocation();
+  initGlobalHistory(navigate, location);
 
   // Preload SVG icons and editor assets
   useEffect(() => {

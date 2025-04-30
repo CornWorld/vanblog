@@ -1,7 +1,7 @@
 import { PageContainer } from '@ant-design/pro-layout';
 import { Image, Space, Spin, Tag } from 'antd';
 import { useMemo } from 'react';
-import { useModel } from '@/utils/umiCompat';
+import { useModel } from '@/router';
 
 const trans_zh = {
   'about.title': '关于',

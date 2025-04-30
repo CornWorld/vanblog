@@ -4,7 +4,7 @@ import { deleteArticle, getAllCategories, getArticleById, getTags } from '@/serv
 import { getPathname } from '@/services/van-blog/getPathname';
 import { parseObjToMarkdown } from '@/services/van-blog/parseMarkdownFile';
 import { message, Modal, Space, Tag, Button } from 'antd';
-import { history } from '@/utils/umiCompat';
+import { history } from '@/router';
 import { genActiveObj } from '../../services/van-blog/activeColTools';
 import { withoutKey } from '@/utils/props';
 

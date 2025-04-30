@@ -5,7 +5,7 @@ import { useNum } from '@/services/van-blog/useNum';
 import { PageContainer, ProTable } from '@ant-design/pro-components';
 import RcResizeObserver from 'rc-resize-observer';
 import { useMemo, useRef, useState } from 'react';
-import { history } from '@/utils/umiCompat';
+import { history } from '@/router';
 import { columns, draftKeysObj, draftKeysObjSmall } from './columes';
 import { Space, message } from 'antd';
 import { batchExport, batchDelete } from '@/services/van-blog/batch';

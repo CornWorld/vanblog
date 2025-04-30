@@ -3,7 +3,7 @@ import { encryptPwd } from '@/services/van-blog/encryptPwd';
 import ProCard from '@ant-design/pro-card';
 import ProForm, { ProFormText } from '@ant-design/pro-form';
 import { Alert, message } from 'antd';
-import { history } from '@/utils/umiCompat';
+import { history } from '@/router';
 
 const trans_zh = {
   'restore.title': '忘记密码',

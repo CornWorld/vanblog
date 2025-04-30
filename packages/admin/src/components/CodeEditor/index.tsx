@@ -1,5 +1,5 @@
 // import MonacoEditor from 'react-monaco-editor';
-import { useModel } from '@/utils/umiCompat';
+import { useModel } from '@/router';
 import { Input } from 'antd';
 
 const { TextArea } = Input;

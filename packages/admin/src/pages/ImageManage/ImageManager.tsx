@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { PageContainer } from '@ant-design/pro-components';
 import { Modal, message, Spin, Empty } from 'antd';
 import RcResizeObserver from 'rc-resize-observer';
-import { useModel } from '@/utils/umiCompat';
+import { useModel } from '@/router';
 import { useTab } from '@/services/van-blog/useTab';
 import { useNum } from '@/services/van-blog/useNum';
 import TipTitle from '@/components/TipTitle';
