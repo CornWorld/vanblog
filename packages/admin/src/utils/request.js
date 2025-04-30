@@ -41,11 +41,7 @@ const errorHandler = (error, skipErrorHandler, url) => {
   if (response?.status === 401 || error.status === 401) {
     notification.error({
       message: trans_zh['request.message.401'],
-      description: (
-        <div>
-          <p>{error.data?.message || errorMessage || '请重新登录'}</p>
-        </div>
-      ),
+      description: `${error.data?.message || errorMessage || '请重新登录'}`,
     });
 
     // 移除登录凭证

@@ -1,4 +1,4 @@
-import { getLoginRecords } from '@/services/van-blog/api';
+import { getLog } from '@/services/van-blog/api';
 import { useNum } from '@/services/van-blog/useNum';
 import { ProTable } from '@ant-design/pro-components';
 import React from 'react';
@@ -104,27 +104,8 @@ export default function () {
       <ProTable
         columns={columns}
         request={async (params, sort) => {
-          const option = {};
-          if (params.current) {
-            option.page = params.current;
-          }
-          if (params.pageSize) {
-            option.pageSize = params.pageSize;
-          }
-          if (params.startTime && params.endTime) {
-            option.startTime = params.startTime;
-            option.endTime = params.endTime;
-          }
-          if (sort && Object.keys(sort).length > 0) {
-            const keys = Object.keys(sort);
-            if (sort[keys[0]] == 'ascend') {
-              option.sort = 'asc';
-            } else {
-              option.sort = 'desc';
-            }
-          }
           try {
-            const { data } = await getLoginRecords(option);
+            const { data } = await getLog('login', params.current, params.pageSize);
             return {
               data: data?.data || [],
               success: Boolean(data),
