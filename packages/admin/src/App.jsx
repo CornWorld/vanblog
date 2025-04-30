@@ -6,6 +6,7 @@ import { App as AntApp } from 'antd';
 import { AppProvider } from './context/AppContext';
 import { getAccessToken } from './utils/auth';
 import { useInitHistory } from './utils/umiCompat';
+import { ROUTES } from './utils/routes';
 import BasicLayout from './layouts/BasicLayout';
 import BlankLayout from './layouts/BlankLayout';
 
@@ -77,7 +78,7 @@ const ProtectedRoute = ({ isAdmin, children }) => {
   if (!token) {
     console.log(trans_zh['app.debug.no_token']);
     return (
-      <Navigate to={`/user/login?redirect=${encodeURIComponent(location.pathname)}`} replace />
+      <Navigate to={`${ROUTES.LOGIN}?redirect=${encodeURIComponent(location.pathname)}`} replace />
     );
   }
 

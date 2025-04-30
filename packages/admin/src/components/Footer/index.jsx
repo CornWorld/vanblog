@@ -2,6 +2,7 @@ import { useEffect, useRef, useMemo } from 'react';
 import { useModel } from '@/utils/umiCompat';
 import { useLocation } from 'react-router-dom';
 import './index.css';
+import { ROUTES } from '@/utils/routes';
 
 const trans_zh = {
   'footer.powered_by': 'Powered By',
@@ -26,7 +27,7 @@ const Footer = () => {
   const version = useMemo(() => {
     if (isInitPage) return trans_zh['footer.initializing'];
     let v = initialState?.version || trans_zh['footer.loading'];
-    if (location.pathname === '/user/login') {
+    if (location.pathname === ROUTES.LOGIN) {
       v = trans_zh['footer.login_required'];
     }
     return v;

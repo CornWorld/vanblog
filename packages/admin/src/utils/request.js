@@ -1,5 +1,6 @@
 import { notification } from 'antd';
 import { isLoggedIn, removeAccessToken } from './auth';
+import { ROUTES, withPrefix } from './routes';
 
 const trans_zh = {
   'request.message.network_error': '网络异常',
@@ -48,10 +49,11 @@ const errorHandler = (error, skipErrorHandler, url) => {
     removeAccessToken();
 
     // 避免重定向循环（如果当前已经在登录页）
-    const isLoginPage = window.location.pathname.includes('/user/login');
+    const isLoginPage = window.location.pathname.includes(ROUTES.LOGIN);
     if (!isLoginPage) {
       setTimeout(() => {
-        window.location.href = '/user/login';
+        // 使用withPrefix函数添加'/admin'前缀
+        window.location.href = withPrefix(ROUTES.LOGIN);
       }, 1000);
     }
 
@@ -150,6 +152,16 @@ const request = async (url, options = {}) => {
         'Content-Type': 'application/json;charset=UTF-8',
         ...newOptions.headers,
       };
+    }
+
+    // 确保body是JSON字符串
+    if (
+      newOptions.body &&
+      typeof newOptions.body === 'object' &&
+      !(newOptions.body instanceof FormData) &&
+      newOptions.headers?.['Content-Type']?.includes('application/json')
+    ) {
+      newOptions.body = JSON.stringify(newOptions.body);
     }
 
     // Mock API响应（开发模式）

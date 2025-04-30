@@ -4,6 +4,8 @@
  * 处理用户token存储、检索和有效性检查
  */
 
+import { isAuthPage as isAuthRoute } from './routes';
+
 const trans_zh = {
   'auth.debug.reset_redirect_cycle': '[DEBUG] 重置重定向循环检测（超时）',
   'auth.debug.redirect_counter': '[DEBUG] 重定向计数器: {count}',
@@ -87,8 +89,7 @@ export const resetRedirectCycle = () => {
  * 检查当前页面是否为认证页面
  */
 const isAuthPage = () => {
-  const path = window.location.pathname;
-  return path.includes('/user/login') || path.includes('/init') || path.includes('/user/restore');
+  return isAuthRoute();
 };
 
 /**

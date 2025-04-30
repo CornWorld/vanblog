@@ -10,6 +10,7 @@ import {
   isLoggedIn,
   resetRedirectCycle,
 } from '../utils/auth';
+import { ROUTES, isAuthPage } from '../utils/routes';
 
 const AppContext = createContext(null);
 
@@ -27,8 +28,9 @@ export const AppProvider = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const loginPath = '/user/login';
-  const initPath = '/init';
+  // 使用路由常量
+  const loginPath = ROUTES.LOGIN;
+  const initPath = ROUTES.INIT;
 
   // Detect if we're in development mode
   const isDevelopment =

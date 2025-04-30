@@ -2,6 +2,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
 import { Link as RouterLink } from 'react-router-dom';
 import { useEffect } from 'react';
+import { withPrefix } from './routes'; // 只导入使用的函数
 
 // Export Link component from react-router-dom
 export const Link = RouterLink;
@@ -64,31 +65,17 @@ export const useHistory = () => {
 // Note: This should be used with caution and only for migration
 let singletonHistory = null;
 
-// The base path for admin routes from main.jsx
-const BASE_PATH = '/admin';
-
 // Function to add base path properly to the URL
 const addBasePath = (path) => {
-  const pathString = typeof path === 'string' ? path : path?.pathname || '/';
-
-  // Don't modify paths that already have the base path
-  if (pathString.startsWith(BASE_PATH + '/') || pathString === BASE_PATH) {
-    return path;
+  // 使用routes.js中的withPrefix函数来实现一致的前缀处理
+  if (typeof path === 'string') {
+    return withPrefix(path);
+  } else if (typeof path === 'object' && path?.pathname) {
+    return {
+      ...path,
+      pathname: withPrefix(path.pathname),
+    };
   }
-
-  // Add base path to relative paths
-  if (pathString.startsWith('/')) {
-    if (typeof path === 'string') {
-      return `${BASE_PATH}${path}`;
-    } else if (typeof path === 'object') {
-      return {
-        ...path,
-        pathname: `${BASE_PATH}${path.pathname}`,
-      };
-    }
-  }
-
-  // Return external URLs as-is
   return path;
 };
 

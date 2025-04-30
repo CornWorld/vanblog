@@ -1,6 +1,7 @@
 import { logout } from '@/services/van-blog/api';
 import { Modal, message } from 'antd';
 import { history } from '@/utils/umiCompat';
+import { ROUTES } from '@/utils/routes';
 
 const trans_zh = {
   'logout.modal.title': '确定要退出登录吗？',
@@ -21,12 +22,12 @@ export default function ({ trigger }) {
           await logout();
           window.localStorage.removeItem('token');
           message.success(trans_zh['logout.message.success']);
-          history.push('/user/login');
+          history.push(ROUTES.LOGIN);
           return;
         } catch {
           // Even if logout API fails, remove token and redirect to login
           window.localStorage.removeItem('token');
-          history.push('/user/login');
+          history.push(ROUTES.LOGIN);
           return;
         }
       },

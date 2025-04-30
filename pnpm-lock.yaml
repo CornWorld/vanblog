@@ -180,6 +180,9 @@ importers:
       highlight.js:
         specifier: ^11.11.1
         version: 11.11.1
+      i18next:
+        specifier: ^25.0.0
+        version: 25.0.0(typescript@5.8.3)
       js-sha256:
         specifier: ^0.11.0
         version: 0.11.0
@@ -228,6 +231,9 @@ importers:
       react-helmet-async:
         specifier: ^2.0.5
         version: 2.0.5(react@19.0.0)
+      react-i18next:
+        specifier: ^15.4.1
+        version: 15.4.1(i18next@25.0.0(typescript@5.8.3))(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
       react-monaco-editor:
         specifier: ^0.58.0
         version: 0.58.0(monaco-editor@0.52.2)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
@@ -25733,6 +25739,12 @@ snapshots:
     optionalDependencies:
       typescript: 5.8.2
 
+  i18next@25.0.0(typescript@5.8.3):
+    dependencies:
+      '@babel/runtime': 7.27.0
+    optionalDependencies:
+      typescript: 5.8.3
+
   iconv-lite@0.4.24:
     dependencies:
       safer-buffer: 2.1.2
@@ -30450,6 +30462,15 @@ snapshots:
       '@babel/runtime': 7.27.0
       html-parse-stringify: 3.0.1
       i18next: 25.0.0(typescript@5.8.2)
+      react: 19.0.0
+    optionalDependencies:
+      react-dom: 19.0.0(react@19.0.0)
+
+  react-i18next@15.4.1(i18next@25.0.0(typescript@5.8.3))(react-dom@19.0.0(react@19.0.0))(react@19.0.0):
+    dependencies:
+      '@babel/runtime': 7.27.0
+      html-parse-stringify: 3.0.1
+      i18next: 25.0.0(typescript@5.8.3)
       react: 19.0.0
     optionalDependencies:
       react-dom: 19.0.0(react@19.0.0)
