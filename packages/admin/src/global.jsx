@@ -1,14 +1,12 @@
-const trans_zh = {
-  'global.offline.warning': '当前处于离线状态',
-  'global.refresh.button': '刷新',
-  'global.update.message': '有新内容',
-  'global.update.description': '请点击"刷新"按钮或者手动刷新页面',
-};
-
+import React from 'react';
+import i18next from 'i18next';
 import { Button, message, notification } from 'antd';
 import defaultSettings from '../config/defaultSettings';
 const { pwa } = defaultSettings;
 const isHttps = document.location.protocol === 'https:';
+
+// Use i18next directly instead of the hook
+const t = (key) => i18next.t(key);
 
 const clearCache = () => {
   // remove all caches
@@ -27,7 +25,7 @@ const clearCache = () => {
 if (pwa) {
   // Notify user if offline now
   window.addEventListener('sw.offline', () => {
-    message.warning(trans_zh['global.offline.warning']);
+    message.warning(t('global.offline.warning'));
   }); // Pop up a prompt on the page asking the user if they want to use the latest version
 
   window.addEventListener('sw.updated', (event) => {
@@ -74,12 +72,12 @@ if (pwa) {
           reloadSW();
         }}
       >
-        {trans_zh['global.refresh.button']}
+        {t('global.refresh.button')}
       </Button>
     );
     notification.open({
-      message: trans_zh['global.update.message'],
-      description: trans_zh['global.update.description'],
+      message: t('global.update.message'),
+      description: t('global.update.description'),
       btn,
       key,
       onClose: async () => null,

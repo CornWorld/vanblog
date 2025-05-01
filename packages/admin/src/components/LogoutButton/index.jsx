@@ -1,26 +1,22 @@
+import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { logout } from '@/services/van-blog/api';
 import { Modal, message } from 'antd';
 import { history, ROUTES } from '@/router';
 
-const trans_zh = {
-  'logout.modal.title': '确定要退出登录吗？',
-  'logout.modal.button.confirm': '确认',
-  'logout.modal.button.cancel': '取消',
-  'logout.message.success': '退出登录成功！',
-};
-
 export default function ({ trigger }) {
+  const { t } = useTranslation();
   // 执行退出函数
   const handleLogout = async () => {
     Modal.confirm({
-      title: trans_zh['logout.modal.title'],
-      okText: trans_zh['logout.modal.button.confirm'],
-      cancelText: trans_zh['logout.modal.button.cancel'],
+      title: t('logout.modal.title'),
+      okText: t('logout.modal.button.confirm'),
+      cancelText: t('logout.modal.button.cancel'),
       async onOk() {
         try {
           await logout();
           window.localStorage.removeItem('token');
-          message.success(trans_zh['logout.message.success']);
+          message.success(t('logout.message.success'));
           history.push(ROUTES.LOGIN);
           return;
         } catch {

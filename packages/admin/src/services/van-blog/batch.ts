@@ -12,10 +12,10 @@ interface ArticleResponse {
 
 // 批量操作
 export const batchDelete = (ids: string[], isDraft = false) => {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     const result = checkDemo();
     if (!result) {
-      reject();
+      resolve(false);
       return;
     }
     Modal.confirm({

@@ -1,15 +1,7 @@
+import i18next from 'i18next';
 import { copyImgLink, getImgLink } from '@/pages/ImageManage/components/tools';
-import { getClipboardContents } from '@/services/van-blog/clipboard';
 import { message } from 'antd';
 import { BytemdPlugin } from 'bytemd';
-
-const trans_zh = {
-  'editor.imgUpload.title': '剪切板图片上传',
-  'editor.imgUpload.success': '上传成功！',
-  'editor.imgUpload.fail': '上传失败！',
-  'editor.imgUpload.noImage': '剪切板没的图片！',
-  'editor.imgUpload.uploadFail': '剪切板图片上传失败！',
-};
 
 export const uploadImg = async (file: File) => {
   const formData = new FormData();
@@ -20,7 +12,7 @@ export const uploadImg = async (file: File) => {
 
     // For SVGs, read the file directly and return as a data URI to avoid server upload issues
     if (isSvg) {
-      return new Promise<string>((resolve, reject) => {
+      return new Promise<string>((resolve) => {
         const reader = new FileReader();
         reader.onload = (event) => {
           const result = event.target?.result as string;
@@ -35,7 +27,7 @@ export const uploadImg = async (file: File) => {
           }
         };
         reader.onerror = () => {
-          reject(new Error('Failed to read SVG file'));
+          message.error(i18next.t('editor.imgUpload.fail'));
         };
         reader.readAsText(file);
       });
@@ -54,15 +46,15 @@ export const uploadImg = async (file: File) => {
     const data = await res.json();
     if (data && data.statusCode == 200) {
       const url = getImgLink(data.data.src, false);
-      copyImgLink(data.data.src, true, trans_zh['editor.imgUpload.success']);
+      copyImgLink(data.data.src, true, i18next.t('editor.imgUpload.success'));
       return url;
     } else {
-      message.error(trans_zh['editor.imgUpload.fail']);
+      message.error(i18next.t('editor.imgUpload.fail'));
       return null;
     }
   } catch {
     // Log a general error message without exposing error details to the user
-    message.error(trans_zh['editor.imgUpload.fail']);
+    message.error(i18next.t('editor.imgUpload.fail'));
     return null;
   }
 };
@@ -71,14 +63,28 @@ export function imgUploadPlugin(setLoading: (loading: boolean) => void): BytemdP
   return {
     actions: [
       {
-        title: trans_zh['editor.imgUpload.title'],
+        title: i18next.t('editor.imgUpload.title'),
         icon: icon, // 16x16 SVG icon
         handler: {
           type: 'action',
           click(ctx) {
             setLoading(true);
-            getClipboardContents()
-              .then((file) => {
+            // Handle clipboard paste manually since we can't directly import getClipboardContents
+            navigator.clipboard
+              .read()
+              .then(async (clipboardItems) => {
+                let file = null;
+                for (const clipboardItem of clipboardItems) {
+                  for (const type of clipboardItem.types) {
+                    if (type.startsWith('image/')) {
+                      const blob = await clipboardItem.getType(type);
+                      file = new File([blob], `clipboard-image.${type.split('/')[1]}`, { type });
+                      break;
+                    }
+                  }
+                  if (file) break;
+                }
+
                 if (file) {
                   uploadImg(file).then((url) => {
                     if (url) {
@@ -98,12 +104,12 @@ export function imgUploadPlugin(setLoading: (loading: boolean) => void): BytemdP
                     }
                   });
                 } else {
-                  message.warning(trans_zh['editor.imgUpload.noImage']);
+                  message.warning(i18next.t('editor.imgUpload.noImage'));
                 }
               })
-              .catch((error) => {
+              .catch((error: Error) => {
                 console.error('Failed to process clipboard contents:', error);
-                message.warning(trans_zh['editor.imgUpload.uploadFail']);
+                message.warning(i18next.t('editor.imgUpload.uploadFail'));
               })
               .finally(() => {
                 setLoading(false);

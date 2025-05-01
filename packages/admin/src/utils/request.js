@@ -1,21 +1,10 @@
 import { notification } from 'antd';
 import { isLoggedIn, removeAccessToken } from './auth';
 import { ROUTES, withPrefix } from '../router';
+import i18next from 'i18next';
 
-const trans_zh = {
-  'request.message.network_error': '网络异常',
-  'request.message.parse_failed': '解析响应失败',
-  'request.message.401': '当前会话已过期，请重新登录',
-  'request.message.503': '服务器暂时不可用，请稍后重试',
-  'request.message.400': '请求参数错误',
-  'request.message.403': '没有权限',
-  'request.message.404': '资源不存在',
-  'request.message.500': '服务器内部错误',
-  'request.message.retry': '重试',
-  'request.message.api_error': 'API 调用失败',
-  'request.message.default_error': '请求失败，请重试',
-  'request.message.go_login': '去登录',
-};
+// Use i18next directly instead of the hook in non-component code
+const t = (key) => i18next.t(key);
 
 // 是否是开发环境
 const isDevelopment =
@@ -41,7 +30,7 @@ const errorHandler = (error, skipErrorHandler, url) => {
   // 401表示未授权，通常是登录过期
   if (response?.status === 401 || error.status === 401) {
     notification.error({
-      message: trans_zh['request.message.401'],
+      message: t('request.message.401'),
       description: `${error.data?.message || errorMessage || '请重新登录'}`,
     });
 
@@ -58,7 +47,7 @@ const errorHandler = (error, skipErrorHandler, url) => {
     }
 
     // 返回错误数据
-    return { statusCode: 401, message: trans_zh['request.message.401'] };
+    return { statusCode: 401, message: t('request.message.401') };
   }
 
   // 根据响应状态码显示不同的错误信息
@@ -72,28 +61,28 @@ const errorHandler = (error, skipErrorHandler, url) => {
       // 根据状态码选择错误信息
       switch (response.status) {
         case 400:
-          errorText = trans_zh['request.message.400'];
+          errorText = t('request.message.400');
           break;
         case 403:
-          errorText = trans_zh['request.message.403'];
+          errorText = t('request.message.403');
           break;
         case 404:
-          errorText = trans_zh['request.message.404'];
+          errorText = t('request.message.404');
           break;
         case 500:
-          errorText = trans_zh['request.message.500'];
+          errorText = t('request.message.500');
           break;
         case 503:
-          errorText = trans_zh['request.message.503'];
+          errorText = t('request.message.503');
           break;
         default:
-          errorText = trans_zh['request.message.default_error'];
+          errorText = t('request.message.default_error');
       }
     }
 
     // 显示错误通知
     notification.error({
-      message: `${trans_zh['request.message.api_error']} (${url})`,
+      message: `${t('request.message.api_error')} (${url})`,
       description: errorText,
     });
 
@@ -106,14 +95,14 @@ const errorHandler = (error, skipErrorHandler, url) => {
 
   // 这是一个网络错误（如无法连接服务器）
   notification.error({
-    message: trans_zh['request.message.network_error'],
+    message: t('request.message.network_error'),
     description: errorMessage || 'Network Error',
   });
 
   // 返回网络错误数据
   return {
     statusCode: 600, // 自定义状态码表示网络错误
-    message: trans_zh['request.message.network_error'],
+    message: t('request.message.network_error'),
   };
 };
 
@@ -185,7 +174,7 @@ const request = async (url, options = {}) => {
       responseData = await response.json();
     } catch (e) {
       console.error('[DEBUG] Failed to parse JSON response:', e);
-      responseData = { message: trans_zh['request.message.parse_failed'] };
+      responseData = { message: t('request.message.parse_failed') };
     }
 
     if (response.ok) {

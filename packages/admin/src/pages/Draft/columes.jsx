@@ -1,3 +1,5 @@
+import React from 'react';
+import { useTranslation } from 'react-i18next';
 import ColumnsToolBar from '@/components/ColumnsToolBar';
 import PublishDraftModal from '@/components/PublishDraftModal';
 import UpdateModal from '@/components/UpdateModal';
@@ -8,50 +10,34 @@ import { message, Modal, Tag } from 'antd';
 import { history } from '@/router';
 import { withoutKey } from '@/utils/props';
 
-const trans_zh = {
-  'draft.column.id': 'ID',
-  'draft.column.title': '标题',
-  'draft.column.title.tip': '标题过长会自动收缩',
-  'draft.column.required': '此项为必填项',
-  'draft.column.category': '分类',
-  'draft.column.tags': '标签',
-  'draft.column.tags.placeholder': '请搜索或选择',
-  'draft.column.created_time': '创建时间',
-  'draft.column.operation': '操作',
-  'draft.action.edit': '编辑',
-  'draft.action.publish': '发布',
-  'draft.action.export': '导出',
-  'draft.action.delete': '删除',
-  'draft.modal.delete.title': '确定删除草稿',
-  'draft.message.delete.success': '删除成功!',
-};
+const { t } = useTranslation();
 
 export const columns = [
   {
     dataIndex: 'id',
     valueType: 'number',
-    title: trans_zh['draft.column.id'],
+    title: t('draft.column.id'),
     width: 48,
     search: false,
   },
   {
-    title: trans_zh['draft.column.title'],
+    title: t('draft.column.title'),
     dataIndex: 'title',
     copyable: true,
     ellipsis: true,
     width: 150,
-    tip: trans_zh['draft.column.title.tip'],
+    tip: t('draft.column.title.tip'),
     formItemProps: {
       rules: [
         {
           required: true,
-          message: trans_zh['draft.column.required'],
+          message: t('draft.column.required'),
         },
       ],
     },
   },
   {
-    title: trans_zh['draft.column.category'],
+    title: t('draft.column.category'),
     dataIndex: 'category',
     width: 120,
     valueType: 'select',
@@ -66,10 +52,10 @@ export const columns = [
     },
   },
   {
-    title: trans_zh['draft.column.tags'],
+    title: t('draft.column.tags'),
     dataIndex: 'tags',
     search: true,
-    fieldProps: { showSearch: true, placeholder: trans_zh['draft.column.tags.placeholder'] },
+    fieldProps: { showSearch: true, placeholder: t('draft.column.tags.placeholder') },
     valueType: 'select',
     width: 120,
     renderFormItem: (item, { defaultRender }) => {
@@ -96,7 +82,7 @@ export const columns = [
     },
   },
   {
-    title: trans_zh['draft.column.created_time'],
+    title: t('draft.column.created_time'),
     key: 'showTime',
     dataIndex: 'createdAt',
     valueType: 'dateTime',
@@ -105,7 +91,7 @@ export const columns = [
     width: 150,
   },
   {
-    title: trans_zh['draft.column.created_time'],
+    title: t('draft.column.created_time'),
     dataIndex: 'createdAt',
     valueType: 'dateRange',
     hideInTable: true,
@@ -119,7 +105,7 @@ export const columns = [
     },
   },
   {
-    title: trans_zh['draft.column.operation'],
+    title: t('draft.column.operation'),
     valueType: 'option',
     key: 'option',
     width: 120,
@@ -133,14 +119,14 @@ export const columns = [
                 history.push(`/editor?type=draft&id=${record.id}`);
               }}
             >
-              {trans_zh['draft.action.edit']}
+              {t('draft.action.edit')}
             </a>,
             <PublishDraftModal
               key="publishRecord1213"
               title={record.title}
               id={record.id}
               action={action}
-              trigger={<a key="publishRecord123">{trans_zh['draft.action.publish']}</a>}
+              trigger={<a key="publishRecord123">{t('draft.action.publish')}</a>}
             />,
           ]}
           nodes={[
@@ -165,22 +151,22 @@ export const columns = [
                 link.click();
               }}
             >
-              {trans_zh['draft.action.export']}
+              {t('draft.action.export')}
             </a>,
             <a
               key={'deleteDraft' + record.id}
               onClick={() => {
                 Modal.confirm({
-                  title: `${trans_zh['draft.modal.delete.title']} "${record.title}" 吗？`,
+                  title: `${t('draft.modal.delete.title')} "${record.title}" 吗？`,
                   onOk: async () => {
                     await deleteDraft(record.id);
-                    message.success(trans_zh['draft.message.delete.success']);
+                    message.success(t('draft.message.delete.success'));
                     action?.reload();
                   },
                 });
               }}
             >
-              {trans_zh['draft.action.delete']}
+              {t('draft.action.delete')}
             </a>,
           ]}
         ></ColumnsToolBar>

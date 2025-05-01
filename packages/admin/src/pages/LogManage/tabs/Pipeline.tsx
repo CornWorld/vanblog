@@ -1,25 +1,11 @@
+import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { getLog, getPipelineConfig } from '@/services/van-blog/api';
 import { ProTable, type ActionType, type ProColumns } from '@ant-design/pro-components';
 import { Modal, Tag } from 'antd';
 import { useEffect, useRef, useState } from 'react';
 import { history } from '@/router';
 import type { AlignType } from 'rc-table/lib/interface';
-
-const trans_zh = {
-  'pipeline.table.index': '序号',
-  'pipeline.table.id': '流水线 id',
-  'pipeline.table.name': '名称',
-  'pipeline.table.event': '触发事件',
-  'pipeline.table.result': '结果',
-  'pipeline.table.result.success': '成功',
-  'pipeline.table.result.fail': '失败',
-  'pipeline.table.detail': '详情',
-  'pipeline.modal.title': '详情',
-  'pipeline.modal.logs': '脚本日志：',
-  'pipeline.modal.input': '输入：',
-  'pipeline.modal.output': '输出：',
-  'pipeline.header.title': '流水线日志',
-};
 
 interface PipelineRecord {
   pipelineId: string;
@@ -43,6 +29,7 @@ interface LogResponse {
 }
 
 export default function Pipeline() {
+  const { t } = useTranslation();
   const actionRef = useRef<ActionType>();
   const [pipelineConfig, setPipelineConfig] = useState<PipelineConfig[]>([]);
 
@@ -56,19 +43,19 @@ export default function Pipeline() {
 
   const columns: ProColumns<PipelineRecord>[] = [
     {
-      title: trans_zh['pipeline.table.index'],
+      title: t('pipeline.table.index'),
       align: 'center' as AlignType,
       width: 50,
       render: (_, __, index) => index + 1,
     },
     {
-      title: trans_zh['pipeline.table.id'],
+      title: t('pipeline.table.id'),
       dataIndex: 'pipelineId',
       key: 'pipelineId',
       align: 'center' as AlignType,
     },
     {
-      title: trans_zh['pipeline.table.name'],
+      title: t('pipeline.table.name'),
       dataIndex: 'pipelineName',
       key: 'pipelineName',
       align: 'center' as AlignType,
@@ -83,7 +70,7 @@ export default function Pipeline() {
       ),
     },
     {
-      title: trans_zh['pipeline.table.event'],
+      title: t('pipeline.table.event'),
       dataIndex: 'eventName',
       key: 'eventName',
       align: 'center' as AlignType,
@@ -94,26 +81,26 @@ export default function Pipeline() {
       ),
     },
     {
-      title: trans_zh['pipeline.table.result'],
+      title: t('pipeline.table.result'),
       dataIndex: 'success',
       key: 'success',
       align: 'center' as AlignType,
       render: (_, record) =>
         record.success ? (
-          <Tag color="green">{trans_zh['pipeline.table.result.success']}</Tag>
+          <Tag color="green">{t('pipeline.table.result.success')}</Tag>
         ) : (
-          <Tag color="red">{trans_zh['pipeline.table.result.fail']}</Tag>
+          <Tag color="red">{t('pipeline.table.result.fail')}</Tag>
         ),
     },
     {
-      title: trans_zh['pipeline.table.detail'],
+      title: t('pipeline.table.detail'),
       dataIndex: 'detail',
       key: 'detail',
       render: (_, record) => (
         <a
           onClick={() => {
             Modal.info({
-              title: trans_zh['pipeline.modal.title'],
+              title: t('pipeline.modal.title'),
               width: 800,
               content: (
                 <div
@@ -122,22 +109,22 @@ export default function Pipeline() {
                     overflow: 'auto',
                   }}
                 >
-                  <p>{trans_zh['pipeline.modal.logs']}</p>
+                  <p>{t('pipeline.modal.logs')}</p>
                   <pre>
                     {record.logs.map((l, i) => (
                       <p key={i}>{l}</p>
                     ))}
                   </pre>
-                  <p>{trans_zh['pipeline.modal.input']}</p>
+                  <p>{t('pipeline.modal.input')}</p>
                   <pre>{JSON.stringify(record.input, null, 2)}</pre>
-                  <p>{trans_zh['pipeline.modal.output']}</p>
+                  <p>{t('pipeline.modal.output')}</p>
                   <pre>{JSON.stringify(record.output, null, 2)}</pre>
                 </div>
               ),
             });
           }}
         >
-          {trans_zh['pipeline.table.detail']}
+          {t('pipeline.table.detail')}
         </a>
       ),
     },
@@ -153,7 +140,7 @@ export default function Pipeline() {
         dateFormatter="string"
         actionRef={actionRef}
         options={false}
-        headerTitle={trans_zh['pipeline.header.title']}
+        headerTitle={t('pipeline.header.title')}
         pagination={{
           pageSize: 10,
           simple: true,

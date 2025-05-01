@@ -1,3 +1,5 @@
+import React from 'react';
+import { useTranslation } from 'react-i18next';
 import ColumnsToolBar from '@/components/ColumnsToolBar';
 import UpdateModal from '@/components/UpdateModal';
 import { deleteArticle, getAllCategories, getArticleById, getTags } from '@/services/van-blog/api';
@@ -8,45 +10,18 @@ import { history } from '@/router';
 import { genActiveObj } from '../../services/van-blog/activeColTools';
 import { withoutKey } from '@/utils/props';
 
-const trans_zh = {
-  'article.column.id': 'ID',
-  'article.column.title': '标题',
-  'article.column.required': '此项为必填项',
-  'article.column.category': '分类',
-  'article.column.tags': '标签',
-  'article.column.tags.placeholder': '请搜索或选择',
-  'article.column.created_time': '创建时间',
-  'article.column.top': '顶置',
-  'article.column.viewer': '浏览量',
-  'article.action.edit': '编辑',
-  'article.action.view': '查看',
-  'article.modal.hidden_title': '此文章为隐藏文章！',
-  'article.modal.hidden_content1':
-    '隐藏文章在未开启通过 URL 访问的情况下（默认关闭），会出现 404 页面！',
-  'article.modal.hidden_content2': '您可以在',
-  'article.modal.hidden_content3': '布局配置',
-  'article.modal.hidden_content4': '中修改此项。',
-  'article.modal.hidden_ok': '仍然访问',
-  'article.modal.hidden_cancel': '返回',
-  'article.action.export': '导出',
-  'article.modal.delete_title': '确定删除此文章吗？',
-  'article.modal.delete_content': '此操作将删除文章及其所有相关数据，包括评论、访问记录等。',
-  'article.modal.delete_ok': '确定',
-  'article.modal.delete_cancel': '取消',
-  'article.message.delete_success': '文章删除成功！',
-  'article.message.delete_error': '文章删除失败，请稍后再试。',
-};
+const { t } = useTranslation();
 
 export const columns = [
   {
     dataIndex: 'id',
     valueType: 'number',
-    title: trans_zh['article.column.id'],
+    title: t('article.column.id'),
     width: 48,
     search: false,
   },
   {
-    title: trans_zh['article.column.title'],
+    title: t('article.column.title'),
     dataIndex: 'title',
     width: 150,
     copyable: true,
@@ -55,13 +30,13 @@ export const columns = [
       rules: [
         {
           required: true,
-          message: trans_zh['article.column.required'],
+          message: t('article.column.required'),
         },
       ],
     },
   },
   {
-    title: trans_zh['article.column.category'],
+    title: t('article.column.category'),
     dataIndex: 'category',
     valueType: 'select',
     width: 100,
@@ -75,10 +50,10 @@ export const columns = [
     },
   },
   {
-    title: trans_zh['article.column.tags'],
+    title: t('article.column.tags'),
     dataIndex: 'tags',
     valueType: 'select',
-    fieldProps: { showSearch: true, placeholder: trans_zh['article.column.tags.placeholder'] },
+    fieldProps: { showSearch: true, placeholder: t('article.column.tags.placeholder') },
     width: 120,
     search: true,
     renderFormItem: (item, { defaultRender }) => {
@@ -105,7 +80,7 @@ export const columns = [
     },
   },
   {
-    title: trans_zh['article.column.created_time'],
+    title: t('article.column.created_time'),
     key: 'showTime',
     dataIndex: 'createdAt',
     valueType: 'dateTime',
@@ -114,7 +89,7 @@ export const columns = [
     width: 150,
   },
   {
-    title: trans_zh['article.column.top'],
+    title: t('article.column.top'),
     key: 'top',
     dataIndex: 'top',
     valueType: 'number',
@@ -123,7 +98,7 @@ export const columns = [
     hideInSearch: true,
   },
   {
-    title: trans_zh['article.column.viewer'],
+    title: t('article.column.viewer'),
     key: 'viewer',
     dataIndex: 'viewer',
     valueType: 'number',
@@ -132,7 +107,7 @@ export const columns = [
     hideInSearch: true,
   },
   {
-    title: trans_zh['article.column.created_time'],
+    title: t('article.column.created_time'),
     dataIndex: 'createdAt',
     valueType: 'dateRange',
     hideInTable: true,
@@ -163,27 +138,27 @@ export const columns = [
                   );
                 }}
               >
-                {trans_zh['article.action.edit']}
+                {t('article.action.edit')}
               </a>,
               <a
                 href={`/post/${getPathname(record)}`}
                 onClick={(ev) => {
                   if (record?.hidden) {
                     Modal.confirm({
-                      title: trans_zh['article.modal.hidden_title'],
+                      title: t('article.modal.hidden_title'),
                       content: (
                         <div>
-                          <p>{trans_zh['article.modal.hidden_content1']}</p>
+                          <p>{t('article.modal.hidden_content1')}</p>
                           <p>
-                            {trans_zh['article.modal.hidden_content2']}
+                            {t('article.modal.hidden_content2')}
                             <a
                               onClick={() => {
                                 history.push('/site/setting?subTab=layout');
                               }}
                             >
-                              {trans_zh['article.modal.hidden_content3']}
+                              {t('article.modal.hidden_content3')}
                             </a>
-                            {trans_zh['article.modal.hidden_content4']}
+                            {t('article.modal.hidden_content4')}
                           </p>
                         </div>
                       ),
@@ -191,8 +166,8 @@ export const columns = [
                         window.open(`/post/${getPathname(record)}`, '_blank');
                         return true;
                       },
-                      okText: trans_zh['article.modal.hidden_ok'],
-                      cancelText: trans_zh['article.modal.hidden_cancel'],
+                      okText: t('article.modal.hidden_ok'),
+                      cancelText: t('article.modal.hidden_cancel'),
                     });
                     ev.preventDefault();
                   }
@@ -201,7 +176,7 @@ export const columns = [
                 rel="noopener noreferrer"
                 key={'view' + record.id}
               >
-                {trans_zh['article.action.view']}
+                {t('article.action.view')}
               </a>,
             ]}
             nodes={[
@@ -226,7 +201,7 @@ export const columns = [
                   link.click();
                 }}
               >
-                {trans_zh['article.action.export']}
+                {t('article.action.export')}
               </a>,
               <Button
                 key={'deleteBtn' + record.id}
@@ -234,23 +209,23 @@ export const columns = [
                 danger
                 onClick={() => {
                   Modal.confirm({
-                    title: trans_zh['article.modal.delete_title'],
-                    content: trans_zh['article.modal.delete_content'],
-                    okText: trans_zh['article.modal.delete_ok'],
-                    cancelText: trans_zh['article.modal.delete_cancel'],
+                    title: t('article.modal.delete_title'),
+                    content: t('article.modal.delete_content'),
+                    okText: t('article.modal.delete_ok'),
+                    cancelText: t('article.modal.delete_cancel'),
                     onOk: async () => {
                       try {
                         await deleteArticle(record.id);
-                        message.success(trans_zh['article.message.delete_success']);
+                        message.success(t('article.message.delete_success'));
                         action?.reload();
                       } catch {
-                        message.error(trans_zh['article.message.delete_error']);
+                        message.error(t('article.message.delete_error'));
                       }
                     },
                   });
                 }}
               >
-                {trans_zh['article.action.delete']}
+                {t('article.action.delete')}
               </Button>,
             ]}
           />

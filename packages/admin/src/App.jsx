@@ -1,22 +1,16 @@
 import React, { lazy, Suspense, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { PageLoading } from '@ant-design/pro-layout';
 import { App as AntApp } from 'antd';
 
 import { AppProvider } from './context/AppContext';
+const { t } = useTranslation();
 import { getAccessToken } from './utils/auth';
 import { ROUTES, initGlobalHistory } from './router';
 import BasicLayout from './layouts/BasicLayout';
 import BlankLayout from './layouts/BlankLayout';
 import { setupThemeListener } from './services/van-blog/theme';
-
-const trans_zh = {
-  'app.debug.route_check': '[DEBUG] ProtectedRoute check:',
-  'app.debug.no_token': '[DEBUG] No token found, redirecting to login',
-  'app.debug.admin_denied': '[DEBUG] Admin route access denied',
-  'app.debug.route_granted': '[DEBUG] Route access granted',
-  'app.debug.checking_admin': '[DEBUG] Checking admin status',
-};
 
 // Preload SVG resources
 function preloadSvgIcons() {
@@ -29,8 +23,8 @@ function preloadSvgIcons() {
   // Create hidden div to preload icons
   const preloadContainer = document.createElement('div');
   preloadContainer.style.position = 'absolute';
-  preloadContainer.style.width = '0';
-  preloadContainer.style.height = '0';
+  preloadContainer.style.width = t('site_form.submenu_offset.placeholder');
+  preloadContainer.style.height = t('site_form.submenu_offset.placeholder');
   preloadContainer.style.overflow = 'hidden';
   preloadContainer.style.visibility = 'hidden';
   document.body.appendChild(preloadContainer);
@@ -68,7 +62,7 @@ const ProtectedRoute = ({ isAdmin, children }) => {
   const location = useLocation();
   const token = getAccessToken();
 
-  console.log(trans_zh['app.debug.route_check'], {
+  console.log(t('app.debug.route_check'), {
     path: location.pathname,
     hasToken: !!token,
     isAdminRoute: !!isAdmin,
@@ -76,7 +70,7 @@ const ProtectedRoute = ({ isAdmin, children }) => {
 
   // 如果没有令牌，重定向到登录页面并保存当前路径
   if (!token) {
-    console.log(trans_zh['app.debug.no_token']);
+    console.log(t('app.debug.no_token'));
     return (
       <Navigate to={`${ROUTES.LOGIN}?redirect=${encodeURIComponent(location.pathname)}`} replace />
     );
@@ -84,18 +78,18 @@ const ProtectedRoute = ({ isAdmin, children }) => {
 
   // 如果是管理员路由，但用户不是管理员
   if (isAdmin && !isAdmin()) {
-    console.log(trans_zh['app.debug.admin_denied']);
+    console.log(t('app.debug.admin_denied'));
     return <Navigate to="/404" replace />;
   }
 
   // 通过验证，渲染子组件
-  console.log(trans_zh['app.debug.route_granted']);
+  console.log(t('app.debug.route_granted'));
   return children;
 };
 
 // isAdmin check function
 const isAdmin = () => {
-  console.log(trans_zh['app.debug.checking_admin']);
+  console.log(t('app.debug.checking_admin'));
   // Implement your admin check logic here
   // This would typically check the user type in the app context
   return true; // Simplified for now, you'll need to implement actual check

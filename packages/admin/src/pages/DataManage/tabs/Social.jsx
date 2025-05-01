@@ -1,22 +1,12 @@
+import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { deleteSocial, getSocial, getSocialTypes, updateSocial } from '@/services/van-blog/api';
 import { EditableProTable } from '@ant-design/pro-components';
 import { Modal, Spin } from 'antd';
 import { useRef, useState } from 'react';
 
-const trans_zh = {
-  'social.column.type': '类型',
-  'social.column.value': '值',
-  'social.column.updatedAt': '最后设置时间',
-  'social.column.actions': '操作',
-  'social.action.edit': '编辑',
-  'social.action.delete': '删除',
-  'social.message.required': '此项为必填项',
-  'social.modal.deleteConfirm': '确认删除"{type}"吗?',
-  'social.modal.demoRestriction': '演示站禁止修改此项！',
-  'social.table.header': '联系方式',
-};
-
 export default function () {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [editableKeys, setEditableRowKeys] = useState([]);
   const actionRef = useRef();
@@ -29,11 +19,11 @@ export default function () {
   };
   const columns = [
     {
-      title: trans_zh['social.column.type'],
+      title: t('social.column.type'),
       dataIndex: 'type',
       formItemProps: () => {
         return {
-          rules: [{ required: true, message: trans_zh['social.message.required'] }],
+          rules: [{ required: true, message: t('social.message.required') }],
         };
       },
       request: async () => {
@@ -42,27 +32,27 @@ export default function () {
       },
     },
     {
-      title: trans_zh['social.column.value'],
+      title: t('social.column.value'),
       dataIndex: 'value',
       formItemProps: () => {
         return {
-          rules: [{ required: true, message: trans_zh['social.message.required'] }],
+          rules: [{ required: true, message: t('social.message.required') }],
         };
       },
     },
     {
-      title: trans_zh['social.column.updatedAt'],
+      title: t('social.column.updatedAt'),
       valueType: 'date',
       editable: false,
       dataIndex: 'updatedAt',
       formItemProps: () => {
         return {
-          rules: [{ required: true, message: trans_zh['social.message.required'] }],
+          rules: [{ required: true, message: t('social.message.required') }],
         };
       },
     },
     {
-      title: trans_zh['social.column.actions'],
+      title: t('social.column.actions'),
       valueType: 'option',
       key: 'option',
       width: 200,
@@ -73,7 +63,7 @@ export default function () {
             action?.startEditable?.(record.type);
           }}
         >
-          {trans_zh['social.action.edit']}
+          {t('social.action.edit')}
         </a>,
         <a
           key="delete"
@@ -83,11 +73,11 @@ export default function () {
                 await deleteSocial(record.type);
                 action?.reload();
               },
-              title: trans_zh['social.modal.deleteConfirm'].replace('{type}', record.type),
+              title: t('social.modal.deleteConfirm', { type: record.type }),
             });
           }}
         >
-          {trans_zh['social.action.delete']}
+          {t('social.action.delete')}
         </a>,
       ],
     },
@@ -98,7 +88,7 @@ export default function () {
         <EditableProTable
           actionRef={actionRef}
           rowKey="key"
-          headerTitle={trans_zh['social.table.header']}
+          headerTitle={t('social.table.header')}
           scroll={{
             x: 960,
           }}
@@ -121,7 +111,7 @@ export default function () {
             editableKeys,
             onSave: async (rowKey, data) => {
               if (location.hostname == 'blog-demo.mereith.com') {
-                Modal.info({ title: trans_zh['social.modal.demoRestriction'] });
+                Modal.info({ title: t('social.modal.demoRestriction') });
                 return;
               }
               const toSaveObj = {

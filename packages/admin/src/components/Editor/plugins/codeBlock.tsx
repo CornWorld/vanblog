@@ -3,9 +3,9 @@ import { visit } from 'unist-util-visit';
 import copy from 'copy-to-clipboard';
 import { message } from 'antd';
 
-const trans_zh = {
-  'editor.codeBlock.copySuccess': '复制成功',
-};
+// Initialize translation
+import i18next from 'i18next';
+const t = (key: string) => i18next.t(key);
 
 interface CodeProperties {
   className?: string[];
@@ -91,7 +91,7 @@ const onClickCopyCode = (e: MouseEvent) => {
   const copyBtn = e.target as HTMLElement;
   const code = copyBtn.parentElement?.parentElement?.querySelector('code')?.innerText || '';
   copy(code);
-  message.success(trans_zh['editor.codeBlock.copySuccess']);
+  message.success(t('editor.codeBlock.copySuccess'));
 };
 
 export function customCodeBlock(): BytemdPlugin {

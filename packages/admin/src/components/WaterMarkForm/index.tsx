@@ -1,30 +1,10 @@
+import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { getStaticSetting, updateStaticSetting } from '@/services/van-blog/api';
 import { checkNoChinese } from '@/services/van-blog/checkString';
 import { ProForm, ProFormSelect, ProFormText } from '@ant-design/pro-components';
 import { message, Modal } from 'antd';
 import { useState } from 'react';
-
-const trans_zh = {
-  'watermark.demo.restricted': '演示站禁止修改此配置！',
-  'watermark.text.required': '开启水印必须指定水印文字！',
-  'watermark.text.no_chinese':
-    '目前水印文字不支持中文！因为用了纯 js 库节约资源，后面会加上自定义图片作为水印。',
-  'watermark.update.success': '更新成功！',
-  'watermark.webp.label': '图片自动压缩',
-  'watermark.webp.option.enabled': '开启',
-  'watermark.webp.option.disabled': '关闭',
-  'watermark.webp.placeholder': '是否开启图片自动压缩',
-  'watermark.webp.tooltip':
-    '开启之后上传图片将压缩至 webp 格式以提高加载速度，无论哪种存储策略都生效。',
-  'watermark.field.required': '这是必填项',
-  'watermark.watermark.label': '水印',
-  'watermark.watermark.placeholder': '是否开启水印',
-  'watermark.watermark.tooltip':
-    '是否开启水印，开启之后上传图片将自动添加水印，无论哪种图床。宽高小于 128px 的图片可能会加不上水印。',
-  'watermark.text.label': '水印文字',
-  'watermark.text.tooltip': '此文字会作为水印加到图片右下角，目前不支持中文',
-  'watermark.text.placeholder': '请输入水印文字',
-};
 
 interface WatermarkFormData {
   enableWaterMark?: boolean;
@@ -34,6 +14,7 @@ interface WatermarkFormData {
 }
 
 export default function WaterMarkForm() {
+  const { t } = useTranslation();
   const [enableWaterMark, setEnableWaterMark] = useState<boolean>(false);
   return (
     <>
@@ -55,7 +36,7 @@ export default function WaterMarkForm() {
         syncToInitialValues={true}
         onFinish={async (data: WatermarkFormData) => {
           if (location.hostname == 'blog-demo.mereith.com') {
-            Modal.info({ title: trans_zh['watermark.demo.restricted'] });
+            Modal.info({ title: t('watermark.demo.restricted') });
             return false;
           }
 
@@ -74,41 +55,41 @@ export default function WaterMarkForm() {
           setEnableWaterMark(processedData.enableWaterMark || false);
 
           if (processedData.enableWaterMark && !processedData.waterMarkText) {
-            Modal.info({ title: trans_zh['watermark.text.required'] });
+            Modal.info({ title: t('watermark.text.required') });
             return false;
           }
 
           if (processedData.waterMarkText && !checkNoChinese(processedData.waterMarkText)) {
             Modal.info({
-              title: trans_zh['watermark.text.no_chinese'],
+              title: t('watermark.text.no_chinese'),
             });
             return false;
           }
 
           await updateStaticSetting(processedData);
-          message.success(trans_zh['watermark.update.success']);
+          message.success(t('watermark.update.success'));
           return true;
         }}
       >
         <ProFormSelect
           name="enableWebp"
-          label={trans_zh['watermark.webp.label']}
+          label={t('watermark.webp.label')}
           request={async () => {
             return [
               {
-                label: trans_zh['watermark.webp.option.enabled'],
+                label: t('watermark.webp.option.enabled'),
                 value: true,
               },
               {
-                label: trans_zh['watermark.webp.option.disabled'],
+                label: t('watermark.webp.option.disabled'),
                 value: false,
               },
             ];
           }}
-          rules={[{ required: true, message: trans_zh['watermark.field.required'] }]}
+          rules={[{ required: true, message: t('watermark.field.required') }]}
           required
-          placeholder={trans_zh['watermark.webp.placeholder']}
-          tooltip={trans_zh['watermark.webp.tooltip']}
+          placeholder={t('watermark.webp.placeholder')}
+          tooltip={t('watermark.webp.tooltip')}
         />
         <ProFormSelect
           fieldProps={{
@@ -118,30 +99,30 @@ export default function WaterMarkForm() {
           }}
           name="enableWaterMark"
           required
-          label={trans_zh['watermark.watermark.label']}
-          placeholder={trans_zh['watermark.watermark.placeholder']}
+          label={t('watermark.watermark.label')}
+          placeholder={t('watermark.watermark.placeholder')}
           request={async () => {
             return [
               {
-                label: trans_zh['watermark.webp.option.enabled'],
+                label: t('watermark.webp.option.enabled'),
                 value: true,
               },
               {
-                label: trans_zh['watermark.webp.option.disabled'],
+                label: t('watermark.webp.option.disabled'),
                 value: false,
               },
             ];
           }}
-          tooltip={trans_zh['watermark.watermark.tooltip']}
-          rules={[{ required: true, message: trans_zh['watermark.field.required'] }]}
+          tooltip={t('watermark.watermark.tooltip')}
+          rules={[{ required: true, message: t('watermark.field.required') }]}
         ></ProFormSelect>
         {enableWaterMark && (
           <ProFormText
             name="waterMarkText"
-            label={trans_zh['watermark.text.label']}
+            label={t('watermark.text.label')}
             required
-            tooltip={trans_zh['watermark.text.tooltip']}
-            placeholder={trans_zh['watermark.text.placeholder']}
+            tooltip={t('watermark.text.tooltip')}
+            placeholder={t('watermark.text.placeholder')}
           />
         )}
       </ProForm>

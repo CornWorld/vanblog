@@ -1,4 +1,3 @@
-import { writeClipBoardText } from '@/services/van-blog/clipboard';
 import { message } from 'antd';
 import { StaticItem } from '../types';
 
@@ -34,15 +33,12 @@ export const copyImgLink = (
   if (isMarkdown) {
     url = `![](${url})`;
   }
-  writeClipBoardText(url).then((res) => {
-    if (res) {
-      message.success(
-        `${info ? info : ''}已复制${isMarkdown ? ' markdown ' : '图片'}链接到剪切板！`,
-      );
-    } else {
-      message.error(`${info ? info : ''}复制链接到剪切板失败！`);
-    }
-  });
+  try {
+    navigator.clipboard.writeText(url);
+    message.success(`${info ? info : ''}已复制${isMarkdown ? ' markdown ' : '图片'}链接到剪切板！`);
+  } catch {
+    message.error(`${info ? info : ''}复制链接到剪切板失败！`);
+  }
 };
 
 export const mergeMetaInfo = (item: StaticItem): Record<string, unknown> => {

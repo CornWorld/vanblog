@@ -1,16 +1,13 @@
+import { useTranslation } from 'react-i18next';
 import { BytemdPlugin } from 'bytemd';
 
-const trans_zh = {
-  'editor.history.undo': '撤销',
-  'editor.history.redo': '重做',
-};
-
 export function historyIcon(): BytemdPlugin {
+  const { t } = useTranslation();
   return {
     actions: [
       {
         position: 'left',
-        title: trans_zh['editor.history.undo'],
+        title: t('editor.history.undo'),
         icon: undoIcon, // 16x16 SVG icon
 
         handler: {
@@ -22,7 +19,7 @@ export function historyIcon(): BytemdPlugin {
       },
       {
         position: 'left',
-        title: trans_zh['editor.history.redo'],
+        title: t('editor.history.redo'),
         icon: redoIcon, // 16x16 SVG icon
         handler: {
           type: 'action',

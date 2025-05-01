@@ -1,3 +1,5 @@
+import React from 'react';
+import { useTranslation } from 'react-i18next';
 import ImportDraftModal from '@/components/ImportDraftModal';
 import NewDraftModal from '@/components/NewDraftModal';
 import { getDraftsByOption } from '@/services/van-blog/api';
@@ -10,16 +12,8 @@ import { columns, draftKeysObj, draftKeysObjSmall } from './columes';
 import { Space, message } from 'antd';
 import { batchExport, batchDelete } from '@/services/van-blog/batch';
 
-const trans_zh = {
-  'draft.title': '草稿管理',
-  'draft.action.batch_delete': '批量删除',
-  'draft.action.batch_export': '批量导出',
-  'draft.action.cancel_select': '取消选择',
-  'draft.message.batch_delete.success': '批量删除成功！',
-  'draft.message.import.success': '导入成功！',
-};
-
 export default () => {
+  const { t } = useTranslation();
   const actionRef = useRef();
   const [colKeys, setColKeys] = useState(draftKeysObj);
   const [simplePage, setSimplePage] = useState(false);
@@ -68,12 +62,12 @@ export default () => {
                 <a
                   onClick={async () => {
                     await batchDelete(selectedRowKeys, true);
-                    message.success(trans_zh['draft.message.batch_delete.success']);
+                    message.success(t('draft.message.batch_delete.success'));
                     actionRef.current.reload();
                     onCleanSelected();
                   }}
                 >
-                  {trans_zh['draft.action.batch_delete']}
+                  {t('draft.action.batch_delete')}
                 </a>
                 <a
                   onClick={() => {
@@ -81,9 +75,9 @@ export default () => {
                     onCleanSelected();
                   }}
                 >
-                  {trans_zh['draft.action.batch_export']}
+                  {t('draft.action.batch_export')}
                 </a>
-                <a onClick={onCleanSelected}>{trans_zh['draft.action.cancel_select']}</a>
+                <a onClick={onCleanSelected}>{t('draft.action.cancel_select')}</a>
               </Space>
             );
           }}
@@ -174,7 +168,7 @@ export default () => {
             simple: simplePage,
           }}
           dateFormatter="string"
-          headerTitle={simpleSearch ? undefined : trans_zh['draft.title']}
+          headerTitle={simpleSearch ? undefined : t('draft.title')}
           options={simpleSearch ? false : true}
           toolBarRender={() => [
             <NewDraftModal
@@ -188,7 +182,7 @@ export default () => {
               key="importDraftMarkdown"
               onFinish={() => {
                 actionRef?.current?.reload();
-                message.success(trans_zh['draft.message.import.success']);
+                message.success(t('draft.message.import.success'));
               }}
             />,
           ]}

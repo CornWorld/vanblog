@@ -1,3 +1,4 @@
+import React from 'react';
 import CodeEditor from '@/components/CodeEditor';
 import UploadBtn from '@/components/UploadBtn';
 import {

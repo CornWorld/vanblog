@@ -1,15 +1,11 @@
+import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button, message, Upload } from 'antd';
 import ImgCrop from 'antd-img-crop';
 import { RcFile } from 'antd/lib/upload';
 import { UploadFile } from 'antd/lib/upload/interface';
 
-const trans_zh = {
-  'upload.button': '上传',
-  'upload.success': '{name} 上传成功!',
-  'upload.fail': '{name} 上传失败!',
-};
-
-export default function (props: {
+interface UploadBtnProps {
   setLoading: (loading: boolean) => void;
   text: string;
   onFinish: (file: UploadFile | RcFile, name?: string) => void;
@@ -22,7 +18,11 @@ export default function (props: {
   basePath?: string | undefined;
   loading?: boolean;
   plainText?: boolean;
-}) {
+}
+
+export default function UploadBtn(props: UploadBtnProps) {
+  const { t } = useTranslation();
+
   const upload = (file: RcFile, rPath: string) => {
     const formData = new FormData();
     let fileName = rPath || file.name;
@@ -45,7 +45,7 @@ export default function (props: {
         props?.onFinish(file, fileName);
       })
       .catch(() => {
-        message.error(trans_zh['upload.fail'].replace('{name}', fileName));
+        message.error(t('upload.fail', { name: fileName }));
       })
       .finally(() => {
         props.setLoading(false);
@@ -85,7 +85,7 @@ export default function (props: {
           props?.setLoading(false);
           props?.onFinish(info.file);
         } else if (info.file.status === 'error') {
-          message.error(trans_zh['upload.fail'].replace('{name}', info.file.name));
+          message.error(t('upload.fail', { name: info.file.name }));
           props?.setLoading(false);
         }
       }}

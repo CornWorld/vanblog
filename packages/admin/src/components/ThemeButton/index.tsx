@@ -6,16 +6,6 @@ import VanBlog from '@/types/initialState';
 import { useTranslation } from 'react-i18next';
 import './index.less';
 
-const trans_zh = {
-  'theme.light': '亮色',
-  'theme.dark': '暗色',
-  'theme.auto': '自动',
-  'theme.switch_to': '切换主题',
-  'theme.mode.light': '日间',
-  'theme.mode.dark': '夜间',
-  'theme.mode.auto': '自动',
-};
-
 interface ThemeButtonProps {
   showText: boolean;
   className?: string;
@@ -171,9 +161,9 @@ export default function ThemeButton({ showText, className = '' }: ThemeButtonPro
       <ThemeIcon />
       {showText && (
         <span style={{ marginLeft: '10px', transition: 'opacity 0.3s' }}>
-          {theme === 'light' && t('common.lightMode', trans_zh['theme.mode.light'])}
-          {theme === 'dark' && t('common.darkMode', trans_zh['theme.mode.dark'])}
-          {theme === 'auto' && t('common.autoMode', trans_zh['theme.mode.auto'])}
+          {theme === 'light' && t('common.lightMode', t('theme.mode.light'))}
+          {theme === 'dark' && t('common.darkMode', t('theme.mode.dark'))}
+          {theme === 'auto' && t('common.autoMode', t('theme.mode.auto'))}
         </span>
       )}
     </a>

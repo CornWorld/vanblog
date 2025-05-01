@@ -1,3 +1,5 @@
+import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { message, Alert } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import { ProFormText, StepsForm, ProFormInstance } from '@ant-design/pro-components';
@@ -5,10 +7,6 @@ import { useEffect, useRef } from 'react';
 import { resetRedirectCycle } from '@/utils/auth';
 import { fetchAllMeta } from '@/services/van-blog/api';
 import './index.less';
-
-const trans_zh = {
-  'init.message.required': '此项为必填项',
-};
 
 interface ApiError {
   response?: {
@@ -39,6 +37,7 @@ interface InitFormValues {
 }
 
 const InitPage = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const formMapRef = useRef<React.MutableRefObject<ProFormInstance<InitFormValues> | undefined>[]>(
     [],
@@ -55,9 +54,12 @@ const InitPage = () => {
   useEffect(() => {
     const checkInit = async () => {
       try {
-        const { statusCode } = await fetchAllMeta();
-        if (statusCode === 200) {
-          navigate('/', { replace: true });
+        const response = await fetchAllMeta();
+        // Check if response has statusCode property before using it
+        if (response && 'statusCode' in response) {
+          if (response.statusCode === 200) {
+            navigate('/', { replace: true });
+          }
         }
       } catch (error) {
         const err = error as ApiError;
@@ -115,7 +117,7 @@ const InitPage = () => {
         onFinish={handleInitSubmit}
         formProps={{
           validateMessages: {
-            required: trans_zh['init.message.required'],
+            required: t('init.message.required'),
           },
         }}
       >
@@ -126,10 +128,15 @@ const InitPage = () => {
             return true;
           }}
         >
-          <ProFormText name="name" label="用户名" width="md" rules={[{ required: true }]} />
+          <ProFormText
+            name="name"
+            label={t('user.username')}
+            width="md"
+            rules={[{ required: true }]}
+          />
           <ProFormText.Password
             name="password"
-            label="密码"
+            label={t('category.form.password')}
             width="md"
             rules={[{ required: true }]}
           />

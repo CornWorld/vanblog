@@ -1,92 +1,77 @@
-const trans_zh = {
-  'menu.overview': '分析概览',
-  'menu.article': '文章管理',
-  'menu.editor': '图形编辑器',
-  'menu.code': '代码编辑器',
-  'menu.about': '关于',
-  'menu.draft': '草稿管理',
-  'menu.image': '图片管理',
-  'menu.site': '站点管理',
-  'menu.site.data': '数据管理',
-  'menu.site.comment': '评论管理',
-  'menu.site.pipeline': '流水线',
-  'menu.site.setting': '系统设置',
-  'menu.site.customPage': '自定义页面',
-  'menu.site.log': '日志管理',
-};
+import i18next from 'i18next';
 
 export default [
   {
     path: '/welcome',
-    name: trans_zh['menu.overview'],
+    name: i18next.t('menu.overview'),
     icon: 'SmileOutlined',
     access: 'isAdmin',
   },
   {
     path: '/article',
-    name: trans_zh['menu.article'],
+    name: i18next.t('menu.article'),
     icon: 'FormOutlined',
   },
   {
     path: '/editor',
-    name: trans_zh['menu.editor'],
+    name: i18next.t('menu.editor'),
     icon: 'FormOutlined',
     hideInMenu: true,
   },
   {
     path: '/code',
-    name: trans_zh['menu.code'],
+    name: i18next.t('menu.code'),
     icon: 'ToolOutlined',
     hideInMenu: true,
     access: 'isAdmin',
   },
   {
     path: '/about',
-    name: trans_zh['menu.about'],
+    name: i18next.t('menu.about'),
     icon: 'FormOutlined',
     hideInMenu: true,
   },
   {
     path: '/draft',
-    name: trans_zh['menu.draft'],
+    name: i18next.t('menu.draft'),
     icon: 'ContainerOutlined',
   },
   {
     path: '/static/img',
-    name: trans_zh['menu.image'],
+    name: i18next.t('menu.image'),
     icon: 'PictureOutlined',
     hideInBreadcrumb: true,
   },
   {
     path: '/site',
-    name: trans_zh['menu.site'],
+    name: i18next.t('menu.site'),
     icon: 'ToolOutlined',
     hideInBreadcrumb: true,
     access: 'isAdmin',
     routes: [
       {
         path: '/site/data',
-        name: trans_zh['menu.site.data'],
+        name: i18next.t('menu.site.data'),
       },
       {
         path: '/site/comment',
-        name: trans_zh['menu.site.comment'],
+        name: i18next.t('menu.site.comment'),
       },
       {
         path: '/site/pipeline',
-        name: trans_zh['menu.site.pipeline'],
+        name: i18next.t('menu.site.pipeline'),
       },
       {
         path: '/site/setting',
-        name: trans_zh['menu.site.setting'],
+        name: i18next.t('menu.site.setting'),
       },
       {
         path: '/site/customPage',
-        name: trans_zh['menu.site.customPage'],
+        name: i18next.t('menu.site.customPage'),
       },
       {
         path: '/site/log',
-        name: trans_zh['menu.site.log'],
+        name: i18next.t('menu.site.log'),
       },
     ],
   },

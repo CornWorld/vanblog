@@ -1,3 +1,5 @@
+import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { useTab } from '@/services/van-blog/useTab';
 import { PageContainer } from '@ant-design/pro-layout';
 import '../Welcome/index.less';
@@ -12,20 +14,8 @@ import User from './tabs/User';
 import WalineTab from './tabs/WalineTab';
 import Token from './tabs/Token';
 
-const trans_zh = {
-  'system.tabs.site_info': '站点配置',
-  'system.tabs.customizing': '客制化',
-  'system.tabs.user': '用户设置',
-  'system.tabs.img': '图床设置',
-  'system.tabs.waline': '评论设置',
-  'system.tabs.backup': '备份恢复',
-  'system.tabs.token': 'Token 管理',
-  'system.tabs.caddy': 'HTTPS',
-  'system.tabs.advance': '高级设置',
-  'system.tabs.migrate': '迁移助手',
-};
-
 export default function () {
+  const { t } = useTranslation();
   const tabMap = {
     siteInfo: <SiteInfo />,
     customizing: <Customizing />,
@@ -49,43 +39,43 @@ export default function () {
       tabActiveKey={tab}
       tabList={[
         {
-          tab: trans_zh['system.tabs.site_info'],
+          tab: t('system.tabs.site_info'),
           key: 'siteInfo',
         },
         {
-          tab: trans_zh['system.tabs.customizing'],
+          tab: t('system.tabs.customizing'),
           key: 'customizing',
         },
         {
-          tab: trans_zh['system.tabs.user'],
+          tab: t('system.tabs.user'),
           key: 'user',
         },
         {
-          tab: trans_zh['system.tabs.img'],
+          tab: t('system.tabs.img'),
           key: 'img',
         },
         {
-          tab: trans_zh['system.tabs.waline'],
+          tab: t('system.tabs.waline'),
           key: 'waline',
         },
         {
-          tab: trans_zh['system.tabs.backup'],
+          tab: t('system.tabs.backup'),
           key: 'backup',
         },
         {
-          tab: trans_zh['system.tabs.token'],
+          tab: t('system.tabs.token'),
           key: 'token',
         },
         {
-          tab: trans_zh['system.tabs.caddy'],
+          tab: t('system.tabs.caddy'),
           key: 'caddy',
         },
         {
-          tab: trans_zh['system.tabs.advance'],
+          tab: t('system.tabs.advance'),
           key: 'advance',
         },
         {
-          tab: trans_zh['system.tabs.migrate'],
+          tab: t('system.tabs.migrate'),
           key: 'migrate',
         },
       ]}

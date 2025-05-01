@@ -1,3 +1,5 @@
+import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { ProCard, StatisticCard } from '@ant-design/pro-components';
 import { Spin } from 'antd';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -11,28 +13,8 @@ import NumSelect from '@/components/NumSelect';
 import { useNum } from '@/services/van-blog/useNum';
 import RcResizeObserver from 'rc-resize-observer';
 
-const trans_zh = {
-  'viewer.stat.baidu': '百度统计',
-  'viewer.stat.enabled': '已开启',
-  'viewer.stat.unconfigured': '未配置',
-  'viewer.stat.google': '谷歌分析',
-  'viewer.stat.recent_visit': '最近访问',
-  'viewer.stat.recent_path': '最近访问路径',
-  'viewer.stat.total_visitors': '总访客数',
-  'viewer.stat.total_visitors.tip': '以浏览器内缓存的唯一标识符为衡量标准计算全站独立访客的数量',
-  'viewer.stat.total_views': '总访问数',
-  'viewer.stat.total_views.tip': '以每一次页面的访问及跳转为衡量标准计算全站的访问数量',
-  'viewer.stat.max_article_visitors': '单篇最高访客数',
-  'viewer.stat.max_article_visitors.tip':
-    '以浏览器内缓存的唯一标识符为衡量标准计算出单篇文章最高的独立访客数',
-  'viewer.stat.max_article_views': '单篇最高访问量',
-  'viewer.stat.max_article_views.tip':
-    '以每一次页面的访问及跳转为衡量标准计算出单篇文章最高的访问量',
-  'viewer.chart.recent_visit_top': '最近访问TOP',
-  'viewer.chart.article_views_top': '文章访问量TOP',
-};
-
 const Viewer = () => {
+  const { t } = useTranslation();
   const [data, setData] = useState();
   const [loading, setLoading] = useState(true);
   const [responsive, setResponsive] = useState(false);
@@ -91,16 +73,16 @@ const Viewer = () => {
                   target="_blank"
                   rel="noreferrer"
                 >
-                  {trans_zh['viewer.stat.baidu']}
+                  {t('viewer.stat.baidu')}
                 </a>
               ),
               formatter: () => {
                 if (data?.enableBaidu) {
-                  return <span>{trans_zh['viewer.stat.enabled']}</span>;
+                  return <span>{t('viewer.stat.enabled')}</span>;
                 } else {
                   return (
                     <Link to={`/admin/site/setting?siteInfoTab=more`}>
-                      {trans_zh['viewer.stat.unconfigured']}
+                      {t('viewer.stat.unconfigured')}
                     </Link>
                   );
                 }
@@ -119,16 +101,16 @@ const Viewer = () => {
                   target="_blank"
                   rel="noreferrer"
                 >
-                  {trans_zh['viewer.stat.google']}
+                  {t('viewer.stat.google')}
                 </a>
               ),
               formatter: () => {
                 if (data?.enableGA) {
-                  return <span>{trans_zh['viewer.stat.enabled']}</span>;
+                  return <span>{t('viewer.stat.enabled')}</span>;
                 } else {
                   return (
                     <Link to={`/admin/site/setting?siteInfoTab=more`}>
-                      {trans_zh['viewer.stat.unconfigured']}
+                      {t('viewer.stat.unconfigured')}
                     </Link>
                   );
                 }
@@ -140,7 +122,7 @@ const Viewer = () => {
             colSpan={responsive ? 24 : 6}
             statistic={{
               layout: responsive ? 'horizontal' : 'vertical',
-              title: trans_zh['viewer.stat.recent_visit'],
+              title: t('viewer.stat.recent_visit'),
               value: recentVisitTime,
             }}
           />
@@ -148,7 +130,7 @@ const Viewer = () => {
             colSpan={responsive ? 24 : 6}
             statistic={{
               layout: responsive ? 'horizontal' : 'vertical',
-              title: trans_zh['viewer.stat.recent_path'],
+              title: t('viewer.stat.recent_path'),
               formatter: () => {
                 return (
                   <a className="ua blue" target="_blank" rel="noreferrer" href={recentHref}>
@@ -170,8 +152,8 @@ const Viewer = () => {
               layout: responsive ? 'horizontal' : 'vertical',
               title: (
                 <TipTitle
-                  title={trans_zh['viewer.stat.total_visitors']}
-                  tip={trans_zh['viewer.stat.total_visitors.tip']}
+                  title={t('viewer.stat.total_visitors')}
+                  tip={t('viewer.stat.total_visitors.tip')}
                 />
               ),
               value: data?.totalVisited || 0,
@@ -183,8 +165,8 @@ const Viewer = () => {
               layout: responsive ? 'horizontal' : 'vertical',
               title: (
                 <TipTitle
-                  title={trans_zh['viewer.stat.total_views']}
-                  tip={trans_zh['viewer.stat.total_views.tip']}
+                  title={t('viewer.stat.total_views')}
+                  tip={t('viewer.stat.total_views.tip')}
                 />
               ),
               value: data?.totalViewer || 0,
@@ -196,8 +178,8 @@ const Viewer = () => {
               layout: responsive ? 'horizontal' : 'vertical',
               title: (
                 <TipTitle
-                  title={trans_zh['viewer.stat.max_article_visitors']}
-                  tip={trans_zh['viewer.stat.max_article_visitors.tip']}
+                  title={t('viewer.stat.max_article_visitors')}
+                  tip={t('viewer.stat.max_article_visitors.tip')}
                 />
               ),
               value: data?.maxArticleVisited || 0,
@@ -209,8 +191,8 @@ const Viewer = () => {
               layout: responsive ? 'horizontal' : 'vertical',
               title: (
                 <TipTitle
-                  title={trans_zh['viewer.stat.max_article_views']}
-                  tip={trans_zh['viewer.stat.max_article_views.tip']}
+                  title={t('viewer.stat.max_article_views')}
+                  tip={t('viewer.stat.max_article_views.tip')}
                 />
               ),
               value: data?.maxArticleViewer || 0,
@@ -231,7 +213,7 @@ const Viewer = () => {
             <StatisticCard
               title={
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <div>{trans_zh['viewer.chart.recent_visit_top']}</div>
+                  <div>{t('viewer.chart.recent_visit_top')}</div>
                   <NumSelect d="条" value={num} setValue={setNum} />
                 </div>
               }
@@ -247,7 +229,7 @@ const Viewer = () => {
             <StatisticCard
               title={
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <div>{trans_zh['viewer.chart.article_views_top']}</div>
+                  <div>{t('viewer.chart.article_views_top')}</div>
                   <NumSelect d="条" value={num} setValue={setNum} />
                 </div>
               }

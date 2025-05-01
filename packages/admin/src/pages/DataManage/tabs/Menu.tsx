@@ -1,22 +1,10 @@
+import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { getMenu, updateMenu } from '@/services/van-blog/api';
 import { ActionType, ProColumns, EditableProTable } from '@ant-design/pro-components';
 import { message, Modal, Spin } from 'antd';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Key } from 'react';
-
-const trans_zh = {
-  'menu.column.name': '菜单名',
-  'menu.column.url': '跳转网址',
-  'menu.column.url.tooltip': '内部地址需以 / 开头，外部地址请以协议开头( http/https )',
-  'menu.column.actions': '操作',
-  'menu.action.edit': '编辑',
-  'menu.action.add_child': '新增下级',
-  'menu.action.delete': '删除',
-  'menu.message.max_level': '目前最大只支持二级菜单',
-  'menu.modal.delete.title': '确认删除"{name}"吗?',
-  'menu.table.header': '导航菜单管理',
-  'menu.message.required': '此项为必填项',
-};
 
 interface MenuItem {
   id: string | number;
@@ -45,6 +33,7 @@ const loopDataSourceFilter = (data: MenuItem[], id: React.Key | undefined): Menu
 };
 
 export default function MenuTab() {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [dataSource, setDataSource] = useState<MenuItem[]>([]);
   const [editableKeys, setEditableRowKeys] = useState<(string | number)[]>([]);
@@ -101,22 +90,22 @@ export default function MenuTab() {
 
   const columns: ProColumns<MenuItem>[] = [
     {
-      title: trans_zh['menu.column.name'],
+      title: t('menu.column.name'),
       dataIndex: 'name',
       formItemProps: () => ({
-        rules: [{ required: true, message: trans_zh['menu.message.required'] }],
+        rules: [{ required: true, message: t('menu.message.required') }],
       }),
     },
     {
-      title: trans_zh['menu.column.url'],
+      title: t('menu.column.url'),
       dataIndex: 'value',
-      tooltip: trans_zh['menu.column.url.tooltip'],
+      tooltip: t('menu.column.url.tooltip'),
       formItemProps: () => ({
-        rules: [{ required: true, message: trans_zh['menu.message.required'] }],
+        rules: [{ required: true, message: t('menu.message.required') }],
       }),
     },
     {
-      title: trans_zh['menu.column.actions'],
+      title: t('menu.column.actions'),
       valueType: 'option',
       key: 'option',
       width: 200,
@@ -127,14 +116,14 @@ export default function MenuTab() {
             action?.startEditable?.(record.id);
           }}
         >
-          {trans_zh['menu.action.edit']}
+          {t('menu.action.edit')}
         </a>,
         record.level === 0 ? (
           <a
             key="addChild"
             onClick={() => {
               if (record.level >= 1) {
-                message.warning(trans_zh['menu.message.max_level']);
+                message.warning(t('menu.message.max_level'));
                 return;
               }
 
@@ -160,7 +149,7 @@ export default function MenuTab() {
               action?.startEditable(newId);
             }}
           >
-            {trans_zh['menu.action.add_child']}
+            {t('menu.action.add_child')}
           </a>
         ) : undefined,
         <a
@@ -170,11 +159,11 @@ export default function MenuTab() {
               onOk: () => {
                 removeRow(record);
               },
-              title: trans_zh['menu.modal.delete.title'].replace('{name}', record.name || '-'),
+              title: t('menu.modal.delete.title', { name: record.name || '-' }),
             });
           }}
         >
-          {trans_zh['menu.action.delete']}
+          {t('menu.action.delete')}
         </a>,
       ],
     },
@@ -196,7 +185,7 @@ export default function MenuTab() {
         }}
         actionRef={actionRef}
         rowKey="id"
-        headerTitle={trans_zh['menu.table.header']}
+        headerTitle={t('menu.table.header')}
         scroll={{
           x: 960,
         }}

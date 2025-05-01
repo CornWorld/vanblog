@@ -1,3 +1,5 @@
+import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Area } from '@ant-design/plots';
 import { ProCard, StatisticCard } from '@ant-design/pro-components';
 import { Spin } from 'antd';
@@ -10,24 +12,8 @@ import TipTitle from '@/components/TipTitle';
 import { useNum } from '@/services/van-blog/useNum';
 const { Statistic } = StatisticCard;
 
-const trans_zh = {
-  'overview.statistic.article_count': '文章数',
-  'overview.statistic.word_count': '总字数',
-  'overview.statistic.total_visitors': '总访客数',
-  'overview.statistic.total_visitors.tip':
-    '以浏览器内缓存的唯一标识符为衡量标准计算全站独立访客的数量',
-  'overview.statistic.today_new': '今日新增',
-  'overview.statistic.total_views': '总访问数',
-  'overview.statistic.total_views.tip': '以每一次页面的访问及跳转为衡量标准计算全站的访问数量',
-  'overview.chart.visitors_trend': '访客数趋势图',
-  'overview.chart.views_trend': '访问量趋势图',
-  'overview.chart.total_visitors_trend': '总访客数趋势图',
-  'overview.chart.total_views_trend': '总访问量趋势图',
-  'overview.chart.visitors': '访客数',
-  'overview.chart.views': '访问量',
-};
-
 const OverView = () => {
+  const { t } = useTranslation();
   const [data, setData] = useState();
   const [loading, setLoading] = useState(true);
   const [num, setNum] = useNum(5);
@@ -48,8 +34,8 @@ const OverView = () => {
     for (const each of data?.viewer?.grid?.each || []) {
       res.push({
         date: each.date,
-        [trans_zh['overview.chart.visitors']]: each.visited,
-        [trans_zh['overview.chart.views']]: each.viewer,
+        [t('overview.chart.visitors')]: each.visited,
+        [t('overview.chart.views')]: each.viewer,
       });
     }
     return res;
@@ -60,8 +46,8 @@ const OverView = () => {
     for (const each of data?.viewer?.grid?.total || []) {
       res.push({
         date: each.date,
-        [trans_zh['overview.chart.visitors']]: each.visited,
-        [trans_zh['overview.chart.views']]: each.viewer,
+        [t('overview.chart.visitors')]: each.visited,
+        [t('overview.chart.views')]: each.viewer,
       });
     }
     return res;
@@ -94,7 +80,7 @@ const OverView = () => {
           <StatisticCard
             colSpan={responsive ? 24 : 6}
             statistic={{
-              title: trans_zh['overview.statistic.article_count'],
+              title: t('overview.statistic.article_count'),
               value: data?.total?.articleNum || 0,
               layout: responsive ? 'horizontal' : 'vertical',
             }}
@@ -102,7 +88,7 @@ const OverView = () => {
           <StatisticCard
             colSpan={responsive ? 24 : 6}
             statistic={{
-              title: trans_zh['overview.statistic.word_count'],
+              title: t('overview.statistic.word_count'),
               layout: responsive ? 'horizontal' : 'vertical',
               value: data?.total?.wordCount || 0,
             }}
@@ -113,15 +99,15 @@ const OverView = () => {
             statistic={{
               title: (
                 <TipTitle
-                  title={trans_zh['overview.statistic.total_visitors']}
-                  tip={trans_zh['overview.statistic.total_visitors.tip']}
+                  title={t('overview.statistic.total_visitors')}
+                  tip={t('overview.statistic.total_visitors.tip')}
                 />
               ),
               value: data?.viewer?.now?.visited || 0,
               layout: responsive ? 'horizontal' : 'vertical',
               description: (
                 <Statistic
-                  title={trans_zh['overview.statistic.today_new']}
+                  title={t('overview.statistic.today_new')}
                   value={data?.viewer?.add?.visited || 0}
                   trend="up"
                 />
@@ -133,15 +119,15 @@ const OverView = () => {
             statistic={{
               title: (
                 <TipTitle
-                  title={trans_zh['overview.statistic.total_views']}
-                  tip={trans_zh['overview.statistic.total_views.tip']}
+                  title={t('overview.statistic.total_views')}
+                  tip={t('overview.statistic.total_views.tip')}
                 />
               ),
               layout: responsive ? 'horizontal' : 'vertical',
               value: data?.viewer?.now?.viewer || 0,
               description: (
                 <Statistic
-                  title={trans_zh['overview.statistic.today_new']}
+                  title={t('overview.statistic.today_new')}
                   value={data?.viewer?.add?.viewer || 0}
                   trend="up"
                 />
@@ -160,11 +146,11 @@ const OverView = () => {
             className="card-full-title"
             title={
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <div>{trans_zh['overview.chart.visitors_trend']}</div>
+                <div>{t('overview.chart.visitors_trend')}</div>
                 <NumSelect d="天" value={num} setValue={setNum} />
               </div>
             }
-            chart={<Area yField={trans_zh['overview.chart.visitors']} {...eachConfig} />}
+            chart={<Area yField={t('overview.chart.visitors')} {...eachConfig} />}
           />
 
           <StatisticCard
@@ -172,11 +158,11 @@ const OverView = () => {
             className="card-full-title"
             title={
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <div>{trans_zh['overview.chart.views_trend']}</div>
+                <div>{t('overview.chart.views_trend')}</div>
                 <NumSelect d="天" value={num} setValue={setNum} />
               </div>
             }
-            chart={<Area yField={trans_zh['overview.chart.views']} {...eachConfig} />}
+            chart={<Area yField={t('overview.chart.views')} {...eachConfig} />}
           />
         </ProCard>
         <ProCard
@@ -190,11 +176,11 @@ const OverView = () => {
             className="card-full-title"
             title={
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <div>{trans_zh['overview.chart.total_visitors_trend']}</div>
+                <div>{t('overview.chart.total_visitors_trend')}</div>
                 <NumSelect d="天" value={num} setValue={setNum} />
               </div>
             }
-            chart={<Area yField={trans_zh['overview.chart.visitors']} {...lineConfig} />}
+            chart={<Area yField={t('overview.chart.visitors')} {...lineConfig} />}
           />
 
           <StatisticCard
@@ -202,11 +188,11 @@ const OverView = () => {
             className="card-full-title"
             title={
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <div>{trans_zh['overview.chart.total_views_trend']}</div>
+                <div>{t('overview.chart.total_views_trend')}</div>
                 <NumSelect d="天" value={num} setValue={setNum} />
               </div>
             }
-            chart={<Area yField={trans_zh['overview.chart.views']} {...lineConfig} />}
+            chart={<Area yField={t('overview.chart.views')} {...lineConfig} />}
           />
         </ProCard>
       </Spin>

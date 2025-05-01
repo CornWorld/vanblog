@@ -19,13 +19,6 @@ import ThemeButton from '@/components/ThemeButton';
 import { mapTheme, writeTheme } from '@/services/van-blog/theme';
 import { useTranslation } from 'react-i18next';
 
-const trans_zh = {
-  'common.logout': '退出登录',
-  'common.home': '主站',
-  'common.about': '关于',
-  'layout.collaborator_mode': '协作模式',
-};
-
 // Route config
 import routes from './routes';
 
@@ -101,19 +94,19 @@ const CustomBottomLinks = ({ collapsed }) => {
 
   // Theme button menu item
   const ThemeMenuItem = () => (
-    <div style={{ padding: collapsed ? '0' : '0 8px 0 6px' }}>
+    <div style={{ padding: collapsed ? t('site_form.submenu_offset.placeholder') : '0 8px 0 6px' }}>
       <ThemeButton showText={!collapsed} />
     </div>
   );
 
   // Logout button menu item
   const LogoutMenuItem = () => (
-    <div style={{ padding: collapsed ? '0' : '0 8px 0 6px' }}>
+    <div style={{ padding: collapsed ? t('site_form.submenu_offset.placeholder') : '0 8px 0 6px' }}>
       <LogoutButton
         trigger={
           <a style={{ display: 'flex', alignItems: 'center' }}>
             <LogoutOutlined style={{ marginRight: collapsed ? 0 : 10 }} />
-            {!collapsed && <span>{t('common.logout') || trans_zh['common.logout']}</span>}
+            {!collapsed && <span>{t('common.logout') || t('common.logout')}</span>}
           </a>
         }
       />
@@ -132,12 +125,12 @@ const CustomBottomLinks = ({ collapsed }) => {
           {
             key: 'home',
             icon: <HomeOutlined />,
-            label: t('common.home') || trans_zh['common.home'],
+            label: t('common.home') || t('common.home'),
           },
           {
             key: 'about',
             icon: <ProjectOutlined />,
-            label: t('common.about') || trans_zh['common.about'],
+            label: t('common.about') || t('common.about'),
           },
           {
             key: 'theme',
@@ -159,6 +152,7 @@ const BasicLayout = () => {
   const { initialState, setInitialState } = useAppContext();
   const location = useLocation();
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   if (!initialState) {
     return <PageLoading />;
@@ -214,7 +208,7 @@ const BasicLayout = () => {
             const user = initialState?.user;
             const isCollaborator = user?.type && user?.type === 'collaborator';
             if (isCollaborator) {
-              settings.title = trans_zh['layout.collaborator_mode'];
+              settings.title = t('layout.collaborator_mode');
             }
             if (settings.navTheme !== initialState?.settings?.navTheme) {
               // 切换了主题

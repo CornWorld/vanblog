@@ -1,8 +1,5 @@
-const trans_zh = {
-  'safeimgpage.empty': '暂无图片',
-};
-
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
+import i18next from 'i18next';
 import { Empty, Image, Spin } from 'antd';
 import { getImgLink } from './tools';
 import { StaticItem } from '../types';
@@ -21,12 +18,9 @@ interface SafeImgPageProps {
 export const SafeImgPage: React.FC<SafeImgPageProps> = ({ data, loading, displayMenu }) => {
   const [shouldRender, setShouldRender] = useState(false);
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setShouldRender(true);
-    }, 500);
-    return () => clearTimeout(timer);
-  }, []);
+  setTimeout(() => {
+    setShouldRender(true);
+  }, 500);
 
   const handleClick = useCallback(
     (e: React.MouseEvent, item: StaticItem) => {
@@ -42,7 +36,7 @@ export const SafeImgPage: React.FC<SafeImgPageProps> = ({ data, loading, display
 
   return (
     <Spin spinning={loading}>
-      {(!data || data.length === 0) && <Empty description={trans_zh['safeimgpage.empty']} />}
+      {(!data || data.length === 0) && <Empty description={i18next.t('safeimgpage.empty')} />}
       <Image.PreviewGroup>
         {data.map((item) => (
           <Image

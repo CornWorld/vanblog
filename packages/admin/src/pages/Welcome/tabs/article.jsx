@@ -1,3 +1,5 @@
+import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { ProCard, StatisticCard } from '@ant-design/pro-components';
 import { Spin } from 'antd';
 import { useCallback, useEffect, useState } from 'react';
@@ -8,18 +10,8 @@ import { Pie, Column } from '@ant-design/plots';
 import { useNum } from '@/services/van-blog/useNum';
 import RcResizeObserver from 'rc-resize-observer';
 
-const trans_zh = {
-  'article.stat.count': '文章数',
-  'article.stat.word_count': '总字数',
-  'article.stat.category_count': '分类数',
-  'article.stat.tag_count': '标签数',
-  'article.chart.category_pie': '分类饼图',
-  'article.chart.tag_column': '标签文章数 TOP 柱状图',
-  'article.meta.tag_name': '标签名',
-  'article.meta.article_count': '文章数量',
-};
-
 const ArticleTab = () => {
+  const { t } = useTranslation();
   const [data, setData] = useState();
   const [loading, setLoading] = useState(true);
   const [responsive, setResponsive] = useState(false);
@@ -75,10 +67,10 @@ const ArticleTab = () => {
     },
     meta: {
       type: {
-        alias: trans_zh['article.meta.tag_name'],
+        alias: t('article.meta.tag_name'),
       },
       value: {
-        alias: trans_zh['article.meta.article_count'],
+        alias: t('article.meta.article_count'),
       },
     },
   };
@@ -98,7 +90,7 @@ const ArticleTab = () => {
           <StatisticCard
             colSpan={responsive ? 24 : 6}
             statistic={{
-              title: trans_zh['article.stat.count'],
+              title: t('article.stat.count'),
               value: data?.articleNum || 0,
               layout: responsive ? 'horizontal' : 'vertical',
             }}
@@ -106,7 +98,7 @@ const ArticleTab = () => {
           <StatisticCard
             colSpan={responsive ? 24 : 6}
             statistic={{
-              title: trans_zh['article.stat.word_count'],
+              title: t('article.stat.word_count'),
               value: data?.wordNum || 0,
               layout: responsive ? 'horizontal' : 'vertical',
             }}
@@ -114,7 +106,7 @@ const ArticleTab = () => {
           <StatisticCard
             colSpan={responsive ? 24 : 6}
             statistic={{
-              title: trans_zh['article.stat.category_count'],
+              title: t('article.stat.category_count'),
               value: data?.categoryNum || 0,
               layout: responsive ? 'horizontal' : 'vertical',
             }}
@@ -122,7 +114,7 @@ const ArticleTab = () => {
           <StatisticCard
             colSpan={responsive ? 24 : 6}
             statistic={{
-              title: trans_zh['article.stat.tag_count'],
+              title: t('article.stat.tag_count'),
               value: data?.tagNum || 0,
               layout: responsive ? 'horizontal' : 'vertical',
             }}
@@ -138,7 +130,7 @@ const ArticleTab = () => {
             className="card-full-title"
             title={
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <div>{trans_zh['article.chart.category_pie']}</div>
+                <div>{t('article.chart.category_pie')}</div>
               </div>
             }
             chart={
@@ -158,7 +150,7 @@ const ArticleTab = () => {
             className="card-full-title"
             title={
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <div>{trans_zh['article.chart.tag_column']}</div>
+                <div>{t('article.chart.tag_column')}</div>
                 <NumSelect d="条" value={num} setValue={setNum} />
               </div>
             }

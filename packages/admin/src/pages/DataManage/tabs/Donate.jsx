@@ -1,21 +1,12 @@
+import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { deleteDonate, getDonate, updateDonate } from '@/services/van-blog/api';
 import { EditableProTable } from '@ant-design/pro-components';
 import { Modal, Spin } from 'antd';
 import { useRef, useState } from 'react';
 
-const trans_zh = {
-  'donate.table.header': '捐赠详情',
-  'donate.column.name': '捐赠人',
-  'donate.column.value': '金额',
-  'donate.column.updatedAt': '最后捐赠时间',
-  'donate.column.actions': '操作',
-  'donate.action.edit': '编辑',
-  'donate.action.delete': '删除',
-  'donate.message.required': '此项为必填项',
-  'donate.modal.deleteConfirm': '确认删除"{name}"的捐赠吗?',
-};
-
 export default function () {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [editableKeys, setEditableRowKeys] = useState([]);
   const actionRef = useRef();
@@ -27,37 +18,37 @@ export default function () {
   };
   const columns = [
     {
-      title: trans_zh['donate.column.name'],
+      title: t('donate.column.name'),
       dataIndex: 'name',
       formItemProps: () => {
         return {
-          rules: [{ required: true, message: trans_zh['donate.message.required'] }],
+          rules: [{ required: true, message: t('donate.message.required') }],
         };
       },
     },
     {
-      title: trans_zh['donate.column.value'],
+      title: t('donate.column.value'),
       valueType: 'money',
       dataIndex: 'value',
       formItemProps: () => {
         return {
-          rules: [{ required: true, message: trans_zh['donate.message.required'] }],
+          rules: [{ required: true, message: t('donate.message.required') }],
         };
       },
     },
     {
-      title: trans_zh['donate.column.updatedAt'],
+      title: t('donate.column.updatedAt'),
       valueType: 'date',
       editable: false,
       dataIndex: 'updatedAt',
       formItemProps: () => {
         return {
-          rules: [{ required: true, message: trans_zh['donate.message.required'] }],
+          rules: [{ required: true, message: t('donate.message.required') }],
         };
       },
     },
     {
-      title: trans_zh['donate.column.actions'],
+      title: t('donate.column.actions'),
       valueType: 'option',
       key: 'option',
       width: 200,
@@ -68,7 +59,7 @@ export default function () {
             action?.startEditable?.(record.name);
           }}
         >
-          {trans_zh['donate.action.edit']}
+          {t('donate.action.edit')}
         </a>,
         <a
           key="delete"
@@ -78,11 +69,11 @@ export default function () {
                 await deleteDonate(record.name);
                 action?.reload();
               },
-              title: trans_zh['donate.modal.deleteConfirm'].replace('{name}', record.name),
+              title: t('donate.modal.deleteConfirm', { name: record.name }),
             });
           }}
         >
-          {trans_zh['donate.action.delete']}
+          {t('donate.action.delete')}
         </a>,
       ],
     },
@@ -93,7 +84,7 @@ export default function () {
         <EditableProTable
           actionRef={actionRef}
           rowKey="key"
-          headerTitle={trans_zh['donate.table.header']}
+          headerTitle={t('donate.table.header')}
           scroll={{
             x: 960,
           }}

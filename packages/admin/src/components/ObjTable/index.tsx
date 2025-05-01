@@ -1,10 +1,7 @@
+import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Table, Typography } from 'antd';
 import { useMemo } from 'react';
-
-const trans_zh = {
-  'obj_table.column.property': '属性',
-  'obj_table.column.value': '值',
-};
 
 interface ObjTableProps {
   obj: Record<string, string>;
@@ -17,6 +14,7 @@ interface TableData {
 }
 
 export default function (props: ObjTableProps) {
+  const { t } = useTranslation();
   const data = useMemo(() => {
     if (!props.obj || Object.keys(props.obj).length == 0) {
       return [];
@@ -32,9 +30,9 @@ export default function (props: ObjTableProps) {
       dataSource={data}
       size="small"
       columns={[
-        { title: trans_zh['obj_table.column.property'], dataIndex: 'name', key: 'name', width: 60 },
+        { title: t('obj_table.column.property'), dataIndex: 'name', key: 'name', width: 60 },
         {
-          title: trans_zh['obj_table.column.value'],
+          title: t('obj_table.column.value'),
           dataIndex: 'val',
           key: 'val',
           render: (val) => {

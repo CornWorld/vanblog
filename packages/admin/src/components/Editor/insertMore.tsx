@@ -1,14 +1,12 @@
+import { useTranslation } from 'react-i18next';
 import { BytemdPlugin } from 'bytemd';
 
-const trans_zh = {
-  'editor.insertMore.title': '插入 more 标记',
-};
-
 export function insertMore(): BytemdPlugin {
+  const { t } = useTranslation();
   return {
     actions: [
       {
-        title: trans_zh['editor.insertMore.title'],
+        title: t('editor.insertMore.title'),
         icon: icon, // 16x16 SVG icon
         handler: {
           type: 'action',

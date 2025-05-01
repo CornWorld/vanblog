@@ -1,14 +1,12 @@
+import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { getLog } from '@/services/van-blog/api';
 import { Button, Card, Space, Spin } from 'antd';
 import { useEffect, useRef, useState } from 'react';
 import TerminalDisplay from '@/components/TerminalDisplay';
 
-const trans_zh = {
-  'system.card.title': '系统日志（每5s自动刷新）',
-  'system.button.refresh': '手动刷新',
-};
-
 export default function () {
+  const { t } = useTranslation();
   const [content, setContent] = useState('');
   const [loading, setLoading] = useState(true);
   const timerRef = useRef<NodeJS.Timeout>(null);
@@ -43,7 +41,7 @@ export default function () {
   }, []);
   return (
     <Card
-      title={trans_zh['system.card.title']}
+      title={t('system.card.title')}
       extra={
         <Space>
           <Button
@@ -60,7 +58,7 @@ export default function () {
               });
             }}
           >
-            {trans_zh['system.button.refresh']}
+            {t('system.button.refresh')}
           </Button>
         </Space>
       }

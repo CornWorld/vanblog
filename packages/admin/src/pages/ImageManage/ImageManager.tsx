@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { PageContainer } from '@ant-design/pro-components';
 import { Modal, message, Spin, Empty } from 'antd';
 import RcResizeObserver from 'rc-resize-observer';
@@ -18,24 +19,6 @@ import './index.less';
 import { deleteImgBySign, getImgs, searchArtclesByLink } from '@/services/van-blog/api';
 import { mergeMetaInfo, copyImgLink, downloadImg, getImgLink } from './components/tools';
 
-const trans_zh = {
-  'image.title': '图片管理',
-  'image.tip': '设置页可更改图片存储方式。对着图片点右键可解锁更多操作哦',
-  'image.error.get': '获取图片失败',
-  'image.modal.info.title': '图片信息',
-  'image.modal.delete.title': '确定删除该图片吗？删除后不可恢复！',
-  'image.message.delete.success1': '删除成功！',
-  'image.message.delete.success2': '但是 OSS 存储中并未删除哦',
-  'image.message.delete.success3': '已彻底删除',
-  'image.message.delete.error': '删除失败！',
-  'image.modal.reference.title': '被引用文章',
-  'image.table.column.id': '文章 ID',
-  'image.table.column.title': '标题',
-  'image.table.column.actions': '操作',
-  'image.action.edit': '编辑',
-  'image.empty.description': '没有图片',
-};
-
 interface ArticleReference {
   id: string;
   title: string;
@@ -47,6 +30,7 @@ interface ApiResponse<T> {
 }
 
 const ImageManager: React.FC = () => {
+  const { t } = useTranslation();
   // State management
   const [data, setData] = useState<StaticItem[]>([]);
   const [total, setTotal] = useState(0);
@@ -93,7 +77,7 @@ const ImageManager: React.FC = () => {
       }
     } catch (error) {
       console.error('Failed to fetch images:', error);
-      message.error(trans_zh['image.error.get']);
+      message.error(t('image.error.get'));
       setData([]);
     } finally {
       setLoading(false);
@@ -112,7 +96,7 @@ const ImageManager: React.FC = () => {
       switch (action) {
         case 'info':
           Modal.info({
-            title: trans_zh['image.modal.info.title'],
+            title: t('image.modal.info.title'),
             content: <ObjTable obj={mergeMetaInfo(clickItem)} />,
           });
           break;
@@ -127,24 +111,24 @@ const ImageManager: React.FC = () => {
           break;
         case 'delete':
           Modal.confirm({
-            title: trans_zh['image.modal.delete.title'],
+            title: t('image.modal.delete.title'),
             onOk: async () => {
               try {
                 setLoading(true);
                 await deleteImgBySign(clickItem.sign);
                 setLoading(false);
                 message.success(
-                  `${trans_zh['image.message.delete.success1']}${
+                  `${t('image.message.delete.success1')}${
                     clickItem.storageType === 'picgo'
-                      ? trans_zh['image.message.delete.success2']
-                      : trans_zh['image.message.delete.success3']
+                      ? t('image.message.delete.success2')
+                      : t('image.message.delete.success3')
                   }`,
                 );
                 fetchData();
               } catch (error) {
                 console.error('Failed to delete image:', error);
                 setLoading(false);
-                message.error(trans_zh['image.message.delete.error']);
+                message.error(t('image.message.delete.error'));
               }
             },
           });
@@ -158,14 +142,14 @@ const ImageManager: React.FC = () => {
             const articlesData = articleResponse.data || [];
 
             Modal.info({
-              title: trans_zh['image.modal.reference.title'],
+              title: t('image.modal.reference.title'),
               content: (
                 <table className="referenceTable">
                   <thead>
                     <tr>
-                      <th>{trans_zh['image.table.column.id']}</th>
-                      <th>{trans_zh['image.table.column.title']}</th>
-                      <th>{trans_zh['image.table.column.actions']}</th>
+                      <th>{t('image.table.column.id')}</th>
+                      <th>{t('image.table.column.title')}</th>
+                      <th>{t('image.table.column.actions')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -179,7 +163,7 @@ const ImageManager: React.FC = () => {
                               window.location.href = `/editor?type=article&id=${record.id}`;
                             }}
                           >
-                            {trans_zh['image.action.edit']}
+                            {t('image.action.edit')}
                           </a>
                         </td>
                       </tr>
@@ -222,7 +206,7 @@ const ImageManager: React.FC = () => {
     <PageContainer
       className="t-0"
       header={{
-        title: <TipTitle title={trans_zh['image.title']} tip={trans_zh['image.tip']} />,
+        title: <TipTitle title={t('image.title')} tip={t('image.tip')} />,
       }}
       extra={
         <ActionButtons
@@ -250,7 +234,7 @@ const ImageManager: React.FC = () => {
           ) : data.length === 0 ? (
             <Empty
               className="gallery-empty"
-              description={trans_zh['image.empty.description'] || '没有图片'}
+              description={t('image.empty.description') || '没有图片'}
             />
           ) : (
             <ImageGrid data={data} responsive={responsive} displayMenu={displayMenu} />

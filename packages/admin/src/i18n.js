@@ -1,6 +1,7 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import LanguageDetector from 'i18next-browser-languagedetector';
+import zhTranslation from './locales/zh.json';
 
 i18n
   // detect user language
@@ -16,7 +17,7 @@ i18n
     },
     resources: {
       zh: {
-        translation: {}, // will be loaded from public/locales/zh/translation.json
+        translation: zhTranslation,
       },
     },
   });

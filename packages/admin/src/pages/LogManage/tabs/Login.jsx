@@ -2,49 +2,36 @@ import { getLog } from '@/services/van-blog/api';
 import { useNum } from '@/services/van-blog/useNum';
 import { ProTable } from '@ant-design/pro-components';
 import React from 'react';
-
-const trans_zh = {
-  'login.column.id': 'ID',
-  'login.column.createdAt': '登录时间',
-  'login.column.ip': 'IP',
-  'login.column.location': '地理位置',
-  'login.column.range': '时间范围',
-  'login.column.time': '时间',
-  'login.message.log.unavailable': '无此数据',
-  'login.status.success': '成功',
-  'login.status.fail': '失败',
-  'login.column.username': '用户名',
-  'login.column.result': '结果',
-  'login.column.userAgent': '浏览器 UA',
-};
+import { useTranslation } from 'react-i18next';
 
 export default function () {
+  const { t } = useTranslation();
   const [pageSize, setPageSize] = useNum(10, 'login-record-page-size');
 
   const columns = [
     {
       dataIndex: 'id',
-      title: trans_zh['login.column.id'],
+      title: t('login.column.id'),
       search: false,
     },
     {
       dataIndex: 'createdAt',
       valueType: 'dateTime',
-      title: trans_zh['login.column.createdAt'],
+      title: t('login.column.createdAt'),
       sorter: true,
     },
     {
       dataIndex: 'ip',
-      title: trans_zh['login.column.ip'],
+      title: t('login.column.ip'),
       search: false,
     },
     {
       dataIndex: 'location',
-      title: trans_zh['login.column.location'],
+      title: t('login.column.location'),
       search: false,
     },
     {
-      title: trans_zh['login.column.range'],
+      title: t('login.column.range'),
       key: 'dateTimeRange',
       dataIndex: 'createdAt',
       valueType: 'dateTimeRange',
@@ -59,7 +46,7 @@ export default function () {
       },
     },
     {
-      title: trans_zh['login.column.time'],
+      title: t('login.column.time'),
       dataIndex: 'time',
       valueType: 'dateTime',
       hideInTable: true,
@@ -74,26 +61,26 @@ export default function () {
     },
     {
       dataIndex: 'username',
-      title: trans_zh['login.column.username'],
+      title: t('login.column.username'),
       search: false,
     },
     {
       dataIndex: 'result',
-      title: trans_zh['login.column.result'],
+      title: t('login.column.result'),
       valueEnum: {
         true: {
-          text: trans_zh['login.status.success'],
+          text: t('login.status.success'),
           status: 'Success',
         },
         false: {
-          text: trans_zh['login.status.fail'],
+          text: t('login.status.fail'),
           status: 'Error',
         },
       },
     },
     {
       dataIndex: 'browser',
-      title: trans_zh['login.column.userAgent'],
+      title: t('login.column.userAgent'),
       search: false,
       ellipsis: true,
     },
@@ -117,7 +104,7 @@ export default function () {
               data: [],
               success: false,
               total: 0,
-              errorMessage: trans_zh['login.message.log.unavailable'],
+              errorMessage: t('login.message.log.unavailable'),
             };
           }
         }}

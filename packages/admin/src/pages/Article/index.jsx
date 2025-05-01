@@ -1,26 +1,19 @@
-import ImportArticleModal from '@/components/ImportArticleModal';
-import NewArticleModal from '@/components/NewArticleModal';
+import React, { useMemo, useRef, useState } from 'react';
+import { PageContainer } from '@ant-design/pro-layout';
+import ProTable from '@ant-design/pro-table';
+import RcResizeObserver from 'rc-resize-observer';
+import { Button, message, Space } from 'antd';
+import { history } from '@/router';
+import { useTranslation } from 'react-i18next';
 import { getArticlesByOption } from '@/services/van-blog/api';
 import { batchExport, batchDelete } from '@/services/van-blog/batch';
 import { useNum } from '@/services/van-blog/useNum';
-import { PageContainer, ProTable } from '@ant-design/pro-components';
-import { Button, Space, message } from 'antd';
-import RcResizeObserver from 'rc-resize-observer';
-import { useMemo, useRef, useState } from 'react';
-import { history } from '@/router';
 import { articleObjAll, articleObjSmall, columns } from './columns';
-
-const trans_zh = {
-  'article.title': '文章管理',
-  'article.action.batch_delete': '批量删除',
-  'article.action.batch_export': '批量导出',
-  'article.action.cancel_select': '取消选择',
-  'article.action.edit_about': '编辑关于',
-  'article.message.batch_delete_success': '批量删除成功！',
-  'article.message.import_success': '导入成功！',
-};
+import ImportArticleModal from '@/components/ImportArticleModal';
+import NewArticleModal from '@/components/NewArticleModal';
 
 export default () => {
+  const { t } = useTranslation();
   const actionRef = useRef();
   const [colKeys, setColKeys] = useState(articleObjAll);
   const [simplePage, setSimplePage] = useState(false);
@@ -70,12 +63,12 @@ export default () => {
                 <a
                   onClick={async () => {
                     await batchDelete(selectedRowKeys);
-                    message.success(trans_zh['article.message.batch_delete_success']);
+                    message.success(t('article.message.batch_delete_success'));
                     actionRef.current.reload();
                     onCleanSelected();
                   }}
                 >
-                  {trans_zh['article.action.batch_delete']}
+                  {t('article.action.batch_delete')}
                 </a>
                 <a
                   onClick={() => {
@@ -83,9 +76,9 @@ export default () => {
                     onCleanSelected();
                   }}
                 >
-                  {trans_zh['article.action.batch_export']}
+                  {t('article.action.batch_export')}
                 </a>
-                <a onClick={onCleanSelected}>{trans_zh['article.action.cancel_select']}</a>
+                <a onClick={onCleanSelected}>{t('article.action.cancel_select')}</a>
               </Space>
             );
           }}
@@ -182,7 +175,7 @@ export default () => {
             },
           }}
           dateFormatter="string"
-          headerTitle={simpleSearch ? undefined : trans_zh['article.title']}
+          headerTitle={simpleSearch ? undefined : t('article.title')}
           options={simpleSearch ? false : true}
           toolBarRender={() => [
             <Button
@@ -191,7 +184,7 @@ export default () => {
                 history.push(`/editor?type=about&id=${0}`);
               }}
             >
-              {trans_zh['article.action.edit_about']}
+              {t('article.action.edit_about')}
             </Button>,
             <NewArticleModal
               key="newArticle123"
@@ -204,7 +197,7 @@ export default () => {
               key="importArticleBtn"
               onFinish={() => {
                 actionRef?.current?.reload();
-                message.success(trans_zh['article.message.import_success']);
+                message.success(t('article.message.import_success'));
               }}
             />,
           ]}
