@@ -8,7 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { getArticlesByOption } from '@/services/van-blog/api';
 import { batchExport, batchDelete } from '@/services/van-blog/batch';
 import { useNum } from '@/services/van-blog/useNum';
-import { articleObjAll, articleObjSmall, columns } from './columns';
+import { articleObjAll, articleObjSmall, getColumns } from './columns';
 import ImportArticleModal from '@/components/ImportArticleModal';
 import NewArticleModal from '@/components/NewArticleModal';
 
@@ -50,7 +50,7 @@ export default () => {
         }}
       >
         <ProTable
-          columns={columns}
+          columns={getColumns({ t })}
           actionRef={actionRef}
           cardBordered
           rowSelection={{

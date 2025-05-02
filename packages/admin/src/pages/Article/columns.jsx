@@ -24,7 +24,7 @@ export const articleKeysSmall = ['category', 'id', 'option', 'title'];
 export const articleObjAll = genActiveObj(articleKeys, articleKeys);
 export const articleObjSmall = genActiveObj(articleKeysSmall, articleKeys);
 
-export const getColumns = (t) => [
+export const getColumns = ({ t }) => [
   {
     dataIndex: 'id',
     valueType: 'number',
@@ -246,6 +246,3 @@ export const getColumns = (t) => [
     },
   },
 ];
-
-// For backwards compatibility
-export const columns = getColumns((key) => key);

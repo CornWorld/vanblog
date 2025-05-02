@@ -586,6 +586,7 @@
   "article.action.batch_export": "批量导出",
   "article.action.cancel_select": "取消选择",
   "article.action.edit_about": "编辑关于",
+  "article.action.delete": "删除",
   "article.message.batch_delete_success": "批量删除成功！",
   "article.message.import_success": "导入成功！",
   "article.column.id": "ID",
