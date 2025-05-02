@@ -1,16 +1,13 @@
 import React from 'react';
-import { useTranslation } from 'react-i18next';
 import ColumnsToolBar from '@/components/ColumnsToolBar';
 import PublishDraftModal from '@/components/PublishDraftModal';
 import UpdateModal from '@/components/UpdateModal';
 import { genActiveObj } from '@/services/van-blog/activeColTools';
 import { deleteDraft, getAllCategories, getDraftById, getTags } from '@/services/van-blog/api';
 import { parseObjToMarkdown } from '@/services/van-blog/parseMarkdownFile';
-import { message, Modal, Tag } from 'antd';
+import { message, Modal, Tag, Button } from 'antd';
 import { history } from '@/router';
 import { withoutKey } from '@/utils/props';
-
-const { t } = useTranslation();
 
 export const draftKeys = ['category', 'id', 'option', 'showTime', 'tags', 'title'];
 export const draftKeysSmall = ['category', 'id', 'option', 'title'];
@@ -18,7 +15,7 @@ export const draftKeysSmall = ['category', 'id', 'option', 'title'];
 export const draftKeysObj = genActiveObj(draftKeys, draftKeys);
 export const draftKeysObjSmall = genActiveObj(draftKeysSmall, draftKeys);
 
-export const getColumns = (t) => [
+export const getColumns = ({ t }) => [
   {
     dataIndex: 'id',
     valueType: 'number',
@@ -159,27 +156,33 @@ export const getColumns = (t) => [
             >
               {t('draft.action.export')}
             </a>,
-            <a
+            <Button
               key={'deleteDraft' + record.id}
+              type="link"
+              danger
               onClick={() => {
                 Modal.confirm({
-                  title: `${t('draft.modal.delete.title')} "${record.title}" 吗？`,
+                  title: t('draft.modal.delete.title'),
+                  content: t('draft.modal.delete.content'),
+                  okText: t('draft.modal.delete.ok'),
+                  cancelText: t('draft.modal.delete.cancel'),
                   onOk: async () => {
-                    await deleteDraft(record.id);
-                    message.success(t('draft.message.delete.success'));
-                    action?.reload();
+                    try {
+                      await deleteDraft(record.id);
+                      message.success(t('draft.message.delete.success'));
+                      action?.reload();
+                    } catch {
+                      message.error(t('draft.message.delete.error'));
+                    }
                   },
                 });
               }}
             >
               {t('draft.action.delete')}
-            </a>,
+            </Button>,
           ]}
-        ></ColumnsToolBar>
+        />
       );
     },
   },
 ];
-
-// For backwards compatibility
-export const columns = getColumns((key) => key);

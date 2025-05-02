@@ -418,7 +418,7 @@ export default function CodePage() {
           </Space>
         ),
         extra: [
-          <Dropdown key="moreAction" overlay={actionMenu} trigger={['click']}>
+          <Dropdown key="moreAction" menu={{ items: actionMenu }} trigger={['click']}>
             <Button size="middle" type="primary">
               操作
               <DownOutlined />

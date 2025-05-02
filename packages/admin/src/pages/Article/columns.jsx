@@ -1,5 +1,4 @@
 import React from 'react';
-import { useTranslation } from 'react-i18next';
 import ColumnsToolBar from '@/components/ColumnsToolBar';
 import UpdateModal from '@/components/UpdateModal';
 import { deleteArticle, getAllCategories, getArticleById, getTags } from '@/services/van-blog/api';

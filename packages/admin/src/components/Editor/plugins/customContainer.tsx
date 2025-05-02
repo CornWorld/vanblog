@@ -2,10 +2,7 @@ import { BytemdPlugin } from 'bytemd';
 import remarkDirective from 'remark-directive';
 import { visit } from 'unist-util-visit';
 import i18next, { TFunction } from 'i18next';
-import { icons } from './icons';
-
-const CUSTOM_CONTAINER_ICON =
-  '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 1024 1024"><path d="M157.4 966.004a99.435 99.435 0 0 1-99.334-99.287V668.09a99.468 99.468 0 0 1 99.333-99.287h709.323a99.425 99.425 0 0 1 99.282 99.287v198.626a99.393 99.393 0 0 1-99.282 99.287zm-14.2-297.913v198.626a14.234 14.234 0 0 0 14.2 14.199h709.322a14.233 14.233 0 0 0 14.199-14.2V668.092a14.266 14.266 0 0 0-14.2-14.199H157.4a14.266 14.266 0 0 0-14.198 14.2zm14.2-212.824a99.436 99.436 0 0 1-99.334-99.288V157.353a99.468 99.468 0 0 1 99.333-99.287h709.323a99.424 99.424 0 0 1 99.282 99.287V355.98a99.393 99.393 0 0 1-99.282 99.287zM143.2 157.353V355.98a14.233 14.233 0 0 0 14.2 14.199h709.32a14.233 14.233 0 0 0 14.2-14.2V157.354a14.266 14.266 0 0 0-14.2-14.199H157.4a14.267 14.267 0 0 0-14.198 14.2z"/></svg>';
+import { icons } from '../icons';
 
 const getContainerActions = () => [
   {
@@ -30,49 +27,47 @@ const getContainerActions = () => [
   },
 ];
 
-const getContainerTitles = () => ({
-  note: i18next.t('editor.customContainer.note'),
-  info: i18next.t('editor.customContainer.info'),
-  warning: i18next.t('editor.customContainer.warning'),
-  danger: i18next.t('editor.customContainer.danger'),
-  tip: i18next.t('editor.customContainer.tip'),
-});
+// Interface for the AST node from remark
+interface RemarkNode {
+  type: string;
+  name?: string;
+  attributes?: Record<string, string>;
+  data?: {
+    hName?: string;
+    hProperties?: {
+      className?: string[];
+      type?: string;
+      [key: string]: unknown;
+    };
+  };
+}
 
-// Disable rule for this complex case with unist/remark
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const customContainerPlugin = () => (tree: any) => {
+// Plugin that handles custom containers
+const customContainerPlugin = () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  visit(tree, (node: any) => {
-    if (
-      node.type === 'textDirective' ||
-      node.type === 'leafDirective' ||
-      node.type === 'containerDirective'
-    ) {
-      if (node.type == 'containerDirective') {
-        const { attributes, name } = node;
-        const data = (node.data ??= {
-          /* intentionally empty */
-        });
-        const tagName = name || '';
-        const CUSTOM_CONTAINER_TITLE = getContainerTitles();
+  return (tree: any) => {
+    visit(tree, (node: RemarkNode) => {
+      if (
+        node.type === 'textDirective' ||
+        node.type === 'leafDirective' ||
+        node.type === 'containerDirective'
+      ) {
+        const data = node.data || (node.data = {});
+        const type = node.name;
+        const attrs = node.attributes || {};
+        const title = attrs.title || type;
 
-        // Check if tagName is a valid key in the CUSTOM_CONTAINER_TITLE object
-        const isValidKey = (key: string): key is keyof typeof CUSTOM_CONTAINER_TITLE =>
-          Object.keys(CUSTOM_CONTAINER_TITLE).includes(key);
-
-        const title =
-          attributes?.title || (isValidKey(tagName) ? CUSTOM_CONTAINER_TITLE[tagName] : undefined);
-
-        const cls = `custom-container ${tagName}`;
-
-        data.hName = 'div';
-        data.hProperties = {
-          class: cls,
-          ['type']: title,
-        };
+        if (type && ['tip', 'warning', 'danger', 'info', 'note'].includes(type)) {
+          // Add class for styling
+          data.hName = 'div';
+          data.hProperties = {
+            className: ['custom-container', type],
+            type: title,
+          };
+        }
       }
-    }
-  });
+    });
+  };
 };
 
 export function customContainer({ t }: { t: TFunction }): BytemdPlugin {
@@ -101,7 +96,7 @@ export function customContainer({ t }: { t: TFunction }): BytemdPlugin {
     actions: [
       {
         title: t('editor.customContainer.title'),
-        icon: CUSTOM_CONTAINER_ICON,
+        icon: icons.customContainer,
         cheatsheet: t('editor.customContainer.cheatsheet'),
         handler: {
           type: 'dropdown',

@@ -112,6 +112,7 @@
     "esbuild": "^0.25.2",
     "eslint": "^9.24.0",
     "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^5.2.0",
     "gh-pages": "^6.3.0",
     "glob": "^11.0.2",
     "jsdom-global": "^3.0.2",

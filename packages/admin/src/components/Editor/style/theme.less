@@ -1,0 +1,88 @@
+// 编辑器主题样式
+// 包含编辑器的主题特定样式覆盖
+
+// 导入主题变量
+@import url('../../../theme-variables.less');
+
+// 亮色主题覆盖
+.light {
+  // 基础主题样式
+  background-color: #fff;
+  color: #333;
+
+  // 亮色主题markdown样式
+  .markdown-body {
+    pre {
+      background-color: #f6f8fa;
+    }
+
+    img {
+      background-color: #fff;
+    }
+
+    table {
+      background-color: #fff;
+      border-color: #dfe2e5;
+    }
+
+    table th,
+    table td {
+      border-color: #dfe2e5;
+    }
+  }
+}
+
+// 暗色主题覆盖
+.dark {
+  // 基础主题样式
+  background-color: #222;
+  color: #f0f0f0;
+
+  // 暗色主题markdown样式
+  .markdown-body {
+    pre {
+      background-color: #282c34;
+    }
+
+    img {
+      background-color: #222;
+    }
+
+    table {
+      background-color: #1f1f1f;
+      border-color: #444;
+    }
+
+    table th,
+    table td {
+      border-color: #444;
+    }
+  }
+
+  // 暗色主题编辑器组件
+  .bytemd {
+    background-color: var(--editor-bg, #1f1f1f);
+    border-color: #333;
+  }
+
+  .bytemd-toolbar {
+    background-color: #282c34;
+    border-color: #444;
+  }
+
+  .bytemd-status {
+    background-color: #282c34;
+    color: rgb(255 255 255 / 65%);
+  }
+
+  // 暗色主题CodeMirror
+  .CodeMirror {
+    background-color: #1f1f1f;
+    color: rgb(255 255 255 / 85%);
+  }
+
+  // 暗色主题预览
+  .bytemd-preview {
+    background: rgb(41 43 43);
+  }
+}

@@ -13,7 +13,7 @@ import BasicLayout from './layouts/BasicLayout';
 import BlankLayout from './layouts/BlankLayout';
 
 // Preload SVG resources
-function preloadSvgIcons(t) {
+function preloadSvgIcons() {
   // Common SVG icons to preload
   const svgIcons = [
     `<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 18C8.68629 18 6 15.3137 6 12C6 8.68629 8.68629 6 12 6C15.3137 6 18 8.68629 18 12C18 15.3137 15.3137 18 12 18Z" /></svg>`,
@@ -83,8 +83,6 @@ const ProtectedRoute = React.memo(({ isAdmin, children }) => {
 });
 
 const App = () => {
-  const { t } = useTranslation();
-
   // Initialize global history for compatibility
   const navigate = useNavigate();
   const location = useLocation();
@@ -92,9 +90,7 @@ const App = () => {
 
   // Preload SVG icons and editor assets - 仅在组件挂载时执行一次
   useEffect(() => {
-    preloadSvgIcons(t);
-    // 移除 t 作为依赖项，避免每次 t 变化都重新执行
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    preloadSvgIcons();
   }, []);
 
   return (

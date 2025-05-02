@@ -1,4 +1,4 @@
-interface PathObject {
+export interface PathObject {
   pathname?: string;
   id: string;
 }

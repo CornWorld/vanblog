@@ -123,7 +123,7 @@ const CustomBottomLinks = ({ collapsed }) => {
 
 const BasicLayout = () => {
   const { initialState, setInitialState } = useAppContext();
-  const { theme, effectiveTheme } = useTheme();
+  const { effectiveTheme } = useTheme();
   const location = useLocation();
   const navigate = useNavigate();
   const { t } = useTranslation();

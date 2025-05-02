@@ -5,9 +5,7 @@ import i18n from '@emoji-mart/data/i18n/zh.json';
 import Picker from '@emoji-mart/react';
 import { BytemdPlugin } from 'bytemd';
 import { createRoot } from 'react-dom/client';
-
-const EMOJI_ICON =
-  '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 1024 1024"><path d="M510.944 960c-247.04 0-448-200.96-448-448s200.992-448 448-448 448 200.96 448 448-200.96 448-448 448zm0-832c-211.744 0-384 172.256-384 384s172.256 384 384 384 384-172.256 384-384-172.256-384-384-384z"/><path d="M512 773.344c-89.184 0-171.904-40.32-226.912-110.624-10.88-13.92-8.448-34.016 5.472-44.896 13.888-10.912 34.016-8.48 44.928 5.472 42.784 54.688 107.136 86.048 176.512 86.048 70.112 0 134.88-31.904 177.664-87.552 10.784-14.016 30.848-16.672 44.864-5.888 14.016 10.784 16.672 30.88 5.888 44.864C685.408 732.32 602.144 773.344 512 773.344zM368 515.2c-26.528 0-48-21.472-48-48v-64c0-26.528 21.472-48 48-48s48 21.472 48 48v64c0 26.496-21.504 48-48 48zm288 0c-26.496 0-48-21.472-48-48v-64c0-26.528 21.504-48 48-48s48 21.472 48 48v64c0 26.496-21.504 48-48 48z"/></svg>';
+import { icons } from '../icons';
 
 const handleClick = (event: Event) => {
   event.stopPropagation();
@@ -66,21 +64,28 @@ export const emoji = (options?: EmojiPluginOptions): BytemdPlugin => {
           }}
         />
       );
-      // Don't remove this line as we might need it later
-      // const container = ctx.root.querySelector('.bytemd-toolbar-left');
+
+      // Create and position the emoji container
       const targetEl = document.createElement('div');
       targetEl.className = 'emoji-container hidden';
-      // Position the emoji picker properly
-      const actionEl = ctx.root.querySelector(`div[bytemd-tippy-path="18"]`) as EditorElement;
-      if (actionEl) {
-        targetEl.style.left = `${actionEl.offsetLeft}px`;
-        // Add fixed positioning to prevent overflow issues
-        targetEl.style.position = 'absolute';
-        targetEl.style.zIndex = '1050';
-      }
+      targetEl.style.position = 'absolute';
+      targetEl.style.zIndex = '1050';
 
-      // Attach to document body instead of toolbar to avoid overflow issues
-      document.body.appendChild(targetEl);
+      // Find the action element that triggers the emoji picker
+      const actionEl = ctx.root.querySelector(`div[bytemd-tippy-path="18"]`) as EditorElement;
+
+      if (actionEl) {
+        // Insert the picker right after the action element in the DOM for accessibility
+        if (actionEl.parentNode) {
+          actionEl.parentNode.insertBefore(targetEl, actionEl.nextSibling);
+        } else {
+          // Fallback to body if we can't find the parent
+          document.body.appendChild(targetEl);
+        }
+      } else {
+        // Fallback if we can't find the action element
+        document.body.appendChild(targetEl);
+      }
 
       // Create root using React 18's API
       const root = createRoot(targetEl);
@@ -88,7 +93,11 @@ export const emoji = (options?: EmojiPluginOptions): BytemdPlugin => {
 
       // Store reference to the container for cleanup
       return () => {
-        if (targetEl && targetEl.parentNode) {
+        // Only attempt removal if the element is still attached to the DOM
+        if (targetEl.parentNode) {
+          // Unmount React component first
+          root.unmount();
+          // Then remove the container element
           targetEl.parentNode.removeChild(targetEl);
         }
       };
@@ -96,7 +105,7 @@ export const emoji = (options?: EmojiPluginOptions): BytemdPlugin => {
     actions: [
       {
         title: getTranslation('editor.emoji.title'),
-        icon: EMOJI_ICON,
+        icon: icons.emoji,
         handler: {
           type: 'action',
           click: ({ root }) => {
@@ -120,10 +129,12 @@ export const emoji = (options?: EmojiPluginOptions): BytemdPlugin => {
                     .querySelector('.bytemd-toolbar')
                     ?.getBoundingClientRect();
                   if (toolbarRect) {
-                    // Set absolute position relative to the viewport
+                    // Set position relative to the viewport
                     (el as HTMLElement).style.position = 'fixed';
                     (el as HTMLElement).style.left = `${actionEl.getBoundingClientRect().left}px`;
                     (el as HTMLElement).style.top = `${toolbarRect.bottom + 5}px`;
+                    // Important: Add appendTo option to resolve the Tippy.js warning
+                    (el as HTMLElement).setAttribute('data-tippy-root', 'true');
                   }
                 }
 

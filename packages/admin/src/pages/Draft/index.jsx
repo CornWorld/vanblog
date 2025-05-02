@@ -8,7 +8,7 @@ import { PageContainer, ProTable } from '@ant-design/pro-components';
 import RcResizeObserver from 'rc-resize-observer';
 import { useMemo, useRef, useState } from 'react';
 import { history } from '@/router';
-import { columns, draftKeysObj, draftKeysObjSmall } from './columes';
+import { getColumns, draftKeysObj, draftKeysObjSmall } from './columes';
 import { Space, message } from 'antd';
 import { batchExport, batchDelete } from '@/services/van-blog/batch';
 
@@ -49,7 +49,7 @@ export default () => {
         }}
       >
         <ProTable
-          columns={columns}
+          columns={getColumns({ t })}
           actionRef={actionRef}
           cardBordered
           rowSelection={{

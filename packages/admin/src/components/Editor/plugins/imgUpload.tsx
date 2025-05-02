@@ -1,10 +1,52 @@
 import i18next, { TFunction } from 'i18next';
 import { copyImgLink, getImgLink } from '@/pages/ImageManage/components/tools';
-import { message } from 'antd';
+import { message as antMessage } from 'antd';
+import type { MessageInstance } from 'antd/es/message/interface';
 import { BytemdPlugin } from 'bytemd';
+import { icons } from '../icons';
 
-export const uploadImg = async (file: File, options?: { t?: TFunction }) => {
+// Define types for bytemd context
+interface Position {
+  line: number;
+  ch: number;
+}
+
+interface EditorContext {
+  appendBlock: (text: string) => Position;
+  editor: {
+    setSelection: (from: Position, to: Position) => void;
+    focus: () => void;
+  };
+  codemirror: {
+    Pos: (line: number) => Position;
+  };
+}
+
+// Define a MessageAPI interface to match Ant Design's message API shape
+interface MessageAPI {
+  success: (content: string) => void;
+  error: (content: string) => void;
+  warning: (content: string) => void;
+  info: (content: string) => void;
+}
+
+// This function helps to use message API with App context when available
+const createMessage = (messageApi: MessageInstance | MessageAPI = antMessage): MessageAPI => {
+  // Return a message object that works with both static and App-based message API
+  return {
+    success: (content: string) => messageApi.success(content),
+    error: (content: string) => messageApi.error(content),
+    warning: (content: string) => messageApi.warning(content),
+    info: (content: string) => messageApi.info(content),
+  };
+};
+
+// Always create a default message instance for fallback
+const defaultMessage = createMessage();
+
+export const uploadImg = async (file: File, options?: { t?: TFunction; message?: MessageAPI }) => {
   const t = options?.t || i18next.t;
+  const message = options?.message || defaultMessage;
   const formData = new FormData();
   formData.append('file', file);
   try {
@@ -62,86 +104,81 @@ export const uploadImg = async (file: File, options?: { t?: TFunction }) => {
 
 interface ImgUploadPluginOptions {
   t?: TFunction;
+  message?: MessageAPI | MessageInstance;
 }
 
 export function imgUploadPlugin(
   setLoading: (loading: boolean) => void,
   options?: ImgUploadPluginOptions,
 ): BytemdPlugin {
-  const t = options?.t || i18next.t;
+  const { t, message: messageApi } = options || {};
+  // Create message API helper
+  const message = messageApi ? createMessage(messageApi) : defaultMessage;
+  // Fallback to i18next.t if t is not provided
+  const translationFunc = t || i18next.t;
+
+  const getTranslation = (key: string) => {
+    if (translationFunc) return translationFunc(key);
+    return key.split('.').pop() || key;
+  };
+
+  // Create a stable handler function that doesn't change on each render
+  const handleClick = (ctx: EditorContext) => {
+    setLoading(true);
+    // Handle clipboard paste manually since we can't directly import getClipboardContents
+    navigator.clipboard
+      .read()
+      .then(async (clipboardItems) => {
+        let file = null;
+        for (const clipboardItem of clipboardItems) {
+          for (const type of clipboardItem.types) {
+            if (type.startsWith('image/')) {
+              const blob = await clipboardItem.getType(type);
+              file = new File([blob], `clipboard-image.${type.split('/')[1]}`, { type });
+              break;
+            }
+          }
+          if (file) break;
+        }
+
+        if (file) {
+          uploadImg(file, { t: translationFunc, message }).then((url) => {
+            if (url) {
+              const imgs = [{ url: url, alt: file.name, title: file.name }];
+              const pos = ctx.appendBlock(
+                imgs
+                  .map(({ url, alt, title }) => {
+                    return `![${alt}](${url}${title ? ` "${title}"` : ''})`;
+                  })
+                  .join('\n\n'),
+              );
+              ctx.editor.setSelection(pos, ctx.codemirror.Pos(pos.line + imgs.length * 2 - 2));
+              ctx.editor.focus();
+            }
+          });
+        } else {
+          message.warning(translationFunc('editor.imgUpload.noImage'));
+        }
+      })
+      .catch((error: Error) => {
+        console.error('Failed to process clipboard contents:', error);
+        message.warning(translationFunc('editor.imgUpload.uploadFail'));
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  };
 
   return {
     actions: [
       {
-        title: t('editor.imgUpload.title'),
-        icon: icon, // 16x16 SVG icon
+        title: getTranslation('editor.imgUpload.title'),
+        icon: icons.imgUpload,
         handler: {
           type: 'action',
-          click(ctx) {
-            setLoading(true);
-            // Handle clipboard paste manually since we can't directly import getClipboardContents
-            navigator.clipboard
-              .read()
-              .then(async (clipboardItems) => {
-                let file = null;
-                for (const clipboardItem of clipboardItems) {
-                  for (const type of clipboardItem.types) {
-                    if (type.startsWith('image/')) {
-                      const blob = await clipboardItem.getType(type);
-                      file = new File([blob], `clipboard-image.${type.split('/')[1]}`, { type });
-                      break;
-                    }
-                  }
-                  if (file) break;
-                }
-
-                if (file) {
-                  uploadImg(file, { t }).then((url) => {
-                    if (url) {
-                      const imgs = [{ url: url, alt: file.name, title: file.name }];
-                      const pos = ctx.appendBlock(
-                        imgs
-                          .map(({ url, alt, title }) => {
-                            return `![${alt}](${url}${title ? ` "${title}"` : ''})`;
-                          })
-                          .join('\n\n'),
-                      );
-                      ctx.editor.setSelection(
-                        pos,
-                        ctx.codemirror.Pos(pos.line + imgs.length * 2 - 2),
-                      );
-                      ctx.editor.focus();
-                    }
-                  });
-                } else {
-                  message.warning(t('editor.imgUpload.noImage'));
-                }
-              })
-              .catch((error: Error) => {
-                console.error('Failed to process clipboard contents:', error);
-                message.warning(t('editor.imgUpload.uploadFail'));
-              })
-              .finally(() => {
-                setLoading(false);
-              });
-          },
+          click: handleClick,
         },
       },
     ],
   };
 }
-
-const icon = `<svg
-viewBox="0 0 1024 1024"
-version="1.1"
-xmlns="http://www.w3.org/2000/svg"
-p-id="1689"
-width="16"
-fill="currentColor"
-height="16"
->
-<path
-  d="M768 128h-50.090667A128 128 0 0 0 597.333333 42.666667h-170.666666a128 128 0 0 0-120.576 85.333333H256a128 128 0 0 0-128 128v597.333333a128 128 0 0 0 128 128h512a128 128 0 0 0 128-128V256a128 128 0 0 0-128-128z m-341.333333 0h170.666666a42.666667 42.666667 0 0 1 0 85.333333h-170.666666a42.666667 42.666667 0 0 1 0-85.333333z m384 725.333333a42.666667 42.666667 0 0 1-42.666667 42.666667H256a42.666667 42.666667 0 0 1-42.666667-42.666667V256a42.666667 42.666667 0 0 1 42.666667-42.666667h50.090667A128 128 0 0 0 426.666667 298.666667h170.666666a128 128 0 0 0 120.576-85.333334H768a42.666667 42.666667 0 0 1 42.666667 42.666667v597.333333z"
-  p-id="1690"
-></path>
-</svg>`;
