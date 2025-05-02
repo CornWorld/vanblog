@@ -1,5 +1,5 @@
 import React from 'react';
-import { useTranslation } from 'react-i18next';
+import { TFunction } from 'i18next';
 import data from '@emoji-mart/data';
 import i18n from '@emoji-mart/data/i18n/zh.json';
 import Picker from '@emoji-mart/react';
@@ -32,8 +32,20 @@ interface EditorElement extends HTMLElement {
   getBoundingClientRect(): DOMRect;
 }
 
-export const emoji = (): BytemdPlugin => {
-  const { t } = useTranslation();
+interface EmojiPluginOptions {
+  t?: TFunction;
+}
+
+export const emoji = (options?: EmojiPluginOptions): BytemdPlugin => {
+  // Get the translation function from options or import from i18next
+  const { t } = options || {};
+
+  // Use the provided t function or get a default one
+  const getTranslation = (key: string) => {
+    if (t) return t(key);
+    // Fallback to default label if no translation function provided
+    return key.split('.').pop() || key;
+  };
 
   return {
     editorEffect: (ctx) => {
@@ -83,7 +95,7 @@ export const emoji = (): BytemdPlugin => {
     },
     actions: [
       {
-        title: t('editor.emoji.title'),
+        title: getTranslation('editor.emoji.title'),
         icon: EMOJI_ICON,
         handler: {
           type: 'action',

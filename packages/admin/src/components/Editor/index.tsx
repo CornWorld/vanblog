@@ -10,27 +10,28 @@ import { Spin } from 'antd';
 import React, { useMemo } from 'react';
 
 // Continue to import styles for markdown and code themes
-import '../../style/github-markdown.css';
-import '../../style/code-light.css';
-import '../../style/code-dark.css';
-import '../../style/custom-container.css';
+import './style/github-markdown.css';
+import './style/code-light.css';
+import './style/code-dark.css';
+import './style/custom-container.css';
 import 'bytemd/dist/index.css';
 
 // Import custom plugins
-import { emoji } from './emoji';
-import { imgUploadPlugin, uploadImg } from './imgUpload';
-import { insertMore } from './insertMore';
+import { emoji } from './plugins/emoji';
+import { imgUploadPlugin, uploadImg } from './plugins/imgUpload';
+import { insertMore } from './plugins/insertMore';
 import { cn } from './locales';
 import { useModel } from '@/router';
 import { customContainer } from './plugins/customContainer';
-import { historyIcon } from './history';
-import rawHTML from './rawHTML';
+import { historyIcon } from './plugins/history';
+import { rawHTML } from './plugins/rawHTML';
 import { Heading } from './plugins/heading';
 import { customCodeBlock } from './plugins/codeBlock';
 import { LinkTarget } from './plugins/linkTarget';
 
 // Add custom styles for the editor
-import './editor.css';
+import './style/editor.css';
+import { useTranslation } from 'react-i18next';
 
 // Add type declaration for sanitize
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -120,29 +121,32 @@ export default function EditorComponent(props: {
   setLoading: (l: boolean) => void;
 }) {
   const { loading, setLoading } = props;
-  // @ts-expect-error Library compatibility issue
-  const { initialState } = useModel('@@initialState');
+  const { t } = useTranslation();
+
+  // Move useModel hook to the top level of the component
+  const { initialState } = useModel();
   const navTheme = initialState?.settings?.navTheme || 'light';
   const themeClass = navTheme.toLowerCase().includes('dark') ? 'dark' : 'light';
+
   const plugins = useMemo(() => {
     return [
-      customContainer(),
+      customContainer({ t }),
       gfm(),
       highlight(),
       frontmatter(),
       math(),
       mediumZoom(),
       mermaid(),
-      imgUploadPlugin(setLoading),
-      emoji(),
-      insertMore(),
+      imgUploadPlugin(setLoading, { t }),
+      emoji({ t }),
+      insertMore({ t }),
       rawHTML(),
-      historyIcon(),
-      Heading(),
+      historyIcon({ t }),
+      Heading({ t }),
       customCodeBlock(),
       LinkTarget(),
     ];
-  }, []);
+  }, [t]);
 
   return (
     <div className={`editor-container ${themeClass}`}>
@@ -158,7 +162,7 @@ export default function EditorComponent(props: {
             const res = [];
             try {
               for (const each of files) {
-                const url = await uploadImg(each);
+                const url = await uploadImg(each, { t });
                 if (url) {
                   // If it's already a data URI, use it as is
                   if (url.startsWith('data:')) {

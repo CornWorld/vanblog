@@ -1,12 +1,22 @@
-import { useTranslation } from 'react-i18next';
+import { TFunction } from 'i18next';
 import { BytemdPlugin } from 'bytemd';
 
-export function insertMore(): BytemdPlugin {
-  const { t } = useTranslation();
+interface InsertMoreOptions {
+  t?: TFunction;
+}
+
+export function insertMore(options?: InsertMoreOptions): BytemdPlugin {
+  // Get the translation function from options or default
+  const getTranslation = (key: string) => {
+    if (options?.t) return options.t(key);
+    // Fallback to default label if no translation function provided
+    return key.split('.').pop() || key;
+  };
+
   return {
     actions: [
       {
-        title: t('editor.insertMore.title'),
+        title: getTranslation('editor.insertMore.title'),
         icon: icon, // 16x16 SVG icon
         handler: {
           type: 'action',

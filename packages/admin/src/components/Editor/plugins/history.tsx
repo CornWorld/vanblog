@@ -1,8 +1,7 @@
-import { useTranslation } from 'react-i18next';
 import { BytemdPlugin } from 'bytemd';
+import { TFunction } from 'i18next';
 
-export function historyIcon(): BytemdPlugin {
-  const { t } = useTranslation();
+export function historyIcon({ t }: { t: TFunction }): BytemdPlugin {
   return {
     actions: [
       {

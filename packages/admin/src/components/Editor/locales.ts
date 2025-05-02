@@ -1,6 +1,7 @@
 import i18next from 'i18next';
 
-// For compatibility with existing code
+// For Bytemd
+
 export const cn = {
   bold: i18next.t('editor.bold'),
   boldText: i18next.t('editor.boldText'),
@@ -69,5 +70,3 @@ export const cn = {
   state: i18next.t('editor.state'),
   uj: i18next.t('editor.uj'),
 };
-
-export { trans_zh };

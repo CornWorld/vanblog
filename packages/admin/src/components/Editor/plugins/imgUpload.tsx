@@ -1,9 +1,10 @@
-import i18next from 'i18next';
+import i18next, { TFunction } from 'i18next';
 import { copyImgLink, getImgLink } from '@/pages/ImageManage/components/tools';
 import { message } from 'antd';
 import { BytemdPlugin } from 'bytemd';
 
-export const uploadImg = async (file: File) => {
+export const uploadImg = async (file: File, options?: { t?: TFunction }) => {
+  const t = options?.t || i18next.t;
   const formData = new FormData();
   formData.append('file', file);
   try {
@@ -27,7 +28,7 @@ export const uploadImg = async (file: File) => {
           }
         };
         reader.onerror = () => {
-          message.error(i18next.t('editor.imgUpload.fail'));
+          message.error(t('editor.imgUpload.fail'));
         };
         reader.readAsText(file);
       });
@@ -46,24 +47,33 @@ export const uploadImg = async (file: File) => {
     const data = await res.json();
     if (data && data.statusCode == 200) {
       const url = getImgLink(data.data.src, false);
-      copyImgLink(data.data.src, true, i18next.t('editor.imgUpload.success'));
+      copyImgLink(data.data.src, true, t('editor.imgUpload.success'));
       return url;
     } else {
-      message.error(i18next.t('editor.imgUpload.fail'));
+      message.error(t('editor.imgUpload.fail'));
       return null;
     }
   } catch {
     // Log a general error message without exposing error details to the user
-    message.error(i18next.t('editor.imgUpload.fail'));
+    message.error(t('editor.imgUpload.fail'));
     return null;
   }
 };
 
-export function imgUploadPlugin(setLoading: (loading: boolean) => void): BytemdPlugin {
+interface ImgUploadPluginOptions {
+  t?: TFunction;
+}
+
+export function imgUploadPlugin(
+  setLoading: (loading: boolean) => void,
+  options?: ImgUploadPluginOptions,
+): BytemdPlugin {
+  const t = options?.t || i18next.t;
+
   return {
     actions: [
       {
-        title: i18next.t('editor.imgUpload.title'),
+        title: t('editor.imgUpload.title'),
         icon: icon, // 16x16 SVG icon
         handler: {
           type: 'action',
@@ -86,7 +96,7 @@ export function imgUploadPlugin(setLoading: (loading: boolean) => void): BytemdP
                 }
 
                 if (file) {
-                  uploadImg(file).then((url) => {
+                  uploadImg(file, { t }).then((url) => {
                     if (url) {
                       const imgs = [{ url: url, alt: file.name, title: file.name }];
                       const pos = ctx.appendBlock(
@@ -104,12 +114,12 @@ export function imgUploadPlugin(setLoading: (loading: boolean) => void): BytemdP
                     }
                   });
                 } else {
-                  message.warning(i18next.t('editor.imgUpload.noImage'));
+                  message.warning(t('editor.imgUpload.noImage'));
                 }
               })
               .catch((error: Error) => {
                 console.error('Failed to process clipboard contents:', error);
-                message.warning(i18next.t('editor.imgUpload.uploadFail'));
+                message.warning(t('editor.imgUpload.uploadFail'));
               })
               .finally(() => {
                 setLoading(false);
