@@ -33,12 +33,11 @@ export const AppProvider = ({ children }) => {
   const initPath = ROUTES.INIT;
 
   // Detect if we're in development mode
-  const isDevelopment =
-    process.env.NODE_ENV === 'development' || window.location.hostname === 'localhost';
+  const needMock = process.env.previewMode === 'true';
 
   const fetchInitData = async (option) => {
     try {
-      console.log('[DEBUG] Fetching init data with options:', option);
+      console.log('[DEBUG] Fetching init data with options:', { option });
       const msg = await fetchAllMeta(option);
       console.log('[DEBUG] Init data response status:', msg.statusCode);
 
@@ -78,13 +77,13 @@ export const AppProvider = ({ children }) => {
       }
 
       // In development mode, provide default data instead of redirecting to login
-      if (isDevelopment) {
+      if (needMock) {
         console.warn('[DEBUG] Using mock data for development');
         return {
           latestVersion: '0.0.0-dev',
           updatedAt: new Date().toISOString(),
           baseUrl: 'http://localhost',
-          version: 'dev',
+          version: 'dev-previewMode',
           user: { username: 'dev-user', type: 'admin' },
         };
       }

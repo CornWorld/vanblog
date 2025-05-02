@@ -1,6 +1,5 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-const { t } = useTranslation();
 import { PageContainer } from '@ant-design/pro-components';
 import { Tabs } from 'antd';
 import Login from './tabs/Login.jsx';
@@ -8,6 +7,8 @@ import Pipeline from './tabs/Pipeline.jsx';
 import System from './tabs/System.tsx';
 
 export default () => {
+  const { t } = useTranslation();
+
   return (
     <PageContainer title={t('log.page.title')}>
       {' '}

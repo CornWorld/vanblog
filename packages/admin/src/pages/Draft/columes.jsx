@@ -12,7 +12,13 @@ import { withoutKey } from '@/utils/props';
 
 const { t } = useTranslation();
 
-export const columns = [
+export const draftKeys = ['category', 'id', 'option', 'showTime', 'tags', 'title'];
+export const draftKeysSmall = ['category', 'id', 'option', 'title'];
+
+export const draftKeysObj = genActiveObj(draftKeys, draftKeys);
+export const draftKeysObjSmall = genActiveObj(draftKeysSmall, draftKeys);
+
+export const getColumns = (t) => [
   {
     dataIndex: 'id',
     valueType: 'number',
@@ -174,8 +180,6 @@ export const columns = [
     },
   },
 ];
-export const draftKeys = ['category', 'id', 'option', 'showTime', 'tags', 'title'];
-export const draftKeysSmall = ['category', 'id', 'option', 'title'];
 
-export const draftKeysObj = genActiveObj(draftKeys, draftKeys);
-export const draftKeysObjSmall = genActiveObj(draftKeysSmall, draftKeys);
+// For backwards compatibility
+export const columns = getColumns((key) => key);

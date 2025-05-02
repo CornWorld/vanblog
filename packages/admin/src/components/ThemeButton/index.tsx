@@ -1,8 +1,4 @@
-import { useEffect } from 'react';
-import { useModel } from '@/router';
-import { readTheme, setTheme } from '@/utils/theme';
-import { applyThemeToDOM, decodeAutoTheme } from '@/services/van-blog/theme';
-import VanBlog from '@/types/initialState';
+import { useTheme } from '@/context/ThemeContext';
 import { useTranslation } from 'react-i18next';
 import './index.less';
 
@@ -11,76 +7,24 @@ interface ThemeButtonProps {
   className?: string;
 }
 
-// Extended settings interface with theme properties
-interface ExtendedSettings {
-  theme?: 'auto' | 'light' | 'dark';
-  navTheme?: string;
-  [key: string]: unknown;
-}
-
 export default function ThemeButton({ showText, className = '' }: ThemeButtonProps) {
-  const { initialState, setInitialState } = useModel();
+  const { theme, setTheme } = useTheme();
   const { t } = useTranslation();
 
-  const updateTheme = (newTheme: 'auto' | 'light' | 'dark') => {
-    const curInitialState: VanBlog.InitialState = { ...initialState };
-    if (curInitialState.settings) {
-      // Using the extended settings interface
-      const settings = curInitialState.settings as ExtendedSettings;
-      settings.theme = newTheme;
-
-      // Update navTheme based on the effective theme (accounting for auto mode)
-      const effectiveTheme = newTheme === 'auto' ? decodeAutoTheme() : newTheme;
-      settings.navTheme = effectiveTheme === 'dark' ? 'realDark' : 'light';
-
-      // Update context state
-      setInitialState(curInitialState);
-
-      // Apply theme via utility function (also updates localStorage)
-      setTheme(newTheme);
-
-      console.log('[Theme] Changed to:', newTheme);
-    }
-  };
-
-  // Add effect to listen for system theme changes when in auto mode
-  useEffect(() => {
-    // This is now handled by setupThemeListener in theme service
-    // No need for duplicate listeners here
-  }, [initialState?.settings]);
-
-  const settings = initialState?.settings as ExtendedSettings;
-  const theme = settings?.theme || readTheme() || 'auto';
-
-  // Initialize theme on component mount
-  useEffect(() => {
-    const savedTheme = readTheme() || 'auto';
-
-    // Apply theme via service function
-    applyThemeToDOM(savedTheme);
-
-    // Sync theme with initialState if needed
-    const settings = initialState?.settings as ExtendedSettings;
-    if (settings && settings.theme !== savedTheme) {
-      updateTheme(savedTheme);
-    }
-  }, []);
-
   const handleSwitch = () => {
-    if (!initialState || !initialState.settings) return;
-    // light -> dark -> auto -> light
+    // 切换主题顺序：light -> dark -> auto -> light
     if (theme === 'light') {
-      updateTheme('dark');
+      setTheme('dark');
     } else if (theme === 'dark') {
-      updateTheme('auto');
+      setTheme('auto');
     } else {
-      updateTheme('light');
+      setTheme('light');
     }
   };
 
   const iconSize = 16;
 
-  // Create an icon component matching the structure of other menu items
+  // 根据当前主题渲染适当的图标
   const ThemeIcon = () => {
     if (theme === 'light') {
       return (
@@ -151,7 +95,21 @@ export default function ThemeButton({ showText, className = '' }: ThemeButtonPro
     }
   };
 
-  // Use the same structure as other menu links
+  // 获取主题模式的名称
+  const getThemeName = () => {
+    switch (theme) {
+      case 'light':
+        return t('theme.mode.light');
+      case 'dark':
+        return t('theme.mode.dark');
+      case 'auto':
+        return t('theme.mode.auto');
+      default:
+        return '';
+    }
+  };
+
+  // 使用与菜单项相同的结构
   return (
     <a
       className={`theme-link ${className}`}
@@ -160,11 +118,7 @@ export default function ThemeButton({ showText, className = '' }: ThemeButtonPro
     >
       <ThemeIcon />
       {showText && (
-        <span style={{ marginLeft: '10px', transition: 'opacity 0.3s' }}>
-          {theme === 'light' && t('common.lightMode', t('theme.mode.light'))}
-          {theme === 'dark' && t('common.darkMode', t('theme.mode.dark'))}
-          {theme === 'auto' && t('common.autoMode', t('theme.mode.auto'))}
-        </span>
+        <span style={{ marginLeft: '10px', transition: 'opacity 0.3s' }}>{getThemeName()}</span>
       )}
     </a>
   );

@@ -7,8 +7,7 @@ import i18next from 'i18next';
 const t = (key) => i18next.t(key);
 
 // 是否是开发环境
-const isDevelopment =
-  process.env.NODE_ENV === 'development' || window.location.hostname === 'localhost';
+const needMock = process.env.previewMode === 'true';
 
 // mock数据，开发调试用
 // Deliberately left, might be needed for future development
@@ -154,7 +153,7 @@ const request = async (url, options = {}) => {
     }
 
     // Mock API响应（开发模式）
-    if (isDevelopment && mockResponses[url] && !options.skipMock) {
+    if (needMock && mockResponses[url] && !options.skipMock) {
       console.log('[MOCK] Returning mock data for', url);
       return {
         statusCode: 200,
@@ -215,7 +214,7 @@ const request = async (url, options = {}) => {
     throw error;
   } catch (error) {
     // 开发模式下记录更详细的错误信息
-    if (isDevelopment) {
+    if (needMock) {
       console.warn(`[DEV] API error:`, error);
       console.warn(`[DEV] Details:`, {
         status: error.response?.status,

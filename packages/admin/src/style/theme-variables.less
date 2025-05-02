@@ -1,0 +1,197 @@
+/*
+  主题变量 - 使用 CSS 变量
+  这个文件定义了使用主题 CSS 变量的全局样式
+  CSS 变量由 ThemeProvider 组件设置
+*/
+
+// 共享组件的主题样式
+.ant-card {
+  background-color: var(--card-bg);
+  border-color: var(--color-border);
+
+  .ant-card-head {
+    background-color: var(--card-header-bg);
+    border-color: var(--color-border);
+  }
+
+  .ant-card-body {
+    background-color: var(--card-bg);
+  }
+}
+
+.ant-pro-card {
+  background-color: var(--card-bg) !important;
+  border-color: var(--color-border) !important;
+
+  .ant-pro-card-header {
+    background-color: var(--card-header-bg) !important;
+    border-color: var(--color-border) !important;
+  }
+
+  .ant-pro-card-body {
+    background-color: var(--card-bg) !important;
+  }
+}
+
+.ant-layout {
+  background-color: var(--color-bg-base);
+}
+
+.ant-layout-sider {
+  background-color: var(--sidebar-bg);
+  border-right-color: var(--color-border);
+
+  .ant-menu {
+    background-color: var(--sidebar-bg);
+    color: var(--sidebar-text);
+  }
+
+  .ant-menu-item {
+    background-color: var(--menu-item-bg);
+    color: var(--sidebar-text);
+
+    &:hover {
+      background-color: var(--menu-item-hover);
+    }
+
+    &.ant-menu-item-selected {
+      background-color: var(--menu-item-active-bg);
+      color: var(--menu-item-active-text);
+    }
+  }
+}
+
+// 表单组件
+.ant-form,
+.ant-form-item-label > label {
+  color: var(--color-text-primary);
+}
+
+.ant-input {
+  background-color: var(--color-bg-base);
+  border-color: var(--color-border);
+  color: var(--color-text-primary);
+
+  &:hover,
+  &:focus {
+    border-color: var(--menu-item-active-text);
+  }
+}
+
+// 表格
+.ant-table {
+  background-color: var(--card-bg);
+  color: var(--color-text-primary);
+
+  .ant-table-thead > tr > th {
+    background-color: var(--menu-item-hover);
+    border-color: var(--color-border);
+    color: var(--color-text-primary);
+  }
+
+  .ant-table-tbody > tr > td {
+    border-color: var(--color-border);
+  }
+
+  .ant-table-tbody > tr:hover > td {
+    background-color: var(--menu-item-hover);
+  }
+}
+
+// 按钮
+.ant-btn {
+  &:not(.ant-btn-primary, .ant-btn-danger, .ant-btn-link) {
+    background-color: var(--color-bg-base);
+    border-color: var(--color-border);
+    color: var(--color-text-primary);
+
+    &:hover {
+      border-color: var(--menu-item-active-text);
+      color: var(--menu-item-active-text);
+    }
+  }
+}
+
+// 下拉菜单
+.ant-dropdown-menu {
+  background-color: var(--card-bg);
+
+  .ant-dropdown-menu-item {
+    color: var(--color-text-primary);
+
+    &:hover {
+      background-color: var(--menu-item-hover);
+    }
+  }
+}
+
+// 模态框
+.ant-modal-content {
+  background-color: var(--card-bg);
+
+  .ant-modal-header {
+    background-color: var(--card-bg);
+    border-color: var(--color-border);
+  }
+
+  .ant-modal-title {
+    color: var(--color-text-primary);
+  }
+
+  .ant-modal-footer {
+    border-color: var(--color-border);
+  }
+}
+
+// ByteMD 编辑器
+.bytemd {
+  background-color: var(--editor-bg);
+  border-color: var(--editor-border);
+  color: var(--editor-text);
+
+  .bytemd-toolbar {
+    background-color: var(--editor-bg);
+    border-color: var(--editor-border);
+  }
+
+  .CodeMirror {
+    background-color: var(--editor-bg);
+    color: var(--editor-text);
+  }
+
+  .bytemd-preview {
+    background-color: var(--editor-bg);
+    color: var(--editor-text);
+  }
+}
+
+// 全局文本
+body {
+  color: var(--color-text-primary);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  color: var(--color-text-primary);
+}
+
+p,
+span,
+div {
+  color: inherit;
+}
+
+a {
+  &:not([class*='ant-btn']) {
+    color: var(--menu-item-active-text);
+
+    &:hover {
+      color: var(--menu-item-active-text);
+      opacity: 0.85;
+    }
+  }
+}

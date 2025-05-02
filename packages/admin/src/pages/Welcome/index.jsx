@@ -1,5 +1,4 @@
 import React, { useState, useRef } from 'react';
-const { t } = useTranslation();
 import { useTranslation } from 'react-i18next';
 import { PageContainer } from '@ant-design/pro-layout';
 import './index.less';
@@ -9,6 +8,7 @@ import Viewer from './tabs/viewer';
 import { useModel } from '@/router';
 
 export default () => {
+  const { t } = useTranslation();
   const { initialState } = useModel();
   const isDarkMode = initialState?.settings?.navTheme?.toLowerCase().includes('dark');
 

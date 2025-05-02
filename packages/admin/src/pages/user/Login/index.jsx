@@ -5,13 +5,13 @@ import { login } from '@/services/van-blog/api';
 import { LockOutlined, UserOutlined } from '@ant-design/icons';
 import { LoginForm, ProFormCheckbox, ProFormText } from '@ant-design/pro-form';
 import { message } from 'antd';
-const { t } = useTranslation();
 import { history, useModel } from '@/router';
 import { setAccessToken, resetRedirectCycle } from '@/utils/auth';
 import './index.less';
 import { useEffect } from 'react';
 
 const Login = () => {
+  const { t } = useTranslation();
   const type = 'account';
   const { initialState, setInitialState } = useModel();
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   HomeOutlined,
@@ -13,10 +13,10 @@ import {
 import { PageLoading, ProLayout, SettingDrawer } from '@ant-design/pro-layout';
 import { Menu } from 'antd';
 import { useAppContext } from '../context/AppContext';
+import { useTheme } from '../context/ThemeContext';
 import Footer from '@/components/Footer';
 import LogoutButton from '@/components/LogoutButton';
 import ThemeButton from '@/components/ThemeButton';
-import { mapTheme, writeTheme } from '@/services/van-blog/theme';
 import { useTranslation } from 'react-i18next';
 
 // Route config
@@ -50,38 +50,11 @@ const LogoTitle = ({ logo, title, collapsed }) => {
 
 // Custom bottom links component using actual Ant Menu to match top menu
 const CustomBottomLinks = ({ collapsed }) => {
-  const [isDarkMode, setIsDarkMode] = useState(false);
+  const { effectiveTheme } = useTheme();
   const navigate = useNavigate();
   const { t } = useTranslation();
 
-  // Effect to detect theme changes
-  useEffect(() => {
-    // Check initial theme
-    const checkTheme = () => {
-      const theme = document.documentElement.getAttribute('data-theme') === 'dark';
-      setIsDarkMode(theme);
-    };
-
-    // Check initial theme
-    checkTheme();
-
-    // Create observer to detect theme attribute changes
-    const observer = new MutationObserver((mutations) => {
-      mutations.forEach((mutation) => {
-        if (mutation.attributeName === 'data-theme') {
-          checkTheme();
-        }
-      });
-    });
-
-    // Start observing
-    observer.observe(document.documentElement, { attributes: true });
-
-    // Cleanup
-    return () => observer.disconnect();
-  }, []);
-
-  const menuTheme = isDarkMode ? 'dark' : 'light';
+  const menuTheme = effectiveTheme === 'dark' ? 'dark' : 'light';
 
   // Handle menu clicks
   const handleMenuClick = ({ key }) => {
@@ -106,7 +79,7 @@ const CustomBottomLinks = ({ collapsed }) => {
         trigger={
           <a style={{ display: 'flex', alignItems: 'center' }}>
             <LogoutOutlined style={{ marginRight: collapsed ? 0 : 10 }} />
-            {!collapsed && <span>{t('common.logout') || t('common.logout')}</span>}
+            {!collapsed && <span>{t('common.logout')}</span>}
           </a>
         }
       />
@@ -125,12 +98,12 @@ const CustomBottomLinks = ({ collapsed }) => {
           {
             key: 'home',
             icon: <HomeOutlined />,
-            label: t('common.home') || t('common.home'),
+            label: t('common.home'),
           },
           {
             key: 'about',
             icon: <ProjectOutlined />,
-            label: t('common.about') || t('common.about'),
+            label: t('common.about'),
           },
           {
             key: 'theme',
@@ -150,6 +123,7 @@ const CustomBottomLinks = ({ collapsed }) => {
 
 const BasicLayout = () => {
   const { initialState, setInitialState } = useAppContext();
+  const { theme, effectiveTheme } = useTheme();
   const location = useLocation();
   const navigate = useNavigate();
   const { t } = useTranslation();
@@ -158,10 +132,14 @@ const BasicLayout = () => {
     return <PageLoading />;
   }
 
+  // 将主题映射到 Ant Design 设置
+  const antdTheme = effectiveTheme === 'dark' ? 'realDark' : 'light';
+
   return (
     <div style={{ height: '100vh' }}>
       <ProLayout
         {...initialState.settings}
+        navTheme={antdTheme}
         route={{ routes }}
         location={location}
         title={initialState.settings.title || 'VanBlog'}
@@ -210,14 +188,14 @@ const BasicLayout = () => {
             if (isCollaborator) {
               settings.title = t('layout.collaborator_mode');
             }
-            if (settings.navTheme !== initialState?.settings?.navTheme) {
-              // 切换了主题
-              settings.navTheme = mapTheme(settings.theme || 'auto');
-              writeTheme(settings.theme || 'auto');
-            }
+
+            // 更新 initialState 中的设置
             setInitialState((prev) => ({
               ...prev,
-              settings,
+              settings: {
+                ...settings,
+                navTheme: antdTheme,
+              },
             }));
           }}
         />

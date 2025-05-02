@@ -10,9 +10,21 @@ import { history } from '@/router';
 import { genActiveObj } from '../../services/van-blog/activeColTools';
 import { withoutKey } from '@/utils/props';
 
-const { t } = useTranslation();
+export const articleKeys = [
+  'category',
+  'id',
+  'option',
+  'showTime',
+  'tags',
+  'title',
+  'top',
+  'viewer',
+];
+export const articleKeysSmall = ['category', 'id', 'option', 'title'];
+export const articleObjAll = genActiveObj(articleKeys, articleKeys);
+export const articleObjSmall = genActiveObj(articleKeysSmall, articleKeys);
 
-export const columns = [
+export const getColumns = (t) => [
   {
     dataIndex: 'id',
     valueType: 'number',
@@ -23,8 +35,8 @@ export const columns = [
   {
     title: t('article.column.title'),
     dataIndex: 'title',
-    width: 150,
     copyable: true,
+    width: 150,
     ellipsis: true,
     formItemProps: {
       rules: [
@@ -234,16 +246,6 @@ export const columns = [
     },
   },
 ];
-export const articleKeys = [
-  'category',
-  'id',
-  'option',
-  'showTime',
-  'tags',
-  'title',
-  'top',
-  'viewer',
-];
-export const articleKeysSmall = ['category', 'id', 'option', 'title'];
-export const articleObjAll = genActiveObj(articleKeys, articleKeys);
-export const articleObjSmall = genActiveObj(articleKeysSmall, articleKeys);
+
+// For backwards compatibility
+export const columns = getColumns((key) => key);
