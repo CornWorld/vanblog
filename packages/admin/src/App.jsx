@@ -1,11 +1,14 @@
 import React, { lazy, Suspense, useEffect } from 'react';
-import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { PageLoading } from '@ant-design/pro-layout';
 import { App as AntApp } from 'antd';
 
 import { AppProvider } from './context/AppContext';
+import { ThemeProvider } from './context/ThemeContext';
+import BytemdThemeProvider from './components/BytemdThemeProvider';
 import { getAccessToken } from './utils/auth';
-import { useInitHistory } from './utils/umiCompat';
+import { ROUTES, initGlobalHistory, useModel } from './router';
 import BasicLayout from './layouts/BasicLayout';
 import BlankLayout from './layouts/BlankLayout';
 
@@ -20,7 +23,7 @@ function preloadSvgIcons() {
   // Create hidden div to preload icons
   const preloadContainer = document.createElement('div');
   preloadContainer.style.position = 'absolute';
-  preloadContainer.style.width = '0';
+  preloadContainer.style.width = '0'; // 使用固定值代替 t() 调用
   preloadContainer.style.height = '0';
   preloadContainer.style.overflow = 'hidden';
   preloadContainer.style.visibility = 'hidden';
@@ -55,193 +58,186 @@ const NotFound = lazy(() => import('./pages/404'));
 const EditorComponent = lazy(() => import('./pages/Editor'));
 
 // Protected route component
-const ProtectedRoute = ({ isAdmin, children }) => {
+const ProtectedRoute = React.memo(({ isAdmin, children }) => {
+  const { t } = useTranslation();
   const location = useLocation();
   const token = getAccessToken();
-
-  console.log('[DEBUG] ProtectedRoute check:', {
-    path: location.pathname,
-    hasToken: !!token,
-    isAdminRoute: !!isAdmin,
-  });
+  const { initialState } = useModel();
 
   // 如果没有令牌，重定向到登录页面并保存当前路径
   if (!token) {
-    console.log('[DEBUG] No token found, redirecting to login');
+    console.log(t('app.debug.no_token'));
     return (
-      <Navigate to={`/user/login?redirect=${encodeURIComponent(location.pathname)}`} replace />
+      <Navigate to={`${ROUTES.LOGIN}?redirect=${encodeURIComponent(location.pathname)}`} replace />
     );
   }
 
   // 如果是管理员路由，但用户不是管理员
-  if (isAdmin && !isAdmin()) {
-    console.log('[DEBUG] Admin route access denied');
+  if (isAdmin && initialState?.user?.type !== 'admin') {
+    console.log(t('app.debug.admin_denied'));
     return <Navigate to="/404" replace />;
   }
 
   // 通过验证，渲染子组件
-  console.log('[DEBUG] Route access granted');
   return children;
-};
-
-// isAdmin check function
-const isAdmin = () => {
-  console.log('[DEBUG] Checking admin status');
-  // Implement your admin check logic here
-  // This would typically check the user type in the app context
-  return true; // Simplified for now, you'll need to implement actual check
-};
+});
 
 const App = () => {
-  // Initialize history singleton for compatibility
-  useInitHistory();
+  // Initialize global history for compatibility
+  const navigate = useNavigate();
+  const location = useLocation();
+  initGlobalHistory(navigate, location);
 
-  // Preload SVG icons and editor assets
+  // Preload SVG icons and editor assets - 仅在组件挂载时执行一次
   useEffect(() => {
     preloadSvgIcons();
   }, []);
 
   return (
     <AntApp>
-      <AppProvider>
-        <Suspense fallback={<PageLoading />}>
-          <Routes>
-            {/* User routes */}
-            <Route element={<BlankLayout />}>
-              <Route path="/user/login" element={<Login />} />
-              <Route path="/user/restore" element={<Restore />} />
-              <Route path="/init" element={<InitPage />} />
-            </Route>
+      <ThemeProvider>
+        <BytemdThemeProvider>
+          <AppProvider>
+            <Suspense fallback={<PageLoading />}>
+              <Routes>
+                {/* User routes */}
+                <Route element={<BlankLayout />}>
+                  <Route path="/user/login" element={<Login />} />
+                  <Route path="/user/restore" element={<Restore />} />
+                  <Route path="/init" element={<InitPage />} />
+                </Route>
 
-            {/* Main application routes with layout */}
-            <Route element={<BasicLayout />}>
-              <Route
-                path="/welcome"
-                element={
-                  <ProtectedRoute isAdmin={isAdmin}>
-                    <Welcome />
-                  </ProtectedRoute>
-                }
-              />
+                {/* Main application routes with layout */}
+                <Route element={<BasicLayout />}>
+                  <Route
+                    path="/welcome"
+                    element={
+                      <ProtectedRoute isAdmin={true}>
+                        <Welcome />
+                      </ProtectedRoute>
+                    }
+                  />
 
-              <Route
-                path="/article"
-                element={
-                  <ProtectedRoute>
-                    <Article />
-                  </ProtectedRoute>
-                }
-              />
+                  <Route
+                    path="/article"
+                    element={
+                      <ProtectedRoute>
+                        <Article />
+                      </ProtectedRoute>
+                    }
+                  />
 
-              <Route
-                path="/editor"
-                element={
-                  <ProtectedRoute>
-                    <EditorComponent />
-                  </ProtectedRoute>
-                }
-              />
+                  <Route
+                    path="/editor"
+                    element={
+                      <ProtectedRoute>
+                        <EditorComponent />
+                      </ProtectedRoute>
+                    }
+                  />
 
-              <Route
-                path="/code"
-                element={
-                  <ProtectedRoute isAdmin={isAdmin}>
-                    <Code />
-                  </ProtectedRoute>
-                }
-              />
+                  <Route
+                    path="/code"
+                    element={
+                      <ProtectedRoute isAdmin={true}>
+                        <Code />
+                      </ProtectedRoute>
+                    }
+                  />
 
-              <Route
-                path="/about"
-                element={
-                  <ProtectedRoute>
-                    <About />
-                  </ProtectedRoute>
-                }
-              />
+                  <Route
+                    path="/about"
+                    element={
+                      <ProtectedRoute>
+                        <About />
+                      </ProtectedRoute>
+                    }
+                  />
 
-              <Route
-                path="/draft"
-                element={
-                  <ProtectedRoute>
-                    <Draft />
-                  </ProtectedRoute>
-                }
-              />
+                  <Route
+                    path="/draft"
+                    element={
+                      <ProtectedRoute>
+                        <Draft />
+                      </ProtectedRoute>
+                    }
+                  />
 
-              <Route
-                path="/static/img"
-                element={
-                  <ProtectedRoute>
-                    <ImageManage />
-                  </ProtectedRoute>
-                }
-              />
+                  <Route
+                    path="/static/img"
+                    element={
+                      <ProtectedRoute>
+                        <ImageManage />
+                      </ProtectedRoute>
+                    }
+                  />
 
-              {/* Site management routes */}
-              <Route
-                path="/site/data"
-                element={
-                  <ProtectedRoute isAdmin={isAdmin}>
-                    <DataManage />
-                  </ProtectedRoute>
-                }
-              />
+                  {/* Site management routes */}
+                  <Route
+                    path="/site/data"
+                    element={
+                      <ProtectedRoute isAdmin={true}>
+                        <DataManage />
+                      </ProtectedRoute>
+                    }
+                  />
 
-              <Route
-                path="/site/comment"
-                element={
-                  <ProtectedRoute isAdmin={isAdmin}>
-                    <CommentManage />
-                  </ProtectedRoute>
-                }
-              />
+                  <Route
+                    path="/site/comment"
+                    element={
+                      <ProtectedRoute isAdmin={true}>
+                        <CommentManage />
+                      </ProtectedRoute>
+                    }
+                  />
 
-              <Route
-                path="/site/pipeline"
-                element={
-                  <ProtectedRoute isAdmin={isAdmin}>
-                    <Pipeline />
-                  </ProtectedRoute>
-                }
-              />
+                  <Route
+                    path="/site/pipeline"
+                    element={
+                      <ProtectedRoute isAdmin={true}>
+                        <Pipeline />
+                      </ProtectedRoute>
+                    }
+                  />
 
-              <Route
-                path="/site/setting"
-                element={
-                  <ProtectedRoute isAdmin={isAdmin}>
-                    <SystemConfig />
-                  </ProtectedRoute>
-                }
-              />
+                  <Route
+                    path="/site/setting"
+                    element={
+                      <ProtectedRoute isAdmin={true}>
+                        <SystemConfig />
+                      </ProtectedRoute>
+                    }
+                  />
 
-              <Route
-                path="/site/customPage"
-                element={
-                  <ProtectedRoute isAdmin={isAdmin}>
-                    <CustomPage />
-                  </ProtectedRoute>
-                }
-              />
+                  <Route
+                    path="/site/customPage"
+                    element={
+                      <ProtectedRoute isAdmin={true}>
+                        <CustomPage />
+                      </ProtectedRoute>
+                    }
+                  />
 
-              <Route
-                path="/site/log"
-                element={
-                  <ProtectedRoute isAdmin={isAdmin}>
-                    <LogManage />
-                  </ProtectedRoute>
-                }
-              />
+                  <Route
+                    path="/site/log"
+                    element={
+                      <ProtectedRoute isAdmin={true}>
+                        <LogManage />
+                      </ProtectedRoute>
+                    }
+                  />
 
-              {/* Redirect root to article */}
-              <Route path="/" element={<Navigate to="/article" replace />} />
+                  {/* Redirect root to article */}
+                  <Route path="/" element={<Navigate to="/article" replace />} />
 
-              {/* 404 route */}
-              <Route path="*" element={<NotFound />} />
-            </Route>
-          </Routes>
-        </Suspense>
-      </AppProvider>
+                  {/* 404 route */}
+                  <Route path="*" element={<NotFound />} />
+                </Route>
+              </Routes>
+            </Suspense>
+          </AppProvider>
+        </BytemdThemeProvider>
+      </ThemeProvider>
     </AntApp>
   );
 };

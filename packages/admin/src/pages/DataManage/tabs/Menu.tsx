@@ -1,18 +1,20 @@
+import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { getMenu, updateMenu } from '@/services/van-blog/api';
-import { EditableProTable, useRefFunction } from '@ant-design/pro-components';
+import { ActionType, ProColumns, EditableProTable } from '@ant-design/pro-components';
 import { message, Modal, Spin } from 'antd';
 import { useCallback, useEffect, useRef, useState } from 'react';
-type DataSourceType = {
-  id: React.Key;
-  name: string;
+import type { Key } from 'react';
+
+interface MenuItem {
+  id: string | number;
+  name?: string;
   value: string;
   level: number;
-  children?: DataSourceType[];
-};
-const loopDataSourceFilter = (
-  data: DataSourceType[],
-  id: React.Key | undefined,
-): DataSourceType[] => {
+  children?: MenuItem[];
+}
+
+const loopDataSourceFilter = (data: MenuItem[], id: React.Key | undefined): MenuItem[] => {
   return data
     .map((item) => {
       if (item.id !== id) {
@@ -27,185 +29,190 @@ const loopDataSourceFilter = (
       }
       return null;
     })
-    .filter(Boolean) as DataSourceType[];
+    .filter(Boolean) as MenuItem[];
 };
 
-export default function () {
+export default function MenuTab() {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
-  const [editableKeys, setEditableRowKeys] = useState([]);
-  const [dataSource, setDataSource] = useState<DataSourceType[]>([]);
-  const [expendKeys, setExpendKeys] = useState([]);
-  const removeRow = useRefFunction((record: DataSourceType) => {
-    const toUpdateData = loopDataSourceFilter(dataSource, record.id);
-    setDataSource(toUpdateData);
-    setEditableRowKeys(editableKeys.filter((e) => e != record.id));
-    setExpendKeys(expendKeys.filter((e) => e != record.id));
-    update(toUpdateData);
-  });
-  const actionRef = useRef();
+  const [dataSource, setDataSource] = useState<MenuItem[]>([]);
+  const [editableKeys, setEditableRowKeys] = useState<(string | number)[]>([]);
+  const [expendKeys, setExpendKeys] = useState<(string | number)[]>([]);
+  const actionRef = useRef<ActionType | undefined>(undefined);
+
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       const { data } = await getMenu();
       const menuData = data?.data || [];
       setDataSource(menuData);
-      const expendKs = menuData.filter((e) => Boolean(e.children)).map((e) => e.id);
+      const expendKs = menuData
+        .filter((e: MenuItem) => Boolean(e.children))
+        .map((e: MenuItem) => e.id);
       setExpendKeys(expendKs);
-      setLoading(false);
-    } catch (err) {
+    } catch (error) {
+      console.error('Failed to fetch menu data:', error);
+      message.error('获取菜单数据失败');
+    } finally {
       setLoading(false);
     }
-  }, [setLoading, setDataSource, setExpendKeys]);
+  }, []);
+
+  const update = useCallback(
+    async (vals: MenuItem[]) => {
+      try {
+        await updateMenu({ data: vals });
+        fetchData();
+      } catch (error) {
+        console.error('Failed to update menu:', error);
+        message.error('更新菜单失败');
+      }
+    },
+    [fetchData],
+  );
+
+  const removeRow = useCallback(
+    (record: MenuItem) => {
+      const toUpdateData = loopDataSourceFilter(dataSource, record.id);
+      setDataSource(toUpdateData);
+      setEditableRowKeys(editableKeys.filter((e) => e !== record.id));
+      setExpendKeys(expendKeys.filter((e) => e !== record.id));
+      update(toUpdateData);
+    },
+    [dataSource, editableKeys, expendKeys, update],
+  );
 
   useEffect(() => {
     fetchData();
   }, [fetchData]);
-  const getNewId = () => {
-    return Date.now();
-  };
-  const update = useCallback(
-    async (vals) => {
-      await updateMenu({ data: vals });
-      //@ts-ignore
-      fetchData();
-    },
-    [fetchData],
-  );
-  const columns = [
+
+  const getNewId = () => Date.now();
+
+  const columns: ProColumns<MenuItem>[] = [
     {
-      title: '菜单名',
+      title: t('menu.column.name'),
       dataIndex: 'name',
-      formItemProps: (form, { rowIndex }) => {
-        return {
-          rules: [{ required: true, message: '此项为必填项' }],
-        };
-      },
+      formItemProps: () => ({
+        rules: [{ required: true, message: t('menu.message.required') }],
+      }),
     },
     {
-      title: '跳转网址',
+      title: t('menu.column.url'),
       dataIndex: 'value',
-      tooltip: `内部地址需以 / 开头，外部地址请以协议开头( http/https )`,
-      formItemProps: (form, { rowIndex }) => {
-        return {
-          rules: [{ required: true, message: '此项为必填项' }],
-        };
-      },
+      tooltip: t('menu.column.url.tooltip'),
+      formItemProps: () => ({
+        rules: [{ required: true, message: t('menu.message.required') }],
+      }),
     },
     {
-      title: '操作',
+      title: t('menu.column.actions'),
       valueType: 'option',
       key: 'option',
       width: 200,
-      render: (text, record, _, action) => {
-        const l = record.level;
-        return [
+      render: (_text, record, _index, action) => [
+        <a
+          key="editable"
+          onClick={() => {
+            action?.startEditable?.(record.id);
+          }}
+        >
+          {t('menu.action.edit')}
+        </a>,
+        record.level === 0 ? (
           <a
-            key="editable"
+            key="addChild"
             onClick={() => {
-              action?.startEditable?.(record.id);
-            }}
-          >
-            编辑
-          </a>,
-          l == 0 ? (
-            <a
-              key="addChild"
-              onClick={() => {
-                if (record.level >= 1) {
-                  message.warning('目前最大只支持二级菜单');
-                  return;
-                }
+              if (record.level >= 1) {
+                message.warning(t('menu.message.max_level'));
+                return;
+              }
 
-                const children = record?.children || [];
-                const newId = getNewId();
-                children.push({
-                  id: newId,
-                  level: record.level + 1,
-                });
-
-                // 没有子属性的话增加一个子属性。
-                const newData = dataSource.map((d) => {
-                  if (d.id == record.id) {
-                    return {
-                      ...record,
-                      children,
-                    };
-                  } else {
-                    return d;
-                  }
-                });
-                setDataSource(newData);
-                setExpendKeys([...expendKeys, record.id]);
-                action.startEditable(newId);
-              }}
-            >
-              新增下级
-            </a>
-          ) : undefined,
-          <a
-            key="delete"
-            onClick={async () => {
-              Modal.confirm({
-                onOk: async () => {
-                  removeRow(record);
-                },
-                title: `确认删除"${record.name || '-'}"吗?`,
+              const children = record?.children || [];
+              const newId = getNewId();
+              children.push({
+                id: newId,
+                level: record.level + 1,
+                value: '',
               });
+
+              const newData = dataSource.map((d) => {
+                if (d.id === record.id) {
+                  return {
+                    ...record,
+                    children,
+                  };
+                }
+                return d;
+              });
+              setDataSource(newData);
+              setExpendKeys([...expendKeys, record.id]);
+              action?.startEditable(newId);
             }}
           >
-            删除
-          </a>,
-        ];
-      },
+            {t('menu.action.add_child')}
+          </a>
+        ) : undefined,
+        <a
+          key="delete"
+          onClick={() => {
+            Modal.confirm({
+              onOk: () => {
+                removeRow(record);
+              },
+              title: t('menu.modal.delete.title', { name: record.name || '-' }),
+            });
+          }}
+        >
+          {t('menu.action.delete')}
+        </a>,
+      ],
     },
   ];
-  return (
-    <>
-      <Spin spinning={loading}>
-        <EditableProTable
-          expandable={{
-            defaultExpandAllRows: true,
-            expandedRowKeys: expendKeys,
-            onExpand: (e, r) => {
-              if (e) {
-                setExpendKeys([...expendKeys, r.id]);
-              } else {
-                setExpendKeys(expendKeys.filter((e) => e != r.id));
-              }
-            },
-            // expandedRowKeys:
-          }}
-          actionRef={actionRef}
-          rowKey="id"
-          headerTitle="导航菜单管理"
-          scroll={{
-            x: 960,
-          }}
-          recordCreatorProps={{
-            position: 'bottom',
-            newRecordType: 'dataSource',
-            record: () => ({ id: getNewId(), level: 0 }),
-          }}
-          loading={false}
-          columns={columns}
-          value={dataSource}
-          onValuesChange={(vals) => {
-            setDataSource(vals);
-          }}
-          editable={{
-            type: 'multiple',
-            editableKeys,
-            onSave: async (key, record, originRow, newLineConfig?) => {
-              update(dataSource);
-            },
-            onDelete: async (key, row) => {
-              removeRow(row);
-            },
 
-            onChange: setEditableRowKeys,
-          }}
-        />
-      </Spin>
-    </>
+  return (
+    <Spin spinning={loading}>
+      <EditableProTable<MenuItem>
+        expandable={{
+          defaultExpandAllRows: true,
+          expandedRowKeys: expendKeys,
+          onExpand: (expanded, record) => {
+            if (expanded) {
+              setExpendKeys([...expendKeys, record.id]);
+            } else {
+              setExpendKeys(expendKeys.filter((e) => e !== record.id));
+            }
+          },
+        }}
+        actionRef={actionRef}
+        rowKey="id"
+        headerTitle={t('menu.table.header')}
+        scroll={{
+          x: 960,
+        }}
+        recordCreatorProps={{
+          position: 'bottom',
+          record: () => ({ id: getNewId(), level: 0, value: '' }),
+        }}
+        loading={false}
+        columns={columns}
+        value={dataSource}
+        onChange={(value) => setDataSource([...value])}
+        editable={{
+          type: 'multiple',
+          editableKeys,
+          onSave: async () => {
+            try {
+              await update(dataSource);
+            } catch (error) {
+              console.error('Failed to save menu changes:', error);
+            }
+          },
+          onDelete: async (_, row) => {
+            removeRow(row);
+          },
+          onChange: (keys: Key[]) => setEditableRowKeys(keys as (string | number)[]),
+        }}
+      />
+    </Spin>
   );
 }

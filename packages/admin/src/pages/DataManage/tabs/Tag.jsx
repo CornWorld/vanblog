@@ -1,89 +1,96 @@
+import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { deleteTag, getTags, updateTag } from '@/services/van-blog/api';
 import { ModalForm, ProFormText, ProTable } from '@ant-design/pro-components';
 import { message, Modal } from 'antd';
 import { useRef } from 'react';
-const columns = [
-  {
-    dataIndex: 'name',
-    title: '标签名',
-    search: true,
-    fieldProps: { showSearch: true, placeholder: '请搜索或选择' },
-    request: async () => {
-      const { data: tags } = await getTags();
-      const data = tags.map((each) => ({
-        label: each,
-        value: each,
-      }));
-      return data;
-    },
-    // render: (text) => {
-    //   return <span style={{ marginLeft: 8 }}>{text}</span>;
-    // },
-  },
-  {
-    title: '操作',
-    valueType: 'option',
-    width: 200,
-    render: (text, record, _, action) => [
-      <a
-        key="viewTag"
-        onClick={() => {
-          window.open(`/tag/${record.name.replace(/#/g, '%23')}`, '_blank');
-        }}
-      >
-        查看
-      </a>,
-      <ModalForm
-        key={`editCateoryC%{${record.name}}`}
-        title={`批量修改标签 "${record.name}"`}
-        trigger={<a key={'editC' + record.name}>批量改名</a>}
-        autoFocusFirstInput
-        submitTimeout={3000}
-        onFinish={async (values) => {
-          Modal.confirm({
-            content: `确定修改标签 "${record.name}" 为 "${values.newName}" 吗？所有文章的该标签都将被更新为新名称!`,
-            onOk: async () => {
-              await updateTag(record.name, values.newName);
-              message.success('更新成功！所有文章该标签都将变为新名称！');
-              action?.reload();
-              return true;
-            },
-          });
 
-          return true;
-        }}
-      >
-        <ProFormText
-          width="lg"
-          name="newName"
-          label="新标签"
-          placeholder="请输入新的标签名称"
-          tooltip="所有文章的该标签都将被更新为新名称"
-          required
-          rules={[{ required: true, message: '这是必填项' }]}
-        />
-      </ModalForm>,
-      <a
-        key="delTag"
-        onClick={() => {
-          Modal.confirm({
-            title: '确认删除',
-            content: `确认删除该标签吗？所有文章的该标签都将被删除，其他标签不变。`,
-            onOk: async () => {
-              await deleteTag(record.name);
-              message.success('删除成功！所有文章的该标签都将被删除，其他标签不变。');
-              action?.reload();
-              return true;
-            },
-          });
-        }}
-      >
-        删除
-      </a>,
-    ],
-  },
-];
 export default function () {
+  const { t } = useTranslation();
+  const actionRef = useRef();
+
+  const columns = [
+    {
+      dataIndex: 'name',
+      title: t('tag.column.name'),
+      search: true,
+      fieldProps: { showSearch: true, placeholder: t('tag.column.name.placeholder') },
+      request: async () => {
+        const { data: tags } = await getTags();
+        const data = tags.map((each) => ({
+          label: each,
+          value: each,
+        }));
+        return data;
+      },
+      // render: (text) => {
+      //   return <span style={{ marginLeft: 8 }}>{text}</span>;
+      // },
+    },
+    {
+      title: t('tag.column.actions'),
+      valueType: 'option',
+      width: 200,
+      render: (text, record, _, action) => [
+        <a
+          key="viewTag"
+          onClick={() => {
+            window.open(`/tag/${record.name.replace(/#/g, '%23')}`, '_blank');
+          }}
+        >
+          {t('tag.action.view')}
+        </a>,
+        <ModalForm
+          key={`editCateoryC%{${record.name}}`}
+          title={`${t('tag.modal.edit.title')} "${record.name}"`}
+          trigger={<a key={'editC' + record.name}>{t('tag.action.batch_rename')}</a>}
+          autoFocusFirstInput
+          submitTimeout={3000}
+          onFinish={async (values) => {
+            Modal.confirm({
+              content: `${t('tag.modal.edit.confirm')} "${record.name}" ${t('tag.modal.edit.confirm.suffix')}`,
+              onOk: async () => {
+                await updateTag(record.name, values.newName);
+                message.success(t('tag.modal.edit.success'));
+                action?.reload();
+                return true;
+              },
+            });
+
+            return true;
+          }}
+        >
+          <ProFormText
+            width="lg"
+            name="newName"
+            label={t('tag.form.new_name')}
+            placeholder={t('tag.form.new_name.placeholder')}
+            tooltip={t('tag.form.new_name.tooltip')}
+            required
+            rules={[{ required: true, message: t('tag.form.required') }]}
+          />
+        </ModalForm>,
+        <a
+          key="delTag"
+          onClick={() => {
+            Modal.confirm({
+              title: t('tag.modal.delete.title'),
+              content: t('tag.modal.delete.content'),
+              onOk: async () => {
+                await deleteTag(record.name);
+                message.success(t('tag.modal.delete.success'));
+                action?.reload();
+                return true;
+              },
+            });
+          }}
+        >
+          {t('tag.action.delete')}
+        </a>,
+      ],
+    },
+  ];
+
   const fetchData = async () => {
     const { data: res } = await getTags();
     return res.map((item) => ({
@@ -91,7 +98,7 @@ export default function () {
       name: item,
     }));
   };
-  const actionRef = useRef();
+
   return (
     <>
       <ProTable

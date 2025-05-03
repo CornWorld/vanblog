@@ -2,12 +2,14 @@ import { useState } from 'react';
 import { getEncryptedArticleByIdOrPathname } from '../../api/getArticles';
 import toast from 'react-hot-toast';
 import Loading from '../Loading';
+import { useTranslation } from 'next-i18next';
 
 export default function UnlockCard(props: {
   id: number | string;
   setLock: (l: boolean) => void;
   setContent: (s: string) => void;
 }) {
+  const { t } = useTranslation();
   const [value, setValue] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -25,18 +27,18 @@ export default function UnlockCard(props: {
     try {
       const res = await getEncryptedArticleByIdOrPathname(props.id, value);
       if (!res || !res.content) {
-        onError('密码错误！请重试！');
+        onError(t('unlock.passwordError'));
         return null;
       }
       return res;
     } catch {
-      onError('密码错误！请重试！');
+      onError(t('unlock.passwordError'));
       return null;
     }
   };
   const handleClick = async () => {
     if (value == '') {
-      onError('输入不能为空！');
+      onError(t('unlock.emptyInput'));
       return;
     }
     setLoading(true);
@@ -44,14 +46,14 @@ export default function UnlockCard(props: {
       const article = await fetchArticle();
       if (article) {
         setLoading(false);
-        onSuccess('解锁成功！');
+        onSuccess(t('unlock.success'));
         props.setContent(article.content);
         props.setLock(false);
       } else {
         setLoading(false);
       }
     } catch {
-      onError('解锁失败！');
+      onError(t('unlock.failed'));
       setLoading(false);
     }
   };
@@ -59,7 +61,7 @@ export default function UnlockCard(props: {
     <>
       <Loading loading={loading}>
         <div className="mb-2">
-          <p className="mb-2 text-gray-600 dark:text-dark ">文章已加密，请输入密码后查看：</p>
+          <p className="mb-2 text-gray-600 dark:text-dark ">{t('unlock.description')}</p>
           <div className="flex items-center">
             <div className=" bg-gray-100 rounded-md dark:bg-dark-2 overflow-hidden flex-grow">
               <input
@@ -68,7 +70,7 @@ export default function UnlockCard(props: {
                 onChange={(ev) => {
                   setValue(ev.currentTarget.value);
                 }}
-                placeholder={'请输入密码'}
+                placeholder={t('unlock.placeholder')}
                 className="ml-2 w-full text-base dark:text-dark "
                 style={{
                   height: 32,
@@ -83,7 +85,7 @@ export default function UnlockCard(props: {
               onClick={handleClick}
               className="flex-grow-0 text-gray-500 dark:text-dark ml-2 rounded-md dark:bg-dark-2 bg-gray-200 transition-all hover:text-lg  w-20 h-8"
             >
-              确认
+              {t('unlock.confirm')}
             </button>
           </div>
         </div>

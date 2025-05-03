@@ -1,3 +1,4 @@
+import React from 'react';
 import CodeEditor from '@/components/CodeEditor';
 import UploadBtn from '@/components/UploadBtn';
 import {
@@ -13,34 +14,82 @@ import {
 import { DownOutlined } from '@ant-design/icons';
 import { PageContainer } from '@ant-design/pro-layout';
 import { Button, Dropdown, Menu, message, Modal, Space, Spin, Tag, Tree } from 'antd';
+import type { DataNode } from 'antd/es/tree';
+import type { Key } from 'react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { history } from '@/utils/umiCompat';
+import { history } from '@/router';
 import PipelineModal from '../Pipeline/components/PipelineModal';
 import RunCodeModal from '../Pipeline/components/RunCodeModal';
 import './index.less';
+import type { ReactNode } from 'react';
+import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
 const { DirectoryTree } = Tree;
 
-export default function () {
+interface TreeNode extends DataNode {
+  type?: 'file' | 'directory';
+  key: string;
+  children?: TreeNode[];
+  title: string | ReactNode;
+  isLeaf?: boolean;
+}
+
+interface CustomPage {
+  name: string;
+  html: string;
+  id: string;
+}
+
+interface Pipeline {
+  id: string;
+  script: string;
+  eventName: string;
+  name: string;
+}
+
+interface PipelineConfig {
+  eventName: string;
+  eventNameChinese: string;
+  passive: boolean;
+}
+
+const renderTreeNodes = (data: TreeNode[]): ReactNode[] => {
+  return data.map((item) => {
+    if (item.children) {
+      return (
+        <Tree.TreeNode title={item.title} key={item.key} isLeaf={item.type === 'file'}>
+          {renderTreeNodes(item.children)}
+        </Tree.TreeNode>
+      );
+    }
+    return <Tree.TreeNode title={item.title} key={item.key} isLeaf={item.type === 'file'} />;
+  });
+};
+
+export default function CodePage() {
   const [value, setValue] = useState('');
-  const [currObj, setCurrObj] = useState<any>({});
-  const [node, setNode] = useState();
-  const [selectedKeys, setSelectedKeys] = useState([]);
-  const [pipelineConfig, setPipelineConfig] = useState<any[]>([]);
+  const [currObj, setCurrObj] = useState<CustomPage | Pipeline | null>(null);
+  const [node, setNode] = useState<TreeNode | undefined>();
+  const [selectedKeys, setSelectedKeys] = useState<Key[]>([]);
+  const [pipelineConfig, setPipelineConfig] = useState<PipelineConfig[]>([]);
   const [pathPrefix, setPathPrefix] = useState('');
-  const [treeData, setTreeData] = useState([{ title: 'door', key: '123' }]);
+  const [treeData, setTreeData] = useState<TreeNode[]>([
+    { title: 'door', key: '123', type: 'directory' },
+  ]);
   const [uploadLoading, setUploadLoading] = useState(false);
   const [editorLoading, setEditorLoading] = useState(false);
   const [treeLoading, setTreeLoading] = useState(true);
   const [editorWidth, setEditorWidth] = useState(400);
-  const [editorHeight, setEditorHeight] = useState('calc(100vh - 82px)');
-  const type = history.location.query?.type;
-  const path = history.location.query?.path;
-  const id = history.location.query?.id;
-  const isFolder = type == 'folder';
-  const typeMap = {
+  const [editorHeight, setEditorHeight] = useState<number>(window.innerHeight - 82);
+  const query = new URLSearchParams(history.location.search);
+  const type = query.get('type') || '';
+  const path = query.get('path') || '';
+  const id = query.get('id') || '';
+  const isFolder = type === 'folder';
+  const typeMap: Record<string, string> = {
     file: '单文件页面',
     folder: '多文件页面',
     pipeline: '流水线',
+    default: '未知类型',
   };
 
   useEffect(() => {
@@ -48,6 +97,7 @@ export default function () {
       setPipelineConfig(data);
     });
   }, []);
+
   const language = useMemo(() => {
     if (type == 'pipeline') {
       return 'javascript';
@@ -70,100 +120,164 @@ export default function () {
       css: cssArr,
     };
     for (const [k, v] of Object.entries(m)) {
-      if (v.some((t) => name.includes('.' + t))) {
+      const title = String(name);
+      if (v.some((t) => title.includes('.' + t))) {
         return k;
       }
     }
     return 'html';
-  }, [node]);
+  }, [node, type]);
 
-  const onResize = () => {
-    updateEditorSize();
+  const fetchFileData = async (node: TreeNode) => {
+    setEditorLoading(true);
+    try {
+      const { data } = await getCustomPageFileDataByPath(path, node.key);
+      setValue(data);
+    } catch (error) {
+      console.error('Failed to fetch file data:', error);
+      message.error('获取文件数据失败！');
+    } finally {
+      setEditorLoading(false);
+    }
   };
 
-  const onClickMenuChangeBtn = () => {
-    setTimeout(() => {
-      updateEditorSize();
-    }, 500);
+  const handleTreeSelect = (_: Key[], info: { node: TreeNode }) => {
+    if (editorLoading) {
+      message.warning('加载中请勿选择!');
+      return;
+    }
+    const selectedNode = info.node;
+    setSelectedKeys([selectedNode.key]);
+    setNode(selectedNode);
+
+    if (selectedNode.type === 'file') {
+      fetchFileData(selectedNode);
+      const arr = selectedNode.key.toString().split('/');
+      arr.pop();
+      setPathPrefix(arr.join('/'));
+    } else {
+      setPathPrefix(selectedNode.key.toString());
+    }
   };
 
-  useEffect(() => {
-    window.addEventListener('resize', onResize);
+  const handleTreeExpand = (_: Key[], info: { node: TreeNode }) => {
+    const selectedNode = info.node;
+    setSelectedKeys([selectedNode.key]);
+  };
+
+  const updateEditorSize = useCallback(() => {
+    const headerEl = document.querySelector('.ant-page-header');
+    if (headerEl) {
+      const fullWidthString = window.getComputedStyle(headerEl).width;
+      const fullWidth = parseInt(fullWidthString.replace('px', ''));
+      const width = isFolder ? fullWidth - 1 - 200 : fullWidth;
+      setEditorWidth(width);
+
+      const HeaderHeightString = window.getComputedStyle(headerEl).height;
+      const HeaderHeight = parseInt(HeaderHeightString.replace('px', ''));
+      setEditorHeight(window.innerHeight - HeaderHeight - 12);
+    }
+  }, [isFolder]);
+
+  const onClickMenuChangeBtn = useCallback(() => {
     const menuBtnEl = document.querySelector('.ant-pro-sider-collapsed-button');
     if (menuBtnEl) {
-      menuBtnEl.addEventListener('click', onClickMenuChangeBtn);
+      menuBtnEl.addEventListener('click', () => {
+        setTimeout(() => {
+          updateEditorSize();
+        }, 500);
+      });
     }
+  }, [updateEditorSize]);
+
+  useEffect(() => {
+    window.addEventListener('resize', updateEditorSize);
+    onClickMenuChangeBtn();
     return () => {
-      window.removeEventListener('resize', onResize);
+      window.removeEventListener('resize', updateEditorSize);
       const menuBtnEl = document.querySelector('.ant-pro-sider-collapsed-button');
       if (menuBtnEl) {
         menuBtnEl.removeEventListener('click', onClickMenuChangeBtn);
       }
     };
-  }, []);
+  }, [onClickMenuChangeBtn, updateEditorSize]);
 
-  const updateEditorSize = () => {
-    const el = document.querySelector('.ant-page-header');
-    const fullWidthString = window.getComputedStyle(el).width;
-    const fullWidth = parseInt(fullWidthString.replace('px', ''));
-
-    const width = isFolder ? fullWidth - 1 - 200 : fullWidth;
-
-    setEditorWidth(width);
-
-    const HeaderHeightString = window.getComputedStyle(el).height;
-    const HeaderHeight = parseInt(HeaderHeightString.replace('px', ''));
-    setEditorHeight(`calc(100vh - ${HeaderHeight + 12}px)`);
-  };
-
-  const onKeyDown = (ev) => {
-    let save = false;
-    if (ev.metaKey == true && ev.key.toLocaleLowerCase() == 's') {
-      save = true;
+  const handleSave = useCallback(async () => {
+    if (location.hostname == 'blog-demo.mereith.com') {
+      Modal.info({
+        title: '演示站不可修改此项！',
+      });
+      return;
     }
-    if (ev.ctrlKey == true && ev.key.toLocaleLowerCase() == 's') {
-      save = true;
+    if (type == 'file') {
+      setEditorLoading(true);
+      await updateCustomPage({ ...currObj, html: value });
+      setEditorLoading(false);
+      message.success('当前编辑器内文件保存成功！');
+    } else if (type == 'pipeline' && currObj) {
+      setEditorLoading(true);
+      await updatePipelineById(currObj.id, { script: value });
+      setEditorLoading(false);
+      message.success('当前编辑器内脚本保存成功！');
+    } else {
+      setEditorLoading(true);
+      if (node?.key) {
+        await updateCustomPageFileInFolder(path, node.key, value);
+        message.success('当前编辑器内文件保存成功！');
+      }
+      setEditorLoading(false);
+      return;
     }
-    if (save) {
-      event?.preventDefault();
-      ev?.preventDefault();
-      handleSave();
-    }
-    return false;
-  };
+  }, [type, currObj, value, path, node, setEditorLoading]);
+
+  const onKeyDown = useCallback(
+    (ev: ReactKeyboardEvent) => {
+      let save = false;
+      if (ev.metaKey === true && ev.key.toLowerCase() === 's') {
+        save = true;
+      }
+      if (ev.ctrlKey === true && ev.key.toLowerCase() === 's') {
+        save = true;
+      }
+      if (save) {
+        ev.preventDefault();
+        handleSave();
+      }
+      return false;
+    },
+    [handleSave],
+  );
 
   useEffect(() => {
-    window.addEventListener('keydown', onKeyDown);
-    return () => {
-      window.removeEventListener('keydown', onKeyDown);
+    const handleKeyDown = (ev: globalThis.KeyboardEvent) => {
+      onKeyDown(ev as unknown as ReactKeyboardEvent);
     };
-  }, [currObj, value, type]);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [onKeyDown]);
 
   useEffect(() => {
     setTimeout(() => {
       updateEditorSize();
     }, 300);
-  }, []);
+  }, [updateEditorSize]);
 
-  const handleUpload = async () => {};
-  const fetchFileData = async (node: any) => {
-    setEditorLoading(true);
-    const { data } = await getCustomPageFileDataByPath(path, node.key);
-    setValue(data);
-    setEditorLoading(false);
-  };
   const fetchData = useCallback(async () => {
     if (!path && !id) {
       message.error('无有效信息，无法获取数据！');
       return;
-    } else {
+    }
+
+    try {
       if (isFolder) {
         setTreeLoading(true);
-        setCurrObj({ name: path });
+        setCurrObj({ name: path, html: '', id: path });
         const { data } = await getCustomPageFolderTreeByPath(path);
         if (data) setTreeData(data);
         setTreeLoading(false);
-      } else if (type == 'pipeline') {
+      } else if (type === 'pipeline') {
         if (!id) {
           message.error('无有效信息，无法获取数据！');
           return;
@@ -184,33 +298,11 @@ export default function () {
         }
         setEditorLoading(false);
       }
+    } catch (error) {
+      console.error('Failed to fetch data:', error);
+      message.error('获取数据失败！');
     }
-  }, [setCurrObj, setValue, path]);
-  const handleSave = async () => {
-    if (location.hostname == 'blog-demo.mereith.com') {
-      Modal.info({
-        title: '演示站不可修改此项！',
-      });
-      return;
-    }
-    if (type == 'file') {
-      setEditorLoading(true);
-      await updateCustomPage({ ...currObj, html: value });
-      setEditorLoading(false);
-      message.success('当前编辑器内文件保存成功！');
-    } else if (type == 'pipeline') {
-      setEditorLoading(true);
-      await updatePipelineById(currObj.id, { script: value });
-      setEditorLoading(false);
-      message.success('当前编辑器内脚本保存成功！');
-    } else {
-      setEditorLoading(true);
-      await updateCustomPageFileInFolder(path, node?.key, value);
-      setEditorLoading(false);
-      message.success('当前编辑器内文件保存成功！');
-      return;
-    }
-  };
+  }, [path, id, type, isFolder]);
 
   const actionMenu = (
     <Menu
@@ -232,8 +324,8 @@ export default function () {
                   <PipelineModal
                     mode="edit"
                     trigger={<a>编辑信息</a>}
-                    onFinish={(vals) => {
-                      console.log(vals);
+                    onFinish={() => {
+                      fetchData();
                     }}
                     initialValues={currObj}
                   />
@@ -252,7 +344,7 @@ export default function () {
                     muti={true}
                     customUpload={true}
                     text="上传文件夹"
-                    onFinish={(info) => {
+                    onFinish={() => {
                       fetchData();
                     }}
                     url={`/api/admin/customPage/upload?path=${path}`}
@@ -273,7 +365,7 @@ export default function () {
                     folder={false}
                     muti={false}
                     text="上传文件"
-                    onFinish={(info) => {
+                    onFinish={() => {
                       fetchData();
                     }}
                     url={`/api/admin/customPage/upload?path=${path}`}
@@ -309,16 +401,16 @@ export default function () {
           <Space>
             <span title={currObj?.name}>{currObj?.name}</span>
             <>
-              <Tag color="green">{typeMap[type] || '未知类型'}</Tag>
-              {type == 'pipeline' && (
+              <Tag color="green">{typeMap[type] || typeMap.default}</Tag>
+              {type === 'pipeline' && currObj && 'eventName' in currObj && (
                 <>
                   <Tag color="blue">
                     {
-                      pipelineConfig?.find((p) => p.eventName == currObj.eventName)
+                      pipelineConfig.find((p) => p.eventName === currObj.eventName)
                         ?.eventNameChinese
                     }
                   </Tag>
-                  {pipelineConfig?.find((p) => p.eventName == currObj.eventName)?.passive ? (
+                  {pipelineConfig.find((p) => p.eventName === currObj.eventName)?.passive ? (
                     <Tag color="yellow">非阻塞</Tag>
                   ) : (
                     <Tag color="red">阻塞</Tag>
@@ -329,7 +421,7 @@ export default function () {
           </Space>
         ),
         extra: [
-          <Dropdown key="moreAction" overlay={actionMenu} trigger={['click']}>
+          <Dropdown key="moreAction" menu={{ items: actionMenu }} trigger={['click']}>
             <Button size="middle" type="primary">
               操作
               <DownOutlined />
@@ -361,7 +453,7 @@ export default function () {
         ],
         breadcrumb: {},
       }}
-      footer={null}
+      footer={[]}
     >
       <div style={{ height: '100%', display: 'flex' }} className="code-editor-content">
         {isFolder && (
@@ -370,9 +462,9 @@ export default function () {
               <div
                 className="file-tree-container"
                 onClick={(ev) => {
-                  const container = document.querySelector('.file-tree-container')!;
-                  const tree = document.querySelector('.ant-tree-list')!;
-                  if (ev.target == container || ev.target == tree) {
+                  const container = document.querySelector('.file-tree-container');
+                  const tree = document.querySelector('.ant-tree-list');
+                  if (container && tree && (ev.target === container || ev.target === tree)) {
                     setSelectedKeys([]);
                     setPathPrefix('');
                   }
@@ -382,65 +474,16 @@ export default function () {
                   background: 'white',
                 }}
               >
-                {/* <div className="toolbar">
-                  <div className="left"> {path}</div>
-                  <div className="right">
-                    <div
-                      className="action-icon"
-                      onClick={async () => {
-                        setTreeLoading(true);
-                        await createCustomFile(path, pathPrefix);
-                        setTreeLoading(false);
-                        fetchData();
-                      }}
-                    >
-                      <Tooltip title="新建文件">
-                        <FileAddOutlined />
-                      </Tooltip>
-                    </div>
-                    <div
-                      className="action-icon"
-                      onClick={async () => {
-                        setTreeLoading(true);
-                        await createCustomFolder(path, pathPrefix);
-                        setTreeLoading(false);
-                        fetchData();
-                      }}
-                    >
-                      <Tooltip title="新建文件夹">
-                        <FolderAddOutlined />
-                      </Tooltip>
-                    </div>
-                  </div>
-                </div> */}
                 <DirectoryTree
-                  style={{ height: editorHeight }}
+                  style={{ height: `${editorHeight}px` }}
                   className="file-tree"
                   defaultExpandAll
                   selectedKeys={selectedKeys}
-                  // onRightClick={({ event, node }) => {
-                  //   console.log(event);
-                  // }}
-                  onSelect={(keys, info) => {
-                    if (editorLoading) {
-                      message.warning('加载中请勿选择!');
-                      return;
-                    }
-                    setSelectedKeys(keys);
-                    const node = info.node as any;
-
-                    if (node.type == 'file') {
-                      fetchFileData(node);
-                      setNode(node);
-                      const arr = node.key.split('/');
-                      arr.pop();
-                      setPathPrefix(arr.join('/'));
-                    } else {
-                      setPathPrefix(node.key);
-                    }
-                  }}
-                  treeData={treeData}
-                />
+                  onSelect={handleTreeSelect}
+                  onExpand={handleTreeExpand}
+                >
+                  {treeData.length > 0 ? renderTreeNodes(treeData) : []}
+                </DirectoryTree>
               </div>
             </Spin>
             <div className="divider-v"></div>

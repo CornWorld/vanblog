@@ -5,4 +5,4 @@ const BlankLayout = () => {
   return <Outlet />;
 };
 
-export default BlankLayout; 
+export default BlankLayout;

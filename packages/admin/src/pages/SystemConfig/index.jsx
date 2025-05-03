@@ -1,3 +1,5 @@
+import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { useTab } from '@/services/van-blog/useTab';
 import { PageContainer } from '@ant-design/pro-layout';
 import '../Welcome/index.less';
@@ -11,7 +13,9 @@ import SiteInfo from './tabs/SiteInfo';
 import User from './tabs/User';
 import WalineTab from './tabs/WalineTab';
 import Token from './tabs/Token';
+
 export default function () {
+  const { t } = useTranslation();
   const tabMap = {
     siteInfo: <SiteInfo />,
     customizing: <Customizing />,
@@ -35,43 +39,43 @@ export default function () {
       tabActiveKey={tab}
       tabList={[
         {
-          tab: '站点配置',
+          tab: t('system.tabs.site_info'),
           key: 'siteInfo',
         },
         {
-          tab: '客制化',
+          tab: t('system.tabs.customizing'),
           key: 'customizing',
         },
         {
-          tab: '用户设置',
+          tab: t('system.tabs.user'),
           key: 'user',
         },
         {
-          tab: '图床设置',
+          tab: t('system.tabs.img'),
           key: 'img',
         },
         {
-          tab: '评论设置',
+          tab: t('system.tabs.waline'),
           key: 'waline',
         },
         {
-          tab: '备份恢复',
+          tab: t('system.tabs.backup'),
           key: 'backup',
         },
         {
-          tab: 'Token 管理',
+          tab: t('system.tabs.token'),
           key: 'token',
         },
         {
-          tab: 'HTTPS',
+          tab: t('system.tabs.caddy'),
           key: 'caddy',
         },
         {
-          tab: '高级设置',
+          tab: t('system.tabs.advance'),
           key: 'advance',
         },
         {
-          tab: '迁移助手',
+          tab: t('system.tabs.migrate'),
           key: 'migrate',
         },
       ]}

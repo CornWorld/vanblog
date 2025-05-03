@@ -1,16 +1,19 @@
-import ImportArticleModal from '@/components/ImportArticleModal';
-import NewArticleModal from '@/components/NewArticleModal';
+import React, { useMemo, useRef, useState } from 'react';
+import { PageContainer } from '@ant-design/pro-layout';
+import ProTable from '@ant-design/pro-table';
+import RcResizeObserver from 'rc-resize-observer';
+import { Button, message, Space } from 'antd';
+import { history } from '@/router';
+import { useTranslation } from 'react-i18next';
 import { getArticlesByOption } from '@/services/van-blog/api';
 import { batchExport, batchDelete } from '@/services/van-blog/batch';
 import { useNum } from '@/services/van-blog/useNum';
-import { PageContainer, ProTable } from '@ant-design/pro-components';
-import { Button, Space, message } from 'antd';
-import RcResizeObserver from 'rc-resize-observer';
-import { useMemo, useRef, useState } from 'react';
-import { history } from '@/utils/umiCompat';
-import { articleObjAll, articleObjSmall, columns } from './columns';
+import { articleObjAll, articleObjSmall, getColumns } from './columns';
+import ImportArticleModal from '@/components/ImportArticleModal';
+import NewArticleModal from '@/components/NewArticleModal';
 
 export default () => {
+  const { t } = useTranslation();
   const actionRef = useRef();
   const [colKeys, setColKeys] = useState(articleObjAll);
   const [simplePage, setSimplePage] = useState(false);
@@ -47,7 +50,7 @@ export default () => {
         }}
       >
         <ProTable
-          columns={columns}
+          columns={getColumns({ t })}
           actionRef={actionRef}
           cardBordered
           rowSelection={{
@@ -60,12 +63,12 @@ export default () => {
                 <a
                   onClick={async () => {
                     await batchDelete(selectedRowKeys);
-                    message.success('批量删除成功！');
+                    message.success(t('article.message.batch_delete_success'));
                     actionRef.current.reload();
                     onCleanSelected();
                   }}
                 >
-                  批量删除
+                  {t('article.action.batch_delete')}
                 </a>
                 <a
                   onClick={() => {
@@ -73,13 +76,13 @@ export default () => {
                     onCleanSelected();
                   }}
                 >
-                  批量导出
+                  {t('article.action.batch_export')}
                 </a>
-                <a onClick={onCleanSelected}>取消选择</a>
+                <a onClick={onCleanSelected}>{t('article.action.cancel_select')}</a>
               </Space>
             );
           }}
-          request={async (params = {}, sort, filter) => {
+          request={async (params = {}, sort) => {
             const option = {};
             if (sort.createdAt) {
               if (sort.createdAt == 'ascend') {
@@ -172,7 +175,7 @@ export default () => {
             },
           }}
           dateFormatter="string"
-          headerTitle={simpleSearch ? undefined : '文章管理'}
+          headerTitle={simpleSearch ? undefined : t('article.title')}
           options={simpleSearch ? false : true}
           toolBarRender={() => [
             <Button
@@ -181,7 +184,7 @@ export default () => {
                 history.push(`/editor?type=about&id=${0}`);
               }}
             >
-              {`编辑关于`}
+              {t('article.action.edit_about')}
             </Button>,
             <NewArticleModal
               key="newArticle123"
@@ -194,7 +197,7 @@ export default () => {
               key="importArticleBtn"
               onFinish={() => {
                 actionRef?.current?.reload();
-                message.success('导入成功！');
+                message.success(t('article.message.import_success'));
               }}
             />,
           ]}

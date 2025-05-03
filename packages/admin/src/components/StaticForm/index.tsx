@@ -1,16 +1,34 @@
+import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { getStaticSetting, updateStaticSetting } from '@/services/van-blog/api';
 import { ProForm, ProFormSelect, ProFormText, ProFormTextArea } from '@ant-design/pro-components';
 import { message, Modal } from 'antd';
 import { useState } from 'react';
-export default function (props: {}) {
-  const [storageType, setStorageType] = useState<any>('local');
+
+interface PicgoConfig {
+  [key: string]: unknown;
+}
+
+interface StaticFormData {
+  storageType: 'local' | 'picgo';
+  picgoConfig?: string;
+  picgoPlugins?: string;
+}
+
+interface SubmitData extends Omit<StaticFormData, 'picgoConfig'> {
+  picgoConfig?: PicgoConfig | string;
+}
+
+export default function StaticForm() {
+  const { t } = useTranslation();
+  const [storageType, setStorageType] = useState<'local' | 'picgo'>('local');
   return (
     <>
       <ProForm
         grid={true}
         layout={'horizontal'}
         labelCol={{ span: 6 }}
-        request={async (params) => {
+        request={async () => {
           const { data } = await getStaticSetting();
           setStorageType(data?.storageType || 'local');
           if (!data) {
@@ -24,43 +42,45 @@ export default function (props: {}) {
           };
         }}
         syncToInitialValues={true}
-        onFinish={async (data) => {
+        onFinish={async (data: StaticFormData) => {
           if (location.hostname == 'blog-demo.mereith.com') {
-            Modal.info({ title: '演示站禁止修改图床配置！' });
+            Modal.info({ title: t('static_form.demo.title') });
             return;
           }
           setStorageType(data?.storageType || 'local');
           // 验证一下 json 格式
-          let picgoConfig = null;
-          let toUpload = data;
+          let toUpload: SubmitData = { ...data };
           if (data?.storageType == 'picgo' && data?.picgoConfig != '') {
             try {
-              picgoConfig = JSON.parse(data?.picgoConfig);
-              toUpload = { ...data, picgoConfig };
+              const parsedConfig = JSON.parse(data?.picgoConfig || '{}');
+              toUpload = { ...data, picgoConfig: parsedConfig };
             } catch (err) {
-              message.error('picgoConfig 格式错误，无法解析成 json');
+              console.error('Failed to parse picgoConfig JSON:', err);
+              message.error(t('static_form.picgo_config.error'));
+              return false;
             }
           }
           await updateStaticSetting(toUpload);
-          message.success('更新成功！');
+          message.success(t('static_form.update.success'));
+          return true;
         }}
       >
         <ProFormSelect
           fieldProps={{
-            onChange: (target) => {
+            onChange: (target: 'local' | 'picgo') => {
               setStorageType(target);
             },
           }}
           name="storageType"
           required
-          label="存储策略"
-          placeholder={'请选择存储策略'}
+          label={t('static_form.storage_type.label')}
+          placeholder={t('static_form.storage_type.placeholder')}
           valueEnum={{
-            local: '本地存储',
-            picgo: 'OSS 图床',
+            local: t('static_form.storage_type.local'),
+            picgo: t('static_form.storage_type.picgo'),
           }}
-          tooltip={'本地存储之前请确保映射了永久目录以防丢失哦'}
-          rules={[{ required: true, message: '这是必填项' }]}
+          tooltip={t('static_form.storage_type.tooltip')}
+          rules={[{ required: true, message: t('static_form.required') }]}
         ></ProFormSelect>
         {storageType == 'picgo' && (
           <>
@@ -72,11 +92,11 @@ export default function (props: {}) {
                   target={'_blank'}
                   rel="norefferrer"
                 >
-                  picgo 配置
+                  {t('static_form.picgo_config.label')}
                 </a>
               }
               tooltip={'OSS 图床后端采用了 picgo'}
-              placeholder="请输入 picgo 配置 (json)"
+              placeholder={t('static_form.picgo_config.placeholder')}
               fieldProps={{
                 autoSize: {
                   minRows: 10,
@@ -86,9 +106,9 @@ export default function (props: {}) {
             />
             <ProFormText
               name="picgoPlugins"
-              label="自定义 picgo 插件"
-              tooltip="请填写插件名（如 s3），多个请用英文逗号分隔"
-              placeholder={'看不懂的话请忽略'}
+              label={t('static_form.plugins.label')}
+              tooltip={t('static_form.plugins.tooltip')}
+              placeholder={t('static_form.plugins.placeholder')}
             />
           </>
         )}

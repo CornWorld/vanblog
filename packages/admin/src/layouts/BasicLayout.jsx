@@ -1,22 +1,23 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { 
-  HomeOutlined, 
-  LogoutOutlined, 
+import {
+  HomeOutlined,
+  LogoutOutlined,
   ProjectOutlined,
   SmileOutlined,
   FormOutlined,
   ContainerOutlined,
   PictureOutlined,
-  ToolOutlined
+  ToolOutlined,
 } from '@ant-design/icons';
 import { PageLoading, ProLayout, SettingDrawer } from '@ant-design/pro-layout';
 import { Menu } from 'antd';
 import { useAppContext } from '../context/AppContext';
+import { useTheme } from '../context/ThemeContext';
 import Footer from '@/components/Footer';
 import LogoutButton from '@/components/LogoutButton';
 import ThemeButton from '@/components/ThemeButton';
-import { beforeSwitchTheme } from '@/services/van-blog/theme';
+import { useTranslation } from 'react-i18next';
 
 // Route config
 import routes from './routes';
@@ -33,11 +34,15 @@ const IconMap = {
 // Custom logo and title component
 const LogoTitle = ({ logo, title, collapsed }) => {
   return (
-    <div style={{ 
-      display: 'flex', 
-      alignItems: 'center', 
-    }}>
-      {logo && <img src={logo} alt="logo" style={{ height: 28, marginRight: collapsed ? 0 : 12 }} />}
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+      }}
+    >
+      {logo && (
+        <img src={logo} alt="logo" style={{ height: 28, marginRight: collapsed ? 0 : 12 }} />
+      )}
       {!collapsed && <strong style={{ margin: 0, color: '#1890ff', fontSize: 16 }}>{title}</strong>}
     </div>
   );
@@ -45,38 +50,12 @@ const LogoTitle = ({ logo, title, collapsed }) => {
 
 // Custom bottom links component using actual Ant Menu to match top menu
 const CustomBottomLinks = ({ collapsed }) => {
-  const [isDarkMode, setIsDarkMode] = useState(false);
+  const { effectiveTheme } = useTheme();
   const navigate = useNavigate();
-  
-  // Effect to detect theme changes
-  useEffect(() => {
-    // Check initial theme
-    const checkTheme = () => {
-      const theme = document.documentElement.getAttribute('data-theme') === 'dark';
-      setIsDarkMode(theme);
-    };
-    
-    // Check initial theme
-    checkTheme();
-    
-    // Create observer to detect theme attribute changes
-    const observer = new MutationObserver((mutations) => {
-      mutations.forEach((mutation) => {
-        if (mutation.attributeName === 'data-theme') {
-          checkTheme();
-        }
-      });
-    });
-    
-    // Start observing
-    observer.observe(document.documentElement, { attributes: true });
-    
-    // Cleanup
-    return () => observer.disconnect();
-  }, []);
-  
-  const menuTheme = isDarkMode ? 'dark' : 'light';
-  
+  const { t } = useTranslation();
+
+  const menuTheme = effectiveTheme === 'dark' ? 'dark' : 'light';
+
   // Handle menu clicks
   const handleMenuClick = ({ key }) => {
     if (key === 'home') {
@@ -85,28 +64,28 @@ const CustomBottomLinks = ({ collapsed }) => {
       navigate('/about');
     }
   };
-  
+
   // Theme button menu item
   const ThemeMenuItem = () => (
-    <div style={{ padding: collapsed ? '0' : '0 8px 0 6px' }}>
+    <div style={{ padding: collapsed ? t('site_form.submenu_offset.placeholder') : '0 8px 0 6px' }}>
       <ThemeButton showText={!collapsed} />
     </div>
   );
-  
+
   // Logout button menu item
   const LogoutMenuItem = () => (
-    <div style={{ padding: collapsed ? '0' : '0 8px 0 6px' }}>
+    <div style={{ padding: collapsed ? t('site_form.submenu_offset.placeholder') : '0 8px 0 6px' }}>
       <LogoutButton
         trigger={
           <a style={{ display: 'flex', alignItems: 'center' }}>
             <LogoutOutlined style={{ marginRight: collapsed ? 0 : 10 }} />
-            {!collapsed && <span>登出</span>}
+            {!collapsed && <span>{t('common.logout')}</span>}
           </a>
         }
       />
     </div>
   );
-  
+
   return (
     <div className="custom-bottom-links">
       <Menu
@@ -119,12 +98,12 @@ const CustomBottomLinks = ({ collapsed }) => {
           {
             key: 'home',
             icon: <HomeOutlined />,
-            label: '主站',
+            label: t('common.home'),
           },
           {
             key: 'about',
             icon: <ProjectOutlined />,
-            label: '关于',
+            label: t('common.about'),
           },
           {
             key: 'theme',
@@ -135,7 +114,7 @@ const CustomBottomLinks = ({ collapsed }) => {
             key: 'logout',
             icon: null,
             label: <LogoutMenuItem />,
-          }
+          },
         ]}
       />
     </div>
@@ -144,27 +123,36 @@ const CustomBottomLinks = ({ collapsed }) => {
 
 const BasicLayout = () => {
   const { initialState, setInitialState } = useAppContext();
+  const { effectiveTheme } = useTheme();
   const location = useLocation();
   const navigate = useNavigate();
-  
+  const { t } = useTranslation();
+
   if (!initialState) {
     return <PageLoading />;
   }
 
+  // 确保 settings 存在
+  const settings = initialState.settings || {};
+
+  // 将主题映射到 Ant Design 设置
+  const antdTheme = effectiveTheme === 'dark' ? 'realDark' : 'light';
+
   return (
     <div style={{ height: '100vh' }}>
       <ProLayout
-        {...initialState.settings}
+        {...settings}
+        navTheme={antdTheme}
         route={{ routes }}
         location={location}
-        title={initialState.settings.title || 'VanBlog'}
+        title={settings.title || 'VanBlog'}
         logo={'/logo.svg'}
         headerRender={false}
         menuHeaderRender={(logoDom, titleDom, props) => (
-          <LogoTitle 
-            logo={logoDom.props.src} 
-            title={initialState.settings.title || titleDom} 
-            collapsed={props?.collapsed} 
+          <LogoTitle
+            logo={logoDom.props.src}
+            title={settings.title || titleDom}
+            collapsed={props?.collapsed}
           />
         )}
         menuItemRender={(menuItemProps, defaultDom) => {
@@ -174,11 +162,11 @@ const BasicLayout = () => {
           return <Link to={menuItemProps.path}>{defaultDom}</Link>;
         }}
         menuDataRender={(menuData) => {
-          return menuData.map(item => {
+          return menuData.map((item) => {
             if (item.icon && typeof item.icon === 'string') {
               return {
                 ...item,
-                icon: IconMap[item.icon]
+                icon: IconMap[item.icon],
               };
             }
             return item;
@@ -186,32 +174,31 @@ const BasicLayout = () => {
         }}
         // Replace default links with custom component
         links={null}
-        menuFooterRender={(props) => (
-          <CustomBottomLinks collapsed={props?.collapsed} />
-        )}
+        menuFooterRender={(props) => <CustomBottomLinks collapsed={props?.collapsed} />}
         footerRender={() => <Footer />}
         onMenuHeaderClick={() => navigate('/')}
         layout="side"
       >
         <Outlet />
-        
+
         <SettingDrawer
           disableUrlParams
           enableDarkTheme
-          settings={initialState.settings}
-          onSettingChange={(settings) => {
+          settings={settings}
+          onSettingChange={(newSettings) => {
             const user = initialState?.user;
             const isCollaborator = user?.type && user?.type === 'collaborator';
             if (isCollaborator) {
-              settings.title = '协作模式';
+              newSettings.title = t('layout.collaborator_mode');
             }
-            if (settings.navTheme !== initialState?.settings?.navTheme) {
-              // 切换了主题
-              beforeSwitchTheme(settings.navTheme);
-            }
+
+            // 更新 initialState 中的设置
             setInitialState((prev) => ({
               ...prev,
-              settings,
+              settings: {
+                ...newSettings,
+                navTheme: antdTheme,
+              },
             }));
           }}
         />
@@ -220,4 +207,4 @@ const BasicLayout = () => {
   );
 };
 
-export default BasicLayout; 
+export default BasicLayout;

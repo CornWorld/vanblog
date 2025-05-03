@@ -1,3 +1,5 @@
+import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { createArticle, getAllCategories, getTags } from '@/services/van-blog/api';
 import { parseMarkdownFile } from '@/services/van-blog/parseMarkdownFile';
 import {
@@ -10,7 +12,9 @@ import {
 import { Button, Form, Upload } from 'antd';
 import dayjs from '@/utils/dayjs';
 import { useState } from 'react';
+
 export default function (props) {
+  const { t } = useTranslation();
   const { onFinish } = props;
   const [visible, setVisible] = useState(false);
   const [form] = Form.useForm();
@@ -37,13 +41,13 @@ export default function (props) {
   return (
     <>
       <Upload showUploadList={false} multiple={true} accept={'.md'} beforeUpload={beforeUpload}>
-        <Button key="button" type="primary" title="从 markdown 文件导入，可多选">
-          导入
+        <Button key="button" type="primary" title={t('import.button.title')}>
+          {t('import.button')}
         </Button>
       </Upload>
       <ModalForm
         form={form}
-        title="导入文章"
+        title={t('import.modal.title')}
         visible={visible}
         onVisibleChange={(v) => {
           setVisible(v);
@@ -73,24 +77,24 @@ export default function (props) {
           required
           id="title"
           name="title"
-          label="文章标题"
-          placeholder="请输入标题"
-          rules={[{ required: true, message: '这是必填项' }]}
+          label={t('import.title.label')}
+          placeholder={t('import.title.placeholder')}
+          rules={[{ required: true, message: t('import.required.message') }]}
         />
         <ProFormText
           width="md"
           id="top"
           name="top"
-          label="置顶优先级"
-          placeholder="留空或0表示不置顶，其余数字越大表示优先级越高"
+          label={t('import.toppriority.label')}
+          placeholder={t('import.toppriority.placeholder')}
         />
         <ProFormSelect
           mode="tags"
           tokenSeparators={[',']}
           width="md"
           name="tags"
-          label="标签"
-          placeholder="请选择或输入标签"
+          label={t('import.tags.label')}
+          placeholder={t('import.tags.placeholder')}
           request={async () => {
             const msg = await getTags();
             return msg?.data?.map((item) => ({ label: item, value: item })) || [];
@@ -101,10 +105,10 @@ export default function (props) {
           required
           id="category"
           name="category"
-          label="分类"
-          placeholder="请选择分类"
-          tooltip="首次使用请先在站点管理-数据管理-分类管理中添加分类"
-          rules={[{ required: true, message: '这是必填项' }]}
+          label={t('import.category.label')}
+          placeholder={t('import.category.placeholder')}
+          tooltip={t('import.category.tooltip')}
+          rules={[{ required: true, message: t('import.required.message') }]}
           request={async () => {
             const { data: categories } = await getAllCategories();
             return categories?.map((e) => {
@@ -122,50 +126,50 @@ export default function (props) {
           width="md"
           name="createdAt"
           id="createdAt"
-          label="创建时间"
+          label={t('import.createtime.label')}
         />
         <ProFormSelect
           width="md"
           name="private"
           id="private"
-          label="是否加密"
-          placeholder="是否加密"
+          label={t('import.private.label')}
+          placeholder={t('import.private.placeholder')}
           request={async () => {
             return [
               {
-                label: '否',
+                label: t('import.option.no'),
                 value: false,
               },
               {
-                label: '是',
+                label: t('import.option.yes'),
                 value: true,
               },
             ];
           }}
         />
         <ProFormText.Password
-          label="密码"
+          label={t('import.password.label')}
           width="md"
           id="password"
           name="password"
           autocomplete="new-password"
-          placeholder="请输入密码"
+          placeholder={t('import.password.placeholder')}
           dependencies={['private']}
         />
         <ProFormSelect
           width="md"
           name="hidden"
           id="hidden"
-          label="是否隐藏"
-          placeholder="是否隐藏"
+          label={t('import.hidden.label')}
+          placeholder={t('import.hidden.placeholder')}
           request={async () => {
             return [
               {
-                label: '否',
+                label: t('import.option.no'),
                 value: false,
               },
               {
-                label: '是',
+                label: t('import.option.yes'),
                 value: true,
               },
             ];
@@ -173,7 +177,7 @@ export default function (props) {
         />
         <ProFormTextArea
           name="content"
-          label="内容"
+          label={t('import.content.label')}
           id="content"
           fieldProps={{ autoSize: { minRows: 3, maxRows: 5 } }}
         />

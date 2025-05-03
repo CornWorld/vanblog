@@ -7,4 +7,4 @@ const PageLoading: React.FC = () => (
   </div>
 );
 
-export default PageLoading; 
+export default PageLoading;

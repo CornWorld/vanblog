@@ -1,9 +1,12 @@
+import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { deleteSocial, getSocial, getSocialTypes, updateSocial } from '@/services/van-blog/api';
 import { EditableProTable } from '@ant-design/pro-components';
 import { Modal, Spin } from 'antd';
 import { useRef, useState } from 'react';
 
 export default function () {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [editableKeys, setEditableRowKeys] = useState([]);
   const actionRef = useRef();
@@ -16,11 +19,11 @@ export default function () {
   };
   const columns = [
     {
-      title: '类型',
+      title: t('social.column.type'),
       dataIndex: 'type',
-      formItemProps: (form, { rowIndex }) => {
+      formItemProps: () => {
         return {
-          rules: [{ required: true, message: '此项为必填项' }],
+          rules: [{ required: true, message: t('social.message.required') }],
         };
       },
       request: async () => {
@@ -29,27 +32,27 @@ export default function () {
       },
     },
     {
-      title: '值',
+      title: t('social.column.value'),
       dataIndex: 'value',
-      formItemProps: (form, { rowIndex }) => {
+      formItemProps: () => {
         return {
-          rules: [{ required: true, message: '此项为必填项' }],
+          rules: [{ required: true, message: t('social.message.required') }],
         };
       },
     },
     {
-      title: '最后设置时间',
+      title: t('social.column.updatedAt'),
       valueType: 'date',
       editable: false,
       dataIndex: 'updatedAt',
-      formItemProps: (form, { rowIndex }) => {
+      formItemProps: () => {
         return {
-          rules: [{ required: true, message: '此项为必填项' }],
+          rules: [{ required: true, message: t('social.message.required') }],
         };
       },
     },
     {
-      title: '操作',
+      title: t('social.column.actions'),
       valueType: 'option',
       key: 'option',
       width: 200,
@@ -60,7 +63,7 @@ export default function () {
             action?.startEditable?.(record.type);
           }}
         >
-          编辑
+          {t('social.action.edit')}
         </a>,
         <a
           key="delete"
@@ -70,11 +73,11 @@ export default function () {
                 await deleteSocial(record.type);
                 action?.reload();
               },
-              title: `确认删除"${record.type}"吗?`,
+              title: t('social.modal.deleteConfirm', { type: record.type }),
             });
           }}
         >
-          删除
+          {t('social.action.delete')}
         </a>,
       ],
     },
@@ -85,7 +88,7 @@ export default function () {
         <EditableProTable
           actionRef={actionRef}
           rowKey="key"
-          headerTitle="联系方式"
+          headerTitle={t('social.table.header')}
           scroll={{
             x: 960,
           }}
@@ -106,9 +109,9 @@ export default function () {
           editable={{
             type: 'multiple',
             editableKeys,
-            onSave: async (rowKey, data, row) => {
+            onSave: async (rowKey, data) => {
               if (location.hostname == 'blog-demo.mereith.com') {
-                Modal.info({ title: '演示站禁止修改此项！' });
+                Modal.info({ title: t('social.modal.demoRestriction') });
                 return;
               }
               const toSaveObj = {

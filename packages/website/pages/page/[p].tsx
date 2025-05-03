@@ -12,6 +12,7 @@ import { getPagePagesProps } from '../../utils/getPageProps';
 import { getArticlesKeyWord } from '../../utils/keywords';
 import { revalidate } from '../../utils/loadConfig';
 import Custom404 from '../404';
+import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
 export interface PagePagesProps {
   layoutProps: LayoutProps;
   authorCardProps: AuthorCardProps;
@@ -90,8 +91,10 @@ export async function getStaticPaths() {
 
 export async function getStaticProps({
   params,
+  locale,
 }: {
   params: { p: string };
+  locale: string;
 }): Promise<{ props: PagePagesProps; revalidate?: number } | { notFound: true }> {
   try {
     // Check if params.p exists
@@ -106,6 +109,7 @@ export async function getStaticProps({
     return {
       props,
       ...revalidate,
+      ...(await serverSideTranslations(locale)),
     };
   } catch (error) {
     console.error('Error getting page props:', error);

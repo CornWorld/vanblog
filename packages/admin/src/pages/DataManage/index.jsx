@@ -1,3 +1,5 @@
+import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { useTab } from '@/services/van-blog/useTab';
 import { PageContainer } from '@ant-design/pro-layout';
 import '../Welcome/index.less';
@@ -9,6 +11,7 @@ import Social from './tabs/Social';
 import Tag from './tabs/Tag';
 
 export default function () {
+  const { t } = useTranslation();
   const tabMap = {
     category: <Category />,
     tag: <Tag />,
@@ -28,27 +31,27 @@ export default function () {
       tabActiveKey={tab}
       tabList={[
         {
-          tab: '分类管理',
+          tab: t('data.tabs.category'),
           key: 'category',
         },
         {
-          tab: '标签管理',
+          tab: t('data.tabs.tag'),
           key: 'tag',
         },
         {
-          tab: '导航配置',
+          tab: t('data.tabs.menu'),
           key: 'menuConfig',
         },
         {
-          tab: '捐赠管理',
+          tab: t('data.tabs.donate'),
           key: 'donateInfo',
         },
         {
-          tab: '友情链接',
+          tab: t('data.tabs.link'),
           key: 'links',
         },
         {
-          tab: '联系方式',
+          tab: t('data.tabs.social'),
           key: 'socials',
         },
       ]}

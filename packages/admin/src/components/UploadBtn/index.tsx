@@ -1,10 +1,14 @@
+import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button, message, Upload } from 'antd';
 import ImgCrop from 'antd-img-crop';
 import { RcFile } from 'antd/lib/upload';
-export default function (props: {
+import { UploadFile } from 'antd/lib/upload/interface';
+
+interface UploadBtnProps {
   setLoading: (loading: boolean) => void;
   text: string;
-  onFinish: Function;
+  onFinish: (file: UploadFile | RcFile, name?: string) => void;
   url: string;
   accept: string;
   muti: boolean;
@@ -14,7 +18,11 @@ export default function (props: {
   basePath?: string | undefined;
   loading?: boolean;
   plainText?: boolean;
-}) {
+}
+
+export default function UploadBtn(props: UploadBtnProps) {
+  const { t } = useTranslation();
+
   const upload = (file: RcFile, rPath: string) => {
     const formData = new FormData();
     let fileName = rPath || file.name;
@@ -34,10 +42,10 @@ export default function (props: {
     })
       .then((res) => res.json())
       .then(() => {
-        props?.onFinish(file, name);
+        props?.onFinish(file, fileName);
       })
       .catch(() => {
-        message.error(`${name} 上传失败!`);
+        message.error(t('upload.fail', { name: fileName }));
       })
       .finally(() => {
         props.setLoading(false);
@@ -53,7 +61,7 @@ export default function (props: {
       directory={props.folder}
       beforeUpload={
         props.customUpload
-          ? (file, fileList) => {
+          ? (file) => {
               let rPath = file.webkitRelativePath;
               if (rPath && rPath.split('/').length >= 2) {
                 rPath = rPath.split('/').slice(1).join('/');
@@ -77,7 +85,7 @@ export default function (props: {
           props?.setLoading(false);
           props?.onFinish(info.file);
         } else if (info.file.status === 'error') {
-          message.error(`${info.file.name} 上传失败!`);
+          message.error(t('upload.fail', { name: info.file.name }));
           props?.setLoading(false);
         }
       }}

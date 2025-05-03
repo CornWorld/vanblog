@@ -1,11 +1,12 @@
+import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { ProCard, StatisticCard } from '@ant-design/pro-components';
-import { Area, Pie } from '@ant-design/plots';
-import { Spin, Table } from 'antd';
+import { Spin } from 'antd';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { getWelcomeData } from '@/services/van-blog/api';
 import ArticleList from '@/components/ArticleList';
 import { getRecentTimeDes } from '@/services/van-blog/tool';
-import { Link } from '@/utils/umiCompat';
+import { Link } from '@/router';
 import TipTitle from '@/components/TipTitle';
 import '../index.less';
 import NumSelect from '@/components/NumSelect';
@@ -13,6 +14,7 @@ import { useNum } from '@/services/van-blog/useNum';
 import RcResizeObserver from 'rc-resize-observer';
 
 const Viewer = () => {
+  const { t } = useTranslation();
   const [data, setData] = useState();
   const [loading, setLoading] = useState(true);
   const [responsive, setResponsive] = useState(false);
@@ -71,14 +73,18 @@ const Viewer = () => {
                   target="_blank"
                   rel="noreferrer"
                 >
-                  百度统计
+                  {t('viewer.stat.baidu')}
                 </a>
               ),
               formatter: () => {
                 if (data?.enableBaidu) {
-                  return <span>已开启</span>;
+                  return <span>{t('viewer.stat.enabled')}</span>;
                 } else {
-                  return <Link to={`/admin/site/setting?siteInfoTab=more`}>未配置</Link>;
+                  return (
+                    <Link to={`/admin/site/setting?siteInfoTab=more`}>
+                      {t('viewer.stat.unconfigured')}
+                    </Link>
+                  );
                 }
               },
               status: data?.enableBaidu ? 'success' : 'error',
@@ -95,14 +101,18 @@ const Viewer = () => {
                   target="_blank"
                   rel="noreferrer"
                 >
-                  谷歌分析
+                  {t('viewer.stat.google')}
                 </a>
               ),
               formatter: () => {
                 if (data?.enableGA) {
-                  return <span>已开启</span>;
+                  return <span>{t('viewer.stat.enabled')}</span>;
                 } else {
-                  return <Link to={`/admin/site/setting?siteInfoTab=more`}>未配置</Link>;
+                  return (
+                    <Link to={`/admin/site/setting?siteInfoTab=more`}>
+                      {t('viewer.stat.unconfigured')}
+                    </Link>
+                  );
                 }
               },
               status: data?.enableGA ? 'success' : 'error',
@@ -112,7 +122,7 @@ const Viewer = () => {
             colSpan={responsive ? 24 : 6}
             statistic={{
               layout: responsive ? 'horizontal' : 'vertical',
-              title: '最近访问',
+              title: t('viewer.stat.recent_visit'),
               value: recentVisitTime,
             }}
           />
@@ -120,8 +130,8 @@ const Viewer = () => {
             colSpan={responsive ? 24 : 6}
             statistic={{
               layout: responsive ? 'horizontal' : 'vertical',
-              title: '最近访问路径',
-              formatter: (val) => {
+              title: t('viewer.stat.recent_path'),
+              formatter: () => {
                 return (
                   <a className="ua blue" target="_blank" rel="noreferrer" href={recentHref}>
                     {data?.siteLastVisitedPathname || '-'}
@@ -142,8 +152,8 @@ const Viewer = () => {
               layout: responsive ? 'horizontal' : 'vertical',
               title: (
                 <TipTitle
-                  title="总访客数"
-                  tip="以浏览器内缓存的唯一标识符为衡量标准计算全站独立访客的数量"
+                  title={t('viewer.stat.total_visitors')}
+                  tip={t('viewer.stat.total_visitors.tip')}
                 />
               ),
               value: data?.totalVisited || 0,
@@ -155,8 +165,8 @@ const Viewer = () => {
               layout: responsive ? 'horizontal' : 'vertical',
               title: (
                 <TipTitle
-                  title="总访问数"
-                  tip="以每一次页面的访问及跳转为衡量标准计算全站的访问数量"
+                  title={t('viewer.stat.total_views')}
+                  tip={t('viewer.stat.total_views.tip')}
                 />
               ),
               value: data?.totalViewer || 0,
@@ -168,8 +178,8 @@ const Viewer = () => {
               layout: responsive ? 'horizontal' : 'vertical',
               title: (
                 <TipTitle
-                  title="单篇最高访客数"
-                  tip="以浏览器内缓存的唯一标识符为衡量标准计算出单篇文章最高的独立访客数"
+                  title={t('viewer.stat.max_article_visitors')}
+                  tip={t('viewer.stat.max_article_visitors.tip')}
                 />
               ),
               value: data?.maxArticleVisited || 0,
@@ -181,8 +191,8 @@ const Viewer = () => {
               layout: responsive ? 'horizontal' : 'vertical',
               title: (
                 <TipTitle
-                  title="单篇最高访问量"
-                  tip="以每一次页面的访问及跳转为衡量标准计算出单篇文章最高的访问量"
+                  title={t('viewer.stat.max_article_views')}
+                  tip={t('viewer.stat.max_article_views.tip')}
                 />
               ),
               value: data?.maxArticleViewer || 0,
@@ -203,8 +213,8 @@ const Viewer = () => {
             <StatisticCard
               title={
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <div>最近访问TOP</div>
-                  <NumSelect d="条" value={num} setValue={setNum} />
+                  <div>{t('viewer.chart.recent_visit_top')}</div>
+                  <NumSelect d="numselect.unit.item" value={num} setValue={setNum} />
                 </div>
               }
               className="card-full-title"
@@ -219,8 +229,8 @@ const Viewer = () => {
             <StatisticCard
               title={
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <div>文章访问量TOP</div>
-                  <NumSelect d="条" value={num} setValue={setNum} />
+                  <div>{t('viewer.chart.article_views_top')}</div>
+                  <NumSelect d="numselect.unit.item" value={num} setValue={setNum} />
                 </div>
               }
               className="card-full-title"

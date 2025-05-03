@@ -1,12 +1,16 @@
+import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { publishDraft } from '@/services/van-blog/api';
 import { ModalForm, ProFormSelect, ProFormText } from '@ant-design/pro-components';
 import { message, Modal } from 'antd';
+
 export default function (props) {
-  const { title, id, trigger, action, onFinish } = props;
+  const { t } = useTranslation();
+  const { title, id, trigger, action } = props;
   return (
     <>
       <ModalForm
-        title={`发布草稿: ${title}`}
+        title={t('publish.modal.title', { title: title })}
         key="publishModal"
         trigger={trigger}
         width={450}
@@ -15,8 +19,8 @@ export default function (props) {
         onFinish={async (values) => {
           if (location.hostname == 'blog-demo.mereith.com') {
             Modal.info({
-              title: '演示站禁止新建文章！',
-              content: '本来是可以的，但有个人在演示站首页放黄色信息，所以关了这个权限了。',
+              title: t('publish.modal.demo.title'),
+              content: t('publish.modal.demo.content'),
             });
             return;
           }
@@ -25,7 +29,7 @@ export default function (props) {
             password: values.pc,
             top: values.Ctop,
           });
-          message.success('发布成功！');
+          message.success(t('publish.message.success'));
           if (action && action.reload) {
             action.reload();
           }
@@ -41,27 +45,27 @@ export default function (props) {
           width="md"
           name="private"
           id="private"
-          label="是否加密"
-          placeholder="是否加密"
+          label={t('publish.field.private')}
+          placeholder={t('publish.field.private.placeholder')}
           request={async () => {
             return [
               {
-                label: '否',
+                label: t('publish.field.option.no'),
                 value: false,
               },
               {
-                label: '是',
+                label: t('publish.field.option.yes'),
                 value: true,
               },
             ];
           }}
         />
         <ProFormText
-          label="置顶优先级"
+          label={t('publish.field.toppriority')}
           width="md"
           id="top"
           name="Ctop"
-          placeholder="留空或0表示不置顶，其余数字越大表示优先级越高"
+          placeholder={t('publish.field.toppriority.placeholder')}
           autocomplete="new-password"
           fieldProps={{
             autocomplete: 'new-password',
@@ -71,17 +75,17 @@ export default function (props) {
           width="md"
           id="pathname"
           name="pathname"
-          label="自定义路径名"
-          tooltip="文章发布后的路径将为 /post/[自定义路径名]，如果未设置则使用文章 id 作为路径名"
-          placeholder="留空或为空则使用 id 作为路径名"
+          label={t('publish.field.pathname')}
+          tooltip={t('publish.field.pathname.tooltip')}
+          placeholder={t('publish.field.pathname.placeholder')}
         />
         <ProFormText.Password
-          label="密码"
+          label={t('publish.field.password')}
           width="md"
           autocomplete="new-password"
           id="password"
           name="pc"
-          placeholder="请输入密码"
+          placeholder={t('publish.field.password.placeholder')}
           dependencies={['private']}
           fieldProps={{
             autocomplete: 'new-password',
@@ -91,16 +95,16 @@ export default function (props) {
           width="md"
           name="hidden"
           id="hidden"
-          label="是否隐藏"
-          placeholder="是否隐藏"
+          label={t('publish.field.hidden')}
+          placeholder={t('publish.field.hidden.placeholder')}
           request={async () => {
             return [
               {
-                label: '否',
+                label: t('publish.field.option.no'),
                 value: false,
               },
               {
-                label: '是',
+                label: t('publish.field.option.yes'),
                 value: true,
               },
             ];
@@ -110,9 +114,9 @@ export default function (props) {
           width="md"
           id="copyright"
           name="copyright"
-          label="版权声明"
-          tooltip="设置后会替换掉文章页底部默认的版权声明文字，留空则根据系统设置中的相关选项进行展示"
-          placeholder="设置后会替换掉文章底部默认的版权"
+          label={t('publish.field.copyright')}
+          tooltip={t('publish.field.copyright.tooltip')}
+          placeholder={t('publish.field.copyright.placeholder')}
         />
       </ModalForm>
     </>

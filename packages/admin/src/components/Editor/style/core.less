@@ -1,0 +1,59 @@
+// 编辑器核心样式
+// 包含编辑器组件自身的基础样式
+
+// 导入主题变量
+@import url('../../../theme-variables.less');
+
+// 核心编辑器容器
+.editor-container {
+  border: 1px solid var(--editor-border, #eee);
+  border-radius: 4px;
+  box-sizing: border-box;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  padding: 0;
+  width: 100%;
+
+  // 暗色主题变体
+  &.dark {
+    background-color: var(--editor-bg, #1f1f1f);
+    border-color: #333;
+  }
+
+  // 添加底部边框代替页脚
+  &::after {
+    background-color: #e8e8e8;
+    bottom: 0;
+    content: '';
+    display: block;
+    height: 1px;
+    left: 0;
+    position: fixed;
+    right: 0;
+  }
+}
+
+// 编辑器包装器
+.editor-wrapper {
+  box-sizing: border-box;
+  height: 100% !important;
+  margin: 0 !important;
+  overflow: hidden;
+  padding: 0 !important;
+  width: 100%;
+}
+
+// 编辑器控制样式
+.editor-controls {
+  margin-bottom: 10px;
+}
+
+// Toast UI编辑器覆盖
+.toastui-editor-defaultUI {
+  border: 1px solid #e0e0e0;
+}
+
+.dark .toastui-editor-defaultUI {
+  border-color: #444;
+}

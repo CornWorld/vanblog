@@ -1,9 +1,12 @@
+import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { deleteLink, getLink, updateLink } from '@/services/van-blog/api';
 import { EditableProTable } from '@ant-design/pro-components';
 import { Modal, Spin } from 'antd';
 import { useRef, useState } from 'react';
 
 export default function () {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [editableKeys, setEditableRowKeys] = useState([]);
   const actionRef = useRef();
@@ -15,54 +18,54 @@ export default function () {
   };
   const columns = [
     {
-      title: '伙伴名',
+      title: t('link.column.name'),
       dataIndex: 'name',
-      formItemProps: (form, { rowIndex }) => {
+      formItemProps: () => {
         return {
-          rules: [{ required: true, message: '此项为必填项' }],
+          rules: [{ required: true, message: t('link.message.required') }],
         };
       },
     },
     {
-      title: '地址',
+      title: t('link.column.url'),
       dataIndex: 'url',
-      formItemProps: (form, { rowIndex }) => {
+      formItemProps: () => {
         return {
-          rules: [{ required: true, message: '此项为必填项' }],
+          rules: [{ required: true, message: t('link.message.required') }],
         };
       },
     },
     {
-      title: '简介',
+      title: t('link.column.desc'),
       dataIndex: 'desc',
-      formItemProps: (form, { rowIndex }) => {
+      formItemProps: () => {
         return {
-          rules: [{ required: true, message: '此项为必填项' }],
+          rules: [{ required: true, message: t('link.message.required') }],
         };
       },
     },
     {
-      title: 'Logo',
+      title: t('link.column.logo'),
       dataIndex: 'logo',
-      formItemProps: (form, { rowIndex }) => {
+      formItemProps: () => {
         return {
-          rules: [{ required: true, message: '此项为必填项' }],
+          rules: [{ required: true, message: t('link.message.required') }],
         };
       },
     },
     {
-      title: '最后设置时间',
+      title: t('link.column.updatedAt'),
       valueType: 'date',
       editable: false,
       dataIndex: 'updatedAt',
-      formItemProps: (form, { rowIndex }) => {
+      formItemProps: () => {
         return {
-          rules: [{ required: true, message: '此项为必填项' }],
+          rules: [{ required: true, message: t('link.message.required') }],
         };
       },
     },
     {
-      title: '操作',
+      title: t('link.column.actions'),
       valueType: 'option',
       key: 'option',
       width: 200,
@@ -73,7 +76,7 @@ export default function () {
             action?.startEditable?.(record.name);
           }}
         >
-          编辑
+          {t('link.action.edit')}
         </a>,
         <a
           key="delete"
@@ -83,11 +86,11 @@ export default function () {
                 await deleteLink(record.name);
                 action?.reload();
               },
-              title: `确认删除"${record.name}"吗?`,
+              title: t('link.modal.deleteConfirm', { name: record.name }),
             });
           }}
         >
-          删除
+          {t('link.action.delete')}
         </a>,
       ],
     },
@@ -97,7 +100,7 @@ export default function () {
       <Spin spinning={loading}>
         <EditableProTable
           rowKey="key"
-          headerTitle="友情链接"
+          headerTitle={t('link.table.header')}
           actionRef={actionRef}
           scroll={{
             x: 960,
@@ -119,9 +122,9 @@ export default function () {
           editable={{
             type: 'multiple',
             editableKeys,
-            onSave: async (rowKey, data, row) => {
+            onSave: async (rowKey, data) => {
               if (location.hostname == 'blog-demo.mereith.com') {
-                Modal.info({ title: '演示站禁止修改此项！' });
+                Modal.info({ title: t('link.modal.demoRestriction') });
                 return;
               }
               const toSaveObj = {
@@ -131,7 +134,6 @@ export default function () {
                 desc: data.desc,
               };
               await updateLink(toSaveObj);
-              // await waitTime(500);
               actionRef?.current?.reload();
             },
             onChange: setEditableRowKeys,

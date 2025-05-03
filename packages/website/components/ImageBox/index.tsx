@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, CSSProperties } from 'react';
 import m from 'medium-zoom';
 import imgBoxPlaceholder from '../../public/img-box-placeholder.png';
+import { useTranslation } from 'next-i18next';
 
 export default function ImageBox(props: {
   src: string;
@@ -16,6 +17,8 @@ export default function ImageBox(props: {
   const [error, setError] = useState(false);
   const imgRef = useRef<HTMLImageElement>(null);
   const hasInitRef = useRef(false);
+  const { t } = useTranslation();
+
   useEffect(() => {
     if (!error) {
       if (imgRef.current && !hasInitRef.current) {
@@ -54,7 +57,7 @@ export default function ImageBox(props: {
         width={props.width}
         height={props.height}
         style={props.style}
-        title={`图片加载失败: ${props.src}`}
+        title={t('image.loadFailed', '图片加载失败: {{src}}', { src: props.src })}
         loading={props.lazyLoad ? 'lazy' : undefined}
       />
     );

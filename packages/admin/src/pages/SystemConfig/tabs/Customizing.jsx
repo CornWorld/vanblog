@@ -1,15 +1,21 @@
+import React from 'react';
+import { useTranslation } from 'react-i18next';
 import CodeEditor from '@/components/CodeEditor';
 import { getLayoutConfig, updateLayoutConfig } from '@/services/van-blog/api';
 import { useTab } from '@/services/van-blog/useTab';
 import { Button, Card, message, Modal, Spin } from 'antd';
 import { useCallback, useEffect, useRef, useState } from 'react';
-const helpMap = {
-  css: '自定义 css 会把您写入的 css 代码作为 <style> 标签插入到前台页面中的 <head> 中。',
-  script: '自定义 script 会把您写入的 script 代码作为 <script> 标签插入到前台页面的最下方。',
-  html: '自定义 html 会把您写入的 html 代码插入到前台页面 body 标签中的下方。是静态化的，首屏源代码即存在。',
-  head: '自定义 html 会把您写入的 html 代码插入到前台页面的 head 标签中的下方。是静态化的，首屏源代码即存在，可以用于网站所有权验证。',
-};
+
 export default function () {
+  const { t } = useTranslation();
+
+  const helpMap = {
+    css: t('customizing.help.css'),
+    script: t('customizing.help.script'),
+    html: t('customizing.help.html'),
+    head: t('customizing.help.head'),
+  };
+
   const [tab, setTab] = useTab('css', 'customTab');
   const [loading, setLoading] = useState(true);
   const [values, setValues] = useState({
@@ -31,25 +37,25 @@ export default function () {
           head: data?.head || '',
         });
       }
-    } catch (err) {
-      throw err;
+    } catch (error) {
+      console.error('Failed to fetch layout config:', error);
+      message.error('Failed to fetch customization settings');
     } finally {
       setLoading(false);
     }
   }, [setValues, setLoading]);
   const handleSave = async () => {
     Modal.confirm({
-      title: '保存确认',
-      content:
-        '在保存前请确认代码的正确性,有问题的代码可能导致前台报错！如不生效，请检查是否在站点配置/布局设置中打开了客制化功能。',
+      title: t('customizing.modal.save.title'),
+      content: t('customizing.modal.save.content'),
       onOk: async () => {
         setLoading(true);
         try {
           await updateLayoutConfig(values);
-          setLoading(false);
-          message.success('更新成功！');
-        } catch (err) {
-          throw err;
+          message.success(t('customizing.message.update.success'));
+        } catch (error) {
+          console.error('Failed to update layout config:', error);
+          message.error('Failed to save customization settings');
         } finally {
           setLoading(false);
         }
@@ -58,11 +64,11 @@ export default function () {
   };
   const handleReset = async () => {
     fetchData();
-    message.success('重置成功！');
+    message.success(t('customizing.message.reset.success'));
   };
   const handleHelp = () => {
     Modal.info({
-      title: '帮助',
+      title: t('customizing.modal.help.title'),
       content: (
         <div>
           <p>{helpMap[tab]}</p>
@@ -71,7 +77,7 @@ export default function () {
             href="https://vanblog.mereith.com/feature/advance/customizing.html"
             rel="noreferrer"
           >
-            帮助文档
+            {t('customizing.modal.help.doc')}
           </a>
         </div>
       ),
@@ -90,19 +96,19 @@ export default function () {
   const tabList = [
     {
       key: 'css',
-      tab: '自定义 CSS',
+      tab: t('customizing.tab.css'),
     },
     {
       key: 'script',
-      tab: '自定义 Script',
+      tab: t('customizing.tab.script'),
     },
     {
       key: 'html',
-      tab: '自定义 HTML (body)',
+      tab: t('customizing.tab.html'),
     },
     {
       key: 'head',
-      tab: '自定义 HTML (head)',
+      tab: t('customizing.tab.head'),
     },
   ];
   return (
@@ -116,13 +122,13 @@ export default function () {
         className="card-body-full"
         actions={[
           <Button type="link" key="save" onClick={handleSave}>
-            保存
+            {t('customizing.button.save')}
           </Button>,
           <Button type="link" key="reset" onClick={handleReset}>
-            重置
+            {t('customizing.button.reset')}
           </Button>,
           <Button type="link" key="help" onClick={handleHelp}>
-            帮助
+            {t('customizing.button.help')}
           </Button>,
         ]}
       >

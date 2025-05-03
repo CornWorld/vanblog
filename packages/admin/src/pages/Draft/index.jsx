@@ -1,3 +1,5 @@
+import React from 'react';
+import { useTranslation } from 'react-i18next';
 import ImportDraftModal from '@/components/ImportDraftModal';
 import NewDraftModal from '@/components/NewDraftModal';
 import { getDraftsByOption } from '@/services/van-blog/api';
@@ -5,11 +7,13 @@ import { useNum } from '@/services/van-blog/useNum';
 import { PageContainer, ProTable } from '@ant-design/pro-components';
 import RcResizeObserver from 'rc-resize-observer';
 import { useMemo, useRef, useState } from 'react';
-import { history } from '@/utils/umiCompat';
-import { columns, draftKeysObj, draftKeysObjSmall } from './columes';
-import { Button, Space, message } from 'antd';
+import { history } from '@/router';
+import { getColumns, draftKeysObj, draftKeysObjSmall } from './columes';
+import { Space, message } from 'antd';
 import { batchExport, batchDelete } from '@/services/van-blog/batch';
+
 export default () => {
+  const { t } = useTranslation();
   const actionRef = useRef();
   const [colKeys, setColKeys] = useState(draftKeysObj);
   const [simplePage, setSimplePage] = useState(false);
@@ -45,7 +49,7 @@ export default () => {
         }}
       >
         <ProTable
-          columns={columns}
+          columns={getColumns({ t })}
           actionRef={actionRef}
           cardBordered
           rowSelection={{
@@ -58,12 +62,12 @@ export default () => {
                 <a
                   onClick={async () => {
                     await batchDelete(selectedRowKeys, true);
-                    message.success('批量删除成功！');
+                    message.success(t('draft.message.batch_delete.success'));
                     actionRef.current.reload();
                     onCleanSelected();
                   }}
                 >
-                  批量删除
+                  {t('draft.action.batch_delete')}
                 </a>
                 <a
                   onClick={() => {
@@ -71,13 +75,13 @@ export default () => {
                     onCleanSelected();
                   }}
                 >
-                  批量导出
+                  {t('draft.action.batch_export')}
                 </a>
-                <a onClick={onCleanSelected}>取消选择</a>
+                <a onClick={onCleanSelected}>{t('draft.action.cancel_select')}</a>
               </Space>
             );
           }}
-          request={async (params = {}, sort, filter) => {
+          request={async (params = {}, sort) => {
             const option = {};
             if (sort.createdAt) {
               if (sort.createdAt == 'ascend') {
@@ -164,7 +168,7 @@ export default () => {
             simple: simplePage,
           }}
           dateFormatter="string"
-          headerTitle={simpleSearch ? undefined : '草稿管理'}
+          headerTitle={simpleSearch ? undefined : t('draft.title')}
           options={simpleSearch ? false : true}
           toolBarRender={() => [
             <NewDraftModal
@@ -178,7 +182,7 @@ export default () => {
               key="importDraftMarkdown"
               onFinish={() => {
                 actionRef?.current?.reload();
-                message.success('导入成功！');
+                message.success(t('draft.message.import.success'));
               }}
             />,
           ]}

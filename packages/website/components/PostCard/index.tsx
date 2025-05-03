@@ -1,17 +1,21 @@
-import Link from "next/link";
-import { useMemo, useState } from "react";
-import AlertCard from "../AlertCard";
-import CopyRight from "../CopyRight";
-import Reward from "../Reward";
-import TopPinIcon from "../TopPinIcon";
-import UnLockCard from "../UnLockCard";
-import WaLine from "../WaLine";
-import { PostBottom } from "./bottom";
-import { SubTitle, Title } from "./title";
-import { getTarget } from "../Link/tools";
-import TocMobile from "../TocMobile";
-import { hasToc } from "../../utils/hasToc";
-import Markdown from "../Markdown";
+import Link from 'next/link';
+import { useMemo, useState } from 'react';
+import AlertCard from '../AlertCard';
+import CopyRight from '../CopyRight';
+import Reward from '../Reward';
+import TopPinIcon from '../TopPinIcon';
+import UnLockCard from '../UnLockCard';
+import WaLine from '../WaLine';
+import { PostBottom } from './bottom';
+import { SubTitle, Title } from './title';
+import TocMobile from '../TocMobile';
+import { hasToc } from '../../utils/hasToc';
+import Markdown from '../Markdown';
+import { useTranslation } from 'next-i18next';
+
+const getTarget = (newTab: boolean) => {
+  return newTab ? '_blank' : '_self';
+};
 
 export default function (props: {
   id: number | string;
@@ -21,14 +25,14 @@ export default function (props: {
   catelog: string;
   content: string;
   setContent: (content: string) => void;
-  type: "overview" | "article" | "about";
+  type: 'overview' | 'article' | 'about';
   pay?: string[];
   payDark?: string[];
   author?: string;
   tags?: string[];
   next?: { id: number; title: string; pathname?: string };
   pre?: { id: number; title: string; pathname?: string };
-  enableComment: "true" | "false";
+  enableComment: 'true' | 'false';
   top: number;
   private: boolean;
   showDonateInAbout?: boolean;
@@ -40,7 +44,8 @@ export default function (props: {
   showExpirationReminder: boolean;
   showEditButton: boolean;
 }) {
-  const [lock, setLock] = useState(props.type != "overview" && props.private);
+  const { t } = useTranslation();
+  const [lock, setLock] = useState(props.type != 'overview' && props.private);
   const { content, setContent } = props;
   const showDonate = useMemo(() => {
     if (lock) {
@@ -52,41 +57,41 @@ export default function (props: {
     if (!props.pay || props.pay.length <= 0) {
       return false;
     }
-    if (props.type == "article") {
+    if (props.type == 'article') {
       return true;
     }
-    if (props.type == "about" && props.showDonateInAbout) {
+    if (props.type == 'about' && props.showDonateInAbout) {
       return true;
     }
     return false;
   }, [props, lock]);
 
   const calContent = useMemo(() => {
-    if (props.type == "overview") {
+    if (props.type == 'overview') {
       if (props.private) {
-        return "该文章已加密，点击 `阅读全文` 并输入密码后方可查看。";
+        return t('post.privateContent');
       }
-      const r = content.split("<!-- more -->");
+      const r = content.split('<!-- more -->');
       if (r.length > 1) {
         return r[0];
       } else {
         return content.substring(0, 50);
       }
     } else {
-      return content.replace("<!-- more -->", "");
+      return content.replace('<!-- more -->', '');
     }
-  }, [props, lock, content]);
+  }, [props, lock, content, t]);
 
   const showToc = useMemo(() => {
     if (!hasToc(props.content)) return false;
-    if (props.type == "article") return true;
+    if (props.type == 'article') return true;
     return false;
   }, [props.type, props.content]);
 
   return (
     <div className="post-card-wrapper">
       <div
-        style={{ position: "relative" }}
+        style={{ position: 'relative' }}
         id="post-card"
         className="overflow-hidden post-card bg-white card-shadow py-4 px-1 sm:px-3 md:py-6 md:px-5 dark:bg-dark  dark:nav-shadow-dark"
       >
@@ -109,7 +114,7 @@ export default function (props: {
           enableComment={props.enableComment}
         />
         <div className="text-sm md:text-base  text-gray-600 mt-4 mx-2">
-          {props.type == "article" && (
+          {props.type == 'article' && (
             <AlertCard
               showExpirationReminder={props.showExpirationReminder}
               updatedAt={props.updatedAt}
@@ -117,11 +122,7 @@ export default function (props: {
             ></AlertCard>
           )}
           {lock ? (
-            <UnLockCard
-              setLock={setLock}
-              setContent={setContent}
-              id={props.id}
-            />
+            <UnLockCard setLock={setLock} setContent={setContent} id={props.id} />
           ) : (
             <>
               {showToc && <TocMobile content={calContent} />}
@@ -130,32 +131,29 @@ export default function (props: {
           )}
         </div>
 
-        {props.type == "overview" && (
+        {props.type == 'overview' && (
           <div className="w-full flex justify-center mt-4 ">
-            <Link
-              href={`/post/${props.id}`}
-              target={getTarget(props.openArticleLinksInNewWindow)}
-            >
+            <Link href={`/post/${props.id}`} target={getTarget(props.openArticleLinksInNewWindow)}>
               <div className=" dark:bg-dark dark:hover:bg-dark-light dark:hover:text-dark-r dark:border-dark dark:text-dark hover:bg-gray-800 hover:text-gray-50 border-2 border-gray-800 text-sm md:text-base text-gray-700 px-2 py-1 transition-all rounded">
-                阅读全文
+                {t('post.read')}
               </div>
             </Link>
           </div>
         )}
         {showDonate && props.pay && (
           <Reward
-            aliPay={(props?.pay as any)[0]}
-            weChatPay={(props?.pay as any)[1]}
-            aliPayDark={(props?.payDark || ["", ""])[0]}
-            weChatPayDark={(props?.payDark || ["", ""])[1]}
-            author={props.author as any}
+            aliPay={props.pay[0] || ''}
+            weChatPay={props.pay[1] || ''}
+            aliPayDark={props.payDark?.[0] || ''}
+            weChatPayDark={props.payDark?.[1] || ''}
+            author={props.author}
             id={props.id}
           ></Reward>
         )}
-        {props.type == "article" && !lock && !props?.hideCopyRight && (
+        {props.type == 'article' && !lock && !props?.hideCopyRight && (
           <CopyRight
             customCopyRight={props.customCopyRight}
-            author={props.author as any}
+            author={props.author}
             id={props.id}
             showDonate={showDonate}
             copyrightAggreement={props.copyrightAggreement}
@@ -172,13 +170,11 @@ export default function (props: {
         />
         <div
           style={{
-            height: props.type == "about" && !showDonate ? "16px" : "0",
+            height: props.type == 'about' && !showDonate ? '16px' : '0',
           }}
         ></div>
       </div>
-      {props.type != "overview" && (
-        <WaLine enable={props.enableComment} visible={true} />
-      )}
+      {props.type != 'overview' && <WaLine enable={props.enableComment} visible={true} />}
     </div>
   );
 }

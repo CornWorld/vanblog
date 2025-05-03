@@ -1,35 +1,29 @@
-import { useTab } from '@/services/van-blog/useTab';
-import { PageContainer } from '@ant-design/pro-layout';
-import '../Welcome/index.less';
-import Login from './tabs/Login';
-import Pipeline from './tabs/Pipeline';
-export default function () {
-  const tabMap = {
-    login: <Login />,
-    pipeline: <Pipeline />,
-  };
-  const [tab, setTab] = useTab('login', 'tab');
+import React from 'react';
+import { useTranslation } from 'react-i18next';
+import { PageContainer } from '@ant-design/pro-components';
+import { Tabs } from 'antd';
+import Login from './tabs/Login.jsx';
+import Pipeline from './tabs/Pipeline.jsx';
+import System from './tabs/System.tsx';
+
+export default () => {
+  const { t } = useTranslation();
 
   return (
-    <PageContainer
-      title={null}
-      extra={null}
-      header={{ title: null, extra: null, ghost: true }}
-      className="thinheader"
-      tabActiveKey={tab}
-      tabList={[
-        {
-          tab: '登录日志',
-          key: 'login',
-        },
-        {
-          tab: '系统日志',
-          key: 'pipeline',
-        },
-      ]}
-      onTabChange={setTab}
-    >
-      {tabMap[tab]}
+    <PageContainer title={t('log.page.title')}>
+      {' '}
+      {/* TODO */}
+      <Tabs defaultActiveKey="1">
+        <Tabs.TabPane tab={t('log.tabs.login')} key="1">
+          <Login />
+        </Tabs.TabPane>
+        <Tabs.TabPane tab={t('log.tabs.pipeline')} key="2">
+          <Pipeline />
+        </Tabs.TabPane>
+        <Tabs.TabPane tab={t('log.tabs.system')} key="3">
+          <System />
+        </Tabs.TabPane>
+      </Tabs>
     </PageContainer>
   );
-}
+};

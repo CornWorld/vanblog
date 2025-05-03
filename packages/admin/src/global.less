@@ -2,6 +2,9 @@
 
 /* @import 'antd/es/style/themes/default.less'; */
 
+/* 导入基于 CSS 变量的主题样式 */
+@import url('./theme-variables.less');
+
 /* Define screen breakpoints directly */
 @screen-xs: 480px;
 
@@ -49,7 +52,7 @@ body,
     }
 
     h1 {
-      color: #1890ff !important; /* Blue color for light theme */
+      color: var(--menu-item-active-text) !important; /* 使用变量代替硬编码颜色 */
       font-size: 18px !important;
       font-weight: bold !important;
       margin: 0 !important;
@@ -80,7 +83,7 @@ body,
 
   /* Custom bottom links styles */
   .custom-bottom-links {
-    border-top: 1px solid rgb(0 0 0 / 6%);
+    border-top: 1px solid var(--color-divider);
     margin-top: auto;
 
     // Remove excess padding to match main menu
@@ -104,71 +107,20 @@ body,
   }
 }
 
-/* Fix title color for dark themes */
-[data-theme='dark'],
-.ant-layout-sider-dark,
-.dark-theme-body {
-  .ant-pro-sider-logo h1 {
-    color: #1890ff !important; /* Brighter blue for dark theme */
-  }
-
-  /* Dark theme for custom bottom links */
-  .custom-bottom-links {
-    border-top: 1px solid rgb(255 255 255 / 8%);
-
-    // Make sure menu background matches sidebar in dark mode
-    .ant-menu {
-      background: transparent !important;
-    }
-  }
-
-  /* ByteMD dark theme styles */
-  .bytemd {
-    --bg-color: #141414 !important;
-    --border-color: #303030 !important;
-    --color: rgb(255 255 255 / 65%) !important;
-
-    border-color: #303030 !important;
-
-    .bytemd-toolbar {
-      background-color: #141414 !important;
-      border-color: #303030 !important;
-
-      .bytemd-toolbar-left {
-        color: rgb(255 255 255 / 65%) !important;
-
-        svg {
-          color: rgb(255 255 255 / 65%) !important;
-          fill: rgb(255 255 255 / 65%) !important;
-        }
-      }
-    }
-
-    .CodeMirror {
-      background-color: #141414 !important;
-      color: rgb(255 255 255 / 65%) !important;
-
-      .CodeMirror-cursor {
-        border-left-color: rgb(255 255 255 / 85%) !important;
-      }
-
-      .cm-s-default {
-        .cm-header,
-        .cm-variable-2,
-        .cm-comment,
-        .cm-link,
-        .cm-url,
-        .cm-string {
-          color: rgb(255 255 255 / 65%) !important;
-        }
-      }
-    }
-
-    .bytemd-preview {
-      background-color: #141414 !important;
-      color: rgb(255 255 255 / 65%) !important;
-    }
-  }
+/* 为组件添加过渡动画 */
+.ant-pro-card,
+.ant-layout-sider,
+.ant-menu,
+.ant-layout-content,
+.ant-card,
+.ant-table,
+.ant-form-item,
+.ant-input,
+.ant-btn {
+  transition:
+    background-color 0.3s ease-in-out,
+    border-color 0.3s ease-in-out,
+    color 0.3s ease-in-out !important;
 }
 
 /* Fix for collapsed logo */
@@ -286,23 +238,7 @@ ol {
 }
 
 .hover-gray:hover {
-  background-color: rgb(223 223 223);
-}
-
-.dark-switch[aria-checked='true'] {
-  background: rgb(23 114 180);
-
-  .ant-switch-handle::before {
-    background-color: rgb(36 37 37);
-  }
-}
-
-body .dark-switch {
-  background: black;
-
-  .ant-switch-handle::before {
-    background-color: rgb(162 162 162);
-  }
+  background-color: var(--menu-item-hover);
 }
 
 .editor-full {
@@ -386,14 +322,13 @@ body .ant-page-header-heading-title {
   cursor: pointer;
 
   :hover {
-    background-color: #f5f5f5;
+    background-color: var(--menu-item-hover);
   }
 }
 
 /* 滚动槽 */
 ::-webkit-scrollbar {
   border-radius: 4px;
-  // border-radius: 4px;
   height: 6px;
   width: 10px;
 }
@@ -429,41 +364,3 @@ img[src^='data:image/svg+xml'] {
   height: auto;
   width: auto;
 }
-
-.ant-layout-sider,
-.ant-menu,
-.ant-layout-content,
-.ant-card,
-.ant-table,
-.ant-form-item,
-.ant-input,
-.ant-btn {
-  transition:
-    background-color 0.3s ease-in-out,
-    border-color 0.3s ease-in-out,
-    color 0.3s ease-in-out !important;
-}
-
-/* Add specific class for dark theme links */
-.dark-theme-link {
-  color: rgb(255 255 255 / 90%) !important;
-
-  svg {
-    color: rgb(255 255 255 / 90%) !important;
-  }
-
-  span {
-    color: rgb(255 255 255 / 90%) !important;
-  }
-
-  &:hover {
-    color: #40a9ff !important;
-
-    svg,
-    span {
-      color: #40a9ff !important;
-    }
-  }
-}
-
-/* Add theme transition for better UX */

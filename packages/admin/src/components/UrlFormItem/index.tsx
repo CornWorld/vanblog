@@ -1,3 +1,5 @@
+import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { errorImg } from '@/assets/error';
 import { getImgLink } from '@/pages/ImageManage/components/tools';
 import { ProFormText } from '@ant-design/pro-form';
@@ -17,7 +19,7 @@ interface FormRef {
   setFieldsValue?: (values: Record<string, string>) => void;
 }
 
-export default function (props: {
+interface UrlFormItemProps {
   name: string;
   label: string;
   placeholder: string;
@@ -26,7 +28,10 @@ export default function (props: {
   isInit: boolean;
   isFavicon?: boolean;
   colProps?: { xs: number; sm: number };
-}) {
+}
+
+export default function UrlFormItem(props: UrlFormItemProps) {
+  const { t } = useTranslation();
   const [url, setUrl] = useState('');
   const handleOnChange = debounce((ev) => {
     const val = ev?.target?.value;
@@ -65,9 +70,9 @@ export default function (props: {
 
   const handleUploadFinish = (info: UploadInfo) => {
     if (info?.response?.data?.isNew) {
-      message.success(`${info.name} 上传成功!`);
+      message.success(t('url_form.success', { name: info.name }));
     } else {
-      message.warning(`${info.name} 已存在!`);
+      message.warning(t('url_form.exists', { name: info.name }));
     }
     const src = getImgLink(info?.response?.data?.src || '');
     setUrl(src);
@@ -91,20 +96,27 @@ export default function (props: {
         label={props.label}
         required={props.required}
         placeholder={props.placeholder}
-        tooltip="上传之前需要设置好图床哦，默认为本地图床。"
+        tooltip={t('url_form.tooltip')}
         fieldProps={{
           onChange: handleOnChange,
         }}
         colProps={props.colProps}
         extra={
           <div style={{ display: 'flex', marginTop: '10px' }}>
-            <Image src={url || ''} fallback={errorImg} height={100} width={100} />
+            <Image
+              src={url || 'error-image-placeholder'}
+              fallback={errorImg}
+              height={100}
+              width={100}
+            />
             <div style={{ marginLeft: 10 }}>
               <UploadBtn
-                setLoading={() => {}}
+                setLoading={() => {
+                  /* handle loading state if needed */
+                }}
                 muti={false}
                 crop={true}
-                text="上传图片"
+                text={t('url_form.upload_button')}
                 onFinish={handleUploadFinish}
                 url={dest}
                 accept=".png,.jpg,.jpeg,.webp,.jiff,.gif"
@@ -112,7 +124,7 @@ export default function (props: {
             </div>
           </div>
         }
-        rules={props.required ? [{ required: true, message: '这是必填项' }] : undefined}
+        rules={props.required ? [{ required: true, message: t('url_form.required') }] : undefined}
       />
     </>
   );

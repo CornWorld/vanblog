@@ -1,4 +1,5 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
+import i18next from 'i18next';
 import { Empty, Image, Spin } from 'antd';
 import { getImgLink } from './tools';
 import { StaticItem } from '../types';
@@ -14,31 +15,19 @@ interface SafeImgPageProps {
   displayMenu: (e: React.MouseEvent, item: StaticItem) => void;
 }
 
-export const SafeImgPage: React.FC<SafeImgPageProps> = ({
-  data,
-  loading,
-  total,
-  page,
-  pageSize,
-  handlePageChange,
-  responsive,
-  displayMenu,
-}) => {
+export const SafeImgPage: React.FC<SafeImgPageProps> = ({ data, loading, displayMenu }) => {
   const [shouldRender, setShouldRender] = useState(false);
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setShouldRender(true);
-    }, 500);
-    return () => clearTimeout(timer);
-  }, []);
+  setTimeout(() => {
+    setShouldRender(true);
+  }, 500);
 
   const handleClick = useCallback(
     (e: React.MouseEvent, item: StaticItem) => {
       e.preventDefault();
       displayMenu(e, item);
     },
-    [displayMenu]
+    [displayMenu],
   );
 
   if (!shouldRender) {
@@ -47,7 +36,7 @@ export const SafeImgPage: React.FC<SafeImgPageProps> = ({
 
   return (
     <Spin spinning={loading}>
-      {(!data || data.length === 0) && <Empty description="暂无图片" />}
+      {(!data || data.length === 0) && <Empty description={i18next.t('safeimgpage.empty')} />}
       <Image.PreviewGroup>
         {data.map((item) => (
           <Image
@@ -61,4 +50,4 @@ export const SafeImgPage: React.FC<SafeImgPageProps> = ({
       </Image.PreviewGroup>
     </Spin>
   );
-}; 
+};

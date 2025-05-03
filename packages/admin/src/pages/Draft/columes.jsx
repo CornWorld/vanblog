@@ -1,40 +1,46 @@
+import React from 'react';
 import ColumnsToolBar from '@/components/ColumnsToolBar';
 import PublishDraftModal from '@/components/PublishDraftModal';
 import UpdateModal from '@/components/UpdateModal';
 import { genActiveObj } from '@/services/van-blog/activeColTools';
 import { deleteDraft, getAllCategories, getDraftById, getTags } from '@/services/van-blog/api';
 import { parseObjToMarkdown } from '@/services/van-blog/parseMarkdownFile';
-import { message, Modal, Tag, Button, Skeleton, Space } from 'antd';
-import { history } from '@/utils/umiCompat';
-import PublishModal from '@/components/PublishDraftModal';
+import { message, Modal, Tag, Button } from 'antd';
+import { history } from '@/router';
 import { withoutKey } from '@/utils/props';
 
-export const columns = [
+export const draftKeys = ['category', 'id', 'option', 'showTime', 'tags', 'title'];
+export const draftKeysSmall = ['category', 'id', 'option', 'title'];
+
+export const draftKeysObj = genActiveObj(draftKeys, draftKeys);
+export const draftKeysObjSmall = genActiveObj(draftKeysSmall, draftKeys);
+
+export const getColumns = ({ t }) => [
   {
     dataIndex: 'id',
     valueType: 'number',
-    title: 'ID',
+    title: t('draft.column.id'),
     width: 48,
     search: false,
   },
   {
-    title: '标题',
+    title: t('draft.column.title'),
     dataIndex: 'title',
     copyable: true,
     ellipsis: true,
     width: 150,
-    tip: '标题过长会自动收缩',
+    tip: t('draft.column.title.tip'),
     formItemProps: {
       rules: [
         {
           required: true,
-          message: '此项为必填项',
+          message: t('draft.column.required'),
         },
       ],
     },
   },
   {
-    title: '分类',
+    title: t('draft.column.category'),
     dataIndex: 'category',
     width: 120,
     valueType: 'select',
@@ -49,10 +55,10 @@ export const columns = [
     },
   },
   {
-    title: '标签',
+    title: t('draft.column.tags'),
     dataIndex: 'tags',
     search: true,
-    fieldProps: { showSearch: true, placeholder: '请搜索或选择' },
+    fieldProps: { showSearch: true, placeholder: t('draft.column.tags.placeholder') },
     valueType: 'select',
     width: 120,
     renderFormItem: (item, { defaultRender }) => {
@@ -79,7 +85,7 @@ export const columns = [
     },
   },
   {
-    title: '创建时间',
+    title: t('draft.column.created_time'),
     key: 'showTime',
     dataIndex: 'createdAt',
     valueType: 'dateTime',
@@ -88,7 +94,7 @@ export const columns = [
     width: 150,
   },
   {
-    title: '创建时间',
+    title: t('draft.column.created_time'),
     dataIndex: 'createdAt',
     valueType: 'dateRange',
     hideInTable: true,
@@ -102,7 +108,7 @@ export const columns = [
     },
   },
   {
-    title: '操作',
+    title: t('draft.column.operation'),
     valueType: 'option',
     key: 'option',
     width: 120,
@@ -116,15 +122,14 @@ export const columns = [
                 history.push(`/editor?type=draft&id=${record.id}`);
               }}
             >
-              编辑
+              {t('draft.action.edit')}
             </a>,
-            ,
             <PublishDraftModal
               key="publishRecord1213"
               title={record.title}
               id={record.id}
               action={action}
-              trigger={<a key="publishRecord123">发布</a>}
+              trigger={<a key="publishRecord123">{t('draft.action.publish')}</a>}
             />,
           ]}
           nodes={[
@@ -149,31 +154,35 @@ export const columns = [
                 link.click();
               }}
             >
-              导出
+              {t('draft.action.export')}
             </a>,
-            <a
+            <Button
               key={'deleteDraft' + record.id}
+              type="link"
+              danger
               onClick={() => {
                 Modal.confirm({
-                  title: `确定删除草稿 "${record.title}" 吗？`,
+                  title: t('draft.modal.delete.title'),
+                  content: t('draft.modal.delete.content'),
+                  okText: t('draft.modal.delete.ok'),
+                  cancelText: t('draft.modal.delete.cancel'),
                   onOk: async () => {
-                    await deleteDraft(record.id);
-                    message.success('删除成功!');
-                    action?.reload();
+                    try {
+                      await deleteDraft(record.id);
+                      message.success(t('draft.message.delete.success'));
+                      action?.reload();
+                    } catch {
+                      message.error(t('draft.message.delete.error'));
+                    }
                   },
                 });
               }}
             >
-              删除
-            </a>,
+              {t('draft.action.delete')}
+            </Button>,
           ]}
-        ></ColumnsToolBar>
+        />
       );
     },
   },
 ];
-export const draftKeys = ['category', 'id', 'option', 'showTime', 'tags', 'title'];
-export const draftKeysSmall = ['category', 'id', 'option', 'title'];
-
-export const draftKeysObj = genActiveObj(draftKeys, draftKeys);
-export const draftKeysObjSmall = genActiveObj(draftKeysSmall, draftKeys);

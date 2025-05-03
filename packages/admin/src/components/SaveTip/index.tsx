@@ -1,15 +1,17 @@
+import React from 'react';
+import i18next from 'i18next';
 import { isMac, isMobileByScreenSize } from '@/services/van-blog/ua';
 import { useMemo } from 'react';
 
 export const SaveTip = () => {
   const text = useMemo(() => {
     if (isMobileByScreenSize()) {
-      return '保存';
+      return i18next.t('savetip.save');
     } else {
       if (isMac()) {
-        return '保存 ⌘ + S';
+        return i18next.t('savetip.save_mac');
       } else {
-        return '保存 Ctrl + S';
+        return i18next.t('savetip.save_win');
       }
     }
   }, []);

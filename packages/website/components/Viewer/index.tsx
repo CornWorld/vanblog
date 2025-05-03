@@ -1,11 +1,15 @@
-import { useContext } from "react";
-import { GlobalContext } from "../../utils/globalContext";
+import { useContext } from 'react';
+import { GlobalContext } from '../../utils/globalContext';
+import { useTranslation } from 'next-i18next';
+
 export default function () {
   const { state } = useContext(GlobalContext);
+  const { t } = useTranslation();
+
   // 全站浏览量统计
   return (
     <span className="flex justify-center items-center dark:text-dark fill-gray-600 divide-gray-600">
-      <span className="flex items-center justify-center pr-2">
+      <span className="flex items-center justify-center pr-2" title={t('stats.visited')}>
         <span>
           <svg
             viewBox="0 0 1024 1024"
@@ -20,10 +24,10 @@ export default function () {
               p-id="7212"
             ></path>
           </svg>
-        </span>{" "}
+        </span>{' '}
         {state.visited}
       </span>
-      <span className="flex items-center justify-center pl-2">
+      <span className="flex items-center justify-center pl-2" title={t('stats.viewer')}>
         <span>
           <svg
             viewBox="0 0 1024 1024"
@@ -33,10 +37,7 @@ export default function () {
             width="14"
             height="14"
           >
-            <path
-              d="M508 512m-112 0a112 112 0 1 0 224 0 112 112 0 1 0-224 0Z"
-              p-id="9715"
-            ></path>
+            <path d="M508 512m-112 0a112 112 0 1 0 224 0 112 112 0 1 0-224 0Z" p-id="9715"></path>
             <path
               d="M942.2 486.2C847.4 286.5 704.1 186 512 186c-192.2 0-335.4 100.5-430.2 300.3-7.7 16.2-7.7 35.2 0 51.5C176.6 737.5 319.9 838 512 838c192.2 0 335.4-100.5 430.2-300.3 7.7-16.2 7.7-35 0-51.5zM508 688c-97.2 0-176-78.8-176-176s78.8-176 176-176 176 78.8 176 176-78.8 176-176 176z"
               p-id="9716"

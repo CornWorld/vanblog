@@ -1,3 +1,5 @@
+import React from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   createCategory,
   deleteCategory,
@@ -9,127 +11,140 @@ import { PlusOutlined } from '@ant-design/icons';
 import { ModalForm, ProFormSelect, ProFormText, ProTable } from '@ant-design/pro-components';
 import { Button, message, Modal } from 'antd';
 import { useRef } from 'react';
-const columns = [
-  {
-    dataIndex: 'name',
-    title: '题目',
-    search: false,
-  },
-  {
-    title: '加密',
-    tooltip:
-      '分类加密后，此分类下的所有文章都会被加密。密码以分类的密码为准。加密后，访客仍可正常访问分类并获取文章列表。',
-    dataIndex: 'private',
-    search: false,
-    valueType: 'select',
-    valueEnum: {
-      [true]: {
-        text: '加密',
-        status: 'Error',
-      },
-      [false]: {
-        text: '未加密',
-        status: 'Success',
-      },
-    },
-  },
-  {
-    title: '操作',
-    valueType: 'option',
-    width: 200,
-    render: (text, record, _, action) => [
-      <a
-        key="viewCategory"
-        onClick={() => {
-          window.open(`/category/${encodeQuerystring(record.name)}`, '_blank');
-        }}
-      >
-        查看
-      </a>,
-      <ModalForm
-        key={`editCateoryC%{${record.name}}`}
-        title={`修改分类 "${record.name}"`}
-        trigger={<a key={'editC' + record.name}>修改</a>}
-        autoFocusFirstInput
-        initialValues={{
-          password: record.password,
-          private: record.private,
-        }}
-        submitTimeout={3000}
-        onFinish={async (values) => {
-          if (Object.keys(values).length == 0) {
-            message.error('无有效信息！请至少填写一个选项！');
-            return false;
-          }
-          if (values.private && !values.password) {
-            message.error('如若加密，请填写密码！');
-            return false;
-          }
 
-          Modal.confirm({
-            content: `确定修改分类 "${record.name}" 吗？改动将立即生效!`,
-            onOk: async () => {
-              await updateCategory(record.name, values);
-              message.success('提交成功');
-              action?.reload();
-              return true;
-            },
-          });
-
-          return true;
-        }}
-      >
-        <ProFormText width="md" name="name" label="分类名" placeholder="请输入新的分类名称" />
-        <ProFormSelect
-          width="md"
-          name="private"
-          label="是否加密"
-          placeholder="是否加密"
-          request={async () => {
-            return [
-              { label: '未加密', value: false },
-              { label: '加密', value: true },
-            ];
-          }}
-        />
-        <ProFormText.Password
-          width="md"
-          name="password"
-          label="密码"
-          placeholder="请输入加密密码"
-        />
-      </ModalForm>,
-
-      <a
-        key={'deleteCategoryC' + record.name}
-        onClick={() => {
-          Modal.confirm({
-            title: `确定删除分类 "${record.name}"吗？`,
-            onOk: async () => {
-              try {
-                await deleteCategory(record.name);
-                message.success('删除成功!');
-              } catch {}
-              action?.reload();
-            },
-          });
-          // action?.startEditable?.(record.id);
-        }}
-      >
-        删除
-      </a>,
-    ],
-  },
-];
 export default function () {
+  const { t } = useTranslation();
   const fetchData = async () => {
     const { data: res } = await getAllCategories(true);
-    return Array.isArray(res) ? res.map((item) => ({
-      key: item.id,
-      ...item,
-    })) : [];
+    return Array.isArray(res)
+      ? res.map((item) => ({
+          key: item.id,
+          ...item,
+        }))
+      : [];
   };
   const actionRef = useRef();
+
+  const columns = [
+    {
+      dataIndex: 'name',
+      title: t('category.column.name'),
+      search: false,
+    },
+    {
+      title: t('category.column.private'),
+      tooltip: t('category.column.private.tooltip'),
+      dataIndex: 'private',
+      search: false,
+      valueType: 'select',
+      valueEnum: {
+        [true]: {
+          text: t('category.status.private'),
+          status: 'Error',
+        },
+        [false]: {
+          text: t('category.status.public'),
+          status: 'Success',
+        },
+      },
+    },
+    {
+      title: t('category.column.actions'),
+      valueType: 'option',
+      width: 200,
+      render: (text, record, _, action) => [
+        <a
+          key="viewCategory"
+          onClick={() => {
+            window.open(`/category/${encodeQuerystring(record.name)}`, '_blank');
+          }}
+        >
+          {t('category.action.view')}
+        </a>,
+        <ModalForm
+          key={`editCateoryC%{${record.name}}`}
+          title={`${t('category.modal.edit.title')} "${record.name}"`}
+          trigger={<a key={'editC' + record.name}>{t('category.action.edit')}</a>}
+          autoFocusFirstInput
+          initialValues={{
+            password: record.password,
+            private: record.private,
+          }}
+          submitTimeout={3000}
+          onFinish={async (values) => {
+            if (Object.keys(values).length == 0) {
+              message.error(t('category.modal.edit.error.empty'));
+              return false;
+            }
+            if (values.private && !values.password) {
+              message.error(t('category.modal.edit.error.password'));
+              return false;
+            }
+
+            Modal.confirm({
+              content: `${t('category.modal.edit.confirm')} "${record.name}" ${t('category.modal.edit.confirm.suffix')}`,
+              onOk: async () => {
+                await updateCategory(record.name, values);
+                message.success(t('category.modal.edit.success'));
+                action?.reload();
+                return true;
+              },
+            });
+
+            return true;
+          }}
+        >
+          <ProFormText
+            width="md"
+            name="name"
+            label={t('category.form.name')}
+            placeholder={t('category.form.name.placeholder')}
+          />
+          <ProFormSelect
+            width="md"
+            name="private"
+            label={t('category.form.private')}
+            placeholder={t('category.form.private.placeholder')}
+            request={async () => {
+              return [
+                { label: t('category.status.public'), value: false },
+                { label: t('category.status.private'), value: true },
+              ];
+            }}
+          />
+          <ProFormText.Password
+            width="md"
+            name="password"
+            label={t('category.form.password')}
+            placeholder={t('category.form.password.placeholder')}
+          />
+        </ModalForm>,
+
+        <a
+          key={'deleteCategoryC' + record.name}
+          onClick={() => {
+            Modal.confirm({
+              title: `${t('category.modal.delete.title')} "${record.name}"吗？`,
+              onOk: async () => {
+                try {
+                  await deleteCategory(record.name);
+                  message.success(t('category.modal.delete.success'));
+                } catch (error) {
+                  console.error('Error deleting category:', error);
+                  message.error(t('category.modal.delete.error') || '删除分类失败');
+                }
+                action?.reload();
+              },
+            });
+            // action?.startEditable?.(record.id);
+          }}
+        >
+          {t('category.action.delete')}
+        </a>,
+      ],
+    },
+  ];
+
   return (
     <>
       <ProTable
@@ -137,16 +152,16 @@ export default function () {
         columns={columns}
         search={false}
         dateFormatter="string"
-        // headerTitle="分类"
+        // headerTitle=t('editor.header.category')
         actionRef={actionRef}
         options={false}
         toolBarRender={() => [
           <ModalForm
-            title="新建分类"
+            title={t('category.modal.new.title')}
             key="newCategoryN"
             trigger={
               <Button key="buttonCN" icon={<PlusOutlined />} type="primary">
-                新建分类
+                {t('category.button.new')}
               </Button>
             }
             width={450}
@@ -155,7 +170,7 @@ export default function () {
             onFinish={async (values) => {
               await createCategory(values);
               actionRef?.current?.reload();
-              message.success('新建分类成功！');
+              message.success(t('category.modal.new.success'));
               return true;
             }}
             layout="horizontal"
@@ -166,10 +181,10 @@ export default function () {
               required
               id="nameC"
               name="name"
-              label="分类名称"
+              label={t('category.form.name')}
               key="nameCCCC"
-              placeholder="请输入分类名称"
-              rules={[{ required: true, message: '这是必填项' }]}
+              placeholder={t('category.form.name.placeholder')}
+              rules={[{ required: true, message: t('category.form.required') }]}
             />
           </ModalForm>,
         ]}

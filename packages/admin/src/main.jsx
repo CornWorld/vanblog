@@ -1,4 +1,5 @@
 import '@ant-design/v5-patch-for-react-19';
+import './i18n';
 
 import React from 'react';
 import { createRoot } from 'react-dom/client';

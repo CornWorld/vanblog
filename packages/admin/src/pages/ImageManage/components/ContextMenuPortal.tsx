@@ -1,42 +1,61 @@
 import React from 'react';
 import { Menu, Item, useContextMenu } from 'react-contexify';
-import { MenuProps } from '../types';
-import 'react-contexify/dist/ReactContexify.css';
+import {
+  InfoCircleOutlined,
+  CopyOutlined,
+  DeleteOutlined,
+  SearchOutlined,
+  DownloadOutlined,
+} from '@ant-design/icons';
 
-export const ContextMenuPortal: React.FC<MenuProps> = ({ 
-  clickItem, 
-  showDelBtn, 
-  handleItemClick 
+interface ContextMenuPortalProps {
+  showDelBtn: boolean;
+  handleItemClick: (params: { data: string }) => void;
+}
+
+export const ContextMenuPortal: React.FC<ContextMenuPortalProps> = ({
+  showDelBtn,
+  handleItemClick,
 }) => {
-  const { show } = useContextMenu({
-    id: 'image-context-menu',
+  useContextMenu({
+    id: 'img-context-menu',
   });
 
   return (
-    <Menu id="image-context-menu">
-      <Item data="info" onClick={handleItemClick}>
-        详情
+    <Menu id="img-context-menu" animation={false}>
+      <Item onClick={() => handleItemClick({ data: 'info' })} id="info">
+        <InfoCircleOutlined style={{ marginRight: 8 }} />
+        图片信息
       </Item>
-      <Item data="copy" onClick={handleItemClick}>
-        复制链接
+      <Item onClick={() => handleItemClick({ data: 'copy' })} id="copy">
+        <CopyOutlined style={{ marginRight: 8 }} />
+        复制图片链接
       </Item>
-      <Item data="copyMarkdown" onClick={handleItemClick}>
-        复制为 Markdown
+      <Item onClick={() => handleItemClick({ data: 'copyMarkdown' })} id="copyMarkdown">
+        <CopyOutlined style={{ marginRight: 8 }} />
+        复制 Markdown
       </Item>
-      <Item data="copyMarkdownAbsolutely" onClick={handleItemClick}>
-        复制为绝对路径的 Markdown
+      <Item
+        onClick={() => handleItemClick({ data: 'copyMarkdownAbsolutely' })}
+        id="copyMarkdownAbsolutely"
+      >
+        <CopyOutlined style={{ marginRight: 8 }} />
+        复制绝对 Markdown
       </Item>
-      <Item data="download" onClick={handleItemClick}>
+      <Item onClick={() => handleItemClick({ data: 'download' })} id="download">
+        <DownloadOutlined style={{ marginRight: 8 }} />
         下载图片
       </Item>
-      <Item data="searchByLink" onClick={handleItemClick}>
-        查找引用此图片的文章
+      <Item onClick={() => handleItemClick({ data: 'searchByLink' })} id="searchByLink">
+        <SearchOutlined style={{ marginRight: 8 }} />
+        搜索文章引用
       </Item>
       {showDelBtn && (
-        <Item data="delete" onClick={handleItemClick}>
-          删除图片
+        <Item onClick={() => handleItemClick({ data: 'delete' })} id="delete">
+          <DeleteOutlined style={{ marginRight: 8 }} />
+          删除
         </Item>
       )}
     </Menu>
   );
-}; 
+};

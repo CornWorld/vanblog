@@ -1,15 +1,31 @@
+import React from 'react';
+import { useTranslation } from 'react-i18next';
 import TipTitle from '@/components/TipTitle';
 import { PageContainer } from '@ant-design/pro-layout';
-import ProTable from '@ant-design/pro-table';
+import ProTable, { ActionType } from '@ant-design/pro-table';
 import { Button, message, Modal, Space, Tag } from 'antd';
 import { getPiplelines, getPipelineConfig, deletePipelineById } from '@/services/van-blog/api';
 import PipelineModal from './components/PipelineModal';
 import { useEffect, useRef, useState } from 'react';
-import { history } from '@/utils/umiCompat';
+import { history } from '@/router';
+
+interface PipelineConfig {
+  eventName: string;
+  eventNameChinese: string;
+  passive: boolean;
+}
+
+interface Pipeline {
+  id: number;
+  name: string;
+  eventName: string;
+  enabled: boolean;
+}
 
 export default function () {
-  const [pipelineConfig, setPipelineConfig] = useState<any[]>([]);
-  const actionRef = useRef<any>();
+  const { t } = useTranslation();
+  const [pipelineConfig, setPipelineConfig] = useState<PipelineConfig[]>([]);
+  const actionRef = useRef<ActionType>();
 
   useEffect(() => {
     getPipelineConfig().then(({ data }) => {
@@ -21,44 +37,56 @@ export default function () {
     {
       dataIndex: 'id',
       valueType: 'number',
-      title: 'ID',
+      title: t('pipeline.column.id'),
       width: 48,
     },
     {
       dataIndex: 'name',
       valueType: 'text',
-      title: '名称',
+      title: t('pipeline.column.name'),
       width: 120,
     },
     {
-      title: '是否异步',
+      title: t('pipeline.column.is_async'),
       width: 60,
-      render: (_, record) => {
+      render: (_, record: Pipeline) => {
         const passive = pipelineConfig.find((item) => item.eventName === record.eventName)?.passive;
-        return <Tag children={passive ? '异步' : '阻塞'} color={passive ? 'green' : 'red'} />;
+        return (
+          <Tag
+            children={
+              passive ? t('pipeline.column.is_async.yes') : t('pipeline.column.is_async.no')
+            }
+            color={passive ? 'green' : 'red'}
+          />
+        );
       },
     },
     {
       dataIndex: 'eventName',
       valueType: 'text',
-      title: '触发事件',
+      title: t('pipeline.column.event'),
       width: 120,
-      render: (eventName) => {
+      render: (eventName: string) => {
         return pipelineConfig.find((item) => item.eventName === eventName)?.eventNameChinese;
       },
     },
     {
       dataIndex: 'enabled',
-      title: '状态',
+      title: t('pipeline.column.status'),
       width: 60,
       render: (enabled: boolean) => (
-        <Tag children={enabled ? '启用' : '禁用'} color={enabled ? 'green' : 'gray'} />
+        <Tag
+          children={
+            enabled ? t('pipeline.column.status.enabled') : t('pipeline.column.status.disabled')
+          }
+          color={enabled ? 'green' : 'gray'}
+        />
       ),
     },
     {
-      title: '操作',
+      title: t('pipeline.column.actions'),
       width: 180,
-      render: (_, record, action) => {
+      render: (_, record: Pipeline) => {
         return (
           <>
             <Space>
@@ -67,11 +95,11 @@ export default function () {
                   history.push('/code?type=pipeline&id=' + record.id);
                 }}
               >
-                编辑脚本
+                {t('pipeline.action.edit_script')}
               </a>
               <PipelineModal
                 mode="edit"
-                trigger={<a>修改信息</a>}
+                trigger={<a>{t('pipeline.action.edit_info')}</a>}
                 initialValues={record}
                 onFinish={() => {
                   actionRef.current?.reload();
@@ -81,17 +109,18 @@ export default function () {
               <a
                 onClick={async () => {
                   Modal.confirm({
-                    title: '确定删除该流水线吗？ ',
+                    title: t('pipeline.modal.delete.title'),
                     onOk: async () => {
                       await deletePipelineById(record.id);
-                      console.log(action);
-                      actionRef.current.reload();
-                      message.success('删除成功！');
+                      if (actionRef.current) {
+                        actionRef.current.reload();
+                      }
+                      message.success(t('pipeline.message.delete.success'));
                     },
                   });
                 }}
               >
-                删除
+                {t('pipeline.action.delete')}
               </a>
             </Space>
           </>
@@ -103,9 +132,7 @@ export default function () {
   return (
     <PageContainer
       header={{
-        title: (
-          <TipTitle title="流水线" tip="流水线允许用户在特定事件时，自动触发执行自定义代码。" />
-        ),
+        title: <TipTitle title={t('pipeline.title')} tip={t('pipeline.tip')} />,
       }}
       extra={
         <Button
@@ -113,7 +140,7 @@ export default function () {
             window.open('https://vanblog.mereith.com/features/pipeline.html', '_blank');
           }}
         >
-          帮助文档
+          {t('pipeline.button.docs')}
         </Button>
       }
     >
@@ -127,7 +154,7 @@ export default function () {
             <PipelineModal
               mode="create"
               key="createPipelineBtn1"
-              trigger={<Button type="primary">新建</Button>}
+              trigger={<Button type="primary">{t('pipeline.button.new')}</Button>}
               onFinish={() => {
                 action.reload();
               }}
@@ -138,11 +165,11 @@ export default function () {
                 history.push('/site/log?tab=pipeline');
               }}
             >
-              运行日志
+              {t('pipeline.button.logs')}
             </Button>,
           ];
         }}
-        headerTitle="流水线列表"
+        headerTitle={t('pipeline.table.title')}
         columns={columns}
         search={false}
         rowKey="id"

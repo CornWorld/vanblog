@@ -1,3 +1,5 @@
+import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { getWalineConfig, updateWalineConfig } from '@/services/van-blog/api';
 import {
   ProForm,
@@ -8,137 +10,166 @@ import {
 } from '@ant-design/pro-components';
 import { message, Modal } from 'antd';
 import { useState } from 'react';
-export default function (props: {}) {
-  const [enableEmail, setEnableEmail] = useState<any>(false);
+
+interface WalineConfig {
+  'smtp.enabled': boolean;
+  forceLoginComment: boolean;
+  webhook?: string;
+  'smtp.host'?: string;
+  'smtp.port'?: number;
+  'smtp.user'?: string;
+  'smtp.password'?: string;
+  authorEmail?: string;
+  'sender.name'?: string;
+  'sender.email'?: string;
+  otherConfig?: string;
+}
+
+export default function WalineForm() {
+  const { t } = useTranslation();
+  const [enableEmail, setEnableEmail] = useState<boolean>(false);
   return (
     <>
       <ProForm
         grid={true}
         layout={'horizontal'}
         labelCol={{ span: 6 }}
-        request={async (params) => {
-          const { data } = await getWalineConfig();
-          setEnableEmail(data?.['smtp.enabled'] || false);
-          if (!data) {
+        request={async () => {
+          try {
+            const { data } = await getWalineConfig();
+            setEnableEmail(data?.['smtp.enabled'] || false);
+            if (!data) {
+              return {
+                'smtp.enabled': false,
+                forceLoginComment: false,
+              };
+            }
+            return { ...data };
+          } catch (err) {
+            console.error('Failed to fetch Waline config:', err);
             return {
               'smtp.enabled': false,
               forceLoginComment: false,
             };
           }
-          return { ...data };
         }}
         syncToInitialValues={true}
-        onFinish={async (data) => {
+        onFinish={async (data: WalineConfig) => {
           if (location.hostname == 'blog-demo.mereith.com') {
-            Modal.info({ title: '演示站禁止修改 waline 配置！' });
+            Modal.info({ title: t('demo.restricted') });
             return;
           }
           if (data.otherConfig) {
             try {
               JSON.parse(data.otherConfig);
             } catch (err) {
-              Modal.info({ title: '自定义环境变量不是合法 JSON 格式！' });
+              console.error('JSON parse error:', err);
+              Modal.info({ title: t('json.invalid') });
               return;
             }
           }
           setEnableEmail(data?.['smtp.enabled'] || false);
-          await updateWalineConfig(data);
-          message.success('更新成功！');
+          try {
+            await updateWalineConfig(data);
+            message.success(t('update.success'));
+          } catch (err) {
+            console.error('Failed to update Waline config:', err);
+            message.error(t('caddy.update.error'));
+          }
         }}
       >
         <ProFormText
           name="webhook"
-          label="评论后的 webhook 地址"
-          tooltip={'收到评论后会向此地址发送一条携带评论信息的 HTTP 请求'}
-          placeholder="评论后的 webhook 地址"
+          label={t('webhook.label')}
+          tooltip={t('webhook.tooltip')}
+          placeholder={t('webhook.placeholder')}
         />
         <ProFormSelect
           fieldProps={{
             options: [
               {
-                label: '开启',
-                value: true as any,
+                label: t('login.option.enabled'),
+                value: true,
               },
               {
-                label: '关闭',
-                value: false as any,
+                label: t('login.option.disabled'),
+                value: false,
               },
             ],
           }}
           name="forceLoginComment"
-          label="是否强制登录后评论"
-          placeholder={'是否强制登录后评论，默认关闭'}
+          label={t('login.label')}
+          placeholder={t('login.placeholder')}
         ></ProFormSelect>
         <ProFormSelect
           fieldProps={{
-            onChange: (target) => {
-              console.log(target);
+            onChange: (target: boolean) => {
               setEnableEmail(target);
             },
             options: [
               {
-                label: '开启',
-                value: true as any,
+                label: t('login.option.enabled'),
+                value: true,
               },
               {
-                label: '关闭',
-                value: false as any,
+                label: t('login.option.disabled'),
+                value: false,
               },
             ],
           }}
           name="smtp.enabled"
-          label="是否启用邮件通知"
-          tooltip="启用后新评论会通知博主，被回复时会通知填写邮箱的被回复者"
-          placeholder={'默认关闭'}
+          label={t('email.label')}
+          tooltip={t('email.tooltip')}
+          placeholder={t('email.placeholder')}
         ></ProFormSelect>
         {enableEmail && (
           <>
             <ProFormText
               name="smtp.host"
-              label="SMTP 地址(host)"
-              tooltip={'发送邮件使用的 smtp 地址'}
-              placeholder="请输入发送邮件使用的 smtp 地址"
-              rules={[{ required: true, message: '这是必填项' }]}
+              label={t('smtp.host.label')}
+              tooltip={t('smtp.host.tooltip')}
+              placeholder={t('smtp.host.placeholder')}
+              rules={[{ required: true, message: t('field.required') }]}
             />
             <ProFormDigit
               name="smtp.port"
-              label="SMTP 端口号"
-              tooltip={'发送邮件使用的 smtp 端口号'}
-              placeholder="请输入发送邮件使用的 smtp 端口号"
-              rules={[{ required: true, message: '这是必填项' }]}
+              label={t('smtp.port.label')}
+              tooltip={t('smtp.port.tooltip')}
+              placeholder={t('smtp.port.placeholder')}
+              rules={[{ required: true, message: t('field.required') }]}
             />
             <ProFormText
               name="smtp.user"
-              label="SMTP 用户名"
-              tooltip={'发送邮件使用的 smtp 用户名'}
-              placeholder="请输入发送邮件使用的 smtp 用户名"
-              rules={[{ required: true, message: '这是必填项' }]}
+              label={t('smtp.user.label')}
+              tooltip={t('smtp.user.tooltip')}
+              placeholder={t('smtp.user.placeholder')}
+              rules={[{ required: true, message: t('field.required') }]}
             />
             <ProFormText.Password
               name="smtp.password"
-              label="SMTP 密码"
-              tooltip={'发送邮件使用的 smtp 密码'}
-              placeholder="请输入发送邮件使用的 smtp 密码"
-              rules={[{ required: true, message: '这是必填项' }]}
+              label={t('smtp.password.label')}
+              tooltip={t('smtp.password.tooltip')}
+              placeholder={t('smtp.password.placeholder')}
+              rules={[{ required: true, message: t('field.required') }]}
             />
             <ProFormText
               name="authorEmail"
-              label="博主邮箱"
-              tooltip={'用来通知博主有新评论'}
-              placeholder="用来通知博主有新评论"
-              rules={[{ required: true, message: '这是必填项' }]}
+              label={t('author.email.label')}
+              tooltip={t('author.email.tooltip')}
+              placeholder={t('author.email.placeholder')}
+              rules={[{ required: true, message: t('field.required') }]}
             />
             <ProFormText
               name="sender.name"
-              label="自定义发送邮件的发件人"
-              tooltip={'自定义发送邮件的发件人'}
-              placeholder="自定义发送邮件的发件人"
+              label={t('sender.name.label')}
+              tooltip={t('sender.name.tooltip')}
+              placeholder={t('sender.name.placeholder')}
             />
             <ProFormText
               name="sender.email"
-              label="自定义发送邮件的发件地址"
-              tooltip={'自定义发送邮件的发件地址'}
-              placeholder="自定义发送邮件的发件地址"
+              label={t('sender.email.label')}
+              tooltip={t('sender.email.tooltip')}
+              placeholder={t('sender.email.placeholder')}
             />
           </>
         )}
@@ -150,11 +181,11 @@ export default function (props: {}) {
               target={'_blank'}
               rel="norefferrer"
             >
-              自定义环境变量
+              {t('other.config.label')}
             </a>
           }
-          tooltip={'json 格式的键值对，会传递个 waline 作为环境变量'}
-          placeholder="json 格式的键值对，会传递个 waline 作为环境变量"
+          tooltip={t('other.config.tooltip')}
+          placeholder={t('other.config.placeholder')}
           fieldProps={{
             autoSize: {
               minRows: 10,

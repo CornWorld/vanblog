@@ -587,7 +587,7 @@ export async function deleteApiToken(id) {
   });
 }
 export async function getAllApiTokens() {
-  return request(`/api/admin/token`, {
+  return request('/api/admin/token', {
     method: 'GET',
   });
 }

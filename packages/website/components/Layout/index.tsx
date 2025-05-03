@@ -13,6 +13,7 @@ import { Toaster } from 'react-hot-toast';
 import Footer from '../Footer';
 import NavBarMobile from '../NavBarMobile';
 import LayoutBody from '../LayoutBody';
+import { useTranslation } from 'next-i18next';
 
 export default function Layout(props: {
   option: LayoutProps;
@@ -23,6 +24,7 @@ export default function Layout(props: {
   // console.log("css", props.option.customCss);
   // console.log("html", props.option.customHtml);
   // console.log("script", decode(props.option.customScript as string));
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const { current } = useRef({ hasInit: false });
   // Initialize theme with a default value that's safe for SSR
@@ -36,25 +38,25 @@ export default function Layout(props: {
   }, []);
 
   const handleClose = () => {
-    console.log('关闭或刷新页面');
+    console.log(t('console.closed'));
     localStorage.removeItem('saidHello');
   };
   useEffect(() => {
     if (!current.hasInit && !localStorage.getItem('saidHello')) {
       current.hasInit = true;
       localStorage.setItem('saidHello', 'true');
-      console.log('✨ Welcome to VanBlog Website ✨');
-      console.log('Version:', props?.option?.version || 'unknown');
+      console.log(t('console.welcome'));
+      console.log(t('console.version'), props?.option?.version || 'unknown');
       // console.log('Website:', 'https://vanblog.mereith.com');
-      console.log('GitHub:', 'https://github.com/CornWorld/vanblog');
-      console.log('!!!', 'This is a fork of VanBlog, and is not the official website.', '!!!');
-      console.log('If you like this project, please give it a star! 🌟');
+      console.log(t('console.githubMsg'), 'https://github.com/CornWorld/vanblog');
+      console.log('!!!', t('console.forkMsg'), '!!!');
+      console.log(t('console.starMsg'));
       window.onbeforeunload = handleClose;
     }
     return () => {
       document.body.style.overflow = 'auto';
     };
-  }, [props]);
+  }, [props, t]);
   return (
     <>
       <Head>

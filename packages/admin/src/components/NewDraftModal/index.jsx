@@ -1,3 +1,5 @@
+import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { createDraft, getAllCategories, getTags } from '@/services/van-blog/api';
 import {
   ModalForm,
@@ -8,14 +10,16 @@ import {
 import { Button } from 'antd';
 import dayjs from '@/utils/dayjs';
 import AuthorField from '../AuthorField';
+
 export default function (props) {
+  const { t } = useTranslation();
   const { onFinish } = props;
   return (
     <ModalForm
-      title="新建草稿"
+      title={t('new_draft.modal.title')}
       trigger={
         <Button key="button" type="primary">
-          新建草稿
+          {t('new_draft.button')}
         </Button>
       }
       width={450}
@@ -42,9 +46,9 @@ export default function (props) {
         required
         id="titleC"
         name="titleC"
-        label="文章标题"
-        placeholder="请输入标题"
-        rules={[{ required: true, message: '这是必填项' }]}
+        label={t('new_draft.field.title')}
+        placeholder={t('new_draft.field.title.placeholder')}
+        rules={[{ required: true, message: t('new_draft.field.required') }]}
       />
       <AuthorField />
       <ProFormSelect
@@ -52,8 +56,8 @@ export default function (props) {
         tokenSeparators={[',']}
         width="md"
         name="tagsC"
-        label="标签"
-        placeholder="请选择或输入标签"
+        label={t('new_draft.field.tags')}
+        placeholder={t('new_draft.field.tags.placeholder')}
         request={async () => {
           const msg = await getTags();
           return msg?.data?.map((item) => ({ label: item, value: item })) || [];
@@ -64,10 +68,10 @@ export default function (props) {
         required
         id="categoryC"
         name="categoryC"
-        label="分类"
-        tooltip="首次使用请先在站点管理-数据管理-分类管理中添加分类"
-        placeholder="请选择分类"
-        rules={[{ required: true, message: '这是必填项' }]}
+        label={t('new_draft.field.category')}
+        tooltip={t('new_draft.field.category.tooltip')}
+        placeholder={t('new_draft.field.category.placeholder')}
+        rules={[{ required: true, message: t('new_draft.field.required') }]}
         request={async () => {
           const { data: categories } = await getAllCategories();
           return categories?.map((e) => {
@@ -82,8 +86,8 @@ export default function (props) {
         width="md"
         name="createdAtC"
         id="createdAtC"
-        label="创建时间"
-        placeholder="不填默认为此刻"
+        label={t('new_draft.field.created_at')}
+        placeholder={t('new_draft.field.created_at.placeholder')}
         showTime={{
           defaultValue: dayjs('00:00:00', 'HH:mm:ss'),
         }}

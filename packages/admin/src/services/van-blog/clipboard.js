@@ -1,30 +1,41 @@
-import dayjs from '@/utils/dayjs';
-import copy from 'copy-to-clipboard';
-export async function getClipboardContents() {
+import { message } from 'antd';
+
+export const writeClipBoardText = (text, successMsg = '复制成功', failMsg = '复制失败') => {
   try {
-    const clipboardItems = await navigator.clipboard.read();
-    for (const clipboardItem of clipboardItems) {
+    navigator.clipboard.writeText(text);
+    message.success(successMsg);
+  } catch {
+    message.error(failMsg);
+  }
+};
+
+/**
+ * 从剪贴板获取内容（主要是图片文件）
+ * @returns {Promise<File|null>} 返回文件对象，如果没有找到图片则返回null
+ */
+export const getClipboardContents = async () => {
+  try {
+    // 使用Clipboard API读取剪贴板内容
+    const items = await navigator.clipboard.read();
+
+    // 遍历剪贴板项目
+    for (const clipboardItem of items) {
+      // 获取所有可用的MIME类型
       for (const type of clipboardItem.types) {
-        if (type.includes('image')) {
+        // 检查是否为图片类型
+        if (type.startsWith('image/')) {
+          // 获取该类型的Blob
           const blob = await clipboardItem.getType(type);
-          return new File(
-            [blob],
-            `clipboard-${dayjs().format('YYYY-MM-DD')}.${type.replace('image/', '')}`,
-          );
+          // 创建一个File对象
+          return new File([blob], `clipboard-image.${type.split('/')[1]}`, { type });
         }
       }
     }
-  } catch (err) {
-    console.error(err.name, err.message);
+
+    // 如果没有找到图片内容
+    return null;
+  } catch (error) {
+    console.error('Failed to read clipboard contents:', error);
     return null;
   }
-}
-export async function writeClipBoardText(str) {
-  try {
-    copy(str);
-    return true;
-  } catch (err) {
-    console.error('Failed to copy: ', err);
-    return false;
-  }
-}
+};

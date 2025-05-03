@@ -1,111 +1,86 @@
+@import url('../../components/Editor/style/index.less');
+
+// Apply border-box to all elements
+* {
+  box-sizing: border-box;
+}
+
 .editorContainer {
-  :global {
-    .ant-pro-page-container {
-      height: 100vh;
-      overflow: visible;
-
-      // Hide the footer
-      .ant-pro-footer-bar {
-        display: none !important;
-      }
-    }
-
-    // Remove all padding from container
-    .ant-pro-page-container-children-container,
-    .ant-pro-page-container-children-container {
-      height: calc(100vh - 120px);
-      margin: 0 !important;
-      padding: 0 !important;
-    }
-
-    // Target the Ant Design Pro grid content to remove padding
-    .ant-pro-grid-content {
-      margin: 0 !important;
-      padding: 0 !important;
-    }
-
-    // Main container styles
-    .ant-spin-nested-loading,
-    .ant-spin-container {
-      display: flex;
-      flex-direction: column;
-      height: 100%;
-    }
-
-    .editor-wrapper {
-      display: flex;
-      flex: 1;
-      flex-direction: column;
-      height: 100%;
-    }
-
-    .bytemd {
-      border: 1px solid #d9d9d9;
-      border-radius: 2px;
-      display: flex;
-      flex: 1;
-      flex-direction: column;
-      height: 100% !important;
-      margin: 0 !important;
-    }
-
-    .bytemd-toolbar {
-      border-bottom: 1px solid #d9d9d9;
-      flex: none;
-      position: relative;
-    }
-
-    .bytemd-body {
-      display: flex;
-      flex: 1 !important;
-      height: 100% !important;
-      min-height: 0;
-    }
-
-    .bytemd-split {
-      display: flex;
-      height: 100%;
-    }
-
-    .bytemd-editor {
-      display: flex;
-      flex: 1;
-      flex-direction: column;
-      height: 100% !important;
-      overflow: visible;
-    }
-
-    .CodeMirror {
-      flex: 1;
-      height: auto !important;
-      min-height: 300px !important;
-    }
-
-    .bytemd-preview {
-      flex: 1;
-      height: 100% !important;
-      overflow: auto;
-      padding: 0 8px;
-    }
-
-    // Fix for the emoji panel
-    .emoji-container {
-      background: var(--background-color, #fff);
-      border: 1px solid var(--border-color, #d9d9d9);
-      border-radius: 4px;
-      box-shadow: 0 2px 8px rgb(0 0 0 / 15%);
-      display: none;
-      position: fixed;
-      top: 40px;
-      z-index: 1050;
-
-      &.active {
-        display: block;
-      }
-
-      &.hidden {
-        display: none !important;
-      }
-    }
+  &::after {
+    background-color: #e8e8e8;
+    bottom: 0;
+    content: '';
+    display: block;
+    height: 1px;
+    left: 0;
+    position: fixed;
+    right: 0;
   }
+}
+
+.editorWrapper {
+  height: 100% !important;
+  overflow: hidden;
+  width: 100%;
+}
+
+// 页面容器特定修改
+.ant-pro-page-container {
+  height: 100vh;
+  overflow: hidden;
+}
+
+// 移除页面容器内容的水平内边距
+.ant-pro-page-container-children-content {
+  height: 100%;
+  padding: 0;
+}
+
+// 容器样式调整
+.ant-pro-page-container-children-content {
+  height: 100%;
+  padding: 0 !important;
+}
+
+// 移除容器内边距
+.ant-pro-page-container-children-container {
+  height: calc(100vh - 82px);
+  margin: 0 !important;
+  overflow: hidden;
+  padding: 0 !important;
+}
+
+// 移除网格内容内边距
+.ant-pro-grid-content {
+  margin: 0 !important;
+  overflow: hidden;
+  padding: 0 !important;
+}
+
+// 修复Spin组件
+.ant-spin-nested-loading,
+.ant-spin-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+// 隐藏页脚
+.ant-pro-footer-bar,
+.footer {
+  display: none !important;
+}
+
+// 隐藏页脚相关元素
+.ant-pro-layout-has-footer {
+  display: none;
+}
+
+// 确保内容不会溢出
+html,
+body,
+#root {
+  height: 100%;
+  overflow: hidden;
 }

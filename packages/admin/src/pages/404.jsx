@@ -1,17 +1,20 @@
 import { Button, Result } from 'antd';
-import { history } from '@/utils/umiCompat';
+import React from 'react';
+import { useTranslation } from 'react-i18next';
 
-const NoFoundPage = () => (
-  <Result
-    status="404"
-    title="404"
-    subTitle="Sorry, the page you visited does not exist."
-    extra={
-      <Button type="primary" onClick={() => history.push('/')}>
-        Back Home
-      </Button>
-    }
-  />
-);
+export default () => {
+  const { t } = useTranslation();
 
-export default NoFoundPage;
+  return (
+    <Result
+      status="404"
+      title={t('error.404.title')}
+      subTitle={t('error.404.subtitle')}
+      extra={
+        <Button type="primary" href="/">
+          {t('error.404.button')}
+        </Button>
+      }
+    />
+  );
+};

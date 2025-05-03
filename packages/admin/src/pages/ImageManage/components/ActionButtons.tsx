@@ -7,17 +7,32 @@ import CopyUploadBtn from '@/components/CopyUploadBtn';
 import UploadBtn from '@/components/UploadBtn';
 import { copyImgLink } from './tools';
 
-export const ActionButtons: React.FC<ActionButtonsProps> = ({ 
-  setLoading, 
-  fetchData, 
-  showDelAllBtn 
+interface UploadResponse {
+  response?: {
+    data?: {
+      src: string;
+      isNew: boolean;
+    };
+  };
+  name: string;
+}
+
+interface ClipboardUploadData {
+  src: string;
+  isNew: boolean;
+}
+
+export const ActionButtons: React.FC<ActionButtonsProps> = ({
+  setLoading,
+  fetchData,
+  showDelAllBtn,
 }) => {
   return (
     <Space>
       <Button icon={<ReloadOutlined />} onClick={fetchData}>
         刷新
       </Button>
-      
+
       <CopyUploadBtn
         setLoading={setLoading}
         onError={() => {
@@ -25,7 +40,7 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
         }}
         text="剪切板上传"
         onFinish={(data: unknown) => {
-          const uploadData = data as { src: string; isNew: boolean };
+          const uploadData = data as ClipboardUploadData;
           copyImgLink(
             uploadData.src,
             true,
@@ -37,18 +52,21 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
         url="/api/admin/img/upload?withWaterMark=true"
         accept=".png,.jpg,.jpeg,.webp,.jiff,.gif"
       />
-      
+
       <UploadBtn
         setLoading={setLoading}
         muti={true}
         text="上传图片"
-        onFinish={(info: any) => {
-          copyImgLink(
-            info?.response?.data?.src,
-            true,
-            info?.response?.data?.isNew ? `${info.name} 上传成功! ` : `${info.name} 已存在! `,
-            false,
-          );
+        onFinish={(info: UploadResponse) => {
+          const src = info?.response?.data?.src;
+          if (src) {
+            copyImgLink(
+              src,
+              true,
+              info?.response?.data?.isNew ? `${info.name} 上传成功! ` : `${info.name} 已存在! `,
+              false,
+            );
+          }
           fetchData();
         }}
         url="/api/admin/img/upload?withWaterMark=true"
@@ -73,6 +91,7 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
                   message.success('删除成功！');
                   fetchData();
                 } catch (error) {
+                  console.error('Failed to delete all images:', error);
                   setLoading(false);
                   message.error('删除失败！');
                 }
@@ -85,4 +104,4 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
       )}
     </Space>
   );
-}; 
+};

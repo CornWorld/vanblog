@@ -1,3 +1,3 @@
 import ImageManager from './ImageManager';
 
-export default ImageManager; 
+export default ImageManager;

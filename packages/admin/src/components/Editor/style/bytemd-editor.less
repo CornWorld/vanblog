@@ -1,0 +1,93 @@
+// ByteMD编辑器特定样式
+// 包含所有与ByteMD编辑器组件相关的样式
+
+// 导入主题变量
+@import url('../../../theme-variables.less');
+
+// ByteMD编辑器样式
+.editor-container {
+  .bytemd {
+    border: 1px solid var(--editor-border, #d9d9d9);
+    border-radius: 2px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    height: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .bytemd-toolbar {
+    border-bottom: 1px solid var(--editor-border, #d9d9d9);
+    box-sizing: border-box;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 10;
+  }
+
+  .bytemd-body {
+    box-sizing: border-box;
+    display: flex;
+    flex: 1;
+    height: 100% !important;
+    margin: 0 !important;
+    overflow: hidden;
+    padding: 0 !important;
+  }
+
+  .bytemd-split {
+    box-sizing: border-box;
+    display: flex;
+    height: 100%;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .bytemd-editor {
+    box-sizing: border-box;
+    flex: 1;
+    height: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .CodeMirror {
+    box-sizing: border-box;
+    height: 100% !important;
+  }
+
+  .bytemd-preview {
+    box-sizing: border-box;
+    flex: 1;
+    height: 100% !important;
+    overflow-y: auto;
+    padding: 0 8px;
+  }
+}
+
+// Emoji选择器样式
+.emoji-mart {
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgb(0 0 0 / 15%);
+}
+
+// Tippy.js样式覆盖
+[data-tippy-root] {
+  max-width: none !important;
+}
+
+.tippy-box {
+  z-index: 1100 !important;
+}
+
+.bytemd-toolbar [data-tippy-root] {
+  display: inline-block;
+  position: relative;
+}
+
+// Toast UI编辑器兼容样式
+.toastui-editor-contents {
+  font-size: 13px;
+  margin: 0;
+  padding: 0;
+}

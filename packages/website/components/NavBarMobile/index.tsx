@@ -2,6 +2,7 @@ import { slide as BurgerMenu } from 'react-burger-menu';
 import Link from 'next/link';
 import { useCallback, ReactNode } from 'react';
 import { MenuItem } from '../../api/getAllData';
+import { useTranslation } from 'next-i18next';
 
 interface NavBarMobileProps {
   isOpen: boolean;
@@ -12,6 +13,8 @@ interface NavBarMobileProps {
 }
 
 export default function NavBarMobile(props: NavBarMobileProps) {
+  const { t } = useTranslation();
+
   const renderItem = useCallback((item: MenuItem, isSub?: boolean) => {
     if (item.value.includes('http')) {
       return (
@@ -89,7 +92,7 @@ export default function NavBarMobile(props: NavBarMobileProps) {
                   rel="noopener noreferrer"
                   href={'/admin'}
                 >
-                  {'后台'}
+                  {t('nav.admin')}
                 </a>
               </li>
             )}

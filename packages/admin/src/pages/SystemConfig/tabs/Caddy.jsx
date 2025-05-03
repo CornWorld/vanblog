@@ -1,3 +1,5 @@
+import React from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   clearCaddyLog,
   getCaddyConfig,
@@ -8,11 +10,11 @@ import {
 import ProForm, { ProFormSwitch } from '@ant-design/pro-form';
 import { Alert, Button, Card, Input, message, Modal, Row, Space, Spin } from 'antd';
 import { isEqual } from 'lodash-es';
-import { useMemo, useState, useEffect } from 'react';
-import { useForm } from 'antd/lib/form/Form';
-import { useModel } from '@/utils/umiCompat';
+import { useMemo, useState } from 'react';
+import { useModel } from '@/router';
 
-export default function (props) {
+export default function () {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [curData, setCurData] = useState(null);
   const [form] = ProForm.useForm();
@@ -37,46 +39,38 @@ export default function (props) {
         }, 2000);
       }
       await setHttpsConfig(data);
-      message.success('更改成功！将自动刷新至新协议');
-      // let text = '关闭成功，现在可以通过 http 访问了。';
-      // if (data.redirect) {
-      //   text =
-      //     '开启成功，现在通过 http 的访问将自动重定向到 https，这可能会导致无法通过 https + ip 访问本站。';
-      // }
-      // Modal.success({
-      //   title: '更新成功！',
-      //   content: text,
-      // });
+      message.success(t('caddy.update.success'));
       return true;
-    } catch (err) {
-      message.error('更新失败！');
+    } catch (error) {
+      console.error('Failed to update HTTPS config:', error);
+      message.error(t('caddy.update.error'));
       return false;
     } finally {
       setLoading(false);
     }
   };
   return (
-    <Card title="HTTPS 相关配置">
+    <Card title={t('caddy.title')}>
       <Alert
         type="info"
         message={
           <div>
             <p>
-              VanBlog 是通过{' '}
+              {t('caddy.alert.info.1')}{' '}
               <a target={'_blank'} rel="noreferrer" href="https://caddyserver.com/">
                 Caddy
               </a>{' '}
-              实现的证书全自动按需申请。
+              {t('caddy.alert.info.2')}
               <a
                 target={'_blank'}
                 rel="noreferrer"
                 href="https://vanblog.mereith.com/guide/https.html"
               >
-                相关文档
+                {t('caddy.alert.info.3')}
               </a>
             </p>
-            <p>高级玩家可点击按钮查看 Caddy 运行日志或配置排查错误。</p>
-            <p>access 日志可进入容器 /var/log/vanblog-access.log 查看</p>
+            <p>{t('caddy.alert.info.4')}</p>
+            <p>{t('caddy.alert.info.5')}</p>
           </div>
         }
         style={{ marginBottom: 20 }}
@@ -85,20 +79,18 @@ export default function (props) {
         type="warning"
         message={
           <div>
-            <p>请确保 80/443 端口处于开放状态。</p>
+            <p>{t('caddy.alert.warning.1')}</p>
+            <p>{t('caddy.alert.warning.2')}</p>
+            <p>{t('caddy.alert.warning.3')}</p>
+            <p>{t('caddy.alert.warning.4')}</p>
             <p>
-              第一次通过某域名 https
-              访问时，如果没有证书会自动申请证书的。你也可以点击下面的按钮手动触发证书申请。
-            </p>
-            <p>稳定后可打开 https 自动重定向功能，开启通过 http 访问将自动跳转至 https </p>
-            <p>如果你用了 80 端口反代，请不要开启 https 自动重定向！否则你的反代可能会失效。</p>
-            <p>
-              如果不小心开启了此选项后关不掉，可以参考：
+              {t('caddy.alert.warning.5')}
               <a
                 href="https://vanblog.mereith.com/faq/usage.html#开启了-https-重定向后关不掉"
                 target="_blank"
+                rel="noreferrer"
               >
-                开启了 https 重定向后关不掉
+                {t('caddy.alert.warning.link')}
               </a>
             </p>
           </div>
@@ -123,17 +115,21 @@ export default function (props) {
                 };
               }
               setCurData(res);
-
               return res;
-            } catch (err) {
+            } catch (error) {
+              console.error('Failed to get HTTPS config:', error);
               setLoading(false);
+              message.error('Failed to get HTTPS configuration');
+              return {
+                redirect: false,
+              };
             }
           }}
           layout="horizontal"
           onFinish={async (data) => {
             if (location.hostname == 'blog-demo.mereith.com') {
               Modal.warning({
-                title: '演示站不可修改此选项，不然怕 k8s ingress 失效',
+                title: t('caddy.modal.demo.warning'),
               });
               setLoading(false);
               return;
@@ -142,16 +138,14 @@ export default function (props) {
 
             if (eq) {
               Modal.warning({
-                title: '未修改任何信息，无需保存！',
+                title: t('caddy.modal.unmodified.warning'),
               });
               setLoading(false);
               return;
             }
-            let text =
-              '确定关闭 https 自动重定向吗？关闭后可通过 http 进行访问。点击确定后 2 秒将自动切换到 http 访问';
+            let text = t('caddy.modal.disable.confirm');
             if (data.redirect) {
-              text =
-                '开启 https 自动重定向之前，请确保通过域名可正常用 https 访问本站。开启将无法使用 http 访问本站。点击确定后 2 秒将自动切换到 https 访问。注意如果是自己反代了 80 端口的话，请务必不要开启此项！';
+              text = t('caddy.modal.enable.confirm');
             }
             Modal.confirm({
               title: text,
@@ -162,7 +156,7 @@ export default function (props) {
           }}
           submitter={{
             searchConfig: {
-              submitText: '保存',
+              submitText: t('caddy.button.save'),
             },
             render: (props, doms) => {
               return (
@@ -177,7 +171,7 @@ export default function (props) {
                             const { data: res } = await getCaddyConfig();
                             if (res) {
                               Modal.info({
-                                title: 'Caddy 配置',
+                                title: t('caddy.modal.config.title'),
                                 content: (
                                   <Input.TextArea
                                     autoSize={{ maxRows: 20, minRows: 15 }}
@@ -186,15 +180,16 @@ export default function (props) {
                                 ),
                               });
                             }
-                          } catch (err) {
-                            message.error('获取 Caddy 配置错误！');
+                          } catch (error) {
+                            console.error('Failed to get Caddy config:', error);
+                            message.error(t('caddy.error.config'));
                           } finally {
                             setLoading(false);
                           }
                         }}
                         type="primary"
                       >
-                        查看 Caddy 配置
+                        {t('caddy.button.view_config')}
                       </Button>
                     </Space>
                   </Row>
@@ -208,7 +203,7 @@ export default function (props) {
                             const { data: res } = await getCaddyLog();
                             if (res || res == '') {
                               Modal.info({
-                                title: 'Caddy 运行日志',
+                                title: t('caddy.modal.log.title'),
                                 content: (
                                   <Input.TextArea
                                     autoSize={{ maxRows: 20, minRows: 15 }}
@@ -216,51 +211,35 @@ export default function (props) {
                                   />
                                 ),
                               });
-                            } else {
-                              message.error('获取 Caddy 日志错误！');
                             }
-                          } catch (err) {
-                            message.error('获取 Caddy 日志错误！');
+                          } catch (error) {
+                            console.error('Failed to get Caddy log:', error);
+                            message.error(t('caddy.error.log'));
                           } finally {
                             setLoading(false);
                           }
                         }}
                       >
-                        查看 Caddy 日志
+                        {t('caddy.button.view_log')}
                       </Button>
                       <Button
-                        danger
                         type="primary"
                         onClick={async () => {
-                          Modal.confirm({
-                            title: '确定清除 Caddy 运行日志吗？清除后将无法恢复！',
-                            onOk: async () => {
-                              await clearCaddyLog();
-                              message.success('清除 Caddy 运行日志成功！');
-                            },
-                          });
+                          setLoading(true);
+                          try {
+                            await clearCaddyLog();
+                            message.success(t('caddy.clear.success'));
+                          } catch (error) {
+                            console.error('Failed to clear Caddy log:', error);
+                            message.error(t('caddy.error.clear'));
+                          } finally {
+                            setLoading(false);
+                          }
                         }}
                       >
-                        清除 Caddy 日志
+                        {t('caddy.button.clear_log')}
                       </Button>
                     </Space>
-                  </Row>
-                  <Row style={{ marginTop: 10 }}>
-                    <Button
-                      type="primary"
-                      onClick={async () => {
-                        Modal.confirm({
-                          title: '触发证书按需申请',
-                          content:
-                            '点击确认后将打开新窗口并用 https 访问当前网址以触发证书按需申请。触发请后稍等一会（申请时间取决于网络环境），申请完成后弹出页面将通过 https 正常加载。',
-                          onOk: () => {
-                            window.open(`https://${window.location.host}`, '_blank');
-                          },
-                        });
-                      }}
-                    >
-                      使用当前访问域名触发按需申请
-                    </Button>
                   </Row>
                 </>
               );
@@ -268,43 +247,11 @@ export default function (props) {
           }}
         >
           <ProFormSwitch
-            label="HTTPS 自动重定向"
+            className={cls}
             name="redirect"
-            tooltip="开启后通过 http 访问本站将自动重定向至 https"
-            fieldProps={{
-              className: cls,
-            }}
-          ></ProFormSwitch>
-          {/* <ProFormSelect
-            name="domains"
-            mode="tags"
-            disabled
-            width={'lg'}
-            label="自动 HTTPS 域名"
-            tooltip="开启自动 HTTPS 域名，内置的 Caddy 会自动申请证书并应用"
-            placeholder={'添加后，内置的 Caddy 会自动申请证书并应用'}
-          /> */}
-          {/* <ProFormTextArea
-            disabled
-            name="caddyConfig"
-            label={
-              <a
-                href="https://picgo.github.io/PicGo-Core-Doc/zh/guide/config.html#%E8%87%AA%E5%8A%A8%E7%94%9F%E6%88%90"
-                target={'_blank'}
-                rel="norefferrer"
-              >
-                Caddy 配置
-              </a>
-            }
-            tooltip={'内置 Caddy2 配置，不懂忽略就行'}
-            placeholder="内置 Caddy2 配置，不懂忽略就行"
-            fieldProps={{
-              autoSize: {
-                minRows: 10,
-                maxRows: 30,
-              },
-            }}
-          /> */}
+            label={t('caddy.switch.auto_redirect')}
+            tooltip={t('caddy.switch.tooltip')}
+          />
         </ProForm>
       </Spin>
     </Card>

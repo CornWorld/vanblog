@@ -9,7 +9,7 @@ import { ApiToken } from 'src/provider/swagger/token';
 @ApiToken
 @Controller('/api/admin/log')
 export class LogController {
-  constructor(private readonly logProvider: LogProvider) {}
+  constructor(private readonly logProvider: LogProvider) { }
 
   @Get()
   async get(

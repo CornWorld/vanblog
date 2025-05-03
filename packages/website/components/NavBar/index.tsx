@@ -10,6 +10,8 @@ import { ThemeContext } from '../../utils/themeContext';
 import RssButton from '../RssButton';
 import Item from './item';
 import { encodeQuerystring } from '../../utils/encode';
+import { useTranslation } from 'next-i18next';
+
 export default function (props: {
   logo: string;
   logoDark: string;
@@ -27,6 +29,7 @@ export default function (props: {
   subMenuOffset: number;
   openArticleLinksInNewWindow: boolean;
 }) {
+  const { t } = useTranslation();
   const [showSearch, setShowSearch] = useState(false);
   const [headroom, setHeadroom] = useState<Headroom>();
   const { theme } = useContext(ThemeContext);
@@ -128,7 +131,7 @@ export default function (props: {
                   setShowSearch(true);
                   document.body.style.overflow = 'hidden';
                 }}
-                title="搜索"
+                title={t('post.search')}
                 className="flex group transform hover:scale-110 transition-all select-none cursor-pointer"
               >
                 <div className="flex items-center mr-0 sm:mr-2 hover:cursor-pointer   transition-all dark:text-dark fill-gray-600">

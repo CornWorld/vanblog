@@ -32,7 +32,14 @@ export const ImageGrid: React.FC<ImageGridProps> = ({ data, responsive, displayM
               </div>
             }
           >
-            <div style={{ fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <div
+              style={{
+                fontSize: 12,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
               {item.name}
             </div>
           </Card>
@@ -40,4 +47,4 @@ export const ImageGrid: React.FC<ImageGridProps> = ({ data, responsive, displayM
       ))}
     </Row>
   );
-}; 
+};

@@ -1,6 +1,8 @@
+import React from 'react';
+import { useTranslation, TFunction } from 'react-i18next';
 import { createApiToken, getAllApiTokens, deleteApiToken } from '@/services/van-blog/api';
 import { ModalForm, ProFormText, ProTable } from '@ant-design/pro-components';
-import type { ActionType } from '@ant-design/pro-components';
+import type { ActionType, ProColumns } from '@ant-design/pro-components';
 import { Button, Card, message, Modal, Space, Typography } from 'antd';
 
 import { useRef } from 'react';
@@ -11,92 +13,90 @@ interface TokenRecord {
   token: string;
 }
 
-const columns = [
-  { dataIndex: '_id', title: 'ID' },
-  { dataIndex: 'name', title: '名称' },
+const getColumns = ({ t }: { t: TFunction }): ProColumns<TokenRecord>[] => [
+  { dataIndex: '_id', title: t('token.column.id') },
+  { dataIndex: 'name', title: t('token.column.name') },
   {
     dataIndex: 'token',
-    title: '内容',
-    render: (token: string) => {
+    title: t('token.column.content'),
+    render: (_: React.ReactNode, entity: TokenRecord) => {
       return (
         <Typography.Text style={{ maxWidth: 250 }} ellipsis={true} copyable={true}>
-          {token}
+          {entity.token}
         </Typography.Text>
       );
     },
   },
   {
-    title: '操作',
+    title: t('token.column.actions'),
     render: (_: unknown, record: TokenRecord, __: unknown, action?: ActionType) => [
       <a
         key="delete"
         style={{ marginLeft: 8 }}
         onClick={() => {
           Modal.confirm({
-            title: '删除确认',
-            content: '是否确认删除该 Token？',
+            title: t('token.modal.delete.title'),
+            content: t('token.modal.delete.content'),
             onOk: async () => {
               await deleteApiToken(record._id);
               action?.reload();
-              message.success('删除成功！');
+              message.success(t('token.message.delete.success'));
             },
           });
         }}
       >
-        删除
+        {t('token.action.delete')}
       </a>,
     ],
   },
 ];
 
-export default function () {
-  const actionRef = useRef<ActionType>();
+export default function Token() {
+  const { t } = useTranslation();
+  const actionRef = useRef<ActionType>(null);
   return (
     <>
       <Card
-        title="Token 管理"
+        title={t('token.card.title')}
         style={{ marginTop: 8 }}
         className="card-body-full"
         extra={
           <Space>
             <ModalForm
-              title="新建 API Token"
-              trigger={<Button type="primary"> 新建</Button>}
+              title={t('token.modal.new.title')}
+              trigger={<Button type="primary">{t('token.button.new')}</Button>}
               onFinish={async (vals) => {
                 await createApiToken(vals);
                 actionRef.current?.reload();
                 return true;
               }}
             >
-              <ProFormText label="名称" name="name" />
+              <ProFormText label={t('token.field.name')} name="name" />
             </ModalForm>
             <Button
               onClick={() => {
                 window.open('/swagger', '_blank');
               }}
             >
-              API 文档
+              {t('token.button.api_docs')}
             </Button>
             <Button
               onClick={() => {
                 Modal.info({
-                  title: 'Token 管理功能介绍',
+                  title: t('token.modal.help.title'),
                   content: (
                     <div>
-                      <p>创建的 Api Token 可以用来调用 VanBlog 的 API</p>
-                      <p>结合 API 文档，您可以做到很多有意思的事情。</p>
-                      <p>API 文档现在比较水，会慢慢完善的，未来会有 API Playgroud，敬请期待。</p>
-                      <p>
-                        PS：暂时没必要通过 API
-                        开发自己的前台，后面会出主题功能（完善的文档和开发指南，不限制技术栈），届时再开发会更好。
-                      </p>
+                      <p>{t('token.modal.help.content1')}</p>
+                      <p>{t('token.modal.help.content2')}</p>
+                      <p>{t('token.modal.help.content3')}</p>
+                      <p>{t('token.modal.help.content4')}</p>
                       <p>
                         <a
                           target="_blank"
                           rel="noreferrer"
                           href="https://vanblog.mereith.com/advanced/token.html"
                         >
-                          相关文档
+                          {t('token.modal.help.docs')}
                         </a>
                       </p>
                     </div>
@@ -104,14 +104,14 @@ export default function () {
                 });
               }}
             >
-              帮助
+              {t('token.button.help')}
             </Button>
           </Space>
         }
       >
-        <ProTable
+        <ProTable<TokenRecord>
           rowKey="id"
-          columns={columns}
+          columns={getColumns({ t })}
           dateFormatter="string"
           actionRef={actionRef}
           search={false}
@@ -121,7 +121,7 @@ export default function () {
             simple: true,
           }}
           request={async () => {
-            const { data } = await getAllApiTokens();
+            const { data = [] } = (await getAllApiTokens()) as { data: TokenRecord[] };
             return {
               data,
               // success 请返回 true，

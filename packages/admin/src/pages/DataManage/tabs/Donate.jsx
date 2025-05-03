@@ -1,9 +1,12 @@
+import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { deleteDonate, getDonate, updateDonate } from '@/services/van-blog/api';
 import { EditableProTable } from '@ant-design/pro-components';
 import { Modal, Spin } from 'antd';
 import { useRef, useState } from 'react';
 
 export default function () {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [editableKeys, setEditableRowKeys] = useState([]);
   const actionRef = useRef();
@@ -15,37 +18,37 @@ export default function () {
   };
   const columns = [
     {
-      title: '捐赠人',
+      title: t('donate.column.name'),
       dataIndex: 'name',
-      formItemProps: (form, { rowIndex }) => {
+      formItemProps: () => {
         return {
-          rules: [{ required: true, message: '此项为必填项' }],
+          rules: [{ required: true, message: t('donate.message.required') }],
         };
       },
     },
     {
-      title: '金额',
+      title: t('donate.column.value'),
       valueType: 'money',
       dataIndex: 'value',
-      formItemProps: (form, { rowIndex }) => {
+      formItemProps: () => {
         return {
-          rules: [{ required: true, message: '此项为必填项' }],
+          rules: [{ required: true, message: t('donate.message.required') }],
         };
       },
     },
     {
-      title: '最后捐赠时间',
+      title: t('donate.column.updatedAt'),
       valueType: 'date',
       editable: false,
       dataIndex: 'updatedAt',
-      formItemProps: (form, { rowIndex }) => {
+      formItemProps: () => {
         return {
-          rules: [{ required: true, message: '此项为必填项' }],
+          rules: [{ required: true, message: t('donate.message.required') }],
         };
       },
     },
     {
-      title: '操作',
+      title: t('donate.column.actions'),
       valueType: 'option',
       key: 'option',
       width: 200,
@@ -56,7 +59,7 @@ export default function () {
             action?.startEditable?.(record.name);
           }}
         >
-          编辑
+          {t('donate.action.edit')}
         </a>,
         <a
           key="delete"
@@ -66,11 +69,11 @@ export default function () {
                 await deleteDonate(record.name);
                 action?.reload();
               },
-              title: `确认删除"${record.name}"的捐赠吗?`,
+              title: t('donate.modal.deleteConfirm', { name: record.name }),
             });
           }}
         >
-          删除
+          {t('donate.action.delete')}
         </a>,
       ],
     },
@@ -81,7 +84,7 @@ export default function () {
         <EditableProTable
           actionRef={actionRef}
           rowKey="key"
-          headerTitle="捐赠详情"
+          headerTitle={t('donate.table.header')}
           scroll={{
             x: 960,
           }}
@@ -102,7 +105,7 @@ export default function () {
           editable={{
             type: 'multiple',
             editableKeys,
-            onSave: async (rowKey, data, row) => {
+            onSave: async (rowKey, data) => {
               await updateDonate(data);
               actionRef?.current?.reload();
             },

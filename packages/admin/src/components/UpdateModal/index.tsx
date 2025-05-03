@@ -1,9 +1,10 @@
+import React from 'react';
 import { getAllCategories, getTags, updateArticle, updateDraft } from '@/services/van-blog/api';
 import { ModalForm, ProFormDateTimePicker, ProFormSelect, ProFormText } from '@ant-design/pro-form';
 import { Form, message, Modal, Button } from 'antd';
 import dayjs from '@/utils/dayjs';
 import { useEffect } from 'react';
-import { history } from '@/utils/umiCompat';
+import { history } from '@/router';
 import AuthorField from '../AuthorField';
 
 interface UpdateModalProps {
@@ -11,14 +12,31 @@ interface UpdateModalProps {
   setLoading: (loading: boolean) => void;
   onFinish: () => void;
   type: 'article' | 'draft' | 'about';
+  visible: boolean;
+}
+
+interface TagsResponse {
+  data?: string[];
+}
+
+interface CategoriesResponse {
+  data?: string[];
 }
 
 export default function (props: UpdateModalProps) {
-  const { currObj, setLoading, type, onFinish } = props;
+  const { currObj, setLoading, type, onFinish, visible } = props;
   const [form] = Form.useForm();
   useEffect(() => {
-    if (form && form.setFieldsValue) form.setFieldsValue(currObj);
-  }, [currObj]);
+    if (visible && currObj) {
+      form.setFieldsValue({
+        title: currObj.title,
+        category: currObj.category,
+        tags: currObj.tags,
+        ...(currObj.pathname ? { pathname: currObj.pathname } : {}),
+        ...(currObj.hidden !== undefined ? { hidden: currObj.hidden } : {}),
+      });
+    }
+  }, [visible, currObj, form]);
   return (
     <ModalForm
       form={form}
@@ -85,7 +103,7 @@ export default function (props: UpdateModalProps) {
           tokenSeparators: [','],
         }}
         request={async () => {
-          const msg = await getTags();
+          const msg = (await getTags()) as TagsResponse;
           return msg?.data?.map((item: string) => ({ label: item, value: item })) || [];
         }}
       />
@@ -99,13 +117,15 @@ export default function (props: UpdateModalProps) {
         placeholder="请选择分类"
         rules={[{ required: true, message: '这是必填项' }]}
         request={async () => {
-          const { data: categories } = await getAllCategories();
-          return categories?.map((e: string) => {
-            return {
-              label: e,
-              value: e,
-            };
-          });
+          const { data: categories } = (await getAllCategories()) as CategoriesResponse;
+          return (
+            categories?.map((e: string) => {
+              return {
+                label: e,
+                value: e,
+              };
+            }) || []
+          );
         }}
         showSearch
         fieldProps={{

@@ -1,10 +1,21 @@
+import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { ModalForm, ProFormSelect } from '@ant-design/pro-form';
 import { Alert, message } from 'antd';
-export default function (props: { setValue: any; value: any; trigger: any }) {
+import { ReactNode } from 'react';
+
+interface EditorProfileProps {
+  setValue: (value: Record<string, unknown>) => void;
+  value: Record<string, unknown>;
+  trigger: ReactNode;
+}
+
+export default function (props: EditorProfileProps) {
+  const { t } = useTranslation();
   const { setValue, value, trigger } = props;
   return (
     <ModalForm
-      title="编辑器偏好设置"
+      title={t('editor_profile.modal.title')}
       trigger={trigger}
       width={450}
       autoFocusFirstInput
@@ -12,7 +23,7 @@ export default function (props: { setValue: any; value: any; trigger: any }) {
       initialValues={value || {}}
       onFinish={async (vals) => {
         setValue({ ...value, ...vals });
-        message.success('保存成功！');
+        message.success(t('editor_profile.save.success'));
         return true;
       }}
       layout="horizontal"
@@ -21,7 +32,7 @@ export default function (props: { setValue: any; value: any; trigger: any }) {
     >
       <Alert
         type="info"
-        message="此配置保存在浏览器存储中，切换设备需重新设置。"
+        message={t('editor_profile.alert.message')}
         style={{ marginBottom: 8 }}
       ></Alert>
 
@@ -30,16 +41,16 @@ export default function (props: { setValue: any; value: any; trigger: any }) {
         required
         id="afterSave"
         name="afterSave"
-        label="保存后行为"
-        placeholder="请选择保存后行为，默认留在此页面"
+        label={t('editor_profile.field.after_save')}
+        placeholder={t('editor_profile.field.after_save.placeholder')}
         request={async () => {
           return [
             {
-              label: '留在此页',
+              label: t('editor_profile.after_save.stay'),
               value: 'stay',
             },
             {
-              label: '返回之前页面',
+              label: t('editor_profile.after_save.back'),
               value: 'goBack',
             },
           ];
@@ -51,17 +62,17 @@ export default function (props: { setValue: any; value: any; trigger: any }) {
         required
         id="useLocalCache"
         name="useLocalCache"
-        label="本地缓存"
-        tooltip="默认关闭，开启后将在本地缓存编辑器内容，当本地内容比服务器内容更新时间更近时，将使用本地内容展示在编辑器中。"
-        placeholder="是否开启本地缓存"
+        label={t('editor_profile.field.local_cache')}
+        tooltip={t('editor_profile.field.local_cache.tooltip')}
+        placeholder={t('editor_profile.field.local_cache.placeholder')}
         request={async () => {
           return [
             {
-              label: '开启',
+              label: t('editor_profile.option.enabled'),
               value: 'open',
             },
             {
-              label: '关闭',
+              label: t('editor_profile.option.disabled'),
               value: 'close',
             },
           ];

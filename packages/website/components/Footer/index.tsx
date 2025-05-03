@@ -1,6 +1,7 @@
-import ImageBox from "../ImageBox";
-import RunningTime from "../RunningTime";
-import Viewer from "../Viewer";
+import ImageBox from '../ImageBox';
+import RunningTime from '../RunningTime';
+import Viewer from '../Viewer';
+import { useTranslation } from 'next-i18next';
 
 export default function ({
   ipcHref,
@@ -21,12 +22,14 @@ export default function ({
   since: string;
   version: string;
 }) {
+  const { t } = useTranslation();
+
   return (
     <>
       <footer className="text-center text-sm space-y-1 mt-8 md:mt-12 dark:text-dark footer-icp-number">
         {Boolean(ipcNumber) && (
           <p className="">
-            ICP 编号:&nbsp;
+            {t('footer.icp')}:&nbsp;
             <a
               href={ipcHref}
               target="_blank"
@@ -38,12 +41,12 @@ export default function ({
         )}
         {Boolean(gaBeianNumber) && (
           <p className="flex justify-center items-center footer-gongan-beian">
-            公安备案:&nbsp;
+            {t('footer.police')}:&nbsp;
             {Boolean(gaBeianLogoUrl) && (
               <ImageBox
                 src={gaBeianLogoUrl}
                 lazyLoad={true}
-                alt="公安备案 logo"
+                alt={t('footer.policeLogoAlt')}
                 width={20}
               />
             )}
@@ -61,7 +64,7 @@ export default function ({
           Powered By&nbsp;
           <a
             href="https://vanblog.mereith.com"
-            target={"_blank"}
+            target={'_blank'}
             className="hover:text-gray-900 dark:hover:text-dark-hover transition ua ua-link"
           >
             VanBlog <span>{version}</span>

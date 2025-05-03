@@ -1,0 +1,67 @@
+// 主编辑器样式入口
+@import url('./core.less');
+@import url('./bytemd-editor.less');
+@import url('./theme.less');
+
+// 消除所有可能的滚动条
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body.editor-page {
+  overflow: hidden;
+}
+
+.ant-layout {
+  overflow: hidden;
+}
+
+.ant-layout-content {
+  overflow: hidden;
+}
+
+// 工具类
+.relative {
+  position: relative;
+}
+
+.flex {
+  display: flex;
+}
+
+.mr-1 {
+  margin-right: 4px;
+}
+
+// Emoji容器样式
+.emoji-container {
+  background: var(--background-color, #fff);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgb(0 0 0 / 15%);
+  left: 0;
+  overflow: visible;
+  position: absolute;
+  top: 32px;
+  visibility: visible;
+  z-index: 1050;
+
+  &.active {
+    display: block;
+  }
+
+  &.hidden {
+    display: none !important;
+  }
+}
+
+// ByteMD工具栏工具
+.bytemd-toolbar-left .hidden {
+  display: none;
+}
+
+// Emoji分类
+body .emoji-categories {
+  background-color: gray;
+}

@@ -1,3 +1,5 @@
+import React from 'react';
+import i18next from 'i18next';
 import { getRecentTimeDes } from '@/services/van-blog/tool';
 import './index.css';
 
@@ -7,7 +9,7 @@ export default ({
   showRecentViewTime,
 }: {
   // FIXME: Add Article type
-  articles: any[];
+  articles: unknown[];
   showViewerNum: boolean;
   showRecentViewTime: boolean;
 }) => (
@@ -22,7 +24,7 @@ export default ({
         rel="noreferrer"
       >
         <div className="">{title}</div>
-        {showViewerNum && <div>{`${viewer || 0}人次`}</div>}
+        {showViewerNum && <div>{i18next.t('articlelist.view_count', { count: viewer || 0 })}</div>}
         {showRecentViewTime && <div>{getRecentTimeDes(lastVisitedTime)}</div>}
       </a>
     ))}

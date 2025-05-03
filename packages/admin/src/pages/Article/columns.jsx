@@ -1,38 +1,53 @@
+import React from 'react';
 import ColumnsToolBar from '@/components/ColumnsToolBar';
 import UpdateModal from '@/components/UpdateModal';
 import { deleteArticle, getAllCategories, getArticleById, getTags } from '@/services/van-blog/api';
 import { getPathname } from '@/services/van-blog/getPathname';
 import { parseObjToMarkdown } from '@/services/van-blog/parseMarkdownFile';
-import { message, Modal, Space, Tag, Button, Typography, Skeleton, notification } from 'antd';
-import { history } from '@/utils/umiCompat';
+import { message, Modal, Space, Tag, Button } from 'antd';
+import { history } from '@/router';
 import { genActiveObj } from '../../services/van-blog/activeColTools';
 import { withoutKey } from '@/utils/props';
 
-export const columns = [
+export const articleKeys = [
+  'category',
+  'id',
+  'option',
+  'showTime',
+  'tags',
+  'title',
+  'top',
+  'viewer',
+];
+export const articleKeysSmall = ['category', 'id', 'option', 'title'];
+export const articleObjAll = genActiveObj(articleKeys, articleKeys);
+export const articleObjSmall = genActiveObj(articleKeysSmall, articleKeys);
+
+export const getColumns = ({ t }) => [
   {
     dataIndex: 'id',
     valueType: 'number',
-    title: 'ID',
+    title: t('article.column.id'),
     width: 48,
     search: false,
   },
   {
-    title: '标题',
+    title: t('article.column.title'),
     dataIndex: 'title',
-    width: 150,
     copyable: true,
+    width: 150,
     ellipsis: true,
     formItemProps: {
       rules: [
         {
           required: true,
-          message: '此项为必填项',
+          message: t('article.column.required'),
         },
       ],
     },
   },
   {
-    title: '分类',
+    title: t('article.column.category'),
     dataIndex: 'category',
     valueType: 'select',
     width: 100,
@@ -46,10 +61,10 @@ export const columns = [
     },
   },
   {
-    title: '标签',
+    title: t('article.column.tags'),
     dataIndex: 'tags',
     valueType: 'select',
-    fieldProps: { showSearch: true, placeholder: '请搜索或选择' },
+    fieldProps: { showSearch: true, placeholder: t('article.column.tags.placeholder') },
     width: 120,
     search: true,
     renderFormItem: (item, { defaultRender }) => {
@@ -76,7 +91,7 @@ export const columns = [
     },
   },
   {
-    title: '创建时间',
+    title: t('article.column.created_time'),
     key: 'showTime',
     dataIndex: 'createdAt',
     valueType: 'dateTime',
@@ -85,7 +100,7 @@ export const columns = [
     width: 150,
   },
   {
-    title: '顶置',
+    title: t('article.column.top'),
     key: 'top',
     dataIndex: 'top',
     valueType: 'number',
@@ -94,7 +109,7 @@ export const columns = [
     hideInSearch: true,
   },
   {
-    title: '浏览量',
+    title: t('article.column.viewer'),
     key: 'viewer',
     dataIndex: 'viewer',
     valueType: 'number',
@@ -103,7 +118,7 @@ export const columns = [
     hideInSearch: true,
   },
   {
-    title: '创建时间',
+    title: t('article.column.created_time'),
     dataIndex: 'createdAt',
     valueType: 'dateRange',
     hideInTable: true,
@@ -134,29 +149,27 @@ export const columns = [
                   );
                 }}
               >
-                编辑
+                {t('article.action.edit')}
               </a>,
               <a
                 href={`/post/${getPathname(record)}`}
                 onClick={(ev) => {
                   if (record?.hidden) {
                     Modal.confirm({
-                      title: '此文章为隐藏文章！',
+                      title: t('article.modal.hidden_title'),
                       content: (
                         <div>
+                          <p>{t('article.modal.hidden_content1')}</p>
                           <p>
-                            隐藏文章在未开启通过 URL 访问的情况下（默认关闭），会出现 404 页面！
-                          </p>
-                          <p>
-                            您可以在{' '}
+                            {t('article.modal.hidden_content2')}
                             <a
                               onClick={() => {
                                 history.push('/site/setting?subTab=layout');
                               }}
                             >
-                              布局配置
-                            </a>{' '}
-                            中修改此项。
+                              {t('article.modal.hidden_content3')}
+                            </a>
+                            {t('article.modal.hidden_content4')}
                           </p>
                         </div>
                       ),
@@ -164,8 +177,8 @@ export const columns = [
                         window.open(`/post/${getPathname(record)}`, '_blank');
                         return true;
                       },
-                      okText: '仍然访问',
-                      cancelText: '返回',
+                      okText: t('article.modal.hidden_ok'),
+                      cancelText: t('article.modal.hidden_cancel'),
                     });
                     ev.preventDefault();
                   }
@@ -174,7 +187,7 @@ export const columns = [
                 rel="noopener noreferrer"
                 key={'view' + record.id}
               >
-                查看
+                {t('article.action.view')}
               </a>,
             ]}
             nodes={[
@@ -199,29 +212,32 @@ export const columns = [
                   link.click();
                 }}
               >
-                导出
+                {t('article.action.export')}
               </a>,
-              <a
-                key={'deleteArticle' + record.id}
+              <Button
+                key={'deleteBtn' + record.id}
+                type="link"
+                danger
                 onClick={() => {
                   Modal.confirm({
-                    title: `确定删除 "${record.title}"吗？`,
+                    title: t('article.modal.delete_title'),
+                    content: t('article.modal.delete_content'),
+                    okText: t('article.modal.delete_ok'),
+                    cancelText: t('article.modal.delete_cancel'),
                     onOk: async () => {
-                      if (location.hostname == 'blog-demo.mereith.com') {
-                        if ([28, 29].includes(record.id)) {
-                          message.warn('演示站禁止删除此文章！');
-                          return false;
-                        }
+                      try {
+                        await deleteArticle(record.id);
+                        message.success(t('article.message.delete_success'));
+                        action?.reload();
+                      } catch {
+                        message.error(t('article.message.delete_error'));
                       }
-                      await deleteArticle(record.id);
-                      message.success('删除成功!');
-                      action?.reload();
                     },
                   });
                 }}
               >
-                删除
-              </a>,
+                {t('article.action.delete')}
+              </Button>,
             ]}
           />
         </Space>
@@ -229,16 +245,3 @@ export const columns = [
     },
   },
 ];
-export const articleKeys = [
-  'category',
-  'id',
-  'option',
-  'showTime',
-  'tags',
-  'title',
-  'top',
-  'viewer',
-];
-export const articleKeysSmall = ['category', 'id', 'option', 'title'];
-export const articleObjAll = genActiveObj(articleKeys, articleKeys);
-export const articleObjSmall = genActiveObj(articleKeysSmall, articleKeys);

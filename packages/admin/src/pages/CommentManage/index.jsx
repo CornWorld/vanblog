@@ -1,9 +1,13 @@
+import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { PageContainer } from '@ant-design/pro-layout';
 import { Button, Modal, Space, Spin } from 'antd';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { history, useModel } from '@/utils/umiCompat';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { history, useModel } from '@/router';
 import TipTitle from '../../components/TipTitle';
+
 export default function () {
+  const { t } = useTranslation();
   const { initialState } = useModel('@@initialState');
   const [loading, setLoading] = useState(true);
   const { current } = useRef({ hasInit: false });
@@ -14,37 +18,36 @@ export default function () {
       return '/ui/';
     }
   }, [initialState]);
-  const showTips = () => {
+
+  const showTips = useCallback(() => {
     Modal.info({
-      title: '使用说明',
+      title: t('comment.modal.title'),
       content: (
         <div>
           <p>
-            Vanblog 内嵌了{' '}
+            {t('comment.modal.content1')}{' '}
             <a target={'_blank'} rel="noreferrer" href="https://waline.js.org/">
-              Waline
+              {t('comment.modal.waline')}
             </a>{' '}
-            作为评论系统。
+            {t('comment.modal.content2')}
           </p>
-          <p>本管理页面也是内嵌的 Waline 后台管理页面。</p>
-          <p>首次使用请先注册，首个注册的用户将默认成为管理员。</p>
-          <p>
-            PS: 评论功能默认开启，关闭请前往站点设置-{'>'} 系统设置
-            -{'>'}站点配置-{'>'} 高级设置-{'>'} 是否开启评论系统
-          </p>
+          <p>{t('comment.modal.content3')}</p>
+          <p>{t('comment.modal.content4')}</p>
+          <p>{t('comment.modal.content5')}</p>
           <p>
             <a
               target={'_blank'}
               rel="noreferrer"
               href="https://vanblog.mereith.com/feature/basic/comment.html"
             >
-              帮助文档
+              {t('comment.modal.docs')}
             </a>
           </p>
         </div>
       ),
     });
-  };
+  }, [t]);
+
   useEffect(() => {
     if (!current.hasInit) {
       current.hasInit = true;
@@ -53,7 +56,7 @@ export default function () {
         showTips();
       }
     }
-  }, [current]);
+  }, [current, showTips]);
   return (
     <PageContainer
       className="editor-full"
@@ -67,18 +70,13 @@ export default function () {
               history.push(`/site/setting?tab=waline`);
             }}
           >
-            设置
+            {t('comment.button.setting')}
           </Button>
-          <Button onClick={showTips}>帮助</Button>
+          <Button onClick={showTips}>{t('comment.button.help')}</Button>
         </Space>
       }
       header={{
-        title: (
-          <TipTitle
-            title="评论管理"
-            tip="基于内嵌的 Waline，首个注册的用户即为管理员。未来会用自己的实现替代 Waline"
-          />
-        ),
+        title: <TipTitle title={t('comment.title')} tip={t('comment.tip')} />,
       }}
     >
       <Spin spinning={loading}>

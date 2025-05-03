@@ -7,30 +7,34 @@ import mediumZoom from '@bytemd/plugin-medium-zoom';
 import mermaid from '@bytemd/plugin-mermaid';
 import { Editor } from '@bytemd/react';
 import { Spin } from 'antd';
-import React, { useMemo } from 'react';
+import React, { useCallback, useMemo } from 'react';
 
-// Continue to import styles for markdown and code themes
-import '../../style/github-markdown.css';
-import '../../style/code-light.css';
-import '../../style/code-dark.css';
-import '../../style/custom-container.css';
+// 导入基础ByteMD样式
 import 'bytemd/dist/index.css';
 
+// 导入Markdown和代码主题样式
+import './style/github-markdown.css';
+import './style/code-light.css';
+import './style/code-dark.css';
+import './style/custom-container.css';
+import './style/diff-style.css';
+
+// 导入我们的主样式入口点
+import './style/index.less';
+
 // Import custom plugins
-import { emoji } from './emoji';
-import { imgUploadPlugin, uploadImg } from './imgUpload';
-import { insertMore } from './insertMore';
+import { emoji } from './plugins/emoji';
+import { imgUploadPlugin, uploadImg } from './plugins/imgUpload';
+import { insertMore } from './plugins/insertMore';
 import { cn } from './locales';
-import { useModel } from '@/utils/umiCompat';
+import { useModel } from '@/router';
 import { customContainer } from './plugins/customContainer';
-import { historyIcon } from './history';
-import rawHTML from './rawHTML';
+import { historyIcon } from './plugins/history';
+import { rawHTML } from './plugins/rawHTML';
 import { Heading } from './plugins/heading';
 import { customCodeBlock } from './plugins/codeBlock';
 import { LinkTarget } from './plugins/linkTarget';
-
-// Add custom styles for the editor
-import './editor.css';
+import { useTranslation } from 'react-i18next';
 
 // Add type declaration for sanitize
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -120,29 +124,60 @@ export default function EditorComponent(props: {
   setLoading: (l: boolean) => void;
 }) {
   const { loading, setLoading } = props;
-  // @ts-expect-error Library compatibility issue
-  const { initialState } = useModel('@@initialState');
+  const { t } = useTranslation();
+
+  // Move useModel hook to the top level of the component
+  const { initialState } = useModel();
   const navTheme = initialState?.settings?.navTheme || 'light';
   const themeClass = navTheme.toLowerCase().includes('dark') ? 'dark' : 'light';
+
   const plugins = useMemo(() => {
     return [
-      customContainer(),
+      customContainer({ t }),
       gfm(),
       highlight(),
       frontmatter(),
       math(),
       mediumZoom(),
       mermaid(),
-      imgUploadPlugin(setLoading),
-      emoji(),
-      insertMore(),
+      imgUploadPlugin(setLoading, { t }),
+      emoji({ t }),
+      insertMore({ t }),
       rawHTML(),
-      historyIcon(),
-      Heading(),
+      historyIcon({ t }),
+      Heading({ t }),
       customCodeBlock(),
       LinkTarget(),
     ];
-  }, []);
+  }, [t, setLoading]);
+
+  // Memoize the uploadImages function to prevent it from being recreated on every render
+  const uploadImagesHandler = useCallback(
+    async (files: File[]) => {
+      setLoading(true);
+      const res = [];
+      try {
+        for (const each of files) {
+          const url = await uploadImg(each, { t });
+          if (url) {
+            // If it's already a data URI, use it as is
+            if (url.startsWith('data:')) {
+              res.push({ url });
+            } else {
+              // For regular URLs, encode them
+              res.push({ url: encodeURI(url) });
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error uploading images:', error);
+      } finally {
+        setLoading(false);
+      }
+      return res;
+    },
+    [setLoading, t],
+  );
 
   return (
     <div className={`editor-container ${themeClass}`}>
@@ -153,29 +188,7 @@ export default function EditorComponent(props: {
           onChange={props.onChange}
           locale={cn}
           sanitize={sanitize}
-          uploadImages={async (files: File[]) => {
-            setLoading(true);
-            const res = [];
-            try {
-              for (const each of files) {
-                const url = await uploadImg(each);
-                if (url) {
-                  // If it's already a data URI, use it as is
-                  if (url.startsWith('data:')) {
-                    res.push({ url });
-                  } else {
-                    // For regular URLs, encode them
-                    res.push({ url: encodeURI(url) });
-                  }
-                }
-              }
-            } catch (error) {
-              console.error('Error uploading images:', error);
-            } finally {
-              setLoading(false);
-            }
-            return res;
-          }}
+          uploadImages={uploadImagesHandler}
         />
       </Spin>
     </div>
