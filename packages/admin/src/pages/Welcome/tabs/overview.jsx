@@ -147,7 +147,7 @@ const OverView = () => {
             title={
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <div>{t('overview.chart.visitors_trend')}</div>
-                <NumSelect d="天" value={num} setValue={setNum} />
+                <NumSelect d="numselect.unit.day" value={num} setValue={setNum} />
               </div>
             }
             chart={<Area yField={t('overview.chart.visitors')} {...eachConfig} />}
@@ -159,7 +159,7 @@ const OverView = () => {
             title={
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <div>{t('overview.chart.views_trend')}</div>
-                <NumSelect d="天" value={num} setValue={setNum} />
+                <NumSelect d="numselect.unit.day" value={num} setValue={setNum} />
               </div>
             }
             chart={<Area yField={t('overview.chart.views')} {...eachConfig} />}
@@ -177,7 +177,7 @@ const OverView = () => {
             title={
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <div>{t('overview.chart.total_visitors_trend')}</div>
-                <NumSelect d="天" value={num} setValue={setNum} />
+                <NumSelect d="numselect.unit.day" value={num} setValue={setNum} />
               </div>
             }
             chart={<Area yField={t('overview.chart.visitors')} {...lineConfig} />}
@@ -189,7 +189,7 @@ const OverView = () => {
             title={
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <div>{t('overview.chart.total_views_trend')}</div>
-                <NumSelect d="天" value={num} setValue={setNum} />
+                <NumSelect d="numselect.unit.day" value={num} setValue={setNum} />
               </div>
             }
             chart={<Area yField={t('overview.chart.views')} {...lineConfig} />}

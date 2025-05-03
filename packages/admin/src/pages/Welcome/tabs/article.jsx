@@ -151,7 +151,7 @@ const ArticleTab = () => {
             title={
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <div>{t('article.chart.tag_column')}</div>
-                <NumSelect d="条" value={num} setValue={setNum} />
+                <NumSelect d="numselect.unit.item" value={num} setValue={setNum} />
               </div>
             }
             chart={

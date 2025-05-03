@@ -214,7 +214,7 @@ const Viewer = () => {
               title={
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <div>{t('viewer.chart.recent_visit_top')}</div>
-                  <NumSelect d="条" value={num} setValue={setNum} />
+                  <NumSelect d="numselect.unit.item" value={num} setValue={setNum} />
                 </div>
               }
               className="card-full-title"
@@ -230,7 +230,7 @@ const Viewer = () => {
               title={
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <div>{t('viewer.chart.article_views_top')}</div>
-                  <NumSelect d="条" value={num} setValue={setNum} />
+                  <NumSelect d="numselect.unit.item" value={num} setValue={setNum} />
                 </div>
               }
               className="card-full-title"

@@ -103,7 +103,12 @@ export default function UrlFormItem(props: UrlFormItemProps) {
         colProps={props.colProps}
         extra={
           <div style={{ display: 'flex', marginTop: '10px' }}>
-            <Image src={url || ''} fallback={errorImg} height={100} width={100} />
+            <Image
+              src={url || 'error-image-placeholder'}
+              fallback={errorImg}
+              height={100}
+              width={100}
+            />
             <div style={{ marginLeft: 10 }}>
               <UploadBtn
                 setLoading={() => {

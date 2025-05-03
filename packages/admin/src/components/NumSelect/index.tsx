@@ -22,7 +22,7 @@ export default function (props: NumSelectProps) {
     const res: SelectOption[] = [];
     nums.forEach((n) => {
       res.push({
-        label: t('numselect.recent', { n: n.toString(), unit: d }),
+        label: t('numselect.recent', { n: n.toString(), unit: t(d) }),
         value: n,
       });
     });

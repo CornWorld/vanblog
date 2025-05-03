@@ -1,8 +1,8 @@
 import React from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation, TFunction } from 'react-i18next';
 import { createApiToken, getAllApiTokens, deleteApiToken } from '@/services/van-blog/api';
 import { ModalForm, ProFormText, ProTable } from '@ant-design/pro-components';
-import type { ActionType } from '@ant-design/pro-components';
+import type { ActionType, ProColumns } from '@ant-design/pro-components';
 import { Button, Card, message, Modal, Space, Typography } from 'antd';
 
 import { useRef } from 'react';
@@ -13,16 +13,16 @@ interface TokenRecord {
   token: string;
 }
 
-const columns = [
+const getColumns = ({ t }: { t: TFunction }): ProColumns<TokenRecord>[] => [
   { dataIndex: '_id', title: t('token.column.id') },
   { dataIndex: 'name', title: t('token.column.name') },
   {
     dataIndex: 'token',
     title: t('token.column.content'),
-    render: (token: string) => {
+    render: (_: React.ReactNode, entity: TokenRecord) => {
       return (
         <Typography.Text style={{ maxWidth: 250 }} ellipsis={true} copyable={true}>
-          {token}
+          {entity.token}
         </Typography.Text>
       );
     },
@@ -51,9 +51,9 @@ const columns = [
   },
 ];
 
-export default function () {
+export default function Token() {
   const { t } = useTranslation();
-  const actionRef = useRef<ActionType>();
+  const actionRef = useRef<ActionType>(null);
   return (
     <>
       <Card
@@ -109,9 +109,9 @@ export default function () {
           </Space>
         }
       >
-        <ProTable
+        <ProTable<TokenRecord>
           rowKey="id"
-          columns={columns}
+          columns={getColumns({ t })}
           dateFormatter="string"
           actionRef={actionRef}
           search={false}
@@ -121,7 +121,7 @@ export default function () {
             simple: true,
           }}
           request={async () => {
-            const { data } = await getAllApiTokens();
+            const { data = [] } = (await getAllApiTokens()) as { data: TokenRecord[] };
             return {
               data,
               // success 请返回 true，
