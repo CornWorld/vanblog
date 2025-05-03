@@ -95,26 +95,24 @@ export async function getStaticProps({
 }: {
   params: { p: string };
   locale: string;
-}): Promise<{ props: PagePagesProps; revalidate?: number } | { notFound: true }> {
+}) {
   try {
-    // Check if params.p exists
-    if (!params || !params.p) {
-      console.error('Error: Page number is undefined');
-      return {
-        notFound: true,
-      };
-    }
-
-    const props = await getPagePagesProps(params.p);
-    return {
-      props,
+    const result = {
+      props: {
+        ...(await getPagePagesProps(params.p)),
+        ...(await serverSideTranslations(locale)),
+      },
       ...revalidate,
-      ...(await serverSideTranslations(locale)),
     };
+    return result;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
   } catch (error) {
-    console.error('Error getting page props:', error);
     return {
-      notFound: true,
+      props: {
+        ...(await getPagePagesProps('1')),
+        ...(await serverSideTranslations(locale)),
+      },
+      ...revalidate,
     };
   }
 }

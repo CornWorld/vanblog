@@ -68,11 +68,12 @@ const CategoryPage = (props: CategoryPageProps) => {
 
 export default CategoryPage;
 export async function getStaticProps({ locale }) {
-  return {
+  const result = {
     props: {
       ...(await getCategoryPageProps()),
       ...(await serverSideTranslations(locale, ['translations'])),
     },
     ...revalidate,
   };
+  return result;
 }

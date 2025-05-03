@@ -78,11 +78,12 @@ const TimeLine = (props: TimeLinePageProps) => {
 
 export default TimeLine;
 export async function getStaticProps({ locale }) {
-  return {
+  const result = {
     props: {
       ...(await getTimeLinePageProps()),
       ...(await serverSideTranslations(locale)),
     },
     ...revalidate,
   };
+  return result;
 }

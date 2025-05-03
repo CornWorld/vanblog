@@ -76,11 +76,12 @@ export async function getStaticProps({
   params: { tag: string };
   locale: string;
 }) {
-  return {
+  const result = {
     props: {
       ...(await getTagPagesProps(params.tag)),
       ...(await serverSideTranslations(locale)),
     },
     ...revalidate,
   };
+  return result;
 }

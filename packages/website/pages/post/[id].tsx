@@ -240,24 +240,14 @@ export async function getStaticProps({
   locale: string;
 }) {
   try {
-    // If params.id is undefined, return notFound
-    if (!params || !params.id) {
-      throw new Error('Article ID is undefined');
-    }
-
-    const pageProps = await getPostPagesProps(params.id);
-
-    if (!pageProps || !pageProps.article || !pageProps.article.id) {
-      throw new Error('Article ID is undefined');
-    }
-
-    return {
+    const result = {
       props: {
-        ...pageProps,
+        ...(await getPostPagesProps(params.id)),
         ...(await serverSideTranslations(locale)),
       },
       ...revalidate,
     };
+    return result;
   } catch (error) {
     console.error(`[getStaticProps] Error getting post props: ${error}`);
     return {

@@ -51,11 +51,12 @@ const TagPage = (props: TagPageProps) => {
 
 export default TagPage;
 export async function getStaticProps({ locale }) {
-  return {
+  const result = {
     props: {
       ...(await getTagPageProps()),
       ...(await serverSideTranslations(locale)),
     },
     ...revalidate,
   };
+  return result;
 }

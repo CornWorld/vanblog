@@ -78,11 +78,12 @@ const Home = (props: IndexPageProps) => {
 export default Home;
 
 export async function getStaticProps({ locale }) {
-  return {
+  const result = {
     props: {
       ...(await getIndexPageProps()),
       ...(await serverSideTranslations(locale)),
     },
     ...revalidate,
   };
+  return result;
 }

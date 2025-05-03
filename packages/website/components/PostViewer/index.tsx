@@ -33,9 +33,10 @@ export const getStaticProps = (async (context) => {
 
   // If no id is provided, return initialViewer as 0
   if (!id) {
-    return {
+    const result = {
       props: { initialViewer: 0 },
     };
+    return result;
   }
 
   // Ensure id is a string or number
@@ -44,11 +45,12 @@ export const getStaticProps = (async (context) => {
   // Fetch initial viewer count at build time
   const res = await getArticleViewer(postId);
 
-  return {
+  const result = {
     props: {
       initialViewer: res?.viewer || 0,
     },
     // Revalidate every hour to keep viewer counts somewhat up-to-date
     revalidate: 3600,
   };
+  return result;
 }) satisfies GetStaticProps;

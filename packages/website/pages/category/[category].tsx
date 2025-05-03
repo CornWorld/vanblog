@@ -74,12 +74,13 @@ export async function getStaticProps({
 }: {
   params: { category: string };
   locale: string;
-}): Promise<{ props: CategoryPagesProps; revalidate?: number }> {
-  return {
+}) {
+  const result = {
     props: {
       ...(await getCategoryPagesProps(params.category)),
       ...(await serverSideTranslations(locale)),
     },
     ...revalidate,
   };
+  return result;
 }

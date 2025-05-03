@@ -87,11 +87,12 @@ const AboutPage = (props: AboutPageProps) => {
 
 export default AboutPage;
 export async function getStaticProps({ locale }) {
-  return {
+  const result = {
     props: {
       ...(await getAboutPageProps()),
       ...(await serverSideTranslations(locale)),
     },
     ...revalidate,
   };
+  return result;
 }

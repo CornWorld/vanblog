@@ -86,11 +86,12 @@ const LinkPage = (props: LinkPageProps) => {
 
 export default LinkPage;
 export async function getStaticProps({ locale }) {
-  return {
+  const result = {
     props: {
       ...(await getLinkPageProps()),
       ...(await serverSideTranslations(locale)),
     },
     ...revalidate,
   };
+  return result;
 }
