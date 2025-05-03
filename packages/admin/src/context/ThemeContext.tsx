@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, useMemo } from 'react';
+import React, { createContext, useContext, useEffect, useState, useMemo, useCallback } from 'react';
 
 export type ThemeType = 'light' | 'dark' | 'auto';
 
@@ -99,7 +99,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   );
 
   // 处理主题变更
-  const setTheme = (newTheme: ThemeType) => {
+  const setTheme = useCallback((newTheme: ThemeType) => {
     if (process.env.NODE_ENV === 'development') {
       console.log('[Theme] Setting theme:', newTheme);
     }
@@ -115,7 +115,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     } else {
       setEffectiveTheme(newTheme);
     }
-  };
+  }, []);
 
   // 监听系统主题变化（仅当主题设置为 auto 时生效）
   useEffect(() => {
@@ -166,7 +166,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (savedTheme !== theme) {
       setTheme(savedTheme);
     }
-  }, []);
+  }, [theme, setTheme]);
 
   // 使用 useMemo 优化 context 值，避免不必要的组件重渲染
   const contextValue = useMemo(
@@ -175,7 +175,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       effectiveTheme,
       setTheme,
     }),
-    [theme, effectiveTheme],
+    [theme, effectiveTheme, setTheme],
   );
 
   return <ThemeContext.Provider value={contextValue}>{children}</ThemeContext.Provider>;

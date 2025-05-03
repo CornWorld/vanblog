@@ -2,7 +2,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { PageContainer } from '@ant-design/pro-layout';
 import { Button, Modal, Space, Spin } from 'antd';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { history, useModel } from '@/router';
 import TipTitle from '../../components/TipTitle';
 
@@ -18,7 +18,8 @@ export default function () {
       return '/ui/';
     }
   }, [initialState]);
-  const showTips = () => {
+
+  const showTips = useCallback(() => {
     Modal.info({
       title: t('comment.modal.title'),
       content: (
@@ -45,7 +46,8 @@ export default function () {
         </div>
       ),
     });
-  };
+  }, [t]);
+
   useEffect(() => {
     if (!current.hasInit) {
       current.hasInit = true;
@@ -54,7 +56,7 @@ export default function () {
         showTips();
       }
     }
-  }, [current]);
+  }, [current, showTips]);
   return (
     <PageContainer
       className="editor-full"

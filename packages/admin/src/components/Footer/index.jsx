@@ -20,7 +20,7 @@ const Footer = () => {
       v = t('footer.login_required');
     }
     return v;
-  }, [initialState, location, isInitPage]);
+  }, [initialState, location, isInitPage, t]);
 
   useEffect(() => {
     if (!current.hasInit) {
@@ -33,7 +33,7 @@ const Footer = () => {
         console.log(t('footer.console.star'));
       }
     }
-  }, [initialState, version, isInitPage]);
+  }, [initialState, version, isInitPage, current, t]);
 
   return (
     <>

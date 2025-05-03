@@ -12,6 +12,7 @@ interface UpdateModalProps {
   setLoading: (loading: boolean) => void;
   onFinish: () => void;
   type: 'article' | 'draft' | 'about';
+  visible: boolean;
 }
 
 interface TagsResponse {
@@ -23,11 +24,19 @@ interface CategoriesResponse {
 }
 
 export default function (props: UpdateModalProps) {
-  const { currObj, setLoading, type, onFinish } = props;
+  const { currObj, setLoading, type, onFinish, visible } = props;
   const [form] = Form.useForm();
   useEffect(() => {
-    if (form && form.setFieldsValue) form.setFieldsValue(currObj);
-  }, [currObj]);
+    if (visible && currObj) {
+      form.setFieldsValue({
+        title: currObj.title,
+        category: currObj.category,
+        tags: currObj.tags,
+        ...(currObj.pathname ? { pathname: currObj.pathname } : {}),
+        ...(currObj.hidden !== undefined ? { hidden: currObj.hidden } : {}),
+      });
+    }
+  }, [visible, currObj, form]);
   return (
     <ModalForm
       form={form}

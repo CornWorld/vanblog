@@ -126,7 +126,7 @@ export default function CodePage() {
       }
     }
     return 'html';
-  }, [node]);
+  }, [node, type]);
 
   const fetchFileData = async (node: TreeNode) => {
     setEditorLoading(true);
@@ -165,7 +165,7 @@ export default function CodePage() {
     setSelectedKeys([selectedNode.key]);
   };
 
-  const updateEditorSize = () => {
+  const updateEditorSize = useCallback(() => {
     const headerEl = document.querySelector('.ant-page-header');
     if (headerEl) {
       const fullWidthString = window.getComputedStyle(headerEl).width;
@@ -177,9 +177,9 @@ export default function CodePage() {
       const HeaderHeight = parseInt(HeaderHeightString.replace('px', ''));
       setEditorHeight(window.innerHeight - HeaderHeight - 12);
     }
-  };
+  }, [isFolder]);
 
-  const onClickMenuChangeBtn = () => {
+  const onClickMenuChangeBtn = useCallback(() => {
     const menuBtnEl = document.querySelector('.ant-pro-sider-collapsed-button');
     if (menuBtnEl) {
       menuBtnEl.addEventListener('click', () => {
@@ -188,7 +188,7 @@ export default function CodePage() {
         }, 500);
       });
     }
-  };
+  }, [updateEditorSize]);
 
   useEffect(() => {
     window.addEventListener('resize', updateEditorSize);
@@ -200,22 +200,53 @@ export default function CodePage() {
         menuBtnEl.removeEventListener('click', onClickMenuChangeBtn);
       }
     };
-  }, []);
+  }, [onClickMenuChangeBtn, updateEditorSize]);
 
-  const onKeyDown = (ev: ReactKeyboardEvent) => {
-    let save = false;
-    if (ev.metaKey === true && ev.key.toLowerCase() === 's') {
-      save = true;
+  const handleSave = useCallback(async () => {
+    if (location.hostname == 'blog-demo.mereith.com') {
+      Modal.info({
+        title: '演示站不可修改此项！',
+      });
+      return;
     }
-    if (ev.ctrlKey === true && ev.key.toLowerCase() === 's') {
-      save = true;
+    if (type == 'file') {
+      setEditorLoading(true);
+      await updateCustomPage({ ...currObj, html: value });
+      setEditorLoading(false);
+      message.success('当前编辑器内文件保存成功！');
+    } else if (type == 'pipeline' && currObj) {
+      setEditorLoading(true);
+      await updatePipelineById(currObj.id, { script: value });
+      setEditorLoading(false);
+      message.success('当前编辑器内脚本保存成功！');
+    } else {
+      setEditorLoading(true);
+      if (node?.key) {
+        await updateCustomPageFileInFolder(path, node.key, value);
+        message.success('当前编辑器内文件保存成功！');
+      }
+      setEditorLoading(false);
+      return;
     }
-    if (save) {
-      ev.preventDefault();
-      handleSave();
-    }
-    return false;
-  };
+  }, [type, currObj, value, path, node, setEditorLoading]);
+
+  const onKeyDown = useCallback(
+    (ev: ReactKeyboardEvent) => {
+      let save = false;
+      if (ev.metaKey === true && ev.key.toLowerCase() === 's') {
+        save = true;
+      }
+      if (ev.ctrlKey === true && ev.key.toLowerCase() === 's') {
+        save = true;
+      }
+      if (save) {
+        ev.preventDefault();
+        handleSave();
+      }
+      return false;
+    },
+    [handleSave],
+  );
 
   useEffect(() => {
     const handleKeyDown = (ev: globalThis.KeyboardEvent) => {
@@ -225,13 +256,13 @@ export default function CodePage() {
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [currObj, value, type]);
+  }, [onKeyDown]);
 
   useEffect(() => {
     setTimeout(() => {
       updateEditorSize();
     }, 300);
-  }, []);
+  }, [updateEditorSize]);
 
   const fetchData = useCallback(async () => {
     if (!path && !id) {
@@ -272,34 +303,6 @@ export default function CodePage() {
       message.error('获取数据失败！');
     }
   }, [path, id, type, isFolder]);
-
-  const handleSave = async () => {
-    if (location.hostname == 'blog-demo.mereith.com') {
-      Modal.info({
-        title: '演示站不可修改此项！',
-      });
-      return;
-    }
-    if (type == 'file') {
-      setEditorLoading(true);
-      await updateCustomPage({ ...currObj, html: value });
-      setEditorLoading(false);
-      message.success('当前编辑器内文件保存成功！');
-    } else if (type == 'pipeline' && currObj) {
-      setEditorLoading(true);
-      await updatePipelineById(currObj.id, { script: value });
-      setEditorLoading(false);
-      message.success('当前编辑器内脚本保存成功！');
-    } else {
-      setEditorLoading(true);
-      if (node?.key) {
-        await updateCustomPageFileInFolder(path, node.key, value);
-        message.success('当前编辑器内文件保存成功！');
-      }
-      setEditorLoading(false);
-      return;
-    }
-  };
 
   const actionMenu = (
     <Menu

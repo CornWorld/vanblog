@@ -132,23 +132,26 @@ const BasicLayout = () => {
     return <PageLoading />;
   }
 
+  // 确保 settings 存在
+  const settings = initialState.settings || {};
+
   // 将主题映射到 Ant Design 设置
   const antdTheme = effectiveTheme === 'dark' ? 'realDark' : 'light';
 
   return (
     <div style={{ height: '100vh' }}>
       <ProLayout
-        {...initialState.settings}
+        {...settings}
         navTheme={antdTheme}
         route={{ routes }}
         location={location}
-        title={initialState.settings.title || 'VanBlog'}
+        title={settings.title || 'VanBlog'}
         logo={'/logo.svg'}
         headerRender={false}
         menuHeaderRender={(logoDom, titleDom, props) => (
           <LogoTitle
             logo={logoDom.props.src}
-            title={initialState.settings.title || titleDom}
+            title={settings.title || titleDom}
             collapsed={props?.collapsed}
           />
         )}
@@ -181,19 +184,19 @@ const BasicLayout = () => {
         <SettingDrawer
           disableUrlParams
           enableDarkTheme
-          settings={initialState.settings}
-          onSettingChange={(settings) => {
+          settings={settings}
+          onSettingChange={(newSettings) => {
             const user = initialState?.user;
             const isCollaborator = user?.type && user?.type === 'collaborator';
             if (isCollaborator) {
-              settings.title = t('layout.collaborator_mode');
+              newSettings.title = t('layout.collaborator_mode');
             }
 
             // 更新 initialState 中的设置
             setInitialState((prev) => ({
               ...prev,
               settings: {
-                ...settings,
+                ...newSettings,
                 navTheme: antdTheme,
               },
             }));

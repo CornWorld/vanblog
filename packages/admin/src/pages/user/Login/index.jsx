@@ -31,7 +31,7 @@ const Login = () => {
       sessionStorage.removeItem('vanblog_redirect_count');
       sessionStorage.removeItem('vanblog_redirect_timestamp');
     }
-  }, []);
+  }, [t]);
 
   // 处理登录表单提交
   const handleSubmit = async (values) => {

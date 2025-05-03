@@ -82,7 +82,7 @@ const ImageManager: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, pageSize]);
+  }, [page, pageSize, t]);
 
   useEffect(() => {
     fetchData();
@@ -178,7 +178,7 @@ const ImageManager: React.FC = () => {
           break;
       }
     },
-    [clickItem, fetchData],
+    [clickItem, fetchData, t],
   );
 
   // Display menu method

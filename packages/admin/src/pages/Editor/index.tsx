@@ -221,10 +221,10 @@ function EditorContent() {
     return () => {
       document.body.classList.remove('editor-page');
     };
-  }, []);
+  }, [fetchData]);
 
   // Define saveFn function
-  const saveFn = async () => {
+  const saveFn = useCallback(async () => {
     const v = value;
     setLoading(true);
     if (window.location.hostname === 'blog-demo.mereith.com' && type !== 'draft') {
@@ -249,7 +249,7 @@ function EditorContent() {
       navigate(-1);
     }
     setLoading(false);
-  };
+  }, [type, value, currObj, fetchData, t, message, navigate, editorConfig, setLoading]);
 
   // Define handleSave function
   const handleSave = useCallback(async () => {
@@ -293,7 +293,7 @@ function EditorContent() {
       ),
       onOk: saveFn,
     });
-  }, [modal, t, type, value, currObj, message]);
+  }, [modal, t, type, value, currObj, saveFn]);
 
   // Define onKeyDown function
   const onKeyDown = useCallback(
@@ -376,6 +376,7 @@ function EditorContent() {
           key: 'updateModalBtn',
           label: (
             <UpdateModal
+              visible={true}
               onFinish={() => {
                 fetchData(true);
               }}

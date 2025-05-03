@@ -39,7 +39,7 @@ const OverView = () => {
       });
     }
     return res;
-  }, [data]);
+  }, [data, t]);
 
   const totalData = useMemo(() => {
     const res = [];
@@ -51,7 +51,7 @@ const OverView = () => {
       });
     }
     return res;
-  }, [data]);
+  }, [data, t]);
   const lineConfig = {
     data: totalData,
     xField: 'date',

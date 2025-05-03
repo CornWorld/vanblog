@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 export const useTab = (init, tabKey) => {
@@ -6,10 +6,10 @@ export const useTab = (init, tabKey) => {
   const navigate = useNavigate();
 
   // Get initial value from URL search params
-  const getInitialValue = () => {
+  const getInitialValue = useCallback(() => {
     const searchParams = new URLSearchParams(location.search);
     return searchParams.get(tabKey) || init;
-  };
+  }, [location.search, tabKey, init]);
 
   const [currTabKey, setCurrTabKey] = useState(getInitialValue());
 
@@ -19,7 +19,7 @@ export const useTab = (init, tabKey) => {
     if (value !== currTabKey) {
       setCurrTabKey(value);
     }
-  }, [location.search, init, tabKey]);
+  }, [location.search, init, tabKey, currTabKey, getInitialValue]);
 
   return [
     currTabKey,
