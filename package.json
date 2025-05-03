@@ -1,6 +1,6 @@
 {
   "name": "root",
-  "version": "0.54.0-corn.5",
+  "version": "0.54.0-corn.6",
   "private": true,
   "type": "module",
   "scripts": {
