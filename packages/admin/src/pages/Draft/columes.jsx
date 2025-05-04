@@ -7,7 +7,6 @@ import { deleteDraft, getAllCategories, getDraftById, getTags } from '@/services
 import { parseObjToMarkdown } from '@/services/van-blog/parseMarkdownFile';
 import { message, Modal, Tag, Button } from 'antd';
 import { history } from '@/router';
-import { withoutKey } from '@/utils/props';
 
 export const draftKeys = ['category', 'id', 'option', 'showTime', 'tags', 'title'];
 export const draftKeysSmall = ['category', 'id', 'option', 'title'];
@@ -62,7 +61,13 @@ export const getColumns = ({ t }) => [
     valueType: 'select',
     width: 120,
     renderFormItem: (item, { defaultRender }) => {
-      return defaultRender(withoutKey(item));
+      const itemWithoutKey = (() => {
+        if (!item) return {};
+        const rest = { ...item };
+        delete rest.key;
+        return rest;
+      })();
+      return defaultRender(itemWithoutKey);
     },
     request: async () => {
       const { data: tags } = await getTags();

@@ -10,7 +10,6 @@ import { UserProvider } from '../user/user.provider';
 import { VisitProvider } from '../visit/visit.provider';
 import { ArticleProvider } from '../article/article.provider';
 import dayjs from 'dayjs';
-import { isTrue } from 'src/utils/isTrue';
 import { ViewerProvider } from '../viewer/viewer.provider';
 @Injectable()
 export class MetaProvider {
@@ -50,10 +49,10 @@ export class MetaProvider {
     const newViewer = ov + 1;
     let newVisited = oldVisited;
     let isNewVisitorByArticle = false;
-    if (isTrue(isNew)) {
+    if (String(isNew).toLowerCase() === 'true') {
       newVisited += 1;
     }
-    if (isTrue(isNewByPath)) {
+    if (String(isNewByPath).toLowerCase() === 'true') {
       isNewVisitorByArticle = true;
     }
     // 这个是 meta 的
@@ -152,10 +151,8 @@ export class MetaProvider {
   }
 
   async updateSiteInfo(updateSiteInfoDto: UpdateSiteInfoDto) {
-    // @ts-ignore eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    const { name, password, ...updateDto } = updateSiteInfoDto;
     const oldSiteInfo = await this.getSiteInfo();
-    return this.metaModel.updateOne({}, { siteInfo: { ...oldSiteInfo, ...updateDto } });
+    return this.metaModel.updateOne({}, { siteInfo: { ...oldSiteInfo, ...updateSiteInfoDto } });
   }
 
   async addOrUpdateReward(addReward: Partial<RewardItem>) {

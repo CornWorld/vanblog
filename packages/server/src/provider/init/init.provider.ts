@@ -6,7 +6,7 @@ import { MetaDocument } from 'src/scheme/meta.schema';
 import { UserDocument } from 'src/scheme/user.schema';
 import { WalineProvider } from '../waline/waline.provider';
 import { SettingProvider } from '../setting/setting.provider';
-import { version } from '../../utils/loadConfig';
+import { version } from '../../config/loadConfig';
 import { encryptPassword, makeSalt } from 'src/utils/crypto';
 import { defaultMenu } from 'src/types/menu.dto';
 import { CacheProvider } from '../cache/cache.provider';
@@ -65,7 +65,7 @@ export class InitProvider {
       // 重启前台
       this.websiteProvider.restart('初始化');
       return '初始化成功!';
-    } catch (err) {
+    } catch {
       throw new BadRequestException('初始化失败');
     }
   }
@@ -83,7 +83,7 @@ export class InitProvider {
     const filePath = path.join('/var/log/', 'restore.key');
     try {
       fs.writeFileSync(filePath, key, { encoding: 'utf-8' });
-    } catch (err) {
+    } catch {
       this.logger.error('写入恢复密钥到文件失败！');
     }
     this.logger.warn(
@@ -165,8 +165,8 @@ export class InitProvider {
           version,
         });
       }
-    } catch (err) {
-      this.logger.error(`初始化版本信息失败: ${JSON.stringify(err, null, 2)}`);
+    } catch (error) {
+      this.logger.error(`初始化版本信息失败: ${JSON.stringify(error, null, 2)}`);
     }
   }
 }

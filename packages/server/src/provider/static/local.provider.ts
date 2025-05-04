@@ -6,7 +6,6 @@ import { config } from 'src/config';
 import { imageSize } from 'image-size';
 import { formatBytes } from 'src/utils/size';
 import { ImgMeta } from 'src/types/img';
-import { isProd } from 'src/utils/isProd';
 import compressing from 'compressing';
 import dayjs from 'dayjs';
 import { checkOrCreate, checkOrCreateByFilePath } from 'src/utils/checkFolder';
@@ -84,7 +83,7 @@ export class LocalProvider {
     const srcPath = path.join(config.staticPath, storagePath, fileName);
     let realPath = `/static/${type}/${fileName}`;
 
-    if (isProd()) {
+    if (process.env?.NODE_ENV === 'production') {
       if (toRootPath) {
         realPath = `/${fileName}`;
       }
@@ -105,7 +104,7 @@ export class LocalProvider {
     const srcPath = path.join(config.staticPath, storagePath, name);
     try {
       rmDir(srcPath);
-    } catch (err) {
+    } catch {
       console.log('删除实际文件夹失败：', name);
     }
   }
@@ -115,7 +114,7 @@ export class LocalProvider {
       const storagePath = StoragePath[type] || StoragePath['img'];
       const srcPath = path.join(config.staticPath, storagePath, fileName);
       fs.rmSync(srcPath);
-    } catch (err) {
+    } catch {
       console.log('删除实际文件失败：', fileName, '可能是更新版本后没映射静态文件目录导致的');
     }
   }

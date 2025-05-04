@@ -1,4 +1,4 @@
-import { loadConfig } from 'src/utils/loadConfig';
+import { loadConfig } from './loadConfig';
 
 export interface Config {
   mongoUrl: string;

@@ -1,9 +1,7 @@
 import {
-  Body,
   Controller,
   Get,
   Post,
-  Put,
   Res,
   UploadedFile,
   UseGuards,
@@ -20,9 +18,8 @@ import { MetaProvider } from 'src/provider/meta/meta.provider';
 import { TagProvider } from 'src/provider/tag/tag.provider';
 import { UserProvider } from 'src/provider/user/user.provider';
 import * as fs from 'fs';
-import * as dayjs from 'dayjs';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { removeID } from 'src/utils/removeId';
+import { omit } from 'lodash-es';
 import { ViewerProvider } from 'src/provider/viewer/viewer.provider';
 import { VisitProvider } from 'src/provider/visit/visit.provider';
 import { StaticProvider } from 'src/provider/static/static.provider';
@@ -102,12 +99,12 @@ export class BackupController {
     const { meta, user, setting } = data;
     let { articles, drafts, viewer, visit, static: staticItems } = data;
     // 去掉 id
-    articles = removeID(articles);
-    drafts = removeID(drafts);
-    viewer = removeID(viewer);
-    visit = removeID(visit);
+    articles = articles?.map((item) => omit(item, ['_id', '__v'])) || null;
+    drafts = drafts?.map((item) => omit(item, ['_id', '__v'])) || null;
+    viewer = viewer?.map((item) => omit(item, ['_id', '__v'])) || null;
+    visit = visit?.map((item) => omit(item, ['_id', '__v'])) || null;
     if (staticItems) {
-      staticItems = removeID(staticItems);
+      staticItems = staticItems.map((item) => omit(item, ['_id', '__v']));
     }
     if (setting && setting.static) {
       setting.static = { ...setting.static, _id: undefined, __v: undefined };

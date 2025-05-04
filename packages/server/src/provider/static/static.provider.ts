@@ -14,7 +14,6 @@ import { formatBytes } from 'src/utils/size';
 import axios from 'axios';
 import { UploadConfig } from 'src/types/upload';
 import { addWaterMarkToIMG } from 'src/utils/watermark';
-import { checkTrue } from 'src/utils/checkTrue';
 import { compressImgToWebp } from 'src/utils/webp';
 @Injectable()
 export class StaticProvider {
@@ -37,7 +36,7 @@ export class StaticProvider {
     return this.publicView;
   }
   async upload(
-    file: any,
+    file: Express.Multer.File,
     type: StaticType,
     isFavicon?: boolean,
     customPathname?: string,
@@ -56,7 +55,11 @@ export class StaticProvider {
         if (updateConfig && updateConfig.withWaterMark && fileType != 'gif') {
           // 双保险，只有这里开启水印并且设置中也开启了才有效。
           const waterMarkConfigInDB = staticConfigInDB;
-          if (waterMarkConfigInDB && checkTrue(waterMarkConfigInDB?.enableWaterMark)) {
+          if (
+            waterMarkConfigInDB &&
+            (waterMarkConfigInDB?.enableWaterMark === true ||
+              String(waterMarkConfigInDB?.enableWaterMark) === 'true')
+          ) {
             const waterMarkText = updateConfig.waterMarkText || waterMarkConfigInDB.waterMarkText;
             if (waterMarkText && waterMarkText.trim() !== '') {
               buf = await addWaterMarkToIMG(buffer, waterMarkText);
@@ -64,15 +67,15 @@ export class StaticProvider {
             }
           }
         }
-      } catch (err) {
+      } catch {
         // console.log(err);
       }
 
-      if (checkTrue(staticConfigInDB.enableWebp)) {
+      if (staticConfigInDB.enableWebp === true || String(staticConfigInDB.enableWebp) === 'true') {
         try {
           buf = await compressImgToWebp(buf);
           currentSign = encryptFileMD5(buf);
-        } catch (err) {
+        } catch {
           // console.log(err);
           compressSuccess = false;
         }
@@ -93,7 +96,11 @@ export class StaticProvider {
     if (type == 'customPage') {
       fileName = customPathname + '/' + file.originalname;
     }
-    if (type == 'img' && checkTrue(staticConfigInDB.enableWebp) && compressSuccess) {
+    if (
+      type == 'img' &&
+      (staticConfigInDB.enableWebp === true || String(staticConfigInDB.enableWebp) === 'true') &&
+      compressSuccess
+    ) {
       fileName = currentSign + '.' + pureFileName + '.webp';
     }
     const realPath = await this.saveFile(
@@ -131,8 +138,8 @@ export class StaticProvider {
       });
 
       return res.data;
-    } catch (err) {
-      console.log(err);
+    } catch (error) {
+      console.log(error);
       return null;
     }
   }
@@ -210,17 +217,22 @@ export class StaticProvider {
     if (type == 'customPage') {
       storageType = 'local';
     }
+
+    let realPath;
+    let meta;
+    let picgoRes;
+
     switch (storageType) {
       case 'local':
-        const { realPath, meta } = await this.localProvider.saveFile(
+        ({ realPath, meta } = await this.localProvider.saveFile(
           fileName,
           buffer,
           type,
           toRootPath,
-        );
+        ));
         if (type != 'customPage') {
           await this.createInDB({
-            fileType: (meta as any)?.type || fileType,
+            fileType: (meta as ImgMeta)?.type || fileType,
             staticType: type,
             storageType: storageType,
             sign,
@@ -231,7 +243,7 @@ export class StaticProvider {
         }
         return realPath;
       case 'picgo':
-        const picgoRes = await this.picgoProvider.saveFile(fileName, buffer, type);
+        picgoRes = await this.picgoProvider.saveFile(fileName, buffer, type);
         await this.createInDB({
           fileType: picgoRes.meta?.type || fileType,
           staticType: type,
@@ -242,6 +254,8 @@ export class StaticProvider {
           meta: picgoRes.meta,
         });
         return picgoRes.realPath;
+      default:
+        return null;
     }
   }
   async createInDB(dto: Partial<Static>) {
@@ -258,7 +272,7 @@ export class StaticProvider {
     return await this.staticModel.find({}, this.getView('public')).exec();
   }
   async getByOption(option: SearchStaticOption) {
-    const query: any = {};
+    const query: { staticType?: StaticType } = {};
     if (option.staticType) {
       query.staticType = option.staticType;
     }

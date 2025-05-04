@@ -7,7 +7,6 @@ import { parseObjToMarkdown } from '@/services/van-blog/parseMarkdownFile';
 import { message, Modal, Space, Tag, Button } from 'antd';
 import { history } from '@/router';
 import { genActiveObj } from '../../services/van-blog/activeColTools';
-import { withoutKey } from '@/utils/props';
 
 export const articleKeys = [
   'category',
@@ -68,7 +67,13 @@ export const getColumns = ({ t }) => [
     width: 120,
     search: true,
     renderFormItem: (item, { defaultRender }) => {
-      return defaultRender(withoutKey(item));
+      const itemWithoutKey = (() => {
+        if (!item) return {};
+        const rest = { ...item };
+        delete rest.key;
+        return rest;
+      })();
+      return defaultRender(itemWithoutKey);
     },
     request: async () => {
       const { data: tags } = await getTags();

@@ -8,7 +8,7 @@ import { MetaProvider } from 'src/provider/meta/meta.provider';
 import { SettingProvider } from 'src/provider/setting/setting.provider';
 import { TagProvider } from 'src/provider/tag/tag.provider';
 import { VisitProvider } from 'src/provider/visit/visit.provider';
-import { version } from 'src/utils/loadConfig';
+import { version } from 'src/config/loadConfig';
 import { CustomPageProvider } from 'src/provider/customPage/customPage.provider';
 import { encode } from 'js-base64';
 
@@ -16,38 +16,38 @@ import { encode } from 'js-base64';
 const defaultMenu = [
   {
     id: 0,
-    name: "首页",
-    value: "/",
+    name: '首页',
+    value: '/',
     level: 0,
   },
   {
     id: 1,
-    name: "标签",
-    value: "/tag",
+    name: '标签',
+    value: '/tag',
     level: 0,
   },
   {
     id: 2,
-    name: "分类",
-    value: "/category",
+    name: '分类',
+    value: '/category',
     level: 0,
   },
   {
     id: 3,
-    name: "时间线",
-    value: "/timeline",
+    name: '时间线',
+    value: '/timeline',
     level: 0,
   },
   {
     id: 4,
-    name: "友链",
-    value: "/link",
+    name: '友链',
+    value: '/link',
     level: 0,
   },
   {
     id: 5,
-    name: "关于",
-    value: "/about",
+    name: '关于',
+    value: '/about',
     level: 0,
   },
 ];
@@ -175,8 +175,8 @@ export class PublicController {
     @Query('sortTop') sortTop?: SortOrder,
   ) {
     const option = {
-      page: parseInt(page as any),
-      pageSize: parseInt(pageSize as any),
+      page: parseInt(String(page)),
+      pageSize: parseInt(String(pageSize)),
       category,
       tags,
       toListView,
@@ -220,53 +220,70 @@ export class PublicController {
   @Get('/meta')
   async getBuildMeta() {
     try {
-      const tags = await this.tagProvider.getAllTags(false) || [];
-      const meta = await this.metaProvider.getAll();
-      console.log('Raw meta:', meta);
-      
-      // Ensure we have a valid meta object
-      const metaDoc = {
+      const tags = (await this.tagProvider.getAllTags(false)) || [];
+      const rawMeta = await this.metaProvider.getAll();
+      console.log('Raw meta:', rawMeta);
+
+      // Ensure we have valid defaults
+      const defaultMeta = {
         links: [],
         socials: [],
         rewards: [],
         about: {
           updatedAt: new Date().toISOString(),
-          content: "",
+          content: '',
         },
         siteInfo: {
-          author: "",
-          authorDesc: "",
-          authorLogo: "",
-          siteLogo: "",
-          favicon: "",
-          siteName: "",
-          siteDesc: "",
-          baseUrl: "",
-          since: "",
-          copyrightAggreement: "",
-          showSubMenu: "false",
-          showAdminButton: "false",
-          headerLeftContent: "siteName",
-          showDonateInfo: "false",
-          showFriends: "false",
-          enableComment: "false",
-          defaultTheme: "auto",
-          enableCustomizing: "false",
-          showDonateButton: "false",
-          showCopyRight: "false",
-          showRSS: "false",
-          openArticleLinksInNewWindow: "false",
-          showExpirationReminder: "false",
-          showEditButton: "false",
+          author: '',
+          authorDesc: '',
+          authorLogo: '',
+          siteLogo: '',
+          favicon: '',
+          siteName: '',
+          siteDesc: '',
+          baseUrl: '',
+          since: '',
+          copyrightAggreement: '',
+          showSubMenu: 'false',
+          showAdminButton: 'false',
+          headerLeftContent: 'siteName',
+          showDonateInfo: 'false',
+          showFriends: 'false',
+          enableComment: 'false',
+          defaultTheme: 'auto',
+          enableCustomizing: 'false',
+          showDonateButton: 'false',
+          showCopyRight: 'false',
+          showRSS: 'false',
+          openArticleLinksInNewWindow: 'false',
+          showExpirationReminder: 'false',
+          showEditButton: 'false',
         },
-        ...(meta as any)?._doc || meta || {},
       };
-      
+
+      // Get the document data
+      let metaDoc = defaultMeta;
+
+      // If we have valid meta data, merge it with defaults
+      if (rawMeta) {
+        if (typeof rawMeta === 'object') {
+          if ('_doc' in rawMeta) {
+            // Handle Mongoose document
+            metaDoc = Object.assign({}, defaultMeta, rawMeta._doc);
+          } else {
+            // Regular object
+            metaDoc = Object.assign({}, defaultMeta, rawMeta);
+          }
+        }
+      }
+
       console.log('Meta doc:', metaDoc);
-      const categories = await this.categoryProvider.getAllCategories(false) || [];
-      const { data: menus } = await this.settingProvider.getMenuSetting() || { data: defaultMenu };
-      const totalArticles = await this.articleProvider.getTotalNum(false) || 0;
-      const totalWordCount = await this.metaProvider.getTotalWords() || 0;
+      const categories = (await this.categoryProvider.getAllCategories(false)) || [];
+      const { data: menus } = (await this.settingProvider.getMenuSetting()) || {
+        data: defaultMenu,
+      };
+      const totalArticles = (await this.articleProvider.getTotalNum(false)) || 0;
+      const totalWordCount = (await this.metaProvider.getTotalWords()) || 0;
       const LayoutSetting = await this.settingProvider.getLayoutSetting();
       const LayoutRes = this.settingProvider.encodeLayoutSetting(LayoutSetting);
 
@@ -282,7 +299,7 @@ export class PublicController {
         totalWordCount,
         ...(LayoutSetting ? { layout: LayoutRes } : {}),
       };
-      
+
       console.log('Final data:', data);
       return {
         statusCode: 200,
@@ -303,39 +320,39 @@ export class PublicController {
             categories: [],
             about: {
               updatedAt: new Date().toISOString(),
-              content: "",
+              content: '',
             },
             siteInfo: {
-              author: "",
-              authorDesc: "",
-              authorLogo: "",
-              siteLogo: "",
-              favicon: "",
-              siteName: "",
-              siteDesc: "",
-              baseUrl: "",
-              since: "",
-              copyrightAggreement: "",
-              showSubMenu: "false",
-              showAdminButton: "false",
-              headerLeftContent: "siteName",
-              showDonateInfo: "false",
-              showFriends: "false",
-              enableComment: "false",
-              defaultTheme: "auto",
-              enableCustomizing: "false",
-              showDonateButton: "false",
-              showCopyRight: "false",
-              showRSS: "false",
-              openArticleLinksInNewWindow: "false",
-              showExpirationReminder: "false",
-              showEditButton: "false",
-            }
+              author: '',
+              authorDesc: '',
+              authorLogo: '',
+              siteLogo: '',
+              favicon: '',
+              siteName: '',
+              siteDesc: '',
+              baseUrl: '',
+              since: '',
+              copyrightAggreement: '',
+              showSubMenu: 'false',
+              showAdminButton: 'false',
+              headerLeftContent: 'siteName',
+              showDonateInfo: 'false',
+              showFriends: 'false',
+              enableComment: 'false',
+              defaultTheme: 'auto',
+              enableCustomizing: 'false',
+              showDonateButton: 'false',
+              showCopyRight: 'false',
+              showRSS: 'false',
+              openArticleLinksInNewWindow: 'false',
+              showExpirationReminder: 'false',
+              showEditButton: 'false',
+            },
           },
           menus: defaultMenu,
           totalArticles: 0,
-          totalWordCount: 0
-        }
+          totalWordCount: 0,
+        },
       };
     }
   }

@@ -7,15 +7,12 @@ import {
   Query,
   UploadedFile,
   UseGuards,
-  UseInterceptors,
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags } from '@nestjs/swagger';
-import { SearchStaticOption } from 'src/types/setting.dto';
 import { AdminGuard } from 'src/provider/auth/auth.guard';
 import { StaticProvider } from 'src/provider/static/static.provider';
 import { config } from 'src/config';
-import { checkTrue } from 'src/utils/checkTrue';
+import { SearchStaticOption } from 'src/types/setting.dto';
 import { ApiToken } from 'src/provider/swagger/token';
 
 @ApiTags('img')
@@ -25,9 +22,8 @@ import { ApiToken } from 'src/provider/swagger/token';
 export class ImgController {
   constructor(private readonly staticProvider: StaticProvider) {}
   @Post('upload')
-  @UseInterceptors(FileInterceptor('file'))
   async upload(
-    @UploadedFile() file: any,
+    @UploadedFile() file: Express.Multer.File,
     @Query('favicon') favicon?: string,
     @Query('waterMarkText') waterMarkText?: string,
     @Query('withWaterMark') withWaterMark?: string,
@@ -38,7 +34,7 @@ export class ImgController {
     }
     // 只有这里开启水印，并且设置里也开启水印，才能触发水印，双保险。避免后台某些表单上传图片也触发了水印。
     const updateConfig = {
-      withWaterMark: checkTrue(withWaterMark),
+      withWaterMark: withWaterMark === 'true',
       waterMarkText,
     };
     const res = await this.staticProvider.upload(file, 'img', isFavicon, undefined, updateConfig);
