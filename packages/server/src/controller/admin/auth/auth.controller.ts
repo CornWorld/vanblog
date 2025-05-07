@@ -22,7 +22,7 @@ import { InitProvider } from 'src/provider/init/init.provider';
 import { PipelineProvider } from 'src/provider/pipeline/pipeline.provider';
 import { ApiToken } from 'src/provider/swagger/token';
 
-@ApiTags('tag')
+@ApiTags('auth')
 @Controller('/api/admin/auth/')
 export class AuthController {
   constructor(
@@ -33,7 +33,7 @@ export class AuthController {
     private readonly cacheProvider: CacheProvider,
     private readonly initProvider: InitProvider,
     private readonly pipelineProvider: PipelineProvider,
-  ) {}
+  ) { }
 
   @UseGuards(LoginGuard, AuthGuard('local'))
   @Post('/login')

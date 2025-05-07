@@ -2,11 +2,12 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { message, Alert } from 'antd';
 import { useNavigate } from 'react-router-dom';
-import { ProFormText, StepsForm, ProFormInstance } from '@ant-design/pro-components';
+import { ProFormText, StepsForm, ProFormInstance, ProFormSelect, ProFormDateTimePicker } from '@ant-design/pro-components';
 import { useEffect, useRef } from 'react';
 import { resetRedirectCycle } from '@/utils/auth';
 import { fetchAllMeta } from '@/services/van-blog/api';
 import './index.less';
+import { encryptPwd } from '@/services/van-blog/encryptPwd';
 
 interface ApiError {
   response?: {
@@ -22,6 +23,7 @@ interface ApiError {
 interface InitFormValues {
   name: string;
   password: string;
+  nickname: string;
   author: string;
   authorLogo: string;
   authorLogoDark: string;
@@ -34,19 +36,45 @@ interface InitFormValues {
   baseUrl: string;
   beianNumber?: string;
   beianUrl?: string;
+  gaBeianNumber?: string;
+  gaBeianUrl?: string;
+  gaBeianLogoUrl?: string;
+  payAliPay?: string;
+  payWechat?: string;
+  payAliPayDark?: string;
+  payWechatDark?: string;
+  since?: Date;
+  gaAnalysisId?: string;
+  baiduAnalysisId?: string;
+  copyrightAggreement?: string;
+  enableComment?: 'true' | 'false';
+  showSubMenu?: 'true' | 'false';
+  headerLeftContent?: 'siteLogo' | 'siteName';
+  subMenuOffset?: number;
+  showAdminButton?: 'true' | 'false';
+  showDonateInfo?: 'true' | 'false';
+  showFriends?: 'true' | 'false';
+  showCopyRight?: 'true' | 'false';
+  showDonateButton?: 'true' | 'false';
+  showDonateInAbout?: 'true' | 'false';
+  allowOpenHiddenPostByUrl?: 'true' | 'false';
+  defaultTheme?: 'auto' | 'dark' | 'light';
+  enableCustomizing?: 'true' | 'false';
+  showRSS?: 'true' | 'false';
+  openArticleLinksInNewWindow?: 'true' | 'false';
+  showExpirationReminder?: 'true' | 'false';
+  showEditButton?: 'true' | 'false';
 }
 
 const InitPage = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const formMapRef = useRef<React.MutableRefObject<ProFormInstance<InitFormValues> | undefined>[]>(
-    [],
-  );
+  const formMapRef = useRef<React.MutableRefObject<ProFormInstance<InitFormValues> | undefined>[]>([]);
   const formRef1 = useRef<ProFormInstance<InitFormValues>>(null);
   const formRef2 = useRef<ProFormInstance<InitFormValues>>(null);
   const formRef3 = useRef<ProFormInstance<InitFormValues>>(null);
+  const formRef4 = useRef<ProFormInstance<InitFormValues>>(null);
 
-  // 页面加载时清除重定向循环状态和任何残留令牌
   useEffect(() => {
     resetRedirectCycle();
   }, []);
@@ -55,7 +83,6 @@ const InitPage = () => {
     const checkInit = async () => {
       try {
         const response = await fetchAllMeta();
-        // Check if response has statusCode property before using it
         if (response && 'statusCode' in response) {
           if (response.statusCode === 200) {
             navigate('/', { replace: true });
@@ -65,7 +92,6 @@ const InitPage = () => {
         const err = error as ApiError;
         console.error('Error checking init status:', err);
 
-        // 详细记录错误信息以便调试
         if (err.response?.status) {
           console.error('HTTP Status:', err.response.status);
         }
@@ -82,12 +108,63 @@ const InitPage = () => {
 
   const handleInitSubmit = async (values: InitFormValues) => {
     try {
+      // Prepare the request body according to the required format
+      const requestBody = {
+        user: {
+          username: values.name,
+          password: encryptPwd(values.name, values.password),
+          nickname: values.name // Using name as nickname if not provided
+        },
+        siteInfo: {
+          author: values.author,
+          authorLogo: values.authorLogo,
+          authorLogoDark: values.authorLogoDark,
+          authDesc: values.authorDesc, // Note: API expects authDesc, not authorDesc
+          siteLogo: values.siteLogo,
+          siteLogoDark: values.siteLogoDark,
+          favicon: values.favicon,
+          siteName: values.siteName,
+          siteDesc: values.siteDesc,
+          baseUrl: values.baseUrl,
+          beianNumber: values.beianNumber || '',
+          beianUrl: values.beianUrl || '',
+          gaBeianNumber: values.gaBeianNumber || '',
+          gaBeianUrl: values.gaBeianUrl || '',
+          gaBeianLogoUrl: values.gaBeianLogoUrl || '',
+          payAliPay: values.payAliPay || '',
+          payWechat: values.payWechat || '',
+          payAliPayDark: values.payAliPayDark || '',
+          payWechatDark: values.payWechatDark || '',
+          since: values.since || new Date(),
+          gaAnalysisId: values.gaAnalysisId || '',
+          baiduAnalysisId: values.baiduAnalysisId || '',
+          copyrightAggreement: values.copyrightAggreement || '',
+          enableComment: values.enableComment || 'true',
+          showSubMenu: values.showSubMenu || 'false',
+          headerLeftContent: values.headerLeftContent || 'siteName',
+          subMenuOffset: values.subMenuOffset || 0,
+          showAdminButton: values.showAdminButton || 'true',
+          showDonateInfo: values.showDonateInfo || 'true',
+          showFriends: values.showFriends || 'true',
+          showCopyRight: values.showCopyRight || 'true',
+          showDonateButton: values.showDonateButton || 'true',
+          showDonateInAbout: values.showDonateInAbout || 'false',
+          allowOpenHiddenPostByUrl: values.allowOpenHiddenPostByUrl || 'false',
+          defaultTheme: values.defaultTheme || 'auto',
+          enableCustomizing: values.enableCustomizing || 'true',
+          showRSS: values.showRSS || 'true',
+          openArticleLinksInNewWindow: values.openArticleLinksInNewWindow || 'false',
+          showExpirationReminder: values.showExpirationReminder || 'true',
+          showEditButton: values.showEditButton || 'true'
+        }
+      };
+
       const response = await fetch('/api/admin/init', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(values),
+        body: JSON.stringify(requestBody),
       });
       const data = await response.json();
       if (response.ok && data?.statusCode === 200) {
@@ -170,6 +247,186 @@ const InitPage = () => {
           <ProFormText name="baseUrl" label="站点 URL" width="md" rules={[{ required: true }]} />
           <ProFormText name="beianNumber" label="备案号" width="md" />
           <ProFormText name="beianUrl" label="备案链接" width="md" />
+          <ProFormText name="gaBeianNumber" label="公安备案号" width="md" />
+          <ProFormText name="gaBeianUrl" label="公安备案链接" width="md" />
+          <ProFormText name="gaBeianLogoUrl" label="公安备案 Logo" width="md" />
+          <ProFormText name="gaAnalysisId" label="Google Analytics ID" width="md" />
+          <ProFormText name="baiduAnalysisId" label="百度统计 ID" width="md" />
+          <ProFormText name="copyrightAggreement" label="版权协议" width="md" />
+          <ProFormDateTimePicker name="since" label="建站时间" width="md" />
+        </StepsForm.StepForm>
+
+        <StepsForm.StepForm<InitFormValues>
+          formRef={formRef4}
+          title="设置布局选项"
+          onFinish={async () => {
+            return true;
+          }}
+          initialValues={{
+            enableComment: 'true',
+            showSubMenu: 'false',
+            headerLeftContent: 'siteName',
+            defaultTheme: 'auto',
+            showAdminButton: 'true',
+            showDonateInfo: 'true',
+            showFriends: 'true',
+            showCopyRight: 'true',
+            showDonateButton: 'true',
+            showDonateInAbout: 'false',
+            allowOpenHiddenPostByUrl: 'false',
+            enableCustomizing: 'true',
+            showRSS: 'true',
+            openArticleLinksInNewWindow: 'false',
+            showExpirationReminder: 'true',
+            showEditButton: 'true',
+            subMenuOffset: 0,
+          }}
+        >
+          <ProFormSelect
+            name="enableComment"
+            label="是否开启评论"
+            width="md"
+            valueEnum={{
+              'true': '开启',
+              'false': '关闭',
+            }}
+          />
+          <ProFormSelect
+            name="showSubMenu"
+            label="显示分类导航栏"
+            width="md"
+            valueEnum={{
+              'true': '显示',
+              'false': '隐藏',
+            }}
+          />
+          <ProFormSelect
+            name="headerLeftContent"
+            label="导航栏左侧内容"
+            width="md"
+            valueEnum={{
+              'siteLogo': '网站 Logo',
+              'siteName': '网站名称',
+            }}
+          />
+          <ProFormSelect
+            name="defaultTheme"
+            label="默认主题"
+            width="md"
+            valueEnum={{
+              'auto': '自动',
+              'light': '亮色',
+              'dark': '暗色',
+            }}
+          />
+          <ProFormSelect
+            name="showAdminButton"
+            label="显示后台按钮"
+            width="md"
+            valueEnum={{
+              'true': '显示',
+              'false': '隐藏',
+            }}
+          />
+          <ProFormSelect
+            name="showDonateInfo"
+            label="显示捐赠信息"
+            width="md"
+            valueEnum={{
+              'true': '显示',
+              'false': '隐藏',
+            }}
+          />
+          <ProFormSelect
+            name="showFriends"
+            label="显示友链"
+            width="md"
+            valueEnum={{
+              'true': '显示',
+              'false': '隐藏',
+            }}
+          />
+          <ProFormSelect
+            name="showCopyRight"
+            label="显示版权信息"
+            width="md"
+            valueEnum={{
+              'true': '显示',
+              'false': '隐藏',
+            }}
+          />
+          <ProFormSelect
+            name="showDonateButton"
+            label="显示打赏按钮"
+            width="md"
+            valueEnum={{
+              'true': '显示',
+              'false': '隐藏',
+            }}
+          />
+          <ProFormSelect
+            name="showDonateInAbout"
+            label="关于页显示打赏"
+            width="md"
+            valueEnum={{
+              'true': '显示',
+              'false': '隐藏',
+            }}
+          />
+          <ProFormSelect
+            name="allowOpenHiddenPostByUrl"
+            label="允许通过 URL 访问隐藏文章"
+            width="md"
+            valueEnum={{
+              'true': '允许',
+              'false': '禁止',
+            }}
+          />
+          <ProFormSelect
+            name="enableCustomizing"
+            label="允许自定义"
+            width="md"
+            valueEnum={{
+              'true': '允许',
+              'false': '禁止',
+            }}
+          />
+          <ProFormSelect
+            name="showRSS"
+            label="显示 RSS"
+            width="md"
+            valueEnum={{
+              'true': '显示',
+              'false': '隐藏',
+            }}
+          />
+          <ProFormSelect
+            name="openArticleLinksInNewWindow"
+            label="新窗口打开文章链接"
+            width="md"
+            valueEnum={{
+              'true': '是',
+              'false': '否',
+            }}
+          />
+          <ProFormSelect
+            name="showExpirationReminder"
+            label="显示过期提醒"
+            width="md"
+            valueEnum={{
+              'true': '显示',
+              'false': '隐藏',
+            }}
+          />
+          <ProFormSelect
+            name="showEditButton"
+            label="显示编辑按钮"
+            width="md"
+            valueEnum={{
+              'true': '显示',
+              'false': '隐藏',
+            }}
+          />
         </StepsForm.StepForm>
       </StepsForm>
     </div>
