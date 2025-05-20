@@ -169,7 +169,7 @@ util_check_system() {
     log_error "不支持 riscv64 平台，目前只支持 arm64、amd64"
     exit 1
   fi
-  
+
   # 检查是否中国 IP，设置合适的镜像
   util_set_docker_vars
 }
@@ -246,7 +246,7 @@ container_find_mongo() {
   if [ $? -ne 0 ]; then
     return 1
   fi
-  
+
   container_id=$($container_cmd ps | grep mongo | awk '{print $1}')
 
   # 检查是否找到符合条件的容器
@@ -265,7 +265,7 @@ container_determine_mongo_cmd() {
   if [ $? -ne 0 ]; then
     return 1
   fi
-  
+
   mongo_cmd=""
   if $container_cmd exec "$container_id" mongosh --version &> /dev/null; then
     mongo_cmd="mongosh"
@@ -296,13 +296,13 @@ container_retag_old_images() {
 # 安装 Docker
 container_install_docker() {
   log_info "正在安装 Docker"
-  
+
   # 首先检查Docker是否已安装
   if command -v docker >/dev/null 2>&1; then
     log_info "Docker已经安装，跳过安装步骤"
     return 0
   fi
-  
+
   # 安装Docker
   log_info "下载安装Docker..."
   bash <(curl -sL https://${DOCKER_URL}) ${DOCKER_ARGS} >/dev/null 2>&1
@@ -310,11 +310,11 @@ container_install_docker() {
     log_error "Docker安装脚本执行失败，请检查网络连接或手动安装Docker"
     exit 1
   fi
-  
+
   log_info "设置Docker自启动..."
   systemctl enable docker.service
   systemctl start docker.service
-  
+
   # 验证Docker安装成功
   command -v docker >/dev/null 2>&1
   if [[ $? != 0 ]]; then
@@ -334,13 +334,13 @@ container_setup_compose_alias() {
     docker-compose --version
     return 0
   fi
-  
+
   # 检查docker compose子命令是否可用
   if docker compose version >/dev/null 2>&1; then
     log_info "检测到 docker compose 命令，将创建 docker-compose 别名"
     echo 'docker compose $@' > /usr/local/bin/docker-compose
     chmod +x /usr/local/bin/docker-compose
-    
+
     command -v docker-compose >/dev/null 2>&1
     if [[ $? != 0 ]]; then
       log_error "docker-compose 别名创建失败，请检查权限或手动创建别名"
@@ -350,7 +350,7 @@ container_setup_compose_alias() {
     docker-compose --version
     return 0
   fi
-  
+
   # 都不可用，提示错误
   log_error "未找到 docker compose 或 docker-compose 命令，请安装 Docker Compose"
   log_info "您可以尝试以下命令安装 Docker Compose:"
@@ -408,12 +408,12 @@ mongo_execute_command() {
 # 列出所有 Waline 用户
 waline_list_users() {
   log_info "列出所有 Waline 用户"
-  
+
   container_determine_mongo_cmd
   if [ $? -ne 0 ]; then
     return 1
   fi
-  
+
   log_info "正在获取用户列表..."
 
   # 根据mongo版本调整打印格式
@@ -432,10 +432,10 @@ waline_list_users() {
 
   # 提取用户信息并格式化输出
   echo -e "${COLOR_BOLD}当前 Waline 用户:${COLOR_PLAIN}"
-  
+
   # 清理MongoDB输出中的连接信息
   user_data=$(echo "$result" | grep -v "MongoDB shell" | grep -v "connecting to:" | grep -v "Implicit session:" | grep -v "MongoDB server version:" | grep -v "bye")
-               
+
   if [ -z "$user_data" ]; then
     show_separator
     log_warn "没有找到用户记录"
@@ -448,7 +448,7 @@ waline_list_users() {
          /_id/ {if (count>0) print "-----------------------------------"; count++; print "用户 #" count ":"; print $0}
          !(/_id/) {print $0}
          END {print "-----------------------------------"; print "用户总数: " count}'
-  
+
   if [[ $# == 0 ]]; then
     pause_before_waline_menu
   fi
@@ -457,12 +457,12 @@ waline_list_users() {
 # 删除 Waline 管理员用户
 waline_delete_admin() {
   log_info "删除 Waline 管理员用户"
-  
+
   container_determine_mongo_cmd
   if [ $? -ne 0 ]; then
     return 1
   fi
-  
+
   log_info "正在获取管理员列表..."
 
   # 获取管理员列表
@@ -481,7 +481,7 @@ waline_delete_admin() {
 
   # 清理MongoDB输出
   admins_data=$(echo "$admins" | grep -v "MongoDB shell" | grep -v "connecting to:" | grep -v "Implicit session:" | grep -v "MongoDB server version:" | grep -v "bye")
-               
+
   # 检查是否有管理员账户
   admin_count=$(echo "$admins_data" | grep -c "_id")
   if [ "$admin_count" -eq 0 ]; then
@@ -554,7 +554,7 @@ waline_delete_admin() {
   else
     log_warn "删除操作已取消"
   fi
-  
+
   if [[ $# == 0 ]]; then
     pause_before_waline_menu
   fi
@@ -563,12 +563,12 @@ waline_delete_admin() {
 # 重置 Waline 管理员密码
 waline_reset_admin_password() {
   log_info "重置 Waline 管理员密码"
-  
+
   container_determine_mongo_cmd
   if [ $? -ne 0 ]; then
     return 1
   fi
-  
+
   # 使用已知的密码哈希值（对应 123123）
   default_password_hash='$2a$08$gW.CHW8prPnZMQynsqNM0uiC3wO6olz0EPzEZLCilu1qcyazwJvs2'
   default_email='admin@admin.com'
@@ -609,7 +609,7 @@ waline_reset_admin_password() {
   else
     log_warn "密码重置已取消"
   fi
-  
+
   if [[ $# == 0 ]]; then
     pause_before_waline_menu
   fi
@@ -618,12 +618,12 @@ waline_reset_admin_password() {
 # 创建新 Waline 管理员账户
 waline_create_admin() {
   log_info "创建新 Waline 管理员账户"
-  
+
   container_determine_mongo_cmd
   if [ $? -ne 0 ]; then
     return 1
   fi
-  
+
   log_info "创建新管理员账户"
   log_warn "注意: 默认将使用密码 '123123'"
 
@@ -668,7 +668,7 @@ waline_create_admin() {
     log_error "创建管理员账户失败"
     log_error "请确认 MongoDB 权限是否正确，或该邮箱是否已被使用"
   fi
-  
+
   if [[ $# == 0 ]]; then
     pause_before_waline_menu
   fi
@@ -856,7 +856,7 @@ config() {
     before_show_menu
     return 1
   }
-  
+
   check_port_usage "${vanblog_https_port}" || {
     log_warn "HTTPS 端口 ${vanblog_https_port} 已被占用，请选择其他端口"
     before_show_menu
@@ -888,11 +888,11 @@ restart() {
   echo -e "> 重启服务"
 
   cd $VANBLOG_BASE_PATH
-  
+
   # 检查配置文件中的端口是否被占用
   local http_port=$(grep -oP '(?<=- )\d+(?=:80)' ${VANBLOG_BASE_PATH}/docker-compose.yaml)
   local https_port=$(grep -oP '(?<=- )\d+(?=:443)' ${VANBLOG_BASE_PATH}/docker-compose.yaml)
-  
+
   check_port_usage "${http_port}" || {
     log_warn "无法重启服务：HTTP 端口 ${http_port} 已被占用"
     if [[ $# == 0 ]]; then
@@ -900,7 +900,7 @@ restart() {
     fi
     return 1
   }
-  
+
   check_port_usage "${https_port}" || {
     log_warn "无法重启服务：HTTPS 端口 ${https_port} 已被占用"
     if [[ $# == 0 ]]; then
@@ -908,18 +908,18 @@ restart() {
     fi
     return 1
   }
-  
+
   docker-compose down -v
   docker-compose up -d
-  
+
   local docker_status=$?
-  
+
   if [[ $docker_status == 0 ]]; then
     echo -e "${COLOR_GREEN}VanBlog 重启成功${COLOR_PLAIN}"
     echo -e "默认管理面板地址：${COLOR_YELLOW}域名:站点访问端口/admin${COLOR_PLAIN}"
   else
     echo -e "${COLOR_RED}重启失败${COLOR_PLAIN}"
-    
+
     # 检查常见的错误
     if docker-compose logs | grep -q "Bind for.*failed: port is already allocated"; then
       echo -e "${COLOR_RED}错误原因: 端口被占用${COLOR_PLAIN}"
@@ -944,11 +944,11 @@ update() {
   container_retag_old_images
 
   cd $VANBLOG_BASE_PATH
-  
+
   # 检查配置文件中的端口是否被占用
   local http_port=$(grep -oP '(?<=- )\d+(?=:80)' ${VANBLOG_BASE_PATH}/docker-compose.yaml)
   local https_port=$(grep -oP '(?<=- )\d+(?=:443)' ${VANBLOG_BASE_PATH}/docker-compose.yaml)
-  
+
   check_port_usage "${http_port}" || {
     log_warn "无法更新服务：HTTP 端口 ${http_port} 已被占用"
     if [[ $# == 0 ]]; then
@@ -956,7 +956,7 @@ update() {
     fi
     return 1
   }
-  
+
   check_port_usage "${https_port}" || {
     log_warn "无法更新服务：HTTPS 端口 ${https_port} 已被占用"
     if [[ $# == 0 ]]; then
@@ -964,22 +964,22 @@ update() {
     fi
     return 1
   }
-  
+
   # 修复docker-compose文件，移除过时的version字段
   fix_docker_compose_file "${VANBLOG_BASE_PATH}/docker-compose.yaml"
-  
+
   docker-compose pull
   docker-compose down -v
   docker-compose up -d
-  
+
   local docker_status=$?
-  
+
   if [[ $docker_status == 0 ]]; then
     echo -e "${COLOR_GREEN}VanBlog 更新并重启成功${COLOR_PLAIN}"
     echo -e "默认管理面板地址：${COLOR_YELLOW}域名:站点访问端口${COLOR_PLAIN}"
   else
     echo -e "${COLOR_RED}更新失败${COLOR_PLAIN}"
-    
+
     # 检查常见的错误
     if docker-compose logs | grep -q "Bind for.*failed: port is already allocated"; then
       echo -e "${COLOR_RED}错误原因: 端口被占用${COLOR_PLAIN}"
@@ -1009,11 +1009,11 @@ start_vanblog() {
   echo -e "> 启动 VanBlog"
 
   cd $VANBLOG_BASE_PATH
-  
+
   # 检查配置文件中的端口是否被占用
   local http_port=$(grep -oP '(?<=- )\d+(?=:80)' ${VANBLOG_BASE_PATH}/docker-compose.yaml)
   local https_port=$(grep -oP '(?<=- )\d+(?=:443)' ${VANBLOG_BASE_PATH}/docker-compose.yaml)
-  
+
   check_port_usage "${http_port}" || {
     log_warn "无法启动服务：HTTP 端口 ${http_port} 已被占用"
     if [[ $# == 0 ]]; then
@@ -1021,7 +1021,7 @@ start_vanblog() {
     fi
     return 1
   }
-  
+
   check_port_usage "${https_port}" || {
     log_warn "无法启动服务：HTTPS 端口 ${https_port} 已被占用"
     if [[ $# == 0 ]]; then
@@ -1029,16 +1029,16 @@ start_vanblog() {
     fi
     return 1
   }
-  
+
   docker-compose up -d
-  
+
   local docker_status=$?
-  
+
   if [[ $docker_status == 0 ]]; then
     echo -e "${COLOR_GREEN}VanBlog 启动成功${COLOR_PLAIN}"
   else
     echo -e "${COLOR_RED}启动失败${COLOR_PLAIN}"
-    
+
     # 检查常见的错误
     if docker-compose logs | grep -q "Bind for.*failed: port is already allocated"; then
       echo -e "${COLOR_RED}错误原因: 端口被占用${COLOR_PLAIN}"
@@ -1303,7 +1303,7 @@ handle_command_line() {
     "waline_create_admin")
       waline_create_admin 0
       ;;
-    *) 
+    *)
       help_show_usage
       ;;
     esac
@@ -1316,7 +1316,7 @@ handle_command_line() {
 main() {
   # 初始化检查
   util_check_system
-  
+
   # 处理命令行参数
   handle_command_line "$@"
 }

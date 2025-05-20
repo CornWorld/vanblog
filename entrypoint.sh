@@ -31,6 +31,9 @@ echo "============================================="
 echo "当前调试配置:"
 echo "VAN_BLOG_DEBUG_MODE: ${VAN_BLOG_DEBUG_MODE}"
 echo "VAN_BLOG_ADMIN_PROXY: ${VAN_BLOG_ADMIN_PROXY}"
+echo "VAN_BLOG_SERVER_PROXY: ${VAN_BLOG_SERVER_PROXY}"
+echo "VAN_BLOG_WEBSITE_PROXY: ${VAN_BLOG_WEBSITE_PROXY}"
+echo "VAN_BLOG_WALINE_PROXY: ${VAN_BLOG_WALINE_PROXY}"
 echo "============================================="
 
 # 导出 WEBSITE_HOST 环境变量，如果未设置则使用容器内部网络 IP
@@ -55,31 +58,14 @@ fi
 # 根据调试模式选择合适的 Caddyfile
 ACTIVE_CADDYFILE="/app/Caddyfile"
 
-if [ "${VAN_BLOG_DEBUG_MODE}" = "true" ] && [ -n "${VAN_BLOG_ADMIN_PROXY}" ]; then
+if [ "${VAN_BLOG_DEBUG_MODE}" = "true" ]; then
     echo "检测到调试模式，使用开发版 Caddyfile"
-    
+
     # 检查开发版 Caddyfile 是否存在
     if [ -f "/app/Caddyfile.dev" ]; then
-        # 创建临时 Caddyfile 并替换代理地址
-        cp /app/Caddyfile.dev /app/Caddyfile.active
-        
-        # 提取代理URL中的协议、主机和端口部分 (删除任何路径)
-        # 例如，从 http://host.docker.internal:3000/admin/ 提取 http://host.docker.internal:3000
-        PROXY_SCHEME=$(echo "${VAN_BLOG_ADMIN_PROXY}" | grep -o 'http[s]*:\/\/')
-        PROXY_HOST=$(echo "${VAN_BLOG_ADMIN_PROXY}" | sed 's|^http[s]*://||' | cut -d'/' -f1)
-        
-        if [ -n "${PROXY_SCHEME}" ] && [ -n "${PROXY_HOST}" ]; then
-            CLEAN_PROXY="${PROXY_SCHEME}${PROXY_HOST}"
-            echo "提取的代理地址: ${CLEAN_PROXY}"
-        else
-            CLEAN_PROXY="${VAN_BLOG_ADMIN_PROXY}"
-            echo "无法解析代理地址，使用原始值: ${CLEAN_PROXY}"
-        fi
-        
-        # 使用 sed 替换代理地址占位符
-        sed -i "s|ADMIN_PROXY_PLACEHOLDER|${CLEAN_PROXY}|g" /app/Caddyfile.active
-        ACTIVE_CADDYFILE="/app/Caddyfile.active"
-        echo "已配置开发版 Caddyfile，代理到: ${CLEAN_PROXY}"
+        # 使用开发版 Caddyfile
+        ACTIVE_CADDYFILE="/app/Caddyfile.dev"
+        echo "已配置开发版 Caddyfile"
     else
         echo "警告: 找不到 Caddyfile.dev，将使用默认 Caddyfile"
     fi
