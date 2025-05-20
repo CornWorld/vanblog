@@ -28,12 +28,14 @@ echo "创建完成"
 echo "============================================="
 
 # 显示当前环境变量配置
-echo "当前调试配置:"
+echo "当前服务配置:"
 echo "VAN_BLOG_DEBUG_MODE: ${VAN_BLOG_DEBUG_MODE}"
-echo "VAN_BLOG_ADMIN_PROXY: ${VAN_BLOG_ADMIN_PROXY}"
-echo "VAN_BLOG_SERVER_PROXY: ${VAN_BLOG_SERVER_PROXY}"
-echo "VAN_BLOG_WEBSITE_PROXY: ${VAN_BLOG_WEBSITE_PROXY}"
-echo "VAN_BLOG_WALINE_PROXY: ${VAN_BLOG_WALINE_PROXY}"
+echo "服务地址配置:"
+echo "- Admin URL: ${VAN_BLOG_ADMIN_URL}"
+echo "- Server URL: ${VAN_BLOG_SERVER_URL}"
+echo "- Website URL: ${VAN_BLOG_WEBSITE_URL}"
+echo "- Waline URL: ${VAN_BLOG_WALINE_URL}"
+echo "- Public Server URL: ${NEXT_PUBLIC_VANBLOG_SERVER_URL}"
 echo "============================================="
 
 # 导出 WEBSITE_HOST 环境变量，如果未设置则使用容器内部网络 IP

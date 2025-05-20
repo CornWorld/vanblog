@@ -14,38 +14,38 @@
 	# Handle admin routes
 	@adminRoutes path /admin*
 	handle @adminRoutes {
-		reverse_proxy {$VAN_BLOG_ADMIN_PROXY:127.0.0.1:3002}
+		reverse_proxy {$VAN_BLOG_ADMIN_URL}
 	}
 
 	# Handle admin static files (but don't serve them in dev mode)
 	@adminStatic path /admin/*.js /admin/*.css /admin/*.png /admin/*.jpg /admin/*.svg /admin/*.json /admin/*chunk*.js /admin/*.async.js /admin/p__*.js
 	handle @adminStatic {
-		reverse_proxy {$VAN_BLOG_ADMIN_PROXY:127.0.0.1:3002}
+		reverse_proxy {$VAN_BLOG_ADMIN_URL}
 	}
 
 	# Handle direct Waline endpoints
 	@comment path /comment* /token* /oauth* /user* /ui* /db*
 	handle @comment {
-		reverse_proxy {$VAN_BLOG_WALINE_PROXY:127.0.0.1:8360}
+		reverse_proxy {$VAN_BLOG_WALINE_URL}
 	}
 
 	# Handle Waline endpoints with /api/ prefix
 	@apiWaline path /api/comment* /api/user* /api/token* /api/oauth* /api/ui* /api/db* /api/article*
 	handle @apiWaline {
-		reverse_proxy {$VAN_BLOG_WALINE_PROXY:127.0.0.1:8360}
+		reverse_proxy {$VAN_BLOG_WALINE_URL}
 	}
 
 	# Handle regular API endpoints
 	@api path /api/*
 	handle @api {
-		reverse_proxy {$VAN_BLOG_SERVER_PROXY:127.0.0.1:3000}
+		reverse_proxy {$VAN_BLOG_SERVER_URL}
 	}
 
 	# Static assets, RSS feeds, etc.
 	@favicon path /favicon*
 	handle @favicon {
 		uri replace /favicon /static/img/favicon
-		reverse_proxy {$VAN_BLOG_SERVER_PROXY:127.0.0.1:3000}
+		reverse_proxy {$VAN_BLOG_SERVER_URL}
 	}
 
 	@feeds path /feed.json /feed.xml /atom.xml /sitemap.xml
@@ -54,17 +54,17 @@
 		uri replace /feed.xml /rss/feed.xml
 		uri replace /atom.xml /rss/atom.xml
 		uri replace /sitemap.xml /sitemap/sitemap.xml
-		reverse_proxy {$VAN_BLOG_SERVER_PROXY:127.0.0.1:3000}
+		reverse_proxy {$VAN_BLOG_SERVER_URL}
 	}
 
 	@static path /static/* /custom/* /c/* /rss/* /swagger*
 	handle @static {
-		reverse_proxy {$VAN_BLOG_SERVER_PROXY:127.0.0.1:3000}
+		reverse_proxy {$VAN_BLOG_SERVER_URL}
 	}
 
 	# Default handler for website
 	handle {
-		reverse_proxy {$VAN_BLOG_WEBSITE_PROXY:127.0.0.1:3001}
+		reverse_proxy {$VAN_BLOG_WEBSITE_URL}
 	}
 
 	encode gzip zstd

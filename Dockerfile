@@ -207,21 +207,26 @@ COPY entrypoint.sh ./
 # 环境变量设置
 ENV NODE_ENV="production"
 ENV PORT="3001"
-# 确保服务器 URL 使用正确的本地地址
+
+# 服务发现配置
+# 内部服务 URL（容器内部或开发环境使用）
+ENV VAN_BLOG_ADMIN_URL="http://127.0.0.1:3002"
 ENV VAN_BLOG_SERVER_URL="http://127.0.0.1:3000"
+ENV VAN_BLOG_WEBSITE_URL="http://127.0.0.1:3001"
+ENV VAN_BLOG_WALINE_URL="http://127.0.0.1:8360"
+
+# 外部访问 URL（浏览器端使用）
 ENV NEXT_PUBLIC_VANBLOG_SERVER_URL="window.location.origin"
-# 设置 CORS 配置，允许来自所有源的请求
+
+# 其他配置
 ENV VAN_BLOG_CORS="true"
 ENV VAN_BLOG_ALLOW_DOMAINS="pic.mereith.com"
 ENV VAN_BLOG_DATABASE_URL="mongodb://mongo:27017/vanBlog?authSource=admin"
 ENV EMAIL="vanblog@mereith.com"
 ENV VAN_BLOG_WALINE_DB="waline"
+
 # Debug mode configuration
 ENV VAN_BLOG_DEBUG_MODE="false"
-ENV VAN_BLOG_ADMIN_PROXY=""
-ENV VAN_BLOG_SERVER_PROXY="127.0.0.1:3000"
-ENV VAN_BLOG_WEBSITE_PROXY="127.0.0.1:3001"
-ENV VAN_BLOG_WALINE_PROXY="127.0.0.1:8360"
 
 # 版本信息
 ARG CORN_VERSION
