@@ -10,11 +10,12 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags } from '@nestjs/swagger';
-import { InitDto } from '../types/init.dto';
+import { InitDto } from '../../types/meta/init.dto';
 import { InitProvider } from '../provider/init.provider';
-import { ISRProvider } from 'src/provider/isr/isr.provider';
+import { ISRProvider } from '../../isr/provider/isr.provider';
 import { StaticProvider } from 'src/provider/static/static.provider';
 import { ApiToken } from '../../common/swagger/token';
+import { Result } from 'src/common/result/Result';
 
 @ApiTags('init')
 @ApiToken
@@ -36,19 +37,13 @@ export class InitController {
     this.isrProvider.activeAll('初始化触发增量渲染！', undefined, {
       forceActice: true,
     });
-    return {
-      statusCode: 200,
-      message: '初始化成功!',
-    };
+    return Result.build(200, "初始化成功!").toObject();
   }
 
   @Get('/init')
   async checkInit() {
     const hasInit = await this.initProvider.checkHasInited();
-    return {
-      statusCode: 200,
-      data: { hasInit },
-    };
+    return Result.ok({ hasInit }).toObject();
   }
 
   @Post('/init/upload')
@@ -63,9 +58,6 @@ export class InitController {
       isFavicon = true;
     }
     const res = await this.staticProvider.upload(file, 'img', isFavicon);
-    return {
-      statusCode: 200,
-      data: res,
-    };
+    return Result.ok(res).toObject();
   }
 }

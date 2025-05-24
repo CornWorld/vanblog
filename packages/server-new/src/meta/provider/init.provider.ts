@@ -1,21 +1,21 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { InitDto } from '../types/init.dto';
+import { InitDto } from '../../types/meta/init.dto';
 import { MetaDocument } from '../../scheme/meta/meta.schema';
 import { UserDocument } from '../../scheme/user/user.schema';
 import { WalineProvider } from '../waline/waline.provider';
 import { SettingProvider } from './setting.provider';
 import { version } from '../../common/config/loadConfig';
 import { encryptPassword, makeSalt } from '../../common/utils/crypto';
-import { defaultMenu } from '../types/menu.dto';
+import { defaultMenu } from '../../types/meta/menu.dto';
 import { CacheProvider } from '../../infra/cache/cache.provider';
 import fs from 'fs';
 import path from 'path';
 import { WebsiteProvider } from '../website/website.provider';
 import { CategoryDocument } from '../../scheme/article/category.schema';
 import { CustomPageDocument } from 'src/scheme/customPage.schema';
-import { SiteInfo } from '../types/site.dto';
+import { SiteInfo } from '../../types/meta/site.dto';
 
 @Injectable()
 export class InitProvider {

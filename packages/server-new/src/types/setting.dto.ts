@@ -1,4 +1,4 @@
-import { MenuItem } from './menu.dto';
+import { MenuItem } from './meta/menu.dto';
 
 export const defaultStaticSetting: StaticSetting = {
   storageType: 'local',

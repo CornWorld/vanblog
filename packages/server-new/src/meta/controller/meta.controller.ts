@@ -6,6 +6,7 @@ import { Request } from 'express';
 import { MetaProvider } from '../provider/meta.provider';
 import { getVersionFromServer } from '../../common/utils/getVersion';
 import { ApiToken } from '../../common/swagger/token';
+import { Result } from 'src/common/result/Result';
 
 @ApiTags('meta')
 @UseGuards(...AdminGuard)
@@ -23,21 +24,17 @@ export class MetaController {
       enableComment: meta.siteInfo.enableComment || 'true',
       allowDomains: process.env.VAN_BLOG_ALLOW_DOMAINS || '',
     };
-    return {
-      statusCode: 200,
-      data,
-    };
+    return Result.ok(data).toObject();
   }
 
   @Get('upstream')
   async getUpstreamInfo() {
     const serverData = await getVersionFromServer();
-    return {
-      statusCode: 200,
-      data: {
+    return Result.ok(
+      {
         version: serverData?.version || version,
         updatedAt: serverData?.updatedAt || new Date(),
-      },
-    };
+      }
+    ).toObject();
   }
 }

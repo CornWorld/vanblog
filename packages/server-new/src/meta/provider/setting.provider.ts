@@ -11,11 +11,11 @@ import {
   VersionSetting,
   WalineSetting,
   defaultStaticSetting,
-} from '../types/setting.dto';
-import { SettingDocument } from '../../scheme/meta/setting.schema';
+} from '../../types/setting.dto';
+import { SettingDocument } from '../../scheme/setting.schema';
 import { PicgoProvider } from '../static/picgo.provider';
 import { encode } from 'js-base64';
-import { defaultMenu, MenuItem } from '../types/menu.dto';
+import { defaultMenu, MenuItem } from '../../types/meta/menu.dto';
 import { MetaProvider } from './meta.provider';
 import { parseHtmlToHeadTagArr } from '../../common/utils/htmlParser';
 @Injectable()
