@@ -11,6 +11,7 @@ import { MenuMetaController } from './controller/menu.meta.controller';
 import { RewardMetaController } from './controller/reward.meta.controller';
 import { SiteMetaController } from './controller/site.meta.controller';
 import { SocialMetaController } from './controller/social.meta.controller';
+import { SiteMapProvider } from './provider/sitemap.provider';
 
 @Module({
   imports: [],
@@ -23,12 +24,13 @@ import { SocialMetaController } from './controller/social.meta.controller';
     MenuMetaController,
     RewardMetaController,
     SiteMetaController,
-    SocialMetaController
+    SocialMetaController,
   ],
   providers: [
     InitProvider,
     MetaProvider,
-    SettingProvider
+    SettingProvider,
+    SiteMapProvider
   ],
 })
 export class MetaModule { }
