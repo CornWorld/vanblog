@@ -1,17 +1,20 @@
-import { ExceptionFilter, Catch, ArgumentsHost, HttpException } from '@nestjs/common';
-import { Request, Response } from 'express';
+import { ExceptionFilter, Catch, ArgumentsHost } from '@nestjs/common';
+import { Response } from 'express';
+import { ResultCodeEnum } from '../result/ResultCodeEnum';
 
-@Catch(HttpException)
-export class HttpExceptionFilter implements ExceptionFilter {
-  catch(exception: HttpException, host: ArgumentsHost) {
+/**
+ * 捕获未被捕获的运行时异常
+ */
+@Catch(Error)
+export class ErrorFilter implements ExceptionFilter {
+  catch(exception: Error, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
-    const request = ctx.getRequest<Request>();
-    const status = exception.getStatus();
-    console.log(request); // 获取请求信息
+    const status = ResultCodeEnum.FAIL;
+    console.error("发生未被捕获异常：" + exception.message); // 获取请求信息
     response.status(status).json({
       statusCode: status,
-      message: 'error',
+      message: '发生未知内部异常',
     });
   }
 }
