@@ -72,8 +72,8 @@ export class Result<T = unknown> {
     return this.build(data ?? null, ResultCodeEnum.SUCCESS);
   }
 
-  static fail<T>(data?: T): Result<T> {
-    return this.build(data ?? null, ResultCodeEnum.FAIL);
+  static fail<T>(message: string): Result<T> {
+    return this.build(ResultCodeEnum.FAIL, message);
   }
 
   setMessage(msg?: string): this {
