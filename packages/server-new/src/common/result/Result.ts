@@ -1,6 +1,6 @@
 import { ResultCodeEnum, ResultCodeMessage } from './ResultCodeEnum';
 
-interface IResult<T = unknown> {
+export interface IResult<T = unknown> {
   statusCode: number;
   message?: string;
   data?: T | null;

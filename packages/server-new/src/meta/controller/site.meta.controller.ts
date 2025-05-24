@@ -2,13 +2,14 @@ import { Body, Controller, Get, Put, UseGuards } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { UpdateSiteInfoDto } from '../../types/meta/site.dto';
 import { AdminGuard } from 'src/provider/auth/auth.guard';
-import { ISRProvider } from 'src/provider/isr/isr.provider';
+import { ISRProvider } from '../../isr/provider/isr.provider';
 import { MetaProvider } from '../provider/meta.provider';
 import { WalineProvider } from 'src/provider/waline/waline.provider';
 import { config } from '../../common/config';
 import { WebsiteProvider } from 'src/provider/website/website.provider';
 import { PipelineProvider } from 'src/provider/pipeline/pipeline.provider';
 import { ApiToken } from '../../common/swagger/token';
+import { Result } from 'src/common/result/Result';
 @ApiTags('site')
 @UseGuards(...AdminGuard)
 @ApiToken
@@ -25,28 +26,19 @@ export class SiteMetaController {
   @Get()
   async get() {
     const data = await this.metaProvider.getSiteInfo();
-    return {
-      statusCode: 200,
-      data,
-    };
+    return Result.ok(data).toObject();
   }
 
   @Put()
   async update(@Body() updateDto: UpdateSiteInfoDto) {
     if (config.demo && config.demo == 'true') {
-      return {
-        statusCode: 401,
-        message: '演示站禁止修改此项！',
-      };
+      return Result.build(401, "演示站禁止修改此项！").toObject();
     }
     const data = await this.metaProvider.updateSiteInfo(updateDto);
     this.pipelineProvider.dispatchEvent('updateSiteInfo', updateDto);
     this.isrProvider.activeAll('更新站点配置触发增量渲染！');
     this.walineProvider.restart('更新站点，');
     this.websiteProvider.restart('更新站点信息');
-    return {
-      statusCode: 200,
-      data,
-    };
+    return Result.ok(data).toObject();
   }
 }

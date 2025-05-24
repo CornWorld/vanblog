@@ -2,7 +2,7 @@ import { forwardRef, Inject, Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Meta, MetaDocument } from '../../scheme/meta/meta.schema';
-import { UpdateSiteInfoDto } from '../types/site.dto';
+import { UpdateSiteInfoDto } from '../../types/meta/site.dto';
 import { RewardItem } from '../../types/meta/reward.dto';
 import { SocialItem, SocialType } from '../../types/meta/social.dto';
 import { LinkItem } from '../../types/meta/link.dto';
