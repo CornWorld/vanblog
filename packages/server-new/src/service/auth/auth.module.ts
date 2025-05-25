@@ -3,6 +3,7 @@ import { AuthController } from './controller/auth.controller';
 import { TokenController } from './controller/token.controller';
 import { AuthProvider } from './provider/auth.provider';
 import { TokenProvider } from './provider/token.provider';
+import { UserProvider } from './provider/user.provider';
 import { JwtStrategy } from './strategy/jwt.strategy';
 import { LocalStrategy } from './strategy/local.strategy';
 import { InitMiddleware } from './middleware/init.middleware';
@@ -16,6 +17,7 @@ import { TokenGuard } from './guard/token.guard';
   providers: [
     AuthProvider,
     TokenProvider,
+    UserProvider,
     JwtStrategy,
     LocalStrategy,
     InitMiddleware,
@@ -24,4 +26,4 @@ import { TokenGuard } from './guard/token.guard';
     TokenGuard,
   ],
 })
-export class AuthModule {}
+export class AuthModule { }
