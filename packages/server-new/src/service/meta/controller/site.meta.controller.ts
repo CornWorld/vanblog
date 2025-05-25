@@ -1,13 +1,13 @@
 import { Body, Controller, Get, Put, UseGuards } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { UpdateSiteInfoDto } from '../../../types/meta/site.dto';
-import { AdminGuard } from 'src/provider/auth/auth.guard';
+import { AdminGuard } from '../../auth/guard/auth.guard';
 import { ISRProvider } from '../../isr/provider/isr.provider';
 import { MetaProvider } from '../provider/meta.provider';
-import { WalineProvider } from 'src/provider/waline/waline.provider';
+import { WalineProvider } from '../../waline/provider/waline.provider';
 import { config } from '../../../common/config';
-import { WebsiteProvider } from 'src/provider/website/website.provider';
-import { PipelineProvider } from 'src/provider/pipeline/pipeline.provider';
+import { WebsiteProvider } from '../provider/website.provider';
+import { PipelineProvider } from '../../contentManagement/provider/pipeline.provider';
 import { ApiToken } from '../../../common/swagger/token';
 import { Result } from 'src/common/result/Result';
 @ApiTags('site')

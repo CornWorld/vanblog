@@ -9,7 +9,7 @@ import { Visit, VisitDocument } from 'src/scheme/assetmanage/visit.schema';
 export class VisitProvider {
   constructor(@InjectModel('Visit') private visitModel: Model<VisitDocument>) { }
 
-  async add(createViewerDto: createVisitDto): Promise<any> {
+  async add(createViewerDto: createVisitDto): Promise<Visit | import('mongoose').UpdateWriteOpResult> {
     // 先找一下有没有今天的，有的话就在今天的基础上加1。
     const { isNew, pathname } = createViewerDto;
     // 这里的 isNew 代表是对于这个文章来说有没有访问过。

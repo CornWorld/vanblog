@@ -2,11 +2,11 @@ import { Body, Controller, Get, Put, UseGuards } from '@nestjs/common';
 
 import { ApiTags } from '@nestjs/swagger';
 import { config } from '../../../common/config/index';
-import { LayoutSetting, LoginSetting, StaticSetting, WalineSetting } from '../types/setting.dto';
-import { AdminGuard } from 'src/provider/auth/auth.guard';
+import { LayoutSetting, LoginSetting, StaticSetting, WalineSetting } from '../../../types/setting.dto';
+import { AdminGuard } from '../../auth/guard/auth.guard';
 import { ISRProvider } from '../../isr/provider/isr.provider';
 import { SettingProvider } from '../provider/setting.provider';
-import { WalineProvider } from 'src/provider/waline/waline.provider';
+import { WalineProvider } from '../../waline/provider/waline.provider';
 import { ApiToken } from '../../../common/swagger/token';
 import { Result } from 'src/common/result/Result';
 

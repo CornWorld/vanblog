@@ -2,7 +2,7 @@ import { Body, Controller, Get, Post, Put, UseGuards } from '@nestjs/common';
 
 import { ApiTags } from '@nestjs/swagger';
 
-import { AdminGuard } from 'src/provider/auth/auth.guard';
+import { AdminGuard } from '../../auth/guard/auth.guard';
 import { ISRProvider } from '../provider/isr.provider';
 import { SettingProvider } from '../../meta/provider/setting.provider';
 import { ApiToken } from '../../../common/swagger/token';

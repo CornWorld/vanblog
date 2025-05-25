@@ -1,12 +1,12 @@
 import { Body, Controller, Delete, Get, Param, Post, Put, UseGuards } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { LinkDto } from '../../../types/meta/link.dto';
-import { AdminGuard } from 'src/provider/auth/auth.guard';
+import { AdminGuard } from '../../auth/guard/auth.guard';
 import { ISRProvider } from '../../isr/provider/isr.provider';
 import { MetaProvider } from '../provider/meta.provider';
 import { config } from '../../../common/config';
 import { ApiToken } from '../../../common/swagger/token';
-import { Result } from 'src/common/result/Result';
+import { Result } from '../../../common/result/Result';
 @ApiTags('link')
 @UseGuards(...AdminGuard)
 @ApiToken

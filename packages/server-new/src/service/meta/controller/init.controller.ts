@@ -13,7 +13,7 @@ import { ApiTags } from '@nestjs/swagger';
 import { InitDto } from '../../../types/meta/init.dto';
 import { InitProvider } from '../provider/init.provider';
 import { ISRProvider } from '../../isr/provider/isr.provider';
-import { StaticProvider } from 'src/provider/static/static.provider';
+import { StaticProvider } from '../../assetmanage/provider/static.provider';
 import { ApiToken } from '../../../common/swagger/token';
 import { Result } from 'src/common/result/Result';
 
@@ -48,7 +48,7 @@ export class InitController {
 
   @Post('/init/upload')
   @UseInterceptors(FileInterceptor('file'))
-  async uploadImg(@UploadedFile() file: any, @Query('favicon') favicon: string) {
+  async uploadImg(@UploadedFile() file: Express.Multer.File, @Query('favicon') favicon: string) {
     const hasInit = await this.initProvider.checkHasInited();
     if (hasInit) {
       throw new HttpException('已初始化', 500);

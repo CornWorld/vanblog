@@ -1,7 +1,7 @@
 import { Controller, Get, Req, UseGuards } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { version } from '../../../common/config/loadConfig';
-import { AdminGuard } from 'src/provider/auth/auth.guard';
+import { AdminGuard } from '../../auth/guard/auth.guard';
 import { Request } from 'express';
 import { MetaProvider } from '../provider/meta.provider';
 import { getVersionFromServer } from '../../../common/utils/getVersion';
