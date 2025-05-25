@@ -9,11 +9,12 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import { AdminGuard } from 'src/provider/auth/auth.guard';
+import { AdminGuard } from '../../auth/guard/auth.guard';
 import { StaticProvider } from '../provider/static.provider';
 import { config } from 'src/common/config';
 import { SearchStaticOption } from 'src/types/setting.dto';
 import { ApiToken } from '../../../common/swagger/token';
+import { Result } from 'src/common/result/Result';
 
 @ApiTags('img')
 @UseGuards(...AdminGuard)
@@ -38,70 +39,43 @@ export class ImgController {
       waterMarkText,
     };
     const res = await this.staticProvider.upload(file, 'img', isFavicon, undefined, updateConfig);
-    return {
-      statusCode: 200,
-      data: res,
-    };
+    return Result.ok(res).toObject();
   }
 
   @Get('all')
   async getAll() {
     const res = await this.staticProvider.getAll('img', 'public');
-    return {
-      statusCode: 200,
-      data: res,
-    };
+    return Result.ok(res).toObject();
   }
 
   @Post('scan')
   async scanImgsOfArticles() {
     if (config.demo && config.demo == 'true') {
-      return {
-        statusCode: 401,
-        message: '演示站禁止修改此项！',
-      };
+      return Result.build(401, '演示站禁止修改此项！').toObject();
     }
     const res = await this.staticProvider.scanLinksOfArticles();
-    return {
-      statusCode: 200,
-      data: res,
-    };
+    return Result.ok(res).toObject();
   }
   @Post('export')
   async exportAllImgs() {
     const res = await this.staticProvider.exportAllImg();
-    return {
-      statusCode: 200,
-      data: res,
-    };
+    return Result.ok(res).toObject();
   }
   @Delete('/all/delete')
   async deleteALL() {
     if (config.demo && config.demo == 'true') {
-      return {
-        statusCode: 401,
-        message: '演示站禁止修改此项！',
-      };
+      return Result.build(401, '演示站禁止修改此项！').toObject();
     }
     const res = await this.staticProvider.deleteAllIMG();
-    return {
-      statusCode: 200,
-      data: res,
-    };
+    return Result.ok(res).toObject();
   }
   @Delete('/:sign')
   async delete(@Param('sign') sign: string) {
     if (config.demo && config.demo == 'true') {
-      return {
-        statusCode: 401,
-        message: '演示站禁止修改此项！',
-      };
+      return Result.build(401, '演示站禁止修改此项！').toObject();
     }
     const res = await this.staticProvider.deleteOneBySign(sign);
-    return {
-      statusCode: 200,
-      data: res,
-    };
+    return Result.ok(res).toObject();
   }
   @Get('')
   async getByOption(@Query('page') page: number, @Query('pageSize') pageSize = 5) {
@@ -112,9 +86,6 @@ export class ImgController {
       view: 'public',
     };
     const data = await this.staticProvider.getByOption(option);
-    return {
-      statusCode: 200,
-      data,
-    };
+    return Result.ok(data).toObject();
   }
 }

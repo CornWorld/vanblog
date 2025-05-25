@@ -1,9 +1,9 @@
 import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import { AdminGuard } from 'src/provider/auth/auth.guard';
-
+import { AdminGuard } from '../../auth/guard/auth.guard';
 import { AnalysisProvider, WelcomeTab } from '../provider/analysis.provider';
 import { ApiToken } from '../../../common/swagger/token';
+import { Result } from 'src/common/result/Result';
 
 @ApiTags('analysis')
 @ApiToken
@@ -15,19 +15,16 @@ export class AnalysisController {
   @Get()
   async getWelcomePageData(
     @Query('tab') tab: WelcomeTab,
-    @Query('viewerDataNum') viewerDataNum = 5,
-    @Query('overviewDataNum') overviewDataNum = 5,
-    @Query('articleTabDataNum') articleTabDataNum = 5,
+    @Query('viewerDataNum') viewerDataNum: string = '5',
+    @Query('overviewDataNum') overviewDataNum: string = '5',
+    @Query('articleTabDataNum') articleTabDataNum: string = '5',
   ) {
     const data = await this.analysisProvider.getWelcomePageData(
       tab,
-      parseInt(overviewDataNum as any),
-      parseInt(viewerDataNum as any),
-      parseInt(articleTabDataNum as any),
+      parseInt(overviewDataNum, 10),
+      parseInt(viewerDataNum, 10),
+      parseInt(articleTabDataNum, 10),
     );
-    return {
-      statusCode: 200,
-      data,
-    };
+    return Result.ok(data).toObject();
   }
 }
