@@ -22,7 +22,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { omit } from 'lodash-es';
 import { ViewerProvider } from '../../analysis/provider/viewer.provider';
 import { VisitProvider } from '../../analysis/provider/visit.provider';
-import { StaticProvider } from '../../assetmanage/provider/static.provider';
+import { StaticProvider } from '../../assetManage/provider/static.provider';
 import { SettingProvider } from '../../meta/provider/setting.provider';
 import { config } from '../../../common/config';
 import { ApiToken } from '../../../common/swagger/token';

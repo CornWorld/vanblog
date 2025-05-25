@@ -13,7 +13,10 @@ import { TokenGuard } from './guard/token.guard';
 
 @Module({
   imports: [],
-  controllers: [AuthController, TokenController],
+  controllers: [
+    AuthController,
+    TokenController
+  ],
   providers: [
     AuthProvider,
     TokenProvider,

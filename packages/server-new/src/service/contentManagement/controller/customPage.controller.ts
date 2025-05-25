@@ -16,7 +16,7 @@ import { ApiTags } from '@nestjs/swagger';
 import { config } from 'src/common/config';
 import { AdminGuard } from '../../auth/guard/auth.guard';
 import { CustomPageProvider } from '../provider/customPage.provider';
-import { StaticProvider } from '../../assetmanage/provider/static.provider';
+import { StaticProvider } from '../../assetManage/provider/static.provider';
 import { ApiToken } from 'src/common/swagger/token';
 import { CustomPage } from 'src/scheme/customPage.schema';
 import { Result } from 'src/common/result/Result';

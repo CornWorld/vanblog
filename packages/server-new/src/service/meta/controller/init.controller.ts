@@ -13,7 +13,7 @@ import { ApiTags } from '@nestjs/swagger';
 import { InitDto } from '../../../types/meta/init.dto';
 import { InitProvider } from '../provider/init.provider';
 import { ISRProvider } from '../../isr/provider/isr.provider';
-import { StaticProvider } from '../../assetmanage/provider/static.provider';
+import { StaticProvider } from '../../assetManage/provider/static.provider';
 import { ApiToken } from '../../../common/swagger/token';
 import { Result } from 'src/common/result/Result';
 

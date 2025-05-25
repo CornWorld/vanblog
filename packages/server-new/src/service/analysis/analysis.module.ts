@@ -6,8 +6,13 @@ import { VisitProvider } from "./provider/visit.provider";
 import { WalineProvider } from "./provider/waline.provider";
 
 @Module({
-    imports: [],
-    controllers: [AnalysisController],
-    providers: [AnalysisProvider, ViewerProvider, VisitProvider, WalineProvider],
+  imports: [],
+  controllers: [AnalysisController],
+  providers: [
+    AnalysisProvider,
+    ViewerProvider,
+    VisitProvider,
+    WalineProvider
+  ],
 })
-export class AssetManageModule { }
+export class AnalysisModule { }
