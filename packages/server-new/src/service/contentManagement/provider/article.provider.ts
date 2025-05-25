@@ -1,14 +1,14 @@
 import { Inject, Injectable, forwardRef, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Document, SortOrder, Types } from 'mongoose';
-import { CreateArticleDto, SearchArticleOption, UpdateArticleDto } from 'src/types/article.dto';
-import { Article, ArticleDocument } from 'src/scheme/article.schema';
-import { parseImgLinksOfMarkdown } from 'src/utils/parseImgOfMarkdown';
-import { wordCount } from 'src/utils/wordCount';
-import { MetaProvider } from '../meta/meta.provider';
-import { VisitProvider } from '../visit/visit.provider';
-import { sleep } from 'src/utils/sleep';
-import { CategoryDocument } from 'src/scheme/category.schema';
+import { CreateArticleDto, SearchArticleOption, UpdateArticleDto } from 'src/types/article/article.dto';
+import { Article, ArticleDocument } from 'src/scheme/article/article.schema';
+import { parseImgLinksOfMarkdown } from 'src/common/utils/parseImgOfMarkdown';
+import { wordCount } from 'src/common/utils/wordCount';
+import { MetaProvider } from '../../meta/provider/meta.provider';
+import { VisitProvider } from '../../analysis/provider/visit.provider';
+import { sleep } from 'src/common/utils/sleep';
+import { CategoryDocument } from 'src/scheme/article/category.schema';
 
 export type ArticleView = 'admin' | 'public' | 'list';
 
@@ -29,7 +29,7 @@ export class ArticleProvider {
     @Inject(forwardRef(() => MetaProvider))
     private readonly metaProvider: MetaProvider,
     private readonly visitProvider: VisitProvider,
-  ) {}
+  ) { }
   publicView = {
     title: 1,
     content: 1,
@@ -429,8 +429,8 @@ export class ArticleProvider {
       .find(
         $and.length > 0
           ? {
-              $and,
-            }
+            $and,
+          }
           : undefined,
         thisView,
       )

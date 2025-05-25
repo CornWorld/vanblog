@@ -1,10 +1,10 @@
 import { Injectable, NotAcceptableException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { ArticleProvider } from '../article/article.provider';
-import { CategoryDocument } from 'src/scheme/category.schema';
-import { sleep } from 'src/utils/sleep';
-import { UpdateCategoryDto } from 'src/types/category.dto';
+import { ArticleProvider } from './article.provider';
+import { CategoryDocument } from 'src/scheme/article/category.schema';
+import { sleep } from 'src/common/utils/sleep';
+import { UpdateCategoryDto } from 'src/types/article/category.dto';
 
 @Injectable()
 export class CategoryProvider {
@@ -12,7 +12,7 @@ export class CategoryProvider {
   constructor(
     @InjectModel('Category') private categoryModal: Model<CategoryDocument>,
     private readonly articleProvider: ArticleProvider,
-  ) {}
+  ) { }
   async getCategoriesWithArticle(includeHidden: boolean) {
     const allArticles = await this.articleProvider.getAll('list', includeHidden);
     const categories = await this.getAllCategories();

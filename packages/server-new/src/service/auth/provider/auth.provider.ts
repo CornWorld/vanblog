@@ -1,13 +1,13 @@
 import { Injectable } from '@nestjs/common';
-import { TokenProvider } from '../token/token.provider';
-import { UserProvider } from '../user/user.provider';
+import { TokenProvider } from '../../auth/provider/token.provider';
+import { UserProvider } from '../../auth/provider/user.provider';
 
 @Injectable()
 export class AuthProvider {
   constructor(
     private readonly usersService: UserProvider,
     private readonly tokenProvider: TokenProvider,
-  ) {}
+  ) { }
   async validateUser(username: string, pass: string): Promise<any> {
     const user = await this.usersService.validateUser(username, pass);
     if (user) {

@@ -5,12 +5,12 @@ import { Model } from 'mongoose';
 import { PipelineDocument } from 'src/scheme/pipeline.schema';
 import { VanblogSystemEvent, VanblogSystemEventNames } from 'src/types/event';
 import { CreatePipelineDto, UpdatePipelineDto } from 'src/types/pipeline.dto';
-import { sleep } from 'src/utils/sleep';
+import { sleep } from 'src/common/utils/sleep';
 import { spawnSync } from 'child_process';
-import { config } from 'src/config/index';
+import { config } from 'src/common/config';
 import { writeFileSync, rmSync } from 'fs';
 import { fork } from 'child_process';
-import { LogProvider } from '../log/log.provider';
+import { LogProvider } from 'src/infra/log/provider/log.provider';
 
 export interface CodeResult {
   logs: string[];

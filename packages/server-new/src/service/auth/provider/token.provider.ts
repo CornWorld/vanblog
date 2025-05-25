@@ -1,10 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 
-import { TokenDocument } from 'src/scheme/token.schema';
+import { TokenDocument } from 'src/scheme/user/token.schema';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { JwtService } from '@nestjs/jwt';
-import { SettingProvider } from '../setting/setting.provider';
+import { SettingProvider } from '../../meta/provider/setting.provider';
 
 @Injectable()
 export class TokenProvider {
@@ -14,7 +14,7 @@ export class TokenProvider {
     @InjectModel('Token') private tokenModel: Model<TokenDocument>,
     private readonly jwtService: JwtService,
     private readonly settingProvider: SettingProvider,
-  ) {}
+  ) { }
 
   async getAllAPIToken() {
     this.logger.log(`获取所有 API Token`);

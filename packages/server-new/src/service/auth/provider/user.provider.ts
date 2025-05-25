@@ -1,15 +1,15 @@
 import { ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { UpdateUserDto } from 'src/types/user.dto';
-import { User, UserDocument } from 'src/scheme/user.schema';
-import { Collaborator } from 'src/types/collaborator';
-import { encryptPassword, makeSalt, washPassword } from 'src/utils/crypto';
+import { UpdateUserDto } from 'src/types/user/user.dto';
+import { User, UserDocument } from 'src/scheme/user/user.schema';
+import { Collaborator } from 'src/types/collaborator/collaborator';
+import { encryptPassword, makeSalt, washPassword } from 'src/common/utils/crypto';
 
 @Injectable()
 export class UserProvider {
   logger = new Logger(UserProvider.name);
-  constructor(@InjectModel('User') private userModel: Model<UserDocument>) {}
+  constructor(@InjectModel('User') private userModel: Model<UserDocument>) { }
   async getUser(isList?: boolean) {
     if (isList) {
       return await this.userModel.findOne({ id: 0 }, { id: 1, name: 1, nickname: 1 });

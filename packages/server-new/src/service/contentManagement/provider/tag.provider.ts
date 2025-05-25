@@ -1,10 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { Article } from 'src/scheme/article.schema';
-import { ArticleProvider } from '../article/article.provider';
+import { Article } from 'src/scheme/article/article.schema';
+import { ArticleProvider } from './article.provider';
 
 @Injectable()
 export class TagProvider {
-  constructor(private readonly articleProvider: ArticleProvider) {}
+  constructor(private readonly articleProvider: ArticleProvider) { }
   async getTagsWithArticle(includeHidden: boolean) {
     const allArticles = await this.articleProvider.getAll('list', includeHidden);
     const data = {};

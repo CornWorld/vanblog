@@ -7,9 +7,9 @@ import {
 } from '@nestjs/common';
 import dayjs from 'dayjs';
 import { Request } from 'express';
-import { CacheProvider } from '../cache/cache.provider';
-import { getNetIp } from '../log/utils';
-import { SettingProvider } from '../setting/setting.provider';
+import { CacheProvider } from 'src/infra/cache/cache.provider';
+import { getNetIp } from 'src/infra/log/utils/utils';
+import { SettingProvider } from '../../meta/provider/setting.provider';
 
 @Injectable()
 export class LoginGuard implements CanActivate {
@@ -17,7 +17,7 @@ export class LoginGuard implements CanActivate {
   constructor(
     private cacheProvider: CacheProvider,
     private settingProvider: SettingProvider,
-  ) {}
+  ) { }
   async canActivate(context: ExecutionContext) {
     const request = context.switchToHttp().getRequest();
     return await this.validateRequest(request);

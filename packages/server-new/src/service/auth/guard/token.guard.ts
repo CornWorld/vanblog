@@ -5,12 +5,12 @@ import {
   Logger,
   UnauthorizedException,
 } from '@nestjs/common';
-import { TokenProvider } from '../token/token.provider';
+import { TokenProvider } from '../../auth/provider/token.provider';
 
 @Injectable()
 export class TokenGuard implements CanActivate {
   logger = new Logger(TokenGuard.name);
-  constructor(private readonly tokenProvider: TokenProvider) {}
+  constructor(private readonly tokenProvider: TokenProvider) { }
   async canActivate(context: ExecutionContext) {
     const request = context.switchToHttp().getRequest();
     return await this.validateRequest(request);

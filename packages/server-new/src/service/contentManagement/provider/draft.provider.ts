@@ -1,16 +1,16 @@
 import { ForbiddenException, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { CreateArticleDto } from 'src/types/article.dto';
+import { CreateArticleDto } from 'src/types/article/article.dto';
 import {
   CreateDraftDto,
   PublishDraftDto,
   SearchDraftOption,
   UpdateDraftDto,
-} from 'src/types/draft.dto';
-import { Draft, DraftDocument } from 'src/scheme/draft.schema';
-import { ArticleProvider } from '../article/article.provider';
-import { sleep } from 'src/utils/sleep';
+} from 'src/types/article/draft.dto';
+import { Draft, DraftDocument } from 'src/scheme/article/draft.schema';
+import { ArticleProvider } from './article.provider';
+import { sleep } from 'src/common/utils/sleep';
 export type DraftView = 'admin' | 'public' | 'list';
 @Injectable()
 export class DraftProvider {
@@ -18,7 +18,7 @@ export class DraftProvider {
   constructor(
     @InjectModel('Draft') private draftModel: Model<DraftDocument>,
     private readonly articleProvider: ArticleProvider,
-  ) {}
+  ) { }
   publicView = {
     title: 1,
     content: 1,
