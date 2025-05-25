@@ -6,11 +6,11 @@ import { UpdateSiteInfoDto } from '../../../types/meta/site.dto';
 import { RewardItem } from '../../../types/meta/reward.dto';
 import { SocialItem, SocialType } from '../../../types/meta/social.dto';
 import { LinkItem } from '../../../types/meta/link.dto';
-import { UserProvider } from '../user/user.provider';
-import { VisitProvider } from '../visit/visit.provider';
-import { ArticleProvider } from '../article/article.provider';
+import { UserProvider } from '../../auth/provider/user.provider';
+import { VisitProvider } from '../../analysis/provider/visit.provider';
+import { ArticleProvider } from '../../contentManagement/provider/article.provider';
 import dayjs from 'dayjs';
-import { ViewerProvider } from '../viewer/viewer.provider';
+import { ViewerProvider } from '../../analysis/provider/viewer.provider';
 @Injectable()
 export class MetaProvider {
   logger = new Logger(MetaProvider.name);

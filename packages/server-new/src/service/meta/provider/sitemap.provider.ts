@@ -1,9 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { ArticleProvider } from '../article/article.provider';
+import { ArticleProvider } from '../../contentManagement/provider/article.provider';
 import { encodeQuerystring, washUrl } from '../../../common/utils/washUrl';
-import { CustomPageProvider } from '../customPage/customPage.provider';
-import { CategoryProvider } from '../category/category.provider';
-import { TagProvider } from '../tag/tag.provider';
+import { CustomPageProvider } from '../../contentManagement/provider/customPage.provider';
+import { CategoryProvider } from '../../contentManagement/provider/category.provider';
+import { TagProvider } from '../../contentManagement/provider/tag.provider';
 import { MetaProvider } from './meta.provider';
 import { SitemapStream, streamToPromise } from 'sitemap';
 import { config } from '../../../common/config';

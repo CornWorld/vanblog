@@ -1,13 +1,13 @@
 import { Injectable, Logger } from '@nestjs/common';
 
-import { ArticleProvider } from '../article/article.provider';
+import { ArticleProvider } from '../../contentManagement/provider/article.provider';
 import { Feed } from 'feed';
 import { MetaProvider } from '../../meta/provider/meta.provider';
 import { SettingProvider } from '../../meta/provider/setting.provider';
 import fs from 'fs';
 import path from 'path';
 import { config } from '../../../common/config';
-import { MarkdownProvider } from '../markdown/markdown.provider';
+import { MarkdownProvider } from '../../contentManagement/provider/markdown.provider';
 import { washUrl } from '../../../common/utils/washUrl';
 
 @Injectable()

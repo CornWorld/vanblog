@@ -1,11 +1,11 @@
 import { Body, Controller, Delete, Get, Param, Post, Put, UseGuards } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { SocialDto, SocialType } from '../../../types/meta/social.dto';
-import { AdminGuard } from 'src/provider/auth/auth.guard';
+import { AdminGuard } from '../../auth/guard/auth.guard';
 import { ISRProvider } from '../../isr/provider/isr.provider';
 import { MetaProvider } from '../provider/meta.provider';
 import { config } from '../../../common/config';
-import { WebsiteProvider } from 'src/provider/website/website.provider';
+import { WebsiteProvider } from '../provider/website.provider';
 import { ApiToken } from '../../../common/swagger/token';
 import { Result } from 'src/common/result/Result';
 @ApiTags('social')

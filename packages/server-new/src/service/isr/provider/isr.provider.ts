@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import axios from 'axios';
 import { Article } from '../../../scheme/article/article.schema';
 import { sleep } from '../../../common/utils/sleep';
-import { ArticleProvider } from '../article/article.provider';
+import { ArticleProvider } from '../../contentManagement/provider/article.provider';
 import { RssProvider } from './rss.provider';
 import { SettingProvider } from '../../meta/provider/setting.provider';
 import { SiteMapProvider } from '../../meta/provider/sitemap.provider';

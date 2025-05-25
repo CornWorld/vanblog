@@ -1,7 +1,7 @@
 import { Body, Controller, Delete, Get, Param, Post, Put, UseGuards } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { RewardDto } from '../../../types/meta/reward.dto';
-import { AdminGuard } from 'src/provider/auth/auth.guard';
+import { AdminGuard } from '../../auth/guard/auth.guard';
 import { ISRProvider } from '../../isr/provider/isr.provider';
 import { MetaProvider } from '../provider/meta.provider';
 import { config } from '../../../common/config';
