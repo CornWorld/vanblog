@@ -12,13 +12,15 @@ import {
 } from '@nestjs/common';
 import { ApiHeader, ApiSecurity, ApiTags } from '@nestjs/swagger';
 import { config } from '../../../common/config';
-import { CreateArticleDto, UpdateArticleDto } from 'src/types/article.dto';
+import { CreateArticleDto, UpdateArticleDto } from 'src/types/article/article.dto';
 import { SortOrder } from 'src/types/sort';
-import { ArticleProvider } from 'src/provider/article/article.provider';
-import { AdminGuard } from 'src/provider/auth/auth.guard';
-import { ISRProvider } from 'src/provider/isr/isr.provider';
-import { PipelineProvider } from 'src/provider/pipeline/pipeline.provider';
-import { ApiToken } from 'src/provider/swagger/token';
+import { ArticleProvider } from '../provider/article.provider';
+import { AdminGuard } from '../../auth/guard/auth.guard';
+import { ISRProvider } from '../../isr/provider/isr.provider';
+import { PipelineProvider } from '../provider/pipeline.provider';
+import { ApiToken } from 'src/common/swagger/token';
+import { Result } from 'src/common/result/Result';
+
 @ApiTags('article')
 @ApiToken
 @UseGuards(...AdminGuard)
@@ -60,28 +62,19 @@ export class ArticleController {
       sortViewer,
     };
     const data = await this.articleProvider.getByOption(option, false);
-    return {
-      statusCode: 200,
-      data,
-    };
+    return Result.ok(data).toObject();
   }
 
   @Get('/:id')
   async getOneByIdOrPathname(@Param('id') id: string) {
     const data = await this.articleProvider.getByIdOrPathname(id, 'admin');
-    return {
-      statusCode: 200,
-      data,
-    };
+    return Result.ok(data).toObject();
   }
 
   @Put('/:id')
   async update(@Param('id') id: number, @Body() updateDto: UpdateArticleDto) {
     if (config.demo && config.demo == 'true') {
-      return {
-        statusCode: 401,
-        message: '演示站禁止修改文章！',
-      };
+      return Result.build(401, '演示站禁止修改文章！').toObject()
     }
     const result = await this.pipelineProvider.dispatchEvent('beforeUpdateArticle', updateDto);
     if (result.length > 0) {
@@ -97,19 +90,13 @@ export class ArticleController {
     });
     const updatedArticle = await this.articleProvider.getById(id, 'admin');
     this.pipelineProvider.dispatchEvent('afterUpdateArticle', updatedArticle);
-    return {
-      statusCode: 200,
-      data,
-    };
+    return Result.ok(data).toObject();
   }
 
   @Post()
   async create(@Req() req: any, @Body() createDto: CreateArticleDto) {
     if (config.demo && config.demo == 'true') {
-      return {
-        statusCode: 401,
-        message: '演示站禁止创建文章！',
-      };
+      return Result.build(401, '演示站禁止创建文章！').toObject()
     }
     const author = req?.user?.nickname || undefined;
     if (!createDto.author) {
@@ -128,23 +115,17 @@ export class ArticleController {
       postId: data.id,
     });
     this.pipelineProvider.dispatchEvent('afterUpdateArticle', data);
-    return {
-      statusCode: 200,
-      data,
-    };
+    return Result.ok(data).toObject();
   }
   @Post('searchByLink')
   async searchArtcilesByLink(@Body() searchDto: { link: string }) {
     const data = await this.articleProvider.searchArticlesByLink(searchDto?.link || '');
-    return {
-      statusCode: 200,
-      data,
-    };
+    return Result.ok(data).toObject();
   }
   @Delete('/:id')
   async delete(@Param('id') id: number) {
     if (config.demo && config.demo == 'true') {
-      return { statusCode: 401, message: '演示站禁止删除文章！' };
+      return Result.build(401, '演示站禁止删除文章！').toObject()
     }
     const toDeleteArticle = await this.articleProvider.getById(id, 'admin');
     this.pipelineProvider.dispatchEvent('deleteArticle', toDeleteArticle);
@@ -153,9 +134,6 @@ export class ArticleController {
     this.isrProvider.activeAll('删除文章触发增量渲染！', undefined, {
       postId: id,
     });
-    return {
-      statusCode: 200,
-      data,
-    };
+    return Result.ok(data).toObject();
   }
 }

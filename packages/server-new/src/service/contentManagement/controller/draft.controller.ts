@@ -11,14 +11,15 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import { CreateDraftDto, PublishDraftDto, UpdateDraftDto } from 'src/types/draft.dto';
+import { CreateDraftDto, PublishDraftDto, UpdateDraftDto } from 'src/types/article/draft.dto';
 import { SortOrder } from 'src/types/sort';
-import { AdminGuard } from 'src/provider/auth/auth.guard';
-import { DraftProvider } from 'src/provider/draft/draft.provider';
-import { ISRProvider } from 'src/provider/isr/isr.provider';
-import { config } from 'src/config';
-import { PipelineProvider } from 'src/provider/pipeline/pipeline.provider';
-import { ApiToken } from 'src/provider/swagger/token';
+import { AdminGuard } from '../../auth/guard/auth.guard';
+import { DraftProvider } from '../provider/draft.provider';
+import { ISRProvider } from '../../isr/provider/isr.provider';
+import { config } from 'src/common/config';
+import { PipelineProvider } from '../provider/pipeline.provider';
+import { ApiToken } from 'src/common/swagger/token';
+import { Result } from 'src/common/result/Result';
 
 @ApiTags('draft')
 @UseGuards(...AdminGuard)
@@ -29,7 +30,7 @@ export class DraftController {
     private readonly draftProvider: DraftProvider,
     private readonly isrProvider: ISRProvider,
     private readonly pipelineProvider: PipelineProvider,
-  ) {}
+  ) { }
 
   @Get('/')
   async getByOption(
@@ -55,19 +56,13 @@ export class DraftController {
       toListView,
     };
     const data = await this.draftProvider.getByOption(option);
-    return {
-      statusCode: 200,
-      data,
-    };
+    return Result.ok(data).toObject();
   }
 
   @Get('/:id')
   async getOne(@Param('id') id: number) {
     const data = await this.draftProvider.findById(id);
-    return {
-      statusCode: 200,
-      data,
-    };
+    return Result.ok(data).toObject();
   }
 
   @Put('/:id')
@@ -83,10 +78,7 @@ export class DraftController {
     const data = await this.draftProvider.updateById(id, updateDto);
     const updated = await this.draftProvider.findById(id);
     this.pipelineProvider.dispatchEvent('afterUpdateDraft', updated);
-    return {
-      statusCode: 200,
-      data,
-    };
+    return Result.ok(data).toObject();
   }
 
   @Post()
@@ -105,18 +97,12 @@ export class DraftController {
     }
     const data = await this.draftProvider.create(createDto);
     this.pipelineProvider.dispatchEvent('afterUpdateDraft', data);
-    return {
-      statusCode: 200,
-      data,
-    };
+    return Result.ok(data).toObject();
   }
   @Post('/publish')
   async publish(@Query('id') id: number, @Body() publishDto: PublishDraftDto) {
     if (config.demo && config.demo == 'true') {
-      return {
-        statusCode: 401,
-        message: '演示站禁止发布草稿！',
-      };
+      return Result.build(401, '演示站禁止发布草稿！').toObject();
     }
     const result = await this.pipelineProvider.dispatchEvent('beforeUpdateArticle', publishDto);
     if (result.length > 0) {
@@ -129,19 +115,13 @@ export class DraftController {
     const data = await this.draftProvider.publish(id, publishDto);
     this.isrProvider.activeAll('发布草稿触发增量渲染！');
     this.pipelineProvider.dispatchEvent('afterUpdateArticle', data);
-    return {
-      statusCode: 200,
-      data,
-    };
+    return Result.ok(data).toObject();
   }
   @Delete('/:id')
   async delete(@Param('id') id: number) {
     const toDeleteDraft = await this.draftProvider.findById(id);
     const data = await this.draftProvider.deleteById(id);
     this.pipelineProvider.dispatchEvent('deleteDraft', toDeleteDraft);
-    return {
-      statusCode: 200,
-      data,
-    };
+    return Result.ok(data).toObject();
   }
 }

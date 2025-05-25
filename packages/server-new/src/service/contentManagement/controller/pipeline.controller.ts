@@ -1,25 +1,23 @@
 import { Body, Controller, Delete, Get, Param, Post, Put, Req, UseGuards } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import { AdminGuard } from 'src/provider/auth/auth.guard';
+import { AdminGuard } from '../../auth/guard/auth.guard';
 import { Request } from 'express';
-import { PipelineProvider } from 'src/provider/pipeline/pipeline.provider';
+import { PipelineProvider } from '../provider/pipeline.provider';
 import { CreatePipelineDto } from 'src/types/pipeline.dto';
 import { VanblogSystemEvents } from 'src/types/event';
-import { ApiToken } from 'src/provider/swagger/token';
+import { ApiToken } from 'src/common/swagger/token';
+import { Result } from 'src/common/result/Result';
 
 @ApiTags('pipeline')
 @UseGuards(...AdminGuard)
 @ApiToken
 @Controller('/api/admin/pipeline')
 export class PipelineController {
-  constructor(private readonly pipelineProvider: PipelineProvider) {}
+  constructor(private readonly pipelineProvider: PipelineProvider) { }
   @Get()
   async getAllPipelines(@Req() req: Request) {
     const pipelines = await this.pipelineProvider.getAll();
-    return {
-      statusCode: 200,
-      data: pipelines,
-    };
+    return Result.ok(pipelines).toObject();
   }
   @Get('config')
   async getPipelineConfig(@Req() req: Request) {
@@ -32,27 +30,18 @@ export class PipelineController {
   async getPipelineById(@Param('id') idString: string) {
     const id = parseInt(idString);
     const pipeline = await this.pipelineProvider.getPipelineById(id);
-    return {
-      statusCode: 200,
-      data: pipeline,
-    };
+    return Result.ok(pipeline).toObject();
   }
   @Post()
   async createPipeline(@Body() createPipelineDto: CreatePipelineDto) {
     const pipeline = await this.pipelineProvider.createPipeline(createPipelineDto);
-    return {
-      statusCode: 200,
-      data: pipeline,
-    };
+    return Result.ok(pipeline).toObject();
   }
   @Delete('/:id')
   async deletePipelineById(@Param('id') idString: string) {
     const id = parseInt(idString);
     const pipeline = await this.pipelineProvider.deletePipelineById(id);
-    return {
-      statusCode: 200,
-      data: pipeline,
-    };
+    return Result.ok(pipeline).toObject();
   }
   @Put('/:id')
   async updatePipelineById(
@@ -61,18 +50,12 @@ export class PipelineController {
   ) {
     const id = parseInt(idString);
     const pipeline = await this.pipelineProvider.updatePipelineById(id, updatePipelineDto);
-    return {
-      statusCode: 200,
-      data: pipeline,
-    };
+    return Result.ok(pipeline).toObject();
   }
   @Post('/trigger/:id')
   async triggerPipelineById(@Param('id') idString: string, @Body() triggerDto: { input?: any }) {
     const id = parseInt(idString);
     const result = await this.pipelineProvider.triggerById(id, triggerDto.input);
-    return {
-      statusCode: 200,
-      data: result,
-    };
+    return Result.ok(result).toObject();
   }
 }
