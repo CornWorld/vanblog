@@ -3,8 +3,8 @@ import { ChildProcess, spawn } from 'node:child_process';
 import { config } from 'src/common/config';
 import { WalineSetting } from 'src/types/setting.dto';
 import { makeSalt } from 'src/common/utils/crypto';
-import { MetaProvider } from '../meta/meta.provider';
-import { SettingProvider } from '../setting/setting.provider';
+import { MetaProvider } from '../../meta/provider/meta.provider';
+import { SettingProvider } from '../../meta/provider/setting.provider';
 @Injectable()
 export class WalineProvider {
   // constructor() {}
@@ -45,7 +45,7 @@ export class WalineProvider {
             for (const [k, v] of Object.entries(data)) {
               result[k] = v;
             }
-          } catch (err) { }
+          } catch (err) { console.log(err); }
         }
       } else {
         const rKey = walineEnvMapping[key];
@@ -118,7 +118,7 @@ export class WalineProvider {
       this.logger.log('waline 停止成功！');
     }
   }
-  async run(): Promise<any> {
+  async run(): Promise<void> {
     await this.loadEnv();
     const base = '../waline/node_modules/@waline/vercel/vanilla.js';
     if (this.ctx == null) {

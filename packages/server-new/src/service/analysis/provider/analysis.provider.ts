@@ -1,11 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { ArticleProvider } from '../article/article.provider';
-import { ViewerProvider } from '../viewer/viewer.provider';
-import { MetaProvider } from '../meta/meta.provider';
+import { ArticleProvider } from '../../contentManagement/provider/article.provider';
+import { ViewerProvider } from '../provider/viewer.provider';
+import { MetaProvider } from '../../meta/provider/meta.provider';
 import { ArticleTabData, ViewerTabData } from 'src/types/analysis';
-import { VisitProvider } from '../visit/visit.provider';
-import { TagProvider } from '../tag/tag.provider';
-import { CategoryProvider } from '../category/category.provider';
+import { VisitProvider } from '../provider/visit.provider';
+import { TagProvider } from '../../contentManagement/provider/tag.provider';
+import { CategoryProvider } from '../../contentManagement/provider/category.provider';
 export type WelcomeTab = 'overview' | 'viewer' | 'article';
 @Injectable()
 export class AnalysisProvider {
@@ -16,7 +16,7 @@ export class AnalysisProvider {
     private readonly visitProvider: VisitProvider,
     private readonly tagProvider: TagProvider,
     private readonly categoryProvider: CategoryProvider,
-  ) {}
+  ) { }
 
   async getOverViewTabData(num: number) {
     const total = {
