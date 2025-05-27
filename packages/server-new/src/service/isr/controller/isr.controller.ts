@@ -6,7 +6,7 @@ import { AdminGuard } from '../../auth/guard/auth.guard';
 import { ISRProvider } from '../provider/isr.provider';
 import { SettingProvider } from '../../meta/provider/setting.provider';
 import { ApiToken } from '../../../common/swagger/token';
-import { WebsiteProvider } from 'src/provider/website/website.provider';
+import { WebsiteProvider } from '../../meta/provider/website.provider';
 import { ISRSetting } from 'src/types/setting.dto';
 import { Result } from 'src/common/result/Result';
 
@@ -19,19 +19,19 @@ export class ISRController {
     private readonly isrProvider: ISRProvider,
     private readonly settingProvider: SettingProvider,
     private readonly websiteProvider: WebsiteProvider,
-  ) { }
+  ) {}
   @Post()
   async activeISR() {
     await this.isrProvider.activeAll('手动触发 ISR', undefined, {
       forceActice: true,
     });
-    return Result.ok("触发成功！").toObject();
+    return Result.ok('触发成功！').toObject();
   }
   @Put()
   async updateISRSetting(@Body() dto: ISRSetting) {
     await this.settingProvider.updateISRSetting(dto);
     await this.websiteProvider.restart('更新 ISR 配置');
-    return Result.ok("更新成功！").toObject();
+    return Result.ok('更新成功！').toObject();
   }
   @Get()
   async getISRSetting() {

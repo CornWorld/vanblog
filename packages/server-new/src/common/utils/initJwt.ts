@@ -1,4 +1,4 @@
-import { loadMongoUrl } from 'src/config';
+import { loadMongoUrl } from '../config';
 import { MongoClient } from 'mongodb';
 import { makeSalt } from './crypto';
 export const initJwt = async () => {

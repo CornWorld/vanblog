@@ -30,11 +30,11 @@ export class CustomPageController {
   constructor(
     private readonly customPageProvider: CustomPageProvider,
     private readonly staticProvider: StaticProvider,
-  ) { }
+  ) {}
   @Post('upload')
   @UseInterceptors(FileInterceptor('file'))
   async upload(
-    @UploadedFile() file: any,
+    @UploadedFile() file: Express.Multer.File,
     @Query('path') path: string,
     @Query('name') name: string,
   ) {
