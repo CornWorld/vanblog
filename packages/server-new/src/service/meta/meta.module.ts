@@ -14,8 +14,23 @@ import { SocialMetaController } from './controller/social.meta.controller';
 import { SiteMapProvider } from './provider/sitemap.provider';
 import { WebsiteProvider } from './provider/website.provider';
 
+import getFilterMongoSchemaObjs from 'src/common/utils/filterMongoAllSchema';
+import { AnalysisModule } from 'src/service/analysis/analysis.module';
+import { AssetManageModule } from 'src/service/assetManage/assetManage.module';
+import { AuthModule } from 'src/service/auth/auth.module';
+import { ContentManagementModule } from 'src/service/contentManagement/contentManagement.module';
+import { IsrModule } from 'src/service/isr/isr.module';
+import { WalineModule } from 'src/service/waline/waline.module';
 @Module({
-  imports: [],
+  imports: [
+    ...getFilterMongoSchemaObjs(),
+    AuthModule,
+    WalineModule,
+    AnalysisModule,
+    ContentManagementModule,
+    IsrModule,
+    AssetManageModule,
+  ],
   controllers: [
     InitController,
     MetaController,
@@ -27,12 +42,6 @@ import { WebsiteProvider } from './provider/website.provider';
     SiteMetaController,
     SocialMetaController,
   ],
-  providers: [
-    InitProvider,
-    MetaProvider,
-    SettingProvider,
-    SiteMapProvider,
-    WebsiteProvider
-  ],
+  providers: [InitProvider, MetaProvider, SettingProvider, SiteMapProvider, WebsiteProvider],
 })
-export class MetaModule { }
+export class MetaModule {}
