@@ -16,7 +16,7 @@ export class AnalysisProvider {
     private readonly visitProvider: VisitProvider,
     private readonly tagProvider: TagProvider,
     private readonly categoryProvider: CategoryProvider,
-  ) {}
+  ) { }
 
   async getOverViewTabData(num: number) {
     const total = {
