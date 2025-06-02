@@ -1,4 +1,4 @@
-import { Module } from "@nestjs/common";
+import { forwardRef, Module } from "@nestjs/common";
 import { AnalysisController } from "./controller/analysis.controller";
 import { AnalysisProvider } from "./provider/analysis.provider";
 import { ViewerProvider } from "./provider/viewer.provider";
@@ -11,8 +11,8 @@ import { ContentManagementModule } from "../contentManagement/contentManagement.
 @Module({
   imports: [
     ...getFilterMongoSchemaObjs(),
-    MetaModule,
-    ContentManagementModule
+    forwardRef(() => MetaModule),
+    forwardRef(() => ContentManagementModule),
   ],
   controllers: [AnalysisController],
   providers: [

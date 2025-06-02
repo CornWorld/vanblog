@@ -1,4 +1,4 @@
-import { Module } from "@nestjs/common";
+import { forwardRef, Module } from "@nestjs/common";
 import { ImgController } from "./controller/img.controller";
 import { LocalProvider } from "./provider/local.provider";
 import { PicgoProvider } from "./provider/picgo.provider";
@@ -11,8 +11,8 @@ import { ContentManagementModule } from "../contentManagement/contentManagement.
 @Module({
   imports: [
     ...getFilterMongoSchemaObjs(),
-    MetaModule,
-    ContentManagementModule,
+    forwardRef(() => MetaModule),
+    forwardRef(() => ContentManagementModule),
   ],
   controllers: [ImgController],
   providers: [

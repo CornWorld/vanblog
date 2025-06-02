@@ -12,7 +12,7 @@ export class WalineProvider {
   logger = new Logger(WalineProvider.name);
   env = {};
   constructor(
-    private metaProvider: MetaProvider,
+    private readonly metaProvider: MetaProvider,
     private readonly settingProvider: SettingProvider,
   ) { }
 

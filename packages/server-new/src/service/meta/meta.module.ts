@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { InitController } from './controller/init.controller';
 import { MetaController } from './controller/meta.controller';
 import { SettingController } from './controller/setting.controller';
@@ -24,12 +24,12 @@ import { WalineModule } from 'src/service/waline/waline.module';
 @Module({
   imports: [
     ...getFilterMongoSchemaObjs(),
-    AuthModule,
-    WalineModule,
-    AnalysisModule,
-    ContentManagementModule,
-    IsrModule,
-    AssetManageModule,
+    forwardRef(() => AuthModule),
+    forwardRef(() => WalineModule),
+    forwardRef(() => AnalysisModule),
+    forwardRef(() => ContentManagementModule),
+    forwardRef(() => IsrModule),
+    forwardRef(() => AssetManageModule),
   ],
   controllers: [
     InitController,
@@ -44,4 +44,4 @@ import { WalineModule } from 'src/service/waline/waline.module';
   ],
   providers: [InitProvider, MetaProvider, SettingProvider, SiteMapProvider, WebsiteProvider],
 })
-export class MetaModule {}
+export class MetaModule { }

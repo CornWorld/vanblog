@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { AuthController } from './controller/auth.controller';
 import { TokenController } from './controller/token.controller';
 import { AuthProvider } from './provider/auth.provider';
@@ -18,7 +18,7 @@ import getFilterMongoSchemaObjs from 'src/common/utils/filterMongoAllSchema';
 
 @Module({
   imports: [
-    MetaModule,
+    forwardRef(() => MetaModule),
     JwtModule.registerAsync({
       useFactory: async () => {
         return {

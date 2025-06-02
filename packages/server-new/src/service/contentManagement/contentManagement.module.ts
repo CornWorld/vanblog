@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { ArticleController } from './controller/article.controller';
 import { CategoryController } from './controller/category.controller';
 import { CustomPageController } from './controller/customPage.controller';
@@ -26,11 +26,11 @@ import { InfraModule } from 'src/infra/infra.module';
   imports: [
     ...getFilterMongoSchemaObjs(),
 
-    AnalysisModule,
-    AssetManageModule,
+    forwardRef(() => AnalysisModule),
+    forwardRef(() => AssetManageModule),
     AuthModule,
-    IsrModule,
-    MetaModule,
+    forwardRef(() => IsrModule),
+    forwardRef(() => MetaModule),
 
     InfraModule,
   ],
@@ -52,4 +52,4 @@ import { InfraModule } from 'src/infra/infra.module';
     PipelineProvider,
   ],
 })
-export class ContentManagementModule {}
+export class ContentManagementModule { }

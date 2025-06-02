@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { ISRController } from './controller/isr.controller';
 import { ISRProvider } from './provider/isr.provider';
 import { RssProvider } from './provider/rss.provider';
@@ -7,8 +7,13 @@ import { ContentManagementModule } from 'src/service/contentManagement/contentMa
 import { AuthModule } from 'src/service/auth/auth.module';
 import { MetaModule } from 'src/service/meta/meta.module';
 @Module({
-  imports: [...getFilterMongoSchemaObjs(), AuthModule, ContentManagementModule, MetaModule],
+  imports: [
+    ...getFilterMongoSchemaObjs(),
+    AuthModule,
+    forwardRef(() => ContentManagementModule),
+    forwardRef(() => MetaModule),
+  ],
   controllers: [ISRController],
   providers: [ISRProvider, RssProvider],
 })
-export class IsrModule {}
+export class IsrModule { }

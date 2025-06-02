@@ -1,11 +1,15 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { WalineProvider } from './provider/waline.provider';
 
 import getFilterMongoSchemaObjs from 'src/common/utils/filterMongoAllSchema';
 import { MetaModule } from 'src/service/meta/meta.module';
+
 @Module({
-  imports: [...getFilterMongoSchemaObjs(), MetaModule],
+  imports: [
+    ...getFilterMongoSchemaObjs(),
+    forwardRef(() => MetaModule),
+  ],
   controllers: [],
   providers: [WalineProvider],
 })
-export class WalineModule {}
+export class WalineModule { }
