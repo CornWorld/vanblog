@@ -16,12 +16,15 @@ export class ISRProvider {
   base = 'http://127.0.0.1:3001/api/revalidate?path=';
   logger = new Logger(ISRProvider.name);
   timer = null;
+
+
   constructor(
-    private readonly articleProvider: ArticleProvider,
-    private readonly rssProvider: RssProvider,
     private readonly sitemapProvider: SiteMapProvider,
     private readonly settingProvider: SettingProvider,
+    private readonly articleProvider: ArticleProvider,
+    private readonly rssProvider: RssProvider,
   ) { }
+
   async activeAllFn(info?: string, activeConfig?: ActiveConfig) {
     const isrConfig = await this.settingProvider.getISRSetting();
     if (isrConfig?.mode == 'delay' && !activeConfig?.forceActice) {

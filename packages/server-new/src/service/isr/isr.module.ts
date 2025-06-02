@@ -5,15 +5,16 @@ import { RssProvider } from './provider/rss.provider';
 import getFilterMongoSchemaObjs from 'src/common/utils/filterMongoAllSchema';
 import { ContentManagementModule } from 'src/service/contentManagement/contentManagement.module';
 import { AuthModule } from 'src/service/auth/auth.module';
-import { MetaModule } from 'src/service/meta/meta.module';
+import { MetaModule } from '../meta/meta.module';
 @Module({
   imports: [
-    ...getFilterMongoSchemaObjs(),
-    AuthModule,
+    forwardRef(() => AuthModule),
     forwardRef(() => ContentManagementModule),
     forwardRef(() => MetaModule),
+    ...getFilterMongoSchemaObjs(),
   ],
   controllers: [ISRController],
   providers: [ISRProvider, RssProvider],
+  exports: [ISRProvider, RssProvider],
 })
 export class IsrModule { }

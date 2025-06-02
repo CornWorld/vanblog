@@ -13,7 +13,7 @@ export class WalineProvider {
   env = {};
   constructor(
     private readonly metaProvider: MetaProvider,
-    private readonly settingProvider: SettingProvider,
+    private readonly settingProvider: SettingProvider
   ) { }
 
   mapConfig2Env(config: WalineSetting) {

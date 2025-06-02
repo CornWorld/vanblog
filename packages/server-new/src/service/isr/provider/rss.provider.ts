@@ -14,10 +14,12 @@ import { washUrl } from '../../../common/utils/washUrl';
 export class RssProvider {
   logger = new Logger(RssProvider.name);
   timer = null;
+
+
   constructor(
-    private readonly articleProvider: ArticleProvider,
     private readonly metaProvider: MetaProvider,
     private readonly settingProvider: SettingProvider,
+    private readonly articleProvider: ArticleProvider,
     private readonly markdownProvider: MarkdownProvider,
   ) { }
 

@@ -21,6 +21,7 @@ import { AuthModule } from 'src/service/auth/auth.module';
 import { ContentManagementModule } from 'src/service/contentManagement/contentManagement.module';
 import { IsrModule } from 'src/service/isr/isr.module';
 import { WalineModule } from 'src/service/waline/waline.module';
+import { InfraModule } from 'src/infra/infra.module';
 @Module({
   imports: [
     ...getFilterMongoSchemaObjs(),
@@ -30,6 +31,7 @@ import { WalineModule } from 'src/service/waline/waline.module';
     forwardRef(() => ContentManagementModule),
     forwardRef(() => IsrModule),
     forwardRef(() => AssetManageModule),
+    InfraModule
   ],
   controllers: [
     InitController,
@@ -43,5 +45,6 @@ import { WalineModule } from 'src/service/waline/waline.module';
     SocialMetaController,
   ],
   providers: [InitProvider, MetaProvider, SettingProvider, SiteMapProvider, WebsiteProvider],
+  exports: [InitProvider, MetaProvider, SettingProvider, SiteMapProvider, WebsiteProvider]
 })
 export class MetaModule { }

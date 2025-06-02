@@ -10,6 +10,7 @@ import { SettingProvider } from '../../meta/provider/setting.provider';
 export class TokenProvider {
   logger = new Logger(TokenProvider.name);
   timer = null;
+
   constructor(
     @InjectModel('Token') private tokenModel: Model<TokenDocument>,
     private readonly jwtService: JwtService,

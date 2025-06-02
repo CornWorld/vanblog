@@ -1,4 +1,4 @@
-import { HttpException, HttpStatus, Injectable, NotImplementedException } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable, NotImplementedException, OnModuleInit } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { SearchStaticOption, StaticType, StorageType } from 'src/types/setting.dto';
@@ -17,6 +17,7 @@ import { addWaterMarkToIMG } from 'src/common/utils/watermark';
 import { compressImgToWebp } from 'src/common/utils/webp';
 @Injectable()
 export class StaticProvider {
+
   constructor(
     @InjectModel('Static')
     private staticModel: Model<StaticDocument>,
@@ -25,6 +26,7 @@ export class StaticProvider {
     private readonly picgoProvider: PicgoProvider,
     private readonly articleProvder: ArticleProvider,
   ) { }
+
   publicView = {
     _id: 0,
   };

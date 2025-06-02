@@ -4,8 +4,9 @@ import { AnalysisProvider } from "./provider/analysis.provider";
 import { ViewerProvider } from "./provider/viewer.provider";
 import { VisitProvider } from "./provider/visit.provider";
 import { WalineProvider } from "./provider/waline.provider";
-import { MetaModule } from "../meta/meta.module";
 import getFilterMongoSchemaObjs from "src/common/utils/filterMongoAllSchema";
+import { AuthModule } from "../auth/auth.module";
+import { MetaModule } from "../meta/meta.module";
 import { ContentManagementModule } from "../contentManagement/contentManagement.module";
 
 @Module({
@@ -13,13 +14,20 @@ import { ContentManagementModule } from "../contentManagement/contentManagement.
     ...getFilterMongoSchemaObjs(),
     forwardRef(() => MetaModule),
     forwardRef(() => ContentManagementModule),
+    forwardRef(() => AuthModule)
   ],
   controllers: [AnalysisController],
   providers: [
     AnalysisProvider,
     ViewerProvider,
     VisitProvider,
-    WalineProvider
+    WalineProvider,
   ],
+  exports: [
+    AnalysisProvider,
+    ViewerProvider,
+    VisitProvider,
+    WalineProvider
+  ]
 })
 export class AnalysisModule { }

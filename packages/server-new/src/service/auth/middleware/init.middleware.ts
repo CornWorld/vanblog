@@ -5,7 +5,12 @@ import { Result } from 'src/common/result/Result';
 
 @Injectable()
 export class InitMiddleware implements NestMiddleware {
-  constructor(private readonly initProvider: InitProvider) { }
+
+
+  constructor(
+    private readonly initProvider: InitProvider,
+  ) { }
+
   async use(req: Request, res: Response, next: NextFunction) {
     if (req.path == '/api/admin/init') {
       next();

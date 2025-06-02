@@ -13,11 +13,14 @@ import { SettingProvider } from '../../meta/provider/setting.provider';
 
 @Injectable()
 export class LoginGuard implements CanActivate {
+
   logger = new Logger(LoginGuard.name);
+
   constructor(
-    private cacheProvider: CacheProvider,
-    private settingProvider: SettingProvider,
+    private readonly settingProvider: SettingProvider,
+    private readonly cacheProvider: CacheProvider,
   ) { }
+
   async canActivate(context: ExecutionContext) {
     const request = context.switchToHttp().getRequest();
     return await this.validateRequest(request);

@@ -6,9 +6,10 @@ import { UserProvider } from '../provider/user.provider';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
+
   constructor(
-    private readonly userProvider: UserProvider,
     private readonly metaProvider: MetaProvider,
+    private readonly userProvider: UserProvider,
   ) {
     super({
       // 获取请求header token值

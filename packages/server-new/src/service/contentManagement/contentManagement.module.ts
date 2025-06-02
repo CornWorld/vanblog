@@ -17,20 +17,21 @@ import getFilterMongoSchemaObjs from 'src/common/utils/filterMongoAllSchema';
 import { AnalysisModule } from 'src/service/analysis/analysis.module';
 import { AssetManageModule } from 'src/service/assetManage/assetManage.module';
 import { AuthModule } from 'src/service/auth/auth.module';
-import { IsrModule } from 'src/service/isr/isr.module';
-import { MetaModule } from 'src/service/meta/meta.module';
 
 import { InfraModule } from 'src/infra/infra.module';
+import { MarkdownProvider } from './provider/markdown.provider';
+import { MetaModule } from '../meta/meta.module';
+import { IsrModule } from '../isr/isr.module';
 
 @Module({
   imports: [
-    ...getFilterMongoSchemaObjs(),
 
     forwardRef(() => AnalysisModule),
     forwardRef(() => AssetManageModule),
-    AuthModule,
-    forwardRef(() => IsrModule),
+    forwardRef(() => AuthModule),
     forwardRef(() => MetaModule),
+    forwardRef(() => IsrModule),
+    ...getFilterMongoSchemaObjs(),
 
     InfraModule,
   ],
@@ -50,6 +51,16 @@ import { InfraModule } from 'src/infra/infra.module';
     TagProvider,
     CustomPageProvider,
     PipelineProvider,
+    MarkdownProvider
   ],
+  exports: [
+    ArticleProvider,
+    CategoryProvider,
+    DraftProvider,
+    TagProvider,
+    CustomPageProvider,
+    PipelineProvider,
+    MarkdownProvider
+  ]
 })
 export class ContentManagementModule { }

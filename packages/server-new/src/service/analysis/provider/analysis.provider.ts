@@ -9,6 +9,7 @@ import { CategoryProvider } from '../../contentManagement/provider/category.prov
 export type WelcomeTab = 'overview' | 'viewer' | 'article';
 @Injectable()
 export class AnalysisProvider {
+
   constructor(
     private readonly metaProvider: MetaProvider,
     private readonly articleProvider: ArticleProvider,
@@ -17,6 +18,7 @@ export class AnalysisProvider {
     private readonly tagProvider: TagProvider,
     private readonly categoryProvider: CategoryProvider,
   ) { }
+
 
   async getOverViewTabData(num: number) {
     const total = {

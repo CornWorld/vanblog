@@ -10,15 +10,15 @@ import { InitMiddleware } from './middleware/init.middleware';
 import { AccessGuard } from './guard/access.guard';
 import { LoginGuard } from './guard/login.guard';
 import { TokenGuard } from './guard/token.guard';
-import { MetaModule } from '../meta/meta.module';
 import { initJwt } from '../../common/utils/initJwt';
 import { JwtModule } from '@nestjs/jwt';
 import { InfraModule } from 'src/infra/infra.module';
 import getFilterMongoSchemaObjs from 'src/common/utils/filterMongoAllSchema';
+import { MetaModule } from '../meta/meta.module';
+import { ContentManagementModule } from '../contentManagement/contentManagement.module';
 
 @Module({
   imports: [
-    forwardRef(() => MetaModule),
     JwtModule.registerAsync({
       useFactory: async () => {
         return {
@@ -29,7 +29,9 @@ import getFilterMongoSchemaObjs from 'src/common/utils/filterMongoAllSchema';
         };
       },
     }),
-    InfraModule,
+    forwardRef(() => InfraModule),
+    forwardRef(() => MetaModule),
+    forwardRef(() => ContentManagementModule),
     ...getFilterMongoSchemaObjs()
   ],
   controllers: [
@@ -47,5 +49,16 @@ import getFilterMongoSchemaObjs from 'src/common/utils/filterMongoAllSchema';
     LoginGuard,
     TokenGuard,
   ],
+  exports: [
+    AuthProvider,
+    TokenProvider,
+    UserProvider,
+    JwtStrategy,
+    LocalStrategy,
+    InitMiddleware,
+    AccessGuard,
+    LoginGuard,
+    TokenGuard,
+  ]
 })
 export class AuthModule { }

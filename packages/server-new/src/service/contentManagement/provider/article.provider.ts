@@ -1,4 +1,4 @@
-import { Inject, Injectable, forwardRef, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Document, SortOrder, Types } from 'mongoose';
 import { CreateArticleDto, SearchArticleOption, UpdateArticleDto } from 'src/types/article/article.dto';
@@ -22,14 +22,16 @@ type MongooseSortOption = Record<string, SortOrder>;
 @Injectable()
 export class ArticleProvider {
   idLock = false;
+
+
   constructor(
+    private readonly metaProvider: MetaProvider,
+    private readonly visitProvider: VisitProvider,
     @InjectModel('Article')
     private articleModel: Model<ArticleDocument>,
     @InjectModel('Category') private categoryModal: Model<CategoryDocument>,
-    @Inject(forwardRef(() => MetaProvider))
-    private readonly metaProvider: MetaProvider,
-    private readonly visitProvider: VisitProvider,
   ) { }
+
   publicView = {
     title: 1,
     content: 1,

@@ -5,6 +5,7 @@ import { AnalysisModule } from 'src/service/analysis/analysis.module';
 import { AssetManageModule } from 'src/service/assetManage/assetManage.module';
 import { ContentManagementModule } from 'src/service/contentManagement/contentManagement.module';
 import { MetaModule } from 'src/service/meta/meta.module';
+import { AuthModule } from '../auth/auth.module';
 @Module({
   imports: [
     ...getFilterMongoSchemaObjs(),
@@ -12,6 +13,7 @@ import { MetaModule } from 'src/service/meta/meta.module';
     AssetManageModule,
     ContentManagementModule,
     MetaModule,
+    AuthModule
   ],
   controllers: [BackupController],
   providers: [],
