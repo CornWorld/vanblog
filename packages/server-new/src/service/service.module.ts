@@ -11,12 +11,12 @@ import { WalineModule } from './waline/waline.module';
 @Module({
   imports: [
     AnalysisModule,
+    MetaModule,
     AssetManageModule,
     AuthModule,
     BackupModule,
     ContentManagementModule,
     IsrModule,
-    MetaModule,
     WalineModule,
   ],
   controllers: [],
