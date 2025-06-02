@@ -14,6 +14,7 @@ import { MetaModule } from '../meta/meta.module';
 import { initJwt } from '../../common/utils/initJwt';
 import { JwtModule } from '@nestjs/jwt';
 import { InfraModule } from 'src/infra/infra.module';
+import getFilterMongoSchemaObjs from 'src/common/utils/filterMongoAllSchema';
 
 @Module({
   imports: [
@@ -28,7 +29,8 @@ import { InfraModule } from 'src/infra/infra.module';
         };
       },
     }),
-    InfraModule
+    InfraModule,
+    ...getFilterMongoSchemaObjs()
   ],
   controllers: [
     AuthController,
