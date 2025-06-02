@@ -11,12 +11,27 @@ import { AccessGuard } from './guard/access.guard';
 import { LoginGuard } from './guard/login.guard';
 import { TokenGuard } from './guard/token.guard';
 
+import getFilterMongoSchemaObjs from 'src/common/utils/filterMongoAllSchema';
+import { AnalysisModule } from 'src/service/analysis/analysis.module';
+import { AssetManageModule } from 'src/service/assetManage/assetManage.module';
+import { ContentManagementModule } from 'src/service/contentManagement/contentManagement.module';
+import { BackupModule } from 'src/service/backup/backup.module';
+import { IsrModule } from 'src/service/isr/isr.module';
+import { MetaModule } from 'src/service/meta/meta.module';
+import { WalineModule } from 'src/service/waline/waline.module';
+
 @Module({
-  imports: [],
-  controllers: [
-    AuthController,
-    TokenController
+  imports: [
+    ...getFilterMongoSchemaObjs(),
+    AnalysisModule,
+    AssetManageModule,
+    BackupModule,
+    ContentManagementModule,
+    IsrModule,
+    MetaModule,
+    WalineModule,
   ],
+  controllers: [AuthController, TokenController],
   providers: [
     AuthProvider,
     TokenProvider,
@@ -29,4 +44,4 @@ import { TokenGuard } from './guard/token.guard';
     TokenGuard,
   ],
 })
-export class AuthModule { }
+export class AuthModule {}

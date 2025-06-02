@@ -12,10 +12,27 @@ import { CustomPageProvider } from './provider/customPage.provider';
 import { DraftProvider } from './provider/draft.provider';
 import { TagProvider } from './provider/tag.provider';
 import { PipelineProvider } from './provider/pipeline.provider';
+
 import getFilterMongoSchemaObjs from 'src/common/utils/filterMongoAllSchema';
+import { AnalysisModule } from 'src/service/analysis/analysis.module';
+import { AssetManageModule } from 'src/service/assetManage/assetManage.module';
+import { AuthModule } from 'src/service/auth/auth.module';
+import { BackupModule } from 'src/service/backup/backup.module';
+import { IsrModule } from 'src/service/isr/isr.module';
+import { MetaModule } from 'src/service/meta/meta.module';
+import { WalineModule } from 'src/service/waline/waline.module';
 
 @Module({
-  imports: [...getFilterMongoSchemaObjs()],
+  imports: [
+    ...getFilterMongoSchemaObjs(),
+    AnalysisModule,
+    AssetManageModule,
+    AuthModule,
+    BackupModule,
+    IsrModule,
+    MetaModule,
+    WalineModule,
+  ],
   controllers: [
     ArticleController,
     CategoryController,
