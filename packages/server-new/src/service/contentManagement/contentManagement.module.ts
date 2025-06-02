@@ -12,9 +12,10 @@ import { CustomPageProvider } from './provider/customPage.provider';
 import { DraftProvider } from './provider/draft.provider';
 import { TagProvider } from './provider/tag.provider';
 import { PipelineProvider } from './provider/pipeline.provider';
+import getFilterMongoSchemaObjs from 'src/common/utils/filterMongoAllSchema';
 
 @Module({
-  imports: [],
+  imports: [...getFilterMongoSchemaObjs()],
   controllers: [
     ArticleController,
     CategoryController,
@@ -22,7 +23,7 @@ import { PipelineProvider } from './provider/pipeline.provider';
     TagController,
     CustomPageController,
     CollaboratorController,
-    PipelineController
+    PipelineController,
   ],
   providers: [
     ArticleProvider,
@@ -30,7 +31,7 @@ import { PipelineProvider } from './provider/pipeline.provider';
     DraftProvider,
     TagProvider,
     CustomPageProvider,
-    PipelineProvider
+    PipelineProvider,
   ],
 })
-export class ContentManagementModule { }
+export class ContentManagementModule {}

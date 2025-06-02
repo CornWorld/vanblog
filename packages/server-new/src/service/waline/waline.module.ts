@@ -1,11 +1,10 @@
 import { Module } from '@nestjs/common';
 import { WalineProvider } from './provider/waline.provider';
+import getFilterMongoSchemaObjs from 'src/common/utils/filterMongoAllSchema';
 
 @Module({
-  imports: [],
+  imports: [...getFilterMongoSchemaObjs()],
   controllers: [],
-  providers: [
-    WalineProvider
-  ],
+  providers: [WalineProvider],
 })
-export class WalineModule { }
+export class WalineModule {}
