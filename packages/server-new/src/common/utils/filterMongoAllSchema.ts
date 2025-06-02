@@ -43,13 +43,15 @@ const ALL_SCHEMAS_OBJS = [
   { name: Pipeline.name, schema: PipelineSchema },
 ];
 
-type SchemaObj = (typeof ALL_SCHEMAS_OBJS)[number] | undefined | null;
+type Schema = (typeof ALL_SCHEMAS_OBJS)[number]['schema'] | undefined | null;
 
-export default function getFilterMongoSchemaObjs(mySchema?: SchemaObj) {
+export default function getFilterMongoSchemaObjs(mySchema?: Schema) {
   return [
     MongooseModule.forRoot(config.mongoUrl, {
       autoIndex: true,
     }),
-    MongooseModule.forFeature(ALL_SCHEMAS_OBJS.filter((schemaOobj) => schemaOobj !== mySchema)),
+    MongooseModule.forFeature(
+      ALL_SCHEMAS_OBJS.filter((schemaObj) => schemaObj.schema !== mySchema),
+    ),
   ];
 }
