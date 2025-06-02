@@ -97,9 +97,9 @@ async function bootstrap() {
   SwaggerModule.setup('swagger', app, document);
   await app.listen(3000);
 
-  const websiteProvider = app.get('WebsiteProvider');
+  // const websiteProvider = app.get('WebsiteProvider');
 
-  websiteProvider.init();
+  // websiteProvider.init();
 
   const initProvider = app.get('InitProvider');
   initProvider.initVersion();
@@ -123,7 +123,7 @@ async function bootstrap() {
     walineProvider.init();
     process.on('SIGINT', async () => {
       await walineProvider.stop();
-      await websiteProvider.stop();
+      // await websiteProvider.stop();
       console.log('检测到关闭信号，优雅退出！');
       process.exit();
     });
@@ -139,6 +139,6 @@ async function bootstrap() {
     console.log('swagger 地址: http://<domain>/swagger');
     // console.log('项目主页: https://vanblog.mereith.com');
     console.log('开源地址: https://github.com/CornWorld/vanblog');
-  }, 3000);
+  }, 1000);
 }
 bootstrap();

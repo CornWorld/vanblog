@@ -19,7 +19,7 @@ export class DraftProvider {
     @InjectModel('Draft') private draftModel: Model<DraftDocument>,
     private readonly articleProvider: ArticleProvider,
   ) { }
-  publicView = {
+  publicView: Record<string, 1 | 0> = {
     title: 1,
     content: 1,
     tags: 1,
@@ -31,7 +31,7 @@ export class DraftProvider {
     _id: 0,
   };
 
-  adminView = {
+  adminView: Record<string, 1 | 0> = {
     title: 1,
     content: 1,
     tags: 1,
@@ -43,7 +43,7 @@ export class DraftProvider {
     _id: 0,
   };
 
-  listView = {
+  listView: Record<string, 1 | 0> = {
     title: 1,
     tags: 1,
     category: 1,

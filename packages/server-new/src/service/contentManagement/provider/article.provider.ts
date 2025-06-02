@@ -32,7 +32,7 @@ export class ArticleProvider {
     @InjectModel('Category') private categoryModal: Model<CategoryDocument>,
   ) { }
 
-  publicView = {
+  publicView: Record<string, 1 | 0> = {
     title: 1,
     content: 1,
     tags: 1,
@@ -52,7 +52,7 @@ export class ArticleProvider {
     pathname: 1,
   };
 
-  adminView = {
+  adminView: Record<string, 1 | 0> = {
     title: 1,
     content: 1,
     tags: 1,
@@ -73,7 +73,7 @@ export class ArticleProvider {
     pathname: 1,
   };
 
-  listView = {
+  listView: Record<string, 1 | 0> = {
     title: 1,
     tags: 1,
     category: 1,
