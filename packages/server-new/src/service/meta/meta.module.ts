@@ -14,25 +14,22 @@ import { SocialMetaController } from './controller/social.meta.controller';
 import { SiteMapProvider } from './provider/sitemap.provider';
 import { WebsiteProvider } from './provider/website.provider';
 
-import { InfraModule } from 'src/infra/infra.module';
-import { WalineModule } from '../waline/waline.module';
-import { AuthModule } from '../auth/auth.module';
-import { AnalysisModule } from '../analysis/analysis.module';
-import { ContentManagementModule } from '../contentManagement/contentManagement.module';
 import getFilterMongoSchemaObjs from 'src/common/utils/filterMongoAllSchema';
-import { IsrModule } from '../isr/isr.module';
-import { AssetManageModule } from '../assetManage/assetManage.module';
-
+import { AnalysisModule } from 'src/service/analysis/analysis.module';
+import { AssetManageModule } from 'src/service/assetManage/assetManage.module';
+import { AuthModule } from 'src/service/auth/auth.module';
+import { ContentManagementModule } from 'src/service/contentManagement/contentManagement.module';
+import { IsrModule } from 'src/service/isr/isr.module';
+import { WalineModule } from 'src/service/waline/waline.module';
 @Module({
   imports: [
     ...getFilterMongoSchemaObjs(),
     AuthModule,
-    InfraModule,
     WalineModule,
     AnalysisModule,
     ContentManagementModule,
     IsrModule,
-    AssetManageModule
+    AssetManageModule,
   ],
   controllers: [
     InitController,
@@ -45,12 +42,6 @@ import { AssetManageModule } from '../assetManage/assetManage.module';
     SiteMetaController,
     SocialMetaController,
   ],
-  providers: [
-    InitProvider,
-    MetaProvider,
-    SettingProvider,
-    SiteMapProvider,
-    WebsiteProvider
-  ]
+  providers: [InitProvider, MetaProvider, SettingProvider, SiteMapProvider, WebsiteProvider],
 })
-export class MetaModule { }
+export class MetaModule {}
