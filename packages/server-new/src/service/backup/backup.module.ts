@@ -3,7 +3,6 @@ import { BackupController } from './controller/backup.controller';
 import getFilterMongoSchemaObjs from 'src/common/utils/filterMongoAllSchema';
 import { AnalysisModule } from 'src/service/analysis/analysis.module';
 import { AssetManageModule } from 'src/service/assetManage/assetManage.module';
-import { AuthModule } from 'src/service/auth/auth.module';
 import { ContentManagementModule } from 'src/service/contentManagement/contentManagement.module';
 import { MetaModule } from 'src/service/meta/meta.module';
 @Module({
@@ -11,11 +10,10 @@ import { MetaModule } from 'src/service/meta/meta.module';
     ...getFilterMongoSchemaObjs(),
     AnalysisModule,
     AssetManageModule,
-    AuthModule,
     ContentManagementModule,
     MetaModule,
   ],
   controllers: [BackupController],
   providers: [],
 })
-export class BackupModule {}
+export class BackupModule { }

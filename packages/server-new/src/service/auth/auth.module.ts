@@ -10,9 +10,26 @@ import { InitMiddleware } from './middleware/init.middleware';
 import { AccessGuard } from './guard/access.guard';
 import { LoginGuard } from './guard/login.guard';
 import { TokenGuard } from './guard/token.guard';
+import { MetaModule } from '../meta/meta.module';
+import { initJwt } from '../../common/utils/initJwt';
+import { JwtModule } from '@nestjs/jwt';
+import { InfraModule } from 'src/infra/infra.module';
 
 @Module({
-  imports: [],
+  imports: [
+    MetaModule,
+    JwtModule.registerAsync({
+      useFactory: async () => {
+        return {
+          secret: await initJwt(),
+          signOptions: {
+            expiresIn: 3600 * 24 * 7,
+          },
+        };
+      },
+    }),
+    InfraModule
+  ],
   controllers: [
     AuthController,
     TokenController

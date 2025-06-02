@@ -5,14 +5,14 @@ import { ViewerProvider } from "./provider/viewer.provider";
 import { VisitProvider } from "./provider/visit.provider";
 import { WalineProvider } from "./provider/waline.provider";
 import { MetaModule } from "../meta/meta.module";
-import { AssetManageModule } from "../assetManage/assetManage.module";
 import getFilterMongoSchemaObjs from "src/common/utils/filterMongoAllSchema";
+import { ContentManagementModule } from "../contentManagement/contentManagement.module";
 
 @Module({
   imports: [
+    ...getFilterMongoSchemaObjs(),
     MetaModule,
-    AssetManageModule,
-    ...getFilterMongoSchemaObjs()
+    ContentManagementModule
   ],
   controllers: [AnalysisController],
   providers: [
