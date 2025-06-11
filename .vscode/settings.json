@@ -31,5 +31,6 @@
   "typescript.tsdk": "node_modules/typescript/lib",
   "[typescriptreact]": {
     "editor.defaultFormatter": "vscode.typescript-language-features"
-  }
+  },
+  "vitest.disableWorkspaceWarning": true
 }
