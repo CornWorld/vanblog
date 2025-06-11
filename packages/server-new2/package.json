@@ -25,12 +25,12 @@
   "dependencies": {
     "@nestjs/common": "^11.0.16",
     "@nestjs/core": "^11.0.16",
+    "@nestjs/event-emitter": "^3.0.1",
     "@nestjs/jwt": "^11.0.0",
     "@nestjs/mongoose": "^11.0.3",
     "@nestjs/passport": "^11.0.5",
     "@nestjs/platform-express": "^11.0.16",
     "@nestjs/schedule": "^5.0.1",
-    "@nestjs/swagger": "^11.1.2",
     "@types/line-reader": "^0.0.37",
     "@vitest/coverage-v8": "^3.2.3",
     "axios": "^1.8.4",
@@ -67,6 +67,7 @@
   "devDependencies": {
     "@nestjs/cli": "^11.0.6",
     "@nestjs/schematics": "^11.0.5",
+    "@nestjs/swagger": "^11.1.2",
     "@nestjs/testing": "^11.0.16",
     "@types/express": "^5.0.1",
     "@types/multer": "^1.4.12",
