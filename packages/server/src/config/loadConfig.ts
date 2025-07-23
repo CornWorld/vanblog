@@ -48,7 +48,7 @@ export const loadConfig = <T = unknown>(key: string, defaultValue?: T | (() => T
   else if (typeof defaultValue === 'function')
     ret = { t: 'def_func', val: (defaultValue as () => T)() };
   else if (defaultValue !== undefined) ret = { t: 'def_val', val: defaultValue as T };
-  else ret = { t: 'no found', val: undefined as T };
+  else ret = { t: 'not found', val: undefined as T };
 
   console.log('load config', { key, ...ret }); // TODO DEBUG
 
