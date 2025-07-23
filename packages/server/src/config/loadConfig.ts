@@ -17,7 +17,7 @@ if (process.env.VAN_BLOG_CONFIG_FILE) {
 rawConfigs = rawConfigs
   .filter(Boolean)
   .filter(fs.existsSync)
-  .map((file) => fs.readFileSync(file, 'utf-8').toString())
+  .map((file) => fs.readFileSync(file, 'utf-8'))
   .map((content) => yaml.parse(content));
 
 if (rawConfigs.length === 0) {
