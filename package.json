@@ -32,21 +32,47 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
+  "pnpm": {
+    "overrides": {
+      "swagger-ui-react>react": "^19.0.0",
+      "swagger-ui-react>react-dom": "^19.0.0"
+    },
+    "onlyBuiltDependencies": [
+      "@nestjs/core",
+      "@parcel/watcher",
+      "@scarf/scarf",
+      "@swc/core",
+      "@tailwindcss/oxide",
+      "@tree-sitter-grammars/tree-sitter-yaml",
+      "core-js",
+      "core-js-pure",
+      "ejs",
+      "es5-ext",
+      "esbuild",
+      "puppeteer-core",
+      "sharp",
+      "sqlite3",
+      "tree-sitter",
+      "tree-sitter-json",
+      "unrs-resolver",
+      "vue-demi"
+    ]
+  },
   "devDependencies": {
-    "@eslint/js": "^9.24.0",
-    "@typescript-eslint/eslint-plugin": "^8.29.1",
-    "@typescript-eslint/parser": "^8.29.1",
-    "eslint": "^9.24.0",
-    "eslint-config-prettier": "^10.1.2",
-    "eslint-plugin-prettier": "^5.2.6",
-    "globals": "^16.0.0",
+    "@eslint/js": "^9.31.0",
+    "@typescript-eslint/eslint-plugin": "^8.38.0",
+    "@typescript-eslint/parser": "^8.38.0",
+    "eslint": "^9.31.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.3",
+    "globals": "^16.3.0",
     "husky": "^9.1.7",
     "nano-staged": "^0.8.0",
     "patch-package": "^8.0.0",
-    "prettier": "^3.5.3",
+    "prettier": "^3.6.2",
     "standard-version": "^9.5.0",
     "ts-node-dev": "^2.0.0",
-    "typescript-eslint": "^8.29.1"
+    "typescript-eslint": "^8.38.0"
   },
   "nano-staged": {
     "*.{js,jsx,ts,tsx}": [
