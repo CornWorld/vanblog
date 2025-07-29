@@ -178,13 +178,13 @@ JWT_EXPIRES_IN=7d
 - [x] 创建基础模块结构 (src/modules, src/core, src/shared)
 - [x] 配置 TypeScript 严格模式和 ESLint 规则
 - [x] 设置环境变量管理系统 (config module)
-- [ ] 配置 Swagger/OpenAPI 文档生成
+- [x] 配置 Swagger/OpenAPI 文档生成
 - [ ] 设置日志系统 (Winston/Pino)
 - [ ] 配置 CORS 和安全中间件
 - [ ] 创建全局异常过滤器
 - [ ] 设置请求验证管道 (class-validator)
 - [ ] 配置数据库连接模块 (MongoDB/Mongoose)
-- [ ] 创建健康检查端点 (/health)
+- [x] 创建健康检查端点 (/health)
 
 ### 阶段 2: 核心模块实现
 
