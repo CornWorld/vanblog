@@ -97,7 +97,8 @@ export async function init(): Promise<INestApplication> {
   );
 
   // Enable compression
-  app.use(compression());
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  app.use(compression() as any);
 
   logger.log(`Application configured with prefix: ${appConfig.apiPrefix}`, 'Bootstrap');
   logger.log(`CORS enabled with options: ${JSON.stringify(corsOptions)}`, 'Bootstrap');

@@ -50,11 +50,29 @@ export class LoggerService implements LoggerService {
     if (isDevelopment || isTest) {
       formats.push(
         winston.format.colorize(),
-        winston.format.printf(({ level, message, timestamp, context, trace, ...meta }) => {
-          const contextStr = context ? `[${String(context)}] ` : '';
+        winston.format.printf((info: winston.Logform.TransformableInfo) => {
+          // Extract known fields from info object
+          const level = info.level ?? '';
+          const message = info.message ?? '';
+          const timestamp = info.timestamp ?? '';
+          const context = info.context as string | undefined;
+          const trace = info.trace as string | undefined;
+
+          // Build meta without known fields
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          const {
+            level: _level,
+            message: _msg,
+            timestamp: _ts,
+            context: _ctx,
+            trace: _tr,
+            ...meta
+          } = info;
+
+          const contextStr = context ? `[${context}] ` : '';
           const metaStr = Object.keys(meta).length ? ` ${JSON.stringify(meta)}` : '';
-          const traceStr = trace ? `\n${String(trace)}` : '';
-          return `${timestamp} ${level}: ${contextStr}${message}${metaStr}${traceStr}`;
+          const traceStr = trace ? `\n${trace}` : '';
+          return `${String(timestamp)} ${level}: ${contextStr}${String(message)}${metaStr}${traceStr}`;
         }),
       );
     }

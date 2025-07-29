@@ -62,17 +62,16 @@ export function validateConfig(config: Record<string, unknown>): ConfigSchema {
     return result.data;
   }
 
-  // ESLint has issues with Zod's internal types, but this is type-safe
+  // Format validation errors
 
-  const errors = result.error.errors
+  const errorMessages: string[] = [];
 
-    .map((e) => {
-      const path = e.path.length > 0 ? e.path.join('.') : 'root';
+  for (const err of result.error.errors) {
+    const path = err.path.length > 0 ? err.path.join('.') : 'root';
 
-      return `${path}: ${e.message}`;
-    })
-
-    .join(', ');
+    errorMessages.push(`${path}: ${err.message}`);
+  }
+  const errors = errorMessages.join(', ');
 
   throw new Error(`Config validation error: ${errors}`);
 }
