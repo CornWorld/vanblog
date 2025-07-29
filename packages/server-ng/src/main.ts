@@ -1,8 +1,9 @@
 import { NestFactory } from '@nestjs/core';
-import { ConsoleLogger, type INestApplication } from '@nestjs/common';
+import { type INestApplication } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder, type OpenAPIObject } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { ConfigService } from './config';
+import { LoggerService } from './core/logger/logger.service';
 
 import 'dayjs/locale/zh-cn';
 import dayjs from 'dayjs';
@@ -11,15 +12,15 @@ dayjs.locale('zh-cn'); // TODO dep on config
 
 export async function init(): Promise<INestApplication> {
   const app = await NestFactory.create(AppModule, {
-    logger: new ConsoleLogger({
-      logLevels: ['debug', 'error', 'fatal', 'log', 'verbose', 'warn'],
-      prefix: 'Vanblog',
-      timestamp: true,
-    }),
+    bufferLogs: true,
   });
 
   const configService = app.get(ConfigService);
   const appConfig = configService.app;
+
+  // Use custom logger
+  const logger = app.get(LoggerService);
+  app.useLogger(logger);
 
   // Swagger/OpenAPI configuration
   const swaggerConfig = new DocumentBuilder()
@@ -75,6 +76,8 @@ export async function init(): Promise<INestApplication> {
 
   app.setGlobalPrefix(appConfig.apiPrefix);
 
+  logger.log(`Application configured with prefix: ${appConfig.apiPrefix}`, 'Bootstrap');
+
   return app;
 }
 
@@ -92,8 +95,12 @@ if ((import.meta as ImportMeta).env?.PROD) {
     await app.listen(port);
 
     // Use logger instead of console.log
-    const logger = new ConsoleLogger('Bootstrap');
-    logger.log(`Application is running on: http://localhost:${String(port)}`);
+    const logger = app.get(LoggerService);
+    logger.log(`Application is running on: http://localhost:${String(port)}`, 'Bootstrap');
+    logger.log(
+      `API Documentation available at: http://localhost:${String(port)}${configService.app.apiPrefix}/docs`,
+      'Bootstrap',
+    );
   });
 }
 
