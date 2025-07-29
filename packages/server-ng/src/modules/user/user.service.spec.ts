@@ -8,18 +8,25 @@ import { users } from '../../db/schema';
 
 // Mock bcrypt
 vi.mock('bcrypt');
-const bcryptCompare = vi.fn().mockResolvedValue(true);
-const bcryptHash = vi.fn().mockResolvedValue('hashedPassword');
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-(bcrypt.compare as any) = bcryptCompare;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-(bcrypt.hash as any) = bcryptHash;
 
 describe('UserService', () => {
   let service: UserService;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let mockDb: any;
+
+  interface MockDb {
+    select: ReturnType<typeof vi.fn>;
+    from: ReturnType<typeof vi.fn>;
+    where: ReturnType<typeof vi.fn>;
+    get: ReturnType<typeof vi.fn>;
+    all: ReturnType<typeof vi.fn>;
+    insert: ReturnType<typeof vi.fn>;
+    values: ReturnType<typeof vi.fn>;
+    returning: ReturnType<typeof vi.fn>;
+    update: ReturnType<typeof vi.fn>;
+    set: ReturnType<typeof vi.fn>;
+    delete: ReturnType<typeof vi.fn>;
+  }
+
+  let mockDb: MockDb;
 
   const mockUser = {
     id: 1,
@@ -81,7 +88,7 @@ describe('UserService', () => {
 
       const result = await service.create(createUserDto);
 
-      expect(bcrypt.hash).toHaveBeenCalledWith('password123', 10);
+      expect(vi.mocked(bcrypt.hash)).toHaveBeenCalledWith('password123', 10);
       expect(mockDb.insert).toHaveBeenCalledWith(users);
       expect(result.username).toBe('testuser');
       expect(result.password).toBe('hashedPassword');
@@ -159,7 +166,7 @@ describe('UserService', () => {
 
       await service.update(1, { password: 'newpassword' });
 
-      expect(bcrypt.hash).toHaveBeenCalledWith('newpassword', 10);
+      expect(vi.mocked(bcrypt.hash)).toHaveBeenCalledWith('newpassword', 10);
     });
 
     it('should throw NotFoundException if user not found', async () => {

@@ -37,4 +37,8 @@ export class User {
   constructor(partial: Partial<User>) {
     Object.assign(this, partial);
   }
+
+  get permission(): Permission[] | undefined {
+    return this.permissions;
+  }
 }

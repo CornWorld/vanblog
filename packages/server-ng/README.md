@@ -196,9 +196,9 @@ JWT_EXPIRES_IN=7d
 ### 阶段 2: 核心模块实现
 
 - [x] 实现用户数据模型 (User Schema)
-- [ ] 创建认证模块 (auth.module.ts)
-- [ ] 实现 JWT 认证策略
-- [ ] 创建登录/登出 API 端点
+- [x] 创建认证模块 (auth.module.ts)
+- [x] 实现 JWT 认证策略
+- [x] 创建登录/登出 API 端点
 - [ ] 实现用户管理基础 CRUD
 - [ ] 添加密码加密服务 (bcrypt)
 - [ ] 创建认证守卫 (auth.guard.ts)
