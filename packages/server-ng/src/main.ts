@@ -4,6 +4,8 @@ import { SwaggerModule, DocumentBuilder, type OpenAPIObject } from '@nestjs/swag
 import { AppModule } from './app.module';
 import { ConfigService } from './config';
 import { LoggerService } from './core/logger/logger.service';
+import helmet from 'helmet';
+import compression from 'compression';
 
 import 'dayjs/locale/zh-cn';
 import dayjs from 'dayjs';
@@ -76,7 +78,30 @@ export async function init(): Promise<INestApplication> {
 
   app.setGlobalPrefix(appConfig.apiPrefix);
 
+  // Enable CORS
+  const corsOptions = configService.cors;
+  app.enableCors(corsOptions);
+
+  // Security middlewares
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          styleSrc: ["'self'", "'unsafe-inline'"],
+          scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+          imgSrc: ["'self'", 'data:', 'https:'],
+        },
+      },
+    }),
+  );
+
+  // Enable compression
+  app.use(compression());
+
   logger.log(`Application configured with prefix: ${appConfig.apiPrefix}`, 'Bootstrap');
+  logger.log(`CORS enabled with options: ${JSON.stringify(corsOptions)}`, 'Bootstrap');
+  logger.log('Security middlewares (Helmet) and compression enabled', 'Bootstrap');
 
   return app;
 }

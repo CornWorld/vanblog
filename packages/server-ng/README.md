@@ -180,7 +180,7 @@ JWT_EXPIRES_IN=7d
 - [x] 设置环境变量管理系统 (config module)
 - [x] 配置 Swagger/OpenAPI 文档生成
 - [x] 设置日志系统 (Winston/Pino)
-- [ ] 配置 CORS 和安全中间件
+- [x] 配置 CORS 和安全中间件
 - [ ] 创建全局异常过滤器
 - [ ] 设置请求验证管道 (class-validator)
 - [ ] 配置数据库连接模块 (MongoDB/Mongoose)

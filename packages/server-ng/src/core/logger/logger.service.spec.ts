@@ -1,21 +1,19 @@
-import type { TestingModule } from '@nestjs/testing';
-import { Test } from '@nestjs/testing';
+import { Test, type TestingModule } from '@nestjs/testing';
 import { LoggerService } from './logger.service';
 import { ConfigService } from '../../config/config.service';
 
 describe('LoggerService', () => {
   let service: LoggerService;
-  let configService: ConfigService;
 
   const mockConfigService = {
-    get: vi.fn((key: string, defaultValue?: unknown) => {
-      const config: Record<string, unknown> = {
-        NODE_ENV: 'test',
-        LOG_LEVEL: 'info',
-        LOG_DIR: 'logs',
-      };
-      return config[key] ?? defaultValue;
-    }),
+    app: {
+      isDevelopment: false,
+      nodeEnv: 'test',
+    },
+    log: {
+      level: 'info',
+      dir: 'logs',
+    },
   };
 
   beforeEach(async () => {
@@ -30,7 +28,6 @@ describe('LoggerService', () => {
     }).compile();
 
     service = module.get<LoggerService>(LoggerService);
-    configService = module.get<ConfigService>(ConfigService);
   });
 
   it('should be defined', () => {
@@ -99,16 +96,18 @@ describe('LoggerService', () => {
   });
 
   it('should use different configuration for development environment', () => {
-    mockConfigService.get = vi.fn((key: string, defaultValue?: unknown) => {
-      const config: Record<string, unknown> = {
-        NODE_ENV: 'development',
-        LOG_LEVEL: 'debug',
-        LOG_DIR: 'logs',
-      };
-      return config[key] ?? defaultValue;
-    });
+    const devMockConfigService = {
+      app: {
+        isDevelopment: true,
+        nodeEnv: 'development',
+      },
+      log: {
+        level: 'debug',
+        dir: 'logs',
+      },
+    };
 
-    const devService = new LoggerService(configService);
+    const devService = new LoggerService(devMockConfigService as ConfigService);
     expect(devService).toBeDefined();
   });
 });

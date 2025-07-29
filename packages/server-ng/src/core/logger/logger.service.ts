@@ -10,11 +10,35 @@ export class LoggerService implements LoggerService {
     this.logger = this.createLogger();
   }
 
+  log(message: string, context?: string): void {
+    this.logger.info(message, { context });
+  }
+
+  info(message: string, context?: string): void {
+    this.logger.info(message, { context });
+  }
+
+  error(message: string, trace?: string, context?: string): void {
+    this.logger.error(message, { context, trace });
+  }
+
+  warn(message: string, context?: string): void {
+    this.logger.warn(message, { context });
+  }
+
+  debug(message: string, context?: string): void {
+    this.logger.debug(message, { context });
+  }
+
+  verbose(message: string, context?: string): void {
+    this.logger.verbose(message, { context });
+  }
+
   private createLogger(): winston.Logger {
-    const isDevelopment = this.configService.get('NODE_ENV') === 'development';
-    const isTest = this.configService.get('NODE_ENV') === 'test';
-    const logLevel = this.configService.get('LOG_LEVEL', 'info');
-    const logDir = this.configService.get('LOG_DIR', 'logs');
+    const isDevelopment = this.configService.app.isDevelopment;
+    const isTest = this.configService.app.nodeEnv === 'test';
+    const logLevel = this.configService.log.level;
+    const logDir = this.configService.log.dir;
 
     const formats = [
       winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
@@ -27,9 +51,9 @@ export class LoggerService implements LoggerService {
       formats.push(
         winston.format.colorize(),
         winston.format.printf(({ level, message, timestamp, context, trace, ...meta }) => {
-          const contextStr = (context as string) ? `[${context as string}] ` : '';
+          const contextStr = context ? `[${String(context)}] ` : '';
           const metaStr = Object.keys(meta).length ? ` ${JSON.stringify(meta)}` : '';
-          const traceStr = (trace as string) ? `\n${trace as string}` : '';
+          const traceStr = trace ? `\n${String(trace)}` : '';
           return `${timestamp} ${level}: ${contextStr}${message}${metaStr}${traceStr}`;
         }),
       );
@@ -80,31 +104,9 @@ export class LoggerService implements LoggerService {
         }),
       );
     } catch (error) {
+      // Log error to console during startup
+
       console.warn('Failed to load winston-daily-rotate-file:', error);
     }
-  }
-
-  log(message: string, context?: string): void {
-    this.logger.info(message, { context });
-  }
-
-  info(message: string, context?: string): void {
-    this.logger.info(message, { context });
-  }
-
-  error(message: string, trace?: string, context?: string): void {
-    this.logger.error(message, { context, trace });
-  }
-
-  warn(message: string, context?: string): void {
-    this.logger.warn(message, { context });
-  }
-
-  debug(message: string, context?: string): void {
-    this.logger.debug(message, { context });
-  }
-
-  verbose(message: string, context?: string): void {
-    this.logger.verbose(message, { context });
   }
 }
