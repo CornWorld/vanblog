@@ -2,8 +2,6 @@ import { z } from 'zod';
 
 const portSchema = z.coerce.number().int().positive().max(65535);
 
-const uriSchema = z.string().regex(/^(mongodb|mongodb+srv):\/\/.+/, 'Must be a valid MongoDB URI');
-
 export const configSchema = z.object({
   // Application
   PORT: portSchema.default(3000),
@@ -12,12 +10,13 @@ export const configSchema = z.object({
   API_VERSION: z.string().default('v2'),
 
   // Database
-  MONGODB_URI: uriSchema.default('mongodb://localhost:27017/vanblog'),
-  DATABASE_HOST: z.string().optional(),
-  DATABASE_PORT: portSchema.optional(),
-  DATABASE_NAME: z.string().optional(),
-  DATABASE_USER: z.string().optional(),
-  DATABASE_PASS: z.string().optional(),
+  DATABASE_DRIVER: z.enum(['local', 'turso', 'd1']).default('local'),
+  DATABASE_URL: z.string().default('file:./data/vanblog.db'),
+  DATABASE_AUTH_TOKEN: z.string().optional(),
+  DATABASE_FILE_PATH: z.string().optional(),
+  CLOUDFLARE_ACCOUNT_ID: z.string().optional(),
+  CLOUDFLARE_DATABASE_ID: z.string().optional(),
+  CLOUDFLARE_D1_TOKEN: z.string().optional(),
 
   // JWT
   JWT_SECRET: z.string().min(1),

@@ -1,7 +1,8 @@
-import { Global, Module } from '@nestjs/common';
-import { ConfigModule as NestConfigModule } from '@nestjs/config';
+import { Global, Module, DynamicModule } from '@nestjs/common';
+import { ConfigModule as NestConfigModule, ConfigFactory } from '@nestjs/config';
 import { ConfigService } from './config.service';
 import { validateConfig } from './config.schema';
+import databaseConfig from './database.config';
 
 @Global()
 @Module({
@@ -12,9 +13,14 @@ import { validateConfig } from './config.schema';
       expandVariables: true,
       envFilePath: [`.env.${process.env.NODE_ENV ?? 'development'}`, '.env'],
       validate: validateConfig,
+      load: [databaseConfig],
     }),
   ],
   providers: [ConfigService],
-  exports: [ConfigService],
+  exports: [ConfigService, NestConfigModule],
 })
-export class ConfigModule {}
+export class ConfigModule {
+  static forFeature(config: ConfigFactory): DynamicModule {
+    return NestConfigModule.forFeature(config);
+  }
+}

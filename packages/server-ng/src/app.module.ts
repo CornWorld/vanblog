@@ -5,9 +5,10 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ConfigModule } from './config';
 import { HealthModule } from './modules/health/health.module';
 import { LoggerModule } from './core/logger/logger.module';
+import { DatabaseModule } from './database';
 
 @Module({
-  imports: [ConfigModule, EventEmitterModule.forRoot(), HealthModule, LoggerModule],
+  imports: [ConfigModule, EventEmitterModule.forRoot(), DatabaseModule, LoggerModule, HealthModule],
   controllers: [AppController],
   providers: [AppService],
 })

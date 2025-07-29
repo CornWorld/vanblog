@@ -8,12 +8,13 @@ export interface AppConfig {
 }
 
 export interface DatabaseConfig {
-  uri: string;
-  host?: string;
-  port?: number;
-  name?: string;
-  user?: string;
-  pass?: string;
+  driver: 'local' | 'turso' | 'd1';
+  url: string;
+  authToken?: string;
+  filePath?: string;
+  accountId?: string;
+  databaseId?: string;
+  d1Token?: string;
 }
 
 export interface JwtConfig {

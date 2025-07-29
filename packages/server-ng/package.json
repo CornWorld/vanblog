@@ -20,9 +20,13 @@
     "test:cov": "vitest run --coverage",
     "test:debug": "vitest --inspect-brk --inspect --logHeapUsage --threads=false",
     "test:e2e": "vitest run --config ./vitest.config.e2e.ts",
-    "test:ui": "vitest --ui"
+    "test:ui": "vitest --ui",
+    "db:generate": "drizzle-kit generate",
+    "db:push": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
+    "@libsql/client": "^0.15.10",
     "@nestjs/common": "^11.0.16",
     "@nestjs/config": "^4.0.2",
     "@nestjs/core": "^11.0.16",
@@ -44,6 +48,7 @@
     "cors": "^2.8.5",
     "dayjs": "^1.11.13",
     "dotenv": "^17.2.1",
+    "drizzle-orm": "^0.44.4",
     "express": "^5.1.0",
     "feed": "^4.2.2",
     "helmet": "^8.1.0",
@@ -90,6 +95,7 @@
     "@typescript-eslint/parser": "^8.38.0",
     "@vitest/ui": "^3.2.3",
     "cross-env": "^7.0.3",
+    "drizzle-kit": "^0.31.4",
     "eslint": "^9.32.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.3",

@@ -1,9 +1,10 @@
 import { NestFactory } from '@nestjs/core';
-import { type INestApplication } from '@nestjs/common';
+import { type INestApplication, ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder, type OpenAPIObject } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { ConfigService } from './config';
 import { LoggerService } from './core/logger/logger.service';
+import { HttpExceptionFilter, AllExceptionsFilter } from './core/filters';
 import helmet from 'helmet';
 import compression from 'compression';
 
@@ -97,12 +98,27 @@ export async function init(): Promise<INestApplication> {
   );
 
   // Enable compression
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  app.use(compression() as any);
+  app.use(compression());
+
+  // Global pipes
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+      transformOptions: {
+        enableImplicitConversion: true,
+      },
+    }),
+  );
+
+  // Global exception filters
+  app.useGlobalFilters(new AllExceptionsFilter(logger), new HttpExceptionFilter(logger));
 
   logger.log(`Application configured with prefix: ${appConfig.apiPrefix}`, 'Bootstrap');
   logger.log(`CORS enabled with options: ${JSON.stringify(corsOptions)}`, 'Bootstrap');
   logger.log('Security middlewares (Helmet) and compression enabled', 'Bootstrap');
+  logger.log('Global validation pipe and exception filters configured', 'Bootstrap');
 
   return app;
 }

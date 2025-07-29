@@ -4,6 +4,7 @@ import {
   type ConfigService as NestConfigService,
 } from '@nestjs/config';
 import { ConfigService } from './config.service';
+import databaseConfig from './database.config';
 
 describe('ConfigService', () => {
   let service: ConfigService;
@@ -21,7 +22,8 @@ describe('ConfigService', () => {
               NODE_ENV: 'test',
               API_PREFIX: 'api',
               API_VERSION: 'v2',
-              MONGODB_URI: 'mongodb://localhost:27017/vanblog-test',
+              DATABASE_DRIVER: 'local',
+              DATABASE_URL: 'file:./test/vanblog.db',
               JWT_SECRET: 'test-secret',
               JWT_REFRESH_SECRET: 'test-refresh-secret',
               CORS_ORIGIN: 'http://localhost:3000',
@@ -36,6 +38,7 @@ describe('ConfigService', () => {
               CODE_RUNNER_PATH: '/test/codeRunner',
               PLUGIN_RUNNER_PATH: '/test/pluginRunner',
             }),
+            databaseConfig,
           ],
         }),
       ],
@@ -63,10 +66,11 @@ describe('ConfigService', () => {
   });
 
   describe('database config', () => {
-    it('should return database configuration with URI', () => {
+    it('should return database configuration', () => {
       const dbConfig = service.database;
       expect(dbConfig).toBeDefined();
-      expect(dbConfig.uri).toBe('mongodb://localhost:27017/vanblog-test');
+      expect(dbConfig.driver).toBe('local');
+      expect(dbConfig.url).toBe('file:./data/vanblog.db');
     });
   });
 

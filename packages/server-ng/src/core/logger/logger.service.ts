@@ -59,12 +59,17 @@ export class LoggerService implements LoggerService {
           const trace = info.trace as string | undefined;
 
           // Build meta without known fields
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
           const {
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
             level: _level,
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
             message: _msg,
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
             timestamp: _ts,
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
             context: _ctx,
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
             trace: _tr,
             ...meta
           } = info;

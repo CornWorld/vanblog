@@ -48,8 +48,8 @@ server-ng/
 
 - **框架**: NestJS v11
 - **语言**: TypeScript 5.x
-- **数据库**: MongoDB (支持扩展到其他数据库)
-- **ORM**: Mongoose (计划支持 TypeORM/Prisma)
+- **数据库**: SQLite (通过 libSQL 支持本地/Turso/Cloudflare D1)
+- **ORM**: Drizzle ORM
 - **认证**: JWT
 - **文档**: OpenAPI/Swagger
 - **测试**: Vitest
@@ -93,7 +93,6 @@ server-ng/
 
 - Node.js >= 18
 - pnpm >= 8
-- MongoDB >= 5.0
 
 ### 安装依赖
 
@@ -147,7 +146,15 @@ PORT=3000
 NODE_ENV=development
 
 # 数据库配置
-MONGODB_URI=mongodb://localhost:27017/vanblog
+DATABASE_DRIVER=local # local | turso | d1
+DATABASE_URL=file:./data/vanblog.db
+# For Turso
+# DATABASE_URL=libsql://your-database.turso.io
+# DATABASE_AUTH_TOKEN=your-auth-token
+# For Cloudflare D1
+# CLOUDFLARE_ACCOUNT_ID=your-account-id
+# CLOUDFLARE_DATABASE_ID=your-database-id
+# CLOUDFLARE_D1_TOKEN=your-d1-token
 
 # JWT 配置
 JWT_SECRET=your-secret-key
@@ -181,9 +188,9 @@ JWT_EXPIRES_IN=7d
 - [x] 配置 Swagger/OpenAPI 文档生成
 - [x] 设置日志系统 (Winston/Pino)
 - [x] 配置 CORS 和安全中间件
-- [ ] 创建全局异常过滤器
-- [ ] 设置请求验证管道 (class-validator)
-- [ ] 配置数据库连接模块 (MongoDB/Mongoose)
+- [x] 创建全局异常过滤器
+- [x] 设置请求验证管道 (class-validator)
+- [x] 配置数据库连接模块 (SQLite/Drizzle ORM)
 - [x] 创建健康检查端点 (/health)
 
 ### 阶段 2: 核心模块实现

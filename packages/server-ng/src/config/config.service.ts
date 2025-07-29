@@ -30,33 +30,7 @@ export class ConfigService {
   }
 
   get database(): DatabaseConfig {
-    const uri = this.configService.get<string>('MONGODB_URI');
-    if (uri) {
-      return { uri };
-    }
-
-    const host = this.configService.get<string>('DATABASE_HOST', 'localhost');
-    const port = this.configService.get<number>('DATABASE_PORT', 27017);
-    const name = this.configService.get<string>('DATABASE_NAME', 'vanblog');
-    const user = this.configService.get<string>('DATABASE_USER', '');
-    const pass = this.configService.get<string>('DATABASE_PASS', '');
-
-    let authInfo = '';
-    if (user && !pass) {
-      authInfo = `${user}@`;
-    }
-    if (user && pass) {
-      authInfo = `${user}:${pass}@`;
-    }
-
-    return {
-      uri: `mongodb://${authInfo}${host}:${String(port)}/${name}${user ? '?authSource=admin' : ''}`,
-      host,
-      port,
-      name,
-      user,
-      pass,
-    };
+    return this.configService.get<DatabaseConfig>('database');
   }
 
   get jwt(): JwtConfig {

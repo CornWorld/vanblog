@@ -37,3 +37,14 @@ yarn-error.log*
 .env
 .env.*
 !.env.example
+
+# Database
+/data
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+
+# Drizzle
+/drizzle/meta
+/drizzle/*.sql
