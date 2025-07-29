@@ -32,3 +32,8 @@ yarn-error.log*
 !.vscode/tasks.json
 !.vscode/launch.json
 !.vscode/extensions.json
+
+# Environment variables
+.env
+.env.*
+!.env.example

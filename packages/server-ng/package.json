@@ -24,6 +24,7 @@
   },
   "dependencies": {
     "@nestjs/common": "^11.0.16",
+    "@nestjs/config": "^4.0.2",
     "@nestjs/core": "^11.0.16",
     "@nestjs/event-emitter": "^3.0.1",
     "@nestjs/jwt": "^11.0.0",
@@ -39,6 +40,7 @@
     "class-validator": "^0.14.1",
     "compressing": "^1.10.1",
     "dayjs": "^1.11.13",
+    "dotenv": "^17.2.1",
     "express": "^5.1.0",
     "feed": "^4.2.2",
     "highlight.js": "^11.11.1",
@@ -62,7 +64,8 @@
     "rimraf": "^6.0.1",
     "rxjs": "^7.8.2",
     "sitemap": "^8.0.0",
-    "yaml": "^2.7.1"
+    "yaml": "^2.7.1",
+    "zod": "^4.0.13"
   },
   "devDependencies": {
     "@eslint/js": "^9.31.0",

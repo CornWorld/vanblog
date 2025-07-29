@@ -177,7 +177,7 @@ JWT_EXPIRES_IN=7d
 
 - [x] 创建基础模块结构 (src/modules, src/core, src/shared)
 - [x] 配置 TypeScript 严格模式和 ESLint 规则
-- [ ] 设置环境变量管理系统 (config module)
+- [x] 设置环境变量管理系统 (config module)
 - [ ] 配置 Swagger/OpenAPI 文档生成
 - [ ] 设置日志系统 (Winston/Pino)
 - [ ] 配置 CORS 和安全中间件
