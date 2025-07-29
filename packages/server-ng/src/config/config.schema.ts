@@ -56,18 +56,23 @@ export const configSchema = z.object({
 export type ConfigSchema = z.infer<typeof configSchema>;
 
 export function validateConfig(config: Record<string, unknown>): ConfigSchema {
-  try {
-    return configSchema.parse(config);
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      const errors = error.errors
-        .map((e) => {
-          const path = e.path.join('.');
-          return `${path}: ${e.message}`;
-        })
-        .join(', ');
-      throw new Error(`Config validation error: ${errors}`);
-    }
-    throw error;
+  const result = configSchema.safeParse(config);
+
+  if (result.success) {
+    return result.data;
   }
+
+  // ESLint has issues with Zod's internal types, but this is type-safe
+
+  const errors = result.error.errors
+
+    .map((e) => {
+      const path = e.path.length > 0 ? e.path.join('.') : 'root';
+
+      return `${path}: ${e.message}`;
+    })
+
+    .join(', ');
+
+  throw new Error(`Config validation error: ${errors}`);
 }

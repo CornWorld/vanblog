@@ -34,15 +34,22 @@ export async function init(): Promise<INestApplication> {
   return app;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-if ((import.meta as any).env?.PROD) {
+interface ImportMeta {
+  env?: {
+    PROD?: boolean;
+  };
+}
+
+if ((import.meta as ImportMeta).env?.PROD) {
   // 生产环境手动启动
   void init().then(async (app) => {
     const configService = app.get(ConfigService);
     const port = configService.app.port;
     await app.listen(port);
 
-    console.log(`Application is running on: http://localhost:${String(port)}`);
+    // Use logger instead of console.log
+    const logger = new ConsoleLogger('Bootstrap');
+    logger.log(`Application is running on: http://localhost:${String(port)}`);
   });
 }
 
