@@ -66,6 +66,7 @@ export default tseslint.config(
       '@typescript-eslint/prefer-readonly': 'error',
       '@typescript-eslint/member-ordering': 'error',
       '@typescript-eslint/unbound-method': 'off',
+      '@typescript-eslint/no-extraneous-class': ['error', { allowWithDecorator: true }],
       
       // 代码质量规则
       'no-console': 'warn',

@@ -60,7 +60,12 @@ export function validateConfig(config: Record<string, unknown>): ConfigSchema {
     return configSchema.parse(config);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const errors = error.errors.map((e) => `${e.path.join('.')}: ${e.message}`).join(', ');
+      const errors = error.errors
+        .map((e) => {
+          const path = e.path.join('.');
+          return `${path}: ${e.message}`;
+        })
+        .join(', ');
       throw new Error(`Config validation error: ${errors}`);
     }
     throw error;

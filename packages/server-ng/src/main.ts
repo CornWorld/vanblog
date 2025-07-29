@@ -1,8 +1,6 @@
 import { NestFactory } from '@nestjs/core';
-import type { INestApplication } from '@nestjs/common';
-import { ConsoleLogger } from '@nestjs/common';
-import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
-import type { OpenAPIObject } from '@nestjs/swagger';
+import { ConsoleLogger, type INestApplication } from '@nestjs/common';
+import { SwaggerModule, DocumentBuilder, type OpenAPIObject } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { ConfigService } from './config';
 
@@ -36,14 +34,15 @@ export async function init(): Promise<INestApplication> {
   return app;
 }
 
-// @ts-expect-error import.meta.env is not available in the test environment
-if (import.meta.env.PROD) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+if ((import.meta as any).env?.PROD) {
   // 生产环境手动启动
-  init().then(async (app) => {
+  void init().then(async (app) => {
     const configService = app.get(ConfigService);
     const port = configService.app.port;
     await app.listen(port);
-    console.log(`Application is running on: http://localhost:${port}`);
+
+    console.log(`Application is running on: http://localhost:${String(port)}`);
   });
 }
 

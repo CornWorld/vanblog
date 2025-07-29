@@ -50,7 +50,7 @@ export class ConfigService {
     }
 
     return {
-      uri: `mongodb://${authInfo}${host}:${port}/${name}${user ? '?authSource=admin' : ''}`,
+      uri: `mongodb://${authInfo}${host}:${String(port)}/${name}${user ? '?authSource=admin' : ''}`,
       host,
       port,
       name,
