@@ -17,7 +17,7 @@ describe('UserController', () => {
     email: 'test@example.com',
     avatar: null,
     type: UserType.ADMIN,
-    permission: [],
+    permissions: [],
     createdAt: new Date(),
     updatedAt: new Date(),
   });
@@ -28,6 +28,7 @@ describe('UserController', () => {
     findOne: vi.fn(),
     update: vi.fn(),
     remove: vi.fn(),
+    getCollaborators: vi.fn(),
   };
 
   beforeEach(async () => {
@@ -103,7 +104,7 @@ describe('UserController', () => {
         email: mockUser.email,
         avatar: mockUser.avatar,
         type: mockUser.type,
-        permission: mockUser.permission,
+        permissions: mockUser.permissions,
         createdAt: mockUser.createdAt,
         updatedAt: mockUser.updatedAt,
       });

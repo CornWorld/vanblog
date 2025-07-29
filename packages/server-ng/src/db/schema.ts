@@ -12,7 +12,7 @@ export const users = sqliteTable('users', {
   type: text('type', { enum: ['admin', 'collaborator'] })
     .notNull()
     .default('collaborator'),
-  permission: text('permission'), // JSON string for permissions array
+  permissions: text('permissions'), // JSON string for permissions array
   createdAt: integer('created_at', { mode: 'timestamp' })
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),

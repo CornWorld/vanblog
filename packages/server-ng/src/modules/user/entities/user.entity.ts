@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { UserType } from '../dto/create-user.dto';
 import { Exclude } from 'class-transformer';
+import type { Permission } from '../../../shared/types/permission.type';
 
 export class User {
   @ApiProperty({ description: '用户ID' })
@@ -25,7 +26,7 @@ export class User {
   type: UserType;
 
   @ApiPropertyOptional({ description: '权限列表', type: [String] })
-  permission?: string[];
+  permissions?: Permission[];
 
   @ApiProperty({ description: '创建时间' })
   createdAt: Date;

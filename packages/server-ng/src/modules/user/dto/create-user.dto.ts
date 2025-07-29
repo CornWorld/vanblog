@@ -8,6 +8,7 @@ import {
   IsArray,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import type { Permission } from '../../../shared/types/permission.type';
 
 export enum UserType {
   ADMIN = 'admin',
@@ -55,10 +56,10 @@ export class CreateUserDto {
   @ApiPropertyOptional({
     description: '权限列表（仅协作者）',
     type: [String],
-    example: ['read:article', 'write:article'],
+    example: ['article:create', 'article:update', 'draft:create'],
   })
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
-  permission?: string[];
+  permissions?: Permission[];
 }

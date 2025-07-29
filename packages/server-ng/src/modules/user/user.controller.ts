@@ -43,6 +43,17 @@ export class UserController {
     return this.userService.findAll();
   }
 
+  @Get('collaborators')
+  @ApiOperation({ summary: '获取所有协作者' })
+  @ApiResponse({
+    status: 200,
+    description: '返回协作者列表',
+    type: [User],
+  })
+  getCollaborators(): Promise<User[]> {
+    return this.userService.getCollaborators();
+  }
+
   @Get(':id')
   @ApiOperation({ summary: '获取单个用户' })
   @ApiResponse({

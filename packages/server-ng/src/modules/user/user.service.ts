@@ -5,6 +5,7 @@ import { CreateUserDto, UpdateUserDto, UserType } from './dto';
 import { User } from './entities/user.entity';
 import { users } from '../../db/schema';
 import type { Database } from '../../db/connection';
+import type { Permission } from '../../shared/types/permission.type';
 
 @Injectable()
 export class UserService {
@@ -35,7 +36,7 @@ export class UserService {
         email: createUserDto.email,
         avatar: createUserDto.avatar,
         type: createUserDto.type,
-        permission: createUserDto.permission ? JSON.stringify(createUserDto.permission) : null,
+        permissions: createUserDto.permissions ? JSON.stringify(createUserDto.permissions) : null,
       })
       .returning()
       .get();
@@ -58,6 +59,22 @@ export class UserService {
     return this.mapToEntity(user);
   }
 
+  async getAdminUser(): Promise<User | null> {
+    const adminUser = await this.db.select().from(users).where(eq(users.type, 'admin')).get();
+
+    return adminUser ? this.mapToEntity(adminUser) : null;
+  }
+
+  async getCollaborators(): Promise<User[]> {
+    const collaborators = await this.db
+      .select()
+      .from(users)
+      .where(eq(users.type, 'collaborator'))
+      .all();
+
+    return collaborators.map((user) => this.mapToEntity(user));
+  }
+
   async findByUsername(username: string): Promise<User | null> {
     const user = await this.db.select().from(users).where(eq(users.username, username)).get();
 
@@ -71,7 +88,7 @@ export class UserService {
       email?: string;
       avatar?: string;
       type?: string;
-      permission?: string;
+      permissions?: string;
     } = {};
 
     if (updateUserDto.password) {
@@ -89,8 +106,8 @@ export class UserService {
     if (updateUserDto.type !== undefined) {
       updateData.type = updateUserDto.type;
     }
-    if (updateUserDto.permission) {
-      updateData.permission = JSON.stringify(updateUserDto.permission);
+    if (updateUserDto.permissions) {
+      updateData.permissions = JSON.stringify(updateUserDto.permissions);
     }
 
     const updatedUsers = await this.db
@@ -123,7 +140,9 @@ export class UserService {
       email: dbUser.email,
       avatar: dbUser.avatar,
       type: dbUser.type as UserType,
-      permission: dbUser.permission ? (JSON.parse(dbUser.permission) as string[]) : undefined,
+      permissions: dbUser.permissions
+        ? (JSON.parse(dbUser.permissions) as Permission[])
+        : undefined,
       createdAt: dbUser.createdAt,
       updatedAt: dbUser.updatedAt,
     });

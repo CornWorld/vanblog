@@ -10,6 +10,7 @@ import { users } from '../../db/schema';
 vi.mock('bcrypt');
 const bcryptCompare = vi.fn().mockResolvedValue(true);
 const bcryptHash = vi.fn().mockResolvedValue('hashedPassword');
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 (bcrypt.compare as any) = bcryptCompare;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -28,7 +29,7 @@ describe('UserService', () => {
     email: 'test@example.com',
     avatar: null,
     type: 'admin',
-    permission: null,
+    permissions: null,
     createdAt: new Date(),
     updatedAt: new Date(),
   };
