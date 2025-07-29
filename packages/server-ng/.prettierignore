@@ -1,0 +1,10 @@
+dist
+node_modules
+coverage
+*.md
+*.json
+*.yaml
+*.yml
+.vite
+.vitest
+pnpm-lock.yaml
