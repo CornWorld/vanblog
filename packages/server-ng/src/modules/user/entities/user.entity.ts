@@ -1,0 +1,39 @@
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { UserType } from '../dto/create-user.dto';
+import { Exclude } from 'class-transformer';
+
+export class User {
+  @ApiProperty({ description: '用户ID' })
+  id: number;
+
+  @ApiProperty({ description: '用户名' })
+  username: string;
+
+  @Exclude()
+  password: string;
+
+  @ApiPropertyOptional({ description: '昵称' })
+  nickname?: string;
+
+  @ApiPropertyOptional({ description: '邮箱' })
+  email?: string;
+
+  @ApiPropertyOptional({ description: '头像URL' })
+  avatar?: string;
+
+  @ApiProperty({ description: '用户类型', enum: UserType })
+  type: UserType;
+
+  @ApiPropertyOptional({ description: '权限列表', type: [String] })
+  permission?: string[];
+
+  @ApiProperty({ description: '创建时间' })
+  createdAt: Date;
+
+  @ApiProperty({ description: '更新时间' })
+  updatedAt: Date;
+
+  constructor(partial: Partial<User>) {
+    Object.assign(this, partial);
+  }
+}
