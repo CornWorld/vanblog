@@ -2,6 +2,7 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { type INestApplication } from '@nestjs/common';
 import request from 'supertest';
+import type { Server } from 'http';
 import { AppModule } from '../src/app.module';
 
 describe('HealthController (e2e)', () => {
@@ -22,7 +23,8 @@ describe('HealthController (e2e)', () => {
   });
 
   it('/api/health (GET)', () => {
-    return request(app.getHttpServer())
+    const httpServer = app.getHttpServer() as Server;
+    return request(httpServer)
       .get('/api/health')
       .expect(200)
       .expect((res: request.Response) => {

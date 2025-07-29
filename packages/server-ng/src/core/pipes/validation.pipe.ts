@@ -1,6 +1,9 @@
 import { PipeTransform, Injectable, ArgumentMetadata, BadRequestException } from '@nestjs/common';
-import { validate } from 'class-validator';
+import { validate, ValidationError } from 'class-validator';
 import { plainToInstance } from 'class-transformer';
+
+type Constructor<T = object> = new (...args: unknown[]) => T;
+type MetaType = typeof String | typeof Boolean | typeof Number | typeof Array | typeof Object;
 
 @Injectable()
 export class ValidationPipe implements PipeTransform {
@@ -9,11 +12,10 @@ export class ValidationPipe implements PipeTransform {
       return value;
     }
 
-    const object = plainToInstance(metatype, value);
+    const object = plainToInstance(metatype as Constructor, value as Record<string, unknown>);
     const errors = await validate(object, {
       whitelist: true,
       forbidNonWhitelisted: true,
-      transform: true,
     });
 
     if (errors.length > 0) {
@@ -25,16 +27,14 @@ export class ValidationPipe implements PipeTransform {
   }
 
   private toValidate(metatype: unknown): boolean {
-    const types = [String, Boolean, Number, Array, Object];
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return !types.includes(metatype as any);
+    const types: MetaType[] = [String, Boolean, Number, Array, Object];
+    return !types.includes(metatype as MetaType);
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private buildErrorMessage(errors: Array<Record<string, any>>): string[] {
+  private buildErrorMessage(errors: ValidationError[]): string[] {
     return errors.map((err) => {
       const constraints = err.constraints ?? {};
-      return Object.values(constraints as Record<string, string>).join(', ');
+      return Object.values(constraints).join(', ');
     });
   }
 }

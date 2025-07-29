@@ -30,7 +30,11 @@ export class ConfigService {
   }
 
   get database(): DatabaseConfig {
-    return this.configService.get<DatabaseConfig>('database');
+    const config = this.configService.get<DatabaseConfig>('database');
+    if (!config) {
+      throw new Error('Database configuration is missing');
+    }
+    return config;
   }
 
   get jwt(): JwtConfig {

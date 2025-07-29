@@ -1,1 +1,2 @@
-// Shared type definitions will be exported from here
+// Shared types and interfaces will be exported from here
+export {};

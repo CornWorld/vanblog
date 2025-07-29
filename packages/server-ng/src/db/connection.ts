@@ -1,7 +1,7 @@
 import { drizzle, type LibSQLDatabase } from 'drizzle-orm/libsql';
 import { createClient } from '@libsql/client';
 import type { DatabaseConfig } from '../config/database.config';
-import { LoggerService } from '../core/logger/logger.service';
+import type { LoggerService } from '../core/logger/logger.service';
 
 export type Database = LibSQLDatabase;
 

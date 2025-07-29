@@ -1,5 +1,4 @@
-import type { ArgumentsHost } from '@nestjs/common';
-import { HttpException, HttpStatus } from '@nestjs/common';
+import { type ArgumentsHost, HttpException, HttpStatus } from '@nestjs/common';
 import { HttpExceptionFilter } from './http-exception.filter';
 import type { LoggerService } from '../logger/logger.service';
 import { describe, it, expect, vi, beforeEach } from 'vitest';

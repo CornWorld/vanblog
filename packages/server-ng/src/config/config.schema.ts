@@ -56,21 +56,9 @@ export type ConfigSchema = z.infer<typeof configSchema>;
 
 export function validateConfig(config: Record<string, unknown>): ConfigSchema {
   const result = configSchema.safeParse(config);
-
-  if (result.success) {
-    return result.data;
+  if (!result.success) {
+    // Use Zod's built-in error message formatting
+    throw new Error(`Config validation error: ${result.error.message}`);
   }
-
-  // Format validation errors
-
-  const errorMessages: string[] = [];
-
-  for (const err of result.error.errors) {
-    const path = err.path.length > 0 ? err.path.join('.') : 'root';
-
-    errorMessages.push(`${path}: ${err.message}`);
-  }
-  const errors = errorMessages.join(', ');
-
-  throw new Error(`Config validation error: ${errors}`);
+  return result.data;
 }

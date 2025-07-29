@@ -1,9 +1,9 @@
-import { Injectable, LoggerService } from '@nestjs/common';
+import { Injectable, LoggerService as NestLoggerService } from '@nestjs/common';
 import * as winston from 'winston';
 import { ConfigService } from '../../config/config.service';
 
 @Injectable()
-export class LoggerService implements LoggerService {
+export class LoggerService implements NestLoggerService {
   private readonly logger: winston.Logger;
 
   constructor(private readonly configService: ConfigService) {
@@ -52,27 +52,16 @@ export class LoggerService implements LoggerService {
         winston.format.colorize(),
         winston.format.printf((info: winston.Logform.TransformableInfo) => {
           // Extract known fields from info object
-          const level = info.level ?? '';
-          const message = info.message ?? '';
-          const timestamp = info.timestamp ?? '';
+          const level = info.level;
+          const message = info.message;
+          const timestamp = info.timestamp;
           const context = info.context as string | undefined;
           const trace = info.trace as string | undefined;
 
-          // Build meta without known fields
-
-          const {
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            level: _level,
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            message: _msg,
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            timestamp: _ts,
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            context: _ctx,
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            trace: _tr,
-            ...meta
-          } = info;
+          // Build meta object by filtering out known fields
+          const meta = Object.entries(info)
+            .filter(([key]) => !['level', 'message', 'timestamp', 'context', 'trace'].includes(key))
+            .reduce((acc, [key, value]) => ({ ...acc, [key]: value }), {});
 
           const contextStr = context ? `[${context}] ` : '';
           const metaStr = Object.keys(meta).length ? ` ${JSON.stringify(meta)}` : '';

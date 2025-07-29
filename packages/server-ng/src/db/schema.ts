@@ -44,13 +44,11 @@ export const articles = sqliteTable(
       .notNull()
       .default(sql`CURRENT_TIMESTAMP`),
   },
-  (table) => {
-    return {
-      pathnameIdx: index('pathname_idx').on(table.pathname),
-      categoryIdx: index('category_idx').on(table.category),
-      createdAtIdx: index('created_at_idx').on(table.createdAt),
-    };
-  },
+  (table) => [
+    index('pathname_idx').on(table.pathname),
+    index('category_idx').on(table.category),
+    index('created_at_idx').on(table.createdAt),
+  ],
 );
 
 // Categories table
@@ -113,11 +111,7 @@ export const staticFiles = sqliteTable(
       .notNull()
       .default(sql`CURRENT_TIMESTAMP`),
   },
-  (table) => {
-    return {
-      filenameIdx: index('filename_idx').on(table.filename),
-    };
-  },
+  (table) => [index('filename_idx').on(table.filename)],
 );
 
 // Site metadata table
@@ -147,12 +141,10 @@ export const loginLogs = sqliteTable(
       .notNull()
       .default(sql`CURRENT_TIMESTAMP`),
   },
-  (table) => {
-    return {
-      usernameIdx: index('username_idx').on(table.username),
-      createdAtIdx: index('login_created_at_idx').on(table.createdAt),
-    };
-  },
+  (table) => [
+    index('username_idx').on(table.username),
+    index('login_created_at_idx').on(table.createdAt),
+  ],
 );
 
 // Custom pages table
@@ -204,11 +196,9 @@ export const analytics = sqliteTable(
       .notNull()
       .default(sql`CURRENT_TIMESTAMP`),
   },
-  (table) => {
-    return {
-      typeIdx: index('type_idx').on(table.type),
-      pathIdx: index('path_idx').on(table.path),
-      createdAtIdx: index('analytics_created_at_idx').on(table.createdAt),
-    };
-  },
+  (table) => [
+    index('type_idx').on(table.type),
+    index('path_idx').on(table.path),
+    index('analytics_created_at_idx').on(table.createdAt),
+  ],
 );
