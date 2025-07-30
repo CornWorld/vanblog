@@ -6,12 +6,12 @@ export class CollaboratorDto {
   @ApiProperty({ description: '用户名' })
   @IsString()
   @MinLength(1)
-  name: string;
+  name!: string;
 
   @ApiProperty({ description: '密码' })
   @IsString()
   @MinLength(1)
-  password: string;
+  password!: string;
 
   @ApiPropertyOptional({ description: '昵称' })
   @IsOptional()
@@ -21,5 +21,5 @@ export class CollaboratorDto {
   @ApiProperty({ description: '权限列表', type: [String] })
   @IsArray()
   @IsString({ each: true })
-  permissions: Permission[];
+  permissions!: Permission[];
 }

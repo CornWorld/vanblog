@@ -6,12 +6,12 @@ import { describe, it, expect, beforeEach } from 'vitest';
 
 class TestDto {
   @IsString()
-  name: string;
+  name!: string;
 
   @IsInt()
   @Min(0)
   @Type(() => Number)
-  age: number;
+  age!: number;
 }
 
 describe('ValidationPipe', () => {
@@ -29,7 +29,7 @@ describe('ValidationPipe', () => {
     };
 
     const validData = { name: 'John', age: 25 };
-    const result = await pipe.transform(validData, metadata);
+    const result = (await pipe.transform(validData, metadata)) as TestDto;
 
     expect(result).toBeInstanceOf(TestDto);
     expect(result.name).toBe('John');
@@ -84,7 +84,7 @@ describe('ValidationPipe', () => {
     };
 
     const validData = { name: 'John', age: '25' }; // age as string to test transform
-    const result = await pipe.transform(validData, metadata);
+    const result = (await pipe.transform(validData, metadata)) as TestDto;
 
     expect(result).toBeInstanceOf(TestDto);
     expect(result.name).toBe('John');

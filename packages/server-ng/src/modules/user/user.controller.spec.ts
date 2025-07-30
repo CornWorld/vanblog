@@ -15,7 +15,7 @@ describe('UserController', () => {
     password: 'hashedPassword',
     nickname: 'Test User',
     email: 'test@example.com',
-    avatar: null,
+    avatar: undefined,
     type: UserType.ADMIN,
     permissions: [],
     createdAt: new Date(),

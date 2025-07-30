@@ -87,7 +87,7 @@ export class UserService {
       nickname?: string;
       email?: string;
       avatar?: string;
-      type?: string;
+      type?: UserType;
       permissions?: string;
     } = {};
 
@@ -136,9 +136,9 @@ export class UserService {
       id: dbUser.id,
       username: dbUser.username,
       password: dbUser.password,
-      nickname: dbUser.nickname,
-      email: dbUser.email,
-      avatar: dbUser.avatar,
+      nickname: dbUser.nickname ?? undefined,
+      email: dbUser.email ?? undefined,
+      avatar: dbUser.avatar ?? undefined,
       type: dbUser.type as UserType,
       permissions: dbUser.permissions
         ? (JSON.parse(dbUser.permissions) as Permission[])

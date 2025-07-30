@@ -20,13 +20,13 @@ export class CreateUserDto {
   @IsString()
   @MinLength(3)
   @MaxLength(20)
-  username: string;
+  username!: string;
 
   @ApiProperty({ description: '密码', example: 'password123' })
   @IsString()
   @MinLength(6)
   @MaxLength(50)
-  password: string;
+  password!: string;
 
   @ApiPropertyOptional({ description: '昵称', example: '管理员' })
   @IsOptional()

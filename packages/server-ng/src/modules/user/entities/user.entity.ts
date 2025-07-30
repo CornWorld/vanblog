@@ -5,13 +5,13 @@ import type { Permission } from '../../../shared/types/permission.type';
 
 export class User {
   @ApiProperty({ description: '用户ID' })
-  id: number;
+  id!: number;
 
   @ApiProperty({ description: '用户名' })
-  username: string;
+  username!: string;
 
   @Exclude()
-  password: string;
+  password!: string;
 
   @ApiPropertyOptional({ description: '昵称' })
   nickname?: string;
@@ -23,22 +23,18 @@ export class User {
   avatar?: string;
 
   @ApiProperty({ description: '用户类型', enum: UserType })
-  type: UserType;
+  type!: UserType;
 
   @ApiPropertyOptional({ description: '权限列表', type: [String] })
   permissions?: Permission[];
 
   @ApiProperty({ description: '创建时间' })
-  createdAt: Date;
+  createdAt!: Date;
 
   @ApiProperty({ description: '更新时间' })
-  updatedAt: Date;
+  updatedAt!: Date;
 
   constructor(partial: Partial<User>) {
     Object.assign(this, partial);
-  }
-
-  get permission(): Permission[] | undefined {
-    return this.permissions;
   }
 }

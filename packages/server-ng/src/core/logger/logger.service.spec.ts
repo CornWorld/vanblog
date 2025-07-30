@@ -35,62 +35,67 @@ describe('LoggerService', () => {
   });
 
   it('should log info message', () => {
-    vi.spyOn(service as never, 'logger', 'get').mockReturnValue({
+    const mockLogger = {
       info: vi.fn(),
-    } as never);
+    };
+    vi.spyOn(service as any, 'logger', 'get').mockReturnValue(mockLogger);
 
     service.info('Test message', 'TestContext');
 
-    expect((service as never).logger.info).toHaveBeenCalledWith('Test message', {
+    expect(mockLogger.info).toHaveBeenCalledWith('Test message', {
       context: 'TestContext',
     });
   });
 
   it('should log error message with trace', () => {
-    vi.spyOn(service as never, 'logger', 'get').mockReturnValue({
+    const mockLogger = {
       error: vi.fn(),
-    } as never);
+    };
+    vi.spyOn(service as any, 'logger', 'get').mockReturnValue(mockLogger);
 
     service.error('Error message', 'Stack trace', 'ErrorContext');
 
-    expect((service as never).logger.error).toHaveBeenCalledWith('Error message', {
+    expect(mockLogger.error).toHaveBeenCalledWith('Error message', {
       context: 'ErrorContext',
       trace: 'Stack trace',
     });
   });
 
   it('should log warning message', () => {
-    vi.spyOn(service as never, 'logger', 'get').mockReturnValue({
+    const mockLogger = {
       warn: vi.fn(),
-    } as never);
+    };
+    vi.spyOn(service as any, 'logger', 'get').mockReturnValue(mockLogger);
 
     service.warn('Warning message', 'WarnContext');
 
-    expect((service as never).logger.warn).toHaveBeenCalledWith('Warning message', {
+    expect(mockLogger.warn).toHaveBeenCalledWith('Warning message', {
       context: 'WarnContext',
     });
   });
 
   it('should log debug message', () => {
-    vi.spyOn(service as never, 'logger', 'get').mockReturnValue({
+    const mockLogger = {
       debug: vi.fn(),
-    } as never);
+    };
+    vi.spyOn(service as any, 'logger', 'get').mockReturnValue(mockLogger);
 
     service.debug('Debug message', 'DebugContext');
 
-    expect((service as never).logger.debug).toHaveBeenCalledWith('Debug message', {
+    expect(mockLogger.debug).toHaveBeenCalledWith('Debug message', {
       context: 'DebugContext',
     });
   });
 
   it('should log verbose message', () => {
-    vi.spyOn(service as never, 'logger', 'get').mockReturnValue({
+    const mockLogger = {
       verbose: vi.fn(),
-    } as never);
+    };
+    vi.spyOn(service as any, 'logger', 'get').mockReturnValue(mockLogger);
 
     service.verbose('Verbose message', 'VerboseContext');
 
-    expect((service as never).logger.verbose).toHaveBeenCalledWith('Verbose message', {
+    expect(mockLogger.verbose).toHaveBeenCalledWith('Verbose message', {
       context: 'VerboseContext',
     });
   });

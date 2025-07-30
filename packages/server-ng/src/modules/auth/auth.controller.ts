@@ -47,7 +47,10 @@ export class AuthController {
   getProfile(@Request() req: RequestWithUser): Omit<User, 'password'> {
     const { password, ...user } = req.user;
     void password;
-    return user;
+    return {
+      ...user,
+      permissions: user.permissions,
+    };
   }
 
   @Post('logout')

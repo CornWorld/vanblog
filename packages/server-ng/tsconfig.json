@@ -28,5 +28,5 @@
     "skipLibCheck": true,
     "types": ["node", "vitest/globals"]
   },
-  "exclude": ["node_modules", "dist", "coverage", "**/*.spec.ts", "**/*.test.ts"]
+  "exclude": ["node_modules", "dist"]
 }

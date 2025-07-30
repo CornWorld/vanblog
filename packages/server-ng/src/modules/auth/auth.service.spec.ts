@@ -5,6 +5,7 @@ import { AuthService } from './auth.service';
 import { UserService } from '../user/user.service';
 import * as bcrypt from 'bcrypt';
 import { User } from '../user/entities/user.entity';
+import { UserType } from '../user/dto';
 import { vi } from 'vitest';
 
 vi.mock('bcrypt');
@@ -17,7 +18,7 @@ describe('AuthService', () => {
     username: 'testuser',
     password: 'hashedPassword',
     nickname: 'Test User',
-    type: 'admin' as const,
+    type: UserType.ADMIN,
     permissions: [],
     createdAt: new Date(),
     updatedAt: new Date(),
@@ -58,7 +59,7 @@ describe('AuthService', () => {
   describe('validateUser', () => {
     it('should return user when credentials are valid', async () => {
       mockUserService.findByUsername.mockResolvedValue(mockUser);
-      vi.mocked(bcrypt.compare).mockResolvedValue(true);
+      (vi.mocked(bcrypt.compare) as any).mockResolvedValue(true);
 
       const result = await service.validateUser('testuser', 'password');
 
@@ -79,7 +80,7 @@ describe('AuthService', () => {
 
     it('should return null when password is invalid', async () => {
       mockUserService.findByUsername.mockResolvedValue(mockUser);
-      vi.mocked(bcrypt.compare).mockResolvedValue(false);
+      (vi.mocked(bcrypt.compare) as any).mockResolvedValue(false);
 
       const result = await service.validateUser('testuser', 'wrongpassword');
 
@@ -101,8 +102,12 @@ describe('AuthService', () => {
           id: mockUser.id,
           username: mockUser.username,
           nickname: mockUser.nickname,
+          email: mockUser.email,
+          avatar: mockUser.avatar,
           type: mockUser.type,
-          permission: mockUser.permissions,
+          permissions: mockUser.permissions,
+          createdAt: mockUser.createdAt,
+          updatedAt: mockUser.updatedAt,
         },
       });
       expect(mockJwtService.sign).toHaveBeenCalledWith({
@@ -115,7 +120,7 @@ describe('AuthService', () => {
 
   describe('verifyToken', () => {
     it('should return user when token is valid', async () => {
-      const payload = { sub: 1, username: 'testuser', type: 'admin' };
+      const payload = { sub: 1, username: 'testuser', type: UserType.ADMIN };
       mockJwtService.verify.mockReturnValue(payload);
       mockUserService.findOne.mockResolvedValue(mockUser);
 
@@ -137,7 +142,7 @@ describe('AuthService', () => {
     });
 
     it('should throw UnauthorizedException when user not found', async () => {
-      const payload = { sub: 1, username: 'testuser', type: 'admin' as const };
+      const payload = { sub: 1, username: 'testuser', type: UserType.ADMIN };
       mockJwtService.verify.mockReturnValue(payload);
       mockUserService.findOne.mockRejectedValue(new UnauthorizedException('User not found'));
 
