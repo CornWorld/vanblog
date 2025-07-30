@@ -30,7 +30,8 @@
   "packageManager": "pnpm@10.8.0",
   "resolutions": {
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "minimatch": "^10"
   },
   "pnpm": {
     "overrides": {
