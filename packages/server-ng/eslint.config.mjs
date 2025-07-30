@@ -17,7 +17,15 @@ export default tseslint.config(
     },
   },
   {
-    ignores: ['dist/**', 'node_modules/**', 'coverage/**', '*.js', '*.mjs', '*.cjs'],
+    ignores: [
+      'dist/**',
+      'node_modules/**',
+      'coverage/**',
+      '*.js',
+      '*.mjs',
+      '*.cjs',
+      './vite-env.d.ts',
+    ],
   },
   {
     languageOptions: {
@@ -67,7 +75,7 @@ export default tseslint.config(
       '@typescript-eslint/member-ordering': 'error',
       '@typescript-eslint/unbound-method': 'off',
       '@typescript-eslint/no-extraneous-class': ['error', { allowWithDecorator: true }],
-      
+
       // 代码质量规则
       'no-console': 'warn',
       'no-debugger': 'error',
@@ -75,8 +83,8 @@ export default tseslint.config(
       'no-unused-expressions': 'error',
       'prefer-const': 'error',
       'prefer-template': 'error',
-      'curly': ['error', 'all'],
-      'eqeqeq': ['error', 'always'],
+      curly: ['error', 'all'],
+      eqeqeq: ['error', 'always'],
       'no-throw-literal': 'error',
       'prefer-promise-reject-errors': 'error',
       'prettier/prettier': 'error',
