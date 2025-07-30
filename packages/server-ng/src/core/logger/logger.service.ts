@@ -116,9 +116,8 @@ export class LoggerService implements NestLoggerService {
         }),
       );
     } catch (error) {
-      // Log error to console during startup
-
-      console.warn('Failed to load winston-daily-rotate-file:', error);
+      // Log error using winston logger during startup
+      this.logger.warn('Failed to load winston-daily-rotate-file:', error);
     }
   }
 }
