@@ -54,9 +54,9 @@ importers:
       ts-node-dev:
         specifier: ^2.0.0
         version: 2.0.0(@swc/core@1.13.2)(@types/node@22.16.5)(typescript@5.8.3)
-      tsc-files:
-        specifier: ^1.1.4
-        version: 1.1.4(typescript@5.8.3)
+      tsc-files-workspace:
+        specifier: ^2.0.1
+        version: 2.0.1(typescript@5.8.3)
       typescript-eslint:
         specifier: ^8.38.0
         version: 8.38.0(eslint@9.32.0(jiti@2.4.2))(typescript@5.8.3)
@@ -14887,8 +14887,8 @@ packages:
   ts-toolbelt@9.6.0:
     resolution: {integrity: sha512-nsZd8ZeNUzukXPlJmTBwUAuABDe/9qtVDelJeT/qW0ow3ZS3BsQJtNkan1802aM9Uf68/Y8ljw86Hu0h5IUW3w==}
 
-  tsc-files@1.1.4:
-    resolution: {integrity: sha512-RePsRsOLru3BPpnf237y1Xe1oCGta8rmSYzM76kYo5tLGsv5R2r3s64yapYorGTPuuLyfS9NVbh9ydzmvNie2w==}
+  tsc-files-workspace@2.0.1:
+    resolution: {integrity: sha512-8nMnUQYJkBK5E+DgsHJhuSU+PHt1rpO5tYN/1AxJ41VMezba9J9uARKXLwsEuxQ3gBfwvFVlBOPYltiYh/bhfA==}
     hasBin: true
     peerDependencies:
       typescript: '>=3'
@@ -33991,7 +33991,7 @@ snapshots:
 
   ts-toolbelt@9.6.0: {}
 
-  tsc-files@1.1.4(typescript@5.8.3):
+  tsc-files-workspace@2.0.1(typescript@5.8.3):
     dependencies:
       typescript: 5.8.3
 

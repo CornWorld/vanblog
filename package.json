@@ -74,14 +74,14 @@
     "prettier": "^3.6.2",
     "standard-version": "^9.5.0",
     "ts-node-dev": "^2.0.0",
-    "tsc-files": "^1.1.4",
+    "tsc-files-workspace": "^2.0.1",
     "typescript-eslint": "^8.38.0"
   },
   "nano-staged": {
     "*.{ts,tsx}": [
       "eslint --fix",
       "prettier --write",
-      "tsc-files --noEmit"
+      "tsc-files-workspace --noEmit"
     ],
     "*.{js,jsx}": [
       "eslint --fix",
