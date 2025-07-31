@@ -1,3 +1,5 @@
+/// <reference types="express" />
+
 export interface UploadResult {
   url: string;
   filename: string;
