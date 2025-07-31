@@ -4,7 +4,7 @@ import { ConflictException, NotFoundException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { UserService } from './user.service';
 import { UserType, type CreateUserDto } from './dto';
-import { users } from '../../db/schema';
+import { users } from '../../database/schema';
 
 // Mock bcrypt
 vi.mock('bcrypt');

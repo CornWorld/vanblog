@@ -8,9 +8,9 @@ import {
   ArticleSearchDto,
   ArticleSearchResponseDto,
 } from './dto/article.dto';
-import { articles, tags } from '../../db/schema';
-import { DATABASE_CONNECTION } from '../../database/database.module';
-import type { Database } from '../../db/connection';
+import { articles, tags } from '../../database/schema';
+import { DATABASE_CONNECTION } from '../../database';
+import type { Database } from '../../database/connection';
 import { Article } from './entities/article.entity';
 
 @Injectable()

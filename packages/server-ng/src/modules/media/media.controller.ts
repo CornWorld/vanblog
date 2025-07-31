@@ -30,7 +30,7 @@ import { UploadFileDto } from './dto/upload-file.dto';
 import { ListStaticFilesDto } from './dto/list-static-files.dto';
 import { BatchDeleteDto } from './dto/batch-delete.dto';
 import { memoryStorage } from 'multer';
-import { staticFiles } from '../../db/schema';
+import { staticFiles } from '../../database/schema';
 
 interface WatermarkBody {
   watermarkText?: string;

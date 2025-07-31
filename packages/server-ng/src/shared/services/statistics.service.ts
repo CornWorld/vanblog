@@ -1,8 +1,8 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { eq, sql, like } from 'drizzle-orm';
 import { DATABASE_CONNECTION } from '../../database/database.module';
-import type { Database } from '../../db/connection';
-import { categories, tags, articles } from '../../db/schema';
+import type { Database } from '../../database/connection';
+import { categories, tags, articles } from '../../database/schema';
 import {
   CategoryStatisticsDto,
   TagStatisticsDto,

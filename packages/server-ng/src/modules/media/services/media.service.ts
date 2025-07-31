@@ -2,7 +2,7 @@ import { Injectable, Inject, NotFoundException, BadRequestException } from '@nes
 import { DATABASE_CONNECTION } from '../../../database/database.module';
 import { LibSQLDatabase } from 'drizzle-orm/libsql';
 import { eq, like, and, desc, sql, inArray } from 'drizzle-orm';
-import { staticFiles } from '../../../db/schema';
+import { staticFiles } from '../../../database/schema';
 import { ListStaticFilesDto } from '../dto/list-static-files.dto';
 import { StorageFactoryService } from './storage-factory.service';
 import sharp from 'sharp';

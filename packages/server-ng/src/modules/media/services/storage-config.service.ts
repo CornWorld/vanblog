@@ -2,7 +2,7 @@ import { Injectable, Inject } from '@nestjs/common';
 import { DATABASE_CONNECTION } from '../../../database/database.module';
 import { LibSQLDatabase } from 'drizzle-orm/libsql';
 import { eq } from 'drizzle-orm';
-import { siteMeta } from '../../../db/schema';
+import { siteMeta } from '../../../database/schema';
 import {
   UpdateStorageConfigDto,
   StorageConfigResponseDto,

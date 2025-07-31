@@ -2,7 +2,7 @@ import { Module, Global } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '../config';
 import { LoggerModule } from '../core/logger/logger.module';
 import { LoggerService } from '../core/logger/logger.service';
-import { createDatabaseConnection } from '../db/connection';
+import { createDatabaseConnection } from './connection';
 import databaseConfig from '../config/database.config';
 
 export const DATABASE_CONNECTION = 'DATABASE_CONNECTION';

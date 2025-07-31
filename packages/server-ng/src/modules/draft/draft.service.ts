@@ -7,9 +7,9 @@ import {
   DraftListResponseDto,
   PublishDraftDto,
 } from './dto/draft.dto';
-import { drafts, articles, tags } from '../../db/schema';
-import { DATABASE_CONNECTION } from '../../database/database.module';
-import type { Database } from '../../db/connection';
+import { drafts, articles, tags } from '../../database/schema';
+import { DATABASE_CONNECTION } from '../../database';
+import type { Database } from '../../database/connection';
 import { Draft } from './entities/draft.entity';
 import { Article } from '../article/entities/article.entity';
 import { DraftVersionService } from './draft-version.service';

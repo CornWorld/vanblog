@@ -6,9 +6,9 @@ import {
   CategoryListResponseDto,
   CategoryWithCountDto,
 } from './dto/category.dto';
-import { categories, articles } from '../../db/schema';
-import { DATABASE_CONNECTION } from '../../database/database.module';
-import type { Database } from '../../db/connection';
+import { categories, articles } from '../../database/schema';
+import { DATABASE_CONNECTION } from '../../database';
+import type { Database } from '../../database/connection';
 import { Category } from './entities/category.entity';
 import { StatisticsService } from '../../shared/services/statistics.service';
 import { OverallStatisticsDto } from '../../shared/dto/statistics.dto';

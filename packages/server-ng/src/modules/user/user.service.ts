@@ -3,8 +3,8 @@ import { eq } from 'drizzle-orm';
 import * as bcrypt from 'bcrypt';
 import { CreateUserDto, UpdateUserDto, UserType } from './dto';
 import { User } from './entities/user.entity';
-import { users } from '../../db/schema';
-import type { Database } from '../../db/connection';
+import { users } from '../../database/schema';
+import type { Database } from '../../database/connection';
 import type { Permission } from '../../shared/types/permission.type';
 
 @Injectable()

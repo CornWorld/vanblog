@@ -1,8 +1,8 @@
 import { Injectable, NotFoundException, Inject } from '@nestjs/common';
 import { eq, and, desc, sql } from 'drizzle-orm';
-import { draftVersions, drafts } from '../../db/schema';
-import { DATABASE_CONNECTION } from '../../database/database.module';
-import type { Database } from '../../db/connection';
+import { draftVersions, drafts } from '../../database/schema';
+import { DATABASE_CONNECTION } from '../../database';
+import type { Database } from '../../database/connection';
 import { DraftVersion } from './entities/draft.entity';
 
 @Injectable()

@@ -2,7 +2,7 @@ import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import type { Server } from 'http';
 import { DATABASE_CONNECTION } from '../src/database/database.module';
-import { users } from '../src/db/schema';
+import { users } from '../src/database/schema';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import { hash } from 'bcrypt';
 
