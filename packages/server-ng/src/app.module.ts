@@ -14,6 +14,7 @@ import { TagModule } from './modules/tag/tag.module';
 import { DraftModule } from './modules/draft/draft.module';
 import { MediaModule } from './modules/media/media.module';
 import { SharedModule } from './shared/shared.module';
+import { SettingModule } from './modules/setting/setting.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { SharedModule } from './shared/shared.module';
     DraftModule,
     MediaModule,
     SharedModule,
+    SettingModule,
   ],
   controllers: [AppController],
   providers: [AppService],
