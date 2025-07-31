@@ -139,7 +139,7 @@ export class CategoryService {
 
     if (articlesInCategory > 0) {
       throw new Error(
-        `Cannot delete category "${category.name}" because it contains ${articlesInCategory} articles`,
+        `Cannot delete category "${category.name}" because it contains ${String(articlesInCategory)} articles`,
       );
     }
 

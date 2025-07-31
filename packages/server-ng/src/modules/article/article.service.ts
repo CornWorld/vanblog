@@ -363,25 +363,6 @@ export class ArticleService {
     }
   }
 
-  private async createMissingTags(tagNames: string[]): Promise<void> {
-    // Get existing tags
-    const existingTags = await this.db.select().from(tags);
-    const existingTagNames = new Set(existingTags.map((tag) => tag.name));
-
-    // Find tags that need to be created
-    const missingTags = tagNames.filter((tagName) => !existingTagNames.has(tagName));
-
-    // Create missing tags
-    if (missingTags.length > 0) {
-      const tagsToCreate = missingTags.map((tagName) => ({
-        name: tagName,
-        slug: tagName.toLowerCase().replace(/\s+/g, '-'),
-      }));
-
-      await this.db.insert(tags).values(tagsToCreate);
-    }
-  }
-
   async findByCategory(categoryName: string): Promise<ArticleListResponseDto> {
     const [articleResults, total] = await Promise.all([
       this.db
@@ -416,5 +397,24 @@ export class ArticleService {
       page: 1,
       pageSize: total,
     };
+  }
+
+  private async createMissingTags(tagNames: string[]): Promise<void> {
+    // Get existing tags
+    const existingTags = await this.db.select().from(tags);
+    const existingTagNames = new Set(existingTags.map((tag) => tag.name));
+
+    // Find tags that need to be created
+    const missingTags = tagNames.filter((tagName) => !existingTagNames.has(tagName));
+
+    // Create missing tags
+    if (missingTags.length > 0) {
+      const tagsToCreate = missingTags.map((tagName) => ({
+        name: tagName,
+        slug: tagName.toLowerCase().replace(/\s+/g, '-'),
+      }));
+
+      await this.db.insert(tags).values(tagsToCreate);
+    }
   }
 }

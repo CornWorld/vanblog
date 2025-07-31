@@ -40,8 +40,8 @@ export function createDatabaseConnection(config: DatabaseConfig, logger: LoggerS
     .then(() => {
       logger.log('Foreign key constraints enabled', 'Database');
     })
-    .catch((error) => {
-      logger.error('Failed to enable foreign key constraints', error, 'Database');
+    .catch((error: unknown) => {
+      logger.error('Failed to enable foreign key constraints', String(error), 'Database');
     });
 
   logger.log('Database connection established', 'Database');
