@@ -86,6 +86,7 @@ export const drafts = sqliteTable('drafts', {
   tags: text('tags'), // JSON string
   category: text('category'),
   author: text('author').notNull(),
+  version: integer('version').notNull().default(1),
   createdAt: integer('created_at', { mode: 'timestamp' })
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
@@ -93,6 +94,29 @@ export const drafts = sqliteTable('drafts', {
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
 });
+
+// Draft versions table
+export const draftVersions = sqliteTable(
+  'draft_versions',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    draftId: integer('draft_id').notNull(),
+    version: integer('version').notNull(),
+    title: text('title').notNull(),
+    content: text('content').notNull(),
+    pathname: text('pathname'),
+    tags: text('tags'), // JSON string
+    category: text('category'),
+    author: text('author').notNull(),
+    createdAt: integer('created_at', { mode: 'timestamp' })
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    index('draft_id_idx').on(table.draftId),
+    index('draft_version_idx').on(table.draftId, table.version),
+  ],
+);
 
 // Images/Static files table
 export const staticFiles = sqliteTable(
