@@ -8,6 +8,8 @@ import {
   Put,
   Query,
   ParseIntPipe,
+  Ip,
+  Headers,
 } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { ArticleService } from './article.service';
@@ -21,11 +23,15 @@ import {
   ArticleSearchResponseDto,
 } from './dto/article.dto';
 import { RequireAuth } from '../auth/auth.decorator';
+import { ArticleStatsService } from '../analytics/services/article-stats.service';
 
 @ApiTags('articles')
 @Controller('api/v2/articles')
 export class ArticleController {
-  constructor(private readonly articleService: ArticleService) {}
+  constructor(
+    private readonly articleService: ArticleService,
+    private readonly articleStatsService: ArticleStatsService,
+  ) {}
 
   @Get()
   @ApiOperation({ summary: 'Get all articles' })
@@ -72,10 +78,25 @@ export class ArticleController {
   }
 
   @Post(':id/view')
-  @ApiOperation({ summary: 'Increment article view count' })
+  @ApiOperation({ summary: 'Increment article view count by ID' })
   @ApiResponse({ status: 200, description: 'View count incremented' })
-  async incrementView(@Param('id', ParseIntPipe) id: number): Promise<void> {
-    await this.articleService.incrementViewer(id);
+  async incrementView(
+    @Param('id', ParseIntPipe) id: number,
+    @Ip() ip: string,
+    @Headers('user-agent') userAgent?: string,
+  ): Promise<void> {
+    await this.articleStatsService.recordArticleView(id, ip, userAgent);
+  }
+
+  @Post('pathname/:pathname/view')
+  @ApiOperation({ summary: 'Increment article view count by pathname' })
+  @ApiResponse({ status: 200, description: 'View count incremented' })
+  async incrementViewByPathname(
+    @Param('pathname') pathname: string,
+    @Ip() ip: string,
+    @Headers('user-agent') userAgent?: string,
+  ): Promise<void> {
+    await this.articleStatsService.recordArticleViewByPathname(pathname, ip, userAgent);
   }
 
   @Post()

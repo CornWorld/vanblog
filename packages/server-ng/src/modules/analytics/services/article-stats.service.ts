@@ -48,6 +48,25 @@ export class ArticleStatsService {
       .where(eq(articles.id, articleId));
   }
 
+  async recordArticleViewByPathname(
+    pathname: string,
+    ip: string,
+    userAgent?: string,
+  ): Promise<void> {
+    const article = await this.db
+      .select({ id: articles.id, pathname: articles.pathname })
+      .from(articles)
+      .where(eq(articles.pathname, pathname))
+      .limit(1);
+
+    if (article.length === 0) {
+      return;
+    }
+
+    const articleId = article[0].id;
+    await this.recordArticleView(articleId, ip, userAgent);
+  }
+
   async getTopArticles(limit = 10): Promise<ArticleStats[]> {
     const result = await this.db
       .select({

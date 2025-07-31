@@ -326,15 +326,6 @@ describe('ArticleService', () => {
     });
   });
 
-  describe('incrementViewer', () => {
-    it('should increment viewer count', async () => {
-      mockDb.where.mockResolvedValueOnce(undefined);
-
-      await expect(service.incrementViewer(1)).resolves.not.toThrow();
-      expect(mockDb.update).toHaveBeenCalled();
-    });
-  });
-
   describe('exportArticles', () => {
     it('should export all articles', async () => {
       const mockArticles = [

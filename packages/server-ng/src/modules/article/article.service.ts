@@ -363,15 +363,6 @@ export class ArticleService {
     }
   }
 
-  async incrementViewer(id: number): Promise<void> {
-    await this.db
-      .update(articles)
-      .set({
-        viewer: sql`${articles.viewer} + 1`,
-      })
-      .where(eq(articles.id, id));
-  }
-
   private async createMissingTags(tagNames: string[]): Promise<void> {
     // Get existing tags
     const existingTags = await this.db.select().from(tags);
