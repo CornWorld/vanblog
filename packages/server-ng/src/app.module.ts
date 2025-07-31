@@ -12,6 +12,7 @@ import { ArticleModule } from './modules/article/article.module';
 import { CategoryModule } from './modules/category/category.module';
 import { TagModule } from './modules/tag/tag.module';
 import { DraftModule } from './modules/draft/draft.module';
+import { MediaModule } from './modules/media/media.module';
 import { SharedModule } from './shared/shared.module';
 
 @Module({
@@ -27,6 +28,7 @@ import { SharedModule } from './shared/shared.module';
     CategoryModule,
     TagModule,
     DraftModule,
+    MediaModule,
     SharedModule,
   ],
   controllers: [AppController],
