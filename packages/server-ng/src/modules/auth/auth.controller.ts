@@ -39,7 +39,7 @@ export class AuthController {
   @ApiResponse({ status: 401, description: 'Invalid credentials' })
   async login(
     @Request() req: RequestWithUser,
-  ): Promise<{ access_token: string; user: Omit<User, 'password'> }> {
+  ): Promise<{ token: string; access_token: string; user: Omit<User, 'password'> }> {
     const result = this.authService.login(req.user);
 
     await this.loginLogService.createLog({
@@ -50,7 +50,10 @@ export class AuthController {
       message: 'Login successful',
     });
 
-    return result;
+    return {
+      ...result,
+      token: result.access_token, // For backward compatibility
+    };
   }
 
   @Get('profile')
