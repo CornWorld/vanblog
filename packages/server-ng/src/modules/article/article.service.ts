@@ -329,6 +329,31 @@ export class ArticleService {
     }
   }
 
+  async exportArticles(): Promise<Article[]> {
+    const articleResults = await this.db.select().from(articles);
+    return articleResults.map(
+      (article) =>
+        new Article({
+          ...article,
+          tags: article.tags ? (JSON.parse(article.tags) as string[]) : [],
+          pathname: article.pathname ?? undefined,
+          category: article.category ?? undefined,
+          author: article.author,
+          top: article.top ?? undefined,
+          hidden: article.hidden ?? undefined,
+          private: article.private ?? undefined,
+          password: article.password ?? undefined,
+          viewer: article.viewer ?? undefined,
+        }),
+    );
+  }
+
+  async importArticles(articleDtos: CreateArticleDto[]): Promise<void> {
+    for (const articleDto of articleDtos) {
+      await this.create(articleDto);
+    }
+  }
+
   async incrementViewer(id: number): Promise<void> {
     await this.db
       .update(articles)

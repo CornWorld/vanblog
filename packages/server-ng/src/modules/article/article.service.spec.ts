@@ -7,24 +7,33 @@ import { vi, describe, beforeEach, it, expect } from 'vitest';
 
 describe('ArticleService', () => {
   let service: ArticleService;
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let mockDb: any;
 
   beforeEach(async () => {
     mockDb = {
-      select: vi.fn().mockReturnThis(),
-      from: vi.fn().mockReturnThis(),
-      where: vi.fn().mockReturnThis(),
-      orderBy: vi.fn().mockReturnThis(),
-      limit: vi.fn().mockReturnThis(),
-      offset: vi.fn().mockReturnThis(),
-      insert: vi.fn().mockReturnThis(),
-      values: vi.fn().mockReturnThis(),
-      returning: vi.fn().mockReturnThis(),
-      update: vi.fn().mockReturnThis(),
-      set: vi.fn().mockReturnThis(),
-      delete: vi.fn().mockReturnThis(),
+      select: vi.fn(),
+      from: vi.fn(),
+      where: vi.fn(),
+      orderBy: vi.fn(),
+      limit: vi.fn(),
+      offset: vi.fn(),
+      insert: vi.fn(),
+      values: vi.fn(),
+      returning: vi.fn(),
+      update: vi.fn(),
+      set: vi.fn(),
+      delete: vi.fn(),
+      leftJoin: vi.fn(),
+      groupBy: vi.fn(),
     };
+
+    // Reset all mocks to return this by default
+
+    Object.keys(mockDb).forEach((key) => {
+      mockDb[key].mockReturnValue(mockDb);
+    });
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -60,12 +69,20 @@ describe('ArticleService', () => {
         },
       ];
 
-      // First query (articles)
+      // Setup for Promise.all - both queries run simultaneously
+      // Override the last method in each chain to resolve with data
       mockDb.offset.mockResolvedValueOnce(mockArticles);
-      // Second query (count) - reset chain after offset
-      mockDb.select.mockReturnValueOnce(mockDb);
-      mockDb.from.mockReturnValueOnce(mockDb);
-      mockDb.where.mockResolvedValueOnce([{ count: 1 }]);
+      // Second where call (for count query) resolves with count
+      let whereCallCount = 0;
+      mockDb.where.mockImplementation(() => {
+        whereCallCount++;
+        if (whereCallCount === 2) {
+          // This is the count query
+          return Promise.resolve([{ count: 1 }]);
+        }
+
+        return mockDb;
+      });
 
       const result = await service.findAll({ page: 1, pageSize: 10 });
 
@@ -97,12 +114,20 @@ describe('ArticleService', () => {
         },
       ];
 
-      // First query (articles)
+      // Setup for Promise.all - both queries run simultaneously
+      // Override the last method in each chain to resolve with data
       mockDb.offset.mockResolvedValueOnce(mockArticles);
-      // Second query (count) - reset chain after offset
-      mockDb.select.mockReturnValueOnce(mockDb);
-      mockDb.from.mockReturnValueOnce(mockDb);
-      mockDb.where.mockResolvedValueOnce([{ count: 1 }]);
+      // Second where call (for count query) resolves with count
+      let whereCallCount = 0;
+      mockDb.where.mockImplementation(() => {
+        whereCallCount++;
+        if (whereCallCount === 2) {
+          // This is the count query
+          return Promise.resolve([{ count: 1 }]);
+        }
+
+        return mockDb;
+      });
 
       const searchDto: ArticleSearchDto = {
         query: 'search term',
@@ -119,12 +144,20 @@ describe('ArticleService', () => {
     });
 
     it('should search only in title when titleOnly is true', async () => {
-      // First query (articles)
+      // Setup for Promise.all - both queries run simultaneously
+      // Override the last method in each chain to resolve with data
       mockDb.offset.mockResolvedValueOnce([]);
-      // Second query (count) - reset chain after offset
-      mockDb.select.mockReturnValueOnce(mockDb);
-      mockDb.from.mockReturnValueOnce(mockDb);
-      mockDb.where.mockResolvedValueOnce([{ count: 0 }]);
+      // Second where call (for count query) resolves with count
+      let whereCallCount = 0;
+      mockDb.where.mockImplementation(() => {
+        whereCallCount++;
+        if (whereCallCount === 2) {
+          // This is the count query
+          return Promise.resolve([{ count: 0 }]);
+        }
+
+        return mockDb;
+      });
 
       const searchDto: ArticleSearchDto = {
         query: 'test',
@@ -137,12 +170,20 @@ describe('ArticleService', () => {
     });
 
     it('should filter by category and tags', async () => {
-      // First query (articles)
+      // Setup for Promise.all - both queries run simultaneously
+      // Override the last method in each chain to resolve with data
       mockDb.offset.mockResolvedValueOnce([]);
-      // Second query (count) - reset chain after offset
-      mockDb.select.mockReturnValueOnce(mockDb);
-      mockDb.from.mockReturnValueOnce(mockDb);
-      mockDb.where.mockResolvedValueOnce([{ count: 0 }]);
+      // Second where call (for count query) resolves with count
+      let whereCallCount = 0;
+      mockDb.where.mockImplementation(() => {
+        whereCallCount++;
+        if (whereCallCount === 2) {
+          // This is the count query
+          return Promise.resolve([{ count: 0 }]);
+        }
+
+        return mockDb;
+      });
 
       const searchDto: ArticleSearchDto = {
         query: 'test',
@@ -287,6 +328,98 @@ describe('ArticleService', () => {
 
       await expect(service.incrementViewer(1)).resolves.not.toThrow();
       expect(mockDb.update).toHaveBeenCalled();
+    });
+  });
+
+  describe('exportArticles', () => {
+    it('should export all articles', async () => {
+      const mockArticles = [
+        {
+          id: 1,
+          title: 'Article 1',
+          content: 'Content 1',
+          tags: JSON.stringify(['tag1']),
+          author: 'admin',
+          top: 0,
+          hidden: false,
+          private: false,
+          viewer: 100,
+          pathname: null,
+          category: null,
+          password: null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        {
+          id: 2,
+          title: 'Article 2',
+          content: 'Content 2',
+          tags: null,
+          author: 'admin',
+          top: 1,
+          hidden: true,
+          private: false,
+          viewer: 50,
+          pathname: 'article-2',
+          category: 'tech',
+          password: null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ];
+
+      mockDb.from.mockResolvedValueOnce(mockArticles);
+
+      const result = await service.exportArticles();
+
+      expect(result).toHaveLength(2);
+      expect(result[0].title).toBe('Article 1');
+      expect(result[0].tags).toEqual(['tag1']);
+      expect(result[1].title).toBe('Article 2');
+      expect(result[1].tags).toEqual([]);
+      expect(result[1].category).toBe('tech');
+    });
+  });
+
+  describe('importArticles', () => {
+    it('should import multiple articles', async () => {
+      const articlesToImport = [
+        {
+          title: 'Import 1',
+          content: 'Content 1',
+          tags: ['import'],
+        },
+        {
+          title: 'Import 2',
+          content: 'Content 2',
+          category: 'imported',
+        },
+      ];
+
+      const mockResults = articlesToImport.map((article, index) => ({
+        id: index + 1,
+        ...article,
+        tags: article.tags ? JSON.stringify(article.tags) : null,
+        category: article.category ?? null,
+        author: 'admin',
+        top: 0,
+        hidden: false,
+        private: false,
+        viewer: 0,
+        pathname: null,
+        password: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }));
+
+      mockDb.returning
+        .mockResolvedValueOnce([mockResults[0]])
+        .mockResolvedValueOnce([mockResults[1]]);
+
+      await service.importArticles(articlesToImport);
+
+      expect(mockDb.insert).toHaveBeenCalledTimes(2);
+      expect(mockDb.values).toHaveBeenCalledTimes(2);
     });
   });
 });

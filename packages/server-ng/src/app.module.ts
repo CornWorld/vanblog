@@ -9,6 +9,8 @@ import { DatabaseModule } from './database';
 import { UserModule } from './modules/user/user.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { ArticleModule } from './modules/article/article.module';
+import { CategoryModule } from './modules/category/category.module';
+import { TagModule } from './modules/tag/tag.module';
 
 @Module({
   imports: [
@@ -20,6 +22,8 @@ import { ArticleModule } from './modules/article/article.module';
     UserModule,
     AuthModule,
     ArticleModule,
+    CategoryModule,
+    TagModule,
   ],
   controllers: [AppController],
   providers: [AppService],

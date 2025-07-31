@@ -46,12 +46,36 @@ export class ArticleController {
     return this.articleService.search(query);
   }
 
+  @Get('export')
+  @RequireAuth()
+  @ApiOperation({ summary: 'Export all articles' })
+  @ApiResponse({ status: 200, description: 'Export articles', type: [ArticleDto] })
+  async export(): Promise<ArticleDto[]> {
+    const articles = await this.articleService.exportArticles();
+    return articles;
+  }
+
+  @Post('import')
+  @RequireAuth()
+  @ApiOperation({ summary: 'Import articles' })
+  @ApiResponse({ status: 201, description: 'Import articles' })
+  async import(@Body() articles: CreateArticleDto[]): Promise<void> {
+    await this.articleService.importArticles(articles);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get article by ID' })
   @ApiResponse({ status: 200, description: 'Return article by ID', type: ArticleDto })
   @ApiResponse({ status: 404, description: 'Article not found' })
   async findOne(@Param('id', ParseIntPipe) id: number): Promise<ArticleDto> {
     return this.articleService.findOne(id);
+  }
+
+  @Post(':id/view')
+  @ApiOperation({ summary: 'Increment article view count' })
+  @ApiResponse({ status: 200, description: 'View count incremented' })
+  async incrementView(@Param('id', ParseIntPipe) id: number): Promise<void> {
+    await this.articleService.incrementViewer(id);
   }
 
   @Post()
