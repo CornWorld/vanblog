@@ -10,6 +10,13 @@ import {
   FriendLink,
   Navigation,
   CustomCode,
+  BeianInfo,
+  AnalyticsConfig,
+  DisplayConfig,
+  PaymentInfo,
+  AboutInfo,
+  SocialLink,
+  RewardInfo,
 } from '../entities/site-meta.entity';
 import { UpdateSiteInfoDto } from '../dto/update-site-info.dto';
 import { UpdateLayoutDto } from '../dto/update-layout.dto';
@@ -377,5 +384,176 @@ export class SettingService {
     }
 
     return updatedCode;
+  }
+
+  // 通用配置获取方法
+  async getConfig<T>(key: string, defaultValue?: T): Promise<T | null> {
+    const results = await this.db.select().from(siteMeta).where(eq(siteMeta.key, key)).limit(1);
+
+    if (results.length > 0 && results[0].value) {
+      return JSON.parse(results[0].value) as T;
+    }
+
+    if (defaultValue !== undefined) {
+      await this.db.insert(siteMeta).values({
+        key,
+        value: JSON.stringify(defaultValue),
+      });
+      return defaultValue;
+    }
+
+    return null;
+  }
+
+  // 通用配置更新方法
+  async updateConfig<T>(key: string, value: T): Promise<T> {
+    const existing = await this.db.select().from(siteMeta).where(eq(siteMeta.key, key)).limit(1);
+
+    if (existing.length > 0) {
+      await this.db
+        .update(siteMeta)
+        .set({
+          value: JSON.stringify(value),
+          updatedAt: sql`CURRENT_TIMESTAMP`,
+        })
+        .where(eq(siteMeta.key, key));
+    } else {
+      await this.db.insert(siteMeta).values({
+        key,
+        value: JSON.stringify(value),
+      });
+    }
+
+    return value;
+  }
+
+  // 备案信息管理
+  async getBeianInfo(): Promise<BeianInfo> {
+    return (await this.getConfig<BeianInfo>('beianInfo')) ?? {};
+  }
+
+  async updateBeianInfo(dto: Partial<BeianInfo>): Promise<BeianInfo> {
+    const existing = await this.getBeianInfo();
+    const updated = Object.assign({}, existing, dto);
+    return this.updateConfig('beianInfo', updated);
+  }
+
+  // 分析配置管理
+  async getAnalyticsConfig(): Promise<AnalyticsConfig> {
+    return (await this.getConfig<AnalyticsConfig>('analyticsConfig')) ?? {};
+  }
+
+  async updateAnalyticsConfig(dto: Partial<AnalyticsConfig>): Promise<AnalyticsConfig> {
+    const existing = await this.getAnalyticsConfig();
+    const updated = Object.assign({}, existing, dto);
+    return this.updateConfig('analyticsConfig', updated);
+  }
+
+  // 显示配置管理
+  async getDisplayConfig(): Promise<DisplayConfig> {
+    const defaultConfig: DisplayConfig = {
+      enableComment: true,
+      showSubMenu: true,
+      showAdminButton: true,
+      showFriends: true,
+      showCopyRight: true,
+      showRSS: true,
+      defaultTheme: 'auto',
+    };
+    return (await this.getConfig<DisplayConfig>('displayConfig', defaultConfig)) ?? defaultConfig;
+  }
+
+  async updateDisplayConfig(dto: Partial<DisplayConfig>): Promise<DisplayConfig> {
+    const existing = await this.getDisplayConfig();
+    const updated = Object.assign({}, existing, dto);
+    return this.updateConfig('displayConfig', updated);
+  }
+
+  // 支付信息管理
+  async getPaymentInfo(): Promise<PaymentInfo> {
+    return (await this.getConfig<PaymentInfo>('paymentInfo')) ?? {};
+  }
+
+  async updatePaymentInfo(dto: Partial<PaymentInfo>): Promise<PaymentInfo> {
+    const existing = await this.getPaymentInfo();
+    const updated = Object.assign({}, existing, dto);
+    return this.updateConfig('paymentInfo', updated);
+  }
+
+  // 关于页面管理
+  async getAboutInfo(): Promise<AboutInfo> {
+    const defaultAbout: AboutInfo = {
+      content: '',
+      updatedAt: new Date(),
+    };
+    return (await this.getConfig<AboutInfo>('aboutInfo', defaultAbout)) ?? defaultAbout;
+  }
+
+  async updateAboutContent(content: string): Promise<AboutInfo> {
+    const aboutInfo: AboutInfo = {
+      content,
+      updatedAt: new Date(),
+    };
+    return this.updateConfig('aboutInfo', aboutInfo);
+  }
+
+  // 社交链接管理
+  async getSocialLinks(): Promise<SocialLink[]> {
+    return (await this.getConfig<SocialLink[]>('socialLinks')) ?? [];
+  }
+
+  async addOrUpdateSocialLink(link: SocialLink): Promise<SocialLink[]> {
+    const links = await this.getSocialLinks();
+    const existingIndex = links.findIndex((l) => l.type === link.type);
+
+    if (existingIndex >= 0) {
+      links[existingIndex] = link;
+    } else {
+      links.push(link);
+    }
+
+    return this.updateConfig('socialLinks', links);
+  }
+
+  async deleteSocialLink(type: string): Promise<SocialLink[]> {
+    const links = await this.getSocialLinks();
+    const filtered = links.filter((l) => l.type !== type);
+    return this.updateConfig('socialLinks', filtered);
+  }
+
+  // 打赏信息管理
+  async getRewardInfos(): Promise<RewardInfo[]> {
+    return (await this.getConfig<RewardInfo[]>('rewardInfos')) ?? [];
+  }
+
+  async addOrUpdateRewardInfo(reward: RewardInfo): Promise<RewardInfo[]> {
+    const rewards = await this.getRewardInfos();
+    const existingIndex = rewards.findIndex((r) => r.name === reward.name);
+
+    if (existingIndex >= 0) {
+      rewards[existingIndex] = { ...reward, updatedAt: new Date() };
+    } else {
+      rewards.push({ ...reward, updatedAt: new Date() });
+    }
+
+    return this.updateConfig('rewardInfos', rewards);
+  }
+
+  async deleteRewardInfo(name: string): Promise<RewardInfo[]> {
+    const rewards = await this.getRewardInfos();
+    const filtered = rewards.filter((r) => r.name !== name);
+    return this.updateConfig('rewardInfos', filtered);
+  }
+
+  // 获取所有社交平台类型
+  getSocialTypes(): Array<{ label: string; value: string }> {
+    return [
+      { label: '哔哩哔哩', value: 'bilibili' },
+      { label: '邮箱', value: 'email' },
+      { label: 'GitHub', value: 'github' },
+      { label: 'Gitee', value: 'gitee' },
+      { label: '微信', value: 'wechat' },
+      { label: '微信（暗色模式）', value: 'wechat-dark' },
+    ];
   }
 }
