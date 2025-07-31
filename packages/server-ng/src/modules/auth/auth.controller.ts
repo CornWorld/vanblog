@@ -3,26 +3,33 @@ import {
   Post,
   UseGuards,
   Request,
-  Body,
   HttpCode,
   HttpStatus,
   Get,
+  Query,
+  HttpException,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { LocalAuthGuard } from './guards/local-auth.guard';
-import { JwtAuthGuard } from './guards/jwt-auth.guard';
-import { LoginDto } from './dto/login.dto';
 import { User } from '../user/entities/user.entity';
+import { UserType } from '../user/dto/create-user.dto';
+import { LoginLogService } from './login-log.service';
+import { LoginLogQueryDto, LoginLogResponseDto } from './dto/login-log.dto';
+import { RequireAuth, RequireAdmin } from './auth.decorator';
+import { Request as ExpressRequest } from 'express';
 
-interface RequestWithUser extends Request {
+interface RequestWithUser extends ExpressRequest {
   user: User;
 }
 
 @ApiTags('auth')
 @Controller('api/v2/auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly loginLogService: LoginLogService,
+  ) {}
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
@@ -30,20 +37,26 @@ export class AuthController {
   @ApiOperation({ summary: 'User login' })
   @ApiResponse({ status: 200, description: 'Login successful' })
   @ApiResponse({ status: 401, description: 'Invalid credentials' })
-  login(
+  async login(
     @Request() req: RequestWithUser,
-    @Body() loginDto: LoginDto,
-  ): { access_token: string; user: Omit<User, 'password'> } {
-    void loginDto; // LoginDto is validated by LocalAuthGuard
-    return this.authService.login(req.user);
+  ): Promise<{ access_token: string; user: Omit<User, 'password'> }> {
+    const result = this.authService.login(req.user);
+
+    await this.loginLogService.createLog({
+      username: req.user.username,
+      ip: req.ip,
+      userAgent: req.headers['user-agent'] ?? '',
+      success: true,
+      message: 'Login successful',
+    });
+
+    return result;
   }
 
   @Get('profile')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
+  @RequireAuth()
   @ApiOperation({ summary: 'Get current user profile' })
   @ApiResponse({ status: 200, description: 'Profile retrieved successfully' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
   getProfile(@Request() req: RequestWithUser): Omit<User, 'password'> {
     const { password, ...user } = req.user;
     void password;
@@ -54,12 +67,27 @@ export class AuthController {
   }
 
   @Post('logout')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
+  @RequireAuth()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'User logout' })
   @ApiResponse({ status: 200, description: 'Logout successful' })
   logout(): { message: string } {
     return { message: 'Logout successful' };
+  }
+
+  @Get('logs')
+  @RequireAdmin()
+  @ApiOperation({ summary: 'Get login logs' })
+  @ApiResponse({ status: 200, description: 'Login logs retrieved successfully' })
+  @ApiQuery({ name: 'username', required: false })
+  @ApiQuery({ name: 'success', required: false, type: Boolean })
+  async getLoginLogs(
+    @Request() req: RequestWithUser,
+    @Query() query: LoginLogQueryDto,
+  ): Promise<LoginLogResponseDto[]> {
+    if (req.user.type !== UserType.ADMIN) {
+      throw new HttpException('Access denied', HttpStatus.FORBIDDEN);
+    }
+    return this.loginLogService.getLogs(query);
   }
 }

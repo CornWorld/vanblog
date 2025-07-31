@@ -8,6 +8,7 @@ import { LoggerModule } from './core/logger/logger.module';
 import { DatabaseModule } from './database';
 import { UserModule } from './modules/user/user.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { ArticleModule } from './modules/article/article.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { AuthModule } from './modules/auth/auth.module';
     HealthModule,
     UserModule,
     AuthModule,
+    ArticleModule,
   ],
   controllers: [AppController],
   providers: [AppService],

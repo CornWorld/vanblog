@@ -1,0 +1,80 @@
+import { Injectable, Inject } from '@nestjs/common';
+import { eq, and, gte, lte, desc } from 'drizzle-orm';
+import { LoginLogDto, LoginLogResponseDto, LoginLogQueryDto } from './dto/login-log.dto';
+import { loginLogs } from '../../db/schema';
+import { DATABASE_CONNECTION } from '../../database/database.module';
+import type { Database } from '../../db/connection';
+
+@Injectable()
+export class LoginLogService {
+  constructor(
+    @Inject(DATABASE_CONNECTION)
+    private readonly db: Database,
+  ) {}
+
+  async createLog(logData: LoginLogDto): Promise<void> {
+    await this.db.insert(loginLogs).values({
+      username: logData.username,
+      ip: logData.ip ?? null,
+      userAgent: logData.userAgent ?? null,
+      success: logData.success,
+      message: logData.message ?? null,
+    });
+  }
+
+  async getLogs(query: LoginLogQueryDto): Promise<LoginLogResponseDto[]> {
+    const conditions = [];
+
+    if (query.username) {
+      conditions.push(eq(loginLogs.username, query.username));
+    }
+
+    if (query.success !== undefined) {
+      conditions.push(eq(loginLogs.success, query.success));
+    }
+
+    if (query.startDate) {
+      conditions.push(gte(loginLogs.createdAt, query.startDate));
+    }
+
+    if (query.endDate) {
+      conditions.push(lte(loginLogs.createdAt, query.endDate));
+    }
+
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+    const logs = await this.db
+      .select()
+      .from(loginLogs)
+      .where(whereClause)
+      .orderBy(desc(loginLogs.createdAt))
+      .limit(100);
+
+    return logs.map((log) => ({
+      id: log.id,
+      username: log.username,
+      ip: log.ip ?? undefined,
+      userAgent: log.userAgent ?? undefined,
+      success: log.success,
+      message: log.message ?? undefined,
+      createdAt: log.createdAt,
+    }));
+  }
+
+  async getRecentFailedAttempts(username: string, minutes = 30): Promise<number> {
+    const cutoffTime = new Date(Date.now() - minutes * 60 * 1000);
+
+    const result = await this.db
+      .select()
+      .from(loginLogs)
+      .where(
+        and(
+          eq(loginLogs.username, username),
+          eq(loginLogs.success, false),
+          gte(loginLogs.createdAt, cutoffTime),
+        ),
+      );
+
+    return result.length;
+  }
+}
