@@ -21,6 +21,7 @@ describe('CategoryService', () => {
     delete: ReturnType<typeof vi.fn>;
     leftJoin: ReturnType<typeof vi.fn>;
     groupBy: ReturnType<typeof vi.fn>;
+    then?: ReturnType<typeof vi.fn>;
   };
 
   beforeEach(async () => {
@@ -75,7 +76,7 @@ describe('CategoryService', () => {
         {
           id: 1,
           name: 'Technology',
-          slug: 'tech',
+          slug: undefined,
           description: 'Tech articles',
           private: false,
           password: null,
@@ -101,7 +102,7 @@ describe('CategoryService', () => {
       const mockCategory = {
         id: 1,
         name: 'Technology',
-        slug: 'tech',
+        slug: undefined,
         description: 'Tech articles',
         private: false,
         password: null,
@@ -129,7 +130,7 @@ describe('CategoryService', () => {
       const mockCreatedCategory = {
         id: 1,
         name: 'New Category',
-        slug: 'new-category',
+        slug: undefined,
         description: 'New category description',
         private: false,
         password: null,
@@ -154,10 +155,21 @@ describe('CategoryService', () => {
 
   describe('update', () => {
     it('should update an existing category', async () => {
+      const mockExistingCategory = {
+        id: 1,
+        name: 'Old Category',
+        slug: null,
+        description: 'Old description',
+        private: false,
+        password: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
       const mockUpdatedCategory = {
         id: 1,
         name: 'Updated Category',
-        slug: 'updated-category',
+        slug: undefined,
         description: 'Updated description',
         private: false,
         password: null,
@@ -165,6 +177,9 @@ describe('CategoryService', () => {
         updatedAt: new Date(),
       };
 
+      // Mock findOne call
+      mockDb.limit.mockResolvedValueOnce([mockExistingCategory]);
+      // Mock update returning
       mockDb.returning.mockResolvedValueOnce([mockUpdatedCategory]);
 
       const updateDto = {
@@ -179,7 +194,8 @@ describe('CategoryService', () => {
     });
 
     it('should throw NotFoundException when category not found', async () => {
-      mockDb.returning.mockResolvedValueOnce([]);
+      // Mock findOne to throw NotFoundException
+      mockDb.limit.mockResolvedValueOnce([]);
 
       await expect(service.update(999, { name: 'Test' })).rejects.toThrow(NotFoundException);
     });
@@ -187,13 +203,33 @@ describe('CategoryService', () => {
 
   describe('remove', () => {
     it('should delete a category', async () => {
+      const mockCategory = {
+        id: 1,
+        name: 'Category1',
+        slug: null,
+        description: null,
+        private: false,
+        password: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      // Mock findOne call
+      mockDb.limit.mockResolvedValueOnce([mockCategory]);
+      // Mock article count check - need to set up the mock chain properly
+      mockDb.select.mockReturnValueOnce(mockDb);
+      mockDb.from.mockReturnValueOnce(mockDb);
+      mockDb.where.mockReturnValueOnce(mockDb);
+      mockDb.then = vi.fn().mockResolvedValueOnce([{ count: 0 }]);
+      // Mock delete returning
       mockDb.returning.mockResolvedValueOnce([{ id: 1 }]);
 
       await expect(service.remove(1)).resolves.not.toThrow();
     });
 
     it('should throw NotFoundException when category not found', async () => {
-      mockDb.returning.mockResolvedValueOnce([]);
+      // Mock findOne to throw NotFoundException
+      mockDb.limit.mockResolvedValueOnce([]);
 
       await expect(service.remove(999)).rejects.toThrow(NotFoundException);
     });
@@ -205,7 +241,7 @@ describe('CategoryService', () => {
         {
           id: 1,
           name: 'Category1',
-          slug: 'category1',
+          slug: undefined,
           description: null,
           private: false,
           password: null,
@@ -213,7 +249,7 @@ describe('CategoryService', () => {
         {
           id: 2,
           name: 'Category2',
-          slug: 'category2',
+          slug: undefined,
           description: null,
           private: false,
           password: null,

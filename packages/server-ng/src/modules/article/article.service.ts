@@ -381,4 +381,40 @@ export class ArticleService {
       await this.db.insert(tags).values(tagsToCreate);
     }
   }
+
+  async findByCategory(categoryName: string): Promise<ArticleListResponseDto> {
+    const [articleResults, total] = await Promise.all([
+      this.db
+        .select()
+        .from(articles)
+        .where(eq(articles.category, categoryName))
+        .orderBy(desc(articles.top), desc(articles.createdAt)),
+      this.db
+        .select({ count: sql<number>`count(*)` })
+        .from(articles)
+        .where(eq(articles.category, categoryName))
+        .then((res) => Number(res[0]?.count || 0)),
+    ]);
+
+    return {
+      data: articleResults.map(
+        (article) =>
+          new Article({
+            ...article,
+            tags: article.tags ? (JSON.parse(article.tags) as string[]) : [],
+            pathname: article.pathname ?? undefined,
+            category: article.category ?? undefined,
+            author: article.author,
+            top: article.top ?? undefined,
+            hidden: article.hidden ?? undefined,
+            private: article.private ?? undefined,
+            password: article.password ?? undefined,
+            viewer: article.viewer ?? undefined,
+          }),
+      ),
+      total,
+      page: 1,
+      pageSize: total,
+    };
+  }
 }

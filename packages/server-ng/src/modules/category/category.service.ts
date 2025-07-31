@@ -100,6 +100,10 @@ export class CategoryService {
   async update(id: number, updateCategoryDto: UpdateCategoryDto): Promise<Category> {
     const categoryData = Object.assign({}, updateCategoryDto);
 
+    // Check if category name has changed
+    const existingCategory = await this.findOne(id);
+    const oldName = existingCategory.name;
+
     // Hash password if provided
     if (categoryData.password) {
       categoryData.password = await bcrypt.hash(categoryData.password, 10);
@@ -115,6 +119,14 @@ export class CategoryService {
       throw new NotFoundException(`Category with ID ${String(id)} not found`);
     }
 
+    // If the name has changed, update related articles
+    if (categoryData.name !== oldName && categoryData.name) {
+      await this.db
+        .update(articles)
+        .set({ category: categoryData.name })
+        .where(eq(articles.category, oldName));
+    }
+
     return new Category({
       ...result[0],
       slug: result[0].slug ?? undefined,
@@ -125,6 +137,22 @@ export class CategoryService {
   }
 
   async remove(id: number): Promise<void> {
+    // Check if category exists
+    const category = await this.findOne(id);
+
+    // Check if there are articles in this category
+    const articlesInCategory = await this.db
+      .select({ count: sql<number>`count(*)` })
+      .from(articles)
+      .where(eq(articles.category, category.name))
+      .then((res) => Number(res[0]?.count || 0));
+
+    if (articlesInCategory > 0) {
+      throw new Error(
+        `Cannot delete category "${category.name}" because it contains ${articlesInCategory} articles`,
+      );
+    }
+
     const result = await this.db
       .delete(categories)
       .where(eq(categories.id, id))

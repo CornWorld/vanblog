@@ -61,6 +61,17 @@ export class ArticleController {
     return articles;
   }
 
+  @Get('category/:name')
+  @ApiOperation({ summary: 'Get articles by category name' })
+  @ApiResponse({
+    status: 200,
+    description: 'Return articles by category',
+    type: ArticleListResponseDto,
+  })
+  async findByCategory(@Param('name') name: string): Promise<ArticleListResponseDto> {
+    return this.articleService.findByCategory(name);
+  }
+
   @Post('import')
   @RequireAuth()
   @ApiOperation({ summary: 'Import articles' })
