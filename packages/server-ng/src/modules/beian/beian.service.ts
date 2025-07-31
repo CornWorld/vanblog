@@ -1,13 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { SettingRegistryService } from '../setting/services/setting-registry.service';
 import { BeianInfoDto } from './dto/beian-info.dto';
-
-export interface BeianInfo {
-  icp?: string;
-  gov?: string;
-  govUrl?: string;
-  showBeian?: boolean;
-}
+import { BeianInfoSchema, BeianInfo } from './beian.schema';
 
 @Injectable()
 export class BeianService {
@@ -23,23 +17,8 @@ export class BeianService {
       },
       description: 'Website beian (ICP/Gov) information',
       validator: (value: unknown) => {
-        if (typeof value !== 'object' || value === null) {
-          return false;
-        }
-        const beianValue = value as BeianInfo;
-        if (beianValue.icp !== undefined && typeof beianValue.icp !== 'string') {
-          return false;
-        }
-        if (beianValue.gov !== undefined && typeof beianValue.gov !== 'string') {
-          return false;
-        }
-        if (beianValue.govUrl !== undefined && typeof beianValue.govUrl !== 'string') {
-          return false;
-        }
-        if (beianValue.showBeian !== undefined && typeof beianValue.showBeian !== 'boolean') {
-          return false;
-        }
-        return true;
+        const result = BeianInfoSchema.safeParse(value);
+        return result.success;
       },
     });
   }

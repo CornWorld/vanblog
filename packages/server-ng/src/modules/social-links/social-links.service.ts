@@ -1,11 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { SettingRegistryService } from '../setting/services/setting-registry.service';
 import { SocialLinkDto } from './dto/social-link.dto';
-
-export interface SocialLink {
-  type: string;
-  url: string;
-}
+import { SocialLinkArraySchema, SocialLink } from './social-links.schema';
 
 @Injectable()
 export class SocialLinksService {
@@ -19,19 +15,8 @@ export class SocialLinksService {
       defaultValue: [],
       description: 'Links for social media platforms',
       validator: (value: unknown) => {
-        if (!Array.isArray(value)) {
-          return false;
-        }
-        for (const link of value) {
-          if (typeof link !== 'object' || link === null) {
-            return false;
-          }
-          const socialLink = link as SocialLink;
-          if (typeof socialLink.type !== 'string' || typeof socialLink.url !== 'string') {
-            return false;
-          }
-        }
-        return true;
+        const result = SocialLinkArraySchema.safeParse(value);
+        return result.success;
       },
     });
   }

@@ -1,11 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { SettingRegistryService } from '../setting/services/setting-registry.service';
 import { RewardInfoDto } from './dto/reward-info.dto';
-
-export interface RewardInfo {
-  name: string;
-  value: string;
-}
+import { RewardInfoArraySchema, RewardInfo } from './reward.schema';
 
 @Injectable()
 export class RewardService {
@@ -19,19 +15,8 @@ export class RewardService {
       defaultValue: [],
       description: 'Reward/donation payment methods',
       validator: (value: unknown) => {
-        if (!Array.isArray(value)) {
-          return false;
-        }
-        for (const reward of value) {
-          if (typeof reward !== 'object' || reward === null) {
-            return false;
-          }
-          const rewardItem = reward as RewardInfo;
-          if (typeof rewardItem.name !== 'string' || typeof rewardItem.value !== 'string') {
-            return false;
-          }
-        }
-        return true;
+        const result = RewardInfoArraySchema.safeParse(value);
+        return result.success;
       },
     });
   }

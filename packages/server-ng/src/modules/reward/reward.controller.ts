@@ -1,6 +1,7 @@
 import { Controller, Get, Post, Delete, Body, Param, UseGuards } from '@nestjs/common';
-import { RewardService, RewardInfo } from './reward.service';
+import { RewardService } from './reward.service';
 import { RewardInfoDto } from './dto/reward-info.dto';
+import { RewardInfo } from './reward.schema';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
 

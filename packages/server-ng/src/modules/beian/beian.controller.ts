@@ -1,6 +1,7 @@
 import { Controller, Get, Put, Body, UseGuards } from '@nestjs/common';
-import { BeianService, BeianInfo } from './beian.service';
+import { BeianService } from './beian.service';
 import { BeianInfoDto } from './dto/beian-info.dto';
+import { BeianInfo } from './beian.schema';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 

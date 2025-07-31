@@ -1,6 +1,7 @@
 import { Controller, Get, Post, Delete, Body, Param, UseGuards } from '@nestjs/common';
-import { SocialLinksService, SocialLink } from './social-links.service';
+import { SocialLinksService } from './social-links.service';
 import { SocialLinkDto } from './dto/social-link.dto';
+import { SocialLink } from './social-links.schema';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
 
