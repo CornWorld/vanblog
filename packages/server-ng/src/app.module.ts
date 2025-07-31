@@ -13,8 +13,8 @@ import { CategoryModule } from './modules/category/category.module';
 import { TagModule } from './modules/tag/tag.module';
 import { DraftModule } from './modules/draft/draft.module';
 import { MediaModule } from './modules/media/media.module';
-import { SharedModule } from './shared/shared.module';
 import { SettingModule } from './modules/setting/setting.module';
+import { AnalyticsModule } from './modules/analytics/analytics.module';
 
 @Module({
   imports: [
@@ -30,8 +30,8 @@ import { SettingModule } from './modules/setting/setting.module';
     TagModule,
     DraftModule,
     MediaModule,
-    SharedModule,
     SettingModule,
+    AnalyticsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
