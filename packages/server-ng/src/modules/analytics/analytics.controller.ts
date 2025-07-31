@@ -14,8 +14,11 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagg
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { AnalyticsService } from './services/analytics.service';
 import { ArticleStatsService, ArticleStats } from './services/article-stats.service';
+import { ThirdPartyAnalyticsService } from './services/third-party-analytics.service';
+import { EchartsFormatterService, EchartsOption } from './services/echarts-formatter.service';
 import { RecordAnalyticsDto } from './dto/record-analytics.dto';
 import { QueryAnalyticsDto } from './dto/query-analytics.dto';
+import { AnalyticsType } from './entities/analytics.entity';
 import {
   AnalyticsOverviewDto,
   PageRankingDto,
@@ -31,6 +34,8 @@ export class AnalyticsController {
   constructor(
     private readonly analyticsService: AnalyticsService,
     private readonly articleStatsService: ArticleStatsService,
+    private readonly thirdPartyAnalyticsService: ThirdPartyAnalyticsService,
+    private readonly echartsFormatterService: EchartsFormatterService,
   ) {}
 
   // 公开的记录接口，前端可以调用
@@ -53,6 +58,15 @@ export class AnalyticsController {
     };
 
     await this.analyticsService.recordAnalytics(recordDto);
+
+    // Send to third-party analytics services
+    if (dto.type === AnalyticsType.PAGEVIEW && dto.path) {
+      await this.thirdPartyAnalyticsService.trackPageview(
+        dto.path,
+        recordDto.ip,
+        recordDto.userAgent,
+      );
+    }
   }
 
   // 公开的文章浏览记录接口
@@ -161,5 +175,60 @@ export class AnalyticsController {
   @ApiResponse({ status: 200, description: '导出成功' })
   async exportAnalyticsData(@Query() query: QueryAnalyticsDto): Promise<unknown[]> {
     return this.analyticsService.exportAnalyticsData(query);
+  }
+
+  @Get('admin/analytics/echarts/dashboard')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: '获取Echarts仪表板数据' })
+  @ApiResponse({ status: 200, description: '获取成功' })
+  async getEchartsDashboard(@Query('days') days?: number): Promise<Record<string, EchartsOption>> {
+    const [timeSeries, devices, browsers] = await Promise.all([
+      this.analyticsService.getChartData(days),
+      this.analyticsService.getDeviceStats(),
+      this.analyticsService.getBrowserStats(),
+    ]);
+
+    return this.echartsFormatterService.formatDashboard(timeSeries, devices, browsers);
+  }
+
+  @Get('admin/analytics/echarts/timeseries')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: '获取Echarts时间序列图表数据' })
+  @ApiResponse({ status: 200, description: '获取成功' })
+  async getEchartsTimeSeries(@Query('days') days?: number): Promise<EchartsOption> {
+    const data = await this.analyticsService.getChartData(days);
+    return this.echartsFormatterService.formatTimeSeriesChart(data);
+  }
+
+  @Get('admin/analytics/echarts/devices')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: '获取Echarts设备分布图表数据' })
+  @ApiResponse({ status: 200, description: '获取成功' })
+  async getEchartsDevices(): Promise<EchartsOption> {
+    const data = await this.analyticsService.getDeviceStats();
+    return this.echartsFormatterService.formatDevicePieChart(data);
+  }
+
+  @Get('admin/analytics/echarts/browsers')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: '获取Echarts浏览器统计图表数据' })
+  @ApiResponse({ status: 200, description: '获取成功' })
+  async getEchartsBrowsers(): Promise<EchartsOption> {
+    const data = await this.analyticsService.getBrowserStats();
+    return this.echartsFormatterService.formatBrowserBarChart(data);
+  }
+
+  @Get('admin/analytics/echarts/page-rankings')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: '获取Echarts页面排行图表数据' })
+  @ApiResponse({ status: 200, description: '获取成功' })
+  async getEchartsPageRankings(@Query('limit') limit?: number): Promise<EchartsOption> {
+    const data = await this.analyticsService.getPageRankings(limit);
+    return this.echartsFormatterService.formatPageRankingsChart(data);
   }
 }
