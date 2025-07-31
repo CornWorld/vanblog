@@ -2,13 +2,25 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
 import { TagService } from './tag.service';
 import { DATABASE_CONNECTION } from '../../database/database.module';
+import { StatisticsService } from '../../shared/services/statistics.service';
 import { vi, describe, beforeEach, it, expect } from 'vitest';
 
 describe('TagService', () => {
   let service: TagService;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let mockDb: any;
+  let mockDb: {
+    select: ReturnType<typeof vi.fn>;
+    from: ReturnType<typeof vi.fn>;
+    where: ReturnType<typeof vi.fn>;
+    limit: ReturnType<typeof vi.fn>;
+    insert: ReturnType<typeof vi.fn>;
+    values: ReturnType<typeof vi.fn>;
+    returning: ReturnType<typeof vi.fn>;
+    update: ReturnType<typeof vi.fn>;
+    set: ReturnType<typeof vi.fn>;
+    delete: ReturnType<typeof vi.fn>;
+    groupBy: ReturnType<typeof vi.fn>;
+  };
 
   beforeEach(async () => {
     mockDb = {
@@ -22,14 +34,32 @@ describe('TagService', () => {
       update: vi.fn().mockReturnThis(),
       set: vi.fn().mockReturnThis(),
       delete: vi.fn().mockReturnThis(),
+      groupBy: vi.fn().mockReturnThis(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
+      imports: [],
       providers: [
         TagService,
         {
           provide: DATABASE_CONNECTION,
           useValue: mockDb,
+        },
+        {
+          provide: StatisticsService,
+          useValue: {
+            getOverallStatistics: vi.fn().mockResolvedValue({
+              totalCategories: 0,
+              totalTags: 0,
+              totalArticles: 0,
+              publishedArticles: 0,
+              privateArticles: 0,
+              hiddenArticles: 0,
+              totalViews: 0,
+              categories: [],
+              tags: [],
+            }),
+          },
         },
       ],
     }).compile();
@@ -49,12 +79,16 @@ describe('TagService', () => {
         },
       ];
 
+      // Mock the first query for getting all tags
       mockDb.from.mockResolvedValueOnce(mockTags);
+      // Mock the article count query
+      mockDb.where.mockResolvedValueOnce([{ count: 3 }]);
 
       const result = await service.findAll();
 
       expect(result.data).toHaveLength(1);
       expect(result.data[0].name).toBe('Tag1');
+      expect(result.data[0].articleCount).toBe(3);
       expect(result.total).toBe(1);
     });
   });
@@ -147,6 +181,33 @@ describe('TagService', () => {
       mockDb.returning.mockResolvedValueOnce([]);
 
       await expect(service.remove(999)).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('getTagsWithCategories', () => {
+    it('should return tags with their categories', async () => {
+      const mockTags = [
+        { id: 1, name: 'Tag1', slug: 'tag1' },
+        { id: 2, name: 'Tag2', slug: 'tag2' },
+      ];
+
+      const mockCategories = [
+        { category: 'Category1', count: 2 },
+        { category: 'Category2', count: 1 },
+      ];
+
+      // Mock for getting all tags
+      mockDb.from.mockResolvedValueOnce(mockTags);
+
+      // Mock for getting categories for each tag
+      mockDb.groupBy.mockResolvedValue(mockCategories);
+
+      const result = await service.getTagsWithCategories();
+
+      expect(result).toHaveLength(2);
+      expect(result[0].categories).toHaveLength(2);
+      expect(result[0].categories[0].name).toBe('Category1');
+      expect(result[0].categories[0].count).toBe(2);
     });
   });
 });

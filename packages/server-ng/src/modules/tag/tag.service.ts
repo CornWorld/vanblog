@@ -1,27 +1,41 @@
 import { Injectable, NotFoundException, Inject } from '@nestjs/common';
-import { eq } from 'drizzle-orm';
+import { eq, sql, like } from 'drizzle-orm';
 import { CreateTagDto, UpdateTagDto, TagListResponseDto } from './dto/tag.dto';
-import { tags } from '../../db/schema';
+import { tags, articles } from '../../db/schema';
 import { DATABASE_CONNECTION } from '../../database/database.module';
 import type { Database } from '../../db/connection';
 import { Tag } from './entities/tag.entity';
+import { StatisticsService } from '../../shared/services/statistics.service';
+import { OverallStatisticsDto } from '../../shared/dto/statistics.dto';
 
 @Injectable()
 export class TagService {
   constructor(
     @Inject(DATABASE_CONNECTION)
     private readonly db: Database,
+    private readonly statisticsService: StatisticsService,
   ) {}
 
   async findAll(): Promise<TagListResponseDto> {
     const tagResults = await this.db.select().from(tags);
     const total = tagResults.length;
 
-    const processedTags = tagResults.map((tag) => ({
-      ...tag,
-      slug: tag.slug ?? undefined,
-      articleCount: 0, // For now, we don't count articles
-    }));
+    // Count articles for each tag
+    const processedTags = await Promise.all(
+      tagResults.map(async (tag) => {
+        // Count articles that contain this tag
+        const countResult = await this.db
+          .select({ count: sql<number>`count(*)` })
+          .from(articles)
+          .where(like(articles.tags, `%"${tag.name}"%`));
+
+        return {
+          ...tag,
+          slug: tag.slug ?? undefined,
+          articleCount: Number(countResult[0]?.count) || 0,
+        };
+      }),
+    );
 
     return {
       data: processedTags,
@@ -74,5 +88,93 @@ export class TagService {
     if (result.length === 0) {
       throw new NotFoundException(`Tag with ID ${String(id)} not found`);
     }
+  }
+
+  async getStatistics(): Promise<OverallStatisticsDto> {
+    return this.statisticsService.getOverallStatistics();
+  }
+
+  async findByName(name: string): Promise<Tag | null> {
+    const results = await this.db.select().from(tags).where(eq(tags.name, name)).limit(1);
+
+    if (results.length === 0) {
+      return null;
+    }
+
+    return new Tag({
+      ...results[0],
+      slug: results[0].slug ?? undefined,
+    });
+  }
+
+  async findOrCreateTags(tagNames: string[]): Promise<Tag[]> {
+    const existingTags = await this.db.select().from(tags);
+    const existingTagNames = new Set(existingTags.map((tag) => tag.name));
+
+    const missingTags = tagNames.filter((tagName) => !existingTagNames.has(tagName));
+
+    if (missingTags.length > 0) {
+      const tagsToCreate = missingTags.map((tagName) => ({
+        name: tagName,
+        slug: tagName.toLowerCase().replace(/\s+/g, '-'),
+      }));
+
+      await this.db.insert(tags).values(tagsToCreate);
+    }
+
+    const allTags = await this.db
+      .select()
+      .from(tags)
+      .where(
+        sql`${tags.name} IN (${sql.join(
+          tagNames.map((name) => sql`${name}`),
+          sql`, `,
+        )})`,
+      );
+
+    return allTags.map(
+      (tag) =>
+        new Tag({
+          ...tag,
+          slug: tag.slug ?? undefined,
+        }),
+    );
+  }
+
+  async getTagsWithCategories(): Promise<
+    {
+      tag: Tag;
+      categories: { name: string; count: number }[];
+    }[]
+  > {
+    const tagList = await this.db.select().from(tags);
+
+    const results = await Promise.all(
+      tagList.map(async (tag) => {
+        const categoryStats = await this.db
+          .select({
+            category: articles.category,
+            count: sql<number>`count(*)`,
+          })
+          .from(articles)
+          .where(like(articles.tags, `%"${tag.name}"%`))
+          .groupBy(articles.category);
+
+        return {
+          tag: new Tag({
+            ...tag,
+            slug: tag.slug ?? undefined,
+          }),
+          categories: categoryStats
+            .filter((stat) => stat.category !== null)
+            .map((stat) => ({
+              name: stat.category as string,
+              count: Number(stat.count),
+            })),
+        };
+      }),
+    );
+
+    return results;
   }
 }

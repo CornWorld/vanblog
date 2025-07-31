@@ -8,7 +8,7 @@ import {
   ArticleSearchDto,
   ArticleSearchResponseDto,
 } from './dto/article.dto';
-import { articles } from '../../db/schema';
+import { articles, tags } from '../../db/schema';
 import { DATABASE_CONNECTION } from '../../database/database.module';
 import type { Database } from '../../db/connection';
 import { Article } from './entities/article.entity';
@@ -214,6 +214,11 @@ export class ArticleService {
   async create(createArticleDto: CreateArticleDto): Promise<Article> {
     const { tags, ...rest } = createArticleDto;
 
+    // Auto-create tags if they don't exist
+    if (tags && tags.length > 0) {
+      await this.createMissingTags(tags);
+    }
+
     const result = await this.db
       .insert(articles)
       .values({
@@ -270,6 +275,10 @@ export class ArticleService {
 
     if (tags !== undefined) {
       updateData.tags = JSON.stringify(tags);
+      // Auto-create tags if they don't exist
+      if (tags.length > 0) {
+        await this.createMissingTags(tags);
+      }
     }
     if ('category' in rest) {
       updateData.category = rest.category ?? null;
@@ -361,5 +370,24 @@ export class ArticleService {
         viewer: sql`${articles.viewer} + 1`,
       })
       .where(eq(articles.id, id));
+  }
+
+  private async createMissingTags(tagNames: string[]): Promise<void> {
+    // Get existing tags
+    const existingTags = await this.db.select().from(tags);
+    const existingTagNames = new Set(existingTags.map((tag) => tag.name));
+
+    // Find tags that need to be created
+    const missingTags = tagNames.filter((tagName) => !existingTagNames.has(tagName));
+
+    // Create missing tags
+    if (missingTags.length > 0) {
+      const tagsToCreate = missingTags.map((tagName) => ({
+        name: tagName,
+        slug: tagName.toLowerCase().replace(/\s+/g, '-'),
+      }));
+
+      await this.db.insert(tags).values(tagsToCreate);
+    }
   }
 }

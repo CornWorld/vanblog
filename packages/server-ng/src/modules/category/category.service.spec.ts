@@ -2,13 +2,26 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
 import { CategoryService } from './category.service';
 import { DATABASE_CONNECTION } from '../../database/database.module';
+import { StatisticsService } from '../../shared/services/statistics.service';
 import { vi, describe, beforeEach, it, expect } from 'vitest';
 
 describe('CategoryService', () => {
   let service: CategoryService;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let mockDb: any;
+  let mockDb: {
+    select: ReturnType<typeof vi.fn>;
+    from: ReturnType<typeof vi.fn>;
+    where: ReturnType<typeof vi.fn>;
+    limit: ReturnType<typeof vi.fn>;
+    insert: ReturnType<typeof vi.fn>;
+    values: ReturnType<typeof vi.fn>;
+    returning: ReturnType<typeof vi.fn>;
+    update: ReturnType<typeof vi.fn>;
+    set: ReturnType<typeof vi.fn>;
+    delete: ReturnType<typeof vi.fn>;
+    leftJoin: ReturnType<typeof vi.fn>;
+    groupBy: ReturnType<typeof vi.fn>;
+  };
 
   beforeEach(async () => {
     mockDb = {
@@ -27,11 +40,28 @@ describe('CategoryService', () => {
     };
 
     const module: TestingModule = await Test.createTestingModule({
+      imports: [],
       providers: [
         CategoryService,
         {
           provide: DATABASE_CONNECTION,
           useValue: mockDb,
+        },
+        {
+          provide: StatisticsService,
+          useValue: {
+            getOverallStatistics: vi.fn().mockResolvedValue({
+              totalCategories: 0,
+              totalTags: 0,
+              totalArticles: 0,
+              publishedArticles: 0,
+              privateArticles: 0,
+              hiddenArticles: 0,
+              totalViews: 0,
+              categories: [],
+              tags: [],
+            }),
+          },
         },
       ],
     }).compile();
@@ -166,6 +196,43 @@ describe('CategoryService', () => {
       mockDb.returning.mockResolvedValueOnce([]);
 
       await expect(service.remove(999)).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('getCategoriesWithTags', () => {
+    it('should return categories with their tags', async () => {
+      const mockCategories = [
+        {
+          id: 1,
+          name: 'Category1',
+          slug: 'category1',
+          description: null,
+          private: false,
+          password: null,
+        },
+        {
+          id: 2,
+          name: 'Category2',
+          slug: 'category2',
+          description: null,
+          private: false,
+          password: null,
+        },
+      ];
+
+      const mockArticles = [{ tags: '["tag1", "tag2"]' }, { tags: '["tag2", "tag3"]' }];
+
+      // Mock for getting all categories
+      mockDb.from.mockResolvedValueOnce(mockCategories);
+
+      // Mock for getting articles in each category - resolve to array
+      mockDb.where.mockResolvedValue(mockArticles);
+
+      const result = await service.getCategoriesWithTags();
+
+      expect(result).toHaveLength(2);
+      expect(result[0].tags).toHaveLength(3); // tag1, tag2, tag3
+      expect(result[0].tags[0].name).toBe('tag1');
     });
   });
 });

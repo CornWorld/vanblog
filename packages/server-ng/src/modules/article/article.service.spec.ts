@@ -8,8 +8,7 @@ import { vi, describe, beforeEach, it, expect } from 'vitest';
 describe('ArticleService', () => {
   let service: ArticleService;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let mockDb: any;
+  let mockDb: Record<string, ReturnType<typeof vi.fn>>;
 
   beforeEach(async () => {
     mockDb = {
@@ -25,8 +24,6 @@ describe('ArticleService', () => {
       update: vi.fn(),
       set: vi.fn(),
       delete: vi.fn(),
-      leftJoin: vi.fn(),
-      groupBy: vi.fn(),
     };
 
     // Reset all mocks to return this by default
@@ -36,6 +33,7 @@ describe('ArticleService', () => {
     });
 
     const module: TestingModule = await Test.createTestingModule({
+      imports: [],
       providers: [
         ArticleService,
         {
@@ -258,6 +256,9 @@ describe('ArticleService', () => {
         tags: ['new'],
       };
 
+      // Mock the db.select().from(tags) call
+      mockDb.from.mockResolvedValueOnce([]);
+
       const result = await service.create(createDto);
 
       expect(result.id).toBe(1);
@@ -292,6 +293,9 @@ describe('ArticleService', () => {
         content: 'Updated content',
         tags: ['updated'],
       };
+
+      // Mock the db.select().from(tags) call
+      mockDb.from.mockResolvedValueOnce([]);
 
       const result = await service.update(1, updateDto);
 
@@ -412,14 +416,26 @@ describe('ArticleService', () => {
         updatedAt: new Date(),
       }));
 
+      // Mock the db.select().from(tags) calls for both articles
+      mockDb.from
+        .mockResolvedValueOnce([]) // First article tags check
+        .mockResolvedValueOnce([]); // Second article tags check (no tags)
+
+      // Need to mock values for tags insert before returning
+      mockDb.values
+        .mockReturnValueOnce(mockDb) // First call for tags insert
+        .mockReturnValueOnce(mockDb) // Second call for first article
+        .mockReturnValueOnce(mockDb); // Third call for second article
+
       mockDb.returning
-        .mockResolvedValueOnce([mockResults[0]])
-        .mockResolvedValueOnce([mockResults[1]]);
+        .mockResolvedValueOnce([{ id: 1, name: 'import', slug: 'import' }]) // Tag creation returning
+        .mockResolvedValueOnce([mockResults[0]]) // First article
+        .mockResolvedValueOnce([mockResults[1]]); // Second article
 
       await service.importArticles(articlesToImport);
 
-      expect(mockDb.insert).toHaveBeenCalledTimes(2);
-      expect(mockDb.values).toHaveBeenCalledTimes(2);
+      expect(mockDb.insert).toHaveBeenCalledTimes(3); // 1 for tags, 2 for articles
+      expect(mockDb.values).toHaveBeenCalledTimes(3); // 1 for tags, 2 for articles
     });
   });
 });

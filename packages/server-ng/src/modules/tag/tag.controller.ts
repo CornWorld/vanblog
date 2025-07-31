@@ -3,6 +3,7 @@ import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { TagService } from './tag.service';
 import { TagDto, CreateTagDto, UpdateTagDto, TagListResponseDto } from './dto/tag.dto';
 import { Tag } from './entities/tag.entity';
+import { OverallStatisticsDto } from '../../shared/dto/statistics.dto';
 import { RequireAuth } from '../auth/auth.decorator';
 
 @ApiTags('tags')
@@ -52,5 +53,31 @@ export class TagController {
   @ApiResponse({ status: 404, description: 'Tag not found' })
   async remove(@Param('id', ParseIntPipe) id: number): Promise<void> {
     return this.tagService.remove(id);
+  }
+
+  @Get('statistics/overall')
+  @ApiOperation({ summary: 'Get overall statistics for categories and tags' })
+  @ApiResponse({
+    status: 200,
+    description: 'Overall statistics retrieved successfully',
+    type: OverallStatisticsDto,
+  })
+  async getStatistics(): Promise<OverallStatisticsDto> {
+    return this.tagService.getStatistics();
+  }
+
+  @Get('associations/categories')
+  @ApiOperation({ summary: 'Get tags with their associated categories' })
+  @ApiResponse({
+    status: 200,
+    description: 'Tags with categories retrieved successfully',
+  })
+  async getTagsWithCategories(): Promise<
+    {
+      tag: Tag;
+      categories: { name: string; count: number }[];
+    }[]
+  > {
+    return this.tagService.getTagsWithCategories();
   }
 }

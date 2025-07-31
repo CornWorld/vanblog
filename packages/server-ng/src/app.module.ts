@@ -11,6 +11,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { ArticleModule } from './modules/article/article.module';
 import { CategoryModule } from './modules/category/category.module';
 import { TagModule } from './modules/tag/tag.module';
+import { SharedModule } from './shared/shared.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { TagModule } from './modules/tag/tag.module';
     ArticleModule,
     CategoryModule,
     TagModule,
+    SharedModule,
   ],
   controllers: [AppController],
   providers: [AppService],
