@@ -4,16 +4,16 @@ import { LibSQLDatabase } from 'drizzle-orm/libsql';
 import { eq, like, and, desc, sql, inArray } from 'drizzle-orm';
 import { staticFiles } from '../../../db/schema';
 import { ListStaticFilesDto } from '../dto/list-static-files.dto';
-import { promises as fsPromises } from 'fs';
-import { join } from 'path';
-import { createHash } from 'crypto';
+import { StorageFactoryService } from './storage-factory.service';
 import sharp from 'sharp';
+import { StorageProvider } from '../dto/storage-config.dto';
 
 @Injectable()
 export class MediaService {
   constructor(
     @Inject(DATABASE_CONNECTION)
     private readonly db: LibSQLDatabase,
+    private readonly storageFactoryService: StorageFactoryService,
   ) {}
 
   async uploadFile(
@@ -22,40 +22,34 @@ export class MediaService {
     provider = 'local',
   ): Promise<typeof staticFiles.$inferSelect> {
     const filename = customFilename ?? file.originalname;
-    const uploadDir = join(process.cwd(), 'uploads', 'images');
+    const storageService = await this.storageFactoryService.getStorageService();
 
-    await fsPromises.mkdir(uploadDir, { recursive: true });
+    const { filename: uploadedFilename, url } = await storageService.upload(file, filename);
 
-    const timestamp = Date.now();
-    const hash = createHash('md5').update(file.buffer).digest('hex');
-    const ext = filename.split('.').pop();
-    const finalFilename = `${String(timestamp)}-${hash}.${ext ?? ''}`;
-    const filePath = join(uploadDir, finalFilename);
-    const relativePath = `/uploads/images/${finalFilename}`;
-
-    await fsPromises.writeFile(filePath, file.buffer);
-
+    // 获取图像尺寸信息
     let width: number | undefined;
     let height: number | undefined;
 
-    try {
-      const metadata = await sharp(file.buffer).metadata();
-      width = metadata.width;
-      height = metadata.height;
-    } catch (error) {
-      void error;
+    if (file.mimetype.startsWith('image/')) {
+      try {
+        const metadata = await sharp(file.buffer).metadata();
+        width = metadata.width;
+        height = metadata.height;
+      } catch {
+        // Error reading image metadata
+      }
     }
 
     const [result] = await this.db
       .insert(staticFiles)
       .values({
-        filename: finalFilename,
-        path: relativePath,
+        filename: uploadedFilename,
+        path: url,
         size: file.size,
         mimeType: file.mimetype,
         width,
         height,
-        hash,
+        hash: '', // Hash not required anymore
         provider,
       })
       .returning();
@@ -124,13 +118,11 @@ export class MediaService {
   async deleteFile(id: number): Promise<{ success: boolean; message: string }> {
     const file = await this.getFileById(id);
 
-    if (file.provider === 'local') {
-      const fullPath = join(process.cwd(), file.path);
-      try {
-        await fsPromises.unlink(fullPath);
-      } catch (error) {
-        void error;
-      }
+    const storageService = await this.storageFactoryService.getStorageService();
+    const currentProvider = await this.storageFactoryService.getCurrentProvider();
+
+    if (currentProvider === StorageProvider.LOCAL || file.provider === StorageProvider.LOCAL) {
+      await storageService.delete(file.filename);
     }
 
     await this.db.delete(staticFiles).where(eq(staticFiles.id, id));
@@ -146,15 +138,12 @@ export class MediaService {
     }
 
     const files = await this.db.select().from(staticFiles).where(inArray(staticFiles.id, ids));
+    const storageService = await this.storageFactoryService.getStorageService();
+    const currentProvider = await this.storageFactoryService.getCurrentProvider();
 
     for (const file of files) {
-      if (file.provider === 'local') {
-        const fullPath = join(process.cwd(), file.path);
-        try {
-          await fsPromises.unlink(fullPath);
-        } catch (error) {
-          void error;
-        }
+      if (currentProvider === StorageProvider.LOCAL || file.provider === StorageProvider.LOCAL) {
+        await storageService.delete(file.filename);
       }
     }
 

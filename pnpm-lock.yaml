@@ -623,6 +623,9 @@ importers:
       passport-local:
         specifier: ^1.0.0
         version: 1.0.0
+      picgo:
+        specifier: ^1.5.8
+        version: 1.5.9
       reflect-metadata:
         specifier: ^0.2.2
         version: 0.2.2

@@ -1,15 +1,9 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { MediaService } from './services/media.service';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
-import { promises as fsPromises } from 'fs';
-
-vi.mock('fs', () => ({
-  promises: {
-    mkdir: vi.fn(),
-    writeFile: vi.fn(),
-    unlink: vi.fn(),
-  },
-}));
+import { StorageFactoryService } from './services/storage-factory.service';
+import { StorageService, UploadResult } from './interfaces/storage.interface';
+import { StorageProvider } from './dto/storage-config.dto';
 
 vi.mock('sharp', () => ({
   default: vi.fn(() => ({
@@ -31,6 +25,8 @@ describe('MediaService', () => {
     limit: ReturnType<typeof vi.fn>;
     offset: ReturnType<typeof vi.fn>;
   };
+  let mockStorageService: Partial<StorageService>;
+  let mockStorageFactoryService: Partial<StorageFactoryService>;
 
   beforeEach(() => {
     mockDb = {
@@ -59,7 +55,28 @@ describe('MediaService', () => {
       offset: vi.fn().mockResolvedValue([]),
     };
 
-    service = new MediaService(mockDb as unknown as LibSQLDatabase);
+    const mockUploadResult: UploadResult = {
+      url: '/uploads/images/test.jpg',
+      filename: 'test.jpg',
+      size: 1024,
+      mimeType: 'image/jpeg',
+    };
+
+    mockStorageService = {
+      upload: vi.fn().mockResolvedValue(mockUploadResult),
+      delete: vi.fn().mockResolvedValue(true),
+      getUrl: vi.fn().mockReturnValue('/uploads/images/test.jpg'),
+    };
+
+    mockStorageFactoryService = {
+      getStorageService: vi.fn().mockResolvedValue(mockStorageService),
+      getCurrentProvider: vi.fn().mockResolvedValue(StorageProvider.LOCAL),
+    };
+
+    service = new MediaService(
+      mockDb as unknown as LibSQLDatabase,
+      mockStorageFactoryService as StorageFactoryService,
+    );
   });
 
   describe('uploadFile', () => {
@@ -76,8 +93,7 @@ describe('MediaService', () => {
       expect(result).toBeDefined();
       expect(result.filename).toContain('.jpg');
       expect(mockDb.insert).toHaveBeenCalled();
-      expect(fsPromises.mkdir).toHaveBeenCalled();
-      expect(fsPromises.writeFile).toHaveBeenCalled();
+      expect(mockStorageService.upload).toHaveBeenCalledWith(mockFile, 'test.jpg');
     });
 
     it('should use custom filename if provided', async () => {
@@ -91,6 +107,7 @@ describe('MediaService', () => {
       await service.uploadFile(mockFile, 'custom.jpg');
 
       expect(mockDb.insert).toHaveBeenCalled();
+      expect(mockStorageService.upload).toHaveBeenCalledWith(mockFile, 'custom.jpg');
     });
   });
 
@@ -133,6 +150,7 @@ describe('MediaService', () => {
         limit: vi.fn().mockResolvedValue([
           {
             id: 1,
+            filename: 'test.jpg',
             path: '/uploads/images/test.jpg',
             provider: 'local',
           },
@@ -143,7 +161,7 @@ describe('MediaService', () => {
 
       expect(result.success).toBe(true);
       expect(mockDb.delete).toHaveBeenCalled();
-      expect(fsPromises.unlink).toHaveBeenCalled();
+      expect(mockStorageService.delete).toHaveBeenCalledWith('test.jpg');
     });
 
     it('should throw NotFoundException for non-existent file', async () => {
@@ -162,8 +180,8 @@ describe('MediaService', () => {
       mockDb.select = vi.fn().mockReturnValue({
         from: vi.fn().mockReturnThis(),
         where: vi.fn().mockResolvedValue([
-          { id: 1, path: '/uploads/images/test1.jpg', provider: 'local' },
-          { id: 2, path: '/uploads/images/test2.jpg', provider: 'local' },
+          { id: 1, filename: 'test1.jpg', path: '/uploads/images/test1.jpg', provider: 'local' },
+          { id: 2, filename: 'test2.jpg', path: '/uploads/images/test2.jpg', provider: 'local' },
         ]),
       });
 
@@ -172,6 +190,7 @@ describe('MediaService', () => {
       expect(result.success).toBe(true);
       expect(result.deletedCount).toBe(2);
       expect(mockDb.delete).toHaveBeenCalled();
+      expect(mockStorageService.delete).toHaveBeenCalledTimes(2);
     });
 
     it('should throw BadRequestException for empty IDs array', async () => {

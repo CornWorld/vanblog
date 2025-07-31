@@ -24,6 +24,8 @@ import {
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { MediaService } from './services/media.service';
 import { ImageProcessingService } from './services/image-processing.service';
+import { StorageConfigService } from './services/storage-config.service';
+import { UpdateStorageConfigDto, StorageConfigResponseDto } from './dto/storage-config.dto';
 import { UploadFileDto } from './dto/upload-file.dto';
 import { ListStaticFilesDto } from './dto/list-static-files.dto';
 import { BatchDeleteDto } from './dto/batch-delete.dto';
@@ -46,6 +48,7 @@ export class MediaController {
   constructor(
     private readonly mediaService: MediaService,
     private readonly imageProcessingService: ImageProcessingService,
+    private readonly storageConfigService: StorageConfigService,
   ) {}
 
   @Post('upload')
@@ -209,5 +212,85 @@ export class MediaController {
     }>;
   }> {
     return this.mediaService.exportAllImages();
+  }
+
+  @Get('storage-config')
+  @ApiOperation({ summary: '获取存储配置' })
+  @ApiResponse({ status: 200, description: '获取成功', type: StorageConfigResponseDto })
+  async getStorageConfig(): Promise<StorageConfigResponseDto> {
+    return this.storageConfigService.getStorageConfig();
+  }
+
+  @Post('storage-config')
+  @ApiOperation({ summary: '更新存储配置' })
+  @ApiResponse({ status: 200, description: '更新成功', type: StorageConfigResponseDto })
+  async updateStorageConfig(
+    @Body() updateDto: UpdateStorageConfigDto,
+  ): Promise<StorageConfigResponseDto> {
+    return this.storageConfigService.updateStorageConfig(updateDto);
+  }
+
+  @Post('upload-clipboard')
+  @ApiOperation({ summary: '从剪贴板上传图片' })
+  @ApiConsumes('application/json')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        dataUrl: {
+          type: 'string',
+          description: 'Base64 格式的图片数据',
+        },
+        filename: {
+          type: 'string',
+          description: '文件名',
+        },
+      },
+      required: ['dataUrl'],
+    },
+  })
+  @ApiResponse({ status: 201, description: '上传成功' })
+  async uploadFromClipboard(
+    @Body() body: { dataUrl: string; filename?: string },
+  ): Promise<typeof staticFiles.$inferSelect> {
+    const matches = body.dataUrl.match(/^data:([A-Za-z-+/]+);base64,(.+)$/);
+    if (!matches || matches.length !== 3) {
+      throw new BadRequestException('Invalid data URL format');
+    }
+
+    const mimeType = matches[1];
+    const base64Data = matches[2];
+    const buffer = Buffer.from(base64Data, 'base64');
+
+    const ext = mimeType.split('/')[1] ?? 'png';
+    const filename = body.filename ?? `clipboard-${String(Date.now())}.${ext}`;
+
+    const file: Express.Multer.File = {
+      fieldname: 'clipboard',
+      originalname: filename,
+      encoding: '7bit',
+      mimetype: mimeType,
+      buffer,
+      size: buffer.length,
+    } as Express.Multer.File;
+
+    let processedBuffer = buffer;
+
+    // 压缩图片
+    if (mimeType.startsWith('image/') && mimeType !== 'image/svg+xml') {
+      processedBuffer = await this.imageProcessingService.compressImage(buffer, {
+        quality: 85,
+        maxWidth: 1920,
+        maxHeight: 1080,
+      });
+    }
+
+    const processedFile = {
+      ...file,
+      buffer: processedBuffer,
+      size: processedBuffer.length,
+    };
+
+    return this.mediaService.uploadFile(processedFile, filename);
   }
 }
