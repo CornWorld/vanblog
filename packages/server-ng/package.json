@@ -73,6 +73,7 @@
     "@types/passport-local": "^1.0.38",
     "@types/supertest": "^6.0.3",
     "@types/ua-parser-js": "^0.7.39",
+    "@vitest/coverage-v8": "^3.2.4",
     "@vitest/ui": "^3.2.3",
     "drizzle-kit": "^0.31.4",
     "eslint": "^9.32.0",
