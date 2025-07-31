@@ -155,17 +155,6 @@ describe('CategoryService', () => {
 
   describe('update', () => {
     it('should update an existing category', async () => {
-      const mockExistingCategory = {
-        id: 1,
-        name: 'Old Category',
-        slug: null,
-        description: 'Old description',
-        private: false,
-        password: null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
       const mockUpdatedCategory = {
         id: 1,
         name: 'Updated Category',
@@ -177,8 +166,6 @@ describe('CategoryService', () => {
         updatedAt: new Date(),
       };
 
-      // Mock findOne call
-      mockDb.limit.mockResolvedValueOnce([mockExistingCategory]);
       // Mock update returning
       mockDb.returning.mockResolvedValueOnce([mockUpdatedCategory]);
 
@@ -194,8 +181,8 @@ describe('CategoryService', () => {
     });
 
     it('should throw NotFoundException when category not found', async () => {
-      // Mock findOne to throw NotFoundException
-      mockDb.limit.mockResolvedValueOnce([]);
+      // Mock update returning empty array
+      mockDb.returning.mockResolvedValueOnce([]);
 
       await expect(service.update(999, { name: 'Test' })).rejects.toThrow(NotFoundException);
     });

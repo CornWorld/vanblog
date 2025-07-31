@@ -30,7 +30,10 @@ export const articles = sqliteTable(
     content: text('content').notNull(),
     pathname: text('pathname').unique(),
     tags: text('tags'), // JSON string for tags array
-    category: text('category'),
+    category: text('category').references(() => categories.name, {
+      onUpdate: 'cascade',
+      onDelete: 'set null',
+    }),
     author: text('author').notNull(),
     top: integer('top').default(0),
     hidden: integer('hidden', { mode: 'boolean' }).default(false),

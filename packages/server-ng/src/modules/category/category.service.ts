@@ -100,10 +100,6 @@ export class CategoryService {
   async update(id: number, updateCategoryDto: UpdateCategoryDto): Promise<Category> {
     const categoryData = Object.assign({}, updateCategoryDto);
 
-    // Check if category name has changed
-    const existingCategory = await this.findOne(id);
-    const oldName = existingCategory.name;
-
     // Hash password if provided
     if (categoryData.password) {
       categoryData.password = await bcrypt.hash(categoryData.password, 10);
@@ -119,13 +115,7 @@ export class CategoryService {
       throw new NotFoundException(`Category with ID ${String(id)} not found`);
     }
 
-    // If the name has changed, update related articles
-    if (categoryData.name !== oldName && categoryData.name) {
-      await this.db
-        .update(articles)
-        .set({ category: categoryData.name })
-        .where(eq(articles.category, oldName));
-    }
+    // Foreign key constraint will handle cascade update automatically
 
     return new Category({
       ...result[0],

@@ -1,5 +1,6 @@
 import { drizzle, type LibSQLDatabase } from 'drizzle-orm/libsql';
 import { createClient } from '@libsql/client';
+import { sql } from 'drizzle-orm';
 import type { DatabaseConfig } from '../config/database.config';
 import type { LoggerService } from '../core/logger/logger.service';
 
@@ -33,6 +34,15 @@ export function createDatabaseConnection(config: DatabaseConfig, logger: LoggerS
 
   const client = createClient(clientConfig);
   const db = drizzle(client);
+
+  // Enable foreign key constraints for SQLite
+  db.run(sql`PRAGMA foreign_keys = ON`)
+    .then(() => {
+      logger.log('Foreign key constraints enabled', 'Database');
+    })
+    .catch((error) => {
+      logger.error('Failed to enable foreign key constraints', error, 'Database');
+    });
 
   logger.log('Database connection established', 'Database');
 
