@@ -17,6 +17,8 @@ import {
   UpdateArticleDto,
   ArticleQueryDto,
   ArticleListResponseDto,
+  ArticleSearchDto,
+  ArticleSearchResponseDto,
 } from './dto/article.dto';
 import { RequireAuth } from '../auth/auth.decorator';
 
@@ -29,7 +31,19 @@ export class ArticleController {
   @ApiOperation({ summary: 'Get all articles' })
   @ApiResponse({ status: 200, description: 'Return all articles', type: ArticleListResponseDto })
   async findAll(@Query() query: ArticleQueryDto): Promise<ArticleListResponseDto> {
-    return this.articleService.findAll(query);
+    const articles = await this.articleService.findAll(query);
+    return articles;
+  }
+
+  @Get('search')
+  @ApiOperation({ summary: 'Search articles' })
+  @ApiResponse({
+    status: 200,
+    description: 'Return search results',
+    type: ArticleSearchResponseDto,
+  })
+  async search(@Query() query: ArticleSearchDto): Promise<ArticleSearchResponseDto> {
+    return this.articleService.search(query);
   }
 
   @Get(':id')

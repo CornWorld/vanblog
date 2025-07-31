@@ -5,6 +5,8 @@ import {
   UpdateArticleDto,
   ArticleQueryDto,
   ArticleListResponseDto,
+  ArticleSearchDto,
+  ArticleSearchResponseDto,
 } from './dto/article.dto';
 import { articles } from '../../db/schema';
 import { DATABASE_CONNECTION } from '../../database/database.module';
@@ -52,6 +54,95 @@ export class ArticleService {
 
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
+    const orderByClause = (() => {
+      const column = articles[sortBy as keyof typeof articles.$inferSelect];
+      return sortOrder === 'asc' ? asc(column) : desc(column);
+    })();
+
+    const [articleResults, countResult] = await Promise.all([
+      this.db
+        .select()
+        .from(articles)
+        .where(whereClause)
+        .orderBy(orderByClause)
+        .limit(pageSize)
+        .offset((page - 1) * pageSize),
+      this.db
+        .select({ count: sql<number>`count(*)` })
+        .from(articles)
+        .where(whereClause),
+    ]);
+
+    const processedArticles = articleResults.map((article) => ({
+      ...article,
+      tags: article.tags ? (JSON.parse(article.tags) as string[]) : [],
+      pathname: article.pathname ?? undefined,
+      category: article.category ?? undefined,
+      author: article.author,
+      top: article.top ?? undefined,
+      hidden: article.hidden ?? undefined,
+      private: article.private ?? undefined,
+      password: article.password ?? undefined,
+      viewer: article.viewer ?? undefined,
+    }));
+
+    return {
+      data: processedArticles.map((article) => new Article(article)),
+      total: countResult[0]?.count ?? 0,
+      page,
+      pageSize,
+    };
+  }
+
+  async search(query: ArticleSearchDto): Promise<ArticleSearchResponseDto> {
+    const startTime = Date.now();
+    const {
+      query: searchTerm,
+      page = 1,
+      pageSize = 10,
+      titleOnly = false,
+      contentOnly = false,
+      category,
+      tags,
+      includeHidden = false,
+      includePrivate = false,
+      sortBy = 'relevance',
+      sortOrder = 'desc',
+    } = query;
+
+    const conditions = [];
+
+    if (searchTerm) {
+      if (titleOnly) {
+        conditions.push(like(articles.title, `%${searchTerm}%`));
+      } else if (contentOnly) {
+        conditions.push(like(articles.content, `%${searchTerm}%`));
+      } else {
+        conditions.push(
+          or(like(articles.title, `%${searchTerm}%`), like(articles.content, `%${searchTerm}%`)),
+        );
+      }
+    }
+
+    if (category) {
+      conditions.push(eq(articles.category, category));
+    }
+
+    if (tags && tags.length > 0) {
+      const tagConditions = tags.map((tag) => like(articles.tags, `%"${tag}"%`));
+      conditions.push(or(...tagConditions));
+    }
+
+    if (!includeHidden) {
+      conditions.push(eq(articles.hidden, false));
+    }
+
+    if (!includePrivate) {
+      conditions.push(eq(articles.private, false));
+    }
+
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
     // Build order by clause
     const orderByClause = (() => {
       const column = articles[sortBy as keyof typeof articles.$inferSelect];
@@ -77,42 +168,46 @@ export class ArticleService {
       tags: article.tags ? (JSON.parse(article.tags) as string[]) : [],
       pathname: article.pathname ?? undefined,
       category: article.category ?? undefined,
-      author: article.author ?? 'admin',
-      top: article.top ?? 0,
-      hidden: article.hidden ?? false,
-      private: article.private ?? false,
+      author: article.author,
+      top: article.top ?? undefined,
+      hidden: article.hidden ?? undefined,
+      private: article.private ?? undefined,
       password: article.password ?? undefined,
-      viewer: article.viewer ?? 0,
+      viewer: article.viewer ?? undefined,
     }));
+
+    const searchTime = Date.now() - startTime;
 
     return {
       data: processedArticles.map((article) => new Article(article)),
       total: countResult[0]?.count ?? 0,
       page,
       pageSize,
+      query: searchTerm,
+      searchTime,
     };
   }
 
   async findOne(id: number): Promise<Article> {
     const results = await this.db.select().from(articles).where(eq(articles.id, id)).limit(1);
 
-    const article = results[0];
-
-    if (!article) {
+    if (results.length === 0) {
       throw new NotFoundException(`Article with ID ${String(id)} not found`);
     }
+
+    const article = results[0];
 
     return new Article({
       ...article,
       tags: article.tags ? (JSON.parse(article.tags) as string[]) : [],
       pathname: article.pathname ?? undefined,
       category: article.category ?? undefined,
-      author: article.author ?? 'admin',
-      top: article.top ?? 0,
-      hidden: article.hidden ?? false,
-      private: article.private ?? false,
+      author: article.author,
+      top: article.top ?? undefined,
+      hidden: article.hidden ?? undefined,
+      private: article.private ?? undefined,
       password: article.password ?? undefined,
-      viewer: article.viewer ?? 0,
+      viewer: article.viewer ?? undefined,
     });
   }
 
@@ -136,23 +231,23 @@ export class ArticleService {
       })
       .returning();
 
-    const newArticle = result[0];
-
-    if (!newArticle) {
+    if (result.length === 0) {
       throw new Error('Failed to create article');
     }
+
+    const newArticle = result[0];
 
     return new Article({
       ...newArticle,
       tags: newArticle.tags ? (JSON.parse(newArticle.tags) as string[]) : [],
       pathname: newArticle.pathname ?? undefined,
       category: newArticle.category ?? undefined,
-      author: newArticle.author ?? 'admin',
-      top: newArticle.top ?? 0,
-      hidden: newArticle.hidden ?? false,
-      private: newArticle.private ?? false,
+      author: newArticle.author,
+      top: newArticle.top ?? undefined,
+      hidden: newArticle.hidden ?? undefined,
+      private: newArticle.private ?? undefined,
       password: newArticle.password ?? undefined,
-      viewer: newArticle.viewer ?? 0,
+      viewer: newArticle.viewer ?? undefined,
     });
   }
 
@@ -161,38 +256,38 @@ export class ArticleService {
 
     const updateData: Record<string, unknown> = {};
 
-    if (rest.title !== undefined) {
+    if ('title' in rest) {
       updateData.title = rest.title;
     }
 
-    if (rest.content !== undefined) {
+    if ('content' in rest) {
       updateData.content = rest.content;
     }
 
-    if (rest.pathname !== undefined) {
-      updateData.pathname = rest.pathname;
+    if ('pathname' in rest) {
+      updateData.pathname = rest.pathname ?? null;
     }
 
     if (tags !== undefined) {
       updateData.tags = JSON.stringify(tags);
     }
-    if (rest.category !== undefined) {
-      updateData.category = rest.category;
+    if ('category' in rest) {
+      updateData.category = rest.category ?? null;
     }
-    if (rest.author !== undefined) {
+    if ('author' in rest) {
       updateData.author = rest.author;
     }
-    if (rest.top !== undefined) {
+    if ('top' in rest) {
       updateData.top = rest.top;
     }
-    if (rest.hidden !== undefined) {
+    if ('hidden' in rest) {
       updateData.hidden = rest.hidden;
     }
-    if (rest.private !== undefined) {
+    if ('private' in rest) {
       updateData.private = rest.private;
     }
-    if (rest.password !== undefined) {
-      updateData.password = rest.password;
+    if ('password' in rest) {
+      updateData.password = rest.password ?? null;
     }
 
     updateData.updatedAt = new Date();
@@ -203,23 +298,23 @@ export class ArticleService {
       .where(eq(articles.id, id))
       .returning();
 
-    const updatedArticle = result[0];
-
-    if (!updatedArticle) {
+    if (result.length === 0) {
       throw new NotFoundException(`Article with ID ${String(id)} not found`);
     }
+
+    const updatedArticle = result[0];
 
     return new Article({
       ...updatedArticle,
       tags: updatedArticle.tags ? (JSON.parse(updatedArticle.tags) as string[]) : [],
       pathname: updatedArticle.pathname ?? undefined,
       category: updatedArticle.category ?? undefined,
-      author: updatedArticle.author ?? 'admin',
-      top: updatedArticle.top ?? 0,
-      hidden: updatedArticle.hidden ?? false,
-      private: updatedArticle.private ?? false,
+      author: updatedArticle.author,
+      top: updatedArticle.top ?? undefined,
+      hidden: updatedArticle.hidden ?? undefined,
+      private: updatedArticle.private ?? undefined,
       password: updatedArticle.password ?? undefined,
-      viewer: updatedArticle.viewer ?? 0,
+      viewer: updatedArticle.viewer ?? undefined,
     });
   }
 

@@ -133,3 +133,92 @@ export class ArticleListResponseDto {
   @ApiProperty({ description: 'Page size' })
   pageSize!: number;
 }
+
+export class ArticleSearchDto {
+  @ApiProperty({ description: 'Search query' })
+  @IsString()
+  @MinLength(1)
+  query!: string;
+
+  @ApiPropertyOptional({ description: 'Search in title only' })
+  @IsOptional()
+  @IsBoolean()
+  titleOnly?: boolean;
+
+  @ApiPropertyOptional({ description: 'Search in content only' })
+  @IsOptional()
+  @IsBoolean()
+  contentOnly?: boolean;
+
+  @ApiPropertyOptional({ description: 'Filter by category' })
+  @IsOptional()
+  @IsString()
+  category?: string;
+
+  @ApiPropertyOptional({ description: 'Filter by tags', type: [String] })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  tags?: string[];
+
+  @ApiPropertyOptional({ description: 'Include hidden articles' })
+  @IsOptional()
+  @IsBoolean()
+  includeHidden?: boolean;
+
+  @ApiPropertyOptional({ description: 'Include private articles' })
+  @IsOptional()
+  @IsBoolean()
+  includePrivate?: boolean;
+
+  @ApiPropertyOptional({ description: 'Page number' })
+  @IsOptional()
+  @IsNumber()
+  page?: number;
+
+  @ApiPropertyOptional({ description: 'Page size' })
+  @IsOptional()
+  @IsNumber()
+  pageSize?: number;
+
+  @ApiPropertyOptional({ description: 'Sort field' })
+  @IsOptional()
+  @IsString()
+  sortBy?: 'relevance' | 'createdAt' | 'updatedAt' | 'viewer';
+
+  @ApiPropertyOptional({ description: 'Sort order', enum: ['asc', 'desc'] })
+  @IsOptional()
+  @IsString()
+  sortOrder?: 'asc' | 'desc';
+}
+
+export class ArticleSearchResultDto extends ArticleDto {
+  @ApiPropertyOptional({ description: 'Search relevance score' })
+  relevance?: number;
+
+  @ApiPropertyOptional({ description: 'Highlighted title with search matches' })
+  highlightedTitle?: string;
+
+  @ApiPropertyOptional({ description: 'Content excerpt with search matches' })
+  excerpt?: string;
+}
+
+export class ArticleSearchResponseDto {
+  @ApiProperty({ description: 'Search results', type: [ArticleSearchResultDto] })
+  data!: ArticleSearchResultDto[];
+
+  @ApiProperty({ description: 'Total count' })
+  total!: number;
+
+  @ApiProperty({ description: 'Current page' })
+  page!: number;
+
+  @ApiProperty({ description: 'Page size' })
+  pageSize!: number;
+
+  @ApiProperty({ description: 'Search query' })
+  query!: string;
+
+  @ApiProperty({ description: 'Search execution time in milliseconds' })
+  searchTime!: number;
+}
