@@ -15,6 +15,9 @@ import { DraftModule } from './modules/draft/draft.module';
 import { MediaModule } from './modules/media/media.module';
 import { SettingModule } from './modules/setting/setting.module';
 import { AnalyticsModule } from './modules/analytics/analytics.module';
+import { BeianModule } from './modules/beian/beian.module';
+import { SocialLinksModule } from './modules/social-links/social-links.module';
+import { RewardModule } from './modules/reward/reward.module';
 
 @Module({
   imports: [
@@ -32,6 +35,9 @@ import { AnalyticsModule } from './modules/analytics/analytics.module';
     MediaModule,
     SettingModule,
     AnalyticsModule,
+    BeianModule,
+    SocialLinksModule,
+    RewardModule,
   ],
   controllers: [AppController],
   providers: [AppService],

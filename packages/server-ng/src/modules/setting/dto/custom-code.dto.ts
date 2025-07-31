@@ -2,23 +2,18 @@ import { IsString, IsOptional } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
 export class UpdateCustomCodeDto {
-  @ApiPropertyOptional({ description: 'Custom CSS code' })
+  @ApiPropertyOptional({ description: 'Custom code to inject in <head> tag' })
   @IsOptional()
   @IsString()
-  customCss?: string;
+  head?: string;
 
-  @ApiPropertyOptional({ description: 'Custom HTML code' })
+  @ApiPropertyOptional({ description: 'Custom code to inject in <body> tag' })
   @IsOptional()
   @IsString()
-  customHtml?: string;
+  body?: string;
 
-  @ApiPropertyOptional({ description: 'Header injection code' })
+  @ApiPropertyOptional({ description: 'Custom code to inject before </body> tag' })
   @IsOptional()
   @IsString()
-  headerCode?: string;
-
-  @ApiPropertyOptional({ description: 'Footer injection code' })
-  @IsOptional()
-  @IsString()
-  footerCode?: string;
+  footer?: string;
 }
