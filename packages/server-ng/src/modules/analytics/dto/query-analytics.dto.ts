@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { createZodDto } from 'nestjs-zod';
 import { AnalyticsType } from '../entities/analytics.entity';
 
 export const QueryAnalyticsSchema = z.object({
@@ -8,6 +9,6 @@ export const QueryAnalyticsSchema = z.object({
   path: z.string().optional(),
 });
 
-export type QueryAnalyticsDto = z.infer<typeof QueryAnalyticsSchema>;
+export class QueryAnalyticsDto extends createZodDto(QueryAnalyticsSchema) {}
 
 export type QueryAnalyticsType = z.infer<typeof QueryAnalyticsSchema>;

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { createZodDto } from 'nestjs-zod';
 import { commonSchemas } from '../../../shared/zod';
 
 export const UpdateSiteInfoSchema = z.object({
@@ -17,4 +18,4 @@ export const UpdateSiteInfoSchema = z.object({
   baiduId: z.string().optional(),
 });
 
-export type UpdateSiteInfoDto = z.infer<typeof UpdateSiteInfoSchema>;
+export class UpdateSiteInfoDto extends createZodDto(UpdateSiteInfoSchema) {}

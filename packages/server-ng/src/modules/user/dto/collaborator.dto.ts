@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { createZodDto } from 'nestjs-zod';
 import { commonSchemas } from '../../../shared/zod';
 
 export const CollaboratorSchema = z.object({
@@ -8,4 +9,4 @@ export const CollaboratorSchema = z.object({
   permissions: z.array(z.string()).describe('权限列表'),
 });
 
-export type CollaboratorDto = z.infer<typeof CollaboratorSchema>;
+export class CollaboratorDto extends createZodDto(CollaboratorSchema) {}

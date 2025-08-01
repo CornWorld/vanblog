@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { createZodDto } from 'nestjs-zod';
 import { commonSchemas } from '../../../shared/zod';
 
 export const CreateFriendLinkSchema = z.object({
@@ -10,5 +11,5 @@ export const CreateFriendLinkSchema = z.object({
 
 export const UpdateFriendLinkSchema = CreateFriendLinkSchema;
 
-export type CreateFriendLinkDto = z.infer<typeof CreateFriendLinkSchema>;
-export type UpdateFriendLinkDto = z.infer<typeof UpdateFriendLinkSchema>;
+export class CreateFriendLinkDto extends createZodDto(CreateFriendLinkSchema) {}
+export class UpdateFriendLinkDto extends createZodDto(UpdateFriendLinkSchema) {}

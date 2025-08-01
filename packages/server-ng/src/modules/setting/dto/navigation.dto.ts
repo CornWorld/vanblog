@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { createZodDto } from 'nestjs-zod';
 
 // 导航项类型定义
 type NavigationItem = {
@@ -34,5 +35,5 @@ export const NavigationResponseSchema = z.object({
   items: z.array(NavigationItemSchema),
 });
 
-export type NavigationItemDto = z.infer<typeof NavigationItemSchema>;
-export type UpdateNavigationDto = z.infer<typeof UpdateNavigationSchema>;
+export class NavigationItemDto extends createZodDto(NavigationItemSchema) {}
+export class UpdateNavigationDto extends createZodDto(UpdateNavigationSchema) {}

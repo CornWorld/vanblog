@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { createZodDto } from 'nestjs-zod';
 import { commonSchemas } from '../../../shared/zod';
 
 export const VerifyCategoryPasswordSchema = z.object({
@@ -11,8 +12,8 @@ export const CategoryAccessResponseSchema = z.object({
   message: z.string().optional().describe('Error message if access is denied'),
 });
 
-export type VerifyCategoryPasswordDto = z.infer<typeof VerifyCategoryPasswordSchema>;
-export type CategoryAccessResponseDto = z.infer<typeof CategoryAccessResponseSchema>;
+export class VerifyCategoryPasswordDto extends createZodDto(VerifyCategoryPasswordSchema) {}
+export class CategoryAccessResponseDto extends createZodDto(CategoryAccessResponseSchema) {}
 
 // Class for Swagger documentation
 export class CategoryAccessResponse {

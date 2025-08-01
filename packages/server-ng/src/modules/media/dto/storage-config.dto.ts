@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { createZodDto } from 'nestjs-zod';
 
 // 存储提供商枚举
 export enum StorageProvider {
@@ -30,5 +31,5 @@ export const StorageConfigResponseSchema = z.object({
   picgoConfig: PicgoConfigSchema.describe('PicGo configuration').optional(),
 });
 
-export type UpdateStorageConfigDto = z.infer<typeof UpdateStorageConfigSchema>;
-export type StorageConfigResponseDto = z.infer<typeof StorageConfigResponseSchema>;
+export class UpdateStorageConfigDto extends createZodDto(UpdateStorageConfigSchema) {}
+export class StorageConfigResponseDto extends createZodDto(StorageConfigResponseSchema) {}

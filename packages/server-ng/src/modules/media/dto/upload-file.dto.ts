@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { createZodDto } from 'nestjs-zod';
 
 export const UploadFileSchema = z.object({
   file: z.any().describe('要上传的文件'),
@@ -6,9 +7,9 @@ export const UploadFileSchema = z.object({
   provider: z.string().optional().default('local').describe('存储提供商'),
 });
 
-export type UploadFileDto = z.infer<typeof UploadFileSchema> & {
-  file: Express.Multer.File;
-};
+export class UploadFileDto extends createZodDto(UploadFileSchema) {
+  file!: Express.Multer.File;
+}
 
 // Class for Swagger documentation
 export class UploadFile {

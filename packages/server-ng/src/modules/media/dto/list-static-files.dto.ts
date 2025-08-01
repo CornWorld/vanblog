@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { createZodDto } from 'nestjs-zod';
 import { commonSchemas } from '../../../shared/zod';
 
 export const ListStaticFilesSchema = z.object({
@@ -10,4 +11,4 @@ export const ListStaticFilesSchema = z.object({
   sortOrder: z.enum(['asc', 'desc']).default('desc'),
 });
 
-export type ListStaticFilesDto = z.infer<typeof ListStaticFilesSchema>;
+export class ListStaticFilesDto extends createZodDto(ListStaticFilesSchema) {}

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { createZodDto } from 'nestjs-zod';
 
 export const UpdateThemeSchema = z.object({
   theme: z.string().min(1, '主题名称不能为空'),
@@ -9,4 +10,4 @@ export const UpdateThemeSchema = z.object({
   customFooter: z.string().optional(),
 });
 
-export type UpdateThemeDto = z.infer<typeof UpdateThemeSchema>;
+export class UpdateThemeDto extends createZodDto(UpdateThemeSchema) {}

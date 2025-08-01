@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { createZodDto } from 'nestjs-zod';
 import { commonSchemas } from '../../../shared/zod';
 
 export const RewardInfoSchema = z.object({
@@ -6,4 +7,4 @@ export const RewardInfoSchema = z.object({
   value: commonSchemas.nonEmptyString.describe('Payment value (e.g., QR code URL or account)'),
 });
 
-export type RewardInfoDto = z.infer<typeof RewardInfoSchema>;
+export class RewardInfoDto extends createZodDto(RewardInfoSchema) {}

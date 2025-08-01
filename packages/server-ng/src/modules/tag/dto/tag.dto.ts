@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { createZodDto } from 'nestjs-zod';
 import { commonSchemas } from '../../../shared/zod';
 
 // 基础标签 Schema
@@ -32,8 +33,8 @@ export const TagListResponseSchema = z.object({
   total: z.number(),
 });
 
-export type CreateTagDto = z.infer<typeof CreateTagSchema>;
-export type UpdateTagDto = z.infer<typeof UpdateTagSchema>;
-export type TagDto = z.infer<typeof TagSchema>;
-export type TagWithCountDto = z.infer<typeof TagWithCountSchema>;
-export type TagListResponseDto = z.infer<typeof TagListResponseSchema>;
+export class CreateTagDto extends createZodDto(CreateTagSchema) {}
+export class UpdateTagDto extends createZodDto(UpdateTagSchema) {}
+export class TagDto extends createZodDto(TagSchema) {}
+export class TagWithCountDto extends createZodDto(TagWithCountSchema) {}
+export class TagListResponseDto extends createZodDto(TagListResponseSchema) {}

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { createZodDto } from 'nestjs-zod';
 import { commonSchemas } from '../../../shared/zod';
 
 // 基础文章 Schema
@@ -117,11 +118,11 @@ export const ArticleSearchResponseSchema = z.object({
   totalPages: z.number(),
 });
 
-export type CreateArticleDto = z.infer<typeof CreateArticleSchema>;
-export type UpdateArticleDto = z.infer<typeof UpdateArticleSchema>;
-export type ArticleDto = z.infer<typeof ArticleSchema>;
-export type ArticleQueryDto = z.infer<typeof ArticleQuerySchema>;
-export type ArticleListResponseDto = z.infer<typeof ArticleListResponseSchema>;
-export type ArticleSearchDto = z.infer<typeof ArticleSearchSchema>;
-export type ArticleSearchResultDto = z.infer<typeof ArticleSearchResultSchema>;
-export type ArticleSearchResponseDto = z.infer<typeof ArticleSearchResponseSchema>;
+export class CreateArticleDto extends createZodDto(CreateArticleSchema) {}
+export class UpdateArticleDto extends createZodDto(UpdateArticleSchema) {}
+export class ArticleDto extends createZodDto(ArticleSchema) {}
+export class ArticleQueryDto extends createZodDto(ArticleQuerySchema) {}
+export class ArticleListResponseDto extends createZodDto(ArticleListResponseSchema) {}
+export class ArticleSearchDto extends createZodDto(ArticleSearchSchema) {}
+export class ArticleSearchResultDto extends createZodDto(ArticleSearchResultSchema) {}
+export class ArticleSearchResponseDto extends createZodDto(ArticleSearchResponseSchema) {}

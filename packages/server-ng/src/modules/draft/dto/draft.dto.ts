@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { createZodDto } from 'nestjs-zod';
 import { commonSchemas } from '../../../shared/zod';
 
 // 创建草稿 Schema
@@ -84,11 +85,11 @@ export const DraftVersionListResponseSchema = z.object({
   totalPages: z.number(),
 });
 
-export type CreateDraftDto = z.infer<typeof CreateDraftSchema>;
-export type UpdateDraftDto = z.infer<typeof UpdateDraftSchema>;
-export type DraftDto = z.infer<typeof DraftSchema>;
-export type DraftListResponseDto = z.infer<typeof DraftListResponseSchema>;
-export type DraftQueryDto = z.infer<typeof DraftQuerySchema>;
-export type PublishDraftDto = z.infer<typeof PublishDraftSchema>;
-export type DraftVersionDto = z.infer<typeof DraftVersionSchema>;
-export type DraftVersionListResponseDto = z.infer<typeof DraftVersionListResponseSchema>;
+export class CreateDraftDto extends createZodDto(CreateDraftSchema) {}
+export class UpdateDraftDto extends createZodDto(UpdateDraftSchema) {}
+export class DraftDto extends createZodDto(DraftSchema) {}
+export class DraftListResponseDto extends createZodDto(DraftListResponseSchema) {}
+export class DraftQueryDto extends createZodDto(DraftQuerySchema) {}
+export class PublishDraftDto extends createZodDto(PublishDraftSchema) {}
+export class DraftVersionDto extends createZodDto(DraftVersionSchema) {}
+export class DraftVersionListResponseDto extends createZodDto(DraftVersionListResponseSchema) {}

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { createZodDto } from 'nestjs-zod';
 
 export const UpdateLayoutSchema = z.object({
   showRecentPosts: z.boolean().describe('是否显示最近文章'),
@@ -10,4 +11,4 @@ export const UpdateLayoutSchema = z.object({
   showSearch: z.boolean().describe('是否显示搜索'),
 });
 
-export type UpdateLayoutDto = z.infer<typeof UpdateLayoutSchema>;
+export class UpdateLayoutDto extends createZodDto(UpdateLayoutSchema) {}

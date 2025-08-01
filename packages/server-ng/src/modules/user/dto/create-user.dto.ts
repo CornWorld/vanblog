@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { createZodDto } from 'nestjs-zod';
 
 export const CreateUserSchema = z.object({
   username: z.string().min(3, '用户名至少3个字符').max(20, '用户名最多20个字符'),
@@ -11,7 +12,7 @@ export const CreateUserSchema = z.object({
   isActive: z.boolean().default(true),
 });
 
-export type CreateUserDto = z.infer<typeof CreateUserSchema>;
+export class CreateUserDto extends createZodDto(CreateUserSchema) {}
 
 // 用户类型枚举
 export const UserType = {

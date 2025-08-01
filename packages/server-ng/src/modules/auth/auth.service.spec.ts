@@ -110,8 +110,8 @@ describe('AuthService', () => {
     it('should return null when password is invalid', async () => {
       mockUserService.findByUsernameWithPassword.mockResolvedValue(mockUser);
       // Override the default mock to return false
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (vi.mocked(bcrypt.compare) as any).mockResolvedValueOnce(false);
+
+      (vi.mocked(bcrypt.compare) as ReturnType<typeof vi.fn>).mockResolvedValueOnce(false);
 
       const result = await service.validateUser('testuser', 'wrongpassword');
 

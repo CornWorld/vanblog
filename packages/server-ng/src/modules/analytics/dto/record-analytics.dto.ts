@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { createZodDto } from 'nestjs-zod';
 import { AnalyticsType } from '../entities/analytics.entity';
 
 export const RecordAnalyticsSchema = z.object({
@@ -10,6 +11,6 @@ export const RecordAnalyticsSchema = z.object({
   metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
-export type RecordAnalyticsDto = z.infer<typeof RecordAnalyticsSchema>;
+export class RecordAnalyticsDto extends createZodDto(RecordAnalyticsSchema) {}
 
 export type RecordAnalyticsType = z.infer<typeof RecordAnalyticsSchema>;
