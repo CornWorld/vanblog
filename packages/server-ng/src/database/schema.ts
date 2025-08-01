@@ -195,11 +195,13 @@ export const customPages = sqliteTable('custom_pages', {
 export const pipelines = sqliteTable('pipelines', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   name: text('name').notNull(),
-  event: text('event').notNull(),
-  enabled: integer('enabled', { mode: 'boolean' }).default(true),
-  code: text('code').notNull(),
-  dependencies: text('dependencies'), // JSON string
-  lastRun: integer('last_run', { mode: 'timestamp' }),
+  eventType: text('event_type').notNull().default('system'),
+  description: text('description'),
+  enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
+  deps: text('deps'), // JSON string for dependencies array
+  eventName: text('event_name').notNull(),
+  script: text('script').notNull(),
+  deleted: integer('deleted', { mode: 'boolean' }).notNull().default(false),
   createdAt: integer('created_at', { mode: 'timestamp' })
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),

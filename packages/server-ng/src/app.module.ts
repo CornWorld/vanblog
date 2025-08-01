@@ -18,6 +18,7 @@ import { AnalyticsModule } from './modules/analytics/analytics.module';
 import { BeianModule } from './modules/beian/beian.module';
 import { SocialLinksModule } from './modules/social-links/social-links.module';
 import { RewardModule } from './modules/reward/reward.module';
+import { PipelineModule } from './modules/pipeline/pipeline.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { RewardModule } from './modules/reward/reward.module';
     BeianModule,
     SocialLinksModule,
     RewardModule,
+    PipelineModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -304,7 +304,7 @@ export class ArticleService {
       .limit(1);
 
     if (existingArticle.length === 0) {
-      throw new NotFoundException(`Article with ID ${id} not found`);
+      throw new NotFoundException(`Article with ID ${String(id)} not found`);
     }
 
     await this.db.delete(articles).where(eq(articles.id, id));
