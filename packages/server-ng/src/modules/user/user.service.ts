@@ -1,7 +1,8 @@
 import { Injectable, NotFoundException, ConflictException, Inject } from '@nestjs/common';
 import { eq, ne } from 'drizzle-orm';
 import * as bcrypt from 'bcrypt';
-import { CreateUserDto, UpdateUserDto, UserType } from './dto';
+import { CreateUserDto, UserType } from './dto/create-user.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
 import { User } from './entities/user.entity';
 import { users } from '../../database/schema';
 import type { Database } from '../../database/connection';

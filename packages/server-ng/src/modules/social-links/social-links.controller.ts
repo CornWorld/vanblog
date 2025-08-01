@@ -1,9 +1,10 @@
 import { Controller, Get, Post, Delete, Body, Param, UseGuards } from '@nestjs/common';
 import { SocialLinksService } from './social-links.service';
-import { SocialLinkDto } from './dto/social-link.dto';
+import { SocialLinkDto, SocialLinkSchema } from './dto/social-link.dto';
 import { SocialLink } from './social-links.schema';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
+import { ZodValidationPipe } from 'nestjs-zod';
 
 @ApiTags('social-links')
 @Controller('api/admin/social-links')
@@ -20,7 +21,9 @@ export class SocialLinksController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Add or update a social link' })
-  async addOrUpdateSocialLink(@Body() dto: SocialLinkDto): Promise<SocialLink[]> {
+  async addOrUpdateSocialLink(
+    @Body(new ZodValidationPipe(SocialLinkSchema)) dto: SocialLinkDto,
+  ): Promise<SocialLink[]> {
     return this.socialLinksService.addOrUpdateSocialLink(dto);
   }
 

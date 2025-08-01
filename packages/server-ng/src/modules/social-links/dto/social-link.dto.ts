@@ -1,14 +1,11 @@
-import { IsString, IsNotEmpty } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
+import { z } from 'zod';
+import { commonSchemas } from '../../../shared/zod';
 
-export class SocialLinkDto {
-  @ApiProperty({ description: 'Social media platform type (e.g., github, twitter, email)' })
-  @IsString()
-  @IsNotEmpty()
-  type!: string;
+export const SocialLinkSchema = z.object({
+  type: commonSchemas.nonEmptyString.describe(
+    'Social media platform type (e.g., github, twitter, email)',
+  ),
+  url: commonSchemas.nonEmptyString.describe('URL or contact information'),
+});
 
-  @ApiProperty({ description: 'URL or contact information' })
-  @IsString()
-  @IsNotEmpty()
-  url!: string;
-}
+export type SocialLinkDto = z.infer<typeof SocialLinkSchema>;

@@ -1,9 +1,10 @@
 import { Controller, Get, Post, Delete, Body, Param, UseGuards } from '@nestjs/common';
 import { RewardService } from './reward.service';
-import { RewardInfoDto } from './dto/reward-info.dto';
+import { RewardInfoDto, RewardInfoSchema } from './dto/reward-info.dto';
 import { RewardInfo } from './reward.schema';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
+import { ZodValidationPipe } from 'nestjs-zod';
 
 @ApiTags('reward')
 @Controller('api/admin/reward')
@@ -20,7 +21,9 @@ export class RewardController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Add or update reward information' })
-  async addOrUpdateRewardInfo(@Body() dto: RewardInfoDto): Promise<RewardInfo[]> {
+  async addOrUpdateRewardInfo(
+    @Body(new ZodValidationPipe(RewardInfoSchema)) dto: RewardInfoDto,
+  ): Promise<RewardInfo[]> {
     return this.rewardService.addOrUpdateRewardInfo(dto);
   }
 

@@ -3,7 +3,7 @@ import { describe, it, beforeEach, afterEach, expect, vi } from 'vitest';
 import { ConflictException, NotFoundException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { UserService } from './user.service';
-import { UserType, type CreateUserDto } from './dto';
+import { UserType, type CreateUserDto } from './dto/create-user.dto';
 import { users } from '../../database/schema';
 
 // Mock bcrypt

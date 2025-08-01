@@ -1,24 +1,14 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsOptional, IsUrl } from 'class-validator';
+import { z } from 'zod';
+import { commonSchemas } from '../../../shared/zod';
 
-export class CreateFriendLinkDto {
-  @ApiProperty({ description: '友链名称' })
-  @IsString()
-  name!: string;
+export const CreateFriendLinkSchema = z.object({
+  name: commonSchemas.nonEmptyString.describe('友链名称'),
+  url: z.string().pipe(z.url()).describe('友链地址'),
+  description: z.string().optional().describe('友链描述'),
+  avatar: z.string().pipe(z.url()).optional().describe('友链头像'),
+});
 
-  @ApiProperty({ description: '友链地址' })
-  @IsUrl()
-  url!: string;
+export const UpdateFriendLinkSchema = CreateFriendLinkSchema;
 
-  @ApiProperty({ description: '友链描述', required: false })
-  @IsOptional()
-  @IsString()
-  description?: string;
-
-  @ApiProperty({ description: '友链头像', required: false })
-  @IsOptional()
-  @IsUrl()
-  avatar?: string;
-}
-
-export class UpdateFriendLinkDto extends CreateFriendLinkDto {}
+export type CreateFriendLinkDto = z.infer<typeof CreateFriendLinkSchema>;
+export type UpdateFriendLinkDto = z.infer<typeof UpdateFriendLinkSchema>;

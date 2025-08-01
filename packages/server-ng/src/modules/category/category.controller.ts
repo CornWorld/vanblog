@@ -9,7 +9,13 @@ import {
 } from './dto/category.dto';
 import { Category } from './entities/category.entity';
 import { OverallStatisticsDto } from '../../shared/dto/statistics.dto';
-import { VerifyCategoryPasswordDto, CategoryAccessResponseDto } from './dto/verify-password.dto';
+import {
+  VerifyCategoryPasswordDto,
+  CategoryAccessResponseDto,
+  CategoryAccessResponse,
+  VerifyCategoryPasswordSchema,
+} from './dto/verify-password.dto';
+import { ZodValidationPipe } from 'nestjs-zod';
 import { RequireAuth } from '../auth/auth.decorator';
 
 @ApiTags('categories')
@@ -77,12 +83,13 @@ export class CategoryController {
   @ApiResponse({
     status: 200,
     description: 'Password verification result',
-    type: CategoryAccessResponseDto,
+    type: CategoryAccessResponse,
   })
   @ApiResponse({ status: 404, description: 'Category not found' })
   async verifyPassword(
     @Param('id', ParseIntPipe) id: number,
-    @Body() verifyPasswordDto: VerifyCategoryPasswordDto,
+    @Body(new ZodValidationPipe(VerifyCategoryPasswordSchema))
+    verifyPasswordDto: VerifyCategoryPasswordDto,
   ): Promise<CategoryAccessResponseDto> {
     return this.categoryService.verifyPassword(id, verifyPasswordDto.password);
   }

@@ -1,25 +1,11 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsOptional, MinLength, IsArray } from 'class-validator';
-import type { Permission } from '../../../shared/types/permission';
+import { z } from 'zod';
+import { commonSchemas } from '../../../shared/zod';
 
-export class CollaboratorDto {
-  @ApiProperty({ description: '用户名' })
-  @IsString()
-  @MinLength(1)
-  name!: string;
+export const CollaboratorSchema = z.object({
+  name: commonSchemas.nonEmptyString.describe('用户名'),
+  password: commonSchemas.nonEmptyString.describe('密码'),
+  nickname: z.string().optional().describe('昵称'),
+  permissions: z.array(z.string()).describe('权限列表'),
+});
 
-  @ApiProperty({ description: '密码' })
-  @IsString()
-  @MinLength(1)
-  password!: string;
-
-  @ApiPropertyOptional({ description: '昵称' })
-  @IsOptional()
-  @IsString()
-  nickname?: string;
-
-  @ApiProperty({ description: '权限列表', type: [String] })
-  @IsArray()
-  @IsString({ each: true })
-  permissions!: Permission[];
-}
+export type CollaboratorDto = z.infer<typeof CollaboratorSchema>;

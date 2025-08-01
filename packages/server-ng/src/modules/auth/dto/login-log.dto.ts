@@ -1,72 +1,31 @@
-import { IsString, IsBoolean, IsOptional, IsDate } from 'class-validator';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { z } from 'zod';
+import { commonSchemas } from '../../../shared/zod';
 
-export class LoginLogDto {
-  @ApiProperty({ description: 'Username attempting to login' })
-  @IsString()
-  username!: string;
+export const LoginLogSchema = z.object({
+  username: commonSchemas.nonEmptyString.describe('Username attempting to login'),
+  ip: z.string().optional().describe('IP address of the login attempt'),
+  userAgent: z.string().optional().describe('User agent string'),
+  success: z.boolean().describe('Whether the login was successful'),
+  message: z.string().optional().describe('Additional message about the login attempt'),
+});
 
-  @ApiPropertyOptional({ description: 'IP address of the login attempt' })
-  @IsOptional()
-  @IsString()
-  ip?: string;
+export const LoginLogResponseSchema = z.object({
+  id: z.number(),
+  username: z.string(),
+  ip: z.string().optional(),
+  userAgent: z.string().optional(),
+  success: z.boolean(),
+  message: z.string().optional(),
+  createdAt: z.date(),
+});
 
-  @ApiPropertyOptional({ description: 'User agent string' })
-  @IsOptional()
-  @IsString()
-  userAgent?: string;
+export const LoginLogQuerySchema = z.object({
+  username: z.string().optional().describe('Filter by username'),
+  success: z.boolean().optional().describe('Filter by success status'),
+  startDate: z.date().optional().describe('Start date for filtering'),
+  endDate: z.date().optional().describe('End date for filtering'),
+});
 
-  @ApiProperty({ description: 'Whether the login was successful' })
-  @IsBoolean()
-  success!: boolean;
-
-  @ApiPropertyOptional({ description: 'Additional message about the login attempt' })
-  @IsOptional()
-  @IsString()
-  message?: string;
-}
-
-export class LoginLogResponseDto {
-  @ApiProperty()
-  id!: number;
-
-  @ApiProperty()
-  username!: string;
-
-  @ApiPropertyOptional()
-  ip?: string;
-
-  @ApiPropertyOptional()
-  userAgent?: string;
-
-  @ApiProperty()
-  success!: boolean;
-
-  @ApiPropertyOptional()
-  message?: string;
-
-  @ApiProperty()
-  createdAt!: Date;
-}
-
-export class LoginLogQueryDto {
-  @ApiPropertyOptional({ description: 'Filter by username' })
-  @IsOptional()
-  @IsString()
-  username?: string;
-
-  @ApiPropertyOptional({ description: 'Filter by success status' })
-  @IsOptional()
-  @IsBoolean()
-  success?: boolean;
-
-  @ApiPropertyOptional({ description: 'Start date for filtering' })
-  @IsOptional()
-  @IsDate()
-  startDate?: Date;
-
-  @ApiPropertyOptional({ description: 'End date for filtering' })
-  @IsOptional()
-  @IsDate()
-  endDate?: Date;
-}
+export type LoginLogDto = z.infer<typeof LoginLogSchema>;
+export type LoginLogResponseDto = z.infer<typeof LoginLogResponseSchema>;
+export type LoginLogQueryDto = z.infer<typeof LoginLogQuerySchema>;

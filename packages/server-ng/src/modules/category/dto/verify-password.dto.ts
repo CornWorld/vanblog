@@ -1,20 +1,22 @@
-import { IsString, MinLength } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
+import { z } from 'zod';
+import { commonSchemas } from '../../../shared/zod';
 
-export class VerifyCategoryPasswordDto {
-  @ApiProperty({ description: 'Password for private category' })
-  @IsString()
-  @MinLength(1)
-  password!: string;
-}
+export const VerifyCategoryPasswordSchema = z.object({
+  password: commonSchemas.nonEmptyString.describe('Password for private category'),
+});
 
-export class CategoryAccessResponseDto {
-  @ApiProperty({ description: 'Whether access is granted' })
+export const CategoryAccessResponseSchema = z.object({
+  success: z.boolean().describe('Whether access is granted'),
+  token: z.string().optional().describe('Access token for the category'),
+  message: z.string().optional().describe('Error message if access is denied'),
+});
+
+export type VerifyCategoryPasswordDto = z.infer<typeof VerifyCategoryPasswordSchema>;
+export type CategoryAccessResponseDto = z.infer<typeof CategoryAccessResponseSchema>;
+
+// Class for Swagger documentation
+export class CategoryAccessResponse {
   success!: boolean;
-
-  @ApiProperty({ description: 'Access token for the category' })
   token?: string;
-
-  @ApiProperty({ description: 'Error message if access is denied' })
   message?: string;
 }

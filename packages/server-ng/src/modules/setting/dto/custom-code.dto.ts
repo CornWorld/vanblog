@@ -1,19 +1,9 @@
-import { IsString, IsOptional } from 'class-validator';
-import { ApiPropertyOptional } from '@nestjs/swagger';
+import { z } from 'zod';
 
-export class UpdateCustomCodeDto {
-  @ApiPropertyOptional({ description: 'Custom code to inject in <head> tag' })
-  @IsOptional()
-  @IsString()
-  head?: string;
+export const UpdateCustomCodeSchema = z.object({
+  head: z.string().optional().describe('Custom code to inject in <head> tag'),
+  body: z.string().optional().describe('Custom code to inject in <body> tag'),
+  footer: z.string().optional().describe('Custom code to inject before </body> tag'),
+});
 
-  @ApiPropertyOptional({ description: 'Custom code to inject in <body> tag' })
-  @IsOptional()
-  @IsString()
-  body?: string;
-
-  @ApiPropertyOptional({ description: 'Custom code to inject before </body> tag' })
-  @IsOptional()
-  @IsString()
-  footer?: string;
-}
+export type UpdateCustomCodeDto = z.infer<typeof UpdateCustomCodeSchema>;

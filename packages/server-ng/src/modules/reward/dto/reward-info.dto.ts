@@ -1,14 +1,9 @@
-import { IsString, IsNotEmpty } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
+import { z } from 'zod';
+import { commonSchemas } from '../../../shared/zod';
 
-export class RewardInfoDto {
-  @ApiProperty({ description: 'Payment method name (e.g., Alipay, WeChat Pay)' })
-  @IsString()
-  @IsNotEmpty()
-  name!: string;
+export const RewardInfoSchema = z.object({
+  name: commonSchemas.nonEmptyString.describe('Payment method name (e.g., Alipay, WeChat Pay)'),
+  value: commonSchemas.nonEmptyString.describe('Payment value (e.g., QR code URL or account)'),
+});
 
-  @ApiProperty({ description: 'Payment value (e.g., QR code URL or account)' })
-  @IsString()
-  @IsNotEmpty()
-  value!: string;
-}
+export type RewardInfoDto = z.infer<typeof RewardInfoSchema>;

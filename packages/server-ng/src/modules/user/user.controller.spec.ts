@@ -2,7 +2,8 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, beforeEach, afterEach, expect, vi } from 'vitest';
 import { UserController } from './user.controller';
 import { UserService } from './user.service';
-import { UserType, type CreateUserDto, type UpdateUserDto } from './dto';
+import { UserType, type CreateUserDto } from './dto/create-user.dto';
+import { type UpdateUserDto } from './dto/update-user.dto';
 import { User } from './entities/user.entity';
 
 describe('UserController', () => {

@@ -26,9 +26,10 @@ import { MediaService } from './services/media.service';
 import { ImageProcessingService } from './services/image-processing.service';
 import { StorageConfigService } from './services/storage-config.service';
 import { UpdateStorageConfigDto, StorageConfigResponseDto } from './dto/storage-config.dto';
-import { UploadFileDto } from './dto/upload-file.dto';
+import { UploadFileDto, UploadFile } from './dto/upload-file.dto';
 import { ListStaticFilesDto } from './dto/list-static-files.dto';
-import { BatchDeleteDto } from './dto/batch-delete.dto';
+import { BatchDeleteDto, BatchDeleteSchema } from './dto/batch-delete.dto';
+import { ZodValidationPipe } from 'nestjs-zod';
 import { memoryStorage } from 'multer';
 import { staticFiles } from '../../database/schema';
 
@@ -54,7 +55,7 @@ export class MediaController {
   @Post('upload')
   @ApiOperation({ summary: '上传文件' })
   @ApiConsumes('multipart/form-data')
-  @ApiBody({ type: UploadFileDto })
+  @ApiBody({ type: UploadFile })
   @ApiResponse({ status: 201, description: '文件上传成功' })
   @UseInterceptors(
     FileInterceptor('file', {
@@ -182,7 +183,9 @@ export class MediaController {
   @Post('batch-delete')
   @ApiOperation({ summary: '批量删除文件' })
   @ApiResponse({ status: 200, description: '删除成功' })
-  async batchDelete(@Body() batchDeleteDto: BatchDeleteDto): Promise<{
+  async batchDelete(
+    @Body(new ZodValidationPipe(BatchDeleteSchema)) batchDeleteDto: BatchDeleteDto,
+  ): Promise<{
     success: boolean;
     deletedCount: number;
     message: string;

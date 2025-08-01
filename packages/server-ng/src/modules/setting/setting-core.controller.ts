@@ -18,12 +18,18 @@ import {
   Navigation,
   CustomCode,
 } from './services/setting-core.service';
-import { UpdateSiteInfoDto } from './dto/update-site-info.dto';
-import { UpdateLayoutDto } from './dto/update-layout.dto';
-import { UpdateThemeDto } from './dto/update-theme.dto';
-import { CreateFriendLinkDto, UpdateFriendLinkDto } from './dto/friend-link.dto';
-import { UpdateNavigationDto } from './dto/navigation.dto';
-import { UpdateCustomCodeDto } from './dto/custom-code.dto';
+import { UpdateSiteInfoDto, UpdateSiteInfoSchema } from './dto/update-site-info.dto';
+import { UpdateLayoutDto, UpdateLayoutSchema } from './dto/update-layout.dto';
+import { UpdateThemeDto, UpdateThemeSchema } from './dto/update-theme.dto';
+import {
+  CreateFriendLinkDto,
+  UpdateFriendLinkDto,
+  CreateFriendLinkSchema,
+  UpdateFriendLinkSchema,
+} from './dto/friend-link.dto';
+import { UpdateNavigationDto, UpdateNavigationSchema } from './dto/navigation.dto';
+import { UpdateCustomCodeDto, UpdateCustomCodeSchema } from './dto/custom-code.dto';
+import { ZodValidationPipe } from 'nestjs-zod';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 
@@ -42,12 +48,14 @@ export class SettingCoreController {
 
   @Patch('site-info')
   @ApiOperation({ summary: 'Update site information' })
-  async updateSiteInfo(@Body() updateSiteInfoDto: UpdateSiteInfoDto): Promise<SiteInfo> {
+  async updateSiteInfo(
+    @Body(new ZodValidationPipe(UpdateSiteInfoSchema)) updateSiteInfoDto: UpdateSiteInfoDto,
+  ): Promise<SiteInfo> {
     // Map DTO fields to SiteInfo interface
     const siteInfoUpdate: Partial<SiteInfo> = {
       title: updateSiteInfoDto.siteName,
-      description: updateSiteInfoDto.siteDescription || '',
-      author: updateSiteInfoDto.authorName || '',
+      description: updateSiteInfoDto.siteDescription ?? '',
+      author: updateSiteInfoDto.authorName ?? '',
       keywords: updateSiteInfoDto.siteKeywords
         ? updateSiteInfoDto.siteKeywords.split(',').map((k) => k.trim())
         : [],
@@ -63,7 +71,9 @@ export class SettingCoreController {
 
   @Patch('layout')
   @ApiOperation({ summary: 'Update layout settings' })
-  async updateLayoutSettings(@Body() updateLayoutDto: UpdateLayoutDto): Promise<SiteLayout> {
+  async updateLayoutSettings(
+    @Body(new ZodValidationPipe(UpdateLayoutSchema)) updateLayoutDto: UpdateLayoutDto,
+  ): Promise<SiteLayout> {
     return this.settingCoreService.updateLayoutSettings(updateLayoutDto);
   }
 
@@ -75,7 +85,9 @@ export class SettingCoreController {
 
   @Patch('theme')
   @ApiOperation({ summary: 'Update theme settings' })
-  async updateThemeSettings(@Body() updateThemeDto: UpdateThemeDto): Promise<SiteTheme> {
+  async updateThemeSettings(
+    @Body(new ZodValidationPipe(UpdateThemeSchema)) updateThemeDto: UpdateThemeDto,
+  ): Promise<SiteTheme> {
     // Map DTO fields to SiteTheme interface
     const themeUpdate: Partial<SiteTheme> = {
       primaryColor: updateThemeDto.theme || '#000000',
@@ -92,7 +104,9 @@ export class SettingCoreController {
 
   @Post('friend-links')
   @ApiOperation({ summary: 'Create a new friend link' })
-  async createFriendLink(@Body() createFriendLinkDto: CreateFriendLinkDto): Promise<FriendLink[]> {
+  async createFriendLink(
+    @Body(new ZodValidationPipe(CreateFriendLinkSchema)) createFriendLinkDto: CreateFriendLinkDto,
+  ): Promise<FriendLink[]> {
     return this.settingCoreService.createFriendLink(createFriendLinkDto);
   }
 
@@ -100,7 +114,7 @@ export class SettingCoreController {
   @ApiOperation({ summary: 'Update a friend link by index' })
   async updateFriendLink(
     @Param('index', ParseIntPipe) index: number,
-    @Body() updateFriendLinkDto: UpdateFriendLinkDto,
+    @Body(new ZodValidationPipe(UpdateFriendLinkSchema)) updateFriendLinkDto: UpdateFriendLinkDto,
   ): Promise<FriendLink[]> {
     return this.settingCoreService.updateFriendLink(index, updateFriendLinkDto);
   }
@@ -119,7 +133,9 @@ export class SettingCoreController {
 
   @Patch('navigation')
   @ApiOperation({ summary: 'Update navigation items' })
-  async updateNavigation(@Body() updateNavigationDto: UpdateNavigationDto): Promise<Navigation[]> {
+  async updateNavigation(
+    @Body(new ZodValidationPipe(UpdateNavigationSchema)) updateNavigationDto: UpdateNavigationDto,
+  ): Promise<Navigation[]> {
     // Map NavigationItem to Navigation interface
     const navigationItems = updateNavigationDto.items.map((item) => ({
       name: item.name,
@@ -136,7 +152,9 @@ export class SettingCoreController {
 
   @Patch('custom-code')
   @ApiOperation({ summary: 'Update custom code injection settings' })
-  async updateCustomCode(@Body() updateCustomCodeDto: UpdateCustomCodeDto): Promise<CustomCode> {
+  async updateCustomCode(
+    @Body(new ZodValidationPipe(UpdateCustomCodeSchema)) updateCustomCodeDto: UpdateCustomCodeDto,
+  ): Promise<CustomCode> {
     return this.settingCoreService.updateCustomCode(updateCustomCodeDto);
   }
 }

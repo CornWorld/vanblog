@@ -1,24 +1,10 @@
-import { IsString, IsOptional, IsBoolean } from 'class-validator';
-import { ApiPropertyOptional } from '@nestjs/swagger';
+import { z } from 'zod';
 
-export class BeianInfoDto {
-  @ApiPropertyOptional({ description: 'ICP beian number' })
-  @IsString()
-  @IsOptional()
-  icp?: string;
+export const BeianInfoSchema = z.object({
+  icp: z.string().optional().describe('ICP beian number'),
+  gov: z.string().optional().describe('Gov beian number'),
+  govUrl: z.string().optional().describe('Gov beian URL'),
+  showBeian: z.boolean().optional().describe('Whether to show beian information'),
+});
 
-  @ApiPropertyOptional({ description: 'Gov beian number' })
-  @IsString()
-  @IsOptional()
-  gov?: string;
-
-  @ApiPropertyOptional({ description: 'Gov beian URL' })
-  @IsString()
-  @IsOptional()
-  govUrl?: string;
-
-  @ApiPropertyOptional({ description: 'Whether to show beian information' })
-  @IsBoolean()
-  @IsOptional()
-  showBeian?: boolean;
-}
+export type BeianInfoDto = z.infer<typeof BeianInfoSchema>;

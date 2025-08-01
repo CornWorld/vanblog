@@ -1,10 +1,8 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsArray, IsNumber, ArrayMinSize } from 'class-validator';
+import { z } from 'zod';
+import { commonSchemas } from '../../../shared/zod';
 
-export class BatchDeleteDto {
-  @ApiProperty({ description: '要删除的文件 ID 列表', type: [Number] })
-  @IsArray()
-  @IsNumber({}, { each: true })
-  @ArrayMinSize(1)
-  ids!: number[];
-}
+export const BatchDeleteSchema = z.object({
+  ids: z.array(commonSchemas.id).min(1, '至少需要选择一个文件').describe('要删除的文件 ID 列表'),
+});
+
+export type BatchDeleteDto = z.infer<typeof BatchDeleteSchema>;

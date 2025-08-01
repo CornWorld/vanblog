@@ -1,17 +1,18 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsOptional, IsString } from 'class-validator';
+import { z } from 'zod';
 
-export class UploadFileDto {
-  @ApiProperty({ type: 'string', format: 'binary', description: '要上传的文件' })
+export const UploadFileSchema = z.object({
+  file: z.any().describe('要上传的文件'),
+  filename: z.string().optional().describe('自定义文件名'),
+  provider: z.string().optional().default('local').describe('存储提供商'),
+});
+
+export type UploadFileDto = z.infer<typeof UploadFileSchema> & {
+  file: Express.Multer.File;
+};
+
+// Class for Swagger documentation
+export class UploadFile {
   file!: Express.Multer.File;
-
-  @ApiProperty({ description: '自定义文件名', required: false })
-  @IsOptional()
-  @IsString()
   filename?: string;
-
-  @ApiProperty({ description: '存储提供商', required: false, default: 'local' })
-  @IsOptional()
-  @IsString()
   provider?: string;
 }

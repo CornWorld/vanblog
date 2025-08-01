@@ -1,1 +1,1 @@
-export * from './validation.pipe';
+// No pipes to export currently

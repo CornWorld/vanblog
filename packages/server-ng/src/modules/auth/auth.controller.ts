@@ -15,7 +15,8 @@ import { LocalAuthGuard } from './guards/local-auth.guard';
 import { User } from '../user/entities/user.entity';
 import { UserType } from '../user/dto/create-user.dto';
 import { LoginLogService } from './login-log.service';
-import { LoginLogQueryDto, LoginLogResponseDto } from './dto/login-log.dto';
+import { LoginLogQueryDto, LoginLogResponseDto, LoginLogQuerySchema } from './dto/login-log.dto';
+import { ZodValidationPipe } from 'nestjs-zod';
 import { RequireAuth, RequireAdmin } from './auth.decorator';
 import { Request as ExpressRequest } from 'express';
 
@@ -86,7 +87,7 @@ export class AuthController {
   @ApiQuery({ name: 'success', required: false, type: Boolean })
   async getLoginLogs(
     @Request() req: RequestWithUser,
-    @Query() query: LoginLogQueryDto,
+    @Query(new ZodValidationPipe(LoginLogQuerySchema)) query: LoginLogQueryDto,
   ): Promise<LoginLogResponseDto[]> {
     if (req.user.type !== UserType.ADMIN) {
       throw new HttpException('Access denied', HttpStatus.FORBIDDEN);
