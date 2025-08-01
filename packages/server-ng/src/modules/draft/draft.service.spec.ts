@@ -2,12 +2,14 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
 import { DraftService } from './draft.service';
 import { DraftVersionService } from './draft-version.service';
+import { PipelineService } from '../pipeline/services/pipeline.service';
 import { DATABASE_CONNECTION } from '../../database/database.module';
 import { vi, describe, beforeEach, it, expect } from 'vitest';
 
 describe('DraftService', () => {
   let service: DraftService;
   let mockDraftVersionService: Partial<DraftVersionService>;
+  let mockPipelineService: Partial<PipelineService>;
   let mockDb: Record<string, ReturnType<typeof vi.fn>>;
 
   beforeEach(async () => {
@@ -43,6 +45,10 @@ describe('DraftService', () => {
       deleteAllVersions: vi.fn().mockResolvedValue(undefined),
     };
 
+    mockPipelineService = {
+      dispatchEvent: vi.fn().mockResolvedValue([]),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       imports: [],
       providers: [
@@ -54,6 +60,10 @@ describe('DraftService', () => {
         {
           provide: DraftVersionService,
           useValue: mockDraftVersionService,
+        },
+        {
+          provide: PipelineService,
+          useValue: mockPipelineService,
         },
       ],
     }).compile();

@@ -14,6 +14,7 @@ import { Draft } from './entities/draft.entity';
 import { Article } from '../article/entities/article.entity';
 import { DraftVersionService } from './draft-version.service';
 import { safeParseJson, dataSchemas } from '../../shared/zod';
+import { PipelineService } from '../pipeline/services/pipeline.service';
 
 @Injectable()
 export class DraftService {
@@ -21,6 +22,7 @@ export class DraftService {
     @Inject(DATABASE_CONNECTION)
     private readonly db: Database,
     private readonly draftVersionService: DraftVersionService,
+    private readonly pipelineService: PipelineService,
   ) {}
 
   async findAll(query: DraftQueryDto): Promise<DraftListResponseDto> {
@@ -132,7 +134,7 @@ export class DraftService {
 
     const { tags, ...rest } = updateDraftDto;
 
-    const updateData: Record<string, unknown> = {};
+    let updateData: Record<string, unknown> = {};
 
     if ('title' in rest) {
       updateData.title = rest.title;
@@ -160,6 +162,25 @@ export class DraftService {
 
     updateData.updatedAt = new Date();
 
+    // Trigger beforeUpdateDraft event
+    try {
+      const beforeResults = await this.pipelineService.dispatchEvent('beforeUpdateDraft', {
+        action: 'update',
+        id,
+        data: updateData,
+      });
+
+      // Apply modifications from pipeline results
+      for (const result of beforeResults) {
+        if (result.status === 'success' && result.output && typeof result.output === 'object') {
+          updateData = { ...updateData, ...result.output };
+        }
+      }
+    } catch (error) {
+      // Log error but don't fail the operation
+      console.error('Error in beforeUpdateDraft pipeline:', error);
+    }
+
     const result = await this.db
       .update(drafts)
       .set(updateData)
@@ -171,18 +192,43 @@ export class DraftService {
     }
 
     const updatedDraft = result[0];
-
-    return new Draft({
+    const draftResult = new Draft({
       ...updatedDraft,
       tags: safeParseJson(updatedDraft.tags, dataSchemas.tagsArray) ?? [],
       pathname: updatedDraft.pathname ?? undefined,
       category: updatedDraft.category ?? undefined,
     });
+
+    // Trigger afterUpdateDraft event
+    try {
+      await this.pipelineService.dispatchEvent('afterUpdateDraft', {
+        action: 'update',
+        id,
+        data: draftResult,
+      });
+    } catch (error) {
+      // Log error but don't fail the operation
+      console.error('Error in afterUpdateDraft pipeline:', error);
+    }
+
+    return draftResult;
   }
 
   async remove(id: number): Promise<void> {
     // Delete all versions first
     await this.draftVersionService.deleteAllVersions(id);
+
+    // Trigger deleteDraft event
+    try {
+      await this.pipelineService.dispatchEvent('deleteDraft', {
+        action: 'delete',
+        id,
+        data: { id },
+      });
+    } catch (error) {
+      // Log error but don't fail the operation
+      console.error('Error in deleteDraft pipeline:', error);
+    }
 
     const result = await this.db
       .delete(drafts)

@@ -13,12 +13,14 @@ import { DATABASE_CONNECTION } from '../../database';
 import type { Database } from '../../database/connection';
 import { Article } from './entities/article.entity';
 import { safeParseJson, dataSchemas } from '../../shared/zod';
+import { PipelineService } from '../pipeline/services/pipeline.service';
 
 @Injectable()
 export class ArticleService {
   constructor(
     @Inject(DATABASE_CONNECTION)
     private readonly db: Database,
+    private readonly pipelineService: PipelineService,
   ) {}
 
   async findAll(query: ArticleQueryDto): Promise<ArticleListResponseDto> {
@@ -219,7 +221,7 @@ export class ArticleService {
       await this.createMissingTags(tagNames);
     }
 
-    const newArticleData = {
+    let newArticleData = {
       title: String(articleData.title),
       content: String(articleData.content),
       pathname: articleData.pathname ? String(articleData.pathname) : undefined,
@@ -235,10 +237,28 @@ export class ArticleService {
       updatedAt: new Date(),
     };
 
+    // Trigger beforeUpdateArticle event
+    try {
+      const beforeResults = await this.pipelineService.dispatchEvent('beforeUpdateArticle', {
+        action: 'create',
+        data: newArticleData,
+      });
+
+      // Apply modifications from pipeline results
+      for (const result of beforeResults) {
+        if (result.status === 'success' && result.output && typeof result.output === 'object') {
+          newArticleData = { ...newArticleData, ...result.output };
+        }
+      }
+    } catch (error) {
+      // Log error but don't fail the operation
+      console.error('Error in beforeUpdateArticle pipeline:', error);
+    }
+
     const insertResult = await this.db.insert(articles).values([newArticleData]).returning();
 
     const newArticle = insertResult[0];
-    return new Article({
+    const articleResult = new Article({
       ...newArticle,
       tags: safeParseJson(newArticle.tags, dataSchemas.tagsArray) ?? [],
       pathname: newArticle.pathname ?? undefined,
@@ -250,6 +270,19 @@ export class ArticleService {
       password: newArticle.password ?? undefined,
       viewer: newArticle.viewer ?? undefined,
     });
+
+    // Trigger afterUpdateArticle event
+    try {
+      await this.pipelineService.dispatchEvent('afterUpdateArticle', {
+        action: 'create',
+        data: articleResult,
+      });
+    } catch (error) {
+      // Log error but don't fail the operation
+      console.error('Error in afterUpdateArticle pipeline:', error);
+    }
+
+    return articleResult;
   }
 
   async update(id: number, updateArticleDto: UpdateArticleDto): Promise<Article> {
@@ -263,7 +296,7 @@ export class ArticleService {
       await this.createMissingTags(tagNames);
     }
 
-    const updateData = {
+    let updateData = {
       ...Object.fromEntries(
         Object.entries(articleData).map(([key, value]) => [
           key,
@@ -274,6 +307,25 @@ export class ArticleService {
       updatedAt: new Date(),
     };
 
+    // Trigger beforeUpdateArticle event
+    try {
+      const beforeResults = await this.pipelineService.dispatchEvent('beforeUpdateArticle', {
+        action: 'update',
+        id,
+        data: updateData,
+      });
+
+      // Apply modifications from pipeline results
+      for (const result of beforeResults) {
+        if (result.status === 'success' && result.output && typeof result.output === 'object') {
+          updateData = { ...updateData, ...result.output };
+        }
+      }
+    } catch (error) {
+      // Log error but don't fail the operation
+      console.error('Error in beforeUpdateArticle pipeline:', error);
+    }
+
     const updateResult = await this.db
       .update(articles)
       .set(updateData)
@@ -281,7 +333,7 @@ export class ArticleService {
       .returning();
 
     const updatedArticle = updateResult[0];
-    return new Article({
+    const articleResult = new Article({
       ...updatedArticle,
       tags: safeParseJson(updatedArticle.tags, dataSchemas.tagsArray) ?? [],
       pathname: updatedArticle.pathname ?? undefined,
@@ -293,6 +345,20 @@ export class ArticleService {
       password: updatedArticle.password ?? undefined,
       viewer: updatedArticle.viewer ?? undefined,
     });
+
+    // Trigger afterUpdateArticle event
+    try {
+      await this.pipelineService.dispatchEvent('afterUpdateArticle', {
+        action: 'update',
+        id,
+        data: articleResult,
+      });
+    } catch (error) {
+      // Log error but don't fail the operation
+      console.error('Error in afterUpdateArticle pipeline:', error);
+    }
+
+    return articleResult;
   }
 
   async remove(id: number): Promise<void> {
@@ -305,6 +371,18 @@ export class ArticleService {
 
     if (existingArticle.length === 0) {
       throw new NotFoundException(`Article with ID ${String(id)} not found`);
+    }
+
+    // Trigger deleteArticle event
+    try {
+      await this.pipelineService.dispatchEvent('deleteArticle', {
+        action: 'delete',
+        id,
+        data: { id },
+      });
+    } catch (error) {
+      // Log error but don't fail the operation
+      console.error('Error in deleteArticle pipeline:', error);
     }
 
     await this.db.delete(articles).where(eq(articles.id, id));

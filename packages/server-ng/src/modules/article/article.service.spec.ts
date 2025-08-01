@@ -1,13 +1,14 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
 import { ArticleService } from './article.service';
+import { PipelineService } from '../pipeline/services/pipeline.service';
 import { DATABASE_CONNECTION } from '../../database/database.module';
 import type { ArticleSearchDto } from './dto/article.dto';
 import { vi, describe, beforeEach, it, expect } from 'vitest';
 
 describe('ArticleService', () => {
   let service: ArticleService;
-
+  let mockPipelineService: Partial<PipelineService>;
   let mockDb: Record<string, ReturnType<typeof vi.fn>>;
 
   beforeEach(async () => {
@@ -31,6 +32,10 @@ describe('ArticleService', () => {
       mockDb[key].mockReturnValue(mockDb);
     });
 
+    mockPipelineService = {
+      dispatchEvent: vi.fn().mockResolvedValue([]),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       imports: [],
       providers: [
@@ -38,6 +43,10 @@ describe('ArticleService', () => {
         {
           provide: DATABASE_CONNECTION,
           useValue: mockDb,
+        },
+        {
+          provide: PipelineService,
+          useValue: mockPipelineService,
         },
       ],
     }).compile();
