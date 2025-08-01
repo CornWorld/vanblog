@@ -46,15 +46,15 @@ export class StorageConfigService {
     const newConfig: StorageConfigResponseDto = {
       provider: updateDto.provider,
       enabled: updateDto.enabled ?? currentConfig.enabled,
+      localPath: updateDto.localPath,
+      baseUrl: updateDto.baseUrl,
     };
 
-    // 清除之前的配置
-    delete (newConfig as unknown as Record<string, unknown>).picgoConfig;
-
+    // 根据存储提供商设置相应配置
     switch (updateDto.provider) {
       case StorageProvider.PICGO:
         if (updateDto.picgoConfig) {
-          (newConfig as unknown as Record<string, unknown>).picgoConfig = updateDto.picgoConfig;
+          newConfig.picgoConfig = updateDto.picgoConfig;
         }
         break;
       case StorageProvider.LOCAL:
@@ -63,10 +63,12 @@ export class StorageConfigService {
     }
 
     // 保存完整配置
-    const fullConfig: Record<string, unknown> = {
+    const fullConfig = {
       provider: newConfig.provider,
       enabled: newConfig.enabled,
-      picgoConfig: updateDto.picgoConfig,
+      localPath: newConfig.localPath,
+      baseUrl: newConfig.baseUrl,
+      picgoConfig: newConfig.picgoConfig,
     };
 
     const existing = await this.db
