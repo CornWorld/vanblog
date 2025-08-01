@@ -36,7 +36,7 @@ export class StorageConfigService {
     const config = safeParseJson(
       result[0].value ?? '{}',
       dataSchemas.genericObject,
-    ) as StorageConfigResponseDto;
+    ) as unknown as StorageConfigResponseDto;
     return config;
   }
 
@@ -49,12 +49,12 @@ export class StorageConfigService {
     };
 
     // 清除之前的配置
-    delete newConfig.picgoConfig;
+    delete (newConfig as unknown as Record<string, unknown>).picgoConfig;
 
     switch (updateDto.provider) {
       case StorageProvider.PICGO:
         if (updateDto.picgoConfig) {
-          newConfig.picgoConfig = updateDto.picgoConfig;
+          (newConfig as unknown as Record<string, unknown>).picgoConfig = updateDto.picgoConfig;
         }
         break;
       case StorageProvider.LOCAL:
@@ -63,7 +63,7 @@ export class StorageConfigService {
     }
 
     // 保存完整配置
-    const fullConfig = {
+    const fullConfig: Record<string, unknown> = {
       provider: newConfig.provider,
       enabled: newConfig.enabled,
       picgoConfig: updateDto.picgoConfig,
@@ -110,6 +110,6 @@ export class StorageConfigService {
     return safeParseJson(
       result[0].value ?? '{}',
       dataSchemas.genericObject,
-    ) as StorageConfigResponseDto;
+    ) as unknown as StorageConfigResponseDto;
   }
 }

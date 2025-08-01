@@ -7,7 +7,7 @@ import { LoggerService } from './core/logger/logger.service';
 import { HttpExceptionFilter, AllExceptionsFilter } from './core/filters';
 import helmet from 'helmet';
 import compression from 'compression';
-import { patchNestJsSwagger } from 'nestjs-zod';
+// import { patchNestJsSwagger } from 'nestjs-zod'; // Not available in current version
 
 import 'dayjs/locale/zh-cn';
 import dayjs from 'dayjs';
@@ -26,7 +26,7 @@ export async function init(): Promise<INestApplication> {
   const logger = app.get(LoggerService);
   app.useLogger(logger);
 
-  patchNestJsSwagger();
+  // patchNestJsSwagger(); // Not available in current version
 
   // Swagger/OpenAPI configuration
   const swaggerConfig = new DocumentBuilder()
