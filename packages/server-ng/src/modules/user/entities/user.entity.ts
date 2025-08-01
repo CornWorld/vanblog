@@ -9,9 +9,6 @@ export class User {
   @ApiProperty({ description: '用户名' })
   username!: string;
 
-  // Password field excluded from serialization via transform logic
-  password?: string;
-
   @ApiPropertyOptional({ description: '昵称' })
   nickname?: string;
 
@@ -32,6 +29,9 @@ export class User {
 
   @ApiProperty({ description: '更新时间' })
   updatedAt!: Date;
+
+  // Password field excluded from serialization via transform logic
+  password?: string;
 
   constructor(partial: Partial<User>) {
     Object.assign(this, partial);

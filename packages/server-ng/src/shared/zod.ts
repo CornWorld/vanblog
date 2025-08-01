@@ -49,9 +49,9 @@ export const commonSchemas = {
 
   jsonString: z.string().transform((str, ctx) => {
     try {
-      return JSON.parse(str);
+      return JSON.parse(str) as unknown;
     } catch {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Invalid JSON string' });
+      ctx.addIssue({ code: 'custom', message: 'Invalid JSON string' });
       return z.NEVER;
     }
   }),
@@ -60,14 +60,14 @@ export const commonSchemas = {
 // 通用的 JSON 解析函数
 export function safeParseJson<T>(
   jsonString: string | null | undefined,
-  schema: z.ZodSchema<T>,
+  schema: z.ZodType<T>,
 ): T | null {
   if (!jsonString) {
     return null;
   }
 
   try {
-    const parsed = JSON.parse(jsonString);
+    const parsed: unknown = JSON.parse(jsonString);
     const result = schema.safeParse(parsed);
     return result.success ? result.data : null;
   } catch {

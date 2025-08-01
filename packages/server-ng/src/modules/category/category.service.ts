@@ -97,7 +97,11 @@ export class CategoryService {
   }
 
   async update(id: number, updateCategoryDto: UpdateCategoryDto): Promise<Category> {
-    const categoryData: UpdateCategoryDto = { ...updateCategoryDto };
+    const categoryData: UpdateCategoryDto = {
+      name: updateCategoryDto.name,
+      description: updateCategoryDto.description,
+      password: updateCategoryDto.password,
+    };
 
     // Hash password if provided
     if (categoryData.password) {

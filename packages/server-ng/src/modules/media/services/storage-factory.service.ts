@@ -31,11 +31,8 @@ export class StorageFactoryService {
     }
 
     // 配置 PicGo 服务
-    if (config.provider === StorageProvider.PICGO && config.picgoConfig) {
-      if (config.picgoConfig.config) {
-        (service as PicgoStorageService).configure(config.picgoConfig.config);
-      }
-
+    if (config.provider === StorageProvider.PICGO && config.picgoConfig?.config) {
+      (service as PicgoStorageService).configure(config.picgoConfig.config);
       // Note: Plugin installation would need to be handled separately
       // as plugins are not part of the current configuration schema
     }
@@ -45,6 +42,6 @@ export class StorageFactoryService {
 
   async getCurrentProvider(): Promise<StorageProvider> {
     const config = await this.storageConfigService.getStorageConfig();
-    return config.provider;
+    return config.provider as StorageProvider;
   }
 }

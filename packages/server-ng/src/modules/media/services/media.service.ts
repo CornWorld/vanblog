@@ -65,14 +65,14 @@ export class MediaService {
     totalPages: number;
   }> {
     const { keyword, type: mimeType, page = 1, pageSize = 20 } = query;
-    const offset = (page - 1) * pageSize;
+    const offset = (Number(page) - 1) * Number(pageSize);
 
     const conditions = [];
     if (keyword) {
-      conditions.push(like(staticFiles.filename, `%${keyword}%`));
+      conditions.push(like(staticFiles.filename, `%${String(keyword)}%`));
     }
     if (mimeType) {
-      conditions.push(eq(staticFiles.mimeType, mimeType));
+      conditions.push(eq(staticFiles.mimeType, String(mimeType)));
     }
     // Provider filtering removed as it's not part of the current DTO
 
@@ -84,7 +84,7 @@ export class MediaService {
         .from(staticFiles)
         .where(whereClause)
         .orderBy(desc(staticFiles.createdAt))
-        .limit(pageSize)
+        .limit(Number(pageSize))
         .offset(offset),
       this.db
         .select({ count: sql<number>`count(*)` })
@@ -97,9 +97,9 @@ export class MediaService {
     return {
       items,
       total,
-      page,
-      pageSize,
-      totalPages: Math.ceil(total / pageSize),
+      page: Number(page),
+      pageSize: Number(pageSize),
+      totalPages: Math.ceil(total / Number(pageSize)),
     };
   }
 
@@ -120,7 +120,12 @@ export class MediaService {
     const currentProvider = await this.storageFactoryService.getCurrentProvider();
 
     if (currentProvider === StorageProvider.LOCAL || file.provider === StorageProvider.LOCAL) {
-      await storageService.delete(file.filename);
+      try {
+        await storageService.delete(file.filename);
+      } catch {
+        // Log error but don't fail the deletion from database
+        // TODO: Replace with proper logger
+      }
     }
 
     await this.db.delete(staticFiles).where(eq(staticFiles.id, id));
@@ -141,7 +146,12 @@ export class MediaService {
 
     for (const file of files) {
       if (currentProvider === StorageProvider.LOCAL || file.provider === StorageProvider.LOCAL) {
-        await storageService.delete(file.filename);
+        try {
+          await storageService.delete(file.filename);
+        } catch {
+          // Log error but don't fail the deletion from database
+          // TODO: Replace with proper logger
+        }
       }
     }
 

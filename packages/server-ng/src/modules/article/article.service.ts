@@ -36,15 +36,18 @@ export class ArticleService {
     // Build where clause
     const whereConditions = [];
     if (category) {
-      whereConditions.push(eq(articles.category, category));
+      whereConditions.push(eq(articles.category, String(category)));
     }
     if (tag) {
-      const tagConditions = [like(articles.tags, `%"${tag}"%`)];
+      const tagConditions = [like(articles.tags, `%"${String(tag)}"%`)];
       whereConditions.push(or(...tagConditions));
     }
     if (keyword) {
       whereConditions.push(
-        or(like(articles.title, `%${keyword}%`), like(articles.content, `%${keyword}%`)),
+        or(
+          like(articles.title, `%${String(keyword)}%`),
+          like(articles.content, `%${String(keyword)}%`),
+        ),
       );
     }
     if (isPublished !== undefined) {
@@ -65,8 +68,8 @@ export class ArticleService {
         .from(articles)
         .where(whereClause)
         .orderBy(orderByClause)
-        .limit(pageSize)
-        .offset((page - 1) * pageSize),
+        .limit(Number(pageSize))
+        .offset((Number(page) - 1) * Number(pageSize)),
       this.db
         .select({ count: sql<number>`count(*)` })
         .from(articles)
@@ -96,12 +99,15 @@ export class ArticleService {
       readTime: 0,
     }));
 
+    const total = Number(countResult[0]?.count || 0);
+    const totalPages = Math.ceil(total / Number(pageSize));
+
     return {
       items: processedArticles,
-      total: countResult[0]?.count ?? 0,
+      total,
       page,
       pageSize,
-      totalPages: Math.ceil((countResult[0]?.count ?? 0) / pageSize),
+      totalPages,
     };
   }
 
@@ -120,15 +126,18 @@ export class ArticleService {
     // Build where clause
     const whereConditions = [];
     if (category) {
-      whereConditions.push(eq(articles.category, category));
+      whereConditions.push(eq(articles.category, String(category)));
     }
-    if (tags && tags.length > 0) {
-      const tagConditions = tags.map((tag: string) => like(articles.tags, `%"${tag}"%`));
+    if (Array.isArray(tags) && tags.length > 0) {
+      const tagConditions = tags.map((tag: string) => like(articles.tags, `%"${String(tag)}"%`));
       whereConditions.push(or(...tagConditions));
     }
     if (keyword) {
       whereConditions.push(
-        or(like(articles.title, `%${keyword}%`), like(articles.content, `%${keyword}%`)),
+        or(
+          like(articles.title, `%${String(keyword)}%`),
+          like(articles.content, `%${String(keyword)}%`),
+        ),
       );
     }
     if (!includeHidden) {
@@ -149,8 +158,8 @@ export class ArticleService {
         .from(articles)
         .where(whereClause)
         .orderBy(orderByClause)
-        .limit(pageSize)
-        .offset((page - 1) * pageSize),
+        .limit(Number(pageSize))
+        .offset((Number(page) - 1) * Number(pageSize)),
       this.db
         .select({ count: sql<number>`count(*)` })
         .from(articles)
@@ -168,12 +177,15 @@ export class ArticleService {
       highlight: undefined,
     }));
 
+    const total = Number(countResult[0]?.count || 0);
+    const totalPages = Math.ceil(total / Number(pageSize));
+
     return {
       items: processedArticles,
-      total: countResult[0]?.count ?? 0,
+      total,
       page,
       pageSize,
-      totalPages: Math.ceil((countResult[0]?.count ?? 0) / pageSize),
+      totalPages,
     };
   }
 
@@ -181,7 +193,7 @@ export class ArticleService {
     const articleResult = await this.db.select().from(articles).where(eq(articles.id, id)).limit(1);
 
     if (articleResult.length === 0) {
-      throw new NotFoundException(`Article with ID ${id} not found`);
+      throw new NotFoundException(`Article with ID ${String(id)} not found`);
     }
 
     const article = articleResult[0];
@@ -203,22 +215,22 @@ export class ArticleService {
     const { tags: tagNames, ...articleData } = createArticleDto;
 
     // Create missing tags
-    if (tagNames && tagNames.length > 0) {
+    if (Array.isArray(tagNames) && tagNames.length > 0) {
       await this.createMissingTags(tagNames);
     }
 
     const newArticleData = {
-      title: articleData.title,
-      content: articleData.content,
-      pathname: articleData.pathname,
-      category: articleData.category,
-      author: articleData.author || 'admin',
-      top: articleData.top,
-      hidden: articleData.hidden,
-      private: articleData.private,
-      password: articleData.password,
+      title: String(articleData.title),
+      content: String(articleData.content),
+      pathname: articleData.pathname ? String(articleData.pathname) : undefined,
+      category: articleData.category ? String(articleData.category) : undefined,
+      author: articleData.author ? String(articleData.author) : 'admin',
+      top: articleData.top ? Number(articleData.top) : undefined,
+      hidden: articleData.hidden ? Boolean(articleData.hidden) : undefined,
+      private: articleData.private ? Boolean(articleData.private) : undefined,
+      password: articleData.password ? String(articleData.password) : undefined,
       viewer: 0,
-      tags: JSON.stringify(tagNames || []),
+      tags: JSON.stringify(Array.isArray(tagNames) ? tagNames : []),
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -241,21 +253,23 @@ export class ArticleService {
   }
 
   async update(id: number, updateArticleDto: UpdateArticleDto): Promise<Article> {
-    const existingArticle = await this.findOne(id);
-    if (!existingArticle) {
-      throw new NotFoundException(`Article with ID ${id} not found`);
-    }
+    // Verify article exists (will throw if not found)
+    await this.findOne(id);
 
     const { tags: tagNames, ...articleData } = updateArticleDto;
 
     // Create missing tags
-    if (tagNames && tagNames.length > 0) {
+    if (Array.isArray(tagNames) && tagNames.length > 0) {
       await this.createMissingTags(tagNames);
     }
 
     const updateData = {
-      ...articleData,
-      ...(articleData.author !== undefined && { author: articleData.author || 'admin' }),
+      ...Object.fromEntries(
+        Object.entries(articleData).map(([key, value]) => [
+          key,
+          typeof value === 'string' ? value : String(value),
+        ]),
+      ),
       ...(tagNames !== undefined && { tags: JSON.stringify(tagNames) }),
       updatedAt: new Date(),
     };
@@ -282,11 +296,6 @@ export class ArticleService {
   }
 
   async remove(id: number): Promise<void> {
-    const existingArticle = await this.findOne(id);
-    if (!existingArticle) {
-      throw new NotFoundException(`Article with ID ${id} not found`);
-    }
-
     await this.db.delete(articles).where(eq(articles.id, id));
   }
 
@@ -323,7 +332,7 @@ export class ArticleService {
     const articleResults = await this.db
       .select()
       .from(articles)
-      .where(eq(articles.category, categoryName))
+      .where(eq(articles.category, String(categoryName)))
       .orderBy(desc(articles.updatedAt));
 
     const processedArticles = articleResults.map((article) => ({

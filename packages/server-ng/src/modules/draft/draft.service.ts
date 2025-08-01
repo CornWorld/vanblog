@@ -40,9 +40,7 @@ export class DraftService {
           ? drafts.createdAt
           : sortBy === 'updatedAt'
             ? drafts.updatedAt
-            : sortBy === 'title'
-              ? drafts.title
-              : drafts.updatedAt;
+            : drafts.title;
       return sortOrder === 'asc' ? asc(column) : desc(column);
     })();
 
@@ -108,7 +106,7 @@ export class DraftService {
         title: rest.title,
         content: rest.content,
         pathname: null, // pathname not available in CreateDraftDto
-        tags: tags ? JSON.stringify(tags) : null,
+        tags: JSON.stringify(tags),
         category: null, // Use first category from categories array if available
         author: 'admin', // Default author since not in CreateDraftDto
       })

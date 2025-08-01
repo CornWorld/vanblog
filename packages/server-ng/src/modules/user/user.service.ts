@@ -125,6 +125,13 @@ export class UserService {
     }
   }
 
+  // Internal method for authentication that includes password
+  async findByUsernameWithPassword(username: string): Promise<User | null> {
+    const user = await this.db.select().from(users).where(eq(users.username, username)).get();
+
+    return user ? this.mapToEntity(user, true) : null;
+  }
+
   private mapToEntity(dbUser: typeof users.$inferSelect, includePassword = false): User {
     const userData: Partial<User> = {
       id: dbUser.id,
@@ -145,12 +152,5 @@ export class UserService {
     }
 
     return new User(userData as User);
-  }
-
-  // Internal method for authentication that includes password
-  async findByUsernameWithPassword(username: string): Promise<User | null> {
-    const user = await this.db.select().from(users).where(eq(users.username, username)).get();
-
-    return user ? this.mapToEntity(user, true) : null;
   }
 }
