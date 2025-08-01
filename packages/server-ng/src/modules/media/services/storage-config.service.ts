@@ -45,15 +45,15 @@ export class StorageConfigService {
 
     const newConfig: StorageConfigResponseDto = {
       provider: updateDto.provider,
-      enabled: updateDto.enabled ?? currentConfig.enabled,
-      localPath: updateDto.localPath,
-      baseUrl: updateDto.baseUrl,
+      enabled: typeof updateDto.enabled === 'boolean' ? updateDto.enabled : currentConfig.enabled,
+      localPath: typeof updateDto.localPath === 'string' ? updateDto.localPath : undefined,
+      baseUrl: typeof updateDto.baseUrl === 'string' ? updateDto.baseUrl : undefined,
     };
 
     // 根据存储提供商设置相应配置
     switch (updateDto.provider) {
       case StorageProvider.PICGO:
-        if (updateDto.picgoConfig) {
+        if (updateDto.picgoConfig && typeof updateDto.picgoConfig === 'object') {
           newConfig.picgoConfig = updateDto.picgoConfig;
         }
         break;
