@@ -92,7 +92,7 @@ describe('UserService', () => {
       expect(vi.mocked(bcrypt.hash)).toHaveBeenCalledWith('password123', 10);
       expect(mockDb.insert).toHaveBeenCalledWith(users);
       expect(result.username).toBe('testuser');
-      expect(result.password).toBe('hashedPassword');
+      expect(result.password).toBeUndefined();
     });
 
     it('should throw ConflictException if username exists', async () => {

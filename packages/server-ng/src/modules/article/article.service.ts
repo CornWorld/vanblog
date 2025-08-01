@@ -12,6 +12,7 @@ import { articles, tags } from '../../database/schema';
 import { DATABASE_CONNECTION } from '../../database';
 import type { Database } from '../../database/connection';
 import { Article } from './entities/article.entity';
+import { safeParseJson, dataSchemas } from '../../shared/zod';
 
 @Injectable()
 export class ArticleService {
@@ -24,145 +25,33 @@ export class ArticleService {
     const {
       page = 1,
       pageSize = 10,
-      keyword,
+      sortBy = 'updatedAt',
+      sortOrder = 'desc',
       category,
       tag,
-      includeHidden = false,
-      sortBy = 'createdAt',
-      sortOrder = 'desc',
+      keyword,
+      isPublished,
     } = query;
 
-    const conditions = [];
-
+    // Build where clause
+    const whereConditions = [];
+    if (category) {
+      whereConditions.push(eq(articles.category, category));
+    }
+    if (tag) {
+      const tagConditions = [like(articles.tags, `%"${tag}"%`)];
+      whereConditions.push(or(...tagConditions));
+    }
     if (keyword) {
-      conditions.push(
+      whereConditions.push(
         or(like(articles.title, `%${keyword}%`), like(articles.content, `%${keyword}%`)),
       );
     }
-
-    if (category) {
-      conditions.push(eq(articles.category, category));
+    if (isPublished !== undefined) {
+      whereConditions.push(eq(articles.hidden, !isPublished));
     }
 
-    if (tag) {
-      conditions.push(like(articles.tags, `%"${tag}"%`));
-    }
-
-    if (!includeHidden) {
-      conditions.push(eq(articles.hidden, false));
-    }
-
-    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
-
-    const orderByClause = (() => {
-      const column = articles[sortBy as keyof typeof articles.$inferSelect];
-      return sortOrder === 'asc' ? asc(column) : desc(column);
-    })();
-
-    const [articleResults, countResult] = await Promise.all([
-      this.db
-        .select()
-        .from(articles)
-        .where(whereClause)
-        .orderBy(orderByClause)
-        .limit(pageSize)
-        .offset((page - 1) * pageSize),
-      this.db
-        .select({ count: sql<number>`count(*)` })
-        .from(articles)
-        .where(whereClause),
-    ]);
-
-    const processedArticles = articleResults.map((article) => ({
-      ...article,
-      tags: article.tags ? (JSON.parse(article.tags) as string[]) : [],
-      pathname: article.pathname ?? undefined,
-      category: article.category ?? undefined,
-      author: article.author,
-      top: article.top ?? undefined,
-      hidden: article.hidden ?? undefined,
-      private: article.private ?? undefined,
-      password: article.password ?? undefined,
-      viewer: article.viewer ?? undefined,
-    }));
-
-    return {
-      items: processedArticles.map((article) => ({
-        id: article.id,
-        title: article.title,
-        content: article.content,
-        summary: undefined,
-        cover: undefined,
-        tags: article.tags ? JSON.parse(article.tags as unknown as string) : [],
-        categories: article.category ? [article.category] : [],
-        isPublished: !article.hidden,
-        isTop: Boolean(article.top),
-        password: article.password ?? undefined,
-        allowComment: true,
-        copyright: undefined,
-        createdAt: article.createdAt,
-        updatedAt: article.updatedAt,
-        publishedAt: article.updatedAt,
-        viewCount: article.viewer ?? 0,
-        likeCount: 0,
-        commentCount: 0,
-        wordCount: 0,
-        readTime: 0,
-      })),
-      total: countResult[0]?.count ?? 0,
-      page,
-      pageSize,
-      totalPages: Math.ceil((countResult[0]?.count ?? 0) / pageSize),
-    };
-  }
-
-  async search(query: ArticleSearchDto): Promise<ArticleSearchResponseDto> {
-    const {
-      query: searchTerm,
-      page = 1,
-      pageSize = 10,
-      titleOnly = false,
-      contentOnly = false,
-      category,
-      tags,
-      includeHidden = false,
-      includePrivate = false,
-      sortBy = 'relevance',
-      sortOrder = 'desc',
-    } = query;
-
-    const conditions = [];
-
-    if (searchTerm) {
-      if (titleOnly) {
-        conditions.push(like(articles.title, `%${searchTerm}%`));
-      } else if (contentOnly) {
-        conditions.push(like(articles.content, `%${searchTerm}%`));
-      } else {
-        conditions.push(
-          or(like(articles.title, `%${searchTerm}%`), like(articles.content, `%${searchTerm}%`)),
-        );
-      }
-    }
-
-    if (category) {
-      conditions.push(eq(articles.category, category));
-    }
-
-    if (tags?.length) {
-      const tagConditions = tags.map((tag) => like(articles.tags, `%"${tag}"%`));
-      conditions.push(or(...tagConditions));
-    }
-
-    if (!includeHidden) {
-      conditions.push(eq(articles.hidden, false));
-    }
-
-    if (!includePrivate) {
-      conditions.push(eq(articles.private, false));
-    }
-
-    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+    const whereClause = whereConditions.length > 0 ? and(...whereConditions) : undefined;
 
     // Build order by clause
     const orderByClause = (() => {
@@ -185,29 +74,102 @@ export class ArticleService {
     ]);
 
     const processedArticles = articleResults.map((article) => ({
-      ...article,
-      tags: article.tags ? (JSON.parse(article.tags) as string[]) : [],
-      pathname: article.pathname ?? undefined,
-      category: article.category ?? undefined,
-      author: article.author,
-      top: article.top ?? undefined,
-      hidden: article.hidden ?? undefined,
-      private: article.private ?? undefined,
-      password: article.password ?? undefined,
-      viewer: article.viewer ?? undefined,
+      id: article.id,
+      title: article.title,
+      content: article.content,
+      summary: undefined,
+      cover: undefined,
+      tags: safeParseJson(article.tags, dataSchemas.tagsArray) ?? [],
+      categories: article.category ? [article.category] : [],
+      isPublished: !article.hidden,
+      isTop: Boolean(article.top),
+      password: article.password,
+      allowComment: true,
+      copyright: undefined,
+      createdAt: article.createdAt,
+      updatedAt: article.updatedAt,
+      publishedAt: article.updatedAt,
+      viewCount: article.viewer ?? 0,
+      likeCount: 0,
+      commentCount: 0,
+      wordCount: 0,
+      readTime: 0,
     }));
 
     return {
-      items: processedArticles.map((article) => ({
-        id: article.id,
-        title: article.title,
-        summary: undefined,
-        cover: undefined,
-        tags: article.tags ? JSON.parse(article.tags as unknown as string) : [],
-        categories: article.category ? [article.category] : [],
-        publishedAt: article.updatedAt,
-        highlight: undefined,
-      })),
+      items: processedArticles,
+      total: countResult[0]?.count ?? 0,
+      page,
+      pageSize,
+      totalPages: Math.ceil((countResult[0]?.count ?? 0) / pageSize),
+    };
+  }
+
+  async search(query: ArticleSearchDto): Promise<ArticleSearchResponseDto> {
+    const {
+      keyword,
+      page = 1,
+      pageSize = 10,
+      tags,
+      category,
+      includeHidden,
+      sortBy = 'updatedAt',
+      sortOrder = 'desc',
+    } = query;
+
+    // Build where clause
+    const whereConditions = [];
+    if (category) {
+      whereConditions.push(eq(articles.category, category));
+    }
+    if (tags && tags.length > 0) {
+      const tagConditions = tags.map((tag: string) => like(articles.tags, `%"${tag}"%`));
+      whereConditions.push(or(...tagConditions));
+    }
+    if (keyword) {
+      whereConditions.push(
+        or(like(articles.title, `%${keyword}%`), like(articles.content, `%${keyword}%`)),
+      );
+    }
+    if (!includeHidden) {
+      whereConditions.push(eq(articles.hidden, false));
+    }
+
+    const whereClause = whereConditions.length > 0 ? and(...whereConditions) : undefined;
+
+    // Build order by clause
+    const orderByClause = (() => {
+      const column = articles[sortBy as keyof typeof articles.$inferSelect];
+      return sortOrder === 'asc' ? asc(column) : desc(column);
+    })();
+
+    const [articleResults, countResult] = await Promise.all([
+      this.db
+        .select()
+        .from(articles)
+        .where(whereClause)
+        .orderBy(orderByClause)
+        .limit(pageSize)
+        .offset((page - 1) * pageSize),
+      this.db
+        .select({ count: sql<number>`count(*)` })
+        .from(articles)
+        .where(whereClause),
+    ]);
+
+    const processedArticles = articleResults.map((article) => ({
+      id: article.id,
+      title: article.title,
+      summary: undefined,
+      cover: undefined,
+      tags: safeParseJson(article.tags, dataSchemas.tagsArray) ?? [],
+      categories: article.category ? [article.category] : [],
+      publishedAt: article.updatedAt,
+      highlight: undefined,
+    }));
+
+    return {
+      items: processedArticles,
       total: countResult[0]?.count ?? 0,
       page,
       pageSize,
@@ -216,17 +178,16 @@ export class ArticleService {
   }
 
   async findOne(id: number): Promise<Article> {
-    const results = await this.db.select().from(articles).where(eq(articles.id, id)).limit(1);
+    const articleResult = await this.db.select().from(articles).where(eq(articles.id, id)).limit(1);
 
-    if (results.length === 0) {
-      throw new NotFoundException(`Article with ID ${String(id)} not found`);
+    if (articleResult.length === 0) {
+      throw new NotFoundException(`Article with ID ${id} not found`);
     }
 
-    const article = results[0];
-
+    const article = articleResult[0];
     return new Article({
       ...article,
-      tags: article.tags ? (JSON.parse(article.tags) as string[]) : [],
+      tags: safeParseJson(article.tags, dataSchemas.tagsArray) ?? [],
       pathname: article.pathname ?? undefined,
       category: article.category ?? undefined,
       author: article.author,
@@ -239,39 +200,35 @@ export class ArticleService {
   }
 
   async create(createArticleDto: CreateArticleDto): Promise<Article> {
-    const { tags, ...rest } = createArticleDto;
+    const { tags: tagNames, ...articleData } = createArticleDto;
 
-    // Auto-create tags if they don't exist
-    if (tags?.length) {
-      await this.createMissingTags(tags);
+    // Create missing tags
+    if (tagNames && tagNames.length > 0) {
+      await this.createMissingTags(tagNames);
     }
 
-    const result = await this.db
-      .insert(articles)
-      .values({
-        title: rest.title,
-        content: rest.content,
-        pathname: rest.pathname ?? null,
-        tags: tags ? JSON.stringify(tags) : null,
-        category: rest.category ?? null,
-        author: rest.author ?? 'admin',
-        top: rest.top ?? 0,
-        hidden: rest.hidden ?? false,
-        private: rest.private ?? false,
-        password: rest.password ?? null,
-        viewer: 0,
-      })
-      .returning();
+    const newArticleData = {
+      title: articleData.title,
+      content: articleData.content,
+      pathname: articleData.pathname,
+      category: articleData.category,
+      author: articleData.author || 'admin',
+      top: articleData.top,
+      hidden: articleData.hidden,
+      private: articleData.private,
+      password: articleData.password,
+      viewer: 0,
+      tags: JSON.stringify(tagNames || []),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
 
-    if (result.length === 0) {
-      throw new Error('Failed to create article');
-    }
+    const insertResult = await this.db.insert(articles).values([newArticleData]).returning();
 
-    const newArticle = result[0];
-
+    const newArticle = insertResult[0];
     return new Article({
       ...newArticle,
-      tags: newArticle.tags ? (JSON.parse(newArticle.tags) as string[]) : [],
+      tags: safeParseJson(newArticle.tags, dataSchemas.tagsArray) ?? [],
       pathname: newArticle.pathname ?? undefined,
       category: newArticle.category ?? undefined,
       author: newArticle.author,
@@ -284,65 +241,35 @@ export class ArticleService {
   }
 
   async update(id: number, updateArticleDto: UpdateArticleDto): Promise<Article> {
-    const { tags, ...rest } = updateArticleDto;
-
-    const updateData: Record<string, unknown> = {};
-
-    if ('title' in rest) {
-      updateData.title = rest.title;
+    const existingArticle = await this.findOne(id);
+    if (!existingArticle) {
+      throw new NotFoundException(`Article with ID ${id} not found`);
     }
 
-    if ('content' in rest) {
-      updateData.content = rest.content;
+    const { tags: tagNames, ...articleData } = updateArticleDto;
+
+    // Create missing tags
+    if (tagNames && tagNames.length > 0) {
+      await this.createMissingTags(tagNames);
     }
 
-    if ('pathname' in rest) {
-      updateData.pathname = rest.pathname ?? null;
-    }
+    const updateData = {
+      ...articleData,
+      ...(articleData.author !== undefined && { author: articleData.author || 'admin' }),
+      ...(tagNames !== undefined && { tags: JSON.stringify(tagNames) }),
+      updatedAt: new Date(),
+    };
 
-    if (tags !== undefined) {
-      updateData.tags = JSON.stringify(tags);
-      // Auto-create tags if they don't exist
-      if (tags.length > 0) {
-        await this.createMissingTags(tags);
-      }
-    }
-    if ('category' in rest) {
-      updateData.category = rest.category ?? null;
-    }
-    if ('author' in rest) {
-      updateData.author = rest.author;
-    }
-    if ('top' in rest) {
-      updateData.top = rest.top;
-    }
-    if ('hidden' in rest) {
-      updateData.hidden = rest.hidden;
-    }
-    if ('private' in rest) {
-      updateData.private = rest.private;
-    }
-    if ('password' in rest) {
-      updateData.password = rest.password ?? null;
-    }
-
-    updateData.updatedAt = new Date();
-
-    const result = await this.db
+    const updateResult = await this.db
       .update(articles)
       .set(updateData)
       .where(eq(articles.id, id))
       .returning();
 
-    if (result.length === 0) {
-      throw new NotFoundException(`Article with ID ${String(id)} not found`);
-    }
-
-    const updatedArticle = result[0];
-
+    const updatedArticle = updateResult[0];
     return new Article({
       ...updatedArticle,
-      tags: updatedArticle.tags ? (JSON.parse(updatedArticle.tags) as string[]) : [],
+      tags: safeParseJson(updatedArticle.tags, dataSchemas.tagsArray) ?? [],
       pathname: updatedArticle.pathname ?? undefined,
       category: updatedArticle.category ?? undefined,
       author: updatedArticle.author,
@@ -355,14 +282,12 @@ export class ArticleService {
   }
 
   async remove(id: number): Promise<void> {
-    const result = await this.db
-      .delete(articles)
-      .where(eq(articles.id, id))
-      .returning({ id: articles.id });
-
-    if (result.length === 0) {
-      throw new NotFoundException(`Article with ID ${String(id)} not found`);
+    const existingArticle = await this.findOne(id);
+    if (!existingArticle) {
+      throw new NotFoundException(`Article with ID ${id} not found`);
     }
+
+    await this.db.delete(articles).where(eq(articles.id, id));
   }
 
   async exportArticles(): Promise<Article[]> {
@@ -370,16 +295,20 @@ export class ArticleService {
     return articleResults.map(
       (article) =>
         new Article({
-          ...article,
-          tags: article.tags ? (JSON.parse(article.tags) as string[]) : [],
+          id: article.id,
+          title: article.title,
+          content: article.content,
           pathname: article.pathname ?? undefined,
+          tags: safeParseJson(article.tags, dataSchemas.tagsArray) ?? [],
           category: article.category ?? undefined,
           author: article.author,
           top: article.top ?? undefined,
           hidden: article.hidden ?? undefined,
           private: article.private ?? undefined,
           password: article.password ?? undefined,
-          viewer: article.viewer ?? undefined,
+          viewer: article.viewer ?? 0,
+          createdAt: article.createdAt,
+          updatedAt: article.updatedAt,
         }),
     );
   }
@@ -391,65 +320,57 @@ export class ArticleService {
   }
 
   async findByCategory(categoryName: string): Promise<ArticleListResponseDto> {
-    const [articleResults, total] = await Promise.all([
-      this.db
-        .select()
-        .from(articles)
-        .where(eq(articles.category, categoryName))
-        .orderBy(desc(articles.top), desc(articles.createdAt)),
-      this.db
-        .select({ count: sql<number>`count(*)` })
-        .from(articles)
-        .where(eq(articles.category, categoryName))
-        .then((res) => Number(res[0]?.count || 0)),
-    ]);
+    const articleResults = await this.db
+      .select()
+      .from(articles)
+      .where(eq(articles.category, categoryName))
+      .orderBy(desc(articles.updatedAt));
+
+    const processedArticles = articleResults.map((article) => ({
+      id: article.id,
+      title: article.title,
+      content: article.content,
+      tags: safeParseJson(article.tags, dataSchemas.tagsArray) ?? [],
+      categories: article.category ? [article.category] : [],
+      isPublished: !article.hidden,
+      isTop: Boolean(article.top),
+      allowComment: true,
+      createdAt: article.createdAt,
+      updatedAt: article.updatedAt,
+      viewCount: article.viewer ?? 0,
+      likeCount: 0,
+      commentCount: 0,
+      wordCount: 0,
+      readTime: 0,
+      publishedAt: article.updatedAt,
+    }));
 
     return {
-      items: articleResults.map((article) => ({
-        id: article.id,
-        title: article.title,
-        content: article.content,
-        summary: undefined,
-        cover: undefined,
-        tags: article.tags ? JSON.parse(article.tags) : [],
-        categories: article.category ? [article.category] : [],
-        isPublished: !article.hidden,
-        isTop: Boolean(article.top),
-        password: article.password ?? undefined,
-        allowComment: true,
-        copyright: undefined,
-        createdAt: article.createdAt,
-        updatedAt: article.updatedAt,
-        publishedAt: article.updatedAt,
-        viewCount: article.viewer ?? 0,
-        likeCount: 0,
-        commentCount: 0,
-        wordCount: 0,
-        readTime: 0,
-      })),
-      total,
+      items: processedArticles,
+      total: processedArticles.length,
       page: 1,
-      pageSize: total,
+      pageSize: processedArticles.length,
       totalPages: 1,
     };
   }
 
   private async createMissingTags(tagNames: string[]): Promise<void> {
-    // Get existing tags
-    const existingTags = await this.db.select().from(tags);
-    const existingTagNames = new Set(existingTags.map((tag) => tag.name));
+    const existingTags = await this.db
+      .select({ name: tags.name })
+      .from(tags)
+      .where(or(...tagNames.map((name) => eq(tags.name, name))));
 
-    // Find tags that need to be created
-    const missingTags = tagNames.filter((tagName) => !existingTagNames.has(tagName));
+    const existingTagNames = existingTags.map((tag) => tag.name);
+    const missingTagNames = tagNames.filter((name) => !existingTagNames.includes(name));
 
-    // Create missing tags
-    if (missingTags.length > 0) {
-      const tagsToCreate = missingTags.map((tagName) => ({
-        name: tagName,
-        slug: tagName.toLowerCase().replace(/\s+/g, '-'),
-      }));
-
-      await this.db.insert(tags).values(tagsToCreate);
+    if (missingTagNames.length > 0) {
+      await this.db.insert(tags).values(
+        missingTagNames.map((name) => ({
+          name,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        })),
+      );
     }
   }
 }

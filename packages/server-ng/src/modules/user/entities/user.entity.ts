@@ -1,6 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { UserType } from '../dto/create-user.dto';
-import { Exclude } from 'class-transformer';
 import type { Permission } from '../../../shared/types/permission.type';
 
 export class User {
@@ -10,8 +9,8 @@ export class User {
   @ApiProperty({ description: '用户名' })
   username!: string;
 
-  @Exclude()
-  password!: string;
+  // Password field excluded from serialization via transform logic
+  password?: string;
 
   @ApiPropertyOptional({ description: '昵称' })
   nickname?: string;

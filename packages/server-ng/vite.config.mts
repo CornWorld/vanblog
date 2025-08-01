@@ -17,8 +17,6 @@ export default defineConfig({
       '@nestjs/microservices',
       '@nestjs/websockets',
       'cache-manager',
-      'class-transformer',
-      'class-validator',
       'fastify-swagger',
     ],
   },

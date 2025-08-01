@@ -3,6 +3,7 @@ import { DATABASE_CONNECTION } from '../../../database/database.module';
 import { LibSQLDatabase } from 'drizzle-orm/libsql';
 import { eq, sql } from 'drizzle-orm';
 import { siteMeta } from '../../../database/schema';
+import { safeParseJson, dataSchemas } from '../../../shared/zod';
 
 // Core site configurations that remain in the setting module
 export interface SiteInfo {
@@ -57,7 +58,8 @@ export class SettingCoreService {
     const results = await this.db.select().from(siteMeta).where(eq(siteMeta.key, key)).limit(1);
 
     if (results.length > 0 && results[0].value) {
-      return JSON.parse(results[0].value) as T;
+      const parsed = safeParseJson(results[0].value, dataSchemas.genericObject);
+      return parsed as T;
     }
 
     if (defaultValue !== undefined) {

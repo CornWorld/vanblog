@@ -1,5 +1,5 @@
 import { NestFactory } from '@nestjs/core';
-import { type INestApplication, ValidationPipe } from '@nestjs/common';
+import { type INestApplication } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder, type OpenAPIObject } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { ConfigService } from './config';
@@ -103,17 +103,7 @@ export async function init(): Promise<INestApplication> {
   // Enable compression
   app.use(compression());
 
-  // Global pipes
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true,
-      forbidNonWhitelisted: true,
-      transform: true,
-      transformOptions: {
-        enableImplicitConversion: true,
-      },
-    }),
-  );
+  // Global pipes - using ZodValidationPipe per endpoint instead of global ValidationPipe
 
   // Global exception filters
   app.useGlobalFilters(new AllExceptionsFilter(logger), new HttpExceptionFilter(logger));

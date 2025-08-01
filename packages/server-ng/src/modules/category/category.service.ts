@@ -15,6 +15,7 @@ import { OverallStatisticsDto } from '../../shared/dto/statistics.dto';
 import { CategoryAccessResponseDto } from './dto/verify-password.dto';
 import * as bcrypt from 'bcrypt';
 import * as jwt from 'jsonwebtoken';
+import { safeParseJson, dataSchemas } from '../../shared/zod';
 
 @Injectable()
 export class CategoryService {
@@ -229,7 +230,7 @@ export class CategoryService {
         const tagCount = new Map<string, number>();
         articlesInCategory.forEach((article) => {
           if (article.tags) {
-            const articleTags = JSON.parse(article.tags) as string[];
+            const articleTags = safeParseJson(article.tags, dataSchemas.tagsArray) ?? [];
             articleTags.forEach((tag) => {
               tagCount.set(tag, (tagCount.get(tag) ?? 0) + 1);
             });

@@ -13,17 +13,19 @@ export class AuthService {
   ) {}
 
   async validateUser(username: string, password: string): Promise<User | null> {
-    const user = await this.userService.findByUsername(username);
+    const user = await this.userService.findByUsernameWithPassword(username);
     if (!user) {
       return null;
     }
 
-    const isPasswordValid = await bcrypt.compare(password, user.password);
+    const isPasswordValid = await bcrypt.compare(password, user.password!);
     if (!isPasswordValid) {
       return null;
     }
 
-    return user;
+    // Return user without password for further use
+    const userWithoutPassword = await this.userService.findByUsername(username);
+    return userWithoutPassword;
   }
 
   login(user: User): { access_token: string; user: Omit<User, 'password'> } {

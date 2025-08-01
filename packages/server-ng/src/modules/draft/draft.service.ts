@@ -13,6 +13,7 @@ import type { Database } from '../../database/connection';
 import { Draft } from './entities/draft.entity';
 import { Article } from '../article/entities/article.entity';
 import { DraftVersionService } from './draft-version.service';
+import { safeParseJson, dataSchemas } from '../../shared/zod';
 
 @Injectable()
 export class DraftService {
@@ -61,8 +62,8 @@ export class DraftService {
 
     const processedDrafts = draftResults.map((draft) => ({
       ...draft,
-      tags: draft.tags ? (JSON.parse(draft.tags) as string[]) : [],
-      categories: draft.tags ? (JSON.parse(draft.tags) as string[]) : [],
+      tags: safeParseJson(draft.tags, dataSchemas.tagsArray) ?? [],
+      categories: draft.category ? [draft.category] : [],
       pathname: draft.pathname ?? undefined,
       category: draft.category ?? undefined,
       userId: 1,
@@ -92,7 +93,7 @@ export class DraftService {
 
     return new Draft({
       ...draft,
-      tags: draft.tags ? (JSON.parse(draft.tags) as string[]) : [],
+      tags: safeParseJson(draft.tags, dataSchemas.tagsArray) ?? [],
       pathname: draft.pathname ?? undefined,
       category: draft.category ?? undefined,
     });
@@ -121,7 +122,7 @@ export class DraftService {
 
     return new Draft({
       ...newDraft,
-      tags: newDraft.tags ? (JSON.parse(newDraft.tags) as string[]) : [],
+      tags: safeParseJson(newDraft.tags, dataSchemas.tagsArray) ?? [],
       pathname: newDraft.pathname ?? undefined,
       category: newDraft.category ?? undefined,
     });
@@ -175,7 +176,7 @@ export class DraftService {
 
     return new Draft({
       ...updatedDraft,
-      tags: updatedDraft.tags ? (JSON.parse(updatedDraft.tags) as string[]) : [],
+      tags: safeParseJson(updatedDraft.tags, dataSchemas.tagsArray) ?? [],
       pathname: updatedDraft.pathname ?? undefined,
       category: updatedDraft.category ?? undefined,
     });
@@ -233,7 +234,7 @@ export class DraftService {
 
     return new Article({
       ...newArticle,
-      tags: newArticle.tags ? (JSON.parse(newArticle.tags) as string[]) : [],
+      tags: safeParseJson(newArticle.tags, dataSchemas.tagsArray) ?? [],
       pathname: newArticle.pathname ?? undefined,
       category: newArticle.category ?? undefined,
       author: newArticle.author,
@@ -298,7 +299,7 @@ export class DraftService {
 
     return new Draft({
       ...updatedDraft,
-      tags: updatedDraft.tags ? (JSON.parse(updatedDraft.tags) as string[]) : [],
+      tags: safeParseJson(updatedDraft.tags, dataSchemas.tagsArray) ?? [],
       pathname: updatedDraft.pathname ?? undefined,
       category: updatedDraft.category ?? undefined,
     });

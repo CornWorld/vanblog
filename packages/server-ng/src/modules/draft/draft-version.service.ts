@@ -4,6 +4,7 @@ import { draftVersions, drafts } from '../../database/schema';
 import { DATABASE_CONNECTION } from '../../database';
 import type { Database } from '../../database/connection';
 import { DraftVersion } from './entities/draft.entity';
+import { safeParseJson, dataSchemas } from '../../shared/zod';
 
 @Injectable()
 export class DraftVersionService {
@@ -57,7 +58,7 @@ export class DraftVersionService {
 
     return new DraftVersion({
       ...newVersion,
-      tags: newVersion.tags ? (JSON.parse(newVersion.tags) as string[]) : [],
+      tags: safeParseJson(newVersion.tags, dataSchemas.tagsArray) ?? [],
       pathname: newVersion.pathname ?? undefined,
       category: newVersion.category ?? undefined,
     });
@@ -74,7 +75,7 @@ export class DraftVersionService {
       (version) =>
         new DraftVersion({
           ...version,
-          tags: version.tags ? (JSON.parse(version.tags) as string[]) : [],
+          tags: safeParseJson(version.tags, dataSchemas.tagsArray) ?? [],
           pathname: version.pathname ?? undefined,
           category: version.category ?? undefined,
         }),
@@ -98,7 +99,7 @@ export class DraftVersionService {
 
     return new DraftVersion({
       ...versionData,
-      tags: versionData.tags ? (JSON.parse(versionData.tags) as string[]) : [],
+      tags: safeParseJson(versionData.tags, dataSchemas.tagsArray) ?? [],
       pathname: versionData.pathname ?? undefined,
       category: versionData.category ?? undefined,
     });

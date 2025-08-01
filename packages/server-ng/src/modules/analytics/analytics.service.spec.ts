@@ -79,7 +79,7 @@ describe('AnalyticsService', () => {
 
       expect(mockDb.values).toHaveBeenCalledWith({
         type: dto.type,
-        path: undefined,
+        path: dto.path,
         referrer: undefined,
         userAgent: undefined,
         ip: undefined,

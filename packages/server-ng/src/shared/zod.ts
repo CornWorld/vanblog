@@ -43,7 +43,50 @@ export const commonSchemas = {
     .string()
     .regex(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/, 'Invalid hex color format')
     .describe('Hexadecimal color code'),
+
+  // JSON 数据解析相关
+  stringArray: z.array(z.string()).describe('Array of strings'),
+
+  jsonString: z.string().transform((str, ctx) => {
+    try {
+      return JSON.parse(str);
+    } catch {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Invalid JSON string' });
+      return z.NEVER;
+    }
+  }),
+};
+
+// 通用的 JSON 解析函数
+export function safeParseJson<T>(
+  jsonString: string | null | undefined,
+  schema: z.ZodSchema<T>,
+): T | null {
+  if (!jsonString) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(jsonString);
+    const result = schema.safeParse(parsed);
+    return result.success ? result.data : null;
+  } catch {
+    return null;
+  }
+}
+
+// 常用的数据结构 schema
+export const dataSchemas = {
+  // 标签数组
+  tagsArray: z.array(z.string()),
+
+  // 权限数组
+  permissionsArray: z.array(z.string()),
+
+  // 通用对象
+  genericObject: z.record(z.string(), z.unknown()),
 };
 
 // 导出类型
 export type CommonSchemas = typeof commonSchemas;
+export type DataSchemas = typeof dataSchemas;

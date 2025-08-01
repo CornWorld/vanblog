@@ -27,7 +27,6 @@ describe('ArticleService', () => {
     };
 
     // Reset all mocks to return this by default
-
     Object.keys(mockDb).forEach((key) => {
       mockDb[key].mockReturnValue(mockDb);
     });
@@ -224,7 +223,10 @@ describe('ArticleService', () => {
         updatedAt: new Date(),
       };
 
-      mockDb.limit.mockResolvedValueOnce([mockArticle]);
+      // Mock the chain: select().from().where().limit(1)
+      mockDb.where.mockReturnValueOnce({
+        limit: vi.fn().mockResolvedValueOnce([mockArticle]),
+      });
 
       const result = await service.findOne(1);
 
@@ -233,7 +235,10 @@ describe('ArticleService', () => {
     });
 
     it('should throw NotFoundException when article not found', async () => {
-      mockDb.limit.mockResolvedValueOnce([]);
+      // Mock the chain: select().from().where().limit(1) returning empty array
+      mockDb.where.mockReturnValueOnce({
+        limit: vi.fn().mockResolvedValueOnce([]),
+      });
 
       await expect(service.findOne(999)).rejects.toThrow(NotFoundException);
     });
@@ -270,8 +275,10 @@ describe('ArticleService', () => {
         allowComment: true,
       };
 
-      // Mock the db.select().from(tags) call
-      mockDb.from.mockResolvedValueOnce([]);
+      // Mock the createMissingTags call: db.select().from(tags).where()
+      mockDb.from.mockReturnValueOnce({
+        where: vi.fn().mockResolvedValueOnce([]),
+      });
 
       const result = await service.create(createDto);
 
@@ -283,6 +290,23 @@ describe('ArticleService', () => {
 
   describe('update', () => {
     it('should update an existing article', async () => {
+      const mockExistingArticle = {
+        id: 1,
+        title: 'Existing Article',
+        content: 'Existing content',
+        tags: JSON.stringify(['existing']),
+        author: 'admin',
+        top: 0,
+        hidden: false,
+        private: false,
+        viewer: 10,
+        pathname: null,
+        category: null,
+        password: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
       const mockUpdatedArticle = {
         id: 1,
         title: 'Updated Article',
@@ -300,6 +324,15 @@ describe('ArticleService', () => {
         updatedAt: new Date(),
       };
 
+      // Mock findOne to return existing article
+      mockDb.where.mockReturnValueOnce({
+        limit: vi.fn().mockResolvedValueOnce([mockExistingArticle]),
+      });
+
+      // Mock the createMissingTags call (db.select().from(tags).where())
+      mockDb.where.mockResolvedValueOnce([]);
+
+      // Mock the update call
       mockDb.returning.mockResolvedValueOnce([mockUpdatedArticle]);
 
       const updateDto = {
@@ -308,9 +341,6 @@ describe('ArticleService', () => {
         tags: ['updated'],
       };
 
-      // Mock the db.select().from(tags) call
-      mockDb.from.mockResolvedValueOnce([]);
-
       const result = await service.update(1, updateDto);
 
       expect(result.title).toBe('Updated Article');
@@ -318,7 +348,10 @@ describe('ArticleService', () => {
     });
 
     it('should throw NotFoundException when article not found', async () => {
-      mockDb.returning.mockResolvedValueOnce([]);
+      // Mock findOne to return empty array (article not found)
+      mockDb.where.mockReturnValueOnce({
+        limit: vi.fn().mockResolvedValueOnce([]),
+      });
 
       await expect(service.update(999, { title: 'Test', content: 'Test content' })).rejects.toThrow(
         NotFoundException,
@@ -328,13 +361,36 @@ describe('ArticleService', () => {
 
   describe('remove', () => {
     it('should delete an article', async () => {
-      mockDb.returning.mockResolvedValueOnce([{ id: 1 }]);
+      const mockArticle = {
+        id: 1,
+        title: 'Test Article',
+        content: 'Test content',
+        tags: JSON.stringify(['test']),
+        author: 'admin',
+        top: 0,
+        hidden: false,
+        private: false,
+        viewer: 10,
+        pathname: null,
+        category: null,
+        password: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      // Mock findOne to return an article
+      mockDb.where.mockReturnValueOnce({
+        limit: vi.fn().mockResolvedValueOnce([mockArticle]),
+      });
 
       await expect(service.remove(1)).resolves.not.toThrow();
     });
 
     it('should throw NotFoundException when article not found', async () => {
-      mockDb.returning.mockResolvedValueOnce([]);
+      // Mock findOne to return empty array (article not found)
+      mockDb.where.mockReturnValueOnce({
+        limit: vi.fn().mockResolvedValueOnce([]),
+      });
 
       await expect(service.remove(999)).rejects.toThrow(NotFoundException);
     });
@@ -417,7 +473,7 @@ describe('ArticleService', () => {
       const mockResults = articlesToImport.map((article, index) => ({
         id: index + 1,
         ...article,
-        tags: article.tags ? JSON.stringify(article.tags) : null,
+        tags: JSON.stringify(article.tags),
         category: article.category ?? null,
         author: 'admin',
         top: 0,
@@ -430,8 +486,11 @@ describe('ArticleService', () => {
         updatedAt: new Date(),
       }));
 
-      // Mock the db.select().from(tags) calls for both articles
-      mockDb.from
+      // Mock the db.select().from(tags).where() calls for both articles
+      // Reset where to return mockDb for chaining, then override specific calls
+      mockDb.where.mockReturnValue(mockDb);
+      // Override the final result for the tag queries
+      mockDb.where
         .mockResolvedValueOnce([]) // First article tags check
         .mockResolvedValueOnce([]); // Second article tags check (no tags)
 

@@ -16,6 +16,7 @@ import {
 } from '../dto/analytics-response.dto';
 import { AnalyticsType } from '../entities/analytics.entity';
 import { UAParser } from 'ua-parser-js';
+import { safeParseJson, dataSchemas } from '../../../shared/zod';
 
 @Injectable()
 export class AnalyticsService {
@@ -234,7 +235,7 @@ export class AnalyticsService {
       .orderBy(desc(analytics.createdAt));
 
     return result.map((row) => {
-      const parsed = row.data ? (JSON.parse(row.data) as Record<string, unknown>) : null;
+      const parsed = safeParseJson(row.data, dataSchemas.genericObject);
       return {
         ...row,
         data: parsed,

@@ -8,6 +8,7 @@ import {
   StorageConfigResponseDto,
   StorageProvider,
 } from '../dto/storage-config.dto';
+import { safeParseJson, dataSchemas } from '../../../shared/zod';
 
 const STORAGE_CONFIG_KEY = 'storage_config';
 
@@ -32,7 +33,10 @@ export class StorageConfigService {
       };
     }
 
-    const config = JSON.parse(result[0].value ?? '{}') as StorageConfigResponseDto;
+    const config = safeParseJson(
+      result[0].value ?? '{}',
+      dataSchemas.genericObject,
+    ) as StorageConfigResponseDto;
     return config;
   }
 
@@ -103,6 +107,9 @@ export class StorageConfigService {
       };
     }
 
-    return JSON.parse(result[0].value ?? '{}') as StorageConfigResponseDto;
+    return safeParseJson(
+      result[0].value ?? '{}',
+      dataSchemas.genericObject,
+    ) as StorageConfigResponseDto;
   }
 }

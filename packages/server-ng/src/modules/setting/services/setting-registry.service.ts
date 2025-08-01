@@ -3,6 +3,7 @@ import { DATABASE_CONNECTION } from '../../../database/database.module';
 import { LibSQLDatabase } from 'drizzle-orm/libsql';
 import { eq, sql } from 'drizzle-orm';
 import { siteMeta } from '../../../database/schema';
+import { safeParseJson, dataSchemas } from '../../../shared/zod';
 
 export interface ConfigRegistration<T = unknown> {
   key: string;
@@ -40,7 +41,8 @@ export class SettingRegistryService {
 
     if (results.length > 0 && results[0].value) {
       try {
-        return JSON.parse(results[0].value) as T;
+        const parsed = safeParseJson(results[0].value, dataSchemas.genericObject);
+        return parsed as T;
       } catch (error) {
         this.logger.error(`Failed to parse config value for key "${key}":`, error);
         return null;

@@ -7,6 +7,7 @@ import { User } from './entities/user.entity';
 import { users } from '../../database/schema';
 import type { Database } from '../../database/connection';
 import type { Permission } from '../../shared/types/permission.type';
+import { safeParseJson, dataSchemas } from '../../shared/zod';
 
 @Injectable()
 export class UserService {
@@ -124,20 +125,32 @@ export class UserService {
     }
   }
 
-  private mapToEntity(dbUser: typeof users.$inferSelect): User {
-    return new User({
+  private mapToEntity(dbUser: typeof users.$inferSelect, includePassword = false): User {
+    const userData: Partial<User> = {
       id: dbUser.id,
       username: dbUser.username,
-      password: dbUser.password,
       nickname: dbUser.nickname ?? undefined,
       email: dbUser.email ?? undefined,
       avatar: dbUser.avatar ?? undefined,
       type: dbUser.type as UserType,
-      permissions: dbUser.permissions
-        ? (JSON.parse(dbUser.permissions) as Permission[])
-        : undefined,
+      permissions: safeParseJson(dbUser.permissions, dataSchemas.permissionsArray) as
+        | Permission[]
+        | undefined,
       createdAt: dbUser.createdAt,
       updatedAt: dbUser.updatedAt,
-    });
+    };
+
+    if (includePassword) {
+      userData.password = dbUser.password;
+    }
+
+    return new User(userData as User);
+  }
+
+  // Internal method for authentication that includes password
+  async findByUsernameWithPassword(username: string): Promise<User | null> {
+    const user = await this.db.select().from(users).where(eq(users.username, username)).get();
+
+    return user ? this.mapToEntity(user, true) : null;
   }
 }
