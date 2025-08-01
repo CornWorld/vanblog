@@ -287,13 +287,14 @@ JWT_EXPIRES_IN=7d
 
 ### 阶段 9: Pipeline 事件系统
 
-- [ ] 创建 Pipeline 数据模型
-- [ ] 实现事件触发机制
-- [ ] 创建 Pipeline 执行引擎
-- [ ] 实现依赖管理系统
-- [ ] 添加调试功能
-- [ ] 创建运行日志记录
-- [ ] 实现手动触发 API
+- [x] 创建 Pipeline 数据模型
+- [x] 实现事件触发机制
+- [x] 创建 Pipeline 执行引擎
+- [x] 实现依赖管理系统
+- [x] 添加调试功能
+- [x] 创建运行日志记录
+- [x] 实现手动触发 API
+- [x] 集成 Article 和 Draft 模块的事件触发（beforeUpdateArticle, afterUpdateArticle, deleteArticle, beforeUpdateDraft, afterUpdateDraft, deleteDraft）
 - [ ] 依赖 pipeline 系统实现 demo 功能，阻止大部分数据库操作 + 提供还原定时事件
 
 ### 阶段 10: 高级功能
