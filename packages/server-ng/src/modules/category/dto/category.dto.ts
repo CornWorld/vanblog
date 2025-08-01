@@ -1,56 +1,39 @@
-import { IsString, IsOptional, IsBoolean, MinLength, MaxLength } from 'class-validator';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { z } from 'zod';
+import { commonSchemas } from '../../../shared/zod';
 
-export class CreateCategoryDto {
-  @ApiProperty({ description: 'Category name' })
-  @IsString()
-  @MinLength(1)
-  @MaxLength(100)
-  name!: string;
+// 基础分类 Schema
+export const CategorySchema = z.object({
+  id: commonSchemas.id,
+  name: z.string(),
+  description: z.string().optional().nullable(),
+  password: z.string().optional().nullable(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+});
 
-  @ApiPropertyOptional({ description: 'Category slug for URL' })
-  @IsOptional()
-  @IsString()
-  slug?: string | null;
+// 创建分类 Schema
+export const CreateCategorySchema = z.object({
+  name: z.string().min(1, '分类名称不能为空'),
+  description: z.string().optional().nullable(),
+  password: z.string().optional().nullable(),
+});
 
-  @ApiPropertyOptional({ description: 'Category description' })
-  @IsOptional()
-  @IsString()
-  description?: string | null;
+// 更新分类 Schema
+export const UpdateCategorySchema = CreateCategorySchema.partial();
 
-  @ApiPropertyOptional({ description: 'Make category private (password protected)' })
-  @IsOptional()
-  @IsBoolean()
-  private?: boolean | null;
+// 带文章数量的分类 Schema
+export const CategoryWithCountSchema = CategorySchema.extend({
+  articleCount: z.number().default(0),
+});
 
-  @ApiPropertyOptional({ description: 'Password for private categories' })
-  @IsOptional()
-  @IsString()
-  password?: string | null;
-}
+// 分类列表响应 Schema
+export const CategoryListResponseSchema = z.object({
+  items: z.array(CategoryWithCountSchema),
+  total: z.number(),
+});
 
-export class UpdateCategoryDto extends CreateCategoryDto {}
-
-export class CategoryDto extends CreateCategoryDto {
-  @ApiProperty({ description: 'Category ID' })
-  id!: number;
-
-  @ApiProperty({ description: 'Creation timestamp' })
-  createdAt!: Date;
-
-  @ApiProperty({ description: 'Last update timestamp' })
-  updatedAt!: Date;
-}
-
-export class CategoryWithCountDto extends CategoryDto {
-  @ApiProperty({ description: 'Number of articles in this category' })
-  articleCount!: number;
-}
-
-export class CategoryListResponseDto {
-  @ApiProperty({ description: 'Category list', type: [CategoryWithCountDto] })
-  data!: CategoryWithCountDto[];
-
-  @ApiProperty({ description: 'Total count' })
-  total!: number;
-}
+export type CreateCategoryDto = z.infer<typeof CreateCategorySchema>;
+export type UpdateCategoryDto = z.infer<typeof UpdateCategorySchema>;
+export type CategoryDto = z.infer<typeof CategorySchema>;
+export type CategoryWithCountDto = z.infer<typeof CategoryWithCountSchema>;
+export type CategoryListResponseDto = z.infer<typeof CategoryListResponseSchema>;

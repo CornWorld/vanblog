@@ -5,10 +5,12 @@ import { ExtractJwt, Strategy } from 'passport-jwt';
 import { UserService } from '../../user/user.service';
 import { User } from '../../user/entities/user.entity';
 
+import { UserType } from '../../user/dto/create-user.dto';
+
 export interface JwtPayload {
   sub: number;
   username: string;
-  type: 'admin' | 'collaborator';
+  type: UserType;
 }
 
 @Injectable()

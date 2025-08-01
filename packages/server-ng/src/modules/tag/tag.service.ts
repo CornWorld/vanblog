@@ -33,12 +33,13 @@ export class TagService {
           ...tag,
           slug: tag.slug ?? undefined,
           articleCount: Number(countResult[0]?.count) || 0,
+          updatedAt: tag.createdAt, // Use createdAt as updatedAt since tags table doesn't have updatedAt
         };
       }),
     );
 
     return {
-      data: processedTags,
+      items: processedTags,
       total: total,
     };
   }

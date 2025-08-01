@@ -1,224 +1,127 @@
-import {
-  IsString,
-  IsOptional,
-  IsBoolean,
-  IsNumber,
-  IsArray,
-  MinLength,
-  MaxLength,
-} from 'class-validator';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { z } from 'zod';
+import { commonSchemas } from '../../../shared/zod';
 
-export class CreateArticleDto {
-  @ApiProperty({ description: 'Article title' })
-  @IsString()
-  @MinLength(1)
-  @MaxLength(200)
-  title!: string;
+// 基础文章 Schema
+export const ArticleSchema = z.object({
+  id: commonSchemas.id,
+  title: z.string(),
+  content: z.string(),
+  summary: z.string().optional(),
+  cover: z.string().optional(),
+  tags: z.array(z.string()).default([]),
+  categories: z.array(z.string()).default([]),
+  isPublished: z.boolean().default(false),
+  isTop: z.boolean().default(false),
+  password: z.string().optional().nullable(),
+  allowComment: z.boolean().default(true),
+  copyright: z.string().optional(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+  publishedAt: z.date().optional(),
+  viewCount: z.number().default(0),
+  likeCount: z.number().default(0),
+  commentCount: z.number().default(0),
+  wordCount: z.number().default(0),
+  readTime: z.number().default(0),
+});
 
-  @ApiProperty({ description: 'Article content (Markdown)' })
-  @IsString()
-  content!: string;
+// 创建文章 Schema
+export const CreateArticleSchema = z.object({
+  title: z.string().min(1, '标题不能为空'),
+  content: z.string().min(1, '内容不能为空'),
+  summary: z.string().optional(),
+  cover: z.string().optional(),
+  tags: z.array(z.string()).default([]),
+  categories: z.array(z.string()).default([]),
+  isPublished: z.boolean().default(false),
+  isTop: z.boolean().default(false),
+  password: z.string().optional().nullable(),
+  allowComment: z.boolean().default(true),
+  copyright: z.string().optional(),
+  publishedAt: z.date().optional(),
+  pathname: z.string().optional(),
+  category: z.string().optional(),
+  author: z.string().optional(),
+  top: z.number().optional(),
+  hidden: z.boolean().optional(),
+  private: z.boolean().optional(),
+});
 
-  @ApiPropertyOptional({ description: 'Custom pathname for the article' })
-  @IsOptional()
-  @IsString()
-  pathname?: string;
+// 更新文章 Schema
+export const UpdateArticleSchema = CreateArticleSchema.partial();
 
-  @ApiPropertyOptional({ description: 'Article tags', type: [String] })
-  @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  tags?: string[];
+// 文章查询 Schema
+export const ArticleQuerySchema = z.object({
+  page: commonSchemas.page,
+  pageSize: commonSchemas.pageSize,
+  keyword: z.string().optional(),
+  tag: z.string().optional(),
+  category: z.string().optional(),
+  isPublished: z.boolean().optional(),
+  isTop: z.boolean().optional(),
+  includeHidden: z.boolean().optional(),
+  sortBy: z
+    .enum(['createdAt', 'updatedAt', 'publishedAt', 'viewCount', 'likeCount'])
+    .default('createdAt'),
+  sortOrder: z.enum(['asc', 'desc']).default('desc'),
+});
 
-  @ApiPropertyOptional({ description: 'Article category' })
-  @IsOptional()
-  @IsString()
-  category?: string;
+// 文章列表响应 Schema
+export const ArticleListResponseSchema = z.object({
+  items: z.array(ArticleSchema),
+  total: z.number(),
+  page: commonSchemas.page,
+  pageSize: commonSchemas.pageSize,
+  totalPages: z.number(),
+});
 
-  @ApiPropertyOptional({ description: 'Article author' })
-  @IsOptional()
-  @IsString()
-  author?: string;
+// 文章搜索 Schema
+export const ArticleSearchSchema = z.object({
+  keyword: z.string().min(1, '搜索关键词不能为空'),
+  page: commonSchemas.page,
+  pageSize: commonSchemas.pageSize,
+  query: z.string().optional(),
+  titleOnly: z.boolean().optional(),
+  contentOnly: z.boolean().optional(),
+  category: z.string().optional(),
+  tags: z.array(z.string()).optional(),
+  includeHidden: z.boolean().optional(),
+  includePrivate: z.boolean().optional(),
+  sortBy: z.string().optional(),
+  sortOrder: z.string().optional(),
+});
 
-  @ApiPropertyOptional({ description: 'Pin priority (0 means not pinned)' })
-  @IsOptional()
-  @IsNumber()
-  top?: number;
+// 文章搜索结果 Schema
+export const ArticleSearchResultSchema = z.object({
+  id: z.number(),
+  title: z.string(),
+  summary: z.string().optional(),
+  cover: z.string().optional(),
+  tags: z.array(z.string()),
+  categories: z.array(z.string()),
+  publishedAt: z.date().optional(),
+  highlight: z
+    .object({
+      title: z.string().optional(),
+      content: z.string().optional(),
+    })
+    .optional(),
+});
 
-  @ApiPropertyOptional({ description: 'Hide article from public' })
-  @IsOptional()
-  @IsBoolean()
-  hidden?: boolean;
+// 文章搜索响应 Schema
+export const ArticleSearchResponseSchema = z.object({
+  items: z.array(ArticleSearchResultSchema),
+  total: z.number(),
+  page: commonSchemas.page,
+  pageSize: commonSchemas.pageSize,
+  totalPages: z.number(),
+});
 
-  @ApiPropertyOptional({ description: 'Make article private (password protected)' })
-  @IsOptional()
-  @IsBoolean()
-  private?: boolean;
-
-  @ApiPropertyOptional({ description: 'Password for private articles' })
-  @IsOptional()
-  @IsString()
-  password?: string;
-}
-
-export class UpdateArticleDto extends CreateArticleDto {}
-
-export class ArticleDto extends CreateArticleDto {
-  @ApiProperty({ description: 'Article ID' })
-  id!: number;
-
-  @ApiProperty({ description: 'View count' })
-  viewer!: number;
-
-  @ApiProperty({ description: 'Creation timestamp' })
-  createdAt!: Date;
-
-  @ApiProperty({ description: 'Last update timestamp' })
-  updatedAt!: Date;
-}
-
-export class ArticleQueryDto {
-  @ApiPropertyOptional({ description: 'Page number' })
-  @IsOptional()
-  @IsNumber()
-  page?: number;
-
-  @ApiPropertyOptional({ description: 'Page size' })
-  @IsOptional()
-  @IsNumber()
-  pageSize?: number;
-
-  @ApiPropertyOptional({ description: 'Search keyword' })
-  @IsOptional()
-  @IsString()
-  keyword?: string;
-
-  @ApiPropertyOptional({ description: 'Filter by category' })
-  @IsOptional()
-  @IsString()
-  category?: string;
-
-  @ApiPropertyOptional({ description: 'Filter by tag' })
-  @IsOptional()
-  @IsString()
-  tag?: string;
-
-  @ApiPropertyOptional({ description: 'Include hidden articles' })
-  @IsOptional()
-  @IsBoolean()
-  includeHidden?: boolean;
-
-  @ApiPropertyOptional({ description: 'Sort field' })
-  @IsOptional()
-  @IsString()
-  sortBy?: string;
-
-  @ApiPropertyOptional({ description: 'Sort order', enum: ['asc', 'desc'] })
-  @IsOptional()
-  @IsString()
-  sortOrder?: 'asc' | 'desc';
-}
-
-export class ArticleListResponseDto {
-  @ApiProperty({ description: 'Article list', type: [ArticleDto] })
-  data!: ArticleDto[];
-
-  @ApiProperty({ description: 'Total count' })
-  total!: number;
-
-  @ApiProperty({ description: 'Current page' })
-  page!: number;
-
-  @ApiProperty({ description: 'Page size' })
-  pageSize!: number;
-}
-
-export class ArticleSearchDto {
-  @ApiProperty({ description: 'Search query' })
-  @IsString()
-  @MinLength(1)
-  query!: string;
-
-  @ApiPropertyOptional({ description: 'Search in title only' })
-  @IsOptional()
-  @IsBoolean()
-  titleOnly?: boolean;
-
-  @ApiPropertyOptional({ description: 'Search in content only' })
-  @IsOptional()
-  @IsBoolean()
-  contentOnly?: boolean;
-
-  @ApiPropertyOptional({ description: 'Filter by category' })
-  @IsOptional()
-  @IsString()
-  category?: string;
-
-  @ApiPropertyOptional({ description: 'Filter by tags', type: [String] })
-  @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  tags?: string[];
-
-  @ApiPropertyOptional({ description: 'Include hidden articles' })
-  @IsOptional()
-  @IsBoolean()
-  includeHidden?: boolean;
-
-  @ApiPropertyOptional({ description: 'Include private articles' })
-  @IsOptional()
-  @IsBoolean()
-  includePrivate?: boolean;
-
-  @ApiPropertyOptional({ description: 'Page number' })
-  @IsOptional()
-  @IsNumber()
-  page?: number;
-
-  @ApiPropertyOptional({ description: 'Page size' })
-  @IsOptional()
-  @IsNumber()
-  pageSize?: number;
-
-  @ApiPropertyOptional({ description: 'Sort field' })
-  @IsOptional()
-  @IsString()
-  sortBy?: 'relevance' | 'createdAt' | 'updatedAt' | 'viewer';
-
-  @ApiPropertyOptional({ description: 'Sort order', enum: ['asc', 'desc'] })
-  @IsOptional()
-  @IsString()
-  sortOrder?: 'asc' | 'desc';
-}
-
-export class ArticleSearchResultDto extends ArticleDto {
-  @ApiPropertyOptional({ description: 'Search relevance score' })
-  relevance?: number;
-
-  @ApiPropertyOptional({ description: 'Highlighted title with search matches' })
-  highlightedTitle?: string;
-
-  @ApiPropertyOptional({ description: 'Content excerpt with search matches' })
-  excerpt?: string;
-}
-
-export class ArticleSearchResponseDto {
-  @ApiProperty({ description: 'Search results', type: [ArticleSearchResultDto] })
-  data!: ArticleSearchResultDto[];
-
-  @ApiProperty({ description: 'Total count' })
-  total!: number;
-
-  @ApiProperty({ description: 'Current page' })
-  page!: number;
-
-  @ApiProperty({ description: 'Page size' })
-  pageSize!: number;
-
-  @ApiProperty({ description: 'Search query' })
-  query!: string;
-
-  @ApiProperty({ description: 'Search execution time in milliseconds' })
-  searchTime!: number;
-}
+export type CreateArticleDto = z.infer<typeof CreateArticleSchema>;
+export type UpdateArticleDto = z.infer<typeof UpdateArticleSchema>;
+export type ArticleDto = z.infer<typeof ArticleSchema>;
+export type ArticleQueryDto = z.infer<typeof ArticleQuerySchema>;
+export type ArticleListResponseDto = z.infer<typeof ArticleListResponseSchema>;
+export type ArticleSearchDto = z.infer<typeof ArticleSearchSchema>;
+export type ArticleSearchResultDto = z.infer<typeof ArticleSearchResultSchema>;
+export type ArticleSearchResponseDto = z.infer<typeof ArticleSearchResponseSchema>;

@@ -1,25 +1,13 @@
-import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsEnum, IsDateString, IsString } from 'class-validator';
+import { z } from 'zod';
 import { AnalyticsType } from '../entities/analytics.entity';
 
-export class QueryAnalyticsDto {
-  @ApiPropertyOptional({ enum: AnalyticsType, description: '分析类型' })
-  @IsOptional()
-  @IsEnum(AnalyticsType)
-  type?: AnalyticsType;
+export const QueryAnalyticsSchema = z.object({
+  type: z.enum([AnalyticsType.PAGEVIEW, AnalyticsType.EVENT, AnalyticsType.API_CALL]).optional(),
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
+  path: z.string().optional(),
+});
 
-  @ApiPropertyOptional({ description: '开始时间' })
-  @IsOptional()
-  @IsDateString()
-  startDate?: string;
+export type QueryAnalyticsDto = z.infer<typeof QueryAnalyticsSchema>;
 
-  @ApiPropertyOptional({ description: '结束时间' })
-  @IsOptional()
-  @IsDateString()
-  endDate?: string;
-
-  @ApiPropertyOptional({ description: '页面路径' })
-  @IsOptional()
-  @IsString()
-  path?: string;
-}
+export type QueryAnalyticsType = z.infer<typeof QueryAnalyticsSchema>;

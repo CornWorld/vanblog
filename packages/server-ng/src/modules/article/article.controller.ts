@@ -14,7 +14,6 @@ import {
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { ArticleService } from './article.service';
 import {
-  ArticleDto,
   CreateArticleDto,
   UpdateArticleDto,
   ArticleQueryDto,
@@ -22,6 +21,7 @@ import {
   ArticleSearchDto,
   ArticleSearchResponseDto,
 } from './dto/article.dto';
+import { Article } from './entities/article.entity';
 import { RequireAuth } from '../auth/auth.decorator';
 import { ArticleStatsService } from '../analytics/services/article-stats.service';
 
@@ -35,7 +35,7 @@ export class ArticleController {
 
   @Get()
   @ApiOperation({ summary: 'Get all articles' })
-  @ApiResponse({ status: 200, description: 'Return all articles', type: ArticleListResponseDto })
+  @ApiResponse({ status: 200, description: 'Return all articles' })
   async findAll(@Query() query: ArticleQueryDto): Promise<ArticleListResponseDto> {
     const articles = await this.articleService.findAll(query);
     return articles;
@@ -46,7 +46,6 @@ export class ArticleController {
   @ApiResponse({
     status: 200,
     description: 'Return search results',
-    type: ArticleSearchResponseDto,
   })
   async search(@Query() query: ArticleSearchDto): Promise<ArticleSearchResponseDto> {
     return this.articleService.search(query);
@@ -55,8 +54,8 @@ export class ArticleController {
   @Get('export')
   @RequireAuth()
   @ApiOperation({ summary: 'Export all articles' })
-  @ApiResponse({ status: 200, description: 'Export articles', type: [ArticleDto] })
-  async export(): Promise<ArticleDto[]> {
+  @ApiResponse({ status: 200, description: 'Export articles' })
+  async export(): Promise<Article[]> {
     const articles = await this.articleService.exportArticles();
     return articles;
   }
@@ -66,7 +65,6 @@ export class ArticleController {
   @ApiResponse({
     status: 200,
     description: 'Return articles by category',
-    type: ArticleListResponseDto,
   })
   async findByCategory(@Param('name') name: string): Promise<ArticleListResponseDto> {
     return this.articleService.findByCategory(name);
@@ -82,9 +80,9 @@ export class ArticleController {
 
   @Get(':id')
   @ApiOperation({ summary: 'Get article by ID' })
-  @ApiResponse({ status: 200, description: 'Return article by ID', type: ArticleDto })
+  @ApiResponse({ status: 200, description: 'Return article by ID' })
   @ApiResponse({ status: 404, description: 'Article not found' })
-  async findOne(@Param('id', ParseIntPipe) id: number): Promise<ArticleDto> {
+  async findOne(@Param('id', ParseIntPipe) id: number): Promise<Article> {
     return this.articleService.findOne(id);
   }
 
@@ -113,20 +111,20 @@ export class ArticleController {
   @Post()
   @RequireAuth()
   @ApiOperation({ summary: 'Create article' })
-  @ApiResponse({ status: 201, description: 'Create new article', type: ArticleDto })
-  async create(@Body() createArticleDto: CreateArticleDto): Promise<ArticleDto> {
+  @ApiResponse({ status: 201, description: 'Create new article' })
+  async create(@Body() createArticleDto: CreateArticleDto): Promise<Article> {
     return this.articleService.create(createArticleDto);
   }
 
   @Put(':id')
   @RequireAuth()
   @ApiOperation({ summary: 'Update article' })
-  @ApiResponse({ status: 200, description: 'Update existing article', type: ArticleDto })
+  @ApiResponse({ status: 200, description: 'Update existing article' })
   @ApiResponse({ status: 404, description: 'Article not found' })
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateArticleDto: UpdateArticleDto,
-  ): Promise<ArticleDto> {
+  ): Promise<Article> {
     return this.articleService.update(id, updateArticleDto);
   }
 

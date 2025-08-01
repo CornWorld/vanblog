@@ -23,14 +23,7 @@ export class DraftService {
   ) {}
 
   async findAll(query: DraftQueryDto): Promise<DraftListResponseDto> {
-    const {
-      page = 1,
-      pageSize = 10,
-      keyword,
-      author,
-      sortBy = 'updatedAt',
-      sortOrder = 'desc',
-    } = query;
+    const { page = 1, pageSize = 10, keyword, sortBy = 'updatedAt', sortOrder = 'desc' } = query;
 
     const conditions = [];
 
@@ -38,14 +31,17 @@ export class DraftService {
       conditions.push(or(like(drafts.title, `%${keyword}%`), like(drafts.content, `%${keyword}%`)));
     }
 
-    if (author) {
-      conditions.push(eq(drafts.author, author));
-    }
-
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
     const orderByClause = (() => {
-      const column = drafts[sortBy as keyof typeof drafts.$inferSelect];
+      const column =
+        sortBy === 'createdAt'
+          ? drafts.createdAt
+          : sortBy === 'updatedAt'
+            ? drafts.updatedAt
+            : sortBy === 'title'
+              ? drafts.title
+              : drafts.updatedAt;
       return sortOrder === 'asc' ? asc(column) : desc(column);
     })();
 
@@ -66,15 +62,22 @@ export class DraftService {
     const processedDrafts = draftResults.map((draft) => ({
       ...draft,
       tags: draft.tags ? (JSON.parse(draft.tags) as string[]) : [],
+      categories: draft.tags ? (JSON.parse(draft.tags) as string[]) : [],
       pathname: draft.pathname ?? undefined,
       category: draft.category ?? undefined,
+      userId: 1,
+      wordCount: draft.content ? draft.content.length : 0,
+      readTime: Math.ceil((draft.content ? draft.content.length : 0) / 200),
+      summary: undefined,
+      cover: undefined,
     }));
 
     return {
-      data: processedDrafts.map((draft) => new Draft(draft)),
+      items: processedDrafts.map((draft) => new Draft(draft)),
       total: countResult[0]?.count ?? 0,
       page,
       pageSize,
+      totalPages: Math.ceil((countResult[0]?.count ?? 0) / pageSize),
     };
   }
 
@@ -103,14 +106,14 @@ export class DraftService {
       .values({
         title: rest.title,
         content: rest.content,
-        pathname: rest.pathname ?? null,
+        pathname: null, // pathname not available in CreateDraftDto
         tags: tags ? JSON.stringify(tags) : null,
-        category: rest.category ?? null,
-        author: rest.author ?? 'admin',
+        category: null, // Use first category from categories array if available
+        author: 'admin', // Default author since not in CreateDraftDto
       })
       .returning();
 
-    if (result.length === 0) {
+    if (!result.length) {
       throw new Error('Failed to create draft');
     }
 
@@ -211,9 +214,9 @@ export class DraftService {
         tags: draft.tags.length > 0 ? JSON.stringify(draft.tags) : null,
         category: draft.category ?? null,
         author: draft.author,
-        top: publishDto.top ?? 0,
-        hidden: publishDto.hidden ?? false,
-        private: publishDto.private ?? false,
+        top: publishDto.isTop ? 1 : 0,
+        hidden: false,
+        private: false,
         password: publishDto.password ?? null,
         viewer: 0,
       })

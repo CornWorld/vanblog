@@ -87,15 +87,36 @@ export class ArticleService {
     }));
 
     return {
-      data: processedArticles.map((article) => new Article(article)),
+      items: processedArticles.map((article) => ({
+        id: article.id,
+        title: article.title,
+        content: article.content,
+        summary: undefined,
+        cover: undefined,
+        tags: article.tags ? JSON.parse(article.tags as unknown as string) : [],
+        categories: article.category ? [article.category] : [],
+        isPublished: !article.hidden,
+        isTop: Boolean(article.top),
+        password: article.password ?? undefined,
+        allowComment: true,
+        copyright: undefined,
+        createdAt: article.createdAt,
+        updatedAt: article.updatedAt,
+        publishedAt: article.updatedAt,
+        viewCount: article.viewer ?? 0,
+        likeCount: 0,
+        commentCount: 0,
+        wordCount: 0,
+        readTime: 0,
+      })),
       total: countResult[0]?.count ?? 0,
       page,
       pageSize,
+      totalPages: Math.ceil((countResult[0]?.count ?? 0) / pageSize),
     };
   }
 
   async search(query: ArticleSearchDto): Promise<ArticleSearchResponseDto> {
-    const startTime = Date.now();
     const {
       query: searchTerm,
       page = 1,
@@ -128,7 +149,7 @@ export class ArticleService {
       conditions.push(eq(articles.category, category));
     }
 
-    if (tags && tags.length > 0) {
+    if (tags?.length) {
       const tagConditions = tags.map((tag) => like(articles.tags, `%"${tag}"%`));
       conditions.push(or(...tagConditions));
     }
@@ -176,15 +197,21 @@ export class ArticleService {
       viewer: article.viewer ?? undefined,
     }));
 
-    const searchTime = Date.now() - startTime;
-
     return {
-      data: processedArticles.map((article) => new Article(article)),
+      items: processedArticles.map((article) => ({
+        id: article.id,
+        title: article.title,
+        summary: undefined,
+        cover: undefined,
+        tags: article.tags ? JSON.parse(article.tags as unknown as string) : [],
+        categories: article.category ? [article.category] : [],
+        publishedAt: article.updatedAt,
+        highlight: undefined,
+      })),
       total: countResult[0]?.count ?? 0,
       page,
       pageSize,
-      query: searchTerm,
-      searchTime,
+      totalPages: Math.ceil((countResult[0]?.count ?? 0) / pageSize),
     };
   }
 
@@ -215,7 +242,7 @@ export class ArticleService {
     const { tags, ...rest } = createArticleDto;
 
     // Auto-create tags if they don't exist
-    if (tags && tags.length > 0) {
+    if (tags?.length) {
       await this.createMissingTags(tags);
     }
 
@@ -378,24 +405,32 @@ export class ArticleService {
     ]);
 
     return {
-      data: articleResults.map(
-        (article) =>
-          new Article({
-            ...article,
-            tags: article.tags ? (JSON.parse(article.tags) as string[]) : [],
-            pathname: article.pathname ?? undefined,
-            category: article.category ?? undefined,
-            author: article.author,
-            top: article.top ?? undefined,
-            hidden: article.hidden ?? undefined,
-            private: article.private ?? undefined,
-            password: article.password ?? undefined,
-            viewer: article.viewer ?? undefined,
-          }),
-      ),
+      items: articleResults.map((article) => ({
+        id: article.id,
+        title: article.title,
+        content: article.content,
+        summary: undefined,
+        cover: undefined,
+        tags: article.tags ? JSON.parse(article.tags) : [],
+        categories: article.category ? [article.category] : [],
+        isPublished: !article.hidden,
+        isTop: Boolean(article.top),
+        password: article.password ?? undefined,
+        allowComment: true,
+        copyright: undefined,
+        createdAt: article.createdAt,
+        updatedAt: article.updatedAt,
+        publishedAt: article.updatedAt,
+        viewCount: article.viewer ?? 0,
+        likeCount: 0,
+        commentCount: 0,
+        wordCount: 0,
+        readTime: 0,
+      })),
       total,
       page: 1,
       pageSize: total,
+      totalPages: 1,
     };
   }
 

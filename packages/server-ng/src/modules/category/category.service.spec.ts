@@ -90,9 +90,9 @@ describe('CategoryService', () => {
 
       const result = await service.findAll();
 
-      expect(result.data).toHaveLength(1);
-      expect(result.data[0].name).toBe('Technology');
-      expect(result.data[0].articleCount).toBe(5);
+      expect(result.items).toHaveLength(1);
+      expect(result.items[0].name).toBe('Technology');
+      expect(result.items[0].articleCount).toBe(5);
       expect(result.total).toBe(1);
     });
   });

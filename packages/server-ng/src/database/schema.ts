@@ -9,9 +9,9 @@ export const users = sqliteTable('users', {
   nickname: text('nickname'),
   email: text('email'),
   avatar: text('avatar'),
-  type: text('type', { enum: ['admin', 'collaborator'] })
+  type: text('type', { enum: ['admin', 'editor', 'author', 'subscriber'] })
     .notNull()
-    .default('collaborator'),
+    .default('subscriber'),
   permissions: text('permissions'), // JSON string for permissions array
   createdAt: integer('created_at', { mode: 'timestamp' })
     .notNull()

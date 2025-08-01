@@ -1,182 +1,94 @@
-import { IsString, IsOptional, IsArray, IsNotEmpty, IsInt, Min } from 'class-validator';
-import { ApiProperty, PartialType } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
+import { z } from 'zod';
+import { commonSchemas } from '../../../shared/zod';
 
-export class CreateDraftDto {
-  @ApiProperty({ description: 'Draft title' })
-  @IsString()
-  @IsNotEmpty()
-  title!: string;
+// 创建草稿 Schema
+export const CreateDraftSchema = z.object({
+  title: z.string().min(1, '标题不能为空'),
+  content: z.string().min(1, '内容不能为空'),
+  summary: z.string().optional(),
+  cover: z.string().optional(),
+  tags: z.array(z.string()).default([]),
+  categories: z.array(z.string()).default([]),
+});
 
-  @ApiProperty({ description: 'Draft content in markdown' })
-  @IsString()
-  @IsNotEmpty()
-  content!: string;
+// 更新草稿 Schema
+export const UpdateDraftSchema = CreateDraftSchema.partial();
 
-  @ApiProperty({ description: 'Custom URL pathname', required: false })
-  @IsString()
-  @IsOptional()
-  pathname?: string;
+// 基础草稿 Schema
+export const DraftSchema = z.object({
+  id: z.number(),
+  title: z.string(),
+  content: z.string(),
+  summary: z.string().optional(),
+  cover: z.string().optional(),
+  tags: z.array(z.string()).default([]),
+  categories: z.array(z.string()).default([]),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+  userId: z.number(),
+  wordCount: z.number().default(0),
+  readTime: z.number().default(0),
+});
 
-  @ApiProperty({ description: 'Tags array', required: false, type: [String] })
-  @IsArray()
-  @IsString({ each: true })
-  @IsOptional()
-  tags?: string[];
+// 草稿查询 Schema
+export const DraftQuerySchema = z.object({
+  page: commonSchemas.page,
+  pageSize: commonSchemas.pageSize,
+  keyword: z.string().optional(),
+  tag: z.string().optional(),
+  category: z.string().optional(),
+  sortBy: z.enum(['createdAt', 'updatedAt', 'title']).default('updatedAt'),
+  sortOrder: z.enum(['asc', 'desc']).default('desc'),
+});
 
-  @ApiProperty({ description: 'Category name', required: false })
-  @IsString()
-  @IsOptional()
-  category?: string;
+// 草稿列表响应 Schema
+export const DraftListResponseSchema = z.object({
+  items: z.array(DraftSchema),
+  total: z.number(),
+  page: z.number(),
+  pageSize: z.number(),
+  totalPages: z.number(),
+});
 
-  @ApiProperty({ description: 'Author username', required: false })
-  @IsString()
-  @IsOptional()
-  author?: string;
-}
+// 发布草稿 Schema
+export const PublishDraftSchema = z.object({
+  isPublished: z.boolean().default(true),
+  isTop: z.boolean().default(false),
+  password: z.string().optional().nullable(),
+  allowComment: z.boolean().default(true),
+  copyright: z.string().optional(),
+  publishedAt: z.date().optional(),
+});
 
-export class UpdateDraftDto extends PartialType(CreateDraftDto) {}
+// 草稿版本 Schema
+export const DraftVersionSchema = z.object({
+  id: z.number(),
+  draftId: z.number(),
+  title: z.string(),
+  content: z.string(),
+  summary: z.string().optional(),
+  cover: z.string().optional(),
+  tags: z.array(z.string()).default([]),
+  categories: z.array(z.string()).default([]),
+  createdAt: z.date(),
+  version: z.number(),
+  comment: z.string().optional(),
+});
 
-export class DraftDto {
-  @ApiProperty()
-  id!: number;
+// 草稿版本列表响应 Schema
+export const DraftVersionListResponseSchema = z.object({
+  items: z.array(DraftVersionSchema),
+  total: z.number(),
+  page: z.number(),
+  pageSize: z.number(),
+  totalPages: z.number(),
+});
 
-  @ApiProperty()
-  title!: string;
-
-  @ApiProperty()
-  content!: string;
-
-  @ApiProperty({ required: false })
-  pathname?: string;
-
-  @ApiProperty({ type: [String] })
-  tags!: string[];
-
-  @ApiProperty({ required: false })
-  category?: string;
-
-  @ApiProperty()
-  author!: string;
-
-  @ApiProperty()
-  version!: number;
-
-  @ApiProperty()
-  createdAt!: Date;
-
-  @ApiProperty()
-  updatedAt!: Date;
-}
-
-export class DraftListResponseDto {
-  @ApiProperty({ type: [DraftDto] })
-  data!: DraftDto[];
-
-  @ApiProperty()
-  total!: number;
-
-  @ApiProperty()
-  page!: number;
-
-  @ApiProperty()
-  pageSize!: number;
-}
-
-export class DraftQueryDto {
-  @ApiProperty({ required: false, default: 1, minimum: 1 })
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  @IsOptional()
-  page?: number = 1;
-
-  @ApiProperty({ required: false, default: 10, minimum: 1 })
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  @IsOptional()
-  pageSize?: number = 10;
-
-  @ApiProperty({ required: false, description: 'Search keyword' })
-  @IsString()
-  @IsOptional()
-  keyword?: string;
-
-  @ApiProperty({ required: false, description: 'Filter by author' })
-  @IsString()
-  @IsOptional()
-  author?: string;
-
-  @ApiProperty({ required: false, enum: ['createdAt', 'updatedAt', 'title'], default: 'updatedAt' })
-  @IsString()
-  @IsOptional()
-  sortBy?: 'createdAt' | 'updatedAt' | 'title' = 'updatedAt';
-
-  @ApiProperty({ required: false, enum: ['asc', 'desc'], default: 'desc' })
-  @IsString()
-  @IsOptional()
-  sortOrder?: 'asc' | 'desc' = 'desc';
-}
-
-export class PublishDraftDto {
-  @ApiProperty({ description: 'Top priority', required: false, minimum: 0 })
-  @Type(() => Number)
-  @IsInt()
-  @Min(0)
-  @IsOptional()
-  top?: number;
-
-  @ApiProperty({ description: 'Hidden status', required: false })
-  @IsOptional()
-  hidden?: boolean;
-
-  @ApiProperty({ description: 'Private status', required: false })
-  @IsOptional()
-  private?: boolean;
-
-  @ApiProperty({ description: 'Password for private article', required: false })
-  @IsString()
-  @IsOptional()
-  password?: string;
-}
-
-export class DraftVersionDto {
-  @ApiProperty()
-  id!: number;
-
-  @ApiProperty()
-  draftId!: number;
-
-  @ApiProperty()
-  version!: number;
-
-  @ApiProperty()
-  title!: string;
-
-  @ApiProperty()
-  content!: string;
-
-  @ApiProperty({ required: false })
-  pathname?: string;
-
-  @ApiProperty({ type: [String] })
-  tags!: string[];
-
-  @ApiProperty({ required: false })
-  category?: string;
-
-  @ApiProperty()
-  author!: string;
-
-  @ApiProperty()
-  createdAt!: Date;
-}
-
-export class DraftVersionListResponseDto {
-  @ApiProperty({ type: [DraftVersionDto] })
-  data!: DraftVersionDto[];
-
-  @ApiProperty()
-  total!: number;
-}
+export type CreateDraftDto = z.infer<typeof CreateDraftSchema>;
+export type UpdateDraftDto = z.infer<typeof UpdateDraftSchema>;
+export type DraftDto = z.infer<typeof DraftSchema>;
+export type DraftListResponseDto = z.infer<typeof DraftListResponseSchema>;
+export type DraftQueryDto = z.infer<typeof DraftQuerySchema>;
+export type PublishDraftDto = z.infer<typeof PublishDraftSchema>;
+export type DraftVersionDto = z.infer<typeof DraftVersionSchema>;
+export type DraftVersionListResponseDto = z.infer<typeof DraftVersionListResponseSchema>;

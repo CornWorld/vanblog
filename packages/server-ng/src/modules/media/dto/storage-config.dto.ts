@@ -1,49 +1,34 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsEnum, IsOptional, IsObject, ValidateNested, IsBoolean } from 'class-validator';
-import { Type } from 'class-transformer';
+import { z } from 'zod';
 
+// 存储提供商枚举
 export enum StorageProvider {
   LOCAL = 'local',
   PICGO = 'picgo',
 }
 
-class PicgoConfigDto {
-  @ApiPropertyOptional({ description: 'PicGo 配置（JSON 格式）' })
-  @IsOptional()
-  @IsObject()
-  config?: Record<string, unknown>;
+// Picgo 配置 Schema
+export const PicgoConfigSchema = z.object({
+  uploader: z.string().describe('PicGo uploader name'),
+  config: z.record(z.string(), z.unknown()).describe('PicGo configuration object'),
+});
 
-  @ApiPropertyOptional({ description: 'PicGo 插件列表（逗号分隔）' })
-  @IsOptional()
-  @IsString()
-  plugins?: string;
-}
+// 存储配置 Schema
+export const UpdateStorageConfigSchema = z.object({
+  provider: z.enum(StorageProvider).describe('Storage provider type'),
+  enabled: z.boolean().describe('Whether storage is enabled').optional(),
+  localPath: z.string().describe('Local storage path').optional(),
+  baseUrl: z.string().describe('Base URL for storage').optional(),
+  picgoConfig: PicgoConfigSchema.describe('PicGo configuration').optional(),
+});
 
-export class UpdateStorageConfigDto {
-  @ApiProperty({ enum: StorageProvider, description: '存储提供商' })
-  @IsEnum(StorageProvider)
-  provider!: StorageProvider;
+// 存储配置响应 Schema
+export const StorageConfigResponseSchema = z.object({
+  provider: z.enum(StorageProvider).describe('Storage provider type'),
+  enabled: z.boolean().describe('Whether storage is enabled'),
+  localPath: z.string().describe('Local storage path').optional(),
+  baseUrl: z.string().describe('Base URL for storage').optional(),
+  picgoConfig: PicgoConfigSchema.describe('PicGo configuration').optional(),
+});
 
-  @ApiPropertyOptional({ description: '是否启用' })
-  @IsOptional()
-  @IsBoolean()
-  enabled?: boolean;
-
-  @ApiPropertyOptional({ description: 'PicGo 配置' })
-  @IsOptional()
-  @IsObject()
-  @ValidateNested()
-  @Type(() => PicgoConfigDto)
-  picgoConfig?: PicgoConfigDto;
-}
-
-export class StorageConfigResponseDto {
-  @ApiProperty({ enum: StorageProvider })
-  provider!: StorageProvider;
-
-  @ApiProperty()
-  enabled!: boolean;
-
-  @ApiPropertyOptional()
-  picgoConfig?: Partial<PicgoConfigDto>;
-}
+export type UpdateStorageConfigDto = z.infer<typeof UpdateStorageConfigSchema>;
+export type StorageConfigResponseDto = z.infer<typeof StorageConfigResponseSchema>;

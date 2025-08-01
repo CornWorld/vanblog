@@ -53,7 +53,7 @@ export class CategoryService {
     }));
 
     return {
-      data: processedCategories,
+      items: processedCategories,
       total: total,
     };
   }
@@ -74,15 +74,13 @@ export class CategoryService {
     });
   }
 
-  async create(createCategoryDto: CreateCategoryDto): Promise<Category> {
-    const categoryData = Object.assign({}, createCategoryDto);
-
+  async create(dto: CreateCategoryDto): Promise<Category> {
     // Hash password if provided
-    if (categoryData.password) {
-      categoryData.password = await bcrypt.hash(categoryData.password, 10);
+    if (dto.password) {
+      dto.password = await bcrypt.hash(dto.password, 10);
     }
 
-    const result = await this.db.insert(categories).values(categoryData).returning();
+    const result = await this.db.insert(categories).values(dto).returning();
 
     if (result.length === 0) {
       throw new Error('Failed to create category');
@@ -98,7 +96,7 @@ export class CategoryService {
   }
 
   async update(id: number, updateCategoryDto: UpdateCategoryDto): Promise<Category> {
-    const categoryData = Object.assign({}, updateCategoryDto);
+    const categoryData: UpdateCategoryDto = { ...updateCategoryDto };
 
     // Hash password if provided
     if (categoryData.password) {

@@ -1,38 +1,38 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsOptional, IsBoolean, IsArray, ValidateNested } from 'class-validator';
-import { Type } from 'class-transformer';
+import { z } from 'zod';
 
-export class NavigationItemDto {
-  @ApiProperty({ description: '导航名称' })
-  @IsString()
-  name!: string;
-
-  @ApiProperty({ description: '导航路径' })
-  @IsString()
-  path!: string;
-
-  @ApiProperty({ description: '导航图标', required: false })
-  @IsOptional()
-  @IsString()
+// 导航项类型定义
+type NavigationItem = {
+  id?: number;
+  name: string;
+  url: string;
   icon?: string;
+  target: '_self' | '_blank';
+  order: number;
+  children?: NavigationItem[];
+};
 
-  @ApiProperty({ description: '是否外部链接', required: false })
-  @IsOptional()
-  @IsBoolean()
-  external?: boolean;
+// 导航项 Schema
+export const NavigationItemSchema: z.ZodType<NavigationItem> = z.lazy(() =>
+  z.object({
+    id: z.number().optional(),
+    name: z.string().min(1, '导航名称不能为空'),
+    url: z.string().min(1, '导航链接不能为空'),
+    icon: z.string().optional(),
+    target: z.enum(['_self', '_blank']).default('_self'),
+    order: z.number().default(0),
+    children: z.array(NavigationItemSchema).optional(),
+  }),
+);
 
-  @ApiProperty({ description: '子导航项', type: [NavigationItemDto], required: false })
-  @IsOptional()
-  @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => NavigationItemDto)
-  children?: NavigationItemDto[];
-}
+// 更新导航 Schema
+export const UpdateNavigationSchema = z.object({
+  items: z.array(NavigationItemSchema),
+});
 
-export class UpdateNavigationDto {
-  @ApiProperty({ description: '导航项列表', type: [NavigationItemDto] })
-  @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => NavigationItemDto)
-  items!: NavigationItemDto[];
-}
+// 导航响应 Schema
+export const NavigationResponseSchema = z.object({
+  items: z.array(NavigationItemSchema),
+});
+
+export type NavigationItemDto = z.infer<typeof NavigationItemSchema>;
+export type UpdateNavigationDto = z.infer<typeof UpdateNavigationSchema>;

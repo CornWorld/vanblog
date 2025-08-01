@@ -86,9 +86,9 @@ describe('TagService', () => {
 
       const result = await service.findAll();
 
-      expect(result.data).toHaveLength(1);
-      expect(result.data[0].name).toBe('Tag1');
-      expect(result.data[0].articleCount).toBe(3);
+      expect(result.items).toHaveLength(1);
+      expect(result.items[0].name).toBe('Tag1');
+      expect(result.items[0].articleCount).toBe(3);
       expect(result.total).toBe(1);
     });
   });

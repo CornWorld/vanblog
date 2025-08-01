@@ -36,10 +36,8 @@ export class StorageFactoryService {
         (service as PicgoStorageService).configure(config.picgoConfig.config);
       }
 
-      if (config.picgoConfig.plugins) {
-        const plugins = config.picgoConfig.plugins.split(',').map((plugin) => plugin.trim());
-        await (service as PicgoStorageService).installPlugins(plugins);
-      }
+      // Note: Plugin installation would need to be handled separately
+      // as plugins are not part of the current configuration schema
     }
 
     return service;

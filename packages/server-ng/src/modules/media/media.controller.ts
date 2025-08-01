@@ -216,14 +216,14 @@ export class MediaController {
 
   @Get('storage-config')
   @ApiOperation({ summary: '获取存储配置' })
-  @ApiResponse({ status: 200, description: '获取成功', type: StorageConfigResponseDto })
+  @ApiResponse({ status: 200, description: '获取成功' })
   async getStorageConfig(): Promise<StorageConfigResponseDto> {
     return this.storageConfigService.getStorageConfig();
   }
 
   @Post('storage-config')
   @ApiOperation({ summary: '更新存储配置' })
-  @ApiResponse({ status: 200, description: '更新成功', type: StorageConfigResponseDto })
+  @ApiResponse({ status: 200, description: '更新成功' })
   async updateStorageConfig(
     @Body() updateDto: UpdateStorageConfigDto,
   ): Promise<StorageConfigResponseDto> {

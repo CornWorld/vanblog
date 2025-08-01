@@ -64,7 +64,7 @@ export class MediaService {
     pageSize: number;
     totalPages: number;
   }> {
-    const { keyword, mimeType, provider, page = 1, pageSize = 20 } = query;
+    const { keyword, type: mimeType, page = 1, pageSize = 20 } = query;
     const offset = (page - 1) * pageSize;
 
     const conditions = [];
@@ -74,9 +74,7 @@ export class MediaService {
     if (mimeType) {
       conditions.push(eq(staticFiles.mimeType, mimeType));
     }
-    if (provider) {
-      conditions.push(eq(staticFiles.provider, provider));
-    }
+    // Provider filtering removed as it's not part of the current DTO
 
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 

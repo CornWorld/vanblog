@@ -79,7 +79,8 @@ describe('UserService', () => {
       password: 'password123',
       nickname: 'Test User',
       email: 'test@example.com',
-      type: UserType.ADMIN,
+      role: UserType.ADMIN,
+      isActive: true,
     };
 
     it('should create a new user', async () => {

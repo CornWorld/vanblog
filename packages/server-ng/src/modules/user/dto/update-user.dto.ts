@@ -1,4 +1,6 @@
-import { PartialType, OmitType } from '@nestjs/swagger';
-import { CreateUserDto } from './create-user.dto';
+import type { z } from 'zod';
+import { CreateUserSchema } from './create-user.dto';
 
-export class UpdateUserDto extends PartialType(OmitType(CreateUserDto, ['username'] as const)) {}
+export const UpdateUserSchema = CreateUserSchema.omit({ username: true }).partial();
+
+export type UpdateUserDto = z.infer<typeof UpdateUserSchema>;

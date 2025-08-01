@@ -19,14 +19,14 @@ export class CategoryController {
 
   @Get()
   @ApiOperation({ summary: 'Get all categories' })
-  @ApiResponse({ status: 200, description: 'Return all categories', type: CategoryListResponseDto })
+  @ApiResponse({ status: 200, description: 'Return all categories' })
   async findAll(): Promise<CategoryListResponseDto> {
     return this.categoryService.findAll();
   }
 
   @Get(':id')
   @ApiOperation({ summary: 'Get category by ID' })
-  @ApiResponse({ status: 200, description: 'Return category by ID', type: CategoryDto })
+  @ApiResponse({ status: 200, description: 'Return category by ID' })
   @ApiResponse({ status: 404, description: 'Category not found' })
   async findOne(@Param('id', ParseIntPipe) id: number): Promise<CategoryDto> {
     return this.categoryService.findOne(id);
@@ -35,7 +35,7 @@ export class CategoryController {
   @Post()
   @RequireAuth()
   @ApiOperation({ summary: 'Create category' })
-  @ApiResponse({ status: 201, description: 'Create new category', type: CategoryDto })
+  @ApiResponse({ status: 201, description: 'Create new category' })
   async create(@Body() createCategoryDto: CreateCategoryDto): Promise<CategoryDto> {
     return this.categoryService.create(createCategoryDto);
   }
@@ -43,7 +43,7 @@ export class CategoryController {
   @Put(':id')
   @RequireAuth()
   @ApiOperation({ summary: 'Update category' })
-  @ApiResponse({ status: 200, description: 'Update existing category', type: CategoryDto })
+  @ApiResponse({ status: 200, description: 'Update existing category' })
   @ApiResponse({ status: 404, description: 'Category not found' })
   async update(
     @Param('id', ParseIntPipe) id: number,

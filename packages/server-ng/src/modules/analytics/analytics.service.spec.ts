@@ -50,7 +50,7 @@ describe('AnalyticsService', () => {
       const dto: RecordAnalyticsDto = {
         type: AnalyticsType.PAGEVIEW,
         path: '/blog/test',
-        referrer: 'https://google.com',
+        referer: 'https://google.com',
         userAgent: 'Mozilla/5.0',
         ip: '127.0.0.1',
       };
@@ -61,7 +61,7 @@ describe('AnalyticsService', () => {
       expect(mockDb.values).toHaveBeenCalledWith({
         type: dto.type,
         path: dto.path,
-        referrer: dto.referrer,
+        referrer: dto.referer,
         userAgent: dto.userAgent,
         ip: dto.ip,
         data: null,
@@ -71,7 +71,8 @@ describe('AnalyticsService', () => {
     it('should stringify data object when provided', async () => {
       const dto: RecordAnalyticsDto = {
         type: AnalyticsType.EVENT,
-        data: { action: 'click', label: 'button' },
+        path: '/test-path',
+        metadata: { action: 'click', label: 'button' },
       };
 
       await service.recordAnalytics(dto);
@@ -82,7 +83,7 @@ describe('AnalyticsService', () => {
         referrer: undefined,
         userAgent: undefined,
         ip: undefined,
-        data: JSON.stringify(dto.data),
+        data: JSON.stringify(dto.metadata),
       });
     });
   });

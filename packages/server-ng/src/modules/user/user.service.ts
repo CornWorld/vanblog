@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException, ConflictException, Inject } from '@nestjs/common';
-import { eq } from 'drizzle-orm';
+import { eq, ne } from 'drizzle-orm';
 import * as bcrypt from 'bcrypt';
 import { CreateUserDto, UpdateUserDto, UserType } from './dto';
 import { User } from './entities/user.entity';
@@ -35,8 +35,7 @@ export class UserService {
         nickname: createUserDto.nickname,
         email: createUserDto.email,
         avatar: createUserDto.avatar,
-        type: createUserDto.type,
-        permissions: createUserDto.permissions ? JSON.stringify(createUserDto.permissions) : null,
+        type: createUserDto.role,
       })
       .returning()
       .get();
@@ -66,11 +65,7 @@ export class UserService {
   }
 
   async getCollaborators(): Promise<User[]> {
-    const collaborators = await this.db
-      .select()
-      .from(users)
-      .where(eq(users.type, 'collaborator'))
-      .all();
+    const collaborators = await this.db.select().from(users).where(ne(users.type, 'admin')).all();
 
     return collaborators.map((user) => this.mapToEntity(user));
   }
@@ -103,11 +98,8 @@ export class UserService {
     if (updateUserDto.avatar !== undefined) {
       updateData.avatar = updateUserDto.avatar;
     }
-    if (updateUserDto.type !== undefined) {
-      updateData.type = updateUserDto.type;
-    }
-    if (updateUserDto.permissions) {
-      updateData.permissions = JSON.stringify(updateUserDto.permissions);
+    if (updateUserDto.role !== undefined) {
+      updateData.type = updateUserDto.role;
     }
 
     const updatedUsers = await this.db

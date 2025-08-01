@@ -43,7 +43,16 @@ export class SettingCoreController {
   @Patch('site-info')
   @ApiOperation({ summary: 'Update site information' })
   async updateSiteInfo(@Body() updateSiteInfoDto: UpdateSiteInfoDto): Promise<SiteInfo> {
-    return this.settingCoreService.updateSiteInfo(updateSiteInfoDto);
+    // Map DTO fields to SiteInfo interface
+    const siteInfoUpdate: Partial<SiteInfo> = {
+      title: updateSiteInfoDto.siteName,
+      description: updateSiteInfoDto.siteDescription || '',
+      author: updateSiteInfoDto.authorName || '',
+      keywords: updateSiteInfoDto.siteKeywords
+        ? updateSiteInfoDto.siteKeywords.split(',').map((k) => k.trim())
+        : [],
+    };
+    return this.settingCoreService.updateSiteInfo(siteInfoUpdate);
   }
 
   @Get('layout')
@@ -67,7 +76,12 @@ export class SettingCoreController {
   @Patch('theme')
   @ApiOperation({ summary: 'Update theme settings' })
   async updateThemeSettings(@Body() updateThemeDto: UpdateThemeDto): Promise<SiteTheme> {
-    return this.settingCoreService.updateThemeSettings(updateThemeDto);
+    // Map DTO fields to SiteTheme interface
+    const themeUpdate: Partial<SiteTheme> = {
+      primaryColor: updateThemeDto.theme || '#000000',
+      darkMode: false, // Default value, could be derived from config
+    };
+    return this.settingCoreService.updateThemeSettings(themeUpdate);
   }
 
   @Get('friend-links')
@@ -106,7 +120,12 @@ export class SettingCoreController {
   @Patch('navigation')
   @ApiOperation({ summary: 'Update navigation items' })
   async updateNavigation(@Body() updateNavigationDto: UpdateNavigationDto): Promise<Navigation[]> {
-    return this.settingCoreService.updateNavigation(updateNavigationDto.items);
+    // Map NavigationItem to Navigation interface
+    const navigationItems = updateNavigationDto.items.map((item) => ({
+      name: item.name,
+      path: item.url, // Map url to path
+    }));
+    return this.settingCoreService.updateNavigation(navigationItems);
   }
 
   @Get('custom-code')

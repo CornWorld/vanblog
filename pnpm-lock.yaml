@@ -587,12 +587,6 @@ importers:
       bcrypt:
         specifier: ^6.0.0
         version: 6.0.0
-      class-transformer:
-        specifier: ^0.5.1
-        version: 0.5.1
-      class-validator:
-        specifier: ^0.14.1
-        version: 0.14.2
       compression:
         specifier: ^1.8.1
         version: 1.8.1
@@ -614,6 +608,9 @@ importers:
       multer:
         specifier: ^2.0.2
         version: 2.0.2
+      nestjs-zod:
+        specifier: ^4.3.1
+        version: 4.3.1(@nestjs/common@11.1.5(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.5)(@nestjs/swagger@11.2.0(@nestjs/common@11.1.5(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.5)(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2))(zod@4.0.13)
       passport:
         specifier: ^0.7.0
         version: 0.7.0
@@ -3675,6 +3672,21 @@ packages:
 
   '@neon-rs/load@0.0.4':
     resolution: {integrity: sha512-kTPhdZyTQxB+2wpiRcFWrDcejc4JI6tkPuS7UZCG4l6Zvc5kU/gGQ/ozvHTh1XR5tS+UlfAfGuPajjzQjCiHCw==}
+
+  '@nest-zod/z@2.0.0':
+    resolution: {integrity: sha512-OqmJUZlpcx9ECzPYSIjaR/q/xLKrm9FkV+0FIWLEb9MVc9YeP21GmnQJBxE1dPRlLJ1kybNFBlt4D/PB8YAPkA==}
+    peerDependencies:
+      '@nestjs/common': ^10.0.0 || ^11.0.0
+      '@nestjs/core': ^10.0.0 || ^11.0.0
+      '@nestjs/swagger': ^7.4.2 || ^8.0.0 || ^11.0.0
+      zod: '>= 3.14.3'
+    peerDependenciesMeta:
+      '@nestjs/common':
+        optional: true
+      '@nestjs/core':
+        optional: true
+      '@nestjs/swagger':
+        optional: true
 
   '@nestjs/cli@11.0.7':
     resolution: {integrity: sha512-svrP8j1R0/lQVJ8ZI3BlDtuZxmkvVJokUJSB04sr6uibunk2wHeVDDVLZvYBUorCdGU/RHJl1IufhqUBM91vAQ==}
@@ -11500,6 +11512,21 @@ packages:
   neotraverse@0.6.18:
     resolution: {integrity: sha512-Z4SmBUweYa09+o6pG+eASabEpP6QkQ70yHj351pQoEXIs8uHbaU2DWVmzBANKgflPa47A50PtB2+NgRpQvr7vA==}
     engines: {node: '>= 10'}
+
+  nestjs-zod@4.3.1:
+    resolution: {integrity: sha512-gl10NOf/AhWt4HLcnMI1J0WUlBCKyteJBftD6SwNyX71/vzAorr5MJQWiDJoPPkou9QL2CRHHBtyjr55o7++Xw==}
+    peerDependencies:
+      '@nestjs/common': ^10.0.0 || ^11.0.0
+      '@nestjs/core': ^10.0.0 || ^11.0.0
+      '@nestjs/swagger': ^7.4.2 || ^8.0.0 || ^11.0.0
+      zod: '>= 3.14.3'
+    peerDependenciesMeta:
+      '@nestjs/common':
+        optional: true
+      '@nestjs/core':
+        optional: true
+      '@nestjs/swagger':
+        optional: true
 
   next-i18next@15.4.2:
     resolution: {integrity: sha512-zgRxWf7kdXtM686ecGIBQL+Bq0+DqAhRlasRZ3vVF0TmrNTWkVhs52n//oU3Fj5O7r/xOKkECDUwfOuXVwTK/g==}
@@ -19384,6 +19411,14 @@ snapshots:
     optional: true
 
   '@neon-rs/load@0.0.4': {}
+
+  '@nest-zod/z@2.0.0(@nestjs/common@11.1.5(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.5)(@nestjs/swagger@11.2.0(@nestjs/common@11.1.5(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.5)(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2))(zod@4.0.13)':
+    dependencies:
+      zod: 4.0.13
+    optionalDependencies:
+      '@nestjs/common': 11.1.5(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      '@nestjs/core': 11.1.5(@nestjs/common@11.1.5(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/platform-express@11.1.5)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      '@nestjs/swagger': 11.2.0(@nestjs/common@11.1.5(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.5)(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)
 
   '@nestjs/cli@11.0.7(@swc/core@1.13.2)(@types/node@22.16.5)':
     dependencies:
@@ -29750,6 +29785,16 @@ snapshots:
   neo-async@2.6.2: {}
 
   neotraverse@0.6.18: {}
+
+  nestjs-zod@4.3.1(@nestjs/common@11.1.5(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.5)(@nestjs/swagger@11.2.0(@nestjs/common@11.1.5(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.5)(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2))(zod@4.0.13):
+    dependencies:
+      '@nest-zod/z': 2.0.0(@nestjs/common@11.1.5(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.5)(@nestjs/swagger@11.2.0(@nestjs/common@11.1.5(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.5)(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2))(zod@4.0.13)
+      deepmerge: 4.3.1
+      zod: 4.0.13
+    optionalDependencies:
+      '@nestjs/common': 11.1.5(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      '@nestjs/core': 11.1.5(@nestjs/common@11.1.5(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/platform-express@11.1.5)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      '@nestjs/swagger': 11.2.0(@nestjs/common@11.1.5(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.5)(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)
 
   next-i18next@15.4.2(@types/react@19.0.10)(i18next@25.3.2(typescript@5.8.2))(next@15.4.3(@playwright/test@1.54.1)(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-i18next@15.6.1(i18next@25.3.2(typescript@5.8.2))(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(typescript@5.8.2))(react@19.1.0):
     dependencies:

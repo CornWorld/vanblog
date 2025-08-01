@@ -1,41 +1,39 @@
-import { IsString, MinLength, MaxLength, IsOptional } from 'class-validator';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { z } from 'zod';
+import { commonSchemas } from '../../../shared/zod';
 
-export class CreateTagDto {
-  @ApiProperty({ description: 'Tag name' })
-  @IsString()
-  @MinLength(1)
-  @MaxLength(100)
-  name!: string;
+// 基础标签 Schema
+export const TagSchema = z.object({
+  id: commonSchemas.id,
+  name: z.string(),
+  description: z.string().optional(),
+  color: z.string().optional(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+});
 
-  @ApiPropertyOptional({ description: 'Tag slug for URL' })
-  @IsOptional()
-  @IsString()
-  slug?: string | null;
-}
+// 创建标签 Schema
+export const CreateTagSchema = z.object({
+  name: z.string().min(1, '标签名称不能为空'),
+  description: z.string().optional(),
+  color: z.string().optional(),
+});
 
-export class UpdateTagDto extends CreateTagDto {}
+// 更新标签 Schema
+export const UpdateTagSchema = CreateTagSchema.partial();
 
-export class TagDto extends CreateTagDto {
-  @ApiProperty({ description: 'Tag ID' })
-  id!: number;
+// 带文章数量的标签 Schema
+export const TagWithCountSchema = TagSchema.extend({
+  articleCount: z.number().default(0),
+});
 
-  @ApiProperty({ description: 'Creation timestamp' })
-  createdAt!: Date;
+// 标签列表响应 Schema
+export const TagListResponseSchema = z.object({
+  items: z.array(TagWithCountSchema),
+  total: z.number(),
+});
 
-  @ApiPropertyOptional({ description: 'Last update timestamp' })
-  updatedAt?: Date;
-}
-
-export class TagWithCountDto extends TagDto {
-  @ApiProperty({ description: 'Number of articles with this tag' })
-  articleCount!: number;
-}
-
-export class TagListResponseDto {
-  @ApiProperty({ description: 'Tag list', type: [TagWithCountDto] })
-  data!: TagWithCountDto[];
-
-  @ApiProperty({ description: 'Total count' })
-  total!: number;
-}
+export type CreateTagDto = z.infer<typeof CreateTagSchema>;
+export type UpdateTagDto = z.infer<typeof UpdateTagSchema>;
+export type TagDto = z.infer<typeof TagSchema>;
+export type TagWithCountDto = z.infer<typeof TagWithCountSchema>;
+export type TagListResponseDto = z.infer<typeof TagListResponseSchema>;

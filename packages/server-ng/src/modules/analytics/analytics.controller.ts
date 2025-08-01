@@ -51,10 +51,10 @@ export class AnalyticsController {
     const recordDto: RecordAnalyticsDto = {
       type: dto.type,
       path: dto.path,
-      referrer: dto.referrer,
+      referer: dto.referer,
       userAgent: dto.userAgent ?? userAgent,
       ip: dto.ip ?? ip,
-      data: dto.data,
+      metadata: dto.metadata,
     };
 
     await this.analyticsService.recordAnalytics(recordDto);
@@ -98,7 +98,7 @@ export class AnalyticsController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: '获取数据概览' })
-  @ApiResponse({ status: 200, description: '获取成功', type: AnalyticsOverviewDto })
+  @ApiResponse({ status: 200, description: '获取成功' })
   async getOverview(): Promise<AnalyticsOverviewDto> {
     return this.analyticsService.getOverview();
   }
@@ -107,7 +107,7 @@ export class AnalyticsController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: '获取页面访问排行' })
-  @ApiResponse({ status: 200, description: '获取成功', type: [PageRankingDto] })
+  @ApiResponse({ status: 200, description: '获取成功' })
   async getPageRankings(@Query('limit') limit?: number): Promise<PageRankingDto[]> {
     return this.analyticsService.getPageRankings(limit);
   }
@@ -116,7 +116,7 @@ export class AnalyticsController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: '获取来源统计' })
-  @ApiResponse({ status: 200, description: '获取成功', type: [ReferrerStatsDto] })
+  @ApiResponse({ status: 200, description: '获取成功' })
   async getReferrerStats(@Query('limit') limit?: number): Promise<ReferrerStatsDto[]> {
     return this.analyticsService.getReferrerStats(limit);
   }
@@ -125,7 +125,7 @@ export class AnalyticsController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: '获取图表数据' })
-  @ApiResponse({ status: 200, description: '获取成功', type: AnalyticsChartDataDto })
+  @ApiResponse({ status: 200, description: '获取成功' })
   async getChartData(@Query('days') days?: number): Promise<AnalyticsChartDataDto> {
     return this.analyticsService.getChartData(days);
   }
@@ -134,7 +134,7 @@ export class AnalyticsController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: '获取设备统计' })
-  @ApiResponse({ status: 200, description: '获取成功', type: [DeviceStatsDto] })
+  @ApiResponse({ status: 200, description: '获取成功' })
   async getDeviceStats(): Promise<DeviceStatsDto[]> {
     return this.analyticsService.getDeviceStats();
   }
@@ -143,7 +143,7 @@ export class AnalyticsController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: '获取浏览器统计' })
-  @ApiResponse({ status: 200, description: '获取成功', type: [BrowserStatsDto] })
+  @ApiResponse({ status: 200, description: '获取成功' })
   async getBrowserStats(): Promise<BrowserStatsDto[]> {
     return this.analyticsService.getBrowserStats();
   }

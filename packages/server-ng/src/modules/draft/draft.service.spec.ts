@@ -90,9 +90,14 @@ describe('DraftService', () => {
         return mockDb;
       });
 
-      const result = await service.findAll({ page: 1, pageSize: 10 });
+      const result = await service.findAll({
+        page: 1,
+        pageSize: 10,
+        sortBy: 'updatedAt',
+        sortOrder: 'desc',
+      });
 
-      expect(result.data).toHaveLength(1);
+      expect(result.items).toHaveLength(1);
       expect(result.total).toBe(1);
       expect(result.page).toBe(1);
       expect(result.pageSize).toBe(10);
@@ -148,6 +153,7 @@ describe('DraftService', () => {
         title: 'New Draft',
         content: 'New content',
         tags: ['new'],
+        categories: ['test-category'],
       };
 
       const result = await service.create(createDto);
@@ -308,9 +314,9 @@ describe('DraftService', () => {
       });
 
       const publishDto = {
-        top: 0,
-        hidden: false,
-        private: false,
+        isPublished: true,
+        isTop: false,
+        allowComment: true,
       };
 
       const result = await service.publish(1, publishDto);
@@ -331,19 +337,21 @@ describe('DraftService', () => {
           title: 'Import 1',
           content: 'Content 1',
           tags: ['import'],
+          categories: ['test'],
         },
         {
           title: 'Import 2',
           content: 'Content 2',
-          category: 'imported',
+          tags: [],
+          categories: ['imported'],
         },
       ];
 
       const mockResults = draftsToImport.map((draft, index) => ({
         id: index + 1,
         ...draft,
-        tags: draft.tags ? JSON.stringify(draft.tags) : null,
-        category: draft.category ?? null,
+        tags: JSON.stringify(draft.tags),
+        category: null,
         author: 'admin',
         pathname: null,
         createdAt: new Date(),

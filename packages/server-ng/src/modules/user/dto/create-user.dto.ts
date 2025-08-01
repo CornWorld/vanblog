@@ -1,65 +1,29 @@
-import {
-  IsString,
-  IsEmail,
-  IsOptional,
-  IsEnum,
-  MinLength,
-  MaxLength,
-  IsArray,
-} from 'class-validator';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import type { Permission } from '../../../shared/types/permission.type';
+import { z } from 'zod';
+import { commonSchemas } from '../../../shared/zod';
 
+// 用户类型枚举
 export enum UserType {
   ADMIN = 'admin',
-  COLLABORATOR = 'collaborator',
+  EDITOR = 'editor',
+  AUTHOR = 'author',
+  SUBSCRIBER = 'subscriber',
 }
 
-export class CreateUserDto {
-  @ApiProperty({ description: '用户名', example: 'admin' })
-  @IsString()
-  @MinLength(3)
-  @MaxLength(20)
-  username!: string;
+export const CreateUserSchema = z.object({
+  username: z
+    .string()
+    .describe('Username')
+    .pipe(z.string().min(3, '用户名至少3个字符').max(20, '用户名最多20个字符')),
+  email: commonSchemas.email,
+  password: z
+    .string()
+    .describe('Password')
+    .pipe(z.string().min(6, '密码至少6个字符').max(50, '密码最多50个字符')),
+  nickname: z.string().describe('User nickname').optional(),
+  avatar: z.string().describe('Avatar URL').optional(),
+  bio: z.string().describe('User biography').optional(),
+  role: z.enum(UserType).describe('User role').default(UserType.SUBSCRIBER),
+  isActive: z.boolean().describe('Whether user is active').default(true),
+});
 
-  @ApiProperty({ description: '密码', example: 'password123' })
-  @IsString()
-  @MinLength(6)
-  @MaxLength(50)
-  password!: string;
-
-  @ApiPropertyOptional({ description: '昵称', example: '管理员' })
-  @IsOptional()
-  @IsString()
-  @MaxLength(50)
-  nickname?: string;
-
-  @ApiPropertyOptional({ description: '邮箱', example: 'admin@example.com' })
-  @IsOptional()
-  @IsEmail()
-  email?: string;
-
-  @ApiPropertyOptional({ description: '头像URL' })
-  @IsOptional()
-  @IsString()
-  avatar?: string;
-
-  @ApiPropertyOptional({
-    description: '用户类型',
-    enum: UserType,
-    default: UserType.COLLABORATOR,
-  })
-  @IsOptional()
-  @IsEnum(UserType)
-  type?: UserType;
-
-  @ApiPropertyOptional({
-    description: '权限列表（仅协作者）',
-    type: [String],
-    example: ['article:create', 'article:update', 'draft:create'],
-  })
-  @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  permissions?: Permission[];
-}
+export type CreateUserDto = z.infer<typeof CreateUserSchema>;

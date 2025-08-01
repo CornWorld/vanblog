@@ -36,14 +36,14 @@ export class DraftController {
 
   @Get()
   @ApiOperation({ summary: 'Get all drafts' })
-  @ApiResponse({ status: 200, description: 'Return all drafts', type: DraftListResponseDto })
+  @ApiResponse({ status: 200, description: 'Return all drafts' })
   async findAll(@Query() query: DraftQueryDto): Promise<DraftListResponseDto> {
     return this.draftService.findAll(query);
   }
 
   @Get(':id')
   @ApiOperation({ summary: 'Get draft by ID' })
-  @ApiResponse({ status: 200, description: 'Return draft by ID', type: DraftDto })
+  @ApiResponse({ status: 200, description: 'Return draft by ID' })
   @ApiResponse({ status: 404, description: 'Draft not found' })
   async findOne(@Param('id', ParseIntPipe) id: number): Promise<DraftDto> {
     return this.draftService.findOne(id);
@@ -51,14 +51,14 @@ export class DraftController {
 
   @Post()
   @ApiOperation({ summary: 'Create draft' })
-  @ApiResponse({ status: 201, description: 'Create new draft', type: DraftDto })
+  @ApiResponse({ status: 201, description: 'Create new draft' })
   async create(@Body() createDraftDto: CreateDraftDto): Promise<DraftDto> {
     return this.draftService.create(createDraftDto);
   }
 
   @Put(':id')
   @ApiOperation({ summary: 'Update draft' })
-  @ApiResponse({ status: 200, description: 'Update existing draft', type: DraftDto })
+  @ApiResponse({ status: 200, description: 'Update existing draft' })
   @ApiResponse({ status: 404, description: 'Draft not found' })
   async update(
     @Param('id', ParseIntPipe) id: number,
@@ -95,7 +95,7 @@ export class DraftController {
 
   @Put(':id/auto-save')
   @ApiOperation({ summary: 'Auto-save draft' })
-  @ApiResponse({ status: 200, description: 'Draft auto-saved successfully', type: DraftDto })
+  @ApiResponse({ status: 200, description: 'Draft auto-saved successfully' })
   @ApiResponse({ status: 404, description: 'Draft not found' })
   async autoSave(
     @Param('id', ParseIntPipe) id: number,
@@ -109,20 +109,22 @@ export class DraftController {
   @ApiResponse({
     status: 200,
     description: 'Return draft versions',
-    type: DraftVersionListResponseDto,
   })
   @ApiResponse({ status: 404, description: 'Draft not found' })
   async getVersions(@Param('id', ParseIntPipe) id: number): Promise<DraftVersionListResponseDto> {
     const versions = await this.draftVersionService.getVersions(id);
     return {
-      data: versions,
+      items: versions,
       total: versions.length,
+      page: 1,
+      pageSize: versions.length,
+      totalPages: 1,
     };
   }
 
   @Get(':id/versions/:version')
   @ApiOperation({ summary: 'Get specific draft version' })
-  @ApiResponse({ status: 200, description: 'Return draft version', type: DraftVersionDto })
+  @ApiResponse({ status: 200, description: 'Return draft version' })
   @ApiResponse({ status: 404, description: 'Draft version not found' })
   async getVersion(
     @Param('id', ParseIntPipe) id: number,

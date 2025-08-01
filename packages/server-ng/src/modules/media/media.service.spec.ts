@@ -124,6 +124,8 @@ describe('MediaService', () => {
       const result = await service.listFiles({
         page: 1,
         pageSize: 20,
+        sortBy: 'createdAt',
+        sortOrder: 'desc',
       });
 
       expect(result).toBeDefined();
@@ -136,6 +138,8 @@ describe('MediaService', () => {
         keyword: 'test',
         page: 1,
         pageSize: 20,
+        sortBy: 'createdAt',
+        sortOrder: 'desc',
       });
 
       expect(mockDb.select).toHaveBeenCalled();

@@ -4,9 +4,15 @@ export class Draft {
   content!: string;
   pathname?: string;
   tags!: string[];
+  categories!: string[];
   category?: string;
   author!: string;
   version!: number;
+  userId!: number;
+  wordCount!: number;
+  readTime!: number;
+  summary?: string;
+  cover?: string;
   createdAt!: Date;
   updatedAt!: Date;
 
@@ -23,9 +29,13 @@ export class DraftVersion {
   content!: string;
   pathname?: string;
   tags!: string[];
+  categories!: string[];
   category?: string;
   author!: string;
+  summary?: string;
+  cover?: string;
   createdAt!: Date;
+  comment?: string;
 
   constructor(partial: Partial<DraftVersion>) {
     Object.assign(this, partial);

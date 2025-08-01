@@ -1,34 +1,15 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsEnum, IsOptional, IsString, IsObject } from 'class-validator';
+import { z } from 'zod';
 import { AnalyticsType } from '../entities/analytics.entity';
 
-export class RecordAnalyticsDto {
-  @ApiProperty({ enum: AnalyticsType, description: '分析类型' })
-  @IsEnum(AnalyticsType)
-  type!: AnalyticsType;
+export const RecordAnalyticsSchema = z.object({
+  type: z.enum([AnalyticsType.PAGEVIEW, AnalyticsType.EVENT, AnalyticsType.API_CALL]),
+  path: z.string(),
+  userAgent: z.string().optional(),
+  ip: z.string().optional(),
+  referer: z.string().optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
+});
 
-  @ApiPropertyOptional({ description: '页面路径' })
-  @IsOptional()
-  @IsString()
-  path?: string;
+export type RecordAnalyticsDto = z.infer<typeof RecordAnalyticsSchema>;
 
-  @ApiPropertyOptional({ description: '来源页面' })
-  @IsOptional()
-  @IsString()
-  referrer?: string;
-
-  @ApiPropertyOptional({ description: '用户代理字符串' })
-  @IsOptional()
-  @IsString()
-  userAgent?: string;
-
-  @ApiPropertyOptional({ description: '客户端 IP' })
-  @IsOptional()
-  @IsString()
-  ip?: string;
-
-  @ApiPropertyOptional({ description: '额外数据' })
-  @IsOptional()
-  @IsObject()
-  data?: Record<string, unknown>;
-}
+export type RecordAnalyticsType = z.infer<typeof RecordAnalyticsSchema>;

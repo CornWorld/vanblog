@@ -1,51 +1,20 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsArray, IsOptional } from 'class-validator';
+import { z } from 'zod';
+import { commonSchemas } from '../../../shared/zod';
 
-export class UpdateSiteInfoDto {
-  @ApiProperty({ description: '站点标题' })
-  @IsString()
-  title!: string;
+export const UpdateSiteInfoSchema = z.object({
+  siteName: commonSchemas.nonEmptyString.max(100, '站点名称过长'),
+  siteDescription: z.string().optional(),
+  siteKeywords: z.string().optional(),
+  siteLogo: z.string().optional(),
+  siteFavicon: z.string().optional(),
+  siteUrl: commonSchemas.url.optional(),
+  authorName: z.string().optional(),
+  authorEmail: commonSchemas.email.optional(),
+  authorAvatar: z.string().optional(),
+  authorBio: z.string().optional(),
+  icp: z.string().optional(),
+  gaId: z.string().optional(),
+  baiduId: z.string().optional(),
+});
 
-  @ApiProperty({ description: '站点描述' })
-  @IsString()
-  description!: string;
-
-  @ApiProperty({ description: '站点作者' })
-  @IsString()
-  author!: string;
-
-  @ApiProperty({ description: '站点关键词', type: [String] })
-  @IsArray()
-  @IsString({ each: true })
-  keywords!: string[];
-
-  @ApiProperty({ description: '站点 Logo', required: false })
-  @IsOptional()
-  @IsString()
-  logo?: string;
-
-  @ApiProperty({ description: '站点 Favicon', required: false })
-  @IsOptional()
-  @IsString()
-  favicon?: string;
-
-  @ApiProperty({ description: '建站时间', required: false })
-  @IsOptional()
-  @IsString()
-  since?: string;
-
-  @ApiProperty({ description: 'ICP 备案号', required: false })
-  @IsOptional()
-  @IsString()
-  icp?: string;
-
-  @ApiProperty({ description: 'Google Analytics ID', required: false })
-  @IsOptional()
-  @IsString()
-  googleAnalyticsId?: string;
-
-  @ApiProperty({ description: '百度统计 ID', required: false })
-  @IsOptional()
-  @IsString()
-  baiduAnalyticsId?: string;
-}
+export type UpdateSiteInfoDto = z.infer<typeof UpdateSiteInfoSchema>;

@@ -1,35 +1,13 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsOptional, IsString, IsNumber, Min, Max } from 'class-validator';
-import { Type } from 'class-transformer';
+import { z } from 'zod';
+import { commonSchemas } from '../../../shared/zod';
 
-export class ListStaticFilesDto {
-  @ApiProperty({ description: '文件名搜索关键词', required: false })
-  @IsOptional()
-  @IsString()
-  keyword?: string;
+export const ListStaticFilesSchema = z.object({
+  page: commonSchemas.page,
+  pageSize: commonSchemas.pageSize,
+  keyword: z.string().optional(),
+  type: z.enum(['image', 'video', 'audio', 'document', 'other']).optional(),
+  sortBy: z.enum(['name', 'size', 'createdAt']).default('createdAt'),
+  sortOrder: z.enum(['asc', 'desc']).default('desc'),
+});
 
-  @ApiProperty({ description: 'MIME 类型筛选', required: false })
-  @IsOptional()
-  @IsString()
-  mimeType?: string;
-
-  @ApiProperty({ description: '存储提供商筛选', required: false })
-  @IsOptional()
-  @IsString()
-  provider?: string;
-
-  @ApiProperty({ description: '页码', default: 1, minimum: 1 })
-  @IsOptional()
-  @Type(() => Number)
-  @IsNumber()
-  @Min(1)
-  page?: number = 1;
-
-  @ApiProperty({ description: '每页数量', default: 20, minimum: 1, maximum: 100 })
-  @IsOptional()
-  @Type(() => Number)
-  @IsNumber()
-  @Min(1)
-  @Max(100)
-  pageSize?: number = 20;
-}
+export type ListStaticFilesDto = z.infer<typeof ListStaticFilesSchema>;

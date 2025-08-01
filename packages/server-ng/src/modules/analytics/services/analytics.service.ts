@@ -28,10 +28,10 @@ export class AnalyticsService {
     await this.db.insert(analytics).values({
       type: dto.type,
       path: dto.path,
-      referrer: dto.referrer,
+      referrer: dto.referer,
       userAgent: dto.userAgent,
       ip: dto.ip,
-      data: dto.data ? JSON.stringify(dto.data) : null,
+      data: dto.metadata ? JSON.stringify(dto.metadata) : null,
     });
   }
 

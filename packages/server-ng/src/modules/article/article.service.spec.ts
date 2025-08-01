@@ -82,9 +82,14 @@ describe('ArticleService', () => {
         return mockDb;
       });
 
-      const result = await service.findAll({ page: 1, pageSize: 10 });
+      const result = await service.findAll({
+        page: 1,
+        pageSize: 10,
+        sortBy: 'createdAt',
+        sortOrder: 'desc',
+      });
 
-      expect(result.data).toHaveLength(1);
+      expect(result.items).toHaveLength(1);
       expect(result.total).toBe(1);
       expect(result.page).toBe(1);
       expect(result.pageSize).toBe(10);
@@ -128,6 +133,7 @@ describe('ArticleService', () => {
       });
 
       const searchDto: ArticleSearchDto = {
+        keyword: 'search term',
         query: 'search term',
         page: 1,
         pageSize: 10,
@@ -135,10 +141,8 @@ describe('ArticleService', () => {
 
       const result = await service.search(searchDto);
 
-      expect(result.data).toHaveLength(1);
+      expect(result.items).toHaveLength(1);
       expect(result.total).toBe(1);
-      expect(result.query).toBe('search term');
-      expect(result.searchTime).toBeGreaterThanOrEqual(0);
     });
 
     it('should search only in title when titleOnly is true', async () => {
@@ -158,6 +162,9 @@ describe('ArticleService', () => {
       });
 
       const searchDto: ArticleSearchDto = {
+        keyword: 'test',
+        page: 1,
+        pageSize: 10,
         query: 'test',
         titleOnly: true,
       };
@@ -184,6 +191,9 @@ describe('ArticleService', () => {
       });
 
       const searchDto: ArticleSearchDto = {
+        keyword: 'test',
+        page: 1,
+        pageSize: 10,
         query: 'test',
         category: 'tech',
         tags: ['javascript', 'node'],
@@ -254,6 +264,10 @@ describe('ArticleService', () => {
         title: 'New Article',
         content: 'New content',
         tags: ['new'],
+        categories: [],
+        isPublished: false,
+        isTop: false,
+        allowComment: true,
       };
 
       // Mock the db.select().from(tags) call
@@ -383,11 +397,20 @@ describe('ArticleService', () => {
           title: 'Import 1',
           content: 'Content 1',
           tags: ['import'],
+          categories: [],
+          isPublished: false,
+          isTop: false,
+          allowComment: true,
         },
         {
           title: 'Import 2',
           content: 'Content 2',
           category: 'imported',
+          tags: [],
+          categories: [],
+          isPublished: false,
+          isTop: false,
+          allowComment: true,
         },
       ];
 
