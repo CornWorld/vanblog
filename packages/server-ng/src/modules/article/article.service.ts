@@ -296,6 +296,17 @@ export class ArticleService {
   }
 
   async remove(id: number): Promise<void> {
+    // Check if article exists first
+    const existingArticle = await this.db
+      .select({ id: articles.id })
+      .from(articles)
+      .where(eq(articles.id, id))
+      .limit(1);
+
+    if (existingArticle.length === 0) {
+      throw new NotFoundException(`Article with ID ${id} not found`);
+    }
+
     await this.db.delete(articles).where(eq(articles.id, id));
   }
 

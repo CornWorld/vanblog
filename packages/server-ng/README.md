@@ -283,7 +283,7 @@ JWT_EXPIRES_IN=7d
 - [x] 检查数据分析模块与原版的差异，看看是否为其超集
 - [x] 检查所有 dto， 检查测试，看是否满足需求，覆盖率较高（当前有19个测试文件，覆盖率39.79%，DTO结构完整，涵盖所有核心功能模块）
 - [x] 使用 zod + [nestjs-zod](https://github.com/BenLorantfy/nestjs-zod) 替换 class-transformer 和 class-validator （注意 db 中的数据结构可能需要使用 z.infer<> 获取类型，不手动 JSON.parse 而是让 orm 解决；如果一定要手动操作，则使用 zod 的 safeParse 函数）
-- [ ] 检查目录结构，看其是否与最初计划的一致，看看是否存在令人困惑的部分（仅考虑被 git 追踪的目录，可以暂时删除所有未被追踪的目录）
+- [x] 检查目录结构，看其是否与最初计划的一致，看看是否存在令人困惑的部分（仅考虑被 git 追踪的目录，可以暂时删除所有未被追踪的目录）
 
 ### 阶段 9: Pipeline 事件系统
 
