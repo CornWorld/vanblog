@@ -49,7 +49,8 @@ describe('AnalyticsController (e2e)', () => {
     it('should record event analytics with data', async () => {
       const analyticsData = {
         type: AnalyticsType.EVENT,
-        data: {
+        path: '/test-event',
+        metadata: {
           action: 'click',
           label: 'download-button',
           value: 1,

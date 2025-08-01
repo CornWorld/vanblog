@@ -9,14 +9,16 @@ import {
   UseGuards,
   Headers,
   Ip,
+  UsePipes,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { ZodValidationPipe } from 'nestjs-zod';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { AnalyticsService } from './services/analytics.service';
 import { ArticleStatsService, ArticleStats } from './services/article-stats.service';
 import { ThirdPartyAnalyticsService } from './services/third-party-analytics.service';
 import { EchartsFormatterService, EchartsOption } from './services/echarts-formatter.service';
-import { RecordAnalyticsDto } from './dto/record-analytics.dto';
+import { RecordAnalyticsDto, RecordAnalyticsSchema } from './dto/record-analytics.dto';
 import { QueryAnalyticsDto } from './dto/query-analytics.dto';
 import { AnalyticsType } from './entities/analytics.entity';
 import {
@@ -40,6 +42,7 @@ export class AnalyticsController {
 
   // 公开的记录接口，前端可以调用
   @Post('analytics/record')
+  @UsePipes(new ZodValidationPipe(RecordAnalyticsSchema))
   @ApiOperation({ summary: '记录分析数据' })
   @ApiResponse({ status: 201, description: '记录成功' })
   async recordAnalytics(
