@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { EventEmitterModule } from '@nestjs/event-emitter';
+import { ScheduleModule } from '@nestjs/schedule';
 import { ConfigModule } from './config';
 import { HealthModule } from './modules/health/health.module';
 import { LoggerModule } from './core/logger/logger.module';
@@ -19,11 +20,13 @@ import { BeianModule } from './modules/beian/beian.module';
 import { SocialLinksModule } from './modules/social-links/social-links.module';
 import { RewardModule } from './modules/reward/reward.module';
 import { PipelineModule } from './modules/pipeline/pipeline.module';
+import { DemoModule } from './modules/demo/demo.module';
 
 @Module({
   imports: [
     ConfigModule,
     EventEmitterModule.forRoot(),
+    ScheduleModule.forRoot(),
     DatabaseModule,
     LoggerModule,
     HealthModule,
@@ -40,6 +43,7 @@ import { PipelineModule } from './modules/pipeline/pipeline.module';
     SocialLinksModule,
     RewardModule,
     PipelineModule,
+    DemoModule,
   ],
   controllers: [AppController],
   providers: [AppService],
