@@ -74,7 +74,7 @@ export class DemoService implements OnModuleInit {
       };
 
       this.demoSnapshot = snapshot;
-      this.logger.log(`Demo snapshot created with ${snapshot.articles.length} articles`);
+      this.logger.log(`Demo snapshot created with ${String(snapshot.articles.length)} articles`);
     } catch (error) {
       this.logger.error('Failed to create demo snapshot:', error);
       throw error;
@@ -155,15 +155,6 @@ export class DemoService implements OnModuleInit {
     }
   }
 
-  // Scheduled restoration every 6 hours in demo mode
-  @Cron('0 */6 * * *')
-  async scheduledRestore(): Promise<void> {
-    if (this.isDemoMode) {
-      this.logger.log('Performing scheduled demo data restoration...');
-      await this.restoreFromSnapshot();
-    }
-  }
-
   // Manual restoration endpoint
   async manualRestore(): Promise<{ success: boolean; message: string }> {
     if (!this.isDemoMode) {
@@ -184,6 +175,15 @@ export class DemoService implements OnModuleInit {
         success: false,
         message: `Failed to restore demo data: ${error instanceof Error ? error.message : String(error)}`,
       };
+    }
+  }
+
+  // Scheduled restoration every 6 hours in demo mode
+  @Cron('0 */6 * * *')
+  async scheduledRestore(): Promise<void> {
+    if (this.isDemoMode) {
+      this.logger.log('Performing scheduled demo data restoration...');
+      await this.restoreFromSnapshot();
     }
   }
 
@@ -239,12 +239,12 @@ console.log('Demo mode: Operation blocked');
     }
   }
 
-  async getSnapshotInfo(): Promise<{
+  getSnapshotInfo(): {
     hasSnapshot: boolean;
     timestamp?: number;
     articlesCount?: number;
     draftsCount?: number;
-  }> {
+  } {
     if (!this.demoSnapshot) {
       return { hasSnapshot: false };
     }
