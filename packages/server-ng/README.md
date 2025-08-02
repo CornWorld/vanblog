@@ -332,7 +332,7 @@ JWT_EXPIRES_IN=7d
 - [x] 创建运行日志记录
 - [x] 实现手动触发 API
 - [x] 集成 Article 和 Draft 模块的事件触发（beforeUpdateArticle, afterUpdateArticle, deleteArticle, beforeUpdateDraft, afterUpdateDraft, deleteDraft）
-- [ ] 依赖 pipeline 系统实现 demo 功能，阻止大部分数据库操作 + 提供还原定时事件
+- ~~依赖 pipeline 系统实现 demo 功能，阻止大部分数据库操作 + 提供还原定时事件~~
 
 ### 额外阶段：升级 Pipeline 到 Plugin 系统
 
