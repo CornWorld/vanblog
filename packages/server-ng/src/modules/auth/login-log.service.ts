@@ -14,11 +14,11 @@ export class LoginLogService {
 
   async createLog(logData: LoginLogDto): Promise<void> {
     await this.db.insert(loginLogs).values({
-      username: logData.username,
-      ip: logData.ip ?? null,
-      userAgent: logData.userAgent ?? null,
-      success: logData.success,
-      message: logData.message ?? null,
+      username: String(logData.username),
+      ip: logData.ip ? String(logData.ip) : null,
+      userAgent: logData.userAgent ? String(logData.userAgent) : null,
+      success: Boolean(logData.success),
+      message: logData.message ? String(logData.message) : null,
     });
   }
 
@@ -26,19 +26,19 @@ export class LoginLogService {
     const conditions = [];
 
     if (query.username) {
-      conditions.push(eq(loginLogs.username, query.username));
+      conditions.push(eq(loginLogs.username, String(query.username)));
     }
 
     if (query.success !== undefined) {
-      conditions.push(eq(loginLogs.success, query.success));
+      conditions.push(eq(loginLogs.success, Boolean(query.success)));
     }
 
     if (query.startDate) {
-      conditions.push(gte(loginLogs.createdAt, query.startDate));
+      conditions.push(gte(loginLogs.createdAt, new Date(query.startDate)));
     }
 
     if (query.endDate) {
-      conditions.push(lte(loginLogs.createdAt, query.endDate));
+      conditions.push(lte(loginLogs.createdAt, new Date(query.endDate)));
     }
 
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
@@ -55,7 +55,7 @@ export class LoginLogService {
       username: log.username,
       ip: log.ip ?? undefined,
       userAgent: log.userAgent ?? undefined,
-      success: log.success,
+      success: Boolean(log.success),
       message: log.message ?? undefined,
       createdAt: log.createdAt,
     }));

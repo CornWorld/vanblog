@@ -43,6 +43,15 @@ export class DemoService implements OnModuleInit {
     this.isDemoMode = this.configService.get<boolean>('DEMO_MODE', false);
   }
 
+  // Scheduled restoration every 6 hours in demo mode
+  @Cron('0 */6 * * *')
+  async scheduledRestore(): Promise<void> {
+    if (this.isDemoMode) {
+      this.logger.log('Performing scheduled demo data restoration...');
+      await this.restoreFromSnapshot();
+    }
+  }
+
   async onModuleInit(): Promise<void> {
     if (this.isDemoMode) {
       this.logger.log('Demo mode enabled, creating initial snapshot...');
@@ -155,7 +164,6 @@ export class DemoService implements OnModuleInit {
     }
   }
 
-  // Manual restoration endpoint
   async manualRestore(): Promise<{ success: boolean; message: string }> {
     if (!this.isDemoMode) {
       return {
@@ -178,13 +186,22 @@ export class DemoService implements OnModuleInit {
     }
   }
 
-  // Scheduled restoration every 6 hours in demo mode
-  @Cron('0 */6 * * *')
-  async scheduledRestore(): Promise<void> {
-    if (this.isDemoMode) {
-      this.logger.log('Performing scheduled demo data restoration...');
-      await this.restoreFromSnapshot();
+  getSnapshotInfo(): {
+    hasSnapshot: boolean;
+    timestamp?: number;
+    articlesCount?: number;
+    draftsCount?: number;
+  } {
+    if (!this.demoSnapshot) {
+      return { hasSnapshot: false };
     }
+
+    return {
+      hasSnapshot: true,
+      timestamp: this.demoSnapshot.timestamp,
+      articlesCount: this.demoSnapshot.articles.length,
+      draftsCount: this.demoSnapshot.drafts.length,
+    };
   }
 
   private async setupDemoPipelines(): Promise<void> {
@@ -210,7 +227,7 @@ if (input && typeof input === 'object') {
 }
 
 // If no input data, just log the attempt
-console.log('Demo mode: Operation blocked');
+// Demo mode: Operation blocked (logged via pipeline)
 `;
 
     const writeEvents = [
@@ -237,23 +254,5 @@ console.log('Demo mode: Operation blocked');
         this.logger.error(`Failed to create demo pipeline for ${eventName}:`, error);
       }
     }
-  }
-
-  getSnapshotInfo(): {
-    hasSnapshot: boolean;
-    timestamp?: number;
-    articlesCount?: number;
-    draftsCount?: number;
-  } {
-    if (!this.demoSnapshot) {
-      return { hasSnapshot: false };
-    }
-
-    return {
-      hasSnapshot: true,
-      timestamp: this.demoSnapshot.timestamp,
-      articlesCount: this.demoSnapshot.articles.length,
-      draftsCount: this.demoSnapshot.drafts.length,
-    };
   }
 }

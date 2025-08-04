@@ -28,14 +28,14 @@ export class DemoController {
       },
     },
   })
-  async getStatus(): Promise<{
+  getStatus(): {
     isDemoMode: boolean;
     hasSnapshot: boolean;
     timestamp?: number;
     articlesCount?: number;
     draftsCount?: number;
-  }> {
-    const snapshotInfo = await this.demoService.getSnapshotInfo();
+  } {
+    const snapshotInfo = this.demoService.getSnapshotInfo();
     return {
       isDemoMode: this.demoService.isDemoModeEnabled(),
       ...snapshotInfo,

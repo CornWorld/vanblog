@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, Inject } from '@nestjs/common';
+import { Injectable, NotFoundException, Inject, Logger } from '@nestjs/common';
 import { eq, and, or, like, desc, asc, sql } from 'drizzle-orm';
 import {
   CreateDraftDto,
@@ -18,6 +18,8 @@ import { PipelineService } from '../pipeline/services/pipeline.service';
 
 @Injectable()
 export class DraftService {
+  private readonly logger = new Logger(DraftService.name);
+
   constructor(
     @Inject(DATABASE_CONNECTION)
     private readonly db: Database,
@@ -178,7 +180,7 @@ export class DraftService {
       }
     } catch (error) {
       // Log error but don't fail the operation
-      console.error('Error in beforeUpdateDraft pipeline:', error);
+      this.logger.error('Error in beforeUpdateDraft pipeline:', error);
     }
 
     const result = await this.db
@@ -208,7 +210,7 @@ export class DraftService {
       });
     } catch (error) {
       // Log error but don't fail the operation
-      console.error('Error in afterUpdateDraft pipeline:', error);
+      this.logger.error('Error in afterUpdateDraft pipeline:', error);
     }
 
     return draftResult;
@@ -227,7 +229,7 @@ export class DraftService {
       });
     } catch (error) {
       // Log error but don't fail the operation
-      console.error('Error in deleteDraft pipeline:', error);
+      this.logger.error('Error in deleteDraft pipeline:', error);
     }
 
     const result = await this.db

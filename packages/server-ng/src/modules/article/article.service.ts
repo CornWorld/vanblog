@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, Inject } from '@nestjs/common';
+import { Injectable, NotFoundException, Inject, Logger } from '@nestjs/common';
 import { eq, and, or, like, desc, asc, sql } from 'drizzle-orm';
 import {
   CreateArticleDto,
@@ -17,6 +17,8 @@ import { PipelineService } from '../pipeline/services/pipeline.service';
 
 @Injectable()
 export class ArticleService {
+  private readonly logger = new Logger(ArticleService.name);
+
   constructor(
     @Inject(DATABASE_CONNECTION)
     private readonly db: Database,
@@ -252,7 +254,7 @@ export class ArticleService {
       }
     } catch (error) {
       // Log error but don't fail the operation
-      console.error('Error in beforeUpdateArticle pipeline:', error);
+      this.logger.error('Error in beforeUpdateArticle pipeline:', error);
     }
 
     const insertResult = await this.db.insert(articles).values([newArticleData]).returning();
@@ -279,7 +281,7 @@ export class ArticleService {
       });
     } catch (error) {
       // Log error but don't fail the operation
-      console.error('Error in afterUpdateArticle pipeline:', error);
+      this.logger.error('Error in afterUpdateArticle pipeline:', error);
     }
 
     return articleResult;
@@ -323,7 +325,7 @@ export class ArticleService {
       }
     } catch (error) {
       // Log error but don't fail the operation
-      console.error('Error in beforeUpdateArticle pipeline:', error);
+      this.logger.error('Error in beforeUpdateArticle pipeline:', error);
     }
 
     const updateResult = await this.db
@@ -355,7 +357,7 @@ export class ArticleService {
       });
     } catch (error) {
       // Log error but don't fail the operation
-      console.error('Error in afterUpdateArticle pipeline:', error);
+      this.logger.error('Error in afterUpdateArticle pipeline:', error);
     }
 
     return articleResult;
@@ -382,7 +384,7 @@ export class ArticleService {
       });
     } catch (error) {
       // Log error but don't fail the operation
-      console.error('Error in deleteArticle pipeline:', error);
+      this.logger.error('Error in deleteArticle pipeline:', error);
     }
 
     await this.db.delete(articles).where(eq(articles.id, id));

@@ -64,7 +64,7 @@ export class PipelineService {
       if (results.length === 0) {
         throw new Error('Failed to create pipeline');
       }
-      const result = results[0] as Pipeline;
+      const result = results[0];
 
       // Save script to file system
       this.saveOrUpdateScriptToRunnerPath(result.id, result.script);
@@ -145,7 +145,7 @@ export class PipelineService {
       if (results.length === 0) {
         throw new Error(`Failed to update pipeline with ID ${String(id)}`);
       }
-      const result = results[0] as Pipeline;
+      const result = results[0];
 
       // Update script file if script changed
       if (updatePipelineDto.script) {
@@ -306,8 +306,8 @@ export class PipelineService {
         });
 
         if (result.status !== 0) {
-          const errorMsg = result.stderr ? result.stderr.toString() : undefined;
-          this.logger.error(`Failed to install dependency ${dep}:`, errorMsg ?? 'Unknown error');
+          const errorMsg = result.stderr.toString() || 'Unknown error';
+          this.logger.error(`Failed to install dependency ${dep}:`, errorMsg);
         } else {
           this.logger.log(`Successfully installed dependency: ${dep}`);
         }

@@ -136,8 +136,8 @@ describe('DemoService', () => {
   });
 
   describe('getSnapshotInfo', () => {
-    it('should return snapshot info', async () => {
-      const result = await service.getSnapshotInfo();
+    it('should return snapshot info', () => {
+      const result = service.getSnapshotInfo();
 
       expect(result).toBeDefined();
       expect(typeof result.hasSnapshot).toBe('boolean');

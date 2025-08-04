@@ -1,4 +1,4 @@
-import { Test, TestingModule } from '@nestjs/testing';
+import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { DemoController } from './demo.controller';
 import { DemoService } from './demo.service';
@@ -38,7 +38,7 @@ describe('DemoController', () => {
   });
 
   describe('getStatus', () => {
-    it('should return demo status with snapshot info', async () => {
+    it('should return demo status with snapshot info', () => {
       const mockSnapshotInfo = {
         hasSnapshot: true,
         timestamp: Date.now(),
@@ -49,7 +49,7 @@ describe('DemoController', () => {
       mockDemoService.isDemoModeEnabled.mockReturnValue(true);
       mockDemoService.getSnapshotInfo.mockResolvedValue(mockSnapshotInfo);
 
-      const result = await controller.getStatus();
+      const result = controller.getStatus();
 
       expect(result).toEqual({
         isDemoMode: true,
@@ -59,7 +59,7 @@ describe('DemoController', () => {
       expect(demoService.getSnapshotInfo).toHaveBeenCalled();
     });
 
-    it('should return demo status without snapshot', async () => {
+    it('should return demo status without snapshot', () => {
       const mockSnapshotInfo = {
         hasSnapshot: false,
       };
@@ -67,7 +67,7 @@ describe('DemoController', () => {
       mockDemoService.isDemoModeEnabled.mockReturnValue(false);
       mockDemoService.getSnapshotInfo.mockResolvedValue(mockSnapshotInfo);
 
-      const result = await controller.getStatus();
+      const result = controller.getStatus();
 
       expect(result).toEqual({
         isDemoMode: false,
