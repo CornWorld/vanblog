@@ -41,6 +41,7 @@
     "dayjs": "^1.11.13",
     "dotenv": "^17.2.1",
     "drizzle-orm": "^0.44.4",
+    "drizzle-zod": "^0.8.2",
     "express": "^5.1.0",
     "helmet": "^8.1.0",
     "multer": "^2.0.2",

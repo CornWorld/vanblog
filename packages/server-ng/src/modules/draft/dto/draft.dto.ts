@@ -1,34 +1,29 @@
 import { z } from 'zod';
 import { createZodDto } from 'nestjs-zod';
 import { commonSchemas } from '../../../shared/zod';
+import {
+  selectDraftSchema,
+  insertDraftSchema,
+  updateDraftSchema,
+  selectDraftVersionSchema,
+} from '../../../database';
 
-// 创建草稿 Schema
-export const CreateDraftSchema = z.object({
-  title: z.string().min(1, '标题不能为空'),
-  content: z.string().min(1, '内容不能为空'),
-  summary: z.string().optional(),
-  cover: z.string().optional(),
-  tags: z.array(z.string()).default([]),
-  categories: z.array(z.string()).default([]),
+// 基础草稿 Schema - 使用 drizzle-zod 生成的 schema
+export const DraftSchema = selectDraftSchema;
+
+// 创建草稿 Schema - 使用 drizzle-zod 生成的 schema
+export const CreateDraftSchema = insertDraftSchema.omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  version: true,
 });
 
-// 更新草稿 Schema
-export const UpdateDraftSchema = CreateDraftSchema.partial();
-
-// 基础草稿 Schema
-export const DraftSchema = z.object({
-  id: z.number(),
-  title: z.string(),
-  content: z.string(),
-  summary: z.string().optional(),
-  cover: z.string().optional(),
-  tags: z.array(z.string()).default([]),
-  categories: z.array(z.string()).default([]),
-  createdAt: z.date(),
-  updatedAt: z.date(),
-  userId: z.number(),
-  wordCount: z.number().default(0),
-  readTime: z.number().default(0),
+// 更新草稿 Schema - 使用 drizzle-zod 生成的 schema
+export const UpdateDraftSchema = updateDraftSchema.omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
 });
 
 // 草稿查询 Schema
@@ -61,20 +56,8 @@ export const PublishDraftSchema = z.object({
   publishedAt: z.date().optional(),
 });
 
-// 草稿版本 Schema
-export const DraftVersionSchema = z.object({
-  id: z.number(),
-  draftId: z.number(),
-  title: z.string(),
-  content: z.string(),
-  summary: z.string().optional(),
-  cover: z.string().optional(),
-  tags: z.array(z.string()).default([]),
-  categories: z.array(z.string()).default([]),
-  createdAt: z.date(),
-  version: z.number(),
-  comment: z.string().optional(),
-});
+// 草稿版本 Schema - 使用 drizzle-zod 生成的 schema
+export const DraftVersionSchema = selectDraftVersionSchema;
 
 // 草稿版本列表响应 Schema
 export const DraftVersionListResponseSchema = z.object({

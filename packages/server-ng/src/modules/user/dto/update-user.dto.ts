@@ -1,6 +1,10 @@
 import { createZodDto } from 'nestjs-zod';
-import { CreateUserSchema } from './create-user.dto';
+import { updateUserSchema } from '../../../database';
 
-export const UpdateUserSchema = CreateUserSchema.omit({ username: true }).partial();
+export const UpdateUserSchema = updateUserSchema.omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
 
 export class UpdateUserDto extends createZodDto(UpdateUserSchema) {}

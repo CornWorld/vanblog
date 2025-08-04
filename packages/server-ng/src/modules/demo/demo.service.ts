@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { Cron } from '@nestjs/schedule';
 import { eq, and } from 'drizzle-orm';
 import { DATABASE_CONNECTION } from '../../database';
-import { Database } from '../../database/connection';
+import type { Database } from '../../database/connection';
 import {
   articles,
   drafts,
@@ -247,7 +247,7 @@ if (input && typeof input === 'object') {
           script: demoScript,
           enabled: true,
           eventType: 'system',
-          deps: [],
+          deps: '[]',
         });
         this.logger.log(`Created demo pipeline for event: ${eventName}`);
       } catch (error) {

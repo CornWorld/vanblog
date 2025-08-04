@@ -1,24 +1,15 @@
 import { z } from 'zod';
 import { createZodDto } from 'nestjs-zod';
-import { commonSchemas } from '../../../shared/zod';
+import { selectLoginLogSchema, insertLoginLogSchema } from '../../../database';
 
-export const LoginLogSchema = z.object({
-  username: commonSchemas.nonEmptyString.describe('Username attempting to login'),
-  ip: z.string().optional().describe('IP address of the login attempt'),
-  userAgent: z.string().optional().describe('User agent string'),
-  success: z.boolean().describe('Whether the login was successful'),
-  message: z.string().optional().describe('Additional message about the login attempt'),
+// 登录日志 Schema - 使用 drizzle-zod 生成的 schema
+export const LoginLogSchema = insertLoginLogSchema.omit({
+  id: true,
+  createdAt: true,
 });
 
-export const LoginLogResponseSchema = z.object({
-  id: z.number(),
-  username: z.string(),
-  ip: z.string().optional(),
-  userAgent: z.string().optional(),
-  success: z.boolean(),
-  message: z.string().optional(),
-  createdAt: z.date(),
-});
+// 登录日志响应 Schema - 使用 drizzle-zod 生成的 schema
+export const LoginLogResponseSchema = selectLoginLogSchema;
 
 export const LoginLogQuerySchema = z.object({
   username: z.string().optional().describe('Filter by username'),

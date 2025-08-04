@@ -1,26 +1,27 @@
 import { z } from 'zod';
 import { createZodDto } from 'nestjs-zod';
-import { commonSchemas } from '../../../shared/zod';
+import {
+  selectCategorySchema,
+  insertCategorySchema,
+  updateCategorySchema,
+} from '../../../database';
 
-// 基础分类 Schema
-export const CategorySchema = z.object({
-  id: commonSchemas.id,
-  name: z.string(),
-  description: z.string().optional().nullable(),
-  password: z.string().optional().nullable(),
-  createdAt: z.date(),
-  updatedAt: z.date(),
+// 基础分类 Schema - 使用 drizzle-zod 生成的 schema
+export const CategorySchema = selectCategorySchema;
+
+// 创建分类 Schema - 使用 drizzle-zod 生成的 schema
+export const CreateCategorySchema = insertCategorySchema.omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
 });
 
-// 创建分类 Schema
-export const CreateCategorySchema = z.object({
-  name: z.string().min(1, '分类名称不能为空'),
-  description: z.string().optional().nullable(),
-  password: z.string().optional().nullable(),
+// 更新分类 Schema - 使用 drizzle-zod 生成的 schema
+export const UpdateCategorySchema = updateCategorySchema.omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
 });
-
-// 更新分类 Schema
-export const UpdateCategorySchema = CreateCategorySchema.partial();
 
 // 带文章数量的分类 Schema
 export const CategoryWithCountSchema = CategorySchema.extend({

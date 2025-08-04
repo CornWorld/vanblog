@@ -1,55 +1,25 @@
 import { z } from 'zod';
 import { createZodDto } from 'nestjs-zod';
 import { commonSchemas } from '../../../shared/zod';
+import { selectArticleSchema, insertArticleSchema, updateArticleSchema } from '../../../database';
 
-// 基础文章 Schema
-export const ArticleSchema = z.object({
-  id: commonSchemas.id,
-  title: z.string(),
-  content: z.string(),
-  summary: z.string().optional(),
-  cover: z.string().optional(),
-  tags: z.array(z.string()).default([]),
-  categories: z.array(z.string()).default([]),
-  isPublished: z.boolean().default(false),
-  isTop: z.boolean().default(false),
-  password: z.string().optional().nullable(),
-  allowComment: z.boolean().default(true),
-  copyright: z.string().optional(),
-  createdAt: z.date(),
-  updatedAt: z.date(),
-  publishedAt: z.date().optional(),
-  viewCount: z.number().default(0),
-  likeCount: z.number().default(0),
-  commentCount: z.number().default(0),
-  wordCount: z.number().default(0),
-  readTime: z.number().default(0),
+// 基础文章 Schema - 使用 drizzle-zod 生成的 schema
+export const ArticleSchema = selectArticleSchema;
+
+// 创建文章 Schema - 使用 drizzle-zod 生成的 schema
+export const CreateArticleSchema = insertArticleSchema.omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  viewer: true,
 });
 
-// 创建文章 Schema
-export const CreateArticleSchema = z.object({
-  title: z.string().min(1, '标题不能为空'),
-  content: z.string().min(1, '内容不能为空'),
-  summary: z.string().optional(),
-  cover: z.string().optional(),
-  tags: z.array(z.string()).default([]),
-  categories: z.array(z.string()).default([]),
-  isPublished: z.boolean().default(false),
-  isTop: z.boolean().default(false),
-  password: z.string().optional().nullable(),
-  allowComment: z.boolean().default(true),
-  copyright: z.string().optional(),
-  publishedAt: z.date().optional(),
-  pathname: z.string().optional(),
-  category: z.string().optional(),
-  author: z.string().optional(),
-  top: z.number().optional(),
-  hidden: z.boolean().optional(),
-  private: z.boolean().optional(),
+// 更新文章 Schema - 使用 drizzle-zod 生成的 schema
+export const UpdateArticleSchema = updateArticleSchema.omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
 });
-
-// 更新文章 Schema
-export const UpdateArticleSchema = CreateArticleSchema.partial();
 
 // 文章查询 Schema
 export const ArticleQuerySchema = z.object({

@@ -1,0 +1,381 @@
+import { createSelectSchema, createInsertSchema, createUpdateSchema } from 'drizzle-zod';
+import { z } from 'zod';
+import {
+  users,
+  articles,
+  categories,
+  tags,
+  drafts,
+  draftVersions,
+  staticFiles,
+  siteMeta,
+  loginLogs,
+  customPages,
+  pipelines,
+  analytics,
+} from './schema';
+
+// User schemas
+export const selectUserSchema = createSelectSchema(users, {
+  permissions: (schema) =>
+    schema.transform((str) => {
+      if (!str) {
+        return [];
+      }
+      try {
+        return JSON.parse(str) as string[];
+      } catch {
+        return [];
+      }
+    }),
+});
+
+export const insertUserSchema = createInsertSchema(users, {
+  username: (schema) => schema.min(3, '用户名至少3个字符').max(20, '用户名最多20个字符'),
+  password: (schema) => schema.min(6, '密码至少6个字符'),
+  email: () => z.string().email('请输入有效的邮箱地址').optional(),
+  permissions: z
+    .array(z.string())
+    .optional()
+    .transform((arr) => {
+      return arr ? JSON.stringify(arr) : null;
+    }),
+});
+
+export const updateUserSchema = createUpdateSchema(users, {
+  username: (schema) => schema.min(3, '用户名至少3个字符').max(20, '用户名最多20个字符').optional(),
+  password: (schema) => schema.min(6, '密码至少6个字符').optional(),
+  email: () => z.string().email('请输入有效的邮箱地址').optional(),
+  permissions: z
+    .array(z.string())
+    .optional()
+    .transform((arr) => {
+      return arr ? JSON.stringify(arr) : null;
+    }),
+});
+
+// Article schemas
+export const selectArticleSchema = createSelectSchema(articles, {
+  tags: (schema) =>
+    schema.transform((str) => {
+      if (!str) {
+        return [];
+      }
+      try {
+        return JSON.parse(str) as string[];
+      } catch {
+        return [];
+      }
+    }),
+});
+
+export const insertArticleSchema = createInsertSchema(articles, {
+  title: (schema) => schema.min(1, '标题不能为空').max(200, '标题最多200个字符'),
+  content: (schema) => schema.min(1, '内容不能为空'),
+  pathname: (schema) =>
+    schema.regex(/^[a-zA-Z0-9-_/]+$/, '路径只能包含字母、数字、连字符和下划线').optional(),
+  tags: z
+    .array(z.string())
+    .optional()
+    .transform((arr) => {
+      return arr ? JSON.stringify(arr) : null;
+    }),
+  author: (schema) => schema.min(1, '作者不能为空'),
+});
+
+export const updateArticleSchema = createUpdateSchema(articles, {
+  title: (schema) => schema.min(1, '标题不能为空').max(200, '标题最多200个字符').optional(),
+  pathname: (schema) =>
+    schema.regex(/^[a-zA-Z0-9-_/]+$/, '路径只能包含字母、数字、连字符和下划线').optional(),
+  tags: z
+    .array(z.string())
+    .optional()
+    .transform((arr) => {
+      return arr ? JSON.stringify(arr) : null;
+    }),
+});
+
+// Category schemas
+export const selectCategorySchema = createSelectSchema(categories);
+
+export const insertCategorySchema = createInsertSchema(categories, {
+  name: (schema) => schema.min(1, '分类名称不能为空').max(50, '分类名称最多50个字符'),
+  slug: (schema) =>
+    schema.regex(/^[a-zA-Z0-9-_]+$/, 'slug只能包含字母、数字、连字符和下划线').optional(),
+});
+
+export const updateCategorySchema = createUpdateSchema(categories, {
+  name: (schema) => schema.min(1, '分类名称不能为空').max(50, '分类名称最多50个字符').optional(),
+  slug: (schema) =>
+    schema.regex(/^[a-zA-Z0-9-_]+$/, 'slug只能包含字母、数字、连字符和下划线').optional(),
+});
+
+// Tag schemas
+export const selectTagSchema = createSelectSchema(tags);
+
+export const insertTagSchema = createInsertSchema(tags, {
+  name: (schema) => schema.min(1, '标签名称不能为空').max(30, '标签名称最多30个字符'),
+  slug: (schema) =>
+    schema.regex(/^[a-zA-Z0-9-_]+$/, 'slug只能包含字母、数字、连字符和下划线').optional(),
+});
+
+export const updateTagSchema = createUpdateSchema(tags, {
+  name: (schema) => schema.min(1, '标签名称不能为空').max(30, '标签名称最多30个字符').optional(),
+  slug: (schema) =>
+    schema.regex(/^[a-zA-Z0-9-_]+$/, 'slug只能包含字母、数字、连字符和下划线').optional(),
+});
+
+// Draft schemas
+export const selectDraftSchema = createSelectSchema(drafts, {
+  tags: (schema) =>
+    schema.transform((str) => {
+      if (!str) {
+        return [];
+      }
+      try {
+        return JSON.parse(str) as string[];
+      } catch {
+        return [];
+      }
+    }),
+});
+
+export const insertDraftSchema = createInsertSchema(drafts, {
+  title: (schema) => schema.min(1, '标题不能为空').max(200, '标题最多200个字符'),
+  content: (schema) => schema.min(1, '内容不能为空'),
+  pathname: (schema) =>
+    schema.regex(/^[a-zA-Z0-9-_/]+$/, '路径只能包含字母、数字、连字符和下划线').optional(),
+  tags: z
+    .array(z.string())
+    .optional()
+    .transform((arr) => {
+      return arr ? JSON.stringify(arr) : null;
+    }),
+  author: (schema) => schema.min(1, '作者不能为空'),
+});
+
+export const updateDraftSchema = createUpdateSchema(drafts, {
+  title: (schema) => schema.min(1, '标题不能为空').max(200, '标题最多200个字符').optional(),
+  pathname: (schema) =>
+    schema.regex(/^[a-zA-Z0-9-_/]+$/, '路径只能包含字母、数字、连字符和下划线').optional(),
+  tags: z
+    .array(z.string())
+    .optional()
+    .transform((arr) => {
+      return arr ? JSON.stringify(arr) : null;
+    }),
+});
+
+// Draft Version schemas
+export const selectDraftVersionSchema = createSelectSchema(draftVersions, {
+  tags: (schema) =>
+    schema.transform((str) => {
+      if (!str) {
+        return [];
+      }
+      try {
+        return JSON.parse(str) as string[];
+      } catch {
+        return [];
+      }
+    }),
+});
+
+export const insertDraftVersionSchema = createInsertSchema(draftVersions, {
+  title: (schema) => schema.min(1, '标题不能为空').max(200, '标题最多200个字符'),
+  content: (schema) => schema.min(1, '内容不能为空'),
+  tags: z
+    .array(z.string())
+    .optional()
+    .transform((arr) => {
+      return arr ? JSON.stringify(arr) : null;
+    }),
+  author: (schema) => schema.min(1, '作者不能为空'),
+});
+
+// Static Files schemas
+export const selectStaticFileSchema = createSelectSchema(staticFiles);
+
+export const insertStaticFileSchema = createInsertSchema(staticFiles, {
+  filename: (schema) => schema.min(1, '文件名不能为空'),
+  path: (schema) => schema.min(1, '文件路径不能为空'),
+  size: (schema) => schema.min(0, '文件大小不能为负数'),
+  mimeType: (schema) =>
+    schema
+      .regex(
+        /^[a-zA-Z0-9][a-zA-Z0-9!#$&\-^_]*\/[a-zA-Z0-9][a-zA-Z0-9!#$&\-^_.]*$/,
+        '无效的MIME类型',
+      )
+      .optional(),
+});
+
+export const updateStaticFileSchema = createUpdateSchema(staticFiles);
+
+// Site Meta schemas
+export const selectSiteMetaSchema = createSelectSchema(siteMeta, {
+  value: (schema) =>
+    schema.transform((str): unknown => {
+      if (!str) {
+        return null;
+      }
+      try {
+        return JSON.parse(str);
+      } catch {
+        return str;
+      }
+    }),
+});
+
+export const insertSiteMetaSchema = createInsertSchema(siteMeta, {
+  key: (schema) => schema.min(1, '键名不能为空').max(100, '键名最多100个字符'),
+  value: z
+    .any()
+    .optional()
+    .transform((val) => {
+      return val !== undefined ? JSON.stringify(val) : null;
+    }),
+});
+
+export const updateSiteMetaSchema = createUpdateSchema(siteMeta, {
+  key: (schema) => schema.min(1, '键名不能为空').max(100, '键名最多100个字符').optional(),
+  value: z
+    .any()
+    .optional()
+    .transform((val) => {
+      return val !== undefined ? JSON.stringify(val) : null;
+    }),
+});
+
+// Login Logs schemas
+export const selectLoginLogSchema = createSelectSchema(loginLogs);
+
+export const insertLoginLogSchema = createInsertSchema(loginLogs, {
+  username: (schema) => schema.min(1, '用户名不能为空'),
+});
+
+// Custom Pages schemas
+export const selectCustomPageSchema = createSelectSchema(customPages);
+
+export const insertCustomPageSchema = createInsertSchema(customPages, {
+  title: (schema) => schema.min(1, '页面标题不能为空').max(200, '页面标题最多200个字符'),
+  pathname: (schema) => schema.regex(/^[a-zA-Z0-9-_/]+$/, '路径只能包含字母、数字、连字符和下划线'),
+  content: (schema) => schema.min(1, '页面内容不能为空'),
+});
+
+export const updateCustomPageSchema = createUpdateSchema(customPages, {
+  title: (schema) => schema.min(1, '页面标题不能为空').max(200, '页面标题最多200个字符').optional(),
+  pathname: (schema) =>
+    schema.regex(/^[a-zA-Z0-9-_/]+$/, '路径只能包含字母、数字、连字符和下划线').optional(),
+  content: (schema) => schema.min(1, '页面内容不能为空').optional(),
+});
+
+// Pipeline schemas
+export const selectPipelineSchema = createSelectSchema(pipelines, {
+  deps: (schema) =>
+    schema.transform((str) => {
+      if (!str) {
+        return [];
+      }
+      try {
+        return JSON.parse(str) as string[];
+      } catch {
+        return [];
+      }
+    }),
+});
+
+export const insertPipelineSchema = createInsertSchema(pipelines, {
+  name: (schema) => schema.min(1, 'Pipeline名称不能为空').max(100, 'Pipeline名称最多100个字符'),
+  eventName: (schema) => schema.min(1, '事件名称不能为空'),
+  script: (schema) => schema.min(1, '脚本内容不能为空'),
+  deps: z
+    .array(z.string())
+    .optional()
+    .transform((arr) => {
+      return arr ? JSON.stringify(arr) : null;
+    }),
+});
+
+export const updatePipelineSchema = createUpdateSchema(pipelines, {
+  name: (schema) =>
+    schema.min(1, 'Pipeline名称不能为空').max(100, 'Pipeline名称最多100个字符').optional(),
+  eventName: (schema) => schema.min(1, '事件名称不能为空').optional(),
+  script: (schema) => schema.min(1, '脚本内容不能为空').optional(),
+  deps: z
+    .array(z.string())
+    .optional()
+    .transform((arr) => {
+      return arr ? JSON.stringify(arr) : null;
+    }),
+});
+
+// Analytics schemas
+export const selectAnalyticsSchema = createSelectSchema(analytics, {
+  data: (schema) =>
+    schema.transform((str) => {
+      if (!str) {
+        return null;
+      }
+      try {
+        return JSON.parse(str);
+      } catch {
+        return null;
+      }
+    }),
+});
+
+export const insertAnalyticsSchema = createInsertSchema(analytics, {
+  type: (schema) => schema.min(1, '分析类型不能为空'),
+  data: z
+    .any()
+    .optional()
+    .transform((val): string | null => {
+      return val !== undefined ? JSON.stringify(val) : null;
+    }),
+});
+
+// Type exports for TypeScript inference
+export type SelectUser = z.infer<typeof selectUserSchema>;
+export type InsertUser = z.infer<typeof insertUserSchema>;
+export type UpdateUser = z.infer<typeof updateUserSchema>;
+
+export type SelectArticle = z.infer<typeof selectArticleSchema>;
+export type InsertArticle = z.infer<typeof insertArticleSchema>;
+export type UpdateArticle = z.infer<typeof updateArticleSchema>;
+
+export type SelectCategory = z.infer<typeof selectCategorySchema>;
+export type InsertCategory = z.infer<typeof insertCategorySchema>;
+export type UpdateCategory = z.infer<typeof updateCategorySchema>;
+
+export type SelectTag = z.infer<typeof selectTagSchema>;
+export type InsertTag = z.infer<typeof insertTagSchema>;
+export type UpdateTag = z.infer<typeof updateTagSchema>;
+
+export type SelectDraft = z.infer<typeof selectDraftSchema>;
+export type InsertDraft = z.infer<typeof insertDraftSchema>;
+export type UpdateDraft = z.infer<typeof updateDraftSchema>;
+
+export type SelectDraftVersion = z.infer<typeof selectDraftVersionSchema>;
+export type InsertDraftVersion = z.infer<typeof insertDraftVersionSchema>;
+
+export type SelectStaticFile = z.infer<typeof selectStaticFileSchema>;
+export type InsertStaticFile = z.infer<typeof insertStaticFileSchema>;
+export type UpdateStaticFile = z.infer<typeof updateStaticFileSchema>;
+
+export type SelectSiteMeta = z.infer<typeof selectSiteMetaSchema>;
+export type InsertSiteMeta = z.infer<typeof insertSiteMetaSchema>;
+export type UpdateSiteMeta = z.infer<typeof updateSiteMetaSchema>;
+
+export type SelectLoginLog = z.infer<typeof selectLoginLogSchema>;
+export type InsertLoginLog = z.infer<typeof insertLoginLogSchema>;
+
+export type SelectCustomPage = z.infer<typeof selectCustomPageSchema>;
+export type InsertCustomPage = z.infer<typeof insertCustomPageSchema>;
+export type UpdateCustomPage = z.infer<typeof updateCustomPageSchema>;
+
+export type SelectPipeline = z.infer<typeof selectPipelineSchema>;
+export type InsertPipeline = z.infer<typeof insertPipelineSchema>;
+export type UpdatePipeline = z.infer<typeof updatePipelineSchema>;
+
+export type SelectAnalytics = z.infer<typeof selectAnalyticsSchema>;
+export type InsertAnalytics = z.infer<typeof insertAnalyticsSchema>;

@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, Logger, Inject } from '@nestjs/common';
 import { eq, and } from 'drizzle-orm';
 import { DATABASE_CONNECTION } from '../../../database';
-import { Database } from '../../../database/connection';
+import type { Database } from '../../../database/connection';
 import { pipelines, Pipeline, NewPipeline } from '../entities/pipeline.entity';
 import { CreatePipelineDto, UpdatePipelineDto } from '../dto';
 import { VanblogSystemEventNames, VanblogSystemEvent } from '../../../shared/types/event';
@@ -154,7 +154,9 @@ export class PipelineService {
 
       // Update dependencies if changed
       if (updatePipelineDto.deps) {
-        this.addDeps(updatePipelineDto.deps);
+        this.addDeps(
+          Array.isArray(updatePipelineDto.deps) ? updatePipelineDto.deps : [updatePipelineDto.deps],
+        );
       }
 
       return result;

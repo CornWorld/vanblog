@@ -1,3 +1,5 @@
 export * from './database.module';
 export { DATABASE_CONNECTION } from './database.module';
-export type { Database } from './connection';
+export { createDatabaseConnection, type Database } from './connection';
+export * from './schema';
+export * from './zod-schemas';
