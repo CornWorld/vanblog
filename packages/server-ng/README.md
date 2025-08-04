@@ -334,6 +334,8 @@ JWT_EXPIRES_IN=7d
 - [x] 集成 Article 和 Draft 模块的事件触发（beforeUpdateArticle, afterUpdateArticle, deleteArticle, beforeUpdateDraft, afterUpdateDraft, deleteDraft）
 - ~~依赖 pipeline 系统实现 demo 功能，阻止大部分数据库操作 + 提供还原定时事件~~
 
+### 额外节点：迁移到 drizzle-zod
+
 ### 额外阶段：升级 Pipeline 到 Plugin 系统
 
 - 暂时不删除 pipeline 系统，而是并行
