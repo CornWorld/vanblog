@@ -336,25 +336,28 @@ JWT_EXPIRES_IN=7d
 
 ### 额外节点：迁移到 drizzle-zod
 
+- [ ] 迁移到 drizzle-zod
+- [ ] 检查是否存在多余代码，清理
+
 ### 额外阶段：升级 Pipeline 到 Plugin 系统
 
-- 暂时不删除 pipeline 系统，而是并行
-- HookService 开发：实现 HookService (addAction, addFilter, doAction, applyFilters) 及优先级排序。
-- 定义并实现 PluginContext：创建 PluginContext 接口，为插件提供 logger, config 读取器, 和 data 存储能力。
-- “代码片段”插件支持 (稳定版)
-  - 设计 pipelines 表来存储代码片段、其监听的钩子名、优先级和状态。
-  - 创建后台 API (CRUD) 管理代码片段（和 Pipeline 一样存储到数据库）。
-  - 使用 Node.js 内置的 vm 模块 创建执行环境，并必须设置超时 (timeout)。
-  - 修改 HookService，使其能从数据库拉取并用 vm 模块执行代码片段。
-- 插件打包支持 (文件系统版)
-  - 建立插件开发规范：插件必须是标准的 NestJS 模块，放置于 src/plugins 目录中。
-  - 修改应用启动脚本 (main.ts)，使其能自动扫描 src/plugins 目录，并将发现的模块动态添加到 AppModule 的 imports 中。
-  - 明确文档：安装/卸载此类插件需要重启应用服务。（暂时不做）在应用内添加重启功能
-  - 安全启动 + 运行时错误隔离，设置超时时间（异步任务可以久一些，给 60s； filter 给 0.1s，允许在配置修改）
-- 在核心业务模块中埋点：在文章、用户、评论等模块的关键位置注入 HookService 并添加钩子。
-- 统一的插件管理界面
-  - 提供一套 API 给管理界面，能统一列出所有形态的插件（代码片段从数据库读取，打包插件从文件系统扫描）。
-  - 实现启用/禁用功能（通过更新数据库中的状态标志）。
+- [ ] 暂时不删除 pipeline 系统，而是并行
+- [ ] HookService 开发：实现 HookService (addAction, addFilter, doAction, applyFilters) 及优先级排序。
+- [ ] 定义并实现 PluginContext：创建 PluginContext 接口，为插件提供 logger, config 读取器, 和 data 存储能力。
+- [ ] “代码片段”插件支持 (稳定版)
+  - [ ] 设计 pipelines 表来存储代码片段、其监听的钩子名、优先级和状态。
+  - [ ] 创建后台 API (CRUD) 管理代码片段（和 Pipeline 一样存储到数据库）。
+  - [ ] 使用 Node.js 内置的 vm 模块 创建执行环境，并必须设置超时 (timeout)。
+  - [ ] 修改 HookService，使其能从数据库拉取并用 vm 模块执行代码片段。
+- [ ] 插件打包支持 (文件系统版)
+  - [ ] 插件开发规范：插件必须是标准的 NestJS 模块，放置于 src/plugins 目录中。
+  - [ ] 修改应用启动脚本 (main.ts)，使其能自动扫描 src/plugins 目录，并将发现的模块动态添加到 AppModule 的 imports 中。
+  - [ ] 明确文档：安装/卸载此类插件需要重启应用服务。（暂时不做）在应用内添加重启功能
+  - [ ] 安全启动 + 运行时错误隔离，设置超时时间（异步任务可以久一些，给 60s； filter 给 0.1s，允许在配置修改）
+- [ ] 在核心业务模块中埋点：在文章、用户、评论等模块的关键位置注入 HookService 并添加钩子。
+- [ ] 统一的插件管理界面
+  - [ ] 提供一套 API 给管理界面，能统一列出所有形态的插件（代码片段从数据库读取，打包插件从文件系统扫描）。
+  - [ ] 实现启用/禁用功能（通过更新数据库中的状态标志）。
 
 ### 阶段 10: 高级功能
 
