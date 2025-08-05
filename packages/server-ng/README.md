@@ -264,7 +264,7 @@ JWT_EXPIRES_IN=7d
 - 每个模块的权限节点都有一个前缀，比如 article 模块的权限节点都以 article: 开头，draft 模块的权限节点都以 draft: 开头。
 - 允许删除/禁用权限，格式：'no:article:read'，会在解析时去除当前解析链条的 'article:read' 权限节点。这对于临时取消 group 权限的情况很有用，比如临时取消 admin 的 'article:remove' 权限，但是允许读取和修改文章。
 
-[ ] 完成
+- [x] 完成
 
 ### 额外阶段：升级 Pipeline 到 Plugin 系统
 

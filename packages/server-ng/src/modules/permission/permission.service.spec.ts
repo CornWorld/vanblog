@@ -1,0 +1,279 @@
+import { Test, type TestingModule } from '@nestjs/testing';
+import { describe, it, beforeEach, afterEach, expect, vi } from 'vitest';
+import { PermissionService } from './permission.service';
+import { DATABASE_CONNECTION } from '../../database/database.module';
+import { PERMISSION_MODULES, PERMISSION_GROUPS } from '../../shared/types/permission';
+
+describe('PermissionService', () => {
+  let service: PermissionService;
+  let mockDb: any;
+
+  const mockPermissionNode = {
+    id: 1,
+    name: 'article:read',
+    description: 'Read articles',
+    module: 'article',
+    isActive: true,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+
+  const mockPermissionGroup = {
+    id: 1,
+    name: 'admin',
+    description: 'Administrator group',
+    permissions: JSON.stringify(['article:read', 'article:write']),
+    isActive: true,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+
+  beforeEach(async () => {
+    mockDb = {
+      select: vi.fn().mockReturnThis(),
+      from: vi.fn().mockReturnThis(),
+      where: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockReturnThis(),
+      offset: vi.fn().mockReturnThis(),
+      orderBy: vi.fn().mockReturnThis(),
+      insert: vi.fn().mockReturnThis(),
+      values: vi.fn().mockReturnThis(),
+      returning: vi.fn().mockResolvedValue([mockPermissionNode]),
+      update: vi.fn().mockReturnThis(),
+      set: vi.fn().mockReturnThis(),
+      delete: vi.fn().mockReturnThis(),
+    };
+
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        PermissionService,
+        {
+          provide: DATABASE_CONNECTION,
+          useValue: mockDb,
+        },
+      ],
+    }).compile();
+
+    service = module.get<PermissionService>(PermissionService);
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  describe('registerPermission', () => {
+    it('should register a new permission node', async () => {
+      mockDb.select.mockReturnValue({
+        from: vi.fn().mockReturnThis(),
+        where: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockResolvedValue([]),
+      });
+
+      await service.registerPermission({
+        name: 'article:read',
+        description: 'Read articles',
+        module: 'article',
+      });
+
+      expect(mockDb.insert).toHaveBeenCalled();
+    });
+
+    it('should not register existing permission node', async () => {
+      mockDb.select.mockReturnValue({
+        from: vi.fn().mockReturnThis(),
+        where: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockResolvedValue([mockPermissionNode]),
+      });
+
+      await service.registerPermission({
+        name: 'article:read',
+        description: 'Read articles',
+        module: 'article',
+      });
+
+      expect(mockDb.insert).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('resolveUserPermissions', () => {
+    beforeEach(() => {
+      // Mock getGroupPermissions method
+      vi.spyOn(service as any, 'getGroupPermissions').mockResolvedValue([
+        'article:read',
+        'article:write',
+        'user:read',
+      ]);
+    });
+
+    it('should resolve basic permissions', async () => {
+      const userPermissions = ['article:read', 'user:write'];
+      const resolved = await service.resolveUserPermissions(userPermissions);
+
+      expect(resolved).toEqual(['article:read', 'user:write']);
+    });
+
+    it('should resolve group permissions', async () => {
+      const userPermissions = ['group:admin'];
+      const resolved = await service.resolveUserPermissions(userPermissions);
+
+      expect(resolved).toEqual(['article:read', 'article:write', 'user:read']);
+    });
+
+    it('should handle disabled permissions', async () => {
+      const userPermissions = ['group:admin', 'no:article:write'];
+      const resolved = await service.resolveUserPermissions(userPermissions);
+
+      expect(resolved).toEqual(['article:read', 'user:read']);
+      expect(resolved).not.toContain('article:write');
+    });
+
+    it('should handle disabled group permissions', async () => {
+      const userPermissions = ['group:admin', 'no:group:admin'];
+      const resolved = await service.resolveUserPermissions(userPermissions);
+
+      expect(resolved).toEqual([]);
+    });
+
+    it('should handle mixed permissions', async () => {
+      const userPermissions = ['article:read', 'group:admin', 'no:user:read', 'draft:write'];
+      const resolved = await service.resolveUserPermissions(userPermissions);
+
+      expect(resolved).toContain('article:read');
+      expect(resolved).toContain('article:write');
+      expect(resolved).toContain('draft:write');
+      expect(resolved).not.toContain('user:read');
+    });
+  });
+
+  describe('hasPermissions', () => {
+    beforeEach(() => {
+      vi.spyOn(service, 'resolveUserPermissions').mockResolvedValue([
+        'article:read',
+        'article:write',
+        'user:read',
+      ]);
+    });
+
+    it('should return true when user has all required permissions', async () => {
+      const result = await service.hasPermissions(['group:admin'], ['article:read', 'user:read']);
+
+      expect(result).toBe(true);
+    });
+
+    it('should return false when user lacks some permissions', async () => {
+      const result = await service.hasPermissions(['group:admin'], ['article:read', 'user:delete']);
+
+      expect(result).toBe(false);
+    });
+
+    it('should return true when user has "all" permission', async () => {
+      vi.spyOn(service, 'resolveUserPermissions').mockResolvedValue(['all']);
+
+      const result = await service.hasPermissions(['all'], ['article:read', 'user:delete']);
+
+      expect(result).toBe(true);
+    });
+  });
+
+  describe('createPermissionNode', () => {
+    it('should create a permission node', async () => {
+      const createDto = {
+        name: 'article:read',
+        description: 'Read articles',
+        module: 'article',
+      };
+
+      const result = await service.createPermissionNode(createDto);
+
+      expect(mockDb.insert).toHaveBeenCalled();
+      expect(result).toEqual(mockPermissionNode);
+    });
+  });
+
+  describe('findAllPermissionNodes', () => {
+    it('should find all permission nodes with pagination', async () => {
+      mockDb.select.mockReturnValue({
+        from: vi.fn().mockReturnThis(),
+        orderBy: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockReturnThis(),
+        offset: vi.fn().mockResolvedValue([mockPermissionNode]),
+      });
+
+      const query = { page: 1, limit: 10 };
+      const result = await service.findAllPermissionNodes(query);
+
+      expect(result).toEqual([mockPermissionNode]);
+    });
+
+    it('should filter by module', async () => {
+      mockDb.select.mockReturnValue({
+        from: vi.fn().mockReturnThis(),
+        where: vi.fn().mockReturnThis(),
+        orderBy: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockReturnThis(),
+        offset: vi.fn().mockResolvedValue([mockPermissionNode]),
+      });
+
+      const query = { module: 'article', page: 1, limit: 10 };
+      const result = await service.findAllPermissionNodes(query);
+
+      expect(result).toEqual([mockPermissionNode]);
+    });
+  });
+
+  describe('createPermissionGroup', () => {
+    it('should create a permission group', async () => {
+      const createDto = {
+        name: 'admin',
+        description: 'Administrator group',
+        permissions: JSON.stringify(['article:read', 'article:write']),
+      };
+
+      mockDb.insert.mockReturnValue({
+        values: vi.fn().mockReturnThis(),
+        returning: vi.fn().mockResolvedValue([mockPermissionGroup]),
+      });
+
+      const result = await service.createPermissionGroup(createDto);
+
+      expect(mockDb.insert).toHaveBeenCalled();
+      expect(result.permissions).toEqual(['article:read', 'article:write']);
+    });
+  });
+
+  describe('initializePermissions', () => {
+    it('should initialize all permissions and groups', async () => {
+      // Mock registerModulePermissions
+      vi.spyOn(service as any, 'registerModulePermissions').mockResolvedValue(undefined);
+      // Mock createPredefinedGroups
+      vi.spyOn(service as any, 'createPredefinedGroups').mockResolvedValue(undefined);
+
+      await service.initializePermissions();
+
+      expect(service['registerModulePermissions']).toHaveBeenCalled();
+      expect(service['createPredefinedGroups']).toHaveBeenCalled();
+    });
+  });
+
+  describe('PERMISSION_MODULES and PERMISSION_GROUPS', () => {
+    it('should have valid permission modules structure', () => {
+      expect(PERMISSION_MODULES).toBeDefined();
+      expect(PERMISSION_MODULES.article).toContain('article:read');
+      expect(PERMISSION_MODULES.article).toContain('article:create');
+      expect(PERMISSION_MODULES.user).toContain('user:read');
+    });
+
+    it('should have valid permission groups structure', () => {
+      expect(PERMISSION_GROUPS).toBeDefined();
+      expect(PERMISSION_GROUPS.admin).toBeDefined();
+      expect(PERMISSION_GROUPS.editor).toBeDefined();
+      expect(PERMISSION_GROUPS.author).toBeDefined();
+      expect(PERMISSION_GROUPS.viewer).toBeDefined();
+    });
+
+    it('should have admin group with all permissions', () => {
+      const allPermissions = Object.values(PERMISSION_MODULES).flat();
+      expect(PERMISSION_GROUPS.admin).toEqual(allPermissions);
+    });
+  });
+});
