@@ -66,8 +66,8 @@ export class DraftService {
       ...draft,
       tags: safeParseJson(draft.tags, dataSchemas.tagsArray) ?? [],
       categories: draft.category ? [draft.category] : [],
-      pathname: draft.pathname ?? undefined,
-      category: draft.category ?? undefined,
+      pathname: draft.pathname,
+      category: draft.category,
       userId: 1,
       wordCount: draft.content ? draft.content.length : 0,
       readTime: Math.ceil((draft.content ? draft.content.length : 0) / 200),
@@ -96,8 +96,8 @@ export class DraftService {
     return new Draft({
       ...draft,
       tags: safeParseJson(draft.tags, dataSchemas.tagsArray) ?? [],
-      pathname: draft.pathname ?? undefined,
-      category: draft.category ?? undefined,
+      pathname: draft.pathname,
+      category: draft.category,
     });
   }
 
@@ -125,8 +125,8 @@ export class DraftService {
     return new Draft({
       ...newDraft,
       tags: safeParseJson(newDraft.tags, dataSchemas.tagsArray) ?? [],
-      pathname: newDraft.pathname ?? undefined,
-      category: newDraft.category ?? undefined,
+      pathname: newDraft.pathname,
+      category: newDraft.category,
     });
   }
 
@@ -150,7 +150,7 @@ export class DraftService {
       updateData.pathname = rest.pathname ?? null;
     }
 
-    if (tags !== undefined) {
+    if (tags) {
       updateData.tags = JSON.stringify(tags);
     }
 
@@ -174,7 +174,11 @@ export class DraftService {
 
       // Apply modifications from pipeline results
       for (const result of beforeResults) {
-        if (result.status === 'success' && result.output && typeof result.output === 'object') {
+        if (
+          result.status === 'success' &&
+          typeof result.output === 'object' &&
+          result.output !== null
+        ) {
           updateData = { ...updateData, ...result.output };
         }
       }
@@ -197,8 +201,8 @@ export class DraftService {
     const draftResult = new Draft({
       ...updatedDraft,
       tags: safeParseJson(updatedDraft.tags, dataSchemas.tagsArray) ?? [],
-      pathname: updatedDraft.pathname ?? undefined,
-      category: updatedDraft.category ?? undefined,
+      pathname: updatedDraft.pathname,
+      category: updatedDraft.category,
     });
 
     // Trigger afterUpdateDraft event
@@ -281,14 +285,14 @@ export class DraftService {
     return new Article({
       ...newArticle,
       tags: safeParseJson(newArticle.tags, dataSchemas.tagsArray) ?? [],
-      pathname: newArticle.pathname ?? undefined,
-      category: newArticle.category ?? undefined,
+      pathname: newArticle.pathname,
+      category: newArticle.category,
       author: newArticle.author,
-      top: newArticle.top ?? undefined,
-      hidden: newArticle.hidden ?? undefined,
-      private: newArticle.private ?? undefined,
-      password: newArticle.password ?? undefined,
-      viewer: newArticle.viewer ?? undefined,
+      top: newArticle.top,
+      hidden: newArticle.hidden,
+      private: newArticle.private,
+      password: newArticle.password,
+      viewer: newArticle.viewer,
     });
   }
 
@@ -317,7 +321,7 @@ export class DraftService {
       updateData.pathname = rest.pathname ?? null;
     }
 
-    if (tags !== undefined) {
+    if (tags) {
       updateData.tags = JSON.stringify(tags);
     }
 
@@ -346,8 +350,8 @@ export class DraftService {
     return new Draft({
       ...updatedDraft,
       tags: safeParseJson(updatedDraft.tags, dataSchemas.tagsArray) ?? [],
-      pathname: updatedDraft.pathname ?? undefined,
-      category: updatedDraft.category ?? undefined,
+      pathname: updatedDraft.pathname,
+      category: updatedDraft.category,
     });
   }
 

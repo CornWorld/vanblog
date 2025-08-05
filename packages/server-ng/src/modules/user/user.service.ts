@@ -37,7 +37,7 @@ export class UserService {
         nickname: createUserDto.nickname,
         email: createUserDto.email,
         avatar: createUserDto.avatar,
-        type: createUserDto.role,
+        type: createUserDto.type as 'admin' | 'editor' | 'author' | 'subscriber',
       })
       .returning()
       .get();
@@ -91,17 +91,17 @@ export class UserService {
     if (updateUserDto.password) {
       updateData.password = await bcrypt.hash(updateUserDto.password, 10);
     }
-    if (updateUserDto.nickname !== undefined) {
+    if (updateUserDto.nickname) {
       updateData.nickname = updateUserDto.nickname;
     }
-    if (updateUserDto.email !== undefined) {
+    if (updateUserDto.email) {
       updateData.email = updateUserDto.email;
     }
-    if (updateUserDto.avatar !== undefined) {
+    if (updateUserDto.avatar) {
       updateData.avatar = updateUserDto.avatar;
     }
-    if (updateUserDto.role !== undefined) {
-      updateData.type = updateUserDto.role;
+    if (updateUserDto.type) {
+      updateData.type = updateUserDto.type;
     }
 
     const updatedUsers = await this.db

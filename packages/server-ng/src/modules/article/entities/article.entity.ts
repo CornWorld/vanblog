@@ -11,31 +11,31 @@ export class Article {
   content!: string;
 
   @ApiPropertyOptional({ description: 'Custom pathname' })
-  pathname?: string;
+  pathname!: string | null;
 
   @ApiPropertyOptional({ description: 'Tags', type: [String] })
-  tags?: string[];
+  tags!: string[] | null;
 
   @ApiPropertyOptional({ description: 'Category' })
-  category?: string;
+  category!: string | null;
 
   @ApiProperty({ description: 'Author' })
   author!: string;
 
   @ApiPropertyOptional({ description: 'Pin priority' })
-  top?: number;
+  top!: number | null;
 
   @ApiPropertyOptional({ description: 'Hidden status' })
-  hidden?: boolean;
+  hidden!: boolean | null;
 
   @ApiPropertyOptional({ description: 'Private status' })
-  private?: boolean;
+  private!: boolean | null;
 
   @ApiPropertyOptional({ description: 'Password for private articles' })
-  password?: string;
+  password!: string | null;
 
   @ApiProperty({ description: 'View count' })
-  viewer!: number;
+  viewer!: number | null;
 
   @ApiProperty({ description: 'Creation date' })
   createdAt!: Date;

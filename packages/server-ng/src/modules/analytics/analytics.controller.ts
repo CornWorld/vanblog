@@ -51,14 +51,15 @@ export class AnalyticsController {
     @Headers('user-agent') userAgent?: string,
   ): Promise<void> {
     // 如果没有提供 IP 或 User-Agent，使用请求中的信息
-    const recordDto: RecordAnalyticsDto = {
+
+    const recordDto = {
       type: dto.type,
       path: dto.path,
-      referer: dto.referer,
-      userAgent: dto.userAgent ?? userAgent,
-      ip: dto.ip ?? ip,
-      metadata: dto.metadata,
-    };
+      referrer: dto.referrer,
+      userAgent: dto.userAgent ?? userAgent ?? null,
+      ip: dto.ip ?? ip ?? null,
+      data: dto.data,
+    } as RecordAnalyticsDto;
 
     await this.analyticsService.recordAnalytics(recordDto);
 
@@ -66,8 +67,8 @@ export class AnalyticsController {
     if (dto.type === AnalyticsType.PAGEVIEW && dto.path) {
       await this.thirdPartyAnalyticsService.trackPageview(
         dto.path,
-        recordDto.ip,
-        recordDto.userAgent,
+        recordDto.ip ?? undefined,
+        recordDto.userAgent ?? undefined,
       );
     }
   }

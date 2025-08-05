@@ -339,6 +339,18 @@ JWT_EXPIRES_IN=7d
 - [ ] 迁移到 drizzle-zod
 - [ ] 检查是否存在多余代码，清理
 
+## 额外阶段：完善权限系统
+
+现有权限系统：使用预设的权限节点 + 用户角色（type/role），比如 article:read + admin
+期望权限系统：
+
+- 存在单独的权限节点和权限组，权限组和权限节点都放在 permissions 里面（只用 permissions 来存储权限）。在从数据库读出后，按照先后顺序解析成完整的权限节点。e.g. ['article:read', 'group:admin'] = ['group:admin'] = [<所有权限节点>]。
+- 每个包内的权限只对自己负责，并注册到权限管理器。 e.g. article 模块注册 article:read 权限节点，draft 模块注册 draft:read 权限节点，通过 guard 来验证权限。对于有依赖的模块，会随着调用链条逐级验证。
+- 每个模块的权限节点都有一个前缀，比如 article 模块的权限节点都以 article: 开头，draft 模块的权限节点都以 draft: 开头。
+- 允许删除/禁用权限，格式：'no:article:read'，会在解析时去除当前解析链条的 'article:read' 权限节点。这对于临时取消 group 权限的情况很有用，比如临时取消 admin 的 'article:remove' 权限，但是允许读取和修改文章。
+
+[ ] 完成
+
 ### 额外阶段：升级 Pipeline 到 Plugin 系统
 
 - [ ] 暂时不删除 pipeline 系统，而是并行

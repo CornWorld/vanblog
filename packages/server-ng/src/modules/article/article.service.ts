@@ -84,23 +84,17 @@ export class ArticleService {
       id: article.id,
       title: article.title,
       content: article.content,
-      summary: undefined,
-      cover: undefined,
+      pathname: article.pathname,
       tags: safeParseJson(article.tags, dataSchemas.tagsArray) ?? [],
-      categories: article.category ? [article.category] : [],
-      isPublished: !article.hidden,
-      isTop: Boolean(article.top),
+      category: article.category,
+      author: article.author,
+      top: article.top,
+      hidden: article.hidden,
+      private: article.private,
       password: article.password,
-      allowComment: true,
-      copyright: undefined,
+      viewer: article.viewer,
       createdAt: article.createdAt,
       updatedAt: article.updatedAt,
-      publishedAt: article.updatedAt,
-      viewCount: article.viewer ?? 0,
-      likeCount: 0,
-      commentCount: 0,
-      wordCount: 0,
-      readTime: 0,
     }));
 
     const total = Number(countResult[0]?.count || 0);
@@ -204,14 +198,14 @@ export class ArticleService {
     return new Article({
       ...article,
       tags: safeParseJson(article.tags, dataSchemas.tagsArray) ?? [],
-      pathname: article.pathname ?? undefined,
-      category: article.category ?? undefined,
+      pathname: article.pathname,
+      category: article.category,
       author: article.author,
-      top: article.top ?? undefined,
-      hidden: article.hidden ?? undefined,
-      private: article.private ?? undefined,
-      password: article.password ?? undefined,
-      viewer: article.viewer ?? undefined,
+      top: article.top,
+      hidden: article.hidden,
+      private: article.private,
+      password: article.password,
+      viewer: article.viewer,
     });
   }
 
@@ -248,7 +242,11 @@ export class ArticleService {
 
       // Apply modifications from pipeline results
       for (const result of beforeResults) {
-        if (result.status === 'success' && result.output && typeof result.output === 'object') {
+        if (
+          result.status === 'success' &&
+          typeof result.output === 'object' &&
+          result.output !== null
+        ) {
           newArticleData = { ...newArticleData, ...result.output };
         }
       }
@@ -263,14 +261,14 @@ export class ArticleService {
     const articleResult = new Article({
       ...newArticle,
       tags: safeParseJson(newArticle.tags, dataSchemas.tagsArray) ?? [],
-      pathname: newArticle.pathname ?? undefined,
-      category: newArticle.category ?? undefined,
+      pathname: newArticle.pathname,
+      category: newArticle.category,
       author: newArticle.author,
-      top: newArticle.top ?? undefined,
-      hidden: newArticle.hidden ?? undefined,
-      private: newArticle.private ?? undefined,
-      password: newArticle.password ?? undefined,
-      viewer: newArticle.viewer ?? undefined,
+      top: newArticle.top,
+      hidden: newArticle.hidden,
+      private: newArticle.private,
+      password: newArticle.password,
+      viewer: newArticle.viewer,
     });
 
     // Trigger afterUpdateArticle event
@@ -305,7 +303,7 @@ export class ArticleService {
           typeof value === 'string' ? value : String(value),
         ]),
       ),
-      ...(tagNames !== undefined && { tags: JSON.stringify(tagNames) }),
+      ...(tagNames && { tags: JSON.stringify(tagNames) }),
       updatedAt: new Date(),
     };
 
@@ -319,7 +317,11 @@ export class ArticleService {
 
       // Apply modifications from pipeline results
       for (const result of beforeResults) {
-        if (result.status === 'success' && result.output && typeof result.output === 'object') {
+        if (
+          result.status === 'success' &&
+          typeof result.output === 'object' &&
+          result.output !== null
+        ) {
           updateData = { ...updateData, ...result.output };
         }
       }
@@ -338,14 +340,14 @@ export class ArticleService {
     const articleResult = new Article({
       ...updatedArticle,
       tags: safeParseJson(updatedArticle.tags, dataSchemas.tagsArray) ?? [],
-      pathname: updatedArticle.pathname ?? undefined,
-      category: updatedArticle.category ?? undefined,
+      pathname: updatedArticle.pathname,
+      category: updatedArticle.category,
       author: updatedArticle.author,
-      top: updatedArticle.top ?? undefined,
-      hidden: updatedArticle.hidden ?? undefined,
-      private: updatedArticle.private ?? undefined,
-      password: updatedArticle.password ?? undefined,
-      viewer: updatedArticle.viewer ?? undefined,
+      top: updatedArticle.top,
+      hidden: updatedArticle.hidden,
+      private: updatedArticle.private,
+      password: updatedArticle.password,
+      viewer: updatedArticle.viewer,
     });
 
     // Trigger afterUpdateArticle event
@@ -398,14 +400,14 @@ export class ArticleService {
           id: article.id,
           title: article.title,
           content: article.content,
-          pathname: article.pathname ?? undefined,
+          pathname: article.pathname,
           tags: safeParseJson(article.tags, dataSchemas.tagsArray) ?? [],
-          category: article.category ?? undefined,
+          category: article.category,
           author: article.author,
-          top: article.top ?? undefined,
-          hidden: article.hidden ?? undefined,
-          private: article.private ?? undefined,
-          password: article.password ?? undefined,
+          top: article.top,
+          hidden: article.hidden,
+          private: article.private,
+          password: article.password,
           viewer: article.viewer ?? 0,
           createdAt: article.createdAt,
           updatedAt: article.updatedAt,
@@ -430,19 +432,17 @@ export class ArticleService {
       id: article.id,
       title: article.title,
       content: article.content,
+      pathname: article.pathname,
       tags: safeParseJson(article.tags, dataSchemas.tagsArray) ?? [],
-      categories: article.category ? [article.category] : [],
-      isPublished: !article.hidden,
-      isTop: Boolean(article.top),
-      allowComment: true,
+      category: article.category,
+      author: article.author,
+      top: article.top,
+      hidden: article.hidden,
+      private: article.private,
+      password: article.password,
+      viewer: article.viewer,
       createdAt: article.createdAt,
       updatedAt: article.updatedAt,
-      viewCount: article.viewer ?? 0,
-      likeCount: 0,
-      commentCount: 0,
-      wordCount: 0,
-      readTime: 0,
-      publishedAt: article.updatedAt,
     }));
 
     return {

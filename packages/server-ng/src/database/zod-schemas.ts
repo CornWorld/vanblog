@@ -326,6 +326,8 @@ export const insertAnalyticsSchema = createInsertSchema(analytics, {
   type: z.enum(['pageview', 'event', 'api_call'], {
     message: '分析类型必须是 pageview、event 或 api_call',
   }),
+  userAgent: z.string().nullable().optional(),
+  ip: z.string().nullable().optional(),
   data: z
     .any()
     .optional()

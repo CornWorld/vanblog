@@ -2,10 +2,10 @@ export class Draft {
   id!: number;
   title!: string;
   content!: string;
-  pathname?: string;
+  pathname!: string | null;
   tags!: string[];
   categories!: string[];
-  category?: string;
+  category!: string | null;
   author!: string;
   version!: number;
   userId!: number;
