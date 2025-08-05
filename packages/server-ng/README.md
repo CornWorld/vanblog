@@ -251,8 +251,8 @@ JWT_EXPIRES_IN=7d
 
 ### 额外节点：迁移到 drizzle-zod
 
-- [ ] 迁移到 drizzle-zod
-- [ ] 检查是否存在多余代码，清理
+- [x] 迁移到 drizzle-zod
+- [x] 检查是否存在多余代码，清理
 
 ## 额外阶段：完善权限系统
 
