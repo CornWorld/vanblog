@@ -1,5 +1,6 @@
 import { createSelectSchema, createInsertSchema, createUpdateSchema } from 'drizzle-zod';
 import { z } from 'zod';
+import { safeParseJson, dataSchemas } from '../shared/zod';
 import {
   users,
   articles,
@@ -33,7 +34,7 @@ export const selectUserSchema = createSelectSchema(users, {
 export const insertUserSchema = createInsertSchema(users, {
   username: (schema) => schema.min(3, '用户名至少3个字符').max(20, '用户名最多20个字符'),
   password: (schema) => schema.min(6, '密码至少6个字符'),
-  email: () => z.string().email('请输入有效的邮箱地址').optional(),
+  email: () => z.string().pipe(z.email('请输入有效的邮箱地址')).optional(),
   permissions: z
     .array(z.string())
     .optional()
@@ -45,7 +46,7 @@ export const insertUserSchema = createInsertSchema(users, {
 export const updateUserSchema = createUpdateSchema(users, {
   username: (schema) => schema.min(3, '用户名至少3个字符').max(20, '用户名最多20个字符').optional(),
   password: (schema) => schema.min(6, '密码至少6个字符').optional(),
-  email: () => z.string().email('请输入有效的邮箱地址').optional(),
+  email: () => z.string().pipe(z.email('请输入有效的邮箱地址')).optional(),
   permissions: z
     .array(z.string())
     .optional()
@@ -215,14 +216,7 @@ export const updateStaticFileSchema = createUpdateSchema(staticFiles);
 export const selectSiteMetaSchema = createSelectSchema(siteMeta, {
   value: (schema) =>
     schema.transform((str): unknown => {
-      if (!str) {
-        return null;
-      }
-      try {
-        return JSON.parse(str);
-      } catch {
-        return str;
-      }
+      return safeParseJson(str, dataSchemas.genericObject) ?? str;
     }),
 });
 
@@ -312,11 +306,15 @@ export const updatePipelineSchema = createUpdateSchema(pipelines, {
 // Analytics schemas
 export const selectAnalyticsSchema = createSelectSchema(analytics, {
   data: (schema) =>
-    schema.transform((str) => {
+    schema.transform((str): unknown => {
       if (!str) {
         return null;
       }
       try {
+        const parseResult = z.unknown().safeParse(str);
+        if (!parseResult.success) {
+          return null;
+        }
         return JSON.parse(str);
       } catch {
         return null;
