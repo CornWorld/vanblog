@@ -268,8 +268,13 @@ JWT_EXPIRES_IN=7d
 
 ### 额外阶段：升级 Pipeline 到 Plugin 系统
 
-- [ ] 暂时不删除 pipeline 系统，而是并行
-- [ ] HookService 开发：实现 HookService (addAction, addFilter, doAction, applyFilters) 及优先级排序。
+> 这个阶段的每一条修改量都非常大。暂定一个 commit
+> 暂时不删除 pipeline 系统，而是并行
+
+- [ ] HookService 开发：
+  - [ ] 实现 HookService (addAction, addFilter, doAction, applyFilters) 及优先级排序。
+  - [ ] 修改一两个模块测试
+  - [ ] 全量模块测试
 - [ ] 定义并实现 PluginContext：创建 PluginContext 接口，为插件提供 logger, config 读取器, 和 data 存储能力。
 - [ ] “代码片段”插件支持 (稳定版)
   - [ ] 设计 pipelines 表来存储代码片段、其监听的钩子名、优先级和状态。
