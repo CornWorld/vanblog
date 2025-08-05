@@ -233,7 +233,9 @@ export class ArticleService {
       updatedAt: new Date(),
     };
 
-    // Trigger beforeUpdateArticle event
+    // Process article data
+
+    // Trigger beforeUpdateArticle event (legacy pipeline)
     try {
       const beforeResults = await this.pipelineService.dispatchEvent('beforeUpdateArticle', {
         action: 'create',
@@ -271,7 +273,9 @@ export class ArticleService {
       viewer: newArticle.viewer,
     });
 
-    // Trigger afterUpdateArticle event
+    // Article created successfully
+
+    // Trigger afterUpdateArticle event (legacy pipeline)
     try {
       await this.pipelineService.dispatchEvent('afterUpdateArticle', {
         action: 'create',
@@ -307,7 +311,9 @@ export class ArticleService {
       updatedAt: new Date(),
     };
 
-    // Trigger beforeUpdateArticle event
+    // Process update data
+
+    // Trigger beforeUpdateArticle event (legacy pipeline)
     try {
       const beforeResults = await this.pipelineService.dispatchEvent('beforeUpdateArticle', {
         action: 'update',
@@ -350,7 +356,9 @@ export class ArticleService {
       viewer: updatedArticle.viewer,
     });
 
-    // Trigger afterUpdateArticle event
+    // Article updated successfully
+
+    // Trigger afterUpdateArticle event (legacy pipeline)
     try {
       await this.pipelineService.dispatchEvent('afterUpdateArticle', {
         action: 'update',
@@ -377,7 +385,9 @@ export class ArticleService {
       throw new NotFoundException(`Article with ID ${String(id)} not found`);
     }
 
-    // Trigger deleteArticle event
+    // Prepare for deletion
+
+    // Trigger deleteArticle event (legacy pipeline)
     try {
       await this.pipelineService.dispatchEvent('deleteArticle', {
         action: 'delete',
@@ -390,6 +400,8 @@ export class ArticleService {
     }
 
     await this.db.delete(articles).where(eq(articles.id, id));
+
+    // Article deleted successfully
   }
 
   async exportArticles(): Promise<Article[]> {

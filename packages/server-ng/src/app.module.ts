@@ -22,6 +22,7 @@ import { RewardModule } from './modules/reward/reward.module';
 import { PipelineModule } from './modules/pipeline/pipeline.module';
 import { DemoModule } from './modules/demo/demo.module';
 import { PermissionModule } from './modules/permission/permission.module';
+import { PluginModule } from './modules/plugin/plugin.module';
 
 @Module({
   imports: [
@@ -46,6 +47,7 @@ import { PermissionModule } from './modules/permission/permission.module';
     PipelineModule,
     DemoModule,
     PermissionModule,
+    PluginModule,
   ],
   controllers: [AppController],
   providers: [AppService],
