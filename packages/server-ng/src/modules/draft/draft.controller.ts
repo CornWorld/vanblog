@@ -27,7 +27,6 @@ import { DraftVersionService } from './draft-version.service';
 
 @ApiTags('drafts')
 @Controller('api/v2/drafts')
-@RequireAuth()
 export class DraftController {
   constructor(
     private readonly draftService: DraftService,
@@ -35,6 +34,7 @@ export class DraftController {
   ) {}
 
   @Get()
+  @RequireAuth('draft:read')
   @ApiOperation({ summary: 'Get all drafts' })
   @ApiResponse({ status: 200, description: 'Return all drafts' })
   async findAll(@Query() query: DraftQueryDto): Promise<DraftListResponseDto> {
@@ -42,6 +42,7 @@ export class DraftController {
   }
 
   @Get(':id')
+  @RequireAuth('draft:read')
   @ApiOperation({ summary: 'Get draft by ID' })
   @ApiResponse({ status: 200, description: 'Return draft by ID' })
   @ApiResponse({ status: 404, description: 'Draft not found' })
@@ -50,6 +51,7 @@ export class DraftController {
   }
 
   @Post()
+  @RequireAuth('draft:create')
   @ApiOperation({ summary: 'Create draft' })
   @ApiResponse({ status: 201, description: 'Create new draft' })
   async create(@Body() createDraftDto: CreateDraftDto): Promise<DraftDto> {
@@ -57,6 +59,7 @@ export class DraftController {
   }
 
   @Put(':id')
+  @RequireAuth('draft:update')
   @ApiOperation({ summary: 'Update draft' })
   @ApiResponse({ status: 200, description: 'Update existing draft' })
   @ApiResponse({ status: 404, description: 'Draft not found' })
@@ -68,6 +71,7 @@ export class DraftController {
   }
 
   @Delete(':id')
+  @RequireAuth('draft:delete')
   @ApiOperation({ summary: 'Delete draft' })
   @ApiResponse({ status: 200, description: 'Draft deleted successfully' })
   @ApiResponse({ status: 404, description: 'Draft not found' })
@@ -76,6 +80,7 @@ export class DraftController {
   }
 
   @Post(':id/publish')
+  @RequireAuth('draft:publish')
   @ApiOperation({ summary: 'Publish draft as article' })
   @ApiResponse({ status: 200, description: 'Draft published successfully', type: Article })
   @ApiResponse({ status: 404, description: 'Draft not found' })
@@ -87,6 +92,7 @@ export class DraftController {
   }
 
   @Post('import')
+  @RequireAuth('draft:create')
   @ApiOperation({ summary: 'Import multiple drafts' })
   @ApiResponse({ status: 200, description: 'Drafts imported successfully' })
   async importDrafts(@Body() draftDtos: CreateDraftDto[]): Promise<void> {
@@ -94,6 +100,7 @@ export class DraftController {
   }
 
   @Put(':id/auto-save')
+  @RequireAuth('draft:update')
   @ApiOperation({ summary: 'Auto-save draft' })
   @ApiResponse({ status: 200, description: 'Draft auto-saved successfully' })
   @ApiResponse({ status: 404, description: 'Draft not found' })
@@ -105,6 +112,7 @@ export class DraftController {
   }
 
   @Get(':id/versions')
+  @RequireAuth('draft:read')
   @ApiOperation({ summary: 'Get draft versions' })
   @ApiResponse({
     status: 200,
@@ -123,6 +131,7 @@ export class DraftController {
   }
 
   @Get(':id/versions/:version')
+  @RequireAuth('draft:read')
   @ApiOperation({ summary: 'Get specific draft version' })
   @ApiResponse({ status: 200, description: 'Return draft version' })
   @ApiResponse({ status: 404, description: 'Draft version not found' })
@@ -134,6 +143,7 @@ export class DraftController {
   }
 
   @Post(':id/versions/:version/restore')
+  @RequireAuth('draft:update')
   @ApiOperation({ summary: 'Restore draft to specific version' })
   @ApiResponse({ status: 200, description: 'Draft restored successfully' })
   @ApiResponse({ status: 404, description: 'Draft version not found' })
@@ -145,6 +155,7 @@ export class DraftController {
   }
 
   @Delete(':id/versions/:version')
+  @RequireAuth('draft:delete')
   @ApiOperation({ summary: 'Delete draft version' })
   @ApiResponse({ status: 200, description: 'Draft version deleted successfully' })
   @ApiResponse({ status: 404, description: 'Draft version not found' })

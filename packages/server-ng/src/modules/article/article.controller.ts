@@ -52,7 +52,7 @@ export class ArticleController {
   }
 
   @Get('export')
-  @RequireAuth()
+  @RequireAuth('article:read')
   @ApiOperation({ summary: 'Export all articles' })
   @ApiResponse({ status: 200, description: 'Export articles' })
   async export(): Promise<Article[]> {
@@ -71,7 +71,7 @@ export class ArticleController {
   }
 
   @Post('import')
-  @RequireAuth()
+  @RequireAuth('article:create')
   @ApiOperation({ summary: 'Import articles' })
   @ApiResponse({ status: 201, description: 'Import articles' })
   async import(@Body() articles: CreateArticleDto[]): Promise<void> {
@@ -109,7 +109,7 @@ export class ArticleController {
   }
 
   @Post()
-  @RequireAuth()
+  @RequireAuth('article:create')
   @ApiOperation({ summary: 'Create article' })
   @ApiResponse({ status: 201, description: 'Create new article' })
   async create(@Body() createArticleDto: CreateArticleDto): Promise<Article> {
@@ -117,7 +117,7 @@ export class ArticleController {
   }
 
   @Put(':id')
-  @RequireAuth()
+  @RequireAuth('article:update')
   @ApiOperation({ summary: 'Update article' })
   @ApiResponse({ status: 200, description: 'Update existing article' })
   @ApiResponse({ status: 404, description: 'Article not found' })
@@ -129,7 +129,7 @@ export class ArticleController {
   }
 
   @Delete(':id')
-  @RequireAuth()
+  @RequireAuth('article:delete')
   @ApiOperation({ summary: 'Delete article' })
   @ApiResponse({ status: 200, description: 'Article deleted successfully' })
   @ApiResponse({ status: 404, description: 'Article not found' })

@@ -39,7 +39,7 @@ export class CategoryController {
   }
 
   @Post()
-  @RequireAuth()
+  @RequireAuth('category:create')
   @ApiOperation({ summary: 'Create category' })
   @ApiResponse({ status: 201, description: 'Create new category' })
   async create(@Body() createCategoryDto: CreateCategoryDto): Promise<CategoryDto> {
@@ -47,7 +47,7 @@ export class CategoryController {
   }
 
   @Put(':id')
-  @RequireAuth()
+  @RequireAuth('category:update')
   @ApiOperation({ summary: 'Update category' })
   @ApiResponse({ status: 200, description: 'Update existing category' })
   @ApiResponse({ status: 404, description: 'Category not found' })
@@ -59,7 +59,7 @@ export class CategoryController {
   }
 
   @Delete(':id')
-  @RequireAuth()
+  @RequireAuth('category:delete')
   @ApiOperation({ summary: 'Delete category' })
   @ApiResponse({ status: 200, description: 'Category deleted successfully' })
   @ApiResponse({ status: 404, description: 'Category not found' })

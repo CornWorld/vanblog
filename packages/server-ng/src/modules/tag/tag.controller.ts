@@ -27,7 +27,7 @@ export class TagController {
   }
 
   @Post()
-  @RequireAuth()
+  @RequireAuth('tag:create')
   @ApiOperation({ summary: 'Create tag' })
   @ApiResponse({ status: 201, description: 'Create new tag' })
   async create(@Body() createTagDto: CreateTagDto): Promise<Tag> {
@@ -35,7 +35,7 @@ export class TagController {
   }
 
   @Put(':id')
-  @RequireAuth()
+  @RequireAuth('tag:update')
   @ApiOperation({ summary: 'Update tag' })
   @ApiResponse({ status: 200, description: 'Update existing tag' })
   @ApiResponse({ status: 404, description: 'Tag not found' })
@@ -47,7 +47,7 @@ export class TagController {
   }
 
   @Delete(':id')
-  @RequireAuth()
+  @RequireAuth('tag:delete')
   @ApiOperation({ summary: 'Delete tag' })
   @ApiResponse({ status: 200, description: 'Tag deleted successfully' })
   @ApiResponse({ status: 404, description: 'Tag not found' })

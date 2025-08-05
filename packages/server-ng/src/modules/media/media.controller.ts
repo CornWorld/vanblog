@@ -22,6 +22,8 @@ import {
   ApiBody,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { PermissionsGuard } from '../auth/guards/permissions.guard';
+import { Permissions } from '../auth/permissions.decorator';
 import { MediaService } from './services/media.service';
 import { ImageProcessingService } from './services/image-processing.service';
 import { StorageConfigService } from './services/storage-config.service';
@@ -43,7 +45,7 @@ interface WatermarkBody {
 
 @ApiTags('媒体资源')
 @Controller('api/v2/admin/media')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
 @ApiBearerAuth()
 export class MediaController {
   constructor(
@@ -53,6 +55,7 @@ export class MediaController {
   ) {}
 
   @Post('upload')
+  @Permissions('media:create')
   @ApiOperation({ summary: '上传文件' })
   @ApiConsumes('multipart/form-data')
   @ApiBody({ type: UploadFile })
@@ -102,6 +105,7 @@ export class MediaController {
   }
 
   @Post('upload-with-watermark')
+  @Permissions('media:create')
   @ApiOperation({ summary: '上传文件并添加水印' })
   @ApiConsumes('multipart/form-data')
   @ApiResponse({ status: 201, description: '文件上传成功' })
@@ -152,6 +156,7 @@ export class MediaController {
   }
 
   @Get()
+  @Permissions('media:read')
   @ApiOperation({ summary: '获取文件列表' })
   @ApiResponse({ status: 200, description: '获取成功' })
   async listFiles(@Query() query: ListStaticFilesDto): Promise<{
@@ -165,6 +170,7 @@ export class MediaController {
   }
 
   @Get(':id')
+  @Permissions('media:read')
   @ApiOperation({ summary: '获取单个文件信息' })
   @ApiResponse({ status: 200, description: '获取成功' })
   async getFile(@Param('id', ParseIntPipe) id: number): Promise<typeof staticFiles.$inferSelect> {
@@ -172,6 +178,7 @@ export class MediaController {
   }
 
   @Delete(':id')
+  @Permissions('media:delete')
   @ApiOperation({ summary: '删除单个文件' })
   @ApiResponse({ status: 200, description: '删除成功' })
   async deleteFile(
@@ -181,6 +188,7 @@ export class MediaController {
   }
 
   @Post('batch-delete')
+  @Permissions('media:delete')
   @ApiOperation({ summary: '批量删除文件' })
   @ApiResponse({ status: 200, description: '删除成功' })
   async batchDelete(
@@ -194,6 +202,7 @@ export class MediaController {
   }
 
   @Post('scan-articles')
+  @Permissions('media:create')
   @ApiOperation({ summary: '扫描文章中的图片' })
   @ApiResponse({ status: 200, description: '扫描完成' })
   async scanArticleImages(): Promise<{ scanned: number; added: number }> {
@@ -201,6 +210,7 @@ export class MediaController {
   }
 
   @Get('export/all')
+  @Permissions('media:read')
   @ApiOperation({ summary: '导出所有图片信息' })
   @ApiResponse({ status: 200, description: '导出成功' })
   async exportAllImages(): Promise<{
@@ -218,6 +228,7 @@ export class MediaController {
   }
 
   @Get('storage-config')
+  @Permissions('setting:read')
   @ApiOperation({ summary: '获取存储配置' })
   @ApiResponse({ status: 200, description: '获取成功' })
   async getStorageConfig(): Promise<StorageConfigResponseDto> {
@@ -225,6 +236,7 @@ export class MediaController {
   }
 
   @Post('storage-config')
+  @Permissions('setting:update')
   @ApiOperation({ summary: '更新存储配置' })
   @ApiResponse({ status: 200, description: '更新成功' })
   async updateStorageConfig(
@@ -234,6 +246,7 @@ export class MediaController {
   }
 
   @Post('upload-clipboard')
+  @Permissions('media:create')
   @ApiOperation({ summary: '从剪贴板上传图片' })
   @ApiConsumes('application/json')
   @ApiBody({

@@ -1,15 +1,21 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { UserService } from './user.service';
 import { CreateUserDto, UpdateUserDto } from './dto';
 import { User } from './entities/user.entity';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { PermissionsGuard } from '../auth/guards/permissions.guard';
+import { Permissions } from '../auth/permissions.decorator';
 
 @ApiTags('users')
 @Controller('api/v2/admin/users')
+@UseGuards(JwtAuthGuard, PermissionsGuard)
+@ApiBearerAuth()
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
   @Post()
+  @Permissions('user:create')
   @ApiOperation({ summary: '创建用户' })
   @ApiResponse({
     status: 201,
@@ -22,6 +28,7 @@ export class UserController {
   }
 
   @Get()
+  @Permissions('user:read')
   @ApiOperation({ summary: '获取所有用户' })
   @ApiResponse({
     status: 200,
@@ -33,6 +40,7 @@ export class UserController {
   }
 
   @Get('collaborators')
+  @Permissions('user:read')
   @ApiOperation({ summary: '获取所有协作者' })
   @ApiResponse({
     status: 200,
@@ -44,6 +52,7 @@ export class UserController {
   }
 
   @Get(':id')
+  @Permissions('user:read')
   @ApiOperation({ summary: '获取单个用户' })
   @ApiResponse({
     status: 200,
@@ -56,6 +65,7 @@ export class UserController {
   }
 
   @Patch(':id')
+  @Permissions('user:update')
   @ApiOperation({ summary: '更新用户信息' })
   @ApiResponse({
     status: 200,
@@ -68,6 +78,7 @@ export class UserController {
   }
 
   @Delete(':id')
+  @Permissions('user:delete')
   @ApiOperation({ summary: '删除用户' })
   @ApiResponse({ status: 200, description: '用户删除成功' })
   @ApiResponse({ status: 404, description: '用户不存在' })

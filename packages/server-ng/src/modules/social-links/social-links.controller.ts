@@ -3,23 +3,27 @@ import { SocialLinksService } from './social-links.service';
 import { SocialLinkDto, SocialLinkSchema } from './dto/social-link.dto';
 import { SocialLink } from './social-links.schema';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { PermissionsGuard } from '../auth/guards/permissions.guard';
+import { Permissions } from '../auth/permissions.decorator';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
 import { ZodValidationPipe } from 'nestjs-zod';
 
 @ApiTags('social-links')
 @Controller('api/admin/social-links')
+@UseGuards(JwtAuthGuard, PermissionsGuard)
+@ApiBearerAuth()
 export class SocialLinksController {
   constructor(private readonly socialLinksService: SocialLinksService) {}
 
   @Get()
+  @Permissions('setting:read')
   @ApiOperation({ summary: 'Get all social links' })
   async getSocialLinks(): Promise<SocialLink[]> {
     return this.socialLinksService.getSocialLinks();
   }
 
   @Post()
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
+  @Permissions('setting:update')
   @ApiOperation({ summary: 'Add or update a social link' })
   async addOrUpdateSocialLink(
     @Body(new ZodValidationPipe(SocialLinkSchema)) dto: SocialLinkDto,
@@ -28,8 +32,7 @@ export class SocialLinksController {
   }
 
   @Delete(':type')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
+  @Permissions('setting:update')
   @ApiOperation({ summary: 'Delete a social link' })
   @ApiParam({ name: 'type', description: 'Social link type' })
   async deleteSocialLink(@Param('type') type: string): Promise<SocialLink[]> {
