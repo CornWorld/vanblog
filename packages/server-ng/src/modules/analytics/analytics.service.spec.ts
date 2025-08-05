@@ -47,13 +47,13 @@ describe('AnalyticsService', () => {
 
   describe('recordAnalytics', () => {
     it('should record analytics data', async () => {
-      const dto: RecordAnalyticsDto = {
+      const dto = {
         type: AnalyticsType.PAGEVIEW,
         path: '/blog/test',
-        referer: 'https://google.com',
+        referrer: 'https://google.com',
         userAgent: 'Mozilla/5.0',
         ip: '127.0.0.1',
-      };
+      } as unknown as RecordAnalyticsDto;
 
       await service.recordAnalytics(dto);
 
@@ -61,29 +61,33 @@ describe('AnalyticsService', () => {
       expect(mockDb.values).toHaveBeenCalledWith({
         type: dto.type,
         path: dto.path,
-        referrer: dto.referer,
+        referrer: dto.referrer,
         userAgent: dto.userAgent,
         ip: dto.ip,
         data: null,
       });
     });
 
-    it('should stringify data object when provided', async () => {
-      const dto: RecordAnalyticsDto = {
+    it('should record analytics data with metadata', async () => {
+      const testData = { action: 'click', label: 'button' };
+      const dto = {
         type: AnalyticsType.EVENT,
-        path: '/test-path',
-        metadata: { action: 'click', label: 'button' },
-      };
+        path: '/blog/test',
+        referrer: 'https://google.com',
+        userAgent: 'Mozilla/5.0',
+        ip: '127.0.0.1',
+        data: testData,
+      } as unknown as RecordAnalyticsDto;
 
       await service.recordAnalytics(dto);
 
       expect(mockDb.values).toHaveBeenCalledWith({
         type: dto.type,
         path: dto.path,
-        referrer: undefined,
-        userAgent: undefined,
-        ip: undefined,
-        data: JSON.stringify(dto.metadata),
+        referrer: dto.referrer,
+        userAgent: dto.userAgent,
+        ip: dto.ip,
+        data: JSON.stringify(testData),
       });
     });
   });
