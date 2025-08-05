@@ -139,7 +139,9 @@ describe('PermissionController', () => {
           description: 'Updated description',
         };
 
-        const updatedNode = { ...mockPermissionNode, description: 'Updated description' };
+        const updatedNode = Object.assign({}, mockPermissionNode, {
+          description: 'Updated description',
+        });
         mockPermissionService.updatePermissionNode.mockResolvedValue(updatedNode);
 
         const result = await controller.updatePermissionNode(id, updateDto);
@@ -214,7 +216,9 @@ describe('PermissionController', () => {
           description: 'Updated description',
         };
 
-        const updatedGroup = { ...mockPermissionGroup, description: 'Updated description' };
+        const updatedGroup = Object.assign({}, mockPermissionGroup, {
+          description: 'Updated description',
+        });
         mockPermissionService.updatePermissionGroup.mockResolvedValue(updatedGroup);
 
         const result = await controller.updatePermissionGroup(id, updateDto);

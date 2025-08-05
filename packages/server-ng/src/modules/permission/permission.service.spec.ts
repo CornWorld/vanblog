@@ -1,12 +1,37 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, beforeEach, afterEach, expect, vi } from 'vitest';
 import { PermissionService } from './permission.service';
 import { DATABASE_CONNECTION } from '../../database/database.module';
 import { PERMISSION_MODULES, PERMISSION_GROUPS } from '../../shared/types/permission';
 
+type MockQueryBuilder = {
+  from: () => MockQueryBuilder;
+  where: () => MockQueryBuilder;
+  limit: () => MockQueryBuilder;
+  offset: () => MockQueryBuilder;
+  values: () => MockQueryBuilder;
+  returning: () => Promise<unknown[]>;
+  orderBy: () => MockQueryBuilder;
+  set: () => MockQueryBuilder;
+};
+
 describe('PermissionService', () => {
   let service: PermissionService;
-  let mockDb: any;
+  let mockDb: {
+    select: { mockReturnValue: (value: any) => any };
+    from: () => MockQueryBuilder;
+    where: () => MockQueryBuilder;
+    limit: () => MockQueryBuilder;
+    offset: () => MockQueryBuilder;
+    orderBy: () => MockQueryBuilder;
+    insert: { mockReturnValue: (value: any) => any };
+    values: () => MockQueryBuilder;
+    returning: () => Promise<unknown[]>;
+    update: () => MockQueryBuilder;
+    set: () => MockQueryBuilder;
+    delete: () => MockQueryBuilder;
+  };
 
   const mockPermissionNode = {
     id: 1,
@@ -80,9 +105,9 @@ describe('PermissionService', () => {
 
     it('should not register existing permission node', async () => {
       mockDb.select.mockReturnValue({
-        from: vi.fn().mockReturnThis(),
-        where: vi.fn().mockReturnThis(),
-        limit: vi.fn().mockResolvedValue([mockPermissionNode]),
+        from: vi.fn().mockReturnThis() as () => MockQueryBuilder,
+        where: vi.fn().mockReturnThis() as () => MockQueryBuilder,
+        limit: vi.fn().mockResolvedValue([mockPermissionNode]) as () => MockQueryBuilder,
       });
 
       await service.registerPermission({
@@ -98,11 +123,10 @@ describe('PermissionService', () => {
   describe('resolveUserPermissions', () => {
     beforeEach(() => {
       // Mock getGroupPermissions method
-      vi.spyOn(service as any, 'getGroupPermissions').mockResolvedValue([
-        'article:read',
-        'article:write',
-        'user:read',
-      ]);
+      vi.spyOn(
+        service as unknown as { getGroupPermissions: () => Promise<string[]> },
+        'getGroupPermissions',
+      ).mockResolvedValue(['article:read', 'article:write', 'user:read']);
     });
 
     it('should resolve basic permissions', async () => {
@@ -230,8 +254,8 @@ describe('PermissionService', () => {
       };
 
       mockDb.insert.mockReturnValue({
-        values: vi.fn().mockReturnThis(),
-        returning: vi.fn().mockResolvedValue([mockPermissionGroup]),
+        values: vi.fn().mockReturnThis() as () => MockQueryBuilder,
+        returning: vi.fn().mockResolvedValue([mockPermissionGroup]) as () => Promise<unknown[]>,
       });
 
       const result = await service.createPermissionGroup(createDto);
@@ -244,9 +268,15 @@ describe('PermissionService', () => {
   describe('initializePermissions', () => {
     it('should initialize all permissions and groups', async () => {
       // Mock registerModulePermissions
-      vi.spyOn(service as any, 'registerModulePermissions').mockResolvedValue(undefined);
+      vi.spyOn(
+        service as unknown as { registerModulePermissions: () => Promise<void> },
+        'registerModulePermissions',
+      ).mockResolvedValue(undefined);
       // Mock createPredefinedGroups
-      vi.spyOn(service as any, 'createPredefinedGroups').mockResolvedValue(undefined);
+      vi.spyOn(
+        service as unknown as { createPredefinedGroups: () => Promise<void> },
+        'createPredefinedGroups',
+      ).mockResolvedValue(undefined);
 
       await service.initializePermissions();
 
