@@ -53,10 +53,10 @@ export class LoginLogService {
     return logs.map((log) => ({
       id: log.id,
       username: log.username,
-      ip: log.ip ?? undefined,
-      userAgent: log.userAgent ?? undefined,
+      ip: log.ip,
+      userAgent: log.userAgent,
       success: Boolean(log.success),
-      message: log.message ?? undefined,
+      message: log.message,
       createdAt: log.createdAt,
     }));
   }

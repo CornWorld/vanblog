@@ -14,6 +14,8 @@ import {
   customPages,
   pipelines,
   analytics,
+  permissionNodes,
+  permissionGroups,
 } from './schema';
 
 // User schemas
@@ -52,7 +54,8 @@ export const updateUserSchema = createUpdateSchema(users, {
     .optional()
     .transform((arr) => {
       return arr ? JSON.stringify(arr) : null;
-    }),
+    })
+    .optional(),
 });
 
 // Article schemas
@@ -381,3 +384,61 @@ export type UpdatePipeline = z.infer<typeof updatePipelineSchema>;
 
 export type SelectAnalytics = z.infer<typeof selectAnalyticsSchema>;
 export type InsertAnalytics = z.infer<typeof insertAnalyticsSchema>;
+
+// Permission Node schemas
+export const selectPermissionNodeSchema = createSelectSchema(permissionNodes);
+
+export const insertPermissionNodeSchema = createInsertSchema(permissionNodes, {
+  name: (schema) => schema.min(1, '权限节点名称不能为空').max(100, '权限节点名称最多100个字符'),
+  module: (schema) => schema.min(1, '模块名称不能为空').max(50, '模块名称最多50个字符'),
+});
+
+export const updatePermissionNodeSchema = createUpdateSchema(permissionNodes, {
+  name: (schema) =>
+    schema.min(1, '权限节点名称不能为空').max(100, '权限节点名称最多100个字符').optional(),
+  module: (schema) => schema.min(1, '模块名称不能为空').max(50, '模块名称最多50个字符').optional(),
+});
+
+// Permission Group schemas
+export const selectPermissionGroupSchema = createSelectSchema(permissionGroups, {
+  permissions: (schema) =>
+    schema.transform((str) => {
+      if (!str) {
+        return [];
+      }
+      try {
+        return JSON.parse(str) as string[];
+      } catch {
+        return [];
+      }
+    }),
+});
+
+export const insertPermissionGroupSchema = createInsertSchema(permissionGroups, {
+  name: (schema) => schema.min(1, '权限组名称不能为空').max(100, '权限组名称最多100个字符'),
+  permissions: z
+    .array(z.string())
+    .optional()
+    .transform((arr) => {
+      return arr ? JSON.stringify(arr) : null;
+    }),
+});
+
+export const updatePermissionGroupSchema = createUpdateSchema(permissionGroups, {
+  name: (schema) =>
+    schema.min(1, '权限组名称不能为空').max(100, '权限组名称最多100个字符').optional(),
+  permissions: z
+    .array(z.string())
+    .optional()
+    .transform((arr) => {
+      return arr ? JSON.stringify(arr) : null;
+    }),
+});
+
+export type SelectPermissionNode = z.infer<typeof selectPermissionNodeSchema>;
+export type InsertPermissionNode = z.infer<typeof insertPermissionNodeSchema>;
+export type UpdatePermissionNode = z.infer<typeof updatePermissionNodeSchema>;
+
+export type SelectPermissionGroup = z.infer<typeof selectPermissionGroupSchema>;
+export type InsertPermissionGroup = z.infer<typeof insertPermissionGroupSchema>;
+export type UpdatePermissionGroup = z.infer<typeof updatePermissionGroupSchema>;

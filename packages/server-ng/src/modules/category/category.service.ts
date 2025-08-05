@@ -46,10 +46,10 @@ export class CategoryService {
 
     const processedCategories: CategoryWithCountDto[] = categoryResults.map((category) => ({
       ...category,
-      slug: category.slug ?? undefined,
-      description: category.description ?? undefined,
-      private: category.private ?? undefined,
-      password: category.password ?? undefined,
+      slug: category.slug,
+      description: category.description,
+      private: category.private,
+      password: category.password,
       articleCount: Number(category.articleCount) || 0,
     }));
 

@@ -31,7 +31,7 @@ export class TagService {
 
         return {
           ...tag,
-          slug: tag.slug ?? undefined,
+          slug: tag.slug,
           articleCount: Number(countResult[0]?.count) || 0,
           updatedAt: tag.createdAt, // Use createdAt as updatedAt since tags table doesn't have updatedAt
         };

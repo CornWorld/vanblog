@@ -76,8 +76,8 @@ export class DraftVersionService {
         new DraftVersion({
           ...version,
           tags: safeParseJson(version.tags, dataSchemas.tagsArray) ?? [],
-          pathname: version.pathname ?? undefined,
-          category: version.category ?? undefined,
+          pathname: version.pathname,
+          category: version.category,
         }),
     );
   }
@@ -100,8 +100,8 @@ export class DraftVersionService {
     return new DraftVersion({
       ...versionData,
       tags: safeParseJson(versionData.tags, dataSchemas.tagsArray) ?? [],
-      pathname: versionData.pathname ?? undefined,
-      category: versionData.category ?? undefined,
+      pathname: versionData.pathname,
+      category: versionData.category,
     });
   }
 

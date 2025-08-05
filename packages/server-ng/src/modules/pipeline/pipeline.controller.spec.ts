@@ -43,6 +43,7 @@ describe('PipelineController', () => {
         name: 'Test Pipeline',
         eventName: 'login',
         script: 'console.log("test");',
+        deps: JSON.stringify(['lodash']),
       };
 
       const expectedResult = {

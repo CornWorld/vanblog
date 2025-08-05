@@ -3,14 +3,17 @@ import { Reflector } from '@nestjs/core';
 import { PERMISSION_KEY } from '../permissions.decorator';
 import { User } from '../../user/entities/user.entity';
 import { UserType } from '../../user/dto/create-user.dto';
-import { Permission } from '../../../shared/types/permission.type';
+import { PermissionService } from '../../permission/permission.service';
 
 @Injectable()
-export class PermissionsGuard implements CanActivate {
-  constructor(private readonly reflector: Reflector) {}
+export class EnhancedPermissionsGuard implements CanActivate {
+  constructor(
+    private readonly reflector: Reflector,
+    private readonly permissionService: PermissionService,
+  ) {}
 
-  canActivate(context: ExecutionContext): boolean {
-    const requiredPermissions = this.reflector.getAllAndOverride<Permission[] | undefined>(
+  async canActivate(context: ExecutionContext): Promise<boolean> {
+    const requiredPermissions = this.reflector.getAllAndOverride<string[] | undefined>(
       PERMISSION_KEY,
       [context.getHandler(), context.getClass()],
     );
@@ -26,6 +29,7 @@ export class PermissionsGuard implements CanActivate {
       return false;
     }
 
+    // 管理员拥有所有权限
     if (user.type === UserType.ADMIN) {
       return true;
     }
@@ -35,8 +39,7 @@ export class PermissionsGuard implements CanActivate {
       return false;
     }
 
-    return requiredPermissions.some(
-      (permission) => userPermissions.includes(permission) || userPermissions.includes('all'),
-    );
+    // 使用新的权限解析系统
+    return this.permissionService.hasPermissions(userPermissions, requiredPermissions);
   }
 }

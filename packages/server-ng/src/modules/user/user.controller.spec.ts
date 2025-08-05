@@ -58,8 +58,8 @@ describe('UserController', () => {
         password: 'password123',
         nickname: 'Test User',
         email: 'test@example.com',
-        role: UserType.ADMIN,
-        isActive: true,
+        type: 'admin',
+        permissions: JSON.stringify(['user:read', 'user:write']),
       };
 
       mockUserService.create.mockResolvedValue(mockUser);

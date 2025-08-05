@@ -74,7 +74,7 @@ describe('PipelineService', () => {
         name: 'Test Pipeline',
         eventName: 'invalid-event',
         script: 'console.log("test");',
-        deps: [],
+        deps: JSON.stringify(['lodash']),
         eventType: 'system' as const,
         description: 'Test description',
         enabled: true,

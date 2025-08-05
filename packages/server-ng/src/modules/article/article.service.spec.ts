@@ -277,7 +277,8 @@ describe('ArticleService', () => {
       const createDto = {
         title: 'New Article',
         content: 'New content',
-        tags: ['new'],
+        author: 'test-author',
+        tags: JSON.stringify(['new']),
         categories: [],
         isPublished: false,
         isTop: false,
@@ -341,13 +342,18 @@ describe('ArticleService', () => {
       // Mock the createMissingTags call (db.select().from(tags).where())
       mockDb.where.mockResolvedValueOnce([]);
 
-      // Mock the update call
-      mockDb.returning.mockResolvedValueOnce([mockUpdatedArticle]);
+      // Mock the update call chain
+      const mockUpdateChain = {
+        set: vi.fn().mockReturnThis(),
+        where: vi.fn().mockReturnThis(),
+        returning: vi.fn().mockResolvedValueOnce([mockUpdatedArticle]),
+      };
+      mockDb.update.mockReturnValueOnce(mockUpdateChain);
 
       const updateDto = {
         title: 'Updated Article',
         content: 'Updated content',
-        tags: ['updated'],
+        tags: JSON.stringify(['updated']),
       };
 
       const result = await service.update(1, updateDto);
@@ -362,9 +368,9 @@ describe('ArticleService', () => {
         limit: vi.fn().mockResolvedValueOnce([]),
       });
 
-      await expect(service.update(999, { title: 'Test', content: 'Test content' })).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        service.update(999, { title: 'Test', content: 'Test content', tags: JSON.stringify([]) }),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -461,7 +467,8 @@ describe('ArticleService', () => {
         {
           title: 'Import 1',
           content: 'Content 1',
-          tags: ['import'],
+          author: 'test-author',
+          tags: JSON.stringify(['import']),
           categories: [],
           isPublished: false,
           isTop: false,
@@ -470,8 +477,9 @@ describe('ArticleService', () => {
         {
           title: 'Import 2',
           content: 'Content 2',
+          author: 'test-author',
           category: 'imported',
-          tags: [],
+          tags: JSON.stringify([]),
           categories: [],
           isPublished: false,
           isTop: false,
@@ -516,8 +524,8 @@ describe('ArticleService', () => {
 
       await service.importArticles(articlesToImport);
 
-      expect(mockDb.insert).toHaveBeenCalledTimes(3); // 1 for tags, 2 for articles
-      expect(mockDb.values).toHaveBeenCalledTimes(3); // 1 for tags, 2 for articles
+      expect(mockDb.insert).toHaveBeenCalledTimes(2); // 1 for tags, 1 for articles (second article has no tags)
+      expect(mockDb.values).toHaveBeenCalledTimes(2); // 1 for tags, 1 for articles
     });
   });
 });

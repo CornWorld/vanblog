@@ -3,7 +3,7 @@ import { describe, it, beforeEach, afterEach, expect, vi } from 'vitest';
 import { ConflictException, NotFoundException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { UserService } from './user.service';
-import { UserType, type CreateUserDto } from './dto/create-user.dto';
+import { type CreateUserDto } from './dto/create-user.dto';
 import { users } from '../../database/schema';
 
 // Mock bcrypt
@@ -79,8 +79,8 @@ describe('UserService', () => {
       password: 'password123',
       nickname: 'Test User',
       email: 'test@example.com',
-      role: UserType.ADMIN,
-      isActive: true,
+      type: 'admin',
+      permissions: JSON.stringify(['user:read', 'user:write']),
     };
 
     it('should create a new user', async () => {

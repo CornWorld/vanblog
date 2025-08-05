@@ -231,3 +231,33 @@ export const analytics = sqliteTable(
     index('analytics_created_at_idx').on(table.createdAt),
   ],
 );
+
+// Permission nodes table
+export const permissionNodes = sqliteTable('permission_nodes', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  name: text('name').notNull().unique(), // 权限节点名称，如 'article:read'
+  description: text('description'), // 权限描述
+  module: text('module').notNull(), // 所属模块，如 'article', 'draft'
+  isActive: integer('is_active', { mode: 'boolean' }).default(true), // 是否启用
+  createdAt: integer('created_at', { mode: 'timestamp' })
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: integer('updated_at', { mode: 'timestamp' })
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+});
+
+// Permission groups table
+export const permissionGroups = sqliteTable('permission_groups', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  name: text('name').notNull().unique(), // 权限组名称，如 'admin', 'editor'
+  description: text('description'), // 权限组描述
+  permissions: text('permissions'), // JSON string for permissions array
+  isActive: integer('is_active', { mode: 'boolean' }).default(true), // 是否启用
+  createdAt: integer('created_at', { mode: 'timestamp' })
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: integer('updated_at', { mode: 'timestamp' })
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+});

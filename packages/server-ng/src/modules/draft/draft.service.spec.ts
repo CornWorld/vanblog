@@ -162,7 +162,8 @@ describe('DraftService', () => {
       const createDto = {
         title: 'New Draft',
         content: 'New content',
-        tags: ['new'],
+        author: 'test-author',
+        tags: JSON.stringify(['new']),
         categories: ['test-category'],
       };
 
@@ -195,7 +196,7 @@ describe('DraftService', () => {
       const updateDto = {
         title: 'Updated Draft',
         content: 'Updated content',
-        tags: ['updated'],
+        tags: JSON.stringify(['updated']),
       };
 
       const result = await service.update(1, updateDto);
@@ -211,7 +212,9 @@ describe('DraftService', () => {
         .fn()
         .mockRejectedValue(new NotFoundException('Draft with ID 999 not found'));
 
-      await expect(service.update(999, { title: 'Test' })).rejects.toThrow(NotFoundException);
+      await expect(
+        service.update(999, { title: 'Test', tags: JSON.stringify([]) }),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -346,14 +349,16 @@ describe('DraftService', () => {
         {
           title: 'Import 1',
           content: 'Content 1',
-          tags: ['import'],
+          tags: JSON.stringify(['import']),
           categories: ['test'],
+          author: 'test-author',
         },
         {
           title: 'Import 2',
           content: 'Content 2',
-          tags: [],
+          tags: JSON.stringify([]),
           categories: ['imported'],
+          author: 'test-author',
         },
       ];
 
@@ -402,6 +407,7 @@ describe('DraftService', () => {
       const updateDto = {
         title: 'Auto-saved Draft',
         content: 'Auto-saved content',
+        tags: JSON.stringify([]),
       };
 
       const result = await service.autoSave(1, updateDto);

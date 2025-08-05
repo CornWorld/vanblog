@@ -21,6 +21,7 @@ import { SocialLinksModule } from './modules/social-links/social-links.module';
 import { RewardModule } from './modules/reward/reward.module';
 import { PipelineModule } from './modules/pipeline/pipeline.module';
 import { DemoModule } from './modules/demo/demo.module';
+import { PermissionModule } from './modules/permission/permission.module';
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { DemoModule } from './modules/demo/demo.module';
     RewardModule,
     PipelineModule,
     DemoModule,
+    PermissionModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -1,10 +1,10 @@
 export class Category {
   id!: number;
   name!: string;
-  slug?: string | null;
-  description?: string | null;
-  private?: boolean | null;
-  password?: string | null;
+  slug!: string | null;
+  description!: string | null;
+  private!: boolean | null;
+  password!: string | null;
   createdAt!: Date;
   updatedAt!: Date;
 
