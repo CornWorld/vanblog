@@ -41,13 +41,13 @@ describe('DemoController', () => {
     it('should return demo status with snapshot info', () => {
       const mockSnapshotInfo = {
         hasSnapshot: true,
-        timestamp: Date.now(),
+        timestamp: 1754365478757,
         articlesCount: 5,
         draftsCount: 2,
       };
 
       mockDemoService.isDemoModeEnabled.mockReturnValue(true);
-      mockDemoService.getSnapshotInfo.mockResolvedValue(mockSnapshotInfo);
+      mockDemoService.getSnapshotInfo.mockReturnValue(mockSnapshotInfo);
 
       const result = controller.getStatus();
 
@@ -65,7 +65,7 @@ describe('DemoController', () => {
       };
 
       mockDemoService.isDemoModeEnabled.mockReturnValue(false);
-      mockDemoService.getSnapshotInfo.mockResolvedValue(mockSnapshotInfo);
+      mockDemoService.getSnapshotInfo.mockReturnValue(mockSnapshotInfo);
 
       const result = controller.getStatus();
 

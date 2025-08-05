@@ -323,7 +323,9 @@ export const selectAnalyticsSchema = createSelectSchema(analytics, {
 });
 
 export const insertAnalyticsSchema = createInsertSchema(analytics, {
-  type: (schema) => schema.min(1, '分析类型不能为空'),
+  type: z.enum(['pageview', 'event', 'api_call'], {
+    message: '分析类型必须是 pageview、event 或 api_call',
+  }),
   data: z
     .any()
     .optional()
