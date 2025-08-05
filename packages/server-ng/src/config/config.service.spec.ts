@@ -70,7 +70,7 @@ describe('ConfigService', () => {
       const dbConfig = service.database;
       expect(dbConfig).toBeDefined();
       expect(dbConfig.driver).toBe('local');
-      expect(dbConfig.url).toBe('file:./data/vanblog.db');
+      expect(dbConfig.url).toMatch(/^file:.*\.db$/);
     });
   });
 

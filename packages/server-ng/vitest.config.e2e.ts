@@ -10,6 +10,15 @@ export default defineConfig({
       '@test': './test',
     },
     root: './',
+    // Run E2E tests sequentially to avoid database conflicts
+    pool: 'forks',
+    poolOptions: {
+      forks: {
+        singleFork: true,
+      },
+    },
+    // Set up test environment
+    setupFiles: ['./test/setup.ts'],
   },
   resolve: {
     alias: {

@@ -13,11 +13,6 @@ export default defineConfig({
     }),
   ],
   optimizeDeps: {
-    exclude: [
-      '@nestjs/microservices',
-      '@nestjs/websockets',
-      'cache-manager',
-      'fastify-swagger',
-    ],
+    exclude: ['@nestjs/microservices', '@nestjs/websockets', 'cache-manager', 'fastify-swagger'],
   },
 });

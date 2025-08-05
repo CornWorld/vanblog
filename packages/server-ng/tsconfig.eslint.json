@@ -1,5 +1,12 @@
 {
   "extends": "./tsconfig.json",
-  "include": ["src/**/*", "test/**/*", "vite.config.mts", "vite-env.d.ts", "drizzle.config.ts"],
+  "include": [
+    "src/**/*",
+    "test/**/*",
+    "vite.config.mts",
+    "vite-env.d.ts",
+    "drizzle.config.ts",
+    "vitest.config.e2e.ts"
+  ],
   "exclude": ["node_modules", "dist", "coverage"]
 }
