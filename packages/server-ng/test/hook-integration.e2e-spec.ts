@@ -1,11 +1,14 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest';
 import { Test, type TestingModule } from '@nestjs/testing';
-import type { INestApplication } from '@nestjs/common';
+import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest';
+
 import { AppModule } from '../src/app.module';
-import { HookService } from '../src/modules/plugin/services/hook.service';
 import { ArticleService } from '../src/modules/article/article.service';
 import { DraftService } from '../src/modules/draft/draft.service';
+import { HookService } from '../src/modules/plugin/services/hook.service';
+
 import { cleanupDatabase } from './test-utils';
+
+import type { INestApplication } from '@nestjs/common';
 
 describe('Hook Integration (e2e)', () => {
   let app: INestApplication;

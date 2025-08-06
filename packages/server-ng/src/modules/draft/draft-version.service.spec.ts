@@ -1,8 +1,10 @@
-import { Test, type TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
-import { DraftVersionService } from './draft-version.service';
-import { DATABASE_CONNECTION } from '../../database/database.module';
+import { Test, type TestingModule } from '@nestjs/testing';
 import { vi, describe, beforeEach, it, expect } from 'vitest';
+
+import { DATABASE_CONNECTION } from '../../database/database.module';
+
+import { DraftVersionService } from './draft-version.service';
 
 describe('DraftVersionService', () => {
   let service: DraftVersionService;

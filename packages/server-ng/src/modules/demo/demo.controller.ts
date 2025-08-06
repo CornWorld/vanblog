@@ -1,10 +1,12 @@
 import { Controller, Post, Get, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
-import { DemoService } from './demo.service';
+
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { UserType } from '../user/dto/create-user.dto';
+
+import { DemoService } from './demo.service';
 
 @ApiTags('demo')
 @Controller('demo')
@@ -64,7 +66,7 @@ export class DemoController {
     success: boolean;
     message: string;
   }> {
-    return await this.demoService.manualRestore();
+    return this.demoService.manualRestore();
   }
 
   @Post('snapshot')

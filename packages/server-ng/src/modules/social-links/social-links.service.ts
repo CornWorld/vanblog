@@ -1,5 +1,7 @@
 import { Injectable } from '@nestjs/common';
+
 import { SettingRegistryService } from '../setting/services/setting-registry.service';
+
 import { SocialLinkDto } from './dto/social-link.dto';
 import { SocialLinkArraySchema, SocialLink } from './social-links.schema';
 

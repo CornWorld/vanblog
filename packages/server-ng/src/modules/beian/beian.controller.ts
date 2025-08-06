@@ -1,12 +1,14 @@
 import { Controller, Get, Put, Body, UseGuards } from '@nestjs/common';
-import { BeianService } from './beian.service';
-import { BeianInfoDto, BeianInfoSchema } from './dto/beian-info.dto';
-import { BeianInfo } from './beian.schema';
+import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { ZodValidationPipe } from 'nestjs-zod';
+
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { Permissions } from '../auth/permissions.decorator';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
-import { ZodValidationPipe } from 'nestjs-zod';
+
+import { BeianInfo } from './beian.schema';
+import { BeianService } from './beian.service';
+import { BeianInfoDto, BeianInfoSchema } from './dto/beian-info.dto';
 
 @ApiTags('beian')
 @Controller('api/admin/beian')

@@ -1,7 +1,9 @@
 import { Module, OnModuleInit } from '@nestjs/common';
+
+import { SettingModule } from '../setting/setting.module';
+
 import { RewardController } from './reward.controller';
 import { RewardService } from './reward.service';
-import { SettingModule } from '../setting/setting.module';
 
 @Module({
   imports: [SettingModule],

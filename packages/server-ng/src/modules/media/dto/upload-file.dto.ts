@@ -1,5 +1,5 @@
-import { z } from 'zod';
 import { createZodDto } from 'nestjs-zod';
+import { z } from 'zod';
 
 export const UploadFileSchema = z.object({
   file: z.any().describe('要上传的文件'),

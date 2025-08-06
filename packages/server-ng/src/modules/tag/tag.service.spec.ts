@@ -1,9 +1,11 @@
-import { Test, type TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
-import { TagService } from './tag.service';
+import { Test, type TestingModule } from '@nestjs/testing';
+import { vi, describe, beforeEach, it, expect } from 'vitest';
+
 import { DATABASE_CONNECTION } from '../../database/database.module';
 import { StatisticsService } from '../../shared/services/statistics.service';
-import { vi, describe, beforeEach, it, expect } from 'vitest';
+
+import { TagService } from './tag.service';
 
 describe('TagService', () => {
   let service: TagService;

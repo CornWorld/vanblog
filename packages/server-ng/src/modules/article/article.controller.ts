@@ -12,6 +12,10 @@ import {
   Headers,
 } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+
+import { ArticleStatsService } from '../analytics/services/article-stats.service';
+import { RequireAuth } from '../auth/auth.decorator';
+
 import { ArticleService } from './article.service';
 import {
   CreateArticleDto,
@@ -22,8 +26,6 @@ import {
   ArticleSearchResponseDto,
 } from './dto/article.dto';
 import { Article } from './entities/article.entity';
-import { RequireAuth } from '../auth/auth.decorator';
-import { ArticleStatsService } from '../analytics/services/article-stats.service';
 
 @ApiTags('articles')
 @Controller('api/v2/articles')

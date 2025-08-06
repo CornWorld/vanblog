@@ -1,16 +1,17 @@
-import { NestFactory } from '@nestjs/core';
 import { type INestApplication } from '@nestjs/common';
+import { NestFactory } from '@nestjs/core';
 import { SwaggerModule, DocumentBuilder, type OpenAPIObject } from '@nestjs/swagger';
+import compression from 'compression';
+import dayjs from 'dayjs';
+import helmet from 'helmet';
+
 import { AppModule } from './app.module';
 import { ConfigService } from './config';
-import { LoggerService } from './core/logger/logger.service';
 import { HttpExceptionFilter, AllExceptionsFilter } from './core/filters';
-import helmet from 'helmet';
-import compression from 'compression';
+import { LoggerService } from './core/logger/logger.service';
 // import { patchNestJsSwagger } from 'nestjs-zod'; // Not available in current version
 
 import 'dayjs/locale/zh-cn';
-import dayjs from 'dayjs';
 
 dayjs.locale('zh-cn'); // TODO dep on config
 

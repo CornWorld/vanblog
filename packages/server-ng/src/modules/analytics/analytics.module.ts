@@ -1,10 +1,12 @@
 import { Module } from '@nestjs/common';
+
 import { DatabaseModule } from '../../database/database.module';
+
 import { AnalyticsController } from './analytics.controller';
 import { AnalyticsService } from './services/analytics.service';
 import { ArticleStatsService } from './services/article-stats.service';
-import { ThirdPartyAnalyticsService } from './services/third-party-analytics.service';
 import { EchartsFormatterService } from './services/echarts-formatter.service';
+import { ThirdPartyAnalyticsService } from './services/third-party-analytics.service';
 
 @Module({
   imports: [DatabaseModule],

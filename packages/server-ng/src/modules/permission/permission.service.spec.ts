@@ -1,8 +1,10 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, beforeEach, afterEach, expect, vi } from 'vitest';
-import { PermissionService } from './permission.service';
+
 import { DATABASE_CONNECTION } from '../../database/database.module';
 import { PERMISSION_MODULES, PERMISSION_GROUPS } from '../../shared/types/permission';
+
+import { PermissionService } from './permission.service';
 
 type MockQueryBuilder = {
   from: () => MockQueryBuilder;

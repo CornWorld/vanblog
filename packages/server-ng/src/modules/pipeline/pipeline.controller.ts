@@ -12,12 +12,14 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
-import { PipelineService } from './services/pipeline.service';
-import { CreatePipelineDto, UpdatePipelineDto } from './dto';
-import { Pipeline } from './entities/pipeline.entity';
+
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { Permissions } from '../auth/permissions.decorator';
+
+import { CreatePipelineDto, UpdatePipelineDto } from './dto';
+import { Pipeline } from './entities/pipeline.entity';
+import { PipelineService } from './services/pipeline.service';
 
 @ApiTags('pipelines')
 @Controller('pipelines')

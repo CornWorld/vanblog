@@ -1,7 +1,9 @@
 import { Injectable } from '@nestjs/common';
+
 import { SettingRegistryService } from '../setting/services/setting-registry.service';
-import { BeianInfoDto } from './dto/beian-info.dto';
+
 import { BeianInfoSchema, BeianInfo } from './beian.schema';
+import { BeianInfoDto } from './dto/beian-info.dto';
 
 @Injectable()
 export class BeianService {

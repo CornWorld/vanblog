@@ -1,6 +1,8 @@
-import { describe, it, expect, beforeEach } from 'vitest';
 import { Test, type TestingModule } from '@nestjs/testing';
+import { describe, it, expect, beforeEach } from 'vitest';
+
 import { EchartsFormatterService } from './echarts-formatter.service';
+
 import type {
   AnalyticsChartDataDto,
   DeviceStatsDto,

@@ -1,12 +1,14 @@
 import { Controller, Get, Post, Delete, Body, Param, UseGuards } from '@nestjs/common';
-import { RewardService } from './reward.service';
-import { RewardInfoDto, RewardInfoSchema } from './dto/reward-info.dto';
-import { RewardInfo } from './reward.schema';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
+import { ZodValidationPipe } from 'nestjs-zod';
+
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { Permissions } from '../auth/permissions.decorator';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
-import { ZodValidationPipe } from 'nestjs-zod';
+
+import { RewardInfoDto, RewardInfoSchema } from './dto/reward-info.dto';
+import { RewardInfo } from './reward.schema';
+import { RewardService } from './reward.service';
 
 @ApiTags('reward')
 @Controller('api/admin/reward')

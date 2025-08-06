@@ -1,4 +1,5 @@
 import { createZodDto } from 'nestjs-zod';
+
 import { insertUserSchema } from '../../../database';
 
 export const CreateUserSchema = insertUserSchema.omit({

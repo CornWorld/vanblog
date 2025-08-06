@@ -1,10 +1,12 @@
-import { Test, type TestingModule } from '@nestjs/testing';
-import { describe, it, beforeEach, afterEach, expect, vi } from 'vitest';
 import { ConflictException, NotFoundException } from '@nestjs/common';
+import { Test, type TestingModule } from '@nestjs/testing';
 import * as bcrypt from 'bcrypt';
-import { UserService } from './user.service';
-import { type CreateUserDto } from './dto/create-user.dto';
+import { describe, it, beforeEach, afterEach, expect, vi } from 'vitest';
+
 import { users } from '../../database/schema';
+
+import { type CreateUserDto } from './dto/create-user.dto';
+import { UserService } from './user.service';
 
 // Mock bcrypt
 vi.mock('bcrypt');

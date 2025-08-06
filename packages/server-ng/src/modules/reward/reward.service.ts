@@ -1,5 +1,7 @@
 import { Injectable } from '@nestjs/common';
+
 import { SettingRegistryService } from '../setting/services/setting-registry.service';
+
 import { RewardInfoDto } from './dto/reward-info.dto';
 import { RewardInfoArraySchema, RewardInfo } from './reward.schema';
 

@@ -1,5 +1,5 @@
-import { z } from 'zod';
 import { createZodDto } from 'nestjs-zod';
+import { z } from 'zod';
 
 export const BeianInfoSchema = z.object({
   icp: z.string().optional().describe('ICP beian number'),

@@ -1,9 +1,12 @@
-import { Test, type TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
+import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { DemoService } from './demo.service';
-import { PipelineService } from '../pipeline/services/pipeline.service';
+
 import { DATABASE_CONNECTION } from '../../database';
+import { PipelineService } from '../pipeline/services/pipeline.service';
+
+import { DemoService } from './demo.service';
+
 import type { Database } from '../../database/connection';
 
 const mockDatabase = {

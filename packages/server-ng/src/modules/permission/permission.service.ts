@@ -1,14 +1,14 @@
 import { Injectable, NotFoundException, Logger, Inject } from '@nestjs/common';
 import { eq, desc, and } from 'drizzle-orm';
+
 import { DATABASE_CONNECTION } from '../../database/database.module';
-import type { Database } from '../../database/connection';
 import { permissionNodes, permissionGroups } from '../../database/schema';
 import {
-  CreatePermissionNodeType,
-  UpdatePermissionNodeType,
-  PermissionNodeQueryType,
-  PermissionNodeType,
-} from './dto/permission-node.dto';
+  LimitPermission,
+  PERMISSION_MODULES,
+  PERMISSION_GROUPS,
+} from '../../shared/types/permission';
+
 import {
   CreatePermissionGroupType,
   UpdatePermissionGroupType,
@@ -16,10 +16,13 @@ import {
   PermissionGroupType,
 } from './dto/permission-group.dto';
 import {
-  LimitPermission,
-  PERMISSION_MODULES,
-  PERMISSION_GROUPS,
-} from '../../shared/types/permission';
+  CreatePermissionNodeType,
+  UpdatePermissionNodeType,
+  PermissionNodeQueryType,
+  PermissionNodeType,
+} from './dto/permission-node.dto';
+
+import type { Database } from '../../database/connection';
 
 @Injectable()
 export class PermissionService {
@@ -127,7 +130,7 @@ export class PermissionService {
     }
 
     if (conditions.length === 0) {
-      return await this.db
+      return this.db
         .select()
         .from(permissionNodes)
         .orderBy(desc(permissionNodes.createdAt))
@@ -136,7 +139,7 @@ export class PermissionService {
     }
 
     if (conditions.length === 1) {
-      return await this.db
+      return this.db
         .select()
         .from(permissionNodes)
         .where(conditions[0])
@@ -145,7 +148,7 @@ export class PermissionService {
         .offset((query.page - 1) * query.limit);
     }
 
-    return await this.db
+    return this.db
       .select()
       .from(permissionNodes)
       .where(and(...conditions))

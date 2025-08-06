@@ -1,19 +1,21 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, beforeEach, afterEach, expect, vi } from 'vitest';
+
 import { PermissionController } from './permission.controller';
 import { PermissionService } from './permission.service';
-import type {
-  CreatePermissionNodeDto,
-  UpdatePermissionNodeDto,
-  PermissionNodeQueryDto,
-  PermissionNodeDto,
-} from './dto/permission-node.dto';
+
 import type {
   CreatePermissionGroupDto,
   UpdatePermissionGroupDto,
   PermissionGroupQueryDto,
   PermissionGroupDto,
 } from './dto/permission-group.dto';
+import type {
+  CreatePermissionNodeDto,
+  UpdatePermissionNodeDto,
+  PermissionNodeQueryDto,
+  PermissionNodeDto,
+} from './dto/permission-node.dto';
 
 describe('PermissionController', () => {
   let controller: PermissionController;

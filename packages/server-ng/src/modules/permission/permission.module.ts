@@ -1,7 +1,9 @@
 import { Module, OnModuleInit } from '@nestjs/common';
-import { PermissionService } from './permission.service';
-import { PermissionController } from './permission.controller';
+
 import { DatabaseModule } from '../../database/database.module';
+
+import { PermissionController } from './permission.controller';
+import { PermissionService } from './permission.service';
 
 @Module({
   imports: [DatabaseModule],

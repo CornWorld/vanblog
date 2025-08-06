@@ -2,8 +2,8 @@ import { Injectable, Logger, Inject, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Cron } from '@nestjs/schedule';
 import { eq, and } from 'drizzle-orm';
+
 import { DATABASE_CONNECTION } from '../../database';
-import type { Database } from '../../database/connection';
 import {
   articles,
   drafts,
@@ -16,6 +16,8 @@ import {
   analytics,
 } from '../../database/schema';
 import { PipelineService } from '../pipeline/services/pipeline.service';
+
+import type { Database } from '../../database/connection';
 
 export interface DemoSnapshot {
   timestamp: number;

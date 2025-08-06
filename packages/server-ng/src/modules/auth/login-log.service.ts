@@ -1,8 +1,11 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { eq, and, gte, lte, desc } from 'drizzle-orm';
-import { LoginLogDto, LoginLogResponseDto, LoginLogQueryDto } from './dto/login-log.dto';
-import { loginLogs } from '../../database/schema';
+
 import { DATABASE_CONNECTION } from '../../database';
+import { loginLogs } from '../../database/schema';
+
+import { LoginLogDto, LoginLogResponseDto, LoginLogQueryDto } from './dto/login-log.dto';
+
 import type { Database } from '../../database/connection';
 
 @Injectable()

@@ -1,7 +1,9 @@
 import { Module, OnModuleInit } from '@nestjs/common';
+
+import { SettingModule } from '../setting/setting.module';
+
 import { BeianController } from './beian.controller';
 import { BeianService } from './beian.service';
-import { SettingModule } from '../setting/setting.module';
 
 @Module({
   imports: [SettingModule],

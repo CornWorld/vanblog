@@ -1,7 +1,9 @@
 import { Module } from '@nestjs/common';
+
+import { DatabaseModule } from '../../database/database.module';
+
 import { PipelineController } from './pipeline.controller';
 import { PipelineService } from './services/pipeline.service';
-import { DatabaseModule } from '../../database/database.module';
 
 @Module({
   imports: [DatabaseModule],

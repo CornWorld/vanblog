@@ -21,19 +21,21 @@ import {
   ApiConsumes,
   ApiBody,
 } from '@nestjs/swagger';
+import { memoryStorage } from 'multer';
+import { ZodValidationPipe } from 'nestjs-zod';
+
+import { staticFiles } from '../../database/schema';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { Permissions } from '../auth/permissions.decorator';
-import { MediaService } from './services/media.service';
-import { ImageProcessingService } from './services/image-processing.service';
-import { StorageConfigService } from './services/storage-config.service';
+
+import { BatchDeleteDto, BatchDeleteSchema } from './dto/batch-delete.dto';
+import { ListStaticFilesDto } from './dto/list-static-files.dto';
 import { UpdateStorageConfigDto, StorageConfigResponseDto } from './dto/storage-config.dto';
 import { UploadFileDto, UploadFile } from './dto/upload-file.dto';
-import { ListStaticFilesDto } from './dto/list-static-files.dto';
-import { BatchDeleteDto, BatchDeleteSchema } from './dto/batch-delete.dto';
-import { ZodValidationPipe } from 'nestjs-zod';
-import { memoryStorage } from 'multer';
-import { staticFiles } from '../../database/schema';
+import { ImageProcessingService } from './services/image-processing.service';
+import { MediaService } from './services/media.service';
+import { StorageConfigService } from './services/storage-config.service';
 
 interface WatermarkBody {
   watermarkText?: string;

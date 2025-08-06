@@ -1,9 +1,11 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { StorageService, UploadResult } from '../../interfaces/storage.interface';
-import { PicGo } from 'picgo';
+import { createHash } from 'crypto';
 import { promises as fsPromises } from 'fs';
 import { join } from 'path';
-import { createHash } from 'crypto';
+
+import { Injectable, Logger } from '@nestjs/common';
+import { PicGo } from 'picgo';
+
+import { StorageService, UploadResult } from '../../interfaces/storage.interface';
 
 @Injectable()
 export class PicgoStorageService implements StorageService {

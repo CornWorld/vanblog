@@ -9,11 +9,13 @@ import {
   HttpException,
   HttpStatus,
 } from '@nestjs/common';
-import { SettingRegistryService } from './services/setting-registry.service';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
+
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { Permissions } from '../auth/permissions.decorator';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
+
+import { SettingRegistryService } from './services/setting-registry.service';
 
 @ApiTags('config')
 @Controller('api/admin/config')

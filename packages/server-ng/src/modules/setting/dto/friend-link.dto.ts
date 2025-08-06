@@ -1,5 +1,6 @@
-import { z } from 'zod';
 import { createZodDto } from 'nestjs-zod';
+import { z } from 'zod';
+
 import { commonSchemas } from '../../../shared/zod';
 
 export const CreateFriendLinkSchema = z.object({

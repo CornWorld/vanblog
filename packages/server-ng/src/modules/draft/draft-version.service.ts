@@ -1,10 +1,13 @@
 import { Injectable, NotFoundException, Inject } from '@nestjs/common';
 import { eq, and, desc, sql } from 'drizzle-orm';
-import { draftVersions, drafts } from '../../database/schema';
+
 import { DATABASE_CONNECTION } from '../../database';
-import type { Database } from '../../database/connection';
-import { DraftVersion } from './entities/draft.entity';
+import { draftVersions, drafts } from '../../database/schema';
 import { safeParseJson, dataSchemas } from '../../shared/zod';
+
+import { DraftVersion } from './entities/draft.entity';
+
+import type { Database } from '../../database/connection';
 
 @Injectable()
 export class DraftVersionService {

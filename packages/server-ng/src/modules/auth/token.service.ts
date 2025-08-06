@@ -1,9 +1,11 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import { UserService } from '../user/user.service';
-import { JwtPayload } from './strategies/jwt.strategy';
+import { JwtService } from '@nestjs/jwt';
+
 import { User } from '../user/entities/user.entity';
+import { UserService } from '../user/user.service';
+
+import { JwtPayload } from './strategies/jwt.strategy';
 
 export interface TokenPair {
   accessToken: string;

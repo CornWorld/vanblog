@@ -1,8 +1,10 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { eq } from 'drizzle-orm';
+
 import { DATABASE_CONNECTION } from './database.module';
-import type { Database } from './connection';
 import { users } from './schema';
+
+import type { Database } from './connection';
 
 /**
  * Example repository showing how to use Drizzle ORM with dependency injection

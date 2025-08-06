@@ -1,8 +1,10 @@
+import { NotFoundException } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, beforeEach, expect, vi } from 'vitest';
-import { PipelineService } from './pipeline.service';
+
 import { DATABASE_CONNECTION } from '../../../database';
-import { NotFoundException } from '@nestjs/common';
+
+import { PipelineService } from './pipeline.service';
 
 type MockDatabase = {
   select: ReturnType<typeof vi.fn>;

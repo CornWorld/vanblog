@@ -1,5 +1,11 @@
 import { Test, type TestingModule } from '@nestjs/testing';
+import { eq, and } from 'drizzle-orm';
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
+
+import { ConfigService } from '../../../config/config.service';
+import { DATABASE_CONNECTION, type Database } from '../../../database';
+import { pluginData } from '../../../database/schema';
+
 import {
   PluginContextFactory,
   PluginDataStorageService,
@@ -7,10 +13,7 @@ import {
   PluginLoggerService,
   PluginContextService,
 } from './plugin-context.service';
-import { ConfigService } from '../../../config/config.service';
-import { DATABASE_CONNECTION, type Database } from '../../../database';
-import { eq, and } from 'drizzle-orm';
-import { pluginData } from '../../../database/schema';
+
 interface MockDatabase {
   select: ReturnType<typeof vi.fn>;
   from: ReturnType<typeof vi.fn>;

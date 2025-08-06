@@ -1,7 +1,8 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { Test, type TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
+import { Test, type TestingModule } from '@nestjs/testing';
 import axios from 'axios';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+
 import { ThirdPartyAnalyticsService } from './third-party-analytics.service';
 
 vi.mock('axios');

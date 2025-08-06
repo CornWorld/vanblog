@@ -1,9 +1,11 @@
-import { Test, type TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
-import { CategoryService } from './category.service';
+import { Test, type TestingModule } from '@nestjs/testing';
+import { vi, describe, beforeEach, it, expect } from 'vitest';
+
 import { DATABASE_CONNECTION } from '../../database/database.module';
 import { StatisticsService } from '../../shared/services/statistics.service';
-import { vi, describe, beforeEach, it, expect } from 'vitest';
+
+import { CategoryService } from './category.service';
 
 describe('CategoryService', () => {
   let service: CategoryService;

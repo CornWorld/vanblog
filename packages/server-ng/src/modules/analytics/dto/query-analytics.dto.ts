@@ -1,5 +1,6 @@
-import { z } from 'zod';
 import { createZodDto } from 'nestjs-zod';
+import { z } from 'zod';
+
 import { AnalyticsType } from '../entities/analytics.entity';
 
 export const QueryAnalyticsSchema = z.object({

@@ -1,7 +1,9 @@
 import { type ArgumentsHost, HttpException, HttpStatus } from '@nestjs/common';
-import { HttpExceptionFilter } from './http-exception.filter';
-import type { LoggerService } from '../logger/logger.service';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+import { HttpExceptionFilter } from './http-exception.filter';
+
+import type { LoggerService } from '../logger/logger.service';
 
 describe('HttpExceptionFilter', () => {
   let filter: HttpExceptionFilter;

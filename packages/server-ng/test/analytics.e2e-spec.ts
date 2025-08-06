@@ -1,11 +1,14 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { Test, type TestingModule } from '@nestjs/testing';
 import { type INestApplication, ValidationPipe } from '@nestjs/common';
+import { Test, type TestingModule } from '@nestjs/testing';
 import request from 'supertest';
-import type { Server } from 'http';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+
 import { AppModule } from '../src/app.module';
 import { AnalyticsType } from '../src/modules/analytics/entities/analytics.entity';
+
 import { createUser, cleanupDatabase, createAuthToken } from './test-utils';
+
+import type { Server } from 'http';
 
 describe('AnalyticsController (e2e)', () => {
   let app: INestApplication;

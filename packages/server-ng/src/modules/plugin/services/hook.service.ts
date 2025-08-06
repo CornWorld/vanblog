@@ -1,4 +1,7 @@
+import { randomUUID } from 'crypto';
+
 import { Injectable, Logger } from '@nestjs/common';
+
 import {
   HookService as IHookService,
   ActionCallback,
@@ -6,7 +9,6 @@ import {
   ActionRegistration,
   FilterRegistration,
 } from '../interfaces/hook.interface';
-import { randomUUID } from 'crypto';
 
 @Injectable()
 export class HookService implements IHookService {

@@ -1,4 +1,5 @@
 import { Module, Global } from '@nestjs/common';
+
 import { HookService } from './services/hook.service';
 import { PluginContextFactory } from './services/plugin-context.service';
 

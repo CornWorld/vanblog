@@ -1,12 +1,13 @@
-import { z } from 'zod';
 import { createZodDto } from 'nestjs-zod';
-import { commonSchemas } from '../../../shared/zod';
+import { z } from 'zod';
+
 import {
   selectDraftSchema,
   insertDraftSchema,
   updateDraftSchema,
   selectDraftVersionSchema,
 } from '../../../database';
+import { commonSchemas } from '../../../shared/zod';
 
 // 基础草稿 Schema - 使用 drizzle-zod 生成的 schema
 export const DraftSchema = selectDraftSchema;

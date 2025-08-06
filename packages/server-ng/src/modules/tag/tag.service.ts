@@ -1,12 +1,15 @@
 import { Injectable, NotFoundException, Inject } from '@nestjs/common';
 import { eq, sql, like } from 'drizzle-orm';
-import { CreateTagDto, UpdateTagDto, TagListResponseDto } from './dto/tag.dto';
-import { tags, articles } from '../../database/schema';
+
 import { DATABASE_CONNECTION } from '../../database';
-import type { Database } from '../../database/connection';
-import { Tag } from './entities/tag.entity';
-import { StatisticsService } from '../../shared/services/statistics.service';
+import { tags, articles } from '../../database/schema';
 import { OverallStatisticsDto } from '../../shared/dto/statistics.dto';
+import { StatisticsService } from '../../shared/services/statistics.service';
+
+import { CreateTagDto, UpdateTagDto, TagListResponseDto } from './dto/tag.dto';
+import { Tag } from './entities/tag.entity';
+
+import type { Database } from '../../database/connection';
 
 @Injectable()
 export class TagService {

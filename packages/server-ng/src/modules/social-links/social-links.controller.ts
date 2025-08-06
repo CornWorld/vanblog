@@ -1,12 +1,14 @@
 import { Controller, Get, Post, Delete, Body, Param, UseGuards } from '@nestjs/common';
-import { SocialLinksService } from './social-links.service';
-import { SocialLinkDto, SocialLinkSchema } from './dto/social-link.dto';
-import { SocialLink } from './social-links.schema';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
+import { ZodValidationPipe } from 'nestjs-zod';
+
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { Permissions } from '../auth/permissions.decorator';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
-import { ZodValidationPipe } from 'nestjs-zod';
+
+import { SocialLinkDto, SocialLinkSchema } from './dto/social-link.dto';
+import { SocialLink } from './social-links.schema';
+import { SocialLinksService } from './social-links.service';
 
 @ApiTags('social-links')
 @Controller('api/admin/social-links')

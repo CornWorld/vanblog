@@ -1,12 +1,14 @@
 import { Injectable, Inject, NotFoundException, BadRequestException } from '@nestjs/common';
-import { DATABASE_CONNECTION } from '../../../database/database.module';
-import { LibSQLDatabase } from 'drizzle-orm/libsql';
 import { eq, like, and, desc, sql, inArray } from 'drizzle-orm';
+import { LibSQLDatabase } from 'drizzle-orm/libsql';
+import sharp from 'sharp';
+
+import { DATABASE_CONNECTION } from '../../../database/database.module';
 import { staticFiles } from '../../../database/schema';
 import { ListStaticFilesDto } from '../dto/list-static-files.dto';
-import { StorageFactoryService } from './storage-factory.service';
-import sharp from 'sharp';
 import { StorageProvider } from '../dto/storage-config.dto';
+
+import { StorageFactoryService } from './storage-factory.service';
 
 @Injectable()
 export class MediaService {

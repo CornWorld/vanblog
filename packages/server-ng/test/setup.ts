@@ -2,10 +2,11 @@
 // This file is automatically loaded before tests run
 
 import { randomUUID } from 'crypto';
-import { createClient } from '@libsql/client';
-import { drizzle } from 'drizzle-orm/libsql';
 import { readFileSync, mkdirSync, existsSync } from 'fs';
 import { join } from 'path';
+
+import { createClient } from '@libsql/client';
+import { drizzle } from 'drizzle-orm/libsql';
 
 // Set up test-specific database configuration
 const testId = randomUUID();

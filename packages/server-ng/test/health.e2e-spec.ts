@@ -1,9 +1,11 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { Test, type TestingModule } from '@nestjs/testing';
 import { type INestApplication } from '@nestjs/common';
+import { Test, type TestingModule } from '@nestjs/testing';
 import request from 'supertest';
-import type { Server } from 'http';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+
 import { AppModule } from '../src/app.module';
+
+import type { Server } from 'http';
 
 describe('HealthController (e2e)', () => {
   let app: INestApplication;

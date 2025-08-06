@@ -1,8 +1,11 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { Test, type TestingModule } from '@nestjs/testing';
-import { AnalyticsService } from './services/analytics.service';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+
 import { DATABASE_CONNECTION } from '../../database/database.module';
+
 import { AnalyticsType } from './entities/analytics.entity';
+import { AnalyticsService } from './services/analytics.service';
+
 import type { RecordAnalyticsDto } from './dto/record-analytics.dto';
 
 describe('AnalyticsService', () => {

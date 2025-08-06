@@ -12,7 +12,11 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 
-import { PermissionService } from './permission.service';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/roles.decorator';
+import { UserType } from '../user/dto/create-user.dto';
+
 import {
   CreatePermissionNodeDto,
   UpdatePermissionNodeDto,
@@ -23,10 +27,7 @@ import {
   PermissionGroupQueryDto,
   PermissionGroupDto,
 } from './dto';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/roles.decorator';
-import { UserType } from '../user/dto/create-user.dto';
+import { PermissionService } from './permission.service';
 
 @ApiTags('permissions')
 @Controller('permissions')

@@ -1,10 +1,12 @@
 import { Body, Controller, Delete, Get, Param, Post, Put, ParseIntPipe } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { TagService } from './tag.service';
-import { CreateTagDto, UpdateTagDto, TagListResponseDto } from './dto/tag.dto';
-import { Tag } from './entities/tag.entity';
+
 import { OverallStatisticsDto } from '../../shared/dto/statistics.dto';
 import { RequireAuth } from '../auth/auth.decorator';
+
+import { CreateTagDto, UpdateTagDto, TagListResponseDto } from './dto/tag.dto';
+import { Tag } from './entities/tag.entity';
+import { TagService } from './tag.service';
 
 @ApiTags('tags')
 @Controller('api/v2/tags')

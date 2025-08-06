@@ -1,9 +1,11 @@
 import { Injectable } from '@nestjs/common';
+
+import { StorageProvider } from '../dto/storage-config.dto';
 import { StorageService } from '../interfaces/storage.interface';
+
 import { StorageConfigService } from './storage-config.service';
 import { LocalStorageService } from './storages/local-storage.service';
 import { PicgoStorageService } from './storages/picgo-storage.service';
-import { StorageProvider } from '../dto/storage-config.dto';
 
 @Injectable()
 export class StorageFactoryService {

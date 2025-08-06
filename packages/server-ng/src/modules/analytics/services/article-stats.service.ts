@@ -1,8 +1,9 @@
 import { Injectable, Inject } from '@nestjs/common';
-import { DATABASE_CONNECTION } from '../../../database/database.module';
-import { LibSQLDatabase } from 'drizzle-orm/libsql';
-import { analytics, articles } from '../../../database/schema';
 import { eq, and, sql, desc } from 'drizzle-orm';
+import { LibSQLDatabase } from 'drizzle-orm/libsql';
+
+import { DATABASE_CONNECTION } from '../../../database/database.module';
+import { analytics, articles } from '../../../database/schema';
 import { AnalyticsType } from '../entities/analytics.entity';
 
 export interface ArticleStats {

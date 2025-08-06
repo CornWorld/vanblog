@@ -1,7 +1,9 @@
 import { Module } from '@nestjs/common';
+
+import { SharedModule } from '../../shared/shared.module';
+
 import { CategoryController } from './category.controller';
 import { CategoryService } from './category.service';
-import { SharedModule } from '../../shared/shared.module';
 
 @Module({
   imports: [SharedModule],

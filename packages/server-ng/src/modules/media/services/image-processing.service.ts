@@ -1,6 +1,7 @@
+import { promises as fsPromises } from 'fs';
+
 import { Injectable } from '@nestjs/common';
 import sharp from 'sharp';
-import { promises as fsPromises } from 'fs';
 
 export interface ImageProcessingOptions {
   quality?: number;

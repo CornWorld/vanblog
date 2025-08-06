@@ -1,8 +1,9 @@
-import { Test, type TestingModule } from '@nestjs/testing';
 import {
   ConfigModule as NestConfigModule,
   type ConfigService as NestConfigService,
 } from '@nestjs/config';
+import { Test, type TestingModule } from '@nestjs/testing';
+
 import { ConfigService } from './config.service';
 import databaseConfig from './database.config';
 

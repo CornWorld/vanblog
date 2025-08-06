@@ -10,6 +10,11 @@ import {
   ParseIntPipe,
 } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+
+import { Article } from '../article/entities/article.entity';
+import { RequireAuth } from '../auth/auth.decorator';
+
+import { DraftVersionService } from './draft-version.service';
 import { DraftService } from './draft.service';
 import {
   DraftDto,
@@ -21,9 +26,6 @@ import {
   DraftVersionDto,
   DraftVersionListResponseDto,
 } from './dto/draft.dto';
-import { Article } from '../article/entities/article.entity';
-import { RequireAuth } from '../auth/auth.decorator';
-import { DraftVersionService } from './draft-version.service';
 
 @ApiTags('drafts')
 @Controller('api/v2/drafts')

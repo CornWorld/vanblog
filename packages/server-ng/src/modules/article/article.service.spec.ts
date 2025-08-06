@@ -1,11 +1,14 @@
-import { Test, type TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
-import { ArticleService } from './article.service';
+import { Test, type TestingModule } from '@nestjs/testing';
+import { vi, describe, beforeEach, it, expect } from 'vitest';
+
+import { DATABASE_CONNECTION } from '../../database/database.module';
 import { PipelineService } from '../pipeline/services/pipeline.service';
 import { HookService } from '../plugin/services/hook.service';
-import { DATABASE_CONNECTION } from '../../database/database.module';
+
+import { ArticleService } from './article.service';
+
 import type { ArticleSearchDto } from './dto/article.dto';
-import { vi, describe, beforeEach, it, expect } from 'vitest';
 
 describe('ArticleService', () => {
   let service: ArticleService;

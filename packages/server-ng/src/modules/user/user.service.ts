@@ -1,13 +1,16 @@
 import { Injectable, NotFoundException, ConflictException, Inject } from '@nestjs/common';
-import { eq, ne } from 'drizzle-orm';
 import * as bcrypt from 'bcrypt';
+import { eq, ne } from 'drizzle-orm';
+
+import { users } from '../../database/schema';
+import { safeParseJson, dataSchemas } from '../../shared/zod';
+
 import { CreateUserDto, UserType } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { User } from './entities/user.entity';
-import { users } from '../../database/schema';
+
 import type { Database } from '../../database/connection';
 import type { Permission } from '../../shared/types/permission.type';
-import { safeParseJson, dataSchemas } from '../../shared/zod';
 
 @Injectable()
 export class UserService {

@@ -1,7 +1,9 @@
-import { Injectable } from '@nestjs/common';
-import { StorageService, UploadResult } from '../../interfaces/storage.interface';
 import { promises as fsPromises } from 'fs';
 import { join } from 'path';
+
+import { Injectable } from '@nestjs/common';
+
+import { StorageService, UploadResult } from '../../interfaces/storage.interface';
 
 @Injectable()
 export class LocalStorageService implements StorageService {

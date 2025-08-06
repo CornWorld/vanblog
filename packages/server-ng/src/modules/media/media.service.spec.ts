@@ -1,9 +1,11 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { MediaService } from './services/media.service';
-import type { LibSQLDatabase } from 'drizzle-orm/libsql';
-import type { StorageFactoryService } from './services/storage-factory.service';
-import type { StorageService, UploadResult } from './interfaces/storage.interface';
+
 import { StorageProvider } from './dto/storage-config.dto';
+import { MediaService } from './services/media.service';
+
+import type { StorageService, UploadResult } from './interfaces/storage.interface';
+import type { StorageFactoryService } from './services/storage-factory.service';
+import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 
 vi.mock('sharp', () => ({
   default: vi.fn(() => ({

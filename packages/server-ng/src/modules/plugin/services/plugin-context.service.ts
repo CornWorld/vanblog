@@ -1,8 +1,8 @@
 import { Injectable, Logger, Inject } from '@nestjs/common';
+import { eq, and } from 'drizzle-orm';
+
 import { ConfigService } from '../../../config/config.service';
 import { DATABASE_CONNECTION } from '../../../database';
-import type { Database } from '../../../database/connection';
-import { eq, and } from 'drizzle-orm';
 import { pluginData } from '../../../database/schema';
 import {
   PluginContext,
@@ -11,6 +11,8 @@ import {
   PluginConfigReader,
   PluginLogger,
 } from '../interfaces/plugin-context.interface';
+
+import type { Database } from '../../../database/connection';
 
 @Injectable()
 export class PluginDataStorageService implements PluginDataStorage {
@@ -165,12 +167,12 @@ export class PluginConfigReaderService implements PluginConfigReader {
     return value as T;
   }
 
-  getOrThrow<T = unknown>(key: string): T {
+  getOrThrow(key: string): unknown {
     const value = this.get(key);
     if (value === undefined) {
       throw new Error(`Plugin configuration key '${key}' is required but not found`);
     }
-    return value as T;
+    return value;
   }
 
   has(key: string): boolean {

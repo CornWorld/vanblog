@@ -1,5 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+
 import { UserType } from '../dto/create-user.dto';
+
 import type { Permission } from '../../../shared/types/permission.type';
 
 export class User {

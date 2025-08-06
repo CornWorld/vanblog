@@ -9,6 +9,24 @@ import {
   UseGuards,
   ParseIntPipe,
 } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { ZodValidationPipe } from 'nestjs-zod';
+
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { PermissionsGuard } from '../auth/guards/permissions.guard';
+import { Permissions } from '../auth/permissions.decorator';
+
+import { UpdateCustomCodeDto, UpdateCustomCodeSchema } from './dto/custom-code.dto';
+import {
+  CreateFriendLinkDto,
+  UpdateFriendLinkDto,
+  CreateFriendLinkSchema,
+  UpdateFriendLinkSchema,
+} from './dto/friend-link.dto';
+import { UpdateNavigationDto, UpdateNavigationSchema } from './dto/navigation.dto';
+import { UpdateLayoutDto, UpdateLayoutSchema } from './dto/update-layout.dto';
+import { UpdateSiteInfoDto, UpdateSiteInfoSchema } from './dto/update-site-info.dto';
+import { UpdateThemeDto, UpdateThemeSchema } from './dto/update-theme.dto';
 import {
   SettingCoreService,
   SiteInfo,
@@ -18,22 +36,6 @@ import {
   Navigation,
   CustomCode,
 } from './services/setting-core.service';
-import { UpdateSiteInfoDto, UpdateSiteInfoSchema } from './dto/update-site-info.dto';
-import { UpdateLayoutDto, UpdateLayoutSchema } from './dto/update-layout.dto';
-import { UpdateThemeDto, UpdateThemeSchema } from './dto/update-theme.dto';
-import {
-  CreateFriendLinkDto,
-  UpdateFriendLinkDto,
-  CreateFriendLinkSchema,
-  UpdateFriendLinkSchema,
-} from './dto/friend-link.dto';
-import { UpdateNavigationDto, UpdateNavigationSchema } from './dto/navigation.dto';
-import { UpdateCustomCodeDto, UpdateCustomCodeSchema } from './dto/custom-code.dto';
-import { ZodValidationPipe } from 'nestjs-zod';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { PermissionsGuard } from '../auth/guards/permissions.guard';
-import { Permissions } from '../auth/permissions.decorator';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 
 @ApiTags('settings')
 @Controller('api/admin/settings')

@@ -1,7 +1,9 @@
 import { Module, OnModuleInit } from '@nestjs/common';
+
+import { SettingModule } from '../setting/setting.module';
+
 import { SocialLinksController } from './social-links.controller';
 import { SocialLinksService } from './social-links.service';
-import { SettingModule } from '../setting/setting.module';
 
 @Module({
   imports: [SettingModule],

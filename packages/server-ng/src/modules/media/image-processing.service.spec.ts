@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+
 import { ImageProcessingService } from './services/image-processing.service';
 
 const mockSharp = {

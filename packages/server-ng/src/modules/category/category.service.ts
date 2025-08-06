@@ -1,21 +1,24 @@
 import { Injectable, NotFoundException, Inject } from '@nestjs/common';
+import * as bcrypt from 'bcrypt';
 import { eq, sql } from 'drizzle-orm';
+import * as jwt from 'jsonwebtoken';
+
+import { DATABASE_CONNECTION } from '../../database';
+import { categories, articles } from '../../database/schema';
+import { OverallStatisticsDto } from '../../shared/dto/statistics.dto';
+import { StatisticsService } from '../../shared/services/statistics.service';
+import { safeParseJson, dataSchemas } from '../../shared/zod';
+
 import {
   CreateCategoryDto,
   UpdateCategoryDto,
   CategoryListResponseDto,
   CategoryWithCountDto,
 } from './dto/category.dto';
-import { categories, articles } from '../../database/schema';
-import { DATABASE_CONNECTION } from '../../database';
-import type { Database } from '../../database/connection';
-import { Category } from './entities/category.entity';
-import { StatisticsService } from '../../shared/services/statistics.service';
-import { OverallStatisticsDto } from '../../shared/dto/statistics.dto';
 import { CategoryAccessResponseDto } from './dto/verify-password.dto';
-import * as bcrypt from 'bcrypt';
-import * as jwt from 'jsonwebtoken';
-import { safeParseJson, dataSchemas } from '../../shared/zod';
+import { Category } from './entities/category.entity';
+
+import type { Database } from '../../database/connection';
 
 @Injectable()
 export class CategoryService {

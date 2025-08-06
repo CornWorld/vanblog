@@ -1,5 +1,5 @@
-import { z } from 'zod';
 import { createZodDto } from 'nestjs-zod';
+import { z } from 'zod';
 
 export const LoginSchema = z.object({
   username: z.string().min(1, 'Username is required'),

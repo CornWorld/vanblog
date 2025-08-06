@@ -1,7 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Test, type TestingModule } from '@nestjs/testing';
-import { LoggerService } from './logger.service';
+
 import { ConfigService } from '../../config/config.service';
+
+import { LoggerService } from './logger.service';
 
 describe('LoggerService', () => {
   let service: LoggerService;

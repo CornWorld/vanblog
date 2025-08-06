@@ -1,5 +1,5 @@
-import { z } from 'zod';
 import { createZodDto } from 'nestjs-zod';
+import { z } from 'zod';
 
 export const UpdateCustomCodeSchema = z.object({
   head: z.string().optional().describe('Custom code to inject in <head> tag'),

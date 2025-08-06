@@ -1,19 +1,20 @@
+import { UnauthorizedException } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
+import { Test, type TestingModule } from '@nestjs/testing';
+import * as bcrypt from 'bcrypt';
 import { vi } from 'vitest';
+
+import { UserType } from '../user/dto';
+import { User } from '../user/entities/user.entity';
+import { UserService } from '../user/user.service';
+
+import { AuthService } from './auth.service';
 
 // Mock bcrypt before any imports that use it
 vi.mock('bcrypt', () => ({
   compare: vi.fn().mockResolvedValue(true),
   hash: vi.fn().mockResolvedValue('hashedPassword'),
 }));
-
-import { Test, type TestingModule } from '@nestjs/testing';
-import { JwtService } from '@nestjs/jwt';
-import { UnauthorizedException } from '@nestjs/common';
-import { AuthService } from './auth.service';
-import { UserService } from '../user/user.service';
-import * as bcrypt from 'bcrypt';
-import { User } from '../user/entities/user.entity';
-import { UserType } from '../user/dto';
 
 // Remove the problematic mock variable
 

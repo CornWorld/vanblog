@@ -1,10 +1,12 @@
-import type { INestApplication } from '@nestjs/common';
+import { hash } from 'bcrypt';
 import request from 'supertest';
-import type { Server } from 'http';
+
 import { DATABASE_CONNECTION } from '../src/database/database.module';
 import { users } from '../src/database/schema';
+
+import type { INestApplication } from '@nestjs/common';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
-import { hash } from 'bcrypt';
+import type { Server } from 'http';
 
 interface LoginResponse {
   token: string;

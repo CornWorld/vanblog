@@ -1,7 +1,8 @@
 import { Global, Module, DynamicModule } from '@nestjs/common';
 import { ConfigModule as NestConfigModule, ConfigFactory } from '@nestjs/config';
-import { ConfigService } from './config.service';
+
 import { validateConfig } from './config.schema';
+import { ConfigService } from './config.service';
 import databaseConfig from './database.config';
 
 @Global()

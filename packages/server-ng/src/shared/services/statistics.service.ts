@@ -1,13 +1,15 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { eq, sql, like } from 'drizzle-orm';
+
 import { DATABASE_CONNECTION } from '../../database/database.module';
-import type { Database } from '../../database/connection';
 import { categories, tags, articles } from '../../database/schema';
 import {
   CategoryStatisticsDto,
   TagStatisticsDto,
   OverallStatisticsDto,
 } from '../dto/statistics.dto';
+
+import type { Database } from '../../database/connection';
 
 @Injectable()
 export class StatisticsService {

@@ -1,5 +1,10 @@
 import { Body, Controller, Delete, Get, Param, Post, Put, ParseIntPipe } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ZodValidationPipe } from 'nestjs-zod';
+
+import { OverallStatisticsDto } from '../../shared/dto/statistics.dto';
+import { RequireAuth } from '../auth/auth.decorator';
+
 import { CategoryService } from './category.service';
 import {
   CategoryDto,
@@ -7,16 +12,13 @@ import {
   UpdateCategoryDto,
   CategoryListResponseDto,
 } from './dto/category.dto';
-import { Category } from './entities/category.entity';
-import { OverallStatisticsDto } from '../../shared/dto/statistics.dto';
 import {
   VerifyCategoryPasswordDto,
   CategoryAccessResponseDto,
   CategoryAccessResponse,
   VerifyCategoryPasswordSchema,
 } from './dto/verify-password.dto';
-import { ZodValidationPipe } from 'nestjs-zod';
-import { RequireAuth } from '../auth/auth.decorator';
+import { Category } from './entities/category.entity';
 
 @ApiTags('categories')
 @Controller('api/v2/categories')

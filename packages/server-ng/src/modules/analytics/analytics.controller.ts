@@ -13,16 +13,11 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { ZodValidationPipe } from 'nestjs-zod';
+
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { Permissions } from '../auth/permissions.decorator';
-import { AnalyticsService } from './services/analytics.service';
-import { ArticleStatsService, ArticleStats } from './services/article-stats.service';
-import { ThirdPartyAnalyticsService } from './services/third-party-analytics.service';
-import { EchartsFormatterService, EchartsOption } from './services/echarts-formatter.service';
-import { RecordAnalyticsDto, RecordAnalyticsSchema } from './dto/record-analytics.dto';
-import { QueryAnalyticsDto } from './dto/query-analytics.dto';
-import { AnalyticsType } from './entities/analytics.entity';
+
 import {
   AnalyticsOverviewDto,
   PageRankingDto,
@@ -31,6 +26,13 @@ import {
   DeviceStatsDto,
   BrowserStatsDto,
 } from './dto/analytics-response.dto';
+import { QueryAnalyticsDto } from './dto/query-analytics.dto';
+import { RecordAnalyticsDto, RecordAnalyticsSchema } from './dto/record-analytics.dto';
+import { AnalyticsType } from './entities/analytics.entity';
+import { AnalyticsService } from './services/analytics.service';
+import { ArticleStatsService, ArticleStats } from './services/article-stats.service';
+import { EchartsFormatterService, EchartsOption } from './services/echarts-formatter.service';
+import { ThirdPartyAnalyticsService } from './services/third-party-analytics.service';
 
 @ApiTags('数据分析')
 @Controller('api/v2')

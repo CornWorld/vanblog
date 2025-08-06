@@ -1,5 +1,5 @@
-import { z } from 'zod';
 import { createZodDto } from 'nestjs-zod';
+import { z } from 'zod';
 
 export const UpdateLayoutSchema = z.object({
   showRecentPosts: z.boolean().describe('是否显示最近文章'),
