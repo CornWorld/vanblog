@@ -15,6 +15,7 @@ import { Article } from '../article/entities/article.entity';
 import { DraftVersionService } from './draft-version.service';
 import { safeParseJson, dataSchemas } from '../../shared/zod';
 import { PipelineService } from '../pipeline/services/pipeline.service';
+import { HookService } from '../plugin/services/hook.service';
 
 @Injectable()
 export class DraftService {
@@ -25,6 +26,7 @@ export class DraftService {
     private readonly db: Database,
     private readonly draftVersionService: DraftVersionService,
     private readonly pipelineService: PipelineService,
+    private readonly hookService: HookService,
   ) {}
 
   async findAll(query: DraftQueryDto): Promise<DraftListResponseDto> {
@@ -104,30 +106,46 @@ export class DraftService {
   async create(createDraftDto: CreateDraftDto): Promise<Draft> {
     const { tags, ...rest } = createDraftDto;
 
-    const result = await this.db
-      .insert(drafts)
-      .values({
-        title: rest.title,
-        content: rest.content,
-        pathname: null, // pathname not available in CreateDraftDto
-        tags: JSON.stringify(tags),
-        category: null, // Use first category from categories array if available
-        author: 'admin', // Default author since not in CreateDraftDto
-      })
-      .returning();
+    let draftData = {
+      title: rest.title,
+      content: rest.content,
+      pathname: null, // pathname not available in CreateDraftDto
+      tags: JSON.stringify(tags),
+      category: null, // Use first category from categories array if available
+      author: 'admin', // Default author since not in CreateDraftDto
+    };
+
+    // Trigger beforeCreateDraft hook (new hook system)
+    try {
+      draftData = await this.hookService.applyFilters('beforeCreateDraft', draftData, {
+        action: 'create',
+      });
+    } catch (error) {
+      this.logger.error('Error in beforeCreateDraft hook:', error);
+    }
+
+    const result = await this.db.insert(drafts).values(draftData).returning();
 
     if (!result.length) {
       throw new Error('Failed to create draft');
     }
 
     const newDraft = result[0];
-
-    return new Draft({
+    const draftResult = new Draft({
       ...newDraft,
       tags: safeParseJson(newDraft.tags, dataSchemas.tagsArray) ?? [],
       pathname: newDraft.pathname,
       category: newDraft.category,
     });
+
+    // Trigger afterCreateDraft hook (new hook system)
+    try {
+      await this.hookService.doAction('afterCreateDraft', draftResult, { action: 'create' });
+    } catch (error) {
+      this.logger.error('Error in afterCreateDraft hook:', error);
+    }
+
+    return draftResult;
   }
 
   async update(id: number, updateDraftDto: UpdateDraftDto): Promise<Draft> {
@@ -163,6 +181,16 @@ export class DraftService {
     }
 
     updateData.updatedAt = new Date();
+
+    // Trigger beforeUpdateDraft hook (new hook system)
+    try {
+      updateData = await this.hookService.applyFilters('beforeUpdateDraft', updateData, {
+        action: 'update',
+        id,
+      });
+    } catch (error) {
+      this.logger.error('Error in beforeUpdateDraft hook:', error);
+    }
 
     // Trigger beforeUpdateDraft event
     try {
@@ -205,6 +233,13 @@ export class DraftService {
       category: updatedDraft.category,
     });
 
+    // Trigger afterUpdateDraft hook (new hook system)
+    try {
+      await this.hookService.doAction('afterUpdateDraft', draftResult, { action: 'update', id });
+    } catch (error) {
+      this.logger.error('Error in afterUpdateDraft hook:', error);
+    }
+
     // Trigger afterUpdateDraft event
     try {
       await this.pipelineService.dispatchEvent('afterUpdateDraft', {
@@ -223,6 +258,13 @@ export class DraftService {
   async remove(id: number): Promise<void> {
     // Delete all versions first
     await this.draftVersionService.deleteAllVersions(id);
+
+    // Trigger beforeDeleteDraft hook (new hook system)
+    try {
+      await this.hookService.doAction('beforeDeleteDraft', { id }, { action: 'delete' });
+    } catch (error) {
+      this.logger.error('Error in beforeDeleteDraft hook:', error);
+    }
 
     // Trigger deleteDraft event
     try {
@@ -243,6 +285,13 @@ export class DraftService {
 
     if (result.length === 0) {
       throw new NotFoundException(`Draft with ID ${String(id)} not found`);
+    }
+
+    // Trigger afterDeleteDraft hook (new hook system)
+    try {
+      await this.hookService.doAction('afterDeleteDraft', { id }, { action: 'delete' });
+    } catch (error) {
+      this.logger.error('Error in afterDeleteDraft hook:', error);
     }
   }
 

@@ -4,9 +4,10 @@ import { ArticleService } from './article.service';
 import { DatabaseModule } from '../../database/database.module';
 import { AnalyticsModule } from '../analytics/analytics.module';
 import { PipelineModule } from '../pipeline/pipeline.module';
+import { PluginModule } from '../plugin/plugin.module';
 
 @Module({
-  imports: [DatabaseModule, AnalyticsModule, PipelineModule],
+  imports: [DatabaseModule, AnalyticsModule, PipelineModule, PluginModule],
   controllers: [ArticleController],
   providers: [ArticleService],
   exports: [ArticleService],

@@ -14,6 +14,7 @@ import type { Database } from '../../database/connection';
 import { Article } from './entities/article.entity';
 import { safeParseJson, dataSchemas } from '../../shared/zod';
 import { PipelineService } from '../pipeline/services/pipeline.service';
+import { HookService } from '../plugin/services/hook.service';
 
 @Injectable()
 export class ArticleService {
@@ -23,6 +24,7 @@ export class ArticleService {
     @Inject(DATABASE_CONNECTION)
     private readonly db: Database,
     private readonly pipelineService: PipelineService,
+    private readonly hookService: HookService,
   ) {}
 
   async findAll(query: ArticleQueryDto): Promise<ArticleListResponseDto> {
@@ -235,6 +237,15 @@ export class ArticleService {
 
     // Process article data
 
+    // Trigger beforeCreateArticle hook (new hook system)
+    try {
+      newArticleData = await this.hookService.applyFilters('beforeCreateArticle', newArticleData, {
+        action: 'create',
+      });
+    } catch (error) {
+      this.logger.error('Error in beforeCreateArticle hook:', error);
+    }
+
     // Trigger beforeUpdateArticle event (legacy pipeline)
     try {
       const beforeResults = await this.pipelineService.dispatchEvent('beforeUpdateArticle', {
@@ -275,6 +286,13 @@ export class ArticleService {
 
     // Article created successfully
 
+    // Trigger afterCreateArticle hook (new hook system)
+    try {
+      await this.hookService.doAction('afterCreateArticle', articleResult, { action: 'create' });
+    } catch (error) {
+      this.logger.error('Error in afterCreateArticle hook:', error);
+    }
+
     // Trigger afterUpdateArticle event (legacy pipeline)
     try {
       await this.pipelineService.dispatchEvent('afterUpdateArticle', {
@@ -312,6 +330,16 @@ export class ArticleService {
     };
 
     // Process update data
+
+    // Trigger beforeUpdateArticle hook (new hook system)
+    try {
+      updateData = await this.hookService.applyFilters('beforeUpdateArticle', updateData, {
+        action: 'update',
+        id,
+      });
+    } catch (error) {
+      this.logger.error('Error in beforeUpdateArticle hook:', error);
+    }
 
     // Trigger beforeUpdateArticle event (legacy pipeline)
     try {
@@ -358,6 +386,16 @@ export class ArticleService {
 
     // Article updated successfully
 
+    // Trigger afterUpdateArticle hook (new hook system)
+    try {
+      await this.hookService.doAction('afterUpdateArticle', articleResult, {
+        action: 'update',
+        id,
+      });
+    } catch (error) {
+      this.logger.error('Error in afterUpdateArticle hook:', error);
+    }
+
     // Trigger afterUpdateArticle event (legacy pipeline)
     try {
       await this.pipelineService.dispatchEvent('afterUpdateArticle', {
@@ -387,6 +425,13 @@ export class ArticleService {
 
     // Prepare for deletion
 
+    // Trigger beforeDeleteArticle hook (new hook system)
+    try {
+      await this.hookService.doAction('beforeDeleteArticle', { id }, { action: 'delete' });
+    } catch (error) {
+      this.logger.error('Error in beforeDeleteArticle hook:', error);
+    }
+
     // Trigger deleteArticle event (legacy pipeline)
     try {
       await this.pipelineService.dispatchEvent('deleteArticle', {
@@ -400,6 +445,13 @@ export class ArticleService {
     }
 
     await this.db.delete(articles).where(eq(articles.id, id));
+
+    // Trigger afterDeleteArticle hook (new hook system)
+    try {
+      await this.hookService.doAction('afterDeleteArticle', { id }, { action: 'delete' });
+    } catch (error) {
+      this.logger.error('Error in afterDeleteArticle hook:', error);
+    }
 
     // Article deleted successfully
   }
