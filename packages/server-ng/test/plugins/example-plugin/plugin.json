@@ -1,0 +1,20 @@
+{
+  "name": "example-plugin",
+  "version": "1.0.0",
+  "description": "An example plugin demonstrating the VanBlog plugin system for testing",
+  "main": "index.ts",
+  "author": "VanBlog Team",
+  "license": "MIT",
+  "config": {
+    "enable_logging": {
+      "type": "boolean",
+      "default": true,
+      "description": "Enable detailed logging for the plugin"
+    },
+    "max_articles": {
+      "type": "number",
+      "default": 100,
+      "description": "Maximum number of articles to process"
+    }
+  }
+}
