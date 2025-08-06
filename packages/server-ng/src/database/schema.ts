@@ -261,3 +261,24 @@ export const permissionGroups = sqliteTable('permission_groups', {
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
 });
+
+// Plugin data storage table
+export const pluginData = sqliteTable(
+  'plugin_data',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    pluginId: text('plugin_id').notNull(),
+    key: text('key').notNull(),
+    value: text('value'), // JSON string for any data type
+    createdAt: integer('created_at', { mode: 'timestamp' })
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: integer('updated_at', { mode: 'timestamp' })
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    index('plugin_data_plugin_id_idx').on(table.pluginId),
+    index('plugin_data_key_idx').on(table.pluginId, table.key),
+  ],
+);

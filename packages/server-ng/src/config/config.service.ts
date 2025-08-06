@@ -101,4 +101,16 @@ export class ConfigService {
       runtime: this.runtime,
     };
   }
+
+  /**
+   * Get configuration value by key
+   */
+  get<T = unknown>(key: string): T | undefined;
+  get<T = unknown>(key: string, defaultValue: T): T;
+  get<T = unknown>(key: string, defaultValue?: T): T | undefined {
+    if (defaultValue !== undefined) {
+      return this.configService.get<T>(key, defaultValue);
+    }
+    return this.configService.get<T>(key);
+  }
 }
