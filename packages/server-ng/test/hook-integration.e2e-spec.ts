@@ -40,7 +40,10 @@ describe('Hook Integration (e2e)', () => {
 
   describe('Article Hook Integration', () => {
     it('should trigger beforeCreateArticle filter hook', async () => {
-      const mockFilter = vi.fn((data) => ({ ...data, title: 'Modified Title' }));
+      const mockFilter = vi.fn((data: Record<string, unknown>) => ({
+        ...data,
+        title: 'Modified Title',
+      }));
       hookService.addFilter('beforeCreateArticle', mockFilter);
 
       const createArticleDto = {
@@ -160,7 +163,10 @@ describe('Hook Integration (e2e)', () => {
 
   describe('Draft Hook Integration', () => {
     it('should trigger beforeCreateDraft filter hook', async () => {
-      const mockFilter = vi.fn((data) => ({ ...data, title: 'Modified Draft Title' }));
+      const mockFilter = vi.fn((data: Record<string, unknown>) => ({
+        ...data,
+        title: 'Modified Draft Title',
+      }));
       hookService.addFilter('beforeCreateDraft', mockFilter);
 
       const createDraftDto = {
