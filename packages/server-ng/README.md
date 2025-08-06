@@ -273,8 +273,8 @@ JWT_EXPIRES_IN=7d
 
 - [x] HookService 开发：
   - [x] 实现 HookService (addAction, addFilter, doAction, applyFilters) 及优先级排序。
-  - [ ] 修改一两个模块（article draft）测试
-  - [ ] 全量模块测试
+  - [x] 修改一两个模块（article draft）测试
+  - [x] 全量模块测试
 - [ ] 定义并实现 PluginContext：创建 PluginContext 接口，为插件提供 logger, config 读取器, 和 data 存储能力。
 - [ ] “代码片段”插件支持 (稳定版)
   - [ ] 设计 pipelines 表来存储代码片段、其监听的钩子名、优先级和状态。
