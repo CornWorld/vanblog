@@ -84,6 +84,14 @@ export async function cleanupDatabase(app: INestApplication): Promise<void> {
     await db.delete(permissionNodes).execute();
     await db.delete(permissionGroups).execute();
     await db.delete(users).execute();
+
+    // Reset auto-increment sequences for tables with primary keys
+    // This prevents SQLITE_CONSTRAINT_PRIMARYKEY errors in tests
+    const { sql } = await import('drizzle-orm');
+    await db.run(
+      sql`DELETE FROM sqlite_sequence WHERE name IN ('analytics', 'loginLogs', 'staticFiles', 'draftVersions', 'drafts', 'articles', 'tags', 'categories', 'siteMeta', 'customPages', 'pipelines', 'permissionNodes', 'permissionGroups')`,
+    );
+    await db.run(sql`DELETE FROM sqlite_sequence WHERE name = 'users'`);
   } catch {
     // Ignore errors during cleanup
   }

@@ -244,10 +244,11 @@ export class PipelineService {
     this.idLock = true;
 
     try {
+      const { desc } = await import('drizzle-orm');
       const result = await this.db
         .select({ id: pipelines.id })
         .from(pipelines)
-        .orderBy(pipelines.id)
+        .orderBy(desc(pipelines.id))
         .limit(1);
 
       const maxId = result.length > 0 ? result[0].id : 0;
