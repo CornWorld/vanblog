@@ -186,6 +186,15 @@ export class HookService implements IHookService, OnModuleInit {
     this.logger.debug('All hooks cleared');
   }
 
+  /**
+   * Clear all registered actions and filters
+   */
+  clearAll(): void {
+    this.actions.clear();
+    this.filters.clear();
+    this.logger.debug('Cleared all registered actions and filters');
+  }
+
   clearHook(hookName: string): void {
     this.actions.delete(hookName);
     this.filters.delete(hookName);

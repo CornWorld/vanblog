@@ -1,0 +1,17 @@
+{
+  "name": "example-plugin",
+  "version": "1.0.0",
+  "description": "An example plugin demonstrating the VanBlog plugin system",
+  "main": "index.ts",
+  "dependencies": [],
+  "hooks": {
+    "article:beforeCreate": {
+      "type": "filter",
+      "priority": 10
+    },
+    "article:afterCreate": {
+      "type": "action",
+      "priority": 10
+    }
+  }
+}

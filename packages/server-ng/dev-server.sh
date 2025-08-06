@@ -33,7 +33,7 @@ check_health() {
 start_server() {
   echo "正在启动开发服务器(pnpm run dev)..."
   # 确保使用你的项目实际的启动命令
-  pnpm run dev > "$LOG_FILE" 2>&1 &
+  CODE_RUNNER_PATH=./data/pipeline-scripts pnpm run dev > "$LOG_FILE" 2>&1 &
 
   PID=$!
   echo $PID > "$PID_FILE"

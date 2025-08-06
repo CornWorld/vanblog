@@ -277,7 +277,7 @@ JWT_EXPIRES_IN=7d
   - [x] 全量模块测试
 - [x] 定义并实现 PluginContext：创建 PluginContext 接口，为插件提供 logger, config 读取器, 和 data 存储能力。
 - [ ] “代码片段”插件支持 (稳定版)
-  - [ ] 设计 pipelines 表来存储代码片段、其监听的钩子名、优先级和状态。
+  - [ ] 设计表来存储代码片段、其监听的钩子名、优先级和状态。
   - [ ] 创建后台 API (CRUD) 管理代码片段（和 Pipeline 一样存储到数据库）。
   - [ ] 使用 Node.js 内置的 vm 模块 创建执行环境，并必须设置超时 (timeout)。
   - [ ] 修改 HookService，使其能从数据库拉取并用 vm 模块执行代码片段。
