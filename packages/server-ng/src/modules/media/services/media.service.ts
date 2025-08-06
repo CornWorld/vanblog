@@ -14,7 +14,7 @@ import { StorageFactoryService } from './storage-factory.service';
 export class MediaService {
   constructor(
     @Inject(DATABASE_CONNECTION)
-    private readonly db: LibSQLDatabase,
+    public readonly db: LibSQLDatabase,
     private readonly storageFactoryService: StorageFactoryService,
   ) {}
 

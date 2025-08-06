@@ -1,0 +1,485 @@
+import { test as baseTest, vi } from 'vitest';
+
+import { StorageProvider } from '../src/modules/media/dto/storage-config.dto';
+
+import type { ConfigService } from '../src/config/config.service';
+import type {
+  StorageService,
+  UploadResult,
+} from '../src/modules/media/interfaces/storage.interface';
+import type { StorageFactoryService } from '../src/modules/media/services/storage-factory.service';
+import type { PipelineService } from '../src/modules/pipeline/services/pipeline.service';
+import type { HookService } from '../src/modules/plugin/services/hook.service';
+import type { LibSQLDatabase } from 'drizzle-orm/libsql';
+
+/**
+ * 数据库Mock构建器 - 使用Vitest Fixtures模式
+ */
+class DatabaseMockBuilder {
+  private mockDb!: Record<string, ReturnType<typeof vi.fn>>;
+
+  constructor() {
+    this.createMockDb();
+  }
+
+  /**
+   * 获取Mock数据库实例
+   */
+  get db(): Record<string, ReturnType<typeof vi.fn>> {
+    return this.mockDb;
+  }
+
+  /**
+   * 设置查询结果
+   */
+  setQueryResult(data: unknown[]): this {
+    // 创建查询链Mock对象
+    const queryChain = {
+      from: vi.fn().mockReturnThis(),
+      where: vi.fn().mockReturnThis(),
+      orderBy: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockResolvedValue(data),
+      offset: vi.fn().mockResolvedValue(data),
+      innerJoin: vi.fn().mockReturnThis(),
+      leftJoin: vi.fn().mockReturnThis(),
+      rightJoin: vi.fn().mockReturnThis(),
+      groupBy: vi.fn().mockReturnThis(),
+      having: vi.fn().mockReturnThis(),
+    };
+
+    // 重新设置from方法以支持不同的调用模式
+    queryChain.from.mockImplementation(() => {
+      // 返回一个新的对象，包含所有查询方法
+      return {
+        ...queryChain,
+        // 对于简单查询，直接await会返回数据
+        then: (resolve: (value: unknown) => void) => {
+          resolve(data);
+        },
+        catch: () => {},
+      };
+    });
+
+    // 设置select方法返回查询链
+    this.mockDb.select.mockReturnValue(queryChain);
+
+    return this;
+  }
+
+  /**
+   * 为不同的查询设置不同的结果
+   */
+  setMultipleQueryResults(results: { items: unknown[]; count: unknown[] }): this {
+    let callCount = 0;
+
+    // 创建查询链Mock，根据调用次数返回不同结果
+    const createQueryChain = (): Record<string, ReturnType<typeof vi.fn>> => {
+      const currentCallCount = callCount++;
+      const result = currentCallCount === 0 ? results.items : results.count;
+
+      const mockChain = {
+        from: vi.fn().mockReturnThis(),
+        where: vi.fn().mockImplementation(() => {
+          // 如果是count查询（第二个查询），直接返回结果
+          if (currentCallCount === 1) {
+            return Promise.resolve(result);
+          }
+          return mockChain;
+        }),
+        orderBy: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockReturnThis(),
+        offset: vi.fn().mockImplementation(() => {
+          return Promise.resolve(result);
+        }),
+        innerJoin: vi.fn().mockReturnThis(),
+        leftJoin: vi.fn().mockReturnThis(),
+        rightJoin: vi.fn().mockReturnThis(),
+        groupBy: vi.fn().mockReturnThis(),
+        having: vi.fn().mockReturnThis(),
+      };
+
+      return mockChain;
+    };
+
+    // 每次调用select都返回新的查询链
+    this.mockDb.select.mockImplementation(() => createQueryChain());
+
+    return this;
+  }
+
+  /**
+   * 设置插入结果
+   */
+  setInsertResult(data: unknown[]): this {
+    this.mockDb.insert.mockReturnThis();
+    this.mockDb.values.mockReturnThis();
+    this.mockDb.returning.mockResolvedValue(data);
+    return this;
+  }
+
+  /**
+   * 设置更新结果
+   */
+  setUpdateResult(data: unknown[]): this {
+    this.mockDb.update.mockReturnThis();
+    this.mockDb.set.mockResolvedValue(data);
+    return this;
+  }
+
+  /**
+   * 设置删除结果
+   */
+  setDeleteResult(affectedRows = 1): this {
+    this.mockDb.delete.mockReturnThis();
+    this.mockDb.where.mockResolvedValue({ affectedRows });
+    return this;
+  }
+
+  /**
+   * 设置计数结果
+   */
+  setCountResult(count: number): this {
+    const countResult = [{ count }];
+
+    // 创建一个模拟的count查询链
+    const mockCountQuery = {
+      from: vi.fn().mockReturnThis(),
+      where: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockReturnThis(),
+      offset: vi.fn().mockResolvedValue(countResult),
+    };
+
+    this.mockDb.count.mockReturnValue(mockCountQuery);
+    return this;
+  }
+
+  /**
+   * 构建Mock数据库实例
+   */
+  build(): Record<string, ReturnType<typeof vi.fn>> {
+    return this.mockDb;
+  }
+
+  /**
+   * 重置所有Mock
+   */
+  reset(): this {
+    Object.values(this.mockDb).forEach((mockFn) => {
+      mockFn.mockReset().mockReturnThis();
+    });
+    return this;
+  }
+
+  private createMockDb(): void {
+    this.mockDb = {
+      select: vi.fn(),
+      from: vi.fn(),
+      where: vi.fn(),
+      orderBy: vi.fn(),
+      limit: vi.fn(),
+      offset: vi.fn(),
+      insert: vi.fn(),
+      values: vi.fn(),
+      returning: vi.fn(),
+      update: vi.fn(),
+      set: vi.fn(),
+      delete: vi.fn(),
+      onConflictDoUpdate: vi.fn(),
+      groupBy: vi.fn(),
+      count: vi.fn(),
+      innerJoin: vi.fn(),
+      leftJoin: vi.fn(),
+      rightJoin: vi.fn(),
+      having: vi.fn(),
+      union: vi.fn(),
+      unionAll: vi.fn(),
+      with: vi.fn(),
+      withRecursive: vi.fn(),
+      as: vi.fn(),
+    };
+
+    // 设置默认的链式调用行为
+    Object.values(this.mockDb).forEach((mockFn) => {
+      mockFn.mockReturnThis();
+    });
+  }
+}
+
+/**
+ * 创建用户测试数据
+ */
+function createUser({
+  overrides = {},
+}: {
+  overrides?: Record<string, unknown>;
+} = {}): Record<string, unknown> {
+  return {
+    id: 1,
+    username: 'testuser',
+    email: 'test@example.com',
+    password: 'hashedpassword',
+    nickname: 'Test User',
+    avatar: '/avatars/default.png',
+    createdAt: new Date('2024-01-01'),
+    updatedAt: new Date('2024-01-01'),
+    ...overrides,
+  };
+}
+
+/**
+ * 创建媒体文件测试数据
+ */
+function createMediaFile({
+  overrides = {},
+}: {
+  overrides?: Record<string, unknown>;
+} = {}): Record<string, unknown> {
+  return {
+    id: 1,
+    filename: 'test-image.jpg',
+    path: '/uploads/test-image.jpg',
+    size: 1024,
+    mimeType: 'image/jpeg',
+    width: 1920,
+    height: 1080,
+    hash: 'abc123def456',
+    provider: StorageProvider.LOCAL,
+    createdAt: new Date('2024-01-01'),
+    ...overrides,
+  };
+}
+
+/**
+ * 创建多个媒体文件测试数据
+ */
+function createMediaFiles({
+  count,
+  overrides = {},
+}: {
+  count: number;
+  overrides?: Record<string, unknown>;
+}): Record<string, unknown>[] {
+  return Array.from({ length: count }, (_, index) =>
+    createMediaFile({
+      overrides: {
+        id: index + 1,
+        filename: `test-image-${String(index + 1)}.jpg`,
+        path: `/uploads/test-image-${String(index + 1)}.jpg`,
+        ...overrides,
+      },
+    }),
+  );
+}
+
+/**
+ * 创建分页结果
+ */
+function createPaginatedResult<T>({
+  items,
+  total,
+  page = 1,
+  pageSize = 10,
+}: {
+  items: T[];
+  total: number;
+  page?: number;
+  pageSize?: number;
+}): {
+  items: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+} {
+  return {
+    items,
+    total,
+    page,
+    pageSize,
+    totalPages: Math.ceil(total / pageSize),
+  };
+}
+
+/**
+ * 测试数据工厂
+ */
+export const TestDataFactory = {
+  createUser,
+  createMediaFile,
+  createMediaFiles,
+  createPaginatedResult,
+};
+
+/**
+ * 创建配置服务Mock
+ */
+function createConfigServiceMock(configMap: Record<string, unknown> = {}): ConfigService {
+  return {
+    get: vi.fn((key: string) => configMap[key]),
+  } as unknown as ConfigService;
+}
+
+/**
+ * 创建存储服务Mock
+ */
+function createStorageServiceMock({
+  uploadResult = {},
+}: {
+  uploadResult?: Partial<UploadResult>;
+} = {}): Partial<StorageService> {
+  const defaultUploadResult: UploadResult = {
+    filename: 'test-file.jpg',
+    size: 1024,
+    url: 'http://localhost:3000/uploads/test-file.jpg',
+    mimeType: 'image/jpeg',
+    ...uploadResult,
+  };
+
+  return {
+    upload: vi.fn().mockResolvedValue(defaultUploadResult),
+    delete: vi.fn().mockResolvedValue(true),
+    getUrl: vi.fn().mockReturnValue('http://localhost:3000/uploads/test-file.jpg'),
+  };
+}
+
+/**
+ * 创建存储工厂服务Mock
+ */
+function createStorageFactoryServiceMock({
+  storageService,
+  provider = StorageProvider.LOCAL,
+}: {
+  storageService?: Partial<StorageService>;
+  provider?: StorageProvider;
+} = {}): Partial<StorageFactoryService> {
+  return {
+    getStorageService: vi.fn().mockResolvedValue(storageService),
+    getCurrentProvider: vi.fn().mockResolvedValue(provider),
+  };
+}
+
+/**
+ * 创建管道服务Mock
+ */
+function createPipelineServiceMock(): Partial<PipelineService> {
+  return {
+    create: vi.fn().mockResolvedValue(undefined),
+    findAll: vi.fn().mockResolvedValue([]),
+    findOne: vi.fn().mockResolvedValue(undefined),
+    findByEvent: vi.fn().mockResolvedValue([]),
+    update: vi.fn().mockResolvedValue(undefined),
+    remove: vi.fn().mockResolvedValue(undefined),
+    triggerById: vi.fn().mockResolvedValue(undefined),
+  };
+}
+
+/**
+ * 创建钩子服务Mock
+ */
+function createHookServiceMock(): Partial<HookService> {
+  return {
+    addAction: vi.fn(),
+    addFilter: vi.fn(),
+    removeAction: vi.fn(),
+    removeFilter: vi.fn(),
+    doAction: vi.fn().mockResolvedValue(undefined),
+    applyFilters: vi.fn().mockImplementation((_, value) => Promise.resolve(value)),
+    hasAction: vi.fn().mockReturnValue(false),
+    hasFilter: vi.fn().mockReturnValue(false),
+    getActionCount: vi.fn().mockReturnValue(0),
+    getFilterCount: vi.fn().mockReturnValue(0),
+  };
+}
+
+/**
+ * 服务Mock工厂
+ */
+export const ServiceMockFactory = {
+  createConfigServiceMock,
+  createStorageServiceMock,
+  createStorageFactoryServiceMock,
+  createPipelineServiceMock,
+  createHookServiceMock,
+};
+
+/**
+ * Vitest测试上下文类型定义
+ */
+interface TestContext {
+  // 数据库相关
+  db: LibSQLDatabase;
+  databaseMock: DatabaseMockBuilder;
+
+  // 服务Mock
+  storageService: Partial<StorageService>;
+  storageFactoryService: Partial<StorageFactoryService>;
+  configService: ConfigService;
+  pipelineService: Partial<PipelineService>;
+  hookService: Partial<HookService>;
+
+  // 测试数据
+  testData: typeof TestDataFactory;
+
+  // 工具方法
+  resetAllMocks: () => void;
+}
+
+/**
+ * 扩展的测试实例，包含所有必要的fixtures
+ */
+export const test = baseTest.extend<TestContext>({
+  // 数据库Mock fixture
+  databaseMock: async (_fixtures, use) => {
+    const mockBuilder = new DatabaseMockBuilder();
+    await use(mockBuilder);
+    mockBuilder.reset();
+  },
+
+  db: async ({ databaseMock }, use) => {
+    const db = databaseMock.build() as unknown as LibSQLDatabase;
+    await use(db);
+  },
+
+  // 服务Mock fixtures
+  storageService: async (_fixtures, use) => {
+    const mock = ServiceMockFactory.createStorageServiceMock();
+    await use(mock);
+  },
+
+  storageFactoryService: async ({ storageService }, use) => {
+    const mock = ServiceMockFactory.createStorageFactoryServiceMock({ storageService });
+    await use(mock);
+  },
+
+  configService: async (_fixtures, use) => {
+    const mock = ServiceMockFactory.createConfigServiceMock();
+    await use(mock);
+  },
+
+  pipelineService: async (_fixtures, use) => {
+    const mock = ServiceMockFactory.createPipelineServiceMock();
+    await use(mock);
+  },
+
+  hookService: async (_fixtures, use) => {
+    const mock = ServiceMockFactory.createHookServiceMock();
+    await use(mock);
+  },
+
+  // 测试数据工厂
+  testData: async (_fixtures, use) => {
+    await use(TestDataFactory);
+  },
+
+  // 工具方法
+  resetAllMocks: async (_fixtures, use) => {
+    const resetFn = (): void => {
+      vi.clearAllMocks();
+    };
+    await use(resetFn);
+  },
+});
+
+// 导出类型和工厂类供其他地方使用
+export { DatabaseMockBuilder };
+export type { TestContext };

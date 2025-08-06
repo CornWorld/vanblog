@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Test, type TestingModule } from '@nestjs/testing';
 
 import { ConfigService } from '../../config/config.service';
@@ -41,7 +40,7 @@ describe('LoggerService', () => {
     const mockLogger = {
       info: vi.fn(),
     };
-    (service as any).logger = mockLogger;
+    (service as unknown as { logger: typeof mockLogger }).logger = mockLogger;
 
     service.info('Test message', 'TestContext');
 
@@ -54,7 +53,7 @@ describe('LoggerService', () => {
     const mockLogger = {
       error: vi.fn(),
     };
-    (service as any).logger = mockLogger;
+    (service as unknown as { logger: typeof mockLogger }).logger = mockLogger;
 
     service.error('Error message', 'Stack trace', 'ErrorContext');
 
@@ -68,7 +67,7 @@ describe('LoggerService', () => {
     const mockLogger = {
       warn: vi.fn(),
     };
-    (service as any).logger = mockLogger;
+    (service as unknown as { logger: typeof mockLogger }).logger = mockLogger;
 
     service.warn('Warning message', 'WarnContext');
 
@@ -81,7 +80,7 @@ describe('LoggerService', () => {
     const mockLogger = {
       debug: vi.fn(),
     };
-    (service as any).logger = mockLogger;
+    (service as unknown as { logger: typeof mockLogger }).logger = mockLogger;
 
     service.debug('Debug message', 'DebugContext');
 
@@ -94,7 +93,7 @@ describe('LoggerService', () => {
     const mockLogger = {
       verbose: vi.fn(),
     };
-    (service as any).logger = mockLogger;
+    (service as unknown as { logger: typeof mockLogger }).logger = mockLogger;
 
     service.verbose('Verbose message', 'VerboseContext');
 
