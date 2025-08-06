@@ -226,8 +226,8 @@ export const analytics = sqliteTable(
       .default(sql`CURRENT_TIMESTAMP`),
   },
   (table) => [
-    index('type_idx').on(table.type),
-    index('path_idx').on(table.path),
+    index('analytics_type_idx').on(table.type),
+    index('analytics_path_idx').on(table.path),
     index('analytics_created_at_idx').on(table.createdAt),
   ],
 );
@@ -280,5 +280,33 @@ export const pluginData = sqliteTable(
   (table) => [
     index('plugin_data_plugin_id_idx').on(table.pluginId),
     index('plugin_data_key_idx').on(table.pluginId, table.key),
+  ],
+);
+
+// Code snippets table for plugin system
+export const codeSnippets = sqliteTable(
+  'code_snippets',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    name: text('name').notNull(),
+    description: text('description'),
+    hookName: text('hook_name').notNull(), // The hook this snippet listens to
+    hookType: text('hook_type', { enum: ['action', 'filter'] })
+      .notNull()
+      .default('action'),
+    priority: integer('priority').notNull().default(10), // Hook execution priority
+    code: text('code').notNull(), // JavaScript code to execute
+    enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
+    timeout: integer('timeout').notNull().default(5000), // Execution timeout in ms
+    createdAt: integer('created_at', { mode: 'timestamp' })
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: integer('updated_at', { mode: 'timestamp' })
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    index('code_snippets_hook_name_idx').on(table.hookName),
+    index('code_snippets_enabled_idx').on(table.enabled),
   ],
 );

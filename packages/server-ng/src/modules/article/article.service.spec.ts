@@ -1,6 +1,6 @@
 import { NotFoundException } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
-import { describe, beforeEach, it, expect } from 'vitest';
+import { describe, beforeEach, it, expect, vi } from 'vitest';
 
 import { MockUtils } from '../../../test/mock-utils';
 import { DATABASE_CONNECTION } from '../../database/database.module';
@@ -50,10 +50,27 @@ describe('ArticleService', () => {
   describe('findAll', () => {
     it('should return articles with pagination', async () => {
       const mockArticles = MockUtils.testData.createArticles(1);
+      const countResult = [{ count: 1 }];
 
-      // 使用Mock工具类设置查询结果
-      databaseMock.setQueryResult(mockArticles);
-      databaseMock.setCountResult(1);
+      // Mock for the main query
+      databaseMock.db.select.mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            orderBy: vi.fn().mockReturnValue({
+              limit: vi.fn().mockReturnValue({
+                offset: vi.fn().mockResolvedValue(mockArticles),
+              }),
+            }),
+          }),
+        }),
+      });
+
+      // Mock for the count query
+      databaseMock.db.select.mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue(countResult),
+        }),
+      });
 
       const result = await service.findAll({
         page: 1,
@@ -72,10 +89,26 @@ describe('ArticleService', () => {
   describe('search', () => {
     it('should search articles by query', async () => {
       const mockArticles = MockUtils.testData.createArticles(1);
+      const countResult = [{ count: 1 }];
 
-      // 使用Mock工具类设置搜索结果
-      databaseMock.setQueryResult(mockArticles);
-      databaseMock.setCountResult(1);
+      // 设置两个并行查询的返回值
+      databaseMock.db.select.mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            orderBy: vi.fn().mockReturnValue({
+              limit: vi.fn().mockReturnValue({
+                offset: vi.fn().mockResolvedValue(mockArticles),
+              }),
+            }),
+          }),
+        }),
+      });
+
+      databaseMock.db.select.mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue(countResult),
+        }),
+      });
 
       const searchDto: ArticleSearchDto = {
         keyword: 'search term',
@@ -91,9 +124,26 @@ describe('ArticleService', () => {
     });
 
     it('should search only in title when titleOnly is true', async () => {
-      // 使用Mock工具类设置空搜索结果
-      databaseMock.setQueryResult([]);
-      databaseMock.setCountResult(0);
+      const countResult = [{ count: 0 }];
+
+      // 设置两个并行查询的返回值
+      databaseMock.db.select.mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            orderBy: vi.fn().mockReturnValue({
+              limit: vi.fn().mockReturnValue({
+                offset: vi.fn().mockResolvedValue([]),
+              }),
+            }),
+          }),
+        }),
+      });
+
+      databaseMock.db.select.mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue(countResult),
+        }),
+      });
 
       const searchDto: ArticleSearchDto = {
         keyword: 'test',
@@ -110,9 +160,27 @@ describe('ArticleService', () => {
     });
 
     it('should filter by category and tags', async () => {
-      // 使用Mock工具类设置空搜索结果
-      databaseMock.setQueryResult([]);
-      databaseMock.setCountResult(0);
+      const countResult = [{ count: 0 }];
+      const whereMock = vi.fn().mockResolvedValue(countResult);
+
+      // 设置两个并行查询的返回值
+      databaseMock.db.select.mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            orderBy: vi.fn().mockReturnValue({
+              limit: vi.fn().mockReturnValue({
+                offset: vi.fn().mockResolvedValue([]),
+              }),
+            }),
+          }),
+        }),
+      });
+
+      databaseMock.db.select.mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: whereMock,
+        }),
+      });
 
       const searchDto: ArticleSearchDto = {
         keyword: 'test',
@@ -125,7 +193,7 @@ describe('ArticleService', () => {
 
       await service.search(searchDto);
 
-      expect(databaseMock.db.where).toHaveBeenCalled();
+      expect(whereMock).toHaveBeenCalled();
     });
   });
 
@@ -133,8 +201,14 @@ describe('ArticleService', () => {
     it('should return a single article', async () => {
       const mockArticle = MockUtils.testData.createArticle({ id: 1 });
 
-      // 使用Mock工具类设置查询结果
-      databaseMock.setQueryResult([mockArticle]);
+      // Mock for findOne query
+      databaseMock.db.select.mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue([mockArticle]),
+          }),
+        }),
+      });
 
       const result = await service.findOne(1);
 
@@ -143,8 +217,14 @@ describe('ArticleService', () => {
     });
 
     it('should throw NotFoundException when article not found', async () => {
-      // 使用Mock工具类设置空查询结果
-      databaseMock.setQueryResult([]);
+      // Mock for findOne query returning empty result
+      databaseMock.db.select.mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue([]),
+          }),
+        }),
+      });
 
       await expect(service.findOne(999)).rejects.toThrow(NotFoundException);
     });
@@ -156,7 +236,7 @@ describe('ArticleService', () => {
         id: 1,
         title: 'New Article',
         content: 'New content',
-        tags: ['new'],
+        tags: JSON.stringify(['new']),
       });
 
       const createDto = MockUtils.testData.createArticleDto({
@@ -185,18 +265,25 @@ describe('ArticleService', () => {
         id: 1,
         title: 'Existing Article',
         content: 'Existing content',
-        tags: ['existing'],
+        tags: JSON.stringify(['existing']),
       });
 
       const mockUpdatedArticle = MockUtils.testData.createArticle({
         id: 1,
         title: 'Updated Article',
         content: 'Updated content',
-        tags: ['updated'],
+        tags: JSON.stringify(['updated']),
       });
 
-      // 使用Mock工具类设置查询和更新结果
-      databaseMock.setQueryResult([mockExistingArticle]); // findOne结果
+      // Mock for the existence check query
+      databaseMock.db.select.mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue([mockExistingArticle]),
+          }),
+        }),
+      });
+
       databaseMock.setUpdateResult([mockUpdatedArticle]); // 更新结果
 
       const updateDto = {
@@ -212,8 +299,14 @@ describe('ArticleService', () => {
     });
 
     it('should throw NotFoundException when article not found', async () => {
-      // 使用Mock工具类设置空查询结果
-      databaseMock.setQueryResult([]);
+      // Mock for the existence check query returning empty result
+      databaseMock.db.select.mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue([]),
+          }),
+        }),
+      });
 
       await expect(
         service.update(999, { title: 'Test', content: 'Test content', tags: JSON.stringify([]) }),
@@ -225,15 +318,32 @@ describe('ArticleService', () => {
     it('should delete an article', async () => {
       const mockArticle = MockUtils.testData.createArticle({ id: 1 });
 
-      // 使用Mock工具类设置查询结果
-      databaseMock.setQueryResult([mockArticle]);
+      // Mock for the existence check query
+      databaseMock.db.select.mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue([mockArticle]),
+          }),
+        }),
+      });
+
+      // Mock for the delete operation
+      databaseMock.db.delete.mockReturnValue({
+        where: vi.fn().mockResolvedValue(undefined),
+      });
 
       await expect(service.remove(1)).resolves.not.toThrow();
     });
 
     it('should throw NotFoundException when article not found', async () => {
-      // 使用Mock工具类设置空查询结果
-      databaseMock.setQueryResult([]);
+      // Mock for the existence check query returning empty result
+      databaseMock.db.select.mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue([]),
+          }),
+        }),
+      });
 
       await expect(service.remove(999)).rejects.toThrow(NotFoundException);
     });
@@ -262,8 +372,10 @@ describe('ArticleService', () => {
         }),
       ];
 
-      // 使用Mock工具类设置查询结果
-      databaseMock.setQueryResult(mockArticles);
+      // Mock for exportArticles: select().from(articles)
+      databaseMock.db.select.mockReturnValue({
+        from: vi.fn().mockResolvedValue(mockArticles),
+      });
 
       const result = await service.exportArticles();
 

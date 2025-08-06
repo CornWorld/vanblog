@@ -1,5 +1,5 @@
-import { defineConfig } from 'vitest/config';
 import swc from 'unplugin-swc';
+import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   test: {
@@ -7,6 +7,12 @@ export default defineConfig({
     environment: 'node',
     root: './',
     setupFiles: ['./test/setup.ts'],
+    exclude: [
+      '**/node_modules/**',
+      '**/dist/**',
+      '**/*.fixtures.test.ts',
+      '**/vitest-fixtures.test.ts',
+    ],
     alias: {
       '@src': './src',
       '@test': './test',

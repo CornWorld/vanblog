@@ -2,14 +2,43 @@ import { Logger } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
+import { DATABASE_CONNECTION } from '../../../database';
+
 import { HookService } from './hook.service';
+import { PluginContextFactory } from './plugin-context.service';
 
 describe('HookService', () => {
   let service: HookService;
 
   beforeEach(async () => {
+    const mockDatabase = {
+      select: vi.fn().mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue([]),
+        }),
+      }),
+    };
+
+    const mockPluginContextFactory = {
+      create: vi.fn().mockReturnValue({
+        data: {},
+        logger: { log: vi.fn(), error: vi.fn() },
+        config: { get: vi.fn() },
+      }),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
-      providers: [HookService],
+      providers: [
+        HookService,
+        {
+          provide: DATABASE_CONNECTION,
+          useValue: mockDatabase,
+        },
+        {
+          provide: PluginContextFactory,
+          useValue: mockPluginContextFactory,
+        },
+      ],
     }).compile();
 
     service = module.get<HookService>(HookService);

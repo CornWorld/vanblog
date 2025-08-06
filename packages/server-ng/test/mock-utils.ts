@@ -33,32 +33,55 @@ export class DatabaseMockBuilder {
    * 设置查询结果
    */
   setQueryResult(data: unknown[]): this {
-    const queryPromise = Promise.resolve(data);
-
-    // 定义带有链式方法的查询对象类型
-    interface MockQueryPromise extends Promise<unknown[]> {
+    // 创建完整的链式调用 mock
+    const createChainMock = (
+      finalData: unknown[],
+    ): {
       where: ReturnType<typeof vi.fn>;
+      orderBy: ReturnType<typeof vi.fn>;
       limit: ReturnType<typeof vi.fn>;
       offset: ReturnType<typeof vi.fn>;
-      orderBy: ReturnType<typeof vi.fn>;
-    }
+    } => {
+      const chainMock = {
+        where: vi.fn(),
+        orderBy: vi.fn(),
+        limit: vi.fn(),
+        offset: vi.fn(),
+      };
 
-    const mockQuery = queryPromise as MockQueryPromise;
+      // 设置链式调用，每个方法都返回自身，最后返回数据
+      chainMock.where.mockReturnValue(chainMock);
+      chainMock.orderBy.mockReturnValue(chainMock);
+      chainMock.limit.mockReturnValue(chainMock);
+      chainMock.offset.mockResolvedValue(finalData);
 
-    // 为 Promise 添加链式方法
-    mockQuery.where = vi.fn().mockResolvedValue(data);
-    mockQuery.limit = vi.fn().mockResolvedValue(data);
-    mockQuery.offset = vi.fn().mockResolvedValue(data);
-    mockQuery.orderBy = vi.fn().mockResolvedValue(data);
+      // 同时设置直接调用的情况
+      chainMock.where.mockResolvedValue(finalData);
+      chainMock.limit.mockResolvedValue(finalData);
 
-    // 设置链式调用 - 每个方法都返回相同的 Promise
-    mockQuery.where.mockReturnValue(mockQuery);
-    mockQuery.limit.mockReturnValue(mockQuery);
-    mockQuery.offset.mockReturnValue(mockQuery);
-    mockQuery.orderBy.mockReturnValue(mockQuery);
+      return chainMock;
+    };
 
-    // 设置 from 方法返回 Promise 对象
-    this.mockDb.from.mockReturnValue(mockQuery);
+    // 重置并设置 select 方法
+    this.mockDb.select.mockReset();
+    this.mockDb.select.mockImplementation(() => {
+      const fromMock = vi.fn();
+
+      fromMock.mockImplementation((table) => {
+        // 如果没有传入 table 参数，说明是 select().from(table) 的简单调用
+        // 这种情况下直接返回 Promise
+        if (table) {
+          return Promise.resolve(data);
+        }
+        // 否则返回链式调用对象
+        return createChainMock(data);
+      });
+
+      return { from: fromMock };
+    });
+
+    // 设置直接的 from() 调用
+    this.mockDb.from.mockReturnValue(createChainMock(data));
 
     return this;
   }
@@ -75,7 +98,7 @@ export class DatabaseMockBuilder {
    * 设置更新结果
    */
   setUpdateResult(data: unknown[]): this {
-    this.mockDb.set.mockResolvedValue(data);
+    this.mockDb.returning.mockResolvedValue(data);
     return this;
   }
 
@@ -97,14 +120,9 @@ export class DatabaseMockBuilder {
       },
     ];
 
-    // 为count查询设置结果
-    this.mockDb.count.mockReturnValue({
-      from: vi.fn().mockReturnValue({
-        where: vi.fn().mockResolvedValue(countResult),
-        limit: vi.fn().mockResolvedValue(countResult),
-        offset: vi.fn().mockResolvedValue(countResult),
-      }),
-    });
+    // 为count查询设置结果 - 需要在第二次调用时返回count结果
+    this.mockDb.where.mockResolvedValueOnce([]); // 第一次调用返回空数组（主查询）
+    this.mockDb.where.mockResolvedValueOnce(countResult); // 第二次调用返回count结果
 
     return this;
   }
