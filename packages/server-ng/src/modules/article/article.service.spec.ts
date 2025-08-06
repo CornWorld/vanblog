@@ -2,7 +2,7 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
 import { ArticleService } from './article.service';
 import { PipelineService } from '../pipeline/services/pipeline.service';
-
+import { HookService } from '../plugin/services/hook.service';
 import { DATABASE_CONNECTION } from '../../database/database.module';
 import type { ArticleSearchDto } from './dto/article.dto';
 import { vi, describe, beforeEach, it, expect } from 'vitest';
@@ -10,7 +10,7 @@ import { vi, describe, beforeEach, it, expect } from 'vitest';
 describe('ArticleService', () => {
   let service: ArticleService;
   let mockPipelineService: Partial<PipelineService>;
-
+  let mockHookService: Partial<HookService>;
   let mockDb: Record<string, ReturnType<typeof vi.fn>>;
 
   beforeEach(async () => {
@@ -38,6 +38,11 @@ describe('ArticleService', () => {
       dispatchEvent: vi.fn().mockResolvedValue([]),
     };
 
+    mockHookService = {
+      applyFilters: vi.fn().mockImplementation((_, data) => Promise.resolve(data)),
+      doAction: vi.fn().mockResolvedValue(undefined),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       imports: [],
       providers: [
@@ -49,6 +54,10 @@ describe('ArticleService', () => {
         {
           provide: PipelineService,
           useValue: mockPipelineService,
+        },
+        {
+          provide: HookService,
+          useValue: mockHookService,
         },
       ],
     }).compile();

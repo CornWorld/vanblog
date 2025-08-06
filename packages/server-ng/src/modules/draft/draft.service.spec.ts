@@ -3,6 +3,7 @@ import { NotFoundException } from '@nestjs/common';
 import { DraftService } from './draft.service';
 import { DraftVersionService } from './draft-version.service';
 import { PipelineService } from '../pipeline/services/pipeline.service';
+import { HookService } from '../plugin/services/hook.service';
 import { DATABASE_CONNECTION } from '../../database/database.module';
 import { vi, describe, beforeEach, it, expect } from 'vitest';
 
@@ -10,6 +11,7 @@ describe('DraftService', () => {
   let service: DraftService;
   let mockDraftVersionService: Partial<DraftVersionService>;
   let mockPipelineService: Partial<PipelineService>;
+  let mockHookService: Partial<HookService>;
   let mockDb: Record<string, ReturnType<typeof vi.fn>>;
 
   beforeEach(async () => {
@@ -49,6 +51,11 @@ describe('DraftService', () => {
       dispatchEvent: vi.fn().mockResolvedValue([]),
     };
 
+    mockHookService = {
+      applyFilters: vi.fn().mockImplementation((_, data) => Promise.resolve(data)),
+      doAction: vi.fn().mockResolvedValue(undefined),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       imports: [],
       providers: [
@@ -64,6 +71,10 @@ describe('DraftService', () => {
         {
           provide: PipelineService,
           useValue: mockPipelineService,
+        },
+        {
+          provide: HookService,
+          useValue: mockHookService,
         },
       ],
     }).compile();

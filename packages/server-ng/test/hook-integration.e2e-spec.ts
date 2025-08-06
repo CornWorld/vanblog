@@ -31,9 +31,11 @@ describe('Hook Integration (e2e)', () => {
     await app.close();
   });
 
-  beforeEach(() => {
+  beforeEach(async () => {
     // Clear all hooks before each test
     hookService.clearAllHooks();
+    // Clean database before each test to avoid conflicts
+    await cleanupDatabase(app);
   });
 
   describe('Article Hook Integration', () => {
