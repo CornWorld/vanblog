@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, beforeEach, afterEach, expect, vi } from 'vitest';
 import { PermissionService } from './permission.service';
@@ -19,18 +18,18 @@ type MockQueryBuilder = {
 describe('PermissionService', () => {
   let service: PermissionService;
   let mockDb: {
-    select: { mockReturnValue: (value: any) => any };
-    from: () => MockQueryBuilder;
-    where: () => MockQueryBuilder;
-    limit: () => MockQueryBuilder;
-    offset: () => MockQueryBuilder;
-    orderBy: () => MockQueryBuilder;
-    insert: { mockReturnValue: (value: any) => any };
-    values: () => MockQueryBuilder;
-    returning: () => Promise<unknown[]>;
-    update: () => MockQueryBuilder;
-    set: () => MockQueryBuilder;
-    delete: () => MockQueryBuilder;
+    select: ReturnType<typeof vi.fn>;
+    from: ReturnType<typeof vi.fn>;
+    where: ReturnType<typeof vi.fn>;
+    limit: ReturnType<typeof vi.fn>;
+    offset: ReturnType<typeof vi.fn>;
+    orderBy: ReturnType<typeof vi.fn>;
+    insert: ReturnType<typeof vi.fn>;
+    values: ReturnType<typeof vi.fn>;
+    returning: ReturnType<typeof vi.fn>;
+    update: ReturnType<typeof vi.fn>;
+    set: ReturnType<typeof vi.fn>;
+    delete: ReturnType<typeof vi.fn>;
   };
 
   const mockPermissionNode = {

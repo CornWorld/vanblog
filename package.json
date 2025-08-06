@@ -25,7 +25,8 @@
     "sync-aliyun": "bash scripts/sync-aliyuncs.sh",
     "webhook": "node scripts/webhook.js",
     "prepare": "husky",
-    "nano-staged": "nano-staged"
+    "nano-staged": "nano-staged",
+    "lint": "eslint"
   },
   "packageManager": "pnpm@10.8.0",
   "resolutions": {
@@ -79,12 +80,12 @@
   },
   "nano-staged": {
     "*.{ts,tsx}": [
-      "eslint --fix",
+      "pnpm lint --fix",
       "prettier --write",
       "tsc-files-workspace --noEmit"
     ],
     "*.{js,jsx}": [
-      "eslint --fix",
+      "pnpm lint --fix",
       "prettier --write"
     ],
     "*.{json,css,less,scss,md}": [

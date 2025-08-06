@@ -11,10 +11,18 @@ import { join } from 'path';
 const testId = randomUUID();
 const testDbDir = join(process.cwd(), 'test-data');
 const testDbPath = join(testDbDir, `test-${testId}.db`);
+const testCodeRunnerDir = join(process.cwd(), 'test-data', 'codeRunner');
+const testPluginRunnerDir = join(process.cwd(), 'test-data', 'pluginRunner');
 
-// Ensure test data directory exists
+// Ensure test data directories exist
 if (!existsSync(testDbDir)) {
   mkdirSync(testDbDir, { recursive: true });
+}
+if (!existsSync(testCodeRunnerDir)) {
+  mkdirSync(testCodeRunnerDir, { recursive: true });
+}
+if (!existsSync(testPluginRunnerDir)) {
+  mkdirSync(testPluginRunnerDir, { recursive: true });
 }
 
 // Override database configuration for tests
@@ -27,6 +35,8 @@ process.env.NODE_ENV = 'test';
 process.env.JWT_SECRET = 'test-secret-key';
 process.env.JWT_REFRESH_SECRET = 'test-refresh-secret-key';
 process.env.PORT = '3333'; // Use fixed test port
+process.env.CODE_RUNNER_PATH = testCodeRunnerDir;
+process.env.PLUGIN_RUNNER_PATH = testPluginRunnerDir;
 
 // Initialize test database with schema
 export async function setupTestDatabase(): Promise<ReturnType<typeof drizzle>> {
