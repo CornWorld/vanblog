@@ -26,11 +26,15 @@ export class HookService implements IHookService {
       this.actions.set(hookName, []);
     }
 
-    const hooks = this.actions.get(hookName)!;
-    hooks.push(registration);
-    hooks.sort((a, b) => a.priority - b.priority);
+    const hooks = this.actions.get(hookName);
+    if (hooks) {
+      hooks.push(registration);
+      hooks.sort((a, b) => a.priority - b.priority);
+    }
 
-    this.logger.debug(`Action added to hook '${hookName}' with priority ${priority} and id ${id}`);
+    this.logger.debug(
+      `Action added to hook '${hookName}' with priority ${String(priority)} and id ${id}`,
+    );
     return id;
   }
 
@@ -46,11 +50,15 @@ export class HookService implements IHookService {
       this.filters.set(hookName, []);
     }
 
-    const hooks = this.filters.get(hookName)!;
-    hooks.push(registration);
-    hooks.sort((a, b) => a.priority - b.priority);
+    const hooks = this.filters.get(hookName);
+    if (hooks) {
+      hooks.push(registration);
+      hooks.sort((a, b) => a.priority - b.priority);
+    }
 
-    this.logger.debug(`Filter added to hook '${hookName}' with priority ${priority} and id ${id}`);
+    this.logger.debug(
+      `Filter added to hook '${hookName}' with priority ${String(priority)} and id ${id}`,
+    );
     return id;
   }
 
@@ -93,7 +101,7 @@ export class HookService implements IHookService {
       return;
     }
 
-    this.logger.debug(`Executing ${hooks.length} actions for hook '${hookName}'`);
+    this.logger.debug(`Executing ${String(hooks.length)} actions for hook '${hookName}'`);
 
     for (const hook of hooks) {
       try {
@@ -114,7 +122,7 @@ export class HookService implements IHookService {
       return value;
     }
 
-    this.logger.debug(`Applying ${hooks.length} filters for hook '${hookName}'`);
+    this.logger.debug(`Applying ${String(hooks.length)} filters for hook '${hookName}'`);
 
     let result: unknown = value;
     for (const hook of hooks) {

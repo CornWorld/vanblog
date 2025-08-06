@@ -41,7 +41,7 @@ describe('ThirdPartyAnalyticsService', () => {
 
   describe('trackPageview', () => {
     it('should send pageview to Google Analytics when tracking ID is configured', async () => {
-      const mockPost = vi.mocked(axios.post).mockResolvedValue({ data: {} });
+      const mockPost = vi.mocked(axios.post).mockResolvedValue({ data: {} } as never);
 
       await service.trackPageview('/test-page', '192.168.1.1', 'Mozilla/5.0');
 
@@ -63,7 +63,7 @@ describe('ThirdPartyAnalyticsService', () => {
     });
 
     it('should send pageview to Baidu Analytics when site ID is configured', async () => {
-      const mockGet = vi.mocked(axios.get).mockResolvedValue({ data: {} });
+      const mockGet = vi.mocked(axios.get).mockResolvedValue({ data: {} } as never);
 
       await service.trackPageview('/test-page', '192.168.1.1');
 
@@ -100,7 +100,7 @@ describe('ThirdPartyAnalyticsService', () => {
 
   describe('trackEvent', () => {
     it('should send event to Google Analytics', async () => {
-      const mockPost = vi.mocked(axios.post).mockResolvedValue({ data: {} });
+      const mockPost = vi.mocked(axios.post).mockResolvedValue({ data: {} } as never);
 
       await service.trackEvent('Category', 'Action', 'Label', 100);
 
@@ -133,8 +133,8 @@ describe('ThirdPartyAnalyticsService', () => {
 
   describe('trackArticleView', () => {
     it('should track both event and pageview for article', async () => {
-      vi.mocked(axios.post).mockResolvedValue({ data: {} });
-      vi.mocked(axios.get).mockResolvedValue({ data: {} });
+      vi.mocked(axios.post).mockResolvedValue({ data: {} } as never);
+      vi.mocked(axios.get).mockResolvedValue({ data: {} } as never);
 
       await service.trackArticleView(123, 'Test Article', '192.168.1.1');
 

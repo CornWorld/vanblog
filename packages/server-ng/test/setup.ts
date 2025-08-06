@@ -68,4 +68,5 @@ export async function setupTestDatabase(): Promise<ReturnType<typeof drizzle>> {
 }
 
 // Setup database before tests
+
 setupTestDatabase().catch(console.error);

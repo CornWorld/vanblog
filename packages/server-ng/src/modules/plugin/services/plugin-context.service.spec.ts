@@ -8,10 +8,9 @@ import {
   PluginContextService,
 } from './plugin-context.service';
 import { ConfigService } from '../../../config/config.service';
-import { DATABASE_CONNECTION } from '../../../database';
+import { DATABASE_CONNECTION, type Database } from '../../../database';
 import { eq, and } from 'drizzle-orm';
 import { pluginData } from '../../../database/schema';
-import type { Database } from '../../../database';
 interface MockDatabase {
   select: ReturnType<typeof vi.fn>;
   from: ReturnType<typeof vi.fn>;

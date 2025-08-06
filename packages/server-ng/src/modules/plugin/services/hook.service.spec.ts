@@ -1,5 +1,4 @@
-import type { TestingModule } from '@nestjs/testing';
-import { Test } from '@nestjs/testing';
+import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { HookService } from './hook.service';
 import { Logger } from '@nestjs/common';
@@ -202,7 +201,7 @@ describe('HookService', () => {
     it('should pass additional arguments to filters', async () => {
       const filter = vi.fn((value: string, ...args: unknown[]) => {
         const [arg1, arg2] = args as [string, number];
-        return value + arg1 + arg2;
+        return value + arg1 + String(arg2);
       });
       service.addFilter('test-hook', filter);
 
@@ -257,7 +256,7 @@ describe('HookService', () => {
       expect(service.hasFilter('test-hook')).toBe(false);
       service.addFilter(
         'test-hook',
-        vi.fn((v) => v),
+        vi.fn((v: unknown) => v),
       );
       expect(service.hasFilter('test-hook')).toBe(true);
     });
@@ -273,11 +272,11 @@ describe('HookService', () => {
       expect(service.getFilterCount('test-hook')).toBe(0);
       service.addFilter(
         'test-hook',
-        vi.fn((v) => v),
+        vi.fn((v: unknown) => v),
       );
       service.addFilter(
         'test-hook',
-        vi.fn((v) => v),
+        vi.fn((v: unknown) => v),
       );
       expect(service.getFilterCount('test-hook')).toBe(2);
     });
@@ -293,11 +292,11 @@ describe('HookService', () => {
     it('should get all filter hooks', () => {
       service.addFilter(
         'hook1',
-        vi.fn((v) => v),
+        vi.fn((v: unknown) => v),
       );
       service.addFilter(
         'hook2',
-        vi.fn((v) => v),
+        vi.fn((v: unknown) => v),
       );
       const hooks = service.getAllFilterHooks();
       expect(hooks).toContain('hook1');
@@ -308,7 +307,7 @@ describe('HookService', () => {
       service.addAction('hook1', vi.fn());
       service.addFilter(
         'hook2',
-        vi.fn((v) => v),
+        vi.fn((v: unknown) => v),
       );
 
       expect(service.hasAction('hook1')).toBe(true);
@@ -325,7 +324,7 @@ describe('HookService', () => {
       service.addAction('hook2', vi.fn());
       service.addFilter(
         'hook1',
-        vi.fn((v) => v),
+        vi.fn((v: unknown) => v),
       );
 
       service.clearHook('hook1');

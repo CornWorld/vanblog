@@ -2,6 +2,7 @@ import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
 import prettierConfig from 'eslint-config-prettier';
 import prettierPlugin from 'eslint-plugin-prettier';
+import importPlugin from 'eslint-plugin-import';
 import { dirname } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -14,6 +15,7 @@ export default tseslint.config(
   {
     plugins: {
       prettier: prettierPlugin,
+      import: importPlugin,
     },
   },
   {
@@ -65,13 +67,47 @@ export default tseslint.config(
       '@typescript-eslint/prefer-string-starts-ends-with': 'error',
       '@typescript-eslint/prefer-readonly': 'error',
       '@typescript-eslint/member-ordering': 'error',
-      '@typescript-eslint/unbound-method': 'off',
+      '@typescript-eslint/unbound-method': 'warn',
       '@typescript-eslint/no-extraneous-class': ['error', { allowWithDecorator: true }],
+      '@typescript-eslint/return-await': ['error', 'in-try-catch'],
+
+      // Import/Export 规范
+      'import/order': [
+        'error',
+        {
+          groups: [
+            'builtin',    // Node.js 内置模块
+            'external',   // 外部依赖
+            'internal',   // 内部模块
+            'parent',     // 父级目录
+            'sibling',    // 同级目录
+            'index',      // index 文件
+            'type',       // 类型导入
+          ],
+          'newlines-between': 'always',
+          alphabetize: {
+            order: 'asc',
+            caseInsensitive: true,
+          },
+        },
+      ],
+      'import/no-duplicates': 'error',
+      'import/no-unresolved': 'off', // TypeScript 已处理
+      'import/named': 'off',         // TypeScript 已处理
+      'import/default': 'off',       // TypeScript 已处理
+      'import/namespace': 'off',     // TypeScript 已处理
+      'import/no-named-as-default': 'warn',
+      'import/no-named-as-default-member': 'warn',
+      'import/no-deprecated': 'warn',
+      'import/no-mutable-exports': 'error',
+      'import/prefer-default-export': 'off',
+      'import/first': 'error',
+      'import/newline-after-import': 'error',
+      'import/no-absolute-path': 'error',
 
       // 代码质量规则
       'no-console': 'warn',
       'no-debugger': 'error',
-      'no-duplicate-imports': 'error',
       'no-unused-expressions': 'error',
       'prefer-const': 'error',
       'prefer-template': 'error',
@@ -80,16 +116,6 @@ export default tseslint.config(
       'no-throw-literal': 'error',
       'prefer-promise-reject-errors': 'error',
       'prettier/prettier': 'error',
-    },
-  },
-  {
-    files: ['**/*.spec.ts', '**/*.test.ts'],
-    rules: {
-      '@typescript-eslint/no-explicit-any': 'off',
-      '@typescript-eslint/explicit-function-return-type': 'off',
-      '@typescript-eslint/no-unsafe-member-access': 'off',
-      '@typescript-eslint/no-unsafe-call': 'off',
-      '@typescript-eslint/no-unsafe-assignment': 'off',
     },
   },
 );

@@ -1,6 +1,7 @@
 export interface PluginDataStorage {
-  get<T = unknown>(key: string): Promise<T | null>;
-  set<T = unknown>(key: string, value: T): Promise<void>;
+  get(key: string): Promise<unknown>;
+  get<T>(key: string): Promise<T | null>;
+  set(key: string, value: unknown): Promise<void>;
   delete(key: string): Promise<boolean>;
   has(key: string): Promise<boolean>;
   clear(): Promise<void>;
@@ -8,9 +9,9 @@ export interface PluginDataStorage {
 }
 
 export interface PluginConfigReader {
-  get<T = unknown>(key: string): T | undefined;
-  get<T = unknown>(key: string, defaultValue: T): T;
-  getOrThrow<T = unknown>(key: string): T;
+  get(key: string): unknown;
+  get<T>(key: string, defaultValue: T): T;
+  getOrThrow(key: string): unknown;
   has(key: string): boolean;
 }
 

@@ -49,7 +49,7 @@ describe('HttpExceptionFilter', () => {
     expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST);
     expect(mockResponse.json).toHaveBeenCalledWith({
       statusCode: HttpStatus.BAD_REQUEST,
-      timestamp: expect.any(String),
+      timestamp: expect.any(String) as string,
       path: '/api/test',
       method: 'GET',
       message: 'Test error',
@@ -58,7 +58,7 @@ describe('HttpExceptionFilter', () => {
   });
 
   it('should handle HttpException with object response', () => {
-    const errorResponse = { message: 'Validation failed', errors: ['field1 is required'] };
+    const errorResponse = { message: 'Validation failed', errors: ['field1 is required'] } as const;
     const exception = new HttpException(errorResponse, HttpStatus.BAD_REQUEST);
 
     filter.catch(exception, mockArgumentsHost);
@@ -66,7 +66,7 @@ describe('HttpExceptionFilter', () => {
     expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST);
     expect(mockResponse.json).toHaveBeenCalledWith({
       statusCode: HttpStatus.BAD_REQUEST,
-      timestamp: expect.any(String),
+      timestamp: expect.any(String) as string,
       path: '/api/test',
       method: 'GET',
       message: 'Validation failed',

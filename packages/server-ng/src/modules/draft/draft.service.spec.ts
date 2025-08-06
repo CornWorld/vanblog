@@ -16,7 +16,7 @@ describe('DraftService', () => {
 
   beforeEach(async () => {
     // Create chainable mock object
-    const createChainableMock = () => {
+    const createChainableMock = (): Record<string, ReturnType<typeof vi.fn>> => {
       const mock: Record<string, ReturnType<typeof vi.fn>> = {
         select: vi.fn(),
         from: vi.fn(),
