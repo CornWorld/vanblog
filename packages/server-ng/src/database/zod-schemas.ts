@@ -109,6 +109,7 @@ export const updateArticleSchema = createUpdateSchema(articles, {
 // Category schemas
 export const selectCategorySchema = createSelectSchema(categories, {
   createdAt: (schema) => schema.transform((date) => date.toISOString()),
+  updatedAt: (schema) => schema.transform((date) => date.toISOString()),
 });
 
 export const insertCategorySchema = createInsertSchema(categories, {

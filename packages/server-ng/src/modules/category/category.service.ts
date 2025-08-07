@@ -14,6 +14,7 @@ import {
   UpdateCategoryDto,
   CategoryListResponseDto,
   CategoryWithCountDto,
+  CategoryDto,
 } from './dto/category.dto';
 import { CategoryAccessResponseDto } from './dto/verify-password.dto';
 import { Category } from './entities/category.entity';
@@ -54,6 +55,8 @@ export class CategoryService {
       private: category.private,
       password: category.password,
       articleCount: Number(category.articleCount) || 0,
+      createdAt: category.createdAt.toISOString(),
+      updatedAt: category.updatedAt.toISOString(),
     }));
 
     return {
@@ -62,23 +65,25 @@ export class CategoryService {
     };
   }
 
-  async findOne(id: number): Promise<Category> {
+  async findOne(id: number): Promise<CategoryDto> {
     const results = await this.db.select().from(categories).where(eq(categories.id, id)).limit(1);
 
     if (results.length === 0) {
       throw new NotFoundException(`Category with ID ${String(id)} not found`);
     }
 
-    return new Category({
+    return {
       ...results[0],
-      slug: results[0].slug ?? undefined,
-      description: results[0].description ?? undefined,
-      private: results[0].private ?? undefined,
-      password: results[0].password ?? undefined,
-    });
+      slug: results[0].slug ?? null,
+      description: results[0].description ?? null,
+      private: results[0].private ?? null,
+      password: results[0].password ?? null,
+      createdAt: results[0].createdAt.toISOString(),
+      updatedAt: results[0].updatedAt.toISOString(),
+    };
   }
 
-  async create(dto: CreateCategoryDto): Promise<Category> {
+  async create(dto: CreateCategoryDto): Promise<CategoryDto> {
     // Hash password if provided
     if (dto.password) {
       dto.password = await bcrypt.hash(dto.password, 10);
@@ -90,16 +95,18 @@ export class CategoryService {
       throw new Error('Failed to create category');
     }
 
-    return new Category({
+    return {
       ...result[0],
-      slug: result[0].slug ?? undefined,
-      description: result[0].description ?? undefined,
-      private: result[0].private ?? undefined,
-      password: result[0].password ?? undefined,
-    });
+      slug: result[0].slug ?? null,
+      description: result[0].description ?? null,
+      private: result[0].private ?? null,
+      password: result[0].password ?? null,
+      createdAt: result[0].createdAt.toISOString(),
+      updatedAt: result[0].updatedAt.toISOString(),
+    };
   }
 
-  async update(id: number, updateCategoryDto: UpdateCategoryDto): Promise<Category> {
+  async update(id: number, updateCategoryDto: UpdateCategoryDto): Promise<CategoryDto> {
     const categoryData: UpdateCategoryDto = {
       name: updateCategoryDto.name,
       description: updateCategoryDto.description,
@@ -123,13 +130,15 @@ export class CategoryService {
 
     // Foreign key constraint will handle cascade update automatically
 
-    return new Category({
+    return {
       ...result[0],
-      slug: result[0].slug ?? undefined,
-      description: result[0].description ?? undefined,
-      private: result[0].private ?? undefined,
-      password: result[0].password ?? undefined,
-    });
+      slug: result[0].slug ?? null,
+      description: result[0].description ?? null,
+      private: result[0].private ?? null,
+      password: result[0].password ?? null,
+      createdAt: result[0].createdAt.toISOString(),
+      updatedAt: result[0].updatedAt.toISOString(),
+    };
   }
 
   async remove(id: number): Promise<void> {

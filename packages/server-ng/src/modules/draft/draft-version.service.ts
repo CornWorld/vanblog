@@ -5,7 +5,7 @@ import { DATABASE_CONNECTION } from '../../database';
 import { draftVersions, drafts } from '../../database/schema';
 import { safeParseJson, dataSchemas } from '../../shared/zod';
 
-import { DraftVersion } from './entities/draft.entity';
+import { DraftVersionDto } from './dto/draft.dto';
 
 import type { Database } from '../../database/connection';
 
@@ -16,7 +16,7 @@ export class DraftVersionService {
     private readonly db: Database,
   ) {}
 
-  async createVersion(draftId: number): Promise<DraftVersion> {
+  async createVersion(draftId: number): Promise<DraftVersionDto> {
     // Get current draft to save as version
     const currentDraftResults = await this.db
       .select()
@@ -59,33 +59,32 @@ export class DraftVersionService {
 
     const newVersion = result[0];
 
-    return new DraftVersion({
+    return {
       ...newVersion,
       tags: safeParseJson(newVersion.tags, dataSchemas.tagsArray) ?? [],
-      pathname: newVersion.pathname ?? undefined,
-      category: newVersion.category ?? undefined,
-    });
+      pathname: newVersion.pathname ?? null,
+      category: newVersion.category ?? null,
+      createdAt: newVersion.createdAt.toISOString(),
+    };
   }
 
-  async getVersions(draftId: number): Promise<DraftVersion[]> {
+  async getVersions(draftId: number): Promise<DraftVersionDto[]> {
     const results = await this.db
       .select()
       .from(draftVersions)
       .where(eq(draftVersions.draftId, draftId))
       .orderBy(desc(draftVersions.version));
 
-    return results.map(
-      (version) =>
-        new DraftVersion({
-          ...version,
-          tags: safeParseJson(version.tags, dataSchemas.tagsArray) ?? [],
-          pathname: version.pathname,
-          category: version.category,
-        }),
-    );
+    return results.map((version) => ({
+      ...version,
+      tags: safeParseJson(version.tags, dataSchemas.tagsArray) ?? [],
+      pathname: version.pathname,
+      category: version.category,
+      createdAt: version.createdAt.toISOString(),
+    }));
   }
 
-  async getVersion(draftId: number, version: number): Promise<DraftVersion> {
+  async getVersion(draftId: number, version: number): Promise<DraftVersionDto> {
     const results = await this.db
       .select()
       .from(draftVersions)
@@ -100,12 +99,13 @@ export class DraftVersionService {
 
     const versionData = results[0];
 
-    return new DraftVersion({
+    return {
       ...versionData,
       tags: safeParseJson(versionData.tags, dataSchemas.tagsArray) ?? [],
       pathname: versionData.pathname,
       category: versionData.category,
-    });
+      createdAt: versionData.createdAt.toISOString(),
+    };
   }
 
   async restoreVersion(draftId: number, version: number): Promise<void> {
@@ -119,7 +119,8 @@ export class DraftVersionService {
         title: versionData.title,
         content: versionData.content,
         pathname: versionData.pathname ?? null,
-        tags: versionData.tags.length > 0 ? JSON.stringify(versionData.tags) : null,
+        tags:
+          versionData.tags && versionData.tags.length > 0 ? JSON.stringify(versionData.tags) : null,
         category: versionData.category ?? null,
         author: versionData.author,
         updatedAt: new Date(),

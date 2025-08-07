@@ -27,8 +27,8 @@ describe('PermissionController', () => {
     description: 'Read articles',
     module: 'article',
     isActive: true,
-    createdAt: new Date(),
-    updatedAt: new Date(),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
   };
 
   const mockPermissionGroup: PermissionGroupDto = {
@@ -37,8 +37,8 @@ describe('PermissionController', () => {
     description: 'Administrator group',
     permissions: ['article:read', 'article:write'],
     isActive: true,
-    createdAt: new Date(),
-    updatedAt: new Date(),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
   };
 
   const mockPermissionService = {

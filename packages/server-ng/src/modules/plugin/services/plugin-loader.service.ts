@@ -2,7 +2,7 @@ import { readdir, stat, readFile } from 'fs/promises';
 import { join } from 'path';
 import { pathToFileURL } from 'url';
 
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 
 import { LoggerService } from '../../../core/logger/logger.service';
 
@@ -11,6 +11,13 @@ import { PluginContextFactory } from './plugin-context.service';
 
 import type { ActionCallback, FilterCallback } from '../interfaces/hook.interface';
 import type { PluginContext } from '../interfaces/plugin-context.interface';
+
+interface PackageJson {
+  [key: string]: unknown;
+  name?: string;
+  keywords?: string[];
+  vanblog?: unknown;
+}
 
 export interface PluginManifest {
   name: string;
@@ -48,7 +55,7 @@ export interface Plugin {
 }
 
 @Injectable()
-export class PluginLoaderService implements OnModuleInit {
+export class PluginLoaderService {
   private readonly loadedPlugins = new Map<string, Plugin>();
   private readonly pluginContexts = new Map<string, PluginContext>();
 
@@ -58,12 +65,6 @@ export class PluginLoaderService implements OnModuleInit {
     private readonly hookService: HookService,
   ) {
     this.logger.log('PluginLoaderService initialized');
-  }
-
-  async onModuleInit(): Promise<void> {
-    this.logger.log('Starting plugin loading process');
-    await this.loadPlugins();
-    this.logger.log('Plugin loading process completed');
   }
 
   getLoadedPlugins(): Map<string, Plugin> {
@@ -242,11 +243,11 @@ export class PluginLoaderService implements OnModuleInit {
     try {
       const packageJsonPath = join(packagePath, 'package.json');
       const packageJsonContent = await readFile(packageJsonPath, 'utf-8');
-      const packageJson = JSON.parse(packageJsonContent);
+      const packageJson = JSON.parse(packageJsonContent) as PackageJson;
 
       // Check if package has vanblog-plugin keyword or starts with vanblog-plugin-
-      const hasKeyword = packageJson.keywords?.includes('vanblog-plugin');
-      const hasPrefix = packageJson.name?.startsWith('vanblog-plugin-');
+      const hasKeyword = packageJson.keywords?.includes('vanblog-plugin') ?? false;
+      const hasPrefix = packageJson.name?.startsWith('vanblog-plugin-') ?? false;
       const hasVanBlogConfig = packageJson.vanblog !== undefined;
 
       return hasKeyword || hasPrefix || hasVanBlogConfig;

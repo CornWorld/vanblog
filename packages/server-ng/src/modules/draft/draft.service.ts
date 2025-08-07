@@ -15,8 +15,9 @@ import {
   DraftQueryDto,
   DraftListResponseDto,
   PublishDraftDto,
+  DraftDto,
 } from './dto/draft.dto';
-import { Draft } from './entities/draft.entity';
+// import { Draft } from './entities/draft.entity';
 
 import type { Database } from '../../database/connection';
 
@@ -81,15 +82,26 @@ export class DraftService {
     }));
 
     return {
-      items: processedDrafts.map((draft) => new Draft(draft)),
-      total: countResult[0]?.count ?? 0,
+      items: processedDrafts.map((draft) => ({
+        id: draft.id,
+        title: draft.title,
+        content: draft.content,
+        pathname: draft.pathname,
+        category: draft.category,
+        tags: draft.tags,
+        author: draft.author,
+        version: draft.version,
+        createdAt: draft.createdAt.toISOString(),
+        updatedAt: draft.updatedAt.toISOString(),
+      })),
+      total: Number(countResult[0]?.count) || 0,
       page,
       pageSize,
-      totalPages: Math.ceil((countResult[0]?.count ?? 0) / pageSize),
+      totalPages: Math.ceil((Number(countResult[0]?.count) || 0) / pageSize),
     };
   }
 
-  async findOne(id: number): Promise<Draft> {
+  async findOne(id: number): Promise<DraftDto> {
     const results = await this.db.select().from(drafts).where(eq(drafts.id, id)).limit(1);
 
     if (results.length === 0) {
@@ -98,15 +110,17 @@ export class DraftService {
 
     const draft = results[0];
 
-    return new Draft({
+    return {
       ...draft,
       tags: safeParseJson(draft.tags, dataSchemas.tagsArray) ?? [],
       pathname: draft.pathname,
       category: draft.category,
-    });
+      createdAt: draft.createdAt.toISOString(),
+      updatedAt: draft.updatedAt.toISOString(),
+    };
   }
 
-  async create(createDraftDto: CreateDraftDto): Promise<Draft> {
+  async create(createDraftDto: CreateDraftDto): Promise<DraftDto> {
     const { tags, ...rest } = createDraftDto;
 
     let draftData = {
@@ -134,12 +148,14 @@ export class DraftService {
     }
 
     const newDraft = result[0];
-    const draftResult = new Draft({
+    const draftResult = {
       ...newDraft,
       tags: safeParseJson(newDraft.tags, dataSchemas.tagsArray) ?? [],
       pathname: newDraft.pathname,
       category: newDraft.category,
-    });
+      createdAt: newDraft.createdAt.toISOString(),
+      updatedAt: newDraft.updatedAt.toISOString(),
+    };
 
     // Trigger afterCreateDraft hook (new hook system)
     try {
@@ -151,7 +167,7 @@ export class DraftService {
     return draftResult;
   }
 
-  async update(id: number, updateDraftDto: UpdateDraftDto): Promise<Draft> {
+  async update(id: number, updateDraftDto: UpdateDraftDto): Promise<DraftDto> {
     // Save a version before updating
     await this.draftVersionService.createVersion(id);
 
@@ -229,12 +245,14 @@ export class DraftService {
     }
 
     const updatedDraft = result[0];
-    const draftResult = new Draft({
+    const draftResult = {
       ...updatedDraft,
       tags: safeParseJson(updatedDraft.tags, dataSchemas.tagsArray) ?? [],
       pathname: updatedDraft.pathname,
       category: updatedDraft.category,
-    });
+      createdAt: updatedDraft.createdAt.toISOString(),
+      updatedAt: updatedDraft.updatedAt.toISOString(),
+    };
 
     // Trigger afterUpdateDraft hook (new hook system)
     try {
@@ -303,7 +321,7 @@ export class DraftService {
     const draft = await this.findOne(id);
 
     // Auto-create tags if they don't exist
-    if (draft.tags.length > 0) {
+    if (draft.tags && draft.tags.length > 0) {
       await this.createMissingTags(draft.tags);
     }
 
@@ -314,7 +332,7 @@ export class DraftService {
         title: draft.title,
         content: draft.content,
         pathname: draft.pathname ?? null,
-        tags: draft.tags.length > 0 ? JSON.stringify(draft.tags) : null,
+        tags: draft.tags && draft.tags.length > 0 ? JSON.stringify(draft.tags) : null,
         category: draft.category ?? null,
         author: draft.author,
         top: publishDto.isTop ? 1 : 0,
@@ -354,7 +372,7 @@ export class DraftService {
     }
   }
 
-  async autoSave(id: number, updateDraftDto: UpdateDraftDto): Promise<Draft> {
+  async autoSave(id: number, updateDraftDto: UpdateDraftDto): Promise<DraftDto> {
     // Auto-save doesn't create a version to avoid too many versions
     // Just update the draft directly
     const { tags, ...rest } = updateDraftDto;
@@ -399,12 +417,14 @@ export class DraftService {
 
     const updatedDraft = result[0];
 
-    return new Draft({
+    return {
       ...updatedDraft,
       tags: safeParseJson(updatedDraft.tags, dataSchemas.tagsArray) ?? [],
       pathname: updatedDraft.pathname,
       category: updatedDraft.category,
-    });
+      createdAt: updatedDraft.createdAt.toISOString(),
+      updatedAt: updatedDraft.updatedAt.toISOString(),
+    };
   }
 
   private async createMissingTags(tagNames: string[]): Promise<void> {

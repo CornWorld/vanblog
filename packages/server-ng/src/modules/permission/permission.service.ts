@@ -55,8 +55,8 @@ export class PermissionService {
       description: permission.description ?? null,
       isActive: permission.isActive ?? true,
       id: existing[0]?.id ?? 0,
-      createdAt: existing[0]?.createdAt ?? new Date(),
-      updatedAt: existing[0]?.updatedAt ?? new Date(),
+      createdAt: existing[0]?.createdAt?.toISOString() ?? new Date().toISOString(),
+      updatedAt: existing[0]?.updatedAt?.toISOString() ?? new Date().toISOString(),
     });
   }
 
@@ -115,7 +115,11 @@ export class PermissionService {
       .insert(permissionNodes)
       .values(createPermissionNodeDto)
       .returning();
-    return result;
+    return {
+      ...result,
+      createdAt: result.createdAt.toISOString(),
+      updatedAt: result.updatedAt.toISOString(),
+    };
   }
 
   async findAllPermissionNodes(query: PermissionNodeQueryType): Promise<PermissionNodeType[]> {
@@ -130,31 +134,46 @@ export class PermissionService {
     }
 
     if (conditions.length === 0) {
-      return this.db
+      const results = await this.db
         .select()
         .from(permissionNodes)
         .orderBy(desc(permissionNodes.createdAt))
         .limit(query.limit)
         .offset((query.page - 1) * query.limit);
+      return results.map((result) => ({
+        ...result,
+        createdAt: result.createdAt.toISOString(),
+        updatedAt: result.updatedAt.toISOString(),
+      }));
     }
 
     if (conditions.length === 1) {
-      return this.db
+      const results = await this.db
         .select()
         .from(permissionNodes)
         .where(conditions[0])
         .orderBy(desc(permissionNodes.createdAt))
         .limit(query.limit)
         .offset((query.page - 1) * query.limit);
+      return results.map((result) => ({
+        ...result,
+        createdAt: result.createdAt.toISOString(),
+        updatedAt: result.updatedAt.toISOString(),
+      }));
     }
 
-    return this.db
+    const results = await this.db
       .select()
       .from(permissionNodes)
       .where(and(...conditions))
       .orderBy(desc(permissionNodes.createdAt))
       .limit(query.limit)
       .offset((query.page - 1) * query.limit);
+    return results.map((result) => ({
+      ...result,
+      createdAt: result.createdAt.toISOString(),
+      updatedAt: result.updatedAt.toISOString(),
+    }));
   }
 
   async findPermissionNodeById(id: number): Promise<PermissionNodeType> {
@@ -168,7 +187,11 @@ export class PermissionService {
       throw new NotFoundException(`Permission node with ID ${String(id)} not found`);
     }
 
-    return result[0];
+    return {
+      ...result[0],
+      createdAt: result[0].createdAt.toISOString(),
+      updatedAt: result[0].updatedAt.toISOString(),
+    };
   }
 
   async updatePermissionNode(
@@ -185,7 +208,16 @@ export class PermissionService {
       throw new NotFoundException(`Permission node with ID ${String(id)} not found`);
     }
 
-    return result[0];
+    const node = result[0];
+    return {
+      id: node.id,
+      name: node.name,
+      description: node.description,
+      module: node.module,
+      isActive: node.isActive,
+      createdAt: node.createdAt.toISOString(),
+      updatedAt: node.updatedAt.toISOString(),
+    };
   }
 
   async removePermissionNode(id: number): Promise<void> {
@@ -207,6 +239,8 @@ export class PermissionService {
     return {
       ...result,
       permissions: result.permissions ? (JSON.parse(result.permissions) as string[]) : null,
+      createdAt: result.createdAt.toISOString(),
+      updatedAt: result.updatedAt.toISOString(),
     };
   }
 
@@ -233,6 +267,8 @@ export class PermissionService {
     return results.map((group) => ({
       ...group,
       permissions: group.permissions ? (JSON.parse(group.permissions) as string[]) : null,
+      createdAt: group.createdAt.toISOString(),
+      updatedAt: group.updatedAt.toISOString(),
     }));
   }
 
@@ -250,6 +286,8 @@ export class PermissionService {
     return {
       ...result[0],
       permissions: result[0].permissions ? (JSON.parse(result[0].permissions) as string[]) : null,
+      createdAt: result[0].createdAt.toISOString(),
+      updatedAt: result[0].updatedAt.toISOString(),
     };
   }
 
@@ -270,6 +308,8 @@ export class PermissionService {
     return {
       ...result[0],
       permissions: result[0].permissions ? (JSON.parse(result[0].permissions) as string[]) : null,
+      createdAt: result[0].createdAt.toISOString(),
+      updatedAt: result[0].updatedAt.toISOString(),
     };
   }
 

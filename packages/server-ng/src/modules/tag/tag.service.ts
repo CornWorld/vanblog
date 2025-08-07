@@ -33,10 +33,11 @@ export class TagService {
           .where(like(articles.tags, `%"${tag.name}"%`));
 
         return {
-          ...tag,
+          id: tag.id,
+          name: tag.name,
           slug: tag.slug,
           articleCount: Number(countResult[0]?.count) || 0,
-          updatedAt: tag.createdAt, // Use createdAt as updatedAt since tags table doesn't have updatedAt
+          createdAt: tag.createdAt.toISOString(),
         };
       }),
     );

@@ -60,7 +60,7 @@ export class LoginLogService {
       userAgent: log.userAgent,
       success: Boolean(log.success),
       message: log.message,
-      createdAt: log.createdAt,
+      createdAt: log.createdAt.toISOString(),
     }));
   }
 

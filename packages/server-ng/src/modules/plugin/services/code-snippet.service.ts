@@ -12,8 +12,9 @@ import {
   CodeSnippetExecuteDto,
   CodeSnippetListResponseDto,
   CodeSnippetExecuteResponseDto,
+  CodeSnippetResponseDto,
 } from '../dto/code-snippet.dto';
-import { CodeSnippet, NewCodeSnippet } from '../entities/code-snippet.entity';
+import { NewCodeSnippet } from '../entities/code-snippet.entity';
 
 import { PluginContextFactory } from './plugin-context.service';
 
@@ -28,7 +29,7 @@ export class CodeSnippetService {
     private readonly pluginContextFactory: PluginContextFactory,
   ) {}
 
-  async create(createCodeSnippetDto: CreateCodeSnippetDto): Promise<CodeSnippet> {
+  async create(createCodeSnippetDto: CreateCodeSnippetDto): Promise<CodeSnippetResponseDto> {
     try {
       // Validate the code syntax by trying to compile it
       this.validateCodeSyntax(createCodeSnippetDto.code);
@@ -53,7 +54,20 @@ export class CodeSnippetService {
       }
 
       this.logger.log(`Created code snippet: ${result[0].name}`);
-      return result[0];
+      const snippet = result[0];
+      return {
+        id: snippet.id,
+        name: snippet.name,
+        description: snippet.description,
+        hookName: snippet.hookName,
+        hookType: snippet.hookType,
+        priority: snippet.priority,
+        code: snippet.code,
+        enabled: snippet.enabled,
+        timeout: snippet.timeout,
+        createdAt: snippet.createdAt.toISOString(),
+        updatedAt: snippet.updatedAt.toISOString(),
+      };
     } catch (error) {
       this.logger.error(
         `Failed to create code snippet:`,
@@ -106,7 +120,19 @@ export class CodeSnippetService {
         .offset(offset);
 
       return {
-        data,
+        data: data.map((snippet) => ({
+          id: snippet.id,
+          name: snippet.name,
+          description: snippet.description,
+          hookName: snippet.hookName,
+          hookType: snippet.hookType,
+          priority: snippet.priority,
+          code: snippet.code,
+          enabled: snippet.enabled,
+          timeout: snippet.timeout,
+          createdAt: snippet.createdAt.toISOString(),
+          updatedAt: snippet.updatedAt.toISOString(),
+        })),
         total,
         page,
         limit,
@@ -121,7 +147,7 @@ export class CodeSnippetService {
     }
   }
 
-  async findOne(id: number): Promise<CodeSnippet> {
+  async findOne(id: number): Promise<CodeSnippetResponseDto> {
     try {
       const result = await this.db
         .select()
@@ -133,7 +159,20 @@ export class CodeSnippetService {
         throw new NotFoundException(`Code snippet with ID ${String(id)} not found`);
       }
 
-      return result[0];
+      const snippet = result[0];
+      return {
+        id: snippet.id,
+        name: snippet.name,
+        description: snippet.description,
+        hookName: snippet.hookName,
+        hookType: snippet.hookType,
+        priority: snippet.priority,
+        code: snippet.code,
+        enabled: snippet.enabled,
+        timeout: snippet.timeout,
+        createdAt: snippet.createdAt.toISOString(),
+        updatedAt: snippet.updatedAt.toISOString(),
+      };
     } catch (error) {
       this.logger.error(
         `Failed to find code snippet with ID ${String(id)}:`,
@@ -143,7 +182,10 @@ export class CodeSnippetService {
     }
   }
 
-  async update(id: number, updateCodeSnippetDto: UpdateCodeSnippetDto): Promise<CodeSnippet> {
+  async update(
+    id: number,
+    updateCodeSnippetDto: UpdateCodeSnippetDto,
+  ): Promise<CodeSnippetResponseDto> {
     try {
       // Validate the code syntax if code is being updated
       if (updateCodeSnippetDto.code) {
@@ -179,7 +221,20 @@ export class CodeSnippetService {
       }
 
       this.logger.log(`Updated code snippet: ${result[0].name}`);
-      return result[0];
+      const snippet = result[0];
+      return {
+        id: snippet.id,
+        name: snippet.name,
+        description: snippet.description,
+        hookName: snippet.hookName,
+        hookType: snippet.hookType,
+        priority: snippet.priority,
+        code: snippet.code,
+        enabled: snippet.enabled,
+        timeout: snippet.timeout,
+        createdAt: snippet.createdAt.toISOString(),
+        updatedAt: snippet.updatedAt.toISOString(),
+      };
     } catch (error) {
       this.logger.error(
         `Failed to update code snippet with ID ${String(id)}:`,
@@ -248,7 +303,10 @@ export class CodeSnippetService {
     }
   }
 
-  async findByHook(hookName: string, hookType: 'action' | 'filter'): Promise<CodeSnippet[]> {
+  async findByHook(
+    hookName: string,
+    hookType: 'action' | 'filter',
+  ): Promise<CodeSnippetResponseDto[]> {
     try {
       const result = await this.db
         .select()
@@ -262,7 +320,19 @@ export class CodeSnippetService {
         )
         .orderBy(codeSnippets.priority);
 
-      return result;
+      return result.map((snippet) => ({
+        id: snippet.id,
+        name: snippet.name,
+        description: snippet.description,
+        hookName: snippet.hookName,
+        hookType: snippet.hookType,
+        priority: snippet.priority,
+        code: snippet.code,
+        enabled: snippet.enabled,
+        timeout: snippet.timeout,
+        createdAt: snippet.createdAt.toISOString(),
+        updatedAt: snippet.updatedAt.toISOString(),
+      }));
     } catch (error) {
       this.logger.error(
         `Failed to find code snippets for hook ${hookName}:`,

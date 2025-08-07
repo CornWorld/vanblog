@@ -98,8 +98,8 @@ export class ArticleService {
       private: article.private,
       password: article.password,
       viewer: article.viewer,
-      createdAt: article.createdAt,
-      updatedAt: article.updatedAt,
+      createdAt: article.createdAt.toISOString(),
+      updatedAt: article.updatedAt.toISOString(),
     }));
 
     const total = Number(countResult[0]?.count || 0);
@@ -176,7 +176,7 @@ export class ArticleService {
       cover: undefined,
       tags: safeParseJson(article.tags, dataSchemas.tagsArray) ?? [],
       categories: article.category ? [article.category] : [],
-      publishedAt: article.updatedAt,
+      publishedAt: article.updatedAt.toISOString(),
       highlight: undefined,
     }));
 
@@ -508,8 +508,8 @@ export class ArticleService {
       private: article.private,
       password: article.password,
       viewer: article.viewer,
-      createdAt: article.createdAt,
-      updatedAt: article.updatedAt,
+      createdAt: article.createdAt.toISOString(),
+      updatedAt: article.updatedAt.toISOString(),
     }));
 
     return {

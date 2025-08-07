@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, DynamicModule } from '@nestjs/common';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ScheduleModule } from '@nestjs/schedule';
 
@@ -26,31 +26,41 @@ import { TagModule } from './modules/tag/tag.module';
 import { UserModule } from './modules/user/user.module';
 
 @Module({
-  imports: [
-    ConfigModule,
-    EventEmitterModule.forRoot(),
-    ScheduleModule.forRoot(),
-    DatabaseModule,
-    LoggerModule,
-    HealthModule,
-    UserModule,
-    AuthModule,
-    ArticleModule,
-    CategoryModule,
-    TagModule,
-    DraftModule,
-    MediaModule,
-    SettingModule,
-    AnalyticsModule,
-    BeianModule,
-    SocialLinksModule,
-    RewardModule,
-    PipelineModule,
-    DemoModule,
-    PermissionModule,
-    PluginModule,
-  ],
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {}
+export class AppModule {
+  static async forRoot(): Promise<DynamicModule> {
+    const pluginModule = await PluginModule.forRoot();
+
+    return {
+      module: AppModule,
+      imports: [
+        ConfigModule,
+        EventEmitterModule.forRoot(),
+        ScheduleModule.forRoot(),
+        DatabaseModule,
+        LoggerModule,
+        HealthModule,
+        UserModule,
+        AuthModule,
+        ArticleModule,
+        CategoryModule,
+        TagModule,
+        DraftModule,
+        MediaModule,
+        SettingModule,
+        AnalyticsModule,
+        BeianModule,
+        SocialLinksModule,
+        RewardModule,
+        PipelineModule,
+        DemoModule,
+        PermissionModule,
+        pluginModule,
+      ],
+      controllers: [AppController],
+      providers: [AppService],
+    };
+  }
+}
