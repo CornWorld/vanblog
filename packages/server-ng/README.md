@@ -268,28 +268,24 @@ JWT_EXPIRES_IN=7d
 
 ### 额外阶段：升级 Pipeline 到 Plugin 系统
 
-> 这个阶段的每一条修改量都非常大。暂定一个 commit
+> 这个阶段的每一条修改量都非常大。暂定一个 commit 一行
 > 暂时不删除 pipeline 系统，而是并行
 
-- [x] HookService 开发：
-  - [x] 实现 HookService (addAction, addFilter, doAction, applyFilters) 及优先级排序。
-  - [x] 修改一两个模块（article draft）测试
-  - [x] 全量模块测试
-- [x] 定义并实现 PluginContext：创建 PluginContext 接口，为插件提供 logger, config 读取器, 和 data 存储能力。
-- [ ] “代码片段”插件支持 (稳定版)
-  - [ ] 设计表来存储代码片段、其监听的钩子名、优先级和状态。
-  - [ ] 创建后台 API (CRUD) 管理代码片段（和 Pipeline 一样存储到数据库）。
-  - [ ] 使用 Node.js 内置的 vm 模块 创建执行环境，并必须设置超时 (timeout)。
-  - [ ] 修改 HookService，使其能从数据库拉取并用 vm 模块执行代码片段。
-- [ ] 插件打包支持 (文件系统版)
-  - [ ] 插件开发规范：插件必须是标准的 NestJS 模块，放置于项目根目录的 plugins/ 目录中。
-- [ ] 修改应用启动脚本 (main.ts)，使其能自动扫描 plugins/ 目录，并将发现的模块动态添加到 AppModule 的 imports 中。
-  - [ ] 明确文档：安装/卸载此类插件需要重启应用服务。（暂时不做）在应用内添加重启功能
+- [ ] HookService 开发：
+  - 借鉴 Wordpress 的 action / filter 机制
+
+  - [ ] 实现 HookService (addAction, addFilter, doAction, applyFilters) 及优先级排序。
+  - [ ] 为一两个模块（article draft）添加 hook 并测试触发效果和回调效果
+
+- [ ] PluginContext 插件能力基建：创建 PluginContext Service，为插件提供 logger, config 读取器, 和 data 存储（存储到 plugin_data 表）能力 （插件使用方法： 依赖 Nestjs DI）
+- [ ] 动态插件加载
+  - [ ] 插件扫描：使其能自动扫描根目录下的 plugins/ 目录（plugins 目录在 gitignore 内；其可能包括多个子目录，每个子目录都是一个插件模块，每个插件模块都有一个 package.json 用于 npm 包管理）
+  - [ ] 插件加载：在应用启动时，扫描 plugins 目录，加载所有插件模块。
+  - [ ] 插件依赖：在插件模块的 package.json 中指定，在载入插件之前会执行 pnpm install 安装依赖到 plugins/<插件名>/node_modules 目录。
   - [ ] 安全启动 + 运行时错误隔离，设置超时时间（异步任务可以久一些，给 60s； filter 给 0.1s，允许在配置修改）
 - [ ] 在核心业务模块中埋点：在文章、用户、评论等模块的关键位置注入 HookService 并添加钩子。
-- [ ] 统一的插件管理界面
-  - [ ] 提供一套 API 给管理界面，能统一列出所有形态的插件（代码片段从数据库读取，打包插件从文件系统扫描）。
-  - [ ] 实现启用/禁用功能（通过更新数据库中的状态标志）。
+- [ ] 添加测试插件
+  - [ ] 🐱插件：在文章保存时在内容/标题/标签的结尾添加“喵”
 
 ### 阶段 10: 高级功能
 
