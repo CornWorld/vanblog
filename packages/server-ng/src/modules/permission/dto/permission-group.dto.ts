@@ -8,7 +8,15 @@ import {
 } from '../../../database';
 
 // 权限组基础 Schema
-export const PermissionGroupSchema = selectPermissionGroupSchema;
+export const PermissionGroupSchema = selectPermissionGroupSchema
+  .omit({
+    createdAt: true,
+    updatedAt: true,
+  })
+  .extend({
+    createdAt: z.string(),
+    updatedAt: z.string(),
+  });
 
 // 创建权限组 Schema
 export const CreatePermissionGroupSchema = insertPermissionGroupSchema.omit({

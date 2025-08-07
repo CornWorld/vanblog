@@ -46,8 +46,8 @@ export const CodeSnippetResponseSchema = z.object({
   code: z.string(),
   enabled: z.boolean(),
   timeout: z.number(),
-  createdAt: z.date(),
-  updatedAt: z.date(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
 });
 
 export const CodeSnippetListResponseSchema = z.object({

@@ -34,6 +34,8 @@ export const selectUserSchema = createSelectSchema(users, {
         return [];
       }
     }),
+  createdAt: (schema) => schema.transform((date) => date.toISOString()),
+  updatedAt: (schema) => schema.transform((date) => date.toISOString()),
 });
 
 export const insertUserSchema = createInsertSchema(users, {
@@ -74,6 +76,8 @@ export const selectArticleSchema = createSelectSchema(articles, {
         return [];
       }
     }),
+  createdAt: (schema) => schema.transform((date) => date.toISOString()),
+  updatedAt: (schema) => schema.transform((date) => date.toISOString()),
 });
 
 export const insertArticleSchema = createInsertSchema(articles, {
@@ -103,7 +107,9 @@ export const updateArticleSchema = createUpdateSchema(articles, {
 });
 
 // Category schemas
-export const selectCategorySchema = createSelectSchema(categories);
+export const selectCategorySchema = createSelectSchema(categories, {
+  createdAt: (schema) => schema.transform((date) => date.toISOString()),
+});
 
 export const insertCategorySchema = createInsertSchema(categories, {
   name: (schema) => schema.min(1, '分类名称不能为空').max(50, '分类名称最多50个字符'),
@@ -118,7 +124,9 @@ export const updateCategorySchema = createUpdateSchema(categories, {
 });
 
 // Tag schemas
-export const selectTagSchema = createSelectSchema(tags);
+export const selectTagSchema = createSelectSchema(tags, {
+  createdAt: (schema) => schema.transform((date) => date.toISOString()),
+});
 
 export const insertTagSchema = createInsertSchema(tags, {
   name: (schema) => schema.min(1, '标签名称不能为空').max(30, '标签名称最多30个字符'),
@@ -145,6 +153,8 @@ export const selectDraftSchema = createSelectSchema(drafts, {
         return [];
       }
     }),
+  createdAt: (schema) => schema.transform((date) => date.toISOString()),
+  updatedAt: (schema) => schema.transform((date) => date.toISOString()),
 });
 
 export const insertDraftSchema = createInsertSchema(drafts, {
@@ -186,6 +196,7 @@ export const selectDraftVersionSchema = createSelectSchema(draftVersions, {
         return [];
       }
     }),
+  createdAt: (schema) => schema.transform((date) => date.toISOString()),
 });
 
 export const insertDraftVersionSchema = createInsertSchema(draftVersions, {
@@ -201,7 +212,9 @@ export const insertDraftVersionSchema = createInsertSchema(draftVersions, {
 });
 
 // Static Files schemas
-export const selectStaticFileSchema = createSelectSchema(staticFiles);
+export const selectStaticFileSchema = createSelectSchema(staticFiles, {
+  createdAt: (schema) => schema.transform((date) => date.toISOString()),
+});
 
 export const insertStaticFileSchema = createInsertSchema(staticFiles, {
   filename: (schema) => schema.min(1, '文件名不能为空'),
@@ -224,6 +237,8 @@ export const selectSiteMetaSchema = createSelectSchema(siteMeta, {
     schema.transform((str): unknown => {
       return safeParseJson(str, dataSchemas.genericObject) ?? str;
     }),
+  createdAt: (schema) => schema.transform((date) => date.toISOString()),
+  updatedAt: (schema) => schema.transform((date) => date.toISOString()),
 });
 
 export const insertSiteMetaSchema = createInsertSchema(siteMeta, {
@@ -247,14 +262,19 @@ export const updateSiteMetaSchema = createUpdateSchema(siteMeta, {
 });
 
 // Login Logs schemas
-export const selectLoginLogSchema = createSelectSchema(loginLogs);
+export const selectLoginLogSchema = createSelectSchema(loginLogs, {
+  createdAt: (schema) => schema.transform((date) => date.toISOString()),
+});
 
 export const insertLoginLogSchema = createInsertSchema(loginLogs, {
   username: (schema) => schema.min(1, '用户名不能为空'),
 });
 
 // Custom Pages schemas
-export const selectCustomPageSchema = createSelectSchema(customPages);
+export const selectCustomPageSchema = createSelectSchema(customPages, {
+  createdAt: (schema) => schema.transform((date) => date.toISOString()),
+  updatedAt: (schema) => schema.transform((date) => date.toISOString()),
+});
 
 export const insertCustomPageSchema = createInsertSchema(customPages, {
   title: (schema) => schema.min(1, '页面标题不能为空').max(200, '页面标题最多200个字符'),
@@ -282,6 +302,8 @@ export const selectPipelineSchema = createSelectSchema(pipelines, {
         return [];
       }
     }),
+  createdAt: (schema) => schema.transform((date) => date.toISOString()),
+  updatedAt: (schema) => schema.transform((date) => date.toISOString()),
 });
 
 export const insertPipelineSchema = createInsertSchema(pipelines, {
@@ -326,6 +348,7 @@ export const selectAnalyticsSchema = createSelectSchema(analytics, {
         return null;
       }
     }),
+  createdAt: (schema) => schema.transform((date) => date.toISOString()),
 });
 
 export const insertAnalyticsSchema = createInsertSchema(analytics, {
@@ -389,7 +412,10 @@ export type SelectAnalytics = z.infer<typeof selectAnalyticsSchema>;
 export type InsertAnalytics = z.infer<typeof insertAnalyticsSchema>;
 
 // Permission Node schemas
-export const selectPermissionNodeSchema = createSelectSchema(permissionNodes);
+export const selectPermissionNodeSchema = createSelectSchema(permissionNodes, {
+  createdAt: (schema) => schema.transform((date) => date.toISOString()),
+  updatedAt: (schema) => schema.transform((date) => date.toISOString()),
+});
 
 export const insertPermissionNodeSchema = createInsertSchema(permissionNodes, {
   name: (schema) => schema.min(1, '权限节点名称不能为空').max(100, '权限节点名称最多100个字符'),
@@ -415,6 +441,8 @@ export const selectPermissionGroupSchema = createSelectSchema(permissionGroups, 
         return [];
       }
     }),
+  createdAt: (schema) => schema.transform((date) => date.toISOString()),
+  updatedAt: (schema) => schema.transform((date) => date.toISOString()),
 });
 
 export const insertPermissionGroupSchema = createInsertSchema(permissionGroups, {
@@ -439,7 +467,10 @@ export const updatePermissionGroupSchema = createUpdateSchema(permissionGroups, 
 });
 
 // Code snippet schemas
-export const selectCodeSnippetSchema = createSelectSchema(codeSnippets);
+export const selectCodeSnippetSchema = createSelectSchema(codeSnippets, {
+  createdAt: (schema) => schema.transform((date) => date.toISOString()),
+  updatedAt: (schema) => schema.transform((date) => date.toISOString()),
+});
 
 export const insertCodeSnippetSchema = createInsertSchema(codeSnippets, {
   name: (schema) => schema.min(1, '代码片段名称不能为空').max(255, '代码片段名称最多255个字符'),

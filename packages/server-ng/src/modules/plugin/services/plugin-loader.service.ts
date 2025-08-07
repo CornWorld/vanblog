@@ -131,24 +131,40 @@ export class PluginLoaderService implements OnModuleInit {
 
   private async loadPlugins(): Promise<void> {
     try {
-      const pluginsDir = join(process.cwd(), 'src', 'plugins');
+      // Plugin directory should be at the same level as data directory
+      const pluginsDir = join(process.cwd(), 'plugins');
       this.logger.log(`Scanning plugins directory: ${pluginsDir}`);
 
-      // Check if plugins directory exists
+      const allPluginDirs: string[] = [];
+
+      // 1. Scan local plugin directories
       try {
         await stat(pluginsDir);
         this.logger.log(`Plugins directory exists: ${pluginsDir}`);
+        const localPluginDirs = await this.scanPluginDirectories(pluginsDir);
+        allPluginDirs.push(...localPluginDirs);
+        this.logger.log(`Found ${String(localPluginDirs.length)} local plugin directories`);
       } catch {
         this.logger.warn(`Plugins directory does not exist: ${pluginsDir}`);
-        return;
       }
 
-      const pluginDirs = await this.scanPluginDirectories(pluginsDir);
+      // 2. Scan npm package plugins in node_modules
+      const nodeModulesDir = join(pluginsDir, 'node_modules');
+      try {
+        await stat(nodeModulesDir);
+        this.logger.log(`Scanning npm plugins in: ${nodeModulesDir}`);
+        const npmPluginDirs = await this.scanNpmPlugins(nodeModulesDir);
+        allPluginDirs.push(...npmPluginDirs);
+        this.logger.log(`Found ${String(npmPluginDirs.length)} npm plugin packages`);
+      } catch {
+        this.logger.log(`No node_modules directory found in plugins directory`);
+      }
+
       this.logger.log(
-        `Found ${String(pluginDirs.length)} potential plugin directories: ${JSON.stringify(pluginDirs)}`,
+        `Found ${String(allPluginDirs.length)} total plugin directories: ${JSON.stringify(allPluginDirs)}`,
       );
 
-      for (const pluginDir of pluginDirs) {
+      for (const pluginDir of allPluginDirs) {
         try {
           this.logger.log(`Attempting to load plugin from: ${pluginDir}`);
           await this.loadPlugin(pluginDir);
@@ -175,7 +191,7 @@ export class PluginLoaderService implements OnModuleInit {
       const pluginDirs: string[] = [];
 
       for (const entry of entries) {
-        if (entry.isDirectory()) {
+        if (entry.isDirectory() && entry.name !== 'node_modules') {
           const pluginPath = join(pluginsDir, entry.name);
           const hasManifest = await this.hasPluginManifest(pluginPath);
           const hasIndex = await this.hasPluginIndex(pluginPath);
@@ -193,6 +209,49 @@ export class PluginLoaderService implements OnModuleInit {
         return [];
       }
       throw error;
+    }
+  }
+
+  private async scanNpmPlugins(nodeModulesDir: string): Promise<string[]> {
+    try {
+      const entries = await readdir(nodeModulesDir, { withFileTypes: true });
+      const pluginDirs: string[] = [];
+
+      for (const entry of entries) {
+        if (entry.isDirectory()) {
+          const packagePath = join(nodeModulesDir, entry.name);
+
+          // Check if it's a VanBlog plugin by looking for package.json with vanblog-plugin keyword
+          if (await this.isVanBlogPlugin(packagePath)) {
+            pluginDirs.push(packagePath);
+          }
+        }
+      }
+
+      return pluginDirs;
+    } catch (error) {
+      if (error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT') {
+        this.logger.warn('Node modules directory does not exist');
+        return [];
+      }
+      throw error;
+    }
+  }
+
+  private async isVanBlogPlugin(packagePath: string): Promise<boolean> {
+    try {
+      const packageJsonPath = join(packagePath, 'package.json');
+      const packageJsonContent = await readFile(packageJsonPath, 'utf-8');
+      const packageJson = JSON.parse(packageJsonContent);
+
+      // Check if package has vanblog-plugin keyword or starts with vanblog-plugin-
+      const hasKeyword = packageJson.keywords?.includes('vanblog-plugin');
+      const hasPrefix = packageJson.name?.startsWith('vanblog-plugin-');
+      const hasVanBlogConfig = packageJson.vanblog !== undefined;
+
+      return hasKeyword || hasPrefix || hasVanBlogConfig;
+    } catch {
+      return false;
     }
   }
 

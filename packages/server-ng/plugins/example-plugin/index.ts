@@ -4,9 +4,9 @@
 import type {
   ActionCallback,
   FilterCallback,
-} from '../../../src/modules/plugin/interfaces/hook.interface';
-import type { PluginContext } from '../../../src/modules/plugin/interfaces/plugin-context.interface';
-import type { Plugin } from '../../../src/modules/plugin/services/plugin-loader.service';
+} from '../../src/modules/plugin/interfaces/hook.interface';
+import type { PluginContext } from '../../src/modules/plugin/interfaces/plugin-context.interface';
+import type { Plugin } from '../../src/modules/plugin/services/plugin-loader.service';
 
 // Define types for article data
 interface ArticleData {
@@ -50,59 +50,74 @@ const plugin: Plugin = {
 
   // Plugin cleanup
   async destroy(context: PluginContext): Promise<void> {
-    const articleCount = (await context.data.get('article_count')) as number;
+    context.logger.log('Example plugin destroying...');
+
+    // Clean up any resources if needed
+    const initTime = (await context.data.get('initialized_at')) as string | null;
+    const articleCount = (await context.data.get('article_count')) as number | null;
+
     context.logger.log(
-      `Example plugin destroyed. Processed ${String(articleCount)} articles during its lifetime.`,
+      `Plugin was active since ${String(initTime)}, processed ${String(articleCount)} articles`,
     );
 
-    // Clean up stored data
-    await context.data.delete('initialized_at');
-    await context.data.delete('article_count');
+    // Clear plugin data
+    await context.data.clear();
 
-    context.logger.log('Example plugin cleanup completed');
+    context.logger.log('Example plugin destroyed');
   },
 
   // Plugin hooks
   hooks: {
-    'article:beforeCreate': {
+    beforeCreateArticle: {
       type: 'filter',
       priority: 10,
       handler: ((value: unknown, ...args: unknown[]) => {
         const articleData = value as ArticleData;
-        const [context] = args as [PluginContext];
+        const context = args[0] as PluginContext;
+        context.logger.log('Processing article before creation:', String(articleData.title));
 
-        context.logger.log(`Processing article: ${articleData.title}`);
+        // Example: Add a prefix to article title
+        const prefix = context.config.get('title_prefix', '[Plugin]') as string;
+        if (prefix && !articleData.title.startsWith(prefix)) {
+          articleData.title = `${prefix} ${articleData.title}`;
+        }
 
-        // Add metadata to indicate processing by this plugin
+        // Example: Add plugin metadata
         articleData.metadata ??= {};
         articleData.metadata.processedByPlugin = 'example-plugin';
         articleData.metadata.processedAt = new Date().toISOString();
-
-        context.logger.log('Article preprocessed by example plugin');
 
         return articleData;
       }) as FilterCallback,
     },
 
-    'article:afterCreate': {
+    afterCreateArticle: {
       type: 'action',
       priority: 10,
       handler: (async (...args: unknown[]): Promise<void> => {
-        const [article, context] = args as [Article, PluginContext];
-
-        context.logger.log(`Article created: ${article.title}`);
+        const article = args[0] as Article;
+        const context = args[1] as PluginContext;
+        context.logger.log('Article created:', String(article.title));
 
         // Update article count
-        const currentCount = ((await context.data.get('article_count')) as number) || 0;
+        const currentCount = ((await context.data.get('article_count')) as number | null) ?? 0;
         await context.data.set('article_count', currentCount + 1);
 
-        // Log statistics
-        const initTime = (await context.data.get('initialized_at')) as string;
-        context.logger.log(
-          `Plugin statistics - Articles processed: ${String(currentCount + 1)}, Running since: ${initTime}`,
-        );
+        // Example: Send notification or perform other actions
+        const enableNotifications = context.config.get('enable_notifications', false) as boolean;
+        if (enableNotifications) {
+          context.logger.log(
+            `Notification: New article "${String(article.title)}" has been created`,
+          );
+        }
 
-        context.logger.log('Article post-processing completed by example plugin');
+        // Example: Log statistics
+        const totalCount = currentCount + 1;
+        if (totalCount % 10 === 0) {
+          context.logger.log(
+            `Milestone reached: ${String(totalCount)} articles processed by plugin`,
+          );
+        }
       }) as ActionCallback,
     },
   },

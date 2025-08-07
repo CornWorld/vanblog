@@ -15,8 +15,8 @@ export const LoginLogResponseSchema = selectLoginLogSchema;
 export const LoginLogQuerySchema = z.object({
   username: z.string().optional().describe('Filter by username'),
   success: z.boolean().optional().describe('Filter by success status'),
-  startDate: z.date().optional().describe('Start date for filtering'),
-  endDate: z.date().optional().describe('End date for filtering'),
+  startDate: z.string().optional().describe('Start date for filtering'),
+  endDate: z.string().optional().describe('End date for filtering'),
 });
 
 export class LoginLogDto extends createZodDto(LoginLogSchema) {}

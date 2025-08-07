@@ -71,7 +71,7 @@ export const ArticleSearchResultSchema = z.object({
   cover: z.string().optional(),
   tags: z.array(z.string()),
   categories: z.array(z.string()),
-  publishedAt: z.date().optional(),
+  publishedAt: z.string().optional(),
   highlight: z
     .object({
       title: z.string().optional(),

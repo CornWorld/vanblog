@@ -54,7 +54,7 @@ export const PublishDraftSchema = z.object({
   password: z.string().optional().nullable(),
   allowComment: z.boolean().default(true),
   copyright: z.string().optional(),
-  publishedAt: z.date().optional(),
+  publishedAt: z.string().optional(),
 });
 
 // 草稿版本 Schema - 使用 drizzle-zod 生成的 schema

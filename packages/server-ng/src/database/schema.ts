@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { sqliteTable, text, integer, index } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, index, uniqueIndex } from 'drizzle-orm/sqlite-core';
 
 // Users table
 export const users = sqliteTable('users', {
@@ -280,6 +280,8 @@ export const pluginData = sqliteTable(
   (table) => [
     index('plugin_data_plugin_id_idx').on(table.pluginId),
     index('plugin_data_key_idx').on(table.pluginId, table.key),
+    // Add unique constraint for plugin_id and key combination
+    uniqueIndex('plugin_data_unique_idx').on(table.pluginId, table.key),
   ],
 );
 
