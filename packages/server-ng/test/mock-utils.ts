@@ -8,7 +8,7 @@ import type {
   UploadResult,
 } from '../src/modules/media/interfaces/storage.interface';
 import type { StorageFactoryService } from '../src/modules/media/services/storage-factory.service';
-import type { PipelineService } from '../src/modules/pipeline/services/pipeline.service';
+
 import type { HookService } from '../src/modules/plugin/services/hook.service';
 
 /**
@@ -185,20 +185,6 @@ export class DatabaseMockBuilder {
  * 服务Mock工具类
  * 提供常用服务的Mock配置
  */
-/**
- * 创建PipelineService Mock
- */
-export function createPipelineServiceMock(): Partial<PipelineService> {
-  return {
-    create: vi.fn(),
-    findAll: vi.fn(),
-    findOne: vi.fn(),
-    findByEvent: vi.fn(),
-    update: vi.fn(),
-    remove: vi.fn(),
-    triggerById: vi.fn(),
-  };
-}
 
 /**
  * 创建HookService Mock
@@ -267,7 +253,6 @@ export function createStorageFactoryServiceMock(
   };
 }
 export const ServiceMockBuilder = {
-  createPipelineServiceMock,
   createHookServiceMock,
   createConfigServiceMock,
   createStorageServiceMock,

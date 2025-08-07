@@ -3,7 +3,6 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import { vi, describe, beforeEach, it, expect } from 'vitest';
 
 import { DATABASE_CONNECTION } from '../../database/database.module';
-import { PipelineService } from '../pipeline/services/pipeline.service';
 import { HookService } from '../plugin/services/hook.service';
 
 import { DraftVersionService } from './draft-version.service';
@@ -12,7 +11,7 @@ import { DraftService } from './draft.service';
 describe('DraftService', () => {
   let service: DraftService;
   let mockDraftVersionService: Partial<DraftVersionService>;
-  let mockPipelineService: Partial<PipelineService>;
+
   let mockHookService: Partial<HookService>;
   let mockDb: Record<string, ReturnType<typeof vi.fn>>;
 
@@ -49,10 +48,6 @@ describe('DraftService', () => {
       deleteAllVersions: vi.fn().mockResolvedValue(undefined),
     };
 
-    mockPipelineService = {
-      dispatchEvent: vi.fn().mockResolvedValue([]),
-    };
-
     mockHookService = {
       applyFilters: vi.fn().mockImplementation((_, data) => Promise.resolve(data)),
       doAction: vi.fn().mockResolvedValue(undefined),
@@ -70,10 +65,7 @@ describe('DraftService', () => {
           provide: DraftVersionService,
           useValue: mockDraftVersionService,
         },
-        {
-          provide: PipelineService,
-          useValue: mockPipelineService,
-        },
+
         {
           provide: HookService,
           useValue: mockHookService,

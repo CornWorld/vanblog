@@ -29,11 +29,6 @@ export type LimitPermission =
   | 'setting:read'
   | 'setting:update'
   | 'analytics:read'
-  | 'pipeline:create'
-  | 'pipeline:read'
-  | 'pipeline:update'
-  | 'pipeline:delete'
-  | 'pipeline:execute'
   | 'permission:manage';
 
 // 权限组
@@ -61,13 +56,7 @@ export const PERMISSION_MODULES = {
   user: ['user:create', 'user:read', 'user:update', 'user:delete'],
   setting: ['setting:read', 'setting:update'],
   analytics: ['analytics:read'],
-  pipeline: [
-    'pipeline:create',
-    'pipeline:read',
-    'pipeline:update',
-    'pipeline:delete',
-    'pipeline:execute',
-  ],
+
   permission: ['permission:manage'],
 } as const;
 

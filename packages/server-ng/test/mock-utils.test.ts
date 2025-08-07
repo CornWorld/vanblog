@@ -54,12 +54,6 @@ describe('MockUtils', () => {
   });
 
   describe('ServiceMockBuilder', () => {
-    it('should create pipeline service mock', () => {
-      const pipelineMock = MockUtils.services.createPipelineServiceMock();
-
-      expect(pipelineMock.create).toBeDefined();
-    });
-
     it('should create hook service mock', () => {
       const hookMock = MockUtils.services.createHookServiceMock();
 

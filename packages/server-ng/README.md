@@ -27,7 +27,7 @@ server-ng/
 │   │   ├── media/        # 媒体资源模块
 │   │   ├── analytics/    # 数据分析模块
 │   │   ├── demo/         # 演示模式模块
-│   │   └── pipeline/     # 事件处理模块
+
 │   ├── core/             # 核心模块
 │   │   ├── filters/      # 全局异常过滤器
 │   │   ├── guards/       # 全局守卫
@@ -237,24 +237,12 @@ JWT_EXPIRES_IN=7d
 - [x] 使用 zod + [nestjs-zod](https://github.com/BenLorantfy/nestjs-zod) 替换 class-transformer 和 class-validator （注意 db 中的数据结构可能需要使用 z.infer<> 获取类型，不手动 JSON.parse 而是让 orm 解决；如果一定要手动操作，则使用 zod 的 safeParse 函数）
 - [x] 检查目录结构，看其是否与最初计划的一致，看看是否存在令人困惑的部分（仅考虑被 git 追踪的目录，可以暂时删除所有未被追踪的目录）
 
-### 阶段 9: Pipeline 事件系统
-
-- [x] 创建 Pipeline 数据模型
-- [x] 实现事件触发机制
-- [x] 创建 Pipeline 执行引擎
-- [x] 实现依赖管理系统
-- [x] 添加调试功能
-- [x] 创建运行日志记录
-- [x] 实现手动触发 API
-- [x] 集成 Article 和 Draft 模块的事件触发（beforeUpdateArticle, afterUpdateArticle, deleteArticle, beforeUpdateDraft, afterUpdateDraft, deleteDraft）
-- ~~依赖 pipeline 系统实现 demo 功能，阻止大部分数据库操作 + 提供还原定时事件~~
-
 ### 额外节点：迁移到 drizzle-zod
 
 - [x] 迁移到 drizzle-zod
 - [x] 检查是否存在多余代码，清理
 
-## 额外阶段：完善权限系统
+### 额外阶段：完善权限系统
 
 现有权限系统：使用预设的权限节点 + 用户角色（type/role），比如 article:read + admin
 期望权限系统：
@@ -266,28 +254,7 @@ JWT_EXPIRES_IN=7d
 
 - [x] 完成
 
-### 额外阶段：升级 Pipeline 到 Plugin 系统
-
-> 这个阶段的每一条修改量都非常大。暂定一个 commit 一行
-> 暂时不删除 pipeline 系统，而是并行
-
-- [ ] HookService 开发：
-  - 借鉴 Wordpress 的 action / filter 机制
-
-  - [ ] 实现 HookService (addAction, addFilter, doAction, applyFilters) 及优先级排序。
-  - [ ] 为一两个模块（article draft）添加 hook 并测试触发效果和回调效果
-
-- [ ] PluginContext 插件能力基建：创建 PluginContext Service，为插件提供 logger, config 读取器, 和 data 存储（存储到 plugin_data 表）能力 （插件使用方法： 依赖 Nestjs DI）
-- [ ] 动态插件加载
-  - [ ] 插件扫描：使其能自动扫描根目录下的 plugins/ 目录（plugins 目录在 gitignore 内；其可能包括多个子目录，每个子目录都是一个插件模块，每个插件模块都有一个 package.json 用于 npm 包管理）
-  - [ ] 插件加载：在应用启动时，扫描 plugins 目录，加载所有插件模块。
-  - [ ] 插件依赖：在插件模块的 package.json 中指定，在载入插件之前会执行 pnpm install 安装依赖到 plugins/<插件名>/node_modules 目录。
-  - [ ] 安全启动 + 运行时错误隔离，设置超时时间（异步任务可以久一些，给 60s； filter 给 0.1s，允许在配置修改）
-- [ ] 在核心业务模块中埋点：在文章、用户、评论等模块的关键位置注入 HookService 并添加钩子。
-- [ ] 添加测试插件
-  - [ ] 🐱插件：在文章保存时在内容/标题/标签的结尾添加“喵”
-
-### 阶段 10: 高级功能
+### 阶段 9: 高级功能
 
 - [ ] 实现增量静态再生 (ISR)
 - [ ] 创建自定义页面功能
@@ -298,7 +265,7 @@ JWT_EXPIRES_IN=7d
 - [ ] 添加邮件通知服务
 - [ ] 创建备份/恢复功能
 
-### 阶段 11: 性能优化
+### 阶段 10: 性能优化
 
 - [ ] 实现 Redis 缓存层
 - [ ] 优化数据库查询
@@ -307,7 +274,7 @@ JWT_EXPIRES_IN=7d
 - [ ] 创建 CDN 集成
 - [ ] 优化图片处理性能
 
-### 阶段 12: 测试和文档
+### 阶段 11: 测试和文档
 
 - [ ] 编写单元测试用例
 - [ ] 创建集成测试
@@ -317,7 +284,7 @@ JWT_EXPIRES_IN=7d
 - [ ] 编写部署文档
 - [ ] 添加代码示例
 
-### 阶段 13: 迁移和兼容
+### 阶段 12: 迁移和兼容
 
 - [ ] 创建数据迁移脚本
 - [ ] 实现 v1 API 兼容层

@@ -14,7 +14,6 @@ import {
   siteMeta,
   loginLogs,
   customPages,
-  pipelines,
   analytics,
   permissionNodes,
   permissionGroups,
@@ -290,48 +289,6 @@ export const updateCustomPageSchema = createUpdateSchema(customPages, {
   content: (schema) => schema.min(1, '页面内容不能为空').optional(),
 });
 
-// Pipeline schemas
-export const selectPipelineSchema = createSelectSchema(pipelines, {
-  deps: (schema) =>
-    schema.transform((str) => {
-      if (!str) {
-        return [];
-      }
-      try {
-        return JSON.parse(str) as string[];
-      } catch {
-        return [];
-      }
-    }),
-  createdAt: (schema) => schema.transform((date) => date.toISOString()),
-  updatedAt: (schema) => schema.transform((date) => date.toISOString()),
-});
-
-export const insertPipelineSchema = createInsertSchema(pipelines, {
-  name: (schema) => schema.min(1, 'Pipeline名称不能为空').max(100, 'Pipeline名称最多100个字符'),
-  eventName: (schema) => schema.min(1, '事件名称不能为空'),
-  script: (schema) => schema.min(1, '脚本内容不能为空'),
-  deps: z
-    .array(z.string())
-    .optional()
-    .transform((arr) => {
-      return arr ? JSON.stringify(arr) : null;
-    }),
-});
-
-export const updatePipelineSchema = createUpdateSchema(pipelines, {
-  name: (schema) =>
-    schema.min(1, 'Pipeline名称不能为空').max(100, 'Pipeline名称最多100个字符').optional(),
-  eventName: (schema) => schema.min(1, '事件名称不能为空').optional(),
-  script: (schema) => schema.min(1, '脚本内容不能为空').optional(),
-  deps: z
-    .array(z.string())
-    .optional()
-    .transform((arr) => {
-      return arr ? JSON.stringify(arr) : null;
-    }),
-});
-
 // Analytics schemas
 export const selectAnalyticsSchema = createSelectSchema(analytics, {
   data: (schema) =>
@@ -404,10 +361,6 @@ export type InsertLoginLog = z.infer<typeof insertLoginLogSchema>;
 export type SelectCustomPage = z.infer<typeof selectCustomPageSchema>;
 export type InsertCustomPage = z.infer<typeof insertCustomPageSchema>;
 export type UpdateCustomPage = z.infer<typeof updateCustomPageSchema>;
-
-export type SelectPipeline = z.infer<typeof selectPipelineSchema>;
-export type InsertPipeline = z.infer<typeof insertPipelineSchema>;
-export type UpdatePipeline = z.infer<typeof updatePipelineSchema>;
 
 export type SelectAnalytics = z.infer<typeof selectAnalyticsSchema>;
 export type InsertAnalytics = z.infer<typeof insertAnalyticsSchema>;

@@ -4,7 +4,7 @@ import { eq, and, or, like, desc, asc, sql } from 'drizzle-orm';
 import { DATABASE_CONNECTION } from '../../database';
 import { articles, tags } from '../../database/schema';
 import { safeParseJson, dataSchemas } from '../../shared/zod';
-import { PipelineService } from '../pipeline/services/pipeline.service';
+
 import { HookService } from '../plugin/services/hook.service';
 
 import {
@@ -26,7 +26,6 @@ export class ArticleService {
   constructor(
     @Inject(DATABASE_CONNECTION)
     private readonly db: Database,
-    private readonly pipelineService: PipelineService,
     private readonly hookService: HookService,
   ) {}
 
@@ -249,28 +248,6 @@ export class ArticleService {
       this.logger.error('Error in beforeCreateArticle hook:', error);
     }
 
-    // Trigger beforeUpdateArticle event (legacy pipeline)
-    try {
-      const beforeResults = await this.pipelineService.dispatchEvent('beforeUpdateArticle', {
-        action: 'create',
-        data: newArticleData,
-      });
-
-      // Apply modifications from pipeline results
-      for (const result of beforeResults) {
-        if (
-          result.status === 'success' &&
-          typeof result.output === 'object' &&
-          result.output !== null
-        ) {
-          newArticleData = { ...newArticleData, ...result.output };
-        }
-      }
-    } catch (error) {
-      // Log error but don't fail the operation
-      this.logger.error('Error in beforeUpdateArticle pipeline:', error);
-    }
-
     const insertResult = await this.db.insert(articles).values([newArticleData]).returning();
 
     const newArticle = insertResult[0];
@@ -294,17 +271,6 @@ export class ArticleService {
       await this.hookService.doAction('afterCreateArticle', articleResult, { action: 'create' });
     } catch (error) {
       this.logger.error('Error in afterCreateArticle hook:', error);
-    }
-
-    // Trigger afterUpdateArticle event (legacy pipeline)
-    try {
-      await this.pipelineService.dispatchEvent('afterUpdateArticle', {
-        action: 'create',
-        data: articleResult,
-      });
-    } catch (error) {
-      // Log error but don't fail the operation
-      this.logger.error('Error in afterUpdateArticle pipeline:', error);
     }
 
     return articleResult;
@@ -344,29 +310,6 @@ export class ArticleService {
       this.logger.error('Error in beforeUpdateArticle hook:', error);
     }
 
-    // Trigger beforeUpdateArticle event (legacy pipeline)
-    try {
-      const beforeResults = await this.pipelineService.dispatchEvent('beforeUpdateArticle', {
-        action: 'update',
-        id,
-        data: updateData,
-      });
-
-      // Apply modifications from pipeline results
-      for (const result of beforeResults) {
-        if (
-          result.status === 'success' &&
-          typeof result.output === 'object' &&
-          result.output !== null
-        ) {
-          updateData = { ...updateData, ...result.output };
-        }
-      }
-    } catch (error) {
-      // Log error but don't fail the operation
-      this.logger.error('Error in beforeUpdateArticle pipeline:', error);
-    }
-
     const updateResult = await this.db
       .update(articles)
       .set(updateData)
@@ -399,18 +342,6 @@ export class ArticleService {
       this.logger.error('Error in afterUpdateArticle hook:', error);
     }
 
-    // Trigger afterUpdateArticle event (legacy pipeline)
-    try {
-      await this.pipelineService.dispatchEvent('afterUpdateArticle', {
-        action: 'update',
-        id,
-        data: articleResult,
-      });
-    } catch (error) {
-      // Log error but don't fail the operation
-      this.logger.error('Error in afterUpdateArticle pipeline:', error);
-    }
-
     return articleResult;
   }
 
@@ -433,18 +364,6 @@ export class ArticleService {
       await this.hookService.doAction('beforeDeleteArticle', { id }, { action: 'delete' });
     } catch (error) {
       this.logger.error('Error in beforeDeleteArticle hook:', error);
-    }
-
-    // Trigger deleteArticle event (legacy pipeline)
-    try {
-      await this.pipelineService.dispatchEvent('deleteArticle', {
-        action: 'delete',
-        id,
-        data: { id },
-      });
-    } catch (error) {
-      // Log error but don't fail the operation
-      this.logger.error('Error in deleteArticle pipeline:', error);
     }
 
     await this.db.delete(articles).where(eq(articles.id, id));

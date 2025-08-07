@@ -8,7 +8,7 @@ import type {
   UploadResult,
 } from '../src/modules/media/interfaces/storage.interface';
 import type { StorageFactoryService } from '../src/modules/media/services/storage-factory.service';
-import type { PipelineService } from '../src/modules/pipeline/services/pipeline.service';
+
 import type { HookService } from '../src/modules/plugin/services/hook.service';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 
@@ -359,21 +359,6 @@ function createStorageFactoryServiceMock({
 }
 
 /**
- * 创建管道服务Mock
- */
-function createPipelineServiceMock(): Partial<PipelineService> {
-  return {
-    create: vi.fn().mockResolvedValue(undefined),
-    findAll: vi.fn().mockResolvedValue([]),
-    findOne: vi.fn().mockResolvedValue(undefined),
-    findByEvent: vi.fn().mockResolvedValue([]),
-    update: vi.fn().mockResolvedValue(undefined),
-    remove: vi.fn().mockResolvedValue(undefined),
-    triggerById: vi.fn().mockResolvedValue(undefined),
-  };
-}
-
-/**
  * 创建钩子服务Mock
  */
 function createHookServiceMock(): Partial<HookService> {
@@ -398,7 +383,6 @@ export const ServiceMockFactory = {
   createConfigServiceMock,
   createStorageServiceMock,
   createStorageFactoryServiceMock,
-  createPipelineServiceMock,
   createHookServiceMock,
 };
 
@@ -414,7 +398,7 @@ interface TestContext {
   storageService: Partial<StorageService>;
   storageFactoryService: Partial<StorageFactoryService>;
   configService: ConfigService;
-  pipelineService: Partial<PipelineService>;
+
   hookService: Partial<HookService>;
 
   // 测试数据
@@ -456,12 +440,6 @@ export const test = baseTest.extend<TestContext>({
   // eslint-disable-next-line no-empty-pattern, @typescript-eslint/no-empty-object-type
   configService: async ({}: {}, use) => {
     const mock = ServiceMockFactory.createConfigServiceMock();
-    await use(mock);
-  },
-
-  // eslint-disable-next-line no-empty-pattern, @typescript-eslint/no-empty-object-type
-  pipelineService: async ({}: {}, use) => {
-    const mock = ServiceMockFactory.createPipelineServiceMock();
     await use(mock);
   },
 

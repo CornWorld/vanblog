@@ -17,7 +17,7 @@ import { DraftModule } from './modules/draft/draft.module';
 import { HealthModule } from './modules/health/health.module';
 import { MediaModule } from './modules/media/media.module';
 import { PermissionModule } from './modules/permission/permission.module';
-import { PipelineModule } from './modules/pipeline/pipeline.module';
+
 import { PluginModule } from './modules/plugin/plugin.module';
 import { RewardModule } from './modules/reward/reward.module';
 import { SettingModule } from './modules/setting/setting.module';
@@ -54,7 +54,7 @@ export class AppModule {
         BeianModule,
         SocialLinksModule,
         RewardModule,
-        PipelineModule,
+
         DemoModule,
         PermissionModule,
         pluginModule,

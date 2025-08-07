@@ -1,7 +1,6 @@
 import { Injectable, Logger, Inject, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Cron } from '@nestjs/schedule';
-import { eq, and } from 'drizzle-orm';
 
 import { DATABASE_CONNECTION } from '../../database';
 import {
@@ -12,10 +11,8 @@ import {
   staticFiles,
   siteMeta,
   customPages,
-  pipelines,
   analytics,
 } from '../../database/schema';
-import { PipelineService } from '../pipeline/services/pipeline.service';
 
 import type { Database } from '../../database/connection';
 
@@ -28,7 +25,6 @@ export interface DemoSnapshot {
   staticFiles: unknown[];
   siteMeta: unknown[];
   customPages: unknown[];
-  pipelines: unknown[];
 }
 
 @Injectable()
@@ -40,7 +36,6 @@ export class DemoService implements OnModuleInit {
   constructor(
     @Inject(DATABASE_CONNECTION) private readonly db: Database,
     private readonly configService: ConfigService,
-    private readonly pipelineService: PipelineService,
   ) {
     this.isDemoMode = this.configService.get<boolean>('DEMO_MODE', false);
   }
@@ -58,7 +53,7 @@ export class DemoService implements OnModuleInit {
     if (this.isDemoMode) {
       this.logger.log('Demo mode enabled, creating initial snapshot...');
       await this.createSnapshot();
-      await this.setupDemoPipelines();
+
       this.logger.log('Demo mode initialized successfully');
     }
   }
@@ -78,10 +73,6 @@ export class DemoService implements OnModuleInit {
         staticFiles: await this.db.select().from(staticFiles),
         siteMeta: await this.db.select().from(siteMeta),
         customPages: await this.db.select().from(customPages),
-        pipelines: await this.db
-          .select()
-          .from(pipelines)
-          .where(and(eq(pipelines.deleted, false), eq(pipelines.eventType, 'system'))),
       };
 
       this.demoSnapshot = snapshot;
@@ -110,11 +101,6 @@ export class DemoService implements OnModuleInit {
       await this.db.delete(categories);
       await this.db.delete(tags);
       await this.db.delete(siteMeta);
-
-      // Delete demo pipelines only
-      await this.db
-        .delete(pipelines)
-        .where(and(eq(pipelines.eventType, 'system'), eq(pipelines.name, 'Demo Mode Interceptor')));
 
       // Restore data from snapshot
       if (this.demoSnapshot.categories.length > 0) {
@@ -150,14 +136,6 @@ export class DemoService implements OnModuleInit {
           .insert(customPages)
           .values(this.demoSnapshot.customPages as (typeof customPages.$inferInsert)[]);
       }
-      if (this.demoSnapshot.pipelines.length > 0) {
-        await this.db
-          .insert(pipelines)
-          .values(this.demoSnapshot.pipelines as (typeof pipelines.$inferInsert)[]);
-      }
-
-      // Re-setup demo pipelines
-      await this.setupDemoPipelines();
 
       this.logger.log('Demo data restoration completed successfully');
     } catch (error) {
@@ -204,57 +182,5 @@ export class DemoService implements OnModuleInit {
       articlesCount: this.demoSnapshot.articles.length,
       draftsCount: this.demoSnapshot.drafts.length,
     };
-  }
-
-  private async setupDemoPipelines(): Promise<void> {
-    // Check if demo pipeline already exists
-    const existingPipelines = await this.db
-      .select()
-      .from(pipelines)
-      .where(and(eq(pipelines.name, 'Demo Mode Interceptor'), eq(pipelines.deleted, false)));
-
-    if (existingPipelines.length > 0) {
-      this.logger.log('Demo pipeline already exists, skipping creation');
-      return;
-    }
-
-    // Create demo interceptor pipelines for write operations
-    const demoScript = `
-// Demo Mode Interceptor
-// This script blocks write operations in demo mode
-
-if (input && typeof input === 'object') {
-  // Block the operation by throwing an error
-  throw new Error('演示站禁止此操作！Demo site prohibits this operation!');
-}
-
-// If no input data, just log the attempt
-// Demo mode: Operation blocked (logged via pipeline)
-`;
-
-    const writeEvents = [
-      'beforeUpdateArticle',
-      'beforeUpdateDraft',
-      'deleteArticle',
-      'deleteDraft',
-      'updateSiteInfo',
-    ];
-
-    for (const eventName of writeEvents) {
-      try {
-        await this.pipelineService.create({
-          name: 'Demo Mode Interceptor',
-          description: `Blocks ${eventName} operations in demo mode`,
-          eventName,
-          script: demoScript,
-          enabled: true,
-          eventType: 'system',
-          deps: '[]',
-        });
-        this.logger.log(`Created demo pipeline for event: ${eventName}`);
-      } catch (error) {
-        this.logger.error(`Failed to create demo pipeline for ${eventName}:`, error);
-      }
-    }
   }
 }

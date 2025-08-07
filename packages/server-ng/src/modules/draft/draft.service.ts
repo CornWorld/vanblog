@@ -5,7 +5,6 @@ import { DATABASE_CONNECTION } from '../../database';
 import { drafts, articles, tags } from '../../database/schema';
 import { safeParseJson, dataSchemas } from '../../shared/zod';
 import { Article } from '../article/entities/article.entity';
-import { PipelineService } from '../pipeline/services/pipeline.service';
 import { HookService } from '../plugin/services/hook.service';
 
 import { DraftVersionService } from './draft-version.service';
@@ -29,7 +28,6 @@ export class DraftService {
     @Inject(DATABASE_CONNECTION)
     private readonly db: Database,
     private readonly draftVersionService: DraftVersionService,
-    private readonly pipelineService: PipelineService,
     private readonly hookService: HookService,
   ) {}
 
@@ -211,29 +209,6 @@ export class DraftService {
       this.logger.error('Error in beforeUpdateDraft hook:', error);
     }
 
-    // Trigger beforeUpdateDraft event
-    try {
-      const beforeResults = await this.pipelineService.dispatchEvent('beforeUpdateDraft', {
-        action: 'update',
-        id,
-        data: updateData,
-      });
-
-      // Apply modifications from pipeline results
-      for (const result of beforeResults) {
-        if (
-          result.status === 'success' &&
-          typeof result.output === 'object' &&
-          result.output !== null
-        ) {
-          updateData = { ...updateData, ...result.output };
-        }
-      }
-    } catch (error) {
-      // Log error but don't fail the operation
-      this.logger.error('Error in beforeUpdateDraft pipeline:', error);
-    }
-
     const result = await this.db
       .update(drafts)
       .set(updateData)
@@ -261,18 +236,6 @@ export class DraftService {
       this.logger.error('Error in afterUpdateDraft hook:', error);
     }
 
-    // Trigger afterUpdateDraft event
-    try {
-      await this.pipelineService.dispatchEvent('afterUpdateDraft', {
-        action: 'update',
-        id,
-        data: draftResult,
-      });
-    } catch (error) {
-      // Log error but don't fail the operation
-      this.logger.error('Error in afterUpdateDraft pipeline:', error);
-    }
-
     return draftResult;
   }
 
@@ -285,18 +248,6 @@ export class DraftService {
       await this.hookService.doAction('beforeDeleteDraft', { id }, { action: 'delete' });
     } catch (error) {
       this.logger.error('Error in beforeDeleteDraft hook:', error);
-    }
-
-    // Trigger deleteDraft event
-    try {
-      await this.pipelineService.dispatchEvent('deleteDraft', {
-        action: 'delete',
-        id,
-        data: { id },
-      });
-    } catch (error) {
-      // Log error but don't fail the operation
-      this.logger.error('Error in deleteDraft pipeline:', error);
     }
 
     const result = await this.db

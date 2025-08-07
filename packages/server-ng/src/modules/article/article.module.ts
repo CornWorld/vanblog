@@ -2,14 +2,14 @@ import { Module } from '@nestjs/common';
 
 import { DatabaseModule } from '../../database/database.module';
 import { AnalyticsModule } from '../analytics/analytics.module';
-import { PipelineModule } from '../pipeline/pipeline.module';
+
 import { PluginModule } from '../plugin/plugin.module';
 
 import { ArticleController } from './article.controller';
 import { ArticleService } from './article.service';
 
 @Module({
-  imports: [DatabaseModule, AnalyticsModule, PipelineModule, PluginModule],
+  imports: [DatabaseModule, AnalyticsModule, PluginModule],
   controllers: [ArticleController],
   providers: [ArticleService],
   exports: [ArticleService],

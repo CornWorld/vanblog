@@ -191,25 +191,6 @@ export const customPages = sqliteTable('custom_pages', {
     .default(sql`CURRENT_TIMESTAMP`),
 });
 
-// Pipeline table
-export const pipelines = sqliteTable('pipelines', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  name: text('name').notNull(),
-  eventType: text('event_type').notNull().default('system'),
-  description: text('description'),
-  enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
-  deps: text('deps'), // JSON string for dependencies array
-  eventName: text('event_name').notNull(),
-  script: text('script').notNull(),
-  deleted: integer('deleted', { mode: 'boolean' }).notNull().default(false),
-  createdAt: integer('created_at', { mode: 'timestamp' })
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: integer('updated_at', { mode: 'timestamp' })
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-});
-
 // Analytics table
 export const analytics = sqliteTable(
   'analytics',

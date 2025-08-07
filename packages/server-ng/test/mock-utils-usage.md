@@ -16,22 +16,22 @@ import { MockUtils, DatabaseMockBuilder } from '../../../test/mock-utils';
 describe('YourService', () => {
   let service: YourService;
   let databaseMock: DatabaseMockBuilder;
-  let mockPipelineService: Partial<PipelineService>;
+  let mockHookService: Partial<HookService>;
 
   beforeEach(async () => {
     // 创建数据库Mock
     databaseMock = MockUtils.createDatabaseMock();
 
     // 创建服务Mock
-    mockPipelineService = MockUtils.services.createPipelineServiceMock();
+    mockHookService = MockUtils.services.createHookServiceMock();
 
     // 使用完整的测试模块配置
     const moduleConfig = MockUtils.createTestModuleConfig({
       providers: [YourService],
       additionalProviders: [
         {
-          provide: PipelineService,
-          useValue: mockPipelineService,
+          provide: HookService,
+          useValue: mockHookService,
         },
       ],
     });
@@ -75,9 +75,6 @@ const result = await databaseMock.build().select().from('articles').where('id', 
 ### 预定义的服务Mock
 
 ```typescript
-// PipelineService Mock
-const mockPipelineService = MockUtils.services.createPipelineServiceMock();
-
 // HookService Mock
 const mockHookService = MockUtils.services.createHookServiceMock();
 
@@ -91,9 +88,9 @@ const mockStorageService = MockUtils.services.createStorageServiceMock();
 ### 自定义服务行为
 
 ```typescript
-// 自定义PipelineService行为
-const mockPipelineService = MockUtils.services.createPipelineServiceMock();
-mockPipelineService.dispatchEvent = vi.fn().mockResolvedValue(['custom-result']);
+// 自定义HookService行为
+const mockHookService = MockUtils.services.createHookServiceMock();
+mockHookService.doAction = vi.fn().mockResolvedValue(['custom-result']);
 
 // 自定义ConfigService行为
 const mockConfigService = MockUtils.services.createConfigServiceMock();
@@ -157,7 +154,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { vi, describe, beforeEach, it, expect } from 'vitest';
 import { MockUtils, DatabaseMockBuilder } from '../../../test/mock-utils';
 import { ArticleService } from './article.service';
-import { PipelineService } from '../pipeline/services/pipeline.service';
+import { HookService } from '../plugin/services/hook.service';
 
 describe('ArticleService', () => {
   let service: ArticleService;
@@ -171,8 +168,8 @@ describe('ArticleService', () => {
       providers: [ArticleService],
       additionalProviders: [
         {
-          provide: PipelineService,
-          useValue: MockUtils.services.createPipelineServiceMock(),
+          provide: HookService,
+          useValue: MockUtils.services.createHookServiceMock(),
         },
       ],
     });
@@ -264,15 +261,15 @@ databaseMock = MockUtils.createDatabaseMock();
 **旧方式:**
 
 ```typescript
-mockPipelineService = {
-  dispatchEvent: vi.fn().mockResolvedValue([]),
+mockHookService = {
+  doAction: vi.fn().mockResolvedValue([]),
 };
 ```
 
 **新方式:**
 
 ```typescript
-mockPipelineService = MockUtils.services.createPipelineServiceMock();
+mockHookService = MockUtils.services.createHookServiceMock();
 ```
 
 通过使用Mock工具类，可以显著减少测试代码的复杂性，提高测试的可维护性和可读性。

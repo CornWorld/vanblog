@@ -3,7 +3,6 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 import { DATABASE_CONNECTION } from '../../database';
-import { PipelineService } from '../pipeline/services/pipeline.service';
 
 import { DemoService } from './demo.service';
 
@@ -33,10 +32,6 @@ mockDatabase.values.mockReturnValue(mockDatabase);
 mockDatabase.delete.mockReturnValue(mockDatabase);
 mockDatabase.returning.mockResolvedValue([]);
 
-const mockPipelineService = {
-  create: vi.fn(),
-};
-
 const mockConfigService = {
   get: vi.fn(),
 };
@@ -45,7 +40,6 @@ describe('DemoService', () => {
   let service: DemoService;
   let module: TestingModule;
   let configService: ConfigService;
-  let pipelineService: PipelineService;
 
   beforeEach(async () => {
     module = await Test.createTestingModule({
@@ -59,16 +53,11 @@ describe('DemoService', () => {
           provide: ConfigService,
           useValue: mockConfigService,
         },
-        {
-          provide: PipelineService,
-          useValue: mockPipelineService,
-        },
       ],
     }).compile();
 
     service = module.get<DemoService>(DemoService);
     configService = module.get<ConfigService>(ConfigService);
-    pipelineService = module.get<PipelineService>(PipelineService);
   });
 
   afterEach(() => {
@@ -82,21 +71,13 @@ describe('DemoService', () => {
   describe('isDemoModeEnabled', () => {
     it('should return true when demo mode is enabled', () => {
       mockConfigService.get.mockReturnValueOnce(true);
-      const newService = new DemoService(
-        mockDatabase as unknown as Database,
-        configService,
-        pipelineService,
-      );
+      const newService = new DemoService(mockDatabase as unknown as Database, configService);
       expect(newService.isDemoModeEnabled()).toBe(true);
     });
 
     it('should return false when demo mode is disabled', () => {
       mockConfigService.get.mockReturnValueOnce(false);
-      const newService = new DemoService(
-        mockDatabase as unknown as Database,
-        configService,
-        pipelineService,
-      );
+      const newService = new DemoService(mockDatabase as unknown as Database, configService);
       expect(newService.isDemoModeEnabled()).toBe(false);
     });
   });
@@ -114,7 +95,6 @@ describe('DemoService', () => {
       const newService = new DemoService(
         mockDatabase as unknown as Database,
         mockConfigService as unknown as ConfigService,
-        mockPipelineService as unknown as PipelineService,
       );
 
       const result = await newService.manualRestore();
@@ -128,7 +108,6 @@ describe('DemoService', () => {
       const newService = new DemoService(
         mockDatabase as unknown as Database,
         mockConfigService as unknown as ConfigService,
-        mockPipelineService as unknown as PipelineService,
       );
 
       const result = await newService.manualRestore();

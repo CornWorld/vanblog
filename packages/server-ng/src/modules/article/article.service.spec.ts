@@ -4,7 +4,6 @@ import { describe, beforeEach, it, expect, vi } from 'vitest';
 
 import { MockUtils } from '../../../test/mock-utils';
 import { DATABASE_CONNECTION } from '../../database/database.module';
-import { PipelineService } from '../pipeline/services/pipeline.service';
 import { HookService } from '../plugin/services/hook.service';
 
 import { ArticleService } from './article.service';
@@ -14,7 +13,7 @@ import type { DatabaseMockBuilder } from '../../../test/mock-utils';
 
 describe('ArticleService', () => {
   let service: ArticleService;
-  let mockPipelineService: Partial<PipelineService>;
+
   let mockHookService: Partial<HookService>;
   let databaseMock: DatabaseMockBuilder;
 
@@ -23,7 +22,7 @@ describe('ArticleService', () => {
     databaseMock = new MockUtils.database();
 
     // 使用Mock工具类创建服务Mock
-    mockPipelineService = MockUtils.services.createPipelineServiceMock();
+
     mockHookService = MockUtils.services.createHookServiceMock();
 
     const module: TestingModule = await Test.createTestingModule({
@@ -33,10 +32,7 @@ describe('ArticleService', () => {
           provide: DATABASE_CONNECTION,
           useValue: databaseMock.build(),
         },
-        {
-          provide: PipelineService,
-          useValue: mockPipelineService,
-        },
+
         {
           provide: HookService,
           useValue: mockHookService,
