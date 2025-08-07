@@ -2,7 +2,6 @@ import { Module } from '@nestjs/common';
 
 import { DatabaseModule } from '../../database/database.module';
 import { AnalyticsModule } from '../analytics/analytics.module';
-
 import { PluginModule } from '../plugin/plugin.module';
 
 import { ArticleController } from './article.controller';
