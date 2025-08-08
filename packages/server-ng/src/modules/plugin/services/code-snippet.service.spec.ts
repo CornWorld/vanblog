@@ -83,6 +83,7 @@ describe('CodeSnippetService', () => {
 
   describe('create', () => {
     it('should create a code snippet successfully', async () => {
+      const now = new Date();
       const createDto = {
         name: 'Test Snippet',
         description: 'Test description',
@@ -97,11 +98,16 @@ describe('CodeSnippetService', () => {
       const expectedResult = {
         id: 1,
         ...createDto,
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        createdAt: now.toISOString(),
+        updatedAt: now.toISOString(),
       };
 
-      mockDb.returning.mockResolvedValueOnce([expectedResult]);
+      const dbResult = {
+        ...expectedResult,
+        createdAt: now,
+        updatedAt: now,
+      };
+      mockDb.returning.mockResolvedValueOnce([dbResult]);
 
       const result = await service.create(createDto);
 
@@ -128,20 +134,27 @@ describe('CodeSnippetService', () => {
 
   describe('findOne', () => {
     it('should return a code snippet when found', async () => {
+      const now = new Date();
       const expectedResult = {
         id: 1,
         name: 'Test Snippet',
+        description: undefined,
         hookName: 'test-hook',
         hookType: 'action',
         code: 'console.log("test");',
         enabled: true,
         timeout: 5000,
         priority: 10,
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        createdAt: now.toISOString(),
+        updatedAt: now.toISOString(),
       };
 
-      mockDb.limit.mockResolvedValueOnce([expectedResult]);
+      const dbResult = {
+        ...expectedResult,
+        createdAt: now,
+        updatedAt: now,
+      };
+      mockDb.limit.mockResolvedValueOnce([dbResult]);
 
       const result = await service.findOne(1);
 
@@ -166,6 +179,7 @@ describe('CodeSnippetService', () => {
         code: 'console.log("updated");',
       };
 
+      const now = new Date();
       const expectedResult = {
         id: 1,
         name: 'Updated Snippet',
@@ -175,11 +189,16 @@ describe('CodeSnippetService', () => {
         enabled: true,
         timeout: 5000,
         priority: 10,
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        createdAt: now.toISOString(),
+        updatedAt: now.toISOString(),
       };
 
-      mockDb.returning.mockResolvedValueOnce([expectedResult]);
+      const dbResult = {
+        ...expectedResult,
+        createdAt: now,
+        updatedAt: now,
+      };
+      mockDb.returning.mockResolvedValueOnce([dbResult]);
 
       const result = await service.update(1, updateDto);
 
@@ -254,26 +273,42 @@ describe('CodeSnippetService', () => {
 
   describe('findByHook', () => {
     it('should return code snippets for a specific hook', async () => {
+      const now = new Date();
       const expectedResults = [
         {
           id: 1,
           name: 'Test Snippet 1',
+          description: undefined,
           hookName: 'test-hook',
           hookType: 'action',
+          code: undefined,
           priority: 10,
           enabled: true,
+          timeout: undefined,
+          createdAt: now.toISOString(),
+          updatedAt: now.toISOString(),
         },
         {
           id: 2,
           name: 'Test Snippet 2',
+          description: undefined,
           hookName: 'test-hook',
           hookType: 'action',
+          code: undefined,
           priority: 20,
           enabled: true,
+          timeout: undefined,
+          createdAt: now.toISOString(),
+          updatedAt: now.toISOString(),
         },
       ];
 
-      mockDb.orderBy.mockResolvedValueOnce(expectedResults);
+      const dbResults = expectedResults.map((result) => ({
+        ...result,
+        createdAt: now,
+        updatedAt: now,
+      }));
+      mockDb.orderBy.mockResolvedValueOnce(dbResults);
 
       const result = await service.findByHook('test-hook', 'action');
 

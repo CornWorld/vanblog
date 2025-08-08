@@ -1,0 +1,17 @@
+{
+  "name": "cat-plugin",
+  "version": "1.0.0",
+  "description": "🐱插件：在文章保存时在内容/标题/标签的结尾添加喵",
+  "main": "index.ts",
+  "dependencies": [],
+  "hooks": {
+    "article|beforeCreate": {
+      "type": "filter",
+      "priority": 10
+    },
+    "article|beforeUpdate": {
+      "type": "filter",
+      "priority": 10
+    }
+  }
+}
