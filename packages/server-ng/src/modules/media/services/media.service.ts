@@ -5,6 +5,7 @@ import sharp from 'sharp';
 
 import { DATABASE_CONNECTION } from '../../../database/database.module';
 import { staticFiles } from '../../../database/schema';
+import { HookService } from '../../plugin/services/hook.service';
 import { ListStaticFilesDto } from '../dto/list-static-files.dto';
 import { StorageProvider } from '../dto/storage-config.dto';
 
@@ -16,6 +17,7 @@ export class MediaService {
     @Inject(DATABASE_CONNECTION)
     public readonly db: LibSQLDatabase,
     private readonly storageFactoryService: StorageFactoryService,
+    private readonly hookService: HookService,
   ) {}
 
   async uploadFile(
@@ -23,7 +25,14 @@ export class MediaService {
     customFilename?: string,
     provider = 'local',
   ): Promise<typeof staticFiles.$inferSelect> {
-    const filename = customFilename ?? file.originalname;
+    // Apply beforeUpload filter
+    const filteredData = await this.hookService.applyFilters('media|beforeUpload', {
+      file,
+      customFilename,
+      provider,
+    });
+
+    const filename = filteredData.customFilename ?? file.originalname;
     const storageService = await this.storageFactoryService.getStorageService();
 
     const { filename: uploadedFilename, url } = await storageService.upload(file, filename);
@@ -55,6 +64,12 @@ export class MediaService {
         provider,
       })
       .returning();
+
+    // Execute afterUpload action
+    await this.hookService.doAction('media|afterUpload', {
+      file: result,
+      originalFile: file,
+    });
 
     return result;
   }
@@ -118,6 +133,9 @@ export class MediaService {
   async deleteFile(id: number): Promise<{ success: boolean; message: string }> {
     const file = await this.getFileById(id);
 
+    // Execute beforeDelete action
+    await this.hookService.doAction('media|beforeDelete', { file });
+
     const storageService = await this.storageFactoryService.getStorageService();
     const currentProvider = await this.storageFactoryService.getCurrentProvider();
 
@@ -132,7 +150,12 @@ export class MediaService {
 
     await this.db.delete(staticFiles).where(eq(staticFiles.id, id));
 
-    return { success: true, message: 'File deleted successfully' };
+    const result = { success: true, message: 'File deleted successfully' };
+
+    // Execute afterDelete action
+    await this.hookService.doAction('media|afterDelete', { file, result });
+
+    return result;
   }
 
   async deleteFiles(
@@ -143,6 +166,10 @@ export class MediaService {
     }
 
     const files = await this.db.select().from(staticFiles).where(inArray(staticFiles.id, ids));
+
+    // Execute beforeDeleteBatch action
+    await this.hookService.doAction('media|beforeDeleteBatch', { files, ids });
+
     const storageService = await this.storageFactoryService.getStorageService();
     const currentProvider = await this.storageFactoryService.getCurrentProvider();
 
@@ -159,11 +186,16 @@ export class MediaService {
 
     await this.db.delete(staticFiles).where(inArray(staticFiles.id, ids));
 
-    return {
+    const result = {
       success: true,
       deletedCount: files.length,
       message: `${String(files.length)} files deleted successfully`,
     };
+
+    // Execute afterDeleteBatch action
+    await this.hookService.doAction('media|afterDeleteBatch', { files, result });
+
+    return result;
   }
 
   scanArticleImages(): Promise<{ scanned: number; added: number }> {

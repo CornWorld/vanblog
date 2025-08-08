@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, Inject, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException, Inject } from '@nestjs/common';
 import { eq, and, or, like, desc, asc, sql } from 'drizzle-orm';
 
 import { DATABASE_CONNECTION } from '../../database';
@@ -22,8 +22,6 @@ import type { Database } from '../../database/connection';
 
 @Injectable()
 export class DraftService {
-  private readonly logger = new Logger(DraftService.name);
-
   constructor(
     @Inject(DATABASE_CONNECTION)
     private readonly db: Database,
@@ -131,13 +129,9 @@ export class DraftService {
     };
 
     // Trigger beforeCreateDraft hook (new hook system)
-    try {
-      draftData = await this.hookService.applyFilters('beforeCreateDraft', draftData, {
-        action: 'create',
-      });
-    } catch (error) {
-      this.logger.error('Error in beforeCreateDraft hook:', error);
-    }
+    draftData = await this.hookService.applyFilters('draft|beforeCreate', draftData, {
+      action: 'create',
+    });
 
     const result = await this.db.insert(drafts).values(draftData).returning();
 
@@ -156,11 +150,7 @@ export class DraftService {
     };
 
     // Trigger afterCreateDraft hook (new hook system)
-    try {
-      await this.hookService.doAction('afterCreateDraft', draftResult, { action: 'create' });
-    } catch (error) {
-      this.logger.error('Error in afterCreateDraft hook:', error);
-    }
+    await this.hookService.doAction('draft|afterCreate', draftResult, { action: 'create' });
 
     return draftResult;
   }
@@ -200,14 +190,10 @@ export class DraftService {
     updateData.updatedAt = new Date();
 
     // Trigger beforeUpdateDraft hook (new hook system)
-    try {
-      updateData = await this.hookService.applyFilters('beforeUpdateDraft', updateData, {
-        action: 'update',
-        id,
-      });
-    } catch (error) {
-      this.logger.error('Error in beforeUpdateDraft hook:', error);
-    }
+    updateData = await this.hookService.applyFilters('draft|beforeUpdate', updateData, {
+      action: 'update',
+      id,
+    });
 
     const result = await this.db
       .update(drafts)
@@ -230,11 +216,7 @@ export class DraftService {
     };
 
     // Trigger afterUpdateDraft hook (new hook system)
-    try {
-      await this.hookService.doAction('afterUpdateDraft', draftResult, { action: 'update', id });
-    } catch (error) {
-      this.logger.error('Error in afterUpdateDraft hook:', error);
-    }
+    await this.hookService.doAction('draft|afterUpdate', draftResult, { action: 'update', id });
 
     return draftResult;
   }
@@ -244,11 +226,7 @@ export class DraftService {
     await this.draftVersionService.deleteAllVersions(id);
 
     // Trigger beforeDeleteDraft hook (new hook system)
-    try {
-      await this.hookService.doAction('beforeDeleteDraft', { id }, { action: 'delete' });
-    } catch (error) {
-      this.logger.error('Error in beforeDeleteDraft hook:', error);
-    }
+    await this.hookService.doAction('draft|beforeDelete', { id }, { action: 'delete' });
 
     const result = await this.db
       .delete(drafts)
@@ -260,11 +238,7 @@ export class DraftService {
     }
 
     // Trigger afterDeleteDraft hook (new hook system)
-    try {
-      await this.hookService.doAction('afterDeleteDraft', { id }, { action: 'delete' });
-    } catch (error) {
-      this.logger.error('Error in afterDeleteDraft hook:', error);
-    }
+    await this.hookService.doAction('draft|afterDelete', { id }, { action: 'delete' });
   }
 
   async publish(id: number, publishDto: PublishDraftDto): Promise<Article> {

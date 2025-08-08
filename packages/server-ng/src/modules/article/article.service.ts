@@ -238,13 +238,13 @@ export class ArticleService {
 
     // Process article data
 
-    // Trigger beforeCreateArticle hook (new hook system)
+    // Trigger article|beforeCreate hook (new hook system)
     try {
-      newArticleData = await this.hookService.applyFilters('beforeCreateArticle', newArticleData, {
+      newArticleData = await this.hookService.applyFilters('article|beforeCreate', newArticleData, {
         action: 'create',
       });
     } catch (error) {
-      this.logger.error('Error in beforeCreateArticle hook:', error);
+      this.logger.error('Error in article|beforeCreate hook:', error);
     }
 
     const insertResult = await this.db.insert(articles).values([newArticleData]).returning();
@@ -265,12 +265,8 @@ export class ArticleService {
 
     // Article created successfully
 
-    // Trigger afterCreateArticle hook (new hook system)
-    try {
-      await this.hookService.doAction('afterCreateArticle', articleResult, { action: 'create' });
-    } catch (error) {
-      this.logger.error('Error in afterCreateArticle hook:', error);
-    }
+    // Trigger article|afterCreate hook (new hook system)
+    await this.hookService.doAction('article|afterCreate', articleResult, { action: 'create' });
 
     return articleResult;
   }
@@ -299,14 +295,14 @@ export class ArticleService {
 
     // Process update data
 
-    // Trigger beforeUpdateArticle hook (new hook system)
+    // Trigger article|beforeUpdate hook (new hook system)
     try {
-      updateData = await this.hookService.applyFilters('beforeUpdateArticle', updateData, {
+      updateData = await this.hookService.applyFilters('article|beforeUpdate', updateData, {
         action: 'update',
         id,
       });
     } catch (error) {
-      this.logger.error('Error in beforeUpdateArticle hook:', error);
+      this.logger.error('Error in article|beforeUpdate hook:', error);
     }
 
     const updateResult = await this.db
@@ -331,15 +327,11 @@ export class ArticleService {
 
     // Article updated successfully
 
-    // Trigger afterUpdateArticle hook (new hook system)
-    try {
-      await this.hookService.doAction('afterUpdateArticle', articleResult, {
-        action: 'update',
-        id,
-      });
-    } catch (error) {
-      this.logger.error('Error in afterUpdateArticle hook:', error);
-    }
+    // Trigger article|afterUpdate hook (new hook system)
+    await this.hookService.doAction('article|afterUpdate', articleResult, {
+      action: 'update',
+      id,
+    });
 
     return articleResult;
   }
@@ -358,21 +350,13 @@ export class ArticleService {
 
     // Prepare for deletion
 
-    // Trigger beforeDeleteArticle hook (new hook system)
-    try {
-      await this.hookService.doAction('beforeDeleteArticle', { id }, { action: 'delete' });
-    } catch (error) {
-      this.logger.error('Error in beforeDeleteArticle hook:', error);
-    }
+    // Trigger article|beforeDelete hook (new hook system)
+    await this.hookService.doAction('article|beforeDelete', { id }, { action: 'delete' });
 
     await this.db.delete(articles).where(eq(articles.id, id));
 
-    // Trigger afterDeleteArticle hook (new hook system)
-    try {
-      await this.hookService.doAction('afterDeleteArticle', { id }, { action: 'delete' });
-    } catch (error) {
-      this.logger.error('Error in afterDeleteArticle hook:', error);
-    }
+    // Trigger article|afterDelete hook (new hook system)
+    await this.hookService.doAction('article|afterDelete', { id }, { action: 'delete' });
 
     // Article deleted successfully
   }

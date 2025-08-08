@@ -5,6 +5,7 @@ import { DATABASE_CONNECTION } from '../../database';
 import { tags, articles } from '../../database/schema';
 import { OverallStatisticsDto } from '../../shared/dto/statistics.dto';
 import { StatisticsService } from '../../shared/services/statistics.service';
+import { HookService } from '../plugin/services/hook.service';
 
 import { CreateTagDto, UpdateTagDto, TagListResponseDto } from './dto/tag.dto';
 import { Tag } from './entities/tag.entity';
@@ -17,6 +18,7 @@ export class TagService {
     @Inject(DATABASE_CONNECTION)
     private readonly db: Database,
     private readonly statisticsService: StatisticsService,
+    private readonly hookService: HookService,
   ) {}
 
   async findAll(): Promise<TagListResponseDto> {
@@ -62,37 +64,89 @@ export class TagService {
   }
 
   async create(createTagDto: CreateTagDto): Promise<Tag> {
-    const result = await this.db.insert(tags).values(createTagDto).returning();
+    let tagData = createTagDto;
+
+    // Trigger beforeCreate hook
+    try {
+      tagData = await this.hookService.applyFilters('tag|beforeCreate', tagData, {
+        action: 'create',
+      });
+    } catch {
+      // Hook errors should not break the main flow
+    }
+
+    const result = await this.db.insert(tags).values(tagData).returning();
 
     if (result.length === 0) {
       throw new Error('Failed to create tag');
     }
 
-    return new Tag({
+    const tagResult = new Tag({
       ...result[0],
       slug: result[0].slug ?? undefined,
     });
+
+    // Trigger afterCreate hook
+    await this.hookService.doAction('tag|afterCreate', tagResult, {
+      action: 'create',
+    });
+
+    return tagResult;
   }
 
   async update(id: number, updateTagDto: UpdateTagDto): Promise<Tag> {
-    const result = await this.db.update(tags).set(updateTagDto).where(eq(tags.id, id)).returning();
+    let tagData = updateTagDto;
+
+    // Trigger beforeUpdate hook
+    tagData = await this.hookService.applyFilters('tag|beforeUpdate', tagData, {
+      action: 'update',
+      id,
+    });
+
+    const result = await this.db.update(tags).set(tagData).where(eq(tags.id, id)).returning();
 
     if (result.length === 0) {
       throw new NotFoundException(`Tag with ID ${String(id)} not found`);
     }
 
-    return new Tag({
+    const tagResult = new Tag({
       ...result[0],
       slug: result[0].slug ?? undefined,
     });
+
+    // Trigger afterUpdate hook
+    await this.hookService.doAction('tag|afterUpdate', tagResult, {
+      action: 'update',
+      id,
+    });
+
+    return tagResult;
   }
 
   async remove(id: number): Promise<void> {
+    // Trigger beforeDelete hook
+    await this.hookService.doAction(
+      'tag|beforeDelete',
+      { id },
+      {
+        action: 'delete',
+      },
+    );
+
     const result = await this.db.delete(tags).where(eq(tags.id, id)).returning({ id: tags.id });
 
     if (result.length === 0) {
       throw new NotFoundException(`Tag with ID ${String(id)} not found`);
     }
+
+    // Trigger afterDelete hook
+    await this.hookService.doAction(
+      'tag|afterDelete',
+      { id },
+      {
+        action: 'delete',
+      },
+    );
   }
 
   async getStatistics(): Promise<OverallStatisticsDto> {

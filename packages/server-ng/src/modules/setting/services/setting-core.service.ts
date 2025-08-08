@@ -5,6 +5,7 @@ import { LibSQLDatabase } from 'drizzle-orm/libsql';
 import { DATABASE_CONNECTION } from '../../../database/database.module';
 import { siteMeta } from '../../../database/schema';
 import { safeParseJson, dataSchemas } from '../../../shared/zod';
+import { HookService } from '../../plugin/services/hook.service';
 
 // Core site configurations that remain in the setting module
 export interface SiteInfo {
@@ -52,6 +53,7 @@ export class SettingCoreService {
   constructor(
     @Inject(DATABASE_CONNECTION)
     private readonly db: LibSQLDatabase,
+    private readonly hookService: HookService,
   ) {}
 
   // Generic config methods
@@ -75,24 +77,37 @@ export class SettingCoreService {
   }
 
   async updateConfig<T>(key: string, value: T): Promise<T> {
+    // Apply beforeUpdateSetting filter
+    const filteredData = await this.hookService.applyFilters('setting|beforeUpdate', {
+      key,
+      value,
+    });
+
     const existing = await this.db.select().from(siteMeta).where(eq(siteMeta.key, key)).limit(1);
 
     if (existing.length > 0) {
       await this.db
         .update(siteMeta)
         .set({
-          value: JSON.stringify(value),
+          value: JSON.stringify(filteredData.value),
           updatedAt: sql`CURRENT_TIMESTAMP`,
         })
         .where(eq(siteMeta.key, key));
     } else {
       await this.db.insert(siteMeta).values({
         key,
-        value: JSON.stringify(value),
+        value: JSON.stringify(filteredData.value),
       });
     }
 
-    return value;
+    // Execute afterUpdateSetting action
+    await this.hookService.doAction('setting|afterUpdate', {
+      key,
+      value: filteredData.value,
+      oldValue: existing.length > 0 ? existing[0].value : null,
+    });
+
+    return filteredData.value;
   }
 
   // Site Info

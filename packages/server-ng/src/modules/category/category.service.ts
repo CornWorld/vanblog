@@ -8,6 +8,7 @@ import { categories, articles } from '../../database/schema';
 import { OverallStatisticsDto } from '../../shared/dto/statistics.dto';
 import { StatisticsService } from '../../shared/services/statistics.service';
 import { safeParseJson, dataSchemas } from '../../shared/zod';
+import { HookService } from '../plugin/services/hook.service';
 
 import {
   CreateCategoryDto,
@@ -27,6 +28,7 @@ export class CategoryService {
     @Inject(DATABASE_CONNECTION)
     private readonly db: Database,
     private readonly statisticsService: StatisticsService,
+    private readonly hookService: HookService,
   ) {}
 
   async findAll(): Promise<CategoryListResponseDto> {
@@ -84,18 +86,25 @@ export class CategoryService {
   }
 
   async create(dto: CreateCategoryDto): Promise<CategoryDto> {
+    let categoryData = dto;
+
+    // Trigger beforeCreate hook
+    categoryData = await this.hookService.applyFilters('category|beforeCreate', categoryData, {
+      action: 'create',
+    });
+
     // Hash password if provided
-    if (dto.password) {
-      dto.password = await bcrypt.hash(dto.password, 10);
+    if (categoryData.password) {
+      categoryData.password = await bcrypt.hash(categoryData.password, 10);
     }
 
-    const result = await this.db.insert(categories).values(dto).returning();
+    const result = await this.db.insert(categories).values(categoryData).returning();
 
     if (result.length === 0) {
       throw new Error('Failed to create category');
     }
 
-    return {
+    const categoryResult = {
       ...result[0],
       slug: result[0].slug ?? null,
       description: result[0].description ?? null,
@@ -104,14 +113,27 @@ export class CategoryService {
       createdAt: result[0].createdAt.toISOString(),
       updatedAt: result[0].updatedAt.toISOString(),
     };
+
+    // Trigger afterCreate hook
+    await this.hookService.doAction('category|afterCreate', categoryResult, {
+      action: 'create',
+    });
+
+    return categoryResult;
   }
 
   async update(id: number, updateCategoryDto: UpdateCategoryDto): Promise<CategoryDto> {
-    const categoryData: UpdateCategoryDto = {
+    let categoryData: UpdateCategoryDto = {
       name: updateCategoryDto.name,
       description: updateCategoryDto.description,
       password: updateCategoryDto.password,
     };
+
+    // Trigger beforeUpdate hook
+    categoryData = await this.hookService.applyFilters('category|beforeUpdate', categoryData, {
+      action: 'update',
+      id,
+    });
 
     // Hash password if provided
     if (categoryData.password) {
@@ -130,7 +152,7 @@ export class CategoryService {
 
     // Foreign key constraint will handle cascade update automatically
 
-    return {
+    const categoryResult = {
       ...result[0],
       slug: result[0].slug ?? null,
       description: result[0].description ?? null,
@@ -139,11 +161,28 @@ export class CategoryService {
       createdAt: result[0].createdAt.toISOString(),
       updatedAt: result[0].updatedAt.toISOString(),
     };
+
+    // Trigger afterUpdate hook
+    await this.hookService.doAction('category|afterUpdate', categoryResult, {
+      action: 'update',
+      id,
+    });
+
+    return categoryResult;
   }
 
   async remove(id: number): Promise<void> {
     // Check if category exists
     const category = await this.findOne(id);
+
+    // Trigger beforeDelete hook
+    await this.hookService.doAction(
+      'category|beforeDelete',
+      { id, category },
+      {
+        action: 'delete',
+      },
+    );
 
     // Check if there are articles in this category
     const articlesInCategory = await this.db
@@ -166,6 +205,15 @@ export class CategoryService {
     if (result.length === 0) {
       throw new NotFoundException(`Category with ID ${String(id)} not found`);
     }
+
+    // Trigger afterDelete hook
+    await this.hookService.doAction(
+      'category|afterDelete',
+      { id, category },
+      {
+        action: 'delete',
+      },
+    );
   }
 
   async getStatistics(): Promise<OverallStatisticsDto> {
