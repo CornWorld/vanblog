@@ -7,6 +7,7 @@ import { MediaService } from './services/media.service';
 
 import type { StorageService } from './interfaces/storage.interface';
 import type { StorageFactoryService } from './services/storage-factory.service';
+import type { HookService } from '../plugin/services/hook.service';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 
 vi.mock('sharp', () => ({
@@ -20,6 +21,7 @@ describe('MediaService', () => {
   let mockStorageService: Partial<StorageService>;
   let databaseMock: DatabaseMockBuilder;
   let mockStorageFactoryService: Partial<StorageFactoryService>;
+  let mockHookService: Partial<HookService>;
 
   beforeEach(() => {
     // 使用Mock工具类创建数据库Mock
@@ -33,9 +35,15 @@ describe('MediaService', () => {
       getCurrentProvider: vi.fn().mockResolvedValue(StorageProvider.LOCAL),
     };
 
+    mockHookService = {
+      applyFilters: vi.fn().mockImplementation((_hookName, data) => Promise.resolve(data)),
+      doAction: vi.fn().mockResolvedValue(undefined),
+    };
+
     service = new MediaService(
       databaseMock.build() as unknown as LibSQLDatabase,
       mockStorageFactoryService as StorageFactoryService,
+      mockHookService as HookService,
     );
   });
 

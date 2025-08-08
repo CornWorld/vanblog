@@ -42,12 +42,12 @@ describe('Hook Integration (e2e)', () => {
   });
 
   describe('Article Hook Integration', () => {
-    it('should trigger beforeCreateArticle filter hook', async () => {
+    it('should trigger article|beforeCreate filter hook', async () => {
       const mockFilter = vi.fn((data: Record<string, unknown>) => ({
         ...data,
         title: 'Modified Title',
       }));
-      hookService.addFilter('beforeCreateArticle', mockFilter);
+      hookService.addFilter('article|beforeCreate', mockFilter);
 
       const createArticleDto = {
         title: 'Original Title',
@@ -70,9 +70,9 @@ describe('Hook Integration (e2e)', () => {
       expect(result.title).toBe('Modified Title');
     });
 
-    it('should trigger afterCreateArticle action hook', async () => {
+    it('should trigger article|afterCreate action hook', async () => {
       const mockAction = vi.fn();
-      hookService.addAction('afterCreateArticle', mockAction);
+      hookService.addAction('article|afterCreate', mockAction);
 
       const createArticleDto = {
         title: 'Test Article',
@@ -113,7 +113,7 @@ describe('Hook Integration (e2e)', () => {
           content: 'Modified Content',
         }),
       );
-      hookService.addFilter('beforeUpdateArticle', mockFilter);
+      hookService.addFilter('article|beforeUpdate', mockFilter);
 
       const updateArticleDto = {
         title: 'Updated Title',
@@ -148,8 +148,8 @@ describe('Hook Integration (e2e)', () => {
       // Add hooks
       const beforeDeleteAction = vi.fn();
       const afterDeleteAction = vi.fn();
-      hookService.addAction('beforeDeleteArticle', beforeDeleteAction);
-      hookService.addAction('afterDeleteArticle', afterDeleteAction);
+      hookService.addAction('article|beforeDelete', beforeDeleteAction);
+      hookService.addAction('article|afterDelete', afterDeleteAction);
 
       await articleService.remove(createdArticle.id);
 
@@ -165,12 +165,12 @@ describe('Hook Integration (e2e)', () => {
   });
 
   describe('Draft Hook Integration', () => {
-    it('should trigger beforeCreateDraft filter hook', async () => {
+    it('should trigger draft|beforeCreate filter hook', async () => {
       const mockFilter = vi.fn((data: Record<string, unknown>) => ({
         ...data,
         title: 'Modified Draft Title',
       }));
-      hookService.addFilter('beforeCreateDraft', mockFilter);
+      hookService.addFilter('draft|beforeCreate', mockFilter);
 
       const createDraftDto = {
         title: 'Original Draft Title',
@@ -191,9 +191,9 @@ describe('Hook Integration (e2e)', () => {
       expect(result.title).toBe('Modified Draft Title');
     });
 
-    it('should trigger afterCreateDraft action hook', async () => {
+    it('should trigger draft|afterCreate action hook', async () => {
       const mockAction = vi.fn();
-      hookService.addAction('afterCreateDraft', mockAction);
+      hookService.addAction('draft|afterCreate', mockAction);
 
       const createDraftDto = {
         title: 'Test Draft',
@@ -230,7 +230,7 @@ describe('Hook Integration (e2e)', () => {
           content: 'Modified Draft Content',
         }),
       );
-      hookService.addFilter('beforeUpdateDraft', mockFilter);
+      hookService.addFilter('draft|beforeUpdate', mockFilter);
 
       const updateDraftDto = {
         title: 'Updated Draft Title',
@@ -263,8 +263,8 @@ describe('Hook Integration (e2e)', () => {
       // Add hooks
       const beforeDeleteAction = vi.fn();
       const afterDeleteAction = vi.fn();
-      hookService.addAction('beforeDeleteDraft', beforeDeleteAction);
-      hookService.addAction('afterDeleteDraft', afterDeleteAction);
+      hookService.addAction('draft|beforeDelete', beforeDeleteAction);
+      hookService.addAction('draft|afterDelete', afterDeleteAction);
 
       await draftService.remove(createdDraft.id);
 
@@ -308,8 +308,8 @@ describe('Hook Integration (e2e)', () => {
         (data: Record<string, unknown>): Record<string, unknown> => ({ ...data, modified2: true }),
       );
 
-      hookService.addFilter('beforeCreateArticle', mockFilter1);
-      hookService.addFilter('beforeCreateArticle', mockFilter2);
+      hookService.addFilter('article|beforeCreate', mockFilter1);
+      hookService.addFilter('article|beforeCreate', mockFilter2);
 
       const createArticleDto = {
         title: 'Multi Hook Test',
@@ -324,7 +324,7 @@ describe('Hook Integration (e2e)', () => {
 
       expect(mockFilter1).toHaveBeenCalled();
       expect(mockFilter2).toHaveBeenCalled();
-      expect(hookService.getFilterCount('beforeCreateArticle')).toBe(2);
+      expect(hookService.getFilterCount('article|beforeCreate')).toBe(2);
     }, 15000);
   });
 });

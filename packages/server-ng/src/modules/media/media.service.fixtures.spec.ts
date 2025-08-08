@@ -6,6 +6,7 @@ import { StorageProvider } from './dto/storage-config.dto';
 import { MediaService } from './services/media.service';
 
 import type { StorageFactoryService } from './services/storage-factory.service';
+import type { HookService } from '../plugin/services/hook.service';
 
 // Mock sharp模块
 vi.mock('sharp', () => ({
@@ -17,7 +18,16 @@ vi.mock('sharp', () => ({
 // 扩展测试上下文，添加MediaService实例
 const mediaTest = test.extend<{ mediaService: MediaService }>({
   mediaService: async ({ db, storageFactoryService }, use) => {
-    const service = new MediaService(db, storageFactoryService as unknown as StorageFactoryService);
+    const mockHookService = {
+      applyFilters: vi.fn().mockImplementation((_, data) => Promise.resolve(data)),
+      doAction: vi.fn().mockResolvedValue(undefined),
+    } as Partial<HookService>;
+
+    const service = new MediaService(
+      db,
+      storageFactoryService as unknown as StorageFactoryService,
+      mockHookService as HookService,
+    );
     await use(service);
   },
 });
@@ -272,8 +282,7 @@ describe('MediaService with Vitest Fixtures', () => {
   describe('with automatic setup and teardown', () => {
     const autoTest = mediaTest.extend({
       autoSetup: [
-        // eslint-disable-next-line no-empty-pattern, @typescript-eslint/no-empty-object-type
-        async ({}: {}, use) => {
+        async (_, use) => {
           // 自动执行的设置逻辑
           console.log('Setting up test environment...');
           await use(undefined);

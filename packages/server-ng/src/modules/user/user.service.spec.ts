@@ -4,6 +4,7 @@ import * as bcrypt from 'bcrypt';
 import { describe, it, beforeEach, afterEach, expect, vi } from 'vitest';
 
 import { users } from '../../database/schema';
+import { HookService } from '../plugin/services/hook.service';
 
 import { type CreateUserDto } from './dto/create-user.dto';
 import { UserService } from './user.service';
@@ -13,6 +14,7 @@ vi.mock('bcrypt');
 
 describe('UserService', () => {
   let service: UserService;
+  let mockHookService: Partial<HookService>;
 
   interface MockDb {
     select: ReturnType<typeof vi.fn>;
@@ -58,12 +60,21 @@ describe('UserService', () => {
       delete: vi.fn().mockReturnThis(),
     };
 
+    mockHookService = {
+      applyFilters: vi.fn().mockImplementation((_hookName, data) => Promise.resolve(data)),
+      doAction: vi.fn().mockResolvedValue(undefined),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         UserService,
         {
           provide: 'DATABASE_CONNECTION',
           useValue: mockDb,
+        },
+        {
+          provide: HookService,
+          useValue: mockHookService,
         },
       ],
     }).compile();

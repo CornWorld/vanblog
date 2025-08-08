@@ -40,8 +40,8 @@ describe('PermissionService', () => {
     description: 'Read articles',
     module: 'article',
     isActive: true,
-    createdAt: new Date(),
-    updatedAt: new Date(),
+    createdAt: new Date('2025-08-08T06:36:15.292Z'),
+    updatedAt: new Date('2025-08-08T06:36:15.292Z'),
   };
 
   const mockPermissionGroup = {
@@ -50,8 +50,8 @@ describe('PermissionService', () => {
     description: 'Administrator group',
     permissions: JSON.stringify(['article:read', 'article:write']),
     isActive: true,
-    createdAt: new Date(),
-    updatedAt: new Date(),
+    createdAt: new Date('2025-08-08T06:36:15.292Z'),
+    updatedAt: new Date('2025-08-08T06:36:15.292Z'),
   };
 
   beforeEach(async () => {
@@ -211,7 +211,11 @@ describe('PermissionService', () => {
       const result = await service.createPermissionNode(createDto);
 
       expect(mockDb.insert).toHaveBeenCalled();
-      expect(result).toEqual(mockPermissionNode);
+      expect(result).toEqual({
+        ...mockPermissionNode,
+        createdAt: '2025-08-08T06:36:15.292Z',
+        updatedAt: '2025-08-08T06:36:15.292Z',
+      });
     });
   });
 
@@ -227,7 +231,13 @@ describe('PermissionService', () => {
       const query = { page: 1, limit: 10 };
       const result = await service.findAllPermissionNodes(query);
 
-      expect(result).toEqual([mockPermissionNode]);
+      expect(result).toEqual([
+        {
+          ...mockPermissionNode,
+          createdAt: '2025-08-08T06:36:15.292Z',
+          updatedAt: '2025-08-08T06:36:15.292Z',
+        },
+      ]);
     });
 
     it('should filter by module', async () => {
@@ -242,7 +252,13 @@ describe('PermissionService', () => {
       const query = { module: 'article', page: 1, limit: 10 };
       const result = await service.findAllPermissionNodes(query);
 
-      expect(result).toEqual([mockPermissionNode]);
+      expect(result).toEqual([
+        {
+          ...mockPermissionNode,
+          createdAt: '2025-08-08T06:36:15.292Z',
+          updatedAt: '2025-08-08T06:36:15.292Z',
+        },
+      ]);
     });
   });
 

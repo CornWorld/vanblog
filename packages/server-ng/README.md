@@ -258,14 +258,14 @@ JWT_EXPIRES_IN=7d
 
 > 这个阶段的每一条修改量都非常大。暂定一个 TODO 一次 commit，如果已实现，要仔细检查是否与设计一致
 
-- [ ] HookService 开发：
+- [x] HookService 开发：
   - 借鉴 Wordpress 的 action / filter 机制，在 核心业务模块中埋点
   - 希望每个模块在 HookService 注册 <模块名> <事件名>， e.g. article|beforeSave 表示在文章保存前触发
   - 每个 Hook 都有由插件注册的一个回调列表，在注册回调时根据优先级排序，触发 Hook 时按照顺序执行
 
-  - [ ] 实现 HookService (addAction, addFilter, doAction, applyFilters)
-  - [ ] 实现回调列表及优先级排序
-  - [ ] 为一两个模块（article draft）添加 hook 并测试触发效果和回调效果
+  - [x] 实现 HookService (addAction, addFilter, doAction, applyFilters)
+  - [x] 实现回调列表及优先级排序
+  - [x] 为一两个模块（article draft）添加 hook 并测试触发效果和回调效果
 
 - [ ] PluginContext 插件能力基建：创建 PluginContext Service，为插件提供 logger, config 读取器, 和 data 存储（存储到 plugin_data 表）能力 （插件使用方法： 依赖 Nestjs DI）
 - [ ] 动态插件加载

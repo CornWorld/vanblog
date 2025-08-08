@@ -4,6 +4,7 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import * as bcrypt from 'bcrypt';
 import { vi } from 'vitest';
 
+import { HookService } from '../plugin/services/hook.service';
 import { UserType } from '../user/dto';
 import { User } from '../user/entities/user.entity';
 import { UserService } from '../user/user.service';
@@ -20,6 +21,7 @@ vi.mock('bcrypt', () => ({
 
 describe('AuthService', () => {
   let service: AuthService;
+  let mockHookService: Partial<HookService>;
 
   const mockUser = new User({
     id: 1,
@@ -44,6 +46,11 @@ describe('AuthService', () => {
   };
 
   beforeEach(async () => {
+    mockHookService = {
+      applyFilters: vi.fn().mockImplementation((_hookName, data) => Promise.resolve(data)),
+      doAction: vi.fn().mockResolvedValue(undefined),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AuthService,
@@ -54,6 +61,10 @@ describe('AuthService', () => {
         {
           provide: JwtService,
           useValue: mockJwtService,
+        },
+        {
+          provide: HookService,
+          useValue: mockHookService,
         },
       ],
     }).compile();

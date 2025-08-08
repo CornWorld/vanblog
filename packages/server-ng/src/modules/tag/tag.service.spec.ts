@@ -4,11 +4,13 @@ import { vi, describe, beforeEach, it, expect } from 'vitest';
 
 import { DATABASE_CONNECTION } from '../../database/database.module';
 import { StatisticsService } from '../../shared/services/statistics.service';
+import { HookService } from '../plugin/services/hook.service';
 
 import { TagService } from './tag.service';
 
 describe('TagService', () => {
   let service: TagService;
+  let mockHookService: Partial<HookService>;
 
   let mockDb: {
     select: ReturnType<typeof vi.fn>;
@@ -39,6 +41,11 @@ describe('TagService', () => {
       groupBy: vi.fn().mockReturnThis(),
     };
 
+    mockHookService = {
+      applyFilters: vi.fn().mockImplementation((_hookName, data) => Promise.resolve(data)),
+      doAction: vi.fn().mockResolvedValue(undefined),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       imports: [],
       providers: [
@@ -62,6 +69,10 @@ describe('TagService', () => {
               tags: [],
             }),
           },
+        },
+        {
+          provide: HookService,
+          useValue: mockHookService,
         },
       ],
     }).compile();
