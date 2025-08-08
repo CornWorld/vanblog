@@ -115,7 +115,19 @@ export default tseslint.config(
       eqeqeq: ['error', 'always'],
       'no-throw-literal': 'error',
       'prefer-promise-reject-errors': 'error',
-      'prettier/prettier': 'error',
+      'prettier/prettier': [
+        'error',
+        {
+          singleQuote: true,
+          trailingComma: 'all',
+          printWidth: 100,
+          tabWidth: 2,
+          semi: true,
+          bracketSpacing: true,
+          arrowParens: 'always',
+          endOfLine: 'lf',
+        },
+      ],
     },
   },
   // 测试文件特殊规则
