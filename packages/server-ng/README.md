@@ -254,6 +254,31 @@ JWT_EXPIRES_IN=7d
 
 - [x] 完成
 
+### 额外紧急阶段：Plugin 系统
+
+> 这个阶段的每一条修改量都非常大。暂定一个 TODO 一次 commit，如果已实现，要仔细检查是否与设计一致
+
+- [ ] HookService 开发：
+  - 借鉴 Wordpress 的 action / filter 机制，在 核心业务模块中埋点
+  - 希望每个模块在 HookService 注册 <模块名> <事件名>， e.g. article|beforeSave 表示在文章保存前触发
+  - 每个 Hook 都有由插件注册的一个回调列表，在注册回调时根据优先级排序，触发 Hook 时按照顺序执行
+
+  - [ ] 实现 HookService (addAction, addFilter, doAction, applyFilters)
+  - [ ] 实现回调列表及优先级排序
+  - [ ] 为一两个模块（article draft）添加 hook 并测试触发效果和回调效果
+
+- [ ] PluginContext 插件能力基建：创建 PluginContext Service，为插件提供 logger, config 读取器, 和 data 存储（存储到 plugin_data 表）能力 （插件使用方法： 依赖 Nestjs DI）
+- [ ] 动态插件加载
+  - [ ] 插件扫描：使其能自动扫描根目录下的 plugins/ 目录（plugins 目录在 gitignore 内；其可能包括多个子目录，每个子目录都是一个插件模块，每个插件模块都有一个 package.json 用于 npm 包管理）
+  - [ ] 插件加载：在应用启动时，扫描 plugins 目录，加载所有插件模块。
+  - [ ] 插件依赖：在插件模块的 package.json 中指定，在载入插件之前会执行 pnpm install 安装依赖到 plugins/<插件名>/node_modules 目录。
+  - [ ] 安全启动 + 运行时错误隔离，设置超时时间（异步任务可以久一些，给 60s； filter 给 0.1s，允许在配置修改）
+- [ ] 在核心业务模块中埋点：在文章、用户、评论等模块的关键位置注入 HookService 并添加钩子。
+- [ ] 添加测试插件
+  - [ ] 🐱插件：在文章保存时在内容/标题/标签的结尾添加“喵”
+
+### 阶段 10: 高级功能
+
 ### 阶段 9: 高级功能
 
 - [ ] 实现增量静态再生 (ISR)
