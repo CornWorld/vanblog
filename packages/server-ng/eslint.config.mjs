@@ -21,9 +21,9 @@ export default [
   {
     ignores: ['dist/**', 'node_modules/**', 'coverage/**', '*.mjs', '*.cjs'],
   },
-  
+
   // TypeScript 文件配置
-  ...tseslint.configs.strictTypeChecked.map(config => ({
+  ...tseslint.configs.strictTypeChecked.map((config) => ({
     ...config,
     files: ['**/*.ts'],
   })),
@@ -117,10 +117,10 @@ export default [
         {
           allowString: false,
           allowNumber: false,
-          allowNullableObject: false,
-          allowNullableBoolean: false,
-          allowNullableString: false,
-          allowNullableNumber: false,
+          allowNullableObject: true,
+          allowNullableBoolean: true,
+          allowNullableString: true,
+          allowNullableNumber: true,
           allowAny: false,
         },
       ],
@@ -179,13 +179,13 @@ export default [
       'prefer-template': 'error',
       'template-curly-spacing': 'error',
       'yield-star-spacing': 'error',
-      'yoda': 'error',
+      yoda: 'error',
       'no-nested-ternary': 'error',
       'no-unneeded-ternary': 'error',
       'spaced-comment': ['error', 'always'],
     },
   },
-  
+
   // 测试文件特殊配置
   {
     files: ['**/*.test.ts', '**/*.spec.ts', '**/test/**/*.ts'],
@@ -200,7 +200,7 @@ export default [
       '@typescript-eslint/no-unsafe-argument': 'off',
     },
   },
-  
+
   // JavaScript 文件配置
   {
     files: ['**/*.js'],

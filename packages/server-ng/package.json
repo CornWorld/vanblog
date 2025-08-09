@@ -18,7 +18,7 @@
     "nest:dev": "nest start --watch",
     "nest:debug": "nest start --debug --watch",
     "nest:prod": "node dist/main",
-    "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" \"scripts/**/*.js\" --fix -c ./eslint.config.mjs",
+    "lint": "eslint --format=compact -c ./eslint.config.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:cov": "vitest run --coverage",
