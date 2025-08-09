@@ -8,9 +8,9 @@ import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-export default tseslint.config(
+export default [
+  // 基础配置
   js.configs.recommended,
-  ...tseslint.configs.strictTypeChecked,
   prettierConfig,
   {
     plugins: {
@@ -19,17 +19,22 @@ export default tseslint.config(
     },
   },
   {
-    ignores: ['dist/**', 'node_modules/**', 'coverage/**', '*.js', '*.mjs', '*.cjs'],
+    ignores: ['dist/**', 'node_modules/**', 'coverage/**', '*.mjs', '*.cjs'],
   },
+  
+  // TypeScript 文件配置
+  ...tseslint.configs.strictTypeChecked.map(config => ({
+    ...config,
+    files: ['**/*.ts'],
+  })),
   {
+    files: ['**/*.ts'],
     languageOptions: {
       parserOptions: {
         project: './tsconfig.eslint.json',
         tsconfigRootDir: __dirname,
       },
     },
-  },
-  {
     rules: {
       // TypeScript 严格规则
       '@typescript-eslint/no-explicit-any': 'error',
@@ -50,39 +55,90 @@ export default tseslint.config(
         {
           argsIgnorePattern: '^_',
           varsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_',
         },
       ],
+      '@typescript-eslint/prefer-nullish-coalescing': 'error',
+      '@typescript-eslint/prefer-optional-chain': 'error',
+      '@typescript-eslint/no-floating-promises': 'error',
+      '@typescript-eslint/await-thenable': 'error',
+      '@typescript-eslint/no-misused-promises': 'error',
+      '@typescript-eslint/require-await': 'error',
+      '@typescript-eslint/no-unnecessary-type-assertion': 'error',
+      '@typescript-eslint/prefer-as-const': 'error',
+      '@typescript-eslint/no-unsafe-assignment': 'error',
+      '@typescript-eslint/no-unsafe-call': 'error',
+      '@typescript-eslint/no-unsafe-member-access': 'error',
+      '@typescript-eslint/no-unsafe-return': 'error',
+      '@typescript-eslint/no-unsafe-argument': 'error',
+      '@typescript-eslint/restrict-template-expressions': [
+        'error',
+        {
+          allowNumber: true,
+          allowBoolean: true,
+          allowAny: false,
+          allowNullish: true,
+          allowRegExp: false,
+        },
+      ],
+      '@typescript-eslint/restrict-plus-operands': 'error',
+      '@typescript-eslint/unbound-method': [
+        'error',
+        {
+          ignoreStatic: true,
+        },
+      ],
+      '@typescript-eslint/no-base-to-string': 'error',
+      '@typescript-eslint/prefer-string-starts-ends-with': 'error',
+      '@typescript-eslint/prefer-includes': 'error',
+      '@typescript-eslint/prefer-for-of': 'error',
+      '@typescript-eslint/prefer-readonly': 'error',
+      '@typescript-eslint/switch-exhaustiveness-check': 'error',
       '@typescript-eslint/consistent-type-imports': [
         'error',
         {
           prefer: 'type-imports',
+          disallowTypeAnnotations: false,
         },
       ],
-      '@typescript-eslint/no-floating-promises': 'error',
-      '@typescript-eslint/no-misused-promises': 'error',
-      '@typescript-eslint/await-thenable': 'error',
-      '@typescript-eslint/no-unnecessary-type-assertion': 'error',
-      '@typescript-eslint/prefer-nullish-coalescing': 'error',
-      '@typescript-eslint/prefer-optional-chain': 'error',
-      '@typescript-eslint/prefer-string-starts-ends-with': 'error',
-      '@typescript-eslint/prefer-readonly': 'error',
-      '@typescript-eslint/member-ordering': 'error',
-      '@typescript-eslint/unbound-method': 'warn',
-      '@typescript-eslint/no-extraneous-class': ['error', { allowWithDecorator: true }],
-      '@typescript-eslint/return-await': ['error', 'in-try-catch'],
-
-      // Import/Export 规范
+      '@typescript-eslint/consistent-type-exports': 'error',
+      '@typescript-eslint/no-import-type-side-effects': 'error',
+      '@typescript-eslint/no-duplicate-type-constituents': 'error',
+      '@typescript-eslint/no-redundant-type-constituents': 'error',
+      '@typescript-eslint/no-unnecessary-condition': 'error',
+      '@typescript-eslint/no-unnecessary-boolean-literal-compare': 'error',
+      '@typescript-eslint/no-unnecessary-type-arguments': 'error',
+      '@typescript-eslint/prefer-reduce-type-parameter': 'error',
+      '@typescript-eslint/prefer-return-this-type': 'error',
+      '@typescript-eslint/promise-function-async': 'error',
+      '@typescript-eslint/require-array-sort-compare': 'error',
+      '@typescript-eslint/strict-boolean-expressions': [
+        'error',
+        {
+          allowString: false,
+          allowNumber: false,
+          allowNullableObject: false,
+          allowNullableBoolean: false,
+          allowNullableString: false,
+          allowNullableNumber: false,
+          allowAny: false,
+        },
+      ],
+      '@typescript-eslint/prefer-promise-reject-errors': 'error',
+      '@typescript-eslint/use-unknown-in-catch-callback-variable': 'error',
+      // Import 规则
       'import/order': [
         'error',
         {
           groups: [
-            'builtin',    // Node.js 内置模块
-            'external',   // 外部依赖
-            'internal',   // 内部模块
-            'parent',     // 父级目录
-            'sibling',    // 同级目录
-            'index',      // index 文件
-            'type',       // 类型导入
+            'builtin',
+            'external',
+            'internal',
+            'parent',
+            'sibling',
+            'index',
+            'object',
+            'type',
           ],
           'newlines-between': 'always',
           alphabetize: {
@@ -92,47 +148,47 @@ export default tseslint.config(
         },
       ],
       'import/no-duplicates': 'error',
-      'import/no-unresolved': 'off', // TypeScript 已处理
-      'import/named': 'off',         // TypeScript 已处理
-      'import/default': 'off',       // TypeScript 已处理
-      'import/namespace': 'off',     // TypeScript 已处理
-      'import/no-named-as-default': 'warn',
-      'import/no-named-as-default-member': 'warn',
-      'import/no-deprecated': 'warn',
-      'import/no-mutable-exports': 'error',
-      'import/prefer-default-export': 'off',
-      'import/first': 'error',
-      'import/newline-after-import': 'error',
-      'import/no-absolute-path': 'error',
-
-      // 代码质量规则
+      'import/no-unresolved': 'off',
+      'import/named': 'off',
+      'import/namespace': 'off',
+      'import/default': 'off',
+      'import/export': 'off',
+      // Prettier 规则
+      'prettier/prettier': 'error',
+      // 通用规则
       'no-console': 'warn',
       'no-debugger': 'error',
-      'no-unused-expressions': 'error',
+      'no-alert': 'error',
+      'no-var': 'error',
       'prefer-const': 'error',
-      'prefer-template': 'error',
-      curly: ['error', 'all'],
-      eqeqeq: ['error', 'always'],
-      'no-throw-literal': 'error',
-      'prefer-promise-reject-errors': 'error',
-      'prettier/prettier': [
+      'prefer-arrow-callback': 'error',
+      'arrow-spacing': 'error',
+      'no-duplicate-imports': 'error',
+      'no-useless-rename': 'error',
+      'object-shorthand': 'error',
+      'prefer-destructuring': [
         'error',
         {
-          singleQuote: true,
-          trailingComma: 'all',
-          printWidth: 100,
-          tabWidth: 2,
-          semi: true,
-          bracketSpacing: true,
-          arrowParens: 'always',
-          endOfLine: 'lf',
+          array: true,
+          object: true,
+        },
+        {
+          enforceForRenamedProperties: false,
         },
       ],
+      'prefer-template': 'error',
+      'template-curly-spacing': 'error',
+      'yield-star-spacing': 'error',
+      'yoda': 'error',
+      'no-nested-ternary': 'error',
+      'no-unneeded-ternary': 'error',
+      'spaced-comment': ['error', 'always'],
     },
   },
-  // 测试文件特殊规则
+  
+  // 测试文件特殊配置
   {
-    files: ['**/*.spec.ts', '**/*.test.ts', '**/test/**/*.ts'],
+    files: ['**/*.test.ts', '**/*.spec.ts', '**/test/**/*.ts'],
     rules: {
       '@typescript-eslint/unbound-method': 'off',
       'no-console': 'off',
@@ -144,4 +200,29 @@ export default tseslint.config(
       '@typescript-eslint/no-unsafe-argument': 'off',
     },
   },
-);
+  
+  // JavaScript 文件配置
+  {
+    files: ['**/*.js'],
+    languageOptions: {
+      ecmaVersion: 2022,
+      sourceType: 'module',
+      globals: {
+        console: 'readonly',
+        process: 'readonly',
+        __dirname: 'readonly',
+        require: 'readonly',
+        module: 'readonly',
+        exports: 'readonly',
+      },
+    },
+    rules: {
+      // 只使用基本的 JavaScript 规则
+      'no-console': 'off',
+      'no-undef': 'off',
+      'no-unused-vars': 'off',
+      'prefer-const': 'error',
+      'no-var': 'error',
+    },
+  },
+];

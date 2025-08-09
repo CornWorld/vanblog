@@ -3,7 +3,9 @@
   "include": [
     "src/**/*",
     "test/**/*",
+    "scripts/**/*",
     "vite.config.mts",
+    "vite.plugin.config.mts",
     "vite-env.d.ts",
     "drizzle.config.ts",
     "vitest.config.e2e.ts",
