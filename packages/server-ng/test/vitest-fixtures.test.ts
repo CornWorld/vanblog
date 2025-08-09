@@ -79,7 +79,7 @@ class DatabaseMockBuilder {
 
       const mockChain = {
         from: vi.fn().mockReturnThis(),
-        where: vi.fn().mockImplementation(() => {
+        where: vi.fn().mockImplementation(async () => {
           // 如果是count查询（第二个查询），直接返回结果
           if (currentCallCount === 1) {
             return Promise.resolve(result);
@@ -88,7 +88,7 @@ class DatabaseMockBuilder {
         }),
         orderBy: vi.fn().mockReturnThis(),
         limit: vi.fn().mockReturnThis(),
-        offset: vi.fn().mockImplementation(() => {
+        offset: vi.fn().mockImplementation(async () => {
           return Promise.resolve(result);
         }),
         innerJoin: vi.fn().mockReturnThis(),
@@ -368,7 +368,7 @@ function createHookServiceMock(): Partial<HookService> {
     removeAction: vi.fn(),
     removeFilter: vi.fn(),
     doAction: vi.fn().mockResolvedValue(undefined),
-    applyFilters: vi.fn().mockImplementation((_, value) => Promise.resolve(value)),
+    applyFilters: vi.fn().mockImplementation(async (_, value) => Promise.resolve(value)),
     hasAction: vi.fn().mockReturnValue(false),
     hasFilter: vi.fn().mockReturnValue(false),
     getActionCount: vi.fn().mockReturnValue(0),

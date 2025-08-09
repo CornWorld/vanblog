@@ -76,7 +76,7 @@ export class PicgoStorageService implements StorageService {
     }
   }
 
-  delete(filename: string): Promise<boolean> {
+  async delete(filename: string): Promise<boolean> {
     // PicGo 不支持删除操作
     this.logger.warn(`Delete operation not supported by PicGo for file: ${filename}`);
     return Promise.resolve(false);

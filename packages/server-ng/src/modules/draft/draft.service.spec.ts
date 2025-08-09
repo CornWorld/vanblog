@@ -49,7 +49,7 @@ describe('DraftService', () => {
     };
 
     mockHookService = {
-      applyFilters: vi.fn().mockImplementation((_, data) => Promise.resolve(data)),
+      applyFilters: vi.fn().mockImplementation(async (_, data) => Promise.resolve(data)),
       doAction: vi.fn().mockResolvedValue(undefined),
     };
 
@@ -96,7 +96,7 @@ describe('DraftService', () => {
       mockDb.offset.mockResolvedValueOnce(mockDrafts);
       // Second where call (for count query) resolves with count
       let whereCallCount = 0;
-      mockDb.where.mockImplementation(() => {
+      mockDb.where.mockImplementation(async () => {
         whereCallCount++;
         if (whereCallCount === 2) {
           // This is the count query
@@ -279,7 +279,7 @@ describe('DraftService', () => {
 
       // Mock findOne to return the draft
       let limitCallCount = 0;
-      mockDb.limit.mockImplementation(() => {
+      mockDb.limit.mockImplementation(async () => {
         limitCallCount++;
         if (limitCallCount === 1) {
           return Promise.resolve([mockDraftRaw]); // Return raw draft with JSON tags
@@ -300,7 +300,7 @@ describe('DraftService', () => {
 
       // Mock from to return empty array for tag check
       let fromCallCount = 0;
-      mockDb.from.mockImplementation(() => {
+      mockDb.from.mockImplementation(async () => {
         fromCallCount++;
         if (fromCallCount === 2) {
           // This is for tag check - return empty array (no existing tags)
@@ -314,7 +314,7 @@ describe('DraftService', () => {
         return mockDb;
       });
       let returningCallCount = 0;
-      mockDb.returning.mockImplementation(() => {
+      mockDb.returning.mockImplementation(async () => {
         returningCallCount++;
         if (returningCallCount === 1) {
           // Tag creation

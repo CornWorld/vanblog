@@ -9,8 +9,8 @@ export {
   PluginContextService,
 } from './services/plugin-context.service';
 export { PluginLoaderService } from './services/plugin-loader.service';
-export * from './interfaces/hook.interface';
-export * from './interfaces/plugin-context.interface';
+export type * from './interfaces/hook.interface';
+export type * from './interfaces/plugin-context.interface';
 export * from './entities/code-snippet.entity';
 export * from './dto/code-snippet.dto';
 export * from './controllers/code-snippet.controller';

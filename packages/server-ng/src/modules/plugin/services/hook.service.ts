@@ -119,7 +119,7 @@ export class HookService implements IHookService, OnModuleInit {
     for (const hook of hooks) {
       try {
         await this.safeExecuteWithTimeout(
-          () => hook.callback(...args),
+          async () => hook.callback(...args),
           5000, // 5 second timeout for action hooks
           `Action hook '${hookName}' with id ${hook.id}`,
         );

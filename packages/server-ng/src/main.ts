@@ -1,4 +1,3 @@
-import { type INestApplication } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { SwaggerModule, DocumentBuilder, type OpenAPIObject } from '@nestjs/swagger';
 import compression from 'compression';
@@ -9,6 +8,8 @@ import { AppModule } from './app.module';
 import { ConfigService } from './config';
 import { HttpExceptionFilter, AllExceptionsFilter } from './core/filters';
 import { LoggerService } from './core/logger/logger.service';
+
+import type { INestApplication } from '@nestjs/common';
 // import { patchNestJsSwagger } from 'nestjs-zod'; // Not available in current version
 
 import 'dayjs/locale/zh-cn';
@@ -127,7 +128,7 @@ if ((import.meta as ImportMeta).env?.PROD) {
   // 生产环境手动启动
   void init().then(async (app) => {
     const configService = app.get(ConfigService);
-    const port = configService.app.port;
+    const { port } = configService.app;
     await app.listen(port);
 
     // Use logger instead of console.log

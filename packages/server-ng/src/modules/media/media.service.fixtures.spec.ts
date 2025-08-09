@@ -19,7 +19,7 @@ vi.mock('sharp', () => ({
 const mediaTest = test.extend<{ mediaService: MediaService }>({
   mediaService: async ({ db, storageFactoryService }, use) => {
     const mockHookService = {
-      applyFilters: vi.fn().mockImplementation((_, data) => Promise.resolve(data)),
+      applyFilters: vi.fn().mockImplementation(async (_, data) => Promise.resolve(data)),
       doAction: vi.fn().mockResolvedValue(undefined),
     } as Partial<HookService>;
 

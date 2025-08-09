@@ -6,8 +6,9 @@ import { describe, it, beforeEach, afterEach, expect, vi } from 'vitest';
 import { users } from '../../database/schema';
 import { HookService } from '../plugin/services/hook.service';
 
-import { type CreateUserDto } from './dto/create-user.dto';
 import { UserService } from './user.service';
+
+import type { CreateUserDto } from './dto/create-user.dto';
 
 // Mock bcrypt
 vi.mock('bcrypt');
@@ -61,7 +62,7 @@ describe('UserService', () => {
     };
 
     mockHookService = {
-      applyFilters: vi.fn().mockImplementation((_hookName, data) => Promise.resolve(data)),
+      applyFilters: vi.fn().mockImplementation(async (_hookName, data) => Promise.resolve(data)),
       doAction: vi.fn().mockResolvedValue(undefined),
     };
 

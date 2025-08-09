@@ -198,7 +198,7 @@ export class MediaService {
     return result;
   }
 
-  scanArticleImages(): Promise<{ scanned: number; added: number }> {
+  async scanArticleImages(): Promise<{ scanned: number; added: number }> {
     // TODO: Implement scanning articles for images
     return Promise.resolve({ scanned: 0, added: 0 });
   }

@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, Inject } from '@nestjs/common';
-import dayjs from 'dayjs';
 import * as bcrypt from 'bcrypt';
+import dayjs from 'dayjs';
 import { eq, sql } from 'drizzle-orm';
 import * as jwt from 'jsonwebtoken';
 
@@ -64,7 +64,7 @@ export class CategoryService {
 
     return {
       items: processedCategories,
-      total: total,
+      total,
     };
   }
 

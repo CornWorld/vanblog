@@ -67,7 +67,7 @@ export class DatabaseMockBuilder {
     this.mockDb.select.mockImplementation(() => {
       const fromMock = vi.fn();
 
-      fromMock.mockImplementation((table) => {
+      fromMock.mockImplementation(async (table) => {
         // 如果没有传入 table 参数，说明是 select().from(table) 的简单调用
         // 这种情况下直接返回 Promise
         if (table) {
@@ -196,7 +196,7 @@ export function createHookServiceMock(): Partial<HookService> {
     removeAction: vi.fn(),
     removeFilter: vi.fn(),
     doAction: vi.fn().mockResolvedValue(undefined),
-    applyFilters: vi.fn().mockImplementation((_, data) => Promise.resolve(data)),
+    applyFilters: vi.fn().mockImplementation(async (_, data) => Promise.resolve(data)),
     hasAction: vi.fn().mockReturnValue(false),
     hasFilter: vi.fn().mockReturnValue(false),
     getActionCount: vi.fn().mockReturnValue(0),

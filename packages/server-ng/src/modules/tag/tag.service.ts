@@ -47,7 +47,7 @@ export class TagService {
 
     return {
       items: processedTags,
-      total: total,
+      total,
     };
   }
 

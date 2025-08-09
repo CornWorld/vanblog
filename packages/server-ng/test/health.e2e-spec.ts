@@ -1,10 +1,10 @@
-import { type INestApplication } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
 import request from 'supertest';
 import { describe, it, expect, afterAll } from 'vitest';
 
 import { AppModule } from '../src/app.module';
 
+import type { INestApplication } from '@nestjs/common';
 import type { Server } from 'http';
 
 describe('HealthController (e2e)', () => {

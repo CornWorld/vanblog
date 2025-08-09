@@ -307,7 +307,7 @@ export class PluginLoaderService implements OnModuleInit {
     // Initialize plugin with timeout and error isolation
     if (plugin.init) {
       await this.safeExecuteWithTimeout(
-        () => plugin.init!(context),
+        async () => plugin.init!(context),
         60000, // 60s timeout for init
         `Plugin ${plugin.name} initialization`,
       );
@@ -384,7 +384,7 @@ export class PluginLoaderService implements OnModuleInit {
 
   private async installPluginDependencies(
     pluginDir: string,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
     _manifest: PluginManifest | null,
   ): Promise<void> {
     // Check if plugin has package.json with dependencies

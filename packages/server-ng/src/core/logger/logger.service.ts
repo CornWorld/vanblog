@@ -36,7 +36,7 @@ export class LoggerService implements NestLoggerService {
   }
 
   private createLogger(): winston.Logger {
-    const isDevelopment = this.configService.app.isDevelopment;
+    const { isDevelopment } = this.configService.app;
     const isTest = this.configService.app.nodeEnv === 'test';
     const logLevel = this.configService.log.level;
     const logDir = this.configService.log.dir;
@@ -53,9 +53,9 @@ export class LoggerService implements NestLoggerService {
         winston.format.colorize(),
         winston.format.printf((info: winston.Logform.TransformableInfo) => {
           // Extract known fields from info object
-          const level = info.level;
-          const message = info.message;
-          const timestamp = info.timestamp;
+          const { level } = info;
+          const { message } = info;
+          const { timestamp } = info;
           const context = info.context as string | undefined;
           const trace = info.trace as string | undefined;
 

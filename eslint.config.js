@@ -13,6 +13,17 @@ export default tseslint.config(eslint.configs.recommended, ...tseslint.configs.r
   },
   rules: {
     // Root-level rules
+    '@typescript-eslint/no-unused-vars': [
+      'error',
+      {
+        argsIgnorePattern: '^_',
+        varsIgnorePattern: '^_',
+        caughtErrorsIgnorePattern: '^_',
+      },
+    ],
+    // 放宽一些严格规则
+    '@typescript-eslint/no-explicit-any': 'warn',
+    '@typescript-eslint/no-non-null-assertion': 'warn',
   },
   ignores: ['node_modules/**', 'dist/**', 'build/**', '*.d.ts'],
 });

@@ -36,7 +36,7 @@ describe('MediaService', () => {
     };
 
     mockHookService = {
-      applyFilters: vi.fn().mockImplementation((_hookName, data) => Promise.resolve(data)),
+      applyFilters: vi.fn().mockImplementation(async (_hookName, data) => Promise.resolve(data)),
       doAction: vi.fn().mockResolvedValue(undefined),
     };
 

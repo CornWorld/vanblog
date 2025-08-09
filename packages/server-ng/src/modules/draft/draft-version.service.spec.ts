@@ -80,7 +80,7 @@ describe('DraftVersionService', () => {
 
       // Setup for first query: select().from(drafts).where().limit()
       let limitCallCount = 0;
-      mockDb.limit.mockImplementation(() => {
+      mockDb.limit.mockImplementation(async () => {
         limitCallCount++;
         if (limitCallCount === 1) {
           return Promise.resolve([mockDraft]);
@@ -90,7 +90,7 @@ describe('DraftVersionService', () => {
 
       // Setup for second query: select({maxVersion}).from(draftVersions).where()
       let whereCallCount = 0;
-      mockDb.where.mockImplementation(() => {
+      mockDb.where.mockImplementation(async () => {
         whereCallCount++;
         if (whereCallCount === 2) {
           return Promise.resolve([{ maxVersion: 1 }]);
@@ -200,7 +200,7 @@ describe('DraftVersionService', () => {
 
       // Mock for getVersion call
       let limitCallCount = 0;
-      mockDb.limit.mockImplementation(() => {
+      mockDb.limit.mockImplementation(async () => {
         limitCallCount++;
         if (limitCallCount === 1) {
           return Promise.resolve([mockVersion]);
@@ -210,7 +210,7 @@ describe('DraftVersionService', () => {
 
       // Mock for update query - where should return mockDb for chaining
       let whereCallCount = 0;
-      mockDb.where.mockImplementation(() => {
+      mockDb.where.mockImplementation(async () => {
         whereCallCount++;
         // For the update query (3rd where call)
         if (whereCallCount === 3) {
