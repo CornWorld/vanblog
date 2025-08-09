@@ -39,7 +39,7 @@ export class TagService {
           id: tag.id,
           name: tag.name,
           slug: tag.slug,
-          articleCount: Number(countResult[0]?.count) || 0,
+          articleCount: Number(countResult[0]?.count) > 0 ? Number(countResult[0]?.count) : 0,
           createdAt: dayjs(tag.createdAt),
         };
       }),

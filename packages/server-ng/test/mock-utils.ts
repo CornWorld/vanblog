@@ -70,7 +70,7 @@ export class DatabaseMockBuilder {
       fromMock.mockImplementation(async (table) => {
         // 如果没有传入 table 参数，说明是 select().from(table) 的简单调用
         // 这种情况下直接返回 Promise
-        if (table) {
+        if (table != null) {
           return Promise.resolve(data);
         }
         // 否则返回链式调用对象

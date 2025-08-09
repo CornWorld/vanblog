@@ -19,7 +19,7 @@ export class ValidationExceptionFilter implements ExceptionFilter {
     };
 
     let validationErrors: string[] = [];
-    if (exceptionResponse.message && Array.isArray(exceptionResponse.message)) {
+    if (exceptionResponse.message != null && Array.isArray(exceptionResponse.message)) {
       validationErrors = exceptionResponse.message;
     }
 

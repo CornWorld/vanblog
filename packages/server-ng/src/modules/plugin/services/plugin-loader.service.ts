@@ -213,7 +213,12 @@ export class PluginLoaderService implements OnModuleInit {
 
       return pluginDirs;
     } catch (error) {
-      if (error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT') {
+      if (
+        error != null &&
+        typeof error === 'object' &&
+        'code' in error &&
+        error.code === 'ENOENT'
+      ) {
         this.logger.warn('Plugins directory does not exist, skipping plugin loading');
         return [];
       }
@@ -239,7 +244,12 @@ export class PluginLoaderService implements OnModuleInit {
 
       return pluginDirs;
     } catch (error) {
-      if (error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT') {
+      if (
+        error != null &&
+        typeof error === 'object' &&
+        'code' in error &&
+        error.code === 'ENOENT'
+      ) {
         this.logger.warn('Node modules directory does not exist');
         return [];
       }
@@ -307,7 +317,7 @@ export class PluginLoaderService implements OnModuleInit {
     // Initialize plugin with timeout and error isolation
     if (plugin.init) {
       await this.safeExecuteWithTimeout(
-        async () => plugin.init!(context),
+        async () => plugin.init?.(context),
         60000, // 60s timeout for init
         `Plugin ${plugin.name} initialization`,
       );
@@ -398,7 +408,7 @@ export class PluginLoaderService implements OnModuleInit {
       };
 
       const hasDependencies =
-        (packageJson.dependencies && Object.keys(packageJson.dependencies).length > 0) ||
+        (packageJson.dependencies && Object.keys(packageJson.dependencies).length > 0) ??
         (packageJson.devDependencies && Object.keys(packageJson.devDependencies).length > 0);
 
       if (hasDependencies) {
@@ -426,11 +436,11 @@ export class PluginLoaderService implements OnModuleInit {
       let stdout = '';
       let stderr = '';
 
-      child.stdout?.on('data', (data) => {
+      child.stdout.on('data', (data: Buffer) => {
         stdout += data.toString();
       });
 
-      child.stderr?.on('data', (data) => {
+      child.stderr.on('data', (data: Buffer) => {
         stderr += data.toString();
       });
 
@@ -468,13 +478,13 @@ export class PluginLoaderService implements OnModuleInit {
           clearTimeout(timeout);
           resolve(result);
         })
-        .catch((error) => {
+        .catch((error: unknown) => {
           clearTimeout(timeout);
           this.logger.error(
             `${operation} failed:`,
             error instanceof Error ? error.stack : String(error),
           );
-          reject(error);
+          reject(error instanceof Error ? error : new Error(String(error)));
         });
     });
   }

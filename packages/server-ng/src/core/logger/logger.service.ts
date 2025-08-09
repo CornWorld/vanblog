@@ -65,7 +65,7 @@ export class LoggerService implements NestLoggerService {
             .reduce((acc, [key, value]) => ({ ...acc, [key]: value }), {});
 
           const contextStr = context ? `[${context}] ` : '';
-          const metaStr = Object.keys(meta).length ? ` ${JSON.stringify(meta)}` : '';
+          const metaStr = Object.keys(meta).length > 0 ? ` ${JSON.stringify(meta)}` : '';
           const traceStr = trace ? `\n${trace}` : '';
           return `${String(timestamp)} ${level}: ${contextStr}${String(message)}${metaStr}${traceStr}`;
         }),

@@ -53,7 +53,7 @@ export class UserService {
         nickname: userData.nickname,
         email: userData.email,
         avatar: userData.avatar,
-        type: userData.type as 'admin' | 'editor' | 'author' | 'subscriber',
+        type: userData.type as UserType,
       })
       .returning()
       .get();
@@ -132,10 +132,10 @@ export class UserService {
     if (userData.email) {
       updateData.email = userData.email;
     }
-    if (userData.avatar) {
+    if (userData.avatar != null) {
       updateData.avatar = userData.avatar;
     }
-    if (userData.type) {
+    if (userData.type != null) {
       updateData.type = userData.type;
     }
 

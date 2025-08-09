@@ -60,10 +60,11 @@ export class StatisticsService {
           id: category.id,
           name: category.name,
           slug: category.slug ?? undefined,
-          articleCount: Number(stats[0]?.articleCount) || 0,
-          publishedCount: Number(stats[0]?.publishedCount) || 0,
-          privateCount: Number(stats[0]?.privateCount) || 0,
-          totalViews: Number(stats[0]?.totalViews) || 0,
+          articleCount: Number(stats[0]?.articleCount) > 0 ? Number(stats[0]?.articleCount) : 0,
+          publishedCount:
+            Number(stats[0]?.publishedCount) > 0 ? Number(stats[0]?.publishedCount) : 0,
+          privateCount: Number(stats[0]?.privateCount) > 0 ? Number(stats[0]?.privateCount) : 0,
+          totalViews: Number(stats[0]?.totalViews) > 0 ? Number(stats[0]?.totalViews) : 0,
         };
       }),
     );
@@ -88,8 +89,8 @@ export class StatisticsService {
           id: tag.id,
           name: tag.name,
           slug: tag.slug ?? undefined,
-          articleCount: Number(stats[0]?.articleCount) || 0,
-          totalViews: Number(stats[0]?.totalViews) || 0,
+          articleCount: Number(stats[0]?.articleCount) > 0 ? Number(stats[0]?.articleCount) : 0,
+          totalViews: Number(stats[0]?.totalViews) > 0 ? Number(stats[0]?.totalViews) : 0,
         };
       }),
     );
@@ -115,11 +116,13 @@ export class StatisticsService {
       .from(articles);
 
     return {
-      totalArticles: Number(stats[0]?.totalArticles) || 0,
-      publishedArticles: Number(stats[0]?.publishedArticles) || 0,
-      privateArticles: Number(stats[0]?.privateArticles) || 0,
-      hiddenArticles: Number(stats[0]?.hiddenArticles) || 0,
-      totalViews: Number(stats[0]?.totalViews) || 0,
+      totalArticles: Number(stats[0]?.totalArticles) > 0 ? Number(stats[0]?.totalArticles) : 0,
+      publishedArticles:
+        Number(stats[0]?.publishedArticles) > 0 ? Number(stats[0]?.publishedArticles) : 0,
+      privateArticles:
+        Number(stats[0]?.privateArticles) > 0 ? Number(stats[0]?.privateArticles) : 0,
+      hiddenArticles: Number(stats[0]?.hiddenArticles) > 0 ? Number(stats[0]?.hiddenArticles) : 0,
+      totalViews: Number(stats[0]?.totalViews) > 0 ? Number(stats[0]?.totalViews) : 0,
     };
   }
 }

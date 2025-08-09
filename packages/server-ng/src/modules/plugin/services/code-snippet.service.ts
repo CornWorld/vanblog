@@ -50,12 +50,8 @@ export class CodeSnippetService {
 
       const result = await this.db.insert(codeSnippets).values(newCodeSnippet).returning();
 
-      if (!result[0]) {
-        throw new Error('Failed to create code snippet');
-      }
-
       this.logger.log(`Created code snippet: ${result[0].name}`);
-      const snippet = result[0];
+      const [snippet] = result;
       return {
         id: snippet.id,
         name: snippet.name,
@@ -89,7 +85,7 @@ export class CodeSnippetService {
         whereConditions.push(eq(codeSnippets.hookName, hookName));
       }
 
-      if (hookType) {
+      if (hookType != null) {
         whereConditions.push(eq(codeSnippets.hookType, hookType));
       }
 
@@ -97,7 +93,7 @@ export class CodeSnippetService {
         whereConditions.push(eq(codeSnippets.enabled, enabled));
       }
 
-      if (search) {
+      if (search != null && search !== '') {
         whereConditions.push(like(codeSnippets.name, `%${search}%`));
       }
 
@@ -156,11 +152,10 @@ export class CodeSnippetService {
         .where(eq(codeSnippets.id, id))
         .limit(1);
 
-      if (!result[0]) {
+      if (result.length === 0) {
         throw new NotFoundException(`Code snippet with ID ${String(id)} not found`);
       }
-
-      const snippet = result[0];
+      const [snippet] = result;
       return {
         id: snippet.id,
         name: snippet.name,
@@ -200,12 +195,12 @@ export class CodeSnippetService {
           ...(updateCodeSnippetDto.description !== undefined && {
             description: updateCodeSnippetDto.description,
           }),
-          ...(updateCodeSnippetDto.hookName && { hookName: updateCodeSnippetDto.hookName }),
-          ...(updateCodeSnippetDto.hookType && { hookType: updateCodeSnippetDto.hookType }),
+          ...(updateCodeSnippetDto.hookName != null && { hookName: updateCodeSnippetDto.hookName }),
+          ...(updateCodeSnippetDto.hookType != null && { hookType: updateCodeSnippetDto.hookType }),
           ...(updateCodeSnippetDto.priority !== undefined && {
             priority: updateCodeSnippetDto.priority,
           }),
-          ...(updateCodeSnippetDto.code && { code: updateCodeSnippetDto.code }),
+          ...(updateCodeSnippetDto.code != null && { code: updateCodeSnippetDto.code }),
           ...(updateCodeSnippetDto.enabled !== undefined && {
             enabled: updateCodeSnippetDto.enabled,
           }),
@@ -217,12 +212,12 @@ export class CodeSnippetService {
         .where(eq(codeSnippets.id, id))
         .returning();
 
-      if (!result[0]) {
+      if (result.length === 0) {
         throw new NotFoundException(`Code snippet with ID ${String(id)} not found`);
       }
+      const [snippet] = result;
 
-      this.logger.log(`Updated code snippet: ${result[0].name}`);
-      const snippet = result[0];
+      this.logger.log(`Updated code snippet: ${snippet.name}`);
       return {
         id: snippet.id,
         name: snippet.name,
@@ -249,11 +244,12 @@ export class CodeSnippetService {
     try {
       const result = await this.db.delete(codeSnippets).where(eq(codeSnippets.id, id)).returning();
 
-      if (!result[0]) {
+      if (result.length === 0) {
         throw new NotFoundException(`Code snippet with ID ${String(id)} not found`);
       }
+      const [deletedSnippet] = result;
 
-      this.logger.log(`Deleted code snippet: ${result[0].name}`);
+      this.logger.log(`Deleted code snippet: ${deletedSnippet.name}`);
     } catch (error) {
       this.logger.error(
         `Failed to delete code snippet with ID ${String(id)}:`,

@@ -100,7 +100,7 @@ export class SettingCoreController {
   ): Promise<SiteTheme> {
     // Map DTO fields to SiteTheme interface
     const themeUpdate: Partial<SiteTheme> = {
-      primaryColor: updateThemeDto.theme || '#000000',
+      primaryColor: updateThemeDto.theme !== '' ? updateThemeDto.theme : '#000000',
       darkMode: false, // Default value, could be derived from config
     };
     return this.settingCoreService.updateThemeSettings(themeUpdate);

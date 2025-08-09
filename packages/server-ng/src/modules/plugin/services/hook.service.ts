@@ -295,17 +295,17 @@ export class HookService implements IHookService, OnModuleInit {
               clearTimeout(timer);
               resolve(res);
             })
-            .catch((error) => {
+            .catch((error: unknown) => {
               clearTimeout(timer);
-              reject(error);
+              reject(error instanceof Error ? error : new Error(String(error)));
             });
         } else {
           clearTimeout(timer);
           resolve(result);
         }
-      } catch (error) {
+      } catch (error: unknown) {
         clearTimeout(timer);
-        reject(error);
+        reject(new Error(error instanceof Error ? error.message : String(error)));
       }
     });
   }

@@ -1,8 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 
-import { MockUtils } from './mock-utils';
-
-import type { DatabaseMockBuilder } from './mock-utils';
+import { MockUtils, type DatabaseMockBuilder } from './mock-utils';
 
 describe('MockUtils', () => {
   describe('DatabaseMockBuilder', () => {

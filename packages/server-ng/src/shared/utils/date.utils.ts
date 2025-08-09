@@ -20,7 +20,7 @@ export function convertDatesToDatejs<T extends Record<string, unknown>>(
   const converted = { ...record };
 
   for (const field of dateFields) {
-    if (field in converted && converted[field]) {
+    if (field in converted && converted[field] != null) {
       converted[field] = toDatejs(converted[field] as Date | string) as T[keyof T];
     }
   }

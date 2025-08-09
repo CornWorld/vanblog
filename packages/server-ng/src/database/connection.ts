@@ -16,20 +16,21 @@ export function createDatabaseConnection(config: DatabaseConfig, logger: LoggerS
     case 'turso':
       clientConfig = {
         url: config.url,
-        authToken: config.authToken,
+        authToken:
+          config.authToken != null && config.authToken !== '' ? config.authToken : undefined,
       };
       break;
     case 'd1':
       // D1 would be handled differently in Cloudflare Workers environment
       // For development, we'll use local SQLite
       clientConfig = {
-        url: config.url || 'file:./data/vanblog.db',
+        url: config.url !== '' ? config.url : 'file:./data/vanblog.db',
       };
       break;
     case 'local':
     default:
       clientConfig = {
-        url: config.url || 'file:./data/vanblog.db',
+        url: config.url !== '' ? config.url : 'file:./data/vanblog.db',
       };
   }
 

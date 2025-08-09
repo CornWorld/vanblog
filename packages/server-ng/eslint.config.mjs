@@ -19,7 +19,7 @@ export default [
     },
   },
   {
-    ignores: ['dist/**', 'node_modules/**', 'coverage/**', '*.mjs', '*.cjs'],
+    ignores: ['dist/**', 'node_modules/**', 'coverage/**', '*.mjs', '*.cjs', 'plugins/**'],
   },
 
   // TypeScript 文件配置
@@ -94,6 +94,8 @@ export default [
       '@typescript-eslint/prefer-for-of': 'error',
       '@typescript-eslint/prefer-readonly': 'error',
       '@typescript-eslint/switch-exhaustiveness-check': 'error',
+      // NestJS 模块通常是空类，通过装饰器配置功能
+      '@typescript-eslint/no-extraneous-class': 'off',
       '@typescript-eslint/consistent-type-imports': [
         'error',
         {
@@ -182,7 +184,7 @@ export default [
       yoda: 'error',
       'no-nested-ternary': 'error',
       'no-unneeded-ternary': 'error',
-      'spaced-comment': ['error', 'always'],
+      'spaced-comment': ['error', 'always', { 'markers': ['/'] }],
     },
   },
 
