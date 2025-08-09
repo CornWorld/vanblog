@@ -26,7 +26,7 @@
     "webhook": "node scripts/webhook.js",
     "prepare": "husky",
     "nano-staged": "nano-staged",
-    "lint": "eslint"
+    "lint": "eslint --format compact"
   },
   "packageManager": "pnpm@10.8.0",
   "resolutions": {
@@ -67,6 +67,7 @@
     "@typescript-eslint/parser": "^8.38.0",
     "eslint": "^9.32.0",
     "eslint-config-prettier": "^10.1.8",
+    "eslint-formatter-compact": "^8.40.0",
     "eslint-plugin-prettier": "^5.5.3",
     "globals": "^16.3.0",
     "husky": "^9.1.7",
