@@ -292,7 +292,7 @@ export class PluginLoaderService implements OnModuleInit {
     const manifest = await this.loadPluginManifest(pluginDir);
 
     // Install dependencies if needed
-    await this.installPluginDependencies(pluginDir);
+    await this.installPluginDependencies(pluginDir, manifest);
 
     const plugin = await this.loadPluginModule(pluginDir, manifest);
 
@@ -382,7 +382,11 @@ export class PluginLoaderService implements OnModuleInit {
     return null;
   }
 
-  private async installPluginDependencies(pluginDir: string): Promise<void> {
+  private async installPluginDependencies(
+    pluginDir: string,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _manifest: PluginManifest | null,
+  ): Promise<void> {
     // Check if plugin has package.json with dependencies
     const packageJsonPath = join(pluginDir, 'package.json');
     try {
@@ -394,7 +398,7 @@ export class PluginLoaderService implements OnModuleInit {
       };
 
       const hasDependencies =
-        (packageJson.dependencies && Object.keys(packageJson.dependencies).length > 0) ??
+        (packageJson.dependencies && Object.keys(packageJson.dependencies).length > 0) ||
         (packageJson.devDependencies && Object.keys(packageJson.devDependencies).length > 0);
 
       if (hasDependencies) {
@@ -422,23 +426,23 @@ export class PluginLoaderService implements OnModuleInit {
       let stdout = '';
       let stderr = '';
 
-      child.stdout.on('data', (data: Buffer) => {
-        stdout += String(data);
+      child.stdout?.on('data', (data) => {
+        stdout += data.toString();
       });
 
-      child.stderr.on('data', (data: Buffer) => {
-        stderr += String(data);
+      child.stderr?.on('data', (data) => {
+        stderr += data.toString();
       });
 
-      child.on('close', (code: number | null) => {
+      child.on('close', (code) => {
         if (code === 0) {
           this.logger.log(`Dependencies installed successfully in ${pluginDir}`);
           resolve();
         } else {
           this.logger.error(
-            `Failed to install dependencies in ${pluginDir}. Exit code: ${code ?? 'unknown'}\nStdout: ${stdout}\nStderr: ${stderr}`,
+            `Failed to install dependencies in ${pluginDir}. Exit code: ${code}\nStdout: ${stdout}\nStderr: ${stderr}`,
           );
-          reject(new Error(`pnpm install failed with exit code ${code ?? 'unknown'}`));
+          reject(new Error(`pnpm install failed with exit code ${code}`));
         }
       });
 
@@ -456,7 +460,7 @@ export class PluginLoaderService implements OnModuleInit {
   ): Promise<T> {
     return new Promise<T>((resolve, reject) => {
       const timeout = setTimeout(() => {
-        reject(new Error(`${operation} timed out after ${String(timeoutMs)}ms`));
+        reject(new Error(`${operation} timed out after ${timeoutMs}ms`));
       }, timeoutMs);
 
       Promise.resolve(fn())
@@ -464,13 +468,13 @@ export class PluginLoaderService implements OnModuleInit {
           clearTimeout(timeout);
           resolve(result);
         })
-        .catch((error: unknown) => {
+        .catch((error) => {
           clearTimeout(timeout);
           this.logger.error(
             `${operation} failed:`,
             error instanceof Error ? error.stack : String(error),
           );
-          reject(new Error(error instanceof Error ? error.message : String(error)));
+          reject(error);
         });
     });
   }

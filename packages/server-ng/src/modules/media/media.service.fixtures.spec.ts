@@ -282,8 +282,7 @@ describe('MediaService with Vitest Fixtures', () => {
   describe('with automatic setup and teardown', () => {
     const autoTest = mediaTest.extend({
       autoSetup: [
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        async ({ mediaService: _mediaService }, use) => {
+        async (_, use) => {
           // 自动执行的设置逻辑
           console.log('Setting up test environment...');
           await use(undefined);

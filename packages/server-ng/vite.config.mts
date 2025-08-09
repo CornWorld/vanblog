@@ -12,6 +12,11 @@ export default defineConfig({
       tsCompiler: 'swc',
     }),
   ],
+  build: {
+    rollupOptions: {
+      external: ['plugins/**'],
+    },
+  },
   optimizeDeps: {
     exclude: ['@nestjs/microservices', '@nestjs/websockets', 'cache-manager', 'fastify-swagger'],
   },

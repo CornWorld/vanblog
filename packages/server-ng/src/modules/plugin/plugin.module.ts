@@ -67,7 +67,7 @@ export class PluginModule {
 
                 // Import the module dynamically
                 const moduleUrl = pathToFileURL(modulePath).href;
-                const moduleExports: unknown = await import(moduleUrl);
+                const moduleExports: unknown = await import(/* @vite-ignore */ moduleUrl);
 
                 // Look for a default export or a module export
                 const typedExports = moduleExports as PluginModuleExports;
