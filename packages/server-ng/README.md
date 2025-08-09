@@ -267,15 +267,15 @@ JWT_EXPIRES_IN=7d
   - [x] 实现回调列表及优先级排序
   - [x] 为一两个模块（article draft）添加 hook 并测试触发效果和回调效果
 
-- [ ] PluginContext 插件能力基建：创建 PluginContext Service，为插件提供 logger, config 读取器, 和 data 存储（存储到 plugin_data 表）能力 （插件使用方法： 依赖 Nestjs DI）
-- [ ] 动态插件加载
-  - [ ] 插件扫描：使其能自动扫描根目录下的 plugins/ 目录（plugins 目录在 gitignore 内；其可能包括多个子目录，每个子目录都是一个插件模块，每个插件模块都有一个 package.json 用于 npm 包管理）
-  - [ ] 插件加载：在应用启动时，扫描 plugins 目录，加载所有插件模块。
-  - [ ] 插件依赖：在插件模块的 package.json 中指定，在载入插件之前会执行 pnpm install 安装依赖到 plugins/<插件名>/node_modules 目录。
-  - [ ] 安全启动 + 运行时错误隔离，设置超时时间（异步任务可以久一些，给 60s； filter 给 0.1s，允许在配置修改）
-- [ ] 在核心业务模块中埋点：在文章、用户、评论等模块的关键位置注入 HookService 并添加钩子。
-- [ ] 添加测试插件
-  - [ ] 🐱插件：在文章保存时在内容/标题/标签的结尾添加“喵”
+- [x] PluginContext 插件能力基建：创建 PluginContext Service，为插件提供 logger, config 读取器, 和 data 存储（存储到 plugin_data 表）能力 （插件使用方法： 依赖 Nestjs DI）
+- [x] 动态插件加载
+  - [x] 插件扫描：使其能自动扫描根目录下的 plugins/ 目录（plugins 目录在 gitignore 内；其可能包括多个子目录，每个子目录都是一个插件模块，每个插件模块都有一个 package.json 用于 npm 包管理）
+  - [x] 插件加载：在应用启动时，扫描 plugins 目录，加载所有插件模块。
+  - [x] 插件依赖：在插件模块的 package.json 中指定，在载入插件之前会执行 pnpm install 安装依赖到 plugins/<插件名>/node_modules 目录。
+  - [x] 安全启动 + 运行时错误隔离，设置超时时间（异步任务可以久一些，给 60s； filter 给 5s，允许在配置修改）
+- [x] 在核心业务模块中埋点：在文章、用户、评论等模块的关键位置注入 HookService 并添加钩子。
+- [x] 添加测试插件
+  - [x] 🐱插件：在文章保存时在内容/标题/标签的结尾添加"喵"
 
 ### 阶段 10: 高级功能
 

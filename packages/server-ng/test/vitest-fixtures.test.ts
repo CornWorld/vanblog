@@ -1,3 +1,4 @@
+import dayjs from 'dayjs';
 import { test as baseTest, vi } from 'vitest';
 
 import { StorageProvider } from '../src/modules/media/dto/storage-config.dto';
@@ -219,8 +220,8 @@ function createUser({
     password: 'hashedpassword',
     nickname: 'Test User',
     avatar: '/avatars/default.png',
-    createdAt: new Date('2024-01-01'),
-    updatedAt: new Date('2024-01-01'),
+    createdAt: dayjs('2024-01-01').toISOString(),
+    updatedAt: dayjs('2024-01-01').toISOString(),
     ...overrides,
   };
 }
@@ -243,7 +244,7 @@ function createMediaFile({
     height: 1080,
     hash: 'abc123def456',
     provider: StorageProvider.LOCAL,
-    createdAt: new Date('2024-01-01'),
+    createdAt: dayjs('2024-01-01').toISOString(),
     ...overrides,
   };
 }

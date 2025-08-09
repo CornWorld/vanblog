@@ -8,5 +8,5 @@ export interface StaticFile {
   height?: number | null;
   hash?: string | null;
   provider?: string | null;
-  createdAt: Date;
+  createdAt: string;
 }

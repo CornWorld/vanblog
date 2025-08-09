@@ -9,8 +9,9 @@ describe('AppController (e2e)', () => {
   let app: INestApplication;
 
   beforeEach(async () => {
+    const appModule = await AppModule.forRoot();
     const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
+      imports: [appModule],
     }).compile();
 
     app = moduleFixture.createNestApplication();

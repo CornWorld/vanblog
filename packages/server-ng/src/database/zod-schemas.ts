@@ -1,3 +1,4 @@
+import dayjs from 'dayjs';
 import { createSelectSchema, createInsertSchema, createUpdateSchema } from 'drizzle-zod';
 import { z } from 'zod';
 
@@ -18,6 +19,7 @@ import {
   permissionNodes,
   permissionGroups,
   codeSnippets,
+  pluginData,
 } from './schema';
 
 // User schemas
@@ -33,8 +35,8 @@ export const selectUserSchema = createSelectSchema(users, {
         return [];
       }
     }),
-  createdAt: (schema) => schema.transform((date) => date.toISOString()),
-  updatedAt: (schema) => schema.transform((date) => date.toISOString()),
+  createdAt: (schema) => schema.transform((str) => dayjs(str)),
+  updatedAt: (schema) => schema.transform((str) => dayjs(str)),
 });
 
 export const insertUserSchema = createInsertSchema(users, {
@@ -75,8 +77,8 @@ export const selectArticleSchema = createSelectSchema(articles, {
         return [];
       }
     }),
-  createdAt: (schema) => schema.transform((date) => date.toISOString()),
-  updatedAt: (schema) => schema.transform((date) => date.toISOString()),
+  createdAt: (schema) => schema.transform((str) => dayjs(str)),
+  updatedAt: (schema) => schema.transform((str) => dayjs(str)),
 });
 
 export const insertArticleSchema = createInsertSchema(articles, {
@@ -107,8 +109,8 @@ export const updateArticleSchema = createUpdateSchema(articles, {
 
 // Category schemas
 export const selectCategorySchema = createSelectSchema(categories, {
-  createdAt: (schema) => schema.transform((date) => date.toISOString()),
-  updatedAt: (schema) => schema.transform((date) => date.toISOString()),
+  createdAt: (schema) => schema.transform((str) => dayjs(str)),
+  updatedAt: (schema) => schema.transform((str) => dayjs(str)),
 });
 
 export const insertCategorySchema = createInsertSchema(categories, {
@@ -125,7 +127,7 @@ export const updateCategorySchema = createUpdateSchema(categories, {
 
 // Tag schemas
 export const selectTagSchema = createSelectSchema(tags, {
-  createdAt: (schema) => schema.transform((date) => date.toISOString()),
+  createdAt: (schema) => schema.transform((str) => dayjs(str)),
 });
 
 export const insertTagSchema = createInsertSchema(tags, {
@@ -153,8 +155,8 @@ export const selectDraftSchema = createSelectSchema(drafts, {
         return [];
       }
     }),
-  createdAt: (schema) => schema.transform((date) => date.toISOString()),
-  updatedAt: (schema) => schema.transform((date) => date.toISOString()),
+  createdAt: (schema) => schema.transform((str) => dayjs(str)),
+  updatedAt: (schema) => schema.transform((str) => dayjs(str)),
 });
 
 export const insertDraftSchema = createInsertSchema(drafts, {
@@ -196,7 +198,7 @@ export const selectDraftVersionSchema = createSelectSchema(draftVersions, {
         return [];
       }
     }),
-  createdAt: (schema) => schema.transform((date) => date.toISOString()),
+  createdAt: (schema) => schema.transform((str) => dayjs(str)),
 });
 
 export const insertDraftVersionSchema = createInsertSchema(draftVersions, {
@@ -213,7 +215,7 @@ export const insertDraftVersionSchema = createInsertSchema(draftVersions, {
 
 // Static Files schemas
 export const selectStaticFileSchema = createSelectSchema(staticFiles, {
-  createdAt: (schema) => schema.transform((date) => date.toISOString()),
+  createdAt: (schema) => schema.transform((str) => dayjs(str)),
 });
 
 export const insertStaticFileSchema = createInsertSchema(staticFiles, {
@@ -237,8 +239,8 @@ export const selectSiteMetaSchema = createSelectSchema(siteMeta, {
     schema.transform((str): unknown => {
       return safeParseJson(str, dataSchemas.genericObject) ?? str;
     }),
-  createdAt: (schema) => schema.transform((date) => date.toISOString()),
-  updatedAt: (schema) => schema.transform((date) => date.toISOString()),
+  createdAt: (schema) => schema.transform((str) => dayjs(str)),
+  updatedAt: (schema) => schema.transform((str) => dayjs(str)),
 });
 
 export const insertSiteMetaSchema = createInsertSchema(siteMeta, {
@@ -263,7 +265,7 @@ export const updateSiteMetaSchema = createUpdateSchema(siteMeta, {
 
 // Login Logs schemas
 export const selectLoginLogSchema = createSelectSchema(loginLogs, {
-  createdAt: (schema) => schema.transform((date) => date.toISOString()),
+  createdAt: (schema) => schema.transform((str) => dayjs(str)),
 });
 
 export const insertLoginLogSchema = createInsertSchema(loginLogs, {
@@ -272,8 +274,8 @@ export const insertLoginLogSchema = createInsertSchema(loginLogs, {
 
 // Custom Pages schemas
 export const selectCustomPageSchema = createSelectSchema(customPages, {
-  createdAt: (schema) => schema.transform((date) => date.toISOString()),
-  updatedAt: (schema) => schema.transform((date) => date.toISOString()),
+  createdAt: (schema) => schema.transform((str) => dayjs(str)),
+  updatedAt: (schema) => schema.transform((str) => dayjs(str)),
 });
 
 export const insertCustomPageSchema = createInsertSchema(customPages, {
@@ -306,7 +308,7 @@ export const selectAnalyticsSchema = createSelectSchema(analytics, {
         return null;
       }
     }),
-  createdAt: (schema) => schema.transform((date) => date.toISOString()),
+  createdAt: (schema) => schema.transform((str) => dayjs(str)),
 });
 
 export const insertAnalyticsSchema = createInsertSchema(analytics, {
@@ -367,8 +369,8 @@ export type InsertAnalytics = z.infer<typeof insertAnalyticsSchema>;
 
 // Permission Node schemas
 export const selectPermissionNodeSchema = createSelectSchema(permissionNodes, {
-  createdAt: (schema) => schema.transform((date) => date.toISOString()),
-  updatedAt: (schema) => schema.transform((date) => date.toISOString()),
+  createdAt: (schema) => schema.transform((str) => dayjs(str)),
+  updatedAt: (schema) => schema.transform((str) => dayjs(str)),
 });
 
 export const insertPermissionNodeSchema = createInsertSchema(permissionNodes, {
@@ -395,8 +397,8 @@ export const selectPermissionGroupSchema = createSelectSchema(permissionGroups, 
         return [];
       }
     }),
-  createdAt: (schema) => schema.transform((date) => date.toISOString()),
-  updatedAt: (schema) => schema.transform((date) => date.toISOString()),
+  createdAt: (schema) => schema.transform((str) => dayjs(str)),
+  updatedAt: (schema) => schema.transform((str) => dayjs(str)),
 });
 
 export const insertPermissionGroupSchema = createInsertSchema(permissionGroups, {
@@ -422,8 +424,8 @@ export const updatePermissionGroupSchema = createUpdateSchema(permissionGroups, 
 
 // Code snippet schemas
 export const selectCodeSnippetSchema = createSelectSchema(codeSnippets, {
-  createdAt: (schema) => schema.transform((date) => date.toISOString()),
-  updatedAt: (schema) => schema.transform((date) => date.toISOString()),
+  createdAt: (schema) => schema.transform((str) => dayjs(str)),
+  updatedAt: (schema) => schema.transform((str) => dayjs(str)),
 });
 
 export const insertCodeSnippetSchema = createInsertSchema(codeSnippets, {
@@ -456,3 +458,31 @@ export type UpdatePermissionGroup = z.infer<typeof updatePermissionGroupSchema>;
 export type SelectCodeSnippet = z.infer<typeof selectCodeSnippetSchema>;
 export type InsertCodeSnippet = z.infer<typeof insertCodeSnippetSchema>;
 export type UpdateCodeSnippet = z.infer<typeof updateCodeSnippetSchema>;
+
+// Plugin data schemas
+export const selectPluginDataSchema = createSelectSchema(pluginData, {
+  createdAt: (schema) => schema.transform((str) => dayjs(str)),
+  updatedAt: (schema) => schema.transform((str) => dayjs(str)),
+});
+
+export const insertPluginDataSchema = createInsertSchema(pluginData, {
+  pluginId: (schema) => schema.min(1, '插件ID不能为空'),
+  key: (schema) => schema.min(1, '键名不能为空'),
+}).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const updatePluginDataSchema = createUpdateSchema(pluginData, {
+  pluginId: (schema) => schema.min(1, '插件ID不能为空').optional(),
+  key: (schema) => schema.min(1, '键名不能为空').optional(),
+}).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type SelectPluginData = z.infer<typeof selectPluginDataSchema>;
+export type InsertPluginData = z.infer<typeof insertPluginDataSchema>;
+export type UpdatePluginData = z.infer<typeof updatePluginDataSchema>;

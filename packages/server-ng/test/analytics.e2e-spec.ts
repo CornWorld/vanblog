@@ -1,5 +1,6 @@
 import { type INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
+import dayjs from 'dayjs';
 import request from 'supertest';
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 
@@ -15,8 +16,9 @@ describe('AnalyticsController (e2e)', () => {
   let authToken: string;
 
   beforeAll(async () => {
+    const appModule = await AppModule.forRoot();
     const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
+      imports: [appModule],
     }).compile();
 
     app = moduleFixture.createNestApplication();
@@ -230,8 +232,8 @@ describe('AnalyticsController (e2e)', () => {
         .get('/api/v2/admin/analytics/export')
         .set('Authorization', `Bearer ${authToken}`)
         .query({
-          startDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-          endDate: new Date().toISOString(),
+          startDate: dayjs().subtract(7, 'day').toISOString(),
+          endDate: dayjs().toISOString(),
         })
         .expect(200);
 

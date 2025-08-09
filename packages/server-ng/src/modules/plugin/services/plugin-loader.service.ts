@@ -1,8 +1,9 @@
+import { spawn } from 'child_process';
 import { readdir, stat, readFile } from 'fs/promises';
 import { join } from 'path';
 import { pathToFileURL } from 'url';
 
-import { Injectable } from '@nestjs/common';
+import { Injectable, OnModuleInit } from '@nestjs/common';
 
 import { LoggerService } from '../../../core/logger/logger.service';
 
@@ -17,6 +18,8 @@ interface PackageJson {
   name?: string;
   keywords?: string[];
   vanblog?: unknown;
+  dependencies?: Record<string, string>;
+  devDependencies?: Record<string, string>;
 }
 
 export interface PluginManifest {
@@ -55,7 +58,7 @@ export interface Plugin {
 }
 
 @Injectable()
-export class PluginLoaderService {
+export class PluginLoaderService implements OnModuleInit {
   private readonly loadedPlugins = new Map<string, Plugin>();
   private readonly pluginContexts = new Map<string, PluginContext>();
 
@@ -65,6 +68,11 @@ export class PluginLoaderService {
     private readonly hookService: HookService,
   ) {
     this.logger.log('PluginLoaderService initialized');
+  }
+
+  async onModuleInit(): Promise<void> {
+    this.logger.log('PluginLoaderService: Starting automatic plugin loading on module init...');
+    await this.loadPlugins();
   }
 
   getLoadedPlugins(): Map<string, Plugin> {
@@ -282,6 +290,10 @@ export class PluginLoaderService {
 
   private async loadPlugin(pluginDir: string): Promise<void> {
     const manifest = await this.loadPluginManifest(pluginDir);
+
+    // Install dependencies if needed
+    await this.installPluginDependencies(pluginDir);
+
     const plugin = await this.loadPluginModule(pluginDir, manifest);
 
     if (!plugin) {
@@ -292,9 +304,13 @@ export class PluginLoaderService {
     const context = this.pluginContextFactory.createContext(plugin.name);
     this.pluginContexts.set(plugin.name, context);
 
-    // Initialize plugin
+    // Initialize plugin with timeout and error isolation
     if (plugin.init) {
-      await plugin.init(context);
+      await this.safeExecuteWithTimeout(
+        () => plugin.init!(context),
+        60000, // 60s timeout for init
+        `Plugin ${plugin.name} initialization`,
+      );
     }
 
     // Register plugin hooks
@@ -364,5 +380,98 @@ export class PluginLoaderService {
     }
 
     return null;
+  }
+
+  private async installPluginDependencies(pluginDir: string): Promise<void> {
+    // Check if plugin has package.json with dependencies
+    const packageJsonPath = join(pluginDir, 'package.json');
+    try {
+      await stat(packageJsonPath);
+      const packageJsonContent = await readFile(packageJsonPath, 'utf-8');
+      const packageJson = JSON.parse(packageJsonContent) as PackageJson & {
+        dependencies?: Record<string, string>;
+        devDependencies?: Record<string, string>;
+      };
+
+      const hasDependencies =
+        (packageJson.dependencies && Object.keys(packageJson.dependencies).length > 0) ||
+        (packageJson.devDependencies && Object.keys(packageJson.devDependencies).length > 0);
+
+      if (hasDependencies) {
+        const nodeModulesPath = join(pluginDir, 'node_modules');
+        try {
+          await stat(nodeModulesPath);
+          this.logger.log(`Dependencies already installed for plugin in ${pluginDir}`);
+        } catch {
+          this.logger.log(`Installing dependencies for plugin in ${pluginDir}`);
+          await this.runPnpmInstall(pluginDir);
+        }
+      }
+    } catch {
+      // No package.json or no dependencies, skip installation
+    }
+  }
+
+  private async runPnpmInstall(pluginDir: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const child = spawn('pnpm', ['install'], {
+        cwd: pluginDir,
+        stdio: ['ignore', 'pipe', 'pipe'],
+      });
+
+      let stdout = '';
+      let stderr = '';
+
+      child.stdout?.on('data', (data) => {
+        stdout += data.toString();
+      });
+
+      child.stderr?.on('data', (data) => {
+        stderr += data.toString();
+      });
+
+      child.on('close', (code) => {
+        if (code === 0) {
+          this.logger.log(`Dependencies installed successfully in ${pluginDir}`);
+          resolve();
+        } else {
+          this.logger.error(
+            `Failed to install dependencies in ${pluginDir}. Exit code: ${code}\nStdout: ${stdout}\nStderr: ${stderr}`,
+          );
+          reject(new Error(`pnpm install failed with exit code ${code}`));
+        }
+      });
+
+      child.on('error', (error) => {
+        this.logger.error(`Failed to spawn pnpm install process: ${error.message}`);
+        reject(error);
+      });
+    });
+  }
+
+  private async safeExecuteWithTimeout<T>(
+    fn: () => Promise<T> | T,
+    timeoutMs: number,
+    operation: string,
+  ): Promise<T> {
+    return new Promise<T>((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        reject(new Error(`${operation} timed out after ${timeoutMs}ms`));
+      }, timeoutMs);
+
+      Promise.resolve(fn())
+        .then((result) => {
+          clearTimeout(timeout);
+          resolve(result);
+        })
+        .catch((error) => {
+          clearTimeout(timeout);
+          this.logger.error(
+            `${operation} failed:`,
+            error instanceof Error ? error.stack : String(error),
+          );
+          reject(error);
+        });
+    });
   }
 }

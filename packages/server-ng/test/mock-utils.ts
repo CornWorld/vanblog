@@ -1,3 +1,4 @@
+import dayjs from 'dayjs';
 import { vi } from 'vitest';
 
 import { StorageProvider } from '../src/modules/media/dto/storage-config.dto';
@@ -272,8 +273,8 @@ export function createUser(overrides: Record<string, unknown> = {}): Record<stri
     nickname: 'Test User',
     email: 'test@example.com',
     type: 'admin',
-    createdAt: new Date(),
-    updatedAt: new Date(),
+    createdAt: dayjs().toISOString(),
+    updatedAt: dayjs().toISOString(),
     ...overrides,
   };
 }
@@ -295,8 +296,8 @@ export function createArticle(overrides: Record<string, unknown> = {}): Record<s
     pathname: null,
     category: null,
     password: null,
-    createdAt: new Date(),
-    updatedAt: new Date(),
+    createdAt: dayjs().toISOString(),
+    updatedAt: dayjs().toISOString(),
     ...overrides,
   };
 }
@@ -341,8 +342,8 @@ export function createTag(overrides: Record<string, unknown> = {}): Record<strin
   return {
     id: 1,
     name: 'Test Tag',
-    createdAt: new Date(),
-    updatedAt: new Date(),
+    createdAt: dayjs().toISOString(),
+    updatedAt: dayjs().toISOString(),
     ...overrides,
   };
 }
@@ -354,8 +355,8 @@ export function createCategory(overrides: Record<string, unknown> = {}): Record<
   return {
     id: 1,
     name: 'Test Category',
-    createdAt: new Date(),
-    updatedAt: new Date(),
+    createdAt: dayjs().toISOString(),
+    updatedAt: dayjs().toISOString(),
     ...overrides,
   };
 }
@@ -374,7 +375,7 @@ export function createMediaFile(overrides: Record<string, unknown> = {}): Record
     height: 1080,
     hash: 'testhash',
     provider: 'local',
-    createdAt: new Date(),
+    createdAt: dayjs().toISOString(),
     ...overrides,
   };
 }

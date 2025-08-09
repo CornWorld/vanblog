@@ -1,3 +1,4 @@
+import dayjs from 'dayjs';
 import { sql } from 'drizzle-orm';
 import { sqliteTable, text, integer, index, uniqueIndex } from 'drizzle-orm/sqlite-core';
 
@@ -13,12 +14,12 @@ export const users = sqliteTable('users', {
     .notNull()
     .default('subscriber'),
   permissions: text('permissions'), // JSON string for permissions array
-  createdAt: integer('created_at', { mode: 'timestamp' })
+  createdAt: text('created_at')
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: integer('updated_at', { mode: 'timestamp' })
+    .default(sql`datetime('now')`),
+  updatedAt: text('updated_at')
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+    .default(sql`datetime('now')`),
 });
 
 // Articles table
@@ -40,12 +41,12 @@ export const articles = sqliteTable(
     private: integer('private', { mode: 'boolean' }).default(false),
     password: text('password'),
     viewer: integer('viewer').default(0),
-    createdAt: integer('created_at', { mode: 'timestamp' })
+    createdAt: text('created_at')
       .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
-    updatedAt: integer('updated_at', { mode: 'timestamp' })
+      .default(sql`datetime('now')`),
+    updatedAt: text('updated_at')
       .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
+      .default(sql`datetime('now')`),
   },
   (table) => [
     index('pathname_idx').on(table.pathname),
@@ -62,12 +63,12 @@ export const categories = sqliteTable('categories', {
   description: text('description'),
   private: integer('private', { mode: 'boolean' }).default(false),
   password: text('password'),
-  createdAt: integer('created_at', { mode: 'timestamp' })
+  createdAt: text('created_at')
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: integer('updated_at', { mode: 'timestamp' })
+    .default(sql`datetime('now')`),
+  updatedAt: text('updated_at')
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+    .default(sql`datetime('now')`),
 });
 
 // Tags table
@@ -75,9 +76,9 @@ export const tags = sqliteTable('tags', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   name: text('name').notNull().unique(),
   slug: text('slug').unique(),
-  createdAt: integer('created_at', { mode: 'timestamp' })
+  createdAt: text('created_at')
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+    .default(sql`datetime('now')`),
 });
 
 // Drafts table
@@ -90,12 +91,12 @@ export const drafts = sqliteTable('drafts', {
   category: text('category'),
   author: text('author').notNull(),
   version: integer('version').notNull().default(1),
-  createdAt: integer('created_at', { mode: 'timestamp' })
+  createdAt: text('created_at')
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: integer('updated_at', { mode: 'timestamp' })
+    .default(sql`datetime('now')`),
+  updatedAt: text('updated_at')
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+    .default(sql`datetime('now')`),
 });
 
 // Draft versions table
@@ -111,9 +112,9 @@ export const draftVersions = sqliteTable(
     tags: text('tags'), // JSON string
     category: text('category'),
     author: text('author').notNull(),
-    createdAt: integer('created_at', { mode: 'timestamp' })
+    createdAt: text('created_at')
       .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
+      .default(sql`datetime('now')`),
   },
   (table) => [
     index('draft_id_idx').on(table.draftId),
@@ -134,9 +135,9 @@ export const staticFiles = sqliteTable(
     height: integer('height'),
     hash: text('hash'),
     provider: text('provider').default('local'), // local, oss, etc.
-    createdAt: integer('created_at', { mode: 'timestamp' })
+    createdAt: text('created_at')
       .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
+      .default(sql`datetime('now')`),
   },
   (table) => [index('filename_idx').on(table.filename)],
 );
@@ -146,12 +147,12 @@ export const siteMeta = sqliteTable('site_meta', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   key: text('key').notNull().unique(),
   value: text('value'), // JSON string for complex values
-  createdAt: integer('created_at', { mode: 'timestamp' })
+  createdAt: text('created_at')
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: integer('updated_at', { mode: 'timestamp' })
+    .default(sql`datetime('now')`),
+  updatedAt: text('updated_at')
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+    .default(sql`datetime('now')`),
 });
 
 // Login logs table
@@ -164,9 +165,9 @@ export const loginLogs = sqliteTable(
     userAgent: text('user_agent'),
     success: integer('success', { mode: 'boolean' }).notNull(),
     message: text('message'),
-    createdAt: integer('created_at', { mode: 'timestamp' })
+    createdAt: text('created_at')
       .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
+      .default(sql`datetime('now')`),
   },
   (table) => [
     index('username_idx').on(table.username),
@@ -183,12 +184,12 @@ export const customPages = sqliteTable('custom_pages', {
   type: text('type', { enum: ['html', 'markdown'] })
     .notNull()
     .default('markdown'),
-  createdAt: integer('created_at', { mode: 'timestamp' })
+  createdAt: text('created_at')
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: integer('updated_at', { mode: 'timestamp' })
+    .default(sql`datetime('now')`),
+  updatedAt: text('updated_at')
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+    .default(sql`datetime('now')`),
 });
 
 // Analytics table
@@ -202,9 +203,9 @@ export const analytics = sqliteTable(
     userAgent: text('user_agent'),
     ip: text('ip'),
     data: text('data'), // JSON string for additional data
-    createdAt: integer('created_at', { mode: 'timestamp' })
+    createdAt: text('created_at')
       .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
+      .default(sql`datetime('now')`),
   },
   (table) => [
     index('analytics_type_idx').on(table.type),
@@ -220,12 +221,12 @@ export const permissionNodes = sqliteTable('permission_nodes', {
   description: text('description'), // 权限描述
   module: text('module').notNull(), // 所属模块，如 'article', 'draft'
   isActive: integer('is_active', { mode: 'boolean' }).default(true), // 是否启用
-  createdAt: integer('created_at', { mode: 'timestamp' })
+  createdAt: text('created_at')
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: integer('updated_at', { mode: 'timestamp' })
+    .$defaultFn(() => dayjs().toISOString()),
+  updatedAt: text('updated_at')
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+    .$defaultFn(() => dayjs().toISOString()),
 });
 
 // Permission groups table
@@ -235,12 +236,12 @@ export const permissionGroups = sqliteTable('permission_groups', {
   description: text('description'), // 权限组描述
   permissions: text('permissions'), // JSON string for permissions array
   isActive: integer('is_active', { mode: 'boolean' }).default(true), // 是否启用
-  createdAt: integer('created_at', { mode: 'timestamp' })
+  createdAt: text('created_at')
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: integer('updated_at', { mode: 'timestamp' })
+    .$defaultFn(() => dayjs().toISOString()),
+  updatedAt: text('updated_at')
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+    .$defaultFn(() => dayjs().toISOString()),
 });
 
 // Plugin data storage table
@@ -251,12 +252,12 @@ export const pluginData = sqliteTable(
     pluginId: text('plugin_id').notNull(),
     key: text('key').notNull(),
     value: text('value'), // JSON string for any data type
-    createdAt: integer('created_at', { mode: 'timestamp' })
+    createdAt: text('created_at')
       .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
-    updatedAt: integer('updated_at', { mode: 'timestamp' })
+      .$defaultFn(() => dayjs().toISOString()),
+    updatedAt: text('updated_at')
       .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
+      .$defaultFn(() => dayjs().toISOString()),
   },
   (table) => [
     index('plugin_data_plugin_id_idx').on(table.pluginId),
@@ -281,12 +282,12 @@ export const codeSnippets = sqliteTable(
     code: text('code').notNull(), // JavaScript code to execute
     enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
     timeout: integer('timeout').notNull().default(5000), // Execution timeout in ms
-    createdAt: integer('created_at', { mode: 'timestamp' })
+    createdAt: text('created_at')
       .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
-    updatedAt: integer('updated_at', { mode: 'timestamp' })
+      .default(sql`datetime('now')`),
+    updatedAt: text('updated_at')
       .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
+      .default(sql`datetime('now')`),
   },
   (table) => [
     index('code_snippets_hook_name_idx').on(table.hookName),

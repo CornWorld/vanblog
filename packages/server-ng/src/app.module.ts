@@ -24,10 +24,7 @@ import { SocialLinksModule } from './modules/social-links/social-links.module';
 import { TagModule } from './modules/tag/tag.module';
 import { UserModule } from './modules/user/user.module';
 
-@Module({
-  controllers: [AppController],
-  providers: [AppService],
-})
+@Module({})
 export class AppModule {
   static async forRoot(): Promise<DynamicModule> {
     const pluginModule = await PluginModule.forRoot();

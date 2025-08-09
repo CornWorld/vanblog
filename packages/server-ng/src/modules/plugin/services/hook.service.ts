@@ -118,7 +118,11 @@ export class HookService implements IHookService, OnModuleInit {
 
     for (const hook of hooks) {
       try {
-        await hook.callback(...args);
+        await this.safeExecuteWithTimeout(
+          () => hook.callback(...args),
+          5000, // 5 second timeout for action hooks
+          `Action hook '${hookName}' with id ${hook.id}`,
+        );
       } catch (error) {
         this.logger.error(
           `Error executing action for hook '${hookName}' with id ${hook.id}:`,
@@ -140,12 +144,18 @@ export class HookService implements IHookService, OnModuleInit {
     let result: unknown = value;
     for (const hook of hooks) {
       try {
-        result = await hook.callback(result, ...args);
+        const newResult = await this.safeExecuteWithTimeout(
+          () => hook.callback(result, ...args),
+          5000, // 5 second timeout for filter hooks
+          `Filter hook '${hookName}' with id ${hook.id}`,
+        );
+        result = newResult;
       } catch (error) {
         this.logger.error(
           `Error applying filter for hook '${hookName}' with id ${hook.id}:`,
           error,
         );
+        // Continue with current result value on error, don't update result
       }
     }
 
@@ -265,6 +275,39 @@ export class HookService implements IHookService, OnModuleInit {
         return value;
       }
     };
+  }
+
+  private async safeExecuteWithTimeout<T>(
+    operation: () => T | Promise<T>,
+    timeoutMs: number,
+    operationName: string,
+  ): Promise<T> {
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
+        reject(new Error(`${operationName} timed out after ${String(timeoutMs)}ms`));
+      }, timeoutMs);
+
+      try {
+        const result = operation();
+        if (result instanceof Promise) {
+          result
+            .then((res) => {
+              clearTimeout(timer);
+              resolve(res);
+            })
+            .catch((error) => {
+              clearTimeout(timer);
+              reject(error);
+            });
+        } else {
+          clearTimeout(timer);
+          resolve(result);
+        }
+      } catch (error) {
+        clearTimeout(timer);
+        reject(error);
+      }
+    });
   }
 
   private async executeCodeSnippet(

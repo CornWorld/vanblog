@@ -69,9 +69,9 @@ describe('🐱插件', () => {
     });
   });
 
-  describe('beforeCreateArticle 钩子', () => {
+  describe('article|beforeCreate 钩子', () => {
     it('应该在标题结尾添加喵', () => {
-      const handler = plugin.hooks?.beforeCreateArticle?.handler;
+      const handler = plugin.hooks?.['article|beforeCreate']?.handler;
       expect(handler).toBeDefined();
 
       const articleData = {
@@ -88,7 +88,7 @@ describe('🐱插件', () => {
     });
 
     it('不应该重复添加喵', () => {
-      const handler = plugin.hooks?.beforeCreateArticle?.handler;
+      const handler = plugin.hooks?.['article|beforeCreate']?.handler;
       expect(handler).toBeDefined();
 
       const articleData = {
@@ -105,7 +105,7 @@ describe('🐱插件', () => {
     });
 
     it('应该处理空值和无效数据', () => {
-      const handler = plugin.hooks?.beforeCreateArticle?.handler;
+      const handler = plugin.hooks?.['article|beforeCreate']?.handler;
       expect(handler).toBeDefined();
 
       // 测试 null
@@ -134,7 +134,7 @@ describe('🐱插件', () => {
           return defaultValue;
         });
 
-      const handler = plugin.hooks?.beforeCreateArticle?.handler;
+      const handler = plugin.hooks?.['article|beforeCreate']?.handler;
       expect(handler).toBeDefined();
 
       const articleData = {
@@ -151,9 +151,9 @@ describe('🐱插件', () => {
     });
   });
 
-  describe('beforeUpdateArticle 钩子', () => {
+  describe('article|beforeUpdate 钩子', () => {
     it('应该在更新时添加喵', () => {
-      const handler = plugin.hooks?.beforeUpdateArticle?.handler;
+      const handler = plugin.hooks?.['article|beforeUpdate']?.handler;
       expect(handler).toBeDefined();
 
       const articleData = {
@@ -173,11 +173,11 @@ describe('🐱插件', () => {
 
   describe('钩子配置', () => {
     it('应该有正确的钩子类型和优先级', () => {
-      expect(plugin.hooks?.beforeCreateArticle?.type).toBe('filter');
-      expect(plugin.hooks?.beforeCreateArticle?.priority).toBe(10);
+      expect(plugin.hooks?.['article|beforeCreate']?.type).toBe('filter');
+      expect(plugin.hooks?.['article|beforeCreate']?.priority).toBe(10);
 
-      expect(plugin.hooks?.beforeUpdateArticle?.type).toBe('filter');
-      expect(plugin.hooks?.beforeUpdateArticle?.priority).toBe(10);
+      expect(plugin.hooks?.['article|beforeUpdate']?.type).toBe('filter');
+      expect(plugin.hooks?.['article|beforeUpdate']?.priority).toBe(10);
     });
   });
 });

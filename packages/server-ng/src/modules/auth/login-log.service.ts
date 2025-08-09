@@ -1,4 +1,5 @@
 import { Injectable, Inject } from '@nestjs/common';
+import dayjs from 'dayjs';
 import { eq, and, gte, lte, desc } from 'drizzle-orm';
 
 import { DATABASE_CONNECTION } from '../../database';
@@ -37,11 +38,11 @@ export class LoginLogService {
     }
 
     if (query.startDate) {
-      conditions.push(gte(loginLogs.createdAt, new Date(query.startDate)));
+      conditions.push(gte(loginLogs.createdAt, query.startDate));
     }
 
     if (query.endDate) {
-      conditions.push(lte(loginLogs.createdAt, new Date(query.endDate)));
+      conditions.push(lte(loginLogs.createdAt, query.endDate));
     }
 
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
@@ -60,12 +61,12 @@ export class LoginLogService {
       userAgent: log.userAgent,
       success: Boolean(log.success),
       message: log.message,
-      createdAt: log.createdAt.toISOString(),
+      createdAt: dayjs(log.createdAt),
     }));
   }
 
   async getRecentFailedAttempts(username: string, minutes = 30): Promise<number> {
-    const cutoffTime = new Date(Date.now() - minutes * 60 * 1000);
+    const cutoffTime = dayjs().subtract(minutes, 'minute').toISOString();
 
     const result = await this.db
       .select()

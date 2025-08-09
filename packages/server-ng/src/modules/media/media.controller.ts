@@ -21,6 +21,7 @@ import {
   ApiConsumes,
   ApiBody,
 } from '@nestjs/swagger';
+import dayjs from 'dayjs';
 import { memoryStorage } from 'multer';
 import { ZodValidationPipe } from 'nestjs-zod';
 
@@ -223,7 +224,7 @@ export class MediaController {
       path: string;
       size: number;
       mimeType: string | null;
-      createdAt: Date | null;
+      createdAt: string | null;
     }>;
   }> {
     return this.mediaService.exportAllImages();
@@ -281,7 +282,7 @@ export class MediaController {
     const buffer = Buffer.from(base64Data, 'base64');
 
     const ext = mimeType.split('/')[1] ?? 'png';
-    const filename = body.filename ?? `clipboard-${String(Date.now())}.${ext}`;
+    const filename = body.filename ?? `clipboard-${dayjs().valueOf()}.${ext}`;
 
     const file: Express.Multer.File = {
       fieldname: 'clipboard',

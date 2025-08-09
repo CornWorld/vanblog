@@ -1,6 +1,7 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
+import dayjs, { type Dayjs } from 'dayjs';
 
 import { User } from '../user/entities/user.entity';
 import { UserService } from '../user/user.service';
@@ -14,7 +15,7 @@ export interface TokenPair {
 
 export interface TokenInfo {
   token: string;
-  expiresAt: Date;
+  expiresAt: Dayjs;
   userId: number;
   type: 'access' | 'refresh';
 }
@@ -52,10 +53,9 @@ export class TokenService {
     );
 
     // 存储刷新令牌信息
-    const refreshExpiresAt = new Date();
-    refreshExpiresAt.setDate(
-      refreshExpiresAt.getDate() +
-        parseInt(this.configService.get<string>('JWT_REFRESH_EXPIRES_IN', '7').replace('d', '')),
+    const refreshExpiresAt = dayjs().add(
+      parseInt(this.configService.get<string>('JWT_REFRESH_EXPIRES_IN', '7').replace('d', '')),
+      'day',
     );
 
     this.refreshTokens.set(refreshToken, {
@@ -101,7 +101,7 @@ export class TokenService {
       throw new UnauthorizedException('Invalid refresh token');
     }
 
-    if (tokenInfo.expiresAt < new Date()) {
+    if (tokenInfo.expiresAt.isBefore(dayjs())) {
       this.refreshTokens.delete(token);
       throw new UnauthorizedException('Refresh token has expired');
     }
@@ -157,9 +157,9 @@ export class TokenService {
    * 清理过期的令牌
    */
   cleanupExpiredTokens(): void {
-    const now = new Date();
+    const now = dayjs();
     for (const [token, tokenInfo] of this.refreshTokens.entries()) {
-      if (tokenInfo.expiresAt < now) {
+      if (tokenInfo.expiresAt.isBefore(now)) {
         this.refreshTokens.delete(token);
       }
     }
@@ -171,7 +171,7 @@ export class TokenService {
   getUserActiveTokenCount(userId: number): number {
     let count = 0;
     for (const tokenInfo of this.refreshTokens.values()) {
-      if (tokenInfo.userId === userId && tokenInfo.expiresAt > new Date()) {
+      if (tokenInfo.userId === userId && tokenInfo.expiresAt.isAfter(dayjs())) {
         count++;
       }
     }

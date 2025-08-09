@@ -1,6 +1,7 @@
 import * as vm from 'vm';
 
 import { Injectable, NotFoundException, Logger, Inject, BadRequestException } from '@nestjs/common';
+import dayjs from 'dayjs';
 import { eq, and, like, desc, sql } from 'drizzle-orm';
 
 import { DATABASE_CONNECTION } from '../../../database';
@@ -43,8 +44,8 @@ export class CodeSnippetService {
         code: createCodeSnippetDto.code,
         enabled: createCodeSnippetDto.enabled,
         timeout: createCodeSnippetDto.timeout,
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        createdAt: dayjs().toISOString(),
+        updatedAt: dayjs().toISOString(),
       };
 
       const result = await this.db.insert(codeSnippets).values(newCodeSnippet).returning();
@@ -65,8 +66,8 @@ export class CodeSnippetService {
         code: snippet.code,
         enabled: snippet.enabled,
         timeout: snippet.timeout,
-        createdAt: snippet.createdAt.toISOString(),
-        updatedAt: snippet.updatedAt.toISOString(),
+        createdAt: snippet.createdAt,
+        updatedAt: snippet.updatedAt,
       };
     } catch (error) {
       this.logger.error(
@@ -130,8 +131,8 @@ export class CodeSnippetService {
           code: snippet.code,
           enabled: snippet.enabled,
           timeout: snippet.timeout,
-          createdAt: snippet.createdAt.toISOString(),
-          updatedAt: snippet.updatedAt.toISOString(),
+          createdAt: snippet.createdAt,
+          updatedAt: snippet.updatedAt,
         })),
         total,
         page,
@@ -170,8 +171,8 @@ export class CodeSnippetService {
         code: snippet.code,
         enabled: snippet.enabled,
         timeout: snippet.timeout,
-        createdAt: snippet.createdAt.toISOString(),
-        updatedAt: snippet.updatedAt.toISOString(),
+        createdAt: snippet.createdAt,
+        updatedAt: snippet.updatedAt,
       };
     } catch (error) {
       this.logger.error(
@@ -211,7 +212,7 @@ export class CodeSnippetService {
           ...(updateCodeSnippetDto.timeout !== undefined && {
             timeout: updateCodeSnippetDto.timeout,
           }),
-          updatedAt: new Date(),
+          updatedAt: dayjs().toISOString(),
         })
         .where(eq(codeSnippets.id, id))
         .returning();
@@ -232,8 +233,8 @@ export class CodeSnippetService {
         code: snippet.code,
         enabled: snippet.enabled,
         timeout: snippet.timeout,
-        createdAt: snippet.createdAt.toISOString(),
-        updatedAt: snippet.updatedAt.toISOString(),
+        createdAt: snippet.createdAt,
+        updatedAt: snippet.updatedAt,
       };
     } catch (error) {
       this.logger.error(
@@ -266,7 +267,7 @@ export class CodeSnippetService {
     id: number,
     executeDto: CodeSnippetExecuteDto,
   ): Promise<CodeSnippetExecuteResponseDto> {
-    const startTime = Date.now();
+    const startTime = dayjs().valueOf();
 
     try {
       const snippet = await this.findOne(id);
@@ -282,7 +283,7 @@ export class CodeSnippetService {
         snippet.timeout,
       );
 
-      const executionTime = Date.now() - startTime;
+      const executionTime = dayjs().valueOf() - startTime;
 
       return {
         success: true,
@@ -290,7 +291,7 @@ export class CodeSnippetService {
         executionTime,
       };
     } catch (error) {
-      const executionTime = Date.now() - startTime;
+      const executionTime = dayjs().valueOf() - startTime;
       const errorMessage = error instanceof Error ? error.message : String(error);
 
       this.logger.error(`Failed to execute code snippet with ID ${String(id)}:`, errorMessage);
@@ -330,8 +331,8 @@ export class CodeSnippetService {
         code: snippet.code,
         enabled: snippet.enabled,
         timeout: snippet.timeout,
-        createdAt: snippet.createdAt.toISOString(),
-        updatedAt: snippet.updatedAt.toISOString(),
+        createdAt: snippet.createdAt,
+        updatedAt: snippet.updatedAt,
       }));
     } catch (error) {
       this.logger.error(

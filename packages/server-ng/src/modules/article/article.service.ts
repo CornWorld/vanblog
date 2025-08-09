@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException, Inject, Logger } from '@nestjs/common';
+import dayjs from 'dayjs';
 import { eq, and, or, like, desc, asc, sql } from 'drizzle-orm';
 
 import { DATABASE_CONNECTION } from '../../database';
@@ -96,8 +97,8 @@ export class ArticleService {
       private: article.private,
       password: article.password,
       viewer: article.viewer,
-      createdAt: article.createdAt.toISOString(),
-      updatedAt: article.updatedAt.toISOString(),
+      createdAt: dayjs(article.createdAt),
+      updatedAt: dayjs(article.updatedAt),
     }));
 
     const total = Number(countResult[0]?.count || 0);
@@ -174,7 +175,7 @@ export class ArticleService {
       cover: undefined,
       tags: safeParseJson(article.tags, dataSchemas.tagsArray) ?? [],
       categories: article.category ? [article.category] : [],
-      publishedAt: article.updatedAt.toISOString(),
+      publishedAt: article.updatedAt,
       highlight: undefined,
     }));
 
@@ -232,8 +233,8 @@ export class ArticleService {
       password: articleData.password ? String(articleData.password) : undefined,
       viewer: 0,
       tags: JSON.stringify(Array.isArray(tagNames) ? tagNames : []),
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      createdAt: dayjs().toISOString(),
+      updatedAt: dayjs().toISOString(),
     };
 
     // Process article data
@@ -290,7 +291,7 @@ export class ArticleService {
         ]),
       ),
       ...(tagNames && { tags: JSON.stringify(tagNames) }),
-      updatedAt: new Date(),
+      updatedAt: dayjs().toISOString(),
     };
 
     // Process update data
@@ -410,8 +411,8 @@ export class ArticleService {
       private: article.private,
       password: article.password,
       viewer: article.viewer,
-      createdAt: article.createdAt.toISOString(),
-      updatedAt: article.updatedAt.toISOString(),
+      createdAt: dayjs(article.createdAt),
+      updatedAt: dayjs(article.updatedAt),
     }));
 
     return {
@@ -436,8 +437,8 @@ export class ArticleService {
       await this.db.insert(tags).values(
         missingTagNames.map((name) => ({
           name,
-          createdAt: new Date(),
-          updatedAt: new Date(),
+          createdAt: dayjs().toISOString(),
+          updatedAt: dayjs().toISOString(),
         })),
       );
     }

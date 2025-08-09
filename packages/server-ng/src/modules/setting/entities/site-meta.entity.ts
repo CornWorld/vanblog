@@ -2,8 +2,8 @@ export interface SiteMeta {
   id: number;
   key: string;
   value: string | null;
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: string;
+  updatedAt: string;
 }
 
 // 基础站点信息
@@ -64,7 +64,7 @@ export interface PaymentInfo {
 // 关于页面
 export interface AboutInfo {
   content: string;
-  updatedAt: Date;
+  updatedAt: string;
 }
 
 // 社交链接
@@ -78,7 +78,7 @@ export interface SocialLink {
 export interface RewardInfo {
   name: string;
   value: string;
-  updatedAt?: Date;
+  updatedAt?: string;
 }
 
 export interface SiteLayout {

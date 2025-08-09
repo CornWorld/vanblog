@@ -1,4 +1,5 @@
 import { Injectable, Logger, Inject } from '@nestjs/common';
+import dayjs from 'dayjs';
 import { eq, and } from 'drizzle-orm';
 
 import { ConfigService } from '../../../config/config.service';
@@ -47,22 +48,30 @@ export class PluginDataStorageService implements PluginDataStorage {
 
   async set(key: string, value: unknown): Promise<void> {
     try {
-      const dataToInsert = {
-        pluginId: this.pluginId,
-        key,
-        value: JSON.stringify(value),
-      };
+      const stringValue = JSON.stringify(value);
+      const now = dayjs().toISOString();
 
-      await this.db
-        .insert(pluginData)
-        .values(dataToInsert)
-        .onConflictDoUpdate({
-          target: [pluginData.pluginId, pluginData.key],
-          set: {
-            value: dataToInsert.value,
-            updatedAt: new Date(),
-          },
+      try {
+        // First try to insert new record using LibSQL client directly
+        await (
+          this.db as Database & {
+            $client: { execute: (query: { sql: string; args: unknown[] }) => Promise<unknown> };
+          }
+        ).$client.execute({
+          sql: 'INSERT INTO plugin_data (plugin_id, key, value, created_at, updated_at) VALUES (?, ?, ?, ?, ?)',
+          args: [this.pluginId, key, stringValue, now, now],
         });
+      } catch {
+        // If insert fails due to unique constraint, update existing record
+        await (
+          this.db as Database & {
+            $client: { execute: (query: { sql: string; args: unknown[] }) => Promise<unknown> };
+          }
+        ).$client.execute({
+          sql: 'UPDATE plugin_data SET value = ?, updated_at = ? WHERE plugin_id = ? AND key = ?',
+          args: [stringValue, now, this.pluginId, key],
+        });
+      }
     } catch (error) {
       this.logger.error(
         `Failed to set plugin data for key '${key}':`,

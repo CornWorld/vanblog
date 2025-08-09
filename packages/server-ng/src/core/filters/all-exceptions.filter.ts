@@ -1,4 +1,5 @@
-import { ExceptionFilter, Catch, ArgumentsHost, HttpException, HttpStatus } from '@nestjs/common';
+import { ExceptionFilter, Catch, ArgumentsHost, HttpStatus, HttpException } from '@nestjs/common';
+import dayjs from 'dayjs';
 import { Request, Response } from 'express';
 
 import { LoggerService } from '../logger/logger.service';
@@ -35,7 +36,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
     const errorResponse = {
       statusCode: status,
-      timestamp: new Date().toISOString(),
+      timestamp: dayjs().toISOString(),
       path: request.url,
       method: request.method,
       ...error,

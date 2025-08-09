@@ -38,10 +38,10 @@ export class Article {
   viewer!: number | null;
 
   @ApiProperty({ description: 'Creation date' })
-  createdAt!: Date;
+  createdAt!: string;
 
   @ApiProperty({ description: 'Last update date' })
-  updatedAt!: Date;
+  updatedAt!: string;
 
   constructor(partial: Partial<Article>) {
     Object.assign(this, partial);

@@ -13,8 +13,8 @@ export class Draft {
   readTime!: number;
   summary?: string;
   cover?: string;
-  createdAt!: Date;
-  updatedAt!: Date;
+  createdAt!: string;
+  updatedAt!: string;
 
   constructor(partial: Partial<Draft>) {
     Object.assign(this, partial);
@@ -34,7 +34,7 @@ export class DraftVersion {
   author!: string;
   summary?: string;
   cover?: string;
-  createdAt!: Date;
+  createdAt!: string;
   comment?: string;
 
   constructor(partial: Partial<DraftVersion>) {

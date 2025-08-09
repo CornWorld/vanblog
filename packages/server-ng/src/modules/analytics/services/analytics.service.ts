@@ -1,4 +1,5 @@
 import { Injectable, Inject } from '@nestjs/common';
+import dayjs, { type Dayjs } from 'dayjs';
 import { eq, and, gte, lte, sql, desc } from 'drizzle-orm';
 import { LibSQLDatabase } from 'drizzle-orm/libsql';
 import { UAParser } from 'ua-parser-js';
@@ -38,11 +39,10 @@ export class AnalyticsService {
   }
 
   async getOverview(): Promise<AnalyticsOverviewDto> {
-    const now = new Date();
-    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const yesterdayStart = new Date(todayStart);
-    yesterdayStart.setDate(yesterdayStart.getDate() - 1);
-    const yesterdayEnd = new Date(todayStart);
+    const now = dayjs();
+    const todayStart = now.startOf('day');
+    const yesterdayStart = todayStart.subtract(1, 'day');
+    const yesterdayEnd = todayStart;
 
     const [todayPageviews, yesterdayPageviews, totalPageviews] = await Promise.all([
       this.getPageviewCount(todayStart, now),
@@ -111,27 +111,22 @@ export class AnalyticsService {
   }
 
   async getChartData(days = 7): Promise<AnalyticsChartDataDto> {
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - days + 1);
+    const startDate = dayjs().subtract(days - 1, 'day');
 
     const pageviewsData: TimeSeriesDataDto[] = [];
     const visitorsData: TimeSeriesDataDto[] = [];
 
     for (let i = 0; i < days; i++) {
-      const date = new Date(startDate);
-      date.setDate(date.getDate() + i);
-      const dayStart = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-      const dayEnd = new Date(dayStart);
-      dayEnd.setDate(dayEnd.getDate() + 1);
+      const date = startDate.add(i, 'day');
+      const dayStart = date.startOf('day');
+      const dayEnd = date.endOf('day');
 
       const [pageviews, visitors] = await Promise.all([
         this.getPageviewCount(dayStart, dayEnd),
         this.getUniqueVisitorCount(dayStart, dayEnd),
       ]);
 
-      const timeStr = `${String(date.getMonth() + 1).padStart(2, '0')}-${String(
-        date.getDate(),
-      ).padStart(2, '0')}`;
+      const timeStr = date.format('MM-DD');
 
       pageviewsData.push({ time: timeStr, value: pageviews });
       visitorsData.push({ time: timeStr, value: visitors });
@@ -216,11 +211,11 @@ export class AnalyticsService {
     }
 
     if (query.startDate) {
-      conditions.push(gte(analytics.createdAt, new Date(query.startDate)));
+      conditions.push(gte(analytics.createdAt, query.startDate));
     }
 
     if (query.endDate) {
-      conditions.push(lte(analytics.createdAt, new Date(query.endDate)));
+      conditions.push(lte(analytics.createdAt, query.endDate));
     }
 
     if (query.path) {
@@ -244,15 +239,15 @@ export class AnalyticsService {
     });
   }
 
-  private async getPageviewCount(startDate?: Date, endDate?: Date): Promise<number> {
+  private async getPageviewCount(startDate?: Dayjs, endDate?: Dayjs): Promise<number> {
     const conditions = [eq(analytics.type, AnalyticsType.PAGEVIEW)];
 
     if (startDate) {
-      conditions.push(gte(analytics.createdAt, startDate));
+      conditions.push(gte(analytics.createdAt, startDate.toISOString()));
     }
 
     if (endDate) {
-      conditions.push(lte(analytics.createdAt, endDate));
+      conditions.push(lte(analytics.createdAt, endDate.toISOString()));
     }
 
     const result = await this.db
@@ -263,15 +258,15 @@ export class AnalyticsService {
     return result[0]?.count ?? 0;
   }
 
-  private async getUniqueVisitorCount(startDate?: Date, endDate?: Date): Promise<number> {
+  private async getUniqueVisitorCount(startDate?: Dayjs, endDate?: Dayjs): Promise<number> {
     const conditions = [eq(analytics.type, AnalyticsType.PAGEVIEW)];
 
     if (startDate) {
-      conditions.push(gte(analytics.createdAt, startDate));
+      conditions.push(gte(analytics.createdAt, startDate.toISOString()));
     }
 
     if (endDate) {
-      conditions.push(lte(analytics.createdAt, endDate));
+      conditions.push(lte(analytics.createdAt, endDate.toISOString()));
     }
 
     const result = await this.db

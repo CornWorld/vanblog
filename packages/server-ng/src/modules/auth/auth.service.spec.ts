@@ -30,8 +30,8 @@ describe('AuthService', () => {
     nickname: 'Test User',
     type: UserType.ADMIN,
     permissions: [],
-    createdAt: new Date(),
-    updatedAt: new Date(),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
   });
 
   const mockUserService = {

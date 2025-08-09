@@ -6,7 +6,7 @@ export interface Analytics {
   userAgent?: string | null;
   ip?: string | null;
   data?: string | null;
-  createdAt: Date | null;
+  createdAt: string | null;
 }
 
 export enum AnalyticsType {

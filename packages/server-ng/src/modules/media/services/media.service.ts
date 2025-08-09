@@ -211,7 +211,7 @@ export class MediaService {
       path: string;
       size: number;
       mimeType: string | null;
-      createdAt: Date | null;
+      createdAt: string | null;
     }>;
   }> {
     const allFiles = await this.db.select().from(staticFiles);

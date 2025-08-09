@@ -27,10 +27,10 @@ export class User {
   permissions?: Permission[];
 
   @ApiProperty({ description: '创建时间' })
-  createdAt!: Date;
+  createdAt!: string;
 
   @ApiProperty({ description: '更新时间' })
-  updatedAt!: Date;
+  updatedAt!: string;
 
   // Password field excluded from serialization via transform logic
   password?: string;

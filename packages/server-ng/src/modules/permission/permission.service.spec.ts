@@ -1,4 +1,5 @@
 import { Test, type TestingModule } from '@nestjs/testing';
+import dayjs from 'dayjs';
 import { describe, it, beforeEach, afterEach, expect, vi } from 'vitest';
 
 import { DATABASE_CONNECTION } from '../../database/database.module';
@@ -40,8 +41,8 @@ describe('PermissionService', () => {
     description: 'Read articles',
     module: 'article',
     isActive: true,
-    createdAt: new Date('2025-08-08T06:36:15.292Z'),
-    updatedAt: new Date('2025-08-08T06:36:15.292Z'),
+    createdAt: dayjs('2025-08-08T06:36:15.292Z'),
+    updatedAt: dayjs('2025-08-08T06:36:15.292Z'),
   };
 
   const mockPermissionGroup = {
@@ -50,8 +51,8 @@ describe('PermissionService', () => {
     description: 'Administrator group',
     permissions: JSON.stringify(['article:read', 'article:write']),
     isActive: true,
-    createdAt: new Date('2025-08-08T06:36:15.292Z'),
-    updatedAt: new Date('2025-08-08T06:36:15.292Z'),
+    createdAt: dayjs('2025-08-08T06:36:15.292Z'),
+    updatedAt: dayjs('2025-08-08T06:36:15.292Z'),
   };
 
   beforeEach(async () => {
@@ -211,11 +212,7 @@ describe('PermissionService', () => {
       const result = await service.createPermissionNode(createDto);
 
       expect(mockDb.insert).toHaveBeenCalled();
-      expect(result).toEqual({
-        ...mockPermissionNode,
-        createdAt: '2025-08-08T06:36:15.292Z',
-        updatedAt: '2025-08-08T06:36:15.292Z',
-      });
+      expect(result).toEqual(mockPermissionNode);
     });
   });
 
@@ -231,13 +228,7 @@ describe('PermissionService', () => {
       const query = { page: 1, limit: 10 };
       const result = await service.findAllPermissionNodes(query);
 
-      expect(result).toEqual([
-        {
-          ...mockPermissionNode,
-          createdAt: '2025-08-08T06:36:15.292Z',
-          updatedAt: '2025-08-08T06:36:15.292Z',
-        },
-      ]);
+      expect(result).toEqual([mockPermissionNode]);
     });
 
     it('should filter by module', async () => {
@@ -255,8 +246,8 @@ describe('PermissionService', () => {
       expect(result).toEqual([
         {
           ...mockPermissionNode,
-          createdAt: '2025-08-08T06:36:15.292Z',
-          updatedAt: '2025-08-08T06:36:15.292Z',
+          createdAt: dayjs('2025-08-08T06:36:15.292Z'),
+          updatedAt: dayjs('2025-08-08T06:36:15.292Z'),
         },
       ]);
     });

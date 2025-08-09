@@ -1,5 +1,6 @@
 // 🐱插件：在文章保存时在内容/标题/标签的结尾添加"喵"
 
+import dayjs from 'dayjs';
 import type { FilterCallback } from '../../src/modules/plugin/interfaces/hook.interface';
 import type { PluginContext } from '../../src/modules/plugin/interfaces/plugin-context.interface';
 import type { Plugin } from '../../src/modules/plugin/services/plugin-loader.service';
@@ -22,7 +23,7 @@ const plugin: Plugin = {
     context.logger.log('🐱插件正在初始化...');
 
     // 记录插件初始化时间
-    await context.data.set('initialized_at', new Date().toISOString());
+    await context.data.set('initialized_at', dayjs().toISOString());
     await context.data.set('processed_articles', 0);
 
     // 读取配置
@@ -53,7 +54,7 @@ const plugin: Plugin = {
   // 钩子定义
   hooks: {
     // 文章创建前的过滤器
-    beforeCreateArticle: {
+    'article|beforeCreate': {
       type: 'filter',
       priority: 10,
       handler: ((value: unknown, context: PluginContext) => {
@@ -112,7 +113,7 @@ const plugin: Plugin = {
     },
 
     // 文章更新前的过滤器
-    beforeUpdateArticle: {
+    'article|beforeUpdate': {
       type: 'filter',
       priority: 10,
       handler: ((value: unknown, context: PluginContext) => {

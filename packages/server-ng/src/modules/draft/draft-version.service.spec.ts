@@ -127,7 +127,7 @@ describe('DraftVersionService', () => {
           author: 'admin',
           pathname: null,
           category: null,
-          createdAt: new Date(),
+          createdAt: new Date().toISOString(),
         },
         {
           id: 1,
@@ -139,7 +139,7 @@ describe('DraftVersionService', () => {
           author: 'admin',
           pathname: null,
           category: null,
-          createdAt: new Date(),
+          createdAt: new Date().toISOString(),
         },
       ];
 
@@ -165,7 +165,7 @@ describe('DraftVersionService', () => {
         author: 'admin',
         pathname: null,
         category: null,
-        createdAt: new Date(),
+        createdAt: new Date().toISOString(),
       };
 
       mockDb.limit.mockResolvedValueOnce([mockVersion]);
@@ -195,7 +195,7 @@ describe('DraftVersionService', () => {
         author: 'admin',
         pathname: null,
         category: null,
-        createdAt: new Date(),
+        createdAt: new Date().toISOString(),
       };
 
       // Mock for getVersion call

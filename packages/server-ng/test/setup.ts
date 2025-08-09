@@ -65,6 +65,34 @@ export async function setupTestDatabase(): Promise<ReturnType<typeof drizzle>> {
     }
   }
 
+  // Manually create plugin_data table if it doesn't exist
+  try {
+    await client.execute(`
+      CREATE TABLE IF NOT EXISTS plugin_data (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        plugin_id TEXT NOT NULL,
+        key TEXT NOT NULL,
+        value TEXT,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+      )
+    `);
+
+    await client.execute(`
+      CREATE INDEX IF NOT EXISTS plugin_data_plugin_id_idx ON plugin_data(plugin_id)
+    `);
+
+    await client.execute(`
+      CREATE INDEX IF NOT EXISTS plugin_data_key_idx ON plugin_data(plugin_id, key)
+    `);
+
+    await client.execute(`
+      CREATE UNIQUE INDEX IF NOT EXISTS plugin_data_unique_idx ON plugin_data(plugin_id, key)
+    `);
+  } catch (error) {
+    console.warn('Failed to create plugin_data table:', error);
+  }
+
   return db;
 }
 

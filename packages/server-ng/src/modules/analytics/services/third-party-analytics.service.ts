@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
+import dayjs from 'dayjs';
 
 @Injectable()
 export class ThirdPartyAnalyticsService {
@@ -98,6 +99,6 @@ export class ThirdPartyAnalyticsService {
     if (ip) {
       return Buffer.from(ip).toString('base64').replace(/=/g, '');
     }
-    return Math.random().toString(36).substring(2) + Date.now().toString(36);
+    return Math.random().toString(36).substring(2) + dayjs().valueOf().toString(36);
   }
 }

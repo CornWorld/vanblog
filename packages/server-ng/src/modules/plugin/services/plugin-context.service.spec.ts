@@ -26,6 +26,9 @@ interface MockDatabase {
   update: ReturnType<typeof vi.fn>;
   set: ReturnType<typeof vi.fn>;
   returning: ReturnType<typeof vi.fn>;
+  $client: {
+    execute: ReturnType<typeof vi.fn>;
+  };
 }
 
 describe('PluginContext Services', () => {
@@ -50,6 +53,9 @@ describe('PluginContext Services', () => {
       update: vi.fn().mockReturnThis(),
       set: vi.fn().mockReturnThis(),
       returning: vi.fn().mockResolvedValue([{ id: 1 }]),
+      $client: {
+        execute: vi.fn().mockResolvedValue({}),
+      },
     } as MockDatabase;
 
     mockConfigService = {
@@ -132,14 +138,25 @@ describe('PluginContext Services', () => {
 
       await dataStorage.set('test-key', testData);
 
-      expect(mockDb.insert).toHaveBeenCalledWith(pluginData);
-      expect(mockDb.values).toHaveBeenCalled();
-      expect(mockDb.onConflictDoUpdate).toHaveBeenCalledWith({
-        target: [pluginData.pluginId, pluginData.key],
-        set: {
-          value: '{"test":"value"}',
-          updatedAt: expect.any(Date) as Date,
-        },
+      expect(mockDb.$client.execute).toHaveBeenCalledWith({
+        sql: 'INSERT INTO plugin_data (plugin_id, key, value, created_at, updated_at) VALUES (?, ?, ?, ?, ?)',
+        args: expect.arrayContaining(['test-plugin', 'test-key', '{"test":"value"}']),
+      });
+    });
+
+    it('should update data when insert fails', async () => {
+      const testData = { test: 'value' };
+
+      // Mock insert to fail first time
+      mockDb.$client.execute.mockRejectedValueOnce(new Error('UNIQUE constraint failed'));
+      mockDb.$client.execute.mockResolvedValueOnce({});
+
+      await dataStorage.set('test-key', testData);
+
+      expect(mockDb.$client.execute).toHaveBeenCalledTimes(2);
+      expect(mockDb.$client.execute).toHaveBeenLastCalledWith({
+        sql: 'UPDATE plugin_data SET value = ?, updated_at = ? WHERE plugin_id = ? AND key = ?',
+        args: expect.arrayContaining(['{"test":"value"}', 'test-plugin', 'test-key']),
       });
     });
 

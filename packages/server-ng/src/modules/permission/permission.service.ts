@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException, Logger, Inject } from '@nestjs/common';
+import dayjs from 'dayjs';
 import { eq, desc, and } from 'drizzle-orm';
 
 import { DATABASE_CONNECTION } from '../../database/database.module';
@@ -29,7 +30,10 @@ export class PermissionService {
   private readonly logger = new Logger(PermissionService.name);
   private readonly registeredPermissions = new Map<string, PermissionNodeType>();
 
-  constructor(@Inject(DATABASE_CONNECTION) private readonly db: Database) {}
+  constructor(
+    @Inject(DATABASE_CONNECTION)
+    private readonly db: Database,
+  ) {}
 
   /**
    * 注册权限节点
@@ -38,26 +42,31 @@ export class PermissionService {
   async registerPermission(
     permission: Omit<CreatePermissionNodeType, 'id' | 'createdAt' | 'updatedAt'>,
   ): Promise<void> {
-    // 检查是否已存在
-    const existing = await this.db
-      .select()
-      .from(permissionNodes)
-      .where(eq(permissionNodes.name, permission.name))
-      .limit(1);
-
-    if (existing.length === 0) {
-      await this.db.insert(permissionNodes).values(permission);
+    const key = `${permission.module}:${permission.name}`;
+    if (this.registeredPermissions.has(key)) {
+      return;
     }
 
-    // 缓存到内存
-    this.registeredPermissions.set(permission.name, {
-      ...permission,
-      description: permission.description ?? null,
-      isActive: permission.isActive ?? true,
-      id: existing[0]?.id ?? 0,
-      createdAt: existing[0]?.createdAt?.toISOString() ?? new Date().toISOString(),
-      updatedAt: existing[0]?.updatedAt?.toISOString() ?? new Date().toISOString(),
-    });
+    try {
+      const existingPermission = await this.db
+        .select()
+        .from(permissionNodes)
+        .where(eq(permissionNodes.name, permission.name))
+        .limit(1);
+
+      if (existingPermission.length === 0) {
+        const newPermission = await this.createPermissionNode(permission);
+        this.registeredPermissions.set(key, newPermission);
+      } else {
+        this.registeredPermissions.set(key, {
+          ...existingPermission[0],
+          createdAt: dayjs(existingPermission[0].createdAt),
+          updatedAt: dayjs(existingPermission[0].updatedAt),
+        });
+      }
+    } catch (error) {
+      this.logger.error(`Failed to register permission ${permission.name}:`, error);
+    }
   }
 
   /**
@@ -117,8 +126,8 @@ export class PermissionService {
       .returning();
     return {
       ...result,
-      createdAt: result.createdAt.toISOString(),
-      updatedAt: result.updatedAt.toISOString(),
+      createdAt: dayjs(result.createdAt),
+      updatedAt: dayjs(result.updatedAt),
     };
   }
 
@@ -140,10 +149,10 @@ export class PermissionService {
         .orderBy(desc(permissionNodes.createdAt))
         .limit(query.limit)
         .offset((query.page - 1) * query.limit);
-      return results.map((result) => ({
-        ...result,
-        createdAt: result.createdAt.toISOString(),
-        updatedAt: result.updatedAt.toISOString(),
+      return results.map((node) => ({
+        ...node,
+        createdAt: dayjs(node.createdAt),
+        updatedAt: dayjs(node.updatedAt),
       }));
     }
 
@@ -155,10 +164,10 @@ export class PermissionService {
         .orderBy(desc(permissionNodes.createdAt))
         .limit(query.limit)
         .offset((query.page - 1) * query.limit);
-      return results.map((result) => ({
-        ...result,
-        createdAt: result.createdAt.toISOString(),
-        updatedAt: result.updatedAt.toISOString(),
+      return results.map((node) => ({
+        ...node,
+        createdAt: dayjs(node.createdAt),
+        updatedAt: dayjs(node.updatedAt),
       }));
     }
 
@@ -169,10 +178,10 @@ export class PermissionService {
       .orderBy(desc(permissionNodes.createdAt))
       .limit(query.limit)
       .offset((query.page - 1) * query.limit);
-    return results.map((result) => ({
-      ...result,
-      createdAt: result.createdAt.toISOString(),
-      updatedAt: result.updatedAt.toISOString(),
+    return results.map((node) => ({
+      ...node,
+      createdAt: dayjs(node.createdAt),
+      updatedAt: dayjs(node.updatedAt),
     }));
   }
 
@@ -189,8 +198,8 @@ export class PermissionService {
 
     return {
       ...result[0],
-      createdAt: result[0].createdAt.toISOString(),
-      updatedAt: result[0].updatedAt.toISOString(),
+      createdAt: dayjs(result[0].createdAt),
+      updatedAt: dayjs(result[0].updatedAt),
     };
   }
 
@@ -200,7 +209,7 @@ export class PermissionService {
   ): Promise<PermissionNodeType> {
     const result = await this.db
       .update(permissionNodes)
-      .set({ ...updatePermissionNodeDto, updatedAt: new Date() })
+      .set({ ...updatePermissionNodeDto, updatedAt: dayjs().toISOString() })
       .where(eq(permissionNodes.id, id))
       .returning();
 
@@ -208,15 +217,10 @@ export class PermissionService {
       throw new NotFoundException(`Permission node with ID ${String(id)} not found`);
     }
 
-    const node = result[0];
     return {
-      id: node.id,
-      name: node.name,
-      description: node.description,
-      module: node.module,
-      isActive: node.isActive,
-      createdAt: node.createdAt.toISOString(),
-      updatedAt: node.updatedAt.toISOString(),
+      ...result[0],
+      createdAt: dayjs(result[0].createdAt),
+      updatedAt: dayjs(result[0].updatedAt),
     };
   }
 
@@ -239,8 +243,8 @@ export class PermissionService {
     return {
       ...result,
       permissions: result.permissions ? (JSON.parse(result.permissions) as string[]) : null,
-      createdAt: result.createdAt.toISOString(),
-      updatedAt: result.updatedAt.toISOString(),
+      createdAt: dayjs(result.createdAt),
+      updatedAt: dayjs(result.updatedAt),
     };
   }
 
@@ -267,8 +271,8 @@ export class PermissionService {
     return results.map((group) => ({
       ...group,
       permissions: group.permissions ? (JSON.parse(group.permissions) as string[]) : null,
-      createdAt: group.createdAt.toISOString(),
-      updatedAt: group.updatedAt.toISOString(),
+      createdAt: dayjs(group.createdAt),
+      updatedAt: dayjs(group.updatedAt),
     }));
   }
 
@@ -286,8 +290,8 @@ export class PermissionService {
     return {
       ...result[0],
       permissions: result[0].permissions ? (JSON.parse(result[0].permissions) as string[]) : null,
-      createdAt: result[0].createdAt.toISOString(),
-      updatedAt: result[0].updatedAt.toISOString(),
+      createdAt: dayjs(result[0].createdAt),
+      updatedAt: dayjs(result[0].updatedAt),
     };
   }
 
@@ -297,7 +301,7 @@ export class PermissionService {
   ): Promise<PermissionGroupType> {
     const result = await this.db
       .update(permissionGroups)
-      .set({ ...updatePermissionGroupDto, updatedAt: new Date() })
+      .set({ ...updatePermissionGroupDto, updatedAt: dayjs().toISOString() })
       .where(eq(permissionGroups.id, id))
       .returning();
 
@@ -308,8 +312,8 @@ export class PermissionService {
     return {
       ...result[0],
       permissions: result[0].permissions ? (JSON.parse(result[0].permissions) as string[]) : null,
-      createdAt: result[0].createdAt.toISOString(),
-      updatedAt: result[0].updatedAt.toISOString(),
+      createdAt: dayjs(result[0].createdAt),
+      updatedAt: dayjs(result[0].updatedAt),
     };
   }
 

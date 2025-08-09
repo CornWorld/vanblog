@@ -8,15 +8,7 @@ import {
 } from '../../../database/zod-schemas';
 
 // 权限节点基础 Schema
-export const PermissionNodeSchema = selectPermissionNodeSchema
-  .omit({
-    createdAt: true,
-    updatedAt: true,
-  })
-  .extend({
-    createdAt: z.string(),
-    updatedAt: z.string(),
-  });
+export const PermissionNodeSchema = selectPermissionNodeSchema;
 
 // 创建权限节点 Schema
 export const CreatePermissionNodeSchema = insertPermissionNodeSchema.omit({

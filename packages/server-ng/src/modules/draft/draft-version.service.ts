@@ -1,8 +1,10 @@
 import { Injectable, NotFoundException, Inject } from '@nestjs/common';
+import dayjs from 'dayjs';
 import { eq, and, desc, sql } from 'drizzle-orm';
 
 import { DATABASE_CONNECTION } from '../../database';
 import { draftVersions, drafts } from '../../database/schema';
+import { selectDraftVersionSchema } from '../../database/zod-schemas';
 import { safeParseJson, dataSchemas } from '../../shared/zod';
 
 import { DraftVersionDto } from './dto/draft.dto';
@@ -64,7 +66,7 @@ export class DraftVersionService {
       tags: safeParseJson(newVersion.tags, dataSchemas.tagsArray) ?? [],
       pathname: newVersion.pathname ?? null,
       category: newVersion.category ?? null,
-      createdAt: newVersion.createdAt.toISOString(),
+      createdAt: dayjs(newVersion.createdAt),
     };
   }
 
@@ -75,13 +77,19 @@ export class DraftVersionService {
       .where(eq(draftVersions.draftId, draftId))
       .orderBy(desc(draftVersions.version));
 
-    return results.map((version) => ({
-      ...version,
-      tags: safeParseJson(version.tags, dataSchemas.tagsArray) ?? [],
-      pathname: version.pathname,
-      category: version.category,
-      createdAt: version.createdAt.toISOString(),
-    }));
+    return results.map((version) => {
+      const parsed = selectDraftVersionSchema.safeParse(version);
+      if (!parsed.success) {
+        throw new Error(`Failed to parse draft version: ${parsed.error.message}`);
+      }
+      return {
+        ...parsed.data,
+        tags: safeParseJson(version.tags, dataSchemas.tagsArray) ?? [],
+        pathname: version.pathname ?? null,
+        category: version.category ?? null,
+        createdAt: parsed.data.createdAt,
+      };
+    });
   }
 
   async getVersion(draftId: number, version: number): Promise<DraftVersionDto> {
@@ -97,14 +105,18 @@ export class DraftVersionService {
       );
     }
 
-    const versionData = results[0];
+    const parseResult = selectDraftVersionSchema.safeParse(results[0]);
+    if (!parseResult.success) {
+      throw new Error(`Failed to parse draft version: ${parseResult.error.message}`);
+    }
 
+    const versionData = parseResult.data;
     return {
       ...versionData,
-      tags: safeParseJson(versionData.tags, dataSchemas.tagsArray) ?? [],
-      pathname: versionData.pathname,
-      category: versionData.category,
-      createdAt: versionData.createdAt.toISOString(),
+      tags: safeParseJson(results[0].tags, dataSchemas.tagsArray) ?? [],
+      pathname: versionData.pathname ?? null,
+      category: versionData.category ?? null,
+      createdAt: versionData.createdAt,
     };
   }
 
@@ -123,7 +135,7 @@ export class DraftVersionService {
           versionData.tags && versionData.tags.length > 0 ? JSON.stringify(versionData.tags) : null,
         category: versionData.category ?? null,
         author: versionData.author,
-        updatedAt: new Date(),
+        updatedAt: dayjs().toISOString(),
       })
       .where(eq(drafts.id, draftId));
   }

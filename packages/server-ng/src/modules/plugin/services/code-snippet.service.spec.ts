@@ -102,12 +102,7 @@ describe('CodeSnippetService', () => {
         updatedAt: now.toISOString(),
       };
 
-      const dbResult = {
-        ...expectedResult,
-        createdAt: now,
-        updatedAt: now,
-      };
-      mockDb.returning.mockResolvedValueOnce([dbResult]);
+      mockDb.returning.mockResolvedValueOnce([expectedResult]);
 
       const result = await service.create(createDto);
 
@@ -149,12 +144,7 @@ describe('CodeSnippetService', () => {
         updatedAt: now.toISOString(),
       };
 
-      const dbResult = {
-        ...expectedResult,
-        createdAt: now,
-        updatedAt: now,
-      };
-      mockDb.limit.mockResolvedValueOnce([dbResult]);
+      mockDb.limit.mockResolvedValueOnce([expectedResult]);
 
       const result = await service.findOne(1);
 
@@ -193,12 +183,7 @@ describe('CodeSnippetService', () => {
         updatedAt: now.toISOString(),
       };
 
-      const dbResult = {
-        ...expectedResult,
-        createdAt: now,
-        updatedAt: now,
-      };
-      mockDb.returning.mockResolvedValueOnce([dbResult]);
+      mockDb.returning.mockResolvedValueOnce([expectedResult]);
 
       const result = await service.update(1, updateDto);
 
@@ -303,12 +288,7 @@ describe('CodeSnippetService', () => {
         },
       ];
 
-      const dbResults = expectedResults.map((result) => ({
-        ...result,
-        createdAt: now,
-        updatedAt: now,
-      }));
-      mockDb.orderBy.mockResolvedValueOnce(dbResults);
+      mockDb.orderBy.mockResolvedValueOnce(expectedResults);
 
       const result = await service.findByHook('test-hook', 'action');
 

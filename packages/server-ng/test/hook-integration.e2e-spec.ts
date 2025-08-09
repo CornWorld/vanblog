@@ -17,8 +17,9 @@ describe('Hook Integration (e2e)', () => {
   let draftService: DraftService;
 
   beforeAll(async () => {
+    const appModule = await AppModule.forRoot();
     const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
+      imports: [appModule],
     }).compile();
 
     app = moduleFixture.createNestApplication();

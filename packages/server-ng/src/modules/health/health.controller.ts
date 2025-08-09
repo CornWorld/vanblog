@@ -1,5 +1,6 @@
 import { Controller, Get } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import dayjs from 'dayjs';
 
 interface HealthCheckResponse {
   status: 'ok' | 'error';
@@ -22,7 +23,7 @@ export class HealthController {
   healthCheck(): HealthCheckResponse {
     return {
       status: 'ok',
-      timestamp: new Date().toISOString(),
+      timestamp: dayjs().toISOString(),
       uptime: process.uptime(),
       environment: process.env['NODE_ENV'] ?? 'development',
       version: '2.0.0',

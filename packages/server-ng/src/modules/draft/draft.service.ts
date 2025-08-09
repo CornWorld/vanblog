@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException, Inject } from '@nestjs/common';
+import dayjs from 'dayjs';
 import { eq, and, or, like, desc, asc, sql } from 'drizzle-orm';
 
 import { DATABASE_CONNECTION } from '../../database';
@@ -87,8 +88,8 @@ export class DraftService {
         tags: draft.tags,
         author: draft.author,
         version: draft.version,
-        createdAt: draft.createdAt.toISOString(),
-        updatedAt: draft.updatedAt.toISOString(),
+        createdAt: dayjs(draft.createdAt),
+        updatedAt: dayjs(draft.updatedAt),
       })),
       total: Number(countResult[0]?.count) || 0,
       page,
@@ -111,8 +112,8 @@ export class DraftService {
       tags: safeParseJson(draft.tags, dataSchemas.tagsArray) ?? [],
       pathname: draft.pathname,
       category: draft.category,
-      createdAt: draft.createdAt.toISOString(),
-      updatedAt: draft.updatedAt.toISOString(),
+      createdAt: dayjs(draft.createdAt),
+      updatedAt: dayjs(draft.updatedAt),
     };
   }
 
@@ -140,13 +141,14 @@ export class DraftService {
     }
 
     const newDraft = result[0];
+
     const draftResult = {
       ...newDraft,
       tags: safeParseJson(newDraft.tags, dataSchemas.tagsArray) ?? [],
       pathname: newDraft.pathname,
       category: newDraft.category,
-      createdAt: newDraft.createdAt.toISOString(),
-      updatedAt: newDraft.updatedAt.toISOString(),
+      createdAt: dayjs(newDraft.createdAt),
+      updatedAt: dayjs(newDraft.updatedAt),
     };
 
     // Trigger afterCreateDraft hook (new hook system)
@@ -187,7 +189,7 @@ export class DraftService {
       updateData.author = rest.author;
     }
 
-    updateData.updatedAt = new Date();
+    updateData.updatedAt = dayjs().toISOString();
 
     // Trigger beforeUpdateDraft hook (new hook system)
     updateData = await this.hookService.applyFilters('draft|beforeUpdate', updateData, {
@@ -206,13 +208,14 @@ export class DraftService {
     }
 
     const updatedDraft = result[0];
+
     const draftResult = {
       ...updatedDraft,
       tags: safeParseJson(updatedDraft.tags, dataSchemas.tagsArray) ?? [],
       pathname: updatedDraft.pathname,
       category: updatedDraft.category,
-      createdAt: updatedDraft.createdAt.toISOString(),
-      updatedAt: updatedDraft.updatedAt.toISOString(),
+      createdAt: dayjs(updatedDraft.createdAt),
+      updatedAt: dayjs(updatedDraft.updatedAt),
     };
 
     // Trigger afterUpdateDraft hook (new hook system)
@@ -328,7 +331,7 @@ export class DraftService {
       updateData.author = rest.author;
     }
 
-    updateData.updatedAt = new Date();
+    updateData.updatedAt = dayjs().toISOString();
 
     const result = await this.db
       .update(drafts)
@@ -347,8 +350,8 @@ export class DraftService {
       tags: safeParseJson(updatedDraft.tags, dataSchemas.tagsArray) ?? [],
       pathname: updatedDraft.pathname,
       category: updatedDraft.category,
-      createdAt: updatedDraft.createdAt.toISOString(),
-      updatedAt: updatedDraft.updatedAt.toISOString(),
+      createdAt: dayjs(updatedDraft.createdAt),
+      updatedAt: dayjs(updatedDraft.updatedAt),
     };
   }
 

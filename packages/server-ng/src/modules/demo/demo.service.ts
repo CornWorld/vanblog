@@ -1,6 +1,7 @@
 import { Injectable, Logger, Inject, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Cron } from '@nestjs/schedule';
+import dayjs from 'dayjs';
 
 import { DATABASE_CONNECTION } from '../../database';
 import {
@@ -65,7 +66,7 @@ export class DemoService implements OnModuleInit {
   async createSnapshot(): Promise<void> {
     try {
       const snapshot: DemoSnapshot = {
-        timestamp: Date.now(),
+        timestamp: dayjs().valueOf(),
         articles: await this.db.select().from(articles),
         drafts: await this.db.select().from(drafts),
         categories: await this.db.select().from(categories),

@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException, Inject } from '@nestjs/common';
+import dayjs from 'dayjs';
 import * as bcrypt from 'bcrypt';
 import { eq, sql } from 'drizzle-orm';
 import * as jwt from 'jsonwebtoken';
@@ -57,8 +58,8 @@ export class CategoryService {
       private: category.private,
       password: category.password,
       articleCount: Number(category.articleCount) || 0,
-      createdAt: category.createdAt.toISOString(),
-      updatedAt: category.updatedAt.toISOString(),
+      createdAt: dayjs(category.createdAt),
+      updatedAt: dayjs(category.updatedAt),
     }));
 
     return {
@@ -80,8 +81,8 @@ export class CategoryService {
       description: results[0].description ?? null,
       private: results[0].private ?? null,
       password: results[0].password ?? null,
-      createdAt: results[0].createdAt.toISOString(),
-      updatedAt: results[0].updatedAt.toISOString(),
+      createdAt: dayjs(results[0].createdAt),
+      updatedAt: dayjs(results[0].updatedAt),
     };
   }
 
@@ -110,8 +111,8 @@ export class CategoryService {
       description: result[0].description ?? null,
       private: result[0].private ?? null,
       password: result[0].password ?? null,
-      createdAt: result[0].createdAt.toISOString(),
-      updatedAt: result[0].updatedAt.toISOString(),
+      createdAt: dayjs(result[0].createdAt),
+      updatedAt: dayjs(result[0].updatedAt),
     };
 
     // Trigger afterCreate hook
@@ -158,8 +159,8 @@ export class CategoryService {
       description: result[0].description ?? null,
       private: result[0].private ?? null,
       password: result[0].password ?? null,
-      createdAt: result[0].createdAt.toISOString(),
-      updatedAt: result[0].updatedAt.toISOString(),
+      createdAt: dayjs(result[0].createdAt),
+      updatedAt: dayjs(result[0].updatedAt),
     };
 
     // Trigger afterUpdate hook

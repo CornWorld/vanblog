@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException, Inject } from '@nestjs/common';
+import dayjs from 'dayjs';
 import { eq, sql, like } from 'drizzle-orm';
 
 import { DATABASE_CONNECTION } from '../../database';
@@ -39,7 +40,7 @@ export class TagService {
           name: tag.name,
           slug: tag.slug,
           articleCount: Number(countResult[0]?.count) || 0,
-          createdAt: tag.createdAt.toISOString(),
+          createdAt: dayjs(tag.createdAt),
         };
       }),
     );

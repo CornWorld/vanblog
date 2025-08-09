@@ -1,6 +1,7 @@
 // Example plugin for VanBlog plugin system
 // This demonstrates how to create a plugin with hooks and context usage
 
+import dayjs from 'dayjs';
 import type {
   ActionCallback,
   FilterCallback,
@@ -34,7 +35,7 @@ const plugin: Plugin = {
     context.logger.log('Example plugin initializing...');
 
     // Test data storage
-    await context.data.set('initialized_at', new Date().toISOString());
+    await context.data.set('initialized_at', dayjs().toISOString());
     await context.data.set('article_count', 0);
 
     // Test configuration reading
@@ -85,7 +86,7 @@ const plugin: Plugin = {
         // Example: Add plugin metadata
         articleData.metadata ??= {};
         articleData.metadata.processedByPlugin = 'example-plugin';
-        articleData.metadata.processedAt = new Date().toISOString();
+        articleData.metadata.processedAt = dayjs().toISOString();
 
         return articleData;
       }) as FilterCallback,
