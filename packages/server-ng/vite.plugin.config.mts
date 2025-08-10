@@ -38,7 +38,7 @@ export default defineConfig({
     lib: {
       entry: scanPlugins(),
       formats: ['cjs'], // 使用 CommonJS 格式
-      fileName: (format, entryName) => {
+      fileName: (_format, entryName) => {
         return `${entryName}.js`;
       },
     },

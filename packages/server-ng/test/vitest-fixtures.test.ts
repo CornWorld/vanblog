@@ -33,41 +33,46 @@ class DatabaseMockBuilder {
    * 设置查询结果
    */
   setQueryResult(data: unknown[]): this {
-    // 创建查询链Mock对象
-    const queryChain = {
-      from: vi.fn().mockReturnThis(),
-      where: vi.fn().mockReturnThis(),
-      orderBy: vi.fn().mockReturnThis(),
-      limit: vi.fn().mockReturnThis(),
-      offset: vi.fn().mockResolvedValue(data),
-      innerJoin: vi.fn().mockReturnThis(),
-      leftJoin: vi.fn().mockReturnThis(),
-      rightJoin: vi.fn().mockReturnThis(),
-      groupBy: vi.fn().mockReturnThis(),
-      having: vi.fn().mockReturnThis(),
+    const createQueryChain = (): Record<string, ReturnType<typeof vi.fn>> => {
+      const mockChain = {
+        from: vi.fn().mockReturnThis(),
+        where: vi.fn().mockReturnThis(),
+        orderBy: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockReturnThis(),
+        offset: vi.fn().mockReturnThis(),
+        innerJoin: vi.fn().mockReturnThis(),
+        leftJoin: vi.fn().mockReturnThis(),
+        rightJoin: vi.fn().mockReturnThis(),
+        groupBy: vi.fn().mockReturnThis(),
+        having: vi.fn().mockReturnThis(),
+      };
+
+      // Make the chain thenable so it can be awaited directly
+      Object.assign(mockChain, {
+        then: async (resolve: (value: unknown) => void) => {
+          resolve(data);
+          return Promise.resolve(data);
+        },
+        catch: async () => Promise.resolve(data),
+      });
+
+      // Set up from method to return a thenable object
+      mockChain.from.mockImplementation(() => {
+        return {
+          ...mockChain,
+          then: async (resolve: (value: unknown) => void) => {
+            resolve(data);
+            return Promise.resolve(data);
+          },
+          catch: async () => Promise.resolve(data),
+        };
+      });
+
+      return mockChain;
     };
 
-    // 设置limit方法返回可执行的Promise
-    queryChain.limit.mockImplementation(async () => {
-      // 对于limit查询，通常是最后一步，直接返回Promise
-      return Promise.resolve(data);
-    });
-
-    // 重新设置from方法以支持不同的调用模式
-    queryChain.from.mockImplementation(() => {
-      // 返回一个新的对象，包含所有查询方法
-      return {
-        ...queryChain,
-        // 对于简单查询，直接await会返回数据
-        then: (resolve: (value: unknown) => void) => {
-          resolve(data);
-        },
-        catch: () => {},
-      };
-    });
-
-    // 设置select方法返回查询链
-    this.mockDb.select.mockReturnValue(queryChain);
+    // 每次调用select都返回新的查询链
+    this.mockDb.select.mockImplementation(() => createQueryChain());
 
     return this;
   }
@@ -85,17 +90,29 @@ class DatabaseMockBuilder {
 
       const mockChain = {
         from: vi.fn().mockReturnThis(),
-        where: vi.fn().mockImplementation(async () => {
-          // 如果是count查询（第二个查询），直接返回结果
+        where: vi.fn().mockImplementation(() => {
+          // 如果是count查询（第二个查询），返回带then方法的对象
           if (currentCallCount === 1) {
-            return Promise.resolve(result);
+            return {
+              ...mockChain,
+              then: async (resolve: (value: unknown) => void) => {
+                resolve(result);
+                return Promise.resolve(result);
+              },
+            };
           }
           return mockChain;
         }),
         orderBy: vi.fn().mockReturnThis(),
         limit: vi.fn().mockReturnThis(),
-        offset: vi.fn().mockImplementation(async () => {
-          return Promise.resolve(result);
+        offset: vi.fn().mockImplementation(() => {
+          return {
+            ...mockChain,
+            then: async (resolve: (value: unknown) => void) => {
+              resolve(result);
+              return Promise.resolve(result);
+            },
+          };
         }),
         innerJoin: vi.fn().mockReturnThis(),
         leftJoin: vi.fn().mockReturnThis(),
@@ -123,9 +140,18 @@ class DatabaseMockBuilder {
    * 设置插入结果
    */
   setInsertResult(data: unknown[]): this {
-    this.mockDb.insert.mockReturnThis();
-    this.mockDb.values.mockReturnThis();
-    this.mockDb.returning.mockResolvedValue(data);
+    // Create a chain that supports insert().values().returning()
+    const insertChain = {
+      values: vi.fn().mockReturnThis(),
+      returning: vi.fn().mockResolvedValue(data),
+    };
+
+    // Set up values to return the chain with returning
+    insertChain.values.mockReturnValue({
+      returning: vi.fn().mockResolvedValue(data),
+    });
+
+    this.mockDb.insert.mockReturnValue(insertChain);
     return this;
   }
 
@@ -134,16 +160,19 @@ class DatabaseMockBuilder {
    */
   setUpdateResult(data: unknown[]): this {
     this.mockDb.update.mockReturnThis();
-    this.mockDb.set.mockResolvedValue(data);
+    this.mockDb.set.mockReturnThis();
+    this.mockDb.where.mockReturnThis();
+    this.mockDb.returning.mockResolvedValue(data);
     return this;
   }
 
   /**
    * 设置删除结果
    */
-  setDeleteResult(affectedRows = 1): this {
+  setDeleteResult(returningData: unknown[] = []): this {
     this.mockDb.delete.mockReturnThis();
-    this.mockDb.where.mockResolvedValue({ affectedRows });
+    this.mockDb.where.mockReturnThis();
+    this.mockDb.returning.mockResolvedValue(returningData);
     return this;
   }
 
@@ -476,6 +505,12 @@ export const test = baseTest.extend<TestContext>({
     await use(resetFn);
   },
 });
+
+// 导出特定的测试函数
+export const tagTest = test;
+export const analyticsTest = test;
+export const configTest = test;
+export const mockUtilsTest = test;
 
 // 导出类型和工厂类供其他地方使用
 export { DatabaseMockBuilder };

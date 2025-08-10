@@ -142,7 +142,7 @@ describe('MediaService with Vitest Fixtures', () => {
 
         // 设置查询和删除结果
         databaseMock.setQueryResult([mockFile]);
-        databaseMock.setDeleteResult(1);
+        databaseMock.setDeleteResult([1]);
 
         const result = await mediaService.deleteFile(1);
 
@@ -167,7 +167,7 @@ describe('MediaService with Vitest Fixtures', () => {
         const mockFiles = testData.createMediaFiles({ count: 2 });
 
         databaseMock.setQueryResult(mockFiles);
-        databaseMock.setDeleteResult(2);
+        databaseMock.setDeleteResult([2]);
 
         const result = await mediaService.deleteFiles([1, 2]);
 
@@ -183,7 +183,7 @@ describe('MediaService with Vitest Fixtures', () => {
         const mockFiles = testData.createMediaFiles({ count: 2 });
 
         databaseMock.setQueryResult(mockFiles);
-        databaseMock.setDeleteResult(1); // 只删除了1个
+        databaseMock.setDeleteResult([1]); // 只删除了1个
 
         // 模拟存储删除部分失败
         storageService.delete = vi
