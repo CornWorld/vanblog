@@ -178,6 +178,8 @@ export class ImageProcessingService {
       case 'southeast':
         return 'southeast';
       case 'center':
+        return 'center';
+      case undefined:
       default:
         return 'center';
     }

@@ -30,7 +30,7 @@ export class DraftVersionService {
       throw new NotFoundException(`Draft with ID ${String(draftId)} not found`);
     }
 
-    const currentDraft = currentDraftResults[0];
+    const [currentDraft] = currentDraftResults;
 
     // Get the next version number
     const maxVersionResult = await this.db
@@ -59,7 +59,7 @@ export class DraftVersionService {
       throw new Error('Failed to create draft version');
     }
 
-    const newVersion = result[0];
+    const [newVersion] = result;
 
     return {
       ...newVersion,

@@ -14,23 +14,19 @@ describe('DraftVersionService', () => {
     // Create chainable mock object
     const createChainableMock = (): Record<string, ReturnType<typeof vi.fn>> => {
       const mock: Record<string, ReturnType<typeof vi.fn>> = {
-        select: vi.fn(),
-        from: vi.fn(),
-        where: vi.fn(),
-        orderBy: vi.fn(),
-        limit: vi.fn(),
-        insert: vi.fn(),
-        values: vi.fn(),
-        returning: vi.fn(),
-        update: vi.fn(),
-        set: vi.fn(),
-        delete: vi.fn(),
+        select: vi.fn().mockReturnThis(),
+        from: vi.fn().mockReturnThis(),
+        where: vi.fn().mockReturnThis(),
+        orderBy: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockReturnThis(),
+        offset: vi.fn().mockReturnThis(),
+        insert: vi.fn().mockReturnThis(),
+        values: vi.fn().mockReturnThis(),
+        returning: vi.fn().mockResolvedValue([]),
+        update: vi.fn().mockReturnThis(),
+        set: vi.fn().mockReturnThis(),
+        delete: vi.fn().mockReturnThis(),
       };
-
-      // Make each method return the mock object for chaining
-      Object.keys(mock).forEach((key) => {
-        mock[key].mockReturnValue(mock);
-      });
 
       return mock;
     };
@@ -80,20 +76,26 @@ describe('DraftVersionService', () => {
 
       // Setup for first query: select().from(drafts).where().limit()
       let limitCallCount = 0;
-      mockDb.limit.mockImplementation(async () => {
+      mockDb.limit.mockImplementation(() => {
         limitCallCount++;
         if (limitCallCount === 1) {
-          return Promise.resolve([mockDraft]);
+          return {
+            ...mockDb,
+            then: (resolve: any) => resolve([mockDraft]),
+          };
         }
         return mockDb;
       });
 
       // Setup for second query: select({maxVersion}).from(draftVersions).where()
       let whereCallCount = 0;
-      mockDb.where.mockImplementation(async () => {
+      mockDb.where.mockImplementation(() => {
         whereCallCount++;
         if (whereCallCount === 2) {
-          return Promise.resolve([{ maxVersion: 1 }]);
+          return {
+            ...mockDb,
+            then: (resolve: any) => resolve([{ maxVersion: 1 }]),
+          };
         }
         return mockDb;
       });
@@ -200,21 +202,27 @@ describe('DraftVersionService', () => {
 
       // Mock for getVersion call
       let limitCallCount = 0;
-      mockDb.limit.mockImplementation(async () => {
+      mockDb.limit.mockImplementation(() => {
         limitCallCount++;
         if (limitCallCount === 1) {
-          return Promise.resolve([mockVersion]);
+          return {
+            ...mockDb,
+            then: (resolve: any) => resolve([mockVersion]),
+          };
         }
         return mockDb;
       });
 
       // Mock for update query - where should return mockDb for chaining
       let whereCallCount = 0;
-      mockDb.where.mockImplementation(async () => {
+      mockDb.where.mockImplementation(() => {
         whereCallCount++;
         // For the update query (3rd where call)
         if (whereCallCount === 3) {
-          return Promise.resolve([{ id: 1 }]);
+          return {
+            ...mockDb,
+            then: (resolve: any) => resolve([{ id: 1 }]),
+          };
         }
         return mockDb;
       });

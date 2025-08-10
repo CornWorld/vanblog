@@ -50,7 +50,7 @@ export class ArticleService {
       const tagConditions = [like(articles.tags, `%"${String(tag)}"%`)];
       whereConditions.push(or(...tagConditions));
     }
-    if (keyword) {
+    if (keyword !== '') {
       whereConditions.push(
         or(
           like(articles.title, `%${String(keyword)}%`),
@@ -101,7 +101,7 @@ export class ArticleService {
       updatedAt: dayjs(article.updatedAt),
     }));
 
-    const total = Number(countResult[0]?.count || 0);
+    const total = Number(countResult[0]?.count) > 0 ? Number(countResult[0]?.count) : 0;
     const totalPages = Math.ceil(total / Number(pageSize));
 
     return {
@@ -134,7 +134,7 @@ export class ArticleService {
       const tagConditions = tags.map((tag: string) => like(articles.tags, `%"${String(tag)}"%`));
       whereConditions.push(or(...tagConditions));
     }
-    if (keyword) {
+    if (keyword !== '') {
       whereConditions.push(
         or(
           like(articles.title, `%${String(keyword)}%`),
@@ -179,7 +179,7 @@ export class ArticleService {
       highlight: undefined,
     }));
 
-    const total = Number(countResult[0]?.count || 0);
+    const total = Number(countResult[0]?.count) > 0 ? Number(countResult[0]?.count) : 0;
     const totalPages = Math.ceil(total / Number(pageSize));
 
     return {
@@ -198,7 +198,7 @@ export class ArticleService {
       throw new NotFoundException(`Article with ID ${String(id)} not found`);
     }
 
-    const article = articleResult[0];
+    const [article] = articleResult;
     return new Article({
       ...article,
       tags: safeParseJson(article.tags, dataSchemas.tagsArray) ?? [],
@@ -226,7 +226,7 @@ export class ArticleService {
       content: String(articleData.content),
       pathname: articleData.pathname ? String(articleData.pathname) : undefined,
       category: articleData.category ? String(articleData.category) : undefined,
-      author: articleData.author ? String(articleData.author) : 'admin',
+      author: articleData.author !== '' ? String(articleData.author) : 'admin',
       top: articleData.top ? Number(articleData.top) : undefined,
       hidden: articleData.hidden ? Boolean(articleData.hidden) : undefined,
       private: articleData.private ? Boolean(articleData.private) : undefined,
@@ -250,7 +250,7 @@ export class ArticleService {
 
     const insertResult = await this.db.insert(articles).values([newArticleData]).returning();
 
-    const newArticle = insertResult[0];
+    const [newArticle] = insertResult;
     const articleResult = new Article({
       ...newArticle,
       tags: safeParseJson(newArticle.tags, dataSchemas.tagsArray) ?? [],
@@ -312,7 +312,7 @@ export class ArticleService {
       .where(eq(articles.id, id))
       .returning();
 
-    const updatedArticle = updateResult[0];
+    const [updatedArticle] = updateResult;
     const articleResult = new Article({
       ...updatedArticle,
       tags: safeParseJson(updatedArticle.tags, dataSchemas.tagsArray) ?? [],

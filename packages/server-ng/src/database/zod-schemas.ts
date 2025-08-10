@@ -26,7 +26,7 @@ import {
 export const selectUserSchema = createSelectSchema(users, {
   permissions: (schema) =>
     schema.transform((str) => {
-      if (!str) {
+      if (str === '') {
         return [];
       }
       try {
@@ -68,7 +68,7 @@ export const updateUserSchema = createUpdateSchema(users, {
 export const selectArticleSchema = createSelectSchema(articles, {
   tags: (schema) =>
     schema.transform((str) => {
-      if (!str) {
+      if (str === '') {
         return [];
       }
       try {
@@ -146,7 +146,7 @@ export const updateTagSchema = createUpdateSchema(tags, {
 export const selectDraftSchema = createSelectSchema(drafts, {
   tags: (schema) =>
     schema.transform((str) => {
-      if (!str) {
+      if (str === '') {
         return [];
       }
       try {
@@ -189,7 +189,7 @@ export const updateDraftSchema = createUpdateSchema(drafts, {
 export const selectDraftVersionSchema = createSelectSchema(draftVersions, {
   tags: (schema) =>
     schema.transform((str) => {
-      if (!str) {
+      if (str === '') {
         return [];
       }
       try {
@@ -295,14 +295,10 @@ export const updateCustomPageSchema = createUpdateSchema(customPages, {
 export const selectAnalyticsSchema = createSelectSchema(analytics, {
   data: (schema) =>
     schema.transform((str): unknown => {
-      if (!str) {
+      if (str === '') {
         return null;
       }
       try {
-        const parseResult = z.unknown().safeParse(str);
-        if (!parseResult.success) {
-          return null;
-        }
         return JSON.parse(str);
       } catch {
         return null;
@@ -388,7 +384,7 @@ export const updatePermissionNodeSchema = createUpdateSchema(permissionNodes, {
 export const selectPermissionGroupSchema = createSelectSchema(permissionGroups, {
   permissions: (schema) =>
     schema.transform((str) => {
-      if (!str) {
+      if (str === '') {
         return [];
       }
       try {

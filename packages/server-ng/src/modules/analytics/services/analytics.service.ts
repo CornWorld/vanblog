@@ -206,7 +206,7 @@ export class AnalyticsService {
   async exportAnalyticsData(query: QueryAnalyticsDto): Promise<unknown[]> {
     const conditions = [];
 
-    if (query.type) {
+    if (query.type != null) {
       conditions.push(eq(analytics.type, query.type));
     }
 

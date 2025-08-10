@@ -38,7 +38,7 @@ class DatabaseMockBuilder {
       from: vi.fn().mockReturnThis(),
       where: vi.fn().mockReturnThis(),
       orderBy: vi.fn().mockReturnThis(),
-      limit: vi.fn().mockResolvedValue(data),
+      limit: vi.fn().mockReturnThis(),
       offset: vi.fn().mockResolvedValue(data),
       innerJoin: vi.fn().mockReturnThis(),
       leftJoin: vi.fn().mockReturnThis(),
@@ -46,6 +46,12 @@ class DatabaseMockBuilder {
       groupBy: vi.fn().mockReturnThis(),
       having: vi.fn().mockReturnThis(),
     };
+
+    // 设置limit方法返回可执行的Promise
+    queryChain.limit.mockImplementation(async () => {
+      // 对于limit查询，通常是最后一步，直接返回Promise
+      return Promise.resolve(data);
+    });
 
     // 重新设置from方法以支持不同的调用模式
     queryChain.from.mockImplementation(() => {
@@ -97,6 +103,12 @@ class DatabaseMockBuilder {
         groupBy: vi.fn().mockReturnThis(),
         having: vi.fn().mockReturnThis(),
       };
+
+      // 设置limit方法的特殊处理
+      mockChain.limit.mockImplementation(() => {
+        // limit后面通常跟offset，所以返回mockChain
+        return mockChain;
+      });
 
       return mockChain;
     };

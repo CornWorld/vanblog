@@ -57,7 +57,7 @@ export class CategoryService {
       description: category.description,
       private: category.private,
       password: category.password,
-      articleCount: Number(category.articleCount) || 0,
+      articleCount: Number(category.articleCount) > 0 ? Number(category.articleCount) : 0,
       createdAt: dayjs(category.createdAt),
       updatedAt: dayjs(category.updatedAt),
     }));
@@ -190,7 +190,7 @@ export class CategoryService {
       .select({ count: sql<number>`count(*)` })
       .from(articles)
       .where(eq(articles.category, category.name))
-      .then((res) => Number(res[0]?.count || 0));
+      .then((res) => (Number(res[0]?.count) > 0 ? Number(res[0]?.count) : 0));
 
     if (articlesInCategory > 0) {
       throw new Error(

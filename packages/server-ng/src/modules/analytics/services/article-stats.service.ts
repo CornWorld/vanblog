@@ -97,7 +97,7 @@ export class ArticleStatsService {
       title: row.title ?? 'Untitled',
       views: row.views,
       uniqueVisitors: row.uniqueVisitors,
-      avgReadTime: row.avgReadTime || 0,
+      avgReadTime: row.avgReadTime > 0 ? row.avgReadTime : 0,
     }));
   }
 
@@ -128,7 +128,7 @@ export class ArticleStatsService {
       title: result[0].title ?? 'Untitled',
       views: result[0].views,
       uniqueVisitors: result[0].uniqueVisitors,
-      avgReadTime: result[0].avgReadTime || 0,
+      avgReadTime: result[0].avgReadTime > 0 ? result[0].avgReadTime : 0,
     };
   }
 

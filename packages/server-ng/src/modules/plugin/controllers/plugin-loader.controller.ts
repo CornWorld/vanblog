@@ -1,9 +1,7 @@
 import { Controller, Get, Post, Delete, Param, HttpCode, HttpStatus, Logger } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 
-import { PluginLoaderService } from '../services/plugin-loader.service';
-
-import type { Plugin } from '../services/plugin-loader.service';
+import { PluginLoaderService, type Plugin } from '../services/plugin-loader.service';
 
 export interface PluginInfo {
   name: string;

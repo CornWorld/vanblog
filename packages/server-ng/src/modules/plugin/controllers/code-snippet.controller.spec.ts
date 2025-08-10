@@ -1,11 +1,9 @@
-import { Test } from '@nestjs/testing';
+import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, beforeEach, expect, vi } from 'vitest';
 
 import { CodeSnippetService } from '../services/code-snippet.service';
 
 import { CodeSnippetController } from './code-snippet.controller';
-
-import type { TestingModule } from '@nestjs/testing';
 
 describe('CodeSnippetController', () => {
   let controller: CodeSnippetController;

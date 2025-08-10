@@ -19,24 +19,19 @@ describe('DraftService', () => {
     // Create chainable mock object
     const createChainableMock = (): Record<string, ReturnType<typeof vi.fn>> => {
       const mock: Record<string, ReturnType<typeof vi.fn>> = {
-        select: vi.fn(),
-        from: vi.fn(),
-        where: vi.fn(),
-        orderBy: vi.fn(),
-        limit: vi.fn(),
-        offset: vi.fn(),
-        insert: vi.fn(),
-        values: vi.fn(),
-        returning: vi.fn(),
-        update: vi.fn(),
-        set: vi.fn(),
-        delete: vi.fn(),
+        select: vi.fn().mockReturnThis(),
+        from: vi.fn().mockReturnThis(),
+        where: vi.fn().mockReturnThis(),
+        orderBy: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockReturnThis(),
+        offset: vi.fn().mockReturnThis(),
+        insert: vi.fn().mockReturnThis(),
+        values: vi.fn().mockReturnThis(),
+        returning: vi.fn().mockResolvedValue([]),
+        update: vi.fn().mockReturnThis(),
+        set: vi.fn().mockReturnThis(),
+        delete: vi.fn().mockReturnThis(),
       };
-
-      // Make each method return the mock object for chaining
-      Object.keys(mock).forEach((key) => {
-        mock[key].mockReturnValue(mock);
-      });
 
       return mock;
     };
@@ -96,11 +91,14 @@ describe('DraftService', () => {
       mockDb.offset.mockResolvedValueOnce(mockDrafts);
       // Second where call (for count query) resolves with count
       let whereCallCount = 0;
-      mockDb.where.mockImplementation(async () => {
+      mockDb.where.mockImplementation(() => {
         whereCallCount++;
         if (whereCallCount === 2) {
-          // This is the count query
-          return Promise.resolve([{ count: 1 }]);
+          // This is the count query - return a mock that resolves to count
+          return {
+            ...mockDb,
+            then: (resolve: any) => resolve([{ count: 1 }]),
+          };
         }
         return mockDb;
       });

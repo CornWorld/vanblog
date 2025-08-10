@@ -44,8 +44,7 @@ export class MediaService {
     if (file.mimetype.startsWith('image/')) {
       try {
         const metadata = await sharp(file.buffer).metadata();
-        width = metadata.width;
-        height = metadata.height;
+        ({ width, height } = metadata);
       } catch {
         // Error reading image metadata
       }
@@ -88,25 +87,33 @@ export class MediaService {
     if (keyword) {
       conditions.push(like(staticFiles.filename, `%${String(keyword)}%`));
     }
-    if (mimeType) {
-      conditions.push(eq(staticFiles.mimeType, String(mimeType)));
-    }
+    conditions.push(eq(staticFiles.mimeType, String(mimeType)));
+
     // Provider filtering removed as it's not part of the current DTO
 
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
     const [items, countResult] = await Promise.all([
-      this.db
-        .select()
-        .from(staticFiles)
-        .where(whereClause)
-        .orderBy(desc(staticFiles.createdAt))
-        .limit(Number(pageSize))
-        .offset(offset),
-      this.db
-        .select({ count: sql<number>`count(*)` })
-        .from(staticFiles)
-        .where(whereClause),
+      whereClause
+        ? this.db
+            .select()
+            .from(staticFiles)
+            .where(whereClause)
+            .orderBy(desc(staticFiles.createdAt))
+            .limit(Number(pageSize))
+            .offset(offset)
+        : this.db
+            .select()
+            .from(staticFiles)
+            .orderBy(desc(staticFiles.createdAt))
+            .limit(Number(pageSize))
+            .offset(offset),
+      whereClause
+        ? this.db
+            .select({ count: sql<number>`count(*)` })
+            .from(staticFiles)
+            .where(whereClause)
+        : this.db.select({ count: sql<number>`count(*)` }).from(staticFiles),
     ]);
 
     const total = countResult[0]?.count ?? 0;
@@ -161,7 +168,7 @@ export class MediaService {
   async deleteFiles(
     ids: number[],
   ): Promise<{ success: boolean; deletedCount: number; message: string }> {
-    if (!ids.length) {
+    if (ids.length === 0) {
       throw new BadRequestException('No file IDs provided');
     }
 

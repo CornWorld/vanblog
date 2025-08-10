@@ -42,12 +42,14 @@ export class DraftService {
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
     const orderByClause = (() => {
-      const column =
-        sortBy === 'createdAt'
-          ? drafts.createdAt
-          : sortBy === 'updatedAt'
-            ? drafts.updatedAt
-            : drafts.title;
+      let column;
+      if (sortBy === 'createdAt') {
+        column = drafts.createdAt;
+      } else if (sortBy === 'updatedAt') {
+        column = drafts.updatedAt;
+      } else {
+        column = drafts.title;
+      }
       return sortOrder === 'asc' ? asc(column) : desc(column);
     })();
 
@@ -68,12 +70,12 @@ export class DraftService {
     const processedDrafts = draftResults.map((draft) => ({
       ...draft,
       tags: safeParseJson(draft.tags, dataSchemas.tagsArray) ?? [],
-      categories: draft.category ? [draft.category] : [],
+      categories: draft.category !== null && draft.category !== '' ? [draft.category] : [],
       pathname: draft.pathname,
       category: draft.category,
       userId: 1,
-      wordCount: draft.content ? draft.content.length : 0,
-      readTime: Math.ceil((draft.content ? draft.content.length : 0) / 200),
+      wordCount: draft.content !== '' ? draft.content.length : 0,
+      readTime: Math.ceil((draft.content !== '' ? draft.content.length : 0) / 200),
       summary: undefined,
       cover: undefined,
     }));
@@ -91,10 +93,12 @@ export class DraftService {
         createdAt: dayjs(draft.createdAt),
         updatedAt: dayjs(draft.updatedAt),
       })),
-      total: Number(countResult[0]?.count) || 0,
+      total: Number(countResult[0]?.count) > 0 ? Number(countResult[0]?.count) : 0,
       page,
       pageSize,
-      totalPages: Math.ceil((Number(countResult[0]?.count) || 0) / pageSize),
+      totalPages: Math.ceil(
+        (Number(countResult[0]?.count) > 0 ? Number(countResult[0]?.count) : 0) / pageSize,
+      ),
     };
   }
 
@@ -105,7 +109,7 @@ export class DraftService {
       throw new NotFoundException(`Draft with ID ${String(id)} not found`);
     }
 
-    const draft = results[0];
+    const [draft] = results;
 
     return {
       ...draft,
@@ -136,11 +140,11 @@ export class DraftService {
 
     const result = await this.db.insert(drafts).values(draftData).returning();
 
-    if (!result.length) {
+    if (result.length === 0) {
       throw new Error('Failed to create draft');
     }
 
-    const newDraft = result[0];
+    const [newDraft] = result;
 
     const draftResult = {
       ...newDraft,
@@ -207,7 +211,7 @@ export class DraftService {
       throw new NotFoundException(`Draft with ID ${String(id)} not found`);
     }
 
-    const updatedDraft = result[0];
+    const [updatedDraft] = result;
 
     const draftResult = {
       ...updatedDraft,
@@ -278,7 +282,7 @@ export class DraftService {
     // Delete the draft after successful publication
     await this.remove(id);
 
-    const newArticle = result[0];
+    const [newArticle] = result;
 
     return new Article({
       ...newArticle,
@@ -343,7 +347,7 @@ export class DraftService {
       throw new NotFoundException(`Draft with ID ${String(id)} not found`);
     }
 
-    const updatedDraft = result[0];
+    const [updatedDraft] = result;
 
     return {
       ...updatedDraft,

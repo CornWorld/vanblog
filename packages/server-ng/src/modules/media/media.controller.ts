@@ -277,8 +277,7 @@ export class MediaController {
       throw new BadRequestException('Invalid data URL format');
     }
 
-    const mimeType = matches[1];
-    const base64Data = matches[2];
+    const [, mimeType, base64Data] = matches;
     const buffer = Buffer.from(base64Data, 'base64');
 
     const ext = mimeType.split('/')[1] ?? 'png';

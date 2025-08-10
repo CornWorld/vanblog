@@ -127,7 +127,7 @@ describe('MediaService', () => {
       const mockCountFrom = vi.fn().mockReturnValue({ where: mockCountWhere });
 
       service.db.select = vi.fn().mockImplementation((fields) => {
-        if (fields && typeof fields === 'object' && 'count' in fields) {
+        if (fields != null && typeof fields === 'object' && 'count' in fields) {
           // This is a count query
           return { from: mockCountFrom };
         }
@@ -164,7 +164,7 @@ describe('MediaService', () => {
       const mockCountFrom = vi.fn().mockReturnValue({ where: mockCountWhere });
 
       service.db.select = vi.fn().mockImplementation((fields) => {
-        if (fields && typeof fields === 'object' && 'count' in fields) {
+        if (fields != null && typeof fields === 'object' && 'count' in fields) {
           // This is a count query
           return { from: mockCountFrom };
         }

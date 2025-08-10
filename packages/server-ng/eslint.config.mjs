@@ -184,7 +184,7 @@ export default [
       yoda: 'error',
       'no-nested-ternary': 'error',
       'no-unneeded-ternary': 'error',
-      'spaced-comment': ['error', 'always', { 'markers': ['/'] }],
+      'spaced-comment': ['error', 'always', { markers: ['/'] }],
     },
   },
 

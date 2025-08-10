@@ -2,14 +2,13 @@ import { NotFoundException } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, beforeEach, it, expect, vi } from 'vitest';
 
-import { MockUtils } from '../../../test/mock-utils';
+import { MockUtils, type DatabaseMockBuilder } from '../../../test/mock-utils';
 import { DATABASE_CONNECTION } from '../../database/database.module';
 import { HookService } from '../plugin/services/hook.service';
 
 import { ArticleService } from './article.service';
 
 import type { ArticleSearchDto } from './dto/article.dto';
-import type { DatabaseMockBuilder } from '../../../test/mock-utils';
 
 describe('ArticleService', () => {
   let service: ArticleService;

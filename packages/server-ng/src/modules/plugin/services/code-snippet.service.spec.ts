@@ -1,13 +1,11 @@
 import { NotFoundException, BadRequestException } from '@nestjs/common';
-import { Test } from '@nestjs/testing';
+import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, beforeEach, expect, vi } from 'vitest';
 
 import { DATABASE_CONNECTION } from '../../../database';
 
 import { CodeSnippetService } from './code-snippet.service';
 import { PluginContextFactory } from './plugin-context.service';
-
-import type { TestingModule } from '@nestjs/testing';
 
 type MockDatabase = {
   select: ReturnType<typeof vi.fn>;
