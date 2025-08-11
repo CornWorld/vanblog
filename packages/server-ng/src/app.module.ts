@@ -19,7 +19,9 @@ import { MediaModule } from './modules/media/media.module';
 import { PermissionModule } from './modules/permission/permission.module';
 import { PluginModule } from './modules/plugin/plugin.module';
 import { RewardModule } from './modules/reward/reward.module';
+import { RssModule } from './modules/rss/rss.module';
 import { SettingModule } from './modules/setting/setting.module';
+import { SitemapModule } from './modules/sitemap/sitemap.module';
 import { SocialLinksModule } from './modules/social-links/social-links.module';
 import { TagModule } from './modules/tag/tag.module';
 import { UserModule } from './modules/user/user.module';
@@ -51,6 +53,8 @@ export class AppModule {
         BeianModule,
         SocialLinksModule,
         RewardModule,
+        RssModule,
+        SitemapModule,
 
         DemoModule,
         PermissionModule,

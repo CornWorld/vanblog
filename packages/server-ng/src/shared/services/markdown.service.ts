@@ -32,8 +32,8 @@ export class MarkdownService {
         )}</code></pre>`;
       },
     })
-      .use(taskLists)
-      .use(katex);
+      .use(taskLists as any)
+      .use(katex as any);
   }
 
   /**
