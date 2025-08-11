@@ -7,10 +7,12 @@ export default {
     );
     const filesStr = api.filenames.join(' ');
 
-    return [
-      `pnpm run lint --fix ${filesStr}`,
-      `pnpm run format --write ${filesStr}`,
-      hasTsFile ? 'tsc --noEmit' : '',
-    ].map((i) => 'cd packages/server-ng ' + i);
+    const commands = [`pnpm run format --write`, `pnpm run lint --fix`].map(
+      (i) => i.trimEnd() + ' ' + filesStr,
+    );
+    if (hasTsFile) {
+      commands.push('tsc --noEmit');
+    }
+    return commands.map((cmd) => `sh -c "cd packages/server-ng && ${cmd}"`);
   },
 };
