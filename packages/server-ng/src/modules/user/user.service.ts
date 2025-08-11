@@ -65,6 +65,16 @@ export class UserService {
       action: 'create',
     });
 
+    // Trigger webhook event
+    await this.hookService.doAction('user.created', {
+      id: userResult.id,
+      username: userResult.username,
+      nickname: userResult.nickname,
+      email: userResult.email,
+      type: userResult.type,
+      createdAt: userResult.createdAt,
+    });
+
     return userResult;
   }
 
@@ -157,6 +167,16 @@ export class UserService {
       id,
     });
 
+    // Trigger webhook event
+    await this.hookService.doAction('user.updated', {
+      id: userResult.id,
+      username: userResult.username,
+      nickname: userResult.nickname,
+      email: userResult.email,
+      type: userResult.type,
+      updatedAt: userResult.updatedAt,
+    });
+
     return userResult;
   }
 
@@ -188,6 +208,9 @@ export class UserService {
         action: 'delete',
       },
     );
+
+    // Trigger webhook event
+    await this.hookService.doAction('user.deleted', { id });
   }
 
   // Internal method for authentication that includes password

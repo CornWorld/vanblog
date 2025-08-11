@@ -120,6 +120,16 @@ export class CategoryService {
       action: 'create',
     });
 
+    // Trigger webhook event
+    await this.hookService.doAction('category.created', {
+      id: categoryResult.id,
+      name: categoryResult.name,
+      slug: categoryResult.slug,
+      description: categoryResult.description,
+      private: categoryResult.private,
+      createdAt: categoryResult.createdAt,
+    });
+
     return categoryResult;
   }
 
@@ -169,6 +179,16 @@ export class CategoryService {
       id,
     });
 
+    // Trigger webhook event
+    await this.hookService.doAction('category.updated', {
+      id: categoryResult.id,
+      name: categoryResult.name,
+      slug: categoryResult.slug,
+      description: categoryResult.description,
+      private: categoryResult.private,
+      updatedAt: categoryResult.updatedAt,
+    });
+
     return categoryResult;
   }
 
@@ -215,6 +235,12 @@ export class CategoryService {
         action: 'delete',
       },
     );
+
+    // Trigger webhook event
+    await this.hookService.doAction('category.deleted', {
+      id,
+      name: category.name,
+    });
   }
 
   async getStatistics(): Promise<OverallStatisticsDto> {

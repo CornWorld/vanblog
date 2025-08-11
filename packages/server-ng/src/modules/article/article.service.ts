@@ -269,6 +269,17 @@ export class ArticleService {
     // Trigger article|afterCreate hook (new hook system)
     await this.hookService.doAction('article|afterCreate', articleResult, { action: 'create' });
 
+    // Trigger webhook event
+    await this.hookService.doAction('article.created', {
+      id: articleResult.id,
+      title: articleResult.title,
+      author: articleResult.author,
+      category: articleResult.category,
+      tags: articleResult.tags,
+      pathname: articleResult.pathname,
+      createdAt: articleResult.createdAt,
+    });
+
     return articleResult;
   }
 
@@ -334,6 +345,17 @@ export class ArticleService {
       id,
     });
 
+    // Trigger webhook event
+    await this.hookService.doAction('article.updated', {
+      id: articleResult.id,
+      title: articleResult.title,
+      author: articleResult.author,
+      category: articleResult.category,
+      tags: articleResult.tags,
+      pathname: articleResult.pathname,
+      updatedAt: articleResult.updatedAt,
+    });
+
     return articleResult;
   }
 
@@ -358,6 +380,9 @@ export class ArticleService {
 
     // Trigger article|afterDelete hook (new hook system)
     await this.hookService.doAction('article|afterDelete', { id }, { action: 'delete' });
+
+    // Trigger webhook event
+    await this.hookService.doAction('article.deleted', { id });
 
     // Article deleted successfully
   }

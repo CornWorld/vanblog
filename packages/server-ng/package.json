@@ -100,7 +100,7 @@
   "nano-staged": {
     "*.{ts,tsx,js,jsx}": [
       "cd packages/server-ng && pnpm run lint --fix",
-      "cd packages/server-ng && pnpm format",
+      "cd packages/server-ng && pnpm format --write",
       "tsc-files-workspace --noEmit"
     ]
   }

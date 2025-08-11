@@ -26,7 +26,9 @@
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
-    "types": ["node", "vitest/globals", "express", "multer"]
+    "types": ["node", "vitest/globals", "express", "multer"],
+    "composite": true
   },
+  "include": ["src/**/*", "test/**/*"],
   "exclude": ["node_modules", "dist"]
 }

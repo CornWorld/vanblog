@@ -158,6 +158,16 @@ export class DraftService {
     // Trigger afterCreateDraft hook (new hook system)
     await this.hookService.doAction('draft|afterCreate', draftResult, { action: 'create' });
 
+    // Trigger webhook event
+    await this.hookService.doAction('draft.created', {
+      id: draftResult.id,
+      title: draftResult.title,
+      author: draftResult.author,
+      category: draftResult.category,
+      tags: draftResult.tags,
+      createdAt: draftResult.createdAt,
+    });
+
     return draftResult;
   }
 
@@ -225,6 +235,16 @@ export class DraftService {
     // Trigger afterUpdateDraft hook (new hook system)
     await this.hookService.doAction('draft|afterUpdate', draftResult, { action: 'update', id });
 
+    // Trigger webhook event
+    await this.hookService.doAction('draft.updated', {
+      id: draftResult.id,
+      title: draftResult.title,
+      author: draftResult.author,
+      category: draftResult.category,
+      tags: draftResult.tags,
+      updatedAt: draftResult.updatedAt,
+    });
+
     return draftResult;
   }
 
@@ -246,6 +266,9 @@ export class DraftService {
 
     // Trigger afterDeleteDraft hook (new hook system)
     await this.hookService.doAction('draft|afterDelete', { id }, { action: 'delete' });
+
+    // Trigger webhook event
+    await this.hookService.doAction('draft.deleted', { id });
   }
 
   async publish(id: number, publishDto: PublishDraftDto): Promise<Article> {
@@ -283,6 +306,31 @@ export class DraftService {
     await this.remove(id);
 
     const [newArticle] = result;
+
+    const articleResult = new Article({
+      ...newArticle,
+      tags: safeParseJson(newArticle.tags, dataSchemas.tagsArray) ?? [],
+      pathname: newArticle.pathname,
+      category: newArticle.category,
+      author: newArticle.author,
+      top: newArticle.top,
+      hidden: newArticle.hidden,
+      private: newArticle.private,
+      password: newArticle.password,
+      viewer: newArticle.viewer,
+    });
+
+    // Trigger webhook event
+    await this.hookService.doAction('draft.published', {
+      draftId: id,
+      articleId: articleResult.id,
+      title: articleResult.title,
+      author: articleResult.author,
+      category: articleResult.category,
+      tags: articleResult.tags,
+      pathname: articleResult.pathname,
+      publishedAt: articleResult.createdAt,
+    });
 
     return new Article({
       ...newArticle,

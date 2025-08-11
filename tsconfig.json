@@ -9,6 +9,9 @@
     },
     {
       "path": "./packages/server"
+    },
+    {
+      "path": "./packages/server-ng"
     }
   ]
 }

@@ -107,6 +107,17 @@ export class SettingCoreService {
       oldValue: existing.length > 0 ? existing[0].value : null,
     });
 
+    // Trigger webhook event
+    await this.hookService.doAction('setting.updated', {
+      key,
+      value: filteredData.value,
+      oldValue:
+        existing.length > 0
+          ? safeParseJson(existing[0].value ?? '', dataSchemas.genericObject)
+          : null,
+      updatedAt: new Date().toISOString(),
+    });
+
     return filteredData.value;
   }
 

@@ -92,6 +92,14 @@ export class TagService {
       action: 'create',
     });
 
+    // Trigger webhook event
+    await this.hookService.doAction('tag.created', {
+      id: tagResult.id,
+      name: tagResult.name,
+      slug: tagResult.slug,
+      createdAt: tagResult.createdAt,
+    });
+
     return tagResult;
   }
 
@@ -121,6 +129,14 @@ export class TagService {
       id,
     });
 
+    // Trigger webhook event
+    await this.hookService.doAction('tag.updated', {
+      id: tagResult.id,
+      name: tagResult.name,
+      slug: tagResult.slug,
+      updatedAt: tagResult.updatedAt,
+    });
+
     return tagResult;
   }
 
@@ -148,6 +164,9 @@ export class TagService {
         action: 'delete',
       },
     );
+
+    // Trigger webhook event
+    await this.hookService.doAction('tag.deleted', { id });
   }
 
   async getStatistics(): Promise<OverallStatisticsDto> {

@@ -294,3 +294,49 @@ export const codeSnippets = sqliteTable(
     index('code_snippets_enabled_idx').on(table.enabled),
   ],
 );
+
+// Webhooks table
+export const webhooks = sqliteTable('webhooks', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  name: text('name').notNull().unique(),
+  url: text('url').notNull(),
+  events: text('events').notNull(), // JSON array of event names
+  secret: text('secret'), // Optional secret for signature verification
+  active: integer('active', { mode: 'boolean' }).notNull().default(true),
+  retryCount: integer('retry_count').notNull().default(3),
+  timeout: integer('timeout').notNull().default(30000), // 30 seconds
+  lastTriggered: text('last_triggered'),
+  lastStatus: text('last_status'), // 'success', 'failed', 'timeout'
+  lastError: text('last_error'),
+  createdAt: text('created_at')
+    .notNull()
+    .default(sql`datetime('now')`),
+  updatedAt: text('updated_at')
+    .notNull()
+    .default(sql`datetime('now')`),
+});
+
+export const webhookLogs = sqliteTable(
+  'webhook_logs',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    webhookId: integer('webhook_id')
+      .notNull()
+      .references(() => webhooks.id, { onDelete: 'cascade' }),
+    event: text('event').notNull(),
+    payload: text('payload').notNull(), // JSON payload
+    status: text('status').notNull(), // 'success', 'failed', 'timeout'
+    responseCode: integer('response_code'),
+    responseBody: text('response_body'),
+    error: text('error'),
+    duration: integer('duration'), // milliseconds
+    createdAt: text('created_at')
+      .notNull()
+      .default(sql`datetime('now')`),
+  },
+  (table) => [
+    index('webhook_logs_webhook_id_idx').on(table.webhookId),
+    index('webhook_logs_event_idx').on(table.event),
+    index('webhook_logs_created_at_idx').on(table.createdAt),
+  ],
+);

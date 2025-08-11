@@ -23,6 +23,7 @@ import { SettingModule } from './modules/setting/setting.module';
 import { SocialLinksModule } from './modules/social-links/social-links.module';
 import { TagModule } from './modules/tag/tag.module';
 import { UserModule } from './modules/user/user.module';
+import { WebhookModule } from './modules/webhook/webhook.module';
 
 @Module({})
 export class AppModule {
@@ -53,6 +54,7 @@ export class AppModule {
 
         DemoModule,
         PermissionModule,
+        WebhookModule,
         pluginModule,
       ],
       controllers: [AppController],

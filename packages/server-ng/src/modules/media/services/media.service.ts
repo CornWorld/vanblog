@@ -70,6 +70,19 @@ export class MediaService {
       originalFile: file,
     });
 
+    // Trigger webhook event
+    await this.hookService.doAction('media.uploaded', {
+      id: result.id,
+      filename: result.filename,
+      path: result.path,
+      size: result.size,
+      mimeType: result.mimeType,
+      width: result.width,
+      height: result.height,
+      provider: result.provider,
+      createdAt: result.createdAt,
+    });
+
     return result;
   }
 
@@ -162,6 +175,15 @@ export class MediaService {
     // Execute afterDelete action
     await this.hookService.doAction('media|afterDelete', { file, result });
 
+    // Trigger webhook event
+    await this.hookService.doAction('media.deleted', {
+      id: file.id,
+      filename: file.filename,
+      path: file.path,
+      size: file.size,
+      mimeType: file.mimeType,
+    });
+
     return result;
   }
 
@@ -201,6 +223,18 @@ export class MediaService {
 
     // Execute afterDeleteBatch action
     await this.hookService.doAction('media|afterDeleteBatch', { files, result });
+
+    // Trigger webhook event
+    await this.hookService.doAction('media.batch_deleted', {
+      deletedCount: files.length,
+      files: files.map((file) => ({
+        id: file.id,
+        filename: file.filename,
+        path: file.path,
+        size: file.size,
+        mimeType: file.mimeType,
+      })),
+    });
 
     return result;
   }
