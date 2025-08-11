@@ -188,6 +188,15 @@ export default [
     },
   },
 
+  // markdown.service.ts 特殊配置 - 允许 require() 用于动态导入插件
+  {
+    files: ['src/shared/services/markdown.service.ts', '**/markdown.service.ts'],
+    rules: {
+      '@typescript-eslint/no-require-imports': 'off',
+      '@typescript-eslint/no-var-requires': 'off',
+    },
+  },
+
   // 测试文件特殊配置
   {
     files: ['**/*.test.ts', '**/*.spec.ts', '**/test/**/*.ts'],

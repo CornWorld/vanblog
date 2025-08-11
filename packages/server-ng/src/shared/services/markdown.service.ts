@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import hljs from 'highlight.js';
-import MarkdownIt, { type PluginSimple } from 'markdown-it';
+import MarkdownIt from 'markdown-it';
 import katex from 'markdown-it-katex';
 import taskLists from 'markdown-it-task-lists';
 
@@ -32,14 +32,14 @@ export class MarkdownService {
         )}</code></pre>`;
       },
     })
-      .use(taskLists as PluginSimple)
-      .use(katex as PluginSimple);
+      .use(taskLists)
+      .use(katex);
   }
 
   /**
    * 渲染 Markdown 为 HTML
    */
-  renderMarkdown(content: string): string {
+  renderMarkdown(content: string | null): string {
     if (!content || content === '') return '';
     return this.md.render(content);
   }
@@ -47,7 +47,7 @@ export class MarkdownService {
   /**
    * 获取文章描述（支持 <!-- more --> 分割符）
    */
-  getDescription(content: string, maxLength = 200): string {
+  getDescription(content: string | null, maxLength = 200): string {
     if (!content || content === '') return '';
 
     // 首先检查是否有 <!-- more --> 分割符
@@ -64,7 +64,7 @@ export class MarkdownService {
   /**
    * 移除 Markdown 标记，获取纯文本
    */
-  stripMarkdown(content: string): string {
+  stripMarkdown(content: string | null): string {
     if (!content || content === '') return '';
 
     return (
@@ -101,7 +101,7 @@ export class MarkdownService {
   /**
    * 为 RSS 处理 Markdown 内容
    */
-  renderForRss(content: string): string {
+  renderForRss(content: string | null): string {
     if (!content || content === '') return '';
 
     const html = this.renderMarkdown(content);
