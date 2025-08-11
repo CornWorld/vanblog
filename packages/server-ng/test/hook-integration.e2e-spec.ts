@@ -4,6 +4,7 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vites
 import { AppModule } from '../src/app.module';
 import { ArticleService } from '../src/modules/article/article.service';
 import { DraftService } from '../src/modules/draft/draft.service';
+import { CommentService } from '../src/modules/comment/comment.service';
 import { HookService } from '../src/modules/plugin/services/hook.service';
 
 import { cleanupDatabase } from './test-utils';
@@ -15,6 +16,7 @@ describe('Hook Integration (e2e)', () => {
   let hookService: HookService;
   let articleService: ArticleService;
   let draftService: DraftService;
+  let commentService: CommentService;
 
   beforeAll(async () => {
     const appModule = await AppModule.forRoot();
@@ -26,6 +28,7 @@ describe('Hook Integration (e2e)', () => {
     hookService = moduleFixture.get<HookService>(HookService);
     articleService = moduleFixture.get<ArticleService>(ArticleService);
     draftService = moduleFixture.get<DraftService>(DraftService);
+    commentService = moduleFixture.get<CommentService>(CommentService);
 
     await app.init();
   });
@@ -327,5 +330,63 @@ describe('Hook Integration (e2e)', () => {
       expect(mockFilter2).toHaveBeenCalled();
       expect(hookService.getFilterCount('article|beforeCreate')).toBe(2);
     }, 15000);
+  });
+
+  describe('Comment Hook Integration', () => {
+    it('should trigger comment|beforeUpdate filter hook', async () => {
+      const mockFilter = vi.fn((data: Record<string, unknown>) => ({
+        ...data,
+        'sender.name': 'Modified Sender',
+      }));
+      hookService.addFilter('comment|beforeUpdate', mockFilter);
+
+      const updateData = {
+        'smtp.enabled': true,
+        'sender.name': 'Original Sender',
+      };
+
+      // Mock restart to avoid actual process operations
+      vi.spyOn(commentService, 'restart').mockResolvedValue();
+
+      await commentService.updateWalineSetting(updateData);
+
+      expect(mockFilter).toHaveBeenCalledWith(
+        updateData,
+        expect.objectContaining({
+          action: 'update',
+          existing: expect.any(Object),
+        }),
+      );
+    });
+
+    it('should trigger comment|afterUpdate action hook', async () => {
+      const mockAction = vi.fn();
+      hookService.addAction('comment|afterUpdate', mockAction);
+
+      const updateData = {
+        'smtp.enabled': false,
+        'sender.name': 'Test Sender',
+      };
+
+      // Mock restart to avoid actual process operations
+      vi.spyOn(commentService, 'restart').mockResolvedValue();
+
+      await commentService.updateWalineSetting(updateData);
+
+      expect(mockAction).toHaveBeenCalledWith(
+        expect.objectContaining({
+          'smtp.enabled': false,
+          'sender.name': 'Test Sender',
+        }),
+        expect.objectContaining({
+          action: 'update',
+          previous: expect.any(Object),
+          changes: expect.any(Object),
+        }),
+      );
+    });
+
+    // Note: restart hooks are tested in unit tests (comment.service.spec.ts)
+    // E2E testing of restart hooks is complex due to process mocking requirements
   });
 });
