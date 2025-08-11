@@ -9,6 +9,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { ArticleService } from '../article/article.service';
 import { HookService } from '../plugin/services/hook.service';
 import { SettingCoreService } from '../setting/services/setting-core.service';
+import { MarkdownService } from '../../shared/services/markdown.service';
 
 import { RssService } from './rss.service';
 
@@ -87,6 +88,11 @@ describe('RssService', () => {
       doAction: vi.fn(),
     };
 
+    const mockMarkdownService = {
+      renderForRss: vi.fn().mockImplementation((content: string) => `<p>${content}</p>`),
+      getDescription: vi.fn().mockImplementation((content: string) => content.substring(0, 100)),
+    };
+
     const mockConfigService = {
       get: vi.fn(),
     };
@@ -105,6 +111,10 @@ describe('RssService', () => {
         {
           provide: HookService,
           useValue: mockHookService,
+        },
+        {
+          provide: MarkdownService,
+          useValue: mockMarkdownService,
         },
         {
           provide: ConfigService,

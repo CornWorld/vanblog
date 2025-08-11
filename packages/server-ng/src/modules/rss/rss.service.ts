@@ -9,6 +9,7 @@ import { Feed } from 'feed';
 import { DATABASE_CONNECTION } from '../../database';
 import { articles, siteMeta } from '../../database/schema';
 import { safeParseJson, dataSchemas } from '../../shared/zod';
+import { MarkdownService } from '../../shared/services/markdown.service';
 import { HookService } from '../plugin/services/hook.service';
 
 import type { Database } from '../../database/connection';
@@ -21,6 +22,7 @@ export class RssService {
   constructor(
     @Inject(DATABASE_CONNECTION) private readonly db: Database,
     private readonly configService: ConfigService,
+    private readonly markdownService: MarkdownService,
     private readonly hookService: HookService,
   ) {}
 
@@ -141,9 +143,8 @@ export class RssService {
 
         const content = article.private ? '此文章已加密' : article.content;
 
-        // 简单的 markdown 转 HTML（基础实现）
-        const htmlContent = this.renderBasicMarkdown(content);
-        const description = this.getDescription(content);
+        const htmlContent = this.markdownService.renderForRss(content);
+        const description = this.markdownService.getDescription(content);
 
         const html = `<div class="markdown-body rss">
       <link rel="stylesheet" href="${siteUrl}markdown.css">
@@ -155,7 +156,7 @@ export class RssService {
           title: article.title,
           id: url,
           link: url,
-          description: this.renderBasicMarkdown(description),
+          description: this.markdownService.renderForRss(description),
           category: [category],
           content: html,
           author: [author],
@@ -213,52 +214,5 @@ export class RssService {
   private washUrl(url: string): string {
     if (url === '') return 'http://localhost:3000/';
     return url.endsWith('/') ? url : `${url}/`;
-  }
-
-  /**
-   * 基础 Markdown 转 HTML
-   */
-  private renderBasicMarkdown(content: string): string {
-    if (content === '') return '';
-
-    return (
-      content
-        // 标题
-        .replace(/^### (.*$)/gim, '<h3>$1</h3>')
-        .replace(/^## (.*$)/gim, '<h2>$1</h2>')
-        .replace(/^# (.*$)/gim, '<h1>$1</h1>')
-        // 粗体
-        .replace(/\*\*(.*?)\*\*/gim, '<strong>$1</strong>')
-        // 斜体
-        .replace(/\*(.*?)\*/gim, '<em>$1</em>')
-        // 链接
-        .replace(/\[([^\]]+)\]\(([^)]+)\)/gim, '<a href="$2">$1</a>')
-        // 代码块
-        .replace(/```([\s\S]*?)```/gim, '<pre><code>$1</code></pre>')
-        // 行内代码
-        .replace(/`([^`]+)`/gim, '<code>$1</code>')
-        // 换行
-        .replace(/\n/gim, '<br>')
-    );
-  }
-
-  /**
-   * 获取文章描述
-   */
-  private getDescription(content: string, maxLength = 200): string {
-    if (content === '') return '';
-
-    // 移除 markdown 标记
-    const plainText = content
-      .replace(/#{1,6}\s+/g, '') // 标题
-      .replace(/\*\*(.*?)\*\*/g, '$1') // 粗体
-      .replace(/\*(.*?)\*/g, '$1') // 斜体
-      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // 链接
-      .replace(/```[\s\S]*?```/g, '') // 代码块
-      .replace(/`([^`]+)`/g, '$1') // 行内代码
-      .replace(/\n+/g, ' ') // 换行转空格
-      .trim();
-
-    return plainText.length > maxLength ? `${plainText.substring(0, maxLength)}...` : plainText;
   }
 }
