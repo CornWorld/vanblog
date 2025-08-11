@@ -6,10 +6,10 @@ import { ConfigService } from '@nestjs/config';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
+import { MarkdownService } from '../../shared/services/markdown.service';
 import { ArticleService } from '../article/article.service';
 import { HookService } from '../plugin/services/hook.service';
 import { SettingCoreService } from '../setting/services/setting-core.service';
-import { MarkdownService } from '../../shared/services/markdown.service';
 
 import { RssService } from './rss.service';
 

@@ -1,8 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
-import MarkdownIt from 'markdown-it';
 import hljs from 'highlight.js';
+import MarkdownIt, { type PluginSimple } from 'markdown-it';
+import katex from 'markdown-it-katex';
 import taskLists from 'markdown-it-task-lists';
-import mk from 'markdown-it-katex';
 
 @Injectable()
 export class MarkdownService {
@@ -18,33 +18,29 @@ export class MarkdownService {
         if (lang === 'mermaid') {
           return `<div class="mermaid">${str}</div>`;
         }
-        if (lang && hljs.getLanguage(lang)) {
+        if (lang !== '' && hljs.getLanguage(lang)) {
           try {
-            return (
-              '<pre class="hljs" style="background: #f3f3f3; padding: 8px;"><code>' +
-              hljs.highlight(str, { language: lang, ignoreIllegals: true }).value +
-              '</code></pre>'
-            );
+            return `<pre class="hljs" style="background: #f3f3f3; padding: 8px;"><code>${
+              hljs.highlight(str, { language: lang, ignoreIllegals: true }).value
+            }</code></pre>`;
           } catch (error) {
             this.logger.warn(`Failed to highlight code with language ${lang}:`, error);
           }
         }
-        return (
-          '<pre class="hljs" style="background: #f3f3f3; padding: 8px;"><code>' +
-          this.md.utils.escapeHtml(str) +
-          '</code></pre>'
-        );
+        return `<pre class="hljs" style="background: #f3f3f3; padding: 8px;"><code>${this.md.utils.escapeHtml(
+          str,
+        )}</code></pre>`;
       },
     })
-      .use(taskLists)
-      .use(mk);
+      .use(taskLists as PluginSimple)
+      .use(katex as PluginSimple);
   }
 
   /**
    * 渲染 Markdown 为 HTML
    */
   renderMarkdown(content: string): string {
-    if (!content) return '';
+    if (!content || content === '') return '';
     return this.md.render(content);
   }
 
@@ -52,7 +48,7 @@ export class MarkdownService {
    * 获取文章描述（支持 <!-- more --> 分割符）
    */
   getDescription(content: string, maxLength = 200): string {
-    if (!content) return '';
+    if (!content || content === '') return '';
 
     // 首先检查是否有 <!-- more --> 分割符
     const moreSplit = content.split('<!-- more -->');
@@ -69,7 +65,7 @@ export class MarkdownService {
    * 移除 Markdown 标记，获取纯文本
    */
   stripMarkdown(content: string): string {
-    if (!content) return '';
+    if (!content || content === '') return '';
 
     return (
       content
@@ -106,7 +102,7 @@ export class MarkdownService {
    * 为 RSS 处理 Markdown 内容
    */
   renderForRss(content: string): string {
-    if (!content) return '';
+    if (!content || content === '') return '';
 
     const html = this.renderMarkdown(content);
 
