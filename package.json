@@ -78,19 +78,5 @@
     "ts-node-dev": "^2.0.0",
     "tsc-files-workspace": "^2.0.1",
     "typescript-eslint": "^8.38.0"
-  },
-  "nano-staged": {
-    "*.{ts,tsx}": [
-      "pnpm lint --fix",
-      "prettier --write",
-      "tsc-files-workspace --noEmit"
-    ],
-    "*.{js,jsx}": [
-      "pnpm lint --fix",
-      "prettier --write"
-    ],
-    "*.{json,css,less,scss,md}": [
-      "prettier --write"
-    ]
   }
 }
