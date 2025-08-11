@@ -1,7 +1,7 @@
 import { Module, Global } from '@nestjs/common';
 
-import { StatisticsService } from './services/statistics.service';
 import { MarkdownService } from './services/markdown.service';
+import { StatisticsService } from './services/statistics.service';
 
 @Global()
 @Module({
