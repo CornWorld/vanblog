@@ -32,5 +32,15 @@
   "[typescriptreact]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode"
   },
-  "vitest.disableWorkspaceWarning": true
+  "vitest.disableWorkspaceWarning": true,
+  "auto-run-command.rules": [
+    {
+      "event": "onFileRename",
+      "command": "typescript.restartTsServer"
+    },
+    {
+      "event": "onFileDelete",
+      "command": "typescript.restartTsServer"
+    }
+  ]
 }
