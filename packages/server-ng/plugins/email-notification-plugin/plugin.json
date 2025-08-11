@@ -1,0 +1,25 @@
+{
+  "name": "email-notification-plugin",
+  "version": "1.0.0",
+  "description": "邮件通知插件：在文章发布、评论等事件时发送邮件通知",
+  "main": "index.ts",
+  "dependencies": ["nodemailer@^6.9.0", "@types/nodemailer@^6.4.0"],
+  "hooks": {
+    "article|afterCreate": {
+      "type": "action",
+      "priority": 10
+    },
+    "article|afterUpdate": {
+      "type": "action",
+      "priority": 10
+    },
+    "comment|afterUpdate": {
+      "type": "action",
+      "priority": 10
+    },
+    "draft.published": {
+      "type": "action",
+      "priority": 10
+    }
+  }
+}
