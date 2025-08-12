@@ -33,7 +33,12 @@ export type LimitPermission =
   | 'rss:generate'
   | 'rss:read'
   | 'sitemap:generate'
-  | 'sitemap:read';
+  | 'sitemap:read'
+  | 'backup:create'
+  | 'backup:read'
+  | 'backup:download'
+  | 'backup:delete'
+  | 'backup:restore';
 
 // 权限组
 export type PermissionGroup = 'group:admin' | 'group:editor' | 'group:author' | 'group:viewer';
@@ -63,6 +68,7 @@ export const PERMISSION_MODULES = {
   rss: ['rss:generate', 'rss:read'],
   sitemap: ['sitemap:generate', 'sitemap:read'],
   permission: ['permission:manage'],
+  backup: ['backup:create', 'backup:read', 'backup:download', 'backup:delete', 'backup:restore'],
 } as const;
 
 // 预定义权限组

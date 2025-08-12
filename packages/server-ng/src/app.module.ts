@@ -27,6 +27,7 @@ import { SocialLinksModule } from './modules/social-links/social-links.module';
 import { TagModule } from './modules/tag/tag.module';
 import { UserModule } from './modules/user/user.module';
 import { WebhookModule } from './modules/webhook/webhook.module';
+import { BackupModule } from './modules/backup/backup.module';
 
 @Module({})
 export class AppModule {
@@ -57,6 +58,7 @@ export class AppModule {
         RssModule,
         SitemapModule,
         CommentModule,
+        BackupModule,
 
         DemoModule,
         PermissionModule,
