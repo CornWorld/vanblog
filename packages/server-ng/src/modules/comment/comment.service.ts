@@ -1,9 +1,11 @@
+import { ChildProcess, spawn } from 'node:child_process';
+
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { ChildProcess, spawn } from 'node:child_process';
+
 import { AllConfig } from '../../config/config.interface';
-import { SettingCoreService } from '../setting/services/setting-core.service';
 import { HookService } from '../plugin/services/hook.service';
+import { SettingCoreService } from '../setting/services/setting-core.service';
 
 import { UpdateWalineSetting, WalineSetting } from './comment.schema';
 
@@ -21,18 +23,14 @@ export class CommentService {
 
   async getWalineSetting(): Promise<WalineSetting> {
     const defaultSetting: WalineSetting = {
-      smtp: {
-        enabled: false,
-        port: 587,
-        host: '',
-        user: '',
-        password: '',
-      },
-      sender: {
-        name: '',
-        email: '',
-      },
-      authorEmail: '',
+      'smtp.enabled': false,
+      'smtp.port': 587,
+      'smtp.host': '',
+      'smtp.user': '',
+      'smtp.password': '',
+      'sender.name': '',
+      'sender.email': 'noreply@example.com',
+      authorEmail: 'admin@example.com',
       webhook: '',
       forceLoginComment: false,
       otherConfig: '',
@@ -69,14 +67,15 @@ export class CommentService {
     return result;
   }
 
-  private mapConfigToEnv(config: WalineSetting): Record<string, string> {
-    const walineEnvMapping = {
+  public mapConfigToEnv(config: WalineSetting): Record<string, string> {
+    const walineEnvMapping: Record<string, string> = {
       'smtp.port': 'SMTP_PORT',
       'smtp.host': 'SMTP_HOST',
       'smtp.user': 'SMTP_USER',
       'sender.name': 'SENDER_NAME',
       'sender.email': 'SENDER_EMAIL',
       'smtp.password': 'SMTP_PASS',
+      'smtp.enabled': '', // Skip this field
       authorEmail: 'AUTHOR_EMAIL',
       webhook: 'WEBHOOK',
       forceLoginComment: 'LOGIN',
@@ -84,9 +83,6 @@ export class CommentService {
     };
 
     const result: Record<string, string> = {};
-    if (!config) {
-      return result;
-    }
 
     for (const [key, value] of Object.entries(config)) {
       if (key === 'forceLoginComment') {
@@ -94,10 +90,10 @@ export class CommentService {
           result['LOGIN'] = 'force';
         }
       } else if (key === 'otherConfig') {
-        if (config.otherConfig) {
+        if (config.otherConfig !== '') {
           try {
-            const data = JSON.parse(config.otherConfig);
-            for (const [k, v] of Object.entries(data)) {
+            const data: unknown = JSON.parse(config.otherConfig ?? '{}');
+            for (const [k, v] of Object.entries(data as Record<string, unknown>)) {
               result[k] = String(v);
             }
           } catch (err) {
@@ -105,8 +101,8 @@ export class CommentService {
           }
         }
       } else {
-        const envKey = walineEnvMapping[key as keyof typeof walineEnvMapping];
-        if (envKey && value !== undefined) {
+        const envKey = walineEnvMapping[key];
+        if (envKey !== '') {
           result[envKey] = String(value);
         }
       }
@@ -139,22 +135,23 @@ export class CommentService {
     const walineDb = this.configService.get('waline.db', { infer: true });
 
     // Database configuration for Waline
-    const mongoEnv = {
-      MONGO_DB: walineDb,
+    const mongoEnv: Record<string, string> = {
+      MONGO_DB: walineDb ?? '',
       MONGO_AUTHSOURCE: 'admin',
     };
 
     // Site information
     const siteInfo = await this.settingService.getSiteInfo();
-    const otherEnv = {
-      SITE_NAME: siteInfo?.title || undefined,
+    const jwtSecret = this.configService.get('jwt.secret', { infer: true });
+    const otherEnv: Record<string, string> = {
+      SITE_NAME: siteInfo.title,
       SITE_URL: 'http://localhost:3000',
-      JWT_TOKEN: this.configService.get('jwt.secret', { infer: true }),
+      JWT_TOKEN: jwtSecret ?? '',
     };
 
     // Waline specific configuration
     const walineConfig = await this.getWalineSetting();
-    const walineConfigEnv = walineConfig ? this.mapConfigToEnv(walineConfig) : {};
+    const walineConfigEnv = this.mapConfigToEnv(walineConfig);
 
     this.walineEnv = {
       ...mongoEnv,
@@ -191,17 +188,17 @@ export class CommentService {
         this.walineProcess = null;
         this.logger.warn('Waline 进程退出');
         // Trigger process exit hook
-        this.hookService.doAction('comment|processExit', {}, { action: 'exit' });
+        void this.hookService.doAction('comment|processExit', {}, { action: 'exit' });
       });
 
-      this.walineProcess.stdout?.on('data', (data) => {
+      this.walineProcess.stdout?.on('data', (data: Buffer) => {
         const output = data.toString();
         if (!output.includes('Cannot find module')) {
           this.logger.log(output.substring(0, output.length - 1));
         }
       });
 
-      this.walineProcess.stderr?.on('data', (data) => {
+      this.walineProcess.stderr?.on('data', (data: Buffer) => {
         const output = data.toString();
         this.logger.error(output.substring(0, output.length - 1));
       });
@@ -225,7 +222,7 @@ export class CommentService {
 
   async stop(): Promise<void> {
     if (this.walineProcess) {
-      const pid = this.walineProcess.pid;
+      const { pid } = this.walineProcess;
 
       // Trigger beforeStop action hook
       await this.hookService.doAction('comment|beforeStop', { pid }, { action: 'stop' });

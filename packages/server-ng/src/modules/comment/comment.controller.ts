@@ -1,9 +1,11 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Post, Put, UseGuards } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags, ApiBearerAuth } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+
 import { DemoModeGuard } from '../auth/guards/demo-mode.guard';
-import { CommentService } from './comment.service';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+
 import { UpdateWalineSettingDto, WalineSettingDto } from './comment.dto';
+import { CommentService } from './comment.service';
 
 @ApiTags('Comment')
 @Controller('comment')
@@ -17,7 +19,7 @@ export class CommentController {
     description: 'Waline settings retrieved successfully',
     type: WalineSettingDto,
   })
-  async getWalineSetting() {
+  async getWalineSetting(): Promise<WalineSettingDto> {
     return this.commentService.getWalineSetting();
   }
 
@@ -30,7 +32,7 @@ export class CommentController {
     description: 'Waline settings updated successfully',
     type: WalineSettingDto,
   })
-  async updateWalineSetting(@Body() updateDto: UpdateWalineSettingDto) {
+  async updateWalineSetting(@Body() updateDto: UpdateWalineSettingDto): Promise<WalineSettingDto> {
     return this.commentService.updateWalineSetting(updateDto);
   }
 
@@ -43,7 +45,7 @@ export class CommentController {
     status: 200,
     description: 'Waline service restarted successfully',
   })
-  async restartWaline() {
+  async restartWaline(): Promise<{ message: string }> {
     await this.commentService.restart('手动重启');
     return { message: 'Waline service restarted successfully' };
   }
@@ -56,7 +58,7 @@ export class CommentController {
     status: 200,
     description: 'Waline service status retrieved successfully',
   })
-  async getWalineStatus() {
+  getWalineStatus(): { running: boolean; pid?: number } {
     return this.commentService.getStatus();
   }
 }

@@ -7,12 +7,12 @@ export const WalineSettingSchema = z.object({
   'smtp.user': z.string().default(''),
   'smtp.password': z.string().default(''),
   'sender.name': z.string().default(''),
-  'sender.email': z.string().email().default(''),
-  authorEmail: z.string().email().default(''),
-  webhook: z.string().url().optional(),
+  'sender.email': z.email().default(''),
+  authorEmail: z.email().default(''),
+  webhook: z.url().optional(),
   forceLoginComment: z.boolean().default(false),
   otherConfig: z.string().optional(),
-  serverURL: z.string().url().optional(),
+  serverURL: z.url().optional(),
 });
 
 export type WalineSetting = z.infer<typeof WalineSettingSchema>;

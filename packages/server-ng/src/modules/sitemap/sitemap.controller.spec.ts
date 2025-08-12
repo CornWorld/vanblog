@@ -54,7 +54,7 @@ describe('SitemapController', () => {
 
   describe('generateSitemap', () => {
     it('should generate sitemap successfully', async () => {
-      sitemapService.generateSitemapFn.mockResolvedValue();
+      vi.mocked(sitemapService.generateSitemapFn).mockResolvedValue();
 
       const result = await controller.generateSitemap();
 
@@ -66,7 +66,7 @@ describe('SitemapController', () => {
 
     it('should handle sitemap generation errors', async () => {
       const error = new Error('Generation failed');
-      sitemapService.generateSitemapFn.mockRejectedValue(error);
+      vi.spyOn(sitemapService, 'generateSitemapFn').mockRejectedValue(error);
 
       await expect(controller.generateSitemap()).rejects.toThrow('Generation failed');
       expect(sitemapService.generateSitemapFn).toHaveBeenCalledWith('手动触发');
@@ -98,7 +98,7 @@ describe('SitemapController', () => {
   describe('getSitemapUrls', () => {
     it('should return sitemap URLs', async () => {
       const mockUrls = ['/', '/post/test', '/category/tech'];
-      sitemapService.getSiteUrls.mockResolvedValue(mockUrls);
+      vi.spyOn(sitemapService, 'getSiteUrls').mockResolvedValue(mockUrls);
 
       const result = await controller.getSitemapUrls();
 
@@ -110,7 +110,7 @@ describe('SitemapController', () => {
 
     it('should handle service errors', async () => {
       const error = new Error('Service error');
-      sitemapService.getSiteUrls.mockRejectedValue(error);
+      vi.spyOn(sitemapService, 'getSiteUrls').mockRejectedValue(error);
 
       await expect(controller.getSitemapUrls()).rejects.toThrow('Service error');
       expect(sitemapService.getSiteUrls).toHaveBeenCalled();

@@ -36,11 +36,13 @@
   "auto-run-command.rules": [
     {
       "event": "onFileRename",
-      "command": "typescript.restartTsServer"
+      "command": "typescript.restartTsServer",
+      "isLanguage": "typescript"
     },
     {
       "event": "onFileDelete",
-      "command": "typescript.restartTsServer"
+      "command": "typescript.restartTsServer",
+      "isLanguage": "typescript"
     }
   ]
 }

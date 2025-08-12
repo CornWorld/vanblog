@@ -3,8 +3,8 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vites
 
 import { AppModule } from '../src/app.module';
 import { ArticleService } from '../src/modules/article/article.service';
-import { DraftService } from '../src/modules/draft/draft.service';
 import { CommentService } from '../src/modules/comment/comment.service';
+import { DraftService } from '../src/modules/draft/draft.service';
 import { HookService } from '../src/modules/plugin/services/hook.service';
 
 import { cleanupDatabase } from './test-utils';

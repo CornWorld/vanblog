@@ -11,8 +11,14 @@ import { HookService } from '../plugin/services/hook.service';
 import { SitemapService } from './sitemap.service';
 
 // Mock fs and path modules
-vi.mock('fs/promises');
-vi.mock('path');
+vi.mock('fs/promises', () => ({
+  access: vi.fn(),
+  mkdir: vi.fn(),
+  writeFile: vi.fn(),
+}));
+vi.mock('path', () => ({
+  join: vi.fn((...args) => args.join('/')),
+}));
 vi.mock('sitemap', () => ({
   SitemapStream: vi.fn().mockImplementation(() => ({
     write: vi.fn(),
@@ -90,13 +96,13 @@ describe('SitemapService', () => {
     hookService = module.get(HookService);
 
     // Setup default mocks
-    configService.get.mockReturnValue('/tmp/static');
+    (configService.get as any).mockReturnValue('/tmp/static');
 
     // 创建一个更复杂的 mock 来处理不同的查询
     const dbMock = {
       select: vi.fn().mockImplementation((_fields) => {
         return {
-          from: vi.fn().mockImplementation((_table) => {
+          from: vi.fn().mockImplementation(async (_table) => {
             // 根据表名返回不同的数据
             if (_table === siteMeta) {
               return Promise.resolve(mockSiteMeta);
@@ -126,7 +132,7 @@ describe('SitemapService', () => {
     // Mock fs operations
     vi.mocked(fs.mkdir).mockResolvedValue(undefined);
     vi.mocked(fs.writeFile).mockResolvedValue(undefined);
-    vi.mocked(fs.access).mockRejectedValue(new Error('Directory not found'));
+    vi.mocked(fs.access).mockResolvedValue(undefined); // Default: directory exists
     vi.mocked(path.join).mockImplementation((...args) => args.join('/'));
   });
 

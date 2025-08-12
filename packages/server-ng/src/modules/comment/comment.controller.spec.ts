@@ -1,9 +1,11 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ConfigService } from '@nestjs/config';
+import { Test, type TestingModule } from '@nestjs/testing';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+
 import { CommentController } from './comment.controller';
 import { CommentService } from './comment.service';
-import { WalineSetting } from './comment.schema';
+
+import type { WalineSetting } from './comment.schema';
 
 describe('CommentController', () => {
   let controller: CommentController;
@@ -42,7 +44,7 @@ describe('CommentController', () => {
         {
           provide: ConfigService,
           useValue: {
-            get: vi.fn().mockReturnValue(false), // demoMode = false
+            get: vi.fn().mockReturnValue(false) as any, // demoMode = false
           },
         },
       ],
@@ -58,7 +60,7 @@ describe('CommentController', () => {
 
   describe('getWalineSetting', () => {
     it('should return waline setting', async () => {
-      commentService.getWalineSetting.mockResolvedValue(mockWalineSetting);
+      vi.mocked(commentService.getWalineSetting).mockResolvedValue(mockWalineSetting);
 
       const result = await controller.getWalineSetting();
 
@@ -66,12 +68,26 @@ describe('CommentController', () => {
       expect(commentService.getWalineSetting).toHaveBeenCalled();
     });
 
-    it('should return null if no setting found', async () => {
-      commentService.getWalineSetting.mockResolvedValue(null);
+    it('should return default setting if no setting found', async () => {
+      const defaultSetting: WalineSetting = {
+        'smtp.enabled': false,
+        'smtp.port': 587,
+        'smtp.host': '',
+        'smtp.user': '',
+        'smtp.password': '',
+        'sender.name': '',
+        'sender.email': 'noreply@example.com',
+        authorEmail: 'admin@example.com',
+        webhook: '',
+        forceLoginComment: false,
+        otherConfig: '',
+        serverURL: '',
+      };
+      vi.mocked(commentService.getWalineSetting).mockResolvedValue(defaultSetting);
 
       const result = await controller.getWalineSetting();
 
-      expect(result).toBeNull();
+      expect(result).toEqual(defaultSetting);
     });
   });
 
@@ -80,7 +96,7 @@ describe('CommentController', () => {
       const updateData = { 'smtp.enabled': false };
       const updatedSetting = { ...mockWalineSetting, ...updateData };
 
-      commentService.updateWalineSetting.mockResolvedValue(updatedSetting);
+      vi.mocked(commentService.updateWalineSetting).mockResolvedValue(updatedSetting);
 
       const result = await controller.updateWalineSetting(updateData);
 
@@ -91,31 +107,32 @@ describe('CommentController', () => {
 
   describe('restartWaline', () => {
     it('should restart waline service', async () => {
-      commentService.restart.mockResolvedValue();
+      vi.mocked(commentService.restart).mockResolvedValue();
 
       const result = await controller.restartWaline();
-
-      expect(result).toEqual({ message: 'Waline service restarted successfully' });
+      expect(result).toEqual({
+        message: 'Waline service restarted successfully',
+      });
       expect(commentService.restart).toHaveBeenCalledWith('手动重启');
     });
   });
 
   describe('getWalineStatus', () => {
-    it('should return waline service status', async () => {
+    it('should return waline service status', () => {
       const mockStatus = { running: true, pid: 12345 };
-      commentService.getStatus.mockReturnValue(mockStatus);
+      vi.mocked(commentService.getStatus).mockReturnValue(mockStatus);
 
-      const result = await controller.getWalineStatus();
+      const result = controller.getWalineStatus();
 
       expect(result).toEqual(mockStatus);
       expect(commentService.getStatus).toHaveBeenCalled();
     });
 
-    it('should return status when service is not running', async () => {
+    it('should return status when service is not running', () => {
       const mockStatus = { running: false, pid: undefined };
-      commentService.getStatus.mockReturnValue(mockStatus);
+      vi.mocked(commentService.getStatus).mockReturnValue(mockStatus);
 
-      const result = await controller.getWalineStatus();
+      const result = controller.getWalineStatus();
 
       expect(result).toEqual(mockStatus);
     });

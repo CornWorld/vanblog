@@ -50,7 +50,7 @@ export class SitemapService {
       const siteMetaResults = await this.db.select().from(siteMeta);
       const siteData = siteMetaResults.reduce<Record<string, string | undefined>>((acc, meta) => {
         const parsedValue = safeParseJson(meta.value, dataSchemas.genericObject);
-        acc[meta.key] = typeof parsedValue === 'string' ? parsedValue : meta.value;
+        acc[meta.key] = typeof parsedValue === 'string' ? parsedValue : (meta.value ?? undefined);
         return acc;
       }, {});
 

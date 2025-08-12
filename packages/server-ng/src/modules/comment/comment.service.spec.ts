@@ -1,16 +1,18 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
+import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { CommentService } from './comment.service';
-import { SettingCoreService } from '../setting/services/setting-core.service';
+
 import { HookService } from '../plugin/services/hook.service';
-import { WalineSetting } from './comment.schema';
+import { SettingCoreService } from '../setting/services/setting-core.service';
+
+import { CommentService } from './comment.service';
+
+import type { WalineSetting } from './comment.schema';
 
 describe('CommentService', () => {
   let service: CommentService;
   let settingService: SettingCoreService;
   let hookService: HookService;
-  let _configService: ConfigService;
 
   const mockWalineSetting: WalineSetting = {
     'smtp.enabled': true,
@@ -39,8 +41,8 @@ describe('CommentService', () => {
     };
 
     const mockHookService = {
-      applyFilters: vi.fn((hookName, data) => Promise.resolve(data)),
-      doAction: vi.fn(() => Promise.resolve()),
+      applyFilters: vi.fn(async (_hookName, data) => Promise.resolve(data)),
+      doAction: vi.fn(async () => Promise.resolve()),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -64,7 +66,6 @@ describe('CommentService', () => {
     service = module.get<CommentService>(CommentService);
     settingService = module.get(SettingCoreService);
     hookService = module.get(HookService);
-    _configService = module.get(ConfigService);
   });
 
   it('should be defined', () => {
@@ -73,7 +74,7 @@ describe('CommentService', () => {
 
   describe('getWalineSetting', () => {
     it('should return waline setting', async () => {
-      settingService.getConfig.mockResolvedValue(mockWalineSetting);
+      vi.mocked(settingService.getConfig).mockResolvedValue(mockWalineSetting);
 
       const result = await service.getWalineSetting();
 
@@ -82,23 +83,27 @@ describe('CommentService', () => {
     });
 
     it('should return default setting if no setting found', async () => {
-      settingService.getConfig.mockResolvedValue(null);
+      vi.mocked(settingService.getConfig).mockResolvedValue(null);
 
       const result = await service.getWalineSetting();
 
       expect(result).toBeDefined();
-      expect(result.smtp.enabled).toBe(false);
+      expect(result['smtp.enabled']).toBe(false);
     });
   });
 
   describe('updateWalineSetting', () => {
     it('should update waline setting and restart service', async () => {
-      const updateData = { smtp: { enabled: false } };
+      const updateData = { 'smtp.enabled': false };
       const updatedSetting = { ...mockWalineSetting, ...updateData };
 
-      settingService.getConfig.mockResolvedValue(mockWalineSetting);
-      settingService.updateConfig.mockResolvedValue(updatedSetting);
-      vi.spyOn(service, 'restart').mockResolvedValue();
+      vi.mocked(settingService.getConfig).mockImplementation(async () =>
+        Promise.resolve(mockWalineSetting),
+      );
+      vi.mocked(settingService.updateConfig).mockImplementation(async () =>
+        Promise.resolve(updatedSetting),
+      );
+      vi.spyOn(service, 'restart').mockImplementation(async () => Promise.resolve());
 
       const result = await service.updateWalineSetting(updateData);
 
@@ -108,12 +113,16 @@ describe('CommentService', () => {
     });
 
     it('should trigger beforeUpdate and afterUpdate hooks', async () => {
-      const updateData = { smtp: { enabled: false } };
+      const updateData = { 'smtp.enabled': false };
       const updatedSetting = { ...mockWalineSetting, ...updateData };
 
-      settingService.getConfig.mockResolvedValue(mockWalineSetting);
-      settingService.updateConfig.mockResolvedValue(updatedSetting);
-      vi.spyOn(service, 'restart').mockResolvedValue();
+      vi.mocked(settingService.getConfig).mockImplementation(async () =>
+        Promise.resolve(mockWalineSetting),
+      );
+      vi.mocked(settingService.updateConfig).mockImplementation(async () =>
+        Promise.resolve(updatedSetting),
+      );
+      vi.spyOn(service, 'restart').mockImplementation(async () => Promise.resolve());
 
       await service.updateWalineSetting(updateData);
 
@@ -131,8 +140,8 @@ describe('CommentService', () => {
 
   describe('Hook Integration', () => {
     it('should trigger start hooks when starting Waline', async () => {
-      vi.spyOn(service as any, 'loadEnv').mockResolvedValue();
-      vi.spyOn(service, 'stop').mockResolvedValue();
+      vi.spyOn(service as any, 'loadEnv').mockImplementation(async () => Promise.resolve());
+      vi.spyOn(service, 'stop').mockImplementation(async () => Promise.resolve());
 
       // Mock process spawn to avoid actual process creation
       const mockProcess = {
@@ -188,11 +197,7 @@ describe('CommentService', () => {
   describe('mapConfigToEnv', () => {
     it('should map waline config to environment variables', () => {
       // Access private method for testing
-      const mapConfigToEnv = (
-        service as CommentService & {
-          mapConfigToEnv: (config: WalineSetting) => Record<string, string>;
-        }
-      ).mapConfigToEnv.bind(service);
+      const mapConfigToEnv = service.mapConfigToEnv.bind(service);
 
       const result = mapConfigToEnv(mockWalineSetting);
 
@@ -211,11 +216,7 @@ describe('CommentService', () => {
     });
 
     it('should handle force login comment', () => {
-      const mapConfigToEnv = (
-        service as CommentService & {
-          mapConfigToEnv: (config: WalineSetting) => Record<string, string>;
-        }
-      ).mapConfigToEnv.bind(service);
+      const mapConfigToEnv = service.mapConfigToEnv.bind(service);
       const configWithForceLogin = {
         ...mockWalineSetting,
         forceLoginComment: true,
@@ -227,11 +228,7 @@ describe('CommentService', () => {
     });
 
     it('should filter out SMTP vars when SMTP is disabled', () => {
-      const mapConfigToEnv = (
-        service as CommentService & {
-          mapConfigToEnv: (config: WalineSetting) => Record<string, string>;
-        }
-      ).mapConfigToEnv.bind(service);
+      const mapConfigToEnv = service.mapConfigToEnv.bind(service);
       const configWithoutSMTP = {
         ...mockWalineSetting,
         'smtp.enabled': false,
