@@ -4,6 +4,7 @@ import { describe, beforeEach, it, expect, vi } from 'vitest';
 
 import { MockUtils, type DatabaseMockBuilder } from '../../../test/mock-utils';
 import { DATABASE_CONNECTION } from '../../database/database.module';
+import { QueryOptimizerService } from '../../shared/services/query-optimizer.service';
 import { HookService } from '../plugin/services/hook.service';
 
 import { ArticleService } from './article.service';
@@ -32,6 +33,16 @@ describe('ArticleService', () => {
           useValue: databaseMock.build(),
         },
 
+        {
+          provide: QueryOptimizerService,
+          useValue: {
+            withPerformanceMonitoring: vi.fn().mockImplementation((_name, fn) => fn()),
+            batchCountArticlesByTags: vi.fn().mockResolvedValue(new Map()),
+            batchCountArticlesByCategories: vi.fn().mockResolvedValue(new Map()),
+            buildOptimizedSearchQuery: vi.fn().mockReturnValue([]),
+            logSlowQuery: vi.fn(),
+          },
+        },
         {
           provide: HookService,
           useValue: mockHookService,

@@ -1,4 +1,4 @@
-import { Module, DynamicModule } from '@nestjs/common';
+import { Module, DynamicModule, NestModule, MiddlewareConsumer } from '@nestjs/common';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ScheduleModule } from '@nestjs/schedule';
 
@@ -10,6 +10,7 @@ import { DatabaseModule } from './database';
 import { AnalyticsModule } from './modules/analytics/analytics.module';
 import { ArticleModule } from './modules/article/article.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { BackupModule } from './modules/backup/backup.module';
 import { BeianModule } from './modules/beian/beian.module';
 import { CategoryModule } from './modules/category/category.module';
 import { CommentModule } from './modules/comment/comment.module';
@@ -27,10 +28,14 @@ import { SocialLinksModule } from './modules/social-links/social-links.module';
 import { TagModule } from './modules/tag/tag.module';
 import { UserModule } from './modules/user/user.module';
 import { WebhookModule } from './modules/webhook/webhook.module';
-import { BackupModule } from './modules/backup/backup.module';
+import { PerformanceMonitoringMiddleware } from './shared/middleware/performance-monitoring.middleware';
 
 @Module({})
-export class AppModule {
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer): void {
+    consumer.apply(PerformanceMonitoringMiddleware).forRoutes('*'); // Apply to all routes
+  }
+
   static async forRoot(): Promise<DynamicModule> {
     const pluginModule = await PluginModule.forRoot();
 

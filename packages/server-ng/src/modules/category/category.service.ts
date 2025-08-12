@@ -7,6 +7,7 @@ import * as jwt from 'jsonwebtoken';
 import { DATABASE_CONNECTION } from '../../database';
 import { categories, articles } from '../../database/schema';
 import { OverallStatisticsDto } from '../../shared/dto/statistics.dto';
+import { QueryOptimizerService } from '../../shared/services/query-optimizer.service';
 import { StatisticsService } from '../../shared/services/statistics.service';
 import { safeParseJson, dataSchemas } from '../../shared/zod';
 import { HookService } from '../plugin/services/hook.service';
@@ -29,6 +30,7 @@ export class CategoryService {
     @Inject(DATABASE_CONNECTION)
     private readonly db: Database,
     private readonly statisticsService: StatisticsService,
+    private readonly queryOptimizer: QueryOptimizerService,
     private readonly hookService: HookService,
   ) {}
 
@@ -305,45 +307,65 @@ export class CategoryService {
       tags: { name: string; count: number }[];
     }[]
   > {
-    const categoryList = await this.db.select().from(categories);
+    return await this.queryOptimizer.withPerformanceMonitoring(
+      'CategoryService.getCategoriesWithTags',
+      async () => {
+        // 获取所有分类
+        const categoryList = await this.db.select().from(categories);
 
-    const results = await Promise.all(
-      categoryList.map(async (category) => {
-        // Get all articles in this category
-        const articlesInCategory = await this.db
+        // 一次性获取所有文章的标签信息，按分类分组
+        const allArticlesWithTags = await this.db
           .select({
+            category: articles.category,
             tags: articles.tags,
           })
           .from(articles)
-          .where(eq(articles.category, category.name));
+          .where(sql`${articles.category} IS NOT NULL`);
 
-        // Extract and count tags
-        const tagCount = new Map<string, number>();
-        articlesInCategory.forEach((article) => {
-          if (article.tags) {
-            const articleTags = safeParseJson(article.tags, dataSchemas.tagsArray) ?? [];
-            articleTags.forEach((tag) => {
-              tagCount.set(tag, (tagCount.get(tag) ?? 0) + 1);
-            });
+        // 按分类分组文章标签
+        const articlesByCategory = new Map<string, string[]>();
+        allArticlesWithTags.forEach((article) => {
+          if (article.category && article.tags) {
+            if (!articlesByCategory.has(article.category)) {
+              articlesByCategory.set(article.category, []);
+            }
+            const categoryArticles = articlesByCategory.get(article.category);
+            if (categoryArticles) {
+              categoryArticles.push(article.tags);
+            }
           }
         });
 
-        return {
-          category: new Category({
-            ...category,
-            slug: category.slug ?? undefined,
-            description: category.description ?? undefined,
-            private: category.private ?? undefined,
-            password: category.password ?? undefined,
-          }),
-          tags: Array.from(tagCount.entries()).map(([name, count]) => ({
-            name,
-            count,
-          })),
-        };
-      }),
-    );
+        // 处理每个分类的标签统计
+        const results = categoryList.map((category) => {
+          const categoryTags = articlesByCategory.get(category.name) ?? [];
 
-    return results;
+          // 统计标签出现次数
+          const tagCount = new Map<string, number>();
+          categoryTags.forEach((tagsJson) => {
+            const articleTags = safeParseJson(tagsJson, dataSchemas.tagsArray) ?? [];
+            articleTags.forEach((tag) => {
+              tagCount.set(tag, (tagCount.get(tag) ?? 0) + 1);
+            });
+          });
+
+          return {
+            category: new Category({
+              ...category,
+              slug: category.slug ?? undefined,
+              description: category.description ?? undefined,
+              private: category.private ?? undefined,
+              password: category.password ?? undefined,
+            }),
+            tags: Array.from(tagCount.entries()).map(([name, count]) => ({
+              name,
+              count,
+            })),
+          };
+        });
+
+        return results;
+      },
+    );
   }
 }

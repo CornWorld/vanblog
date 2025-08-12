@@ -5,6 +5,7 @@ import { test } from '../../../test/vitest-fixtures.test';
 
 import { TagService } from './tag.service';
 
+import type { QueryOptimizerService } from '../../shared/services/query-optimizer.service';
 import type { StatisticsService } from '../../shared/services/statistics.service';
 import type { HookService } from '../plugin/services/hook.service';
 
@@ -12,6 +13,7 @@ import type { HookService } from '../plugin/services/hook.service';
 const tagTest = test.extend<{
   tagService: TagService;
   statisticsService: StatisticsService;
+  queryOptimizerService: QueryOptimizerService;
 }>({
   // eslint-disable-next-line no-empty-pattern
   statisticsService: async ({}, use) => {
@@ -30,58 +32,60 @@ const tagTest = test.extend<{
     await use(mockStatisticsService as unknown as StatisticsService);
   },
 
-  tagService: async ({ db, hookService, statisticsService }, use) => {
-    const service = new TagService(db, statisticsService, hookService as HookService);
+  queryOptimizerService: async (_fixtures, use) => {
+    const mockService = {
+      withPerformanceMonitoring: vi.fn().mockImplementation((_name, fn) => fn()),
+      batchCountArticlesByTags: vi.fn().mockResolvedValue(new Map()),
+      batchCountArticlesByCategories: vi.fn().mockResolvedValue({}),
+      buildOptimizedSearchQuery: vi.fn().mockReturnValue([]),
+      logSlowQuery: vi.fn(),
+    } as unknown as QueryOptimizerService;
+    await use(mockService);
+  },
+
+  tagService: async ({ db, hookService, statisticsService, queryOptimizerService }, use) => {
+    const service = new TagService(
+      db,
+      statisticsService,
+      queryOptimizerService,
+      hookService as HookService,
+    );
     await use(service);
   },
 });
 
 describe('TagService with Vitest Fixtures', () => {
   describe('findAll', () => {
-    tagTest('should return all tags', async ({ tagService, databaseMock }) => {
-      const mockTags = [
-        {
-          id: 1,
-          name: 'Tag1',
-          slug: 'tag1',
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-      ];
+    tagTest(
+      'should return all tags',
+      async ({ tagService, databaseMock, queryOptimizerService }) => {
+        const mockTags = [
+          {
+            id: 1,
+            name: 'Tag1',
+            slug: 'tag1',
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
+        ];
 
-      // 设置查询结果：第一个查询返回标签
-      databaseMock.setQueryResult(mockTags);
+        // 设置查询结果：返回标签数组
+        databaseMock.setQueryResult(mockTags);
 
-      // 为文章数量查询设置结果
-      const mockDb = databaseMock.db;
-      let countCallCount = 0;
-      mockDb.select.mockImplementation(() => {
-        if (countCallCount === 0) {
-          countCallCount++;
-          return {
-            from: vi.fn().mockReturnThis(),
-            then: (resolve: (value: unknown) => void) => {
-              resolve(mockTags);
-            },
-          };
-        } else {
-          return {
-            from: vi.fn().mockReturnThis(),
-            where: vi.fn().mockReturnThis(),
-            then: (resolve: (value: unknown) => void) => {
-              resolve([{ count: 3 }]);
-            },
-          };
-        }
-      });
+        // Mock article counts for tags
+        const articleCounts = { Tag1: 3 };
+        (queryOptimizerService.batchCountArticlesByTags as any).mockResolvedValueOnce(
+          articleCounts,
+        );
 
-      const result = await tagService.findAll();
+        const result = await tagService.findAll();
 
-      expect(result.items).toHaveLength(1);
-      expect(result.items[0].name).toBe('Tag1');
-      expect(result.items[0].articleCount).toBe(3);
-      expect(result.total).toBe(1);
-    });
+        expect(result.items).toHaveLength(1);
+        expect(result.items[0].name).toBe('Tag1');
+        expect(result.items[0].articleCount).toBe(3);
+        expect(result.total).toBe(1);
+      },
+    );
   });
 
   describe('findOne', () => {

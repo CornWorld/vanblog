@@ -3,6 +3,7 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import { vi, describe, beforeEach, it, expect } from 'vitest';
 
 import { DATABASE_CONNECTION } from '../../database/database.module';
+import { QueryOptimizerService } from '../../shared/services/query-optimizer.service';
 import { StatisticsService } from '../../shared/services/statistics.service';
 import { HookService } from '../plugin/services/hook.service';
 
@@ -71,6 +72,16 @@ describe('CategoryService', () => {
               categories: [],
               tags: [],
             }),
+          },
+        },
+        {
+          provide: QueryOptimizerService,
+          useValue: {
+            withPerformanceMonitoring: vi.fn().mockImplementation((_name, fn) => fn()),
+            batchCountArticlesByTags: vi.fn().mockResolvedValue(new Map()),
+            batchCountArticlesByCategories: vi.fn().mockResolvedValue(new Map()),
+            buildOptimizedSearchQuery: vi.fn().mockReturnValue([]),
+            logSlowQuery: vi.fn(),
           },
         },
         {

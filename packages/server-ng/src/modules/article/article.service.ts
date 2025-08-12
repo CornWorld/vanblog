@@ -4,6 +4,7 @@ import { eq, and, or, like, desc, asc, sql } from 'drizzle-orm';
 
 import { DATABASE_CONNECTION } from '../../database';
 import { articles, tags } from '../../database/schema';
+import { QueryOptimizerService } from '../../shared/services/query-optimizer.service';
 import { safeParseJson, dataSchemas } from '../../shared/zod';
 import { HookService } from '../plugin/services/hook.service';
 
@@ -26,6 +27,7 @@ export class ArticleService {
   constructor(
     @Inject(DATABASE_CONNECTION)
     private readonly db: Database,
+    private readonly queryOptimizer: QueryOptimizerService,
     private readonly hookService: HookService,
   ) {}
 
@@ -50,7 +52,7 @@ export class ArticleService {
       const tagConditions = [like(articles.tags, `%"${String(tag)}"%`)];
       whereConditions.push(or(...tagConditions));
     }
-    if (keyword !== '') {
+    if (keyword && keyword !== '') {
       whereConditions.push(
         or(
           like(articles.title, `%${String(keyword)}%`),
@@ -121,74 +123,94 @@ export class ArticleService {
       tags,
       category,
       includeHidden,
+      titleOnly,
+      contentOnly,
       sortBy = 'updatedAt',
       sortOrder = 'desc',
     } = query;
 
-    // Build where clause
-    const whereConditions = [];
-    if (category) {
-      whereConditions.push(eq(articles.category, String(category)));
-    }
-    if (Array.isArray(tags) && tags.length > 0) {
-      const tagConditions = tags.map((tag: string) => like(articles.tags, `%"${String(tag)}"%`));
-      whereConditions.push(or(...tagConditions));
-    }
-    if (keyword !== '') {
-      whereConditions.push(
-        or(
-          like(articles.title, `%${String(keyword)}%`),
-          like(articles.content, `%${String(keyword)}%`),
-        ),
-      );
-    }
-    if (!includeHidden) {
-      whereConditions.push(eq(articles.hidden, false));
-    }
+    return await this.queryOptimizer.withPerformanceMonitoring(
+      'ArticleService.search',
+      async () => {
+        // Build where clause
+        const whereConditions = [];
 
-    const whereClause = whereConditions.length > 0 ? and(...whereConditions) : undefined;
+        if (category) {
+          whereConditions.push(eq(articles.category, String(category)));
+        }
 
-    // Build order by clause
-    const orderByClause = (() => {
-      const column = articles[sortBy as keyof typeof articles.$inferSelect];
-      return sortOrder === 'asc' ? asc(column) : desc(column);
-    })();
+        if (Array.isArray(tags) && tags.length > 0) {
+          const tagConditions = tags.map((tag: string) =>
+            like(articles.tags, `%"${String(tag)}"%`),
+          );
+          whereConditions.push(or(...tagConditions));
+        }
 
-    const [articleResults, countResult] = await Promise.all([
-      this.db
-        .select()
-        .from(articles)
-        .where(whereClause)
-        .orderBy(orderByClause)
-        .limit(Number(pageSize))
-        .offset((Number(page) - 1) * Number(pageSize)),
-      this.db
-        .select({ count: sql<number>`count(*)` })
-        .from(articles)
-        .where(whereClause),
-    ]);
+        if (keyword !== '') {
+          // 使用优化的搜索查询
+          const searchInTitle = !contentOnly; // 默认搜索标题，除非明确指定只搜索内容
+          const searchInContent = !titleOnly; // 默认搜索内容，除非明确指定只搜索标题
 
-    const processedArticles = articleResults.map((article) => ({
-      id: article.id,
-      title: article.title,
-      summary: undefined,
-      cover: undefined,
-      tags: safeParseJson(article.tags, dataSchemas.tagsArray) ?? [],
-      categories: article.category ? [article.category] : [],
-      publishedAt: article.updatedAt,
-      highlight: undefined,
-    }));
+          const searchConditions = this.queryOptimizer.buildOptimizedSearchQuery(
+            keyword,
+            searchInTitle,
+            searchInContent,
+          );
 
-    const total = Number(countResult[0]?.count) > 0 ? Number(countResult[0]?.count) : 0;
-    const totalPages = Math.ceil(total / Number(pageSize));
+          if (searchConditions.length > 0) {
+            whereConditions.push(or(...searchConditions));
+          }
+        }
 
-    return {
-      items: processedArticles,
-      total,
-      page,
-      pageSize,
-      totalPages,
-    };
+        if (!includeHidden) {
+          whereConditions.push(eq(articles.hidden, false));
+        }
+
+        const whereClause = whereConditions.length > 0 ? and(...whereConditions) : undefined;
+
+        // Build order by clause
+        const orderByClause = (() => {
+          const column = articles[sortBy as keyof typeof articles.$inferSelect];
+          return sortOrder === 'asc' ? asc(column) : desc(column);
+        })();
+
+        const [articleResults, countResult] = await Promise.all([
+          this.db
+            .select()
+            .from(articles)
+            .where(whereClause)
+            .orderBy(orderByClause)
+            .limit(Number(pageSize))
+            .offset((Number(page) - 1) * Number(pageSize)),
+          this.db
+            .select({ count: sql<number>`count(*)` })
+            .from(articles)
+            .where(whereClause),
+        ]);
+
+        const processedArticles = articleResults.map((article) => ({
+          id: article.id,
+          title: article.title,
+          summary: undefined,
+          cover: undefined,
+          tags: safeParseJson(article.tags, dataSchemas.tagsArray) ?? [],
+          categories: article.category ? [article.category] : [],
+          publishedAt: article.updatedAt,
+          highlight: undefined,
+        }));
+
+        const total = Number(countResult[0]?.count) > 0 ? Number(countResult[0]?.count) : 0;
+        const totalPages = Math.ceil(total / Number(pageSize));
+
+        return {
+          items: processedArticles,
+          total,
+          page,
+          pageSize,
+          totalPages,
+        };
+      },
+    );
   }
 
   async findOne(id: number): Promise<Article> {
@@ -416,37 +438,60 @@ export class ArticleService {
     }
   }
 
-  async findByCategory(categoryName: string): Promise<ArticleListResponseDto> {
-    const articleResults = await this.db
-      .select()
-      .from(articles)
-      .where(eq(articles.category, String(categoryName)))
-      .orderBy(desc(articles.updatedAt));
+  async findByCategory(
+    categoryName: string,
+    query: { page?: number; pageSize?: number } = {},
+  ): Promise<ArticleListResponseDto> {
+    const { page = 1, pageSize = 10 } = query;
 
-    const processedArticles = articleResults.map((article) => ({
-      id: article.id,
-      title: article.title,
-      content: article.content,
-      pathname: article.pathname,
-      tags: safeParseJson(article.tags, dataSchemas.tagsArray) ?? [],
-      category: article.category,
-      author: article.author,
-      top: article.top,
-      hidden: article.hidden,
-      private: article.private,
-      password: article.password,
-      viewer: article.viewer,
-      createdAt: dayjs(article.createdAt),
-      updatedAt: dayjs(article.updatedAt),
-    }));
+    return await this.queryOptimizer.withPerformanceMonitoring(
+      'ArticleService.findByCategory',
+      async () => {
+        const whereClause = eq(articles.category, String(categoryName));
 
-    return {
-      items: processedArticles,
-      total: processedArticles.length,
-      page: 1,
-      pageSize: processedArticles.length,
-      totalPages: 1,
-    };
+        const [articleResults, countResult] = await Promise.all([
+          this.db
+            .select()
+            .from(articles)
+            .where(whereClause)
+            .orderBy(desc(articles.updatedAt))
+            .limit(Number(pageSize))
+            .offset((Number(page) - 1) * Number(pageSize)),
+          this.db
+            .select({ count: sql<number>`count(*)` })
+            .from(articles)
+            .where(whereClause),
+        ]);
+
+        const processedArticles = articleResults.map((article) => ({
+          id: article.id,
+          title: article.title,
+          content: article.content,
+          pathname: article.pathname,
+          tags: safeParseJson(article.tags, dataSchemas.tagsArray) ?? [],
+          category: article.category,
+          author: article.author,
+          top: article.top,
+          hidden: article.hidden,
+          private: article.private,
+          password: article.password,
+          viewer: article.viewer,
+          createdAt: dayjs(article.createdAt),
+          updatedAt: dayjs(article.updatedAt),
+        }));
+
+        const total = Number(countResult[0]?.count) > 0 ? Number(countResult[0]?.count) : 0;
+        const totalPages = Math.ceil(total / Number(pageSize));
+
+        return {
+          items: processedArticles,
+          total,
+          page: Number(page),
+          pageSize: Number(pageSize),
+          totalPages,
+        };
+      },
+    );
   }
 
   private async createMissingTags(tagNames: string[]): Promise<void> {

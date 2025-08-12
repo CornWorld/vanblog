@@ -3,6 +3,7 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import { vi, describe, beforeEach, it, expect } from 'vitest';
 
 import { DATABASE_CONNECTION } from '../../database/database.module';
+import { QueryOptimizerService } from '../../shared/services/query-optimizer.service';
 import { StatisticsService } from '../../shared/services/statistics.service';
 import { HookService } from '../plugin/services/hook.service';
 
@@ -10,7 +11,9 @@ import { TagService } from './tag.service';
 
 describe('TagService', () => {
   let service: TagService;
+  let module: TestingModule;
   let mockHookService: Partial<HookService>;
+  let mockQueryOptimizer: any;
 
   let mockDb: {
     select: ReturnType<typeof vi.fn>;
@@ -46,7 +49,7 @@ describe('TagService', () => {
       doAction: vi.fn().mockResolvedValue(undefined),
     };
 
-    const module: TestingModule = await Test.createTestingModule({
+    module = await Test.createTestingModule({
       imports: [],
       providers: [
         TagService,
@@ -71,6 +74,16 @@ describe('TagService', () => {
           },
         },
         {
+          provide: QueryOptimizerService,
+          useValue: {
+            withPerformanceMonitoring: vi.fn().mockImplementation((_name, fn) => fn()),
+            batchCountArticlesByTags: vi.fn().mockResolvedValue(new Map()),
+            batchCountArticlesByCategories: vi.fn().mockResolvedValue(new Map()),
+            buildOptimizedSearchQuery: vi.fn().mockReturnValue([]),
+            logSlowQuery: vi.fn(),
+          },
+        },
+        {
           provide: HookService,
           useValue: mockHookService,
         },
@@ -78,6 +91,7 @@ describe('TagService', () => {
     }).compile();
 
     service = module.get<TagService>(TagService);
+    mockQueryOptimizer = module.get(QueryOptimizerService);
   });
 
   describe('findAll', () => {
@@ -94,8 +108,10 @@ describe('TagService', () => {
 
       // Mock the first query for getting all tags
       mockDb.from.mockResolvedValueOnce(mockTags);
-      // Mock the article count query
-      mockDb.where.mockResolvedValueOnce([{ count: 3 }]);
+
+      // Mock the QueryOptimizerService to return article counts
+      const articleCounts = { Tag1: 3 }; // tag name 'Tag1' has 3 articles
+      mockQueryOptimizer.batchCountArticlesByTags.mockResolvedValueOnce(articleCounts);
 
       const result = await service.findAll();
 

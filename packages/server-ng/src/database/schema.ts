@@ -52,6 +52,15 @@ export const articles = sqliteTable(
     index('pathname_idx').on(table.pathname),
     index('category_idx').on(table.category),
     index('created_at_idx').on(table.createdAt),
+    index('updated_at_idx').on(table.updatedAt),
+    index('author_idx').on(table.author),
+    index('hidden_idx').on(table.hidden),
+    index('private_idx').on(table.private),
+    index('top_idx').on(table.top),
+    // 复合索引用于常见查询组合
+    index('category_hidden_idx').on(table.category, table.hidden),
+    index('author_created_at_idx').on(table.author, table.createdAt),
+    index('hidden_created_at_idx').on(table.hidden, table.createdAt),
   ],
 );
 

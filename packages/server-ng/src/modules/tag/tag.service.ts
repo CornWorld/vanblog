@@ -5,6 +5,7 @@ import { eq, sql, like } from 'drizzle-orm';
 import { DATABASE_CONNECTION } from '../../database';
 import { tags, articles } from '../../database/schema';
 import { OverallStatisticsDto } from '../../shared/dto/statistics.dto';
+import { QueryOptimizerService } from '../../shared/services/query-optimizer.service';
 import { StatisticsService } from '../../shared/services/statistics.service';
 import { HookService } from '../plugin/services/hook.service';
 
@@ -19,36 +20,39 @@ export class TagService {
     @Inject(DATABASE_CONNECTION)
     private readonly db: Database,
     private readonly statisticsService: StatisticsService,
+    private readonly queryOptimizer: QueryOptimizerService,
     private readonly hookService: HookService,
   ) {}
 
   async findAll(): Promise<TagListResponseDto> {
-    const tagResults = await this.db.select().from(tags);
-    const total = tagResults.length;
+    return await this.queryOptimizer.withPerformanceMonitoring('TagService.findAll', async () => {
+      const tagResults = await this.db.select().from(tags);
+      const total = tagResults.length;
 
-    // Count articles for each tag
-    const processedTags = await Promise.all(
-      tagResults.map(async (tag) => {
-        // Count articles that contain this tag
-        const countResult = await this.db
-          .select({ count: sql<number>`count(*)` })
-          .from(articles)
-          .where(like(articles.tags, `%"${tag.name}"%`));
-
+      if (total === 0) {
         return {
-          id: tag.id,
-          name: tag.name,
-          slug: tag.slug,
-          articleCount: Number(countResult[0]?.count) > 0 ? Number(countResult[0]?.count) : 0,
-          createdAt: dayjs(tag.createdAt),
+          items: [],
+          total: 0,
         };
-      }),
-    );
+      }
 
-    return {
-      items: processedTags,
-      total,
-    };
+      // 批量查询所有标签的文章数量，避免 N+1 查询问题
+      const tagNames = tagResults.map((tag) => tag.name);
+      const articleCounts = await this.queryOptimizer.batchCountArticlesByTags(this.db, tagNames);
+
+      const processedTags = tagResults.map((tag) => ({
+        id: tag.id,
+        name: tag.name,
+        slug: tag.slug,
+        articleCount: articleCounts[tag.name] ?? 0,
+        createdAt: dayjs(tag.createdAt),
+      }));
+
+      return {
+        items: processedTags,
+        total,
+      };
+    });
   }
 
   async findOne(id: number): Promise<Tag> {

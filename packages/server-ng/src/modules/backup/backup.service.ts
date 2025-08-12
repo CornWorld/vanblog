@@ -453,7 +453,7 @@ export class BackupService {
         if (!dto.restoreAnalytics && tableName === 'analytics') continue;
         if (!dto.restoreLogs && tableName === 'loginLogs') continue;
 
-        await this.restoreTable(tableName, data[tableName] as unknown[], dto.overwriteExisting);
+        await this.restoreTable(tableName, data[tableName], dto.overwriteExisting);
 
         processedTables++;
         task.progress = 20 + Math.floor((processedTables / totalTables) * 70);
@@ -508,7 +508,25 @@ export class BackupService {
       webhookLogs,
     };
 
-    const table = tableMap[tableName] as any;
+    type TableType =
+      | typeof users
+      | typeof articles
+      | typeof categories
+      | typeof tags
+      | typeof drafts
+      | typeof draftVersions
+      | typeof staticFiles
+      | typeof siteMeta
+      | typeof loginLogs
+      | typeof customPages
+      | typeof analytics
+      | typeof permissionNodes
+      | typeof permissionGroups
+      | typeof pluginData
+      | typeof codeSnippets
+      | typeof webhooks
+      | typeof webhookLogs;
+    const table = tableMap[tableName] as TableType | undefined;
 
     if (!table) {
       this.logger.warn(`Unknown table: ${String(tableName)}`);
