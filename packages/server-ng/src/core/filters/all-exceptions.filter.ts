@@ -1,8 +1,9 @@
 import { ExceptionFilter, Catch, ArgumentsHost, HttpStatus, HttpException } from '@nestjs/common';
 import dayjs from 'dayjs';
-import { Request, Response } from 'express';
 
 import { LoggerService } from '../logger/logger.service';
+
+import type { Request, Response } from 'express';
 
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {

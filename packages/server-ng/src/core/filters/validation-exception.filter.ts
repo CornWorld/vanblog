@@ -1,8 +1,9 @@
 import { ExceptionFilter, Catch, ArgumentsHost, BadRequestException } from '@nestjs/common';
 import dayjs from 'dayjs';
-import { Request, Response } from 'express';
 
 import { LoggerService } from '../logger/logger.service';
+
+import type { Request, Response } from 'express';
 
 @Catch(BadRequestException)
 export class ValidationExceptionFilter implements ExceptionFilter {

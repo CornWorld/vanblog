@@ -17,7 +17,7 @@ import 'dayjs/locale/zh-cn';
 dayjs.locale('zh-cn'); // TODO dep on config
 
 export async function init(): Promise<INestApplication> {
-  const app = await NestFactory.create(await AppModule.forRoot(), {
+  const app = await NestFactory.create(AppModule.forRoot(), {
     bufferLogs: true,
   });
 

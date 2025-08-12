@@ -75,7 +75,7 @@ export class BackupService {
   private readonly restoreTasks = new Map<string, RestoreTask>();
 
   constructor(
-    @Inject('DATABASE') private readonly db: Database,
+    @Inject('DATABASE_CONNECTION') private readonly db: Database,
     private readonly logger: LoggerService,
   ) {
     void this.ensureBackupDir();
@@ -542,7 +542,8 @@ export class BackupService {
     if (records.length > 0) {
       const batchSize = 100;
       for (let i = 0; i < records.length; i += batchSize) {
-        const batch = records.slice(i, i + batchSize);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const batch = records.slice(i, i + batchSize) as any;
         try {
           await this.db.insert(table).values(batch).onConflictDoNothing();
         } catch (error) {

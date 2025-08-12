@@ -15,7 +15,6 @@ import {
   Res,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
-import { Response } from 'express';
 
 import { RequireAuth } from '../auth/auth.decorator';
 
@@ -28,6 +27,8 @@ import {
   BackupListDto,
   RestoreProgressDto,
 } from './dto/backup.dto';
+
+import type { Response } from 'express';
 
 @ApiTags('backup')
 @Controller('api/v2/backup')

@@ -158,7 +158,8 @@ export class ArticleService {
           );
 
           if (searchConditions.length > 0) {
-            whereConditions.push(or(...searchConditions));
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            whereConditions.push(or(...(searchConditions as any)));
           }
         }
 
@@ -170,7 +171,9 @@ export class ArticleService {
 
         // Build order by clause
         const orderByClause = (() => {
-          const column = articles[sortBy as keyof typeof articles.$inferSelect];
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const column = articles[sortBy as keyof typeof articles.$inferSelect] as any;
+
           return sortOrder === 'asc' ? asc(column) : desc(column);
         })();
 

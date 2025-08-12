@@ -1,5 +1,6 @@
 import { Injectable, NestMiddleware, Logger } from '@nestjs/common';
-import { Request, Response, NextFunction } from 'express';
+
+import type { Request, Response, NextFunction } from 'express';
 
 @Injectable()
 export class PerformanceMonitoringMiddleware implements NestMiddleware {
@@ -17,10 +18,9 @@ export class PerformanceMonitoringMiddleware implements NestMiddleware {
     }
 
     // Override res.end to capture response time
-    const originalEnd: (chunk?: unknown, encoding?: BufferEncoding, cb?: () => void) => Response =
-      res.end.bind(res);
+    const originalEnd = res.end.bind(res);
     const { logger } = this;
-    res.end = function (chunk?: unknown, encoding?: BufferEncoding, cb?: () => void): Response {
+    res.end = function (...args: unknown[]): Response {
       const duration = Date.now() - startTime;
       const { statusCode } = res;
 
@@ -48,7 +48,7 @@ export class PerformanceMonitoringMiddleware implements NestMiddleware {
       }
 
       // Call original end method
-      return originalEnd(chunk, encoding, cb);
+      return originalEnd(...(args as Parameters<typeof originalEnd>));
     };
 
     next();

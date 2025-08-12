@@ -100,7 +100,7 @@ describe('SitemapService', () => {
 
     // 创建一个更复杂的 mock 来处理不同的查询
     const dbMock = {
-      select: vi.fn().mockImplementation((_fields) => {
+      select: vi.fn().mockImplementation(() => {
         return {
           from: vi.fn().mockImplementation(async (_table) => {
             // 根据表名返回不同的数据

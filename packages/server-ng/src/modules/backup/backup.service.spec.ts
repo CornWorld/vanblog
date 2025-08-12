@@ -6,6 +6,7 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, beforeEach, expect, vi } from 'vitest';
 
 import { LoggerService } from '../../core/logger/logger.service';
+import { DATABASE_CONNECTION } from '../../database/database.module';
 
 import { BackupService } from './backup.service';
 
@@ -41,7 +42,7 @@ describe('BackupService', () => {
       providers: [
         BackupService,
         {
-          provide: 'DATABASE',
+          provide: DATABASE_CONNECTION,
           useValue: mockDb,
         },
         {

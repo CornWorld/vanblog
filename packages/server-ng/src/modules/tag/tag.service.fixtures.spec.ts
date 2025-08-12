@@ -32,7 +32,8 @@ const tagTest = test.extend<{
     await use(mockStatisticsService as unknown as StatisticsService);
   },
 
-  queryOptimizerService: async (_fixtures, use) => {
+  // eslint-disable-next-line no-empty-pattern
+  queryOptimizerService: async ({}, use) => {
     const mockService = {
       withPerformanceMonitoring: vi.fn().mockImplementation((_name, fn) => fn()),
       batchCountArticlesByTags: vi.fn().mockResolvedValue(new Map()),

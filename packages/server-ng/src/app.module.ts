@@ -36,8 +36,8 @@ export class AppModule implements NestModule {
     consumer.apply(PerformanceMonitoringMiddleware).forRoutes('*'); // Apply to all routes
   }
 
-  static async forRoot(): Promise<DynamicModule> {
-    const pluginModule = await PluginModule.forRoot();
+  static forRoot(): DynamicModule {
+    const pluginModule = PluginModule.forRoot();
 
     return {
       module: AppModule,

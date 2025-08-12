@@ -267,19 +267,25 @@ describe('CategoryService', () => {
         },
       ];
 
-      const mockArticles = [{ tags: '["tag1", "tag2"]' }, { tags: '["tag2", "tag3"]' }];
+      const mockArticles = [
+        { category: 'Category1', tags: '["tag1", "tag2"]' },
+        { category: 'Category1', tags: '["tag2", "tag3"]' },
+        { category: 'Category2', tags: '["tag4"]' },
+      ];
 
-      // Mock for getting all categories
+      // Mock the first query: getting all categories
       mockDb.from.mockResolvedValueOnce(mockCategories);
 
-      // Mock for getting articles in each category - resolve to array
-      mockDb.where.mockResolvedValue(mockArticles);
+      // Mock the second query: getting articles with tags
+      mockDb.where.mockResolvedValueOnce(mockArticles);
 
       const result = await service.getCategoriesWithTags();
 
       expect(result).toHaveLength(2);
+      expect(result[0].category.name).toBe('Category1');
       expect(result[0].tags).toHaveLength(3); // tag1, tag2, tag3
-      expect(result[0].tags[0].name).toBe('tag1');
+      expect(result[1].category.name).toBe('Category2');
+      expect(result[1].tags).toHaveLength(1); // tag4
     });
   });
 });

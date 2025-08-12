@@ -163,7 +163,8 @@ export class QueryOptimizerService {
     keyword: string,
     searchInTitle: boolean,
     searchInContent: boolean,
-  ): unknown[] {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ): any[] {
     const conditions = [];
 
     if (searchInTitle) {
