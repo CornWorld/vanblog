@@ -95,6 +95,8 @@ describe('BackupController', () => {
         name: 'encrypted-backup',
         password: 'test123456',
         includeMedia: true,
+        includeAnalytics: false,
+        includeLogs: false,
       };
 
       const expectedResult = {
@@ -280,6 +282,9 @@ describe('BackupController', () => {
       const restoreBackupDto: RestoreBackupDto = {
         password: 'test123456',
         overwriteExisting: false,
+        restoreMedia: true,
+        restoreAnalytics: false,
+        restoreLogs: false,
       };
 
       const expectedResult = { taskId: 'task-456' };
@@ -294,7 +299,12 @@ describe('BackupController', () => {
 
     it('should throw error for invalid filename', async () => {
       const filename = '../../../etc/passwd';
-      const restoreBackupDto: RestoreBackupDto = {};
+      const restoreBackupDto: RestoreBackupDto = {
+        overwriteExisting: false,
+        restoreMedia: true,
+        restoreAnalytics: false,
+        restoreLogs: false,
+      };
 
       await expect(controller.restoreBackup(filename, restoreBackupDto)).rejects.toThrow(
         'Invalid filename',

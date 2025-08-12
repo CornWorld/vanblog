@@ -214,6 +214,18 @@ export default [
     },
   },
 
+  // backup.service.ts 特殊配置 - 数据库操作需要使用 any 类型
+  {
+    files: ['**/backup/backup.service.ts'],
+    rules: {
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+      '@typescript-eslint/no-unsafe-member-access': 'off',
+      '@typescript-eslint/no-unsafe-argument': 'off',
+      '@typescript-eslint/no-unsafe-call': 'off',
+      '@typescript-eslint/strict-boolean-expressions': 'off',
+    },
+  },
+
   // JavaScript 文件配置
   {
     files: ['**/*.js'],

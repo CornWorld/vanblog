@@ -118,6 +118,9 @@ describe('BackupService', () => {
 
       const createBackupDto: CreateBackupDto = {
         name: 'failing-backup',
+        includeMedia: true,
+        includeAnalytics: false,
+        includeLogs: false,
       };
 
       await expect(service.createBackup(createBackupDto)).rejects.toThrow(
@@ -296,7 +299,12 @@ describe('BackupService', () => {
       (error as any).code = 'ENOENT';
       mockFs.access.mockRejectedValue(error);
 
-      const restoreDto: RestoreBackupDto = {};
+      const restoreDto: RestoreBackupDto = {
+        overwriteExisting: false,
+        restoreMedia: true,
+        restoreAnalytics: false,
+        restoreLogs: false,
+      };
 
       await expect(service.restoreBackup('non-existent.vbak', restoreDto)).rejects.toThrow(
         'Backup file not found',
@@ -308,7 +316,12 @@ describe('BackupService', () => {
     it('should return restore progress', async () => {
       // First start a restore task
       mockFs.access.mockResolvedValue(undefined);
-      const restoreDto: RestoreBackupDto = {};
+      const restoreDto: RestoreBackupDto = {
+        overwriteExisting: false,
+        restoreMedia: true,
+        restoreAnalytics: false,
+        restoreLogs: false,
+      };
       const { taskId } = await service.restoreBackup('test-backup.vbak', restoreDto);
 
       const progress = service.getRestoreProgress(taskId);

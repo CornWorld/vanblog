@@ -45,7 +45,7 @@ export const BackupInfoSchema = z.object({
   includeAnalytics: z.boolean(),
   includeLogs: z.boolean(),
   createdAt: z.string(),
-  tables: z.record(z.number()), // table name -> record count
+  tables: z.record(z.string(), z.number()), // table name -> record count
 });
 
 export class BackupInfoDto extends createZodDto(BackupInfoSchema) {}

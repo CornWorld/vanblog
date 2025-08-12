@@ -85,7 +85,10 @@ export class BackupService {
     try {
       await fs.mkdir(this.backupDir, { recursive: true });
     } catch (error) {
-      this.logger.error('Failed to create backup directory', error);
+      this.logger.error(
+        'Failed to create backup directory',
+        error instanceof Error ? error.message : String(error),
+      );
     }
   }
 
@@ -156,7 +159,10 @@ export class BackupService {
       };
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      this.logger.error(`Failed to create backup: ${String(errorMessage)}`, error);
+      this.logger.error(
+        `Failed to create backup: ${String(errorMessage)}`,
+        error instanceof Error ? error.message : String(error),
+      );
       throw new InternalServerErrorException('Failed to create backup');
     }
   }
@@ -233,7 +239,10 @@ export class BackupService {
       };
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      this.logger.error(`Failed to get backups: ${String(errorMessage)}`, error);
+      this.logger.error(
+        `Failed to get backups: ${String(errorMessage)}`,
+        error instanceof Error ? error.message : String(error),
+      );
       throw new InternalServerErrorException('Failed to get backups');
     }
   }
@@ -255,7 +264,10 @@ export class BackupService {
         throw new NotFoundException('Backup file not found');
       }
       const errorMessage = error instanceof Error ? error.message : String(error);
-      this.logger.error(`Failed to delete backup: ${String(errorMessage)}`, error);
+      this.logger.error(
+        `Failed to delete backup: ${String(errorMessage)}`,
+        error instanceof Error ? error.message : String(error),
+      );
       throw new InternalServerErrorException('Failed to delete backup');
     }
   }
@@ -282,7 +294,10 @@ export class BackupService {
     this.performRestore(filepath, dto, task).catch((error: unknown) => {
       task.status = 'failed';
       task.error = error instanceof Error ? error.message : String(error);
-      this.logger.error(`Restore task ${String(taskId)} failed:`, error);
+      this.logger.error(
+        `Restore task ${String(taskId)} failed:`,
+        error instanceof Error ? error.message : String(error),
+      );
     });
 
     return { taskId };
@@ -304,10 +319,8 @@ export class BackupService {
     };
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private async collectData(dto: CreateBackupDto): Promise<Record<string, any[]>> {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const data: Record<string, any[]> = {};
+  private async collectData(dto: CreateBackupDto): Promise<Record<string, unknown[]>> {
+    const data: Record<string, unknown[]> = {};
 
     // 用户数据
     data.users = await this.db.select().from(users);
@@ -347,8 +360,7 @@ export class BackupService {
     return data;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private getTableCounts(data: Record<string, any[]>): Record<string, number> {
+  private getTableCounts(data: Record<string, unknown[]>): Record<string, number> {
     const counts: Record<string, number> = {};
     for (const [tableName, records] of Object.entries(data)) {
       counts[tableName] = records.length;
@@ -363,9 +375,9 @@ export class BackupService {
       const content = decompressed.toString();
 
       try {
-        const backup = JSON.parse(content);
+        const backup = JSON.parse(content) as { metadata: BackupMetadata };
 
-        return backup.metadata as BackupMetadata;
+        return backup.metadata;
       } catch {
         // 可能是加密的备份，无法读取元数据
         throw new Error('Cannot read metadata from encrypted backup');
@@ -397,7 +409,6 @@ export class BackupService {
       // 解密（如果需要）
       try {
         const backup = JSON.parse(content);
-
         if (backup.metadata && !backup.metadata.hasPassword) {
           // 未加密的备份
         } else {
@@ -411,7 +422,10 @@ export class BackupService {
         content = this.decrypt(content, dto.password);
       }
 
-      const backup = JSON.parse(content);
+      const backup = JSON.parse(content) as {
+        metadata: BackupMetadata;
+        data: Record<string, unknown[]>;
+      };
 
       const { metadata, data } = backup;
 
@@ -439,7 +453,7 @@ export class BackupService {
         if (!dto.restoreAnalytics && tableName === 'analytics') continue;
         if (!dto.restoreLogs && tableName === 'loginLogs') continue;
 
-        await this.restoreTable(tableName, data[tableName], dto.overwriteExisting);
+        await this.restoreTable(tableName, data[tableName] as unknown[], dto.overwriteExisting);
 
         processedTables++;
         task.progress = 20 + Math.floor((processedTables / totalTables) * 70);
@@ -460,16 +474,21 @@ export class BackupService {
     } catch (error: unknown) {
       task.status = 'failed';
       task.error = error instanceof Error ? error.message : String(error);
-      this.logger.error(`Restore task ${String(task.id)} failed:`, error);
+      this.logger.error(
+        `Restore task ${String(task.id)} failed:`,
+        error instanceof Error ? error.message : String(error),
+      );
       throw error;
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private async restoreTable(tableName: string, records: any[], overwrite: boolean): Promise<void> {
+  private async restoreTable(
+    tableName: string,
+    records: unknown[],
+    overwrite: boolean,
+  ): Promise<void> {
     // 获取对应的表定义
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const tableMap: Record<string, any> = {
+    const tableMap: Record<string, unknown> = {
       users,
       articles,
       categories,
@@ -489,7 +508,7 @@ export class BackupService {
       webhookLogs,
     };
 
-    const table = tableMap[tableName];
+    const table = tableMap[tableName] as any;
 
     if (!table) {
       this.logger.warn(`Unknown table: ${String(tableName)}`);
@@ -507,9 +526,15 @@ export class BackupService {
       for (let i = 0; i < records.length; i += batchSize) {
         const batch = records.slice(i, i + batchSize);
         try {
-          await this.db.insert(table).values(batch).onConflictDoNothing();
+          await this.db
+            .insert(table)
+            .values(batch as any[])
+            .onConflictDoNothing();
         } catch (error) {
-          this.logger.warn(`Failed to insert batch for ${String(tableName)}:`, error);
+          this.logger.warn(
+            `Failed to insert batch for ${String(tableName)}:`,
+            error instanceof Error ? error.message : String(error),
+          );
         }
       }
     }
@@ -518,12 +543,13 @@ export class BackupService {
   private async optimizeDatabase(): Promise<void> {
     try {
       // SQLite 优化命令
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (this.db as any).run('VACUUM');
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (this.db as any).run('ANALYZE');
+      (await (this.db as any).run('VACUUM')) as unknown;
+      (await (this.db as any).run('ANALYZE')) as unknown;
     } catch (error) {
-      this.logger.warn('Failed to optimize database:', error);
+      this.logger.warn(
+        'Failed to optimize database:',
+        error instanceof Error ? error.message : String(error),
+      );
     }
   }
 
