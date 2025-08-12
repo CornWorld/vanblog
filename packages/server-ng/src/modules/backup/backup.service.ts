@@ -526,10 +526,7 @@ export class BackupService {
       for (let i = 0; i < records.length; i += batchSize) {
         const batch = records.slice(i, i + batchSize);
         try {
-          await this.db
-            .insert(table)
-            .values(batch as any[])
-            .onConflictDoNothing();
+          await this.db.insert(table).values(batch).onConflictDoNothing();
         } catch (error) {
           this.logger.warn(
             `Failed to insert batch for ${String(tableName)}:`,
@@ -543,8 +540,8 @@ export class BackupService {
   private async optimizeDatabase(): Promise<void> {
     try {
       // SQLite 优化命令
-      (await (this.db as any).run('VACUUM')) as unknown;
-      (await (this.db as any).run('ANALYZE')) as unknown;
+      await (this.db as unknown as { run: (sql: string) => Promise<unknown> }).run('VACUUM');
+      await (this.db as unknown as { run: (sql: string) => Promise<unknown> }).run('ANALYZE');
     } catch (error) {
       this.logger.warn(
         'Failed to optimize database:',
