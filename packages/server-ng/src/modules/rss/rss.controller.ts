@@ -8,7 +8,7 @@ import { Permissions } from '../auth/permissions.decorator';
 import { RssService } from './rss.service';
 
 @ApiTags('rss')
-@Controller('api/v2/rss')
+@Controller({ path: 'rss', version: '2' })
 export class RssController {
   constructor(private readonly rssService: RssService) {}
 

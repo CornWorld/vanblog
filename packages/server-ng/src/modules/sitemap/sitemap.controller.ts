@@ -8,7 +8,7 @@ import { Permissions } from '../auth/permissions.decorator';
 import { SitemapService } from './sitemap.service';
 
 @ApiTags('sitemap')
-@Controller('api/v2/sitemap')
+@Controller({ path: 'sitemap', version: '2' })
 export class SitemapController {
   constructor(private readonly sitemapService: SitemapService) {}
 

@@ -37,7 +37,7 @@ import { WebhookRegistryService } from './webhook-registry.service';
 import { WebhookService } from './webhook.service';
 
 @ApiTags('webhooks')
-@Controller('api/v2/webhooks')
+@Controller({ path: 'webhooks', version: '2' })
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 @ApiBearerAuth()
 export class WebhookController {

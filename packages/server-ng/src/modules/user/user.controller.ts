@@ -10,7 +10,7 @@ import { User } from './entities/user.entity';
 import { UserService } from './user.service';
 
 @ApiTags('users')
-@Controller('api/v2/admin/users')
+@Controller({ path: 'admin/users', version: '2' })
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 @ApiBearerAuth()
 export class UserController {

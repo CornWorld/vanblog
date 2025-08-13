@@ -9,7 +9,7 @@ import { Tag } from './entities/tag.entity';
 import { TagService } from './tag.service';
 
 @ApiTags('tags')
-@Controller('api/v2/tags')
+@Controller({ path: 'tags', version: '2' })
 export class TagController {
   constructor(private readonly tagService: TagService) {}
 

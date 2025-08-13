@@ -47,7 +47,7 @@ interface WatermarkBody {
 }
 
 @ApiTags('媒体资源')
-@Controller('api/v2/admin/media')
+@Controller({ path: 'admin/media', version: '2' })
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 @ApiBearerAuth()
 export class MediaController {

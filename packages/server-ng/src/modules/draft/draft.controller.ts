@@ -28,7 +28,7 @@ import {
 } from './dto/draft.dto';
 
 @ApiTags('drafts')
-@Controller('api/v2/drafts')
+@Controller({ path: 'drafts', version: '2' })
 export class DraftController {
   constructor(
     private readonly draftService: DraftService,

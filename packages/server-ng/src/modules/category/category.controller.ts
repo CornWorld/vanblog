@@ -21,7 +21,7 @@ import {
 import { Category } from './entities/category.entity';
 
 @ApiTags('categories')
-@Controller('api/v2/categories')
+@Controller({ path: 'categories', version: '2' })
 export class CategoryController {
   constructor(private readonly categoryService: CategoryService) {}
 
