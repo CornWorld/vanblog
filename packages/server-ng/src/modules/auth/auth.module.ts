@@ -9,6 +9,7 @@ import { UserModule } from '../user/user.module';
 import { AuthV1Controller } from './auth-v1.controller';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
+import { RateLimitGuard } from './guards/rate-limit.guard';
 import { LoginLogService } from './login-log.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { LocalStrategy } from './strategies/local.strategy';
@@ -31,7 +32,14 @@ import { TokenService } from './token.service';
     }),
   ],
   controllers: [AuthController, AuthV1Controller],
-  providers: [AuthService, LocalStrategy, JwtStrategy, LoginLogService, TokenService],
+  providers: [
+    AuthService,
+    LocalStrategy,
+    JwtStrategy,
+    LoginLogService,
+    TokenService,
+    RateLimitGuard,
+  ],
   exports: [AuthService, LoginLogService, TokenService],
 })
 export class AuthModule {}

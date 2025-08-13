@@ -81,4 +81,21 @@ export class LoginLogService {
 
     return result.length;
   }
+
+  async getRecentFailedAttemptsByIp(ip: string, minutes = 30): Promise<number> {
+    const cutoffTime = dayjs().subtract(minutes, 'minute').toISOString();
+
+    const result = await this.db
+      .select()
+      .from(loginLogs)
+      .where(
+        and(
+          eq(loginLogs.ip, ip),
+          eq(loginLogs.success, false),
+          gte(loginLogs.createdAt, cutoffTime),
+        ),
+      );
+
+    return result.length;
+  }
 }

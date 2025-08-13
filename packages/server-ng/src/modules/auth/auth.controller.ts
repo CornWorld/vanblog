@@ -21,6 +21,7 @@ import { RequireAuth, RequireAdmin } from './auth.decorator';
 import { AuthService } from './auth.service';
 import { LoginLogQueryDto, LoginLogResponseDto, LoginLogQuerySchema } from './dto/login-log.dto';
 import { LocalAuthGuard } from './guards/local-auth.guard';
+import { RateLimitGuard } from './guards/rate-limit.guard';
 import { LoginLogService } from './login-log.service';
 
 interface RequestWithUser extends ExpressRequest {
@@ -37,10 +38,11 @@ export class AuthController {
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  @UseGuards(LocalAuthGuard)
+  @UseGuards(RateLimitGuard, LocalAuthGuard)
   @ApiOperation({ summary: 'User login' })
   @ApiResponse({ status: 200, description: 'Login successful' })
   @ApiResponse({ status: 401, description: 'Invalid credentials' })
+  @ApiResponse({ status: 429, description: 'Too many login attempts' })
   async login(@Request() req: RequestWithUser): Promise<{
     token: string;
     access_token: string;
