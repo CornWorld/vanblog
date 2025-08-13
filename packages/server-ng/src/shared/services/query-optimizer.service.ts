@@ -1,7 +1,32 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { sql } from 'drizzle-orm';
+import { sql, type SQL } from 'drizzle-orm';
+
+import { CacheService } from './cache.service';
 
 import type { Database } from '../../database/connection';
+
+/**
+ * 查询统计信息
+ */
+interface QueryStats {
+  name: string;
+  count: number;
+  totalTime: number;
+  avgTime: number;
+  maxTime: number;
+  minTime: number;
+  lastExecuted: Date;
+}
+
+/**
+ * 索引建议
+ */
+interface IndexSuggestion {
+  table: string;
+  columns: string[];
+  reason: string;
+  estimatedImprovement: string;
+}
 
 /**
  * 查询优化服务
@@ -10,6 +35,45 @@ import type { Database } from '../../database/connection';
 @Injectable()
 export class QueryOptimizerService {
   private readonly logger = new Logger(QueryOptimizerService.name);
+  private readonly queryStats = new Map<string, QueryStats>();
+  private readonly indexSuggestions: IndexSuggestion[] = [];
+
+  constructor(private readonly cacheService: CacheService) {
+    // 初始化一些基础的索引建议
+    this.initializeIndexSuggestions();
+  }
+
+  /**
+   * 初始化索引建议
+   */
+  private initializeIndexSuggestions(): void {
+    this.indexSuggestions.push(
+      {
+        table: 'articles',
+        columns: ['hidden', 'private'],
+        reason: 'Frequently used in WHERE clauses for filtering visible articles',
+        estimatedImprovement: 'High - reduces full table scans',
+      },
+      {
+        table: 'articles',
+        columns: ['category'],
+        reason: 'Used for category-based filtering and grouping',
+        estimatedImprovement: 'Medium - improves category queries',
+      },
+      {
+        table: 'articles',
+        columns: ['createdAt'],
+        reason: 'Used for sorting articles by creation date',
+        estimatedImprovement: 'Medium - improves sorting performance',
+      },
+      {
+        table: 'articles',
+        columns: ['pathname'],
+        reason: 'Used for unique article lookups',
+        estimatedImprovement: 'High - enables fast article retrieval',
+      },
+    );
+  }
 
   /**
    * 批量查询标签的文章数量，避免 N+1 查询问题
@@ -163,8 +227,7 @@ export class QueryOptimizerService {
     keyword: string,
     searchInTitle: boolean,
     searchInContent: boolean,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ): any[] {
+  ): SQL[] {
     const conditions = [];
 
     if (searchInTitle) {
@@ -211,11 +274,166 @@ export class QueryOptimizerService {
       const result = await queryFn();
       const duration = Date.now() - startTime;
       this.logSlowQuery(queryName, duration, threshold);
+      this.updateQueryStats(queryName, duration);
       return result;
     } catch (error) {
       const duration = Date.now() - startTime;
       this.logger.error(`Query ${queryName} failed after ${duration}ms:`, error);
+      this.updateQueryStats(queryName, duration);
       throw error;
+    }
+  }
+
+  /**
+   * 更新查询统计信息
+   */
+  private updateQueryStats(queryName: string, duration: number): void {
+    const existing = this.queryStats.get(queryName);
+
+    if (existing) {
+      existing.count += 1;
+      existing.totalTime += duration;
+      existing.avgTime = existing.totalTime / existing.count;
+      existing.maxTime = Math.max(existing.maxTime, duration);
+      existing.minTime = Math.min(existing.minTime, duration);
+      existing.lastExecuted = new Date();
+    } else {
+      this.queryStats.set(queryName, {
+        name: queryName,
+        count: 1,
+        totalTime: duration,
+        avgTime: duration,
+        maxTime: duration,
+        minTime: duration,
+        lastExecuted: new Date(),
+      });
+    }
+  }
+
+  /**
+   * 获取查询统计信息
+   */
+  getQueryStats(): QueryStats[] {
+    return Array.from(this.queryStats.values()).sort((a, b) => b.avgTime - a.avgTime);
+  }
+
+  /**
+   * 获取慢查询统计
+   */
+  getSlowQueries(threshold = 1000): QueryStats[] {
+    return this.getQueryStats().filter((stat) => stat.avgTime > threshold);
+  }
+
+  /**
+   * 重置查询统计
+   */
+  resetQueryStats(): void {
+    this.queryStats.clear();
+  }
+
+  /**
+   * 获取索引建议
+   */
+  getIndexSuggestions(): IndexSuggestion[] {
+    return [...this.indexSuggestions];
+  }
+
+  /**
+   * 添加动态索引建议
+   */
+  addIndexSuggestion(suggestion: IndexSuggestion): void {
+    // 检查是否已存在相同的建议
+    const exists = this.indexSuggestions.some(
+      (s) =>
+        s.table === suggestion.table &&
+        JSON.stringify(s.columns.sort()) === JSON.stringify(suggestion.columns.sort()),
+    );
+
+    if (!exists) {
+      this.indexSuggestions.push(suggestion);
+    }
+  }
+
+  /**
+   * 分析查询模式并生成索引建议
+   */
+  analyzeQueryPatterns(): IndexSuggestion[] {
+    const suggestions: IndexSuggestion[] = [];
+    const stats = this.getQueryStats();
+
+    // 分析慢查询模式
+    const slowQueries = stats.filter((s) => s.avgTime > 500);
+
+    for (const query of slowQueries) {
+      if (query.name.includes('article') && query.name.includes('search')) {
+        suggestions.push({
+          table: 'articles',
+          columns: ['title', 'content'],
+          reason: `Slow search query detected: ${query.name} (avg: ${query.avgTime}ms)`,
+          estimatedImprovement: 'High - consider full-text search index',
+        });
+      }
+
+      if (query.name.includes('category') && query.avgTime > 1000) {
+        suggestions.push({
+          table: 'articles',
+          columns: ['category', 'createdAt'],
+          reason: `Slow category query: ${query.name} (avg: ${query.avgTime}ms)`,
+          estimatedImprovement: 'Medium - composite index for category + date sorting',
+        });
+      }
+    }
+
+    return suggestions;
+  }
+
+  /**
+   * 生成查询优化报告
+   */
+  generateOptimizationReport(): {
+    totalQueries: number;
+    slowQueries: QueryStats[];
+    indexSuggestions: IndexSuggestion[];
+    dynamicSuggestions: IndexSuggestion[];
+  } {
+    const stats = this.getQueryStats();
+    const slowQueries = this.getSlowQueries();
+    const dynamicSuggestions = this.analyzeQueryPatterns();
+
+    return {
+      totalQueries: stats.reduce((sum, stat) => sum + stat.count, 0),
+      slowQueries,
+      indexSuggestions: this.getIndexSuggestions(),
+      dynamicSuggestions,
+    };
+  }
+
+  /**
+   * 查询缓存包装器
+   */
+  async withCache<T>(
+    key: string,
+    queryFn: () => Promise<T>,
+    ttl: number = 5 * 60 * 1000, // 5分钟默认TTL
+  ): Promise<T> {
+    return this.cacheService.getOrSet(key, queryFn, ttl);
+  }
+
+  /**
+   * 清除缓存
+   */
+  clearCache(pattern?: string): void {
+    if (pattern) {
+      // 清除匹配模式的缓存
+      const keys = this.cacheService.keys();
+      for (const key of keys) {
+        if (key.includes(pattern)) {
+          this.cacheService.delete(key);
+        }
+      }
+    } else {
+      // 清除所有缓存
+      this.cacheService.clear();
     }
   }
 }

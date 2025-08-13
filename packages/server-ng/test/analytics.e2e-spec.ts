@@ -16,7 +16,7 @@ describe('AnalyticsController (e2e)', () => {
   let authToken: string;
 
   beforeAll(async () => {
-    const appModule = await AppModule.forRoot();
+    const appModule = AppModule.forRoot();
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [appModule],
     }).compile();

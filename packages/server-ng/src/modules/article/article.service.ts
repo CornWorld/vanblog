@@ -158,8 +158,7 @@ export class ArticleService {
           );
 
           if (searchConditions.length > 0) {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            whereConditions.push(or(...(searchConditions as any)));
+            whereConditions.push(or(...searchConditions));
           }
         }
 
@@ -171,10 +170,26 @@ export class ArticleService {
 
         // Build order by clause
         const orderByClause = (() => {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const column = articles[sortBy as keyof typeof articles.$inferSelect] as any;
+          const validColumns = ['id', 'title', 'createdAt', 'updatedAt', 'category'] as const;
+          type ValidColumn = (typeof validColumns)[number];
+          const columnName: ValidColumn = validColumns.includes(sortBy as ValidColumn)
+            ? (sortBy as ValidColumn)
+            : 'createdAt';
 
-          return sortOrder === 'asc' ? asc(column) : desc(column);
+          switch (columnName) {
+            case 'id':
+              return sortOrder === 'asc' ? asc(articles.id) : desc(articles.id);
+            case 'title':
+              return sortOrder === 'asc' ? asc(articles.title) : desc(articles.title);
+            case 'createdAt':
+              return sortOrder === 'asc' ? asc(articles.createdAt) : desc(articles.createdAt);
+            case 'updatedAt':
+              return sortOrder === 'asc' ? asc(articles.updatedAt) : desc(articles.updatedAt);
+            case 'category':
+              return sortOrder === 'asc' ? asc(articles.category) : desc(articles.category);
+            default:
+              return sortOrder === 'asc' ? asc(articles.createdAt) : desc(articles.createdAt);
+          }
         })();
 
         const [articleResults, countResult] = await Promise.all([

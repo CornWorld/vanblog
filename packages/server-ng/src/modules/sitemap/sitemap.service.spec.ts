@@ -100,7 +100,7 @@ describe('SitemapService', () => {
 
     // 创建一个更复杂的 mock 来处理不同的查询
     const dbMock = {
-      select: vi.fn().mockImplementation(() => {
+      select: vi.fn().mockImplementation((_fields) => {
         return {
           from: vi.fn().mockImplementation(async (_table) => {
             // 根据表名返回不同的数据
@@ -109,7 +109,12 @@ describe('SitemapService', () => {
             }
             if (_table === articles) {
               return {
-                where: vi.fn().mockResolvedValue(mockArticles),
+                where: vi.fn().mockResolvedValue(
+                  mockArticles.map((article) => ({
+                    id: article.id,
+                    pathname: article.pathname,
+                  })),
+                ),
               };
             }
             if (_table === categories) {
@@ -146,7 +151,19 @@ describe('SitemapService', () => {
 
   describe('generateSitemapFn', () => {
     it('should generate sitemap successfully', async () => {
+      // Reset mocks before test
+      vi.mocked(fs.mkdir).mockResolvedValue(undefined);
+      vi.mocked(fs.writeFile).mockResolvedValue(undefined);
+      vi.mocked(fs.access).mockResolvedValue(undefined);
+
+      // Mock logger to avoid console output
+      const loggerSpy = vi.spyOn(service['logger'], 'log').mockImplementation(() => {});
+      const errorSpy = vi.spyOn(service['logger'], 'error').mockImplementation(() => {});
+
       await service.generateSitemapFn('Test generation');
+
+      // Check if there were any errors
+      expect(errorSpy).not.toHaveBeenCalled();
 
       expect(fs.writeFile).toHaveBeenCalledWith(
         '/tmp/static/sitemap/sitemap.xml',
@@ -160,15 +177,31 @@ describe('SitemapService', () => {
         'sitemap|afterGenerate',
         expect.any(Object),
       );
+
+      loggerSpy.mockRestore();
+      errorSpy.mockRestore();
     });
 
     it('should create directory if it does not exist', async () => {
+      // Reset mocks before test
+      vi.mocked(fs.mkdir).mockResolvedValue(undefined);
+      vi.mocked(fs.writeFile).mockResolvedValue(undefined);
       // Mock fs.access to throw error (directory doesn't exist)
       vi.mocked(fs.access).mockRejectedValue(new Error('Directory not found'));
 
+      // Mock logger to avoid console output
+      const loggerSpy = vi.spyOn(service['logger'], 'log').mockImplementation(() => {});
+      const errorSpy = vi.spyOn(service['logger'], 'error').mockImplementation(() => {});
+
       await service.generateSitemapFn('Test generation');
 
+      // Check if there were any errors
+      expect(errorSpy).not.toHaveBeenCalled();
+
       expect(fs.mkdir).toHaveBeenCalledWith('/tmp/static/sitemap', { recursive: true });
+
+      loggerSpy.mockRestore();
+      errorSpy.mockRestore();
     });
 
     it('should handle errors gracefully', async () => {

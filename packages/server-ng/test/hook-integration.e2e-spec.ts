@@ -19,7 +19,7 @@ describe('Hook Integration (e2e)', () => {
   let commentService: CommentService;
 
   beforeAll(async () => {
-    const appModule = await AppModule.forRoot();
+    const appModule = AppModule.forRoot();
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [appModule],
     }).compile();
