@@ -93,7 +93,7 @@ describe('BackupController', () => {
     it('should create an encrypted backup', async () => {
       const createBackupDto: CreateBackupDto = {
         name: 'encrypted-backup',
-        password: 'test123456',
+        password: 'TestPassword123!',
         includeMedia: true,
         includeAnalytics: false,
         includeLogs: false,
@@ -280,7 +280,7 @@ describe('BackupController', () => {
     it('should start restore with password', async () => {
       const filename = 'encrypted-backup.vbak';
       const restoreBackupDto: RestoreBackupDto = {
-        password: 'test123456',
+        password: 'TestPassword123!',
         overwriteExisting: false,
         restoreMedia: true,
         restoreAnalytics: false,

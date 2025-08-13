@@ -18,7 +18,7 @@ export async function createUser(
   app: INestApplication,
   userData = {
     username: 'testadmin',
-    password: 'testpassword',
+    password: 'TestPassword123!',
     nickname: 'Test Admin',
     type: 'admin' as const,
   },
@@ -38,7 +38,7 @@ export async function createAuthToken(
   app: INestApplication,
   credentials = {
     username: 'testadmin',
-    password: 'testpassword',
+    password: 'TestPassword123!',
   },
 ): Promise<string> {
   const response = await request(app.getHttpServer() as Server)

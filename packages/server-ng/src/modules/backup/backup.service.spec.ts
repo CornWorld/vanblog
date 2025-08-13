@@ -102,7 +102,7 @@ describe('BackupService', () => {
     it('should create a backup with password', async () => {
       const createBackupDto: CreateBackupDto = {
         name: 'encrypted-backup',
-        password: 'test123456',
+        password: 'TestPassword123!',
         includeMedia: true,
         includeAnalytics: true,
         includeLogs: true,

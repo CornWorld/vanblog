@@ -90,7 +90,7 @@ describe('UserService', () => {
   describe('create', () => {
     const createUserDto: CreateUserDto = {
       username: 'testuser',
-      password: 'password123',
+      password: 'TestPassword123!',
       nickname: 'Test User',
       email: 'test@example.com',
       type: 'admin',
@@ -103,7 +103,7 @@ describe('UserService', () => {
 
       const result = await service.create(createUserDto);
 
-      expect(vi.mocked(bcrypt.hash)).toHaveBeenCalledWith('password123', 10);
+      expect(vi.mocked(bcrypt.hash)).toHaveBeenCalledWith('TestPassword123!', 10);
       expect(mockDb.insert).toHaveBeenCalledWith(users);
       expect(result.username).toBe('testuser');
       expect(result.password).toBeUndefined();
@@ -179,9 +179,9 @@ describe('UserService', () => {
     it('should hash password if provided', async () => {
       mockDb.returning.mockResolvedValue([mockUser]);
 
-      await service.update(1, { password: 'newpassword' });
+      await service.update(1, { password: 'NewPassword123!' });
 
-      expect(vi.mocked(bcrypt.hash)).toHaveBeenCalledWith('newpassword', 10);
+      expect(vi.mocked(bcrypt.hash)).toHaveBeenCalledWith('NewPassword123!', 10);
     });
 
     it('should throw NotFoundException if user not found', async () => {

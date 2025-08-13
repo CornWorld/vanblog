@@ -39,9 +39,19 @@ export const selectUserSchema = createSelectSchema(users, {
   updatedAt: (schema) => schema.transform((str) => dayjs(str)),
 });
 
+// Password strength validation schema
+const passwordStrengthSchema = z
+  .string()
+  .min(8, '密码至少8个字符')
+  .max(128, '密码最多128个字符')
+  .regex(/[a-z]/, '密码必须包含至少一个小写字母')
+  .regex(/[A-Z]/, '密码必须包含至少一个大写字母')
+  .regex(/[0-9]/, '密码必须包含至少一个数字')
+  .regex(/[^a-zA-Z0-9]/, '密码必须包含至少一个特殊字符');
+
 export const insertUserSchema = createInsertSchema(users, {
   username: (schema) => schema.min(3, '用户名至少3个字符').max(20, '用户名最多20个字符'),
-  password: (schema) => schema.min(6, '密码至少6个字符'),
+  password: () => passwordStrengthSchema,
   email: () => z.string().pipe(z.email('请输入有效的邮箱地址')).optional(),
   permissions: z
     .array(z.string())
@@ -53,7 +63,7 @@ export const insertUserSchema = createInsertSchema(users, {
 
 export const updateUserSchema = createUpdateSchema(users, {
   username: (schema) => schema.min(3, '用户名至少3个字符').max(20, '用户名最多20个字符').optional(),
-  password: (schema) => schema.min(6, '密码至少6个字符').optional(),
+  password: () => passwordStrengthSchema.optional(),
   email: () => z.string().pipe(z.email('请输入有效的邮箱地址')).optional(),
   permissions: z
     .array(z.string())
