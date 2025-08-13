@@ -15,6 +15,12 @@ export class AuthService {
     private readonly tokenService: TokenService,
   ) {}
 
+  /**
+   * Validates user credentials against the database
+   * @param username - The username to validate
+   * @param password - The plain text password to verify
+   * @returns The user object if validation succeeds, null otherwise
+   */
   async validateUser(username: string, password: string): Promise<User | null> {
     // Execute beforeValidateUser action
     await this.hookService.doAction('auth|beforeValidateUser', { username });
@@ -57,6 +63,21 @@ export class AuthService {
     return userWithoutPassword;
   }
 
+  /**
+   * Generates JWT tokens for authenticated user
+   * @param user - The authenticated user object
+   * @returns Object containing access_token, refresh_token, and user data
+   *
+   * JWT Payload Structure:
+   * {
+   *   sub: number, // User ID
+   *   username: string, // Username
+   *   type: string, // User type (e.g., 'admin', 'collaborator')
+   *   permissions: string[], // User permissions array
+   *   iat: number, // Issued at timestamp
+   *   exp: number // Expiration timestamp
+   * }
+   */
   login(user: User): { access_token: string; refresh_token: string; user: Omit<User, 'password'> } {
     // Execute beforeLogin action
     this.hookService.doAction('auth|beforeLogin', { user }).catch(() => {});
@@ -87,18 +108,38 @@ export class AuthService {
     return result;
   }
 
+  /**
+   * Verifies and decodes a JWT token
+   * @param token - The JWT token to verify
+   * @returns The user object associated with the token
+   * @throws UnauthorizedException if token is invalid or expired
+   */
   async verifyToken(token: string): Promise<User> {
     return this.tokenService.verifyAccessToken(token);
   }
 
+  /**
+   * Refreshes an access token using a valid refresh token
+   * @param refreshToken - The refresh token to use for generating new tokens
+   * @returns New token pair (access_token and refresh_token)
+   * @throws UnauthorizedException if refresh token is invalid
+   */
   async refreshToken(refreshToken: string): Promise<TokenPair> {
     return this.tokenService.refreshTokenPair(refreshToken);
   }
 
+  /**
+   * Revokes a specific JWT token by adding it to the blacklist
+   * @param token - The JWT token to revoke
+   */
   revokeToken(token: string): void {
     this.tokenService.revokeToken(token);
   }
 
+  /**
+   * Revokes all tokens for a specific user
+   * @param userId - The ID of the user whose tokens should be revoked
+   */
   revokeAllUserTokens(userId: number): void {
     this.tokenService.revokeAllUserTokens(userId);
   }

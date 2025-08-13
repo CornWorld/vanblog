@@ -6,6 +6,19 @@ import { UserType } from '../../user/dto/create-user.dto';
 import { User } from '../../user/entities/user.entity';
 import { PERMISSION_KEY } from '../permissions.decorator';
 
+/**
+ * Guard that checks if the current user has the required permissions to access a route.
+ *
+ * Permission String Examples:
+ * - Basic permissions: 'article:read', 'article:write', 'user:create', 'media:delete'
+ * - Group permissions: 'group:admin', 'group:editor', 'group:author', 'group:viewer'
+ * - Disabled permissions: 'no:article:write', 'no:group:editor'
+ * - Special permissions: 'all' (grants all permissions)
+ *
+ * Usage with @Permissions decorator:
+ * @Permissions(['article:read', 'article:write'])
+ * @UseGuards(JwtAuthGuard, PermissionsGuard)
+ */
 @Injectable()
 export class PermissionsGuard implements CanActivate {
   constructor(private readonly reflector: Reflector) {}
