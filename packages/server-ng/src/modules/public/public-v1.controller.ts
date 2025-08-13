@@ -282,7 +282,7 @@ export class PublicV1Controller {
     }
   }
 
-  @Get('meta')
+  @Get('getBuildMeta')
   @ApiOperation({ summary: 'Get build metadata' })
   @ApiResponse({ status: 200, description: 'Return build metadata' })
   async getBuildMeta(): Promise<unknown> {
