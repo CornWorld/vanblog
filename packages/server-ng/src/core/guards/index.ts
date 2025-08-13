@@ -1,2 +1,2 @@
 // Global guards will be exported from here
-export {};
+export { CsrfGuard } from './csrf.guard';

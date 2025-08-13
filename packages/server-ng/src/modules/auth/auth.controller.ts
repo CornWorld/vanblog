@@ -28,6 +28,10 @@ interface RequestWithUser extends ExpressRequest {
   user: User;
 }
 
+interface RequestWithCsrf extends ExpressRequest {
+  csrfToken(): string;
+}
+
 @ApiTags('Auth')
 @Controller({ path: 'auth', version: '2' })
 export class AuthController {
@@ -150,5 +154,18 @@ export class AuthController {
       throw new HttpException('Access denied', HttpStatus.FORBIDDEN);
     }
     return this.loginLogService.getLogs(query);
+  }
+
+  @Get('csrf-token')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Get CSRF token' })
+  @ApiResponse({ status: 200, description: 'CSRF token retrieved successfully' })
+  getCsrfToken(@Request() req: RequestWithCsrf): { csrfToken: string } {
+    // The CSRF token is automatically added to req by the csurf middleware
+    // In test environment, CSRF is disabled, so we return a mock token
+    if (process.env.NODE_ENV === 'test') {
+      return { csrfToken: 'test-csrf-token' };
+    }
+    return { csrfToken: req.csrfToken() };
   }
 }

@@ -2,6 +2,7 @@ import { VersioningType, type INestApplication } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { SwaggerModule, DocumentBuilder, type OpenAPIObject } from '@nestjs/swagger';
 import compression from 'compression';
+import csurf from 'csurf';
 import dayjs from 'dayjs';
 import helmet from 'helmet';
 
@@ -107,6 +108,19 @@ export async function init(): Promise<INestApplication> {
       },
     }),
   );
+
+  // CSRF protection (disabled in test environment)
+  if (process.env.NODE_ENV !== 'test') {
+    app.use(
+      csurf({
+        cookie: {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'strict',
+        },
+      }),
+    );
+  }
 
   // Enable compression
   app.use(compression());
