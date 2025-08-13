@@ -32,7 +32,7 @@ export class PicgoStorageService implements StorageService {
         } else {
           this.logger.error(`Failed to install PicGo plugins: ${String(result.body)}`);
         }
-      } catch (error) {
+      } catch (error: unknown) {
         this.logger.error(`Error installing PicGo plugins: ${String(error)}`);
       }
     }
@@ -63,7 +63,7 @@ export class PicgoStorageService implements StorageService {
         size: file.buffer.length,
         mimeType: file.mimetype,
       };
-    } catch (error) {
+    } catch (error: unknown) {
       throw new Error(
         `PicGo upload failed: ${error instanceof Error ? error.message : String(error)}`,
       );

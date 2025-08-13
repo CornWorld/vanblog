@@ -309,16 +309,13 @@ export class MigrationService {
       for (const file of migrationFiles) {
         const filePath = path.join(migrationDir, file);
 
-        const migrationModule = await import(filePath);
+        const migrationModule = (await import(filePath)) as { default?: Migration } | Migration;
 
-        const moduleExports = migrationModule.default || migrationModule;
-        if (
-          moduleExports !== undefined &&
-          moduleExports !== null &&
-          typeof moduleExports === 'object'
-        ) {
-          this.migrations.push(moduleExports as Migration);
-        }
+        const moduleExports =
+          'default' in migrationModule
+            ? (migrationModule.default ?? migrationModule)
+            : migrationModule;
+        this.migrations.push(moduleExports as Migration);
       }
 
       this.logger.log(`Loaded ${migrationFiles.length} migration files from ${migrationDir}`);
@@ -345,16 +342,17 @@ export class MigrationService {
 
       // 检查数据库完整性
       const integrityCheck = await this.db.get(sql`PRAGMA integrity_check`);
-      const integrityResult = integrityCheck?.['integrity_check'] ?? 'unknown';
-      if (String(integrityResult) !== 'ok') {
-        issues.push(`Database integrity check failed: ${String(integrityResult)}`);
+      const integrityResult = integrityCheck?.['integrity_check'];
+      const resultStr = typeof integrityResult === 'string' ? integrityResult : 'unknown';
+      if (resultStr !== 'ok') {
+        issues.push(`Database integrity check failed: ${resultStr}`);
       }
 
       // 检查索引完整性
       const indexCheck = await this.db.all(sql`PRAGMA index_list`);
       // 这里可以添加更多的索引检查逻辑
       void indexCheck; // 避免未使用变量警告
-    } catch (error) {
+    } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       issues.push(`Database validation failed: ${errorMessage}`);
     }

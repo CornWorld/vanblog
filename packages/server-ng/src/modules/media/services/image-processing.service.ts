@@ -268,7 +268,7 @@ export class ImageProcessingService {
             },
           ])
           .toBuffer();
-      } catch (error) {
+      } catch (error: unknown) {
         void error;
         return inputBuffer;
       }

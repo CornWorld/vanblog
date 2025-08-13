@@ -56,7 +56,7 @@ export class CDNService {
    * 获取资源的 CDN URL
    */
   getResourceUrl(resourcePath: string, optimization?: ImageOptimizationParams): string {
-    if (!this.config.enabled || !this.config.baseUrl || this.config.baseUrl.trim() === '') {
+    if (!this.config.enabled || this.config.baseUrl === '' || this.config.baseUrl.trim() === '') {
       return resourcePath;
     }
 
