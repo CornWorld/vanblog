@@ -1,6 +1,5 @@
 import { Controller, Get, Post, Query, Param, Body, Req } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiQuery, ApiParam } from '@nestjs/swagger';
-import { Request } from 'express';
 
 import { AnalyticsType } from '../analytics/entities/analytics.entity';
 import { AnalyticsService } from '../analytics/services/analytics.service';
@@ -8,6 +7,8 @@ import { ArticleService } from '../article/article.service';
 import { CategoryService } from '../category/category.service';
 import { SettingCoreService } from '../setting/services/setting-core.service';
 import { TagService } from '../tag/tag.service';
+
+import type { Request } from 'express';
 
 // Default menu structure for v1 compatibility
 const DEFAULT_MENU = [
@@ -17,7 +18,7 @@ const DEFAULT_MENU = [
 ];
 
 @ApiTags('public-v1')
-@Controller({ path: 'api/public', version: '1' })
+@Controller({ path: 'public', version: '1' })
 export class PublicV1Controller {
   constructor(
     private readonly articleService: ArticleService,
@@ -195,10 +196,34 @@ export class PublicV1Controller {
   @Get('getByOption')
   @ApiOperation({ summary: 'Get data by option' })
   @ApiQuery({ name: 'option', required: true, description: 'Option type' })
+  @ApiQuery({ name: 'page', required: false, description: 'Page number' })
+  @ApiQuery({ name: 'pageSize', required: false, description: 'Page size' })
   @ApiResponse({ status: 200, description: 'Return data by option' })
-  async getByOption(@Query('option') option: string): Promise<unknown> {
+  async getByOption(
+    @Query('option') option: string,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
+  ): Promise<unknown> {
     try {
       switch (option) {
+        case 'articles': {
+          const result = await this.articleService.findAll({
+            page: parseInt(page ?? '1', 10),
+            pageSize: parseInt(pageSize ?? '10', 10),
+            sortBy: 'createdAt',
+            sortOrder: 'desc',
+          });
+          return {
+            statusCode: 200,
+            data: {
+              articles: result.items,
+              total: result.total,
+              page: result.page,
+              pageSize: result.pageSize,
+              totalPages: result.totalPages,
+            },
+          };
+        }
         case 'categories':
           return await this.categoryService.findAll();
         case 'tags':

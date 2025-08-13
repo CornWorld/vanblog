@@ -35,7 +35,7 @@ import { EchartsFormatterService, EchartsOption } from './services/echarts-forma
 import { ThirdPartyAnalyticsService } from './services/third-party-analytics.service';
 
 @ApiTags('数据分析')
-@Controller('api/v2')
+@Controller({ version: '2' })
 export class AnalyticsController {
   constructor(
     private readonly analyticsService: AnalyticsService,

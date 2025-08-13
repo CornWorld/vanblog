@@ -20,6 +20,7 @@ import { HealthModule } from './modules/health/health.module';
 import { MediaModule } from './modules/media/media.module';
 import { PermissionModule } from './modules/permission/permission.module';
 import { PluginModule } from './modules/plugin/plugin.module';
+import { PublicModule } from './modules/public/public.module';
 import { RewardModule } from './modules/reward/reward.module';
 import { RssModule } from './modules/rss/rss.module';
 import { SettingModule } from './modules/setting/setting.module';
@@ -55,6 +56,7 @@ export class AppModule implements NestModule {
         TagModule,
         DraftModule,
         MediaModule,
+        PublicModule,
         SettingModule,
         AnalyticsModule,
         BeianModule,

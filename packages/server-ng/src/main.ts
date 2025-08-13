@@ -27,6 +27,9 @@ export async function init(): Promise<INestApplication> {
   const logger = app.get(LoggerService);
   app.useLogger(logger);
 
+  // Set global prefix first
+  app.setGlobalPrefix(appConfig.apiPrefix);
+
   // Enable API versioning
   app.enableVersioning({
     type: VersioningType.URI,
@@ -87,8 +90,6 @@ export async function init(): Promise<INestApplication> {
     customSiteTitle: 'VanBlog API Documentation',
   });
 
-  app.setGlobalPrefix(appConfig.apiPrefix);
-
   // Enable CORS
   const corsOptions = configService.cors;
   app.enableCors(corsOptions);
@@ -123,27 +124,19 @@ export async function init(): Promise<INestApplication> {
   return app;
 }
 
-interface ImportMeta {
-  env?: {
-    PROD?: boolean;
-  };
-}
+// 启动应用
+void init().then(async (app) => {
+  const configService = app.get(ConfigService);
+  const { port } = configService.app;
+  await app.listen(port);
 
-if ((import.meta as ImportMeta).env?.PROD) {
-  // 生产环境手动启动
-  void init().then(async (app) => {
-    const configService = app.get(ConfigService);
-    const { port } = configService.app;
-    await app.listen(port);
-
-    // Use logger instead of console.log
-    const logger = app.get(LoggerService);
-    logger.log(`Application is running on: http://localhost:${String(port)}`, 'Bootstrap');
-    logger.log(
-      `API Documentation available at: http://localhost:${String(port)}${configService.app.apiPrefix}/docs`,
-      'Bootstrap',
-    );
-  });
-}
+  // Use logger instead of console.log
+  const logger = app.get(LoggerService);
+  logger.log(`Application is running on: http://localhost:${String(port)}`, 'Bootstrap');
+  logger.log(
+    `API Documentation available at: http://localhost:${String(port)}${configService.app.apiPrefix}/docs`,
+    'Bootstrap',
+  );
+});
 
 export const viteNodeApp = init();

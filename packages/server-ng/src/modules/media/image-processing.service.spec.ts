@@ -9,6 +9,7 @@ const mockSharp = {
   png: vi.fn().mockReturnThis(),
   webp: vi.fn().mockReturnThis(),
   composite: vi.fn().mockReturnThis(),
+  keepMetadata: vi.fn().mockReturnThis(),
   toBuffer: vi.fn(),
 };
 
@@ -35,12 +36,30 @@ describe('ImageProcessingService', () => {
         height: 600,
         format: 'jpeg',
       });
-      mockSharp.toBuffer.mockResolvedValue(outputBuffer);
+      mockSharp.toBuffer.mockResolvedValue({
+        data: outputBuffer,
+        info: {
+          width: 800,
+          height: 600,
+          format: 'jpeg',
+          size: outputBuffer.length,
+        },
+      });
 
-      const result = await service.compressImage(inputBuffer);
+      const result = await service.compressImage(inputBuffer, { format: 'jpeg' });
 
-      expect(result).toBe(outputBuffer);
-      expect(mockSharp.jpeg).toHaveBeenCalledWith({ quality: 80 });
+      expect(result.buffer).toBe(outputBuffer);
+      expect(result.metadata.width).toBe(800);
+      expect(result.metadata.height).toBe(600);
+      expect(result.metadata.format).toBe('jpeg');
+      expect(mockSharp.jpeg).toHaveBeenCalledWith({
+        quality: 80,
+        progressive: true,
+        mozjpeg: true,
+        trellisQuantisation: true,
+        overshootDeringing: true,
+        optimizeScans: true,
+      });
     });
 
     it('should resize image if width exceeds maxWidth', async () => {
@@ -51,11 +70,20 @@ describe('ImageProcessingService', () => {
         height: 2000,
         format: 'jpeg',
       });
-      mockSharp.toBuffer.mockResolvedValue(Buffer.from('resized'));
+      const resizedBuffer = Buffer.from('resized');
+      mockSharp.toBuffer.mockResolvedValue({
+        data: resizedBuffer,
+        info: {
+          width: 1920,
+          height: 1280,
+          format: 'jpeg',
+          size: resizedBuffer.length,
+        },
+      });
 
       await service.compressImage(inputBuffer, { maxWidth: 1920 });
 
-      expect(mockSharp.resize).toHaveBeenCalledWith(1920, null, {
+      expect(mockSharp.resize).toHaveBeenCalledWith(1920, 1080, {
         withoutEnlargement: true,
         fit: 'inside',
       });
@@ -69,11 +97,26 @@ describe('ImageProcessingService', () => {
         height: 600,
         format: 'png',
       });
-      mockSharp.toBuffer.mockResolvedValue(Buffer.from('compressed'));
+      const compressedBuffer = Buffer.from('compressed');
+      mockSharp.toBuffer.mockResolvedValue({
+        data: compressedBuffer,
+        info: {
+          width: 800,
+          height: 600,
+          format: 'png',
+          size: compressedBuffer.length,
+        },
+      });
 
-      await service.compressImage(inputBuffer, { quality: 90 });
+      await service.compressImage(inputBuffer, { quality: 90, format: 'png' });
 
-      expect(mockSharp.png).toHaveBeenCalledWith({ quality: 90 });
+      expect(mockSharp.png).toHaveBeenCalledWith({
+        quality: 90,
+        progressive: true,
+        compressionLevel: 9,
+        adaptiveFiltering: true,
+        palette: true,
+      });
     });
   });
 

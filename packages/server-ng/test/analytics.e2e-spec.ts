@@ -1,10 +1,11 @@
-import { type INestApplication, ValidationPipe } from '@nestjs/common';
+import { type INestApplication, ValidationPipe, VersioningType } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
 import dayjs from 'dayjs';
 import request from 'supertest';
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 
 import { AppModule } from '../src/app.module';
+import { ConfigService } from '../src/config';
 import { AnalyticsType } from '../src/modules/analytics/entities/analytics.entity';
 
 import { createUser, cleanupDatabase, createAuthToken } from './test-utils';
@@ -23,6 +24,16 @@ describe('AnalyticsController (e2e)', () => {
 
     app = moduleFixture.createNestApplication();
     app.useGlobalPipes(new ValidationPipe({ transform: true }));
+
+    // Configure app like in main.ts
+    const configService = app.get(ConfigService);
+    const appConfig = configService.app;
+    app.setGlobalPrefix(appConfig.apiPrefix);
+    app.enableVersioning({
+      type: VersioningType.URI,
+      defaultVersion: '2',
+    });
+
     await app.init();
 
     // Create admin user and get auth token

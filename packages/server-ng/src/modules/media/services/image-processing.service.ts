@@ -73,10 +73,8 @@ export class ImageProcessingService {
     };
 
     // 移除元数据以减小文件大小
-    if (removeMetadata) {
-      pipeline = pipeline.withMetadata({
-        density: metadata.density,
-      });
+    if (!removeMetadata) {
+      pipeline = pipeline.keepMetadata();
     }
 
     // 调整尺寸
@@ -87,8 +85,6 @@ export class ImageProcessingService {
       pipeline = pipeline.resize(maxWidth, maxHeight, {
         fit,
         withoutEnlargement: true,
-        // 使用高质量的重采样算法
-        kernel: sharp.kernel.lanczos3,
       });
     }
 

@@ -102,10 +102,10 @@ describe('SitemapService', () => {
     const dbMock = {
       select: vi.fn().mockImplementation((_fields) => {
         return {
-          from: vi.fn().mockImplementation(async (_table) => {
+          from: vi.fn().mockImplementation((_table) => {
             // 根据表名返回不同的数据
             if (_table === siteMeta) {
-              return Promise.resolve(mockSiteMeta);
+              return mockSiteMeta;
             }
             if (_table === articles) {
               return {
@@ -118,12 +118,12 @@ describe('SitemapService', () => {
               };
             }
             if (_table === categories) {
-              return Promise.resolve(mockCategories);
+              return mockCategories;
             }
             if (_table === tags) {
-              return Promise.resolve(mockTags);
+              return mockTags;
             }
-            return Promise.resolve([]);
+            return [];
           }),
         };
       }),
