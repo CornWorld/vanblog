@@ -147,6 +147,7 @@ export class ConnectionPoolService implements OnModuleDestroy {
         this.updateWaitTime(Date.now() - startTime);
         this.stats.successfulRequests++;
         this.stats.waitingRequests--;
+        this.updateStats();
         return newConnection;
       }
 
@@ -344,7 +345,6 @@ export class ConnectionPoolService implements OnModuleDestroy {
       };
 
       this.connections.set(connectionId, connection);
-      this.stats.totalConnections++;
 
       this.logger.debug(`Created new connection: ${connectionId}`);
       return connection;
@@ -413,6 +413,7 @@ export class ConnectionPoolService implements OnModuleDestroy {
    * 更新统计信息
    */
   private updateStats(): void {
+    this.stats.totalConnections = this.connections.size;
     this.stats.activeConnections = Array.from(this.connections.values()).filter(
       (c) => c.isActive,
     ).length;
