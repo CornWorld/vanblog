@@ -39,6 +39,7 @@
     "@nestjs/passport": "^11.0.5",
     "@nestjs/platform-express": "^11.1.5",
     "@nestjs/schedule": "^5.0.1",
+    "@nestjs/throttler": "^6.4.0",
     "@types/markdown-it": "^14.1.2",
     "@types/nodemailer": "^6.4.17",
     "axios": "^1.8.4",

@@ -11,6 +11,7 @@ import {
   Body,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiQuery, ApiBody } from '@nestjs/swagger';
+import { ThrottlerGuard } from '@nestjs/throttler';
 import { Request as ExpressRequest } from 'express';
 import { ZodValidationPipe } from 'nestjs-zod';
 
@@ -21,7 +22,6 @@ import { RequireAuth, RequireAdmin } from './auth.decorator';
 import { AuthService } from './auth.service';
 import { LoginLogQueryDto, LoginLogResponseDto, LoginLogQuerySchema } from './dto/login-log.dto';
 import { LocalAuthGuard } from './guards/local-auth.guard';
-import { RateLimitGuard } from './guards/rate-limit.guard';
 import { LoginLogService } from './login-log.service';
 
 interface RequestWithUser extends ExpressRequest {
@@ -42,7 +42,7 @@ export class AuthController {
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  @UseGuards(RateLimitGuard, LocalAuthGuard)
+  @UseGuards(ThrottlerGuard, LocalAuthGuard)
   @ApiOperation({ summary: 'User login' })
   @ApiResponse({ status: 200, description: 'Login successful' })
   @ApiResponse({ status: 401, description: 'Invalid credentials' })

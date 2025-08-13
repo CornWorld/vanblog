@@ -6,7 +6,6 @@ import { CacheService } from './cache.service';
 
 describe('CacheService', () => {
   let service: CacheService;
-  let _loggerSpy: any;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -25,7 +24,6 @@ describe('CacheService', () => {
     }).compile();
 
     service = module.get<CacheService>(CacheService);
-    _loggerSpy = module.get<Logger>(Logger);
   });
 
   afterEach(() => {

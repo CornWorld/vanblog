@@ -492,7 +492,7 @@ JWT_EXPIRES_IN=7d
 
 ### 阶段 12：完成 REVIEW.md
 
-REVIEW.md 为类似 README.md 的文件，你需要完成所有 TODO
+- [x] REVIEW.md 为类似 README.md 的文件，已完成所有 TODO
 
 ### 注意事项
 

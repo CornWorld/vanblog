@@ -9,7 +9,6 @@ import { UserModule } from '../user/user.module';
 import { AuthV1Controller } from './auth-v1.controller';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
-import { RateLimitGuard } from './guards/rate-limit.guard';
 import { LoginLogService } from './login-log.service';
 import { PasswordChangeHandlerService } from './password-change-handler.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
@@ -39,7 +38,6 @@ import { TokenService } from './token.service';
     JwtStrategy,
     LoginLogService,
     TokenService,
-    RateLimitGuard,
     PasswordChangeHandlerService,
   ],
   exports: [AuthService, LoginLogService, TokenService],

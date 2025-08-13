@@ -28,7 +28,7 @@ describe('CDNService', () => {
     const mockConfigService = {
       get: vi.fn((key: string, defaultValue?: any) => {
         const value = mockConfigValues[key as keyof typeof mockConfigValues];
-        return value ?? defaultValue;
+        return value !== undefined ? value : defaultValue;
       }),
     };
 
@@ -59,8 +59,7 @@ describe('CDNService', () => {
       // Mock CDN disabled
       vi.mocked(configService.get).mockImplementation((key: string, defaultValue?: any) => {
         if (key === 'CDN_ENABLED') return false;
-        const value = mockConfigValues[key as keyof typeof mockConfigValues];
-        return value ?? defaultValue;
+        return defaultValue;
       });
 
       // Create new service instance with disabled CDN
@@ -72,8 +71,7 @@ describe('CDNService', () => {
     it('should return original path when base URL is empty', () => {
       vi.mocked(configService.get).mockImplementation((key: string, defaultValue?: any) => {
         if (key === 'CDN_BASE_URL') return '';
-        const value = mockConfigValues[key as keyof typeof mockConfigValues];
-        return value !== undefined ? value : defaultValue;
+        return defaultValue;
       });
 
       const emptyUrlService = new CDNService(configService);
@@ -161,7 +159,7 @@ describe('CDNService', () => {
       vi.mocked(configService.get).mockImplementation((key: string, defaultValue?: any) => {
         if (key === 'CDN_ENABLED') return false;
         const value = mockConfigValues[key as keyof typeof mockConfigValues];
-        return value !== undefined ? value : defaultValue;
+        return value ?? defaultValue;
       });
 
       const disabledService = new CDNService(configService);
@@ -196,9 +194,8 @@ describe('CDNService', () => {
   describe('purgeCache', () => {
     it('should return false when CDN is disabled', async () => {
       vi.mocked(configService.get).mockImplementation((key: string, defaultValue?: any) => {
-        if (key === 'CDN_ENABLED') return false;
-        const value = mockConfigValues[key as keyof typeof mockConfigValues];
-        return value !== undefined ? value : defaultValue;
+        if (key === 'CDN_IMAGE_OPTIMIZATION') return false;
+        return defaultValue;
       });
 
       const disabledService = new CDNService(configService);
@@ -209,8 +206,7 @@ describe('CDNService', () => {
     it('should return false when purge endpoint is not configured', async () => {
       vi.mocked(configService.get).mockImplementation((key: string, defaultValue?: any) => {
         if (key === 'CDN_PURGE_ENDPOINT') return undefined;
-        const value = mockConfigValues[key as keyof typeof mockConfigValues];
-        return value !== undefined ? value : defaultValue;
+        return defaultValue;
       });
 
       const noPurgeService = new CDNService(configService);
@@ -268,8 +264,7 @@ describe('CDNService', () => {
     it('should return false when not configured', async () => {
       vi.mocked(configService.get).mockImplementation((key: string, defaultValue?: any) => {
         if (key === 'CDN_PURGE_API_KEY') return undefined;
-        const value = mockConfigValues[key as keyof typeof mockConfigValues];
-        return value !== undefined ? value : defaultValue;
+        return defaultValue;
       });
 
       const noKeyService = new CDNService(configService);
@@ -380,8 +375,7 @@ describe('CDNService', () => {
       // Mock WebP disabled
       vi.mocked(configService.get).mockImplementation((key: string, defaultValue?: any) => {
         if (key === 'CDN_WEBP_ENABLED') return false;
-        const value = mockConfigValues[key as keyof typeof mockConfigValues];
-        return value !== undefined ? value : defaultValue;
+        return defaultValue;
       });
 
       const noWebpService = new CDNService(configService);
@@ -395,8 +389,7 @@ describe('CDNService', () => {
     it('should return base URL when no domains configured', () => {
       vi.mocked(configService.get).mockImplementation((key: string, defaultValue?: any) => {
         if (key === 'CDN_DOMAINS') return '';
-        const value = mockConfigValues[key as keyof typeof mockConfigValues];
-        return value !== undefined ? value : defaultValue;
+        return defaultValue;
       });
 
       const noDomainsService = new CDNService(configService);

@@ -10,6 +10,7 @@ import {
   HttpException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
+import { ThrottlerGuard } from '@nestjs/throttler';
 import { Request as ExpressRequest } from 'express';
 import { ZodValidationPipe } from 'nestjs-zod';
 
@@ -40,10 +41,11 @@ export class AuthV1Controller {
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  @UseGuards(LocalAuthGuard)
+  @UseGuards(ThrottlerGuard, LocalAuthGuard)
   @ApiOperation({ summary: 'User login (v1 compatible)' })
   @ApiResponse({ status: 200, description: 'Login successful' })
   @ApiResponse({ status: 401, description: 'Invalid credentials' })
+  @ApiResponse({ status: 429, description: 'Too many login attempts' })
   async login(
     @Request() req: RequestWithUser,
   ): Promise<{ token: string; access_token: string; user: Omit<User, 'password'> }> {
