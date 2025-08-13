@@ -13,22 +13,10 @@ describe('CDNService', () => {
   let configService: ConfigService;
   let module: TestingModule;
 
-  const mockConfigValues = {
-    CDN_ENABLED: true,
-    CDN_BASE_URL: 'https://cdn.example.com',
-    CDN_DOMAINS: 'https://cdn1.example.com,https://cdn2.example.com,https://cdn3.example.com',
-    CDN_IMAGE_OPTIMIZATION: true,
-    CDN_WEBP_ENABLED: true,
-    CDN_CACHE_TTL: 86400,
-    CDN_PURGE_API_KEY: 'test-api-key',
-    CDN_PURGE_ENDPOINT: 'https://api.example.com/purge',
-  };
-
   beforeEach(async () => {
     const mockConfigService = {
       get: vi.fn((key: string, defaultValue?: any) => {
-        const value = mockConfigValues[key as keyof typeof mockConfigValues];
-        return value !== undefined ? value : defaultValue;
+        return defaultValue;
       }),
     };
 
@@ -158,8 +146,7 @@ describe('CDNService', () => {
     it('should skip warmup when CDN is disabled', async () => {
       vi.mocked(configService.get).mockImplementation((key: string, defaultValue?: any) => {
         if (key === 'CDN_ENABLED') return false;
-        const value = mockConfigValues[key as keyof typeof mockConfigValues];
-        return value ?? defaultValue;
+        return defaultValue;
       });
 
       const disabledService = new CDNService(configService);
