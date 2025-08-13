@@ -230,10 +230,20 @@ export class PublicV1Controller {
             },
           };
         }
-        case 'categories':
-          return await this.categoryService.findAll();
-        case 'tags':
-          return await this.tagService.findAll();
+        case 'categories': {
+          const categories = await this.categoryService.findAll();
+          return {
+            statusCode: 200,
+            data: categories,
+          };
+        }
+        case 'tags': {
+          const tags = await this.tagService.findAll();
+          return {
+            statusCode: 200,
+            data: tags,
+          };
+        }
         case 'siteInfo':
           return await this.settingCoreService.getSiteInfo();
         case 'layout':
