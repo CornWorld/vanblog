@@ -140,23 +140,26 @@ export class ImageProcessingService {
     const outputBuffer = await pipeline.toBuffer({ resolveWithObject: true });
     const processingTime = Date.now() - startTime;
 
+    const compressionRatio =
+      originalSize > 0 ? Math.round((1 - outputBuffer.info.size / originalSize) * 100) : 0;
+
     const result: ProcessingResult = {
       buffer: outputBuffer.data,
       metadata: {
-        width: outputBuffer.info.width,
-        height: outputBuffer.info.height,
-        format: outputBuffer.info.format,
-        size: outputBuffer.info.size,
+        width: outputBuffer.info.width ?? 0,
+        height: outputBuffer.info.height ?? 0,
+        format: outputBuffer.info.format ?? 'unknown',
+        size: outputBuffer.info.size ?? 0,
         hasAlpha: outputBuffer.info.channels === 4,
-        density: outputBuffer.info.density,
+        density: outputBuffer.info.density ?? 72,
       },
       originalSize,
-      compressedSize: outputBuffer.info.size,
-      compressionRatio: Math.round((1 - outputBuffer.info.size / originalSize) * 100),
+      compressedSize: outputBuffer.info.size ?? 0,
+      compressionRatio,
     };
 
     this.logger.debug(
-      `Image processed in ${processingTime}ms: ${originalSize} -> ${outputBuffer.info.size} bytes (${result.compressionRatio}% reduction)`,
+      `Image processed in ${String(processingTime)}ms: ${String(originalSize)} -> ${String(outputBuffer.info.size)} bytes (${String(compressionRatio)}% reduction)`,
     );
 
     return result;

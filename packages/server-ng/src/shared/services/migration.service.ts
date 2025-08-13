@@ -342,7 +342,12 @@ export class MigrationService {
 
       // 检查数据库完整性
       const integrityCheck = await this.db.get(sql`PRAGMA integrity_check`);
-      const integrityResult = integrityCheck?.['integrity_check'];
+      const integrityResult =
+        integrityCheck !== null &&
+        typeof integrityCheck === 'object' &&
+        'integrity_check' in integrityCheck
+          ? (integrityCheck as Record<string, unknown>)['integrity_check']
+          : undefined;
       const resultStr = typeof integrityResult === 'string' ? integrityResult : 'unknown';
       if (resultStr !== 'ok') {
         issues.push(`Database integrity check failed: ${resultStr}`);
