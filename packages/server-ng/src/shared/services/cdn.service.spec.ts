@@ -15,7 +15,7 @@ describe('CDNService', () => {
 
   beforeEach(async () => {
     const mockConfigService = {
-      get: vi.fn((key: string, defaultValue?: any) => {
+      get: vi.fn((_key: string, defaultValue?: any) => {
         return defaultValue;
       }),
     };
