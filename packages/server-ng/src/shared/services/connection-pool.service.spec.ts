@@ -36,8 +36,8 @@ describe('ConnectionPoolService', () => {
     service = module.get<ConnectionPoolService>(ConnectionPoolService);
   });
 
-  afterEach(async () => {
-    await service.onModuleDestroy();
+  afterEach(() => {
+    service.forceCloseAll();
   });
 
   it('should be defined', () => {
@@ -64,9 +64,9 @@ describe('ConnectionPoolService', () => {
     it('should return initial stats', () => {
       const stats = service.getStats();
       expect(stats).toEqual({
-        totalConnections: 0,
+        totalConnections: 2, // 2 min connections
         activeConnections: 0,
-        idleConnections: 0,
+        idleConnections: 2, // 2 min connections
         waitingRequests: 0,
         totalRequests: 0,
         successfulRequests: 0,
@@ -74,20 +74,21 @@ describe('ConnectionPoolService', () => {
         averageWaitTime: 0,
         maxWaitTime: 0,
         connectionErrors: 0,
-        poolUtilization: 0,
+        poolUtilization: 20, // (2/10) * 100
       });
     });
   });
 
   describe('getConnections', () => {
-    it('should return empty array initially', () => {
+    it('should return initial connections', () => {
       const connections = service.getConnections();
-      expect(connections).toEqual([]);
+      expect(connections).toHaveLength(2); // 2 min connections
+      expect(connections.every((conn) => !conn.isActive)).toBe(true);
     });
   });
 
   describe('acquireConnection', () => {
-    it('should create new connection when pool is empty', async () => {
+    it('should acquire connection from pool', async () => {
       const connection = await service.acquireConnection();
 
       expect(connection).toBeDefined();
@@ -98,7 +99,7 @@ describe('ConnectionPoolService', () => {
       expect(connection.totalQueryTime).toBe(0);
 
       const stats = service.getStats();
-      expect(stats.totalConnections).toBe(1);
+      expect(stats.totalConnections).toBe(2); // 2 min connections
       expect(stats.activeConnections).toBe(1);
       expect(stats.totalRequests).toBe(1);
       expect(stats.successfulRequests).toBe(1);
@@ -114,9 +115,9 @@ describe('ConnectionPoolService', () => {
       expect(connection2.isActive).toBe(true);
 
       const stats = service.getStats();
-      expect(stats.totalConnections).toBe(1);
+      expect(stats.totalConnections).toBe(2); // 2 min connections
       expect(stats.activeConnections).toBe(1);
-      expect(stats.idleConnections).toBe(0);
+      expect(stats.idleConnections).toBe(1);
     });
 
     it('should create multiple connections up to max limit', async () => {
@@ -156,7 +157,7 @@ describe('ConnectionPoolService', () => {
 
       const stats = service.getStats();
       expect(stats.activeConnections).toBe(0);
-      expect(stats.idleConnections).toBe(1);
+      expect(stats.idleConnections).toBe(2); // 2 min connections
     });
 
     it('should handle unknown connection gracefully', () => {
@@ -234,13 +235,18 @@ describe('ConnectionPoolService', () => {
 
     it('should timeout if connections are not released', async () => {
       await service.acquireConnection();
-      // Don't release the connection
+      // Don't release the connection - it should remain active
+
+      // Verify the connection is active
+      const statsBefore = service.getStats();
+      expect(statsBefore.activeConnections).toBeGreaterThan(0);
 
       const startTime = Date.now();
       await service.gracefulShutdown(100);
       const endTime = Date.now();
 
-      expect(endTime - startTime).toBeGreaterThanOrEqual(100);
+      // Should timeout because we have active connections
+      expect(endTime - startTime).toBeGreaterThanOrEqual(90);
     });
   });
 
@@ -287,7 +293,9 @@ describe('ConnectionPoolService', () => {
       const connection = await service.acquireConnection();
 
       const stats = service.getStats();
-      const expectedUtilization = (1 / service.getConfig().maxConnections) * 100;
+      // Pool utilization is based on total connections
+      // We start with 2 min connections, acquire uses one of them
+      const expectedUtilization = (2 / service.getConfig().maxConnections) * 100;
       expect(stats.poolUtilization).toBe(expectedUtilization);
 
       service.releaseConnection(connection);

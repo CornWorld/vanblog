@@ -15,8 +15,19 @@ describe('CDNService', () => {
 
   beforeEach(async () => {
     const mockConfigService = {
-      get: vi.fn((_key: string, defaultValue?: any) => {
-        return defaultValue;
+      get: vi.fn((key: string, defaultValue?: any) => {
+        // Provide test configuration values
+        const config: Record<string, any> = {
+          CDN_ENABLED: true,
+          CDN_BASE_URL: 'https://cdn.example.com',
+          CDN_DOMAINS: 'https://cdn1.example.com,https://cdn2.example.com,https://cdn3.example.com',
+          CDN_IMAGE_OPTIMIZATION: true,
+          CDN_WEBP_ENABLED: true,
+          CDN_CACHE_TTL: 86400,
+          CDN_PURGE_API_KEY: 'test-api-key',
+          CDN_PURGE_ENDPOINT: 'https://api.example.com/purge',
+        };
+        return config[key] ?? defaultValue;
       }),
     };
 
@@ -376,6 +387,8 @@ describe('CDNService', () => {
     it('should return base URL when no domains configured', () => {
       vi.mocked(configService.get).mockImplementation((key: string, defaultValue?: any) => {
         if (key === 'CDN_DOMAINS') return '';
+        if (key === 'CDN_BASE_URL') return 'https://cdn.example.com';
+        if (key === 'CDN_ENABLED') return true;
         return defaultValue;
       });
 
