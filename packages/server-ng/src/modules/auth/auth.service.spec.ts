@@ -1,5 +1,4 @@
 import { UnauthorizedException } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
 import { Test, type TestingModule } from '@nestjs/testing';
 import * as bcrypt from 'bcrypt';
 import { vi } from 'vitest';
@@ -10,6 +9,7 @@ import { User } from '../user/entities/user.entity';
 import { UserService } from '../user/user.service';
 
 import { AuthService } from './auth.service';
+import { TokenService } from './token.service';
 
 // Mock bcrypt before any imports that use it
 vi.mock('bcrypt', () => ({
@@ -40,9 +40,14 @@ describe('AuthService', () => {
     findOne: vi.fn(),
   };
 
-  const mockJwtService = {
-    sign: vi.fn(),
-    verify: vi.fn(),
+  const mockTokenService = {
+    generateTokenPair: vi.fn(),
+    verifyAccessToken: vi.fn(),
+    verifyRefreshToken: vi.fn(),
+    refreshTokenPair: vi.fn(),
+    revokeToken: vi.fn(),
+    revokeAllUserTokens: vi.fn(),
+    isTokenRevoked: vi.fn(),
   };
 
   beforeEach(async () => {
@@ -59,8 +64,8 @@ describe('AuthService', () => {
           useValue: mockUserService,
         },
         {
-          provide: JwtService,
-          useValue: mockJwtService,
+          provide: TokenService,
+          useValue: mockTokenService,
         },
         {
           provide: HookService,
@@ -133,14 +138,18 @@ describe('AuthService', () => {
   });
 
   describe('login', () => {
-    it('should return access token and user info', () => {
-      const token = 'jwt.token.here';
-      mockJwtService.sign.mockReturnValue(token);
+    it('should return token pair and user info', () => {
+      const tokenPair = {
+        accessToken: 'access.token.here',
+        refreshToken: 'refresh.token.here',
+      };
+      mockTokenService.generateTokenPair.mockReturnValue(tokenPair);
 
       const result = service.login(mockUser);
 
       expect(result).toEqual({
-        access_token: token,
+        access_token: tokenPair.accessToken,
+        refresh_token: tokenPair.refreshToken,
         user: {
           id: mockUser.id,
           username: mockUser.username,
@@ -153,45 +162,59 @@ describe('AuthService', () => {
           updatedAt: mockUser.updatedAt,
         },
       });
-      expect(mockJwtService.sign).toHaveBeenCalledWith({
-        sub: mockUser.id,
-        username: mockUser.username,
-        type: mockUser.type,
-      });
+      expect(mockTokenService.generateTokenPair).toHaveBeenCalledWith(mockUser);
     });
   });
 
   describe('verifyToken', () => {
     it('should return user when token is valid', async () => {
-      const payload = { sub: 1, username: 'testuser', type: UserType.ADMIN };
-      mockJwtService.verify.mockReturnValue(payload);
-      mockUserService.findOne.mockResolvedValue(mockUser);
+      mockTokenService.verifyAccessToken.mockResolvedValue(mockUser);
 
       const result = await service.verifyToken('valid.token');
 
       expect(result).toEqual(mockUser);
-      expect(mockJwtService.verify).toHaveBeenCalledWith('valid.token');
-      expect(mockUserService.findOne).toHaveBeenCalledWith(1);
+      expect(mockTokenService.verifyAccessToken).toHaveBeenCalledWith('valid.token');
     });
 
     it('should throw UnauthorizedException when token is invalid', async () => {
-      mockJwtService.verify.mockImplementation(() => {
-        throw new Error('Invalid token');
-      });
+      mockTokenService.verifyAccessToken.mockRejectedValue(
+        new UnauthorizedException('Invalid token'),
+      );
 
       await expect(service.verifyToken('invalid.token')).rejects.toThrow(
         new UnauthorizedException('Invalid token'),
       );
     });
+  });
 
-    it('should throw UnauthorizedException when user not found', async () => {
-      const payload = { sub: 1, username: 'testuser', type: UserType.ADMIN };
-      mockJwtService.verify.mockReturnValue(payload);
-      mockUserService.findOne.mockRejectedValue(new UnauthorizedException('User not found'));
+  describe('refreshToken', () => {
+    it('should return new token pair when refresh token is valid', async () => {
+      const tokenPair = {
+        accessToken: 'new.access.token',
+        refreshToken: 'new.refresh.token',
+      };
+      mockTokenService.refreshTokenPair.mockResolvedValue(tokenPair);
 
-      await expect(service.verifyToken('valid.token')).rejects.toThrow(
-        new UnauthorizedException('User not found'),
-      );
+      const result = await service.refreshToken('valid.refresh.token');
+
+      expect(result).toEqual(tokenPair);
+      expect(mockTokenService.refreshTokenPair).toHaveBeenCalledWith('valid.refresh.token');
+    });
+  });
+
+  describe('revokeToken', () => {
+    it('should revoke token', () => {
+      service.revokeToken('token.to.revoke');
+
+      expect(mockTokenService.revokeToken).toHaveBeenCalledWith('token.to.revoke');
+    });
+  });
+
+  describe('revokeAllUserTokens', () => {
+    it('should revoke all user tokens', () => {
+      service.revokeAllUserTokens(1);
+
+      expect(mockTokenService.revokeAllUserTokens).toHaveBeenCalledWith(1);
     });
   });
 });

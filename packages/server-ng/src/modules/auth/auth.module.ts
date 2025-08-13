@@ -12,6 +12,7 @@ import { AuthService } from './auth.service';
 import { LoginLogService } from './login-log.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { LocalStrategy } from './strategies/local.strategy';
+import { TokenService } from './token.service';
 
 @Module({
   imports: [
@@ -30,7 +31,7 @@ import { LocalStrategy } from './strategies/local.strategy';
     }),
   ],
   controllers: [AuthController, AuthV1Controller],
-  providers: [AuthService, LocalStrategy, JwtStrategy, LoginLogService],
-  exports: [AuthService, LoginLogService],
+  providers: [AuthService, LocalStrategy, JwtStrategy, LoginLogService, TokenService],
+  exports: [AuthService, LoginLogService, TokenService],
 })
 export class AuthModule {}

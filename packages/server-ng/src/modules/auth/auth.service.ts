@@ -1,19 +1,18 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
+import { Injectable } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 
 import { HookService } from '../plugin/services/hook.service';
 import { User } from '../user/entities/user.entity';
 import { UserService } from '../user/user.service';
 
-import { JwtPayload } from './strategies/jwt.strategy';
+import { TokenService, TokenPair } from './token.service';
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly userService: UserService,
-    private readonly jwtService: JwtService,
     private readonly hookService: HookService,
+    private readonly tokenService: TokenService,
   ) {}
 
   async validateUser(username: string, password: string): Promise<User | null> {
@@ -58,18 +57,15 @@ export class AuthService {
     return userWithoutPassword;
   }
 
-  login(user: User): { access_token: string; user: Omit<User, 'password'> } {
+  login(user: User): { access_token: string; refresh_token: string; user: Omit<User, 'password'> } {
     // Execute beforeLogin action
     this.hookService.doAction('auth|beforeLogin', { user }).catch(() => {});
 
-    const payload: JwtPayload = {
-      sub: user.id,
-      username: user.username,
-      type: user.type,
-    };
+    const tokenPair = this.tokenService.generateTokenPair(user);
 
     const result = {
-      access_token: this.jwtService.sign(payload),
+      access_token: tokenPair.accessToken,
+      refresh_token: tokenPair.refreshToken,
       user: {
         id: user.id,
         username: user.username,
@@ -92,14 +88,18 @@ export class AuthService {
   }
 
   async verifyToken(token: string): Promise<User> {
-    try {
-      const payload = this.jwtService.verify<JwtPayload>(token);
-      const user = await this.userService.findOne(payload.sub);
-      return user;
-    } catch (error) {
-      throw error instanceof UnauthorizedException
-        ? error
-        : new UnauthorizedException('Invalid token');
-    }
+    return this.tokenService.verifyAccessToken(token);
+  }
+
+  async refreshToken(refreshToken: string): Promise<TokenPair> {
+    return this.tokenService.refreshTokenPair(refreshToken);
+  }
+
+  revokeToken(token: string): void {
+    this.tokenService.revokeToken(token);
+  }
+
+  revokeAllUserTokens(userId: number): void {
+    this.tokenService.revokeAllUserTokens(userId);
   }
 }

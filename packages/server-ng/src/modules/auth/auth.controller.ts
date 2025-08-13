@@ -8,8 +8,9 @@ import {
   Get,
   Query,
   HttpException,
+  Body,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiQuery, ApiBody } from '@nestjs/swagger';
 import { Request as ExpressRequest } from 'express';
 import { ZodValidationPipe } from 'nestjs-zod';
 
@@ -40,9 +41,12 @@ export class AuthController {
   @ApiOperation({ summary: 'User login' })
   @ApiResponse({ status: 200, description: 'Login successful' })
   @ApiResponse({ status: 401, description: 'Invalid credentials' })
-  async login(
-    @Request() req: RequestWithUser,
-  ): Promise<{ token: string; access_token: string; user: Omit<User, 'password'> }> {
+  async login(@Request() req: RequestWithUser): Promise<{
+    token: string;
+    access_token: string;
+    refresh_token: string;
+    user: Omit<User, 'password'>;
+  }> {
     const result = this.authService.login(req.user);
 
     await this.loginLogService.createLog({
@@ -77,8 +81,57 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'User logout' })
   @ApiResponse({ status: 200, description: 'Logout successful' })
-  logout(): { message: string } {
+  @ApiBody({ schema: { type: 'object', properties: { token: { type: 'string' } } } })
+  logout(
+    @Request() req: RequestWithUser,
+    @Body() body: { token?: string; refresh_token?: string },
+  ): { message: string } {
+    // Extract token from Authorization header if not provided in body
+    const authHeader = req.headers.authorization;
+    const token =
+      body.token ?? (authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : null);
+
+    if (token) {
+      this.authService.revokeToken(token);
+    }
+
+    if (body.refresh_token) {
+      this.authService.revokeToken(body.refresh_token);
+    }
+
     return { message: 'Logout successful' };
+  }
+
+  @Post('refresh')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Refresh access token' })
+  @ApiResponse({ status: 200, description: 'Token refreshed successfully' })
+  @ApiResponse({ status: 401, description: 'Invalid refresh token' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: { refresh_token: { type: 'string' } },
+      required: ['refresh_token'],
+    },
+  })
+  async refreshToken(
+    @Body() body: { refresh_token: string },
+  ): Promise<{ access_token: string; refresh_token: string }> {
+    const tokenPair = await this.authService.refreshToken(body.refresh_token);
+    return {
+      access_token: tokenPair.accessToken,
+      refresh_token: tokenPair.refreshToken,
+    };
+  }
+
+  @Post('revoke-all')
+  @RequireAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Revoke all user tokens' })
+  @ApiResponse({ status: 200, description: 'All tokens revoked successfully' })
+  revokeAllTokens(@Request() req: RequestWithUser): { message: string } {
+    this.authService.revokeAllUserTokens(req.user.id);
+    return { message: 'All tokens revoked successfully' };
   }
 
   @Get('logs')

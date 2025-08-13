@@ -1,5 +1,4 @@
 import { UnauthorizedException } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
 import { Test, type TestingModule } from '@nestjs/testing';
 import * as bcrypt from 'bcrypt';
 import { afterEach, beforeEach, describe, expect, vi } from 'vitest';
@@ -11,6 +10,7 @@ import { User } from '../user/entities/user.entity';
 import { UserService } from '../user/user.service';
 
 import { AuthService } from './auth.service';
+import { TokenService } from './token.service';
 
 // Mock bcrypt before any imports that use it
 vi.mock('bcrypt', () => ({
@@ -39,9 +39,14 @@ describe('AuthService with Vitest Fixtures', () => {
     findOne: vi.fn(),
   };
 
-  const mockJwtService = {
-    sign: vi.fn(),
-    verify: vi.fn(),
+  const mockTokenService = {
+    generateTokenPair: vi.fn(),
+    verifyAccessToken: vi.fn(),
+    verifyRefreshToken: vi.fn(),
+    refreshTokenPair: vi.fn(),
+    revokeToken: vi.fn(),
+    revokeAllUserTokens: vi.fn(),
+    isTokenRevoked: vi.fn(),
   };
 
   beforeEach(async () => {
@@ -58,8 +63,8 @@ describe('AuthService with Vitest Fixtures', () => {
           useValue: mockUserService,
         },
         {
-          provide: JwtService,
-          useValue: mockJwtService,
+          provide: TokenService,
+          useValue: mockTokenService,
         },
         {
           provide: HookService,
@@ -127,14 +132,18 @@ describe('AuthService with Vitest Fixtures', () => {
   });
 
   describe('login', () => {
-    configTest('should return access token and user info', () => {
-      const token = 'jwt.token.here';
-      mockJwtService.sign.mockReturnValue(token);
+    configTest('should return token pair and user info', () => {
+      const tokenPair = {
+        accessToken: 'access.token.here',
+        refreshToken: 'refresh.token.here',
+      };
+      mockTokenService.generateTokenPair.mockReturnValue(tokenPair);
 
       const result = service.login(mockUser);
 
       expect(result).toEqual({
-        access_token: token,
+        access_token: tokenPair.accessToken,
+        refresh_token: tokenPair.refreshToken,
         user: {
           id: mockUser.id,
           username: mockUser.username,
@@ -147,44 +156,27 @@ describe('AuthService with Vitest Fixtures', () => {
           updatedAt: mockUser.updatedAt,
         },
       });
-      expect(mockJwtService.sign).toHaveBeenCalledWith({
-        username: mockUser.username,
-        sub: mockUser.id,
-        type: mockUser.type,
-      });
+      expect(mockTokenService.generateTokenPair).toHaveBeenCalledWith(mockUser);
     });
   });
 
   describe('verifyToken', () => {
     configTest('should return user when token is valid', async () => {
-      const payload = { sub: 1, username: 'testuser', type: UserType.ADMIN };
-      mockJwtService.verify.mockReturnValue(payload);
-      mockUserService.findOne.mockResolvedValue(mockUser);
+      mockTokenService.verifyAccessToken.mockResolvedValue(mockUser);
 
       const result = await service.verifyToken('valid.token');
 
       expect(result).toEqual(mockUser);
-      expect(mockJwtService.verify).toHaveBeenCalledWith('valid.token');
-      expect(mockUserService.findOne).toHaveBeenCalledWith(1);
+      expect(mockTokenService.verifyAccessToken).toHaveBeenCalledWith('valid.token');
     });
 
     configTest('should throw UnauthorizedException when token is invalid', async () => {
-      mockJwtService.verify.mockImplementation(() => {
-        throw new Error('Invalid token');
-      });
+      mockTokenService.verifyAccessToken.mockRejectedValue(
+        new UnauthorizedException('Invalid token'),
+      );
 
       await expect(service.verifyToken('invalid.token')).rejects.toThrow(
         new UnauthorizedException('Invalid token'),
-      );
-    });
-
-    configTest('should throw UnauthorizedException when user not found', async () => {
-      const payload = { sub: 1, username: 'testuser', type: UserType.ADMIN };
-      mockJwtService.verify.mockReturnValue(payload);
-      mockUserService.findOne.mockRejectedValue(new UnauthorizedException('User not found'));
-
-      await expect(service.verifyToken('valid.token')).rejects.toThrow(
-        new UnauthorizedException('User not found'),
       );
     });
   });
