@@ -30,18 +30,24 @@ export class PublicV1Controller {
   @Get('getAllCustomPages')
   @ApiOperation({ summary: 'Get all custom pages' })
   @ApiResponse({ status: 200, description: 'Return all custom pages' })
-  getAllCustomPages(): unknown[] {
+  getAllCustomPages(): { statusCode: number; data: unknown[] } {
     // TODO: Implement custom pages functionality
-    return [];
+    return {
+      statusCode: 200,
+      data: [],
+    };
   }
 
   @Get('getCustomPageByPath/:path')
   @ApiOperation({ summary: 'Get custom page by path' })
   @ApiParam({ name: 'path', description: 'Page path' })
   @ApiResponse({ status: 200, description: 'Return custom page' })
-  getCustomPageByPath(@Param('path') _path: string): unknown {
+  getCustomPageByPath(@Param('path') _path: string): { statusCode: number; data: unknown } {
     // TODO: Implement custom page by path functionality
-    return null;
+    return {
+      statusCode: 200,
+      data: null,
+    };
   }
 
   @Get('getArticleByIdOrPathname/:idOrPathname')
@@ -251,29 +257,119 @@ export class PublicV1Controller {
     }
   }
 
-  @Get('getBuildMeta')
+  @Get('meta')
   @ApiOperation({ summary: 'Get build metadata' })
   @ApiResponse({ status: 200, description: 'Return build metadata' })
   async getBuildMeta(): Promise<unknown> {
     try {
+      const tags = await this.tagService.findAll();
+      const categories = await this.categoryService.findAll();
       const siteInfo = await this.settingCoreService.getSiteInfo();
       const navigation = await this.settingCoreService.getNavigation();
+      const articlesResult = await this.articleService.findAll({
+        page: 1,
+        pageSize: 1,
+        sortBy: 'createdAt',
+        sortOrder: 'desc',
+      });
+
+      // Default meta structure for v1 compatibility
+      const defaultMeta = {
+        links: [],
+        socials: [],
+        rewards: [],
+        about: {
+          updatedAt: new Date().toISOString(),
+          content: '',
+        },
+        siteInfo: {
+          author: siteInfo.author,
+          authorDesc: siteInfo.description,
+          authorLogo: '',
+          siteLogo: '',
+          favicon: '',
+          siteName: siteInfo.title,
+          siteDesc: siteInfo.description,
+          baseUrl: '',
+          since: '',
+          copyrightAggreement: '',
+          showSubMenu: 'false',
+          showAdminButton: 'false',
+          headerLeftContent: 'siteName',
+          showDonateInfo: 'false',
+          showFriends: 'false',
+          enableComment: 'false',
+          defaultTheme: 'auto',
+          enableCustomizing: 'false',
+          showDonateButton: 'false',
+          showCopyRight: 'false',
+          showRSS: 'false',
+          openArticleLinksInNewWindow: 'false',
+          showExpirationReminder: 'false',
+          showEditButton: 'false',
+        },
+        categories,
+      };
+
+      const data = {
+        version: 'v2-compat',
+        tags,
+        meta: defaultMeta,
+        menus: navigation.length > 0 ? navigation : DEFAULT_MENU,
+        totalArticles: articlesResult.total,
+        totalWordCount: 0, // TODO: Implement word count calculation
+      };
 
       return {
-        siteInfo,
-        menu: navigation.length > 0 ? navigation : DEFAULT_MENU,
-        buildTime: new Date().toISOString(),
+        statusCode: 200,
+        data,
       };
     } catch {
       return {
-        siteInfo: {
-          title: 'My Blog',
-          description: 'A blog powered by VanBlog',
-          author: 'Admin',
-          keywords: [],
+        statusCode: 500,
+        data: {
+          version: 'v2-compat',
+          tags: [],
+          meta: {
+            links: [],
+            socials: [],
+            rewards: [],
+            categories: [],
+            about: {
+              updatedAt: new Date().toISOString(),
+              content: '',
+            },
+            siteInfo: {
+              author: '',
+              authorDesc: '',
+              authorLogo: '',
+              siteLogo: '',
+              favicon: '',
+              siteName: '',
+              siteDesc: '',
+              baseUrl: '',
+              since: '',
+              copyrightAggreement: '',
+              showSubMenu: 'false',
+              showAdminButton: 'false',
+              headerLeftContent: 'siteName',
+              showDonateInfo: 'false',
+              showFriends: 'false',
+              enableComment: 'false',
+              defaultTheme: 'auto',
+              enableCustomizing: 'false',
+              showDonateButton: 'false',
+              showCopyRight: 'false',
+              showRSS: 'false',
+              openArticleLinksInNewWindow: 'false',
+              showExpirationReminder: 'false',
+              showEditButton: 'false',
+            },
+          },
+          menus: DEFAULT_MENU,
+          totalArticles: 0,
+          totalWordCount: 0,
         },
-        menu: DEFAULT_MENU,
-        buildTime: new Date().toISOString(),
       };
     }
   }
