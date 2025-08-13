@@ -133,8 +133,10 @@ export class UserService {
       permissions?: string;
     } = {};
 
+    let passwordChanged = false;
     if (userData.password) {
       updateData.password = await bcrypt.hash(userData.password, 10);
+      passwordChanged = true;
     }
     if (userData.nickname) {
       updateData.nickname = userData.nickname;
@@ -160,6 +162,14 @@ export class UserService {
     }
 
     const userResult = this.mapToEntity(updatedUsers[0]);
+
+    // If password was changed, trigger token revocation through hook system
+    if (passwordChanged) {
+      await this.hookService.doAction('user.passwordChanged', {
+        userId: id,
+        username: userResult.username,
+      });
+    }
 
     // Trigger afterUpdate hook
     await this.hookService.doAction('user|afterUpdate', userResult, {

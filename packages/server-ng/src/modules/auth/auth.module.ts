@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
@@ -11,13 +11,14 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { RateLimitGuard } from './guards/rate-limit.guard';
 import { LoginLogService } from './login-log.service';
+import { PasswordChangeHandlerService } from './password-change-handler.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { LocalStrategy } from './strategies/local.strategy';
 import { TokenService } from './token.service';
 
 @Module({
   imports: [
-    UserModule,
+    forwardRef(() => UserModule),
     PassportModule,
     DatabaseModule,
     JwtModule.registerAsync({
@@ -39,6 +40,7 @@ import { TokenService } from './token.service';
     LoginLogService,
     TokenService,
     RateLimitGuard,
+    PasswordChangeHandlerService,
   ],
   exports: [AuthService, LoginLogService, TokenService],
 })

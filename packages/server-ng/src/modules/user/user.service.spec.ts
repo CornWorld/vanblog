@@ -12,7 +12,6 @@ import type { CreateUserDto } from './dto/create-user.dto';
 
 // Mock bcrypt
 vi.mock('bcrypt');
-
 describe('UserService', () => {
   let service: UserService;
   let mockHookService: Partial<HookService>;
@@ -182,6 +181,28 @@ describe('UserService', () => {
       await service.update(1, { password: 'NewPassword123!' });
 
       expect(vi.mocked(bcrypt.hash)).toHaveBeenCalledWith('NewPassword123!', 10);
+    });
+
+    it('should trigger password change hook when password is changed', async () => {
+      mockDb.returning.mockResolvedValue([mockUser]);
+
+      await service.update(1, { password: 'NewPassword123!' });
+
+      expect(mockHookService.doAction).toHaveBeenCalledWith('user.passwordChanged', {
+        userId: 1,
+        username: mockUser.username,
+      });
+    });
+
+    it('should not trigger password change hook when password is not changed', async () => {
+      mockDb.returning.mockResolvedValue([mockUser]);
+
+      await service.update(1, { nickname: 'Updated' });
+
+      expect(mockHookService.doAction).not.toHaveBeenCalledWith(
+        'user.passwordChanged',
+        expect.anything(),
+      );
     });
 
     it('should throw NotFoundException if user not found', async () => {
