@@ -161,9 +161,15 @@ export class PublicV1Controller {
   async getViewer(): Promise<unknown> {
     try {
       const overview = await this.analyticsService.getOverview();
-      return overview;
+      return {
+        statusCode: 200,
+        data: overview,
+      };
     } catch {
-      return { totalPageviews: 0, totalVisitors: 0 };
+      return {
+        statusCode: 200,
+        data: { totalPageviews: 0, totalVisitors: 0 },
+      };
     }
   }
 
@@ -280,6 +286,13 @@ export class PublicV1Controller {
     } catch {
       return [];
     }
+  }
+
+  @Get('meta')
+  @ApiOperation({ summary: 'Get site metadata (v1 compatible)' })
+  @ApiResponse({ status: 200, description: 'Return site metadata' })
+  async getMeta(): Promise<unknown> {
+    return this.getBuildMeta();
   }
 
   @Get('getBuildMeta')
