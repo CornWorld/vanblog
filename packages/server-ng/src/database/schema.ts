@@ -65,48 +65,76 @@ export const articles = sqliteTable(
 );
 
 // Categories table
-export const categories = sqliteTable('categories', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  name: text('name').notNull().unique(),
-  slug: text('slug').unique(),
-  description: text('description'),
-  private: integer('private', { mode: 'boolean' }).default(false),
-  password: text('password'),
-  createdAt: text('created_at')
-    .notNull()
-    .default(sql`datetime('now')`),
-  updatedAt: text('updated_at')
-    .notNull()
-    .default(sql`datetime('now')`),
-});
+export const categories = sqliteTable(
+  'categories',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    name: text('name').notNull().unique(),
+    slug: text('slug').unique(),
+    description: text('description'),
+    private: integer('private', { mode: 'boolean' }).default(false),
+    password: text('password'),
+    createdAt: text('created_at')
+      .notNull()
+      .default(sql`datetime('now')`),
+    updatedAt: text('updated_at')
+      .notNull()
+      .default(sql`datetime('now')`),
+  },
+  (table) => [
+    index('categories_slug_idx').on(table.slug),
+    index('categories_private_idx').on(table.private),
+    index('categories_created_at_idx').on(table.createdAt),
+  ],
+);
 
 // Tags table
-export const tags = sqliteTable('tags', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  name: text('name').notNull().unique(),
-  slug: text('slug').unique(),
-  createdAt: text('created_at')
-    .notNull()
-    .default(sql`datetime('now')`),
-});
+export const tags = sqliteTable(
+  'tags',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    name: text('name').notNull().unique(),
+    slug: text('slug').unique(),
+    createdAt: text('created_at')
+      .notNull()
+      .default(sql`datetime('now')`),
+  },
+  (table) => [
+    index('tags_slug_idx').on(table.slug),
+    index('tags_created_at_idx').on(table.createdAt),
+  ],
+);
 
 // Drafts table
-export const drafts = sqliteTable('drafts', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  title: text('title').notNull(),
-  content: text('content').notNull(),
-  pathname: text('pathname'),
-  tags: text('tags'), // JSON string
-  category: text('category'),
-  author: text('author').notNull(),
-  version: integer('version').notNull().default(1),
-  createdAt: text('created_at')
-    .notNull()
-    .default(sql`datetime('now')`),
-  updatedAt: text('updated_at')
-    .notNull()
-    .default(sql`datetime('now')`),
-});
+export const drafts = sqliteTable(
+  'drafts',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    title: text('title').notNull(),
+    content: text('content').notNull(),
+    pathname: text('pathname'),
+    tags: text('tags'), // JSON string
+    category: text('category'),
+    author: text('author').notNull(),
+    version: integer('version').notNull().default(1),
+    createdAt: text('created_at')
+      .notNull()
+      .default(sql`datetime('now')`),
+    updatedAt: text('updated_at')
+      .notNull()
+      .default(sql`datetime('now')`),
+  },
+  (table) => [
+    index('drafts_author_idx').on(table.author),
+    index('drafts_category_idx').on(table.category),
+    index('drafts_pathname_idx').on(table.pathname),
+    index('drafts_created_at_idx').on(table.createdAt),
+    index('drafts_updated_at_idx').on(table.updatedAt),
+    // 复合索引用于常见查询组合
+    index('drafts_author_created_at_idx').on(table.author, table.createdAt),
+    index('drafts_category_created_at_idx').on(table.category, table.createdAt),
+  ],
+);
 
 // Draft versions table
 export const draftVersions = sqliteTable(
@@ -148,21 +176,40 @@ export const staticFiles = sqliteTable(
       .notNull()
       .default(sql`datetime('now')`),
   },
-  (table) => [index('filename_idx').on(table.filename)],
+  (table) => [
+    index('static_files_filename_idx').on(table.filename),
+    index('static_files_path_idx').on(table.path),
+    index('static_files_mime_type_idx').on(table.mimeType),
+    index('static_files_provider_idx').on(table.provider),
+    index('static_files_hash_idx').on(table.hash),
+    index('static_files_created_at_idx').on(table.createdAt),
+    index('static_files_size_idx').on(table.size),
+    // 复合索引用于常见查询组合
+    index('static_files_provider_created_at_idx').on(table.provider, table.createdAt),
+    index('static_files_mime_type_created_at_idx').on(table.mimeType, table.createdAt),
+  ],
 );
 
 // Site metadata table
-export const siteMeta = sqliteTable('site_meta', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  key: text('key').notNull().unique(),
-  value: text('value'), // JSON string for complex values
-  createdAt: text('created_at')
-    .notNull()
-    .default(sql`datetime('now')`),
-  updatedAt: text('updated_at')
-    .notNull()
-    .default(sql`datetime('now')`),
-});
+export const siteMeta = sqliteTable(
+  'site_meta',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    key: text('key').notNull().unique(),
+    value: text('value'), // JSON string for complex values
+    createdAt: text('created_at')
+      .notNull()
+      .default(sql`datetime('now')`),
+    updatedAt: text('updated_at')
+      .notNull()
+      .default(sql`datetime('now')`),
+  },
+  (table) => [
+    index('site_meta_key_idx').on(table.key),
+    index('site_meta_created_at_idx').on(table.createdAt),
+    index('site_meta_updated_at_idx').on(table.updatedAt),
+  ],
+);
 
 // Login logs table
 export const loginLogs = sqliteTable(
@@ -185,21 +232,30 @@ export const loginLogs = sqliteTable(
 );
 
 // Custom pages table
-export const customPages = sqliteTable('custom_pages', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  title: text('title').notNull(),
-  pathname: text('pathname').notNull().unique(),
-  content: text('content').notNull(),
-  type: text('type', { enum: ['html', 'markdown'] })
-    .notNull()
-    .default('markdown'),
-  createdAt: text('created_at')
-    .notNull()
-    .default(sql`datetime('now')`),
-  updatedAt: text('updated_at')
-    .notNull()
-    .default(sql`datetime('now')`),
-});
+export const customPages = sqliteTable(
+  'custom_pages',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    title: text('title').notNull(),
+    pathname: text('pathname').notNull().unique(),
+    content: text('content').notNull(),
+    type: text('type', { enum: ['html', 'markdown'] })
+      .notNull()
+      .default('markdown'),
+    createdAt: text('created_at')
+      .notNull()
+      .default(sql`datetime('now')`),
+    updatedAt: text('updated_at')
+      .notNull()
+      .default(sql`datetime('now')`),
+  },
+  (table) => [
+    index('custom_pages_pathname_idx').on(table.pathname),
+    index('custom_pages_type_idx').on(table.type),
+    index('custom_pages_created_at_idx').on(table.createdAt),
+    index('custom_pages_updated_at_idx').on(table.updatedAt),
+  ],
+);
 
 // Analytics table
 export const analytics = sqliteTable(
@@ -224,34 +280,50 @@ export const analytics = sqliteTable(
 );
 
 // Permission nodes table
-export const permissionNodes = sqliteTable('permission_nodes', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  name: text('name').notNull().unique(), // 权限节点名称，如 'article:read'
-  description: text('description'), // 权限描述
-  module: text('module').notNull(), // 所属模块，如 'article', 'draft'
-  isActive: integer('is_active', { mode: 'boolean' }).default(true), // 是否启用
-  createdAt: text('created_at')
-    .notNull()
-    .$defaultFn(() => dayjs().toISOString()),
-  updatedAt: text('updated_at')
-    .notNull()
-    .$defaultFn(() => dayjs().toISOString()),
-});
+export const permissionNodes = sqliteTable(
+  'permission_nodes',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    name: text('name').notNull().unique(), // 权限节点名称，如 'article:read'
+    description: text('description'), // 权限描述
+    module: text('module').notNull(), // 所属模块，如 'article', 'draft'
+    isActive: integer('is_active', { mode: 'boolean' }).default(true), // 是否启用
+    createdAt: text('created_at')
+      .notNull()
+      .$defaultFn(() => dayjs().toISOString()),
+    updatedAt: text('updated_at')
+      .notNull()
+      .$defaultFn(() => dayjs().toISOString()),
+  },
+  (table) => [
+    index('permission_nodes_name_idx').on(table.name),
+    index('permission_nodes_module_idx').on(table.module),
+    index('permission_nodes_is_active_idx').on(table.isActive),
+    index('permission_nodes_module_active_idx').on(table.module, table.isActive),
+  ],
+);
 
 // Permission groups table
-export const permissionGroups = sqliteTable('permission_groups', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  name: text('name').notNull().unique(), // 权限组名称，如 'admin', 'editor'
-  description: text('description'), // 权限组描述
-  permissions: text('permissions'), // JSON string for permissions array
-  isActive: integer('is_active', { mode: 'boolean' }).default(true), // 是否启用
-  createdAt: text('created_at')
-    .notNull()
-    .$defaultFn(() => dayjs().toISOString()),
-  updatedAt: text('updated_at')
-    .notNull()
-    .$defaultFn(() => dayjs().toISOString()),
-});
+export const permissionGroups = sqliteTable(
+  'permission_groups',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    name: text('name').notNull().unique(), // 权限组名称，如 'admin', 'editor'
+    description: text('description'), // 权限组描述
+    permissions: text('permissions'), // JSON string for permissions array
+    isActive: integer('is_active', { mode: 'boolean' }).default(true), // 是否启用
+    createdAt: text('created_at')
+      .notNull()
+      .$defaultFn(() => dayjs().toISOString()),
+    updatedAt: text('updated_at')
+      .notNull()
+      .$defaultFn(() => dayjs().toISOString()),
+  },
+  (table) => [
+    index('permission_groups_name_idx').on(table.name),
+    index('permission_groups_is_active_idx').on(table.isActive),
+  ],
+);
 
 // Plugin data storage table
 export const pluginData = sqliteTable(

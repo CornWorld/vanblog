@@ -47,30 +47,32 @@ export class QueryOptimizerService {
    * 初始化索引建议
    */
   private initializeIndexSuggestions(): void {
+    // 大部分基础索引已经在 schema.ts 中实现
+    // 这里只保留一些高级的复合索引建议
     this.indexSuggestions.push(
       {
         table: 'articles',
-        columns: ['hidden', 'private'],
-        reason: 'Frequently used in WHERE clauses for filtering visible articles',
-        estimatedImprovement: 'High - reduces full table scans',
+        columns: ['hidden', 'private', 'createdAt'],
+        reason: 'Triple column index for complex visibility filtering with date sorting',
+        estimatedImprovement: 'High - optimizes complex article listing queries',
       },
       {
         table: 'articles',
-        columns: ['category'],
-        reason: 'Used for category-based filtering and grouping',
-        estimatedImprovement: 'Medium - improves category queries',
+        columns: ['category', 'hidden', 'top'],
+        reason: 'Composite index for category pages with visibility and pinning',
+        estimatedImprovement: 'Medium - improves category page performance',
       },
       {
-        table: 'articles',
-        columns: ['createdAt'],
-        reason: 'Used for sorting articles by creation date',
-        estimatedImprovement: 'Medium - improves sorting performance',
+        table: 'draftVersions',
+        columns: ['draftId', 'version'],
+        reason: 'Composite index for draft version queries',
+        estimatedImprovement: 'High - enables fast draft version lookups',
       },
       {
-        table: 'articles',
-        columns: ['pathname'],
-        reason: 'Used for unique article lookups',
-        estimatedImprovement: 'High - enables fast article retrieval',
+        table: 'analytics',
+        columns: ['date', 'type'],
+        reason: 'Composite index for analytics queries by date and type',
+        estimatedImprovement: 'Medium - improves analytics performance',
       },
     );
   }
