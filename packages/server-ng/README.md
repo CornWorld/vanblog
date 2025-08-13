@@ -49,189 +49,189 @@ server-ng/
 
 ```
 .
-├── .env.example
-├── .eslintignore
-├── .eslintrc.js
-├── .gitignore
-├── .npmrc
-├── .prettierignore
-├── .prettierrc.js
-├── CHANGELOG.md
-├── README.md
-├── UPGRADE_GUIDE.md
-├── dev-server.sh
-├── drizzle.config.ts
-├── package.json
-├── pnpm-lock.yaml
+├── [ ] .env.example
+├── [ ] .eslintignore
+├── [ ] .eslintrc.js
+├── [ ] .gitignore
+├── [ ] .npmrc
+├── [ ] .prettierignore
+├── [ ] .prettierrc.js
+├── [ ] CHANGELOG.md
+├── [ ] README.md
+├── [ ] UPGRADE_GUIDE.md
+├── [ ] dev-server.sh
+├── [ ] drizzle.config.ts
+├── [ ] package.json
+├── [ ] pnpm-lock.yaml
 ├── scripts
-│   ├── sync-to-cloudflare.mjs
-│   └── sync-to-turso.mjs
+│   ├── [ ] sync-to-cloudflare.mjs
+│   └── [ ] sync-to-turso.mjs
 ├── src
-│   ├── app.module.ts
-│   ├── core
-│   │   ├── constants
-│   │   │   ├── app.constant.ts
-│   │   │   └── index.ts
-│   │   ├── core.module.ts
-│   │   ├── decorators
-│   │   │   ├── permission.decorator.ts
-│   │   │   └── user.decorator.ts
-│   │   ├── dto
-│   │   │   ├── page.dto.ts
-│   │   │   └── page.schema.ts
-│   │   ├── filters
-│   │   │   ├── all-exception.filter.ts
-│   │   │   └── zod-exception.filter.ts
-│   │   ├── guards
-│   │   │   ├── auth.guard.ts
-│   │   │   ├── permission.guard.ts
-│   │   │   └── throttler.guard.ts
-│   │   ├── interceptors
-│   │   │   ├── logging.interceptor.ts
-│   │   │   └── transform.interceptor.ts
-│   │   ├── pipes
-│   │   │   └── zod-validation.pipe.ts
-│   │   └── providers
-│   │       ├── cache.service.ts
-│   │       ├── config
-│   │       ├── database
-│   │       ├── helper.service.ts
-│   │       ├── hook.service.spec.ts
-│   │       ├── hook.service.ts
-│   │       ├── index.ts
-│   │       ├── logger
-│   │       ├── permission.service.spec.ts
-│   │       ├── permission.service.ts
-│   │       ├── plugin-context.service.ts
-│   │       ├── plugin.service.spec.ts
-│   │       └── plugin.service.ts
-│   ├── main.ts
-│   ├── modules
-│   │   ├── analytics
-│   │   │   ├── analytics.controller.ts
-│   │   │   ├── analytics.dto.ts
-│   │   │   ├── analytics.module.ts
-│   │   │   ├── analytics.schema.ts
-│   │   │   ├── analytics.service.spec.ts
-│   │   │   └── analytics.service.ts
-│   │   ├── article
-│   │   │   ├── article.controller.ts
-│   │   │   ├── article.dto.ts
-│   │   │   ├── article.module.ts
-│   │   │   ├── article.schema.ts
-│   │   │   ├── article.service.spec.ts
-│   │   │   └── article.service.ts
-│   │   ├── auth
-│   │   │   ├── auth.controller.ts
-│   │   │   ├── auth.dto.ts
-│   │   │   ├── auth.module.ts
-│   │   │   ├── auth.service.spec.ts
-│   │   │   └── auth.service.ts
-│   │   ├── category
-│   │   │   ├── category.controller.ts
-│   │   │   ├── category.dto.ts
-│   │   │   ├── category.module.ts
-│   │   │   ├── category.schema.ts
-│   │   │   ├── category.service.spec.ts
-│   │   │   └── category.service.ts
-│   │   ├── draft
-│   │   │   ├── draft.controller.ts
-│   │   │   ├── draft.dto.ts
-│   │   │   ├── draft.module.ts
-│   │   │   ├── draft.schema.ts
-│   │   │   ├── draft.service.spec.ts
-│   │   │   └── draft.service.ts
-│   │   ├── health
-│   │   │   ├── health.controller.ts
-│   │   │   └── health.module.ts
-│   │   ├── image
-│   │   │   ├── image.controller.ts
-│   │   │   ├── image.dto.ts
-│   │   │   ├── image.module.ts
-│   │   │   ├── image.schema.ts
-│   │   │   ├── image.service.spec.ts
-│   │   │   └── image.service.ts
-│   │   ├── public-v1
-│   │   │   ├── public-v1.controller.ts
-│   │   │   └── public-v1.module.ts
-│   │   ├── setting
-│   │   │   ├── setting.controller.ts
-│   │   │   ├── setting.dto.ts
-│   │   │   ├── setting.module.ts
-│   │   │   ├── setting.schema.ts
-│   │   │   ├── setting.service.spec.ts
-│   │   │   └── setting.service.ts
-│   │   ├── tag
-│   │   │   ├── tag.controller.ts
-│   │   │   ├── tag.dto.ts
-│   │   │   ├── tag.module.ts
-│   │   │   ├── tag.schema.ts
-│   │   │   ├── tag.service.spec.ts
-│   │   │   └── tag.service.ts
-│   │   └── user
-│   │       ├── user.controller.ts
-│   │       ├── user.dto.ts
-│   │       ├── user.module.ts
-│   │       ├── user.schema.ts
-│   │       ├── user.service.spec.ts
-│   │       └── user.service.ts
-│   ├── shared
-│   │   ├── constants
-│   │   │   ├── index.ts
-│   │   │   └── zod.ts
-│   │   ├── dtos
-│   │   │   ├── cdn.dto.ts
-│   │   │   ├── cdn.schema.ts
-│   │   │   ├── index.ts
-│   │   │   ├── isr.dto.ts
-│   │   │   └── isr.schema.ts
-│   │   ├── services
-│   │   │   ├── cdn.service.spec.ts
-│   │   │   ├── cdn.service.ts
-│   │   │   ├── connection-pool.service.ts
-│   │   │   ├── index.ts
-│   │   │   ├── markdown.service.spec.ts
-│   │   │   ├── markdown.service.ts
-│   │   │   ├── migration.service.spec.ts
-│   │   │   ├── migration.service.ts
-│   │   │   ├── query-optimizer.service.ts
-│   │   │   └── statistics.service.ts
-│   │   ├── shared.module.ts
-│   │   ├── types
-│   │   │   ├── event.ts
-│   │   │   ├── index.ts
-│   │   │   ├── permission.ts
-│   │   │   └── permission.type.ts
-│   │   ├── utils
-│   │   │   ├── date.utils.ts
-│   │   │   └── index.ts
-│   │   └── zod.ts
-│   └── types
-│       ├── markdown-it-katex.d.ts
-│       ├── markdown-it-task-lists.d.ts
-│       └── markdown-plugins.d.ts
+│   ├── [ ] app.module.ts
+│   ├── core
+│   │   ├── constants
+│   │   │   ├── [ ] app.constant.ts
+│   │   │   └── [ ] index.ts
+│   │   ├── [ ] core.module.ts
+│   │   ├── decorators
+│   │   │   ├── [ ] permission.decorator.ts
+│   │   │   └── [ ] user.decorator.ts
+│   │   ├── dto
+│   │   │   ├── [ ] page.dto.ts
+│   │   │   └── [ ] page.schema.ts
+│   │   ├── filters
+│   │   │   ├── [ ] all-exception.filter.ts
+│   │   │   └── [ ] zod-exception.filter.ts
+│   │   ├── guards
+│   │   │   ├── [ ] auth.guard.ts
+│   │   │   ├── [ ] permission.guard.ts
+│   │   │   └── [ ] throttler.guard.ts
+│   │   ├── interceptors
+│   │   │   ├── [ ] logging.interceptor.ts
+│   │   │   └── [ ] transform.interceptor.ts
+│   │   ├── pipes
+│   │   │   └── [ ] zod-validation.pipe.ts
+│   │   └── providers
+│   │       ├── [ ] cache.service.ts
+│   │       ├── config
+│   │       ├── database
+│   │       ├── [ ] helper.service.ts
+│   │       ├── [ ] hook.service.spec.ts
+│   │       ├── [ ] hook.service.ts
+│   │       ├── [ ] index.ts
+│   │       ├── logger
+│   │       ├── [ ] permission.service.spec.ts
+│   │       ├── [ ] permission.service.ts
+│   │       ├── [ ] plugin-context.service.ts
+│   │       ├── [ ] plugin.service.spec.ts
+│   │       └── [ ] plugin.service.ts
+│   ├── [ ] main.ts
+│   ├── modules
+│   │   ├── analytics
+│   │   │   ├── [ ] analytics.controller.ts
+│   │   │   ├── [ ] analytics.dto.ts
+│   │   │   ├── [ ] analytics.module.ts
+│   │   │   ├── [ ] analytics.schema.ts
+│   │   │   ├── [ ] analytics.service.spec.ts
+│   │   │   └── [ ] analytics.service.ts
+│   │   ├── article
+│   │   │   ├── [ ] article.controller.ts
+│   │   │   ├── [ ] article.dto.ts
+│   │   │   ├── [ ] article.module.ts
+│   │   │   ├── [ ] article.schema.ts
+│   │   │   ├── [ ] article.service.spec.ts
+│   │   │   └── [ ] article.service.ts
+│   │   ├── auth
+│   │   │   ├── [ ] auth.controller.ts
+│   │   │   ├── [ ] auth.dto.ts
+│   │   │   ├── [ ] auth.module.ts
+│   │   │   ├── [ ] auth.service.spec.ts
+│   │   │   └── [ ] auth.service.ts
+│   │   ├── category
+│   │   │   ├── [ ] category.controller.ts
+│   │   │   ├── [ ] category.dto.ts
+│   │   │   ├── [ ] category.module.ts
+│   │   │   ├── [ ] category.schema.ts
+│   │   │   ├── [ ] category.service.spec.ts
+│   │   │   └── [ ] category.service.ts
+│   │   ├── draft
+│   │   │   ├── [ ] draft.controller.ts
+│   │   │   ├── [ ] draft.dto.ts
+│   │   │   ├── [ ] draft.module.ts
+│   │   │   ├── [ ] draft.schema.ts
+│   │   │   ├── [ ] draft.service.spec.ts
+│   │   │   └── [ ] draft.service.ts
+│   │   ├── health
+│   │   │   ├── [ ] health.controller.ts
+│   │   │   └── [ ] health.module.ts
+│   │   ├── image
+│   │   │   ├── [ ] image.controller.ts
+│   │   │   ├── [ ] image.dto.ts
+│   │   │   ├── [ ] image.module.ts
+│   │   │   ├── [ ] image.schema.ts
+│   │   │   ├── [ ] image.service.spec.ts
+│   │   │   └── [ ] image.service.ts
+│   │   ├── public-v1
+│   │   │   ├── [ ] public-v1.controller.ts
+│   │   │   └── [ ] public-v1.module.ts
+│   │   ├── setting
+│   │   │   ├── [ ] setting.controller.ts
+│   │   │   ├── [ ] setting.dto.ts
+│   │   │   ├── [ ] setting.module.ts
+│   │   │   ├── [ ] setting.schema.ts
+│   │   │   ├── [ ] setting.service.spec.ts
+│   │   │   └── [ ] setting.service.ts
+│   │   ├── tag
+│   │   │   ├── [ ] tag.controller.ts
+│   │   │   ├── [ ] tag.dto.ts
+│   │   │   ├── [ ] tag.module.ts
+│   │   │   ├── [ ] tag.schema.ts
+│   │   │   ├── [ ] tag.service.spec.ts
+│   │   │   └── [ ] tag.service.ts
+│   │   └── user
+│   │       ├── [ ] user.controller.ts
+│   │       ├── [ ] user.dto.ts
+│   │       ├── [ ] user.module.ts
+│   │       ├── [ ] user.schema.ts
+│   │       ├── [ ] user.service.spec.ts
+│   │       └── [ ] user.service.ts
+│   ├── shared
+│   │   ├── constants
+│   │   │   ├── [ ] index.ts
+│   │   │   └── [ ] zod.ts
+│   │   ├── dtos
+│   │   │   ├── [ ] cdn.dto.ts
+│   │   │   ├── [ ] cdn.schema.ts
+│   │   │   ├── [ ] index.ts
+│   │   │   ├── [ ] isr.dto.ts
+│   │   │   └── [ ] isr.schema.ts
+│   │   ├── services
+│   │   │   ├── [ ] cdn.service.spec.ts
+│   │   │   ├── [ ] cdn.service.ts
+│   │   │   ├── [ ] connection-pool.service.ts
+│   │   │   ├── [ ] index.ts
+│   │   │   ├── [ ] markdown.service.spec.ts
+│   │   │   ├── [ ] markdown.service.ts
+│   │   │   ├── [ ] migration.service.spec.ts
+│   │   │   ├── [ ] migration.service.ts
+│   │   │   ├── [ ] query-optimizer.service.ts
+│   │   │   └── [ ] statistics.service.ts
+│   │   ├── [ ] shared.module.ts
+│   │   ├── types
+│   │   │   ├── [ ] event.ts
+│   │   │   ├── [ ] index.ts
+│   │   │   ├── [ ] permission.ts
+│   │   │   └── [ ] permission.type.ts
+│   │   ├── utils
+│   │   │   ├── [ ] date.utils.ts
+│   │   │   └── [ ] index.ts
+│   │   └── [ ] zod.ts
+│   └── types
+│       ├── [ ] markdown-it-katex.d.ts
+│       ├── [ ] markdown-it-task-lists.d.ts
+│       └── [ ] markdown-plugins.d.ts
 ├── test
-│   ├── analytics.e2e-spec.ts
-│   ├── app.e2e-spec.ts
-│   ├── health.e2e-spec.ts
-│   ├── hook-integration.e2e-spec.ts
-│   ├── mock-utils-usage.md
-│   ├── mock-utils.fixtures.spec.ts
-│   ├── mock-utils.test.ts
-│   ├── mock-utils.ts
-│   ├── setup.ts
-│   ├── tag.service.fixtures.spec.ts
-│   ├── test-utils.ts
-│   ├── vitest-fixtures-guide.md
-│   └── vitest-fixtures.test.ts
-├── tsconfig.build.json
-├── tsconfig.eslint.json
-├── tsconfig.json
-├── vite-env.d.ts
-├── vite.config.mts
-├── vite.plugin.config.mts
-├── vitest.config.e2e.ts
-└── vitest.config.ts
+│   ├── [ ] analytics.e2e-spec.ts
+│   ├── [ ] app.e2e-spec.ts
+│   ├── [ ] health.e2e-spec.ts
+│   ├── [ ] hook-integration.e2e-spec.ts
+│   ├── [ ] mock-utils-usage.md
+│   ├── [ ] mock-utils.fixtures.spec.ts
+│   ├── [ ] mock-utils.test.ts
+│   ├── [ ] mock-utils.ts
+│   ├── [ ] setup.ts
+│   ├── [ ] tag.service.fixtures.spec.ts
+│   ├── [ ] test-utils.ts
+│   ├── [ ] vitest-fixtures-guide.md
+│   └── [ ] vitest-fixtures.test.ts
+├── [ ] tsconfig.build.json
+├── [ ] tsconfig.eslint.json
+├── [ ] tsconfig.json
+├── [ ] vite-env.d.ts
+├── [ ] vite.config.mts
+├── [ ] vite.plugin.config.mts
+├── [ ] vitest.config.e2e.ts
+└── [ ] vitest.config.ts
 ```
 
 ## 技术栈
