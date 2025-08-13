@@ -27,8 +27,8 @@ import {
 } from './dto/article.dto';
 import { Article } from './entities/article.entity';
 
-@ApiTags('articles')
-@Controller('api/v2/articles')
+@ApiTags('Articles')
+@Controller({ path: 'articles', version: '2' })
 export class ArticleController {
   constructor(
     private readonly articleService: ArticleService,

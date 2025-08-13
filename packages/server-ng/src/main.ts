@@ -1,3 +1,4 @@
+import { VersioningType, type INestApplication } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { SwaggerModule, DocumentBuilder, type OpenAPIObject } from '@nestjs/swagger';
 import compression from 'compression';
@@ -8,8 +9,6 @@ import { AppModule } from './app.module';
 import { ConfigService } from './config';
 import { HttpExceptionFilter, AllExceptionsFilter } from './core/filters';
 import { LoggerService } from './core/logger/logger.service';
-
-import type { INestApplication } from '@nestjs/common';
 // import { patchNestJsSwagger } from 'nestjs-zod'; // Not available in current version
 
 import 'dayjs/locale/zh-cn';
@@ -27,6 +26,12 @@ export async function init(): Promise<INestApplication> {
   // Use custom logger
   const logger = app.get(LoggerService);
   app.useLogger(logger);
+
+  // Enable API versioning
+  app.enableVersioning({
+    type: VersioningType.URI,
+    defaultVersion: '2',
+  });
 
   // patchNestJsSwagger(); // Not available in current version
 

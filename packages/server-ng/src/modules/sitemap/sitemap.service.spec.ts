@@ -102,7 +102,7 @@ describe('SitemapService', () => {
     const dbMock = {
       select: vi.fn().mockImplementation((_fields) => {
         return {
-          from: vi.fn().mockImplementation(async (_table) => {
+          from: vi.fn().mockImplementation((_table) => {
             // 根据表名返回不同的数据
             if (_table === siteMeta) {
               return Promise.resolve(mockSiteMeta);

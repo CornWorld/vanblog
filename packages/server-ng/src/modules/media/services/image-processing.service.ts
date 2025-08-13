@@ -146,15 +146,15 @@ export class ImageProcessingService {
     const result: ProcessingResult = {
       buffer: outputBuffer.data,
       metadata: {
-        width: outputBuffer.info.width ?? 0,
-        height: outputBuffer.info.height ?? 0,
-        format: outputBuffer.info.format ?? 'unknown',
-        size: outputBuffer.info.size ?? 0,
+        width: outputBuffer.info.width,
+        height: outputBuffer.info.height,
+        format: outputBuffer.info.format,
+        size: outputBuffer.info.size,
         hasAlpha: outputBuffer.info.channels === 4,
-        density: outputBuffer.info.density ?? 72,
+        density: metadata.density,
       },
       originalSize,
-      compressedSize: outputBuffer.info.size ?? 0,
+      compressedSize: outputBuffer.info.size,
       compressionRatio,
     };
 

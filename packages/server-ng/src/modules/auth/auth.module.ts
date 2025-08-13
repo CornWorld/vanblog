@@ -6,6 +6,7 @@ import { PassportModule } from '@nestjs/passport';
 import { DatabaseModule } from '../../database/database.module';
 import { UserModule } from '../user/user.module';
 
+import { AuthV1Controller } from './auth-v1.controller';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { LoginLogService } from './login-log.service';
@@ -28,7 +29,7 @@ import { LocalStrategy } from './strategies/local.strategy';
       inject: [ConfigService],
     }),
   ],
-  controllers: [AuthController],
+  controllers: [AuthController, AuthV1Controller],
   providers: [AuthService, LocalStrategy, JwtStrategy, LoginLogService],
   exports: [AuthService, LoginLogService],
 })

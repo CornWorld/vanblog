@@ -86,11 +86,12 @@ export class MediaController {
 
     // 压缩图片
     if (file.mimetype.startsWith('image/') && file.mimetype !== 'image/svg+xml') {
-      processedBuffer = await this.imageProcessingService.compressImage(file.buffer, {
+      const result = await this.imageProcessingService.compressImage(file.buffer, {
         quality: 85,
         maxWidth: 1920,
         maxHeight: 1080,
       });
+      processedBuffer = result.buffer;
     }
 
     // 更新文件对象
@@ -143,11 +144,12 @@ export class MediaController {
     }
 
     // 压缩图片
-    processedBuffer = await this.imageProcessingService.compressImage(processedBuffer, {
+    const result = await this.imageProcessingService.compressImage(processedBuffer, {
       quality: 85,
       maxWidth: 1920,
       maxHeight: 1080,
     });
+    processedBuffer = result.buffer;
 
     const processedFile = {
       ...file,
@@ -296,11 +298,12 @@ export class MediaController {
 
     // 压缩图片
     if (mimeType.startsWith('image/') && mimeType !== 'image/svg+xml') {
-      processedBuffer = await this.imageProcessingService.compressImage(buffer, {
+      const result = await this.imageProcessingService.compressImage(buffer, {
         quality: 85,
         maxWidth: 1920,
         maxHeight: 1080,
       });
+      processedBuffer = result.buffer;
     }
 
     const processedFile = {

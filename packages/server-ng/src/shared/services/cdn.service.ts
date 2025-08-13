@@ -37,7 +37,6 @@ interface ImageOptimizationParams {
 export class CDNService {
   private readonly logger = new Logger(CDNService.name);
   private readonly config: CDNConfig;
-  private readonly domainIndex = 0;
 
   constructor(private readonly configService: ConfigService) {
     this.config = {
@@ -127,31 +126,6 @@ export class CDNService {
   private isImage(filePath: string): boolean {
     const ext = path.extname(filePath).toLowerCase();
     return ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.bmp', '.tiff'].includes(ext);
-  }
-
-  /**
-   * 检查是否为图片路径
-   */
-  private isImagePath(path: string): boolean {
-    const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.avif', '.svg'];
-    return imageExtensions.some((ext) => path.toLowerCase().endsWith(ext));
-  }
-
-  /**
-   * 获取下一个域名（负载均衡）
-   */
-  private getNextDomain(): string {
-    if (this.config.domains.length === 0) {
-      return this.config.baseUrl;
-    }
-
-    const domain = this.config.domains[this.domainIndex];
-    if (typeof domain !== 'string' || domain.trim().length === 0) {
-      return this.config.baseUrl;
-    }
-    (this as { domainIndex: number }).domainIndex =
-      (this.domainIndex + 1) % this.config.domains.length;
-    return domain;
   }
 
   /**

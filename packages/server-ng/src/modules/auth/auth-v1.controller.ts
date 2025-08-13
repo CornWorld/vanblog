@@ -26,9 +26,13 @@ interface RequestWithUser extends ExpressRequest {
   user: User;
 }
 
-@ApiTags('Auth')
-@Controller({ path: 'auth', version: '2' })
-export class AuthController {
+/**
+ * V1 API 认证控制器
+ * 提供与现有 v1 API 兼容的认证接口
+ */
+@ApiTags('Auth (v1 Compatible)')
+@Controller({ path: 'auth', version: '1' })
+export class AuthV1Controller {
   constructor(
     private readonly authService: AuthService,
     private readonly loginLogService: LoginLogService,
@@ -37,7 +41,7 @@ export class AuthController {
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @UseGuards(LocalAuthGuard)
-  @ApiOperation({ summary: 'User login' })
+  @ApiOperation({ summary: 'User login (v1 compatible)' })
   @ApiResponse({ status: 200, description: 'Login successful' })
   @ApiResponse({ status: 401, description: 'Invalid credentials' })
   async login(
@@ -48,34 +52,29 @@ export class AuthController {
     await this.loginLogService.createLog({
       username: req.user.username,
       ip: req.ip,
-      userAgent: req.headers['user-agent'] ?? '',
+      userAgent: req.get('User-Agent') ?? '',
       success: true,
-      message: 'Login successful',
     });
 
     return {
       ...result,
-      token: result.access_token, // For backward compatibility
+      token: result.access_token, // v1 compatibility
     };
   }
 
   @Get('profile')
   @RequireAuth()
-  @ApiOperation({ summary: 'Get current user profile' })
+  @ApiOperation({ summary: 'Get current user profile (v1 compatible)' })
   @ApiResponse({ status: 200, description: 'Profile retrieved successfully' })
   getProfile(@Request() req: RequestWithUser): Omit<User, 'password'> {
-    const { password, ...user } = req.user;
-    void password;
-    return {
-      ...user,
-      permissions: user.permissions,
-    };
+    const { password: _password, ...profile } = req.user;
+    return profile;
   }
 
   @Post('logout')
   @RequireAuth()
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'User logout' })
+  @ApiOperation({ summary: 'User logout (v1 compatible)' })
   @ApiResponse({ status: 200, description: 'Logout successful' })
   logout(): { message: string } {
     return { message: 'Logout successful' };
@@ -83,7 +82,7 @@ export class AuthController {
 
   @Get('logs')
   @RequireAdmin()
-  @ApiOperation({ summary: 'Get login logs' })
+  @ApiOperation({ summary: 'Get login logs (v1 compatible)' })
   @ApiResponse({ status: 200, description: 'Login logs retrieved successfully' })
   @ApiQuery({ name: 'username', required: false })
   @ApiQuery({ name: 'success', required: false, type: Boolean })
@@ -92,8 +91,8 @@ export class AuthController {
     @Query(new ZodValidationPipe(LoginLogQuerySchema)) query: LoginLogQueryDto,
   ): Promise<LoginLogResponseDto[]> {
     if (req.user.type !== UserType.ADMIN) {
-      throw new HttpException('Access denied', HttpStatus.FORBIDDEN);
+      throw new HttpException('Forbidden', HttpStatus.FORBIDDEN);
     }
-    return this.loginLogService.getLogs(query);
+    return await this.loginLogService.getLogs(query);
   }
 }
