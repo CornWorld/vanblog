@@ -32,8 +32,6 @@ import {
   WebhookDto,
   WebhookQueryDto,
   WebhookLogQueryDto,
-  WebhookEvent,
-  AVAILABLE_WEBHOOK_EVENTS,
   CreateWebhookSchema,
   UpdateWebhookSchema,
 } from './webhook.dto';
@@ -93,7 +91,7 @@ export class WebhookController {
   @ApiResponse({ status: 200, description: 'Available events retrieved successfully' })
   getAvailableEvents(): { events: string[]; categories: Record<string, string[]> } {
     return {
-      events: AVAILABLE_WEBHOOK_EVENTS,
+      events: this.webhookRegistryService.getAvailableEvents(),
       categories: this.webhookRegistryService.getEventCategories(),
     };
   }
@@ -107,6 +105,18 @@ export class WebhookController {
     @Query('webhookId', ParseIntPipe) webhookId?: number,
   ): Promise<Record<string, unknown>> {
     return this.webhookService.getStats(webhookId);
+  }
+
+  @Post('refresh')
+  @Permissions('webhook:admin')
+  @ApiOperation({ summary: 'Refresh webhook event registrations' })
+  @ApiResponse({ status: 200, description: 'Webhook registrations refreshed successfully' })
+  refreshRegistrations(): { message: string; events: string[] } {
+    this.webhookRegistryService.refreshWebhookRegistrations();
+    return {
+      message: 'Webhook registrations refreshed successfully',
+      events: this.webhookRegistryService.getAvailableEvents(),
+    };
   }
 
   @Get('logs')
@@ -197,10 +207,7 @@ export class WebhookController {
       throw new NotFoundException('Event not supported');
     }
 
-    await this.webhookRegistryService.triggerEvent(
-      testData.event as WebhookEvent,
-      testData.payload,
-    );
+    await this.webhookRegistryService.triggerEvent(testData.event, testData.payload);
 
     return { message: 'Webhook triggered successfully' };
   }

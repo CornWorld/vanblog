@@ -33,9 +33,11 @@ describe('WebhookController', () => {
         {
           provide: WebhookRegistryService,
           useValue: {
+            getAvailableEvents: vi.fn(),
             getEventCategories: vi.fn(),
             isEventSupported: vi.fn(),
             triggerEvent: vi.fn(),
+            refreshWebhookRegistrations: vi.fn(),
           },
         },
       ],
@@ -129,17 +131,20 @@ describe('WebhookController', () => {
 
   describe('getAvailableEvents', () => {
     it('should return available webhook events', () => {
+      const mockEvents = ['article.created', 'article.updated', 'draft.created', 'draft.updated'];
       const mockCategories = {
         article: ['article.created', 'article.updated'],
         draft: ['draft.created', 'draft.updated'],
       };
 
+      vi.spyOn(webhookRegistryService, 'getAvailableEvents').mockReturnValue(mockEvents);
       vi.spyOn(webhookRegistryService, 'getEventCategories').mockReturnValue(mockCategories);
 
       const result = controller.getAvailableEvents();
 
       expect(result).toHaveProperty('events');
       expect(result).toHaveProperty('categories');
+      expect(result.events).toEqual(mockEvents);
       expect(result.categories).toEqual(mockCategories);
     });
   });

@@ -11,7 +11,6 @@ import {
   UpdateWebhookDto,
   WebhookQueryDto,
   WebhookLogQueryDto,
-  WebhookEvent,
 } from './webhook.dto';
 
 import type { Database } from '../../database/connection';
@@ -151,7 +150,7 @@ export class WebhookService {
     await this.db.delete(webhooks).where(eq(webhooks.id, id));
   }
 
-  async trigger(event: WebhookEvent, data: Record<string, unknown>): Promise<void> {
+  async trigger(event: string, data: Record<string, unknown>): Promise<void> {
     const activeWebhooks = await this.db.select().from(webhooks).where(eq(webhooks.active, true));
 
     const relevantWebhooks = activeWebhooks.filter((webhook) => {

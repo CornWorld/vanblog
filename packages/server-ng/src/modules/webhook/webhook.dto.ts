@@ -96,44 +96,9 @@ export class WebhookLogQueryDto {
   endDate?: Date;
 }
 
-// Webhook events enum
-export const WEBHOOK_EVENTS = {
-  // Article events
-  ARTICLE_CREATED: 'article.created',
-  ARTICLE_UPDATED: 'article.updated',
-  ARTICLE_DELETED: 'article.deleted',
-  ARTICLE_PUBLISHED: 'article.published',
-  ARTICLE_UNPUBLISHED: 'article.unpublished',
+// Note: Webhook events are now dynamically loaded from the plugin system
+// via HookService.getAllActionHooks() instead of being hardcoded here.
+// This allows plugins to register their own webhook events.
 
-  // Draft events
-  DRAFT_CREATED: 'draft.created',
-  DRAFT_UPDATED: 'draft.updated',
-  DRAFT_DELETED: 'draft.deleted',
-  DRAFT_PUBLISHED: 'draft.published',
-
-  // Category events
-  CATEGORY_CREATED: 'category.created',
-  CATEGORY_UPDATED: 'category.updated',
-  CATEGORY_DELETED: 'category.deleted',
-
-  // Tag events
-  TAG_CREATED: 'tag.created',
-  TAG_UPDATED: 'tag.updated',
-  TAG_DELETED: 'tag.deleted',
-
-  // Media events
-  MEDIA_UPLOADED: 'media.uploaded',
-  MEDIA_DELETED: 'media.deleted',
-
-  // Setting events
-  SETTING_UPDATED: 'setting.updated',
-
-  // User events
-  USER_CREATED: 'user.created',
-  USER_UPDATED: 'user.updated',
-  USER_DELETED: 'user.deleted',
-} as const;
-
-export type WebhookEvent = (typeof WEBHOOK_EVENTS)[keyof typeof WEBHOOK_EVENTS];
-
-export const AVAILABLE_WEBHOOK_EVENTS = Object.values(WEBHOOK_EVENTS);
+// Legacy type for backward compatibility - now just a string
+export type WebhookEvent = string;
