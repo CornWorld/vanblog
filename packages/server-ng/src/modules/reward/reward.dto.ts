@@ -1,7 +1,7 @@
 import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
 
-import { commonSchemas } from '../../../shared/zod';
+import { commonSchemas } from '../../shared/zod';
 
 export const RewardInfoSchema = z.object({
   name: commonSchemas.nonEmptyString.describe('Payment method name (e.g., Alipay, WeChat Pay)'),

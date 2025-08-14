@@ -5,7 +5,7 @@ import { DATABASE_CONNECTION } from '../../database';
 
 import { WebhookService } from './webhook.service';
 
-import type { CreateWebhookDto, UpdateWebhookDto, WebhookEvent } from './dto/webhook.dto';
+import type { CreateWebhookDto, UpdateWebhookDto, WebhookEvent } from './webhook.dto';
 
 describe('WebhookService', () => {
   let service: WebhookService;

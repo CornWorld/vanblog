@@ -6,7 +6,7 @@ import { WebhookRegistryService } from './webhook-registry.service';
 import { WebhookController } from './webhook.controller';
 import { WebhookService } from './webhook.service';
 
-import type { CreateWebhookDto, UpdateWebhookDto, WebhookQueryDto } from './dto/webhook.dto';
+import type { CreateWebhookDto, UpdateWebhookDto, WebhookQueryDto } from './webhook.dto';
 
 describe('WebhookController', () => {
   let controller: WebhookController;

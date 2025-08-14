@@ -24,6 +24,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { Permissions } from '../auth/permissions.decorator';
 
+import { WebhookRegistryService } from './webhook-registry.service';
 import {
   CreateWebhookDto,
   UpdateWebhookDto,
@@ -32,8 +33,7 @@ import {
   WebhookLogQueryDto,
   WebhookEvent,
   AVAILABLE_WEBHOOK_EVENTS,
-} from './dto/webhook.dto';
-import { WebhookRegistryService } from './webhook-registry.service';
+} from './webhook.dto';
 import { WebhookService } from './webhook.service';
 
 @ApiTags('webhooks')

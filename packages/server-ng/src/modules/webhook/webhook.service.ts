@@ -5,14 +5,14 @@ import { eq, and, desc, gte, lte, count } from 'drizzle-orm';
 
 import { DATABASE_CONNECTION } from '../../database';
 
+import { webhooks, webhookLogs, type Webhook as WebhookEntity } from './entities/webhook.schema';
 import {
   CreateWebhookDto,
   UpdateWebhookDto,
   WebhookQueryDto,
   WebhookLogQueryDto,
   WebhookEvent,
-} from './dto/webhook.dto';
-import { webhooks, webhookLogs, type Webhook as WebhookEntity } from './entities/webhook.schema';
+} from './webhook.dto';
 
 import type { Database } from '../../database/connection';
 

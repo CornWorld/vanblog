@@ -1,7 +1,7 @@
 import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
 
-import { commonSchemas } from '../../../shared/zod';
+import { commonSchemas } from '../../shared/zod';
 
 export const SocialLinkSchema = z.object({
   type: commonSchemas.nonEmptyString.describe(

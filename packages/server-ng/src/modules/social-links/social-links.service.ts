@@ -2,8 +2,8 @@ import { Injectable } from '@nestjs/common';
 
 import { SettingRegistryService } from '../setting/services/setting-registry.service';
 
-import { SocialLinkDto } from './dto/social-link.dto';
-import { SocialLinkArraySchema, SocialLink } from './social-links.schema';
+import { SocialLinkDto } from './social-links.dto';
+import { SocialLinkArraySchema, type SocialLink } from './social-links.schema';
 
 @Injectable()
 export class SocialLinksService {
@@ -30,11 +30,15 @@ export class SocialLinksService {
 
   async addOrUpdateSocialLink(dto: SocialLinkDto): Promise<SocialLink[]> {
     const links = await this.getSocialLinks();
+    const linkData: SocialLink = {
+      type: dto.type,
+      url: dto.url,
+    };
     const index = links.findIndex((link) => link.type === dto.type);
     if (index !== -1) {
-      links[index] = dto;
+      links[index] = linkData;
     } else {
-      links.push(dto);
+      links.push(linkData);
     }
     return this.settingRegistry.updateConfig(this.CONFIG_KEY, links);
   }

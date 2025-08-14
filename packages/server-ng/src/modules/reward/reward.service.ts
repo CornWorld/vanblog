@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 
 import { SettingRegistryService } from '../setting/services/setting-registry.service';
 
-import { RewardInfoDto } from './dto/reward-info.dto';
+import { RewardInfoDto } from './reward.dto';
 import { RewardInfoArraySchema, RewardInfo } from './reward.schema';
 
 @Injectable()
@@ -29,12 +29,16 @@ export class RewardService {
 
   async addOrUpdateRewardInfo(dto: RewardInfoDto): Promise<RewardInfo[]> {
     const rewards = await this.getRewardInfo();
+    const rewardData: RewardInfo = {
+      name: dto.name,
+      value: dto.value,
+    };
     const index = rewards.findIndex((r) => r.name === dto.name);
 
     if (index !== -1) {
-      rewards[index] = dto;
+      rewards[index] = rewardData;
     } else {
-      rewards.push(dto);
+      rewards.push(rewardData);
     }
 
     return this.settingRegistry.updateConfig(this.CONFIG_KEY, rewards);

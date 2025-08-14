@@ -6,7 +6,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { Permissions } from '../auth/permissions.decorator';
 
-import { SocialLinkDto, SocialLinkSchema } from './dto/social-link.dto';
+import { SocialLinkDto, SocialLinkSchema } from './social-links.dto';
 import { SocialLink } from './social-links.schema';
 import { SocialLinksService } from './social-links.service';
 

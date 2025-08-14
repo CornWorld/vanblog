@@ -2,7 +2,7 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 
 import { HookService } from '../plugin/services/hook.service';
 
-import { WEBHOOK_EVENTS, WebhookEvent } from './dto/webhook.dto';
+import { WEBHOOK_EVENTS, WebhookEvent } from './webhook.dto';
 import { WebhookService } from './webhook.service';
 
 @Injectable()

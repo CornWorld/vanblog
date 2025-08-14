@@ -6,7 +6,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { Permissions } from '../auth/permissions.decorator';
 
-import { RewardInfoDto, RewardInfoSchema } from './dto/reward-info.dto';
+import { RewardInfoDto, RewardInfoSchema } from './reward.dto';
 import { RewardInfo } from './reward.schema';
 import { RewardService } from './reward.service';
 
