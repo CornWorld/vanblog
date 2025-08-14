@@ -12,6 +12,7 @@ import {
   UsePipes,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { ZodValidationPipe } from 'nestjs-zod';
 
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -46,6 +47,7 @@ export class AnalyticsController {
 
   // 公开的记录接口，前端可以调用
   @Post('analytics/record')
+  @Throttle({ medium: { limit: 10, ttl: 10000 } }) // 10秒内最多10次请求
   @UsePipes(new ZodValidationPipe(RecordAnalyticsSchema))
   @ApiOperation({ summary: '记录分析数据' })
   @ApiResponse({ status: 201, description: '记录成功' })
@@ -79,6 +81,7 @@ export class AnalyticsController {
 
   // 公开的文章浏览记录接口
   @Post('article/:id/view')
+  @Throttle({ medium: { limit: 5, ttl: 10000 } }) // 10秒内最多5次请求
   @ApiOperation({ summary: '记录文章浏览' })
   @ApiResponse({ status: 201, description: '记录成功' })
   async recordArticleView(
@@ -91,6 +94,7 @@ export class AnalyticsController {
 
   // 公开的阅读时间记录接口
   @Post('article/:id/reading-time')
+  @Throttle({ long: { limit: 20, ttl: 60000 } }) // 1分钟内最多20次请求
   @ApiOperation({ summary: '记录文章阅读时间' })
   @ApiResponse({ status: 201, description: '记录成功' })
   async recordReadingTime(

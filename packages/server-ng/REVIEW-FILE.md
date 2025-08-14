@@ -266,7 +266,7 @@
 - [x] 检查 API 端点的完整性 - ✅ API 端点完整，包含记录、查询、统计等功能
 - [x] 验证参数验证和响应格式 - ✅ 使用 ZodValidationPipe 进行参数验证，响应格式规范
 - [x] 确保权限控制 - ✅ 管理接口使用 JwtAuthGuard 和 PermissionsGuard，权限控制完善
-- [ ] 建议添加请求频率限制防止数据记录滥用（nestjs 官方功能）
+- [x] 建议添加请求频率限制防止数据记录滥用（nestjs 官方功能）
 - [ ] 考虑添加批量数据导出功能
 
 ### [x] src/modules/analytics/analytics.service.ts
