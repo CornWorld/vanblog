@@ -4,11 +4,6 @@ import { eq, desc, and } from 'drizzle-orm';
 
 import { DATABASE_CONNECTION } from '../../database/database.module';
 import { permissionNodes, permissionGroups } from '../../database/schema';
-import {
-  LimitPermission,
-  PERMISSION_MODULES,
-  PERMISSION_GROUPS,
-} from '../../shared/types/permission';
 
 import {
   CreatePermissionGroupType,
@@ -25,15 +20,170 @@ import {
 
 import type { Database } from '../../database/connection';
 
+export interface PermissionRegistration {
+  module: string;
+  permissions?: string[];
+  roles?: Record<string, string[]>;
+}
+
+export interface ModulePermissionInfo {
+  fullPermissions: string[];
+  semanticPermissions: string[];
+}
+
 @Injectable()
 export class PermissionService {
   private readonly logger = new Logger(PermissionService.name);
   private readonly registeredPermissions = new Map<string, PermissionNodeType>();
+  private readonly modulePermissions = new Map<string, string[]>();
+  private readonly predefinedRoles = new Map<string, string[]>();
+  private readonly moduleContext = new Map<string, string[]>();
 
   constructor(
     @Inject(DATABASE_CONNECTION)
     private readonly db: Database,
-  ) {}
+  ) {
+    // 初始化预定义权限组
+    this.initializePredefinedGroups();
+  }
+
+  /**
+   * 初始化预定义角色
+   */
+  private initializePredefinedGroups(): void {
+    // 这些是基础的角色，各模块可以通过 register 方法添加更多
+    this.predefinedRoles.set('admin', []); // admin 角色将包含所有权限
+    this.predefinedRoles.set('editor', []);
+    this.predefinedRoles.set('author', []);
+    this.predefinedRoles.set('viewer', []);
+  }
+
+  /**
+   * 简化的自动注册方法
+   * @param moduleName 模块名称
+   * @param permissions 权限列表
+   * @param roles 角色权限配置（可选）
+   */
+  autoRegister(moduleName: string, permissions: string[], roles?: Record<string, string[]>): void {
+    this.register({
+      module: moduleName,
+      permissions,
+      roles,
+    });
+  }
+
+  /**
+   * 注册模块权限
+   * @param moduleName 模块名称
+   * @param permissions 权限列表
+   */
+  /**
+   * 新的统一权限注册方法
+   * @param config 权限注册配置
+   */
+  register(config: PermissionRegistration): void {
+    const { module, permissions = [], roles = {} } = config;
+
+    this.logger.log(`模块 ${module} 的已注册权限`);
+
+    // 注册模块权限节点（带前缀）
+    const fullPermissions = permissions.map((p) => `${module}:${p}`);
+    this.modulePermissions.set(module, fullPermissions);
+
+    // 存储模块上下文，用于权限名称映射
+    this.moduleContext.set(module, permissions);
+
+    // admin 角色自动获得所有权限
+    const adminPermissions = this.predefinedRoles.get('admin') ?? [];
+    this.predefinedRoles.set('admin', [...adminPermissions, ...fullPermissions]);
+
+    // 注册角色权限
+    Object.entries(roles).forEach(([roleName, rolePermissions]) => {
+      const fullRolePermissions = rolePermissions.map((p) => `${module}:${p}`);
+      const existingPermissions = this.predefinedRoles.get(roleName) ?? [];
+      this.predefinedRoles.set(roleName, [...existingPermissions, ...fullRolePermissions]);
+      this.logger.log(`注册角色 ${roleName} 的权限: ${fullRolePermissions.join(', ')}`);
+    });
+
+    this.logger.log(`模块 ${module} 权限注册完成: ${fullPermissions.join(', ')}`);
+  }
+
+  /**
+   * 兼容性方法：注册模块权限
+   * @deprecated 使用 register 方法替代
+   */
+  registerModulePermissions(moduleName: string, permissions: string[]): void {
+    this.register({ module: moduleName, permissions });
+  }
+
+  /**
+   * 兼容性方法：注册权限组权限
+   * @deprecated 使用 register 方法替代
+   */
+  registerPermissionGroup(groupName: string, permissions: string[]): void {
+    this.logger.log(`注册角色 ${groupName} 的权限: ${permissions.join(', ')}`);
+    const existingPermissions = this.predefinedRoles.get(groupName) ?? [];
+    this.predefinedRoles.set(groupName, [...existingPermissions, ...permissions]);
+  }
+
+  /**
+   * 解析语义化权限名称
+   * @param module 模块名称
+   * @param permissions 权限列表（可能包含语义化名称）
+   */
+  resolvePermissionNames(module: string, permissions: string[]): string[] {
+    const modulePermissions = this.moduleContext.get(module) ?? [];
+
+    return permissions.map((permission) => {
+      // 如果已经是完整格式，直接返回
+      if (permission.includes(':')) {
+        return permission;
+      }
+
+      // 如果是语义化名称且在模块权限中，添加模块前缀
+      if (modulePermissions.includes(permission)) {
+        return `${module}:${permission}`;
+      }
+
+      // 否则返回原始权限名称
+      return permission;
+    });
+  }
+
+  /**
+   * 获取特定模块的所有权限
+   * @param module 模块名称
+   * @returns 模块的所有权限列表（完整格式）
+   */
+  getModulePermissions(module: string): string[] {
+    return this.modulePermissions.get(module) ?? [];
+  }
+
+  /**
+   * 获取特定模块的语义化权限名称
+   * @param module 模块名称
+   * @returns 模块的语义化权限名称列表
+   */
+  getModuleSemanticPermissions(module: string): string[] {
+    return this.moduleContext.get(module) ?? [];
+  }
+
+  /**
+   * 获取所有已注册模块的权限信息
+   * @returns 模块权限映射表
+   */
+  getAllModulePermissions(): Record<string, ModulePermissionInfo> {
+    const result: Record<string, ModulePermissionInfo> = {};
+
+    for (const [module] of this.modulePermissions) {
+      result[module] = {
+        fullPermissions: this.getModulePermissions(module),
+        semanticPermissions: this.getModuleSemanticPermissions(module),
+      };
+    }
+
+    return result;
+  }
 
   /**
    * 注册权限节点
@@ -82,17 +232,17 @@ export class PermissionService {
         const disabledPermission = permission.slice(3);
         disabledPermissions.add(disabledPermission);
 
-        // 如果是禁用权限组，需要禁用组内所有权限
-        if (disabledPermission.startsWith('group:')) {
-          const groupName = disabledPermission.slice(6);
-          const groupPermissions = await this.getGroupPermissions(groupName);
-          groupPermissions.forEach((p) => disabledPermissions.add(p));
+        // 如果是禁用角色，需要禁用角色内所有权限
+        if (disabledPermission.startsWith('role:')) {
+          const roleName = disabledPermission.slice(5);
+          const rolePermissions = await this.getRolePermissions(roleName);
+          rolePermissions.forEach((p) => disabledPermissions.add(p));
         }
-      } else if (permission.startsWith('group:')) {
-        // 权限组
-        const groupName = permission.slice(6);
-        const groupPermissions = await this.getGroupPermissions(groupName);
-        groupPermissions.forEach((p) => resolvedPermissions.add(p));
+      } else if (permission.startsWith('role:')) {
+        // 角色权限
+        const roleName = permission.slice(5);
+        const rolePermissions = await this.getRolePermissions(roleName);
+        rolePermissions.forEach((p) => resolvedPermissions.add(p));
       } else {
         // 普通权限
         resolvedPermissions.add(permission);
@@ -333,7 +483,7 @@ export class PermissionService {
 
     try {
       // 1. 注册所有模块的权限节点
-      await this.registerModulePermissions();
+      await this.registerAllModulePermissions();
 
       // 2. 创建预定义的权限组
       await this.createPredefinedGroups();
@@ -346,33 +496,47 @@ export class PermissionService {
   }
 
   /**
-   * 获取权限组的权限列表
-   * @param groupName 权限组名称
+   * 获取角色的权限列表
+   * @param roleName 角色名称
    * @returns 权限列表
    */
-  private async getGroupPermissions(groupName: string): Promise<LimitPermission[]> {
+  private async getRolePermissions(roleName: string): Promise<string[]> {
+    // 移除 'role:' 前缀
+    const actualRoleName = roleName.replace('role:', '');
+
+    // 从预定义角色中获取权限
+    const predefinedPermissions = this.predefinedRoles.get(actualRoleName);
+    if (predefinedPermissions) {
+      return predefinedPermissions;
+    }
+
+    // 如果不是预定义角色，从数据库查询
     const group = await this.db
       .select()
       .from(permissionGroups)
-      .where(eq(permissionGroups.name, groupName))
+      .where(eq(permissionGroups.name, actualRoleName))
       .limit(1);
 
     if (group.length === 0) {
       return [];
     }
 
-    try {
-      return group[0].permissions ? (JSON.parse(group[0].permissions) as LimitPermission[]) : [];
-    } catch {
-      return [];
-    }
+    return group[0].permissions ? (JSON.parse(group[0].permissions) as string[]) : [];
+  }
+
+  /**
+   * 兼容性方法：获取权限组权限
+   * @deprecated 使用 getRolePermissions 方法替代
+   */
+  private async getGroupPermissions(groupName: string): Promise<string[]> {
+    return this.getRolePermissions(groupName);
   }
 
   /**
    * 注册所有模块的权限节点
    */
-  private async registerModulePermissions(): Promise<void> {
-    for (const [moduleName, permissions] of Object.entries(PERMISSION_MODULES)) {
+  private async registerAllModulePermissions(): Promise<void> {
+    for (const [moduleName, permissions] of this.modulePermissions.entries()) {
       this.logger.log(`注册模块 ${moduleName} 的权限节点...`);
 
       for (const permission of permissions) {
@@ -389,7 +553,7 @@ export class PermissionService {
    * 创建预定义的权限组
    */
   private async createPredefinedGroups(): Promise<void> {
-    for (const [groupName, permissions] of Object.entries(PERMISSION_GROUPS)) {
+    for (const [groupName, permissions] of this.predefinedRoles.entries()) {
       this.logger.log(`创建权限组: ${groupName}`);
 
       try {

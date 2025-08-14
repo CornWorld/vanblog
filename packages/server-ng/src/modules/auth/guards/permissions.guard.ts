@@ -1,7 +1,8 @@
 import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 
-import { Permission } from '../../../shared/types/permission.type';
+import { Permission } from '../../../shared/types/permission';
+import { PermissionService } from '../../permission/permission.service';
 import { UserType } from '../../user/dto/create-user.dto';
 import { User } from '../../user/entities/user.entity';
 import { PERMISSION_KEY } from '../permissions.decorator';
@@ -21,15 +22,17 @@ import { PERMISSION_KEY } from '../permissions.decorator';
  */
 @Injectable()
 export class PermissionsGuard implements CanActivate {
-  constructor(private readonly reflector: Reflector) {}
+  constructor(
+    private readonly reflector: Reflector,
+    private readonly permissionService: PermissionService,
+  ) {}
 
-  canActivate(context: ExecutionContext): boolean {
-    const requiredPermissions = this.reflector.getAllAndOverride<Permission[] | undefined>(
-      PERMISSION_KEY,
-      [context.getHandler(), context.getClass()],
-    );
+  async canActivate(context: ExecutionContext): Promise<boolean> {
+    const permissionData = this.reflector.getAllAndOverride<
+      Permission[] | { module: string; permissions: string[] } | undefined
+    >(PERMISSION_KEY, [context.getHandler(), context.getClass()]);
 
-    if (!requiredPermissions || requiredPermissions.length === 0) {
+    if (!permissionData) {
       return true;
     }
 
@@ -49,8 +52,25 @@ export class PermissionsGuard implements CanActivate {
       return false;
     }
 
-    return requiredPermissions.some(
-      (permission) => userPermissions.includes(permission) || userPermissions.includes('all'),
-    );
+    // 处理新的模块权限格式
+    let requiredPermissions: Permission[];
+    if (Array.isArray(permissionData)) {
+      // 传统格式：直接是权限数组
+      requiredPermissions = permissionData;
+    } else {
+      // 新格式：包含模块上下文的对象
+      const { module, permissions } = permissionData;
+      requiredPermissions = this.permissionService.resolvePermissionNames(
+        module,
+        permissions,
+      ) as Permission[];
+    }
+
+    if (requiredPermissions.length === 0) {
+      return true;
+    }
+
+    // 使用 PermissionService 的权限解析逻辑
+    return await this.permissionService.hasPermissions(userPermissions, requiredPermissions);
   }
 }

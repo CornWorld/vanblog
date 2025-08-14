@@ -23,7 +23,7 @@ import { ZodValidationPipe } from 'nestjs-zod';
 
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../../auth/guards/permissions.guard';
-import { Permissions } from '../../auth/permissions.decorator';
+import { ModulePermissions } from '../../auth/permissions.decorator';
 import {
   CreateWebhookDto,
   UpdateWebhookDto,
@@ -47,7 +47,7 @@ export class WebhookController {
   ) {}
 
   @Post()
-  @Permissions('webhook:create')
+  @ModulePermissions('webhook', 'create')
   @ApiOperation({ summary: 'Create a new webhook' })
   @ApiResponse({ status: 201, description: 'Webhook created successfully', type: WebhookDto })
   async create(
@@ -61,7 +61,7 @@ export class WebhookController {
   }
 
   @Get()
-  @Permissions('webhook:read')
+  @ModulePermissions('webhook', 'read')
   @ApiOperation({ summary: 'Get all webhooks' })
   @ApiResponse({ status: 200, description: 'Webhooks retrieved successfully' })
   async findAll(@Query() query: WebhookQueryDto): Promise<{
@@ -85,7 +85,7 @@ export class WebhookController {
   }
 
   @Get('events')
-  @Permissions('webhook:read')
+  @ModulePermissions('webhook', 'read')
   @ApiOperation({ summary: 'Get available webhook events' })
   @ApiResponse({ status: 200, description: 'Available events retrieved successfully' })
   getAvailableEvents(): { events: string[]; categories: Record<string, string[]> } {
@@ -96,7 +96,7 @@ export class WebhookController {
   }
 
   @Get('stats')
-  @Permissions('webhook:read')
+  @ModulePermissions('webhook', 'read')
   @ApiOperation({ summary: 'Get webhook statistics' })
   @ApiResponse({ status: 200, description: 'Statistics retrieved successfully' })
   @ApiQuery({ name: 'webhookId', required: false, type: Number })
@@ -107,7 +107,7 @@ export class WebhookController {
   }
 
   @Post('refresh')
-  @Permissions('webhook:admin')
+  @ModulePermissions('webhook', 'admin')
   @ApiOperation({ summary: 'Refresh webhook event registrations' })
   @ApiResponse({ status: 200, description: 'Webhook registrations refreshed successfully' })
   refreshRegistrations(): { message: string; events: string[] } {
@@ -119,7 +119,7 @@ export class WebhookController {
   }
 
   @Post(':id/register')
-  @Permissions('webhook:admin')
+  @ModulePermissions('webhook', 'admin')
   @ApiOperation({ summary: 'Manually register a webhook for events' })
   @ApiParam({ name: 'id', type: Number })
   @ApiResponse({ status: 200, description: 'Webhook registered successfully' })
@@ -141,7 +141,7 @@ export class WebhookController {
   }
 
   @Delete(':id/register')
-  @Permissions('webhook:admin')
+  @ModulePermissions('webhook', 'admin')
   @ApiOperation({ summary: 'Unregister a webhook from all events' })
   @ApiParam({ name: 'id', type: Number })
   @ApiResponse({ status: 200, description: 'Webhook unregistered successfully' })
@@ -153,7 +153,7 @@ export class WebhookController {
   }
 
   @Get('logs')
-  @Permissions('webhook:read')
+  @ModulePermissions('webhook', 'read')
   @ApiOperation({ summary: 'Get webhook execution logs' })
   @ApiResponse({ status: 200, description: 'Logs retrieved successfully' })
   async getLogs(@Query() query: WebhookLogQueryDto): Promise<Record<string, unknown>> {
@@ -161,7 +161,7 @@ export class WebhookController {
   }
 
   @Get(':id')
-  @Permissions('webhook:read')
+  @ModulePermissions('webhook', 'read')
   @ApiOperation({ summary: 'Get a webhook by ID' })
   @ApiParam({ name: 'id', type: Number })
   @ApiResponse({ status: 200, description: 'Webhook retrieved successfully', type: WebhookDto })
@@ -175,7 +175,7 @@ export class WebhookController {
   }
 
   @Patch(':id')
-  @Permissions('webhook:update')
+  @ModulePermissions('webhook', 'update')
   @ApiOperation({ summary: 'Update a webhook' })
   @ApiParam({ name: 'id', type: Number })
   @ApiResponse({ status: 200, description: 'Webhook updated successfully', type: WebhookDto })
@@ -192,7 +192,7 @@ export class WebhookController {
   }
 
   @Delete(':id')
-  @Permissions('webhook:delete')
+  @ModulePermissions('webhook', 'delete')
   @ApiOperation({ summary: 'Delete a webhook' })
   @ApiParam({ name: 'id', type: Number })
   @ApiResponse({ status: 200, description: 'Webhook deleted successfully' })
@@ -203,7 +203,7 @@ export class WebhookController {
   }
 
   @Post(':id/test')
-  @Permissions('webhook:test')
+  @ModulePermissions('webhook', 'test')
   @ApiOperation({ summary: 'Test a webhook' })
   @ApiParam({ name: 'id', type: Number })
   @ApiResponse({ status: 200, description: 'Webhook test completed' })
@@ -221,7 +221,7 @@ export class WebhookController {
   }
 
   @Post(':id/trigger')
-  @Permissions('webhook:trigger')
+  @ModulePermissions('webhook', 'trigger')
   @ApiOperation({ summary: 'Manually trigger a webhook' })
   @ApiParam({ name: 'id', type: Number })
   @ApiResponse({ status: 200, description: 'Webhook triggered successfully' })

@@ -1,8 +1,10 @@
-import { Module } from '@nestjs/common';
+import { Module, OnModuleInit } from '@nestjs/common';
 
 import { DatabaseModule } from '../../database/database.module';
 import { AnalyticsCacheService } from '../../shared/cache/analytics-cache.service';
 import { CacheModule } from '../../shared/cache/cache.module';
+import { PermissionModule } from '../permission/permission.module';
+import { PermissionService } from '../permission/permission.service';
 
 import { AnalyticsController } from './analytics.controller';
 import { AnalyticsService } from './services/analytics.service';
@@ -11,7 +13,7 @@ import { EchartsFormatterService } from './services/echarts-formatter.service';
 import { ThirdPartyAnalyticsService } from './services/third-party-analytics.service';
 
 @Module({
-  imports: [DatabaseModule, CacheModule],
+  imports: [DatabaseModule, CacheModule, PermissionModule],
   controllers: [AnalyticsController],
   providers: [
     AnalyticsService,
@@ -28,4 +30,18 @@ import { ThirdPartyAnalyticsService } from './services/third-party-analytics.ser
     EchartsFormatterService,
   ],
 })
-export class AnalyticsModule {}
+export class AnalyticsModule implements OnModuleInit {
+  constructor(private readonly permissionService: PermissionService) {}
+
+  onModuleInit(): void {
+    // 注册分析模块的权限
+    this.permissionService.registerModulePermissions('analytics', [
+      'analytics:read',
+      'analytics:export',
+    ]);
+
+    // 为权限组注册权限
+    this.permissionService.registerPermissionGroup('editor', ['analytics:read']);
+    this.permissionService.registerPermissionGroup('viewer', ['analytics:read']);
+  }
+}

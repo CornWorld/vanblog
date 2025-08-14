@@ -285,7 +285,7 @@ describe('PermissionService with Vitest Fixtures', () => {
 
       await service.initializePermissions();
 
-      expect(service['registerModulePermissions']).toHaveBeenCalled();
+      expect(service['register']).toHaveBeenCalled();
       expect(service['createPredefinedGroups']).toHaveBeenCalled();
     });
   });

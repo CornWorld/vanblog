@@ -3,7 +3,6 @@ import dayjs from 'dayjs';
 import { describe, it, beforeEach, afterEach, expect, vi } from 'vitest';
 
 import { DATABASE_CONNECTION } from '../../database/database.module';
-import { PERMISSION_MODULES, PERMISSION_GROUPS } from '../../shared/types/permission';
 
 import { PermissionService } from './permission.service';
 
@@ -288,7 +287,7 @@ describe('PermissionService', () => {
 
       await service.initializePermissions();
 
-      expect(service['registerModulePermissions']).toHaveBeenCalled();
+      expect(service['register']).toHaveBeenCalled();
       expect(service['createPredefinedGroups']).toHaveBeenCalled();
     });
   });

@@ -244,13 +244,63 @@ JWT_EXPIRES_IN=7d
 
 ### 额外阶段：完善权限系统
 
-现有权限系统：使用预设的权限节点 + 用户角色（type/role），比如 article:read + admin
-期望权限系统：
+#### 权限系统架构设计
 
-- 存在单独的权限节点和权限组，权限组和权限节点都放在 permissions 里面（只用 permissions 来存储权限）。在从数据库读出后，按照先后顺序解析成完整的权限节点。e.g. ['article:read', 'group:admin'] = ['group:admin'] = [<所有权限节点>]。
-- 每个包内的权限只对自己负责，并注册到权限管理器。 e.g. article 模块注册 article:read 权限节点，draft 模块注册 draft:read 权限节点，通过 guard 来验证权限。对于有依赖的模块，会随着调用链条逐级验证。
-- 每个模块的权限节点都有一个前缀，比如 article 模块的权限节点都以 article: 开头，draft 模块的权限节点都以 draft: 开头。
-- 允许删除/禁用权限，格式：'no:article:read'，会在解析时去除当前解析链条的 'article:read' 权限节点。这对于临时取消 group 权限的情况很有用，比如临时取消 admin 的 'article:remove' 权限，但是允许读取和修改文章。
+**核心理念：模块化权限注册 + 语义化权限名称 + 角色继承**
+
+##### 1. 权限节点设计
+
+- **模块前缀**: 每个模块的权限节点都有模块前缀，如 `article:read`、`category:write`
+- **语义化名称**: 在模块内部使用简化名称，如 `read`、`write`、`delete`
+- **自动映射**: `category:read` 在 category 模块内等价于 `read`
+- **反射机制**: 通过装饰器自动收集模块内的权限节点
+
+##### 2. 角色系统设计
+
+- **角色定义**: 使用 `role:` 前缀，如 `role:admin`、`role:editor`
+- **权限继承**: 角色可以包含其他角色和具体权限节点
+- **动态解析**: 用户权限列表按顺序解析，支持权限叠加和撤销
+
+##### 3. 权限注册接口
+
+```typescript
+// 简化的注册接口
+PermissionService.register({
+  module: 'category',
+  permissions: ['read', 'write', 'delete'], // 语义化名称
+  roles: {
+    admin: ['read', 'write', 'delete'],
+    editor: ['read', 'write'],
+    viewer: ['read'],
+  },
+});
+```
+
+##### 4. 权限解析规则
+
+- **存储格式**: 用户权限存储为字符串数组，如 `['article:read', 'role:editor', 'no:article:delete']`
+- **解析顺序**: 按数组顺序解析，后面的权限可以覆盖前面的
+- **权限撤销**: 使用 `no:` 前缀撤销特定权限，如 `no:article:delete`
+- **角色展开**: `role:admin` 会展开为该角色包含的所有权限节点
+
+##### 5. 装饰器支持
+
+```typescript
+// 控制器中使用语义化权限名称
+export class CategoryController {
+  @Permissions('read', 'write', 'article:read') // 等价于 category:read, category:write, article:read(此权限仅供演示权限名称缩写)
+  @Get()
+  async getArticleByCategoryId() {}
+}
+```
+
+##### 6. 实现特性
+
+- **模块隔离**: 每个模块只管理自己的权限节点
+- **热注册**: 模块启动时自动注册权限和角色
+- **类型安全**: 使用 TypeScript 确保权限名称的类型安全
+- **向后兼容**: 支持完整权限名称和简化名称
+- **权限验证**: Guard 自动处理模块上下文和权限映射
 
 - [x] 完成
 
