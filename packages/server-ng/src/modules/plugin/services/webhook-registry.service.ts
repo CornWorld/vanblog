@@ -1,7 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 
-import { HookService } from '../plugin/services/hook.service';
-
+import { HookService } from './hook.service';
 import { WebhookService } from './webhook.service';
 
 @Injectable()

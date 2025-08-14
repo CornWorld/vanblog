@@ -3,18 +3,18 @@ import { createHmac } from 'crypto';
 import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import { eq, and, desc, gte, lte, count } from 'drizzle-orm';
 
-import { DATABASE_CONNECTION } from '../../database';
-
-import { webhooks, webhookLogs, type Webhook as WebhookEntity } from './entities/webhook.schema';
-import { WebhookRegistryService } from './webhook-registry.service';
+import { DATABASE_CONNECTION } from '../../../database';
 import {
   CreateWebhookDto,
   UpdateWebhookDto,
   WebhookQueryDto,
   WebhookLogQueryDto,
-} from './webhook.dto';
+} from '../dto/webhook.dto';
+import { webhooks, webhookLogs, type Webhook as WebhookEntity } from '../entities/webhook.schema';
 
-import type { Database } from '../../database/connection';
+import { WebhookRegistryService } from './webhook-registry.service';
+
+import type { Database } from '../../../database/connection';
 
 // Custom Webhook interface with parsed events
 export interface Webhook extends Omit<WebhookEntity, 'events'> {

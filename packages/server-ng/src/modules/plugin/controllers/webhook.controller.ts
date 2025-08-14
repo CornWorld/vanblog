@@ -21,11 +21,9 @@ import {
 } from '@nestjs/swagger';
 import { ZodValidationPipe } from 'nestjs-zod';
 
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { PermissionsGuard } from '../auth/guards/permissions.guard';
-import { Permissions } from '../auth/permissions.decorator';
-
-import { WebhookRegistryService } from './webhook-registry.service';
+import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { PermissionsGuard } from '../../auth/guards/permissions.guard';
+import { Permissions } from '../../auth/permissions.decorator';
 import {
   CreateWebhookDto,
   UpdateWebhookDto,
@@ -34,8 +32,9 @@ import {
   WebhookLogQueryDto,
   CreateWebhookSchema,
   UpdateWebhookSchema,
-} from './webhook.dto';
-import { WebhookService } from './webhook.service';
+} from '../dto/webhook.dto';
+import { WebhookRegistryService } from '../services/webhook-registry.service';
+import { WebhookService } from '../services/webhook.service';
 
 @ApiTags('webhooks')
 @Controller({ path: 'webhooks', version: '2' })

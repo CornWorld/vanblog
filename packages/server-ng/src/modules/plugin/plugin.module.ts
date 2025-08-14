@@ -1,18 +1,40 @@
 import { Global, Module, DynamicModule } from '@nestjs/common';
 
 import { LoggerModule } from '../../core/logger/logger.module';
+import { DatabaseModule } from '../../database/database.module';
 
 import { PluginLoaderController } from './controllers/plugin-loader.controller';
+import { WebhookController } from './controllers/webhook.controller';
 import { HookService } from './services/hook.service';
 import { PluginContextFactory } from './services/plugin-context.service';
 import { PluginLoaderService } from './services/plugin-loader.service';
+import { WebhookRegistryService } from './services/webhook-registry.service';
+import { WebhookService } from './services/webhook.service';
 
 @Global()
 @Module({
-  imports: [LoggerModule],
-  controllers: [PluginLoaderController],
-  providers: [HookService, PluginContextFactory, PluginLoaderService],
-  exports: [HookService, PluginContextFactory, PluginLoaderService],
+  imports: [LoggerModule, DatabaseModule],
+  controllers: [PluginLoaderController, WebhookController],
+  providers: [
+    HookService,
+    PluginContextFactory,
+    PluginLoaderService,
+    {
+      provide: WebhookService,
+      useClass: WebhookService,
+    },
+    {
+      provide: WebhookRegistryService,
+      useClass: WebhookRegistryService,
+    },
+  ],
+  exports: [
+    HookService,
+    PluginContextFactory,
+    PluginLoaderService,
+    WebhookService,
+    WebhookRegistryService,
+  ],
 })
 export class PluginModule {
   static forRoot(): DynamicModule {

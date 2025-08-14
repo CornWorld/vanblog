@@ -29,7 +29,6 @@ import { SitemapModule } from './modules/sitemap/sitemap.module';
 import { SocialLinksModule } from './modules/social-links/social-links.module';
 import { TagModule } from './modules/tag/tag.module';
 import { UserModule } from './modules/user/user.module';
-import { WebhookModule } from './modules/webhook/webhook.module';
 import { PerformanceMonitoringMiddleware } from './shared/middleware/performance-monitoring.middleware';
 
 @Module({})
@@ -87,7 +86,6 @@ export class AppModule implements NestModule {
 
         DemoModule,
         PermissionModule,
-        WebhookModule,
         pluginModule,
       ],
       controllers: [AppController],
