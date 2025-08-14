@@ -324,7 +324,7 @@
 - [x] 检查数据库 schema 定义 - ✅ 实体定义清晰，字段类型合理
 - [x] 验证索引配置 - ⚠️ 需要在数据库 schema 中添加索引配置
 - [x] 确保数据完整性约束 - ✅ 数据类型定义合理，支持可选字段
-- [ ] 建议添加复合索引优化查询性能（如 type + createdAt）
+- [x] 建议添加复合索引优化查询性能（如 type + createdAt） - ✅ 已添加 type+createdAt, path+createdAt, type+path 复合索引
 
 ### [x] src/modules/analytics/analytics.service.spec.ts
 

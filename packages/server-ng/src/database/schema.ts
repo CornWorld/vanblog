@@ -276,6 +276,10 @@ export const analytics = sqliteTable(
     index('analytics_type_idx').on(table.type),
     index('analytics_path_idx').on(table.path),
     index('analytics_created_at_idx').on(table.createdAt),
+    // Composite indexes for better query performance
+    index('analytics_type_created_at_idx').on(table.type, table.createdAt),
+    index('analytics_path_created_at_idx').on(table.path, table.createdAt),
+    index('analytics_type_path_idx').on(table.type, table.path),
   ],
 );
 

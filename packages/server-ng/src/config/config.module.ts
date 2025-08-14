@@ -1,6 +1,7 @@
 import { Global, Module, DynamicModule } from '@nestjs/common';
 import { ConfigModule as NestConfigModule, ConfigFactory } from '@nestjs/config';
 
+import { ConfigValidationService } from './config-validation.service';
 import { validateConfig } from './config.schema';
 import { ConfigService } from './config.service';
 import databaseConfig from './database.config';
@@ -17,8 +18,8 @@ import databaseConfig from './database.config';
       load: [databaseConfig],
     }),
   ],
-  providers: [ConfigService],
-  exports: [ConfigService, NestConfigModule],
+  providers: [ConfigService, ConfigValidationService],
+  exports: [ConfigService, ConfigValidationService, NestConfigModule],
 })
 export class ConfigModule {
   static forFeature(config: ConfigFactory): DynamicModule {

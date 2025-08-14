@@ -7,6 +7,27 @@ import { AnalyticsService } from './services/analytics.service';
 
 import type { RecordAnalyticsDto } from './dto/record-analytics.dto';
 
+// Performance test utilities
+const _generateBulkAnalyticsData = (count: number): RecordAnalyticsDto[] => {
+  return Array.from({ length: count }, (_, i) => ({
+    type: i % 2 === 0 ? AnalyticsType.PAGEVIEW : AnalyticsType.EVENT,
+    path: `/page-${i}`,
+    referrer: `https://referrer-${i % 10}.com`,
+    userAgent: `UserAgent-${i % 5}`,
+    ip: `192.168.1.${i % 255}`,
+    data: i % 3 === 0 ? JSON.stringify({ action: 'click', target: `element-${i}` }) : null,
+  }));
+};
+
+const _measureExecutionTime = async (
+  fn: () => Promise<any>,
+): Promise<{ result: any; duration: number }> => {
+  const start = performance.now();
+  const result = await fn();
+  const duration = performance.now() - start;
+  return { result, duration };
+};
+
 describe('AnalyticsService', () => {
   let service: AnalyticsService;
   let mockDb: DatabaseMockBuilder;
@@ -130,6 +151,60 @@ describe('AnalyticsService', () => {
       expect(chartData.visitors).toHaveLength(7);
       expect(chartData.pageviews[0]).toHaveProperty('time');
       expect(chartData.pageviews[0]).toHaveProperty('value');
+    });
+  });
+
+  describe('Performance Tests', () => {
+    it('should handle bulk data insertion efficiently', async () => {
+      const bulkData = _generateBulkAnalyticsData(100);
+      mockDb.setInsertResult([]);
+
+      const { duration } = await _measureExecutionTime(async () => {
+        for (const data of bulkData) {
+          await service.recordAnalytics(data);
+        }
+      });
+
+      // Should complete 100 insertions within reasonable time (< 1000ms)
+      expect(duration).toBeLessThan(1000);
+      expect(mockDb.db.insert).toHaveBeenCalledTimes(100);
+    });
+
+    it('should handle complex analytics queries efficiently', async () => {
+      // Mock query results for overview
+      const mockOverviewData = [
+        { count: 1000 }, // totalPageviews
+        { count: 500 }, // uniqueVisitors
+        { count: 800 }, // yesterdayPageviews
+      ];
+
+      mockDb.setQueryResult(mockOverviewData);
+      mockDb.setCountResult(1000);
+
+      const { duration } = await _measureExecutionTime(async () => {
+        await Promise.all([
+          service.getOverview(),
+          service.getOverview(), // Test multiple calls
+          service.getOverview(),
+        ]);
+      });
+
+      // Complex queries should complete within reasonable time (< 500ms)
+      expect(duration).toBeLessThan(500);
+    });
+
+    it('should maintain performance with large dataset queries', async () => {
+      // Mock large dataset result
+      const mockLargeResult = [{ count: 10000 }];
+      mockDb.setQueryResult(mockLargeResult);
+      mockDb.setCountResult(10000);
+
+      const { duration } = await _measureExecutionTime(async () => {
+        await service.getOverview();
+      });
+
+      // Large dataset queries should complete within reasonable time (< 2000ms)
+      expect(duration).toBeLessThan(2000);
     });
   });
 });
