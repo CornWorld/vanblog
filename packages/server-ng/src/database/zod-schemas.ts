@@ -18,7 +18,6 @@ import {
   analytics,
   permissionNodes,
   permissionGroups,
-  codeSnippets,
   pluginData,
 } from './schema';
 
@@ -428,31 +427,6 @@ export const updatePermissionGroupSchema = createUpdateSchema(permissionGroups, 
     }),
 });
 
-// Code snippet schemas
-export const selectCodeSnippetSchema = createSelectSchema(codeSnippets, {
-  createdAt: (schema) => schema.transform((str) => dayjs(str)),
-  updatedAt: (schema) => schema.transform((str) => dayjs(str)),
-});
-
-export const insertCodeSnippetSchema = createInsertSchema(codeSnippets, {
-  name: (schema) => schema.min(1, '代码片段名称不能为空').max(255, '代码片段名称最多255个字符'),
-  hookName: (schema) => schema.min(1, 'Hook名称不能为空').max(255, 'Hook名称最多255个字符'),
-  code: (schema) => schema.min(1, '代码内容不能为空'),
-  priority: (schema) => schema.min(1, '优先级最小为1').max(100, '优先级最大为100'),
-  timeout: (schema) => schema.min(100, '超时时间最小为100ms').max(60000, '超时时间最大为60秒'),
-});
-
-export const updateCodeSnippetSchema = createUpdateSchema(codeSnippets, {
-  name: (schema) =>
-    schema.min(1, '代码片段名称不能为空').max(255, '代码片段名称最多255个字符').optional(),
-  hookName: (schema) =>
-    schema.min(1, 'Hook名称不能为空').max(255, 'Hook名称最多255个字符').optional(),
-  code: (schema) => schema.min(1, '代码内容不能为空').optional(),
-  priority: (schema) => schema.min(1, '优先级最小为1').max(100, '优先级最大为100').optional(),
-  timeout: (schema) =>
-    schema.min(100, '超时时间最小为100ms').max(60000, '超时时间最大为60秒').optional(),
-});
-
 export type SelectPermissionNode = z.infer<typeof selectPermissionNodeSchema>;
 export type InsertPermissionNode = z.infer<typeof insertPermissionNodeSchema>;
 export type UpdatePermissionNode = z.infer<typeof updatePermissionNodeSchema>;
@@ -460,10 +434,6 @@ export type UpdatePermissionNode = z.infer<typeof updatePermissionNodeSchema>;
 export type SelectPermissionGroup = z.infer<typeof selectPermissionGroupSchema>;
 export type InsertPermissionGroup = z.infer<typeof insertPermissionGroupSchema>;
 export type UpdatePermissionGroup = z.infer<typeof updatePermissionGroupSchema>;
-
-export type SelectCodeSnippet = z.infer<typeof selectCodeSnippetSchema>;
-export type InsertCodeSnippet = z.infer<typeof insertCodeSnippetSchema>;
-export type UpdateCodeSnippet = z.infer<typeof updateCodeSnippetSchema>;
 
 // Plugin data schemas
 export const selectPluginDataSchema = createSelectSchema(pluginData, {

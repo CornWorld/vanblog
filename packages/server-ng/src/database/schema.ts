@@ -352,34 +352,6 @@ export const pluginData = sqliteTable(
   ],
 );
 
-// Code snippets table for plugin system
-export const codeSnippets = sqliteTable(
-  'code_snippets',
-  {
-    id: integer('id').primaryKey({ autoIncrement: true }),
-    name: text('name').notNull(),
-    description: text('description'),
-    hookName: text('hook_name').notNull(), // The hook this snippet listens to
-    hookType: text('hook_type', { enum: ['action', 'filter'] })
-      .notNull()
-      .default('action'),
-    priority: integer('priority').notNull().default(10), // Hook execution priority
-    code: text('code').notNull(), // JavaScript code to execute
-    enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
-    timeout: integer('timeout').notNull().default(5000), // Execution timeout in ms
-    createdAt: text('created_at')
-      .notNull()
-      .default(sql`datetime('now')`),
-    updatedAt: text('updated_at')
-      .notNull()
-      .default(sql`datetime('now')`),
-  },
-  (table) => [
-    index('code_snippets_hook_name_idx').on(table.hookName),
-    index('code_snippets_enabled_idx').on(table.enabled),
-  ],
-);
-
 // Webhooks table
 export const webhooks = sqliteTable('webhooks', {
   id: integer('id').primaryKey({ autoIncrement: true }),

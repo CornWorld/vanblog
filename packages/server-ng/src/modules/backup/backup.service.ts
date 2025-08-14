@@ -28,7 +28,6 @@ import {
   permissionNodes,
   permissionGroups,
   pluginData,
-  codeSnippets,
   webhooks,
   webhookLogs,
 } from '../../database/schema';
@@ -343,7 +342,6 @@ export class BackupService {
     data.permissionNodes = await this.db.select().from(permissionNodes);
     data.permissionGroups = await this.db.select().from(permissionGroups);
     data.pluginData = await this.db.select().from(pluginData);
-    data.codeSnippets = await this.db.select().from(codeSnippets);
     data.webhooks = await this.db.select().from(webhooks);
 
     // 分析数据（如果包含）
@@ -503,7 +501,7 @@ export class BackupService {
       permissionNodes,
       permissionGroups,
       pluginData,
-      codeSnippets,
+
       webhooks,
       webhookLogs,
     };
@@ -523,7 +521,6 @@ export class BackupService {
       | typeof permissionNodes
       | typeof permissionGroups
       | typeof pluginData
-      | typeof codeSnippets
       | typeof webhooks
       | typeof webhookLogs;
     const table = tableMap[tableName] as TableType | undefined;
