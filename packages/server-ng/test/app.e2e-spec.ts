@@ -1,6 +1,6 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import request from 'supertest';
-import { describe, beforeEach, afterEach, it } from 'vitest';
+import { describe, beforeAll, afterAll, it } from 'vitest';
 
 import { AppModule } from './../src/app.module';
 import { cleanupDatabase } from './test-utils';
@@ -11,7 +11,7 @@ import type { Server } from 'http';
 describe('AppController (e2e)', () => {
   let app: INestApplication;
 
-  beforeEach(async () => {
+  beforeAll(async () => {
     const appModule = AppModule.forRoot();
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [appModule],
@@ -21,7 +21,7 @@ describe('AppController (e2e)', () => {
     await app.init();
   });
 
-  afterEach(async () => {
+  afterAll(async () => {
     await cleanupDatabase(app);
     await app.close();
   });

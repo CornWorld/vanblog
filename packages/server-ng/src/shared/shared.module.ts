@@ -1,6 +1,6 @@
 import { Module, Global, MiddlewareConsumer, NestModule } from '@nestjs/common';
 
-import { CacheService } from './cache/cache.service';
+import { CacheModule } from './cache/cache.module';
 import { CompressionMiddleware } from './middleware/compression.middleware';
 import { CDNService } from './services/cdn.service';
 import { ConnectionPoolService } from './services/connection-pool.service';
@@ -11,11 +11,11 @@ import { StatisticsService } from './services/statistics.service';
 
 @Global()
 @Module({
+  imports: [CacheModule],
   providers: [
     StatisticsService,
     MarkdownService,
     QueryOptimizerService,
-    CacheService,
     ConnectionPoolService,
     CDNService,
     MigrationService,
@@ -25,7 +25,7 @@ import { StatisticsService } from './services/statistics.service';
     StatisticsService,
     MarkdownService,
     QueryOptimizerService,
-    CacheService,
+    CacheModule,
     ConnectionPoolService,
     CDNService,
     MigrationService,
