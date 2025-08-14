@@ -11,6 +11,8 @@ import {
   CreateCategoryDto,
   UpdateCategoryDto,
   CategoryListResponseDto,
+  CreateCategorySchema,
+  UpdateCategorySchema,
 } from './dto/category.dto';
 import {
   VerifyCategoryPasswordDto,
@@ -44,7 +46,9 @@ export class CategoryController {
   @RequireAuth('category:create')
   @ApiOperation({ summary: 'Create category' })
   @ApiResponse({ status: 201, description: 'Create new category' })
-  async create(@Body() createCategoryDto: CreateCategoryDto): Promise<CategoryDto> {
+  async create(
+    @Body(new ZodValidationPipe(CreateCategorySchema)) createCategoryDto: CreateCategoryDto,
+  ): Promise<CategoryDto> {
     return this.categoryService.create(createCategoryDto);
   }
 
@@ -55,7 +59,7 @@ export class CategoryController {
   @ApiResponse({ status: 404, description: 'Category not found' })
   async update(
     @Param('id', ParseIntPipe) id: number,
-    @Body() updateCategoryDto: UpdateCategoryDto,
+    @Body(new ZodValidationPipe(UpdateCategorySchema)) updateCategoryDto: UpdateCategoryDto,
   ): Promise<CategoryDto> {
     return this.categoryService.update(id, updateCategoryDto);
   }

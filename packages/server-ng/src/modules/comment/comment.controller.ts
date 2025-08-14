@@ -1,10 +1,12 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Post, Put, UseGuards } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { ZodValidationPipe } from 'nestjs-zod';
 
 import { DemoModeGuard } from '../auth/guards/demo-mode.guard';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 import { UpdateWalineSettingDto, WalineSettingDto } from './comment.dto';
+import { UpdateWalineSettingSchema } from './comment.schema';
 import { CommentService } from './comment.service';
 
 @ApiTags('Comment')
@@ -32,7 +34,9 @@ export class CommentController {
     description: 'Waline settings updated successfully',
     type: WalineSettingDto,
   })
-  async updateWalineSetting(@Body() updateDto: UpdateWalineSettingDto): Promise<WalineSettingDto> {
+  async updateWalineSetting(
+    @Body(new ZodValidationPipe(UpdateWalineSettingSchema)) updateDto: UpdateWalineSettingDto,
+  ): Promise<WalineSettingDto> {
     return this.commentService.updateWalineSetting(updateDto);
   }
 

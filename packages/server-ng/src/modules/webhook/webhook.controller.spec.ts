@@ -57,6 +57,8 @@ describe('WebhookController', () => {
         url: 'https://example.com/webhook',
         events: ['article.created'],
         active: true,
+        retryCount: 3,
+        timeout: 5000,
       };
 
       const mockWebhook = {
@@ -64,7 +66,7 @@ describe('WebhookController', () => {
         name: createDto.name,
         url: createDto.url,
         events: createDto.events,
-        active: createDto.active ?? true,
+        active: true,
         secret: 'test-secret',
         retryCount: 3,
         timeout: 30000,

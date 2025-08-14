@@ -1,11 +1,14 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { ZodValidationPipe } from 'nestjs-zod';
 
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { Permissions } from '../auth/permissions.decorator';
 
 import { CreateUserDto, UpdateUserDto } from './dto';
+import { CreateUserSchema } from './dto/create-user.dto';
+import { UpdateUserSchema } from './dto/update-user.dto';
 import { User } from './entities/user.entity';
 import { UserService } from './user.service';
 
@@ -25,7 +28,9 @@ export class UserController {
     type: User,
   })
   @ApiResponse({ status: 409, description: '用户名已存在' })
-  async create(@Body() createUserDto: CreateUserDto): Promise<User> {
+  async create(
+    @Body(new ZodValidationPipe(CreateUserSchema)) createUserDto: CreateUserDto,
+  ): Promise<User> {
     return this.userService.create(createUserDto);
   }
 
@@ -75,7 +80,10 @@ export class UserController {
     type: User,
   })
   @ApiResponse({ status: 404, description: '用户不存在' })
-  async update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto): Promise<User> {
+  async update(
+    @Param('id') id: string,
+    @Body(new ZodValidationPipe(UpdateUserSchema)) updateUserDto: UpdateUserDto,
+  ): Promise<User> {
     return this.userService.update(+id, updateUserDto);
   }
 

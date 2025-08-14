@@ -3,15 +3,16 @@ import {
   Controller,
   Delete,
   Get,
+  Headers,
+  Ip,
   Param,
+  ParseIntPipe,
   Post,
   Put,
   Query,
-  ParseIntPipe,
-  Ip,
-  Headers,
 } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ZodValidationPipe } from 'nestjs-zod';
 
 import { ArticleStatsService } from '../analytics/services/article-stats.service';
 import { RequireAuth } from '../auth/auth.decorator';
@@ -24,6 +25,8 @@ import {
   ArticleListResponseDto,
   ArticleSearchDto,
   ArticleSearchResponseDto,
+  CreateArticleSchema,
+  UpdateArticleSchema,
 } from './dto/article.dto';
 import { Article } from './entities/article.entity';
 
@@ -114,7 +117,9 @@ export class ArticleController {
   @RequireAuth('article:create')
   @ApiOperation({ summary: 'Create article' })
   @ApiResponse({ status: 201, description: 'Create new article' })
-  async create(@Body() createArticleDto: CreateArticleDto): Promise<Article> {
+  async create(
+    @Body(new ZodValidationPipe(CreateArticleSchema)) createArticleDto: CreateArticleDto,
+  ): Promise<Article> {
     return this.articleService.create(createArticleDto);
   }
 
@@ -125,7 +130,7 @@ export class ArticleController {
   @ApiResponse({ status: 404, description: 'Article not found' })
   async update(
     @Param('id', ParseIntPipe) id: number,
-    @Body() updateArticleDto: UpdateArticleDto,
+    @Body(new ZodValidationPipe(UpdateArticleSchema)) updateArticleDto: UpdateArticleDto,
   ): Promise<Article> {
     return this.articleService.update(id, updateArticleDto);
   }

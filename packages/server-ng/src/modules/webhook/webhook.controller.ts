@@ -19,6 +19,7 @@ import {
   ApiQuery,
   ApiBearerAuth,
 } from '@nestjs/swagger';
+import { ZodValidationPipe } from 'nestjs-zod';
 
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
@@ -33,6 +34,8 @@ import {
   WebhookLogQueryDto,
   WebhookEvent,
   AVAILABLE_WEBHOOK_EVENTS,
+  CreateWebhookSchema,
+  UpdateWebhookSchema,
 } from './webhook.dto';
 import { WebhookService } from './webhook.service';
 
@@ -50,7 +53,9 @@ export class WebhookController {
   @Permissions('webhook:create')
   @ApiOperation({ summary: 'Create a new webhook' })
   @ApiResponse({ status: 201, description: 'Webhook created successfully', type: WebhookDto })
-  async create(@Body() createWebhookDto: CreateWebhookDto): Promise<WebhookDto> {
+  async create(
+    @Body(new ZodValidationPipe(CreateWebhookSchema)) createWebhookDto: CreateWebhookDto,
+  ): Promise<WebhookDto> {
     const webhook = await this.webhookService.create(createWebhookDto);
     return {
       ...webhook,
@@ -134,7 +139,7 @@ export class WebhookController {
   @ApiResponse({ status: 404, description: 'Webhook not found' })
   async update(
     @Param('id', ParseIntPipe) id: number,
-    @Body() updateWebhookDto: UpdateWebhookDto,
+    @Body(new ZodValidationPipe(UpdateWebhookSchema)) updateWebhookDto: UpdateWebhookDto,
   ): Promise<WebhookDto> {
     const webhook = (await this.webhookService.update(id, updateWebhookDto)) as WebhookDto | null;
     if (!webhook) {

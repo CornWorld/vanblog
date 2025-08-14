@@ -15,6 +15,7 @@ import {
   Res,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { ZodValidationPipe } from 'nestjs-zod';
 
 import { RequireAuth } from '../auth/auth.decorator';
 
@@ -26,6 +27,8 @@ import {
   BackupInfoDto,
   BackupListDto,
   RestoreProgressDto,
+  CreateBackupSchema,
+  RestoreBackupSchema,
 } from './dto/backup.dto';
 
 import type { Response } from 'express';
@@ -45,7 +48,9 @@ export class BackupController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Insufficient permissions' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
-  async createBackup(@Body() createBackupDto: CreateBackupDto): Promise<BackupInfoDto> {
+  async createBackup(
+    @Body(new ZodValidationPipe(CreateBackupSchema)) createBackupDto: CreateBackupDto,
+  ): Promise<BackupInfoDto> {
     return this.backupService.createBackup(createBackupDto);
   }
 
@@ -127,7 +132,7 @@ export class BackupController {
   @ApiResponse({ status: 403, description: 'Insufficient permissions' })
   async restoreBackup(
     @Param('filename') filename: string,
-    @Body() restoreBackupDto: RestoreBackupDto,
+    @Body(new ZodValidationPipe(RestoreBackupSchema)) restoreBackupDto: RestoreBackupDto,
   ): Promise<{ taskId: string }> {
     // 验证文件名安全性
     if (!filename.endsWith('.vbak') || filename.includes('..') || filename.includes('/')) {

@@ -10,6 +10,7 @@ import {
   ParseIntPipe,
 } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ZodValidationPipe } from 'nestjs-zod';
 
 import { Article } from '../article/entities/article.entity';
 import { RequireAuth } from '../auth/auth.decorator';
@@ -25,6 +26,9 @@ import {
   PublishDraftDto,
   DraftVersionDto,
   DraftVersionListResponseDto,
+  CreateDraftSchema,
+  UpdateDraftSchema,
+  PublishDraftSchema,
 } from './dto/draft.dto';
 
 @ApiTags('drafts')
@@ -56,7 +60,9 @@ export class DraftController {
   @RequireAuth('draft:create')
   @ApiOperation({ summary: 'Create draft' })
   @ApiResponse({ status: 201, description: 'Create new draft' })
-  async create(@Body() createDraftDto: CreateDraftDto): Promise<DraftDto> {
+  async create(
+    @Body(new ZodValidationPipe(CreateDraftSchema)) createDraftDto: CreateDraftDto,
+  ): Promise<DraftDto> {
     return this.draftService.create(createDraftDto);
   }
 
@@ -67,7 +73,7 @@ export class DraftController {
   @ApiResponse({ status: 404, description: 'Draft not found' })
   async update(
     @Param('id', ParseIntPipe) id: number,
-    @Body() updateDraftDto: UpdateDraftDto,
+    @Body(new ZodValidationPipe(UpdateDraftSchema)) updateDraftDto: UpdateDraftDto,
   ): Promise<DraftDto> {
     return this.draftService.update(id, updateDraftDto);
   }
@@ -88,7 +94,7 @@ export class DraftController {
   @ApiResponse({ status: 404, description: 'Draft not found' })
   async publish(
     @Param('id', ParseIntPipe) id: number,
-    @Body() publishDto: PublishDraftDto,
+    @Body(new ZodValidationPipe(PublishDraftSchema)) publishDto: PublishDraftDto,
   ): Promise<Article> {
     return this.draftService.publish(id, publishDto);
   }

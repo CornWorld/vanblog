@@ -32,7 +32,11 @@ import { Permissions } from '../auth/permissions.decorator';
 
 import { BatchDeleteDto, BatchDeleteSchema } from './dto/batch-delete.dto';
 import { ListStaticFilesDto } from './dto/list-static-files.dto';
-import { UpdateStorageConfigDto, StorageConfigResponseDto } from './dto/storage-config.dto';
+import {
+  UpdateStorageConfigDto,
+  StorageConfigResponseDto,
+  UpdateStorageConfigSchema,
+} from './dto/storage-config.dto';
 import { UploadFileDto, UploadFile } from './dto/upload-file.dto';
 import { ImageProcessingService } from './services/image-processing.service';
 import { MediaService } from './services/media.service';
@@ -245,7 +249,7 @@ export class MediaController {
   @ApiOperation({ summary: '更新存储配置' })
   @ApiResponse({ status: 200, description: '更新成功' })
   async updateStorageConfig(
-    @Body() updateDto: UpdateStorageConfigDto,
+    @Body(new ZodValidationPipe(UpdateStorageConfigSchema)) updateDto: UpdateStorageConfigDto,
   ): Promise<StorageConfigResponseDto> {
     return this.storageConfigService.updateStorageConfig(updateDto);
   }

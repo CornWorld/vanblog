@@ -1,10 +1,17 @@
 import { Body, Controller, Delete, Get, Param, Post, Put, ParseIntPipe } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ZodValidationPipe } from 'nestjs-zod';
 
 import { OverallStatisticsDto } from '../../shared/dto/statistics.dto';
 import { RequireAuth } from '../auth/auth.decorator';
 
-import { CreateTagDto, UpdateTagDto, TagListResponseDto } from './dto/tag.dto';
+import {
+  CreateTagDto,
+  UpdateTagDto,
+  TagListResponseDto,
+  CreateTagSchema,
+  UpdateTagSchema,
+} from './dto/tag.dto';
 import { Tag } from './entities/tag.entity';
 import { TagService } from './tag.service';
 
@@ -32,7 +39,9 @@ export class TagController {
   @RequireAuth('tag:create')
   @ApiOperation({ summary: 'Create tag' })
   @ApiResponse({ status: 201, description: 'Create new tag' })
-  async create(@Body() createTagDto: CreateTagDto): Promise<Tag> {
+  async create(
+    @Body(new ZodValidationPipe(CreateTagSchema)) createTagDto: CreateTagDto,
+  ): Promise<Tag> {
     return this.tagService.create(createTagDto);
   }
 
@@ -43,7 +52,7 @@ export class TagController {
   @ApiResponse({ status: 404, description: 'Tag not found' })
   async update(
     @Param('id', ParseIntPipe) id: number,
-    @Body() updateTagDto: UpdateTagDto,
+    @Body(new ZodValidationPipe(UpdateTagSchema)) updateTagDto: UpdateTagDto,
   ): Promise<Tag> {
     return this.tagService.update(id, updateTagDto);
   }
