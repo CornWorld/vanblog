@@ -1,7 +1,6 @@
-import { Test, type TestingModule } from '@nestjs/testing';
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-import { DATABASE_CONNECTION } from '../../database/database.module';
+import { DatabaseMockBuilder } from '../../../test/mock-utils';
 
 import { AnalyticsType } from './entities/analytics.entity';
 import { AnalyticsService } from './services/analytics.service';
@@ -10,42 +9,11 @@ import type { RecordAnalyticsDto } from './dto/record-analytics.dto';
 
 describe('AnalyticsService', () => {
   let service: AnalyticsService;
-  let mockDb: {
-    insert: ReturnType<typeof vi.fn>;
-    values: ReturnType<typeof vi.fn>;
-    select: ReturnType<typeof vi.fn>;
-    from: ReturnType<typeof vi.fn>;
-    where: ReturnType<typeof vi.fn>;
-    groupBy: ReturnType<typeof vi.fn>;
-    orderBy: ReturnType<typeof vi.fn>;
-    limit: ReturnType<typeof vi.fn>;
-    execute: ReturnType<typeof vi.fn>;
-  };
+  let mockDb: DatabaseMockBuilder;
 
-  beforeEach(async () => {
-    mockDb = {
-      insert: vi.fn().mockReturnThis(),
-      values: vi.fn().mockReturnThis(),
-      select: vi.fn().mockReturnThis(),
-      from: vi.fn().mockReturnThis(),
-      where: vi.fn().mockReturnThis(),
-      groupBy: vi.fn().mockReturnThis(),
-      orderBy: vi.fn().mockReturnThis(),
-      limit: vi.fn().mockReturnThis(),
-      execute: vi.fn(),
-    };
-
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        AnalyticsService,
-        {
-          provide: DATABASE_CONNECTION,
-          useValue: mockDb,
-        },
-      ],
-    }).compile();
-
-    service = module.get<AnalyticsService>(AnalyticsService);
+  beforeEach(() => {
+    mockDb = new DatabaseMockBuilder();
+    service = new AnalyticsService(mockDb.db as any);
   });
 
   describe('recordAnalytics', () => {
@@ -60,8 +28,8 @@ describe('AnalyticsService', () => {
 
       await service.recordAnalytics(dto);
 
-      expect(mockDb.insert).toHaveBeenCalled();
-      expect(mockDb.values).toHaveBeenCalledWith({
+      expect(mockDb.db.insert).toHaveBeenCalled();
+      expect(mockDb.db.values).toHaveBeenCalledWith({
         type: dto.type,
         path: dto.path,
         referrer: dto.referrer,
@@ -84,7 +52,7 @@ describe('AnalyticsService', () => {
 
       await service.recordAnalytics(dto);
 
-      expect(mockDb.values).toHaveBeenCalledWith({
+      expect(mockDb.db.values).toHaveBeenCalledWith({
         type: dto.type,
         path: dto.path,
         referrer: dto.referrer,
@@ -97,7 +65,7 @@ describe('AnalyticsService', () => {
 
   describe('getOverview', () => {
     it('should return analytics overview', async () => {
-      mockDb.execute = vi.fn().mockResolvedValue([{ count: 100 }]);
+      mockDb.db.execute = vi.fn().mockResolvedValue([{ count: 100 }]);
 
       const overview = await service.getOverview();
 
@@ -117,7 +85,7 @@ describe('AnalyticsService', () => {
         { path: '/blog/article2', views: 80, uniqueVisitors: 40 },
       ];
 
-      mockDb.limit = vi.fn().mockResolvedValue(mockResult);
+      mockDb.db.limit = vi.fn().mockResolvedValue(mockResult);
 
       const rankings = await service.getPageRankings();
 
@@ -138,7 +106,7 @@ describe('AnalyticsService', () => {
         { userAgent: 'Mozilla/5.0 (Linux; Android 10)', count: 20 },
       ];
 
-      mockDb.groupBy = vi.fn().mockResolvedValue(mockResult);
+      mockDb.db.groupBy = vi.fn().mockResolvedValue(mockResult);
 
       const stats = await service.getDeviceStats();
 
@@ -152,7 +120,7 @@ describe('AnalyticsService', () => {
 
   describe('getChartData', () => {
     it('should return chart data for specified days', async () => {
-      mockDb.execute = vi.fn().mockResolvedValue([{ count: 10 }]);
+      mockDb.db.execute = vi.fn().mockResolvedValue([{ count: 10 }]);
 
       const chartData = await service.getChartData(7);
 

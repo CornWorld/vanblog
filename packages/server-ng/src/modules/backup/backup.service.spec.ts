@@ -2,11 +2,9 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as zlib from 'zlib';
 
-import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, beforeEach, expect, vi } from 'vitest';
 
-import { LoggerService } from '../../core/logger/logger.service';
-import { DATABASE_CONNECTION } from '../../database/database.module';
+import { DatabaseMockBuilder } from '../../../test/mock-utils';
 
 import { BackupService } from './backup.service';
 
@@ -15,17 +13,6 @@ import type { CreateBackupDto, RestoreBackupDto, GetBackupsDto } from './dto/bac
 // Mock fs module
 vi.mock('fs/promises');
 const mockFs = fs as any;
-
-// Mock database
-const mockDb = {
-  select: vi.fn().mockReturnThis(),
-  from: vi.fn().mockReturnValue([]),
-  delete: vi.fn().mockReturnThis(),
-  insert: vi.fn().mockReturnThis(),
-  values: vi.fn().mockReturnThis(),
-  onConflictDoNothing: vi.fn().mockResolvedValue(undefined),
-  run: vi.fn().mockResolvedValue(undefined),
-};
 
 // Mock logger
 const mockLogger = {
@@ -36,23 +23,11 @@ const mockLogger = {
 
 describe('BackupService', () => {
   let service: BackupService;
+  let mockDb: DatabaseMockBuilder;
 
-  beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        BackupService,
-        {
-          provide: DATABASE_CONNECTION,
-          useValue: mockDb,
-        },
-        {
-          provide: LoggerService,
-          useValue: mockLogger,
-        },
-      ],
-    }).compile();
-
-    service = module.get<BackupService>(BackupService);
+  beforeEach(() => {
+    mockDb = new DatabaseMockBuilder();
+    service = new BackupService(mockDb.db as any, mockLogger as any);
 
     // Reset mocks
     vi.clearAllMocks();

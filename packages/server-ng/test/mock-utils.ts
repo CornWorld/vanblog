@@ -33,31 +33,55 @@ export class DatabaseMockBuilder {
    * 设置查询结果
    */
   setQueryResult(data: unknown[]): this {
-    // 创建完整的链式调用 mock
-    const createChainMock = (
-      finalData: unknown[],
-    ): {
-      where: ReturnType<typeof vi.fn>;
-      orderBy: ReturnType<typeof vi.fn>;
-      limit: ReturnType<typeof vi.fn>;
-      offset: ReturnType<typeof vi.fn>;
-    } => {
-      const chainMock = {
+    // 创建完整的链式调用Mock
+    const createChainMock = (resultData: unknown[]): any => {
+      const chainMock: any = {
         where: vi.fn(),
+        get: vi.fn().mockResolvedValue(resultData[0] ?? null),
+        all: vi.fn().mockResolvedValue(resultData),
         orderBy: vi.fn(),
         limit: vi.fn(),
         offset: vi.fn(),
+        groupBy: vi.fn(),
+        having: vi.fn(),
+        innerJoin: vi.fn(),
+        leftJoin: vi.fn(),
+        rightJoin: vi.fn(),
+        union: vi.fn(),
+        unionAll: vi.fn(),
+        with: vi.fn(),
+        withRecursive: vi.fn(),
+        as: vi.fn(),
+        distinct: vi.fn(),
+        distinctOn: vi.fn(),
+        for: vi.fn(),
+        $dynamic: vi.fn(),
       };
 
-      // 设置链式调用，每个方法都返回自身，最后返回数据
-      chainMock.where.mockReturnValue(chainMock);
-      chainMock.orderBy.mockReturnValue(chainMock);
-      chainMock.limit.mockReturnValue(chainMock);
-      chainMock.offset.mockResolvedValue(finalData);
+      // 设置where方法返回包含get和all的对象
+      chainMock.where.mockReturnValue({
+        get: vi.fn().mockResolvedValue(resultData[0] ?? null),
+        all: vi.fn().mockResolvedValue(resultData),
+        limit: vi.fn().mockReturnValue({
+          get: vi.fn().mockResolvedValue(resultData[0] ?? null),
+          all: vi.fn().mockResolvedValue(resultData),
+        }),
+        offset: vi.fn().mockReturnValue({
+          get: vi.fn().mockResolvedValue(resultData[0] ?? null),
+          all: vi.fn().mockResolvedValue(resultData),
+        }),
+        orderBy: vi.fn().mockReturnValue({
+          get: vi.fn().mockResolvedValue(resultData[0] ?? null),
+          all: vi.fn().mockResolvedValue(resultData),
+        }),
+      });
 
-      // 同时设置直接调用的情况
-      chainMock.where.mockResolvedValue(finalData);
-      chainMock.limit.mockResolvedValue(finalData);
+      // 设置其他方法都返回自身以支持链式调用
+      Object.keys(chainMock).forEach((key) => {
+        if (!['where', 'get', 'all'].includes(key)) {
+          chainMock[key].mockReturnValue(chainMock);
+        }
+      });
 
       return chainMock;
     };
@@ -67,13 +91,7 @@ export class DatabaseMockBuilder {
     this.mockDb.select.mockImplementation(() => {
       const fromMock = vi.fn();
 
-      fromMock.mockImplementation(async (table) => {
-        // 如果没有传入 table 参数，说明是 select().from(table) 的简单调用
-        // 这种情况下直接返回 Promise
-        if (table != null) {
-          return Promise.resolve(data);
-        }
-        // 否则返回链式调用对象
+      fromMock.mockImplementation((_table) => {
         return createChainMock(data);
       });
 
@@ -90,7 +108,13 @@ export class DatabaseMockBuilder {
    * 设置插入结果
    */
   setInsertResult(data: unknown[]): this {
-    this.mockDb.returning.mockResolvedValue(data);
+    // Create a mock that supports both direct array access and .get() method
+    const returningMock = Object.create(Array.prototype);
+    Object.assign(returningMock, data);
+    returningMock.length = data.length;
+    returningMock.get = vi.fn().mockResolvedValue(data[0]); // .get() returns first item
+    returningMock.all = vi.fn().mockResolvedValue(data); // .all() returns all items
+    this.mockDb.returning.mockReturnValue(returningMock);
     return this;
   }
 
@@ -105,8 +129,17 @@ export class DatabaseMockBuilder {
   /**
    * 设置删除结果
    */
-  setDeleteResult(affectedRows = 1): this {
-    this.mockDb.delete.mockResolvedValue({ affectedRows });
+  setDeleteResult(data: unknown[] | number = 1): this {
+    // 如果传入的是数组，直接使用（用于 .returning() 的情况）
+    if (Array.isArray(data)) {
+      this.mockDb.returning.mockResolvedValue(data);
+    } else {
+      // 如果传入的是数字，创建对应数量的空对象数组
+      const resultArray = Array(data)
+        .fill({})
+        .map((_, index) => ({ id: index + 1 }));
+      this.mockDb.returning.mockResolvedValue(resultArray);
+    }
     return this;
   }
 

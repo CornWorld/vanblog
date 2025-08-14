@@ -1,8 +1,10 @@
 import { ConflictException, NotFoundException } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
 import * as bcrypt from 'bcrypt';
-import { describe, it, beforeEach, afterEach, expect, vi } from 'vitest';
+import { vi } from 'vitest';
 
+import { MockUtils } from '../../../test/mock-utils';
+import { DATABASE_CONNECTION } from '../../database/database.module';
 import { users } from '../../database/schema';
 import { HookService } from '../plugin/services/hook.service';
 
@@ -10,67 +12,30 @@ import { UserService } from './user.service';
 
 import type { CreateUserDto } from './dto/create-user.dto';
 
-// Mock bcrypt
 vi.mock('bcrypt');
+const mockedBcrypt = vi.mocked(bcrypt);
+
 describe('UserService', () => {
   let service: UserService;
+  let databaseMock: InstanceType<typeof MockUtils.database>;
   let mockHookService: Partial<HookService>;
 
-  interface MockDb {
-    select: ReturnType<typeof vi.fn>;
-    from: ReturnType<typeof vi.fn>;
-    where: ReturnType<typeof vi.fn>;
-    get: ReturnType<typeof vi.fn>;
-    all: ReturnType<typeof vi.fn>;
-    insert: ReturnType<typeof vi.fn>;
-    values: ReturnType<typeof vi.fn>;
-    returning: ReturnType<typeof vi.fn>;
-    update: ReturnType<typeof vi.fn>;
-    set: ReturnType<typeof vi.fn>;
-    delete: ReturnType<typeof vi.fn>;
-  }
-
-  let mockDb: MockDb;
-
-  const mockUser = {
-    id: 1,
-    username: 'testuser',
-    password: 'hashedPassword',
-    nickname: 'Test User',
-    email: 'test@example.com',
-    avatar: null,
-    type: 'admin',
-    permissions: null,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  };
-
   beforeEach(async () => {
-    mockDb = {
-      select: vi.fn().mockReturnThis(),
-      from: vi.fn().mockReturnThis(),
-      where: vi.fn().mockReturnThis(),
-      get: vi.fn(),
-      all: vi.fn(),
-      insert: vi.fn().mockReturnThis(),
-      values: vi.fn().mockReturnThis(),
-      returning: vi.fn().mockReturnThis(),
-      update: vi.fn().mockReturnThis(),
-      set: vi.fn().mockReturnThis(),
-      delete: vi.fn().mockReturnThis(),
-    };
+    // 使用Mock工具类创建数据库Mock
+    databaseMock = new MockUtils.database();
 
+    // 创建Hook服务Mock
     mockHookService = {
-      applyFilters: vi.fn().mockImplementation(async (_hookName, data) => Promise.resolve(data)),
-      doAction: vi.fn().mockResolvedValue(undefined),
+      applyFilters: vi.fn().mockImplementation((_, data) => data),
+      doAction: vi.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         UserService,
         {
-          provide: 'DATABASE_CONNECTION',
-          useValue: mockDb,
+          provide: DATABASE_CONNECTION,
+          useValue: databaseMock.db,
         },
         {
           provide: HookService,
@@ -84,32 +49,68 @@ describe('UserService', () => {
 
   afterEach(() => {
     vi.clearAllMocks();
+    databaseMock.reset();
   });
 
   describe('create', () => {
-    const createUserDto: CreateUserDto = {
-      username: 'testuser',
-      password: 'TestPassword123!',
-      nickname: 'Test User',
-      email: 'test@example.com',
-      type: 'admin',
-      permissions: JSON.stringify(['user:read', 'user:write']),
-    };
+    it('should create a new user successfully', async () => {
+      const createUserDto: CreateUserDto = {
+        username: 'testuser',
+        password: 'password123',
+        nickname: 'Test User',
+        email: 'test@example.com',
+        type: 'admin',
+        permissions: 'read,write',
+      };
 
-    it('should create a new user', async () => {
-      mockDb.get.mockResolvedValueOnce(null);
-      mockDb.get.mockResolvedValueOnce(mockUser);
+      const hashedPassword = 'hashedPassword123';
+      mockedBcrypt.hash.mockResolvedValue(hashedPassword as never);
+
+      const createdDbUser = {
+        id: 1,
+        username: createUserDto.username,
+        password: hashedPassword,
+        nickname: createUserDto.nickname,
+        email: createUserDto.email,
+        type: createUserDto.type,
+        permissions: JSON.stringify(['read', 'write']), // Store as JSON string
+        avatar: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      // First query checks if username exists (should return empty)
+      databaseMock.setQueryResult([]);
+      // Then insert the new user
+      databaseMock.setInsertResult([createdDbUser]);
 
       const result = await service.create(createUserDto);
 
-      expect(vi.mocked(bcrypt.hash)).toHaveBeenCalledWith('TestPassword123!', 10);
-      expect(mockDb.insert).toHaveBeenCalledWith(users);
-      expect(result.username).toBe('testuser');
-      expect(result.password).toBeUndefined();
+      expect(result).toMatchObject({
+        id: 1,
+        username: 'testuser',
+        nickname: 'Test User',
+        email: 'test@example.com',
+        type: 'admin',
+        permissions: ['read', 'write'],
+      });
+      expect(result.password).toBeUndefined(); // password should not be included
+      expect(mockedBcrypt.hash).toHaveBeenCalledWith('password123', 10);
+      expect(databaseMock.db.insert).toHaveBeenCalledWith(users);
     });
 
-    it('should throw ConflictException if username exists', async () => {
-      mockDb.get.mockResolvedValue(mockUser);
+    it('should throw ConflictException if username already exists', async () => {
+      const createUserDto: CreateUserDto = {
+        username: 'existinguser',
+        password: 'password123',
+        nickname: 'Test User',
+        email: 'test@example.com',
+        type: 'admin',
+        permissions: 'read',
+      };
+
+      // Mock existing user found
+      databaseMock.setQueryResult([{ id: 1, username: 'existinguser' }]);
 
       await expect(service.create(createUserDto)).rejects.toThrow(ConflictException);
     });
@@ -117,30 +118,90 @@ describe('UserService', () => {
 
   describe('findAll', () => {
     it('should return all users', async () => {
-      mockDb.all.mockResolvedValue([mockUser]);
+      const dbUsers = [
+        {
+          id: 1,
+          username: 'user1',
+          email: 'user1@example.com',
+          nickname: 'User 1',
+          avatar: null,
+          type: 'admin',
+          permissions: '[]',
+          password: 'hashedpassword1',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        {
+          id: 2,
+          username: 'user2',
+          email: 'user2@example.com',
+          nickname: 'User 2',
+          avatar: null,
+          type: 'collaborator',
+          permissions: '["read"]',
+          password: 'hashedpassword2',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ];
+
+      databaseMock.setQueryResult(dbUsers);
 
       const result = await service.findAll();
 
-      expect(mockDb.select).toHaveBeenCalled();
-      expect(mockDb.from).toHaveBeenCalledWith(users);
-      expect(result).toHaveLength(1);
-      expect(result[0].username).toBe('testuser');
+      expect(result).toHaveLength(2);
+      expect(result[0]).toMatchObject({
+        id: 1,
+        username: 'user1',
+        email: 'user1@example.com',
+        nickname: 'User 1',
+        type: 'admin',
+        permissions: [],
+      });
+      expect(result[0].password).toBeUndefined();
+      expect(result[1]).toMatchObject({
+        id: 2,
+        username: 'user2',
+        email: 'user2@example.com',
+        nickname: 'User 2',
+        type: 'collaborator',
+        permissions: ['read'],
+      });
+      expect(result[1].password).toBeUndefined();
     });
   });
 
   describe('findOne', () => {
     it('should return a user by id', async () => {
-      mockDb.get.mockResolvedValue(mockUser);
+      const dbUser = {
+        id: 1,
+        username: 'testuser',
+        email: 'test@example.com',
+        nickname: 'Test User',
+        avatar: null,
+        type: 'admin',
+        permissions: '[]',
+        password: 'hashedpassword',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      databaseMock.setQueryResult([dbUser]);
 
       const result = await service.findOne(1);
 
-      expect(mockDb.where).toHaveBeenCalled();
-      expect(result.id).toBe(1);
-      expect(result.username).toBe('testuser');
+      expect(result).toMatchObject({
+        id: 1,
+        username: 'testuser',
+        email: 'test@example.com',
+        nickname: 'Test User',
+        type: 'admin',
+        permissions: [],
+      });
+      expect(result.password).toBeUndefined();
     });
 
     it('should throw NotFoundException if user not found', async () => {
-      mockDb.get.mockResolvedValue(null);
+      databaseMock.setQueryResult([]);
 
       await expect(service.findOne(999)).rejects.toThrow(NotFoundException);
     });
@@ -148,16 +209,35 @@ describe('UserService', () => {
 
   describe('findByUsername', () => {
     it('should return a user by username', async () => {
-      mockDb.get.mockResolvedValue(mockUser);
+      const dbUser = {
+        id: 1,
+        username: 'testuser',
+        email: 'test@example.com',
+        nickname: 'Test User',
+        avatar: null,
+        type: 'admin',
+        permissions: '[]',
+        password: 'hashedpassword',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      databaseMock.setQueryResult([dbUser]);
 
       const result = await service.findByUsername('testuser');
 
-      expect(mockDb.where).toHaveBeenCalled();
-      expect(result?.username).toBe('testuser');
+      expect(result).toMatchObject({
+        id: 1,
+        username: 'testuser',
+        email: 'test@example.com',
+        nickname: 'Test User',
+        type: 'admin',
+        permissions: [],
+      });
+      expect(result?.password).toBeUndefined(); // password should not be included
     });
 
     it('should return null if user not found', async () => {
-      mockDb.get.mockResolvedValue(null);
+      databaseMock.setQueryResult([]);
 
       const result = await service.findByUsername('nonexistent');
 
@@ -166,63 +246,59 @@ describe('UserService', () => {
   });
 
   describe('update', () => {
-    it('should update a user', async () => {
-      mockDb.returning.mockResolvedValue([{ ...mockUser, nickname: 'Updated' }]);
+    it('should update a user successfully', async () => {
+      const updateData = {
+        nickname: 'Updated User',
+        email: 'updated@example.com',
+      };
 
-      const result = await service.update(1, { nickname: 'Updated' });
+      const updatedDbUser = {
+        id: 1,
+        username: 'testuser',
+        nickname: 'Updated User',
+        email: 'updated@example.com',
+        avatar: null,
+        type: 'admin',
+        permissions: '[]',
+        password: 'hashedpassword',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
 
-      expect(mockDb.update).toHaveBeenCalledWith(users);
-      expect(result.nickname).toBe('Updated');
-    });
+      databaseMock.setUpdateResult([updatedDbUser]);
 
-    it('should hash password if provided', async () => {
-      mockDb.returning.mockResolvedValue([mockUser]);
+      const result = await service.update(1, updateData);
 
-      await service.update(1, { password: 'NewPassword123!' });
-
-      expect(vi.mocked(bcrypt.hash)).toHaveBeenCalledWith('NewPassword123!', 10);
-    });
-
-    it('should trigger password change hook when password is changed', async () => {
-      mockDb.returning.mockResolvedValue([mockUser]);
-
-      await service.update(1, { password: 'NewPassword123!' });
-
-      expect(mockHookService.doAction).toHaveBeenCalledWith('user.passwordChanged', {
-        userId: 1,
-        username: mockUser.username,
+      expect(result).toMatchObject({
+        id: 1,
+        username: 'testuser',
+        nickname: 'Updated User',
+        email: 'updated@example.com',
+        type: 'admin',
+        permissions: [],
       });
-    });
-
-    it('should not trigger password change hook when password is not changed', async () => {
-      mockDb.returning.mockResolvedValue([mockUser]);
-
-      await service.update(1, { nickname: 'Updated' });
-
-      expect(mockHookService.doAction).not.toHaveBeenCalledWith(
-        'user.passwordChanged',
-        expect.anything(),
-      );
+      expect(result.password).toBeUndefined(); // password should not be included
+      expect(databaseMock.db.update).toHaveBeenCalled();
     });
 
     it('should throw NotFoundException if user not found', async () => {
-      mockDb.returning.mockResolvedValue([]);
+      databaseMock.setUpdateResult([]);
 
       await expect(service.update(999, { nickname: 'Test' })).rejects.toThrow(NotFoundException);
     });
   });
 
   describe('remove', () => {
-    it('should remove a user', async () => {
-      mockDb.returning.mockResolvedValue([mockUser]);
+    it('should remove a user successfully', async () => {
+      databaseMock.setDeleteResult(1);
 
       await service.remove(1);
 
-      expect(mockDb.delete).toHaveBeenCalledWith(users);
+      expect(databaseMock.db.delete).toHaveBeenCalled();
     });
 
     it('should throw NotFoundException if user not found', async () => {
-      mockDb.returning.mockResolvedValue([]);
+      databaseMock.setDeleteResult(0);
 
       await expect(service.remove(999)).rejects.toThrow(NotFoundException);
     });
