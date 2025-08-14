@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { Cron } from '@nestjs/schedule';
 import dayjs from 'dayjs';
 
-import { DATABASE_CONNECTION } from '../../database';
+import { DATABASE_CONNECTION } from '../../database/database.module';
 import {
   articles,
   drafts,
@@ -14,6 +14,7 @@ import {
   customPages,
   analytics,
 } from '../../database/schema';
+import { SettingRegistryService } from '../setting/services/setting-registry.service';
 
 import type { Database } from '../../database/connection';
 
@@ -36,9 +37,10 @@ export class DemoService implements OnModuleInit {
 
   constructor(
     @Inject(DATABASE_CONNECTION) private readonly db: Database,
+    private readonly settingRegistry: SettingRegistryService,
     private readonly configService: ConfigService,
   ) {
-    this.isDemoMode = this.configService.get<boolean>('DEMO_MODE', false);
+    this.isDemoMode = Boolean(this.configService.get<boolean>('DEMO_MODE', false));
   }
 
   // Scheduled restoration every 6 hours in demo mode

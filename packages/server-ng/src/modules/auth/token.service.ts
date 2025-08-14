@@ -3,10 +3,11 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import dayjs, { type Dayjs } from 'dayjs';
 
-import { User } from '../user/entities/user.entity';
-import { UserService } from '../user/user.service';
+import { ConfigRegistryService } from '../../config';
 
 import { JwtPayload } from './strategies/jwt.strategy';
+
+import type { User } from '../../database/schema';
 
 export interface TokenPair {
   accessToken: string;
@@ -27,8 +28,8 @@ export class TokenService {
 
   constructor(
     private readonly jwtService: JwtService,
+    private readonly configRegistry: ConfigRegistryService,
     private readonly configService: ConfigService,
-    private readonly userService: UserService,
   ) {}
 
   /**
@@ -42,19 +43,21 @@ export class TokenService {
     };
 
     const accessToken = this.jwtService.sign(payload, {
-      expiresIn: this.configService.get<string>('JWT_EXPIRES_IN', '15m'),
+      expiresIn: this.configRegistry.getOrDefault<string>('jwt.expiresIn', '15m'),
     });
 
     const refreshToken = this.jwtService.sign(
       { ...payload, tokenType: 'refresh' },
       {
-        expiresIn: this.configService.get<string>('JWT_REFRESH_EXPIRES_IN', '7d'),
+        expiresIn: this.configRegistry.getOrDefault<string>('jwt.refreshExpiresIn', '7d'),
       },
     );
 
     // 存储刷新令牌信息
     const refreshExpiresAt = dayjs().add(
-      parseInt(this.configService.get<string>('JWT_REFRESH_EXPIRES_IN', '7').replace('d', '')),
+      parseInt(
+        this.configRegistry.getOrDefault<string>('jwt.refreshExpiresIn', '7d').replace('d', ''),
+      ),
       'day',
     );
 
