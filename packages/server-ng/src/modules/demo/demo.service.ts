@@ -14,7 +14,6 @@ import {
   customPages,
   analytics,
 } from '../../database/schema';
-import { SettingRegistryService } from '../setting/services/setting-registry.service';
 
 import type { Database } from '../../database/connection';
 
@@ -37,7 +36,6 @@ export class DemoService implements OnModuleInit {
 
   constructor(
     @Inject(DATABASE_CONNECTION) private readonly db: Database,
-    private readonly settingRegistry: SettingRegistryService,
     private readonly configService: ConfigService,
   ) {
     this.isDemoMode = Boolean(this.configService.get<boolean>('DEMO_MODE', false));
