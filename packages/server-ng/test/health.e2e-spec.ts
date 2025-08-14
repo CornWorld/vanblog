@@ -1,8 +1,10 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import request from 'supertest';
-import { describe, it, expect, afterAll } from 'vitest';
+import { describe, beforeEach, afterEach, it, expect } from 'vitest';
 
 import { AppModule } from '../src/app.module';
+
+import { cleanupDatabase } from './test-utils';
 
 import type { INestApplication } from '@nestjs/common';
 import type { Server } from 'http';
@@ -21,7 +23,8 @@ describe('HealthController (e2e)', () => {
     await app.init();
   });
 
-  afterAll(async () => {
+  afterEach(async () => {
+    await cleanupDatabase(app);
     await app.close();
   });
 

@@ -4,6 +4,8 @@ import { describe, beforeEach, afterEach, it, expect } from 'vitest';
 
 import { AppModule } from '../src/app.module';
 
+import { cleanupDatabase } from './test-utils';
+
 import type { INestApplication } from '@nestjs/common';
 
 describe('CSRF Protection (e2e)', () => {
@@ -20,6 +22,7 @@ describe('CSRF Protection (e2e)', () => {
   });
 
   afterEach(async () => {
+    await cleanupDatabase(app);
     await app.close();
   });
 
