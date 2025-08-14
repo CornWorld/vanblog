@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { sql, type SQL } from 'drizzle-orm';
 
-import { CacheService } from './cache.service';
+import { CacheService } from '../cache/cache.service';
 
 import type { Database } from '../../database/connection';
 
@@ -124,8 +124,9 @@ export class QueryOptimizerService {
       }
 
       // 填充实际计数
-      for (const result of results as Array<{ tag_name: string; article_count: number }>) {
-        countMap[result.tag_name] = result.article_count;
+      for (const result of results) {
+        const row = result as { tag_name: string; article_count: number };
+        countMap[row.tag_name] = row.article_count;
       }
 
       return countMap;
@@ -154,8 +155,9 @@ export class QueryOptimizerService {
             AND hidden = 0
         `;
 
-        const result: { count: number } | undefined = await db.get(countQuery);
-        countMap[tagName] = result?.count ?? 0;
+        const result = await db.get(countQuery);
+        const row = result as { count: number } | undefined;
+        countMap[tagName] = row?.count ?? 0;
       } catch (error: unknown) {
         this.logger.warn(`Failed to count articles for tag ${tagName}:`, error);
         countMap[tagName] = 0;
@@ -204,8 +206,9 @@ export class QueryOptimizerService {
       }
 
       // 填充实际计数
-      for (const result of results as Array<{ category: string; article_count: number }>) {
-        countMap[result.category] = result.article_count;
+      for (const result of results) {
+        const row = result as { category: string; article_count: number };
+        countMap[row.category] = row.article_count;
       }
 
       return countMap;
@@ -416,26 +419,22 @@ export class QueryOptimizerService {
   async withCache<T>(
     key: string,
     queryFn: () => Promise<T>,
-    ttl: number = 5 * 60 * 1000, // 5分钟默认TTL
+    ttl = 300, // 5分钟默认TTL（秒）
   ): Promise<T> {
-    return this.cacheService.getOrSet(key, queryFn, ttl);
+    return this.cacheService.wrap(key, queryFn, ttl);
   }
 
   /**
    * 清除缓存
    */
-  clearCache(pattern?: string): void {
+  async clearCache(pattern?: string): Promise<void> {
     if (pattern) {
-      // 清除匹配模式的缓存
-      const keys = this.cacheService.keys();
-      for (const key of keys) {
-        if (key.includes(pattern)) {
-          this.cacheService.delete(key);
-        }
-      }
+      // 注意：当前 CacheService 不支持模式匹配清除
+      // 这是一个简化的实现，只清除所有缓存
+      await this.cacheService.clear();
     } else {
       // 清除所有缓存
-      this.cacheService.clear();
+      await this.cacheService.clear();
     }
   }
 }

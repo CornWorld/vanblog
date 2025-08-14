@@ -1,11 +1,12 @@
 import { Injectable, Inject } from '@nestjs/common';
-import dayjs, { type Dayjs } from 'dayjs';
+import dayjs from 'dayjs';
 import { eq, and, gte, lte, sql, desc } from 'drizzle-orm';
 import { LibSQLDatabase } from 'drizzle-orm/libsql';
 import { UAParser } from 'ua-parser-js';
 
 import { DATABASE_CONNECTION } from '../../../database/database.module';
 import { analytics } from '../../../database/schema';
+import { AnalyticsCacheService } from '../../../shared/cache/analytics-cache.service';
 import { safeParseJson, dataSchemas } from '../../../shared/zod';
 import {
   AnalyticsOverviewDto,
@@ -25,6 +26,7 @@ export class AnalyticsService {
   constructor(
     @Inject(DATABASE_CONNECTION)
     private readonly db: LibSQLDatabase,
+    private readonly cacheService: AnalyticsCacheService,
   ) {}
 
   async recordAnalytics(dto: RecordAnalyticsDto): Promise<void> {
@@ -39,47 +41,20 @@ export class AnalyticsService {
   }
 
   async getOverview(): Promise<AnalyticsOverviewDto> {
-    const now = dayjs();
-    const todayStart = now.startOf('day');
-    const yesterdayStart = todayStart.subtract(1, 'day');
-    const yesterdayEnd = todayStart;
-
-    const [todayPageviews, yesterdayPageviews, totalPageviews] = await Promise.all([
-      this.getPageviewCount(todayStart, now),
-      this.getPageviewCount(yesterdayStart, yesterdayEnd),
-      this.getPageviewCount(),
-    ]);
-
-    const [todayVisitors, yesterdayVisitors, totalVisitors] = await Promise.all([
-      this.getUniqueVisitorCount(todayStart, now),
-      this.getUniqueVisitorCount(yesterdayStart, yesterdayEnd),
-      this.getUniqueVisitorCount(),
-    ]);
-
+    const data = await this.cacheService.getOverview();
     return {
-      todayPageviews,
-      yesterdayPageviews,
-      totalPageviews,
-      todayVisitors,
-      yesterdayVisitors,
-      totalVisitors,
+      todayPageviews: data.todayViews,
+      yesterdayPageviews: data.yesterdayViews,
+      totalPageviews: data.totalViews,
+      todayVisitors: data.todayUniqueVisitors,
+      yesterdayVisitors: data.yesterdayUniqueVisitors,
+      totalVisitors: data.totalUniqueVisitors,
     };
   }
 
   async getPageRankings(limit = 10): Promise<PageRankingDto[]> {
-    const result = await this.db
-      .select({
-        path: analytics.path,
-        views: sql<number>`count(*)`,
-        uniqueVisitors: sql<number>`count(distinct ${analytics.ip})`,
-      })
-      .from(analytics)
-      .where(and(eq(analytics.type, AnalyticsType.PAGEVIEW), sql`${analytics.path} is not null`))
-      .groupBy(analytics.path)
-      .orderBy(desc(sql`count(*)`))
-      .limit(limit);
-
-    return result.map((row) => ({
+    const data = await this.cacheService.getPageRankings();
+    return data.slice(0, limit).map((row) => ({
       path: row.path ?? '',
       views: row.views,
       uniqueVisitors: row.uniqueVisitors,
@@ -87,50 +62,26 @@ export class AnalyticsService {
   }
 
   async getReferrerStats(limit = 10): Promise<ReferrerStatsDto[]> {
-    const result = await this.db
-      .select({
-        referrer: analytics.referrer,
-        count: sql<number>`count(*)`,
-      })
-      .from(analytics)
-      .where(
-        and(
-          eq(analytics.type, AnalyticsType.PAGEVIEW),
-          sql`${analytics.referrer} is not null`,
-          sql`${analytics.referrer} != ''`,
-        ),
-      )
-      .groupBy(analytics.referrer)
-      .orderBy(desc(sql`count(*)`))
-      .limit(limit);
-
-    return result.map((row) => ({
+    const data = await this.cacheService.getReferrerStats();
+    return data.slice(0, limit).map((row) => ({
       referrer: row.referrer ?? '',
-      count: row.count,
+      count: row.views,
     }));
   }
 
   async getChartData(days = 7): Promise<AnalyticsChartDataDto> {
-    const startDate = dayjs().subtract(days - 1, 'day');
+    const data = await this.cacheService.getChartData();
+    const recentData = data.slice(-days);
 
-    const pageviewsData: TimeSeriesDataDto[] = [];
-    const visitorsData: TimeSeriesDataDto[] = [];
+    const pageviewsData: TimeSeriesDataDto[] = recentData.map((item) => ({
+      time: dayjs(item.date).format('MM-DD'),
+      value: item.views,
+    }));
 
-    for (let i = 0; i < days; i++) {
-      const date = startDate.add(i, 'day');
-      const dayStart = date.startOf('day');
-      const dayEnd = date.endOf('day');
-
-      const [pageviews, visitors] = await Promise.all([
-        this.getPageviewCount(dayStart, dayEnd),
-        this.getUniqueVisitorCount(dayStart, dayEnd),
-      ]);
-
-      const timeStr = date.format('MM-DD');
-
-      pageviewsData.push({ time: timeStr, value: pageviews });
-      visitorsData.push({ time: timeStr, value: visitors });
-    }
+    const visitorsData: TimeSeriesDataDto[] = recentData.map((item) => ({
+      time: dayjs(item.date).format('MM-DD'),
+      value: item.uniqueVisitors,
+    }));
 
     return {
       pageviews: pageviewsData,
@@ -237,43 +188,5 @@ export class AnalyticsService {
         data: parsed,
       };
     });
-  }
-
-  private async getPageviewCount(startDate?: Dayjs, endDate?: Dayjs): Promise<number> {
-    const conditions = [eq(analytics.type, AnalyticsType.PAGEVIEW)];
-
-    if (startDate) {
-      conditions.push(gte(analytics.createdAt, startDate.toISOString()));
-    }
-
-    if (endDate) {
-      conditions.push(lte(analytics.createdAt, endDate.toISOString()));
-    }
-
-    const result = await this.db
-      .select({ count: sql<number>`count(*)` })
-      .from(analytics)
-      .where(and(...conditions));
-
-    return result[0]?.count ?? 0;
-  }
-
-  private async getUniqueVisitorCount(startDate?: Dayjs, endDate?: Dayjs): Promise<number> {
-    const conditions = [eq(analytics.type, AnalyticsType.PAGEVIEW)];
-
-    if (startDate) {
-      conditions.push(gte(analytics.createdAt, startDate.toISOString()));
-    }
-
-    if (endDate) {
-      conditions.push(lte(analytics.createdAt, endDate.toISOString()));
-    }
-
-    const result = await this.db
-      .select({ count: sql<number>`count(distinct ${analytics.ip})` })
-      .from(analytics)
-      .where(and(...conditions));
-
-    return result[0]?.count ?? 0;
   }
 }

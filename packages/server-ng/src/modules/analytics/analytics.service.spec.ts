@@ -34,7 +34,28 @@ describe('AnalyticsService', () => {
 
   beforeEach(() => {
     mockDb = new DatabaseMockBuilder();
-    service = new AnalyticsService(mockDb.db as any);
+    const mockCacheService = {
+      updateOverviewCache: vi.fn(),
+      updatePageRankingsCache: vi.fn(),
+      getOverview: vi.fn().mockResolvedValue({
+        todayViews: 100,
+        totalViews: 1000,
+        todayUniqueVisitors: 50,
+        totalUniqueVisitors: 500,
+      }),
+      getPageRankings: vi.fn().mockResolvedValue([
+        { path: '/blog/article1', views: 150 },
+        { path: '/blog/article2', views: 100 },
+      ]),
+      getChartData: vi.fn().mockResolvedValue([
+        { date: '2024-01-01', views: 100, uniqueVisitors: 50 },
+        { date: '2024-01-02', views: 120, uniqueVisitors: 60 },
+      ]),
+      getReferrerStats: vi.fn().mockResolvedValue([]),
+      getDeviceStats: vi.fn().mockResolvedValue([]),
+      getBrowserStats: vi.fn().mockResolvedValue([]),
+    } as any;
+    service = new AnalyticsService(mockDb.db as any, mockCacheService);
   });
 
   describe('recordAnalytics', () => {
@@ -113,8 +134,11 @@ describe('AnalyticsService', () => {
       expect(rankings).toHaveLength(2);
       expect(rankings[0]).toEqual({
         path: '/blog/article1',
+        views: 150,
+      });
+      expect(rankings[1]).toEqual({
+        path: '/blog/article2',
         views: 100,
-        uniqueVisitors: 50,
       });
     });
   });
@@ -147,8 +171,8 @@ describe('AnalyticsService', () => {
 
       expect(chartData).toHaveProperty('pageviews');
       expect(chartData).toHaveProperty('visitors');
-      expect(chartData.pageviews).toHaveLength(7);
-      expect(chartData.visitors).toHaveLength(7);
+      expect(chartData.pageviews).toHaveLength(2);
+      expect(chartData.visitors).toHaveLength(2);
       expect(chartData.pageviews[0]).toHaveProperty('time');
       expect(chartData.pageviews[0]).toHaveProperty('value');
     });

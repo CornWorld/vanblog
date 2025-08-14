@@ -1,7 +1,7 @@
 import { Module, Global, MiddlewareConsumer, NestModule } from '@nestjs/common';
 
+import { CacheService } from './cache/cache.service';
 import { CompressionMiddleware } from './middleware/compression.middleware';
-import { CacheService } from './services/cache.service';
 import { CDNService } from './services/cdn.service';
 import { ConnectionPoolService } from './services/connection-pool.service';
 import { MarkdownService } from './services/markdown.service';
