@@ -7,7 +7,7 @@ import { WebhookService } from './webhook.service';
 @Injectable()
 export class WebhookRegistryService implements OnModuleInit {
   private readonly logger = new Logger(WebhookRegistryService.name);
-  private readonly registeredWebhookIds: string[] = [];
+  private readonly registeredWebhooks = new Map<string, string>();
 
   constructor(
     private readonly hookService: HookService,
@@ -36,7 +36,7 @@ export class WebhookRegistryService implements OnModuleInit {
         },
         1000, // Low priority to ensure webhooks are triggered after other handlers
       );
-      this.registeredWebhookIds.push(webhookId);
+      this.registeredWebhooks.set(event, webhookId);
     });
 
     this.logger.debug(
@@ -86,15 +86,14 @@ export class WebhookRegistryService implements OnModuleInit {
   }
 
   /**
-   * Refresh webhook registrations (useful when new plugins are loaded)
+   * Refresh webhook registrations by removing existing ones and re-registering
    */
   refreshWebhookRegistrations(): void {
-    // Remove existing webhook registrations
-    this.registeredWebhookIds.forEach((_id) => {
-      // We need to find which hook this ID belongs to and remove it
-      // Since we don't have a direct way to get hook name by ID, we'll clear and re-register
+    // Remove existing webhook registrations precisely
+    this.registeredWebhooks.forEach((registrationId, hookName) => {
+      this.hookService.removeAction(hookName, registrationId);
     });
-    this.registeredWebhookIds.length = 0;
+    this.registeredWebhooks.clear();
 
     // Re-register webhooks
     this.registerWebhookHooks();
