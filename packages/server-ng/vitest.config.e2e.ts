@@ -21,6 +21,7 @@ export default defineConfig({
     setupFiles: ['./test/setup.ts'],
     // Increase timeout for E2E tests
     testTimeout: 30000,
+    hookTimeout: 30000,
   },
   resolve: {
     alias: {
