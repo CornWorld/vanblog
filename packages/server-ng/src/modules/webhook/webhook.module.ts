@@ -10,7 +10,16 @@ import { WebhookService } from './webhook.service';
 @Module({
   imports: [DatabaseModule, PluginModule],
   controllers: [WebhookController],
-  providers: [WebhookService, WebhookRegistryService],
+  providers: [
+    {
+      provide: WebhookService,
+      useClass: WebhookService,
+    },
+    {
+      provide: WebhookRegistryService,
+      useClass: WebhookRegistryService,
+    },
+  ],
   exports: [WebhookService, WebhookRegistryService],
 })
 export class WebhookModule {}

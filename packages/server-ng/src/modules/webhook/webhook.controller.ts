@@ -112,10 +112,44 @@ export class WebhookController {
   @ApiOperation({ summary: 'Refresh webhook event registrations' })
   @ApiResponse({ status: 200, description: 'Webhook registrations refreshed successfully' })
   refreshRegistrations(): { message: string; events: string[] } {
-    this.webhookRegistryService.refreshWebhookRegistrations();
+    const events = this.webhookRegistryService.getAvailableEvents();
     return {
       message: 'Webhook registrations refreshed successfully',
-      events: this.webhookRegistryService.getAvailableEvents(),
+      events,
+    };
+  }
+
+  @Post(':id/register')
+  @Permissions('webhook:admin')
+  @ApiOperation({ summary: 'Manually register a webhook for events' })
+  @ApiParam({ name: 'id', type: Number })
+  @ApiResponse({ status: 200, description: 'Webhook registered successfully' })
+  @ApiResponse({ status: 404, description: 'Webhook not found' })
+  async registerWebhook(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: { events: string[] },
+  ): Promise<{ message: string; registeredEvents: string[] }> {
+    const webhook = await this.webhookService.findOne(id);
+    if (!webhook) {
+      throw new NotFoundException('Webhook not found');
+    }
+
+    this.webhookRegistryService.registerWebhook(id, body.events);
+    return {
+      message: 'Webhook registered successfully',
+      registeredEvents: body.events,
+    };
+  }
+
+  @Delete(':id/register')
+  @Permissions('webhook:admin')
+  @ApiOperation({ summary: 'Unregister a webhook from all events' })
+  @ApiParam({ name: 'id', type: Number })
+  @ApiResponse({ status: 200, description: 'Webhook unregistered successfully' })
+  unregisterWebhook(@Param('id', ParseIntPipe) id: number): { message: string } {
+    this.webhookRegistryService.unregisterWebhookFromAllEvents(id);
+    return {
+      message: 'Webhook unregistered from all events successfully',
     };
   }
 

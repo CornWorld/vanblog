@@ -1,11 +1,12 @@
 import { createHmac } from 'crypto';
 
-import { Injectable, Logger, Inject } from '@nestjs/common';
+import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import { eq, and, desc, gte, lte, count } from 'drizzle-orm';
 
 import { DATABASE_CONNECTION } from '../../database';
 
 import { webhooks, webhookLogs, type Webhook as WebhookEntity } from './entities/webhook.schema';
+import { WebhookRegistryService } from './webhook-registry.service';
 import {
   CreateWebhookDto,
   UpdateWebhookDto,
@@ -31,7 +32,11 @@ export interface WebhookPayload {
 export class WebhookService {
   private readonly logger = new Logger(WebhookService.name);
 
-  constructor(@Inject(DATABASE_CONNECTION) private readonly db: Database) {}
+  constructor(
+    @Inject(DATABASE_CONNECTION) private readonly db: Database,
+    @Inject(forwardRef(() => WebhookRegistryService))
+    private readonly webhookRegistry: WebhookRegistryService,
+  ) {}
 
   async create(createWebhookDto: CreateWebhookDto): Promise<Webhook> {
     const eventsJson = JSON.stringify(createWebhookDto.events);
@@ -49,10 +54,17 @@ export class WebhookService {
       })
       .returning();
 
-    return {
+    const result = {
       ...webhook,
       events: JSON.parse(webhook.events) as string[],
     };
+
+    // Register webhook for its events if active
+    if (result.active) {
+      this.webhookRegistry.registerWebhook(result.id, result.events);
+    }
+
+    return result;
   }
 
   async findAll(query: WebhookQueryDto): Promise<Record<string, unknown>> {
@@ -105,10 +117,18 @@ export class WebhookService {
 
     const [webhook] = results;
 
-    return {
+    const result = {
       ...webhook,
       events: JSON.parse(webhook.events) as string[],
     };
+
+    // Update webhook registration
+    this.webhookRegistry.unregisterWebhookFromAllEvents(id);
+    if (result.active) {
+      this.webhookRegistry.registerWebhook(result.id, result.events);
+    }
+
+    return result;
   }
 
   async update(id: number, updateWebhookDto: UpdateWebhookDto): Promise<Webhook | null> {
@@ -147,6 +167,9 @@ export class WebhookService {
   }
 
   async remove(id: number): Promise<void> {
+    // Unregister webhook before deletion
+    this.webhookRegistry.unregisterWebhookFromAllEvents(id);
+
     await this.db.delete(webhooks).where(eq(webhooks.id, id));
   }
 
@@ -169,6 +192,10 @@ export class WebhookService {
     });
 
     await Promise.allSettled(promises);
+  }
+
+  async triggerForEvent(event: string, data: Record<string, unknown>): Promise<void> {
+    return this.trigger(event, data);
   }
 
   async test(
