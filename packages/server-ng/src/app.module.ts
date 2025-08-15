@@ -7,6 +7,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ConfigModule } from './config';
 import { LoggerModule } from './core/logger/logger.module';
+import { V1DeprecationMiddleware } from './core/middleware/v1-deprecation.middleware';
 import { DatabaseModule } from './database';
 import { AnalyticsModule } from './modules/analytics/analytics.module';
 import { ArticleModule } from './modules/article/article.module';
@@ -34,7 +35,7 @@ import { PerformanceMonitoringMiddleware } from './shared/middleware/performance
 @Module({})
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer): void {
-    consumer.apply(PerformanceMonitoringMiddleware).forRoutes('*'); // Apply to all routes
+    consumer.apply(PerformanceMonitoringMiddleware, V1DeprecationMiddleware).forRoutes('*'); // Apply to all routes
   }
 
   static forRoot(): DynamicModule {
