@@ -1,21 +1,47 @@
-import { Module, OnModuleInit } from '@nestjs/common';
+import { DynamicModule, Global, Module, Provider } from '@nestjs/common';
 
-import { DatabaseModule } from '../../database/database.module';
-
-import { PermissionController } from './permission.controller';
+import { PermissionCollectionService } from './permission-collection.service';
 import { PermissionService } from './permission.service';
 
-@Module({
-  imports: [DatabaseModule],
-  controllers: [PermissionController],
-  providers: [PermissionService],
-  exports: [PermissionService],
-})
-export class PermissionModule implements OnModuleInit {
-  constructor(private readonly permissionService: PermissionService) {}
+// 共享的注入令牌
+const PERMISSIONS = 'PERMISSIONS';
 
-  async onModuleInit(): Promise<void> {
-    // 在模块初始化时注册权限节点和权限组
-    await this.permissionService.initializePermissions();
+@Global() // 使权限服务在全局可用
+@Module({})
+export class PermissionModule {
+  /**
+   * 在根模块 (AppModule) 中调用一次。
+   * 负责创建和导出权限收集服务。
+   */
+  static forRoot(): DynamicModule {
+    return {
+      module: PermissionModule,
+      providers: [PermissionCollectionService, PermissionService],
+      exports: [PermissionCollectionService, PermissionService],
+    };
+  }
+
+  /**
+   * 在功能模块 (Feature Module) 中调用。
+   * 负责接收该模块的权限列表，并将其作为 provider 注册。
+   * @param permissions - 该功能模块提供的一组权限字符串。
+   */
+  static forFeature(permissions: string[]): DynamicModule {
+    const permissionsProvider: Provider & { multi: boolean } = {
+      provide: PERMISSIONS,
+      useValue: permissions,
+      // multi: true 是一个关键技巧，它告诉 NestJS DI 容器，
+      // 可能会有多个 provider 使用同一个令牌，请将它们收集成一个数组。
+      multi: true,
+    };
+
+    return {
+      module: PermissionModule,
+      providers: [permissionsProvider],
+      exports: [permissionsProvider],
+    };
   }
 }
+
+// 导出常量供 PermissionCollectionService 使用
+export { PERMISSIONS };

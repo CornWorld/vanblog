@@ -85,7 +85,7 @@ export class AppModule implements NestModule {
         BackupModule,
 
         DemoModule,
-        PermissionModule,
+        PermissionModule.forRoot(),
         pluginModule,
       ],
       controllers: [AppController],

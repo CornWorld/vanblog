@@ -1,9 +1,8 @@
-import { Global, Module, DynamicModule, OnModuleInit } from '@nestjs/common';
+import { Global, Module, DynamicModule } from '@nestjs/common';
 
 import { LoggerModule } from '../../core/logger/logger.module';
 import { DatabaseModule } from '../../database/database.module';
 import { PermissionModule } from '../permission/permission.module';
-import { PermissionService } from '../permission/permission.service';
 
 import { PluginLoaderController } from './controllers/plugin-loader.controller';
 import { WebhookController } from './controllers/webhook.controller';
@@ -15,7 +14,17 @@ import { WebhookService } from './services/webhook.service';
 
 @Global()
 @Module({
-  imports: [LoggerModule, DatabaseModule, PermissionModule],
+  imports: [
+    LoggerModule,
+    DatabaseModule,
+    PermissionModule.forFeature([
+      'plugin:install',
+      'plugin:uninstall',
+      'plugin:enable',
+      'plugin:disable',
+      'plugin:configure',
+    ]),
+  ],
   controllers: [PluginLoaderController, WebhookController],
   providers: [
     HookService,
@@ -38,20 +47,7 @@ import { WebhookService } from './services/webhook.service';
     WebhookRegistryService,
   ],
 })
-export class PluginModule implements OnModuleInit {
-  constructor(private readonly permissionService: PermissionService) {}
-
-  onModuleInit(): void {
-    // 注册插件模块的权限
-    this.permissionService.register({
-      module: 'plugin',
-      permissions: ['install', 'uninstall', 'enable', 'disable', 'configure'],
-      roles: {
-        admin: ['install', 'uninstall', 'enable', 'disable', 'configure'],
-        editor: ['enable', 'disable', 'configure'],
-      },
-    });
-  }
+export class PluginModule {
   static forRoot(): DynamicModule {
     // Note: Plugin loading is temporarily disabled to avoid constructor issues in tests
     // This should be investigated and fixed in a future update

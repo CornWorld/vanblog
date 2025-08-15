@@ -59,26 +59,7 @@ export class PermissionService {
   }
 
   /**
-   * 简化的自动注册方法
-   * @param moduleName 模块名称
-   * @param permissions 权限列表
-   * @param roles 角色权限配置（可选）
-   */
-  autoRegister(moduleName: string, permissions: string[], roles?: Record<string, string[]>): void {
-    this.register({
-      module: moduleName,
-      permissions,
-      roles,
-    });
-  }
-
-  /**
-   * 注册模块权限
-   * @param moduleName 模块名称
-   * @param permissions 权限列表
-   */
-  /**
-   * 新的统一权限注册方法
+   * 注册模块权限和角色权限
    * @param config 权限注册配置
    */
   register(config: PermissionRegistration): void {
@@ -106,24 +87,6 @@ export class PermissionService {
     });
 
     this.logger.log(`模块 ${module} 权限注册完成: ${fullPermissions.join(', ')}`);
-  }
-
-  /**
-   * 兼容性方法：注册模块权限
-   * @deprecated 使用 register 方法替代
-   */
-  registerModulePermissions(moduleName: string, permissions: string[]): void {
-    this.register({ module: moduleName, permissions });
-  }
-
-  /**
-   * 兼容性方法：注册权限组权限
-   * @deprecated 使用 register 方法替代
-   */
-  registerPermissionGroup(groupName: string, permissions: string[]): void {
-    this.logger.log(`注册角色 ${groupName} 的权限: ${permissions.join(', ')}`);
-    const existingPermissions = this.predefinedRoles.get(groupName) ?? [];
-    this.predefinedRoles.set(groupName, [...existingPermissions, ...permissions]);
   }
 
   /**
@@ -522,14 +485,6 @@ export class PermissionService {
     }
 
     return group[0].permissions ? (JSON.parse(group[0].permissions) as string[]) : [];
-  }
-
-  /**
-   * 兼容性方法：获取权限组权限
-   * @deprecated 使用 getRolePermissions 方法替代
-   */
-  private async getGroupPermissions(groupName: string): Promise<string[]> {
-    return this.getRolePermissions(groupName);
   }
 
   /**

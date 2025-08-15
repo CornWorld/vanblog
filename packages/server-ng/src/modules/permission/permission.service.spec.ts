@@ -123,10 +123,10 @@ describe('PermissionService', () => {
 
   describe('resolveUserPermissions', () => {
     beforeEach(() => {
-      // Mock getGroupPermissions method
+      // Mock getRolePermissions method
       vi.spyOn(
-        service as unknown as { getGroupPermissions: () => Promise<string[]> },
-        'getGroupPermissions',
+        service as unknown as { getRolePermissions: (roleName: string) => Promise<string[]> },
+        'getRolePermissions',
       ).mockResolvedValue(['article:read', 'article:write', 'user:read']);
     });
 
@@ -274,10 +274,10 @@ describe('PermissionService', () => {
 
   describe('initializePermissions', () => {
     it('should initialize all permissions and groups', async () => {
-      // Mock registerModulePermissions
+      // Mock registerAllModulePermissions
       vi.spyOn(
-        service as unknown as { registerModulePermissions: () => Promise<void> },
-        'registerModulePermissions',
+        service as unknown as { registerAllModulePermissions: () => Promise<void> },
+        'registerAllModulePermissions',
       ).mockResolvedValue(undefined);
       // Mock createPredefinedGroups
       vi.spyOn(
@@ -287,30 +287,8 @@ describe('PermissionService', () => {
 
       await service.initializePermissions();
 
-      expect(service['register']).toHaveBeenCalled();
+      expect(service['registerAllModulePermissions']).toHaveBeenCalled();
       expect(service['createPredefinedGroups']).toHaveBeenCalled();
-    });
-  });
-
-  describe('PERMISSION_MODULES and PERMISSION_GROUPS', () => {
-    it('should have valid permission modules structure', () => {
-      expect(PERMISSION_MODULES).toBeDefined();
-      expect(PERMISSION_MODULES.article).toContain('article:read');
-      expect(PERMISSION_MODULES.article).toContain('article:create');
-      expect(PERMISSION_MODULES.user).toContain('user:read');
-    });
-
-    it('should have valid permission groups structure', () => {
-      expect(PERMISSION_GROUPS).toBeDefined();
-      expect(PERMISSION_GROUPS.admin).toBeDefined();
-      expect(PERMISSION_GROUPS.editor).toBeDefined();
-      expect(PERMISSION_GROUPS.author).toBeDefined();
-      expect(PERMISSION_GROUPS.viewer).toBeDefined();
-    });
-
-    it('should have admin group with all permissions', () => {
-      const allPermissions = Object.values(PERMISSION_MODULES).flat();
-      expect(PERMISSION_GROUPS.admin).toEqual(allPermissions);
     });
   });
 });
