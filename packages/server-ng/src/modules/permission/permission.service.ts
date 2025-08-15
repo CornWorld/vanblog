@@ -179,37 +179,46 @@ export class PermissionService {
   }
 
   /**
-   * 解析用户权限，处理禁用权限和权限组
+   * 解析用户权限，处理禁用权限和权限组（顺序敏感：后者覆盖前者）
    */
   async resolveUserPermissions(userPermissions: string[]): Promise<string[]> {
     const resolvedPermissions = new Set<string>();
-    const disabledPermissions = new Set<string>();
 
-    for (const permission of userPermissions) {
-      if (permission.startsWith('no:')) {
-        // 禁用权限
-        const disabledPermission = permission.slice(3);
-        disabledPermissions.add(disabledPermission);
-
-        // 如果是禁用角色，需要禁用角色内所有权限
-        if (disabledPermission.startsWith('role:')) {
-          const roleName = disabledPermission.slice(5);
-          const rolePermissions = await this.getRolePermissions(roleName);
-          rolePermissions.forEach((p) => disabledPermissions.add(p));
-        }
-      } else if (permission.startsWith('role:')) {
-        // 角色权限
-        const roleName = permission.slice(5);
-        const rolePermissions = await this.getRolePermissions(roleName);
-        rolePermissions.forEach((p) => resolvedPermissions.add(p));
-      } else {
-        // 普通权限
-        resolvedPermissions.add(permission);
+    for (const token of userPermissions) {
+      if (token === 'all') {
+        // 特殊权限：all
+        resolvedPermissions.add('all');
+        continue;
       }
-    }
 
-    // 移除被禁用的权限
-    disabledPermissions.forEach((p) => resolvedPermissions.delete(p));
+      if (token.startsWith('no:')) {
+        // 撤销权限或角色
+        const target = token.slice(3);
+        if (target.startsWith('role:')) {
+          const roleName = target.slice(5);
+          const rolePermissions = await this.getRolePermissions(roleName);
+          for (const p of rolePermissions) {
+            resolvedPermissions.delete(p);
+          }
+        } else {
+          resolvedPermissions.delete(target);
+        }
+        continue;
+      }
+
+      if (token.startsWith('role:')) {
+        // 角色展开（添加权限）
+        const roleName = token.slice(5);
+        const rolePermissions = await this.getRolePermissions(roleName);
+        for (const p of rolePermissions) {
+          resolvedPermissions.add(p);
+        }
+        continue;
+      }
+
+      // 普通权限：直接添加
+      resolvedPermissions.add(token);
+    }
 
     return Array.from(resolvedPermissions);
   }

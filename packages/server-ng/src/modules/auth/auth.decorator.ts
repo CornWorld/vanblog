@@ -19,10 +19,7 @@ export function RequireAuth(): MethodDecorator & ClassDecorator {
  * 权限装饰器的别名，推荐直接使用 @Permissions
  * @deprecated 请直接使用 @Permissions 装饰器
  */
-export function RequirePermissions(
-  module: string,
-  ...permissions: string[]
-): MethodDecorator & ClassDecorator {
+export function RequirePermissions(module: string, ...permissions: string[]): MethodDecorator {
   return Permissions(module, ...permissions);
 }
 

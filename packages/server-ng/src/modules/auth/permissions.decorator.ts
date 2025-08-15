@@ -15,20 +15,30 @@ export const ModuleContext = (moduleName: string): ReturnType<typeof SetMetadata
   SetMetadata(MODULE_CONTEXT_KEY, moduleName);
 
 /**
- * 权限装饰器，自动包含认证和权限检查
- * @param moduleName 模块名称
- * @param permissions 权限列表（语义化名称）
+ * 权限装饰器，支持向后兼容的权限参数格式
+ *
+ * 使用方式：
+ * 1. 新格式：@ModuleContext('category') + @Permissions('read', 'write')
+ * 2. 旧格式：@Permissions('module', 'permission') - 向后兼容
+ * 3. 完整格式：@Permissions('module:permission')
+ *
+ * @param permissions 权限列表（支持不同格式）
  */
-export const Permissions = (
-  moduleName: string,
-  ...permissions: string[]
-): MethodDecorator & ClassDecorator => {
+export const Permissions = (...permissions: string[]): MethodDecorator => {
+  // 处理向后兼容：如果是两个参数且第二个不包含冒号，转换为完整格式
+  let normalizedPermissions: string[];
+
+  if (permissions.length === 2 && !permissions[1].includes(':')) {
+    // 旧格式：@Permissions('module', 'permission') -> ['module:permission']
+    normalizedPermissions = [`${permissions[0]}:${permissions[1]}`];
+  } else {
+    // 新格式或完整格式：保持原样
+    normalizedPermissions = permissions;
+  }
+
   return applyDecorators(
     UseGuards(JwtAuthGuard, PermissionsGuard),
-    SetMetadata(PERMISSION_KEY, {
-      module: moduleName,
-      permissions,
-    }),
+    SetMetadata(PERMISSION_KEY, normalizedPermissions),
     ApiBearerAuth(),
     ApiResponse({ status: 401, description: 'Unauthorized' }),
     ApiResponse({ status: 403, description: 'Forbidden - Insufficient permissions' }),

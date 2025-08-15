@@ -4,7 +4,7 @@ import { Reflector } from '@nestjs/core';
 import { Permission } from '../../../shared/types/permission';
 import { PermissionService } from '../../permission/permission.service';
 import { User } from '../../user/entities/user.entity';
-import { PERMISSION_KEY } from '../permissions.decorator';
+import { PERMISSION_KEY, MODULE_CONTEXT_KEY } from '../permissions.decorator';
 
 /**
  * Guard that checks if the current user has the required permissions to access a route.
@@ -16,8 +16,14 @@ import { PERMISSION_KEY } from '../permissions.decorator';
  * - Special permissions: 'all' (grants all permissions)
  *
  * Usage with @Permissions decorator:
- * @Permissions('user', 'read', 'write')
- * @UseGuards(JwtAuthGuard, PermissionsGuard)
+ * @ModuleContext('category')
+ * class CategoryController {
+ *   @Permissions('read', 'write')  // 等价于 'category:read', 'category:write'
+ *   getCategories() {}
+ *
+ *   @Permissions('article:read')   // 直接使用完整权限名称
+ *   getCategoryArticles() {}
+ * }
  */
 @Injectable()
 export class PermissionsGuard implements CanActivate {
@@ -27,11 +33,13 @@ export class PermissionsGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const permissionData = this.reflector.getAllAndOverride<
-      { module: string; permissions: string[] } | undefined
-    >(PERMISSION_KEY, [context.getHandler(), context.getClass()]);
+    // 获取方法级别的权限要求
+    const requiredPermissions = this.reflector.getAllAndOverride<string[] | undefined>(
+      PERMISSION_KEY,
+      [context.getHandler(), context.getClass()],
+    );
 
-    if (!permissionData) {
+    if (!requiredPermissions || requiredPermissions.length === 0) {
       return true;
     }
 
@@ -47,16 +55,53 @@ export class PermissionsGuard implements CanActivate {
       return false;
     }
 
-    const { module, permissions } = permissionData;
-    const requiredPermissions = this.permissionService.resolvePermissionNames(
-      module,
-      permissions,
-    ) as Permission[];
+    // 获取类级别的模块上下文
+    const moduleContext = this.reflector.getAllAndOverride<string | undefined>(MODULE_CONTEXT_KEY, [
+      context.getClass(),
+    ]);
 
-    if (requiredPermissions.length === 0) {
-      return true;
+    // 解析权限名称：如果有模块上下文，将语义化名称转换为完整权限名称
+    let resolvedPermissions: string[];
+    if (moduleContext) {
+      resolvedPermissions = this.permissionService.resolvePermissionNames(
+        moduleContext,
+        requiredPermissions,
+      );
+    } else {
+      // 如果没有模块上下文，尝试从控制器路径推导模块名
+      const controllerName = context.getClass().name;
+      const moduleName = this.extractModuleNameFromController(controllerName);
+
+      if (moduleName) {
+        resolvedPermissions = this.permissionService.resolvePermissionNames(
+          moduleName,
+          requiredPermissions,
+        );
+      } else {
+        // 无法推导模块名，直接使用原始权限名称
+        resolvedPermissions = requiredPermissions;
+      }
     }
 
-    return await this.permissionService.hasPermissions(userPermissions, requiredPermissions);
+    return await this.permissionService.hasPermissions(
+      userPermissions,
+      resolvedPermissions as Permission[],
+    );
+  }
+
+  /**
+   * 从控制器名称推导模块名
+   * 例如：CategoryController -> category
+   */
+  private extractModuleNameFromController(controllerName: string): string | null {
+    if (controllerName.endsWith('Controller')) {
+      const moduleName = controllerName
+        .replace('Controller', '')
+        .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
+        .toLowerCase();
+
+      return moduleName;
+    }
+    return null;
   }
 }
