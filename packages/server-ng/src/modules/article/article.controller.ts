@@ -83,6 +83,14 @@ export class ArticleController {
     await this.articleService.importArticles(articles);
   }
 
+  @Get('by-path/:pathname')
+  @ApiOperation({ summary: 'Get article by pathname' })
+  @ApiResponse({ status: 200, description: 'Return article by pathname' })
+  @ApiResponse({ status: 404, description: 'Article not found' })
+  async findOneByPathname(@Param('pathname') pathname: string): Promise<Article> {
+    return this.articleService.findOneByPathname(pathname);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get article by ID' })
   @ApiResponse({ status: 200, description: 'Return article by ID' })

@@ -46,6 +46,7 @@
 
 - 目标：GET /pages、GET /pages/:path
 - 验收：根据数据库 `customPages` 返回内容；支持草稿/发布状态和缓存；404 语义清晰。
+- 暂时不做
 
 2. pathname 访问（高）
 
