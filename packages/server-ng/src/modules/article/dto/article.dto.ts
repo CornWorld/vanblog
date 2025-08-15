@@ -31,7 +31,7 @@ export const ArticleQuerySchema = z.object({
   category: z.string().optional(),
   isPublished: z.boolean().optional(),
   isTop: z.boolean().optional(),
-  includeHidden: z.boolean().optional(),
+  includeHidden: z.boolean().default(false).optional(),
   sortBy: z
     .enum(['createdAt', 'updatedAt', 'publishedAt', 'viewCount', 'likeCount'])
     .default('createdAt'),

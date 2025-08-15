@@ -41,6 +41,7 @@ export class ArticleService {
       tag,
       keyword,
       isPublished,
+      includeHidden,
     } = query;
 
     // Build where clause
@@ -60,7 +61,11 @@ export class ArticleService {
         ),
       );
     }
-    if (isPublished !== undefined) {
+
+    // 过滤隐藏文章（除非显式包含）
+    if (!includeHidden) {
+      whereConditions.push(eq(articles.hidden, false));
+    } else if (isPublished !== undefined) {
       whereConditions.push(eq(articles.hidden, !isPublished));
     }
 
@@ -236,6 +241,32 @@ export class ArticleService {
 
     if (articleResult.length === 0) {
       throw new NotFoundException(`Article with ID ${String(id)} not found`);
+    }
+
+    const [article] = articleResult;
+    return new Article({
+      ...article,
+      tags: safeParseJson(article.tags, dataSchemas.tagsArray) ?? [],
+      pathname: article.pathname,
+      category: article.category,
+      author: article.author,
+      top: article.top,
+      hidden: article.hidden,
+      private: article.private,
+      password: article.password,
+      viewer: article.viewer,
+    });
+  }
+
+  async findOneByPathname(pathname: string): Promise<Article> {
+    const articleResult = await this.db
+      .select()
+      .from(articles)
+      .where(eq(articles.pathname, String(pathname)))
+      .limit(1);
+
+    if (articleResult.length === 0) {
+      throw new NotFoundException(`Article with pathname ${String(pathname)} not found`);
     }
 
     const [article] = articleResult;
@@ -458,14 +489,21 @@ export class ArticleService {
 
   async findByCategory(
     categoryName: string,
-    query: { page?: number; pageSize?: number } = {},
+    query: { page?: number; pageSize?: number; includeHidden?: boolean } = {},
   ): Promise<ArticleListResponseDto> {
-    const { page = 1, pageSize = 10 } = query;
+    const { page = 1, pageSize = 10, includeHidden = false } = query;
 
     return await this.queryOptimizer.withPerformanceMonitoring(
       'ArticleService.findByCategory',
       async () => {
-        const whereClause = eq(articles.category, String(categoryName));
+        const whereConditions = [eq(articles.category, String(categoryName))];
+
+        // 过滤隐藏文章（除非显式包含）
+        if (!includeHidden) {
+          whereConditions.push(eq(articles.hidden, false));
+        }
+
+        const whereClause = and(...whereConditions);
 
         const [articleResults, countResult] = await Promise.all([
           this.db

@@ -1,5 +1,15 @@
-import { Controller, Get, Post, Query, Param, Body, Req } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiQuery, ApiParam } from '@nestjs/swagger';
+import {
+  Controller,
+  Get,
+  Param,
+  NotFoundException,
+  Query,
+  Post,
+  Body,
+  Req,
+  BadRequestException,
+} from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery } from '@nestjs/swagger';
 
 import { AnalyticsType } from '../analytics/entities/analytics.entity';
 import { AnalyticsService } from '../analytics/services/analytics.service';
@@ -17,7 +27,7 @@ const DEFAULT_MENU = [
   { name: 'About', path: '/about' },
 ];
 
-@ApiTags('public-v1')
+@ApiTags('publicv1')
 @Controller({ path: 'public', version: '1' })
 export class PublicV1Controller {
   constructor(
@@ -56,32 +66,27 @@ export class PublicV1Controller {
   @ApiParam({ name: 'idOrPathname', description: 'Article ID or pathname' })
   @ApiResponse({ status: 200, description: 'Return article' })
   async getArticleByIdOrPathname(@Param('idOrPathname') idOrPathname: string): Promise<unknown> {
-    try {
-      // Try to find by ID first (if it's a number)
-      const id = parseInt(idOrPathname, 10);
-      if (!isNaN(id)) {
-        try {
-          const article = await this.articleService.findOne(id);
-          return article;
-        } catch {
-          // Article not found by ID, continue to search by pathname
+    const id = parseInt(idOrPathname, 10);
+    if (!isNaN(id)) {
+      try {
+        const article = await this.articleService.findOne(id);
+        if (article.hidden) {
+          throw new NotFoundException('Article not found');
         }
+        return { statusCode: 200, data: article };
+      } catch {
+        throw new NotFoundException('Article not found');
       }
+    }
 
-      // Try to search by pathname
-      const searchResult = await this.articleService.search({
-        keyword: idOrPathname,
-        page: 1,
-        pageSize: 1,
-      });
-
-      if (searchResult.items.length > 0) {
-        return searchResult.items[0];
+    try {
+      const article = await this.articleService.findOneByPathname(idOrPathname);
+      if (article.hidden) {
+        throw new NotFoundException('Article not found');
       }
-
-      return null;
+      return { statusCode: 200, data: article };
     } catch {
-      return null;
+      throw new NotFoundException('Article not found');
     }
   }
 
@@ -125,9 +130,21 @@ export class PublicV1Controller {
         page: parseInt(page ?? '1', 10),
         pageSize: parseInt(pageSize ?? '10', 10),
       });
-      return result;
+      return {
+        statusCode: 200,
+        data: {
+          articles: result.items,
+          total: result.total,
+          page: result.page,
+          pageSize: result.pageSize,
+          totalPages: result.totalPages,
+        },
+      };
     } catch {
-      return { items: [], total: 0, page: 1, pageSize: 10, totalPages: 0 };
+      return {
+        statusCode: 200,
+        data: { articles: [], total: 0, page: 1, pageSize: 10, totalPages: 0 },
+      };
     }
   }
 
@@ -136,14 +153,23 @@ export class PublicV1Controller {
   @ApiResponse({ status: 200, description: 'Viewer added successfully' })
   async addViewer(@Body() body: unknown, @Req() req: Request): Promise<unknown> {
     try {
-      const { referer } = req.headers;
-      const userAgent = req.headers['user-agent'] ?? '';
+      const referer = req.get('referer') ?? undefined;
+      const userAgent = req.get('user-agent') ?? '';
       const ip = req.ip ?? '';
+
+      function hasValidPath(input: unknown): input is { path: string } {
+        if (typeof input !== 'object' || input === null) return false;
+        if (!('path' in input)) return false;
+        const value = (input as { path?: unknown }).path;
+        return typeof value === 'string';
+      }
+
+      const path = hasValidPath(body) ? body.path : '/';
 
       await this.analyticsService.recordAnalytics({
         type: AnalyticsType.PAGEVIEW,
-        path: typeof body === 'object' && body && 'path' in body ? String(body.path) : '/',
-        referrer: typeof referer === 'string' ? referer : undefined,
+        path,
+        referrer: referer,
         userAgent,
         ip,
         data: null,
@@ -178,7 +204,7 @@ export class PublicV1Controller {
   @ApiParam({ name: 'idOrPathname', description: 'Article ID or pathname' })
   @ApiResponse({ status: 200, description: 'Return viewer statistics' })
   getViewerByArticleIdOrPathname(@Param('idOrPathname') _idOrPathname: string): unknown {
-    // TODO: Implement article-specific viewer statistics
+    // TODO: Implement articlespecific viewer statistics
     return { views: 0, uniqueVisitors: 0 };
   }
 
@@ -190,12 +216,26 @@ export class PublicV1Controller {
     try {
       const result = await this.articleService.search({
         keyword: tagName,
+        tags: [tagName],
         page: 1,
         pageSize: 100,
+        includeHidden: false,
       });
-      return result.items;
+      return {
+        statusCode: 200,
+        data: {
+          articles: result.items,
+          total: result.total,
+          page: result.page,
+          pageSize: result.pageSize,
+          totalPages: result.totalPages,
+        },
+      };
     } catch {
-      return [];
+      return {
+        statusCode: 200,
+        data: { articles: [], total: 0, page: 1, pageSize: 100, totalPages: 0 },
+      };
     }
   }
 
@@ -210,53 +250,49 @@ export class PublicV1Controller {
     @Query('page') page?: string,
     @Query('pageSize') pageSize?: string,
   ): Promise<unknown> {
-    try {
-      switch (option) {
-        case 'articles': {
-          const result = await this.articleService.findAll({
-            page: parseInt(page ?? '1', 10),
-            pageSize: parseInt(pageSize ?? '10', 10),
-            sortBy: 'createdAt',
-            sortOrder: 'desc',
-          });
-          return {
-            statusCode: 200,
-            data: {
-              articles: result.items,
-              total: result.total,
-              page: result.page,
-              pageSize: result.pageSize,
-              totalPages: result.totalPages,
-            },
-          };
-        }
-        case 'categories': {
-          const categories = await this.categoryService.findAll();
-          return {
-            statusCode: 200,
-            data: categories,
-          };
-        }
-        case 'tags': {
-          const tags = await this.tagService.findAll();
-          return {
-            statusCode: 200,
-            data: tags,
-          };
-        }
-        case 'siteInfo':
-          return await this.settingCoreService.getSiteInfo();
-        case 'layout':
-          return await this.settingCoreService.getLayoutSettings();
-        case 'theme':
-          return await this.settingCoreService.getThemeSettings();
-        case 'navigation':
-          return await this.settingCoreService.getNavigation();
-        default:
-          return null;
+    switch (option) {
+      case 'articles': {
+        const result = await this.articleService.findAll({
+          page: parseInt(page ?? '1', 10),
+          pageSize: parseInt(pageSize ?? '10', 10),
+          sortBy: 'createdAt',
+          sortOrder: 'desc',
+        });
+        return {
+          statusCode: 200,
+          data: {
+            articles: result.items,
+            total: result.total,
+            page: result.page,
+            pageSize: result.pageSize,
+            totalPages: result.totalPages,
+          },
+        };
       }
-    } catch {
-      return null;
+      case 'categories': {
+        const categories = await this.categoryService.findAll();
+        return {
+          statusCode: 200,
+          data: categories,
+        };
+      }
+      case 'tags': {
+        const tags = await this.tagService.findAll();
+        return {
+          statusCode: 200,
+          data: tags,
+        };
+      }
+      case 'siteInfo':
+        return await this.settingCoreService.getSiteInfo();
+      case 'layout':
+        return await this.settingCoreService.getLayoutSettings();
+      case 'theme':
+        return await this.settingCoreService.getThemeSettings();
+      case 'navigation':
+        return await this.settingCoreService.getNavigation();
+      default:
+        throw new BadRequestException('Invalid option');
     }
   }
 
@@ -264,20 +300,44 @@ export class PublicV1Controller {
   @ApiOperation({ summary: 'Get timeline information' })
   @ApiResponse({ status: 200, description: 'Return timeline information' })
   getTimeLineInfo(): unknown {
-    // TODO: Implement timeline functionality
-    return { timeline: [] };
+    return {
+      statusCode: 200,
+      data: {
+        timeline: [],
+      },
+    };
   }
 
   @Get('getArticlesByCategory/:category')
   @ApiOperation({ summary: 'Get articles by category' })
   @ApiParam({ name: 'category', description: 'Category name' })
   @ApiResponse({ status: 200, description: 'Return articles' })
-  async getArticlesByCategory(@Param('category') category: string): Promise<unknown> {
+  async getArticlesByCategory(
+    @Param('category') category: string,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
+  ): Promise<unknown> {
     try {
-      const result = await this.articleService.findByCategory(category);
-      return result;
+      const result = await this.articleService.findByCategory(category, {
+        page: parseInt(page ?? '1', 10),
+        pageSize: parseInt(pageSize ?? '10', 10),
+        includeHidden: false,
+      });
+      return {
+        statusCode: 200,
+        data: {
+          articles: result.items,
+          total: result.total,
+          page: result.page,
+          pageSize: result.pageSize,
+          totalPages: result.totalPages,
+        },
+      };
     } catch {
-      return { items: [], total: 0 };
+      return {
+        statusCode: 200,
+        data: { articles: [], total: 0, page: 1, pageSize: 10, totalPages: 0 },
+      };
     }
   }
 
@@ -286,22 +346,50 @@ export class PublicV1Controller {
   @ApiParam({ name: 'tag', description: 'Tag name' })
   @ApiResponse({ status: 200, description: 'Return articles' })
   async getArticlesByTag(@Param('tag') tag: string): Promise<unknown> {
+    const isNumericId = /^\d+$/.test(tag);
+
+    let tagName = tag;
+    if (isNumericId) {
+      try {
+        // First check if the tag ID exists and resolve to tag name
+        const tagEntity = await this.tagService.findOne(Number(tag));
+        tagName = tagEntity.name;
+      } catch {
+        // Tag not found, return 404
+        throw new NotFoundException(`Tag with ID ${tag} not found`);
+      }
+    }
+
     try {
       const result = await this.articleService.search({
-        keyword: tag,
+        keyword: tagName,
+        tags: [tagName],
         page: 1,
         pageSize: 100,
+        includeHidden: false,
       });
-      return result.items;
+      return {
+        statusCode: 200,
+        data: {
+          articles: result.items,
+          total: result.total,
+          page: result.page,
+          pageSize: result.pageSize,
+          totalPages: result.totalPages,
+        },
+      };
     } catch {
-      return [];
+      return {
+        statusCode: 200,
+        data: { articles: [], total: 0, page: 1, pageSize: 100, totalPages: 0 },
+      };
     }
   }
 
-  @Get('meta')
-  @ApiOperation({ summary: 'Get site metadata (v1 compatible)' })
+  @Get('getMeta')
+  @ApiOperation({ summary: 'Get site metadata (v1 compatible alias)' })
   @ApiResponse({ status: 200, description: 'Return site metadata' })
-  async getMeta(): Promise<unknown> {
+  async getMetaAlias(): Promise<unknown> {
     return this.getBuildMeta();
   }
 
@@ -360,7 +448,7 @@ export class PublicV1Controller {
       };
 
       const data = {
-        version: 'v2-compat',
+        version: 'v2compat',
         tags,
         meta: defaultMeta,
         menus: navigation.length > 0 ? navigation : DEFAULT_MENU,
@@ -376,7 +464,7 @@ export class PublicV1Controller {
       return {
         statusCode: 500,
         data: {
-          version: 'v2-compat',
+          version: 'v2compat',
           tags: [],
           meta: {
             links: [],

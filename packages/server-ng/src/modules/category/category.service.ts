@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, Inject } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import dayjs from 'dayjs';
-import { eq, sql } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import * as jwt from 'jsonwebtoken';
 
 import { DATABASE_CONNECTION } from '../../database';
@@ -48,7 +48,7 @@ export class CategoryService {
         articleCount: sql<number>`count(${articles.id})`,
       })
       .from(categories)
-      .leftJoin(articles, eq(categories.name, articles.category))
+      .leftJoin(articles, and(eq(categories.name, articles.category), eq(articles.hidden, false)))
       .groupBy(categories.id);
 
     const total = categoryResults.length;
