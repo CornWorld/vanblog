@@ -1,6 +1,7 @@
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Injectable, Inject } from '@nestjs/common';
-import { Cache } from 'cache-manager';
+
+import type { Cache } from 'cache-manager';
 
 /**
  * Linus 式缓存服务 - 简单、直接、无特殊情况
