@@ -31,6 +31,7 @@ export async function createUser(
     password: hashedPassword,
     nickname: userData.nickname,
     type: userData.type,
+    permissions: JSON.stringify(['all']),
   });
 }
 

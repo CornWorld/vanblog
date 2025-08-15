@@ -1,5 +1,5 @@
 import { applyDecorators, SetMetadata, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiResponse, ApiExtension } from '@nestjs/swagger';
 
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { PermissionsGuard } from './guards/permissions.guard';
@@ -42,5 +42,7 @@ export const Permissions = (...permissions: string[]): MethodDecorator => {
     ApiBearerAuth(),
     ApiResponse({ status: 401, description: 'Unauthorized' }),
     ApiResponse({ status: 403, description: 'Forbidden - Insufficient permissions' }),
+    // 将权限要求写入 OpenAPI vendor 扩展，便于文档工具消费
+    ApiExtension('x-permissions', normalizedPermissions),
   );
 };
