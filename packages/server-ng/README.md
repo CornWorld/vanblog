@@ -26,6 +26,7 @@ server-ng/
 │   │   ├── tag/          # 标签管理模块
 │   │   ├── media/        # 媒体资源模块
 │   │   ├── analytics/    # 数据分析模块
+│   │   ├── public/       # 公共接口模块
 │   │   ├── demo/         # 演示模式模块
 
 │   ├── core/             # 核心模块
@@ -353,6 +354,11 @@ export class CategoryController {
 ### 阶段 12：完成 REVIEW.md
 
 - [x] REVIEW.md 为类似 README.md 的文件，已完成所有 TODO
+
+### 阶段 13：公共模块（Public）
+
+- [x] 自定义页面列表 API：GET /api/v2/public/customPage/all
+- [x] 自定义页面详情 API：GET /api/v2/public/customPage?path=...
 
 ### 注意事项
 
