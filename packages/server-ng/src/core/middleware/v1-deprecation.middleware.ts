@@ -92,8 +92,8 @@ export class V1DeprecationMiddleware implements NestMiddleware {
       getViewer: 'Use: GET /api/v2/admin/analytics/overview (requires authentication)',
       getViewerByArticleIdOrPathname:
         'Use: GET /api/v2/admin/analytics/article/{id} (requires authentication)',
-      getAllCustomPages: 'Custom pages are not yet implemented in V2',
-      getCustomPageByPath: 'Custom pages are not yet implemented in V2',
+      getAllCustomPages: 'Use: GET /api/v2/public/customPage/all',
+      getCustomPageByPath: 'Use: GET /api/v2/public/customPage?path={pathname}',
       getTimeLineInfo: 'Timeline functionality is not yet implemented in V2',
       getMeta: 'Site metadata endpoints need to be implemented in V2',
       getBuildMeta: 'Build metadata endpoints need to be implemented in V2',
