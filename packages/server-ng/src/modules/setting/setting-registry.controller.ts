@@ -25,14 +25,14 @@ export class SettingRegistryController {
   constructor(private readonly settingRegistryService: SettingRegistryService) {}
 
   @Get('keys')
-  @Permissions('setting:read')
+  @Permissions('setting', 'read')
   @ApiOperation({ summary: 'Get all registered configuration keys' })
   getRegisteredKeys(): string[] {
     return this.settingRegistryService.getRegisteredKeys();
   }
 
   @Get(':key')
-  @Permissions('setting:read')
+  @Permissions('setting', 'read')
   @ApiOperation({ summary: 'Get configuration value by key' })
   @ApiParam({ name: 'key', description: 'Configuration key' })
   async getConfig(@Param('key') key: string): Promise<{ key: string; value: unknown }> {
@@ -50,7 +50,7 @@ export class SettingRegistryController {
   }
 
   @Put(':key')
-  @Permissions('setting:update')
+  @Permissions('setting', 'update')
   @ApiOperation({ summary: 'Update configuration value' })
   @ApiParam({ name: 'key', description: 'Configuration key' })
   async updateConfig(
@@ -75,7 +75,7 @@ export class SettingRegistryController {
   }
 
   @Delete(':key')
-  @Permissions('setting:update')
+  @Permissions('setting', 'update')
   @ApiOperation({ summary: 'Delete configuration value' })
   @ApiParam({ name: 'key', description: 'Configuration key' })
   async deleteConfig(@Param('key') key: string): Promise<{ message: string }> {

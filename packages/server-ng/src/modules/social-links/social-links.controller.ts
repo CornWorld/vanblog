@@ -18,14 +18,14 @@ export class SocialLinksController {
   constructor(private readonly socialLinksService: SocialLinksService) {}
 
   @Get()
-  @Permissions('setting:read')
+  @Permissions('setting', 'read')
   @ApiOperation({ summary: 'Get all social links' })
   async getSocialLinks(): Promise<SocialLink[]> {
     return this.socialLinksService.getSocialLinks();
   }
 
   @Post()
-  @Permissions('setting:update')
+  @Permissions('setting', 'update')
   @ApiOperation({ summary: 'Add or update a social link' })
   async addOrUpdateSocialLink(
     @Body(new ZodValidationPipe(SocialLinkSchema)) dto: SocialLinkDto,
@@ -34,7 +34,7 @@ export class SocialLinksController {
   }
 
   @Delete(':type')
-  @Permissions('setting:update')
+  @Permissions('setting', 'update')
   @ApiOperation({ summary: 'Delete a social link' })
   @ApiParam({ name: 'type', description: 'Social link type' })
   async deleteSocialLink(@Param('type') type: string): Promise<SocialLink[]> {

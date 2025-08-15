@@ -18,14 +18,14 @@ export class BeianController {
   constructor(private readonly beianService: BeianService) {}
 
   @Get()
-  @Permissions('setting:read')
+  @Permissions('setting', 'read')
   @ApiOperation({ summary: 'Get beian information' })
   async getBeianInfo(): Promise<BeianInfo> {
     return this.beianService.getBeianInfo();
   }
 
   @Put()
-  @Permissions('setting:update')
+  @Permissions('setting', 'update')
   @ApiOperation({ summary: 'Update beian information' })
   async updateBeianInfo(
     @Body(new ZodValidationPipe(BeianInfoSchema)) dto: BeianInfoDto,

@@ -18,14 +18,14 @@ export class RewardController {
   constructor(private readonly rewardService: RewardService) {}
 
   @Get()
-  @Permissions('setting:read')
+  @Permissions('setting', 'read')
   @ApiOperation({ summary: 'Get all reward information' })
   async getRewardInfo(): Promise<RewardInfo[]> {
     return this.rewardService.getRewardInfo();
   }
 
   @Post()
-  @Permissions('setting:update')
+  @Permissions('setting', 'update')
   @ApiOperation({ summary: 'Add or update reward information' })
   async addOrUpdateRewardInfo(
     @Body(new ZodValidationPipe(RewardInfoSchema)) dto: RewardInfoDto,
@@ -34,7 +34,7 @@ export class RewardController {
   }
 
   @Delete(':name')
-  @Permissions('setting:update')
+  @Permissions('setting', 'update')
   @ApiOperation({ summary: 'Delete reward information' })
   @ApiParam({ name: 'name', description: 'Reward method name' })
   async deleteRewardInfo(@Param('name') name: string): Promise<RewardInfo[]> {

@@ -1,6 +1,8 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, beforeEach, afterEach, expect, vi } from 'vitest';
 
+import { PermissionService } from '../permission/permission.service';
+
 import { UserType, type CreateUserDto } from './dto/create-user.dto';
 import { User } from './entities/user.entity';
 import { UserController } from './user.controller';
@@ -34,6 +36,12 @@ describe('UserController', () => {
     getCollaborators: vi.fn(),
   };
 
+  const mockPermissionService = {
+    hasPermission: vi.fn(),
+    getUserPermissions: vi.fn(),
+    checkPermissions: vi.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [UserController],
@@ -41,6 +49,10 @@ describe('UserController', () => {
         {
           provide: UserService,
           useValue: mockUserService,
+        },
+        {
+          provide: PermissionService,
+          useValue: mockPermissionService,
         },
       ],
     }).compile();

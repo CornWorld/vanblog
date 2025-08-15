@@ -3,7 +3,7 @@ import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { ZodValidationPipe } from 'nestjs-zod';
 
 import { OverallStatisticsDto } from '../../shared/dto/statistics.dto';
-import { RequireAuth } from '../auth/auth.decorator';
+import { Permissions } from '../auth/permissions.decorator';
 
 import {
   CreateTagDto,
@@ -36,7 +36,7 @@ export class TagController {
   }
 
   @Post()
-  @RequireAuth('tag:create')
+  @Permissions('tag', 'create')
   @ApiOperation({ summary: 'Create tag' })
   @ApiResponse({ status: 201, description: 'Create new tag' })
   async create(
@@ -46,7 +46,7 @@ export class TagController {
   }
 
   @Put(':id')
-  @RequireAuth('tag:update')
+  @Permissions('tag', 'update')
   @ApiOperation({ summary: 'Update tag' })
   @ApiResponse({ status: 200, description: 'Update existing tag' })
   @ApiResponse({ status: 404, description: 'Tag not found' })
@@ -58,7 +58,7 @@ export class TagController {
   }
 
   @Delete(':id')
-  @RequireAuth('tag:delete')
+  @Permissions('tag', 'delete')
   @ApiOperation({ summary: 'Delete tag' })
   @ApiResponse({ status: 200, description: 'Tag deleted successfully' })
   @ApiResponse({ status: 404, description: 'Tag not found' })

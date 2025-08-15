@@ -52,7 +52,7 @@ export class PermissionService {
    */
   private initializePredefinedGroups(): void {
     // 这些是基础的角色，各模块可以通过 register 方法添加更多
-    this.predefinedRoles.set('admin', []); // admin 角色将包含所有权限
+    this.predefinedRoles.set('admin', []);
     this.predefinedRoles.set('editor', []);
     this.predefinedRoles.set('author', []);
     this.predefinedRoles.set('viewer', []);
@@ -73,10 +73,6 @@ export class PermissionService {
 
     // 存储模块上下文，用于权限名称映射
     this.moduleContext.set(module, permissions);
-
-    // admin 角色自动获得所有权限
-    const adminPermissions = this.predefinedRoles.get('admin') ?? [];
-    this.predefinedRoles.set('admin', [...adminPermissions, ...fullPermissions]);
 
     // 注册角色权限
     Object.entries(roles).forEach(([roleName, rolePermissions]) => {

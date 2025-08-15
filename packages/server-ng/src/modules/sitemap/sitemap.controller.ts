@@ -14,7 +14,7 @@ export class SitemapController {
 
   @Post('generate')
   @UseGuards(JwtAuthGuard, PermissionsGuard)
-  @Permissions('sitemap:generate')
+  @Permissions('sitemap', 'generate')
   @ApiBearerAuth()
   @ApiOperation({ summary: '手动生成站点地图' })
   @ApiResponse({ status: 200, description: '站点地图生成成功' })
@@ -25,7 +25,7 @@ export class SitemapController {
 
   @Get('status')
   @UseGuards(JwtAuthGuard, PermissionsGuard)
-  @Permissions('sitemap:read')
+  @Permissions('sitemap', 'read')
   @ApiBearerAuth()
   @ApiOperation({ summary: '获取站点地图生成状态' })
   @ApiResponse({ status: 200, description: '获取状态成功' })
@@ -45,7 +45,7 @@ export class SitemapController {
 
   @Get('urls')
   @UseGuards(JwtAuthGuard, PermissionsGuard)
-  @Permissions('sitemap:read')
+  @Permissions('sitemap', 'read')
   @ApiBearerAuth()
   @ApiOperation({ summary: '获取站点地图包含的所有 URL' })
   @ApiResponse({ status: 200, description: '获取 URL 列表成功' })

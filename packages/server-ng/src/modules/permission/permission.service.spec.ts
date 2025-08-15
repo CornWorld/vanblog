@@ -137,30 +137,30 @@ describe('PermissionService', () => {
       expect(resolved).toEqual(['article:read', 'user:write']);
     });
 
-    it('should resolve group permissions', async () => {
-      const userPermissions = ['group:admin'];
+    it('should resolve role permissions', async () => {
+      const userPermissions = ['role:admin'];
       const resolved = await service.resolveUserPermissions(userPermissions);
 
       expect(resolved).toEqual(['article:read', 'article:write', 'user:read']);
     });
 
     it('should handle disabled permissions', async () => {
-      const userPermissions = ['group:admin', 'no:article:write'];
+      const userPermissions = ['role:admin', 'no:article:write'];
       const resolved = await service.resolveUserPermissions(userPermissions);
 
       expect(resolved).toEqual(['article:read', 'user:read']);
       expect(resolved).not.toContain('article:write');
     });
 
-    it('should handle disabled group permissions', async () => {
-      const userPermissions = ['group:admin', 'no:group:admin'];
+    it('should handle disabled role permissions', async () => {
+      const userPermissions = ['role:admin', 'no:role:admin'];
       const resolved = await service.resolveUserPermissions(userPermissions);
 
       expect(resolved).toEqual([]);
     });
 
     it('should handle mixed permissions', async () => {
-      const userPermissions = ['article:read', 'group:admin', 'no:user:read', 'draft:write'];
+      const userPermissions = ['article:read', 'role:admin', 'no:user:read', 'draft:write'];
       const resolved = await service.resolveUserPermissions(userPermissions);
 
       expect(resolved).toContain('article:read');

@@ -17,7 +17,7 @@ import {
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { ZodValidationPipe } from 'nestjs-zod';
 
-import { RequireAuth } from '../auth/auth.decorator';
+import { Permissions } from '../auth/permissions.decorator';
 
 import { BackupService } from './backup.service';
 import {
@@ -41,7 +41,7 @@ export class BackupController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  @RequireAuth('backup:create')
+  @Permissions('backup', 'create')
   @ApiOperation({ summary: 'Create a new backup' })
   @ApiResponse({ status: 201, description: 'Backup created successfully', type: BackupInfoDto })
   @ApiResponse({ status: 400, description: 'Invalid request parameters' })
@@ -55,7 +55,7 @@ export class BackupController {
   }
 
   @Get()
-  @RequireAuth('backup:read')
+  @Permissions('backup', 'read')
   @ApiOperation({ summary: 'Get list of backups' })
   @ApiResponse({ status: 200, description: 'Backups retrieved successfully', type: BackupListDto })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -65,7 +65,7 @@ export class BackupController {
   }
 
   @Get(':filename/download')
-  @RequireAuth('backup:download')
+  @Permissions('backup', 'download')
   @ApiOperation({ summary: 'Download a backup file' })
   @ApiResponse({ status: 200, description: 'Backup file downloaded successfully' })
   @ApiResponse({ status: 404, description: 'Backup file not found' })
@@ -102,7 +102,7 @@ export class BackupController {
 
   @Delete(':filename')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @RequireAuth('backup:delete')
+  @Permissions('backup', 'delete')
   @ApiOperation({ summary: 'Delete a backup file' })
   @ApiResponse({ status: 204, description: 'Backup deleted successfully' })
   @ApiResponse({ status: 404, description: 'Backup file not found' })
@@ -119,7 +119,7 @@ export class BackupController {
 
   @Post(':filename/restore')
   @HttpCode(HttpStatus.ACCEPTED)
-  @RequireAuth('backup:restore')
+  @Permissions('backup', 'restore')
   @ApiOperation({ summary: 'Restore from a backup file' })
   @ApiResponse({
     status: 202,
@@ -143,7 +143,7 @@ export class BackupController {
   }
 
   @Get('restore/:taskId/progress')
-  @RequireAuth('backup:restore')
+  @Permissions('backup', 'restore')
   @ApiOperation({ summary: 'Get restore task progress' })
   @ApiResponse({
     status: 200,

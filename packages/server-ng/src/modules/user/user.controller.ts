@@ -20,7 +20,7 @@ export class UserController {
   constructor(private readonly userService: UserService) {}
 
   @Post()
-  @Permissions('user:create')
+  @Permissions('user', 'create')
   @ApiOperation({ summary: '创建用户' })
   @ApiResponse({
     status: 201,
@@ -35,7 +35,7 @@ export class UserController {
   }
 
   @Get()
-  @Permissions('user:read')
+  @Permissions('user', 'read')
   @ApiOperation({ summary: '获取所有用户' })
   @ApiResponse({
     status: 200,
@@ -47,7 +47,7 @@ export class UserController {
   }
 
   @Get('collaborators')
-  @Permissions('user:read')
+  @Permissions('user', 'read')
   @ApiOperation({ summary: '获取所有协作者' })
   @ApiResponse({
     status: 200,
@@ -59,7 +59,7 @@ export class UserController {
   }
 
   @Get(':id')
-  @Permissions('user:read')
+  @Permissions('user', 'read')
   @ApiOperation({ summary: '获取单个用户' })
   @ApiResponse({
     status: 200,
@@ -72,7 +72,7 @@ export class UserController {
   }
 
   @Patch(':id')
-  @Permissions('user:update')
+  @Permissions('user', 'update')
   @ApiOperation({ summary: '更新用户信息' })
   @ApiResponse({
     status: 200,
@@ -88,7 +88,7 @@ export class UserController {
   }
 
   @Delete(':id')
-  @Permissions('user:delete')
+  @Permissions('user', 'delete')
   @ApiOperation({ summary: '删除用户' })
   @ApiResponse({ status: 200, description: '用户删除成功' })
   @ApiResponse({ status: 404, description: '用户不存在' })

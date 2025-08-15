@@ -14,7 +14,7 @@ export class RssController {
 
   @Post('generate')
   @UseGuards(JwtAuthGuard, PermissionsGuard)
-  @Permissions('rss:generate')
+  @Permissions('rss', 'generate')
   @ApiBearerAuth()
   @ApiOperation({ summary: '手动生成 RSS 订阅源' })
   @ApiResponse({ status: 200, description: 'RSS 生成成功' })
@@ -25,7 +25,7 @@ export class RssController {
 
   @Get('status')
   @UseGuards(JwtAuthGuard, PermissionsGuard)
-  @Permissions('rss:read')
+  @Permissions('rss', 'read')
   @ApiBearerAuth()
   @ApiOperation({ summary: '获取 RSS 生成状态' })
   @ApiResponse({ status: 200, description: '获取状态成功' })

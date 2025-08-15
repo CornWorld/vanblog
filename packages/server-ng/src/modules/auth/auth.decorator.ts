@@ -2,24 +2,28 @@ import { applyDecorators, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
 
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
-import { PermissionsGuard } from './guards/permissions.guard';
 import { Permissions } from './permissions.decorator';
 
-export function RequireAuth(...permissions: string[]): MethodDecorator & ClassDecorator {
-  const decorators = [
-    UseGuards(JwtAuthGuard, PermissionsGuard),
+/**
+ * 仅认证装饰器，只验证用户是否登录
+ */
+export function RequireAuth(): MethodDecorator & ClassDecorator {
+  return applyDecorators(
+    UseGuards(JwtAuthGuard),
     ApiBearerAuth(),
     ApiResponse({ status: 401, description: 'Unauthorized' }),
-  ];
+  );
+}
 
-  if (permissions.length > 0) {
-    decorators.push(Permissions(...permissions));
-    decorators.push(
-      ApiResponse({ status: 403, description: 'Forbidden - Insufficient permissions' }),
-    );
-  }
-
-  return applyDecorators(...decorators);
+/**
+ * 权限装饰器的别名，推荐直接使用 @Permissions
+ * @deprecated 请直接使用 @Permissions 装饰器
+ */
+export function RequirePermissions(
+  module: string,
+  ...permissions: string[]
+): MethodDecorator & ClassDecorator {
+  return Permissions(module, ...permissions);
 }
 
 export function RequireAdmin(): MethodDecorator & ClassDecorator {

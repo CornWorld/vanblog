@@ -45,14 +45,14 @@ export class SettingCoreController {
   constructor(private readonly settingCoreService: SettingCoreService) {}
 
   @Get('site-info')
-  @Permissions('setting:read')
+  @Permissions('setting', 'read')
   @ApiOperation({ summary: 'Get site information' })
   async getSiteInfo(): Promise<SiteInfo> {
     return this.settingCoreService.getSiteInfo();
   }
 
   @Patch('site-info')
-  @Permissions('setting:update')
+  @Permissions('setting', 'update')
   @ApiOperation({ summary: 'Update site information' })
   async updateSiteInfo(
     @Body(new ZodValidationPipe(UpdateSiteInfoSchema)) updateSiteInfoDto: UpdateSiteInfoDto,
@@ -70,14 +70,14 @@ export class SettingCoreController {
   }
 
   @Get('layout')
-  @Permissions('setting:read')
+  @Permissions('setting', 'read')
   @ApiOperation({ summary: 'Get layout settings' })
   async getLayoutSettings(): Promise<SiteLayout> {
     return this.settingCoreService.getLayoutSettings();
   }
 
   @Patch('layout')
-  @Permissions('setting:update')
+  @Permissions('setting', 'update')
   @ApiOperation({ summary: 'Update layout settings' })
   async updateLayoutSettings(
     @Body(new ZodValidationPipe(UpdateLayoutSchema)) updateLayoutDto: UpdateLayoutDto,
@@ -86,14 +86,14 @@ export class SettingCoreController {
   }
 
   @Get('theme')
-  @Permissions('setting:read')
+  @Permissions('setting', 'read')
   @ApiOperation({ summary: 'Get theme settings' })
   async getThemeSettings(): Promise<SiteTheme> {
     return this.settingCoreService.getThemeSettings();
   }
 
   @Patch('theme')
-  @Permissions('setting:update')
+  @Permissions('setting', 'update')
   @ApiOperation({ summary: 'Update theme settings' })
   async updateThemeSettings(
     @Body(new ZodValidationPipe(UpdateThemeSchema)) updateThemeDto: UpdateThemeDto,
@@ -107,14 +107,14 @@ export class SettingCoreController {
   }
 
   @Get('friend-links')
-  @Permissions('setting:read')
+  @Permissions('setting', 'read')
   @ApiOperation({ summary: 'Get friend links' })
   async getFriendLinks(): Promise<FriendLink[]> {
     return this.settingCoreService.getFriendLinks();
   }
 
   @Post('friend-links')
-  @Permissions('setting:update')
+  @Permissions('setting', 'update')
   @ApiOperation({ summary: 'Create a new friend link' })
   async createFriendLink(
     @Body(new ZodValidationPipe(CreateFriendLinkSchema)) createFriendLinkDto: CreateFriendLinkDto,
@@ -123,7 +123,7 @@ export class SettingCoreController {
   }
 
   @Patch('friend-links/:index')
-  @Permissions('setting:update')
+  @Permissions('setting', 'update')
   @ApiOperation({ summary: 'Update a friend link by index' })
   async updateFriendLink(
     @Param('index', ParseIntPipe) index: number,
@@ -133,21 +133,21 @@ export class SettingCoreController {
   }
 
   @Delete('friend-links/:index')
-  @Permissions('setting:update')
+  @Permissions('setting', 'update')
   @ApiOperation({ summary: 'Delete a friend link by index' })
   async deleteFriendLink(@Param('index', ParseIntPipe) index: number): Promise<FriendLink[]> {
     return this.settingCoreService.deleteFriendLink(index);
   }
 
   @Get('navigation')
-  @Permissions('setting:read')
+  @Permissions('setting', 'read')
   @ApiOperation({ summary: 'Get navigation items' })
   async getNavigation(): Promise<Navigation[]> {
     return this.settingCoreService.getNavigation();
   }
 
   @Patch('navigation')
-  @Permissions('setting:update')
+  @Permissions('setting', 'update')
   @ApiOperation({ summary: 'Update navigation items' })
   async updateNavigation(
     @Body(new ZodValidationPipe(UpdateNavigationSchema)) updateNavigationDto: UpdateNavigationDto,
@@ -161,14 +161,14 @@ export class SettingCoreController {
   }
 
   @Get('custom-code')
-  @Permissions('setting:read')
+  @Permissions('setting', 'read')
   @ApiOperation({ summary: 'Get custom code injection settings' })
   async getCustomCode(): Promise<CustomCode> {
     return this.settingCoreService.getCustomCode();
   }
 
   @Patch('custom-code')
-  @Permissions('setting:update')
+  @Permissions('setting', 'update')
   @ApiOperation({ summary: 'Update custom code injection settings' })
   async updateCustomCode(
     @Body(new ZodValidationPipe(UpdateCustomCodeSchema)) updateCustomCodeDto: UpdateCustomCodeDto,
