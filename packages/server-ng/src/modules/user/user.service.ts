@@ -11,7 +11,6 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { User } from './entities/user.entity';
 
 import type { Database } from '../../database/connection';
-import type { Permission } from '../../shared/types/permission.type';
 
 @Injectable()
 export class UserService {
@@ -239,7 +238,7 @@ export class UserService {
       avatar: dbUser.avatar ?? undefined,
       type: dbUser.type as UserType,
       permissions: safeParseJson(dbUser.permissions, dataSchemas.permissionsArray) as
-        | Permission[]
+        | string[]
         | undefined,
       createdAt: dbUser.createdAt,
       updatedAt: dbUser.updatedAt,

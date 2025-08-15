@@ -1,7 +1,6 @@
 import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 
-import { Permission } from '../../../shared/types/permission';
 import { PermissionService } from '../../permission/permission.service';
 import { User } from '../../user/entities/user.entity';
 import { PERMISSION_KEY, MODULE_CONTEXT_KEY } from '../permissions.decorator';
@@ -83,10 +82,7 @@ export class PermissionsGuard implements CanActivate {
       }
     }
 
-    return await this.permissionService.hasPermissions(
-      userPermissions,
-      resolvedPermissions as Permission[],
-    );
+    return await this.permissionService.hasPermissions(userPermissions, resolvedPermissions);
   }
 
   /**
