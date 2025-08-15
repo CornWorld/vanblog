@@ -8,26 +8,26 @@ VanBlog Server-NG 是 VanBlog 的下一代 API 服务器，采用模块化架构
 
 ### 主要改进
 
-- **模块化架构**: 每个功能域独立成模块，便于维护和扩展
-- **现代技术栈**: 使用 Drizzle ORM + SQLite 替代 Mongoose + MongoDB
-- **严格类型检查**: 使用 Zod 4 + TypeScript 严格模式
-- **插件系统**: 支持动态插件加载和 Hook 机制
-- **性能优化**: 更好的查询优化和缓存策略
-- **API 一致性**: 统一的 RESTful API 设计
+- 模块化架构: 每个功能域独立成模块，便于维护和扩展
+- 现代技术栈: 使用 Drizzle ORM + SQLite 替代 Mongoose + MongoDB
+- 严格类型检查: 使用 Zod 4 + TypeScript 严格模式
+- 插件系统: 支持动态插件加载和 Hook 机制
+- 性能优化: 更好的查询优化和缓存策略
+- API 一致性: 统一的 RESTful API 设计
 
 ## 版本兼容性
 
 ### 支持的版本
 
-- **源版本**: VanBlog v0.54.x (packages/server)
-- **目标版本**: VanBlog v2.x (packages/server-ng)
+- 源版本: VanBlog v0.54.x (packages/server)
+- 目标版本: VanBlog v2.x (packages/server-ng)
 
 ### 兼容性说明
 
-- ✅ **v1 API 兼容**: 提供完整的 v1 API 兼容层
-- ✅ **数据迁移**: 支持从 MongoDB 迁移到 SQLite
-- ✅ **配置兼容**: 支持现有配置文件格式
-- ⚠️ **插件系统**: 需要重写现有插件以适配新的插件架构
+- ❗ v1 API 已移除：所有以 `/api/v1/*` 开头的请求将返回 410 Gone，并附带迁移建议，由全局中间件统一拦截。
+- ✅ 数据迁移: 支持从 MongoDB 迁移到 SQLite
+- ✅ 配置兼容: 支持现有配置文件格式
+- ⚠️ 插件系统: 需要重写现有插件以适配新的插件架构
 
 ## 升级前准备
 
@@ -114,28 +114,35 @@ bash dev-server.sh logs
 pnpm run test
 pnpm run test:e2e
 
-# 检查 API 兼容性
-curl http://localhost:3000/api/v1/public/meta
-curl http://localhost:3000/api/v2/public/site-info
+# 验证健康检查与 v2 基础接口
+curl http://localhost:3000/health
+curl http://localhost:3000/api/v2/articles
 ```
 
 ## API 变更说明
 
-### v1 API 兼容层
+### v1 访问控制
 
-Server-NG 提供完整的 v1 API 兼容层，现有的前端应用无需修改即可正常工作。
+- v1 API 已不再提供兼容层。为防止误用，访问 `/api/v1/*` 将返回 410 Gone。
+- 中间件会返回结构化的错误体，包含迁移建议。
 
-#### 兼容的 v1 端点
+### v2 API 设计
 
-- `GET /api/public/meta` - 站点元数据
-- `GET /api/public/article` - 文章列表
-- `GET /api/public/article/:id` - 文章详情
-- `GET /api/public/category` - 分类列表
-- `GET /api/public/tag` - 标签列表
-- `GET /api/public/timeline` - 时间线
-- `GET /api/public/search` - 搜索文章
+- 统一响应格式、明确的版本化（URI 形式，即 `/api/v2/*`）
+- 参见 Swagger 文档：`/api/docs`
 
-### v2 API 新特性
+```typescript
+// v2 API 统一响应格式（示意）
+interface ApiResponse<T> {
+  success: boolean;
+  data?: T;
+  error?: {
+    code: string;
+    message: string;
+    details?: any;
+  };
+}
+```
 
 #### 统一响应格式
 

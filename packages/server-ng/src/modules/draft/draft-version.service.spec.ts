@@ -137,7 +137,7 @@ describe('DraftVersionService', () => {
           version: 1,
           title: 'Version 1',
           content: 'Content 1',
-          tags: JSON.stringify(['v1']),
+          tags: JSON.stringify(['legacy']),
           author: 'admin',
           pathname: null,
           category: null,

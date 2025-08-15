@@ -206,7 +206,7 @@ const uploadTest = serviceTest.extend({
 ```typescript
 const test = baseTest.extend({
   apiUrl: [
-    '/api/v1', // 默认值
+    '/api', // 默认值（由 ConfigService 的 apiPrefix 决定，默认 'api'）
     { injected: true }, // 允许在配置中覆盖
   ],
 });
