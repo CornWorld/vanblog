@@ -161,7 +161,7 @@ export class SettingCoreController {
       children: item.children?.map(mapItem),
     });
 
-    const navigationItems = (updateNavigationDto.items as unknown as NavigationItem[]).map(mapItem);
+    const navigationItems = updateNavigationDto.items.map(mapItem);
     return this.settingCoreService.updateNavigation(navigationItems);
   }
 

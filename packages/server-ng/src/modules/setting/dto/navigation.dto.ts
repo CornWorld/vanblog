@@ -36,4 +36,6 @@ export const NavigationResponseSchema = z.object({
 });
 
 export class NavigationItemDto extends createZodDto(NavigationItemSchema) {}
-export class UpdateNavigationDto extends createZodDto(UpdateNavigationSchema) {}
+export class UpdateNavigationDto extends createZodDto(UpdateNavigationSchema) {
+  items!: NavigationItem[];
+}
