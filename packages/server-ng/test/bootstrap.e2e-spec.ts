@@ -10,11 +10,10 @@ import { cleanupDatabase, createUser } from './test-utils';
 
 import type { Server } from 'http';
 
-// e2e test for GET /api/v2/public/meta
+// e2e test for GET /api/v2/public/bootstrap
 // Verifies that endpoint responds 200 and payload has minimal required shape
-// Without enforcing exact content to avoid coupling with internals
 
-describe('MetaController (e2e)', () => {
+describe('BootstrapController (e2e)', () => {
   let app: INestApplication;
 
   beforeAll(async () => {
@@ -45,9 +44,9 @@ describe('MetaController (e2e)', () => {
     await app.close();
   });
 
-  it('GET /api/v2/public/meta should return 200 and expected structure', async () => {
+  it('GET /api/v2/public/bootstrap should return 200 and expected structure', async () => {
     const res = await request(app.getHttpServer() as Server)
-      .get('/api/v2/public/meta')
+      .get('/api/v2/public/bootstrap')
       .expect(200);
 
     // basic response wrapper
@@ -67,19 +66,26 @@ describe('MetaController (e2e)', () => {
     expect(data).toHaveProperty('totalArticles');
     expect(typeof (data as any).totalArticles).toBe('number');
 
-    expect(data).toHaveProperty('meta');
-    const { meta } = data as any;
-    expect(meta).toHaveProperty('links');
-    expect(meta).toHaveProperty('socials');
-    expect(meta).toHaveProperty('rewards');
-    expect(meta).toHaveProperty('categories');
-    expect(meta).toHaveProperty('siteInfo');
+    expect(data).toHaveProperty('siteInfo');
+    expect(data).toHaveProperty('navigation');
+    expect(Array.isArray((data as any).navigation)).toBe(true);
 
-    expect(data).toHaveProperty('menus');
-    expect(Array.isArray((data as any).menus)).toBe(true);
+    expect(data).toHaveProperty('friendLinks');
+    expect(Array.isArray((data as any).friendLinks)).toBe(true);
 
-    // siteInfo contains legacy fields
-    expect(meta.siteInfo).toHaveProperty('headerLeftContent');
-    expect(meta.siteInfo).toHaveProperty('defaultTheme');
+    expect(data).toHaveProperty('socialLinks');
+    expect(Array.isArray((data as any).socialLinks)).toBe(true);
+
+    expect(data).toHaveProperty('rewards');
+    expect(Array.isArray((data as any).rewards)).toBe(true);
+
+    expect(data).toHaveProperty('categories');
+    expect(Array.isArray((data as any).categories)).toBe(true);
+
+    // walineConfig is optional
+    if ('walineConfig' in data) {
+      const wc = data['walineConfig'];
+      expect(typeof wc).toBe('object');
+    }
   });
 });

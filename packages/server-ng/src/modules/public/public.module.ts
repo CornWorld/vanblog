@@ -10,10 +10,10 @@ import { SettingModule } from '../setting/setting.module';
 import { SocialLinksModule } from '../social-links/social-links.module';
 import { TagModule } from '../tag/tag.module';
 
+import { BootstrapController } from './bootstrap.controller';
+import { BootstrapService } from './bootstrap.service';
 import { CustomPageController } from './custom-page.controller';
 import { CustomPageService } from './custom-page.service';
-import { MetaController } from './meta.controller';
-import { MetaService } from './meta.service';
 
 @Module({
   imports: [
@@ -27,7 +27,7 @@ import { MetaService } from './meta.service';
     RewardModule,
     SocialLinksModule,
   ],
-  controllers: [CustomPageController, MetaController],
-  providers: [CustomPageService, MetaService],
+  controllers: [CustomPageController, BootstrapController],
+  providers: [CustomPageService, BootstrapService],
 })
 export class PublicModule {}
