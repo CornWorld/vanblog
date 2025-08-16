@@ -1,6 +1,11 @@
 import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
 
+// Reuse base schemas from existing modules to avoid duplication
+import { RewardInfoSchema } from '../reward/reward.schema';
+import { CreateFriendLinkSchema } from '../setting/dto/friend-link.dto';
+import { SocialLinkSchema } from '../social-links/social-links.schema';
+
 // Define MenuItem interface for recursive type
 export interface MenuItem {
   id: number;
@@ -10,12 +15,15 @@ export interface MenuItem {
   children?: MenuItem[];
 }
 
-const SocialItemSchema = z.object({
-  updatedAt: z.string(),
-  type: z.enum(['bilibili', 'email', 'github', 'wechat', 'gitee', 'wechat-dark']),
-  value: z.string(),
-  dark: z.string().optional(),
-});
+// Public social item builds on the base SocialLink but adds metadata fields
+const SocialItemSchema = z.intersection(
+  SocialLinkSchema,
+  z.object({
+    updatedAt: z.string(),
+    // Some clients may expect a dark variant URL for icons
+    dark: z.string().optional(),
+  }),
+);
 
 const MenuItemSchema: z.ZodType<MenuItem> = z.object({
   id: z.number(),
@@ -25,17 +33,15 @@ const MenuItemSchema: z.ZodType<MenuItem> = z.object({
   children: z.array(z.lazy(() => MenuItemSchema)).optional(),
 });
 
-const DonateItemSchema = z.object({
-  name: z.string(),
-  value: z.string(),
+// Reward items reuse RewardInfoSchema and append updatedAt
+const DonateItemSchema = RewardInfoSchema.extend({
   updatedAt: z.string(),
 });
 
-const LinkItemSchema = z.object({
-  name: z.string(),
+// Friend link items reuse name/url from existing friend link schema
+const LinkItemSchema = CreateFriendLinkSchema.pick({ name: true, url: true }).extend({
   desc: z.string(),
   logo: z.string(),
-  url: z.string(),
   updatedAt: z.string(),
 });
 
