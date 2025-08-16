@@ -23,7 +23,7 @@ import {
   CreateFriendLinkSchema,
   UpdateFriendLinkSchema,
 } from './dto/friend-link.dto';
-import { UpdateNavigationDto, UpdateNavigationSchema } from './dto/navigation.dto';
+import { UpdateNavigationDto, UpdateNavigationSchema, NavigationItem } from './dto/navigation.dto';
 import { UpdateLayoutDto, UpdateLayoutSchema } from './dto/update-layout.dto';
 import { UpdateSiteInfoDto, UpdateSiteInfoSchema } from './dto/update-site-info.dto';
 import { UpdateThemeDto, UpdateThemeSchema } from './dto/update-theme.dto';
@@ -152,11 +152,16 @@ export class SettingCoreController {
   async updateNavigation(
     @Body(new ZodValidationPipe(UpdateNavigationSchema)) updateNavigationDto: UpdateNavigationDto,
   ): Promise<Navigation[]> {
-    // Map NavigationItem to Navigation interface
-    const navigationItems = updateNavigationDto.items.map((item) => ({
+    // Map NavigationItem to Navigation interface (recursive)
+    const mapItem = (item: NavigationItem): Navigation => ({
       name: item.name,
-      path: item.url, // Map url to path
-    }));
+      path: item.url,
+      icon: item.icon,
+      external: item.target === '_blank',
+      children: item.children?.map(mapItem),
+    });
+
+    const navigationItems = (updateNavigationDto.items as unknown as NavigationItem[]).map(mapItem);
     return this.settingCoreService.updateNavigation(navigationItems);
   }
 

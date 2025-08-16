@@ -2,7 +2,7 @@ import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
 
 // 导航项类型定义
-type NavigationItem = {
+export type NavigationItem = {
   id?: number;
   name: string;
   url: string;

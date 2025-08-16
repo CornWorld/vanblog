@@ -33,6 +33,9 @@ export interface SiteTheme {
 export interface Navigation {
   name: string;
   path: string;
+  icon?: string;
+  external?: boolean;
+  children?: Navigation[];
 }
 
 export interface FriendLink {
