@@ -15,15 +15,13 @@ export interface MenuItem {
   children?: MenuItem[];
 }
 
-// Public social item builds on the base SocialLink but adds metadata fields
-const SocialItemSchema = z.intersection(
-  SocialLinkSchema,
-  z.object({
-    updatedAt: z.string(),
-    // Some clients may expect a dark variant URL for icons
-    dark: z.string().optional(),
-  }),
-);
+// Public social item builds on the base SocialLink's `type` and adds `value` + metadata
+const SocialItemSchema = SocialLinkSchema.pick({ type: true }).extend({
+  value: z.string(),
+  updatedAt: z.string(),
+  // Some clients may expect a dark variant URL for icons
+  dark: z.string().optional(),
+});
 
 const MenuItemSchema: z.ZodType<MenuItem> = z.object({
   id: z.number(),
