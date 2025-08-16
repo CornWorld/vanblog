@@ -95,8 +95,8 @@ export class V1DeprecationMiddleware implements NestMiddleware {
       getAllCustomPages: 'Use: GET /api/v2/public/customPage/all',
       getCustomPageByPath: 'Use: GET /api/v2/public/customPage?path={pathname}',
       getTimeLineInfo: 'Timeline functionality is not yet implemented in V2',
-      getMeta: 'Site metadata endpoints need to be implemented in V2',
-      getBuildMeta: 'Build metadata endpoints need to be implemented in V2',
+      getMeta: 'Use: GET /api/v2/public/meta',
+      getBuildMeta: 'Use: GET /api/v2/public/meta',
     };
 
     const suggestion = migrationMap[action];
