@@ -1,5 +1,5 @@
 import { Injectable, Inject } from '@nestjs/common';
-import { eq, sql, like } from 'drizzle-orm';
+import { eq, sql, like, and } from 'drizzle-orm';
 
 import { DATABASE_CONNECTION } from '../../database/database.module';
 import { categories, tags, articles } from '../../database/schema';
@@ -83,7 +83,7 @@ export class StatisticsService {
             totalViews: sql<number>`sum(viewer)`,
           })
           .from(articles)
-          .where(like(articles.tags, `%"${tag.name}"%`));
+          .where(like(articles.tags, `"%${tag.name}%"`.replace('"%', '%"').replace('%"', '"%')));
 
         return {
           id: tag.id,
@@ -124,5 +124,16 @@ export class StatisticsService {
       hiddenArticles: Number(stats[0]?.hiddenArticles) > 0 ? Number(stats[0]?.hiddenArticles) : 0,
       totalViews: Number(stats[0]?.totalViews) > 0 ? Number(stats[0]?.totalViews) : 0,
     };
+  }
+
+  async getTotalPublishedWordCount(): Promise<number> {
+    // 基于 SQLite 的 length() 统计字符数，保持与 Draft.wordCount 一致（以字符数为度量）
+    const res = await this.db
+      .select({ total: sql<number>`sum(length(${articles.content}))` })
+      .from(articles)
+      .where(and(eq(articles.hidden, false), eq(articles.private, false)));
+
+    const total = Number(res[0]?.total);
+    return Number.isFinite(total) && total > 0 ? total : 0;
   }
 }

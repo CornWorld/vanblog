@@ -35,6 +35,7 @@ export class BootstrapService {
       rewards,
       walineSettings,
       categories,
+      totalWordCount,
     ] = await Promise.allSettled([
       this.getAllTags(),
       this.statisticsService.getOverallStatistics(),
@@ -45,13 +46,14 @@ export class BootstrapService {
       this.rewardService.getRewardInfo(),
       this.getWalineConfig(),
       this.getAllCategories(),
+      this.statisticsService.getTotalPublishedWordCount(),
     ]);
 
     const response: PublicBootstrapResponseDto = {
       version: this.getVersion(),
       tags: tags.status === 'fulfilled' ? tags.value : [],
       totalArticles: overall.status === 'fulfilled' ? overall.value.publishedArticles : 0,
-      totalWordCount: 0,
+      totalWordCount: totalWordCount.status === 'fulfilled' ? totalWordCount.value : 0,
       siteInfo: siteInfo.status === 'fulfilled' ? siteInfo.value : this.getDefaultSiteInfo(),
       navigation: navigation.status === 'fulfilled' ? navigation.value : [],
       friendLinks: friendLinks.status === 'fulfilled' ? friendLinks.value : [],
