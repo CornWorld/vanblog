@@ -7,7 +7,7 @@ import type { PluginContext } from '../../src/modules/plugin/interfaces/plugin-c
 import type { Plugin } from '../../src/modules/plugin/services/plugin-loader.service';
 import { withPluginPrefix } from '../../src/modules/plugin/utils/prefix.util';
 
-const PLUGIN_PREFIX = 'email-notification-plugin';
+const PLUGIN_PREFIX = withPluginPrefix('email-notification-plugin');
 const logger = new Logger(PLUGIN_PREFIX);
 
 // 定义邮件配置接口

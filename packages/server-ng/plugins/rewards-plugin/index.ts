@@ -1,4 +1,5 @@
 // 插件：增强 /public/bootstrap 的 rewards 字段，支持通过配置追加并去重
+// 同时提供完整的 reward 管理 API
 
 import { Logger } from '@nestjs/common';
 import type {
@@ -9,11 +10,8 @@ import type { PluginContext } from '../../src/modules/plugin/interfaces/plugin-c
 import type { Plugin } from '../../src/modules/plugin/services/plugin-loader.service';
 import { withPluginPrefix } from '../../src/modules/plugin/utils/prefix.util';
 
-// 与 RewardInfoSchema 对齐的最小类型
-interface RewardInfo {
-  name: string;
-  value: string;
-}
+import type { RewardInfo } from './reward.schema';
+import { RewardService } from './reward.service';
 
 // /public/bootstrap 响应的最小子集类型
 interface PublicBootstrapResponseLike {
@@ -27,29 +25,74 @@ const isValidReward = (r: unknown): r is RewardInfo =>
 // 插件 Logger 实例
 const logger = new Logger(withPluginPrefix('rewards-plugin'));
 
+// 创建服务实例
+const rewardService = new RewardService();
+
 const plugin: Plugin = {
   name: 'rewards-plugin',
   version: '1.0.0',
-  description: '通过插件配置向 /public/bootstrap 注入/合并 rewards，支持去重',
+  description: '通过插件配置向 /public/bootstrap 注入/合并 rewards，支持去重，并提供完整的管理 API',
+
+  // 暴露奖励服务实例
+  rewardService: rewardService,
 
   async init(context: PluginContext): Promise<void> {
     // 预热：记录初始化时间与默认配置
     logger.log(withPluginPrefix('rewards-plugin', '插件正在初始化...'));
 
-    // 从配置中读取额外的 rewards
-    const extraRewards = context.config.get<RewardInfo[]>('extra_rewards', []);
-    const validRewards = Array.isArray(extraRewards) ? extraRewards.filter(isValidReward) : [];
-
-    await context.data.set('extra_rewards', validRewards);
+    // 初始化奖励数据
+    await context.data.set('extra_rewards', []);
     await context.data.set('boot_count', 0);
 
-    logger.log(withPluginPrefix('rewards-plugin', '插件初始化成功'));
+    // 设置服务上下文
+    rewardService.setContext(context);
+    await rewardService.onModuleInit();
+
+    // 将服务实例暴露给插件对象
+    plugin.rewardService = rewardService;
+
+    // 从配置中读取额外的 rewards
+    const extraRewards = context.config.get<RewardInfo[]>('extra_rewards', []);
+    if (extraRewards.length > 0) {
+      logger.log(
+        withPluginPrefix('rewards-plugin', `加载了 ${extraRewards.length} 个额外奖励配置`),
+      );
+    }
+
+    logger.log(withPluginPrefix('rewards-plugin', '奖励插件初始化成功'));
   },
 
   async destroy(context: PluginContext): Promise<void> {
     const bootCount = (await context.data.get('boot_count')) ?? 0;
     logger.log(withPluginPrefix('rewards-plugin', `插件销毁，共启动 ${String(bootCount)} 次`));
     await context.data.clear();
+    // 清理服务实例
+    (this as any).rewardService = null;
+  },
+
+  // 暴露服务方法
+  async getRewards(): Promise<any[]> {
+    const service = (this as any).rewardService as RewardService;
+    if (!service) {
+      throw new Error('Reward service not initialized');
+    }
+    return service.getRewardInfo();
+  },
+
+  async addOrUpdateReward(reward: any): Promise<void> {
+    const service = (this as any).rewardService as RewardService;
+    if (!service) {
+      throw new Error('Reward service not initialized');
+    }
+    await service.addOrUpdateRewardInfo(reward);
+  },
+
+  async deleteReward(id: string): Promise<void> {
+    const service = (this as any).rewardService as RewardService;
+    if (!service) {
+      throw new Error('Reward service not initialized');
+    }
+    await service.deleteRewardInfo(id);
   },
 
   hooks: {

@@ -1,7 +1,6 @@
 import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
 
-import { RewardInfoSchema } from '../reward/reward.schema';
 import { CreateFriendLinkSchema } from '../setting/dto/friend-link.dto';
 import { SocialLinkArraySchema } from '../social-links/social-links.schema';
 
@@ -42,7 +41,6 @@ export const PublicBootstrapResponseSchema = z.object({
   navigation: z.array(NavigationSchema),
   friendLinks: FriendLinkArraySchema,
   socialLinks: SocialLinkArraySchema,
-  rewards: z.array(RewardInfoSchema),
   categories: z.array(z.string()),
   walineConfig: z
     .object({

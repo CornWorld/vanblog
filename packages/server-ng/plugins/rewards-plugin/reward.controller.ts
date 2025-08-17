@@ -2,12 +2,12 @@ import { Controller, Get, Post, Delete, Body, Param, UseGuards } from '@nestjs/c
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
 import { ZodValidationPipe } from 'nestjs-zod';
 
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { PermissionsGuard } from '../auth/guards/permissions.guard';
-import { Permissions } from '../auth/permissions.decorator';
+import { JwtAuthGuard } from '../../src/modules/auth/guards/jwt-auth.guard';
+import { PermissionsGuard } from '../../src/modules/auth/guards/permissions.guard';
+import { Permissions } from '../../src/modules/auth/permissions.decorator';
 
 import { RewardInfoDto, RewardInfoSchema } from './reward.dto';
-import { RewardInfo } from './reward.schema';
+import type { RewardInfo } from './reward.schema';
 import { RewardService } from './reward.service';
 
 @ApiTags('reward')

@@ -23,7 +23,6 @@ import { MediaModule } from './modules/media/media.module';
 import { PermissionModule } from './modules/permission/permission.module';
 import { PluginModule } from './modules/plugin/plugin.module';
 import { PublicModule } from './modules/public/public.module';
-import { RewardModule } from './modules/reward/reward.module';
 import { RssModule } from './modules/rss/rss.module';
 import { SettingModule } from './modules/setting/setting.module';
 import { SitemapModule } from './modules/sitemap/sitemap.module';
@@ -38,8 +37,8 @@ export class AppModule implements NestModule {
     consumer.apply(PerformanceMonitoringMiddleware, V1DeprecationMiddleware).forRoutes('*'); // Apply to all routes
   }
 
-  static forRoot(): DynamicModule {
-    const pluginModule = PluginModule.forRoot();
+  static async forRoot(): Promise<DynamicModule> {
+    const pluginModule = await PluginModule.forRoot();
 
     return {
       module: AppModule,
@@ -79,7 +78,6 @@ export class AppModule implements NestModule {
         AnalyticsModule,
         BeianModule,
         SocialLinksModule,
-        RewardModule,
         RssModule,
         SitemapModule,
         CommentModule,

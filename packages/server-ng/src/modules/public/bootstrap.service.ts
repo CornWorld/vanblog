@@ -5,7 +5,6 @@ import { StatisticsService } from '../../shared/services/statistics.service';
 import { CategoryService } from '../category/category.service';
 import { CommentService } from '../comment/comment.service';
 import { HookService } from '../plugin/services/hook.service';
-import { RewardService } from '../reward/reward.service';
 import { SettingCoreService } from '../setting/services/setting-core.service';
 import { SocialLinksService } from '../social-links/social-links.service';
 import { TagService } from '../tag/tag.service';
@@ -19,7 +18,6 @@ export class BootstrapService {
     private readonly statisticsService: StatisticsService,
     private readonly settingCoreService: SettingCoreService,
     private readonly socialLinksService: SocialLinksService,
-    private readonly rewardService: RewardService,
     private readonly commentService: CommentService,
     private readonly tagService: TagService,
     private readonly categoryService: CategoryService,
@@ -32,6 +30,19 @@ export class BootstrapService {
       .doAction('bootstrap|beforeGenerate', {}, { action: 'public' })
       .catch(() => {});
 
+    const results = await Promise.allSettled([
+      this.getAllTags(),
+      this.statisticsService.getOverallStatistics(),
+      this.settingCoreService.getSiteInfo(),
+      this.settingCoreService.getNavigation(),
+      this.settingCoreService.getFriendLinks(),
+      this.socialLinksService.getSocialLinks(),
+      this.hookService.applyFilters('bootstrap_rewards', []),
+      this.getWalineConfig(),
+      this.getAllCategories(),
+      this.statisticsService.getTotalPublishedWordCount(),
+    ]);
+
     const [
       tags,
       overall,
@@ -39,22 +50,11 @@ export class BootstrapService {
       navigation,
       friendLinks,
       socialLinks,
-      rewards,
+      _rewards,
       walineSettings,
       categories,
       totalWordCount,
-    ] = await Promise.allSettled([
-      this.getAllTags(),
-      this.statisticsService.getOverallStatistics(),
-      this.settingCoreService.getSiteInfo(),
-      this.settingCoreService.getNavigation(),
-      this.settingCoreService.getFriendLinks(),
-      this.socialLinksService.getSocialLinks(),
-      this.rewardService.getRewardInfo(),
-      this.getWalineConfig(),
-      this.getAllCategories(),
-      this.statisticsService.getTotalPublishedWordCount(),
-    ]);
+    ] = results;
 
     const response: PublicBootstrapResponseDto = {
       version: this.getVersion(),
@@ -65,7 +65,6 @@ export class BootstrapService {
       navigation: navigation.status === 'fulfilled' ? navigation.value : [],
       friendLinks: friendLinks.status === 'fulfilled' ? friendLinks.value : [],
       socialLinks: socialLinks.status === 'fulfilled' ? socialLinks.value : [],
-      rewards: rewards.status === 'fulfilled' ? rewards.value : [],
       categories: categories.status === 'fulfilled' ? categories.value : [],
       ...(walineSettings.status === 'fulfilled' &&
         walineSettings.value && { walineConfig: walineSettings.value }),

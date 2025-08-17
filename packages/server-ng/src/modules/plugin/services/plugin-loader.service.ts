@@ -62,6 +62,8 @@ export interface Plugin {
   };
   init?(context: PluginContext): Promise<void> | void;
   destroy?(context: PluginContext): Promise<void> | void;
+  // 允许插件暴露自定义方法
+  [key: string]: unknown;
 }
 
 export type PartialPlugin = Partial<Plugin>;

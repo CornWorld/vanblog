@@ -78,13 +78,17 @@ describe('EmailNotificationPlugin', () => {
 
   describe('Plugin Lifecycle', () => {
     it('should initialize successfully', async () => {
-      await expect(plugin.init!(mockContext)).resolves.not.toThrow();
+      if (plugin.init) {
+        await expect(plugin.init(mockContext)).resolves.not.toThrow();
+      }
       expect(mockData.set).toHaveBeenCalledWith('email_enabled', true);
       expect(mockData.set).toHaveBeenCalledWith('emails_sent', 0);
     });
 
     it('should destroy successfully', async () => {
-      await expect(plugin.destroy!(mockContext)).resolves.not.toThrow();
+      if (plugin.destroy) {
+        await expect(plugin.destroy(mockContext)).resolves.not.toThrow();
+      }
       expect(mockData.clear).toHaveBeenCalled();
     });
   });
@@ -118,7 +122,8 @@ describe('EmailNotificationPlugin', () => {
       });
 
       // Test through hooks since sendEmail is not exported
-      const handler = plugin.hooks!['article|afterCreate'].handler;
+      const handler = plugin.hooks?.['article|afterCreate']?.handler;
+      if (!handler) throw new Error('Handler not found');
       const articleData = { title: 'Test Article' };
 
       await handler(articleData, mockContext);
@@ -153,14 +158,14 @@ describe('EmailNotificationPlugin', () => {
 
     it('should have all required hooks', () => {
       expect(plugin.hooks).toBeDefined();
-      expect(plugin.hooks!['article|afterCreate']).toBeDefined();
-      expect(plugin.hooks!['article|afterUpdate']).toBeDefined();
-      expect(plugin.hooks!['comment|afterUpdate']).toBeDefined();
-      expect(plugin.hooks!['draft.published']).toBeDefined();
+      expect(plugin.hooks?.['article|afterCreate']).toBeDefined();
+      expect(plugin.hooks?.['article|afterUpdate']).toBeDefined();
+      expect(plugin.hooks?.['comment|afterUpdate']).toBeDefined();
+      expect(plugin.hooks?.['draft.published']).toBeDefined();
 
       // Check hook types and priorities
-      expect(plugin.hooks!['article|afterCreate'].type).toBe('action');
-      expect(plugin.hooks!['article|afterCreate'].priority).toBe(10);
+      expect(plugin.hooks?.['article|afterCreate']?.type).toBe('action');
+      expect(plugin.hooks?.['article|afterCreate']?.priority).toBe(10);
     });
 
     it('should handle article creation hook', async () => {
@@ -172,7 +177,8 @@ describe('EmailNotificationPlugin', () => {
         createdAt: '2024-01-01T00:00:00Z',
       };
 
-      const handler = plugin.hooks!['article|afterCreate'].handler;
+      const handler = plugin.hooks?.['article|afterCreate']?.handler;
+      if (!handler) throw new Error('Handler not found');
       await handler(articleData, mockContext);
 
       expect(mockLogger.log).toHaveBeenCalledWith(
@@ -190,7 +196,8 @@ describe('EmailNotificationPlugin', () => {
         email: 'commenter@example.com',
       };
 
-      const handler = plugin.hooks!['comment|afterUpdate'].handler;
+      const handler = plugin.hooks?.['comment|afterUpdate']?.handler;
+      if (!handler) throw new Error('Handler not found');
       await handler(commentData, mockContext);
 
       expect(mockLogger.log).toHaveBeenCalledWith(
@@ -199,7 +206,8 @@ describe('EmailNotificationPlugin', () => {
     });
 
     it('should handle invalid data gracefully', async () => {
-      const handler = plugin.hooks!['article|afterCreate'].handler;
+      const handler = plugin.hooks?.['article|afterCreate']?.handler;
+      if (!handler) throw new Error('Handler not found');
       await handler(null, mockContext);
 
       expect(mockLogger.warn).toHaveBeenCalledWith(
