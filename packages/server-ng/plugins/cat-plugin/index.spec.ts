@@ -60,7 +60,7 @@ describe('🐱插件', () => {
   describe('插件生命周期', () => {
     it('应该正确初始化', async () => {
       expect(plugin.init).toBeDefined();
-      await plugin.init!(mockContext);
+      await (plugin.init as any)(mockContext);
 
       expect(mockLogger.log).toHaveBeenCalledWith('cat-plugin:插件正在初始化...');
       expect(mockLogger.log).toHaveBeenCalledWith('cat-plugin:插件初始化成功');
@@ -70,7 +70,7 @@ describe('🐱插件', () => {
 
     it('应该正确销毁', async () => {
       expect(plugin.destroy).toBeDefined();
-      await plugin.destroy!(mockContext);
+      await (plugin.destroy as any)(mockContext);
 
       expect(mockLogger.log).toHaveBeenCalledWith('cat-plugin:插件正在销毁...');
       expect(mockLogger.log).toHaveBeenCalledWith('cat-plugin:插件销毁完成');
@@ -89,7 +89,7 @@ describe('🐱插件', () => {
         tags: ['测试标签'],
       };
 
-      const result = handler!(articleData, mockContext) as typeof articleData;
+      const result = (handler as any)(articleData, mockContext) as typeof articleData;
 
       expect(result.title).toBe('测试文章喵');
       expect(result.content).toBe('测试内容喵');
@@ -106,7 +106,7 @@ describe('🐱插件', () => {
         tags: ['测试标签喵'],
       };
 
-      const result = handler!(articleData, mockContext) as typeof articleData;
+      const result = (handler as any)(articleData, mockContext) as typeof articleData;
 
       expect(result.title).toBe('测试文章喵');
       expect(result.content).toBe('测试内容喵');
@@ -118,16 +118,16 @@ describe('🐱插件', () => {
       expect(handler).toBeDefined();
 
       // 测试 null
-      expect(handler!(null, mockContext)).toBe(null);
+      expect((handler as any)(null, mockContext)).toBe(null);
 
       // 测试 undefined
-      expect(handler!(undefined, mockContext)).toBe(undefined);
+      expect((handler as any)(undefined, mockContext)).toBe(undefined);
 
       // 测试非对象
-      expect(handler!('string', mockContext)).toBe('string');
+      expect((handler as any)('string', mockContext)).toBe('string');
 
       // 测试空对象
-      const emptyResult = handler!({}, mockContext);
+      const emptyResult = (handler as any)({}, mockContext);
       expect(emptyResult).toEqual({});
     });
 
@@ -152,7 +152,7 @@ describe('🐱插件', () => {
         tags: ['测试标签'],
       };
 
-      const result = handler!(articleData, contextWithConfig) as typeof articleData;
+      const result = (handler as any)(articleData, contextWithConfig) as typeof articleData;
 
       expect(result.title).toBe('测试文章喵');
       expect(result.content).toBe('测试内容'); // 不应该被修改
@@ -171,7 +171,7 @@ describe('🐱插件', () => {
         tags: ['更新标签'],
       };
 
-      const result = handler!(articleData, mockContext) as typeof articleData;
+      const result = (handler as any)(articleData, mockContext) as typeof articleData;
 
       expect(result.title).toBe('更新文章喵');
       expect(result.content).toBe('更新内容喵');

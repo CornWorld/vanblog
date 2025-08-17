@@ -40,7 +40,7 @@ describe('EmailNotificationPlugin', () => {
           email_from: 'test@example.com',
           email_to: ['admin@example.com'],
         };
-        return configs[key as keyof typeof configs] ?? defaultValue;
+        return configs[key as keyof typeof configs] || defaultValue;
       }),
     };
 

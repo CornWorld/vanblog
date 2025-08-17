@@ -1,6 +1,4 @@
-import { Module } from '@nestjs/common';
-
-import type { DynamicModule } from '@nestjs/common';
+import { Module, type DynamicModule } from '@nestjs/common';
 
 // Beian 插件模块，可以被动态加载
 @Module({
@@ -9,11 +7,7 @@ import type { DynamicModule } from '@nestjs/common';
   providers: [],
   exports: [],
 })
-class BeianPluginModule {
-  constructor() {
-    // Beian 插件模块已加载
-  }
-}
+class BeianPluginModule {}
 
 // 导出为默认模块用于动态加载
 const pluginModule: DynamicModule = {
