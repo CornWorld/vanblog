@@ -1,7 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+
 import plugin from './index';
+
+import type { RewardService } from './reward.service';
 import type { PluginContext } from '../../src/modules/plugin/interfaces/plugin-context.interface';
-import { RewardService } from './reward.service';
 
 const createMockContext = (): PluginContext => ({
   pluginId: 'rewards-plugin',
@@ -14,7 +16,7 @@ const createMockContext = (): PluginContext => ({
     keys: vi.fn(),
   },
   config: {
-    get: vi.fn().mockImplementation((key: string, defaultValue: any) => defaultValue || []),
+    get: vi.fn().mockImplementation((key: string, defaultValue: unknown) => defaultValue ?? []),
     getOrThrow: vi.fn(),
     has: vi.fn(),
   },
@@ -30,7 +32,8 @@ describe('🧩 bootstrap-reward-plugin', () => {
 
   describe('插件基本信息', () => {
     it('应包含正确的元信息', () => {
-      expect(plugin.name).toBe('rewards-plugin');
+      expect(plugin.id).toBe('rewards-plugin');
+      expect(plugin.name).toBe('Rewards Plugin');
       expect(plugin.version).toBe('1.0.0');
       expect(plugin.description).toContain('rewards');
     });
@@ -38,14 +41,18 @@ describe('🧩 bootstrap-reward-plugin', () => {
 
   describe('生命周期', () => {
     it('init: 初始化数据', async () => {
-      await plugin.init!(ctx);
+      if (plugin.init) {
+        await plugin.init(ctx);
+      }
 
       expect(ctx.data.set).toHaveBeenCalledWith('extra_rewards', []);
       expect(ctx.data.set).toHaveBeenCalledWith('boot_count', 0);
     });
 
     it('destroy: 清理数据', async () => {
-      await plugin.destroy!(ctx);
+      if (plugin.destroy) {
+        await plugin.destroy(ctx);
+      }
       expect(ctx.data.clear).toHaveBeenCalled();
     });
   });
@@ -78,7 +85,7 @@ describe('🧩 bootstrap-reward-plugin', () => {
         { name: 'Coffee', value: 'extra://coffee' },
         { name: 'Alipay', value: 'ali://zz' },
       ];
-      (ctx.data.get as any).mockImplementation(async (key: string) => {
+      (ctx.data.get as ReturnType<typeof vi.fn>).mockImplementation((key: string) => {
         if (key === 'extra_rewards') return cachedExtras;
         return null;
       });
@@ -156,8 +163,10 @@ describe('🧩 bootstrap-reward-plugin', () => {
 
     beforeEach(async () => {
       // 初始化插件以设置 rewardService
-      await plugin.init!(ctx);
-      rewardService = (plugin as any).rewardService as RewardService;
+      if (plugin.init) {
+        await plugin.init(ctx);
+      }
+      rewardService = (plugin as { rewardService?: RewardService }).rewardService as RewardService;
       expect(rewardService).toBeDefined();
     });
 

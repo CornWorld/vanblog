@@ -7,8 +7,9 @@ import { PermissionsGuard } from '../../src/modules/auth/guards/permissions.guar
 import { Permissions } from '../../src/modules/auth/permissions.decorator';
 
 import { RewardInfoDto, RewardInfoSchema } from './reward.dto';
-import type { RewardInfo } from './reward.schema';
 import { RewardService } from './reward.service';
+
+import type { RewardInfo } from './reward.schema';
 
 @ApiTags('reward')
 @Controller('api/admin/reward')
@@ -18,14 +19,14 @@ export class RewardController {
   constructor(private readonly rewardService: RewardService) {}
 
   @Get()
-  @Permissions('setting', 'read')
+  @Permissions('settings:read')
   @ApiOperation({ summary: 'Get all reward information' })
   async getRewardInfo(): Promise<RewardInfo[]> {
     return this.rewardService.getRewardInfo();
   }
 
   @Post()
-  @Permissions('setting', 'update')
+  @Permissions('settings:update')
   @ApiOperation({ summary: 'Add or update reward information' })
   async addOrUpdateRewardInfo(
     @Body(new ZodValidationPipe(RewardInfoSchema)) dto: RewardInfoDto,
@@ -34,7 +35,7 @@ export class RewardController {
   }
 
   @Delete(':name')
-  @Permissions('setting', 'update')
+  @Permissions('setting:update')
   @ApiOperation({ summary: 'Delete reward information' })
   @ApiParam({ name: 'name', description: 'Reward method name' })
   async deleteRewardInfo(@Param('name') name: string): Promise<RewardInfo[]> {

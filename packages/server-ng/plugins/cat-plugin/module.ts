@@ -1,4 +1,4 @@
-import { Module, DynamicModule } from '@nestjs/common';
+import { Module, type DynamicModule } from '@nestjs/common';
 
 // 🐱插件模块，可以被动态加载
 @Module({
@@ -7,11 +7,7 @@ import { Module, DynamicModule } from '@nestjs/common';
   providers: [],
   exports: [],
 })
-class CatPluginModule {
-  constructor() {
-    console.log('🐱插件模块已加载！');
-  }
-}
+class CatPluginModule {}
 
 // 导出为默认模块用于动态加载
 const pluginModule: DynamicModule = {

@@ -6,7 +6,6 @@ import { CategoryService } from '../category/category.service';
 import { CommentService } from '../comment/comment.service';
 import { HookService } from '../plugin/services/hook.service';
 import { SettingCoreService } from '../setting/services/setting-core.service';
-import { SocialLinksService } from '../social-links/social-links.service';
 import { TagService } from '../tag/tag.service';
 
 import type { PublicBootstrapResponseDto } from './bootstrap.dto';
@@ -17,7 +16,6 @@ export class BootstrapService {
     private readonly configService: ConfigService,
     private readonly statisticsService: StatisticsService,
     private readonly settingCoreService: SettingCoreService,
-    private readonly socialLinksService: SocialLinksService,
     private readonly commentService: CommentService,
     private readonly tagService: TagService,
     private readonly categoryService: CategoryService,
@@ -36,7 +34,6 @@ export class BootstrapService {
       this.settingCoreService.getSiteInfo(),
       this.settingCoreService.getNavigation(),
       this.settingCoreService.getFriendLinks(),
-      this.socialLinksService.getSocialLinks(),
       this.hookService.applyFilters('bootstrap_rewards', []),
       this.getWalineConfig(),
       this.getAllCategories(),
@@ -49,7 +46,6 @@ export class BootstrapService {
       siteInfo,
       navigation,
       friendLinks,
-      socialLinks,
       _rewards,
       walineSettings,
       categories,
@@ -64,7 +60,7 @@ export class BootstrapService {
       siteInfo: siteInfo.status === 'fulfilled' ? siteInfo.value : this.getDefaultSiteInfo(),
       navigation: navigation.status === 'fulfilled' ? navigation.value : [],
       friendLinks: friendLinks.status === 'fulfilled' ? friendLinks.value : [],
-      socialLinks: socialLinks.status === 'fulfilled' ? socialLinks.value : [],
+      socialLinks: [],
       categories: categories.status === 'fulfilled' ? categories.value : [],
       ...(walineSettings.status === 'fulfilled' &&
         walineSettings.value && { walineConfig: walineSettings.value }),

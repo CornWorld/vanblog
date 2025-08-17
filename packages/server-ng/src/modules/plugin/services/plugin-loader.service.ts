@@ -44,6 +44,7 @@ export interface PluginManifest {
 }
 
 export interface Plugin {
+  id: string;
   name: string;
   version: string;
   description?: string;
@@ -432,6 +433,7 @@ export class PluginLoaderService implements OnModuleInit {
 
     const finalPlugin: Plugin = {
       ...pluginData,
+      id: pluginData.id ?? finalName,
       name: finalName,
       version: finalVersion,
       ...(finalDescription ? { description: finalDescription } : {}),

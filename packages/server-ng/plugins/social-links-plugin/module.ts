@@ -1,17 +1,17 @@
 import { Module, type DynamicModule } from '@nestjs/common';
 
-// Email Notification 插件模块，可以被动态加载
+// Social Links 插件模块，可以被动态加载
 @Module({
   imports: [],
   controllers: [],
   providers: [],
   exports: [],
 })
-class EmailNotificationPluginModule {}
+class SocialLinksPluginModule {}
 
 // 导出为默认模块用于动态加载
 const pluginModule: DynamicModule = {
-  module: EmailNotificationPluginModule,
+  module: SocialLinksPluginModule,
   imports: [],
   controllers: [],
   providers: [],
@@ -19,5 +19,5 @@ const pluginModule: DynamicModule = {
 };
 
 export default pluginModule;
-export { pluginModule as EmailNotificationPluginModule };
+export { pluginModule as SocialLinksPluginModule };
 export { pluginModule as PluginModule };

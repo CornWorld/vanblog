@@ -1,17 +1,23 @@
-import { Module, type DynamicModule } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 
-// Email Notification 插件模块，可以被动态加载
+import type { DynamicModule } from '@nestjs/common';
+
+// Beian 插件模块，可以被动态加载
 @Module({
   imports: [],
   controllers: [],
   providers: [],
   exports: [],
 })
-class EmailNotificationPluginModule {}
+class BeianPluginModule {
+  constructor() {
+    // Beian 插件模块已加载
+  }
+}
 
 // 导出为默认模块用于动态加载
 const pluginModule: DynamicModule = {
-  module: EmailNotificationPluginModule,
+  module: BeianPluginModule,
   imports: [],
   controllers: [],
   providers: [],
@@ -19,5 +25,5 @@ const pluginModule: DynamicModule = {
 };
 
 export default pluginModule;
-export { pluginModule as EmailNotificationPluginModule };
+export { pluginModule as BeianPluginModule };
 export { pluginModule as PluginModule };

@@ -19,7 +19,7 @@ export default [
     },
   },
   {
-    ignores: ['dist/**', 'node_modules/**', 'coverage/**', '*.mjs', '*.cjs', 'plugins/**'],
+    ignores: ['dist/**', 'node_modules/**', 'coverage/**', '*.mjs', '*.cjs'],
   },
 
   // TypeScript 文件配置

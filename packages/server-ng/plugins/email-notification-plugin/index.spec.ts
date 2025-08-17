@@ -1,4 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+import plugin from './index';
+
 import type { PluginContext } from '../../src/modules/plugin/interfaces/plugin-context.interface';
 
 const mockLogger = vi.hoisted(() => ({
@@ -16,8 +19,6 @@ vi.mock('nodemailer', () => ({
 vi.mock('@nestjs/common', () => ({
   Logger: vi.fn().mockImplementation(() => mockLogger),
 }));
-
-import plugin from './index';
 
 describe('EmailNotificationPlugin', () => {
   let mockContext: PluginContext;
@@ -65,7 +66,8 @@ describe('EmailNotificationPlugin', () => {
 
   describe('Plugin Basic Info', () => {
     it('should have correct plugin metadata', () => {
-      expect(plugin.name).toBe('email-notification-plugin');
+      expect(plugin.id).toBe('email-notification-plugin');
+      expect(plugin.name).toBe('Email Notification Plugin');
       expect(plugin.version).toBe('1.0.0');
       expect(plugin.description).toContain('邮件通知插件');
     });
@@ -111,7 +113,7 @@ describe('EmailNotificationPlugin', () => {
           email_from: 'noreply@example.com',
           email_to: ['admin@example.com'],
         };
-        return configs[key] || defaultValue;
+        return configs[key] ?? defaultValue;
       });
     });
 
@@ -152,7 +154,7 @@ describe('EmailNotificationPlugin', () => {
           email_from: 'noreply@example.com',
           email_to: ['admin@example.com'],
         };
-        return configs[key] || defaultValue;
+        return configs[key] ?? defaultValue;
       });
     });
 
@@ -179,7 +181,10 @@ describe('EmailNotificationPlugin', () => {
 
       const handler = plugin.hooks?.['article|afterCreate']?.handler;
       if (!handler) throw new Error('Handler not found');
-      await handler(articleData, mockContext);
+      handler(articleData, mockContext);
+
+      // Wait a bit for the async operation to complete
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
       expect(mockLogger.log).toHaveBeenCalledWith(
         expect.stringContaining(
@@ -198,7 +203,10 @@ describe('EmailNotificationPlugin', () => {
 
       const handler = plugin.hooks?.['comment|afterUpdate']?.handler;
       if (!handler) throw new Error('Handler not found');
-      await handler(commentData, mockContext);
+      handler(commentData, mockContext);
+
+      // Wait a bit for the async operation to complete
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
       expect(mockLogger.log).toHaveBeenCalledWith(
         expect.stringContaining('email-notification-plugin:邮件发送成功: 💬 评论系统更新通知'),

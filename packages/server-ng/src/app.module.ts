@@ -13,7 +13,6 @@ import { AnalyticsModule } from './modules/analytics/analytics.module';
 import { ArticleModule } from './modules/article/article.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { BackupModule } from './modules/backup/backup.module';
-import { BeianModule } from './modules/beian/beian.module';
 import { CategoryModule } from './modules/category/category.module';
 import { CommentModule } from './modules/comment/comment.module';
 import { DemoModule } from './modules/demo/demo.module';
@@ -26,7 +25,6 @@ import { PublicModule } from './modules/public/public.module';
 import { RssModule } from './modules/rss/rss.module';
 import { SettingModule } from './modules/setting/setting.module';
 import { SitemapModule } from './modules/sitemap/sitemap.module';
-import { SocialLinksModule } from './modules/social-links/social-links.module';
 import { TagModule } from './modules/tag/tag.module';
 import { UserModule } from './modules/user/user.module';
 import { PerformanceMonitoringMiddleware } from './shared/middleware/performance-monitoring.middleware';
@@ -76,8 +74,6 @@ export class AppModule implements NestModule {
         PublicModule,
         SettingModule,
         AnalyticsModule,
-        BeianModule,
-        SocialLinksModule,
         RssModule,
         SitemapModule,
         CommentModule,

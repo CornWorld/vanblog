@@ -1,17 +1,13 @@
-import { Injectable } from '@nestjs/common';
-import type { OnModuleInit } from '@nestjs/common';
-
-import type { PluginContext } from '../../src/modules/plugin/interfaces/plugin-context.interface';
+import { Injectable, type OnModuleInit } from '@nestjs/common';
 
 import type { RewardInfoDto } from './reward.dto';
 import type { RewardInfo } from './reward.schema';
+import type { PluginContext } from '../../src/modules/plugin/interfaces/plugin-context.interface';
 
 @Injectable()
 export class RewardService implements OnModuleInit {
   private readonly CONFIG_KEY = 'extra_rewards';
   private context?: PluginContext;
-
-  constructor() {}
 
   async onModuleInit(): Promise<void> {
     // 插件初始化时不需要注册配置，通过 PluginContext 管理
@@ -26,7 +22,7 @@ export class RewardService implements OnModuleInit {
       throw new Error('Plugin context not initialized');
     }
     const rewards = await this.context.data.get<RewardInfo[]>(this.CONFIG_KEY);
-    return rewards || [];
+    return rewards ?? [];
   }
 
   async addOrUpdateRewardInfo(dto: RewardInfoDto): Promise<RewardInfo[]> {

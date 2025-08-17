@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-import type { PluginContext } from '../../src/modules/plugin/interfaces/plugin-context.interface';
 import plugin from './index';
+
+import type { PluginContext } from '../../src/modules/plugin/interfaces/plugin-context.interface';
 
 // 模拟 PluginContext
 // Mock Logger
@@ -49,7 +50,8 @@ describe('🐱插件', () => {
 
   describe('插件基本信息', () => {
     it('应该有正确的插件信息', () => {
-      expect(plugin.name).toBe('cat-plugin');
+      expect(plugin.id).toBe('cat-plugin');
+      expect(plugin.name).toBe('Cat Plugin');
       expect(plugin.version).toBe('1.0.0');
       expect(plugin.description).toBe('🐱插件：在文章保存时在内容/标题/标签的结尾添加喵');
     });

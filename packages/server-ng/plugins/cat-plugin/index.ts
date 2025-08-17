@@ -2,10 +2,12 @@
 
 import { Logger } from '@nestjs/common';
 import dayjs from 'dayjs';
+
+import { withPluginPrefix } from '../../src/modules/plugin/utils/prefix.util';
+
 import type { FilterCallback } from '../../src/modules/plugin/interfaces/hook.interface';
 import type { PluginContext } from '../../src/modules/plugin/interfaces/plugin-context.interface';
 import type { Plugin } from '../../src/modules/plugin/services/plugin-loader.service';
-import { withPluginPrefix } from '../../src/modules/plugin/utils/prefix.util';
 
 // 定义文章数据类型
 interface ArticleData {
@@ -19,7 +21,8 @@ interface ArticleData {
 const logger = new Logger(withPluginPrefix('cat-plugin'));
 
 const plugin: Plugin = {
-  name: 'cat-plugin',
+  id: 'cat-plugin',
+  name: 'Cat Plugin',
   version: '1.0.0',
   description: '🐱插件：在文章保存时在内容/标题/标签的结尾添加喵',
 
@@ -68,7 +71,7 @@ const plugin: Plugin = {
       handler: ((value: unknown, context: PluginContext) => {
         const articleData = value as ArticleData;
 
-        if (!articleData || typeof articleData !== 'object') {
+        if (typeof articleData !== 'object' || articleData === null) {
           return value;
         }
 
@@ -82,14 +85,14 @@ const plugin: Plugin = {
         // 处理标题
         if (enableTitle && result.title && typeof result.title === 'string') {
           if (!result.title.endsWith('喵')) {
-            result.title = result.title + '喵';
+            result.title = `${result.title}喵`;
           }
         }
 
         // 处理内容
         if (enableContent && result.content && typeof result.content === 'string') {
           if (!result.content.endsWith('喵')) {
-            result.content = result.content + '喵';
+            result.content = `${result.content}喵`;
           }
         }
 
@@ -97,7 +100,7 @@ const plugin: Plugin = {
         if (enableTags && result.tags && Array.isArray(result.tags)) {
           result.tags = result.tags.map((tag) => {
             if (typeof tag === 'string' && !tag.endsWith('喵')) {
-              return tag + '喵';
+              return `${tag}喵`;
             }
             return tag;
           });
@@ -106,11 +109,11 @@ const plugin: Plugin = {
         logger.log(withPluginPrefix('cat-plugin', '已为文章添加喵~'));
 
         // 更新处理计数
-        context.data
+        void context.data
           .get('processed_articles')
-          .then((count) => {
-            const newCount = ((count as number) || 0) + 1;
-            context.data.set('processed_articles', newCount);
+          .then(async (count) => {
+            const newCount = (typeof count === 'number' ? count : 0) + 1;
+            return context.data.set('processed_articles', newCount);
           })
           .catch(() => {
             // 忽略错误
@@ -127,7 +130,7 @@ const plugin: Plugin = {
       handler: ((value: unknown, context: PluginContext) => {
         const articleData = value as ArticleData;
 
-        if (!articleData || typeof articleData !== 'object') {
+        if (typeof articleData !== 'object' || articleData === null) {
           return value;
         }
 
@@ -141,14 +144,14 @@ const plugin: Plugin = {
         // 处理标题
         if (enableTitle && result.title && typeof result.title === 'string') {
           if (!result.title.endsWith('喵')) {
-            result.title = result.title + '喵';
+            result.title = `${result.title}喵`;
           }
         }
 
         // 处理内容
         if (enableContent && result.content && typeof result.content === 'string') {
           if (!result.content.endsWith('喵')) {
-            result.content = result.content + '喵';
+            result.content = `${result.content}喵`;
           }
         }
 
@@ -156,7 +159,7 @@ const plugin: Plugin = {
         if (enableTags && result.tags && Array.isArray(result.tags)) {
           result.tags = result.tags.map((tag) => {
             if (typeof tag === 'string' && !tag.endsWith('喵')) {
-              return tag + '喵';
+              return `${tag}喵`;
             }
             return tag;
           });
@@ -165,11 +168,11 @@ const plugin: Plugin = {
         logger.log(withPluginPrefix('cat-plugin', '已为更新的文章添加喵~'));
 
         // 更新处理计数
-        context.data
+        void context.data
           .get('processed_articles')
-          .then((count) => {
-            const newCount = ((count as number) || 0) + 1;
-            context.data.set('processed_articles', newCount);
+          .then(async (count) => {
+            const newCount = (typeof count === 'number' ? count : 0) + 1;
+            return context.data.set('processed_articles', newCount);
           })
           .catch(() => {
             // 忽略错误

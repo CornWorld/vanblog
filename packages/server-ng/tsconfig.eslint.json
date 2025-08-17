@@ -4,6 +4,7 @@
     "src/**/*",
     "test/**/*",
     "scripts/**/*",
+    "plugins/**/*",
     "vite.config.mts",
     "vite.plugin.config.mts",
     "vite-env.d.ts",

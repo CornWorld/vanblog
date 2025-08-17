@@ -6,7 +6,6 @@ import { ArticleModule } from '../article/article.module';
 import { CategoryModule } from '../category/category.module';
 import { CommentModule } from '../comment/comment.module';
 import { SettingModule } from '../setting/setting.module';
-import { SocialLinksModule } from '../social-links/social-links.module';
 import { TagModule } from '../tag/tag.module';
 
 import { BootstrapController } from './bootstrap.controller';
@@ -23,7 +22,6 @@ import { CustomPageService } from './custom-page.service';
     SettingModule,
     SharedModule,
     CommentModule,
-    SocialLinksModule,
   ],
   controllers: [CustomPageController, BootstrapController],
   providers: [CustomPageService, BootstrapService],

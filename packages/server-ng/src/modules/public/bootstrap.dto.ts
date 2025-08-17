@@ -2,7 +2,6 @@ import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
 
 import { CreateFriendLinkSchema } from '../setting/dto/friend-link.dto';
-import { SocialLinkArraySchema } from '../social-links/social-links.schema';
 
 // Directly reuse base schemas from feature modules
 const FriendLinkArraySchema = z.array(
@@ -40,7 +39,13 @@ export const PublicBootstrapResponseSchema = z.object({
   }),
   navigation: z.array(NavigationSchema),
   friendLinks: FriendLinkArraySchema,
-  socialLinks: SocialLinkArraySchema,
+  socialLinks: z.array(
+    z.object({
+      name: z.string(),
+      url: z.string(),
+      icon: z.string().optional(),
+    }),
+  ),
   categories: z.array(z.string()),
   walineConfig: z
     .object({
