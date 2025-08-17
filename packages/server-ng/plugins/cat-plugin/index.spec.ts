@@ -1,17 +1,24 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+
 import type { PluginContext } from '../../src/modules/plugin/interfaces/plugin-context.interface';
 import plugin from './index';
 
 // 模拟 PluginContext
+// Mock Logger
+const mockLogger = vi.hoisted(() => ({
+  log: vi.fn(),
+  error: vi.fn(),
+  warn: vi.fn(),
+  debug: vi.fn(),
+  verbose: vi.fn(),
+}));
+
+vi.mock('@nestjs/common', () => ({
+  Logger: vi.fn().mockImplementation(() => mockLogger),
+}));
+
 const createMockContext = (): PluginContext => ({
   pluginId: 'cat-plugin',
-  logger: {
-    log: vi.fn(),
-    error: vi.fn(),
-    warn: vi.fn(),
-    debug: vi.fn(),
-    verbose: vi.fn(),
-  },
   data: {
     get: vi.fn().mockResolvedValue(0),
     set: vi.fn().mockResolvedValue(undefined),
@@ -53,8 +60,8 @@ describe('🐱插件', () => {
       expect(plugin.init).toBeDefined();
       await plugin.init!(mockContext);
 
-      expect(mockContext.logger.log).toHaveBeenCalledWith('🐱插件正在初始化...');
-      expect(mockContext.logger.log).toHaveBeenCalledWith('🐱插件初始化成功');
+      expect(mockLogger.log).toHaveBeenCalledWith('cat-plugin:插件正在初始化...');
+      expect(mockLogger.log).toHaveBeenCalledWith('cat-plugin:插件初始化成功');
       expect(mockContext.data.set).toHaveBeenCalledWith('initialized_at', expect.any(String));
       expect(mockContext.data.set).toHaveBeenCalledWith('processed_articles', 0);
     });
@@ -63,8 +70,8 @@ describe('🐱插件', () => {
       expect(plugin.destroy).toBeDefined();
       await plugin.destroy!(mockContext);
 
-      expect(mockContext.logger.log).toHaveBeenCalledWith('🐱插件正在销毁...');
-      expect(mockContext.logger.log).toHaveBeenCalledWith('🐱插件销毁完成');
+      expect(mockLogger.log).toHaveBeenCalledWith('cat-plugin:插件正在销毁...');
+      expect(mockLogger.log).toHaveBeenCalledWith('cat-plugin:插件销毁完成');
       expect(mockContext.data.clear).toHaveBeenCalled();
     });
   });
@@ -167,7 +174,7 @@ describe('🐱插件', () => {
       expect(result.title).toBe('更新文章喵');
       expect(result.content).toBe('更新内容喵');
       expect(result.tags).toEqual(['更新标签喵']);
-      expect(mockContext.logger.log).toHaveBeenCalledWith('🐱插件已为更新的文章添加喵~');
+      expect(mockLogger.log).toHaveBeenCalledWith('cat-plugin:已为更新的文章添加喵~');
     });
   });
 

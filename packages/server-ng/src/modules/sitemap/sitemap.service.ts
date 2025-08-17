@@ -131,7 +131,26 @@ export class SitemapService {
     urlList = urlList.concat(await this.getCategoryUrls());
     urlList = urlList.concat(await this.getPageUrls());
 
-    return urlList;
+    // 通过钩子允许插件贡献或过滤 URL 列表
+    try {
+      const filtered = await this.hookService.applyFilters<string[]>(
+        'sitemap|collectUrls',
+        urlList,
+      );
+      // 去重，确保有序（稳定保留第一次出现）
+      const seen = new Set<string>();
+      const deduped: string[] = [];
+      for (const u of filtered) {
+        if (!seen.has(u)) {
+          seen.add(u);
+          deduped.push(u);
+        }
+      }
+      return deduped;
+    } catch (_e) {
+      // 容错：钩子异常时返回原始列表，遵循 never break userspace
+      return Array.from(new Set(urlList));
+    }
   }
 
   /**

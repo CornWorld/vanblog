@@ -1,0 +1,112 @@
+// 插件：增强 /public/bootstrap 的 rewards 字段，支持通过配置追加并去重
+
+import { Logger } from '@nestjs/common';
+import type {
+  ActionCallback,
+  FilterCallback,
+} from '../../src/modules/plugin/interfaces/hook.interface';
+import type { PluginContext } from '../../src/modules/plugin/interfaces/plugin-context.interface';
+import type { Plugin } from '../../src/modules/plugin/services/plugin-loader.service';
+import { withPluginPrefix } from '../../src/modules/plugin/utils/prefix.util';
+
+// 与 RewardInfoSchema 对齐的最小类型
+interface RewardInfo {
+  name: string;
+  value: string;
+}
+
+// /public/bootstrap 响应的最小子集类型
+interface PublicBootstrapResponseLike {
+  rewards: RewardInfo[];
+  [key: string]: unknown;
+}
+
+const isValidReward = (r: unknown): r is RewardInfo =>
+  !!r && typeof (r as any).name === 'string' && typeof (r as any).value === 'string';
+
+// 插件 Logger 实例
+const logger = new Logger(withPluginPrefix('rewards-plugin'));
+
+const plugin: Plugin = {
+  name: 'rewards-plugin',
+  version: '1.0.0',
+  description: '通过插件配置向 /public/bootstrap 注入/合并 rewards，支持去重',
+
+  async init(context: PluginContext): Promise<void> {
+    // 预热：记录初始化时间与默认配置
+    logger.log(withPluginPrefix('rewards-plugin', '插件正在初始化...'));
+
+    // 从配置中读取额外的 rewards
+    const extraRewards = context.config.get<RewardInfo[]>('extra_rewards', []);
+    const validRewards = Array.isArray(extraRewards) ? extraRewards.filter(isValidReward) : [];
+
+    await context.data.set('extra_rewards', validRewards);
+    await context.data.set('boot_count', 0);
+
+    logger.log(withPluginPrefix('rewards-plugin', '插件初始化成功'));
+  },
+
+  async destroy(context: PluginContext): Promise<void> {
+    const bootCount = (await context.data.get('boot_count')) ?? 0;
+    logger.log(withPluginPrefix('rewards-plugin', `插件销毁，共启动 ${String(bootCount)} 次`));
+    await context.data.clear();
+  },
+
+  hooks: {
+    'bootstrap|beforeGenerate': {
+      type: 'action',
+      priority: 10,
+      handler: (async (_value: unknown, context: PluginContext) => {
+        const current = (await context.data.get('boot_count')) as number | null | undefined;
+        const next = (typeof current === 'number' ? current : 0) + 1;
+        await context.data.set('boot_count', next);
+        logger.log(withPluginPrefix('rewards-plugin', `beforeGenerate: 第 ${next} 次`));
+      }) as ActionCallback,
+    },
+
+    'bootstrap|transformResponse': {
+      type: 'filter',
+      priority: 10,
+      handler: (async (value: unknown, context: PluginContext) => {
+        const resp = ((value as PublicBootstrapResponseLike) || {
+          rewards: [],
+        }) as PublicBootstrapResponseLike;
+        const baseRewards = Array.isArray(resp.rewards) ? resp.rewards.filter(isValidReward) : [];
+
+        let extras = (await context.data.get('extra_rewards')) as unknown[] | null | undefined;
+        if (!Array.isArray(extras)) {
+          // 无缓存时从配置中心读取并回填缓存
+          extras = context.config.get<RewardInfo[]>('extra_rewards', []).filter(isValidReward);
+          await context.data.set('extra_rewards', extras);
+        }
+        const validExtras = (extras || []).filter(isValidReward) as RewardInfo[];
+
+        // 合并逻辑：同名项由 extras 覆盖 base；保持去重
+        const map = new Map<string, RewardInfo>();
+        for (const r of baseRewards) {
+          map.set(r.name, r);
+        }
+        for (const r of validExtras) {
+          map.set(r.name, r); // 覆盖
+        }
+
+        return {
+          ...resp,
+          rewards: Array.from(map.values()),
+        } as PublicBootstrapResponseLike;
+      }) as FilterCallback,
+    },
+
+    'bootstrap|afterGenerate': {
+      type: 'action',
+      priority: 10,
+      handler: (async (_context: PluginContext, value: unknown) => {
+        const resp = (value || {}) as PublicBootstrapResponseLike;
+        const count = Array.isArray(resp.rewards) ? resp.rewards.length : 0;
+        logger.log(withPluginPrefix('rewards-plugin', `afterGenerate: rewards=${count}`));
+      }) as ActionCallback,
+    },
+  },
+};
+
+export default plugin;

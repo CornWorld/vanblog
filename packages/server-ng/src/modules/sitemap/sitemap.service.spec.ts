@@ -273,6 +273,58 @@ describe('SitemapService', () => {
     });
   });
 
+  describe('getSiteUrls with filters', () => {
+    it('should return original urls when no filters registered', async () => {
+      vi.spyOn(service, 'getArticleUrls').mockResolvedValue(['/post/a']);
+      vi.spyOn(service, 'getCategoryUrls').mockResolvedValue(['/category/c']);
+      vi.spyOn(service, 'getTagUrls').mockResolvedValue(['/tag/t']);
+      vi.spyOn(service, 'getPageUrls').mockResolvedValue(['/page/1']);
+
+      // hookService.applyFilters 未定义时，getSiteUrls 内部会调用真正实现，需提供默认行为
+      (hookService as any).applyFilters = vi
+        .fn()
+        .mockImplementation((_name: string, value: string[]) => value);
+
+      const urls = await service.getSiteUrls();
+      expect(urls).toContain('/');
+      expect(urls).toContain('/post/a');
+      expect(urls).toContain('/category/c');
+      expect(urls).toContain('/tag/t');
+      expect(urls).toContain('/page/1');
+    });
+
+    it('should allow plugins to contribute and dedupe urls', async () => {
+      vi.spyOn(service, 'getArticleUrls').mockResolvedValue(['/post/a']);
+      vi.spyOn(service, 'getCategoryUrls').mockResolvedValue([]);
+      vi.spyOn(service, 'getTagUrls').mockResolvedValue([]);
+      vi.spyOn(service, 'getPageUrls').mockResolvedValue([]);
+
+      (hookService as any).applyFilters = vi
+        .fn()
+        .mockImplementation((_name: string, value: string[]) =>
+          value.concat(['/post/a', '/extra']),
+        );
+
+      const urls = await service.getSiteUrls();
+      // 保留顺序并去重
+      expect(urls.filter((u) => u === '/post/a').length).toBe(1);
+      expect(urls).toContain('/extra');
+    });
+
+    it('should return original urls when filter throws', async () => {
+      vi.spyOn(service, 'getArticleUrls').mockResolvedValue(['/post/a']);
+      vi.spyOn(service, 'getCategoryUrls').mockResolvedValue([]);
+      vi.spyOn(service, 'getTagUrls').mockResolvedValue([]);
+      vi.spyOn(service, 'getPageUrls').mockResolvedValue([]);
+
+      (hookService as any).applyFilters = vi.fn().mockRejectedValue(new Error('boom'));
+
+      const urls = await service.getSiteUrls();
+      expect(urls).toContain('/post/a');
+      expect(urls).not.toContain('/extra');
+    });
+  });
+
   describe('generateSitemap', () => {
     it('should debounce sitemap generation', () => {
       vi.useFakeTimers();

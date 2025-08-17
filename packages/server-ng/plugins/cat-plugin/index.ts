@@ -1,9 +1,11 @@
 // 🐱插件：在文章保存时在内容/标题/标签的结尾添加"喵"
 
+import { Logger } from '@nestjs/common';
 import dayjs from 'dayjs';
 import type { FilterCallback } from '../../src/modules/plugin/interfaces/hook.interface';
 import type { PluginContext } from '../../src/modules/plugin/interfaces/plugin-context.interface';
 import type { Plugin } from '../../src/modules/plugin/services/plugin-loader.service';
+import { withPluginPrefix } from '../../src/modules/plugin/utils/prefix.util';
 
 // 定义文章数据类型
 interface ArticleData {
@@ -13,6 +15,9 @@ interface ArticleData {
   tags?: string[];
 }
 
+// 插件 Logger 实例
+const logger = new Logger(withPluginPrefix('cat-plugin'));
+
 const plugin: Plugin = {
   name: 'cat-plugin',
   version: '1.0.0',
@@ -20,7 +25,7 @@ const plugin: Plugin = {
 
   // 插件初始化
   async init(context: PluginContext): Promise<void> {
-    context.logger.log('🐱插件正在初始化...');
+    logger.log(withPluginPrefix('cat-plugin', '插件正在初始化...'));
 
     // 记录插件初始化时间
     await context.data.set('initialized_at', dayjs().toISOString());
@@ -31,24 +36,27 @@ const plugin: Plugin = {
     const enableContent = context.config.get('enable_content', true) as boolean;
     const enableTags = context.config.get('enable_tags', true) as boolean;
 
-    context.logger.log(
-      `🐱插件配置 - 标题: ${String(enableTitle)}, 内容: ${String(enableContent)}, 标签: ${String(enableTags)}`,
+    logger.log(
+      withPluginPrefix(
+        'cat-plugin',
+        `插件配置 - 标题: ${String(enableTitle)}, 内容: ${String(enableContent)}, 标签: ${String(enableTags)}`,
+      ),
     );
 
-    context.logger.log('🐱插件初始化成功');
+    logger.log(withPluginPrefix('cat-plugin', '插件初始化成功'));
   },
 
   // 插件销毁
   async destroy(context: PluginContext): Promise<void> {
-    context.logger.log('🐱插件正在销毁...');
+    logger.log(withPluginPrefix('cat-plugin', '插件正在销毁...'));
 
     const processedCount = await context.data.get('processed_articles');
-    context.logger.log(`🐱插件已处理 ${String(processedCount)} 篇文章`);
+    logger.log(withPluginPrefix('cat-plugin', `插件已处理 ${String(processedCount)} 篇文章`));
 
     // 清理数据
     await context.data.clear();
 
-    context.logger.log('🐱插件销毁完成');
+    logger.log(withPluginPrefix('cat-plugin', '插件销毁完成'));
   },
 
   // 钩子定义
@@ -95,7 +103,7 @@ const plugin: Plugin = {
           });
         }
 
-        context.logger.log('🐱插件已为文章添加喵~');
+        logger.log(withPluginPrefix('cat-plugin', '已为文章添加喵~'));
 
         // 更新处理计数
         context.data
@@ -154,7 +162,7 @@ const plugin: Plugin = {
           });
         }
 
-        context.logger.log('🐱插件已为更新的文章添加喵~');
+        logger.log(withPluginPrefix('cat-plugin', '已为更新的文章添加喵~'));
 
         // 更新处理计数
         context.data

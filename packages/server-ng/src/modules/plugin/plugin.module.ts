@@ -3,6 +3,7 @@ import { Global, Module, DynamicModule } from '@nestjs/common';
 import { LoggerModule } from '../../core/logger/logger.module';
 import { DatabaseModule } from '../../database/database.module';
 import { PermissionModule } from '../permission/permission.module';
+import { SettingModule } from '../setting/setting.module';
 
 import { PluginLoaderController } from './controllers/plugin-loader.controller';
 import { WebhookController } from './controllers/webhook.controller';
@@ -17,6 +18,7 @@ import { WebhookService } from './services/webhook.service';
   imports: [
     LoggerModule,
     DatabaseModule,
+    SettingModule,
     PermissionModule.forFeature([
       'plugin:install',
       'plugin:uninstall',

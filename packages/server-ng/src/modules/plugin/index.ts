@@ -4,7 +4,6 @@ export {
   PluginContextFactory,
   PluginDataStorageService,
   PluginConfigReaderService,
-  PluginLoggerService,
   PluginContextService,
 } from './services/plugin-context.service';
 export { PluginLoaderService } from './services/plugin-loader.service';
@@ -15,3 +14,4 @@ export type * from './interfaces/plugin-context.interface';
 export * from './controllers/plugin-loader.controller';
 export * from './controllers/webhook.controller';
 export * from './dto/webhook.dto';
+export { withPluginPrefix } from './utils/prefix.util';

@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { StatisticsService } from '../../shared/services/statistics.service';
 import { CategoryService } from '../category/category.service';
 import { CommentService } from '../comment/comment.service';
+import { HookService } from '../plugin/services/hook.service';
 import { RewardService } from '../reward/reward.service';
 import { SettingCoreService } from '../setting/services/setting-core.service';
 import { SocialLinksService } from '../social-links/social-links.service';
@@ -22,9 +23,15 @@ export class BootstrapService {
     private readonly commentService: CommentService,
     private readonly tagService: TagService,
     private readonly categoryService: CategoryService,
+    private readonly hookService: HookService,
   ) {}
 
   async getPublicBootstrap(): Promise<PublicBootstrapResponseDto> {
+    // 插件钩子：生成前
+    await this.hookService
+      .doAction('bootstrap|beforeGenerate', {}, { action: 'public' })
+      .catch(() => {});
+
     const [
       tags,
       overall,
@@ -64,7 +71,17 @@ export class BootstrapService {
         walineSettings.value && { walineConfig: walineSettings.value }),
     };
 
-    return response;
+    // 允许插件过滤/转换响应
+    const filtered = await this.hookService
+      .applyFilters('bootstrap|transformResponse', response, { action: 'public' })
+      .catch(() => response);
+
+    // 插件钩子：生成后
+    await this.hookService
+      .doAction('bootstrap|afterGenerate', filtered, { action: 'public' })
+      .catch(() => {});
+
+    return filtered;
   }
 
   private async getAllTags(): Promise<string[]> {

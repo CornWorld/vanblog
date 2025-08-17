@@ -16,8 +16,15 @@ import type { PluginContext } from '../interfaces/plugin-context.interface';
 interface PackageJson {
   [key: string]: unknown;
   name?: string;
+  version?: string;
+  description?: string;
+  main?: string;
   keywords?: string[];
-  vanblog?: unknown;
+  vanblog?: {
+    description?: string;
+    [k: string]: unknown;
+  };
+  engines?: Record<string, string>;
   dependencies?: Record<string, string>;
   devDependencies?: Record<string, string>;
 }
@@ -56,6 +63,8 @@ export interface Plugin {
   init?(context: PluginContext): Promise<void> | void;
   destroy?(context: PluginContext): Promise<void> | void;
 }
+
+export type PartialPlugin = Partial<Plugin>;
 
 @Injectable()
 export class PluginLoaderService implements OnModuleInit {
@@ -108,7 +117,7 @@ export class PluginLoaderService implements OnModuleInit {
     // Clear hooks (this will remove all registered hooks)
     this.hookService.clearAll();
 
-    // Reload plugins
+    // Load plugins again
     await this.loadPlugins();
   }
 
@@ -123,138 +132,121 @@ export class PluginLoaderService implements OnModuleInit {
       if (plugin.destroy && context) {
         await plugin.destroy(context);
       }
-
-      this.loadedPlugins.delete(pluginName);
-      this.pluginContexts.delete(pluginName);
-
-      this.logger.log(`Successfully unloaded plugin: ${pluginName}`);
-      return true;
     } catch (error) {
       this.logger.error(
-        `Failed to unload plugin ${pluginName}:`,
+        `Failed to destroy plugin ${pluginName}:`,
         error instanceof Error ? error.stack : String(error),
       );
-      return false;
     }
+
+    this.loadedPlugins.delete(pluginName);
+    this.pluginContexts.delete(pluginName);
+    return true;
   }
 
   private async loadPlugins(): Promise<void> {
+    const pluginDirectories: string[] = [];
+    const pluginsDir = join(process.cwd(), 'plugins');
+
+    // Scan plugins directory
     try {
-      // Plugin directory should be at the same level as data directory
-      const pluginsDir = join(process.cwd(), 'plugins');
-      this.logger.log(`Scanning plugins directory: ${pluginsDir}`);
-
-      const allPluginDirs: string[] = [];
-
-      // 1. Scan local plugin directories
-      try {
-        await stat(pluginsDir);
-        this.logger.log(`Plugins directory exists: ${pluginsDir}`);
-        const localPluginDirs = await this.scanPluginDirectories(pluginsDir);
-        allPluginDirs.push(...localPluginDirs);
-        this.logger.log(`Found ${String(localPluginDirs.length)} local plugin directories`);
-      } catch {
-        this.logger.warn(`Plugins directory does not exist: ${pluginsDir}`);
-      }
-
-      // 2. Scan npm package plugins in node_modules
-      const nodeModulesDir = join(pluginsDir, 'node_modules');
-      try {
-        await stat(nodeModulesDir);
-        this.logger.log(`Scanning npm plugins in: ${nodeModulesDir}`);
-        const npmPluginDirs = await this.scanNpmPlugins(nodeModulesDir);
-        allPluginDirs.push(...npmPluginDirs);
-        this.logger.log(`Found ${String(npmPluginDirs.length)} npm plugin packages`);
-      } catch {
-        this.logger.log(`No node_modules directory found in plugins directory`);
-      }
-
-      this.logger.log(
-        `Found ${String(allPluginDirs.length)} total plugin directories: ${JSON.stringify(allPluginDirs)}`,
-      );
-
-      for (const pluginDir of allPluginDirs) {
-        try {
-          this.logger.log(`Attempting to load plugin from: ${pluginDir}`);
-          await this.loadPlugin(pluginDir);
-        } catch (loadError) {
-          this.logger.error(
-            `Failed to load plugin from ${pluginDir}:`,
-            loadError instanceof Error ? loadError.stack : String(loadError),
-          );
-        }
-      }
-
-      this.logger.log(`Successfully loaded ${String(this.loadedPlugins.size)} plugins`);
-    } catch (error) {
-      this.logger.error(
-        'Failed to load plugins:',
-        error instanceof Error ? error.stack : String(error),
-      );
+      const localPlugins = await this.scanPluginDirectories(pluginsDir);
+      pluginDirectories.push(...localPlugins);
+      this.logger.log(`Found ${localPlugins.length} local plugins in ${pluginsDir}`);
+    } catch (_error) {
+      this.logger.log(`No local plugins directory found: ${pluginsDir}`);
     }
+
+    // Scan npm plugins in node_modules
+    try {
+      const nodeModulesDir = join(process.cwd(), 'node_modules');
+      const npmPlugins = await this.scanNpmPlugins(nodeModulesDir);
+      pluginDirectories.push(...npmPlugins);
+      this.logger.log(`Found ${npmPlugins.length} npm plugins in node_modules`);
+    } catch (_error) {
+      this.logger.log('No node_modules directory found or unable to scan npm plugins');
+    }
+
+    // Load each plugin
+    for (const pluginDir of pluginDirectories) {
+      try {
+        await this.loadPlugin(pluginDir);
+      } catch (error) {
+        this.logger.error(
+          `Failed to load plugin from ${pluginDir}:`,
+          error instanceof Error ? error.stack : String(error),
+        );
+      }
+    }
+
+    this.logger.log(`Successfully loaded ${this.loadedPlugins.size} plugins`);
   }
 
   private async scanPluginDirectories(pluginsDir: string): Promise<string[]> {
+    const plugins: string[] = [];
+
     try {
-      const entries = await readdir(pluginsDir, { withFileTypes: true });
-      const pluginDirs: string[] = [];
+      const entries = await readdir(pluginsDir);
 
       for (const entry of entries) {
-        if (entry.isDirectory() && entry.name !== 'node_modules') {
-          const pluginPath = join(pluginsDir, entry.name);
+        const pluginPath = join(pluginsDir, entry);
+        const isDir = (await stat(pluginPath)).isDirectory();
+
+        if (isDir) {
           const hasManifest = await this.hasPluginManifest(pluginPath);
           const hasIndex = await this.hasPluginIndex(pluginPath);
 
           if (hasManifest || hasIndex) {
-            pluginDirs.push(pluginPath);
+            plugins.push(pluginPath);
           }
         }
       }
-
-      return pluginDirs;
     } catch (error) {
-      if (
-        error != null &&
-        typeof error === 'object' &&
-        'code' in error &&
-        error.code === 'ENOENT'
-      ) {
-        this.logger.warn('Plugins directory does not exist, skipping plugin loading');
-        return [];
-      }
-      throw error;
+      this.logger.error(
+        `Failed to scan plugin directories in ${pluginsDir}:`,
+        error instanceof Error ? error.stack : String(error),
+      );
     }
+
+    return plugins;
   }
 
   private async scanNpmPlugins(nodeModulesDir: string): Promise<string[]> {
+    const npmPlugins: string[] = [];
+
     try {
-      const entries = await readdir(nodeModulesDir, { withFileTypes: true });
-      const pluginDirs: string[] = [];
+      const entries = await readdir(nodeModulesDir);
 
       for (const entry of entries) {
-        if (entry.isDirectory()) {
-          const packagePath = join(nodeModulesDir, entry.name);
+        // Skip .bin directory and other special directories
+        if (entry.startsWith('.')) continue;
 
-          // Check if it's a VanBlog plugin by looking for package.json with vanblog-plugin keyword
+        // Handle scoped packages
+        if (entry.startsWith('@')) {
+          const scopeDir = join(nodeModulesDir, entry);
+          const scopedEntries = await readdir(scopeDir);
+
+          for (const scopedEntry of scopedEntries) {
+            const packagePath = join(scopeDir, scopedEntry);
+            if (await this.isVanBlogPlugin(packagePath)) {
+              npmPlugins.push(packagePath);
+            }
+          }
+        } else {
+          const packagePath = join(nodeModulesDir, entry);
           if (await this.isVanBlogPlugin(packagePath)) {
-            pluginDirs.push(packagePath);
+            npmPlugins.push(packagePath);
           }
         }
       }
-
-      return pluginDirs;
     } catch (error) {
-      if (
-        error != null &&
-        typeof error === 'object' &&
-        'code' in error &&
-        error.code === 'ENOENT'
-      ) {
-        this.logger.warn('Node modules directory does not exist');
-        return [];
-      }
-      throw error;
+      this.logger.error(
+        `Failed to scan npm plugins in ${nodeModulesDir}:`,
+        error instanceof Error ? error.stack : String(error),
+      );
     }
+
+    return npmPlugins;
   }
 
   private async isVanBlogPlugin(packagePath: string): Promise<boolean> {
@@ -263,12 +255,13 @@ export class PluginLoaderService implements OnModuleInit {
       const packageJsonContent = await readFile(packageJsonPath, 'utf-8');
       const packageJson = JSON.parse(packageJsonContent) as PackageJson;
 
-      // Check if package has vanblog-plugin keyword or starts with vanblog-plugin-
-      const hasKeyword = packageJson.keywords?.includes('vanblog-plugin') ?? false;
-      const hasPrefix = packageJson.name?.startsWith('vanblog-plugin-') ?? false;
-      const hasVanBlogConfig = packageJson.vanblog !== undefined;
-
-      return hasKeyword || hasPrefix || hasVanBlogConfig;
+      // Check if it's a VanBlog plugin
+      if (Array.isArray(packageJson.keywords)) {
+        if (packageJson.keywords.includes('vanblog-plugin')) return true;
+        if (packageJson.keywords.includes('vanblog')) return true;
+      }
+      if (packageJson.vanblog !== undefined) return true;
+      return false;
     } catch {
       return false;
     }
@@ -276,8 +269,7 @@ export class PluginLoaderService implements OnModuleInit {
 
   private async hasPluginManifest(pluginDir: string): Promise<boolean> {
     try {
-      const manifestPath = join(pluginDir, 'plugin.json');
-      await stat(manifestPath);
+      await stat(join(pluginDir, 'plugin.json'));
       return true;
     } catch {
       return false;
@@ -285,11 +277,11 @@ export class PluginLoaderService implements OnModuleInit {
   }
 
   private async hasPluginIndex(pluginDir: string): Promise<boolean> {
-    const indexFiles = ['index.js', 'index.mjs', 'index.ts'];
+    const indexFiles = ['index.mjs', 'index.js', 'index.ts'];
+
     for (const indexFile of indexFiles) {
       try {
-        const indexPath = join(pluginDir, indexFile);
-        await stat(indexPath);
+        await stat(join(pluginDir, indexFile));
         return true;
       } catch {
         // Continue to next file
@@ -298,34 +290,167 @@ export class PluginLoaderService implements OnModuleInit {
     return false;
   }
 
+  private getServerVersion(): string {
+    return '2.0.0'; // This should come from package.json or environment
+  }
+
+  private parseVersion(v: string): [number, number, number] {
+    const parts = v.split('.').map(Number);
+    return [parts[0] ?? 0, parts[1] ?? 0, parts[2] ?? 0];
+  }
+
+  private cmp(a: [number, number, number], b: [number, number, number]): number {
+    for (let i = 0; i < 3; i++) {
+      if (a[i] !== b[i]) return a[i] - b[i];
+    }
+    return 0;
+  }
+
+  private satisfiesVanblogEngine(range: string, version: string): boolean {
+    const trimmed = range.trim();
+    const v = this.parseVersion(version);
+
+    // ^2.0.0 => >=2.0.0 <3.0.0
+    const caret = trimmed.match(/^\^(\d+)\.(\d+)\.(\d+)$/);
+    if (caret) {
+      const low: [number, number, number] = [Number(caret[1]), Number(caret[2]), Number(caret[3])];
+      const high: [number, number, number] = [low[0] + 1, 0, 0];
+      return this.cmp(v, low) >= 0 && this.cmp(v, high) < 0;
+    }
+
+    // ~2.1.3 => >=2.1.3 <2.2.0
+    const tilde = trimmed.match(/^~(\d+)\.(\d+)\.(\d+)$/);
+    if (tilde) {
+      const low: [number, number, number] = [Number(tilde[1]), Number(tilde[2]), Number(tilde[3])];
+      const high: [number, number, number] = [low[0], low[1] + 1, 0];
+      return this.cmp(v, low) >= 0 && this.cmp(v, high) < 0;
+    }
+
+    // >=2.0.0, >2.0.0, <=, <
+    const comp = trimmed.match(/^(>=|>|<=|<)\s*(\d+)\.(\d+)\.(\d+)$/);
+    if (comp) {
+      const op = comp[1] as '>=' | '>' | '<=' | '<';
+      const target: [number, number, number] = [Number(comp[2]), Number(comp[3]), Number(comp[4])];
+      const c = this.cmp(v, target);
+      if (op === '>=') return c >= 0;
+      if (op === '>') return c > 0;
+      if (op === '<=') return c <= 0;
+      return c < 0;
+    }
+
+    // Exact 2.0.0
+    const exact = trimmed.match(/^(\d+)\.(\d+)\.(\d+)$/);
+    if (exact) {
+      const target: [number, number, number] = [
+        Number(exact[1]),
+        Number(exact[2]),
+        Number(exact[3]),
+      ];
+      return this.cmp(v, target) === 0;
+    }
+
+    // Fallbacks for simple forms
+    // '2' => match major only
+    if (/^\d+$/.test(trimmed)) {
+      const maj = Number(trimmed);
+      return v[0] === maj;
+    }
+
+    // '2.1' => match major.minor
+    if (/^\d+\.\d+$/.test(trimmed)) {
+      const [majStr, minStr] = trimmed.split('.');
+      const maj = Number(majStr);
+      const min = Number(minStr);
+      return v[0] === maj && v[1] === min;
+    }
+
+    // Unknown pattern: be permissive (do not block)
+    this.logger.warn(`Unknown engines.vanblog range pattern: "${trimmed}", allowing by default`);
+    return true;
+  }
+
   private async loadPlugin(pluginDir: string): Promise<void> {
     const manifest = await this.loadPluginManifest(pluginDir);
+
+    // Read package.json for engines, main, name, version and vanblog metadata
+    const pkg = await this.readPackageJson(pluginDir);
+
+    // Enforce engines.vanblog if provided
+    const required = pkg?.engines?.vanblog;
+    if (typeof required === 'string' && required !== '') {
+      const serverVersion = this.getServerVersion();
+      if (!this.satisfiesVanblogEngine(required, serverVersion)) {
+        this.logger.warn(
+          `Skip loading plugin in ${pluginDir} due to engines.vanblog (required: ${required}, server: ${serverVersion})`,
+        );
+        return;
+      }
+    }
 
     // Install dependencies if needed
     await this.installPluginDependencies(pluginDir, manifest);
 
-    const plugin = await this.loadPluginModule(pluginDir, manifest);
+    const plugin = await this.loadPluginModule(pluginDir, manifest, pkg);
 
     if (!plugin) {
       throw new Error('Plugin module did not export a valid plugin object');
     }
 
-    // Create plugin context
-    const context = this.pluginContextFactory.createContext(plugin.name);
-    this.pluginContexts.set(plugin.name, context);
+    // Merge metadata with fallback from package.json (plugin export may omit them)
+    const pluginData: PartialPlugin = { ...plugin };
 
-    // Initialize plugin with timeout and error isolation
-    if (plugin.init) {
-      await this.safeExecuteWithTimeout(
-        async () => plugin.init?.(context),
-        60000, // 60s timeout for init
-        `Plugin ${plugin.name} initialization`,
+    const finalName =
+      (typeof pluginData.name === 'string' && pluginData.name !== ''
+        ? pluginData.name
+        : undefined) ?? (typeof pkg?.name === 'string' && pkg.name !== '' ? pkg.name : undefined);
+
+    const finalVersion =
+      (typeof pluginData.version === 'string' && pluginData.version !== ''
+        ? pluginData.version
+        : undefined) ??
+      (typeof pkg?.version === 'string' && pkg.version !== '' ? pkg.version : undefined);
+
+    // Prefer package.json.vanblog.description over npm description
+    const finalDescription =
+      (typeof pluginData.description === 'string' && pluginData.description !== ''
+        ? pluginData.description
+        : undefined) ??
+      (typeof pkg?.vanblog?.description === 'string' && pkg.vanblog.description !== ''
+        ? pkg.vanblog.description
+        : undefined) ??
+      (typeof pkg?.description === 'string' && pkg.description !== ''
+        ? pkg.description
+        : undefined);
+
+    if (!finalName || !finalVersion) {
+      throw new Error(
+        `Plugin in ${pluginDir} must export name/version or specify them in package.json`,
       );
     }
 
-    // Register plugin hooks
-    if (plugin.hooks) {
-      for (const [hookName, hookConfig] of Object.entries(plugin.hooks)) {
+    const finalPlugin: Plugin = {
+      ...pluginData,
+      name: finalName,
+      version: finalVersion,
+      ...(finalDescription ? { description: finalDescription } : {}),
+    };
+
+    // Create plugin context
+    const context = this.pluginContextFactory.createContext(finalPlugin.name);
+    this.pluginContexts.set(finalPlugin.name, context);
+
+    // Initialize plugin with timeout and error isolation
+    if (finalPlugin.init) {
+      await this.safeExecuteWithTimeout(
+        async () => finalPlugin.init?.(context),
+        60000, // 60s timeout for init
+        `Plugin ${finalPlugin.name} initialization`,
+      );
+    }
+
+    // Register plugin hooks (must come from code, not JSON)
+    if (finalPlugin.hooks) {
+      for (const [hookName, hookConfig] of Object.entries(finalPlugin.hooks)) {
         if (hookConfig.type === 'action') {
           this.hookService.addAction(hookName, hookConfig.handler, hookConfig.priority ?? 10);
         } else {
@@ -334,8 +459,8 @@ export class PluginLoaderService implements OnModuleInit {
       }
     }
 
-    this.loadedPlugins.set(plugin.name, plugin);
-    this.logger.log(`Successfully loaded plugin: ${plugin.name} v${plugin.version}`);
+    this.loadedPlugins.set(finalPlugin.name, finalPlugin);
+    this.logger.log(`Successfully loaded plugin: ${finalPlugin.name} v${finalPlugin.version}`);
   }
 
   private async loadPluginManifest(pluginDir: string): Promise<PluginManifest | null> {
@@ -348,23 +473,34 @@ export class PluginLoaderService implements OnModuleInit {
     }
   }
 
+  private async readPackageJson(pluginDir: string): Promise<PackageJson | null> {
+    try {
+      const packageJsonPath = join(pluginDir, 'package.json');
+      const packageJsonContent = await readFile(packageJsonPath, 'utf-8');
+      return JSON.parse(packageJsonContent) as PackageJson;
+    } catch {
+      return null;
+    }
+  }
+
   private async loadPluginModule(
     pluginDir: string,
     manifest: PluginManifest | null,
-  ): Promise<Plugin | null> {
+    pkg: PackageJson | null,
+  ): Promise<PartialPlugin | null> {
     const indexFiles = ['index.mjs', 'index.js', 'index.ts'];
-    const mainFile = manifest?.main;
+    const mainFile = pkg?.main ?? manifest?.main;
 
-    // Try main file first if specified in manifest
-    if (mainFile) {
+    // Try main file from package.json (preferred) then manifest
+    if (typeof mainFile === 'string' && mainFile !== '') {
       try {
         const mainPath = join(pluginDir, mainFile);
         const moduleUrl = pathToFileURL(mainPath).href;
         const pluginModule = (await import(/* @vite-ignore */ moduleUrl)) as {
           [key: string]: unknown;
-          default?: Plugin;
+          default?: PartialPlugin;
         };
-        return pluginModule.default ?? (pluginModule as unknown as Plugin);
+        return (pluginModule.default ?? (pluginModule as unknown)) as PartialPlugin;
       } catch (loadError) {
         this.logger.warn(
           `Failed to load main file ${mainFile}, trying index files:`,
@@ -381,9 +517,9 @@ export class PluginLoaderService implements OnModuleInit {
         const moduleUrl = pathToFileURL(indexPath).href;
         const pluginModule = (await import(/* @vite-ignore */ moduleUrl)) as {
           [key: string]: unknown;
-          default?: Plugin;
+          default?: PartialPlugin;
         };
-        return pluginModule.default ?? (pluginModule as unknown as Plugin);
+        return (pluginModule.default ?? (pluginModule as unknown)) as PartialPlugin;
       } catch {
         // Continue to next file
       }
@@ -394,7 +530,6 @@ export class PluginLoaderService implements OnModuleInit {
 
   private async installPluginDependencies(
     pluginDir: string,
-
     _manifest: PluginManifest | null,
   ): Promise<void> {
     // Check if plugin has package.json with dependencies
@@ -407,9 +542,9 @@ export class PluginLoaderService implements OnModuleInit {
         devDependencies?: Record<string, string>;
       };
 
-      const hasDependencies =
-        (packageJson.dependencies && Object.keys(packageJson.dependencies).length > 0) ??
-        (packageJson.devDependencies && Object.keys(packageJson.devDependencies).length > 0);
+      const depsCount = Object.keys(packageJson.dependencies ?? {}).length;
+      const devDepsCount = Object.keys(packageJson.devDependencies ?? {}).length;
+      const hasDependencies = depsCount + devDepsCount > 0;
 
       if (hasDependencies) {
         const nodeModulesPath = join(pluginDir, 'node_modules');
@@ -469,21 +604,17 @@ export class PluginLoaderService implements OnModuleInit {
     operation: string,
   ): Promise<T> {
     return new Promise<T>((resolve, reject) => {
-      const timeout = setTimeout(() => {
+      const timer = setTimeout(() => {
         reject(new Error(`${operation} timed out after ${timeoutMs}ms`));
       }, timeoutMs);
 
       Promise.resolve(fn())
         .then((result) => {
-          clearTimeout(timeout);
+          clearTimeout(timer);
           resolve(result);
         })
         .catch((error: unknown) => {
-          clearTimeout(timeout);
-          this.logger.error(
-            `${operation} failed:`,
-            error instanceof Error ? error.stack : String(error),
-          );
+          clearTimeout(timer);
           reject(error instanceof Error ? error : new Error(String(error)));
         });
     });

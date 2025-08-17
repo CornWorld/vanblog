@@ -1,0 +1,18 @@
+{
+  "name": "cat-plugin",
+  "version": "1.0.0",
+  "description": "演示用的猫猫插件",
+  "main": "index.ts",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "echo \"No tests for this plugin\" && exit 0"
+  },
+  "keywords": [
+    "vanblog",
+    "plugin",
+    "demo"
+  ],
+  "author": "VanBlog",
+  "license": "MIT"
+}

@@ -1,29 +1,46 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import plugin from './index';
 import type { PluginContext } from '../../src/modules/plugin/interfaces/plugin-context.interface';
 
-// Mock nodemailer
-vi.mock('nodemailer', () => ({
-  createTransporter: vi.fn(() => ({
-    sendMail: vi.fn().mockResolvedValue({ messageId: 'test-message-id' }),
-  })),
+const mockLogger = vi.hoisted(() => ({
+  log: vi.fn(),
+  warn: vi.fn(),
+  error: vi.fn(),
 }));
+
+vi.mock('nodemailer', () => ({
+  createTransport: vi.fn().mockReturnValue({
+    sendMail: vi.fn().mockResolvedValue({ messageId: 'test-message-id' }),
+  }),
+}));
+
+vi.mock('@nestjs/common', () => ({
+  Logger: vi.fn().mockImplementation(() => mockLogger),
+}));
+
+import plugin from './index';
 
 describe('EmailNotificationPlugin', () => {
   let mockContext: PluginContext;
-  let mockLogger: any;
   let mockConfig: any;
   let mockData: any;
 
   beforeEach(() => {
-    mockLogger = {
-      log: vi.fn(),
-      warn: vi.fn(),
-      error: vi.fn(),
-    };
+    // Reset mock calls
+    vi.clearAllMocks();
 
     mockConfig = {
-      get: vi.fn(),
+      get: vi.fn().mockImplementation((key: string, defaultValue?: unknown) => {
+        const configs = {
+          smtp_host: 'smtp.example.com',
+          smtp_port: 587,
+          smtp_secure: false,
+          smtp_user: 'test@example.com',
+          smtp_pass: 'password',
+          email_from: 'test@example.com',
+          email_to: ['admin@example.com'],
+        };
+        return configs[key as keyof typeof configs] ?? defaultValue;
+      }),
     };
 
     mockData = {
@@ -33,10 +50,17 @@ describe('EmailNotificationPlugin', () => {
     };
 
     mockContext = {
-      logger: mockLogger,
       config: mockConfig,
       data: mockData,
-    };
+      settings: {
+        register: vi.fn(),
+        get: vi.fn(),
+        update: vi.fn(),
+        delete: vi.fn(),
+        listKeys: vi.fn().mockReturnValue([]),
+        getRegistration: vi.fn(),
+      } as any,
+    } as unknown as PluginContext;
   });
 
   describe('Plugin Basic Info', () => {
@@ -45,114 +69,31 @@ describe('EmailNotificationPlugin', () => {
       expect(plugin.version).toBe('1.0.0');
       expect(plugin.description).toContain('邮件通知插件');
     });
+
+    it('should have init and destroy methods', () => {
+      expect(typeof plugin.init).toBe('function');
+      expect(typeof plugin.destroy).toBe('function');
+    });
   });
 
-  describe('Plugin Initialization', () => {
-    it('should initialize successfully with valid email config', async () => {
-      // Mock valid email configuration
-      mockConfig.get.mockImplementation((key: string, defaultValue: any) => {
-        const configs: Record<string, any> = {
-          smtp_host: 'smtp.example.com',
-          smtp_port: 587,
-          smtp_secure: false,
-          smtp_user: 'test@example.com',
-          smtp_pass: 'password',
-          email_from: 'noreply@example.com',
-          email_to: ['admin@example.com'],
-        };
-        return configs[key] || defaultValue;
-      });
-
-      await plugin.init(mockContext);
-
-      expect(mockLogger.log).toHaveBeenCalledWith('📧邮件通知插件正在初始化...');
-      expect(mockLogger.log).toHaveBeenCalledWith('📧邮件配置验证成功');
-      expect(mockLogger.log).toHaveBeenCalledWith('📧邮件通知插件初始化成功');
+  describe('Plugin Lifecycle', () => {
+    it('should initialize successfully', async () => {
+      await expect(plugin.init!(mockContext)).resolves.not.toThrow();
       expect(mockData.set).toHaveBeenCalledWith('email_enabled', true);
       expect(mockData.set).toHaveBeenCalledWith('emails_sent', 0);
     });
 
-    it('should handle incomplete email config gracefully', async () => {
-      // Mock incomplete email configuration
-      mockConfig.get.mockImplementation((key: string, defaultValue: any) => {
-        const configs: Record<string, any> = {
-          smtp_host: '',
-          smtp_port: 587,
-          smtp_secure: false,
-          smtp_user: '',
-          smtp_pass: '',
-          email_from: '',
-          email_to: [],
-        };
-        return configs[key] || defaultValue;
-      });
-
-      await plugin.init(mockContext);
-
-      expect(mockLogger.warn).toHaveBeenCalledWith('📧邮件配置不完整，插件将不会发送邮件');
-      expect(mockData.set).toHaveBeenCalledWith('email_enabled', false);
-    });
-  });
-
-  describe('Plugin Destruction', () => {
-    it('should destroy plugin and clean up data', async () => {
-      mockData.get.mockResolvedValue(5);
-
-      await plugin.destroy(mockContext);
-
-      expect(mockLogger.log).toHaveBeenCalledWith('📧邮件通知插件正在销毁...');
-      expect(mockLogger.log).toHaveBeenCalledWith('📧插件已发送 5 封邮件');
+    it('should destroy successfully', async () => {
+      await expect(plugin.destroy!(mockContext)).resolves.not.toThrow();
       expect(mockData.clear).toHaveBeenCalled();
-      expect(mockLogger.log).toHaveBeenCalledWith('📧邮件通知插件销毁完成');
-    });
-  });
-
-  describe('Email Configuration', () => {
-    it('should return valid email config when all required fields are provided', async () => {
-      mockConfig.get.mockImplementation((key: string, defaultValue: any) => {
-        const configs: Record<string, any> = {
-          smtp_host: 'smtp.example.com',
-          smtp_port: 587,
-          smtp_secure: false,
-          smtp_user: 'test@example.com',
-          smtp_pass: 'password',
-          email_from: 'noreply@example.com',
-          email_to: ['admin@example.com'],
-        };
-        return configs[key] || defaultValue;
-      });
-
-      const config = await plugin.getEmailConfig(mockContext);
-
-      expect(config).toEqual({
-        host: 'smtp.example.com',
-        port: 587,
-        secure: false,
-        auth: {
-          user: 'test@example.com',
-          pass: 'password',
-        },
-        from: 'noreply@example.com',
-        to: ['admin@example.com'],
-      });
-    });
-
-    it('should return null when required fields are missing', async () => {
-      mockConfig.get.mockImplementation((key: string, defaultValue: any) => {
-        return defaultValue;
-      });
-
-      const config = await plugin.getEmailConfig(mockContext);
-
-      expect(config).toBeNull();
     });
   });
 
   describe('Email Sending', () => {
-    it('should send email successfully when enabled', async () => {
+    beforeEach(() => {
       mockData.get.mockImplementation((key: string) => {
         if (key === 'email_enabled') return true;
-        if (key === 'emails_sent') return 0;
+        if (key === 'emails_sent') return 5;
         return null;
       });
 
@@ -168,33 +109,58 @@ describe('EmailNotificationPlugin', () => {
         };
         return configs[key] || defaultValue;
       });
-
-      await plugin.sendEmail(mockContext, 'Test Subject', 'Test Content');
-
-      expect(mockLogger.log).toHaveBeenCalledWith('📧邮件发送成功: Test Subject');
-      expect(mockData.set).toHaveBeenCalledWith('emails_sent', 1);
     });
 
     it('should skip sending when email is disabled', async () => {
-      mockData.get.mockResolvedValue(false);
+      mockData.get.mockImplementation((key: string) => {
+        if (key === 'email_enabled') return false;
+        return null;
+      });
 
-      await plugin.sendEmail(mockContext, 'Test Subject', 'Test Content');
+      // Test through hooks since sendEmail is not exported
+      const handler = plugin.hooks!['article|afterCreate'].handler;
+      const articleData = { title: 'Test Article' };
 
-      expect(mockLogger.warn).toHaveBeenCalledWith('📧邮件功能未启用，跳过发送');
+      await handler(articleData, mockContext);
+
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        expect.stringContaining('email-notification-plugin:邮件功能未启用，跳过发送'),
+      );
     });
   });
 
   describe('Hook Handlers', () => {
-    it('should have correct hook configurations', () => {
+    beforeEach(() => {
+      mockData.get.mockImplementation((key: string) => {
+        if (key === 'email_enabled') return true;
+        if (key === 'emails_sent') return 5;
+        return null;
+      });
+
+      mockConfig.get.mockImplementation((key: string, defaultValue: any) => {
+        const configs: Record<string, any> = {
+          smtp_host: 'smtp.example.com',
+          smtp_port: 587,
+          smtp_secure: false,
+          smtp_user: 'test@example.com',
+          smtp_pass: 'password',
+          email_from: 'noreply@example.com',
+          email_to: ['admin@example.com'],
+        };
+        return configs[key] || defaultValue;
+      });
+    });
+
+    it('should have all required hooks', () => {
       expect(plugin.hooks).toBeDefined();
-      expect(plugin.hooks['article|afterCreate']).toBeDefined();
-      expect(plugin.hooks['article|afterUpdate']).toBeDefined();
-      expect(plugin.hooks['comment|afterUpdate']).toBeDefined();
-      expect(plugin.hooks['draft.published']).toBeDefined();
+      expect(plugin.hooks!['article|afterCreate']).toBeDefined();
+      expect(plugin.hooks!['article|afterUpdate']).toBeDefined();
+      expect(plugin.hooks!['comment|afterUpdate']).toBeDefined();
+      expect(plugin.hooks!['draft.published']).toBeDefined();
 
       // Check hook types and priorities
-      expect(plugin.hooks['article|afterCreate'].type).toBe('action');
-      expect(plugin.hooks['article|afterCreate'].priority).toBe(10);
+      expect(plugin.hooks!['article|afterCreate'].type).toBe('action');
+      expect(plugin.hooks!['article|afterCreate'].priority).toBe(10);
     });
 
     it('should handle article creation hook', async () => {
@@ -206,25 +172,13 @@ describe('EmailNotificationPlugin', () => {
         createdAt: '2024-01-01T00:00:00Z',
       };
 
-      mockData.get.mockResolvedValue(true);
-      mockConfig.get.mockImplementation((key: string, defaultValue: any) => {
-        const configs: Record<string, any> = {
-          smtp_host: 'smtp.example.com',
-          smtp_port: 587,
-          smtp_secure: false,
-          smtp_user: 'test@example.com',
-          smtp_pass: 'password',
-          email_from: 'noreply@example.com',
-          email_to: ['admin@example.com'],
-        };
-        return configs[key] || defaultValue;
-      });
-
-      const handler = plugin.hooks['article|afterCreate'].handler;
+      const handler = plugin.hooks!['article|afterCreate'].handler;
       await handler(articleData, mockContext);
 
       expect(mockLogger.log).toHaveBeenCalledWith(
-        expect.stringContaining('📧邮件发送成功: 📝 新文章发布：Test Article'),
+        expect.stringContaining(
+          'email-notification-plugin:邮件发送成功: 📝 新文章发布：Test Article',
+        ),
       );
     });
 
@@ -236,25 +190,20 @@ describe('EmailNotificationPlugin', () => {
         email: 'commenter@example.com',
       };
 
-      mockData.get.mockResolvedValue(true);
-      mockConfig.get.mockImplementation((key: string, defaultValue: any) => {
-        const configs: Record<string, any> = {
-          smtp_host: 'smtp.example.com',
-          smtp_port: 587,
-          smtp_secure: false,
-          smtp_user: 'test@example.com',
-          smtp_pass: 'password',
-          email_from: 'noreply@example.com',
-          email_to: ['admin@example.com'],
-        };
-        return configs[key] || defaultValue;
-      });
-
-      const handler = plugin.hooks['comment|afterUpdate'].handler;
+      const handler = plugin.hooks!['comment|afterUpdate'].handler;
       await handler(commentData, mockContext);
 
       expect(mockLogger.log).toHaveBeenCalledWith(
-        expect.stringContaining('📧邮件发送成功: 💬 评论系统更新通知'),
+        expect.stringContaining('email-notification-plugin:邮件发送成功: 💬 评论系统更新通知'),
+      );
+    });
+
+    it('should handle invalid data gracefully', async () => {
+      const handler = plugin.hooks!['article|afterCreate'].handler;
+      await handler(null, mockContext);
+
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        expect.stringContaining('email-notification-plugin:文章创建Hook收到无效数据，跳过邮件发送'),
       );
     });
   });

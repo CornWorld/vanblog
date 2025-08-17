@@ -15,17 +15,8 @@ export interface PluginConfigReader {
   has(key: string): boolean;
 }
 
-export interface PluginLogger {
-  log(message: string, context?: string): void;
-  error(message: string, trace?: string, context?: string): void;
-  warn(message: string, context?: string): void;
-  debug(message: string, context?: string): void;
-  verbose(message: string, context?: string): void;
-}
-
 export interface PluginContext {
   readonly pluginId: string;
-  readonly logger: PluginLogger;
   readonly config: PluginConfigReader;
   readonly data: PluginDataStorage;
 }

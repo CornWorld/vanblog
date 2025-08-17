@@ -10,7 +10,7 @@ import {
   PluginContextFactory,
   PluginDataStorageService,
   PluginConfigReaderService,
-  PluginLoggerService,
+  // PluginSettingsRegistryService,
   PluginContextService,
 } from './plugin-context.service';
 
@@ -33,10 +33,26 @@ interface MockDatabase {
 
 describe('PluginContext Services', () => {
   let factory: PluginContextFactory;
-  let mockDb: MockDatabase;
   let mockConfigService: ConfigService;
+  let mockDb: MockDatabase;
 
   beforeEach(async () => {
+    // Do not instantiate real ConfigService; use a lightweight mock instead
+    mockDb = {
+      select: vi.fn().mockReturnThis(),
+      from: vi.fn().mockReturnThis(),
+      where: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockReturnThis(),
+      insert: vi.fn().mockReturnThis(),
+      values: vi.fn().mockReturnThis(),
+      onConflictDoUpdate: vi.fn().mockReturnThis(),
+      delete: vi.fn().mockReturnThis(),
+      update: vi.fn().mockReturnThis(),
+      set: vi.fn().mockReturnThis(),
+      returning: vi.fn().mockReturnThis(),
+      $client: { execute: vi.fn() },
+    } as unknown as MockDatabase;
+
     const mockReturning = {
       returning: vi.fn().mockResolvedValue([{ id: 1 }]),
     };
@@ -98,7 +114,6 @@ describe('PluginContext Services', () => {
 
       expect(context).toBeDefined();
       expect(context.pluginId).toBe('test-plugin');
-      expect(context.logger).toBeDefined();
       expect(context.config).toBeDefined();
       expect(context.data).toBeDefined();
     });
@@ -295,37 +310,51 @@ describe('PluginContext Services', () => {
     });
   });
 
-  describe('PluginLoggerService', () => {
-    let logger: PluginLoggerService;
+  // describe('PluginSettingsRegistryService', () => {
+  //   let settings: PluginSettingsRegistryService;
 
-    beforeEach(() => {
-      logger = new PluginLoggerService('test-plugin');
-    });
+  //   beforeEach(() => {
+  //     settings = new PluginSettingsRegistryService(mockSettingRegistry, 'test-plugin');
+  //   });
 
-    it('should be defined', () => {
-      expect(logger).toBeDefined();
-    });
+  //   it('should prefix keys and register config', () => {
+  //     settings.register({ key: 'foo', description: 'desc', defaultValue: 'x' });
+  //     expect(mockSettingRegistry.registerConfig).toHaveBeenCalledWith({
+  //       key: 'plugin.test-plugin.foo',
+  //       description: 'desc',
+  //       defaultValue: 'x',
+  //     });
+  //   });
 
-    it('should have all logging methods', () => {
-      expect(typeof logger.log).toBe('function');
-      expect(typeof logger.error).toBe('function');
-      expect(typeof logger.warn).toBe('function');
-      expect(typeof logger.debug).toBe('function');
-      expect(typeof logger.verbose).toBe('function');
-    });
-  });
+  //   it('should proxy get/update/delete and list keys', async () => {
+  //     await settings.get('foo');
+  //     expect(mockSettingRegistry.getConfig).toHaveBeenCalledWith('plugin.test-plugin.foo');
+
+  //     await settings.update('bar', 1);
+  //     expect(mockSettingRegistry.updateConfig).toHaveBeenCalledWith('plugin.test-plugin.bar', 1);
+
+  //     await settings.delete('bar');
+  //     expect(mockSettingRegistry.deleteConfig).toHaveBeenCalledWith('plugin.test-plugin.bar');
+
+  //     const keys = settings.listKeys();
+  //     expect(keys).toEqual(['foo', 'bar']);
+  //   });
+
+  //   it('should get registration by key', () => {
+  //     settings.getRegistration('foo');
+  //     expect(mockSettingRegistry.getRegistration).toHaveBeenCalledWith('plugin.test-plugin.foo');
+  //   });
+  // });
 
   describe('PluginContextService', () => {
-    it('should create context with all components', () => {
-      const mockLogger = new PluginLoggerService('test-plugin');
+    it('should create context with components', () => {
       const mockConfig = new PluginConfigReaderService(mockConfigService, 'test-plugin');
       const mockData = new PluginDataStorageService(mockDb as unknown as Database, 'test-plugin');
 
-      const context = new PluginContextService('test-plugin', mockLogger, mockConfig, mockData);
+      const context = new PluginContextService('test-plugin', mockConfig, mockData);
 
       expect(context).toBeDefined();
       expect(context.pluginId).toBe('test-plugin');
-      expect(context.logger).toBe(mockLogger);
       expect(context.config).toBe(mockConfig);
       expect(context.data).toBe(mockData);
     });

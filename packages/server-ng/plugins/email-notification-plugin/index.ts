@@ -1,9 +1,14 @@
 // 邮件通知插件：在文章发布、评论等事件时发送邮件通知
 
+import { Logger } from '@nestjs/common';
 import * as nodemailer from 'nodemailer';
 import type { ActionCallback } from '../../src/modules/plugin/interfaces/hook.interface';
 import type { PluginContext } from '../../src/modules/plugin/interfaces/plugin-context.interface';
 import type { Plugin } from '../../src/modules/plugin/services/plugin-loader.service';
+import { withPluginPrefix } from '../../src/modules/plugin/utils/prefix.util';
+
+const PLUGIN_PREFIX = 'email-notification-plugin';
+const logger = new Logger(PLUGIN_PREFIX);
 
 // 定义邮件配置接口
 interface EmailConfig {
@@ -38,6 +43,62 @@ interface CommentData {
   email?: string;
 }
 
+// 获取邮件配置
+async function getEmailConfig(context: PluginContext): Promise<EmailConfig | null> {
+  const host = context.config.get('smtp_host') as string;
+  const port = context.config.get('smtp_port', 587) as number;
+  const secure = context.config.get('smtp_secure', false) as boolean;
+  const user = context.config.get('smtp_user') as string;
+  const pass = context.config.get('smtp_pass') as string;
+  const from = context.config.get('email_from') as string;
+  const to = context.config.get('email_to') as string[];
+
+  if (!host || !user || !pass || !from || !to || to.length === 0) {
+    return null;
+  }
+
+  return { host, port, secure, auth: { user, pass }, from, to };
+}
+
+// 发送邮件
+async function sendEmail(context: PluginContext, subject: string, content: string): Promise<void> {
+  const emailEnabled = await context.data.get('email_enabled');
+  if (!emailEnabled) {
+    logger.warn(withPluginPrefix(PLUGIN_PREFIX, '邮件功能未启用，跳过发送'));
+    return;
+  }
+
+  const emailConfig = await getEmailConfig(context);
+  if (!emailConfig) {
+    logger.error(withPluginPrefix(PLUGIN_PREFIX, '邮件配置获取失败'));
+    return;
+  }
+
+  try {
+    const transporter = nodemailer.createTransport({
+      host: emailConfig.host,
+      port: emailConfig.port,
+      secure: emailConfig.secure,
+      auth: emailConfig.auth,
+    });
+
+    await transporter.sendMail({
+      from: emailConfig.from,
+      to: emailConfig.to.join(', '),
+      subject,
+      html: content,
+    });
+
+    // 更新发送计数
+    const currentCount = ((await context.data.get('emails_sent')) as number) || 0;
+    await context.data.set('emails_sent', currentCount + 1);
+
+    logger.log(withPluginPrefix(PLUGIN_PREFIX, `邮件发送成功: ${subject}`));
+  } catch (error) {
+    logger.error(withPluginPrefix(PLUGIN_PREFIX, `邮件发送失败: ${String(error)}`));
+  }
+}
+
 const plugin: Plugin = {
   name: 'email-notification-plugin',
   version: '1.0.0',
@@ -45,97 +106,32 @@ const plugin: Plugin = {
 
   // 插件初始化
   async init(context: PluginContext): Promise<void> {
-    context.logger.log('📧邮件通知插件正在初始化...');
+    logger.log(withPluginPrefix(PLUGIN_PREFIX, '邮件通知插件正在初始化...'));
 
     // 验证邮件配置
-    const emailConfig = await this.getEmailConfig(context);
+    const emailConfig = await getEmailConfig(context);
     if (!emailConfig) {
-      context.logger.warn('📧邮件配置不完整，插件将不会发送邮件');
+      logger.warn(withPluginPrefix(PLUGIN_PREFIX, '邮件配置不完整，插件将不会发送邮件'));
       await context.data.set('email_enabled', false);
     } else {
-      context.logger.log('📧邮件配置验证成功');
+      logger.log(withPluginPrefix(PLUGIN_PREFIX, '邮件配置验证成功'));
       await context.data.set('email_enabled', true);
       await context.data.set('emails_sent', 0);
     }
 
-    context.logger.log('📧邮件通知插件初始化成功');
+    logger.log(withPluginPrefix(PLUGIN_PREFIX, '邮件通知插件初始化成功'));
   },
 
   // 插件销毁
   async destroy(context: PluginContext): Promise<void> {
-    context.logger.log('📧邮件通知插件正在销毁...');
+    logger.log(withPluginPrefix(PLUGIN_PREFIX, '邮件通知插件正在销毁...'));
 
     const emailsSent = await context.data.get('emails_sent');
-    context.logger.log(`📧插件已发送 ${String(emailsSent)} 封邮件`);
+    logger.log(withPluginPrefix(PLUGIN_PREFIX, `插件已发送 ${String(emailsSent)} 封邮件`));
 
     // 清理数据
     await context.data.clear();
-    context.logger.log('📧邮件通知插件销毁完成');
-  },
-
-  // 获取邮件配置
-  async getEmailConfig(context: PluginContext): Promise<EmailConfig | null> {
-    const host = context.config.get('smtp_host', '') as string;
-    const port = context.config.get('smtp_port', 587) as number;
-    const secure = context.config.get('smtp_secure', false) as boolean;
-    const user = context.config.get('smtp_user', '') as string;
-    const pass = context.config.get('smtp_pass', '') as string;
-    const from = context.config.get('email_from', '') as string;
-    const to = context.config.get('email_to', []) as string[];
-
-    if (!host || !user || !pass || !from || to.length === 0) {
-      return null;
-    }
-
-    return {
-      host,
-      port,
-      secure,
-      auth: { user, pass },
-      from,
-      to,
-    };
-  },
-
-  // 发送邮件
-  async sendEmail(context: PluginContext, subject: string, content: string): Promise<void> {
-    const emailEnabled = await context.data.get('email_enabled');
-    if (!emailEnabled) {
-      context.logger.warn('📧邮件功能未启用，跳过发送');
-      return;
-    }
-
-    const emailConfig = await this.getEmailConfig(context);
-    if (!emailConfig) {
-      context.logger.error('📧邮件配置获取失败');
-      return;
-    }
-
-    try {
-      const transporter = nodemailer.createTransporter({
-        host: emailConfig.host,
-        port: emailConfig.port,
-        secure: emailConfig.secure,
-        auth: emailConfig.auth,
-      });
-
-      const mailOptions = {
-        from: emailConfig.from,
-        to: emailConfig.to.join(', '),
-        subject,
-        html: content,
-      };
-
-      await transporter.sendMail(mailOptions);
-
-      // 更新发送计数
-      const currentCount = (await context.data.get('emails_sent')) || 0;
-      await context.data.set('emails_sent', currentCount + 1);
-
-      context.logger.log(`📧邮件发送成功: ${subject}`);
-    } catch (error) {
-      context.logger.error(`📧邮件发送失败: ${String(error)}`);
-    }
+    logger.log(withPluginPrefix(PLUGIN_PREFIX, '邮件通知插件销毁完成'));
   },
 
   // Hook 处理器
@@ -146,7 +142,7 @@ const plugin: Plugin = {
       priority: 10,
       handler: (async (value: unknown, context: PluginContext) => {
         if (!value || typeof value !== 'object') {
-          context.logger.warn('📧文章创建Hook收到无效数据，跳过邮件发送');
+          logger.warn(withPluginPrefix(PLUGIN_PREFIX, '文章创建Hook收到无效数据，跳过邮件发送'));
           return;
         }
 
@@ -165,7 +161,7 @@ const plugin: Plugin = {
           <p>请登录后台查看完整内容。</p>
         `;
 
-        await plugin.sendEmail(context, subject, content);
+        await sendEmail(context, subject, content);
       }) as ActionCallback,
     },
 
@@ -175,7 +171,7 @@ const plugin: Plugin = {
       priority: 10,
       handler: (async (value: unknown, context: PluginContext) => {
         if (!value || typeof value !== 'object') {
-          context.logger.warn('📧文章更新Hook收到无效数据，跳过邮件发送');
+          logger.warn(withPluginPrefix(PLUGIN_PREFIX, '文章更新Hook收到无效数据，跳过邮件发送'));
           return;
         }
 
@@ -194,7 +190,7 @@ const plugin: Plugin = {
           <p>请登录后台查看完整内容。</p>
         `;
 
-        await plugin.sendEmail(context, subject, content);
+        await sendEmail(context, subject, content);
       }) as ActionCallback,
     },
 
@@ -204,7 +200,7 @@ const plugin: Plugin = {
       priority: 10,
       handler: (async (value: unknown, context: PluginContext) => {
         if (!value || typeof value !== 'object') {
-          context.logger.warn('📧评论更新Hook收到无效数据，跳过邮件发送');
+          logger.warn(withPluginPrefix(PLUGIN_PREFIX, '评论更新Hook收到无效数据，跳过邮件发送'));
           return;
         }
 
@@ -223,7 +219,7 @@ const plugin: Plugin = {
           <p>请登录后台查看详细信息。</p>
         `;
 
-        await plugin.sendEmail(context, subject, content);
+        await sendEmail(context, subject, content);
       }) as ActionCallback,
     },
 
@@ -233,7 +229,7 @@ const plugin: Plugin = {
       priority: 10,
       handler: (async (value: unknown, context: PluginContext) => {
         if (!value || typeof value !== 'object') {
-          context.logger.warn('📧草稿发布Hook收到无效数据，跳过邮件发送');
+          logger.warn(withPluginPrefix(PLUGIN_PREFIX, '草稿发布Hook收到无效数据，跳过邮件发送'));
           return;
         }
 
@@ -252,7 +248,7 @@ const plugin: Plugin = {
           <p>草稿已成功发布为正式文章。</p>
         `;
 
-        await plugin.sendEmail(context, subject, content);
+        await sendEmail(context, subject, content);
       }) as ActionCallback,
     },
   },

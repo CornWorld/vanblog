@@ -1,13 +1,13 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { eq, sql } from 'drizzle-orm';
 import { LibSQLDatabase } from 'drizzle-orm/libsql';
+import { z } from 'zod';
 
 import { DATABASE_CONNECTION } from '../../../database/database.module';
 import { siteMeta } from '../../../database/schema';
-import { safeParseJson, dataSchemas } from '../../../shared/zod';
+import { safeParseJson, dataSchemas, NavigationNode } from '../../../shared/zod';
 import { HookService } from '../../plugin/services/hook.service';
 
-// Core site configurations that remain in the setting module
 export interface SiteInfo {
   title: string;
   description: string;
@@ -59,13 +59,17 @@ export class SettingCoreService {
     private readonly hookService: HookService,
   ) {}
 
-  // Generic config methods
-  async getConfig<T>(key: string, defaultValue?: T): Promise<T | null> {
+  // Generic config methods with optional schema validation
+  async getConfig<T>(key: string, defaultValue?: T, schema?: z.ZodType<T>): Promise<T | null> {
     const results = await this.db.select().from(siteMeta).where(eq(siteMeta.key, key)).limit(1);
 
     if (results.length > 0 && results[0].value) {
+      if (schema) {
+        const parsed = safeParseJson<T>(results[0].value, schema);
+        return parsed;
+      }
       const parsed = safeParseJson(results[0].value, dataSchemas.genericObject);
-      return parsed as T;
+      return parsed as unknown as T | null;
     }
 
     if (defaultValue !== undefined) {
@@ -128,9 +132,9 @@ export class SettingCoreService {
   async getSiteInfo(): Promise<SiteInfo> {
     const defaultInfo: SiteInfo = {
       title: 'My Blog',
-      description: 'A blog powered by VanBlog',
+      description: 'A modern blog platform',
       author: 'Admin',
-      keywords: [],
+      keywords: ['blog', 'tech', 'personal'],
     };
     return (await this.getConfig<SiteInfo>('siteInfo', defaultInfo)) ?? defaultInfo;
   }
@@ -176,20 +180,33 @@ export class SettingCoreService {
     return this.updateConfig('siteTheme', updated);
   }
 
-  // Navigation
+  // Navigation with strict schema validation
   async getNavigation(): Promise<Navigation[]> {
     const defaultNavigation: Navigation[] = [
       { name: 'Home', path: '/' },
       { name: 'Archive', path: '/archive' },
       { name: 'About', path: '/about' },
     ];
-    return (
-      (await this.getConfig<Navigation[]>('navigation', defaultNavigation)) ?? defaultNavigation
+    const result = await this.getConfig<NavigationNode[]>(
+      'navigation',
+      defaultNavigation as unknown as NavigationNode[],
+      dataSchemas.navigationArray,
     );
+    if (!result) {
+      return defaultNavigation;
+    }
+    return result as unknown as Navigation[];
   }
 
   async updateNavigation(items: Navigation[]): Promise<Navigation[]> {
-    return this.updateConfig('navigation', items);
+    // Validate the incoming data against navigation schema before storage
+    const toValidate = items as unknown as NavigationNode[];
+    const validationResult = dataSchemas.navigationArray.safeParse(toValidate);
+    if (!validationResult.success) {
+      throw new Error(`Invalid navigation data: ${validationResult.error.message}`);
+    }
+    await this.updateConfig('navigation', validationResult.data);
+    return items;
   }
 
   // Friend Links
