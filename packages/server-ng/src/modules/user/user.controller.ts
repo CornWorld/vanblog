@@ -7,15 +7,12 @@ import {
   Param,
   Delete,
   Request,
-  UseGuards,
   BadRequestException,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { ZodValidationPipe } from 'nestjs-zod';
 
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { PermissionsGuard } from '../auth/guards/permissions.guard';
-import { Permission } from '../auth/permissions.decorator';
+import { Perm } from '../auth/permissions.decorator';
 
 import { CreateUserDto, UpdateUserDto } from './dto';
 import { CreateUserSchema } from './dto/create-user.dto';
@@ -29,13 +26,11 @@ interface RequestWithUser {
 
 @ApiTags('Users')
 @Controller({ path: 'admin/users', version: '2' })
-@UseGuards(JwtAuthGuard, PermissionsGuard)
-@ApiBearerAuth()
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
   @Post()
-  @Permission('user', ['create'])
+  @Perm('user', ['create'])
   @ApiOperation({ summary: '创建用户' })
   @ApiResponse({ status: 201, description: '用户创建成功' })
   async create(
@@ -45,8 +40,7 @@ export class UserController {
   }
 
   @Get()
-  @Permission('user', ['read'])
-  @ApiBearerAuth()
+  @Perm('user', ['read'])
   @ApiOperation({ summary: '获取用户列表' })
   @ApiResponse({ status: 200, description: '用户列表获取成功' })
   async findAll(): Promise<User[]> {
@@ -54,7 +48,7 @@ export class UserController {
   }
 
   @Get('collaborators')
-  @Permission('user', ['read'])
+  @Perm('user', ['read'])
   @ApiOperation({ summary: '获取所有协作者' })
   @ApiResponse({
     status: 200,
@@ -66,8 +60,7 @@ export class UserController {
   }
 
   @Get(':id')
-  @Permission('user', ['read'])
-  @ApiBearerAuth()
+  @Perm('user', ['read'])
   @ApiOperation({ summary: '根据ID获取用户' })
   @ApiResponse({ status: 200, description: '用户获取成功' })
   @ApiResponse({ status: 404, description: '用户未找到' })
@@ -80,8 +73,7 @@ export class UserController {
   }
 
   @Patch(':id')
-  @Permission('user', ['update'])
-  @ApiBearerAuth()
+  @Perm('user', ['update'])
   @ApiOperation({ summary: '更新用户' })
   @ApiResponse({ status: 200, description: '用户更新成功' })
   @ApiResponse({ status: 404, description: '用户未找到' })
@@ -97,8 +89,7 @@ export class UserController {
   }
 
   @Get('profile/me')
-  @Permission('user', ['read'])
-  @ApiBearerAuth()
+  @Perm('user', ['read'])
   @ApiOperation({ summary: '获取当前用户信息' })
   @ApiResponse({ status: 200, description: '用户信息获取成功' })
   async getProfile(@Request() req: RequestWithUser): Promise<User> {
@@ -106,8 +97,7 @@ export class UserController {
   }
 
   @Delete(':id')
-  @Permission('user', ['delete'])
-  @ApiBearerAuth()
+  @Perm('user', ['delete'])
   @ApiOperation({ summary: '删除用户' })
   @ApiResponse({ status: 200, description: '用户删除成功' })
   @ApiResponse({ status: 404, description: '用户未找到' })

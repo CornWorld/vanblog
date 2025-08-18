@@ -1,9 +1,9 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Post, Put, UseGuards } from '@nestjs/common';
-import { ApiOperation, ApiResponse, ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { ZodValidationPipe } from 'nestjs-zod';
 
 import { DemoModeGuard } from '../auth/guards/demo-mode.guard';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { Perm } from '../auth/permissions.decorator';
 
 import { UpdateWalineSettingDto, WalineSettingDto } from './comment.dto';
 import { UpdateWalineSettingSchema } from './comment.schema';
@@ -26,8 +26,8 @@ export class CommentController {
   }
 
   @Put('waline')
-  @UseGuards(JwtAuthGuard, DemoModeGuard)
-  @ApiBearerAuth()
+  @UseGuards(DemoModeGuard)
+  @Perm('comment', ['write'])
   @ApiOperation({ summary: 'Update Waline settings' })
   @ApiResponse({
     status: 200,
@@ -41,8 +41,8 @@ export class CommentController {
   }
 
   @Post('waline/restart')
-  @UseGuards(JwtAuthGuard, DemoModeGuard)
-  @ApiBearerAuth()
+  @UseGuards(DemoModeGuard)
+  @Perm('comment', ['write'])
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Restart Waline service' })
   @ApiResponse({
@@ -55,8 +55,7 @@ export class CommentController {
   }
 
   @Get('waline/status')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
+  @Perm('comment', ['read'])
   @ApiOperation({ summary: 'Get Waline service status' })
   @ApiResponse({
     status: 200,

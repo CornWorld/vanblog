@@ -1,20 +1,8 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Param,
-  Patch,
-  Delete,
-  UseGuards,
-  ParseIntPipe,
-} from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
+import { Controller, Get, Post, Body, Param, Patch, Delete, ParseIntPipe } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { ZodValidationPipe } from 'nestjs-zod';
 
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { PermissionsGuard } from '../auth/guards/permissions.guard';
-import { Permission } from '../auth/permissions.decorator';
+import { Perm } from '../auth/permissions.decorator';
 
 import { UpdateCustomCodeDto, UpdateCustomCodeSchema } from './dto/custom-code.dto';
 import {
@@ -39,13 +27,11 @@ import {
 
 @ApiTags('Settings')
 @Controller({ path: 'api/admin/settings', version: '2' })
-@UseGuards(JwtAuthGuard, PermissionsGuard)
-@ApiBearerAuth()
 export class SettingCoreController {
   constructor(private readonly settingCoreService: SettingCoreService) {}
 
   @Get('site-info')
-  @Permission('setting', ['read'])
+  @Perm('setting', ['read'])
   @ApiOperation({ summary: 'Get site information' })
   @ApiResponse({
     status: 200,
@@ -57,7 +43,7 @@ export class SettingCoreController {
   }
 
   @Patch('site-info')
-  @Permission('setting', ['update'])
+  @Perm('setting', ['update'])
   @ApiOperation({ summary: 'Update site information' })
   @ApiResponse({
     status: 200,
@@ -80,7 +66,7 @@ export class SettingCoreController {
   }
 
   @Get('layout')
-  @Permission('setting', ['read'])
+  @Perm('setting', ['read'])
   @ApiOperation({ summary: 'Get layout settings' })
   @ApiResponse({
     status: 200,
@@ -92,7 +78,7 @@ export class SettingCoreController {
   }
 
   @Patch('layout')
-  @Permission('setting', ['update'])
+  @Perm('setting', ['update'])
   @ApiOperation({ summary: 'Update layout settings' })
   @ApiResponse({
     status: 200,
@@ -106,7 +92,7 @@ export class SettingCoreController {
   }
 
   @Get('theme')
-  @Permission('setting', ['read'])
+  @Perm('setting', ['read'])
   @ApiOperation({ summary: 'Get theme settings' })
   @ApiResponse({
     status: 200,
@@ -118,7 +104,7 @@ export class SettingCoreController {
   }
 
   @Patch('theme')
-  @Permission('setting', ['update'])
+  @Perm('setting', ['update'])
   @ApiOperation({ summary: 'Update theme settings' })
   @ApiResponse({
     status: 200,
@@ -137,7 +123,7 @@ export class SettingCoreController {
   }
 
   @Get('friend-links')
-  @Permission('setting', ['read'])
+  @Perm('setting', ['read'])
   @ApiOperation({ summary: 'Get friend links' })
   @ApiResponse({
     status: 200,
@@ -149,7 +135,7 @@ export class SettingCoreController {
   }
 
   @Post('friend-links')
-  @Permission('setting', ['update'])
+  @Perm('setting', ['update'])
   @ApiOperation({ summary: 'Create a new friend link' })
   @ApiResponse({
     status: 201,
@@ -163,7 +149,7 @@ export class SettingCoreController {
   }
 
   @Patch('friend-links/:index')
-  @Permission('setting', ['update'])
+  @Perm('setting', ['update'])
   @ApiOperation({ summary: 'Update a friend link by index' })
   @ApiResponse({
     status: 200,
@@ -178,7 +164,7 @@ export class SettingCoreController {
   }
 
   @Delete('friend-links/:index')
-  @Permission('setting', ['update'])
+  @Perm('setting', ['update'])
   @ApiOperation({ summary: 'Delete a friend link by index' })
   @ApiResponse({
     status: 200,
@@ -190,7 +176,7 @@ export class SettingCoreController {
   }
 
   @Get('navigation')
-  @Permission('setting', ['read'])
+  @Perm('setting', ['read'])
   @ApiOperation({ summary: 'Get navigation items' })
   @ApiResponse({
     status: 200,
@@ -202,7 +188,7 @@ export class SettingCoreController {
   }
 
   @Patch('navigation')
-  @Permission('setting', ['update'])
+  @Perm('setting', ['update'])
   @ApiOperation({ summary: 'Update navigation items' })
   @ApiResponse({
     status: 200,
@@ -226,7 +212,7 @@ export class SettingCoreController {
   }
 
   @Get('custom-code')
-  @Permission('setting', ['read'])
+  @Perm('setting', ['read'])
   @ApiOperation({ summary: 'Get custom code injection settings' })
   @ApiResponse({
     status: 200,
@@ -238,7 +224,7 @@ export class SettingCoreController {
   }
 
   @Patch('custom-code')
-  @Permission('setting', ['update'])
+  @Perm('setting', ['update'])
   @ApiOperation({ summary: 'Update custom code injection settings' })
   @ApiResponse({
     status: 200,

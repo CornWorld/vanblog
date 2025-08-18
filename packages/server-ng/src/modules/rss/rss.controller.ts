@@ -1,9 +1,7 @@
-import { Controller, Get, Post, UseGuards } from '@nestjs/common';
-import { ApiOperation, ApiTags, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
+import { Controller, Get, Post } from '@nestjs/common';
+import { ApiOperation, ApiTags, ApiResponse } from '@nestjs/swagger';
 
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { PermissionsGuard } from '../auth/guards/permissions.guard';
-import { Permission } from '../auth/permissions.decorator';
+import { Perm } from '../auth/permissions.decorator';
 
 import { RssService } from './rss.service';
 
@@ -13,9 +11,7 @@ export class RssController {
   constructor(private readonly rssService: RssService) {}
 
   @Post('generate')
-  @UseGuards(JwtAuthGuard, PermissionsGuard)
-  @Permission('rss', ['generate'])
-  @ApiBearerAuth()
+  @Perm('rss', ['generate'])
   @ApiOperation({ summary: '手动生成 RSS 订阅源' })
   @ApiResponse({
     status: 201,
@@ -28,9 +24,7 @@ export class RssController {
   }
 
   @Get('status')
-  @UseGuards(JwtAuthGuard, PermissionsGuard)
-  @Permission('rss', ['read'])
-  @ApiBearerAuth()
+  @Perm('rss', ['read'])
   @ApiOperation({ summary: '获取 RSS 生成状态' })
   @ApiResponse({
     status: 200,

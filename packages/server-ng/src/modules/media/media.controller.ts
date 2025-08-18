@@ -6,29 +6,19 @@ import {
   Body,
   Query,
   Param,
-  UseGuards,
   UseInterceptors,
   UploadedFile,
   ParseIntPipe,
   BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
-  ApiBearerAuth,
-  ApiConsumes,
-  ApiBody,
-} from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiConsumes, ApiBody } from '@nestjs/swagger';
 import dayjs from 'dayjs';
 import { memoryStorage } from 'multer';
 import { ZodValidationPipe } from 'nestjs-zod';
 
 import { staticFiles } from '../../database/schema';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { PermissionsGuard } from '../auth/guards/permissions.guard';
-import { Permission } from '../auth/permissions.decorator';
+import { Perm } from '../auth/permissions.decorator';
 
 import { BatchDeleteDto, BatchDeleteSchema } from './dto/batch-delete.dto';
 import { ListStaticFilesDto } from './dto/list-static-files.dto';
@@ -52,8 +42,6 @@ interface WatermarkBody {
 
 @ApiTags('Media')
 @Controller({ path: 'admin/media', version: '2' })
-@UseGuards(JwtAuthGuard, PermissionsGuard)
-@ApiBearerAuth()
 export class MediaController {
   constructor(
     private readonly mediaService: MediaService,
@@ -62,7 +50,7 @@ export class MediaController {
   ) {}
 
   @Post('upload')
-  @Permission('media', ['create'])
+  @Perm('media', ['create'])
   @ApiOperation({ summary: '上传文件' })
   @ApiConsumes('multipart/form-data')
   @ApiBody({ type: UploadFile })
@@ -113,7 +101,7 @@ export class MediaController {
   }
 
   @Post('upload-with-watermark')
-  @Permission('media', ['create'])
+  @Perm('media', ['create'])
   @ApiOperation({ summary: '上传文件并添加水印' })
   @ApiConsumes('multipart/form-data')
   @ApiResponse({ status: 201, description: '文件上传成功' })
@@ -165,7 +153,7 @@ export class MediaController {
   }
 
   @Get()
-  @Permission('media', ['read'])
+  @Perm('media', ['read'])
   @ApiOperation({ summary: '获取文件列表' })
   @ApiResponse({ status: 200, description: '获取成功' })
   async listFiles(@Query() query: ListStaticFilesDto): Promise<{
@@ -179,7 +167,7 @@ export class MediaController {
   }
 
   @Get(':id')
-  @Permission('media', ['read'])
+  @Perm('media', ['read'])
   @ApiOperation({ summary: '获取单个文件信息' })
   @ApiResponse({ status: 200, description: '获取成功' })
   async getFile(@Param('id', ParseIntPipe) id: number): Promise<typeof staticFiles.$inferSelect> {
@@ -187,7 +175,7 @@ export class MediaController {
   }
 
   @Delete(':id')
-  @Permission('media', ['delete'])
+  @Perm('media', ['delete'])
   @ApiOperation({ summary: '删除单个文件' })
   @ApiResponse({ status: 200, description: '删除成功' })
   async deleteFile(
@@ -197,7 +185,7 @@ export class MediaController {
   }
 
   @Post('batch-delete')
-  @Permission('media', ['delete'])
+  @Perm('media', ['delete'])
   @ApiOperation({ summary: '批量删除文件' })
   @ApiResponse({ status: 200, description: '删除成功' })
   async batchDelete(
@@ -211,7 +199,7 @@ export class MediaController {
   }
 
   @Post('scan-articles')
-  @Permission('media', ['create'])
+  @Perm('media', ['create'])
   @ApiOperation({ summary: '扫描文章中的图片' })
   @ApiResponse({ status: 200, description: '扫描完成' })
   async scanArticleImages(): Promise<{ scanned: number; added: number }> {
@@ -219,7 +207,7 @@ export class MediaController {
   }
 
   @Get('export/all')
-  @Permission('media', ['read'])
+  @Perm('media', ['read'])
   @ApiOperation({ summary: '导出所有图片信息' })
   @ApiResponse({ status: 200, description: '导出成功' })
   async exportAllImages(): Promise<{
@@ -237,7 +225,7 @@ export class MediaController {
   }
 
   @Get('storage-config')
-  @Permission('setting', ['read'])
+  @Perm('setting', ['read'])
   @ApiOperation({ summary: '获取存储配置' })
   @ApiResponse({ status: 200, description: '获取成功' })
   async getStorageConfig(): Promise<StorageConfigResponseDto> {
@@ -245,7 +233,7 @@ export class MediaController {
   }
 
   @Post('storage-config')
-  @Permission('setting', ['update'])
+  @Perm('setting', ['update'])
   @ApiOperation({ summary: '更新存储配置' })
   @ApiResponse({ status: 200, description: '更新成功' })
   async updateStorageConfig(
@@ -255,7 +243,7 @@ export class MediaController {
   }
 
   @Post('upload-clipboard')
-  @Permission('media', ['create'])
+  @Perm('media', ['create'])
   @ApiOperation({ summary: '从剪贴板上传图片' })
   @ApiConsumes('application/json')
   @ApiBody({

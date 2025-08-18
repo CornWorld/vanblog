@@ -5,34 +5,29 @@ import {
   Delete,
   Body,
   Param,
-  UseGuards,
   HttpException,
   HttpStatus,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiParam } from '@nestjs/swagger';
 
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { PermissionsGuard } from '../auth/guards/permissions.guard';
-import { Permission } from '../auth/permissions.decorator';
+import { Perm } from '../auth/permissions.decorator';
 
 import { SettingRegistryService } from './services/setting-registry.service';
 
 @ApiTags('Config')
 @Controller('api/admin/config')
-@UseGuards(JwtAuthGuard, PermissionsGuard)
-@ApiBearerAuth()
 export class SettingRegistryController {
   constructor(private readonly settingRegistryService: SettingRegistryService) {}
 
   @Get('keys')
-  @Permission('setting', ['read'])
+  @Perm('setting', ['read'])
   @ApiOperation({ summary: 'Get all registered configuration keys' })
   getRegisteredKeys(): string[] {
     return this.settingRegistryService.getRegisteredKeys();
   }
 
   @Get(':key')
-  @Permission('setting', ['read'])
+  @Perm('setting', ['read'])
   @ApiOperation({ summary: 'Get configuration value by key' })
   @ApiParam({ name: 'key', description: 'Configuration key' })
   async getConfig(@Param('key') key: string): Promise<{ key: string; value: unknown }> {
@@ -50,7 +45,7 @@ export class SettingRegistryController {
   }
 
   @Put(':key')
-  @Permission('setting', ['update'])
+  @Perm('setting', ['update'])
   @ApiOperation({ summary: 'Update configuration value' })
   @ApiParam({ name: 'key', description: 'Configuration key' })
   async updateConfig(
@@ -75,7 +70,7 @@ export class SettingRegistryController {
   }
 
   @Delete(':key')
-  @Permission('setting', ['update'])
+  @Perm('setting', ['update'])
   @ApiOperation({ summary: 'Delete configuration value' })
   @ApiParam({ name: 'key', description: 'Configuration key' })
   async deleteConfig(@Param('key') key: string): Promise<{ message: string }> {

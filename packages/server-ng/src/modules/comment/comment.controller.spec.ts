@@ -2,6 +2,8 @@ import { ConfigService } from '@nestjs/config';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
+import { PermissionService } from '../permission/permission.service';
+
 import { CommentController } from './comment.controller';
 import { CommentService } from './comment.service';
 
@@ -45,6 +47,12 @@ describe('CommentController', () => {
           provide: ConfigService,
           useValue: {
             get: vi.fn().mockReturnValue(false) as any, // demoMode = false
+          },
+        },
+        {
+          provide: PermissionService,
+          useValue: {
+            hasPermission: vi.fn().mockReturnValue(true),
           },
         },
       ],

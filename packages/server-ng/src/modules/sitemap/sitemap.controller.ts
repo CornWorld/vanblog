@@ -1,9 +1,7 @@
-import { Controller, Get, Post, UseGuards } from '@nestjs/common';
-import { ApiOperation, ApiResponse, ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { Controller, Get, Post } from '@nestjs/common';
+import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { PermissionsGuard } from '../auth/guards/permissions.guard';
-import { Permission } from '../auth/permissions.decorator';
+import { Perm } from '../auth/permissions.decorator';
 
 import { SitemapService } from './sitemap.service';
 
@@ -13,9 +11,7 @@ export class SitemapController {
   constructor(private readonly sitemapService: SitemapService) {}
 
   @Post('generate')
-  @UseGuards(JwtAuthGuard, PermissionsGuard)
-  @Permission('sitemap', ['generate'])
-  @ApiBearerAuth()
+  @Perm('sitemap', ['generate'])
   @ApiOperation({ summary: 'Generate sitemap' })
   @ApiResponse({ status: 200, description: '站点地图生成成功' })
   async generateSitemap(): Promise<{ message: string }> {
@@ -24,9 +20,7 @@ export class SitemapController {
   }
 
   @Get('status')
-  @UseGuards(JwtAuthGuard, PermissionsGuard)
-  @Permission('sitemap', ['read'])
-  @ApiBearerAuth()
+  @Perm('sitemap', ['read'])
   @ApiOperation({ summary: 'Get sitemap generation status' })
   @ApiResponse({ status: 200, description: '获取状态成功' })
   getSitemapStatus(): {
@@ -44,9 +38,7 @@ export class SitemapController {
   }
 
   @Get('urls')
-  @UseGuards(JwtAuthGuard, PermissionsGuard)
-  @Permission('sitemap', ['read'])
-  @ApiBearerAuth()
+  @Perm('sitemap', ['read'])
   @ApiOperation({ summary: 'Get sitemap URLs' })
   @ApiResponse({ status: 200, description: '获取 URL 列表成功' })
   async getSitemapUrls(): Promise<{ urls: string[] }> {
