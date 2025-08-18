@@ -11,10 +11,11 @@ import {
   Ip,
   UsePipes,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { ZodValidationPipe } from 'nestjs-zod';
 
+import { DerivedView } from '../../shared/decorators/derived-view.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { Permission } from '../auth/permissions.decorator';
@@ -110,6 +111,7 @@ export class AnalyticsController {
   @UseGuards(JwtAuthGuard, PermissionsGuard)
   @Permission('analytics', ['read'])
   @ApiBearerAuth()
+  @DerivedView({ key: 'analytics-overview', ttl: 120, swr: true })
   @ApiOperation({ summary: '获取数据概览' })
   @ApiResponse({ status: 200, description: '获取成功' })
   async getOverview(): Promise<AnalyticsOverviewDto> {
@@ -120,6 +122,7 @@ export class AnalyticsController {
   @UseGuards(JwtAuthGuard, PermissionsGuard)
   @Permission('analytics', ['read'])
   @ApiBearerAuth()
+  @DerivedView({ key: 'analytics-page-rankings', ttl: 180, swr: true })
   @ApiOperation({ summary: '获取页面访问排行' })
   @ApiResponse({ status: 200, description: '获取成功' })
   async getPageRankings(@Query('limit') limit?: number): Promise<PageRankingDto[]> {
@@ -130,6 +133,7 @@ export class AnalyticsController {
   @UseGuards(JwtAuthGuard, PermissionsGuard)
   @Permission('analytics', ['read'])
   @ApiBearerAuth()
+  @DerivedView({ key: 'analytics-referrers', ttl: 180, swr: true })
   @ApiOperation({ summary: '获取来源统计' })
   @ApiResponse({ status: 200, description: '获取成功' })
   async getReferrerStats(@Query('limit') limit?: number): Promise<ReferrerStatsDto[]> {
@@ -140,6 +144,7 @@ export class AnalyticsController {
   @UseGuards(JwtAuthGuard, PermissionsGuard)
   @Permission('analytics', ['read'])
   @ApiBearerAuth()
+  @DerivedView({ key: 'analytics-chart', ttl: 240, swr: true })
   @ApiOperation({ summary: '获取图表数据' })
   @ApiResponse({ status: 200, description: '获取成功' })
   async getChartData(@Query('days') days?: number): Promise<AnalyticsChartDataDto> {
@@ -150,6 +155,7 @@ export class AnalyticsController {
   @UseGuards(JwtAuthGuard, PermissionsGuard)
   @Permission('analytics', ['read'])
   @ApiBearerAuth()
+  @DerivedView({ key: 'analytics-devices', ttl: 360, swr: true })
   @ApiOperation({ summary: '获取设备统计' })
   @ApiResponse({ status: 200, description: '获取成功' })
   async getDeviceStats(): Promise<DeviceStatsDto[]> {
@@ -160,6 +166,7 @@ export class AnalyticsController {
   @UseGuards(JwtAuthGuard, PermissionsGuard)
   @Permission('analytics', ['read'])
   @ApiBearerAuth()
+  @DerivedView({ key: 'analytics-browsers', ttl: 360, swr: true })
   @ApiOperation({ summary: '获取浏览器统计' })
   @ApiResponse({ status: 200, description: '获取成功' })
   async getBrowserStats(): Promise<BrowserStatsDto[]> {
@@ -170,6 +177,7 @@ export class AnalyticsController {
   @UseGuards(JwtAuthGuard, PermissionsGuard)
   @Permission('analytics', ['read'])
   @ApiBearerAuth()
+  @DerivedView({ key: 'analytics-top-articles', ttl: 240, swr: true })
   @ApiOperation({ summary: '获取热门文章' })
   @ApiResponse({ status: 200, description: '获取成功' })
   async getTopArticles(@Query('limit') limit?: number): Promise<ArticleStats[]> {
@@ -180,6 +188,7 @@ export class AnalyticsController {
   @UseGuards(JwtAuthGuard, PermissionsGuard)
   @Permission('analytics', ['read'])
   @ApiBearerAuth()
+  @DerivedView({ key: 'analytics-article-stats', ttl: 180, swr: true })
   @ApiOperation({ summary: '获取文章统计' })
   @ApiResponse({ status: 200, description: '获取成功' })
   async getArticleStats(
@@ -192,6 +201,7 @@ export class AnalyticsController {
   @UseGuards(JwtAuthGuard, PermissionsGuard)
   @Permission('analytics', ['read'])
   @ApiBearerAuth()
+  @DerivedView({ key: 'analytics-export', ttl: 600, swr: false })
   @ApiOperation({ summary: '导出分析数据' })
   @ApiResponse({ status: 200, description: '导出成功' })
   async exportAnalyticsData(@Query() query: QueryAnalyticsDto): Promise<unknown[]> {
@@ -202,6 +212,7 @@ export class AnalyticsController {
   @UseGuards(JwtAuthGuard, PermissionsGuard)
   @Permission('analytics', ['read'])
   @ApiBearerAuth()
+  @DerivedView({ key: 'analytics-echarts-dashboard', ttl: 240, swr: true })
   @ApiOperation({ summary: '获取Echarts仪表板数据' })
   @ApiResponse({ status: 200, description: '获取成功' })
   async getEchartsDashboard(@Query('days') days?: number): Promise<Record<string, EchartsOption>> {
@@ -218,6 +229,7 @@ export class AnalyticsController {
   @UseGuards(JwtAuthGuard, PermissionsGuard)
   @Permission('analytics', ['read'])
   @ApiBearerAuth()
+  @DerivedView({ key: 'analytics-echarts-timeseries', ttl: 240, swr: true })
   @ApiOperation({ summary: '获取Echarts时间序列图表数据' })
   @ApiResponse({ status: 200, description: '获取成功' })
   async getEchartsTimeSeries(@Query('days') days?: number): Promise<EchartsOption> {
@@ -229,6 +241,7 @@ export class AnalyticsController {
   @UseGuards(JwtAuthGuard, PermissionsGuard)
   @Permission('analytics', ['read'])
   @ApiBearerAuth()
+  @DerivedView({ key: 'analytics-echarts-devices', ttl: 360, swr: true })
   @ApiOperation({ summary: '获取Echarts设备分布图表数据' })
   @ApiResponse({ status: 200, description: '获取成功' })
   async getEchartsDevices(): Promise<EchartsOption> {
@@ -240,6 +253,7 @@ export class AnalyticsController {
   @UseGuards(JwtAuthGuard, PermissionsGuard)
   @Permission('analytics', ['read'])
   @ApiBearerAuth()
+  @DerivedView({ key: 'analytics-echarts-browsers', ttl: 360, swr: true })
   @ApiOperation({ summary: '获取Echarts浏览器统计图表数据' })
   @ApiResponse({ status: 200, description: '获取成功' })
   async getEchartsBrowsers(): Promise<EchartsOption> {
@@ -251,6 +265,7 @@ export class AnalyticsController {
   @UseGuards(JwtAuthGuard, PermissionsGuard)
   @Permission('analytics', ['read'])
   @ApiBearerAuth()
+  @DerivedView({ key: 'analytics-echarts-page-rankings', ttl: 240, swr: true })
   @ApiOperation({ summary: '获取Echarts页面排行图表数据' })
   @ApiResponse({ status: 200, description: '获取成功' })
   async getEchartsPageRankings(@Query('limit') limit?: number): Promise<EchartsOption> {

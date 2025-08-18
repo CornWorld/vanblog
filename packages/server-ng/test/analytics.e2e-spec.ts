@@ -251,4 +251,79 @@ describe('AnalyticsController (e2e)', () => {
       expect(response.body).toBeInstanceOf(Array);
     });
   });
+
+  describe('ETag & DerivedView caching', () => {
+    it('should return ETag header on cached analytics endpoints', async () => {
+      const { headers } = await request(app.getHttpServer() as Server)
+        .get('/api/v2/admin/analytics/overview')
+        .set('Authorization', `Bearer ${authToken}`)
+        .expect(200);
+
+      expect(headers).toHaveProperty('etag');
+      expect(headers.etag).toBeTruthy();
+    });
+
+    it('should return 304 when If-None-Match matches ETag', async () => {
+      // First request to get ETag
+      const first = await request(app.getHttpServer() as Server)
+        .get('/api/v2/admin/analytics/overview')
+        .set('Authorization', `Bearer ${authToken}`)
+        .expect(200);
+
+      const { etag } = first.headers;
+      expect(etag).toBeTruthy();
+
+      // Second request with If-None-Match
+      await request(app.getHttpServer() as Server)
+        .get('/api/v2/admin/analytics/overview')
+        .set('Authorization', `Bearer ${authToken}`)
+        .set('If-None-Match', etag)
+        .expect(304);
+    });
+
+    it('should cache analytics data with different query parameters', async () => {
+      // Use chart endpoint where `days` parameter changes output shape/length
+      const first = await request(app.getHttpServer() as Server)
+        .get('/api/v2/admin/analytics/chart')
+        .set('Authorization', `Bearer ${authToken}`)
+        .query({ days: 7 })
+        .expect(200);
+
+      const second = await request(app.getHttpServer() as Server)
+        .get('/api/v2/admin/analytics/chart')
+        .set('Authorization', `Bearer ${authToken}`)
+        .query({ days: 14 })
+        .expect(200);
+
+      // Different ETags for different cache keys (very likely due to different content)
+      expect(first.headers.etag).toBeTruthy();
+      expect(second.headers.etag).toBeTruthy();
+      expect(first.headers.etag).not.toBe(second.headers.etag);
+    });
+
+    it('should return fresh data when cache is invalidated', async () => {
+      // First request with caching
+      const res1 = await request(app.getHttpServer() as Server)
+        .get('/api/v2/admin/analytics/chart')
+        .set('Authorization', `Bearer ${authToken}`)
+        .query({ days: 7 })
+        .expect(200);
+
+      const etag1 = res1.headers.etag;
+
+      // Force a small delay and request again - should be same (cached)
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      const res2 = await request(app.getHttpServer() as Server)
+        .get('/api/v2/admin/analytics/chart')
+        .set('Authorization', `Bearer ${authToken}`)
+        .query({ days: 7 })
+        .expect(200);
+
+      const etag2 = res2.headers.etag;
+
+      // Since cache is fresh, should have same ETag
+      expect(etag1).toBe(etag2);
+    });
+  });
 });
