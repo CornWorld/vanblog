@@ -71,17 +71,25 @@ export class AnalyticsService {
 
   async getChartData(days = 7): Promise<AnalyticsChartDataDto> {
     const data = await this.cacheService.getChartData();
-    const recentData = data.slice(-days);
 
-    const pageviewsData: TimeSeriesDataDto[] = recentData.map((item) => ({
-      time: dayjs(item.date).format('MM-DD'),
-      value: item.views,
-    }));
+    // Build a lookup map by date (YYYY-MM-DD)
+    const byDate = new Map<string, { views: number; uniqueVisitors: number }>();
+    for (const item of data) {
+      byDate.set(item.date, { views: item.views, uniqueVisitors: item.uniqueVisitors });
+    }
 
-    const visitorsData: TimeSeriesDataDto[] = recentData.map((item) => ({
-      time: dayjs(item.date).format('MM-DD'),
-      value: item.uniqueVisitors,
-    }));
+    // Construct exactly `days` points, including zeros for missing dates
+    const pageviewsData: TimeSeriesDataDto[] = [];
+    const visitorsData: TimeSeriesDataDto[] = [];
+
+    for (let i = days - 1; i >= 0; i--) {
+      const dateKey = dayjs().subtract(i, 'day').format('YYYY-MM-DD');
+      const label = dayjs(dateKey).format('MM-DD');
+      const daily = byDate.get(dateKey) ?? { views: 0, uniqueVisitors: 0 };
+
+      pageviewsData.push({ time: label, value: daily.views });
+      visitorsData.push({ time: label, value: daily.uniqueVisitors });
+    }
 
     return {
       pageviews: pageviewsData,

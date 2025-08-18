@@ -158,8 +158,8 @@ describe('AnalyticsService with Vitest Fixtures', () => {
 
         expect(chartData).toHaveProperty('pageviews');
         expect(chartData).toHaveProperty('visitors');
-        expect(chartData.pageviews).toHaveLength(2);
-        expect(chartData.visitors).toHaveLength(2);
+        expect(chartData.pageviews).toHaveLength(7);
+        expect(chartData.visitors).toHaveLength(7);
         expect(chartData.pageviews[0]).toHaveProperty('time');
         expect(chartData.pageviews[0]).toHaveProperty('value');
       },

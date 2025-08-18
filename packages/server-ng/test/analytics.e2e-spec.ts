@@ -6,10 +6,13 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 
 import { AppModule } from '../src/app.module';
 import { ConfigService } from '../src/config';
+import { DATABASE_CONNECTION } from '../src/database/database.module';
+import { analytics } from '../src/database/schema';
 import { AnalyticsType } from '../src/modules/analytics/entities/analytics.entity';
 
 import { createUser, cleanupDatabase, createAuthToken } from './test-utils';
 
+import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import type { Server } from 'http';
 
 describe('AnalyticsController (e2e)', () => {
@@ -282,7 +285,33 @@ describe('AnalyticsController (e2e)', () => {
     });
 
     it('should cache analytics data with different query parameters', async () => {
-      // Use chart endpoint where `days` parameter changes output shape/length
+      // Seed analytics data across 14 days to ensure distinct dataset lengths
+      const db = app.get<LibSQLDatabase>(DATABASE_CONNECTION);
+      const now = dayjs();
+      const rows = [] as Array<{
+        type: string;
+        path: string | null;
+        referrer: string | null;
+        userAgent: string | null;
+        ip: string | null;
+        data: string | null;
+        createdAt: string;
+      }>;
+      for (let i = 0; i < 14; i++) {
+        const d = now.subtract(i, 'day');
+        // Add one pageview per day
+        rows.push({
+          type: 'pageview',
+          path: '/seed',
+          referrer: null,
+          userAgent: null,
+          ip: `127.0.0.${i + 1}`,
+          data: null,
+          createdAt: d.format('YYYY-MM-DD 12:00:00'),
+        });
+      }
+      await db.insert(analytics).values(rows);
+
       const first = await request(app.getHttpServer() as Server)
         .get('/api/v2/admin/analytics/chart')
         .set('Authorization', `Bearer ${authToken}`)
@@ -295,14 +324,13 @@ describe('AnalyticsController (e2e)', () => {
         .query({ days: 14 })
         .expect(200);
 
-      // Different ETags for different cache keys (very likely due to different content)
+      // Different ETags for different cache keys/content
       expect(first.headers.etag).toBeTruthy();
       expect(second.headers.etag).toBeTruthy();
       expect(first.headers.etag).not.toBe(second.headers.etag);
     });
 
     it('should return fresh data when cache is invalidated', async () => {
-      // First request with caching
       const res1 = await request(app.getHttpServer() as Server)
         .get('/api/v2/admin/analytics/chart')
         .set('Authorization', `Bearer ${authToken}`)
@@ -310,8 +338,9 @@ describe('AnalyticsController (e2e)', () => {
         .expect(200);
 
       const etag1 = res1.headers.etag;
+      expect(etag1).toBeTruthy();
 
-      // Force a small delay and request again - should be same (cached)
+      // Short delay and request again - should be same (cached)
       await new Promise((resolve) => setTimeout(resolve, 10));
 
       const res2 = await request(app.getHttpServer() as Server)
@@ -321,8 +350,7 @@ describe('AnalyticsController (e2e)', () => {
         .expect(200);
 
       const etag2 = res2.headers.etag;
-
-      // Since cache is fresh, should have same ETag
+      expect(etag2).toBeTruthy();
       expect(etag1).toBe(etag2);
     });
   });

@@ -12,6 +12,8 @@ import { BootstrapController } from './bootstrap.controller';
 import { BootstrapService } from './bootstrap.service';
 import { CustomPageController } from './custom-page.controller';
 import { CustomPageService } from './custom-page.service';
+import { TimelineController } from './timeline.controller';
+import { TimelineService } from './timeline.service';
 
 @Module({
   imports: [
@@ -23,7 +25,7 @@ import { CustomPageService } from './custom-page.service';
     SharedModule,
     CommentModule,
   ],
-  controllers: [CustomPageController, BootstrapController],
-  providers: [CustomPageService, BootstrapService],
+  controllers: [CustomPageController, BootstrapController, TimelineController],
+  providers: [CustomPageService, BootstrapService, TimelineService],
 })
 export class PublicModule {}
