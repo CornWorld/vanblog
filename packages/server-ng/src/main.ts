@@ -9,6 +9,7 @@ import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { ConfigService } from './config';
 import { HttpExceptionFilter, AllExceptionsFilter } from './core/filters';
+import { ETagCacheInterceptor } from './core/interceptors';
 import { LoggerService } from './core/logger/logger.service';
 // import { patchNestJsSwagger } from 'nestjs-zod'; // Not available in current version
 
@@ -97,7 +98,6 @@ export async function init(): Promise<INestApplication> {
     .addTag('Users', 'User management endpoints')
     .addTag('Categories', 'Category management endpoints')
     .addTag('Tags', 'Tag management endpoints')
-    .addTag('Media', 'Media resource management endpoints')
     .addTag('Analytics', 'Analytics and statistics endpoints')
     .addTag('System', 'System configuration endpoints')
     .setContact('VanBlog Team', 'https://github.com/Mereithhh/vanblog', 'support@vanblog.dev')
@@ -158,6 +158,9 @@ export async function init(): Promise<INestApplication> {
 
   // Global exception filters
   app.useGlobalFilters(new AllExceptionsFilter(logger), new HttpExceptionFilter(logger));
+
+  // Global ETag interceptor
+  app.useGlobalInterceptors(new ETagCacheInterceptor());
 
   logger.log(`Application configured with prefix: ${appConfig.apiPrefix}`, 'Bootstrap');
   logger.log(`CORS enabled with options: ${JSON.stringify(corsOptions)}`, 'Bootstrap');

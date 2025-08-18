@@ -3,6 +3,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 
 import { CacheService } from './cache.service';
+import { DerivedViewCacheService } from './derived-view-cache.service';
 
 /**
  * Linus 式缓存模块 - 简单配置，支持内存和 Redis
@@ -27,7 +28,7 @@ import { CacheService } from './cache.service';
       },
     }),
   ],
-  providers: [CacheService],
-  exports: [CacheService],
+  providers: [CacheService, DerivedViewCacheService],
+  exports: [CacheService, DerivedViewCacheService],
 })
 export class CacheModule {}
