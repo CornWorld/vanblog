@@ -29,7 +29,7 @@ import {
 } from './dto';
 import { PermissionService } from './permission.service';
 
-@ApiTags('permissions')
+@ApiTags('Permissions')
 @Controller('permissions')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()

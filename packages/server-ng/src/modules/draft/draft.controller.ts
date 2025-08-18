@@ -31,7 +31,7 @@ import {
   PublishDraftSchema,
 } from './dto/draft.dto';
 
-@ApiTags('drafts')
+@ApiTags('Drafts')
 @Controller({ path: 'drafts', version: '2' })
 export class DraftController {
   constructor(

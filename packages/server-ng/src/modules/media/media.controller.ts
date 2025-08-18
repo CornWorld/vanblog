@@ -50,7 +50,7 @@ interface WatermarkBody {
   provider?: string;
 }
 
-@ApiTags('媒体资源')
+@ApiTags('Media')
 @Controller({ path: 'admin/media', version: '2' })
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 @ApiBearerAuth()

@@ -22,7 +22,7 @@ import {
 } from './dto/verify-password.dto';
 import { Category } from './entities/category.entity';
 
-@ApiTags('categories')
+@ApiTags('Categories')
 @Controller({ path: 'categories', version: '2' })
 export class CategoryController {
   constructor(private readonly categoryService: CategoryService) {}

@@ -15,7 +15,7 @@ import {
 import { Tag } from './entities/tag.entity';
 import { TagService } from './tag.service';
 
-@ApiTags('tags')
+@ApiTags('Tags')
 @Controller({ path: 'tags', version: '2' })
 export class TagController {
   constructor(private readonly tagService: TagService) {}

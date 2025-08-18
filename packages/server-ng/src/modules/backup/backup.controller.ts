@@ -33,7 +33,7 @@ import {
 
 import type { Response } from 'express';
 
-@ApiTags('backup')
+@ApiTags('Backup')
 @Controller({ path: 'backup', version: '2' })
 @ApiBearerAuth()
 export class BackupController {

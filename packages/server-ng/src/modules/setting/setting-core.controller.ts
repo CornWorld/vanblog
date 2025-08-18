@@ -9,7 +9,7 @@ import {
   UseGuards,
   ParseIntPipe,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
 import { ZodValidationPipe } from 'nestjs-zod';
 
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -37,8 +37,8 @@ import {
   CustomCode,
 } from './services/setting-core.service';
 
-@ApiTags('settings')
-@Controller('api/admin/settings')
+@ApiTags('Settings')
+@Controller({ path: 'api/admin/settings', version: '2' })
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 @ApiBearerAuth()
 export class SettingCoreController {
@@ -47,6 +47,11 @@ export class SettingCoreController {
   @Get('site-info')
   @Permission('setting', ['read'])
   @ApiOperation({ summary: 'Get site information' })
+  @ApiResponse({
+    status: 200,
+    description: 'Site information retrieved successfully',
+    type: Object,
+  })
   async getSiteInfo(): Promise<SiteInfo> {
     return this.settingCoreService.getSiteInfo();
   }
@@ -54,6 +59,11 @@ export class SettingCoreController {
   @Patch('site-info')
   @Permission('setting', ['update'])
   @ApiOperation({ summary: 'Update site information' })
+  @ApiResponse({
+    status: 200,
+    description: 'Site information updated successfully',
+    type: Object,
+  })
   async updateSiteInfo(
     @Body(new ZodValidationPipe(UpdateSiteInfoSchema)) updateSiteInfoDto: UpdateSiteInfoDto,
   ): Promise<SiteInfo> {
@@ -72,6 +82,11 @@ export class SettingCoreController {
   @Get('layout')
   @Permission('setting', ['read'])
   @ApiOperation({ summary: 'Get layout settings' })
+  @ApiResponse({
+    status: 200,
+    description: 'Layout settings retrieved successfully',
+    type: Object,
+  })
   async getLayoutSettings(): Promise<SiteLayout> {
     return this.settingCoreService.getLayoutSettings();
   }
@@ -79,6 +94,11 @@ export class SettingCoreController {
   @Patch('layout')
   @Permission('setting', ['update'])
   @ApiOperation({ summary: 'Update layout settings' })
+  @ApiResponse({
+    status: 200,
+    description: 'Layout settings updated successfully',
+    type: Object,
+  })
   async updateLayoutSettings(
     @Body(new ZodValidationPipe(UpdateLayoutSchema)) updateLayoutDto: UpdateLayoutDto,
   ): Promise<SiteLayout> {
@@ -88,6 +108,11 @@ export class SettingCoreController {
   @Get('theme')
   @Permission('setting', ['read'])
   @ApiOperation({ summary: 'Get theme settings' })
+  @ApiResponse({
+    status: 200,
+    description: 'Theme settings retrieved successfully',
+    type: Object,
+  })
   async getThemeSettings(): Promise<SiteTheme> {
     return this.settingCoreService.getThemeSettings();
   }
@@ -95,6 +120,11 @@ export class SettingCoreController {
   @Patch('theme')
   @Permission('setting', ['update'])
   @ApiOperation({ summary: 'Update theme settings' })
+  @ApiResponse({
+    status: 200,
+    description: 'Theme settings updated successfully',
+    type: Object,
+  })
   async updateThemeSettings(
     @Body(new ZodValidationPipe(UpdateThemeSchema)) updateThemeDto: UpdateThemeDto,
   ): Promise<SiteTheme> {
@@ -109,6 +139,11 @@ export class SettingCoreController {
   @Get('friend-links')
   @Permission('setting', ['read'])
   @ApiOperation({ summary: 'Get friend links' })
+  @ApiResponse({
+    status: 200,
+    description: 'Friend links retrieved successfully',
+    type: [Object],
+  })
   async getFriendLinks(): Promise<FriendLink[]> {
     return this.settingCoreService.getFriendLinks();
   }
@@ -116,6 +151,11 @@ export class SettingCoreController {
   @Post('friend-links')
   @Permission('setting', ['update'])
   @ApiOperation({ summary: 'Create a new friend link' })
+  @ApiResponse({
+    status: 201,
+    description: 'Friend link created successfully',
+    type: [Object],
+  })
   async createFriendLink(
     @Body(new ZodValidationPipe(CreateFriendLinkSchema)) createFriendLinkDto: CreateFriendLinkDto,
   ): Promise<FriendLink[]> {
@@ -125,6 +165,11 @@ export class SettingCoreController {
   @Patch('friend-links/:index')
   @Permission('setting', ['update'])
   @ApiOperation({ summary: 'Update a friend link by index' })
+  @ApiResponse({
+    status: 200,
+    description: 'Friend link updated successfully',
+    type: [Object],
+  })
   async updateFriendLink(
     @Param('index', ParseIntPipe) index: number,
     @Body(new ZodValidationPipe(UpdateFriendLinkSchema)) updateFriendLinkDto: UpdateFriendLinkDto,
@@ -135,6 +180,11 @@ export class SettingCoreController {
   @Delete('friend-links/:index')
   @Permission('setting', ['update'])
   @ApiOperation({ summary: 'Delete a friend link by index' })
+  @ApiResponse({
+    status: 200,
+    description: 'Friend link deleted successfully',
+    type: [Object],
+  })
   async deleteFriendLink(@Param('index', ParseIntPipe) index: number): Promise<FriendLink[]> {
     return this.settingCoreService.deleteFriendLink(index);
   }
@@ -142,6 +192,11 @@ export class SettingCoreController {
   @Get('navigation')
   @Permission('setting', ['read'])
   @ApiOperation({ summary: 'Get navigation items' })
+  @ApiResponse({
+    status: 200,
+    description: 'Navigation items retrieved successfully',
+    type: [Object],
+  })
   async getNavigation(): Promise<Navigation[]> {
     return this.settingCoreService.getNavigation();
   }
@@ -149,6 +204,11 @@ export class SettingCoreController {
   @Patch('navigation')
   @Permission('setting', ['update'])
   @ApiOperation({ summary: 'Update navigation items' })
+  @ApiResponse({
+    status: 200,
+    description: 'Navigation items updated successfully',
+    type: [Object],
+  })
   async updateNavigation(
     @Body(new ZodValidationPipe(UpdateNavigationSchema)) updateNavigationDto: UpdateNavigationDto,
   ): Promise<Navigation[]> {
@@ -168,6 +228,11 @@ export class SettingCoreController {
   @Get('custom-code')
   @Permission('setting', ['read'])
   @ApiOperation({ summary: 'Get custom code injection settings' })
+  @ApiResponse({
+    status: 200,
+    description: 'Custom code settings retrieved successfully',
+    type: Object,
+  })
   async getCustomCode(): Promise<CustomCode> {
     return this.settingCoreService.getCustomCode();
   }
@@ -175,6 +240,11 @@ export class SettingCoreController {
   @Patch('custom-code')
   @Permission('setting', ['update'])
   @ApiOperation({ summary: 'Update custom code injection settings' })
+  @ApiResponse({
+    status: 200,
+    description: 'Custom code settings updated successfully',
+    type: Object,
+  })
   async updateCustomCode(
     @Body(new ZodValidationPipe(UpdateCustomCodeSchema)) updateCustomCodeDto: UpdateCustomCodeDto,
   ): Promise<CustomCode> {

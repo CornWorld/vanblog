@@ -27,7 +27,7 @@ interface RequestWithUser {
   user: User;
 }
 
-@ApiTags('users')
+@ApiTags('Users')
 @Controller({ path: 'admin/users', version: '2' })
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 @ApiBearerAuth()

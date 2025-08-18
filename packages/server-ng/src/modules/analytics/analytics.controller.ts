@@ -36,7 +36,7 @@ import { ArticleStatsService, ArticleStats } from './services/article-stats.serv
 import { EchartsFormatterService, EchartsOption } from './services/echarts-formatter.service';
 import { ThirdPartyAnalyticsService } from './services/third-party-analytics.service';
 
-@ApiTags('数据分析')
+@ApiTags('Analytics')
 @Controller({ version: '2' })
 export class AnalyticsController {
   constructor(

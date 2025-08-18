@@ -8,7 +8,7 @@ import { UserType } from '../user/dto/create-user.dto';
 
 import { DemoService } from './demo.service';
 
-@ApiTags('demo')
+@ApiTags('Demo')
 @Controller('demo')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class DemoController {

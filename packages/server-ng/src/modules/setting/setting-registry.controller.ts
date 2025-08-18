@@ -17,7 +17,7 @@ import { Permission } from '../auth/permissions.decorator';
 
 import { SettingRegistryService } from './services/setting-registry.service';
 
-@ApiTags('config')
+@ApiTags('Config')
 @Controller('api/admin/config')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 @ApiBearerAuth()
