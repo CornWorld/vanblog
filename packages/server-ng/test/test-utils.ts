@@ -35,6 +35,39 @@ export async function createUser(
   });
 }
 
+// 添加：按需自定义权限创建用户的工具
+export async function createUserWithPermissions(
+  app: INestApplication,
+  options: {
+    username: string;
+    password: string;
+    nickname?: string;
+    // 对齐 schema 支持的用户类型
+    type?: 'admin' | 'editor' | 'author' | 'subscriber';
+    permissions: string[];
+  },
+): Promise<void> {
+  const {
+    username,
+    password,
+    nickname = 'Test User',
+    // 默认选择受限的普通角色，避免拥有隐式高权限
+    type = 'author',
+    permissions,
+  } = options;
+
+  const db = app.get<LibSQLDatabase>(DATABASE_CONNECTION);
+  const hashedPassword = await hash(password, 10);
+
+  await db.insert(users).values({
+    username,
+    password: hashedPassword,
+    nickname,
+    type,
+    permissions: JSON.stringify(permissions),
+  });
+}
+
 export async function createAuthToken(
   app: INestApplication,
   credentials = {

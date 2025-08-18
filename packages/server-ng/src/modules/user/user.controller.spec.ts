@@ -73,8 +73,8 @@ describe('UserController', () => {
         nickname: 'Test User',
         email: 'test@example.com',
         type: 'admin',
-        permissions: JSON.stringify(['user:read', 'user:write']),
-      };
+        permissions: ['user:read', 'user:write'],
+      } as unknown as CreateUserDto; // cast for test simplicity
 
       mockUserService.create.mockResolvedValue(mockUser);
 
@@ -111,7 +111,7 @@ describe('UserController', () => {
     it('should update a user', async () => {
       const updateUserDto: UpdateUserDto = {
         nickname: 'Updated User',
-      };
+      } as UpdateUserDto;
       const updatedUser = new User({
         id: mockUser.id,
         username: mockUser.username,

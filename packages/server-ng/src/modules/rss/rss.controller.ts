@@ -1,9 +1,9 @@
 import { Controller, Get, Post, UseGuards } from '@nestjs/common';
-import { ApiOperation, ApiResponse, ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiOperation, ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
-import { Permissions } from '../auth/permissions.decorator';
+import { Permission } from '../auth/permissions.decorator';
 
 import { RssService } from './rss.service';
 
@@ -14,10 +14,9 @@ export class RssController {
 
   @Post('generate')
   @UseGuards(JwtAuthGuard, PermissionsGuard)
-  @Permissions('rss', 'generate')
+  @Permission('rss', ['generate'])
   @ApiBearerAuth()
   @ApiOperation({ summary: '手动生成 RSS 订阅源' })
-  @ApiResponse({ status: 200, description: 'RSS 生成成功' })
   async generateRss(): Promise<{ message: string }> {
     await this.rssService.generateRssFeedFn('手动触发');
     return { message: 'RSS 订阅源生成成功' };
@@ -25,10 +24,9 @@ export class RssController {
 
   @Get('status')
   @UseGuards(JwtAuthGuard, PermissionsGuard)
-  @Permissions('rss', 'read')
+  @Permission('rss', ['read'])
   @ApiBearerAuth()
   @ApiOperation({ summary: '获取 RSS 生成状态' })
-  @ApiResponse({ status: 200, description: '获取状态成功' })
   getRssStatus(): {
     enabled: boolean;
     lastGenerated?: string;

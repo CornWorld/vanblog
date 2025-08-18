@@ -32,6 +32,7 @@ const plugin: Plugin = {
   async destroy(_context: PluginContext): Promise<void> {
     logger.log('Beian plugin destroying...');
     // 清理逻辑（如果需要）
+    await Promise.resolve();
     logger.log('Beian plugin destroyed successfully');
   },
 
@@ -49,6 +50,8 @@ const plugin: Plugin = {
       priority: 10,
       handler: (async (_value: unknown, _context: PluginContext) => {
         logger.debug('Bootstrap before generate - beian');
+        // 保持异步语义，满足测试与 lint 规则
+        await Promise.resolve();
       }) as ActionCallback,
     },
 

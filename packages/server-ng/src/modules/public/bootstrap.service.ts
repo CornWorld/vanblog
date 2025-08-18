@@ -8,7 +8,7 @@ import { HookService } from '../plugin/services/hook.service';
 import { SettingCoreService } from '../setting/services/setting-core.service';
 import { TagService } from '../tag/tag.service';
 
-import type { PublicBootstrapResponseDto } from './bootstrap.dto';
+import type { PublicBootstrapResponseDto, RewardItem } from './bootstrap.dto';
 
 @Injectable()
 export class BootstrapService {
@@ -46,7 +46,7 @@ export class BootstrapService {
       siteInfo,
       navigation,
       friendLinks,
-      _rewards,
+      rewards,
       walineSettings,
       categories,
       totalWordCount,
@@ -61,6 +61,7 @@ export class BootstrapService {
       navigation: navigation.status === 'fulfilled' ? navigation.value : [],
       friendLinks: friendLinks.status === 'fulfilled' ? friendLinks.value : [],
       socialLinks: [],
+      rewards: rewards.status === 'fulfilled' ? (rewards.value as RewardItem[]) : [],
       categories: categories.status === 'fulfilled' ? categories.value : [],
       ...(walineSettings.status === 'fulfilled' &&
         walineSettings.value && { walineConfig: walineSettings.value }),

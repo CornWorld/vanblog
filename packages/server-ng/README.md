@@ -289,7 +289,7 @@ PermissionService.register({
 ```typescript
 // 控制器中使用语义化权限名称
 export class CategoryController {
-  @Permissions('read', 'write', 'article:read') // 等价于 category:read, category:write, article:read(此权限仅供演示权限名称缩写)
+  @Permission('read', 'write', 'article:read') // 等价于 category:read, category:write, article:read(此权限仅供演示权限名称缩写)
   @Get()
   async getArticleByCategoryId() {}
 }

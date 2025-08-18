@@ -38,6 +38,15 @@ import { WebhookService } from './services/webhook.service';
       'plugin:disable',
       'plugin:configure',
     ]),
+    PermissionModule.forFeature([
+      'webhook:create',
+      'webhook:read',
+      'webhook:admin',
+      'webhook:update',
+      'webhook:delete',
+      'webhook:test',
+      'webhook:trigger',
+    ]),
   ],
   controllers: [PluginLoaderController, WebhookController],
   providers: [

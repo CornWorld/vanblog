@@ -3,7 +3,7 @@ import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { ZodValidationPipe } from 'nestjs-zod';
 
 import { OverallStatisticsDto } from '../../shared/dto/statistics.dto';
-import { Permissions } from '../auth/permissions.decorator';
+import { Permission } from '../auth/permissions.decorator';
 
 import {
   CreateTagDto,
@@ -36,8 +36,8 @@ export class TagController {
   }
 
   @Post()
-  @Permissions('tag', 'create')
-  @ApiOperation({ summary: 'Create tag' })
+  @Permission('tag', ['create'])
+  @ApiOperation({ summary: 'Create a new tag' })
   @ApiResponse({ status: 201, description: 'Create new tag' })
   async create(
     @Body(new ZodValidationPipe(CreateTagSchema)) createTagDto: CreateTagDto,
@@ -46,8 +46,8 @@ export class TagController {
   }
 
   @Put(':id')
-  @Permissions('tag', 'update')
-  @ApiOperation({ summary: 'Update tag' })
+  @Permission('tag', ['update'])
+  @ApiOperation({ summary: 'Update a tag' })
   @ApiResponse({ status: 200, description: 'Update existing tag' })
   @ApiResponse({ status: 404, description: 'Tag not found' })
   async update(
@@ -58,8 +58,8 @@ export class TagController {
   }
 
   @Delete(':id')
-  @Permissions('tag', 'delete')
-  @ApiOperation({ summary: 'Delete tag' })
+  @Permission('tag', ['delete'])
+  @ApiOperation({ summary: 'Delete a tag' })
   @ApiResponse({ status: 200, description: 'Tag deleted successfully' })
   @ApiResponse({ status: 404, description: 'Tag not found' })
   async remove(@Param('id', ParseIntPipe) id: number): Promise<void> {

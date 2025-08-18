@@ -59,6 +59,10 @@ export async function init(): Promise<INestApplication> {
         '- **Universal Permission**: `all` (grants access to everything)\n' +
         '- **Permission Revocation**: `no:permission` (e.g., `no:article:delete`, `no:role:admin`)\n\n' +
         '### Semantic Permissions\n' +
+        'Use the modern @Permission or @Perm decorators with these formats:\n' +
+        '- `@Permission("module:action")` - Full permission name format\n' +
+        '- `@Permission("module", ["read", "write"])` - Module with action array\n' +
+        '- `@Permission("module:action1", "module:action2")` - Multiple permissions\n\n' +
         'When using `@ModuleContext()` decorator, you can use semantic names:\n' +
         '- `read`, `write`, `delete` instead of `module:read`, `module:write`, `module:delete`\n\n' +
         '### Permission Resolution\n' +

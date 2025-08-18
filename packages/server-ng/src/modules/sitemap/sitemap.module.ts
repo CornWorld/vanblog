@@ -3,6 +3,7 @@ import { Module, forwardRef } from '@nestjs/common';
 import { DatabaseModule } from '../../database/database.module';
 import { ArticleModule } from '../article/article.module';
 import { CategoryModule } from '../category/category.module';
+import { PermissionModule } from '../permission/permission.module';
 import { PluginModule } from '../plugin/plugin.module';
 import { TagModule } from '../tag/tag.module';
 
@@ -13,6 +14,7 @@ import { SitemapService } from './sitemap.service';
   imports: [
     DatabaseModule,
     PluginModule,
+    PermissionModule.forFeature(['sitemap:generate', 'sitemap:read']),
     forwardRef(() => ArticleModule),
     forwardRef(() => CategoryModule),
     forwardRef(() => TagModule),

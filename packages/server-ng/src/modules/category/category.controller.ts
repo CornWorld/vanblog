@@ -3,7 +3,7 @@ import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { ZodValidationPipe } from 'nestjs-zod';
 
 import { OverallStatisticsDto } from '../../shared/dto/statistics.dto';
-import { Permissions } from '../auth/permissions.decorator';
+import { Permission } from '../auth/permissions.decorator';
 
 import { CategoryService } from './category.service';
 import {
@@ -43,7 +43,7 @@ export class CategoryController {
   }
 
   @Post()
-  @Permissions('category', 'create')
+  @Permission('category', ['create'])
   @ApiOperation({ summary: 'Create category' })
   @ApiResponse({ status: 201, description: 'Create new category' })
   async create(
@@ -53,7 +53,7 @@ export class CategoryController {
   }
 
   @Put(':id')
-  @Permissions('category', 'update')
+  @Permission('category', ['update'])
   @ApiOperation({ summary: 'Update category' })
   @ApiResponse({ status: 200, description: 'Update existing category' })
   @ApiResponse({ status: 404, description: 'Category not found' })
@@ -65,7 +65,7 @@ export class CategoryController {
   }
 
   @Delete(':id')
-  @Permissions('category', 'delete')
+  @Permission('category', ['delete'])
   @ApiOperation({ summary: 'Delete category' })
   @ApiResponse({ status: 200, description: 'Category deleted successfully' })
   @ApiResponse({ status: 404, description: 'Category not found' })

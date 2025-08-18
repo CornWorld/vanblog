@@ -3,7 +3,7 @@ import { Reflector } from '@nestjs/core';
 
 import { PermissionService } from '../../permission/permission.service';
 import { User } from '../../user/entities/user.entity';
-import { PERMISSION_KEY, MODULE_CONTEXT_KEY } from '../permissions.decorator';
+import { PERMISSION_KEY } from '../permissions.decorator';
 
 /**
  * Guard that checks if the current user has the required permissions to access a route.
@@ -14,14 +14,13 @@ import { PERMISSION_KEY, MODULE_CONTEXT_KEY } from '../permissions.decorator';
  * - Disabled permissions: 'no:article:write', 'no:role:editor'
  * - Special permissions: 'all' (grants all permissions)
  *
- * Usage with @Permissions decorator:
- * @ModuleContext('category')
+ * Usage with @Permission decorator:
  * class CategoryController {
- *   @Permissions('read', 'write')  // 等价于 'category:read', 'category:write'
+ *   @Permission('category:read', 'category:write')
  *   getCategories() {}
  *
- *   @Permissions('article:read')   // 直接使用完整权限名称
- *   getCategoryArticles() {}
+ *   @Permission('category', ['read', 'write'])
+ *   createCategory() {}
  * }
  */
 @Injectable()
@@ -54,32 +53,19 @@ export class PermissionsGuard implements CanActivate {
       return false;
     }
 
-    // 获取类级别的模块上下文
-    const moduleContext = this.reflector.getAllAndOverride<string | undefined>(MODULE_CONTEXT_KEY, [
-      context.getClass(),
-    ]);
-
-    // 解析权限名称：如果有模块上下文，将语义化名称转换为完整权限名称
+    // 解析权限名称：尝试从控制器路径推导模块名
     let resolvedPermissions: string[];
-    if (moduleContext) {
+    const controllerName = context.getClass().name;
+    const moduleName = this.extractModuleNameFromController(controllerName);
+
+    if (moduleName) {
       resolvedPermissions = this.permissionService.resolvePermissionNames(
-        moduleContext,
+        moduleName,
         requiredPermissions,
       );
     } else {
-      // 如果没有模块上下文，尝试从控制器路径推导模块名
-      const controllerName = context.getClass().name;
-      const moduleName = this.extractModuleNameFromController(controllerName);
-
-      if (moduleName) {
-        resolvedPermissions = this.permissionService.resolvePermissionNames(
-          moduleName,
-          requiredPermissions,
-        );
-      } else {
-        // 无法推导模块名，直接使用原始权限名称
-        resolvedPermissions = requiredPermissions;
-      }
+      // 无法推导模块名，直接使用原始权限名称
+      resolvedPermissions = requiredPermissions;
     }
 
     return await this.permissionService.hasPermissions(userPermissions, resolvedPermissions);

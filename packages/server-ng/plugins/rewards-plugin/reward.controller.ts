@@ -4,7 +4,7 @@ import { ZodValidationPipe } from 'nestjs-zod';
 
 import { JwtAuthGuard } from '../../src/modules/auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../../src/modules/auth/guards/permissions.guard';
-import { Permissions } from '../../src/modules/auth/permissions.decorator';
+import { Permission } from '../../src/modules/auth/permissions.decorator';
 
 import { RewardInfoDto, RewardInfoSchema } from './reward.dto';
 import { RewardService } from './reward.service';
@@ -19,14 +19,14 @@ export class RewardController {
   constructor(private readonly rewardService: RewardService) {}
 
   @Get()
-  @Permissions('settings:read')
+  @Permission('setting', ['read'])
   @ApiOperation({ summary: 'Get all reward information' })
   async getRewardInfo(): Promise<RewardInfo[]> {
     return this.rewardService.getRewardInfo();
   }
 
   @Post()
-  @Permissions('settings:update')
+  @Permission('setting', ['update'])
   @ApiOperation({ summary: 'Add or update reward information' })
   async addOrUpdateRewardInfo(
     @Body(new ZodValidationPipe(RewardInfoSchema)) dto: RewardInfoDto,
@@ -35,7 +35,7 @@ export class RewardController {
   }
 
   @Delete(':name')
-  @Permissions('setting:update')
+  @Permission('setting', ['update'])
   @ApiOperation({ summary: 'Delete reward information' })
   @ApiParam({ name: 'name', description: 'Reward method name' })
   async deleteRewardInfo(@Param('name') name: string): Promise<RewardInfo[]> {

@@ -69,13 +69,12 @@ const plugin: Plugin = {
       type: 'filter',
       priority: 10,
       handler: ((value: unknown, context: PluginContext) => {
-        const articleData = value as ArticleData;
-
-        if (typeof articleData !== 'object' || articleData === null) {
+        // 在断言之前做类型收窄
+        if (typeof value !== 'object' || value === null) {
           return value;
         }
 
-        const result = { ...articleData };
+        const result: ArticleData = { ...(value as Record<string, unknown>) };
 
         // 读取配置
         const enableTitle = context.config.get('enable_title', true) as boolean;
@@ -83,23 +82,19 @@ const plugin: Plugin = {
         const enableTags = context.config.get('enable_tags', true) as boolean;
 
         // 处理标题
-        if (enableTitle && result.title && typeof result.title === 'string') {
-          if (!result.title.endsWith('喵')) {
-            result.title = `${result.title}喵`;
-          }
+        if (enableTitle && typeof result.title === 'string' && !result.title.endsWith('喵')) {
+          result.title = `${result.title}喵`;
         }
 
         // 处理内容
-        if (enableContent && result.content && typeof result.content === 'string') {
-          if (!result.content.endsWith('喵')) {
-            result.content = `${result.content}喵`;
-          }
+        if (enableContent && typeof result.content === 'string' && !result.content.endsWith('喵')) {
+          result.content = `${result.content}喵`;
         }
 
         // 处理标签
-        if (enableTags && result.tags && Array.isArray(result.tags)) {
+        if (enableTags && Array.isArray(result.tags)) {
           result.tags = result.tags.map((tag) => {
-            if (typeof tag === 'string' && !tag.endsWith('喵')) {
+            if (!tag.endsWith('喵')) {
               return `${tag}喵`;
             }
             return tag;
@@ -128,13 +123,12 @@ const plugin: Plugin = {
       type: 'filter',
       priority: 10,
       handler: ((value: unknown, context: PluginContext) => {
-        const articleData = value as ArticleData;
-
-        if (typeof articleData !== 'object' || articleData === null) {
+        // 在断言之前做类型收窄
+        if (typeof value !== 'object' || value === null) {
           return value;
         }
 
-        const result = { ...articleData };
+        const result: ArticleData = { ...(value as Record<string, unknown>) };
 
         // 读取配置
         const enableTitle = context.config.get('enable_title', true) as boolean;
@@ -142,23 +136,19 @@ const plugin: Plugin = {
         const enableTags = context.config.get('enable_tags', true) as boolean;
 
         // 处理标题
-        if (enableTitle && result.title && typeof result.title === 'string') {
-          if (!result.title.endsWith('喵')) {
-            result.title = `${result.title}喵`;
-          }
+        if (enableTitle && typeof result.title === 'string' && !result.title.endsWith('喵')) {
+          result.title = `${result.title}喵`;
         }
 
         // 处理内容
-        if (enableContent && result.content && typeof result.content === 'string') {
-          if (!result.content.endsWith('喵')) {
-            result.content = `${result.content}喵`;
-          }
+        if (enableContent && typeof result.content === 'string' && !result.content.endsWith('喵')) {
+          result.content = `${result.content}喵`;
         }
 
         // 处理标签
-        if (enableTags && result.tags && Array.isArray(result.tags)) {
+        if (enableTags && Array.isArray(result.tags)) {
           result.tags = result.tags.map((tag) => {
-            if (typeof tag === 'string' && !tag.endsWith('喵')) {
+            if (!tag.endsWith('喵')) {
               return `${tag}喵`;
             }
             return tag;

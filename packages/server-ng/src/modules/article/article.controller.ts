@@ -15,7 +15,7 @@ import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { ZodValidationPipe } from 'nestjs-zod';
 
 import { ArticleStatsService } from '../analytics/services/article-stats.service';
-import { Permissions } from '../auth/permissions.decorator';
+import { Permission } from '../auth/permissions.decorator';
 
 import { ArticleService } from './article.service';
 import {
@@ -57,7 +57,7 @@ export class ArticleController {
   }
 
   @Get('export')
-  @Permissions('article', 'read')
+  @Permission('article', ['read'])
   @ApiOperation({ summary: 'Export all articles' })
   @ApiResponse({ status: 200, description: 'Export articles' })
   async export(): Promise<Article[]> {
@@ -76,7 +76,7 @@ export class ArticleController {
   }
 
   @Post('import')
-  @Permissions('article', 'create')
+  @Permission('article', ['create'])
   @ApiOperation({ summary: 'Import articles' })
   @ApiResponse({ status: 201, description: 'Import articles' })
   async import(@Body() articles: CreateArticleDto[]): Promise<void> {
@@ -122,7 +122,7 @@ export class ArticleController {
   }
 
   @Post()
-  @Permissions('article', 'create')
+  @Permission('article', ['create'])
   @ApiOperation({ summary: 'Create article' })
   @ApiResponse({ status: 201, description: 'Create new article' })
   async create(
@@ -132,7 +132,7 @@ export class ArticleController {
   }
 
   @Put(':id')
-  @Permissions('article', 'update')
+  @Permission('article', ['update'])
   @ApiOperation({ summary: 'Update article' })
   @ApiResponse({ status: 200, description: 'Update existing article' })
   @ApiResponse({ status: 404, description: 'Article not found' })
@@ -144,7 +144,7 @@ export class ArticleController {
   }
 
   @Delete(':id')
-  @Permissions('article', 'delete')
+  @Permission('article', ['delete'])
   @ApiOperation({ summary: 'Delete article' })
   @ApiResponse({ status: 200, description: 'Article deleted successfully' })
   @ApiResponse({ status: 404, description: 'Article not found' })

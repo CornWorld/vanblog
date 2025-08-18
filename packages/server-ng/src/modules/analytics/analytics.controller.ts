@@ -17,7 +17,7 @@ import { ZodValidationPipe } from 'nestjs-zod';
 
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
-import { Permissions } from '../auth/permissions.decorator';
+import { Permission } from '../auth/permissions.decorator';
 
 import {
   AnalyticsOverviewDto,
@@ -108,7 +108,7 @@ export class AnalyticsController {
   // 以下是需要认证的管理接口
   @Get('admin/analytics/overview')
   @UseGuards(JwtAuthGuard, PermissionsGuard)
-  @Permissions('analytics', 'read')
+  @Permission('analytics', ['read'])
   @ApiBearerAuth()
   @ApiOperation({ summary: '获取数据概览' })
   @ApiResponse({ status: 200, description: '获取成功' })
@@ -118,7 +118,7 @@ export class AnalyticsController {
 
   @Get('admin/analytics/page-rankings')
   @UseGuards(JwtAuthGuard, PermissionsGuard)
-  @Permissions('analytics', 'read')
+  @Permission('analytics', ['read'])
   @ApiBearerAuth()
   @ApiOperation({ summary: '获取页面访问排行' })
   @ApiResponse({ status: 200, description: '获取成功' })
@@ -128,7 +128,7 @@ export class AnalyticsController {
 
   @Get('admin/analytics/referrers')
   @UseGuards(JwtAuthGuard, PermissionsGuard)
-  @Permissions('analytics', 'read')
+  @Permission('analytics', ['read'])
   @ApiBearerAuth()
   @ApiOperation({ summary: '获取来源统计' })
   @ApiResponse({ status: 200, description: '获取成功' })
@@ -138,7 +138,7 @@ export class AnalyticsController {
 
   @Get('admin/analytics/chart')
   @UseGuards(JwtAuthGuard, PermissionsGuard)
-  @Permissions('analytics', 'read')
+  @Permission('analytics', ['read'])
   @ApiBearerAuth()
   @ApiOperation({ summary: '获取图表数据' })
   @ApiResponse({ status: 200, description: '获取成功' })
@@ -148,7 +148,7 @@ export class AnalyticsController {
 
   @Get('admin/analytics/devices')
   @UseGuards(JwtAuthGuard, PermissionsGuard)
-  @Permissions('analytics', 'read')
+  @Permission('analytics', ['read'])
   @ApiBearerAuth()
   @ApiOperation({ summary: '获取设备统计' })
   @ApiResponse({ status: 200, description: '获取成功' })
@@ -158,7 +158,7 @@ export class AnalyticsController {
 
   @Get('admin/analytics/browsers')
   @UseGuards(JwtAuthGuard, PermissionsGuard)
-  @Permissions('analytics', 'read')
+  @Permission('analytics', ['read'])
   @ApiBearerAuth()
   @ApiOperation({ summary: '获取浏览器统计' })
   @ApiResponse({ status: 200, description: '获取成功' })
@@ -168,7 +168,7 @@ export class AnalyticsController {
 
   @Get('admin/analytics/articles/top')
   @UseGuards(JwtAuthGuard, PermissionsGuard)
-  @Permissions('analytics', 'read')
+  @Permission('analytics', ['read'])
   @ApiBearerAuth()
   @ApiOperation({ summary: '获取热门文章' })
   @ApiResponse({ status: 200, description: '获取成功' })
@@ -178,7 +178,7 @@ export class AnalyticsController {
 
   @Get('admin/analytics/article/:id')
   @UseGuards(JwtAuthGuard, PermissionsGuard)
-  @Permissions('analytics', 'read')
+  @Permission('analytics', ['read'])
   @ApiBearerAuth()
   @ApiOperation({ summary: '获取文章统计' })
   @ApiResponse({ status: 200, description: '获取成功' })
@@ -190,7 +190,7 @@ export class AnalyticsController {
 
   @Get('admin/analytics/export')
   @UseGuards(JwtAuthGuard, PermissionsGuard)
-  @Permissions('analytics', 'read')
+  @Permission('analytics', ['read'])
   @ApiBearerAuth()
   @ApiOperation({ summary: '导出分析数据' })
   @ApiResponse({ status: 200, description: '导出成功' })
@@ -200,7 +200,7 @@ export class AnalyticsController {
 
   @Get('admin/analytics/echarts/dashboard')
   @UseGuards(JwtAuthGuard, PermissionsGuard)
-  @Permissions('analytics', 'read')
+  @Permission('analytics', ['read'])
   @ApiBearerAuth()
   @ApiOperation({ summary: '获取Echarts仪表板数据' })
   @ApiResponse({ status: 200, description: '获取成功' })
@@ -216,7 +216,7 @@ export class AnalyticsController {
 
   @Get('admin/analytics/echarts/timeseries')
   @UseGuards(JwtAuthGuard, PermissionsGuard)
-  @Permissions('analytics', 'read')
+  @Permission('analytics', ['read'])
   @ApiBearerAuth()
   @ApiOperation({ summary: '获取Echarts时间序列图表数据' })
   @ApiResponse({ status: 200, description: '获取成功' })
@@ -227,7 +227,7 @@ export class AnalyticsController {
 
   @Get('admin/analytics/echarts/devices')
   @UseGuards(JwtAuthGuard, PermissionsGuard)
-  @Permissions('analytics', 'read')
+  @Permission('analytics', ['read'])
   @ApiBearerAuth()
   @ApiOperation({ summary: '获取Echarts设备分布图表数据' })
   @ApiResponse({ status: 200, description: '获取成功' })
@@ -238,7 +238,7 @@ export class AnalyticsController {
 
   @Get('admin/analytics/echarts/browsers')
   @UseGuards(JwtAuthGuard, PermissionsGuard)
-  @Permissions('analytics', 'read')
+  @Permission('analytics', ['read'])
   @ApiBearerAuth()
   @ApiOperation({ summary: '获取Echarts浏览器统计图表数据' })
   @ApiResponse({ status: 200, description: '获取成功' })
@@ -249,7 +249,7 @@ export class AnalyticsController {
 
   @Get('admin/analytics/echarts/page-rankings')
   @UseGuards(JwtAuthGuard, PermissionsGuard)
-  @Permissions('analytics', 'read')
+  @Permission('analytics', ['read'])
   @ApiBearerAuth()
   @ApiOperation({ summary: '获取Echarts页面排行图表数据' })
   @ApiResponse({ status: 200, description: '获取成功' })

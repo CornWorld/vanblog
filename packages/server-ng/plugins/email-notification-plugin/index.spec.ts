@@ -39,8 +39,8 @@ describe('EmailNotificationPlugin', () => {
           smtp_pass: 'password',
           email_from: 'test@example.com',
           email_to: ['admin@example.com'],
-        };
-        return configs[key as keyof typeof configs] || defaultValue;
+        } as const;
+        return (configs as Record<string, unknown>)[key] ?? defaultValue;
       }),
     };
 
@@ -80,7 +80,7 @@ describe('EmailNotificationPlugin', () => {
 
   describe('Plugin Lifecycle', () => {
     it('should initialize successfully', async () => {
-      if (plugin.init) {
+      if (typeof plugin.init === 'function') {
         await expect(plugin.init(mockContext)).resolves.not.toThrow();
       }
       expect(mockData.set).toHaveBeenCalledWith('email_enabled', true);
@@ -88,7 +88,7 @@ describe('EmailNotificationPlugin', () => {
     });
 
     it('should destroy successfully', async () => {
-      if (plugin.destroy) {
+      if (typeof plugin.destroy === 'function') {
         await expect(plugin.destroy(mockContext)).resolves.not.toThrow();
       }
       expect(mockData.clear).toHaveBeenCalled();
@@ -159,11 +159,11 @@ describe('EmailNotificationPlugin', () => {
     });
 
     it('should have all required hooks', () => {
-      expect(plugin.hooks).toBeDefined();
-      expect(plugin.hooks?.['article|afterCreate']).toBeDefined();
-      expect(plugin.hooks?.['article|afterUpdate']).toBeDefined();
-      expect(plugin.hooks?.['comment|afterUpdate']).toBeDefined();
-      expect(plugin.hooks?.['draft.published']).toBeDefined();
+      expect(Boolean(plugin.hooks)).toBe(true);
+      expect(Boolean(plugin.hooks?.['article|afterCreate'])).toBe(true);
+      expect(Boolean(plugin.hooks?.['article|afterUpdate'])).toBe(true);
+      expect(Boolean(plugin.hooks?.['comment|afterUpdate'])).toBe(true);
+      expect(Boolean(plugin.hooks?.['draft.published'])).toBe(true);
 
       // Check hook types and priorities
       expect(plugin.hooks?.['article|afterCreate']?.type).toBe('action');

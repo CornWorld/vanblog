@@ -26,6 +26,14 @@ const NavigationSchema: z.ZodType<NavigationPublic> = z.lazy(() =>
   }),
 );
 
+// Reward item schema/type for backward compatibility
+export const RewardSchema = z.object({
+  name: z.string(),
+  value: z.string(),
+  updatedAt: z.string().optional(),
+});
+export type RewardItem = z.infer<typeof RewardSchema>;
+
 export const PublicBootstrapResponseSchema = z.object({
   version: z.string(),
   tags: z.array(z.string()),
@@ -46,6 +54,8 @@ export const PublicBootstrapResponseSchema = z.object({
       icon: z.string().optional(),
     }),
   ),
+  // Keep rewards for backward compatibility with v1/v2 clients and e2e contract
+  rewards: z.array(RewardSchema),
   categories: z.array(z.string()),
   walineConfig: z
     .object({

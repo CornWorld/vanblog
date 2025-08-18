@@ -17,7 +17,7 @@ import {
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { ZodValidationPipe } from 'nestjs-zod';
 
-import { Permissions } from '../auth/permissions.decorator';
+import { Permission } from '../auth/permissions.decorator';
 
 import { BackupService } from './backup.service';
 import {
@@ -40,9 +40,9 @@ export class BackupController {
   constructor(private readonly backupService: BackupService) {}
 
   @Post()
+  @Permission('backup', ['create'])
+  @ApiOperation({ summary: 'Create a database backup' })
   @HttpCode(HttpStatus.CREATED)
-  @Permissions('backup', 'create')
-  @ApiOperation({ summary: 'Create a new backup' })
   @ApiResponse({ status: 201, description: 'Backup created successfully', type: BackupInfoDto })
   @ApiResponse({ status: 400, description: 'Invalid request parameters' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -55,8 +55,8 @@ export class BackupController {
   }
 
   @Get()
-  @Permissions('backup', 'read')
-  @ApiOperation({ summary: 'Get list of backups' })
+  @Permission('backup', ['read'])
+  @ApiOperation({ summary: 'List all backups' })
   @ApiResponse({ status: 200, description: 'Backups retrieved successfully', type: BackupListDto })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Insufficient permissions' })
@@ -65,8 +65,8 @@ export class BackupController {
   }
 
   @Get(':filename/download')
-  @Permissions('backup', 'download')
-  @ApiOperation({ summary: 'Download a backup file' })
+  @Permission('backup', ['download'])
+  @ApiOperation({ summary: 'Download a backup by filename' })
   @ApiResponse({ status: 200, description: 'Backup file downloaded successfully' })
   @ApiResponse({ status: 404, description: 'Backup file not found' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -101,9 +101,9 @@ export class BackupController {
   }
 
   @Delete(':filename')
+  @Permission('backup', ['delete'])
+  @ApiOperation({ summary: 'Delete a backup file by filename' })
   @HttpCode(HttpStatus.NO_CONTENT)
-  @Permissions('backup', 'delete')
-  @ApiOperation({ summary: 'Delete a backup file' })
   @ApiResponse({ status: 204, description: 'Backup deleted successfully' })
   @ApiResponse({ status: 404, description: 'Backup file not found' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -119,8 +119,8 @@ export class BackupController {
 
   @Post(':filename/restore')
   @HttpCode(HttpStatus.ACCEPTED)
-  @Permissions('backup', 'restore')
-  @ApiOperation({ summary: 'Restore from a backup file' })
+  @Permission('backup', ['restore'])
+  @ApiOperation({ summary: 'Restore database from a backup file' })
   @ApiResponse({
     status: 202,
     description: 'Restore task started',
@@ -143,7 +143,7 @@ export class BackupController {
   }
 
   @Get('restore/:taskId/progress')
-  @Permissions('backup', 'restore')
+  @Permission('backup', ['restore'])
   @ApiOperation({ summary: 'Get restore task progress' })
   @ApiResponse({
     status: 200,

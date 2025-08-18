@@ -3,7 +3,7 @@ import { ApiOperation, ApiResponse, ApiTags, ApiBearerAuth } from '@nestjs/swagg
 
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
-import { Permissions } from '../auth/permissions.decorator';
+import { Permission } from '../auth/permissions.decorator';
 
 import { SitemapService } from './sitemap.service';
 
@@ -14,9 +14,9 @@ export class SitemapController {
 
   @Post('generate')
   @UseGuards(JwtAuthGuard, PermissionsGuard)
-  @Permissions('sitemap', 'generate')
+  @Permission('sitemap', ['generate'])
   @ApiBearerAuth()
-  @ApiOperation({ summary: '手动生成站点地图' })
+  @ApiOperation({ summary: 'Generate sitemap' })
   @ApiResponse({ status: 200, description: '站点地图生成成功' })
   async generateSitemap(): Promise<{ message: string }> {
     await this.sitemapService.generateSitemapFn('手动触发');
@@ -25,9 +25,9 @@ export class SitemapController {
 
   @Get('status')
   @UseGuards(JwtAuthGuard, PermissionsGuard)
-  @Permissions('sitemap', 'read')
+  @Permission('sitemap', ['read'])
   @ApiBearerAuth()
-  @ApiOperation({ summary: '获取站点地图生成状态' })
+  @ApiOperation({ summary: 'Get sitemap generation status' })
   @ApiResponse({ status: 200, description: '获取状态成功' })
   getSitemapStatus(): {
     enabled: boolean;
@@ -45,9 +45,9 @@ export class SitemapController {
 
   @Get('urls')
   @UseGuards(JwtAuthGuard, PermissionsGuard)
-  @Permissions('sitemap', 'read')
+  @Permission('sitemap', ['read'])
   @ApiBearerAuth()
-  @ApiOperation({ summary: '获取站点地图包含的所有 URL' })
+  @ApiOperation({ summary: 'Get sitemap URLs' })
   @ApiResponse({ status: 200, description: '获取 URL 列表成功' })
   async getSitemapUrls(): Promise<{ urls: string[] }> {
     const urls = await this.sitemapService.getSiteUrls();

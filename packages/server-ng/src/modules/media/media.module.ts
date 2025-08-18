@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 
 import { DatabaseModule } from '../../database/database.module';
+import { PermissionModule } from '../permission/permission.module';
 
 import { MediaController } from './media.controller';
 import { ImageProcessingService } from './services/image-processing.service';
@@ -11,7 +12,10 @@ import { LocalStorageService } from './services/storages/local-storage.service';
 import { PicgoStorageService } from './services/storages/picgo-storage.service';
 
 @Module({
-  imports: [DatabaseModule],
+  imports: [
+    DatabaseModule,
+    PermissionModule.forFeature(['media:create', 'media:read', 'media:delete']),
+  ],
   controllers: [MediaController],
   providers: [
     MediaService,
