@@ -1,5 +1,5 @@
 import { VersioningType, type INestApplication } from '@nestjs/common';
-import { NestFactory } from '@nestjs/core';
+import { NestFactory, Reflector } from '@nestjs/core';
 import { SwaggerModule, DocumentBuilder, type OpenAPIObject } from '@nestjs/swagger';
 import compression from 'compression';
 // import csurf from 'csurf';
@@ -9,8 +9,9 @@ import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { ConfigService } from './config';
 import { HttpExceptionFilter, AllExceptionsFilter } from './core/filters';
-import { ETagCacheInterceptor } from './core/interceptors';
+import { ETagCacheInterceptor, DerivedViewInterceptor } from './core/interceptors';
 import { LoggerService } from './core/logger/logger.service';
+import { DerivedViewCacheService } from './shared/cache';
 // import { patchNestJsSwagger } from 'nestjs-zod'; // Not available in current version
 
 import 'dayjs/locale/zh-cn';
@@ -159,8 +160,11 @@ export async function init(): Promise<INestApplication> {
   // Global exception filters
   app.useGlobalFilters(new AllExceptionsFilter(logger), new HttpExceptionFilter(logger));
 
-  // Global ETag interceptor
-  app.useGlobalInterceptors(new ETagCacheInterceptor());
+  // Global interceptors: DerivedView must run BEFORE ETag so ETag hashes the final response body
+  app.useGlobalInterceptors(
+    new DerivedViewInterceptor(app.get(Reflector), app.get(DerivedViewCacheService)),
+    new ETagCacheInterceptor(),
+  );
 
   logger.log(`Application configured with prefix: ${appConfig.apiPrefix}`, 'Bootstrap');
   logger.log(`CORS enabled with options: ${JSON.stringify(corsOptions)}`, 'Bootstrap');
