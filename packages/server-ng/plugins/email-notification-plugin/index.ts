@@ -45,17 +45,87 @@ interface CommentData {
   email?: string;
 }
 
+// 基础类型守卫：非空对象
+function isNonNullObject(v: unknown): v is Record<string, unknown> {
+  return typeof v === 'object' && v !== null;
+}
+
+// PluginDataStorage 方法守卫
+function hasDataStorage(
+  o: unknown,
+): o is Pick<PluginContext['data'], 'get' | 'set'> & Partial<Pick<PluginContext['data'], 'clear'>> {
+  if (!isNonNullObject(o)) return false;
+  const g = (o as { get?: unknown }).get;
+  const s = (o as { set?: unknown }).set;
+  return typeof g === 'function' && typeof s === 'function';
+}
+
+// PluginConfigReader 方法守卫
+function hasConfigReader(o: unknown): o is Pick<PluginContext['config'], 'get'> {
+  if (!isNonNullObject(o)) return false;
+  const g = (o as { get?: unknown }).get;
+  return typeof g === 'function';
+}
+
+// 类型守卫：判断是否为 PluginContext（放宽：不强制 pluginId）
+function isPluginContext(x: unknown): x is PluginContext {
+  if (x == null || typeof x !== 'object') return false;
+  const obj = x as { data?: unknown; config?: unknown };
+  return hasDataStorage(obj.data) && hasConfigReader(obj.config);
+}
+
 // 获取邮件配置
 function getEmailConfig(context: PluginContext): EmailConfig | null {
-  const host = context.config.get('smtp_host') as string;
-  const port = context.config.get('smtp_port', 587) as number;
-  const secure = context.config.get('smtp_secure', false) as boolean;
-  const user = context.config.get('smtp_user') as string;
-  const pass = context.config.get('smtp_pass') as string;
-  const from = context.config.get('email_from') as string;
-  const to = context.config.get('email_to') as string[];
+  // 使用更安全的读取方式并提供兜底
+  const hostRaw = context.config.get('smtp_host');
+  const host = typeof hostRaw === 'string' ? hostRaw.trim() : '';
 
-  if (host === '' || user === '' || pass === '' || from === '' || to.length === 0) {
+  const portRaw = context.config.get('smtp_port');
+  let port: number | null = null;
+  if (typeof portRaw === 'number' && Number.isFinite(portRaw)) {
+    port = portRaw;
+  } else if (typeof portRaw === 'string' && portRaw.trim() !== '') {
+    const parsed = Number(portRaw);
+    if (Number.isFinite(parsed)) {
+      port = parsed;
+    }
+  }
+
+  const secureRaw = context.config.get('smtp_secure');
+  const secure =
+    secureRaw === true || (typeof secureRaw === 'string' && secureRaw.toLowerCase() === 'true');
+
+  const userRaw = context.config.get('smtp_user');
+  const user = typeof userRaw === 'string' ? userRaw.trim() : '';
+
+  const passRaw = context.config.get('smtp_pass');
+  const pass = typeof passRaw === 'string' ? passRaw.trim() : '';
+
+  const fromRaw = context.config.get('email_from');
+  const from = typeof fromRaw === 'string' ? fromRaw.trim() : '';
+
+  const toRaw = context.config.get('email_to');
+  let to: string[] = [];
+  if (Array.isArray(toRaw)) {
+    to = toRaw
+      .filter((x): x is string => typeof x === 'string' && x.trim() !== '')
+      .map((s) => s.trim());
+  } else if (typeof toRaw === 'string') {
+    to = toRaw
+      .split(',')
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
+  }
+
+  // 配置不完整时返回 null，避免后续读取 undefined.length 报错
+  if (
+    host.length === 0 ||
+    user.length === 0 ||
+    pass.length === 0 ||
+    from.length === 0 ||
+    port === null ||
+    to.length === 0
+  ) {
     return null;
   }
 
@@ -138,19 +208,29 @@ const plugin: Plugin = {
     logger.log(withPluginPrefix(PLUGIN_PREFIX, '邮件通知插件销毁完成'));
   },
 
-  // Hook 处理器
+  // Hook 处理器 - 正确使用 ActionCallback 类型
   hooks: {
     // 文章创建后发送通知
     'article|afterCreate': {
       type: 'action',
       priority: 10,
-      handler: ((value: unknown, context: PluginContext) => {
+      handler: ((...args: unknown[]) => {
+        // 兼容两参(值, 上下文)和三参(值, 元数据, 上下文)
+        const [value, second, third] = args;
+        const contextCandidate = third !== undefined ? third : second;
+
         if (value == null || typeof value !== 'object') {
           logger.warn(withPluginPrefix(PLUGIN_PREFIX, '文章创建Hook收到无效数据，跳过邮件发送'));
           return;
         }
 
+        if (!isPluginContext(contextCandidate)) {
+          logger.error(withPluginPrefix(PLUGIN_PREFIX, '插件上下文无效，跳过邮件发送'));
+          return;
+        }
+
         const article = value as ArticleData;
+        const pluginContext = contextCandidate;
 
         const subject = `📝 新文章发布：${article.title ?? '无标题'}`;
         const content = `
@@ -165,7 +245,7 @@ const plugin: Plugin = {
           <p>请登录后台查看完整内容。</p>
         `;
 
-        void sendEmail(context, subject, content);
+        void sendEmail(pluginContext, subject, content);
       }) as ActionCallback,
     },
 
@@ -173,13 +253,23 @@ const plugin: Plugin = {
     'article|afterUpdate': {
       type: 'action',
       priority: 10,
-      handler: ((value: unknown, context: PluginContext) => {
+      handler: ((...args: unknown[]) => {
+        // 兼容两参(值, 上下文)和三参(值, 元数据, 上下文)
+        const [value, second, third] = args;
+        const contextCandidate = third !== undefined ? third : second;
+
         if (value == null || typeof value !== 'object') {
           logger.warn(withPluginPrefix(PLUGIN_PREFIX, '文章更新Hook收到无效数据，跳过邮件发送'));
           return;
         }
 
+        if (!isPluginContext(contextCandidate)) {
+          logger.error(withPluginPrefix(PLUGIN_PREFIX, '插件上下文无效，跳过邮件发送'));
+          return;
+        }
+
         const article = value as ArticleData;
+        const pluginContext = contextCandidate;
 
         const subject = `✏️ 文章更新：${article.title ?? '无标题'}`;
         const content = `
@@ -194,7 +284,7 @@ const plugin: Plugin = {
           <p>请登录后台查看完整内容。</p>
         `;
 
-        void sendEmail(context, subject, content);
+        void sendEmail(pluginContext, subject, content);
       }) as ActionCallback,
     },
 
@@ -202,13 +292,23 @@ const plugin: Plugin = {
     'comment|afterUpdate': {
       type: 'action',
       priority: 10,
-      handler: ((value: unknown, context: PluginContext) => {
+      handler: ((...args: unknown[]) => {
+        // 兼容两参(值, 上下文)和三参(值, 元数据, 上下文)
+        const [value, second, third] = args;
+        const contextCandidate = third !== undefined ? third : second;
+
         if (value == null || typeof value !== 'object') {
           logger.warn(withPluginPrefix(PLUGIN_PREFIX, '评论更新Hook收到无效数据，跳过邮件发送'));
           return;
         }
 
+        if (!isPluginContext(contextCandidate)) {
+          logger.error(withPluginPrefix(PLUGIN_PREFIX, '插件上下文无效，跳过邮件发送'));
+          return;
+        }
+
         const comment = value as CommentData;
+        const pluginContext = contextCandidate;
 
         const subject = `💬 评论系统更新通知`;
         const content = `
@@ -223,7 +323,7 @@ const plugin: Plugin = {
           <p>请登录后台查看详细信息。</p>
         `;
 
-        void sendEmail(context, subject, content);
+        void sendEmail(pluginContext, subject, content);
       }) as ActionCallback,
     },
 
@@ -231,13 +331,23 @@ const plugin: Plugin = {
     'draft.published': {
       type: 'action',
       priority: 10,
-      handler: ((value: unknown, context: PluginContext) => {
+      handler: ((...args: unknown[]) => {
+        // 兼容两参(值, 上下文)和三参(值, 元数据, 上下文)
+        const [value, second, third] = args;
+        const contextCandidate = third !== undefined ? third : second;
+
         if (value == null || typeof value !== 'object') {
           logger.warn(withPluginPrefix(PLUGIN_PREFIX, '草稿发布Hook收到无效数据，跳过邮件发送'));
           return;
         }
 
+        if (!isPluginContext(contextCandidate)) {
+          logger.error(withPluginPrefix(PLUGIN_PREFIX, '插件上下文无效，跳过邮件发送'));
+          return;
+        }
+
         const draft = value as ArticleData;
+        const pluginContext = contextCandidate;
 
         const subject = `🚀 草稿发布：${draft.title ?? '无标题'}`;
         const content = `
@@ -249,10 +359,10 @@ const plugin: Plugin = {
           <div style="border-left: 3px solid #17a2b8; padding-left: 15px; margin: 10px 0;">
             ${String(draft.content ?? '').substring(0, 200)}${String(draft.content ?? '').length > 200 ? '...' : ''}
           </div>
-          <p>草稿已成功发布为正式文章。</p>
+          <p>请登录后台查看完整内容。</p>
         `;
 
-        void sendEmail(context, subject, content);
+        void sendEmail(pluginContext, subject, content);
       }) as ActionCallback,
     },
   },

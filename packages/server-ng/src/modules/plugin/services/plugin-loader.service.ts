@@ -456,9 +456,19 @@ export class PluginLoaderService implements OnModuleInit {
     if (finalPlugin.hooks) {
       for (const [hookName, hookConfig] of Object.entries(finalPlugin.hooks)) {
         if (hookConfig.type === 'action') {
-          this.hookService.addAction(hookName, hookConfig.handler, hookConfig.priority ?? 10);
+          const original = hookConfig.handler;
+          const wrapped: ActionCallback = async (...args: unknown[]) => {
+            // 将 plugin context 作为最后一个参数传递给回调
+            await original(...args, context);
+          };
+          this.hookService.addAction(hookName, wrapped, hookConfig.priority ?? 10);
         } else {
-          this.hookService.addFilter(hookName, hookConfig.handler, hookConfig.priority ?? 10);
+          const original = hookConfig.handler;
+          const wrapped: FilterCallback = async (value: unknown, ...args: unknown[]) => {
+            // 将 plugin context 作为最后一个参数传递给过滤器回调
+            return await original(value, ...args, context);
+          };
+          this.hookService.addFilter(hookName, wrapped, hookConfig.priority ?? 10);
         }
       }
     }
