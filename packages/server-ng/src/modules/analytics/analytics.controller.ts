@@ -33,6 +33,12 @@ import { ArticleStatsService, ArticleStats } from './services/article-stats.serv
 import { EchartsFormatterService, EchartsOption } from './services/echarts-formatter.service';
 import { ThirdPartyAnalyticsService } from './services/third-party-analytics.service';
 
+/**
+ * 分析数据控制器
+ *
+ * 提供网站分析数据的记录、查询和统计功能，包括页面访问、用户行为、
+ * 设备统计、浏览器统计等多维度的数据分析服务。
+ */
 @ApiTags('Analytics')
 @Controller({ version: '2' })
 export class AnalyticsController {
@@ -43,7 +49,26 @@ export class AnalyticsController {
     private readonly echartsFormatterService: EchartsFormatterService,
   ) {}
 
-  // 公开的记录接口，前端可以调用
+  /**
+   * 记录分析数据
+   *
+   * 公开接口，用于记录用户行为分析数据，包括页面访问、点击事件等。
+   * 支持限流保护，防止恶意请求。同时会将数据发送到第三方分析服务。
+   *
+   * @param dto 分析数据传输对象
+   * @param ip 客户端IP地址（可选，自动获取）
+   * @param userAgent 用户代理字符串（可选，自动获取）
+   */
+  /**
+   * 记录分析数据
+   *
+   * 记录用户的访问行为数据，包括页面访问、事件触发等。
+   * 支持防刷限制，10秒内最多记录10次。
+   *
+   * @param dto 分析数据记录
+   * @param ip 客户端IP地址
+   * @param userAgent 用户代理字符串
+   */
   @Post('analytics/record')
   @Throttle({ medium: { limit: 10, ttl: 10000 } }) // 10秒内最多10次请求
   @UsePipes(new ZodValidationPipe(RecordAnalyticsSchema))
@@ -77,7 +102,26 @@ export class AnalyticsController {
     }
   }
 
-  // 公开的文章浏览记录接口
+  /**
+   * 记录文章浏览
+   *
+   * 公开接口，用于记录特定文章的浏览事件。包含限流保护，
+   * 防止同一用户短时间内重复刷新造成的数据污染。
+   *
+   * @param articleId 文章ID
+   * @param ip 客户端IP地址
+   * @param userAgent 用户代理字符串（可选）
+   */
+  /**
+   * 记录文章浏览
+   *
+   * 记录用户对特定文章的浏览行为，用于统计文章热度。
+   * 支持防刷限制，10秒内最多记录5次。
+   *
+   * @param articleId 文章ID
+   * @param ip 客户端IP地址
+   * @param userAgent 用户代理字符串
+   */
   @Post('article/:id/view')
   @Throttle({ medium: { limit: 5, ttl: 10000 } }) // 10秒内最多5次请求
   @ApiOperation({ summary: '记录文章浏览' })
@@ -91,6 +135,16 @@ export class AnalyticsController {
   }
 
   // 公开的阅读时间记录接口
+  /**
+   * 记录文章阅读时间
+   *
+   * 公开接口，用于记录用户在特定文章上的阅读时长。
+   * 用于分析用户阅读行为和文章质量评估。
+   *
+   * @param articleId 文章ID
+   * @param duration 阅读时长（秒）
+   * @param ip 客户端IP地址
+   */
   @Post('article/:id/reading-time')
   @Throttle({ long: { limit: 20, ttl: 60000 } }) // 1分钟内最多20次请求
   @ApiOperation({ summary: '记录文章阅读时间' })
@@ -104,6 +158,22 @@ export class AnalyticsController {
   }
 
   // 以下是需要认证的管理接口
+  /**
+   * 获取数据概览
+   *
+   * 管理员接口，获取网站分析数据的总体概览，包括访问量、
+   * 用户数、页面浏览量等关键指标。支持缓存优化。
+   *
+   * @returns 分析数据概览
+   */
+  /**
+   * 获取数据概览
+   *
+   * 获取网站分析数据的总体概览，包括访问量、用户数、页面浏览量等
+   * 关键指标。数据缓存2分钟，支持SWR策略。
+   *
+   * @returns 分析数据概览
+   */
   @Get('admin/analytics/overview')
   @Perm('analytics', ['read'])
   @DerivedView({ key: 'analytics-overview', ttl: 120, swr: true })
@@ -113,6 +183,24 @@ export class AnalyticsController {
     return this.analyticsService.getOverview();
   }
 
+  /**
+   * 获取页面访问排行
+   *
+   * 管理员接口，获取网站页面的访问量排行榜，
+   * 帮助了解哪些页面最受用户欢迎。
+   *
+   * @param limit 返回结果数量限制（可选）
+   * @returns 页面访问排行数据
+   */
+  /**
+   * 获取页面访问排行
+   *
+   * 获取网站页面的访问量排行榜，可指定返回的页面数量。
+   * 数据缓存3分钟，支持SWR策略。
+   *
+   * @param limit 返回页面数量限制
+   * @returns 页面访问排行列表
+   */
   @Get('admin/analytics/page-rankings')
   @Perm('analytics', ['read'])
   @DerivedView({ key: 'analytics-page-rankings', ttl: 180, swr: true })
@@ -122,6 +210,15 @@ export class AnalyticsController {
     return this.analyticsService.getPageRankings(limit);
   }
 
+  /**
+   * 获取来源统计
+   *
+   * 管理员接口，获取网站访问来源的统计数据，
+   * 包括搜索引擎、社交媒体、直接访问等来源分析。
+   *
+   * @param limit 返回结果数量限制（可选）
+   * @returns 来源统计数据
+   */
   @Get('admin/analytics/referrers')
   @Perm('analytics', ['read'])
   @DerivedView({ key: 'analytics-referrers', ttl: 180, swr: true })
@@ -131,6 +228,24 @@ export class AnalyticsController {
     return this.analyticsService.getReferrerStats(limit);
   }
 
+  /**
+   * 获取图表数据
+   *
+   * 管理员接口，获取用于生成分析图表的时间序列数据，
+   * 支持指定时间范围的访问趋势分析。
+   *
+   * @param days 查询天数（可选，默认为系统配置）
+   * @returns 图表数据
+   */
+  /**
+   * 获取图表数据
+   *
+   * 获取用于绘制分析图表的时间序列数据，可指定查询的天数范围。
+   * 数据缓存4分钟，支持SWR策略。
+   *
+   * @param days 查询天数范围
+   * @returns 图表数据
+   */
   @Get('admin/analytics/chart')
   @Perm('analytics', ['read'])
   @DerivedView({ key: 'analytics-chart', ttl: 240, swr: true })
@@ -140,6 +255,14 @@ export class AnalyticsController {
     return this.analyticsService.getChartData(days);
   }
 
+  /**
+   * 获取设备统计
+   *
+   * 管理员接口，获取用户访问设备的统计数据，
+   * 包括桌面、移动设备、平板等设备类型分布。
+   *
+   * @returns 设备统计数据
+   */
   @Get('admin/analytics/devices')
   @Perm('analytics', ['read'])
   @DerivedView({ key: 'analytics-devices', ttl: 360, swr: true })
@@ -149,6 +272,14 @@ export class AnalyticsController {
     return this.analyticsService.getDeviceStats();
   }
 
+  /**
+   * 获取浏览器统计
+   *
+   * 管理员接口，获取用户使用浏览器的统计数据，
+   * 包括Chrome、Firefox、Safari等浏览器类型和版本分布。
+   *
+   * @returns 浏览器统计数据
+   */
   @Get('admin/analytics/browsers')
   @Perm('analytics', ['read'])
   @DerivedView({ key: 'analytics-browsers', ttl: 360, swr: true })
@@ -158,6 +289,24 @@ export class AnalyticsController {
     return this.analyticsService.getBrowserStats();
   }
 
+  /**
+   * 获取热门文章
+   *
+   * 管理员接口，获取访问量最高的文章列表，
+   * 用于了解最受欢迎的内容和优化内容策略。
+   *
+   * @param limit 返回结果数量限制（可选）
+   * @returns 热门文章统计数据
+   */
+  /**
+   * 获取热门文章
+   *
+   * 根据访问量、阅读时长等指标获取热门文章排行榜。
+   * 数据缓存4分钟，支持SWR策略。
+   *
+   * @param limit 返回文章数量限制
+   * @returns 热门文章列表
+   */
   @Get('admin/analytics/articles/top')
   @Perm('analytics', ['read'])
   @DerivedView({ key: 'analytics-top-articles', ttl: 240, swr: true })
@@ -167,6 +316,15 @@ export class AnalyticsController {
     return this.articleStatsService.getTopArticles(limit);
   }
 
+  /**
+   * 获取文章统计
+   *
+   * 管理员接口，获取特定文章的详细统计数据，
+   * 包括访问量、阅读时长、用户互动等指标。
+   *
+   * @param articleId 文章ID
+   * @returns 文章统计数据，如果文章不存在则返回null
+   */
   @Get('admin/analytics/article/:id')
   @Perm('analytics', ['read'])
   @DerivedView({ key: 'analytics-article-stats', ttl: 180, swr: true })
@@ -178,6 +336,24 @@ export class AnalyticsController {
     return this.articleStatsService.getArticleStats(articleId);
   }
 
+  /**
+   * 导出分析数据
+   *
+   * 管理员接口，导出指定条件的分析数据，
+   * 支持多种查询条件和数据格式导出。
+   *
+   * @param query 查询条件
+   * @returns 导出的分析数据数组
+   */
+  /**
+   * 导出分析数据
+   *
+   * 根据查询条件导出分析数据，支持多种格式和时间范围。
+   * 数据缓存10分钟，不支持SWR策略以确保数据一致性。
+   *
+   * @param query 查询条件
+   * @returns 导出的分析数据
+   */
   @Get('admin/analytics/export')
   @Perm('analytics', ['read'])
   @DerivedView({ key: 'analytics-export', ttl: 600, swr: false })
@@ -187,6 +363,24 @@ export class AnalyticsController {
     return this.analyticsService.exportAnalyticsData(query);
   }
 
+  /**
+   * 获取Echarts仪表板数据
+   *
+   * 管理员接口，获取用于Echarts仪表板的综合图表数据，
+   * 包括多个维度的可视化配置选项。
+   *
+   * @param days 查询天数（可选）
+   * @returns Echarts配置选项的键值对集合
+   */
+  /**
+   * 获取Echarts仪表板数据
+   *
+   * 获取用于Echarts仪表板的完整图表配置数据，包含多个图表组件。
+   * 数据缓存4分钟，支持SWR策略。
+   *
+   * @param days 查询天数范围
+   * @returns Echarts仪表板配置
+   */
   @Get('admin/analytics/echarts/dashboard')
   @Perm('analytics', ['read'])
   @DerivedView({ key: 'analytics-echarts-dashboard', ttl: 240, swr: true })
@@ -202,6 +396,15 @@ export class AnalyticsController {
     return this.echartsFormatterService.formatDashboard(timeSeries, devices, browsers);
   }
 
+  /**
+   * 获取Echarts时间序列图表数据
+   *
+   * 管理员接口，获取用于时间序列图表的Echarts配置，
+   * 展示访问量随时间变化的趋势。
+   *
+   * @param days 查询天数（可选）
+   * @returns Echarts时间序列图表配置
+   */
   @Get('admin/analytics/echarts/timeseries')
   @Perm('analytics', ['read'])
   @DerivedView({ key: 'analytics-echarts-timeseries', ttl: 240, swr: true })
@@ -212,6 +415,14 @@ export class AnalyticsController {
     return this.echartsFormatterService.formatTimeSeriesChart(data);
   }
 
+  /**
+   * 获取Echarts设备分布图表数据
+   *
+   * 管理员接口，获取用于设备分布图表的Echarts配置，
+   * 以饼图或柱状图形式展示不同设备类型的访问分布。
+   *
+   * @returns Echarts设备分布图表配置
+   */
   @Get('admin/analytics/echarts/devices')
   @Perm('analytics', ['read'])
   @DerivedView({ key: 'analytics-echarts-devices', ttl: 360, swr: true })
@@ -222,6 +433,14 @@ export class AnalyticsController {
     return this.echartsFormatterService.formatDevicePieChart(data);
   }
 
+  /**
+   * 获取Echarts浏览器统计图表数据
+   *
+   * 管理员接口，获取用于浏览器统计图表的Echarts配置，
+   * 以饼图或柱状图形式展示不同浏览器的使用分布。
+   *
+   * @returns Echarts浏览器统计图表配置
+   */
   @Get('admin/analytics/echarts/browsers')
   @Perm('analytics', ['read'])
   @DerivedView({ key: 'analytics-echarts-browsers', ttl: 360, swr: true })
@@ -232,6 +451,15 @@ export class AnalyticsController {
     return this.echartsFormatterService.formatBrowserBarChart(data);
   }
 
+  /**
+   * 获取Echarts页面排行图表数据
+   *
+   * 管理员接口，获取用于页面访问排行图表的Echarts配置，
+   * 以柱状图形式展示最受欢迎页面的访问量排行。
+   *
+   * @param limit 返回结果数量限制（可选）
+   * @returns Echarts页面排行图表配置
+   */
   @Get('admin/analytics/echarts/page-rankings')
   @Perm('analytics', ['read'])
   @DerivedView({ key: 'analytics-echarts-page-rankings', ttl: 240, swr: true })

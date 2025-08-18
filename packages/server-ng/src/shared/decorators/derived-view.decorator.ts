@@ -1,7 +1,17 @@
 import { SetMetadata } from '@nestjs/common';
 
+/**
+ * 派生视图元数据键
+ *
+ * 用于在 NestJS 元数据系统中标识派生视图装饰器的键。
+ */
 export const DERIVED_VIEW_METADATA = 'derived-view';
 
+/**
+ * 派生视图配置选项
+ *
+ * 定义派生视图装饰器的配置参数，支持缓存策略和 SWR 机制。
+ */
 export interface DerivedViewOptions {
   /** 缓存键前缀 */
   key: string;
@@ -14,9 +24,18 @@ export interface DerivedViewOptions {
 }
 /**
  * 派生视图装饰器
- * @description
- * 零配置，零特殊情况。
- * 拦截器在请求进入时构建 cache key → 通过派生视图缓存服务获取/生成数据 → 最终响应由 ETag 拦截器注入 ETag 并处理 304。
+ *
+ * Linus 式设计原则：零配置，零特殊情况。
+ *
+ * 工作流程：
+ * 1. 拦截器在请求进入时构建 cache key
+ * 2. 通过派生视图缓存服务获取/生成数据
+ * 3. 最终响应由 ETag 拦截器注入 ETag 并处理 304
+ *
+ * 核心优势：
+ * - 自动缓存管理，无需手动处理缓存逻辑
+ * - SWR 机制确保用户体验，即使缓存过期也能快速响应
+ * - ETag 支持，减少不必要的数据传输
  *
  * @param {object} options - 派生视图的配置选项
  * @param {string} options.key - 缓存键的前缀，用于唯一标识缓存项

@@ -11,6 +11,12 @@ import {
 
 import type { Database } from '../../database/connection';
 
+/**
+ * 统计数据服务
+ *
+ * 提供系统各种统计数据的计算和查询功能，包括文章、分类、标签等
+ * 的统计信息。用于生成仪表板数据和分析报告。
+ */
 @Injectable()
 export class StatisticsService {
   constructor(
@@ -18,6 +24,14 @@ export class StatisticsService {
     private readonly db: Database,
   ) {}
 
+  /**
+   * 获取系统整体统计信息
+   *
+   * 汇总系统中所有模块的统计数据，包括文章、分类、标签的数量
+   * 和状态分布，以及总浏览量等关键指标。
+   *
+   * @returns 系统整体统计数据
+   */
   async getOverallStatistics(): Promise<OverallStatisticsDto> {
     // Get category statistics
     const categoryStats = await this.getCategoryStatistics();
@@ -41,6 +55,14 @@ export class StatisticsService {
     };
   }
 
+  /**
+   * 获取分类统计信息
+   *
+   * 计算每个分类下的文章数量、浏览量等统计数据。
+   *
+   * @returns 分类统计数据列表
+   * @private
+   */
   private async getCategoryStatistics(): Promise<CategoryStatisticsDto[]> {
     const allCategories = await this.db.select().from(categories);
 
@@ -72,6 +94,14 @@ export class StatisticsService {
     return categoryStats;
   }
 
+  /**
+   * 获取标签统计信息
+   *
+   * 计算每个标签下的文章数量、浏览量等统计数据。
+   *
+   * @returns 标签统计数据列表
+   * @private
+   */
   private async getTagStatistics(): Promise<TagStatisticsDto[]> {
     const allTags = await this.db.select().from(tags);
 
@@ -98,6 +128,14 @@ export class StatisticsService {
     return tagStats;
   }
 
+  /**
+   * 获取文章统计信息
+   *
+   * 计算文章的总数、已发布数量、私有数量、隐藏数量和总浏览量。
+   *
+   * @returns 文章统计数据对象
+   * @private
+   */
   private async getArticleStatistics(): Promise<{
     totalArticles: number;
     publishedArticles: number;
@@ -126,6 +164,13 @@ export class StatisticsService {
     };
   }
 
+  /**
+   * 获取已发布文章的总字数
+   *
+   * 计算所有已发布文章的内容字数总和，用于统计创作量。
+   *
+   * @returns 已发布文章的总字数
+   */
   async getTotalPublishedWordCount(): Promise<number> {
     // 基于 SQLite 的 length() 统计字符数，保持与 Draft.wordCount 一致（以字符数为度量）
     const res = await this.db

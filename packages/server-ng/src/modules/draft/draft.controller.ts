@@ -31,6 +31,12 @@ import {
   PublishDraftSchema,
 } from './dto/draft.dto';
 
+/**
+ * 草稿管理控制器
+ *
+ * 提供草稿的完整生命周期管理，包括创建、编辑、版本控制、
+ * 自动保存、发布为文章等功能。支持草稿版本历史和恢复操作。
+ */
 @ApiTags('Drafts')
 @Controller({ path: 'drafts', version: '2' })
 export class DraftController {
@@ -39,6 +45,14 @@ export class DraftController {
     private readonly draftVersionService: DraftVersionService,
   ) {}
 
+  /**
+   * 获取草稿列表
+   *
+   * 分页查询所有草稿，支持按标题、状态、创建时间等条件过滤。
+   *
+   * @param query 查询参数
+   * @returns 分页的草稿列表
+   */
   @Get()
   @Permission('draft', ['read'])
   @ApiOperation({ summary: 'Get all drafts' })
@@ -47,6 +61,14 @@ export class DraftController {
     return this.draftService.findAll(query);
   }
 
+  /**
+   * 根据 ID 获取草稿
+   *
+   * 获取指定 ID 的草稿详细信息。
+   *
+   * @param id 草稿 ID
+   * @returns 草稿详细信息
+   */
   @Get(':id')
   @Permission('draft', ['read'])
   @ApiOperation({ summary: 'Get draft by ID' })
@@ -56,6 +78,14 @@ export class DraftController {
     return this.draftService.findOne(id);
   }
 
+  /**
+   * 创建新草稿
+   *
+   * 创建一个新的草稿，包含标题、内容、标签等基本信息。
+   *
+   * @param createDraftDto 草稿创建数据
+   * @returns 创建的草稿信息
+   */
   @Post()
   @Permission('draft', ['create'])
   @ApiOperation({ summary: 'Create draft' })
@@ -87,6 +117,15 @@ export class DraftController {
     return this.draftService.remove(id);
   }
 
+  /**
+   * 发布草稿为文章
+   *
+   * 将草稿发布为正式文章，可以指定发布时间、分类等额外信息。
+   *
+   * @param id 草稿 ID
+   * @param publishDto 发布配置
+   * @returns 发布的文章信息
+   */
   @Post(':id/publish')
   @Permission('draft', ['publish'])
   @ApiOperation({ summary: 'Publish draft as article' })
@@ -107,6 +146,16 @@ export class DraftController {
     return this.draftService.importDrafts(draftDtos);
   }
 
+  /**
+   * 自动保存草稿
+   *
+   * 定期自动保存草稿内容，防止数据丢失。与手动保存不同，
+   * 自动保存不会创建新的版本记录。
+   *
+   * @param id 草稿 ID
+   * @param updateDraftDto 更新的草稿数据
+   * @returns 更新后的草稿信息
+   */
   @Put(':id/auto-save')
   @Permission('draft', ['update'])
   @ApiOperation({ summary: 'Auto-save draft' })
@@ -119,6 +168,15 @@ export class DraftController {
     return this.draftService.autoSave(id, updateDraftDto);
   }
 
+  /**
+   * 获取草稿版本历史
+   *
+   * 获取指定草稿的所有版本历史记录，包括版本号、创建时间、
+   * 修改摘要等信息。
+   *
+   * @param id 草稿 ID
+   * @returns 草稿版本列表
+   */
   @Get(':id/versions')
   @Permission('draft', ['read'])
   @ApiOperation({ summary: 'Get draft versions' })
@@ -150,6 +208,15 @@ export class DraftController {
     return this.draftVersionService.getVersion(id, version);
   }
 
+  /**
+   * 恢复草稿到指定版本
+   *
+   * 将草稿内容恢复到历史版本的状态，当前内容将被覆盖。
+   * 恢复操作会创建一个新的版本记录。
+   *
+   * @param id 草稿 ID
+   * @param version 目标版本号
+   */
   @Post(':id/versions/:version/restore')
   @Permission('draft', ['update'])
   @ApiOperation({ summary: 'Restore draft to specific version' })

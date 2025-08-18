@@ -6,7 +6,9 @@ import { Request, Response, NextFunction } from 'express';
 
 /**
  * 响应压缩中间件
- * 使用 gzip/deflate 压缩响应内容以减少传输大小
+ *
+ * 使用 gzip/deflate 压缩响应内容以减少传输大小，提高网络传输效率。
+ * 支持智能内容类型检测，只压缩适合的内容类型，避免对已压缩内容重复压缩。
  */
 @Injectable()
 export class CompressionMiddleware implements NestMiddleware {
@@ -46,6 +48,15 @@ export class CompressionMiddleware implements NestMiddleware {
     strategy: zlibConstants.Z_DEFAULT_STRATEGY,
   });
 
+  /**
+   * 中间件处理函数
+   *
+   * Express 中间件接口实现，对符合条件的响应内容进行压缩处理。
+   *
+   * @param req Express 请求对象
+   * @param res Express 响应对象
+   * @param next 下一个中间件函数
+   */
   use(req: Request, res: Response, next: NextFunction): void {
     this.compressionHandler(req, res, next);
   }

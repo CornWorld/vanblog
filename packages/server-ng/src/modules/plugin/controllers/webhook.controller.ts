@@ -26,6 +26,13 @@ import {
 import { WebhookRegistryService } from '../services/webhook-registry.service';
 import { WebhookService } from '../services/webhook.service';
 
+/**
+ * Webhook 管理控制器
+ *
+ * 提供 Webhook 的完整生命周期管理，包括创建、查询、更新、删除、
+ * 事件注册、日志查看、测试和手动触发等功能。支持多种事件类型和
+ * 灵活的配置选项。
+ */
 @ApiTags('Webhooks')
 @Controller({ path: 'webhooks', version: '2' })
 export class WebhookController {
@@ -34,6 +41,15 @@ export class WebhookController {
     private readonly webhookRegistryService: WebhookRegistryService,
   ) {}
 
+  /**
+   * 创建新的 Webhook
+   *
+   * 创建一个新的 Webhook 配置，包括 URL、事件类型、认证信息等。
+   * 创建成功后会自动注册到相应的事件监听器中。
+   *
+   * @param createWebhookDto Webhook 创建数据
+   * @returns 创建的 Webhook 信息
+   */
   @Post()
   @Perm('webhook', ['create'])
   @ApiOperation({ summary: 'Create a new webhook' })
@@ -48,6 +64,14 @@ export class WebhookController {
     } as WebhookDto;
   }
 
+  /**
+   * 获取 Webhook 列表
+   *
+   * 分页查询所有 Webhook 配置，支持按名称、状态等条件过滤。
+   *
+   * @param query 查询参数
+   * @returns 分页的 Webhook 列表
+   */
   @Get()
   @Perm('webhook', ['read'])
   @ApiOperation({ summary: 'Get all webhooks' })
@@ -72,6 +96,13 @@ export class WebhookController {
     };
   }
 
+  /**
+   * 获取可用的 Webhook 事件
+   *
+   * 返回系统支持的所有 Webhook 事件类型和分类信息。
+   *
+   * @returns 事件列表和分类信息
+   */
   @Get('events')
   @Perm('webhook', ['read'])
   @ApiOperation({ summary: 'Get available webhook events' })
@@ -190,6 +221,16 @@ export class WebhookController {
     return { message: 'Webhook deleted successfully' };
   }
 
+  /**
+   * 测试 Webhook
+   *
+   * 使用指定的事件和数据测试 Webhook 的连通性和响应。
+   * 不会触发实际的业务逻辑，仅用于验证配置是否正确。
+   *
+   * @param id Webhook ID
+   * @param testData 测试数据，包含事件类型和载荷
+   * @returns 测试结果
+   */
   @Post(':id/test')
   @Perm('webhook', ['test'])
   @ApiOperation({ summary: 'Test a webhook' })
@@ -208,6 +249,16 @@ export class WebhookController {
     return this.webhookService.test(id, testData);
   }
 
+  /**
+   * 手动触发 Webhook
+   *
+   * 手动触发指定的 Webhook，模拟真实事件的发生。
+   * 与测试不同，这会执行完整的 Webhook 流程。
+   *
+   * @param id Webhook ID
+   * @param testData 触发数据，包含事件类型和载荷
+   * @returns 触发结果
+   */
   @Post(':id/trigger')
   @Perm('webhook', ['trigger'])
   @ApiOperation({ summary: 'Manually trigger a webhook' })

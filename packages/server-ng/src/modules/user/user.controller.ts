@@ -24,11 +24,29 @@ interface RequestWithUser {
   user: User;
 }
 
+/**
+ * 用户管理控制器
+ *
+ * 提供用户的 CRUD 操作，包括创建、查询、更新和删除用户，
+ * 以及获取协作者列表和当前用户信息等功能。
+ *
+ * @author VanBlog Team
+ * @since 2.0.0
+ */
 @ApiTags('Users')
 @Controller({ path: 'admin/users', version: '2' })
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
+  /**
+   * 创建新用户
+   *
+   * 根据提供的用户信息创建新用户账户。需要管理员权限。
+   *
+   * @param createUserDto 用户创建数据传输对象
+   * @returns 创建成功的用户信息
+   * @throws {BadRequestException} 当用户名已存在或数据验证失败时
+   */
   @Post()
   @Perm('user', ['create'])
   @ApiOperation({ summary: '创建用户' })
@@ -39,6 +57,20 @@ export class UserController {
     return this.userService.create(createUserDto);
   }
 
+  /**
+   * 获取所有用户列表
+   *
+   * 返回系统中所有用户的信息列表。需要用户读取权限。
+   *
+   * @returns 用户列表数组
+   */
+  /**
+   * 获取用户列表
+   *
+   * 查询系统中所有用户的信息列表。需要用户读取权限。
+   *
+   * @returns 用户信息列表
+   */
   @Get()
   @Perm('user', ['read'])
   @ApiOperation({ summary: '获取用户列表' })
@@ -47,6 +79,20 @@ export class UserController {
     return this.userService.findAll();
   }
 
+  /**
+   * 获取所有协作者
+   *
+   * 返回系统中所有具有协作者角色的用户列表。
+   *
+   * @returns 协作者用户列表
+   */
+  /**
+   * 获取协作者列表
+   *
+   * 查询系统中所有具有协作者权限的用户列表。
+   *
+   * @returns 协作者用户列表
+   */
   @Get('collaborators')
   @Perm('user', ['read'])
   @ApiOperation({ summary: '获取所有协作者' })
@@ -59,6 +105,25 @@ export class UserController {
     return this.userService.getCollaborators();
   }
 
+  /**
+   * 根据ID获取用户
+   *
+   * 通过用户ID查询并返回用户详细信息。
+   *
+   * @param id 用户ID
+   * @returns 用户信息
+   * @throws {BadRequestException} 当用户ID无效或用户不存在时
+   */
+  /**
+   * 根据 ID 获取用户
+   *
+   * 根据用户 ID 查询单个用户的详细信息。
+   *
+   * @param id 用户 ID
+   * @returns 用户详细信息
+   * @throws {BadRequestException} 当用户 ID 格式无效时
+   * @throws {NotFoundException} 当用户不存在时
+   */
   @Get(':id')
   @Perm('user', ['read'])
   @ApiOperation({ summary: '根据ID获取用户' })
@@ -72,6 +137,27 @@ export class UserController {
     return this.userService.findOne(numId);
   }
 
+  /**
+   * 更新用户信息
+   *
+   * 根据用户ID更新用户的基本信息。需要用户更新权限。
+   *
+   * @param id 用户ID
+   * @param updateUserDto 用户更新数据传输对象
+   * @returns 更新后的用户信息
+   * @throws {BadRequestException} 当用户ID无效或用户不存在时
+   */
+  /**
+   * 更新用户信息
+   *
+   * 根据用户 ID 更新用户的信息，如用户名、邮箱、角色等。
+   *
+   * @param id 用户 ID
+   * @param updateUserDto 用户更新数据传输对象
+   * @returns 更新后的用户信息
+   * @throws {BadRequestException} 当用户 ID 格式无效或数据验证失败时
+   * @throws {NotFoundException} 当用户不存在时
+   */
   @Patch(':id')
   @Perm('user', ['update'])
   @ApiOperation({ summary: '更新用户' })
@@ -88,14 +174,49 @@ export class UserController {
     return this.userService.update(numId, updateUserDto);
   }
 
+  /**
+   * 获取当前用户信息
+   *
+   * 获取当前登录用户的详细信息。
+   *
+   * @param req 包含用户信息的请求对象
+   * @returns 当前用户信息
+   */
+  /**
+   * 获取当前用户信息
+   *
+   * 获取当前认证用户的详细信息，基于 JWT 令牌中的用户身份。
+   *
+   * @param req 包含用户信息的请求对象
+   * @returns 当前用户信息
+   */
   @Get('profile/me')
   @Perm('user', ['read'])
   @ApiOperation({ summary: '获取当前用户信息' })
   @ApiResponse({ status: 200, description: '用户信息获取成功' })
-  async getProfile(@Request() req: RequestWithUser): Promise<User> {
-    return this.userService.findOne(req.user.id);
+  getProfile(@Request() req: RequestWithUser): User {
+    return req.user;
   }
 
+  /**
+   * 删除用户
+   *
+   * 根据用户ID删除指定用户。需要用户删除权限。
+   *
+   * @param id 用户ID
+   * @returns 删除成功消息
+   * @throws {BadRequestException} 当用户ID无效时
+   */
+  /**
+   * 删除用户
+   *
+   * 根据用户 ID 删除指定用户。删除前会检查用户是否可以被删除。
+   *
+   * @param id 用户 ID
+   * @returns 删除操作结果消息
+   * @throws {BadRequestException} 当用户 ID 格式无效或用户不能被删除时
+   * @throws {NotFoundException} 当用户不存在时
+   */
   @Delete(':id')
   @Perm('user', ['delete'])
   @ApiOperation({ summary: '删除用户' })

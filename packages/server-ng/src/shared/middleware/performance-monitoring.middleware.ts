@@ -4,6 +4,8 @@ import type { Request, Response, NextFunction } from 'express';
 
 /**
  * 请求性能指标
+ *
+ * 记录单个请求的详细性能数据，用于性能分析和监控。
  */
 interface RequestMetrics {
   method: string;
@@ -18,6 +20,8 @@ interface RequestMetrics {
 
 /**
  * 性能统计
+ *
+ * 聚合的性能统计数据，提供系统整体性能概览。
  */
 interface PerformanceStats {
   totalRequests: number;
@@ -29,6 +33,23 @@ interface PerformanceStats {
   topSlowEndpoints: Array<{ path: string; avgDuration: number; count: number }>;
 }
 
+/**
+ * 性能监控中间件
+ *
+ * Linus 式设计：简单直接的性能监控，无复杂配置。
+ *
+ * 核心功能：
+ * - 自动记录每个请求的响应时间和内存使用
+ * - 识别慢请求和错误请求
+ * - 提供端点级别的性能统计
+ * - 内存使用趋势监控
+ * - 性能警告和建议
+ *
+ * 设计原则：
+ * - 低开销：监控本身不应显著影响性能
+ * - 零配置：开箱即用，无需复杂设置
+ * - 实用性：提供可操作的性能洞察
+ */
 @Injectable()
 export class PerformanceMonitoringMiddleware implements NestMiddleware {
   private readonly logger = new Logger(PerformanceMonitoringMiddleware.name);
@@ -49,6 +70,16 @@ export class PerformanceMonitoringMiddleware implements NestMiddleware {
 
   private static lastMemorySnapshot = 0;
 
+  /**
+   * 中间件处理函数
+   *
+   * 在请求开始时记录时间戳，在响应结束时计算性能指标。
+   * 自动收集响应时间、内存使用、状态码等关键指标。
+   *
+   * @param req Express 请求对象
+   * @param res Express 响应对象
+   * @param next 下一个中间件函数
+   */
   use(req: Request, res: Response, next: NextFunction): void {
     const startTime = Date.now();
     const { method, originalUrl } = req;
@@ -102,6 +133,12 @@ export class PerformanceMonitoringMiddleware implements NestMiddleware {
   /**
    * 记录内存快照
    */
+  /**
+   * 记录内存快照
+   *
+   * 定期记录内存使用情况，用于内存泄漏检测和趋势分析。
+   * 采用固定间隔采样，避免过度频繁的内存检查。
+   */
   private recordMemorySnapshot(): void {
     const now = Date.now();
     if (
@@ -125,6 +162,14 @@ export class PerformanceMonitoringMiddleware implements NestMiddleware {
 
   /**
    * 收集请求指标
+   */
+  /**
+   * 收集性能指标
+   *
+   * 将单个请求的性能数据添加到全局统计中。
+   * 自动维护历史记录大小，防止内存无限增长。
+   *
+   * @param metrics 请求性能指标
    */
   private static collectMetrics(metrics: RequestMetrics): void {
     // 添加到历史记录
@@ -156,6 +201,14 @@ export class PerformanceMonitoringMiddleware implements NestMiddleware {
 
   /**
    * 获取性能统计
+   */
+  /**
+   * 获取性能统计
+   *
+   * 计算并返回系统的整体性能统计数据。
+   * 包括平均响应时间、请求量、错误率等关键指标。
+   *
+   * @returns 性能统计数据
    */
   static getPerformanceStats(): PerformanceStats {
     const now = Date.now();
@@ -189,6 +242,14 @@ export class PerformanceMonitoringMiddleware implements NestMiddleware {
 
   /**
    * 获取详细的性能指标
+   */
+  /**
+   * 获取详细性能指标
+   *
+   * 返回完整的性能监控数据，包括统计信息、最近请求记录、
+   * 端点统计和系统资源使用情况。用于性能分析和调试。
+   *
+   * @returns 详细的性能指标数据
    */
   static getDetailedMetrics(): {
     slowRequestThreshold: number;
@@ -228,6 +289,12 @@ export class PerformanceMonitoringMiddleware implements NestMiddleware {
   /**
    * 重置性能统计
    */
+  /**
+   * 重置统计数据
+   *
+   * 清空所有性能统计数据，重新开始监控。
+   * 用于系统重启后的数据清理或调试目的。
+   */
   static resetStats(): void {
     this.requestMetrics.length = 0;
     this.endpointStats.clear();
@@ -238,6 +305,14 @@ export class PerformanceMonitoringMiddleware implements NestMiddleware {
 
   /**
    * 获取内存使用趋势
+   */
+  /**
+   * 获取内存使用趋势
+   *
+   * 分析内存使用的历史数据，识别内存泄漏和使用模式。
+   * 提供当前使用量、趋势数据、平均值和峰值等信息。
+   *
+   * @returns 内存趋势分析数据
    */
   static getMemoryTrend(): {
     current: number;
@@ -271,6 +346,14 @@ export class PerformanceMonitoringMiddleware implements NestMiddleware {
 
   /**
    * 获取性能警告
+   */
+  /**
+   * 获取性能警告
+   *
+   * 基于当前性能数据生成警告信息。
+   * 自动识别高响应时间、高错误率、内存泄漏等问题。
+   *
+   * @returns 性能警告列表
    */
   static getPerformanceWarnings(): string[] {
     const warnings: string[] = [];
@@ -309,6 +392,14 @@ export class PerformanceMonitoringMiddleware implements NestMiddleware {
 
   /**
    * 向后兼容的方法
+   */
+  /**
+   * 获取基础性能指标
+   *
+   * 返回系统的基础性能指标，包括响应时间阈值、
+   * 内存使用和系统运行时间等核心数据。
+   *
+   * @returns 基础性能指标
    */
   static getPerformanceMetrics(): {
     slowRequestThreshold: number;

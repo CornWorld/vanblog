@@ -32,7 +32,9 @@ interface Migration {
 
 /**
  * 数据迁移服务
- * 处理数据库结构变更和数据迁移
+ *
+ * 处理数据库结构变更和数据迁移，支持版本控制、回滚操作、
+ * 完整性验证等功能。确保数据库结构的安全升级和降级。
  */
 @Injectable()
 export class MigrationService {
@@ -105,6 +107,14 @@ export class MigrationService {
 
   /**
    * 运行所有待执行的迁移
+   */
+  /**
+   * 执行所有待执行的迁移
+   *
+   * 检查并执行所有尚未执行的迁移脚本，按版本顺序依次执行。
+   * 每个迁移都会在事务中执行，确保数据一致性。
+   *
+   * @throws Error 当迁移执行失败时抛出异常
    */
   async runMigrations(): Promise<void> {
     this.logger.log('Starting database migrations...');
@@ -225,6 +235,15 @@ export class MigrationService {
   /**
    * 回滚迁移
    */
+  /**
+   * 回滚指定的迁移
+   *
+   * 执行指定迁移的回滚操作，将数据库恢复到迁移前的状态。
+   * 只有提供了 down 方法的迁移才能被回滚。
+   *
+   * @param migrationId 要回滚的迁移 ID
+   * @throws Error 当迁移不存在、未执行或不支持回滚时抛出异常
+   */
   async rollbackMigration(migrationId: string): Promise<void> {
     const migration = this.migrations.find((m) => m.id === migrationId);
     if (!migration) {
@@ -271,6 +290,13 @@ export class MigrationService {
   /**
    * 获取迁移状态
    */
+  /**
+   * 获取迁移状态信息
+   *
+   * 返回当前数据库的迁移状态，包括版本信息、执行统计和待执行列表。
+   *
+   * @returns 包含迁移状态的详细信息
+   */
   async getMigrationStatus(): Promise<{
     currentVersion: string;
     totalMigrations: number;
@@ -299,6 +325,15 @@ export class MigrationService {
   /**
    * 从文件加载迁移脚本
    */
+  /**
+   * 从目录加载迁移脚本
+   *
+   * 扫描指定目录下的迁移文件，动态加载迁移脚本。
+   * 支持 TypeScript 和 JavaScript 格式的迁移文件。
+   *
+   * @param migrationDir 迁移文件目录路径
+   * @throws Error 当目录不存在或文件格式错误时抛出异常
+   */
   async loadMigrationsFromDirectory(migrationDir: string): Promise<void> {
     try {
       const files = await fs.readdir(migrationDir);
@@ -326,6 +361,14 @@ export class MigrationService {
 
   /**
    * 验证数据库完整性
+   */
+  /**
+   * 验证数据库完整性
+   *
+   * 检查数据库结构的完整性，包括表结构、索引、约束等。
+   * 识别潜在的数据完整性问题并提供修复建议。
+   *
+   * @returns 包含验证结果和问题列表的对象
    */
   async validateDatabaseIntegrity(): Promise<{
     isValid: boolean;

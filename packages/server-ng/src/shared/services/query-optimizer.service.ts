@@ -30,7 +30,9 @@ interface IndexSuggestion {
 
 /**
  * 查询优化服务
- * 提供数据库查询性能优化的工具和方法
+ *
+ * 提供数据库查询性能优化的工具和方法，包括查询性能监控、
+ * 批量查询优化、索引建议和缓存管理等功能。
  */
 @Injectable()
 export class QueryOptimizerService {
@@ -82,6 +84,16 @@ export class QueryOptimizerService {
    * @param db 数据库连接
    * @param tagNames 标签名称数组
    * @returns 标签名称到文章数量的映射
+   */
+  /**
+   * 批量统计标签下的文章数量
+   *
+   * 使用优化的查询策略批量获取多个标签的文章数量，
+   * 避免 N+1 查询问题。优先使用缓存，缓存失效时回退到数据库查询。
+   *
+   * @param db 数据库连接实例
+   * @param tagNames 标签名称数组
+   * @returns 标签名称到文章数量的映射对象
    */
   async batchCountArticlesByTags(
     db: Database,
@@ -173,6 +185,16 @@ export class QueryOptimizerService {
    * @param categoryNames 分类名称数组
    * @returns 分类名称到文章数量的映射
    */
+  /**
+   * 批量统计分类下的文章数量
+   *
+   * 使用优化的查询策略批量获取多个分类的文章数量，
+   * 避免 N+1 查询问题。优先使用缓存，缓存失效时回退到数据库查询。
+   *
+   * @param db 数据库连接实例
+   * @param categoryNames 分类名称数组
+   * @returns 分类名称到文章数量的映射对象
+   */
   async batchCountArticlesByCategories(
     db: Database,
     categoryNames: string[],
@@ -228,6 +250,17 @@ export class QueryOptimizerService {
    * 优化的文章搜索查询
    * 使用全文搜索索引（如果可用）或优化的 LIKE 查询
    */
+  /**
+   * 构建优化的搜索查询条件
+   *
+   * 根据搜索关键词和搜索范围构建优化的 SQL 查询条件，
+   * 支持在标题和内容中进行搜索。
+   *
+   * @param keyword 搜索关键词
+   * @param searchInTitle 是否在标题中搜索
+   * @param searchInContent 是否在内容中搜索
+   * @returns SQL 查询条件数组
+   */
   buildOptimizedSearchQuery(
     keyword: string,
     searchInTitle: boolean,
@@ -268,6 +301,17 @@ export class QueryOptimizerService {
 
   /**
    * 查询性能监控装饰器
+   */
+  /**
+   * 带性能监控的查询执行
+   *
+   * 包装查询函数，自动记录执行时间和性能统计。
+   * 当查询时间超过阈值时会记录慢查询日志。
+   *
+   * @param queryName 查询名称，用于统计和日志
+   * @param queryFn 要执行的查询函数
+   * @param threshold 慢查询阈值（毫秒），默认 1000ms
+   * @returns 查询函数的执行结果
    */
   async withPerformanceMonitoring<T>(
     queryName: string,
@@ -415,6 +459,17 @@ export class QueryOptimizerService {
 
   /**
    * 查询缓存包装器
+   */
+  /**
+   * 带缓存的查询执行
+   *
+   * 包装查询函数，自动处理缓存的读取和写入。
+   * 如果缓存存在则直接返回，否则执行查询并缓存结果。
+   *
+   * @param key 缓存键名
+   * @param queryFn 要执行的查询函数
+   * @param ttl 缓存过期时间（秒），默认 300 秒（5分钟）
+   * @returns 查询结果或缓存的结果
    */
   async withCache<T>(
     key: string,

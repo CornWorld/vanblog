@@ -40,6 +40,12 @@ interface WatermarkBody {
   provider?: string;
 }
 
+/**
+ * 媒体文件管理控制器
+ *
+ * 提供文件上传、下载、删除、批量操作等媒体文件管理功能。
+ * 支持图片水印处理、存储配置管理和文章图片扫描等高级功能。
+ */
 @ApiTags('Media')
 @Controller({ path: 'admin/media', version: '2' })
 export class MediaController {
@@ -49,6 +55,15 @@ export class MediaController {
     private readonly storageConfigService: StorageConfigService,
   ) {}
 
+  /**
+   * 上传文件
+   *
+   * 上传单个文件到服务器，支持多种文件类型，最大文件大小 50MB。
+   *
+   * @param file 上传的文件对象
+   * @param uploadFileDto 上传文件的配置信息
+   * @returns 上传成功的文件信息
+   */
   @Post('upload')
   @Perm('media', ['create'])
   @ApiOperation({ summary: '上传文件' })
@@ -100,6 +115,15 @@ export class MediaController {
     );
   }
 
+  /**
+   * 上传文件并添加水印
+   *
+   * 上传图片文件并自动添加文字水印，支持自定义水印文本、位置和透明度。
+   *
+   * @param file 上传的图片文件
+   * @param body 水印配置信息
+   * @returns 处理后的文件信息
+   */
   @Post('upload-with-watermark')
   @Perm('media', ['create'])
   @ApiOperation({ summary: '上传文件并添加水印' })
@@ -152,6 +176,14 @@ export class MediaController {
     return this.mediaService.uploadFile(processedFile, body.filename, body.provider);
   }
 
+  /**
+   * 获取文件列表
+   *
+   * 分页查询文件列表，支持按文件名、类型等条件过滤。
+   *
+   * @param query 查询参数，包含分页和过滤条件
+   * @returns 分页的文件列表
+   */
   @Get()
   @Perm('media', ['read'])
   @ApiOperation({ summary: '获取文件列表' })
@@ -166,6 +198,14 @@ export class MediaController {
     return this.mediaService.listFiles(query);
   }
 
+  /**
+   * 获取单个文件信息
+   *
+   * 根据文件 ID 获取文件的详细信息。
+   *
+   * @param id 文件 ID
+   * @returns 文件详细信息
+   */
   @Get(':id')
   @Perm('media', ['read'])
   @ApiOperation({ summary: '获取单个文件信息' })
@@ -174,6 +214,14 @@ export class MediaController {
     return this.mediaService.getFileById(id);
   }
 
+  /**
+   * 删除单个文件
+   *
+   * 根据文件 ID 删除指定文件，同时清理存储空间。
+   *
+   * @param id 文件 ID
+   * @returns 删除操作结果
+   */
   @Delete(':id')
   @Perm('media', ['delete'])
   @ApiOperation({ summary: '删除单个文件' })
@@ -184,6 +232,14 @@ export class MediaController {
     return this.mediaService.deleteFile(id);
   }
 
+  /**
+   * 批量删除文件
+   *
+   * 根据文件 ID 列表批量删除多个文件，提高删除效率。
+   *
+   * @param batchDeleteDto 包含要删除的文件 ID 列表
+   * @returns 批量删除操作结果，包含删除数量
+   */
   @Post('batch-delete')
   @Perm('media', ['delete'])
   @ApiOperation({ summary: '批量删除文件' })
@@ -198,6 +254,13 @@ export class MediaController {
     return this.mediaService.deleteFiles(batchDeleteDto.ids);
   }
 
+  /**
+   * 扫描文章中的图片
+   *
+   * 扫描所有文章内容，自动发现并添加文章中引用的图片到媒体库。
+   *
+   * @returns 扫描结果，包含扫描数量和新增数量
+   */
   @Post('scan-articles')
   @Perm('media', ['create'])
   @ApiOperation({ summary: '扫描文章中的图片' })
@@ -206,6 +269,13 @@ export class MediaController {
     return this.mediaService.scanArticleImages();
   }
 
+  /**
+   * 导出所有图片信息
+   *
+   * 导出媒体库中所有文件的详细信息，用于备份或迁移。
+   *
+   * @returns 包含所有文件信息的导出数据
+   */
   @Get('export/all')
   @Perm('media', ['read'])
   @ApiOperation({ summary: '导出所有图片信息' })
@@ -242,6 +312,14 @@ export class MediaController {
     return this.storageConfigService.updateStorageConfig(updateDto);
   }
 
+  /**
+   * 从剪贴板上传图片
+   *
+   * 接收 Base64 格式的图片数据，将剪贴板中的图片直接上传到服务器。
+   *
+   * @param body 包含 Base64 图片数据和可选文件名
+   * @returns 上传成功的文件信息
+   */
   @Post('upload-clipboard')
   @Perm('media', ['create'])
   @ApiOperation({ summary: '从剪贴板上传图片' })

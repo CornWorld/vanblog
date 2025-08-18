@@ -4,6 +4,12 @@ import MarkdownIt from 'markdown-it';
 import katex from 'markdown-it-katex';
 import taskLists from 'markdown-it-task-lists';
 
+/**
+ * Markdown 处理服务
+ *
+ * 提供 Markdown 文本的渲染、解析和处理功能。支持代码高亮、数学公式、
+ * 任务列表等扩展功能。用于将 Markdown 格式的文章内容转换为 HTML。
+ */
 @Injectable()
 export class MarkdownService {
   private readonly logger = new Logger(MarkdownService.name);
@@ -38,6 +44,12 @@ export class MarkdownService {
 
   /**
    * 渲染 Markdown 为 HTML
+   *
+   * 将 Markdown 格式的文本转换为 HTML，支持代码高亮、数学公式、
+   * 任务列表等扩展功能。特别处理 Mermaid 图表和代码块的样式。
+   *
+   * @param content Markdown 格式的文本内容
+   * @returns 转换后的 HTML 字符串
    */
   renderMarkdown(content: string | null): string {
     if (!content || content === '') return '';
@@ -45,7 +57,14 @@ export class MarkdownService {
   }
 
   /**
-   * 获取文章描述（支持 <!-- more --> 分割符）
+   * 从 Markdown 内容中提取描述文本
+   *
+   * 移除 Markdown 语法标记，提取纯文本内容作为文章描述。
+   * 自动截取指定长度，用于文章摘要显示。
+   *
+   * @param content Markdown 格式的文本内容
+   * @param maxLength 最大长度，默认 200 字符
+   * @returns 提取的描述文本
    */
   getDescription(content: string | null, maxLength = 200): string {
     if (!content || content === '') return '';
@@ -62,7 +81,13 @@ export class MarkdownService {
   }
 
   /**
-   * 移除 Markdown 标记，获取纯文本
+   * 移除 Markdown 语法标记
+   *
+   * 将 Markdown 文本转换为纯文本，移除所有格式化标记。
+   * 用于搜索索引、描述提取等场景。
+   *
+   * @param content Markdown 格式的文本内容
+   * @returns 移除标记后的纯文本
    */
   stripMarkdown(content: string | null): string {
     if (!content || content === '') return '';
@@ -99,7 +124,13 @@ export class MarkdownService {
   }
 
   /**
-   * 为 RSS 处理 Markdown 内容
+   * 为 RSS 渲染 Markdown
+   *
+   * 专门为 RSS 订阅源渲染 Markdown 内容，移除可能影响 RSS 阅读器
+   * 显示的特殊元素，如 Mermaid 图表等。
+   *
+   * @param content Markdown 格式的文本内容
+   * @returns 适用于 RSS 的 HTML 字符串
    */
   renderForRss(content: string | null): string {
     if (!content || content === '') return '';

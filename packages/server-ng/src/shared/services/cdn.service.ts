@@ -31,7 +31,9 @@ interface ImageOptimizationParams {
 
 /**
  * CDN 集成服务
- * 提供静态资源 CDN 分发和优化功能
+ *
+ * 提供静态资源 CDN 分发和优化功能，包括图片优化、缓存管理、
+ * 域名分片和响应式图片生成等功能。
  */
 @Injectable()
 export class CDNService {
@@ -53,6 +55,16 @@ export class CDNService {
 
   /**
    * 获取资源的 CDN URL
+   */
+  /**
+   * 获取资源的 CDN URL
+   *
+   * 根据配置将本地资源路径转换为 CDN URL，支持图片优化参数。
+   * 如果 CDN 未启用，则返回原始路径。
+   *
+   * @param resourcePath 资源路径
+   * @param optimization 图片优化参数（可选）
+   * @returns CDN URL 或原始路径
    */
   getResourceUrl(resourcePath: string, optimization?: ImageOptimizationParams): string {
     if (!this.config.enabled || this.config.baseUrl === '' || this.config.baseUrl.trim() === '') {
@@ -76,6 +88,12 @@ export class CDNService {
 
   /**
    * 获取分片域名
+   *
+   * 基于资源路径的哈希值选择合适的 CDN 域名，实现负载均衡。
+   * 确保相同资源始终使用相同域名，避免缓存失效。
+   *
+   * @param resourcePath 资源路径
+   * @returns 选中的 CDN 域名
    */
   private getShardedDomain(resourcePath: string): string {
     if (this.config.domains.length === 0) {
@@ -89,7 +107,14 @@ export class CDNService {
   }
 
   /**
-   * 构建优化的图片 URL
+   * 构建优化图片 URL
+   *
+   * 根据优化参数构建图片处理 URL，支持尺寸调整、格式转换、
+   * 质量压缩等功能。自动选择最佳格式以减少文件大小。
+   *
+   * @param baseUrl 基础 URL
+   * @param params 优化参数
+   * @returns 带优化参数的 URL
    */
   private buildOptimizedImageUrl(baseUrl: string, params: ImageOptimizationParams): string {
     const queryParams = new URLSearchParams();
@@ -121,7 +146,13 @@ export class CDNService {
   }
 
   /**
-   * 检查是否为图片文件
+   * 检查文件是否为图片
+   *
+   * 根据文件扩展名判断是否为支持的图片格式。
+   * 支持常见的 Web 图片格式。
+   *
+   * @param filePath 文件路径
+   * @returns 是否为图片文件
    */
   private isImage(filePath: string): boolean {
     const ext = path.extname(filePath).toLowerCase();
@@ -130,6 +161,14 @@ export class CDNService {
 
   /**
    * 预热 CDN 缓存
+   */
+  /**
+   * 预热 CDN 缓存
+   *
+   * 主动请求指定的 URL 列表，让 CDN 提前缓存这些资源，
+   * 提高用户首次访问的速度。
+   *
+   * @param urls 需要预热的 URL 列表
    */
   async warmupCache(urls: string[]): Promise<void> {
     if (!this.config.enabled) {
@@ -155,6 +194,15 @@ export class CDNService {
 
   /**
    * 清除 CDN 缓存
+   */
+  /**
+   * 清除指定 URL 的 CDN 缓存
+   *
+   * 通过 CDN 提供商的 API 清除指定 URL 的缓存，
+   * 强制 CDN 重新从源站获取最新内容。
+   *
+   * @param urls 需要清除缓存的 URL 列表
+   * @returns 清除操作是否成功
    */
   async purgeCache(urls: string[]): Promise<boolean> {
     if (
@@ -192,6 +240,14 @@ export class CDNService {
   /**
    * 清除所有缓存
    */
+  /**
+   * 清除所有 CDN 缓存
+   *
+   * 清除整个 CDN 的所有缓存内容，通常在网站大规模更新时使用。
+   * 注意：此操作会影响所有用户的访问速度。
+   *
+   * @returns 清除操作是否成功
+   */
   async purgeAllCache(): Promise<boolean> {
     if (
       !this.config.enabled ||
@@ -227,6 +283,10 @@ export class CDNService {
 
   /**
    * 获取 CDN 统计信息
+   *
+   * 返回当前 CDN 配置的统计信息，用于监控和调试。
+   *
+   * @returns CDN 配置统计
    */
   getCDNStats(): {
     enabled: boolean;
@@ -249,6 +309,16 @@ export class CDNService {
   /**
    * 生成响应式图片 URL 集合
    */
+  /**
+   * 生成响应式图片 URL 列表
+   *
+   * 为指定图片生成不同尺寸的 URL，用于响应式图片显示。
+   * 支持自定义尺寸列表。
+   *
+   * @param imagePath 图片路径
+   * @param sizes 图片宽度列表，默认包含常用的响应式断点
+   * @returns 包含 URL 和宽度的对象数组
+   */
   generateResponsiveImageUrls(
     imagePath: string,
     sizes: number[] = [320, 640, 768, 1024, 1280, 1920],
@@ -261,6 +331,16 @@ export class CDNService {
 
   /**
    * 生成图片 srcset 字符串
+   */
+  /**
+   * 生成 HTML srcset 属性值
+   *
+   * 为指定图片生成符合 HTML srcset 规范的字符串，
+   * 用于响应式图片的 <img> 标签。
+   *
+   * @param imagePath 图片路径
+   * @param sizes 图片宽度列表，默认包含常用的响应式断点
+   * @returns srcset 属性值字符串
    */
   generateSrcSet(imagePath: string, sizes: number[] = [320, 640, 768, 1024, 1280, 1920]): string {
     const urls = this.generateResponsiveImageUrls(imagePath, sizes);

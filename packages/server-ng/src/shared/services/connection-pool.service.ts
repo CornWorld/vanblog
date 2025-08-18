@@ -55,7 +55,9 @@ interface PendingRequest {
 
 /**
  * 数据库连接池优化服务
- * 提供连接池管理、健康检查、性能监控等功能
+ *
+ * 提供连接池管理、健康检查、性能监控等功能。支持连接复用、
+ * 超时控制、自动清理和优雅关闭等特性。
  */
 @Injectable()
 export class ConnectionPoolService implements OnModuleDestroy {
@@ -118,7 +120,13 @@ export class ConnectionPoolService implements OnModuleDestroy {
   }
 
   /**
-   * 获取连接
+   * 获取数据库连接
+   *
+   * 从连接池中获取一个可用的数据库连接。如果没有空闲连接且未达到最大连接数，
+   * 则创建新连接。如果连接池已满，则等待直到有连接释放或超时。
+   *
+   * @returns 数据库连接信息
+   * @throws Error 当获取连接超时或连接池已关闭时抛出异常
    */
   async acquireConnection(): Promise<ConnectionInfo> {
     if (this.isShuttingDown) {
@@ -189,7 +197,12 @@ export class ConnectionPoolService implements OnModuleDestroy {
   }
 
   /**
-   * 释放连接
+   * 释放数据库连接
+   *
+   * 将使用完的数据库连接归还到连接池中，标记为空闲状态。
+   * 如果有等待中的请求，会立即分配给下一个请求。
+   *
+   * @param connection 要释放的数据库连接
    */
   releaseConnection(connection: ConnectionInfo): void {
     if (!this.connections.has(connection.id)) {
@@ -211,6 +224,11 @@ export class ConnectionPoolService implements OnModuleDestroy {
 
   /**
    * 获取连接池统计信息
+   *
+   * 返回连接池的详细统计数据，包括连接数量、请求统计、
+   * 等待时间和利用率等信息。
+   *
+   * @returns 连接池统计信息
    */
   getStats(): PoolStats {
     this.updateStats();
@@ -233,6 +251,14 @@ export class ConnectionPoolService implements OnModuleDestroy {
 
   /**
    * 获取连接池健康状态
+   */
+  /**
+   * 获取连接池健康状态
+   *
+   * 检查连接池的健康状况，包括连接数量、利用率、等待时间等指标。
+   * 提供问题诊断和优化建议。
+   *
+   * @returns 包含健康状态、问题列表和建议的对象
    */
   getHealthStatus(): {
     isHealthy: boolean;
@@ -280,6 +306,12 @@ export class ConnectionPoolService implements OnModuleDestroy {
   /**
    * 强制关闭所有连接
    */
+  /**
+   * 强制关闭所有连接
+   *
+   * 立即关闭连接池中的所有连接，不等待正在进行的操作完成。
+   * 通常在紧急情况下使用，可能导致正在进行的操作失败。
+   */
   forceCloseAll(): void {
     this.logger.warn('Force closing all connections');
 
@@ -302,6 +334,14 @@ export class ConnectionPoolService implements OnModuleDestroy {
 
   /**
    * 优雅关闭连接池
+   */
+  /**
+   * 优雅关闭连接池
+   *
+   * 停止接受新的连接请求，等待现有连接完成操作后关闭。
+   * 如果在指定时间内无法完成，则强制关闭剩余连接。
+   *
+   * @param timeoutMs 等待超时时间（毫秒），默认 30 秒
    */
   async gracefulShutdown(timeoutMs = 30000): Promise<void> {
     this.isShuttingDown = true;
@@ -484,6 +524,12 @@ export class ConnectionPoolService implements OnModuleDestroy {
 
   /**
    * 模块销毁时的清理
+   */
+  /**
+   * 模块销毁时的清理操作
+   *
+   * NestJS 生命周期钩子，在模块销毁时自动调用。
+   * 执行优雅关闭流程，清理所有资源。
    */
   async onModuleDestroy(): Promise<void> {
     if (this.healthCheckTimer) {
