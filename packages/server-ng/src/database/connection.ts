@@ -1,13 +1,17 @@
 import { createClient } from '@libsql/client';
 import { sql } from 'drizzle-orm';
 import { drizzle, type LibSQLDatabase } from 'drizzle-orm/libsql';
+import { migrate } from 'drizzle-orm/libsql/migrator';
 
 import type { DatabaseConfig } from '../config/database.config';
 import type { LoggerService } from '../core/logger/logger.service';
 
 export type Database = LibSQLDatabase;
 
-export function createDatabaseConnection(config: DatabaseConfig, logger: LoggerService): Database {
+export async function createDatabaseConnection(
+  config: DatabaseConfig,
+  logger: LoggerService,
+): Promise<Database> {
   logger.log(`Initializing database with driver: ${config.driver}`, 'Database');
 
   let clientConfig;
@@ -47,6 +51,19 @@ export function createDatabaseConnection(config: DatabaseConfig, logger: LoggerS
     });
 
   logger.log('Database connection established', 'Database');
+
+  // Auto-run migrations in test environment is disabled in favor of schema push in test/setup.ts
+  if (process.env.NODE_ENV === 'test' && process.env.DB_AUTO_MIGRATE === 'true') {
+    try {
+      const migrationsPath = `${process.cwd()}/drizzle/migrations`;
+      logger.log(`Running migrations from: ${migrationsPath}`, 'Database');
+      await migrate(db, { migrationsFolder: migrationsPath });
+      logger.log('Test database migrations completed', 'Database');
+    } catch (error: unknown) {
+      logger.error('Failed to run test database migrations', String(error), 'Database');
+      throw error;
+    }
+  }
 
   return db;
 }

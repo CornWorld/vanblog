@@ -15,9 +15,9 @@ export const DATABASE_CONNECTION = 'DATABASE_CONNECTION';
   providers: [
     {
       provide: DATABASE_CONNECTION,
-      useFactory: (configService: ConfigService, logger: LoggerService) => {
+      useFactory: async (configService: ConfigService, logger: LoggerService) => {
         const dbConfig = configService.database;
-        return createDatabaseConnection(dbConfig, logger);
+        return await createDatabaseConnection(dbConfig, logger);
       },
       inject: [ConfigService, LoggerService],
     },

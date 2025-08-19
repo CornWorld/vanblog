@@ -32,7 +32,8 @@ export class PluginLoaderController {
   private readonly logger = new Logger(PluginLoaderController.name);
 
   constructor(private readonly pluginLoaderService: PluginLoaderService) {
-    this.logger.error('PluginLoaderController initialized (ERROR LEVEL)');
+    // Downgrade noisy test-time log to warn to avoid false positives in log scans
+    this.logger.warn('PluginLoaderController initialized (WARN LEVEL)');
   }
 
   @Get()

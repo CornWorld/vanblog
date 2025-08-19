@@ -51,11 +51,13 @@ export class DemoService implements OnModuleInit {
   }
 
   async onModuleInit(): Promise<void> {
-    if (this.isDemoMode) {
+    if (this.isDemoMode && process.env.NODE_ENV !== 'test') {
       this.logger.log('Demo mode enabled, creating initial snapshot...');
       await this.createSnapshot();
 
       this.logger.log('Demo mode initialized successfully');
+    } else if (this.isDemoMode && process.env.NODE_ENV === 'test') {
+      this.logger.log('Demo mode enabled in test environment, skipping initial snapshot');
     }
   }
 
