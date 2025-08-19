@@ -1,4 +1,4 @@
-// / <reference types="express" />
+/// <reference types="express" />
 
 export interface UploadResult {
   url: string;
