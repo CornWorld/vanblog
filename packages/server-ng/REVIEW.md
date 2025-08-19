@@ -62,6 +62,7 @@
 
 - 自定义页面（Public）：GET /public/customPage/all、GET /public/customPage?path={pathname}，具备草稿/发布状态处理与 404 语义；已覆盖 e2e
 - 文章 pathname GET 访问：GET /articles/by-path/:pathname，已覆盖 e2e
+- 灰度模块（简版）：Shared.GrayReleaseService（基于环境变量的开关/百分比/白名单），用于 pathname/密码类改动的灰度与回滚
 
 ### 待办
 
@@ -100,7 +101,7 @@
 
 - v1 访问明确返回 410，并提供文档与迁移建议，避免“静默失败”。
 - 前端需适配 v2 响应格式（直接数据）与可能的分页参数差异。
-- 对于 pathname/密码类改动，需设计灰度与回滚策略，避免 SEO 与访问的突变。
+- 对于 pathname/密码类改动，需设计灰度与回滚策略（已提供 Shared.GrayReleaseService：ROLLOUT\_\* 环境变量控制），避免 SEO 与访问的突变。
 
 ---
 
@@ -113,7 +114,7 @@
 - 数据库架构已优化，性能查询与索引策略就位
 - Drizzle-Zod 集成完成，类型安全与运行时验证统一
 
-**已完成的 M1 项**：pathname、自定义页面
+**已完成的 M1 项**：pathname、自定义页面、灰度模块（简版）
 
 **剩余里程碑**：
 M1（用户可见断层修复）：时间线

@@ -4,6 +4,7 @@ import { CacheModule } from './cache/cache.module';
 import { CompressionMiddleware } from './middleware/compression.middleware';
 import { CDNService } from './services/cdn.service';
 import { ConnectionPoolService } from './services/connection-pool.service';
+import { GrayReleaseService } from './services/gray-release.service';
 import { MarkdownService } from './services/markdown.service';
 import { MigrationService } from './services/migration.service';
 import { QueryOptimizerService } from './services/query-optimizer.service';
@@ -20,6 +21,7 @@ import { StatisticsService } from './services/statistics.service';
     CDNService,
     MigrationService,
     CompressionMiddleware,
+    GrayReleaseService,
   ],
   exports: [
     StatisticsService,
@@ -29,6 +31,7 @@ import { StatisticsService } from './services/statistics.service';
     ConnectionPoolService,
     CDNService,
     MigrationService,
+    GrayReleaseService,
   ],
 })
 export class SharedModule implements NestModule {
