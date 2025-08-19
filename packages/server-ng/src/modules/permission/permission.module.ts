@@ -5,6 +5,7 @@ import { PermissionService } from './permission.service';
 
 // 共享的注入令牌
 const PERMISSIONS = 'PERMISSIONS';
+const PERMISSIONS_CONTRIBUTOR = 'PERMISSIONS_CONTRIBUTOR';
 
 @Global() // 使权限服务在全局可用
 @Module({})
@@ -24,20 +25,27 @@ export class PermissionModule {
   /**
    * 在功能模块 (Feature Module) 中调用。
    * 负责接收该模块的权限列表，并将其作为 provider 注册。
+   * 同时通过工厂 provider 主动将权限贡献给全局的 PermissionCollectionService，避免多 provider 注入时序问题。
    * @param permissions - 该功能模块提供的一组权限字符串。
    */
   static forFeature(permissions: string[]): DynamicModule {
-    const permissionsProvider: Provider & { multi: boolean } = {
+    const permissionsProvider: Provider = {
       provide: PERMISSIONS,
       useValue: permissions,
-      // multi: true 是一个关键技巧，它告诉 NestJS DI 容器，
-      // 可能会有多个 provider 使用同一个令牌，请将它们收集成一个数组。
-      multi: true,
+    };
+
+    const contributorProvider: Provider = {
+      provide: PERMISSIONS_CONTRIBUTOR,
+      useFactory: (collector: PermissionCollectionService) => {
+        collector.contributePermissions(permissions);
+        return true; // 返回任意值占位
+      },
+      inject: [PermissionCollectionService],
     };
 
     return {
       module: PermissionModule,
-      providers: [permissionsProvider],
+      providers: [permissionsProvider, contributorProvider],
       exports: [permissionsProvider],
     };
   }

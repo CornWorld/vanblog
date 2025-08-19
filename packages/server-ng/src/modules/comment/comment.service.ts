@@ -1,6 +1,6 @@
 import { ChildProcess, spawn } from 'node:child_process';
 
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
 import { AllConfig } from '../../config/config.interface';
@@ -10,16 +10,24 @@ import { SettingCoreService } from '../setting/services/setting-core.service';
 import { UpdateWalineSetting, WalineSetting } from './comment.schema';
 
 @Injectable()
-export class CommentService {
+export class CommentService implements OnModuleInit {
   private readonly logger = new Logger(CommentService.name);
   private walineProcess: ChildProcess | null = null;
   private walineEnv: Record<string, string> = {};
 
   constructor(
-    private readonly configService: ConfigService<AllConfig>,
     private readonly settingService: SettingCoreService,
     private readonly hookService: HookService,
+    private readonly configService: ConfigService<AllConfig>,
   ) {}
+
+  async onModuleInit(): Promise<void> {
+    // 测试环境下不自动启动 Waline
+    if (process.env.NODE_ENV === 'test' || process.env.VITEST) {
+      return;
+    }
+    await this.start();
+  }
 
   async getWalineSetting(): Promise<WalineSetting> {
     const defaultSetting: WalineSetting = {
@@ -132,21 +140,21 @@ export class CommentService {
   }
 
   private async loadEnv(): Promise<void> {
-    const walineDb = this.configService.get('waline.db', { infer: true });
+    const walineDb = this.configService.get<string>('waline.db', { infer: true }) ?? '';
 
     // Database configuration for Waline
     const mongoEnv: Record<string, string> = {
-      MONGO_DB: walineDb ?? '',
+      MONGO_DB: walineDb,
       MONGO_AUTHSOURCE: 'admin',
     };
 
     // Site information
     const siteInfo = await this.settingService.getSiteInfo();
-    const jwtSecret = this.configService.get('jwt.secret', { infer: true });
+    const jwtSecret = this.configService.get<string>('jwt.secret', { infer: true }) ?? '';
     const otherEnv: Record<string, string> = {
       SITE_NAME: siteInfo.title,
       SITE_URL: 'http://localhost:3000',
-      JWT_TOKEN: jwtSecret ?? '',
+      JWT_TOKEN: jwtSecret,
     };
 
     // Waline specific configuration
@@ -180,8 +188,9 @@ export class CommentService {
         detached: true,
       });
 
-      this.walineProcess.on('message', (message) => {
-        this.logger.log(message);
+      this.walineProcess.on('message', (message: unknown) => {
+        const output = typeof message === 'string' ? message : JSON.stringify(message);
+        this.logger.log(output);
       });
 
       this.walineProcess.on('exit', () => {
@@ -229,7 +238,9 @@ export class CommentService {
 
       this.walineProcess.unref();
       if (this.walineProcess.pid) {
-        process.kill(-this.walineProcess.pid);
+        const targetPid =
+          process.platform !== 'win32' ? -this.walineProcess.pid : this.walineProcess.pid;
+        process.kill(targetPid);
       }
       this.walineProcess = null;
       this.logger.log('Waline 停止成功！');
@@ -252,10 +263,6 @@ export class CommentService {
 
     // Trigger afterRestart action hook
     await this.hookService.doAction('comment|afterRestart', { reason }, { action: 'restart' });
-  }
-
-  async init(): Promise<void> {
-    await this.start();
   }
 
   getStatus(): { running: boolean; pid?: number } {

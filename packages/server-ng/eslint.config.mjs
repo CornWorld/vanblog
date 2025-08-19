@@ -11,13 +11,6 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 export default [
   // 基础配置
   js.configs.recommended,
-  prettierConfig,
-  {
-    plugins: {
-      prettier: prettierPlugin,
-      import: importPlugin,
-    },
-  },
   {
     ignores: ['dist/**', 'node_modules/**', 'coverage/**', '*.mjs', '*.cjs'],
   },
@@ -248,6 +241,13 @@ export default [
       'no-unused-vars': 'off',
       'prefer-const': 'error',
       'no-var': 'error',
+    },
+  },
+  prettierConfig,
+  {
+    plugins: {
+      prettier: prettierPlugin,
+      import: importPlugin,
     },
   },
 ];

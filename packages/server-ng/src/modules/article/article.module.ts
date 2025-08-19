@@ -7,6 +7,7 @@ import { PluginModule } from '../plugin/plugin.module';
 
 import { ArticleController } from './article.controller';
 import { ArticleService } from './article.service';
+import { ArticleAccessGuard } from './guards/article-access.guard';
 
 @Module({
   imports: [
@@ -22,7 +23,7 @@ import { ArticleService } from './article.service';
     ]),
   ],
   controllers: [ArticleController],
-  providers: [ArticleService],
+  providers: [ArticleService, ArticleAccessGuard],
   exports: [ArticleService],
 })
 export class ArticleModule {}

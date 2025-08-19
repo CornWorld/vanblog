@@ -10,7 +10,7 @@ export const users = sqliteTable('users', {
   nickname: text('nickname'),
   email: text('email'),
   avatar: text('avatar'),
-  type: text('type', { enum: ['admin', 'editor', 'author', 'subscriber'] })
+  type: text('type', { enum: ['admin', 'editor', 'author', 'subscriber', 'viewer'] })
     .notNull()
     .default('subscriber'),
   permissions: text('permissions'), // JSON string for permissions array

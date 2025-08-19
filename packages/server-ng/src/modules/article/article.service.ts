@@ -361,6 +361,34 @@ export class ArticleService {
     });
   }
 
+  /**
+   * 判断指定 ID 的文章是否为私有
+   * 返回 true/false；当文章不存在时返回 null
+   */
+  async isPrivateById(id: number): Promise<boolean | null> {
+    const rows = await this.db
+      .select({ private: articles.private })
+      .from(articles)
+      .where(eq(articles.id, id))
+      .limit(1);
+    if (rows.length === 0) return null;
+    return Boolean(rows[0].private);
+  }
+
+  /**
+   * 判断指定 pathname 的文章是否为私有
+   * 返回 true/false；当文章不存在时返回 null
+   */
+  async isPrivateByPathname(pathname: string): Promise<boolean | null> {
+    const rows = await this.db
+      .select({ private: articles.private })
+      .from(articles)
+      .where(eq(articles.pathname, String(pathname)))
+      .limit(1);
+    if (rows.length === 0) return null;
+    return Boolean(rows[0].private);
+  }
+
   async create(createArticleDto: CreateArticleDto): Promise<Article> {
     const { tags: tagNames, ...articleData } = createArticleDto;
 

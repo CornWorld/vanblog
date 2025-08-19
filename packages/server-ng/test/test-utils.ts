@@ -100,7 +100,8 @@ export async function cleanupDatabase(app: INestApplication): Promise<void> {
       categories,
       siteMeta,
       customPages,
-
+      webhooks,
+      webhookLogs,
       permissionNodes,
       permissionGroups,
     } = await import('../src/database/schema');
@@ -116,6 +117,8 @@ export async function cleanupDatabase(app: INestApplication): Promise<void> {
     await db.delete(categories).execute();
     await db.delete(siteMeta).execute();
     await db.delete(customPages).execute();
+    await db.delete(webhookLogs).execute(); // Delete logs before webhooks due to FK constraint
+    await db.delete(webhooks).execute();
 
     await db.delete(permissionNodes).execute();
     await db.delete(permissionGroups).execute();
@@ -125,7 +128,7 @@ export async function cleanupDatabase(app: INestApplication): Promise<void> {
     // This prevents SQLITE_CONSTRAINT_PRIMARYKEY errors in tests
     const { sql } = await import('drizzle-orm');
     await db.run(
-      sql`DELETE FROM sqlite_sequence WHERE name IN ('analytics', 'loginLogs', 'staticFiles', 'draftVersions', 'drafts', 'articles', 'tags', 'categories', 'siteMeta', 'customPages', 'permissionNodes', 'permissionGroups')`,
+      sql`DELETE FROM sqlite_sequence WHERE name IN ('analytics', 'loginLogs', 'staticFiles', 'draftVersions', 'drafts', 'articles', 'tags', 'categories', 'siteMeta', 'customPages', 'webhooks', 'webhookLogs', 'permissionNodes', 'permissionGroups')`,
     );
     await db.run(sql`DELETE FROM sqlite_sequence WHERE name = 'users'`);
   } catch {

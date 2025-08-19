@@ -63,6 +63,7 @@ export class AppModule implements NestModule {
         ]),
         DatabaseModule,
         LoggerModule,
+        PermissionModule.forRoot(),
         HealthModule,
         UserModule,
         AuthModule,
@@ -80,7 +81,6 @@ export class AppModule implements NestModule {
         BackupModule,
 
         DemoModule,
-        PermissionModule.forRoot(),
         pluginModule,
       ],
       controllers: [AppController],

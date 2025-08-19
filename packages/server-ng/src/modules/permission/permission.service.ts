@@ -182,11 +182,15 @@ export class PermissionService {
    * 解析用户权限，处理禁用权限和权限组（顺序敏感：后者覆盖前者）
    */
   async resolveUserPermissions(userPermissions: string[]): Promise<string[]> {
+    this.logger.debug(`开始解析用户权限: ${JSON.stringify(userPermissions)}`);
     const resolvedPermissions = new Set<string>();
 
     for (const token of userPermissions) {
+      this.logger.debug(`处理权限 token: ${token}`);
+
       if (token === 'all') {
         // 特殊权限：all
+        this.logger.debug('添加 all 权限');
         resolvedPermissions.add('all');
         continue;
       }
@@ -194,14 +198,17 @@ export class PermissionService {
       if (token.startsWith('no:')) {
         // 撤销权限或角色
         const target = token.slice(3);
+        this.logger.debug(`撤销权限: ${target}`);
         if (target.startsWith('role:')) {
           const roleName = target.slice(5);
           const rolePermissions = await this.getRolePermissions(roleName);
           for (const p of rolePermissions) {
             resolvedPermissions.delete(p);
+            this.logger.debug(`删除权限: ${p}`);
           }
         } else {
           resolvedPermissions.delete(target);
+          this.logger.debug(`删除权限: ${target}`);
         }
         continue;
       }
@@ -209,18 +216,24 @@ export class PermissionService {
       if (token.startsWith('role:')) {
         // 角色展开（添加权限）
         const roleName = token.slice(5);
+        this.logger.debug(`解析角色: ${roleName}`);
         const rolePermissions = await this.getRolePermissions(roleName);
+        this.logger.debug(`角色 ${roleName} 的权限: ${JSON.stringify(rolePermissions)}`);
         for (const p of rolePermissions) {
           resolvedPermissions.add(p);
+          this.logger.debug(`添加权限: ${p}`);
         }
         continue;
       }
 
       // 普通权限：直接添加
+      this.logger.debug(`添加普通权限: ${token}`);
       resolvedPermissions.add(token);
     }
 
-    return Array.from(resolvedPermissions);
+    const result = Array.from(resolvedPermissions);
+    this.logger.debug(`最终解析结果: ${JSON.stringify(result)}`);
+    return result;
   }
 
   /**
@@ -472,11 +485,19 @@ export class PermissionService {
     // 移除 'role:' 前缀
     const actualRoleName = roleName.replace('role:', '');
 
+    this.logger.debug(`查找角色权限: ${actualRoleName}`);
+    this.logger.debug(`预定义角色列表: ${Array.from(this.predefinedRoles.keys()).join(', ')}`);
+
     // 从预定义角色中获取权限
     const predefinedPermissions = this.predefinedRoles.get(actualRoleName);
     if (predefinedPermissions) {
+      this.logger.debug(
+        `找到预定义角色 ${actualRoleName} 的权限: ${predefinedPermissions.join(', ')}`,
+      );
       return predefinedPermissions;
     }
+
+    this.logger.debug(`未找到预定义角色 ${actualRoleName}，从数据库查询`);
 
     // 如果不是预定义角色，从数据库查询
     const group = await this.db
@@ -486,10 +507,15 @@ export class PermissionService {
       .limit(1);
 
     if (group.length === 0) {
+      this.logger.debug(`数据库中也未找到角色 ${actualRoleName}`);
       return [];
     }
 
-    return group[0].permissions ? (JSON.parse(group[0].permissions) as string[]) : [];
+    const dbPermissions = group[0].permissions
+      ? (JSON.parse(group[0].permissions) as string[])
+      : [];
+    this.logger.debug(`从数据库找到角色 ${actualRoleName} 的权限: ${dbPermissions.join(', ')}`);
+    return dbPermissions;
   }
 
   /**

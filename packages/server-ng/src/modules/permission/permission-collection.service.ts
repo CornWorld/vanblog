@@ -1,12 +1,13 @@
-import { Inject, Injectable, OnModuleInit, Optional } from '@nestjs/common';
+import { Inject, Injectable, OnApplicationBootstrap, Optional } from '@nestjs/common';
 
 // 从 permission.module.ts 导入令牌
 import { PERMISSIONS } from './permission.module';
 import { PermissionService } from './permission.service';
 
 @Injectable()
-export class PermissionCollectionService implements OnModuleInit {
+export class PermissionCollectionService implements OnApplicationBootstrap {
   private allRegisteredPermissions = new Set<string>();
+  private readonly collectedPermissions = new Set<string>();
 
   // 使用 @Optional() 避免在没有任何模块注册权限时出错
   // 由于 multi: true，permissionSets 会直接是一个一维数组 [p1, p2, p3, ...]
@@ -15,11 +16,45 @@ export class PermissionCollectionService implements OnModuleInit {
     @Inject(PERMISSIONS)
     private readonly permissionSets: string[] = [], // 默认为空数组
     private readonly permissionService: PermissionService,
-  ) {}
+  ) {
+    // 调试：检查构造时的权限收集情况
+    console.log('[PermissionCollectionService] Constructor - Received permissions:', {
+      count: this.permissionSets.length,
+      permissions: this.permissionSets,
+      isArray: Array.isArray(this.permissionSets),
+    });
+  }
 
-  async onModuleInit(): Promise<void> {
-    this.allRegisteredPermissions = new Set(this.permissionSets);
+  /**
+   * 供各业务模块在 forFeature 阶段调用，用于贡献自身的权限集合。
+   */
+  contributePermissions(permissions: string[]): void {
+    for (const p of permissions) this.collectedPermissions.add(p);
+    console.log('[PermissionCollectionService] Contributed permissions:', permissions);
+  }
+
+  async onApplicationBootstrap(): Promise<void> {
+    console.log('[PermissionCollectionService] Bootstrap - Processing permissions:', {
+      injectedCount: this.permissionSets.length,
+      collectedCount: this.collectedPermissions.size,
+    });
+
+    // 优先采用运行期收集到的权限，其次回退到注入的权限（兼容旧实现）
+    const finalPermissions =
+      this.collectedPermissions.size > 0
+        ? Array.from(this.collectedPermissions)
+        : this.permissionSets;
+
+    // 保存全集
+    this.allRegisteredPermissions = new Set(finalPermissions);
+
+    // 完成注册
     this.registerModulePermissions();
+
+    console.log('[PermissionCollectionService] After registration:', {
+      registeredCount: this.allRegisteredPermissions.size,
+      registered: Array.from(this.allRegisteredPermissions),
+    });
 
     // 初始化权限节点与预定义权限组（幂等）
     await this.permissionService.initializePermissions();
@@ -33,7 +68,7 @@ export class PermissionCollectionService implements OnModuleInit {
     const modulePermissions = new Map<string, string[]>();
 
     // 分析权限列表，按模块分组
-    for (const permission of this.permissionSets) {
+    for (const permission of this.allRegisteredPermissions) {
       if (permission.includes(':')) {
         const [module, perm] = permission.split(':', 2);
         const list = modulePermissions.get(module) ?? [];

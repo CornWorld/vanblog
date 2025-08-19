@@ -83,6 +83,13 @@ export class PluginLoaderService implements OnModuleInit {
   }
 
   async onModuleInit(): Promise<void> {
+    // In test environments, skip automatic plugin loading to avoid side effects
+    if (process.env.NODE_ENV === 'test' || process.env.VITEST) {
+      this.logger.log(
+        'PluginLoaderService: Test environment detected, skipping automatic plugin loading',
+      );
+      return;
+    }
     this.logger.log('PluginLoaderService: Starting automatic plugin loading on module init...');
     await this.loadPlugins();
   }

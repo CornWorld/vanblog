@@ -3,6 +3,7 @@ import { Reflector } from '@nestjs/core';
 import { Request } from 'express';
 import * as jwt from 'jsonwebtoken';
 
+import { ArticleService } from '../article.service';
 import { ARTICLE_ACCESS_KEY } from '../decorators/article-access.decorator';
 
 /**
@@ -41,9 +42,14 @@ interface RequestWithArticleAccess extends Request {
   };
 }
 
+type RequestWithParams = RequestWithArticleAccess & { params?: Record<string, string> };
+
 @Injectable()
 export class ArticleAccessGuard implements CanActivate {
-  constructor(private readonly reflector: Reflector) {}
+  constructor(
+    private readonly reflector: Reflector,
+    private readonly articleService: ArticleService,
+  ) {}
 
   /**
    * 验证文章访问权限
@@ -55,12 +61,34 @@ export class ArticleAccessGuard implements CanActivate {
    * @returns 是否允许访问
    * @throws {UnauthorizedException} 当令牌无效或过期时
    */
-  canActivate(context: ExecutionContext): boolean {
-    const request = context.switchToHttp().getRequest<RequestWithArticleAccess>();
+  async canActivate(context: ExecutionContext): Promise<boolean> {
+    const request = context.switchToHttp().getRequest<RequestWithParams>();
 
     // 检查是否需要文章访问验证
     const requiresAccess = this.checkIfRequiresAccess(context);
     if (!requiresAccess) {
+      return true;
+    }
+
+    // 根据路由参数判断文章是否为私有
+    const { id: idParam, pathname: pathnameParam } = request.params as Record<string, string>;
+
+    let requiresToken = true; // 默认需要 token
+    if (typeof pathnameParam === 'string' && pathnameParam.length > 0) {
+      const isPrivate = await this.articleService.isPrivateByPathname(pathnameParam);
+      if (isPrivate === null) return true; // 不存在，让控制器逻辑返回 404
+      requiresToken = isPrivate;
+    } else if (typeof idParam !== 'undefined') {
+      const idNum = Number(idParam);
+      if (!Number.isNaN(idNum)) {
+        const isPrivate = await this.articleService.isPrivateById(idNum);
+        if (isPrivate === null) return true; // 不存在，让控制器逻辑返回 404
+        requiresToken = isPrivate;
+      }
+    }
+
+    if (!requiresToken) {
+      // 公共文章无需 token
       return true;
     }
 
