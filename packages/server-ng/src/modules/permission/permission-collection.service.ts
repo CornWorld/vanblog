@@ -1,4 +1,4 @@
-import { Inject, Injectable, OnApplicationBootstrap, Optional } from '@nestjs/common';
+import { Inject, Injectable, Logger, OnApplicationBootstrap, Optional } from '@nestjs/common';
 
 // 从 permission.module.ts 导入令牌
 import { PERMISSIONS } from './permission.module';
@@ -6,6 +6,7 @@ import { PermissionService } from './permission.service';
 
 @Injectable()
 export class PermissionCollectionService implements OnApplicationBootstrap {
+  private readonly logger = new Logger(PermissionCollectionService.name);
   private allRegisteredPermissions = new Set<string>();
   private readonly collectedPermissions = new Set<string>();
 
@@ -18,7 +19,7 @@ export class PermissionCollectionService implements OnApplicationBootstrap {
     private readonly permissionService: PermissionService,
   ) {
     // 调试：检查构造时的权限收集情况
-    console.log('[PermissionCollectionService] Constructor - Received permissions:', {
+    this.logger.debug('Constructor - Received permissions', {
       count: this.permissionSets.length,
       permissions: this.permissionSets,
       isArray: Array.isArray(this.permissionSets),
@@ -30,11 +31,11 @@ export class PermissionCollectionService implements OnApplicationBootstrap {
    */
   contributePermissions(permissions: string[]): void {
     for (const p of permissions) this.collectedPermissions.add(p);
-    console.log('[PermissionCollectionService] Contributed permissions:', permissions);
+    this.logger.debug('Contributed permissions', { permissions });
   }
 
   async onApplicationBootstrap(): Promise<void> {
-    console.log('[PermissionCollectionService] Bootstrap - Processing permissions:', {
+    this.logger.debug('Bootstrap - Processing permissions', {
       injectedCount: this.permissionSets.length,
       collectedCount: this.collectedPermissions.size,
     });
@@ -51,7 +52,7 @@ export class PermissionCollectionService implements OnApplicationBootstrap {
     // 完成注册
     this.registerModulePermissions();
 
-    console.log('[PermissionCollectionService] After registration:', {
+    this.logger.debug('After registration', {
       registeredCount: this.allRegisteredPermissions.size,
       registered: Array.from(this.allRegisteredPermissions),
     });
