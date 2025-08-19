@@ -81,7 +81,7 @@ export class MigrationService {
         up: async (db: Database) => {
           // 清理孤立的标签数据（没有关联文章的标签）
           await db.run(sql`
-            DELETE FROM tags 
+            DELETE FROM tags
             WHERE id NOT IN (
               SELECT DISTINCT json_extract(value, '$') as tag_name
               FROM articles, json_each(articles.tags)
@@ -91,10 +91,10 @@ export class MigrationService {
 
           // 清理孤立的分类数据（没有关联文章的分类）
           await db.run(sql`
-            DELETE FROM categories 
+            DELETE FROM categories
             WHERE name NOT IN (
-              SELECT DISTINCT category 
-              FROM articles 
+              SELECT DISTINCT category
+              FROM articles
               WHERE category IS NOT NULL
             )
           `);

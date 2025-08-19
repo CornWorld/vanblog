@@ -16,6 +16,7 @@ export const UserType = {
   EDITOR: 'editor',
   AUTHOR: 'author',
   SUBSCRIBER: 'subscriber',
+  VIEWER: 'viewer',
 } as const;
 
 export type UserType = (typeof UserType)[keyof typeof UserType];

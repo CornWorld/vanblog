@@ -232,4 +232,15 @@ export class AuthController {
     }
     return { csrfToken: req.csrfToken() };
   }
+
+  @Post('anonymous')
+  @ApiOperation({ summary: '获取匿名访客访问令牌' })
+  @ApiResponse({ status: 201, description: '成功颁发匿名访问令牌' })
+  @ApiResponse({ status: 429, description: '请求过多，已限流' })
+  issueAnonymousToken(@Query('expiresIn') expiresIn?: string): {
+    access_token: string;
+    expiresAt: string;
+  } {
+    return this.authService.generateAnonymousToken(expiresIn);
+  }
 }

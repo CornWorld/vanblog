@@ -10,14 +10,20 @@ import {
   Post,
   Put,
   Query,
+  Request,
+  HttpCode,
+  HttpStatus,
+  UseGuards,
 } from '@nestjs/common';
-import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiResponse, ApiTags, ApiParam } from '@nestjs/swagger';
 import { ZodValidationPipe } from 'nestjs-zod';
 
 import { ArticleStatsService } from '../analytics/services/article-stats.service';
 import { Permission } from '../auth/permissions.decorator';
+import { User } from '../user/entities/user.entity';
 
 import { ArticleService } from './article.service';
+import { RequireArticleAccess } from './decorators/article-access.decorator';
 import {
   CreateArticleDto,
   UpdateArticleDto,
@@ -28,7 +34,9 @@ import {
   CreateArticleSchema,
   UpdateArticleSchema,
 } from './dto/article.dto';
+import { VerifyArticlePasswordDto, ArticleAccessResponseDto } from './dto/verify-password.dto';
 import { Article } from './entities/article.entity';
+import { ArticleAccessGuard } from './guards/article-access.guard';
 
 /**
  * 文章管理控制器
@@ -41,6 +49,7 @@ import { Article } from './entities/article.entity';
  */
 @ApiTags('Articles')
 @Controller({ path: 'articles', version: '2' })
+@UseGuards(ArticleAccessGuard)
 export class ArticleController {
   constructor(
     private readonly articleService: ArticleService,
@@ -141,9 +150,11 @@ export class ArticleController {
    * @throws {NotFoundException} 当文章不存在时
    */
   @Get('by-path/:pathname')
+  @RequireArticleAccess()
   @ApiOperation({ summary: 'Get article by pathname' })
   @ApiResponse({ status: 200, description: 'Return article by pathname' })
   @ApiResponse({ status: 404, description: 'Article not found' })
+  @ApiResponse({ status: 401, description: 'Article access token required for private articles' })
   async findOneByPathname(@Param('pathname') pathname: string): Promise<Article> {
     return this.articleService.findOneByPathname(pathname);
   }
@@ -158,9 +169,11 @@ export class ArticleController {
    * @throws {NotFoundException} 当文章不存在时
    */
   @Get(':id')
+  @RequireArticleAccess()
   @ApiOperation({ summary: 'Get article by ID' })
   @ApiResponse({ status: 200, description: 'Return article by ID' })
   @ApiResponse({ status: 404, description: 'Article not found' })
+  @ApiResponse({ status: 401, description: 'Article access token required for private articles' })
   async findOne(@Param('id', ParseIntPipe) id: number): Promise<Article> {
     return this.articleService.findOne(id);
   }
@@ -262,5 +275,37 @@ export class ArticleController {
   @ApiResponse({ status: 404, description: 'Article not found' })
   async remove(@Param('id', ParseIntPipe) id: number): Promise<void> {
     return this.articleService.remove(id);
+  }
+
+  /**
+   * 验证文章密码
+   *
+   * 验证受密码保护文章的访问密码。
+   *
+   * @param id 文章 ID
+   * @param verifyPasswordDto 密码验证数据传输对象
+   * @returns 文章访问响应
+   * @throws {NotFoundException} 当文章不存在时
+   * @throws {UnauthorizedException} 当密码错误时
+   */
+  @Post(':id/verify-password')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Verify article password' })
+  @ApiParam({ name: 'id', description: 'Article ID', type: 'number' })
+  @ApiResponse({
+    status: 200,
+    description: 'Password verified successfully',
+    type: ArticleAccessResponseDto,
+  })
+  @ApiResponse({ status: 401, description: 'Invalid password' })
+  @ApiResponse({ status: 404, description: 'Article not found' })
+  async verifyPassword(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() verifyPasswordDto: VerifyArticlePasswordDto,
+    @Request() req: { user?: User },
+  ): Promise<ArticleAccessResponseDto> {
+    // 提取当前用户 ID（如果已认证）
+    const userId = req.user?.id;
+    return this.articleService.verifyPassword(id, verifyPasswordDto.password, userId);
   }
 }

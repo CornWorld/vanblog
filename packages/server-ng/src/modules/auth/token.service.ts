@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import dayjs, { type Dayjs } from 'dayjs';
 
+import { UserType } from '../user/dto/create-user.dto';
 import { User } from '../user/entities/user.entity';
 import { UserService } from '../user/user.service';
 
@@ -74,6 +75,23 @@ export class TokenService {
   }
 
   /**
+   * 为匿名访客生成短期访问令牌（不包含刷新令牌）
+   */
+  generateAnonymousAccessToken(username = 'anonymous', customExpiresIn?: string): string {
+    const payload: JwtPayload = {
+      sub: 'anonymous',
+      username,
+      type: UserType.VIEWER,
+      isAnonymous: true,
+    };
+
+    const expiresIn =
+      customExpiresIn ?? this.configService.get<string>('JWT_GUEST_EXPIRES_IN', '12h');
+
+    return this.jwtService.sign(payload, { expiresIn });
+  }
+
+  /**
    * 验证访问令牌
    */
   async verifyAccessToken(token: string): Promise<User> {
@@ -83,6 +101,20 @@ export class TokenService {
 
     try {
       const payload = this.jwtService.verify<JwtPayload>(token);
+
+      // 匿名访客：返回虚拟用户
+      if (payload.isAnonymous === true || payload.sub === 'anonymous') {
+        const { username } = payload;
+        return new User({
+          id: 0,
+          username,
+          type: UserType.VIEWER,
+          permissions: ['role:viewer'],
+          createdAt: dayjs().toISOString(),
+          updatedAt: dayjs().toISOString(),
+        });
+      }
+
       const user = await this.userService.findOne(payload.sub);
       return user;
     } catch {
@@ -114,7 +146,7 @@ export class TokenService {
         throw new UnauthorizedException('Invalid token type');
       }
 
-      const user = await this.userService.findOne(payload.sub);
+      const user = await this.userService.findOne(payload.sub as number);
       return user;
     } catch {
       throw new UnauthorizedException('Invalid or expired refresh token');

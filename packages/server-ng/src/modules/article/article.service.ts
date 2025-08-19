@@ -1,6 +1,8 @@
 import { Injectable, NotFoundException, Inject, Logger } from '@nestjs/common';
+import * as bcrypt from 'bcrypt';
 import dayjs from 'dayjs';
 import { eq, and, or, like, desc, asc, sql } from 'drizzle-orm';
+import * as jwt from 'jsonwebtoken';
 
 import { DATABASE_CONNECTION } from '../../database';
 import { articles, tags } from '../../database/schema';
@@ -16,6 +18,7 @@ import {
   ArticleSearchDto,
   ArticleSearchResponseDto,
 } from './dto/article.dto';
+import { ArticleAccessResponseDto } from './dto/verify-password.dto';
 import { Article } from './entities/article.entity';
 
 import type { Database } from '../../database/connection';
@@ -236,6 +239,79 @@ export class ArticleService {
     );
   }
 
+  /**
+   * 验证文章密码
+   *
+   * 验证私有文章的访问密码，验证成功后发放短期访问令牌。
+   * 令牌会绑定当前用户（如果已登录），未登录用户使用匿名访问令牌。
+   *
+   * @param id 文章 ID
+   * @param password 用户输入的密码
+   * @param userId 当前用户 ID（可选，来自认证上下文）
+   * @returns 验证结果和访问令牌
+   * @throws {NotFoundException} 当文章不存在时
+   */
+  async verifyPassword(
+    id: number,
+    password: string,
+    userId?: number,
+  ): Promise<ArticleAccessResponseDto> {
+    const article = await this.findOneWithPassword(id);
+
+    // 如果文章不是私有的或没有设置密码，直接允许访问
+    if (!article.private || !article.password) {
+      return {
+        success: true,
+        message: 'Article is not private',
+      };
+    }
+
+    // 验证密码
+    const isPasswordValid = await bcrypt.compare(password, article.password);
+
+    if (!isPasswordValid) {
+      return {
+        success: false,
+        message: 'Invalid password',
+      };
+    }
+
+    // 生成访问令牌（24小时有效期）
+    // 如果用户已登录，绑定用户 ID；否则使用匿名访问
+    const expiresAt = dayjs().add(24, 'hour').toISOString();
+    const tokenPayload = {
+      articleId: article.id,
+      articleTitle: article.title,
+      pathname: article.pathname,
+      type: 'article-access',
+      userId: userId ?? null, // 绑定用户 ID，未登录则为 null
+      isAnonymous: !userId, // 标记是否为匿名访问
+      iat: Math.floor(Date.now() / 1000),
+    };
+
+    const token = jwt.sign(tokenPayload, process.env.JWT_SECRET ?? 'default-secret', {
+      expiresIn: '24h',
+    });
+
+    return {
+      success: true,
+      token,
+      message: userId
+        ? 'Access granted for authenticated user'
+        : 'Access granted for anonymous user',
+      expiresAt,
+    };
+  }
+
+  /**
+   * 获取文章的安全版本（不包含敏感信息）
+   *
+   * 对于私有文章，不返回密码字段，确保敏感信息不会泄露。
+   *
+   * @param id 文章 ID
+   * @returns 文章实体（安全版本）
+   * @throws {NotFoundException} 当文章不存在时
+   */
   async findOne(id: number): Promise<Article> {
     const articleResult = await this.db.select().from(articles).where(eq(articles.id, id)).limit(1);
 
@@ -246,6 +322,8 @@ export class ArticleService {
     const [article] = articleResult;
     return new Article({
       ...article,
+      // 不返回密码字段，确保安全
+      password: undefined,
       tags: safeParseJson(article.tags, dataSchemas.tagsArray) ?? [],
       pathname: article.pathname,
       category: article.category,
@@ -253,7 +331,6 @@ export class ArticleService {
       top: article.top,
       hidden: article.hidden,
       private: article.private,
-      password: article.password,
       viewer: article.viewer,
     });
   }
@@ -568,5 +645,35 @@ export class ArticleService {
         })),
       );
     }
+  }
+
+  /**
+   * 获取文章的完整版本（包含密码字段）
+   *
+   * 仅用于内部验证，包含所有字段包括密码。
+   * 此方法不应直接暴露给 API 端点。
+   *
+   * @param id 文章 ID
+   * @returns 完整的文章实体
+   * @throws {NotFoundException} 当文章不存在时
+   */
+  private async findOneWithPassword(id: number): Promise<Article> {
+    const articleResult = await this.db.select().from(articles).where(eq(articles.id, id)).limit(1);
+
+    if (articleResult.length === 0) {
+      throw new NotFoundException(`Article with ID ${String(id)} not found`);
+    }
+
+    const [article] = articleResult;
+    return new Article({
+      ...article,
+      tags: safeParseJson(article.tags, dataSchemas.tagsArray) ?? [],
+      pathname: article.pathname,
+      category: article.category,
+      author: article.author,
+      top: article.top,
+      hidden: article.hidden,
+      private: article.private,
+    });
   }
 }

@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
+import dayjs from 'dayjs';
 
 import { HookService } from '../plugin/services/hook.service';
 import { User } from '../user/entities/user.entity';
@@ -134,6 +135,28 @@ export class AuthService {
    */
   revokeToken(token: string): void {
     this.tokenService.revokeToken(token);
+  }
+
+  /**
+   * 为匿名访客生成访问令牌
+   * @param customExpiresIn - 可选的自定义过期时间
+   * @returns 匿名访客令牌
+   */
+  generateAnonymousToken(customExpiresIn?: string): { access_token: string; expiresAt: string } {
+    const accessToken = this.tokenService.generateAnonymousAccessToken(
+      'anonymous',
+      customExpiresIn,
+    );
+
+    // 计算过期时间
+    const expiresIn = customExpiresIn ?? '12h';
+    const hours = parseInt(expiresIn.replace('h', ''));
+    const expiresAt = dayjs().add(hours, 'hour').toISOString();
+
+    return {
+      access_token: accessToken,
+      expiresAt,
+    };
   }
 
   /**
