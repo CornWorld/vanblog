@@ -36,7 +36,7 @@ export class AnalyticsService {
       referrer: dto.referrer,
       userAgent: dto.userAgent,
       ip: dto.ip,
-      data: dto.data ? JSON.stringify(dto.data) : null,
+      data: dto.data !== undefined && dto.data !== null ? JSON.stringify(dto.data) : null,
     });
   }
 
@@ -111,7 +111,7 @@ export class AnalyticsService {
     let total = 0;
 
     result.forEach((row) => {
-      if (row.userAgent) {
+      if (typeof row.userAgent === 'string' && row.userAgent.length > 0) {
         const parser = new UAParser(row.userAgent);
         const device = parser.getDevice();
         const deviceType = device.type ?? 'desktop';
@@ -142,7 +142,7 @@ export class AnalyticsService {
     let total = 0;
 
     result.forEach((row) => {
-      if (row.userAgent) {
+      if (typeof row.userAgent === 'string' && row.userAgent.length > 0) {
         const parser = new UAParser(row.userAgent);
         const browser = parser.getBrowser();
         const browserName = browser.name ?? 'Unknown';
@@ -165,19 +165,19 @@ export class AnalyticsService {
   async exportAnalyticsData(query: QueryAnalyticsDto): Promise<unknown[]> {
     const conditions = [];
 
-    if (query.type != null) {
+    if (query.type !== undefined) {
       conditions.push(eq(analytics.type, query.type));
     }
 
-    if (query.startDate) {
+    if (query.startDate !== undefined) {
       conditions.push(gte(analytics.createdAt, query.startDate));
     }
 
-    if (query.endDate) {
+    if (query.endDate !== undefined) {
       conditions.push(lte(analytics.createdAt, query.endDate));
     }
 
-    if (query.path) {
+    if (typeof query.path === 'string' && query.path.length > 0) {
       conditions.push(eq(analytics.path, query.path));
     }
 

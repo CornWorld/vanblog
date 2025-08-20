@@ -57,6 +57,7 @@ describe('AnalyticsController (e2e)', () => {
         referrer: 'https://google.com',
         userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
         ip: '192.168.1.1',
+        data: { articleId: 1 },
       };
 
       await request(app.getHttpServer() as Server)
@@ -69,7 +70,7 @@ describe('AnalyticsController (e2e)', () => {
       const analyticsData = {
         type: AnalyticsType.EVENT,
         path: '/test-event',
-        metadata: {
+        data: {
           action: 'click',
           label: 'download-button',
           value: 1,
@@ -150,6 +151,7 @@ describe('AnalyticsController (e2e)', () => {
           type: AnalyticsType.PAGEVIEW,
           path: '/popular-page',
           ip: '192.168.1.1',
+          data: { articleId: 101 },
         });
 
       await request(app.getHttpServer() as Server)
@@ -158,6 +160,7 @@ describe('AnalyticsController (e2e)', () => {
           type: AnalyticsType.PAGEVIEW,
           path: '/popular-page',
           ip: '192.168.1.2',
+          data: { articleId: 102 },
         });
 
       const response = await request(app.getHttpServer() as Server)

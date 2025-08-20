@@ -11,13 +11,25 @@ import {
 import { PERMISSIONS } from './permission.module';
 import { PermissionService } from './permission.service';
 
+// 全局贡献寄存器，避免在模块装配阶段直接依赖服务实例
+const GLOBAL_PERMISSION_CONTRIBUTIONS = new Set<string>();
+export function contributePermissions(perms: string[]): void {
+  for (const p of perms) GLOBAL_PERMISSION_CONTRIBUTIONS.add(p);
+}
+export function getContributedPermissions(): string[] {
+  return Array.from(GLOBAL_PERMISSION_CONTRIBUTIONS);
+}
+export function clearContributedPermissions(): void {
+  GLOBAL_PERMISSION_CONTRIBUTIONS.clear();
+}
+
 @Injectable()
 export class PermissionCollectionService implements OnApplicationBootstrap {
   private readonly logger = new Logger(PermissionCollectionService.name);
-  private allRegisteredPermissions = new Set<string>();
+  private readonly allRegisteredPermissions = new Set<string>();
 
   // 使用 @Optional() 避免在没有任何模块注册权限时出错
-  // 由于 multi: true，permissionSets 会直接是一个一维数组 [p1, p2, p3, ...]
+  // 注意：NestJS 不支持 Angular 风格的 multi provider，这里的注入仅代表当前模块提供的权限数组
   constructor(
     @Optional()
     @Inject(PERMISSIONS)
@@ -33,13 +45,37 @@ export class PermissionCollectionService implements OnApplicationBootstrap {
     });
   }
 
+  /**
+   * 在模块装配阶段由 forFeature 工厂主动贡献权限。
+   * 该方法是幂等的，多次调用不会产生重复项。
+   */
+  addPermissions(permissions: string[]): void {
+    for (const p of permissions) {
+      this.allRegisteredPermissions.add(p);
+    }
+    this.logger.debug('Contributed permissions', {
+      contributed: permissions,
+      total: this.allRegisteredPermissions.size,
+    });
+  }
+
   async onApplicationBootstrap(): Promise<void> {
     this.logger.debug('Bootstrap - Processing permissions', {
       injectedCount: this.permissionSets.length,
     });
 
-    // 使用注入的权限集合
-    this.allRegisteredPermissions = new Set(this.permissionSets);
+    // 合并来自工厂阶段的全局贡献
+    const contributed = getContributedPermissions();
+    for (const p of contributed) {
+      this.allRegisteredPermissions.add(p);
+    }
+    // 消费后清空，避免多次启动或测试之间的污染
+    clearContributedPermissions();
+
+    // 合并注入的权限集合（不要覆盖之前通过 addPermissions 贡献的集合）
+    for (const p of this.permissionSets) {
+      this.allRegisteredPermissions.add(p);
+    }
 
     // 完成注册
     this.registerModulePermissions();
@@ -82,6 +118,7 @@ export class PermissionCollectionService implements OnApplicationBootstrap {
 
   /**
    * 为模块生成默认的角色权限映射
+   * 注意：仅提供 admin 与 viewer 的默认行为；其他角色来自数据库的用户权限与覆盖机制。
    */
   private getDefaultRolesForModule(
     _module: string,
@@ -92,25 +129,12 @@ export class PermissionCollectionService implements OnApplicationBootstrap {
     // 管理员拥有所有权限
     roles.admin = [...permissions];
 
-    // 编辑者通常有读写权限，但不能删除
-    const editorPermissions = permissions.filter((p) => !p.includes('delete'));
-    if (editorPermissions.length > 0) {
-      roles.editor = editorPermissions;
-    }
-
-    // 作者通常有读权限和部分写权限
-    const authorPermissions = permissions.filter(
-      (p) => p === 'read' || p === 'create' || p === 'update',
-    );
-    if (authorPermissions.length > 0) {
-      roles.author = authorPermissions;
-    }
-
     // 访客只有读权限
     if (permissions.includes('read')) {
       roles.viewer = ['read'];
     }
 
+    // 其他角色（editor/author/…）由 PermissionService 的用户权限解析与覆盖机制产生
     return roles;
   }
 

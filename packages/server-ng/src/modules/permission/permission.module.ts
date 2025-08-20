@@ -1,6 +1,9 @@
 import { DynamicModule, Global, Module, Provider } from '@nestjs/common';
 
-import { PermissionCollectionService } from './permission-collection.service';
+import {
+  PermissionCollectionService,
+  contributePermissions,
+} from './permission-collection.service';
 import { PermissionService } from './permission.service';
 
 // 共享的注入令牌
@@ -33,9 +36,18 @@ export class PermissionModule {
       useValue: permissions,
     };
 
+    const contributeProvider: Provider = {
+      provide: 'PERMISSION_CONTRIBUTION',
+      useFactory: (perms: string[]) => {
+        contributePermissions(perms);
+        return true;
+      },
+      inject: [PERMISSIONS],
+    };
+
     return {
       module: PermissionModule,
-      providers: [permissionsProvider],
+      providers: [permissionsProvider, contributeProvider],
       exports: [permissionsProvider],
     };
   }
