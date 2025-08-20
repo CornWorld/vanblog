@@ -111,12 +111,12 @@ export class QueryOptimizerService {
           COUNT(*) as article_count
         FROM (
           SELECT
-            json_extract(value, '$') as tag_name
+            value as tag_name
           FROM
             articles,
-            json_each(articles.tags)
+            json_each(CASE WHEN json_valid(articles.tags) THEN articles.tags ELSE '[]' END)
           WHERE
-            json_extract(value, '$') IN (${sql.join(
+            value IN (${sql.join(
               tagNames.map((name) => sql`${name}`),
               sql`, `,
             )})
@@ -163,7 +163,7 @@ export class QueryOptimizerService {
         const countQuery = sql`
           SELECT COUNT(*) as count
           FROM articles
-          WHERE json_extract(tags, '$') LIKE '%' || ${tagName} || '%'
+          WHERE (tags IS NOT NULL AND tags != '' AND tags LIKE '%' || '"' || ${tagName} || '"' || '%')
             AND hidden = 0
         `;
 

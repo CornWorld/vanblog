@@ -1,4 +1,4 @@
-import { Module, DynamicModule, NestModule, MiddlewareConsumer } from '@nestjs/common';
+import { Module, DynamicModule, NestModule, MiddlewareConsumer, type Type } from '@nestjs/common';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerModule } from '@nestjs/throttler';
@@ -7,7 +7,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ConfigModule } from './config';
 import { LoggerModule } from './core/logger/logger.module';
-import { V1DeprecationMiddleware } from './core/middleware/v1-deprecation.middleware';
+import { V1DeprecationMiddleware } from './core/middlewares/v1-deprecation.middleware';
 import { DatabaseModule } from './database';
 import { AnalyticsModule } from './modules/analytics/analytics.module';
 import { ArticleModule } from './modules/article/article.module';
@@ -32,7 +32,8 @@ import { PerformanceMonitoringMiddleware } from './shared/middleware/performance
 @Module({})
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer): void {
-    consumer.apply(PerformanceMonitoringMiddleware, V1DeprecationMiddleware).forRoutes('*'); // Apply to all routes
+    consumer.apply(PerformanceMonitoringMiddleware as Type).forRoutes('*');
+    consumer.apply(V1DeprecationMiddleware as Type).forRoutes('*'); // Apply to all routes
   }
 
   static async forRoot(): Promise<DynamicModule> {

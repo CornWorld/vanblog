@@ -12,7 +12,10 @@ import {
 function safeToString(value: unknown): string {
   if (value === undefined) return 'undefined';
   if (value === null) return 'null';
-  if (Array.isArray(value)) return value.map((x) => safeToString(x)).join(',');
+  if (Array.isArray(value)) {
+    // Preserve original order for general arrays; order-sensitive endpoints rely on this
+    return value.map((x) => safeToString(x)).join(',');
+  }
   if (typeof value === 'object') return JSON.stringify(value as Record<string, unknown>);
   if (typeof value === 'string') return value;
   if (typeof value === 'number' || typeof value === 'boolean') return String(value);
@@ -66,6 +69,35 @@ export class DerivedViewInterceptor implements NestInterceptor {
     for (const k of Object.keys(query).sort()) {
       const v = query[k];
       if (v === undefined) continue;
+
+      // Special handling for CSV-style include to avoid cache pollution by order or duplicates
+      if (k === 'include') {
+        const tokens: string[] = [];
+        if (Array.isArray(v)) {
+          for (const it of v) {
+            const s = typeof it === 'string' ? it : safeToString(it);
+            for (const seg of s.split(',')) {
+              const t = seg.trim();
+              if (t.length > 0) tokens.push(t);
+            }
+          }
+        } else if (typeof v === 'string') {
+          for (const seg of v.split(',')) {
+            const t = seg.trim();
+            if (t.length > 0) tokens.push(t);
+          }
+        } else {
+          // Fallback
+          parts.push(`${k}=${safeToString(v)}`);
+          continue;
+        }
+
+        // de-dup + sort for stable key
+        const normalized = Array.from(new Set(tokens)).sort().join(',');
+        parts.push(`${k}=${normalized}`);
+        continue;
+      }
+
       parts.push(`${k}=${safeToString(v)}`);
     }
 

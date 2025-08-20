@@ -82,10 +82,13 @@ export class MigrationService {
           // 清理孤立的标签数据（没有关联文章的标签）
           await db.run(sql`
             DELETE FROM tags
-            WHERE id NOT IN (
-              SELECT DISTINCT json_extract(value, '$') as tag_name
-              FROM articles, json_each(articles.tags)
-              WHERE articles.tags IS NOT NULL AND articles.tags != '[]'
+            WHERE name NOT IN (
+              SELECT DISTINCT value as tag_name
+              FROM articles,
+                   json_each(CASE WHEN json_valid(articles.tags) THEN articles.tags ELSE '[]' END)
+              WHERE articles.tags IS NOT NULL
+                AND TRIM(articles.tags) != ''
+                AND articles.tags != '[]'
             )
           `);
 

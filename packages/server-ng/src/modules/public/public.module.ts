@@ -5,6 +5,7 @@ import { AnalyticsModule } from '../analytics/analytics.module';
 import { ArticleModule } from '../article/article.module';
 import { CategoryModule } from '../category/category.module';
 import { CommentModule } from '../comment/comment.module';
+import { PluginModule } from '../plugin/plugin.module';
 import { SettingModule } from '../setting/setting.module';
 import { TagModule } from '../tag/tag.module';
 
@@ -12,6 +13,8 @@ import { BootstrapController } from './bootstrap.controller';
 import { BootstrapService } from './bootstrap.service';
 import { CustomPageController } from './custom-page.controller';
 import { CustomPageService } from './custom-page.service';
+import { OptionsController } from './options.controller';
+import { OptionsService } from './options.service';
 import { TimelineController } from './timeline.controller';
 import { TimelineService } from './timeline.service';
 
@@ -24,8 +27,9 @@ import { TimelineService } from './timeline.service';
     SettingModule,
     SharedModule,
     CommentModule,
+    PluginModule,
   ],
-  controllers: [CustomPageController, BootstrapController, TimelineController],
-  providers: [CustomPageService, BootstrapService, TimelineService],
+  controllers: [CustomPageController, BootstrapController, OptionsController, TimelineController],
+  providers: [CustomPageService, BootstrapService, OptionsService, TimelineService],
 })
 export class PublicModule {}
