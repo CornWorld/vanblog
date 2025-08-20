@@ -1,4 +1,4 @@
-import { Module, Global, MiddlewareConsumer, NestModule } from '@nestjs/common';
+import { Module, Global, MiddlewareConsumer, NestModule, RequestMethod } from '@nestjs/common';
 
 import { CacheModule } from './cache/cache.module';
 import { CompressionMiddleware } from './middleware/compression.middleware';
@@ -33,6 +33,6 @@ import { StatisticsService } from './services/statistics.service';
 })
 export class SharedModule implements NestModule {
   configure(consumer: MiddlewareConsumer): void {
-    consumer.apply(CompressionMiddleware).forRoutes('*');
+    consumer.apply(CompressionMiddleware).forRoutes({ path: '(.*)', method: RequestMethod.ALL });
   }
 }
