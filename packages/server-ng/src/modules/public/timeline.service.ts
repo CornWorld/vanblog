@@ -61,8 +61,8 @@ export class TimelineService {
         hidden: !!row.hidden,
         private: !!row.private,
         viewer: row.viewer ?? 0,
-        createdAt: dayjs(row.createdAt).toDate(),
-        updatedAt: dayjs(row.updatedAt).toDate(),
+        createdAt: dayjs(row.createdAt).toISOString(),
+        updatedAt: dayjs(row.updatedAt).toISOString(),
       };
 
       result[year] ??= [];

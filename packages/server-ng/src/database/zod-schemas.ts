@@ -19,6 +19,8 @@ import {
   permissionNodes,
   permissionGroups,
   pluginData,
+  webhooks,
+  webhookLogs,
 } from './schema';
 
 // User schemas
@@ -462,3 +464,85 @@ export const updatePluginDataSchema = createUpdateSchema(pluginData, {
 export type SelectPluginData = z.infer<typeof selectPluginDataSchema>;
 export type InsertPluginData = z.infer<typeof insertPluginDataSchema>;
 export type UpdatePluginData = z.infer<typeof updatePluginDataSchema>;
+
+// Webhook schemas
+export const selectWebhookSchema = createSelectSchema(webhooks, {
+  events: (schema) =>
+    schema.transform((str) => {
+      if (str === '') {
+        return [];
+      }
+      try {
+        return JSON.parse(str) as string[];
+      } catch {
+        return [];
+      }
+    }),
+  createdAt: (schema) => schema.transform((str) => dayjs(str)),
+  updatedAt: (schema) => schema.transform((str) => dayjs(str)),
+});
+
+export const insertWebhookSchema = createInsertSchema(webhooks, {
+  name: (schema) => schema.min(1, 'Webhook名称不能为空').max(100, 'Webhook名称最多100个字符'),
+  url: (schema) => schema.min(1, 'Webhook URL不能为空'),
+  events: z
+    .array(z.string())
+    .min(1, '至少需要选择一个事件')
+    .transform((arr) => {
+      return JSON.stringify(arr);
+    }),
+}).omit({
+  id: true,
+  lastTriggered: true,
+  lastStatus: true,
+  lastError: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const updateWebhookSchema = createUpdateSchema(webhooks, {
+  name: (schema) =>
+    schema.min(1, 'Webhook名称不能为空').max(100, 'Webhook名称最多100个字符').optional(),
+  url: (schema) => schema.min(1, 'Webhook URL不能为空').optional(),
+  events: z
+    .array(z.string())
+    .min(1, '至少需要选择一个事件')
+    .transform((arr) => {
+      return JSON.stringify(arr);
+    })
+    .optional(),
+}).omit({
+  id: true,
+  lastTriggered: true,
+  lastStatus: true,
+  lastError: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const selectWebhookLogSchema = createSelectSchema(webhookLogs, {
+  payload: (schema) =>
+    schema.transform((str): unknown => {
+      return safeParseJson(str, dataSchemas.genericObject) ?? str;
+    }),
+  createdAt: (schema) => schema.transform((str) => dayjs(str)),
+});
+
+export const insertWebhookLogSchema = createInsertSchema(webhookLogs, {
+  event: (schema) => schema.min(1, '事件名称不能为空'),
+  payload: z.any().transform((val) => {
+    return JSON.stringify(val);
+  }),
+  status: z.enum(['success', 'failed', 'timeout'], {
+    message: '状态必须是 success、failed 或 timeout',
+  }),
+}).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type SelectWebhook = z.infer<typeof selectWebhookSchema>;
+export type InsertWebhook = z.infer<typeof insertWebhookSchema>;
+export type UpdateWebhook = z.infer<typeof updateWebhookSchema>;
+export type SelectWebhookLog = z.infer<typeof selectWebhookLogSchema>;
+export type InsertWebhookLog = z.infer<typeof insertWebhookLogSchema>;

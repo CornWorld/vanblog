@@ -13,8 +13,8 @@ export const TimelineArticleSchema = z.object({
   hidden: z.boolean(),
   private: z.boolean(),
   viewer: z.number(),
-  createdAt: z.string().or(z.date()),
-  updatedAt: z.string().or(z.date()),
+  createdAt: z.string(),
+  updatedAt: z.string(),
 });
 
 // Timeline 响应结构：{"2024": [...], "2023": [...]}

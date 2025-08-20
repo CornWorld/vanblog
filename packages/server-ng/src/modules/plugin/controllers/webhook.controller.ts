@@ -13,6 +13,11 @@ import {
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery } from '@nestjs/swagger';
 import { ZodValidationPipe } from 'nestjs-zod';
 
+import {
+  selectWebhookSchema,
+  insertWebhookSchema,
+  updateWebhookSchema,
+} from '../../../database/zod-schemas';
 import { Perm } from '../../auth/permissions.decorator';
 import {
   CreateWebhookDto,
@@ -20,8 +25,6 @@ import {
   WebhookDto,
   WebhookQueryDto,
   WebhookLogQueryDto,
-  CreateWebhookSchema,
-  UpdateWebhookSchema,
 } from '../dto/webhook.dto';
 import { WebhookRegistryService } from '../services/webhook-registry.service';
 import { WebhookService } from '../services/webhook.service';
@@ -55,13 +58,11 @@ export class WebhookController {
   @ApiOperation({ summary: 'Create a new webhook' })
   @ApiResponse({ status: 201, description: 'Webhook created successfully', type: WebhookDto })
   async create(
-    @Body(new ZodValidationPipe(CreateWebhookSchema)) createWebhookDto: CreateWebhookDto,
+    @Body(new ZodValidationPipe(insertWebhookSchema)) createWebhookDto: CreateWebhookDto,
   ): Promise<WebhookDto> {
     const webhook = await this.webhookService.create(createWebhookDto);
-    return {
-      ...webhook,
-      secret: webhook.secret ?? undefined,
-    } as WebhookDto;
+    const parsedWebhook = selectWebhookSchema.parse(webhook);
+    return parsedWebhook as unknown as WebhookDto;
   }
 
   /**
@@ -83,16 +84,14 @@ export class WebhookController {
     limit: number;
   }> {
     const result = await this.webhookService.findAll(query);
-    const pagination = result.pagination as { total: number; page: number; limit: number };
-    const data = result.data as Array<{ secret: string | null; [key: string]: unknown }>;
+    const { pagination, data } = result;
+    const { total, page, limit } = pagination as { total: number; page: number; limit: number };
+    const webhooks = data as unknown[];
     return {
-      data: data.map((webhook) => ({
-        ...webhook,
-        secret: webhook.secret ?? undefined,
-      })) as WebhookDto[],
-      total: pagination.total,
-      page: pagination.page,
-      limit: pagination.limit,
+      data: webhooks.map((webhook) => selectWebhookSchema.parse(webhook) as unknown as WebhookDto),
+      total,
+      page,
+      limit,
     };
   }
 
@@ -186,11 +185,12 @@ export class WebhookController {
   @ApiResponse({ status: 200, description: 'Webhook retrieved successfully', type: WebhookDto })
   @ApiResponse({ status: 404, description: 'Webhook not found' })
   async findOne(@Param('id', ParseIntPipe) id: number): Promise<WebhookDto> {
-    const webhook = (await this.webhookService.findOne(id)) as WebhookDto | null;
+    const webhook = await this.webhookService.findOne(id);
     if (!webhook) {
       throw new NotFoundException('Webhook not found');
     }
-    return webhook;
+    const parsedWebhook = selectWebhookSchema.parse(webhook);
+    return parsedWebhook as unknown as WebhookDto;
   }
 
   @Patch(':id')
@@ -201,13 +201,14 @@ export class WebhookController {
   @ApiResponse({ status: 404, description: 'Webhook not found' })
   async update(
     @Param('id', ParseIntPipe) id: number,
-    @Body(new ZodValidationPipe(UpdateWebhookSchema)) updateWebhookDto: UpdateWebhookDto,
+    @Body(new ZodValidationPipe(updateWebhookSchema)) updateWebhookDto: UpdateWebhookDto,
   ): Promise<WebhookDto> {
-    const webhook = (await this.webhookService.update(id, updateWebhookDto)) as WebhookDto | null;
+    const webhook = await this.webhookService.update(id, updateWebhookDto);
     if (!webhook) {
       throw new NotFoundException('Webhook not found');
     }
-    return webhook;
+    const parsedWebhook = selectWebhookSchema.parse(webhook);
+    return parsedWebhook as unknown as WebhookDto;
   }
 
   @Delete(':id')
