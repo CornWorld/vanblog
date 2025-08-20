@@ -1,4 +1,11 @@
-import { Inject, Injectable, Logger, OnApplicationBootstrap, Optional } from '@nestjs/common';
+import {
+  Inject,
+  Injectable,
+  Logger,
+  OnApplicationBootstrap,
+  Optional,
+  forwardRef,
+} from '@nestjs/common';
 
 // 从 permission.module.ts 导入令牌
 import { PERMISSIONS } from './permission.module';
@@ -8,7 +15,6 @@ import { PermissionService } from './permission.service';
 export class PermissionCollectionService implements OnApplicationBootstrap {
   private readonly logger = new Logger(PermissionCollectionService.name);
   private allRegisteredPermissions = new Set<string>();
-  private readonly collectedPermissions = new Set<string>();
 
   // 使用 @Optional() 避免在没有任何模块注册权限时出错
   // 由于 multi: true，permissionSets 会直接是一个一维数组 [p1, p2, p3, ...]
@@ -16,6 +22,7 @@ export class PermissionCollectionService implements OnApplicationBootstrap {
     @Optional()
     @Inject(PERMISSIONS)
     private readonly permissionSets: string[] = [], // 默认为空数组
+    @Inject(forwardRef(() => PermissionService))
     private readonly permissionService: PermissionService,
   ) {
     // 调试：检查构造时的权限收集情况
@@ -26,28 +33,13 @@ export class PermissionCollectionService implements OnApplicationBootstrap {
     });
   }
 
-  /**
-   * 供各业务模块在 forFeature 阶段调用，用于贡献自身的权限集合。
-   */
-  contributePermissions(permissions: string[]): void {
-    for (const p of permissions) this.collectedPermissions.add(p);
-    this.logger.debug('Contributed permissions', { permissions });
-  }
-
   async onApplicationBootstrap(): Promise<void> {
     this.logger.debug('Bootstrap - Processing permissions', {
       injectedCount: this.permissionSets.length,
-      collectedCount: this.collectedPermissions.size,
     });
 
-    // 优先采用运行期收集到的权限，其次回退到注入的权限（兼容旧实现）
-    const finalPermissions =
-      this.collectedPermissions.size > 0
-        ? Array.from(this.collectedPermissions)
-        : this.permissionSets;
-
-    // 保存全集
-    this.allRegisteredPermissions = new Set(finalPermissions);
+    // 使用注入的权限集合
+    this.allRegisteredPermissions = new Set(this.permissionSets);
 
     // 完成注册
     this.registerModulePermissions();

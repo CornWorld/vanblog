@@ -69,26 +69,27 @@ export class ArticleStatsService {
   }
 
   async getTopArticles(limit = 10): Promise<ArticleStats[]> {
+    // 已统一数据：仅使用新字段 articleId / duration，类型为 pageview
+    const articleIdExpr = sql<number>`CAST(json_extract(${analytics.data}, '$.articleId') AS INTEGER)`;
+    const durationExpr = sql<number>`CAST(json_extract(${analytics.data}, '$.duration') AS INTEGER)`;
+
     const result = await this.db
       .select({
-        articleId: sql<number>`CAST(json_extract(${analytics.data}, '$.articleId') as INTEGER)`,
+        articleId: articleIdExpr,
         title: articles.title,
         views: sql<number>`count(*)`,
         uniqueVisitors: sql<number>`count(distinct ${analytics.ip})`,
-        avgReadTime: sql<number>`avg(CAST(json_extract(${analytics.data}, '$.duration') as INTEGER))`,
+        avgReadTime: sql<number>`avg(${durationExpr})`,
       })
       .from(analytics)
-      .leftJoin(
-        articles,
-        sql`CAST(json_extract(${analytics.data}, '$.articleId') as INTEGER) = ${articles.id}`,
-      )
+      .leftJoin(articles, sql`${articleIdExpr} = ${articles.id}`)
       .where(
         and(
           eq(analytics.type, AnalyticsType.PAGEVIEW),
-          sql`json_extract(${analytics.data}, '$.articleId') is not null`,
+          sql`json_extract(${analytics.data}, '$.articleId') IS NOT NULL`,
         ),
       )
-      .groupBy(sql`json_extract(${analytics.data}, '$.articleId')`, articles.title)
+      .groupBy(articleIdExpr, articles.title)
       .orderBy(desc(sql`count(*)`))
       .limit(limit);
 
@@ -102,21 +103,20 @@ export class ArticleStatsService {
   }
 
   async getArticleStats(articleId: number): Promise<ArticleStats | null> {
+    // 已统一数据：仅使用新字段 articleId / duration，类型为 pageview
+    const articleIdExpr = sql<number>`CAST(json_extract(${analytics.data}, '$.articleId') AS INTEGER)`;
+    const durationExpr = sql<number>`CAST(json_extract(${analytics.data}, '$.duration') AS INTEGER)`;
+
     const result = await this.db
       .select({
         title: articles.title,
         views: sql<number>`count(*)`,
         uniqueVisitors: sql<number>`count(distinct ${analytics.ip})`,
-        avgReadTime: sql<number>`avg(CAST(json_extract(${analytics.data}, '$.duration') as INTEGER))`,
+        avgReadTime: sql<number>`avg(${durationExpr})`,
       })
       .from(analytics)
       .leftJoin(articles, eq(articles.id, articleId))
-      .where(
-        and(
-          eq(analytics.type, AnalyticsType.PAGEVIEW),
-          sql`json_extract(${analytics.data}, '$.articleId') = ${articleId}`,
-        ),
-      )
+      .where(and(eq(analytics.type, AnalyticsType.PAGEVIEW), sql`${articleIdExpr} = ${articleId}`))
       .groupBy(articles.title);
 
     if (result.length === 0) {

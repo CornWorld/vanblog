@@ -5,7 +5,6 @@ import { PermissionService } from './permission.service';
 
 // 共享的注入令牌
 const PERMISSIONS = 'PERMISSIONS';
-const PERMISSIONS_CONTRIBUTOR = 'PERMISSIONS_CONTRIBUTOR';
 
 @Global() // 使权限服务在全局可用
 @Module({})
@@ -34,18 +33,9 @@ export class PermissionModule {
       useValue: permissions,
     };
 
-    const contributorProvider: Provider = {
-      provide: PERMISSIONS_CONTRIBUTOR,
-      useFactory: (collector: PermissionCollectionService) => {
-        collector.contributePermissions(permissions);
-        return true; // 返回任意值占位
-      },
-      inject: [PermissionCollectionService],
-    };
-
     return {
       module: PermissionModule,
-      providers: [permissionsProvider, contributorProvider],
+      providers: [permissionsProvider],
       exports: [permissionsProvider],
     };
   }

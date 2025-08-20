@@ -6,9 +6,11 @@ import { CacheModule } from '../../shared/cache/cache.module';
 import { PermissionModule } from '../permission/permission.module';
 
 import { AnalyticsController } from './analytics.controller';
+import { PublicAnalyticsController } from './public-analytics.controller';
 import { AnalyticsService } from './services/analytics.service';
 import { ArticleStatsService } from './services/article-stats.service';
 import { EchartsFormatterService } from './services/echarts-formatter.service';
+import { PublicAnalyticsService } from './services/public-analytics.service';
 import { ThirdPartyAnalyticsService } from './services/third-party-analytics.service';
 
 @Module({
@@ -17,11 +19,12 @@ import { ThirdPartyAnalyticsService } from './services/third-party-analytics.ser
     CacheModule,
     PermissionModule.forFeature(['analytics:read', 'analytics:export']),
   ],
-  controllers: [AnalyticsController],
+  controllers: [AnalyticsController, PublicAnalyticsController],
   providers: [
     AnalyticsService,
     AnalyticsCacheService,
     ArticleStatsService,
+    PublicAnalyticsService,
     ThirdPartyAnalyticsService,
     EchartsFormatterService,
   ],
@@ -29,6 +32,7 @@ import { ThirdPartyAnalyticsService } from './services/third-party-analytics.ser
     AnalyticsService,
     AnalyticsCacheService,
     ArticleStatsService,
+    PublicAnalyticsService,
     ThirdPartyAnalyticsService,
     EchartsFormatterService,
   ],

@@ -10,33 +10,6 @@
 
 ---
 
-## v2 现有能力（一览）
-
-- **Articles**：GET /articles、GET /articles/search、GET /articles/:id、GET /articles/export、GET /articles/category/:name、POST /articles/import、POST /articles（管理）、PUT /articles/:id（管理）、DELETE /articles/:id（管理）、POST /articles/:id/view、POST /articles/pathname/:pathname/view
-- **Drafts**：GET /drafts、GET /drafts/:id、POST /drafts（管理）、PUT /drafts/:id（管理）、PUT /drafts/:id/auto-save（管理）、DELETE /drafts/:id（管理）、POST /drafts/:id/publish（管理）、POST /drafts/import（管理）、GET/POST/DELETE /drafts/:id/versions/\*（版本管理）
-- **Categories**：GET /categories、GET /categories/:id、POST /categories/:id/verify-password、GET /categories/statistics/overall、GET /categories/associations/tags、POST /categories（管理）、PUT /categories/:id（管理）、DELETE /categories/:id（管理）
-- **Tags**：GET /tags、GET /tags/:id、GET /tags/statistics/overall、GET /tags/associations/categories、POST /tags（管理）、PUT /tags/:id（管理）、DELETE /tags/:id（管理）
-- **Users**：GET /admin/users、GET /admin/users/:id、POST /admin/users（管理）、PUT /admin/users/:id（管理）、DELETE /admin/users/:id（管理）
-- **Media**：GET /admin/media、POST /admin/media/upload、DELETE /admin/media/:id（管理）
-- **Analytics**：POST /analytics/record、POST /article/:id/view、POST /article/:id/reading-time、GET /admin/analytics/\*（管理统计，含 Echarts 格式化）
-- **Auth**：POST /auth/login、GET /auth/profile、POST /auth/logout、POST /auth/refresh、POST /auth/revoke-all、GET /auth/logs（管理）、GET /auth/csrf-token
-- **RSS**：GET /rss、GET /rss.xml
-- **Sitemap**：GET /sitemap、GET /sitemap.xml
-- **Public Meta**：GET /public/meta
-- **Public Custom Pages**：GET /public/customPage/all、GET /public/customPage?path={pathname}
-- **WebHook**：GET/POST/PATCH/DELETE /webhooks（完整CRUD、事件管理、测试触发、日志查询、统计信息）
-- **插件系统**：HookService（doAction/applyFilters）、PluginContext（数据存储）、动态模块加载、安全隔离、GET /v2/plugins/\*（插件管理）
-- **权限系统**：GET /permissions（权限节点查询、角色管理、语义化权限名称、模块化注册）
-- **设置管理**：GET/PATCH /api/admin/settings/_（站点信息、布局、主题、友链、导航、自定义代码）、GET/PUT/DELETE /api/admin/config/_（动态配置注册系统）
-- **备份恢复**：GET/POST/DELETE /backup、POST /backup/:filename/restore、GET /backup/restore/:taskId/progress（全模块数据导出/导入/下载/恢复进度）
-- **Demo 演示**：GET /demo（演示环境标识与功能限制）
-- **健康检查**：GET /health（系统状态监控）
-- **辅助模块**：Comment（评论集成）、Reward（打赏模块）、Beian（备案信息）、Social Links（社交链接）等管理端点
-
-以上接口已通过 e2e 验证，且不受 v1 拦截影响（非 `/api/v1/*` 路径）。
-
----
-
 ## v1 → v2 迁移速查（核心）
 
 - public.getByOption → 使用多接口：/articles、/categories、/tags、/rss、/sitemap（短期不提供聚合端点）
