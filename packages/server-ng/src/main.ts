@@ -2,7 +2,8 @@ import { VersioningType, type INestApplication } from '@nestjs/common';
 import { NestFactory, Reflector } from '@nestjs/core';
 import { SwaggerModule, DocumentBuilder, type OpenAPIObject } from '@nestjs/swagger';
 import compression from 'compression';
-// import csurf from 'csurf';
+import cookieParser from 'cookie-parser';
+import csurf from 'csurf';
 import dayjs from 'dayjs';
 import helmet from 'helmet';
 
@@ -138,19 +139,21 @@ export async function init(): Promise<INestApplication> {
     }),
   );
 
-  // CSRF protection (temporarily disabled due to configuration issues)
-  // TODO: Re-enable CSRF protection with proper cookie-parser setup
-  // if (process.env.NODE_ENV !== 'test') {
-  //   app.use(
-  //     csurf({
-  //       cookie: {
-  //         httpOnly: true,
-  //         secure: process.env.NODE_ENV === 'production',
-  //         sameSite: 'strict',
-  //       },
-  //     }),
-  //   );
-  // }
+  // Cookie parser (required for CSRF protection)
+  app.use(cookieParser());
+
+  // CSRF protection
+  if (process.env.NODE_ENV !== 'test') {
+    app.use(
+      csurf({
+        cookie: {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'strict',
+        },
+      }),
+    );
+  }
 
   // Enable compression
   app.use(compression());
