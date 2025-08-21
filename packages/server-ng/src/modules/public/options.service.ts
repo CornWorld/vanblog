@@ -136,11 +136,15 @@ export class OptionsService {
 
     if (includeMap.walineConfig) {
       tasks.push(
-        this.getWalineConfig().then((walineConfig) => {
-          if (walineConfig) {
-            response.walineConfig = walineConfig;
-          }
-        }),
+        this.commentService
+          .getResolvedWalineConfig()
+          .then((walineConfig) => {
+            const url = walineConfig.serverURL ?? '';
+            if (url !== '') {
+              response.walineConfig = { serverURL: url };
+            }
+          })
+          .catch(() => {}),
       );
     }
 
@@ -148,16 +152,5 @@ export class OptionsService {
     await Promise.allSettled(tasks);
 
     return response;
-  }
-
-  private async getWalineConfig(): Promise<{ serverURL?: string } | undefined> {
-    try {
-      const walineSettings = await this.commentService.getWalineSetting();
-      return {
-        serverURL: walineSettings.serverURL,
-      };
-    } catch {
-      return undefined;
-    }
   }
 }

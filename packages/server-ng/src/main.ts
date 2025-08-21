@@ -47,33 +47,6 @@ export async function init(): Promise<INestApplication> {
     .setTitle('VanBlog API v2')
     .setDescription(
       'VanBlog Next Generation API Documentation\n\n' +
-        'This is the new modular, high-performance API server for VanBlog.\n\n' +
-        'Features:\n' +
-        '- RESTful API design\n' +
-        '- JWT authentication with fine-grained permissions\n' +
-        '- Comprehensive error handling\n' +
-        '- Request validation\n' +
-        '- OpenAPI 3.0 compliant\n\n' +
-        '## Permission System\n\n' +
-        'The API uses a sophisticated permission system with the following features:\n\n' +
-        '### Permission Format\n' +
-        '- **Module Permissions**: `module:action` (e.g., `article:read`, `user:write`)\n' +
-        '- **Role Permissions**: `role:name` (e.g., `role:admin`, `role:editor`)\n' +
-        '- **Universal Permission**: `all` (grants access to everything)\n' +
-        '- **Permission Revocation**: `no:permission` (e.g., `no:article:delete`, `no:role:admin`)\n\n' +
-        '### Semantic Permissions\n' +
-        'Use the modern @Permission or @Perm decorators with these formats:\n' +
-        '- `@Permission("module:action")` - Full permission name format\n' +
-        '- `@Permission("module", ["read", "write"])` - Module with action array\n' +
-        '- `@Permission("module:action1", "module:action2")` - Multiple permissions\n\n' +
-        'When using `@ModuleContext()` decorator, you can use semantic names:\n' +
-        '- `read`, `write`, `delete` instead of `module:read`, `module:write`, `module:delete`\n\n' +
-        '### Permission Resolution\n' +
-        'Permissions are processed in order (later entries override earlier ones):\n' +
-        '1. Universal permissions (`all`)\n' +
-        '2. Role expansion (`role:admin` → expanded permissions)\n' +
-        '3. Direct permissions (`article:read`)\n' +
-        '4. Permission revocation (`no:article:delete`)\n\n' +
         '### Authorization Headers\n' +
         'Protected endpoints require a valid JWT token in the Authorization header:\n' +
         '```\n' +
@@ -105,7 +78,7 @@ export async function init(): Promise<INestApplication> {
     .setContact('VanBlog Team', 'https://github.com/Mereithhh/vanblog', 'support@vanblog.dev')
     .setLicense('GPL v3', 'https://www.gnu.org/licenses/gpl-3.0.html')
     .addServer(`http://localhost:${String(appConfig.port)}`, 'Development server')
-    .addServer('https://api.vanblog.dev', 'Production server')
+    // .addServer('https://api.vanblog.corn.im', 'Production server') // no server provided currently
     .build();
 
   const documentFactory = (): OpenAPIObject => SwaggerModule.createDocument(app, swaggerConfig);
@@ -187,7 +160,7 @@ void init().then(async (app) => {
   const logger = app.get(LoggerService);
   logger.log(`Application is running on: http://localhost:${String(port)}`, 'Bootstrap');
   logger.log(
-    `API Documentation available at: http://localhost:${String(port)}${configService.app.apiPrefix}/docs`,
+    `API Documentation available at: http://localhost:${String(port)}/${configService.app.apiPrefix}/docs`,
     'Bootstrap',
   );
 });

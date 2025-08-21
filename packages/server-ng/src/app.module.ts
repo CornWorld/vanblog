@@ -14,7 +14,6 @@ import { ArticleModule } from './modules/article/article.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { BackupModule } from './modules/backup/backup.module';
 import { CategoryModule } from './modules/category/category.module';
-import { CommentModule } from './modules/comment/comment.module';
 import { DemoModule } from './modules/demo/demo.module';
 import { DraftModule } from './modules/draft/draft.module';
 import { HealthModule } from './modules/health/health.module';
@@ -78,7 +77,6 @@ export class AppModule implements NestModule {
         AnalyticsModule,
         RssModule,
         SitemapModule,
-        CommentModule,
         BackupModule,
 
         DemoModule,

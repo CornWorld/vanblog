@@ -96,10 +96,8 @@ export class BootstrapService {
 
   private async getWalineConfig(): Promise<{ serverURL?: string } | undefined> {
     try {
-      const walineSettings = await this.commentService.getWalineSetting();
-      return {
-        serverURL: walineSettings.serverURL,
-      };
+      const cfg = await this.commentService.getResolvedWalineConfig();
+      return cfg;
     } catch {
       return undefined;
     }
