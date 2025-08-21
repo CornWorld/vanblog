@@ -98,6 +98,7 @@ export class CommentService implements OnModuleInit, OnModuleDestroy, BeforeAppl
 
   // 新增：对外提供“已解析”的 Waline 配置，确保 serverURL 始终有值
   public async getResolvedWalineConfig(): Promise<{ serverURL?: string }> {
+    // 若在设置中显式配置了 serverURL，则优先返回
     try {
       const settings = await this.getWalineSetting();
       const configured = (settings.serverURL ?? '').trim();
@@ -109,10 +110,10 @@ export class CommentService implements OnModuleInit, OnModuleDestroy, BeforeAppl
     }
 
     // 优先使用运行时环境合成的 URL，其次回退到 HOST/PORT 缺省值
-    const rawEnvUrl = this.walineEnv['VAN_BLOG_WALINE_URL'];
-    const envUrl = typeof rawEnvUrl === 'string' ? rawEnvUrl.trim() : '';
-    if (envUrl !== '') {
-      return { serverURL: envUrl };
+    const rawEnvUrl = this.walineEnv['SERVER_URL'];
+
+    if (typeof rawEnvUrl === 'string' && rawEnvUrl.trim() !== '') {
+      return { serverURL: rawEnvUrl.trim() };
     }
 
     const rawHost = this.walineEnv['HOST'];
@@ -135,7 +136,7 @@ export class CommentService implements OnModuleInit, OnModuleDestroy, BeforeAppl
       authorEmail: 'AUTHOR_EMAIL',
       webhook: 'WEBHOOK',
       forceLoginComment: 'LOGIN',
-      serverURL: 'VAN_BLOG_WALINE_URL',
+      serverURL: 'SERVER_URL',
     };
 
     const result: Record<string, string> = {};
@@ -207,7 +208,7 @@ export class CommentService implements OnModuleInit, OnModuleDestroy, BeforeAppl
       SITE_NAME: siteInfo.title,
       SITE_URL: 'http://localhost:3000',
       JWT_TOKEN: jwtSecret,
-      HOST: '127.0.0.1', // Waline 监听地址 - 修复为本地回环地址
+      HOST: '127.0.0.1', // Waline 监听地址 - 用于内部探测与拼接 URL
       PORT: '8360', // Waline 监听端口
     };
 
@@ -222,8 +223,7 @@ export class CommentService implements OnModuleInit, OnModuleDestroy, BeforeAppl
     };
 
     const hasWalineUrl =
-      typeof mergedEnv.VAN_BLOG_WALINE_URL === 'string' &&
-      mergedEnv.VAN_BLOG_WALINE_URL.trim().length > 0;
+      typeof mergedEnv.SERVER_URL === 'string' && mergedEnv.SERVER_URL.trim().length > 0;
 
     if (!hasWalineUrl) {
       const host =
@@ -234,13 +234,13 @@ export class CommentService implements OnModuleInit, OnModuleDestroy, BeforeAppl
         typeof mergedEnv.PORT === 'string' && mergedEnv.PORT.trim().length > 0
           ? mergedEnv.PORT.trim()
           : '8360';
-      mergedEnv.VAN_BLOG_WALINE_URL = `http://${host}:${port}`;
+      mergedEnv.SERVER_URL = `http://${host}:${port}`;
     }
 
     this.walineEnv = mergedEnv;
 
     // 安全日志：仅输出非敏感配置，避免泄露密钥
-    const SENSITIVE_KEYS = /PASS|PASSWORD|TOKEN|SECRET/i;
+    const SENSITIVE_KEYS = /(PASS|PASSWORD|TOKEN|SECRET|MASTER_KEY|LEAN_KEY|LEAN_MASTER_KEY)/i;
     const safeEnv: Record<string, string> = {};
     for (const [k, v] of Object.entries(this.walineEnv)) {
       safeEnv[k] = SENSITIVE_KEYS.test(k) ? '<redacted>' : v;

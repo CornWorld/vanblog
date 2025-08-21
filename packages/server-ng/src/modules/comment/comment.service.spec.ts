@@ -210,7 +210,7 @@ describe('CommentService', () => {
         SENDER_EMAIL: 'noreply@example.com',
         AUTHOR_EMAIL: 'admin@example.com',
         WEBHOOK: 'https://example.com/webhook',
-        VAN_BLOG_WALINE_URL: 'https://waline.example.com',
+        SERVER_URL: 'https://waline.example.com',
         key: 'value', // from otherConfig
       });
     });
