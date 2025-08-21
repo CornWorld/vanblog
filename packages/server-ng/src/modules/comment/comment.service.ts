@@ -155,6 +155,8 @@ export class CommentService implements OnModuleInit {
       SITE_NAME: siteInfo.title,
       SITE_URL: 'http://localhost:3000',
       JWT_TOKEN: jwtSecret,
+      HOST: '0.0.0.0', // Waline 监听地址
+      PORT: '8360', // Waline 监听端口
     };
 
     // Waline specific configuration

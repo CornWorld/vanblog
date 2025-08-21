@@ -539,9 +539,8 @@ export class BackupService {
     if (records.length > 0) {
       const batchSize = 100;
       for (let i = 0; i < records.length; i += batchSize) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         // Type-safe batch: infer type from records array
-        const batch = records.slice(i, i + batchSize);
+        const batch = records.slice(i, i + batchSize) as Record<string, unknown>[];
         try {
           await this.db.insert(table).values(batch).onConflictDoNothing();
         } catch (error) {

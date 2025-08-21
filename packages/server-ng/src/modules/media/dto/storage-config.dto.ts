@@ -15,7 +15,9 @@ export const PicgoConfigSchema = z.object({
 
 // 存储配置 Schema
 export const UpdateStorageConfigSchema = z.object({
-  provider: z.nativeEnum(StorageProvider).describe('Storage provider type'),
+  provider: z
+    .enum([StorageProvider.LOCAL, StorageProvider.PICGO])
+    .describe('Storage provider type'),
   enabled: z.boolean().describe('Whether storage is enabled').optional(),
   localPath: z.string().describe('Local storage path').optional(),
   baseUrl: z.string().describe('Base URL for storage').optional(),
@@ -24,7 +26,9 @@ export const UpdateStorageConfigSchema = z.object({
 
 // 存储配置响应 Schema
 export const StorageConfigResponseSchema = z.object({
-  provider: z.nativeEnum(StorageProvider).describe('Storage provider type'),
+  provider: z
+    .enum([StorageProvider.LOCAL, StorageProvider.PICGO])
+    .describe('Storage provider type'),
   enabled: z.boolean().describe('Whether storage is enabled'),
   localPath: z.string().describe('Local storage path').optional(),
   baseUrl: z.string().describe('Base URL for storage').optional(),
