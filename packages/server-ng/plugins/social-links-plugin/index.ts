@@ -9,7 +9,7 @@ import type {
   FilterCallback,
 } from '../../src/modules/plugin/interfaces/hook.interface';
 import type { PluginContext } from '../../src/modules/plugin/interfaces/plugin-context.interface';
-import type { Plugin } from '../../src/modules/plugin/services/plugin-loader.service';
+import type { Plugin } from '../../src/modules/plugin/services/loader.service';
 
 // 插件 Logger 实例
 const logger = new Logger(withPluginPrefix('social-links-plugin'));

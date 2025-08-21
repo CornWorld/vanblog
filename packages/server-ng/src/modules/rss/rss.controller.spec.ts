@@ -1,6 +1,7 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
+import { ConfigService } from '../../config/config.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
 
@@ -11,36 +12,33 @@ describe('RssController', () => {
   let controller: RssController;
   let rssService: any;
 
-  const mockRssService = {
-    generateRssFeedFn: vi.fn(),
-  };
-
-  const mockJwtAuthGuard = {
-    canActivate: vi.fn().mockReturnValue(true),
-  };
-
-  const mockPermissionGuard = {
-    canActivate: vi.fn().mockReturnValue(true),
-  };
-
   beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
+    const moduleBuilder = Test.createTestingModule({
       controllers: [RssController],
       providers: [
         {
           provide: RssService,
-          useValue: mockRssService,
+          useValue: {
+            generateRssFeedFn: vi.fn(),
+          },
+        },
+        {
+          provide: ConfigService,
+          useValue: {
+            get: vi.fn((_key: string, defaultValue?: any) => defaultValue),
+          },
         },
       ],
     })
       .overrideGuard(JwtAuthGuard)
-      .useValue(mockJwtAuthGuard)
+      .useValue({ canActivate: vi.fn().mockReturnValue(true) })
       .overrideGuard(PermissionsGuard)
-      .useValue(mockPermissionGuard)
-      .compile();
+      .useValue({ canActivate: vi.fn().mockReturnValue(true) });
+
+    const module: TestingModule = await moduleBuilder.compile();
 
     controller = module.get<RssController>(RssController);
-    rssService = module.get(RssService);
+    rssService = module.get<RssService>(RssService);
   });
 
   afterEach(() => {

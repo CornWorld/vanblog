@@ -1,6 +1,7 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
+import { ConfigService } from '../../config/config.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
 
@@ -10,6 +11,7 @@ import { SitemapService } from './sitemap.service';
 describe('SitemapController', () => {
   let controller: SitemapController;
   let sitemapService: SitemapService;
+  let configService: ConfigService;
 
   const mockSitemapService: Partial<SitemapService> = {
     generateSitemapFn: vi.fn(),
@@ -24,6 +26,10 @@ describe('SitemapController', () => {
     canActivate: vi.fn().mockReturnValue(true),
   };
 
+  const mockConfigService = {
+    get: vi.fn((_key: string, defaultValue?: any) => defaultValue),
+  } as unknown as ConfigService;
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [SitemapController],
@@ -31,6 +37,10 @@ describe('SitemapController', () => {
         {
           provide: SitemapService,
           useValue: mockSitemapService,
+        },
+        {
+          provide: ConfigService,
+          useValue: mockConfigService,
         },
       ],
     })
@@ -42,6 +52,7 @@ describe('SitemapController', () => {
 
     controller = module.get<SitemapController>(SitemapController);
     sitemapService = module.get(SitemapService);
+    configService = module.get(ConfigService);
   });
 
   afterEach(() => {
@@ -84,14 +95,14 @@ describe('SitemapController', () => {
     });
 
     it('should handle custom base URL', () => {
-      const originalEnv = process.env.BASE_URL;
-      process.env.BASE_URL = 'https://example.com';
+      vi.spyOn(configService, 'get').mockImplementationOnce((key: string, defaultValue?: any) => {
+        if (key === 'BASE_URL') return 'https://example.com';
+        return defaultValue;
+      });
 
       const result = controller.getSitemapStatus();
 
       expect(result.sitemapUrl).toBe('https://example.com/sitemap/sitemap.xml');
-
-      process.env.BASE_URL = originalEnv;
     });
   });
 

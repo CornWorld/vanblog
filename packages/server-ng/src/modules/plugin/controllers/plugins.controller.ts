@@ -1,7 +1,7 @@
 import { Controller, Get, Post, Delete, Param, HttpCode, HttpStatus, Logger } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 
-import { PluginLoaderService, type Plugin } from '../services/plugin-loader.service';
+import { LoaderService, type Plugin } from '../services/loader.service';
 
 export interface PluginInfo {
   name: string;
@@ -28,12 +28,12 @@ export interface PluginUnloadResponse {
 
 @ApiTags('Plugin Management')
 @Controller('v2/plugins')
-export class PluginLoaderController {
-  private readonly logger = new Logger(PluginLoaderController.name);
+export class PluginsController {
+  private readonly logger = new Logger(PluginsController.name);
 
-  constructor(private readonly pluginLoaderService: PluginLoaderService) {
+  constructor(private readonly loaderService: LoaderService) {
     // Downgrade noisy test-time log to warn to avoid false positives in log scans
-    this.logger.warn('PluginLoaderController initialized (WARN LEVEL)');
+    this.logger.warn('PluginsController initialized (WARN LEVEL)');
   }
 
   @Get()
@@ -61,10 +61,10 @@ export class PluginLoaderController {
     },
   })
   getPlugins(): PluginListResponse {
-    const loadedPlugins = this.pluginLoaderService.getLoadedPlugins();
+    const loadedPlugins: Map<string, Plugin> = this.loaderService.getLoadedPlugins();
     const plugins: PluginInfo[] = [];
 
-    for (const [, plugin] of loadedPlugins) {
+    for (const plugin of loadedPlugins.values()) {
       plugins.push({
         name: plugin.name,
         version: plugin.version,
@@ -107,7 +107,7 @@ export class PluginLoaderController {
   })
   @ApiResponse({ status: 404, description: 'Plugin not found' })
   getPlugin(@Param('name') name: string): Plugin | null {
-    const loadedPlugins = this.pluginLoaderService.getLoadedPlugins();
+    const loadedPlugins = this.loaderService.getLoadedPlugins();
     return loadedPlugins.get(name) ?? null;
   }
 
@@ -128,8 +128,8 @@ export class PluginLoaderController {
   })
   async reloadPlugins(): Promise<PluginReloadResponse> {
     try {
-      await this.pluginLoaderService.reloadPlugins();
-      const loadedCount = this.pluginLoaderService.getLoadedPlugins().size;
+      await this.loaderService.reloadPlugins();
+      const loadedCount = this.loaderService.getLoadedPlugins().size;
 
       return {
         success: true,
@@ -161,7 +161,7 @@ export class PluginLoaderController {
   })
   @ApiResponse({ status: 404, description: 'Plugin not found' })
   async unloadPlugin(@Param('name') pluginName: string): Promise<PluginUnloadResponse> {
-    const success = await this.pluginLoaderService.unloadPlugin(pluginName);
+    const success = await this.loaderService.unloadPlugin(pluginName);
 
     if (success) {
       return {

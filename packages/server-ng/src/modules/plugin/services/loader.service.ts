@@ -76,7 +76,7 @@ export interface Plugin {
 export type PartialPlugin = Partial<Plugin>;
 
 @Injectable()
-export class PluginLoaderService implements OnModuleInit {
+export class LoaderService implements OnModuleInit {
   private readonly loadedPlugins = new Map<string, Plugin>();
   private readonly pluginContexts = new Map<string, PluginContext>();
   // Track hook registrations per plugin so we can safely unload/reload without nuking all hooks
@@ -92,12 +92,12 @@ export class PluginLoaderService implements OnModuleInit {
     private readonly pluginContextFactory: PluginContextFactory,
     private readonly hookService: HookService,
   ) {
-    this.logger.log('PluginLoaderService initialized');
+    this.logger.log('LoaderService initialized');
   }
 
   onModuleInit(): void {
     this.logger.log(
-      'PluginLoaderService: plugin modules are loaded via PluginModule.forRoot, skip internal scanning',
+      'LoaderService: plugin modules are loaded via PluginModule.forRoot, skip internal scanning',
     );
   }
 
@@ -489,7 +489,7 @@ class PluginObjectAdapter implements OnModuleInit {
     @Inject('PLUGIN_DIR') private readonly pluginDir: string,
     private readonly hookService: HookService,
     private readonly pluginContextFactory: PluginContextFactory,
-    private readonly loaderService: PluginLoaderService,
+    private readonly loaderService: LoaderService,
   ) {}
 
   async onModuleInit(): Promise<void> {

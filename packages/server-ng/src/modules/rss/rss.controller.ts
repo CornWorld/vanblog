@@ -1,6 +1,7 @@
 import { Controller, Get, Post } from '@nestjs/common';
 import { ApiOperation, ApiTags, ApiResponse } from '@nestjs/swagger';
 
+import { ConfigService } from '../../config/config.service';
 import { Perm } from '../auth/permissions.decorator';
 
 import { RssService } from './rss.service';
@@ -8,7 +9,10 @@ import { RssService } from './rss.service';
 @ApiTags('RSS')
 @Controller({ path: 'rss', version: '2' })
 export class RssController {
-  constructor(private readonly rssService: RssService) {}
+  constructor(
+    private readonly rssService: RssService,
+    private readonly configService: ConfigService,
+  ) {}
 
   @Post('generate')
   @Perm('rss', ['generate'])
@@ -41,7 +45,7 @@ export class RssController {
     };
   } {
     // 这里可以添加更多状态信息
-    const baseUrl = process.env.BASE_URL ?? 'http://localhost:3000';
+    const baseUrl = this.configService.get<string>('BASE_URL', 'http://localhost:3000');
     const siteUrl = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
 
     return {

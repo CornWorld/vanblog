@@ -1,6 +1,7 @@
 import { Controller, Get, Post } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 
+import { ConfigService } from '../../config/config.service';
 import { Perm } from '../auth/permissions.decorator';
 
 import { SitemapService } from './sitemap.service';
@@ -8,7 +9,10 @@ import { SitemapService } from './sitemap.service';
 @ApiTags('Sitemap')
 @Controller({ path: 'sitemap', version: '2' })
 export class SitemapController {
-  constructor(private readonly sitemapService: SitemapService) {}
+  constructor(
+    private readonly sitemapService: SitemapService,
+    private readonly configService: ConfigService,
+  ) {}
 
   @Post('generate')
   @Perm('sitemap', ['generate'])
@@ -28,7 +32,7 @@ export class SitemapController {
     lastGenerated?: string;
     sitemapUrl: string;
   } {
-    const baseUrl = process.env.BASE_URL ?? 'http://localhost:3000';
+    const baseUrl = this.configService.get<string>('BASE_URL', 'http://localhost:3000');
     const siteUrl = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
 
     return {

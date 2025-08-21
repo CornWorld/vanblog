@@ -3,6 +3,7 @@ import { Reflector } from '@nestjs/core';
 import { Request } from 'express';
 import * as jwt from 'jsonwebtoken';
 
+import { ConfigService } from '../../../config/config.service';
 import { ArticleService } from '../article.service';
 import { ARTICLE_ACCESS_KEY } from '../decorators/article-access.decorator';
 
@@ -49,6 +50,7 @@ export class ArticleAccessGuard implements CanActivate {
   constructor(
     private readonly reflector: Reflector,
     private readonly articleService: ArticleService,
+    private readonly configService: ConfigService,
   ) {}
 
   /**
@@ -98,10 +100,7 @@ export class ArticleAccessGuard implements CanActivate {
     }
 
     try {
-      const payload = jwt.verify(
-        token,
-        process.env.JWT_SECRET ?? 'default-secret',
-      ) as ArticleAccessPayload;
+      const payload = jwt.verify(token, this.configService.jwt.secret) as ArticleAccessPayload;
 
       // 验证令牌类型
       if (payload.type !== 'article-access') {

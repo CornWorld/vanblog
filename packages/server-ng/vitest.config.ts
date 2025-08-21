@@ -12,6 +12,7 @@ export default defineConfig({
       '**/dist/**',
       '**/*.fixtures.test.ts',
       '**/vitest-fixtures.test.ts',
+      '**/*.e2e-spec.ts',
     ],
     alias: {
       '@src': './src',

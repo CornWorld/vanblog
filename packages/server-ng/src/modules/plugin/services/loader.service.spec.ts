@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-import { PluginLoaderService } from './plugin-loader.service';
+import { LoaderService } from './loader.service';
 
 import type { LoggerService } from '../../../core/logger/logger.service';
 
@@ -12,7 +12,7 @@ type VersionHelpers = {
 };
 
 // Minimal mocks for dependencies; we won't use them in these tests
-const createService = (): { service: PluginLoaderService; logger: MinimalLogger } => {
+const createService = (): { service: LoaderService; logger: MinimalLogger } => {
   const logger = {
     log: vi.fn(),
     warn: vi.fn(),
@@ -31,13 +31,13 @@ const createService = (): { service: PluginLoaderService; logger: MinimalLogger 
   } as unknown as import('./hook.service').HookService;
 
   return {
-    service: new PluginLoaderService(logger as any, pluginContextFactory, hookService),
+    service: new LoaderService(logger as any, pluginContextFactory, hookService),
     logger,
   };
 };
 
-describe('PluginLoaderService version utilities', () => {
-  let service: PluginLoaderService;
+describe('LoaderService version utilities', () => {
+  let service: LoaderService;
   let logger: MinimalLogger;
   let parseVersion: VersionHelpers['parseVersion'];
   let satisfies: VersionHelpers['satisfiesVanblogEngine'];

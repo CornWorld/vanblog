@@ -3,6 +3,7 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, beforeEach, it, expect, vi } from 'vitest';
 
 import { MockUtils, type DatabaseMockBuilder } from '../../../test/mock-utils';
+import { ConfigService } from '../../config/config.service';
 import { DATABASE_CONNECTION } from '../../database/database.module';
 import { QueryOptimizerService } from '../../shared/services/query-optimizer.service';
 import { HookService } from '../plugin/services/hook.service';
@@ -46,6 +47,13 @@ describe('ArticleService', () => {
         {
           provide: HookService,
           useValue: mockHookService,
+        },
+        {
+          provide: ConfigService,
+          useValue: {
+            jwt: { secret: 'test-secret-key' },
+            get: vi.fn((_key: string, defaultValue?: unknown) => defaultValue),
+          },
         },
       ],
     }).compile();

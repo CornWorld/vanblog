@@ -7,7 +7,7 @@ import { withPluginPrefix } from '../../src/modules/plugin/utils/prefix.util';
 
 import type { ActionCallback } from '../../src/modules/plugin/interfaces/hook.interface';
 import type { PluginContext } from '../../src/modules/plugin/interfaces/plugin-context.interface';
-import type { Plugin } from '../../src/modules/plugin/services/plugin-loader.service';
+import type { Plugin } from '../../src/modules/plugin/services/loader.service';
 
 const PLUGIN_PREFIX = withPluginPrefix('email-notification-plugin');
 const logger = new Logger(PLUGIN_PREFIX);

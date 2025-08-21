@@ -4,6 +4,7 @@ import dayjs from 'dayjs';
 import { and, eq, sql } from 'drizzle-orm';
 import * as jwt from 'jsonwebtoken';
 
+import { ConfigService } from '../../config/config.service';
 import { DATABASE_CONNECTION } from '../../database';
 import { categories, articles } from '../../database/schema';
 import { OverallStatisticsDto } from '../../shared/dto/statistics.dto';
@@ -32,6 +33,7 @@ export class CategoryService {
     private readonly statisticsService: StatisticsService,
     private readonly queryOptimizer: QueryOptimizerService,
     private readonly hookService: HookService,
+    private readonly configService: ConfigService,
   ) {}
 
   async findAll(): Promise<CategoryListResponseDto> {
@@ -271,7 +273,7 @@ export class CategoryService {
     // Generate access token for the category
     const token = jwt.sign(
       { categoryId: category.id, categoryName: category.name },
-      process.env.JWT_SECRET ?? 'default-secret',
+      this.configService.jwt.secret,
       { expiresIn: '24h' },
     );
 

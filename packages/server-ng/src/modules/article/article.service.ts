@@ -4,6 +4,7 @@ import dayjs from 'dayjs';
 import { eq, and, or, like, desc, asc, sql } from 'drizzle-orm';
 import * as jwt from 'jsonwebtoken';
 
+import { ConfigService } from '../../config/config.service';
 import { DATABASE_CONNECTION } from '../../database';
 import { articles, tags } from '../../database/schema';
 import { QueryOptimizerService } from '../../shared/services/query-optimizer.service';
@@ -32,6 +33,7 @@ export class ArticleService {
     private readonly db: Database,
     private readonly queryOptimizer: QueryOptimizerService,
     private readonly hookService: HookService,
+    private readonly configService: ConfigService,
   ) {}
 
   async findAll(query: ArticleQueryDto): Promise<ArticleListResponseDto> {
@@ -289,7 +291,7 @@ export class ArticleService {
       iat: Math.floor(Date.now() / 1000),
     };
 
-    const token = jwt.sign(tokenPayload, process.env.JWT_SECRET ?? 'default-secret', {
+    const token = jwt.sign(tokenPayload, this.configService.jwt.secret, {
       expiresIn: '24h',
     });
 

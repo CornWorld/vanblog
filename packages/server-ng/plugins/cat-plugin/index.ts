@@ -7,7 +7,7 @@ import { withPluginPrefix } from '../../src/modules/plugin/utils/prefix.util';
 
 import type { FilterCallback } from '../../src/modules/plugin/interfaces/hook.interface';
 import type { PluginContext } from '../../src/modules/plugin/interfaces/plugin-context.interface';
-import type { Plugin } from '../../src/modules/plugin/services/plugin-loader.service';
+import type { Plugin } from '../../src/modules/plugin/services/loader.service';
 
 // 定义文章数据类型
 interface ArticleData {
