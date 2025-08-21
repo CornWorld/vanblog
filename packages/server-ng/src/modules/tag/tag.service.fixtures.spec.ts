@@ -7,7 +7,6 @@ import { TagService } from './tag.service';
 
 import type { QueryOptimizerService } from '../../shared/services/query-optimizer.service';
 import type { StatisticsService } from '../../shared/services/statistics.service';
-import type { HookService } from '../plugin/services/hook.service';
 
 // 扩展测试上下文，添加 TagService 实例
 const tagTest = test.extend<{
@@ -15,41 +14,26 @@ const tagTest = test.extend<{
   statisticsService: StatisticsService;
   queryOptimizerService: QueryOptimizerService;
 }>({
-  // eslint-disable-next-line no-empty-pattern
-  statisticsService: async ({}, use) => {
-    const mockStatisticsService = {
-      getOverallStatistics: vi.fn(),
-      getTagStatistics: vi.fn(),
-      getArticleStatistics: vi.fn(),
-      getCategoryStatistics: vi.fn(),
-      getVisitorStatistics: vi.fn(),
-      getSearchStatistics: vi.fn(),
-      getPopularArticles: vi.fn(),
-      getRecentArticles: vi.fn(),
-      getTopCategories: vi.fn(),
-      getTopTags: vi.fn(),
-    };
-    await use(mockStatisticsService as unknown as StatisticsService);
-  },
-
-  // eslint-disable-next-line no-empty-pattern
-  queryOptimizerService: async ({}, use) => {
-    const mockService = {
-      withPerformanceMonitoring: vi.fn().mockImplementation((_name, fn) => fn()),
-      batchCountArticlesByTags: vi.fn().mockResolvedValue(new Map()),
-      batchCountArticlesByCategories: vi.fn().mockResolvedValue({}),
-      buildOptimizedSearchQuery: vi.fn().mockReturnValue([]),
-      logSlowQuery: vi.fn(),
-    } as unknown as QueryOptimizerService;
+  statisticsService: async (_ctx, use) => {
+    const mockService = {} as any;
     await use(mockService);
   },
-
+  queryOptimizerService: async (_ctx, use) => {
+    const mockService = {
+      withPerformanceMonitoring: vi.fn().mockImplementation(async (_name, fn) => await fn()),
+      batchCountArticlesByTags: vi.fn().mockResolvedValue(new Map()),
+      batchCountArticlesByCategories: vi.fn().mockResolvedValue(new Map()),
+      buildOptimizedSearchQuery: vi.fn().mockReturnValue([]),
+      logSlowQuery: vi.fn(),
+    } as any;
+    await use(mockService);
+  },
   tagService: async ({ db, hookService, statisticsService, queryOptimizerService }, use) => {
     const service = new TagService(
-      db,
-      statisticsService,
-      queryOptimizerService,
-      hookService as HookService,
+      db as any,
+      statisticsService as any,
+      queryOptimizerService as any,
+      hookService as any,
     );
     await use(service);
   },

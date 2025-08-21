@@ -454,8 +454,8 @@ interface TestContext {
  */
 export const test = baseTest.extend<TestContext>({
   // 数据库Mock fixture
-  // eslint-disable-next-line no-empty-pattern, @typescript-eslint/no-empty-object-type
-  databaseMock: async ({}: {}, use) => {
+  /* eslint-disable-next-line no-empty-pattern */
+  databaseMock: async ({}, use) => {
     const mockBuilder = new DatabaseMockBuilder();
     await use(mockBuilder);
     mockBuilder.reset();
@@ -467,8 +467,8 @@ export const test = baseTest.extend<TestContext>({
   },
 
   // 服务Mock fixtures
-  // eslint-disable-next-line no-empty-pattern, @typescript-eslint/no-empty-object-type
-  storageService: async ({}: {}, use) => {
+  /* eslint-disable-next-line no-empty-pattern */
+  storageService: async ({}, use) => {
     const mock = ServiceMockFactory.createStorageServiceMock();
     await use(mock);
   },
@@ -478,27 +478,27 @@ export const test = baseTest.extend<TestContext>({
     await use(mock);
   },
 
-  // eslint-disable-next-line no-empty-pattern, @typescript-eslint/no-empty-object-type
-  configService: async ({}: {}, use) => {
+  /* eslint-disable-next-line no-empty-pattern */
+  configService: async ({}, use) => {
     const mock = ServiceMockFactory.createConfigServiceMock();
     await use(mock);
   },
 
-  // eslint-disable-next-line no-empty-pattern, @typescript-eslint/no-empty-object-type
-  hookService: async ({}: {}, use) => {
+  /* eslint-disable-next-line no-empty-pattern */
+  hookService: async ({}, use) => {
     const mock = ServiceMockFactory.createHookServiceMock();
     await use(mock);
   },
 
   // 测试数据工厂
-  // eslint-disable-next-line no-empty-pattern, @typescript-eslint/no-empty-object-type
-  testData: async ({}: {}, use) => {
+  /* eslint-disable-next-line no-empty-pattern */
+  testData: async ({}, use) => {
     await use(TestDataFactory);
   },
 
   // 工具方法
-  // eslint-disable-next-line no-empty-pattern, @typescript-eslint/no-empty-object-type
-  resetAllMocks: async ({}: {}, use) => {
+  /* eslint-disable-next-line no-empty-pattern */
+  resetAllMocks: async ({}, use) => {
     const resetFn = (): void => {
       vi.clearAllMocks();
     };

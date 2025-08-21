@@ -226,6 +226,15 @@ export class CommentService implements OnModuleInit, OnModuleDestroy, BeforeAppl
       typeof mergedEnv.SERVER_URL === 'string' && mergedEnv.SERVER_URL.trim().length > 0;
 
     if (!hasWalineUrl) {
+      // Backward-compat: allow VAN_BLOG_WALINE_URL to override when SERVER_URL is not provided
+      const compatUrl = process.env.VAN_BLOG_WALINE_URL;
+      if (typeof compatUrl === 'string' && compatUrl.trim() !== '') {
+        mergedEnv.SERVER_URL = compatUrl.trim();
+      }
+    }
+
+    const currentServerUrl = typeof mergedEnv.SERVER_URL === 'string' ? mergedEnv.SERVER_URL : '';
+    if (currentServerUrl.trim() === '') {
       const host =
         typeof mergedEnv.HOST === 'string' && mergedEnv.HOST.trim().length > 0
           ? mergedEnv.HOST.trim()
@@ -361,9 +370,9 @@ export class CommentService implements OnModuleInit, OnModuleDestroy, BeforeAppl
     }
 
     // 启动前检查端口占用，避免 EADDRINUSE
-    const hostRaw = this.walineEnv.HOST.trim();
+    const hostRaw = typeof this.walineEnv.HOST === 'string' ? this.walineEnv.HOST.trim() : '';
     const host = hostRaw === '' ? '127.0.0.1' : hostRaw;
-    const portRaw = this.walineEnv.PORT.trim();
+    const portRaw = typeof this.walineEnv.PORT === 'string' ? this.walineEnv.PORT.trim() : '';
     const portStr = portRaw === '' ? '8360' : portRaw;
     const parsed = Number.parseInt(portStr, 10);
     const portNum = Number.isFinite(parsed) ? parsed : 8360;
@@ -384,17 +393,19 @@ export class CommentService implements OnModuleInit, OnModuleDestroy, BeforeAppl
         cwd: process.cwd(),
       });
 
-      this.walineProcess.on('message', (message: unknown) => {
+      const child = this.walineProcess;
+
+      child.on('message', (message: unknown) => {
         const output = typeof message === 'string' ? message : JSON.stringify(message);
         this.logger.log(output);
       });
 
-      this.walineProcess.on('error', (error: Error) => {
+      child.on('error', (error: Error) => {
         this.logger.error(`Waline 进程错误: ${error.message}`);
         void this.releaseWalineLock();
       });
 
-      this.walineProcess.on('exit', () => {
+      child.on('exit', () => {
         this.walineProcess = null;
         this.logger.warn('Waline 进程退出');
         // 释放锁
@@ -403,17 +414,21 @@ export class CommentService implements OnModuleInit, OnModuleDestroy, BeforeAppl
         void this.hookService.doAction('comment|processExit', {}, { action: 'exit' });
       });
 
-      this.walineProcess.stdout?.on('data', (data: Buffer) => {
-        const output = data.toString();
-        if (!output.includes('Cannot find module')) {
-          this.logger.log(output.substring(0, output.length - 1));
-        }
-      });
+      if (child.stdout) {
+        child.stdout.on('data', (data: Buffer) => {
+          const output = data.toString();
+          if (!output.includes('Cannot find module')) {
+            this.logger.log(output.substring(0, output.length - 1));
+          }
+        });
+      }
 
-      this.walineProcess.stderr?.on('data', (data: Buffer) => {
-        const output = data.toString();
-        this.logger.error(output.substring(0, output.length - 1));
-      });
+      if (child.stderr) {
+        child.stderr.on('data', (data: Buffer) => {
+          const output = data.toString();
+          this.logger.error(output.substring(0, output.length - 1));
+        });
+      }
 
       this.logger.log('Waline 启动成功！');
 
@@ -421,7 +436,7 @@ export class CommentService implements OnModuleInit, OnModuleDestroy, BeforeAppl
       await this.hookService.doAction(
         'comment|afterStart',
         {
-          pid: this.walineProcess.pid,
+          pid: child.pid,
           env: this.walineEnv,
         },
         { action: 'start' },
@@ -434,25 +449,26 @@ export class CommentService implements OnModuleInit, OnModuleDestroy, BeforeAppl
 
   async stop(): Promise<void> {
     if (this.walineProcess) {
-      const { pid } = this.walineProcess;
+      const child = this.walineProcess;
+      const { pid } = child;
 
       // Trigger beforeStop action hook
       await this.hookService.doAction('comment|beforeStop', { pid }, { action: 'stop' });
 
       try {
         // 先尝试优雅关闭
-        this.walineProcess.kill('SIGTERM');
+        child.kill('SIGTERM');
 
         // 等待一段时间后强制终止
         await new Promise<void>((resolve) => {
           const timeout = setTimeout(() => {
-            if (this.walineProcess?.pid) {
-              this.walineProcess.kill('SIGKILL');
+            if (child.pid) {
+              child.kill('SIGKILL');
             }
             resolve();
           }, 3000);
 
-          this.walineProcess?.on('exit', () => {
+          child.on('exit', () => {
             clearTimeout(timeout);
             resolve();
           });
@@ -489,9 +505,9 @@ export class CommentService implements OnModuleInit, OnModuleDestroy, BeforeAppl
   }
 
   getStatus(): { running: boolean; pid?: number } {
-    return {
-      running: this.walineProcess !== null,
-      pid: this.walineProcess?.pid,
-    };
+    const child = this.walineProcess;
+    const running = child !== null;
+    const pid = child ? child.pid : undefined;
+    return { running, pid };
   }
 }

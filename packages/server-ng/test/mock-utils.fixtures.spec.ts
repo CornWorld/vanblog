@@ -8,8 +8,7 @@ interface MockUtilsTestContext {
 }
 
 const mockUtilsTest = test.extend<MockUtilsTestContext>({
-  // eslint-disable-next-line no-empty-pattern
-  databaseMockBuilder: async ({}, use) => {
+  databaseMockBuilder: async (_ctx, use) => {
     const databaseMockBuilder = new MockUtils.database();
     await use(databaseMockBuilder);
   },
