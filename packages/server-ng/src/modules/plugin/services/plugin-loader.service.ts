@@ -1,11 +1,17 @@
-import { spawn } from 'child_process';
-import { readdir, stat, readFile } from 'fs/promises';
+import { readFile, readdir, stat } from 'fs/promises';
 import { join } from 'path';
-import { pathToFileURL } from 'url';
 
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import {
+  Injectable,
+  OnModuleInit,
+  Module,
+  Inject,
+  Logger,
+  type DynamicModule,
+} from '@nestjs/common';
 
 import { LoggerService } from '../../../core/logger/logger.service';
+import { resolveObjectPluginExport } from '../utils/object-plugin.util';
 
 import { HookService } from './hook.service';
 import { PluginContextFactory } from './plugin-context.service';
@@ -73,6 +79,13 @@ export type PartialPlugin = Partial<Plugin>;
 export class PluginLoaderService implements OnModuleInit {
   private readonly loadedPlugins = new Map<string, Plugin>();
   private readonly pluginContexts = new Map<string, PluginContext>();
+  // Track hook registrations per plugin so we can safely unload/reload without nuking all hooks
+  private readonly pluginHookRegistrations = new Map<
+    string,
+    Array<{ type: 'action' | 'filter'; hookName: string; id: string }>
+  >();
+  // Track plugin origin directory (for object plugins) to support reload
+  private readonly pluginOrigins = new Map<string, string>();
 
   constructor(
     private readonly logger: LoggerService,
@@ -82,16 +95,27 @@ export class PluginLoaderService implements OnModuleInit {
     this.logger.log('PluginLoaderService initialized');
   }
 
-  async onModuleInit(): Promise<void> {
-    // In test environments, skip automatic plugin loading to avoid side effects
-    if (process.env.NODE_ENV === 'test' || process.env.VITEST) {
-      this.logger.log(
-        'PluginLoaderService: Test environment detected, skipping automatic plugin loading',
-      );
-      return;
+  onModuleInit(): void {
+    this.logger.log(
+      'PluginLoaderService: plugin modules are loaded via PluginModule.forRoot, skip internal scanning',
+    );
+  }
+
+  // 供动态模块适配器注册已加载插件信息，保持语义一致
+  registerExternalPlugin(
+    plugin: Plugin,
+    context: PluginContext,
+    meta?: {
+      pluginDir?: string;
+      hooks?: Array<{ type: 'action' | 'filter'; hookName: string; id: string }>;
+    },
+  ): void {
+    this.loadedPlugins.set(plugin.name, plugin);
+    this.pluginContexts.set(plugin.name, context);
+    if (meta) {
+      if (meta.pluginDir) this.pluginOrigins.set(plugin.name, meta.pluginDir);
+      if (meta.hooks) this.pluginHookRegistrations.set(plugin.name, meta.hooks);
     }
-    this.logger.log('PluginLoaderService: Starting automatic plugin loading on module init...');
-    await this.loadPlugins();
   }
 
   getLoadedPlugins(): Map<string, Plugin> {
@@ -105,30 +129,29 @@ export class PluginLoaderService implements OnModuleInit {
   async reloadPlugins(): Promise<void> {
     this.logger.log('Reloading all plugins...');
 
-    // Destroy existing plugins
-    for (const [pluginName, plugin] of this.loadedPlugins) {
+    // Clean up existing plugins without clearing non-plugin hooks
+    const names = Array.from(this.loadedPlugins.keys());
+    for (const name of names) {
+      await this.cleanupPlugin(name);
+    }
+
+    // Re-load only object-style plugins we know the origin of
+    const origins = names
+      .map((n) => this.pluginOrigins.get(n))
+      .filter((p): p is string => typeof p === 'string' && p.length > 0);
+
+    for (const dir of origins) {
       try {
-        const context = this.pluginContexts.get(pluginName);
-        if (plugin.destroy && context) {
-          await plugin.destroy(context);
-        }
+        await this.loadPlugin(dir);
       } catch (error) {
         this.logger.error(
-          `Failed to destroy plugin ${pluginName}:`,
+          `Failed to reload plugin from ${dir}:`,
           error instanceof Error ? error.stack : String(error),
         );
       }
     }
 
-    // Clear loaded plugins and contexts
-    this.loadedPlugins.clear();
-    this.pluginContexts.clear();
-
-    // Clear hooks (this will remove all registered hooks)
-    this.hookService.clearAll();
-
-    // Load plugins again
-    await this.loadPlugins();
+    this.logger.log(`Successfully reloaded ${String(this.loadedPlugins.size)} plugins`);
   }
 
   async unloadPlugin(pluginName: string): Promise<boolean> {
@@ -137,507 +160,487 @@ export class PluginLoaderService implements OnModuleInit {
       return false;
     }
 
-    try {
-      const context = this.pluginContexts.get(pluginName);
-      if (plugin.destroy && context) {
-        await plugin.destroy(context);
-      }
-    } catch (error) {
-      this.logger.error(
-        `Failed to destroy plugin ${pluginName}:`,
-        error instanceof Error ? error.stack : String(error),
-      );
-    }
-
-    this.loadedPlugins.delete(pluginName);
-    this.pluginContexts.delete(pluginName);
+    await this.cleanupPlugin(pluginName);
     return true;
   }
 
-  private async loadPlugins(): Promise<void> {
-    const pluginDirectories: string[] = [];
-    const pluginsDir = join(process.cwd(), 'plugins');
+  private async cleanupPlugin(pluginName: string): Promise<void> {
+    const plugin = this.loadedPlugins.get(pluginName);
+    const context = this.pluginContexts.get(pluginName);
 
-    // Scan plugins directory
-    try {
-      const localPlugins = await this.scanPluginDirectories(pluginsDir);
-      pluginDirectories.push(...localPlugins);
-      this.logger.log(`Found ${localPlugins.length} local plugins in ${pluginsDir}`);
-    } catch (_error) {
-      this.logger.log(`No local plugins directory found: ${pluginsDir}`);
-    }
-
-    // Scan npm plugins in node_modules
-    try {
-      const nodeModulesDir = join(process.cwd(), 'node_modules');
-      const npmPlugins = await this.scanNpmPlugins(nodeModulesDir);
-      pluginDirectories.push(...npmPlugins);
-      this.logger.log(`Found ${npmPlugins.length} npm plugins in node_modules`);
-    } catch (_error) {
-      this.logger.log('No node_modules directory found or unable to scan npm plugins');
-    }
-
-    // Load each plugin
-    for (const pluginDir of pluginDirectories) {
+    // 1) call destroy if present
+    if (plugin && context && typeof plugin.destroy === 'function') {
       try {
-        await this.loadPlugin(pluginDir);
+        await plugin.destroy(context);
       } catch (error) {
         this.logger.error(
-          `Failed to load plugin from ${pluginDir}:`,
+          `Failed to destroy plugin ${pluginName}:`,
           error instanceof Error ? error.stack : String(error),
         );
       }
     }
 
-    this.logger.log(`Successfully loaded ${this.loadedPlugins.size} plugins`);
-  }
-
-  private async scanPluginDirectories(pluginsDir: string): Promise<string[]> {
-    const plugins: string[] = [];
-
-    try {
-      const entries = await readdir(pluginsDir);
-
-      for (const entry of entries) {
-        const pluginPath = join(pluginsDir, entry);
-        const isDir = (await stat(pluginPath)).isDirectory();
-
-        if (isDir) {
-          const hasManifest = await this.hasPluginManifest(pluginPath);
-          const hasIndex = await this.hasPluginIndex(pluginPath);
-
-          if (hasManifest || hasIndex) {
-            plugins.push(pluginPath);
-          }
-        }
-      }
-    } catch (error) {
-      this.logger.error(
-        `Failed to scan plugin directories in ${pluginsDir}:`,
-        error instanceof Error ? error.stack : String(error),
-      );
-    }
-
-    return plugins;
-  }
-
-  private async scanNpmPlugins(nodeModulesDir: string): Promise<string[]> {
-    const npmPlugins: string[] = [];
-
-    try {
-      const entries = await readdir(nodeModulesDir);
-
-      for (const entry of entries) {
-        // Skip .bin directory and other special directories
-        if (entry.startsWith('.')) continue;
-
-        // Handle scoped packages
-        if (entry.startsWith('@')) {
-          const scopeDir = join(nodeModulesDir, entry);
-          const scopedEntries = await readdir(scopeDir);
-
-          for (const scopedEntry of scopedEntries) {
-            const packagePath = join(scopeDir, scopedEntry);
-            if (await this.isVanBlogPlugin(packagePath)) {
-              npmPlugins.push(packagePath);
-            }
-          }
-        } else {
-          const packagePath = join(nodeModulesDir, entry);
-          if (await this.isVanBlogPlugin(packagePath)) {
-            npmPlugins.push(packagePath);
-          }
-        }
-      }
-    } catch (error) {
-      this.logger.error(
-        `Failed to scan npm plugins in ${nodeModulesDir}:`,
-        error instanceof Error ? error.stack : String(error),
-      );
-    }
-
-    return npmPlugins;
-  }
-
-  private async isVanBlogPlugin(packagePath: string): Promise<boolean> {
-    try {
-      const packageJsonPath = join(packagePath, 'package.json');
-      const packageJsonContent = await readFile(packageJsonPath, 'utf-8');
-      const packageJson = JSON.parse(packageJsonContent) as PackageJson;
-
-      // Check if it's a VanBlog plugin
-      if (Array.isArray(packageJson.keywords)) {
-        if (packageJson.keywords.includes('vanblog-plugin')) return true;
-        if (packageJson.keywords.includes('vanblog')) return true;
-      }
-      if (packageJson.vanblog !== undefined) return true;
-      return false;
-    } catch {
-      return false;
-    }
-  }
-
-  private async hasPluginManifest(pluginDir: string): Promise<boolean> {
-    try {
-      await stat(join(pluginDir, 'plugin.json'));
-      return true;
-    } catch {
-      return false;
-    }
-  }
-
-  private async hasPluginIndex(pluginDir: string): Promise<boolean> {
-    const indexFiles = ['index.mjs', 'index.js', 'index.ts'];
-
-    for (const indexFile of indexFiles) {
+    // 2) remove hook registrations only for this plugin
+    const regs = this.pluginHookRegistrations.get(pluginName) ?? [];
+    for (const r of regs) {
       try {
-        await stat(join(pluginDir, indexFile));
-        return true;
-      } catch {
-        // Continue to next file
+        if (r.type === 'action') {
+          this.hookService.removeAction(r.hookName, r.id);
+        } else {
+          this.hookService.removeFilter(r.hookName, r.id);
+        }
+      } catch (error) {
+        this.logger.error(
+          `Failed to remove ${r.type} for hook '${r.hookName}' of plugin ${pluginName}:`,
+          error instanceof Error ? error.stack : String(error),
+        );
       }
     }
-    return false;
+
+    // 3) clear registries
+    this.pluginHookRegistrations.delete(pluginName);
+    this.loadedPlugins.delete(pluginName);
+    this.pluginContexts.delete(pluginName);
+    // keep origin for potential reload
   }
+
+  // removed unused isVanBlogPlugin
 
   private getServerVersion(): string {
-    return '2.0.0'; // This should come from package.json or environment
+    // In real scenario, read from package.json or env
+    return '2.1.3';
   }
 
   private parseVersion(v: string): [number, number, number] {
-    const parts = v.split('.').map(Number);
-    return [parts[0] ?? 0, parts[1] ?? 0, parts[2] ?? 0];
+    const nums = v.split('.').map((x) => Number.parseInt(x, 10));
+    const a = Number.isFinite(nums[0]) ? nums[0] : 0;
+    const b = Number.isFinite(nums[1]) ? nums[1] : 0;
+    const c = Number.isFinite(nums[2]) ? nums[2] : 0;
+    return [a, b, c];
   }
 
   private cmp(a: [number, number, number], b: [number, number, number]): number {
-    for (let i = 0; i < 3; i++) {
-      if (a[i] !== b[i]) return a[i] - b[i];
-    }
-    return 0;
+    if (a[0] !== b[0]) return a[0] - b[0];
+    if (a[1] !== b[1]) return a[1] - b[1];
+    return a[2] - b[2];
   }
 
   private satisfiesVanblogEngine(range: string, version: string): boolean {
-    const trimmed = range.trim();
     const v = this.parseVersion(version);
 
-    // ^2.0.0 => >=2.0.0 <3.0.0
-    const caret = trimmed.match(/^\^(\d+)\.(\d+)\.(\d+)$/);
-    if (caret) {
-      const low: [number, number, number] = [Number(caret[1]), Number(caret[2]), Number(caret[3])];
-      const high: [number, number, number] = [low[0] + 1, 0, 0];
-      return this.cmp(v, low) >= 0 && this.cmp(v, high) < 0;
+    // caret ^x.y.z => >=x.y.z <(x+1).0.0
+    if (range.startsWith('^')) {
+      const base = this.parseVersion(range.slice(1));
+      const upper: [number, number, number] = [base[0] + 1, 0, 0];
+      return this.cmp(v, base) >= 0 && this.cmp(v, upper) < 0;
     }
 
-    // ~2.1.3 => >=2.1.3 <2.2.0
-    const tilde = trimmed.match(/^~(\d+)\.(\d+)\.(\d+)$/);
-    if (tilde) {
-      const low: [number, number, number] = [Number(tilde[1]), Number(tilde[2]), Number(tilde[3])];
-      const high: [number, number, number] = [low[0], low[1] + 1, 0];
-      return this.cmp(v, low) >= 0 && this.cmp(v, high) < 0;
+    // tilde ~x.y.z => >=x.y.z <x.(y+1).0
+    if (range.startsWith('~')) {
+      const base = this.parseVersion(range.slice(1));
+      const upper: [number, number, number] = [base[0], base[1] + 1, 0];
+      return this.cmp(v, base) >= 0 && this.cmp(v, upper) < 0;
     }
 
-    // >=2.0.0, >2.0.0, <=, <
-    const comp = trimmed.match(/^(>=|>|<=|<)\s*(\d+)\.(\d+)\.(\d+)$/);
-    if (comp) {
-      const op = comp[1] as '>=' | '>' | '<=' | '<';
-      const target: [number, number, number] = [Number(comp[2]), Number(comp[3]), Number(comp[4])];
-      const c = this.cmp(v, target);
-      if (op === '>=') return c >= 0;
-      if (op === '>') return c > 0;
-      if (op === '<=') return c <= 0;
-      return c < 0;
+    // comparison operators
+    const m = range.match(/^(>=|<=|>|<)\s*(\d+(?:\.\d+){0,2})$/);
+    if (m) {
+      const [, op, verStr] = m;
+      const base = this.parseVersion(verStr);
+      switch (op) {
+        case '>=':
+          return this.cmp(v, base) >= 0;
+        case '>':
+          return this.cmp(v, base) > 0;
+        case '<=':
+          return this.cmp(v, base) <= 0;
+        case '<':
+          return this.cmp(v, base) < 0;
+        default:
+          return true;
+      }
     }
 
-    // Exact 2.0.0
-    const exact = trimmed.match(/^(\d+)\.(\d+)\.(\d+)$/);
-    if (exact) {
-      const target: [number, number, number] = [
-        Number(exact[1]),
-        Number(exact[2]),
-        Number(exact[3]),
-      ];
-      return this.cmp(v, target) === 0;
+    // exact version or major/minor patterns (numeric only)
+    const parts = range.split('.');
+    const isNumeric = (s: string): boolean => /^\d+$/.test(s);
+
+    if (parts.length === 1) {
+      if (isNumeric(parts[0])) {
+        // '2' => 2.x.x
+        const base = this.parseVersion(`${parts[0]}.0.0`);
+        const upper: [number, number, number] = [base[0] + 1, 0, 0];
+        return this.cmp(v, base) >= 0 && this.cmp(v, upper) < 0;
+      }
+      this.logger.warn(`Unknown Version Range pattern: '${range}', allowing by default.`);
+      return true;
     }
 
-    // Fallbacks for simple forms
-    // '2' => match major only
-    if (/^\d+$/.test(trimmed)) {
-      const maj = Number(trimmed);
-      return v[0] === maj;
+    if (parts.length === 2) {
+      if (isNumeric(parts[0]) && isNumeric(parts[1])) {
+        // '2.1' => 2.1.x
+        const base = this.parseVersion(`${parts[0]}.${parts[1]}.0`);
+        const upper: [number, number, number] = [base[0], base[1] + 1, 0];
+        return this.cmp(v, base) >= 0 && this.cmp(v, upper) < 0;
+      }
+      this.logger.warn(`Unknown Version Range pattern: '${range}', allowing by default.`);
+      return true;
     }
 
-    // '2.1' => match major.minor
-    if (/^\d+\.\d+$/.test(trimmed)) {
-      const [majStr, minStr] = trimmed.split('.');
-      const maj = Number(majStr);
-      const min = Number(minStr);
-      return v[0] === maj && v[1] === min;
+    if (parts.length === 3) {
+      if (isNumeric(parts[0]) && isNumeric(parts[1]) && isNumeric(parts[2])) {
+        const base = this.parseVersion(range);
+        return this.cmp(v, base) === 0;
+      }
+      this.logger.warn(`Unknown Version Range pattern: '${range}', allowing by default.`);
+      return true;
     }
 
-    // Unknown pattern: be permissive (do not block)
-    this.logger.warn(`Unknown engines.vanblog range pattern: "${trimmed}", allowing by default`);
+    // unknown patterns: be permissive but warn
+    this.logger.warn(`Unknown Version Range pattern: '${range}', allowing by default.`);
     return true;
-  }
-
-  private async loadPlugin(pluginDir: string): Promise<void> {
-    const manifest = await this.loadPluginManifest(pluginDir);
-
-    // Read package.json for engines, main, name, version and vanblog metadata
-    const pkg = await this.readPackageJson(pluginDir);
-
-    // Enforce engines.vanblog if provided
-    const required = pkg?.engines?.vanblog;
-    if (typeof required === 'string' && required !== '') {
-      const serverVersion = this.getServerVersion();
-      if (!this.satisfiesVanblogEngine(required, serverVersion)) {
-        this.logger.warn(
-          `Skip loading plugin in ${pluginDir} due to engines.vanblog (required: ${required}, server: ${serverVersion})`,
-        );
-        return;
-      }
-    }
-
-    // Install dependencies if needed
-    await this.installPluginDependencies(pluginDir, manifest);
-
-    const plugin = await this.loadPluginModule(pluginDir, manifest, pkg);
-
-    if (!plugin) {
-      throw new Error('Plugin module did not export a valid plugin object');
-    }
-
-    // Merge metadata with fallback from package.json (plugin export may omit them)
-    const pluginData: PartialPlugin = { ...plugin };
-
-    const finalName =
-      (typeof pluginData.name === 'string' && pluginData.name !== ''
-        ? pluginData.name
-        : undefined) ?? (typeof pkg?.name === 'string' && pkg.name !== '' ? pkg.name : undefined);
-
-    const finalVersion =
-      (typeof pluginData.version === 'string' && pluginData.version !== ''
-        ? pluginData.version
-        : undefined) ??
-      (typeof pkg?.version === 'string' && pkg.version !== '' ? pkg.version : undefined);
-
-    // Prefer package.json.vanblog.description over npm description
-    const finalDescription =
-      (typeof pluginData.description === 'string' && pluginData.description !== ''
-        ? pluginData.description
-        : undefined) ??
-      (typeof pkg?.vanblog?.description === 'string' && pkg.vanblog.description !== ''
-        ? pkg.vanblog.description
-        : undefined) ??
-      (typeof pkg?.description === 'string' && pkg.description !== ''
-        ? pkg.description
-        : undefined);
-
-    if (!finalName || !finalVersion) {
-      throw new Error(
-        `Plugin in ${pluginDir} must export name/version or specify them in package.json`,
-      );
-    }
-
-    const finalPlugin: Plugin = {
-      ...pluginData,
-      id: pluginData.id ?? finalName,
-      name: finalName,
-      version: finalVersion,
-      ...(finalDescription ? { description: finalDescription } : {}),
-    };
-
-    // Create plugin context
-    const context = this.pluginContextFactory.createContext(finalPlugin.name);
-    this.pluginContexts.set(finalPlugin.name, context);
-
-    // Initialize plugin with timeout and error isolation
-    if (finalPlugin.init) {
-      await this.safeExecuteWithTimeout(
-        async () => finalPlugin.init?.(context),
-        60000, // 60s timeout for init
-        `Plugin ${finalPlugin.name} initialization`,
-      );
-    }
-
-    // Register plugin hooks (must come from code, not JSON)
-    if (finalPlugin.hooks) {
-      for (const [hookName, hookConfig] of Object.entries(finalPlugin.hooks)) {
-        if (hookConfig.type === 'action') {
-          const original = hookConfig.handler;
-          const wrapped: ActionCallback = async (...args: unknown[]) => {
-            // 将 plugin context 作为最后一个参数传递给回调
-            await original(...args, context);
-          };
-          this.hookService.addAction(hookName, wrapped, hookConfig.priority ?? 10);
-        } else {
-          const original = hookConfig.handler;
-          const wrapped: FilterCallback = async (value: unknown, ...args: unknown[]) => {
-            // 将 plugin context 作为最后一个参数传递给过滤器回调
-            return await original(value, ...args, context);
-          };
-          this.hookService.addFilter(hookName, wrapped, hookConfig.priority ?? 10);
-        }
-      }
-    }
-
-    this.loadedPlugins.set(finalPlugin.name, finalPlugin);
-    this.logger.log(`Successfully loaded plugin: ${finalPlugin.name} v${finalPlugin.version}`);
-  }
-
-  private async loadPluginManifest(pluginDir: string): Promise<PluginManifest | null> {
-    try {
-      const manifestPath = join(pluginDir, 'plugin.json');
-      const manifestContent = await readFile(manifestPath, 'utf-8');
-      return JSON.parse(manifestContent) as PluginManifest;
-    } catch {
-      return null;
-    }
-  }
-
-  private async readPackageJson(pluginDir: string): Promise<PackageJson | null> {
-    try {
-      const packageJsonPath = join(pluginDir, 'package.json');
-      const packageJsonContent = await readFile(packageJsonPath, 'utf-8');
-      return JSON.parse(packageJsonContent) as PackageJson;
-    } catch {
-      return null;
-    }
-  }
-
-  private async loadPluginModule(
-    pluginDir: string,
-    manifest: PluginManifest | null,
-    pkg: PackageJson | null,
-  ): Promise<PartialPlugin | null> {
-    const indexFiles = ['index.mjs', 'index.js', 'index.ts'];
-    const mainFile = pkg?.main ?? manifest?.main;
-
-    // Try main file from package.json (preferred) then manifest
-    if (typeof mainFile === 'string' && mainFile !== '') {
-      try {
-        const mainPath = join(pluginDir, mainFile);
-        const moduleUrl = pathToFileURL(mainPath).href;
-        const pluginModule = (await import(/* @vite-ignore */ moduleUrl)) as {
-          [key: string]: unknown;
-          default?: PartialPlugin;
-        };
-        return (pluginModule.default ?? (pluginModule as unknown)) as PartialPlugin;
-      } catch (loadError) {
-        this.logger.warn(
-          `Failed to load main file ${mainFile}, trying index files:`,
-          String(loadError),
-        );
-      }
-    }
-
-    // Try index files
-    for (const indexFile of indexFiles) {
-      try {
-        const indexPath = join(pluginDir, indexFile);
-        await stat(indexPath);
-        const moduleUrl = pathToFileURL(indexPath).href;
-        const pluginModule = (await import(/* @vite-ignore */ moduleUrl)) as {
-          [key: string]: unknown;
-          default?: PartialPlugin;
-        };
-        return (pluginModule.default ?? (pluginModule as unknown)) as PartialPlugin;
-      } catch {
-        // Continue to next file
-      }
-    }
-
-    return null;
-  }
-
-  private async installPluginDependencies(
-    pluginDir: string,
-    _manifest: PluginManifest | null,
-  ): Promise<void> {
-    // Check if plugin has package.json with dependencies
-    const packageJsonPath = join(pluginDir, 'package.json');
-    try {
-      await stat(packageJsonPath);
-      const packageJsonContent = await readFile(packageJsonPath, 'utf-8');
-      const packageJson = JSON.parse(packageJsonContent) as PackageJson & {
-        dependencies?: Record<string, string>;
-        devDependencies?: Record<string, string>;
-      };
-
-      const depsCount = Object.keys(packageJson.dependencies ?? {}).length;
-      const devDepsCount = Object.keys(packageJson.devDependencies ?? {}).length;
-      const hasDependencies = depsCount + devDepsCount > 0;
-
-      if (hasDependencies) {
-        const nodeModulesPath = join(pluginDir, 'node_modules');
-        try {
-          await stat(nodeModulesPath);
-          this.logger.log(`Dependencies already installed for plugin in ${pluginDir}`);
-        } catch {
-          this.logger.log(`Installing dependencies for plugin in ${pluginDir}`);
-          await this.runPnpmInstall(pluginDir);
-        }
-      }
-    } catch {
-      // No package.json or no dependencies, skip installation
-    }
-  }
-
-  private async runPnpmInstall(pluginDir: string): Promise<void> {
-    return new Promise((resolve, reject) => {
-      const child = spawn('pnpm', ['install'], {
-        cwd: pluginDir,
-        stdio: ['ignore', 'pipe', 'pipe'],
-      });
-
-      let stdout = '';
-      let stderr = '';
-
-      child.stdout.on('data', (data: Buffer) => {
-        stdout += data.toString();
-      });
-
-      child.stderr.on('data', (data: Buffer) => {
-        stderr += data.toString();
-      });
-
-      child.on('close', (code) => {
-        if (code === 0) {
-          this.logger.log(`Dependencies installed successfully in ${pluginDir}`);
-          resolve();
-        } else {
-          this.logger.error(
-            `Failed to install dependencies in ${pluginDir}. Exit code: ${code}\nStdout: ${stdout}\nStderr: ${stderr}`,
-          );
-          reject(new Error(`pnpm install failed with exit code ${code}`));
-        }
-      });
-
-      child.on('error', (error) => {
-        this.logger.error(`Failed to spawn pnpm install process: ${error.message}`);
-        reject(error);
-      });
-    });
   }
 
   private async safeExecuteWithTimeout<T>(
     fn: () => Promise<T> | T,
     timeoutMs: number,
-    operation: string,
-  ): Promise<T> {
-    return new Promise<T>((resolve, reject) => {
-      const timer = setTimeout(() => {
-        reject(new Error(`${operation} timed out after ${timeoutMs}ms`));
-      }, timeoutMs);
+    label: string,
+  ): Promise<T | undefined> {
+    let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
+    try {
+      const timeoutPromise = new Promise<undefined>((resolve) => {
+        timeoutHandle = setTimeout(() => {
+          resolve(undefined);
+        }, timeoutMs);
+      });
 
-      Promise.resolve(fn())
-        .then((result) => {
-          clearTimeout(timer);
-          resolve(result);
-        })
-        .catch((error: unknown) => {
-          clearTimeout(timer);
-          reject(error instanceof Error ? error : new Error(String(error)));
-        });
+      const result = (await Promise.race([Promise.resolve(fn()), timeoutPromise])) as T | undefined;
+      if (result === undefined) {
+        this.logger.warn(`${label} timed out after ${String(timeoutMs)}ms`);
+      }
+      return result;
+    } finally {
+      if (timeoutHandle) clearTimeout(timeoutHandle);
+    }
+  }
+
+  private installPluginDependencies(_pluginDir: string, manifest: PluginManifest | null): void {
+    // We do not auto-install here to avoid side-effects in server process.
+    // Leave a hook or CLI to handle it.
+    if (!manifest?.dependencies || manifest.dependencies.length === 0) return;
+    this.logger.warn(
+      `Plugin '${manifest.name}' declares dependencies: ${manifest.dependencies.join(', ')} (skipped auto-install)`,
+    );
+  }
+
+  private async loadPlugin(pluginDir: string): Promise<void> {
+    const manifest = await this.loadPluginManifest(pluginDir);
+    if (!manifest) return;
+
+    const serverVersion = this.getServerVersion();
+    const vanRange = (manifest as unknown as PackageJson).engines?.vanblog;
+    if (typeof vanRange === 'string' && !this.satisfiesVanblogEngine(vanRange, serverVersion)) {
+      this.logger.warn(
+        `Plugin '${manifest.name}' requires vanblog engine '${vanRange}', current '${serverVersion}', skipping`,
+      );
+      return;
+    }
+
+    this.installPluginDependencies(pluginDir, manifest);
+
+    const exp = await resolveObjectPluginExport(pluginDir);
+    if (exp == null || typeof exp !== 'object') {
+      this.logger.warn(`Plugin '${manifest.name}' has no valid export, skipping`);
+      return;
+    }
+
+    const plugin = exp as PartialPlugin;
+
+    plugin.name ??= manifest.name;
+    plugin.version ??= manifest.version;
+    plugin.description ??= manifest.description;
+
+    const { name, version } = plugin;
+    if (
+      typeof name !== 'string' ||
+      name.length === 0 ||
+      typeof version !== 'string' ||
+      version.length === 0
+    ) {
+      this.logger.warn(`Plugin at ${pluginDir} missing name/version, skipping`);
+      return;
+    }
+
+    const context = this.pluginContextFactory.createContext(plugin.name);
+
+    // Register hooks and keep ids for targeted unload
+    const registrations: Array<{ type: 'action' | 'filter'; hookName: string; id: string }> = [];
+    if (plugin.hooks) {
+      for (const [hookName, hookConfig] of Object.entries(plugin.hooks)) {
+        if (hookConfig.type === 'action') {
+          const original = hookConfig.handler;
+          const wrapped: ActionCallback = async (...args: unknown[]) => {
+            await original(...args, context);
+          };
+          const id = this.hookService.addAction(hookName, wrapped, hookConfig.priority ?? 10);
+          registrations.push({ type: 'action', hookName, id });
+        } else {
+          const original = hookConfig.handler;
+          const wrapped: FilterCallback = async (value: unknown, ...args: unknown[]) => {
+            return await original(value, ...args, context);
+          };
+          const id = this.hookService.addFilter(hookName, wrapped, hookConfig.priority ?? 10);
+          registrations.push({ type: 'filter', hookName, id });
+        }
+      }
+    }
+
+    if (typeof plugin.init === 'function') {
+      try {
+        await this.safeExecuteWithTimeout(
+          async () => plugin.init?.(context),
+          10_000,
+          'plugin.init',
+        );
+      } catch (error) {
+        this.logger.error(
+          `Failed to init plugin '${plugin.name}':`,
+          error instanceof Error ? error.stack : String(error),
+        );
+      }
+    }
+
+    const full: Plugin = {
+      ...(plugin as Plugin),
+    };
+    this.loadedPlugins.set(full.name, full);
+    this.pluginContexts.set(full.name, context);
+    this.pluginHookRegistrations.set(full.name, registrations);
+    this.pluginOrigins.set(full.name, pluginDir);
+
+    this.logger.log(`Loaded plugin '${full.name}@${full.version}'`);
+  }
+
+  private async loadPluginManifest(pluginDir: string): Promise<PluginManifest | null> {
+    try {
+      // Prefer plugin.json if exists
+      const mfPath = join(pluginDir, 'plugin.json');
+      const mfContent = await readFile(mfPath, 'utf-8');
+      const mf = JSON.parse(mfContent) as PluginManifest;
+      if (typeof mf.name !== 'string' || mf.name.length === 0)
+        throw new Error('plugin.json must specify name');
+      if (typeof mf.version !== 'string' || mf.version.length === 0)
+        throw new Error('plugin.json must specify version');
+
+      // optional hooks meta in manifest only provides priorities/types; handlers are in code
+      return mf;
+    } catch {
+      // fallback to package.json
+      try {
+        const pkg = await this.readPackageJson(pluginDir);
+        if (!pkg || (!pkg.name && !pkg.version)) return null;
+        const mf: PluginManifest = {
+          name: pkg.name ?? 'plugin',
+          version: pkg.version ?? '0.0.0',
+          description: pkg.description,
+        };
+        return mf;
+      } catch (error) {
+        this.logger.error(
+          `Failed to read manifest at ${pluginDir}:`,
+          error instanceof Error ? error.stack : String(error),
+        );
+        return null;
+      }
+    }
+  }
+
+  private async readPackageJson(pluginDir: string): Promise<PackageJson | null> {
+    try {
+      const pkgPath = join(pluginDir, 'package.json');
+      const content = await readFile(pkgPath, 'utf-8');
+      const pkg = JSON.parse(content) as PackageJson;
+      return pkg;
+    } catch {
+      return null;
+    }
+  }
+}
+
+// ---- 以下为合并自 services/loader.service.ts 的对象插件适配与发现逻辑 ----
+
+// 仅用于对象插件适配的本地接口
+interface PluginLike {
+  id?: string;
+  name?: string;
+  version?: string;
+  description?: string;
+  hooks?: {
+    [hookName: string]:
+      | { type: 'action'; priority?: number; handler: ActionCallback }
+      | { type: 'filter'; priority?: number; handler: FilterCallback };
+  };
+  init?(context: PluginContext): Promise<void> | void;
+}
+
+@Injectable()
+class PluginObjectAdapter implements OnModuleInit {
+  constructor(
+    @Inject('PLUGIN_DIR') private readonly pluginDir: string,
+    private readonly hookService: HookService,
+    private readonly pluginContextFactory: PluginContextFactory,
+    private readonly loaderService: PluginLoaderService,
+  ) {}
+
+  async onModuleInit(): Promise<void> {
+    const exp = await resolveObjectPluginExport(this.pluginDir);
+    if (exp == null) return;
+
+    // try read package.json for metadata fallback
+    let name: string | undefined;
+    let version: string | undefined;
+    let description: string | undefined;
+    try {
+      const pkgPath = join(this.pluginDir, 'package.json');
+      const pkgContent = await readFile(pkgPath, 'utf-8');
+      const pkg = JSON.parse(pkgContent) as {
+        name?: string;
+        version?: string;
+        description?: string;
+      };
+      name = pkg.name ?? name;
+      version = pkg.version ?? version;
+      description = pkg.description ?? description;
+    } catch {
+      /* noop: optional package.json */
+    }
+
+    const plugin = exp as PluginLike;
+    const finalName = plugin.name ?? name ?? this.pluginDir.split('/').pop() ?? 'plugin';
+    const finalVersion = plugin.version ?? version ?? '0.0.0';
+    const finalDescription = plugin.description ?? description;
+
+    const context = this.pluginContextFactory.createContext(finalName);
+
+    // register hooks and capture registration ids
+    const registrations: Array<{ type: 'action' | 'filter'; hookName: string; id: string }> = [];
+    if (plugin.hooks) {
+      for (const [hookName, hookConfig] of Object.entries(plugin.hooks)) {
+        if (hookConfig.type === 'action') {
+          const original = hookConfig.handler;
+          const wrapped: ActionCallback = async (...args: unknown[]) => {
+            await original(...args, context);
+          };
+          const id = this.hookService.addAction(hookName, wrapped, hookConfig.priority ?? 10);
+          registrations.push({ type: 'action', hookName, id });
+        } else {
+          const original = hookConfig.handler;
+          const wrapped: FilterCallback = async (value: unknown, ...args: unknown[]) => {
+            return await original(value, ...args, context);
+          };
+          const id = this.hookService.addFilter(hookName, wrapped, hookConfig.priority ?? 10);
+          registrations.push({ type: 'filter', hookName, id });
+        }
+      }
+    }
+
+    if (typeof plugin.init === 'function') {
+      try {
+        await Promise.resolve(plugin.init(context));
+      } catch {
+        /* noop: isolate plugin init failure */
+      }
+    }
+
+    // sync to loader service for API visibility
+    const registered: Plugin = {
+      id: finalName,
+      name: finalName,
+      version: finalVersion,
+      ...(finalDescription ? { description: finalDescription } : {}),
+      hooks: plugin.hooks,
+    } as Plugin;
+
+    this.loaderService.registerExternalPlugin(registered, context, {
+      pluginDir: this.pluginDir,
+      hooks: registrations,
     });
   }
+}
+
+@Module({
+  providers: [PluginObjectAdapter],
+})
+class PluginObjectAdapterModule {}
+
+function createPluginObjectAdapterModule(pluginDir: string): DynamicModule {
+  return {
+    module: PluginObjectAdapterModule,
+    providers: [{ provide: 'PLUGIN_DIR', useValue: pluginDir }, PluginObjectAdapter],
+  };
+}
+
+export async function discoverNestDynamicModules(
+  pluginsDir?: string,
+  logger?: Logger,
+): Promise<DynamicModule[]> {
+  const dir = pluginsDir ?? join(process.cwd(), 'plugins');
+  const { loadNestDynamicModules, hasNestModule } = await import('../utils/module-loader.util');
+  const nestModules = await loadNestDynamicModules(dir, logger);
+
+  const wrapped: DynamicModule[] = [];
+  try {
+    const entries = await readdir(dir, { withFileTypes: true });
+    for (const entry of entries) {
+      if (!entry.isDirectory() || entry.name === 'node_modules') continue;
+      const pluginPath = join(dir, entry.name);
+      try {
+        if (await hasNestModule(pluginPath)) continue;
+
+        // Heuristic: index.* or {package.json|plugin.json}.main
+        let mayBeObject = false;
+        const idx = ['index.ts', 'index.js', 'index.mjs'];
+        for (const f of idx) {
+          try {
+            await stat(join(pluginPath, f));
+            mayBeObject = true;
+            break;
+          } catch {
+            /* noop: index not exists */
+          }
+        }
+        if (!mayBeObject) {
+          try {
+            const pkgPath = join(pluginPath, 'package.json');
+            const pkgContent = await readFile(pkgPath, 'utf-8');
+            const pkg = JSON.parse(pkgContent) as { main?: string };
+            if (typeof pkg.main === 'string' && pkg.main.length > 0) mayBeObject = true;
+          } catch {
+            /* noop: optional package.json */
+          }
+          if (!mayBeObject) {
+            try {
+              const mfPath = join(pluginPath, 'plugin.json');
+              const mfContent = await readFile(mfPath, 'utf-8');
+              const mf = JSON.parse(mfContent) as { main?: string };
+              if (typeof mf.main === 'string' && mf.main.length > 0) mayBeObject = true;
+            } catch {
+              /* noop: optional plugin.json */
+            }
+          }
+        }
+
+        if (mayBeObject) {
+          wrapped.push(createPluginObjectAdapterModule(pluginPath));
+          logger?.log(`Wrapping plugin object as DynamicModule: ${entry.name}`);
+        }
+      } catch {
+        /* noop: isolate one plugin failure */
+      }
+    }
+  } catch {
+    /* noop: no plugins directory */
+  }
+
+  return [...nestModules, ...wrapped];
 }
