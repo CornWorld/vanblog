@@ -14,11 +14,13 @@ const tagTest = test.extend<{
   statisticsService: StatisticsService;
   queryOptimizerService: QueryOptimizerService;
 }>({
-  statisticsService: async (_ctx, use) => {
+  /* eslint-disable-next-line no-empty-pattern */
+  statisticsService: async ({}, use) => {
     const mockService = {} as any;
     await use(mockService);
   },
-  queryOptimizerService: async (_ctx, use) => {
+  /* eslint-disable-next-line no-empty-pattern */
+  queryOptimizerService: async ({}, use) => {
     const mockService = {
       withPerformanceMonitoring: vi.fn().mockImplementation(async (_name, fn) => await fn()),
       batchCountArticlesByTags: vi.fn().mockResolvedValue(new Map()),

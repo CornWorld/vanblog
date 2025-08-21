@@ -16,11 +16,13 @@ interface TagTestContext {
 }
 
 const tagTest = test.extend<TagTestContext>({
-  statisticsService: async (_ctx, use) => {
+  /* eslint-disable-next-line no-empty-pattern */
+  statisticsService: async ({}, use) => {
     const mockService = {} as any;
     await use(mockService);
   },
-  queryOptimizerService: async (_ctx, use) => {
+  /* eslint-disable-next-line no-empty-pattern */
+  queryOptimizerService: async ({}, use) => {
     const mockService = {
       withPerformanceMonitoring: vi.fn().mockImplementation(async (_name, fn) => await fn()),
       batchCountArticlesByTags: vi.fn().mockResolvedValue(new Map()),
@@ -30,7 +32,8 @@ const tagTest = test.extend<TagTestContext>({
     } as any;
     await use(mockService);
   },
-  hookService: async (_ctx, use) => {
+  /* eslint-disable-next-line no-empty-pattern */
+  hookService: async ({}, use) => {
     const mockService = {
       addAction: vi.fn(),
       addFilter: vi.fn(),
