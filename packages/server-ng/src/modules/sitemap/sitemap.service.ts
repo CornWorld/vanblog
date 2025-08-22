@@ -6,12 +6,10 @@ import { ConfigService } from '@nestjs/config';
 import { eq, and } from 'drizzle-orm';
 import { SitemapStream, streamToPromise } from 'sitemap';
 
-import { DATABASE_CONNECTION } from '../../database';
+import { DATABASE_CONNECTION, type Database } from '../../database';
 import { articles, categories, tags, siteMeta } from '../../database/schema';
 import { safeParseJson, dataSchemas } from '../../shared/zod';
 import { HookService } from '../plugin/services/hook.service';
-
-import type { Database } from '../../database/connection';
 
 @Injectable()
 export class SitemapService {

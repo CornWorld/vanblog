@@ -2,7 +2,7 @@ import { NotFoundException } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { vi, describe, beforeEach, it, expect } from 'vitest';
 
-import { DATABASE_CONNECTION } from '../../database/database.module';
+import { DATABASE_CONNECTION } from '../../database';
 
 import { DraftVersionService } from './draft-version.service';
 

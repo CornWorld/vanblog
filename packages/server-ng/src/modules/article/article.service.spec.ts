@@ -4,7 +4,7 @@ import { describe, beforeEach, it, expect, vi } from 'vitest';
 
 import { MockUtils, type DatabaseMockBuilder } from '../../../test/mock-utils';
 import { ConfigService } from '../../config/config.service';
-import { DATABASE_CONNECTION } from '../../database/database.module';
+import { DATABASE_CONNECTION } from '../../database';
 import { QueryOptimizerService } from '../../shared/services/query-optimizer.service';
 import { HookService } from '../plugin/services/hook.service';
 

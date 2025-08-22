@@ -2,7 +2,7 @@ import { Injectable, NotFoundException, Inject } from '@nestjs/common';
 import dayjs from 'dayjs';
 import { eq, sql, like } from 'drizzle-orm';
 
-import { DATABASE_CONNECTION } from '../../database';
+import { DATABASE_CONNECTION, type Database } from '../../database';
 import { tags, articles } from '../../database/schema';
 import { OverallStatisticsDto } from '../../shared/dto/statistics.dto';
 import { QueryOptimizerService } from '../../shared/services/query-optimizer.service';
@@ -11,8 +11,6 @@ import { HookService } from '../plugin/services/hook.service';
 
 import { CreateTagDto, UpdateTagDto, TagListResponseDto } from './dto/tag.dto';
 import { Tag } from './entities/tag.entity';
-
-import type { Database } from '../../database/connection';
 
 @Injectable()
 export class TagService {

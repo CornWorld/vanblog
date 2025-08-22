@@ -1,9 +1,9 @@
 import { createHmac } from 'crypto';
 
 import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
-import { eq, and, desc, gte, lte, count } from 'drizzle-orm';
+import { eq, and, desc, gte, lte, count, like } from 'drizzle-orm';
 
-import { DATABASE_CONNECTION } from '../../../database';
+import { DATABASE_CONNECTION, type Database } from '../../../database';
 import {
   CreateWebhookDto,
   UpdateWebhookDto,
@@ -13,8 +13,6 @@ import {
 import { webhooks, webhookLogs, type Webhook as WebhookEntity } from '../entities/webhook.schema';
 
 import { WebhookRegistryService } from './webhook-registry.service';
-
-import type { Database } from '../../../database/connection';
 
 // Custom Webhook interface with parsed events
 export interface Webhook extends Omit<WebhookEntity, 'events'> {
@@ -78,8 +76,8 @@ export class WebhookService {
     }
 
     if (event) {
-      // Search for event in the JSON array
-      whereConditions.push(eq(webhooks.events, `%"${event}"%`));
+      // Search for event in the JSON array (stored as string)
+      whereConditions.push(like(webhooks.events, `%"${event}"%`));
     }
 
     const whereClause = whereConditions.length > 0 ? and(...whereConditions) : undefined;
@@ -92,7 +90,9 @@ export class WebhookService {
       .limit(limit)
       .offset(offset);
 
-    const total = await this.db.select({ count: webhooks.id }).from(webhooks).where(whereClause);
+    const [totalRow] = await this.db.select({ count: count() }).from(webhooks).where(whereClause);
+
+    const totalCount = Number(totalRow.count);
 
     return {
       data: results.map((webhook) => ({
@@ -102,8 +102,8 @@ export class WebhookService {
       pagination: {
         page,
         limit,
-        total: total.length,
-        totalPages: Math.ceil(total.length / limit),
+        total: totalCount,
+        totalPages: Math.ceil(totalCount / limit),
       },
     };
   }
@@ -216,14 +216,14 @@ export class WebhookService {
     data: Record<string, unknown>,
   ): Promise<Record<string, unknown>> {
     const startTime = Date.now();
-    const payload: WebhookPayload = {
+    const payload: string = JSON.stringify({
       event,
-      timestamp: startTime,
+      timestamp: Date.now(),
       data,
-      source: 'vanblog-server-ng',
-    };
+      source: 'server-ng',
+    });
 
-    const payloadString = JSON.stringify(payload);
+    const payloadString = payload;
     let attempt = 0;
     let lastError: string | null = null;
     let success = false;
@@ -345,7 +345,7 @@ export class WebhookService {
   }
 
   private generateSignature(payload: string, secret: string): string {
-    return `sha256=${createHmac('sha256', secret).update(payload).digest('hex')}`;
+    return createHmac('sha256', secret).update(payload).digest('hex');
   }
 
   async getLogs(query: WebhookLogQueryDto): Promise<Record<string, unknown>> {
@@ -389,7 +389,7 @@ export class WebhookService {
       .from(webhookLogs)
       .where(whereClause);
 
-    const totalCount = totalResult.count;
+    const totalCount = Number(totalResult.count);
 
     return {
       data: results.map((log) => ({
@@ -406,36 +406,45 @@ export class WebhookService {
   }
 
   async getStats(webhookId?: number): Promise<Record<string, number>> {
-    const whereClause = webhookId ? eq(webhookLogs.webhookId, webhookId) : undefined;
+    const baseFilter = webhookId ? eq(webhookLogs.webhookId, webhookId) : undefined;
 
     const [totalLogs] = await this.db
       .select({ count: count() })
       .from(webhookLogs)
-      .where(whereClause);
+      .where(baseFilter);
 
+    const successCond = baseFilter
+      ? and(baseFilter, eq(webhookLogs.status, 'success'))
+      : eq(webhookLogs.status, 'success');
     const [successLogs] = await this.db
       .select({ count: count() })
       .from(webhookLogs)
-      .where(and(whereClause, eq(webhookLogs.status, 'success')));
+      .where(successCond);
 
+    const failedCond = baseFilter
+      ? and(baseFilter, eq(webhookLogs.status, 'failed'))
+      : eq(webhookLogs.status, 'failed');
     const [failedLogs] = await this.db
       .select({ count: count() })
       .from(webhookLogs)
-      .where(and(whereClause, eq(webhookLogs.status, 'failed')));
+      .where(failedCond);
 
+    const timeoutCond = baseFilter
+      ? and(baseFilter, eq(webhookLogs.status, 'timeout'))
+      : eq(webhookLogs.status, 'timeout');
     const [timeoutLogs] = await this.db
       .select({ count: count() })
       .from(webhookLogs)
-      .where(and(whereClause, eq(webhookLogs.status, 'timeout')));
+      .where(timeoutCond);
 
-    const totalCount = totalLogs.count;
-    const successCount = successLogs.count;
+    const totalCount = Number(totalLogs.count);
+    const successCount = Number(successLogs.count);
 
     return {
       total: totalCount,
       success: successCount,
-      failed: failedLogs.count,
-      timeout: timeoutLogs.count,
+      failed: Number(failedLogs.count),
+      timeout: Number(timeoutLogs.count),
       successRate: totalCount > 0 ? successCount / totalCount : 0,
     };
   }

@@ -2,7 +2,7 @@ import { Injectable, Inject, Logger } from '@nestjs/common';
 import { eq, sql } from 'drizzle-orm';
 import { LibSQLDatabase } from 'drizzle-orm/libsql';
 
-import { DATABASE_CONNECTION } from '../../../database/database.module';
+import { DATABASE_CONNECTION } from '../../../database';
 import { siteMeta } from '../../../database/schema';
 import { safeParseJson, dataSchemas } from '../../../shared/zod';
 

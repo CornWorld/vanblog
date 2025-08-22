@@ -4,7 +4,7 @@ import * as bcrypt from 'bcrypt';
 import { vi } from 'vitest';
 
 import { MockUtils } from '../../../test/mock-utils';
-import { DATABASE_CONNECTION } from '../../database/database.module';
+import { DATABASE_CONNECTION } from '../../database';
 import { users } from '../../database/schema';
 import { HookService } from '../plugin/services/hook.service';
 

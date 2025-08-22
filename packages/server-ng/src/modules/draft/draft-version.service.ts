@@ -2,14 +2,12 @@ import { Injectable, NotFoundException, Inject } from '@nestjs/common';
 import dayjs from 'dayjs';
 import { eq, and, desc, sql } from 'drizzle-orm';
 
-import { DATABASE_CONNECTION } from '../../database';
+import { DATABASE_CONNECTION, type Database } from '../../database';
 import { draftVersions, drafts } from '../../database/schema';
 import { selectDraftVersionSchema } from '../../database/zod-schemas';
 import { safeParseJson, dataSchemas } from '../../shared/zod';
 
 import { DraftVersionDto } from './dto/draft.dto';
-
-import type { Database } from '../../database/connection';
 
 @Injectable()
 export class DraftVersionService {

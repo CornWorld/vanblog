@@ -1,7 +1,7 @@
 import { hash } from 'bcrypt';
 import request from 'supertest';
 
-import { DATABASE_CONNECTION } from '../src/database/database.module';
+import { DATABASE_CONNECTION } from '../src/database';
 import { users } from '../src/database/schema';
 
 import type { INestApplication } from '@nestjs/common';

@@ -1,11 +1,9 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { eq } from 'drizzle-orm';
 
-import { DATABASE_CONNECTION } from '../../database';
+import { DATABASE_CONNECTION, type Database } from '../../database';
 import { customPages } from '../../database/schema';
 import { MarkdownService } from '../../shared/services/markdown.service';
-
-import type { Database } from '../../database/connection';
 
 interface CustomPageList {
   name: string;

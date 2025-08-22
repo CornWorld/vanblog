@@ -3,7 +3,7 @@ import { eq, sql } from 'drizzle-orm';
 import { LibSQLDatabase } from 'drizzle-orm/libsql';
 import { z } from 'zod';
 
-import { DATABASE_CONNECTION } from '../../../database/database.module';
+import { DATABASE_CONNECTION } from '../../../database';
 import { siteMeta } from '../../../database/schema';
 import { safeParseJson, dataSchemas, NavigationNode } from '../../../shared/zod';
 import { HookService } from '../../plugin/services/hook.service';

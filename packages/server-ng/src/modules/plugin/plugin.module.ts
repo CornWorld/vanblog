@@ -3,7 +3,7 @@ import { join } from 'path';
 import { Global, Module, DynamicModule, Logger } from '@nestjs/common';
 
 import { LoggerModule } from '../../core/logger/logger.module';
-import { DatabaseModule } from '../../database/database.module';
+import { DatabaseModule } from '../../database';
 import { PermissionModule } from '../permission/permission.module';
 import { SettingModule } from '../setting/setting.module';
 

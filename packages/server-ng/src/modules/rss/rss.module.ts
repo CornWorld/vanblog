@@ -1,6 +1,6 @@
 import { Module, forwardRef } from '@nestjs/common';
 
-import { DatabaseModule } from '../../database/database.module';
+import { DatabaseModule } from '../../database';
 import { ArticleModule } from '../article/article.module';
 import { PermissionModule } from '../permission/permission.module';
 import { PluginModule } from '../plugin/plugin.module';

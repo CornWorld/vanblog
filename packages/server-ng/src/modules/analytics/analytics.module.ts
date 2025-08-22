@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 
-import { DatabaseModule } from '../../database/database.module';
+import { DatabaseModule } from '../../database';
 import { AnalyticsCacheService } from '../../shared/cache/analytics-cache.service';
 import { CacheModule } from '../../shared/cache/cache.module';
 import { PermissionModule } from '../permission/permission.module';

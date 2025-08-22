@@ -3,7 +3,7 @@ import { sql, type SQL } from 'drizzle-orm';
 
 import { CacheService } from '../cache/cache.service';
 
-import type { Database } from '../../database/connection';
+import type { Database } from '../../database';
 
 /**
  * 查询统计信息

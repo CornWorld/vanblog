@@ -6,13 +6,11 @@ import { ConfigService } from '@nestjs/config';
 import { eq, and, desc } from 'drizzle-orm';
 import { Feed } from 'feed';
 
-import { DATABASE_CONNECTION } from '../../database';
+import { DATABASE_CONNECTION, type Database } from '../../database';
 import { articles, siteMeta } from '../../database/schema';
 import { MarkdownService } from '../../shared/services/markdown.service';
 import { safeParseJson, dataSchemas } from '../../shared/zod';
 import { HookService } from '../plugin/services/hook.service';
-
-import type { Database } from '../../database/connection';
 
 @Injectable()
 export class RssService {

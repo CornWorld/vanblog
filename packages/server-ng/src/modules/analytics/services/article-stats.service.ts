@@ -2,7 +2,7 @@ import { Injectable, Inject } from '@nestjs/common';
 import { eq, and, sql, desc } from 'drizzle-orm';
 import { LibSQLDatabase } from 'drizzle-orm/libsql';
 
-import { DATABASE_CONNECTION } from '../../../database/database.module';
+import { DATABASE_CONNECTION } from '../../../database';
 import { analytics, articles } from '../../../database/schema';
 import { AnalyticsType } from '../entities/analytics.entity';
 

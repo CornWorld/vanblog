@@ -4,10 +4,8 @@ import * as path from 'path';
 import { Injectable, Logger, Inject } from '@nestjs/common';
 import { eq, sql } from 'drizzle-orm';
 
-import { DATABASE_CONNECTION } from '../../database/database.module';
+import { DATABASE_CONNECTION, type Database } from '../../database';
 import { siteMeta } from '../../database/schema';
-
-import type { Database } from '../../database/connection';
 
 /**
  * 迁移记录接口
@@ -42,7 +40,7 @@ export class MigrationService {
   private readonly migrations: Migration[] = [];
 
   constructor(
-    @Inject(DATABASE_CONNECTION as string)
+    @Inject(DATABASE_CONNECTION)
     private readonly db: Database,
   ) {
     this.initializeMigrations();

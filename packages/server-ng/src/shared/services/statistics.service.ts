@@ -1,15 +1,13 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { eq, sql, like, and } from 'drizzle-orm';
 
-import { DATABASE_CONNECTION } from '../../database/database.module';
+import { DATABASE_CONNECTION, type Database } from '../../database';
 import { categories, tags, articles } from '../../database/schema';
 import {
   CategoryStatisticsDto,
   TagStatisticsDto,
   OverallStatisticsDto,
 } from '../dto/statistics.dto';
-
-import type { Database } from '../../database/connection';
 
 /**
  * 统计数据服务

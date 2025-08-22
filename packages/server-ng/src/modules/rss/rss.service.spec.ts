@@ -6,6 +6,7 @@ import { ConfigService } from '@nestjs/config';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
+import { DATABASE_CONNECTION } from '../../database';
 import { MarkdownService } from '../../shared/services/markdown.service';
 import { ArticleService } from '../article/article.service';
 import { HookService } from '../plugin/services/hook.service';
@@ -121,7 +122,7 @@ describe('RssService', () => {
           useValue: mockConfigService,
         },
         {
-          provide: 'DATABASE_CONNECTION',
+          provide: DATABASE_CONNECTION,
           useValue: {},
         },
       ],

@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 
-import { DatabaseModule } from '../../database/database.module';
+import { DatabaseModule } from '../../database';
 import { PermissionModule } from '../permission/permission.module';
 
 import { UserController } from './user.controller';

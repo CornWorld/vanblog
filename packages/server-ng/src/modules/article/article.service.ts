@@ -5,7 +5,7 @@ import { eq, and, or, like, desc, asc, sql } from 'drizzle-orm';
 import * as jwt from 'jsonwebtoken';
 
 import { ConfigService } from '../../config/config.service';
-import { DATABASE_CONNECTION } from '../../database';
+import { DATABASE_CONNECTION, type Database } from '../../database';
 import { articles, tags } from '../../database/schema';
 import { QueryOptimizerService } from '../../shared/services/query-optimizer.service';
 import { safeParseJson, dataSchemas } from '../../shared/zod';
@@ -21,8 +21,6 @@ import {
 } from './dto/article.dto';
 import { ArticleAccessResponseDto } from './dto/verify-password.dto';
 import { Article } from './entities/article.entity';
-
-import type { Database } from '../../database/connection';
 
 @Injectable()
 export class ArticleService {

@@ -3,12 +3,10 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import dayjs from 'dayjs';
 import { sql, desc } from 'drizzle-orm';
 
-import { DATABASE_CONNECTION } from '../../database/database.module';
+import { DATABASE_CONNECTION, type Database } from '../../database';
 import { analytics } from '../../database/schema';
 
 import { CacheService } from './cache.service';
-
-import type { Database } from '../../database/connection';
 
 // 类型定义
 interface OverviewData {

@@ -6,7 +6,7 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 
 import { AppModule } from '../src/app.module';
 import { ConfigService } from '../src/config';
-import { DATABASE_CONNECTION } from '../src/database/database.module';
+import { DATABASE_CONNECTION } from '../src/database';
 import { analytics } from '../src/database/schema';
 import { AnalyticsType } from '../src/modules/analytics/entities/analytics.entity';
 

@@ -2,7 +2,7 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import dayjs from 'dayjs';
 import { describe, it, beforeEach, afterEach, expect, vi } from 'vitest';
 
-import { DATABASE_CONNECTION } from '../../database/database.module';
+import { DATABASE_CONNECTION } from '../../database';
 
 import { PermissionService } from './permission.service';
 

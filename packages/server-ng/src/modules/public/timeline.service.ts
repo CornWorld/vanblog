@@ -3,13 +3,11 @@ import dayjs from 'dayjs';
 import { and, desc, eq } from 'drizzle-orm';
 import { z } from 'zod';
 
-import { DATABASE_CONNECTION } from '../../database';
+import { DATABASE_CONNECTION, type Database } from '../../database';
 import { articles } from '../../database/schema';
 import { safeParseJson, dataSchemas } from '../../shared/zod';
 
 import { TimelineArticleSchema } from './dto/timeline.dto';
-
-import type { Database } from '../../database/connection';
 
 // 使用 Zod 推导出 TimelineArticle 的 TS 类型
 export type TimelineArticle = z.infer<typeof TimelineArticleSchema>;

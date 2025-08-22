@@ -4,7 +4,7 @@ import { eq, and, gte, lte, sql, desc } from 'drizzle-orm';
 import { LibSQLDatabase } from 'drizzle-orm/libsql';
 import { UAParser } from 'ua-parser-js';
 
-import { DATABASE_CONNECTION } from '../../../database/database.module';
+import { DATABASE_CONNECTION } from '../../../database';
 import { analytics } from '../../../database/schema';
 import { AnalyticsCacheService } from '../../../shared/cache/analytics-cache.service';
 import { safeParseJson, dataSchemas } from '../../../shared/zod';

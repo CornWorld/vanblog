@@ -2,12 +2,10 @@ import { Injectable, Inject } from '@nestjs/common';
 import dayjs from 'dayjs';
 import { eq, and, gte, lte, desc } from 'drizzle-orm';
 
-import { DATABASE_CONNECTION } from '../../database';
+import { DATABASE_CONNECTION, type Database } from '../../database';
 import { loginLogs } from '../../database/schema';
 
 import { LoginLogDto, LoginLogResponseDto, LoginLogQueryDto } from './dto/login-log.dto';
-
-import type { Database } from '../../database/connection';
 
 @Injectable()
 export class LoginLogService {

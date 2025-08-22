@@ -1,6 +1,7 @@
 import dayjs from 'dayjs';
 import { vi } from 'vitest';
 
+import { DATABASE_CONNECTION } from '../src/database';
 import { StorageProvider } from '../src/modules/media/dto/storage-config.dto';
 
 import type { ConfigService } from '../src/config/config.service';
@@ -478,7 +479,7 @@ export function createTestModuleConfig(options: {
 
   if (options.databaseMock) {
     providers.push({
-      provide: 'DATABASE_CONNECTION',
+      provide: DATABASE_CONNECTION,
       useValue: options.databaseMock.build(),
     });
   }

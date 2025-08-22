@@ -5,6 +5,7 @@ import { ConfigService } from '@nestjs/config';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
+import { DATABASE_CONNECTION } from '../../database';
 import { articles, categories, tags, siteMeta } from '../../database/schema';
 import { HookService } from '../plugin/services/hook.service';
 
@@ -85,7 +86,7 @@ describe('SitemapService', () => {
           useValue: mockHookService,
         },
         {
-          provide: 'DATABASE_CONNECTION',
+          provide: DATABASE_CONNECTION,
           useValue: {}, // 将在后面重新定义
         },
       ],

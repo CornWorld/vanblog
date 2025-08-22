@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { Cron } from '@nestjs/schedule';
 import dayjs from 'dayjs';
 
-import { DATABASE_CONNECTION } from '../../database/database.module';
+import { DATABASE_CONNECTION, type Database } from '../../database';
 import {
   articles,
   drafts,
@@ -14,8 +14,6 @@ import {
   customPages,
   analytics,
 } from '../../database/schema';
-
-import type { Database } from '../../database/connection';
 
 export interface DemoSnapshot {
   timestamp: number;

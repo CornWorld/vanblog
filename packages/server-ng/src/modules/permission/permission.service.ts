@@ -2,7 +2,7 @@ import { Injectable, NotFoundException, Logger, Inject } from '@nestjs/common';
 import dayjs from 'dayjs';
 import { eq, desc, and } from 'drizzle-orm';
 
-import { DATABASE_CONNECTION } from '../../database/database.module';
+import { DATABASE_CONNECTION, type Database } from '../../database';
 import { permissionNodes, permissionGroups } from '../../database/schema';
 
 import {
@@ -17,8 +17,6 @@ import {
   PermissionNodeQueryType,
   PermissionNodeType,
 } from './dto/permission-node.dto';
-
-import type { Database } from '../../database/connection';
 
 export interface PermissionRegistration {
   module: string;

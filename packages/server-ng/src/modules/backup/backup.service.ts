@@ -13,6 +13,7 @@ import {
 } from '@nestjs/common';
 
 import { LoggerService } from '../../core/logger/logger.service';
+import { DATABASE_CONNECTION, type Database } from '../../database';
 import {
   users,
   articles,
@@ -40,8 +41,6 @@ import {
   BackupListDto,
   RestoreProgressDto,
 } from './dto/backup.dto';
-
-import type { Database } from '../../database/connection';
 
 const gzip = promisify(zlib.gzip);
 const gunzip = promisify(zlib.gunzip);
@@ -74,7 +73,7 @@ export class BackupService {
   private readonly restoreTasks = new Map<string, RestoreTask>();
 
   constructor(
-    @Inject('DATABASE_CONNECTION') private readonly db: Database,
+    @Inject(DATABASE_CONNECTION) private readonly db: Database,
     private readonly logger: LoggerService,
   ) {
     void this.ensureBackupDir();

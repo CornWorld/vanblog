@@ -3,7 +3,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 import { QueryOptimizerService } from './query-optimizer.service';
 
-import type { Database } from '../../database/connection';
+import type { Database } from '../../database';
 
 describe('QueryOptimizerService', () => {
   let service: QueryOptimizerService;

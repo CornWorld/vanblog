@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, ConflictException, Inject } from '@nestj
 import * as bcrypt from 'bcrypt';
 import { eq, ne } from 'drizzle-orm';
 
+import { DATABASE_CONNECTION, type Database } from '../../database';
 import { users } from '../../database/schema';
 import { safeParseJson, dataSchemas } from '../../shared/zod';
 import { HookService } from '../plugin/services/hook.service';
@@ -10,12 +11,10 @@ import { CreateUserDto, UserType } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { User } from './entities/user.entity';
 
-import type { Database } from '../../database/connection';
-
 @Injectable()
 export class UserService {
   constructor(
-    @Inject('DATABASE_CONNECTION')
+    @Inject(DATABASE_CONNECTION)
     private readonly db: Database,
     private readonly hookService: HookService,
   ) {}

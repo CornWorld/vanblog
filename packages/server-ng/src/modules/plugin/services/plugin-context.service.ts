@@ -3,10 +3,9 @@ import dayjs from 'dayjs';
 import { and, eq } from 'drizzle-orm';
 
 import { ConfigService } from '../../../config/config.service';
-import { DATABASE_CONNECTION } from '../../../database';
+import { DATABASE_CONNECTION, type Database } from '../../../database';
 import { pluginData } from '../../../database/schema';
 
-import type { Database } from '../../../database/connection';
 import type {
   PluginConfigReader,
   PluginContext,

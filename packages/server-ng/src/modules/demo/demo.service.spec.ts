@@ -2,11 +2,9 @@ import { ConfigService } from '@nestjs/config';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
-import { DATABASE_CONNECTION } from '../../database';
+import { DATABASE_CONNECTION, type Database } from '../../database';
 
 import { DemoService } from './demo.service';
-
-import type { Database } from '../../database/connection';
 
 const mockDatabase = {
   select: vi.fn(),

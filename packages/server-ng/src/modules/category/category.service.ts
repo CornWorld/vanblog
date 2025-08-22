@@ -5,7 +5,7 @@ import { and, eq, sql } from 'drizzle-orm';
 import * as jwt from 'jsonwebtoken';
 
 import { ConfigService } from '../../config/config.service';
-import { DATABASE_CONNECTION } from '../../database';
+import { DATABASE_CONNECTION, type Database } from '../../database';
 import { categories, articles } from '../../database/schema';
 import { OverallStatisticsDto } from '../../shared/dto/statistics.dto';
 import { QueryOptimizerService } from '../../shared/services/query-optimizer.service';
@@ -22,8 +22,6 @@ import {
 } from './dto/category.dto';
 import { CategoryAccessResponseDto } from './dto/verify-password.dto';
 import { Category } from './entities/category.entity';
-
-import type { Database } from '../../database/connection';
 
 @Injectable()
 export class CategoryService {

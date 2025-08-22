@@ -2,7 +2,7 @@ import { Injectable, NotFoundException, Inject } from '@nestjs/common';
 import dayjs from 'dayjs';
 import { eq, and, or, like, desc, asc, sql } from 'drizzle-orm';
 
-import { DATABASE_CONNECTION } from '../../database';
+import { DATABASE_CONNECTION, type Database } from '../../database';
 import { drafts, articles, tags } from '../../database/schema';
 import { safeParseJson, dataSchemas } from '../../shared/zod';
 import { Article } from '../article/entities/article.entity';
@@ -17,9 +17,6 @@ import {
   PublishDraftDto,
   DraftDto,
 } from './dto/draft.dto';
-// import { Draft } from './entities/draft.entity';
-
-import type { Database } from '../../database/connection';
 
 @Injectable()
 export class DraftService {
