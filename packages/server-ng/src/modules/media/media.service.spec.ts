@@ -7,6 +7,7 @@ import { MediaService } from './services/media.service';
 
 import type { StorageService } from './interfaces/storage.interface';
 import type { StorageFactoryService } from './services/storage-factory.service';
+import type { LoggerService } from '../../core/logger/logger.service';
 import type { HookService } from '../plugin/services/hook.service';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 
@@ -22,6 +23,7 @@ describe('MediaService', () => {
   let databaseMock: DatabaseMockBuilder;
   let mockStorageFactoryService: Partial<StorageFactoryService>;
   let mockHookService: Partial<HookService>;
+  let mockLogger: LoggerService;
 
   beforeEach(() => {
     // 使用Mock工具类创建数据库Mock
@@ -40,10 +42,20 @@ describe('MediaService', () => {
       doAction: vi.fn().mockResolvedValue(undefined),
     };
 
+    mockLogger = {
+      log: vi.fn(),
+      info: vi.fn(),
+      error: vi.fn(),
+      warn: vi.fn(),
+      debug: vi.fn(),
+      verbose: vi.fn(),
+    } as unknown as LoggerService;
+
     service = new MediaService(
       databaseMock.build() as unknown as LibSQLDatabase,
       mockStorageFactoryService as StorageFactoryService,
       mockHookService as HookService,
+      mockLogger,
     );
   });
 
@@ -115,16 +127,15 @@ describe('MediaService', () => {
         MockUtils.testData.createMediaFile({ id: 2, filename: 'test2.jpg' }),
       ];
 
-      // 直接 mock db 查询方法
+      // 直接 mock db 查询方法（无过滤条件分支：from -> orderBy -> limit -> offset）
       const mockOffset = vi.fn().mockResolvedValue(mockFiles);
       const mockLimit = vi.fn().mockReturnValue({ offset: mockOffset });
       const mockOrderBy = vi.fn().mockReturnValue({ limit: mockLimit });
-      const mockWhere = vi.fn().mockReturnValue({ orderBy: mockOrderBy });
-      const mockFrom = vi.fn().mockReturnValue({ where: mockWhere });
+      const mockFrom = vi.fn().mockReturnValue({ orderBy: mockOrderBy });
 
-      // Mock count query
-      const mockCountWhere = vi.fn().mockResolvedValue([{ count: 2 }]);
-      const mockCountFrom = vi.fn().mockReturnValue({ where: mockCountWhere });
+      // Mock count query（无过滤条件：from -> get）
+      const mockCountGet = vi.fn().mockResolvedValue({ count: 2 });
+      const mockCountFrom = vi.fn().mockReturnValue({ get: mockCountGet });
 
       service.db.select = vi.fn().mockImplementation((fields) => {
         if (fields != null && typeof fields === 'object' && 'count' in fields) {
@@ -152,15 +163,16 @@ describe('MediaService', () => {
     it('should filter files by keyword', async () => {
       const mockFiles = [MockUtils.testData.createMediaFile({ id: 1, filename: 'test.jpg' })];
 
-      // 直接 mock db 查询方法
+      // 直接 mock db 查询方法（有过滤条件分支：from -> where -> orderBy -> limit -> offset）
       const mockOffset = vi.fn().mockResolvedValue(mockFiles);
       const mockLimit = vi.fn().mockReturnValue({ offset: mockOffset });
       const mockOrderBy = vi.fn().mockReturnValue({ limit: mockLimit });
       const mockWhere = vi.fn().mockReturnValue({ orderBy: mockOrderBy });
       const mockFrom = vi.fn().mockReturnValue({ where: mockWhere });
 
-      // Mock count query
-      const mockCountWhere = vi.fn().mockResolvedValue([{ count: 1 }]);
+      // Mock count query（有过滤条件：from -> where -> get）
+      const mockCountGet = vi.fn().mockResolvedValue({ count: 1 });
+      const mockCountWhere = vi.fn().mockReturnValue({ get: mockCountGet });
       const mockCountFrom = vi.fn().mockReturnValue({ where: mockCountWhere });
 
       service.db.select = vi.fn().mockImplementation((fields) => {
@@ -204,8 +216,8 @@ describe('MediaService', () => {
       };
 
       // 直接 mock db 查询方法
-      const mockLimit = vi.fn().mockResolvedValue([mockFile]);
-      const mockWhere = vi.fn().mockReturnValue({ limit: mockLimit });
+      const mockGet = vi.fn().mockResolvedValue(mockFile);
+      const mockWhere = vi.fn().mockReturnValue({ get: mockGet });
       const mockFrom = vi.fn().mockReturnValue({ where: mockWhere });
       const mockSelect = vi.fn().mockReturnValue({ from: mockFrom });
 
@@ -218,9 +230,9 @@ describe('MediaService', () => {
     });
 
     it('should throw NotFoundException for non-existent file', async () => {
-      // 直接 mock db 查询方法返回空数组
-      const mockLimit = vi.fn().mockResolvedValue([]);
-      const mockWhere = vi.fn().mockReturnValue({ limit: mockLimit });
+      // 直接 mock db 查询方法返回空
+      const mockGet = vi.fn().mockResolvedValue(undefined);
+      const mockWhere = vi.fn().mockReturnValue({ get: mockGet });
       const mockFrom = vi.fn().mockReturnValue({ where: mockWhere });
 
       service.db.select = vi.fn().mockReturnValue({ from: mockFrom });
@@ -239,8 +251,8 @@ describe('MediaService', () => {
       };
 
       // 直接 mock db 查询方法
-      const mockLimit = vi.fn().mockResolvedValue([mockFile]);
-      const mockWhere = vi.fn().mockReturnValue({ limit: mockLimit });
+      const mockGet = vi.fn().mockResolvedValue(mockFile);
+      const mockWhere = vi.fn().mockReturnValue({ get: mockGet });
       const mockFrom = vi.fn().mockReturnValue({ where: mockWhere });
 
       const mockDelete = {
@@ -259,9 +271,9 @@ describe('MediaService', () => {
     });
 
     it('should throw NotFoundException for non-existent file', async () => {
-      // 直接 mock db 查询方法返回空数组
-      const mockLimit = vi.fn().mockResolvedValue([]);
-      const mockWhere = vi.fn().mockReturnValue({ limit: mockLimit });
+      // 直接 mock db 查询方法返回空
+      const mockGet = vi.fn().mockResolvedValue(undefined);
+      const mockWhere = vi.fn().mockReturnValue({ get: mockGet });
       const mockFrom = vi.fn().mockReturnValue({ where: mockWhere });
 
       service.db.select = vi.fn().mockReturnValue({ from: mockFrom });
@@ -325,8 +337,9 @@ describe('MediaService', () => {
         },
       ];
 
-      // 直接 mock db 查询方法
-      const mockFrom = vi.fn().mockResolvedValue(mockFiles);
+      // 直接 mock db 查询方法（包含 orderBy 链）
+      const mockOrderBy = vi.fn().mockResolvedValue(mockFiles);
+      const mockFrom = vi.fn().mockReturnValue({ orderBy: mockOrderBy });
 
       service.db.select = vi.fn().mockReturnValue({ from: mockFrom });
 
@@ -352,6 +365,112 @@ describe('MediaService', () => {
         },
       ]);
       expect(databaseMock.db.select).toHaveBeenCalled();
+    });
+  });
+
+  describe('scanArticleImages', () => {
+    it('should scan article contents, deduplicate URLs and insert missing ones', async () => {
+      // Arrange: two articles with various image URL patterns and duplicates
+      const articlesRows = [
+        {
+          id: 1,
+          content:
+            '![alt](/uploads/img1.png) <img src="https://example.com/pics/pic.jpg"/> background:url(\'/assets/icons/icon.svg\') ![x](data:image/png;base64,xxx)',
+        },
+        {
+          id: 2,
+          content:
+            'Some text and duplicate image ![a](/uploads/img1.png) and css url(/styles/bg.webp?size=small)',
+        },
+      ];
+
+      // Extracted unique URLs expected by implementation (data: should be ignored)
+      const allUnique = new Set<string>([
+        '/uploads/img1.png',
+        'https://example.com/pics/pic.jpg',
+        '/assets/icons/icon.svg',
+        '/styles/bg.webp?size=small',
+      ]);
+
+      // Existing static_files paths (already present): will be excluded from insertion
+      const existingPaths = [
+        { path: 'https://example.com/pics/pic.jpg' },
+        { path: '/assets/icons/icon.svg' },
+      ];
+
+      // Mock db.select behavior
+      const mockFromArticles = vi.fn().mockResolvedValue(articlesRows);
+      const mockWhereStaticFiles = vi.fn().mockResolvedValue(existingPaths);
+      const mockFromStaticFiles = vi.fn().mockReturnValue({ where: mockWhereStaticFiles });
+
+      service.db.select = vi.fn().mockImplementation((fields: Record<string, unknown>) => {
+        if ('content' in fields) {
+          // select articles
+          return { from: mockFromArticles } as any;
+        }
+        if ('path' in fields) {
+          // select existing static files
+          return { from: mockFromStaticFiles } as any;
+        }
+        throw new Error('Unexpected select fields');
+      });
+
+      // Mock db.insert(...).values(...).returning()
+      const mockReturning = vi.fn().mockResolvedValue([]);
+      const mockValues = vi.fn().mockReturnValue({ returning: mockReturning });
+      const mockInsert = vi.fn().mockReturnValue({ values: mockValues });
+      service.db.insert = mockInsert as unknown as typeof service.db.insert;
+
+      // Act
+      const result = await service.scanArticleImages();
+
+      // Assert
+      expect(result.scanned).toBe(allUnique.size);
+      expect(result.added).toBe(2); // only two missing should be inserted
+
+      // Verify values() called with the two missing URLs mapped to records
+      expect(mockInsert).toHaveBeenCalled();
+      expect(mockValues).toHaveBeenCalledTimes(1);
+      const valuesArg = (mockValues as any).mock.calls[0][0] as any[];
+      const cmp = (a: string, b: string): number => a.localeCompare(b);
+      const insertedPaths = valuesArg.map((x: any) => x.path).sort(cmp);
+      expect(insertedPaths).toEqual(['/styles/bg.webp?size=small', '/uploads/img1.png'].sort(cmp));
+
+      // mimeType guess should be consistent with extensions
+      const mimeTypes = Object.fromEntries(valuesArg.map((x: any) => [x.path, x.mimeType]));
+      expect(mimeTypes['/uploads/img1.png']).toBe('image/png');
+      expect(mimeTypes['/styles/bg.webp?size=small']).toBe('image/webp');
+    });
+
+    it('should return zero when no image urls found', async () => {
+      // Arrange: articles without any image urls
+      const articlesRows = [
+        { id: 1, content: 'no images here' },
+        { id: 2, content: 'just text and links http://example.com but no images' },
+      ];
+
+      const mockFromArticles = vi.fn().mockResolvedValue(articlesRows);
+      service.db.select = vi.fn().mockImplementation((fields: Record<string, unknown>) => {
+        if ('content' in fields) {
+          return { from: mockFromArticles } as any;
+        }
+        // In this case, static_files select should never be called
+        const dummyFrom = vi.fn();
+        return { from: dummyFrom } as any;
+      });
+
+      const mockValues = vi.fn();
+      service.db.insert = vi
+        .fn()
+        .mockReturnValue({ values: mockValues }) as unknown as typeof service.db.insert;
+
+      // Act
+      const result = await service.scanArticleImages();
+
+      // Assert
+      expect(result.scanned).toBe(0);
+      expect(result.added).toBe(0);
+      expect(mockValues).not.toHaveBeenCalled();
     });
   });
 });

@@ -11,6 +11,7 @@ const AppConfigSchema = z.object({
   nodeEnv: z.enum(['development', 'production', 'test']),
   apiPrefix: z.string().min(1),
   apiVersion: z.string().min(1),
+  locale: z.string().min(2),
   isProduction: z.boolean(),
   isDevelopment: z.boolean(),
 });

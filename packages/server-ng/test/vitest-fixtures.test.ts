@@ -45,6 +45,9 @@ class DatabaseMockBuilder {
         rightJoin: vi.fn().mockReturnThis(),
         groupBy: vi.fn().mockReturnThis(),
         having: vi.fn().mockReturnThis(),
+        // 新增：显式支持 get/all，兼容 MediaService.listFiles/count/getFileById 的 .get() 调用
+        get: vi.fn().mockResolvedValue(Array.isArray(data) ? data[0] : (undefined as unknown)),
+        all: vi.fn().mockResolvedValue(data),
       };
 
       // Make the chain thenable so it can be awaited directly
@@ -65,10 +68,10 @@ class DatabaseMockBuilder {
             return Promise.resolve(data);
           },
           catch: async () => Promise.resolve(data),
-        };
+        } as unknown as ReturnType<typeof mockChain.from>;
       });
 
-      return mockChain;
+      return mockChain as unknown as Record<string, ReturnType<typeof vi.fn>>;
     };
 
     // 每次调用select都返回新的查询链
@@ -99,9 +102,10 @@ class DatabaseMockBuilder {
                 resolve(result);
                 return Promise.resolve(result);
               },
-            };
+              catch: async () => Promise.resolve(result),
+            } as unknown as ReturnType<typeof mockChain.where>;
           }
-          return mockChain;
+          return mockChain as unknown as ReturnType<typeof mockChain.where>;
         }),
         orderBy: vi.fn().mockReturnThis(),
         limit: vi.fn().mockReturnThis(),
@@ -112,22 +116,38 @@ class DatabaseMockBuilder {
               resolve(result);
               return Promise.resolve(result);
             },
-          };
+            catch: async () => Promise.resolve(result),
+          } as unknown as ReturnType<typeof mockChain.offset>;
         }),
         innerJoin: vi.fn().mockReturnThis(),
         leftJoin: vi.fn().mockReturnThis(),
         rightJoin: vi.fn().mockReturnThis(),
         groupBy: vi.fn().mockReturnThis(),
         having: vi.fn().mockReturnThis(),
+        // 新增：显式支持 get/all
+        get: vi.fn().mockResolvedValue(Array.isArray(result) ? result[0] : (undefined as unknown)),
+        all: vi.fn().mockResolvedValue(result),
       };
 
       // 设置limit方法的特殊处理
       mockChain.limit.mockImplementation(() => {
         // limit后面通常跟offset，所以返回mockChain
-        return mockChain;
+        return mockChain as unknown as ReturnType<typeof mockChain.limit>;
       });
 
-      return mockChain;
+      // from 直接可 then（无 where 的 count 分支会用到 get()，无 then 也要保留可等待性）
+      mockChain.from.mockImplementation(() => {
+        return {
+          ...mockChain,
+          then: async (resolve: (value: unknown) => void) => {
+            resolve(result);
+            return Promise.resolve(result);
+          },
+          catch: async () => Promise.resolve(result),
+        } as unknown as ReturnType<typeof mockChain.from>;
+      });
+
+      return mockChain as unknown as Record<string, ReturnType<typeof vi.fn>>;
     };
 
     // 每次调用select都返回新的查询链
@@ -151,7 +171,9 @@ class DatabaseMockBuilder {
       returning: vi.fn().mockResolvedValue(data),
     });
 
-    this.mockDb.insert.mockReturnValue(insertChain);
+    this.mockDb.insert.mockReturnValue(
+      insertChain as unknown as ReturnType<typeof this.mockDb.insert>,
+    );
     return this;
   }
 
@@ -188,9 +210,11 @@ class DatabaseMockBuilder {
       where: vi.fn().mockReturnThis(),
       limit: vi.fn().mockReturnThis(),
       offset: vi.fn().mockResolvedValue(countResult),
-    };
+    } as unknown as Record<string, ReturnType<typeof vi.fn>>;
 
-    this.mockDb.count.mockReturnValue(mockCountQuery);
+    this.mockDb.count.mockReturnValue(
+      mockCountQuery as unknown as ReturnType<typeof this.mockDb.count>,
+    );
     return this;
   }
 
@@ -237,7 +261,7 @@ class DatabaseMockBuilder {
       with: vi.fn(),
       withRecursive: vi.fn(),
       as: vi.fn(),
-    };
+    } as unknown as Record<string, ReturnType<typeof vi.fn>>;
 
     // 设置默认的链式调用行为
     Object.values(this.mockDb).forEach((mockFn) => {

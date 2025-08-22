@@ -25,6 +25,7 @@ export class ConfigService {
       nodeEnv,
       apiPrefix: this.configService.get<string>('API_PREFIX', 'api'),
       apiVersion: this.configService.get<string>('API_VERSION', 'v2'),
+      locale: this.configService.get<string>('LOCALE', 'zh-cn'),
       isProduction: nodeEnv === 'production',
       isDevelopment: nodeEnv === 'development',
     };

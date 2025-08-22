@@ -26,6 +26,7 @@ describe('ConfigService', () => {
               NODE_ENV: 'test',
               API_PREFIX: 'api',
               API_VERSION: 'v2',
+              LOCALE: 'zh-cn',
               DATABASE_DRIVER: 'local',
               DATABASE_URL: 'file:./test/vanblog.db',
               JWT_SECRET: 'test-secret',
@@ -64,6 +65,7 @@ describe('ConfigService', () => {
       expect(appConfig.nodeEnv).toBe('test');
       expect(appConfig.apiPrefix).toBe('api');
       expect(appConfig.apiVersion).toBe('v2');
+      expect(appConfig.locale).toBe('zh-cn');
       expect(appConfig.isDevelopment).toBe(false);
       expect(appConfig.isProduction).toBe(false);
     });

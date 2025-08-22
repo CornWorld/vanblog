@@ -3,6 +3,7 @@ export interface AppConfig {
   nodeEnv: string;
   apiPrefix: string;
   apiVersion: string;
+  locale: string;
   isProduction: boolean;
   isDevelopment: boolean;
 }

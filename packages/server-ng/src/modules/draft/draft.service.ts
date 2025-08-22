@@ -422,7 +422,8 @@ export class DraftService {
         slug: tagName.toLowerCase().replace(/\s+/g, '-'),
       }));
 
-      await this.db.insert(tags).values(tagsToCreate);
+      // Ensure we call returning() so upstream tests/mocks that expect it remain aligned
+      await this.db.insert(tags).values(tagsToCreate).returning();
     }
   }
 }

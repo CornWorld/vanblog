@@ -6,6 +6,7 @@ import { StorageProvider } from './dto/storage-config.dto';
 import { MediaService } from './services/media.service';
 
 import type { StorageFactoryService } from './services/storage-factory.service';
+import type { LoggerService } from '../../core/logger/logger.service';
 import type { HookService } from '../plugin/services/hook.service';
 
 // Mock sharp模块
@@ -23,10 +24,20 @@ const mediaTest = test.extend<{ mediaService: MediaService }>({
       doAction: vi.fn().mockResolvedValue(undefined),
     } as Partial<HookService>;
 
+    const mockLogger = {
+      log: vi.fn(),
+      info: vi.fn(),
+      error: vi.fn(),
+      warn: vi.fn(),
+      debug: vi.fn(),
+      verbose: vi.fn(),
+    } as unknown as LoggerService;
+
     const service = new MediaService(
       db,
       storageFactoryService as unknown as StorageFactoryService,
       mockHookService as HookService,
+      mockLogger,
     );
     await use(service);
   },

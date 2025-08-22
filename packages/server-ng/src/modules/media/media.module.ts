@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 
+import { LoggerModule } from '../../core/logger/logger.module';
 import { DatabaseModule } from '../../database/database.module';
 import { PermissionModule } from '../permission/permission.module';
 
@@ -13,6 +14,7 @@ import { PicgoStorageService } from './services/storages/picgo-storage.service';
 
 @Module({
   imports: [
+    LoggerModule,
     DatabaseModule,
     PermissionModule.forFeature(['media:create', 'media:read', 'media:delete']),
   ],

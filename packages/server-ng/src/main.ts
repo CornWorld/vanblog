@@ -15,9 +15,7 @@ import { LoggerService } from './core/logger/logger.service';
 import { DerivedViewCacheService } from './shared/cache';
 // import { patchNestJsSwagger } from 'nestjs-zod'; // Not available in current version
 
-import 'dayjs/locale/zh-cn';
-
-dayjs.locale('zh-cn'); // TODO dep on config
+// Removed static locale import to allow dynamic, config-driven locale loading
 
 export async function init(): Promise<INestApplication> {
   const app = await NestFactory.create(AppModule.forRoot(), {
@@ -26,6 +24,16 @@ export async function init(): Promise<INestApplication> {
 
   const configService = app.get(ConfigService);
   const appConfig = configService.app;
+
+  // Configure dayjs locale from config
+  try {
+    if (appConfig.locale !== 'en') {
+      await import(`dayjs/locale/${appConfig.locale}`);
+    }
+    dayjs.locale(appConfig.locale);
+  } catch {
+    dayjs.locale('en');
+  }
 
   // Use custom logger
   const logger = app.get(LoggerService);

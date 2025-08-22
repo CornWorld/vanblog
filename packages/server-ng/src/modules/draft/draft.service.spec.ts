@@ -236,9 +236,9 @@ describe('DraftService', () => {
   });
 
   describe('publish', () => {
-    it.skip('should publish a draft as an article', async () => {
+    it('should publish a draft as an article', async () => {
       // Reset all mocks to ensure clean state
-      vi.clearAllMocks();
+      // vi.clearAllMocks(); // Removing this to keep chainable mocks intact
       const mockDraftRaw = {
         id: 1,
         title: 'Draft to Publish',
@@ -298,12 +298,16 @@ describe('DraftService', () => {
 
       // Mock from to return empty array for tag check
       let fromCallCount = 0;
-      mockDb.from.mockImplementation(async () => {
+      mockDb.from.mockImplementation((_table?: unknown) => {
         fromCallCount++;
         if (fromCallCount === 2) {
-          // This is for tag check - return empty array (no existing tags)
-          return Promise.resolve([]);
+          // This is for tag check - return thenable resolving to empty array
+          return {
+            ...mockDb,
+            then: (resolve: (val: unknown[]) => unknown) => resolve([]),
+          } as unknown as typeof mockDb;
         }
+        // Default: keep chainable behavior
         return mockDb;
       });
 
