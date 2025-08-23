@@ -1,8 +1,7 @@
 import { Injectable, Inject, Logger } from '@nestjs/common';
 import { eq, sql } from 'drizzle-orm';
-import { LibSQLDatabase } from 'drizzle-orm/libsql';
 
-import { DATABASE_CONNECTION } from '../../../database';
+import { DATABASE_CONNECTION, type Database } from '../../../database';
 import { siteMeta } from '../../../database/schema';
 import { safeParseJson, dataSchemas } from '../../../shared/zod';
 
@@ -20,7 +19,7 @@ export class SettingRegistryService {
 
   constructor(
     @Inject(DATABASE_CONNECTION)
-    private readonly db: LibSQLDatabase,
+    private readonly db: Database,
   ) {}
 
   /**

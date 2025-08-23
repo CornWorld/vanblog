@@ -8,8 +8,8 @@ import { MediaService } from './services/media.service';
 import type { StorageService } from './interfaces/storage.interface';
 import type { StorageFactoryService } from './services/storage-factory.service';
 import type { LoggerService } from '../../core/logger/logger.service';
+import type { Database } from '../../database';
 import type { HookService } from '../plugin/services/hook.service';
-import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 
 vi.mock('sharp', () => ({
   default: vi.fn(() => ({
@@ -52,7 +52,7 @@ describe('MediaService', () => {
     } as unknown as LoggerService;
 
     service = new MediaService(
-      databaseMock.build() as unknown as LibSQLDatabase,
+      databaseMock.build() as unknown as Database,
       mockStorageFactoryService as StorageFactoryService,
       mockHookService as HookService,
       mockLogger,

@@ -1,9 +1,8 @@
 import { Injectable, Inject } from '@nestjs/common';
 import dayjs from 'dayjs';
 import { eq } from 'drizzle-orm';
-import { LibSQLDatabase } from 'drizzle-orm/libsql';
 
-import { DATABASE_CONNECTION } from '../../../database';
+import { DATABASE_CONNECTION, type Database } from '../../../database';
 import { siteMeta } from '../../../database/schema';
 import { safeParseJson, dataSchemas } from '../../../shared/zod';
 import {
@@ -18,7 +17,7 @@ const STORAGE_CONFIG_KEY = 'storage_config';
 export class StorageConfigService {
   constructor(
     @Inject(DATABASE_CONNECTION)
-    private readonly db: LibSQLDatabase,
+    private readonly db: Database,
   ) {}
 
   async getStorageConfig(): Promise<StorageConfigResponseDto> {

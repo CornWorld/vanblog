@@ -1,8 +1,7 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { eq, and, sql, desc } from 'drizzle-orm';
-import { LibSQLDatabase } from 'drizzle-orm/libsql';
 
-import { DATABASE_CONNECTION } from '../../../database';
+import { DATABASE_CONNECTION, type Database } from '../../../database';
 import { analytics, articles } from '../../../database/schema';
 import { AnalyticsType } from '../entities/analytics.entity';
 
@@ -18,7 +17,7 @@ export interface ArticleStats {
 export class ArticleStatsService {
   constructor(
     @Inject(DATABASE_CONNECTION)
-    private readonly db: LibSQLDatabase,
+    private readonly db: Database,
   ) {}
 
   async recordArticleView(articleId: number, ip: string, userAgent?: string): Promise<void> {

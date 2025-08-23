@@ -1,9 +1,8 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { eq, sql } from 'drizzle-orm';
-import { LibSQLDatabase } from 'drizzle-orm/libsql';
 import { z } from 'zod';
 
-import { DATABASE_CONNECTION } from '../../../database';
+import { DATABASE_CONNECTION, type Database } from '../../../database';
 import { siteMeta } from '../../../database/schema';
 import { safeParseJson, dataSchemas, NavigationNode } from '../../../shared/zod';
 import { HookService } from '../../plugin/services/hook.service';
@@ -55,7 +54,7 @@ export interface CustomCode {
 export class SettingCoreService {
   constructor(
     @Inject(DATABASE_CONNECTION)
-    private readonly db: LibSQLDatabase,
+    private readonly db: Database,
     private readonly hookService: HookService,
   ) {}
 

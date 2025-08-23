@@ -1,10 +1,9 @@
 import { Injectable, Inject } from '@nestjs/common';
 import dayjs from 'dayjs';
 import { eq, and, gte, lte, sql, desc } from 'drizzle-orm';
-import { LibSQLDatabase } from 'drizzle-orm/libsql';
 import { UAParser } from 'ua-parser-js';
 
-import { DATABASE_CONNECTION } from '../../../database';
+import { DATABASE_CONNECTION, type Database } from '../../../database';
 import { analytics } from '../../../database/schema';
 import { AnalyticsCacheService } from '../../../shared/cache/analytics-cache.service';
 import { safeParseJson, dataSchemas } from '../../../shared/zod';
@@ -25,7 +24,7 @@ import { AnalyticsType } from '../entities/analytics.entity';
 export class AnalyticsService {
   constructor(
     @Inject(DATABASE_CONNECTION)
-    private readonly db: LibSQLDatabase,
+    private readonly db: Database,
     private readonly cacheService: AnalyticsCacheService,
   ) {}
 
