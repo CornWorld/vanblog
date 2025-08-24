@@ -17,6 +17,11 @@ export default defineConfig({
         singleFork: true,
       },
     },
+    // 禁用文件级并行 & 测试并发，彻底串行化执行
+    fileParallelism: false,
+    sequence: {
+      concurrent: false,
+    },
     // Set up test environment
     setupFiles: ['./test/setup.ts'],
     // Increase timeout for E2E tests

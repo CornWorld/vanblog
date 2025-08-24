@@ -204,7 +204,7 @@ JWT_EXPIRES_IN=7d
 - [x] 添加图片批量操作
 - [x] 实现剪贴板上传支持
 
-### 阶段 7: 系统配置模块
+### 系统配置模块
 
 - [x] 创建站点元数据模型 (Meta Schema)
 - [x] 创建系统设置模型 (Setting Schema)
@@ -214,6 +214,16 @@ JWT_EXPIRES_IN=7d
 - [x] 添加自定义代码注入
 - [x] 创建导航栏配置管理
 - [x] 实现友链管理功能
+
+### 配置读写统一策略（重要）
+
+- 写路径统一：任何设置写入一律通过 SettingRegistryService.updateConfig(key, value) 执行，底层使用基于 site_meta.key 唯一约束的单语句 upsert，具备并发幂等性，避免竞争条件。
+- 读路径默认值：
+  - 若该 key 已通过 SettingRegistryService.registerConfig 注册了 defaultValue，则 SettingRegistryService.getConfig 命中空值时会落库该默认值并返回；
+  - 若未注册 defaultValue，则调用方可在 SettingCoreService.getConfig(key, defaultValue, schema) 传入临时默认值，命中空值时委托 Registry 落库该默认值；
+  - 两者的共同点是：默认值一旦被读取即被持久化，避免后续绕过统一写入口的“旁路写”。
+- 校验策略：可在注册时提供 validator(value): boolean，或在调用 Core 层提供 zod schema；任何不合法的值将被拒绝或在 Core 层提前抛错。
+- 边缘保护：Registry 对超大 payload（>256KB）直接拒绝；空对象会记录警告但仍按历史行为继续写入；对同 key 的高频写入仅记录告警，不做阻断（不破坏用户空间）。
 
 ### 阶段 8: 数据分析模块
 

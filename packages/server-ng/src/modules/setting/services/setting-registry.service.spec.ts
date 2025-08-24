@@ -115,10 +115,11 @@ describe('SettingRegistryService', () => {
 
       service.registerConfig({ key: testKey, defaultValue });
 
-      // First select in getConfig -> empty, second select in updateConfig -> empty
-      mockSelectChain.limit.mockResolvedValueOnce([]).mockResolvedValueOnce([]);
+      // First select in getConfig -> empty
+      mockSelectChain.limit.mockResolvedValueOnce([]);
+      // Upsert path used by updateConfig
       mockDatabase.insert.mockReturnValue(mockInsertChain);
-      mockInsertChain.values.mockResolvedValue(undefined);
+      mockInsertChain.onConflictDoUpdate.mockResolvedValue(undefined);
 
       const result = await service.getConfig<typeof defaultValue>(testKey);
 
@@ -128,6 +129,7 @@ describe('SettingRegistryService', () => {
         key: testKey,
         value: JSON.stringify(defaultValue),
       });
+      expect(mockInsertChain.onConflictDoUpdate).toHaveBeenCalled();
     });
 
     it('should return null when stored JSON is invalid (parse failure)', async () => {
@@ -141,34 +143,44 @@ describe('SettingRegistryService', () => {
   });
 
   describe('updateConfig', () => {
-    it('should update existing config', async () => {
+    it('should upsert configuration value idempotently (calls insert with onConflictDoUpdate)', async () => {
       const testKey = 'testKey';
       const testValue = { updated: 'value' };
 
-      // Mock select to return existing record
-      mockSelectChain.limit.mockResolvedValue([{ key: testKey, value: 'old' }]);
-      mockUpdateChain.where.mockResolvedValue(undefined);
+      // Upsert path: insert(...).onConflictDoUpdate(...)
+      mockInsertChain.onConflictDoUpdate.mockResolvedValue(undefined);
 
       const result = await service.updateConfig(testKey, testValue);
 
       expect(result).toEqual(testValue);
-      expect(mockDatabase.select).toHaveBeenCalled();
-      expect(mockDatabase.update).toHaveBeenCalled();
+      expect(mockDatabase.insert).toHaveBeenCalled();
+      expect(mockInsertChain.values).toHaveBeenCalledWith({
+        key: testKey,
+        value: JSON.stringify(testValue),
+      });
+      expect(mockInsertChain.onConflictDoUpdate).toHaveBeenCalled();
+      // No need to select/update explicitly under upsert strategy
+      expect(mockDatabase.select).not.toHaveBeenCalled();
+      expect(mockDatabase.update).not.toHaveBeenCalled();
     });
 
-    it('should insert new config when not exists', async () => {
+    it('should upsert new config without pre-select', async () => {
       const testKey = 'newKey';
       const testValue = { new: 'value' };
 
-      // Mock select to return empty array
-      mockSelectChain.limit.mockResolvedValue([]);
-      mockInsertChain.values.mockResolvedValue(undefined);
+      mockInsertChain.onConflictDoUpdate.mockResolvedValue(undefined);
 
       const result = await service.updateConfig(testKey, testValue);
 
       expect(result).toEqual(testValue);
-      expect(mockDatabase.select).toHaveBeenCalled();
       expect(mockDatabase.insert).toHaveBeenCalled();
+      expect(mockInsertChain.values).toHaveBeenCalledWith({
+        key: testKey,
+        value: JSON.stringify(testValue),
+      });
+      expect(mockInsertChain.onConflictDoUpdate).toHaveBeenCalled();
+      expect(mockDatabase.select).not.toHaveBeenCalled();
+      expect(mockDatabase.update).not.toHaveBeenCalled();
     });
 
     it('should throw when validator rejects the value', async () => {

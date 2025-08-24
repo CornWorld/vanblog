@@ -1,11 +1,13 @@
 import { Injectable, Inject } from '@nestjs/common';
-import { eq, sql } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
 import { DATABASE_CONNECTION, type Database } from '../../../database';
 import { siteMeta } from '../../../database/schema';
 import { safeParseJson, dataSchemas, NavigationNode } from '../../../shared/zod';
 import { HookService } from '../../plugin/services/hook.service';
+
+import { SettingRegistryService } from './setting-registry.service';
 
 export interface SiteInfo {
   title: string;
@@ -56,6 +58,7 @@ export class SettingCoreService {
     @Inject(DATABASE_CONNECTION)
     private readonly db: Database,
     private readonly hookService: HookService,
+    private readonly registryService: SettingRegistryService,
   ) {}
 
   // Generic config methods with optional schema validation
@@ -72,10 +75,8 @@ export class SettingCoreService {
     }
 
     if (defaultValue !== undefined) {
-      await this.db.insert(siteMeta).values({
-        key,
-        value: JSON.stringify(defaultValue),
-      });
+      // Delegate to registry to persist default via upsert (concurrency-safe)
+      await this.registryService.updateConfig(key, defaultValue as T);
       return defaultValue;
     }
 
@@ -89,38 +90,25 @@ export class SettingCoreService {
       value,
     });
 
+    // Get old value for hooks
     const existing = await this.db.select().from(siteMeta).where(eq(siteMeta.key, key)).limit(1);
+    const oldValue = existing.length > 0 ? existing[0].value : null;
 
-    if (existing.length > 0) {
-      await this.db
-        .update(siteMeta)
-        .set({
-          value: JSON.stringify(filteredData.value),
-          updatedAt: sql`CURRENT_TIMESTAMP`,
-        })
-        .where(eq(siteMeta.key, key));
-    } else {
-      await this.db.insert(siteMeta).values({
-        key,
-        value: JSON.stringify(filteredData.value),
-      });
-    }
+    // Delegate write to registry service (single-statement upsert, idempotent)
+    await this.registryService.updateConfig(key, filteredData.value);
 
     // Execute afterUpdateSetting action
     await this.hookService.doAction('setting|afterUpdate', {
       key,
       value: filteredData.value,
-      oldValue: existing.length > 0 ? existing[0].value : null,
+      oldValue,
     });
 
     // Trigger webhook event
     await this.hookService.doAction('setting.updated', {
       key,
       value: filteredData.value,
-      oldValue:
-        existing.length > 0
-          ? safeParseJson(existing[0].value ?? '', dataSchemas.genericObject)
-          : null,
+      oldValue: oldValue ? safeParseJson(oldValue, dataSchemas.genericObject) : null,
       updatedAt: new Date().toISOString(),
     });
 
