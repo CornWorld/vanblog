@@ -62,4 +62,44 @@ describe('ValidationExceptionFilter', () => {
       message: 'oops',
     });
   });
+
+  it('should handle missing message field gracefully', () => {
+    const exception = new BadRequestException({ error: 'Bad Request' } as any);
+
+    filter.catch(exception, mockArgumentsHost);
+
+    expect(mockResponse.status).toHaveBeenCalledWith(400);
+    const calls = (mockResponse.json as any).mock.calls as any[];
+    const [lastCall] = calls.slice(-1);
+    const [payload] = lastCall;
+    expect(payload).toMatchObject({
+      statusCode: 400,
+      path: '/api/test',
+      method: 'POST',
+      error: 'Validation Failed',
+    });
+    expect('message' in payload).toBe(true);
+    expect(payload.message).toBeUndefined();
+    expect((mockLogger as any).warn).toHaveBeenCalled();
+  });
+
+  it('should pass through non-array, non-string message objects', () => {
+    const msg = { a: 1 } as any;
+    const exception = new BadRequestException({ message: msg, error: 'Bad Request' } as any);
+
+    filter.catch(exception, mockArgumentsHost);
+
+    expect(mockResponse.status).toHaveBeenCalledWith(400);
+    const calls = (mockResponse.json as any).mock.calls as any[];
+    const [lastCall] = calls.slice(-1);
+    const [payload] = lastCall;
+    expect(payload).toMatchObject({
+      statusCode: 400,
+      path: '/api/test',
+      method: 'POST',
+      error: 'Validation Failed',
+    });
+    expect(payload.message).toEqual(msg);
+    expect((mockLogger as any).warn).toHaveBeenCalled();
+  });
 });

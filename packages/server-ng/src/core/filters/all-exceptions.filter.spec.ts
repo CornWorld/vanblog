@@ -47,6 +47,40 @@ describe('AllExceptionsFilter', () => {
     expect((mockLogger as any).error).toHaveBeenCalled();
   });
 
+  it('should handle HttpException with string message (fallback payload)', () => {
+    const exception = new HttpException('boom', HttpStatus.NOT_FOUND);
+
+    filter.catch(exception, mockArgumentsHost);
+
+    expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.NOT_FOUND);
+    expect(mockResponse.json).toHaveBeenCalledWith({
+      statusCode: HttpStatus.NOT_FOUND,
+      timestamp: expect.any(String) as string,
+      path: '/api/test',
+      method: 'GET',
+      message: 'boom',
+    });
+    expect((mockLogger as any).error).toHaveBeenCalled();
+  });
+
+  it('should handle non-Error unknown exception and respond 500', () => {
+    const unknown: any = { foo: 'bar' };
+
+    filter.catch(unknown, mockArgumentsHost);
+
+    expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.INTERNAL_SERVER_ERROR);
+    const calls = (mockResponse.json as any).mock.calls as any[];
+    expect(calls.length).toBeGreaterThan(0);
+    const [lastCall] = calls.slice(-1);
+    const [payload] = lastCall;
+    expect(payload).toMatchObject({
+      statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+      path: '/api/test',
+      method: 'GET',
+    });
+    expect((mockLogger as any).error).toHaveBeenCalled();
+  });
+
   it('should handle generic Error and include stack only in development', () => {
     const originalEnv = process.env.NODE_ENV;
 
