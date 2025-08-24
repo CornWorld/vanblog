@@ -1,5 +1,4 @@
 import { Module, DynamicModule, NestModule, MiddlewareConsumer, type Type } from '@nestjs/common';
-import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerModule } from '@nestjs/throttler';
 
@@ -42,7 +41,6 @@ export class AppModule implements NestModule {
       module: AppModule,
       imports: [
         ConfigModule,
-        EventEmitterModule.forRoot(),
         ScheduleModule.forRoot(),
         ThrottlerModule.forRoot([
           {
