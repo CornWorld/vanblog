@@ -103,6 +103,34 @@ describe('SettingCoreController', () => {
       };
       expect(mockSettingCoreService.updateSiteInfo).toHaveBeenCalledWith(expectedParam);
     });
+
+    it('should split keywords and map authorName correctly', async () => {
+      const updateDto = {
+        siteName: 'My Blog',
+        siteDescription: 'Desc',
+        siteKeywords: 'a, b , c',
+        authorName: 'Linus',
+      };
+      const updatedSiteInfo: SiteInfo = {
+        title: 'My Blog',
+        description: 'Desc',
+        keywords: ['a', 'b', 'c'],
+        author: 'Linus',
+      };
+
+      mockSettingCoreService.updateSiteInfo.mockResolvedValue(updatedSiteInfo);
+
+      const result = await controller.updateSiteInfo(updateDto as any);
+
+      expect(result).toEqual(updatedSiteInfo);
+      const expectedParam = {
+        title: 'My Blog',
+        description: 'Desc',
+        author: 'Linus',
+        keywords: ['a', 'b', 'c'],
+      };
+      expect(mockSettingCoreService.updateSiteInfo).toHaveBeenCalledWith(expectedParam);
+    });
   });
 
   describe('getLayoutSettings', () => {
@@ -354,6 +382,81 @@ describe('SettingCoreController', () => {
       });
       const expectedNavParam = updateDto.items.map(mapItem);
       expect(mockSettingCoreService.updateNavigation).toHaveBeenCalledWith(expectedNavParam);
+    });
+
+    it('should map nested children recursively and external links', async () => {
+      const updateDto = {
+        items: [
+          {
+            name: 'Root',
+            url: '/',
+            target: '_self' as const,
+            order: 0,
+            children: [
+              {
+                name: 'Docs',
+                url: '/docs',
+                target: '_self' as const,
+                order: 0,
+                children: [
+                  {
+                    name: 'API',
+                    url: 'https://api.example.com',
+                    target: '_blank' as const,
+                    order: 0,
+                  },
+                ],
+              },
+              {
+                name: 'Blog',
+                url: '/blog',
+                target: '_self' as const,
+                order: 1,
+              },
+            ],
+          },
+        ],
+      };
+
+      const expectedParam: Navigation[] = [
+        {
+          name: 'Root',
+          path: '/',
+          icon: undefined,
+          external: false,
+          children: [
+            {
+              name: 'Docs',
+              path: '/docs',
+              icon: undefined,
+              external: false,
+              children: [
+                {
+                  name: 'API',
+                  path: 'https://api.example.com',
+                  icon: undefined,
+                  external: true,
+                  children: undefined,
+                },
+              ],
+            },
+            {
+              name: 'Blog',
+              path: '/blog',
+              icon: undefined,
+              external: false,
+              children: undefined,
+            },
+          ],
+        },
+      ];
+
+      mockSettingCoreService.updateNavigation.mockResolvedValue(expectedParam);
+
+      const result = await controller.updateNavigation(updateDto as any);
+
+      expect(result).toEqual(expectedParam);
+      expect(mockSettingCoreService.updateNavigation).toHaveBeenCalledWith(expectedParam);
     });
   });
 

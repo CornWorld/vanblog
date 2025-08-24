@@ -1,4 +1,5 @@
 import { Test, type TestingModule } from '@nestjs/testing';
+import { z } from 'zod';
 
 import { DATABASE_CONNECTION } from '../../../database';
 import { HookService } from '../../plugin/services/hook.service';
@@ -110,6 +111,26 @@ describe('SettingCoreService', () => {
 
       expect(result).toBeNull();
     });
+
+    it('should parse with provided schema and return typed value', async () => {
+      const schema = z.object({ a: z.string(), b: z.number() });
+      const stored = { a: 'x', b: 1 };
+      mockSelectChain.limit.mockResolvedValue([{ value: JSON.stringify(stored) }]);
+
+      const result = await service.getConfig<typeof stored>('schemaKey', undefined, schema);
+
+      expect(result).toEqual(stored);
+    });
+
+    it('should return null if schema parsing fails', async () => {
+      const schema = z.object({ a: z.string(), b: z.number() });
+      const badStored = { a: 'x', b: 'not-number' } as any;
+      mockSelectChain.limit.mockResolvedValue([{ value: JSON.stringify(badStored) }]);
+
+      const result = await service.getConfig('schemaKey', undefined, schema);
+
+      expect(result).toBeNull();
+    });
   });
 
   describe('updateConfig', () => {
@@ -150,6 +171,32 @@ describe('SettingCoreService', () => {
         key: 'testKey',
         value: JSON.stringify(testValue),
       });
+    });
+
+    it('should call doAction with correct payloads including parsed oldValue and updatedAt', async () => {
+      const testValue = { updated: 'value' };
+      const filteredData = { key: 'testKey', value: testValue };
+      const oldStoredRaw = { old: 'value' };
+
+      mockHookService.applyFilters.mockResolvedValue(filteredData);
+      mockSelectChain.limit.mockResolvedValue([{ value: JSON.stringify(oldStoredRaw) }]);
+      mockUpdateChain.where.mockResolvedValue(undefined);
+      mockHookService.doAction.mockResolvedValue(undefined);
+
+      await service.updateConfig('testKey', testValue);
+
+      expect(mockHookService.doAction).toHaveBeenCalledWith('setting|afterUpdate', {
+        key: 'testKey',
+        value: testValue,
+        oldValue: JSON.stringify(oldStoredRaw),
+      });
+      const secondCall = mockHookService.doAction.mock.calls.find(
+        (c: any[]) => c[0] === 'setting.updated',
+      );
+      expect(secondCall).toBeTruthy();
+      const [, payload] = secondCall!;
+      expect(payload).toMatchObject({ key: 'testKey', value: testValue, oldValue: oldStoredRaw });
+      expect(typeof payload.updatedAt).toBe('string');
     });
   });
 
@@ -259,6 +306,27 @@ describe('SettingCoreService', () => {
       await expect(service.updateNavigation(invalidNavigation)).rejects.toThrow(
         'Invalid navigation data:',
       );
+    });
+
+    it('should update navigation when data is valid', async () => {
+      const validNav: Navigation[] = [
+        { name: 'Home', path: '/', external: false },
+        {
+          name: 'Docs',
+          path: '/docs',
+          external: false,
+          children: [{ name: 'Guide', path: '/docs/guide', external: false }],
+        },
+      ];
+
+      const spy = vi.spyOn(service as any, 'updateConfig').mockResolvedValue(validNav as any);
+
+      const result = await service.updateNavigation(validNav);
+
+      expect(result).toEqual(validNav);
+      expect(spy).toHaveBeenCalledWith('navigation', expect.any(Array));
+      const passed = spy.mock.calls[0][1] as any[];
+      expect(passed[1].children?.length).toBe(1);
     });
   });
 

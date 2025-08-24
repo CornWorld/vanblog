@@ -108,6 +108,36 @@ describe('SettingRegistryService', () => {
 
       expect(result).toBeNull();
     });
+
+    it('should persist and return default from registration when no value exists', async () => {
+      const testKey = 'registered.with.default';
+      const defaultValue = { foo: 'bar' };
+
+      service.registerConfig({ key: testKey, defaultValue });
+
+      // First select in getConfig -> empty, second select in updateConfig -> empty
+      mockSelectChain.limit.mockResolvedValueOnce([]).mockResolvedValueOnce([]);
+      mockDatabase.insert.mockReturnValue(mockInsertChain);
+      mockInsertChain.values.mockResolvedValue(undefined);
+
+      const result = await service.getConfig<typeof defaultValue>(testKey);
+
+      expect(result).toEqual(defaultValue);
+      expect(mockDatabase.insert).toHaveBeenCalled();
+      expect(mockInsertChain.values).toHaveBeenCalledWith({
+        key: testKey,
+        value: JSON.stringify(defaultValue),
+      });
+    });
+
+    it('should return null when stored JSON is invalid (parse failure)', async () => {
+      const testKey = 'bad.json';
+      mockSelectChain.limit.mockResolvedValue([{ value: '{invalid-json' }]);
+
+      const result = await service.getConfig(testKey);
+
+      expect(result).toBeNull();
+    });
   });
 
   describe('updateConfig', () => {
@@ -139,6 +169,18 @@ describe('SettingRegistryService', () => {
       expect(result).toEqual(testValue);
       expect(mockDatabase.select).toHaveBeenCalled();
       expect(mockDatabase.insert).toHaveBeenCalled();
+    });
+
+    it('should throw when validator rejects the value', async () => {
+      const testKey = 'with.validator';
+      const value = { nope: true };
+      service.registerConfig({ key: testKey, validator: () => false });
+
+      await expect(service.updateConfig(testKey, value)).rejects.toThrow(
+        `Invalid value for configuration key "${testKey}"`,
+      );
+      expect(mockDatabase.update).not.toHaveBeenCalled();
+      expect(mockDatabase.insert).not.toHaveBeenCalled();
     });
   });
 
