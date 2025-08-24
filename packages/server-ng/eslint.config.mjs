@@ -148,6 +148,24 @@ export default [
       'import/namespace': 'off',
       'import/default': 'off',
       'import/export': 'off',
+      // 禁止直接从 drizzle-orm/libsql 导入，强制通过内部 Database 别名
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: 'drizzle-orm/libsql',
+              message:
+                '禁止直接导入 libsql 驱动；请使用内部 Database 别名（src/database/connection.ts 导出的 Database 类型）',
+            },
+            {
+              name: 'drizzle-orm/libsql/migrator',
+              message:
+                '迁移逻辑应仅存在于数据库层，禁止在业务代码中直接导入 migrator',
+            },
+          ],
+        },
+      ],
       // Prettier 规则
       'prettier/prettier': 'error',
       // 通用规则
@@ -192,6 +210,14 @@ export default [
     },
   },
 
+  // src/database/connection.ts 例外 - 允许导入 libsql 驱动与 migrator
+  {
+    files: ['src/database/connection.ts'],
+    rules: {
+      'no-restricted-imports': 'off',
+    },
+  },
+
   // 测试文件特殊配置
   {
     files: ['**/*.test.ts', '**/*.spec.ts', '**/test/**/*.ts'],
@@ -204,6 +230,8 @@ export default [
       '@typescript-eslint/no-unsafe-call': 'off',
       '@typescript-eslint/no-unsafe-return': 'off',
       '@typescript-eslint/no-unsafe-argument': 'off',
+      // 允许测试直接导入 libsql 驱动（只在测试文件中）
+      'no-restricted-imports': 'off',
     },
   },
 
