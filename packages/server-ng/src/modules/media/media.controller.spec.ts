@@ -2,6 +2,9 @@ import { BadRequestException } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, beforeEach, afterEach, expect, vi } from 'vitest';
 
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { PermissionsGuard } from '../auth/guards/permissions.guard';
+
 import { MediaController } from './media.controller';
 import { ImageProcessingService } from './services/image-processing.service';
 import { MediaService } from './services/media.service';
@@ -27,6 +30,9 @@ const mockStorageConfigService = {
   updateStorageConfig: vi.fn(),
 };
 
+const mockJwtAuthGuard = { canActivate: vi.fn().mockReturnValue(true) };
+const mockPermissionsGuard = { canActivate: vi.fn().mockReturnValue(true) };
+
 describe('MediaController', () => {
   let controller: MediaController;
 
@@ -38,7 +44,12 @@ describe('MediaController', () => {
         { provide: ImageProcessingService, useValue: mockImageProcessingService },
         { provide: StorageConfigService, useValue: mockStorageConfigService },
       ],
-    }).compile();
+    })
+      .overrideGuard(PermissionsGuard)
+      .useValue(mockPermissionsGuard)
+      .overrideGuard(JwtAuthGuard)
+      .useValue(mockJwtAuthGuard)
+      .compile();
 
     controller = module.get<MediaController>(MediaController);
     vi.clearAllMocks();

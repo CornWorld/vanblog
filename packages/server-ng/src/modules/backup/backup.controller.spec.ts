@@ -5,6 +5,7 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, beforeEach, expect, vi } from 'vitest';
 
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { PermissionService } from '../permission/permission.service';
 
 import { BackupController } from './backup.controller';
@@ -27,6 +28,10 @@ const mockBackupService = {
 };
 
 const mockJwtAuthGuard = {
+  canActivate: vi.fn().mockReturnValue(true),
+};
+
+const mockPermissionsGuard = {
   canActivate: vi.fn().mockReturnValue(true),
 };
 
@@ -54,6 +59,8 @@ describe('BackupController', () => {
         },
       ],
     })
+      .overrideGuard(PermissionsGuard)
+      .useValue(mockPermissionsGuard)
       .overrideGuard(JwtAuthGuard)
       .useValue(mockJwtAuthGuard)
       .compile();
