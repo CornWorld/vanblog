@@ -1,5 +1,6 @@
 import { NotFoundException } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
+import * as bcrypt from 'bcrypt';
 import { vi, describe, beforeEach, it, expect } from 'vitest';
 
 import { DATABASE_CONNECTION } from '../../database/database.module';
@@ -347,6 +348,137 @@ describe('DraftService', () => {
       expect(result.top).toBe(0);
       expect(result.hidden).toBe(false);
       expect(result.private).toBe(false);
+    });
+
+    it('should set private=true and hash password when provided', async () => {
+      const mockDraftRaw = {
+        id: 2,
+        title: 'Secret Draft',
+        content: 'Top secret content',
+        tags: JSON.stringify(['secret', 'tag']),
+        author: 'admin',
+        pathname: 'secret-draft',
+        category: 'test-category',
+        version: 1,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      // findOne
+      mockDb.limit.mockResolvedValueOnce([mockDraftRaw]);
+
+      // createMissingTags -> select/from -> [] means all tags missing
+      let fromCallCount2 = 0;
+      mockDb.from.mockImplementation((_table?: unknown) => {
+        fromCallCount2++;
+        if (fromCallCount2 === 2) {
+          return {
+            ...mockDb,
+            then: (resolve: (val: unknown[]) => unknown) => resolve([]),
+          } as unknown as typeof mockDb;
+        }
+        return mockDb;
+      });
+
+      let valuesCallCount = 0;
+      let capturedArticleValues: any;
+      mockDb.values.mockImplementation((vals?: any) => {
+        valuesCallCount++;
+        if (valuesCallCount === 2) {
+          capturedArticleValues = vals; // The second values() corresponds to articles insertion
+        }
+        return mockDb;
+      });
+
+      let returningCallCount2 = 0;
+      mockDb.returning.mockImplementation(async () => {
+        returningCallCount2++;
+        if (returningCallCount2 === 1) {
+          // tag creation returning
+          return Promise.resolve([
+            { id: 10, name: 'secret', slug: 'secret' },
+            { id: 11, name: 'tag', slug: 'tag' },
+          ]);
+        }
+        if (returningCallCount2 === 2) {
+          // article creation returning
+          // it doesn't matter what password here is; we assert capturedArticleValues
+          return Promise.resolve([
+            {
+              id: 200,
+              title: 'Secret Draft',
+              content: 'Top secret content',
+              tags: JSON.stringify(['secret', 'tag']),
+              author: 'admin',
+              pathname: 'secret-draft',
+              category: 'test-category',
+              top: 1,
+              hidden: false,
+              private: true,
+              password: 'placeholder',
+              viewer: 0,
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            },
+          ]);
+        }
+        if (returningCallCount2 === 3) {
+          // draft deletion returning
+          return Promise.resolve([{ id: 2 }]);
+        }
+        return Promise.resolve([]);
+      });
+
+      const publishDto = {
+        isPublished: true,
+        isTop: true,
+        allowComment: true,
+        password: 's3cr3t',
+      } as any;
+
+      const result = await service.publish(2, publishDto);
+
+      expect(result).toBeDefined();
+      expect(result.private).toBe(true);
+      expect(result.top).toBe(1);
+
+      expect(capturedArticleValues).toBeDefined();
+      expect(Array.isArray(capturedArticleValues)).toBe(true);
+      const [inserted] = capturedArticleValues;
+      expect(inserted.private).toBe(true);
+      expect(typeof inserted.password).toBe('string');
+      expect(inserted.password).not.toBe(publishDto.password);
+      const ok = await bcrypt.compare(publishDto.password, inserted.password);
+      expect(ok).toBe(true);
+    });
+
+    it('should throw when article creation returns empty array', async () => {
+      const mockDraftRaw = {
+        id: 3,
+        title: 'Draft Fail',
+        content: 'Will fail to publish',
+        tags: JSON.stringify([]), // no tags -> createMissingTags will not insert
+        author: 'admin',
+        pathname: 'draft-fail',
+        category: 'none',
+        version: 1,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      // findOne
+      mockDb.limit.mockResolvedValueOnce([mockDraftRaw]);
+
+      // returning for article creation -> []
+      mockDb.returning.mockResolvedValueOnce([]);
+
+      const publishDto = {
+        isPublished: true,
+        isTop: false,
+        allowComment: true,
+      } as any;
+
+      await expect(service.publish(3, publishDto)).rejects.toThrow('Failed to publish draft');
     });
   });
 
