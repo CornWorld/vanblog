@@ -52,6 +52,7 @@ export class UserService {
         email: userData.email,
         avatar: userData.avatar,
         type: userData.type as UserType,
+        permissions: userData.permissions, // persist permissions if provided
       })
       .returning()
       .get();
@@ -128,7 +129,7 @@ export class UserService {
       email?: string;
       avatar?: string;
       type?: UserType;
-      permissions?: string;
+      permissions?: string | null;
     } = {};
 
     let passwordChanged = false;
@@ -147,6 +148,9 @@ export class UserService {
     }
     if (userData.type != null) {
       updateData.type = userData.type;
+    }
+    if (userData.permissions !== undefined) {
+      updateData.permissions = userData.permissions; // allow updating/clearing permissions
     }
 
     const updatedUsers = await this.db
