@@ -270,6 +270,20 @@ export class MediaController {
   @Perm('media', ['create'])
   @ApiOperation({ summary: '批量上传多个文件' })
   @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        files: {
+          type: 'array',
+          items: { type: 'string', format: 'binary' },
+          description: '待上传文件列表',
+        },
+        provider: { type: 'string', description: '存储提供方（可选）' },
+      },
+      required: ['files'],
+    },
+  })
   @UseInterceptors(
     FilesInterceptor('files', 20, {
       storage: memoryStorage(),
@@ -301,6 +315,7 @@ export class MediaController {
   @ApiOperation({ summary: '初始化分片上传会话' })
   @ApiConsumes('application/json')
   @ApiResponse({ status: 200, description: '会话创建成功' })
+  @ApiBody({ type: InitiateChunkUploadDto })
   async initiateChunkUpload(
     @Body(new ZodValidationPipe(InitiateChunkUploadSchema)) dto: InitiateChunkUploadDto,
   ): Promise<{ uploadId: string; uploaded: boolean[]; totalChunks: number }> {
@@ -311,6 +326,17 @@ export class MediaController {
   @Perm('media', ['create'])
   @ApiOperation({ summary: '上传分片（已上传文件块，不做流式处理）' })
   @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: { type: 'string', format: 'binary', description: '当前分片二进制内容' },
+        uploadId: { type: 'string', description: '上传会话 ID' },
+        index: { type: 'integer', minimum: 0, description: '分片索引（从 0 开始）' },
+      },
+      required: ['file', 'uploadId', 'index'],
+    },
+  })
   @UseInterceptors(
     FileInterceptor('file', {
       storage: memoryStorage(),
@@ -328,6 +354,8 @@ export class MediaController {
   @Perm('media', ['create'])
   @ApiOperation({ summary: '完成分片上传并合并，作为常规上传入库' })
   @ApiConsumes('application/json')
+  @ApiBody({ type: CompleteChunkUploadDto })
+  @ApiResponse({ status: 201, description: '合并并入库成功' })
   async completeChunkUpload(
     @Body(new ZodValidationPipe(CompleteChunkUploadSchema)) dto: CompleteChunkUploadDto,
   ): Promise<typeof staticFiles.$inferSelect> {
