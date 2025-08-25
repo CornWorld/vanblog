@@ -2,9 +2,13 @@ import { Injectable, NotFoundException, ConflictException, Inject } from '@nestj
 import * as bcrypt from 'bcrypt';
 import { eq, ne } from 'drizzle-orm';
 
-import { DATABASE_CONNECTION, type Database } from '../../database';
+import {
+  DATABASE_CONNECTION,
+  type Database,
+  insertUserSchema,
+  updateUserSchema,
+} from '../../database';
 import { users } from '../../database/schema';
-import { safeParseJson, dataSchemas } from '../../shared/zod';
 import { HookService } from '../plugin/services/hook.service';
 
 import { CreateUserDto, UserType } from './dto/create-user.dto';
@@ -18,6 +22,22 @@ export class UserService {
     private readonly db: Database,
     private readonly hookService: HookService,
   ) {}
+
+  // 将输入规范化为 string[] | undefined（字符串按逗号拆分并去空白）
+  private normalizePermissions(input: unknown): string[] | undefined {
+    if (Array.isArray(input)) {
+      const arr = input.filter((v): v is string => typeof v === 'string');
+      return arr;
+    }
+    if (typeof input === 'string') {
+      const parts = input
+        .split(',')
+        .map((s: string) => s.trim())
+        .filter((s: string) => s.length > 0);
+      return parts;
+    }
+    return undefined;
+  }
 
   async create(createUserDto: CreateUserDto): Promise<User> {
     let userData = createUserDto;
@@ -43,6 +63,12 @@ export class UserService {
 
     const hashedPassword = await bcrypt.hash(userData.password, 10);
 
+    // Persist with DB schema conversions (permissions: string | string[] -> JSON string|null)
+    const normalizedPermissions = this.normalizePermissions(
+      (userData as unknown as { permissions?: unknown }).permissions,
+    );
+    const permissionsDb = insertUserSchema.shape.permissions.parse(normalizedPermissions);
+
     const newUser = await this.db
       .insert(users)
       .values({
@@ -51,8 +77,8 @@ export class UserService {
         nickname: userData.nickname,
         email: userData.email,
         avatar: userData.avatar,
-        type: userData.type as UserType,
-        permissions: userData.permissions, // persist permissions if provided
+        type: userData.type,
+        permissions: permissionsDb,
       })
       .returning()
       .get();
@@ -150,7 +176,12 @@ export class UserService {
       updateData.type = userData.type;
     }
     if (userData.permissions !== undefined) {
-      updateData.permissions = userData.permissions; // allow updating/clearing permissions
+      // Prepare update data, converting permissions via DB schema
+      const normalizedPermissions = this.normalizePermissions(
+        (userData as unknown as { permissions?: unknown }).permissions,
+      );
+      const permissionsDb = updateUserSchema.shape.permissions.parse(normalizedPermissions);
+      updateData.permissions = permissionsDb;
     }
 
     const updatedUsers = await this.db
@@ -225,7 +256,6 @@ export class UserService {
     await this.hookService.doAction('user.deleted', { id });
   }
 
-  // Internal method for authentication that includes password
   async findByUsernameWithPassword(username: string): Promise<User | null> {
     const user = await this.db.select().from(users).where(eq(users.username, username)).get();
 
@@ -233,24 +263,36 @@ export class UserService {
   }
 
   private mapToEntity(dbUser: typeof users.$inferSelect, includePassword = false): User {
-    const userData: Partial<User> = {
+    // Normalize permissions: DB stores JSON string (or null) -> entity expects string[] | undefined
+    const permissions: string[] | undefined = (() => {
+      const raw = dbUser.permissions;
+      if (raw == null) return undefined; // null -> undefined (not set)
+      if (raw === '') return [];
+      try {
+        const parsedUnknown: unknown = JSON.parse(raw);
+        if (
+          Array.isArray(parsedUnknown) &&
+          parsedUnknown.every((v: unknown): v is string => typeof v === 'string')
+        ) {
+          return parsedUnknown;
+        }
+        return [];
+      } catch {
+        return [];
+      }
+    })();
+
+    return new User({
       id: dbUser.id,
       username: dbUser.username,
+      password: includePassword ? dbUser.password : undefined,
       nickname: dbUser.nickname ?? undefined,
       email: dbUser.email ?? undefined,
       avatar: dbUser.avatar ?? undefined,
-      type: dbUser.type as UserType,
-      permissions: safeParseJson(dbUser.permissions, dataSchemas.permissionsArray) as
-        | string[]
-        | undefined,
+      type: dbUser.type,
+      permissions,
       createdAt: dbUser.createdAt,
       updatedAt: dbUser.updatedAt,
-    };
-
-    if (includePassword) {
-      userData.password = dbUser.password;
-    }
-
-    return new User(userData as User);
+    });
   }
 }

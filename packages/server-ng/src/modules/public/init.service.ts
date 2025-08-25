@@ -1,7 +1,7 @@
 import { ConflictException, Injectable } from '@nestjs/common';
 
 import { SettingCoreService } from '../setting/services/setting-core.service';
-import { CreateUserSchema, type CreateUserDto, UserType } from '../user/dto/create-user.dto';
+import { CreateUserSchema, UserType } from '../user/dto/create-user.dto';
 import { UserService } from '../user/user.service';
 
 import type { InitCmsRequestDto, InitCmsResponseDto } from './dto/init.dto';
@@ -27,12 +27,12 @@ export class InitService {
       ...(payload.admin.nickname ? { nickname: payload.admin.nickname } : {}),
       ...(payload.admin.email ? { email: payload.admin.email } : {}),
       ...(payload.admin.avatar ? { avatar: payload.admin.avatar } : {}),
-      permissions: ['role:admin'] as string[],
+      permissions: ['role:admin'],
       type: UserType.ADMIN,
     };
     const normalizedAdmin = CreateUserSchema.parse(adminInput);
 
-    const adminUser = await this.userService.create(normalizedAdmin as unknown as CreateUserDto);
+    const adminUser = await this.userService.create(normalizedAdmin);
 
     // Optionally update site info
     let updatedSiteInfo:

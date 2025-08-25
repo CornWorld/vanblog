@@ -1,12 +1,20 @@
 import { createZodDto } from 'nestjs-zod';
+import { z } from 'zod';
 
 import { insertUserSchema } from '../../../database';
 
-export const CreateUserSchema = insertUserSchema.omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
+export const CreateUserSchema = insertUserSchema
+  .omit({
+    id: true,
+    createdAt: true,
+    updatedAt: true,
+    permissions: true,
+  })
+  .extend({
+    permissions: z.union([z.array(z.string()), z.string()]).optional(),
+  });
+
+export type CreateUserType = z.infer<typeof CreateUserSchema>;
 
 export class CreateUserDto extends createZodDto(CreateUserSchema) {}
 

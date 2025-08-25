@@ -10,6 +10,9 @@ import {
   UpdatePermissionGroupType,
   PermissionGroupQueryType,
   PermissionGroupType,
+  PermissionGroupSchema,
+  CreatePermissionGroupSchema,
+  UpdatePermissionGroupSchema,
 } from './dto/permission-group.dto';
 import {
   CreatePermissionNodeType,
@@ -229,9 +232,38 @@ export class PermissionService {
       resolvedPermissions.add(token);
     }
 
-    const result = Array.from(resolvedPermissions);
-    this.logger.debug(`最终解析结果: ${JSON.stringify(result)}`);
-    return result;
+    // 过滤未知权限：仅保留 'all' 或已注册的权限节点
+    const known = this.getKnownPermissionsSet();
+    const filtered = Array.from(resolvedPermissions).filter((p) => {
+      if (p === 'all') return true;
+      const ok = this.isKnownPermission(p, known);
+      if (!ok) this.logger.warn(`未知权限 '${p}' 已被忽略`);
+      return ok;
+    });
+
+    this.logger.debug(`最终解析结果: ${JSON.stringify(filtered)}`);
+    return filtered;
+  }
+
+  /**
+   * 计算已知权限集合（来自各模块注册的完整权限名）
+   */
+  private getKnownPermissionsSet(): Set<string> {
+    const set = new Set<string>();
+    for (const perms of this.modulePermissions.values()) {
+      for (const p of perms) set.add(p);
+    }
+    return set;
+  }
+
+  /**
+   * 判断是否为已注册权限
+   */
+  private isKnownPermission(permission: string, known?: Set<string>): boolean {
+    const set = known ?? this.getKnownPermissionsSet();
+    // 仅接受完整的 module:action 形式
+    if (!permission.includes(':')) return false;
+    return set.has(permission);
   }
 
   /**
@@ -369,12 +401,7 @@ export class PermissionService {
       .insert(permissionGroups)
       .values(createPermissionGroupDto)
       .returning();
-    return {
-      ...result,
-      permissions: result.permissions ? (JSON.parse(result.permissions) as string[]) : null,
-      createdAt: dayjs(result.createdAt),
-      updatedAt: dayjs(result.updatedAt),
-    };
+    return PermissionGroupSchema.parse(result);
   }
 
   async findAllPermissionGroups(query: PermissionGroupQueryType): Promise<PermissionGroupType[]> {
@@ -397,12 +424,7 @@ export class PermissionService {
         .offset((query.page - 1) * query.limit);
     }
 
-    return results.map((group) => ({
-      ...group,
-      permissions: group.permissions ? (JSON.parse(group.permissions) as string[]) : null,
-      createdAt: dayjs(group.createdAt),
-      updatedAt: dayjs(group.updatedAt),
-    }));
+    return results.map((group) => PermissionGroupSchema.parse(group));
   }
 
   async findPermissionGroupById(id: number): Promise<PermissionGroupType> {
@@ -416,12 +438,7 @@ export class PermissionService {
       throw new NotFoundException(`Permission group with ID ${String(id)} not found`);
     }
 
-    return {
-      ...result[0],
-      permissions: result[0].permissions ? (JSON.parse(result[0].permissions) as string[]) : null,
-      createdAt: dayjs(result[0].createdAt),
-      updatedAt: dayjs(result[0].updatedAt),
-    };
+    return PermissionGroupSchema.parse(result[0]);
   }
 
   async updatePermissionGroup(
@@ -438,12 +455,7 @@ export class PermissionService {
       throw new NotFoundException(`Permission group with ID ${String(id)} not found`);
     }
 
-    return {
-      ...result[0],
-      permissions: result[0].permissions ? (JSON.parse(result[0].permissions) as string[]) : null,
-      createdAt: dayjs(result[0].createdAt),
-      updatedAt: dayjs(result[0].updatedAt),
-    };
+    return PermissionGroupSchema.parse(result[0]);
   }
 
   async removePermissionGroup(id: number): Promise<void> {
@@ -509,9 +521,7 @@ export class PermissionService {
       return [];
     }
 
-    const dbPermissions = group[0].permissions
-      ? (JSON.parse(group[0].permissions) as string[])
-      : [];
+    const dbPermissions = PermissionGroupSchema.parse(group[0]).permissions ?? [];
     this.logger.debug(`从数据库找到角色 ${actualRoleName} 的权限: ${dbPermissions.join(', ')}`);
     return dbPermissions;
   }
@@ -549,18 +559,21 @@ export class PermissionService {
           .limit(1);
 
         if (existingGroup.length === 0) {
-          // 创建新的权限组
-          await this.createPermissionGroup({
-            name: groupName,
-            description: `${groupName} 角色的默认权限组`,
-            permissions: JSON.stringify(permissions),
-          });
+          // 创建新的权限组（使用 Zod Schema 将数组转换为存储格式）
+          await this.createPermissionGroup(
+            CreatePermissionGroupSchema.parse({
+              name: groupName,
+              description: `${groupName} 角色的默认权限组`,
+              permissions,
+            }),
+          );
           this.logger.log(`权限组 ${groupName} 创建成功`);
         } else {
-          // 更新现有权限组的权限
-          await this.updatePermissionGroup(existingGroup[0].id, {
-            permissions: JSON.stringify(permissions),
-          });
+          // 更新现有权限组的权限（使用 Zod Schema 转换）
+          await this.updatePermissionGroup(
+            existingGroup[0].id,
+            UpdatePermissionGroupSchema.parse({ permissions }),
+          );
           this.logger.log(`权限组 ${groupName} 权限更新成功`);
         }
       } catch (error) {
