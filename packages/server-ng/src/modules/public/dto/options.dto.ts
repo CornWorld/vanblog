@@ -1,6 +1,7 @@
 import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
 
+import { dataSchemas } from '../../../shared/zod';
 import { ArticleListResponseSchema } from '../../article/dto/article.dto';
 import { CategorySchema } from '../../category/dto/category.dto';
 import { TagSchema } from '../../tag/dto/tag.dto';
@@ -49,17 +50,7 @@ export const OptionsResponseSchema = z.object({
       keywords: z.array(z.string()),
     })
     .optional(),
-  navigation: z
-    .array(
-      z.object({
-        name: z.string(),
-        path: z.string(),
-        icon: z.string().optional(),
-        external: z.boolean().optional(),
-        children: z.array(z.any()).optional(),
-      }),
-    )
-    .optional(),
+  navigation: dataSchemas.navigationArray.optional(),
   friendLinks: z
     .array(
       z.object({

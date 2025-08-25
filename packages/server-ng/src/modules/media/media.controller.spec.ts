@@ -18,6 +18,11 @@ const mockMediaService = {
   deleteFiles: vi.fn(),
   scanArticleImages: vi.fn(),
   exportAllImages: vi.fn(),
+  // chunked upload methods
+  initiateChunkUpload: vi.fn(),
+  uploadChunk: vi.fn(),
+  mergeChunks: vi.fn(),
+  cleanupChunks: vi.fn(),
 };
 
 const mockImageProcessingService = {
@@ -186,5 +191,87 @@ describe('MediaController', () => {
         controller.uploadFromClipboard({ dataUrl: 'invalid' as any }),
       ).rejects.toBeInstanceOf(BadRequestException);
     });
+  });
+});
+
+describe('chunked upload', () => {
+  let controller: MediaController;
+
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      controllers: [MediaController],
+      providers: [
+        { provide: MediaService, useValue: mockMediaService },
+        { provide: ImageProcessingService, useValue: mockImageProcessingService },
+        { provide: StorageConfigService, useValue: mockStorageConfigService },
+      ],
+    })
+      .overrideGuard(PermissionsGuard)
+      .useValue(mockPermissionsGuard)
+      .overrideGuard(JwtAuthGuard)
+      .useValue(mockJwtAuthGuard)
+      .compile();
+
+    controller = module.get<MediaController>(MediaController);
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('initiateChunkUpload should validate and delegate to service', async () => {
+    const dto = {
+      filename: 'big.bin',
+      totalSize: 20,
+      chunkSize: 10,
+      totalChunks: 2,
+    } as any;
+    const resp = { uploadId: 'u1', uploaded: [false, false], totalChunks: 2 };
+    mockMediaService.initiateChunkUpload.mockResolvedValue(resp);
+
+    const result = await controller.initiateChunkUpload(dto);
+
+    expect(mockMediaService.initiateChunkUpload).toHaveBeenCalledWith(dto);
+    expect(result).toEqual(resp);
+  });
+
+  it('uploadChunk should pass file and dto to service', async () => {
+    const dto = { uploadId: 'u1', index: 0 } as any;
+    const file = {
+      originalname: 'part0',
+      buffer: Buffer.from('a'),
+      size: 1,
+      mimetype: 'application/octet-stream',
+    } as any;
+    mockMediaService.uploadChunk.mockResolvedValue({ index: 0, size: 1 });
+
+    const result = await controller.uploadChunk(file, dto);
+
+    expect(mockMediaService.uploadChunk).toHaveBeenCalledWith({ uploadId: 'u1', index: 0, file });
+    expect(result).toEqual({ index: 0, size: 1 });
+  });
+
+  it('completeChunkUpload should merge, optionally compress and upload, then cleanup', async () => {
+    const dto = { uploadId: 'u1', filename: 'final.bin' } as any;
+    const merged = {
+      buffer: Buffer.from('data'),
+      meta: { filename: 'final.bin', mimeType: 'application/octet-stream' },
+    };
+    const saved = { id: 10 } as any;
+
+    mockMediaService.mergeChunks = vi.fn().mockResolvedValue(merged);
+    mockMediaService.uploadFile.mockResolvedValue(saved);
+    mockMediaService.cleanupChunks.mockResolvedValue(undefined);
+
+    const result = await controller.completeChunkUpload(dto);
+
+    expect(mockMediaService.mergeChunks).toHaveBeenCalledWith('u1');
+    expect(mockMediaService.uploadFile).toHaveBeenCalledWith(
+      expect.objectContaining({ originalname: 'final.bin', buffer: merged.buffer }),
+      'final.bin',
+    );
+    expect(mockMediaService.cleanupChunks).toHaveBeenCalledWith('u1');
+    expect(result).toBe(saved);
   });
 });

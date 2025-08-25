@@ -257,20 +257,20 @@ export const selectSiteMetaSchema = createSelectSchema(siteMeta, {
 export const insertSiteMetaSchema = createInsertSchema(siteMeta, {
   key: (schema) => schema.min(1, '键名不能为空').max(100, '键名最多100个字符'),
   value: z
-    .any()
+    .unknown()
     .optional()
     .transform((val) => {
-      return val !== undefined ? JSON.stringify(val) : null;
+      return val === undefined ? null : JSON.stringify(val);
     }),
 });
 
 export const updateSiteMetaSchema = createUpdateSchema(siteMeta, {
   key: (schema) => schema.min(1, '键名不能为空').max(100, '键名最多100个字符').optional(),
   value: z
-    .any()
+    .unknown()
     .optional()
     .transform((val) => {
-      return val !== undefined ? JSON.stringify(val) : null;
+      return val === undefined ? null : JSON.stringify(val);
     }),
 });
 
@@ -530,7 +530,7 @@ export const selectWebhookLogSchema = createSelectSchema(webhookLogs, {
 
 export const insertWebhookLogSchema = createInsertSchema(webhookLogs, {
   event: (schema) => schema.min(1, '事件名称不能为空'),
-  payload: z.any().transform((val) => {
+  payload: z.unknown().transform((val) => {
     return JSON.stringify(val);
   }),
   status: z.enum(['success', 'failed', 'timeout'], {

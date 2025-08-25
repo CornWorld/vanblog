@@ -1,3 +1,6 @@
+import { promises as fsPromises } from 'fs';
+import { join } from 'path';
+
 import { Injectable, Inject, NotFoundException, BadRequestException } from '@nestjs/common';
 import { and, asc, desc, eq, like, sql, type SQL, inArray } from 'drizzle-orm';
 import sharp from 'sharp';
@@ -469,5 +472,108 @@ export class MediaService {
         createdAt: f.createdAt,
       })),
     };
+  }
+
+  // 分片上传：仅处理已上传好的文件块（非流式），支持并发安全地写入不同分片
+  private getChunkBaseDir(): string {
+    return join(process.cwd(), 'tmp', 'uploads', 'chunks');
+  }
+
+  async initiateChunkUpload(params: {
+    filename: string;
+    totalSize: number;
+    chunkSize: number;
+    totalChunks: number;
+    mimeType?: string;
+    provider?: string;
+    uploadId?: string;
+  }): Promise<{ uploadId: string; uploaded: boolean[]; totalChunks: number }> {
+    const { filename, totalSize, chunkSize, totalChunks, mimeType, provider } = params;
+    if (filename.length === 0 || totalSize <= 0 || chunkSize <= 0 || totalChunks <= 0) {
+      throw new BadRequestException('缺少必要参数');
+    }
+    const uploadId = params.uploadId ?? `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    const dir = join(this.getChunkBaseDir(), uploadId);
+    await fsPromises.mkdir(dir, { recursive: true });
+    const meta = { filename, totalSize, chunkSize, totalChunks, mimeType, provider };
+    await fsPromises.writeFile(join(dir, 'meta.json'), JSON.stringify(meta));
+
+    const uploaded = new Array<boolean>(totalChunks).fill(false);
+    try {
+      const entries = await fsPromises.readdir(dir);
+      for (const name of entries) {
+        const m = name.match(/^chunk\.(\d+)$/);
+        if (m) {
+          const idx = Number(m[1]);
+          if (idx >= 0 && idx < totalChunks) uploaded[idx] = true;
+        }
+      }
+    } catch {
+      // ignore
+    }
+    return { uploadId, uploaded, totalChunks };
+  }
+
+  async uploadChunk(params: {
+    uploadId: string;
+    index: number;
+    file: Express.Multer.File;
+  }): Promise<{ index: number; size: number }> {
+    const { uploadId, index, file } = params;
+    if (typeof uploadId !== 'string' || !Number.isInteger(index) || index < 0) {
+      throw new BadRequestException('参数不合法');
+    }
+    const dir = join(this.getChunkBaseDir(), uploadId);
+    try {
+      await fsPromises.access(dir);
+    } catch {
+      throw new NotFoundException('上传会话不存在');
+    }
+
+    const chunkPath = join(dir, `chunk.${index}`);
+    // 简单幂等：覆盖写入该分片（客户端不应重复并发发送同一 index）
+    await fsPromises.writeFile(chunkPath, file.buffer);
+    return { index, size: file.buffer.length };
+  }
+
+  async mergeChunks(uploadId: string): Promise<{
+    buffer: Buffer;
+    meta: { filename: string; totalChunks: number; mimeType?: string; provider?: string };
+  }> {
+    const dir = join(this.getChunkBaseDir(), uploadId);
+    let metaRaw: string;
+    try {
+      metaRaw = await fsPromises.readFile(join(dir, 'meta.json'), 'utf8');
+    } catch {
+      throw new NotFoundException('上传会话不存在');
+    }
+    const meta = JSON.parse(metaRaw) as {
+      filename: string;
+      totalChunks: number;
+      mimeType?: string;
+      provider?: string;
+    };
+
+    const parts: Buffer[] = [];
+    for (let i = 0; i < meta.totalChunks; i++) {
+      const chunkPath = join(dir, `chunk.${i}`);
+      try {
+        const buf = await fsPromises.readFile(chunkPath);
+        parts.push(buf);
+      } catch {
+        throw new BadRequestException(`缺少分片: ${i}`);
+      }
+    }
+    const buffer = Buffer.concat(parts);
+    return { buffer, meta };
+  }
+
+  async cleanupChunks(uploadId: string): Promise<void> {
+    const dir = join(this.getChunkBaseDir(), uploadId);
+    try {
+      await fsPromises.rm(dir, { recursive: true, force: true });
+    } catch {
+      // ignore
+    }
   }
 }

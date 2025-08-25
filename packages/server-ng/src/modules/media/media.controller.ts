@@ -1,3 +1,5 @@
+import { Readable } from 'stream';
+
 import {
   Controller,
   Post,
@@ -8,10 +10,11 @@ import {
   Param,
   UseInterceptors,
   UploadedFile,
+  UploadedFiles,
   ParseIntPipe,
   BadRequestException,
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiOperation, ApiResponse, ApiConsumes, ApiBody } from '@nestjs/swagger';
 import dayjs from 'dayjs';
 import { memoryStorage } from 'multer';
@@ -21,6 +24,14 @@ import { staticFiles } from '../../database/schema';
 import { Perm } from '../auth/permissions.decorator';
 
 import { BatchDeleteDto, BatchDeleteSchema } from './dto/batch-delete.dto';
+import {
+  CompleteChunkUploadDto,
+  CompleteChunkUploadSchema,
+  InitiateChunkUploadDto,
+  InitiateChunkUploadSchema,
+  UploadChunkDto,
+  UploadChunkSchema,
+} from './dto/chunk-upload.dto';
 import { ListStaticFilesDto } from './dto/list-static-files.dto';
 import {
   UpdateStorageConfigDto,
@@ -252,6 +263,107 @@ export class MediaController {
     message: string;
   }> {
     return this.mediaService.deleteFiles(batchDeleteDto.ids);
+  }
+
+  // 多文件上传：使用内存缓冲，支持并发
+  @Post('upload-multiple')
+  @Perm('media', ['create'])
+  @ApiOperation({ summary: '批量上传多个文件' })
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(
+    FilesInterceptor('files', 20, {
+      storage: memoryStorage(),
+      limits: { fileSize: 50 * 1024 * 1024 },
+    }),
+  )
+  async uploadMultiple(
+    @UploadedFiles() files: Express.Multer.File[],
+    @Body() body: { provider?: string },
+  ): Promise<Array<typeof staticFiles.$inferSelect>> {
+    const tasks = files.map(async (f) => {
+      let buf = f.buffer;
+      if (f.mimetype.startsWith('image/') && f.mimetype !== 'image/svg+xml') {
+        const result = await this.imageProcessingService.compressImage(buf, {
+          quality: 85,
+          maxWidth: 1920,
+          maxHeight: 1080,
+        });
+        buf = result.buffer;
+      }
+      const processed = { ...f, buffer: buf, size: buf.length } as Express.Multer.File;
+      return this.mediaService.uploadFile(processed, f.originalname, body.provider ?? 'local');
+    });
+    return Promise.all(tasks);
+  }
+
+  @Post('upload/initiate')
+  @Perm('media', ['create'])
+  @ApiOperation({ summary: '初始化分片上传会话' })
+  @ApiConsumes('application/json')
+  @ApiResponse({ status: 200, description: '会话创建成功' })
+  async initiateChunkUpload(
+    @Body(new ZodValidationPipe(InitiateChunkUploadSchema)) dto: InitiateChunkUploadDto,
+  ): Promise<{ uploadId: string; uploaded: boolean[]; totalChunks: number }> {
+    return this.mediaService.initiateChunkUpload(dto);
+  }
+
+  @Post('upload/chunk')
+  @Perm('media', ['create'])
+  @ApiOperation({ summary: '上传分片（已上传文件块，不做流式处理）' })
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: memoryStorage(),
+      limits: { fileSize: 10 * 1024 * 1024 },
+    }),
+  )
+  async uploadChunk(
+    @UploadedFile() file: Express.Multer.File,
+    @Body(new ZodValidationPipe(UploadChunkSchema)) dto: UploadChunkDto,
+  ): Promise<{ index: number; size: number }> {
+    return this.mediaService.uploadChunk({ uploadId: dto.uploadId, index: dto.index, file });
+  }
+
+  @Post('upload/complete')
+  @Perm('media', ['create'])
+  @ApiOperation({ summary: '完成分片上传并合并，作为常规上传入库' })
+  @ApiConsumes('application/json')
+  async completeChunkUpload(
+    @Body(new ZodValidationPipe(CompleteChunkUploadSchema)) dto: CompleteChunkUploadDto,
+  ): Promise<typeof staticFiles.$inferSelect> {
+    const { buffer, meta } = await this.mediaService.mergeChunks(dto.uploadId);
+
+    let processedBuffer = buffer;
+    if ((meta.mimeType ?? '').startsWith('image/') && meta.mimeType !== 'image/svg+xml') {
+      const result = await this.imageProcessingService.compressImage(buffer, {
+        quality: 85,
+        maxWidth: 1920,
+        maxHeight: 1080,
+      });
+      processedBuffer = result.buffer;
+    }
+
+    const fakeFile: Express.Multer.File = {
+      fieldname: 'file',
+      originalname: dto.filename ?? meta.filename,
+      encoding: '7bit',
+      mimetype: meta.mimeType ?? 'application/octet-stream',
+      size: processedBuffer.length,
+      stream: Readable.from([]),
+      destination: '',
+      filename: dto.filename ?? meta.filename,
+      path: '',
+      buffer: processedBuffer,
+    } as Express.Multer.File;
+
+    try {
+      const saved = await this.mediaService.uploadFile(fakeFile, dto.filename ?? meta.filename);
+      await this.mediaService.cleanupChunks(dto.uploadId);
+      return saved;
+    } catch (e) {
+      await this.mediaService.cleanupChunks(dto.uploadId);
+      throw e;
+    }
   }
 
   /**
