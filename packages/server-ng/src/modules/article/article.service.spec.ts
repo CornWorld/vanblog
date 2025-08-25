@@ -271,6 +271,39 @@ describe('ArticleService', () => {
       expect(result.title).toBe('New Article');
       expect(result.tags).toEqual(['new']);
     });
+
+    it('should hash password on create when provided', async () => {
+      // Arrange
+      const mockCreatedArticle = MockUtils.testData.createArticle({
+        id: 2,
+        title: 'With Password',
+        content: 'Secret content',
+        tags: JSON.stringify([]),
+        password: '$2a$10$xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+      });
+
+      const createDto = MockUtils.testData.createArticleDto({
+        title: 'With Password',
+        content: 'Secret content',
+        tags: JSON.stringify([]),
+        password: 'plain-secret',
+      });
+
+      databaseMock.setInsertResult([mockCreatedArticle]);
+      databaseMock.setQueryResult([]);
+
+      // Act
+      await service.create(createDto as unknown as Parameters<typeof service.create>[0]);
+
+      // Assert: capture values() argument and ensure password is hashed (bcrypt)
+      const [[valuesArg]] = databaseMock.db.values.mock.calls; // service.create uses .values([newArticleData])
+      expect(databaseMock.db.values.mock.calls.length).toBeGreaterThan(0);
+      expect(Array.isArray(valuesArg)).toBe(true);
+      const inserted = valuesArg[0] as Record<string, unknown>;
+      expect(inserted.password).toBeTypeOf('string');
+      expect(inserted.password).not.toBe('plain-secret');
+      expect(String(inserted.password)).toMatch(/^\$2[aby]\$/);
+    });
   });
 
   describe('update', () => {
@@ -310,6 +343,33 @@ describe('ArticleService', () => {
 
       expect(result.title).toBe('Updated Article');
       expect(result.tags).toEqual(['updated']);
+    });
+
+    it('should hash password on update when provided', async () => {
+      // Arrange: mock existing article for existence check
+      const mockExistingArticle = MockUtils.testData.createArticle({ id: 3 });
+
+      databaseMock.db.select.mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue([mockExistingArticle]),
+          }),
+        }),
+      });
+
+      databaseMock.setUpdateResult([MockUtils.testData.createArticle({ id: 3, password: null })]);
+
+      // Act
+      await service.update(3, { password: 'plain-update' } as unknown as Parameters<
+        typeof service.update
+      >[1]);
+
+      // Assert: capture set() argument and ensure password is hashed
+      const [[setArg]] = databaseMock.db.set.mock.calls;
+      expect(databaseMock.db.set.mock.calls.length).toBeGreaterThan(0);
+      expect(setArg.password).toBeTypeOf('string');
+      expect(setArg.password).not.toBe('plain-update');
+      expect(String(setArg.password)).toMatch(/^\$2[aby]\$/);
     });
 
     it('should throw NotFoundException when article not found', async () => {

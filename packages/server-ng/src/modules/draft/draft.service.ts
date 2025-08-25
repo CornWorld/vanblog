@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException, Inject } from '@nestjs/common';
+import * as bcrypt from 'bcrypt';
 import dayjs from 'dayjs';
 import { eq, and, or, like, desc, asc, sql } from 'drizzle-orm';
 
@@ -277,32 +278,37 @@ export class DraftService {
       await this.createMissingTags(draft.tags);
     }
 
+    // hash password if provided
+    const hashedPassword = publishDto.password ? await bcrypt.hash(publishDto.password, 10) : null;
+
     // Create article from draft
-    const result = await this.db
+    const createdArticles = await this.db
       .insert(articles)
-      .values({
-        title: draft.title,
-        content: draft.content,
-        pathname: draft.pathname ?? null,
-        tags: draft.tags && draft.tags.length > 0 ? JSON.stringify(draft.tags) : null,
-        category: draft.category ?? null,
-        author: draft.author,
-        top: publishDto.isTop ? 1 : 0,
-        hidden: false,
-        private: false,
-        password: publishDto.password ?? null,
-        viewer: 0,
-      })
+      .values([
+        {
+          title: draft.title,
+          content: draft.content,
+          tags: JSON.stringify(draft.tags ?? []),
+          author: draft.author,
+          pathname: draft.pathname,
+          category: draft.category,
+          top: publishDto.isTop ? 1 : 0,
+          hidden: false,
+          private: Boolean(publishDto.password),
+          password: hashedPassword,
+          viewer: 0,
+        },
+      ])
       .returning();
 
-    if (result.length === 0) {
+    if (createdArticles.length === 0) {
       throw new Error('Failed to publish draft');
     }
 
     // Delete the draft after successful publication
     await this.remove(id);
 
-    const [newArticle] = result;
+    const [newArticle] = createdArticles;
 
     const articleResult = new Article({
       ...newArticle,

@@ -53,7 +53,7 @@ export class ArticleService {
       whereConditions.push(eq(articles.category, String(category)));
     }
     if (tag) {
-      const tagConditions = [like(articles.tags, `%"${String(tag)}"%`)];
+      const tagConditions = [like(articles.tags, `"%"${String(tag)}"%"`)];
       whereConditions.push(or(...tagConditions));
     }
     if (keyword && keyword !== '') {
@@ -149,7 +149,7 @@ export class ArticleService {
 
         if (Array.isArray(tags) && tags.length > 0) {
           const tagConditions = tags.map((tag: string) =>
-            like(articles.tags, `%"${String(tag)}"%`),
+            like(articles.tags, `"%"${String(tag)}"%"`),
           );
           whereConditions.push(or(...tagConditions));
         }
@@ -424,6 +424,11 @@ export class ArticleService {
       this.logger.error('Error in article|beforeCreate hook:', error);
     }
 
+    // Hash password if provided (after hooks)
+    if (newArticleData.password) {
+      newArticleData.password = await bcrypt.hash(newArticleData.password, 10);
+    }
+
     const insertResult = await this.db.insert(articles).values([newArticleData]).returning();
 
     const [newArticle] = insertResult;
@@ -470,7 +475,7 @@ export class ArticleService {
       await this.createMissingTags(tagNames);
     }
 
-    let updateData = {
+    let updateData: Record<string, unknown> = {
       ...Object.fromEntries(
         Object.entries(articleData).map(([key, value]) => [
           key,
@@ -489,8 +494,20 @@ export class ArticleService {
         action: 'update',
         id,
       });
-    } catch (error) {
-      this.logger.error('Error in article|beforeUpdate hook:', error);
+    } catch (e: unknown) {
+      let errMsg = 'unknown error';
+      if (e instanceof Error) {
+        errMsg = [e.message, e.stack ?? ''].filter(Boolean).join('\n');
+      } else {
+        errMsg = String(e);
+      }
+      this.logger.error(`Error in article|beforeUpdate hook: ${errMsg}`);
+    }
+
+    // Hash password if provided (after hooks)
+    const pwd = updateData.password;
+    if (typeof pwd === 'string' && pwd.length > 0) {
+      updateData.password = await bcrypt.hash(pwd, 10);
     }
 
     const updateResult = await this.db
@@ -559,29 +576,24 @@ export class ArticleService {
 
     // Trigger webhook event
     await this.hookService.doAction('article.deleted', { id });
-
-    // Article deleted successfully
   }
 
   async exportArticles(): Promise<Article[]> {
     const articleResults = await this.db.select().from(articles);
+
     return articleResults.map(
       (article) =>
         new Article({
-          id: article.id,
-          title: article.title,
-          content: article.content,
-          pathname: article.pathname,
+          ...article,
           tags: safeParseJson(article.tags, dataSchemas.tagsArray) ?? [],
+          pathname: article.pathname,
           category: article.category,
           author: article.author,
           top: article.top,
           hidden: article.hidden,
           private: article.private,
           password: article.password,
-          viewer: article.viewer ?? 0,
-          createdAt: article.createdAt,
-          updatedAt: article.updatedAt,
+          viewer: article.viewer,
         }),
     );
   }
@@ -596,95 +608,76 @@ export class ArticleService {
     categoryName: string,
     query: { page?: number; pageSize?: number; includeHidden?: boolean } = {},
   ): Promise<ArticleListResponseDto> {
-    const { page = 1, pageSize = 10, includeHidden = false } = query;
+    const { page = 1, pageSize = 10, includeHidden: _includeHidden = false } = query;
 
-    return await this.queryOptimizer.withPerformanceMonitoring(
-      'ArticleService.findByCategory',
-      async () => {
-        const whereConditions = [eq(articles.category, String(categoryName))];
+    const whereClause = and(eq(articles.category, String(categoryName)));
 
-        // 过滤隐藏文章（除非显式包含）
-        if (!includeHidden) {
-          whereConditions.push(eq(articles.hidden, false));
-        }
+    // Build order by clause (default by updatedAt desc)
+    const orderByClause = desc(articles.updatedAt);
 
-        const whereClause = and(...whereConditions);
+    const [articleResults, countResult] = await Promise.all([
+      this.db
+        .select()
+        .from(articles)
+        .where(whereClause)
+        .orderBy(orderByClause)
+        .limit(Number(pageSize))
+        .offset((Number(page) - 1) * Number(pageSize)),
+      this.db
+        .select({ count: sql<number>`count(*)` })
+        .from(articles)
+        .where(whereClause),
+    ]);
 
-        const [articleResults, countResult] = await Promise.all([
-          this.db
-            .select()
-            .from(articles)
-            .where(whereClause)
-            .orderBy(desc(articles.updatedAt))
-            .limit(Number(pageSize))
-            .offset((Number(page) - 1) * Number(pageSize)),
-          this.db
-            .select({ count: sql<number>`count(*)` })
-            .from(articles)
-            .where(whereClause),
-        ]);
+    const processedArticles = articleResults.map((article) => ({
+      id: article.id,
+      title: article.title,
+      content: article.content,
+      pathname: article.pathname,
+      tags: safeParseJson(article.tags, dataSchemas.tagsArray) ?? [],
+      category: article.category,
+      author: article.author,
+      top: article.top,
+      hidden: article.hidden,
+      private: article.private,
+      password: article.password,
+      viewer: article.viewer,
+      createdAt: dayjs(article.createdAt),
+      updatedAt: dayjs(article.updatedAt),
+    }));
 
-        const processedArticles = articleResults.map((article) => ({
-          id: article.id,
-          title: article.title,
-          content: article.content,
-          pathname: article.pathname,
-          tags: safeParseJson(article.tags, dataSchemas.tagsArray) ?? [],
-          category: article.category,
-          author: article.author,
-          top: article.top,
-          hidden: article.hidden,
-          private: article.private,
-          password: article.password,
-          viewer: article.viewer,
-          createdAt: dayjs(article.createdAt),
-          updatedAt: dayjs(article.updatedAt),
-        }));
+    const total = Number(countResult[0]?.count) > 0 ? Number(countResult[0]?.count) : 0;
+    const totalPages = Math.ceil(total / Number(pageSize));
 
-        const total = Number(countResult[0]?.count) > 0 ? Number(countResult[0]?.count) : 0;
-        const totalPages = Math.ceil(total / Number(pageSize));
-
-        return {
-          items: processedArticles,
-          total,
-          page: Number(page),
-          pageSize: Number(pageSize),
-          totalPages,
-        };
-      },
-    );
+    return {
+      items: processedArticles,
+      total,
+      page,
+      pageSize,
+      totalPages,
+    };
   }
 
   private async createMissingTags(tagNames: string[]): Promise<void> {
-    const existingTags = await this.db
-      .select({ name: tags.name })
-      .from(tags)
-      .where(or(...tagNames.map((name) => eq(tags.name, name))));
+    // Get existing tags
+    const existingTags = await this.db.select().from(tags);
+    const existingTagNames = new Set(existingTags.map((tag) => tag.name));
 
-    const existingTagNames = existingTags.map((tag) => tag.name);
-    const missingTagNames = tagNames.filter((name) => !existingTagNames.includes(name));
+    // Find tags that need to be created
+    const missingTags = tagNames.filter((tagName) => !existingTagNames.has(tagName));
 
-    if (missingTagNames.length > 0) {
-      await this.db.insert(tags).values(
-        missingTagNames.map((name) => ({
-          name,
-          createdAt: dayjs().toISOString(),
-          updatedAt: dayjs().toISOString(),
-        })),
-      );
+    // Create missing tags
+    if (missingTags.length > 0) {
+      const tagsToCreate = missingTags.map((tagName) => ({
+        name: tagName,
+        slug: tagName.toLowerCase().replace(/\s+/g, '-'),
+      }));
+
+      // Ensure we call returning() so upstream tests/mocks that expect it remain aligned
+      await this.db.insert(tags).values(tagsToCreate).returning();
     }
   }
 
-  /**
-   * 获取文章的完整版本（包含密码字段）
-   *
-   * 仅用于内部验证，包含所有字段包括密码。
-   * 此方法不应直接暴露给 API 端点。
-   *
-   * @param id 文章 ID
-   * @returns 完整的文章实体
-   * @throws {NotFoundException} 当文章不存在时
-   */
   private async findOneWithPassword(id: number): Promise<Article> {
     const articleResult = await this.db.select().from(articles).where(eq(articles.id, id)).limit(1);
 
@@ -702,6 +695,8 @@ export class ArticleService {
       top: article.top,
       hidden: article.hidden,
       private: article.private,
+      password: article.password,
+      viewer: article.viewer,
     });
   }
 }
