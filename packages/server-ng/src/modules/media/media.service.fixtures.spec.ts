@@ -296,9 +296,7 @@ describe('MediaService with Vitest Fixtures', () => {
         /* eslint-disable-next-line no-empty-pattern */
         async ({}, use) => {
           // 自动执行的设置逻辑
-          console.log('Setting up test environment...');
           await use(undefined);
-          console.log('Cleaning up test environment...');
         },
         { auto: true }, // 标记为自动fixture
       ],

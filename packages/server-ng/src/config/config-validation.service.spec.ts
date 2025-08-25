@@ -187,10 +187,6 @@ describe('ConfigValidationService', () => {
 
       const result = service.validateAll();
 
-      console.log('Validation result:', result);
-      console.log('Warnings:', result.warnings);
-      console.log('Errors:', result.errors);
-
       expect(result.warnings.length).toBeGreaterThan(0);
       expect(result.warnings.some((warning) => warning.includes('JWT secret'))).toBe(true);
       expect(result.warnings.some((warning) => warning.includes('CORS origin'))).toBe(true);
