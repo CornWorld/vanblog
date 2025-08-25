@@ -83,9 +83,7 @@ describe('V1 API Deprecation (e2e)', () => {
       .get('/api/v1/public/getTimeLineInfo')
       .expect(410);
 
-    expect(response.body.details.migrationGuide).toContain(
-      'Timeline functionality is not yet implemented in V2',
-    );
+    expect(response.body.details.migrationGuide).toContain('Use: GET /api/v2/public/timeline');
   });
 
   it('should allow v2 endpoints to work normally', async () => {

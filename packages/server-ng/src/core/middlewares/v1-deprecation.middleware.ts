@@ -82,7 +82,7 @@ export class V1DeprecationMiddleware implements NestMiddleware {
       searchArticle: 'Use: GET /api/v2/articles/search?keyword={keyword}&page={page}&limit={limit}',
       getArticleByIdOrPathname:
         'Use: GET /api/v2/articles/{id} or implement pathname support in V2',
-      getArticleWithPassword: 'Password-protected articles are not yet implemented in V2',
+      getArticleWithPassword: 'Use: POST /api/v2/articles/{id}/verify-password',
       getArticlesByTagName:
         'Use: GET /api/v2/tags to find tag ID, then GET /api/v2/tags/{id}/articles',
       getArticlesByCategory:
@@ -94,7 +94,7 @@ export class V1DeprecationMiddleware implements NestMiddleware {
         'Use: GET /api/v2/admin/analytics/article/{id} (requires authentication)',
       getAllCustomPages: 'Use: GET /api/v2/public/customPage/all',
       getCustomPageByPath: 'Use: GET /api/v2/public/customPage?path={pathname}',
-      getTimeLineInfo: 'Timeline functionality is not yet implemented in V2',
+      getTimeLineInfo: 'Use: GET /api/v2/public/timeline',
       getMeta: 'Use: GET /api/v2/public/bootstrap',
       getBuildMeta: 'Use: GET /api/v2/public/bootstrap',
     };
