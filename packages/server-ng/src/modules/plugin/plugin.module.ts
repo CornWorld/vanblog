@@ -1,6 +1,6 @@
 import { join } from 'path';
 
-import { Global, Module, DynamicModule, Logger } from '@nestjs/common';
+import { Global, Module, DynamicModule, Logger, OnApplicationBootstrap } from '@nestjs/common';
 
 import { LoggerModule } from '../../core/logger/logger.module';
 import { DatabaseModule } from '../../database';
@@ -60,7 +60,38 @@ import { WebhookService } from './services/webhook.service';
     WebhookRegistryService,
   ],
 })
-export class PluginModule {
+export class PluginModule implements OnApplicationBootstrap {
+  constructor(private readonly hookService: HookService) {}
+
+  onApplicationBootstrap(): void {
+    // 输出 hooks 总览日志，方便在全部注册完成后检查
+    const logger = new Logger(PluginModule.name);
+    try {
+      const actionHooks = this.hookService.getAllActionHooks();
+      const filterHooks = this.hookService.getAllFilterHooks();
+      logger.log(
+        `[Hooks] Final summary -> actions=${actionHooks.length}, filters=${filterHooks.length}`,
+      );
+
+      if (process.env.NODE_ENV !== 'production') {
+        const actionSample = actionHooks.slice(0, 10).join(', ');
+        const filterSample = filterHooks.slice(0, 10).join(', ');
+        if (actionSample.length > 0) {
+          logger.log(
+            `[Hooks] Action samples: ${actionSample}${actionHooks.length > 10 ? ', ...' : ''}`,
+          );
+        }
+        if (filterSample.length > 0) {
+          logger.log(
+            `[Hooks] Filter samples: ${filterSample}${filterHooks.length > 10 ? ', ...' : ''}`,
+          );
+        }
+      }
+    } catch (e) {
+      logger.error(`Failed to build hooks final summary: ${String(e)}`);
+    }
+  }
+
   static async forRoot(): Promise<DynamicModule> {
     const pluginModules: DynamicModule[] =
       process.env.NODE_ENV === 'test' ? [] : await PluginModule.loadPluginModules();

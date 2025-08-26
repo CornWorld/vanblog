@@ -74,7 +74,7 @@ export class CommentService implements OnModuleInit, OnModuleDestroy, BeforeAppl
   async updateWalineSetting(data: UpdateWalineSetting): Promise<WalineSetting> {
     const existing = await this.getWalineSetting();
 
-    // Trigger beforeUpdate filter hook
+    // Trigger comment|before_update filter hook
     const filteredData = await this.hookService.applyFilters('comment|beforeUpdate', data, {
       action: 'update',
       existing,
@@ -86,7 +86,7 @@ export class CommentService implements OnModuleInit, OnModuleDestroy, BeforeAppl
     // Restart Waline with new settings
     await this.restart('配置更新');
 
-    // Trigger afterUpdate action hook
+    // Trigger comment|afterUpdate action hook
     await this.hookService.doAction('comment|afterUpdate', result, {
       action: 'update',
       previous: existing,

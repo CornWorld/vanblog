@@ -1,5 +1,5 @@
-import { LinkItem } from "../../api/getAllData";
-import ImageBox from "../ImageBox";
+import { LinkItem } from '../../api/getAllData';
+import ImageBox from '../ImageBox';
 
 export default function (props: { link: LinkItem }) {
   return (
@@ -8,7 +8,7 @@ export default function (props: { link: LinkItem }) {
         href={props.link.url}
         target="_blank"
         rel="referrer"
-        style={{ overflow: "hidden" }}
+        style={{ overflow: 'hidden' }}
         className="flex p-3 sm:p-4 dark:bg-dark-2 card-shadow dark:card-shadow-dark transition  sm:hover:-translate-y-2 hover:-translate-y-1 duration-300 "
       >
         <div className="mr-2 flex-shrink-0 sm:mr-4 flex  items-center justify-center">
@@ -24,9 +24,9 @@ export default function (props: { link: LinkItem }) {
             title={props.link.name}
             className="text-sm sm:text-lg font-normal mb-1 dark:text-dark"
             style={{
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
             }}
           >
             {props.link.name}
@@ -34,9 +34,9 @@ export default function (props: { link: LinkItem }) {
           <p
             title={props.link.desc}
             style={{
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
             }}
             className="text-xs sm:text-sm font-thin text-gray-600 dark:text-dark"
           >

@@ -28,12 +28,7 @@ export class LogProvider {
     this.logger = pino({ level: 'debug' }, pino.multistream(streams));
     this.logger.info({ event: 'start' });
   }
-  async runPipeline(
-    pipeline: Pipeline,
-    input: any,
-    result?: CodeResult,
-    error?: Error,
-  ) {
+  async runPipeline(pipeline: Pipeline, input: any, result?: CodeResult, error?: Error) {
     this.logger.info({
       event: EventType.RUN_PIPELINE,
       pipelineId: pipeline.id,

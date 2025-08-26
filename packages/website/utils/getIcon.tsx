@@ -1,7 +1,7 @@
-import { SocialType } from "../api/getAllData";
+import { SocialType } from '../api/getAllData';
 
 export function getIcon(type: SocialType, size: number) {
-  if (type == "bilibili") {
+  if (type == 'bilibili') {
     return (
       <svg
         viewBox="0 0 1024 1024"
@@ -17,7 +17,7 @@ export function getIcon(type: SocialType, size: number) {
         ></path>
       </svg>
     );
-  } else if (type == "email") {
+  } else if (type == 'email') {
     return (
       <svg
         viewBox="0 0 1024 1024"
@@ -33,7 +33,7 @@ export function getIcon(type: SocialType, size: number) {
         ></path>
       </svg>
     );
-  } else if (type == "github") {
+  } else if (type == 'github') {
     return (
       <svg
         viewBox="0 0 1024 1024"
@@ -49,7 +49,7 @@ export function getIcon(type: SocialType, size: number) {
         ></path>
       </svg>
     );
-  } else if (type == "wechat") {
+  } else if (type == 'wechat') {
     return (
       <svg
         viewBox="0 0 1171 1024"
@@ -65,7 +65,7 @@ export function getIcon(type: SocialType, size: number) {
         ></path>
       </svg>
     );
-  } else if (type == "gitee") {
+  } else if (type == 'gitee') {
     return (
       <svg
         viewBox="0 0 1024 1024"

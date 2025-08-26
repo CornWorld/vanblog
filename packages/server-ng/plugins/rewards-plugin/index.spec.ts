@@ -59,18 +59,18 @@ describe('🧩 bootstrap-reward-plugin', () => {
 
   describe('hooks', () => {
     it('应有正确的钩子类型与优先级', () => {
-      expect(plugin.hooks?.['bootstrap|beforeGenerate']?.type).toBe('action');
-      expect(plugin.hooks?.['bootstrap|beforeGenerate']?.priority).toBe(10);
-      expect(plugin.hooks?.['bootstrap|transformResponse']?.type).toBe('filter');
-      expect(plugin.hooks?.['bootstrap|transformResponse']?.priority).toBe(10);
-      expect(plugin.hooks?.['bootstrap|afterGenerate']?.type).toBe('action');
-      expect(plugin.hooks?.['bootstrap|afterGenerate']?.priority).toBe(10);
+      expect(plugin.hooks?.['bootstrap|before_generate']?.type).toBe('action');
+      expect(plugin.hooks?.['bootstrap|before_generate']?.priority).toBe(10);
+      expect(plugin.hooks?.['bootstrap|transform_response']?.type).toBe('filter');
+      expect(plugin.hooks?.['bootstrap|transform_response']?.priority).toBe(10);
+      expect(plugin.hooks?.['bootstrap|generated']?.type).toBe('action');
+      expect(plugin.hooks?.['bootstrap|generated']?.priority).toBe(10);
     });
 
-    it('beforeGenerate: 自增计数', async () => {
+    it('before_generate: 自增计数', async () => {
       (ctx.data.get as any).mockResolvedValueOnce(1); // boot_count=1
 
-      const handler = plugin.hooks?.['bootstrap|beforeGenerate']?.handler as (
+      const handler = plugin.hooks?.['bootstrap|before_generate']?.handler as (
         value: unknown,
         context: PluginContext,
       ) => Promise<void>;
@@ -80,7 +80,7 @@ describe('🧩 bootstrap-reward-plugin', () => {
       expect(ctx.data.set).toHaveBeenCalledWith('boot_count', 2);
     });
 
-    it('transformResponse: 使用缓存的 extras 合并并去重，extras 覆盖同名项', async () => {
+    it('transform_response: 使用缓存的 extras 合并并去重，extras 覆盖同名项', async () => {
       const cachedExtras = [
         { name: 'Coffee', value: 'extra://coffee' },
         { name: 'Alipay', value: 'ali://zz' },
@@ -98,7 +98,7 @@ describe('🧩 bootstrap-reward-plugin', () => {
         other: 123,
       } as any;
 
-      const handler = plugin.hooks?.['bootstrap|transformResponse']?.handler as (
+      const handler = plugin.hooks?.['bootstrap|transform_response']?.handler as (
         value: unknown,
         context: PluginContext,
       ) => Promise<any>;
@@ -121,11 +121,11 @@ describe('🧩 bootstrap-reward-plugin', () => {
       expect(names.size).toBe(result.rewards.length);
     });
 
-    it('transformResponse: 无缓存时使用空数组', async () => {
+    it('transform_response: 无缓存时使用空数组', async () => {
       (ctx.data.get as any).mockResolvedValueOnce(null); // 没有缓存
 
       const value = { rewards: [] } as any;
-      const handler = plugin.hooks?.['bootstrap|transformResponse']?.handler as (
+      const handler = plugin.hooks?.['bootstrap|transform_response']?.handler as (
         value: unknown,
         context: PluginContext,
       ) => Promise<any>;
@@ -137,8 +137,8 @@ describe('🧩 bootstrap-reward-plugin', () => {
       expect(ctx.data.set).toHaveBeenCalledWith('extra_rewards', []);
     });
 
-    it('afterGenerate: 处理完成', async () => {
-      const handler = plugin.hooks?.['bootstrap|afterGenerate']?.handler as (
+    it('generated: 处理完成', async () => {
+      const handler = plugin.hooks?.['bootstrap|generated']?.handler as (
         value: unknown,
         context: PluginContext,
       ) => Promise<void>;

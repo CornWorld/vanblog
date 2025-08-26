@@ -196,11 +196,11 @@ describe('SettingCoreService', () => {
         oldValue: JSON.stringify(oldStoredRaw),
       });
       const secondCall = mockHookService.doAction.mock.calls.find(
-        (c: any[]) => c[0] === 'setting.updated',
+        (c: any[]) => c[0] === 'setting|afterUpdate',
       );
       expect(secondCall).toBeTruthy();
       if (!secondCall) {
-        throw new Error('Expected hook "setting.updated" to be called');
+        throw new Error('Expected hook "setting|afterUpdate" to be called');
       }
       const [, payload] = secondCall;
       expect(payload).toMatchObject({ key: 'testKey', value: testValue, oldValue: oldStoredRaw });

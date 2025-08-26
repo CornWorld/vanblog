@@ -1,7 +1,7 @@
 import { getDirname, path } from 'vuepress/utils';
 import { hopeTheme } from 'vuepress-theme-hope';
 
-import caddyfile from "./caddyfile.tmLanguage.json" with { type: 'json'};
+import caddyfile from './caddyfile.tmLanguage.json' with { type: 'json' };
 
 const __dirname = getDirname(import.meta.url);
 
@@ -56,11 +56,13 @@ export default hopeTheme({
   markdown: {
     highlighter: {
       type: 'shiki',
-      langs: [{
-        id: "Caddyfile",
-        aliases: ["caddyfile", "caddy"],
-        ...caddyfile,
-      }]
+      langs: [
+        {
+          id: 'Caddyfile',
+          aliases: ['caddyfile', 'caddy'],
+          ...caddyfile,
+        },
+      ],
     },
     align: true,
     codeTabs: true,
@@ -70,8 +72,7 @@ export default hopeTheme({
     include: {
       deep: true,
       resolvePath: (filePath, cwd) => {
-        if (filePath.startsWith('@'))
-          return filePath.replace('@', path.resolve(__dirname, '../'));
+        if (filePath.startsWith('@')) return filePath.replace('@', path.resolve(__dirname, '../'));
 
         return path.resolve(cwd, filePath);
       },
@@ -93,6 +94,6 @@ export default hopeTheme({
       assets: 'fontawesome-with-brands',
     },
 
-    slimsearch: true
+    slimsearch: true,
   },
 });

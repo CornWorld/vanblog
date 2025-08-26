@@ -45,7 +45,7 @@ const plugin: Plugin = {
   },
 
   hooks: {
-    'bootstrap|beforeGenerate': {
+    'bootstrap|before_generate': {
       type: 'action',
       priority: 10,
       handler: (async (_value: unknown, _context: PluginContext) => {
@@ -54,17 +54,27 @@ const plugin: Plugin = {
         await Promise.resolve();
       }) as ActionCallback,
     },
-
-    'bootstrap|transformResponse': {
+    'bootstrap|transform_response': {
       type: 'filter',
       priority: 10,
-      handler: (async (value: unknown, context: PluginContext) => {
-        const beianInfo = await beianService.getBeianInfo(context);
+      handler: ((value: unknown, _context: PluginContext) => {
+        if (value == null || typeof value !== 'object') return value as typeof value;
+        const resp = value as Record<string, unknown>;
         return {
-          ...(value as Record<string, unknown>),
-          beianInfo,
-        };
+          ...resp,
+          beian: {
+            icp: 'ICP 12345678',
+            policeIcp: '公网安备 12345678901234 号',
+          },
+        } as typeof value;
       }) as FilterCallback,
+    },
+    'bootstrap|afterGenerate': {
+      type: 'action',
+      priority: 10,
+      handler: ((_: unknown, __: PluginContext): void => {
+        // no-op for symmetry with rewards plugin and core
+      }) as ActionCallback,
     },
   },
 };

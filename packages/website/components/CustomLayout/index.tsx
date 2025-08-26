@@ -1,9 +1,9 @@
-import { decode } from "js-base64";
-import Head from "next/head";
-import Script from "next/script";
-import { createElement } from "react";
+import { decode } from 'js-base64';
+import Head from 'next/head';
+import Script from 'next/script';
+import { createElement } from 'react';
 
-import { type HeadTag } from "../../utils/getLayoutProps";
+import { type HeadTag } from '../../utils/getLayoutProps';
 
 export default function (props: {
   customCss?: string;
@@ -16,7 +16,7 @@ export default function (props: {
       return (
         <>
           {props.customHead.map(({ content, props, name }, index) =>
-            createElement(name, { ...props, key: `head-tag-${index}` }, content)
+            createElement(name, { ...props, key: `head-tag-${index}` }, content),
           )}
         </>
       );
@@ -32,14 +32,10 @@ export default function (props: {
         {renderHeadTags()}
       </Head>
       {props.customHtml ? (
-        <div
-          dangerouslySetInnerHTML={{ __html: decode(props.customHtml) }}
-        ></div>
+        <div dangerouslySetInnerHTML={{ __html: decode(props.customHtml) }}></div>
       ) : null}
       {props.customScript ? (
-        <Script strategy="beforeInteractive">{`${decode(
-          props.customScript
-        )}`}</Script>
+        <Script strategy="beforeInteractive">{`${decode(props.customScript)}`}</Script>
       ) : null}
     </>
   );

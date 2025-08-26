@@ -59,7 +59,7 @@ export class AuthService {
     const userWithoutPassword = await this.userService.findByUsername(username);
 
     // Execute afterValidateUser action
-    await this.hookService.doAction('auth|afterValidateUser', { user: userWithoutPassword });
+    await this.hookService.doAction('auth|validatedUser', { user: userWithoutPassword });
 
     return userWithoutPassword;
   }
@@ -103,7 +103,7 @@ export class AuthService {
 
     // Execute afterLogin action
     this.hookService
-      .doAction('auth|afterLogin', { user, token: result.access_token })
+      .doAction('auth|loggedIn', { user, token: result.access_token })
       .catch(() => {});
 
     return result;

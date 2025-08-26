@@ -117,13 +117,8 @@ export class CategoryService {
       updatedAt: dayjs(result[0].updatedAt),
     };
 
-    // Trigger afterCreate hook
-    await this.hookService.doAction('category|afterCreate', categoryResult, {
-      action: 'create',
-    });
-
     // Trigger webhook event
-    await this.hookService.doAction('category.created', {
+    await this.hookService.doAction('category|afterCreate', categoryResult, {
       id: categoryResult.id,
       name: categoryResult.name,
       slug: categoryResult.slug,
@@ -142,7 +137,7 @@ export class CategoryService {
       password: updateCategoryDto.password,
     };
 
-    // Trigger beforeUpdate hook
+    // Trigger category|before_update hook
     categoryData = await this.hookService.applyFilters('category|beforeUpdate', categoryData, {
       action: 'update',
       id,
@@ -175,14 +170,8 @@ export class CategoryService {
       updatedAt: dayjs(result[0].updatedAt),
     };
 
-    // Trigger afterUpdate hook
-    await this.hookService.doAction('category|afterUpdate', categoryResult, {
-      action: 'update',
-      id,
-    });
-
     // Trigger webhook event
-    await this.hookService.doAction('category.updated', {
+    await this.hookService.doAction('category|afterUpdate', categoryResult, {
       id: categoryResult.id,
       name: categoryResult.name,
       slug: categoryResult.slug,
@@ -198,7 +187,7 @@ export class CategoryService {
     // Check if category exists
     const category = await this.findOne(id);
 
-    // Trigger beforeDelete hook
+    // Trigger category|before_delete hook
     await this.hookService.doAction(
       'category|beforeDelete',
       { id, category },
@@ -229,17 +218,8 @@ export class CategoryService {
       throw new NotFoundException(`Category with ID ${String(id)} not found`);
     }
 
-    // Trigger afterDelete hook
-    await this.hookService.doAction(
-      'category|afterDelete',
-      { id, category },
-      {
-        action: 'delete',
-      },
-    );
-
     // Trigger webhook event
-    await this.hookService.doAction('category.deleted', {
+    await this.hookService.doAction('category|afterDelete', {
       id,
       name: category.name,
     });

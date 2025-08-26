@@ -328,7 +328,7 @@ const plugin: Plugin = {
     },
 
     // 草稿发布后发送通知
-    'draft.published': {
+    'draft|afterPublish': {
       type: 'action',
       priority: 10,
       handler: ((...args: unknown[]) => {
@@ -346,15 +346,23 @@ const plugin: Plugin = {
           return;
         }
 
-        const draft = value as ArticleData;
+        const draft = value as Record<string, unknown> & {
+          title?: string;
+          author?: string;
+          articleId?: string | number;
+          createdAt?: string;
+          publishedAt?: string;
+          content?: string;
+        };
         const pluginContext = contextCandidate;
 
-        const subject = `🚀 草稿发布：${draft.title ?? '无标题'}`;
+        const subject = `📢 草稿发布通知：${draft.title ?? '无标题'}`;
         const content = `
           <h2>草稿发布通知</h2>
           <p><strong>标题：</strong>${draft.title ?? '无标题'}</p>
           <p><strong>作者：</strong>${draft.author ?? '未知'}</p>
-          <p><strong>发布时间：</strong>${draft.createdAt ?? '未知'}</p>
+          <p><strong>文章ID：</strong>${draft.articleId ?? '未知'}</p>
+          <p><strong>发布时间：</strong>${draft.publishedAt ?? draft.createdAt ?? '未知'}</p>
           <p><strong>内容预览：</strong></p>
           <div style="border-left: 3px solid #17a2b8; padding-left: 15px; margin: 10px 0;">
             ${String(draft.content ?? '').substring(0, 200)}${String(draft.content ?? '').length > 200 ? '...' : ''}

@@ -132,7 +132,7 @@ export class SitemapService {
     // 通过钩子允许插件贡献或过滤 URL 列表
     try {
       const filtered = await this.hookService.applyFilters<string[]>(
-        'sitemap|collectUrls',
+        'sitemap|collect_urls',
         urlList,
       );
       // 去重，确保有序（稳定保留第一次出现）

@@ -124,7 +124,7 @@ export class OptionsService {
     if (includeMap.rewards) {
       tasks.push(
         this.hookService
-          .applyFilters('bootstrap_rewards', [])
+          .applyFilters('bootstrap|rewards', [])
           .then((rewards) => {
             response.rewards = rewards;
           })

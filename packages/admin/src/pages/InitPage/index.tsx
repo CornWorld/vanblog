@@ -2,7 +2,13 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { message, Alert } from 'antd';
 import { useNavigate } from 'react-router-dom';
-import { ProFormText, StepsForm, ProFormInstance, ProFormSelect, ProFormDateTimePicker } from '@ant-design/pro-components';
+import {
+  ProFormText,
+  StepsForm,
+  ProFormInstance,
+  ProFormSelect,
+  ProFormDateTimePicker,
+} from '@ant-design/pro-components';
 import { useEffect, useRef } from 'react';
 import { resetRedirectCycle } from '@/utils/auth';
 import { fetchAllMeta } from '@/services/van-blog/api';
@@ -69,7 +75,9 @@ interface InitFormValues {
 const InitPage = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const formMapRef = useRef<React.MutableRefObject<ProFormInstance<InitFormValues> | undefined>[]>([]);
+  const formMapRef = useRef<React.MutableRefObject<ProFormInstance<InitFormValues> | undefined>[]>(
+    [],
+  );
   const formRef1 = useRef<ProFormInstance<InitFormValues>>(null);
   const formRef2 = useRef<ProFormInstance<InitFormValues>>(null);
   const formRef3 = useRef<ProFormInstance<InitFormValues>>(null);
@@ -113,7 +121,7 @@ const InitPage = () => {
         user: {
           username: values.name,
           password: encryptPwd(values.name, values.password),
-          nickname: values.name // Using name as nickname if not provided
+          nickname: values.name, // Using name as nickname if not provided
         },
         siteInfo: {
           author: values.author,
@@ -155,8 +163,8 @@ const InitPage = () => {
           showRSS: values.showRSS || 'true',
           openArticleLinksInNewWindow: values.openArticleLinksInNewWindow || 'false',
           showExpirationReminder: values.showExpirationReminder || 'true',
-          showEditButton: values.showEditButton || 'true'
-        }
+          showEditButton: values.showEditButton || 'true',
+        },
       };
 
       const response = await fetch('/api/admin/init', {
@@ -287,8 +295,8 @@ const InitPage = () => {
             label="是否开启评论"
             width="md"
             valueEnum={{
-              'true': '开启',
-              'false': '关闭',
+              true: '开启',
+              false: '关闭',
             }}
           />
           <ProFormSelect
@@ -296,8 +304,8 @@ const InitPage = () => {
             label="显示分类导航栏"
             width="md"
             valueEnum={{
-              'true': '显示',
-              'false': '隐藏',
+              true: '显示',
+              false: '隐藏',
             }}
           />
           <ProFormSelect
@@ -305,8 +313,8 @@ const InitPage = () => {
             label="导航栏左侧内容"
             width="md"
             valueEnum={{
-              'siteLogo': '网站 Logo',
-              'siteName': '网站名称',
+              siteLogo: '网站 Logo',
+              siteName: '网站名称',
             }}
           />
           <ProFormSelect
@@ -314,9 +322,9 @@ const InitPage = () => {
             label="默认主题"
             width="md"
             valueEnum={{
-              'auto': '自动',
-              'light': '亮色',
-              'dark': '暗色',
+              auto: '自动',
+              light: '亮色',
+              dark: '暗色',
             }}
           />
           <ProFormSelect
@@ -324,8 +332,8 @@ const InitPage = () => {
             label="显示后台按钮"
             width="md"
             valueEnum={{
-              'true': '显示',
-              'false': '隐藏',
+              true: '显示',
+              false: '隐藏',
             }}
           />
           <ProFormSelect
@@ -333,8 +341,8 @@ const InitPage = () => {
             label="显示捐赠信息"
             width="md"
             valueEnum={{
-              'true': '显示',
-              'false': '隐藏',
+              true: '显示',
+              false: '隐藏',
             }}
           />
           <ProFormSelect
@@ -342,8 +350,8 @@ const InitPage = () => {
             label="显示友链"
             width="md"
             valueEnum={{
-              'true': '显示',
-              'false': '隐藏',
+              true: '显示',
+              false: '隐藏',
             }}
           />
           <ProFormSelect
@@ -351,8 +359,8 @@ const InitPage = () => {
             label="显示版权信息"
             width="md"
             valueEnum={{
-              'true': '显示',
-              'false': '隐藏',
+              true: '显示',
+              false: '隐藏',
             }}
           />
           <ProFormSelect
@@ -360,8 +368,8 @@ const InitPage = () => {
             label="显示打赏按钮"
             width="md"
             valueEnum={{
-              'true': '显示',
-              'false': '隐藏',
+              true: '显示',
+              false: '隐藏',
             }}
           />
           <ProFormSelect
@@ -369,8 +377,8 @@ const InitPage = () => {
             label="关于页显示打赏"
             width="md"
             valueEnum={{
-              'true': '显示',
-              'false': '隐藏',
+              true: '显示',
+              false: '隐藏',
             }}
           />
           <ProFormSelect
@@ -378,8 +386,8 @@ const InitPage = () => {
             label="允许通过 URL 访问隐藏文章"
             width="md"
             valueEnum={{
-              'true': '允许',
-              'false': '禁止',
+              true: '允许',
+              false: '禁止',
             }}
           />
           <ProFormSelect
@@ -387,8 +395,8 @@ const InitPage = () => {
             label="允许自定义"
             width="md"
             valueEnum={{
-              'true': '允许',
-              'false': '禁止',
+              true: '允许',
+              false: '禁止',
             }}
           />
           <ProFormSelect
@@ -396,8 +404,8 @@ const InitPage = () => {
             label="显示 RSS"
             width="md"
             valueEnum={{
-              'true': '显示',
-              'false': '隐藏',
+              true: '显示',
+              false: '隐藏',
             }}
           />
           <ProFormSelect
@@ -405,8 +413,8 @@ const InitPage = () => {
             label="新窗口打开文章链接"
             width="md"
             valueEnum={{
-              'true': '是',
-              'false': '否',
+              true: '是',
+              false: '否',
             }}
           />
           <ProFormSelect
@@ -414,8 +422,8 @@ const InitPage = () => {
             label="显示过期提醒"
             width="md"
             valueEnum={{
-              'true': '显示',
-              'false': '隐藏',
+              true: '显示',
+              false: '隐藏',
             }}
           />
           <ProFormSelect
@@ -423,8 +431,8 @@ const InitPage = () => {
             label="显示编辑按钮"
             width="md"
             valueEnum={{
-              'true': '显示',
-              'false': '隐藏',
+              true: '显示',
+              false: '隐藏',
             }}
           />
         </StepsForm.StepForm>

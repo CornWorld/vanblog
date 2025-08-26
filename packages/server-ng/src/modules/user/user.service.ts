@@ -85,13 +85,8 @@ export class UserService {
 
     const userResult = this.mapToEntity(newUser);
 
-    // Trigger afterCreate hook
-    await this.hookService.doAction('user|afterCreate', userResult, {
-      action: 'create',
-    });
-
     // Trigger webhook event
-    await this.hookService.doAction('user.created', {
+    await this.hookService.doAction('user|afterCreate', userResult, {
       id: userResult.id,
       username: userResult.username,
       nickname: userResult.nickname,
@@ -139,7 +134,7 @@ export class UserService {
   async update(id: number, updateUserDto: UpdateUserDto): Promise<User> {
     let userData = updateUserDto;
 
-    // Trigger beforeUpdate hook
+    // Trigger user|beforeUpdate hook
     try {
       userData = await this.hookService.applyFilters('user|beforeUpdate', userData, {
         action: 'update',
@@ -198,20 +193,14 @@ export class UserService {
 
     // If password was changed, trigger token revocation through hook system
     if (passwordChanged) {
-      await this.hookService.doAction('user.passwordChanged', {
+      await this.hookService.doAction('user|afterPasswordChange', {
         userId: id,
         username: userResult.username,
       });
     }
 
-    // Trigger afterUpdate hook
-    await this.hookService.doAction('user|afterUpdate', userResult, {
-      action: 'update',
-      id,
-    });
-
     // Trigger webhook event
-    await this.hookService.doAction('user.updated', {
+    await this.hookService.doAction('user|afterUpdate', userResult, {
       id: userResult.id,
       username: userResult.username,
       nickname: userResult.nickname,
@@ -224,7 +213,7 @@ export class UserService {
   }
 
   async remove(id: number): Promise<void> {
-    // Trigger beforeDelete hook
+    // Trigger user|beforeDelete hook
     try {
       await this.hookService.doAction(
         'user|beforeDelete',
@@ -243,17 +232,8 @@ export class UserService {
       throw new NotFoundException(`User with ID ${String(id)} not found`);
     }
 
-    // Trigger afterDelete hook
-    await this.hookService.doAction(
-      'user|afterDelete',
-      { id },
-      {
-        action: 'delete',
-      },
-    );
-
     // Trigger webhook event
-    await this.hookService.doAction('user.deleted', { id });
+    await this.hookService.doAction('user|afterDelete', { id });
   }
 
   async findByUsernameWithPassword(username: string): Promise<User | null> {

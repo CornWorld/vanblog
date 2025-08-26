@@ -97,18 +97,12 @@ export class SettingCoreService {
     // Delegate write to registry service (single-statement upsert, idempotent)
     await this.registryService.updateConfig(key, filteredData.value);
 
-    // Execute afterUpdateSetting action
+    // Execute canonical afterUpdate action (include both raw and parsed for compatibility)
     await this.hookService.doAction('setting|afterUpdate', {
       key,
       value: filteredData.value,
-      oldValue,
-    });
-
-    // Trigger webhook event
-    await this.hookService.doAction('setting.updated', {
-      key,
-      value: filteredData.value,
-      oldValue: oldValue ? safeParseJson(oldValue, dataSchemas.genericObject) : null,
+      oldValue, // raw string
+      parsedOldValue: oldValue ? safeParseJson(oldValue, dataSchemas.genericObject) : null,
       updatedAt: new Date().toISOString(),
     });
 

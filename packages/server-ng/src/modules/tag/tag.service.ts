@@ -89,13 +89,8 @@ export class TagService {
       slug: result[0].slug ?? undefined,
     });
 
-    // Trigger afterCreate hook
-    await this.hookService.doAction('tag|afterCreate', tagResult, {
-      action: 'create',
-    });
-
     // Trigger webhook event
-    await this.hookService.doAction('tag.created', {
+    await this.hookService.doAction('tag|afterCreate', tagResult, {
       id: tagResult.id,
       name: tagResult.name,
       slug: tagResult.slug,
@@ -108,7 +103,7 @@ export class TagService {
   async update(id: number, updateTagDto: UpdateTagDto): Promise<Tag> {
     let tagData = updateTagDto;
 
-    // Trigger beforeUpdate hook
+    // Trigger tag|before_update hook
     tagData = await this.hookService.applyFilters('tag|beforeUpdate', tagData, {
       action: 'update',
       id,
@@ -125,14 +120,8 @@ export class TagService {
       slug: result[0].slug ?? undefined,
     });
 
-    // Trigger afterUpdate hook
-    await this.hookService.doAction('tag|afterUpdate', tagResult, {
-      action: 'update',
-      id,
-    });
-
     // Trigger webhook event
-    await this.hookService.doAction('tag.updated', {
+    await this.hookService.doAction('tag|afterUpdate', tagResult, {
       id: tagResult.id,
       name: tagResult.name,
       slug: tagResult.slug,
@@ -143,7 +132,7 @@ export class TagService {
   }
 
   async remove(id: number): Promise<void> {
-    // Trigger beforeDelete hook
+    // Trigger tag|before_delete hook
     await this.hookService.doAction(
       'tag|beforeDelete',
       { id },
@@ -158,17 +147,8 @@ export class TagService {
       throw new NotFoundException(`Tag with ID ${String(id)} not found`);
     }
 
-    // Trigger afterDelete hook
-    await this.hookService.doAction(
-      'tag|afterDelete',
-      { id },
-      {
-        action: 'delete',
-      },
-    );
-
     // Trigger webhook event
-    await this.hookService.doAction('tag.deleted', { id });
+    await this.hookService.doAction('tag|afterDelete', { id });
   }
 
   async getStatistics(): Promise<OverallStatisticsDto> {

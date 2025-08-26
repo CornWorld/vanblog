@@ -1,1 +1,1 @@
-export { getArticlesBySearch as searchArticles } from './getArticles'; 
+export { getArticlesBySearch as searchArticles } from './getArticles';

@@ -13,7 +13,7 @@ export class PasswordChangeHandlerService implements OnModuleInit {
 
   onModuleInit(): void {
     // Register hook to handle password changes
-    this.hookService.addAction('user.passwordChanged', (data: unknown) => {
+    this.hookService.addAction('user|afterPasswordChange', (data: unknown) => {
       const { userId } = data as { userId: number };
       // Revoke all tokens for the user when password is changed
       this.tokenService.revokeAllUserTokens(userId);

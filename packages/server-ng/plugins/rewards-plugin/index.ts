@@ -54,9 +54,6 @@ const plugin: Plugin = {
     rewardService.setContext(context);
     await rewardService.onModuleInit();
 
-    // 将服务实例暴露给插件对象
-    plugin.rewardService = rewardService;
-
     // 从配置中读取额外的 rewards
     const extraRewards = context.config.get<RewardInfo[]>('extra_rewards', []);
     if (extraRewards.length > 0) {
@@ -88,57 +85,63 @@ const plugin: Plugin = {
   },
 
   hooks: {
-    'bootstrap|beforeGenerate': {
+    // 维持兼容：注册 legacy 名称，HookService 会规范化
+    'bootstrap|before_generate': {
       type: 'action',
       priority: 10,
       handler: (async (_value: unknown, context: PluginContext) => {
-        const current = (await context.data.get('boot_count')) as number | null | undefined;
-        const next = (typeof current === 'number' ? current : 0) + 1;
-        await context.data.set('boot_count', next);
-        logger.log(`beforeGenerate: 第 ${next} 次`);
+        const currentRaw = (await context.data.get('boot_count')) as unknown;
+        const current = typeof currentRaw === 'number' ? currentRaw : 0;
+        await context.data.set('boot_count', current + 1);
       }) as ActionCallback,
     },
 
-    'bootstrap|transformResponse': {
+    'bootstrap|transform_response': {
       type: 'filter',
       priority: 10,
-      handler: (async (value: unknown, context: PluginContext) => {
-        const resp = (value as PublicBootstrapResponseLike | null | undefined) ?? {
-          rewards: [],
-        };
-        const baseRewards = Array.isArray(resp.rewards) ? resp.rewards.filter(isValidReward) : [];
+      handler: (async (value: PublicBootstrapResponseLike, context: PluginContext) => {
+        if (value == null || typeof value !== 'object') return value as PublicBootstrapResponseLike;
+        const response = value;
 
-        let extras = (await context.data.get('extra_rewards')) as unknown[] | null | undefined;
-        if (!Array.isArray(extras)) {
-          // 无缓存时从配置中心读取并回填缓存
-          extras = context.config.get<RewardInfo[]>('extra_rewards', []).filter(isValidReward);
-          await context.data.set('extra_rewards', extras);
+        const baseRewards = Array.isArray(response.rewards) ? response.rewards : [];
+        const cachedRaw = (await context.data.get('extra_rewards')) as unknown;
+
+        let extras: RewardInfo[] = [];
+        if (Array.isArray(cachedRaw)) {
+          extras = cachedRaw.filter(isValidReward);
+        } else if (cachedRaw == null) {
+          // 无缓存时初始化空数组
+          await context.data.set('extra_rewards', []);
+        } else {
+          // 类型不符时重置为空数组，避免无意义的条件
+          await context.data.set('extra_rewards', []);
         }
-        const validExtras = extras.filter(isValidReward);
 
-        // 合并逻辑：同名项由 extras 覆盖 base；保持去重
+        // 合并：extras 覆盖同名项，保持名称唯一
         const map = new Map<string, RewardInfo>();
-        for (const r of baseRewards) {
-          map.set(r.name, r);
-        }
-        for (const r of validExtras) {
-          map.set(r.name, r); // 覆盖
-        }
+        for (const r of baseRewards.filter(isValidReward)) map.set(r.name, r);
+        for (const r of extras) map.set(r.name, r);
 
-        return {
-          ...resp,
-          rewards: Array.from(map.values()),
-        } as PublicBootstrapResponseLike;
+        const merged = Array.from(map.values());
+        return { ...response, rewards: merged } as PublicBootstrapResponseLike;
       }) as FilterCallback,
     },
 
+    // 维持兼容：使用 legacy 名称 generated，核心会映射在新系统中到 afterGenerate
+    'bootstrap|generated': {
+      type: 'action',
+      priority: 10,
+      handler: (async (_value: unknown, _context: PluginContext) => {
+        // no-op，保持接口稳定即可
+      }) as ActionCallback,
+    },
+
+    // 同时注册新的事件名，便于与核心保持一致
     'bootstrap|afterGenerate': {
       type: 'action',
       priority: 10,
-      handler: ((_context: PluginContext, value: unknown) => {
-        const resp = (value ?? {}) as PublicBootstrapResponseLike;
-        const count = Array.isArray(resp.rewards) ? resp.rewards.length : 0;
-        logger.log(`afterGenerate: rewards=${count}`);
+      handler: (async (_value: unknown, _context: PluginContext) => {
+        // no-op，同步于 legacy 行为
       }) as ActionCallback,
     },
   },

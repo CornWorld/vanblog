@@ -321,7 +321,7 @@ export class CategoryController {
 
 - [x] HookService 开发：
   - 借鉴 Wordpress 的 action / filter 机制，在 核心业务模块中埋点
-  - 希望每个模块在 HookService 注册 <模块名> <事件名>， e.g. article|beforeSave 表示在文章保存前触发
+  - 希望每个模块在 HookService 注册 <模块名>|<事件名>， e.g. (action) article|beforeUpdate (filter) article|update (action) article|afterUpdate  表示在文字保存时候的事件们
   - 每个 Hook 都有由插件注册的一个回调列表，在注册回调时根据优先级排序，触发 Hook 时按照顺序执行
 
   - [x] 实现 HookService (addAction, addFilter, doAction, applyFilters)

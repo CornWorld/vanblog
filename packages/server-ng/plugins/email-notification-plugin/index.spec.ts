@@ -163,9 +163,11 @@ describe('EmailNotificationPlugin', () => {
       expect(Boolean(plugin.hooks?.['article|afterCreate'])).toBe(true);
       expect(Boolean(plugin.hooks?.['article|afterUpdate'])).toBe(true);
       expect(Boolean(plugin.hooks?.['comment|afterUpdate'])).toBe(true);
-      expect(Boolean(plugin.hooks?.['draft.published'])).toBe(true);
+      expect(Boolean(plugin.hooks?.['draft|afterPublish'])).toBe(true);
 
       // Check hook types and priorities
+      expect(plugin.hooks?.['article|afterCreate']?.type).toBe('action');
+      expect(plugin.hooks?.['article|afterCreate']?.priority).toBe(10);
       expect(plugin.hooks?.['article|afterCreate']?.type).toBe('action');
       expect(plugin.hooks?.['article|afterCreate']?.priority).toBe(10);
     });

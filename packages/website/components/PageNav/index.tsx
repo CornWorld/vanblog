@@ -1,5 +1,5 @@
-import { calItemList, PageNavProps } from "./core";
-import { RenderItemList } from "./render";
+import { calItemList, PageNavProps } from './core';
+import { RenderItemList } from './render';
 export default function (props: PageNavProps) {
   const pageSize = props?.pageSize || 5;
   const show = props.total > pageSize;

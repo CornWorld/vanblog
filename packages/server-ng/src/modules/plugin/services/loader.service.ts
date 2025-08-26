@@ -116,6 +116,29 @@ export class LoaderService implements OnModuleInit {
       if (meta.pluginDir) this.pluginOrigins.set(plugin.name, meta.pluginDir);
       if (meta.hooks) this.pluginHookRegistrations.set(plugin.name, meta.hooks);
     }
+
+    // Log plugin registration and current hooks snapshot for diagnostics
+    try {
+      const actionHooks = this.hookService.getAllActionHooks();
+      const filterHooks = this.hookService.getAllFilterHooks();
+      const totalActions = Array.isArray(actionHooks) ? actionHooks.length : 0;
+      const totalFilters = Array.isArray(filterHooks) ? filterHooks.length : 0;
+
+      const registeredHooks = (meta?.hooks ?? []).map((h) => `${h.type}:${h.hookName}`);
+      const sample = registeredHooks.slice(0, 5).join(', ');
+
+      const pluginMsg = `[Plugin] Registered ${plugin.name}@${plugin.version} with ${registeredHooks.length} hooks`;
+      this.logger.log(
+        sample.length > 0
+          ? `${pluginMsg} (sample: ${sample}${registeredHooks.length > 5 ? ', ...' : ''})`
+          : pluginMsg,
+      );
+      this.logger.log(
+        `[Hooks] Totals after registration -> actions=${totalActions}, filters=${totalFilters}`,
+      );
+    } catch (e) {
+      this.logger.debug(`Failed to log hooks snapshot for ${plugin.name}: ${String(e)}`);
+    }
   }
 
   getLoadedPlugins(): Map<string, Plugin> {

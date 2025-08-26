@@ -1,1 +1,1 @@
-export { getArticleViewer } from './getAllData'; 
+export { getArticleViewer } from './getAllData';

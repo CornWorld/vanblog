@@ -131,7 +131,7 @@ export class DraftService {
       author: 'admin', // Default author since not in CreateDraftDto
     };
 
-    // Trigger beforeCreateDraft hook (new hook system)
+    // Trigger draft|created action hook (new hook system)
     draftData = await this.hookService.applyFilters('draft|beforeCreate', draftData, {
       action: 'create',
     });
@@ -155,16 +155,6 @@ export class DraftService {
 
     // Trigger afterCreateDraft hook (new hook system)
     await this.hookService.doAction('draft|afterCreate', draftResult, { action: 'create' });
-
-    // Trigger webhook event
-    await this.hookService.doAction('draft.created', {
-      id: draftResult.id,
-      title: draftResult.title,
-      author: draftResult.author,
-      category: draftResult.category,
-      tags: draftResult.tags,
-      createdAt: draftResult.createdAt,
-    });
 
     return draftResult;
   }
@@ -203,7 +193,7 @@ export class DraftService {
 
     updateData.updatedAt = dayjs().toISOString();
 
-    // Trigger beforeUpdateDraft hook (new hook system)
+    // Trigger draft|before_update hook (new hook system)
     updateData = await this.hookService.applyFilters('draft|beforeUpdate', updateData, {
       action: 'update',
       id,
@@ -230,18 +220,8 @@ export class DraftService {
       updatedAt: dayjs(updatedDraft.updatedAt),
     };
 
-    // Trigger afterUpdateDraft hook (new hook system)
+    // Trigger draft|updated hook (new hook system)
     await this.hookService.doAction('draft|afterUpdate', draftResult, { action: 'update', id });
-
-    // Trigger webhook event
-    await this.hookService.doAction('draft.updated', {
-      id: draftResult.id,
-      title: draftResult.title,
-      author: draftResult.author,
-      category: draftResult.category,
-      tags: draftResult.tags,
-      updatedAt: draftResult.updatedAt,
-    });
 
     return draftResult;
   }
@@ -250,7 +230,7 @@ export class DraftService {
     // Delete all versions first
     await this.draftVersionService.deleteAllVersions(id);
 
-    // Trigger beforeDeleteDraft hook (new hook system)
+    // Trigger draft|before_delete hook (new hook system)
     await this.hookService.doAction('draft|beforeDelete', { id }, { action: 'delete' });
 
     const result = await this.db
@@ -262,11 +242,8 @@ export class DraftService {
       throw new NotFoundException(`Draft with ID ${String(id)} not found`);
     }
 
-    // Trigger afterDeleteDraft hook (new hook system)
+    // Trigger draft|deleted hook (new hook system)
     await this.hookService.doAction('draft|afterDelete', { id }, { action: 'delete' });
-
-    // Trigger webhook event
-    await this.hookService.doAction('draft.deleted', { id });
   }
 
   async publish(id: number, publishDto: PublishDraftDto): Promise<Article> {
@@ -324,7 +301,7 @@ export class DraftService {
     });
 
     // Trigger webhook event
-    await this.hookService.doAction('draft.published', {
+    await this.hookService.doAction('draft|afterPublish', {
       draftId: id,
       articleId: articleResult.id,
       title: articleResult.title,

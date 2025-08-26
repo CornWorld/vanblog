@@ -98,7 +98,7 @@ describe('Hook Integration (e2e)', () => {
       );
     });
 
-    it('should trigger beforeUpdateArticle filter hook', async () => {
+    it('should trigger article|beforeUpdate filter hook', async () => {
       // First create an article
       const createArticleDto = {
         title: 'Original Article',
@@ -137,7 +137,7 @@ describe('Hook Integration (e2e)', () => {
       expect(result.content).toBe('Modified Content');
     }, 15000);
 
-    it('should trigger beforeDeleteArticle and afterDeleteArticle hooks', async () => {
+    it('should trigger article|beforeDelete and article|afterDelete hooks', async () => {
       // First create an article
       const createArticleDto = {
         title: 'Article to Delete',
@@ -217,7 +217,7 @@ describe('Hook Integration (e2e)', () => {
       );
     });
 
-    it('should trigger beforeUpdateDraft filter hook', async () => {
+    it('should trigger draft|beforeUpdate filter hook', async () => {
       // First create a draft
       const createDraftDto = {
         title: 'Original Draft',
@@ -254,7 +254,7 @@ describe('Hook Integration (e2e)', () => {
       expect(result.content).toBe('Modified Draft Content');
     }, 15000);
 
-    it('should trigger beforeDeleteDraft and afterDeleteDraft hooks', async () => {
+    it('should trigger draft|beforeDelete and draft|afterDelete hooks', async () => {
       // First create a draft
       const createDraftDto = {
         title: 'Draft to Delete',
@@ -286,22 +286,22 @@ describe('Hook Integration (e2e)', () => {
       const mockFilter = vi.fn((data: unknown) => data);
 
       // Add hooks and get their IDs
-      const actionId = hookService.addAction('testAction', mockAction);
-      const filterId = hookService.addFilter('testFilter', mockFilter);
+      const actionId = hookService.addAction('test|action', mockAction);
+      const filterId = hookService.addFilter('test|filter', mockFilter);
 
-      expect(hookService.hasAction('testAction')).toBe(true);
-      expect(hookService.hasFilter('testFilter')).toBe(true);
-      expect(hookService.getActionCount('testAction')).toBe(1);
-      expect(hookService.getFilterCount('testFilter')).toBe(1);
+      expect(hookService.hasAction('test|action')).toBe(true);
+      expect(hookService.hasFilter('test|filter')).toBe(true);
+      expect(hookService.getActionCount('test|action')).toBe(1);
+      expect(hookService.getFilterCount('test|filter')).toBe(1);
 
       // Remove hooks using their IDs
-      const actionRemoved = hookService.removeAction('testAction', actionId);
-      const filterRemoved = hookService.removeFilter('testFilter', filterId);
+      const actionRemoved = hookService.removeAction('test|action', actionId);
+      const filterRemoved = hookService.removeFilter('test|filter', filterId);
 
       expect(actionRemoved).toBe(true);
       expect(filterRemoved).toBe(true);
-      expect(hookService.getActionCount('testAction')).toBe(0);
-      expect(hookService.getFilterCount('testFilter')).toBe(0);
+      expect(hookService.getActionCount('test|action')).toBe(0);
+      expect(hookService.getFilterCount('test|filter')).toBe(0);
     });
 
     it('should handle multiple hooks for the same event', async () => {

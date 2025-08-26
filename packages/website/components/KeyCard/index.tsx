@@ -1,14 +1,14 @@
-import { useEffect, useState } from "react";
-import { isMac } from "../../utils/ua";
+import { useEffect, useState } from 'react';
+import { isMac } from '../../utils/ua';
 
-export default function (props: { type: "search" | "esc" }) {
-  const [keyString, setKeyString] = useState("Ctrl");
+export default function (props: { type: 'search' | 'esc' }) {
+  const [keyString, setKeyString] = useState('Ctrl');
   useEffect(() => {
     if (isMac()) {
-      setKeyString("⌘");
+      setKeyString('⌘');
     }
-  }, [])
-  if (props.type == "search") {
+  }, []);
+  if (props.type == 'search') {
     return (
       <div className="flex items-center">
         <span
@@ -30,7 +30,7 @@ export default function (props: { type: "search" | "esc" }) {
     return (
       <div className="flex items-center select-none ml-2">
         <span
-          style={{ opacity: 1, height: 24, lineHeight: "17.73px" }}
+          style={{ opacity: 1, height: 24, lineHeight: '17.73px' }}
           className="hidden sm:block text-gray-500 text-sm leading-5 py-0.5 px-1.5 border border-gray-300 rounded-md dark:text-dark dark:border-dark"
         >
           <span className="sr-only">Press </span>

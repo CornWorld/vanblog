@@ -160,7 +160,7 @@ describe('🐱插件', () => {
     });
   });
 
-  describe('article|beforeUpdate 钩子', () => {
+  describe('article|before_update 钩子', () => {
     it('应该在更新时添加喵', () => {
       const handler = plugin.hooks?.['article|beforeUpdate']?.handler;
       expect(handler).toBeDefined();
@@ -184,7 +184,6 @@ describe('🐱插件', () => {
     it('应该有正确的钩子类型和优先级', () => {
       expect(plugin.hooks?.['article|beforeCreate']?.type).toBe('filter');
       expect(plugin.hooks?.['article|beforeCreate']?.priority).toBe(10);
-
       expect(plugin.hooks?.['article|beforeUpdate']?.type).toBe('filter');
       expect(plugin.hooks?.['article|beforeUpdate']?.priority).toBe(10);
     });

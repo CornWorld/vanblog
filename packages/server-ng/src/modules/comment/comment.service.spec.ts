@@ -112,7 +112,7 @@ describe('CommentService', () => {
       expect(service.restart).toHaveBeenCalledWith('配置更新');
     });
 
-    it('should trigger beforeUpdate and afterUpdate hooks', async () => {
+    it('should trigger comment|beforeUpdate and comment|afterUpdate hooks', async () => {
       const updateData = { 'smtp.enabled': false };
       const updatedSetting = { ...mockWalineSetting, ...updateData };
 

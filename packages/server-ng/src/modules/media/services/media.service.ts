@@ -70,17 +70,8 @@ export class MediaService {
       })
       .returning();
 
-    // Execute afterUpload action
-    await this.hookService.doAction('media|afterUpload', { file: result });
-
     // Trigger webhook event
-    await this.hookService.doAction('media.uploaded', {
-      id: result.id,
-      filename: result.filename,
-      path: result.path,
-      size: result.size,
-      mimeType: result.mimeType,
-    });
+    await this.hookService.doAction('media|uploaded', { file: result });
 
     return result;
   }
@@ -192,7 +183,7 @@ export class MediaService {
   async deleteFile(id: number): Promise<{ success: boolean; message: string }> {
     const file = await this.getFileById(id);
 
-    // Execute beforeDelete action
+    // Execute media|before_delete action
     await this.hookService.doAction('media|beforeDelete', { file });
 
     const storageService = await this.storageFactoryService.getStorageService();
@@ -215,17 +206,8 @@ export class MediaService {
 
     const result = { success: true, message: 'File deleted successfully' };
 
-    // Execute afterDelete action
-    await this.hookService.doAction('media|afterDelete', { file, result });
-
     // Trigger webhook event
-    await this.hookService.doAction('media.deleted', {
-      id: file.id,
-      filename: file.filename,
-      path: file.path,
-      size: file.size,
-      mimeType: file.mimeType,
-    });
+    await this.hookService.doAction('media|afterDelete', { file, result });
 
     return result;
   }
@@ -239,7 +221,7 @@ export class MediaService {
 
     const files = await this.db.select().from(staticFiles).where(inArray(staticFiles.id, ids));
 
-    // Execute beforeDeleteBatch action
+    // Execute media|before_delete_batch action
     await this.hookService.doAction('media|beforeDeleteBatch', { files, ids });
 
     const storageService = await this.storageFactoryService.getStorageService();
@@ -268,11 +250,8 @@ export class MediaService {
       message: `${String(files.length)} files deleted successfully`,
     };
 
-    // Execute afterDeleteBatch action
-    await this.hookService.doAction('media|afterDeleteBatch', { files, result });
-
     // Trigger webhook event
-    await this.hookService.doAction('media.batch_deleted', {
+    await this.hookService.doAction('media|afterDeleteBatch', {
       deletedCount: files.length,
       files: files.map((file) => ({
         id: file.id,

@@ -160,8 +160,7 @@ export default [
             },
             {
               name: 'drizzle-orm/libsql/migrator',
-              message:
-                '迁移逻辑应仅存在于数据库层，禁止在业务代码中直接导入 migrator',
+              message: '迁移逻辑应仅存在于数据库层，禁止在业务代码中直接导入 migrator',
             },
           ],
         },

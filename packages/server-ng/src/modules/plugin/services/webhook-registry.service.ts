@@ -41,7 +41,7 @@ export class WebhookRegistryService {
     const categories: Record<string, string[]> = {};
 
     this.getAvailableEvents().forEach((event) => {
-      const [category] = event.split('.');
+      const [category] = event.split('|');
 
       if (category !== '') {
         if (!(category in categories)) {

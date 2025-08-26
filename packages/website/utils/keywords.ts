@@ -1,4 +1,4 @@
-import { Article } from "../types/article";
+import { Article } from '../types/article';
 
 export const getArticlesKeyWord = (articles: Article[]) => {
   // 文章标签分类生成 keywords

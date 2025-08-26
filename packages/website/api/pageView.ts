@@ -25,31 +25,29 @@ export const getServerPageview = async (): Promise<PageViewData> => {
 };
 
 // Client-side only function to update pageviews
-export const updatePageview = async (
-  pathname: string
-): Promise<PageViewData> => {
-  const hasVisited = window.localStorage.getItem("visited") === "true";
-  const hasVisitedCurrentPath = window.localStorage.getItem(`visited-${pathname}`) === "true";
+export const updatePageview = async (pathname: string): Promise<PageViewData> => {
+  const hasVisited = window.localStorage.getItem('visited') === 'true';
+  const hasVisitedCurrentPath = window.localStorage.getItem(`visited-${pathname}`) === 'true';
 
   if (!hasVisited) {
-    window.localStorage.setItem("visited", "true");
+    window.localStorage.setItem('visited', 'true');
   }
 
   if (!hasVisitedCurrentPath) {
-    window.localStorage.setItem(`visited-${pathname}`, "true");
+    window.localStorage.setItem(`visited-${pathname}`, 'true');
   }
 
   try {
     const options = {
       isNew: !hasVisited,
-      isNewByPath: !hasVisitedCurrentPath
+      isNewByPath: !hasVisitedCurrentPath,
     };
-    
+
     try {
       return await apiService.updatePageView(options);
     } catch (fetchError) {
       console.warn('[PageView] Failed to update pageview, using fallback data:', fetchError);
-      
+
       try {
         return await apiService.getPageView();
       } catch (cacheError) {
@@ -62,4 +60,3 @@ export const updatePageview = async (
     return DEFAULT_PAGEVIEW_RESPONSE;
   }
 };
-

@@ -1,16 +1,10 @@
-import { HeadTag } from "../utils/getLayoutProps";
-import { logDefaultValueUsage, isBuildTime } from "../utils/loadConfig";
-import { apiService } from "./service";
-import { PageViewData } from "./types";
+import { HeadTag } from '../utils/getLayoutProps';
+import { logDefaultValueUsage, isBuildTime } from '../utils/loadConfig';
+import { apiService } from './service';
+import { PageViewData } from './types';
 
 // Re-export types used in public interface
-export type SocialType =
-  | "bilibili"
-  | "email"
-  | "github"
-  | "wechat"
-  | "gitee"
-  | "wechat-dark";
+export type SocialType = 'bilibili' | 'email' | 'github' | 'wechat' | 'gitee' | 'wechat-dark';
 
 export interface CustomPageList {
   name: string;
@@ -40,38 +34,38 @@ export interface MenuItem {
 export const defaultMenu: MenuItem[] = [
   {
     id: 0,
-    name: "首页",
-    value: "/",
+    name: '首页',
+    value: '/',
     level: 0,
   },
   {
     id: 1,
-    name: "标签",
-    value: "/tag",
+    name: '标签',
+    value: '/tag',
     level: 0,
   },
   {
     id: 2,
-    name: "分类",
-    value: "/category",
+    name: '分类',
+    value: '/category',
     level: 0,
   },
   {
     id: 3,
-    name: "时间线",
-    value: "/timeline",
+    name: '时间线',
+    value: '/timeline',
     level: 0,
   },
   {
     id: 4,
-    name: "友链",
-    value: "/link",
+    name: '友链',
+    value: '/link',
     level: 0,
   },
   {
     id: 5,
-    name: "关于",
-    value: "/about",
+    name: '关于',
+    value: '/about',
     level: 0,
   },
 ];
@@ -123,22 +117,22 @@ export interface MetaProps {
     gaAnalysisId?: string;
     siteLogoDark?: string;
     copyrightAggreement: string;
-    showSubMenu?: "true" | "false";
-    showAdminButton?: "true" | "false";
-    headerLeftContent?: "siteLogo" | "siteName";
+    showSubMenu?: 'true' | 'false';
+    showAdminButton?: 'true' | 'false';
+    headerLeftContent?: 'siteLogo' | 'siteName';
     subMenuOffset?: number;
-    showDonateInfo: "true" | "false";
-    showFriends: "true" | "false";
-    enableComment: "true" | "false";
-    defaultTheme: "auto" | "light" | "dark";
-    showDonateInAbout?: "true" | "false";
-    enableCustomizing: "true" | "false";
-    showDonateButton: "true" | "false";
-    showCopyRight: "true" | "false";
-    showRSS: "true" | "false";
-    openArticleLinksInNewWindow: "true" | "false";
-    showExpirationReminder: "true" | "false";
-    showEditButton: "true" | "false";
+    showDonateInfo: 'true' | 'false';
+    showFriends: 'true' | 'false';
+    enableComment: 'true' | 'false';
+    defaultTheme: 'auto' | 'light' | 'dark';
+    showDonateInAbout?: 'true' | 'false';
+    enableCustomizing: 'true' | 'false';
+    showDonateButton: 'true' | 'false';
+    showCopyRight: 'true' | 'false';
+    showRSS: 'true' | 'false';
+    openArticleLinksInNewWindow: 'true' | 'false';
+    showExpirationReminder: 'true' | 'false';
+    showEditButton: 'true' | 'false';
   };
 }
 
@@ -168,11 +162,11 @@ export const getPublicMeta = async (): Promise<PublicMetaProp> => {
     return await apiService.getMeta();
   } catch (err) {
     console.error('Error fetching public meta:', err);
-    
+
     if (isBuildTime) {
       logDefaultValueUsage('getPublicMeta');
     }
-    
+
     // Return a basic structure with empty values
     return {
       version: '1.0.0',
@@ -186,7 +180,7 @@ export const getPublicMeta = async (): Promise<PublicMetaProp> => {
         categories: [],
         about: {
           updatedAt: new Date().toISOString(),
-          content: ''
+          content: '',
         },
         siteInfo: {
           author: 'Author',
@@ -217,9 +211,9 @@ export const getPublicMeta = async (): Promise<PublicMetaProp> => {
           openArticleLinksInNewWindow: 'false',
           showExpirationReminder: 'false',
           showEditButton: 'false',
-        }
+        },
       },
-      menus: defaultMenu
+      menus: defaultMenu,
     };
   }
 };
@@ -252,13 +246,12 @@ export const getCustomPage = async (path: string): Promise<CustomPage | null> =>
  * Get article viewer statistics by article ID
  */
 export const getArticleViewer = async (id: number | string): Promise<PageViewData> => {
-  if(isBuildTime) {
+  if (isBuildTime) {
     return {
       viewer: 0,
-      visited: 0
+      visited: 0,
     };
   }
 
   return apiService.getArticleViewer(id);
 };
-

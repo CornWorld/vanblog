@@ -34,7 +34,7 @@ export class BootstrapService {
       this.settingCoreService.getSiteInfo(),
       this.settingCoreService.getNavigation(),
       this.settingCoreService.getFriendLinks(),
-      this.hookService.applyFilters('bootstrap_rewards', []),
+      this.hookService.applyFilters('bootstrap|rewards', []),
       this.getWalineConfig(),
       this.getAllCategories(),
       this.statisticsService.getTotalPublishedWordCount(),

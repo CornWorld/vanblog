@@ -415,8 +415,8 @@ export class ArticleService {
 
     // Process article data
 
-    // Trigger article|beforeCreate hook (new hook system)
     try {
+      // Trigger article|beforeCreate hook (new hook system)
       newArticleData = await this.hookService.applyFilters('article|beforeCreate', newArticleData, {
         action: 'create',
       });
@@ -447,19 +447,7 @@ export class ArticleService {
 
     // Article created successfully
 
-    // Trigger article|afterCreate hook (new hook system)
     await this.hookService.doAction('article|afterCreate', articleResult, { action: 'create' });
-
-    // Trigger webhook event
-    await this.hookService.doAction('article.created', {
-      id: articleResult.id,
-      title: articleResult.title,
-      author: articleResult.author,
-      category: articleResult.category,
-      tags: articleResult.tags,
-      pathname: articleResult.pathname,
-      createdAt: articleResult.createdAt,
-    });
 
     return articleResult;
   }
@@ -488,20 +476,14 @@ export class ArticleService {
 
     // Process update data
 
-    // Trigger article|beforeUpdate hook (new hook system)
     try {
+      // Trigger article|beforeUpdate hook (new hook system)
       updateData = await this.hookService.applyFilters('article|beforeUpdate', updateData, {
-        action: 'update',
         id,
+        action: 'update',
       });
-    } catch (e: unknown) {
-      let errMsg = 'unknown error';
-      if (e instanceof Error) {
-        errMsg = [e.message, e.stack ?? ''].filter(Boolean).join('\n');
-      } else {
-        errMsg = String(e);
-      }
-      this.logger.error(`Error in article|beforeUpdate hook: ${errMsg}`);
+    } catch (error) {
+      this.logger.error('Error in article|beforeUpdate hook:', error);
     }
 
     // Hash password if provided (after hooks)
@@ -532,21 +514,10 @@ export class ArticleService {
 
     // Article updated successfully
 
-    // Trigger article|afterUpdate hook (new hook system)
+    // Trigger article|updated hook (new hook system)
     await this.hookService.doAction('article|afterUpdate', articleResult, {
       action: 'update',
       id,
-    });
-
-    // Trigger webhook event
-    await this.hookService.doAction('article.updated', {
-      id: articleResult.id,
-      title: articleResult.title,
-      author: articleResult.author,
-      category: articleResult.category,
-      tags: articleResult.tags,
-      pathname: articleResult.pathname,
-      updatedAt: articleResult.updatedAt,
     });
 
     return articleResult;
@@ -571,11 +542,8 @@ export class ArticleService {
 
     await this.db.delete(articles).where(eq(articles.id, id));
 
-    // Trigger article|afterDelete hook (new hook system)
-    await this.hookService.doAction('article|afterDelete', { id }, { action: 'delete' });
-
     // Trigger webhook event
-    await this.hookService.doAction('article.deleted', { id });
+    await this.hookService.doAction('article|afterDelete', { id }, { action: 'delete' });
   }
 
   async exportArticles(): Promise<Article[]> {
