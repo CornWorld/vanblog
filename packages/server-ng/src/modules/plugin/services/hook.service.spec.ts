@@ -362,41 +362,42 @@ describe('HookService', () => {
       expect(service.hasAction('hook2|event')).toBe(true);
     });
   });
-  describe('name normalization compatibility', () => {
-    it('should normalize snake_case and kebab-case to the same canonical hook', async () => {
-      const action1 = vi.fn();
-      const action2 = vi.fn();
-      // legacy names should still work via normalization
-      service.addAction('user|password_changed', action1);
-      service.addAction('user|password-changed', action2);
-
-      await service.doAction('user|passwordChanged', { id: 1 });
-
-      expect(action1).toHaveBeenCalledTimes(1);
-      expect(action2).toHaveBeenCalledTimes(1);
-      // and canonical form also triggers them
-      await service.doAction('user|afterPasswordChange', { id: 1 });
-      expect(action1).toHaveBeenCalledTimes(2);
-      expect(action2).toHaveBeenCalledTimes(2);
+  describe('strict hook name validation', () => {
+    it('should reject snake_case hook names and provide suggestions', () => {
+      expect(() => {
+        service.addAction('user|password_changed', vi.fn());
+      }).toThrow(/Invalid event name 'password_changed'.*Did you mean 'afterPasswordChange'\?/);
     });
 
-    it('should map afterUpdate alias to updated and support mixed module casing', async () => {
-      const action = vi.fn();
-      // Register with legacy alias and uppercase module
-      service.addAction('Article|afterUpdate', action);
-      await service.doAction('article|afterUpdate', { id: 1 });
-
-      expect(action).toHaveBeenCalledTimes(1);
+    it('should reject kebab-case hook names and provide suggestions', () => {
+      expect(() => {
+        service.addAction('user|password-changed', vi.fn());
+      }).toThrow(/Invalid event name 'password-changed'.*Did you mean 'afterPasswordChange'\?/);
     });
 
-    it('should map before_update to beforeUpdate for filters', async () => {
-      const filter = vi.fn((value: Record<string, unknown>) => ({ ...value, ok: true }));
-      service.addFilter('article|before_update', filter);
-      const input = { id: 1 } as Record<string, unknown>;
-      const result = await service.applyFilters('article|beforeUpdate', input);
+    it('should reject invalid module names', () => {
+      expect(() => {
+        service.addAction('User|afterCreate', vi.fn());
+      }).toThrow(/Invalid module name 'User'.*must be lowercase/);
+    });
 
-      expect(filter).toHaveBeenCalledTimes(1);
-      expect(result).toEqual({ id: 1, ok: true });
+    it('should accept valid camelCase hook names', () => {
+      expect(() => {
+        service.addAction('user|afterPasswordChange', vi.fn());
+        service.addFilter('article|beforeUpdate', vi.fn());
+      }).not.toThrow();
+    });
+
+    it('should reject hook names without pipe separator', () => {
+      expect(() => {
+        service.addAction('userafterCreate', vi.fn());
+      }).toThrow(/Invalid hook name.*Expected format: module\|event/);
+    });
+
+    it('should reject empty hook names', () => {
+      expect(() => {
+        service.addAction('', vi.fn());
+      }).toThrow(/Invalid hook name.*Expected format: module\|event/);
     });
   });
 });
