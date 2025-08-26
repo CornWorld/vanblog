@@ -100,7 +100,7 @@ const plugin: Plugin = {
       type: 'filter',
       priority: 10,
       handler: (async (value: PublicBootstrapResponseLike, context: PluginContext) => {
-        if (value == null || typeof value !== 'object') return value;
+        if (value == null) return value;
         const response = value;
 
         const baseRewards = Array.isArray(response.rewards) ? response.rewards : [];

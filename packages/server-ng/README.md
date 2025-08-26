@@ -321,7 +321,7 @@ export class CategoryController {
 
 - [x] HookService 开发：
   - 借鉴 Wordpress 的 action / filter 机制，在 核心业务模块中埋点
-  - 希望每个模块在 HookService 注册 <模块名>|<事件名>， e.g. (action) article|beforeUpdate (filter) article|update (action) article|afterUpdate  表示在文字保存时候的事件们
+  - 希望每个模块在 HookService 注册 <模块名>|<事件名>， e.g. (action) article|beforeUpdate (filter) article|update (action) article|afterUpdate 表示在文字保存时候的事件们
   - 每个 Hook 都有由插件注册的一个回调列表，在注册回调时根据优先级排序，触发 Hook 时按照顺序执行
 
   - [x] 实现 HookService (addAction, addFilter, doAction, applyFilters)
@@ -361,9 +361,9 @@ export class CategoryController {
 - [x] 创建回滚方案
 - [x] 测试兼容性
 
-### 阶段 12：完成 REVIEW.md
+### 阶段 12：文档整理
 
-- [x] REVIEW.md 为类似 README.md 的文件，已完成所有 TODO
+- [x] 清理无效文档，保持项目整洁
 
 ### 阶段 13：公共模块（Public）
 
