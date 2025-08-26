@@ -118,7 +118,7 @@ JWT_EXPIRES_IN=7d
 
 ## 贡献指南
 
-请参考项目 `CONTRIBUTING.md` 文件(TODO 暂无)。在提交代码前，请确保：
+在提交代码前，请确保：
 
 1. 遵循 TypeScript 和 NestJS 最佳实践
 2. 编写相应的单元测试
@@ -215,15 +215,12 @@ JWT_EXPIRES_IN=7d
 - [x] 创建导航栏配置管理
 - [x] 实现友链管理功能
 
-### 配置读写统一策略（重要）
+### 配置读写统一策略
 
-- 写路径统一：任何设置写入一律通过 SettingRegistryService.updateConfig(key, value) 执行，底层使用基于 site_meta.key 唯一约束的单语句 upsert，具备并发幂等性，避免竞争条件。
-- 读路径默认值：
-  - 若该 key 已通过 SettingRegistryService.registerConfig 注册了 defaultValue，则 SettingRegistryService.getConfig 命中空值时会落库该默认值并返回；
-  - 若未注册 defaultValue，则调用方可在 SettingCoreService.getConfig(key, defaultValue, schema) 传入临时默认值，命中空值时委托 Registry 落库该默认值；
-  - 两者的共同点是：默认值一旦被读取即被持久化，避免后续绕过统一写入口的“旁路写”。
-- 校验策略：可在注册时提供 validator(value): boolean，或在调用 Core 层提供 zod schema；任何不合法的值将被拒绝或在 Core 层提前抛错。
-- 边缘保护：Registry 对超大 payload（>256KB）直接拒绝；空对象会记录警告但仍按历史行为继续写入；对同 key 的高频写入仅记录告警，不做阻断（不破坏用户空间）。
+- 统一写入：所有配置通过 SettingRegistryService 写入，确保并发安全
+- 默认值管理：支持注册时和运行时默认值设置
+- 数据校验：支持 Zod schema 和自定义验证器
+- 安全保护：限制 payload 大小，记录异常操作
 
 ### 阶段 8: 数据分析模块
 
@@ -255,88 +252,23 @@ JWT_EXPIRES_IN=7d
 
 ### 额外阶段：完善权限系统
 
-#### 权限系统架构设计
+#### 权限系统架构
 
-**核心理念：模块化权限注册 + 语义化权限名称 + 角色继承**
-
-##### 1. 权限节点设计
-
-- **模块前缀**: 每个模块的权限节点都有模块前缀，如 `article:read`、`category:write`
-- **语义化名称**: 在模块内部使用简化名称，如 `read`、`write`、`delete`
-- **自动映射**: `category:read` 在 category 模块内等价于 `read`
-- **反射机制**: 通过装饰器自动收集模块内的权限节点
-
-##### 2. 角色系统设计
-
-- **角色定义**: 使用 `role:` 前缀，如 `role:admin`、`role:editor`
-- **权限继承**: 角色可以包含其他角色和具体权限节点
-- **动态解析**: 用户权限列表按顺序解析，支持权限叠加和撤销
-
-##### 3. 权限注册接口
-
-```typescript
-// 简化的注册接口
-PermissionService.register({
-  module: 'category',
-  permissions: ['read', 'write', 'delete'], // 语义化名称
-  roles: {
-    admin: ['read', 'write', 'delete'],
-    editor: ['read', 'write'],
-    viewer: ['read'],
-  },
-});
-```
-
-##### 4. 权限解析规则
-
-- **存储格式**: 用户权限存储为字符串数组，如 `['article:read', 'role:editor', 'no:article:delete']`
-- **解析顺序**: 按数组顺序解析，后面的权限可以覆盖前面的
-- **权限撤销**: 使用 `no:` 前缀撤销特定权限，如 `no:article:delete`
-- **角色展开**: `role:admin` 会展开为该角色包含的所有权限节点
-
-##### 5. 装饰器支持
-
-```typescript
-// 控制器中使用语义化权限名称
-export class CategoryController {
-  @Permission('read', 'write', 'article:read') // 等价于 category:read, category:write, article:read(此权限仅供演示权限名称缩写)
-  @Get()
-  async getArticleByCategoryId() {}
-}
-```
-
-##### 6. 实现特性
-
-- **模块隔离**: 每个模块只管理自己的权限节点
-- **热注册**: 模块启动时自动注册权限和角色
-- **类型安全**: 使用 TypeScript 确保权限名称的类型安全
-- **向后兼容**: 支持完整权限名称和简化名称
-- **权限验证**: Guard 自动处理模块上下文和权限映射
+- **模块化权限**: 每个模块独立管理权限节点（如 `article:read`）
+- **角色继承**: 支持角色嵌套和权限叠加/撤销
+- **装饰器支持**: 控制器中使用语义化权限名称
+- **类型安全**: TypeScript 确保权限名称类型安全
 
 - [x] 完成
 
-### 额外紧急阶段：Plugin 系统
+### Plugin 系统
 
-> 这个阶段的每一条修改量都非常大。暂定一个 TODO 一次 commit，如果已实现，要仔细检查是否与设计一致
-
-- [x] HookService 开发：
-  - 借鉴 Wordpress 的 action / filter 机制，在 核心业务模块中埋点
-  - 希望每个模块在 HookService 注册 <模块名>|<事件名>， e.g. (action) article|beforeUpdate (filter) article|update (action) article|afterUpdate 表示在文字保存时候的事件们
-  - 每个 Hook 都有由插件注册的一个回调列表，在注册回调时根据优先级排序，触发 Hook 时按照顺序执行
-
-  - [x] 实现 HookService (addAction, addFilter, doAction, applyFilters)
-  - [x] 实现回调列表及优先级排序
-  - [x] 为一两个模块（article draft）添加 hook 并测试触发效果和回调效果
-
-- [x] PluginContext 插件能力基建：创建 PluginContext Service，为插件提供 logger, config 读取器, 和 data 存储（存储到 plugin_data 表）能力 （插件使用方法： 依赖 Nestjs DI）
-- [x] 动态插件加载
-  - [x] 插件扫描：使其能自动扫描根目录下的 plugins/ 目录（plugins 目录在 gitignore 内；其可能包括多个子目录，每个子目录都是一个插件模块，每个插件模块都有一个 package.json 用于 npm 包管理）
-  - [x] 插件加载：在应用启动时，扫描 plugins 目录，加载所有插件模块。
-  - [x] 插件依赖：在插件模块的 package.json 中指定，在载入插件之前会执行 pnpm install 安装依赖到 plugins/<插件名>/node_modules 目录。
-  - [x] 安全启动 + 运行时错误隔离，设置超时时间（异步任务可以久一些，给 60s； filter 给 5s，允许在配置修改）
-- [x] 在核心业务模块中埋点：在文章、用户、评论等模块的关键位置注入 HookService 并添加钩子。
-- [x] 添加测试插件
-  - [x] 🐱插件：在文章保存时在内容/标题/标签的结尾添加"喵"
+- [x] HookService 开发：实现 WordPress 风格的 action/filter 机制
+- [x] PluginContext 基建：提供 logger、config、data 存储能力
+- [x] 动态插件加载：自动扫描 plugins/ 目录，支持依赖管理
+- [x] 安全隔离：运行时错误隔离，超时保护
+- [x] 核心模块埋点：在关键业务流程中注入钩子
+- [x] 测试插件：🐱插件示例
 
 ### 阶段 9: 高级功能
 
@@ -372,8 +304,7 @@ export class CategoryController {
 
 ### 注意事项
 
-1. 每一行一个任务，每个任务都应该是独立的，可以单独完成
-2. 优先完成基础架构，确保后续开发顺利
-3. 保持代码质量，每个模块都要有相应的测试
-4. 遵循 NestJS 最佳实践和项目编码规范
-5. 确保 API 设计的一致性和可扩展性
+1. 任务独立完成，优先基础架构
+2. 保持代码质量和测试覆盖
+3. 遵循 NestJS 最佳实践
+4. 确保 API 设计一致性
