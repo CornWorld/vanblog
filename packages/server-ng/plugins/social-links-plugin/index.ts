@@ -58,7 +58,7 @@ const plugin: Plugin = {
   },
 
   hooks: {
-    'bootstrap|before_generate': {
+    'bootstrap|beforeGenerate': {
       type: 'action',
       priority: 10,
       handler: ((_value: unknown, _context: PluginContext) => {
@@ -66,7 +66,7 @@ const plugin: Plugin = {
       }) as ActionCallback,
     },
 
-    'bootstrap|transform_response': {
+    'bootstrap|transformResponse': {
       type: 'filter',
       priority: 10,
       handler: (async (value: unknown, context: PluginContext) => {

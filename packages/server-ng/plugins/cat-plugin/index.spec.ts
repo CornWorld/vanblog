@@ -160,7 +160,7 @@ describe('🐱插件', () => {
     });
   });
 
-  describe('article|before_update 钩子', () => {
+  describe('article|beforeUpdate 钩子', () => {
     it('应该在更新时添加喵', () => {
       const handler = plugin.hooks?.['article|beforeUpdate']?.handler;
       expect(handler).toBeDefined();

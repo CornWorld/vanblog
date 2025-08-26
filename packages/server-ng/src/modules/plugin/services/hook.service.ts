@@ -105,7 +105,7 @@ export class HookService implements IHookService {
       stopped: 'afterStop',
     };
 
-    return suggestions[invalidEvent.toLowerCase()] || null;
+    return suggestions[invalidEvent.toLowerCase()];
   }
 
   addAction(hookName: string, callback: ActionCallback, priority = 10): string {

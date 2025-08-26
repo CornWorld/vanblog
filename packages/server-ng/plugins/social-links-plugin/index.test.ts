@@ -65,8 +65,8 @@ describe('Social Links Plugin', () => {
     it('should have hooks defined', () => {
       expect(plugin.hooks).toBeDefined();
       if (plugin.hooks) {
-        expect(plugin.hooks['bootstrap|before_generate']).toBeDefined();
-        expect(plugin.hooks['bootstrap|transform_response']).toBeDefined();
+        expect(plugin.hooks['bootstrap|beforeGenerate']).toBeDefined();
+        expect(plugin.hooks['bootstrap|transformResponse']).toBeDefined();
       }
     });
   });
@@ -100,16 +100,16 @@ describe('Social Links Plugin', () => {
       }
     });
 
-    it('should handle bootstrap|before_generate hook', () => {
-      if (plugin.hooks?.['bootstrap|before_generate']) {
-        const hook = plugin.hooks['bootstrap|before_generate'];
+    it('should handle bootstrap|beforeGenerate hook', () => {
+      if (plugin.hooks?.['bootstrap|beforeGenerate']) {
+        const hook = plugin.hooks['bootstrap|beforeGenerate'];
         expect(() => hook.handler(null, mockContext)).not.toThrow();
       }
     });
 
-    it('should handle bootstrap|transform_response hook', async () => {
-      if (plugin.hooks?.['bootstrap|transform_response']) {
-        const hook = plugin.hooks['bootstrap|transform_response'];
+    it('should handle bootstrap|transformResponse hook', async () => {
+      if (plugin.hooks?.['bootstrap|transformResponse']) {
+        const hook = plugin.hooks['bootstrap|transformResponse'];
         const mockValue = { socialLinks: [] };
         const result = await hook.handler(mockValue, mockContext);
         expect(result).toBeDefined();

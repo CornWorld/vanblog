@@ -59,10 +59,10 @@ describe('🧩 bootstrap-reward-plugin', () => {
 
   describe('hooks', () => {
     it('应有正确的钩子类型与优先级', () => {
-      expect(plugin.hooks?.['bootstrap|before_generate']?.type).toBe('action');
-      expect(plugin.hooks?.['bootstrap|before_generate']?.priority).toBe(10);
-      expect(plugin.hooks?.['bootstrap|transform_response']?.type).toBe('filter');
-      expect(plugin.hooks?.['bootstrap|transform_response']?.priority).toBe(10);
+      expect(plugin.hooks?.['bootstrap|beforeGenerate']?.type).toBe('action');
+      expect(plugin.hooks?.['bootstrap|beforeGenerate']?.priority).toBe(10);
+      expect(plugin.hooks?.['bootstrap|transformResponse']?.type).toBe('filter');
+      expect(plugin.hooks?.['bootstrap|transformResponse']?.priority).toBe(10);
       expect(plugin.hooks?.['bootstrap|generated']?.type).toBe('action');
       expect(plugin.hooks?.['bootstrap|generated']?.priority).toBe(10);
     });
@@ -70,7 +70,7 @@ describe('🧩 bootstrap-reward-plugin', () => {
     it('before_generate: 自增计数', async () => {
       (ctx.data.get as any).mockResolvedValueOnce(1); // boot_count=1
 
-      const handler = plugin.hooks?.['bootstrap|before_generate']?.handler as (
+      const handler = plugin.hooks?.['bootstrap|beforeGenerate']?.handler as (
         value: unknown,
         context: PluginContext,
       ) => Promise<void>;
@@ -98,7 +98,7 @@ describe('🧩 bootstrap-reward-plugin', () => {
         other: 123,
       } as any;
 
-      const handler = plugin.hooks?.['bootstrap|transform_response']?.handler as (
+      const handler = plugin.hooks?.['bootstrap|transformResponse']?.handler as (
         value: unknown,
         context: PluginContext,
       ) => Promise<any>;
@@ -125,7 +125,7 @@ describe('🧩 bootstrap-reward-plugin', () => {
       (ctx.data.get as any).mockResolvedValueOnce(null); // 没有缓存
 
       const value = { rewards: [] } as any;
-      const handler = plugin.hooks?.['bootstrap|transform_response']?.handler as (
+      const handler = plugin.hooks?.['bootstrap|transformResponse']?.handler as (
         value: unknown,
         context: PluginContext,
       ) => Promise<any>;

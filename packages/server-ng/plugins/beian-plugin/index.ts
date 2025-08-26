@@ -45,7 +45,7 @@ const plugin: Plugin = {
   },
 
   hooks: {
-    'bootstrap|before_generate': {
+    'bootstrap|beforeGenerate': {
       type: 'action',
       priority: 10,
       handler: (async (_value: unknown, _context: PluginContext) => {
@@ -54,11 +54,11 @@ const plugin: Plugin = {
         await Promise.resolve();
       }) as ActionCallback,
     },
-    'bootstrap|transform_response': {
+    'bootstrap|transformResponse': {
       type: 'filter',
       priority: 10,
       handler: ((value: unknown, _context: PluginContext) => {
-        if (value == null || typeof value !== 'object') return value as typeof value;
+        if (value == null || typeof value !== 'object') return value;
         const resp = value as Record<string, unknown>;
         return {
           ...resp,

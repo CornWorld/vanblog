@@ -86,25 +86,25 @@ const plugin: Plugin = {
 
   hooks: {
     // 维持兼容：注册 legacy 名称，HookService 会规范化
-    'bootstrap|before_generate': {
+    'bootstrap|beforeGenerate': {
       type: 'action',
       priority: 10,
       handler: (async (_value: unknown, context: PluginContext) => {
-        const currentRaw = (await context.data.get('boot_count')) as unknown;
+        const currentRaw = await context.data.get('boot_count');
         const current = typeof currentRaw === 'number' ? currentRaw : 0;
         await context.data.set('boot_count', current + 1);
       }) as ActionCallback,
     },
 
-    'bootstrap|transform_response': {
+    'bootstrap|transformResponse': {
       type: 'filter',
       priority: 10,
       handler: (async (value: PublicBootstrapResponseLike, context: PluginContext) => {
-        if (value == null || typeof value !== 'object') return value as PublicBootstrapResponseLike;
+        if (value == null || typeof value !== 'object') return value;
         const response = value;
 
         const baseRewards = Array.isArray(response.rewards) ? response.rewards : [];
-        const cachedRaw = (await context.data.get('extra_rewards')) as unknown;
+        const cachedRaw = await context.data.get('extra_rewards');
 
         let extras: RewardInfo[] = [];
         if (Array.isArray(cachedRaw)) {
