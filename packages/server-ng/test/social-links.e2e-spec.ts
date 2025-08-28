@@ -203,6 +203,59 @@ describe('SocialLinksController (e2e)', () => {
     });
   });
 
+  // New tests for PUT update endpoint
+  describe('PUT /api/v2/admin/social-links/:type', () => {
+    it('403 when only setting:read', async () => {
+      await request(httpServer)
+        .put('/api/v2/admin/social-links/github')
+        .set('Authorization', `Bearer ${tokenReader}`)
+        .send({ url: 'https://github.com/blocked' })
+        .expect(403);
+    });
+
+    it('400 with invalid Zod validation', async () => {
+      // missing url
+      await request(httpServer)
+        .put('/api/v2/admin/social-links/github')
+        .set('Authorization', `Bearer ${tokenEditor}`)
+        .send({})
+        .expect(400);
+
+      // invalid url
+      await request(httpServer)
+        .put('/api/v2/admin/social-links/github')
+        .set('Authorization', `Bearer ${tokenEditor}`)
+        .send({ url: 'invalid-url' })
+        .expect(400);
+    });
+
+    it('200 with setting:update and valid data (update existing and create new)', async () => {
+      // update existing github
+      let res = await request(httpServer)
+        .put('/api/v2/admin/social-links/github')
+        .set('Authorization', `Bearer ${tokenEditor}`)
+        .send({ url: 'https://github.com/put-updated' })
+        .expect(200);
+
+      expect(Array.isArray(res.body)).toBe(true);
+      const github = res.body.find((i: any) => i.type === 'github');
+      expect(github).toBeTruthy();
+      expect(github.url).toBe('https://github.com/put-updated');
+
+      // create new via PUT
+      res = await request(httpServer)
+        .put('/api/v2/admin/social-links/mastodon')
+        .set('Authorization', `Bearer ${tokenEditor}`)
+        .send({ url: 'https://mastodon.social/@vanblog' })
+        .expect(200);
+
+      expect(Array.isArray(res.body)).toBe(true);
+      const mastodon = res.body.find((i: any) => i.type === 'mastodon');
+      expect(mastodon).toBeTruthy();
+      expect(mastodon.url).toBe('https://mastodon.social/@vanblog');
+    });
+  });
+
   describe('DELETE /api/v2/admin/social-links/:type', () => {
     it('403 when only setting:read', async () => {
       await request(httpServer)
