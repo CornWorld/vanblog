@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Param, Post, Put } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { ZodValidationPipe } from 'nestjs-zod';
 
@@ -9,6 +9,8 @@ import {
   SocialLinksResponseDto,
   UpsertSocialLinkDto,
   UpsertSocialLinkSchema,
+  UpdateSocialLinkDto,
+  UpdateSocialLinkSchema,
   type SocialLink,
 } from './dto/social-link.dto';
 
@@ -55,7 +57,23 @@ export class SocialLinksController {
   ): Promise<SocialLink[]> {
     const { context, api } = this.getContextAndAPI();
     if (!context || typeof api?.addOrUpdateSocialLink !== 'function') return [];
-    const links = await api.addOrUpdateSocialLink(context, dto as unknown as SocialLink);
+    const payload: SocialLink = { type: dto.type, url: dto.url } as unknown as SocialLink;
+    const links = await api.addOrUpdateSocialLink(context, payload);
+    return links;
+  }
+
+  @Put(':type')
+  @Perm('setting', ['update'])
+  @ApiOperation({ summary: '更新指定类型社交媒体链接的 URL' })
+  @ApiResponse({ status: 200, type: SocialLinksResponseDto })
+  async update(
+    @Param('type') type: string,
+    @Body(new ZodValidationPipe(UpdateSocialLinkSchema)) dto: UpdateSocialLinkDto,
+  ): Promise<SocialLink[]> {
+    const { context, api } = this.getContextAndAPI();
+    if (!context || typeof api?.addOrUpdateSocialLink !== 'function') return [];
+    const payload: SocialLink = { type, url: dto.url } as unknown as SocialLink;
+    const links = await api.addOrUpdateSocialLink(context, payload);
     return links;
   }
 
