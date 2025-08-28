@@ -4,6 +4,7 @@ import { ZodValidationPipe } from 'nestjs-zod';
 
 import { Perm } from '../auth/permissions.decorator';
 
+import { UpdateAboutDto, UpdateAboutSchema } from './dto/about.dto';
 import { UpdateCustomCodeDto, UpdateCustomCodeSchema } from './dto/custom-code.dto';
 import {
   CreateFriendLinkDto,
@@ -23,6 +24,7 @@ import {
   FriendLink,
   Navigation,
   CustomCode,
+  AboutInfo,
 } from './services/setting-core.service';
 
 @ApiTags('Settings')
@@ -235,5 +237,24 @@ export class SettingCoreController {
     @Body(new ZodValidationPipe(UpdateCustomCodeSchema)) updateCustomCodeDto: UpdateCustomCodeDto,
   ): Promise<CustomCode> {
     return this.settingCoreService.updateCustomCode(updateCustomCodeDto);
+  }
+
+  // About Info
+  @Get('about')
+  @Perm('setting', ['read'])
+  @ApiOperation({ summary: 'Get about page content' })
+  @ApiResponse({ status: 200, description: 'About info retrieved successfully', type: Object })
+  async getAboutInfo(): Promise<AboutInfo> {
+    return this.settingCoreService.getAboutInfo();
+  }
+
+  @Patch('about')
+  @Perm('setting', ['update'])
+  @ApiOperation({ summary: 'Update about page content' })
+  @ApiResponse({ status: 200, description: 'About info updated successfully', type: Object })
+  async updateAboutInfo(
+    @Body(new ZodValidationPipe(UpdateAboutSchema)) updateAboutDto: UpdateAboutDto,
+  ): Promise<AboutInfo> {
+    return this.settingCoreService.updateAboutInfo(updateAboutDto);
   }
 }

@@ -52,6 +52,12 @@ export interface CustomCode {
   footer?: string;
 }
 
+// 新增：关于信息
+export interface AboutInfo {
+  content: string;
+  updatedAt: string;
+}
+
 @Injectable()
 export class SettingCoreService {
   constructor(
@@ -97,13 +103,21 @@ export class SettingCoreService {
     // Delegate write to registry service (single-statement upsert, idempotent)
     await this.registryService.updateConfig(key, filteredData.value);
 
-    // Execute canonical afterUpdate action (include both raw and parsed for compatibility)
+    const parsed = oldValue != null ? safeParseJson(oldValue, dataSchemas.genericObject) : null;
+
+    // Extended payload: emit with parsed oldValue object and updatedAt FIRST
     await this.hookService.doAction('setting|afterUpdate', {
       key,
       value: filteredData.value,
-      oldValue, // raw string
-      parsedOldValue: oldValue ? safeParseJson(oldValue, dataSchemas.genericObject) : null,
+      oldValue: parsed,
       updatedAt: new Date().toISOString(),
+    });
+
+    // Backward compatibility: emit with raw string oldValue AFTER
+    await this.hookService.doAction('setting|afterUpdate', {
+      key,
+      value: filteredData.value,
+      oldValue,
     });
 
     return filteredData.value;
@@ -228,5 +242,23 @@ export class SettingCoreService {
     const existing = await this.getCustomCode();
     const updated = { ...existing, ...dto };
     return this.updateConfig('customCode', updated);
+  }
+
+  // About Info
+  async getAboutInfo(): Promise<AboutInfo> {
+    const defaultAbout: AboutInfo = {
+      content: '',
+      updatedAt: new Date().toISOString(),
+    };
+    return (await this.getConfig<AboutInfo>('aboutInfo', defaultAbout)) ?? defaultAbout;
+  }
+
+  async updateAboutInfo(dto: Partial<AboutInfo>): Promise<AboutInfo> {
+    const existing = await this.getAboutInfo();
+    const updated: AboutInfo = {
+      content: dto.content ?? existing.content,
+      updatedAt: new Date().toISOString(),
+    };
+    return this.updateConfig('aboutInfo', updated);
   }
 }

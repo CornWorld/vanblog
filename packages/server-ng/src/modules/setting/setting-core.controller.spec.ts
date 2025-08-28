@@ -497,4 +497,30 @@ describe('SettingCoreController', () => {
       expect(mockSettingCoreService.updateCustomCode).toHaveBeenCalledWith(updateDto);
     });
   });
+
+  // About
+  describe('getAboutInfo', () => {
+    it('should return about info', async () => {
+      const mockAbout = { content: 'Hello', updatedAt: new Date().toISOString() };
+      mockSettingCoreService.getAboutInfo = vi.fn().mockResolvedValue(mockAbout);
+
+      const result = await controller.getAboutInfo();
+
+      expect(result).toEqual(mockAbout);
+      expect(mockSettingCoreService.getAboutInfo).toHaveBeenCalled();
+    });
+  });
+
+  describe('updateAboutInfo', () => {
+    it('should update about info', async () => {
+      const updateDto = { content: 'New Hello' } as any;
+      const updated = { content: 'New Hello', updatedAt: new Date().toISOString() };
+      mockSettingCoreService.updateAboutInfo = vi.fn().mockResolvedValue(updated);
+
+      const result = await controller.updateAboutInfo(updateDto);
+
+      expect(result).toEqual(updated);
+      expect(mockSettingCoreService.updateAboutInfo).toHaveBeenCalledWith(updateDto);
+    });
+  });
 });

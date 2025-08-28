@@ -1,5 +1,4 @@
 import { Injectable, Inject } from '@nestjs/common';
-import dayjs from 'dayjs';
 import { eq } from 'drizzle-orm';
 
 import { DATABASE_CONNECTION, type Database } from '../../../database';
@@ -83,7 +82,7 @@ export class StorageConfigService {
         .update(siteMeta)
         .set({
           value: JSON.stringify(fullConfig),
-          updatedAt: dayjs().toISOString(),
+          updatedAt: new Date().toISOString(),
         })
         .where(eq(siteMeta.key, STORAGE_CONFIG_KEY));
     } else {

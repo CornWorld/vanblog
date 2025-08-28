@@ -1,6 +1,8 @@
 import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
 
+import { MediaProcessingOverrideSchema } from './media-settings.dto';
+
 export const InitiateChunkUploadSchema = z.object({
   filename: z.string().min(1),
   totalSize: z.number().int().positive(),
@@ -22,5 +24,6 @@ export const CompleteChunkUploadSchema = z.object({
   uploadId: z.string().min(1),
   filename: z.string().optional(),
   provider: z.string().optional(),
+  processing: z.union([MediaProcessingOverrideSchema, z.string()]).optional(),
 });
 export class CompleteChunkUploadDto extends createZodDto(CompleteChunkUploadSchema) {}

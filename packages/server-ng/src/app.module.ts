@@ -23,6 +23,7 @@ import { PublicModule } from './modules/public/public.module';
 import { RssModule } from './modules/rss/rss.module';
 import { SettingModule } from './modules/setting/setting.module';
 import { SitemapModule } from './modules/sitemap/sitemap.module';
+import { SocialLinksModule } from './modules/social-links/social-links.module';
 import { TagModule } from './modules/tag/tag.module';
 import { UserModule } from './modules/user/user.module';
 import { PerformanceMonitoringMiddleware } from './shared/middleware/performance-monitoring.middleware';
@@ -76,6 +77,7 @@ export class AppModule implements NestModule {
         RssModule,
         SitemapModule,
         BackupModule,
+        SocialLinksModule,
 
         DemoModule,
         pluginModule,

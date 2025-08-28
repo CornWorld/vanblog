@@ -3,7 +3,6 @@ import { promises as fsPromises } from 'fs';
 import { join } from 'path';
 
 import { Injectable, Logger } from '@nestjs/common';
-import dayjs from 'dayjs';
 import { PicGo } from 'picgo';
 
 import { StorageService, UploadResult } from '../../interfaces/storage.interface';
@@ -41,7 +40,7 @@ export class PicgoStorageService implements StorageService {
   async upload(file: Express.Multer.File, filename: string): Promise<UploadResult> {
     await fsPromises.mkdir(this.tmpDir, { recursive: true });
 
-    const timestamp = dayjs().valueOf();
+    const timestamp = Date.now();
     const hash = createHash('md5').update(file.buffer).digest('hex').substring(0, 8);
     const ext = filename.split('.').pop();
     const tmpFilename = `${String(timestamp)}-${hash}.${ext ?? ''}`;

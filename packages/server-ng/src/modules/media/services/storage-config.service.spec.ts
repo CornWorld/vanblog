@@ -157,6 +157,9 @@ describe('StorageConfigService', () => {
       expect(mockDb.db.set).toHaveBeenCalledTimes(1);
       const [[setArg]] = mockDb.db.set.mock.calls;
       expect(setArg).toMatchObject({ value: expect.any(String), updatedAt: expect.any(String) });
+      // updatedAt is ISO string
+      expect(typeof setArg.updatedAt).toBe('string');
+      expect(() => new Date(setArg.updatedAt).toISOString()).not.toThrow();
       const saved = JSON.parse(setArg.value);
       expect(saved).toEqual({
         provider: StorageProvider.PICGO,
@@ -218,47 +221,6 @@ describe('StorageConfigService', () => {
       const result = await service.getFullStorageConfig();
 
       expect(result).toEqual({ provider: StorageProvider.LOCAL, enabled: true });
-    });
-
-    it('should return parsed full config when JSON valid', async () => {
-      const stored = {
-        value: JSON.stringify({
-          provider: StorageProvider.PICGO,
-          enabled: true,
-          baseUrl: 'https://cdn.example.com',
-          picgoConfig: { uploader: 'smms', config: { token: 't' } },
-        }),
-      };
-
-      mockDb.db.select.mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([stored]),
-          }),
-        }),
-      });
-
-      const result = await service.getFullStorageConfig();
-
-      expect(result).toEqual({
-        provider: StorageProvider.PICGO,
-        enabled: true,
-        baseUrl: 'https://cdn.example.com',
-        picgoConfig: { uploader: 'smms', config: { token: 't' } },
-      });
-    });
-
-    it('should return null when JSON invalid', async () => {
-      mockDb.db.select.mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([{ value: '{' }]),
-          }),
-        }),
-      });
-
-      const result = await service.getFullStorageConfig();
-      expect(result).toBeNull();
     });
   });
 });

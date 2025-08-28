@@ -128,6 +128,11 @@ describe('PermissionService', () => {
         service as unknown as { getRolePermissions: (roleName: string) => Promise<string[]> },
         'getRolePermissions',
       ).mockResolvedValue(['article:read', 'article:write', 'user:read']);
+
+      // 注册模块权限以构建已知权限集合，避免被过滤掉
+      service.register({ module: 'article', permissions: ['read', 'write'] });
+      service.register({ module: 'user', permissions: ['read', 'write'] });
+      service.register({ module: 'draft', permissions: ['write'] });
     });
 
     it('should resolve basic permissions', async () => {

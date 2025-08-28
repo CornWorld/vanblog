@@ -99,9 +99,9 @@ const plugin: Plugin = {
     'bootstrap|transformResponse': {
       type: 'filter',
       priority: 10,
-      handler: (async (value: PublicBootstrapResponseLike, context: PluginContext) => {
-        if (value == null) return value;
-        const response = value;
+      handler: (async (value: unknown, context: PluginContext) => {
+        if (value == null || typeof value !== 'object') return value as PublicBootstrapResponseLike;
+        const response = value as PublicBootstrapResponseLike;
 
         const baseRewards = Array.isArray(response.rewards) ? response.rewards : [];
         const cachedRaw = await context.data.get('extra_rewards');

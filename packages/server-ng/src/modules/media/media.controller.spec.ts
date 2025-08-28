@@ -4,11 +4,17 @@ import { describe, it, beforeEach, afterEach, expect, vi } from 'vitest';
 
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
+import { SettingRegistryService } from '../setting/services/setting-registry.service';
 
+import { MediaProcessingSettingsSchema } from './dto/media-settings.dto';
 import { MediaController } from './media.controller';
 import { ImageProcessingService } from './services/image-processing.service';
 import { MediaService } from './services/media.service';
 import { StorageConfigService } from './services/storage-config.service';
+
+const mockSettingRegistryService = {
+  getConfig: vi.fn().mockResolvedValue(MediaProcessingSettingsSchema.parse({})),
+};
 
 const mockMediaService = {
   uploadFile: vi.fn(),
@@ -48,6 +54,7 @@ describe('MediaController', () => {
         { provide: MediaService, useValue: mockMediaService },
         { provide: ImageProcessingService, useValue: mockImageProcessingService },
         { provide: StorageConfigService, useValue: mockStorageConfigService },
+        { provide: SettingRegistryService, useValue: mockSettingRegistryService },
       ],
     })
       .overrideGuard(PermissionsGuard)
@@ -135,6 +142,10 @@ describe('MediaController', () => {
 
   describe('uploadFromClipboard', () => {
     it('should parse data url, compress image if needed and upload via service', async () => {
+      // override default compress.enabled=false to true for this test
+      mockSettingRegistryService.getConfig.mockResolvedValueOnce(
+        MediaProcessingSettingsSchema.parse({ compress: { enabled: true } }),
+      );
       const pngData = Buffer.from('test').toString('base64');
       const dataUrl = `data:image/png;base64,${pngData}`;
       const compressed = Buffer.from('compressed');
@@ -191,6 +202,117 @@ describe('MediaController', () => {
         controller.uploadFromClipboard({ dataUrl: 'invalid' as any }),
       ).rejects.toBeInstanceOf(BadRequestException);
     });
+
+    it('should apply watermark only when provided via processing override', async () => {
+      const pngData = Buffer.from('abc').toString('base64');
+      const dataUrl = `data:image/png;base64,${pngData}`;
+      const wmBuf = Buffer.from('wm');
+      mockImageProcessingService.addWatermark.mockResolvedValue(wmBuf);
+      mockMediaService.uploadFile.mockResolvedValue({ id: 11 } as any);
+
+      const result = await controller.uploadFromClipboard({
+        dataUrl,
+        filename: 'y.png',
+        processing: { watermark: { enabled: true, text: 'HELLO' } },
+      } as any);
+
+      expect(mockImageProcessingService.addWatermark).toHaveBeenCalledWith(
+        expect.any(Buffer),
+        expect.objectContaining({ text: 'HELLO' }),
+      );
+      expect(mockImageProcessingService.compressImage).not.toHaveBeenCalled();
+      expect(mockMediaService.uploadFile).toHaveBeenCalledWith(
+        expect.objectContaining({ buffer: wmBuf, originalname: 'y.png' }),
+        'y.png',
+      );
+      expect(result).toEqual({ id: 11 });
+    });
+  });
+
+  describe('uploadFile', () => {
+    it('should merge processing override and run watermark then compress in order', async () => {
+      const file = {
+        originalname: 'a.png',
+        buffer: Buffer.from('orig'),
+        size: 4,
+        mimetype: 'image/png',
+        fieldname: 'file',
+        encoding: '7bit',
+      } as any;
+
+      const wmOut = Buffer.from('wm');
+      const cmpOut = Buffer.from('cmp');
+      mockImageProcessingService.addWatermark.mockResolvedValue(wmOut);
+      mockImageProcessingService.compressImage.mockResolvedValue({ buffer: cmpOut });
+      mockMediaService.uploadFile.mockResolvedValue({ id: 99 } as any);
+
+      const dto = {
+        filename: 'a.png',
+        processing: { compress: { enabled: true }, watermark: { enabled: true, text: 'T' } },
+      } as any;
+
+      const saved = await controller.uploadFile(file, dto);
+
+      expect(mockImageProcessingService.addWatermark).toHaveBeenCalledWith(
+        file.buffer,
+        expect.objectContaining({ text: 'T' }),
+      );
+      expect(mockImageProcessingService.compressImage).toHaveBeenCalledWith(
+        wmOut,
+        expect.objectContaining({}),
+      );
+      expect(mockMediaService.uploadFile).toHaveBeenCalledWith(
+        expect.objectContaining({ buffer: cmpOut, originalname: 'a.png' }),
+        'a.png',
+        undefined,
+      );
+      expect(saved).toEqual({ id: 99 });
+    });
+  });
+
+  describe('uploadMultiple', () => {
+    it('should support stringified processing override and apply watermark only', async () => {
+      const f1 = {
+        originalname: 'f1.png',
+        buffer: Buffer.from('b1'),
+        size: 2,
+        mimetype: 'image/png',
+      } as any;
+      const f2 = {
+        originalname: 'f2.png',
+        buffer: Buffer.from('b2'),
+        size: 2,
+        mimetype: 'image/png',
+      } as any;
+
+      const wm1 = Buffer.from('w1');
+      const wm2 = Buffer.from('w2');
+      // resolve watermark differently per call to ensure per-file path
+      mockImageProcessingService.addWatermark.mockResolvedValueOnce(wm1).mockResolvedValueOnce(wm2);
+      mockMediaService.uploadFile
+        .mockResolvedValueOnce({ id: 1 } as any)
+        .mockResolvedValueOnce({ id: 2 } as any);
+
+      const result = await controller.uploadMultiple([f1, f2], {
+        processing: JSON.stringify({ watermark: { enabled: true, text: 'X' } }),
+      } as any);
+
+      expect(mockImageProcessingService.addWatermark).toHaveBeenCalledTimes(2);
+      expect(mockImageProcessingService.compressImage).not.toHaveBeenCalled();
+      expect(mockMediaService.uploadFile).toHaveBeenNthCalledWith(
+        1,
+        expect.objectContaining({ buffer: wm1, originalname: 'f1.png' }),
+        'f1.png',
+        undefined,
+      );
+      expect(mockMediaService.uploadFile).toHaveBeenNthCalledWith(
+        2,
+        expect.objectContaining({ buffer: wm2, originalname: 'f2.png' }),
+        'f2.png',
+        undefined,
+      );
+      expect(result).toEqual([{ id: 1 }, { id: 2 }]);
+    });
   });
 });
 
@@ -204,6 +326,7 @@ describe('chunked upload', () => {
         { provide: MediaService, useValue: mockMediaService },
         { provide: ImageProcessingService, useValue: mockImageProcessingService },
         { provide: StorageConfigService, useValue: mockStorageConfigService },
+        { provide: SettingRegistryService, useValue: mockSettingRegistryService },
       ],
     })
       .overrideGuard(PermissionsGuard)
@@ -273,5 +396,42 @@ describe('chunked upload', () => {
     );
     expect(mockMediaService.cleanupChunks).toHaveBeenCalledWith('u1');
     expect(result).toBe(saved);
+  });
+
+  it('completeChunkUpload should honor processing override: watermark then compress for images', async () => {
+    const dto = {
+      uploadId: 'u2',
+      filename: 'final.png',
+      processing: { compress: { enabled: true }, watermark: { enabled: true, text: 'W' } },
+    } as any;
+    const merged = {
+      buffer: Buffer.from('img'),
+      meta: { filename: 'final.png', mimeType: 'image/png' },
+    };
+    const wmOut = Buffer.from('wm2');
+    const cmpOut = Buffer.from('cmp2');
+
+    mockMediaService.mergeChunks = vi.fn().mockResolvedValue(merged);
+    mockImageProcessingService.addWatermark.mockResolvedValue(wmOut);
+    mockImageProcessingService.compressImage.mockResolvedValue({ buffer: cmpOut });
+    mockMediaService.uploadFile.mockResolvedValue({ id: 20 } as any);
+    mockMediaService.cleanupChunks.mockResolvedValue(undefined);
+
+    const result = await controller.completeChunkUpload(dto);
+
+    expect(mockImageProcessingService.addWatermark).toHaveBeenCalledWith(
+      merged.buffer,
+      expect.objectContaining({ text: 'W' }),
+    );
+    expect(mockImageProcessingService.compressImage).toHaveBeenCalledWith(
+      wmOut,
+      expect.objectContaining({}),
+    );
+    expect(mockMediaService.uploadFile).toHaveBeenCalledWith(
+      expect.objectContaining({ originalname: 'final.png', buffer: cmpOut }),
+      'final.png',
+    );
+    expect(mockMediaService.cleanupChunks).toHaveBeenCalledWith('u2');
+    expect(result).toEqual({ id: 20 });
   });
 });

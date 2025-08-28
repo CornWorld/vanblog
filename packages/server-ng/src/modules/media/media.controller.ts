@@ -16,12 +16,12 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiOperation, ApiResponse, ApiConsumes, ApiBody } from '@nestjs/swagger';
-import dayjs from 'dayjs';
 import { memoryStorage } from 'multer';
 import { ZodValidationPipe } from 'nestjs-zod';
 
 import { staticFiles } from '../../database/schema';
 import { Perm } from '../auth/permissions.decorator';
+import { SettingRegistryService } from '../setting/services/setting-registry.service';
 
 import { BatchDeleteDto, BatchDeleteSchema } from './dto/batch-delete.dto';
 import {
@@ -34,6 +34,12 @@ import {
 } from './dto/chunk-upload.dto';
 import { ListStaticFilesDto } from './dto/list-static-files.dto';
 import {
+  MediaProcessingSettings,
+  MEDIA_PROCESSING_CONFIG_KEY,
+  MediaProcessingSettingsSchema,
+  MediaProcessingOverrideSchema,
+} from './dto/media-settings.dto';
+import {
   UpdateStorageConfigDto,
   StorageConfigResponseDto,
   UpdateStorageConfigSchema,
@@ -42,14 +48,6 @@ import { UploadFileDto, UploadFile } from './dto/upload-file.dto';
 import { ImageProcessingService } from './services/image-processing.service';
 import { MediaService } from './services/media.service';
 import { StorageConfigService } from './services/storage-config.service';
-
-interface WatermarkBody {
-  watermarkText?: string;
-  watermarkPosition?: string;
-  watermarkOpacity?: string;
-  filename?: string;
-  provider?: string;
-}
 
 /**
  * 媒体文件管理控制器
@@ -64,7 +62,40 @@ export class MediaController {
     private readonly mediaService: MediaService,
     private readonly imageProcessingService: ImageProcessingService,
     private readonly storageConfigService: StorageConfigService,
+    private readonly settingRegistry: SettingRegistryService,
   ) {}
+
+  private async getMediaProcessingConfig(): Promise<MediaProcessingSettings> {
+    const cfg = await this.settingRegistry.getConfig<MediaProcessingSettings>(
+      MEDIA_PROCESSING_CONFIG_KEY,
+    );
+    // getConfig will auto-upsert default when registered; but keep fallback to schema default for safety
+    return cfg ?? MediaProcessingSettingsSchema.parse({});
+  }
+
+  // Merge request-time override into global config, supporting stringified JSON for multipart
+  private mergeConfigOverride(
+    base: MediaProcessingSettings,
+    override?: unknown,
+  ): MediaProcessingSettings {
+    if (override == null) return base;
+    let ov: unknown = override;
+    if (typeof override === 'string') {
+      try {
+        ov = JSON.parse(override);
+      } catch {
+        // ignore invalid JSON and treat as no override
+        return base;
+      }
+    }
+    const parsed = MediaProcessingOverrideSchema.safeParse(ov);
+    if (!parsed.success) return base;
+    const o = parsed.data;
+    return {
+      compress: { ...base.compress, ...(o.compress ?? {}) },
+      watermark: { ...base.watermark, ...(o.watermark ?? {}) },
+    };
+  }
 
   /**
    * 上传文件
@@ -102,14 +133,34 @@ export class MediaController {
   ): Promise<typeof staticFiles.$inferSelect> {
     let processedBuffer = file.buffer;
 
-    // 压缩图片
+    const globalConfig = await this.getMediaProcessingConfig();
+    const config = this.mergeConfigOverride(globalConfig, uploadFileDto.processing);
+
+    // 针对图片类型执行处理（水印 -> 压缩），SVG 跳过
     if (file.mimetype.startsWith('image/') && file.mimetype !== 'image/svg+xml') {
-      const result = await this.imageProcessingService.compressImage(file.buffer, {
-        quality: 85,
-        maxWidth: 1920,
-        maxHeight: 1080,
-      });
-      processedBuffer = result.buffer;
+      // 水印（受全局/覆盖配置控制）
+      if (config.watermark.enabled && config.watermark.text) {
+        processedBuffer = await this.imageProcessingService.addWatermark(processedBuffer, {
+          text: config.watermark.text,
+          position: config.watermark.position,
+          opacity: config.watermark.opacity,
+        });
+      }
+
+      // 压缩（受全局/覆盖配置控制）
+      if (config.compress.enabled) {
+        const result = await this.imageProcessingService.compressImage(processedBuffer, {
+          quality: config.compress.quality,
+          maxWidth: config.compress.maxWidth,
+          maxHeight: config.compress.maxHeight,
+          format: config.compress.format,
+          progressive: config.compress.progressive,
+          optimizeForWeb: config.compress.optimizeForWeb,
+          removeMetadata: config.compress.removeMetadata,
+          fit: config.compress.fit,
+        });
+        processedBuffer = result.buffer;
+      }
     }
 
     // 更新文件对象
@@ -124,67 +175,6 @@ export class MediaController {
       uploadFileDto.filename,
       uploadFileDto.provider,
     );
-  }
-
-  /**
-   * 上传文件并添加水印
-   *
-   * 上传图片文件并自动添加文字水印，支持自定义水印文本、位置和透明度。
-   *
-   * @param file 上传的图片文件
-   * @param body 水印配置信息
-   * @returns 处理后的文件信息
-   */
-  @Post('upload-with-watermark')
-  @Perm('media', ['create'])
-  @ApiOperation({ summary: '上传文件并添加水印' })
-  @ApiConsumes('multipart/form-data')
-  @ApiResponse({ status: 201, description: '文件上传成功' })
-  @UseInterceptors(
-    FileInterceptor('file', {
-      storage: memoryStorage(),
-      limits: {
-        fileSize: 50 * 1024 * 1024,
-      },
-    }),
-  )
-  async uploadFileWithWatermark(
-    @UploadedFile() file: Express.Multer.File,
-    @Body() body: WatermarkBody,
-  ): Promise<typeof staticFiles.$inferSelect> {
-    let processedBuffer = file.buffer;
-
-    // 添加水印
-    if (body.watermarkText) {
-      processedBuffer = await this.imageProcessingService.addWatermark(processedBuffer, {
-        text: body.watermarkText,
-        position:
-          (body.watermarkPosition as
-            | 'center'
-            | 'northwest'
-            | 'northeast'
-            | 'southwest'
-            | 'southeast'
-            | undefined) ?? 'southeast',
-        opacity: body.watermarkOpacity ? parseFloat(body.watermarkOpacity) : 0.5,
-      });
-    }
-
-    // 压缩图片
-    const result = await this.imageProcessingService.compressImage(processedBuffer, {
-      quality: 85,
-      maxWidth: 1920,
-      maxHeight: 1080,
-    });
-    processedBuffer = result.buffer;
-
-    const processedFile = {
-      ...file,
-      buffer: processedBuffer,
-      size: processedBuffer.length,
-    };
-
-    return this.mediaService.uploadFile(processedFile, body.filename, body.provider);
   }
 
   /**
@@ -280,6 +270,10 @@ export class MediaController {
           description: '待上传文件列表',
         },
         provider: { type: 'string', description: '存储提供方（可选）' },
+        processing: {
+          oneOf: [{ type: 'object' }, { type: 'string', description: 'JSON 字符串' }],
+          description: '处理配置覆盖（可选，JSON 对象或字符串）',
+        },
       },
       required: ['files'],
     },
@@ -292,22 +286,47 @@ export class MediaController {
   )
   async uploadMultiple(
     @UploadedFiles() files: Express.Multer.File[],
-    @Body() body: { provider?: string },
+    @Body() body: { provider?: string; processing?: unknown },
   ): Promise<Array<typeof staticFiles.$inferSelect>> {
-    const tasks = files.map(async (f) => {
-      let buf = f.buffer;
-      if (f.mimetype.startsWith('image/') && f.mimetype !== 'image/svg+xml') {
-        const result = await this.imageProcessingService.compressImage(buf, {
-          quality: 85,
-          maxWidth: 1920,
-          maxHeight: 1080,
-        });
-        buf = result.buffer;
+    const global = await this.getMediaProcessingConfig();
+    const config = this.mergeConfigOverride(global, body.processing);
+
+    const results: Array<typeof staticFiles.$inferSelect> = [];
+    for (const file of files) {
+      let { buffer } = file;
+      if (file.mimetype.startsWith('image/') && file.mimetype !== 'image/svg+xml') {
+        if (config.watermark.enabled && config.watermark.text) {
+          buffer = await this.imageProcessingService.addWatermark(buffer, {
+            text: config.watermark.text,
+            position: config.watermark.position,
+            opacity: config.watermark.opacity,
+          });
+        }
+        if (config.compress.enabled) {
+          const { buffer: out } = await this.imageProcessingService.compressImage(buffer, {
+            quality: config.compress.quality,
+            maxWidth: config.compress.maxWidth,
+            maxHeight: config.compress.maxHeight,
+            format: config.compress.format,
+            progressive: config.compress.progressive,
+            optimizeForWeb: config.compress.optimizeForWeb,
+            removeMetadata: config.compress.removeMetadata,
+            fit: config.compress.fit,
+          });
+          buffer = out;
+        }
       }
-      const processed = { ...f, buffer: buf, size: buf.length } as Express.Multer.File;
-      return this.mediaService.uploadFile(processed, f.originalname, body.provider ?? 'local');
-    });
-    return Promise.all(tasks);
+
+      const processedFile = { ...file, buffer, size: buffer.length };
+      const saved = await this.mediaService.uploadFile(
+        processedFile,
+        file.originalname,
+        body.provider,
+      );
+      results.push(saved);
+    }
+
+    return results;
   }
 
   @Post('upload/initiate')
@@ -359,39 +378,59 @@ export class MediaController {
   async completeChunkUpload(
     @Body(new ZodValidationPipe(CompleteChunkUploadSchema)) dto: CompleteChunkUploadDto,
   ): Promise<typeof staticFiles.$inferSelect> {
-    const { buffer, meta } = await this.mediaService.mergeChunks(dto.uploadId);
+    const { buffer: mergedBuffer, meta } = await this.mediaService.mergeChunks(dto.uploadId);
 
-    let processedBuffer = buffer;
-    if ((meta.mimeType ?? '').startsWith('image/') && meta.mimeType !== 'image/svg+xml') {
-      const result = await this.imageProcessingService.compressImage(buffer, {
-        quality: 85,
-        maxWidth: 1920,
-        maxHeight: 1080,
-      });
-      processedBuffer = result.buffer;
+    const config = this.mergeConfigOverride(await this.getMediaProcessingConfig(), dto.processing);
+
+    let outBuffer = mergedBuffer;
+    if (meta.mimeType?.startsWith('image/') && meta.mimeType !== 'image/svg+xml') {
+      if (config.watermark.enabled && config.watermark.text) {
+        outBuffer = await this.imageProcessingService.addWatermark(outBuffer, {
+          text: config.watermark.text,
+          position: config.watermark.position,
+          opacity: config.watermark.opacity,
+        });
+      }
+      if (config.compress.enabled) {
+        const { buffer } = await this.imageProcessingService.compressImage(outBuffer, {
+          quality: config.compress.quality,
+          maxWidth: config.compress.maxWidth,
+          maxHeight: config.compress.maxHeight,
+          format: config.compress.format,
+          progressive: config.compress.progressive,
+          optimizeForWeb: config.compress.optimizeForWeb,
+          removeMetadata: config.compress.removeMetadata,
+          fit: config.compress.fit,
+        });
+        outBuffer = buffer;
+      }
     }
 
-    const fakeFile: Express.Multer.File = {
-      fieldname: 'file',
+    const processedFile = {
+      buffer: outBuffer,
+      size: outBuffer.length,
       originalname: dto.filename ?? meta.filename,
-      encoding: '7bit',
       mimetype: meta.mimeType ?? 'application/octet-stream',
-      size: processedBuffer.length,
-      stream: Readable.from([]),
+      fieldname: 'file',
+      encoding: '7bit',
+      stream: Readable.from(outBuffer),
       destination: '',
-      filename: dto.filename ?? meta.filename,
+      filename: '',
       path: '',
-      buffer: processedBuffer,
     } as Express.Multer.File;
 
-    try {
-      const saved = await this.mediaService.uploadFile(fakeFile, dto.filename ?? meta.filename);
-      await this.mediaService.cleanupChunks(dto.uploadId);
-      return saved;
-    } catch (e) {
-      await this.mediaService.cleanupChunks(dto.uploadId);
-      throw e;
-    }
+    // 当 provider 未提供时，避免传递 undefined 作为第三个参数
+    const saved = meta.provider
+      ? await this.mediaService.uploadFile(
+          processedFile,
+          dto.filename ?? meta.filename,
+          meta.provider,
+        )
+      : await this.mediaService.uploadFile(processedFile, dto.filename ?? meta.filename);
+
+    await this.mediaService.cleanupChunks(dto.uploadId);
+
+    return saved;
   }
 
   /**
@@ -476,52 +515,89 @@ export class MediaController {
           type: 'string',
           description: '文件名',
         },
+        processing: {
+          oneOf: [{ type: 'object' }, { type: 'string', description: 'JSON 字符串' }],
+          description: '处理配置覆盖（可选，JSON 对象或字符串）',
+        },
       },
       required: ['dataUrl'],
     },
   })
   @ApiResponse({ status: 201, description: '上传成功' })
   async uploadFromClipboard(
-    @Body() body: { dataUrl: string; filename?: string },
+    @Body() body: { dataUrl: string; filename?: string; processing?: unknown },
   ): Promise<typeof staticFiles.$inferSelect> {
-    const matches = body.dataUrl.match(/^data:([A-Za-z-+/]+);base64,(.+)$/);
-    if (!matches || matches.length !== 3) {
-      throw new BadRequestException('Invalid data URL format');
+    const match = body.dataUrl.match(/^data:(.*?);base64,(.*)$/);
+    if (!match) {
+      throw new BadRequestException('Invalid data URL');
     }
 
-    const [, mimeType, base64Data] = matches;
-    const buffer = Buffer.from(base64Data, 'base64');
+    const [, mimeType, base64] = match;
+    const buffer = Buffer.from(base64, 'base64');
 
-    const ext = mimeType.split('/')[1] ?? 'png';
-    const filename = body.filename ?? `clipboard-${dayjs().valueOf()}.${ext}`;
+    const global = await this.getMediaProcessingConfig();
+    const config = this.mergeConfigOverride(global, body.processing);
+
+    let outBuffer = buffer;
+    if (mimeType.startsWith('image/') && mimeType !== 'image/svg+xml') {
+      if (config.watermark.enabled && config.watermark.text) {
+        outBuffer = await this.imageProcessingService.addWatermark(outBuffer, {
+          text: config.watermark.text,
+          position: config.watermark.position,
+          opacity: config.watermark.opacity,
+        });
+      }
+      if (config.compress.enabled) {
+        const { buffer: out } = await this.imageProcessingService.compressImage(outBuffer, {
+          quality: config.compress.quality,
+          maxWidth: config.compress.maxWidth,
+          maxHeight: config.compress.maxHeight,
+          format: config.compress.format,
+          progressive: config.compress.progressive,
+          optimizeForWeb: config.compress.optimizeForWeb,
+          removeMetadata: config.compress.removeMetadata,
+          fit: config.compress.fit,
+        });
+        outBuffer = out;
+      }
+    }
+
+    const filename = body.filename ?? `clipboard-${Date.now()}.${this.extFromMime(mimeType)}`;
 
     const file: Express.Multer.File = {
-      fieldname: 'clipboard',
+      fieldname: 'file',
       originalname: filename,
       encoding: '7bit',
       mimetype: mimeType,
-      buffer,
-      size: buffer.length,
-    } as Express.Multer.File;
-
-    let processedBuffer = buffer;
-
-    // 压缩图片
-    if (mimeType.startsWith('image/') && mimeType !== 'image/svg+xml') {
-      const result = await this.imageProcessingService.compressImage(buffer, {
-        quality: 85,
-        maxWidth: 1920,
-        maxHeight: 1080,
-      });
-      processedBuffer = result.buffer;
-    }
-
-    const processedFile = {
-      ...file,
-      buffer: processedBuffer,
-      size: processedBuffer.length,
+      buffer: outBuffer,
+      size: outBuffer.length,
+      stream: Readable.from(outBuffer),
+      destination: '',
+      filename: '',
+      path: '',
     };
 
-    return this.mediaService.uploadFile(processedFile, filename);
+    const saved = await this.mediaService.uploadFile(file, filename);
+    return saved;
+  }
+
+  private extFromMime(mime: string): string {
+    // 最小可用映射，非图片类型回退为 bin
+    const map: Record<string, string> = {
+      'image/jpeg': 'jpg',
+      'image/jpg': 'jpg',
+      'image/png': 'png',
+      'image/webp': 'webp',
+      'image/avif': 'avif',
+      'image/gif': 'gif',
+      'image/bmp': 'bmp',
+      'image/svg+xml': 'svg',
+    };
+    const known = map[mime];
+    if (typeof known === 'string') {
+      return known;
+    }
+    const slash = mime.indexOf('/');
+    return slash > 0 ? mime.slice(slash + 1).replace(/\+xml$/, '') : 'bin';
   }
 }

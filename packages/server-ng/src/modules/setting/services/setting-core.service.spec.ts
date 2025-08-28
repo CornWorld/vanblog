@@ -471,4 +471,48 @@ describe('SettingCoreService', () => {
       expect(mockRegistryService.updateConfig).toHaveBeenCalledWith('customCode', expectedResult);
     });
   });
+
+  describe('getAboutInfo', () => {
+    it('should return default about info when not set and persist default', async () => {
+      mockSelectChain.limit.mockResolvedValue([]);
+      mockRegistryService.updateConfig.mockResolvedValue(undefined);
+
+      const result = await service.getAboutInfo();
+
+      expect(result.content).toBe('');
+      expect(typeof result.updatedAt).toBe('string');
+      expect(mockRegistryService.updateConfig).toHaveBeenCalledWith(
+        'aboutInfo',
+        expect.any(Object),
+      );
+    });
+
+    it('should return existing about info', async () => {
+      const existing = { content: 'Hello', updatedAt: new Date().toISOString() };
+      mockSelectChain.limit.mockResolvedValue([{ value: JSON.stringify(existing) }]);
+
+      const result = await service.getAboutInfo();
+
+      expect(result).toEqual(existing);
+    });
+  });
+
+  describe('updateAboutInfo', () => {
+    it('should update about content and timestamp', async () => {
+      const existing = { content: 'Old', updatedAt: '2020-01-01T00:00:00.000Z' };
+      mockSelectChain.limit.mockResolvedValueOnce([{ value: JSON.stringify(existing) }]);
+      mockHookService.applyFilters.mockImplementation((_hook, payload) => payload);
+      mockRegistryService.updateConfig.mockResolvedValue(undefined);
+      mockHookService.doAction.mockResolvedValue(undefined);
+
+      const result = await service.updateAboutInfo({ content: 'New Content' });
+
+      expect(result.content).toBe('New Content');
+      expect(typeof result.updatedAt).toBe('string');
+      expect(mockRegistryService.updateConfig).toHaveBeenCalledWith(
+        'aboutInfo',
+        expect.any(Object),
+      );
+    });
+  });
 });

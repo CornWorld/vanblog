@@ -16,6 +16,7 @@ import { CustomPageController } from './custom-page.controller';
 import { CustomPageService } from './custom-page.service';
 import { InitController } from './init.controller';
 import { InitService } from './init.service';
+import { MetaController } from './meta.controller';
 import { OptionsController } from './options.controller';
 import { OptionsService } from './options.service';
 import { TimelineController } from './timeline.controller';
@@ -39,6 +40,7 @@ import { TimelineService } from './timeline.service';
     OptionsController,
     TimelineController,
     InitController,
+    MetaController,
   ],
   providers: [CustomPageService, BootstrapService, OptionsService, TimelineService, InitService],
 })

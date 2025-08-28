@@ -20,13 +20,6 @@ vi.mock('crypto', () => ({
   createHash: vi.fn(),
 }));
 
-vi.mock('dayjs', () => {
-  const mockDayjs = vi.fn(() => ({
-    valueOf: vi.fn(() => 1640995200000), // Fixed timestamp
-  }));
-  return { default: mockDayjs };
-});
-
 vi.mock('picgo', () => ({
   PicGo: vi.fn().mockImplementation(() => ({
     setConfig: vi.fn(),
@@ -54,6 +47,8 @@ describe('PicgoStorageService', () => {
   };
 
   beforeEach(async () => {
+    vi.spyOn(Date, 'now').mockReturnValue(1640995200000);
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [PicgoStorageService],
     }).compile();
@@ -218,12 +213,10 @@ describe('PicgoStorageService', () => {
   });
 
   describe('getUrl', () => {
-    it('should return the filename as URL', () => {
-      const filename = 'test.jpg';
+    it('should return filename as placeholder', () => {
+      const result = service.getUrl('abc');
 
-      const result = service.getUrl(filename);
-
-      expect(result).toBe(filename);
+      expect(result).toBe('abc');
     });
   });
 });
