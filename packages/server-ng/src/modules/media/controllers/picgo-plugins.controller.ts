@@ -12,6 +12,8 @@ import {
   PicGoPluginOperationResponseSchema,
   UninstallPicGoPluginDto,
   UninstallPicGoPluginSchema,
+  PicGoPluginLogsResponseDto,
+  PicGoPluginLogsResponseSchema,
 } from '../dto/picgo-plugin.dto';
 import { PicgoStorageService } from '../services/storages/picgo-storage.service';
 
@@ -29,6 +31,15 @@ export class PicgoPluginsController {
   listPlugins(): PicGoPluginListResponseDto {
     // 目前 picgo 插件系统未暴露 list 接口，保持返回空列表，向后兼容
     return PicGoPluginListResponseSchema.parse({ plugins: [], total: 0 });
+  }
+
+  @Get('logs')
+  @Perm('setting', ['read'])
+  @ApiOperation({ summary: '查询 PicGo 插件执行日志（内存缓冲，最近若干条）' })
+  @ApiResponse({ status: 200, type: PicGoPluginLogsResponseDto })
+  getLogs(): PicGoPluginLogsResponseDto {
+    const { logs, total } = this.picgoStorage.getPluginLogs();
+    return PicGoPluginLogsResponseSchema.parse({ logs, total });
   }
 
   @Post('install')

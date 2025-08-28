@@ -25,6 +25,10 @@ const mockPicgoStorageService = {
     }
     return Promise.resolve();
   },
+  getPluginLogs: () => ({
+    logs: [{ timestamp: Date.now(), level: 'info', message: 'boot' }],
+    total: 1,
+  }),
 };
 
 describe('PicgoPluginsController (e2e)', () => {
@@ -112,6 +116,41 @@ describe('PicgoPluginsController (e2e)', () => {
           total: 0,
         }),
       );
+    });
+  });
+
+  describe('GET /api/v2/admin/media/picgo/plugins/logs', () => {
+    it('401 when no auth', async () => {
+      await request(httpServer).get('/api/v2/admin/media/picgo/plugins/logs').expect(401);
+    });
+
+    it('200 with setting:read', async () => {
+      const res = await request(httpServer)
+        .get('/api/v2/admin/media/picgo/plugins/logs')
+        .set('Authorization', `Bearer ${tokenReader}`)
+        .expect(200);
+
+      expect(res.body).toEqual(
+        expect.objectContaining({
+          logs: expect.any(Array),
+          total: expect.any(Number),
+        }),
+      );
+      expect(res.body.logs[0]).toEqual(
+        expect.objectContaining({
+          timestamp: expect.any(Number),
+          level: expect.any(String),
+          message: expect.any(String),
+        }),
+      );
+    });
+
+    it('403 when only setting:update (no read)', async () => {
+      // 使用 editor token（仅有 update 权限）应返回 403
+      await request(httpServer)
+        .get('/api/v2/admin/media/picgo/plugins/logs')
+        .set('Authorization', `Bearer ${tokenEditor}`)
+        .expect(403);
     });
   });
 

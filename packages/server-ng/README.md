@@ -300,7 +300,7 @@ JWT_EXPIRES_IN=7d
 ### 阶段 14：文档差异补齐（Feature Gaps）
 
 - [x] 媒体全局处理配置：新增站点级图片处理策略（自动压缩/格式转换/水印）的集中配置与开关，默认关闭，保证向后兼容；上传接口读取该配置并可由入参覆盖
-- [ ] PicGo 插件管理 API：提供插件安装/卸载/查询接口与执行日志，复用现有 picgo-storage.service 能力
+- [x] PicGo 插件管理 API：提供插件安装/卸载/查询接口与执行日志，复用现有 picgo-storage.service 能力
 - [x] 社交媒体链接：打通 public/options 输出链路（移除强制空数组）
 - [ ] 社交媒体链接 CRUD：后端提供完整的增删改查与类型唯一性校验
 - [x] 关于页内容管理：提供 AboutInfo 的 CRUD 与 public 渲染输出（保持 showAbout 默认行为不变）

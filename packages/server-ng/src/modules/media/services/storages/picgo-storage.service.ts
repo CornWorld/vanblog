@@ -7,11 +7,16 @@ import { PicGo } from 'picgo';
 
 import { StorageService, UploadResult } from '../../interfaces/storage.interface';
 
+import type { PicGoPluginLogEntry } from '../../dto/picgo-plugin.dto';
+
 @Injectable()
 export class PicgoStorageService implements StorageService {
   private readonly picgo: PicGo;
   private readonly logger = new Logger(PicgoStorageService.name);
   private readonly tmpDir = join(process.cwd(), 'tmp');
+  // 简单的内存环形日志，避免复杂度
+  private readonly maxLogs = 200;
+  private readonly logs: PicGoPluginLogEntry[] = [];
 
   constructor() {
     this.picgo = new PicGo();
@@ -21,18 +26,41 @@ export class PicgoStorageService implements StorageService {
     this.picgo.setConfig(config);
   }
 
+  // 记录日志（追加至环形缓冲）
+  private recordPluginLog(entry: PicGoPluginLogEntry): void {
+    this.logs.push(entry);
+    if (this.logs.length > this.maxLogs) {
+      this.logs.splice(0, this.logs.length - this.maxLogs);
+    }
+  }
+
+  getPluginLogs(): { logs: PicGoPluginLogEntry[]; total: number } {
+    return { logs: [...this.logs], total: this.logs.length };
+  }
+
   async installPlugins(plugins: string[]): Promise<void> {
     if (plugins.length > 0) {
       this.logger.log(`Installing PicGo plugins: ${plugins.join(', ')}`);
+      this.recordPluginLog({
+        timestamp: Date.now(),
+        level: 'info',
+        message: `Installing: ${plugins.join(', ')}`,
+      });
       try {
         const result = await this.picgo.pluginHandler.install(plugins);
         if (result.success) {
-          this.logger.log(`PicGo plugins installed successfully: ${String(result.body)}`);
+          const msg = `PicGo plugins installed successfully: ${String(result.body)}`;
+          this.logger.log(msg);
+          this.recordPluginLog({ timestamp: Date.now(), level: 'info', message: msg });
         } else {
-          this.logger.error(`Failed to install PicGo plugins: ${String(result.body)}`);
+          const msg = `Failed to install PicGo plugins: ${String(result.body)}`;
+          this.logger.error(msg);
+          this.recordPluginLog({ timestamp: Date.now(), level: 'error', message: msg });
         }
       } catch (error: unknown) {
-        this.logger.error(`Error installing PicGo plugins: ${String(error)}`);
+        const msg = `Error installing PicGo plugins: ${String(error)}`;
+        this.logger.error(msg);
+        this.recordPluginLog({ timestamp: Date.now(), level: 'error', message: msg });
       }
     }
   }
@@ -56,6 +84,8 @@ export class PicgoStorageService implements StorageService {
       }
 
       const result = results[0] as { imgUrl?: string; url?: string; fileName?: string };
+      const okMsg = `PicGo uploaded file: ${result.fileName ?? filename} -> ${result.imgUrl ?? result.url ?? ''}`;
+      this.recordPluginLog({ timestamp: Date.now(), level: 'info', message: okMsg });
       return {
         url: result.imgUrl ?? result.url ?? '',
         filename: result.fileName ?? filename,
@@ -63,21 +93,25 @@ export class PicgoStorageService implements StorageService {
         mimeType: file.mimetype,
       };
     } catch (error: unknown) {
-      throw new Error(
-        `PicGo upload failed: ${error instanceof Error ? error.message : String(error)}`,
-      );
+      const errMsg = `PicGo upload failed: ${error instanceof Error ? error.message : String(error)}`;
+      this.recordPluginLog({ timestamp: Date.now(), level: 'error', message: errMsg });
+      throw new Error(errMsg);
     } finally {
       try {
         await fsPromises.unlink(tmpFilePath);
       } catch {
-        this.logger.warn(`Failed to delete temporary file: ${tmpFilePath}`);
+        const warnMsg = `Failed to delete temporary file: ${tmpFilePath}`;
+        this.logger.warn(warnMsg);
+        this.recordPluginLog({ timestamp: Date.now(), level: 'warn', message: warnMsg });
       }
     }
   }
 
   async delete(filename: string): Promise<boolean> {
     // PicGo 不支持删除操作
-    this.logger.warn(`Delete operation not supported by PicGo for file: ${filename}`);
+    const warnMsg = `Delete operation not supported by PicGo for file: ${filename}`;
+    this.logger.warn(warnMsg);
+    this.recordPluginLog({ timestamp: Date.now(), level: 'warn', message: warnMsg });
     return Promise.resolve(false);
   }
 
