@@ -1,1 +1,11 @@
+#!/usr/bin/env sh
+
+# Always run at repository root
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+cd "$REPO_ROOT" || exit 1
+
+# Ensure git env is explicit for tools that rely on it
+export GIT_DIR="$REPO_ROOT/.git"
+export GIT_WORK_TREE="$REPO_ROOT"
+
 pnpm nano-staged

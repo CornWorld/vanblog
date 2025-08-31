@@ -40,6 +40,10 @@ export class PermissionService {
   private readonly modulePermissions = new Map<string, string[]>();
   private readonly predefinedRoles = new Map<string, string[]>();
   private readonly moduleContext = new Map<string, string[]>();
+  // 缓存：已知权限集合（当 register 调整模块权限后失效）
+  private cachedKnownPermissions: Set<string> | null = null;
+  // 缓存：角色展开后的权限列表（当权限组或注册的预定义角色发生变化时失效）
+  private readonly rolePermissionsCache = new Map<string, string[]>();
 
   constructor(
     @Inject(DATABASE_CONNECTION)
@@ -85,6 +89,10 @@ export class PermissionService {
     });
 
     this.logger.log(`模块 ${module} 权限注册完成: ${fullPermissions.join(', ')}`);
+
+    // 失效缓存：模块权限与预定义角色发生变化
+    this.cachedKnownPermissions = null;
+    this.rolePermissionsCache.clear();
   }
 
   /**
@@ -206,11 +214,9 @@ export class PermissionService {
           const rolePermissions = await this.getRolePermissions(roleName);
           for (const p of rolePermissions) {
             resolvedPermissions.delete(p);
-            this.logger.debug(`删除权限: ${p}`);
           }
         } else {
           resolvedPermissions.delete(target);
-          this.logger.debug(`删除权限: ${target}`);
         }
         continue;
       }
@@ -218,18 +224,14 @@ export class PermissionService {
       if (token.startsWith('role:')) {
         // 角色展开（添加权限）
         const roleName = token.slice(5);
-        this.logger.debug(`解析角色: ${roleName}`);
         const rolePermissions = await this.getRolePermissions(roleName);
-        this.logger.debug(`角色 ${roleName} 的权限: ${JSON.stringify(rolePermissions)}`);
         for (const p of rolePermissions) {
           resolvedPermissions.add(p);
-          this.logger.debug(`添加权限: ${p}`);
         }
         continue;
       }
 
       // 普通权限：直接添加
-      this.logger.debug(`添加普通权限: ${token}`);
       resolvedPermissions.add(token);
     }
 
@@ -242,7 +244,6 @@ export class PermissionService {
       return ok;
     });
 
-    this.logger.debug(`最终解析结果: ${JSON.stringify(filtered)}`);
     return filtered;
   }
 
@@ -250,10 +251,12 @@ export class PermissionService {
    * 计算已知权限集合（来自各模块注册的完整权限名）
    */
   private getKnownPermissionsSet(): Set<string> {
+    if (this.cachedKnownPermissions) return this.cachedKnownPermissions;
     const set = new Set<string>();
     for (const perms of this.modulePermissions.values()) {
       for (const p of perms) set.add(p);
     }
+    this.cachedKnownPermissions = set;
     return set;
   }
 
@@ -422,6 +425,8 @@ export class PermissionService {
       .insert(permissionGroups)
       .values(createPermissionGroupDto)
       .returning();
+    // 影响角色权限：失效缓存
+    this.rolePermissionsCache.clear();
     return PermissionGroupSchema.parse(this.normalizePermissionGroupRow(result));
   }
 
@@ -480,6 +485,8 @@ export class PermissionService {
       throw new NotFoundException(`Permission group with ID ${String(id)} not found`);
     }
 
+    // 影响角色权限：失效缓存
+    this.rolePermissionsCache.clear();
     return PermissionGroupSchema.parse(this.normalizePermissionGroupRow(result[0]));
   }
 
@@ -489,6 +496,9 @@ export class PermissionService {
     if (result.rowsAffected === 0) {
       throw new NotFoundException(`Permission group with ID ${String(id)} not found`);
     }
+
+    // 影响角色权限：失效缓存
+    this.rolePermissionsCache.clear();
   }
 
   async initializePermissions(): Promise<void> {
@@ -497,9 +507,17 @@ export class PermissionService {
 
     // 创建预定义权限组
     await this.createPredefinedGroups();
+
+    // 初始化完成后，已知权限集合与角色权限可能已变化：失效相关缓存
+    this.cachedKnownPermissions = null;
+    this.rolePermissionsCache.clear();
   }
 
   private async getRolePermissions(roleName: string): Promise<string[]> {
+    // 命中缓存直接返回
+    const cached = this.rolePermissionsCache.get(roleName);
+    if (cached) return cached;
+
     const group = await this.db
       .select()
       .from(permissionGroups)
@@ -510,7 +528,9 @@ export class PermissionService {
       // Fallback to predefined roles collected during module registration
       const predefined = this.predefinedRoles.get(roleName) ?? [];
       const known = this.getKnownPermissionsSet();
-      return predefined.filter((p) => this.isKnownPermission(p, known));
+      const filtered = predefined.filter((p) => this.isKnownPermission(p, known));
+      this.rolePermissionsCache.set(roleName, filtered);
+      return filtered;
     }
 
     const dbPermissions =
@@ -520,7 +540,9 @@ export class PermissionService {
 
     // 过滤非法/未注册权限
     const known = this.getKnownPermissionsSet();
-    return dbPermissions.filter((p) => this.isKnownPermission(p, known));
+    const filtered = dbPermissions.filter((p) => this.isKnownPermission(p, known));
+    this.rolePermissionsCache.set(roleName, filtered);
+    return filtered;
   }
 
   private async registerAllModulePermissions(): Promise<void> {

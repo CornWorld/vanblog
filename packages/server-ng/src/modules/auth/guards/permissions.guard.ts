@@ -67,6 +67,12 @@ export class PermissionsGuard implements CanActivate {
       return false;
     }
 
+    // 如果 requiredPermissions 全为完整形式（包含冒号），跳过模块名推断与解析
+    const allFull = requiredPermissions.every((p) => typeof p === 'string' && p.includes(':'));
+    if (allFull) {
+      return await this.permissionService.hasPermissions(userPermissions, requiredPermissions);
+    }
+
     // 解析权限名称：尝试从控制器路径推导模块名
     let resolvedPermissions: string[];
     const controllerName = context.getClass().name;
