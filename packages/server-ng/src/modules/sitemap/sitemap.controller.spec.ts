@@ -2,8 +2,6 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 import { ConfigService } from '../../config/config.service';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { PermissionsGuard } from '../auth/guards/permissions.guard';
 
 import { SitemapController } from './sitemap.controller';
 import { SitemapService } from './sitemap.service';
@@ -18,13 +16,7 @@ describe('SitemapController', () => {
     getSiteUrls: vi.fn(),
   };
 
-  const mockJwtAuthGuard = {
-    canActivate: vi.fn().mockReturnValue(true),
-  };
-
-  const mockPermissionGuard = {
-    canActivate: vi.fn().mockReturnValue(true),
-  };
+  // removed mockJwtAuthGuard and mockPermissionGuard
 
   const mockConfigService = {
     get: vi.fn((_key: string, defaultValue?: any) => defaultValue),
@@ -43,12 +35,7 @@ describe('SitemapController', () => {
           useValue: mockConfigService,
         },
       ],
-    })
-      .overrideGuard(JwtAuthGuard)
-      .useValue(mockJwtAuthGuard)
-      .overrideGuard(PermissionsGuard)
-      .useValue(mockPermissionGuard)
-      .compile();
+    }).compile();
 
     controller = module.get<SitemapController>(SitemapController);
     sitemapService = module.get(SitemapService);

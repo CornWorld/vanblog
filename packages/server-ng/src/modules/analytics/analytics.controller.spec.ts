@@ -1,9 +1,6 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, beforeEach, afterEach, expect, vi } from 'vitest';
 
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { PermissionsGuard } from '../auth/guards/permissions.guard';
-
 import { AnalyticsController } from './analytics.controller';
 import { AnalyticsType } from './entities/analytics.entity';
 import { AnalyticsService } from './services/analytics.service';
@@ -45,12 +42,7 @@ describe('AnalyticsController', () => {
         { provide: ThirdPartyAnalyticsService, useValue: mockThirdPartyAnalyticsService },
         { provide: EchartsFormatterService, useValue: mockEchartsFormatterService },
       ],
-    })
-      .overrideGuard(PermissionsGuard)
-      .useValue({ canActivate: () => true })
-      .overrideGuard(JwtAuthGuard)
-      .useValue({ canActivate: () => true })
-      .compile();
+    }).compile();
 
     controller = module.get<AnalyticsController>(AnalyticsController);
     vi.clearAllMocks();

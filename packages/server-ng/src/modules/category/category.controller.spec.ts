@@ -1,9 +1,6 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, beforeEach, afterEach, expect, vi } from 'vitest';
 
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { PermissionsGuard } from '../auth/guards/permissions.guard';
-
 import { CategoryController } from './category.controller';
 import { CategoryService } from './category.service';
 
@@ -18,9 +15,6 @@ const mockCategoryService = {
   getCategoriesWithTags: vi.fn(),
 };
 
-const mockJwtAuthGuard = { canActivate: vi.fn().mockReturnValue(true) };
-const mockPermissionsGuard = { canActivate: vi.fn().mockReturnValue(true) };
-
 describe('CategoryController', () => {
   let controller: CategoryController;
 
@@ -28,12 +22,7 @@ describe('CategoryController', () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [CategoryController],
       providers: [{ provide: CategoryService, useValue: mockCategoryService }],
-    })
-      .overrideGuard(PermissionsGuard)
-      .useValue(mockPermissionsGuard)
-      .overrideGuard(JwtAuthGuard)
-      .useValue(mockJwtAuthGuard)
-      .compile();
+    }).compile();
 
     controller = module.get<CategoryController>(CategoryController);
     vi.clearAllMocks();

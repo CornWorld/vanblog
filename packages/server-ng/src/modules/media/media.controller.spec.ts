@@ -2,8 +2,6 @@ import { BadRequestException } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, beforeEach, afterEach, expect, vi } from 'vitest';
 
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { SettingRegistryService } from '../setting/services/setting-registry.service';
 
 import { MediaProcessingSettingsSchema } from './dto/media-settings.dto';
@@ -41,9 +39,6 @@ const mockStorageConfigService = {
   updateStorageConfig: vi.fn(),
 };
 
-const mockJwtAuthGuard = { canActivate: vi.fn().mockReturnValue(true) };
-const mockPermissionsGuard = { canActivate: vi.fn().mockReturnValue(true) };
-
 describe('MediaController', () => {
   let controller: MediaController;
 
@@ -56,12 +51,7 @@ describe('MediaController', () => {
         { provide: StorageConfigService, useValue: mockStorageConfigService },
         { provide: SettingRegistryService, useValue: mockSettingRegistryService },
       ],
-    })
-      .overrideGuard(PermissionsGuard)
-      .useValue(mockPermissionsGuard)
-      .overrideGuard(JwtAuthGuard)
-      .useValue(mockJwtAuthGuard)
-      .compile();
+    }).compile();
 
     controller = module.get<MediaController>(MediaController);
     vi.clearAllMocks();
@@ -328,12 +318,7 @@ describe('chunked upload', () => {
         { provide: StorageConfigService, useValue: mockStorageConfigService },
         { provide: SettingRegistryService, useValue: mockSettingRegistryService },
       ],
-    })
-      .overrideGuard(PermissionsGuard)
-      .useValue(mockPermissionsGuard)
-      .overrideGuard(JwtAuthGuard)
-      .useValue(mockJwtAuthGuard)
-      .compile();
+    }).compile();
 
     controller = module.get<MediaController>(MediaController);
     vi.clearAllMocks();

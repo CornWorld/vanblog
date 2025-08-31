@@ -2,8 +2,6 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 import { ConfigService } from '../../config/config.service';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { PermissionsGuard } from '../auth/guards/permissions.guard';
 
 import { RssController } from './rss.controller';
 import { RssService } from './rss.service';
@@ -29,11 +27,7 @@ describe('RssController', () => {
           },
         },
       ],
-    })
-      .overrideGuard(JwtAuthGuard)
-      .useValue({ canActivate: vi.fn().mockReturnValue(true) })
-      .overrideGuard(PermissionsGuard)
-      .useValue({ canActivate: vi.fn().mockReturnValue(true) });
+    });
 
     const module: TestingModule = await moduleBuilder.compile();
 

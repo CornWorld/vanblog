@@ -1,9 +1,6 @@
 import { HttpException, HttpStatus } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
 
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { PermissionsGuard } from '../auth/guards/permissions.guard';
-
 import { SettingRegistryService } from './services/setting-registry.service';
 import { SettingRegistryController } from './setting-registry.controller';
 
@@ -27,12 +24,7 @@ describe('SettingRegistryController', () => {
           useValue: mockSettingRegistryService,
         },
       ],
-    })
-      .overrideGuard(JwtAuthGuard)
-      .useValue({ canActivate: () => true })
-      .overrideGuard(PermissionsGuard)
-      .useValue({ canActivate: () => true })
-      .compile();
+    }).compile();
 
     controller = module.get<SettingRegistryController>(SettingRegistryController);
   });

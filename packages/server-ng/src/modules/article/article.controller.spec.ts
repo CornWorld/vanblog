@@ -2,8 +2,6 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, beforeEach, afterEach, expect, vi } from 'vitest';
 
 import { ArticleStatsService } from '../analytics/services/article-stats.service';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { PermissionsGuard } from '../auth/guards/permissions.guard';
 
 import { ArticleController } from './article.controller';
 import { ArticleService } from './article.service';
@@ -33,10 +31,6 @@ describe('ArticleController', () => {
       ],
     })
       .overrideGuard(ArticleAccessGuard)
-      .useValue({ canActivate: () => true })
-      .overrideGuard(PermissionsGuard)
-      .useValue({ canActivate: () => true })
-      .overrideGuard(JwtAuthGuard)
       .useValue({ canActivate: () => true })
       .compile();
 

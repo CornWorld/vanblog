@@ -1,8 +1,5 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { PermissionsGuard } from '../auth/guards/permissions.guard';
-
 import {
   SettingCoreService,
   type SiteInfo,
@@ -44,12 +41,7 @@ describe('SettingCoreController', () => {
           useValue: mockSettingCoreService,
         },
       ],
-    })
-      .overrideGuard(JwtAuthGuard)
-      .useValue({ canActivate: () => true })
-      .overrideGuard(PermissionsGuard)
-      .useValue({ canActivate: () => true })
-      .compile();
+    }).compile();
 
     controller = module.get<SettingCoreController>(SettingCoreController);
   });

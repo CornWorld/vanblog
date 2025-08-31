@@ -4,8 +4,6 @@ import { StreamableFile } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, beforeEach, expect, vi } from 'vitest';
 
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { PermissionService } from '../permission/permission.service';
 
 import { BackupController } from './backup.controller';
@@ -25,14 +23,6 @@ const mockBackupService = {
   deleteBackup: vi.fn(),
   restoreBackup: vi.fn(),
   getRestoreProgress: vi.fn(),
-};
-
-const mockJwtAuthGuard = {
-  canActivate: vi.fn().mockReturnValue(true),
-};
-
-const mockPermissionsGuard = {
-  canActivate: vi.fn().mockReturnValue(true),
 };
 
 const mockPermissionService = {
@@ -58,12 +48,7 @@ describe('BackupController', () => {
           useValue: mockPermissionService,
         },
       ],
-    })
-      .overrideGuard(PermissionsGuard)
-      .useValue(mockPermissionsGuard)
-      .overrideGuard(JwtAuthGuard)
-      .useValue(mockJwtAuthGuard)
-      .compile();
+    }).compile();
 
     controller = module.get<BackupController>(BackupController);
     service = module.get<BackupService>(BackupService);

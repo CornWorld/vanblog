@@ -1,8 +1,6 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, beforeEach, afterEach, expect, vi } from 'vitest';
 
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { PermissionService } from '../permission/permission.service';
 
 import { UserType, type CreateUserDto } from './dto/create-user.dto';
@@ -44,9 +42,6 @@ describe('UserController', () => {
     checkPermissions: vi.fn(),
   };
 
-  const mockJwtAuthGuard = { canActivate: vi.fn().mockReturnValue(true) };
-  const mockPermissionsGuard = { canActivate: vi.fn().mockReturnValue(true) };
-
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [UserController],
@@ -60,12 +55,7 @@ describe('UserController', () => {
           useValue: mockPermissionService,
         },
       ],
-    })
-      .overrideGuard(PermissionsGuard)
-      .useValue(mockPermissionsGuard)
-      .overrideGuard(JwtAuthGuard)
-      .useValue(mockJwtAuthGuard)
-      .compile();
+    }).compile();
 
     controller = module.get<UserController>(UserController);
     service = module.get<UserService>(UserService);

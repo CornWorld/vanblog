@@ -2,8 +2,6 @@ import { ConfigService } from '@nestjs/config';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { PermissionService } from '../permission/permission.service';
 
 import { CommentController } from './comment.controller';
@@ -29,9 +27,6 @@ describe('CommentController', () => {
     otherConfig: '{"key":"value"}',
     serverURL: 'https://waline.example.com',
   };
-
-  const mockJwtAuthGuard = { canActivate: vi.fn().mockReturnValue(true) };
-  const mockPermissionsGuard = { canActivate: vi.fn().mockReturnValue(true) };
 
   beforeEach(async () => {
     const mockCommentService = {
@@ -61,12 +56,7 @@ describe('CommentController', () => {
           },
         },
       ],
-    })
-      .overrideGuard(PermissionsGuard)
-      .useValue(mockPermissionsGuard)
-      .overrideGuard(JwtAuthGuard)
-      .useValue(mockJwtAuthGuard)
-      .compile();
+    }).compile();
 
     controller = module.get<CommentController>(CommentController);
     commentService = module.get(CommentService);
