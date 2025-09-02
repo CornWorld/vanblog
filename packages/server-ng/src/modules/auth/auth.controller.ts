@@ -18,11 +18,11 @@ import { ZodValidationPipe } from 'nestjs-zod';
 import { UserType } from '../user/dto/create-user.dto';
 import { User } from '../user/entities/user.entity';
 
-import { RequireAuth, RequireAdmin } from './auth.decorator';
 import { AuthService } from './auth.service';
 import { LoginLogQueryDto, LoginLogResponseDto, LoginLogQuerySchema } from './dto/login-log.dto';
 import { LocalAuthGuard } from './guards/local-auth.guard';
 import { LoginLogService } from './login-log.service';
+import { Perm } from './permissions.decorator';
 
 interface RequestWithUser extends ExpressRequest {
   user: User;
@@ -92,7 +92,7 @@ export class AuthController {
    * @returns 用户信息（不含密码）
    */
   @Get('profile')
-  @RequireAuth()
+  @Perm({ authOnly: true })
   @ApiOperation({ summary: 'Get current user profile' })
   @ApiResponse({ status: 200, description: 'Profile retrieved successfully' })
   getProfile(@Request() req: RequestWithUser): Omit<User, 'password'> {
@@ -114,7 +114,7 @@ export class AuthController {
    * @returns 登出成功消息
    */
   @Post('logout')
-  @RequireAuth()
+  @Perm({ authOnly: true })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'User logout' })
   @ApiResponse({ status: 200, description: 'Logout successful' })
@@ -178,7 +178,7 @@ export class AuthController {
    * @returns 撤销成功消息
    */
   @Post('revoke-all')
-  @RequireAuth()
+  @Perm({ authOnly: true })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Revoke all user tokens' })
   @ApiResponse({ status: 200, description: 'All tokens revoked successfully' })
@@ -197,7 +197,7 @@ export class AuthController {
    * @returns 登录日志列表
    */
   @Get('logs')
-  @RequireAdmin()
+  @Perm({ roles: UserType.ADMIN })
   @ApiOperation({ summary: 'Get login logs' })
   @ApiResponse({ status: 200, description: 'Login logs retrieved successfully' })
   @ApiQuery({ name: 'username', required: false })

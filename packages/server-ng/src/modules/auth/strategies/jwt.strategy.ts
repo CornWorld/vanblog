@@ -49,7 +49,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     try {
       const user = await this.userService.findOne(payload.sub);
       return user;
-    } catch {
+    } catch (_e: unknown) {
       throw new UnauthorizedException('Invalid token');
     }
   }

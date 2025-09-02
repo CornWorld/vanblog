@@ -20,7 +20,7 @@ export class LocalStrategy extends PassportStrategy(Strategy) {
       }
 
       return user;
-    } catch (_e) {
+    } catch (_e: unknown) {
       // 统一对外表现为未授权，避免将内部错误泄露给调用方
       throw new UnauthorizedException('Invalid credentials');
     }

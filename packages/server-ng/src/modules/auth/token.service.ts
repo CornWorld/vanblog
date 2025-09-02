@@ -117,7 +117,7 @@ export class TokenService {
 
       const user = await this.userService.findOne(payload.sub);
       return user;
-    } catch {
+    } catch (_e: unknown) {
       throw new UnauthorizedException('Invalid or expired token');
     }
   }
@@ -148,7 +148,7 @@ export class TokenService {
 
       const user = await this.userService.findOne(payload.sub as number);
       return user;
-    } catch {
+    } catch (_e: unknown) {
       throw new UnauthorizedException('Invalid or expired refresh token');
     }
   }
