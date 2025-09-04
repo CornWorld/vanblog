@@ -12,6 +12,7 @@ import { WebhookController } from './controllers/webhook.controller';
 import { HookService } from './services/hook.service';
 import { LoaderService, discoverNestDynamicModules } from './services/loader.service';
 import { PluginContextFactory } from './services/plugin-context.service';
+import { PluginRegistryService } from './services/plugin-registry.service';
 import { WebhookRegistryService } from './services/webhook-registry.service';
 import { WebhookService } from './services/webhook.service';
 
@@ -43,6 +44,7 @@ import { WebhookService } from './services/webhook.service';
     HookService,
     PluginContextFactory,
     LoaderService,
+    PluginRegistryService,
     {
       provide: WebhookService,
       useClass: WebhookService,
@@ -56,6 +58,7 @@ import { WebhookService } from './services/webhook.service';
     HookService,
     PluginContextFactory,
     LoaderService,
+    PluginRegistryService,
     WebhookService,
     WebhookRegistryService,
   ],

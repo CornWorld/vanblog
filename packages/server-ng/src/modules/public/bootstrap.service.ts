@@ -5,6 +5,7 @@ import { StatisticsService } from '../../shared/services/statistics.service';
 import { CategoryService } from '../category/category.service';
 import { CommentService } from '../comment/comment.service';
 import { HookService } from '../plugin/services/hook.service';
+import { PluginRegistryService } from '../plugin/services/plugin-registry.service';
 import { SettingCoreService } from '../setting/services/setting-core.service';
 import { TagService } from '../tag/tag.service';
 
@@ -20,6 +21,7 @@ export class BootstrapService {
     private readonly tagService: TagService,
     private readonly categoryService: CategoryService,
     private readonly hookService: HookService,
+    private readonly pluginRegistryService: PluginRegistryService,
   ) {}
 
   async getPublicBootstrap(): Promise<PublicBootstrapResponseDto> {
@@ -34,10 +36,10 @@ export class BootstrapService {
       this.settingCoreService.getSiteInfo(),
       this.settingCoreService.getNavigation(),
       this.settingCoreService.getFriendLinks(),
-      this.hookService.applyFilters('bootstrap|rewards', []),
       this.getWalineConfig(),
       this.getAllCategories(),
       this.statisticsService.getTotalPublishedWordCount(),
+      this.pluginRegistryService.getAllPublicData(),
     ]);
 
     const [
@@ -46,10 +48,10 @@ export class BootstrapService {
       siteInfo,
       navigation,
       friendLinks,
-      rewards,
       walineSettings,
       categories,
       totalWordCount,
+      pluginData,
     ] = results;
 
     const response: PublicBootstrapResponseDto = {
@@ -61,7 +63,9 @@ export class BootstrapService {
       navigation: navigation.status === 'fulfilled' ? navigation.value : [],
       friendLinks: friendLinks.status === 'fulfilled' ? friendLinks.value : [],
       socialLinks: [],
-      rewards: rewards.status === 'fulfilled' ? (rewards.value as RewardItem[]) : [],
+      rewards: this.extractRewardsFromPluginData(
+        pluginData.status === 'fulfilled' ? pluginData.value : {},
+      ),
       categories: categories.status === 'fulfilled' ? categories.value : [],
       ...(walineSettings.status === 'fulfilled' &&
         walineSettings.value && { walineConfig: walineSettings.value }),
@@ -78,6 +82,19 @@ export class BootstrapService {
       .catch(() => {});
 
     return filtered;
+  }
+
+  /**
+   * 从插件数据中提取 rewards 数据
+   * 遵循 Linus 的"好品味"原则：统一处理，消除特殊情况
+   */
+  private extractRewardsFromPluginData(pluginData: Record<string, unknown>): RewardItem[] {
+    // 查找 rewards-plugin 的数据
+    const rewardsData = pluginData['rewards-plugin'];
+    if (Array.isArray(rewardsData)) {
+      return rewardsData as RewardItem[];
+    }
+    return [];
   }
 
   private async getAllTags(): Promise<string[]> {
