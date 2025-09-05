@@ -2,14 +2,7 @@ import { readFileSync } from 'fs';
 import { readFile, readdir, stat } from 'fs/promises';
 import { join } from 'path';
 
-import {
-  Injectable,
-  OnModuleInit,
-  Module,
-  Inject,
-  Logger,
-  type DynamicModule,
-} from '@nestjs/common';
+import { Injectable, OnModuleInit, Module, type Logger, type DynamicModule } from '@nestjs/common';
 import { z } from 'zod';
 
 import { LoggerService } from '../../../core/logger/logger.service';
@@ -542,7 +535,6 @@ export class LoaderService implements OnModuleInit {
     // Try plugin.json first; if missing/invalid, fallback to package.json
     try {
       const mfPath = join(pluginDir, 'plugin.json');
-      const { readFile } = await import('fs/promises');
       const mfContent = await readFile(mfPath, { encoding: 'utf-8' });
       const parsed: unknown = JSON.parse(mfContent);
       const result = ManifestSchema.safeParse(parsed);
@@ -576,9 +568,8 @@ export class LoaderService implements OnModuleInit {
   private async readPackageJson(pluginDir: string): Promise<PackageJson | null> {
     try {
       const pkgPath = join(pluginDir, 'package.json');
-      const { readFile } = await import('fs/promises');
-      const content = await readFile(pkgPath, 'utf-8');
-      const pkg = JSON.parse(content) as PackageJson;
+      const pkgContent = await readFile(pkgPath, 'utf-8');
+      const pkg = JSON.parse(pkgContent) as PackageJson;
       return pkg;
     } catch {
       return null;
@@ -586,144 +577,19 @@ export class LoaderService implements OnModuleInit {
   }
 }
 
-// ---- 以下为合并自 services/loader.service.ts 的对象插件适配与发现逻辑 ----
-
-// 仅用于对象插件适配的本地接口
-interface PluginLike {
-  id?: string;
-  name?: string;
-  version?: string;
-  description?: string;
-  hooks?: {
-    [hookName: string]:
-      | { type: 'action'; priority?: number; handler: ActionCallback }
-      | { type: 'filter'; priority?: number; handler: FilterCallback };
-  };
-  init?(context: PluginContext): Promise<void> | void;
-}
-
-@Injectable()
-class PluginObjectAdapter implements OnModuleInit {
-  private readonly logger = new Logger(PluginObjectAdapter.name);
-
-  constructor(
-    @Inject('PLUGIN_DIR') private readonly pluginDir: string,
-    private readonly hookService: HookService,
-    private readonly pluginContextFactory: PluginContextFactory,
-    private readonly loaderService: LoaderService,
-  ) {}
-
-  async onModuleInit(): Promise<void> {
-    const exp = await resolveObjectPluginExport(this.pluginDir);
-    if (exp == null) return;
-
-    // try read package.json for metadata fallback
-    let name: string | undefined;
-    let version: string | undefined;
-    let description: string | undefined;
-    try {
-      const pkgPath = join(this.pluginDir, 'package.json');
-      const pkgContent = await readFile(pkgPath, 'utf-8');
-      const pkg = JSON.parse(pkgContent) as {
-        name?: string;
-        version?: string;
-        description?: string;
-      };
-      name = pkg.name ?? name;
-      version = pkg.version ?? version;
-      description = pkg.description ?? description;
-    } catch {
-      /* noop: optional package.json */
-    }
-
-    const plugin = exp as PluginLike;
-    const finalName = plugin.name ?? name ?? this.pluginDir.split('/').pop() ?? 'plugin';
-    const finalVersion = plugin.version ?? version ?? '0.0.0';
-    const finalDescription = plugin.description ?? description;
-
-    const context = this.pluginContextFactory.createContext(finalName);
-
-    // register hooks and capture registration ids
-    const registrations: Array<{ type: 'action' | 'filter'; hookName: string; id: string }> = [];
-    if (plugin.hooks) {
-      for (const [hookName, hookConfig] of Object.entries(plugin.hooks)) {
-        if (hookConfig.type === 'action') {
-          const { handler } = hookConfig;
-          if (typeof handler !== 'function') {
-            this.logger.warn(
-              `Plugin '${finalName}' hook '${hookName}' has invalid action handler, skipped`,
-            );
-            continue;
-          }
-          const wrapped: ActionCallback = async (...args: unknown[]) => {
-            await handler(...args, context);
-          };
-          const id = this.hookService.addAction(hookName, wrapped, hookConfig.priority ?? 10);
-          registrations.push({ type: 'action', hookName, id });
-        } else {
-          const { handler } = hookConfig;
-          if (typeof handler !== 'function') {
-            this.logger.warn(
-              `Plugin '${finalName}' hook '${hookName}' has invalid filter handler, skipped`,
-            );
-            continue;
-          }
-          const wrapped: FilterCallback = async (value: unknown, ...args: unknown[]) => {
-            return await handler(value, ...args, context);
-          };
-          const id = this.hookService.addFilter(hookName, wrapped, hookConfig.priority ?? 10);
-          registrations.push({ type: 'filter', hookName, id });
-        }
-      }
-    }
-
-    if (typeof plugin.init === 'function') {
-      try {
-        await Promise.resolve(plugin.init(context));
-      } catch {
-        /* noop: isolate plugin init failure */
-      }
-    }
-
-    // sync to loader service for API visibility
-    const registered: Plugin = {
-      id: finalName,
-      name: finalName,
-      version: finalVersion,
-      ...(finalDescription ? { description: finalDescription } : {}),
-      hooks: plugin.hooks,
-    } as Plugin;
-
-    this.loaderService.registerExternalPlugin(registered, context, {
-      pluginDir: this.pluginDir,
-      hooks: registrations,
-    });
-  }
-}
-
-@Module({
-  providers: [PluginObjectAdapter],
-})
-class PluginObjectAdapterModule {}
-
-function createPluginObjectAdapterModule(pluginDir: string): DynamicModule {
-  return {
-    module: PluginObjectAdapterModule,
-    providers: [{ provide: 'PLUGIN_DIR', useValue: pluginDir }, PluginObjectAdapter],
-  };
-}
-
-// 纯工具函数：根据现有启发式判断一个插件目录是否为“对象风格插件”
+/**
+ * Check if plugin has entry point defined (index.* or main field)
+ */
 async function isLikelyObjectStylePlugin(pluginPath: string): Promise<boolean> {
-  // Heuristic: index.* or {package.json|plugin.json}.main
-  // 1) index.ts/js/mjs
-  const idx = ['index.ts', 'index.js', 'index.mjs'];
-  for (const f of idx) {
+  // 1) check index.*
+  const indexFiles = ['index.ts', 'index.js', 'index.mjs'];
+  for (const f of indexFiles) {
     try {
-      await stat(join(pluginPath, f));
+      const p = join(pluginPath, f);
+      await stat(p);
       return true;
     } catch {
-      // noop
+      /* noop: no index.* */
     }
   }
 
@@ -748,6 +614,24 @@ async function isLikelyObjectStylePlugin(pluginPath: string): Promise<boolean> {
   }
 
   return false;
+}
+
+/**
+ * Create a DynamicModule that wraps an object-style plugin
+ */
+function createPluginObjectAdapterModule(pluginPath: string): DynamicModule {
+  @Module({})
+  class PluginObjectAdapterModule {}
+
+  return {
+    module: PluginObjectAdapterModule,
+    providers: [
+      {
+        provide: 'PLUGIN_DIR',
+        useValue: pluginPath,
+      },
+    ],
+  };
 }
 
 export async function discoverNestDynamicModules(
