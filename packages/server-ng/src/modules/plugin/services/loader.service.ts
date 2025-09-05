@@ -10,6 +10,7 @@ import {
   Logger,
   type DynamicModule,
 } from '@nestjs/common';
+import { z } from 'zod';
 
 import { LoggerService } from '../../../core/logger/logger.service';
 import { resolveObjectPluginExport } from '../utils/object-plugin.util';
@@ -518,42 +519,64 @@ export class LoaderService implements OnModuleInit {
   }
 
   private async loadPluginManifest(pluginDir: string): Promise<PluginManifest | null> {
-    try {
-      // Prefer plugin.json if exists
-      const mfPath = join(pluginDir, 'plugin.json');
-      const mfContent = await readFile(mfPath, 'utf-8');
-      const mf = JSON.parse(mfContent) as PluginManifest;
-      if (typeof mf.name !== 'string' || mf.name.length === 0)
-        throw new Error('plugin.json must specify name');
-      if (typeof mf.version !== 'string' || mf.version.length === 0)
-        throw new Error('plugin.json must specify version');
+    // Define Zod schema once inside to avoid top-level export noise
+    const ManifestSchema = z
+      .object({
+        name: z.string().min(1),
+        version: z.string().min(1),
+        description: z.string().optional(),
+        main: z.string().optional(),
+        dependencies: z.array(z.string()).optional(),
+        hooks: z
+          .record(
+            z.string(),
+            z.object({
+              type: z.enum(['action', 'filter']),
+              priority: z.number().int().optional(),
+            }),
+          )
+          .optional(),
+      })
+      .loose();
 
-      // optional hooks meta in manifest only provides priorities/types; handlers are in code
-      return mf;
-    } catch {
-      // fallback to package.json
-      try {
-        const pkg = await this.readPackageJson(pluginDir);
-        if (!pkg || (!pkg.name && !pkg.version)) return null;
-        const mf: PluginManifest = {
-          name: pkg.name ?? 'plugin',
-          version: pkg.version ?? '0.0.0',
-          description: pkg.description,
-        };
-        return mf;
-      } catch (error) {
-        this.logger.error(
-          `Failed to read manifest at ${pluginDir}:`,
-          error instanceof Error ? error.stack : String(error),
-        );
-        return null;
+    // Try plugin.json first; if missing/invalid, fallback to package.json
+    try {
+      const mfPath = join(pluginDir, 'plugin.json');
+      const { readFile } = await import('fs/promises');
+      const mfContent = await readFile(mfPath, { encoding: 'utf-8' });
+      const parsed: unknown = JSON.parse(mfContent);
+      const result = ManifestSchema.safeParse(parsed);
+      if (result.success) {
+        return result.data as PluginManifest;
       }
+      // invalid schema -> fallback to package.json
+    } catch {
+      // read/parse error -> fallback
+    }
+
+    // fallback to package.json
+    try {
+      const pkg = await this.readPackageJson(pluginDir);
+      if (!pkg || (!pkg.name && !pkg.version)) return null;
+      const mf: PluginManifest = {
+        name: pkg.name ?? 'plugin',
+        version: pkg.version ?? '0.0.0',
+        description: pkg.description,
+      };
+      return mf;
+    } catch (error) {
+      this.logger.error(
+        `Failed to read manifest at ${pluginDir}:`,
+        error instanceof Error ? error.stack : String(error),
+      );
+      return null;
     }
   }
 
   private async readPackageJson(pluginDir: string): Promise<PackageJson | null> {
     try {
       const pkgPath = join(pluginDir, 'package.json');
+      const { readFile } = await import('fs/promises');
       const content = await readFile(pkgPath, 'utf-8');
       const pkg = JSON.parse(content) as PackageJson;
       return pkg;
@@ -690,6 +713,43 @@ function createPluginObjectAdapterModule(pluginDir: string): DynamicModule {
   };
 }
 
+// 纯工具函数：根据现有启发式判断一个插件目录是否为“对象风格插件”
+async function isLikelyObjectStylePlugin(pluginPath: string): Promise<boolean> {
+  // Heuristic: index.* or {package.json|plugin.json}.main
+  // 1) index.ts/js/mjs
+  const idx = ['index.ts', 'index.js', 'index.mjs'];
+  for (const f of idx) {
+    try {
+      await stat(join(pluginPath, f));
+      return true;
+    } catch {
+      // noop
+    }
+  }
+
+  // 2) package.json.main
+  try {
+    const pkgPath = join(pluginPath, 'package.json');
+    const pkgContent = await readFile(pkgPath, 'utf-8');
+    const pkg = JSON.parse(pkgContent) as { main?: string };
+    if (typeof pkg.main === 'string' && pkg.main.length > 0) return true;
+  } catch {
+    // noop: optional package.json
+  }
+
+  // 3) plugin.json.main
+  try {
+    const mfPath = join(pluginPath, 'plugin.json');
+    const mfContent = await readFile(mfPath, 'utf-8');
+    const mf = JSON.parse(mfContent) as { main?: string };
+    if (typeof mf.main === 'string' && mf.main.length > 0) return true;
+  } catch {
+    // noop: optional plugin.json
+  }
+
+  return false;
+}
+
 export async function discoverNestDynamicModules(
   pluginsDir?: string,
   logger?: Logger,
@@ -716,40 +776,7 @@ export async function discoverNestDynamicModules(
       try {
         if (await hasNestModule(pluginPath)) continue;
 
-        // Heuristic: index.* or {package.json|plugin.json}.main
-        let mayBeObject = false;
-        const idx = ['index.ts', 'index.js', 'index.mjs'];
-        for (const f of idx) {
-          try {
-            await stat(join(pluginPath, f));
-            mayBeObject = true;
-            break;
-          } catch {
-            /* noop: index not exists */
-          }
-        }
-        if (!mayBeObject) {
-          try {
-            const pkgPath = join(pluginPath, 'package.json');
-            const pkgContent = await readFile(pkgPath, 'utf-8');
-            const pkg = JSON.parse(pkgContent) as { main?: string };
-            if (typeof pkg.main === 'string' && pkg.main.length > 0) mayBeObject = true;
-          } catch {
-            /* noop: optional package.json */
-          }
-          if (!mayBeObject) {
-            try {
-              const mfPath = join(pluginPath, 'plugin.json');
-              const mfContent = await readFile(mfPath, 'utf-8');
-              const mf = JSON.parse(mfContent) as { main?: string };
-              if (typeof mf.main === 'string' && mf.main.length > 0) mayBeObject = true;
-            } catch {
-              /* noop: optional plugin.json */
-            }
-          }
-        }
-
-        if (mayBeObject) {
+        if (await isLikelyObjectStylePlugin(pluginPath)) {
           wrapped.push(createPluginObjectAdapterModule(pluginPath));
           logger?.log(`Wrapping plugin object as DynamicModule: ${entry.name}`);
         }

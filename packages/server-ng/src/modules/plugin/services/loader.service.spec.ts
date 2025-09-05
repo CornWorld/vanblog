@@ -1,4 +1,18 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
+// Hoisted mock for fs/promises with a mutable implementation function for readFile
+let readFileImpl: (p: string | URL, opts?: unknown) => Promise<string> = async () => {
+  await Promise.resolve();
+  throw new Error('ENOENT');
+};
+
+vi.mock('fs/promises', async () => {
+  const actual = await vi.importActual<typeof import('fs/promises')>('fs/promises');
+  return {
+    ...actual,
+    readFile: async (...args: unknown[]) => await readFileImpl(args[0] as string | URL, args[1]),
+  };
+});
 
 import { LoaderService } from './loader.service';
 
@@ -100,5 +114,71 @@ describe('LoaderService version utilities', () => {
     const result = satisfies('foo', '2.1.0');
     expect(result).toBe(true);
     expect(logger.warn).toHaveBeenCalled();
+  });
+});
+
+describe('LoaderService manifest validation', () => {
+  let service: LoaderService;
+  let logger: MinimalLogger;
+
+  beforeEach(() => {
+    ({ service, logger } = createService());
+    readFileImpl = async () => {
+      await Promise.resolve();
+      throw new Error('ENOENT');
+    };
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('should parse valid plugin.json via Zod schema', async () => {
+    vi.spyOn<any, any>(service as any, 'readPackageJson').mockResolvedValue(null);
+
+    readFileImpl = async (p: string | URL) => {
+      await Promise.resolve();
+      if (typeof p === 'string' && p.endsWith('plugin.json')) {
+        return await Promise.resolve(
+          JSON.stringify({ name: 'foo', version: '1.2.3', hooks: { a: { type: 'action' } } }),
+        );
+      }
+      throw new Error('ENOENT');
+    };
+
+    const manifest = await (service as any).loadPluginManifest('/tmp/x');
+    expect(manifest).toEqual(expect.objectContaining({ name: 'foo', version: '1.2.3' }));
+  });
+
+  it('should fallback to package.json when plugin.json invalid', async () => {
+    vi.spyOn<any, any>(service as any, 'readPackageJson').mockResolvedValue({
+      name: 'bar',
+      version: '0.1.0',
+    });
+
+    readFileImpl = async (p: string | URL) => {
+      await Promise.resolve();
+      if (typeof p === 'string' && p.endsWith('plugin.json')) {
+        // invalid: missing name/version
+        return await Promise.resolve(JSON.stringify({ foo: 'bar' }));
+      }
+      throw new Error('ENOENT');
+    };
+
+    const manifest = await (service as any).loadPluginManifest('/tmp/y');
+    expect(manifest).toEqual(expect.objectContaining({ name: 'bar', version: '0.1.0' }));
+  });
+
+  it('should return null when both manifests are missing essential fields', async () => {
+    vi.spyOn<any, any>(service as any, 'readPackageJson').mockResolvedValue({});
+
+    readFileImpl = async () => {
+      await Promise.resolve();
+      throw new Error('ENOENT');
+    };
+
+    const manifest = await (service as any).loadPluginManifest('/tmp/z');
+    expect(manifest).toBeNull();
+    expect(logger.error).not.toHaveBeenCalled();
   });
 });
