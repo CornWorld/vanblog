@@ -15,10 +15,22 @@ export interface PluginConfigReader {
   has(key: string): boolean;
 }
 
+// 供插件通过上下文访问的“公共数据注册表”最小接口，避免直接暴露内部服务实现
+export type PluginPublicDataProvider<T = unknown> = () => Promise<T> | T;
+export interface PluginRegistryAccessor {
+  register<T = unknown>(
+    pluginName: string,
+    provider: PluginPublicDataProvider<T>,
+    priority?: number,
+  ): void;
+  unregister(pluginName: string): boolean;
+}
+
 export interface PluginContext {
   readonly pluginId: string;
   readonly config: PluginConfigReader;
   readonly data: PluginDataStorage;
+  readonly registry: PluginRegistryAccessor;
 }
 
 export interface PluginContextFactory {

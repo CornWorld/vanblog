@@ -43,6 +43,10 @@ describe('Social Links Plugin', () => {
       pluginId: 'social-links-plugin',
       data: mockDataStorage,
       config: mockConfigReader,
+      registry: {
+        register: vi.fn(),
+        unregister: vi.fn().mockReturnValue(true),
+      } as any,
     };
   });
 

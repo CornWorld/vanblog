@@ -40,15 +40,26 @@ const plugin: Plugin = {
     rewardService.setContext(context);
     await rewardService.onModuleInit();
 
-    // 从配置中读取额外的 rewards
-    const extraRewards = context.config.get<RewardInfo[]>('extra_rewards', []);
-    if (extraRewards.length > 0) {
-      logger.log(`加载了 ${extraRewards.length} 个额外奖励配置`);
+    // 从配置中读取额外的 rewards（不写回存储，由提供者在聚合时合并）
+    const extraRewardsFromConfig = context.config.get<RewardInfo[]>('extra_rewards', []);
+    if (extraRewardsFromConfig.length > 0) {
+      logger.log(`加载了 ${extraRewardsFromConfig.length} 个额外奖励配置`);
     }
 
-    // TODO: 注册到插件注册表
-    // 需要扩展 PluginContext 接口以支持服务访问
-    logger.log('插件注册表集成待实现');
+    // 注册到插件注册表：提供 rewards 数据
+    // 提供者会合并“存储中的奖励”和“配置中的奖励”，并按 name 去重
+    context.registry.register(
+      'rewards-plugin',
+      async () => {
+        const stored = await rewardService.getRewardInfo();
+        const configured = context.config.get<RewardInfo[]>('extra_rewards', []);
+        const all = [...stored, ...configured];
+        const uniqueByName = new Map<string, RewardInfo>();
+        for (const r of all) uniqueByName.set(r.name, r);
+        return Array.from(uniqueByName.values());
+      },
+      10,
+    );
 
     logger.log('奖励插件初始化成功');
   },
@@ -57,8 +68,11 @@ const plugin: Plugin = {
     const bootCount = (await context.data.get('boot_count')) as number | null | undefined;
     logger.log(`插件销毁，共启动 ${bootCount ?? 0} 次`);
 
-    // TODO: 从插件注册表中注销
-    // 需要扩展 PluginContext 接口以支持服务访问
+    // 从插件注册表中注销
+    const ok = context.registry.unregister('rewards-plugin');
+    if (!ok) {
+      logger.debug('rewards-plugin 未在注册表中找到或已被移除');
+    }
 
     await context.data.clear();
     // 清理服务实例

@@ -13,6 +13,7 @@ import {
   // PluginSettingsRegistryService,
   PluginContextService,
 } from './plugin-context.service';
+import { PluginRegistryService } from './plugin-registry.service';
 
 interface MockDatabase {
   select: ReturnType<typeof vi.fn>;
@@ -97,6 +98,14 @@ describe('PluginContext Services', () => {
         {
           provide: ConfigService,
           useValue: mockConfigService,
+        },
+        {
+          provide: PluginRegistryService,
+          useValue: {
+            register: vi.fn(),
+            unregister: vi.fn().mockReturnValue(true),
+            getAllPublicData: vi.fn().mockResolvedValue({}),
+          },
         },
       ],
     }).compile();
@@ -351,12 +360,14 @@ describe('PluginContext Services', () => {
       const mockConfig = new PluginConfigReaderService(mockConfigService, 'test-plugin');
       const mockData = new PluginDataStorageService(mockDb as unknown as Database, 'test-plugin');
 
-      const context = new PluginContextService('test-plugin', mockConfig, mockData);
+      const mockRegistry = { register: vi.fn(), unregister: vi.fn() } as any;
+      const context = new PluginContextService('test-plugin', mockConfig, mockData, mockRegistry);
 
       expect(context).toBeDefined();
       expect(context.pluginId).toBe('test-plugin');
       expect(context.config).toBe(mockConfig);
       expect(context.data).toBe(mockData);
+      expect(context.registry).toBe(mockRegistry);
     });
   });
 });

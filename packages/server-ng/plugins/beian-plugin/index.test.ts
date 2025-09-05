@@ -47,6 +47,10 @@ describe('Beian Plugin', () => {
       pluginId: 'beian-plugin',
       data: mockDataStorage,
       config: mockConfigReader,
+      registry: {
+        register: vi.fn(),
+        unregister: vi.fn().mockReturnValue(true),
+      } as any,
     };
   });
 

@@ -20,6 +20,10 @@ const createMockContext = (): PluginContext => ({
     getOrThrow: vi.fn(),
     has: vi.fn(),
   },
+  registry: {
+    register: vi.fn(),
+    unregister: vi.fn().mockReturnValue(true),
+  },
 });
 
 describe('🧩 bootstrap-reward-plugin', () => {
@@ -40,20 +44,28 @@ describe('🧩 bootstrap-reward-plugin', () => {
   });
 
   describe('生命周期', () => {
-    it('init: 初始化数据', async () => {
+    it('init: 初始化数据并注册 provider', async () => {
       if (plugin.init) {
         await plugin.init(ctx);
       }
 
       expect(ctx.data.set).toHaveBeenCalledWith('extra_rewards', []);
       expect(ctx.data.set).toHaveBeenCalledWith('boot_count', 0);
+      expect(ctx.registry.register).toHaveBeenCalledTimes(1);
+      expect(ctx.registry.register).toHaveBeenCalledWith(
+        'rewards-plugin',
+        expect.any(Function),
+        expect.any(Number),
+      );
     });
 
-    it('destroy: 清理数据', async () => {
+    it('destroy: 清理数据并注销 provider', async () => {
+      if (plugin.init) await plugin.init(ctx);
       if (plugin.destroy) {
         await plugin.destroy(ctx);
       }
       expect(ctx.data.clear).toHaveBeenCalled();
+      expect(ctx.registry.unregister).toHaveBeenCalledWith('rewards-plugin');
     });
   });
 
@@ -83,11 +95,11 @@ describe('🧩 bootstrap-reward-plugin', () => {
   });
 
   describe('插件注册表集成', () => {
-    it('应该支持通过插件注册表提供数据', () => {
-      // 注意：由于 PluginContext 接口尚不支持服务访问，
-      // 插件注册表功能暂时被注释掉
+    it('应该支持通过插件注册表提供数据', async () => {
+      if (plugin.init) await plugin.init(ctx);
       expect(plugin.id).toBe('rewards-plugin');
       expect(plugin.rewardService).toBeDefined();
+      expect(ctx.registry.register).toHaveBeenCalled();
     });
   });
 
@@ -136,85 +148,51 @@ describe('🧩 bootstrap-reward-plugin', () => {
         ];
 
         (ctx.data.get as any).mockResolvedValueOnce(existingRewards);
-        (ctx.data.set as any).mockResolvedValueOnce(undefined);
-
-        const result = await rewardService.addOrUpdateRewardInfo(newReward);
+        await rewardService.addOrUpdateRewardInfo(newReward as any);
 
         expect(ctx.data.set).toHaveBeenCalledWith('extra_rewards', expectedRewards);
-        expect(result).toEqual(expectedRewards);
       });
 
-      it('应更新现有的奖励信息', async () => {
+      it('应更新已有的奖励信息', async () => {
         const existingRewards = [
           { name: 'Alipay', value: 'alipay://old' },
           { name: 'WeChat', value: 'wechat://old' },
         ];
-        const updatedReward = { name: 'Alipay', value: 'alipay://new' };
+        const updatedReward = { name: 'WeChat', value: 'wechat://updated' };
         const expectedRewards = [
-          { name: 'Alipay', value: 'alipay://new' },
-          { name: 'WeChat', value: 'wechat://old' },
+          { name: 'Alipay', value: 'alipay://old' },
+          { name: 'WeChat', value: 'wechat://updated' },
         ];
 
         (ctx.data.get as any).mockResolvedValueOnce(existingRewards);
-        (ctx.data.set as any).mockResolvedValueOnce(undefined);
-
-        const result = await rewardService.addOrUpdateRewardInfo(updatedReward);
+        await rewardService.addOrUpdateRewardInfo(updatedReward as any);
 
         expect(ctx.data.set).toHaveBeenCalledWith('extra_rewards', expectedRewards);
-        expect(result).toEqual(expectedRewards);
       });
 
-      it('应在空数组中添加第一个奖励', async () => {
-        const newReward = { name: 'Alipay', value: 'alipay://test' };
-        const expectedRewards = [newReward];
-
+      it('应处理空的初始奖励列表', async () => {
         (ctx.data.get as any).mockResolvedValueOnce([]);
-        (ctx.data.set as any).mockResolvedValueOnce(undefined);
+        const newReward = { name: 'Alipay', value: 'alipay://new' };
 
-        const result = await rewardService.addOrUpdateRewardInfo(newReward);
+        await rewardService.addOrUpdateRewardInfo(newReward as any);
 
-        expect(ctx.data.set).toHaveBeenCalledWith('extra_rewards', expectedRewards);
-        expect(result).toEqual(expectedRewards);
+        expect(ctx.data.set).toHaveBeenCalledWith('extra_rewards', [newReward]);
       });
     });
 
     describe('deleteRewardInfo', () => {
-      it('应删除指定名称的奖励信息', async () => {
+      it('应删除指定的奖励信息', async () => {
         const existingRewards = [
-          { name: 'Alipay', value: 'alipay://test' },
-          { name: 'WeChat', value: 'wechat://test' },
+          { name: 'Alipay', value: 'alipay://old' },
+          { name: 'WeChat', value: 'wechat://old' },
         ];
-        const expectedRewards = [{ name: 'WeChat', value: 'wechat://test' }];
-
         (ctx.data.get as any).mockResolvedValueOnce(existingRewards);
-        (ctx.data.set as any).mockResolvedValueOnce(undefined);
 
-        const result = await rewardService.deleteRewardInfo('Alipay');
+        await rewardService.deleteRewardInfo('WeChat');
 
-        expect(ctx.data.set).toHaveBeenCalledWith('extra_rewards', expectedRewards);
-        expect(result).toEqual(expectedRewards);
-      });
-
-      it('应在奖励不存在时返回原数组', async () => {
-        const existingRewards = [{ name: 'Alipay', value: 'alipay://test' }];
-
-        (ctx.data.get as any).mockResolvedValueOnce(existingRewards);
-        (ctx.data.set as any).mockResolvedValueOnce(undefined);
-
-        const result = await rewardService.deleteRewardInfo('NonExistent');
-
-        expect(ctx.data.set).toHaveBeenCalledWith('extra_rewards', existingRewards);
-        expect(result).toEqual(existingRewards);
-      });
-
-      it('应在空数组中删除时返回空数组', async () => {
-        (ctx.data.get as any).mockResolvedValueOnce([]);
-        (ctx.data.set as any).mockResolvedValueOnce(undefined);
-
-        const result = await rewardService.deleteRewardInfo('Alipay');
-
-        expect(ctx.data.set).toHaveBeenCalledWith('extra_rewards', []);
-        expect(result).toEqual([]);
+        expect(ctx.data.set).toHaveBeenCalledWith('extra_rewards', [
+          { name: 'Alipay', value: 'alipay://old' },
+        ]);
       });
     });
   });

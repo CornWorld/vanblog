@@ -51,8 +51,13 @@ describe('EmailNotificationPlugin', () => {
     };
 
     mockContext = {
+      pluginId: 'email-notification-plugin',
       config: mockConfig,
       data: mockData,
+      registry: {
+        register: vi.fn(),
+        unregister: vi.fn().mockReturnValue(true),
+      } as any,
       settings: {
         register: vi.fn(),
         get: vi.fn(),

@@ -6,11 +6,14 @@ import { ConfigService } from '../../../config/config.service';
 import { DATABASE_CONNECTION, type Database } from '../../../database';
 import { pluginData } from '../../../database/schema';
 
+import { PluginRegistryService } from './plugin-registry.service';
+
 import type {
   PluginConfigReader,
   PluginContext,
   PluginContextFactory as IPluginContextFactory,
   PluginDataStorage,
+  PluginRegistryAccessor,
 } from '../interfaces/plugin-context.interface';
 
 @Injectable()
@@ -149,6 +152,7 @@ export class PluginContextService implements PluginContext {
     public readonly pluginId: string,
     public readonly config: PluginConfigReader,
     public readonly data: PluginDataStorage,
+    public readonly registry: PluginRegistryAccessor,
   ) {}
 }
 
@@ -157,12 +161,22 @@ export class PluginContextFactory implements IPluginContextFactory {
   constructor(
     @Inject(DATABASE_CONNECTION) private readonly db: Database,
     private readonly configService: ConfigService,
+    private readonly pluginRegistryService: PluginRegistryService,
   ) {}
 
   createContext(pluginId: string): PluginContext {
     const config = new PluginConfigReaderService(this.configService, pluginId);
     const data = new PluginDataStorageService(this.db, pluginId);
 
-    return new PluginContextService(pluginId, config, data);
+    const registry: PluginRegistryAccessor = {
+      register: (pluginName, provider, priority) => {
+        this.pluginRegistryService.register(pluginName, provider, priority);
+      },
+      unregister: (pluginName) => {
+        return this.pluginRegistryService.unregister(pluginName);
+      },
+    };
+
+    return new PluginContextService(pluginId, config, data, registry);
   }
 }
