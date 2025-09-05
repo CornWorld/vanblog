@@ -4,10 +4,10 @@
   "description": "VanBlog Server-NG - A modern, modular, and high-performance API server for VanBlog",
   "author": "VanBlog Team",
   "private": true,
-  "license": "UNLICENSED",
+  "license": "GPL-3.0-only",
   "engines": {
-    "node": ">=18.0.0",
-    "pnpm": ">=8.0.0"
+    "node": ">=22",
+    "pnpm": ">=10"
   },
   "repository": {
     "type": "git",
