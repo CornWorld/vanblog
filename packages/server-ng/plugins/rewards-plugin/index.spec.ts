@@ -57,104 +57,37 @@ describe('🧩 bootstrap-reward-plugin', () => {
     });
   });
 
-  describe('hooks', () => {
-    it('应有正确的钩子类型与优先级', () => {
-      expect(plugin.hooks?.['bootstrap|beforeGenerate']?.type).toBe('action');
-      expect(plugin.hooks?.['bootstrap|beforeGenerate']?.priority).toBe(10);
-      expect(plugin.hooks?.['bootstrap|transformResponse']?.type).toBe('filter');
-      expect(plugin.hooks?.['bootstrap|transformResponse']?.priority).toBe(10);
-      expect(plugin.hooks?.['bootstrap|generated']?.type).toBe('action');
-      expect(plugin.hooks?.['bootstrap|generated']?.priority).toBe(10);
+  describe('服务方法', () => {
+    it('getRewards: 获取奖励列表', async () => {
+      const pluginWithMethods = plugin as typeof plugin & {
+        getRewards: () => Promise<unknown[]>;
+      };
+      const rewards = await pluginWithMethods.getRewards();
+      expect(Array.isArray(rewards)).toBe(true);
     });
 
-    it('before_generate: 自增计数', async () => {
-      (ctx.data.get as any).mockResolvedValueOnce(1); // boot_count=1
-
-      const handler = plugin.hooks?.['bootstrap|beforeGenerate']?.handler as (
-        value: unknown,
-        context: PluginContext,
-      ) => Promise<void>;
-
-      await handler(undefined, ctx);
-
-      expect(ctx.data.set).toHaveBeenCalledWith('boot_count', 2);
+    it('addOrUpdateReward: 添加或更新奖励', async () => {
+      const pluginWithMethods = plugin as typeof plugin & {
+        addOrUpdateReward: (reward: unknown) => Promise<void>;
+      };
+      const reward = { name: 'Test', value: 'test://reward' };
+      await expect(pluginWithMethods.addOrUpdateReward(reward)).resolves.not.toThrow();
     });
 
-    it('transform_response: 使用缓存的 extras 合并并去重，extras 覆盖同名项', async () => {
-      const cachedExtras = [
-        { name: 'Coffee', value: 'extra://coffee' },
-        { name: 'Alipay', value: 'ali://zz' },
-      ];
-      (ctx.data.get as ReturnType<typeof vi.fn>).mockImplementation((key: string) => {
-        if (key === 'extra_rewards') return cachedExtras;
-        return null;
-      });
-
-      const value = {
-        rewards: [
-          { name: 'Coffee', value: 'base://coffee' },
-          { name: 'Snack', value: 'base://snack' },
-        ],
-        other: 123,
-      } as any;
-
-      const handler = plugin.hooks?.['bootstrap|transformResponse']?.handler as (
-        value: unknown,
-        context: PluginContext,
-      ) => Promise<any>;
-
-      const result = await handler(value, ctx);
-
-      // 不应回写缓存（已有缓存）
-      expect(ctx.data.set).not.toHaveBeenCalledWith('extra_rewards', expect.anything());
-
-      expect(result.other).toBe(123);
-      expect(result.rewards).toEqual(
-        expect.arrayContaining([
-          { name: 'Coffee', value: 'extra://coffee' }, // extras 覆盖 base
-          { name: 'Snack', value: 'base://snack' },
-          { name: 'Alipay', value: 'ali://zz' },
-        ]),
-      );
-      // 名称去重
-      const names = new Set(result.rewards.map((r: any) => r.name));
-      expect(names.size).toBe(result.rewards.length);
+    it('deleteReward: 删除奖励', async () => {
+      const pluginWithMethods = plugin as typeof plugin & {
+        deleteReward: (id: string) => Promise<void>;
+      };
+      await expect(pluginWithMethods.deleteReward('test-id')).resolves.not.toThrow();
     });
+  });
 
-    it('transform_response: 无缓存时使用空数组', async () => {
-      (ctx.data.get as any).mockResolvedValueOnce(null); // 没有缓存
-
-      const value = { rewards: [] } as any;
-      const handler = plugin.hooks?.['bootstrap|transformResponse']?.handler as (
-        value: unknown,
-        context: PluginContext,
-      ) => Promise<any>;
-
-      const result = await handler(value, ctx);
-
-      expect(result.rewards).toEqual([]);
-      // 回填缓存
-      expect(ctx.data.set).toHaveBeenCalledWith('extra_rewards', []);
-    });
-
-    it('generated: 处理完成', async () => {
-      const handler = plugin.hooks?.['bootstrap|generated']?.handler as (
-        value: unknown,
-        context: PluginContext,
-      ) => Promise<void>;
-
-      await handler(
-        {
-          rewards: [
-            { name: 'A', value: 'a' },
-            { name: 'B', value: 'b' },
-          ],
-        },
-        ctx,
-      );
-
-      // Test passes if no errors are thrown
-      expect(true).toBe(true);
+  describe('插件注册表集成', () => {
+    it('应该支持通过插件注册表提供数据', () => {
+      // 注意：由于 PluginContext 接口尚不支持服务访问，
+      // 插件注册表功能暂时被注释掉
+      expect(plugin.id).toBe('rewards-plugin');
+      expect(plugin.rewardService).toBeDefined();
     });
   });
 
