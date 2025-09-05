@@ -1,6 +1,7 @@
 import { Controller, Get, Post, Delete, Param, HttpCode, HttpStatus, Logger } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 
+import { Perm } from '../../auth/permissions.decorator';
 import { LoaderService, type Plugin } from '../services/loader.service';
 
 export interface PluginInfo {
@@ -26,8 +27,8 @@ export interface PluginUnloadResponse {
   message: string;
 }
 
-@ApiTags('Plugin Management')
-@Controller('v2/plugins')
+@ApiTags('Plugins - Blog')
+@Controller({ path: 'admin/plugins', version: '2' })
 export class PluginsController {
   private readonly logger = new Logger(PluginsController.name);
 
@@ -37,6 +38,7 @@ export class PluginsController {
   }
 
   @Get()
+  @Perm('plugin', ['read'])
   @ApiOperation({ summary: 'Get all loaded plugins' })
   @ApiResponse({
     status: 200,
@@ -80,6 +82,7 @@ export class PluginsController {
   }
 
   @Get(':name')
+  @Perm('plugin', ['read'])
   @ApiOperation({ summary: 'Get plugin details by name' })
   @ApiParam({ name: 'name', description: 'Plugin name' })
   @ApiResponse({
@@ -112,6 +115,7 @@ export class PluginsController {
   }
 
   @Post('reload')
+  @Perm('plugin', ['configure'])
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Reload all plugins' })
   @ApiResponse({
@@ -146,6 +150,7 @@ export class PluginsController {
   }
 
   @Delete(':name')
+  @Perm('plugin', ['disable'])
   @ApiOperation({ summary: 'Unload a specific plugin' })
   @ApiParam({ name: 'name', description: 'Plugin name to unload' })
   @ApiResponse({

@@ -23,11 +23,12 @@ import { WebhookService } from './services/webhook.service';
     DatabaseModule,
     SettingModule,
     PermissionModule.forFeature([
+      'plugin:read',
+      'plugin:disable',
+      'plugin:configure',
       'plugin:install',
       'plugin:uninstall',
       'plugin:enable',
-      'plugin:disable',
-      'plugin:configure',
     ]),
     PermissionModule.forFeature([
       'webhook:create',
