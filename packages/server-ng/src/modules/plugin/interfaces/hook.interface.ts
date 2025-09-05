@@ -14,18 +14,21 @@ export interface HookRegistration {
   callback: HookCallback;
   priority: number;
   id: string;
+  sequence: number;
 }
 
 export interface ActionRegistration {
   callback: ActionCallback;
   priority: number;
   id: string;
+  sequence: number;
 }
 
 export interface FilterRegistration<T = unknown> {
   callback: FilterCallback<T>;
   priority: number;
   id: string;
+  sequence: number;
 }
 
 export interface HookService {

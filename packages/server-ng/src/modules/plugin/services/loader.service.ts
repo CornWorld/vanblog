@@ -1,3 +1,4 @@
+import { readFileSync } from 'fs';
 import { readFile, readdir, stat } from 'fs/promises';
 import { join } from 'path';
 
@@ -194,7 +195,11 @@ export class LoaderService implements OnModuleInit {
     // 1) call destroy if present
     if (plugin && context && typeof plugin.destroy === 'function') {
       try {
-        await plugin.destroy(context);
+        await this.safeExecuteWithTimeout(
+          async () => plugin.destroy?.(context),
+          10_000,
+          'plugin.destroy',
+        );
       } catch (error) {
         this.logger.error(
           `Failed to destroy plugin ${pluginName}:`,
@@ -230,25 +235,65 @@ export class LoaderService implements OnModuleInit {
   // removed unused isVanBlogPlugin
 
   private getServerVersion(): string {
-    // In real scenario, read from package.json or env
-    return '2.1.3';
-  }
-
-  private parseVersion(v: string): [number, number, number] {
-    const nums = v.split('.').map((x) => Number.parseInt(x, 10));
-    const a = Number.isFinite(nums[0]) ? nums[0] : 0;
-    const b = Number.isFinite(nums[1]) ? nums[1] : 0;
-    const c = Number.isFinite(nums[2]) ? nums[2] : 0;
-    return [a, b, c];
-  }
-
-  private cmp(a: [number, number, number], b: [number, number, number]): number {
-    if (a[0] !== b[0]) return a[0] - b[0];
-    if (a[1] !== b[1]) return a[1] - b[1];
-    return a[2] - b[2];
+    try {
+      const envVer = process.env.VANBLOG_VERSION;
+      if (typeof envVer === 'string' && envVer.trim().length > 0) {
+        return envVer.replace(/^v/, '');
+      }
+      const candidates = [
+        join(process.cwd(), 'package.json'),
+        join(process.cwd(), 'packages', 'server-ng', 'package.json'),
+        join(__dirname, '../../../../package.json'),
+      ];
+      for (const p of candidates) {
+        try {
+          const content = readFileSync(p, 'utf-8');
+          const pkg = JSON.parse(content) as { version?: string };
+          if (pkg.version) return pkg.version.replace(/^v/, '');
+        } catch {
+          /* try next */
+        }
+      }
+    } catch {
+      /* noop */
+    }
+    return '0.0.0';
   }
 
   private satisfiesVanblogEngine(range: string, version: string): boolean {
+    // Normalize inputs
+    range = range.trim().replace(/^v/i, '');
+    version = version.trim().replace(/^v/i, '');
+
+    if (range === '' || range === '*' || range.toLowerCase() === 'x') return true;
+
+    // Support patterns like 2.x, 2.* , 2.1.x, 2.1.*
+    const xMatch = /^(?<major>\d+)(?:\.(?<minor>\d+|x|\*))?(?:\.(?<patch>\d+|x|\*))?$/i.exec(range);
+    if (xMatch?.groups) {
+      const {
+        major: majorStr,
+        minor: minorRaw,
+        patch: patchRaw,
+      } = xMatch.groups as unknown as { major: string; minor?: string; patch?: string };
+      const major = Number.parseInt(majorStr, 10);
+
+      if (minorRaw == null || minorRaw.toLowerCase() === 'x' || minorRaw === '*') {
+        const base: [number, number, number] = [major, 0, 0];
+        const upper: [number, number, number] = [major + 1, 0, 0];
+        const v = this.parseVersion(version);
+        return this.cmp(v, base) >= 0 && this.cmp(v, upper) < 0;
+      }
+
+      const minor = Number.parseInt(minorRaw, 10);
+      if (patchRaw == null || patchRaw.toLowerCase() === 'x' || patchRaw === '*') {
+        const base: [number, number, number] = [major, minor, 0];
+        const upper: [number, number, number] = [major, minor + 1, 0];
+        const v = this.parseVersion(version);
+        return this.cmp(v, base) >= 0 && this.cmp(v, upper) < 0;
+      }
+      // If both minor and patch are numeric, fall-through to exact match handling below
+    }
+
     const v = this.parseVersion(version);
 
     // caret ^x.y.z => >=x.y.z <(x+1).0.0
@@ -322,6 +367,22 @@ export class LoaderService implements OnModuleInit {
     // unknown patterns: be permissive but warn
     this.logger.warn(`Unknown Version Range pattern: '${range}', allowing by default.`);
     return true;
+  }
+
+  private parseVersion(input: string): [number, number, number] {
+    const s = input.trim().replace(/^v/i, '');
+    const [maj, min, pat] = s.split('.', 3);
+    const toNum = (x: string | undefined): number => {
+      const n = Number.parseInt(x ?? '0', 10);
+      return Number.isFinite(n) && !Number.isNaN(n) && n >= 0 ? n : 0;
+    };
+    return [toNum(maj), toNum(min), toNum(pat)];
+  }
+
+  private cmp(a: [number, number, number], b: [number, number, number]): number {
+    if (a[0] !== b[0]) return a[0] - b[0];
+    if (a[1] !== b[1]) return a[1] - b[1];
+    return a[2] - b[2];
   }
 
   private async safeExecuteWithTimeout<T>(
@@ -401,16 +462,28 @@ export class LoaderService implements OnModuleInit {
     if (plugin.hooks) {
       for (const [hookName, hookConfig] of Object.entries(plugin.hooks)) {
         if (hookConfig.type === 'action') {
-          const original = hookConfig.handler;
+          const { handler } = hookConfig;
+          if (typeof handler !== 'function') {
+            this.logger.warn(
+              `Plugin '${name}' hook '${hookName}' has invalid action handler, skipped`,
+            );
+            continue;
+          }
           const wrapped: ActionCallback = async (...args: unknown[]) => {
-            await original(...args, context);
+            await handler(...args, context);
           };
           const id = this.hookService.addAction(hookName, wrapped, hookConfig.priority ?? 10);
           registrations.push({ type: 'action', hookName, id });
         } else {
-          const original = hookConfig.handler;
+          const { handler } = hookConfig;
+          if (typeof handler !== 'function') {
+            this.logger.warn(
+              `Plugin '${name}' hook '${hookName}' has invalid filter handler, skipped`,
+            );
+            continue;
+          }
           const wrapped: FilterCallback = async (value: unknown, ...args: unknown[]) => {
-            return await original(value, ...args, context);
+            return await handler(value, ...args, context);
           };
           const id = this.hookService.addFilter(hookName, wrapped, hookConfig.priority ?? 10);
           registrations.push({ type: 'filter', hookName, id });
@@ -508,6 +581,8 @@ interface PluginLike {
 
 @Injectable()
 class PluginObjectAdapter implements OnModuleInit {
+  private readonly logger = new Logger(PluginObjectAdapter.name);
+
   constructor(
     @Inject('PLUGIN_DIR') private readonly pluginDir: string,
     private readonly hookService: HookService,
@@ -550,16 +625,28 @@ class PluginObjectAdapter implements OnModuleInit {
     if (plugin.hooks) {
       for (const [hookName, hookConfig] of Object.entries(plugin.hooks)) {
         if (hookConfig.type === 'action') {
-          const original = hookConfig.handler;
+          const { handler } = hookConfig;
+          if (typeof handler !== 'function') {
+            this.logger.warn(
+              `Plugin '${finalName}' hook '${hookName}' has invalid action handler, skipped`,
+            );
+            continue;
+          }
           const wrapped: ActionCallback = async (...args: unknown[]) => {
-            await original(...args, context);
+            await handler(...args, context);
           };
           const id = this.hookService.addAction(hookName, wrapped, hookConfig.priority ?? 10);
           registrations.push({ type: 'action', hookName, id });
         } else {
-          const original = hookConfig.handler;
+          const { handler } = hookConfig;
+          if (typeof handler !== 'function') {
+            this.logger.warn(
+              `Plugin '${finalName}' hook '${hookName}' has invalid filter handler, skipped`,
+            );
+            continue;
+          }
           const wrapped: FilterCallback = async (value: unknown, ...args: unknown[]) => {
-            return await original(value, ...args, context);
+            return await handler(value, ...args, context);
           };
           const id = this.hookService.addFilter(hookName, wrapped, hookConfig.priority ?? 10);
           registrations.push({ type: 'filter', hookName, id });
@@ -615,7 +702,16 @@ export async function discoverNestDynamicModules(
   try {
     const entries = await readdir(dir, { withFileTypes: true });
     for (const entry of entries) {
-      if (!entry.isDirectory() || entry.name === 'node_modules') continue;
+      if (
+        !entry.isDirectory() ||
+        entry.name === 'node_modules' ||
+        entry.name.startsWith('.') ||
+        entry.name.startsWith('_') ||
+        entry.name === 'dist' ||
+        entry.name === 'build' ||
+        entry.name === 'coverage'
+      )
+        continue;
       const pluginPath = join(dir, entry.name);
       try {
         if (await hasNestModule(pluginPath)) continue;

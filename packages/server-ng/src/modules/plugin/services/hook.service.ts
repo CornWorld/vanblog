@@ -15,6 +15,7 @@ export class HookService implements IHookService {
   private readonly logger = new Logger(HookService.name);
   private readonly actions = new Map<string, ActionRegistration[]>();
   private readonly filters = new Map<string, FilterRegistration[]>();
+  private nextSequence = 0;
 
   private validateAndNormalizeHookName(hookName: string): string {
     if (typeof hookName !== 'string' || hookName.trim().length === 0) {
@@ -53,59 +54,39 @@ export class HookService implements IHookService {
     return `${modulePart.toLowerCase()}|${eventPart}`;
   }
 
-  private isValidModuleName(module: string): boolean {
-    // Module names: lowercase alphanumeric with optional hyphens
-    return /^[a-z][a-z0-9-]*[a-z0-9]$|^[a-z]$/.test(module);
+  private isValidModuleName(name: string): boolean {
+    return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(name);
   }
 
-  private isValidEventName(event: string): boolean {
-    // Event names: strict camelCase starting with lowercase
-    return /^[a-z][a-zA-Z0-9]*$/.test(event);
+  private isValidEventName(name: string): boolean {
+    return /^[a-z]+(?:[A-Z][a-z0-9]*)*$/.test(name);
   }
 
-  private suggestEventName(invalidEvent: string): string | null {
-    const suggestions: Record<string, string> = {
-      // snake_case suggestions
-      after_create: 'afterCreate',
-      before_create: 'beforeCreate',
-      after_update: 'afterUpdate',
-      before_update: 'beforeUpdate',
-      after_delete: 'afterDelete',
-      before_delete: 'beforeDelete',
-      password_changed: 'afterPasswordChange',
-      before_upload: 'beforeUpload',
-      after_upload: 'afterUpload',
-      before_login: 'beforeLogin',
-      after_login: 'afterLogin',
-      logged_in: 'afterLogin',
-      validate_user_failed: 'validateUserFailed',
-      validated_user: 'validatedUser',
-      before_validate_user: 'beforeValidateUser',
-      transform_response: 'transformResponse',
-      // kebab-case suggestions
-      'after-create': 'afterCreate',
-      'before-create': 'beforeCreate',
-      'after-update': 'afterUpdate',
-      'before-update': 'beforeUpdate',
-      'after-delete': 'afterDelete',
-      'before-delete': 'beforeDelete',
-      'password-changed': 'afterPasswordChange',
-      'before-upload': 'beforeUpload',
-      'after-upload': 'afterUpload',
-      'before-login': 'beforeLogin',
-      'after-login': 'afterLogin',
-      // past tense suggestions
-      created: 'afterCreate',
-      updated: 'afterUpdate',
-      deleted: 'afterDelete',
-      uploaded: 'afterUpload',
-      published: 'afterPublish',
-      generated: 'afterGenerate',
-      started: 'afterStart',
-      stopped: 'afterStop',
-    };
-
-    return suggestions[invalidEvent.toLowerCase()];
+  private suggestEventName(name: string): string | null {
+    const raw = name.trim();
+    const parts = raw.split(/[_-]+/).filter(Boolean);
+    if (parts.length > 1) {
+      const lower = parts.map((p) => p.toLowerCase());
+      const last = lower[lower.length - 1];
+      const suffixMap = new Map<string, string>([
+        ['created', 'Create'],
+        ['updated', 'Update'],
+        ['deleted', 'Delete'],
+        ['changed', 'Change'],
+        ['change', 'Change'],
+      ]);
+      const suffix = suffixMap.get(last);
+      if (suffix !== undefined) {
+        const base = lower.slice(0, -1);
+        const pascalBase = base.map((p) => p.charAt(0).toUpperCase() + p.slice(1)).join('');
+        return `after${pascalBase}${suffix}`;
+      }
+      // Fallback: simple camelCase conversion
+      return lower
+        .map((part, index) => (index === 0 ? part : part.charAt(0).toUpperCase() + part.slice(1)))
+        .join('');
+    }
+    return null;
   }
 
   addAction(hookName: string, callback: ActionCallback, priority = 10): string {
@@ -115,6 +96,7 @@ export class HookService implements IHookService {
       callback,
       priority,
       id,
+      sequence: this.nextSequence++,
     };
 
     if (!this.actions.has(normalized)) {
@@ -124,7 +106,11 @@ export class HookService implements IHookService {
     const hooks = this.actions.get(normalized);
     if (hooks) {
       hooks.push(registration);
-      hooks.sort((a, b) => a.priority - b.priority);
+      hooks.sort((a, b) => {
+        const pd = a.priority - b.priority;
+        if (pd !== 0) return pd;
+        return a.sequence - b.sequence;
+      });
     }
 
     this.logger.debug(
@@ -140,6 +126,7 @@ export class HookService implements IHookService {
       callback: callback as FilterCallback,
       priority,
       id,
+      sequence: this.nextSequence++,
     };
 
     if (!this.filters.has(normalized)) {
@@ -149,7 +136,11 @@ export class HookService implements IHookService {
     const hooks = this.filters.get(normalized);
     if (hooks) {
       hooks.push(registration);
-      hooks.sort((a, b) => a.priority - b.priority);
+      hooks.sort((a, b) => {
+        const pd = a.priority - b.priority;
+        if (pd !== 0) return pd;
+        return a.sequence - b.sequence;
+      });
     }
 
     this.logger.debug(
@@ -161,34 +152,26 @@ export class HookService implements IHookService {
   removeAction(hookName: string, id: string): boolean {
     const normalized = this.validateAndNormalizeHookName(hookName);
     const hooks = this.actions.get(normalized);
-    if (!hooks) {
-      return false;
-    }
+    if (!hooks) return false;
 
-    const index = hooks.findIndex((hook) => hook.id === id);
-    if (index === -1) {
-      return false;
-    }
+    const index = hooks.findIndex((h) => h.id === id);
+    if (index === -1) return false;
 
     hooks.splice(index, 1);
-    this.logger.debug(`Action removed from hook '${normalized}' with id ${id}`);
+    this.logger.debug(`Action with id ${id} removed from hook '${normalized}'`);
     return true;
   }
 
   removeFilter(hookName: string, id: string): boolean {
     const normalized = this.validateAndNormalizeHookName(hookName);
     const hooks = this.filters.get(normalized);
-    if (!hooks) {
-      return false;
-    }
+    if (!hooks) return false;
 
-    const index = hooks.findIndex((hook) => hook.id === id);
-    if (index === -1) {
-      return false;
-    }
+    const index = hooks.findIndex((h) => h.id === id);
+    if (index === -1) return false;
 
     hooks.splice(index, 1);
-    this.logger.debug(`Filter removed from hook '${normalized}' with id ${id}`);
+    this.logger.debug(`Filter with id ${id} removed from hook '${normalized}'`);
     return true;
   }
 
@@ -210,6 +193,7 @@ export class HookService implements IHookService {
           `Error executing action for hook '${normalized}' with id ${hook.id}:`,
           error instanceof Error ? error.message : String(error),
         );
+        // Continue execution even if one action fails
       }
     }
   }

@@ -362,6 +362,67 @@ describe('HookService', () => {
       expect(service.hasAction('hook2|event')).toBe(true);
     });
   });
+  describe('stable ordering', () => {
+    it('should keep registration order for actions with the same priority', async () => {
+      const results: number[] = [];
+      service.addAction(
+        'stable|act',
+        () => {
+          results.push(1);
+        },
+        10,
+      );
+      service.addAction(
+        'stable|act',
+        () => {
+          results.push(2);
+        },
+        10,
+      );
+      service.addAction(
+        'stable|act',
+        () => {
+          results.push(3);
+        },
+        10,
+      );
+
+      await service.doAction('stable|act');
+      expect(results).toEqual([1, 2, 3]);
+    });
+
+    it('should keep registration order for filters with the same priority', async () => {
+      const seq: number[] = [];
+      service.addFilter(
+        'stable|filter',
+        (v: string) => {
+          seq.push(1);
+          return `${v}a`;
+        },
+        10,
+      );
+      service.addFilter(
+        'stable|filter',
+        (v: string) => {
+          seq.push(2);
+          return `${v}b`;
+        },
+        10,
+      );
+      service.addFilter(
+        'stable|filter',
+        (v: string) => {
+          seq.push(3);
+          return `${v}c`;
+        },
+        10,
+      );
+
+      const out = await service.applyFilters('stable|filter', '');
+      expect(seq).toEqual([1, 2, 3]);
+      expect(out).toBe('abc');
+    });
+  });
   describe('strict hook name validation', () => {
     it('should reject snake_case hook names and provide suggestions', () => {
       expect(() => {
