@@ -115,6 +115,39 @@ describe('LoaderService version utilities', () => {
     expect(result).toBe(true);
     expect(logger.warn).toHaveBeenCalled();
   });
+
+  // New edge cases
+  it('should not accept prerelease versions when includePrerelease=false', () => {
+    expect(satisfies('^2.0.0', '2.0.0-alpha.1')).toBe(false);
+    expect(satisfies('>=2.1.0', '2.1.0-beta')).toBe(false);
+  });
+
+  it('should ignore build metadata in version comparison', () => {
+    expect(satisfies('>=2.1.0', '2.1.0+build.1')).toBe(true);
+    expect(satisfies('2.1.0', '2.1.0+exp.sha.5114f85')).toBe(true);
+  });
+
+  it('should handle x/wildcard minor/patch patterns', () => {
+    expect(satisfies('2.x', '2.1.0')).toBe(true);
+    expect(satisfies('2.*', '2.3.4')).toBe(true);
+    expect(satisfies('2.x', '3.0.0')).toBe(false);
+  });
+
+  it('should trim whitespace and strip leading v/V prefixes', () => {
+    expect(satisfies('  ^2.1.0  ', '  v2.1.3  ')).toBe(true);
+    expect(satisfies('v2.1', 'V2.1.2')).toBe(true);
+  });
+
+  it('should treat invalid version as 0.0.0 via coerce fallback', () => {
+    expect(satisfies('>=1.0.0', 'not-a-version')).toBe(false);
+    expect(satisfies('>=0.0.0', 'not-a-version')).toBe(true);
+  });
+
+  it("should allow empty range, '*' and 'x' as allow-all", () => {
+    expect(satisfies('', '2.0.0')).toBe(true);
+    expect(satisfies('*', '100.0.0')).toBe(true);
+    expect(satisfies('x', '0.0.0')).toBe(true);
+  });
 });
 
 describe('LoaderService manifest validation', () => {
@@ -180,5 +213,57 @@ describe('LoaderService manifest validation', () => {
     const manifest = await (service as any).loadPluginManifest('/tmp/z');
     expect(manifest).toBeNull();
     expect(logger.error).not.toHaveBeenCalled();
+  });
+
+  // New tests for lenient input and internal strictness
+  it('should preserve unknown fields from plugin.json due to Zod .loose()', async () => {
+    vi.spyOn<any, any>(service as any, 'readPackageJson').mockResolvedValue(null);
+    readFileImpl = async (p: string | URL) => {
+      await Promise.resolve();
+      if (typeof p === 'string' && p.endsWith('plugin.json')) {
+        return await Promise.resolve(
+          JSON.stringify({
+            name: 'baz',
+            version: '3.2.1',
+            description: 'desc',
+            extra: { keep: true },
+            hooks: { h: { type: 'filter', priority: 5 } },
+          }),
+        );
+      }
+      throw new Error('ENOENT');
+    };
+    const manifest = await (service as any).loadPluginManifest('/tmp/a');
+    expect(manifest).toEqual(
+      expect.objectContaining({ name: 'baz', version: '3.2.1', description: 'desc' }),
+    );
+    // unknown field should be present on the runtime object even if not typed
+    expect(manifest.extra).toEqual({ keep: true });
+    expect(manifest.hooks.h.priority).toBe(5);
+  });
+
+  it('should fallback when hooks.priority is not an integer (schema invalid)', async () => {
+    vi.spyOn<any, any>(service as any, 'readPackageJson').mockResolvedValue({
+      name: 'fallback',
+      version: '9.9.9',
+    });
+    readFileImpl = async (p: string | URL) => {
+      await Promise.resolve();
+      if (typeof p === 'string' && p.endsWith('plugin.json')) {
+        // priority must be int; using float to trigger invalid schema
+        return await Promise.resolve(
+          JSON.stringify({
+            name: 'oops',
+            version: '1.0.0',
+            hooks: { a: { type: 'action', priority: 1.5 } },
+          }),
+        );
+      }
+      throw new Error('ENOENT');
+    };
+    const manifest = await (service as any).loadPluginManifest('/tmp/b');
+    expect(manifest).toEqual(expect.objectContaining({ name: 'fallback', version: '9.9.9' }));
+    // hooks should not exist because we fell back to package.json
+    expect(manifest.hooks).toBeUndefined();
   });
 });

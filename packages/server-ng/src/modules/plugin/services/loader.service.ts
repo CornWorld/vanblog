@@ -7,6 +7,7 @@ import {
   coerce as semverCoerce,
   satisfies as semverSatisfies,
   validRange as semverValidRange,
+  valid as semverValid,
 } from 'semver';
 import { z } from 'zod';
 
@@ -273,10 +274,14 @@ export class LoaderService implements OnModuleInit {
       return true;
     }
 
-    // 版本字符串尽量宽松地规范化，例如将 '2' / 'v2.1' 等转为合法 semver
-    const v = semverCoerce(version.trim())?.version ?? '0.0.0';
+    // 版本字符串尽量宽松地规范化：
+    // 1) 若已是合法 semver（含可能的预发布），优先使用原始有效版本，保留预发布标记
+    // 2) 否则回退到 coerce 以处理如 '2' / 'v2.1' 等宽松输入
+    const trimmed = version.trim();
+    const valid = semverValid(trimmed, { loose: true });
+    const v = valid ?? semverCoerce(trimmed)?.version ?? '0.0.0';
 
-    // 使用标准 semver 的范围判断
+    // 使用标准 semver 的范围判断（默认不包含预发布）
     return semverSatisfies(v, normalizedRange, { includePrerelease: false, loose: true });
   }
 
