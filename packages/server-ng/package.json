@@ -34,7 +34,7 @@
     "lint": "eslint --format=compact -c ./eslint.config.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:debug": "vitest --inspect-brk --inspect --logHeapUsage --threads=false",
+    "test:debug": "vitest --inspect-brk --inspect --logHeapUsage",
     "test:e2e": "vitest run --config ./vitest.config.e2e.ts",
     "test:ui": "vitest --ui",
     "db:generate": "drizzle-kit generate",
