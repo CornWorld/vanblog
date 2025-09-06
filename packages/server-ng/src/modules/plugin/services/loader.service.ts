@@ -3,6 +3,11 @@ import { readFile, readdir, stat } from 'fs/promises';
 import { join } from 'path';
 
 import { Injectable, OnModuleInit, Module, type Logger, type DynamicModule } from '@nestjs/common';
+import {
+  coerce as semverCoerce,
+  satisfies as semverSatisfies,
+  validRange as semverValidRange,
+} from 'semver';
 import { z } from 'zod';
 
 import { LoggerService } from '../../../core/logger/logger.service';
@@ -255,115 +260,30 @@ export class LoaderService implements OnModuleInit {
   }
 
   private satisfiesVanblogEngine(range: string, version: string): boolean {
-    // Normalize inputs
-    range = range.trim().replace(/^v/i, '');
-    version = version.trim().replace(/^v/i, '');
+    // 统一处理一些显而易见的允许模式
+    const r = range.trim().replace(/^v/i, '');
+    if (r === '' || r === '*' || r.toLowerCase() === 'x') return true;
 
-    if (range === '' || range === '*' || range.toLowerCase() === 'x') return true;
-
-    // Support patterns like 2.x, 2.* , 2.1.x, 2.1.*
-    const xMatch = /^(?<major>\d+)(?:\.(?<minor>\d+|x|\*))?(?:\.(?<patch>\d+|x|\*))?$/i.exec(range);
-    if (xMatch?.groups) {
-      const {
-        major: majorStr,
-        minor: minorRaw,
-        patch: patchRaw,
-      } = xMatch.groups as unknown as { major: string; minor?: string; patch?: string };
-      const major = Number.parseInt(majorStr, 10);
-
-      if (minorRaw == null || minorRaw.toLowerCase() === 'x' || minorRaw === '*') {
-        const base: [number, number, number] = [major, 0, 0];
-        const upper: [number, number, number] = [major + 1, 0, 0];
-        const v = this.parseVersion(version);
-        return this.cmp(v, base) >= 0 && this.cmp(v, upper) < 0;
-      }
-
-      const minor = Number.parseInt(minorRaw, 10);
-      if (patchRaw == null || patchRaw.toLowerCase() === 'x' || patchRaw === '*') {
-        const base: [number, number, number] = [major, minor, 0];
-        const upper: [number, number, number] = [major, minor + 1, 0];
-        const v = this.parseVersion(version);
-        return this.cmp(v, base) >= 0 && this.cmp(v, upper) < 0;
-      }
-      // If both minor and patch are numeric, fall-through to exact match handling below
-    }
-
-    const v = this.parseVersion(version);
-
-    // caret ^x.y.z => >=x.y.z <(x+1).0.0
-    if (range.startsWith('^')) {
-      const base = this.parseVersion(range.slice(1));
-      const upper: [number, number, number] = [base[0] + 1, 0, 0];
-      return this.cmp(v, base) >= 0 && this.cmp(v, upper) < 0;
-    }
-
-    // tilde ~x.y.z => >=x.y.z <x.(y+1).0
-    if (range.startsWith('~')) {
-      const base = this.parseVersion(range.slice(1));
-      const upper: [number, number, number] = [base[0], base[1] + 1, 0];
-      return this.cmp(v, base) >= 0 && this.cmp(v, upper) < 0;
-    }
-
-    // comparison operators
-    const m = range.match(/^(>=|<=|>|<)\s*(\d+(?:\.\d+){0,2})$/);
-    if (m) {
-      const [, op, verStr] = m;
-      const base = this.parseVersion(verStr);
-      switch (op) {
-        case '>=':
-          return this.cmp(v, base) >= 0;
-        case '>':
-          return this.cmp(v, base) > 0;
-        case '<=':
-          return this.cmp(v, base) <= 0;
-        case '<':
-          return this.cmp(v, base) < 0;
-        default:
-          return true;
-      }
-    }
-
-    // exact version or major/minor patterns (numeric only)
-    const parts = range.split('.');
-    const isNumeric = (s: string): boolean => /^\d+$/.test(s);
-
-    if (parts.length === 1) {
-      if (isNumeric(parts[0])) {
-        // '2' => 2.x.x
-        const base = this.parseVersion(`${parts[0]}.0.0`);
-        const upper: [number, number, number] = [base[0] + 1, 0, 0];
-        return this.cmp(v, base) >= 0 && this.cmp(v, upper) < 0;
-      }
-      this.logger.warn(`Unknown Version Range pattern: '${range}', allowing by default.`);
+    // 非法范围：按原行为告警并放行
+    const normalizedRange = semverValidRange(r, { includePrerelease: false, loose: true });
+    if (!normalizedRange) {
+      this.logger.warn(
+        `Unknown Version Range pattern: '${range}', allowing by default. Tip: use standard semver ranges like ^2.0.0, ~2.1.0, >=2 <3`,
+      );
       return true;
     }
 
-    if (parts.length === 2) {
-      if (isNumeric(parts[0]) && isNumeric(parts[1])) {
-        // '2.1' => 2.1.x
-        const base = this.parseVersion(`${parts[0]}.${parts[1]}.0`);
-        const upper: [number, number, number] = [base[0], base[1] + 1, 0];
-        return this.cmp(v, base) >= 0 && this.cmp(v, upper) < 0;
-      }
-      this.logger.warn(`Unknown Version Range pattern: '${range}', allowing by default.`);
-      return true;
-    }
+    // 版本字符串尽量宽松地规范化，例如将 '2' / 'v2.1' 等转为合法 semver
+    const v = semverCoerce(version.trim())?.version ?? '0.0.0';
 
-    if (parts.length === 3) {
-      if (isNumeric(parts[0]) && isNumeric(parts[1]) && isNumeric(parts[2])) {
-        const base = this.parseVersion(range);
-        return this.cmp(v, base) === 0;
-      }
-      this.logger.warn(`Unknown Version Range pattern: '${range}', allowing by default.`);
-      return true;
-    }
-
-    // unknown patterns: be permissive but warn
-    this.logger.warn(`Unknown Version Range pattern: '${range}', allowing by default.`);
-    return true;
+    // 使用标准 semver 的范围判断
+    return semverSatisfies(v, normalizedRange, { includePrerelease: false, loose: true });
   }
 
-  private parseVersion(input: string): [number, number, number] {
+  /**
+   * @deprecated Replaced by semver.satisfies with semver.coerce/validRange. Kept temporarily for backward-compatible tests.
+   */
+  public parseVersion(input: string): [number, number, number] {
     const s = input.trim().replace(/^v/i, '');
     const [maj, min, pat] = s.split('.', 3);
     const toNum = (x: string | undefined): number => {
@@ -373,7 +293,10 @@ export class LoaderService implements OnModuleInit {
     return [toNum(maj), toNum(min), toNum(pat)];
   }
 
-  private cmp(a: [number, number, number], b: [number, number, number]): number {
+  /**
+   * @deprecated Replaced by semver comparison. Kept temporarily for backward-compatible tests.
+   */
+  public cmp(a: [number, number, number], b: [number, number, number]): number {
     if (a[0] !== b[0]) return a[0] - b[0];
     if (a[1] !== b[1]) return a[1] - b[1];
     return a[2] - b[2];

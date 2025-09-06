@@ -45,25 +45,17 @@ export class PluginDataStorageService implements PluginDataStorage {
     const stringValue = JSON.stringify(value);
     const now = dayjs().toISOString();
 
-    try {
-      await (
-        this.db as Database & {
-          $client: { execute: (query: { sql: string; args: unknown[] }) => Promise<unknown> };
-        }
-      ).$client.execute({
-        sql: 'INSERT INTO plugin_data (plugin_id, key, value, created_at, updated_at) VALUES (?, ?, ?, ?, ?)',
-        args: [this.pluginId, key, stringValue, now, now],
-      });
-    } catch {
-      await (
-        this.db as Database & {
-          $client: { execute: (query: { sql: string; args: unknown[] }) => Promise<unknown> };
-        }
-      ).$client.execute({
-        sql: 'UPDATE plugin_data SET value = ?, updated_at = ? WHERE plugin_id = ? AND key = ?',
-        args: [stringValue, now, this.pluginId, key],
-      });
-    }
+    // Single-statement UPSERT to avoid insert-then-update race and extra roundtrip
+    await (
+      this.db as Database & {
+        $client: { execute: (query: { sql: string; args: unknown[] }) => Promise<unknown> };
+      }
+    ).$client.execute({
+      sql: `INSERT INTO plugin_data (plugin_id, key, value, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?)
+            ON CONFLICT(plugin_id, key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
+      args: [this.pluginId, key, stringValue, now, now],
+    });
   }
 
   async delete(key: string): Promise<boolean> {
@@ -116,8 +108,19 @@ export class PluginConfigReaderService implements PluginConfigReader {
   get(key: string): unknown;
   get<T>(key: string, defaultValue: T): T;
   get<T>(key: string, defaultValue?: T): T | undefined {
-    const configKey = this.getPluginConfigKey(key);
-    const value = this.configService.get(configKey, defaultValue);
+    const primaryKey = this.getPluginConfigKey(key);
+    let value = this.configService.get(primaryKey);
+
+    // Fallback: allow env-style underscore variant for plugin id or key
+    if (value === undefined) {
+      const underscoreKey = primaryKey.replace(/-/g, '_');
+      if (underscoreKey !== primaryKey) {
+        value = this.configService.get(underscoreKey);
+      }
+    }
+
+    if (value === undefined) return defaultValue;
+
     if (typeof value === 'string') {
       try {
         return JSON.parse(value) as T;
@@ -139,7 +142,10 @@ export class PluginConfigReaderService implements PluginConfigReader {
   has(key: string): boolean {
     const configKey = this.getPluginConfigKey(key);
     const value = this.configService.get(configKey);
-    return value !== undefined;
+    if (value !== undefined) return true;
+    // Also respect underscore fallback
+    const underscoreKey = configKey.replace(/-/g, '_');
+    return this.configService.get(underscoreKey) !== undefined;
   }
 
   private getPluginConfigKey(key: string): string {

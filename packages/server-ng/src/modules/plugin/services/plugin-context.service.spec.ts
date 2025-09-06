@@ -118,13 +118,12 @@ describe('PluginContext Services', () => {
       expect(factory).toBeDefined();
     });
 
-    it('should create a plugin context', () => {
+    it('should create context for plugin', () => {
       const context = factory.createContext('test-plugin');
-
       expect(context).toBeDefined();
       expect(context.pluginId).toBe('test-plugin');
-      expect(context.config).toBeDefined();
-      expect(context.data).toBeDefined();
+      expect(context.config).toBeInstanceOf(PluginConfigReaderService);
+      expect(context.data).toBeInstanceOf(PluginDataStorageService);
     });
   });
 
@@ -135,8 +134,8 @@ describe('PluginContext Services', () => {
       dataStorage = new PluginDataStorageService(mockDb as unknown as Database, 'test-plugin');
     });
 
-    it('should get data from storage', async () => {
-      const testData = { test: 'value' };
+    it('should get data by key', async () => {
+      const testData = { foo: 'bar' };
       mockDb.limit.mockResolvedValueOnce([{ value: testData }]);
 
       const result = await dataStorage.get('test-key');
@@ -157,30 +156,15 @@ describe('PluginContext Services', () => {
       expect(result).toBeNull();
     });
 
-    it('should set data in storage', async () => {
+    it('should set data in storage using single UPSERT', async () => {
       const testData = { test: 'value' };
 
       await dataStorage.set('test-key', testData);
 
+      expect(mockDb.$client.execute).toHaveBeenCalledTimes(1);
       expect(mockDb.$client.execute).toHaveBeenCalledWith({
-        sql: 'INSERT INTO plugin_data (plugin_id, key, value, created_at, updated_at) VALUES (?, ?, ?, ?, ?)',
+        sql: expect.stringContaining('INSERT INTO plugin_data'),
         args: expect.arrayContaining(['test-plugin', 'test-key', '{"test":"value"}']),
-      });
-    });
-
-    it('should update data when insert fails', async () => {
-      const testData = { test: 'value' };
-
-      // Mock insert to fail first time
-      mockDb.$client.execute.mockRejectedValueOnce(new Error('UNIQUE constraint failed'));
-      mockDb.$client.execute.mockResolvedValueOnce({});
-
-      await dataStorage.set('test-key', testData);
-
-      expect(mockDb.$client.execute).toHaveBeenCalledTimes(2);
-      expect(mockDb.$client.execute).toHaveBeenLastCalledWith({
-        sql: 'UPDATE plugin_data SET value = ?, updated_at = ? WHERE plugin_id = ? AND key = ?',
-        args: expect.arrayContaining(['{"test":"value"}', 'test-plugin', 'test-key']),
       });
     });
 
@@ -317,43 +301,19 @@ describe('PluginContext Services', () => {
       expect(configReader.has('exists')).toBe(true);
       expect(configReader.has('not_exists')).toBe(false);
     });
+
+    it('should fallback to underscore variant when hyphenated key not found', () => {
+      mockConfigService.get = vi.fn().mockImplementation((key: string) => {
+        if (key === 'PLUGIN_TEST-PLUGIN_FOO_BAR') return undefined; // primary not set
+        if (key === 'PLUGIN_TEST_PLUGIN_FOO_BAR') return 'ok'; // underscore fallback
+        return undefined;
+      });
+
+      const reader = new PluginConfigReaderService(mockConfigService, 'test-plugin');
+      const value = reader.get('foo_bar');
+      expect(value).toBe('ok');
+    });
   });
-
-  // describe('PluginSettingsRegistryService', () => {
-  //   let settings: PluginSettingsRegistryService;
-
-  //   beforeEach(() => {
-  //     settings = new PluginSettingsRegistryService(mockSettingRegistry, 'test-plugin');
-  //   });
-
-  //   it('should prefix keys and register config', () => {
-  //     settings.register({ key: 'foo', description: 'desc', defaultValue: 'x' });
-  //     expect(mockSettingRegistry.registerConfig).toHaveBeenCalledWith({
-  //       key: 'plugin.test-plugin.foo',
-  //       description: 'desc',
-  //       defaultValue: 'x',
-  //     });
-  //   });
-
-  //   it('should proxy get/update/delete and list keys', async () => {
-  //     await settings.get('foo');
-  //     expect(mockSettingRegistry.getConfig).toHaveBeenCalledWith('plugin.test-plugin.foo');
-
-  //     await settings.update('bar', 1);
-  //     expect(mockSettingRegistry.updateConfig).toHaveBeenCalledWith('plugin.test-plugin.bar', 1);
-
-  //     await settings.delete('bar');
-  //     expect(mockSettingRegistry.deleteConfig).toHaveBeenCalledWith('plugin.test-plugin.bar');
-
-  //     const keys = settings.listKeys();
-  //     expect(keys).toEqual(['foo', 'bar']);
-  //   });
-
-  //   it('should get registration by key', () => {
-  //     settings.getRegistration('foo');
-  //     expect(mockSettingRegistry.getRegistration).toHaveBeenCalledWith('plugin.test-plugin.foo');
-  //   });
-  // });
 
   describe('PluginContextService', () => {
     it('should create context with components', () => {
