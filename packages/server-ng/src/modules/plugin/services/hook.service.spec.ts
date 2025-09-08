@@ -422,6 +422,160 @@ describe('HookService', () => {
       expect(seq).toEqual([1, 2, 3]);
       expect(out).toBe('abc');
     });
+
+    // New tests for mixed priorities keep FIFO within the same priority bucket
+    it('should execute actions in priority buckets with FIFO within each bucket', async () => {
+      const order: string[] = [];
+      service.addAction(
+        'order|mix',
+        () => {
+          order.push('A');
+        },
+        10,
+      );
+      service.addAction(
+        'order|mix',
+        () => {
+          order.push('B');
+        },
+        5,
+      );
+      service.addAction(
+        'order|mix',
+        () => {
+          order.push('C');
+        },
+        10,
+      );
+      service.addAction(
+        'order|mix',
+        () => {
+          order.push('D');
+        },
+        5,
+      );
+      service.addAction(
+        'order|mix',
+        () => {
+          order.push('E');
+        },
+        15,
+      );
+
+      await service.doAction('order|mix');
+      expect(order).toEqual(['B', 'D', 'A', 'C', 'E']);
+    });
+
+    it('should preserve FIFO among remaining same-priority actions after removal', async () => {
+      const order: string[] = [];
+      const idB = service.addAction(
+        'order|mixSecond',
+        () => {
+          order.push('B');
+        },
+        5,
+      );
+      service.addAction(
+        'order|mixSecond',
+        () => {
+          order.push('D');
+        },
+        5,
+      );
+      service.addAction(
+        'order|mixSecond',
+        () => {
+          order.push('A');
+        },
+        10,
+      );
+      service.addAction(
+        'order|mixSecond',
+        () => {
+          order.push('C');
+        },
+        10,
+      );
+      service.addAction(
+        'order|mixSecond',
+        () => {
+          order.push('E');
+        },
+        15,
+      );
+
+      const removed = service.removeAction('order|mixSecond', idB);
+      expect(removed).toBe(true);
+
+      await service.doAction('order|mixSecond');
+      expect(order).toEqual(['D', 'A', 'C', 'E']);
+    });
+
+    it('should apply filters in priority buckets with FIFO within each bucket', async () => {
+      const seq: string[] = [];
+      service.addFilter(
+        'order|filterMix',
+        (v: string) => {
+          seq.push('B');
+          return `${v}b`;
+        },
+        5,
+      );
+      service.addFilter(
+        'order|filterMix',
+        (v: string) => {
+          seq.push('D');
+          return `${v}d`;
+        },
+        5,
+      );
+      service.addFilter(
+        'order|filterMix',
+        (v: string) => {
+          seq.push('A');
+          return `${v}a`;
+        },
+        10,
+      );
+      service.addFilter(
+        'order|filterMix',
+        (v: string) => {
+          seq.push('C');
+          return `${v}c`;
+        },
+        10,
+      );
+      service.addFilter(
+        'order|filterMix',
+        (v: string) => {
+          seq.push('E');
+          return `${v}e`;
+        },
+        15,
+      );
+
+      const out = await service.applyFilters('order|filterMix', '');
+      expect(seq).toEqual(['B', 'D', 'A', 'C', 'E']);
+      expect(out).toBe('bdace');
+    });
+  });
+
+  // Extra coverage for clearAll (distinct from clearAllHooks)
+  describe('clearAll', () => {
+    it('should clear both actions and filters using clearAll', () => {
+      service.addAction('x|y', vi.fn());
+      service.addFilter(
+        'x|y',
+        vi.fn((v: unknown) => v),
+      );
+      expect(service.getActionCount('x|y')).toBe(1);
+      expect(service.getFilterCount('x|y')).toBe(1);
+
+      service.clearAll();
+
+      expect(service.getActionCount('x|y')).toBe(0);
+      expect(service.getFilterCount('x|y')).toBe(0);
+    });
   });
   describe('strict hook name validation', () => {
     it('should reject snake_case hook names and provide suggestions', () => {
