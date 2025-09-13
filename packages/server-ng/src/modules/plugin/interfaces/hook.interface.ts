@@ -1,15 +1,15 @@
 export type MaybePromise<T> = T | Promise<T>;
 
-export interface HookCallback<T = unknown> {
-  (...args: unknown[]): MaybePromise<T>;
+export interface HookCallback<T = unknown, Args extends unknown[] = unknown[]> {
+  (...args: Args): MaybePromise<T>;
 }
 
-export interface ActionCallback {
-  (...args: unknown[]): MaybePromise<void>;
+export interface ActionCallback<Args extends unknown[] = unknown[]> {
+  (...args: Args): MaybePromise<void>;
 }
 
-export interface FilterCallback<T = unknown> {
-  (value: T, ...args: unknown[]): MaybePromise<T>;
+export interface FilterCallback<T = unknown, Args extends unknown[] = unknown[]> {
+  (value: T, ...args: Args): MaybePromise<T>;
 }
 
 export interface HookRegistration {
