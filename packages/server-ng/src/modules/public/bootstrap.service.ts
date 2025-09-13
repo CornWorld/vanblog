@@ -5,6 +5,7 @@ import { StatisticsService } from '../../shared/services/statistics.service';
 import { CategoryService } from '../category/category.service';
 import { CommentService } from '../comment/comment.service';
 import { HookService } from '../plugin/services/hook.service';
+import { PluginDataValidator } from '../plugin/services/plugin-data.validator';
 import { PluginRegistryService } from '../plugin/services/plugin-registry.service';
 import { SettingCoreService } from '../setting/services/setting-core.service';
 import { TagService } from '../tag/tag.service';
@@ -22,13 +23,16 @@ export class BootstrapService {
     private readonly categoryService: CategoryService,
     private readonly hookService: HookService,
     private readonly pluginRegistryService: PluginRegistryService,
+    private readonly pluginDataValidator: PluginDataValidator,
   ) {}
 
   async getPublicBootstrap(): Promise<PublicBootstrapResponseDto> {
     // 插件钩子：生成前
-    await this.hookService
-      .doAction('bootstrap|beforeGenerate', {}, { action: 'public' })
-      .catch(() => {});
+    try {
+      await this.hookService.doAction('bootstrap|beforeGenerate', {}, { action: 'public' });
+    } catch {
+      // ignore plugin errors
+    }
 
     const results = await Promise.allSettled([
       this.getAllTags(),
@@ -54,7 +58,17 @@ export class BootstrapService {
       pluginData,
     ] = results;
 
-    const resolvedPluginData = pluginData.status === 'fulfilled' ? pluginData.value : {};
+    const resolvedPluginData: Record<string, unknown> =
+      pluginData.status === 'fulfilled' ? pluginData.value : {};
+
+    // 校验与规范化插件数据
+    const validatedExtensions: Record<string, unknown> = {};
+    for (const [name, raw] of Object.entries(resolvedPluginData)) {
+      const normalized = this.pluginDataValidator.normalizeProviderResult(name, raw);
+      if (normalized !== undefined) {
+        validatedExtensions[name] = normalized;
+      }
+    }
 
     const response: PublicBootstrapResponseDto = {
       version: this.getVersion(),
@@ -67,18 +81,25 @@ export class BootstrapService {
       categories: categories.status === 'fulfilled' ? categories.value : [],
       ...(walineSettings.status === 'fulfilled' &&
         walineSettings.value && { walineConfig: walineSettings.value }),
-      extensions: resolvedPluginData,
+      extensions: validatedExtensions,
     };
 
     // 允许插件过滤/转换响应
-    const filtered = await this.hookService
-      .applyFilters('bootstrap|transformResponse', response, { action: 'public' })
-      .catch(() => response);
+    let filtered: PublicBootstrapResponseDto;
+    try {
+      filtered = await this.hookService.applyFilters('bootstrap|transformResponse', response, {
+        action: 'public',
+      });
+    } catch {
+      filtered = response;
+    }
 
     // 插件钩子：生成后
-    await this.hookService
-      .doAction('bootstrap|afterGenerate', filtered, { action: 'public' })
-      .catch(() => {});
+    try {
+      await this.hookService.doAction('bootstrap|afterGenerate', filtered, { action: 'public' });
+    } catch {
+      // ignore plugin errors
+    }
 
     return filtered;
   }

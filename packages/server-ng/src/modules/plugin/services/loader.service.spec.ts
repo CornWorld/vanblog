@@ -559,7 +559,10 @@ describe('LoaderService load/unload behavior', () => {
 
     // ensure label carries hook metadata
     expect(spy).toHaveBeenCalled();
-    const lastCall = spy.mock.calls.at(-1)!;
+    if (spy.mock.calls.length === 0) {
+      throw new Error('Expected spy to have at least one call');
+    }
+    const lastCall = spy.mock.calls[spy.mock.calls.length - 1];
     expect(String(lastCall[2])).toContain('plugin:p1:f:filter');
   });
 
@@ -610,7 +613,10 @@ describe('LoaderService load/unload behavior', () => {
     // Should not throw regardless of inner failure/timeout
     await expect(capturedActionHandler?.('x', 1)).resolves.toBeUndefined();
     expect(spy).toHaveBeenCalled();
-    const lastCall = spy.mock.calls.at(-1)!;
+    if (spy.mock.calls.length === 0) {
+      throw new Error('Expected spy to have at least one call');
+    }
+    const lastCall = spy.mock.calls[spy.mock.calls.length - 1];
     expect(String(lastCall[2])).toContain('plugin:p2:a:action');
   });
 
