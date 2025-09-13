@@ -36,12 +36,18 @@ interface PackageJson {
   devDependencies?: Record<string, string>;
 }
 
+export interface PluginDependency {
+  name: string;
+  version?: string; // semver range, e.g., "^1.0.0", ">=2.0.0 <3.0.0"
+}
+
 export interface PluginManifest {
   name: string;
   version: string;
   description?: string;
   main?: string;
-  dependencies?: string[];
+  dependencies?: string[] | Record<string, string>; // Support both array and object format
+  peerDependencies?: Record<string, string>;
   hooks?: {
     [hookName: string]: {
       type: 'action' | 'filter';
@@ -87,6 +93,8 @@ export class LoaderService implements OnModuleInit {
   >();
   // Track plugin origin directory (for object plugins) to support reload
   private readonly pluginOrigins = new Map<string, string>();
+  // Failed plugin loads
+  private readonly failedPlugins = new Set<string>();
 
   constructor(
     private readonly logger: LoggerService,
@@ -150,32 +158,31 @@ export class LoaderService implements OnModuleInit {
     return this.pluginContexts.get(pluginName);
   }
 
-  async reloadPlugins(): Promise<void> {
-    this.logger.log('Reloading all plugins...');
+  /**
+   * Get all failed plugins
+   */
+  getFailedPlugins(): Set<string> {
+    return new Set(this.failedPlugins);
+  }
 
-    // Clean up existing plugins without clearing non-plugin hooks
-    const names = Array.from(this.loadedPlugins.keys());
-    for (const name of names) {
+  async reloadPlugins(): Promise<void> {
+    this.logger.log('Starting plugin reload...');
+
+    // Save current plugin names
+    const currentPluginNames = Array.from(this.loadedPlugins.keys());
+
+    // Clean up existing plugins
+    for (const name of currentPluginNames) {
       await this.cleanupPlugin(name);
     }
 
-    // Re-load only object-style plugins we know the origin of
-    const origins = names
-      .map((n) => this.pluginOrigins.get(n))
-      .filter((p): p is string => typeof p === 'string' && p.length > 0);
+    // Clear failed plugins set
+    this.failedPlugins.clear();
 
-    for (const dir of origins) {
-      try {
-        await this.loadPlugin(dir);
-      } catch (error) {
-        this.logger.error(
-          `Failed to reload plugin from ${dir}:`,
-          error instanceof Error ? error.stack : String(error),
-        );
-      }
-    }
+    // Reload all plugins
+    await this.loadPluginsFromDirectories();
 
-    this.logger.log(`Successfully reloaded ${String(this.loadedPlugins.size)} plugins`);
+    this.logger.log(`Successfully reloaded ${this.loadedPlugins.size} plugins`);
   }
 
   async unloadPlugin(pluginName: string): Promise<boolean> {
@@ -333,10 +340,91 @@ export class LoaderService implements OnModuleInit {
   private installPluginDependencies(_pluginDir: string, manifest: PluginManifest | null): void {
     // We do not auto-install here to avoid side-effects in server process.
     // Leave a hook or CLI to handle it.
-    if (!manifest?.dependencies || manifest.dependencies.length === 0) return;
+    if (!manifest?.dependencies) return;
+
+    const depList = Array.isArray(manifest.dependencies)
+      ? manifest.dependencies
+      : Object.keys(manifest.dependencies);
+
+    if (depList.length === 0) return;
+
     this.logger.warn(
-      `Plugin '${manifest.name}' declares dependencies: ${manifest.dependencies.join(', ')} (skipped auto-install)`,
+      `Plugin '${manifest.name}' declares dependencies: ${depList.join(', ')} (skipped auto-install)`,
     );
+  }
+
+  /**
+   * Load all plugins from directories using parallel loading
+   */
+  async loadPluginsFromDirectories(
+    pluginsDir: string = join(process.cwd(), 'plugins'),
+  ): Promise<void> {
+    try {
+      const entries = await readdir(pluginsDir, { withFileTypes: true });
+      const pluginDirs: Array<{ name: string; path: string }> = [];
+
+      for (const entry of entries) {
+        if (
+          entry.isDirectory() &&
+          !entry.name.startsWith('.') &&
+          !entry.name.startsWith('_') &&
+          entry.name !== 'node_modules' &&
+          entry.name !== 'dist' &&
+          entry.name !== 'build' &&
+          entry.name !== 'coverage'
+        ) {
+          pluginDirs.push({
+            name: entry.name,
+            path: join(pluginsDir, entry.name),
+          });
+        }
+      }
+
+      // Load all plugins in parallel
+      const results = await Promise.allSettled(
+        pluginDirs.map(async ({ path }) => this.loadPlugin(path)),
+      );
+
+      // Record failed plugins
+      results.forEach((result, index) => {
+        if (result.status === 'rejected') {
+          const pluginName = pluginDirs[index]?.name ?? 'unknown';
+          this.failedPlugins.add(pluginName);
+          const reasonText =
+            result.reason instanceof Error ? result.reason.message : String(result.reason);
+          this.logger.error(`Failed to load plugin ${pluginName}: ${reasonText}`);
+        }
+      });
+
+      this.logger.log(
+        `Plugin loading complete: ${this.loadedPlugins.size} loaded, ${this.failedPlugins.size} failed`,
+      );
+    } catch (error) {
+      this.logger.error(
+        'Failed to read plugins directory:',
+        error instanceof Error ? error.message : String(error),
+      );
+    }
+  }
+
+  /**
+   * Retry a failed plugin manually
+   */
+  async retryPlugin(pluginName: string, pluginDir?: string): Promise<boolean> {
+    if (!this.failedPlugins.has(pluginName)) {
+      return false;
+    }
+
+    try {
+      const dir = pluginDir ?? join(process.cwd(), 'plugins', pluginName);
+      await this.loadPlugin(dir);
+      this.failedPlugins.delete(pluginName);
+      return true;
+    } catch (error) {
+      const trace = error instanceof Error ? error.stack : String(error);
+      this.logger.error(`Retry failed for ${pluginName}:`, trace);
+      return false;
+    }
   }
 
   private async loadPlugin(pluginDir: string): Promise<void> {
@@ -392,7 +480,13 @@ export class LoaderService implements OnModuleInit {
             continue;
           }
           const wrapped: ActionCallback = async (...args: unknown[]) => {
-            await handler(...args, context);
+            await this.safeExecuteWithTimeout(
+              async () => {
+                await handler(...args, context);
+              },
+              10_000,
+              `plugin:${name}:${hookName}:action`,
+            );
           };
           const id = this.hookService.addAction(hookName, wrapped, hookConfig.priority ?? 10);
           registrations.push({ type: 'action', hookName, id });
@@ -405,7 +499,20 @@ export class LoaderService implements OnModuleInit {
             continue;
           }
           const wrapped: FilterCallback = async (value: unknown, ...args: unknown[]) => {
-            return await handler(value, ...args, context);
+            const res = await this.safeExecuteWithTimeout(
+              async () => {
+                return await handler(value, ...args, context);
+              },
+              10_000,
+              `plugin:${name}:${hookName}:filter`,
+            );
+            if (res === undefined) {
+              this.logger.warn(
+                `Filter '${hookName}' of plugin '${name}' returned undefined or timed out - keeping previous value`,
+              );
+              return value;
+            }
+            return res;
           };
           const id = this.hookService.addFilter(hookName, wrapped, hookConfig.priority ?? 10);
           registrations.push({ type: 'filter', hookName, id });
@@ -447,7 +554,8 @@ export class LoaderService implements OnModuleInit {
         version: z.string().min(1),
         description: z.string().optional(),
         main: z.string().optional(),
-        dependencies: z.array(z.string()).optional(),
+        dependencies: z.union([z.array(z.string()), z.record(z.string(), z.string())]).optional(),
+        peerDependencies: z.record(z.string(), z.string()).optional(),
         hooks: z
           .record(
             z.string(),
@@ -478,10 +586,20 @@ export class LoaderService implements OnModuleInit {
     try {
       const pkg = await this.readPackageJson(pluginDir);
       if (!pkg || (!pkg.name && !pkg.version)) return null;
+      const dependencies: string[] = [];
+      if (pkg.dependencies) {
+        for (const dep of Object.keys(pkg.dependencies)) {
+          if (dep.startsWith('@vanblog/') || pkg.keywords?.includes('vanblog-plugin')) {
+            dependencies.push(dep);
+          }
+        }
+      }
       const mf: PluginManifest = {
         name: pkg.name ?? 'plugin',
         version: pkg.version ?? '0.0.0',
         description: pkg.description,
+        dependencies: dependencies.length > 0 ? dependencies : undefined,
+        peerDependencies: pkg.peerDependencies as Record<string, string> | undefined,
       };
       return mf;
     } catch (error) {

@@ -497,4 +497,255 @@ describe('LoaderService load/unload behavior', () => {
     expect(m.has('p4')).toBe(true);
     expect(logger.log).toHaveBeenCalled();
   });
+
+  // ...
+
+  it('filter wrapper should fall back to previous value when handler times out or returns undefined', async () => {
+    const logger = {
+      log: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+      debug: vi.fn(),
+    } as unknown as MinimalLogger;
+
+    const createdContext = {
+      pluginId: 'p1',
+      config: {},
+      data: {},
+      registry: { register: vi.fn(), unregister: vi.fn() },
+    } as any;
+    const pluginContextFactory = {
+      createContext: vi.fn().mockReturnValue(createdContext),
+    } as unknown as import('./plugin-context.service').PluginContextFactory;
+
+    let capturedFilterHandler: ((...args: unknown[]) => unknown) | undefined;
+    const hookService = {
+      addAction: vi.fn(),
+      addFilter: vi.fn().mockImplementation((_hook: string, fn: unknown, _priority?: number) => {
+        capturedFilterHandler = fn as typeof capturedFilterHandler;
+        return 'fil-1';
+      }),
+      removeAction: vi.fn(),
+      removeFilter: vi.fn(),
+      clearAll: vi.fn(),
+    } as unknown as import('./hook.service').HookService;
+
+    const service = new LoaderService(logger as any, pluginContextFactory, hookService);
+    vi.spyOn<any, any>(service as any, 'loadPluginManifest').mockResolvedValue({
+      name: 'p1',
+      version: '1.0.0',
+    });
+    vi.spyOn<any, any>(service as any, 'getServerVersion').mockReturnValue('1.0.0');
+
+    // plugin exports a filter hook; handler won't be used because we mock safeExecuteWithTimeout
+    (resolveObjectPluginExport as any).mockResolvedValue({
+      name: 'p1',
+      version: '1.0.0',
+      hooks: { f: { type: 'filter', handler: vi.fn() } },
+    });
+
+    await (service as any).loadPlugin('/p1');
+    expect(typeof capturedFilterHandler).toBe('function');
+
+    // Make safeExecuteWithTimeout resolve to undefined (simulate timeout or undefined return)
+    const spy = vi
+      .spyOn<any, any>(service as any, 'safeExecuteWithTimeout')
+      .mockResolvedValue(undefined);
+
+    const prev = 'v0';
+    const result = await capturedFilterHandler?.(prev);
+    expect(result).toBe(prev);
+    expect(logger.warn).toHaveBeenCalled();
+
+    // ensure label carries hook metadata
+    expect(spy).toHaveBeenCalled();
+    const lastCall = spy.mock.calls.at(-1)!;
+    expect(String(lastCall[2])).toContain('plugin:p1:f:filter');
+  });
+
+  it('action wrapper should use safeExecuteWithTimeout and not throw on errors/timeouts', async () => {
+    const logger = {
+      log: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+      debug: vi.fn(),
+    } as unknown as MinimalLogger;
+
+    const pluginContextFactory = {
+      createContext: vi.fn().mockReturnValue({ pluginId: 'p2' } as any),
+    } as unknown as import('./plugin-context.service').PluginContextFactory;
+
+    let capturedActionHandler: ((...args: unknown[]) => unknown) | undefined;
+    const hookService = {
+      addAction: vi.fn().mockImplementation((_hook: string, fn: unknown) => {
+        capturedActionHandler = fn as typeof capturedActionHandler;
+        return 'act-1';
+      }),
+      addFilter: vi.fn(),
+      removeAction: vi.fn(),
+      removeFilter: vi.fn(),
+      clearAll: vi.fn(),
+    } as unknown as import('./hook.service').HookService;
+
+    const service = new LoaderService(logger as any, pluginContextFactory, hookService);
+    vi.spyOn<any, any>(service as any, 'loadPluginManifest').mockResolvedValue({
+      name: 'p2',
+      version: '1.0.0',
+    });
+    vi.spyOn<any, any>(service as any, 'getServerVersion').mockReturnValue('1.0.0');
+
+    (resolveObjectPluginExport as any).mockResolvedValue({
+      name: 'p2',
+      version: '1.0.0',
+      hooks: { a: { type: 'action', handler: vi.fn() } },
+    });
+
+    await (service as any).loadPlugin('/p2');
+    expect(typeof capturedActionHandler).toBe('function');
+
+    const spy = vi
+      .spyOn<any, any>(service as any, 'safeExecuteWithTimeout')
+      .mockResolvedValue(undefined);
+
+    // Should not throw regardless of inner failure/timeout
+    await expect(capturedActionHandler?.('x', 1)).resolves.toBeUndefined();
+    expect(spy).toHaveBeenCalled();
+    const lastCall = spy.mock.calls.at(-1)!;
+    expect(String(lastCall[2])).toContain('plugin:p2:a:action');
+  });
+
+  it("unloadPlugin should call destroy and remove only this plugin's hooks", async () => {
+    const logger = {
+      log: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+      debug: vi.fn(),
+    } as unknown as MinimalLogger;
+
+    const pluginContextFactory = {
+      createContext: vi.fn().mockReturnValue({ pluginId: 'p2' } as any),
+    } as unknown as import('./plugin-context.service').PluginContextFactory;
+
+    const addAction = vi.fn().mockReturnValue('act-42');
+    const addFilter = vi.fn().mockReturnValue('fil-24');
+    const removeAction = vi.fn();
+    const removeFilter = vi.fn();
+
+    const hookService = {
+      addAction,
+      addFilter,
+      removeAction,
+      removeFilter,
+      clearAll: vi.fn(),
+    } as unknown as import('./hook.service').HookService;
+
+    const service = new LoaderService(logger as any, pluginContextFactory, hookService);
+
+    const destroySpy = vi.fn();
+    vi.spyOn<any, any>(service as any, 'loadPluginManifest').mockResolvedValue({
+      name: 'p2',
+      version: '1.0.0',
+    });
+    vi.spyOn<any, any>(service as any, 'getServerVersion').mockReturnValue('1.0.0');
+
+    (resolveObjectPluginExport as any).mockResolvedValue({
+      name: 'p2',
+      version: '1.0.0',
+      hooks: {
+        a: { type: 'action', handler: vi.fn() },
+        f: { type: 'filter', handler: vi.fn() },
+      },
+      destroy: destroySpy,
+    });
+
+    await (service as any).loadPlugin('/p2');
+
+    const unloaded = await service.unloadPlugin('p2');
+    expect(unloaded).toBe(true);
+    expect(destroySpy).toHaveBeenCalled();
+    expect(removeAction).toHaveBeenCalledWith('a', 'act-42');
+    expect(removeFilter).toHaveBeenCalledWith('f', 'fil-24');
+    // subsequent unload should return false
+    const again = await service.unloadPlugin('p2');
+    expect(again).toBe(false);
+  });
+
+  it('loadPlugin should skip when engines.vanblog does not satisfy current version', async () => {
+    const logger = {
+      log: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+      debug: vi.fn(),
+    } as unknown as MinimalLogger;
+
+    const pluginContextFactory = {
+      createContext: vi.fn(),
+    } as unknown as import('./plugin-context.service').PluginContextFactory;
+
+    const hookService = {
+      addAction: vi.fn(),
+      addFilter: vi.fn(),
+      removeAction: vi.fn(),
+      removeFilter: vi.fn(),
+      clearAll: vi.fn(),
+    } as unknown as import('./hook.service').HookService;
+
+    const service = new LoaderService(logger as any, pluginContextFactory, hookService);
+
+    vi.spyOn<any, any>(service as any, 'loadPluginManifest').mockResolvedValue({
+      name: 'p3',
+      version: '1.0.0',
+      engines: { vanblog: '^999.0.0' },
+    } as any);
+    vi.spyOn<any, any>(service as any, 'getServerVersion').mockReturnValue('1.0.0');
+
+    await (service as any).loadPlugin('/p3');
+
+    expect(logger.warn).toHaveBeenCalled();
+    expect(hookService.addAction).not.toHaveBeenCalled();
+    expect(hookService.addFilter).not.toHaveBeenCalled();
+  });
+
+  it('registerExternalPlugin should persist meta and log hook totals snapshot', () => {
+    const logger = {
+      log: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+      debug: vi.fn(),
+    } as unknown as MinimalLogger;
+
+    const pluginContextFactory = {
+      createContext: vi.fn(),
+    } as unknown as import('./plugin-context.service').PluginContextFactory;
+
+    const hookService = {
+      getAllActionHooks: vi.fn().mockReturnValue(['a1', 'a2']),
+      getAllFilterHooks: vi.fn().mockReturnValue(['f1']),
+      addAction: vi.fn(),
+      addFilter: vi.fn(),
+      removeAction: vi.fn(),
+      removeFilter: vi.fn(),
+      clearAll: vi.fn(),
+    } as unknown as import('./hook.service').HookService;
+
+    const service = new LoaderService(logger as any, pluginContextFactory, hookService);
+
+    const plugin = { id: 'id4', name: 'p4', version: '0.0.1' } as any;
+    const ctx = { pluginId: 'p4' } as any;
+    const meta = {
+      pluginDir: '/p4',
+      hooks: [
+        { type: 'action' as const, hookName: 'hA', id: '1' },
+        { type: 'filter' as const, hookName: 'hF', id: '2' },
+      ],
+    };
+
+    service.registerExternalPlugin(plugin, ctx, meta);
+
+    expect(service.getPluginContext('p4')).toBe(ctx);
+    // call again to cover getters
+    const m = service.getLoadedPlugins();
+    expect(m.has('p4')).toBe(true);
+    expect(logger.log).toHaveBeenCalled();
+  });
 });
