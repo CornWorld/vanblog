@@ -5,7 +5,6 @@ import { dataSchemas } from '../../../shared/zod';
 import { ArticleListResponseSchema } from '../../article/dto/article.dto';
 import { CategorySchema } from '../../category/dto/category.dto';
 import { TagSchema } from '../../tag/dto/tag.dto';
-import { RewardSchema } from '../bootstrap.dto';
 
 // 可选的字段类型，对应 include 查询参数支持的值
 const INCLUDE_OPTIONS = [
@@ -15,8 +14,6 @@ const INCLUDE_OPTIONS = [
   'siteMeta', // Bootstrap 接口中已有的 siteInfo 字段
   'navigation',
   'friendLinks',
-  'socialLinks',
-  'rewards',
   'walineConfig',
 ] as const;
 
@@ -61,16 +58,6 @@ export const OptionsResponseSchema = z.object({
       }),
     )
     .optional(),
-  socialLinks: z
-    .array(
-      z.object({
-        name: z.string(),
-        url: z.string(),
-        icon: z.string().optional(),
-      }),
-    )
-    .optional(),
-  rewards: z.array(RewardSchema).optional(),
   walineConfig: z
     .object({
       serverURL: z.string().optional(),

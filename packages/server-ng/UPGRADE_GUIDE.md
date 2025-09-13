@@ -240,6 +240,14 @@ NODE_ENV=production
 
 ## 插件系统升级
 
+### 重要变更
+
+**插件数据访问模式已完全重构：**
+
+- ❌ **已移除**：`socialLinks` 和 `rewards` 字段不再作为独立字段存在于 API 响应中
+- ✅ **新模式**：所有插件数据统一通过 `extensions` 字段提供
+- 🔄 **迁移路径**：插件数据从 `response.socialLinks` 迁移到 `response.extensions.socialLinks`
+
 ### v1 插件结构
 
 ```javascript
@@ -282,6 +290,49 @@ export class MyPlugin {
     return content + ' [Modified by plugin]';
   }
 }
+```
+
+### 插件数据访问变更
+
+#### v1 数据访问（已废弃）
+
+```javascript
+// v1: 直接访问特定字段
+const response = await fetch('/api/v2/public/bootstrap');
+const { socialLinks, rewards } = response.data;
+```
+
+#### v2 数据访问（新模式）
+
+```javascript
+// v2: 通过 extensions 字段访问
+const response = await fetch('/api/v2/public/bootstrap');
+const { extensions } = response.data;
+const socialLinks = extensions.socialLinks || [];
+const rewards = extensions.rewards || [];
+```
+
+### 插件开发最佳实践
+
+1. **使用 Hook 系统注入数据**
+
+```typescript
+// 注册 transform 过滤器
+this.hookService.addFilter('bootstrap|transformResponse', async (response) => {
+  response.extensions = response.extensions || {};
+  response.extensions.myPlugin = await this.getPluginData();
+  return response;
+});
+```
+
+2. **避免直接修改核心响应结构**
+
+```typescript
+// ❌ 错误：直接添加顶层字段
+response.myPluginData = data;
+
+// ✅ 正确：使用 extensions 命名空间
+response.extensions.myPlugin = data;
 ```
 
 ## 性能优化

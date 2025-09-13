@@ -3,8 +3,6 @@ import { Injectable } from '@nestjs/common';
 import { ArticleService } from '../article/article.service';
 import { CategoryService } from '../category/category.service';
 import { CommentService } from '../comment/comment.service';
-import { HookService } from '../plugin/services/hook.service';
-import { LoaderService } from '../plugin/services/loader.service';
 import { SettingCoreService } from '../setting/services/setting-core.service';
 import { TagService } from '../tag/tag.service';
 
@@ -23,8 +21,6 @@ export class OptionsService {
     private readonly tagService: TagService,
     private readonly settingCoreService: SettingCoreService,
     private readonly commentService: CommentService,
-    private readonly hookService: HookService,
-    private readonly loaderService: LoaderService,
   ) {}
 
   async getOptions(query: OptionsQueryDto): Promise<OptionsResponseDto> {
@@ -114,48 +110,8 @@ export class OptionsService {
       );
     }
 
-    if (includeMap.socialLinks) {
-      tasks.push(
-        (async () => {
-          try {
-            const plugins = this.loaderService.getLoadedPlugins();
-            const plugin = plugins.get('Social Links Plugin');
-            if (plugin) {
-              const { name } = plugin;
-              const context = this.loaderService.getPluginContext(name);
-              const { getSocialLinks } = plugin as unknown as {
-                getSocialLinks?: (ctx: unknown) => Promise<Array<{ type: string; url: string }>>;
-              };
-              if (context && typeof getSocialLinks === 'function') {
-                const raw = await getSocialLinks(context);
-                response.socialLinks = raw.map((item) => ({
-                  name: item.type,
-                  url: item.url,
-                }));
-                return;
-              }
-            }
-          } catch {
-            // ignore and fallback
-          }
-          // Fallback 保持向后兼容
-          response.socialLinks = [];
-        })(),
-      );
-    }
-
-    if (includeMap.rewards) {
-      tasks.push(
-        this.hookService
-          .applyFilters('bootstrap|rewards', [])
-          .then((rewards) => {
-            response.rewards = rewards;
-          })
-          .catch(() => {
-            response.rewards = [];
-          }),
-      );
-    }
+    // socialLinks and rewards have been removed from the system
+    // Plugin data should be accessed through extensions field in bootstrap response
 
     if (includeMap.walineConfig) {
       tasks.push(

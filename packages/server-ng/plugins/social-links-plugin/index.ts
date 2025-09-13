@@ -17,6 +17,17 @@ const logger = new Logger(withPluginPrefix('social-links-plugin'));
 // 创建服务实例
 const socialLinksService = new SocialLinksService();
 
+// 仅做最小的运行时防护，保证注入的数据可被 JSON 序列化；不要引入额外类型束缚
+function isJsonSerializable(value: unknown): boolean {
+  try {
+    // 对象里如果有循环引用会抛错；我们不深入校验，只做最小可用性检测
+    JSON.stringify(value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 const plugin: Plugin = {
   id: 'social-links-plugin',
   name: 'Social Links Plugin',
@@ -73,8 +84,20 @@ const plugin: Plugin = {
         if (value != null && typeof value === 'object') {
           const response = value as Record<string, unknown>;
           const socialLinks = await socialLinksService.getSocialLinks(context);
-          response.socialLinks = socialLinks;
-          logger.debug(`Added ${socialLinks.length} social links to bootstrap response`);
+
+          if (!isJsonSerializable(socialLinks)) {
+            logger.warn(
+              'Skip injecting socialLinks into extensions: value is not JSON-serializable',
+            );
+            return value;
+          }
+
+          // 只在 extensions 中提供数据（保持灵活，不强制类型）
+          response.extensions ??= {};
+          const ext = response.extensions as Record<string, unknown>;
+          ext['socialLinks'] = socialLinks;
+
+          logger.debug(`Added ${socialLinks.length} social links to extensions`);
         }
         return value;
       }) as FilterCallback,

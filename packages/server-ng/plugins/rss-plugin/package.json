@@ -1,0 +1,27 @@
+{
+  "name": "@vanblog/rss-plugin",
+  "version": "1.0.0",
+  "description": "RSS feed generation plugin for VanBlog",
+  "main": "index.ts",
+  "keywords": [
+    "vanblog",
+    "plugin",
+    "rss",
+    "feed"
+  ],
+  "author": "VanBlog Team",
+  "license": "MIT",
+  "dependencies": {
+    "feed": "^4.2.2"
+  },
+  "peerDependencies": {
+    "@nestjs/common": "^11.0.0",
+    "@nestjs/config": "^4.0.0",
+    "drizzle-orm": "^0.44.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0",
+    "vitest": "^3.0.0"
+  }
+}

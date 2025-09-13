@@ -14,16 +14,6 @@ export default defineConfig({
       '**/vitest-fixtures.test.ts',
       '**/*.e2e-spec.ts',
     ],
-    alias: {
-      '@src': './src',
-      '@test': './test',
-    },
-  },
-  resolve: {
-    alias: {
-      '@src': './src',
-      '@test': './test',
-    },
   },
   plugins: [
     swc.vite({

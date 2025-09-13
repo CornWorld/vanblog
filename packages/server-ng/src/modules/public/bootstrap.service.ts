@@ -9,7 +9,7 @@ import { PluginRegistryService } from '../plugin/services/plugin-registry.servic
 import { SettingCoreService } from '../setting/services/setting-core.service';
 import { TagService } from '../tag/tag.service';
 
-import type { PublicBootstrapResponseDto, RewardItem } from './bootstrap.dto';
+import type { PublicBootstrapResponseDto } from './bootstrap.dto';
 
 @Injectable()
 export class BootstrapService {
@@ -54,6 +54,8 @@ export class BootstrapService {
       pluginData,
     ] = results;
 
+    const resolvedPluginData = pluginData.status === 'fulfilled' ? pluginData.value : {};
+
     const response: PublicBootstrapResponseDto = {
       version: this.getVersion(),
       tags: tags.status === 'fulfilled' ? tags.value : [],
@@ -62,13 +64,10 @@ export class BootstrapService {
       siteInfo: siteInfo.status === 'fulfilled' ? siteInfo.value : this.getDefaultSiteInfo(),
       navigation: navigation.status === 'fulfilled' ? navigation.value : [],
       friendLinks: friendLinks.status === 'fulfilled' ? friendLinks.value : [],
-      socialLinks: [],
-      rewards: this.extractRewardsFromPluginData(
-        pluginData.status === 'fulfilled' ? pluginData.value : {},
-      ),
       categories: categories.status === 'fulfilled' ? categories.value : [],
       ...(walineSettings.status === 'fulfilled' &&
         walineSettings.value && { walineConfig: walineSettings.value }),
+      extensions: resolvedPluginData,
     };
 
     // 允许插件过滤/转换响应
@@ -82,19 +81,6 @@ export class BootstrapService {
       .catch(() => {});
 
     return filtered;
-  }
-
-  /**
-   * 从插件数据中提取 rewards 数据
-   * 遵循 Linus 的"好品味"原则：统一处理，消除特殊情况
-   */
-  private extractRewardsFromPluginData(pluginData: Record<string, unknown>): RewardItem[] {
-    // 查找 rewards-plugin 的数据
-    const rewardsData = pluginData['rewards-plugin'];
-    if (Array.isArray(rewardsData)) {
-      return rewardsData as RewardItem[];
-    }
-    return [];
   }
 
   private async getAllTags(): Promise<string[]> {

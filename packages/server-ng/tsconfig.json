@@ -29,6 +29,6 @@
     "types": ["node", "vitest/globals", "express", "multer"],
     "composite": true
   },
-  "include": ["src/**/*", "test/**/*", "src/types/**/*.d.ts"],
+  "include": ["src/**/*", "test/**/*", "plugins/**/*", "src/types/**/*.d.ts"],
   "exclude": ["node_modules", "dist"]
 }

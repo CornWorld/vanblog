@@ -51,9 +51,11 @@ describe('MetaController', () => {
         totalWordCount: 1234,
         siteInfo: { title: 'Site' },
         friendLinks: [{ name: 'A', description: 'desc', avatar: 'logo', url: 'https://a.test' }],
-        rewards: [{ name: 'r1', value: 'v1' }],
         categories: ['c1', 'c2'],
         navigation: [{ name: 'Home', value: '/', children: [{ name: 'Blog', value: '/blog' }] }],
+        extensions: {
+          rewards: [{ name: 'r1', value: 'v1' }],
+        },
       } as any;
 
       mockBootstrapService.getPublicBootstrap.mockResolvedValue(mockBoot);
@@ -83,9 +85,7 @@ describe('MetaController', () => {
       expect(data.meta.links[0]).toMatchObject({ name: 'A', url: 'https://a.test' });
       expect(typeof data.meta.links[0].updatedAt).toBe('string');
 
-      expect(Array.isArray(data.meta.rewards)).toBe(true);
-      expect(data.meta.rewards[0]).toMatchObject({ name: 'r1', value: 'v1' });
-      expect(typeof data.meta.rewards[0].updatedAt).toBe('string');
+      // rewards have been removed from direct fields and moved to extensions
 
       // navigation: 1 parent + 1 child => flattened to 2 menus
       expect(Array.isArray(data.menus)).toBe(true);
@@ -102,7 +102,7 @@ describe('MetaController', () => {
         totalWordCount: 0,
         siteInfo: {},
         friendLinks: [],
-        rewards: [],
+        extensions: {},
         categories: [],
         navigation: [],
       } as any;

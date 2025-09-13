@@ -2,12 +2,12 @@ import { z } from 'zod';
 
 import type { PluginContext } from '../../src/modules/plugin/interfaces/plugin-context.interface';
 
-const SocialLinkSchema = z.object({
-  type: z.string(),
-  url: z.string(),
+export const SocialLinkSchema = z.object({
+  type: z.string().min(1),
+  url: z.string().min(1),
 });
 
-const _SocialLinkArraySchema = z.array(SocialLinkSchema);
+const SocialLinksSchema = z.array(SocialLinkSchema);
 
 export type SocialLink = z.infer<typeof SocialLinkSchema>;
 
@@ -15,8 +15,10 @@ export class SocialLinksService {
   private readonly CONFIG_KEY = 'socialLinks';
 
   async getSocialLinks(context: PluginContext): Promise<SocialLink[]> {
-    const links = await context.data.get<SocialLink[]>(this.CONFIG_KEY);
-    return links ?? [];
+    const linksRaw = await context.data.get<unknown>(this.CONFIG_KEY);
+    if (linksRaw == null) return [];
+    const parsed = SocialLinksSchema.safeParse(linksRaw);
+    return parsed.success ? parsed.data : [];
   }
 
   async addOrUpdateSocialLink(
@@ -24,10 +26,7 @@ export class SocialLinksService {
     dto: { type: string; url: string },
   ): Promise<SocialLink[]> {
     const links = await this.getSocialLinks(context);
-    const linkData: SocialLink = {
-      type: dto.type,
-      url: dto.url,
-    };
+    const linkData = SocialLinkSchema.parse(dto);
     const index = links.findIndex((link) => link.type === dto.type);
     if (index !== -1) {
       links[index] = linkData;

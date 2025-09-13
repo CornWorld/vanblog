@@ -8,6 +8,7 @@ import { withPluginPrefix } from '../../src/modules/plugin/utils/prefix.util';
 import { RewardService } from './reward.service';
 
 import type { RewardInfo } from './reward.schema';
+import type { FilterCallback } from '../../src/modules/plugin/interfaces/hook.interface';
 import type { PluginContext } from '../../src/modules/plugin/interfaces/plugin-context.interface';
 import type { Plugin } from '../../src/modules/plugin/services/loader.service';
 
@@ -92,8 +93,34 @@ const plugin: Plugin = {
     await rewardService.deleteRewardInfo(id);
   },
 
-  // 移除钩子系统，改用插件注册表模式
-  // 所有数据通过 init 方法中的注册表注册提供
+  // 使用 hooks 系统在 extensions 中提供数据
+  hooks: {
+    'bootstrap|transformResponse': {
+      type: 'filter',
+      priority: 10,
+      handler: (async (value: unknown, context: PluginContext) => {
+        if (value != null && typeof value === 'object') {
+          const response = value as Record<string, unknown>;
+
+          // 获取存储的奖励和配置中的奖励
+          const stored = await rewardService.getRewardInfo();
+          const configured = context.config.get<RewardInfo[]>('extra_rewards', []);
+          const all = [...stored, ...configured];
+
+          // 按 name 去重
+          const uniqueByName = new Map<string, RewardInfo>();
+          for (const r of all) uniqueByName.set(r.name, r);
+          const rewards = Array.from(uniqueByName.values());
+
+          // 只在 extensions 中提供数据
+          response.extensions ??= {};
+          (response.extensions as Record<string, unknown>)['rewards'] = rewards;
+          logger.debug(`Added ${rewards.length} rewards to extensions`);
+        }
+        return value;
+      }) as FilterCallback,
+    },
+  },
 };
 
 export default plugin;

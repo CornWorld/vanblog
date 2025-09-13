@@ -1,23 +1,20 @@
 import { defineConfig } from 'vite';
 import { VitePluginNode } from 'vite-plugin-node';
+import swc from 'unplugin-swc';
 
 export default defineConfig({
   server: {
-    port: 3000,
+    port: 3050,
   },
   plugins: [
-    ...VitePluginNode({
-      adapter: 'nest',
-      appPath: './src/main.ts',
-      tsCompiler: 'swc',
-    }),
+    ...VitePluginNode({ adapter: 'nest', appPath: './src/main.ts', exportName: 'viteNodeApp' }),
+    swc.vite({ module: { type: 'es6' } }),
   ],
   build: {
-    rollupOptions: {
-      external: ['plugins/**'],
-    },
-  },
-  optimizeDeps: {
-    exclude: ['@nestjs/microservices', '@nestjs/websockets', 'cache-manager', 'fastify-swagger'],
+    target: 'node22',
+    ssr: true,
+    outDir: 'dist',
+    sourcemap: true,
+    minify: false,
   },
 });

@@ -10,26 +10,13 @@ import { BootstrapService } from './bootstrap.service';
 
 import type { NavigationNode } from '../../shared/zod';
 
-// 定义前端所需的 PublicMetaProp 结构（最小实现以保持向后兼容）
-interface RewardItemDto {
-  name: string;
-  value: string;
-  updatedAt?: string;
-}
-
+// 简化的 meta 结构，插件数据从 extensions 获取
 interface FriendLinkDto {
   name: string;
   desc?: string;
   logo?: string;
   url: string;
   updatedAt?: string;
-}
-
-interface SocialLinkDto {
-  updatedAt?: string;
-  type: string;
-  value: string;
-  dark?: string;
 }
 
 interface PublicMetaProp {
@@ -39,11 +26,11 @@ interface PublicMetaProp {
   totalWordCount: number;
   meta: {
     links: FriendLinkDto[];
-    socials: SocialLinkDto[];
-    rewards: RewardItemDto[];
     categories: string[];
     about: { updatedAt: string; content: string };
     siteInfo: Record<string, unknown>;
+    // 插件数据通过 extensions 提供
+    extensions: Record<string, unknown>;
   };
   menus: Array<{
     id: number;
@@ -52,7 +39,6 @@ interface PublicMetaProp {
     level: number;
     children?: never;
   }>;
-  layout?: { css?: string; script?: string; html?: string; head?: Array<Record<string, unknown>> };
 }
 
 @ApiTags('Public')
@@ -66,11 +52,11 @@ export class MetaController {
 
   @Get('meta')
   @Throttle({ short: { limit: 3, ttl: 1000 }, medium: { limit: 10, ttl: 10000 } })
-  @ApiOperation({ summary: '获取公共元数据（含 about 与 rewards 等）' })
+  @ApiOperation({ summary: '获取公共元数据' })
   @ApiResponse({ status: 200, description: '公共元数据获取成功', type: Object })
   @DerivedView({ key: 'public-meta', ttl: 180, swr: true })
   async getMeta(): Promise<{ statusCode: number; data: PublicMetaProp }> {
-    // 复用 bootstrap 聚合（tags、siteInfo、friendLinks、rewards、categories、version、total 等）
+    // 复用 bootstrap 数据
     const boot = await this.bootstrapService.getPublicBootstrap();
 
     // 获取关于信息
@@ -85,12 +71,6 @@ export class MetaController {
       logo: f.avatar,
       url: f.url,
       updatedAt: now,
-    }));
-
-    const rewards: RewardItemDto[] = boot.rewards.map((r) => ({
-      name: r.name,
-      value: r.value,
-      updatedAt: r.updatedAt ?? now,
     }));
 
     const { categories } = boot;
@@ -122,11 +102,10 @@ export class MetaController {
       totalWordCount: boot.totalWordCount,
       meta: {
         links,
-        socials: [],
-        rewards,
         categories,
         about: { updatedAt: about.updatedAt, content: about.content },
         siteInfo: boot.siteInfo,
+        extensions: boot.extensions, // 直接传递插件数据
       },
       menus,
     };

@@ -64,9 +64,4 @@ export default defineConfig({
     target: 'node18',
     minify: false, // 保持代码可读性
   },
-  resolve: {
-    alias: {
-      '@src': resolve(__dirname, 'src'),
-    },
-  },
 });

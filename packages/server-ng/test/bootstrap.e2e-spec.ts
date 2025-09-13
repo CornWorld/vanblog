@@ -73,14 +73,12 @@ describe('BootstrapController (e2e)', () => {
     expect(data).toHaveProperty('friendLinks');
     expect(Array.isArray((data as any).friendLinks)).toBe(true);
 
-    expect(data).toHaveProperty('socialLinks');
-    expect(Array.isArray((data as any).socialLinks)).toBe(true);
-
-    expect(data).toHaveProperty('rewards');
-    expect(Array.isArray((data as any).rewards)).toBe(true);
-
     expect(data).toHaveProperty('categories');
     expect(Array.isArray((data as any).categories)).toBe(true);
+
+    // 插件数据应该在 extensions 中
+    expect(data).toHaveProperty('extensions');
+    expect(typeof (data as any).extensions).toBe('object');
 
     // walineConfig is optional
     if ('walineConfig' in data) {

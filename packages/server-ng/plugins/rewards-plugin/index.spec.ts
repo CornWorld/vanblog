@@ -16,7 +16,7 @@ const createMockContext = (): PluginContext => ({
     keys: vi.fn(),
   },
   config: {
-    get: vi.fn().mockImplementation((key: string, defaultValue: unknown) => defaultValue ?? []),
+    get: vi.fn().mockImplementation((_key: string, defaultValue: unknown) => defaultValue ?? []),
     getOrThrow: vi.fn(),
     has: vi.fn(),
   },
