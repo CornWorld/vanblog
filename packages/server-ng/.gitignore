@@ -49,3 +49,8 @@ yarn-error.log*
 # Drizzle
 /drizzle/meta
 /drizzle/*.sql
+
+# Test reports (Vitest JUnit)
+/junit-report*.xml
+/test-results/
+/vitest-output-*.json

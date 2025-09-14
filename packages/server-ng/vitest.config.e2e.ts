@@ -27,6 +27,11 @@ export default defineConfig({
     // Increase timeout for E2E tests
     testTimeout: 30000,
     hookTimeout: 30000,
+    // 启用 JUnit 报告（CI Artifact）
+    reporters: ['default', 'junit'],
+    outputFile: {
+      junit: './junit-report.e2e.xml',
+    },
   },
   resolve: {
     alias: {

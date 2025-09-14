@@ -170,12 +170,17 @@ export class SitemapService {
 
     // 从设置读取可选的额外静态路径，兼容 string 或 string[]，且仅接受以 '/' 开头的项
     try {
-      const list =
-        (await this.settingCoreService.getConfig<string[]>(
+      const raw =
+        (await this.settingCoreService.getConfig<string | string[]>(
           SITEMAP_EXTRA_STATIC_PATHS_KEY,
           undefined,
           SitemapExtraStaticPathsSchema,
         )) ?? [];
+
+      let list: string[] = [];
+      if (Array.isArray(raw)) list = raw;
+      else if (typeof raw === 'string') list = [raw];
+
       for (const p of list) {
         const trimmed = p.trim();
         if (trimmed.startsWith('/')) urlList.push(trimmed);

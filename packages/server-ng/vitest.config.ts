@@ -14,6 +14,20 @@ export default defineConfig({
       '**/vitest-fixtures.test.ts',
       '**/*.e2e-spec.ts',
     ],
+    // 启用测试报告（JUnit，用于 CI Artifact）
+    reporters: ['default', 'junit'],
+    outputFile: {
+      junit: './junit-report.unit.xml',
+    },
+    // 覆盖率配置
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'html', 'lcov', 'json-summary'],
+      reportsDirectory: './coverage',
+      all: true,
+      include: ['src/**/*.ts'],
+      exclude: ['src/**/*.spec.ts', 'src/**/*.e2e-spec.ts', 'src/**/__mocks__/**', '**/*.d.ts'],
+    },
   },
   plugins: [
     swc.vite({
