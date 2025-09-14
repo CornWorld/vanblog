@@ -44,6 +44,6 @@ export class StorageFactoryService {
 
   async getCurrentProvider(): Promise<StorageProvider> {
     const config = await this.storageConfigService.getStorageConfig();
-    return config.provider as StorageProvider;
+    return config?.provider ?? StorageProvider.LOCAL;
   }
 }

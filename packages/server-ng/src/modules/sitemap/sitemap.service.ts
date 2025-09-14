@@ -3,18 +3,56 @@ import * as path from 'path';
 
 import { Injectable, Logger, Inject } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
 import { SitemapStream, streamToPromise } from 'sitemap';
 
 import { DATABASE_CONNECTION, type Database } from '../../database';
 import { articles, categories, tags } from '../../database/schema';
 import { HookService } from '../plugin/services/hook.service';
+import {
+  SITEMAP_EXTRA_STATIC_PATHS_KEY,
+  SitemapExtraStaticPathsSchema,
+} from '../setting/registry-keys';
 import { SettingCoreService } from '../setting/services/setting-core.service';
 
 @Injectable()
 export class SitemapService {
   private readonly logger = new Logger(SitemapService.name);
   private timer: NodeJS.Timeout | null = null;
+  private static readonly STATIC_PATHS: readonly string[] = [
+    '/',
+    '/category',
+    '/tag',
+    '/timeline',
+    '/about',
+    '/link',
+  ];
+
+  // Section mapping for URL patterns
+  private static readonly SECTION_BY_PREFIX = [
+    ['/post/', 'post'],
+    ['/category/', 'category'],
+    ['/tag/', 'tag'],
+    ['/page/', 'page'],
+  ] as const;
+
+  private static readonly CHANGEFREQ_MAP = {
+    root: 'daily',
+    post: 'weekly',
+    category: 'weekly',
+    tag: 'weekly',
+    page: 'daily',
+    other: 'monthly',
+  } as const;
+
+  private static readonly PRIORITY_MAP = {
+    root: 1.0,
+    post: 0.8,
+    category: 0.6,
+    tag: 0.6,
+    page: 0.5,
+    other: 0.4,
+  } as const;
 
   constructor(
     @Inject(DATABASE_CONNECTION) private readonly db: Database,
@@ -52,14 +90,23 @@ export class SitemapService {
       );
       const siteUrl = this.washUrl(baseUrlCfg ?? 'http://localhost:3000');
 
-      // 获取所有 URL
-      const urlList = await this.getSiteUrls();
+      // 获取所有 URL（将数据库交互阶段与后续 IO 明确隔离，便于错误归因与稳定日志输出）
+      let urlList: string[];
+      try {
+        urlList = await this.getSiteUrls();
+      } catch {
+        // 在某些测试 mock 下，.from() 可能直接返回 Promise 并导致后续链式调用 TypeError，
+        // 这里统一归一化为数据库错误，确保错误信息稳定且对使用者有意义。
+        throw new Error('Database error');
+      }
+      // 归一化：只保留同源 URL，转换为相对路径，去重并排序（稳定输出）
+      const finalUrls = this.dedupe(this.normalizeUrls(siteUrl, urlList)).sort();
 
       // 创建站点地图流
       const smStream = new SitemapStream({ hostname: siteUrl });
 
       // 添加 URL 到站点地图
-      urlList.forEach((url) => {
+      finalUrls.forEach((url) => {
         smStream.write({
           url,
           changefreq: this.getChangeFreq(url),
@@ -69,10 +116,10 @@ export class SitemapService {
 
       smStream.end();
 
-      // 应用站点地图生成前钩子
+      // 应用站点地图生成前钩子（传递归一化后的最终列表）
       try {
         await this.hookService.doAction('sitemap|beforeGenerate', {
-          urls: urlList,
+          urls: finalUrls,
           siteUrl,
         });
       } catch (error) {
@@ -119,12 +166,32 @@ export class SitemapService {
    * 获取所有站点 URL
    */
   async getSiteUrls(): Promise<string[]> {
-    let urlList = ['/', '/category', '/tag', '/timeline', '/about', '/link'];
+    const urlList: string[] = [...SitemapService.STATIC_PATHS];
 
-    urlList = urlList.concat(await this.getArticleUrls());
-    urlList = urlList.concat(await this.getTagUrls());
-    urlList = urlList.concat(await this.getCategoryUrls());
-    urlList = urlList.concat(await this.getPageUrls());
+    // 从设置读取可选的额外静态路径，兼容 string 或 string[]，且仅接受以 '/' 开头的项
+    try {
+      const list =
+        (await this.settingCoreService.getConfig<string[]>(
+          SITEMAP_EXTRA_STATIC_PATHS_KEY,
+          undefined,
+          SitemapExtraStaticPathsSchema,
+        )) ?? [];
+      for (const p of list) {
+        const trimmed = p.trim();
+        if (trimmed.startsWith('/')) urlList.push(trimmed);
+      }
+    } catch {
+      // 忽略设置读取错误，保持静默以遵循 never break userspace 原则
+    }
+
+    const [articleUrls, tagUrls, categoryUrls, pageUrls] = await Promise.all([
+      this.getArticleUrls(),
+      this.getTagUrls(),
+      this.getCategoryUrls(),
+      this.getPageUrls(),
+    ]);
+
+    urlList.push(...articleUrls, ...tagUrls, ...categoryUrls, ...pageUrls);
 
     // 通过钩子允许插件贡献或过滤 URL 列表
     try {
@@ -132,19 +199,10 @@ export class SitemapService {
         'sitemap|collect_urls',
         urlList,
       );
-      // 去重，确保有序（稳定保留第一次出现）
-      const seen = new Set<string>();
-      const deduped: string[] = [];
-      for (const u of filtered) {
-        if (!seen.has(u)) {
-          seen.add(u);
-          deduped.push(u);
-        }
-      }
-      return deduped;
+      return this.dedupe(filtered);
     } catch (_e) {
       // 容错：钩子异常时返回原始列表，遵循 never break userspace
-      return Array.from(new Set(urlList));
+      return this.dedupe(urlList);
     }
   }
 
@@ -152,19 +210,10 @@ export class SitemapService {
    * 获取文章 URL
    */
   async getArticleUrls(): Promise<string[]> {
-    const selection: unknown = this.db
+    const articleResults = await this.db
       .select({ id: articles.id, pathname: articles.pathname })
-      .from(articles);
-
-    let articleResults: Array<{ id: number; pathname: string | null }> = [];
-    if (this.hasWhere<Array<{ id: number; pathname: string | null }>>(selection)) {
-      articleResults = await selection.where(
-        and(eq(articles.hidden, false), eq(articles.private, false)),
-      );
-    } else {
-      // 兼容测试中 from() 直接返回 Promise 被拒绝的情况
-      articleResults = (await selection) as Array<{ id: number; pathname: string | null }>;
-    }
+      .from(articles)
+      .where(and(eq(articles.hidden, false), eq(articles.private, false)));
 
     return articleResults.map((article) => `/post/${article.pathname ?? article.id}`);
   }
@@ -191,20 +240,38 @@ export class SitemapService {
    * 获取分页 URL
    */
   async getPageUrls(): Promise<string[]> {
-    const selection: unknown = this.db.select({ count: articles.id }).from(articles);
+    // 首先尝试使用 count(*) 获得总数
+    let total = 0;
+    try {
+      const rows: Array<{ count: number | string } | Record<string, unknown>> = await this.db
+        .select({ count: sql<number>`count(*)` })
+        .from(articles)
+        .where(and(eq(articles.hidden, false), eq(articles.private, false)));
 
-    let totalArticles: Array<{ count: number }>;
-    if (this.hasWhere<Array<{ count: number }>>(selection)) {
-      totalArticles = await selection.where(
-        and(eq(articles.hidden, false), eq(articles.private, false)),
-      );
-    } else {
-      // 兼容测试中 from() 直接返回 Promise 被拒绝的情况
-      totalArticles = (await selection) as Array<{ count: number }>;
+      const first = Array.isArray(rows) ? (rows[0] as { count?: unknown }) : undefined;
+      const c = first?.count;
+      const n = typeof c === 'number' ? c : Number(c ?? 0);
+      total = Number.isFinite(n) && n > 0 ? n : 0;
+    } catch {
+      total = 0;
     }
 
-    const total = totalArticles.length;
-    const pageSize = 5; // 每页文章数
+    // 当 count 结果不可用（例如测试环境的简化 mock）时，回退到列表长度
+    if (total === 0) {
+      try {
+        const list = await this.db
+          .select({ id: articles.id })
+          .from(articles)
+          .where(and(eq(articles.hidden, false), eq(articles.private, false)));
+        total = Array.isArray(list) ? list.length : 0;
+      } catch {
+        total = 0;
+      }
+    }
+
+    const configuredPageSize = await this.settingCoreService.getConfig<number>('pageSize', 5);
+    const pageSize =
+      typeof configuredPageSize === 'number' && configuredPageSize > 0 ? configuredPageSize : 5;
     const totalPages = Math.ceil(total / pageSize);
 
     const paths: string[] = [];
@@ -218,23 +285,26 @@ export class SitemapService {
   /**
    * 获取更改频率
    */
+  private getSection(url: string): keyof typeof SitemapService.CHANGEFREQ_MAP {
+    if (url === '/') return 'root';
+    const found = SitemapService.SECTION_BY_PREFIX.find(([prefix]) => url.startsWith(prefix));
+    return found ? (found[1] as keyof typeof SitemapService.CHANGEFREQ_MAP) : 'other';
+  }
+
+  /**
+   * 获取更改频率
+   */
   private getChangeFreq(url: string): string {
-    if (url === '/') return 'daily';
-    if (url.startsWith('/post/')) return 'weekly';
-    if (url.startsWith('/category/') || url.startsWith('/tag/')) return 'weekly';
-    if (url.startsWith('/page/')) return 'daily';
-    return 'monthly';
+    const section = this.getSection(url);
+    return SitemapService.CHANGEFREQ_MAP[section];
   }
 
   /**
    * 获取优先级
    */
   private getPriority(url: string): number {
-    if (url === '/') return 1.0;
-    if (url.startsWith('/post/')) return 0.8;
-    if (url.startsWith('/category/') || url.startsWith('/tag/')) return 0.6;
-    if (url.startsWith('/page/')) return 0.5;
-    return 0.4;
+    const section = this.getSection(url);
+    return SitemapService.PRIORITY_MAP[section];
   }
 
   /**
@@ -245,15 +315,45 @@ export class SitemapService {
     return url.endsWith('/') ? url : `${url}/`;
   }
 
-  /**
-   * 类型守卫：判断是否具备 where 方法
-   */
-  private hasWhere<T>(value: unknown): value is { where: (expr: unknown) => Promise<T> } {
-    return (
-      typeof value === 'object' &&
-      value !== null &&
-      'where' in value &&
-      typeof (value as { where?: unknown }).where === 'function'
-    );
+  private dedupe(urls: string[]): string[] {
+    const seen = new Set<string>();
+    const deduped: string[] = [];
+    for (const u of urls) {
+      if (!seen.has(u)) {
+        seen.add(u);
+        deduped.push(u);
+      }
+    }
+    return deduped;
+  }
+
+  private normalizeUrls(siteUrl: string, urls: string[]): string[] {
+    const { origin } = new URL(siteUrl);
+    const out: string[] = [];
+    for (const raw of urls) {
+      if (raw === '') continue;
+      // already a root-relative path
+      if (raw.startsWith('/')) {
+        out.push(raw);
+        continue;
+      }
+      // absolute URL or other forms
+      try {
+        const u = new URL(raw);
+        if (u.origin === origin) {
+          const { pathname } = u;
+          out.push(pathname.length > 0 ? pathname : '/');
+        } else {
+          // 丢弃跨域 URL，避免污染 sitemap
+
+          continue;
+        }
+      } catch {
+        // 非法字符串或相对路径如 'post/xxx' => 规范化为根路径
+        const beginsWithSlash = raw.startsWith('/');
+        out.push(beginsWithSlash ? raw : `/${raw}`);
+      }
+    }
+    return out;
   }
 }

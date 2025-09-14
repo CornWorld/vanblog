@@ -86,11 +86,11 @@ describe('SitemapController - permissions (e2e)', () => {
     });
 
     it('should allow with sitemap:generate', async () => {
-      // Default NestJS for POST is 201 Created when not overridden
+      // Explicitly expect 200 OK since controller uses @HttpCode(200)
       await request(httpServer)
         .post('/api/v2/sitemap/generate')
         .set('Authorization', `Bearer ${generatorToken}`)
-        .expect(201);
+        .expect(200);
     });
   });
 

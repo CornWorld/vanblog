@@ -1,4 +1,4 @@
-import { Controller, Get, Post } from '@nestjs/common';
+import { Controller, Get, Post, HttpCode } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 
 import { ConfigService } from '../../config/config.service';
@@ -15,6 +15,7 @@ export class SitemapController {
   ) {}
 
   @Post('generate')
+  @HttpCode(200)
   @Perm('sitemap', ['generate'])
   @ApiOperation({ summary: 'Generate sitemap' })
   @ApiResponse({ status: 200, description: '站点地图生成成功' })

@@ -477,7 +477,7 @@ export class MediaController {
   @Perm('setting', ['read'])
   @ApiOperation({ summary: '获取存储配置' })
   @ApiResponse({ status: 200, description: '获取成功' })
-  async getStorageConfig(): Promise<StorageConfigResponseDto> {
+  async getStorageConfig(): Promise<StorageConfigResponseDto | null> {
     return this.storageConfigService.getStorageConfig();
   }
 

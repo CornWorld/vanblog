@@ -12,19 +12,17 @@ import {
 export class StorageConfigService {
   constructor(private readonly registry: SettingRegistryService) {}
 
-  async getStorageConfig(): Promise<StorageConfigResponseDto> {
-    const stored = await this.registry.getConfig<StorageConfigResponseDto>(STORAGE_CONFIG_KEY);
-    // Provide safe default to guarantee non-null return
-    return (
-      stored ?? {
-        provider: StorageProvider.LOCAL,
-        enabled: true,
-      }
-    );
+  async getStorageConfig(): Promise<StorageConfigResponseDto | null> {
+    // 直接透传注册表结果，便于上层根据 null 作出决策；
+    // 非空默认由 getFullStorageConfig 提供。
+    return await this.registry.getConfig<StorageConfigResponseDto>(STORAGE_CONFIG_KEY);
   }
 
   async updateStorageConfig(updateDto: UpdateStorageConfigDto): Promise<StorageConfigResponseDto> {
-    const currentConfig = await this.getStorageConfig();
+    const currentConfig = (await this.getStorageConfig()) ?? {
+      provider: StorageProvider.LOCAL,
+      enabled: true,
+    };
 
     const newConfig: StorageConfigResponseDto = {
       provider: updateDto.provider,

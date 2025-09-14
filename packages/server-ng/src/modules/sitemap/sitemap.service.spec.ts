@@ -37,6 +37,7 @@ describe('SitemapService', () => {
   let service: SitemapService;
   let configService: ConfigService;
   let hookService: HookService;
+  let settingCoreService: SettingCoreService;
 
   const mockArticles = [
     {
@@ -92,6 +93,7 @@ describe('SitemapService', () => {
     service = module.get<SitemapService>(SitemapService);
     configService = module.get(ConfigService);
     hookService = module.get(HookService);
+    settingCoreService = module.get(SettingCoreService);
 
     // Setup default mocks
     (configService.get as any).mockReturnValue('/tmp/static');
@@ -241,6 +243,102 @@ describe('SitemapService', () => {
       expect(urls).toContain('/category/tech');
       expect(urls).toContain('/tag/js');
       expect(urls).toContain('/page/1');
+    });
+  });
+
+  describe('getPageUrls', () => {
+    it('should fall back to default pageSize when config is null', async () => {
+      // 2 articles mocked in beforeEach, fallback 5 => totalPages=1
+      (settingCoreService.getConfig as any).mockResolvedValueOnce(null);
+      const paths = await service.getPageUrls();
+      expect(paths).toEqual(['/page/1']);
+    });
+
+    it('should fall back to default pageSize when config is non-positive', async () => {
+      (settingCoreService.getConfig as any).mockResolvedValueOnce(0);
+      const paths = await service.getPageUrls();
+      expect(paths).toEqual(['/page/1']);
+    });
+
+    it('should respect configured pageSize when it is a positive number', async () => {
+      (settingCoreService.getConfig as any).mockResolvedValueOnce(10);
+      const paths = await service.getPageUrls();
+      // 2 articles, pageSize 10 => totalPages=1
+      expect(paths).toEqual(['/page/1']);
+    });
+  });
+
+  // Additional cases
+  describe('generateSitemapFn - normalization & hook payload', () => {
+    it('should normalize, same-origin filter, dedupe and sort urls then pass to beforeGenerate', async () => {
+      // ensure FS ok
+      vi.mocked(fs.mkdir).mockResolvedValue(undefined);
+      vi.mocked(fs.writeFile).mockResolvedValue(undefined);
+      vi.mocked(fs.access).mockResolvedValue(undefined);
+
+      // keep baseUrl as default https://example.com
+      (settingCoreService.getConfig as any).mockImplementation(async (key: string) => {
+        if (key === 'baseUrl') return await Promise.resolve('https://example.com');
+        return await Promise.resolve(null);
+      });
+
+      // craft raw urls with mix
+      const rawUrls = [
+        '/',
+        '/b',
+        '/a',
+        '/a',
+        'https://example.com/page/2',
+        'https://example.com',
+        'https://example.com/',
+        'https://example.com/post/abc?x=1',
+        'https://other.com/page/3',
+        '',
+        'post/no-leading-slash',
+      ];
+      vi.spyOn(service, 'getSiteUrls').mockResolvedValue(rawUrls);
+
+      await service.generateSitemapFn('test');
+
+      const expected = ['/', '/a', '/b', '/page/2', '/post/abc', '/post/no-leading-slash'];
+
+      expect(hookService.doAction).toHaveBeenCalledWith(
+        'sitemap|beforeGenerate',
+        expect.objectContaining({
+          urls: expected,
+          siteUrl: 'https://example.com/',
+        }),
+      );
+    });
+  });
+
+  describe('getSiteUrls - extra static paths from settings', () => {
+    it('should include extra static paths from string[] and ignore invalid items', async () => {
+      (settingCoreService.getConfig as any).mockImplementation(async (key: string) => {
+        if (key === 'sitemapExtraStaticPaths')
+          return await Promise.resolve(['/extra', 'invalid', '/more']);
+        if (key === 'baseUrl') return await Promise.resolve('https://example.com');
+        return await Promise.resolve(null);
+      });
+
+      const urls = await service.getSiteUrls();
+
+      expect(urls).toContain('/');
+      expect(urls).toContain('/extra');
+      expect(urls).toContain('/more');
+      expect(urls).not.toContain('invalid');
+    });
+
+    it('should include extra static path from string value', async () => {
+      (settingCoreService.getConfig as any).mockImplementation(async (key: string) => {
+        if (key === 'sitemapExtraStaticPaths') return await Promise.resolve('   /one ');
+        if (key === 'baseUrl') return await Promise.resolve('https://example.com');
+        return await Promise.resolve(null);
+      });
+
+      const urls = await service.getSiteUrls();
+
+      expect(urls).toContain('/one');
     });
   });
 });
