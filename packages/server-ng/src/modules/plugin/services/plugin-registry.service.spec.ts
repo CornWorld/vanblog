@@ -102,6 +102,27 @@ describe('PluginRegistryService', () => {
       expect(provider1).toHaveBeenCalled();
       expect(provider2).toHaveBeenCalled();
     });
+
+    it('should skip providers that exceed timeout and still collect others', async () => {
+      const slowProvider = vi.fn().mockImplementation(async () => {
+        await new Promise<void>((resolve) => {
+          setTimeout(() => {
+            resolve();
+          }, 50);
+        });
+        return { slow: true };
+      });
+      const fastProvider = vi.fn().mockResolvedValue({ fast: true });
+
+      service.register('slow-plugin', slowProvider);
+      service.register('fast-plugin', fastProvider);
+
+      const result = await service.getAllPublicData(10);
+
+      expect(result).toEqual({ 'fast-plugin': { fast: true } });
+      expect(slowProvider).toHaveBeenCalled();
+      expect(fastProvider).toHaveBeenCalled();
+    });
   });
 
   describe('getPluginData', () => {
@@ -128,6 +149,23 @@ describe('PluginRegistryService', () => {
 
       expect(result).toBeNull();
       expect(provider).toHaveBeenCalled();
+    });
+
+    it('should return null when provider exceeds timeout', async () => {
+      const slowProvider = vi.fn().mockImplementation(async () => {
+        await new Promise<void>((resolve) => {
+          setTimeout(() => {
+            resolve();
+          }, 50);
+        });
+        return { data: 'late' };
+      });
+      service.register('slow-plugin', slowProvider);
+
+      const result = await service.getPluginData('slow-plugin', 10);
+
+      expect(result).toBeNull();
+      expect(slowProvider).toHaveBeenCalled();
     });
   });
 });

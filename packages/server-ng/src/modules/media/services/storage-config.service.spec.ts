@@ -1,20 +1,21 @@
 import { describe, it, beforeEach, afterEach, expect, vi } from 'vitest';
 
-import { DatabaseMockBuilder } from '../../../../test/mock-utils';
 import { StorageProvider, type UpdateStorageConfigDto } from '../dto/storage-config.dto';
 
 import { StorageConfigService } from './storage-config.service';
 
-// Note: We instantiate the service directly with a mocked DB connection
-// instead of spinning up Nest testing module, to keep tests fast and focused.
+import type { SettingRegistryService } from '../../setting/services/setting-registry.service';
 
-describe('StorageConfigService', () => {
+describe('StorageConfigService (registry-backed)', () => {
   let service: StorageConfigService;
-  let mockDb: DatabaseMockBuilder;
+  let registry: Pick<SettingRegistryService, 'getConfig' | 'updateConfig'>;
 
   beforeEach(() => {
-    mockDb = new DatabaseMockBuilder();
-    service = new StorageConfigService(mockDb.db as any);
+    registry = {
+      getConfig: vi.fn(),
+      updateConfig: vi.fn(),
+    } as any;
+    service = new StorageConfigService(registry as SettingRegistryService);
   });
 
   afterEach(() => {
@@ -22,54 +23,32 @@ describe('StorageConfigService', () => {
   });
 
   describe('getStorageConfig', () => {
-    it('should return default LOCAL config when no record exists', async () => {
-      // select().from().where().limit(1) -> []
-      mockDb.db.select.mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([]),
-          }),
-        }),
-      });
+    it('should return default LOCAL config via registration when registry returns default', async () => {
+      vi.mocked(registry.getConfig).mockResolvedValue({
+        provider: StorageProvider.LOCAL,
+        enabled: true,
+      } as any);
 
       const result = await service.getStorageConfig();
 
       expect(result).toEqual({ provider: StorageProvider.LOCAL, enabled: true });
-      expect(mockDb.db.select).toHaveBeenCalledOnce();
+      expect(registry.getConfig).toHaveBeenCalledOnce();
     });
 
-    it('should parse and return config when record exists with valid JSON', async () => {
-      const stored = {
-        value: JSON.stringify({
-          provider: StorageProvider.PICGO,
-          enabled: true,
-          baseUrl: '/media',
-        }),
-      };
-
-      mockDb.db.select.mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([stored]),
-          }),
-        }),
-      });
+    it('should return parsed config when registry has value', async () => {
+      vi.mocked(registry.getConfig).mockResolvedValue({
+        provider: StorageProvider.PICGO,
+        enabled: true,
+        baseUrl: '/media',
+      } as any);
 
       const result = await service.getStorageConfig();
 
       expect(result).toEqual({ provider: StorageProvider.PICGO, enabled: true, baseUrl: '/media' });
     });
 
-    it('should return null when record exists but JSON is invalid', async () => {
-      const stored = { value: 'this-is-not-json' };
-
-      mockDb.db.select.mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([stored]),
-          }),
-        }),
-      });
+    it('should return null when registry parsing failed (returns null)', async () => {
+      vi.mocked(registry.getConfig).mockResolvedValue(null);
 
       const result = await service.getStorageConfig();
 
@@ -78,38 +57,22 @@ describe('StorageConfigService', () => {
   });
 
   describe('updateStorageConfig', () => {
-    it('should insert new record when none exists and return newConfig (LOCAL)', async () => {
-      // Mock current config read inside updateStorageConfig
-      vi.spyOn(service, 'getStorageConfig').mockResolvedValue({
+    it('should write new LOCAL config and return newConfig', async () => {
+      vi.mocked(registry.getConfig).mockResolvedValueOnce({
         provider: StorageProvider.LOCAL,
         enabled: true,
       } as any);
 
-      // existing check: select().from().where().limit(1) -> []
-      mockDb.db.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([]),
-          }),
-        }),
-      });
-
       const dto: UpdateStorageConfigDto = {
         provider: StorageProvider.LOCAL,
-        // intentionally do not pass enabled to verify it falls back to current enabled
       } as any;
 
       const result = await service.updateStorageConfig(dto);
 
       expect(result).toEqual({ provider: StorageProvider.LOCAL, enabled: true });
-
-      // verify insert path
-      expect(mockDb.db.insert).toHaveBeenCalledTimes(1);
-      expect(mockDb.db.values).toHaveBeenCalledTimes(1);
-
-      const [[valuesArg]] = mockDb.db.values.mock.calls;
-      expect(valuesArg).toMatchObject({ key: 'storage_config', value: expect.any(String) });
-      const saved = JSON.parse(valuesArg.value);
+      expect(registry.updateConfig).toHaveBeenCalledTimes(1);
+      const [[key, saved]] = vi.mocked(registry.updateConfig).mock.calls as any;
+      expect(key).toBe('storage_config');
       expect(saved).toEqual({
         provider: StorageProvider.LOCAL,
         enabled: true,
@@ -119,28 +82,14 @@ describe('StorageConfigService', () => {
       });
     });
 
-    it('should update existing record when found and return newConfig (PICGO with config)', async () => {
-      // Mock current config read
-      vi.spyOn(service, 'getStorageConfig').mockResolvedValue({
+    it('should update to PICGO and include picgoConfig when provided', async () => {
+      vi.mocked(registry.getConfig).mockResolvedValueOnce({
         provider: StorageProvider.LOCAL,
-        enabled: false, // ensure fallback works when dto.enabled is undefined
+        enabled: false,
       } as any);
-
-      // existing check -> found
-      const existing = [
-        { value: JSON.stringify({ provider: StorageProvider.LOCAL, enabled: true }) },
-      ];
-      mockDb.db.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue(existing),
-          }),
-        }),
-      });
 
       const dto: UpdateStorageConfigDto = {
         provider: StorageProvider.PICGO,
-        // enabled not provided => should fallback to current (false)
         picgoConfig: { uploader: 'smms', config: { token: 'xxx', folder: 'blog' } },
       } as any;
 
@@ -152,15 +101,8 @@ describe('StorageConfigService', () => {
         picgoConfig: { uploader: 'smms', config: { token: 'xxx', folder: 'blog' } },
       });
 
-      // verify update path
-      expect(mockDb.db.update).toHaveBeenCalledTimes(1);
-      expect(mockDb.db.set).toHaveBeenCalledTimes(1);
-      const [[setArg]] = mockDb.db.set.mock.calls;
-      expect(setArg).toMatchObject({ value: expect.any(String), updatedAt: expect.any(String) });
-      // updatedAt is ISO string
-      expect(typeof setArg.updatedAt).toBe('string');
-      expect(() => new Date(setArg.updatedAt).toISOString()).not.toThrow();
-      const saved = JSON.parse(setArg.value);
+      expect(registry.updateConfig).toHaveBeenCalledTimes(1);
+      const [[, saved]] = vi.mocked(registry.updateConfig).mock.calls as any;
       expect(saved).toEqual({
         provider: StorageProvider.PICGO,
         enabled: false,
@@ -170,34 +112,22 @@ describe('StorageConfigService', () => {
       });
     });
 
-    it('should not include picgoConfig when provider is LOCAL even if provided in dto', async () => {
-      vi.spyOn(service, 'getStorageConfig').mockResolvedValue({
+    it('should ignore picgoConfig when provider is LOCAL', async () => {
+      vi.mocked(registry.getConfig).mockResolvedValueOnce({
         provider: StorageProvider.PICGO,
         enabled: true,
       } as any);
 
-      // existing check -> found
-      mockDb.db.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([{ value: '{}' }]),
-          }),
-        }),
-      });
-
       const dto: UpdateStorageConfigDto = {
         provider: StorageProvider.LOCAL,
         enabled: true,
-        // even if provided, should be ignored when provider is LOCAL
         picgoConfig: { uploader: 'whatever', config: { a: 1 } },
       } as any;
 
       const result = await service.updateStorageConfig(dto);
 
       expect(result).toEqual({ provider: StorageProvider.LOCAL, enabled: true });
-
-      const [[setArg]] = mockDb.db.set.mock.calls;
-      const saved = JSON.parse(setArg.value);
+      const [[, saved]] = vi.mocked(registry.updateConfig).mock.calls as any;
       expect(saved).toEqual({
         provider: StorageProvider.LOCAL,
         enabled: true,
@@ -209,14 +139,11 @@ describe('StorageConfigService', () => {
   });
 
   describe('getFullStorageConfig', () => {
-    it('should return default when no record exists', async () => {
-      mockDb.db.select.mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([]),
-          }),
-        }),
-      });
+    it('should return default when registry returns default', async () => {
+      vi.mocked(registry.getConfig).mockResolvedValueOnce({
+        provider: StorageProvider.LOCAL,
+        enabled: true,
+      } as any);
 
       const result = await service.getFullStorageConfig();
 

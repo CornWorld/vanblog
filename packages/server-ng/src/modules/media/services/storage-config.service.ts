@@ -1,43 +1,26 @@
-import { Injectable, Inject } from '@nestjs/common';
-import { eq } from 'drizzle-orm';
+import { Injectable } from '@nestjs/common';
 
-import { DATABASE_CONNECTION, type Database } from '../../../database';
-import { siteMeta } from '../../../database/schema';
-import { safeParseJson, dataSchemas } from '../../../shared/zod';
+import { SettingRegistryService } from '../../setting/services/setting-registry.service';
 import {
   UpdateStorageConfigDto,
   StorageConfigResponseDto,
   StorageProvider,
+  STORAGE_CONFIG_KEY,
 } from '../dto/storage-config.dto';
-
-const STORAGE_CONFIG_KEY = 'storage_config';
 
 @Injectable()
 export class StorageConfigService {
-  constructor(
-    @Inject(DATABASE_CONNECTION)
-    private readonly db: Database,
-  ) {}
+  constructor(private readonly registry: SettingRegistryService) {}
 
   async getStorageConfig(): Promise<StorageConfigResponseDto> {
-    const result = await this.db
-      .select()
-      .from(siteMeta)
-      .where(eq(siteMeta.key, STORAGE_CONFIG_KEY))
-      .limit(1);
-
-    if (result.length === 0) {
-      return {
+    const stored = await this.registry.getConfig<StorageConfigResponseDto>(STORAGE_CONFIG_KEY);
+    // Provide safe default to guarantee non-null return
+    return (
+      stored ?? {
         provider: StorageProvider.LOCAL,
         enabled: true,
-      };
-    }
-
-    const config = safeParseJson(
-      result[0].value ?? '{}',
-      dataSchemas.genericObject,
-    ) as unknown as StorageConfigResponseDto;
-    return config;
+      }
+    );
   }
 
   async updateStorageConfig(updateDto: UpdateStorageConfigDto): Promise<StorageConfigResponseDto> {
@@ -69,49 +52,20 @@ export class StorageConfigService {
       localPath: newConfig.localPath,
       baseUrl: newConfig.baseUrl,
       picgoConfig: newConfig.picgoConfig,
-    };
+    } satisfies StorageConfigResponseDto;
 
-    const existing = await this.db
-      .select()
-      .from(siteMeta)
-      .where(eq(siteMeta.key, STORAGE_CONFIG_KEY))
-      .limit(1);
-
-    if (existing.length > 0) {
-      await this.db
-        .update(siteMeta)
-        .set({
-          value: JSON.stringify(fullConfig),
-          updatedAt: new Date().toISOString(),
-        })
-        .where(eq(siteMeta.key, STORAGE_CONFIG_KEY));
-    } else {
-      await this.db.insert(siteMeta).values({
-        key: STORAGE_CONFIG_KEY,
-        value: JSON.stringify(fullConfig),
-      });
-    }
+    await this.registry.updateConfig(STORAGE_CONFIG_KEY, fullConfig);
 
     return newConfig;
   }
 
   async getFullStorageConfig(): Promise<StorageConfigResponseDto> {
-    const result = await this.db
-      .select()
-      .from(siteMeta)
-      .where(eq(siteMeta.key, STORAGE_CONFIG_KEY))
-      .limit(1);
-
-    if (result.length === 0) {
-      return {
+    const stored = await this.registry.getConfig<StorageConfigResponseDto>(STORAGE_CONFIG_KEY);
+    return (
+      stored ?? {
         provider: StorageProvider.LOCAL,
         enabled: true,
-      };
-    }
-
-    return safeParseJson(
-      result[0].value ?? '{}',
-      dataSchemas.genericObject,
-    ) as unknown as StorageConfigResponseDto;
+      }
+    );
   }
 }

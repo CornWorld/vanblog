@@ -7,10 +7,10 @@ import { eq, and, desc } from 'drizzle-orm';
 import { Feed } from 'feed';
 
 import { DATABASE_CONNECTION, type Database } from '../../database';
-import { articles, siteMeta } from '../../database/schema';
+import { articles } from '../../database/schema';
 import { MarkdownService } from '../../shared/services/markdown.service';
-import { safeParseJson, dataSchemas } from '../../shared/zod';
 import { HookService } from '../plugin/services/hook.service';
+import { SettingCoreService, type SiteInfo } from '../setting/services/setting-core.service';
 
 @Injectable()
 export class RssService {
@@ -22,6 +22,7 @@ export class RssService {
     private readonly configService: ConfigService,
     private readonly markdownService: MarkdownService,
     private readonly hookService: HookService,
+    private readonly settingCoreService: SettingCoreService,
   ) {}
 
   /**
@@ -47,6 +48,13 @@ export class RssService {
   async generateRssFeedFn(info?: string): Promise<void> {
     this.logger.log(`${info ?? ''}重新生成 RSS 订阅`);
     try {
+      // 检查是否开启 RSS
+      const showRSS = await this.settingCoreService.getConfig<boolean>('showRSS', true);
+      if (showRSS === false) {
+        this.logger.log('RSS 功能已关闭，跳过生成');
+        return;
+      }
+
       // 获取所有公开文章
       const articleResults = await this.db
         .select()
@@ -54,31 +62,39 @@ export class RssService {
         .where(and(eq(articles.hidden, false), eq(articles.private, false)))
         .orderBy(desc(articles.createdAt));
 
-      // 获取站点元数据和设置数据
-      const siteMetaResults = await this.db.select().from(siteMeta);
-      const siteData = siteMetaResults.reduce<Record<string, string | undefined>>((acc, meta) => {
-        const parsedValue = safeParseJson(meta.value, dataSchemas.genericObject);
-        acc[meta.key] = typeof parsedValue === 'string' ? parsedValue : (meta.value ?? undefined);
-        return acc;
-      }, {});
+      // 读取站点配置
+      const [
+        baseUrlCfg,
+        siteInfoCfg,
+        walineCfg,
+        authorEmailCfg,
+        faviconUrlCfg,
+        siteLogoUrlCfg,
+        authorLogoCfg,
+      ] = await Promise.all([
+        this.settingCoreService.getConfig<string>('baseUrl', 'http://localhost:3000'),
+        this.settingCoreService.getConfig<SiteInfo>('siteInfo'),
+        this.settingCoreService.getConfig<unknown>('waline'),
+        this.settingCoreService.getConfig<string>('authorEmail'),
+        this.settingCoreService.getConfig<string>('favicon', ''),
+        this.settingCoreService.getConfig<string>('siteLogo', ''),
+        this.settingCoreService.getConfig<string>('authorLogo', ''),
+      ]);
 
-      // 构建站点信息
+      const siteUrl = this.washUrl(baseUrlCfg ?? 'http://localhost:3000');
+
       const siteInfo = {
-        siteName: siteData.siteName ?? 'VanBlog',
-        siteDesc: siteData.siteDesc ?? 'A simple blog',
-        baseUrl: siteData.baseUrl ?? 'http://localhost:3000',
-        author: siteData.author ?? 'Admin',
-        siteLogo: siteData.siteLogo ?? '',
-        favicon: siteData.favicon ?? '',
-        authorLogo: siteData.authorLogo ?? '',
+        siteName: siteInfoCfg?.title ?? 'VanBlog',
+        siteDesc: siteInfoCfg?.description ?? 'A simple blog',
+        author: siteInfoCfg?.author ?? 'Admin',
+        siteLogo: siteLogoUrlCfg ?? '',
+        favicon: faviconUrlCfg ?? '',
+        authorLogo: authorLogoCfg ?? '',
       };
 
       // 获取作者邮箱
-      let email = process.env.EMAIL ?? siteData.authorEmail ?? undefined;
-      const walineConfig =
-        typeof siteData.waline === 'string'
-          ? safeParseJson(siteData.waline, dataSchemas.genericObject)
-          : null;
+      let email = process.env.EMAIL ?? authorEmailCfg ?? undefined;
+      const walineConfig = walineCfg ?? null;
       if (
         walineConfig !== null &&
         typeof walineConfig === 'object' &&
@@ -90,10 +106,9 @@ export class RssService {
       const author = {
         name: siteInfo.author,
         email,
-        link: siteInfo.baseUrl,
+        link: siteUrl,
       };
 
-      const siteUrl = this.washUrl(siteInfo.baseUrl);
       const { favicon: faviconUrl, siteLogo: siteLogoUrl, authorLogo } = siteInfo;
 
       let favicon = `${siteUrl}logo.svg`;

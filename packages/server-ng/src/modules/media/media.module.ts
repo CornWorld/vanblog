@@ -11,6 +11,11 @@ import {
   MEDIA_PROCESSING_CONFIG_KEY,
   MediaProcessingSettingsSchema,
 } from './dto/media-settings.dto';
+import {
+  StorageConfigResponseSchema,
+  StorageProvider,
+  STORAGE_CONFIG_KEY,
+} from './dto/storage-config.dto';
 import { MediaController } from './media.controller';
 import { ImageProcessingService } from './services/image-processing.service';
 import { MediaService } from './services/media.service';
@@ -43,6 +48,19 @@ import { PicgoStorageService } from './services/storages/picgo-storage.service';
           defaultValue: MediaProcessingSettingsSchema.parse({}),
           validator: (value: unknown) => MediaProcessingSettingsSchema.safeParse(value).success,
           description: 'Global media processing settings (compression, watermark, format, etc.)',
+        });
+        return true;
+      },
+    },
+    {
+      provide: 'STORAGE_CONFIG_REGISTRATION',
+      inject: [SettingRegistryService],
+      useFactory: (registry: SettingRegistryService) => {
+        registry.registerConfig({
+          key: STORAGE_CONFIG_KEY,
+          defaultValue: { provider: StorageProvider.LOCAL, enabled: true },
+          validator: (value: unknown) => StorageConfigResponseSchema.safeParse(value).success,
+          description: 'Storage provider configuration (local/picgo)',
         });
         return true;
       },

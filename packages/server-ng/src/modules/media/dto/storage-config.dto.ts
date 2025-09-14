@@ -1,6 +1,9 @@
 import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
 
+// 存储配置键（集中导出，避免重复定义）
+export const STORAGE_CONFIG_KEY = 'storage_config';
+
 // 存储提供商枚举
 export enum StorageProvider {
   LOCAL = 'local',

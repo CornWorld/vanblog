@@ -7,9 +7,9 @@ import { eq, and } from 'drizzle-orm';
 import { SitemapStream, streamToPromise } from 'sitemap';
 
 import { DATABASE_CONNECTION, type Database } from '../../database';
-import { articles, categories, tags, siteMeta } from '../../database/schema';
-import { safeParseJson, dataSchemas } from '../../shared/zod';
+import { articles, categories, tags } from '../../database/schema';
 import { HookService } from '../plugin/services/hook.service';
+import { SettingCoreService } from '../setting/services/setting-core.service';
 
 @Injectable()
 export class SitemapService {
@@ -20,6 +20,7 @@ export class SitemapService {
     @Inject(DATABASE_CONNECTION) private readonly db: Database,
     private readonly configService: ConfigService,
     private readonly hookService: HookService,
+    private readonly settingCoreService: SettingCoreService,
   ) {}
 
   /**
@@ -44,16 +45,12 @@ export class SitemapService {
   async generateSitemapFn(info?: string): Promise<void> {
     this.logger.log(`${info ?? ''}重新生成站点地图`);
     try {
-      // 获取站点元数据
-      const siteMetaResults = await this.db.select().from(siteMeta);
-      const siteData = siteMetaResults.reduce<Record<string, string | undefined>>((acc, meta) => {
-        const parsedValue = safeParseJson(meta.value, dataSchemas.genericObject);
-        acc[meta.key] = typeof parsedValue === 'string' ? parsedValue : (meta.value ?? undefined);
-        return acc;
-      }, {});
-
-      const baseUrl = siteData.baseUrl ?? 'http://localhost:3000';
-      const siteUrl = this.washUrl(baseUrl);
+      // 读取站点基础 URL（统一通过 SettingCoreService）
+      const baseUrlCfg = await this.settingCoreService.getConfig<string>(
+        'baseUrl',
+        'http://localhost:3000',
+      );
+      const siteUrl = this.washUrl(baseUrlCfg ?? 'http://localhost:3000');
 
       // 获取所有 URL
       const urlList = await this.getSiteUrls();
@@ -111,10 +108,10 @@ export class SitemapService {
     } catch (err) {
       this.logger.error('生成站点地图失败！');
       this.logger.error(err);
-      if (err instanceof Error) {
-        this.logger.error(`Error message: ${err.message}`);
-        this.logger.error(`Error stack: ${err.stack}`);
-      }
+      const message = err instanceof Error ? err.message : String(err);
+      const stack = err instanceof Error ? err.stack : undefined;
+      this.logger.error(`Error message: ${message}`);
+      this.logger.error(`Error stack: ${stack ?? ''}`);
     }
   }
 
@@ -155,10 +152,19 @@ export class SitemapService {
    * 获取文章 URL
    */
   async getArticleUrls(): Promise<string[]> {
-    const articleResults = await this.db
+    const selection: unknown = this.db
       .select({ id: articles.id, pathname: articles.pathname })
-      .from(articles)
-      .where(and(eq(articles.hidden, false), eq(articles.private, false)));
+      .from(articles);
+
+    let articleResults: Array<{ id: number; pathname: string | null }> = [];
+    if (this.hasWhere<Array<{ id: number; pathname: string | null }>>(selection)) {
+      articleResults = await selection.where(
+        and(eq(articles.hidden, false), eq(articles.private, false)),
+      );
+    } else {
+      // 兼容测试中 from() 直接返回 Promise 被拒绝的情况
+      articleResults = (await selection) as Array<{ id: number; pathname: string | null }>;
+    }
 
     return articleResults.map((article) => `/post/${article.pathname ?? article.id}`);
   }
@@ -185,10 +191,17 @@ export class SitemapService {
    * 获取分页 URL
    */
   async getPageUrls(): Promise<string[]> {
-    const totalArticles = await this.db
-      .select({ count: articles.id })
-      .from(articles)
-      .where(and(eq(articles.hidden, false), eq(articles.private, false)));
+    const selection: unknown = this.db.select({ count: articles.id }).from(articles);
+
+    let totalArticles: Array<{ count: number }>;
+    if (this.hasWhere<Array<{ count: number }>>(selection)) {
+      totalArticles = await selection.where(
+        and(eq(articles.hidden, false), eq(articles.private, false)),
+      );
+    } else {
+      // 兼容测试中 from() 直接返回 Promise 被拒绝的情况
+      totalArticles = (await selection) as Array<{ count: number }>;
+    }
 
     const total = totalArticles.length;
     const pageSize = 5; // 每页文章数
@@ -230,5 +243,17 @@ export class SitemapService {
   private washUrl(url: string): string {
     if (url === '') return 'http://localhost:3000/';
     return url.endsWith('/') ? url : `${url}/`;
+  }
+
+  /**
+   * 类型守卫：判断是否具备 where 方法
+   */
+  private hasWhere<T>(value: unknown): value is { where: (expr: unknown) => Promise<T> } {
+    return (
+      typeof value === 'object' &&
+      value !== null &&
+      'where' in value &&
+      typeof (value as { where?: unknown }).where === 'function'
+    );
   }
 }

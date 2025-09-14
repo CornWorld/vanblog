@@ -31,13 +31,45 @@ export class PluginRegistryService {
   private readonly registrations = new Map<string, PluginRegistration>();
 
   /**
+   * 在可选超时时间内执行 provider
+   * - timeoutMs <= 0 或未提供 => 不设超时
+   */
+  private async runProviderWithOptionalTimeout<T>(
+    fn: PublicDataProvider<T>,
+    timeoutMs?: number,
+  ): Promise<T> {
+    if (timeoutMs === undefined || timeoutMs <= 0 || !Number.isFinite(timeoutMs)) {
+      return await fn();
+    }
+
+    return await new Promise<T>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        reject(new Error(`Provider timed out after ${timeoutMs}ms`));
+      }, timeoutMs);
+
+      Promise.resolve()
+        .then(async () => fn())
+        .then(
+          (val) => {
+            clearTimeout(timer);
+            resolve(val);
+          },
+          (err: unknown) => {
+            clearTimeout(timer);
+            reject(err instanceof Error ? err : new Error(String(err)));
+          },
+        );
+    });
+  }
+
+  /**
    * 注册插件的公共数据提供者
    *
    * @param pluginName 插件名称
    * @param provider 数据提供者函数
    * @param priority 优先级，默认为 10
    */
-  register<T = unknown>(pluginName: string, provider: PublicDataProvider<T>, priority = 10): void {
+  register<T>(pluginName: string, provider: PublicDataProvider<T>, priority = 10): void {
     if (pluginName === '' || typeof pluginName !== 'string') {
       throw new Error('Plugin name must be a non-empty string');
     }
@@ -101,9 +133,10 @@ export class PluginRegistryService {
    * 按优先级顺序执行所有插件的数据提供者，收集结果
    * 失败的插件会被跳过，不影响其他插件
    *
+   * @param timeoutMs 可选的超时毫秒数；未提供或 <=0 表示不设超时
    * @returns 插件数据对象，键为插件名称，值为插件数据
    */
-  async getAllPublicData(): Promise<Record<string, unknown>> {
+  async getAllPublicData(timeoutMs?: number): Promise<Record<string, unknown>> {
     const sortedRegistrations = Array.from(this.registrations.values()).sort(
       (a, b) => a.priority - b.priority,
     );
@@ -113,7 +146,7 @@ export class PluginRegistryService {
     // 并行执行所有插件的数据提供者
     const promises = sortedRegistrations.map(async (registration) => {
       try {
-        const data = await registration.provider();
+        const data = await this.runProviderWithOptionalTimeout(registration.provider, timeoutMs);
         return { name: registration.name, data };
       } catch (error) {
         this.logger.error(
@@ -143,17 +176,19 @@ export class PluginRegistryService {
    * 获取特定插件的公共数据
    *
    * @param pluginName 插件名称
+   * @param timeoutMs 可选的超时毫秒数；未提供或 <=0 表示不设超时
    * @returns 插件数据，如果插件不存在或执行失败则返回 null
    */
-  async getPluginData<T = unknown>(pluginName: string): Promise<T | null> {
+  async getPluginData<T>(pluginName: string, timeoutMs?: number): Promise<T | null> {
     const registration = this.registrations.get(pluginName);
     if (!registration) {
       return null;
     }
 
     try {
-      const data = await registration.provider();
-      return data as T;
+      const provider = registration.provider as PublicDataProvider<T>;
+      const data = await this.runProviderWithOptionalTimeout(provider, timeoutMs);
+      return data;
     } catch (error) {
       this.logger.error(
         `Failed to get data from plugin '${pluginName}': ${error instanceof Error ? error.message : String(error)}`,

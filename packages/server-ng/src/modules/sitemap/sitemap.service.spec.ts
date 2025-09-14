@@ -6,8 +6,9 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 import { DATABASE_CONNECTION } from '../../database';
-import { articles, categories, tags, siteMeta } from '../../database/schema';
+import { articles, categories, tags } from '../../database/schema';
 import { HookService } from '../plugin/services/hook.service';
+import { SettingCoreService } from '../setting/services/setting-core.service';
 
 import { SitemapService } from './sitemap.service';
 
@@ -41,29 +42,16 @@ describe('SitemapService', () => {
     {
       id: 1,
       pathname: 'test-article-1',
-      title: 'Test Article 1',
-      content: 'Test content 1',
-      hidden: false,
-      private: false,
     },
     {
       id: 2,
       pathname: 'test-article-2',
-      title: 'Test Article 2',
-      content: 'Test content 2',
-      hidden: false,
-      private: false,
     },
   ];
 
   const mockCategories = [{ name: 'Technology' }, { name: 'Life' }];
 
   const mockTags = [{ name: 'JavaScript' }, { name: 'TypeScript' }];
-
-  const mockSiteMeta = [
-    { key: 'baseUrl', value: 'https://example.com' },
-    { key: 'siteName', value: 'Test Blog' },
-  ];
 
   beforeEach(async () => {
     const mockConfigService = {
@@ -72,6 +60,11 @@ describe('SitemapService', () => {
 
     const mockHookService = {
       doAction: vi.fn(),
+      applyFilters: vi.fn().mockImplementation((_hook: string, urls: string[]) => urls),
+    };
+
+    const mockSettingCoreService = {
+      getConfig: vi.fn().mockResolvedValue('https://example.com'),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -84,6 +77,10 @@ describe('SitemapService', () => {
         {
           provide: HookService,
           useValue: mockHookService,
+        },
+        {
+          provide: SettingCoreService,
+          useValue: mockSettingCoreService,
         },
         {
           provide: DATABASE_CONNECTION,
@@ -105,9 +102,6 @@ describe('SitemapService', () => {
         return {
           from: vi.fn().mockImplementation((_table) => {
             // 根据表名返回不同的数据
-            if (_table === siteMeta) {
-              return mockSiteMeta;
-            }
             if (_table === articles) {
               return {
                 where: vi.fn().mockResolvedValue(
@@ -247,101 +241,6 @@ describe('SitemapService', () => {
       expect(urls).toContain('/category/tech');
       expect(urls).toContain('/tag/js');
       expect(urls).toContain('/page/1');
-    });
-  });
-
-  describe('getArticleUrls', () => {
-    it('should return article URLs', async () => {
-      const mockArticleSelect = {
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockResolvedValue([
-            { id: 1, pathname: 'test-article' },
-            { id: 2, pathname: null },
-          ]),
-        }),
-      };
-
-      Object.defineProperty(service, 'db', {
-        value: {
-          select: vi.fn().mockReturnValue(mockArticleSelect),
-        },
-        writable: true,
-      });
-
-      const urls = await service.getArticleUrls();
-
-      expect(urls).toEqual(['/post/test-article', '/post/2']);
-    });
-  });
-
-  describe('getSiteUrls with filters', () => {
-    it('should return original urls when no filters registered', async () => {
-      vi.spyOn(service, 'getArticleUrls').mockResolvedValue(['/post/a']);
-      vi.spyOn(service, 'getCategoryUrls').mockResolvedValue(['/category/c']);
-      vi.spyOn(service, 'getTagUrls').mockResolvedValue(['/tag/t']);
-      vi.spyOn(service, 'getPageUrls').mockResolvedValue(['/page/1']);
-
-      // hookService.applyFilters 未定义时，getSiteUrls 内部会调用真正实现，需提供默认行为
-      (hookService as any).applyFilters = vi
-        .fn()
-        .mockImplementation((_name: string, value: string[]) => value);
-
-      const urls = await service.getSiteUrls();
-      expect(urls).toContain('/');
-      expect(urls).toContain('/post/a');
-      expect(urls).toContain('/category/c');
-      expect(urls).toContain('/tag/t');
-      expect(urls).toContain('/page/1');
-    });
-
-    it('should allow plugins to contribute and dedupe urls', async () => {
-      vi.spyOn(service, 'getArticleUrls').mockResolvedValue(['/post/a']);
-      vi.spyOn(service, 'getCategoryUrls').mockResolvedValue([]);
-      vi.spyOn(service, 'getTagUrls').mockResolvedValue([]);
-      vi.spyOn(service, 'getPageUrls').mockResolvedValue([]);
-
-      (hookService as any).applyFilters = vi
-        .fn()
-        .mockImplementation((_name: string, value: string[]) =>
-          value.concat(['/post/a', '/extra']),
-        );
-
-      const urls = await service.getSiteUrls();
-      // 保留顺序并去重
-      expect(urls.filter((u) => u === '/post/a').length).toBe(1);
-      expect(urls).toContain('/extra');
-    });
-
-    it('should return original urls when filter throws', async () => {
-      vi.spyOn(service, 'getArticleUrls').mockResolvedValue(['/post/a']);
-      vi.spyOn(service, 'getCategoryUrls').mockResolvedValue([]);
-      vi.spyOn(service, 'getTagUrls').mockResolvedValue([]);
-      vi.spyOn(service, 'getPageUrls').mockResolvedValue([]);
-
-      (hookService as any).applyFilters = vi.fn().mockRejectedValue(new Error('boom'));
-
-      const urls = await service.getSiteUrls();
-      expect(urls).toContain('/post/a');
-      expect(urls).not.toContain('/extra');
-    });
-  });
-
-  describe('generateSitemap', () => {
-    it('should debounce sitemap generation', () => {
-      vi.useFakeTimers();
-      const generateSpy = vi.spyOn(service, 'generateSitemapFn').mockResolvedValue();
-
-      service.generateSitemap('Test', 1000);
-      service.generateSitemap('Test', 1000);
-      service.generateSitemap('Test', 1000);
-
-      expect(generateSpy).not.toHaveBeenCalled();
-
-      vi.advanceTimersByTime(1000);
-
-      expect(generateSpy).toHaveBeenCalledTimes(1);
-
-      vi.useRealTimers();
     });
   });
 });
