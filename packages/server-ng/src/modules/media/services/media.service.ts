@@ -39,9 +39,7 @@ export class MediaService {
     const filename = filteredData.customFilename ?? file.originalname;
     const storageService = await this.storageFactoryService.getStorageService();
 
-    const { filename: uploadedFilename, url } = await storageService.upload(file, filename);
-
-    // 获取图像尺寸信息
+    // 获取图像尺寸信息（在上传前处理，避免重复处理）
     let width: number | undefined;
     let height: number | undefined;
 
@@ -57,23 +55,60 @@ export class MediaService {
     const widthOrNull: number | null = typeof width === 'number' ? width : null;
     const heightOrNull: number | null = typeof height === 'number' ? height : null;
 
-    const [result] = await this.db
-      .insert(staticFiles)
-      .values({
-        filename: uploadedFilename,
-        path: url,
-        size: file.size,
-        mimeType: file.mimetype,
-        width: widthOrNull,
-        height: heightOrNull,
-        provider: (filteredData as { provider?: string }).provider ?? provider,
-      })
-      .returning();
+    // Linus 式原子操作：要么全部成功，要么全部失败
+    return await this.db.transaction(async (tx) => {
+      let uploadResult: { filename: string; url: string };
 
-    // Trigger webhook event
-    await this.hookService.doAction('media|uploaded', { file: result });
+      try {
+        // 第一步：上传到存储
+        uploadResult = await storageService.upload(file, filename);
+      } catch (uploadError) {
+        // 存储失败，直接抛出错误，不需要清理
+        this.logger.error('Storage upload failed', String(uploadError));
+        throw uploadError;
+      }
 
-    return result;
+      try {
+        // 第二步：插入数据库记录
+        const [result] = await tx
+          .insert(staticFiles)
+          .values({
+            filename: uploadResult.filename,
+            path: uploadResult.url,
+            size: file.size,
+            mimeType: file.mimetype,
+            width: widthOrNull,
+            height: heightOrNull,
+            provider: (filteredData as { provider?: string }).provider ?? provider,
+          })
+          .returning();
+
+        // 第三步：触发钩子（在事务内，确保一致性）
+        try {
+          await this.hookService.doAction('media|uploaded', { file: result });
+        } catch (hookError) {
+          // 钩子失败不应该影响主流程，只记录日志
+          this.logger.warn('Upload hook failed', String(hookError));
+        }
+
+        return result;
+      } catch (dbError) {
+        // 数据库操作失败，需要清理已上传的文件
+        this.logger.error('Database insert failed, cleaning up uploaded file', String(dbError));
+
+        try {
+          await storageService.delete(uploadResult.filename);
+        } catch (cleanupError) {
+          // 清理失败也要记录，但不影响原始错误的抛出
+          this.logger.error(
+            'Failed to cleanup uploaded file after database error',
+            String(cleanupError),
+          );
+        }
+
+        throw dbError;
+      }
+    });
   }
 
   async listFiles(query: ListStaticFilesDto): Promise<{
@@ -217,6 +252,11 @@ export class MediaService {
   ): Promise<{ success: boolean; deletedCount: number; message: string }> {
     if (ids.length === 0) {
       throw new BadRequestException('No file IDs provided');
+    }
+
+    // Linus 式限制：防止一次删除过多文件导致系统负载过高
+    if (ids.length > 100) {
+      throw new BadRequestException('Cannot delete more than 100 files at once');
     }
 
     const files = await this.db.select().from(staticFiles).where(inArray(staticFiles.id, ids));

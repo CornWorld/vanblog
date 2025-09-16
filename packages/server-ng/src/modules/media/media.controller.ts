@@ -45,6 +45,10 @@ import {
   UpdateStorageConfigSchema,
 } from './dto/storage-config.dto';
 import { UploadFileDto, UploadFile } from './dto/upload-file.dto';
+import {
+  ImageProcessingQueueService,
+  type QueueTask,
+} from './services/image-processing-queue.service';
 import { ImageProcessingService } from './services/image-processing.service';
 import { MediaService } from './services/media.service';
 import { StorageConfigService } from './services/storage-config.service';
@@ -61,6 +65,7 @@ export class MediaController {
   constructor(
     private readonly mediaService: MediaService,
     private readonly imageProcessingService: ImageProcessingService,
+    private readonly imageProcessingQueueService: ImageProcessingQueueService,
     private readonly storageConfigService: StorageConfigService,
     private readonly settingRegistry: SettingRegistryService,
   ) {}
@@ -130,11 +135,65 @@ export class MediaController {
   async uploadFile(
     @UploadedFile() file: Express.Multer.File,
     @Body() uploadFileDto: UploadFileDto,
-  ): Promise<typeof staticFiles.$inferSelect> {
-    let processedBuffer = file.buffer;
-
+  ): Promise<
+    | typeof staticFiles.$inferSelect
+    | (typeof staticFiles.$inferSelect & { taskId: number; status: string })
+  > {
     const globalConfig = await this.getMediaProcessingConfig();
     const config = this.mergeConfigOverride(globalConfig, uploadFileDto.processing);
+
+    // 如果启用异步处理且是图片文件（非SVG）
+    if (
+      uploadFileDto.async &&
+      file.mimetype.startsWith('image/') &&
+      file.mimetype !== 'image/svg+xml' &&
+      (config.watermark.enabled || config.compress.enabled)
+    ) {
+      // 先上传原始文件
+      const uploadedFile = await this.mediaService.uploadFile(
+        file,
+        uploadFileDto.filename,
+        uploadFileDto.provider,
+      );
+
+      // 添加到处理队列
+      const processingOptions = {
+        watermark: config.watermark.enabled
+          ? {
+              text: config.watermark.text,
+              position: config.watermark.position,
+              opacity: config.watermark.opacity,
+            }
+          : undefined,
+        compress: config.compress.enabled
+          ? {
+              quality: config.compress.quality,
+              maxWidth: config.compress.maxWidth,
+              maxHeight: config.compress.maxHeight,
+              format: config.compress.format,
+              progressive: config.compress.progressive,
+              optimizeForWeb: config.compress.optimizeForWeb,
+              removeMetadata: config.compress.removeMetadata,
+              fit: config.compress.fit,
+            }
+          : undefined,
+      };
+
+      const task = await this.imageProcessingQueueService.addTask(
+        uploadedFile.id,
+        processingOptions,
+        file.buffer,
+      );
+
+      return {
+        ...uploadedFile,
+        taskId: task.id,
+        status: 'processing',
+      } as typeof staticFiles.$inferSelect & { taskId: number; status: string };
+    }
+
+    // 同步处理（原有逻辑）
+    let processedBuffer = file.buffer;
 
     // 针对图片类型执行处理（水印 -> 压缩），SVG 跳过
     if (file.mimetype.startsWith('image/') && file.mimetype !== 'image/svg+xml') {
@@ -579,6 +638,62 @@ export class MediaController {
 
     const saved = await this.mediaService.uploadFile(file, filename);
     return saved;
+  }
+
+  /**
+   * 获取队列任务状态
+   *
+   * 根据任务ID查询图片处理队列中的任务状态。
+   *
+   * @param taskId 任务ID
+   * @returns 任务状态信息
+   */
+  @Get('queue/task/:taskId')
+  @Perm('media', ['read'])
+  @ApiOperation({ summary: '获取队列任务状态' })
+  @ApiResponse({ status: 200, description: '获取成功' })
+  async getTaskStatus(@Param('taskId', ParseIntPipe) taskId: number): Promise<QueueTask> {
+    const task = await this.imageProcessingQueueService.getTaskStatus(taskId);
+    if (!task) {
+      throw new BadRequestException('任务不存在');
+    }
+    return task;
+  }
+
+  /**
+   * 获取文件的所有队列任务
+   *
+   * 根据文件ID查询该文件的所有处理任务。
+   *
+   * @param fileId 文件ID
+   * @returns 任务列表
+   */
+  @Get('queue/file/:fileId')
+  @Perm('media', ['read'])
+  @ApiOperation({ summary: '获取文件的所有队列任务' })
+  @ApiResponse({ status: 200, description: '获取成功' })
+  async getFileQueueTasks(@Param('fileId', ParseIntPipe) fileId: number): Promise<QueueTask[]> {
+    return await this.imageProcessingQueueService.getTasksByFileId(fileId);
+  }
+
+  /**
+   * 获取队列统计信息
+   *
+   * 获取图片处理队列的统计信息，包括各状态任务数量。
+   *
+   * @returns 队列统计信息
+   */
+  @Get('queue/stats')
+  @Perm('media', ['read'])
+  @ApiOperation({ summary: '获取队列统计信息' })
+  @ApiResponse({ status: 200, description: '获取成功' })
+  async getQueueStats(): Promise<{
+    pending: number;
+    processing: number;
+    completed: number;
+    failed: number;
+  }> {
+    return await this.imageProcessingQueueService.getQueueStats();
   }
 
   private extFromMime(mime: string): string {

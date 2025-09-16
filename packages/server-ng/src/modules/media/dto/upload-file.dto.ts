@@ -12,6 +12,16 @@ export const UploadFileSchema = z.object({
     .union([MediaProcessingOverrideSchema, z.string()])
     .optional()
     .describe('处理配置覆盖（JSON 对象或字符串）'),
+  async: z
+    .union([z.boolean(), z.string()])
+    .optional()
+    .transform((val) => {
+      if (typeof val === 'string') {
+        return val === 'true';
+      }
+      return val ?? false;
+    })
+    .describe('是否使用异步处理队列'),
 });
 
 export class UploadFileDto extends createZodDto(UploadFileSchema) {

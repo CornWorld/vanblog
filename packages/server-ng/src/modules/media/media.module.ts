@@ -17,6 +17,7 @@ import {
   STORAGE_CONFIG_KEY,
 } from './dto/storage-config.dto';
 import { MediaController } from './media.controller';
+import { ImageProcessingQueueService } from './services/image-processing-queue.service';
 import { ImageProcessingService } from './services/image-processing.service';
 import { MediaService } from './services/media.service';
 import { StorageConfigService } from './services/storage-config.service';
@@ -34,6 +35,7 @@ import { PicgoStorageService } from './services/storages/picgo-storage.service';
   controllers: [MediaController, PicgoPluginsController],
   providers: [
     MediaService,
+    ImageProcessingQueueService,
     ImageProcessingService,
     StorageConfigService,
     StorageFactoryService,
