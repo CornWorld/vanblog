@@ -98,10 +98,7 @@ describe('MediaService - Transaction Atomicity', () => {
 
       // Verify transaction was called
       expect(mockTransaction).toHaveBeenCalledTimes(1);
-      expect(mockStorageService.upload).toHaveBeenCalledWith(
-        file,
-        expect.stringContaining('test.jpg'),
-      );
+      expect(mockStorageService.upload).toHaveBeenCalledWith(file, 'test-category');
       expect(mockLogger.error).toHaveBeenCalledWith(
         'Storage upload failed',
         'Error: Storage upload failed',
@@ -153,12 +150,18 @@ describe('MediaService - Transaction Atomicity', () => {
 
       // Mock database insert failure
       const dbError = new Error('Database insert failed');
-      mockDbBuilder.setInsertResult([]).reset();
-      const mockInsert = vi.fn().mockRejectedValue(dbError);
-      mockDbBuilder.db.insert = mockInsert;
 
-      // Mock transaction that properly handles rollback
-      const mockTransaction = vi.fn().mockRejectedValue(dbError);
+      // Create a proper mock for the drizzle chain
+      const mockReturning = vi.fn().mockRejectedValue(dbError);
+      const mockValues = vi.fn().mockReturnValue({ returning: mockReturning });
+      const mockInsert = vi.fn().mockReturnValue({ values: mockValues });
+
+      // Mock transaction that executes the callback but fails on database insert
+      const mockTransaction = vi.fn().mockImplementation(async (callback) => {
+        // Execute the callback to simulate transaction execution
+        const mockTx = { insert: mockInsert };
+        return await callback(mockTx);
+      });
       (mockDatabase as any).transaction = mockTransaction;
 
       // Act & Assert
@@ -166,7 +169,7 @@ describe('MediaService - Transaction Atomicity', () => {
         'Database insert failed',
       );
 
-      // Verify transaction was called and failed
+      // Verify transaction was called and storage upload happened
       expect(mockTransaction).toHaveBeenCalledTimes(1);
       expect(mockStorageService.upload).toHaveBeenCalled();
       expect(mockLogger.error).toHaveBeenCalledWith(

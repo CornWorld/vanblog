@@ -397,3 +397,5 @@ export const webhookLogs = sqliteTable(
     index('webhook_logs_created_at_idx').on(table.createdAt),
   ],
 );
+
+export { imageProcessingQueue } from './schema/image-processing-queue';

@@ -6,6 +6,7 @@ import { SettingRegistryService } from '../setting/services/setting-registry.ser
 
 import { MediaProcessingSettingsSchema } from './dto/media-settings.dto';
 import { MediaController } from './media.controller';
+import { ImageProcessingQueueService } from './services/image-processing-queue.service';
 import { ImageProcessingService } from './services/image-processing.service';
 import { MediaService } from './services/media.service';
 import { StorageConfigService } from './services/storage-config.service';
@@ -39,6 +40,13 @@ const mockStorageConfigService = {
   updateStorageConfig: vi.fn(),
 };
 
+const mockImageProcessingQueueService = {
+  addTask: vi.fn(),
+  getTask: vi.fn(),
+  getTasksByFileId: vi.fn(),
+  getStats: vi.fn(),
+};
+
 describe('MediaController', () => {
   let controller: MediaController;
 
@@ -48,6 +56,7 @@ describe('MediaController', () => {
       providers: [
         { provide: MediaService, useValue: mockMediaService },
         { provide: ImageProcessingService, useValue: mockImageProcessingService },
+        { provide: ImageProcessingQueueService, useValue: mockImageProcessingQueueService },
         { provide: StorageConfigService, useValue: mockStorageConfigService },
         { provide: SettingRegistryService, useValue: mockSettingRegistryService },
       ],
@@ -317,6 +326,7 @@ describe('chunked upload', () => {
         { provide: ImageProcessingService, useValue: mockImageProcessingService },
         { provide: StorageConfigService, useValue: mockStorageConfigService },
         { provide: SettingRegistryService, useValue: mockSettingRegistryService },
+        { provide: ImageProcessingQueueService, useValue: mockImageProcessingQueueService },
       ],
     }).compile();
 

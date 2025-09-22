@@ -219,6 +219,26 @@ class DatabaseMockBuilder {
   }
 
   /**
+   * 设置事务行为
+   */
+  setTransactionBehavior(
+    shouldSucceed: boolean,
+    mockTx?: Record<string, ReturnType<typeof vi.fn>>,
+  ): this {
+    const transactionMock = this.mockDb.transaction;
+
+    if (shouldSucceed) {
+      transactionMock.mockImplementation(async (callback: (tx: any) => Promise<any>) => {
+        return await callback(mockTx ?? this.mockDb);
+      });
+    } else {
+      transactionMock.mockRejectedValue(new Error('Transaction failed'));
+    }
+
+    return this;
+  }
+
+  /**
    * 构建Mock数据库实例
    */
   build(): Record<string, ReturnType<typeof vi.fn>> {
@@ -261,11 +281,19 @@ class DatabaseMockBuilder {
       with: vi.fn(),
       withRecursive: vi.fn(),
       as: vi.fn(),
+      transaction: vi.fn(),
     } as unknown as Record<string, ReturnType<typeof vi.fn>>;
 
     // 设置默认的链式调用行为
-    Object.values(this.mockDb).forEach((mockFn) => {
-      mockFn.mockReturnThis();
+    Object.entries(this.mockDb).forEach(([key, mockFn]) => {
+      if (key === 'transaction') {
+        // 设置 transaction 的默认行为：执行回调并返回结果
+        mockFn.mockImplementation(async (callback: (tx: any) => Promise<any>) => {
+          return await callback(this.mockDb);
+        });
+      } else {
+        mockFn.mockReturnThis();
+      }
     });
   }
 }
