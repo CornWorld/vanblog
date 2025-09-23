@@ -1,7 +1,6 @@
 import { defaultMenu, MenuItem, PublicMetaProp } from '../api/getAllData';
 import dayjs from 'dayjs';
 import { AuthorCardProps } from '../components/AuthorCard';
-import { checkLogin } from './auth';
 import { getPublicMeta } from '../api/getAllData';
 
 export interface LayoutProps {
@@ -66,7 +65,13 @@ export function getLayoutPropsFromData(data: PublicMetaProp): LayoutProps {
   if (siteInfo?.showFriends == 'false') {
     showFriends = 'false';
   }
-  const customSetting: any = { enableCustomizing: 'true' };
+  const customSetting: {
+    enableCustomizing: 'true' | 'false';
+    customCss?: string;
+    customHtml?: string;
+    customHead?: HeadTag[];
+    customScript?: string;
+  } = { enableCustomizing: 'true' };
   if (siteInfo.enableCustomizing && siteInfo.enableCustomizing == 'false') {
     customSetting.enableCustomizing = 'false';
   }
@@ -82,8 +87,8 @@ export function getLayoutPropsFromData(data: PublicMetaProp): LayoutProps {
   if (data?.layout?.script) {
     customSetting.customScript = data?.layout?.script;
   }
-  let showDonateButton = 'true';
-  let showCopyRight = 'true';
+  let showDonateButton: 'true' | 'false' = 'true';
+  let showCopyRight: 'true' | 'false' = 'true';
   if (siteInfo?.showCopyRight == 'false') {
     showCopyRight = 'false';
   }
@@ -115,6 +120,15 @@ export function getLayoutPropsFromData(data: PublicMetaProp): LayoutProps {
 
   const walineConfig = data?.walineConfig || {};
 
+  // Coerce possibly string-typed flags from siteInfo into narrow unions required by LayoutProps
+  const enableCommentVal: 'true' | 'false' = siteInfo?.enableComment === 'false' ? 'false' : 'true';
+  const defaultThemeVal: 'auto' | 'dark' | 'light' =
+    siteInfo?.defaultTheme === 'dark'
+      ? 'dark'
+      : siteInfo?.defaultTheme === 'light'
+        ? 'light'
+        : 'auto';
+
   return {
     showFriends,
     version: data?.version || 'dev',
@@ -140,8 +154,8 @@ export function getLayoutPropsFromData(data: PublicMetaProp): LayoutProps {
     menus: data?.menus || defaultMenu,
     categories: data.meta.categories,
     showSubMenu: showSubMenu ? 'true' : 'false',
-    enableComment: siteInfo?.enableComment || 'true',
-    defaultTheme: siteInfo?.defaultTheme || 'auto',
+    enableComment: enableCommentVal,
+    defaultTheme: defaultThemeVal,
     openArticleLinksInNewWindow,
     showCopyRight,
     showDonateButton,

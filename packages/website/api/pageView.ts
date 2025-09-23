@@ -5,7 +5,10 @@ const DEFAULT_PAGEVIEW_RESPONSE: PageViewData = { viewer: 0, visited: 0 };
 
 export type { PageViewData };
 
-export const getPageview = async (pathname: string): Promise<PageViewData> => {
+// Accept an optional pathname for backward compatibility; it's intentionally unused here.
+export const getPageview = async (..._args: [pathname?: string]): Promise<PageViewData> => {
+  // Mark arguments as used to satisfy eslint no-unused-vars
+  void _args;
   try {
     return await apiService.getPageView();
   } catch (err) {
@@ -46,7 +49,7 @@ export const updatePageview = async (pathname: string): Promise<PageViewData> =>
     try {
       return await apiService.updatePageView(options);
     } catch (fetchError) {
-      console.warn('[PageView] Failed to update pageview, using fallback data:', fetchError);
+      console.warn('[PageView] Failed to update pageview, using fallback data]:', fetchError);
 
       try {
         return await apiService.getPageView();

@@ -16,7 +16,7 @@ export const getArticlesKeyWord = (articles: Article[]) => {
       }
     }
     return keywords;
-  } catch (err) {
+  } catch {
     return [];
   }
 };

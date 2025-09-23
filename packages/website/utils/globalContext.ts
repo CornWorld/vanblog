@@ -13,5 +13,5 @@ export const GlobalContext = React.createContext<{
     viewer: 0,
     visited: 0,
   },
-  setState: (newState: GlobalState) => {},
+  setState: () => {},
 });
