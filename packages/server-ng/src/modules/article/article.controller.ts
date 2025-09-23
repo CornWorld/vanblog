@@ -308,4 +308,31 @@ export class ArticleController {
     const userId = req.user?.id;
     return this.articleService.verifyPassword(id, verifyPasswordDto.password, userId);
   }
+
+  /**
+   * 验证文章密码（按 pathname）
+   */
+  @Post('by-path/:pathname/verify-password')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Verify article password by pathname' })
+  @ApiParam({ name: 'pathname', description: 'Article pathname', type: 'string' })
+  @ApiResponse({
+    status: 200,
+    description: 'Password verified successfully',
+    type: ArticleAccessResponseDto,
+  })
+  @ApiResponse({ status: 401, description: 'Invalid password' })
+  @ApiResponse({ status: 404, description: 'Article not found' })
+  async verifyPasswordByPathname(
+    @Param('pathname') pathname: string,
+    @Body() verifyPasswordDto: VerifyArticlePasswordDto,
+    @Request() req: { user?: User },
+  ): Promise<ArticleAccessResponseDto> {
+    const userId = req.user?.id;
+    return this.articleService.verifyPasswordByPathname(
+      pathname,
+      verifyPasswordDto.password,
+      userId,
+    );
+  }
 }

@@ -29,7 +29,7 @@ export const getArticleByIdOrPathname = async (
     console.error(`Invalid article ID or pathname: ${idOrPathname}`);
     // Return a default article instead of throwing
     return {
-      id: '0',
+      id: 0,
       title: 'Article Not Found',
       content: 'This article could not be found.',
       createdAt: new Date().toISOString(),
@@ -37,7 +37,10 @@ export const getArticleByIdOrPathname = async (
       category: '',
       tags: [],
       private: false,
+      author: 'System',
       top: 0,
+      hidden: false,
+      viewer: 0,
       date: new Date().toISOString(),
       hide: false,
       secret: false,
@@ -50,7 +53,7 @@ export const getArticleByIdOrPathname = async (
     console.error(`Error fetching article with ID ${idOrPathname}:`, error);
     // Return a default article on error
     return {
-      id: '0',
+      id: 0,
       title: 'Error Loading Article',
       content: 'There was an error loading this article.',
       createdAt: new Date().toISOString(),
@@ -58,7 +61,10 @@ export const getArticleByIdOrPathname = async (
       category: '',
       tags: [],
       private: false,
+      author: 'System',
       top: 0,
+      hidden: false,
+      viewer: 0,
       date: new Date().toISOString(),
       hide: false,
       secret: false,

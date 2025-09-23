@@ -251,13 +251,11 @@ export class ArticleService {
    * @returns 验证结果和访问令牌
    * @throws {NotFoundException} 当文章不存在时
    */
-  async verifyPassword(
-    id: number,
+  private async verifyArticlePasswordCore(
+    article: Article,
     password: string,
     userId?: number,
   ): Promise<ArticleAccessResponseDto> {
-    const article = await this.findOneWithPassword(id);
-
     // 如果文章不是私有的或没有设置密码，直接允许访问
     if (!article.private || !article.password) {
       return {
@@ -301,6 +299,24 @@ export class ArticleService {
         : 'Access granted for anonymous user',
       expiresAt,
     };
+  }
+
+  async verifyPassword(
+    id: number,
+    password: string,
+    userId?: number,
+  ): Promise<ArticleAccessResponseDto> {
+    const article = await this.findOneWithPassword(id);
+    return this.verifyArticlePasswordCore(article, password, userId);
+  }
+
+  async verifyPasswordByPathname(
+    pathname: string,
+    password: string,
+    userId?: number,
+  ): Promise<ArticleAccessResponseDto> {
+    const article = await this.findOneByPathname(pathname);
+    return this.verifyArticlePasswordCore(article, password, userId);
   }
 
   /**

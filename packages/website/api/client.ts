@@ -2,13 +2,17 @@ import { config, isBuildTime, isDevelopment } from '../utils/loadConfig';
 
 const isBrowser = typeof window !== 'undefined';
 
+// Typed helpers for query parameters
+type QueryParamPrimitive = string | number | boolean | null | undefined;
+type QueryParams = Record<string, QueryParamPrimitive | QueryParamPrimitive[]>;
+
 export class ApiError extends Error {
   constructor(
     message: string,
     public status?: number,
     public endpoint?: string,
     public context?: string,
-    public details?: any,
+    public details?: unknown,
     public stack?: string,
   ) {
     super(message);
@@ -35,7 +39,7 @@ export class ApiError extends Error {
 
 export class ApiClient {
   private baseUrl: string;
-  private cache: Map<string, { data: any; timestamp: number }>;
+  private cache: Map<string, { data: unknown; timestamp: number }>;
   private readonly cacheDuration: number;
 
   constructor(baseUrl?: string, cacheDuration = 5 * 60 * 1000) {
@@ -97,8 +101,21 @@ export class ApiClient {
     }
   }
 
-  private getCacheKey(endpoint: string, params?: Record<string, any>): string {
-    const queryString = params ? new URLSearchParams(params as any).toString() : '';
+  private getCacheKey(endpoint: string, params?: QueryParams): string {
+    const queryParams = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value === undefined || value === null) return;
+        if (Array.isArray(value)) {
+          for (const v of value) {
+            queryParams.append(key, String(v));
+          }
+        } else {
+          queryParams.append(key, String(value));
+        }
+      });
+    }
+    const queryString = queryParams.toString();
     return `${endpoint}:${queryString}`;
   }
 
@@ -138,7 +155,7 @@ export class ApiClient {
       console.log(`[ApiClient] Fetching ${url} (${context})`);
     }
 
-    let lastError: Error | null = null;
+    let lastError: unknown = null;
 
     for (let i = 0; i < retries; i++) {
       try {
@@ -159,7 +176,7 @@ export class ApiClient {
 
         if (!response.ok) {
           const errorText = await response.text().catch(() => 'No error details available');
-          let errorData = {};
+          let errorData: unknown = {};
 
           try {
             if (errorText && errorText.trim().startsWith('{')) {
@@ -169,8 +186,16 @@ export class ApiClient {
             console.error(`[ApiClient] Error parsing error response: ${parseError}`);
           }
 
+          const detailMessage =
+            typeof errorData === 'object' &&
+            errorData !== null &&
+            'message' in errorData &&
+            typeof (errorData as { message?: unknown }).message === 'string'
+              ? (errorData as { message: string }).message
+              : errorText;
+
           throw new ApiError(
-            `HTTP error! url: ${url}, status: ${response.status}, ${(errorData as any).message || errorText}`,
+            `HTTP error! url: ${url}, status: ${response.status}, ${detailMessage}`,
             response.status,
             endpoint,
             context,
@@ -200,8 +225,17 @@ export class ApiClient {
         }
 
         const data = await response.json();
+
+        // Handle server-ng v2 API response format: {statusCode: number, data: T}
+        // If the response has statusCode and data properties, it's a v2 API response
+        if (data && typeof data === 'object' && 'statusCode' in data && 'data' in data) {
+          // For v2 API, return the complete response object so service layer can extract data
+          return data as T;
+        }
+
+        // For v1 API or other formats, return data directly
         return data as T;
-      } catch (error: any) {
+      } catch (error: unknown) {
         lastError = error;
         if (isDevelopment) {
           console.error(`[ApiClient] Fetch attempt ${i + 1}/${retries} failed:`, error);
@@ -220,7 +254,7 @@ export class ApiClient {
     // Provide helpful error message for connection issues
     if (
       isDevelopment &&
-      lastError &&
+      lastError instanceof Error &&
       (lastError.message === 'Failed to fetch' || lastError.name === 'AbortError')
     ) {
       const serverUrl =
@@ -245,21 +279,30 @@ export class ApiClient {
 
     if (lastError instanceof ApiError) {
       throw lastError;
-    } else if (lastError) {
+    } else if (lastError instanceof Error) {
       throw new ApiError(
         lastError.message || 'Unknown error occurred',
         undefined,
         endpoint,
         context,
-        { originalError: lastError.toString() },
+        { originalError: String(lastError) },
       );
+    } else if (lastError) {
+      throw new ApiError('Unknown error occurred', undefined, endpoint, context, {
+        originalError: String(lastError),
+      });
     }
 
     // This should never happen, but TypeScript requires a return value
     throw new ApiError('Maximum retries exceeded', undefined, endpoint, context);
   }
 
-  async get<T>(endpoint: string, params?: Record<string, any>, context = ''): Promise<T> {
+  async get<T>(
+    endpoint: string,
+    params?: QueryParams,
+    context = '',
+    headers?: Record<string, string>,
+  ): Promise<T> {
     const cacheKey = this.getCacheKey(endpoint, params);
     const cachedItem = this.cache.get(cacheKey);
 
@@ -272,7 +315,13 @@ export class ApiClient {
       const queryParams = new URLSearchParams();
       Object.entries(params).forEach(([key, value]) => {
         if (value !== undefined && value !== null) {
-          queryParams.append(key, String(value));
+          if (Array.isArray(value)) {
+            for (const v of value) {
+              queryParams.append(key, String(v));
+            }
+          } else {
+            queryParams.append(key, String(value));
+          }
         }
       });
 
@@ -282,19 +331,25 @@ export class ApiClient {
       }
     }
 
-    const data = await this.fetchWithRetry<T>(url, { method: 'GET' }, 3, context);
+    const options: RequestInit = { method: 'GET', headers };
+    const data = await this.fetchWithRetry<T>(url, options, 3, context);
 
     // Cache the result
     this.cache.set(cacheKey, { data, timestamp: Date.now() });
-
     return data;
   }
 
-  async post<T>(endpoint: string, body: any, context = ''): Promise<T> {
+  async post<T>(
+    endpoint: string,
+    body: unknown,
+    context = '',
+    headers?: Record<string, string>,
+  ): Promise<T> {
     const options: RequestInit = {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        ...(headers || {}),
       },
       body: JSON.stringify(body),
     };
@@ -306,7 +361,7 @@ export class ApiClient {
     this.cache.clear();
   }
 
-  invalidateCache(endpoint: string, params?: Record<string, any>): void {
+  invalidateCache(endpoint: string, params?: QueryParams): void {
     const cacheKey = this.getCacheKey(endpoint, params);
     this.cache.delete(cacheKey);
   }
@@ -315,7 +370,7 @@ export class ApiClient {
     try {
       new URL(url);
       return true;
-    } catch (e) {
+    } catch {
       return false;
     }
   }
