@@ -335,28 +335,43 @@ export class SitemapService {
   private normalizeUrls(siteUrl: string, urls: string[]): string[] {
     const { origin } = new URL(siteUrl);
     const out: string[] = [];
+
+    const normalizePath = (p: string): string => {
+      const trimmed = p.trim();
+      if (trimmed === '') return '/';
+      // 确保以根路径起始
+      const withLeading = trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
+      // 折叠重复斜杠
+      const collapsed = withLeading.replace(/\/{2,}/g, '/');
+      // 去除非根路径的尾随斜杠
+      if (collapsed.length > 1 && collapsed.endsWith('/')) {
+        return collapsed.replace(/\/+$/, '');
+      }
+      return collapsed;
+    };
+
     for (const raw of urls) {
-      if (raw === '') continue;
-      // already a root-relative path
-      if (raw.startsWith('/')) {
-        out.push(raw);
+      const input = typeof raw === 'string' ? raw.trim() : '';
+      if (input === '') continue;
+      // 已是根相对路径
+      if (input.startsWith('/')) {
+        out.push(normalizePath(input));
         continue;
       }
-      // absolute URL or other forms
+      // 绝对 URL 或其他形式
       try {
-        const u = new URL(raw);
+        const u = new URL(input);
         if (u.origin === origin) {
-          const { pathname } = u;
-          out.push(pathname.length > 0 ? pathname : '/');
+          const pathnameStr = u.pathname; // 显式使用字符串而非 truthy 检查
+          const pathname = pathnameStr.length > 0 ? pathnameStr : '/';
+          out.push(normalizePath(pathname));
         } else {
           // 丢弃跨域 URL，避免污染 sitemap
-
           continue;
         }
       } catch {
         // 非法字符串或相对路径如 'post/xxx' => 规范化为根路径
-        const beginsWithSlash = raw.startsWith('/');
-        out.push(beginsWithSlash ? raw : `/${raw}`);
+        out.push(normalizePath(input));
       }
     }
     return out;

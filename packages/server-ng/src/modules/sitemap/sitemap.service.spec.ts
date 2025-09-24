@@ -295,20 +295,34 @@ describe('SitemapService', () => {
         'https://other.com/page/3',
         '',
         'post/no-leading-slash',
+        '  /trailing/ ',
+        '//double//slashes///',
       ];
       vi.spyOn(service, 'getSiteUrls').mockResolvedValue(rawUrls);
 
       await service.generateSitemapFn('test');
 
-      const expected = ['/', '/a', '/b', '/page/2', '/post/abc', '/post/no-leading-slash'];
+      const expected = [
+        '/',
+        '/a',
+        '/b',
+        '/page/2',
+        '/post/abc',
+        '/post/no-leading-slash',
+        '/trailing',
+        '/double/slashes',
+      ];
+      const expectedSorted = [...expected].sort();
 
-      expect(hookService.doAction).toHaveBeenCalledWith(
-        'sitemap|beforeGenerate',
-        expect.objectContaining({
-          urls: expected,
-          siteUrl: 'https://example.com/',
-        }),
-      );
+      const calls = vi.mocked(hookService.doAction).mock.calls;
+      const beforeArgs = calls.find(([name]) => name === 'sitemap|beforeGenerate');
+      expect(beforeArgs).toBeTruthy();
+      const [, payload] = beforeArgs as [string, { siteUrl: string; urls: string[] }];
+      expect(payload.siteUrl).toBe('https://example.com/');
+      // ensure sorted
+      expect(payload.urls).toEqual([...payload.urls].sort());
+      // ensure expected set
+      expect(payload.urls).toEqual(expectedSorted);
     });
   });
 
