@@ -1,8 +1,9 @@
 import { Logger } from '@nestjs/common';
+import { z } from 'zod';
 
 import { withPluginPrefix } from '../../src/modules/plugin/utils/prefix.util';
 
-import { SocialLinksService, type SocialLink } from './social-links.service';
+import { SocialLinksService, type SocialLink, SocialLinkSchema } from './social-links.service';
 
 import type {
   ActionCallback,
@@ -43,11 +44,26 @@ const plugin: Plugin = {
     // 初始化社交链接数据
     await context.data.set('socialLinks', []);
 
+    // 注册到插件注册表：提供 socialLinks 公共数据（使用 Zod schema envelope）
+    context.registry.register(
+      'socialLinks',
+      async () => {
+        const data = await socialLinksService.getSocialLinks(context);
+        return { schema: z.array(SocialLinkSchema), data };
+      },
+      10,
+    );
+
     logger.log('Social links plugin initialized successfully');
   },
 
   async destroy(context: PluginContext): Promise<void> {
     logger.log('Social links plugin destroying...');
+    // 从插件注册表中注销 provider
+    const ok = context.registry.unregister('socialLinks');
+    if (!ok) {
+      logger.debug('socialLinks provider not found or already removed');
+    }
     await context.data.clear();
     logger.log('Social links plugin destroyed');
   },

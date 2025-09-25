@@ -314,7 +314,7 @@ describe('SitemapService', () => {
       ];
       const expectedSorted = [...expected].sort();
 
-      const calls = vi.mocked(hookService.doAction).mock.calls;
+      const { calls } = vi.mocked(hookService.doAction).mock;
       const beforeArgs = calls.find(([name]) => name === 'sitemap|beforeGenerate');
       expect(beforeArgs).toBeTruthy();
       const [, payload] = beforeArgs as [string, { siteUrl: string; urls: string[] }];
