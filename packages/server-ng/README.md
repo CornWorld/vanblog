@@ -326,7 +326,28 @@ JWT_EXPIRES_IN=7d
 - [x] 错误处理优化：改进 API 客户端的错误处理和类型安全
 - [x] 开发环境配置：优化 dev-server 脚本，提升开发体验
 
-### 注意事项
+#### 阶段 15：API 路径适配（API Path Adaptation）
+
+- [x] **Website API 路径适配**：修正 website 项目中的 API 调用路径
+  - [x] 文章列表 API：`/api/v2/public/article` → `/api/v2/articles`
+  - [x] 分类 API：`/api/v2/public/category` → `/api/v2/categories`
+  - [x] 标签 API：`/api/v2/public/tag` → `/api/v2/tags`
+- [x] **API 路径验证**：确认所有 API 路径正确性
+  - [x] 搜索 API：`/api/v2/articles/search` 已正确
+  - [x] 时间线 API：`/api/v2/public/timeline` 已正确
+  - [x] 文章详情 API：`/api/v2/articles/{id}` 已正确
+- [x] **功能验证**：测试所有 API 适配后的功能正常性
+  - [x] 文章列表功能正常（返回 total: 1）
+  - [x] 分类功能正常（返回 2 个分类）
+  - [x] 标签功能正常（返回 2 个标签）
+  - [x] 搜索功能正常（返回 total: 1）
+  - [x] 时间线功能正常（返回 2 个时间段）
+- [x] **集成测试**：Website-Server-NG 完整功能验证
+  - [x] 前端页面正常加载（HTTP 200）
+  - [x] API 代理正常工作
+  - [x] 所有测试通过（118 个测试）
+
+## 注意事项
 
 1. 任务独立完成，优先基础架构
 2. 保持代码质量和测试覆盖
