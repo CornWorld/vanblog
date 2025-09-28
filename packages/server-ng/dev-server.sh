@@ -4,7 +4,7 @@
 PID_FILE=".vite.pid"
 # 主日志文件，捕获所有标准输出和错误输出
 LOG_FILE="vite-dev-server.log"
-PORT=3500
+PORT=3050
 HEALTH_CHECK_URL="http://localhost:${PORT}/api/v2/health"
 HEALTH_CHECK_TIMEOUT=30
 

@@ -162,7 +162,7 @@ export async function init(): Promise<INestApplication> {
 void init().then(async (app) => {
   const configService = app.get(ConfigService);
   const { port } = configService.app;
-  await app.listen(port);
+  await app.listen(port, '0.0.0.0');
 
   // Use logger instead of console.log
   const logger = app.get(LoggerService);

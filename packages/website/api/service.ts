@@ -201,66 +201,29 @@ export class ApiService {
     idOrPathname: string | number,
     password: string,
   ): Promise<ArticleDetail> {
-    // 支持两种方式：ID 或 pathname
-    const id = typeof idOrPathname === 'number' ? idOrPathname : Number(idOrPathname);
+    // First try to get the article by ID or pathname to get the actual ID
+    let articleId = idOrPathname;
 
-    if (Number.isFinite(id)) {
-      // 走按 ID 的流程
-      const verify = await apiClient.post<{
-        success: boolean;
-        token?: string;
-        message?: string;
-        expiresAt?: string;
-      }>(`/api/v2/articles/${id}/verify-password`, { password }, 'verifyArticlePassword');
-
-      if (!verify || !verify.success || !verify.token) {
-        const msg =
-          verify && typeof verify.message === 'string' ? verify.message : 'Invalid password';
-        throw new Error(`[ApiService] verify-password failed: ${msg}`);
-      }
-
-      const article = await apiClient.get<Article>(
-        `/api/v2/articles/${id}`,
-        undefined,
-        'getEncryptedArticleWithToken',
-        { Authorization: `Bearer ${verify.token}` },
-      );
-
-      return article as unknown as ArticleDetail;
+    // If it's not a number, try to resolve pathname to ID
+    if (isNaN(Number(idOrPathname))) {
+      const article = await this.getArticleByIdOrPathname(idOrPathname);
+      articleId = article.id.toString();
     }
 
-    // 非数字，按 pathname 进行验证与访问
-    const pathname = String(idOrPathname);
-    const verifyByPath = await apiClient.post<{
-      success: boolean;
-      token?: string;
-      message?: string;
-      expiresAt?: string;
-    }>(
-      `/api/v2/articles/by-path/${pathname}/verify-password`,
-      { password },
-      'verifyArticlePasswordByPathname',
+    const response = await apiClient.post<ArticleDetail>(
+      `/api/v2/articles/${articleId}/verify-password`,
+      {
+        password,
+      },
+      'getEncryptedArticle',
     );
 
-    if (!verifyByPath || !verifyByPath.success || !verifyByPath.token) {
-      const msg =
-        verifyByPath && typeof verifyByPath.message === 'string'
-          ? verifyByPath.message
-          : 'Invalid password';
-      throw new Error(`[ApiService] verify-password(by-path) failed: ${msg}`);
-    }
-
-    const articleByPath = await apiClient.get<Article>(
-      `/api/v2/articles/by-path/${pathname}`,
-      undefined,
-      'getEncryptedArticleByPathWithToken',
-      { Authorization: `Bearer ${verifyByPath.token}` },
-    );
-
-    return articleByPath as unknown as ArticleDetail;
+    return response;
   }
 
-  async getArticleViewer(id: number | string): Promise<PageViewData> {
+  async getArticleViewer(idOrPathname: string): Promise<{ pv: number; uv: number }> {
+    // For public analytics, we need to use the article ID
+    // If it's a pathname, we might need to resolve it to an ID first
     const response = await apiClient.get<{
       statusCode: number;
       data: {
@@ -270,11 +233,15 @@ export class ApiService {
         uniqueVisitors: number;
         avgReadTime: number;
       } | null;
-    }>(`/api/v2/analytics/public/article/${id}`, undefined, 'getArticleViewer');
+    }>(
+      `/api/v2/analytics/public/article/${encodeURIComponent(idOrPathname)}`,
+      undefined,
+      'getArticleViewer',
+    );
     const stats = response.data;
     return {
-      visited: stats?.views ?? 0,
-      viewer: stats?.uniqueVisitors ?? 0,
+      pv: stats?.views ?? 0,
+      uv: stats?.uniqueVisitors ?? 0,
     };
   }
 
@@ -290,7 +257,7 @@ export class ApiService {
 
   async getCategories(): Promise<Record<string, Article[]>> {
     const response = await apiClient.get<{ statusCode: number; data: Record<string, Article[]> }>(
-      '/api/v2/public/category',
+      '/api/v2/categories',
       {},
       'getCategories',
     );
@@ -299,7 +266,7 @@ export class ApiService {
 
   async getTags(): Promise<Record<string, Article[]>> {
     const response = await apiClient.get<{ statusCode: number; data: Record<string, Article[]> }>(
-      '/api/v2/public/tag',
+      '/api/v2/tags',
       {},
       'getTags',
     );
@@ -308,7 +275,7 @@ export class ApiService {
 
   async getArticlesByTag(tag: string): Promise<Article[]> {
     const response = await apiClient.get<{ statusCode: number; data: Article[] }>(
-      `/api/v2/public/tag/${tag}`,
+      `/api/v2/tags/${tag}/articles`,
       {},
       'getArticlesByTag',
     );
@@ -318,8 +285,8 @@ export class ApiService {
   // Search
   async searchArticles(keyword: string): Promise<ArticleResponse> {
     const response = await apiClient.get<{ statusCode: number; data: ArticleResponse }>(
-      '/api/v2/public/search',
-      { value: keyword },
+      '/api/v2/articles/search',
+      { keyword },
       'searchArticles',
     );
     return response.data;
@@ -328,7 +295,7 @@ export class ApiService {
   // Meta
   async getMeta(): Promise<PublicMetaProp> {
     const response = await apiClient.get<{ statusCode: number; data: PublicMetaProp }>(
-      '/api/v2/public/meta',
+      '/api/v2/public/bootstrap',
       {},
       'getMeta',
     );
@@ -348,24 +315,35 @@ export class ApiService {
     };
   }
 
-  async updatePageView(_options: { isNew: boolean; isNewByPath: boolean }): Promise<PageViewData> {
-    // prevent unused param lint error while keeping signature for compatibility
-    void _options;
+  async updatePageView(options: {
+    isNew: boolean;
+    isNewByPath: boolean;
+    articleId?: number;
+  }): Promise<PageViewData> {
     // Record a pageview event, then fetch latest overview
     try {
       const path = typeof window !== 'undefined' ? window.location?.pathname : undefined;
       const referrer = typeof document !== 'undefined' ? document.referrer || undefined : undefined;
 
+      // For pageview type, we need to provide articleId in data
+      const recordData: {
+        type: string;
+        path?: string;
+        referrer?: string;
+        data?: { articleId: number };
+      } = {
+        type: 'pageview',
+        path,
+        referrer,
+      };
+
+      // If articleId is provided, add it to data (required for pageview type)
+      if (options.articleId) {
+        recordData.data = { articleId: options.articleId };
+      }
+
       // Fire-and-forget record, server may return empty body
-      await apiClient.post<void>(
-        '/api/v2/analytics/record',
-        {
-          type: 'pageview',
-          path,
-          referrer,
-        },
-        'updatePageView',
-      );
+      await apiClient.post<void>('/api/v2/analytics/record', recordData, 'updatePageView');
     } catch (e) {
       // Swallow record errors; we'll still attempt to get overview as fallback
       if (process.env.NODE_ENV !== 'production') {
