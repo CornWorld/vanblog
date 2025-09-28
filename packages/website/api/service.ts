@@ -78,7 +78,7 @@ export class ApiService {
   ): Promise<ArticleResponse> {
     try {
       const response = await apiClient.get<ApiV2Response<PaginatedData<Article>>>(
-        '/api/v2/public/article',
+        '/api/v2/articles',
         options,
         'getArticles',
       );
@@ -139,7 +139,7 @@ export class ApiService {
       const response = await apiClient.get<{
         statusCode: number;
         data: { article: ArticleDetail; pre?: ArticleDetail | null; next?: ArticleDetail | null };
-      }>(`/api/v2/public/article/${idOrPathname}`, {}, 'getArticleByIdOrPathname');
+      }>(`/api/v2/articles/${idOrPathname}`, {}, 'getArticleByIdOrPathname');
 
       if (!response) {
         console.error(`[ApiService] Article response is null or undefined for ID ${idOrPathname}`);
