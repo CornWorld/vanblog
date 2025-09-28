@@ -318,6 +318,14 @@ JWT_EXPIRES_IN=7d
 - [x] 自定义页面列表 API：GET /api/v2/public/customPage/all
 - [x] 自定义页面详情 API：GET /api/v2/public/customPage?path=...
 
+### 阶段 14：集成测试（Integration）
+
+- [x] Website-Server-NG 集成：配置 server-ng 监听 0.0.0.0:3050，修复 website API 代理
+- [x] API 代理验证：确保 website 能正确代理请求到 server-ng 的 v2 API
+- [x] 端到端测试：验证 website 前端与 server-ng 后端的完整数据流
+- [x] 错误处理优化：改进 API 客户端的错误处理和类型安全
+- [x] 开发环境配置：优化 dev-server 脚本，提升开发体验
+
 ### 注意事项
 
 1. 任务独立完成，优先基础架构
