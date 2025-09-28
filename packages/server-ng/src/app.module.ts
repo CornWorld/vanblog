@@ -12,6 +12,7 @@ import { AnalyticsModule } from './modules/analytics/analytics.module';
 import { ArticleModule } from './modules/article/article.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { BackupModule } from './modules/backup/backup.module';
+import { CaddyModule } from './modules/caddy/caddy.module';
 import { CategoryModule } from './modules/category/category.module';
 import { DemoModule } from './modules/demo/demo.module';
 import { DraftModule } from './modules/draft/draft.module';
@@ -76,6 +77,7 @@ export class AppModule implements NestModule {
         RssModule,
         SitemapModule,
         BackupModule,
+        CaddyModule,
 
         DemoModule,
         pluginModule,
