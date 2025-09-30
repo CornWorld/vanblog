@@ -264,12 +264,12 @@ export class ApiClient {
 
       console.error(`
         [ApiClient] Connection Error: Unable to connect to ${this.baseUrl}
-        
+
         This could be due to:
         1. The API server is not running
         2. The API server is running on a different URL than configured
         3. CORS is not properly configured
-        
+
         Check your environment variables:
         - VAN_BLOG_SERVER_URL: ${serverUrl || 'not set'}
         - NEXT_PUBLIC_VANBLOG_SERVER_URL: ${clientUrl || 'not set'}

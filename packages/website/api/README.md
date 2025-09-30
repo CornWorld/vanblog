@@ -23,10 +23,10 @@ The API layer follows a service-oriented architecture with the following compone
 
 The API layer interacts with the following public endpoints:
 
-- `GET /api/v2/public/article` - Get articles with pagination and filtering
-- `GET /api/v2/public/article/{id}` - Get a specific article by ID
-- `POST /api/v2/public/article/{id}` - Get an encrypted article with password
-- `GET /api/v2/public/article/viewer/{id}` - Get viewer statistics for an article
+- `GET /api/v2/articles` - Get articles with pagination and filtering
+- `GET /api/v2/articles/{id}` - Get a specific article by ID
+- `POST /api/v2/articles/{id}` - Get an encrypted article with password
+- `GET /api/v2/articles/viewer/{id}` - Get viewer statistics for an article
 - `GET /api/v2/public/search` - Search articles
 - `GET /api/v2/public/timeline` - Get articles organized by timeline
 - `GET /api/v2/public/category` - Get articles organized by category

@@ -17,10 +17,10 @@ import { PageViewData } from './types';
  * API 服务类
  *
  * 提供对 VanBlog API 的访问，包括以下端点：
- * - GET /api/v2/public/article
- * - GET /api/v2/public/article/{id}
- * - POST /api/v2/public/article/{id}
- * - GET /api/v2/public/article/viewer/{id}
+ * - GET /api/v2/articles
+ * - GET /api/v2/articles/{id}
+ * - POST /api/v2/articles/{id}
+ * - GET /api/v2/articles/viewer/{id}
  * - GET /api/v2/public/search
  * - GET /api/v2/public/timeline
  * - GET /api/v2/public/category
