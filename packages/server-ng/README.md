@@ -149,24 +149,25 @@ JWT_EXPIRES_IN=7d
 
 #### ESM 迁移任务
 
-- [ ] **修复根目录脚本文件**：将 `/scripts/` 下所有 `.js` 文件从 CommonJS 转换为 ESM
-  - [ ] `scripts/check.js` - MongoDB 连接和 YAML 处理
-  - [ ] `scripts/dev.js` - 开发服务器启动脚本
-  - [ ] `scripts/start.js` - 生产服务器启动脚本
-  - [ ] `scripts/webhook.js` - HTTP 服务器脚本
+- [x] **修复根目录脚本文件**：将 `/scripts/` 下所有 `.js` 文件从 CommonJS 转换为 ESM
+  - [x] `scripts/check.js` - MongoDB 连接和 YAML 处理
+  - [x] `scripts/dev.js` - 开发服务器启动脚本
+  - [x] `scripts/start.js` - 生产服务器启动脚本
+  - [x] `scripts/webhook.js` - HTTP 服务器脚本
 
-- [ ] **修复 CLI 工具**：转换 `/packages/cli/resetHttps.js` 为 ESM
+- [x] **修复 CLI 工具**：转换 `/packages/cli/resetHttps.js` 为 ESM
 
-- [ ] **配置文件迁移**：
-  - [ ] 将 `.eslintrc.js` 重命名为 `eslint.config.js` 并转换为 ESM
-  - [ ] 检查其他配置文件的 ESM 兼容性
+- [x] **配置文件迁移**：
+  - [x] 将 `.eslintrc.js` 重命名为 `eslint.config.js` 并转换为 ESM
+  - [x] 检查其他配置文件的 ESM 兼容性
+  - [x] 迁移 `packages/website` 中的配置文件：`postcss.config.js`, `tailwind.config.js`, `next-i18next.config.js`
 
-- [ ] **验证和清理**：
-  - [ ] 运行 `pnpm lint` 确保所有 lint 错误已修复
-  - [ ] 测试所有脚本功能正常
-  - [ ] 确保构建和开发流程正常工作
+- [x] **验证和清理**：
+  - [x] 运行 `pnpm lint` 确保所有 lint 错误已修复
+  - [x] 测试所有脚本功能正常
+  - [x] 确保构建和开发流程正常工作
 
-- [ ] **文档更新**：更新相关文档中的脚本使用说明
+- [x] **文档更新**：更新相关文档中的脚本使用说明
 
 ### 🎯 后续优化任务
 
