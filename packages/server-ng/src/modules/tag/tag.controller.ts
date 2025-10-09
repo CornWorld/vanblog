@@ -167,6 +167,26 @@ export class TagController {
   }
 
   /**
+   * 根据标签名称获取文章列表
+   *
+   * 根据标签名称查询该标签下的所有文章，支持分页和筛选。
+   *
+   * @param name 标签名称
+   * @param query 查询参数
+   * @returns 文章列表响应数据
+   */
+  @Get('name/:name/articles')
+  @ApiOperation({ summary: 'Get articles by tag name' })
+  @ApiResponse({ status: 200, description: 'Return articles by tag name' })
+  @ApiResponse({ status: 404, description: 'Tag not found' })
+  async getArticlesByTagName(
+    @Param('name') name: string,
+    @Query(new ZodValidationPipe(ArticleQuerySchema)) query: ArticleQueryDto,
+  ): Promise<ArticleListResponseDto> {
+    return this.tagService.getArticlesByTagName(name, query);
+  }
+
+  /**
    * 根据标签 ID 获取文章列表
    *
    * 根据标签 ID 查询该标签下的所有文章，支持分页和筛选。
