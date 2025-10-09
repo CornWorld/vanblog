@@ -158,3 +158,17 @@ export interface ArticleDetail extends Article {
   next?: { id: number; title: string; pathname?: string };
   prev?: { id: number; title: string; pathname?: string };
 }
+
+// ============================================================================
+// CSRF Token Response Contract
+// ============================================================================
+
+export interface CsrfTokenResponse {
+  csrfToken: string;
+}
+
+export interface CsrfTokenWrappedResponse {
+  data: CsrfTokenResponse;
+}
+
+export type CsrfResponse = CsrfTokenResponse | CsrfTokenWrappedResponse;

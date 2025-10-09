@@ -1,11 +1,9 @@
 /**
  * Common types for the API layer
+ *
+ * Note: PageViewData has been moved to contracts.ts as PageViewDataContract
+ * to eliminate defensive programming patterns.
  */
-
-export interface PageViewData {
-  viewer: number;
-  visited: number;
-}
 
 export interface SearchParams {
   value: string;

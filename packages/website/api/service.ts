@@ -9,7 +9,11 @@ import {
   PaginatedData,
 } from '../types/api';
 import { Article } from '../types/article';
-import { PageViewData } from './types';
+import {
+  PageViewDataContract,
+  normalizeAnalyticsOverview,
+  normalizeArticleStats,
+} from '../types/contracts';
 
 /**
  * Comprehensive API service for VanBlog public API
@@ -221,7 +225,7 @@ export class ApiService {
     return response;
   }
 
-  async getArticleViewer(idOrPathname: string): Promise<{ pv: number; uv: number }> {
+  async getArticleViewer(idOrPathname: string | number): Promise<PageViewDataContract> {
     // For public analytics, we need to use the article ID
     // If it's a pathname, we might need to resolve it to an ID first
     const response = await apiClient.get<{
@@ -234,14 +238,14 @@ export class ApiService {
         avgReadTime: number;
       } | null;
     }>(
-      `/api/v2/analytics/public/article/${encodeURIComponent(idOrPathname)}`,
+      `/api/v2/analytics/public/article/${encodeURIComponent(String(idOrPathname))}`,
       undefined,
       'getArticleViewer',
     );
-    const stats = response.data;
+    const stats = normalizeArticleStats(response.data);
     return {
-      pv: stats?.views ?? 0,
-      uv: stats?.uniqueVisitors ?? 0,
+      viewer: stats.views,
+      visited: stats.uniqueVisitors,
     };
   }
 
@@ -256,30 +260,28 @@ export class ApiService {
   }
 
   async getCategories(): Promise<Record<string, Article[]>> {
-    const response = await apiClient.get<{ statusCode: number; data: Record<string, Article[]> }>(
-      '/api/v2/categories',
+    const response = await apiClient.get<Record<string, Article[]>>(
+      '/api/v2/articles/grouped-by-category',
       {},
       'getCategories',
     );
-    return response.data;
+    return response;
   }
 
   async getTags(): Promise<Record<string, Article[]>> {
-    const response = await apiClient.get<{ statusCode: number; data: Record<string, Article[]> }>(
-      '/api/v2/tags',
+    const response = await apiClient.get<Record<string, Article[]>>(
+      '/api/v2/articles/grouped-by-tag',
       {},
       'getTags',
     );
-    return response.data;
+    return response;
   }
 
   async getArticlesByTag(tag: string): Promise<Article[]> {
-    const response = await apiClient.get<{ statusCode: number; data: Article[] }>(
-      `/api/v2/tags/${tag}/articles`,
-      {},
-      'getArticlesByTag',
-    );
-    return response.data;
+    // 由于标签是存储在文章中而不是独立的标签表，
+    // 我们使用grouped-by-tag端点然后提取特定标签的文章
+    const groupedArticles = await this.getTags();
+    return groupedArticles[tag] || [];
   }
 
   // Search
@@ -303,15 +305,15 @@ export class ApiService {
   }
 
   // Page Views
-  async getPageView(): Promise<PageViewData> {
+  async getPageView(): Promise<PageViewDataContract> {
     const response = await apiClient.get<{
       statusCode: number;
       data: { totalPageviews: number; totalVisitors: number };
     }>('/api/v2/analytics/public/overview', undefined, 'getPageView');
-    const overview = response.data ?? { totalPageviews: 0, totalVisitors: 0 };
+    const overview = normalizeAnalyticsOverview(response.data);
     return {
-      visited: Number(overview.totalPageviews) || 0,
-      viewer: Number(overview.totalVisitors) || 0,
+      visited: overview.totalPageviews,
+      viewer: overview.totalVisitors,
     };
   }
 
@@ -319,7 +321,7 @@ export class ApiService {
     isNew: boolean;
     isNewByPath: boolean;
     articleId?: number;
-  }): Promise<PageViewData> {
+  }): Promise<PageViewDataContract> {
     // Record pageview via analytics/record with CSRF, routed through Next.js proxy
     try {
       const path = typeof window !== 'undefined' ? window.location.pathname : undefined;

@@ -506,3 +506,77 @@ const normalizeWalineConfig = (raw: unknown): WalineConfigContract => {
     serverURL: typeof data.serverURL === 'string' ? data.serverURL : '',
   };
 };
+
+// ============================================================================
+// Analytics and Page View Contracts
+// ============================================================================
+
+export interface PageViewDataContract {
+  readonly viewer: number;
+  readonly visited: number;
+}
+
+export const createDefaultPageViewData = (): PageViewDataContract => ({
+  viewer: 0,
+  visited: 0,
+});
+
+export interface AnalyticsOverviewContract {
+  readonly totalPageviews: number;
+  readonly totalVisitors: number;
+}
+
+export const createDefaultAnalyticsOverview = (): AnalyticsOverviewContract => ({
+  totalPageviews: 0,
+  totalVisitors: 0,
+});
+
+export interface ArticleStatsContract {
+  readonly views: number;
+  readonly uniqueVisitors: number;
+}
+
+export const createDefaultArticleStats = (): ArticleStatsContract => ({
+  views: 0,
+  uniqueVisitors: 0,
+});
+
+// ============================================================================
+// Normalization Functions for Analytics
+// ============================================================================
+
+export const normalizePageViewData = (raw: unknown): PageViewDataContract => {
+  if (!raw || typeof raw !== 'object') {
+    return createDefaultPageViewData();
+  }
+
+  const data = raw as Record<string, unknown>;
+  return {
+    viewer: typeof data.viewer === 'number' ? data.viewer : 0,
+    visited: typeof data.visited === 'number' ? data.visited : 0,
+  };
+};
+
+export const normalizeAnalyticsOverview = (raw: unknown): AnalyticsOverviewContract => {
+  if (!raw || typeof raw !== 'object') {
+    return createDefaultAnalyticsOverview();
+  }
+
+  const data = raw as Record<string, unknown>;
+  return {
+    totalPageviews: typeof data.totalPageviews === 'number' ? data.totalPageviews : 0,
+    totalVisitors: typeof data.totalVisitors === 'number' ? data.totalVisitors : 0,
+  };
+};
+
+export const normalizeArticleStats = (raw: unknown): ArticleStatsContract => {
+  if (!raw || typeof raw !== 'object') {
+    return createDefaultArticleStats();
+  }
+
+  const data = raw as Record<string, unknown>;
+  return {
+    views: typeof data.views === 'number' ? data.views : 0,
+    uniqueVisitors: typeof data.uniqueVisitors === 'number' ? data.uniqueVisitors : 0,
+  };
+};

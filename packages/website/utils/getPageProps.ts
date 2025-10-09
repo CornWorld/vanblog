@@ -27,6 +27,7 @@ import { isBuildTime } from './loadConfig';
 import { TagPagesProps } from '../pages/tag/[tag]';
 import { getServerPageview, PageViewData } from '../api/pageView';
 import { AuthorCardProps } from '../components/AuthorCard';
+import { normalizePublicMeta } from '../types/contracts';
 
 const defaultLayoutProps: LayoutProps = {
   description: '',
@@ -305,25 +306,19 @@ export async function getAboutPageProps(): Promise<AboutPageProps> {
     return emptyRet;
   }
 
-  const data = await getPublicMeta();
-  const layoutProps = getLayoutPropsFromData(data);
-  const authorCardProps = getAuthorCardProps(data);
-  const about = data.meta.about;
-  let showDonateInfo: 'true' | 'false' = 'true';
-  if (data.meta.siteInfo?.showDonateInfo == 'false') {
-    showDonateInfo = 'false';
-  }
-  let showDonateInAbout: 'true' | 'false' = 'false';
+  const rawData = await getPublicMeta();
+  const data = normalizePublicMeta(rawData);
+  const layoutProps = getLayoutPropsFromData(rawData);
+  const authorCardProps = getAuthorCardProps(rawData);
+  const about = rawData.meta.about;
 
-  if (data.meta.siteInfo?.showDonateInAbout == 'true') {
-    showDonateInAbout = 'true';
-  }
-  if (data.meta.siteInfo?.showDonateButton == 'false') {
-    showDonateInAbout = 'false';
-  }
+  const showDonateInfo = data.meta.siteInfo.showDonateInfo ? 'true' : 'false';
+  const showDonateInAbout =
+    data.meta.siteInfo.showDonateInAbout && data.meta.siteInfo.showDonateButton ? 'true' : 'false';
+
   const payProps = {
-    pay: [data.meta.siteInfo?.payAliPay || '', data.meta.siteInfo?.payWechat || ''],
-    payDark: [data.meta.siteInfo?.payAliPayDark || '', data.meta.siteInfo?.payWechatDark || ''],
+    pay: [data.meta.siteInfo.payAliPay, data.meta.siteInfo.payWechat],
+    payDark: [data.meta.siteInfo.payAliPayDark, data.meta.siteInfo.payWechatDark],
   };
 
   // Fetch pageview data
@@ -334,7 +329,7 @@ export async function getAboutPageProps(): Promise<AboutPageProps> {
     layoutProps,
     authorCardProps,
     about,
-    donates: data.meta?.rewards || [],
+    donates: [...data.meta.rewards],
     showDonateInAbout,
     ...payProps,
     pageViewData,
@@ -379,8 +374,9 @@ export async function getPostPagesProps(curId: string): Promise<PostPagesProps> 
   console.log(`[getPostPagesProps] Fetching post props for ID: ${curId}`);
 
   try {
-    const data = await getPublicMeta();
-    const layoutProps = getLayoutPropsFromData(data);
+    const rawData = await getPublicMeta();
+    const data = normalizePublicMeta(rawData);
+    const layoutProps = getLayoutPropsFromData(rawData);
     let articleData;
 
     try {
@@ -427,10 +423,10 @@ export async function getPostPagesProps(curId: string): Promise<PostPagesProps> 
       };
     }
 
-    const author = articleData?.author || data.meta.siteInfo.author || '';
+    const author = articleData.author || data.meta.siteInfo.author;
     const payProps = {
-      pay: [data.meta.siteInfo?.payAliPay || '', data.meta.siteInfo?.payWechat || ''],
-      payDark: [data.meta.siteInfo?.payAliPayDark || '', data.meta.siteInfo?.payWechatDark || ''],
+      pay: [data.meta.siteInfo.payAliPay, data.meta.siteInfo.payWechat],
+      payDark: [data.meta.siteInfo.payAliPayDark, data.meta.siteInfo.payWechatDark],
     };
 
     // Handle prev/next navigation

@@ -1,7 +1,7 @@
 import { HeadTag } from '../utils/getLayoutProps';
 import { logDefaultValueUsage, isBuildTime } from '../utils/loadConfig';
 import { apiService } from './service';
-import { PageViewData } from './types';
+import { PageViewDataContract, createDefaultPageViewData } from '../types/contracts';
 
 // Re-export types used in public interface
 export type SocialType = 'bilibili' | 'email' | 'github' | 'wechat' | 'gitee' | 'wechat-dark';
@@ -245,12 +245,9 @@ export const getCustomPage = async (path: string): Promise<CustomPage | null> =>
 /**
  * Get article viewer statistics by article ID
  */
-export const getArticleViewer = async (id: number | string): Promise<PageViewData> => {
+export const getArticleViewer = async (id: number | string): Promise<PageViewDataContract> => {
   if (isBuildTime) {
-    return {
-      viewer: 0,
-      visited: 0,
-    };
+    return createDefaultPageViewData();
   }
 
   return apiService.getArticleViewer(id);

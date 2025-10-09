@@ -1,4 +1,5 @@
 import { config, isBuildTime, isDevelopment } from '../utils/loadConfig';
+import { CsrfResponse } from '../types/api';
 
 const isBrowser = typeof window !== 'undefined';
 
@@ -383,7 +384,10 @@ export class ApiClient {
 
       // Support both plain and wrapped responses
       if (res && typeof res === 'object') {
-        const token = (res as any).csrfToken ?? (res as any).data?.csrfToken;
+        const csrfRes = res as CsrfResponse;
+        const token =
+          'csrfToken' in csrfRes ? csrfRes.csrfToken : 'data' in csrfRes && csrfRes.data?.csrfToken;
+
         if (typeof token === 'string' && token.length > 0) {
           this.csrfToken = token;
         }

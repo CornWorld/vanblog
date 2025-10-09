@@ -1,12 +1,12 @@
 import { apiService } from './service';
-import { PageViewData } from './types';
+import { PageViewDataContract, createDefaultPageViewData } from '../types/contracts';
 
-const DEFAULT_PAGEVIEW_RESPONSE: PageViewData = { viewer: 0, visited: 0 };
+const DEFAULT_PAGEVIEW_RESPONSE: PageViewDataContract = createDefaultPageViewData();
 
-export type { PageViewData };
+export type { PageViewDataContract as PageViewData };
 
 // Accept an optional pathname for backward compatibility; it's intentionally unused here.
-export const getPageview = async (..._args: [pathname?: string]): Promise<PageViewData> => {
+export const getPageview = async (..._args: [pathname?: string]): Promise<PageViewDataContract> => {
   // Mark arguments as used to satisfy eslint no-unused-vars
   void _args;
   try {
@@ -18,7 +18,7 @@ export const getPageview = async (..._args: [pathname?: string]): Promise<PageVi
 };
 
 // Server-side-compatible version of pageview
-export const getServerPageview = async (): Promise<PageViewData> => {
+export const getServerPageview = async (): Promise<PageViewDataContract> => {
   try {
     return await apiService.getPageView();
   } catch (err) {
@@ -28,7 +28,7 @@ export const getServerPageview = async (): Promise<PageViewData> => {
 };
 
 // Client-side only function to update pageviews
-export const updatePageview = async (pathname: string): Promise<PageViewData> => {
+export const updatePageview = async (pathname: string): Promise<PageViewDataContract> => {
   const hasVisited = window.localStorage.getItem('visited') === 'true';
   const hasVisitedCurrentPath = window.localStorage.getItem(`visited-${pathname}`) === 'true';
 
@@ -48,15 +48,10 @@ export const updatePageview = async (pathname: string): Promise<PageViewData> =>
 
     try {
       return await apiService.updatePageView(options);
-    } catch (fetchError) {
-      console.warn('[PageView] Failed to update pageview, using fallback data]:', fetchError);
-
-      try {
-        return await apiService.getPageView();
-      } catch (cacheError) {
-        console.warn('[PageView] Failed to get cached pageview data:', cacheError);
-        return DEFAULT_PAGEVIEW_RESPONSE;
-      }
+    } catch (err) {
+      console.error('[PageView] Error updating pageview:', err);
+      // Fallback to getting current pageview data
+      return await apiService.getPageView();
     }
   } catch (err) {
     console.error('[PageView] Error in updatePageview:', err);
