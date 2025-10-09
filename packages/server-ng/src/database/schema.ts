@@ -399,3 +399,4 @@ export const webhookLogs = sqliteTable(
 );
 
 export { imageProcessingQueue } from './schema/image-processing-queue';
+export { tokenBlacklist } from './schema/auth.schema';

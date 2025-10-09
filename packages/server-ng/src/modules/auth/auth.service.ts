@@ -133,8 +133,8 @@ export class AuthService {
    * Revokes a specific JWT token by adding it to the blacklist
    * @param token - The JWT token to revoke
    */
-  revokeToken(token: string): void {
-    this.tokenService.revokeToken(token);
+  async revokeToken(token: string): Promise<void> {
+    await this.tokenService.revokeToken(token);
   }
 
   /**

@@ -7,6 +7,7 @@ import dayjs from 'dayjs';
 import { UserType } from '../user/dto/create-user.dto';
 import { UserService } from '../user/user.service';
 
+import { TokenBlacklistService } from './token-blacklist.service';
 import { TokenService } from './token.service';
 
 describe('TokenService', () => {
@@ -15,6 +16,10 @@ describe('TokenService', () => {
   let mockJwtVerify: ReturnType<typeof vi.fn>;
   let mockUserServiceFindOne: ReturnType<typeof vi.fn>;
   let mockConfigServiceGet: ReturnType<typeof vi.fn>;
+  let mockTokenBlacklistService: {
+    revokeToken: ReturnType<typeof vi.fn>;
+    isTokenRevoked: ReturnType<typeof vi.fn>;
+  };
 
   const mockUser = {
     id: 1,
@@ -27,6 +32,10 @@ describe('TokenService', () => {
     mockJwtVerify = vi.fn();
     mockUserServiceFindOne = vi.fn();
     mockConfigServiceGet = vi.fn((_: string, def: any) => def);
+    mockTokenBlacklistService = {
+      revokeToken: vi.fn(),
+      isTokenRevoked: vi.fn().mockResolvedValue(false),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -49,6 +58,10 @@ describe('TokenService', () => {
           useValue: {
             get: mockConfigServiceGet,
           },
+        },
+        {
+          provide: TokenBlacklistService,
+          useValue: mockTokenBlacklistService,
         },
       ],
     }).compile();
@@ -277,9 +290,9 @@ describe('TokenService', () => {
   });
 
   describe('revokeToken', () => {
-    it('should add token to revoked tokens set', () => {
+    it('should add token to revoked tokens set', async () => {
       const token = 'token-to-revoke';
-      service.revokeToken(token);
+      await service.revokeToken(token);
       expect(service.isTokenRevoked(token)).toBe(true);
     });
   });
@@ -367,9 +380,9 @@ describe('TokenService', () => {
       expect(service.isTokenRevoked('valid-token')).toBe(false);
     });
 
-    it('should return true for revoked token', () => {
+    it('should return true for revoked token', async () => {
       const token = 'revoked-token';
-      service.revokeToken(token);
+      await service.revokeToken(token);
       expect(service.isTokenRevoked(token)).toBe(true);
     });
   });

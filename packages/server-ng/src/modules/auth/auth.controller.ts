@@ -119,21 +119,21 @@ export class AuthController {
   @ApiOperation({ summary: 'User logout' })
   @ApiResponse({ status: 200, description: 'Logout successful' })
   @ApiBody({ schema: { type: 'object', properties: { token: { type: 'string' } } } })
-  logout(
+  async logout(
     @Request() req: RequestWithUser,
     @Body() body: { token?: string; refresh_token?: string },
-  ): { message: string } {
+  ): Promise<{ message: string }> {
     // Extract token from Authorization header if not provided in body
     const authHeader = req.headers.authorization;
     const token =
       body.token ?? (authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : null);
 
     if (token) {
-      this.authService.revokeToken(token);
+      await this.authService.revokeToken(token);
     }
 
     if (body.refresh_token) {
-      this.authService.revokeToken(body.refresh_token);
+      await this.authService.revokeToken(body.refresh_token);
     }
 
     return { message: 'Logout successful' };

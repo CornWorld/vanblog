@@ -13,6 +13,7 @@ import { LoginLogService } from './login-log.service';
 import { PasswordChangeHandlerService } from './password-change-handler.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { LocalStrategy } from './strategies/local.strategy';
+import { TokenBlacklistService } from './token-blacklist.service';
 import { TokenService } from './token.service';
 
 @Module({
@@ -38,6 +39,7 @@ import { TokenService } from './token.service';
     JwtStrategy,
     LoginLogService,
     TokenService,
+    TokenBlacklistService,
     PasswordChangeHandlerService,
     PermissionsGuard,
   ],

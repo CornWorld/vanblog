@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import dayjs, { type Dayjs } from 'dayjs';
@@ -8,6 +8,7 @@ import { User } from '../user/entities/user.entity';
 import { UserService } from '../user/user.service';
 
 import { JwtPayload } from './strategies/jwt.strategy';
+import { TokenBlacklistService } from './token-blacklist.service';
 
 export interface TokenPair {
   accessToken: string;
@@ -23,6 +24,7 @@ export interface TokenInfo {
 
 @Injectable()
 export class TokenService {
+  private readonly logger = new Logger(TokenService.name);
   private readonly revokedTokens = new Set<string>();
   private readonly refreshTokens = new Map<string, TokenInfo>();
 
@@ -30,6 +32,7 @@ export class TokenService {
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
     private readonly userService: UserService,
+    private readonly tokenBlacklistService: TokenBlacklistService,
   ) {}
 
   /**
@@ -95,7 +98,13 @@ export class TokenService {
    * 验证访问令牌
    */
   async verifyAccessToken(token: string): Promise<User> {
+    // 检查内存黑名单（向后兼容）
     if (this.revokedTokens.has(token)) {
+      throw new UnauthorizedException('Token has been revoked');
+    }
+
+    // 检查数据库黑名单
+    if (await this.tokenBlacklistService.isTokenRevoked(token)) {
       throw new UnauthorizedException('Token has been revoked');
     }
 
@@ -160,7 +169,7 @@ export class TokenService {
     const user = await this.verifyRefreshToken(refreshToken);
 
     // 撤销旧的刷新令牌
-    this.revokeToken(refreshToken);
+    await this.revokeToken(refreshToken);
 
     // 生成新的令牌对
     return this.generateTokenPair(user);
@@ -169,9 +178,36 @@ export class TokenService {
   /**
    * 撤销令牌
    */
-  revokeToken(token: string): void {
+  async revokeToken(token: string): Promise<void> {
+    // 保持内存黑名单（向后兼容）
     this.revokedTokens.add(token);
     this.refreshTokens.delete(token);
+
+    // 添加到数据库黑名单
+    try {
+      const payload: unknown = this.jwtService.decode(token);
+      if (payload !== null && typeof payload === 'object' && 'exp' in payload) {
+        const payloadWithExp = payload as { exp: unknown };
+        if (typeof payloadWithExp.exp === 'number' && payloadWithExp.exp > 0) {
+          const jwtPayload = payload as unknown as JwtPayload & { exp: number };
+          const expiresAt = new Date(jwtPayload.exp * 1000);
+          // 根据令牌内容判断类型，默认为 access
+          const tokenType = 'access'; // 简化处理，因为 JwtPayload 没有 tokenType 属性
+          const userId = typeof jwtPayload.sub === 'number' ? jwtPayload.sub : undefined;
+
+          await this.tokenBlacklistService.revokeToken(
+            token,
+            tokenType,
+            expiresAt,
+            userId,
+            'Manual revocation',
+          );
+        }
+      }
+    } catch (error) {
+      // 如果解码失败，仍然添加到内存黑名单
+      this.logger.warn('Failed to decode token for database blacklist', { error });
+    }
   }
 
   /**

@@ -203,8 +203,8 @@ describe('AuthService', () => {
   });
 
   describe('revokeToken', () => {
-    it('should revoke token', () => {
-      service.revokeToken('token.to.revoke');
+    it('should revoke token', async () => {
+      await service.revokeToken('token.to.revoke');
 
       expect(mockTokenService.revokeToken).toHaveBeenCalledWith('token.to.revoke');
     });
