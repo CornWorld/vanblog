@@ -1,4 +1,5 @@
 import { defaultMenu, MenuItem, PublicMetaProp } from '../api/getAllData';
+import { normalizePublicMeta } from '../types/contracts';
 import dayjs from 'dayjs';
 import { AuthorCardProps } from '../components/AuthorCard';
 import { getPublicMeta } from '../api/getAllData';
@@ -51,174 +52,85 @@ export interface HeadTag {
 }
 
 export function getLayoutPropsFromData(data: PublicMetaProp): LayoutProps {
-  // 防御：容忍 data/meta/siteInfo 为空，提供安全默认值
-  const safeMeta =
-    data?.meta ||
-    ({
-      links: [],
-      socials: [],
-      rewards: [],
-      categories: [],
-      about: { updatedAt: dayjs().toISOString(), content: '' },
-      siteInfo: {
-        author: '',
-        authorDesc: '',
-        authorLogo: '',
-        siteLogo: '',
-        favicon: '/logo.svg',
-        siteName: 'VanBlog',
-        siteDesc: '',
-        beianNumber: '',
-        beianUrl: '',
-        gaBeianNumber: '',
-        gaBeianUrl: '',
-        gaBeianLogoUrl: '',
-        payAliPay: '',
-        payWechat: '',
-        since: dayjs().format('YYYY'),
-        baseUrl: '',
-        copyrightAggreement: 'BY-NC-SA',
-        showFriends: 'false',
-        enableComment: 'false',
-        defaultTheme: 'auto',
-        enableCustomizing: 'false',
-        showDonateButton: 'false',
-        showCopyRight: 'false',
-        showRSS: 'false',
-        openArticleLinksInNewWindow: 'false',
-        showExpirationReminder: 'false',
-        showEditButton: 'false',
-      },
-    } as PublicMetaProp['meta']);
+  // 使用新的数据契约规范化函数，消除防御性编程
+  const normalizedData = normalizePublicMeta(data);
+  const { meta, layout, walineConfig, version, menus } = normalizedData;
+  const { siteInfo, categories } = meta;
 
-  const siteInfo = safeMeta.siteInfo || ({} as PublicMetaProp['meta']['siteInfo']);
-  const showSubMenu = Boolean(safeMeta.categories?.length) && siteInfo?.showSubMenu == 'true';
-  let headerLeftContent: 'siteLogo' | 'siteName' = 'siteName';
-  if (siteInfo?.siteLogo && siteInfo?.headerLeftContent == 'siteLogo') {
-    headerLeftContent = 'siteLogo';
-  }
-  let showAdminButton: 'true' | 'false' = 'true';
-  if (siteInfo?.showAdminButton && siteInfo.showAdminButton == 'false') {
-    showAdminButton = 'false';
-  }
-  let showFriends: 'true' | 'false' = 'true';
-  if (siteInfo?.showFriends == 'false') {
-    showFriends = 'false';
-  }
+  const showSubMenu = Boolean(categories.length) && siteInfo.showSubMenu;
+  const headerLeftContent: 'siteLogo' | 'siteName' =
+    siteInfo.siteLogo && siteInfo.headerLeftContent === 'siteLogo' ? 'siteLogo' : 'siteName';
+
   const customSetting: {
     enableCustomizing: 'true' | 'false';
     customCss?: string;
     customHtml?: string;
     customHead?: HeadTag[];
     customScript?: string;
-  } = { enableCustomizing: 'true' };
-  if (siteInfo.enableCustomizing && siteInfo.enableCustomizing == 'false') {
-    customSetting.enableCustomizing = 'false';
-  }
-  if (data?.layout?.css) {
-    customSetting.customCss = data?.layout?.css;
-  }
-  if (data?.layout?.html) {
-    customSetting.customHtml = data?.layout?.html;
-  }
-  if (data?.layout?.head) {
-    customSetting.customHead = data?.layout?.head;
-  }
-  if (data?.layout?.script) {
-    customSetting.customScript = data?.layout?.script;
-  }
-  let showDonateButton: 'true' | 'false' = 'true';
-  let showCopyRight: 'true' | 'false' = 'true';
-  if (siteInfo?.showCopyRight == 'false') {
-    showCopyRight = 'false';
-  }
-  if (siteInfo?.showDonateButton == 'false') {
-    showDonateButton = 'false';
-  }
-  let showRSS: 'true' | 'false' = 'true';
-  if (siteInfo?.showRSS && siteInfo?.showRSS == 'false') {
-    showRSS = 'false';
-  }
-  let showExpirationReminder: 'true' | 'false' = 'true';
-  if (siteInfo?.showExpirationReminder && siteInfo?.showExpirationReminder == 'false') {
-    showExpirationReminder = 'false';
-  }
-  let showEditButton: 'true' | 'false' = 'true';
-  if (siteInfo?.showEditButton && siteInfo?.showEditButton == 'false') {
-    showEditButton = 'false';
-  }
-  let openArticleLinksInNewWindow: 'true' | 'false' = 'false';
-  if (siteInfo?.openArticleLinksInNewWindow && siteInfo?.openArticleLinksInNewWindow == 'true') {
-    openArticleLinksInNewWindow = 'true';
-  }
-
-  const walineConfig = data?.walineConfig || {};
-
-  // Coerce possibly string-typed flags from siteInfo into narrow unions required by LayoutProps
-  const enableCommentVal: 'true' | 'false' = siteInfo?.enableComment === 'false' ? 'false' : 'true';
-  const defaultThemeVal: 'auto' | 'dark' | 'light' =
-    siteInfo?.defaultTheme === 'dark'
-      ? 'dark'
-      : siteInfo?.defaultTheme === 'light'
-        ? 'light'
-        : 'auto';
+  } = {
+    enableCustomizing: siteInfo.enableCustomizing ? 'true' : 'false',
+    customCss: layout.css || undefined,
+    customHtml: layout.html || undefined,
+    customHead: layout.head.length > 0 ? [...layout.head] : undefined,
+    customScript: layout.script || undefined,
+  };
 
   return {
-    showFriends,
-    version: data?.version || 'dev',
-    subMenuOffset: siteInfo?.subMenuOffset || 0,
-    showAdminButton,
+    showFriends: siteInfo.showFriends ? 'true' : 'false',
+    version,
+    subMenuOffset: siteInfo.subMenuOffset,
+    showAdminButton: siteInfo.showAdminButton ? 'true' : 'false',
     headerLeftContent,
-    copyrightAggreement: siteInfo?.copyrightAggreement || 'BY-NC-SA',
-    ipcHref: siteInfo?.beianUrl || '',
-    ipcNumber: siteInfo?.beianNumber || '',
-    gaBeianNumber: siteInfo?.gaBeianNumber || '',
-    gaBeianLogoUrl: siteInfo?.gaBeianLogoUrl || '',
-    gaBeianUrl: siteInfo?.gaBeianUrl || '',
-    since: siteInfo?.since || dayjs().toISOString(),
-    logo: siteInfo?.siteLogo || '',
-    favicon: siteInfo?.favicon || '/logo.svg',
-    siteName: siteInfo?.siteName || 'VanBlog',
-    siteDesc: siteInfo?.siteDesc || '',
-    baiduAnalysisID: siteInfo?.baiduAnalysisId || '',
-    gaAnalysisID: siteInfo?.gaAnalysisId || '',
-    logoDark: siteInfo?.siteLogoDark || '',
-    showExpirationReminder: showExpirationReminder,
-    description: siteInfo?.siteDesc || '',
-    menus: data?.menus || defaultMenu,
-    categories: safeMeta?.categories || [],
+    copyrightAggreement: siteInfo.copyrightAggreement,
+    ipcHref: siteInfo.beianUrl,
+    ipcNumber: siteInfo.beianNumber,
+    gaBeianNumber: siteInfo.gaBeianNumber,
+    gaBeianLogoUrl: siteInfo.gaBeianLogoUrl,
+    gaBeianUrl: siteInfo.gaBeianUrl,
+    since: siteInfo.since,
+    logo: siteInfo.siteLogo,
+    favicon: siteInfo.favicon,
+    siteName: siteInfo.siteName,
+    siteDesc: siteInfo.siteDesc,
+    baiduAnalysisID: siteInfo.baiduAnalysisId,
+    gaAnalysisID: siteInfo.gaAnalysisId,
+    logoDark: siteInfo.siteLogoDark,
+    showExpirationReminder: siteInfo.showExpirationReminder ? 'true' : 'false',
+    description: siteInfo.siteDesc,
+    menus: menus as MenuItem[],
+    categories: [...categories],
     showSubMenu: showSubMenu ? 'true' : 'false',
-    enableComment: enableCommentVal,
-    defaultTheme: defaultThemeVal,
-    openArticleLinksInNewWindow,
-    showCopyRight,
-    showDonateButton,
-    showRSS,
-    showEditButton,
+    enableComment: siteInfo.enableComment ? 'true' : 'false',
+    defaultTheme: siteInfo.defaultTheme,
+    openArticleLinksInNewWindow: siteInfo.openArticleLinksInNewWindow ? 'true' : 'false',
+    showCopyRight: siteInfo.showCopyRight ? 'true' : 'false',
+    showDonateButton: siteInfo.showDonateButton ? 'true' : 'false',
+    showRSS: siteInfo.showRSS ? 'true' : 'false',
+    showEditButton: siteInfo.showEditButton ? 'true' : 'false',
     ...customSetting,
-    walineServerURL: walineConfig.serverURL || '',
+    walineServerURL: walineConfig.serverURL,
   };
 }
 
 export function getAuthorCardProps(data: PublicMetaProp): AuthorCardProps {
-  const meta = data?.meta || ({} as any);
-  const categoriesLen = Array.isArray(meta?.categories) ? meta.categories.length : 0;
-  const showSubMenu = Boolean(categoriesLen) && meta?.siteInfo?.showSubMenu == 'true';
-  let showRSS: 'true' | 'false' = 'true';
-  if (meta?.siteInfo?.showRSS && meta?.siteInfo?.showRSS == 'false') {
-    showRSS = 'false';
-  }
+  const normalizedData = normalizePublicMeta(data);
+  const { meta, tags, totalArticles } = normalizedData;
+  const { categories, siteInfo, socials } = meta;
+
+  const categoriesLen = categories.length;
+  const showSubMenu = Boolean(categoriesLen) && siteInfo.showSubMenu;
+
   return {
-    postNum: data?.totalArticles ?? 0,
-    tagNum: Array.isArray(data?.tags) ? data.tags.length : 0,
+    postNum: totalArticles,
+    tagNum: tags.length,
     catelogNum: categoriesLen,
-    socials: meta?.socials || [],
-    author: meta?.siteInfo?.author || '',
-    desc: meta?.siteInfo?.authorDesc || '',
-    logo: meta?.siteInfo?.authorLogo || '',
-    logoDark: meta?.siteInfo?.authorLogoDark || '',
+    socials: [...socials],
+    author: siteInfo.author,
+    desc: siteInfo.authorDesc,
+    logo: siteInfo.authorLogo,
+    logoDark: siteInfo.authorLogoDark,
     showSubMenu: showSubMenu ? 'true' : 'false',
-    showRSS,
+    showRSS: siteInfo.showRSS ? 'true' : 'false',
   };
 }
 
