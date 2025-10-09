@@ -1,8 +1,23 @@
-import { Body, Controller, Delete, Get, Param, Post, Put, ParseIntPipe } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Post,
+  Put,
+  ParseIntPipe,
+  Query,
+} from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { ZodValidationPipe } from 'nestjs-zod';
 
 import { OverallStatisticsDto } from '../../shared/dto/statistics.dto';
+import {
+  ArticleListResponseDto,
+  ArticleQueryDto,
+  ArticleQuerySchema,
+} from '../article/dto/article.dto';
 import { Permission } from '../auth/permissions.decorator';
 
 import { CategoryService } from './category.service';
@@ -192,5 +207,25 @@ export class CategoryController {
     }[]
   > {
     return this.categoryService.getCategoriesWithTags();
+  }
+
+  /**
+   * 根据分类 ID 获取文章列表
+   *
+   * 根据分类 ID 查询该分类下的所有文章，支持分页和筛选。
+   *
+   * @param id 分类 ID
+   * @param query 查询参数
+   * @returns 文章列表响应数据
+   */
+  @Get(':id/articles')
+  @ApiOperation({ summary: 'Get articles by category ID' })
+  @ApiResponse({ status: 200, description: 'Return articles by category ID' })
+  @ApiResponse({ status: 404, description: 'Category not found' })
+  async getArticlesByCategoryId(
+    @Param('id', ParseIntPipe) id: number,
+    @Query(new ZodValidationPipe(ArticleQuerySchema)) query: ArticleQueryDto,
+  ): Promise<ArticleListResponseDto> {
+    return this.categoryService.getArticlesByCategoryId(id, query);
   }
 }

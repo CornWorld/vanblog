@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, Inject } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import dayjs from 'dayjs';
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, sql, desc } from 'drizzle-orm';
 import * as jwt from 'jsonwebtoken';
 
 import { ConfigService } from '../../config/config.service';
@@ -11,6 +11,7 @@ import { OverallStatisticsDto } from '../../shared/dto/statistics.dto';
 import { QueryOptimizerService } from '../../shared/services/query-optimizer.service';
 import { StatisticsService } from '../../shared/services/statistics.service';
 import { safeParseJson, dataSchemas } from '../../shared/zod';
+import { ArticleListResponseDto, ArticleQueryDto } from '../article/dto/article.dto';
 import { HookService } from '../plugin/services/hook.service';
 
 import {
@@ -347,5 +348,66 @@ export class CategoryService {
         return results;
       },
     );
+  }
+
+  async getArticlesByCategoryId(
+    id: number,
+    query: ArticleQueryDto,
+  ): Promise<ArticleListResponseDto> {
+    // 首先验证分类是否存在
+    const category = await this.findOne(id);
+
+    const { page = 1, pageSize = 10, includeHidden = false } = query;
+
+    // 构建查询条件：查找该分类下的文章
+    const whereClause = and(
+      eq(articles.category, category.name),
+      includeHidden ? undefined : eq(articles.hidden, false),
+    );
+
+    // 构建排序条件
+    const orderByClause = desc(articles.updatedAt);
+
+    const [articleResults, countResult] = await Promise.all([
+      this.db
+        .select()
+        .from(articles)
+        .where(whereClause)
+        .orderBy(orderByClause)
+        .limit(Number(pageSize))
+        .offset((Number(page) - 1) * Number(pageSize)),
+      this.db
+        .select({ count: sql<number>`count(*)` })
+        .from(articles)
+        .where(whereClause),
+    ]);
+
+    const processedArticles = articleResults.map((article) => ({
+      id: article.id,
+      title: article.title,
+      content: article.content,
+      pathname: article.pathname,
+      tags: safeParseJson(article.tags, dataSchemas.tagsArray) ?? [],
+      category: article.category,
+      author: article.author,
+      top: article.top,
+      hidden: article.hidden,
+      private: article.private,
+      password: article.password,
+      viewer: article.viewer,
+      createdAt: dayjs(article.createdAt),
+      updatedAt: dayjs(article.updatedAt),
+    }));
+
+    const total = Number(countResult[0]?.count) > 0 ? Number(countResult[0]?.count) : 0;
+    const totalPages = Math.ceil(total / Number(pageSize));
+
+    return {
+      items: processedArticles,
+      total,
+      page,
+      pageSize,
+      totalPages,
+    };
   }
 }

@@ -1,12 +1,14 @@
 import { Injectable, NotFoundException, Inject } from '@nestjs/common';
 import dayjs from 'dayjs';
-import { eq, sql, like } from 'drizzle-orm';
+import { eq, sql, like, and, desc } from 'drizzle-orm';
 
 import { DATABASE_CONNECTION, type Database } from '../../database';
 import { tags, articles } from '../../database/schema';
 import { OverallStatisticsDto } from '../../shared/dto/statistics.dto';
 import { QueryOptimizerService } from '../../shared/services/query-optimizer.service';
 import { StatisticsService } from '../../shared/services/statistics.service';
+import { safeParseJson, dataSchemas } from '../../shared/zod';
+import { ArticleListResponseDto, ArticleQueryDto } from '../article/dto/article.dto';
 import { HookService } from '../plugin/services/hook.service';
 
 import { CreateTagDto, UpdateTagDto, TagListResponseDto } from './dto/tag.dto';
@@ -237,5 +239,63 @@ export class TagService {
     );
 
     return results;
+  }
+
+  async getArticlesByTagId(id: number, query: ArticleQueryDto): Promise<ArticleListResponseDto> {
+    // 首先验证标签是否存在
+    const tag = await this.findOne(id);
+
+    const { page = 1, pageSize = 10, includeHidden = false } = query;
+
+    // 构建查询条件：查找包含该标签的文章
+    const whereClause = and(
+      like(articles.tags, `%"${tag.name}"%`),
+      includeHidden ? undefined : eq(articles.hidden, false),
+    );
+
+    // 构建排序条件
+    const orderByClause = desc(articles.updatedAt);
+
+    const [articleResults, countResult] = await Promise.all([
+      this.db
+        .select()
+        .from(articles)
+        .where(whereClause)
+        .orderBy(orderByClause)
+        .limit(Number(pageSize))
+        .offset((Number(page) - 1) * Number(pageSize)),
+      this.db
+        .select({ count: sql<number>`count(*)` })
+        .from(articles)
+        .where(whereClause),
+    ]);
+
+    const processedArticles = articleResults.map((article) => ({
+      id: article.id,
+      title: article.title,
+      content: article.content,
+      pathname: article.pathname,
+      tags: safeParseJson(article.tags, dataSchemas.tagsArray) ?? [],
+      category: article.category,
+      author: article.author,
+      top: article.top,
+      hidden: article.hidden,
+      private: article.private,
+      password: article.password,
+      viewer: article.viewer,
+      createdAt: dayjs(article.createdAt),
+      updatedAt: dayjs(article.updatedAt),
+    }));
+
+    const total = Number(countResult[0]?.count) > 0 ? Number(countResult[0]?.count) : 0;
+    const totalPages = Math.ceil(total / Number(pageSize));
+
+    return {
+      items: processedArticles,
+      total,
+      page,
+      pageSize,
+      totalPages,
+    };
   }
 }

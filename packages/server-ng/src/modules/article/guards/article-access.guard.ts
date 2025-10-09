@@ -6,6 +6,7 @@ import * as jwt from 'jsonwebtoken';
 import { ConfigService } from '../../../config/config.service';
 import { ArticleService } from '../article.service';
 import { ARTICLE_ACCESS_KEY } from '../decorators/article-access.decorator';
+import { SKIP_ARTICLE_ACCESS_KEY } from '../decorators/skip-article-access.decorator';
 
 /**
  * 文章访问令牌载荷接口
@@ -65,6 +66,16 @@ export class ArticleAccessGuard implements CanActivate {
    */
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<RequestWithParams>();
+
+    // 检查是否跳过文章访问验证
+    const skipAccess = this.reflector.getAllAndOverride<boolean>(SKIP_ARTICLE_ACCESS_KEY, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
+
+    if (skipAccess) {
+      return true;
+    }
 
     // 检查是否需要文章访问验证
     const requiresAccess = this.checkIfRequiresAccess(context);

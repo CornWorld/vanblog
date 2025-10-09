@@ -24,6 +24,7 @@ import { User } from '../user/entities/user.entity';
 
 import { ArticleService } from './article.service';
 import { RequireArticleAccess } from './decorators/article-access.decorator';
+import { SkipArticleAccess } from './decorators/skip-article-access.decorator';
 import {
   CreateArticleDto,
   UpdateArticleDto,
@@ -39,13 +40,10 @@ import { Article } from './entities/article.entity';
 import { ArticleAccessGuard } from './guards/article-access.guard';
 
 /**
- * 文章管理控制器
+ * 文章控制器
  *
- * 提供文章的 CRUD 操作，包括创建、查询、更新和删除文章，
- * 以及文章搜索、导入导出、浏览量统计等功能。
- *
- * @author VanBlog Team
- * @since 2.0.0
+ * 提供文章的 CRUD 操作、搜索、分类查询等功能。
+ * 支持文章访问控制，包括密码保护和私有文章访问。
  */
 @ApiTags('Articles')
 @Controller({ path: 'articles', version: '2' })
@@ -59,26 +57,25 @@ export class ArticleController {
   /**
    * 获取所有文章
    *
-   * 根据查询条件获取文章列表，支持分页、排序、筛选等功能。
+   * 支持分页、排序、筛选等查询参数。
    *
-   * @param query 文章查询参数
-   * @returns 文章列表响应对象
+   * @param query 查询参数
+   * @returns 文章列表和分页信息
    */
   @Get()
   @ApiOperation({ summary: 'Get all articles' })
   @ApiResponse({ status: 200, description: 'Return all articles' })
   async findAll(@Query() query: ArticleQueryDto): Promise<ArticleListResponseDto> {
-    const articles = await this.articleService.findAll(query);
-    return articles;
+    return this.articleService.findAll(query);
   }
 
   /**
    * 搜索文章
    *
-   * 根据关键词搜索文章，支持标题、内容、标签等多字段搜索。
+   * 根据关键词搜索文章标题和内容。
    *
-   * @param query 文章搜索参数
-   * @returns 文章搜索结果
+   * @param query 搜索参数
+   * @returns 搜索结果
    */
   @Get('search')
   @ApiOperation({ summary: 'Search articles' })
@@ -93,23 +90,22 @@ export class ArticleController {
   /**
    * 导出所有文章
    *
-   * 导出系统中所有文章的完整数据，用于备份或迁移。需要文章读取权限。
+   * 导出系统中的所有文章数据，需要管理员权限。
    *
-   * @returns 所有文章的数据数组
+   * @returns 所有文章数据
    */
   @Get('export')
   @Permission('article', ['read'])
   @ApiOperation({ summary: 'Export all articles' })
   @ApiResponse({ status: 200, description: 'Export articles' })
   async export(): Promise<Article[]> {
-    const articles = await this.articleService.exportArticles();
-    return articles;
+    return this.articleService.exportArticles();
   }
 
   /**
    * 根据分类名称获取文章
    *
-   * 获取指定分类下的所有文章列表。
+   * 获取指定分类下的所有文章。
    *
    * @param name 分类名称
    * @returns 该分类下的文章列表
@@ -125,12 +121,11 @@ export class ArticleController {
   }
 
   /**
-   * 导入文章
+   * 批量导入文章
    *
-   * 批量导入文章数据，用于数据迁移或批量创建。需要文章创建权限。
+   * 批量创建多篇文章，需要管理员权限。
    *
-   * @param articles 要导入的文章数据数组
-   * @throws {BadRequestException} 当文章数据格式错误时
+   * @param articles 文章数据数组
    */
   @Post('import')
   @Permission('article', ['create'])
@@ -143,10 +138,10 @@ export class ArticleController {
   /**
    * 根据路径获取文章
    *
-   * 根据文章的路径名称获取文章详细信息，用于前端路由访问。
+   * 根据文章的路径名称获取文章详情。如果文章是私有的，需要提供有效的访问令牌。
    *
    * @param pathname 文章路径名称
-   * @returns 文章详细信息
+   * @returns 文章详情
    * @throws {NotFoundException} 当文章不存在时
    */
   @Get('by-path/:pathname')
@@ -157,6 +152,36 @@ export class ArticleController {
   @ApiResponse({ status: 401, description: 'Article access token required for private articles' })
   async findOneByPathname(@Param('pathname') pathname: string): Promise<Article> {
     return this.articleService.findOneByPathname(pathname);
+  }
+
+  /**
+   * 获取按分类分组的文章
+   * 返回 Record<string, Article[]> 格式，用于前端展示
+   */
+  @Get('grouped-by-category')
+  @SkipArticleAccess()
+  @ApiOperation({ summary: 'Get articles grouped by category' })
+  @ApiResponse({
+    status: 200,
+    description: 'Return articles grouped by category name',
+  })
+  async getArticlesGroupedByCategory(): Promise<Record<string, Article[]>> {
+    return this.articleService.getArticlesGroupedByCategory();
+  }
+
+  /**
+   * 获取按标签分组的文章
+   * 返回 Record<string, Article[]> 格式，用于前端展示
+   */
+  @Get('grouped-by-tag')
+  @SkipArticleAccess()
+  @ApiOperation({ summary: 'Get articles grouped by tag' })
+  @ApiResponse({
+    status: 200,
+    description: 'Return articles grouped by tag name',
+  })
+  async getArticlesGroupedByTag(): Promise<Record<string, Article[]>> {
+    return this.articleService.getArticlesGroupedByTag();
   }
 
   /**
@@ -221,11 +246,10 @@ export class ArticleController {
   /**
    * 创建新文章
    *
-   * 根据提供的文章信息创建新文章。需要文章创建权限。
+   * 创建一篇新的文章，需要管理员权限。
    *
-   * @param createArticleDto 文章创建数据传输对象
-   * @returns 创建成功的文章信息
-   * @throws {BadRequestException} 当文章数据验证失败时
+   * @param createArticleDto 文章创建数据
+   * @returns 创建的文章
    */
   @Post()
   @Permission('article', ['create'])
@@ -238,15 +262,14 @@ export class ArticleController {
   }
 
   /**
-   * 更新文章信息
+   * 更新文章
    *
-   * 根据文章 ID 更新文章的信息，如标题、内容、分类、标签等。
+   * 根据 ID 更新文章信息，需要管理员权限。
    *
    * @param id 文章 ID
-   * @param updateArticleDto 文章更新数据传输对象
-   * @returns 更新后的文章信息
+   * @param updateArticleDto 文章更新数据
+   * @returns 更新后的文章
    * @throws {NotFoundException} 当文章不存在时
-   * @throws {BadRequestException} 当数据验证失败时
    */
   @Put(':id')
   @Permission('article', ['update'])
@@ -263,7 +286,7 @@ export class ArticleController {
   /**
    * 删除文章
    *
-   * 根据文章 ID 删除指定文章及其相关数据。
+   * 根据 ID 删除文章，需要管理员权限。
    *
    * @param id 文章 ID
    * @throws {NotFoundException} 当文章不存在时
@@ -274,19 +297,20 @@ export class ArticleController {
   @ApiResponse({ status: 200, description: 'Article deleted successfully' })
   @ApiResponse({ status: 404, description: 'Article not found' })
   async remove(@Param('id', ParseIntPipe) id: number): Promise<void> {
-    return this.articleService.remove(id);
+    await this.articleService.remove(id);
   }
 
   /**
-   * 验证文章密码
+   * 验证文章密码（通过 ID）
    *
-   * 验证受密码保护文章的访问密码。
+   * 验证受密码保护文章的访问密码，成功后返回访问令牌。
    *
    * @param id 文章 ID
-   * @param verifyPasswordDto 密码验证数据传输对象
-   * @returns 文章访问响应
-   * @throws {NotFoundException} 当文章不存在时
+   * @param verifyPasswordDto 密码验证数据
+   * @param req 请求对象，包含用户信息
+   * @returns 访问令牌信息
    * @throws {UnauthorizedException} 当密码错误时
+   * @throws {NotFoundException} 当文章不存在时
    */
   @Post(':id/verify-password')
   @HttpCode(HttpStatus.OK)
@@ -304,13 +328,20 @@ export class ArticleController {
     @Body() verifyPasswordDto: VerifyArticlePasswordDto,
     @Request() req: { user?: User },
   ): Promise<ArticleAccessResponseDto> {
-    // 提取当前用户 ID（如果已认证）
-    const userId = req.user?.id;
-    return this.articleService.verifyPassword(id, verifyPasswordDto.password, userId);
+    return this.articleService.verifyPassword(id, verifyPasswordDto.password, req.user?.id);
   }
 
   /**
-   * 验证文章密码（按 pathname）
+   * 验证文章密码（通过路径）
+   *
+   * 根据文章路径验证受密码保护文章的访问密码，成功后返回访问令牌。
+   *
+   * @param pathname 文章路径名称
+   * @param verifyPasswordDto 密码验证数据
+   * @param req 请求对象，包含用户信息
+   * @returns 访问令牌信息
+   * @throws {UnauthorizedException} 当密码错误时
+   * @throws {NotFoundException} 当文章不存在时
    */
   @Post('by-path/:pathname/verify-password')
   @HttpCode(HttpStatus.OK)
@@ -328,11 +359,10 @@ export class ArticleController {
     @Body() verifyPasswordDto: VerifyArticlePasswordDto,
     @Request() req: { user?: User },
   ): Promise<ArticleAccessResponseDto> {
-    const userId = req.user?.id;
     return this.articleService.verifyPasswordByPathname(
       pathname,
       verifyPasswordDto.password,
-      userId,
+      req.user?.id,
     );
   }
 }

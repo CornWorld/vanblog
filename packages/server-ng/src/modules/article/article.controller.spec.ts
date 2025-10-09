@@ -12,6 +12,8 @@ const mockArticleService = {
   update: vi.fn(),
   remove: vi.fn(),
   verifyPassword: vi.fn(),
+  getArticlesGroupedByCategory: vi.fn(),
+  getArticlesGroupedByTag: vi.fn(),
 };
 
 const mockArticleStatsService = {
@@ -110,6 +112,58 @@ describe('ArticleController', () => {
         ip,
         ua,
       );
+    });
+  });
+
+  describe('getArticlesGroupedByCategory', () => {
+    it('should return articles grouped by category', async () => {
+      const mockGroupedArticles = {
+        'Test Category': [{ id: 1, title: 'Test Article', category: 'Test Category' }],
+        'Another Category': [{ id: 2, title: 'Another Article', category: 'Another Category' }],
+      };
+
+      mockArticleService.getArticlesGroupedByCategory.mockResolvedValue(mockGroupedArticles);
+
+      const result = await controller.getArticlesGroupedByCategory();
+
+      expect(result).toEqual(mockGroupedArticles);
+      expect(mockArticleService.getArticlesGroupedByCategory).toHaveBeenCalled();
+    });
+
+    it('should handle empty categories', async () => {
+      const mockEmptyGrouped = {};
+      mockArticleService.getArticlesGroupedByCategory.mockResolvedValue(mockEmptyGrouped);
+
+      const result = await controller.getArticlesGroupedByCategory();
+
+      expect(result).toEqual(mockEmptyGrouped);
+      expect(mockArticleService.getArticlesGroupedByCategory).toHaveBeenCalled();
+    });
+  });
+
+  describe('getArticlesGroupedByTag', () => {
+    it('should return articles grouped by tag', async () => {
+      const mockGroupedArticles = {
+        test: [{ id: 1, title: 'Test Article', tags: ['test'] }],
+        javascript: [{ id: 2, title: 'JS Article', tags: ['javascript'] }],
+      };
+
+      mockArticleService.getArticlesGroupedByTag.mockResolvedValue(mockGroupedArticles);
+
+      const result = await controller.getArticlesGroupedByTag();
+
+      expect(result).toEqual(mockGroupedArticles);
+      expect(mockArticleService.getArticlesGroupedByTag).toHaveBeenCalled();
+    });
+
+    it('should handle empty tags', async () => {
+      const mockEmptyGrouped = {};
+      mockArticleService.getArticlesGroupedByTag.mockResolvedValue(mockEmptyGrouped);
+
+      const result = await controller.getArticlesGroupedByTag();
+
+      expect(result).toEqual(mockEmptyGrouped);
+      expect(mockArticleService.getArticlesGroupedByTag).toHaveBeenCalled();
     });
   });
 });

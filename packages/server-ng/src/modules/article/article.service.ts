@@ -683,4 +683,89 @@ export class ArticleService {
       viewer: article.viewer,
     });
   }
+
+  /**
+   * 获取按分类分组的文章
+   * 返回 Record<string, Article[]> 格式
+   */
+  async getArticlesGroupedByCategory(): Promise<Record<string, Article[]>> {
+    const result = await this.db
+      .select()
+      .from(articles)
+      .where(and(eq(articles.private, false), eq(articles.hidden, false)))
+      .orderBy(desc(articles.updatedAt));
+
+    const grouped: Record<string, Article[]> = {};
+
+    for (const article of result) {
+      const processedArticle = new Article({
+        ...article,
+        tags: safeParseJson(article.tags, dataSchemas.tagsArray) ?? [],
+        pathname: article.pathname,
+        category: article.category,
+        author: article.author,
+        top: article.top,
+        hidden: article.hidden,
+        private: article.private,
+        password: article.password,
+        viewer: article.viewer,
+      });
+      const category = processedArticle.category ?? 'Uncategorized';
+
+      if (!(category in grouped)) {
+        grouped[category] = [];
+      }
+      grouped[category].push(processedArticle);
+    }
+
+    return grouped;
+  }
+
+  /**
+   * 获取按标签分组的文章
+   * 返回 Record<string, Article[]> 格式
+   */
+  async getArticlesGroupedByTag(): Promise<Record<string, Article[]>> {
+    const result = await this.db
+      .select()
+      .from(articles)
+      .where(and(eq(articles.private, false), eq(articles.hidden, false)))
+      .orderBy(desc(articles.updatedAt));
+
+    const grouped: Record<string, Article[]> = {};
+
+    for (const article of result) {
+      const processedArticle = new Article({
+        ...article,
+        tags: safeParseJson(article.tags, dataSchemas.tagsArray) ?? [],
+        pathname: article.pathname,
+        category: article.category,
+        author: article.author,
+        top: article.top,
+        hidden: article.hidden,
+        private: article.private,
+        password: article.password,
+        viewer: article.viewer,
+      });
+      const articleTags = processedArticle.tags ?? [];
+
+      if (articleTags.length === 0) {
+        // 没有标签的文章归类到 "Untagged"
+        if (!('Untagged' in grouped)) {
+          grouped['Untagged'] = [];
+        }
+        grouped['Untagged'].push(processedArticle);
+      } else {
+        // 有标签的文章，每个标签都添加一份
+        for (const tag of articleTags) {
+          if (!(tag in grouped)) {
+            grouped[tag] = [];
+          }
+          grouped[tag].push(processedArticle);
+        }
+      }
+    }
+
+    return grouped;
+  }
 }
