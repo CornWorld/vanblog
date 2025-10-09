@@ -160,21 +160,68 @@ export class ConfigValidationService {
    * Validate security-related settings
    */
   private validateSecuritySettings(config: AllConfig, result: ConfigValidationResult): void {
-    // Check JWT secrets strength
-    if (config.jwt.secret === 'your-secret-key-that-is-long-enough-for-validation') {
-      result.warnings.push('JWT secret is using default value, please change it in production');
+    // Check JWT secrets strength - CRITICAL SECURITY ISSUE
+    const defaultSecrets = [
+      'your-secret-key-that-is-long-enough-for-validation',
+      'your-secret-key',
+      'your-refresh-secret-that-is-long-enough-too',
+      'your-refresh-secret',
+      'secret',
+      'jwt-secret',
+    ];
+
+    if (defaultSecrets.includes(config.jwt.secret)) {
+      if (config.app.isProduction) {
+        result.errors.push('CRITICAL: JWT secret is using default/weak value in production');
+      } else {
+        result.warnings.push('JWT secret is using default value, please change it in production');
+      }
     }
 
-    if (config.jwt.refreshSecret === 'your-refresh-secret-that-is-long-enough-too') {
-      result.warnings.push(
-        'JWT refresh secret is using default value, please change it in production',
+    if (defaultSecrets.includes(config.jwt.refreshSecret)) {
+      if (config.app.isProduction) {
+        result.errors.push(
+          'CRITICAL: JWT refresh secret is using default/weak value in production',
+        );
+      } else {
+        result.warnings.push(
+          'JWT refresh secret is using default value, please change it in production',
+        );
+      }
+    }
+
+    // Validate JWT secret strength
+    if (config.jwt.secret.length < 32) {
+      result.errors.push('JWT secret must be at least 32 characters long');
+    }
+
+    if (config.jwt.refreshSecret.length < 32) {
+      result.errors.push('JWT refresh secret must be at least 32 characters long');
+    }
+
+    // Check for weak patterns in JWT secrets
+    const weakPatterns = [/^(.)\1+$/, /^(012|123|abc|password|admin)/i, /^[a-z]+$/i, /^\d+$/];
+
+    for (const pattern of weakPatterns) {
+      if (pattern.test(config.jwt.secret)) {
+        result.warnings.push(
+          'JWT secret appears to use a weak pattern, consider using a stronger random key',
+        );
+        break;
+      }
+    }
+
+    // Check CORS settings in production - SECURITY CRITICAL
+    if (config.app.isProduction && config.cors.origin === '*') {
+      result.errors.push(
+        'CRITICAL: CORS origin is set to "*" in production, this is a security vulnerability',
       );
     }
 
-    // Check CORS settings in production
-    if (config.app.isProduction && config.cors.origin === '*') {
-      result.warnings.push('CORS origin is set to "*" in production, consider restricting it');
-    }
+    // 使用新的 CORS 验证函数
+    const corsErrors = this.validateCorsOriginSecurity(config.cors.origin, config.app.isProduction);
+    result.errors.push(...corsErrors.filter((error) => error.includes('CRITICAL')));
+    result.warnings.push(...corsErrors.filter((error) => !error.includes('CRITICAL')));
 
     // Check upload file size limits
     const maxSizeMB = config.upload.maxFileSize / (1024 * 1024);
@@ -183,6 +230,42 @@ export class ConfigValidationService {
         `Upload max file size is ${maxSizeMB.toFixed(1)}MB, consider if this is appropriate`,
       );
     }
+  }
+
+  /**
+   * 验证 CORS 源配置的安全性
+   */
+  private validateCorsOriginSecurity(origin: string | string[], isProduction: boolean): string[] {
+    const errors: string[] = [];
+
+    if (isProduction && origin === '*') {
+      errors.push('CRITICAL: CORS origin cannot be "*" in production environment');
+      return errors; // 早期返回，避免重复错误
+    }
+
+    const origins = Array.isArray(origin) ? origin : [origin];
+
+    for (const singleOrigin of origins) {
+      if (singleOrigin === '*') {
+        if (isProduction) {
+          errors.push('CRITICAL: Wildcard CORS origin is not allowed in production');
+        }
+        continue;
+      }
+
+      try {
+        new URL(singleOrigin);
+      } catch {
+        errors.push(`CORS origin appears to be malformed URL: ${singleOrigin}`);
+      }
+
+      // 检查是否使用 HTTP 在生产环境
+      if (isProduction && singleOrigin.startsWith('http://')) {
+        errors.push(`HTTP origin not recommended in production: ${singleOrigin}`);
+      }
+    }
+
+    return errors;
   }
 
   /**

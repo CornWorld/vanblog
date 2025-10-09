@@ -188,14 +188,51 @@ export class TokenService {
   }
 
   /**
+   * 撤销所有令牌（系统级操作）
+   */
+  revokeAllTokens(): void {
+    // 将所有刷新令牌添加到撤销列表
+    for (const token of this.refreshTokens.keys()) {
+      this.revokedTokens.add(token);
+    }
+    this.refreshTokens.clear();
+  }
+
+  /**
    * 清理过期的令牌
    */
   cleanupExpiredTokens(): void {
     const now = dayjs();
+
+    // 清理过期的刷新令牌
     for (const [token, tokenInfo] of this.refreshTokens.entries()) {
       if (tokenInfo.expiresAt.isBefore(now)) {
         this.refreshTokens.delete(token);
       }
+    }
+
+    // 清理过期的撤销令牌（保留24小时）
+    const expiredRevokedTokens = new Set<string>();
+    for (const token of this.revokedTokens) {
+      try {
+        const payload: unknown = this.jwtService.decode(token);
+        if (payload !== null && typeof payload === 'object' && 'exp' in payload) {
+          const tokenPayload = payload as Record<string, unknown>;
+          if (
+            typeof tokenPayload.exp === 'number' &&
+            tokenPayload.exp * 1000 < now.valueOf() - 24 * 60 * 60 * 1000
+          ) {
+            expiredRevokedTokens.add(token);
+          }
+        }
+      } catch {
+        // 无法解码的令牌也清理掉
+        expiredRevokedTokens.add(token);
+      }
+    }
+
+    for (const token of expiredRevokedTokens) {
+      this.revokedTokens.delete(token);
     }
   }
 
@@ -217,5 +254,25 @@ export class TokenService {
    */
   isTokenRevoked(token: string): boolean {
     return this.revokedTokens.has(token);
+  }
+
+  /**
+   * 获取系统令牌统计信息
+   */
+  getTokenStats(): {
+    activeRefreshTokens: number;
+    revokedTokens: number;
+    totalUsers: number;
+  } {
+    const userIds = new Set<number>();
+    for (const tokenInfo of this.refreshTokens.values()) {
+      userIds.add(tokenInfo.userId);
+    }
+
+    return {
+      activeRefreshTokens: this.refreshTokens.size,
+      revokedTokens: this.revokedTokens.size,
+      totalUsers: userIds.size,
+    };
   }
 }

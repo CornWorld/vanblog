@@ -137,7 +137,7 @@ describe('ConfigValidationService', () => {
       expect(result.errors.some((error) => error.includes('nodeEnv'))).toBe(true);
     });
 
-    it('should include security warnings for default values', () => {
+    it('should include security errors for default values in production', () => {
       // Mock configuration with default security values
       vi.spyOn(configService, 'all', 'get').mockReturnValue({
         app: {
@@ -155,9 +155,9 @@ describe('ConfigValidationService', () => {
           filePath: './test.db',
         },
         jwt: {
-          secret: 'your-secret-key-that-is-long-enough-for-validation', // Default value that should trigger warning
+          secret: 'your-secret-key-that-is-long-enough-for-validation', // Default value that should trigger error
           expiresIn: '1h',
-          refreshSecret: 'your-refresh-secret-that-is-long-enough-too', // Default value that should trigger warning
+          refreshSecret: 'your-refresh-secret-that-is-long-enough-too', // Default value that should trigger error
           refreshExpiresIn: '7d',
         },
         cors: {
@@ -187,9 +187,9 @@ describe('ConfigValidationService', () => {
 
       const result = service.validateAll();
 
-      expect(result.warnings.length).toBeGreaterThan(0);
-      expect(result.warnings.some((warning) => warning.includes('JWT secret'))).toBe(true);
-      expect(result.warnings.some((warning) => warning.includes('CORS origin'))).toBe(true);
+      expect(result.errors.length).toBeGreaterThan(0);
+      expect(result.errors.some((error) => error.includes('JWT secret'))).toBe(true);
+      expect(result.errors.some((error) => error.includes('CORS origin'))).toBe(true);
     });
   });
 

@@ -17,6 +17,7 @@ import { DemoModule } from './modules/demo/demo.module';
 import { DraftModule } from './modules/draft/draft.module';
 import { HealthModule } from './modules/health/health.module';
 import { MediaModule } from './modules/media/media.module';
+import { MetricsModule } from './modules/metrics/metrics.module';
 import { PermissionModule } from './modules/permission/permission.module';
 import { PluginModule } from './modules/plugin/plugin.module';
 import { PublicModule } from './modules/public/public.module';
@@ -70,6 +71,7 @@ export class AppModule implements NestModule {
         TagModule,
         DraftModule,
         MediaModule,
+        MetricsModule,
         PublicModule,
         SettingModule,
         AnalyticsModule,

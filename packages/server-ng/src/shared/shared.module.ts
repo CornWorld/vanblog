@@ -3,6 +3,7 @@ import { Module, Global, MiddlewareConsumer, NestModule } from '@nestjs/common';
 import { CacheModule } from './cache/cache.module';
 import { CompressionMiddleware } from './middleware/compression.middleware';
 import { CDNService } from './services/cdn.service';
+import { ErrorRateMonitoringService } from './services/error-rate-monitoring.service';
 import { MarkdownService } from './services/markdown.service';
 import { MigrationService } from './services/migration.service';
 import { QueryOptimizerService } from './services/query-optimizer.service';
@@ -17,6 +18,7 @@ import { StatisticsService } from './services/statistics.service';
     QueryOptimizerService,
     CDNService,
     MigrationService,
+    ErrorRateMonitoringService,
     CompressionMiddleware,
   ],
   exports: [
@@ -26,6 +28,7 @@ import { StatisticsService } from './services/statistics.service';
     CacheModule,
     CDNService,
     MigrationService,
+    ErrorRateMonitoringService,
   ],
 })
 export class SharedModule implements NestModule {

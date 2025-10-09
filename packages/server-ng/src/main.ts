@@ -9,8 +9,16 @@ import helmet from 'helmet';
 
 import { AppModule } from './app.module';
 import { ConfigService } from './config';
+import {
+  getProductionSecurityConfig,
+  getDevelopmentSecurityConfig,
+} from './config/security.config';
 import { HttpExceptionFilter, AllExceptionsFilter } from './core/filters';
-import { ETagCacheInterceptor, DerivedViewInterceptor } from './core/interceptors';
+import {
+  ETagCacheInterceptor,
+  DerivedViewInterceptor,
+  PerformanceInterceptor,
+} from './core/interceptors';
 import { LoggerService } from './core/logger/logger.service';
 import { DerivedViewCacheService } from './shared/cache';
 // import { patchNestJsSwagger } from 'nestjs-zod'; // Not available in current version
@@ -107,18 +115,12 @@ export async function init(): Promise<INestApplication> {
   app.enableCors(corsOptions);
 
   // Security middlewares
-  app.use(
-    helmet({
-      contentSecurityPolicy: {
-        directives: {
-          defaultSrc: ["'self'"],
-          styleSrc: ["'self'", "'unsafe-inline'"],
-          scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
-          imgSrc: ["'self'", 'data:', 'https:'],
-        },
-      },
-    }),
-  );
+  const isProduction = process.env.NODE_ENV === 'production';
+  const securityConfig = isProduction
+    ? getProductionSecurityConfig(corsOptions.origin)
+    : getDevelopmentSecurityConfig(corsOptions.origin);
+
+  app.use(helmet(securityConfig.helmet));
 
   // Cookie parser (required for CSRF protection)
   app.use(cookieParser());
@@ -144,8 +146,9 @@ export async function init(): Promise<INestApplication> {
   // Global exception filters
   app.useGlobalFilters(new AllExceptionsFilter(logger), new HttpExceptionFilter(logger));
 
-  // Global interceptors: DerivedView must run BEFORE ETag so ETag hashes the final response body
+  // Global interceptors: Performance must run FIRST, then DerivedView, then ETag
   app.useGlobalInterceptors(
+    new PerformanceInterceptor(logger),
     new DerivedViewInterceptor(app.get(Reflector), app.get(DerivedViewCacheService)),
     new ETagCacheInterceptor(),
   );
