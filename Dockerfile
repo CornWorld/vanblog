@@ -63,6 +63,7 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm store prune && pnpm fetch
 COPY package.json pnpm-workspace.yaml ./
 COPY packages/admin/package.json ./packages/admin/
 COPY packages/server/package.json ./packages/server/
+COPY packages/server-ng/package.json ./packages/server-ng/
 COPY packages/website/package.json ./packages/website/
 COPY packages/cli/package.json ./packages/cli/
 COPY packages/waline/package.json ./packages/waline/
@@ -127,6 +128,19 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
     # 在生产目录中安装依赖，确保包含 @nestjs/core
     pnpm install --prod
 
+# Server-NG 构建（v2）
+FROM deps AS serverng-builder
+WORKDIR /app
+ENV NODE_OPTIONS="--max_old_space_size=4096"
+ENV NODE_ENV="production"
+COPY packages/server-ng ./packages/server-ng
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+    cd packages/server-ng && \
+    pnpm install --frozen-lockfile && \
+    pnpm run build:production && \
+    mkdir -p /prod/server-ng && \
+    cp -r dist /prod/server-ng/
+
 # Website 构建
 FROM deps AS website-builder
 WORKDIR /app
@@ -179,6 +193,13 @@ COPY --from=waline-builder /prod/waline ./
 WORKDIR /app/server
 COPY --from=server-builder /prod/server/dist/src ./
 COPY --from=server-builder /prod/server/node_modules ./node_modules
+
+# 复制 Server-NG（v2 构建产物）
+WORKDIR /app/server-ng
+COPY --from=serverng-builder /prod/server-ng/dist ./
+# 安装生产依赖（基于 dist/package.json）
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+    pnpm install --prod || true
 
 # 复制 Website
 WORKDIR /app/website

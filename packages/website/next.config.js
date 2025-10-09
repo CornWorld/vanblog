@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 import bundleAnalyzer from '@next/bundle-analyzer';
-import i18nConfig from './next-i18next.config.js';
+import i18nConfig from './next-i18next.config.cjs';
 
 const withBundleAnalyzer = bundleAnalyzer({
   enabled: process.env.ANALYZE === 'true',

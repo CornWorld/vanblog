@@ -103,14 +103,15 @@ export default function (props: { item: SocialItem }) {
       </Popover>
     );
   } else {
-    return (
+    const href = (props.item.value || '').trim();
+    return href ? (
       <a
         style={{
           display: 'inline-flex',
           width: '100%',
           justifyContent: 'start',
         }}
-        href={props.item.value}
+        href={href}
         target="_blank"
       >
         <span style={iconStyle} className={iconClass}>
@@ -118,6 +119,19 @@ export default function (props: { item: SocialItem }) {
         </span>
         <span className="inline-flex items-center ml-1">{capitalize(props.item.type)}</span>
       </a>
+    ) : (
+      <span
+        style={{
+          display: 'inline-flex',
+          width: '100%',
+          justifyContent: 'start',
+        }}
+      >
+        <span style={iconStyle} className={iconClass}>
+          {getIcon(props.item.type, iconSize)}
+        </span>
+        <span className="inline-flex items-center ml-1">{capitalize(props.item.type)}</span>
+      </span>
     );
   }
 }

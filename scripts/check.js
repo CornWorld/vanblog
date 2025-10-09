@@ -1,13 +1,14 @@
 // 我自己用的清洗 more 标记的脚本
-const { MongoClient } = require('mongodb');
-const fs = require('fs');
-const yaml = require('yaml');
+import { MongoClient } from 'mongodb';
+import fs from 'fs';
+import yaml from 'yaml';
+
 // Replace the uri string with your connection string.
 const data = yaml.parse(fs.readFileSync('config.yaml', { encoding: 'utf-8' }));
 
 if (!data || !data.url) {
   console.log("cant's parse url");
-  return;
+  process.exit(1);
 }
 const url = data.url;
 const client = new MongoClient(url);

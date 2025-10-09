@@ -320,34 +320,30 @@ export class ApiService {
     isNewByPath: boolean;
     articleId?: number;
   }): Promise<PageViewData> {
-    // Record a pageview event, then fetch latest overview
+    // Record pageview via analytics/record with CSRF, routed through Next.js proxy
     try {
-      const path = typeof window !== 'undefined' ? window.location?.pathname : undefined;
+      const path = typeof window !== 'undefined' ? window.location.pathname : undefined;
       const referrer = typeof document !== 'undefined' ? document.referrer || undefined : undefined;
+      const userAgent = typeof navigator !== 'undefined' ? navigator.userAgent : undefined;
 
-      // For pageview type, we need to provide articleId in data
-      const recordData: {
-        type: string;
-        path?: string;
-        referrer?: string;
-        data?: { articleId: number };
-      } = {
-        type: 'pageview',
-        path,
-        referrer,
-      };
-
-      // If articleId is provided, add it to data (required for pageview type)
-      if (options.articleId) {
-        recordData.data = { articleId: options.articleId };
-      }
-
-      // Fire-and-forget record, server may return empty body
-      await apiClient.post<void>('/api/v2/analytics/record', recordData, 'updatePageView');
+      await apiClient.post<void>(
+        '/api/v2/analytics/record',
+        {
+          type: 'pageview',
+          path,
+          referrer,
+          userAgent,
+          data: { articleId: options.articleId ?? 0 },
+        },
+        'updatePageView',
+      );
     } catch (e) {
       // Swallow record errors; we'll still attempt to get overview as fallback
       if (process.env.NODE_ENV !== 'production') {
-        console.warn('[ApiService] updatePageView record failed, will fallback to overview', e);
+        console.warn(
+          '[ApiService] updatePageView analytics/record failed, will fallback to overview',
+          e,
+        );
       }
     }
 

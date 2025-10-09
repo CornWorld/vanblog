@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 
-const { MongoClient } = require('mongodb');
+import { MongoClient } from 'mongodb';
 
 const uri = 'mongodb://mongo:27017/vanBlog?authSource=admin';
 
 const readString = (prompt) => {
   process.stdout.write(prompt);
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve, _reject) => {
     process.stdin.once('data', (data) => {
       resolve(data.toString().trim());
     });

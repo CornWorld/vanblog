@@ -1,7 +1,12 @@
 #! /usr/bin/env node
-const { spawn } = require('child_process');
-const { writeFileSync } = require('fs');
-const { join } = require('path');
+import { spawn } from 'child_process';
+import { writeFileSync } from 'fs';
+import { join } from 'path';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 let logPath = `/var/log/`;
 if (process.platform === 'win32') {
   logPath = join(__dirname, '../log');
@@ -50,7 +55,7 @@ printLog(
 );
 
 const ctx = spawn('node', ['main.js'], {
-  cwd: '/app/server',
+  cwd: '/app/server-ng',
   shell: process.platform === 'win32',
   env: {
     ...process.env,

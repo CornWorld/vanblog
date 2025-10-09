@@ -51,14 +51,54 @@ export interface HeadTag {
 }
 
 export function getLayoutPropsFromData(data: PublicMetaProp): LayoutProps {
-  const siteInfo = data.meta.siteInfo;
-  const showSubMenu = Boolean(data.meta.categories.length) && siteInfo?.showSubMenu == 'true';
+  // 防御：容忍 data/meta/siteInfo 为空，提供安全默认值
+  const safeMeta =
+    data?.meta ||
+    ({
+      links: [],
+      socials: [],
+      rewards: [],
+      categories: [],
+      about: { updatedAt: dayjs().toISOString(), content: '' },
+      siteInfo: {
+        author: '',
+        authorDesc: '',
+        authorLogo: '',
+        siteLogo: '',
+        favicon: '/logo.svg',
+        siteName: 'VanBlog',
+        siteDesc: '',
+        beianNumber: '',
+        beianUrl: '',
+        gaBeianNumber: '',
+        gaBeianUrl: '',
+        gaBeianLogoUrl: '',
+        payAliPay: '',
+        payWechat: '',
+        since: dayjs().format('YYYY'),
+        baseUrl: '',
+        copyrightAggreement: 'BY-NC-SA',
+        showFriends: 'false',
+        enableComment: 'false',
+        defaultTheme: 'auto',
+        enableCustomizing: 'false',
+        showDonateButton: 'false',
+        showCopyRight: 'false',
+        showRSS: 'false',
+        openArticleLinksInNewWindow: 'false',
+        showExpirationReminder: 'false',
+        showEditButton: 'false',
+      },
+    } as PublicMetaProp['meta']);
+
+  const siteInfo = safeMeta.siteInfo || ({} as PublicMetaProp['meta']['siteInfo']);
+  const showSubMenu = Boolean(safeMeta.categories?.length) && siteInfo?.showSubMenu == 'true';
   let headerLeftContent: 'siteLogo' | 'siteName' = 'siteName';
-  if (data.meta.siteInfo.siteLogo && siteInfo.headerLeftContent == 'siteLogo') {
+  if (siteInfo?.siteLogo && siteInfo?.headerLeftContent == 'siteLogo') {
     headerLeftContent = 'siteLogo';
   }
   let showAdminButton: 'true' | 'false' = 'true';
-  if (siteInfo.showAdminButton && siteInfo.showAdminButton == 'false') {
+  if (siteInfo?.showAdminButton && siteInfo.showAdminButton == 'false') {
     showAdminButton = 'false';
   }
   let showFriends: 'true' | 'false' = 'true';
@@ -96,25 +136,19 @@ export function getLayoutPropsFromData(data: PublicMetaProp): LayoutProps {
     showDonateButton = 'false';
   }
   let showRSS: 'true' | 'false' = 'true';
-  if (data.meta.siteInfo?.showRSS && data.meta.siteInfo?.showRSS == 'false') {
+  if (siteInfo?.showRSS && siteInfo?.showRSS == 'false') {
     showRSS = 'false';
   }
   let showExpirationReminder: 'true' | 'false' = 'true';
-  if (
-    data.meta.siteInfo?.showExpirationReminder &&
-    data.meta.siteInfo?.showExpirationReminder == 'false'
-  ) {
+  if (siteInfo?.showExpirationReminder && siteInfo?.showExpirationReminder == 'false') {
     showExpirationReminder = 'false';
   }
   let showEditButton: 'true' | 'false' = 'true';
-  if (data.meta.siteInfo?.showEditButton && data.meta.siteInfo?.showEditButton == 'false') {
+  if (siteInfo?.showEditButton && siteInfo?.showEditButton == 'false') {
     showEditButton = 'false';
   }
   let openArticleLinksInNewWindow: 'true' | 'false' = 'false';
-  if (
-    data.meta.siteInfo?.openArticleLinksInNewWindow &&
-    data.meta.siteInfo?.openArticleLinksInNewWindow == 'true'
-  ) {
+  if (siteInfo?.openArticleLinksInNewWindow && siteInfo?.openArticleLinksInNewWindow == 'true') {
     openArticleLinksInNewWindow = 'true';
   }
 
@@ -135,7 +169,7 @@ export function getLayoutPropsFromData(data: PublicMetaProp): LayoutProps {
     subMenuOffset: siteInfo?.subMenuOffset || 0,
     showAdminButton,
     headerLeftContent,
-    copyrightAggreement: siteInfo.copyrightAggreement || 'BY-NC-SA',
+    copyrightAggreement: siteInfo?.copyrightAggreement || 'BY-NC-SA',
     ipcHref: siteInfo?.beianUrl || '',
     ipcNumber: siteInfo?.beianNumber || '',
     gaBeianNumber: siteInfo?.gaBeianNumber || '',
@@ -143,16 +177,16 @@ export function getLayoutPropsFromData(data: PublicMetaProp): LayoutProps {
     gaBeianUrl: siteInfo?.gaBeianUrl || '',
     since: siteInfo?.since || dayjs().toISOString(),
     logo: siteInfo?.siteLogo || '',
-    favicon: siteInfo.favicon,
-    siteName: siteInfo.siteName,
-    siteDesc: siteInfo.siteDesc,
+    favicon: siteInfo?.favicon || '/logo.svg',
+    siteName: siteInfo?.siteName || 'VanBlog',
+    siteDesc: siteInfo?.siteDesc || '',
     baiduAnalysisID: siteInfo?.baiduAnalysisId || '',
     gaAnalysisID: siteInfo?.gaAnalysisId || '',
     logoDark: siteInfo?.siteLogoDark || '',
     showExpirationReminder: showExpirationReminder,
     description: siteInfo?.siteDesc || '',
     menus: data?.menus || defaultMenu,
-    categories: data.meta.categories,
+    categories: safeMeta?.categories || [],
     showSubMenu: showSubMenu ? 'true' : 'false',
     enableComment: enableCommentVal,
     defaultTheme: defaultThemeVal,
@@ -167,21 +201,22 @@ export function getLayoutPropsFromData(data: PublicMetaProp): LayoutProps {
 }
 
 export function getAuthorCardProps(data: PublicMetaProp): AuthorCardProps {
-  const showSubMenu =
-    Boolean(data.meta.categories.length) && data.meta.siteInfo?.showSubMenu == 'true';
+  const meta = data?.meta || ({} as any);
+  const categoriesLen = Array.isArray(meta?.categories) ? meta.categories.length : 0;
+  const showSubMenu = Boolean(categoriesLen) && meta?.siteInfo?.showSubMenu == 'true';
   let showRSS: 'true' | 'false' = 'true';
-  if (data.meta.siteInfo?.showRSS && data.meta.siteInfo?.showRSS == 'false') {
+  if (meta?.siteInfo?.showRSS && meta?.siteInfo?.showRSS == 'false') {
     showRSS = 'false';
   }
   return {
-    postNum: data.totalArticles,
-    tagNum: data.tags.length,
-    catelogNum: data.meta.categories.length,
-    socials: data.meta.socials,
-    author: data.meta.siteInfo.author,
-    desc: data.meta.siteInfo.authorDesc,
-    logo: data.meta.siteInfo.authorLogo,
-    logoDark: data.meta.siteInfo.authorLogoDark || '',
+    postNum: data?.totalArticles ?? 0,
+    tagNum: Array.isArray(data?.tags) ? data.tags.length : 0,
+    catelogNum: categoriesLen,
+    socials: meta?.socials || [],
+    author: meta?.siteInfo?.author || '',
+    desc: meta?.siteInfo?.authorDesc || '',
+    logo: meta?.siteInfo?.authorLogo || '',
+    logoDark: meta?.siteInfo?.authorLogoDark || '',
     showSubMenu: showSubMenu ? 'true' : 'false',
     showRSS,
   };

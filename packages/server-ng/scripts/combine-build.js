@@ -57,7 +57,7 @@ function createPackageJson() {
 // 创建启动脚本
 function createStartScript() {
   return `#!/usr/bin/env node
-require('./main.js');
+import('./main.js');
 `;
 }
 

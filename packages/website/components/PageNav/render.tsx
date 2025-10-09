@@ -10,43 +10,69 @@ const commonStyle: CSSProperties = {
   fontSize: '14px',
 };
 const renderLink = (item: PageItem, isCur: boolean) => {
-  return (
-    <Link href={item.href} key={`LinkItem-${item.page}-${item.type}-${item.href}`}>
-      <div
-        style={commonStyle}
-        className={`${commonCls} ${btnCls}  ${
-          isCur
-            ? 'bg-gray-200 dark:bg-dark-hover dark:pg-text-dark-hover'
-            : 'dark:bg-dark-1 dark:pg-text-dark '
-        }`}
-      >
-        {item.page}
+  const href = item.href || null;
+  const inner = (
+    <div
+      style={commonStyle}
+      className={`${commonCls} ${btnCls}  ${
+        isCur
+          ? 'bg-gray-200 dark:bg-dark-hover dark:pg-text-dark-hover'
+          : 'dark:bg-dark-1 dark:pg-text-dark '
+      }`}
+    >
+      {item.page}
+    </div>
+  );
+  if (!href) {
+    return (
+      <div key={`LinkItem-${item.page}-${item.type}-${item.href}`} className="disabled">
+        {inner}
       </div>
+    );
+  }
+  return (
+    <Link href={href} key={`LinkItem-${item.page}-${item.type}-${item.href}`}>
+      {inner}
     </Link>
   );
 };
 const renderBtn = (item: PageItem, disable: boolean, isNext: boolean) => {
-  return (
-    <Link
-      href={item.href}
-      key={`pagenav-btn-${item.page}-${item.href}-${isNext}`}
-      // className="justify-center items-center "
-    >
-      <div
-        style={commonStyle}
-        className={`${commonCls} dark:bg-dark-1 dark:pg-text-dark  ${btnCls}`}
-      >
-        {isNext ? '›' : '‹'}
+  const href = item.href || null;
+  const inner = (
+    <div style={commonStyle} className={`${commonCls} dark:bg-dark-1 dark:pg-text-dark  ${btnCls}`}>
+      {isNext ? '›' : '‹'}
+    </div>
+  );
+  if (!href) {
+    return (
+      <div key={`pagenav-btn-${item.page}-${item.href}-${isNext}`} className="disabled">
+        {inner}
       </div>
+    );
+  }
+  return (
+    <Link href={href} key={`pagenav-btn-${item.page}-${item.href}-${isNext}`}>
+      {inner}
     </Link>
   );
 };
 const renderMore = (item: PageItem, isNext: boolean) => {
-  return (
-    <Link href={item.href} key={`pagenav-more-${item.page}-${item.href}-${isNext}`}>
-      <div style={commonStyle} className={`dark:pg-text-dark ${commonCls}`}>
-        •••
+  const href = item.href || null;
+  const inner = (
+    <div style={commonStyle} className={`dark:pg-text-dark ${commonCls}`}>
+      •••
+    </div>
+  );
+  if (!href) {
+    return (
+      <div key={`pagenav-more-${item.page}-${item.href}-${isNext}`} className="disabled">
+        {inner}
       </div>
+    );
+  }
+  return (
+    <Link href={href} key={`pagenav-more-${item.page}-${item.href}-${isNext}`}>
+      {inner}
     </Link>
   );
 };

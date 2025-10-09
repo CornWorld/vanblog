@@ -41,10 +41,16 @@ export class ApiClient {
   private baseUrl: string;
   private cache: Map<string, { data: unknown; timestamp: number }>;
   private readonly cacheDuration: number;
+  private csrfToken?: string;
 
   constructor(baseUrl?: string, cacheDuration = 5 * 60 * 1000) {
     // 5 minutes default cache
     this.baseUrl = baseUrl || config.baseUrl;
+
+    // Enforce same-origin baseUrl in browser to ensure cookies/CSRF work via Next.js proxy
+    if (isBrowser) {
+      this.baseUrl = 'window.location.origin';
+    }
 
     // Validate that baseUrl is properly set
     if (!this.baseUrl) {
@@ -169,6 +175,8 @@ export class ApiClient {
             'Content-Type': 'application/json',
             ...options.headers,
           },
+          // Always include credentials so cookies (for CSRF) are sent
+          credentials: 'include',
           signal: controller.signal,
         });
 
@@ -345,16 +353,47 @@ export class ApiClient {
     context = '',
     headers?: Record<string, string>,
   ): Promise<T> {
+    // Ensure CSRF token is present for POST requests to API endpoints
+    await this.ensureCsrfToken();
+
     const options: RequestInit = {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         ...(headers || {}),
+        ...(this.csrfToken ? { 'x-csrf-token': this.csrfToken } : {}),
       },
       body: JSON.stringify(body),
     };
 
     return this.fetchWithRetry<T>(endpoint, options, 3, context);
+  }
+
+  private async ensureCsrfToken(): Promise<void> {
+    // Skip during build time or if already set
+    if (isBuildTime || this.csrfToken) return;
+
+    try {
+      const res = await this.fetchWithRetry<{ statusCode?: number; csrfToken?: string }>(
+        '/api/v2/auth/csrf-token',
+        { method: 'GET' },
+        1,
+        'getCsrfToken',
+      );
+
+      // Support both plain and wrapped responses
+      if (res && typeof res === 'object') {
+        const token = (res as any).csrfToken ?? (res as any).data?.csrfToken;
+        if (typeof token === 'string' && token.length > 0) {
+          this.csrfToken = token;
+        }
+      }
+    } catch (e) {
+      // Log but do not throw; subsequent POST may fail and surface error appropriately
+      if (isDevelopment) {
+        console.warn('[ApiClient] Failed to fetch CSRF token:', e);
+      }
+    }
   }
 
   clearCache(): void {

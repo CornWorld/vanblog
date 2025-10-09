@@ -1,6 +1,7 @@
 {
   "private": true,
   "name": "@vanblog/theme-default",
+  "type": "module",
   "scripts": {
     "anlysis": "pnpm next build",
     "build": "npx cross-env NODE_ENV=production pnpm next build",
