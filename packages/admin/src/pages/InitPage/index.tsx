@@ -167,11 +167,12 @@ const InitPage = () => {
         },
       };
 
-      const response = await fetch('/api/admin/init', {
+      const response = await fetch('/api/v2/public/init', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify(requestBody),
       });
       const data = await response.json();

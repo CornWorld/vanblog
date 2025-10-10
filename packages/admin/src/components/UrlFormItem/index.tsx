@@ -51,7 +51,7 @@ export default function UrlFormItem(props: UrlFormItemProps) {
   }, [props.formRef, props.name]);
 
   const dest = useMemo(() => {
-    let r = props.isInit ? '/api/admin/init/upload' : '/api/admin/img/upload';
+    let r = props.isInit ? '/api/v2/admin/init/upload' : '/api/v2/admin/media/upload';
     if (props.isFavicon) {
       r = r + '?favicon=true';
     }

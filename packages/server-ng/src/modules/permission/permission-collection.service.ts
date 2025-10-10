@@ -37,6 +37,7 @@ export class PermissionCollectionService implements OnApplicationBootstrap {
     @Inject(forwardRef(() => PermissionService))
     private readonly permissionService: PermissionService,
   ) {
+    this.logger.log('PermissionCollectionService constructor called');
     // 调试：检查构造时的权限收集情况
     this.logger.debug('Constructor - Received permissions', {
       count: this.permissionSets.length,

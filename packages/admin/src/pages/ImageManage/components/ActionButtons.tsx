@@ -49,7 +49,7 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
           );
           fetchData();
         }}
-        url="/api/admin/img/upload?withWaterMark=true"
+        url="/api/v2/admin/media/upload?withWaterMark=true"
         accept=".png,.jpg,.jpeg,.webp,.jiff,.gif"
       />
 
@@ -69,7 +69,7 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
           }
           fetchData();
         }}
-        url="/api/admin/img/upload?withWaterMark=true"
+        url="/api/v2/admin/media/upload?withWaterMark=true"
         accept=".png,.jpg,.jpeg,.webp,.jiff,.gif"
       />
 

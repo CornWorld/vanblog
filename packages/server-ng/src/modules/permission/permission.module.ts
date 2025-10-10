@@ -4,6 +4,7 @@ import {
   PermissionCollectionService,
   contributePermissions,
 } from './permission-collection.service';
+import { PermissionController } from './permission.controller';
 import { PermissionService } from './permission.service';
 
 // 共享的注入令牌
@@ -19,6 +20,7 @@ export class PermissionModule {
   static forRoot(): DynamicModule {
     return {
       module: PermissionModule,
+      controllers: [PermissionController],
       providers: [PermissionCollectionService, PermissionService],
       exports: [PermissionCollectionService, PermissionService],
     };

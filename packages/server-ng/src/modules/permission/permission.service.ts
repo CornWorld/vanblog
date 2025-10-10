@@ -44,24 +44,32 @@ export class PermissionService {
   private cachedKnownPermissions: Set<string> | null = null;
   // 缓存：角色展开后的权限列表（当权限组或注册的预定义角色发生变化时失效）
   private readonly rolePermissionsCache = new Map<string, string[]>();
+  // 标记是否已经初始化过预定义角色
+  private static predefinedRolesInitialized = false;
 
   constructor(
     @Inject(DATABASE_CONNECTION)
     private readonly db: Database,
   ) {
-    // 初始化预定义权限组
-    this.initializePredefinedGroups();
+    // 只在第一次构造时初始化预定义权限组
+    if (!PermissionService.predefinedRolesInitialized) {
+      this.initializePredefinedGroups();
+      PermissionService.predefinedRolesInitialized = true;
+    }
   }
 
   /**
    * 初始化预定义角色
    */
   private initializePredefinedGroups(): void {
-    // 这些是基础的角色，各模块可以通过 register 方法添加更多
-    this.predefinedRoles.set('admin', []);
-    this.predefinedRoles.set('editor', []);
-    this.predefinedRoles.set('author', []);
-    this.predefinedRoles.set('viewer', []);
+    // 只在 Map 为空时初始化基础角色，避免重复初始化时清空已注册的权限
+    if (this.predefinedRoles.size === 0) {
+      // 这些是基础的角色，各模块可以通过 register 方法添加更多
+      this.predefinedRoles.set('admin', []);
+      this.predefinedRoles.set('editor', []);
+      this.predefinedRoles.set('author', []);
+      this.predefinedRoles.set('viewer', []);
+    }
   }
 
   /**
@@ -505,8 +513,12 @@ export class PermissionService {
     // 注册所有模块权限
     await this.registerAllModulePermissions();
 
+    this.logger.log(
+      'Before createPredefinedGroups - predefinedRoles size:',
+      this.predefinedRoles.size,
+    );
     // 创建预定义权限组
-    await this.createPredefinedGroups();
+    await this.ensurePredefinedGroups();
 
     // 初始化完成后，已知权限集合与角色权限可能已变化：失效相关缓存
     this.cachedKnownPermissions = null;
@@ -558,7 +570,30 @@ export class PermissionService {
     }
   }
 
-  private async createPredefinedGroups(): Promise<void> {
-    // ... existing code ...
+  private async ensurePredefinedGroups(): Promise<void> {
+    for (const [roleName, permissions] of this.predefinedRoles) {
+      // 检查权限组是否已存在
+      const existingGroup = await this.db
+        .select()
+        .from(permissionGroups)
+        .where(eq(permissionGroups.name, roleName))
+        .limit(1);
+
+      if (existingGroup.length === 0) {
+        // 创建新的权限组
+        await this.db.insert(permissionGroups).values({
+          name: roleName,
+          description: `预定义角色: ${roleName}`,
+          permissions: JSON.stringify(permissions),
+          isActive: true,
+        });
+      } else {
+        // 更新现有权限组的权限列表
+        await this.db
+          .update(permissionGroups)
+          .set({ permissions: JSON.stringify(permissions) })
+          .where(eq(permissionGroups.name, roleName));
+      }
+    }
   }
 }

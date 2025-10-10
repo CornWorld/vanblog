@@ -3,214 +3,182 @@ import { encodeQuerystring } from './encode';
 import { encryptPwd } from './encryptPwd';
 
 export async function fetchAllMeta(options) {
-  return request('/api/admin/meta', {
+  return request('/api/v2/public/bootstrap', {
     method: 'GET',
     ...(options || {}),
   });
 }
 
 export async function fetchLatestVersionInfo() {
-  return request('/api/admin/meta/upstream', {
+  return request('/api/v2/admin/meta/version', {
     method: 'GET',
   });
 }
 
 export async function activeISR() {
-  return request('/api/admin/isr', {
+  return request('/api/v2/admin/isr/trigger', {
     method: 'POST',
   });
 }
 export async function getHttpsConfig() {
-  return request('/api/admin/caddy/https', {
+  return request('/api/v2/admin/settings/https', {
     method: 'GET',
   });
 }
 export async function getLoginConfig() {
-  return request('/api/admin/setting/login', {
+  return request('/api/v2/admin/settings/login', {
     method: 'GET',
   });
 }
 export async function updateLoginConfig(body) {
-  return request('/api/admin/setting/login', {
+  return request('/api/v2/admin/settings/login', {
     method: 'PUT',
     body: body,
   });
 }
 export async function getLayoutConfig() {
-  return request('/api/admin/setting/layout', {
+  return request('/api/v2/admin/settings/layout', {
     method: 'GET',
   });
 }
 export async function updateLayoutConfig(body) {
-  return request('/api/admin/setting/layout', {
+  return request('/api/v2/admin/settings/layout', {
     method: 'PUT',
     body: body,
   });
 }
 export async function getWalineConfig() {
-  return request('/api/admin/setting/waline', {
+  return request('/api/v2/admin/settings/waline', {
     method: 'GET',
   });
 }
 export async function updateWalineConfig(body) {
-  return request('/api/admin/setting/waline', {
+  return request('/api/v2/admin/settings/waline', {
     method: 'PUT',
     body: body,
   });
 }
 export async function getISRConfig() {
-  return request('/api/admin/isr', {
+  return request('/api/v2/admin/isr/config', {
     method: 'GET',
   });
 }
 export async function updateISRConfig(body) {
-  return request('/api/admin/isr', {
+  return request('/api/v2/admin/isr/config', {
     method: 'PUT',
     body: body,
   });
 }
 export async function clearCaddyLog() {
-  return request('/api/admin/caddy/log', {
+  return request('/api/v2/admin/caddy/logs', {
     method: 'DELETE',
   });
 }
 export async function getCaddyConfig() {
-  return request('/api/admin/caddy/config', {
+  return request('/api/v2/admin/caddy/config', {
     method: 'GET',
   });
 }
 export async function getCaddyLog() {
-  return request('/api/admin/caddy/log', {
+  return request('/api/v2/admin/caddy/logs', {
     method: 'GET',
   });
 }
 export async function setHttpsConfig(data) {
-  return request('/api/admin/caddy/https', {
+  return request('/api/v2/admin/settings/https', {
     method: 'PUT',
     body: data,
   });
 }
 
 export async function fetchInit(body) {
-  return request('/api/admin/init', {
+  return request('/api/v2/public/init', {
     method: 'POST',
     body: body,
   });
 }
 export async function searchArtclesByLink(link) {
-  return request('/api/admin/article/searchByLink', {
-    method: 'POST',
-    body: {
-      link,
-    },
+  return request(`/api/v2/admin/articles/search?link=${encodeQuerystring(link)}`, {
+    method: 'GET',
   });
 }
 export async function scanImgsOfArticles() {
-  return request('/api/admin/img/scan', {
+  return request('/api/v2/admin/media/scan-articles', {
     method: 'POST',
   });
 }
 export async function exportAllImgs() {
-  return request('/api/admin/img/export', {
-    method: 'POST',
+  return request('/api/v2/admin/media/export/all', {
+    method: 'GET',
   });
 }
 
 export async function login(body, options) {
-  body.username = body.username.toLowerCase();
-  body.password = encryptPwd(body.username, body.password);
-  console.log(
-    '[DEBUG] API login called with body structure:',
-    JSON.stringify(
-      {
-        ...body,
-        username: body.username,
-        password: body.password,
-      },
-      null,
-      2,
-    ),
-  );
-
-  const payload = {
-    username: body.username,
-    password: body.password,
-  };
-
-  console.log(
-    '[DEBUG] Sending login request with username:',
-    payload.username,
-    '(using pre-encrypted password)',
-  );
-
-  // 使用POST方法发送登录请求
-  return request('/api/admin/auth/login', {
+  return request('/api/v2/auth/login', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
+    body: {
+      username: body.name,
+      password: encryptPwd(body.password),
     },
-    body: payload,
     ...(options || {}),
   });
 }
 export async function logout(options) {
-  return request('/api/admin/auth/logout', {
+  return request('/api/v2/auth/logout', {
     method: 'POST',
     ...(options || {}),
   });
 }
 export async function restore(data, options) {
-  return request('/api/admin/auth/restore', {
+  return request('/api/v2/admin/backup/restore', {
     method: 'POST',
-    data,
+    body: data,
     ...(options || {}),
   });
 }
 
 export async function createArticle(body) {
-  return request('/api/admin/article', {
+  return request('/api/v2/admin/articles', {
     method: 'POST',
     body: body,
   });
 }
 
 export async function deleteArticle(id) {
-  // ID can be numeric or a pathname (string)
-  const encodedId = typeof id === 'string' ? encodeQuerystring(id) : id;
-  return request(`/api/admin/article/${encodedId}`, {
+  return request(`/api/v2/admin/articles/${id}`, {
     method: 'DELETE',
   });
 }
 export async function createCollaborator(body) {
-  return request('/api/admin/collaborator', {
+  return request('/api/v2/admin/users/collaborators', {
     method: 'POST',
     body: body,
   });
 }
 export async function createCustomPage(body) {
-  return request('/api/admin/customPage', {
+  return request('/api/v2/admin/custom-pages', {
     method: 'POST',
     body: body,
   });
 }
 export async function createCustomFile(path, subPath) {
-  return request(`/api/admin/customPage/file?path=${path}&subPath=${subPath}`, {
+  return request(`/api/v2/admin/custom-pages/file?path=${path}&subPath=${subPath}`, {
     method: 'POST',
   });
 }
 export async function createCustomFolder(path, subPath) {
-  return request(`/api/admin/customPage/file?path=${path}&subPath=${subPath}`, {
+  return request(`/api/v2/admin/custom-pages/file?path=${path}&subPath=${subPath}`, {
     method: 'POST',
   });
 }
 export async function updateCustomPage(body) {
-  return request('/api/admin/customPage', {
+  return request('/api/v2/admin/custom-pages', {
     method: 'PUT',
     body: body,
   });
 }
 export async function updateCustomPageFileInFolder(pathname, filePath, content) {
-  return request('/api/admin/customPage/file', {
+  return request('/api/v2/admin/custom-pages/file', {
     method: 'PUT',
     body: {
       pathname,
@@ -220,374 +188,370 @@ export async function updateCustomPageFileInFolder(pathname, filePath, content) 
   });
 }
 export async function deleteCustomPageByPath(path) {
-  return request('/api/admin/customPage?path=' + path, {
+  return request('/api/v2/admin/custom-pages?path=' + path, {
     method: 'DELETE',
   });
 }
 export async function getCustomPages() {
-  return request('/api/admin/customPage/all', {
+  return request('/api/v2/admin/custom-pages/all', {
     method: 'GET',
   });
 }
 export async function getCustomPageByPath(path) {
-  return request('/api/admin/customPage?path=' + path, {
+  return request('/api/v2/admin/custom-pages?path=' + path, {
     method: 'GET',
   });
 }
 export async function getCustomPageFolderTreeByPath(path) {
-  return request('/api/admin/customPage/folder?path=' + path, {
+  return request('/api/v2/admin/custom-pages/folder?path=' + path, {
     method: 'GET',
   });
 }
 export async function getCustomPageFileDataByPath(path, key) {
-  return request('/api/admin/customPage/file?path=' + path + '&key=' + key, {
+  return request('/api/v2/admin/custom-pages/file?path=' + path + '&key=' + key, {
     method: 'GET',
   });
 }
 export async function updateCollaborator(body) {
-  return request('/api/admin/collaborator', {
+  return request('/api/v2/admin/users/collaborators', {
     method: 'PUT',
     body: body,
   });
 }
 export async function deleteCollaborator(id) {
-  return request(`/api/admin/collaborator/${id}`, {
+  return request(`/api/v2/admin/users/collaborators/${id}`, {
     method: 'DELETE',
   });
 }
 export async function getAllCollaborators() {
-  return request(`/api/admin/collaborator`, {
+  return request(`/api/v2/admin/users/collaborators`, {
     method: 'GET',
   });
 }
 
 export async function getAllCategories(withAllData = false) {
-  return request(`/api/admin/category/all?detail=${withAllData ? 'true' : 'false'}`, {
+  return request(`/api/v2/admin/categories?detail=${withAllData ? 'true' : 'false'}`, {
     method: 'GET',
   });
 }
 
 export async function getArticlesByCategory(name) {
-  return request(`/api/admin/category/${encodeQuerystring(name)}`, {
+  return request(`/api/v2/admin/categories/${encodeQuerystring(name)}/articles`, {
     method: 'GET',
   });
 }
 
 export async function getLog(type, page, pageSize = 10) {
-  return request(`/api/admin/log?event=${type}&pageSize=${pageSize}&page=${page}`, {
+  return request(`/api/v2/admin/analytics/logs?event=${type}&pageSize=${pageSize}&page=${page}`, {
     method: 'GET',
   });
 }
 export async function updateSiteInfo(body) {
-  return request(`/api/admin/meta/site`, {
+  return request(`/api/v2/admin/settings/site-info`, {
     method: 'PUT',
     body: body,
   });
 }
 export async function updateUser(body) {
-  return request(`/api/admin/auth`, {
+  return request(`/api/v2/admin/users/profile`, {
     method: 'PUT',
     body: body,
   });
 }
 export async function createCategory(body) {
-  return request(`/api/admin/category/`, {
+  return request(`/api/v2/admin/categories`, {
     method: 'POST',
     body: body,
   });
 }
 export async function updateCategory(name, value) {
-  return request(`/api/admin/category/${encodeQuerystring(name)}`, {
+  return request(`/api/v2/admin/categories/${encodeQuerystring(name)}`, {
     method: 'PUT',
     body: value,
   });
 }
 export async function updateTag(name, value) {
-  return request(`/api/admin/tag/${name}?value=${value}`, {
+  return request(`/api/v2/admin/tags/${encodeQuerystring(name)}`, {
     method: 'PUT',
+    body: value,
   });
 }
 export async function deleteTag(name) {
-  return request(`/api/admin/tag/${name}`, {
+  return request(`/api/v2/admin/tags/${encodeQuerystring(name)}`, {
     method: 'DELETE',
   });
 }
 export async function deleteCategory(name) {
-  return request(`/api/admin/category/${encodeQuerystring(name)}`, {
+  return request(`/api/v2/admin/categories/${encodeQuerystring(name)}`, {
     method: 'DELETE',
   });
 }
 export async function deleteDraft(id) {
-  return request(`/api/admin/draft/${id}`, {
+  return request(`/api/v2/admin/drafts/${id}`, {
     method: 'DELETE',
   });
 }
 export async function createDraft(body) {
-  return request(`/api/admin/draft`, {
+  return request(`/api/v2/admin/drafts`, {
     method: 'POST',
     body: body,
   });
 }
 export async function publishDraft(id, body) {
-  return request(`/api/admin/draft/publish?id=${id}`, {
+  return request(`/api/v2/admin/drafts/${id}/publish`, {
     method: 'POST',
     body: body,
   });
 }
 export async function createDonate(body) {
-  return request(`/api/admin/meta/reward`, {
+  return request(`/api/v2/admin/settings/donations`, {
     method: 'POST',
     body: body,
   });
 }
 export async function updateLink(body) {
-  return request(`/api/admin/meta/link`, {
+  return request(`/api/v2/admin/settings/friend-links`, {
     method: 'PUT',
     body: body,
   });
 }
 export async function getLink() {
-  return request(`/api/admin/meta/link`, {
+  return request(`/api/v2/admin/settings/friend-links`, {
     method: 'GET',
   });
 }
 export async function updateMenu(body) {
-  return request(`/api/admin/meta/menu`, {
+  return request(`/api/v2/admin/settings/navigation`, {
     method: 'PUT',
     body: body,
   });
 }
 export async function getMenu() {
-  return request(`/api/admin/meta/menu`, {
+  return request(`/api/v2/admin/settings/navigation`, {
     method: 'GET',
   });
 }
 export async function deleteLink(name) {
-  return request(`/api/admin/meta/link/${name}`, {
+  return request(`/api/v2/admin/settings/friend-links/${encodeQuerystring(name)}`, {
     method: 'DELETE',
   });
 }
 
 export async function createLink(body) {
-  return request(`/api/admin/meta/link`, {
+  return request(`/api/v2/admin/settings/friend-links`, {
     method: 'POST',
     body: body,
   });
 }
 export async function updateDonate(body) {
-  return request(`/api/admin/meta/reward`, {
+  return request(`/api/v2/admin/settings/donations`, {
     method: 'PUT',
     body: body,
   });
 }
 export async function deleteDonate(name) {
-  return request(`/api/admin/meta/reward/${name}`, {
+  return request(`/api/v2/admin/settings/donations/${encodeQuerystring(name)}`, {
     method: 'DELETE',
   });
 }
 export async function getDonate() {
-  return request(`/api/admin/meta/reward`, {
+  return request(`/api/v2/admin/settings/donations`, {
     method: 'GET',
   });
 }
 export async function updateSocial(body) {
-  return request(`/api/admin/meta/social`, {
+  return request(`/api/v2/admin/settings/social`, {
     method: 'PUT',
     body: body,
   });
 }
 export async function getSocial() {
-  return request(`/api/admin/meta/social`, {
+  return request(`/api/v2/admin/settings/social`, {
     method: 'GET',
   });
 }
 export async function getSocialTypes() {
-  return request(`/api/admin/meta/social/types`, {
+  return request(`/api/v2/admin/settings/social/types`, {
     method: 'GET',
   });
 }
 export async function getTags() {
-  return request(`/api/admin/tag/all`, {
+  return request(`/api/v2/admin/tags`, {
     method: 'GET',
   });
 }
 export async function getAllCollaboratorsList() {
-  return request(`/api/admin/collaborator/list`, {
+  return request(`/api/v2/admin/users/collaborators`, {
     method: 'GET',
   });
 }
 export async function importAll() {
-  return request(`/api/admin/backup/import`, {
+  return request(`/api/v2/admin/backup/import`, {
     method: 'POST',
   });
 }
 export async function exportAll() {
-  return request(`/api/admin/backup/export`, {
+  return request(`/api/v2/admin/backup/export`, {
     method: 'GET',
-    skipErrorHandler: true,
-    responseType: 'blob',
   });
 }
 export async function deleteSocial(name) {
-  return request(`/api/admin/meta/social/${name}`, {
+  return request(`/api/v2/admin/settings/social/${encodeQuerystring(name)}`, {
     method: 'DELETE',
   });
 }
 export async function updateArticle(id, body) {
-  // ID can be numeric or a pathname (string)
-  const encodedId = typeof id === 'string' ? encodeQuerystring(id) : id;
-  return request(`/api/admin/article/${encodedId}`, {
+  return request(`/api/v2/admin/articles/${id}`, {
     method: 'PUT',
     body: body,
   });
 }
 export async function updateDraft(id, body) {
-  return request(`/api/admin/draft/${id}`, {
+  return request(`/api/v2/admin/drafts/${id}`, {
     method: 'PUT',
     body: body,
   });
 }
 export async function updateAbout(body) {
-  return request(`/api/admin/meta/about`, {
+  return request(`/api/v2/admin/settings/about`, {
     method: 'PUT',
     body: body,
   });
 }
 export async function getAbout() {
-  return request(`/api/admin/meta/about`, {
+  return request(`/api/v2/admin/settings/about`, {
     method: 'GET',
   });
 }
 export async function getArticleById(id) {
-  // ID can be numeric or a pathname (string)
-  const encodedId = typeof id === 'string' ? encodeQuerystring(id) : id;
-  return request(`/api/admin/article/${encodedId}`, {
+  return request(`/api/v2/admin/articles/${id}`, {
     method: 'GET',
   });
 }
 export async function getDraftById(id) {
-  return request(`/api/admin/draft/${id}`, {
+  return request(`/api/v2/admin/drafts/${id}`, {
     method: 'GET',
   });
 }
 export async function getSiteInfo() {
-  return request(`/api/admin/meta/site`, {
+  return request(`/api/v2/admin/settings/site-info`, {
     method: 'GET',
   });
 }
 export async function getArticlesByOption(option) {
-  const newQuery = {};
-  for (const [k, v] of Object.entries(option)) {
-    newQuery[k] = v;
-  }
-  let queryString = '';
-  for (const [k, v] of Object.entries(newQuery)) {
-    queryString += `${k}=${v}&`;
-  }
-  queryString = queryString.substring(0, queryString.length - 1);
-  return request(`/api/admin/article?${queryString}&toListView=true`, {
-    method: 'GET',
-  });
+  return request(
+    `/api/v2/admin/articles?${new URLSearchParams({
+      page: option.current || 1,
+      pageSize: option.pageSize || 10,
+      ...(option.category && { category: option.category }),
+      ...(option.tag && { tag: option.tag }),
+      ...(option.topping !== undefined && { topping: option.topping }),
+      ...(option.hidden !== undefined && { hidden: option.hidden }),
+      ...(option.password !== undefined && { password: option.password }),
+    })}`,
+    {
+      method: 'GET',
+    },
+  );
 }
 export async function getImgs(page, pageSize = 10) {
-  return request(`/api/admin/img?page=${page}&pageSize=${pageSize}`, {
+  return request(`/api/v2/admin/media?page=${page}&pageSize=${pageSize}`, {
     method: 'GET',
   });
 }
 export async function deleteImgBySign(sign) {
-  return request(`/api/admin/img/${sign}`, {
+  return request(`/api/v2/admin/media/${sign}`, {
     method: 'DELETE',
   });
 }
 export async function deleteAllIMG() {
-  return request(`/api/admin/img/all/delete`, {
-    method: 'DELETE',
+  return request(`/api/v2/admin/media/batch-delete`, {
+    method: 'POST',
   });
 }
 export async function getStaticSetting() {
-  return request(`/api/admin/setting/static`, {
+  return request(`/api/v2/admin/media/storage-config`, {
     method: 'GET',
   });
 }
 export async function updateStaticSetting(data) {
-  return request(`/api/admin/setting/static`, {
-    method: 'PUT',
+  return request(`/api/v2/admin/media/storage-config`, {
+    method: 'POST',
     body: data,
   });
 }
 export async function getDraftsByOption(option) {
-  const newQuery = {};
-  for (const [k, v] of Object.entries(option)) {
-    newQuery[k] = v;
-  }
-  let queryString = '';
-  for (const [k, v] of Object.entries(newQuery)) {
-    queryString += `${k}=${v}&`;
-  }
-  queryString = queryString.substring(0, queryString.length - 1);
-  return request(`/api/admin/draft?${queryString}&toListView=true`, {
-    method: 'GET',
-  });
+  return request(
+    `/api/v2/admin/drafts?${new URLSearchParams({
+      page: option.current || 1,
+      pageSize: option.pageSize || 10,
+      ...(option.category && { category: option.category }),
+      ...(option.tag && { tag: option.tag }),
+    })}`,
+    {
+      method: 'GET',
+    },
+  );
 }
 export async function getWelcomeData(tab, overviewNum = 5, viewNum = 5, articleTabNum = 5) {
   return request(
-    `/api/admin/analysis?tab=${tab}&viewerDataNum=${viewNum}&overviewDataNum=${overviewNum}&articleTabDataNum=${articleTabNum}`,
+    `/api/v2/admin/analytics/overview?tab=${tab}&overviewNum=${overviewNum}&viewNum=${viewNum}&articleTabNum=${articleTabNum}`,
     {
       method: 'GET',
     },
   );
 }
 export async function getPiplelines() {
-  return request(`/api/admin/pipeline`, {
+  return request(`/api/v2/admin/pipelines`, {
     method: 'GET',
   });
 }
 export async function getPipelineConfig() {
-  return request(`/api/admin/pipeline/config`, {
+  return request(`/api/v2/admin/pipelines/config`, {
     method: 'GET',
   });
 }
 export async function getPipelineById(id) {
-  return request(`/api/admin/pipeline/${id}`, {
+  return request(`/api/v2/admin/pipelines/${id}`, {
     method: 'GET',
   });
 }
 export async function updatePipelineById(id, data) {
-  return request(`/api/admin/pipeline/${id}`, {
+  return request(`/api/v2/admin/pipelines/${id}`, {
     method: 'PUT',
-    data,
+    body: data,
   });
 }
 export async function deletePipelineById(id) {
-  return request(`/api/admin/pipeline/${id}`, {
+  return request(`/api/v2/admin/pipelines/${id}`, {
     method: 'DELETE',
   });
 }
 export async function createPipeline(data) {
-  return request(`/api/admin/pipeline`, {
+  return request(`/api/v2/admin/pipelines`, {
     method: 'POST',
-    data,
+    body: data,
   });
 }
 export async function triggerPipelineById(id, input) {
-  return request(`/api/admin/pipeline/trigger/${id}`, {
+  return request(`/api/v2/admin/pipelines/${id}/trigger`, {
     method: 'POST',
     body: input,
   });
 }
 export async function createApiToken(data) {
-  return request(`/api/admin/token`, {
+  return request(`/api/v2/admin/tokens`, {
     method: 'POST',
-    data,
+    body: data,
   });
 }
 export async function deleteApiToken(id) {
-  return request(`/api/admin/token/${id}`, {
+  return request(`/api/v2/admin/tokens/${id}`, {
     method: 'DELETE',
   });
 }
 export async function getAllApiTokens() {
-  return request('/api/admin/token', {
+  return request(`/api/v2/admin/tokens`, {
     method: 'GET',
   });
 }

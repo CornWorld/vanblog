@@ -30,8 +30,6 @@ import { WebhookService } from './services/webhook.service';
       'plugin:install',
       'plugin:uninstall',
       'plugin:enable',
-    ]),
-    PermissionModule.forFeature([
       'webhook:create',
       'webhook:read',
       'webhook:admin',

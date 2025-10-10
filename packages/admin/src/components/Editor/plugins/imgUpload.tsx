@@ -77,7 +77,7 @@ export const uploadImg = async (file: File, options?: { t?: TFunction; message?:
     }
 
     // For non-SVG files, proceed with normal upload
-    const res = await fetch('/api/admin/img/upload?withWaterMark=true', {
+    const res = await fetch('/api/v2/admin/media/upload?withWaterMark=true', {
       method: 'POST',
       body: formData,
       headers: {

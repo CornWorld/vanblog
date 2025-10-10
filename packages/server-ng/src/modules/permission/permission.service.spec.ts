@@ -284,16 +284,16 @@ describe('PermissionService', () => {
         service as unknown as { registerAllModulePermissions: () => Promise<void> },
         'registerAllModulePermissions',
       ).mockResolvedValue(undefined);
-      // Mock createPredefinedGroups
+      // Mock ensurePredefinedGroups
       vi.spyOn(
-        service as unknown as { createPredefinedGroups: () => Promise<void> },
-        'createPredefinedGroups',
+        service as unknown as { ensurePredefinedGroups: () => Promise<void> },
+        'ensurePredefinedGroups',
       ).mockResolvedValue(undefined);
 
       await service.initializePermissions();
 
       expect(service['registerAllModulePermissions']).toHaveBeenCalled();
-      expect(service['createPredefinedGroups']).toHaveBeenCalled();
+      expect(service['ensurePredefinedGroups']).toHaveBeenCalled();
     });
   });
 });

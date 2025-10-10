@@ -27,7 +27,7 @@ import {
 import { PermissionService } from './permission.service';
 
 @ApiTags('Permissions')
-@Controller('permissions')
+@Controller({ path: 'permissions', version: '2' })
 @Perm({ roles: [UserType.ADMIN] })
 export class PermissionController {
   constructor(private readonly permissionService: PermissionService) {}

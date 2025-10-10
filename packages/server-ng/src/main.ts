@@ -126,7 +126,7 @@ export async function init(): Promise<INestApplication> {
   app.use(cookieParser());
 
   // CSRF protection
-  if (process.env.NODE_ENV !== 'test') {
+  if (process.env.NODE_ENV !== 'test' && process.env.NODE_ENV !== 'development') {
     app.use(
       csurf({
         cookie: {

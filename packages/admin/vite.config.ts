@@ -24,6 +24,20 @@ export default defineConfig(({ mode }) => {
     server: {
       host: '0.0.0.0',
       port: 3002,
+      proxy: {
+        // 代理 API 请求到 server-ng
+        '/api': {
+          target: 'http://localhost:3050',
+          changeOrigin: true,
+          secure: false,
+        },
+        // 代理静态资源请求到 server-ng
+        '/static': {
+          target: 'http://localhost:3050',
+          changeOrigin: true,
+          secure: false,
+        },
+      },
     },
     base: '/admin/',
     resolve: {

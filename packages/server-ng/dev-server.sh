@@ -32,8 +32,8 @@ check_health() {
 
 start_server() {
   echo "正在启动开发服务器(pnpm run dev)..."
-  # 确保使用你的项目实际的启动命令
-  pnpm run dev > "$LOG_FILE" 2>&1 &
+  # 确保使用你的项目实际的启动命令，并设置开发环境变量
+  NODE_ENV=development pnpm run dev > "$LOG_FILE" 2>&1 &
 
   PID=$!
   echo $PID > "$PID_FILE"
