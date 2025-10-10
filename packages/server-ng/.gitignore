@@ -54,3 +54,4 @@ yarn-error.log*
 /junit-report*.xml
 /test-results/
 /vitest-output-*.json
+cookies.txt
