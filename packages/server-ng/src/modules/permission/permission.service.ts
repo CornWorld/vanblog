@@ -44,18 +44,13 @@ export class PermissionService {
   private cachedKnownPermissions: Set<string> | null = null;
   // 缓存：角色展开后的权限列表（当权限组或注册的预定义角色发生变化时失效）
   private readonly rolePermissionsCache = new Map<string, string[]>();
-  // 标记是否已经初始化过预定义角色
-  private static predefinedRolesInitialized = false;
 
   constructor(
     @Inject(DATABASE_CONNECTION)
     private readonly db: Database,
   ) {
-    // 只在第一次构造时初始化预定义权限组
-    if (!PermissionService.predefinedRolesInitialized) {
-      this.initializePredefinedGroups();
-      PermissionService.predefinedRolesInitialized = true;
-    }
+    // 每次实例化时都初始化预定义权限组
+    this.initializePredefinedGroups();
   }
 
   /**
@@ -69,6 +64,7 @@ export class PermissionService {
       this.predefinedRoles.set('editor', []);
       this.predefinedRoles.set('author', []);
       this.predefinedRoles.set('viewer', []);
+      this.logger.log('初始化预定义角色完成');
     }
   }
 
@@ -79,7 +75,7 @@ export class PermissionService {
   register(config: PermissionRegistration): void {
     const { module, permissions = [], roles = {} } = config;
 
-    this.logger.log(`模块 ${module} 的已注册权限`);
+    this.logger.log(`注册模块 ${module} 的权限: ${permissions.join(', ')}`);
 
     // 注册模块权限节点（带前缀）
     const fullPermissions = permissions.map((p) => `${module}:${p}`);
@@ -93,10 +89,11 @@ export class PermissionService {
       const fullRolePermissions = rolePermissions.map((p) => `${module}:${p}`);
       const existingPermissions = this.predefinedRoles.get(roleName) ?? [];
       this.predefinedRoles.set(roleName, [...existingPermissions, ...fullRolePermissions]);
-      this.logger.log(`注册角色 ${roleName} 的权限: ${fullRolePermissions.join(', ')}`);
+      this.logger.log(`为角色 ${roleName} 添加权限: ${fullRolePermissions.join(', ')}`);
     });
 
-    this.logger.log(`模块 ${module} 权限注册完成: ${fullPermissions.join(', ')}`);
+    this.logger.log(`模块 ${module} 权限注册完成，完整权限: ${fullPermissions.join(', ')}`);
+    this.logger.log(`当前 admin 角色权限: ${JSON.stringify(this.predefinedRoles.get('admin'))}`);
 
     // 失效缓存：模块权限与预定义角色发生变化
     this.cachedKnownPermissions = null;
@@ -571,7 +568,11 @@ export class PermissionService {
   }
 
   private async ensurePredefinedGroups(): Promise<void> {
+    this.logger.log(`开始确保预定义权限组，当前角色数量: ${this.predefinedRoles.size}`);
+
     for (const [roleName, permissions] of this.predefinedRoles) {
+      this.logger.log(`处理角色 ${roleName}，权限: ${JSON.stringify(permissions)}`);
+
       // 检查权限组是否已存在
       const existingGroup = await this.db
         .select()
@@ -581,6 +582,7 @@ export class PermissionService {
 
       if (existingGroup.length === 0) {
         // 创建新的权限组
+        this.logger.log(`创建新权限组: ${roleName}`);
         await this.db.insert(permissionGroups).values({
           name: roleName,
           description: `预定义角色: ${roleName}`,
@@ -589,11 +591,14 @@ export class PermissionService {
         });
       } else {
         // 更新现有权限组的权限列表
+        this.logger.log(`更新现有权限组: ${roleName}`);
         await this.db
           .update(permissionGroups)
           .set({ permissions: JSON.stringify(permissions) })
           .where(eq(permissionGroups.name, roleName));
       }
     }
+
+    this.logger.log('预定义权限组确保完成');
   }
 }

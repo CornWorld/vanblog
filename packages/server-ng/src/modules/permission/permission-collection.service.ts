@@ -128,11 +128,12 @@ export class PermissionCollectionService implements OnApplicationBootstrap {
     const roles: Record<string, string[]> = {};
 
     // 管理员拥有所有权限
-    roles.admin = [...permissions];
+    roles.admin = permissions;
 
-    // 访客只有读权限
-    if (permissions.includes('read')) {
-      roles.viewer = ['read'];
+    // 访客只有读权限 - 检查是否有以'read'结尾的权限
+    const readPermissions = permissions.filter((perm) => perm.endsWith('read'));
+    if (readPermissions.length > 0) {
+      roles.viewer = readPermissions;
     }
 
     // 其他角色（editor/author/…）由 PermissionService 的用户权限解析与覆盖机制产生
