@@ -6,6 +6,7 @@ import { eq, sql } from 'drizzle-orm';
 
 import { DATABASE_CONNECTION, type Database } from '../../database';
 import { siteMeta } from '../../database/schema';
+import { normalizeMigrationData } from '../contracts';
 
 /**
  * 迁移记录接口
@@ -176,7 +177,8 @@ export class MigrationService {
       }
 
       const data = JSON.parse(result[0].value ?? '{}') as { migrations?: MigrationRecord[] };
-      return data.migrations ?? [];
+      const migrationData = normalizeMigrationData(data);
+      return [...migrationData.migrations];
     } catch (error) {
       this.logger.error('Failed to get executed migrations:', error);
       return [];

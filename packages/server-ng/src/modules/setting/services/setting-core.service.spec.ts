@@ -435,14 +435,20 @@ describe('SettingCoreService', () => {
 
       const result = await service.getCustomCode();
 
-      expect(result).toEqual({});
+      expect(result).toEqual({
+        css: '',
+        script: '',
+        html: '',
+        head: '',
+      });
     });
 
     it('should return existing custom code', async () => {
       const existingCode: CustomCode = {
         head: '<meta name="test" content="test">',
-        body: '<script>console.log("test")</script>',
-        footer: '<p>Footer</p>',
+        css: 'body { color: red; }',
+        script: 'console.log("test")',
+        html: '<div>test</div>',
       };
       mockSelectChain.limit.mockResolvedValue([{ value: JSON.stringify(existingCode) }]);
 
@@ -457,7 +463,7 @@ describe('SettingCoreService', () => {
       const existingCode: CustomCode = {
         head: '<meta name="old" content="old">',
       };
-      const updateDto = { body: '<script>console.log("new")</script>' };
+      const updateDto = { script: 'console.log("new")' };
       const expectedResult = { ...existingCode, ...updateDto };
 
       mockSelectChain.limit.mockResolvedValue([{ value: JSON.stringify(existingCode) }]);

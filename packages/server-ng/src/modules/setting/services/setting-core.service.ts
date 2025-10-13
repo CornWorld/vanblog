@@ -4,6 +4,7 @@ import { z } from 'zod';
 
 import { DATABASE_CONNECTION, type Database } from '../../../database';
 import { siteMeta } from '../../../database/schema';
+import { normalizeCustomCode } from '../../../shared/contracts';
 import { safeParseJson, dataSchemas, NavigationNode } from '../../../shared/zod';
 import { HookService } from '../../plugin/services/hook.service';
 
@@ -47,9 +48,10 @@ export interface FriendLink {
 }
 
 export interface CustomCode {
-  head?: string;
-  body?: string;
-  footer?: string;
+  readonly css?: string;
+  readonly script?: string;
+  readonly html?: string;
+  readonly head?: string;
 }
 
 // 新增：关于信息
@@ -235,7 +237,8 @@ export class SettingCoreService {
 
   // Custom Code
   async getCustomCode(): Promise<CustomCode> {
-    return (await this.getConfig<CustomCode>('customCode')) ?? {};
+    const rawConfig = await this.getConfig<CustomCode>('customCode');
+    return rawConfig ? normalizeCustomCode(rawConfig) : normalizeCustomCode(null);
   }
 
   async updateCustomCode(dto: Partial<CustomCode>): Promise<CustomCode> {

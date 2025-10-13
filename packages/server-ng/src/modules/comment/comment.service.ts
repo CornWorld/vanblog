@@ -13,6 +13,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 
 import { AllConfig } from '../../config/config.interface';
+import { normalizeCommentOtherConfig } from '../../shared/contracts';
 import { HookService } from '../plugin/services/hook.service';
 import { SettingCoreService } from '../setting/services/setting-core.service';
 
@@ -149,9 +150,10 @@ export class CommentService implements OnModuleInit, OnModuleDestroy, BeforeAppl
       } else if (key === 'otherConfig') {
         if (config.otherConfig !== '') {
           try {
-            const data: unknown = JSON.parse(config.otherConfig ?? '{}');
-            for (const [k, v] of Object.entries(data as Record<string, unknown>)) {
-              result[k] = String(v);
+            const rawData: unknown = JSON.parse(config.otherConfig ?? '{}');
+            const otherConfig = normalizeCommentOtherConfig(rawData);
+            for (const [k, v] of Object.entries(otherConfig)) {
+              result[k] = v;
             }
           } catch (err) {
             this.logger.warn('Failed to parse otherConfig:', err);

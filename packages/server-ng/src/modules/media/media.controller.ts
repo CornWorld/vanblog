@@ -20,9 +20,9 @@ import { memoryStorage } from 'multer';
 import { ZodValidationPipe } from 'nestjs-zod';
 
 import { staticFiles } from '../../database/schema';
+import { normalizeMediaProcessingOverride } from '../../shared/contracts';
 import { Perm } from '../auth/permissions.decorator';
 import { SettingRegistryService } from '../setting/services/setting-registry.service';
-
 import { BatchDeleteDto, BatchDeleteSchema } from './dto/batch-delete.dto';
 import {
   CompleteChunkUploadDto,
@@ -37,7 +37,6 @@ import {
   MediaProcessingSettings,
   MEDIA_PROCESSING_CONFIG_KEY,
   MediaProcessingSettingsSchema,
-  MediaProcessingOverrideSchema,
 } from './dto/media-settings.dto';
 import {
   UpdateStorageConfigDto,
@@ -93,12 +92,10 @@ export class MediaController {
         return base;
       }
     }
-    const parsed = MediaProcessingOverrideSchema.safeParse(ov);
-    if (!parsed.success) return base;
-    const o = parsed.data;
+    const normalizedOverride = normalizeMediaProcessingOverride(ov);
     return {
-      compress: { ...base.compress, ...(o.compress ?? {}) },
-      watermark: { ...base.watermark, ...(o.watermark ?? {}) },
+      compress: { ...base.compress, ...normalizedOverride.compress },
+      watermark: { ...base.watermark, ...normalizedOverride.watermark },
     };
   }
 
