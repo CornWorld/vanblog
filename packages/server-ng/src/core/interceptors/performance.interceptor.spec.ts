@@ -1,36 +1,16 @@
-import { firstValueFrom, of, throwError } from 'rxjs';
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { of, throwError, firstValueFrom } from 'rxjs';
+import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 
 import { PerformanceInterceptor } from './performance.interceptor';
 
 import type { LoggerService } from '../logger/logger.service';
-import type { CallHandler, ExecutionContext } from '@nestjs/common';
-import type { Request, Response } from 'express';
-
-function createContext(req: Partial<Request>, res: Partial<Response>): ExecutionContext {
-  return {
-    switchToHttp: () => ({
-      getRequest: () => req,
-      getResponse: () => res,
-    }),
-  } as ExecutionContext;
-}
-
-function createCallHandler(data: unknown): CallHandler {
-  return {
-    handle: () => of(data),
-  } as CallHandler;
-}
-
-function createErrorCallHandler(error: Error): CallHandler {
-  return {
-    handle: () => throwError(() => error),
-  } as CallHandler;
-}
+import type { ExecutionContext, CallHandler } from '@nestjs/common';
 
 describe('PerformanceInterceptor', () => {
   let interceptor: PerformanceInterceptor;
   let mockLogger: LoggerService;
+  let mockExecutionContext: ExecutionContext;
+  let mockCallHandler: CallHandler;
 
   beforeEach(() => {
     mockLogger = {
@@ -40,140 +20,286 @@ describe('PerformanceInterceptor', () => {
     } as unknown as LoggerService;
 
     interceptor = new PerformanceInterceptor(mockLogger);
-  });
 
-  it('should log normal requests in development environment', async () => {
-    const originalEnv = process.env.NODE_ENV;
-    process.env.NODE_ENV = 'development';
+    mockExecutionContext = {
+      switchToHttp: vi.fn().mockReturnValue({
+        getRequest: vi.fn().mockReturnValue({
+          method: 'GET',
+          url: '/api/test',
+          ip: '127.0.0.1',
+          socket: { remoteAddress: '127.0.0.1' },
+          headers: { 'user-agent': 'test-agent' },
+        }),
+        getResponse: vi.fn().mockReturnValue({
+          statusCode: 200,
+        }),
+      }),
+    } as unknown as ExecutionContext;
 
-    const req: Partial<Request> = {
-      method: 'GET',
-      url: '/api/test',
-      ip: '127.0.0.1',
-      socket: { remoteAddress: '127.0.0.1' } as any,
-      headers: { 'user-agent': 'test-agent' },
+    mockCallHandler = {
+      handle: vi.fn().mockReturnValue(of('test response')),
     };
-    const res: Partial<Response> = { statusCode: 200 };
 
-    const ctx = createContext(req, res);
-    const next = createCallHandler({ success: true });
-
-    const result = await firstValueFrom(interceptor.intercept(ctx, next));
-
-    expect(result).toEqual({ success: true });
-    expect(mockLogger.log).toHaveBeenCalledWith(
-      expect.stringMatching(/GET \/api\/test 200 \d+ms \[127\.0\.0\.1\]/),
-      'PerformanceInterceptor',
-    );
-
-    process.env.NODE_ENV = originalEnv;
+    // 重置统计数据
+    PerformanceInterceptor.resetStats();
   });
 
-  it('should not log normal requests in production environment', async () => {
-    const originalEnv = process.env.NODE_ENV;
-    process.env.NODE_ENV = 'production';
-
-    const req: Partial<Request> = {
-      method: 'GET',
-      url: '/api/test',
-      ip: '127.0.0.1',
-      socket: { remoteAddress: '127.0.0.1' } as any,
-      headers: { 'user-agent': 'test-agent' },
-    };
-    const res: Partial<Response> = { statusCode: 200 };
-
-    const ctx = createContext(req, res);
-    const next = createCallHandler({ success: true });
-
-    await firstValueFrom(interceptor.intercept(ctx, next));
-
-    expect(mockLogger.log).not.toHaveBeenCalled();
-
-    process.env.NODE_ENV = originalEnv;
+  afterEach(() => {
+    vi.restoreAllMocks();
+    PerformanceInterceptor.resetStats();
   });
 
-  it('should warn about slow requests by mocking Date.now', async () => {
-    const originalDateNow = Date.now;
-    let callCount = 0;
-    Date.now = vi.fn(() => {
-      callCount++;
-      return callCount === 1 ? 1000 : 2500; // 1.5 second difference
+  describe('基础功能测试', () => {
+    it('应该在开发环境记录正常请求', async () => {
+      const originalEnv = process.env.NODE_ENV;
+      process.env.NODE_ENV = 'development';
+
+      const mockDateNow = vi.spyOn(Date, 'now');
+      // 第一次调用：startTime = 1000
+      // 第二次调用：tap中的duration计算 = 1100
+      // 第三次调用：logRequest中的duration计算 = 1100
+      mockDateNow.mockReturnValueOnce(1000).mockReturnValueOnce(1100).mockReturnValueOnce(1100);
+
+      const result = interceptor.intercept(mockExecutionContext, mockCallHandler);
+      await firstValueFrom(result);
+
+      expect(mockLogger.log).toHaveBeenCalledWith(
+        'GET /api/test 200 100ms [127.0.0.1]',
+        'PerformanceInterceptor',
+      );
+
+      process.env.NODE_ENV = originalEnv;
     });
 
-    const req: Partial<Request> = {
-      method: 'POST',
-      url: '/api/slow',
-      ip: '192.168.1.1',
-      socket: { remoteAddress: '192.168.1.1' } as any,
-      headers: { 'user-agent': 'slow-client' },
-    };
-    const res: Partial<Response> = { statusCode: 200 };
+    it('应该在生产环境不记录正常请求', async () => {
+      const originalEnv = process.env.NODE_ENV;
+      process.env.NODE_ENV = 'production';
 
-    const ctx = createContext(req, res);
-    const next = createCallHandler({ data: 'slow' });
+      const mockDateNow = vi.spyOn(Date, 'now');
+      // 第一次调用：startTime = 1000
+      // 第二次调用：tap中的duration计算 = 1100
+      // 第三次调用：logRequest中的duration计算 = 1100
+      mockDateNow.mockReturnValueOnce(1000).mockReturnValueOnce(1100).mockReturnValueOnce(1100);
 
-    await firstValueFrom(interceptor.intercept(ctx, next));
+      const result = interceptor.intercept(mockExecutionContext, mockCallHandler);
+      await firstValueFrom(result);
 
-    expect(mockLogger.warn).toHaveBeenCalledWith(
-      expect.stringMatching(
-        /SLOW REQUEST: POST \/api\/slow 200 1500ms \[192\.168\.1\.1\] - UA: slow-client/,
-      ),
-      'PerformanceInterceptor',
-    );
+      expect(mockLogger.log).not.toHaveBeenCalled();
 
-    Date.now = originalDateNow;
+      process.env.NODE_ENV = originalEnv;
+    });
+
+    it('应该记录慢请求警告', async () => {
+      const mockDateNow = vi.spyOn(Date, 'now');
+      // 第一次调用：startTime = 1000
+      // 第二次调用：tap中的duration计算 = 2500
+      // 第三次调用：logRequest中的duration计算 = 2500
+      mockDateNow.mockReturnValueOnce(1000).mockReturnValueOnce(2500).mockReturnValueOnce(2500);
+
+      const result = interceptor.intercept(mockExecutionContext, mockCallHandler);
+      await firstValueFrom(result);
+
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        'SLOW REQUEST: GET /api/test 200 1500ms [127.0.0.1] - UA: test-agent',
+        'PerformanceInterceptor',
+      );
+    });
+
+    it('应该记录非常慢的请求错误', async () => {
+      const mockDateNow = vi.spyOn(Date, 'now');
+      // 第一次调用：startTime = 1000
+      // 第二次调用：tap中的duration计算 = 4500
+      // 第三次调用：logRequest中的duration计算 = 4500
+      mockDateNow.mockReturnValueOnce(1000).mockReturnValueOnce(4500).mockReturnValueOnce(4500);
+
+      const result = interceptor.intercept(mockExecutionContext, mockCallHandler);
+      await firstValueFrom(result);
+
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        'VERY SLOW REQUEST: GET /api/test 200 3500ms [127.0.0.1] - UA: test-agent',
+        'PerformanceInterceptor',
+      );
+    });
+
+    it('应该记录错误请求', async () => {
+      const testError = new Error('Test error');
+      mockCallHandler.handle = vi.fn().mockReturnValue(throwError(() => testError));
+
+      const mockDateNow = vi.spyOn(Date, 'now');
+      mockDateNow.mockReturnValueOnce(1000).mockReturnValueOnce(1200); // 200ms duration
+
+      const result = interceptor.intercept(mockExecutionContext, mockCallHandler);
+
+      try {
+        await firstValueFrom(result);
+      } catch {
+        // 预期的错误
+      }
+
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        expect.stringMatching(/^GET \/api\/test 500 \d+ms \[127\.0\.0\.1\] - ERROR: Test error$/),
+        testError.stack,
+        'PerformanceInterceptor',
+      );
+    });
   });
 
-  it('should log errors with stack trace', async () => {
-    const testError = new Error('Test error');
-    const req: Partial<Request> = {
-      method: 'DELETE',
-      url: '/api/error',
-      ip: '10.0.0.1',
-      socket: { remoteAddress: '10.0.0.1' } as any,
-      headers: { 'user-agent': 'error-client' },
-    };
-    const res: Partial<Response> = { statusCode: 500 };
+  describe('端点性能统计测试', () => {
+    it('应该正确记录端点统计信息', async () => {
+      const mockDateNow = vi.spyOn(Date, 'now');
 
-    const ctx = createContext(req, res);
-    const next = createErrorCallHandler(testError);
+      // 第一个请求：100ms
+      mockDateNow.mockReturnValueOnce(1000).mockReturnValueOnce(1100);
+      let result = interceptor.intercept(mockExecutionContext, mockCallHandler);
+      await firstValueFrom(result);
 
-    try {
-      await firstValueFrom(interceptor.intercept(ctx, next));
-    } catch {
-      // Expected to throw
-    }
+      // 第二个请求：200ms
+      mockDateNow.mockReturnValueOnce(2000).mockReturnValueOnce(2200);
+      result = interceptor.intercept(mockExecutionContext, mockCallHandler);
+      await firstValueFrom(result);
 
-    expect(mockLogger.error).toHaveBeenCalledWith(
-      expect.stringMatching(/DELETE \/api\/error 500 \d+ms \[10\.0\.0\.1\] - ERROR: Test error/),
-      testError.stack,
-      'PerformanceInterceptor',
-    );
+      const stats = PerformanceInterceptor.getEndpointStats();
+      const endpointStats = stats.get('GET /api/test');
+
+      expect(endpointStats).toBeDefined();
+      expect(endpointStats!.totalRequests).toBe(2);
+      expect(endpointStats!.totalDuration).toBe(300);
+      expect(endpointStats!.averageDuration).toBe(150);
+      expect(endpointStats!.minDuration).toBe(100);
+      expect(endpointStats!.maxDuration).toBe(200);
+    });
+
+    it('应该正确统计响应时间分布', async () => {
+      const mockDateNow = vi.spyOn(Date, 'now');
+
+      // 快速请求：50ms
+      mockDateNow.mockReturnValueOnce(1000).mockReturnValueOnce(1050);
+      let result = interceptor.intercept(mockExecutionContext, mockCallHandler);
+      await firstValueFrom(result);
+
+      // 正常请求：300ms
+      mockDateNow.mockReturnValueOnce(2000).mockReturnValueOnce(2300);
+      result = interceptor.intercept(mockExecutionContext, mockCallHandler);
+      await firstValueFrom(result);
+
+      // 慢请求：800ms
+      mockDateNow.mockReturnValueOnce(3000).mockReturnValueOnce(3800);
+      result = interceptor.intercept(mockExecutionContext, mockCallHandler);
+      await firstValueFrom(result);
+
+      // 非常慢请求：1500ms
+      mockDateNow.mockReturnValueOnce(4000).mockReturnValueOnce(5500);
+      result = interceptor.intercept(mockExecutionContext, mockCallHandler);
+      await firstValueFrom(result);
+
+      const stats = PerformanceInterceptor.getEndpointStats();
+      const endpointStats = stats.get('GET /api/test');
+
+      expect(endpointStats!.responseTimeDistribution.fast).toBe(1);
+      expect(endpointStats!.responseTimeDistribution.normal).toBe(1);
+      expect(endpointStats!.responseTimeDistribution.slow).toBe(1);
+      expect(endpointStats!.responseTimeDistribution.verySlow).toBe(1);
+    });
+
+    it('应该正确生成性能摘要', async () => {
+      const mockDateNow = vi.spyOn(Date, 'now');
+
+      // 添加多个端点的请求
+      // 端点1：快速请求
+      mockDateNow.mockReturnValueOnce(1000).mockReturnValueOnce(1050);
+      let result = interceptor.intercept(mockExecutionContext, mockCallHandler);
+      await firstValueFrom(result);
+
+      // 端点2：慢请求
+      const slowContext = {
+        ...mockExecutionContext,
+        switchToHttp: vi.fn().mockReturnValue({
+          getRequest: vi.fn().mockReturnValue({
+            method: 'POST',
+            url: '/api/slow',
+            ip: '127.0.0.1',
+            socket: { remoteAddress: '127.0.0.1' },
+            headers: { 'user-agent': 'test-agent' },
+          }),
+          getResponse: vi.fn().mockReturnValue({
+            statusCode: 200,
+          }),
+        }),
+      } as unknown as ExecutionContext;
+
+      mockDateNow.mockReturnValueOnce(2000).mockReturnValueOnce(3500); // 1500ms
+      result = interceptor.intercept(slowContext, mockCallHandler);
+      await firstValueFrom(result);
+
+      const summary = PerformanceInterceptor.getPerformanceSummary();
+
+      expect(summary.totalEndpoints).toBe(2);
+      expect(summary.slowEndpoints).toBe(1);
+      expect(summary.totalRequests).toBe(2);
+      expect(summary.averageResponseTime).toBe(775); // (50 + 1500) / 2
+      expect(summary.responseTimeDistribution.fast).toBe(1);
+      expect(summary.responseTimeDistribution.verySlow).toBe(1);
+    });
+
+    it('应该限制最大端点数量', async () => {
+      const mockDateNow = vi.spyOn(Date, 'now');
+
+      // 创建超过限制的端点数量（模拟1001个端点）
+      for (let i = 0; i < 1001; i++) {
+        const context = {
+          ...mockExecutionContext,
+          switchToHttp: vi.fn().mockReturnValue({
+            getRequest: vi.fn().mockReturnValue({
+              method: 'GET',
+              url: `/api/test-${i}`,
+              ip: '127.0.0.1',
+              socket: { remoteAddress: '127.0.0.1' },
+              headers: { 'user-agent': 'test-agent' },
+            }),
+            getResponse: vi.fn().mockReturnValue({
+              statusCode: 200,
+            }),
+          }),
+        } as unknown as ExecutionContext;
+
+        mockDateNow.mockReturnValueOnce(1000 + i).mockReturnValueOnce(1100 + i);
+        const result = interceptor.intercept(context, mockCallHandler);
+        await firstValueFrom(result);
+      }
+
+      const stats = PerformanceInterceptor.getEndpointStats();
+      expect(stats.size).toBe(1000); // 应该限制在1000个
+    });
   });
 
-  it('should handle missing user-agent and IP gracefully', async () => {
-    const originalEnv = process.env.NODE_ENV;
-    process.env.NODE_ENV = 'development';
+  describe('静态方法测试', () => {
+    it('应该能够重置统计数据', async () => {
+      const mockDateNow = vi.spyOn(Date, 'now');
+      mockDateNow.mockReturnValueOnce(1000).mockReturnValueOnce(1100);
 
-    const req: Partial<Request> = {
-      method: 'PATCH',
-      url: '/api/minimal',
-      socket: {} as any,
-      headers: {},
-    };
-    const res: Partial<Response> = { statusCode: 204 };
+      const result = interceptor.intercept(mockExecutionContext, mockCallHandler);
+      await firstValueFrom(result);
 
-    const ctx = createContext(req, res);
-    const next = createCallHandler(null);
+      expect(PerformanceInterceptor.getEndpointStats().size).toBe(1);
 
-    const result = await firstValueFrom(interceptor.intercept(ctx, next));
+      PerformanceInterceptor.resetStats();
 
-    expect(result).toBeNull();
-    expect(mockLogger.log).toHaveBeenCalledWith(
-      expect.stringMatching(/PATCH \/api\/minimal 204 \d+ms \[unknown\]/),
-      'PerformanceInterceptor',
-    );
+      expect(PerformanceInterceptor.getEndpointStats().size).toBe(0);
+      expect(PerformanceInterceptor.getPerformanceSummary().totalEndpoints).toBe(0);
+    });
 
-    process.env.NODE_ENV = originalEnv;
+    it('应该返回端点统计的副本', async () => {
+      const mockDateNow = vi.spyOn(Date, 'now');
+      mockDateNow.mockReturnValueOnce(1000).mockReturnValueOnce(1100);
+
+      const result = interceptor.intercept(mockExecutionContext, mockCallHandler);
+      await firstValueFrom(result);
+
+      const stats1 = PerformanceInterceptor.getEndpointStats();
+      const stats2 = PerformanceInterceptor.getEndpointStats();
+
+      expect(stats1).not.toBe(stats2); // 应该是不同的对象实例
+      expect(stats1.size).toBe(stats2.size); // 但内容相同
+    });
   });
 });

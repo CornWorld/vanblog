@@ -17,23 +17,22 @@ import { useRouter } from 'next/router';
 import { getPageview, updatePageview } from '../api/pageView';
 import Head from 'next/head';
 import { appWithTranslation } from 'next-i18next';
+import { PageViewDataContract, normalizePageViewData } from '../types/contracts';
 
 type AppPropsWithPageViewData = AppProps & {
   pageProps: {
-    pageViewData?: {
-      viewer: number;
-      visited: number;
-    };
+    pageViewData?: PageViewDataContract;
   };
 };
 
 function MyApp({ Component, pageProps }: AppPropsWithPageViewData) {
   const { current } = useRef({ hasInit: false });
 
-  // Initialize state with server-side fetched data if available
+  // Initialize state with normalized server-side data
+  const normalizedPageViewData = normalizePageViewData(pageProps.pageViewData);
   const [globalState, setGlobalState] = useState<GlobalState>({
-    viewer: pageProps.pageViewData?.viewer || 0,
-    visited: pageProps.pageViewData?.visited || 0,
+    viewer: normalizedPageViewData.viewer,
+    visited: normalizedPageViewData.visited,
   });
 
   const router = useRouter();

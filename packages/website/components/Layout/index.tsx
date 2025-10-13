@@ -46,7 +46,7 @@ export default function Layout(props: {
       current.hasInit = true;
       localStorage.setItem('saidHello', 'true');
       console.log(t('console.welcome'));
-      console.log(t('console.version'), props?.option?.version || 'unknown');
+      console.log(t('console.version'), props.option.version);
       // console.log('Website:', 'https://vanblog.mereith.com');
       console.log(t('console.githubMsg'), 'https://github.com/CornWorld/vanblog');
       console.log('!!!', t('console.forkMsg'), '!!!');

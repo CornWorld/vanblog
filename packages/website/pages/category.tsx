@@ -2,6 +2,7 @@ import AuthorCard, { AuthorCardProps } from '../components/AuthorCard';
 import Layout from '../components/Layout';
 import TimeLineItem from '../components/TimeLineItem';
 import { Article } from '../types/article';
+import { normalizeArticles } from '../types/contracts';
 import { LayoutProps } from '../utils/getLayoutProps';
 import { getCategoryPageProps } from '../utils/getPageProps';
 import { revalidate } from '../utils/loadConfig';
@@ -18,9 +19,12 @@ export interface CategoryPageProps {
 }
 const CategoryPage = (props: CategoryPageProps) => {
   const { t } = useTranslation();
+  // Use normalizeArticles to eliminate defensive programming
+  const normalizedArticles = normalizeArticles(props.articles);
+
   // Calculate total word count
-  const wordTotal = props.articles.reduce((total, article) => {
-    return total + (article.wordCount || 0);
+  const wordTotal = normalizedArticles.reduce((total, article) => {
+    return total + article.wordCount;
   }, 0);
 
   return (
@@ -53,9 +57,12 @@ const CategoryPage = (props: CategoryPageProps) => {
                 defaultOpen={false}
                 key={category}
                 date={category}
-                articles={props.articles.filter(
-                  (article: Article) => article.category === category,
-                )}
+                articles={normalizedArticles
+                  .filter((article) => article.category === category)
+                  .map((article) => ({
+                    ...article,
+                    tags: [...article.tags],
+                  }))}
                 showYear={true}
               ></TimeLineItem>
             );

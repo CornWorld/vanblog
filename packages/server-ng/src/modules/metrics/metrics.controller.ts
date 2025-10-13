@@ -1,11 +1,12 @@
 import { Controller, Get, Header } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 
+import { PerformanceInterceptor } from '../../core/interceptors/performance.interceptor';
 import { PerformanceMonitoringMiddleware } from '../../shared/middleware/performance-monitoring.middleware';
 import { ErrorRateMonitoringService } from '../../shared/services/error-rate-monitoring.service';
 
 @ApiTags('Metrics')
-@Controller('metrics')
+@Controller({ path: 'api/metrics', version: '2' })
 export class MetricsController {
   constructor(private readonly errorRateMonitoringService: ErrorRateMonitoringService) {}
 
@@ -19,6 +20,7 @@ export class MetricsController {
   })
   getMetrics(): string {
     const stats = PerformanceMonitoringMiddleware.getPerformanceStats();
+    const performanceSummary = PerformanceInterceptor.getPerformanceSummary();
     const globalErrorRate = this.errorRateMonitoringService.getGlobalErrorRate();
     const endpointErrorRates = this.errorRateMonitoringService.getEndpointErrorRates();
     const healthStatus = this.errorRateMonitoringService.getSystemHealthStatus();
@@ -38,6 +40,22 @@ export class MetricsController {
     );
     metrics.push(`http_request_duration_seconds_count ${stats.totalRequests}`);
 
+    // Response time distribution
+    metrics.push('# HELP http_request_duration_distribution Response time distribution');
+    metrics.push('# TYPE http_request_duration_distribution gauge');
+    metrics.push(
+      `http_request_duration_distribution{bucket="fast"} ${performanceSummary.responseTimeDistribution.fast}`,
+    );
+    metrics.push(
+      `http_request_duration_distribution{bucket="normal"} ${performanceSummary.responseTimeDistribution.normal}`,
+    );
+    metrics.push(
+      `http_request_duration_distribution{bucket="slow"} ${performanceSummary.responseTimeDistribution.slow}`,
+    );
+    metrics.push(
+      `http_request_duration_distribution{bucket="very_slow"} ${performanceSummary.responseTimeDistribution.verySlow}`,
+    );
+
     // Error rate metrics
     metrics.push('# HELP http_requests_error_rate HTTP request error rate');
     metrics.push('# TYPE http_requests_error_rate gauge');
@@ -51,6 +69,15 @@ export class MetricsController {
     metrics.push('# HELP http_requests_slow_total Total number of slow HTTP requests');
     metrics.push('# TYPE http_requests_slow_total counter');
     metrics.push(`http_requests_slow_total ${stats.slowRequests}`);
+
+    // Endpoint performance metrics
+    metrics.push('# HELP http_endpoints_total Total number of monitored endpoints');
+    metrics.push('# TYPE http_endpoints_total gauge');
+    metrics.push(`http_endpoints_total ${performanceSummary.totalEndpoints}`);
+
+    metrics.push('# HELP http_endpoints_slow_total Total number of slow endpoints');
+    metrics.push('# TYPE http_endpoints_slow_total gauge');
+    metrics.push(`http_endpoints_slow_total ${performanceSummary.slowEndpoints}`);
 
     // Memory usage
     const memoryUsage = process.memoryUsage();
@@ -93,5 +120,72 @@ export class MetricsController {
     errorRate: number;
   } {
     return this.errorRateMonitoringService.getSystemHealthStatus();
+  }
+
+  @Get('performance')
+  @ApiOperation({ summary: 'Get detailed performance metrics' })
+  @ApiResponse({
+    status: 200,
+    description: 'Detailed performance metrics',
+  })
+  getPerformanceMetrics(): {
+    performance: {
+      totalEndpoints: number;
+      slowEndpoints: number;
+      averageResponseTime: number;
+      totalRequests: number;
+      responseTimeDistribution: {
+        fast: number;
+        normal: number;
+        slow: number;
+        verySlow: number;
+      };
+    };
+    endpoints: Array<{
+      endpoint: string;
+      totalRequests: number;
+      averageDuration: number;
+      minDuration: number;
+      maxDuration: number;
+      responseTimeDistribution: {
+        fast: number;
+        normal: number;
+        slow: number;
+        verySlow: number;
+      };
+      lastUpdated: Date;
+    }>;
+    errorRates: {
+      globalErrorRate: number;
+      totalErrors: number;
+      totalRequests: number;
+      highErrorEndpoints: number;
+      criticalErrorEndpoints: number;
+      alertCount: number;
+      performanceCorrelationAlerts: number;
+      averageResponseTime: number;
+      slowRequestRatio: number;
+    };
+    trends: {
+      trend: 'improving' | 'stable' | 'degrading';
+      recommendation: string;
+      criticalEndpoints: string[];
+      performanceImpactedEndpoints: string[];
+    };
+  } {
+    const performanceSummary = PerformanceInterceptor.getPerformanceSummary();
+    const endpointStats = PerformanceInterceptor.getEndpointStats();
+    const errorRateSummary = this.errorRateMonitoringService.getErrorRateSummary();
+    const trendAnalysis = this.errorRateMonitoringService.getErrorRateTrendAnalysis();
+
+    return {
+      performance: performanceSummary,
+      endpoints: Array.from(endpointStats.entries()).map(([endpoint, stats]) => ({
+        endpoint,
+        ...stats,
+      })),
+      errorRates: errorRateSummary,
+      trends: trendAnalysis,
+    };
   }
 }

@@ -13,6 +13,7 @@ import { getArticlePath } from '../utils/getArticlePath';
 import { PageViewData } from '../api/pageView';
 import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
 import { useTranslation } from 'next-i18next';
+import { normalizeArticles } from '../types/contracts';
 
 export interface IndexPageProps {
   layoutProps: LayoutProps;
@@ -23,8 +24,13 @@ export interface IndexPageProps {
 }
 
 const Home = (props: IndexPageProps) => {
-  const { t } = useTranslation();
-  const { articles = [] } = props;
+  const { t } = useTranslation('common');
+  const normalizedArticles = normalizeArticles(props.articles);
+  // Convert to Article[] for compatibility with existing functions
+  const articlesForKeywords: Article[] = normalizedArticles.map((article) => ({
+    ...article,
+    tags: [...article.tags],
+  }));
 
   return (
     <Layout
@@ -33,15 +39,15 @@ const Home = (props: IndexPageProps) => {
       sideBar={<AuthorCard option={props.authorCardProps}></AuthorCard>}
     >
       <Head>
-        <meta name="keywords" content={getArticlesKeyWord(articles || []).join(',')}></meta>
+        <meta name="keywords" content={getArticlesKeyWord(articlesForKeywords).join(',')}></meta>
       </Head>
       <div className="space-y-2 md:space-y-4">
-        {!articles || articles.length === 0 ? (
+        {normalizedArticles.length === 0 ? (
           <div className="text-center text-gray-500 dark:text-gray-400 py-8">
             {t('pages.home.emptyMessage')}
           </div>
         ) : (
-          articles.map((article) => (
+          normalizedArticles.map((article) => (
             <PostCard
               showEditButton={props.layoutProps.showEditButton === 'true'}
               setContent={() => {}}
@@ -50,13 +56,13 @@ const Home = (props: IndexPageProps) => {
               customCopyRight={null}
               private={article.private}
               top={typeof article.top === 'number' ? article.top : article.top ? 1 : 0}
-              id={getArticlePath(article)}
+              id={getArticlePath({ ...article, tags: [...article.tags] })}
               key={article.id}
               title={article.title}
               updatedAt={new Date(article.updatedAt)}
               createdAt={new Date(article.createdAt)}
               catelog={article.category}
-              content={article.content || ''}
+              content={article.content}
               type={'overview'}
               enableComment={props.layoutProps.enableComment}
               copyrightAggreement={props.layoutProps.copyrightAggreement}

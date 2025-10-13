@@ -171,7 +171,7 @@ JWT_EXPIRES_IN=7d
 
 ### 🎯 后续优化任务
 
-- [ ] **数据契约优化**：重构 website API 服务中的防御性编程代码
+- [x] **数据契约优化**：重构 website API 服务中的防御性编程代码
   - 当前使用 `data?.meta || ({} as any)` 等临时修复
   - 需要定义清晰的 TypeScript 接口和默认值策略
   - 消除 `any` 类型的使用

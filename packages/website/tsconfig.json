@@ -2,11 +2,7 @@
   "compilerOptions": {
     "composite": true,
     "target": "es5",
-    "lib": [
-      "dom",
-      "dom.iterable",
-      "esnext"
-    ],
+    "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
     "noEmit": false,
     "module": "esnext",
@@ -15,9 +11,7 @@
     "isolatedModules": true,
     "jsx": "preserve",
     "paths": {
-      "react": [
-        "./node_modules/@types/react"
-      ]
+      "react": ["./node_modules/@types/react"]
     },
     "skipLibCheck": true,
     "strict": false,
@@ -25,12 +19,6 @@
     "incremental": true,
     "esModuleInterop": true
   },
-  "include": [
-    "next-env.d.ts",
-    "**/*.ts",
-    "**/*.tsx"
-  ],
-  "exclude": [
-    "node_modules"
-  ]
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx"],
+  "exclude": ["node_modules"]
 }

@@ -570,13 +570,181 @@ export const normalizeAnalyticsOverview = (raw: unknown): AnalyticsOverviewContr
 };
 
 export const normalizeArticleStats = (raw: unknown): ArticleStatsContract => {
-  if (!raw || typeof raw !== 'object') {
-    return createDefaultArticleStats();
+  if (typeof raw === 'object' && raw !== null) {
+    const obj = raw as Record<string, unknown>;
+    return {
+      views: typeof obj.views === 'number' ? obj.views : 0,
+      uniqueVisitors: typeof obj.uniqueVisitors === 'number' ? obj.uniqueVisitors : 0,
+    };
   }
+  return createDefaultArticleStats();
+};
 
-  const data = raw as Record<string, unknown>;
+// ============================================================================
+// Article Data Contract
+// ============================================================================
+
+export interface ArticleContract {
+  readonly id: number;
+  readonly title: string;
+  readonly content: string;
+  readonly pathname: string;
+  readonly tags: readonly string[];
+  readonly category: string;
+  readonly author: string;
+  readonly top: number;
+  readonly hidden: boolean;
+  readonly private: boolean;
+  readonly password: string;
+  readonly viewer: number;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+  readonly wordCount: number;
+  readonly summary: string;
+  readonly copyright: string;
+}
+
+export const createDefaultArticle = (): ArticleContract => ({
+  id: 0,
+  title: '',
+  content: '',
+  pathname: '',
+  tags: [],
+  category: '',
+  author: '',
+  top: 0,
+  hidden: false,
+  private: false,
+  password: '',
+  viewer: 0,
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
+  wordCount: 0,
+  summary: '',
+  copyright: '',
+});
+
+export const normalizeArticle = (raw: unknown): ArticleContract => {
+  if (typeof raw === 'object' && raw !== null) {
+    const obj = raw as Record<string, unknown>;
+    const defaultArticle = createDefaultArticle();
+
+    return {
+      id: typeof obj.id === 'number' ? obj.id : defaultArticle.id,
+      title: typeof obj.title === 'string' ? obj.title : defaultArticle.title,
+      content: typeof obj.content === 'string' ? obj.content : defaultArticle.content,
+      pathname:
+        typeof obj.pathname === 'string'
+          ? obj.pathname
+          : typeof obj.id === 'number'
+            ? `/post/${obj.id}`
+            : defaultArticle.pathname,
+      tags: Array.isArray(obj.tags)
+        ? obj.tags.filter((tag): tag is string => typeof tag === 'string')
+        : defaultArticle.tags,
+      category: typeof obj.category === 'string' ? obj.category : defaultArticle.category,
+      author: typeof obj.author === 'string' ? obj.author : defaultArticle.author,
+      top: typeof obj.top === 'number' ? obj.top : defaultArticle.top,
+      hidden:
+        typeof obj.hidden === 'boolean'
+          ? obj.hidden
+          : typeof obj.hide === 'boolean'
+            ? obj.hide
+            : defaultArticle.hidden,
+      private:
+        typeof obj.private === 'boolean'
+          ? obj.private
+          : typeof obj.secret === 'boolean'
+            ? obj.secret
+            : defaultArticle.private,
+      password: typeof obj.password === 'string' ? obj.password : defaultArticle.password,
+      viewer: typeof obj.viewer === 'number' ? obj.viewer : defaultArticle.viewer,
+      createdAt:
+        typeof obj.createdAt === 'string'
+          ? obj.createdAt
+          : typeof obj.date === 'string'
+            ? obj.date
+            : defaultArticle.createdAt,
+      updatedAt: typeof obj.updatedAt === 'string' ? obj.updatedAt : defaultArticle.updatedAt,
+      wordCount: typeof obj.wordCount === 'number' ? obj.wordCount : defaultArticle.wordCount,
+      summary: typeof obj.summary === 'string' ? obj.summary : defaultArticle.summary,
+      copyright: typeof obj.copyright === 'string' ? obj.copyright : defaultArticle.copyright,
+    };
+  }
+  return createDefaultArticle();
+};
+
+export const normalizeArticles = (raw: unknown): readonly ArticleContract[] => {
+  if (Array.isArray(raw)) {
+    return raw.map(normalizeArticle);
+  }
+  return [];
+};
+
+// ============================================================================
+// Payment Data Contract
+// ============================================================================
+
+export interface PaymentContract {
+  readonly aliPay: string;
+  readonly weChatPay: string;
+  readonly aliPayDark: string;
+  readonly weChatPayDark: string;
+}
+
+export const createDefaultPayment = (): PaymentContract => ({
+  aliPay: '',
+  weChatPay: '',
+  aliPayDark: '',
+  weChatPayDark: '',
+});
+
+export const normalizePayment = (pay: unknown, payDark: unknown): PaymentContract => {
+  const defaultPayment = createDefaultPayment();
+
+  const payArray = Array.isArray(pay) ? pay : [];
+  const payDarkArray = Array.isArray(payDark) ? payDark : [];
+
   return {
-    views: typeof data.views === 'number' ? data.views : 0,
-    uniqueVisitors: typeof data.uniqueVisitors === 'number' ? data.uniqueVisitors : 0,
+    aliPay: typeof payArray[0] === 'string' ? payArray[0] : defaultPayment.aliPay,
+    weChatPay: typeof payArray[1] === 'string' ? payArray[1] : defaultPayment.weChatPay,
+    aliPayDark: typeof payDarkArray[0] === 'string' ? payDarkArray[0] : defaultPayment.aliPayDark,
+    weChatPayDark:
+      typeof payDarkArray[1] === 'string' ? payDarkArray[1] : defaultPayment.weChatPayDark,
   };
+};
+
+// ============================================================================
+// Navigation Data Contract
+// ============================================================================
+
+export interface NavigationItemContract {
+  readonly id: number;
+  readonly title: string;
+  readonly pathname: string;
+}
+
+export const createDefaultNavigationItem = (): NavigationItemContract => ({
+  id: 0,
+  title: '',
+  pathname: '',
+});
+
+export const normalizeNavigationItem = (raw: unknown): NavigationItemContract => {
+  if (typeof raw === 'object' && raw !== null) {
+    const obj = raw as Record<string, unknown>;
+    const defaultItem = createDefaultNavigationItem();
+
+    return {
+      id: typeof obj.id === 'number' ? obj.id : defaultItem.id,
+      title: typeof obj.title === 'string' ? obj.title : defaultItem.title,
+      pathname:
+        typeof obj.pathname === 'string'
+          ? obj.pathname
+          : typeof obj.id === 'number'
+            ? `/post/${obj.id}`
+            : defaultItem.pathname,
+    };
+  }
+  return createDefaultNavigationItem();
 };

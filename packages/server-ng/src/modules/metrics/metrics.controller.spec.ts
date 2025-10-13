@@ -55,12 +55,16 @@ describe('MetricsController', () => {
           errorCount: 2,
           totalRequests: 80,
           severity: 'normal' as const,
+          averageResponseTime: 150,
+          slowRequestRatio: 0.1,
+          errorResponseTimeCorrelation: 'low' as const,
         },
       ]);
       vi.spyOn(errorRateMonitoringService, 'getSystemHealthStatus').mockReturnValue({
         status: 'healthy',
         message: 'System is healthy',
         errorRate: 5.0,
+        factors: [],
       });
 
       const result = controller.getMetrics();
@@ -79,6 +83,7 @@ describe('MetricsController', () => {
         status: 'healthy' as const,
         message: 'System is healthy',
         errorRate: 2.5,
+        factors: [],
       };
 
       vi.spyOn(errorRateMonitoringService, 'getSystemHealthStatus').mockReturnValue(

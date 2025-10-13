@@ -8,6 +8,7 @@ import { revalidate } from '../utils/loadConfig';
 import { PageViewData } from '../api/pageView';
 import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
 import { useTranslation } from 'next-i18next';
+import { normalizeArticles } from '../types/contracts';
 
 export interface TimeLinePageProps {
   layoutProps: LayoutProps;
@@ -17,21 +18,27 @@ export interface TimeLinePageProps {
 }
 
 const TimeLine = (props: TimeLinePageProps) => {
-  const { t } = useTranslation();
+  const { t } = useTranslation('common');
+  const normalizedTimeline = normalizeArticles(props.timeLine);
 
   // Group articles by year
   const sortedArticles: Record<string, Article[]> = {};
-  props.timeLine.forEach((article) => {
+  normalizedTimeline.forEach((article) => {
     const year = new Date(article.createdAt).getFullYear().toString();
     if (!sortedArticles[year]) {
       sortedArticles[year] = [];
     }
-    sortedArticles[year].push(article);
+    // Convert ArticleContract to Article for compatibility
+    const articleForTimeline: Article = {
+      ...article,
+      tags: [...article.tags], // Convert readonly array to mutable
+    };
+    sortedArticles[year].push(articleForTimeline);
   });
 
-  // Calculate total word count (using safe property access)
-  const wordTotal = props.timeLine.reduce((total, article) => {
-    return total + (article.wordCount || 0);
+  // Calculate total word count
+  const wordTotal = normalizedTimeline.reduce((total, article) => {
+    return total + article.wordCount;
   }, 0);
 
   return (

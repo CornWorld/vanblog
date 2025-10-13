@@ -1,10 +1,12 @@
 import { Module, DynamicModule, NestModule, MiddlewareConsumer, type Type } from '@nestjs/common';
+import { APP_INTERCEPTOR } from '@nestjs/core';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerModule } from '@nestjs/throttler';
 
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ConfigModule } from './config';
+import { PerformanceInterceptor } from './core/interceptors/performance.interceptor';
 import { LoggerModule } from './core/logger/logger.module';
 import { V1DeprecationMiddleware } from './core/middlewares/v1-deprecation.middleware';
 import { DatabaseModule } from './database';
@@ -83,7 +85,13 @@ export class AppModule implements NestModule {
         pluginModule,
       ],
       controllers: [AppController],
-      providers: [AppService],
+      providers: [
+        AppService,
+        {
+          provide: APP_INTERCEPTOR,
+          useClass: PerformanceInterceptor,
+        },
+      ],
     };
   }
 }

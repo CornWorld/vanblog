@@ -28,6 +28,8 @@ import { TagPagesProps } from '../pages/tag/[tag]';
 import { getServerPageview, PageViewData } from '../api/pageView';
 import { AuthorCardProps } from '../components/AuthorCard';
 import { normalizePublicMeta } from '../types/contracts';
+import { Article } from '../types/article';
+import { ApiV2Response, PaginatedData } from '../types/api';
 
 const defaultLayoutProps: LayoutProps = {
   description: '',
@@ -126,15 +128,22 @@ export async function getIndexPageProps(): Promise<IndexPageProps> {
         console.log(`[getIndexPageProps] Successfully fetched ${response.data.length} articles`);
         articles = response.data;
       }
-      // Check if response has the ArticleResponse structure with nested data
+      // Check if response has the ArticleResponse structure
       else if (typeof response === 'object' && 'data' in response && response.data) {
-        const articleData = response.data as unknown;
-        const typedData = articleData as { data: unknown };
-        if (Array.isArray(typedData.data)) {
+        // Handle v1 API response format
+        if (Array.isArray(response.data)) {
           console.log(
-            `[getIndexPageProps] Found articles in nested data: ${typedData.data.length} articles`,
+            `[getIndexPageProps] Found articles in v1 format: ${response.data.length} articles`,
           );
-          articles = typedData.data;
+          articles = response.data;
+        }
+        // Handle v2 API response format
+        else if (response.data && typeof response.data === 'object' && 'items' in response.data) {
+          const v2Response = response as unknown as ApiV2Response<PaginatedData<Article>>;
+          console.log(
+            `[getIndexPageProps] Found articles in v2 format: ${v2Response.data.items.length} articles`,
+          );
+          articles = v2Response.data.items;
         } else {
           console.error('[getIndexPageProps] Unexpected data structure:', response);
         }
