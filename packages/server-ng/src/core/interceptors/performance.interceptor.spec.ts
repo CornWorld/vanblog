@@ -162,11 +162,11 @@ describe('PerformanceInterceptor', () => {
       const endpointStats = stats.get('GET /api/test');
 
       expect(endpointStats).toBeDefined();
-      expect(endpointStats!.totalRequests).toBe(2);
-      expect(endpointStats!.totalDuration).toBe(300);
-      expect(endpointStats!.averageDuration).toBe(150);
-      expect(endpointStats!.minDuration).toBe(100);
-      expect(endpointStats!.maxDuration).toBe(200);
+      expect(endpointStats?.totalRequests).toBe(2);
+      expect(endpointStats?.totalDuration).toBe(300);
+      expect(endpointStats?.averageDuration).toBe(150);
+      expect(endpointStats?.minDuration).toBe(100);
+      expect(endpointStats?.maxDuration).toBe(200);
     });
 
     it('应该正确统计响应时间分布', async () => {
@@ -195,10 +195,10 @@ describe('PerformanceInterceptor', () => {
       const stats = PerformanceInterceptor.getEndpointStats();
       const endpointStats = stats.get('GET /api/test');
 
-      expect(endpointStats!.responseTimeDistribution.fast).toBe(1);
-      expect(endpointStats!.responseTimeDistribution.normal).toBe(1);
-      expect(endpointStats!.responseTimeDistribution.slow).toBe(1);
-      expect(endpointStats!.responseTimeDistribution.verySlow).toBe(1);
+      expect(endpointStats?.responseTimeDistribution.fast).toBe(1);
+      expect(endpointStats?.responseTimeDistribution.normal).toBe(1);
+      expect(endpointStats?.responseTimeDistribution.slow).toBe(1);
+      expect(endpointStats?.responseTimeDistribution.verySlow).toBe(1);
     });
 
     it('应该正确生成性能摘要', async () => {

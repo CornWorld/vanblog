@@ -456,8 +456,8 @@ describe('SettingCoreController', () => {
     it('should return custom code settings', async () => {
       const mockCustomCode: CustomCode = {
         head: '<meta name="custom" content="test">',
-        body: '<script>console.log("test")</script>',
-        footer: '<div>Footer content</div>',
+        script: '<script>console.log("test")</script>',
+        html: '<div>Footer content</div>',
       };
 
       mockSettingCoreService.getCustomCode.mockResolvedValue(mockCustomCode);
@@ -473,12 +473,12 @@ describe('SettingCoreController', () => {
     it('should update custom code settings', async () => {
       const updateDto = {
         head: '<meta name="updated" content="test">',
-        body: '<script>console.log("updated")</script>',
+        script: '<script>console.log("updated")</script>',
       };
       const updatedCustomCode: CustomCode = {
         head: '<meta name="updated" content="test">',
-        body: '<script>console.log("updated")</script>',
-        footer: '<div>Footer content</div>',
+        script: '<script>console.log("updated")</script>',
+        html: '<div>Footer content</div>',
       };
 
       mockSettingCoreService.updateCustomCode.mockResolvedValue(updatedCustomCode);
