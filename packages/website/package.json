@@ -59,7 +59,6 @@
     "@types/hast": "^3.0.4",
     "@types/headroom.js": "^0.12.4",
     "@types/markdown-navbar": "^1.4.4",
-    "@types/node": "22.13.10",
     "@types/react": "19.0.10",
     "@types/react-burger-menu": "^2.8.7",
     "@types/react-copy-to-clipboard": "^5.0.7",
@@ -68,10 +67,8 @@
     "@types/react-scroll": "^1.8.10",
     "@types/react-syntax-highlighter": "^15.5.13",
     "autoprefixer": "^10.4.14",
-    "cross-env": "^7.0.3",
     "postcss": "^8.4.31",
     "tailwindcss": "^3.3.0",
-    "typescript": "5.8.2",
     "unified": "^11.0.5",
     "vitest": "3.0.8"
   },
