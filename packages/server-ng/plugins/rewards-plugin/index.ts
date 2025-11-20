@@ -5,10 +5,9 @@ import { Logger } from '@nestjs/common';
 
 import { withPluginPrefix } from '../../src/modules/plugin/utils/prefix.util';
 
-import { RewardInfoArraySchema } from './reward.schema';
+import { RewardInfoArraySchema, RewardInfo } from './reward.schema';
 import { RewardService } from './reward.service';
 
-import type { RewardInfo } from './reward.schema';
 import type { PluginContext } from '../../src/modules/plugin/interfaces/plugin-context.interface';
 import type { Plugin } from '../../src/modules/plugin/services/loader.service';
 
