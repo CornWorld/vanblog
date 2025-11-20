@@ -5,10 +5,6 @@ import { withPluginPrefix } from '../../src/modules/plugin/utils/prefix.util';
 
 import { SocialLinksService, type SocialLink, SocialLinkSchema } from './social-links.service';
 
-import type {
-  ActionCallback,
-  FilterCallback,
-} from '../../src/modules/plugin/interfaces/hook.interface';
 import type { PluginContext } from '../../src/modules/plugin/interfaces/plugin-context.interface';
 import type { Plugin } from '../../src/modules/plugin/services/loader.service';
 
@@ -17,17 +13,6 @@ const logger = new Logger(withPluginPrefix('social-links-plugin'));
 
 // 创建服务实例
 const socialLinksService = new SocialLinksService();
-
-// 仅做最小的运行时防护，保证注入的数据可被 JSON 序列化；不要引入额外类型束缚
-function isJsonSerializable(value: unknown): boolean {
-  try {
-    // 对象里如果有循环引用会抛错；我们不深入校验，只做最小可用性检测
-    JSON.stringify(value);
-    return true;
-  } catch {
-    return false;
-  }
-}
 
 const plugin: Plugin = {
   id: 'social-links-plugin',
@@ -59,11 +44,6 @@ const plugin: Plugin = {
 
   async destroy(context: PluginContext): Promise<void> {
     logger.log('Social links plugin destroying...');
-    // 从插件注册表中注销 provider
-    const ok = context.registry.unregister('socialLinks');
-    if (!ok) {
-      logger.debug('socialLinks provider not found or already removed');
-    }
     await context.data.clear();
     logger.log('Social links plugin destroyed');
   },
@@ -82,42 +62,6 @@ const plugin: Plugin = {
 
   async deleteSocialLink(context: PluginContext, type: string): Promise<SocialLink[]> {
     return socialLinksService.deleteSocialLink(context, type);
-  },
-
-  hooks: {
-    'bootstrap|beforeGenerate': {
-      type: 'action',
-      priority: 10,
-      handler: ((_value: unknown, _context: PluginContext) => {
-        logger.debug('Bootstrap before generate - social links');
-      }) as ActionCallback,
-    },
-
-    'bootstrap|transformResponse': {
-      type: 'filter',
-      priority: 10,
-      handler: (async (value: unknown, context: PluginContext) => {
-        if (value != null && typeof value === 'object') {
-          const response = value as Record<string, unknown>;
-          const socialLinks = await socialLinksService.getSocialLinks(context);
-
-          if (!isJsonSerializable(socialLinks)) {
-            logger.warn(
-              'Skip injecting socialLinks into extensions: value is not JSON-serializable',
-            );
-            return value;
-          }
-
-          // 只在 extensions 中提供数据（保持灵活，不强制类型）
-          response.extensions ??= {};
-          const ext = response.extensions as Record<string, unknown>;
-          ext['socialLinks'] = socialLinks;
-
-          logger.debug(`Added ${socialLinks.length} social links to extensions`);
-        }
-        return value;
-      }) as FilterCallback,
-    },
   },
 };
 

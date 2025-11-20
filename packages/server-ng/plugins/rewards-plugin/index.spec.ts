@@ -53,7 +53,7 @@ describe('🧩 bootstrap-reward-plugin', () => {
       expect(ctx.data.set).toHaveBeenCalledWith('boot_count', 0);
       expect(ctx.registry.register).toHaveBeenCalledTimes(1);
       expect(ctx.registry.register).toHaveBeenCalledWith(
-        'rewards-plugin',
+        'rewards',
         expect.any(Function),
         expect.any(Number),
       );
@@ -65,7 +65,6 @@ describe('🧩 bootstrap-reward-plugin', () => {
         await plugin.destroy(ctx);
       }
       expect(ctx.data.clear).toHaveBeenCalled();
-      expect(ctx.registry.unregister).toHaveBeenCalledWith('rewards-plugin');
     });
   });
 

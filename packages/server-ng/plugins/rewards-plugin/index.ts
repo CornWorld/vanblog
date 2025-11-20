@@ -5,10 +5,10 @@ import { Logger } from '@nestjs/common';
 
 import { withPluginPrefix } from '../../src/modules/plugin/utils/prefix.util';
 
+import { RewardInfoArraySchema } from './reward.schema';
 import { RewardService } from './reward.service';
 
 import type { RewardInfo } from './reward.schema';
-import type { FilterCallback } from '../../src/modules/plugin/interfaces/hook.interface';
 import type { PluginContext } from '../../src/modules/plugin/interfaces/plugin-context.interface';
 import type { Plugin } from '../../src/modules/plugin/services/loader.service';
 
@@ -50,14 +50,19 @@ const plugin: Plugin = {
     // 注册到插件注册表：提供 rewards 数据
     // 提供者会合并“存储中的奖励”和“配置中的奖励”，并按 name 去重
     context.registry.register(
-      'rewards-plugin',
+      'rewards',
       async () => {
         const stored = await rewardService.getRewardInfo();
         const configured = context.config.get<RewardInfo[]>('extra_rewards', []);
         const all = [...stored, ...configured];
         const uniqueByName = new Map<string, RewardInfo>();
         for (const r of all) uniqueByName.set(r.name, r);
-        return Array.from(uniqueByName.values());
+
+        return {
+          version: '1.0.0',
+          data: Array.from(uniqueByName.values()),
+          schema: RewardInfoArraySchema,
+        };
       },
       10,
     );
@@ -68,12 +73,6 @@ const plugin: Plugin = {
   async destroy(context: PluginContext): Promise<void> {
     const bootCount = (await context.data.get('boot_count')) as number | null | undefined;
     logger.log(`插件销毁，共启动 ${bootCount ?? 0} 次`);
-
-    // 从插件注册表中注销
-    const ok = context.registry.unregister('rewards-plugin');
-    if (!ok) {
-      logger.debug('rewards-plugin 未在注册表中找到或已被移除');
-    }
 
     await context.data.clear();
     // 清理服务实例
@@ -91,35 +90,6 @@ const plugin: Plugin = {
 
   async deleteReward(id: string): Promise<void> {
     await rewardService.deleteRewardInfo(id);
-  },
-
-  // 使用 hooks 系统在 extensions 中提供数据
-  hooks: {
-    'bootstrap|transformResponse': {
-      type: 'filter',
-      priority: 10,
-      handler: (async (value: unknown, context: PluginContext) => {
-        if (value != null && typeof value === 'object') {
-          const response = value as Record<string, unknown>;
-
-          // 获取存储的奖励和配置中的奖励
-          const stored = await rewardService.getRewardInfo();
-          const configured = context.config.get<RewardInfo[]>('extra_rewards', []);
-          const all = [...stored, ...configured];
-
-          // 按 name 去重
-          const uniqueByName = new Map<string, RewardInfo>();
-          for (const r of all) uniqueByName.set(r.name, r);
-          const rewards = Array.from(uniqueByName.values());
-
-          // 只在 extensions 中提供数据
-          response.extensions ??= {};
-          (response.extensions as Record<string, unknown>)['rewards'] = rewards;
-          logger.debug(`Added ${rewards.length} rewards to extensions`);
-        }
-        return value;
-      }) as FilterCallback,
-    },
   },
 };
 

@@ -16,10 +16,6 @@ export const PublicBootstrapResponseSchema = z.object({
   tags: z.array(z.string()),
   // ...
 
-  // 保持向后兼容
-  rewards: z.array(RewardSchema),
-  socialLinks: z.array(/* ... */),
-
   // 新增：通用插件数据字段
   extensions: z.record(z.string(), z.unknown()).optional().describe('插件扩展数据，key 为插件名称'),
 });
@@ -34,19 +30,21 @@ async getPublicBootstrap(): Promise<PublicBootstrapResponseDto> {
 
   const pluginData = await this.pluginRegistryService.getAllPublicData();
 
+  // 校验与规范化插件数据
+  const validatedExtensions: Record<string, unknown> = {};
+  for (const [name, raw] of Object.entries(pluginData)) {
+    const normalized = this.pluginDataValidator.normalizeProviderResult(name, raw);
+    if (normalized !== undefined) {
+      validatedExtensions[name] = normalized;
+    }
+  }
+
   const response: PublicBootstrapResponseDto = {
     // ... 现有字段
     version: this.getVersion(),
 
-    // 保持向后兼容（标记为 deprecated）
-    /** @deprecated 使用 extensions.rewards 代替 */
-    rewards: this.extractRewardsFromPluginData(pluginData),
-
-    /** @deprecated 使用 extensions.socialLinks 代替 */
-    socialLinks: [],  // TODO: 从插件获取
-
     // 新增：所有插件数据
-    extensions: pluginData,
+    extensions: validatedExtensions,
   };
 
   return response;
@@ -58,26 +56,13 @@ async getPublicBootstrap(): Promise<PublicBootstrapResponseDto> {
 ```typescript
 // rewards-plugin/index.ts
 async init(context: PluginContext): Promise<void> {
-  // 注册到插件注册表（现有方式）
-  context.registry.register(
-    'rewards-plugin',  // 保持兼容性
-    async () => {
-      // 返回数据
-      const rewards = await this.getRewards();
-      return rewards;
-    }
-  );
-
-  // 同时注册新格式（未来标准）
+  // 注册到插件注册表（使用新标准）
   context.registry.register(
     'rewards',  // 新的简洁名称
     async () => ({
       version: '1.0.0',
       data: await this.getRewards(),
-      schema: {
-        type: 'array',
-        items: RewardSchema,
-      },
+      schema: RewardInfoArraySchema,
     })
   );
 }
@@ -136,18 +121,20 @@ export class PluginDataValidator {
 ### 1. 向后兼容性测试
 
 ```typescript
-it('should maintain backward compatibility', async () => {
+it('should include all plugin data in extensions', async () => {
   const response = await request(app).get('/api/v2/public/bootstrap');
 
-  // 旧字段仍然存在
-  expect(response.body).toHaveProperty('rewards');
-  expect(response.body).toHaveProperty('socialLinks');
-
-  // 新字段也存在
+  // 验证 extensions 字段存在
   expect(response.body).toHaveProperty('extensions');
+  expect(typeof response.body.extensions).toBe('object');
 
-  // 数据一致性
-  expect(response.body.rewards).toEqual(response.body.extensions?.['rewards-plugin'] || []);
+  // 验证插件数据存在
+  if (response.body.extensions['rewards']) {
+    expect(Array.isArray(response.body.extensions['rewards'])).toBe(true);
+  }
+  if (response.body.extensions['socialLinks']) {
+    expect(Array.isArray(response.body.extensions['socialLinks'])).toBe(true);
+  }
 });
 ```
 

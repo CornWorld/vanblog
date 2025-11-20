@@ -15,7 +15,7 @@ import { LoggerService } from '../../../core/logger/logger.service';
 import { resolveObjectPluginExport } from '../utils/object-plugin.util';
 
 import { HookService } from './hook.service';
-import { PluginContextFactory } from './plugin-context.service';
+import { PluginContextFactory, PluginContextService } from './plugin-context.service';
 
 import type { ActionCallback, FilterCallback } from '../interfaces/hook.interface';
 import type { PluginContext } from '../interfaces/plugin-context.interface';
@@ -86,11 +86,6 @@ export type PartialPlugin = Partial<Plugin>;
 export class LoaderService implements OnModuleInit {
   private readonly loadedPlugins = new Map<string, Plugin>();
   private readonly pluginContexts = new Map<string, PluginContext>();
-  // Track hook registrations per plugin so we can safely unload/reload without nuking all hooks
-  private readonly pluginHookRegistrations = new Map<
-    string,
-    Array<{ type: 'action' | 'filter'; hookName: string; id: string }>
-  >();
   // Track plugin origin directory (for object plugins) to support reload
   private readonly pluginOrigins = new Map<string, string>();
   // Failed plugin loads
@@ -116,14 +111,12 @@ export class LoaderService implements OnModuleInit {
     context: PluginContext,
     meta?: {
       pluginDir?: string;
-      hooks?: Array<{ type: 'action' | 'filter'; hookName: string; id: string }>;
     },
   ): void {
     this.loadedPlugins.set(plugin.name, plugin);
     this.pluginContexts.set(plugin.name, context);
     if (meta) {
       if (meta.pluginDir) this.pluginOrigins.set(plugin.name, meta.pluginDir);
-      if (meta.hooks) this.pluginHookRegistrations.set(plugin.name, meta.hooks);
     }
 
     // Log plugin registration and current hooks snapshot for diagnostics
@@ -133,17 +126,8 @@ export class LoaderService implements OnModuleInit {
       const totalActions = Array.isArray(actionHooks) ? actionHooks.length : 0;
       const totalFilters = Array.isArray(filterHooks) ? filterHooks.length : 0;
 
-      const registeredHooks = (meta?.hooks ?? []).map((h) => `${h.type}:${h.hookName}`);
-      const sample = registeredHooks.slice(0, 5).join(', ');
-
-      const pluginMsg = `[Plugin] Registered ${plugin.name}@${plugin.version} with ${registeredHooks.length} hooks`;
       this.logger.log(
-        sample.length > 0
-          ? `${pluginMsg} (sample: ${sample}${registeredHooks.length > 5 ? ', ...' : ''})`
-          : pluginMsg,
-      );
-      this.logger.log(
-        `[Hooks] Totals after registration -> actions=${totalActions}, filters=${totalFilters}`,
+        `[Plugin] Registered ${plugin.name}@${plugin.version}. Total hooks: ${totalActions} actions, ${totalFilters} filters`,
       );
     } catch (e) {
       this.logger.debug(`Failed to log hooks snapshot for ${plugin.name}: ${String(e)}`);
@@ -215,25 +199,12 @@ export class LoaderService implements OnModuleInit {
       }
     }
 
-    // 2) remove hook registrations only for this plugin
-    const regs = this.pluginHookRegistrations.get(pluginName) ?? [];
-    for (const r of regs) {
-      try {
-        if (r.type === 'action') {
-          this.hookService.removeAction(r.hookName, r.id);
-        } else {
-          this.hookService.removeFilter(r.hookName, r.id);
-        }
-      } catch (error) {
-        this.logger.error(
-          `Failed to remove ${r.type} for hook '${r.hookName}' of plugin ${pluginName}:`,
-          error instanceof Error ? error.stack : String(error),
-        );
-      }
+    // 2) Auto-unregister public data providers and hooks
+    if (context instanceof PluginContextService) {
+      context.cleanupRegistrations();
     }
 
     // 3) clear registries
-    this.pluginHookRegistrations.delete(pluginName);
     this.loadedPlugins.delete(pluginName);
     this.pluginContexts.delete(pluginName);
     // keep origin for potential reload
@@ -468,7 +439,6 @@ export class LoaderService implements OnModuleInit {
     const context = this.pluginContextFactory.createContext(plugin.name);
 
     // Register hooks and keep ids for targeted unload
-    const registrations: Array<{ type: 'action' | 'filter'; hookName: string; id: string }> = [];
     if (plugin.hooks) {
       for (const [hookName, hookConfig] of Object.entries(plugin.hooks)) {
         if (hookConfig.type === 'action') {
@@ -488,8 +458,8 @@ export class LoaderService implements OnModuleInit {
               `plugin:${name}:${hookName}:action`,
             );
           };
-          const id = this.hookService.addAction(hookName, wrapped, hookConfig.priority ?? 10);
-          registrations.push({ type: 'action', hookName, id });
+          context.hooks.addAction(hookName, wrapped, hookConfig.priority ?? 10);
+          // No need to track manually anymore, context handles it
         } else {
           const { handler } = hookConfig;
           if (typeof handler !== 'function') {
@@ -514,8 +484,8 @@ export class LoaderService implements OnModuleInit {
             }
             return res;
           };
-          const id = this.hookService.addFilter(hookName, wrapped, hookConfig.priority ?? 10);
-          registrations.push({ type: 'filter', hookName, id });
+          context.hooks.addFilter(hookName, wrapped, hookConfig.priority ?? 10);
+          // No need to track manually anymore, context handles it
         }
       }
     }
@@ -540,7 +510,7 @@ export class LoaderService implements OnModuleInit {
     };
     this.loadedPlugins.set(full.name, full);
     this.pluginContexts.set(full.name, context);
-    this.pluginHookRegistrations.set(full.name, registrations);
+    // this.pluginHookRegistrations.set(full.name, registrations); // Removed
     this.pluginOrigins.set(full.name, pluginDir);
 
     this.logger.log(`Loaded plugin '${full.name}@${full.version}'`);

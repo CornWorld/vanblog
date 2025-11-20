@@ -65,14 +65,6 @@ describe('Social Links Plugin', () => {
     it('should have destroy method', () => {
       expect(typeof plugin.destroy).toBe('function');
     });
-
-    it('should have hooks defined', () => {
-      expect(plugin.hooks).toBeDefined();
-      if (plugin.hooks) {
-        expect(plugin.hooks['bootstrap|beforeGenerate']).toBeDefined();
-        expect(plugin.hooks['bootstrap|transformResponse']).toBeDefined();
-      }
-    });
   });
 
   describe('Plugin Methods', () => {
@@ -93,30 +85,6 @@ describe('Social Links Plugin', () => {
       expect(plugin.destroy).toBeDefined();
       if (plugin.destroy) {
         await expect(plugin.destroy(mockContext)).resolves.not.toThrow();
-      }
-    });
-  });
-
-  describe('Hook Functions', () => {
-    beforeEach(async () => {
-      if (plugin.init) {
-        await plugin.init(mockContext);
-      }
-    });
-
-    it('should handle bootstrap|beforeGenerate hook', () => {
-      if (plugin.hooks?.['bootstrap|beforeGenerate']) {
-        const hook = plugin.hooks['bootstrap|beforeGenerate'];
-        expect(() => hook.handler(null, mockContext)).not.toThrow();
-      }
-    });
-
-    it('should handle bootstrap|transformResponse hook', async () => {
-      if (plugin.hooks?.['bootstrap|transformResponse']) {
-        const hook = plugin.hooks['bootstrap|transformResponse'];
-        const mockValue = { socialLinks: [] };
-        const result = await hook.handler(mockValue, mockContext);
-        expect(result).toBeDefined();
       }
     });
   });

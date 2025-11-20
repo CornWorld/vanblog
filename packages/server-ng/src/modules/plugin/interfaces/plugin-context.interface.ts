@@ -1,3 +1,6 @@
+import type { ActionCallback, FilterCallback } from './hook.interface';
+import type { Logger } from '@nestjs/common';
+
 export interface PluginDataStorage {
   get(key: string): Promise<unknown>;
   get<T>(key: string): Promise<T | null>;
@@ -26,11 +29,20 @@ export interface PluginRegistryAccessor {
   unregister(pluginName: string): boolean;
 }
 
+export interface PluginHooksAccessor {
+  addAction(hookName: string, callback: ActionCallback, priority?: number): string;
+  addFilter<T>(hookName: string, callback: FilterCallback<T>, priority?: number): string;
+  removeAction(hookName: string, id: string): boolean;
+  removeFilter(hookName: string, id: string): boolean;
+}
+
 export interface PluginContext {
   readonly pluginId: string;
   readonly config: PluginConfigReader;
   readonly data: PluginDataStorage;
   readonly registry: PluginRegistryAccessor;
+  readonly hooks: PluginHooksAccessor;
+  readonly logger: Logger;
 }
 
 export interface PluginContextFactory {
