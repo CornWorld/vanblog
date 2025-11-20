@@ -1,0 +1,19 @@
+{
+  "name": "@vanblog/shared",
+  "version": "0.0.1",
+  "type": "module",
+  "description": "Shared contracts and utilities for VanBlog",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc -w"
+  },
+  "dependencies": {
+    "@ts-rest/core": "^3.51.0",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  }
+}

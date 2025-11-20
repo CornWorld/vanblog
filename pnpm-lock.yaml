@@ -212,6 +212,12 @@ importers:
       '@toast-ui/react-editor':
         specifier: ^3.2.3
         version: 3.2.3(react@19.1.0)
+      '@ts-rest/core':
+        specifier: ^3.51.0
+        version: 3.52.1(@types/node@22.16.5)(zod@3.25.76)
+      '@vanblog/shared':
+        specifier: workspace:*
+        version: link:../shared
       ansi-to-html:
         specifier: ^0.7.2
         version: 0.7.2
@@ -613,6 +619,15 @@ importers:
       '@nestjs/throttler':
         specifier: ^6.4.0
         version: 6.4.0(@nestjs/common@11.1.5(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.5)(reflect-metadata@0.2.2)
+      '@ts-rest/core':
+        specifier: ^3.51.0
+        version: 3.52.1(@types/node@22.16.5)(zod@3.25.76)
+      '@ts-rest/nest':
+        specifier: ^3.51.0
+        version: 3.52.1(@nestjs/common@11.1.5(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.5)(@ts-rest/core@3.52.1(@types/node@22.16.5)(zod@3.25.76))(rxjs@7.8.2)(zod@3.25.76)
+      '@vanblog/shared':
+        specifier: workspace:*
+        version: link:../shared
       axios:
         specifier: ^1.8.4
         version: 1.11.0
@@ -639,7 +654,7 @@ importers:
         version: 0.44.4(@libsql/client@0.15.10)(mysql2@3.15.3)(pg@8.16.3)(sqlite3@5.1.7)
       drizzle-zod:
         specifier: ^0.8.2
-        version: 0.8.2(drizzle-orm@0.44.4(@libsql/client@0.15.10)(mysql2@3.15.3)(pg@8.16.3)(sqlite3@5.1.7))(zod@4.0.13)
+        version: 0.8.2(drizzle-orm@0.44.4(@libsql/client@0.15.10)(mysql2@3.15.3)(pg@8.16.3)(sqlite3@5.1.7))(zod@3.25.76)
       express:
         specifier: ^5.1.0
         version: 5.1.0
@@ -669,7 +684,7 @@ importers:
         version: 2.0.2
       nestjs-zod:
         specifier: 5.0.0-beta.20250731T202215
-        version: 5.0.0-beta.20250731T202215(@nestjs/common@11.1.5(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/swagger@11.2.0(@nestjs/common@11.1.5(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.5)(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2))(zod@4.0.13)
+        version: 5.0.0-beta.20250731T202215(@nestjs/common@11.1.5(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/swagger@11.2.0(@nestjs/common@11.1.5(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.5)(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2))(zod@3.25.76)
       passport:
         specifier: ^0.7.0
         version: 0.7.0
@@ -707,8 +722,8 @@ importers:
         specifier: ^5.0.0
         version: 5.0.0(winston@3.17.0)
       zod:
-        specifier: ^4.0.13
-        version: 4.0.13
+        specifier: ^3.24.1
+        version: 3.25.76
     devDependencies:
       '@eslint/js':
         specifier: ^9.31.0
@@ -842,6 +857,19 @@ importers:
         specifier: ^3.2.3
         version: 3.2.4(@types/debug@4.1.12)(@types/node@22.16.5)(@vitest/ui@3.2.4)(jiti@2.4.2)(jsdom@25.0.1)(less@4.4.0)(lightningcss@1.30.1)(sugarss@2.0.0)(terser@5.43.1)(tsx@4.20.3)(yaml@2.8.0)
 
+  packages/shared:
+    dependencies:
+      '@ts-rest/core':
+        specifier: ^3.51.0
+        version: 3.52.1(@types/node@22.16.5)(zod@3.25.76)
+      zod:
+        specifier: ^3.24.1
+        version: 3.25.76
+    devDependencies:
+      typescript:
+        specifier: ^5.8.3
+        version: 5.8.3
+
   packages/waline:
     dependencies:
       '@waline/vercel':
@@ -868,6 +896,12 @@ importers:
       '@next/bundle-analyzer':
         specifier: ^15.2.1
         version: 15.4.3
+      '@ts-rest/core':
+        specifier: ^3.51.0
+        version: 3.52.1(@types/node@22.16.5)(zod@3.25.76)
+      '@vanblog/shared':
+        specifier: workspace:*
+        version: link:../shared
       '@waline/client':
         specifier: ^3.5.5
         version: 3.6.0(typescript@5.8.3)
@@ -5169,6 +5203,29 @@ packages:
       tree-sitter: ^0.22.4
     peerDependenciesMeta:
       tree-sitter:
+        optional: true
+
+  '@ts-rest/core@3.52.1':
+    resolution: {integrity: sha512-tAjz7Kxq/grJodcTA1Anop4AVRDlD40fkksEV5Mmal88VoZeRKAG8oMHsDwdwPZz+B/zgnz0q2sF+cm5M7Bc7g==}
+    peerDependencies:
+      '@types/node': ^22.14.1
+      zod: ^3.22.3
+    peerDependenciesMeta:
+      '@types/node':
+        optional: true
+      zod:
+        optional: true
+
+  '@ts-rest/nest@3.52.1':
+    resolution: {integrity: sha512-6Abk9tRu0yxBv6PORAU6RIRizRQTQow7VeZ41j9vfEXXYUcR6DnkltGVIGSBepkg50wwJ9ygr0fplwNoWUUkBw==}
+    peerDependencies:
+      '@nestjs/common': ^9.0.0 || ^10.0.0 || ^11.0.0
+      '@nestjs/core': ^9.0.0 || ^10.0.0 || ^11.0.0
+      '@ts-rest/core': ~3.52.0
+      rxjs: ^7.1.0
+      zod: ^3.22.3
+    peerDependenciesMeta:
+      zod:
         optional: true
 
   '@tsconfig/node10@1.0.11':
@@ -16448,9 +16505,6 @@ packages:
   zod@3.25.76:
     resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
 
-  zod@4.0.13:
-    resolution: {integrity: sha512-jv+zRxuZQxTrFHzxZ46ezL2FtnE+M4HIJHJEwLsZ7UjrXHltdG6HrxvqM0twoVCWxJiYf8WqKjAcjztegpkB+Q==}
-
   zwitch@2.0.4:
     resolution: {integrity: sha512-bXE4cR/kVZhKZX/RjPEflHaKVhUVl85noU3v6b8apfQEc1x4A+zBxjZ4lN8LqGd6WZ3dl98pY4o717VFmoPp+A==}
 
@@ -21736,6 +21790,20 @@ snapshots:
       tree-sitter: 0.22.4
     optional: true
 
+  '@ts-rest/core@3.52.1(@types/node@22.16.5)(zod@3.25.76)':
+    optionalDependencies:
+      '@types/node': 22.16.5
+      zod: 3.25.76
+
+  '@ts-rest/nest@3.52.1(@nestjs/common@11.1.5(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.5)(@ts-rest/core@3.52.1(@types/node@22.16.5)(zod@3.25.76))(rxjs@7.8.2)(zod@3.25.76)':
+    dependencies:
+      '@nestjs/common': 11.1.5(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      '@nestjs/core': 11.1.5(@nestjs/common@11.1.5(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/platform-express@11.1.5)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      '@ts-rest/core': 3.52.1(@types/node@22.16.5)(zod@3.25.76)
+      rxjs: 7.8.2
+    optionalDependencies:
+      zod: 3.25.76
+
   '@tsconfig/node10@1.0.11': {}
 
   '@tsconfig/node12@1.0.11': {}
@@ -25589,10 +25657,10 @@ snapshots:
       pg: 8.16.3
       sqlite3: 5.1.7
 
-  drizzle-zod@0.8.2(drizzle-orm@0.44.4(@libsql/client@0.15.10)(mysql2@3.15.3)(pg@8.16.3)(sqlite3@5.1.7))(zod@4.0.13):
+  drizzle-zod@0.8.2(drizzle-orm@0.44.4(@libsql/client@0.15.10)(mysql2@3.15.3)(pg@8.16.3)(sqlite3@5.1.7))(zod@3.25.76):
     dependencies:
       drizzle-orm: 0.44.4(@libsql/client@0.15.10)(mysql2@3.15.3)(pg@8.16.3)(sqlite3@5.1.7)
-      zod: 4.0.13
+      zod: 3.25.76
 
   dunder-proto@1.0.1:
     dependencies:
@@ -30515,10 +30583,10 @@ snapshots:
 
   neotraverse@0.6.18: {}
 
-  nestjs-zod@5.0.0-beta.20250731T202215(@nestjs/common@11.1.5(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/swagger@11.2.0(@nestjs/common@11.1.5(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.5)(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2))(zod@4.0.13):
+  nestjs-zod@5.0.0-beta.20250731T202215(@nestjs/common@11.1.5(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/swagger@11.2.0(@nestjs/common@11.1.5(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.5)(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2))(zod@3.25.76):
     dependencies:
       deepmerge: 4.3.1
-      zod: 4.0.13
+      zod: 3.25.76
     optionalDependencies:
       '@nestjs/common': 11.1.5(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.2)
       '@nestjs/swagger': 11.2.0(@nestjs/common@11.1.5(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.5)(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)
@@ -36026,7 +36094,5 @@ snapshots:
   zenscroll@4.0.2: {}
 
   zod@3.25.76: {}
-
-  zod@4.0.13: {}
 
   zwitch@2.0.4: {}

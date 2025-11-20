@@ -28,7 +28,7 @@ import {
 } from './services/setting-core.service';
 
 @ApiTags('Settings')
-@Controller({ path: 'api/admin/settings', version: '2' })
+@Controller({ path: 'admin/settings', version: '2' })
 export class SettingCoreController {
   constructor(private readonly settingCoreService: SettingCoreService) {}
 

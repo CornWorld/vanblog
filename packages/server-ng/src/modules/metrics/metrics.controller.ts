@@ -6,7 +6,7 @@ import { PerformanceMonitoringMiddleware } from '../../shared/middleware/perform
 import { ErrorRateMonitoringService } from '../../shared/services/error-rate-monitoring.service';
 
 @ApiTags('Metrics')
-@Controller({ path: 'api/metrics', version: '2' })
+@Controller({ path: 'metrics', version: '2' })
 export class MetricsController {
   constructor(private readonly errorRateMonitoringService: ErrorRateMonitoringService) {}
 

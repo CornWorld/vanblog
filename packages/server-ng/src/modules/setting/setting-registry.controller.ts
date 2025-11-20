@@ -15,7 +15,7 @@ import { Perm } from '../auth/permissions.decorator';
 import { SettingRegistryService } from './services/setting-registry.service';
 
 @ApiTags('Config')
-@Controller('api/admin/config')
+@Controller('admin/config')
 export class SettingRegistryController {
   constructor(private readonly settingRegistryService: SettingRegistryService) {}
 

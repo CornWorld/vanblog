@@ -7,13 +7,14 @@ import { SettingCoreService } from './services/setting-core.service';
 import { SettingRegistryService } from './services/setting-registry.service';
 import { SettingCoreController } from './setting-core.controller';
 import { SettingRegistryController } from './setting-registry.controller';
+import { SettingCoreTsRestController } from './setting-core.ts-rest.controller';
 
 @Module({
   imports: [
     DatabaseModule,
     PermissionModule.forFeature(['setting:read', 'setting:update', 'setting:manage']),
   ],
-  controllers: [SettingCoreController, SettingRegistryController],
+  controllers: [SettingCoreController, SettingRegistryController, SettingCoreTsRestController],
   providers: [SettingCoreService, SettingRegistryService],
   exports: [SettingCoreService, SettingRegistryService],
 })

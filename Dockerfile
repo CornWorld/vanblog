@@ -62,7 +62,6 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm store prune && pnpm fetch
 
 COPY package.json pnpm-workspace.yaml ./
 COPY packages/admin/package.json ./packages/admin/
-COPY packages/server/package.json ./packages/server/
 COPY packages/server-ng/package.json ./packages/server-ng/
 COPY packages/website/package.json ./packages/website/
 COPY packages/cli/package.json ./packages/cli/
@@ -109,24 +108,6 @@ RUN test -d /app/packages/admin/dist && \
     echo "Admin 构建成功，文件列表：" && \
     ls -la /app/packages/admin/dist || \
     (echo "Admin 构建失败：dist 目录不存在" && exit 1)
-
-# Server 构建
-FROM deps AS server-builder
-WORKDIR /app
-ENV NODE_OPTIONS="--max_old_space_size=4096"
-ENV NODE_ENV="production"
-COPY packages/server ./packages/server
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
-    cd packages/server && \
-    # 确保安装所有依赖，包括 @nestjs/core
-    pnpm install --frozen-lockfile && \
-    pnpm build && \
-    # 创建生产环境依赖目录
-    mkdir -p /prod/server && \
-    cp -r dist package.json /prod/server/ && \
-    cd /prod/server && \
-    # 在生产目录中安装依赖，确保包含 @nestjs/core
-    pnpm install --prod
 
 # Server-NG 构建（v2）
 FROM deps AS serverng-builder
@@ -188,11 +169,6 @@ COPY --from=cli-builder /prod/cli ./
 # 复制 Waline
 WORKDIR /app/waline
 COPY --from=waline-builder /prod/waline ./
-
-# 复制 Server（修改复制路径以使用 prod 目录）
-WORKDIR /app/server
-COPY --from=server-builder /prod/server/dist/src ./
-COPY --from=server-builder /prod/server/node_modules ./node_modules
 
 # 复制 Server-NG（v2 构建产物）
 WORKDIR /app/server-ng

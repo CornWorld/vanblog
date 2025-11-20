@@ -10,6 +10,7 @@ import { PerformanceInterceptor } from './core/interceptors/performance.intercep
 import { LoggerModule } from './core/logger/logger.module';
 import { V1DeprecationMiddleware } from './core/middlewares/v1-deprecation.middleware';
 import { DatabaseModule } from './database';
+import { AdminModule } from './modules/admin/admin.module';
 import { AnalyticsModule } from './modules/analytics/analytics.module';
 import { ArticleModule } from './modules/article/article.module';
 import { AuthModule } from './modules/auth/auth.module';
@@ -80,6 +81,7 @@ export class AppModule implements NestModule {
         RssModule,
         SitemapModule,
         BackupModule,
+        AdminModule,
 
         DemoModule,
         pluginModule,
