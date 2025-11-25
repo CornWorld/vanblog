@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import TipTitle from '@/components/TipTitle';
@@ -25,7 +26,7 @@ interface Pipeline {
 export default function () {
   const { t } = useTranslation();
   const [pipelineConfig, setPipelineConfig] = useState<PipelineConfig[]>([]);
-  const actionRef = useRef<ActionType>();
+  const actionRef = useRef<ActionType | undefined>(undefined);
 
   useEffect(() => {
     getPipelineConfig().then(({ data }) => {
@@ -49,7 +50,7 @@ export default function () {
     {
       title: t('pipeline.column.is_async'),
       width: 60,
-      render: (_, record: Pipeline) => {
+      render: (_: any, record: Pipeline) => {
         const passive = pipelineConfig.find((item) => item.eventName === record.eventName)?.passive;
         return (
           <Tag
@@ -66,7 +67,7 @@ export default function () {
       valueType: 'text',
       title: t('pipeline.column.event'),
       width: 120,
-      render: (eventName: string) => {
+      render: (eventName: any) => {
         return pipelineConfig.find((item) => item.eventName === eventName)?.eventNameChinese;
       },
     },
@@ -74,7 +75,7 @@ export default function () {
       dataIndex: 'enabled',
       title: t('pipeline.column.status'),
       width: 60,
-      render: (enabled: boolean) => (
+      render: (enabled: any) => (
         <Tag
           children={
             enabled ? t('pipeline.column.status.enabled') : t('pipeline.column.status.disabled')
@@ -86,7 +87,7 @@ export default function () {
     {
       title: t('pipeline.column.actions'),
       width: 180,
-      render: (_, record: Pipeline) => {
+      render: (_: any, record: Pipeline) => {
         return (
           <>
             <Space>
@@ -100,7 +101,7 @@ export default function () {
               <PipelineModal
                 mode="edit"
                 trigger={<a>{t('pipeline.action.edit_info')}</a>}
-                initialValues={record}
+                initialValues={record as any}
                 onFinish={() => {
                   actionRef.current?.reload();
                 }}
@@ -156,7 +157,7 @@ export default function () {
               key="createPipelineBtn1"
               trigger={<Button type="primary">{t('pipeline.button.new')}</Button>}
               onFinish={() => {
-                action.reload();
+                action?.reload();
               }}
             />,
             <Button
@@ -170,16 +171,16 @@ export default function () {
           ];
         }}
         headerTitle={t('pipeline.table.title')}
-        columns={columns}
+        columns={columns as any}
         search={false}
         rowKey="id"
         request={async () => {
           const data = await getPiplelines();
           return {
-            data: data.data,
+            data: data.data as any,
             success: true,
-            total: data.data.length,
-          };
+            total: (data.data as any).length,
+          } as any;
         }}
       />
     </PageContainer>

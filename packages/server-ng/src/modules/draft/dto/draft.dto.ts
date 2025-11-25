@@ -40,7 +40,7 @@ export const DraftQuerySchema = z.object({
 
 // 草稿列表响应 Schema
 export const DraftListResponseSchema = z.object({
-  items: z.array(DraftSchema),
+  items: z.array(DraftSchema as unknown as z.ZodType),
   total: z.number(),
   page: z.number(),
   pageSize: z.number(),
@@ -62,7 +62,7 @@ export const DraftVersionSchema = selectDraftVersionSchema;
 
 // 草稿版本列表响应 Schema
 export const DraftVersionListResponseSchema = z.object({
-  items: z.array(DraftVersionSchema),
+  items: z.array(DraftVersionSchema as unknown as z.ZodType),
   total: z.number(),
   page: z.number(),
   pageSize: z.number(),

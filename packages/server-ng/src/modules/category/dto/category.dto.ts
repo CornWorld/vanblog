@@ -31,7 +31,7 @@ export const CategoryWithCountSchema = CategorySchema.extend({
 
 // 分类列表响应 Schema
 export const CategoryListResponseSchema = z.object({
-  items: z.array(CategoryWithCountSchema),
+  items: z.array(CategoryWithCountSchema as unknown as z.ZodType),
   total: z.number(),
 });
 

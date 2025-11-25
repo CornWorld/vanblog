@@ -3,13 +3,6 @@ import { parseObjToMarkdown } from './parseMarkdownFile';
 import { getArticleById, deleteArticle, deleteDraft, getDraftById } from './api';
 import { Modal } from 'antd';
 
-interface ArticleResponse {
-  data: {
-    title: string;
-    [key: string]: unknown;
-  };
-}
-
 // 批量操作
 export const batchDelete = (ids: string[], isDraft = false) => {
   return new Promise((resolve) => {
@@ -50,7 +43,9 @@ export const exportEachById = async (id: string, isDraft = false) => {
   const getFunction = isDraft ? getDraftById : getArticleById;
 
   // Use the selected function to get data
-  const { data: obj } = (await getFunction(id)) as ArticleResponse;
+  const { data: obj } = (await getFunction(id)) as {
+    data: { title: string; [key: string]: unknown };
+  };
 
   const md = parseObjToMarkdown(obj);
   const data = new Blob([md]);

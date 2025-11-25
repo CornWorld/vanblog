@@ -17,7 +17,7 @@ import { normalizeCommentOtherConfig } from '../../shared/contracts';
 import { HookService } from '../plugin/services/hook.service';
 import { SettingCoreService } from '../setting/services/setting-core.service';
 
-import { UpdateWalineSetting, WalineSetting } from './comment.schema';
+import { UpdateWalineSetting, WalineSetting, UpdateWalineSettingSchema } from './comment.schema';
 
 @Injectable()
 export class CommentService implements OnModuleInit, OnModuleDestroy, BeforeApplicationShutdown {
@@ -68,7 +68,10 @@ export class CommentService implements OnModuleInit, OnModuleDestroy, BeforeAppl
       serverURL: '',
     };
 
-    const setting = await this.settingService.getConfig('walineSetting', defaultSetting);
+    const setting = await this.settingService.getConfig<WalineSetting>(
+      'walineSetting',
+      defaultSetting,
+    );
     return setting ?? defaultSetting;
   }
 
@@ -81,7 +84,8 @@ export class CommentService implements OnModuleInit, OnModuleDestroy, BeforeAppl
       existing,
     });
 
-    const updated = { ...existing, ...filteredData };
+    const parsed = UpdateWalineSettingSchema.partial().parse(filteredData);
+    const updated = { ...existing, ...parsed };
     const result = await this.settingService.updateConfig('walineSetting', updated);
 
     // Restart Waline with new settings
@@ -102,7 +106,7 @@ export class CommentService implements OnModuleInit, OnModuleDestroy, BeforeAppl
     // 若在设置中显式配置了 serverURL，则优先返回
     try {
       const settings = await this.getWalineSetting();
-      const configured = (settings.serverURL ?? '').trim();
+      const configured = (typeof settings.serverURL === 'string' ? settings.serverURL : '').trim();
       if (configured !== '') {
         return { serverURL: configured };
       }
@@ -144,13 +148,14 @@ export class CommentService implements OnModuleInit, OnModuleDestroy, BeforeAppl
 
     for (const [key, value] of Object.entries(config)) {
       if (key === 'forceLoginComment') {
-        if (config.forceLoginComment) {
+        if (value === true) {
           result['LOGIN'] = 'force';
         }
       } else if (key === 'otherConfig') {
         if (config.otherConfig !== '') {
           try {
-            const rawData: unknown = JSON.parse(config.otherConfig ?? '{}');
+            const rawStr = typeof config.otherConfig === 'string' ? config.otherConfig : '{}';
+            const rawData: unknown = JSON.parse(rawStr);
             const otherConfig = normalizeCommentOtherConfig(rawData);
             for (const [k, v] of Object.entries(otherConfig)) {
               result[k] = v;
@@ -168,7 +173,8 @@ export class CommentService implements OnModuleInit, OnModuleDestroy, BeforeAppl
     }
 
     // Remove SMTP related env vars if SMTP is disabled
-    if (!config['smtp.enabled']) {
+    const smtpEnabled = config['smtp.enabled'];
+    if (!smtpEnabled) {
       const filteredResult: Record<string, string> = {};
       for (const [k, v] of Object.entries(result)) {
         if (

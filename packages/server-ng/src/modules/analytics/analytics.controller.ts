@@ -27,7 +27,6 @@ import {
 } from './dto/analytics-response.dto';
 import { QueryAnalyticsDto } from './dto/query-analytics.dto';
 import { RecordAnalyticsDto, RecordAnalyticsSchema } from './dto/record-analytics.dto';
-import { AnalyticsType } from './entities/analytics.entity';
 import { AnalyticsService } from './services/analytics.service';
 import { ArticleStatsService, ArticleStats } from './services/article-stats.service';
 import { EchartsFormatterService, EchartsOption } from './services/echarts-formatter.service';
@@ -93,7 +92,7 @@ export class AnalyticsController {
     await this.analyticsService.recordAnalytics(recordDto);
 
     // Send to third-party analytics services
-    if (dto.type === AnalyticsType.PAGEVIEW && dto.path) {
+    if (dto.type === 'pageview' && dto.path) {
       await this.thirdPartyAnalyticsService.trackPageview(
         dto.path,
         recordDto.ip ?? undefined,

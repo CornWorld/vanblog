@@ -11,6 +11,7 @@ interface BatchImportProps {
 }
 
 const BatchImport = (props: BatchImportProps) => {
+  const { t } = useTranslation();
   return (
     <Upload
       showUploadList={false}

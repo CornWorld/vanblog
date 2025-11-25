@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { getStaticSetting, updateStaticSetting } from '@/services/van-blog/api';
@@ -30,16 +31,17 @@ export default function StaticForm() {
         labelCol={{ span: 6 }}
         request={async () => {
           const { data } = await getStaticSetting();
-          setStorageType(data?.storageType || 'local');
-          if (!data) {
+          const setting = data as any;
+          setStorageType(setting?.storageType || 'local');
+          if (!setting) {
             return {
               storageType: 'local',
             };
           }
           return {
-            ...data,
-            picgoConfig: JSON.stringify(data?.picgoConfig || '', null, 2),
-          };
+            ...setting,
+            picgoConfig: JSON.stringify(setting?.picgoConfig || '', null, 2),
+          } as any;
         }}
         syncToInitialValues={true}
         onFinish={async (data: StaticFormData) => {

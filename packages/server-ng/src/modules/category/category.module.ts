@@ -5,6 +5,7 @@ import { PermissionModule } from '../permission/permission.module';
 
 import { CategoryController } from './category.controller';
 import { CategoryService } from './category.service';
+import { CategoryTsRestController } from './category.ts-rest.controller';
 
 @Module({
   imports: [
@@ -16,7 +17,7 @@ import { CategoryService } from './category.service';
       'category:delete',
     ]),
   ],
-  controllers: [CategoryController],
+  controllers: [CategoryController, CategoryTsRestController],
   providers: [CategoryService],
   exports: [CategoryService],
 })

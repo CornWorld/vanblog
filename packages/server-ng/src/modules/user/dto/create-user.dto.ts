@@ -14,7 +14,7 @@ export const CreateUserSchema = insertUserSchema
     permissions: z.union([z.array(z.string()), z.string()]).optional(),
   });
 
-export type CreateUserType = z.infer<typeof CreateUserSchema>;
+// Note: avoid exporting inferred type to prevent TS constraints issues under Zod v3 typings
 
 export class CreateUserDto extends createZodDto(CreateUserSchema) {}
 

@@ -36,9 +36,11 @@ export const OptionsQuerySchema = z.object({
 export const OptionsResponseSchema = z.object({
   articles: ArticleListResponseSchema.optional(),
   categories: z
-    .array(CategorySchema.pick({ name: true, slug: true, description: true }))
+    .array(
+      CategorySchema.pick({ name: true, slug: true, description: true }) as unknown as z.ZodType,
+    )
     .optional(),
-  tags: z.array(TagSchema.pick({ name: true, slug: true })).optional(),
+  tags: z.array(TagSchema.pick({ name: true, slug: true }) as unknown as z.ZodType).optional(),
   siteMeta: z
     .object({
       title: z.string(),

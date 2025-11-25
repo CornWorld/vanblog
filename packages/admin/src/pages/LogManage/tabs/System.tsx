@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { getLog } from '@/services/van-blog/api';
@@ -9,7 +10,7 @@ export default function () {
   const { t } = useTranslation();
   const [content, setContent] = useState('');
   const [loading, setLoading] = useState(true);
-  const timerRef = useRef<NodeJS.Timeout>(null);
+  const timerRef = useRef<any>(null);
   const domRef = useRef<HTMLPreElement>(null);
 
   const fetchLog = async () => {

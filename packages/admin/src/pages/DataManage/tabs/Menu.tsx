@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { getMenu, updateMenu } from '@/services/van-blog/api';
@@ -44,7 +45,7 @@ export default function MenuTab() {
     setLoading(true);
     try {
       const { data } = await getMenu();
-      const menuData = data?.data || [];
+      const menuData = (data as any)?.data || [];
       setDataSource(menuData);
       const expendKs = menuData
         .filter((e: MenuItem) => Boolean(e.children))

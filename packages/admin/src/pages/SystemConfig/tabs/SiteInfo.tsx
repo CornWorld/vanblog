@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import SiteInfoForm from '@/components/SiteInfoForm';
@@ -45,7 +46,7 @@ export default function () {
           }
         }}
         syncToInitialValues={true}
-        onFinish={async (data) => {
+        onFinish={async (data: any) => {
           let ok = true;
           try {
             new URL(data.baseUrl);

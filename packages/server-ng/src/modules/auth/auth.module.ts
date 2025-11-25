@@ -8,6 +8,7 @@ import { UserModule } from '../user/user.module';
 
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
+import { AuthTsRestController } from './auth.ts-rest.controller';
 import { PermissionsGuard } from './guards/permissions.guard';
 import { LoginLogService } from './login-log.service';
 import { PasswordChangeHandlerService } from './password-change-handler.service';
@@ -32,7 +33,7 @@ import { TokenService } from './token.service';
       inject: [ConfigService],
     }),
   ],
-  controllers: [AuthController],
+  controllers: [AuthController, AuthTsRestController],
   providers: [
     AuthService,
     LocalStrategy,

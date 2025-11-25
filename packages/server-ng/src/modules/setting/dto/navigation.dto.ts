@@ -1,19 +1,8 @@
 import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
 
-// 导航项类型定义
-export type NavigationItem = {
-  id?: number;
-  name: string;
-  url: string;
-  icon?: string;
-  target: '_self' | '_blank';
-  order: number;
-  children?: NavigationItem[];
-};
-
-// 导航项 Schema
-export const NavigationItemSchema: z.ZodType<NavigationItem> = z.lazy(() =>
+// 导航项 Schema（递归）
+export const NavigationItemSchema = z.lazy(() =>
   z.object({
     id: z.number().optional(),
     name: z.string().min(1, '导航名称不能为空'),
@@ -24,6 +13,8 @@ export const NavigationItemSchema: z.ZodType<NavigationItem> = z.lazy(() =>
     children: z.array(NavigationItemSchema).optional(),
   }),
 );
+
+export type NavigationItem = z.output<typeof NavigationItemSchema>;
 
 // 更新导航 Schema
 export const UpdateNavigationSchema = z.object({

@@ -25,7 +25,7 @@ export const TagWithCountSchema = TagSchema.extend({
 
 // 标签列表响应 Schema
 export const TagListResponseSchema = z.object({
-  items: z.array(TagWithCountSchema),
+  items: z.array(TagWithCountSchema as unknown as z.ZodType),
   total: z.number(),
 });
 

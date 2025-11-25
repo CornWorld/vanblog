@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { PageContainer } from '@ant-design/pro-components';
@@ -97,7 +98,7 @@ const ImageManager: React.FC = () => {
         case 'info':
           Modal.info({
             title: t('image.modal.info.title'),
-            content: <ObjTable obj={mergeMetaInfo(clickItem)} />,
+            content: <ObjTable obj={mergeMetaInfo(clickItem) as any} />,
           });
           break;
         case 'copy':

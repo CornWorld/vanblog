@@ -1,6 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { deleteLink, getLink, updateLink } from '@/services/van-blog/api';
+import { createLink, deleteLink, getLink, updateLink } from '@/services/van-blog/api';
 import { EditableProTable } from '@ant-design/pro-components';
 import { Modal, Spin } from 'antd';
 import { useRef, useState } from 'react';
@@ -14,7 +14,7 @@ export default function () {
     setLoading(true);
     const { data } = await getLink();
     setLoading(false);
-    return data.map((item) => ({ key: item.name, ...item }));
+    return data.map((item, index) => ({ key: index, ...item }));
   };
   const columns = [
     {
@@ -83,7 +83,7 @@ export default function () {
           onClick={async () => {
             Modal.confirm({
               onOk: async () => {
-                await deleteLink(record.name);
+                await deleteLink(record.key);
                 action?.reload();
               },
               title: t('link.modal.deleteConfirm', { name: record.name }),
@@ -133,7 +133,11 @@ export default function () {
                 logo: data.logo,
                 desc: data.desc,
               };
-              await updateLink(toSaveObj);
+              if (typeof rowKey === 'number' && rowKey < 1000000) {
+                await updateLink(rowKey, toSaveObj);
+              } else {
+                await createLink(toSaveObj);
+              }
               actionRef?.current?.reload();
             },
             onChange: setEditableRowKeys,

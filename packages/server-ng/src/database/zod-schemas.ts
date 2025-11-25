@@ -40,20 +40,20 @@ export const selectUserSchema = createSelectSchema(users, {
   updatedAt: (schema) => schema.transform((str) => dayjs(str)),
 });
 
-// Password strength validation schema
-const passwordStrengthSchema = z
-  .string()
-  .min(8, '密码至少8个字符')
-  .max(128, '密码最多128个字符')
-  .regex(/[a-z]/, '密码必须包含至少一个小写字母')
-  .regex(/[A-Z]/, '密码必须包含至少一个大写字母')
-  .regex(/[0-9]/, '密码必须包含至少一个数字')
-  .regex(/[^a-zA-Z0-9]/, '密码必须包含至少一个特殊字符');
+// Password strength validation schema builder (use column schema to avoid zod instance mixing)
+const applyPasswordStrength = (schema: z.ZodString): z.ZodString =>
+  schema
+    .min(8, '密码至少8个字符')
+    .max(128, '密码最多128个字符')
+    .regex(/[a-z]/, '密码必须包含至少一个小写字母')
+    .regex(/[A-Z]/, '密码必须包含至少一个大写字母')
+    .regex(/[0-9]/, '密码必须包含至少一个数字')
+    .regex(/[^a-zA-Z0-9]/, '密码必须包含至少一个特殊字符');
 
 export const insertUserSchema = createInsertSchema(users, {
   username: (schema) => schema.min(3, '用户名至少3个字符').max(20, '用户名最多20个字符'),
-  password: () => passwordStrengthSchema,
-  email: () => z.string().pipe(z.email('请输入有效的邮箱地址')).optional(),
+  password: (schema) => applyPasswordStrength(schema),
+  email: (schema) => schema.regex(/^[^\s@]+@[^\s@]+\.[^\s@]+$/u, '请输入有效的邮箱地址').optional(),
   permissions: z
     .array(z.string())
     .optional()
@@ -64,8 +64,8 @@ export const insertUserSchema = createInsertSchema(users, {
 
 export const updateUserSchema = createUpdateSchema(users, {
   username: (schema) => schema.min(3, '用户名至少3个字符').max(20, '用户名最多20个字符').optional(),
-  password: () => passwordStrengthSchema.optional(),
-  email: () => z.string().pipe(z.email('请输入有效的邮箱地址')).optional(),
+  password: (schema) => applyPasswordStrength(schema).optional(),
+  email: (schema) => schema.regex(/^[^\s@]+@[^\s@]+\.[^\s@]+$/u, '请输入有效的邮箱地址').optional(),
   permissions: z
     .array(z.string())
     .optional()
@@ -319,11 +319,13 @@ export const selectAnalyticsSchema = createSelectSchema(analytics, {
 });
 
 export const insertAnalyticsSchema = createInsertSchema(analytics, {
-  type: z.enum(['pageview', 'event', 'api_call'], {
-    message: '分析类型必须是 pageview、event 或 api_call',
-  }),
-  userAgent: z.string().nullable().optional(),
-  ip: z.string().nullable().optional(),
+  type: (schema) =>
+    schema.refine(
+      (val) => ['pageview', 'event', 'api_call'].includes(val),
+      '分析类型必须是 pageview、event 或 api_call',
+    ),
+  userAgent: (schema) => schema.nullable().optional(),
+  ip: (schema) => schema.nullable().optional(),
   data: z
     .any()
     .optional()

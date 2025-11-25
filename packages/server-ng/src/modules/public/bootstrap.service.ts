@@ -106,12 +106,12 @@ export class BootstrapService {
 
   private async getAllTags(): Promise<string[]> {
     const tagResponse = await this.tagService.findAll();
-    return tagResponse.items.map((tag) => tag.name);
+    return tagResponse.items.map((tag: { name: string }) => tag.name);
   }
 
   private async getAllCategories(): Promise<string[]> {
     const categoryResponse = await this.categoryService.findAll();
-    return categoryResponse.items.map((category) => category.name);
+    return categoryResponse.items.map((category: { name: string }) => category.name);
   }
 
   private getVersion(): string {

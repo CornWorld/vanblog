@@ -590,7 +590,7 @@ export class MediaController {
     }
 
     const [, mimeType, base64] = match;
-    const buffer = Buffer.from(base64, 'base64');
+    const buffer: Buffer = Buffer.from(base64, 'base64');
 
     const global = await this.getMediaProcessingConfig();
     const config = this.mergeConfigOverride(global, body.processing);

@@ -1,7 +1,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import CodeEditor from '@/components/CodeEditor';
-import { getLayoutConfig, updateLayoutConfig } from '@/services/van-blog/api';
+import { getCustomCode, updateCustomCode } from '@/services/van-blog/api';
 import { useTab } from '@/services/van-blog/useTab';
 import { Button, Card, message, Modal, Spin } from 'antd';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -28,7 +28,7 @@ export default function () {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const { data } = await getLayoutConfig();
+      const { data } = await getCustomCode();
       if (data) {
         setValues({
           css: data?.css || '',
@@ -51,7 +51,7 @@ export default function () {
       onOk: async () => {
         setLoading(true);
         try {
-          await updateLayoutConfig(values);
+          await updateCustomCode(values);
           message.success(t('customizing.message.update.success'));
         } catch (error) {
           console.error('Failed to update layout config:', error);

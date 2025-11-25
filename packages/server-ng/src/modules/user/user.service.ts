@@ -131,7 +131,7 @@ export class UserService {
     return user ? this.mapToEntity(user) : null;
   }
 
-  async update(id: number, updateUserDto: UpdateUserDto): Promise<User> {
+  async update(id: number, updateUserDto: Partial<UpdateUserDto>): Promise<User> {
     let userData = updateUserDto;
 
     // Trigger user|beforeUpdate hook

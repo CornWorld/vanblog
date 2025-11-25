@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { getStaticSetting, updateStaticSetting } from '@/services/van-blog/api';
@@ -24,14 +25,15 @@ export default function WaterMarkForm() {
         labelCol={{ span: 6 }}
         request={async () => {
           const { data } = await getStaticSetting();
-          setEnableWaterMark(data?.enableWaterMark || false);
-          if (!data) {
+          const setting = data as any;
+          setEnableWaterMark(setting?.enableWaterMark || false);
+          if (!setting) {
             return {
               enableWaterMark: false,
               enableWebp: true,
             };
           }
-          return data;
+          return setting as any;
         }}
         syncToInitialValues={true}
         onFinish={async (data: WatermarkFormData) => {

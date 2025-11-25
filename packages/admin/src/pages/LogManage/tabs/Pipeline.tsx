@@ -30,7 +30,7 @@ interface LogResponse {
 
 export default function Pipeline() {
   const { t } = useTranslation();
-  const actionRef = useRef<ActionType>();
+  const actionRef = useRef<ActionType | undefined>(undefined);
   const [pipelineConfig, setPipelineConfig] = useState<PipelineConfig[]>([]);
 
   useEffect(() => {

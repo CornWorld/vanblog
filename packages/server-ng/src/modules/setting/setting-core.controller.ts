@@ -12,7 +12,7 @@ import {
   CreateFriendLinkSchema,
   UpdateFriendLinkSchema,
 } from './dto/friend-link.dto';
-import { UpdateNavigationDto, UpdateNavigationSchema, NavigationItem } from './dto/navigation.dto';
+import { UpdateNavigationDto, UpdateNavigationSchema } from './dto/navigation.dto';
 import { UpdateLayoutDto, UpdateLayoutSchema } from './dto/update-layout.dto';
 import { UpdateSiteInfoDto, UpdateSiteInfoSchema } from './dto/update-site-info.dto';
 import { UpdateThemeDto, UpdateThemeSchema } from './dto/update-theme.dto';
@@ -146,7 +146,7 @@ export class SettingCoreController {
   })
   async createFriendLink(
     @Body(new ZodValidationPipe(CreateFriendLinkSchema)) createFriendLinkDto: CreateFriendLinkDto,
-  ): Promise<FriendLink[]> {
+  ): Promise<FriendLink> {
     return this.settingCoreService.createFriendLink(createFriendLinkDto);
   }
 
@@ -161,7 +161,7 @@ export class SettingCoreController {
   async updateFriendLink(
     @Param('index', ParseIntPipe) index: number,
     @Body(new ZodValidationPipe(UpdateFriendLinkSchema)) updateFriendLinkDto: UpdateFriendLinkDto,
-  ): Promise<FriendLink[]> {
+  ): Promise<FriendLink> {
     return this.settingCoreService.updateFriendLink(index, updateFriendLinkDto);
   }
 
@@ -201,15 +201,23 @@ export class SettingCoreController {
     @Body(new ZodValidationPipe(UpdateNavigationSchema)) updateNavigationDto: UpdateNavigationDto,
   ): Promise<Navigation[]> {
     // Map NavigationItem to Navigation interface (recursive)
-    const mapItem = (item: NavigationItem): Navigation => ({
+    type NavItemLocal = {
+      name: string;
+      url: string;
+      icon?: string;
+      target: '_self' | '_blank';
+      children?: NavItemLocal[];
+    };
+    const mapItem = (item: NavItemLocal): Navigation => ({
       name: item.name,
       path: item.url,
       icon: item.icon,
       external: item.target === '_blank',
-      children: item.children?.map(mapItem),
+      children: Array.isArray(item.children) ? item.children.map(mapItem) : undefined,
     });
 
-    const navigationItems = updateNavigationDto.items.map(mapItem);
+    const parsed: { items: NavItemLocal[] } = UpdateNavigationSchema.parse(updateNavigationDto);
+    const navigationItems = parsed.items.map((item: NavItemLocal) => mapItem(item));
     return this.settingCoreService.updateNavigation(navigationItems);
   }
 

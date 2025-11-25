@@ -35,9 +35,15 @@ export const commonSchemas = {
     .default(10),
 
   // 格式验证
-  email: z.string().pipe(z.email('Invalid email format')).describe('Email address'),
+  email: z
+    .string()
+    .regex(/^[^\s@]+@[^\s@]+\.[^\s@]+$/u, 'Invalid email format')
+    .describe('Email address'),
 
-  url: z.string().pipe(z.url('Invalid URL format')).describe('URL address'),
+  url: z
+    .string()
+    .regex(/^https?:\/\/.+/i, 'Invalid URL format')
+    .describe('URL address'),
 
   hexColor: z
     .string()

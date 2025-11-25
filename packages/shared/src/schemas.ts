@@ -197,3 +197,357 @@ export type AboutInfo = z.infer<typeof AboutInfoSchema>;
 
 export const UpdateAboutSchema = AboutInfoSchema;
 export type UpdateAbout = z.infer<typeof UpdateAboutSchema>;
+
+export const SocialTypeEnum = z.enum([
+  'bilibili',
+  'email',
+  'github',
+  'gitee',
+  'wechat',
+  'wechat-dark',
+]);
+
+export const SocialItemSchema = z.object({
+  type: SocialTypeEnum,
+  value: z.string(),
+  updatedAt: z.string().or(z.date()),
+});
+
+export type SocialItem = z.infer<typeof SocialItemSchema>;
+
+export const CreateSocialSchema = z.object({
+  type: SocialTypeEnum,
+  value: z.string(),
+});
+
+export type CreateSocial = z.infer<typeof CreateSocialSchema>;
+
+export const UpdateSocialSchema = CreateSocialSchema;
+export type UpdateSocial = z.infer<typeof UpdateSocialSchema>;
+
+export const SocialTypeInfoSchema = z.object({
+  label: z.string(),
+  value: SocialTypeEnum,
+});
+
+export type SocialTypeInfo = z.infer<typeof SocialTypeInfoSchema>;
+
+export const WalineSettingSchema = z.object({
+  'smtp.enabled': z.boolean().default(false),
+  'smtp.port': z.number().default(465),
+  'smtp.host': z.string().default(''),
+  'smtp.user': z.string().default(''),
+  'smtp.password': z.string().default(''),
+  'sender.name': z.string().default(''),
+  'sender.email': z.string().default(''),
+  authorEmail: z.string().default(''),
+  webhook: z.string().optional(),
+  forceLoginComment: z.boolean().default(false),
+  otherConfig: z.string().optional(),
+  serverURL: z.string().optional(),
+});
+
+export type WalineSetting = z.infer<typeof WalineSettingSchema>;
+
+export const UpdateWalineSettingSchema = WalineSettingSchema;
+export type UpdateWalineSetting = z.infer<typeof UpdateWalineSettingSchema>;
+
+export const ISRSettingSchema = z.object({
+  mode: z.enum(['delay', 'onDemand']).default('onDemand'),
+  delay: z.number().default(0),
+});
+
+export type ISRSetting = z.infer<typeof ISRSettingSchema>;
+
+export const UpdateISRSettingSchema = ISRSettingSchema;
+export type UpdateISRSetting = z.infer<typeof UpdateISRSettingSchema>;
+
+export const LoginSettingSchema = z.object({
+  enableMaxLoginRetry: z.boolean().default(false),
+  maxRetryTimes: z.number().default(5),
+  durationSeconds: z.number().default(300),
+  expiresIn: z.number().default(7200),
+});
+
+export type LoginSetting = z.infer<typeof LoginSettingSchema>;
+
+export const UpdateLoginSettingSchema = LoginSettingSchema;
+export type UpdateLoginSetting = z.infer<typeof UpdateLoginSettingSchema>;
+
+export const HttpsSettingSchema = z.object({
+  redirect: z.boolean().default(false),
+});
+
+export type HttpsSetting = z.infer<typeof HttpsSettingSchema>;
+
+export const UpdateHttpsSettingSchema = HttpsSettingSchema;
+export type UpdateHttpsSetting = z.infer<typeof UpdateHttpsSettingSchema>;
+
+export const StaticSettingSchema = z.object({
+  storageType: z.enum(['picgo', 'local']).default('local'),
+  picgoConfig: z.any().optional(),
+  picgoPlugins: z.string().optional(),
+  enableWaterMark: z.boolean().default(false),
+  waterMarkText: z.string().optional(),
+  enableWebp: z.boolean().default(true),
+});
+
+export type StaticSetting = z.infer<typeof StaticSettingSchema>;
+
+export const UpdateStaticSettingSchema = StaticSettingSchema;
+export type UpdateStaticSetting = z.infer<typeof UpdateStaticSettingSchema>;
+
+export const RewardItemSchema = z.object({
+  name: z.string(),
+  value: z.string(),
+  updatedAt: z.string().or(z.date()),
+});
+
+export type RewardItem = z.infer<typeof RewardItemSchema>;
+
+export const CreateRewardSchema = z.object({
+  name: z.string(),
+  value: z.string(),
+});
+
+export type CreateReward = z.infer<typeof CreateRewardSchema>;
+
+export const UpdateRewardSchema = CreateRewardSchema;
+export type UpdateReward = z.infer<typeof UpdateRewardSchema>;
+
+export const CaddyLogSchema = z.string();
+export const CaddyConfigSchema = z.string();
+
+// Auth & User
+export const LoginSchema = z.object({
+  name: z.string(),
+  password: z.string(),
+});
+
+export const UserSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  nickname: z.string().optional(),
+  avatar: z.string().optional(),
+  email: z.string().optional(),
+  permissions: z.array(z.string()),
+  createdAt: z.string().or(z.date()),
+  updatedAt: z.string().or(z.date()),
+});
+
+export const UpdateUserSchema = z.object({
+  nickname: z.string().optional(),
+  avatar: z.string().optional(),
+  email: z.string().optional(),
+  password: z.string().optional(),
+  oldPassword: z.string().optional(),
+});
+
+export const CreateCollaboratorSchema = z.object({
+  name: z.string(),
+  password: z.string(),
+  nickname: z.string().optional(),
+  permissions: z.array(z.string()),
+});
+
+export const UpdateCollaboratorSchema = z.object({
+  id: z.number(),
+  password: z.string().optional(),
+  nickname: z.string().optional(),
+  permissions: z.array(z.string()).optional(),
+});
+
+// Token
+export const TokenSchema = z.object({
+  _id: z.string(),
+  name: z.string(),
+  token: z.string(),
+  createdAt: z.string().or(z.date()),
+});
+
+export const CreateTokenSchema = z.object({
+  name: z.string(),
+});
+
+// Category & Tag
+export const CategorySchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  description: z.string().optional(),
+  count: z.number().optional(),
+  createAt: z.string().or(z.date()),
+  updateAt: z.string().or(z.date()),
+});
+
+export const CreateCategorySchema = z.object({
+  name: z.string(),
+  description: z.string().optional(),
+});
+
+export const UpdateCategorySchema = z.object({
+  description: z.string().optional(),
+});
+
+export const TagSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  count: z.number().optional(),
+  createAt: z.string().or(z.date()),
+  updateAt: z.string().or(z.date()),
+});
+
+export const CreateTagSchema = z.object({
+  name: z.string(),
+});
+
+export const UpdateTagSchema = z.object({
+  name: z.string(),
+});
+
+// Article & Draft
+export const ArticleSchema = z.object({
+  id: z.number(),
+  title: z.string(),
+  content: z.string(),
+  summary: z.string().optional(),
+  cover: z.string().optional(),
+  category: z.string().optional(),
+  tags: z.array(TagSchema).optional(),
+  views: z.number().default(0),
+  likes: z.number().default(0),
+  isTop: z.boolean().default(false),
+  isHot: z.boolean().default(false),
+  pubTime: z.string().or(z.date()),
+  createdAt: z.string().or(z.date()),
+  updatedAt: z.string().or(z.date()),
+  private: z.boolean().default(false),
+  password: z.string().optional(),
+  toc: z.string().optional(),
+});
+
+export const CreateArticleSchema = z.object({
+  title: z.string(),
+  content: z.string(),
+  summary: z.string().optional(),
+  cover: z.string().optional(),
+  category: z.string().optional(),
+  tags: z.array(z.string()).optional(),
+  isTop: z.boolean().optional(),
+  isHot: z.boolean().optional(),
+  pubTime: z.string().or(z.date()).optional(),
+  private: z.boolean().optional(),
+  password: z.string().optional(),
+});
+
+export const UpdateArticleSchema = CreateArticleSchema.partial();
+
+export const DraftSchema = z.object({
+  id: z.number(),
+  title: z.string(),
+  content: z.string(),
+  summary: z.string().optional(),
+  cover: z.string().optional(),
+  category: z.string().optional(),
+  tags: z.array(z.string()).optional(),
+  createdAt: z.string().or(z.date()),
+  updatedAt: z.string().or(z.date()),
+});
+
+export const CreateDraftSchema = z.object({
+  title: z.string(),
+  content: z.string(),
+  summary: z.string().optional(),
+  cover: z.string().optional(),
+  category: z.string().optional(),
+  tags: z.array(z.string()).optional(),
+});
+
+export const UpdateDraftSchema = CreateDraftSchema.partial();
+
+// Media
+export const MediaSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  url: z.string(),
+  path: z.string(),
+  type: z.string(),
+  size: z.number(),
+  createdAt: z.string().or(z.date()),
+});
+
+// Custom Page
+export const CustomPageSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  path: z.string(),
+  createdAt: z.string().or(z.date()),
+  updatedAt: z.string().or(z.date()),
+});
+
+export const CreateCustomPageSchema = z.object({
+  name: z.string(),
+  path: z.string(),
+});
+
+export const UpdateCustomPageSchema = z.object({
+  id: z.string(),
+  name: z.string().optional(),
+  path: z.string().optional(),
+});
+
+export const PublicCustomPageSchema = z.object({
+  name: z.string(),
+  path: z.string(),
+  html: z.string(),
+});
+
+export const CustomPageListSchema = z.object({
+  name: z.string(),
+  path: z.string(),
+});
+
+// Pipeline
+export const PipelineSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  status: z.string(),
+  lastRun: z.string().or(z.date()).optional(),
+});
+
+export const CreatePipelineSchema = z.object({
+  name: z.string(),
+  config: z.any(),
+});
+
+export const UpdatePipelineSchema = z.object({
+  name: z.string().optional(),
+  config: z.any().optional(),
+});
+
+// Analytics
+export const AnalyticsOverviewSchema = z.object({
+  totalPageviews: z.number(),
+  totalVisitors: z.number(),
+  todayPageviews: z.number(),
+  todayVisitors: z.number(),
+});
+
+export const AnalyticsLogSchema = z.object({
+  id: z.number(),
+  type: z.string(),
+  content: z.string(),
+  createdAt: z.string().or(z.date()),
+});
+
+// Meta
+export const VersionInfoSchema = z.object({
+  version: z.string(),
+  latestVersion: z.string(),
+  needUpdate: z.boolean(),
+});
+
+export const InitSchema = z.object({
+  username: z.string(),
+  password: z.string(),
+  email: z.string(),
+});

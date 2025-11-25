@@ -61,11 +61,13 @@ export class OptionsService {
     if (includeMap.categories) {
       tasks.push(
         this.categoryService.findAll().then((result) => {
-          response.categories = result.items.map((category) => ({
-            name: category.name,
-            slug: category.slug,
-            description: category.description,
-          }));
+          response.categories = result.items.map(
+            (category: { name: string; slug: string; description?: string | null }) => ({
+              name: category.name,
+              slug: category.slug,
+              description: category.description ?? undefined,
+            }),
+          );
         }),
       );
     }
@@ -73,7 +75,7 @@ export class OptionsService {
     if (includeMap.tags) {
       tasks.push(
         this.tagService.findAll().then((result) => {
-          response.tags = result.items.map((tag) => ({
+          response.tags = result.items.map((tag: { name: string; slug: string }) => ({
             name: tag.name,
             slug: tag.slug,
           }));
