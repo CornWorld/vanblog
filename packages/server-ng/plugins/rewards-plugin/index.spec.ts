@@ -24,6 +24,17 @@ const createMockContext = (): PluginContext => ({
     register: vi.fn(),
     unregister: vi.fn().mockReturnValue(true),
   },
+  hooks: {
+    register: vi.fn(),
+    unregister: vi.fn(),
+  } as any,
+  logger: {
+    log: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn(),
+    verbose: vi.fn(),
+  } as any,
 });
 
 describe('🧩 bootstrap-reward-plugin', () => {

@@ -2,6 +2,7 @@ import * as fs from 'fs';
 
 import { Injectable, Inject, OnModuleInit, Logger } from '@nestjs/common';
 import axios from 'axios';
+import dayjs from 'dayjs';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
@@ -174,8 +175,11 @@ export class SettingCoreService implements OnModuleInit {
         const parsed = safeParseJson<T>(results[0].value, schema);
         return parsed;
       }
-      const parsed = safeParseJson<T>(results[0].value, dataSchemas.genericObject);
-      return parsed;
+      const parsed = safeParseJson<Record<string, unknown>>(
+        results[0].value,
+        dataSchemas.genericObject,
+      );
+      return parsed as unknown as T | null;
     }
 
     if (defaultValue !== undefined) {
@@ -307,21 +311,21 @@ export class SettingCoreService implements OnModuleInit {
     return (await this.getConfig<FriendLink[]>('friendLinks')) ?? [];
   }
 
-  async createFriendLink(dto: FriendLink): Promise<FriendLink[]> {
+  async createFriendLink(dto: FriendLink): Promise<FriendLink> {
     const friends = await this.getFriendLinks();
     friends.push(dto);
     await this.updateConfig('friendLinks', friends);
-    return friends;
+    return dto;
   }
 
-  async updateFriendLink(index: number, dto: Partial<FriendLink>): Promise<FriendLink[]> {
+  async updateFriendLink(index: number, dto: Partial<FriendLink>): Promise<FriendLink> {
     const friends = await this.getFriendLinks();
     if (index < 0 || index >= friends.length) {
       throw new Error('Invalid index');
     }
     friends[index] = { ...friends[index], ...dto };
     await this.updateConfig('friendLinks', friends);
-    return friends;
+    return friends[index];
   }
 
   async deleteFriendLink(index: number): Promise<FriendLink[]> {
@@ -349,7 +353,7 @@ export class SettingCoreService implements OnModuleInit {
   async getAboutInfo(): Promise<AboutInfo> {
     const defaultAbout: AboutInfo = {
       content: '',
-      updatedAt: new Date().toISOString(),
+      updatedAt: dayjs().toISOString(),
     };
     return (await this.getConfig<AboutInfo>('aboutInfo', defaultAbout)) ?? defaultAbout;
   }
@@ -358,7 +362,7 @@ export class SettingCoreService implements OnModuleInit {
     const existing = await this.getAboutInfo();
     const updated: AboutInfo = {
       content: dto.content ?? existing.content,
-      updatedAt: new Date().toISOString(),
+      updatedAt: dayjs().toISOString(),
     };
     return this.updateConfig('aboutInfo', updated);
   }
@@ -374,7 +378,7 @@ export class SettingCoreService implements OnModuleInit {
     const newItem: SocialItem = {
       type: dto.type,
       value: dto.value,
-      updatedAt: new Date().toISOString(),
+      updatedAt: dayjs().toISOString(),
     };
 
     if (index !== -1) {
@@ -493,7 +497,7 @@ export class SettingCoreService implements OnModuleInit {
     const rewards = await this.getRewards();
     const newItem: RewardItem = {
       ...dto,
-      updatedAt: new Date(),
+      updatedAt: dayjs().toISOString(),
     };
 
     // Check if exists
@@ -518,7 +522,7 @@ export class SettingCoreService implements OnModuleInit {
 
     const updatedItem: RewardItem = {
       ...dto,
-      updatedAt: new Date(),
+      updatedAt: dayjs().toISOString(),
     };
 
     rewards[index] = updatedItem;

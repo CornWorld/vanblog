@@ -1,6 +1,7 @@
 import { Controller, Get } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
+import dayjs from 'dayjs';
 
 import { DerivedView } from '../../shared/decorators/derived-view.decorator';
 import { HookService } from '../plugin/services/hook.service';
@@ -63,7 +64,7 @@ export class MetaController {
     const about = await this.settingCoreService.getAboutInfo();
 
     // 构造前端期望的 meta 结构
-    const now = new Date().toISOString();
+    const now = dayjs().toISOString();
 
     const links: FriendLinkDto[] = boot.friendLinks.map((f) => ({
       name: f.name,

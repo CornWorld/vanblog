@@ -120,11 +120,11 @@ describe('CategoryService', () => {
 
       mockDb.groupBy.mockResolvedValueOnce(mockCategories);
 
-      const result = await service.findAll();
+      const result = (await service.findAll()) as any;
 
       expect(result.items).toHaveLength(1);
-      expect(result.items[0].name).toBe('Technology');
-      expect(result.items[0].articleCount).toBe(5);
+      expect((result.items as any[])[0].name).toBe('Technology');
+      expect((result.items as any[])[0].articleCount).toBe(5);
       expect(result.total).toBe(1);
     });
   });

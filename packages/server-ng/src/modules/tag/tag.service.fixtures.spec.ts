@@ -65,11 +65,11 @@ describe('TagService with Vitest Fixtures', () => {
           articleCounts,
         );
 
-        const result = await tagService.findAll();
+        const result = (await tagService.findAll()) as any;
 
         expect(result.items).toHaveLength(1);
-        expect(result.items[0].name).toBe('Tag1');
-        expect(result.items[0].articleCount).toBe(3);
+        expect((result.items as any[])[0].name).toBe('Tag1');
+        expect((result.items as any[])[0].articleCount).toBe(3);
         expect(result.total).toBe(1);
       },
     );

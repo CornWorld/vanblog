@@ -7,6 +7,7 @@ import {
   SiteInfo,
   SiteTheme,
   Navigation,
+  type SocialType,
 } from './services/setting-core.service';
 
 @Controller()
@@ -14,7 +15,7 @@ export class SettingCoreTsRestController {
   constructor(private readonly settingCoreService: SettingCoreService) {}
 
   @TsRestHandler(contract.getSiteInfo)
-  getSiteInfo(): TsRestHandler<typeof contract.getSiteInfo> {
+  getSiteInfo(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.getSiteInfo, async () => {
       const data = await this.settingCoreService.getSiteInfo();
       return { status: 200, body: data };
@@ -22,7 +23,7 @@ export class SettingCoreTsRestController {
   }
 
   @TsRestHandler(contract.updateSiteInfo)
-  updateSiteInfo(): TsRestHandler<typeof contract.updateSiteInfo> {
+  updateSiteInfo(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.updateSiteInfo, async ({ body }) => {
       const siteInfoUpdate: Partial<SiteInfo> = {
         title: body.siteName,
@@ -36,7 +37,7 @@ export class SettingCoreTsRestController {
   }
 
   @TsRestHandler(contract.getLayoutSettings)
-  getLayoutSettings(): TsRestHandler<typeof contract.getLayoutSettings> {
+  getLayoutSettings(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.getLayoutSettings, async () => {
       const data = await this.settingCoreService.getLayoutSettings();
       return { status: 200, body: data };
@@ -44,7 +45,7 @@ export class SettingCoreTsRestController {
   }
 
   @TsRestHandler(contract.updateLayoutSettings)
-  updateLayoutSettings(): TsRestHandler<typeof contract.updateLayoutSettings> {
+  updateLayoutSettings(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.updateLayoutSettings, async ({ body }) => {
       const data = await this.settingCoreService.updateLayoutSettings(body);
       return { status: 200, body: data };
@@ -52,7 +53,7 @@ export class SettingCoreTsRestController {
   }
 
   @TsRestHandler(contract.getThemeSettings)
-  getThemeSettings(): TsRestHandler<typeof contract.getThemeSettings> {
+  getThemeSettings(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.getThemeSettings, async () => {
       const data = await this.settingCoreService.getThemeSettings();
       return { status: 200, body: data };
@@ -60,7 +61,7 @@ export class SettingCoreTsRestController {
   }
 
   @TsRestHandler(contract.updateThemeSettings)
-  updateThemeSettings(): TsRestHandler<typeof contract.updateThemeSettings> {
+  updateThemeSettings(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.updateThemeSettings, async ({ body }) => {
       const themeUpdate: Partial<SiteTheme> = {
         primaryColor: body.theme !== '' ? body.theme : '#000000',
@@ -72,7 +73,7 @@ export class SettingCoreTsRestController {
   }
 
   @TsRestHandler(contract.getFriendLinks)
-  getFriendLinks(): TsRestHandler<typeof contract.getFriendLinks> {
+  getFriendLinks(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.getFriendLinks, async () => {
       const data = await this.settingCoreService.getFriendLinks();
       return { status: 200, body: data };
@@ -80,11 +81,11 @@ export class SettingCoreTsRestController {
   }
 
   @TsRestHandler(contract.createFriendLink)
-  createFriendLink(): TsRestHandler<typeof contract.createFriendLink> {
+  createFriendLink(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.createFriendLink, async ({ body }) => {
       const data = await this.settingCoreService.createFriendLink({
-        name: body.name,
-        url: body.url,
+        name: String(body.name ?? ''),
+        url: String(body.url ?? ''),
         description: body.description,
         avatar: body.avatar,
       });
@@ -93,7 +94,7 @@ export class SettingCoreTsRestController {
   }
 
   @TsRestHandler(contract.updateFriendLink)
-  updateFriendLink(): TsRestHandler<typeof contract.updateFriendLink> {
+  updateFriendLink(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.updateFriendLink, async ({ params, body }) => {
       const index = params.index ?? -1;
       const data = await this.settingCoreService.updateFriendLink(index, body);
@@ -102,7 +103,7 @@ export class SettingCoreTsRestController {
   }
 
   @TsRestHandler(contract.deleteFriendLink)
-  deleteFriendLink(): TsRestHandler<typeof contract.deleteFriendLink> {
+  deleteFriendLink(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.deleteFriendLink, async ({ params }) => {
       const index = params.index ?? -1;
       const data = await this.settingCoreService.deleteFriendLink(index);
@@ -111,7 +112,7 @@ export class SettingCoreTsRestController {
   }
 
   @TsRestHandler(contract.getNavigation)
-  getNavigation(): TsRestHandler<typeof contract.getNavigation> {
+  getNavigation(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.getNavigation, async () => {
       const data = await this.settingCoreService.getNavigation();
       return { status: 200, body: data };
@@ -119,7 +120,7 @@ export class SettingCoreTsRestController {
   }
 
   @TsRestHandler(contract.updateNavigation)
-  updateNavigation(): TsRestHandler<typeof contract.updateNavigation> {
+  updateNavigation(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.updateNavigation, async ({ body }) => {
       const mapItem = (item: NavigationItem): Navigation => ({
         name: item.name,
@@ -136,7 +137,7 @@ export class SettingCoreTsRestController {
   }
 
   @TsRestHandler(contract.getCustomCode)
-  getCustomCode(): TsRestHandler<typeof contract.getCustomCode> {
+  getCustomCode(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.getCustomCode, async () => {
       const data = await this.settingCoreService.getCustomCode();
       return { status: 200, body: data };
@@ -144,7 +145,7 @@ export class SettingCoreTsRestController {
   }
 
   @TsRestHandler(contract.updateCustomCode)
-  updateCustomCode(): TsRestHandler<typeof contract.updateCustomCode> {
+  updateCustomCode(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.updateCustomCode, async ({ body }) => {
       const data = await this.settingCoreService.updateCustomCode(body);
       return { status: 200, body: data };
@@ -152,7 +153,7 @@ export class SettingCoreTsRestController {
   }
 
   @TsRestHandler(contract.getAboutInfo)
-  getAboutInfo(): TsRestHandler<typeof contract.getAboutInfo> {
+  getAboutInfo(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.getAboutInfo, async () => {
       const data = await this.settingCoreService.getAboutInfo();
       return { status: 200, body: data };
@@ -160,7 +161,7 @@ export class SettingCoreTsRestController {
   }
 
   @TsRestHandler(contract.updateAboutInfo)
-  updateAboutInfo(): TsRestHandler<typeof contract.updateAboutInfo> {
+  updateAboutInfo(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.updateAboutInfo, async ({ body }) => {
       const data = await this.settingCoreService.updateAboutInfo(body);
       return { status: 200, body: data };
@@ -168,7 +169,7 @@ export class SettingCoreTsRestController {
   }
 
   @TsRestHandler(contract.getSocials)
-  getSocials(): TsRestHandler<typeof contract.getSocials> {
+  getSocials(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.getSocials, async () => {
       const data = await this.settingCoreService.getSocials();
       return { status: 200, body: data };
@@ -176,34 +177,37 @@ export class SettingCoreTsRestController {
   }
 
   @TsRestHandler(contract.updateSocial)
-  updateSocial(): TsRestHandler<typeof contract.updateSocial> {
+  updateSocial(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.updateSocial, async ({ body }) => {
       const data = await this.settingCoreService.updateSocial({
-        type: body.type,
-        value: body.value,
+        type: (body.type ?? 'email') as SocialType,
+        value: String(body.value ?? ''),
       });
       return { status: 200, body: data };
     });
   }
 
   @TsRestHandler(contract.deleteSocial)
-  deleteSocial(): TsRestHandler<typeof contract.deleteSocial> {
+  deleteSocial(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.deleteSocial, async ({ params }) => {
-      const data = await this.settingCoreService.deleteSocial(params.type);
+      const data = await this.settingCoreService.deleteSocial(
+        (params.type ?? 'email') as SocialType,
+      );
       return { status: 200, body: data };
     });
   }
 
   @TsRestHandler(contract.getSocialTypes)
-  getSocialTypes(): TsRestHandler<typeof contract.getSocialTypes> {
-    return tsRestHandler(contract.getSocialTypes, () => {
+  getSocialTypes(): ReturnType<typeof tsRestHandler> {
+    return tsRestHandler(contract.getSocialTypes, async () => {
+      await Promise.resolve();
       const data = this.settingCoreService.getSocialTypes();
       return { status: 200, body: data };
     });
   }
 
   @TsRestHandler(contract.getWalineSetting)
-  getWalineSetting(): TsRestHandler<typeof contract.getWalineSetting> {
+  getWalineSetting(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.getWalineSetting, async () => {
       const data = await this.settingCoreService.getWalineSetting();
       return { status: 200, body: data };
@@ -211,7 +215,7 @@ export class SettingCoreTsRestController {
   }
 
   @TsRestHandler(contract.updateWalineSetting)
-  updateWalineSetting(): TsRestHandler<typeof contract.updateWalineSetting> {
+  updateWalineSetting(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.updateWalineSetting, async ({ body }) => {
       const data = await this.settingCoreService.updateWalineSetting(body);
       return { status: 200, body: data };
@@ -219,7 +223,7 @@ export class SettingCoreTsRestController {
   }
 
   @TsRestHandler(contract.getISRSetting)
-  getISRSetting(): TsRestHandler<typeof contract.getISRSetting> {
+  getISRSetting(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.getISRSetting, async () => {
       const data = await this.settingCoreService.getISRSetting();
       return { status: 200, body: data };
@@ -227,7 +231,7 @@ export class SettingCoreTsRestController {
   }
 
   @TsRestHandler(contract.updateISRSetting)
-  updateISRSetting(): TsRestHandler<typeof contract.updateISRSetting> {
+  updateISRSetting(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.updateISRSetting, async ({ body }) => {
       const data = await this.settingCoreService.updateISRSetting(body);
       return { status: 200, body: data };
@@ -235,7 +239,7 @@ export class SettingCoreTsRestController {
   }
 
   @TsRestHandler(contract.getLoginSetting)
-  getLoginSetting(): TsRestHandler<typeof contract.getLoginSetting> {
+  getLoginSetting(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.getLoginSetting, async () => {
       const data = await this.settingCoreService.getLoginSetting();
       return { status: 200, body: data };
@@ -243,7 +247,7 @@ export class SettingCoreTsRestController {
   }
 
   @TsRestHandler(contract.updateLoginSetting)
-  updateLoginSetting(): TsRestHandler<typeof contract.updateLoginSetting> {
+  updateLoginSetting(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.updateLoginSetting, async ({ body }) => {
       const data = await this.settingCoreService.updateLoginSetting(body);
       return { status: 200, body: data };
@@ -251,7 +255,7 @@ export class SettingCoreTsRestController {
   }
 
   @TsRestHandler(contract.getHttpsSetting)
-  getHttpsSetting(): TsRestHandler<typeof contract.getHttpsSetting> {
+  getHttpsSetting(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.getHttpsSetting, async () => {
       const data = await this.settingCoreService.getHttpsSetting();
       return { status: 200, body: data };
@@ -259,7 +263,7 @@ export class SettingCoreTsRestController {
   }
 
   @TsRestHandler(contract.updateHttpsSetting)
-  updateHttpsSetting(): TsRestHandler<typeof contract.updateHttpsSetting> {
+  updateHttpsSetting(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.updateHttpsSetting, async ({ body }) => {
       const data = await this.settingCoreService.updateHttpsSetting({
         redirect: body.redirect ?? false,
@@ -269,7 +273,7 @@ export class SettingCoreTsRestController {
   }
 
   @TsRestHandler(contract.getStaticSetting)
-  getStaticSetting(): TsRestHandler<typeof contract.getStaticSetting> {
+  getStaticSetting(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.getStaticSetting, async () => {
       const data = await this.settingCoreService.getStaticSetting();
       return { status: 200, body: data };
@@ -277,7 +281,7 @@ export class SettingCoreTsRestController {
   }
 
   @TsRestHandler(contract.updateStaticSetting)
-  updateStaticSetting(): TsRestHandler<typeof contract.updateStaticSetting> {
+  updateStaticSetting(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.updateStaticSetting, async ({ body }) => {
       const data = await this.settingCoreService.updateStaticSetting({
         storageType: body.storageType ?? 'local',
@@ -292,7 +296,7 @@ export class SettingCoreTsRestController {
   }
 
   @TsRestHandler(contract.getRewards)
-  getRewards(): TsRestHandler<typeof contract.getRewards> {
+  getRewards(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.getRewards, async () => {
       const data = await this.settingCoreService.getRewards();
       return { status: 200, body: data };
@@ -300,53 +304,55 @@ export class SettingCoreTsRestController {
   }
 
   @TsRestHandler(contract.createReward)
-  createReward(): TsRestHandler<typeof contract.createReward> {
+  createReward(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.createReward, async ({ body }) => {
       const data = await this.settingCoreService.createReward({
-        name: body.name,
-        value: body.value,
+        name: String(body.name ?? ''),
+        value: String(body.value ?? ''),
       });
       return { status: 201, body: data };
     });
   }
 
   @TsRestHandler(contract.updateReward)
-  updateReward(): TsRestHandler<typeof contract.updateReward> {
+  updateReward(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.updateReward, async ({ params, body }) => {
-      const data = await this.settingCoreService.updateReward(params.name, {
-        name: body.name,
-        value: body.value,
+      const data = await this.settingCoreService.updateReward(String(params.name ?? ''), {
+        name: String(body.name ?? ''),
+        value: String(body.value ?? ''),
       });
       return { status: 200, body: data };
     });
   }
 
   @TsRestHandler(contract.deleteReward)
-  deleteReward(): TsRestHandler<typeof contract.deleteReward> {
+  deleteReward(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.deleteReward, async ({ params }) => {
-      const data = await this.settingCoreService.deleteReward(params.name);
+      const data = await this.settingCoreService.deleteReward(String(params.name ?? ''));
       return { status: 200, body: data };
     });
   }
 
   @TsRestHandler(contract.getCaddyLog)
-  getCaddyLog(): TsRestHandler<typeof contract.getCaddyLog> {
-    return tsRestHandler(contract.getCaddyLog, () => {
+  getCaddyLog(): ReturnType<typeof tsRestHandler> {
+    return tsRestHandler(contract.getCaddyLog, async () => {
+      await Promise.resolve();
       const data = this.settingCoreService.getCaddyLog();
       return { status: 200, body: data };
     });
   }
 
   @TsRestHandler(contract.clearCaddyLog)
-  clearCaddyLog(): TsRestHandler<typeof contract.clearCaddyLog> {
-    return tsRestHandler(contract.clearCaddyLog, () => {
+  clearCaddyLog(): ReturnType<typeof tsRestHandler> {
+    return tsRestHandler(contract.clearCaddyLog, async () => {
+      await Promise.resolve();
       this.settingCoreService.clearCaddyLog();
       return { status: 200, body: 'Logs cleared' };
     });
   }
 
   @TsRestHandler(contract.getCaddyConfig)
-  getCaddyConfig(): TsRestHandler<typeof contract.getCaddyConfig> {
+  getCaddyConfig(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.getCaddyConfig, async () => {
       const data = await this.settingCoreService.getCaddyConfig();
       return { status: 200, body: JSON.stringify(data) };

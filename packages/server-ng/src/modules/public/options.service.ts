@@ -13,6 +13,9 @@ import {
   type IncludeOption,
 } from './dto/options.dto';
 
+import type { CategoryWithCountDto } from '../category/dto/category.dto';
+import type { TagWithCountDto } from '../tag/dto/tag.dto';
+
 @Injectable()
 export class OptionsService {
   constructor(
@@ -61,13 +64,11 @@ export class OptionsService {
     if (includeMap.categories) {
       tasks.push(
         this.categoryService.findAll().then((result) => {
-          response.categories = result.items.map(
-            (category: { name: string; slug: string; description?: string | null }) => ({
-              name: category.name,
-              slug: category.slug,
-              description: category.description ?? undefined,
-            }),
-          );
+          response.categories = (result.items as CategoryWithCountDto[]).map((category) => ({
+            name: category.name,
+            slug: category.slug ?? '',
+            description: category.description ?? undefined,
+          }));
         }),
       );
     }
@@ -75,9 +76,9 @@ export class OptionsService {
     if (includeMap.tags) {
       tasks.push(
         this.tagService.findAll().then((result) => {
-          response.tags = result.items.map((tag: { name: string; slug: string }) => ({
+          response.tags = (result.items as TagWithCountDto[]).map((tag) => ({
             name: tag.name,
-            slug: tag.slug,
+            slug: tag.slug ?? '',
           }));
         }),
       );

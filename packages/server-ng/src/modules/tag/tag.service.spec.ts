@@ -113,11 +113,11 @@ describe('TagService', () => {
       const articleCounts = { Tag1: 3 }; // tag name 'Tag1' has 3 articles
       mockQueryOptimizer.batchCountArticlesByTags.mockResolvedValueOnce(articleCounts);
 
-      const result = await service.findAll();
+      const result = (await service.findAll()) as any;
 
       expect(result.items).toHaveLength(1);
-      expect(result.items[0].name).toBe('Tag1');
-      expect(result.items[0].articleCount).toBe(3);
+      expect((result.items as any[])[0].name).toBe('Tag1');
+      expect((result.items as any[])[0].articleCount).toBe(3);
       expect(result.total).toBe(1);
     });
   });

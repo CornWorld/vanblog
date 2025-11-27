@@ -47,6 +47,16 @@ describe('Social Links Plugin', () => {
         register: vi.fn(),
         unregister: vi.fn().mockReturnValue(true),
       } as any,
+      hooks: {
+        register: vi.fn(),
+        unregister: vi.fn(),
+      } as any,
+      logger: {
+        log: vi.fn(),
+        debug: vi.fn(),
+        error: vi.fn(),
+        warn: vi.fn(),
+      } as any,
     };
   });
 

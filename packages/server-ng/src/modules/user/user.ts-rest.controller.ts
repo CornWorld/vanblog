@@ -11,7 +11,7 @@ export class UserTsRestController {
   constructor(private readonly userService: UserService) {}
 
   @TsRestHandler(contract.updateProfile)
-  updateProfile(@Req() req: Request): TsRestHandler<typeof contract.updateProfile> {
+  updateProfile(@Req() req: Request): ReturnType<typeof tsRestHandler> {
     type AuthRequest = Request & { user?: { id: number } };
     return tsRestHandler(contract.updateProfile, async ({ body }) => {
       const authUser = (req as AuthRequest).user;
@@ -31,7 +31,7 @@ export class UserTsRestController {
   }
 
   @TsRestHandler(contract.getCollaborators)
-  getCollaborators(): TsRestHandler<typeof contract.getCollaborators> {
+  getCollaborators(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.getCollaborators, async () => {
       const collaborators = await this.userService.getCollaborators();
       return { status: 200, body: collaborators };
@@ -39,7 +39,7 @@ export class UserTsRestController {
   }
 
   @TsRestHandler(contract.createCollaborator)
-  createCollaborator(): TsRestHandler<typeof contract.createCollaborator> {
+  createCollaborator(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.createCollaborator, async ({ body }) => {
       const newUser = await this.userService.create({
         username: (body as { name: string }).name,
@@ -53,7 +53,7 @@ export class UserTsRestController {
   }
 
   @TsRestHandler(contract.updateCollaborator)
-  updateCollaborator(): TsRestHandler<typeof contract.updateCollaborator> {
+  updateCollaborator(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.updateCollaborator, async ({ body }) => {
       const updatedUser = await this.userService.update((body as { id: number }).id, {
         password: body.password,
@@ -65,7 +65,7 @@ export class UserTsRestController {
   }
 
   @TsRestHandler(contract.deleteCollaborator)
-  deleteCollaborator(): TsRestHandler<typeof contract.deleteCollaborator> {
+  deleteCollaborator(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.deleteCollaborator, async ({ params }) => {
       await this.userService.remove(Number(params.id));
       return { status: 200, body: { success: true } };

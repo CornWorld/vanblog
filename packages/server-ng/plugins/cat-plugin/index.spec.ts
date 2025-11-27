@@ -42,6 +42,11 @@ const createMockContext = (): PluginContext => ({
     register: vi.fn(),
     unregister: vi.fn().mockReturnValue(true),
   },
+  hooks: {
+    register: vi.fn(),
+    unregister: vi.fn(),
+  } as any,
+  logger: mockLogger as any,
 });
 
 describe('🐱插件', () => {

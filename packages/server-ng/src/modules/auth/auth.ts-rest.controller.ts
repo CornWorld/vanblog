@@ -9,7 +9,7 @@ export class AuthTsRestController {
   constructor(private readonly authService: AuthService) {}
 
   @TsRestHandler(contract.login)
-  login(): TsRestHandler<typeof contract.login> {
+  login(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.login, async ({ body }) => {
       const user = await this.authService.validateUser(
         (body as { name: string }).name,
@@ -24,7 +24,7 @@ export class AuthTsRestController {
   }
 
   @TsRestHandler(contract.logout)
-  logout(): TsRestHandler<typeof contract.logout> {
+  logout(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.logout, async ({ headers }) => {
       const authHeader = headers.authorization;
       const token = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : null;

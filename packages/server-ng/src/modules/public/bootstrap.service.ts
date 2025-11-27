@@ -11,6 +11,8 @@ import { SettingCoreService } from '../setting/services/setting-core.service';
 import { TagService } from '../tag/tag.service';
 
 import type { PublicBootstrapResponseDto } from './bootstrap.dto';
+import type { CategoryWithCountDto } from '../category/dto/category.dto';
+import type { TagWithCountDto } from '../tag/dto/tag.dto';
 
 @Injectable()
 export class BootstrapService {
@@ -106,12 +108,12 @@ export class BootstrapService {
 
   private async getAllTags(): Promise<string[]> {
     const tagResponse = await this.tagService.findAll();
-    return tagResponse.items.map((tag: { name: string }) => tag.name);
+    return (tagResponse.items as TagWithCountDto[]).map((tag) => tag.name);
   }
 
   private async getAllCategories(): Promise<string[]> {
     const categoryResponse = await this.categoryService.findAll();
-    return categoryResponse.items.map((category: { name: string }) => category.name);
+    return (categoryResponse.items as CategoryWithCountDto[]).map((category) => category.name);
   }
 
   private getVersion(): string {

@@ -3,6 +3,7 @@ import * as path from 'path';
 
 import { Injectable, Logger, Inject } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import dayjs from 'dayjs';
 import { eq, and, desc } from 'drizzle-orm';
 import { Feed } from 'feed';
 
@@ -129,7 +130,7 @@ export class RssService {
         siteLogo = faviconUrl;
       }
 
-      const date = new Date();
+      const date = dayjs().toDate();
       const feed = new Feed({
         title: siteInfo.siteName,
         description: siteInfo.siteDesc,
@@ -176,8 +177,10 @@ export class RssService {
           content: html,
           author: [author],
           contributor: [author],
-          date: new Date(article.createdAt),
-          published: new Date(article.updatedAt !== '' ? article.updatedAt : article.createdAt),
+          date: dayjs(article.createdAt).toDate(),
+          published: dayjs(
+            article.updatedAt !== '' ? article.updatedAt : article.createdAt,
+          ).toDate(),
         });
       }
 

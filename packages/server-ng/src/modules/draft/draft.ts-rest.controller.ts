@@ -6,12 +6,14 @@ import { contract } from '@vanblog/shared';
 
 import { DraftService } from './draft.service';
 
+import type { DraftDto } from './dto/draft.dto';
+
 @Controller()
 export class DraftTsRestController {
   constructor(private readonly draftService: DraftService) {}
 
   @TsRestHandler(contract.getDrafts)
-  getDrafts(): any {
+  getDrafts() {
     return tsRestHandler(contract.getDrafts, async ({ query }) => {
       const result = await this.draftService.findAll({
         page: query.page ?? 1,
@@ -22,86 +24,86 @@ export class DraftTsRestController {
         sortOrder: 'desc',
       });
 
-      const items = result.items.map((item) => {
-        const createdAt = (item.createdAt as any).toISOString();
-        const updatedAt = (item.updatedAt as any).toISOString();
+      const items = (result.items as DraftDto[]).map((item) => ({
+        id: item.id,
+        title: item.title,
+        content: item.content,
+        pathname: item.pathname,
+        author: item.author,
+        category: item.category ?? undefined,
+        tags: item.tags ?? undefined,
+        createdAt: item.createdAt.toISOString(),
+        updatedAt: item.updatedAt.toISOString(),
+        version: item.version,
+        summary: undefined,
+        cover: undefined,
+      }));
 
-        const plain = Object.assign({}, item);
-        return {
-          ...plain,
-          createdAt,
-          updatedAt,
-          category: item.category ?? undefined,
-          tags: item.tags ?? undefined,
-          summary: undefined,
-          cover: undefined,
-        };
-      });
-
-      const plainResult = Object.assign({}, result);
       return {
         status: 200,
-        body: { ...plainResult, items } as any,
+        body: { ...result, items },
       };
     });
   }
 
   @TsRestHandler(contract.createDraft)
-  createDraft(): any {
+  createDraft() {
     return tsRestHandler(contract.createDraft, async ({ body }) => {
       const result = await this.draftService.create({
         ...body,
-        tags: body.tags ?? [],
+        tags: body.tags ? JSON.stringify(body.tags) : '[]',
       } as any);
 
-      const createdAt = (result.createdAt as any).toISOString();
-      const updatedAt = (result.updatedAt as any).toISOString();
-
-      const plain = Object.assign({}, result);
       return {
         status: 201,
         body: {
-          ...plain,
-          createdAt,
-          updatedAt,
+          id: result.id,
+          title: result.title,
+          content: result.content,
+          pathname: result.pathname,
+          author: result.author,
           category: result.category ?? undefined,
           tags: result.tags ?? undefined,
+          createdAt: result.createdAt.toISOString(),
+          updatedAt: result.updatedAt.toISOString(),
+          version: result.version,
           summary: undefined,
           cover: undefined,
-        } as any,
+        },
       };
     });
   }
 
   @TsRestHandler(contract.updateDraft)
-  updateDraft(): any {
+  updateDraft() {
     return tsRestHandler(contract.updateDraft, async ({ params, body }) => {
       const result = await this.draftService.update(Number(params.id), {
         ...body,
-        tags: body.tags ?? undefined,
-      } as any);
+        tags: body.tags ? JSON.stringify(body.tags) : null,
+      });
 
-      const createdAt = (result.createdAt as any).toISOString();
-      const updatedAt = (result.updatedAt as any).toISOString();
-
-      const plain = Object.assign({}, result);
       return {
         status: 200,
         body: {
-          ...plain,
-          createdAt,
-          updatedAt,
+          id: result.id,
+          title: result.title,
+          content: result.content,
+          pathname: result.pathname,
+          author: result.author,
           category: result.category ?? undefined,
           tags: result.tags ?? undefined,
+          createdAt: result.createdAt.toISOString(),
+          updatedAt: result.updatedAt.toISOString(),
+          version: result.version,
           summary: undefined,
           cover: undefined,
-        } as any,
+        },
       };
     });
   }
 
   @TsRestHandler(contract.deleteDraft)
-  deleteDraft(): any {
+  deleteDraft() {
     return tsRestHandler(contract.deleteDraft, async ({ params }) => {
       await this.draftService.remove(Number(params.id));
       return { status: 200, body: { success: true } };
@@ -109,31 +111,32 @@ export class DraftTsRestController {
   }
 
   @TsRestHandler(contract.getDraft)
-  getDraft(): any {
+  getDraft() {
     return tsRestHandler(contract.getDraft, async ({ params }) => {
       const result = await this.draftService.findOne(Number(params.id));
 
-      const createdAt = (result.createdAt as any).toISOString();
-      const updatedAt = (result.updatedAt as any).toISOString();
-
-      const plain = Object.assign({}, result);
       return {
         status: 200,
         body: {
-          ...plain,
-          createdAt,
-          updatedAt,
+          id: result.id,
+          title: result.title,
+          content: result.content,
+          pathname: result.pathname,
+          author: result.author,
           category: result.category ?? undefined,
           tags: result.tags ?? undefined,
+          createdAt: result.createdAt.toISOString(),
+          updatedAt: result.updatedAt.toISOString(),
+          version: result.version,
           summary: undefined,
           cover: undefined,
-        } as any,
+        },
       };
     });
   }
 
   @TsRestHandler(contract.publishDraft)
-  publishDraft(): any {
+  publishDraft() {
     return tsRestHandler(contract.publishDraft, async ({ params }) => {
       const result = await this.draftService.publish(Number(params.id), {
         isPublished: true,
@@ -142,13 +145,15 @@ export class DraftTsRestController {
         allowComment: true,
       });
 
-      const plain = Object.assign({}, result);
       return {
         status: 200,
         body: {
-          ...plain,
+          ...result,
           password: result.password ?? undefined,
-        } as any,
+          category: result.category ?? undefined,
+          tags: undefined,
+          private: result.private ?? undefined,
+        },
       };
     });
   }
