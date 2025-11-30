@@ -146,7 +146,7 @@ export class SettingCoreController {
   })
   async createFriendLink(
     @Body(new ZodValidationPipe(CreateFriendLinkSchema)) createFriendLinkDto: CreateFriendLinkDto,
-  ): Promise<FriendLink> {
+  ): Promise<FriendLink[]> {
     return this.settingCoreService.createFriendLink(createFriendLinkDto);
   }
 
@@ -161,7 +161,7 @@ export class SettingCoreController {
   async updateFriendLink(
     @Param('index', ParseIntPipe) index: number,
     @Body(new ZodValidationPipe(UpdateFriendLinkSchema)) updateFriendLinkDto: UpdateFriendLinkDto,
-  ): Promise<FriendLink> {
+  ): Promise<FriendLink[]> {
     return this.settingCoreService.updateFriendLink(index, updateFriendLinkDto);
   }
 

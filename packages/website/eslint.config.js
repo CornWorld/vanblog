@@ -14,5 +14,5 @@ export default tseslint.config(eslint.configs.recommended, ...tseslint.configs.r
   rules: {
     // Website-specific rules
   },
-  ignores: ['node_modules/**', 'dist/**', 'build/**', '*.d.ts'],
+  ignores: ['node_modules/**', 'dist/**', 'build/**', '*.d.ts', '.next/**'],
 });

@@ -318,11 +318,36 @@ export const contract = c.router({
   searchAdminArticles: {
     method: 'GET',
     path: '/admin/articles/search',
-    query: z.object({ link: z.string() }),
+    query: z.object({
+      keyword: z.string(),
+      page: z.coerce.number().optional(),
+      pageSize: z.coerce.number().optional(),
+      category: z.string().optional(),
+      tags: z.array(z.string()).optional(),
+      includeHidden: z
+        .string()
+        .transform((v) => v === 'true')
+        .optional(),
+      titleOnly: z
+        .string()
+        .transform((v) => v === 'true')
+        .optional(),
+      contentOnly: z
+        .string()
+        .transform((v) => v === 'true')
+        .optional(),
+      sortBy: z.string().optional(),
+      sortOrder: z.enum(['ASC', 'DESC']).optional(),
+    }),
     responses: {
-      200: z.array(ArticleSchema),
+      200: z.object({
+        items: z.array(ArticleSchema),
+        total: z.number(),
+        page: z.number(),
+        pageSize: z.number(),
+      }),
     },
-    summary: 'Search articles by link',
+    summary: 'Search articles (admin)',
   },
   // Draft
   getDrafts: {

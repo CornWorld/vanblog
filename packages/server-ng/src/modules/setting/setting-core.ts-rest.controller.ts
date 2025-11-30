@@ -29,7 +29,7 @@ export class SettingCoreTsRestController {
         title: body.siteName,
         description: body.siteDescription ?? '',
         author: body.authorName ?? '',
-        keywords: body.siteKeywords ? body.siteKeywords.split(',').map((k) => k.trim()) : [],
+        keywords: body.siteKeywords ? body.siteKeywords.split(',').map((k: string) => k.trim()) : [],
       };
       const data = await this.settingCoreService.updateSiteInfo(siteInfoUpdate);
       return { status: 200, body: data };

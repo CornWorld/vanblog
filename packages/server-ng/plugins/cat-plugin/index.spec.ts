@@ -87,7 +87,7 @@ describe('🐱插件', () => {
     it('article|beforeCreate: 应添加喵并增加计数', async () => {
       const hook = plugin.hooks?.['article|beforeCreate'];
       expect(hook).toBeDefined();
-      if (!hook || hook.type !== 'filter') return;
+      if (hook?.type !== 'filter') return;
 
       const input = { title: 'Hello', content: 'World', tags: ['tag1', 'tag2喵'] } as any;
       const result = (hook as any).handler(input, mockContext);

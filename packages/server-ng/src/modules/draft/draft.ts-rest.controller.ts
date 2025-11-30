@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 import { Controller } from '@nestjs/common';
 import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
 import { contract } from '@vanblog/shared';
@@ -52,7 +50,7 @@ export class DraftTsRestController {
       const result = await this.draftService.create({
         ...body,
         tags: body.tags ? JSON.stringify(body.tags) : '[]',
-      } as any);
+      });
 
       return {
         status: 201,

@@ -9,7 +9,7 @@ export class TagTsRestController {
   constructor(private readonly tagService: TagService) {}
 
   @TsRestHandler(contract.getTags)
-  getTags(): TsRestHandler<typeof contract.getTags> {
+  getTags() {
     return tsRestHandler(contract.getTags, async () => {
       const result = await this.tagService.findAll();
       return { status: 200, body: result.items };
@@ -17,7 +17,7 @@ export class TagTsRestController {
   }
 
   @TsRestHandler(contract.updateTag)
-  updateTag(): TsRestHandler<typeof contract.updateTag> {
+  updateTag() {
     return tsRestHandler(contract.updateTag, async ({ params, body }) => {
       const tag = await this.tagService.findByName((params as { name: string }).name);
       if (!tag) {
@@ -29,7 +29,7 @@ export class TagTsRestController {
   }
 
   @TsRestHandler(contract.deleteTag)
-  deleteTag(): TsRestHandler<typeof contract.deleteTag> {
+  deleteTag() {
     return tsRestHandler(contract.deleteTag, async ({ params }) => {
       const tag = await this.tagService.findByName((params as { name: string }).name);
       if (!tag) {

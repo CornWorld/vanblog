@@ -49,13 +49,13 @@ export class TokenService {
     const refreshExpiresIn = this.configService.get<string>('JWT_REFRESH_EXPIRES_IN', '7d');
 
     const accessToken = this.jwtService.sign(payload, {
-      expiresIn,
+      expiresIn: expiresIn as any,
     });
 
     const refreshToken = this.jwtService.sign(
       { ...payload, tokenType: 'refresh' },
       {
-        expiresIn: refreshExpiresIn,
+        expiresIn: refreshExpiresIn as any,
       },
     );
 
@@ -91,7 +91,7 @@ export class TokenService {
     const expiresIn =
       customExpiresIn ?? this.configService.get<string>('JWT_GUEST_EXPIRES_IN', '12h');
 
-    return this.jwtService.sign(payload, { expiresIn });
+    return this.jwtService.sign(payload, { expiresIn: expiresIn as any });
   }
 
   /**

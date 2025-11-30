@@ -311,21 +311,21 @@ export class SettingCoreService implements OnModuleInit {
     return (await this.getConfig<FriendLink[]>('friendLinks')) ?? [];
   }
 
-  async createFriendLink(dto: FriendLink): Promise<FriendLink> {
+  async createFriendLink(dto: FriendLink): Promise<FriendLink[]> {
     const friends = await this.getFriendLinks();
     friends.push(dto);
     await this.updateConfig('friendLinks', friends);
-    return dto;
+    return friends;
   }
 
-  async updateFriendLink(index: number, dto: Partial<FriendLink>): Promise<FriendLink> {
+  async updateFriendLink(index: number, dto: Partial<FriendLink>): Promise<FriendLink[]> {
     const friends = await this.getFriendLinks();
     if (index < 0 || index >= friends.length) {
       throw new Error('Invalid index');
     }
     friends[index] = { ...friends[index], ...dto };
     await this.updateConfig('friendLinks', friends);
-    return friends[index];
+    return friends;
   }
 
   async deleteFriendLink(index: number): Promise<FriendLink[]> {
