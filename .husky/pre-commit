@@ -52,10 +52,7 @@ printf 'husky debug: which git => %s\n' "$(command -v git || echo ERR)"
 GIT_TRACE= GIT_TRACE_SETUP= GIT_CURL_VERBOSE= GIT_TRACE_PACKET= GIT_TRACE_PERFORMANCE= \
 node -e "import('./node_modules/nano-staged/lib/git.js').then(async m=>{const g=m.createGit('$REPO_ROOT'); const p=await g.getGitPaths(); console.log('husky ns-probe:', JSON.stringify(p));})"
 
-# Prefer running nano-staged via Node ESM with explicit cwd to avoid env quirks (also disable git tracing)
+# Run nano-staged exactly once via pnpm, with explicit cwd and sanitized git env
 GIT_TRACE= GIT_TRACE_SETUP= GIT_CURL_VERBOSE= GIT_TRACE_PACKET= GIT_TRACE_PERFORMANCE= \
-node -e "import('./node_modules/nano-staged/lib/index.js').then(m=>m.default({cwd: '$REPO_ROOT'}))" || {
-  echo "husky warn: nano-staged via ESM failed, falling back to local binary" >&2
-  GIT_TRACE= GIT_TRACE_SETUP= GIT_CURL_VERBOSE= GIT_TRACE_PACKET= GIT_TRACE_PERFORMANCE= \
-  "$REPO_ROOT/node_modules/.bin/nano-staged"
-}
+PNPM_HOME= PNPM_GLOBAL_BIN= \
+pnpm exec nano-staged --cwd "$REPO_ROOT"
