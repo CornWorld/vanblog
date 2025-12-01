@@ -1,12 +1,5 @@
 import { z } from 'zod';
-import dayjs from 'dayjs';
-
-export const isoDate = z
-  .string()
-  .refine((val) => dayjs(val).isValid(), {
-    message: 'Invalid date string',
-  })
-  .describe('ISO 8601 date string, validated by dayjs');
+import { dataCodec } from './date-codecs.js';
 
 export const commonSchemas = {
   id: z.number().int().positive('ID must be a positive integer').describe('Unique identifier'),
@@ -218,7 +211,7 @@ export const SocialTypeEnum = z.enum([
 export const SocialItemSchema = z.object({
   type: SocialTypeEnum,
   value: z.string(),
-  updatedAt: isoDate,
+  updatedAt: dataCodec,
 });
 
 export type SocialItem = z.infer<typeof SocialItemSchema>;
@@ -308,7 +301,7 @@ export type UpdateStaticSetting = z.infer<typeof UpdateStaticSettingSchema>;
 export const RewardItemSchema = z.object({
   name: z.string(),
   value: z.string(),
-  updatedAt: isoDate,
+  updatedAt: dataCodec,
 });
 
 export type RewardItem = z.infer<typeof RewardItemSchema>;
@@ -328,19 +321,19 @@ export const CaddyConfigSchema = z.string();
 
 // Auth & User
 export const LoginSchema = z.object({
-  username: z.string(),
+  name: z.string(),
   password: z.string(),
 });
 
 export const UserSchema = z.object({
   id: z.number(),
-  username: z.string(),
+  name: z.string(),
   nickname: z.string().optional(),
   avatar: z.string().optional(),
   email: z.string().optional(),
   permissions: z.array(z.string()),
-  createdAt: isoDate,
-  updatedAt: isoDate,
+  createdAt: dataCodec,
+  updatedAt: dataCodec,
 });
 
 export const UpdateUserSchema = z.object({
@@ -352,7 +345,7 @@ export const UpdateUserSchema = z.object({
 });
 
 export const CreateCollaboratorSchema = z.object({
-  username: z.string(),
+  name: z.string(),
   password: z.string(),
   nickname: z.string().optional(),
   permissions: z.array(z.string()),
@@ -370,7 +363,7 @@ export const TokenSchema = z.object({
   _id: z.string(),
   name: z.string(),
   token: z.string(),
-  createdAt: isoDate,
+  createdAt: dataCodec,
 });
 
 export const CreateTokenSchema = z.object({
@@ -383,8 +376,8 @@ export const CategorySchema = z.object({
   name: z.string(),
   description: z.string().optional(),
   count: z.number().optional(),
-  createAt: isoDate,
-  updateAt: isoDate,
+  createAt: dataCodec,
+  updateAt: dataCodec,
 });
 
 export const CreateCategorySchema = z.object({
@@ -400,8 +393,8 @@ export const TagSchema = z.object({
   id: z.number(),
   name: z.string(),
   count: z.number().optional(),
-  createAt: isoDate,
-  updateAt: isoDate,
+  createAt: dataCodec,
+  updateAt: dataCodec,
 });
 
 export const CreateTagSchema = z.object({
@@ -413,25 +406,23 @@ export const UpdateTagSchema = z.object({
 });
 
 // Article & Draft
-// NOTE: tags is an array of tag IDs (strings), not full Tag objects
-// All tag ID references must be validated against the database/cache
 export const ArticleSchema = z.object({
   id: z.number(),
   title: z.string(),
   content: z.string(),
   summary: z.string().optional(),
   cover: z.string().optional(),
-  category: z.string().nullable(),
-  tags: z.array(z.string()).nullable(),
+  category: z.string().optional(),
+  tags: z.array(TagSchema).optional(),
   views: z.number().default(0),
   likes: z.number().default(0),
   isTop: z.boolean().default(false),
   isHot: z.boolean().default(false),
-  pubTime: isoDate,
-  createdAt: isoDate,
-  updatedAt: isoDate,
+  pubTime: dataCodec,
+  createdAt: dataCodec,
+  updatedAt: dataCodec,
   private: z.boolean().default(false),
-  password: z.string().nullable(),
+  password: z.string().optional(),
   toc: z.string().optional(),
 });
 
@@ -444,7 +435,7 @@ export const CreateArticleSchema = z.object({
   tags: z.array(z.string()).optional(),
   isTop: z.boolean().optional(),
   isHot: z.boolean().optional(),
-  pubTime: isoDate.optional(),
+  pubTime: dataCodec.optional(),
   private: z.boolean().optional(),
   password: z.string().optional(),
 });
@@ -459,8 +450,8 @@ export const DraftSchema = z.object({
   cover: z.string().optional(),
   category: z.string().optional(),
   tags: z.array(z.string()).optional(),
-  createdAt: isoDate,
-  updatedAt: isoDate,
+  createdAt: dataCodec,
+  updatedAt: dataCodec,
 });
 
 export const CreateDraftSchema = z.object({
@@ -482,7 +473,7 @@ export const MediaSchema = z.object({
   path: z.string(),
   type: z.string(),
   size: z.number(),
-  createdAt: isoDate,
+  createdAt: dataCodec,
 });
 
 // Custom Page
@@ -490,8 +481,8 @@ export const CustomPageSchema = z.object({
   id: z.string(),
   name: z.string(),
   path: z.string(),
-  createdAt: isoDate,
-  updatedAt: isoDate,
+  createdAt: dataCodec,
+  updatedAt: dataCodec,
 });
 
 export const CreateCustomPageSchema = z.object({
@@ -521,7 +512,7 @@ export const PipelineSchema = z.object({
   id: z.string(),
   name: z.string(),
   status: z.string(),
-  lastRun: isoDate.optional(),
+  lastRun: dataCodec.optional(),
 });
 
 export const CreatePipelineSchema = z.object({
@@ -546,7 +537,7 @@ export const AnalyticsLogSchema = z.object({
   id: z.number(),
   type: z.string(),
   content: z.string(),
-  createdAt: isoDate,
+  createdAt: dataCodec,
 });
 
 // Meta
