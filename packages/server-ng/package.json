@@ -53,6 +53,9 @@
     "@nestjs/platform-express": "^11.1.5",
     "@nestjs/schedule": "^5.0.1",
     "@nestjs/throttler": "^6.4.0",
+    "@ts-rest/core": "3.53.0-rc.1",
+    "@ts-rest/nest": "3.53.0-rc.1",
+    "@vanblog/shared": "workspace:*",
     "axios": "^1.8.4",
     "bcrypt": "^6.0.0",
     "cache-manager": "^7.1.1",
@@ -71,10 +74,7 @@
     "markdown-it-katex": "^2.0.3",
     "markdown-it-task-lists": "^2.1.1",
     "multer": "^2.0.2",
-    "@ts-rest/core": "3.53.0-rc.1",
-    "@ts-rest/nest": "3.53.0-rc.1",
-    "@vanblog/shared": "workspace:*",
-    "nestjs-zod": "5.0.0-beta.20250731T202215",
+    "next": "16.0.7",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
     "passport-local": "^1.0.0",
@@ -119,7 +119,7 @@
     "typescript-eslint": "^8.38.0",
     "unplugin-swc": "^1.5.4",
     "vite": "^7.2.4",
-    "vitest": "^4.0.14",
-    "vite-plugin-node": "^5.0.1"
+    "vite-plugin-node": "^5.0.1",
+    "vitest": "^4.0.14"
   }
 }

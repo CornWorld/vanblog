@@ -66,13 +66,13 @@ jobs:
 
       - name: Coverage summary and soft threshold
         run: >-
-          node -e "const fs=require('fs');const p='packages/server-ng/coverage/coverage-summary.json';
-          if(!fs.existsSync(p)){console.log('::warning::No coverage summary found at '+p);process.exit(0);} 
+          node -e "const fs=require('fs');const p='packages/server-ng/coverage/coverage-summary.json'; if(!fs.existsSync(p)){console.log('::warning::No coverage summary found at '+p);process.exit(0);} 
           const sum=JSON.parse(fs.readFileSync(p,'utf8')).total;const min=80; 
           const m=k=>sum[k]?.pct??0;const lines=m('lines'),fns=m('functions'),br=m('branches'),stmts=m('statements'); 
           const md=['### server-ng Coverage Summary','',`- Threshold: ${min}%`,`- Lines: ${lines}%`,`- Functions: ${fns}%`,`- Branches: ${br}%`,`- Statements: ${stmts}%`].join('\n'); 
           try{fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY||'/dev/null',md+'\n');}catch(e){} 
           if(lines<min||fns<min||br<min||stmts<min){console.log(`::warning::Coverage below threshold ${min}% (lines=${lines} fns=${fns} br=${br} stmts=${stmts})`);}else{console.log(`Coverage OK >= ${min}% (lines=${lines} fns=${fns} br=${br} stmts=${stmts})`);}" 
+
 
       - name: Coverage hard threshold (default branch and PRs only)
         if: ${{ github.ref == format('refs/heads/{0}', env.DEFAULT_BRANCH) || (github.event_name == 'pull_request' && github.base_ref == env.DEFAULT_BRANCH) }}
@@ -83,6 +83,7 @@ jobs:
           const m=k=>sum[k]?.pct??0;const lines=m('lines'),fns=m('functions'),br=m('branches'),stmts=m('statements'); 
           if(lines<min||fns<min||br<min||stmts<min){console.log(`::error::Coverage below threshold ${min}% (lines=${lines} fns=${fns} br=${br} stmts=${stmts})`);process.exit(1);} 
           console.log(`Coverage OK >= ${min}% (lines=${lines} fns=${fns} br=${br} stmts=${stmts})`);"
+
 
       - name: Upload coverage artifact
         uses: actions/upload-artifact@v4
