@@ -1,4 +1,3 @@
-import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
 
 // 存储配置键（集中导出，避免重复定义）
@@ -38,5 +37,5 @@ export const StorageConfigResponseSchema = z.object({
   picgoConfig: PicgoConfigSchema.describe('PicGo configuration').optional(),
 });
 
-export class UpdateStorageConfigDto extends createZodDto(UpdateStorageConfigSchema) {}
-export class StorageConfigResponseDto extends createZodDto(StorageConfigResponseSchema) {}
+export type UpdateStorageConfigDto = z.infer<typeof UpdateStorageConfigSchema>;
+export type StorageConfigResponseDto = z.infer<typeof StorageConfigResponseSchema>;

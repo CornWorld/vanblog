@@ -30,12 +30,24 @@
 - **数据库**: Sqlite + libsql + drizzle orm + drizzle-zod
 - **测试框架**: Vitest （而不是 Jest）
 - **API 文档**: Swagger/OpenAPI
-- **类型验证**: Zod 3 + Ts-rest
+- **类型验证**: Zod 4 + Ts-rest(rc)
+- **API 路径**: 统一使用 `/v2/xxx` 前缀（不使用 `/admin/xxx`）
+- **API Contracts**:
+  - 所有 contracts 定义在 `packages/shared/src/contracts/`
+  - `shared/src/contract.ts` 是旧版单体 contract，仍在使用
+  - `shared/src/contracts/*.ts` 是新版 factory contracts
+- **Contract 模式**: 使用 factory pattern `createXContract(c)` 而不是直接实例化
+- **Handler 签名**: 统一使用 `async (args) => { ...args.body, args.params, args.query }`
+- **Status 字面量**: 统一使用 `status: 200 as const` 而不是 `status: 200`
+- **字段命名**: 统一使用 `createdAt/updatedAt`，不使用 `createAt/updateAt`
+- **server-ng 内部 contracts**: 不应在 `server-ng/src/modules/` 中定义 contracts，应统一迁移到 shared
 
 ## 5. 开发原则
 
 - **模块化架构**: 每个功能域独立成模块
-- **API 设计一致性**: RESTful 规范，v2 API
+- **API 设计一致性**: RESTful 规范，v2 API，使用 ts-rest shared contracts
+- **Contract 优先**: 所有 API 定义在 shared contracts，单一数据源
+- **类型安全**: 使用 Zod 验证 + TypeScript 类型推导，避免 any
 - **性能优先**: 注重查询优化和缓存策略
 - **安全第一**: JWT 认证，请求验证，异常处理
 
@@ -47,6 +59,7 @@
 - 模块: `*.module.ts`
 - 数据模型: `*.schema.ts`
 - DTO: `*.dto.ts`
+- Contracts: `*.contract.ts` (位于 `packages/shared/src/contracts/`)
 
 ## 7. 提交规范
 
@@ -58,15 +71,21 @@
 
 ## 8. 注意事项
 
-- **不要猜测需求**，参考现有 `/packages/server` 的实现
-- **保持向后兼容**，v2 API 与 v1 API 共存
+- **不要猜测需求**，参考现有 `/packages/server-ng` 的实现
 - **优先实现核心功能**，再考虑高级特性
 - **遇到不确定的地方**，查看 VanBlog 项目文档或现有代码，必要时咨询项目维护者
+- **新建 Controller 时**：
+  1. 先在 `packages/shared/src/contracts/` 定义 contract（使用 factory pattern）
+  2. 在 `packages/shared/src/contracts/index.ts` 导出
+  3. Controller 中导入并使用 shared contract
+  4. Handler 使用 `async (args)` 统一签名
+  5. Status 使用 `as const` 字面量
+  6. 注意通用 API 所需的装饰器（@Perm, @Throttle, @DerivedView 等）
 
 ## 9. 资源参考
 
 - VanBlog 文档: `/Users/corn/Code/vanblog/docs`
-- 现有服务器代码: `/Users/corn/Code/vanblog/packages/server`
+- 现有服务器代码: `/Users/corn/Code/vanblog/packages/server-ng`
 - NestJS 最佳实践: 遵循官方推荐的项目结构和编码规范
 
 ### dev server 使用指南

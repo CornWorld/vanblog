@@ -1,7 +1,7 @@
 // 🐱插件：在文章保存时在内容/标题/标签的结尾添加"喵"
 
 import { Logger } from '@nestjs/common';
-import dayjs from 'dayjs';
+import { dayjs } from '@vanblog/shared';
 
 import { withPluginPrefix } from '../../src/modules/plugin/utils/prefix.util';
 

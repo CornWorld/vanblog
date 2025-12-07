@@ -254,7 +254,7 @@ export async function getCategoryPageProps(): Promise<CategoryPageProps> {
   const categoryData = await getArticlesByCategory();
 
   // Get all categories from meta data
-  const categories = data.meta.categories;
+  const { categories } = data.meta;
 
   // Convert to a flat array of articles
   const articles = Object.values(categoryData).flat();
@@ -319,7 +319,7 @@ export async function getAboutPageProps(): Promise<AboutPageProps> {
   const data = normalizePublicMeta(rawData);
   const layoutProps = getLayoutPropsFromData(rawData);
   const authorCardProps = getAuthorCardProps(rawData);
-  const about = rawData.meta.about;
+  const { about } = rawData.meta;
 
   const showDonateInfo = data.meta.siteInfo.showDonateInfo ? 'true' : 'false';
   const showDonateInAbout =

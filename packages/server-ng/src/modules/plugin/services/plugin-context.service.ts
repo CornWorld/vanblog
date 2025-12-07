@@ -1,5 +1,5 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import dayjs from 'dayjs';
+import { dayjs } from '@vanblog/shared';
 import { and, eq } from 'drizzle-orm';
 
 import { ConfigService } from '../../../config/config.service';
@@ -46,7 +46,7 @@ export class PluginDataStorageService implements PluginDataStorage {
 
   async set(key: string, value: unknown): Promise<void> {
     const stringValue = JSON.stringify(value);
-    const now = dayjs().toISOString();
+    const now = dayjs().format();
 
     // Single-statement UPSERT to avoid insert-then-update race and extra roundtrip
     await (

@@ -1,4 +1,3 @@
-import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
 
 import { insertAnalyticsSchema } from '../../../database';
@@ -47,6 +46,5 @@ export const RecordAnalyticsSchema = BaseRecordSchema.extend({
   }
 });
 
-export class RecordAnalyticsDto extends createZodDto(RecordAnalyticsSchema) {}
-
+export type RecordAnalyticsDto = z.infer<typeof RecordAnalyticsSchema>;
 export type RecordAnalyticsType = z.infer<typeof RecordAnalyticsSchema>;

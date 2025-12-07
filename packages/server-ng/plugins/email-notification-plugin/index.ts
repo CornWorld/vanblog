@@ -168,7 +168,7 @@ async function sendEmail(context: PluginContext, subject: string, content: strin
 
     logger.log(withPluginPrefix(PLUGIN_PREFIX, `邮件发送成功: ${subject}`));
   } catch (error) {
-    logger.error(withPluginPrefix(PLUGIN_PREFIX, `邮件发送失败: ${String(error)}`));
+    logger.error(withPluginPrefix(PLUGIN_PREFIX, `邮件发送失败: ${error}`));
   }
 }
 
@@ -201,7 +201,7 @@ const plugin: Plugin = {
     logger.log(withPluginPrefix(PLUGIN_PREFIX, '邮件通知插件正在销毁...'));
 
     const emailsSent = await context.data.get('emails_sent');
-    logger.log(withPluginPrefix(PLUGIN_PREFIX, `插件已发送 ${String(emailsSent)} 封邮件`));
+    logger.log(withPluginPrefix(PLUGIN_PREFIX, `插件已发送 ${emailsSent} 封邮件`));
 
     // 清理数据
     await context.data.clear();

@@ -11,12 +11,10 @@ export class AuthTsRestController {
   @TsRestHandler(contract.login)
   login(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.login, async ({ body }) => {
-      const user = await this.authService.validateUser(
-        (body as { name: string }).name,
-        (body as { password: string }).password,
-      );
+      const { name, password } = body;
+      const user = await this.authService.validateUser(name, password);
       if (!user) {
-        return { status: 401, body: { message: 'Invalid credentials' } as unknown as never };
+        return { status: 401, body: { message: 'Invalid credentials' } };
       }
       const result = this.authService.login(user);
       return { status: 200, body: { token: result.access_token } };

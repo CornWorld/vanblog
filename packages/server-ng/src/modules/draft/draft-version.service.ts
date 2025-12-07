@@ -1,13 +1,14 @@
 import { Injectable, NotFoundException, Inject } from '@nestjs/common';
-import dayjs from 'dayjs';
+import { dayjs } from '@vanblog/shared';
 import { eq, and, desc, sql } from 'drizzle-orm';
+import { z } from 'zod';
 
 import { DATABASE_CONNECTION, type Database } from '../../database';
 import { draftVersions, drafts } from '../../database/schema';
 import { selectDraftVersionSchema } from '../../database/zod-schemas';
 import { safeParseJson, dataSchemas } from '../../shared/zod';
 
-import { DraftVersionDto } from './dto/draft.dto';
+import { DraftVersionSchema } from './dto/draft.dto';
 
 @Injectable()
 export class DraftVersionService {
@@ -16,7 +17,7 @@ export class DraftVersionService {
     private readonly db: Database,
   ) {}
 
-  async createVersion(draftId: number): Promise<DraftVersionDto> {
+  async createVersion(draftId: number): Promise<z.infer<typeof DraftVersionSchema>> {
     // Get current draft to save as version
     const currentDraftResults = await this.db
       .select()
@@ -64,11 +65,11 @@ export class DraftVersionService {
       tags: safeParseJson(newVersion.tags, dataSchemas.tagsArray) ?? [],
       pathname: newVersion.pathname ?? null,
       category: newVersion.category ?? null,
-      createdAt: dayjs(newVersion.createdAt),
+      createdAt: dayjs(newVersion.createdAt).format(),
     };
   }
 
-  async getVersions(draftId: number): Promise<DraftVersionDto[]> {
+  async getVersions(draftId: number): Promise<z.infer<typeof DraftVersionSchema>[]> {
     const results = await this.db
       .select()
       .from(draftVersions)
@@ -85,12 +86,12 @@ export class DraftVersionService {
         tags: safeParseJson(version.tags, dataSchemas.tagsArray) ?? [],
         pathname: version.pathname ?? null,
         category: version.category ?? null,
-        createdAt: parsed.data.createdAt,
+        createdAt: dayjs(parsed.data.createdAt).format(),
       };
     });
   }
 
-  async getVersion(draftId: number, version: number): Promise<DraftVersionDto> {
+  async getVersion(draftId: number, version: number): Promise<z.infer<typeof DraftVersionSchema>> {
     const results = await this.db
       .select()
       .from(draftVersions)
@@ -114,7 +115,7 @@ export class DraftVersionService {
       tags: safeParseJson(results[0].tags, dataSchemas.tagsArray) ?? [],
       pathname: versionData.pathname ?? null,
       category: versionData.category ?? null,
-      createdAt: versionData.createdAt,
+      createdAt: dayjs(versionData.createdAt).format(),
     };
   }
 
@@ -133,7 +134,7 @@ export class DraftVersionService {
           versionData.tags && versionData.tags.length > 0 ? JSON.stringify(versionData.tags) : null,
         category: versionData.category ?? null,
         author: versionData.author,
-        updatedAt: dayjs().toISOString(),
+        updatedAt: dayjs().format(),
       })
       .where(eq(drafts.id, draftId));
   }

@@ -1,5 +1,6 @@
 import { NotFoundException } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
+import { dayjs } from '@vanblog/shared';
 import { vi, describe, beforeEach, it, expect } from 'vitest';
 
 import { DATABASE_CONNECTION } from '../../database';
@@ -129,7 +130,7 @@ describe('DraftVersionService', () => {
           author: 'admin',
           pathname: null,
           category: null,
-          createdAt: new Date().toISOString(),
+          createdAt: dayjs().format(),
         },
         {
           id: 1,
@@ -141,7 +142,7 @@ describe('DraftVersionService', () => {
           author: 'admin',
           pathname: null,
           category: null,
-          createdAt: new Date().toISOString(),
+          createdAt: dayjs().format(),
         },
       ];
 
@@ -167,7 +168,7 @@ describe('DraftVersionService', () => {
         author: 'admin',
         pathname: null,
         category: null,
-        createdAt: new Date().toISOString(),
+        createdAt: dayjs().format(),
       };
 
       mockDb.limit.mockResolvedValueOnce([mockVersion]);
@@ -197,7 +198,7 @@ describe('DraftVersionService', () => {
         author: 'admin',
         pathname: null,
         category: null,
-        createdAt: new Date().toISOString(),
+        createdAt: dayjs().format(),
       };
 
       // Mock for getVersion call

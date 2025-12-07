@@ -14,16 +14,18 @@ export const TimelineArticleInputSchema = z.object({
   viewer: z.number(),
   createdAt: dateStr,
   updatedAt: dateStr,
+  pubTime: dateStr,
 });
 
 export type TimelineArticleInput = z.input<typeof TimelineArticleInputSchema>;
 
 export type TimelineArticleDecoded = Omit<
   z.output<typeof TimelineArticleInputSchema>,
-  'createdAt' | 'updatedAt'
+  'createdAt' | 'updatedAt' | 'pubTime'
 > & {
   createdAt: import('dayjs').Dayjs;
   updatedAt: import('dayjs').Dayjs;
+  pubTime: import('dayjs').Dayjs;
 };
 
 export const TimelineArticleOutputSchema = z.object({
@@ -39,6 +41,7 @@ export const TimelineArticleOutputSchema = z.object({
   viewer: z.number(),
   createdAt: dateStr,
   updatedAt: dateStr,
+  pubTime: dateStr,
 });
 
 export type TimelineArticleOutput = z.output<typeof TimelineArticleOutputSchema>;
@@ -48,6 +51,7 @@ export function decodeTimelineArticle(input: TimelineArticleInput): TimelineArti
     ...input,
     createdAt: dataCodec.decode(input.createdAt),
     updatedAt: dataCodec.decode(input.updatedAt),
+    pubTime: dataCodec.decode(input.pubTime),
   } as TimelineArticleDecoded;
 }
 
@@ -56,6 +60,7 @@ export function encodeTimelineArticle(decoded: TimelineArticleDecoded): Timeline
     ...decoded,
     createdAt: dataCodec.encode(decoded.createdAt),
     updatedAt: dataCodec.encode(decoded.updatedAt),
+    pubTime: dataCodec.encode(decoded.pubTime),
   } as TimelineArticleInput;
 }
 
@@ -72,6 +77,7 @@ export type TimelineArticleDbRow = {
   viewer: number | null;
   createdAt: string;
   updatedAt: string;
+  pubTime: string;
 };
 
 export function toTimelineArticleInputFromDb(row: TimelineArticleDbRow): TimelineArticleInput {
@@ -98,5 +104,6 @@ export function toTimelineArticleInputFromDb(row: TimelineArticleDbRow): Timelin
     viewer: row.viewer ?? 0,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
+    pubTime: row.pubTime,
   } satisfies TimelineArticleInput;
 }

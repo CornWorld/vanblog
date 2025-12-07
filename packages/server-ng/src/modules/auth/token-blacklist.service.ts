@@ -45,7 +45,7 @@ export class TokenBlacklistService {
         tokenType,
         userId,
         reason,
-        expiresAt: expiresAt.toISOString(),
+        expiresAt: dayjs(expiresAt).format(),
       });
 
       this.logger.log(`Token revoked: ${tokenType} for user ${userId ?? 'anonymous'}`);
@@ -81,7 +81,7 @@ export class TokenBlacklistService {
    */
   async revokeAllUserTokens(userId: number, reason?: string): Promise<number> {
     try {
-      const expiresAt = dayjs().add(1, 'year').toDate(); // Far future expiry
+      const expiresAt = dayjs().add(1, 'year'); // Far future expiry
 
       // This is a simplified approach - in production you'd want to track active tokens
       // For now, we'll create a special entry to mark all user tokens as revoked
@@ -90,7 +90,7 @@ export class TokenBlacklistService {
         tokenType: 'access',
         userId,
         reason: reason ?? 'All user tokens revoked',
-        expiresAt: expiresAt.toISOString(),
+        expiresAt: expiresAt.format(),
       });
 
       this.logger.log(`All tokens revoked for user ${userId}`);
@@ -106,7 +106,7 @@ export class TokenBlacklistService {
    */
   async cleanupExpiredTokens(): Promise<number> {
     try {
-      const now = dayjs().toISOString();
+      const now = dayjs().format();
 
       const result = await this.db.delete(tokenBlacklist).where(lt(tokenBlacklist.expiresAt, now));
 

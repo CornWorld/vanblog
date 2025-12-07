@@ -1,5 +1,5 @@
 import { Injectable, Inject, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
-import dayjs from 'dayjs';
+import { dayjs } from '@vanblog/shared';
 import { eq, and, lt, desc } from 'drizzle-orm';
 
 import { DATABASE_CONNECTION, type Database } from '../../../database';
@@ -134,9 +134,9 @@ export class ImageProcessingQueueService implements OnModuleInit, OnModuleDestro
         .update(imageProcessingQueue)
         .set({
           status: 'processing',
-          startedAt: dayjs().toISOString(),
+          startedAt: dayjs().format(),
           attempts: task.attempts + 1,
-          updatedAt: dayjs().toISOString(),
+          updatedAt: dayjs().format(),
         })
         .where(eq(imageProcessingQueue.id, task.id));
 
@@ -158,8 +158,8 @@ export class ImageProcessingQueueService implements OnModuleInit, OnModuleDestro
         .set({
           status: 'completed',
           processedBuffer: result.buffer.toString('base64'),
-          completedAt: dayjs().toISOString(),
-          updatedAt: dayjs().toISOString(),
+          completedAt: dayjs().format(),
+          updatedAt: dayjs().format(),
         })
         .where(eq(imageProcessingQueue.id, task.id));
     } catch (error) {
@@ -169,7 +169,7 @@ export class ImageProcessingQueueService implements OnModuleInit, OnModuleDestro
         .set({
           status: 'failed',
           errorMessage: error instanceof Error ? error.message : String(error),
-          updatedAt: dayjs().toISOString(),
+          updatedAt: dayjs().format(),
         })
         .where(eq(imageProcessingQueue.id, task.id));
     }

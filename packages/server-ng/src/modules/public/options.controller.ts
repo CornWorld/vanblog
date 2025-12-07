@@ -1,11 +1,10 @@
 import { Controller, Get, Query } from '@nestjs/common';
 import { ApiOperation, ApiTags, ApiResponse } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
-import { ZodValidationPipe } from 'nestjs-zod';
 
 import { DerivedView } from '../../shared/decorators/derived-view.decorator';
 
-import { OptionsQueryDto, OptionsResponseDto, OptionsQuerySchema } from './dto/options.dto';
+import { OptionsQuerySchema, type OptionsResponseDto } from './dto/options.dto';
 import { OptionsService } from './options.service';
 
 @ApiTags('Public')
@@ -19,12 +18,12 @@ export class OptionsController {
   @ApiResponse({
     status: 200,
     description: '站点配置选项获取成功',
-    type: OptionsResponseDto,
   })
   @DerivedView({ key: 'options', ttl: 300, swr: true })
   async getOptions(
-    @Query(new ZodValidationPipe(OptionsQuerySchema)) query: OptionsQueryDto,
+    @Query() raw: unknown,
   ): Promise<{ statusCode: number; data: OptionsResponseDto }> {
+    const query = OptionsQuerySchema.parse(raw);
     const data = await this.optionsService.getOptions(query);
     return { statusCode: 200, data };
   }

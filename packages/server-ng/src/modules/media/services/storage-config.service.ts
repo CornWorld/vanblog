@@ -1,8 +1,9 @@
 import { Injectable } from '@nestjs/common';
+import { z } from 'zod';
 
 import { SettingRegistryService } from '../../setting/services/setting-registry.service';
 import {
-  UpdateStorageConfigDto,
+  UpdateStorageConfigSchema,
   StorageConfigResponseDto,
   StorageProvider,
   STORAGE_CONFIG_KEY,
@@ -18,7 +19,9 @@ export class StorageConfigService {
     return await this.registry.getConfig<StorageConfigResponseDto>(STORAGE_CONFIG_KEY);
   }
 
-  async updateStorageConfig(updateDto: UpdateStorageConfigDto): Promise<StorageConfigResponseDto> {
+  async updateStorageConfig(
+    updateDto: z.infer<typeof UpdateStorageConfigSchema>,
+  ): Promise<StorageConfigResponseDto> {
     const currentConfig = (await this.getStorageConfig()) ?? {
       provider: StorageProvider.LOCAL,
       enabled: true,

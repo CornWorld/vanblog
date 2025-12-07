@@ -1,4 +1,4 @@
-import dayjs from 'dayjs';
+import { dayjs } from '@vanblog/shared';
 import { test as baseTest, vi } from 'vitest';
 
 import { StorageProvider } from '../src/modules/media/dto/storage-config.dto';
@@ -313,8 +313,8 @@ function createUser({
     password: 'hashedpassword',
     nickname: 'Test User',
     avatar: '/avatars/default.png',
-    createdAt: dayjs('2024-01-01').toISOString(),
-    updatedAt: dayjs('2024-01-01').toISOString(),
+    createdAt: dayjs('2024-01-01').format(),
+    updatedAt: dayjs('2024-01-01').format(),
     ...overrides,
   };
 }
@@ -337,7 +337,7 @@ function createMediaFile({
     height: 1080,
     hash: 'abc123def456',
     provider: StorageProvider.LOCAL,
-    createdAt: dayjs('2024-01-01').toISOString(),
+    createdAt: dayjs('2024-01-01').format(),
     ...overrides,
   };
 }

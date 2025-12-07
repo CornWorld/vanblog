@@ -1,10 +1,8 @@
-import { createZodDto } from 'nestjs-zod';
+import { c } from '@vanblog/shared';
 import { z } from 'zod';
 
-import { commonSchemas } from '../../../shared/zod';
-
 export const CreateFriendLinkSchema = z.object({
-  name: commonSchemas.nonEmptyString.describe('友链名称'),
+  name: c.nonEmptyString.describe('友链名称'),
   url: z.string().pipe(z.url()).describe('友链地址'),
   description: z.string().optional().describe('友链描述'),
   avatar: z.string().pipe(z.url()).optional().describe('友链头像'),
@@ -12,5 +10,5 @@ export const CreateFriendLinkSchema = z.object({
 
 export const UpdateFriendLinkSchema = CreateFriendLinkSchema;
 
-export class CreateFriendLinkDto extends createZodDto(CreateFriendLinkSchema) {}
-export class UpdateFriendLinkDto extends createZodDto(UpdateFriendLinkSchema) {}
+export type CreateFriendLinkDto = z.infer<typeof CreateFriendLinkSchema>;
+export type UpdateFriendLinkDto = z.infer<typeof UpdateFriendLinkSchema>;

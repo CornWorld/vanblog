@@ -1,4 +1,3 @@
-import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
 
 import { selectLoginLogSchema, insertLoginLogSchema } from '../../../database';
@@ -19,6 +18,6 @@ export const LoginLogQuerySchema = z.object({
   endDate: z.string().optional().describe('End date for filtering'),
 });
 
-export class LoginLogDto extends createZodDto(LoginLogSchema) {}
-export class LoginLogResponseDto extends createZodDto(LoginLogResponseSchema) {}
-export class LoginLogQueryDto extends createZodDto(LoginLogQuerySchema) {}
+export type LoginLogDto = z.infer<typeof LoginLogSchema>;
+export type LoginLogResponseDto = z.infer<typeof LoginLogResponseSchema>;
+export type LoginLogQueryDto = z.infer<typeof LoginLogQuerySchema>;

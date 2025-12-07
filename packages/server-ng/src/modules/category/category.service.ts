@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, Inject } from '@nestjs/common';
+import { dayjs } from '@vanblog/shared';
 import * as bcrypt from 'bcrypt';
-import dayjs from 'dayjs';
 import { and, eq, sql, desc } from 'drizzle-orm';
 import * as jwt from 'jsonwebtoken';
 
@@ -60,9 +60,9 @@ export class CategoryService {
       description: category.description,
       private: category.private,
       password: category.password,
-      articleCount: Number(category.articleCount) > 0 ? Number(category.articleCount) : 0,
-      createdAt: dayjs(category.createdAt),
-      updatedAt: dayjs(category.updatedAt),
+      articleCount: category.articleCount > 0 ? category.articleCount : 0,
+      createdAt: dayjs(category.createdAt).format(),
+      updatedAt: dayjs(category.updatedAt).format(),
     }));
 
     return {
@@ -75,7 +75,7 @@ export class CategoryService {
     const results = await this.db.select().from(categories).where(eq(categories.id, id)).limit(1);
 
     if (results.length === 0) {
-      throw new NotFoundException(`Category with ID ${String(id)} not found`);
+      throw new NotFoundException(`Category with ID ${id} not found`);
     }
 
     return {
@@ -84,8 +84,8 @@ export class CategoryService {
       description: results[0].description ?? null,
       private: results[0].private ?? null,
       password: results[0].password ?? null,
-      createdAt: dayjs(results[0].createdAt),
-      updatedAt: dayjs(results[0].updatedAt),
+      createdAt: dayjs(results[0].createdAt).format(),
+      updatedAt: dayjs(results[0].updatedAt).format(),
     };
   }
 
@@ -114,8 +114,8 @@ export class CategoryService {
       description: result[0].description ?? null,
       private: result[0].private ?? null,
       password: result[0].password ?? null,
-      createdAt: dayjs(result[0].createdAt),
-      updatedAt: dayjs(result[0].updatedAt),
+      createdAt: dayjs(result[0].createdAt).format(),
+      updatedAt: dayjs(result[0].updatedAt).format(),
     };
 
     // Trigger webhook event
@@ -156,7 +156,7 @@ export class CategoryService {
       .returning();
 
     if (result.length === 0) {
-      throw new NotFoundException(`Category with ID ${String(id)} not found`);
+      throw new NotFoundException(`Category with ID ${id} not found`);
     }
 
     // Foreign key constraint will handle cascade update automatically
@@ -167,8 +167,8 @@ export class CategoryService {
       description: result[0].description ?? null,
       private: result[0].private ?? null,
       password: result[0].password ?? null,
-      createdAt: dayjs(result[0].createdAt),
-      updatedAt: dayjs(result[0].updatedAt),
+      createdAt: dayjs(result[0].createdAt).format(),
+      updatedAt: dayjs(result[0].updatedAt).format(),
     };
 
     // Trigger webhook event
@@ -206,7 +206,7 @@ export class CategoryService {
 
     if (articlesInCategory > 0) {
       throw new Error(
-        `Cannot delete category "${category.name}" because it contains ${String(articlesInCategory)} articles`,
+        `Cannot delete category "${category.name}" because it contains ${articlesInCategory} articles`,
       );
     }
 
@@ -216,7 +216,7 @@ export class CategoryService {
       .returning({ id: categories.id });
 
     if (result.length === 0) {
-      throw new NotFoundException(`Category with ID ${String(id)} not found`);
+      throw new NotFoundException(`Category with ID ${id} not found`);
     }
 
     // Trigger webhook event
@@ -374,8 +374,8 @@ export class CategoryService {
         .from(articles)
         .where(whereClause)
         .orderBy(orderByClause)
-        .limit(Number(pageSize))
-        .offset((Number(page) - 1) * Number(pageSize)),
+        .limit(pageSize)
+        .offset((page - 1) * pageSize),
       this.db
         .select({ count: sql<number>`count(*)` })
         .from(articles)
@@ -395,12 +395,12 @@ export class CategoryService {
       private: article.private,
       password: article.password,
       viewer: article.viewer,
-      createdAt: dayjs(article.createdAt),
-      updatedAt: dayjs(article.updatedAt),
+      createdAt: dayjs(article.createdAt).format(),
+      updatedAt: dayjs(article.updatedAt).format(),
     }));
 
     const total = Number(countResult[0]?.count) > 0 ? Number(countResult[0]?.count) : 0;
-    const totalPages = Math.ceil(total / Number(pageSize));
+    const totalPages = Math.ceil(total / pageSize);
 
     return {
       items: processedArticles,

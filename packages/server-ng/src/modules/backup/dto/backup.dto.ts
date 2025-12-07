@@ -1,4 +1,3 @@
-import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
 
 // 备份创建请求
@@ -11,7 +10,7 @@ export const CreateBackupSchema = z.object({
   password: z.string().min(6).optional(),
 });
 
-export class CreateBackupDto extends createZodDto(CreateBackupSchema) {}
+export type CreateBackupDto = z.infer<typeof CreateBackupSchema>;
 
 // 备份恢复请求
 export const RestoreBackupSchema = z.object({
@@ -22,7 +21,7 @@ export const RestoreBackupSchema = z.object({
   restoreLogs: z.boolean().default(false),
 });
 
-export class RestoreBackupDto extends createZodDto(RestoreBackupSchema) {}
+export type RestoreBackupDto = z.infer<typeof RestoreBackupSchema>;
 
 // 备份列表查询
 export const GetBackupsSchema = z.object({
@@ -31,7 +30,7 @@ export const GetBackupsSchema = z.object({
   search: z.string().optional(),
 });
 
-export class GetBackupsDto extends createZodDto(GetBackupsSchema) {}
+export type GetBackupsDto = z.infer<typeof GetBackupsSchema>;
 
 // 备份信息响应
 export const BackupInfoSchema = z.object({
@@ -48,7 +47,7 @@ export const BackupInfoSchema = z.object({
   tables: z.record(z.string(), z.number()), // table name -> record count
 });
 
-export class BackupInfoDto extends createZodDto(BackupInfoSchema) {}
+export type BackupInfoDto = z.infer<typeof BackupInfoSchema>;
 
 // 备份列表响应
 export const BackupListSchema = z.object({
@@ -58,7 +57,7 @@ export const BackupListSchema = z.object({
   limit: z.number(),
 });
 
-export class BackupListDto extends createZodDto(BackupListSchema) {}
+export type BackupListDto = z.infer<typeof BackupListSchema>;
 
 // 恢复进度响应
 export const RestoreProgressSchema = z.object({
@@ -70,4 +69,4 @@ export const RestoreProgressSchema = z.object({
   error: z.string().optional(),
 });
 
-export class RestoreProgressDto extends createZodDto(RestoreProgressSchema) {}
+export type RestoreProgressDto = z.infer<typeof RestoreProgressSchema>;

@@ -1,4 +1,3 @@
-import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
 
 import { insertUserSchema } from '../../../database';
@@ -14,9 +13,7 @@ export const CreateUserSchema = insertUserSchema
     permissions: z.union([z.array(z.string()), z.string()]).optional(),
   });
 
-// Note: avoid exporting inferred type to prevent TS constraints issues under Zod v3 typings
-
-export class CreateUserDto extends createZodDto(CreateUserSchema) {}
+export type CreateUserDto = z.infer<typeof CreateUserSchema>;
 
 // 用户类型枚举
 export const UserType = {

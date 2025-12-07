@@ -1,7 +1,9 @@
-import dayjs, { type Dayjs } from 'dayjs';
+import { dayjs } from '@vanblog/shared';
 import { describe, it, expect } from 'vitest';
 
 import { toDatejs, convertDatesToDatejs, convertArrayDatesToDatejs } from './date.utils';
+
+import type { Dayjs } from 'dayjs';
 
 describe('DateUtils', () => {
   describe('toDatejs', () => {

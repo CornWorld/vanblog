@@ -26,7 +26,7 @@ const LinkPage = (props: LinkPageProps) => {
     setUrl(window.location.origin);
   }, [setUrl]);
   const logo = useMemo(() => {
-    let logo = props.layoutProps.logo;
+    let { logo } = props.layoutProps;
     if (props.layoutProps.logo == '') {
       logo = props.authorCardProps.logo || '';
     }

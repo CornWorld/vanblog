@@ -43,7 +43,7 @@ function MyApp({ Component, pageProps }: AppPropsWithPageViewData) {
     if (typeof window === 'undefined') return;
 
     try {
-      const pathname = window.location.pathname;
+      const { pathname } = window.location;
       if (window.localStorage.getItem('noViewer')) {
         try {
           const { viewer, visited } = await getPageview(pathname);

@@ -2,14 +2,10 @@ import { createHmac } from 'crypto';
 
 import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import { eq, and, desc, gte, lte, count, like } from 'drizzle-orm';
+import { z } from 'zod';
 
 import { DATABASE_CONNECTION, type Database } from '../../../database';
-import {
-  CreateWebhookDto,
-  UpdateWebhookDto,
-  WebhookQueryDto,
-  WebhookLogQueryDto,
-} from '../dto/webhook.dto';
+import { insertWebhookSchema, updateWebhookSchema } from '../../../database/zod-schemas';
 import { webhooks, webhookLogs, type Webhook as WebhookEntity } from '../entities/webhook.schema';
 
 import { WebhookRegistryService } from './webhook-registry.service';
@@ -36,7 +32,7 @@ export class WebhookService {
     private readonly webhookRegistry: WebhookRegistryService,
   ) {}
 
-  async create(createWebhookDto: CreateWebhookDto): Promise<Webhook> {
+  async create(createWebhookDto: z.infer<typeof insertWebhookSchema>): Promise<Webhook> {
     const eventsJson = JSON.stringify(createWebhookDto.events);
 
     const [webhook] = await this.db
@@ -65,7 +61,12 @@ export class WebhookService {
     return result;
   }
 
-  async findAll(query: WebhookQueryDto): Promise<Record<string, unknown>> {
+  async findAll(query: {
+    page?: number;
+    limit?: number;
+    active?: boolean;
+    event?: string;
+  }): Promise<Record<string, unknown>> {
     const { page = 1, limit = 10, active, event } = query;
     const offset = (page - 1) * limit;
 
@@ -92,7 +93,7 @@ export class WebhookService {
 
     const [totalRow] = await this.db.select({ count: count() }).from(webhooks).where(whereClause);
 
-    const totalCount = Number(totalRow.count);
+    const totalCount = totalRow.count;
 
     return {
       data: results.map((webhook) => ({
@@ -131,7 +132,10 @@ export class WebhookService {
     return result;
   }
 
-  async update(id: number, updateWebhookDto: UpdateWebhookDto): Promise<Webhook | null> {
+  async update(
+    id: number,
+    updateWebhookDto: z.infer<typeof updateWebhookSchema>,
+  ): Promise<Webhook | null> {
     const updateData: Record<string, unknown> = {
       name: updateWebhookDto.name,
       url: updateWebhookDto.url,
@@ -235,7 +239,7 @@ export class WebhookService {
 
       try {
         this.logger.debug(
-          `Executing webhook ${String(webhook.name)} (attempt ${attempt}/${String(webhook.retryCount)})`,
+          `Executing webhook ${webhook.name} (attempt ${attempt}/${webhook.retryCount})`,
         );
 
         const headers: Record<string, string> = {
@@ -270,7 +274,7 @@ export class WebhookService {
 
         if (response.ok) {
           success = true;
-          this.logger.debug(`Webhook ${String(webhook.name)} executed successfully`);
+          this.logger.debug(`Webhook ${webhook.name} executed successfully`);
         } else {
           lastError = `HTTP ${response.status}: ${responseBody}`;
           this.logger.warn(
@@ -288,9 +292,7 @@ export class WebhookService {
           lastError = 'Unknown error';
         }
 
-        this.logger.error(
-          `Webhook ${String(webhook.name)} failed (attempt ${attempt}): ${lastError}`,
-        );
+        this.logger.error(`Webhook ${webhook.name} failed (attempt ${attempt}): ${lastError}`);
       }
 
       // Wait before retry (exponential backoff)
@@ -348,7 +350,15 @@ export class WebhookService {
     return createHmac('sha256', secret).update(payload).digest('hex');
   }
 
-  async getLogs(query: WebhookLogQueryDto): Promise<Record<string, unknown>> {
+  async getLogs(query: {
+    page?: number;
+    limit?: number;
+    webhookId?: number;
+    event?: string;
+    status?: 'success' | 'failed' | 'timeout';
+    startDate?: string;
+    endDate?: string;
+  }): Promise<Record<string, unknown>> {
     const { page = 1, limit = 10, webhookId, event, status, startDate, endDate } = query;
     const offset = (page - 1) * limit;
 
@@ -367,11 +377,13 @@ export class WebhookService {
     }
 
     if (startDate) {
-      whereConditions.push(gte(webhookLogs.createdAt, startDate));
+      const sd = new Date(startDate);
+      whereConditions.push(gte(webhookLogs.createdAt, sd));
     }
 
     if (endDate) {
-      whereConditions.push(lte(webhookLogs.createdAt, endDate));
+      const ed = new Date(endDate);
+      whereConditions.push(lte(webhookLogs.createdAt, ed));
     }
 
     const whereClause = whereConditions.length > 0 ? and(...whereConditions) : undefined;
@@ -389,7 +401,7 @@ export class WebhookService {
       .from(webhookLogs)
       .where(whereClause);
 
-    const totalCount = Number(totalResult.count);
+    const totalCount = totalResult.count;
 
     return {
       data: results.map((log) => ({
@@ -437,14 +449,14 @@ export class WebhookService {
       .from(webhookLogs)
       .where(timeoutCond);
 
-    const totalCount = Number(totalLogs.count);
-    const successCount = Number(successLogs.count);
+    const totalCount = totalLogs.count;
+    const successCount = successLogs.count;
 
     return {
       total: totalCount,
       success: successCount,
-      failed: Number(failedLogs.count),
-      timeout: Number(timeoutLogs.count),
+      failed: failedLogs.count,
+      timeout: timeoutLogs.count,
       successRate: totalCount > 0 ? successCount / totalCount : 0,
     };
   }

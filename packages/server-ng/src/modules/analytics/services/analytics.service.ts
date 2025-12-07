@@ -1,12 +1,13 @@
 import { Injectable, Inject } from '@nestjs/common';
-import dayjs from 'dayjs';
+import { dayjs } from '@vanblog/shared';
 import { eq, and, gte, lte, sql, desc } from 'drizzle-orm';
 import { UAParser } from 'ua-parser-js';
+import { z } from 'zod';
 
 import { DATABASE_CONNECTION, type Database } from '../../../database';
 import { analytics } from '../../../database/schema';
 import { AnalyticsCacheService } from '../../../shared/cache/analytics-cache.service';
-import { safeParseJson, dataSchemas } from '../../../shared/zod';
+import { toDatejs } from '../../../shared/utils/date.utils';
 import {
   AnalyticsOverviewDto,
   PageRankingDto,
@@ -27,6 +28,20 @@ export class AnalyticsService {
     private readonly db: Database,
     private readonly cacheService: AnalyticsCacheService,
   ) {}
+
+  private static readonly GenericObjectSchema = z.object({}).catchall(z.unknown());
+
+  private parseData(json: unknown): Record<string, unknown> | null {
+    if (typeof json !== 'string' || json.length === 0) return null;
+    let obj: unknown;
+    try {
+      obj = JSON.parse(json);
+    } catch {
+      return null;
+    }
+    const parsed = AnalyticsService.GenericObjectSchema.safeParse(obj);
+    return parsed.success ? (parsed.data as Record<string, unknown>) : null;
+  }
 
   async recordAnalytics(dto: RecordAnalyticsDto): Promise<void> {
     await this.db.insert(analytics).values({
@@ -189,9 +204,11 @@ export class AnalyticsService {
       .orderBy(desc(analytics.createdAt));
 
     return result.map((row) => {
-      const parsed = safeParseJson(row.data, dataSchemas.genericObject);
+      const createdAtStr = toDatejs(row.createdAt as Date | string).format('YYYY-MM-DDTHH:mm:ssZ');
+      const parsed = this.parseData(row.data);
       return {
         ...row,
+        createdAt: createdAtStr,
         data: parsed,
       };
     });

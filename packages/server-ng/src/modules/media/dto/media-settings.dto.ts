@@ -1,4 +1,3 @@
-import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
 
 export const MediaProcessingSettingsSchema = z.object({
@@ -39,7 +38,7 @@ export const MediaProcessingSettingsSchema = z.object({
 
 export type MediaProcessingSettings = z.infer<typeof MediaProcessingSettingsSchema>;
 
-export class MediaProcessingSettingsDto extends createZodDto(MediaProcessingSettingsSchema) {}
+export type MediaProcessingSettingsDto = z.infer<typeof MediaProcessingSettingsSchema>;
 
 export const MEDIA_PROCESSING_CONFIG_KEY = 'media.processing';
 

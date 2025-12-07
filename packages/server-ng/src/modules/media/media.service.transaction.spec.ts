@@ -101,7 +101,7 @@ describe('MediaService - Transaction Atomicity', () => {
       expect(mockStorageService.upload).toHaveBeenCalledWith(file, 'test-category');
       expect(mockLogger.error).toHaveBeenCalledWith(
         'Storage upload failed',
-        'Error: Storage upload failed',
+        'Storage upload failed',
       );
     });
 
@@ -174,7 +174,7 @@ describe('MediaService - Transaction Atomicity', () => {
       expect(mockStorageService.upload).toHaveBeenCalled();
       expect(mockLogger.error).toHaveBeenCalledWith(
         'Database insert failed, cleaning up uploaded file',
-        'Error: Database insert failed',
+        'Database insert failed',
       );
     });
 
@@ -295,11 +295,11 @@ describe('MediaService - Transaction Atomicity', () => {
       // Should log both errors
       expect(mockLogger.error).toHaveBeenCalledWith(
         'Database insert failed, cleaning up uploaded file',
-        'Error: Database failed',
+        'Database failed',
       );
       expect(mockLogger.error).toHaveBeenCalledWith(
         'Failed to cleanup uploaded file after database error',
-        'Error: Cleanup failed',
+        'Cleanup failed',
       );
     });
   });

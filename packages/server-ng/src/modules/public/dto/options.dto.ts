@@ -1,4 +1,3 @@
-import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
 
 import { dataSchemas } from '../../../shared/zod';
@@ -67,8 +66,8 @@ export const OptionsResponseSchema = z.object({
     .optional(),
 });
 
-export class OptionsQueryDto extends createZodDto(OptionsQuerySchema) {}
-export class OptionsResponseDto extends createZodDto(OptionsResponseSchema) {}
+export type OptionsQueryDto = z.infer<typeof OptionsQuerySchema>;
+export type OptionsResponseDto = z.infer<typeof OptionsResponseSchema>;
 
 // 导出字段选项供类型检查使用
 export { INCLUDE_OPTIONS };

@@ -1,6 +1,5 @@
-import { createZodDto } from 'nestjs-zod';
+import type { UpdateWalineSettingSchema, WalineSettingSchema } from './comment.schema';
+import type { z } from 'zod';
 
-import { UpdateWalineSettingSchema, WalineSettingSchema } from './comment.schema';
-
-export class WalineSettingDto extends createZodDto(WalineSettingSchema) {}
-export class UpdateWalineSettingDto extends createZodDto(UpdateWalineSettingSchema) {}
+export type WalineSettingDto = z.infer<typeof WalineSettingSchema>;
+export type UpdateWalineSettingDto = z.infer<typeof UpdateWalineSettingSchema>;

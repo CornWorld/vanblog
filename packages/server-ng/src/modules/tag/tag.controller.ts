@@ -10,23 +10,15 @@ import {
   Query,
 } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { ZodValidationPipe } from 'nestjs-zod';
+import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
+import { contract } from '@vanblog/shared';
+import { z } from 'zod';
 
 import { OverallStatisticsDto } from '../../shared/dto/statistics.dto';
-import {
-  ArticleListResponseDto,
-  ArticleQueryDto,
-  ArticleQuerySchema,
-} from '../article/dto/article.dto';
+import { ArticleListResponseSchema, ArticleQuerySchema } from '../article/dto/article.dto';
 import { Permission } from '../auth/permissions.decorator';
 
-import {
-  CreateTagDto,
-  UpdateTagDto,
-  TagListResponseDto,
-  CreateTagSchema,
-  UpdateTagSchema,
-} from './dto/tag.dto';
+import { TagListResponseSchema, CreateTagSchema, UpdateTagSchema } from './dto/tag.dto';
 import { Tag } from './entities/tag.entity';
 import { TagService } from './tag.service';
 
@@ -51,7 +43,7 @@ export class TagController {
   @Get()
   @ApiOperation({ summary: 'Get all tags' })
   @ApiResponse({ status: 200, description: 'Return all tags' })
-  async findAll(): Promise<TagListResponseDto> {
+  async findAll(): Promise<z.infer<typeof TagListResponseSchema>> {
     return this.tagService.findAll();
   }
 
@@ -83,10 +75,9 @@ export class TagController {
   @Permission('tag', ['create'])
   @ApiOperation({ summary: 'Create a new tag' })
   @ApiResponse({ status: 201, description: 'Create new tag' })
-  async create(
-    @Body(new ZodValidationPipe(CreateTagSchema)) createTagDto: CreateTagDto,
-  ): Promise<Tag> {
-    return this.tagService.create(createTagDto);
+  async create(@Body() raw: unknown): Promise<Tag> {
+    const dto = CreateTagSchema.parse(raw);
+    return this.tagService.create(dto);
   }
 
   /**
@@ -103,11 +94,9 @@ export class TagController {
   @ApiOperation({ summary: 'Update a tag' })
   @ApiResponse({ status: 200, description: 'Update existing tag' })
   @ApiResponse({ status: 404, description: 'Tag not found' })
-  async update(
-    @Param('id', ParseIntPipe) id: number,
-    @Body(new ZodValidationPipe(UpdateTagSchema)) updateTagDto: UpdateTagDto,
-  ): Promise<Tag> {
-    return this.tagService.update(id, updateTagDto);
+  async update(@Param('id', ParseIntPipe) id: number, @Body() raw: unknown): Promise<Tag> {
+    const dto = UpdateTagSchema.parse(raw);
+    return this.tagService.update(id, dto);
   }
 
   /**
@@ -181,8 +170,9 @@ export class TagController {
   @ApiResponse({ status: 404, description: 'Tag not found' })
   async getArticlesByTagName(
     @Param('name') name: string,
-    @Query(new ZodValidationPipe(ArticleQuerySchema)) query: ArticleQueryDto,
-  ): Promise<ArticleListResponseDto> {
+    @Query() raw: unknown,
+  ): Promise<z.infer<typeof ArticleListResponseSchema>> {
+    const query = ArticleQuerySchema.parse(raw);
     return this.tagService.getArticlesByTagName(name, query);
   }
 
@@ -201,8 +191,30 @@ export class TagController {
   @ApiResponse({ status: 404, description: 'Tag not found' })
   async getArticlesByTagId(
     @Param('id', ParseIntPipe) id: number,
-    @Query(new ZodValidationPipe(ArticleQuerySchema)) query: ArticleQueryDto,
-  ): Promise<ArticleListResponseDto> {
+    @Query() raw: unknown,
+  ): Promise<z.infer<typeof ArticleListResponseSchema>> {
+    const query = ArticleQuerySchema.parse(raw);
     return this.tagService.getArticlesByTagId(id, query);
+  }
+}
+
+@Controller()
+export class TagTsRestCreateController {
+  constructor(private readonly tagService: TagService) {}
+
+  @TsRestHandler(contract.createTag)
+  createTag(): unknown {
+    // @ts-expect-error ts-rest handler type incompatibility
+
+    return tsRestHandler(contract.createTag, async ({ body }) => {
+      const created = await this.tagService.create(body);
+      const resp = {
+        id: created.id,
+        name: created.name,
+        createAt: created.createdAt,
+        updateAt: created.updatedAt,
+      };
+      return { status: 201, body: resp };
+    });
   }
 }

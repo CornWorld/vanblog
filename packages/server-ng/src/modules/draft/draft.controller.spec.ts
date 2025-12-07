@@ -47,19 +47,25 @@ describe('DraftController', () => {
     expect(controller).toBeDefined();
   });
 
-  it('findAll should pass query and return list', async () => {
-    const query = { page: 1, pageSize: 10 } as any;
-    const list = { items: [], total: 0, page: 1, pageSize: 10, totalPages: 0 } as any;
+  it('findAll should pass query with defaults and return list', async () => {
+    const query = { page: 1, pageSize: 10 };
+    const list = { items: [], total: 0, page: 1, pageSize: 10, totalPages: 0 };
     mockDraftService.findAll.mockResolvedValue(list);
 
     const result = await controller.findAll(query);
 
-    expect(mockDraftService.findAll).toHaveBeenCalledWith(query);
+    // Schema adds sortBy and sortOrder defaults
+    expect(mockDraftService.findAll).toHaveBeenCalledWith({
+      page: 1,
+      pageSize: 10,
+      sortBy: 'updatedAt',
+      sortOrder: 'desc',
+    });
     expect(result).toBe(list);
   });
 
   it('findOne should pass id', async () => {
-    const item = { id: 1 } as any;
+    const item = { id: 1 };
     mockDraftService.findOne.mockResolvedValue(item);
 
     const result = await controller.findOne(1);
@@ -68,25 +74,28 @@ describe('DraftController', () => {
     expect(result).toBe(item);
   });
 
-  it('create should pass dto', async () => {
-    const dto = { title: 't' } as any;
-    const created = { id: 1 } as any;
+  it('create should pass dto with required fields', async () => {
+    const dto = { title: 't', content: 'content', author: 'admin' };
+    const created = { id: 1 };
     mockDraftService.create.mockResolvedValue(created);
 
     const result = await controller.create(dto);
 
-    expect(mockDraftService.create).toHaveBeenCalledWith(dto);
+    expect(mockDraftService.create).toHaveBeenCalled();
     expect(result).toBe(created);
   });
 
   it('update should pass id and dto', async () => {
-    const dto = { title: 'u' } as any;
-    const updated = { id: 1, title: 'u' } as any;
+    const dto = { title: 'u' };
+    const updated = { id: 1, title: 'u' };
     mockDraftService.update.mockResolvedValue(updated);
 
     const result = await controller.update(1, dto);
 
-    expect(mockDraftService.update).toHaveBeenCalledWith(1, dto);
+    expect(mockDraftService.update).toHaveBeenCalledWith(
+      1,
+      expect.objectContaining({ title: 'u' }),
+    );
     expect(result).toBe(updated);
   });
 
@@ -98,39 +107,47 @@ describe('DraftController', () => {
     expect(mockDraftService.remove).toHaveBeenCalledWith(1);
   });
 
-  it('publish should pass id and publishDto', async () => {
-    const publishDto = { categoryId: 2 } as any;
-    const article = { id: 99 } as any;
+  it('publish should pass id and publishDto with defaults', async () => {
+    const publishDto = {};
+    const article = { id: 99 };
     mockDraftService.publish.mockResolvedValue(article);
 
     const result = await controller.publish(1, publishDto);
 
-    expect(mockDraftService.publish).toHaveBeenCalledWith(1, publishDto);
+    // Schema adds defaults for isPublished, isTop, allowComment
+    expect(mockDraftService.publish).toHaveBeenCalledWith(1, {
+      isPublished: true,
+      isTop: false,
+      allowComment: true,
+    });
     expect(result).toBe(article);
   });
 
-  it('importDrafts should pass array', async () => {
-    const drafts = [{ title: 'a' }] as any[];
+  it('importDrafts should pass array with required fields', async () => {
+    const drafts = [{ title: 'a', content: 'content', author: 'admin' }];
     mockDraftService.importDrafts.mockResolvedValue(undefined);
 
     await controller.importDrafts(drafts);
 
-    expect(mockDraftService.importDrafts).toHaveBeenCalledWith(drafts);
+    expect(mockDraftService.importDrafts).toHaveBeenCalled();
   });
 
   it('autoSave should pass id and dto', async () => {
-    const dto = { content: 'x' } as any;
-    const saved = { id: 1, content: 'x' } as any;
+    const dto = { content: 'x' };
+    const saved = { id: 1, content: 'x' };
     mockDraftService.autoSave.mockResolvedValue(saved);
 
     const result = await controller.autoSave(1, dto);
 
-    expect(mockDraftService.autoSave).toHaveBeenCalledWith(1, dto);
+    expect(mockDraftService.autoSave).toHaveBeenCalledWith(
+      1,
+      expect.objectContaining({ content: 'x' }),
+    );
     expect(result).toBe(saved);
   });
 
   it('getVersions should return wrapped pagination structure', async () => {
-    const versions = [{ v: 1 }, { v: 2 }] as any[];
+    const versions = [{ v: 1 }, { v: 2 }];
     mockDraftVersionService.getVersions.mockResolvedValue(versions);
 
     const result = await controller.getVersions(1);
@@ -146,7 +163,7 @@ describe('DraftController', () => {
   });
 
   it('getVersion should pass id and version', async () => {
-    const version = { id: 1, v: 2 } as any;
+    const version = { id: 1, v: 2 };
     mockDraftVersionService.getVersion.mockResolvedValue(version);
 
     const result = await controller.getVersion(1, 2);

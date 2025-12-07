@@ -17,34 +17,27 @@ import {
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiOperation, ApiResponse, ApiConsumes, ApiBody } from '@nestjs/swagger';
 import { memoryStorage } from 'multer';
-import { ZodValidationPipe } from 'nestjs-zod';
+// import { z } from 'zod';
 
 import { staticFiles } from '../../database/schema';
 import { normalizeMediaProcessingOverride } from '../../shared/contracts';
 import { Perm } from '../auth/permissions.decorator';
 import { SettingRegistryService } from '../setting/services/setting-registry.service';
 
-import { BatchDeleteDto, BatchDeleteSchema } from './dto/batch-delete.dto';
+import { BatchDeleteSchema } from './dto/batch-delete.dto';
 import {
-  CompleteChunkUploadDto,
   CompleteChunkUploadSchema,
-  InitiateChunkUploadDto,
   InitiateChunkUploadSchema,
-  UploadChunkDto,
   UploadChunkSchema,
 } from './dto/chunk-upload.dto';
-import { ListStaticFilesDto } from './dto/list-static-files.dto';
+import { ListStaticFilesSchema } from './dto/list-static-files.dto';
 import {
   MediaProcessingSettings,
   MEDIA_PROCESSING_CONFIG_KEY,
   MediaProcessingSettingsSchema,
 } from './dto/media-settings.dto';
-import {
-  UpdateStorageConfigDto,
-  StorageConfigResponseDto,
-  UpdateStorageConfigSchema,
-} from './dto/storage-config.dto';
-import { UploadFileDto, UploadFile } from './dto/upload-file.dto';
+import { StorageConfigResponseDto, UpdateStorageConfigSchema } from './dto/storage-config.dto';
+import { UploadFileSchema, UploadFile } from './dto/upload-file.dto';
 import {
   ImageProcessingQueueService,
   type QueueTask,
@@ -132,11 +125,12 @@ export class MediaController {
   )
   async uploadFile(
     @UploadedFile() file: Express.Multer.File,
-    @Body() uploadFileDto: UploadFileDto,
+    @Body() raw: unknown,
   ): Promise<
     | typeof staticFiles.$inferSelect
     | (typeof staticFiles.$inferSelect & { taskId: number; status: string })
   > {
+    const uploadFileDto = UploadFileSchema.parse(raw);
     const globalConfig = await this.getMediaProcessingConfig();
     const config = this.mergeConfigOverride(globalConfig, uploadFileDto.processing);
 
@@ -246,13 +240,14 @@ export class MediaController {
   @Perm('media', ['read'])
   @ApiOperation({ summary: '获取文件列表' })
   @ApiResponse({ status: 200, description: '获取成功' })
-  async listFiles(@Query() query: ListStaticFilesDto): Promise<{
+  async listFiles(@Query() raw: unknown): Promise<{
     items: (typeof staticFiles.$inferSelect)[];
     total: number;
     page: number;
     pageSize: number;
     totalPages: number;
   }> {
+    const query = ListStaticFilesSchema.parse(raw);
     return this.mediaService.listFiles(query);
   }
 
@@ -302,14 +297,13 @@ export class MediaController {
   @Perm('media', ['delete'])
   @ApiOperation({ summary: '批量删除文件' })
   @ApiResponse({ status: 200, description: '删除成功' })
-  async batchDelete(
-    @Body(new ZodValidationPipe(BatchDeleteSchema)) batchDeleteDto: BatchDeleteDto,
-  ): Promise<{
+  async batchDelete(@Body() raw: unknown): Promise<{
     success: boolean;
     deletedCount: number;
     message: string;
   }> {
-    return this.mediaService.deleteFiles(batchDeleteDto.ids);
+    const dto = BatchDeleteSchema.parse(raw);
+    return this.mediaService.deleteFiles(dto.ids);
   }
 
   // 多文件上传：使用内存缓冲，支持并发
@@ -391,10 +385,12 @@ export class MediaController {
   @ApiOperation({ summary: '初始化分片上传会话' })
   @ApiConsumes('application/json')
   @ApiResponse({ status: 200, description: '会话创建成功' })
-  @ApiBody({ type: InitiateChunkUploadDto })
-  async initiateChunkUpload(
-    @Body(new ZodValidationPipe(InitiateChunkUploadSchema)) dto: InitiateChunkUploadDto,
-  ): Promise<{ uploadId: string; uploaded: boolean[]; totalChunks: number }> {
+  async initiateChunkUpload(@Body() raw: unknown): Promise<{
+    uploadId: string;
+    uploaded: boolean[];
+    totalChunks: number;
+  }> {
+    const dto = InitiateChunkUploadSchema.parse(raw);
     return this.mediaService.initiateChunkUpload(dto);
   }
 
@@ -421,8 +417,9 @@ export class MediaController {
   )
   async uploadChunk(
     @UploadedFile() file: Express.Multer.File,
-    @Body(new ZodValidationPipe(UploadChunkSchema)) dto: UploadChunkDto,
+    @Body() raw: unknown,
   ): Promise<{ index: number; size: number }> {
+    const dto = UploadChunkSchema.parse(raw);
     return this.mediaService.uploadChunk({ uploadId: dto.uploadId, index: dto.index, file });
   }
 
@@ -430,11 +427,9 @@ export class MediaController {
   @Perm('media', ['create'])
   @ApiOperation({ summary: '完成分片上传并合并，作为常规上传入库' })
   @ApiConsumes('application/json')
-  @ApiBody({ type: CompleteChunkUploadDto })
   @ApiResponse({ status: 201, description: '合并并入库成功' })
-  async completeChunkUpload(
-    @Body(new ZodValidationPipe(CompleteChunkUploadSchema)) dto: CompleteChunkUploadDto,
-  ): Promise<typeof staticFiles.$inferSelect> {
+  async completeChunkUpload(@Body() raw: unknown): Promise<typeof staticFiles.$inferSelect> {
+    const dto = CompleteChunkUploadSchema.parse(raw);
     const { buffer: mergedBuffer, meta } = await this.mediaService.mergeChunks(dto.uploadId);
 
     const config = this.mergeConfigOverride(await this.getMediaProcessingConfig(), dto.processing);
@@ -542,9 +537,8 @@ export class MediaController {
   @Perm('setting', ['update'])
   @ApiOperation({ summary: '更新存储配置' })
   @ApiResponse({ status: 200, description: '更新成功' })
-  async updateStorageConfig(
-    @Body(new ZodValidationPipe(UpdateStorageConfigSchema)) updateDto: UpdateStorageConfigDto,
-  ): Promise<StorageConfigResponseDto> {
+  async updateStorageConfig(@Body() raw: unknown): Promise<StorageConfigResponseDto> {
+    const updateDto = UpdateStorageConfigSchema.parse(raw);
     return this.storageConfigService.updateStorageConfig(updateDto);
   }
 

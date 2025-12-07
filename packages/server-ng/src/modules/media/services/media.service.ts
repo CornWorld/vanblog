@@ -4,12 +4,13 @@ import { join } from 'path';
 import { Injectable, Inject, NotFoundException, BadRequestException } from '@nestjs/common';
 import { and, asc, desc, eq, like, sql, type SQL, inArray } from 'drizzle-orm';
 import sharp from 'sharp';
+import { z } from 'zod';
 
 import { LoggerService } from '../../../core/logger/logger.service';
 import { DATABASE_CONNECTION, type Database } from '../../../database';
 import { staticFiles, articles } from '../../../database/schema';
 import { HookService } from '../../plugin/services/hook.service';
-import { ListStaticFilesDto } from '../dto/list-static-files.dto';
+import { ListStaticFilesSchema } from '../dto/list-static-files.dto';
 import { StorageProvider } from '../dto/storage-config.dto';
 
 import { StorageFactoryService } from './storage-factory.service';
@@ -64,7 +65,10 @@ export class MediaService {
         uploadResult = await storageService.upload(file, filename);
       } catch (uploadError) {
         // 存储失败，直接抛出错误，不需要清理
-        this.logger.error('Storage upload failed', String(uploadError));
+        this.logger.error(
+          'Storage upload failed',
+          uploadError instanceof Error ? uploadError.message : String(uploadError),
+        );
         throw uploadError;
       }
 
@@ -88,13 +92,19 @@ export class MediaService {
           await this.hookService.doAction('media|uploaded', { file: result });
         } catch (hookError) {
           // 钩子失败不应该影响主流程，只记录日志
-          this.logger.warn('Upload hook failed', String(hookError));
+          this.logger.warn(
+            'Upload hook failed',
+            hookError instanceof Error ? hookError.message : String(hookError),
+          );
         }
 
         return result;
       } catch (dbError) {
         // 数据库操作失败，需要清理已上传的文件
-        this.logger.error('Database insert failed, cleaning up uploaded file', String(dbError));
+        this.logger.error(
+          'Database insert failed, cleaning up uploaded file',
+          dbError instanceof Error ? dbError.message : String(dbError),
+        );
 
         try {
           await storageService.delete(uploadResult.filename);
@@ -102,7 +112,7 @@ export class MediaService {
           // 清理失败也要记录，但不影响原始错误的抛出
           this.logger.error(
             'Failed to cleanup uploaded file after database error',
-            String(cleanupError),
+            cleanupError instanceof Error ? cleanupError.message : String(cleanupError),
           );
         }
 
@@ -111,7 +121,7 @@ export class MediaService {
     });
   }
 
-  async listFiles(query: ListStaticFilesDto): Promise<{
+  async listFiles(query: z.infer<typeof ListStaticFilesSchema>): Promise<{
     items: (typeof staticFiles.$inferSelect)[];
     total: number;
     page: number;
@@ -124,7 +134,7 @@ export class MediaService {
     const clauses: SQL[] = [];
 
     if (typeof query.keyword === 'string' && query.keyword.length > 0) {
-      clauses.push(like(staticFiles.filename, `%${String(query.keyword)}%`));
+      clauses.push(like(staticFiles.filename, `%${query.keyword}%`));
     }
 
     if (typeof query.type === 'string') {
@@ -201,7 +211,7 @@ export class MediaService {
         .get();
     }
 
-    const total = countRow ? Number(countRow.count) : 0;
+    const total = countRow ? countRow.count : 0;
     const totalPages = Math.ceil(total / pageSize);
 
     return { items, total, page, pageSize, totalPages };
@@ -287,7 +297,7 @@ export class MediaService {
     const result = {
       success: true,
       deletedCount: files.length,
-      message: `${String(files.length)} files deleted successfully`,
+      message: `${files.length} files deleted successfully`,
     };
 
     // Trigger webhook event
@@ -359,10 +369,7 @@ export class MediaService {
     const scanned = urlSet.size;
     const added = missing.length;
 
-    this.logger.info(
-      `scanArticleImages: scanned=${String(scanned)}, added=${String(added)}`,
-      MediaService.name,
-    );
+    this.logger.info(`scanArticleImages: scanned=${scanned}, added=${added}`, MediaService.name);
 
     return { scanned, added };
   }

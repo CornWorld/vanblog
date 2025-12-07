@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, Inject } from '@nestjs/common';
-import dayjs from 'dayjs';
+import { dayjs } from '@vanblog/shared';
 import { eq, sql, like, and, desc } from 'drizzle-orm';
+import { z } from 'zod';
 
 import { DATABASE_CONNECTION, type Database } from '../../database';
 import { tags, articles } from '../../database/schema';
@@ -8,10 +9,10 @@ import { OverallStatisticsDto } from '../../shared/dto/statistics.dto';
 import { QueryOptimizerService } from '../../shared/services/query-optimizer.service';
 import { StatisticsService } from '../../shared/services/statistics.service';
 import { safeParseJson, dataSchemas } from '../../shared/zod';
-import { ArticleListResponseDto, ArticleQueryDto } from '../article/dto/article.dto';
+import { ArticleListResponseSchema, ArticleQuerySchema } from '../article/dto/article.dto';
 import { HookService } from '../plugin/services/hook.service';
 
-import { CreateTagDto, UpdateTagDto, TagListResponseDto } from './dto/tag.dto';
+import { CreateTagSchema, UpdateTagSchema, TagListResponseSchema } from './dto/tag.dto';
 import { Tag } from './entities/tag.entity';
 
 @Injectable()
@@ -24,7 +25,7 @@ export class TagService {
     private readonly hookService: HookService,
   ) {}
 
-  async findAll(): Promise<TagListResponseDto> {
+  async findAll(): Promise<z.infer<typeof TagListResponseSchema>> {
     return await this.queryOptimizer.withPerformanceMonitoring('TagService.findAll', async () => {
       const tagResults = await this.db.select().from(tags);
       const total = tagResults.length;
@@ -45,7 +46,7 @@ export class TagService {
         name: tag.name,
         slug: tag.slug,
         articleCount: articleCounts[tag.name] ?? 0,
-        createdAt: dayjs(tag.createdAt),
+        createdAt: dayjs(tag.createdAt).format(),
       }));
 
       return {
@@ -59,16 +60,19 @@ export class TagService {
     const results = await this.db.select().from(tags).where(eq(tags.id, id)).limit(1);
 
     if (results.length === 0) {
-      throw new NotFoundException(`Tag with ID ${String(id)} not found`);
+      throw new NotFoundException(`Tag with ID ${id} not found`);
     }
 
+    const [result] = results;
     return new Tag({
-      ...results[0],
-      slug: results[0].slug ?? undefined,
+      ...result,
+      slug: result.slug ?? undefined,
+      createdAt: dayjs(result.createdAt).format(),
+      updatedAt: undefined,
     });
   }
 
-  async create(createTagDto: CreateTagDto): Promise<Tag> {
+  async create(createTagDto: z.infer<typeof CreateTagSchema>): Promise<Tag> {
     let tagData = createTagDto;
 
     // Trigger beforeCreate hook
@@ -89,6 +93,8 @@ export class TagService {
     const tagResult = new Tag({
       ...result[0],
       slug: result[0].slug ?? undefined,
+      createdAt: dayjs(result[0].createdAt).format(),
+      updatedAt: undefined,
     });
 
     // Trigger webhook event
@@ -102,7 +108,7 @@ export class TagService {
     return tagResult;
   }
 
-  async update(id: number, updateTagDto: UpdateTagDto): Promise<Tag> {
+  async update(id: number, updateTagDto: z.infer<typeof UpdateTagSchema>): Promise<Tag> {
     let tagData = updateTagDto;
 
     // Trigger tag|before_update hook
@@ -114,12 +120,14 @@ export class TagService {
     const result = await this.db.update(tags).set(tagData).where(eq(tags.id, id)).returning();
 
     if (result.length === 0) {
-      throw new NotFoundException(`Tag with ID ${String(id)} not found`);
+      throw new NotFoundException(`Tag with ID ${id} not found`);
     }
 
     const tagResult = new Tag({
       ...result[0],
       slug: result[0].slug ?? undefined,
+      createdAt: dayjs(result[0].createdAt).format(),
+      updatedAt: undefined,
     });
 
     // Trigger webhook event
@@ -146,7 +154,7 @@ export class TagService {
     const result = await this.db.delete(tags).where(eq(tags.id, id)).returning({ id: tags.id });
 
     if (result.length === 0) {
-      throw new NotFoundException(`Tag with ID ${String(id)} not found`);
+      throw new NotFoundException(`Tag with ID ${id} not found`);
     }
 
     // Trigger webhook event
@@ -164,9 +172,12 @@ export class TagService {
       return null;
     }
 
+    const [result] = results;
     return new Tag({
-      ...results[0],
-      slug: results[0].slug ?? undefined,
+      ...result,
+      slug: result.slug ?? undefined,
+      createdAt: dayjs(result.createdAt).format(),
+      updatedAt: undefined,
     });
   }
 
@@ -200,6 +211,8 @@ export class TagService {
         new Tag({
           ...tag,
           slug: tag.slug ?? undefined,
+          createdAt: dayjs(tag.createdAt).format(),
+          updatedAt: undefined,
         }),
     );
   }
@@ -227,12 +240,14 @@ export class TagService {
           tag: new Tag({
             ...tag,
             slug: tag.slug ?? undefined,
+            createdAt: dayjs(tag.createdAt).format(),
+            updatedAt: undefined,
           }),
           categories: categoryStats
             .filter((stat) => stat.category !== null)
             .map((stat) => ({
               name: stat.category as string,
-              count: Number(stat.count),
+              count: stat.count,
             })),
         };
       }),
@@ -243,8 +258,8 @@ export class TagService {
 
   async getArticlesByTagName(
     name: string,
-    query: ArticleQueryDto,
-  ): Promise<ArticleListResponseDto> {
+    query: z.infer<typeof ArticleQuerySchema>,
+  ): Promise<z.infer<typeof ArticleListResponseSchema>> {
     // 首先根据名称查找标签
     const tag = await this.findByName(name);
     if (!tag) {
@@ -255,7 +270,10 @@ export class TagService {
     return this.getArticlesByTagId(tag.id, query);
   }
 
-  async getArticlesByTagId(id: number, query: ArticleQueryDto): Promise<ArticleListResponseDto> {
+  async getArticlesByTagId(
+    id: number,
+    query: z.infer<typeof ArticleQuerySchema>,
+  ): Promise<z.infer<typeof ArticleListResponseSchema>> {
     // 首先验证标签是否存在
     const tag = await this.findOne(id);
 
@@ -270,14 +288,16 @@ export class TagService {
     // 构建排序条件
     const orderByClause = desc(articles.updatedAt);
 
+    const p = page;
+    const ps = pageSize;
     const [articleResults, countResult] = await Promise.all([
       this.db
         .select()
         .from(articles)
         .where(whereClause)
         .orderBy(orderByClause)
-        .limit(Number(pageSize))
-        .offset((Number(page) - 1) * Number(pageSize)),
+        .limit(ps)
+        .offset((p - 1) * ps),
       this.db
         .select({ count: sql<number>`count(*)` })
         .from(articles)
@@ -297,18 +317,19 @@ export class TagService {
       private: article.private,
       password: article.password,
       viewer: article.viewer,
-      createdAt: dayjs(article.createdAt),
-      updatedAt: dayjs(article.updatedAt),
+      createdAt: dayjs(article.createdAt).format(),
+      updatedAt: dayjs(article.updatedAt).format(),
     }));
 
-    const total = Number(countResult[0]?.count) > 0 ? Number(countResult[0]?.count) : 0;
-    const totalPages = Math.ceil(total / Number(pageSize));
+    const totalRaw = countResult[0]?.count ?? 0;
+    const total = totalRaw > 0 ? totalRaw : 0;
+    const totalPages = Math.ceil(total / ps);
 
     return {
       items: processedArticles,
       total,
-      page,
-      pageSize,
+      page: p,
+      pageSize: ps,
       totalPages,
     };
   }

@@ -1,28 +1,30 @@
-import { Controller, Get, Query } from '@nestjs/common';
-import { ApiOperation, ApiTags, ApiResponse } from '@nestjs/swagger';
+import { Controller } from '@nestjs/common';
+import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
+import { timelineContract } from '@vanblog/shared/dist/contracts/timeline.contract.js';
 
 import { DerivedView } from '../../shared/decorators/derived-view.decorator';
 
-import { TimelineQueryDto, TimelineResponseDto } from './dto/timeline.dto';
+import { TimelineResponseDto } from './dto/timeline.dto';
 import { TimelineService } from './timeline.service';
 
-@ApiTags('Public')
-@Controller({ path: 'public', version: '2' })
+@Controller()
 export class TimelineController {
   constructor(private readonly timelineService: TimelineService) {}
 
-  @Get('timeline')
-  @ApiOperation({ summary: '获取文章时间线' })
-  @ApiResponse({
-    status: 200,
-    description: '文章时间线获取成功',
-    type: Object,
-  })
+  @TsRestHandler(timelineContract.getTimeline)
   @DerivedView({ key: 'timeline', ttl: 180, swr: true })
-  async getTimeline(
-    @Query() query: TimelineQueryDto,
-  ): Promise<{ statusCode: number; data: TimelineResponseDto }> {
-    const data = await this.timelineService.getTimeline(query.includeHidden);
+  getTimelineHandler(): ReturnType<typeof tsRestHandler> {
+    return tsRestHandler(timelineContract.getTimeline, async ({ query }) => {
+      const includeHidden = (query?.includeHidden ?? 'false') === 'true';
+      const data = await this.timelineService.getTimeline(includeHidden);
+      return { status: 200, body: data };
+    });
+  }
+
+  async getTimeline(query: {
+    includeHidden?: boolean;
+  }): Promise<{ statusCode: number; data: TimelineResponseDto }> {
+    const data = await this.timelineService.getTimeline(Boolean(query?.includeHidden));
     return { statusCode: 200, data };
   }
 }

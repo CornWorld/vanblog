@@ -1,10 +1,11 @@
 import { ConflictException, Injectable } from '@nestjs/common';
+import { z } from 'zod';
 
 import { SettingCoreService } from '../setting/services/setting-core.service';
 import { CreateUserSchema, UserType } from '../user/dto/create-user.dto';
 import { UserService } from '../user/user.service';
 
-import type { InitCmsRequestDto, InitCmsResponseDto } from './dto/init.dto';
+import { InitCmsRequestSchema, InitCmsResponseSchema } from './dto/init.dto';
 
 @Injectable()
 export class InitService {
@@ -13,7 +14,9 @@ export class InitService {
     private readonly settingCoreService: SettingCoreService,
   ) {}
 
-  async initializeCms(payload: InitCmsRequestDto): Promise<InitCmsResponseDto> {
+  async initializeCms(
+    payload: z.infer<typeof InitCmsRequestSchema>,
+  ): Promise<z.infer<typeof InitCmsResponseSchema>> {
     // If admin already exists, block initialization
     const existingAdmin = await this.userService.getAdminUser();
     if (existingAdmin) {

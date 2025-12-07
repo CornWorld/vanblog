@@ -1,4 +1,3 @@
-import dayjs from 'dayjs';
 import { createSelectSchema, createInsertSchema, createUpdateSchema } from 'drizzle-zod';
 import { z } from 'zod';
 
@@ -36,8 +35,6 @@ export const selectUserSchema = createSelectSchema(users, {
         return [];
       }
     }),
-  createdAt: (schema) => schema.transform((str) => dayjs(str)),
-  updatedAt: (schema) => schema.transform((str) => dayjs(str)),
 });
 
 // Password strength validation schema builder (use column schema to avoid zod instance mixing)
@@ -88,8 +85,6 @@ export const selectArticleSchema = createSelectSchema(articles, {
         return [];
       }
     }),
-  createdAt: (schema) => schema.transform((str) => dayjs(str)),
-  updatedAt: (schema) => schema.transform((str) => dayjs(str)),
 });
 
 export const insertArticleSchema = createInsertSchema(articles, {
@@ -119,10 +114,7 @@ export const updateArticleSchema = createUpdateSchema(articles, {
 });
 
 // Category schemas
-export const selectCategorySchema = createSelectSchema(categories, {
-  createdAt: (schema) => schema.transform((str) => dayjs(str)),
-  updatedAt: (schema) => schema.transform((str) => dayjs(str)),
-});
+export const selectCategorySchema = createSelectSchema(categories, {});
 
 export const insertCategorySchema = createInsertSchema(categories, {
   name: (schema) => schema.min(1, '分类名称不能为空').max(50, '分类名称最多50个字符'),
@@ -137,9 +129,7 @@ export const updateCategorySchema = createUpdateSchema(categories, {
 });
 
 // Tag schemas
-export const selectTagSchema = createSelectSchema(tags, {
-  createdAt: (schema) => schema.transform((str) => dayjs(str)),
-});
+export const selectTagSchema = createSelectSchema(tags, {});
 
 export const insertTagSchema = createInsertSchema(tags, {
   name: (schema) => schema.min(1, '标签名称不能为空').max(30, '标签名称最多30个字符'),
@@ -166,8 +156,6 @@ export const selectDraftSchema = createSelectSchema(drafts, {
         return [];
       }
     }),
-  createdAt: (schema) => schema.transform((str) => dayjs(str)),
-  updatedAt: (schema) => schema.transform((str) => dayjs(str)),
 });
 
 export const insertDraftSchema = createInsertSchema(drafts, {
@@ -209,7 +197,6 @@ export const selectDraftVersionSchema = createSelectSchema(draftVersions, {
         return [];
       }
     }),
-  createdAt: (schema) => schema.transform((str) => dayjs(str)),
 });
 
 export const insertDraftVersionSchema = createInsertSchema(draftVersions, {
@@ -225,9 +212,7 @@ export const insertDraftVersionSchema = createInsertSchema(draftVersions, {
 });
 
 // Static Files schemas
-export const selectStaticFileSchema = createSelectSchema(staticFiles, {
-  createdAt: (schema) => schema.transform((str) => dayjs(str)),
-});
+export const selectStaticFileSchema = createSelectSchema(staticFiles, {});
 
 export const insertStaticFileSchema = createInsertSchema(staticFiles, {
   filename: (schema) => schema.min(1, '文件名不能为空'),
@@ -250,8 +235,6 @@ export const selectSiteMetaSchema = createSelectSchema(siteMeta, {
     schema.transform((str): unknown => {
       return safeParseJson(str, dataSchemas.genericObject) ?? str;
     }),
-  createdAt: (schema) => schema.transform((str) => dayjs(str)),
-  updatedAt: (schema) => schema.transform((str) => dayjs(str)),
 });
 
 export const insertSiteMetaSchema = createInsertSchema(siteMeta, {
@@ -275,19 +258,14 @@ export const updateSiteMetaSchema = createUpdateSchema(siteMeta, {
 });
 
 // Login Logs schemas
-export const selectLoginLogSchema = createSelectSchema(loginLogs, {
-  createdAt: (schema) => schema.transform((str) => dayjs(str)),
-});
+export const selectLoginLogSchema = createSelectSchema(loginLogs, {});
 
 export const insertLoginLogSchema = createInsertSchema(loginLogs, {
   username: (schema) => schema.min(1, '用户名不能为空'),
 });
 
 // Custom Pages schemas
-export const selectCustomPageSchema = createSelectSchema(customPages, {
-  createdAt: (schema) => schema.transform((str) => dayjs(str)),
-  updatedAt: (schema) => schema.transform((str) => dayjs(str)),
-});
+export const selectCustomPageSchema = createSelectSchema(customPages, {});
 
 export const insertCustomPageSchema = createInsertSchema(customPages, {
   title: (schema) => schema.min(1, '页面标题不能为空').max(200, '页面标题最多200个字符'),
@@ -315,7 +293,6 @@ export const selectAnalyticsSchema = createSelectSchema(analytics, {
         return null;
       }
     }),
-  createdAt: (schema) => schema.transform((str) => dayjs(str)),
 });
 
 export const insertAnalyticsSchema = createInsertSchema(analytics, {
@@ -377,10 +354,7 @@ export type SelectAnalytics = z.infer<typeof selectAnalyticsSchema>;
 export type InsertAnalytics = z.infer<typeof insertAnalyticsSchema>;
 
 // Permission Node schemas
-export const selectPermissionNodeSchema = createSelectSchema(permissionNodes, {
-  createdAt: (schema) => schema.transform((str) => dayjs(str)),
-  updatedAt: (schema) => schema.transform((str) => dayjs(str)),
-});
+export const selectPermissionNodeSchema = createSelectSchema(permissionNodes, {});
 
 export const insertPermissionNodeSchema = createInsertSchema(permissionNodes, {
   name: (schema) => schema.min(1, '权限节点名称不能为空').max(100, '权限节点名称最多100个字符'),
@@ -406,8 +380,6 @@ export const selectPermissionGroupSchema = createSelectSchema(permissionGroups, 
         return [];
       }
     }),
-  createdAt: (schema) => schema.transform((str) => dayjs(str)),
-  updatedAt: (schema) => schema.transform((str) => dayjs(str)),
 });
 
 export const insertPermissionGroupSchema = createInsertSchema(permissionGroups, {
@@ -440,10 +412,7 @@ export type InsertPermissionGroup = z.infer<typeof insertPermissionGroupSchema>;
 export type UpdatePermissionGroup = z.infer<typeof updatePermissionGroupSchema>;
 
 // Plugin data schemas
-export const selectPluginDataSchema = createSelectSchema(pluginData, {
-  createdAt: (schema) => schema.transform((str) => dayjs(str)),
-  updatedAt: (schema) => schema.transform((str) => dayjs(str)),
-});
+export const selectPluginDataSchema = createSelectSchema(pluginData, {});
 
 export const insertPluginDataSchema = createInsertSchema(pluginData, {
   pluginId: (schema) => schema.min(1, '插件ID不能为空'),
@@ -480,8 +449,6 @@ export const selectWebhookSchema = createSelectSchema(webhooks, {
         return [];
       }
     }),
-  createdAt: (schema) => schema.transform((str) => dayjs(str)),
-  updatedAt: (schema) => schema.transform((str) => dayjs(str)),
 });
 
 export const insertWebhookSchema = createInsertSchema(webhooks, {
@@ -527,7 +494,6 @@ export const selectWebhookLogSchema = createSelectSchema(webhookLogs, {
     schema.transform((str): unknown => {
       return safeParseJson(str, dataSchemas.genericObject) ?? str;
     }),
-  createdAt: (schema) => schema.transform((str) => dayjs(str)),
 });
 
 export const insertWebhookLogSchema = createInsertSchema(webhookLogs, {

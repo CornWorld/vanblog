@@ -3,9 +3,10 @@ import * as path from 'path';
 
 import { Injectable, Logger, Inject } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import dayjs from 'dayjs';
+import { dayjs } from '@vanblog/shared';
 import { eq, and, desc } from 'drizzle-orm';
 import { Feed } from 'feed';
+import { z } from 'zod';
 
 import { DATABASE_CONNECTION, type Database } from '../../database';
 import { articles } from '../../database/schema';
@@ -205,7 +206,39 @@ export class RssService {
         await fs.mkdir(rssPath, { recursive: true });
       }
 
-      await fs.writeFile(path.join(rssPath, 'feed.json'), feed.json1());
+      let feedJsonStr = '';
+      try {
+        const rawJson = feed.json1();
+        const jsonObj = JSON.parse(rawJson);
+        const DateField = z
+          .union([z.string(), z.date()])
+          .optional()
+          .transform((v) => (v === undefined ? v : dayjs(v).format()));
+        const ItemSchema = z
+          .object({
+            date_published: DateField,
+            date_modified: DateField,
+          })
+          .passthrough();
+        const FeedSchema = z
+          .object({
+            date_modified: DateField,
+            items: z.array(ItemSchema),
+          })
+          .passthrough();
+        const parsed = FeedSchema.safeParse(jsonObj);
+        if (parsed.success) {
+          feedJsonStr = JSON.stringify(parsed.data, null, 2);
+        } else {
+          this.logger.warn('RSS JSON Feed schema validation failed, writing original JSON');
+          feedJsonStr = rawJson;
+        }
+      } catch (e) {
+        this.logger.error('RSS JSON Feed post-process failed');
+        this.logger.error(JSON.stringify(e, null, 2));
+        feedJsonStr = feed.json1();
+      }
+      await fs.writeFile(path.join(rssPath, 'feed.json'), feedJsonStr);
       await fs.writeFile(path.join(rssPath, 'feed.xml'), feed.rss2());
       await fs.writeFile(path.join(rssPath, 'atom.xml'), feed.atom1());
 

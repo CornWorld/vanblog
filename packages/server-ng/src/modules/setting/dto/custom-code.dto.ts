@@ -1,4 +1,3 @@
-import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
 
 export const UpdateCustomCodeSchema = z.object({
@@ -8,4 +7,4 @@ export const UpdateCustomCodeSchema = z.object({
   head: z.string().optional().describe('Custom code to inject in <head> tag'),
 });
 
-export class UpdateCustomCodeDto extends createZodDto(UpdateCustomCodeSchema) {}
+export type UpdateCustomCodeDto = z.infer<typeof UpdateCustomCodeSchema>;

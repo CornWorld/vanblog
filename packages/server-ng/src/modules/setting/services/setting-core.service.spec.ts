@@ -1,4 +1,5 @@
 import { Test, type TestingModule } from '@nestjs/testing';
+import { dayjs, type FriendLink, type CreateFriendLink } from '@vanblog/shared';
 import { z } from 'zod';
 
 import { DATABASE_CONNECTION } from '../../../database';
@@ -8,7 +9,6 @@ import {
   SettingCoreService,
   type SiteInfo,
   type Navigation,
-  type FriendLink,
   type CustomCode,
 } from './setting-core.service';
 import { SettingRegistryService } from './setting-registry.service';
@@ -356,43 +356,70 @@ describe('SettingCoreService', () => {
 
   describe('createFriendLink', () => {
     it('should add new friend link', async () => {
-      const newLink: FriendLink = {
+      const newLinkInput: CreateFriendLink = {
         name: 'Test Friend',
         url: 'https://test.com',
         description: 'Test description',
       };
 
+      const expectedLink: FriendLink = {
+        id: 1,
+        name: 'Test Friend',
+        url: 'https://test.com',
+        description: 'Test description',
+        createTime: expect.any(String),
+        updateTime: expect.any(String),
+      };
+
       mockSelectChain.limit.mockResolvedValue([]);
-      mockHookService.applyFilters.mockResolvedValue({ key: 'friendLinks', value: [newLink] });
-      mockRegistryService.updateConfig.mockResolvedValue([newLink]);
+      mockHookService.applyFilters.mockResolvedValue({ key: 'friendLinks', value: [expectedLink] });
+      mockRegistryService.updateConfig.mockResolvedValue([expectedLink]);
       mockHookService.doAction.mockResolvedValue(undefined);
 
-      const result = await service.createFriendLink(newLink);
+      const result = await service.createFriendLink(newLinkInput);
 
-      expect(result).toEqual([newLink]);
-      expect(mockRegistryService.updateConfig).toHaveBeenCalledWith('friendLinks', [newLink]);
+      expect(result).toMatchObject({
+        id: 1,
+        name: 'Test Friend',
+        url: 'https://test.com',
+        description: 'Test description',
+      });
+      expect(result.createTime).toBeDefined();
+      expect(result.updateTime).toBeDefined();
     });
   });
 
   describe('updateFriendLink', () => {
     it('should update existing friend link', async () => {
       const existingLinks: FriendLink[] = [
-        { name: 'Friend 1', url: 'https://friend1.com' },
-        { name: 'Friend 2', url: 'https://friend2.com' },
+        {
+          id: 1,
+          name: 'Friend 1',
+          url: 'https://friend1.com',
+          createTime: '2024-01-01T00:00:00Z',
+          updateTime: '2024-01-01T00:00:00Z',
+        },
+        {
+          id: 2,
+          name: 'Friend 2',
+          url: 'https://friend2.com',
+          createTime: '2024-01-01T00:00:00Z',
+          updateTime: '2024-01-01T00:00:00Z',
+        },
       ];
       const updateDto = { name: 'Updated Friend 1' };
-      const expectedResult = [{ ...existingLinks[0], ...updateDto }, existingLinks[1]];
 
       // Mock getFriendLinks to return existing links
       vi.spyOn(service, 'getFriendLinks').mockResolvedValue(existingLinks);
-      mockHookService.applyFilters.mockResolvedValue({ key: 'friendLinks', value: expectedResult });
-      mockRegistryService.updateConfig.mockResolvedValue(expectedResult);
+      mockHookService.applyFilters.mockImplementation(async (_hook, data) => data);
+      mockRegistryService.updateConfig.mockImplementation(async (_key, value) => value);
       mockHookService.doAction.mockResolvedValue(undefined);
 
       const result = await service.updateFriendLink(0, updateDto);
 
-      expect(result).toEqual(expectedResult);
-      expect(mockRegistryService.updateConfig).toHaveBeenCalledWith('friendLinks', expectedResult);
+      expect(result.name).toBe('Updated Friend 1');
+      expect(result.id).toBe(1);
+      expect(result.updateTime).toBeDefined();
     });
 
     it('should throw error for invalid index', async () => {
@@ -405,8 +432,20 @@ describe('SettingCoreService', () => {
   describe('deleteFriendLink', () => {
     it('should delete friend link at index', async () => {
       const existingLinks: FriendLink[] = [
-        { name: 'Friend 1', url: 'https://friend1.com' },
-        { name: 'Friend 2', url: 'https://friend2.com' },
+        {
+          id: 1,
+          name: 'Friend 1',
+          url: 'https://friend1.com',
+          createTime: '2024-01-01T00:00:00Z',
+          updateTime: '2024-01-01T00:00:00Z',
+        },
+        {
+          id: 2,
+          name: 'Friend 2',
+          url: 'https://friend2.com',
+          createTime: '2024-01-01T00:00:00Z',
+          updateTime: '2024-01-01T00:00:00Z',
+        },
       ];
       const expectedResult = [existingLinks[1]];
 
@@ -494,7 +533,7 @@ describe('SettingCoreService', () => {
     });
 
     it('should return existing about info', async () => {
-      const existing = { content: 'Hello', updatedAt: new Date().toISOString() };
+      const existing = { content: 'Hello', updatedAt: dayjs().format() };
       mockSelectChain.limit.mockResolvedValue([{ value: JSON.stringify(existing) }]);
 
       const result = await service.getAboutInfo();

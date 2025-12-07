@@ -2,7 +2,6 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, beforeEach, afterEach, expect, vi } from 'vitest';
 
 import { AnalyticsController } from './analytics.controller';
-import { AnalyticsType } from './entities/analytics.entity';
 import { AnalyticsService } from './services/analytics.service';
 import { ArticleStatsService } from './services/article-stats.service';
 import { EchartsFormatterService } from './services/echarts-formatter.service';
@@ -58,12 +57,13 @@ describe('AnalyticsController', () => {
 
   describe('recordAnalytics', () => {
     it('should record pageview via third-party and persist analytics', async () => {
-      const dto = { type: AnalyticsType.PAGEVIEW, path: '/home' } as any;
+      // pageview requires data.articleId to be a number
+      const dto = { type: 'pageview', path: '/home', data: { articleId: 1 } };
 
       await controller.recordAnalytics(dto);
 
       expect(mockAnalyticsService.recordAnalytics).toHaveBeenCalledWith(
-        expect.objectContaining({ type: AnalyticsType.PAGEVIEW, path: '/home' }),
+        expect.objectContaining({ type: 'pageview', path: '/home' }),
       );
       expect(mockThirdPartyAnalyticsService.trackPageview).toHaveBeenCalledWith(
         '/home',
@@ -73,12 +73,12 @@ describe('AnalyticsController', () => {
     });
 
     it('should persist non-pageview event via analytics service only', async () => {
-      const dto = { type: AnalyticsType.EVENT, data: { target: 'btn' } } as any;
+      const dto = { type: 'event', data: { target: 'btn' } };
 
       await controller.recordAnalytics(dto);
 
       expect(mockAnalyticsService.recordAnalytics).toHaveBeenCalledWith(
-        expect.objectContaining({ type: AnalyticsType.EVENT, data: { target: 'btn' } }),
+        expect.objectContaining({ type: 'event', data: { target: 'btn' } }),
       );
       expect(mockThirdPartyAnalyticsService.trackPageview).not.toHaveBeenCalled();
     });

@@ -1,4 +1,3 @@
-import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
 
 import { updateUserSchema } from '../../../database';
@@ -14,4 +13,4 @@ export const UpdateUserSchema = updateUserSchema
     permissions: z.array(z.string()).optional(),
   });
 
-export class UpdateUserDto extends createZodDto(UpdateUserSchema) {}
+export type UpdateUserDto = z.infer<typeof UpdateUserSchema>;

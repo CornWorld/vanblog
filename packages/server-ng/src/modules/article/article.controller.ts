@@ -16,7 +16,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags, ApiParam } from '@nestjs/swagger';
-import { ZodValidationPipe } from 'nestjs-zod';
+import { z } from 'zod';
 
 import { ArticleStatsService } from '../analytics/services/article-stats.service';
 import { Permission } from '../auth/permissions.decorator';
@@ -26,16 +26,18 @@ import { ArticleService } from './article.service';
 import { RequireArticleAccess } from './decorators/article-access.decorator';
 import { SkipArticleAccess } from './decorators/skip-article-access.decorator';
 import {
-  CreateArticleDto,
-  UpdateArticleDto,
-  ArticleQueryDto,
-  ArticleListResponseDto,
-  ArticleSearchDto,
-  ArticleSearchResponseDto,
+  ArticleListResponseSchema,
+  ArticleQuerySchema,
+  ArticleSearchResponseSchema,
+  ArticleSearchSchema,
   CreateArticleSchema,
   UpdateArticleSchema,
 } from './dto/article.dto';
-import { VerifyArticlePasswordDto, ArticleAccessResponseDto } from './dto/verify-password.dto';
+import {
+  VerifyArticlePasswordSchema,
+  ArticleAccessResponseSchema,
+  ArticleAccessResponse,
+} from './dto/verify-password.dto';
 import { Article } from './entities/article.entity';
 import { ArticleAccessGuard } from './guards/article-access.guard';
 
@@ -65,7 +67,8 @@ export class ArticleController {
   @Get()
   @ApiOperation({ summary: 'Get all articles' })
   @ApiResponse({ status: 200, description: 'Return all articles' })
-  async findAll(@Query() query: ArticleQueryDto): Promise<ArticleListResponseDto> {
+  async findAll(@Query() raw: unknown): Promise<z.infer<typeof ArticleListResponseSchema>> {
+    const query = ArticleQuerySchema.parse(raw);
     return this.articleService.findAll(query);
   }
 
@@ -83,7 +86,8 @@ export class ArticleController {
     status: 200,
     description: 'Return search results',
   })
-  async search(@Query() query: ArticleSearchDto): Promise<ArticleSearchResponseDto> {
+  async search(@Query() raw: unknown): Promise<z.infer<typeof ArticleSearchResponseSchema>> {
+    const query = ArticleSearchSchema.parse(raw);
     return this.articleService.search(query);
   }
 
@@ -116,7 +120,9 @@ export class ArticleController {
     status: 200,
     description: 'Return articles by category',
   })
-  async findByCategory(@Param('name') name: string): Promise<ArticleListResponseDto> {
+  async findByCategory(
+    @Param('name') name: string,
+  ): Promise<z.infer<typeof ArticleListResponseSchema>> {
     return this.articleService.findByCategory(name);
   }
 
@@ -131,7 +137,8 @@ export class ArticleController {
   @Permission('article', ['create'])
   @ApiOperation({ summary: 'Import articles' })
   @ApiResponse({ status: 201, description: 'Import articles' })
-  async import(@Body() articles: CreateArticleDto[]): Promise<void> {
+  async import(@Body() raw: unknown): Promise<void> {
+    const articles = z.array(CreateArticleSchema).parse(raw);
     await this.articleService.importArticles(articles);
   }
 
@@ -255,10 +262,9 @@ export class ArticleController {
   @Permission('article', ['create'])
   @ApiOperation({ summary: 'Create article' })
   @ApiResponse({ status: 201, description: 'Create new article' })
-  async create(
-    @Body(new ZodValidationPipe(CreateArticleSchema)) createArticleDto: CreateArticleDto,
-  ): Promise<Article> {
-    return this.articleService.create(createArticleDto);
+  async create(@Body() raw: unknown): Promise<Article> {
+    const dto = CreateArticleSchema.parse(raw);
+    return this.articleService.create(dto);
   }
 
   /**
@@ -276,11 +282,9 @@ export class ArticleController {
   @ApiOperation({ summary: 'Update article' })
   @ApiResponse({ status: 200, description: 'Update existing article' })
   @ApiResponse({ status: 404, description: 'Article not found' })
-  async update(
-    @Param('id', ParseIntPipe) id: number,
-    @Body(new ZodValidationPipe(UpdateArticleSchema)) updateArticleDto: UpdateArticleDto,
-  ): Promise<Article> {
-    return this.articleService.update(id, updateArticleDto);
+  async update(@Param('id', ParseIntPipe) id: number, @Body() raw: unknown): Promise<Article> {
+    const dto = UpdateArticleSchema.parse(raw);
+    return this.articleService.update(id, dto);
   }
 
   /**
@@ -319,16 +323,17 @@ export class ArticleController {
   @ApiResponse({
     status: 200,
     description: 'Password verified successfully',
-    type: ArticleAccessResponseDto,
+    type: ArticleAccessResponse,
   })
   @ApiResponse({ status: 401, description: 'Invalid password' })
   @ApiResponse({ status: 404, description: 'Article not found' })
   async verifyPassword(
     @Param('id', ParseIntPipe) id: number,
-    @Body() verifyPasswordDto: VerifyArticlePasswordDto,
+    @Body() raw: unknown,
     @Request() req: { user?: User },
-  ): Promise<ArticleAccessResponseDto> {
-    return this.articleService.verifyPassword(id, verifyPasswordDto.password, req.user?.id);
+  ): Promise<z.infer<typeof ArticleAccessResponseSchema>> {
+    const dto = VerifyArticlePasswordSchema.parse(raw);
+    return this.articleService.verifyPassword(id, dto.password, req.user?.id);
   }
 
   /**
@@ -350,19 +355,16 @@ export class ArticleController {
   @ApiResponse({
     status: 200,
     description: 'Password verified successfully',
-    type: ArticleAccessResponseDto,
+    type: ArticleAccessResponse,
   })
   @ApiResponse({ status: 401, description: 'Invalid password' })
   @ApiResponse({ status: 404, description: 'Article not found' })
   async verifyPasswordByPathname(
     @Param('pathname') pathname: string,
-    @Body() verifyPasswordDto: VerifyArticlePasswordDto,
+    @Body() raw: unknown,
     @Request() req: { user?: User },
-  ): Promise<ArticleAccessResponseDto> {
-    return this.articleService.verifyPasswordByPathname(
-      pathname,
-      verifyPasswordDto.password,
-      req.user?.id,
-    );
+  ): Promise<z.infer<typeof ArticleAccessResponseSchema>> {
+    const dto = VerifyArticlePasswordSchema.parse(raw);
+    return this.articleService.verifyPasswordByPathname(pathname, dto.password, req.user?.id);
   }
 }

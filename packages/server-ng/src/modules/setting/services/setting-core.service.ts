@@ -1,8 +1,15 @@
 import * as fs from 'fs';
 
 import { Injectable, Inject, OnModuleInit, Logger } from '@nestjs/common';
+import {
+  dayjs,
+  type FriendLink,
+  type CreateFriendLink,
+  type SocialItem,
+  type SocialType,
+  type RewardItem,
+} from '@vanblog/shared';
 import axios from 'axios';
-import dayjs from 'dayjs';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
@@ -44,13 +51,6 @@ export interface Navigation {
   children?: Navigation[];
 }
 
-export interface FriendLink {
-  name: string;
-  url: string;
-  description?: string;
-  avatar?: string;
-}
-
 export interface CustomCode {
   readonly css?: string;
   readonly script?: string;
@@ -62,14 +62,6 @@ export interface CustomCode {
 export interface AboutInfo {
   content: string;
   updatedAt: string;
-}
-
-export type SocialType = 'bilibili' | 'email' | 'github' | 'gitee' | 'wechat' | 'wechat-dark';
-
-export interface SocialItem {
-  type: SocialType;
-  value: string;
-  updatedAt: string | Date;
 }
 
 export interface SocialTypeInfo {
@@ -103,12 +95,6 @@ export interface LoginSetting {
   maxRetryTimes: number;
   durationSeconds: number;
   expiresIn: number;
-}
-
-export interface RewardItem {
-  name: string;
-  value: string;
-  updatedAt: string | Date;
 }
 
 export interface HttpsSetting {
@@ -212,7 +198,7 @@ export class SettingCoreService implements OnModuleInit {
       key,
       value: filteredData.value,
       oldValue: parsed,
-      updatedAt: new Date().toISOString(),
+      updatedAt: dayjs().format(),
     });
 
     // Backward compatibility: emit with raw string oldValue AFTER
@@ -311,21 +297,31 @@ export class SettingCoreService implements OnModuleInit {
     return (await this.getConfig<FriendLink[]>('friendLinks')) ?? [];
   }
 
-  async createFriendLink(dto: FriendLink): Promise<FriendLink[]> {
+  async createFriendLink(dto: CreateFriendLink): Promise<FriendLink> {
     const friends = await this.getFriendLinks();
-    friends.push(dto);
+    const now = dayjs().format();
+    const newFriend: FriendLink = {
+      id: friends.length > 0 ? Math.max(...friends.map((f) => f.id)) + 1 : 1,
+      name: dto.name,
+      url: dto.url,
+      description: dto.description,
+      avatar: dto.avatar,
+      createTime: now,
+      updateTime: now,
+    };
+    friends.push(newFriend);
     await this.updateConfig('friendLinks', friends);
-    return friends;
+    return newFriend;
   }
 
-  async updateFriendLink(index: number, dto: Partial<FriendLink>): Promise<FriendLink[]> {
+  async updateFriendLink(index: number, dto: Partial<FriendLink>): Promise<FriendLink> {
     const friends = await this.getFriendLinks();
     if (index < 0 || index >= friends.length) {
       throw new Error('Invalid index');
     }
-    friends[index] = { ...friends[index], ...dto };
+    friends[index] = { ...friends[index], ...dto, updateTime: dayjs().format() };
     await this.updateConfig('friendLinks', friends);
-    return friends;
+    return friends[index];
   }
 
   async deleteFriendLink(index: number): Promise<FriendLink[]> {
@@ -353,7 +349,7 @@ export class SettingCoreService implements OnModuleInit {
   async getAboutInfo(): Promise<AboutInfo> {
     const defaultAbout: AboutInfo = {
       content: '',
-      updatedAt: dayjs().toISOString(),
+      updatedAt: dayjs().format(),
     };
     return (await this.getConfig<AboutInfo>('aboutInfo', defaultAbout)) ?? defaultAbout;
   }
@@ -362,7 +358,7 @@ export class SettingCoreService implements OnModuleInit {
     const existing = await this.getAboutInfo();
     const updated: AboutInfo = {
       content: dto.content ?? existing.content,
-      updatedAt: dayjs().toISOString(),
+      updatedAt: dayjs().format(),
     };
     return this.updateConfig('aboutInfo', updated);
   }
@@ -378,7 +374,7 @@ export class SettingCoreService implements OnModuleInit {
     const newItem: SocialItem = {
       type: dto.type,
       value: dto.value,
-      updatedAt: dayjs().toISOString(),
+      updatedAt: dayjs().format(),
     };
 
     if (index !== -1) {
@@ -497,7 +493,7 @@ export class SettingCoreService implements OnModuleInit {
     const rewards = await this.getRewards();
     const newItem: RewardItem = {
       ...dto,
-      updatedAt: dayjs().toISOString(),
+      updatedAt: dayjs().format(),
     };
 
     // Check if exists
@@ -522,7 +518,7 @@ export class SettingCoreService implements OnModuleInit {
 
     const updatedItem: RewardItem = {
       ...dto,
-      updatedAt: dayjs().toISOString(),
+      updatedAt: dayjs().format(),
     };
 
     rewards[index] = updatedItem;
@@ -565,7 +561,7 @@ export class SettingCoreService implements OnModuleInit {
       const res = await axios.get('http://127.0.0.1:2019/config');
       return res.data;
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
+      const msg = err instanceof Error ? err.message : err;
       this.logger.warn(`获取 Caddy 配置失败: ${msg}`);
       return null;
     }

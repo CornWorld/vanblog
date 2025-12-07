@@ -1,7 +1,7 @@
 import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import dayjs, { type Dayjs } from 'dayjs';
+import { dayjs } from '@vanblog/shared';
 
 import { UserType } from '../user/dto/create-user.dto';
 import { User } from '../user/entities/user.entity';
@@ -9,6 +9,9 @@ import { UserService } from '../user/user.service';
 
 import { JwtPayload } from './strategies/jwt.strategy';
 import { TokenBlacklistService } from './token-blacklist.service';
+
+import type { Dayjs } from 'dayjs';
+import type { StringValue } from 'ms';
 
 export interface TokenPair {
   accessToken: string;
@@ -49,15 +52,17 @@ export class TokenService {
     const refreshExpiresIn = this.configService.get<string>('JWT_REFRESH_EXPIRES_IN', '7d');
 
     const accessToken = this.jwtService.sign(payload, {
-      expiresIn: expiresIn as any,
+      expiresIn: expiresIn as StringValue,
     });
 
-    const refreshToken = this.jwtService.sign(
-      { ...payload, tokenType: 'refresh' },
-      {
-        expiresIn: refreshExpiresIn as any,
-      },
-    );
+    const refreshPayload: JwtPayload & { tokenType: string } = {
+      ...payload,
+      tokenType: 'refresh',
+    };
+
+    const refreshToken = this.jwtService.sign(refreshPayload, {
+      expiresIn: refreshExpiresIn as StringValue,
+    });
 
     // 存储刷新令牌信息
     const refreshDays = parseInt(refreshExpiresIn.replace('d', ''));
@@ -91,7 +96,9 @@ export class TokenService {
     const expiresIn =
       customExpiresIn ?? this.configService.get<string>('JWT_GUEST_EXPIRES_IN', '12h');
 
-    return this.jwtService.sign(payload, { expiresIn: expiresIn as any });
+    return this.jwtService.sign(payload, {
+      expiresIn: expiresIn as StringValue,
+    });
   }
 
   /**
@@ -119,8 +126,8 @@ export class TokenService {
           username,
           type: UserType.VIEWER,
           permissions: ['role:viewer'],
-          createdAt: dayjs().toISOString(),
-          updatedAt: dayjs().toISOString(),
+          createdAt: dayjs().format(),
+          updatedAt: dayjs().format(),
         });
       }
 

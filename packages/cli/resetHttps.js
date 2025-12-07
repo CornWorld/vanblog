@@ -6,7 +6,7 @@ const uri = 'mongodb://mongo:27017/vanBlog?authSource=admin';
 
 const readString = (prompt) => {
   process.stdout.write(prompt);
-  return new Promise((resolve, _reject) => {
+  return new Promise((resolve) => {
     process.stdin.once('data', (data) => {
       resolve(data.toString().trim());
     });

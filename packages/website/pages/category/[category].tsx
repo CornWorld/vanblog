@@ -58,7 +58,7 @@ export async function getStaticPaths() {
   const data = normalizePublicMeta(rawData);
 
   // Use normalized data - no defensive programming needed
-  const categories = data.meta.categories;
+  const { categories } = data.meta;
   const paths = categories.map((category) => ({
     params: {
       category: category,

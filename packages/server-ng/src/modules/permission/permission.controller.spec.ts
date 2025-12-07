@@ -1,5 +1,5 @@
 import { Test, type TestingModule } from '@nestjs/testing';
-import dayjs from 'dayjs';
+import { dayjs } from '@vanblog/shared';
 import { describe, it, beforeEach, afterEach, expect, vi } from 'vitest';
 
 import { PermissionController } from './permission.controller';
@@ -28,8 +28,8 @@ describe('PermissionController', () => {
     description: 'Read articles',
     module: 'article',
     isActive: true,
-    createdAt: dayjs(),
-    updatedAt: dayjs(),
+    createdAt: dayjs().format(),
+    updatedAt: dayjs().format(),
   };
 
   const mockPermissionGroup: PermissionGroupDto = {
@@ -38,8 +38,8 @@ describe('PermissionController', () => {
     description: 'Administrator group',
     permissions: ['article:read', 'article:write'],
     isActive: true,
-    createdAt: dayjs(),
-    updatedAt: dayjs(),
+    createdAt: dayjs().format(),
+    updatedAt: dayjs().format(),
   };
 
   const mockPermissionService = {

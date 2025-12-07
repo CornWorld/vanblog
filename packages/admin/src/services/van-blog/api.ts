@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { settingService } from './setting';
 import { authService } from './auth';
 import { userService } from './user';
@@ -13,6 +15,7 @@ import { pipelineService } from './pipeline';
 import { tokenService } from './token';
 import { customPageService } from './custom-page';
 import { backupService } from './backup';
+import { encodeQuerystring } from './encode';
 import { encryptPwd } from './encryptPwd';
 
 export async function fetchAllMeta(options?: any) {
@@ -171,7 +174,7 @@ export async function fetchInit(body: any) {
 }
 
 export async function searchArtclesByLink(link: any) {
-  const { body } = await articleService.searchAdminArticles({ query: { keyword: link } });
+  const { body } = await articleService.searchAdminArticles({ query: { link } });
   return { data: body };
 }
 

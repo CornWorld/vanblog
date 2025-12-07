@@ -20,7 +20,7 @@ export class HookService implements IHookService {
   private validateAndNormalizeHookName(hookName: string): string {
     if (typeof hookName !== 'string' || hookName.trim().length === 0) {
       throw new Error(
-        `Invalid hook name '${String(hookName)}'. Expected format: module|event (e.g., article|afterCreate)`,
+        `Invalid hook name '${hookName}'. Expected format: module|event (e.g., article|afterCreate)`,
       );
     }
 
@@ -114,7 +114,7 @@ export class HookService implements IHookService {
     }
 
     this.logger.debug(
-      `Action added to hook '${normalized}' with priority ${String(priority)} and id ${id}`,
+      `Action added to hook '${normalized}' with priority ${priority} and id ${id}`,
     );
     return id;
   }
@@ -144,7 +144,7 @@ export class HookService implements IHookService {
     }
 
     this.logger.debug(
-      `Filter added to hook '${normalized}' with priority ${String(priority)} and id ${id}`,
+      `Filter added to hook '${normalized}' with priority ${priority} and id ${id}`,
     );
     return id;
   }
@@ -183,7 +183,7 @@ export class HookService implements IHookService {
       return;
     }
 
-    this.logger.debug(`Executing ${String(hooks.length)} actions for hook '${normalized}'`);
+    this.logger.debug(`Executing ${hooks.length} actions for hook '${normalized}'`);
 
     for (const hook of hooks) {
       try {
@@ -191,7 +191,7 @@ export class HookService implements IHookService {
       } catch (error) {
         this.logger.error(
           `Error executing action for hook '${normalized}' with id ${hook.id}:`,
-          error instanceof Error ? error.message : String(error),
+          error instanceof Error ? error.message : error,
         );
         // Continue execution even if one action fails
       }
@@ -206,7 +206,7 @@ export class HookService implements IHookService {
       return value;
     }
 
-    this.logger.debug(`Applying ${String(hooks.length)} filters for hook '${normalized}'`);
+    this.logger.debug(`Applying ${hooks.length} filters for hook '${normalized}'`);
 
     let result: unknown = value;
     for (const hook of hooks) {
@@ -216,7 +216,7 @@ export class HookService implements IHookService {
       } catch (error) {
         this.logger.error(
           `Error applying filter for hook '${normalized}' with id ${hook.id}:`,
-          error instanceof Error ? error.message : String(error),
+          error instanceof Error ? error.message : error,
         );
         // Continue with current result value on error, don't update result
       }

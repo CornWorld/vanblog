@@ -134,7 +134,10 @@ describe('MediaController', () => {
       const updated = { provider: 'local', local: { root: '/data' } } as any;
       mockStorageConfigService.updateStorageConfig.mockResolvedValue(updated);
       const result = await controller.updateStorageConfig(dto);
-      expect(mockStorageConfigService.updateStorageConfig).toHaveBeenCalledWith(dto);
+      // Zod schema strips unrecognized properties like 'local'
+      expect(mockStorageConfigService.updateStorageConfig).toHaveBeenCalledWith({
+        provider: 'local',
+      });
       expect(result).toBe(updated);
     });
   });
@@ -263,7 +266,7 @@ describe('MediaController', () => {
       expect(mockMediaService.uploadFile).toHaveBeenCalledWith(
         expect.objectContaining({ buffer: cmpOut, originalname: 'a.png' }),
         'a.png',
-        undefined,
+        'local', // default provider from UploadFileSchema
       );
       expect(saved).toEqual({ id: 99 });
     });

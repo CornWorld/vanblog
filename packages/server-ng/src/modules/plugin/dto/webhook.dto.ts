@@ -1,15 +1,14 @@
-import { createZodDto } from 'nestjs-zod';
-
-import {
+import type {
   insertWebhookSchema,
   updateWebhookSchema,
   selectWebhookSchema,
 } from '../../../database/zod-schemas';
+import type { z } from 'zod';
 
 // Webhook DTOs - directly using centralized schemas
-export class CreateWebhookDto extends createZodDto(insertWebhookSchema) {}
-export class UpdateWebhookDto extends createZodDto(updateWebhookSchema) {}
-export class WebhookDto extends createZodDto(selectWebhookSchema) {}
+export type CreateWebhookDto = z.infer<typeof insertWebhookSchema>;
+export type UpdateWebhookDto = z.infer<typeof updateWebhookSchema>;
+export type WebhookDto = z.infer<typeof selectWebhookSchema>;
 
 export class WebhookLogDto {
   id!: number;

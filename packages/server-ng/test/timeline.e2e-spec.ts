@@ -106,11 +106,8 @@ describe('TimelineController (e2e)', () => {
   it('GET /api/v2/public/timeline should group by year and exclude hidden/private by default', async () => {
     const res = await request(httpServer).get('/api/v2/public/timeline').expect(200);
 
-    // wrapper
-    expect(res.body).toHaveProperty('statusCode', 200);
-    expect(res.body).toHaveProperty('data');
-
-    const data = res.body.data as Partial<Record<string, any[]>>;
+    // ts-rest returns body directly without wrapper
+    const data = res.body as Partial<Record<string, any[]>>;
 
     // year keys should exist
     expect(Object.keys(data)).toContain('2024');
@@ -137,8 +134,8 @@ describe('TimelineController (e2e)', () => {
       .query({ includeHidden: 'true' })
       .expect(200);
 
-    expect(res.body).toHaveProperty('statusCode', 200);
-    const data = res.body.data as Partial<Record<string, any[]>>;
+    // ts-rest returns body directly without wrapper
+    const data = res.body as Partial<Record<string, any[]>>;
 
     const y2024 = data['2024'];
     const titles2024 = (y2024 ?? []).map((a) => a.title);
@@ -154,10 +151,11 @@ describe('TimelineController (e2e)', () => {
       .query({ includeHidden: 'true' })
       .expect(200);
 
-    const titles2024_1 = ((res1.body.data as Partial<Record<string, any[]>>)['2024'] ?? []).map(
+    // ts-rest returns body directly without wrapper
+    const titles2024_1 = ((res1.body as Partial<Record<string, any[]>>)['2024'] ?? []).map(
       (a) => a.title,
     );
-    const titles2024_2 = ((res2.body.data as Partial<Record<string, any[]>>)['2024'] ?? []).map(
+    const titles2024_2 = ((res2.body as Partial<Record<string, any[]>>)['2024'] ?? []).map(
       (a) => a.title,
     );
 

@@ -1,32 +1,18 @@
-import { Controller, Get } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
-import dayjs from 'dayjs';
+import { Controller } from '@nestjs/common';
+import { initContract } from '@ts-rest/core';
+import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
+import { dayjs } from '@vanblog/shared';
+import { createHealthContract } from '@vanblog/shared/src/contracts/health.contract';
 
-interface HealthCheckResponse {
-  status: 'ok' | 'error';
-  timestamp: string;
-  uptime: number;
-  environment: string;
-  version: string;
-}
+const c = initContract();
+const healthContract = createHealthContract(c);
 
-@ApiTags('System')
-@Controller('health')
+@Controller()
 export class HealthController {
-  @Get()
-  @ApiOperation({ summary: 'Health check endpoint' })
-  @ApiResponse({
-    status: 200,
-    description: 'Service is healthy',
-    type: Object,
-  })
-  healthCheck(): HealthCheckResponse {
-    return {
-      status: 'ok',
-      timestamp: dayjs().toISOString(),
-      uptime: process.uptime(),
-      environment: process.env['NODE_ENV'] ?? 'development',
-      version: '2.0.0',
-    };
+  @TsRestHandler(healthContract.getHealth)
+  getHealth(): ReturnType<typeof tsRestHandler> {
+    return tsRestHandler(healthContract.getHealth, async () => {
+      return { status: 200, body: { timestamp: dayjs().format() } };
+    });
   }
 }

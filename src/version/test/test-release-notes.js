@@ -108,9 +108,8 @@ const mockLogger = {
 // Create a mock version of generateReleaseNotes
 async function mockGenerateReleaseNotes(version, releaseType) {
   // Import modules that contain the functions we need
-  const { initCategories, parseCommit, formatMarkdown, formatReleaseNotes } = await import(
-    '../utils/commits.js'
-  );
+  const { initCategories, parseCommit, formatMarkdown, formatReleaseNotes } =
+    await import('../utils/commits.js');
 
   mockLogger.step('Creating release notes...');
 

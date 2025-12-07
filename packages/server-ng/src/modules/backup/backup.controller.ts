@@ -15,20 +15,18 @@ import {
   Res,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
-import { ZodValidationPipe } from 'nestjs-zod';
+import { z } from 'zod';
 
 import { Perm } from '../auth/permissions.decorator';
 
 import { BackupService } from './backup.service';
 import {
-  CreateBackupDto,
-  RestoreBackupDto,
-  GetBackupsDto,
-  BackupInfoDto,
-  BackupListDto,
-  RestoreProgressDto,
   CreateBackupSchema,
   RestoreBackupSchema,
+  GetBackupsSchema,
+  BackupInfoSchema,
+  BackupListSchema,
+  RestoreProgressSchema,
 } from './dto/backup.dto';
 
 import type { Response } from 'express';
@@ -61,14 +59,13 @@ export class BackupController {
   @Perm('backup', ['create'])
   @ApiOperation({ summary: 'Create a database backup' })
   @HttpCode(HttpStatus.CREATED)
-  @ApiResponse({ status: 201, description: 'Backup created successfully', type: BackupInfoDto })
+  @ApiResponse({ status: 201, description: 'Backup created successfully' })
   @ApiResponse({ status: 400, description: 'Invalid request parameters' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Insufficient permissions' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
-  async createBackup(
-    @Body(new ZodValidationPipe(CreateBackupSchema)) createBackupDto: CreateBackupDto,
-  ): Promise<BackupInfoDto> {
+  async createBackup(@Body() raw: unknown): Promise<z.infer<typeof BackupInfoSchema>> {
+    const createBackupDto = CreateBackupSchema.parse(raw);
     return this.backupService.createBackup(createBackupDto);
   }
 
@@ -86,10 +83,11 @@ export class BackupController {
   @Get()
   @Perm('backup', ['read'])
   @ApiOperation({ summary: 'List all backups' })
-  @ApiResponse({ status: 200, description: 'Backups retrieved successfully', type: BackupListDto })
+  @ApiResponse({ status: 200, description: 'Backups retrieved successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Insufficient permissions' })
-  async getBackups(@Query() getBackupsDto: GetBackupsDto): Promise<BackupListDto> {
+  async getBackups(@Query() raw: unknown): Promise<z.infer<typeof BackupListSchema>> {
+    const getBackupsDto = GetBackupsSchema.parse(raw);
     return this.backupService.getBackups(getBackupsDto);
   }
 
@@ -199,13 +197,14 @@ export class BackupController {
   @ApiResponse({ status: 403, description: 'Insufficient permissions' })
   async restoreBackup(
     @Param('filename') filename: string,
-    @Body(new ZodValidationPipe(RestoreBackupSchema)) restoreBackupDto: RestoreBackupDto,
+    @Body() raw: unknown,
   ): Promise<{ taskId: string }> {
     // 验证文件名安全性
     if (!filename.endsWith('.vbak') || filename.includes('..') || filename.includes('/')) {
       throw new Error('Invalid filename');
     }
 
+    const restoreBackupDto = RestoreBackupSchema.parse(raw);
     return this.backupService.restoreBackup(filename, restoreBackupDto);
   }
 
@@ -227,12 +226,11 @@ export class BackupController {
   @ApiResponse({
     status: 200,
     description: 'Restore progress retrieved successfully',
-    type: RestoreProgressDto,
   })
   @ApiResponse({ status: 404, description: 'Restore task not found' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Insufficient permissions' })
-  getRestoreProgress(@Param('taskId') taskId: string): RestoreProgressDto {
+  getRestoreProgress(@Param('taskId') taskId: string): z.infer<typeof RestoreProgressSchema> {
     return this.backupService.getRestoreProgress(taskId);
   }
 }

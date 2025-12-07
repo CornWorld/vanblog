@@ -4,6 +4,8 @@ import * as path from 'path';
 import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Test, type TestingModule } from '@nestjs/testing';
+import { dayjs } from '@vanblog/shared';
+// import { Feed } from 'feed';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 import { DATABASE_CONNECTION } from '../../database';
@@ -147,6 +149,7 @@ describe('RssService', () => {
     configService.get.mockReturnValue('/tmp/static');
 
     // Mock fs operations
+    vi.mocked(fs.access).mockRejectedValue(new Error('no access'));
     vi.mocked(fs.mkdir).mockResolvedValue(undefined);
     vi.mocked(fs.writeFile).mockResolvedValue(undefined);
     vi.mocked(path.join).mockImplementation((...args) => args.join('/'));
@@ -170,8 +173,8 @@ describe('RssService', () => {
               mockArticles.map((article) => ({
                 ...article,
                 tags: JSON.stringify(article.tags),
-                createdAt: article.createdAt.toISOString(),
-                updatedAt: article.updatedAt.toISOString(),
+                createdAt: dayjs(article.createdAt as any).format(),
+                updatedAt: dayjs(article.updatedAt as any).format(),
               })),
             ),
           }),

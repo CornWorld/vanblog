@@ -1,8 +1,7 @@
-import { createZodDto } from 'nestjs-zod';
+import { c } from '@vanblog/shared';
 import { z } from 'zod';
 
 import { selectArticleSchema, insertArticleSchema, updateArticleSchema } from '../../../database';
-import { commonSchemas } from '../../../shared/zod';
 
 // 基础文章 Schema - 使用 drizzle-zod 生成的 schema
 export const ArticleSchema = selectArticleSchema;
@@ -24,8 +23,8 @@ export const UpdateArticleSchema = updateArticleSchema.omit({
 
 // 文章查询 Schema
 export const ArticleQuerySchema = z.object({
-  page: commonSchemas.page,
-  pageSize: commonSchemas.pageSize,
+  page: c.page,
+  pageSize: c.pageSize,
   keyword: z.string().optional(),
   tag: z.string().optional(),
   category: z.string().optional(),
@@ -42,16 +41,16 @@ export const ArticleQuerySchema = z.object({
 export const ArticleListResponseSchema = z.object({
   items: z.array(ArticleSchema),
   total: z.number(),
-  page: commonSchemas.page,
-  pageSize: commonSchemas.pageSize,
+  page: c.page,
+  pageSize: c.pageSize,
   totalPages: z.number(),
 });
 
 // 文章搜索 Schema
 export const ArticleSearchSchema = z.object({
   keyword: z.string().min(1, '搜索关键词不能为空'),
-  page: commonSchemas.page,
-  pageSize: commonSchemas.pageSize,
+  page: c.page,
+  pageSize: c.pageSize,
   query: z.string().optional(),
   titleOnly: z.boolean().optional(),
   contentOnly: z.boolean().optional(),
@@ -84,16 +83,16 @@ export const ArticleSearchResultSchema = z.object({
 export const ArticleSearchResponseSchema = z.object({
   items: z.array(ArticleSearchResultSchema),
   total: z.number(),
-  page: commonSchemas.page,
-  pageSize: commonSchemas.pageSize,
+  page: c.page,
+  pageSize: c.pageSize,
   totalPages: z.number(),
 });
 
-export class CreateArticleDto extends createZodDto(CreateArticleSchema) {}
-export class UpdateArticleDto extends createZodDto(UpdateArticleSchema) {}
-export class ArticleDto extends createZodDto(ArticleSchema) {}
-export class ArticleQueryDto extends createZodDto(ArticleQuerySchema) {}
-export class ArticleListResponseDto extends createZodDto(ArticleListResponseSchema) {}
-export class ArticleSearchDto extends createZodDto(ArticleSearchSchema) {}
-export class ArticleSearchResultDto extends createZodDto(ArticleSearchResultSchema) {}
-export class ArticleSearchResponseDto extends createZodDto(ArticleSearchResponseSchema) {}
+export type CreateArticleDto = z.infer<typeof CreateArticleSchema>;
+export type UpdateArticleDto = z.infer<typeof UpdateArticleSchema>;
+export type ArticleDto = z.infer<typeof ArticleSchema>;
+export type ArticleQueryDto = z.infer<typeof ArticleQuerySchema>;
+export type ArticleListResponseDto = z.infer<typeof ArticleListResponseSchema>;
+export type ArticleSearchDto = z.infer<typeof ArticleSearchSchema>;
+export type ArticleSearchResultDto = z.infer<typeof ArticleSearchResultSchema>;
+export type ArticleSearchResponseDto = z.infer<typeof ArticleSearchResponseSchema>;

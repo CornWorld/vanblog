@@ -1,12 +1,11 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Post, Put, UseGuards } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { ZodValidationPipe } from 'nestjs-zod';
+import { z } from 'zod';
 
 import { DemoModeGuard } from '../auth/guards/demo-mode.guard';
 import { Perm } from '../auth/permissions.decorator';
 
-import { UpdateWalineSettingDto, WalineSettingDto } from './comment.dto';
-import { UpdateWalineSettingSchema } from './comment.schema';
+import { WalineSettingSchema, UpdateWalineSettingSchema } from './comment.schema';
 import { CommentService } from './comment.service';
 
 @ApiTags('Comment')
@@ -19,9 +18,8 @@ export class CommentController {
   @ApiResponse({
     status: 200,
     description: 'Waline settings retrieved successfully',
-    type: WalineSettingDto,
   })
-  async getWalineSetting(): Promise<WalineSettingDto> {
+  async getWalineSetting(): Promise<z.infer<typeof WalineSettingSchema>> {
     return this.commentService.getWalineSetting();
   }
 
@@ -32,11 +30,9 @@ export class CommentController {
   @ApiResponse({
     status: 200,
     description: 'Waline settings updated successfully',
-    type: WalineSettingDto,
   })
-  async updateWalineSetting(
-    @Body(new ZodValidationPipe(UpdateWalineSettingSchema)) updateDto: UpdateWalineSettingDto,
-  ): Promise<WalineSettingDto> {
+  async updateWalineSetting(@Body() raw: unknown): Promise<z.infer<typeof WalineSettingSchema>> {
+    const updateDto = UpdateWalineSettingSchema.parse(raw);
     return this.commentService.updateWalineSetting(updateDto);
   }
 

@@ -1,4 +1,3 @@
-import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
 
 // 简化的通用 schema，避免依赖外部模块
@@ -9,4 +8,4 @@ export const RewardInfoSchema = z.object({
   value: nonEmptyString.describe('Payment value (e.g., QR code URL or account)'),
 });
 
-export class RewardInfoDto extends createZodDto(RewardInfoSchema) {}
+export type RewardInfoDto = z.infer<typeof RewardInfoSchema>;

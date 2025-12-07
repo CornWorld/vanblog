@@ -1,4 +1,3 @@
-import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
 
 import {
@@ -33,10 +32,10 @@ export const PermissionGroupQuerySchema = z.object({
   limit: z.number().int().positive().max(100).default(10),
 });
 
-export class PermissionGroupDto extends createZodDto(PermissionGroupSchema) {}
-export class CreatePermissionGroupDto extends createZodDto(CreatePermissionGroupSchema) {}
-export class UpdatePermissionGroupDto extends createZodDto(UpdatePermissionGroupSchema) {}
-export class PermissionGroupQueryDto extends createZodDto(PermissionGroupQuerySchema) {}
+export type PermissionGroupDto = z.infer<typeof PermissionGroupSchema>;
+export type CreatePermissionGroupDto = z.infer<typeof CreatePermissionGroupSchema>;
+export type UpdatePermissionGroupDto = z.infer<typeof UpdatePermissionGroupSchema>;
+export type PermissionGroupQueryDto = z.infer<typeof PermissionGroupQuerySchema>;
 
 export type PermissionGroupType = z.infer<typeof PermissionGroupSchema>;
 export type CreatePermissionGroupType = z.infer<typeof CreatePermissionGroupSchema>;

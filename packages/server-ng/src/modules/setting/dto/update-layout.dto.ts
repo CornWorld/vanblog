@@ -1,4 +1,3 @@
-import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
 
 export const UpdateLayoutSchema = z.object({
@@ -11,4 +10,4 @@ export const UpdateLayoutSchema = z.object({
   showSearch: z.boolean().describe('是否显示搜索'),
 });
 
-export class UpdateLayoutDto extends createZodDto(UpdateLayoutSchema) {}
+export type UpdateLayoutDto = z.infer<typeof UpdateLayoutSchema>;

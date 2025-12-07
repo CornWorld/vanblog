@@ -1,7 +1,6 @@
-import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
 
-interface NavItemType {
+export interface NavItemType {
   id?: number;
   name: string;
   url: string;
@@ -35,7 +34,5 @@ export const NavigationResponseSchema = z.object({
   items: z.array(NavigationItemSchema),
 });
 
-export class NavigationItemDto extends createZodDto(NavigationItemSchema) {}
-export class UpdateNavigationDto extends createZodDto(UpdateNavigationSchema) {
-  items!: NavigationItem[];
-}
+export type NavigationItemDto = z.infer<typeof NavigationItemSchema>;
+export type UpdateNavigationDto = z.infer<typeof UpdateNavigationSchema>;

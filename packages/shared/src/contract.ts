@@ -93,7 +93,7 @@ export const contract = c.router({
   // User
   updateProfile: {
     method: 'PUT',
-    path: '/admin/users/profile',
+    path: '/v2/users/profile',
     body: UpdateUserSchema,
     responses: {
       200: UserSchema,
@@ -102,7 +102,7 @@ export const contract = c.router({
   },
   getCollaborators: {
     method: 'GET',
-    path: '/admin/users/collaborators',
+    path: '/v2/users/collaborators',
     responses: {
       200: z.array(UserSchema),
     },
@@ -110,7 +110,7 @@ export const contract = c.router({
   },
   createCollaborator: {
     method: 'POST',
-    path: '/admin/users/collaborators',
+    path: '/v2/users/collaborators',
     body: CreateCollaboratorSchema,
     responses: {
       201: UserSchema,
@@ -119,7 +119,7 @@ export const contract = c.router({
   },
   updateCollaborator: {
     method: 'PUT',
-    path: '/admin/users/collaborators',
+    path: '/v2/users/collaborators',
     body: UpdateCollaboratorSchema,
     responses: {
       200: UserSchema,
@@ -128,7 +128,7 @@ export const contract = c.router({
   },
   deleteCollaborator: {
     method: 'DELETE',
-    path: '/admin/users/collaborators/:id',
+    path: '/v2/users/collaborators/:id',
     pathParams: z.object({ id: z.string() }),
     responses: {
       200: z.object({ success: z.boolean() }),
@@ -138,7 +138,7 @@ export const contract = c.router({
   // Token
   getTokens: {
     method: 'GET',
-    path: '/admin/tokens',
+    path: '/v2/tokens',
     responses: {
       200: z.array(TokenSchema),
     },
@@ -146,7 +146,7 @@ export const contract = c.router({
   },
   createToken: {
     method: 'POST',
-    path: '/admin/tokens',
+    path: '/v2/tokens',
     body: CreateTokenSchema,
     responses: {
       201: TokenSchema,
@@ -155,7 +155,7 @@ export const contract = c.router({
   },
   deleteToken: {
     method: 'DELETE',
-    path: '/admin/tokens/:id',
+    path: '/v2/tokens/:id',
     pathParams: z.object({ id: z.string() }),
     responses: {
       200: z.object({ success: z.boolean() }),
@@ -165,7 +165,7 @@ export const contract = c.router({
   // Category
   getCategories: {
     method: 'GET',
-    path: '/admin/categories',
+    path: '/v2/categories',
     query: z.object({ detail: z.string().optional() }),
     responses: {
       200: z.array(CategorySchema),
@@ -174,7 +174,7 @@ export const contract = c.router({
   },
   createCategory: {
     method: 'POST',
-    path: '/admin/categories',
+    path: '/v2/categories',
     body: CreateCategorySchema,
     responses: {
       201: CategorySchema,
@@ -183,7 +183,7 @@ export const contract = c.router({
   },
   updateCategory: {
     method: 'PUT',
-    path: '/admin/categories/:name',
+    path: '/v2/categories/:name',
     pathParams: z.object({ name: z.string() }),
     body: UpdateCategorySchema,
     responses: {
@@ -193,7 +193,7 @@ export const contract = c.router({
   },
   deleteCategory: {
     method: 'DELETE',
-    path: '/admin/categories/:name',
+    path: '/v2/categories/:name',
     pathParams: z.object({ name: z.string() }),
     responses: {
       200: z.object({ success: z.boolean() }),
@@ -202,7 +202,7 @@ export const contract = c.router({
   },
   getArticlesByCategory: {
     method: 'GET',
-    path: '/admin/categories/:name/articles',
+    path: '/v2/categories/:name/articles',
     pathParams: z.object({ name: z.string() }),
     responses: {
       200: z.array(ArticleSchema),
@@ -212,7 +212,7 @@ export const contract = c.router({
   // Tag
   getTags: {
     method: 'GET',
-    path: '/admin/tags',
+    path: '/v2/tags',
     responses: {
       200: z.array(TagSchema),
     },
@@ -220,7 +220,7 @@ export const contract = c.router({
   },
   createTag: {
     method: 'POST',
-    path: '/admin/tags',
+    path: '/v2/tags',
     body: CreateTagSchema,
     responses: {
       201: TagSchema,
@@ -229,7 +229,7 @@ export const contract = c.router({
   },
   updateTag: {
     method: 'PUT',
-    path: '/admin/tags/:name',
+    path: '/v2/tags/:name',
     pathParams: z.object({ name: z.string() }),
     body: UpdateTagSchema,
     responses: {
@@ -239,7 +239,7 @@ export const contract = c.router({
   },
   deleteTag: {
     method: 'DELETE',
-    path: '/admin/tags/:name',
+    path: '/v2/tags/:name',
     pathParams: z.object({ name: z.string() }),
     responses: {
       200: z.object({ success: z.boolean() }),
@@ -249,7 +249,7 @@ export const contract = c.router({
   // Article (Admin)
   getAdminArticles: {
     method: 'GET',
-    path: '/admin/articles',
+    path: '/v2/articles',
     query: z.object({
       page: z.coerce.number().optional(),
       pageSize: z.coerce.number().optional(),
@@ -280,7 +280,7 @@ export const contract = c.router({
   },
   createArticle: {
     method: 'POST',
-    path: '/admin/articles',
+    path: '/v2/articles',
     body: CreateArticleSchema,
     responses: {
       201: ArticleSchema,
@@ -289,7 +289,7 @@ export const contract = c.router({
   },
   updateArticle: {
     method: 'PUT',
-    path: '/admin/articles/:id',
+    path: '/v2/articles/:id',
     pathParams: z.object({ id: z.string() }),
     body: UpdateArticleSchema,
     responses: {
@@ -299,7 +299,7 @@ export const contract = c.router({
   },
   deleteArticle: {
     method: 'DELETE',
-    path: '/admin/articles/:id',
+    path: '/v2/articles/:id',
     pathParams: z.object({ id: z.string() }),
     responses: {
       200: z.object({ success: z.boolean() }),
@@ -308,7 +308,7 @@ export const contract = c.router({
   },
   getAdminArticle: {
     method: 'GET',
-    path: '/admin/articles/:id',
+    path: '/v2/articles/:id',
     pathParams: z.object({ id: z.string() }),
     responses: {
       200: ArticleSchema,
@@ -317,7 +317,7 @@ export const contract = c.router({
   },
   searchAdminArticles: {
     method: 'GET',
-    path: '/admin/articles/search',
+    path: '/v2/articles/search',
     query: z.object({ link: z.string() }),
     responses: {
       200: z.array(ArticleSchema),
@@ -327,7 +327,7 @@ export const contract = c.router({
   // Draft
   getDrafts: {
     method: 'GET',
-    path: '/admin/drafts',
+    path: '/v2/drafts',
     query: z.object({
       page: z.coerce.number().optional(),
       pageSize: z.coerce.number().optional(),
@@ -346,7 +346,7 @@ export const contract = c.router({
   },
   createDraft: {
     method: 'POST',
-    path: '/admin/drafts',
+    path: '/v2/drafts',
     body: CreateDraftSchema,
     responses: {
       201: DraftSchema,
@@ -355,7 +355,7 @@ export const contract = c.router({
   },
   updateDraft: {
     method: 'PUT',
-    path: '/admin/drafts/:id',
+    path: '/v2/drafts/:id',
     pathParams: z.object({ id: z.string() }),
     body: UpdateDraftSchema,
     responses: {
@@ -365,7 +365,7 @@ export const contract = c.router({
   },
   deleteDraft: {
     method: 'DELETE',
-    path: '/admin/drafts/:id',
+    path: '/v2/drafts/:id',
     pathParams: z.object({ id: z.string() }),
     responses: {
       200: z.object({ success: z.boolean() }),
@@ -374,7 +374,7 @@ export const contract = c.router({
   },
   getDraft: {
     method: 'GET',
-    path: '/admin/drafts/:id',
+    path: '/v2/drafts/:id',
     pathParams: z.object({ id: z.string() }),
     responses: {
       200: DraftSchema,
@@ -383,7 +383,7 @@ export const contract = c.router({
   },
   publishDraft: {
     method: 'POST',
-    path: '/admin/drafts/:id/publish',
+    path: '/v2/drafts/:id/publish',
     pathParams: z.object({ id: z.string() }),
     body: z.object({}),
     responses: {
@@ -394,7 +394,7 @@ export const contract = c.router({
   // Media
   getMedia: {
     method: 'GET',
-    path: '/admin/media',
+    path: '/v2/media',
     query: z.object({
       page: z.coerce.number().optional(),
       pageSize: z.coerce.number().optional(),
@@ -411,7 +411,7 @@ export const contract = c.router({
   },
   deleteMedia: {
     method: 'DELETE',
-    path: '/admin/media/:sign',
+    path: '/v2/media/:sign',
     pathParams: z.object({ sign: z.string() }),
     responses: {
       200: z.object({ success: z.boolean() }),
@@ -420,7 +420,7 @@ export const contract = c.router({
   },
   batchDeleteMedia: {
     method: 'POST',
-    path: '/admin/media/batch-delete',
+    path: '/v2/media/batch-delete',
     body: z.object({}),
     responses: {
       200: z.object({ success: z.boolean() }),
@@ -429,7 +429,7 @@ export const contract = c.router({
   },
   scanMedia: {
     method: 'POST',
-    path: '/admin/media/scan-articles',
+    path: '/v2/media/scan-articles',
     body: z.object({}),
     responses: {
       200: z.object({ success: z.boolean() }),
@@ -438,7 +438,7 @@ export const contract = c.router({
   },
   exportMedia: {
     method: 'GET',
-    path: '/admin/media/export/all',
+    path: '/v2/media/export/all',
     responses: {
       200: z.any(), // Blob/File
     },
@@ -447,7 +447,7 @@ export const contract = c.router({
   // Custom Page (Admin)
   getCustomPages: {
     method: 'GET',
-    path: '/admin/custom-pages/all',
+    path: '/v2/custom-pages/all',
     responses: {
       200: z.array(CustomPageSchema),
     },
@@ -455,7 +455,7 @@ export const contract = c.router({
   },
   getCustomPage: {
     method: 'GET',
-    path: '/admin/custom-pages',
+    path: '/v2/custom-pages',
     query: z.object({ path: z.string() }),
     responses: {
       200: CustomPageSchema,
@@ -464,7 +464,7 @@ export const contract = c.router({
   },
   createCustomPage: {
     method: 'POST',
-    path: '/admin/custom-pages',
+    path: '/v2/custom-pages',
     body: CreateCustomPageSchema,
     responses: {
       201: CustomPageSchema,
@@ -473,7 +473,7 @@ export const contract = c.router({
   },
   updateCustomPage: {
     method: 'PUT',
-    path: '/admin/custom-pages',
+    path: '/v2/custom-pages',
     body: UpdateCustomPageSchema,
     responses: {
       200: CustomPageSchema,
@@ -482,7 +482,7 @@ export const contract = c.router({
   },
   deleteCustomPage: {
     method: 'DELETE',
-    path: '/admin/custom-pages',
+    path: '/v2/custom-pages',
     query: z.object({ path: z.string() }),
     responses: {
       200: z.object({ success: z.boolean() }),
@@ -491,7 +491,7 @@ export const contract = c.router({
   },
   getCustomPageFolder: {
     method: 'GET',
-    path: '/admin/custom-pages/folder',
+    path: '/v2/custom-pages/folder',
     query: z.object({ path: z.string() }),
     responses: {
       200: z.any(), // Tree structure
@@ -500,7 +500,7 @@ export const contract = c.router({
   },
   getCustomPageFile: {
     method: 'GET',
-    path: '/admin/custom-pages/file',
+    path: '/v2/custom-pages/file',
     query: z.object({ path: z.string(), key: z.string() }),
     responses: {
       200: z.string(),
@@ -509,7 +509,7 @@ export const contract = c.router({
   },
   createCustomPageFile: {
     method: 'POST',
-    path: '/admin/custom-pages/file',
+    path: '/v2/custom-pages/file',
     query: z.object({ path: z.string(), subPath: z.string() }),
     body: z.object({}),
     responses: {
@@ -519,7 +519,7 @@ export const contract = c.router({
   },
   updateCustomPageFile: {
     method: 'PUT',
-    path: '/admin/custom-pages/file',
+    path: '/v2/custom-pages/file',
     body: z.object({
       pathname: z.string(),
       filePath: z.string(),
@@ -533,7 +533,7 @@ export const contract = c.router({
   // Pipeline
   getPipelines: {
     method: 'GET',
-    path: '/admin/pipelines',
+    path: '/v2/pipelines',
     responses: {
       200: z.array(PipelineSchema),
     },
@@ -541,7 +541,7 @@ export const contract = c.router({
   },
   getPipelineConfig: {
     method: 'GET',
-    path: '/admin/pipelines/config',
+    path: '/v2/pipelines/config',
     responses: {
       200: z.any(),
     },
@@ -549,7 +549,7 @@ export const contract = c.router({
   },
   getPipeline: {
     method: 'GET',
-    path: '/admin/pipelines/:id',
+    path: '/v2/pipelines/:id',
     pathParams: z.object({ id: z.string() }),
     responses: {
       200: PipelineSchema,
@@ -558,7 +558,7 @@ export const contract = c.router({
   },
   updatePipeline: {
     method: 'PUT',
-    path: '/admin/pipelines/:id',
+    path: '/v2/pipelines/:id',
     pathParams: z.object({ id: z.string() }),
     body: UpdatePipelineSchema,
     responses: {
@@ -568,7 +568,7 @@ export const contract = c.router({
   },
   deletePipeline: {
     method: 'DELETE',
-    path: '/admin/pipelines/:id',
+    path: '/v2/pipelines/:id',
     pathParams: z.object({ id: z.string() }),
     responses: {
       200: z.object({ success: z.boolean() }),
@@ -577,7 +577,7 @@ export const contract = c.router({
   },
   createPipeline: {
     method: 'POST',
-    path: '/admin/pipelines',
+    path: '/v2/pipelines',
     body: CreatePipelineSchema,
     responses: {
       201: PipelineSchema,
@@ -586,7 +586,7 @@ export const contract = c.router({
   },
   triggerPipeline: {
     method: 'POST',
-    path: '/admin/pipelines/:id/trigger',
+    path: '/v2/pipelines/:id/trigger',
     pathParams: z.object({ id: z.string() }),
     body: z.any(),
     responses: {
@@ -597,7 +597,7 @@ export const contract = c.router({
   // Analytics (Admin)
   getAnalyticsOverview: {
     method: 'GET',
-    path: '/admin/analytics/overview',
+    path: '/v2/analytics/overview',
     query: z.object({
       tab: z.string(),
       overviewNum: z.coerce.number().optional(),
@@ -611,7 +611,7 @@ export const contract = c.router({
   },
   getAnalyticsLogs: {
     method: 'GET',
-    path: '/admin/analytics/logs',
+    path: '/v2/analytics/logs',
     query: z.object({
       event: z.string(),
       page: z.coerce.number(),
@@ -628,7 +628,7 @@ export const contract = c.router({
   // Meta & Backup
   getVersion: {
     method: 'GET',
-    path: '/admin/meta/version',
+    path: '/v2/meta/version',
     responses: {
       200: VersionInfoSchema,
     },
@@ -645,7 +645,7 @@ export const contract = c.router({
   },
   importBackup: {
     method: 'POST',
-    path: '/admin/backup/import',
+    path: '/v2/backup/import',
     body: z.any(), // Multipart
     contentType: 'multipart/form-data',
     responses: {
@@ -655,7 +655,7 @@ export const contract = c.router({
   },
   exportBackup: {
     method: 'GET',
-    path: '/admin/backup/export',
+    path: '/v2/backup/export',
     responses: {
       200: z.any(), // Blob
     },
@@ -663,7 +663,7 @@ export const contract = c.router({
   },
   restoreBackup: {
     method: 'POST',
-    path: '/admin/backup/restore',
+    path: '/v2/backup/restore',
     body: z.any(),
     responses: {
       200: z.object({ success: z.boolean() }),
@@ -672,7 +672,7 @@ export const contract = c.router({
   },
   triggerISR: {
     method: 'POST',
-    path: '/admin/isr/trigger',
+    path: '/v2/isr/trigger',
     body: z.object({}),
     responses: {
       200: z.object({ success: z.boolean() }),
@@ -834,7 +834,7 @@ export const contract = c.router({
   // Site Info
   getSiteInfo: {
     method: 'GET',
-    path: '/admin/settings/site-info',
+    path: '/v2/settings/site-info',
     responses: {
       200: SiteInfoSchema,
     },
@@ -842,7 +842,7 @@ export const contract = c.router({
   },
   updateSiteInfo: {
     method: 'PUT',
-    path: '/admin/settings/site-info',
+    path: '/v2/settings/site-info',
     body: UpdateSiteInfoSchema,
     responses: {
       200: SiteInfoSchema,
@@ -852,7 +852,7 @@ export const contract = c.router({
   // Layout
   getLayoutSettings: {
     method: 'GET',
-    path: '/admin/settings/layout',
+    path: '/v2/settings/layout',
     responses: {
       200: SiteLayoutSchema,
     },
@@ -860,7 +860,7 @@ export const contract = c.router({
   },
   updateLayoutSettings: {
     method: 'PUT',
-    path: '/admin/settings/layout',
+    path: '/v2/settings/layout',
     body: UpdateLayoutSchema,
     responses: {
       200: SiteLayoutSchema,
@@ -870,7 +870,7 @@ export const contract = c.router({
   // Theme
   getThemeSettings: {
     method: 'GET',
-    path: '/admin/settings/theme',
+    path: '/v2/settings/theme',
     responses: {
       200: SiteThemeSchema,
     },
@@ -878,7 +878,7 @@ export const contract = c.router({
   },
   updateThemeSettings: {
     method: 'PUT',
-    path: '/admin/settings/theme',
+    path: '/v2/settings/theme',
     body: UpdateThemeSchema,
     responses: {
       200: SiteThemeSchema,
@@ -888,7 +888,7 @@ export const contract = c.router({
   // Friend Links
   getFriendLinks: {
     method: 'GET',
-    path: '/admin/settings/friend-links',
+    path: '/v2/settings/friend-links',
     responses: {
       200: z.array(FriendLinkSchema),
     },
@@ -896,7 +896,7 @@ export const contract = c.router({
   },
   createFriendLink: {
     method: 'POST',
-    path: '/admin/settings/friend-links',
+    path: '/v2/settings/friend-links',
     body: CreateFriendLinkSchema,
     responses: {
       201: FriendLinkSchema,
@@ -905,7 +905,7 @@ export const contract = c.router({
   },
   updateFriendLink: {
     method: 'PUT',
-    path: '/admin/settings/friend-links/:index',
+    path: '/v2/settings/friend-links/:index',
     pathParams: z.object({
       index: z.coerce.number(),
     }),
@@ -917,7 +917,7 @@ export const contract = c.router({
   },
   deleteFriendLink: {
     method: 'DELETE',
-    path: '/admin/settings/friend-links/:index',
+    path: '/v2/settings/friend-links/:index',
     pathParams: z.object({
       index: z.coerce.number(),
     }),
@@ -930,7 +930,7 @@ export const contract = c.router({
   // Navigation
   getNavigation: {
     method: 'GET',
-    path: '/admin/settings/navigation',
+    path: '/v2/settings/navigation',
     responses: {
       200: z.array(NavigationSchema),
     },
@@ -938,7 +938,7 @@ export const contract = c.router({
   },
   updateNavigation: {
     method: 'PUT',
-    path: '/admin/settings/navigation',
+    path: '/v2/settings/navigation',
     body: UpdateNavigationSchema,
     responses: {
       200: z.array(NavigationSchema),
@@ -948,7 +948,7 @@ export const contract = c.router({
   // Custom Code
   getCustomCode: {
     method: 'GET',
-    path: '/admin/settings/custom-code',
+    path: '/v2/settings/custom-code',
     responses: {
       200: CustomCodeSchema,
     },
@@ -956,7 +956,7 @@ export const contract = c.router({
   },
   updateCustomCode: {
     method: 'PUT',
-    path: '/admin/settings/custom-code',
+    path: '/v2/settings/custom-code',
     body: UpdateCustomCodeSchema,
     responses: {
       200: CustomCodeSchema,
@@ -966,7 +966,7 @@ export const contract = c.router({
   // About
   getAboutInfo: {
     method: 'GET',
-    path: '/admin/settings/about',
+    path: '/v2/settings/about',
     responses: {
       200: AboutInfoSchema,
     },
@@ -974,7 +974,7 @@ export const contract = c.router({
   },
   updateAboutInfo: {
     method: 'PUT',
-    path: '/admin/settings/about',
+    path: '/v2/settings/about',
     body: UpdateAboutSchema,
     responses: {
       200: AboutInfoSchema,
@@ -984,7 +984,7 @@ export const contract = c.router({
   // Social
   getSocials: {
     method: 'GET',
-    path: '/admin/settings/social',
+    path: '/v2/settings/social',
     responses: {
       200: z.array(SocialItemSchema),
     },
@@ -992,7 +992,7 @@ export const contract = c.router({
   },
   updateSocial: {
     method: 'PUT',
-    path: '/admin/settings/social',
+    path: '/v2/settings/social',
     body: UpdateSocialSchema,
     responses: {
       200: z.array(SocialItemSchema),
@@ -1001,7 +1001,7 @@ export const contract = c.router({
   },
   deleteSocial: {
     method: 'DELETE',
-    path: '/admin/settings/social/:type',
+    path: '/v2/settings/social/:type',
     pathParams: z.object({
       type: SocialTypeEnum,
     }),
@@ -1012,7 +1012,7 @@ export const contract = c.router({
   },
   getSocialTypes: {
     method: 'GET',
-    path: '/admin/settings/social/types',
+    path: '/v2/settings/social/types',
     responses: {
       200: z.array(SocialTypeInfoSchema),
     },
@@ -1021,7 +1021,7 @@ export const contract = c.router({
   // Waline
   getWalineSetting: {
     method: 'GET',
-    path: '/admin/settings/waline',
+    path: '/v2/settings/waline',
     responses: {
       200: WalineSettingSchema,
     },
@@ -1029,7 +1029,7 @@ export const contract = c.router({
   },
   updateWalineSetting: {
     method: 'PUT',
-    path: '/admin/settings/waline',
+    path: '/v2/settings/waline',
     body: UpdateWalineSettingSchema,
     responses: {
       200: WalineSettingSchema,
@@ -1039,7 +1039,7 @@ export const contract = c.router({
   // ISR
   getISRSetting: {
     method: 'GET',
-    path: '/admin/settings/isr',
+    path: '/v2/settings/isr',
     responses: {
       200: ISRSettingSchema,
     },
@@ -1047,7 +1047,7 @@ export const contract = c.router({
   },
   updateISRSetting: {
     method: 'PUT',
-    path: '/admin/settings/isr',
+    path: '/v2/settings/isr',
     body: UpdateISRSettingSchema,
     responses: {
       200: ISRSettingSchema,
@@ -1057,7 +1057,7 @@ export const contract = c.router({
   // Login
   getLoginSetting: {
     method: 'GET',
-    path: '/admin/settings/login',
+    path: '/v2/settings/login',
     responses: {
       200: LoginSettingSchema,
     },
@@ -1065,7 +1065,7 @@ export const contract = c.router({
   },
   updateLoginSetting: {
     method: 'PUT',
-    path: '/admin/settings/login',
+    path: '/v2/settings/login',
     body: UpdateLoginSettingSchema,
     responses: {
       200: LoginSettingSchema,
@@ -1075,7 +1075,7 @@ export const contract = c.router({
   // HTTPS
   getHttpsSetting: {
     method: 'GET',
-    path: '/admin/settings/https',
+    path: '/v2/settings/https',
     responses: {
       200: HttpsSettingSchema,
     },
@@ -1083,7 +1083,7 @@ export const contract = c.router({
   },
   updateHttpsSetting: {
     method: 'PUT',
-    path: '/admin/settings/https',
+    path: '/v2/settings/https',
     body: UpdateHttpsSettingSchema,
     responses: {
       200: HttpsSettingSchema,
@@ -1093,7 +1093,7 @@ export const contract = c.router({
   // Static
   getStaticSetting: {
     method: 'GET',
-    path: '/admin/settings/static',
+    path: '/v2/settings/static',
     responses: {
       200: StaticSettingSchema,
     },
@@ -1101,7 +1101,7 @@ export const contract = c.router({
   },
   updateStaticSetting: {
     method: 'PUT',
-    path: '/admin/settings/static',
+    path: '/v2/settings/static',
     body: UpdateStaticSettingSchema,
     responses: {
       200: StaticSettingSchema,
@@ -1111,7 +1111,7 @@ export const contract = c.router({
   // Rewards
   getRewards: {
     method: 'GET',
-    path: '/admin/settings/donations',
+    path: '/v2/settings/donations',
     responses: {
       200: z.array(RewardItemSchema),
     },
@@ -1119,7 +1119,7 @@ export const contract = c.router({
   },
   createReward: {
     method: 'POST',
-    path: '/admin/settings/donations',
+    path: '/v2/settings/donations',
     body: CreateRewardSchema,
     responses: {
       201: RewardItemSchema,
@@ -1128,7 +1128,7 @@ export const contract = c.router({
   },
   updateReward: {
     method: 'PUT',
-    path: '/admin/settings/donations/:name',
+    path: '/v2/settings/donations/:name',
     pathParams: z.object({
       name: z.string(),
     }),
@@ -1140,7 +1140,7 @@ export const contract = c.router({
   },
   deleteReward: {
     method: 'DELETE',
-    path: '/admin/settings/donations/:name',
+    path: '/v2/settings/donations/:name',
     pathParams: z.object({
       name: z.string(),
     }),
@@ -1152,7 +1152,7 @@ export const contract = c.router({
   // Caddy
   getCaddyLog: {
     method: 'GET',
-    path: '/admin/caddy/logs',
+    path: '/v2/caddy/logs',
     responses: {
       200: CaddyLogSchema,
     },
@@ -1160,7 +1160,7 @@ export const contract = c.router({
   },
   clearCaddyLog: {
     method: 'DELETE',
-    path: '/admin/caddy/logs',
+    path: '/v2/caddy/logs',
     body: z.object({}),
     responses: {
       200: z.string(),
@@ -1169,7 +1169,7 @@ export const contract = c.router({
   },
   getCaddyConfig: {
     method: 'GET',
-    path: '/admin/caddy/config',
+    path: '/v2/caddy/config',
     responses: {
       200: CaddyConfigSchema,
     },

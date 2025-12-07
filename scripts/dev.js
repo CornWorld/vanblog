@@ -37,7 +37,7 @@ class Service {
     });
   }
   async stop() {
-    for (const [_k, ctx] of Object.entries(this.ctx)) {
+    for (const [, ctx] of Object.entries(this.ctx)) {
       ctx.unref();
       process.kill(-ctx.pid, 'SIGINT');
     }

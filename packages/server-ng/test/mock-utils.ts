@@ -1,4 +1,4 @@
-import dayjs from 'dayjs';
+import { dayjs } from '@vanblog/shared';
 import { vi } from 'vitest';
 
 import { DATABASE_CONNECTION } from '../src/database';
@@ -338,8 +338,8 @@ export function createUser(overrides: Record<string, unknown> = {}): Record<stri
     nickname: 'Test User',
     email: 'test@example.com',
     type: 'admin',
-    createdAt: dayjs().toISOString(),
-    updatedAt: dayjs().toISOString(),
+    createdAt: dayjs().format(),
+    updatedAt: dayjs().format(),
     ...overrides,
   };
 }
@@ -361,8 +361,8 @@ export function createArticle(overrides: Record<string, unknown> = {}): Record<s
     pathname: null,
     category: null,
     password: null,
-    createdAt: dayjs().toISOString(),
-    updatedAt: dayjs().toISOString(),
+    createdAt: dayjs().format(),
+    updatedAt: dayjs().format(),
     ...overrides,
   };
 }
@@ -407,8 +407,8 @@ export function createTag(overrides: Record<string, unknown> = {}): Record<strin
   return {
     id: 1,
     name: 'Test Tag',
-    createdAt: dayjs().toISOString(),
-    updatedAt: dayjs().toISOString(),
+    createdAt: dayjs().format(),
+    updatedAt: dayjs().format(),
     ...overrides,
   };
 }
@@ -420,8 +420,8 @@ export function createCategory(overrides: Record<string, unknown> = {}): Record<
   return {
     id: 1,
     name: 'Test Category',
-    createdAt: dayjs().toISOString(),
-    updatedAt: dayjs().toISOString(),
+    createdAt: dayjs().format(),
+    updatedAt: dayjs().format(),
     ...overrides,
   };
 }
@@ -440,7 +440,7 @@ export function createMediaFile(overrides: Record<string, unknown> = {}): Record
     height: 1080,
     hash: 'testhash',
     provider: 'local',
-    createdAt: dayjs().toISOString(),
+    createdAt: dayjs().format(),
     ...overrides,
   };
 }

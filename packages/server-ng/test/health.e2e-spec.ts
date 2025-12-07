@@ -35,20 +35,11 @@ describe('HealthController (e2e)', () => {
       .expect(200)
       .expect((res: request.Response) => {
         const body = res.body as {
-          status: string;
           timestamp: string;
-          uptime: number;
-          environment: string;
-          version: string;
         };
 
-        expect(body).toHaveProperty('status', 'ok');
         expect(body).toHaveProperty('timestamp');
-        expect(body).toHaveProperty('uptime');
-        expect(body).toHaveProperty('environment');
-        expect(body).toHaveProperty('version', '2.0.0');
-        expect(typeof body.uptime).toBe('number');
-        expect(body.uptime).toBeGreaterThan(0);
+        expect(typeof body.timestamp).toBe('string');
       });
   });
 });

@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { dayjs } from '@vanblog/shared';
 import axios from 'axios';
-import dayjs from 'dayjs';
 
 @Injectable()
 export class ThirdPartyAnalyticsService {

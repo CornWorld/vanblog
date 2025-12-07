@@ -1,7 +1,5 @@
-import { createZodDto } from 'nestjs-zod';
+import { c } from '@vanblog/shared';
 import { z } from 'zod';
-
-import { commonSchemas } from '../../../shared/zod';
 
 /**
  * 文章密码验证请求 Schema
@@ -9,7 +7,7 @@ import { commonSchemas } from '../../../shared/zod';
  * 用于验证私有文章的访问密码
  */
 export const VerifyArticlePasswordSchema = z.object({
-  password: commonSchemas.nonEmptyString.describe('Password for private article'),
+  password: c.nonEmptyString.describe('Password for private article'),
 });
 
 /**
@@ -27,12 +25,12 @@ export const ArticleAccessResponseSchema = z.object({
 /**
  * 文章密码验证 DTO
  */
-export class VerifyArticlePasswordDto extends createZodDto(VerifyArticlePasswordSchema) {}
+export type VerifyArticlePasswordDto = z.infer<typeof VerifyArticlePasswordSchema>;
 
 /**
  * 文章访问响应 DTO
  */
-export class ArticleAccessResponseDto extends createZodDto(ArticleAccessResponseSchema) {}
+export type ArticleAccessResponseDto = z.infer<typeof ArticleAccessResponseSchema>;
 
 /**
  * Swagger 文档类

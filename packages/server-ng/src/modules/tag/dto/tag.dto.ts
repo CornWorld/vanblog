@@ -1,4 +1,3 @@
-import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
 
 import { selectTagSchema, insertTagSchema, updateTagSchema } from '../../../database';
@@ -25,12 +24,12 @@ export const TagWithCountSchema = TagSchema.extend({
 
 // 标签列表响应 Schema
 export const TagListResponseSchema = z.object({
-  items: z.array(TagWithCountSchema as unknown as z.ZodType),
+  items: z.array(TagWithCountSchema),
   total: z.number(),
 });
 
-export class CreateTagDto extends createZodDto(CreateTagSchema) {}
-export class UpdateTagDto extends createZodDto(UpdateTagSchema) {}
-export class TagDto extends createZodDto(TagSchema) {}
-export class TagWithCountDto extends createZodDto(TagWithCountSchema) {}
-export class TagListResponseDto extends createZodDto(TagListResponseSchema) {}
+export type CreateTagDto = z.infer<typeof CreateTagSchema>;
+export type UpdateTagDto = z.infer<typeof UpdateTagSchema>;
+export type TagDto = z.infer<typeof TagSchema>;
+export type TagWithCountDto = z.infer<typeof TagWithCountSchema>;
+export type TagListResponseDto = z.infer<typeof TagListResponseSchema>;

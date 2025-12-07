@@ -1,4 +1,4 @@
-import { createZodDto } from 'nestjs-zod';
+import { c } from '@vanblog/shared';
 import { z } from 'zod';
 
 import {
@@ -7,7 +7,6 @@ import {
   updateDraftSchema,
   selectDraftVersionSchema,
 } from '../../../database';
-import { commonSchemas } from '../../../shared/zod';
 
 // 基础草稿 Schema - 使用 drizzle-zod 生成的 schema
 export const DraftSchema = selectDraftSchema;
@@ -29,8 +28,8 @@ export const UpdateDraftSchema = updateDraftSchema.omit({
 
 // 草稿查询 Schema
 export const DraftQuerySchema = z.object({
-  page: commonSchemas.page,
-  pageSize: commonSchemas.pageSize,
+  page: c.page,
+  pageSize: c.pageSize,
   keyword: z.string().optional(),
   tag: z.string().optional(),
   category: z.string().optional(),
@@ -69,11 +68,11 @@ export const DraftVersionListResponseSchema = z.object({
   totalPages: z.number(),
 });
 
-export class CreateDraftDto extends createZodDto(CreateDraftSchema) {}
-export class UpdateDraftDto extends createZodDto(UpdateDraftSchema) {}
-export class DraftDto extends createZodDto(DraftSchema) {}
-export class DraftListResponseDto extends createZodDto(DraftListResponseSchema) {}
-export class DraftQueryDto extends createZodDto(DraftQuerySchema) {}
-export class PublishDraftDto extends createZodDto(PublishDraftSchema) {}
-export class DraftVersionDto extends createZodDto(DraftVersionSchema) {}
-export class DraftVersionListResponseDto extends createZodDto(DraftVersionListResponseSchema) {}
+export type CreateDraftDto = z.infer<typeof CreateDraftSchema>;
+export type UpdateDraftDto = z.infer<typeof UpdateDraftSchema>;
+export type DraftDto = z.infer<typeof DraftSchema>;
+export type DraftListResponseDto = z.infer<typeof DraftListResponseSchema>;
+export type DraftQueryDto = z.infer<typeof DraftQuerySchema>;
+export type PublishDraftDto = z.infer<typeof PublishDraftSchema>;
+export type DraftVersionDto = z.infer<typeof DraftVersionSchema>;
+export type DraftVersionListResponseDto = z.infer<typeof DraftVersionListResponseSchema>;

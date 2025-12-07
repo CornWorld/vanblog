@@ -45,7 +45,7 @@ describe('SettingsController Validation (e2e)', () => {
     await app.close();
   });
 
-  it('PATCH /api/v2/api/admin/settings/site-info should return 400 on invalid payload', async () => {
+  it('PATCH /api/v2/admin/settings/site-info should return 400 on invalid payload', async () => {
     const invalidBody = {
       siteName: '', // required non-empty per schema
       siteDescription: 'desc',
@@ -54,16 +54,16 @@ describe('SettingsController Validation (e2e)', () => {
     };
 
     const res = await request(httpServer)
-      .patch('/api/v2/api/admin/settings/site-info')
+      .patch('/api/v2/admin/settings/site-info')
       .set('Authorization', `Bearer ${token}`)
       .send(invalidBody)
       .expect(400);
 
-    expect(res.body).toHaveProperty('statusCode', 400);
+    // ts-rest validation returns { message, issues } without statusCode wrapper
     expect(res.body).toHaveProperty('message');
   });
 
-  it('PATCH /api/v2/api/admin/settings/navigation should return 400 on invalid items', async () => {
+  it('PATCH /api/v2/admin/settings/navigation should return 400 on invalid items', async () => {
     const invalidBody = {
       items: [
         {
@@ -77,12 +77,12 @@ describe('SettingsController Validation (e2e)', () => {
     };
 
     const res = await request(httpServer)
-      .patch('/api/v2/api/admin/settings/navigation')
+      .patch('/api/v2/admin/settings/navigation')
       .set('Authorization', `Bearer ${token}`)
       .send(invalidBody)
       .expect(400);
 
-    expect(res.body).toHaveProperty('statusCode', 400);
+    // ts-rest validation returns { message, issues } without statusCode wrapper
     expect(res.body).toHaveProperty('message');
   });
 });

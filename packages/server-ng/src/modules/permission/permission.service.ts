@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException, Logger, Inject } from '@nestjs/common';
-import dayjs, { type Dayjs } from 'dayjs';
+import { dayjs } from '@vanblog/shared';
 import { eq, desc, and } from 'drizzle-orm';
 
 import { DATABASE_CONNECTION, type Database } from '../../database';
@@ -18,6 +18,8 @@ import {
   PermissionNodeQueryType,
   PermissionNodeType,
 } from './dto/permission-node.dto';
+
+import type { Dayjs } from 'dayjs';
 
 export interface PermissionRegistration {
   module: string;
@@ -184,8 +186,14 @@ export class PermissionService {
       } else {
         this.registeredPermissions.set(key, {
           ...existingPermission[0],
-          createdAt: dayjs(existingPermission[0].createdAt),
-          updatedAt: dayjs(existingPermission[0].updatedAt),
+          createdAt:
+            typeof existingPermission[0].createdAt === 'string'
+              ? existingPermission[0].createdAt
+              : dayjs(existingPermission[0].createdAt).format(),
+          updatedAt:
+            typeof existingPermission[0].updatedAt === 'string'
+              ? existingPermission[0].updatedAt
+              : dayjs(existingPermission[0].updatedAt).format(),
         });
       }
     } catch (error) {
@@ -296,8 +304,10 @@ export class PermissionService {
       .returning();
     return {
       ...result,
-      createdAt: dayjs(result.createdAt),
-      updatedAt: dayjs(result.updatedAt),
+      createdAt:
+        typeof result.createdAt === 'string' ? result.createdAt : dayjs(result.createdAt).format(),
+      updatedAt:
+        typeof result.updatedAt === 'string' ? result.updatedAt : dayjs(result.updatedAt).format(),
     };
   }
 
@@ -321,8 +331,10 @@ export class PermissionService {
         .offset((query.page - 1) * query.limit);
       return results.map((node) => ({
         ...node,
-        createdAt: dayjs(node.createdAt),
-        updatedAt: dayjs(node.updatedAt),
+        createdAt:
+          typeof node.createdAt === 'string' ? node.createdAt : dayjs(node.createdAt).format(),
+        updatedAt:
+          typeof node.updatedAt === 'string' ? node.updatedAt : dayjs(node.updatedAt).format(),
       }));
     }
 
@@ -336,8 +348,10 @@ export class PermissionService {
         .offset((query.page - 1) * query.limit);
       return results.map((node) => ({
         ...node,
-        createdAt: dayjs(node.createdAt),
-        updatedAt: dayjs(node.updatedAt),
+        createdAt:
+          typeof node.createdAt === 'string' ? node.createdAt : dayjs(node.createdAt).format(),
+        updatedAt:
+          typeof node.updatedAt === 'string' ? node.updatedAt : dayjs(node.updatedAt).format(),
       }));
     }
 
@@ -350,8 +364,10 @@ export class PermissionService {
       .offset((query.page - 1) * query.limit);
     return results.map((node) => ({
       ...node,
-      createdAt: dayjs(node.createdAt),
-      updatedAt: dayjs(node.updatedAt),
+      createdAt:
+        typeof node.createdAt === 'string' ? node.createdAt : dayjs(node.createdAt).format(),
+      updatedAt:
+        typeof node.updatedAt === 'string' ? node.updatedAt : dayjs(node.updatedAt).format(),
     }));
   }
 
@@ -368,8 +384,14 @@ export class PermissionService {
 
     return {
       ...result[0],
-      createdAt: dayjs(result[0].createdAt),
-      updatedAt: dayjs(result[0].updatedAt),
+      createdAt:
+        typeof result[0].createdAt === 'string'
+          ? result[0].createdAt
+          : dayjs(result[0].createdAt).format(),
+      updatedAt:
+        typeof result[0].updatedAt === 'string'
+          ? result[0].updatedAt
+          : dayjs(result[0].updatedAt).format(),
     };
   }
 
@@ -379,7 +401,7 @@ export class PermissionService {
   ): Promise<PermissionNodeType> {
     const result = await this.db
       .update(permissionNodes)
-      .set({ ...updatePermissionNodeDto, updatedAt: dayjs().toISOString() })
+      .set({ ...updatePermissionNodeDto, updatedAt: dayjs().format() })
       .where(eq(permissionNodes.id, id))
       .returning();
 
@@ -389,8 +411,14 @@ export class PermissionService {
 
     return {
       ...result[0],
-      createdAt: dayjs(result[0].createdAt),
-      updatedAt: dayjs(result[0].updatedAt),
+      createdAt:
+        typeof result[0].createdAt === 'string'
+          ? result[0].createdAt
+          : dayjs(result[0].createdAt).format(),
+      updatedAt:
+        typeof result[0].updatedAt === 'string'
+          ? result[0].updatedAt
+          : dayjs(result[0].updatedAt).format(),
     };
   }
 
@@ -412,7 +440,7 @@ export class PermissionService {
     const toIso = (v: string | number | Date | Dayjs | null | undefined): string => {
       if (typeof v === 'string') return v;
       const d = dayjs(v ?? undefined);
-      return d.toISOString();
+      return d.format();
     };
 
     return {
@@ -482,7 +510,7 @@ export class PermissionService {
   ): Promise<PermissionGroupType> {
     const result = await this.db
       .update(permissionGroups)
-      .set({ ...updatePermissionGroupDto, updatedAt: dayjs().toISOString() })
+      .set({ ...updatePermissionGroupDto, updatedAt: dayjs().format() })
       .where(eq(permissionGroups.id, id))
       .returning();
 

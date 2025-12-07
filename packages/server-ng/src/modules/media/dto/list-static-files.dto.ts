@@ -1,15 +1,13 @@
-import { createZodDto } from 'nestjs-zod';
+import { c } from '@vanblog/shared';
 import { z } from 'zod';
 
-import { commonSchemas } from '../../../shared/zod';
-
 export const ListStaticFilesSchema = z.object({
-  page: commonSchemas.page,
-  pageSize: commonSchemas.pageSize,
+  page: c.page,
+  pageSize: c.pageSize,
   keyword: z.string().optional(),
   type: z.enum(['image', 'video', 'audio', 'document', 'other']).optional(),
   sortBy: z.enum(['name', 'size', 'createdAt']).default('createdAt'),
   sortOrder: z.enum(['asc', 'desc']).default('desc'),
 });
 
-export class ListStaticFilesDto extends createZodDto(ListStaticFilesSchema) {}
+export type ListStaticFilesDto = z.infer<typeof ListStaticFilesSchema>;

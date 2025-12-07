@@ -76,10 +76,13 @@ export default function PipelineModal({
             onFinish(vals as PipelineData);
             return true;
           } else {
-            await updatePipelineById(initialValues!.id, vals);
-            message.success('提交成功！');
-            onFinish(vals as PipelineData);
-            return true;
+            if (initialValues?.id) {
+              await updatePipelineById(initialValues.id, vals);
+              message.success('提交成功！');
+              onFinish(vals as PipelineData);
+              return true;
+            }
+            return false;
           }
         }
       }}

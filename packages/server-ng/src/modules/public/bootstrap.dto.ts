@@ -1,4 +1,3 @@
-import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
 
 import { CreateFriendLinkSchema } from '../setting/dto/friend-link.dto';
@@ -52,4 +51,4 @@ export const PublicBootstrapResponseSchema = z.object({
     .default({}),
 });
 
-export class PublicBootstrapResponseDto extends createZodDto(PublicBootstrapResponseSchema) {}
+export type PublicBootstrapResponseDto = z.infer<typeof PublicBootstrapResponseSchema>;

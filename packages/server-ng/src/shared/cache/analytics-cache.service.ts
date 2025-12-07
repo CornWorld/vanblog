@@ -1,6 +1,6 @@
 import { Injectable, Logger, Inject } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import dayjs from 'dayjs';
+import { dayjs } from '@vanblog/shared';
 import { sql, desc } from 'drizzle-orm';
 
 import { DATABASE_CONNECTION, type Database } from '../../database';

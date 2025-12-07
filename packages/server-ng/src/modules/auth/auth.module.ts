@@ -1,6 +1,6 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { JwtModule } from '@nestjs/jwt';
+import { JwtModule, type JwtModuleOptions } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 
 import { DatabaseModule } from '../../database';
@@ -10,12 +10,15 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { AuthTsRestController } from './auth.ts-rest.controller';
 import { PermissionsGuard } from './guards/permissions.guard';
+import { LoginLogTsRestController } from './login-log.controller';
 import { LoginLogService } from './login-log.service';
 import { PasswordChangeHandlerService } from './password-change-handler.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { LocalStrategy } from './strategies/local.strategy';
 import { TokenBlacklistService } from './token-blacklist.service';
 import { TokenService } from './token.service';
+
+import type { StringValue } from 'ms';
 
 @Module({
   imports: [
@@ -24,16 +27,16 @@ import { TokenService } from './token.service';
     DatabaseModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
-      useFactory: (configService: ConfigService) => ({
-        secret: configService.get<string>('JWT_SECRET'),
+      useFactory: (configService: ConfigService): JwtModuleOptions => ({
+        secret: configService.get<string>('JWT_SECRET') || 'default-secret-change-me',
         signOptions: {
-          expiresIn: configService.get<string>('JWT_EXPIRES_IN', '7d') as any,
+          expiresIn: (configService.get<string>('JWT_EXPIRES_IN') ?? '7d') as StringValue,
         },
       }),
       inject: [ConfigService],
     }),
   ],
-  controllers: [AuthController, AuthTsRestController],
+  controllers: [AuthController, AuthTsRestController, LoginLogTsRestController],
   providers: [
     AuthService,
     LocalStrategy,

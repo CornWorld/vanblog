@@ -1,23 +1,25 @@
 import { Inject, Injectable } from '@nestjs/common';
-import dayjs from 'dayjs';
+import {
+  toTimelineArticleInputFromDb,
+  decodeTimelineArticle,
+  encodeTimelineArticle,
+} from '@vanblog/shared';
 import { and, desc, eq } from 'drizzle-orm';
-import { z } from 'zod';
 
 import { DATABASE_CONNECTION, type Database } from '../../database';
 import { articles } from '../../database/schema';
-import { safeParseJson, dataSchemas } from '../../shared/zod';
 
-import { TimelineArticleSchema } from './dto/timeline.dto';
+import type { TimelineArticleInput, TimelineArticleDbRow } from '@vanblog/shared';
+// tags parsing moved into shared helper
 
-// 使用 Zod 推导出 TimelineArticle 的 TS 类型
-export type TimelineArticle = z.infer<typeof TimelineArticleSchema>;
+// 使用本地类型，后续迁移到 shared
 
 @Injectable()
 export class TimelineService {
   constructor(@Inject(DATABASE_CONNECTION) private readonly db: Database) {}
 
   // 获取按年份聚合的文章时间线（仅公开文章）
-  async getTimeline(includeHidden = false): Promise<Record<string, TimelineArticle[]>> {
+  async getTimeline(includeHidden = false): Promise<Record<string, TimelineArticleInput[]>> {
     // 过滤条件：隐藏文章默认不包含；私有文章不包含
     const where = includeHidden
       ? eq(articles.private, false)
@@ -43,30 +45,25 @@ export class TimelineService {
       .where(where)
       .orderBy(desc(articles.createdAt));
 
-    // 聚合为 { year: Article[] }
-    const result: Record<string, TimelineArticle[] | undefined> = {};
+    // 聚合到 Map 后再转对象，避免 undefined union 与类型断言
+    const buckets = new Map<string, TimelineArticleInput[]>();
 
     for (const row of rows) {
-      const year = dayjs(row.createdAt).year().toString();
-      const item: TimelineArticle = {
-        id: row.id,
-        title: row.title,
-        pathname: row.pathname,
-        tags: safeParseJson(row.tags, dataSchemas.tagsArray) ?? [],
-        category: row.category,
-        author: row.author,
-        top: row.top,
-        hidden: !!row.hidden,
-        private: !!row.private,
-        viewer: row.viewer ?? 0,
-        createdAt: dayjs(row.createdAt).toISOString(),
-        updatedAt: dayjs(row.updatedAt).toISOString(),
+      // Use createdAt as fallback for pubTime since the column doesn't exist yet
+      const dbRow: TimelineArticleDbRow = {
+        ...row,
+        pubTime: row.createdAt, // fallback to createdAt
       };
+      const input = toTimelineArticleInputFromDb(dbRow);
+      const decoded = decodeTimelineArticle(input);
+      const year = decoded.createdAt.year().toString();
+      const item = encodeTimelineArticle(decoded);
 
-      result[year] ??= [];
-      result[year].push(item);
+      const arr = buckets.get(year) ?? [];
+      arr.push(item);
+      buckets.set(year, arr);
     }
 
-    return result as Record<string, TimelineArticle[]>;
+    return Object.fromEntries(buckets) as Record<string, TimelineArticleInput[]>;
   }
 }

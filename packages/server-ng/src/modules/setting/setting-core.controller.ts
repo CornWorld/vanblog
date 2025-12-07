@@ -1,31 +1,36 @@
-import { Controller, Get, Post, Body, Param, Patch, Delete, ParseIntPipe } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Patch,
+  Delete,
+  ParseIntPipe,
+  BadRequestException,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
-import { ZodValidationPipe } from 'nestjs-zod';
 
 import { Perm } from '../auth/permissions.decorator';
 
-import { UpdateAboutDto, UpdateAboutSchema } from './dto/about.dto';
-import { UpdateCustomCodeDto, UpdateCustomCodeSchema } from './dto/custom-code.dto';
-import {
-  CreateFriendLinkDto,
-  UpdateFriendLinkDto,
-  CreateFriendLinkSchema,
-  UpdateFriendLinkSchema,
-} from './dto/friend-link.dto';
-import { UpdateNavigationDto, UpdateNavigationSchema } from './dto/navigation.dto';
-import { UpdateLayoutDto, UpdateLayoutSchema } from './dto/update-layout.dto';
-import { UpdateSiteInfoDto, UpdateSiteInfoSchema } from './dto/update-site-info.dto';
-import { UpdateThemeDto, UpdateThemeSchema } from './dto/update-theme.dto';
+import { UpdateAboutSchema } from './dto/about.dto';
+import { UpdateCustomCodeSchema } from './dto/custom-code.dto';
+import { CreateFriendLinkSchema, UpdateFriendLinkSchema } from './dto/friend-link.dto';
+import { UpdateNavigationSchema } from './dto/navigation.dto';
+import { UpdateLayoutSchema } from './dto/update-layout.dto';
+import { UpdateSiteInfoSchema } from './dto/update-site-info.dto';
+import { UpdateThemeSchema } from './dto/update-theme.dto';
 import {
   SettingCoreService,
   SiteInfo,
   SiteLayout,
   SiteTheme,
-  FriendLink,
   Navigation,
   CustomCode,
   AboutInfo,
 } from './services/setting-core.service';
+
+import type { FriendLink } from '@vanblog/shared';
 
 @ApiTags('Settings')
 @Controller({ path: 'admin/settings', version: '2' })
@@ -52,9 +57,12 @@ export class SettingCoreController {
     description: 'Site information updated successfully',
     type: Object,
   })
-  async updateSiteInfo(
-    @Body(new ZodValidationPipe(UpdateSiteInfoSchema)) updateSiteInfoDto: UpdateSiteInfoDto,
-  ): Promise<SiteInfo> {
+  async updateSiteInfo(@Body() rawBody: unknown): Promise<SiteInfo> {
+    const parsed = UpdateSiteInfoSchema.safeParse(rawBody);
+    if (!parsed.success) {
+      throw new BadRequestException({ message: 'Validation failed', issues: parsed.error.issues });
+    }
+    const updateSiteInfoDto = parsed.data;
     // Map DTO fields to SiteInfo interface
     const siteInfoUpdate: Partial<SiteInfo> = {
       title: updateSiteInfoDto.siteName,
@@ -87,10 +95,12 @@ export class SettingCoreController {
     description: 'Layout settings updated successfully',
     type: Object,
   })
-  async updateLayoutSettings(
-    @Body(new ZodValidationPipe(UpdateLayoutSchema)) updateLayoutDto: UpdateLayoutDto,
-  ): Promise<SiteLayout> {
-    return this.settingCoreService.updateLayoutSettings(updateLayoutDto);
+  async updateLayoutSettings(@Body() rawBody: unknown): Promise<SiteLayout> {
+    const parsed = UpdateLayoutSchema.safeParse(rawBody);
+    if (!parsed.success) {
+      throw new BadRequestException({ message: 'Validation failed', issues: parsed.error.issues });
+    }
+    return this.settingCoreService.updateLayoutSettings(parsed.data);
   }
 
   @Get('theme')
@@ -113,9 +123,12 @@ export class SettingCoreController {
     description: 'Theme settings updated successfully',
     type: Object,
   })
-  async updateThemeSettings(
-    @Body(new ZodValidationPipe(UpdateThemeSchema)) updateThemeDto: UpdateThemeDto,
-  ): Promise<SiteTheme> {
+  async updateThemeSettings(@Body() rawBody: unknown): Promise<SiteTheme> {
+    const parsed = UpdateThemeSchema.safeParse(rawBody);
+    if (!parsed.success) {
+      throw new BadRequestException({ message: 'Validation failed', issues: parsed.error.issues });
+    }
+    const updateThemeDto = parsed.data;
     // Map DTO fields to SiteTheme interface
     const themeUpdate: Partial<SiteTheme> = {
       primaryColor: updateThemeDto.theme !== '' ? updateThemeDto.theme : '#000000',
@@ -144,10 +157,12 @@ export class SettingCoreController {
     description: 'Friend link created successfully',
     type: [Object],
   })
-  async createFriendLink(
-    @Body(new ZodValidationPipe(CreateFriendLinkSchema)) createFriendLinkDto: CreateFriendLinkDto,
-  ): Promise<FriendLink[]> {
-    return this.settingCoreService.createFriendLink(createFriendLinkDto);
+  async createFriendLink(@Body() rawBody: unknown): Promise<FriendLink> {
+    const parsed = CreateFriendLinkSchema.safeParse(rawBody);
+    if (!parsed.success) {
+      throw new BadRequestException({ message: 'Validation failed', issues: parsed.error.issues });
+    }
+    return this.settingCoreService.createFriendLink(parsed.data);
   }
 
   @Patch('friend-links/:index')
@@ -160,9 +175,13 @@ export class SettingCoreController {
   })
   async updateFriendLink(
     @Param('index', ParseIntPipe) index: number,
-    @Body(new ZodValidationPipe(UpdateFriendLinkSchema)) updateFriendLinkDto: UpdateFriendLinkDto,
-  ): Promise<FriendLink[]> {
-    return this.settingCoreService.updateFriendLink(index, updateFriendLinkDto);
+    @Body() rawBody: unknown,
+  ): Promise<FriendLink> {
+    const parsed = UpdateFriendLinkSchema.safeParse(rawBody);
+    if (!parsed.success) {
+      throw new BadRequestException({ message: 'Validation failed', issues: parsed.error.issues });
+    }
+    return this.settingCoreService.updateFriendLink(index, parsed.data);
   }
 
   @Delete('friend-links/:index')
@@ -197,9 +216,7 @@ export class SettingCoreController {
     description: 'Navigation items updated successfully',
     type: [Object],
   })
-  async updateNavigation(
-    @Body(new ZodValidationPipe(UpdateNavigationSchema)) updateNavigationDto: UpdateNavigationDto,
-  ): Promise<Navigation[]> {
+  async updateNavigation(@Body() rawBody: unknown): Promise<Navigation[]> {
     // Map NavigationItem to Navigation interface (recursive)
     type NavItemLocal = {
       name: string;
@@ -216,7 +233,14 @@ export class SettingCoreController {
       children: Array.isArray(item.children) ? item.children.map(mapItem) : undefined,
     });
 
-    const parsed: { items: NavItemLocal[] } = UpdateNavigationSchema.parse(updateNavigationDto);
+    const parsedResult = UpdateNavigationSchema.safeParse(rawBody);
+    if (!parsedResult.success) {
+      throw new BadRequestException({
+        message: 'Validation failed',
+        issues: parsedResult.error.issues,
+      });
+    }
+    const parsed: { items: NavItemLocal[] } = parsedResult.data;
     const navigationItems = parsed.items.map((item: NavItemLocal) => mapItem(item));
     return this.settingCoreService.updateNavigation(navigationItems);
   }
@@ -241,10 +265,12 @@ export class SettingCoreController {
     description: 'Custom code settings updated successfully',
     type: Object,
   })
-  async updateCustomCode(
-    @Body(new ZodValidationPipe(UpdateCustomCodeSchema)) updateCustomCodeDto: UpdateCustomCodeDto,
-  ): Promise<CustomCode> {
-    return this.settingCoreService.updateCustomCode(updateCustomCodeDto);
+  async updateCustomCode(@Body() rawBody: unknown): Promise<CustomCode> {
+    const parsed = UpdateCustomCodeSchema.safeParse(rawBody);
+    if (!parsed.success) {
+      throw new BadRequestException({ message: 'Validation failed', issues: parsed.error.issues });
+    }
+    return this.settingCoreService.updateCustomCode(parsed.data);
   }
 
   // About Info
@@ -260,9 +286,11 @@ export class SettingCoreController {
   @Perm('setting', ['update'])
   @ApiOperation({ summary: 'Update about page content' })
   @ApiResponse({ status: 200, description: 'About info updated successfully', type: Object })
-  async updateAboutInfo(
-    @Body(new ZodValidationPipe(UpdateAboutSchema)) updateAboutDto: UpdateAboutDto,
-  ): Promise<AboutInfo> {
-    return this.settingCoreService.updateAboutInfo(updateAboutDto);
+  async updateAboutInfo(@Body() rawBody: unknown): Promise<AboutInfo> {
+    const parsed = UpdateAboutSchema.safeParse(rawBody);
+    if (!parsed.success) {
+      throw new BadRequestException({ message: 'Validation failed', issues: parsed.error.issues });
+    }
+    return this.settingCoreService.updateAboutInfo(parsed.data);
   }
 }

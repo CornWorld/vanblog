@@ -7,7 +7,6 @@ import {
   SiteInfo,
   SiteTheme,
   Navigation,
-  type SocialType,
 } from './services/setting-core.service';
 
 @Controller()
@@ -29,7 +28,9 @@ export class SettingCoreTsRestController {
         title: body.siteName,
         description: body.siteDescription ?? '',
         author: body.authorName ?? '',
-        keywords: body.siteKeywords ? body.siteKeywords.split(',').map((k: string) => k.trim()) : [],
+        keywords: body.siteKeywords
+          ? body.siteKeywords.split(',').map((k: string) => k.trim())
+          : [],
       };
       const data = await this.settingCoreService.updateSiteInfo(siteInfoUpdate);
       return { status: 200, body: data };
@@ -180,7 +181,7 @@ export class SettingCoreTsRestController {
   updateSocial(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.updateSocial, async ({ body }) => {
       const data = await this.settingCoreService.updateSocial({
-        type: (body.type ?? 'email') as SocialType,
+        type: body.type ?? 'email',
         value: String(body.value ?? ''),
       });
       return { status: 200, body: data };
@@ -190,9 +191,7 @@ export class SettingCoreTsRestController {
   @TsRestHandler(contract.deleteSocial)
   deleteSocial(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.deleteSocial, async ({ params }) => {
-      const data = await this.settingCoreService.deleteSocial(
-        (params.type ?? 'email') as SocialType,
-      );
+      const data = await this.settingCoreService.deleteSocial(params.type ?? 'email');
       return { status: 200, body: data };
     });
   }

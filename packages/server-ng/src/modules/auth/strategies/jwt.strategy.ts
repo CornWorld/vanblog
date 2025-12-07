@@ -1,6 +1,7 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
+import { dayjs } from '@vanblog/shared';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 
 import { UserType } from '../../user/dto/create-user.dto';
@@ -41,8 +42,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         username: payload.username,
         type: UserType.VIEWER, // 明确的 viewer 类型
         permissions: ['role:viewer'], // 默认 viewer 角色权限
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+        createdAt: dayjs().format(),
+        updatedAt: dayjs().format(),
       });
     }
 

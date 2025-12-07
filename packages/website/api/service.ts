@@ -215,14 +215,14 @@ export class ApiService {
     });
 
     if (status === 200) {
-      const item = body as {
+      const item = body as unknown as {
         tags?: Array<{ name: string }>;
         views?: number;
         isTop?: boolean;
         private?: boolean;
         author?: string;
-        createdAt: string | number | Date;
-        updatedAt: string | number | Date;
+        createdAt: unknown;
+        updatedAt: unknown;
       } & Record<string, unknown>;
       return {
         ...item,
@@ -231,8 +231,8 @@ export class ApiService {
         top: item.isTop ? 1 : 0,
         hidden: item.private || false,
         author: item.author || 'Admin',
-        createdAt: dayjs(item.createdAt).toISOString(),
-        updatedAt: dayjs(item.updatedAt).toISOString(),
+        createdAt: dayjs(item.createdAt as string | number | Date).toISOString(),
+        updatedAt: dayjs(item.updatedAt as string | number | Date).toISOString(),
       } as ArticleDetail;
     }
     throw new Error('Failed to verify password');

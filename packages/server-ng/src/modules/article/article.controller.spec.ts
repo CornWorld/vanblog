@@ -51,13 +51,17 @@ describe('ArticleController', () => {
   describe('update', () => {
     it('should delegate to articleService.update and return value', async () => {
       const id = 1;
-      const dto = { title: 't' } as any;
-      const updated = { id, title: 't' } as any;
+      const dto = { title: 't' };
+      const updated = { id, title: 't' };
       mockArticleService.update.mockResolvedValue(updated);
 
       const result = await controller.update(id, dto);
 
-      expect(mockArticleService.update).toHaveBeenCalledWith(id, dto);
+      // Schema transformation may add additional fields like tags: null
+      expect(mockArticleService.update).toHaveBeenCalledWith(
+        id,
+        expect.objectContaining({ title: 't' }),
+      );
       expect(result).toBe(updated);
     });
   });

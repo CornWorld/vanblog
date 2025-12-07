@@ -1,8 +1,9 @@
 import { Injectable, NotFoundException, Inject, Logger } from '@nestjs/common';
+import { dayjs } from '@vanblog/shared';
 import * as bcrypt from 'bcrypt';
-import dayjs from 'dayjs';
 import { eq, and, or, like, desc, asc, sql } from 'drizzle-orm';
 import * as jwt from 'jsonwebtoken';
+import { z } from 'zod';
 
 import { ConfigService } from '../../config/config.service';
 import { DATABASE_CONNECTION, type Database } from '../../database';
@@ -12,14 +13,14 @@ import { safeParseJson, dataSchemas } from '../../shared/zod';
 import { HookService } from '../plugin/services/hook.service';
 
 import {
-  CreateArticleDto,
-  UpdateArticleDto,
-  ArticleQueryDto,
-  ArticleListResponseDto,
-  ArticleSearchDto,
-  ArticleSearchResponseDto,
+  CreateArticleSchema,
+  UpdateArticleSchema,
+  ArticleQuerySchema,
+  ArticleListResponseSchema,
+  ArticleSearchSchema,
+  ArticleSearchResponseSchema,
 } from './dto/article.dto';
-import { ArticleAccessResponseDto } from './dto/verify-password.dto';
+import { ArticleAccessResponseSchema } from './dto/verify-password.dto';
 import { Article } from './entities/article.entity';
 
 @Injectable()
@@ -34,7 +35,21 @@ export class ArticleService {
     private readonly configService: ConfigService,
   ) {}
 
-  async findAll(query: ArticleQueryDto): Promise<ArticleListResponseDto> {
+  private derivePubTime(createdAt: string | Date, updatedAt: string | Date): string {
+    try {
+      const base = updatedAt ?? createdAt;
+      return dayjs(base).format();
+    } catch (_e) {
+      this.logger.warn(
+        'TODO(pubTime): 业务规则不明确，无法派生 pubTime。请确认 pubTime 推导规则（优先 updatedAt，其次 createdAt）。',
+      );
+      return dayjs(createdAt || new Date()).format();
+    }
+  }
+
+  async findAll(
+    query: z.infer<typeof ArticleQuerySchema>,
+  ): Promise<z.infer<typeof ArticleListResponseSchema>> {
     const {
       page = 1,
       pageSize = 10,
@@ -50,18 +65,15 @@ export class ArticleService {
     // Build where clause
     const whereConditions = [];
     if (category) {
-      whereConditions.push(eq(articles.category, String(category)));
+      whereConditions.push(eq(articles.category, category));
     }
     if (tag) {
-      const tagConditions = [like(articles.tags, `"%"${String(tag)}"%"`)];
+      const tagConditions = [like(articles.tags, `"%"${tag}"%"`)];
       whereConditions.push(or(...tagConditions));
     }
     if (keyword && keyword !== '') {
       whereConditions.push(
-        or(
-          like(articles.title, `%${String(keyword)}%`),
-          like(articles.content, `%${String(keyword)}%`),
-        ),
+        or(like(articles.title, `%${keyword}%`), like(articles.content, `%${keyword}%`)),
       );
     }
 
@@ -86,8 +98,8 @@ export class ArticleService {
         .from(articles)
         .where(whereClause)
         .orderBy(orderByClause)
-        .limit(Number(pageSize))
-        .offset((Number(page) - 1) * Number(pageSize)),
+        .limit(pageSize)
+        .offset((page - 1) * pageSize),
       this.db
         .select({ count: sql<number>`count(*)` })
         .from(articles)
@@ -107,12 +119,13 @@ export class ArticleService {
       private: article.private,
       password: article.password,
       viewer: article.viewer,
-      createdAt: dayjs(article.createdAt),
-      updatedAt: dayjs(article.updatedAt),
+      createdAt: dayjs(article.createdAt).format(),
+      updatedAt: dayjs(article.updatedAt).format(),
+      pubTime: this.derivePubTime(article.createdAt, article.updatedAt),
     }));
 
     const total = Number(countResult[0]?.count) > 0 ? Number(countResult[0]?.count) : 0;
-    const totalPages = Math.ceil(total / Number(pageSize));
+    const totalPages = Math.ceil(total / pageSize);
 
     return {
       items: processedArticles,
@@ -123,7 +136,9 @@ export class ArticleService {
     };
   }
 
-  async search(query: ArticleSearchDto): Promise<ArticleSearchResponseDto> {
+  async search(
+    query: z.infer<typeof ArticleSearchSchema>,
+  ): Promise<z.infer<typeof ArticleSearchResponseSchema>> {
     const {
       keyword,
       page = 1,
@@ -144,13 +159,11 @@ export class ArticleService {
         const whereConditions = [];
 
         if (category) {
-          whereConditions.push(eq(articles.category, String(category)));
+          whereConditions.push(eq(articles.category, category));
         }
 
         if (Array.isArray(tags) && tags.length > 0) {
-          const tagConditions = tags.map((tag: string) =>
-            like(articles.tags, `"%"${String(tag)}"%"`),
-          );
+          const tagConditions = tags.map((tag: string) => like(articles.tags, `"%"${tag}"%"`));
           whereConditions.push(or(...tagConditions));
         }
 
@@ -206,8 +219,8 @@ export class ArticleService {
             .from(articles)
             .where(whereClause)
             .orderBy(orderByClause)
-            .limit(Number(pageSize))
-            .offset((Number(page) - 1) * Number(pageSize)),
+            .limit(pageSize)
+            .offset((page - 1) * pageSize),
           this.db
             .select({ count: sql<number>`count(*)` })
             .from(articles)
@@ -221,12 +234,12 @@ export class ArticleService {
           cover: undefined,
           tags: safeParseJson(article.tags, dataSchemas.tagsArray) ?? [],
           categories: article.category ? [article.category] : [],
-          publishedAt: article.updatedAt,
+          publishedAt: dayjs(article.updatedAt ?? article.createdAt).format(),
           highlight: undefined,
         }));
 
         const total = Number(countResult[0]?.count) > 0 ? Number(countResult[0]?.count) : 0;
-        const totalPages = Math.ceil(total / Number(pageSize));
+        const totalPages = Math.ceil(total / pageSize);
 
         return {
           items: processedArticles,
@@ -255,7 +268,7 @@ export class ArticleService {
     article: Article,
     password: string,
     userId?: number,
-  ): Promise<ArticleAccessResponseDto> {
+  ): Promise<z.infer<typeof ArticleAccessResponseSchema>> {
     // 如果文章不是私有的或没有设置密码，直接允许访问
     if (!article.private || !article.password) {
       return {
@@ -276,7 +289,7 @@ export class ArticleService {
 
     // 生成访问令牌（24小时有效期）
     // 如果用户已登录，绑定用户 ID；否则使用匿名访问
-    const expiresAt = dayjs().add(24, 'hour').toISOString();
+    const expiresAt = dayjs().add(24, 'hour').format();
     const tokenPayload = {
       articleId: article.id,
       articleTitle: article.title,
@@ -305,7 +318,7 @@ export class ArticleService {
     id: number,
     password: string,
     userId?: number,
-  ): Promise<ArticleAccessResponseDto> {
+  ): Promise<z.infer<typeof ArticleAccessResponseSchema>> {
     const article = await this.findOneWithPassword(id);
     return this.verifyArticlePasswordCore(article, password, userId);
   }
@@ -314,7 +327,7 @@ export class ArticleService {
     pathname: string,
     password: string,
     userId?: number,
-  ): Promise<ArticleAccessResponseDto> {
+  ): Promise<z.infer<typeof ArticleAccessResponseSchema>> {
     const article = await this.findOneByPathname(pathname);
     return this.verifyArticlePasswordCore(article, password, userId);
   }
@@ -332,7 +345,7 @@ export class ArticleService {
     const articleResult = await this.db.select().from(articles).where(eq(articles.id, id)).limit(1);
 
     if (articleResult.length === 0) {
-      throw new NotFoundException(`Article with ID ${String(id)} not found`);
+      throw new NotFoundException(`Article with ID ${id} not found`);
     }
 
     const [article] = articleResult;
@@ -355,11 +368,11 @@ export class ArticleService {
     const articleResult = await this.db
       .select()
       .from(articles)
-      .where(eq(articles.pathname, String(pathname)))
+      .where(eq(articles.pathname, pathname))
       .limit(1);
 
     if (articleResult.length === 0) {
-      throw new NotFoundException(`Article with pathname ${String(pathname)} not found`);
+      throw new NotFoundException(`Article with pathname ${pathname} not found`);
     }
 
     const [article] = articleResult;
@@ -399,13 +412,13 @@ export class ArticleService {
     const rows = await this.db
       .select({ private: articles.private })
       .from(articles)
-      .where(eq(articles.pathname, String(pathname)))
+      .where(eq(articles.pathname, pathname))
       .limit(1);
     if (rows.length === 0) return null;
     return Boolean(rows[0].private);
   }
 
-  async create(createArticleDto: CreateArticleDto): Promise<Article> {
+  async create(createArticleDto: z.infer<typeof CreateArticleSchema>): Promise<Article> {
     const { tags: tagNames, ...articleData } = createArticleDto;
 
     // Create missing tags
@@ -414,19 +427,19 @@ export class ArticleService {
     }
 
     let newArticleData = {
-      title: String(articleData.title),
-      content: String(articleData.content),
-      pathname: articleData.pathname ? String(articleData.pathname) : undefined,
-      category: articleData.category ? String(articleData.category) : undefined,
-      author: articleData.author !== '' ? String(articleData.author) : 'admin',
-      top: articleData.top ? Number(articleData.top) : undefined,
-      hidden: articleData.hidden ? Boolean(articleData.hidden) : undefined,
-      private: articleData.private ? Boolean(articleData.private) : undefined,
-      password: articleData.password ? String(articleData.password) : undefined,
+      title: articleData.title,
+      content: articleData.content,
+      pathname: articleData.pathname ? articleData.pathname : undefined,
+      category: articleData.category ? articleData.category : undefined,
+      author: articleData.author !== '' ? articleData.author : 'admin',
+      top: articleData.top ? articleData.top : undefined,
+      hidden: articleData.hidden ? articleData.hidden : undefined,
+      private: articleData.private ? articleData.private : undefined,
+      password: articleData.password ? articleData.password : undefined,
       viewer: 0,
       tags: JSON.stringify(Array.isArray(tagNames) ? tagNames : []),
-      createdAt: dayjs().toISOString(),
-      updatedAt: dayjs().toISOString(),
+      createdAt: dayjs().format(),
+      updatedAt: dayjs().format(),
     };
 
     // Process article data
@@ -436,8 +449,9 @@ export class ArticleService {
       newArticleData = await this.hookService.applyFilters('article|beforeCreate', newArticleData, {
         action: 'create',
       });
-    } catch (error) {
-      this.logger.error('Error in article|beforeCreate hook:', error);
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : error;
+      this.logger.error(`Error in article|beforeCreate hook: ${msg}`);
     }
 
     // Hash password if provided (after hooks)
@@ -468,7 +482,10 @@ export class ArticleService {
     return articleResult;
   }
 
-  async update(id: number, updateArticleDto: UpdateArticleDto): Promise<Article> {
+  async update(
+    id: number,
+    updateArticleDto: z.infer<typeof UpdateArticleSchema>,
+  ): Promise<Article> {
     // Verify article exists (will throw if not found)
     await this.findOne(id);
 
@@ -483,11 +500,11 @@ export class ArticleService {
       ...Object.fromEntries(
         Object.entries(articleData).map(([key, value]) => [
           key,
-          typeof value === 'string' ? value : String(value),
+          typeof value === 'string' ? value : value,
         ]),
       ),
       ...(tagNames && { tags: JSON.stringify(tagNames) }),
-      updatedAt: dayjs().toISOString(),
+      updatedAt: dayjs().format(),
     };
 
     // Process update data
@@ -498,8 +515,9 @@ export class ArticleService {
         id,
         action: 'update',
       });
-    } catch (error) {
-      this.logger.error('Error in article|beforeUpdate hook:', error);
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : error;
+      this.logger.error(`Error in article|beforeUpdate hook: ${msg}`);
     }
 
     // Hash password if provided (after hooks)
@@ -548,7 +566,7 @@ export class ArticleService {
       .limit(1);
 
     if (existingArticle.length === 0) {
-      throw new NotFoundException(`Article with ID ${String(id)} not found`);
+      throw new NotFoundException(`Article with ID ${id} not found`);
     }
 
     // Prepare for deletion
@@ -582,7 +600,7 @@ export class ArticleService {
     );
   }
 
-  async importArticles(articleDtos: CreateArticleDto[]): Promise<void> {
+  async importArticles(articleDtos: Array<z.infer<typeof CreateArticleSchema>>): Promise<void> {
     for (const articleDto of articleDtos) {
       await this.create(articleDto);
     }
@@ -591,10 +609,10 @@ export class ArticleService {
   async findByCategory(
     categoryName: string,
     query: { page?: number; pageSize?: number; includeHidden?: boolean } = {},
-  ): Promise<ArticleListResponseDto> {
+  ): Promise<z.infer<typeof ArticleListResponseSchema>> {
     const { page = 1, pageSize = 10, includeHidden: _includeHidden = false } = query;
 
-    const whereClause = and(eq(articles.category, String(categoryName)));
+    const whereClause = and(eq(articles.category, categoryName));
 
     // Build order by clause (default by updatedAt desc)
     const orderByClause = desc(articles.updatedAt);
@@ -605,8 +623,8 @@ export class ArticleService {
         .from(articles)
         .where(whereClause)
         .orderBy(orderByClause)
-        .limit(Number(pageSize))
-        .offset((Number(page) - 1) * Number(pageSize)),
+        .limit(pageSize)
+        .offset((page - 1) * pageSize),
       this.db
         .select({ count: sql<number>`count(*)` })
         .from(articles)
@@ -626,12 +644,13 @@ export class ArticleService {
       private: article.private,
       password: article.password,
       viewer: article.viewer,
-      createdAt: dayjs(article.createdAt),
-      updatedAt: dayjs(article.updatedAt),
+      createdAt: dayjs(article.createdAt).format(),
+      updatedAt: dayjs(article.updatedAt).format(),
+      pubTime: this.derivePubTime(article.createdAt, article.updatedAt),
     }));
 
     const total = Number(countResult[0]?.count) > 0 ? Number(countResult[0]?.count) : 0;
-    const totalPages = Math.ceil(total / Number(pageSize));
+    const totalPages = Math.ceil(total / pageSize);
 
     return {
       items: processedArticles,
@@ -666,7 +685,7 @@ export class ArticleService {
     const articleResult = await this.db.select().from(articles).where(eq(articles.id, id)).limit(1);
 
     if (articleResult.length === 0) {
-      throw new NotFoundException(`Article with ID ${String(id)} not found`);
+      throw new NotFoundException(`Article with ID ${id} not found`);
     }
 
     const [article] = articleResult;

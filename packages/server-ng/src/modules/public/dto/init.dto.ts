@@ -1,4 +1,3 @@
-import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
 
 import { CreateUserSchema } from '../../user/dto/create-user.dto';
@@ -41,5 +40,5 @@ export const InitCmsResponseSchema = z.object({
     .optional(),
 });
 
-export class InitCmsRequestDto extends createZodDto(InitCmsRequestSchema) {}
-export class InitCmsResponseDto extends createZodDto(InitCmsResponseSchema) {}
+export type InitCmsRequestDto = z.infer<typeof InitCmsRequestSchema>;
+export type InitCmsResponseDto = z.infer<typeof InitCmsResponseSchema>;

@@ -1,4 +1,3 @@
-import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
 
 export const InstallPicGoPluginSchema = z.object({
@@ -44,12 +43,10 @@ export const PicGoPluginLogsResponseSchema = z.object({
 export type PicGoPluginInfo = z.infer<typeof PicGoPluginInfoSchema>;
 export type PicGoPluginLogEntry = z.infer<typeof PicGoPluginLogEntrySchema>;
 
-export class InstallPicGoPluginDto extends createZodDto(InstallPicGoPluginSchema) {}
-export class UninstallPicGoPluginDto extends createZodDto(UninstallPicGoPluginSchema) {}
-export class PicGoPluginInfoDto extends createZodDto(PicGoPluginInfoSchema) {}
-export class PicGoPluginListResponseDto extends createZodDto(PicGoPluginListResponseSchema) {}
-export class PicGoPluginOperationResponseDto extends createZodDto(
-  PicGoPluginOperationResponseSchema,
-) {}
-export class PicGoPluginLogEntryDto extends createZodDto(PicGoPluginLogEntrySchema) {}
-export class PicGoPluginLogsResponseDto extends createZodDto(PicGoPluginLogsResponseSchema) {}
+export type InstallPicGoPluginDto = z.infer<typeof InstallPicGoPluginSchema>;
+export type UninstallPicGoPluginDto = z.infer<typeof UninstallPicGoPluginSchema>;
+export type PicGoPluginInfoDto = z.infer<typeof PicGoPluginInfoSchema>;
+export type PicGoPluginListResponseDto = z.infer<typeof PicGoPluginListResponseSchema>;
+export type PicGoPluginOperationResponseDto = z.infer<typeof PicGoPluginOperationResponseSchema>;
+export type PicGoPluginLogEntryDto = z.infer<typeof PicGoPluginLogEntrySchema>;
+export type PicGoPluginLogsResponseDto = z.infer<typeof PicGoPluginLogsResponseSchema>;

@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { z } from 'zod';
 
 import { ArticleService } from '../article/article.service';
 import { CategoryService } from '../category/category.service';
@@ -8,13 +9,10 @@ import { TagService } from '../tag/tag.service';
 
 import {
   INCLUDE_OPTIONS,
-  type OptionsQueryDto,
-  type OptionsResponseDto,
+  OptionsQuerySchema,
+  OptionsResponseSchema,
   type IncludeOption,
 } from './dto/options.dto';
-
-import type { CategoryWithCountDto } from '../category/dto/category.dto';
-import type { TagWithCountDto } from '../tag/dto/tag.dto';
 
 @Injectable()
 export class OptionsService {
@@ -26,9 +24,13 @@ export class OptionsService {
     private readonly commentService: CommentService,
   ) {}
 
-  async getOptions(query: OptionsQueryDto): Promise<OptionsResponseDto> {
+  async getOptions(
+    query: z.infer<typeof OptionsQuerySchema>,
+  ): Promise<z.infer<typeof OptionsResponseSchema>> {
     const { include } = query;
-    const response: OptionsResponseDto = {} as OptionsResponseDto;
+    const response: z.infer<typeof OptionsResponseSchema> = {} as z.infer<
+      typeof OptionsResponseSchema
+    >;
 
     // 处理 include 字段，按需获取数据（容错 + 强类型）
     const includeArray: string[] = Array.isArray(include)
@@ -64,7 +66,7 @@ export class OptionsService {
     if (includeMap.categories) {
       tasks.push(
         this.categoryService.findAll().then((result) => {
-          response.categories = (result.items as CategoryWithCountDto[]).map((category) => ({
+          response.categories = result.items.map((category) => ({
             name: category.name,
             slug: category.slug ?? '',
             description: category.description ?? undefined,
@@ -76,7 +78,7 @@ export class OptionsService {
     if (includeMap.tags) {
       tasks.push(
         this.tagService.findAll().then((result) => {
-          response.tags = (result.items as TagWithCountDto[]).map((tag) => ({
+          response.tags = result.items.map((tag) => ({
             name: tag.name,
             slug: tag.slug ?? '',
           }));

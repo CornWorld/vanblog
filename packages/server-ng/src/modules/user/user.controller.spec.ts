@@ -1,4 +1,5 @@
 import { Test, type TestingModule } from '@nestjs/testing';
+import { dayjs } from '@vanblog/shared';
 import { describe, it, beforeEach, afterEach, expect, vi } from 'vitest';
 
 import { PermissionService } from '../permission/permission.service';
@@ -23,8 +24,8 @@ describe('UserController', () => {
     avatar: undefined,
     type: UserType.ADMIN,
     permissions: [],
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    createdAt: dayjs().format(),
+    updatedAt: dayjs().format(),
   });
 
   const mockUserService = {

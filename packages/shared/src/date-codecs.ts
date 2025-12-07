@@ -11,6 +11,6 @@ export const dataCodec = z.codec(
   z.custom<import('dayjs').Dayjs>((v) => dayjs.isDayjs(v)),
   {
     decode: (s) => dayjs(s),
-    encode: (d) => d.format(),
+    encode: (d) => d.format() as z.infer<typeof dateStr>,
   },
 );

@@ -38,7 +38,6 @@ export class PermissionController {
   @ApiResponse({
     status: 201,
     description: 'Permission node created successfully',
-    type: PermissionNodeDto,
   })
   async createPermissionNode(
     @Body()
@@ -53,7 +52,6 @@ export class PermissionController {
   @ApiResponse({
     status: 200,
     description: 'Permission nodes retrieved successfully',
-    type: [PermissionNodeDto],
   })
   async findAllPermissionNodes(
     @Query()
@@ -68,7 +66,6 @@ export class PermissionController {
   @ApiResponse({
     status: 200,
     description: 'Permission node retrieved successfully',
-    type: PermissionNodeDto,
   })
   @ApiResponse({ status: 404, description: 'Permission node not found' })
   async findPermissionNodeById(@Param('id', ParseIntPipe) id: number): Promise<PermissionNodeDto> {
@@ -81,7 +78,6 @@ export class PermissionController {
   @ApiResponse({
     status: 200,
     description: 'Permission node updated successfully',
-    type: PermissionNodeDto,
   })
   @ApiResponse({ status: 404, description: 'Permission node not found' })
   async updatePermissionNode(
@@ -107,7 +103,6 @@ export class PermissionController {
   @ApiResponse({
     status: 201,
     description: 'Permission group created successfully',
-    type: PermissionGroupDto,
   })
   async createPermissionGroup(
     @Body()
@@ -122,7 +117,6 @@ export class PermissionController {
   @ApiResponse({
     status: 200,
     description: 'Permission groups retrieved successfully',
-    type: [PermissionGroupDto],
   })
   async findAllPermissionGroups(
     @Query()
@@ -137,7 +131,6 @@ export class PermissionController {
   @ApiResponse({
     status: 200,
     description: 'Permission group retrieved successfully',
-    type: PermissionGroupDto,
   })
   @ApiResponse({ status: 404, description: 'Permission group not found' })
   async findPermissionGroupById(
@@ -152,7 +145,6 @@ export class PermissionController {
   @ApiResponse({
     status: 200,
     description: 'Permission group updated successfully',
-    type: PermissionGroupDto,
   })
   @ApiResponse({ status: 404, description: 'Permission group not found' })
   async updatePermissionGroup(

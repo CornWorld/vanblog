@@ -1,17 +1,15 @@
-import { createZodDto } from 'nestjs-zod';
+import { c } from '@vanblog/shared';
 import { z } from 'zod';
 
-import { commonSchemas } from '../../../shared/zod';
-
 export const UpdateSiteInfoSchema = z.object({
-  siteName: commonSchemas.nonEmptyString.max(100, '站点名称过长'),
+  siteName: c.nonEmptyString.max(100, '站点名称过长'),
   siteDescription: z.string().optional(),
   siteKeywords: z.string().optional(),
   siteLogo: z.string().optional(),
   siteFavicon: z.string().optional(),
-  siteUrl: commonSchemas.url.optional(),
+  siteUrl: c.url.optional(),
   authorName: z.string().optional(),
-  authorEmail: commonSchemas.email.optional(),
+  authorEmail: c.email.optional(),
   authorAvatar: z.string().optional(),
   authorBio: z.string().optional(),
   icp: z.string().optional(),
@@ -19,4 +17,4 @@ export const UpdateSiteInfoSchema = z.object({
   baiduId: z.string().optional(),
 });
 
-export class UpdateSiteInfoDto extends createZodDto(UpdateSiteInfoSchema) {}
+export type UpdateSiteInfoDto = z.infer<typeof UpdateSiteInfoSchema>;

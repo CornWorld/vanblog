@@ -9,17 +9,17 @@ import {
   Query,
   HttpException,
   Body,
+  BadRequestException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiQuery, ApiBody } from '@nestjs/swagger';
 import { ThrottlerGuard } from '@nestjs/throttler';
 import { Request as ExpressRequest } from 'express';
-import { ZodValidationPipe } from 'nestjs-zod';
 
 import { UserType } from '../user/dto/create-user.dto';
 import { User } from '../user/entities/user.entity';
 
 import { AuthService } from './auth.service';
-import { LoginLogQueryDto, LoginLogResponseDto, LoginLogQuerySchema } from './dto/login-log.dto';
+import { LoginLogResponseDto, LoginLogQuerySchema } from './dto/login-log.dto';
 import { LocalAuthGuard } from './guards/local-auth.guard';
 import { LoginLogService } from './login-log.service';
 import { Perm } from './permissions.decorator';
@@ -204,12 +204,16 @@ export class AuthController {
   @ApiQuery({ name: 'success', required: false, type: Boolean })
   async getLoginLogs(
     @Request() req: RequestWithUser,
-    @Query(new ZodValidationPipe(LoginLogQuerySchema)) query: LoginLogQueryDto,
+    @Query() rawQuery: unknown,
   ): Promise<LoginLogResponseDto[]> {
+    const parsed = LoginLogQuerySchema.safeParse(rawQuery);
+    if (!parsed.success) {
+      throw new BadRequestException({ message: 'Validation failed', issues: parsed.error.issues });
+    }
     if (req.user.type !== UserType.ADMIN) {
       throw new HttpException('Access denied', HttpStatus.FORBIDDEN);
     }
-    return this.loginLogService.getLogs(query);
+    return this.loginLogService.getLogs(parsed.data);
   }
 
   /**

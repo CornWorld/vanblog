@@ -1,7 +1,8 @@
 import { Injectable, NotFoundException, Inject } from '@nestjs/common';
+import { dayjs } from '@vanblog/shared';
 import * as bcrypt from 'bcrypt';
-import dayjs from 'dayjs';
 import { eq, and, or, like, desc, asc, sql } from 'drizzle-orm';
+import { z } from 'zod';
 
 import { DATABASE_CONNECTION, type Database } from '../../database';
 import { drafts, articles, tags } from '../../database/schema';
@@ -11,12 +12,12 @@ import { HookService } from '../plugin/services/hook.service';
 
 import { DraftVersionService } from './draft-version.service';
 import {
-  CreateDraftDto,
-  UpdateDraftDto,
-  DraftQueryDto,
-  DraftListResponseDto,
-  PublishDraftDto,
-  DraftDto,
+  CreateDraftSchema,
+  UpdateDraftSchema,
+  DraftQuerySchema,
+  DraftListResponseSchema,
+  PublishDraftSchema,
+  DraftSchema,
 } from './dto/draft.dto';
 
 @Injectable()
@@ -28,7 +29,9 @@ export class DraftService {
     private readonly hookService: HookService,
   ) {}
 
-  async findAll(query: DraftQueryDto): Promise<DraftListResponseDto> {
+  async findAll(
+    query: z.infer<typeof DraftQuerySchema>,
+  ): Promise<z.infer<typeof DraftListResponseSchema>> {
     const { page = 1, pageSize = 10, keyword, sortBy = 'updatedAt', sortOrder = 'desc' } = query;
 
     const conditions = [];
@@ -65,31 +68,18 @@ export class DraftService {
         .where(whereClause),
     ]);
 
-    const processedDrafts = draftResults.map((draft) => ({
-      ...draft,
-      tags: safeParseJson(draft.tags, dataSchemas.tagsArray) ?? [],
-      categories: draft.category !== null && draft.category !== '' ? [draft.category] : [],
-      pathname: draft.pathname,
-      category: draft.category,
-      userId: 1,
-      wordCount: draft.content !== '' ? draft.content.length : 0,
-      readTime: Math.ceil((draft.content !== '' ? draft.content.length : 0) / 200),
-      summary: undefined,
-      cover: undefined,
-    }));
-
     return {
-      items: processedDrafts.map((draft) => ({
+      items: draftResults.map((draft) => ({
         id: draft.id,
         title: draft.title,
         content: draft.content,
         pathname: draft.pathname,
         category: draft.category,
-        tags: draft.tags,
+        tags: safeParseJson(draft.tags, dataSchemas.tagsArray) ?? [],
         author: draft.author,
         version: draft.version,
-        createdAt: dayjs(draft.createdAt),
-        updatedAt: dayjs(draft.updatedAt),
+        createdAt: dayjs(draft.createdAt).format(),
+        updatedAt: dayjs(draft.updatedAt).format(),
       })),
       total: Number(countResult[0]?.count) > 0 ? Number(countResult[0]?.count) : 0,
       page,
@@ -100,11 +90,11 @@ export class DraftService {
     };
   }
 
-  async findOne(id: number): Promise<DraftDto> {
+  async findOne(id: number): Promise<z.infer<typeof DraftSchema>> {
     const results = await this.db.select().from(drafts).where(eq(drafts.id, id)).limit(1);
 
     if (results.length === 0) {
-      throw new NotFoundException(`Draft with ID ${String(id)} not found`);
+      throw new NotFoundException(`Draft with ID ${id} not found`);
     }
 
     const [draft] = results;
@@ -114,12 +104,14 @@ export class DraftService {
       tags: safeParseJson(draft.tags, dataSchemas.tagsArray) ?? [],
       pathname: draft.pathname,
       category: draft.category,
-      createdAt: dayjs(draft.createdAt),
-      updatedAt: dayjs(draft.updatedAt),
+      createdAt: dayjs(draft.createdAt).format(),
+      updatedAt: dayjs(draft.updatedAt).format(),
     };
   }
 
-  async create(createDraftDto: CreateDraftDto): Promise<DraftDto> {
+  async create(
+    createDraftDto: z.infer<typeof CreateDraftSchema>,
+  ): Promise<z.infer<typeof DraftSchema>> {
     const { tags, ...rest } = createDraftDto;
 
     let draftData = {
@@ -149,8 +141,8 @@ export class DraftService {
       tags: safeParseJson(newDraft.tags, dataSchemas.tagsArray) ?? [],
       pathname: newDraft.pathname,
       category: newDraft.category,
-      createdAt: dayjs(newDraft.createdAt),
-      updatedAt: dayjs(newDraft.updatedAt),
+      createdAt: dayjs(newDraft.createdAt).format(),
+      updatedAt: dayjs(newDraft.updatedAt).format(),
     };
 
     // Trigger afterCreateDraft hook (new hook system)
@@ -159,7 +151,10 @@ export class DraftService {
     return draftResult;
   }
 
-  async update(id: number, updateDraftDto: UpdateDraftDto): Promise<DraftDto> {
+  async update(
+    id: number,
+    updateDraftDto: z.infer<typeof UpdateDraftSchema>,
+  ): Promise<z.infer<typeof DraftSchema>> {
     // Save a version before updating
     await this.draftVersionService.createVersion(id);
 
@@ -191,7 +186,7 @@ export class DraftService {
       updateData.author = rest.author;
     }
 
-    updateData.updatedAt = dayjs().toISOString();
+    updateData.updatedAt = dayjs().format();
 
     // Trigger draft|before_update hook (new hook system)
     updateData = await this.hookService.applyFilters('draft|beforeUpdate', updateData, {
@@ -206,7 +201,7 @@ export class DraftService {
       .returning();
 
     if (result.length === 0) {
-      throw new NotFoundException(`Draft with ID ${String(id)} not found`);
+      throw new NotFoundException(`Draft with ID ${id} not found`);
     }
 
     const [updatedDraft] = result;
@@ -216,8 +211,8 @@ export class DraftService {
       tags: safeParseJson(updatedDraft.tags, dataSchemas.tagsArray) ?? [],
       pathname: updatedDraft.pathname,
       category: updatedDraft.category,
-      createdAt: dayjs(updatedDraft.createdAt),
-      updatedAt: dayjs(updatedDraft.updatedAt),
+      createdAt: dayjs(updatedDraft.createdAt).format(),
+      updatedAt: dayjs(updatedDraft.updatedAt).format(),
     };
 
     // Trigger draft|updated hook (new hook system)
@@ -239,14 +234,14 @@ export class DraftService {
       .returning({ id: drafts.id });
 
     if (result.length === 0) {
-      throw new NotFoundException(`Draft with ID ${String(id)} not found`);
+      throw new NotFoundException(`Draft with ID ${id} not found`);
     }
 
     // Trigger draft|deleted hook (new hook system)
     await this.hookService.doAction('draft|afterDelete', { id }, { action: 'delete' });
   }
 
-  async publish(id: number, publishDto: PublishDraftDto): Promise<Article> {
+  async publish(id: number, publishDto: z.infer<typeof PublishDraftSchema>): Promise<Article> {
     // First, get the draft
     const draft = await this.findOne(id);
 
@@ -271,7 +266,7 @@ export class DraftService {
           category: draft.category,
           top: publishDto.isTop ? 1 : 0,
           hidden: false,
-          private: Boolean(publishDto.password),
+          private: !!publishDto.password,
           password: hashedPassword,
           viewer: 0,
         },
@@ -309,7 +304,7 @@ export class DraftService {
       category: articleResult.category,
       tags: articleResult.tags,
       pathname: articleResult.pathname,
-      publishedAt: articleResult.createdAt,
+      publishedAt: dayjs(articleResult.createdAt).format(),
     });
 
     return new Article({
@@ -326,13 +321,16 @@ export class DraftService {
     });
   }
 
-  async importDrafts(draftDtos: CreateDraftDto[]): Promise<void> {
+  async importDrafts(draftDtos: Array<z.infer<typeof CreateDraftSchema>>): Promise<void> {
     for (const draftDto of draftDtos) {
       await this.create(draftDto);
     }
   }
 
-  async autoSave(id: number, updateDraftDto: UpdateDraftDto): Promise<DraftDto> {
+  async autoSave(
+    id: number,
+    updateDraftDto: z.infer<typeof UpdateDraftSchema>,
+  ): Promise<z.infer<typeof DraftSchema>> {
     // Auto-save doesn't create a version to avoid too many versions
     // Just update the draft directly
     const { tags, ...rest } = updateDraftDto;
@@ -363,7 +361,7 @@ export class DraftService {
       updateData.author = rest.author;
     }
 
-    updateData.updatedAt = dayjs().toISOString();
+    updateData.updatedAt = dayjs().format();
 
     const result = await this.db
       .update(drafts)
@@ -372,7 +370,7 @@ export class DraftService {
       .returning();
 
     if (result.length === 0) {
-      throw new NotFoundException(`Draft with ID ${String(id)} not found`);
+      throw new NotFoundException(`Draft with ID ${id} not found`);
     }
 
     const [updatedDraft] = result;
@@ -382,8 +380,8 @@ export class DraftService {
       tags: safeParseJson(updatedDraft.tags, dataSchemas.tagsArray) ?? [],
       pathname: updatedDraft.pathname,
       category: updatedDraft.category,
-      createdAt: dayjs(updatedDraft.createdAt),
-      updatedAt: dayjs(updatedDraft.updatedAt),
+      createdAt: dayjs(updatedDraft.createdAt).format(),
+      updatedAt: dayjs(updatedDraft.updatedAt).format(),
     };
   }
 

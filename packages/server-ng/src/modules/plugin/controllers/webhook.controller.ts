@@ -11,7 +11,8 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery } from '@nestjs/swagger';
-import { ZodValidationPipe } from 'nestjs-zod';
+import { dateStr } from '@vanblog/shared';
+import { z } from 'zod';
 
 import {
   selectWebhookSchema,
@@ -19,13 +20,7 @@ import {
   updateWebhookSchema,
 } from '../../../database/zod-schemas';
 import { Perm } from '../../auth/permissions.decorator';
-import {
-  CreateWebhookDto,
-  UpdateWebhookDto,
-  WebhookDto,
-  WebhookQueryDto,
-  WebhookLogQueryDto,
-} from '../dto/webhook.dto';
+import { WebhookDto } from '../dto/webhook.dto';
 import { WebhookRegistryService } from '../services/webhook-registry.service';
 import { WebhookService } from '../services/webhook.service';
 
@@ -56,10 +51,9 @@ export class WebhookController {
   @Post()
   @Perm('webhook', ['create'])
   @ApiOperation({ summary: 'Create a new webhook' })
-  @ApiResponse({ status: 201, description: 'Webhook created successfully', type: WebhookDto })
-  async create(
-    @Body(new ZodValidationPipe(insertWebhookSchema)) createWebhookDto: CreateWebhookDto,
-  ): Promise<WebhookDto> {
+  @ApiResponse({ status: 201, description: 'Webhook created successfully' })
+  async create(@Body() raw: unknown): Promise<WebhookDto> {
+    const createWebhookDto = insertWebhookSchema.parse(raw);
     const webhook = await this.webhookService.create(createWebhookDto);
     const parsedWebhook = selectWebhookSchema.parse(webhook);
     return parsedWebhook as unknown as WebhookDto;
@@ -77,12 +71,19 @@ export class WebhookController {
   @Perm('webhook', ['read'])
   @ApiOperation({ summary: 'Get all webhooks' })
   @ApiResponse({ status: 200, description: 'Webhooks retrieved successfully' })
-  async findAll(@Query() query: WebhookQueryDto): Promise<{
+  async findAll(@Query() raw: unknown): Promise<{
     data: WebhookDto[];
     total: number;
     page: number;
     limit: number;
   }> {
+    const QuerySchema = z.object({
+      page: z.coerce.number().min(1).default(1),
+      limit: z.coerce.number().min(1).max(100).default(10),
+      active: z.coerce.boolean().optional(),
+      event: z.string().optional(),
+    });
+    const query = QuerySchema.parse(raw);
     const result = await this.webhookService.findAll(query);
     const { pagination, data } = result;
     const { total, page, limit } = pagination as { total: number; page: number; limit: number };
@@ -174,7 +175,17 @@ export class WebhookController {
   @Perm('webhook', ['read'])
   @ApiOperation({ summary: 'Get webhook execution logs' })
   @ApiResponse({ status: 200, description: 'Logs retrieved successfully' })
-  async getLogs(@Query() query: WebhookLogQueryDto): Promise<Record<string, unknown>> {
+  async getLogs(@Query() raw: unknown): Promise<Record<string, unknown>> {
+    const LogQuerySchema = z.object({
+      page: z.coerce.number().min(1).default(1),
+      limit: z.coerce.number().min(1).max(100).default(10),
+      webhookId: z.coerce.number().optional(),
+      event: z.string().optional(),
+      status: z.enum(['success', 'failed', 'timeout']).optional(),
+      startDate: dateStr.optional(),
+      endDate: dateStr.optional(),
+    });
+    const query = LogQuerySchema.parse(raw);
     return this.webhookService.getLogs(query);
   }
 
@@ -182,7 +193,7 @@ export class WebhookController {
   @Perm('webhook', ['read'])
   @ApiOperation({ summary: 'Get a webhook by ID' })
   @ApiParam({ name: 'id', type: Number })
-  @ApiResponse({ status: 200, description: 'Webhook retrieved successfully', type: WebhookDto })
+  @ApiResponse({ status: 200, description: 'Webhook retrieved successfully' })
   @ApiResponse({ status: 404, description: 'Webhook not found' })
   async findOne(@Param('id', ParseIntPipe) id: number): Promise<WebhookDto> {
     const webhook = await this.webhookService.findOne(id);
@@ -197,12 +208,10 @@ export class WebhookController {
   @Perm('webhook', ['update'])
   @ApiOperation({ summary: 'Update a webhook' })
   @ApiParam({ name: 'id', type: Number })
-  @ApiResponse({ status: 200, description: 'Webhook updated successfully', type: WebhookDto })
+  @ApiResponse({ status: 200, description: 'Webhook updated successfully' })
   @ApiResponse({ status: 404, description: 'Webhook not found' })
-  async update(
-    @Param('id', ParseIntPipe) id: number,
-    @Body(new ZodValidationPipe(updateWebhookSchema)) updateWebhookDto: UpdateWebhookDto,
-  ): Promise<WebhookDto> {
+  async update(@Param('id', ParseIntPipe) id: number, @Body() raw: unknown): Promise<WebhookDto> {
+    const updateWebhookDto = updateWebhookSchema.parse(raw);
     const webhook = await this.webhookService.update(id, updateWebhookDto);
     if (!webhook) {
       throw new NotFoundException('Webhook not found');

@@ -1,10 +1,10 @@
 import { VersioningType, type INestApplication } from '@nestjs/common';
 import { NestFactory, Reflector } from '@nestjs/core';
 import { SwaggerModule, DocumentBuilder, type OpenAPIObject } from '@nestjs/swagger';
+import { configureDayjs } from '@vanblog/shared';
 import compression from 'compression';
 import cookieParser from 'cookie-parser';
 import csurf from 'csurf';
-import dayjs from 'dayjs';
 import helmet from 'helmet';
 
 import { AppModule } from './app.module';
@@ -21,7 +21,6 @@ import {
 } from './core/interceptors';
 import { LoggerService } from './core/logger/logger.service';
 import { DerivedViewCacheService } from './shared/cache';
-// import { patchNestJsSwagger } from 'nestjs-zod'; // Not available in current version
 
 // Removed static locale import to allow dynamic, config-driven locale loading
 
@@ -33,15 +32,7 @@ export async function init(): Promise<INestApplication> {
   const configService = app.get(ConfigService);
   const appConfig = configService.app;
 
-  // Configure dayjs locale from config
-  try {
-    if (appConfig.locale !== 'en') {
-      await import(`dayjs/locale/${appConfig.locale}`);
-    }
-    dayjs.locale(appConfig.locale);
-  } catch {
-    dayjs.locale('en');
-  }
+  await configureDayjs({ locale: appConfig.locale, timezone: process.env.TZ ?? 'UTC' });
 
   // Use custom logger
   const logger = app.get(LoggerService);
@@ -141,7 +132,7 @@ export async function init(): Promise<INestApplication> {
   // Enable compression
   app.use(compression());
 
-  // Global pipes - using ZodValidationPipe per endpoint instead of global ValidationPipe
+  // Global pipes
 
   // Global exception filters
   app.useGlobalFilters(new AllExceptionsFilter(logger), new HttpExceptionFilter(logger));

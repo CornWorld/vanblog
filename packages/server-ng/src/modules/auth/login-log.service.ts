@@ -1,5 +1,5 @@
 import { Injectable, Inject } from '@nestjs/common';
-import dayjs from 'dayjs';
+import { dayjs } from '@vanblog/shared';
 import { eq, and, gte, lte, desc } from 'drizzle-orm';
 
 import { DATABASE_CONNECTION, type Database } from '../../database';
@@ -16,31 +16,34 @@ export class LoginLogService {
 
   async createLog(logData: LoginLogDto): Promise<void> {
     await this.db.insert(loginLogs).values({
-      username: String(logData.username),
-      ip: logData.ip ? String(logData.ip) : null,
-      userAgent: logData.userAgent ? String(logData.userAgent) : null,
-      success: Boolean(logData.success),
-      message: logData.message ? String(logData.message) : null,
+      username: logData.username,
+      ip: logData.ip ? logData.ip : null,
+      userAgent: logData.userAgent ? logData.userAgent : null,
+      success: logData.success,
+      message: logData.message ? logData.message : null,
     });
   }
 
   async getLogs(query: LoginLogQueryDto): Promise<LoginLogResponseDto[]> {
     const conditions = [];
 
+    const start = query.startDate ? dayjs(query.startDate).format() : undefined;
+    const end = query.endDate ? dayjs(query.endDate).format() : undefined;
+
     if (query.username) {
-      conditions.push(eq(loginLogs.username, String(query.username)));
+      conditions.push(eq(loginLogs.username, query.username));
     }
 
     if (query.success !== undefined) {
-      conditions.push(eq(loginLogs.success, Boolean(query.success)));
+      conditions.push(eq(loginLogs.success, query.success));
     }
 
-    if (query.startDate) {
-      conditions.push(gte(loginLogs.createdAt, query.startDate));
+    if (start) {
+      conditions.push(gte(loginLogs.createdAt, start));
     }
 
-    if (query.endDate) {
-      conditions.push(lte(loginLogs.createdAt, query.endDate));
+    if (end) {
+      conditions.push(lte(loginLogs.createdAt, end));
     }
 
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
@@ -57,14 +60,14 @@ export class LoginLogService {
       username: log.username,
       ip: log.ip,
       userAgent: log.userAgent,
-      success: Boolean(log.success),
+      success: log.success,
       message: log.message,
-      createdAt: dayjs(log.createdAt),
+      createdAt: dayjs(log.createdAt).format(),
     }));
   }
 
   async getRecentFailedAttempts(username: string, minutes = 30): Promise<number> {
-    const cutoffTime = dayjs().subtract(minutes, 'minute').toISOString();
+    const cutoffTime = dayjs().subtract(minutes, 'minute').format();
 
     const result = await this.db
       .select()
@@ -81,7 +84,7 @@ export class LoginLogService {
   }
 
   async getRecentFailedAttemptsByIp(ip: string, minutes = 30): Promise<number> {
-    const cutoffTime = dayjs().subtract(minutes, 'minute').toISOString();
+    const cutoffTime = dayjs().subtract(minutes, 'minute').format();
 
     const result = await this.db
       .select()

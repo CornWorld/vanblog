@@ -10,11 +10,9 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
-import { ZodValidationPipe } from 'nestjs-zod';
 
 import { Perm } from '../auth/permissions.decorator';
 
-import { CreateUserDto, UpdateUserDto } from './dto';
 import { CreateUserSchema } from './dto/create-user.dto';
 import { UpdateUserSchema } from './dto/update-user.dto';
 import { User } from './entities/user.entity';
@@ -51,10 +49,12 @@ export class UserController {
   @Perm('user', ['create'])
   @ApiOperation({ summary: '创建用户' })
   @ApiResponse({ status: 201, description: '用户创建成功' })
-  async create(
-    @Body(new ZodValidationPipe(CreateUserSchema)) createUserDto: CreateUserDto,
-  ): Promise<User> {
-    return this.userService.create(createUserDto);
+  async create(@Body() rawBody: unknown): Promise<User> {
+    const parsed = CreateUserSchema.safeParse(rawBody);
+    if (!parsed.success) {
+      throw new BadRequestException({ message: 'Validation failed', issues: parsed.error.issues });
+    }
+    return this.userService.create(parsed.data);
   }
 
   /**
@@ -163,15 +163,16 @@ export class UserController {
   @ApiOperation({ summary: '更新用户' })
   @ApiResponse({ status: 200, description: '用户更新成功' })
   @ApiResponse({ status: 404, description: '用户未找到' })
-  async update(
-    @Param('id') id: string,
-    @Body(new ZodValidationPipe(UpdateUserSchema)) updateUserDto: UpdateUserDto,
-  ): Promise<User> {
+  async update(@Param('id') id: string, @Body() rawBody: unknown): Promise<User> {
     const numId = Number(id);
     if (Number.isNaN(numId)) {
       throw new BadRequestException('Invalid user id');
     }
-    return this.userService.update(numId, updateUserDto);
+    const parsed = UpdateUserSchema.safeParse(rawBody);
+    if (!parsed.success) {
+      throw new BadRequestException({ message: 'Validation failed', issues: parsed.error.issues });
+    }
+    return this.userService.update(numId, parsed.data);
   }
 
   /**

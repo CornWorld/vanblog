@@ -1,4 +1,3 @@
-import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
 
 import {
@@ -35,10 +34,10 @@ export const PermissionNodeQuerySchema = z.object({
 });
 
 // DTO 类
-export class PermissionNodeDto extends createZodDto(PermissionNodeSchema) {}
-export class CreatePermissionNodeDto extends createZodDto(CreatePermissionNodeSchema) {}
-export class UpdatePermissionNodeDto extends createZodDto(UpdatePermissionNodeSchema) {}
-export class PermissionNodeQueryDto extends createZodDto(PermissionNodeQuerySchema) {}
+export type PermissionNodeDto = z.infer<typeof PermissionNodeSchema>;
+export type CreatePermissionNodeDto = z.infer<typeof CreatePermissionNodeSchema>;
+export type UpdatePermissionNodeDto = z.infer<typeof UpdatePermissionNodeSchema>;
+export type PermissionNodeQueryDto = z.infer<typeof PermissionNodeQuerySchema>;
 
 export type PermissionNodeType = z.infer<typeof PermissionNodeSchema>;
 export type CreatePermissionNodeType = z.infer<typeof CreatePermissionNodeSchema>;

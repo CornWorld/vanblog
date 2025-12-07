@@ -1,4 +1,6 @@
-import dayjs, { type Dayjs } from 'dayjs';
+import { dayjs } from '@vanblog/shared';
+
+import type { Dayjs } from 'dayjs';
 
 /**
  * 转换为 Dayjs 实例

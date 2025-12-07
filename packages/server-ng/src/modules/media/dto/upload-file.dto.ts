@@ -1,4 +1,3 @@
-import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
 
 import { MediaProcessingOverrideSchema } from './media-settings.dto';
@@ -24,12 +23,9 @@ export const UploadFileSchema = z.object({
     .describe('是否使用异步处理队列'),
 });
 
-export class UploadFileDto extends createZodDto(UploadFileSchema) {
-  file!: Express.Multer.File;
-  filename?: string;
-  provider!: string;
-  processing?: z.infer<typeof MediaProcessingOverrideSchema> | string;
-}
+export type UploadFileDto = z.infer<typeof UploadFileSchema> & {
+  file: Express.Multer.File;
+};
 
 // Class for Swagger documentation
 export class UploadFile {

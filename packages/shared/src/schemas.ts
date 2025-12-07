@@ -1,7 +1,7 @@
 import { z } from 'zod';
-import { dataCodec } from './date-codecs.js';
+import { dateStr } from './date-codecs.js';
 
-export const commonSchemas = {
+export const c = {
   id: z.number().int().positive('ID must be a positive integer').describe('Unique identifier'),
 
   nonEmptyString: z.string().min(1, 'String cannot be empty').describe('Non-empty string value'),
@@ -39,14 +39,14 @@ export const commonSchemas = {
 };
 
 export const UpdateSiteInfoSchema = z.object({
-  siteName: commonSchemas.nonEmptyString.max(100, '站点名称过长'),
+  siteName: c.nonEmptyString.max(100, '站点名称过长'),
   siteDescription: z.string().optional(),
   siteKeywords: z.string().optional(),
   siteLogo: z.string().optional(),
   siteFavicon: z.string().optional(),
-  siteUrl: commonSchemas.url.optional(),
+  siteUrl: c.url.optional(),
   authorName: z.string().optional(),
-  authorEmail: commonSchemas.email.optional(),
+  authorEmail: c.email.optional(),
   authorAvatar: z.string().optional(),
   authorBio: z.string().optional(),
   icp: z.string().optional(),
@@ -120,7 +120,7 @@ export const FriendLinkSchema = z.object({
 export type FriendLink = z.infer<typeof FriendLinkSchema>;
 
 export const CreateFriendLinkSchema = z.object({
-  name: commonSchemas.nonEmptyString.describe('友链名称'),
+  name: c.nonEmptyString.describe('友链名称'),
   url: z.string().url().describe('友链地址'),
   description: z.string().optional().describe('友链描述'),
   avatar: z.string().url().optional().describe('友链头像'),
@@ -208,10 +208,12 @@ export const SocialTypeEnum = z.enum([
   'wechat-dark',
 ]);
 
+export type SocialType = z.infer<typeof SocialTypeEnum>;
+
 export const SocialItemSchema = z.object({
   type: SocialTypeEnum,
   value: z.string(),
-  updatedAt: dataCodec,
+  updatedAt: dateStr,
 });
 
 export type SocialItem = z.infer<typeof SocialItemSchema>;
@@ -301,7 +303,7 @@ export type UpdateStaticSetting = z.infer<typeof UpdateStaticSettingSchema>;
 export const RewardItemSchema = z.object({
   name: z.string(),
   value: z.string(),
-  updatedAt: dataCodec,
+  updatedAt: dateStr,
 });
 
 export type RewardItem = z.infer<typeof RewardItemSchema>;
@@ -327,14 +329,16 @@ export const LoginSchema = z.object({
 
 export const UserSchema = z.object({
   id: z.number(),
-  name: z.string(),
+  username: z.string(),
   nickname: z.string().optional(),
   avatar: z.string().optional(),
   email: z.string().optional(),
   permissions: z.array(z.string()),
-  createdAt: dataCodec,
-  updatedAt: dataCodec,
+  createdAt: dateStr,
+  updatedAt: dateStr,
 });
+
+export type User = z.infer<typeof UserSchema>;
 
 export const UpdateUserSchema = z.object({
   nickname: z.string().optional(),
@@ -363,7 +367,7 @@ export const TokenSchema = z.object({
   _id: z.string(),
   name: z.string(),
   token: z.string(),
-  createdAt: dataCodec,
+  createdAt: dateStr,
 });
 
 export const CreateTokenSchema = z.object({
@@ -376,8 +380,8 @@ export const CategorySchema = z.object({
   name: z.string(),
   description: z.string().optional(),
   count: z.number().optional(),
-  createAt: dataCodec,
-  updateAt: dataCodec,
+  createdAt: dateStr,
+  updatedAt: dateStr,
 });
 
 export const CreateCategorySchema = z.object({
@@ -386,16 +390,20 @@ export const CreateCategorySchema = z.object({
 });
 
 export const UpdateCategorySchema = z.object({
+  name: z.string().optional(),
   description: z.string().optional(),
+  password: z.string().optional(),
 });
 
 export const TagSchema = z.object({
   id: z.number(),
   name: z.string(),
   count: z.number().optional(),
-  createAt: dataCodec,
-  updateAt: dataCodec,
+  createdAt: dateStr,
+  updatedAt: dateStr.optional(),
 });
+
+export type Tag = z.infer<typeof TagSchema>;
 
 export const CreateTagSchema = z.object({
   name: z.string(),
@@ -418,9 +426,9 @@ export const ArticleSchema = z.object({
   likes: z.number().default(0),
   isTop: z.boolean().default(false),
   isHot: z.boolean().default(false),
-  pubTime: dataCodec,
-  createdAt: dataCodec,
-  updatedAt: dataCodec,
+  pubTime: dateStr,
+  createdAt: dateStr,
+  updatedAt: dateStr,
   private: z.boolean().default(false),
   password: z.string().optional(),
   toc: z.string().optional(),
@@ -435,7 +443,7 @@ export const CreateArticleSchema = z.object({
   tags: z.array(z.string()).optional(),
   isTop: z.boolean().optional(),
   isHot: z.boolean().optional(),
-  pubTime: dataCodec.optional(),
+  pubTime: dateStr.optional(),
   private: z.boolean().optional(),
   password: z.string().optional(),
 });
@@ -450,8 +458,8 @@ export const DraftSchema = z.object({
   cover: z.string().optional(),
   category: z.string().optional(),
   tags: z.array(z.string()).optional(),
-  createdAt: dataCodec,
-  updatedAt: dataCodec,
+  createdAt: dateStr,
+  updatedAt: dateStr,
 });
 
 export const CreateDraftSchema = z.object({
@@ -473,7 +481,7 @@ export const MediaSchema = z.object({
   path: z.string(),
   type: z.string(),
   size: z.number(),
-  createdAt: dataCodec,
+  createdAt: dateStr,
 });
 
 // Custom Page
@@ -481,8 +489,8 @@ export const CustomPageSchema = z.object({
   id: z.string(),
   name: z.string(),
   path: z.string(),
-  createdAt: dataCodec,
-  updatedAt: dataCodec,
+  createdAt: dateStr,
+  updatedAt: dateStr,
 });
 
 export const CreateCustomPageSchema = z.object({
@@ -512,7 +520,7 @@ export const PipelineSchema = z.object({
   id: z.string(),
   name: z.string(),
   status: z.string(),
-  lastRun: dataCodec.optional(),
+  lastRun: dateStr.optional(),
 });
 
 export const CreatePipelineSchema = z.object({
@@ -537,7 +545,7 @@ export const AnalyticsLogSchema = z.object({
   id: z.number(),
   type: z.string(),
   content: z.string(),
-  createdAt: dataCodec,
+  createdAt: dateStr,
 });
 
 // Meta

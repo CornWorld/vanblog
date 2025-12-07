@@ -34,13 +34,17 @@ describe('OptionsController (Public)', () => {
   });
 
   it('getOptions should pass query and wrap result', async () => {
-    const query = { include: ['articles', 'siteMeta'] } as any;
-    const data = { articles: { items: [], total: 0 }, siteMeta: { title: 'x' } } as any;
+    // include should be a comma-separated string that gets transformed to an array
+    const query = { include: 'articles,siteMeta' };
+    const data = { articles: { items: [], total: 0 }, siteMeta: { title: 'x' } };
     mockOptionsService.getOptions.mockResolvedValue(data);
 
     const result = await controller.getOptions(query);
 
-    expect(mockOptionsService.getOptions).toHaveBeenCalledWith(query);
+    // After parsing, include becomes an array
+    expect(mockOptionsService.getOptions).toHaveBeenCalledWith({
+      include: ['articles', 'siteMeta'],
+    });
     expect(result).toEqual({ statusCode: 200, data });
   });
 });

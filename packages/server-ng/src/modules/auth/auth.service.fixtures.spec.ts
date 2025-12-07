@@ -1,5 +1,6 @@
 import { UnauthorizedException } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
+import { dayjs } from '@vanblog/shared';
 import * as bcrypt from 'bcrypt';
 import { afterEach, beforeEach, describe, expect, vi } from 'vitest';
 
@@ -29,8 +30,8 @@ describe('AuthService with Vitest Fixtures', () => {
     nickname: 'Test User',
     type: UserType.ADMIN,
     permissions: [],
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    createdAt: dayjs().format(),
+    updatedAt: dayjs().format(),
   });
 
   const mockUserService = {

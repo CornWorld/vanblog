@@ -8,11 +8,9 @@ import {
   ParseIntPipe,
   Headers,
   Ip,
-  UsePipes,
 } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
-import { ZodValidationPipe } from 'nestjs-zod';
 
 import { DerivedView } from '../../shared/decorators/derived-view.decorator';
 import { Perm } from '../auth/permissions.decorator';
@@ -25,8 +23,8 @@ import {
   DeviceStatsDto,
   BrowserStatsDto,
 } from './dto/analytics-response.dto';
-import { QueryAnalyticsDto } from './dto/query-analytics.dto';
-import { RecordAnalyticsDto, RecordAnalyticsSchema } from './dto/record-analytics.dto';
+import { QueryAnalyticsSchema } from './dto/query-analytics.dto';
+import { RecordAnalyticsSchema } from './dto/record-analytics.dto';
 import { AnalyticsService } from './services/analytics.service';
 import { ArticleStatsService, ArticleStats } from './services/article-stats.service';
 import { EchartsFormatterService, EchartsOption } from './services/echarts-formatter.service';
@@ -69,35 +67,42 @@ export class AnalyticsController {
    * @param userAgent 用户代理字符串
    */
   @Post('analytics/record')
-  @Throttle({ medium: { limit: 10, ttl: 10000 } }) // 10秒内最多10次请求
-  @UsePipes(new ZodValidationPipe(RecordAnalyticsSchema))
+  @Throttle({ default: { limit: 10, ttl: 10000 } })
   @ApiOperation({ summary: '记录分析数据' })
   @ApiResponse({ status: 201, description: '记录成功' })
   async recordAnalytics(
-    @Body() dto: RecordAnalyticsDto,
+    @Body() raw: unknown,
     @Ip() ip?: string,
     @Headers('user-agent') userAgent?: string,
   ): Promise<void> {
-    // 如果没有提供 IP 或 User-Agent，使用请求中的信息
+    const input = RecordAnalyticsSchema.parse(raw) as {
+      type: string;
+      path?: string | null;
+      referrer?: string | null;
+      userAgent?: string | null;
+      ip?: string | null;
+      data?: unknown;
+    };
+
+    const userAgentVal = input.userAgent ?? userAgent ?? null;
+    const ipVal = input.ip ?? ip ?? null;
 
     const recordDto = {
-      type: dto.type,
-      path: dto.path,
-      referrer: dto.referrer,
-      userAgent: dto.userAgent ?? userAgent ?? null,
-      ip: dto.ip ?? ip ?? null,
-      data: dto.data,
-    } as RecordAnalyticsDto;
+      type: input.type,
+      path: input.path ?? null,
+      referrer: input.referrer ?? null,
+      userAgent: userAgentVal,
+      ip: ipVal,
+      data: input.data,
+    };
 
     await this.analyticsService.recordAnalytics(recordDto);
 
     // Send to third-party analytics services
-    if (dto.type === 'pageview' && dto.path) {
-      await this.thirdPartyAnalyticsService.trackPageview(
-        dto.path,
-        recordDto.ip ?? undefined,
-        recordDto.userAgent ?? undefined,
-      );
+    if (input.type === 'pageview' && input.path) {
+      const ipArg: string | undefined = ipVal ?? undefined;
+      const uaArg: string | undefined = userAgentVal ?? undefined;
+      await this.thirdPartyAnalyticsService.trackPageview(input.path, ipArg, uaArg);
     }
   }
 
@@ -122,7 +127,7 @@ export class AnalyticsController {
    * @param userAgent 用户代理字符串
    */
   @Post('article/:id/view')
-  @Throttle({ medium: { limit: 5, ttl: 10000 } }) // 10秒内最多5次请求
+  @Throttle({ default: { limit: 5, ttl: 10000 } })
   @ApiOperation({ summary: '记录文章浏览' })
   @ApiResponse({ status: 201, description: '记录成功' })
   async recordArticleView(
@@ -145,7 +150,7 @@ export class AnalyticsController {
    * @param ip 客户端IP地址
    */
   @Post('article/:id/reading-time')
-  @Throttle({ long: { limit: 20, ttl: 60000 } }) // 1分钟内最多20次请求
+  @Throttle({ default: { limit: 20, ttl: 60000 } }) // 1分钟内最多20次请求
   @ApiOperation({ summary: '记录文章阅读时间' })
   @ApiResponse({ status: 201, description: '记录成功' })
   async recordReadingTime(
@@ -358,7 +363,8 @@ export class AnalyticsController {
   @DerivedView({ key: 'analytics-export', ttl: 600, swr: false })
   @ApiOperation({ summary: '导出分析数据' })
   @ApiResponse({ status: 200, description: '导出成功' })
-  async exportAnalyticsData(@Query() query: QueryAnalyticsDto): Promise<unknown[]> {
+  async exportAnalyticsData(@Query() raw: unknown): Promise<unknown[]> {
+    const query = QueryAnalyticsSchema.parse(raw);
     return this.analyticsService.exportAnalyticsData(query);
   }
 

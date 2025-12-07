@@ -1,11 +1,11 @@
 import { Test, type TestingModule } from '@nestjs/testing';
+import { dayjs, type FriendLink } from '@vanblog/shared';
 
 import {
   SettingCoreService,
   type SiteInfo,
   type SiteLayout,
   type SiteTheme,
-  type FriendLink,
   type Navigation,
   type CustomCode,
 } from './services/setting-core.service';
@@ -221,14 +221,20 @@ describe('SettingCoreController', () => {
     it('should return friend links', async () => {
       const mockFriendLinks: FriendLink[] = [
         {
+          id: 1,
           name: 'Friend 1',
           url: 'https://friend1.com',
           description: 'Friend 1 description',
+          createTime: '2024-01-01T00:00:00Z',
+          updateTime: '2024-01-01T00:00:00Z',
         },
         {
+          id: 2,
           name: 'Friend 2',
           url: 'https://friend2.com',
           description: 'Friend 2 description',
+          createTime: '2024-01-01T00:00:00Z',
+          updateTime: '2024-01-01T00:00:00Z',
         },
       ];
 
@@ -248,19 +254,20 @@ describe('SettingCoreController', () => {
         url: 'https://newfriend.com',
         description: 'New friend description',
       };
-      const updatedFriendLinks: FriendLink[] = [
-        {
-          name: 'New Friend',
-          url: 'https://newfriend.com',
-          description: 'New friend description',
-        },
-      ];
+      const createdFriendLink: FriendLink = {
+        id: 1,
+        name: 'New Friend',
+        url: 'https://newfriend.com',
+        description: 'New friend description',
+        createTime: '2024-01-01T00:00:00Z',
+        updateTime: '2024-01-01T00:00:00Z',
+      };
 
-      mockSettingCoreService.createFriendLink.mockResolvedValue(updatedFriendLinks);
+      mockSettingCoreService.createFriendLink.mockResolvedValue(createdFriendLink);
 
       const result = await controller.createFriendLink(createDto);
 
-      expect(result).toEqual(updatedFriendLinks);
+      expect(result).toEqual(createdFriendLink);
       expect(mockSettingCoreService.createFriendLink).toHaveBeenCalledWith(createDto);
     });
   });
@@ -273,19 +280,20 @@ describe('SettingCoreController', () => {
         url: 'https://updatedfriend.com',
         description: 'Updated description',
       };
-      const updatedFriendLinks: FriendLink[] = [
-        {
-          name: 'Updated Friend',
-          url: 'https://updatedfriend.com',
-          description: 'Updated description',
-        },
-      ];
+      const updatedFriendLink: FriendLink = {
+        id: 1,
+        name: 'Updated Friend',
+        url: 'https://updatedfriend.com',
+        description: 'Updated description',
+        createTime: '2024-01-01T00:00:00Z',
+        updateTime: '2024-01-02T00:00:00Z',
+      };
 
-      mockSettingCoreService.updateFriendLink.mockResolvedValue(updatedFriendLinks);
+      mockSettingCoreService.updateFriendLink.mockResolvedValue(updatedFriendLink);
 
       const result = await controller.updateFriendLink(index, updateDto);
 
-      expect(result).toEqual(updatedFriendLinks);
+      expect(result).toEqual(updatedFriendLink);
       expect(mockSettingCoreService.updateFriendLink).toHaveBeenCalledWith(index, updateDto);
     });
   });
@@ -493,7 +501,7 @@ describe('SettingCoreController', () => {
   // About
   describe('getAboutInfo', () => {
     it('should return about info', async () => {
-      const mockAbout = { content: 'Hello', updatedAt: new Date().toISOString() };
+      const mockAbout = { content: 'Hello', updatedAt: dayjs().format() };
       mockSettingCoreService.getAboutInfo = vi.fn().mockResolvedValue(mockAbout);
 
       const result = await controller.getAboutInfo();
@@ -506,7 +514,7 @@ describe('SettingCoreController', () => {
   describe('updateAboutInfo', () => {
     it('should update about info', async () => {
       const updateDto = { content: 'New Hello' } as any;
-      const updated = { content: 'New Hello', updatedAt: new Date().toISOString() };
+      const updated = { content: 'New Hello', updatedAt: dayjs().format() };
       mockSettingCoreService.updateAboutInfo = vi.fn().mockResolvedValue(updated);
 
       const result = await controller.updateAboutInfo(updateDto);

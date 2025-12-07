@@ -1,40 +1,43 @@
-import { Controller, Get, Post, Delete, Body, Param } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiParam } from '@nestjs/swagger';
-import { ZodValidationPipe } from 'nestjs-zod';
+import { Controller } from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
+import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
 
 import { Perm } from '../../src/modules/auth/permissions.decorator';
 
-import { RewardInfoDto, RewardInfoSchema } from './reward.dto';
+import { rewardContract } from './reward.contract';
+import { RewardInfoSchema } from './reward.dto';
 import { RewardService } from './reward.service';
-
-import type { RewardInfo } from './reward.schema';
 
 @ApiTags('reward')
 @Controller('api/admin/reward')
 export class RewardController {
   constructor(private readonly rewardService: RewardService) {}
 
-  @Get()
+  @TsRestHandler(rewardContract.list)
   @Perm('setting', ['read'])
-  @ApiOperation({ summary: 'Get all reward information' })
-  async getRewardInfo(): Promise<RewardInfo[]> {
-    return this.rewardService.getRewardInfo();
+  getRewardInfo(): ReturnType<typeof tsRestHandler> {
+    return tsRestHandler(rewardContract.list, async () => {
+      const data = await this.rewardService.getRewardInfo();
+      return { status: 200, body: data };
+    });
   }
 
-  @Post()
+  @TsRestHandler(rewardContract.upsert)
   @Perm('setting', ['update'])
-  @ApiOperation({ summary: 'Add or update reward information' })
-  async addOrUpdateRewardInfo(
-    @Body(new ZodValidationPipe(RewardInfoSchema)) dto: RewardInfoDto,
-  ): Promise<RewardInfo[]> {
-    return this.rewardService.addOrUpdateRewardInfo(dto);
+  addOrUpdateRewardInfo(): ReturnType<typeof tsRestHandler> {
+    return tsRestHandler(rewardContract.upsert, async ({ body }) => {
+      const dto = RewardInfoSchema.parse(body);
+      const data = await this.rewardService.addOrUpdateRewardInfo(dto);
+      return { status: 200, body: data };
+    });
   }
 
-  @Delete(':name')
+  @TsRestHandler(rewardContract.delete)
   @Perm('setting', ['update'])
-  @ApiOperation({ summary: 'Delete reward information' })
-  @ApiParam({ name: 'name', description: 'Reward method name' })
-  async deleteRewardInfo(@Param('name') name: string): Promise<RewardInfo[]> {
-    return this.rewardService.deleteRewardInfo(name);
+  deleteRewardInfo(): ReturnType<typeof tsRestHandler> {
+    return tsRestHandler(rewardContract.delete, async ({ params }) => {
+      const data = await this.rewardService.deleteRewardInfo(params.name);
+      return { status: 200, body: data };
+    });
   }
 }

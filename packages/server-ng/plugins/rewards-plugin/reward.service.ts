@@ -1,6 +1,8 @@
 import { Injectable, type OnModuleInit } from '@nestjs/common';
+import { z } from 'zod';
 
-import type { RewardInfoDto } from './reward.dto';
+import { RewardInfoSchema } from './reward.dto';
+
 import type { RewardInfo } from './reward.schema';
 import type { PluginContext } from '../../src/modules/plugin/interfaces/plugin-context.interface';
 
@@ -25,7 +27,7 @@ export class RewardService implements OnModuleInit {
     return rewards ?? [];
   }
 
-  async addOrUpdateRewardInfo(dto: RewardInfoDto): Promise<RewardInfo[]> {
+  async addOrUpdateRewardInfo(dto: z.infer<typeof RewardInfoSchema>): Promise<RewardInfo[]> {
     const rewards = await this.getRewardInfo();
     const rewardData: RewardInfo = {
       name: dto.name,

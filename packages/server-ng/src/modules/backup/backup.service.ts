@@ -11,6 +11,8 @@ import {
   InternalServerErrorException,
   Inject,
 } from '@nestjs/common';
+import { dayjs } from '@vanblog/shared';
+import { z } from 'zod';
 
 import { LoggerService } from '../../core/logger/logger.service';
 import { DATABASE_CONNECTION, type Database } from '../../database';
@@ -34,12 +36,12 @@ import {
 } from '../../database/schema';
 
 import {
-  CreateBackupDto,
-  RestoreBackupDto,
-  GetBackupsDto,
-  BackupInfoDto,
-  BackupListDto,
-  RestoreProgressDto,
+  CreateBackupSchema,
+  RestoreBackupSchema,
+  GetBackupsSchema,
+  BackupInfoSchema,
+  BackupListSchema,
+  RestoreProgressSchema,
 } from './dto/backup.dto';
 
 const gzip = promisify(zlib.gzip);
@@ -90,15 +92,17 @@ export class BackupService {
     }
   }
 
-  async createBackup(dto: CreateBackupDto): Promise<BackupInfoDto> {
+  async createBackup(
+    dto: z.infer<typeof CreateBackupSchema>,
+  ): Promise<z.infer<typeof BackupInfoSchema>> {
     const backupId = crypto.randomUUID();
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const timestamp = dayjs().format().replace(/[:.]/g, '-');
     const backupName = dto.name ?? `backup-${timestamp}`;
     const filename = `${backupName}-${backupId}.vbak`;
     const filepath = path.join(this.backupDir, filename);
 
     try {
-      this.logger.log(`Creating backup: ${String(backupName)}`);
+      this.logger.log(`Creating backup: ${backupName}`);
 
       // 收集数据
       const data = await this.collectData(dto);
@@ -110,8 +114,8 @@ export class BackupService {
         name: backupName,
         description: dto.description,
         version: '1.0.0',
-        createdAt: new Date().toISOString(),
-        hasPassword: Boolean(dto.password),
+        createdAt: dayjs().format(),
+        hasPassword: !!dto.password,
         includeMedia: dto.includeMedia,
         includeAnalytics: dto.includeAnalytics,
         includeLogs: dto.includeLogs,
@@ -138,9 +142,7 @@ export class BackupService {
       // 获取文件信息
       const stats = await fs.stat(filepath);
 
-      this.logger.log(
-        `Backup created successfully: ${String(filename)} (${String(stats.size)} bytes)`,
-      );
+      this.logger.log(`Backup created successfully: ${filename} (${stats.size} bytes)`);
 
       return {
         id: backupId,
@@ -148,7 +150,7 @@ export class BackupService {
         description: dto.description,
         filename,
         size: stats.size,
-        hasPassword: Boolean(dto.password),
+        hasPassword: !!dto.password,
         includeMedia: dto.includeMedia,
         includeAnalytics: dto.includeAnalytics,
         includeLogs: dto.includeLogs,
@@ -158,19 +160,21 @@ export class BackupService {
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       this.logger.error(
-        `Failed to create backup: ${String(errorMessage)}`,
+        `Failed to create backup: ${errorMessage}`,
         error instanceof Error ? error.message : String(error),
       );
       throw new InternalServerErrorException('Failed to create backup');
     }
   }
 
-  async getBackups(dto: GetBackupsDto): Promise<BackupListDto> {
+  async getBackups(
+    dto: z.infer<typeof GetBackupsSchema>,
+  ): Promise<z.infer<typeof BackupListSchema>> {
     try {
       const files = await fs.readdir(this.backupDir);
       const backupFiles = files.filter((file) => file.endsWith('.vbak'));
 
-      const backups: BackupInfoDto[] = [];
+      const backups: z.infer<typeof BackupInfoSchema>[] = [];
 
       for (const file of backupFiles) {
         try {
@@ -195,9 +199,7 @@ export class BackupService {
           }
         } catch (error: unknown) {
           const errorMessage = error instanceof Error ? error.message : String(error);
-          this.logger.warn(
-            `Failed to read backup metadata for ${String(file)}: ${String(errorMessage)}`,
-          );
+          this.logger.warn(`Failed to read backup metadata for ${file}: ${errorMessage}`);
 
           // 如果是加密备份，创建一个默认的备份项
           if (errorMessage.includes('encrypted') || errorMessage.includes('Cannot read metadata')) {
@@ -214,7 +216,7 @@ export class BackupService {
               includeMedia: false,
               includeAnalytics: false,
               includeLogs: false,
-              createdAt: stats.mtime.toISOString(),
+              createdAt: dayjs(stats.mtime).format(),
               tables: {},
             });
           }
@@ -237,10 +239,7 @@ export class BackupService {
       };
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      this.logger.error(
-        `Failed to get backups: ${String(errorMessage)}`,
-        error instanceof Error ? error.message : String(error),
-      );
+      this.logger.error(`Failed to get backups: ${errorMessage}`, errorMessage);
       throw new InternalServerErrorException('Failed to get backups');
     }
   }
@@ -251,7 +250,7 @@ export class BackupService {
     try {
       await fs.access(filepath);
       await fs.unlink(filepath);
-      this.logger.log(`Backup deleted: ${String(filename)}`);
+      this.logger.log(`Backup deleted: ${filename}`);
     } catch (error: unknown) {
       if (
         error != null &&
@@ -262,15 +261,15 @@ export class BackupService {
         throw new NotFoundException('Backup file not found');
       }
       const errorMessage = error instanceof Error ? error.message : String(error);
-      this.logger.error(
-        `Failed to delete backup: ${String(errorMessage)}`,
-        error instanceof Error ? error.message : String(error),
-      );
+      this.logger.error(`Failed to delete backup: ${errorMessage}`, errorMessage);
       throw new InternalServerErrorException('Failed to delete backup');
     }
   }
 
-  async restoreBackup(filename: string, dto: RestoreBackupDto): Promise<{ taskId: string }> {
+  async restoreBackup(
+    filename: string,
+    dto: z.infer<typeof RestoreBackupSchema>,
+  ): Promise<{ taskId: string }> {
     const filepath = path.join(this.backupDir, filename);
     const taskId = crypto.randomUUID();
 
@@ -293,7 +292,7 @@ export class BackupService {
       task.status = 'failed';
       task.error = error instanceof Error ? error.message : String(error);
       this.logger.error(
-        `Restore task ${String(taskId)} failed:`,
+        `Restore task ${taskId} failed:`,
         error instanceof Error ? error.message : String(error),
       );
     });
@@ -301,7 +300,7 @@ export class BackupService {
     return { taskId };
   }
 
-  getRestoreProgress(taskId: string): RestoreProgressDto {
+  getRestoreProgress(taskId: string): z.infer<typeof RestoreProgressSchema> {
     const task = this.restoreTasks.get(taskId);
     if (!task) {
       throw new NotFoundException('Restore task not found');
@@ -317,7 +316,9 @@ export class BackupService {
     };
   }
 
-  private async collectData(dto: CreateBackupDto): Promise<Record<string, unknown[]>> {
+  private async collectData(
+    dto: z.infer<typeof CreateBackupSchema>,
+  ): Promise<Record<string, unknown[]>> {
     const data: Record<string, unknown[]> = {};
 
     // 用户数据
@@ -380,14 +381,14 @@ export class BackupService {
         throw new Error('Cannot read metadata from encrypted backup');
       }
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage = error instanceof Error ? error.message : error;
       throw new Error(`Failed to read backup metadata: ${errorMessage}`);
     }
   }
 
   private async performRestore(
     filepath: string,
-    dto: RestoreBackupDto,
+    dto: z.infer<typeof RestoreBackupSchema>,
     task: RestoreTask,
   ): Promise<void> {
     task.status = 'running';
@@ -443,7 +444,7 @@ export class BackupService {
 
       for (const tableName of tables) {
         task.currentTable = tableName;
-        task.message = `Restoring ${String(tableName)}...`;
+        task.message = `Restoring ${tableName}...`;
 
         // 根据选项决定是否恢复某些表
         if (!dto.restoreMedia && tableName === 'staticFiles') continue;
@@ -467,12 +468,12 @@ export class BackupService {
       task.message = 'Restore completed successfully';
       task.currentTable = undefined;
 
-      this.logger.log(`Restore task ${String(task.id)} completed successfully`);
+      this.logger.log(`Restore task ${task.id} completed successfully`);
     } catch (error: unknown) {
       task.status = 'failed';
       task.error = error instanceof Error ? error.message : String(error);
       this.logger.error(
-        `Restore task ${String(task.id)} failed:`,
+        `Restore task ${task.id} failed:`,
         error instanceof Error ? error.message : String(error),
       );
       throw error;
@@ -525,7 +526,7 @@ export class BackupService {
     const table = tableMap[tableName] as TableType | undefined;
 
     if (!table) {
-      this.logger.warn(`Unknown table: ${String(tableName)}`);
+      this.logger.warn(`Unknown table: ${tableName}`);
       return;
     }
 
@@ -542,9 +543,9 @@ export class BackupService {
         const batch = records.slice(i, i + batchSize) as Record<string, unknown>[];
         try {
           await this.db.insert(table).values(batch).onConflictDoNothing();
-        } catch (error) {
+        } catch (error: unknown) {
           this.logger.warn(
-            `Failed to insert batch for ${String(tableName)}:`,
+            `Failed to insert batch for ${tableName}:`,
             error instanceof Error ? error.message : String(error),
           );
         }
@@ -557,7 +558,7 @@ export class BackupService {
       // SQLite 优化命令
       await (this.db as unknown as { run: (sql: string) => Promise<unknown> }).run('VACUUM');
       await (this.db as unknown as { run: (sql: string) => Promise<unknown> }).run('ANALYZE');
-    } catch (error) {
+    } catch (error: unknown) {
       this.logger.warn(
         'Failed to optimize database:',
         error instanceof Error ? error.message : String(error),

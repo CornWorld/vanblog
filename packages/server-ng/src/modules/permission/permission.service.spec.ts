@@ -1,5 +1,4 @@
 import { Test, type TestingModule } from '@nestjs/testing';
-import dayjs from 'dayjs';
 import { describe, it, beforeEach, afterEach, expect, vi } from 'vitest';
 
 import { DATABASE_CONNECTION } from '../../database';
@@ -34,14 +33,15 @@ describe('PermissionService', () => {
     delete: ReturnType<typeof vi.fn>;
   };
 
+  const mockDate = '2025-08-08T06:36:15+00:00';
   const mockPermissionNode = {
     id: 1,
     name: 'article:read',
     description: 'Read articles',
     module: 'article',
     isActive: true,
-    createdAt: dayjs('2025-08-08T06:36:15.292Z'),
-    updatedAt: dayjs('2025-08-08T06:36:15.292Z'),
+    createdAt: mockDate,
+    updatedAt: mockDate,
   };
 
   const mockPermissionGroup = {
@@ -50,8 +50,8 @@ describe('PermissionService', () => {
     description: 'Administrator group',
     permissions: JSON.stringify(['article:read', 'article:write']),
     isActive: true,
-    createdAt: dayjs('2025-08-08T06:36:15.292Z'),
-    updatedAt: dayjs('2025-08-08T06:36:15.292Z'),
+    createdAt: mockDate,
+    updatedAt: mockDate,
   };
 
   beforeEach(async () => {
@@ -247,13 +247,7 @@ describe('PermissionService', () => {
       const query = { module: 'article', page: 1, limit: 10 };
       const result = await service.findAllPermissionNodes(query);
 
-      expect(result).toEqual([
-        {
-          ...mockPermissionNode,
-          createdAt: dayjs('2025-08-08T06:36:15.292Z'),
-          updatedAt: dayjs('2025-08-08T06:36:15.292Z'),
-        },
-      ]);
+      expect(result).toEqual([mockPermissionNode]);
     });
   });
 

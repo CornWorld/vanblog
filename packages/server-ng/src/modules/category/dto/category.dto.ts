@@ -1,4 +1,3 @@
-import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
 
 import {
@@ -31,12 +30,15 @@ export const CategoryWithCountSchema = CategorySchema.extend({
 
 // 分类列表响应 Schema
 export const CategoryListResponseSchema = z.object({
-  items: z.array(CategoryWithCountSchema as unknown as z.ZodType),
+  items: z.array(CategoryWithCountSchema),
   total: z.number(),
 });
 
-export class CreateCategoryDto extends createZodDto(CreateCategorySchema) {}
-export class UpdateCategoryDto extends createZodDto(UpdateCategorySchema) {}
-export class CategoryDto extends createZodDto(CategorySchema) {}
-export class CategoryWithCountDto extends createZodDto(CategoryWithCountSchema) {}
-export class CategoryListResponseDto extends createZodDto(CategoryListResponseSchema) {}
+export type CreateCategoryDto = z.infer<typeof CreateCategorySchema>;
+export type UpdateCategoryDto = z.infer<typeof UpdateCategorySchema>;
+export type CategoryDto = z.infer<typeof CategorySchema>;
+export type CategoryWithCountDto = z.infer<typeof CategoryWithCountSchema>;
+export type CategoryListResponseDto = {
+  items: CategoryWithCountDto[];
+  total: number;
+};

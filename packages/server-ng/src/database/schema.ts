@@ -1,5 +1,5 @@
-import dayjs from 'dayjs';
-import { sql } from 'drizzle-orm';
+import { nowIsoTz } from '@vanblog/shared';
+//
 import { sqliteTable, text, integer, index, uniqueIndex } from 'drizzle-orm/sqlite-core';
 
 // Users table
@@ -16,10 +16,10 @@ export const users = sqliteTable('users', {
   permissions: text('permissions'), // JSON string for permissions array
   createdAt: text('created_at')
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+    .$defaultFn(() => nowIsoTz()),
   updatedAt: text('updated_at')
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+    .$defaultFn(() => nowIsoTz()),
 });
 
 // Articles table
@@ -43,10 +43,10 @@ export const articles = sqliteTable(
     viewer: integer('viewer').default(0),
     createdAt: text('created_at')
       .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
+      .$defaultFn(() => nowIsoTz()),
     updatedAt: text('updated_at')
       .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
+      .$defaultFn(() => nowIsoTz()),
   },
   (table) => [
     index('pathname_idx').on(table.pathname),
@@ -76,10 +76,10 @@ export const categories = sqliteTable(
     password: text('password'),
     createdAt: text('created_at')
       .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
+      .$defaultFn(() => nowIsoTz()),
     updatedAt: text('updated_at')
       .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
+      .$defaultFn(() => nowIsoTz()),
   },
   (table) => [
     index('categories_slug_idx').on(table.slug),
@@ -97,7 +97,7 @@ export const tags = sqliteTable(
     slug: text('slug').unique(),
     createdAt: text('created_at')
       .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
+      .$defaultFn(() => nowIsoTz()),
   },
   (table) => [
     index('tags_slug_idx').on(table.slug),
@@ -119,10 +119,10 @@ export const drafts = sqliteTable(
     version: integer('version').notNull().default(1),
     createdAt: text('created_at')
       .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
+      .$defaultFn(() => nowIsoTz()),
     updatedAt: text('updated_at')
       .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
+      .$defaultFn(() => nowIsoTz()),
   },
   (table) => [
     index('drafts_author_idx').on(table.author),
@@ -151,7 +151,7 @@ export const draftVersions = sqliteTable(
     author: text('author').notNull(),
     createdAt: text('created_at')
       .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
+      .$defaultFn(() => nowIsoTz()),
   },
   (table) => [
     index('draft_id_idx').on(table.draftId),
@@ -174,7 +174,7 @@ export const staticFiles = sqliteTable(
     provider: text('provider').default('local'), // local, oss, etc.
     createdAt: text('created_at')
       .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
+      .$defaultFn(() => nowIsoTz()),
   },
   (table) => [
     index('static_files_filename_idx').on(table.filename),
@@ -199,10 +199,10 @@ export const siteMeta = sqliteTable(
     value: text('value'), // JSON string for complex values
     createdAt: text('created_at')
       .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
+      .$defaultFn(() => nowIsoTz()),
     updatedAt: text('updated_at')
       .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
+      .$defaultFn(() => nowIsoTz()),
   },
   (table) => [
     index('site_meta_key_idx').on(table.key),
@@ -223,7 +223,7 @@ export const loginLogs = sqliteTable(
     message: text('message'),
     createdAt: text('created_at')
       .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
+      .$defaultFn(() => nowIsoTz()),
   },
   (table) => [
     index('username_idx').on(table.username),
@@ -244,10 +244,10 @@ export const customPages = sqliteTable(
       .default('markdown'),
     createdAt: text('created_at')
       .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
+      .$defaultFn(() => nowIsoTz()),
     updatedAt: text('updated_at')
       .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
+      .$defaultFn(() => nowIsoTz()),
   },
   (table) => [
     index('custom_pages_pathname_idx').on(table.pathname),
@@ -270,7 +270,7 @@ export const analytics = sqliteTable(
     data: text('data'), // JSON string for additional data
     createdAt: text('created_at')
       .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
+      .$defaultFn(() => nowIsoTz()),
   },
   (table) => [
     index('analytics_type_idx').on(table.type),
@@ -294,10 +294,10 @@ export const permissionNodes = sqliteTable(
     isActive: integer('is_active', { mode: 'boolean' }).default(true), // 是否启用
     createdAt: text('created_at')
       .notNull()
-      .$defaultFn(() => dayjs().toISOString()),
+      .$defaultFn(() => nowIsoTz()),
     updatedAt: text('updated_at')
       .notNull()
-      .$defaultFn(() => dayjs().toISOString()),
+      .$defaultFn(() => nowIsoTz()),
   },
   (table) => [
     index('permission_nodes_name_idx').on(table.name),
@@ -318,10 +318,10 @@ export const permissionGroups = sqliteTable(
     isActive: integer('is_active', { mode: 'boolean' }).default(true), // 是否启用
     createdAt: text('created_at')
       .notNull()
-      .$defaultFn(() => dayjs().toISOString()),
+      .$defaultFn(() => nowIsoTz()),
     updatedAt: text('updated_at')
       .notNull()
-      .$defaultFn(() => dayjs().toISOString()),
+      .$defaultFn(() => nowIsoTz()),
   },
   (table) => [
     index('permission_groups_name_idx').on(table.name),
@@ -339,10 +339,10 @@ export const pluginData = sqliteTable(
     value: text('value'), // JSON string for any data type
     createdAt: text('created_at')
       .notNull()
-      .$defaultFn(() => dayjs().toISOString()),
+      .$defaultFn(() => nowIsoTz()),
     updatedAt: text('updated_at')
       .notNull()
-      .$defaultFn(() => dayjs().toISOString()),
+      .$defaultFn(() => nowIsoTz()),
   },
   (table) => [
     index('plugin_data_plugin_id_idx').on(table.pluginId),
@@ -367,10 +367,10 @@ export const webhooks = sqliteTable('webhooks', {
   lastError: text('last_error'),
   createdAt: text('created_at')
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+    .$defaultFn(() => nowIsoTz()),
   updatedAt: text('updated_at')
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+    .$defaultFn(() => nowIsoTz()),
 });
 
 export const webhookLogs = sqliteTable(
@@ -389,7 +389,7 @@ export const webhookLogs = sqliteTable(
     duration: integer('duration'), // milliseconds
     createdAt: text('created_at')
       .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
+      .$defaultFn(() => nowIsoTz()),
   },
   (table) => [
     index('webhook_logs_webhook_id_idx').on(table.webhookId),

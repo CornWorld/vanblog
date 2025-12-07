@@ -1,4 +1,3 @@
-import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
 
 export const UpdateThemeSchema = z.object({
@@ -10,4 +9,4 @@ export const UpdateThemeSchema = z.object({
   customFooter: z.string().optional(),
 });
 
-export class UpdateThemeDto extends createZodDto(UpdateThemeSchema) {}
+export type UpdateThemeDto = z.infer<typeof UpdateThemeSchema>;

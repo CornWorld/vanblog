@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
+import { dayjs } from '@vanblog/shared';
 import * as bcrypt from 'bcrypt';
-import dayjs from 'dayjs';
 
 import { HookService } from '../plugin/services/hook.service';
 import { User } from '../user/entities/user.entity';
@@ -151,7 +151,7 @@ export class AuthService {
     // 计算过期时间
     const expiresIn = customExpiresIn ?? '12h';
     const hours = parseInt(expiresIn.replace('h', ''));
-    const expiresAt = dayjs().add(hours, 'hour').toISOString();
+    const expiresAt = dayjs().add(hours, 'hour').format();
 
     return {
       access_token: accessToken,

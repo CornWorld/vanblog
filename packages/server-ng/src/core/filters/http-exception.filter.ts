@@ -1,5 +1,5 @@
 import { ExceptionFilter, Catch, ArgumentsHost, HttpException } from '@nestjs/common';
-import dayjs from 'dayjs';
+import { dayjs } from '@vanblog/shared';
 
 import { LoggerService } from '../logger/logger.service';
 
@@ -23,7 +23,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
 
     const errorResponse = {
       statusCode: status,
-      timestamp: dayjs().toISOString(),
+      timestamp: dayjs().format(),
       path: request.url,
       method: request.method,
       ...error,

@@ -1,6 +1,7 @@
 import { UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Test, type TestingModule } from '@nestjs/testing';
+import { dayjs } from '@vanblog/shared';
 import { describe, it, beforeEach, expect, vi } from 'vitest';
 
 import { UserType } from '../../user/dto/create-user.dto';
@@ -19,8 +20,8 @@ describe('JwtStrategy', () => {
     username: 'testuser',
     type: UserType.ADMIN,
     permissions: ['user:read', 'user:write'],
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    createdAt: dayjs().format(),
+    updatedAt: dayjs().format(),
   });
 
   const mockUserService = {
