@@ -8,7 +8,7 @@ import { z } from 'zod';
 
 import { LoggerService } from '../../../core/logger/logger.service';
 import { DATABASE_CONNECTION, type Database } from '../../../database';
-import { staticFiles, articles } from '../../../database/schema';
+import { staticFiles, articles } from '@vanblog/shared/drizzle';
 import { HookService } from '../../plugin/services/hook.service';
 import { ListStaticFilesSchema } from '../dto/list-static-files.dto';
 import { StorageProvider } from '../dto/storage-config.dto';

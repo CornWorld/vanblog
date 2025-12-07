@@ -4,11 +4,11 @@ import { eq, sql, like, and, desc } from 'drizzle-orm';
 import { z } from 'zod';
 
 import { DATABASE_CONNECTION, type Database } from '../../database';
-import { tags, articles } from '../../database/schema';
+import { tags, articles } from '@vanblog/shared/drizzle';
 import { OverallStatisticsDto } from '../../shared/dto/statistics.dto';
 import { QueryOptimizerService } from '../../shared/services/query-optimizer.service';
 import { StatisticsService } from '../../shared/services/statistics.service';
-import { safeParseJson, dataSchemas } from '../../shared/zod';
+import { safeParseJson, dataSchemas } from '@vanblog/shared/drizzle';
 import { ArticleListResponseSchema, ArticleQuerySchema } from '../article/dto/article.dto';
 import { HookService } from '../plugin/services/hook.service';
 

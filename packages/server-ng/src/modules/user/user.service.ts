@@ -8,7 +8,7 @@ import {
   insertUserSchema,
   updateUserSchema,
 } from '../../database';
-import { users } from '../../database/schema';
+import { users } from '@vanblog/shared/drizzle';
 import { HookService } from '../plugin/services/hook.service';
 
 import { CreateUserDto, UserType } from './dto/create-user.dto';

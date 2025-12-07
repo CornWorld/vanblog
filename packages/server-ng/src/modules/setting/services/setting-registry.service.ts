@@ -2,8 +2,7 @@ import { Injectable, Inject, Logger, BadRequestException } from '@nestjs/common'
 import { eq, sql } from 'drizzle-orm';
 
 import { DATABASE_CONNECTION, type Database } from '../../../database';
-import { siteMeta } from '../../../database/schema';
-import { safeParseJson, dataSchemas } from '../../../shared/zod';
+import { siteMeta, safeParseJson, dataSchemas } from '@vanblog/shared/drizzle';
 
 export interface ConfigRegistration<T = unknown> {
   key: string;

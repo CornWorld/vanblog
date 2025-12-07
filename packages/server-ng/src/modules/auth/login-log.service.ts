@@ -3,7 +3,7 @@ import { dayjs } from '@vanblog/shared';
 import { eq, and, gte, lte, desc } from 'drizzle-orm';
 
 import { DATABASE_CONNECTION, type Database } from '../../database';
-import { loginLogs } from '../../database/schema';
+import { loginLogs } from '@vanblog/shared/drizzle';
 
 import { LoginLogDto, LoginLogResponseDto, LoginLogQueryDto } from './dto/login-log.dto';
 

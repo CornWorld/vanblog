@@ -6,11 +6,11 @@ import * as jwt from 'jsonwebtoken';
 
 import { ConfigService } from '../../config/config.service';
 import { DATABASE_CONNECTION, type Database } from '../../database';
-import { categories, articles } from '../../database/schema';
+import { categories, articles } from '@vanblog/shared/drizzle';
 import { OverallStatisticsDto } from '../../shared/dto/statistics.dto';
 import { QueryOptimizerService } from '../../shared/services/query-optimizer.service';
 import { StatisticsService } from '../../shared/services/statistics.service';
-import { safeParseJson, dataSchemas } from '../../shared/zod';
+import { safeParseJson, dataSchemas } from '@vanblog/shared/drizzle';
 import { ArticleListResponseDto, ArticleQueryDto } from '../article/dto/article.dto';
 import { HookService } from '../plugin/services/hook.service';
 

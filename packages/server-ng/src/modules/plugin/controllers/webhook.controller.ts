@@ -18,7 +18,7 @@ import {
   selectWebhookSchema,
   insertWebhookSchema,
   updateWebhookSchema,
-} from '../../../database/zod-schemas';
+} from '@vanblog/shared/drizzle';
 import { Perm } from '../../auth/permissions.decorator';
 import { WebhookDto } from '../dto/webhook.dto';
 import { WebhookRegistryService } from '../services/webhook-registry.service';

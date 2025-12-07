@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
-import { categories, tags, articles } from '../../database/schema';
+import { categories, tags, articles } from '@vanblog/shared/drizzle';
 
 import { StatisticsService } from './statistics.service';
 

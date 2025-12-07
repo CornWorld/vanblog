@@ -2,7 +2,7 @@ import { hash } from 'bcrypt';
 import request from 'supertest';
 
 import { DATABASE_CONNECTION } from '../src/database';
-import { users } from '../src/database/schema';
+import { users } from '@vanblog/shared/drizzle';
 
 import type { INestApplication } from '@nestjs/common';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
@@ -104,7 +104,7 @@ export async function cleanupDatabase(app: INestApplication): Promise<void> {
       webhookLogs,
       permissionNodes,
       permissionGroups,
-    } = await import('../src/database/schema');
+    } = await import('@vanblog/shared/drizzle');
 
     // Delete test data in reverse order of dependencies
     await db.delete(analytics).execute();

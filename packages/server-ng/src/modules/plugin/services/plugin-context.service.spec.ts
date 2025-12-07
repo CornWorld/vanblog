@@ -4,7 +4,7 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 
 import { ConfigService } from '../../../config/config.service';
 import { DATABASE_CONNECTION, type Database } from '../../../database';
-import { pluginData } from '../../../database/schema';
+import { pluginData } from '@vanblog/shared/drizzle';
 
 import { HookService } from './hook.service';
 import {

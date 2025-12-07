@@ -10,7 +10,7 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { AppModule } from '../src/app.module';
 import { ConfigService as AppConfigService } from '../src/config';
 import { DATABASE_CONNECTION, type Database } from '../src/database';
-import { siteMeta } from '../src/database/schema';
+import { siteMeta } from '@vanblog/shared/drizzle';
 
 import { createUserWithPermissions, createAuthToken, cleanupDatabase } from './test-utils';
 

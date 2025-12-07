@@ -9,7 +9,7 @@ import { createClient } from '@libsql/client';
 import { drizzle } from 'drizzle-orm/libsql';
 import { vi } from 'vitest';
 
-import * as schema from '../src/database/schema';
+import * as schema from '@vanblog/shared/drizzle';
 
 // Set up test-specific database configuration
 // Use a fixed database name for all tests to ensure they share the same database

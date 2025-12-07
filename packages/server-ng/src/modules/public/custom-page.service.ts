@@ -2,7 +2,7 @@ import { Injectable, Inject } from '@nestjs/common';
 import { eq } from 'drizzle-orm';
 
 import { DATABASE_CONNECTION, type Database } from '../../database';
-import { customPages } from '../../database/schema';
+import { customPages } from '@vanblog/shared/drizzle';
 import { MarkdownService } from '../../shared/services/markdown.service';
 
 interface CustomPageList {

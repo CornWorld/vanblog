@@ -33,7 +33,7 @@ import {
   pluginData,
   webhooks,
   webhookLogs,
-} from '../../database/schema';
+} from '@vanblog/shared/drizzle';
 
 import {
   CreateBackupSchema,

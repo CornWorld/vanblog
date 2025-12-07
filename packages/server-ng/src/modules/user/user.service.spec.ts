@@ -5,7 +5,7 @@ import { vi } from 'vitest';
 
 import { MockUtils } from '../../../test/mock-utils';
 import { DATABASE_CONNECTION } from '../../database';
-import { users } from '../../database/schema';
+import { users } from '@vanblog/shared/drizzle';
 import { HookService } from '../plugin/services/hook.service';
 
 import { UserService } from './user.service';

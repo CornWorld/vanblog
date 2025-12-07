@@ -4,8 +4,7 @@ import * as path from 'path';
 import { eq, and, desc } from 'drizzle-orm';
 import { Feed } from 'feed';
 
-import { articles, siteMeta } from '../../src/database/schema';
-import { safeParseJson, dataSchemas } from '../../src/shared/zod';
+import { articles, siteMeta, safeParseJson, dataSchemas } from '@vanblog/shared/drizzle';
 
 import type { Database } from '../../src/database/connection';
 import type { HookService } from '../../src/modules/plugin/services/hook.service';

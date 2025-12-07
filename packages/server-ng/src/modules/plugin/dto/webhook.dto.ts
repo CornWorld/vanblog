@@ -2,7 +2,7 @@ import type {
   insertWebhookSchema,
   updateWebhookSchema,
   selectWebhookSchema,
-} from '../../../database/zod-schemas';
+} from '@vanblog/shared/drizzle';
 import type { z } from 'zod';
 
 // Webhook DTOs - directly using centralized schemas

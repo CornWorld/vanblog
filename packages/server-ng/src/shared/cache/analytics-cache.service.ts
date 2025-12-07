@@ -4,7 +4,7 @@ import { dayjs } from '@vanblog/shared';
 import { sql, desc } from 'drizzle-orm';
 
 import { DATABASE_CONNECTION, type Database } from '../../database';
-import { analytics } from '../../database/schema';
+import { analytics } from '@vanblog/shared/drizzle';
 
 import { CacheService } from './cache.service';
 

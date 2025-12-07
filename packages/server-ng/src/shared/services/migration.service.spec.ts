@@ -2,7 +2,7 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 
 import { DATABASE_CONNECTION, type Database } from '../../database';
-import { siteMeta } from '../../database/schema';
+import { siteMeta } from '@vanblog/shared/drizzle';
 
 import { MigrationService } from './migration.service';
 

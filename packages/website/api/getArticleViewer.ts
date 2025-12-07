@@ -1,1 +1,0 @@
-export { getArticleViewer } from './getAllData';

@@ -13,7 +13,7 @@ import {
   siteMeta,
   customPages,
   analytics,
-} from '../../database/schema';
+} from '@vanblog/shared/drizzle';
 
 export interface DemoSnapshot {
   timestamp: number;

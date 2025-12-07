@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { sql, type SQL, like, or } from 'drizzle-orm';
 
-import { articles } from '../../database/schema';
+import { articles } from '@vanblog/shared/drizzle';
 
 import type { Database } from '../../database';
 

@@ -5,8 +5,8 @@ import { eq, and, or, like, desc, asc, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
 import { DATABASE_CONNECTION, type Database } from '../../database';
-import { drafts, articles, tags } from '../../database/schema';
-import { safeParseJson, dataSchemas } from '../../shared/zod';
+import { drafts, articles, tags } from '@vanblog/shared/drizzle';
+import { safeParseJson, dataSchemas } from '@vanblog/shared/drizzle';
 import { Article } from '../article/entities/article.entity';
 import { HookService } from '../plugin/services/hook.service';
 

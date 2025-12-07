@@ -5,7 +5,7 @@ import { dayjs } from '@vanblog/shared';
 import { eq, lt } from 'drizzle-orm';
 
 import { DATABASE_CONNECTION, type Database } from '../../database';
-import { tokenBlacklist } from '../../database/schema';
+import { tokenBlacklist } from '@vanblog/shared/drizzle';
 
 /**
  * Token Blacklist Service

@@ -6,7 +6,7 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 import { DATABASE_CONNECTION } from '../../database';
-import { articles, categories, tags } from '../../database/schema';
+import { articles, categories, tags } from '@vanblog/shared/drizzle';
 import { HookService } from '../plugin/services/hook.service';
 import { SettingCoreService } from '../setting/services/setting-core.service';
 

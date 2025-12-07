@@ -6,7 +6,7 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import { AppModule } from '../src/app.module';
 import { ConfigService } from '../src/config';
 import { DATABASE_CONNECTION } from '../src/database';
-import { articles, categories, tags } from '../src/database/schema';
+import { articles, categories, tags } from '@vanblog/shared/drizzle';
 
 import { createUser, cleanupDatabase } from './test-utils';
 

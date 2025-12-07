@@ -5,7 +5,7 @@ import { eq, and, desc, gte, lte, count, like } from 'drizzle-orm';
 import { z } from 'zod';
 
 import { DATABASE_CONNECTION, type Database } from '../../../database';
-import { insertWebhookSchema, updateWebhookSchema } from '../../../database/zod-schemas';
+import { insertWebhookSchema, updateWebhookSchema } from '@vanblog/shared/drizzle';
 import { webhooks, webhookLogs, type Webhook as WebhookEntity } from '../entities/webhook.schema';
 
 import { WebhookRegistryService } from './webhook-registry.service';

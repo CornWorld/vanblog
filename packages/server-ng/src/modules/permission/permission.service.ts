@@ -3,7 +3,7 @@ import { dayjs } from '@vanblog/shared';
 import { eq, desc, and } from 'drizzle-orm';
 
 import { DATABASE_CONNECTION, type Database } from '../../database';
-import { permissionNodes, permissionGroups } from '../../database/schema';
+import { permissionNodes, permissionGroups } from '@vanblog/shared/drizzle';
 
 import {
   CreatePermissionGroupType,

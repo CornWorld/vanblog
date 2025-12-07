@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { searchArticles } from '../../api/search';
+import { getArticlesBySearch as searchArticles } from '../../api/getArticles';
 import { useDebounce } from 'react-use';
 import ArticleList from '../ArticleList';
 import KeyCard from '../KeyCard';

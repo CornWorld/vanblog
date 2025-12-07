@@ -19,7 +19,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiConsumes, ApiBody } from '@nestj
 import { memoryStorage } from 'multer';
 // import { z } from 'zod';
 
-import { staticFiles } from '../../database/schema';
+import { staticFiles } from '@vanblog/shared/drizzle';
 import { normalizeMediaProcessingOverride } from '../../shared/contracts';
 import { Perm } from '../auth/permissions.decorator';
 import { SettingRegistryService } from '../setting/services/setting-registry.service';

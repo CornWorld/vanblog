@@ -7,9 +7,9 @@ import { z } from 'zod';
 
 import { ConfigService } from '../../config/config.service';
 import { DATABASE_CONNECTION, type Database } from '../../database';
-import { articles, tags } from '../../database/schema';
+import { articles, tags } from '@vanblog/shared/drizzle';
 import { QueryOptimizerService } from '../../shared/services/query-optimizer.service';
-import { safeParseJson, dataSchemas } from '../../shared/zod';
+import { safeParseJson, dataSchemas } from '@vanblog/shared/drizzle';
 import { HookService } from '../plugin/services/hook.service';
 
 import {

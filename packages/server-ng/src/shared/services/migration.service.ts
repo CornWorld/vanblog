@@ -5,7 +5,7 @@ import { Injectable, Logger, Inject } from '@nestjs/common';
 import { eq, sql } from 'drizzle-orm';
 
 import { DATABASE_CONNECTION, type Database } from '../../database';
-import { siteMeta } from '../../database/schema';
+import { siteMeta } from '@vanblog/shared/drizzle';
 import { normalizeMigrationData } from '../contracts';
 
 /**

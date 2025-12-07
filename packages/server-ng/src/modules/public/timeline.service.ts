@@ -9,7 +9,7 @@ import {
 import { and, desc, eq } from 'drizzle-orm';
 
 import { DATABASE_CONNECTION, type Database } from '../../database';
-import { articles } from '../../database/schema';
+import { articles } from '@vanblog/shared/drizzle';
 
 // tags parsing moved into shared helper
 

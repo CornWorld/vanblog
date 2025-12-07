@@ -14,9 +14,8 @@ import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
 import { DATABASE_CONNECTION, type Database } from '../../../database';
-import { siteMeta } from '../../../database/schema';
+import { siteMeta, safeParseJson, dataSchemas, NavigationNode } from '@vanblog/shared/drizzle';
 import { normalizeCustomCode } from '../../../shared/contracts';
-import { safeParseJson, dataSchemas, NavigationNode } from '../../../shared/zod';
 import { HookService } from '../../plugin/services/hook.service';
 
 import { SettingRegistryService } from './setting-registry.service';

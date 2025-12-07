@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 
-import { insertUserSchema, updateUserSchema } from '../../database/zod-schemas';
+import { insertUserSchema, updateUserSchema } from '@vanblog/shared/drizzle';
 
 describe('Password Validation', () => {
   describe('insertUserSchema password validation', () => {

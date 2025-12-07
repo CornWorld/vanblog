@@ -2,7 +2,7 @@ import { Injectable, Inject } from '@nestjs/common';
 import { eq, sql, like, and } from 'drizzle-orm';
 
 import { DATABASE_CONNECTION, type Database } from '../../database';
-import { categories, tags, articles } from '../../database/schema';
+import { categories, tags, articles } from '@vanblog/shared/drizzle';
 import {
   CategoryStatisticsDto,
   TagStatisticsDto,

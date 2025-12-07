@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { dataSchemas } from '../../../shared/zod';
+import { dataSchemas } from '@vanblog/shared/drizzle';
 import { ArticleListResponseSchema } from '../../article/dto/article.dto';
 import { CategorySchema } from '../../category/dto/category.dto';
 import { TagSchema } from '../../tag/dto/tag.dto';

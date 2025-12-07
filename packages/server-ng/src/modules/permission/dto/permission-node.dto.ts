@@ -4,7 +4,7 @@ import {
   selectPermissionNodeSchema,
   insertPermissionNodeSchema,
   updatePermissionNodeSchema,
-} from '../../../database/zod-schemas';
+} from '@vanblog/shared/drizzle';
 
 // 权限节点基础 Schema
 export const PermissionNodeSchema = selectPermissionNodeSchema;

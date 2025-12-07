@@ -7,7 +7,7 @@ import { eq, and, sql } from 'drizzle-orm';
 import { SitemapStream, streamToPromise } from 'sitemap';
 
 import { DATABASE_CONNECTION, type Database } from '../../database';
-import { articles, categories, tags } from '../../database/schema';
+import { articles, categories, tags } from '@vanblog/shared/drizzle';
 import { HookService } from '../plugin/services/hook.service';
 import {
   SITEMAP_EXTRA_STATIC_PATHS_KEY,

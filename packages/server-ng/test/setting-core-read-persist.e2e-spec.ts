@@ -4,7 +4,7 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 
 import { AppModule } from '../src/app.module';
 import { DATABASE_CONNECTION, type Database } from '../src/database';
-import { siteMeta } from '../src/database/schema';
+import { siteMeta } from '@vanblog/shared/drizzle';
 import { SettingCoreService } from '../src/modules/setting/services/setting-core.service';
 
 import { cleanupDatabase } from './test-utils';

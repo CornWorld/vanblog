@@ -9,7 +9,7 @@ import { Feed } from 'feed';
 import { z } from 'zod';
 
 import { DATABASE_CONNECTION, type Database } from '../../database';
-import { articles } from '../../database/schema';
+import { articles } from '@vanblog/shared/drizzle';
 import { MarkdownService } from '../../shared/services/markdown.service';
 import { HookService } from '../plugin/services/hook.service';
 import { SettingCoreService, type SiteInfo } from '../setting/services/setting-core.service';

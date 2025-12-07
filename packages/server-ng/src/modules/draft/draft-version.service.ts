@@ -4,9 +4,13 @@ import { eq, and, desc, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
 import { DATABASE_CONNECTION, type Database } from '../../database';
-import { draftVersions, drafts } from '../../database/schema';
-import { selectDraftVersionSchema } from '../../database/zod-schemas';
-import { safeParseJson, dataSchemas } from '../../shared/zod';
+import {
+  draftVersions,
+  drafts,
+  selectDraftVersionSchema,
+  safeParseJson,
+  dataSchemas,
+} from '@vanblog/shared/drizzle';
 
 import { DraftVersionSchema } from './dto/draft.dto';
 
