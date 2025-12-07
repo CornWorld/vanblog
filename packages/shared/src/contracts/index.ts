@@ -73,4 +73,4 @@ export { draftVersionContract, DraftVersionList } from './draft-version.contract
 export { createLoginLogContract } from './login-log.contract.js';
 export { timelineContract } from './timeline.contract.js';
 export { rssContract, createRssContract, RssItemSchema } from './rss.contract.js';
-export { createMetaContract, MetaResponse, VersionInfo } from './meta.contract.js';
+export { createMetaContract, metaContract, MetaResponse, VersionInfo } from './meta.contract.js';

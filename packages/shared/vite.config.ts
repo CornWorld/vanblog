@@ -10,6 +10,7 @@ export default defineConfig({
         'type/index': resolve(__dirname, 'src/type/index.ts'),
         'runtime/index': resolve(__dirname, 'src/runtime/index.ts'),
         'contracts/index': resolve(__dirname, 'src/contracts/index.ts'),
+        'drizzle/index': resolve(__dirname, 'src/drizzle/index.ts'),
       },
       formats: ['es'],
     },

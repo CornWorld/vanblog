@@ -5,6 +5,7 @@ import { AnalyticsController } from './analytics.controller';
 import { AnalyticsService } from './services/analytics.service';
 import { ArticleStatsService } from './services/article-stats.service';
 import { EchartsFormatterService } from './services/echarts-formatter.service';
+import { PublicAnalyticsService } from './services/public-analytics.service';
 import { ThirdPartyAnalyticsService } from './services/third-party-analytics.service';
 
 // Mocks
@@ -25,6 +26,11 @@ const mockThirdPartyAnalyticsService = {
   trackPageview: vi.fn(),
 };
 
+const mockPublicAnalyticsService = {
+  getPublicOverview: vi.fn(),
+  getPublicArticleStats: vi.fn(),
+};
+
 const mockEchartsFormatterService = {
   formatTimeSeriesData: vi.fn(),
 };
@@ -38,6 +44,7 @@ describe('AnalyticsController', () => {
       providers: [
         { provide: AnalyticsService, useValue: mockAnalyticsService },
         { provide: ArticleStatsService, useValue: mockArticleStatsService },
+        { provide: PublicAnalyticsService, useValue: mockPublicAnalyticsService },
         { provide: ThirdPartyAnalyticsService, useValue: mockThirdPartyAnalyticsService },
         { provide: EchartsFormatterService, useValue: mockEchartsFormatterService },
       ],
