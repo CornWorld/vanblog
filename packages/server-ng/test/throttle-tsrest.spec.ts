@@ -24,10 +24,10 @@ class ThrottleTsRestController {
   @TsRestHandler(testContract.record)
   @Throttle({ default: { limit: 2, ttl: 1000 } })
   record(): ReturnType<typeof tsRestHandler> {
-    return tsRestHandler(testContract.record, async () => ({
-      status: 200 as const,
-      body: { ok: true },
-    }));
+    return tsRestHandler(testContract.record, async () => {
+      await Promise.resolve();
+      return { status: 200 as const, body: { ok: true } };
+    });
   }
 }
 

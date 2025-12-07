@@ -94,10 +94,10 @@ export class MetaController {
 
   @TsRestHandler(metaContract.getPublicMeta)
   getPublicMeta(): unknown {
-    return tsRestHandler(metaContract.getPublicMeta, async () => ({
-      status: 200 as const,
-      body: { buildTime: dayjs().format() },
-    }));
+    return tsRestHandler(metaContract.getPublicMeta, async () => {
+      await Promise.resolve();
+      return { status: 200 as const, body: { buildTime: dayjs().format() } };
+    });
   }
 
   @Get('meta')

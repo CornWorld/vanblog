@@ -492,9 +492,17 @@ export class ArticleService {
 
     const { tags: tagNames, ...articleData } = updateArticleDto;
 
-    // Create missing tags
-    if (Array.isArray(tagNames) && tagNames.length > 0) {
-      await this.createMissingTags(tagNames);
+    // Create missing tags - tagNames is already transformed to JSON string by schema
+    // Parse it back to array if needed for tag creation
+    if (typeof tagNames === 'string' && tagNames !== '[]' && tagNames !== 'null') {
+      try {
+        const parsedTags = JSON.parse(tagNames) as string[];
+        if (Array.isArray(parsedTags) && parsedTags.length > 0) {
+          await this.createMissingTags(parsedTags);
+        }
+      } catch {
+        // Ignore parse errors
+      }
     }
 
     let updateData: Record<string, unknown> = {
@@ -507,8 +515,9 @@ export class ArticleService {
       updatedAt: dayjs().format(),
     };
 
-    if (tagNames !== undefined) {
-      updateData.tags = JSON.stringify(tagNames);
+    // tagNames is string | null after schema transform
+    if (typeof tagNames === 'string') {
+      updateData.tags = tagNames;
     }
 
     // Process update data

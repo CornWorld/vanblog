@@ -11,9 +11,9 @@ const healthContract = createHealthContract(c);
 export class HealthController {
   @TsRestHandler(healthContract.getHealth)
   getHealth(): ReturnType<typeof tsRestHandler> {
-    return tsRestHandler(healthContract.getHealth, async () => ({
-      status: 200 as const,
-      body: { timestamp: dayjs().format() },
-    }));
+    return tsRestHandler(healthContract.getHealth, async () => {
+      await Promise.resolve();
+      return { status: 200 as const, body: { timestamp: dayjs().format() } };
+    });
   }
 }

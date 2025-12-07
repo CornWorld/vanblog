@@ -223,8 +223,7 @@ export class RssService {
             date_modified: DateField,
             items: z.array(ItemSchema),
           })
-
-          .passthrough();
+          .catchall(z.unknown());
         const parsed = FeedSchema.safeParse(jsonObj);
         if (parsed.success) {
           feedJsonStr = JSON.stringify(parsed.data, null, 2);
