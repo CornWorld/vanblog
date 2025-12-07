@@ -1,20 +1,27 @@
 import { initContract } from '@ts-rest/core';
 import { z } from 'zod';
+import { StaticFile, PaginationQuery, DeleteResponse } from '../runtime/schema.js';
 
-// Media DTOs - 先用 z.any()，后续精确化
+// Media list response
+export const StaticFileList = z.object({
+  items: z.array(StaticFile),
+  total: z.number(),
+  page: z.number(),
+  pageSize: z.number(),
+});
+
+// Media query
+export const MediaQuery = PaginationQuery.extend({
+  keyword: z.string().optional(),
+  type: z.enum(['image', 'video', 'audio', 'document', 'other']).optional(),
+});
+
+// Batch delete schema
 export const BatchDeleteSchema = z.object({
   ids: z.array(z.string()).min(1).max(100),
 });
 
-export const ListStaticFilesSchema = z.object({
-  page: z.number().int().positive().default(1),
-  pageSize: z.number().int().positive().max(100).default(10),
-  keyword: z.string().optional(),
-  type: z.enum(['image', 'video', 'audio', 'document', 'other']).optional(),
-  sortBy: z.enum(['name', 'size', 'createdAt']).default('createdAt'),
-  sortOrder: z.enum(['asc', 'desc']).default('desc'),
-});
-
+// Chunk upload schemas
 export const InitiateChunkUploadSchema = z.object({
   filename: z.string().min(1),
   totalSize: z.number().int().positive(),
@@ -34,10 +41,11 @@ export const CompleteChunkUploadSchema = z.object({
   uploadId: z.string().min(1),
   filename: z.string().optional(),
   provider: z.string().optional(),
-  processing: z.any().optional(),
+  processing: z.unknown().optional(),
 });
 
-export const StorageConfigResponseSchema = z.object({
+// Storage config
+export const StorageConfig = z.object({
   provider: z.enum(['local', 'picgo']),
   enabled: z.boolean().optional(),
   localPath: z.string().optional(),
@@ -50,17 +58,31 @@ export const StorageConfigResponseSchema = z.object({
     .optional(),
 });
 
-export const UpdateStorageConfigSchema = z.object({
-  provider: z.enum(['local', 'picgo']),
-  enabled: z.boolean().optional(),
-  localPath: z.string().optional(),
-  baseUrl: z.string().optional(),
-  picgoConfig: z
-    .object({
-      uploader: z.string(),
-      config: z.record(z.string(), z.unknown()),
-    })
-    .optional(),
+// Upload response
+export const UploadResponse = z.object({
+  id: z.number(),
+  filename: z.string(),
+  path: z.string(),
+  url: z.string(),
+  size: z.number(),
+  mimeType: z.string().optional(),
+});
+
+// Queue stats
+export const QueueStats = z.object({
+  pending: z.number(),
+  processing: z.number(),
+  completed: z.number(),
+  failed: z.number(),
+});
+
+// Task status
+export const TaskStatus = z.object({
+  id: z.string(),
+  status: z.enum(['pending', 'processing', 'completed', 'failed']),
+  progress: z.number().optional(),
+  result: z.unknown().optional(),
+  error: z.string().optional(),
 });
 
 export const createMediaContract = (c: ReturnType<typeof initContract>) =>
@@ -68,22 +90,22 @@ export const createMediaContract = (c: ReturnType<typeof initContract>) =>
     list: {
       method: 'GET',
       path: '/v2/admin/media',
-      query: ListStaticFilesSchema,
-      responses: { 200: z.any() },
+      query: MediaQuery,
+      responses: { 200: StaticFileList },
       summary: 'List media files',
     },
     getById: {
       method: 'GET',
       path: '/v2/admin/media/:id',
       pathParams: z.object({ id: z.string() }),
-      responses: { 200: z.any() },
+      responses: { 200: StaticFile },
       summary: 'Get media by ID',
     },
     deleteById: {
       method: 'DELETE',
       path: '/v2/admin/media/:id',
       pathParams: z.object({ id: z.string() }),
-      responses: { 200: z.object({ success: z.boolean(), message: z.string() }) },
+      responses: { 200: DeleteResponse.extend({ message: z.string() }) },
       summary: 'Delete media by ID',
     },
     batchDelete: {
@@ -98,15 +120,15 @@ export const createMediaContract = (c: ReturnType<typeof initContract>) =>
     uploadFile: {
       method: 'POST',
       path: '/v2/admin/media/upload',
-      body: z.any(),
-      responses: { 201: z.any() },
+      body: z.unknown(),
+      responses: { 201: UploadResponse },
       summary: 'Upload file',
     },
     uploadMultiple: {
       method: 'POST',
       path: '/v2/admin/media/upload-multiple',
-      body: z.any(),
-      responses: { 201: z.any() },
+      body: z.unknown(),
+      responses: { 201: z.array(UploadResponse) },
       summary: 'Upload multiple files',
     },
     initiateChunkUpload: {
@@ -133,7 +155,7 @@ export const createMediaContract = (c: ReturnType<typeof initContract>) =>
       method: 'POST',
       path: '/v2/admin/media/upload/complete',
       body: CompleteChunkUploadSchema,
-      responses: { 201: z.any() },
+      responses: { 201: UploadResponse },
       summary: 'Complete chunk upload',
     },
     scanArticles: {
@@ -146,54 +168,47 @@ export const createMediaContract = (c: ReturnType<typeof initContract>) =>
     exportAll: {
       method: 'GET',
       path: '/v2/admin/media/export/all',
-      responses: { 200: z.any() },
+      responses: { 200: z.array(StaticFile) },
       summary: 'Export all media',
     },
     getStorageConfig: {
       method: 'GET',
       path: '/v2/admin/media/storage-config',
-      responses: { 200: StorageConfigResponseSchema.nullable() },
+      responses: { 200: StorageConfig.nullable() },
       summary: 'Get storage config',
     },
     updateStorageConfig: {
       method: 'POST',
       path: '/v2/admin/media/storage-config',
-      body: UpdateStorageConfigSchema,
-      responses: { 200: StorageConfigResponseSchema },
+      body: StorageConfig,
+      responses: { 200: StorageConfig },
       summary: 'Update storage config',
     },
     uploadClipboard: {
       method: 'POST',
       path: '/v2/admin/media/upload-clipboard',
-      body: z.any(),
-      responses: { 201: z.any() },
+      body: z.unknown(),
+      responses: { 201: UploadResponse },
       summary: 'Upload clipboard',
     },
     getTaskStatus: {
       method: 'GET',
       path: '/v2/admin/media/queue/task/:taskId',
       pathParams: z.object({ taskId: z.string() }),
-      responses: { 200: z.any() },
+      responses: { 200: TaskStatus },
       summary: 'Get task status',
     },
     getFileQueueTasks: {
       method: 'GET',
       path: '/v2/admin/media/queue/file/:fileId',
       pathParams: z.object({ fileId: z.string() }),
-      responses: { 200: z.array(z.any()) },
+      responses: { 200: z.array(TaskStatus) },
       summary: 'Get file queue tasks',
     },
     getQueueStats: {
       method: 'GET',
       path: '/v2/admin/media/queue/stats',
-      responses: {
-        200: z.object({
-          pending: z.number(),
-          processing: z.number(),
-          completed: z.number(),
-          failed: z.number(),
-        }),
-      },
+      responses: { 200: QueueStats },
       summary: 'Get queue stats',
     },
   });

@@ -4,7 +4,7 @@ import * as path from 'path';
 import { Controller, InternalServerErrorException } from '@nestjs/common';
 import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
 import { dayjs } from '@vanblog/shared';
-import { rssContract } from '@vanblog/shared/dist/contracts/rss.contract.js';
+import { rssContract } from '@vanblog/shared/contracts';
 
 import { ConfigService } from '../../config/config.service';
 import { Perm } from '../auth/permissions.decorator';
@@ -47,7 +47,7 @@ export class RssController {
         };
 
         let lastGenerated: string | undefined = undefined;
-        const staticPath = this.configService.static?.path ?? './static';
+        const staticPath = this.configService.static.path;
         const rssPath = path.join(staticPath, 'rss');
         try {
           const files = ['feed.xml', 'feed.json', 'atom.xml'];

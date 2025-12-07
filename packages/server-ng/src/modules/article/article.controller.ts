@@ -14,8 +14,12 @@ import {
   HttpCode,
   HttpStatus,
   UseGuards,
+  Req,
 } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags, ApiParam } from '@nestjs/swagger';
+import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
+import { contract, dayjs } from '@vanblog/shared';
+import { Request as ExpressRequest } from 'express';
 import { z } from 'zod';
 
 import { ArticleStatsService } from '../analytics/services/article-stats.service';
@@ -366,5 +370,168 @@ export class ArticleController {
   ): Promise<z.infer<typeof ArticleAccessResponseSchema>> {
     const dto = VerifyArticlePasswordSchema.parse(raw);
     return this.articleService.verifyPasswordByPathname(pathname, dto.password, req.user?.id);
+  }
+
+  private getUsernameFromRequest(req: ExpressRequest): string | undefined {
+    const maybeUser = (req as unknown as { user?: { username?: unknown } }).user;
+    const username = maybeUser?.username;
+    return typeof username === 'string' ? username : undefined;
+  }
+
+  @TsRestHandler(contract.getAdminArticles)
+  getAdminArticles(): ReturnType<typeof tsRestHandler> {
+    return tsRestHandler(contract.getAdminArticles, async ({ query }) => {
+      const result = await this.articleService.findAll({
+        page: query.page ?? 1,
+        pageSize: query.pageSize ?? 10,
+        category: query.category,
+        tag: query.tag,
+        isTop: query.topping,
+        isPublished: query.hidden !== undefined ? !query.hidden : undefined,
+        includeHidden: true,
+        sortBy: 'createdAt',
+        sortOrder: 'desc',
+      });
+
+      const items = result.items.map((item) => ({
+        id: item.id,
+        title: item.title,
+        content: item.content,
+        summary: undefined,
+        cover: undefined,
+        category: item.category ?? undefined,
+        tags: undefined,
+        views: item.viewer ?? 0,
+        likes: 0,
+        isTop: (item.top ?? 0) > 0,
+        isHot: false,
+        pubTime: dayjs(item.updatedAt).format(),
+        createdAt: dayjs(item.createdAt).format(),
+        updatedAt: dayjs(item.updatedAt).format(),
+        private: item.private ?? false,
+        password: item.password ?? undefined,
+        toc: undefined,
+      }));
+
+      const { items: _omitItems, ...restResult } = result;
+      return { status: 200, body: { ...restResult, items } };
+    });
+  }
+
+  @TsRestHandler(contract.createArticle)
+  createArticleRest(@Req() req: ExpressRequest): ReturnType<typeof tsRestHandler> {
+    return tsRestHandler(contract.createArticle, async ({ body }) => {
+      const username = this.getUsernameFromRequest(req);
+      const result = await this.articleService.create({
+        ...body,
+        author: username ?? 'admin',
+        tags: JSON.stringify(Array.isArray(body.tags) ? body.tags : []),
+      });
+
+      return {
+        status: 201,
+        body: {
+          id: result.id,
+          title: result.title,
+          content: result.content,
+          summary: undefined,
+          cover: undefined,
+          category: result.category ?? undefined,
+          tags: undefined,
+          views: result.viewer ?? undefined,
+          likes: 0,
+          isTop: (result.top ?? 0) > 0,
+          isHot: false,
+          pubTime: dayjs(result.updatedAt).format(),
+          createdAt: dayjs(result.createdAt).format(),
+          updatedAt: dayjs(result.updatedAt).format(),
+          private: result.private ?? false,
+          password: result.password ?? undefined,
+          toc: undefined,
+        },
+      };
+    });
+  }
+
+  @TsRestHandler(contract.updateArticle)
+  updateArticleRest(): ReturnType<typeof tsRestHandler> {
+    return tsRestHandler(contract.updateArticle, async ({ params, body }) => {
+      const id = Number(params.id);
+      const { tags: rawTags, ...restBody } = body;
+      let tags: string | undefined;
+      if (Array.isArray(rawTags)) {
+        tags = JSON.stringify(rawTags);
+      } else if (typeof rawTags === 'string') {
+        tags = rawTags;
+      }
+      const updateData = tags !== undefined ? { ...restBody, tags } : restBody;
+      const result = await this.articleService.update(
+        id,
+        updateData as Parameters<typeof this.articleService.update>[1],
+      );
+
+      return {
+        status: 200,
+        body: {
+          id: result.id,
+          title: result.title,
+          content: result.content,
+          summary: undefined,
+          cover: undefined,
+          category: result.category ?? undefined,
+          tags: undefined,
+          views: result.viewer ?? undefined,
+          likes: 0,
+          isTop: (result.top ?? 0) > 0,
+          isHot: false,
+          pubTime: dayjs(result.updatedAt).format(),
+          createdAt: dayjs(result.createdAt).format(),
+          updatedAt: dayjs(result.updatedAt).format(),
+          private: result.private ?? false,
+          password: result.password ?? undefined,
+          toc: undefined,
+        },
+      };
+    });
+  }
+
+  @TsRestHandler(contract.deleteArticle)
+  deleteArticleRest(): ReturnType<typeof tsRestHandler> {
+    return tsRestHandler(contract.deleteArticle, async ({ params }) => {
+      const id = Number(params.id);
+      await this.articleService.remove(id);
+      return { status: 200, body: { success: true } };
+    });
+  }
+
+  @TsRestHandler(contract.getAdminArticle)
+  getAdminArticleRest(): ReturnType<typeof tsRestHandler> {
+    return tsRestHandler(contract.getAdminArticle, async ({ params }) => {
+      const id = Number(params.id);
+      const result = await this.articleService.findOne(id);
+
+      return {
+        status: 200,
+        body: {
+          id: result.id,
+          title: result.title,
+          content: result.content,
+          summary: undefined,
+          cover: undefined,
+          category: result.category ?? undefined,
+          tags: undefined,
+          views: result.viewer ?? undefined,
+          likes: 0,
+          isTop: (result.top ?? 0) > 0,
+          isHot: false,
+          pubTime: dayjs(result.updatedAt).format(),
+          createdAt: dayjs(result.createdAt).format(),
+          updatedAt: dayjs(result.updatedAt).format(),
+          private: result.private ?? false,
+          password: result.password ?? undefined,
+          toc: undefined,
+        },
+      };
+    });
   }
 }

@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  NotFoundException,
   Param,
   Post,
   Put,
@@ -11,7 +12,7 @@ import {
 } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
-import { contract } from '@vanblog/shared';
+import { contract, type Tag as SharedTag } from '@vanblog/shared';
 import { z } from 'zod';
 
 import { OverallStatisticsDto } from '../../shared/dto/statistics.dto';
@@ -196,25 +197,69 @@ export class TagController {
     const query = ArticleQuerySchema.parse(raw);
     return this.tagService.getArticlesByTagId(id, query);
   }
-}
 
-@Controller()
-export class TagTsRestCreateController {
-  constructor(private readonly tagService: TagService) {}
+  @TsRestHandler(contract.getTags)
+  getTags(): unknown {
+    return tsRestHandler(contract.getTags, async () => {
+      const result = await this.tagService.findAll();
+      const body: SharedTag[] = result.items.map((item) => ({
+        id: item.id,
+        name: item.name,
+        count: item.articleCount,
+        createdAt: item.createdAt,
+        updatedAt: undefined,
+      }));
+      return { status: 200, body };
+    });
+  }
 
   @TsRestHandler(contract.createTag)
   createTag(): unknown {
-    // @ts-expect-error ts-rest handler type incompatibility
-
     return tsRestHandler(contract.createTag, async ({ body }) => {
       const created = await this.tagService.create(body);
-      const resp = {
-        id: created.id,
-        name: created.name,
-        createAt: created.createdAt,
-        updateAt: created.updatedAt,
+      return {
+        status: 201,
+        body: {
+          id: created.id,
+          name: created.name,
+          count: undefined,
+          createdAt: created.createdAt,
+          updatedAt: created.updatedAt ?? undefined,
+        },
       };
-      return { status: 201, body: resp };
+    });
+  }
+
+  @TsRestHandler(contract.updateTag)
+  updateTag(): unknown {
+    return tsRestHandler(contract.updateTag, async ({ params, body }) => {
+      const tag = await this.tagService.findByName(params.name);
+      if (!tag) {
+        throw new NotFoundException(`Tag ${params.name} not found`);
+      }
+      const result = await this.tagService.update(tag.id, body);
+      return {
+        status: 200,
+        body: {
+          id: result.id,
+          name: result.name,
+          count: undefined,
+          createdAt: result.createdAt,
+          updatedAt: result.updatedAt ?? undefined,
+        },
+      };
+    });
+  }
+
+  @TsRestHandler(contract.deleteTag)
+  deleteTag(): unknown {
+    return tsRestHandler(contract.deleteTag, async ({ params }) => {
+      const tag = await this.tagService.findByName(params.name);
+      if (!tag) {
+        throw new NotFoundException(`Tag ${params.name} not found`);
+      }
+      await this.tagService.remove(tag.id);
+      return { status: 200, body: { success: true } };
     });
   }
 }

@@ -19,10 +19,10 @@ interface TagTestContext {
 type TagResult = { items: Array<{ createdAt: string }>; total: number };
 
 function isTagResult(v: unknown): v is TagResult {
-  if (!v || typeof v !== 'object') return false;
+  if (typeof v !== 'object' || v === null) return false;
   const obj = v as any;
   if (!Array.isArray(obj.items) || typeof obj.total !== 'number') return false;
-  const first = obj.items[0];
+  const [first] = obj.items;
   return first === undefined || typeof first.createdAt === 'string';
 }
 
@@ -269,7 +269,7 @@ describe('TagService', () => {
       expect(Array.isArray(v)).toBe(true);
       const list = v as Array<{ tag: { createdAt: string } }>;
       expect(list.length).toBe(2);
-      const first = list[0];
+      const [first] = list;
       expect(first.tag.createdAt).toMatch(/\d{4}-\d{2}-/);
       // updatedAt is undefined in Tag entity
     });

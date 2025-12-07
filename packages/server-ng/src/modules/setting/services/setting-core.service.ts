@@ -542,7 +542,7 @@ export class SettingCoreService implements OnModuleInit {
   getCaddyLog(): string {
     try {
       const data = fs.readFileSync('/var/log/caddy.log', { encoding: 'utf-8' });
-      return data.toString();
+      return data;
     } catch (_err) {
       return '';
     }
@@ -561,7 +561,7 @@ export class SettingCoreService implements OnModuleInit {
       const res = await axios.get('http://127.0.0.1:2019/config');
       return res.data;
     } catch (err) {
-      const msg = err instanceof Error ? err.message : err;
+      const msg = err instanceof Error ? err.message : String(err);
       this.logger.warn(`获取 Caddy 配置失败: ${msg}`);
       return null;
     }

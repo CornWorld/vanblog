@@ -1,6 +1,6 @@
 import { Controller } from '@nestjs/common';
 import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
-import { timelineContract } from '@vanblog/shared/dist/contracts/timeline.contract.js';
+import { timelineContract } from '@vanblog/shared/contracts';
 
 import { DerivedView } from '../../shared/decorators/derived-view.decorator';
 
@@ -24,7 +24,7 @@ export class TimelineController {
   async getTimeline(query: {
     includeHidden?: boolean;
   }): Promise<{ statusCode: number; data: TimelineResponseDto }> {
-    const data = await this.timelineService.getTimeline(Boolean(query?.includeHidden));
+    const data = await this.timelineService.getTimeline(Boolean(query.includeHidden));
     return { statusCode: 200, data };
   }
 }

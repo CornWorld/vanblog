@@ -1,22 +1,31 @@
 import { initContract } from '@ts-rest/core';
 import { z } from 'zod';
-import { dateStr } from '../date-codecs.js';
-import { VersionInfoSchema } from '../schemas.js';
 
-export const metaResponse = z.object({ buildTime: dateStr });
+// Version info schema
+export const VersionInfo = z.object({
+  version: z.string(),
+  buildTime: z.string(),
+  nodeVersion: z.string().optional(),
+  platform: z.string().optional(),
+});
+
+// Meta response for public endpoint
+export const MetaResponse = z.object({
+  buildTime: z.string(),
+});
 
 export const createMetaContract = (c: ReturnType<typeof initContract>) =>
   c.router({
     getPublicMeta: {
       method: 'GET',
       path: '/public/meta',
-      responses: { 200: metaResponse },
+      responses: { 200: MetaResponse },
       summary: 'Get public meta',
     },
     getVersionInfo: {
       method: 'GET',
       path: '/v2/meta/version',
-      responses: { 200: VersionInfoSchema },
+      responses: { 200: VersionInfo },
       summary: 'Get version info',
     },
   });
@@ -25,4 +34,4 @@ export const createMetaContract = (c: ReturnType<typeof initContract>) =>
 const c = initContract();
 export const metaContract = createMetaContract(c);
 
-export type MetaResponse = z.infer<typeof metaResponse>;
+export type MetaResponse = z.infer<typeof MetaResponse>;

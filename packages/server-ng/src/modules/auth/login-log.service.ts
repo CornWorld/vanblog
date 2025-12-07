@@ -17,10 +17,10 @@ export class LoginLogService {
   async createLog(logData: LoginLogDto): Promise<void> {
     await this.db.insert(loginLogs).values({
       username: logData.username,
-      ip: logData.ip ? logData.ip : null,
-      userAgent: logData.userAgent ? logData.userAgent : null,
+      ip: logData.ip ?? null,
+      userAgent: logData.userAgent ?? null,
       success: logData.success,
-      message: logData.message ? logData.message : null,
+      message: logData.message ?? null,
     });
   }
 

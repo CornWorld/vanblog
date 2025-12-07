@@ -37,13 +37,14 @@ export class ArticleService {
 
   private derivePubTime(createdAt: string | Date, updatedAt: string | Date): string {
     try {
-      const base = updatedAt ?? createdAt;
+      const base = updatedAt;
       return dayjs(base).format();
     } catch (_e) {
       this.logger.warn(
         'TODO(pubTime): 业务规则不明确，无法派生 pubTime。请确认 pubTime 推导规则（优先 updatedAt，其次 createdAt）。',
       );
-      return dayjs(createdAt || new Date()).format();
+      const fallback = typeof createdAt === 'string' && createdAt !== '' ? createdAt : new Date();
+      return dayjs(fallback).format();
     }
   }
 
@@ -124,7 +125,7 @@ export class ArticleService {
       pubTime: this.derivePubTime(article.createdAt, article.updatedAt),
     }));
 
-    const total = Number(countResult[0]?.count) > 0 ? Number(countResult[0]?.count) : 0;
+    const total = (countResult[0]?.count ?? 0) > 0 ? (countResult[0]?.count ?? 0) : 0;
     const totalPages = Math.ceil(total / pageSize);
 
     return {
@@ -234,11 +235,11 @@ export class ArticleService {
           cover: undefined,
           tags: safeParseJson(article.tags, dataSchemas.tagsArray) ?? [],
           categories: article.category ? [article.category] : [],
-          publishedAt: dayjs(article.updatedAt ?? article.createdAt).format(),
+          publishedAt: dayjs(article.updatedAt).format(),
           highlight: undefined,
         }));
 
-        const total = Number(countResult[0]?.count) > 0 ? Number(countResult[0]?.count) : 0;
+        const total = (countResult[0]?.count ?? 0) > 0 ? (countResult[0]?.count ?? 0) : 0;
         const totalPages = Math.ceil(total / pageSize);
 
         return {
@@ -429,13 +430,13 @@ export class ArticleService {
     let newArticleData = {
       title: articleData.title,
       content: articleData.content,
-      pathname: articleData.pathname ? articleData.pathname : undefined,
-      category: articleData.category ? articleData.category : undefined,
+      pathname: articleData.pathname ?? undefined,
+      category: articleData.category ?? undefined,
       author: articleData.author !== '' ? articleData.author : 'admin',
-      top: articleData.top ? articleData.top : undefined,
-      hidden: articleData.hidden ? articleData.hidden : undefined,
-      private: articleData.private ? articleData.private : undefined,
-      password: articleData.password ? articleData.password : undefined,
+      top: articleData.top ?? undefined,
+      hidden: articleData.hidden ?? undefined,
+      private: articleData.private ?? undefined,
+      password: articleData.password ?? undefined,
       viewer: 0,
       tags: JSON.stringify(Array.isArray(tagNames) ? tagNames : []),
       createdAt: dayjs().format(),
@@ -450,7 +451,7 @@ export class ArticleService {
         action: 'create',
       });
     } catch (error: unknown) {
-      const msg = error instanceof Error ? error.message : error;
+      const msg = error instanceof Error ? error.message : String(error);
       this.logger.error(`Error in article|beforeCreate hook: ${msg}`);
     }
 
@@ -503,9 +504,12 @@ export class ArticleService {
           typeof value === 'string' ? value : value,
         ]),
       ),
-      ...(tagNames && { tags: JSON.stringify(tagNames) }),
       updatedAt: dayjs().format(),
     };
+
+    if (tagNames !== undefined) {
+      updateData.tags = JSON.stringify(tagNames);
+    }
 
     // Process update data
 
@@ -516,7 +520,7 @@ export class ArticleService {
         action: 'update',
       });
     } catch (error: unknown) {
-      const msg = error instanceof Error ? error.message : error;
+      const msg = error instanceof Error ? error.message : String(error);
       this.logger.error(`Error in article|beforeUpdate hook: ${msg}`);
     }
 
@@ -649,7 +653,7 @@ export class ArticleService {
       pubTime: this.derivePubTime(article.createdAt, article.updatedAt),
     }));
 
-    const total = Number(countResult[0]?.count) > 0 ? Number(countResult[0]?.count) : 0;
+    const total = (countResult[0]?.count ?? 0) > 0 ? (countResult[0]?.count ?? 0) : 0;
     const totalPages = Math.ceil(total / pageSize);
 
     return {

@@ -7,7 +7,6 @@ import { PluginModule } from '../plugin/plugin.module';
 
 import { ArticleController } from './article.controller';
 import { ArticleService } from './article.service';
-import { ArticleTsRestController } from './article.ts-rest.controller';
 import { ArticleAccessGuard } from './guards/article-access.guard';
 
 @Module({
@@ -23,7 +22,7 @@ import { ArticleAccessGuard } from './guards/article-access.guard';
       'article:publish',
     ]),
   ],
-  controllers: [ArticleController, ArticleTsRestController],
+  controllers: [ArticleController],
   providers: [ArticleService, ArticleAccessGuard],
   exports: [ArticleService],
 })

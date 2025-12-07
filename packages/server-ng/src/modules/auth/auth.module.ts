@@ -8,7 +8,6 @@ import { UserModule } from '../user/user.module';
 
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
-import { AuthTsRestController } from './auth.ts-rest.controller';
 import { PermissionsGuard } from './guards/permissions.guard';
 import { LoginLogTsRestController } from './login-log.controller';
 import { LoginLogService } from './login-log.service';
@@ -28,7 +27,7 @@ import type { StringValue } from 'ms';
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService): JwtModuleOptions => ({
-        secret: configService.get<string>('JWT_SECRET') || 'default-secret-change-me',
+        secret: configService.get<string>('JWT_SECRET') ?? 'default-secret-change-me',
         signOptions: {
           expiresIn: (configService.get<string>('JWT_EXPIRES_IN') ?? '7d') as StringValue,
         },
@@ -36,7 +35,7 @@ import type { StringValue } from 'ms';
       inject: [ConfigService],
     }),
   ],
-  controllers: [AuthController, AuthTsRestController, LoginLogTsRestController],
+  controllers: [AuthController, LoginLogTsRestController],
   providers: [
     AuthService,
     LocalStrategy,

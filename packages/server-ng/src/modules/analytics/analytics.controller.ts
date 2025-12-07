@@ -8,9 +8,13 @@ import {
   ParseIntPipe,
   Headers,
   Ip,
+  Req,
 } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
+import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
+import { contract } from '@vanblog/shared';
+import { Request } from 'express';
 
 import { DerivedView } from '../../shared/decorators/derived-view.decorator';
 import { Perm } from '../auth/permissions.decorator';
@@ -28,6 +32,7 @@ import { RecordAnalyticsSchema } from './dto/record-analytics.dto';
 import { AnalyticsService } from './services/analytics.service';
 import { ArticleStatsService, ArticleStats } from './services/article-stats.service';
 import { EchartsFormatterService, EchartsOption } from './services/echarts-formatter.service';
+import { PublicAnalyticsService } from './services/public-analytics.service';
 import { ThirdPartyAnalyticsService } from './services/third-party-analytics.service';
 
 /**
@@ -42,6 +47,7 @@ export class AnalyticsController {
   constructor(
     private readonly analyticsService: AnalyticsService,
     private readonly articleStatsService: ArticleStatsService,
+    private readonly publicAnalyticsService: PublicAnalyticsService,
     private readonly thirdPartyAnalyticsService: ThirdPartyAnalyticsService,
     private readonly echartsFormatterService: EchartsFormatterService,
   ) {}
@@ -473,5 +479,88 @@ export class AnalyticsController {
   async getEchartsPageRankings(@Query('limit') limit?: number): Promise<EchartsOption> {
     const data = await this.analyticsService.getPageRankings(limit);
     return this.echartsFormatterService.formatPageRankingsChart(data);
+  }
+
+  @TsRestHandler(contract.getPublicViewer)
+  getPublicViewer(): ReturnType<typeof tsRestHandler> {
+    return tsRestHandler(contract.getPublicViewer, async () => {
+      const overview = await this.publicAnalyticsService.getPublicOverview();
+      return {
+        status: 200,
+        body: {
+          totalPageviews: overview.totalPageviews,
+          totalVisitors: overview.totalVisitors,
+        },
+      };
+    });
+  }
+
+  @TsRestHandler(contract.getArticleViewer)
+  getArticleViewer(): ReturnType<typeof tsRestHandler> {
+    return tsRestHandler(contract.getArticleViewer, async ({ params }) => {
+      const idNum = Number(params.id);
+      const data = await this.publicAnalyticsService.getPublicArticleStats(idNum);
+      if (!data) {
+        return { status: 200, body: null };
+      }
+      return {
+        status: 200,
+        body: {
+          articleId: data.articleId,
+          title: data.title,
+          views: data.views,
+          uniqueVisitors: data.uniqueVisitors,
+          avgReadTime: data.avgReadTime,
+        },
+      };
+    });
+  }
+
+  @TsRestHandler(contract.recordPublicViewer)
+  recordPublicViewer(@Req() req: Request): ReturnType<typeof tsRestHandler> {
+    return tsRestHandler(contract.recordPublicViewer, async ({ body, headers }) => {
+      const { type, path, referrer, userAgent: userAgentInBody } = body;
+      const pathValue = path ?? null;
+      const referrerValue = referrer ?? null;
+      const userAgentValue = userAgentInBody ?? null;
+      const dataValue: unknown = body.data;
+      const ip = req.ip ?? null;
+      const headerUa = headers['user-agent'] ?? null;
+      const userAgent = userAgentValue ?? headerUa;
+
+      await this.analyticsService.recordAnalytics({
+        type,
+        path: pathValue,
+        referrer: referrerValue,
+        userAgent,
+        ip,
+        data: dataValue,
+      });
+
+      if (type === 'pageview' && typeof pathValue === 'string') {
+        await this.thirdPartyAnalyticsService.trackPageview(
+          pathValue,
+          ip ?? undefined,
+          userAgent ?? undefined,
+        );
+      }
+      return { status: 201, body: undefined };
+    });
+  }
+
+  @TsRestHandler(contract.getAnalyticsOverview)
+  getAnalyticsOverview(): ReturnType<typeof tsRestHandler> {
+    return tsRestHandler(contract.getAnalyticsOverview, async () => {
+      const overview = await this.analyticsService.getOverview();
+      return {
+        status: 200,
+        body: {
+          totalPageviews: overview.totalPageviews,
+          totalVisitors: overview.totalVisitors,
+          todayPageviews: overview.todayPageviews,
+          todayVisitors: overview.todayVisitors,
+        },
+      };
+    });
   }
 }

@@ -381,7 +381,7 @@ export class BackupService {
         throw new Error('Cannot read metadata from encrypted backup');
       }
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : error;
+      const errorMessage = error instanceof Error ? error.message : String(error);
       throw new Error(`Failed to read backup metadata: ${errorMessage}`);
     }
   }

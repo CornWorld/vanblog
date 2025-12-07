@@ -209,22 +209,21 @@ export class RssService {
       let feedJsonStr = '';
       try {
         const rawJson = feed.json1();
-        const jsonObj = JSON.parse(rawJson);
+        const jsonObj: unknown = JSON.parse(rawJson);
         const DateField = z
           .union([z.string(), z.date()])
           .optional()
           .transform((v) => (v === undefined ? v : dayjs(v).format()));
-        const ItemSchema = z
-          .object({
-            date_published: DateField,
-            date_modified: DateField,
-          })
-          .passthrough();
+        const ItemSchema = z.object({
+          date_published: DateField,
+          date_modified: DateField,
+        });
         const FeedSchema = z
           .object({
             date_modified: DateField,
             items: z.array(ItemSchema),
           })
+
           .passthrough();
         const parsed = FeedSchema.safeParse(jsonObj);
         if (parsed.success) {

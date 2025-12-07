@@ -143,11 +143,8 @@ export class WebhookService {
       active: updateWebhookDto.active,
       retryCount: updateWebhookDto.retryCount,
       timeout: updateWebhookDto.timeout,
+      events: updateWebhookDto.events,
     };
-
-    if (updateWebhookDto.events) {
-      updateData.events = JSON.stringify(updateWebhookDto.events);
-    }
 
     const results = await this.db
       .update(webhooks)

@@ -1,41 +1,14 @@
 import { initContract } from '@ts-rest/core';
 import { z } from 'zod';
-import { dateStr } from '../date-codecs.js';
+import { DraftVersion, PaginationQuery, DeleteResponse } from '../runtime/schema.js';
 
-export const DraftVersionMetaSchema = z.object({
-  id: z.string(),
-  draftId: z.string(),
-  version: z.string(),
-  createdAt: dateStr,
-  updatedAt: dateStr.optional(),
+// Draft version list response
+export const DraftVersionList = z.object({
+  items: z.array(DraftVersion),
+  total: z.number(),
+  page: z.number(),
+  pageSize: z.number(),
 });
-
-export const DraftVersionContentSchema = z.object({
-  title: z.string(),
-  content: z.string(),
-  summary: z.string().optional(),
-  cover: z.string().optional(),
-  category: z.string().optional(),
-  tags: z.array(z.string()).optional(),
-});
-
-export const DraftVersionResponseSchema = z.object({
-  meta: DraftVersionMetaSchema,
-  data: DraftVersionContentSchema,
-});
-
-export const DraftVersionListResponseSchema = z.object({
-  items: z.array(DraftVersionMetaSchema),
-  total: z.string(),
-  page: z.string(),
-  pageSize: z.string(),
-});
-
-// Export types
-export type DraftVersionMeta = z.infer<typeof DraftVersionMetaSchema>;
-export type DraftVersionContent = z.infer<typeof DraftVersionContentSchema>;
-export type DraftVersionResponse = z.infer<typeof DraftVersionResponseSchema>;
-export type DraftVersionListResponse = z.infer<typeof DraftVersionListResponseSchema>;
 
 export const createDraftVersionContract = (c: ReturnType<typeof initContract>) =>
   c.router({
@@ -43,36 +16,31 @@ export const createDraftVersionContract = (c: ReturnType<typeof initContract>) =
       method: 'GET',
       path: '/v2/drafts/:id/versions',
       pathParams: z.object({ id: z.string() }),
-      query: z
-        .object({
-          page: z.string().optional(),
-          pageSize: z.string().optional(),
-        })
-        .optional(),
-      responses: { 200: DraftVersionListResponseSchema },
-      summary: 'List draft versions (strings-only)',
+      query: PaginationQuery.optional(),
+      responses: { 200: DraftVersionList },
+      summary: 'List draft versions',
     },
     getVersion: {
       method: 'GET',
       path: '/v2/drafts/:id/versions/:versionId',
       pathParams: z.object({ id: z.string(), versionId: z.string() }),
-      responses: { 200: DraftVersionResponseSchema },
-      summary: 'Get specific draft version (strings-only)',
+      responses: { 200: DraftVersion },
+      summary: 'Get specific draft version',
     },
     createVersion: {
       method: 'POST',
       path: '/v2/drafts/:id/versions',
       pathParams: z.object({ id: z.string() }),
       body: z.object({ reason: z.string().optional() }),
-      responses: { 201: DraftVersionMetaSchema },
-      summary: 'Create a version snapshot (strings-only)',
+      responses: { 201: DraftVersion },
+      summary: 'Create a version snapshot',
     },
     deleteVersion: {
       method: 'DELETE',
       path: '/v2/drafts/:id/versions/:versionId',
       pathParams: z.object({ id: z.string(), versionId: z.string() }),
-      responses: { 200: z.object({ success: z.enum(['true', 'false']) }) },
-      summary: 'Delete a version snapshot (strings-only)',
+      responses: { 200: DeleteResponse },
+      summary: 'Delete a version snapshot',
     },
   });
 

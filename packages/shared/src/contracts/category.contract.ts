@@ -1,39 +1,22 @@
 import { z } from 'zod';
 import { initContract } from '@ts-rest/core';
 import {
-  CategorySchema,
-  CreateCategorySchema,
-  UpdateCategorySchema,
-  ArticleSchema,
-} from '../schemas.js';
+  Category,
+  CategoryReq,
+  CategoryPatch,
+  ArticleList,
+  PaginationQuery,
+  DeleteResponse,
+} from '../runtime/schema.js';
 
-// Response schemas
-export const CategoryResponseSchema = CategorySchema;
-export type CategoryResponse = z.infer<typeof CategoryResponseSchema>;
-
-export const CategoryWithCountSchema = CategorySchema.extend({
+// Extended schema with article count
+export const CategoryWithCount = Category.extend({
   articleCount: z.number().default(0),
 });
 
-export const CategoryListResponseSchema = z.object({
-  items: z.array(CategoryWithCountSchema),
+export const CategoryListResponse = z.object({
+  items: z.array(CategoryWithCount),
   total: z.number(),
-});
-
-export const ArticleResponseSchema = ArticleSchema;
-
-export const ArticleListResponseSchema = z.object({
-  items: z.array(ArticleSchema),
-  total: z.number(),
-  page: z.number(),
-  pageSize: z.number(),
-});
-
-export const ArticleQuerySchema = z.object({
-  page: z.coerce.number().optional().default(1),
-  pageSize: z.coerce.number().optional().default(10),
-  sortBy: z.string().optional().default('createdAt'),
-  sortOrder: z.enum(['asc', 'desc']).optional().default('desc'),
 });
 
 export const createCategoryContract = (c: ReturnType<typeof initContract>) =>
@@ -42,52 +25,52 @@ export const createCategoryContract = (c: ReturnType<typeof initContract>) =>
       method: 'GET',
       path: '/v2/categories',
       query: z.object({ detail: z.string().optional() }).optional(),
-      responses: { 200: CategoryListResponseSchema },
+      responses: { 200: CategoryListResponse },
       summary: 'Get all categories',
     },
     getCategoryById: {
       method: 'GET',
       path: '/v2/categories/:id',
       pathParams: z.object({ id: z.string() }),
-      responses: { 200: CategoryResponseSchema },
+      responses: { 200: Category },
       summary: 'Get category by ID',
     },
     createCategory: {
       method: 'POST',
       path: '/v2/categories',
-      body: CreateCategorySchema,
-      responses: { 201: CategoryResponseSchema },
+      body: CategoryReq,
+      responses: { 201: Category },
       summary: 'Create category',
     },
     updateCategory: {
       method: 'PUT',
       path: '/v2/categories/:id',
       pathParams: z.object({ id: z.string() }),
-      body: UpdateCategorySchema,
-      responses: { 200: CategoryResponseSchema },
+      body: CategoryPatch,
+      responses: { 200: Category },
       summary: 'Update category',
     },
     deleteCategory: {
       method: 'DELETE',
       path: '/v2/categories/:id',
       pathParams: z.object({ id: z.string() }),
-      responses: { 200: z.object({ success: z.boolean() }) },
+      responses: { 200: DeleteResponse },
       summary: 'Delete category',
     },
     getArticlesByCategory: {
       method: 'GET',
       path: '/v2/categories/:id/articles',
       pathParams: z.object({ id: z.string() }),
-      query: ArticleQuerySchema,
-      responses: { 200: ArticleListResponseSchema },
+      query: PaginationQuery,
+      responses: { 200: ArticleList },
       summary: 'Get articles by category',
     },
     getArticlesByCategoryName: {
       method: 'GET',
       path: '/v2/categories/name/:name/articles',
       pathParams: z.object({ name: z.string() }),
-      query: ArticleQuerySchema,
-      responses: { 200: ArticleListResponseSchema },
+      query: PaginationQuery,
+      responses: { 200: ArticleList },
       summary: 'Get articles by category name',
     },
   });

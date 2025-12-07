@@ -24,9 +24,10 @@ class ThrottleTsRestController {
   @TsRestHandler(testContract.record)
   @Throttle({ default: { limit: 2, ttl: 1000 } })
   record(): ReturnType<typeof tsRestHandler> {
-    return tsRestHandler(testContract.record, async () => {
-      return { status: 200, body: { ok: true } };
-    });
+    return tsRestHandler(testContract.record, async () => ({
+      status: 200 as const,
+      body: { ok: true },
+    }));
   }
 }
 
@@ -46,7 +47,7 @@ describe('ts-rest + Throttle integration', () => {
     const app = await createApp();
     const server = app.getHttpServer();
 
-    const req = () => request(server).post('/__test__/throttle').send({ n: 1 });
+    const req = (): request.Test => request(server).post('/__test__/throttle').send({ n: 1 });
 
     const r1 = await req();
     expect(r1.status).toBe(200);

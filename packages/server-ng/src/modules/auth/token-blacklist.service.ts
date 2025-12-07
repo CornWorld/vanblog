@@ -1,7 +1,7 @@
 import { createHash } from 'crypto';
 
 import { Injectable, Logger, Inject } from '@nestjs/common';
-import dayjs from 'dayjs';
+import { dayjs } from '@vanblog/shared';
 import { eq, lt } from 'drizzle-orm';
 
 import { DATABASE_CONNECTION, type Database } from '../../database';
@@ -46,6 +46,7 @@ export class TokenBlacklistService {
         userId,
         reason,
         expiresAt: dayjs(expiresAt).format(),
+        createdAt: dayjs().format(),
       });
 
       this.logger.log(`Token revoked: ${tokenType} for user ${userId ?? 'anonymous'}`);
@@ -91,6 +92,7 @@ export class TokenBlacklistService {
         userId,
         reason: reason ?? 'All user tokens revoked',
         expiresAt: expiresAt.format(),
+        createdAt: dayjs().format(),
       });
 
       this.logger.log(`All tokens revoked for user ${userId}`);

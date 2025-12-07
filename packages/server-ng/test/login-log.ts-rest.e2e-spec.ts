@@ -1,4 +1,4 @@
-import { VersioningType } from '@nestjs/common';
+import { VersioningType, type INestApplication } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
 import request from 'supertest';
 import { describe, beforeAll, afterAll, it, expect } from 'vitest';
@@ -7,7 +7,6 @@ import { AppModule } from './../src/app.module';
 import { ConfigService } from './../src/config';
 import { cleanupDatabase } from './test-utils';
 
-import type { INestApplication } from '@nestjs/common';
 import type { Server } from 'http';
 
 /**

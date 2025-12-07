@@ -168,7 +168,7 @@ async function sendEmail(context: PluginContext, subject: string, content: strin
 
     logger.log(withPluginPrefix(PLUGIN_PREFIX, `邮件发送成功: ${subject}`));
   } catch (error) {
-    logger.error(withPluginPrefix(PLUGIN_PREFIX, `邮件发送失败: ${error}`));
+    logger.error(withPluginPrefix(PLUGIN_PREFIX, `邮件发送失败: ${String(error)}`));
   }
 }
 
@@ -201,7 +201,7 @@ const plugin: Plugin = {
     logger.log(withPluginPrefix(PLUGIN_PREFIX, '邮件通知插件正在销毁...'));
 
     const emailsSent = await context.data.get('emails_sent');
-    logger.log(withPluginPrefix(PLUGIN_PREFIX, `插件已发送 ${emailsSent} 封邮件`));
+    logger.log(withPluginPrefix(PLUGIN_PREFIX, `插件已发送 ${String(emailsSent)} 封邮件`));
 
     // 清理数据
     await context.data.clear();
@@ -240,7 +240,7 @@ const plugin: Plugin = {
           <p><strong>发布时间：</strong>${article.createdAt ?? '未知'}</p>
           <p><strong>内容预览：</strong></p>
           <div style="border-left: 3px solid #007cba; padding-left: 15px; margin: 10px 0;">
-            ${String(article.content ?? '').substring(0, 200)}${String(article.content ?? '').length > 200 ? '...' : ''}
+            ${(article.content ?? '').substring(0, 200)}${(article.content ?? '').length > 200 ? '...' : ''}
           </div>
           <p>请登录后台查看完整内容。</p>
         `;
@@ -279,7 +279,7 @@ const plugin: Plugin = {
           <p><strong>更新时间：</strong>${article.updatedAt ?? '未知'}</p>
           <p><strong>内容预览：</strong></p>
           <div style="border-left: 3px solid #28a745; padding-left: 15px; margin: 10px 0;">
-            ${String(article.content ?? '').substring(0, 200)}${String(article.content ?? '').length > 200 ? '...' : ''}
+            ${(article.content ?? '').substring(0, 200)}${(article.content ?? '').length > 200 ? '...' : ''}
           </div>
           <p>请登录后台查看完整内容。</p>
         `;
@@ -318,7 +318,7 @@ const plugin: Plugin = {
           <p><strong>邮箱：</strong>${comment.email ?? '未提供'}</p>
           <p><strong>评论内容：</strong></p>
           <div style="border-left: 3px solid #ffc107; padding-left: 15px; margin: 10px 0;">
-            ${String(comment.content ?? '').substring(0, 200)}${String(comment.content ?? '').length > 200 ? '...' : ''}
+            ${(comment.content ?? '').substring(0, 200)}${(comment.content ?? '').length > 200 ? '...' : ''}
           </div>
           <p>请登录后台查看详细信息。</p>
         `;
@@ -365,7 +365,7 @@ const plugin: Plugin = {
           <p><strong>发布时间：</strong>${draft.publishedAt ?? draft.createdAt ?? '未知'}</p>
           <p><strong>内容预览：</strong></p>
           <div style="border-left: 3px solid #17a2b8; padding-left: 15px; margin: 10px 0;">
-            ${String(draft.content ?? '').substring(0, 200)}${String(draft.content ?? '').length > 200 ? '...' : ''}
+            ${(draft.content ?? '').substring(0, 200)}${(draft.content ?? '').length > 200 ? '...' : ''}
           </div>
           <p>请登录后台查看完整内容。</p>
         `;

@@ -60,7 +60,7 @@ export class CategoryService {
       description: category.description,
       private: category.private,
       password: category.password,
-      articleCount: category.articleCount > 0 ? category.articleCount : 0,
+      articleCount: category.articleCount,
       createdAt: dayjs(category.createdAt).format(),
       updatedAt: dayjs(category.updatedAt).format(),
     }));
@@ -202,7 +202,7 @@ export class CategoryService {
       .select({ count: sql<number>`count(*)` })
       .from(articles)
       .where(eq(articles.category, category.name))
-      .then((res) => (Number(res[0]?.count) > 0 ? Number(res[0]?.count) : 0));
+      .then((res) => res[0]?.count ?? 0);
 
     if (articlesInCategory > 0) {
       throw new Error(
@@ -399,7 +399,7 @@ export class CategoryService {
       updatedAt: dayjs(article.updatedAt).format(),
     }));
 
-    const total = Number(countResult[0]?.count) > 0 ? Number(countResult[0]?.count) : 0;
+    const total = countResult[0]?.count ?? 0;
     const totalPages = Math.ceil(total / pageSize);
 
     return {

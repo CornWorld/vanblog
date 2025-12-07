@@ -1,7 +1,7 @@
 import { Controller } from '@nestjs/common';
 import { initContract } from '@ts-rest/core';
 import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
-import { createLoginLogContract } from '@vanblog/shared/src/contracts/login-log.contract';
+import { createLoginLogContract } from '@vanblog/shared/contracts';
 
 import { LoginLogQueryDto } from './dto/login-log.dto';
 import { LoginLogService } from './login-log.service';
@@ -20,7 +20,7 @@ export class LoginLogTsRestController {
         const { username, success, startDate, endDate } = query;
         const q: LoginLogQueryDto = {
           username,
-          success: success === undefined ? undefined : success === 'true',
+          success,
           startDate,
           endDate,
         };

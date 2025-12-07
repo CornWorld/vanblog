@@ -1,86 +1,72 @@
 import { Controller } from '@nestjs/common';
 import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
-import { dayjs } from '@vanblog/shared';
-import { draftVersionContract as draftVersionShared } from '@vanblog/shared/src/contracts/draft-version.contract';
-import { z } from 'zod';
+import { draftVersionContract } from '@vanblog/shared/contracts';
 
 import { DraftVersionService } from './draft-version.service';
-import { DraftVersionSchema } from './dto/draft.dto';
 
-const draftVersionContract = draftVersionShared;
-
-type DraftVersionData = z.infer<typeof DraftVersionSchema>;
+import type { DraftVersion } from '@vanblog/shared/runtime';
 
 @Controller()
 export class DraftVersionTsRestController {
   constructor(private readonly draftVersionService: DraftVersionService) {}
 
-  private toStr(v: unknown): string {
-    return typeof v === 'string' ? v : String(v ?? '');
-  }
-
-  private dateStr(input: unknown): string {
-    if (typeof input === 'string') return input;
-    if (input instanceof Date) return dayjs(input).format();
-    return dayjs().format();
+  private mapToDraftVersion(v: unknown): DraftVersion {
+    const record = v as Record<string, unknown>;
+    return {
+      id: record.id as number,
+      draftId: record.draftId as number,
+      version: record.version as number,
+      title: (record.title as string | null) ?? '',
+      content: (record.content as string | null) ?? '',
+      pathname: (record.pathname as string | null) ?? null,
+      tags: Array.isArray(record.tags) ? (record.tags as string[]) : null,
+      category: (record.category as string | null) ?? null,
+      author: (record.author as string | null) ?? '',
+      createdAt: (record.createdAt as string | null) ?? new Date().toISOString(),
+    };
   }
 
   @TsRestHandler(draftVersionContract.listVersions)
-  listVersions() {
+  listVersions(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(draftVersionContract.listVersions, async ({ params, query }) => {
       try {
         const draftId = Number(params.id);
         const itemsRaw = await this.draftVersionService.getVersions(draftId);
-        const items = Array.isArray(itemsRaw)
-          ? itemsRaw.map((v: DraftVersionData) => ({
-              id: this.toStr(v.id),
-              draftId: this.toStr(v.draftId),
-              version: this.toStr(v.version),
-              createdAt: this.dateStr(v.createdAt),
-              updatedAt: undefined,
-            }))
-          : [];
+        const items = Array.isArray(itemsRaw) ? itemsRaw.map((v) => this.mapToDraftVersion(v)) : [];
 
-        const page = this.toStr(query?.page ?? '1');
-        const pageSize = this.toStr(query?.pageSize ?? String(items.length));
-        const total = this.toStr(String(items.length));
+        const page = query?.page ?? 1;
+        const pageSize = query?.pageSize ?? items.length;
+        const total = items.length;
 
         return { status: 200, body: { items, total, page, pageSize } };
       } catch (_err) {
-        return { status: 200, body: { items: [], total: '0', page: '1', pageSize: '0' } };
+        return { status: 200, body: { items: [], total: 0, page: 1, pageSize: 0 } };
       }
     });
   }
 
   @TsRestHandler(draftVersionContract.getVersion)
-  getVersion() {
+  getVersion(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(draftVersionContract.getVersion, async ({ params }) => {
       try {
         const draftId = Number(params.id);
         const versionId = Number(params.versionId);
         const v = await this.draftVersionService.getVersion(draftId, versionId);
-        const meta = {
-          id: this.toStr(v.id),
-          draftId: this.toStr(v.draftId),
-          version: this.toStr(v.version),
-          createdAt: this.dateStr(v.createdAt),
-          updatedAt: undefined,
-        };
-        const data = {
-          title: this.toStr(v.title),
-          content: this.toStr(v.content),
-          summary: undefined,
-          cover: undefined,
-          category: typeof v.category === 'string' ? v.category : undefined,
-          tags: Array.isArray(v.tags) ? v.tags : undefined,
-        };
-        return { status: 200, body: { meta, data } };
+        return { status: 200, body: this.mapToDraftVersion(v) };
       } catch (_err) {
         return {
           status: 200,
           body: {
-            meta: { id: '', draftId: '', version: '', createdAt: dayjs().format() },
-            data: { title: '', content: '' },
+            id: 0,
+            draftId: 0,
+            version: 0,
+            title: '',
+            content: '',
+            pathname: null,
+            tags: null,
+            category: null,
+            author: '',
+            createdAt: new Date().toISOString(),
           },
         };
       }
@@ -88,40 +74,42 @@ export class DraftVersionTsRestController {
   }
 
   @TsRestHandler(draftVersionContract.createVersion)
-  createVersion() {
+  createVersion(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(draftVersionContract.createVersion, async ({ params }) => {
       try {
         const draftId = Number(params.id);
         const v = await this.draftVersionService.createVersion(draftId);
-        return {
-          status: 201,
-          body: {
-            id: this.toStr(v.id),
-            draftId: this.toStr(v.draftId),
-            version: this.toStr(v.version),
-            createdAt: this.dateStr(v.createdAt),
-            updatedAt: undefined,
-          },
-        };
+        return { status: 201, body: this.mapToDraftVersion(v) };
       } catch (_err) {
         return {
           status: 201,
-          body: { id: '', draftId: '', version: '', createdAt: dayjs().format() },
+          body: {
+            id: 0,
+            draftId: 0,
+            version: 0,
+            title: '',
+            content: '',
+            pathname: null,
+            tags: null,
+            category: null,
+            author: '',
+            createdAt: new Date().toISOString(),
+          },
         };
       }
     });
   }
 
   @TsRestHandler(draftVersionContract.deleteVersion)
-  deleteVersion() {
+  deleteVersion(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(draftVersionContract.deleteVersion, async ({ params }) => {
       try {
         const draftId = Number(params.id);
         const versionId = Number(params.versionId);
         await this.draftVersionService.deleteVersion(draftId, versionId);
-        return { status: 200, body: { success: 'true' as const } };
+        return { status: 200, body: { success: true } };
       } catch (_err) {
-        return { status: 200, body: { success: 'false' as const } };
+        return { status: 200, body: { success: false } };
       }
     });
   }

@@ -6,7 +6,6 @@ import { PluginModule } from '../plugin/plugin.module';
 import { DraftVersionService } from './draft-version.service';
 import { DraftController } from './draft.controller';
 import { DraftService } from './draft.service';
-import { DraftTsRestController } from './draft.ts-rest.controller';
 
 @Module({
   imports: [
@@ -19,7 +18,7 @@ import { DraftTsRestController } from './draft.ts-rest.controller';
       'draft:publish',
     ]),
   ],
-  controllers: [DraftController, DraftTsRestController],
+  controllers: [DraftController],
   providers: [DraftService, DraftVersionService],
   exports: [DraftService],
 })

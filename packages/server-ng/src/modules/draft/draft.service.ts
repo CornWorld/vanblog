@@ -81,11 +81,11 @@ export class DraftService {
         createdAt: dayjs(draft.createdAt).format(),
         updatedAt: dayjs(draft.updatedAt).format(),
       })),
-      total: Number(countResult[0]?.count) > 0 ? Number(countResult[0]?.count) : 0,
+      total: (countResult[0]?.count ?? 0) > 0 ? (countResult[0]?.count ?? 0) : 0,
       page,
       pageSize,
       totalPages: Math.ceil(
-        (Number(countResult[0]?.count) > 0 ? Number(countResult[0]?.count) : 0) / pageSize,
+        ((countResult[0]?.count ?? 0) > 0 ? (countResult[0]?.count ?? 0) : 0) / pageSize,
       ),
     };
   }
@@ -162,27 +162,26 @@ export class DraftService {
 
     let updateData: Record<string, unknown> = {};
 
-    if ('title' in rest) {
+    if ('title' in rest && rest.title !== undefined) {
       updateData.title = rest.title;
     }
 
-    if ('content' in rest) {
+    if ('content' in rest && rest.content !== undefined) {
       updateData.content = rest.content;
     }
 
-    if ('pathname' in rest) {
+    if ('pathname' in rest && rest.pathname !== undefined) {
       updateData.pathname = rest.pathname ?? null;
     }
 
-    if (tags) {
-      updateData.tags = JSON.stringify(tags);
-    }
+    // tags is already JSON stringified by the schema transform, can be string or null
+    updateData.tags = tags;
 
-    if ('category' in rest) {
+    if ('category' in rest && rest.category !== undefined) {
       updateData.category = rest.category ?? null;
     }
 
-    if ('author' in rest) {
+    if ('author' in rest && rest.author !== undefined) {
       updateData.author = rest.author;
     }
 
@@ -337,27 +336,26 @@ export class DraftService {
 
     const updateData: Record<string, unknown> = {};
 
-    if ('title' in rest) {
+    if ('title' in rest && rest.title !== undefined) {
       updateData.title = rest.title;
     }
 
-    if ('content' in rest) {
+    if ('content' in rest && rest.content !== undefined) {
       updateData.content = rest.content;
     }
 
-    if ('pathname' in rest) {
+    if ('pathname' in rest && rest.pathname !== undefined) {
       updateData.pathname = rest.pathname ?? null;
     }
 
-    if (tags) {
-      updateData.tags = JSON.stringify(tags);
-    }
+    // tags is already JSON stringified by the schema transform, can be string or null
+    updateData.tags = tags;
 
-    if ('category' in rest) {
+    if ('category' in rest && rest.category !== undefined) {
       updateData.category = rest.category ?? null;
     }
 
-    if ('author' in rest) {
+    if ('author' in rest && rest.author !== undefined) {
       updateData.author = rest.author;
     }
 

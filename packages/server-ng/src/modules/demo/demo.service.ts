@@ -36,7 +36,7 @@ export class DemoService implements OnModuleInit {
     @Inject(DATABASE_CONNECTION) private readonly db: Database,
     private readonly configService: ConfigService,
   ) {
-    this.isDemoMode = Boolean(this.configService.get<boolean>('DEMO_MODE', false));
+    this.isDemoMode = this.configService.get<boolean>('DEMO_MODE', false);
   }
 
   // Scheduled restoration every 6 hours in demo mode
@@ -162,7 +162,7 @@ export class DemoService implements OnModuleInit {
     } catch (error) {
       return {
         success: false,
-        message: `Failed to restore demo data: ${error instanceof Error ? error.message : error}`,
+        message: `Failed to restore demo data: ${error instanceof Error ? error.message : String(error)}`,
       };
     }
   }

@@ -1,32 +1,41 @@
 import { z } from 'zod';
 import { initContract } from '@ts-rest/core';
-import { TagSchema, CreateTagSchema, UpdateTagSchema, ArticleSchema } from '../schemas.js';
+import {
+  Tag,
+  TagReq,
+  TagPatch,
+  ArticleList,
+  PaginationQuery,
+  DeleteResponse,
+} from '../runtime/schema.js';
 
-// Response schemas
-export const TagResponseSchema = TagSchema;
-export type TagResponse = z.infer<typeof TagResponseSchema>;
-
-export const TagWithCountSchema = TagSchema.extend({
+// Extended schema with article count
+export const TagWithCount = Tag.extend({
   articleCount: z.number().default(0),
 });
 
-export const TagListResponseSchema = z.object({
-  items: z.array(TagWithCountSchema),
+export const TagListResponse = z.object({
+  items: z.array(TagWithCount),
   total: z.number(),
 });
 
-export const ArticleListResponseSchema = z.object({
-  items: z.array(ArticleSchema),
-  total: z.number(),
-  page: z.number(),
-  pageSize: z.number(),
+// Tag statistics response
+export const TagStatistics = z.object({
+  totalTags: z.number(),
+  totalArticles: z.number(),
+  avgArticlesPerTag: z.number(),
+  topTags: z.array(TagWithCount),
 });
 
-export const ArticleQuerySchema = z.object({
-  page: z.coerce.number().optional().default(1),
-  pageSize: z.coerce.number().optional().default(10),
-  sortBy: z.string().optional().default('createdAt'),
-  sortOrder: z.enum(['asc', 'desc']).optional().default('desc'),
+// Tag with categories association
+export const TagWithCategories = Tag.extend({
+  categories: z.array(
+    z.object({
+      id: z.number(),
+      name: z.string(),
+      articleCount: z.number(),
+    }),
+  ),
 });
 
 export const createTagContract = (c: ReturnType<typeof initContract>) =>
@@ -34,64 +43,64 @@ export const createTagContract = (c: ReturnType<typeof initContract>) =>
     getTags: {
       method: 'GET',
       path: '/v2/tags',
-      responses: { 200: TagListResponseSchema },
+      responses: { 200: TagListResponse },
       summary: 'Get all tags',
     },
     getTagById: {
       method: 'GET',
       path: '/v2/tags/:id',
       pathParams: z.object({ id: z.string() }),
-      responses: { 200: TagResponseSchema },
+      responses: { 200: Tag },
       summary: 'Get tag by ID',
     },
     createTag: {
       method: 'POST',
       path: '/v2/tags',
-      body: CreateTagSchema,
-      responses: { 201: TagResponseSchema },
+      body: TagReq,
+      responses: { 201: Tag },
       summary: 'Create tag',
     },
     updateTag: {
       method: 'PUT',
       path: '/v2/tags/:id',
       pathParams: z.object({ id: z.string() }),
-      body: UpdateTagSchema,
-      responses: { 200: TagResponseSchema },
+      body: TagPatch,
+      responses: { 200: Tag },
       summary: 'Update tag',
     },
     deleteTag: {
       method: 'DELETE',
       path: '/v2/tags/:id',
       pathParams: z.object({ id: z.string() }),
-      responses: { 200: z.object({ success: z.boolean() }) },
+      responses: { 200: DeleteResponse },
       summary: 'Delete tag',
     },
     getStatistics: {
       method: 'GET',
       path: '/v2/tags/statistics/overall',
-      responses: { 200: z.any() },
+      responses: { 200: TagStatistics },
       summary: 'Get tag statistics',
     },
     getTagsWithCategories: {
       method: 'GET',
       path: '/v2/tags/associations/categories',
-      responses: { 200: z.any() },
+      responses: { 200: z.array(TagWithCategories) },
       summary: 'Get tags with categories',
     },
     getArticlesByTagName: {
       method: 'GET',
       path: '/v2/tags/name/:name/articles',
       pathParams: z.object({ name: z.string() }),
-      query: ArticleQuerySchema,
-      responses: { 200: ArticleListResponseSchema },
+      query: PaginationQuery,
+      responses: { 200: ArticleList },
       summary: 'Get articles by tag name',
     },
     getArticlesByTagId: {
       method: 'GET',
       path: '/v2/tags/:id/articles',
       pathParams: z.object({ id: z.string() }),
-      query: ArticleQuerySchema,
-      responses: { 200: ArticleListResponseSchema },
+      query: PaginationQuery,
+      responses: { 200: ArticleList },
       summary: 'Get articles by tag ID',
     },
   });

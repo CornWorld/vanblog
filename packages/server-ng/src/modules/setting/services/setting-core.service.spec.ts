@@ -411,8 +411,8 @@ describe('SettingCoreService', () => {
 
       // Mock getFriendLinks to return existing links
       vi.spyOn(service, 'getFriendLinks').mockResolvedValue(existingLinks);
-      mockHookService.applyFilters.mockImplementation(async (_hook, data) => data);
-      mockRegistryService.updateConfig.mockImplementation(async (_key, value) => value);
+      mockHookService.applyFilters.mockImplementation((_hook, data) => data);
+      mockRegistryService.updateConfig.mockImplementation((_key, value) => value);
       mockHookService.doAction.mockResolvedValue(undefined);
 
       const result = await service.updateFriendLink(0, updateDto);
