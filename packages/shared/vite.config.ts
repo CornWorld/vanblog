@@ -15,8 +15,6 @@ export default defineConfig({
       formats: ['es'],
     },
     rollupOptions: {
-      // 只有 @ts-rest/core 作为外部依赖
-      // zod, drizzle-orm, drizzle-zod, dayjs 都会被内联
       external: (id) => {
         return id === '@ts-rest/core' || id.startsWith('@ts-rest/');
       },
