@@ -11,8 +11,6 @@ import { RewardService } from './reward.service';
 import type { PluginContext } from '../../src/modules/plugin/interfaces/plugin-context.interface';
 import type { Plugin } from '../../src/modules/plugin/services/loader.service';
 
-// 移除未使用的函数
-
 // 插件 Logger 实例
 const logger = new Logger(withPluginPrefix('rewards-plugin'));
 

@@ -76,14 +76,16 @@ export class StatisticsService {
           .from(articles)
           .where(eq(articles.category, category.name));
 
+        const result = stats[0];
+
         return {
           id: category.id,
           name: category.name,
           slug: category.slug ?? undefined,
-          articleCount: (stats[0]?.articleCount ?? 0) > 0 ? (stats[0]?.articleCount ?? 0) : 0,
-          publishedCount: (stats[0]?.publishedCount ?? 0) > 0 ? (stats[0]?.publishedCount ?? 0) : 0,
-          privateCount: (stats[0]?.privateCount ?? 0) > 0 ? (stats[0]?.privateCount ?? 0) : 0,
-          totalViews: (stats[0]?.totalViews ?? 0) > 0 ? (stats[0]?.totalViews ?? 0) : 0,
+          articleCount: Math.max(0, result?.articleCount ?? 0),
+          publishedCount: Math.max(0, result?.publishedCount ?? 0),
+          privateCount: Math.max(0, result?.privateCount ?? 0),
+          totalViews: Math.max(0, result?.totalViews ?? 0),
         };
       }),
     );
@@ -112,12 +114,14 @@ export class StatisticsService {
           .from(articles)
           .where(like(articles.tags, `"%${tag.name}%"`.replace('"%', '%"').replace('%"', '"%')));
 
+        const result = stats[0];
+
         return {
           id: tag.id,
           name: tag.name,
           slug: tag.slug ?? undefined,
-          articleCount: (stats[0]?.articleCount ?? 0) > 0 ? (stats[0]?.articleCount ?? 0) : 0,
-          totalViews: (stats[0]?.totalViews ?? 0) > 0 ? (stats[0]?.totalViews ?? 0) : 0,
+          articleCount: Math.max(0, result?.articleCount ?? 0),
+          totalViews: Math.max(0, result?.totalViews ?? 0),
         };
       }),
     );
@@ -150,13 +154,14 @@ export class StatisticsService {
       })
       .from(articles);
 
+    const result = stats[0];
+
     return {
-      totalArticles: (stats[0]?.totalArticles ?? 0) > 0 ? (stats[0]?.totalArticles ?? 0) : 0,
-      publishedArticles:
-        (stats[0]?.publishedArticles ?? 0) > 0 ? (stats[0]?.publishedArticles ?? 0) : 0,
-      privateArticles: (stats[0]?.privateArticles ?? 0) > 0 ? (stats[0]?.privateArticles ?? 0) : 0,
-      hiddenArticles: (stats[0]?.hiddenArticles ?? 0) > 0 ? (stats[0]?.hiddenArticles ?? 0) : 0,
-      totalViews: (stats[0]?.totalViews ?? 0) > 0 ? (stats[0]?.totalViews ?? 0) : 0,
+      totalArticles: Math.max(0, result?.totalArticles ?? 0),
+      publishedArticles: Math.max(0, result?.publishedArticles ?? 0),
+      privateArticles: Math.max(0, result?.privateArticles ?? 0),
+      hiddenArticles: Math.max(0, result?.hiddenArticles ?? 0),
+      totalViews: Math.max(0, result?.totalViews ?? 0),
     };
   }
 

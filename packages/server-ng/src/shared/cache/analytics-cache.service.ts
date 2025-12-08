@@ -64,7 +64,7 @@ export class AnalyticsCacheService {
       await this.cache.set('analytics:overview', overview, 300); // 5 分钟缓存
       this.logger.debug('Overview cache updated');
     } catch (error) {
-      this.logger.error('Failed to update overview cache', error);
+      this.logger.error('Failed to update overview cache', error as Error);
     }
   }
 
@@ -78,7 +78,7 @@ export class AnalyticsCacheService {
       await this.cache.set('analytics:page-rankings', rankings, 600); // 10 分钟缓存
       this.logger.debug('Page rankings cache updated');
     } catch (error) {
-      this.logger.error('Failed to update page rankings cache', error);
+      this.logger.error('Failed to update page rankings cache', error as Error);
     }
   }
 
@@ -92,7 +92,7 @@ export class AnalyticsCacheService {
       await this.cache.set('analytics:referrer-stats', stats, 900); // 15 分钟缓存
       this.logger.debug('Referrer stats cache updated');
     } catch (error) {
-      this.logger.error('Failed to update referrer stats cache', error);
+      this.logger.error('Failed to update referrer stats cache', error as Error);
     }
   }
 
@@ -106,7 +106,7 @@ export class AnalyticsCacheService {
       await this.cache.set('analytics:chart-data', chartData, 3600); // 1 小时缓存
       this.logger.debug('Chart data cache updated');
     } catch (error) {
-      this.logger.error('Failed to update chart data cache', error);
+      this.logger.error('Failed to update chart data cache', error as Error);
     }
   }
 

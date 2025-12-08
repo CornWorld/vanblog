@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { z } from 'zod';
 
 import { ConfigService } from './config.service';
+import { validateCorsOrigin } from './security.config';
 
 import type { AllConfig } from './config.interface';
 
@@ -218,10 +219,10 @@ export class ConfigValidationService {
       );
     }
 
-    // 使用新的 CORS 验证函数
-    const corsErrors = this.validateCorsOriginSecurity(config.cors.origin, config.app.isProduction);
-    result.errors.push(...corsErrors.filter((error) => error.includes('CRITICAL')));
-    result.warnings.push(...corsErrors.filter((error) => !error.includes('CRITICAL')));
+    // 使用统一的 CORS 验证函数
+    const corsValidation = validateCorsOrigin(config.cors.origin, config.app.isProduction);
+    result.errors.push(...corsValidation.errors);
+    result.warnings.push(...corsValidation.warnings);
 
     // Check upload file size limits
     const maxSizeMB = config.upload.maxFileSize / (1024 * 1024);
@@ -230,42 +231,6 @@ export class ConfigValidationService {
         `Upload max file size is ${maxSizeMB.toFixed(1)}MB, consider if this is appropriate`,
       );
     }
-  }
-
-  /**
-   * 验证 CORS 源配置的安全性
-   */
-  private validateCorsOriginSecurity(origin: string | string[], isProduction: boolean): string[] {
-    const errors: string[] = [];
-
-    if (isProduction && origin === '*') {
-      errors.push('CRITICAL: CORS origin cannot be "*" in production environment');
-      return errors; // 早期返回，避免重复错误
-    }
-
-    const origins = Array.isArray(origin) ? origin : [origin];
-
-    for (const singleOrigin of origins) {
-      if (singleOrigin === '*') {
-        if (isProduction) {
-          errors.push('CRITICAL: Wildcard CORS origin is not allowed in production');
-        }
-        continue;
-      }
-
-      try {
-        new URL(singleOrigin);
-      } catch {
-        errors.push(`CORS origin appears to be malformed URL: ${singleOrigin}`);
-      }
-
-      // 检查是否使用 HTTP 在生产环境
-      if (isProduction && singleOrigin.startsWith('http://')) {
-        errors.push(`HTTP origin not recommended in production: ${singleOrigin}`);
-      }
-    }
-
-    return errors;
   }
 
   /**

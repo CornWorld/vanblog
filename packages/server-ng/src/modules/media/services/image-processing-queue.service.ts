@@ -7,7 +7,7 @@ import {
   imageProcessingQueue,
   type ImageProcessingQueueInsert,
   type ImageProcessingQueueSelect,
-} from '../../../database/schema/image-processing-queue';
+} from '@vanblog/shared/drizzle';
 
 import { ImageProcessingService, type ImageProcessingOptions } from './image-processing.service';
 

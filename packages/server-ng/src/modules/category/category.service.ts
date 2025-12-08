@@ -282,6 +282,14 @@ export class CategoryService {
     });
   }
 
+  /**
+   * 获取分类及其关联的标签统计
+   *
+   * 返回所有分类以及每个分类下的标签使用情况
+   * 使用优化的查询策略，一次性获取所有数据后在内存中分组，避免 N+1 查询问题
+   *
+   * @returns 分类和标签统计数据数组
+   */
   async getCategoriesWithTags(): Promise<
     {
       category: Category;
@@ -303,7 +311,7 @@ export class CategoryService {
           .from(articles)
           .where(sql`${articles.category} IS NOT NULL`);
 
-        // 按分类分组文章标签
+        // 在内存中按分类分组文章标签
         const articlesByCategory = new Map<string, string[]>();
         allArticlesWithTags.forEach((article) => {
           if (article.category && article.tags) {

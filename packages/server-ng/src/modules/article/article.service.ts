@@ -35,19 +35,34 @@ export class ArticleService {
     private readonly configService: ConfigService,
   ) {}
 
+  /**
+   * 派生文章发布时间
+   *
+   * 当前规则：优先使用 updatedAt，失败时回退到 createdAt
+   *
+   * @param createdAt 创建时间
+   * @param updatedAt 更新时间
+   * @returns 格式化的发布时间字符串
+   */
   private derivePubTime(createdAt: string | Date, updatedAt: string | Date): string {
     try {
       const base = updatedAt;
       return dayjs(base).format();
     } catch (_e) {
-      this.logger.warn(
-        'TODO(pubTime): 业务规则不明确，无法派生 pubTime。请确认 pubTime 推导规则（优先 updatedAt，其次 createdAt）。',
-      );
+      this.logger.warn('派生 pubTime 失败，使用 createdAt 作为回退值');
       const fallback = typeof createdAt === 'string' && createdAt !== '' ? createdAt : new Date();
       return dayjs(fallback).format();
     }
   }
 
+  /**
+   * 查询文章列表
+   *
+   * 支持分页、排序、分类筛选、标签筛选、关键词搜索等功能
+   *
+   * @param query 查询参数
+   * @returns 文章列表和分页信息
+   */
   async findAll(
     query: z.infer<typeof ArticleQuerySchema>,
   ): Promise<z.infer<typeof ArticleListResponseSchema>> {
@@ -63,12 +78,13 @@ export class ArticleService {
       includeHidden,
     } = query;
 
-    // Build where clause
+    // 构建查询条件
     const whereConditions = [];
     if (category) {
       whereConditions.push(eq(articles.category, category));
     }
     if (tag) {
+      // 标签存储为 JSON 数组，使用 LIKE 匹配
       const tagConditions = [like(articles.tags, `"%"${tag}"%"`)];
       whereConditions.push(or(...tagConditions));
     }
@@ -87,12 +103,13 @@ export class ArticleService {
 
     const whereClause = whereConditions.length > 0 ? and(...whereConditions) : undefined;
 
-    // Build order by clause
+    // 构建排序条件
     const orderByClause = (() => {
       const column = articles[sortBy as keyof typeof articles.$inferSelect];
       return sortOrder === 'asc' ? asc(column) : desc(column);
     })();
 
+    // 并发执行查询和计数，提高性能
     const [articleResults, countResult] = await Promise.all([
       this.db
         .select()
@@ -107,6 +124,7 @@ export class ArticleService {
         .where(whereClause),
     ]);
 
+    // 处理文章数据：解析 JSON 字段，格式化日期
     const processedArticles = articleResults.map((article) => ({
       id: article.id,
       title: article.title,
@@ -137,6 +155,15 @@ export class ArticleService {
     };
   }
 
+  /**
+   * 搜索文章
+   *
+   * 提供高级搜索功能，支持标题/内容搜索、分类和标签筛选、排序等
+   * 使用查询优化器进行性能监控
+   *
+   * @param query 搜索参数
+   * @returns 搜索结果和分页信息
+   */
   async search(
     query: z.infer<typeof ArticleSearchSchema>,
   ): Promise<z.infer<typeof ArticleSearchResponseSchema>> {
@@ -156,7 +183,7 @@ export class ArticleService {
     return await this.queryOptimizer.withPerformanceMonitoring(
       'ArticleService.search',
       async () => {
-        // Build where clause
+        // 构建搜索条件
         const whereConditions = [];
 
         if (category) {
@@ -164,12 +191,13 @@ export class ArticleService {
         }
 
         if (Array.isArray(tags) && tags.length > 0) {
+          // 标签存储为 JSON 数组，使用 LIKE 匹配多个标签
           const tagConditions = tags.map((tag: string) => like(articles.tags, `"%"${tag}"%"`));
           whereConditions.push(or(...tagConditions));
         }
 
         if (keyword !== '') {
-          // 使用优化的搜索查询
+          // 使用优化的搜索查询，支持仅搜索标题或仅搜索内容
           const searchInTitle = !contentOnly; // 默认搜索标题，除非明确指定只搜索内容
           const searchInContent = !titleOnly; // 默认搜索内容，除非明确指定只搜索标题
 
@@ -190,7 +218,7 @@ export class ArticleService {
 
         const whereClause = whereConditions.length > 0 ? and(...whereConditions) : undefined;
 
-        // Build order by clause
+        // 构建动态排序条件
         const orderByClause = (() => {
           const validColumns = ['id', 'title', 'createdAt', 'updatedAt', 'category'] as const;
           type ValidColumn = (typeof validColumns)[number];
@@ -443,8 +471,7 @@ export class ArticleService {
       updatedAt: dayjs().format(),
     };
 
-    // Process article data
-
+    // 触发创建前的插件钩子，允许插件修改文章数据
     try {
       // Trigger article|beforeCreate hook (new hook system)
       newArticleData = await this.hookService.applyFilters('article|beforeCreate', newArticleData, {
@@ -455,7 +482,7 @@ export class ArticleService {
       this.logger.error(`Error in article|beforeCreate hook: ${msg}`);
     }
 
-    // Hash password if provided (after hooks)
+    // 密码加密（在钩子处理之后）
     if (newArticleData.password) {
       newArticleData.password = await bcrypt.hash(newArticleData.password, 10);
     }
@@ -476,8 +503,7 @@ export class ArticleService {
       viewer: newArticle.viewer,
     });
 
-    // Article created successfully
-
+    // 触发创建后的插件钩子，通知插件文章已创建
     await this.hookService.doAction('article|afterCreate', articleResult, { action: 'create' });
 
     return articleResult;
@@ -520,8 +546,7 @@ export class ArticleService {
       updateData.tags = tagNames;
     }
 
-    // Process update data
-
+    // 触发更新前的插件钩子，允许插件修改更新数据
     try {
       // Trigger article|beforeUpdate hook (new hook system)
       updateData = await this.hookService.applyFilters('article|beforeUpdate', updateData, {
@@ -533,7 +558,7 @@ export class ArticleService {
       this.logger.error(`Error in article|beforeUpdate hook: ${msg}`);
     }
 
-    // Hash password if provided (after hooks)
+    // 密码加密（在钩子处理之后）
     const pwd = updateData.password;
     if (typeof pwd === 'string' && pwd.length > 0) {
       updateData.password = await bcrypt.hash(pwd, 10);
@@ -559,9 +584,7 @@ export class ArticleService {
       viewer: updatedArticle.viewer,
     });
 
-    // Article updated successfully
-
-    // Trigger article|updated hook (new hook system)
+    // 触发更新后的插件钩子，通知插件文章已更新
     await this.hookService.doAction('article|afterUpdate', articleResult, {
       action: 'update',
       id,
@@ -582,14 +605,12 @@ export class ArticleService {
       throw new NotFoundException(`Article with ID ${id} not found`);
     }
 
-    // Prepare for deletion
-
-    // Trigger article|beforeDelete hook (new hook system)
+    // 触发删除前的插件钩子，允许插件执行清理操作
     await this.hookService.doAction('article|beforeDelete', { id }, { action: 'delete' });
 
     await this.db.delete(articles).where(eq(articles.id, id));
 
-    // Trigger webhook event
+    // 触发删除后的插件钩子，通知插件文章已删除
     await this.hookService.doAction('article|afterDelete', { id }, { action: 'delete' });
   }
 
@@ -674,22 +695,30 @@ export class ArticleService {
     };
   }
 
+  /**
+   * 自动创建缺失的标签
+   *
+   * 在创建或更新文章时，自动创建数据库中不存在的标签
+   * 避免因标签不存在导致的关联错误
+   *
+   * @param tagNames 标签名称数组
+   */
   private async createMissingTags(tagNames: string[]): Promise<void> {
-    // Get existing tags
+    // 获取现有标签
     const existingTags = await this.db.select().from(tags);
     const existingTagNames = new Set(existingTags.map((tag) => tag.name));
 
-    // Find tags that need to be created
+    // 找出需要创建的标签
     const missingTags = tagNames.filter((tagName) => !existingTagNames.has(tagName));
 
-    // Create missing tags
+    // 批量创建缺失的标签
     if (missingTags.length > 0) {
       const tagsToCreate = missingTags.map((tagName) => ({
         name: tagName,
         slug: tagName.toLowerCase().replace(/\s+/g, '-'),
       }));
 
-      // Ensure we call returning() so upstream tests/mocks that expect it remain aligned
+      // 确保返回结果，以保持与测试/mock 的一致性
       await this.db.insert(tags).values(tagsToCreate).returning();
     }
   }

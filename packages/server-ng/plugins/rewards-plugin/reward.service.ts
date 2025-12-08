@@ -41,8 +41,6 @@ export class RewardService implements OnModuleInit {
       rewards.push(rewardData);
     }
 
-    // 由于插件上下文可能不直接支持配置更新，我们可能需要通过其他方式
-    // 实现配置更新，比如通过 SettingRegistryService
     await this.updateConfig(rewards);
     return rewards;
   }
@@ -58,9 +56,6 @@ export class RewardService implements OnModuleInit {
     if (!this.context) {
       throw new Error('Plugin context not initialized');
     }
-    // 这里需要实现配置更新逻辑
-    // 由于插件上下文可能不直接支持配置更新，我们可能需要通过其他方式
-    // 暂时使用 data 存储作为替代方案
     await this.context.data.set(this.CONFIG_KEY, rewards);
   }
 }

@@ -11,22 +11,26 @@ import { and, desc, eq } from 'drizzle-orm';
 import { DATABASE_CONNECTION, type Database } from '../../database';
 import { articles } from '@vanblog/shared/drizzle';
 
-// tags parsing moved into shared helper
-
-// 使用本地类型，后续迁移到 shared
-
 @Injectable()
 export class TimelineService {
   constructor(@Inject(DATABASE_CONNECTION) private readonly db: Database) {}
 
-  // 获取按年份聚合的文章时间线（仅公开文章）
+  /**
+   * 获取按年份聚合的文章时间线
+   *
+   * 根据文章的创建时间，将文章按年份进行分组聚合。
+   * 默认只返回公开的文章（非隐藏且非私密）。
+   *
+   * @param includeHidden 是否包含隐藏文章（默认为 false）
+   * @returns 按年份分组的文章列表，键为年份字符串，值为该年份的文章数组
+   */
   async getTimeline(includeHidden = false): Promise<Record<string, TimelineArticleInput[]>> {
-    // 过滤条件：隐藏文章默认不包含；私有文章不包含
+    // 过滤条件：隐藏文章默认不包含；私有文章始终不包含
     const where = includeHidden
       ? eq(articles.private, false)
       : and(eq(articles.hidden, false), eq(articles.private, false));
 
-    // 先按创建时间降序取出必要字段
+    // 按创建时间降序查询文章的必要字段
     const rows = await this.db
       .select({
         id: articles.id,
@@ -50,10 +54,10 @@ export class TimelineService {
     const buckets = new Map<string, TimelineArticleInput[]>();
 
     for (const row of rows) {
-      // Use createdAt as fallback for pubTime since the column doesn't exist yet
+      // 使用 createdAt 作为 pubTime 的回退值（因为该列尚未迁移）
       const dbRow: TimelineArticleDbRow = {
         ...row,
-        pubTime: row.createdAt, // fallback to createdAt
+        pubTime: row.createdAt,
       };
       const input = toTimelineArticleInputFromDb(dbRow);
       const decoded = decodeTimelineArticle(input);

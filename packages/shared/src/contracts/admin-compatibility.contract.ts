@@ -1,6 +1,47 @@
 import { initContract } from '@ts-rest/core';
 import { z } from 'zod';
 
+/**
+ * ISR (增量静态再生成) 配置 schema
+ *
+ * ISR (Incremental Static Regeneration) configuration schema
+ */
+const ISRConfigSchema = z.object({
+  skip: z.boolean(),
+  interval: z.number(),
+});
+
+/**
+ * HTTPS 配置 schema
+ *
+ * HTTPS configuration schema
+ */
+const HttpsConfigSchema = z.object({
+  enabled: z.boolean(),
+  email: z.string(),
+  domain: z.string(),
+});
+
+/**
+ * 登录配置 schema
+ *
+ * Login configuration schema
+ */
+const LoginConfigSchema = z.object({
+  allowRegister: z.boolean(),
+  allowSocialLogin: z.boolean(),
+});
+
+/**
+ * Waline 评论系统配置 schema
+ *
+ * Waline comment system configuration schema
+ */
+const WalineConfigSchema = z.object({
+  serverURL: z.string(),
+  pageSize: z.number(),
+});
+
 export const createAdminCompatibilityContract = (c: ReturnType<typeof initContract>) =>
   c.router({
     triggerISR: {
@@ -12,13 +53,13 @@ export const createAdminCompatibilityContract = (c: ReturnType<typeof initContra
     getISRConfig: {
       method: 'GET',
       path: '/v2/admin/isr/config',
-      responses: { 200: z.object({ skip: z.boolean(), interval: z.number() }) },
+      responses: { 200: ISRConfigSchema },
     },
     updateISRConfig: {
       method: 'PUT',
       path: '/v2/admin/isr/config',
-      body: z.record(z.string(), z.any()),
-      responses: { 200: z.record(z.string(), z.any()) },
+      body: ISRConfigSchema.partial(),
+      responses: { 200: ISRConfigSchema },
     },
     getCaddyLogs: {
       method: 'GET',
@@ -38,34 +79,34 @@ export const createAdminCompatibilityContract = (c: ReturnType<typeof initContra
     getHttpsConfig: {
       method: 'GET',
       path: '/v2/admin/settings/https',
-      responses: { 200: z.object({ enabled: z.boolean(), email: z.string(), domain: z.string() }) },
+      responses: { 200: HttpsConfigSchema },
     },
     updateHttpsConfig: {
       method: 'PUT',
       path: '/v2/admin/settings/https',
-      body: z.record(z.string(), z.any()),
-      responses: { 200: z.record(z.string(), z.any()) },
+      body: HttpsConfigSchema.partial(),
+      responses: { 200: HttpsConfigSchema },
     },
     getLoginConfig: {
       method: 'GET',
       path: '/v2/admin/settings/login',
-      responses: { 200: z.object({ allowRegister: z.boolean(), allowSocialLogin: z.boolean() }) },
+      responses: { 200: LoginConfigSchema },
     },
     updateLoginConfig: {
       method: 'PUT',
       path: '/v2/admin/settings/login',
-      body: z.record(z.string(), z.any()),
-      responses: { 200: z.record(z.string(), z.any()) },
+      body: LoginConfigSchema.partial(),
+      responses: { 200: LoginConfigSchema },
     },
     getWalineConfig: {
       method: 'GET',
       path: '/v2/admin/settings/waline',
-      responses: { 200: z.object({ serverURL: z.string(), pageSize: z.number() }) },
+      responses: { 200: WalineConfigSchema },
     },
     updateWalineConfig: {
       method: 'PUT',
       path: '/v2/admin/settings/waline',
-      body: z.record(z.string(), z.any()),
-      responses: { 200: z.record(z.string(), z.any()) },
+      body: WalineConfigSchema.partial(),
+      responses: { 200: WalineConfigSchema },
     },
   });

@@ -123,7 +123,7 @@ export class DraftService {
       author: 'admin', // Default author since not in CreateDraftDto
     };
 
-    // Trigger draft|created action hook (new hook system)
+    // 触发创建前的插件钩子
     draftData = await this.hookService.applyFilters('draft|beforeCreate', draftData, {
       action: 'create',
     });
@@ -145,7 +145,7 @@ export class DraftService {
       updatedAt: dayjs(newDraft.updatedAt).format(),
     };
 
-    // Trigger afterCreateDraft hook (new hook system)
+    // 触发创建后的插件钩子
     await this.hookService.doAction('draft|afterCreate', draftResult, { action: 'create' });
 
     return draftResult;
@@ -187,7 +187,7 @@ export class DraftService {
 
     updateData.updatedAt = dayjs().format();
 
-    // Trigger draft|before_update hook (new hook system)
+    // 触发更新前的插件钩子
     updateData = await this.hookService.applyFilters('draft|beforeUpdate', updateData, {
       action: 'update',
       id,
@@ -214,17 +214,17 @@ export class DraftService {
       updatedAt: dayjs(updatedDraft.updatedAt).format(),
     };
 
-    // Trigger draft|updated hook (new hook system)
+    // 触发更新后的插件钩子
     await this.hookService.doAction('draft|afterUpdate', draftResult, { action: 'update', id });
 
     return draftResult;
   }
 
   async remove(id: number): Promise<void> {
-    // Delete all versions first
+    // 首先删除所有版本
     await this.draftVersionService.deleteAllVersions(id);
 
-    // Trigger draft|before_delete hook (new hook system)
+    // 触发删除前的插件钩子
     await this.hookService.doAction('draft|beforeDelete', { id }, { action: 'delete' });
 
     const result = await this.db
@@ -236,10 +236,20 @@ export class DraftService {
       throw new NotFoundException(`Draft with ID ${id} not found`);
     }
 
-    // Trigger draft|deleted hook (new hook system)
+    // 触发删除后的插件钩子
     await this.hookService.doAction('draft|afterDelete', { id }, { action: 'delete' });
   }
 
+  /**
+   * 发布草稿为文章
+   *
+   * 将草稿转换为正式文章，支持设置密码保护、置顶等选项
+   * 发布成功后会自动删除草稿
+   *
+   * @param id 草稿 ID
+   * @param publishDto 发布选项
+   * @returns 创建的文章实体
+   */
   async publish(id: number, publishDto: z.infer<typeof PublishDraftSchema>): Promise<Article> {
     // First, get the draft
     const draft = await this.findOne(id);
@@ -276,7 +286,7 @@ export class DraftService {
       throw new Error('Failed to publish draft');
     }
 
-    // Delete the draft after successful publication
+    // 发布成功，删除原草稿
     await this.remove(id);
 
     const [newArticle] = createdArticles;
@@ -294,7 +304,7 @@ export class DraftService {
       viewer: newArticle.viewer,
     });
 
-    // Trigger webhook event
+    // 触发发布成功的 webhook 事件
     await this.hookService.doAction('draft|afterPublish', {
       draftId: id,
       articleId: articleResult.id,
@@ -383,22 +393,29 @@ export class DraftService {
     };
   }
 
+  /**
+   * 自动创建缺失的标签
+   *
+   * 在发布草稿时，自动创建数据库中不存在的标签
+   *
+   * @param tagNames 标签名称数组
+   */
   private async createMissingTags(tagNames: string[]): Promise<void> {
-    // Get existing tags
+    // 获取现有标签
     const existingTags = await this.db.select().from(tags);
     const existingTagNames = new Set(existingTags.map((tag) => tag.name));
 
-    // Find tags that need to be created
+    // 找出需要创建的标签
     const missingTags = tagNames.filter((tagName) => !existingTagNames.has(tagName));
 
-    // Create missing tags
+    // 批量创建缺失的标签
     if (missingTags.length > 0) {
       const tagsToCreate = missingTags.map((tagName) => ({
         name: tagName,
         slug: tagName.toLowerCase().replace(/\s+/g, '-'),
       }));
 
-      // Ensure we call returning() so upstream tests/mocks that expect it remain aligned
+      // 确保返回结果，以保持与测试/mock 的一致性
       await this.db.insert(tags).values(tagsToCreate).returning();
     }
   }

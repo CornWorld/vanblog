@@ -161,14 +161,12 @@ export class CDNService {
 
   /**
    * 预热 CDN 缓存
-   */
-  /**
-   * 预热 CDN 缓存
    *
    * 主动请求指定的 URL 列表，让 CDN 提前缓存这些资源，
-   * 提高用户首次访问的速度。
+   * 提高用户首次访问的速度。适合在发布新内容后使用。
    *
    * @param urls 需要预热的 URL 列表
+   * @returns Promise，在所有预热请求完成后 resolve
    */
   async warmupCache(urls: string[]): Promise<void> {
     if (!this.config.enabled) {
@@ -193,16 +191,13 @@ export class CDNService {
   }
 
   /**
-   * 清除 CDN 缓存
-   */
-  /**
    * 清除指定 URL 的 CDN 缓存
    *
    * 通过 CDN 提供商的 API 清除指定 URL 的缓存，
-   * 强制 CDN 重新从源站获取最新内容。
+   * 强制 CDN 重新从源站获取最新内容。通常在内容更新后使用。
    *
    * @param urls 需要清除缓存的 URL 列表
-   * @returns 清除操作是否成功
+   * @returns Promise<boolean> 清除操作是否成功
    */
   async purgeCache(urls: string[]): Promise<boolean> {
     if (
@@ -238,15 +233,12 @@ export class CDNService {
   }
 
   /**
-   * 清除所有缓存
-   */
-  /**
    * 清除所有 CDN 缓存
    *
    * 清除整个 CDN 的所有缓存内容，通常在网站大规模更新时使用。
-   * 注意：此操作会影响所有用户的访问速度。
+   * 注意：此操作会影响所有用户的访问速度，应谨慎使用。
    *
-   * @returns 清除操作是否成功
+   * @returns Promise<boolean> 清除操作是否成功
    */
   async purgeAllCache(): Promise<boolean> {
     if (
@@ -307,17 +299,14 @@ export class CDNService {
   }
 
   /**
-   * 生成响应式图片 URL 集合
-   */
-  /**
    * 生成响应式图片 URL 列表
    *
    * 为指定图片生成不同尺寸的 URL，用于响应式图片显示。
-   * 支持自定义尺寸列表。
+   * 支持自定义尺寸列表，默认包含常用的响应式断点。
    *
    * @param imagePath 图片路径
    * @param sizes 图片宽度列表，默认包含常用的响应式断点
-   * @returns 包含 URL 和宽度的对象数组
+   * @returns Array<{url: string, width: number}> 包含 URL 和宽度的对象数组
    */
   generateResponsiveImageUrls(
     imagePath: string,
@@ -330,17 +319,14 @@ export class CDNService {
   }
 
   /**
-   * 生成图片 srcset 字符串
-   */
-  /**
    * 生成 HTML srcset 属性值
    *
    * 为指定图片生成符合 HTML srcset 规范的字符串，
-   * 用于响应式图片的 <img> 标签。
+   * 用于响应式图片的 img 标签。浏览器会根据设备屏幕自动选择最合适的图片。
    *
    * @param imagePath 图片路径
    * @param sizes 图片宽度列表，默认包含常用的响应式断点
-   * @returns srcset 属性值字符串
+   * @returns string srcset 属性值字符串，例如 "/img.jpg?w=320 320w, /img.jpg?w=640 640w"
    */
   generateSrcSet(imagePath: string, sizes: number[] = [320, 640, 768, 1024, 1280, 1920]): string {
     const urls = this.generateResponsiveImageUrls(imagePath, sizes);

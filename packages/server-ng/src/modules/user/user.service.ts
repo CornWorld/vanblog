@@ -18,7 +18,17 @@ export class UserService {
     private readonly hookService: HookService,
   ) {}
 
-  // 将输入规范化为 string[] | undefined（字符串按逗号拆分并去空白）
+  /**
+   * 规范化权限数据格式
+   *
+   * 将多种权限输入格式统一转换为字符串数组:
+   * - 数组格式: 直接过滤并返回字符串元素
+   * - 字符串格式: 按逗号分割后去除空白，返回非空字符串数组
+   * - 其他格式: 返回 undefined
+   *
+   * @param input 输入的权限数据（可能是数组、字符串或其他类型）
+   * @returns 规范化后的权限数组或 undefined
+   */
   private normalizePermissions(input: unknown): string[] | undefined {
     if (Array.isArray(input)) {
       const arr = input.filter((v): v is string => typeof v === 'string');
@@ -37,13 +47,13 @@ export class UserService {
   async create(createUserDto: CreateUserDto): Promise<User> {
     let userData = createUserDto;
 
-    // Trigger beforeCreate hook
+    // 触发 beforeCreate 钩子，允许插件修改创建数据
     try {
       userData = await this.hookService.applyFilters('user|beforeCreate', userData, {
         action: 'create',
       });
     } catch {
-      // Hook errors should not break the main flow
+      // 钩子错误不应中断主流程
     }
 
     const existingUser = await this.db
@@ -58,7 +68,7 @@ export class UserService {
 
     const hashedPassword = await bcrypt.hash(userData.password, 10);
 
-    // Persist with DB schema conversions (permissions: string | string[] -> JSON string|null)
+    // 权限数据转换：API 格式（string[] | string）-> DB 格式（JSON string | null）
     const normalizedPermissions = this.normalizePermissions(
       (userData as unknown as { permissions?: unknown }).permissions,
     );
@@ -80,7 +90,7 @@ export class UserService {
 
     const userResult = this.mapToEntity(newUser);
 
-    // Trigger webhook event
+    // 触发 afterCreate 钩子
     await this.hookService.doAction('user|afterCreate', userResult, {
       id: userResult.id,
       username: userResult.username,
@@ -129,16 +139,17 @@ export class UserService {
   async update(id: number, updateUserDto: Partial<UpdateUserDto>): Promise<User> {
     let userData = updateUserDto;
 
-    // Trigger user|beforeUpdate hook
+    // 触发 user|beforeUpdate 钩子，允许插件修改更新数据
     try {
       userData = await this.hookService.applyFilters('user|beforeUpdate', userData, {
         action: 'update',
         id,
       });
     } catch {
-      // Hook errors should not break the main flow
+      // 钩子错误不应中断主流程
     }
 
+    // 构建更新数据对象，仅包含提供的字段
     const updateData: {
       password?: string;
       nickname?: string;
@@ -148,6 +159,7 @@ export class UserService {
       permissions?: string | null;
     } = {};
 
+    // 密码更新：加密后存储
     let passwordChanged = false;
     if (userData.password) {
       updateData.password = await bcrypt.hash(userData.password, 10);
@@ -166,7 +178,7 @@ export class UserService {
       updateData.type = userData.type;
     }
     if (userData.permissions !== undefined) {
-      // Prepare update data, converting permissions via DB schema
+      // 权限数据转换：API 格式（string[]）-> DB 格式（JSON string）
       const normalizedPermissions = this.normalizePermissions(
         (userData as unknown as { permissions?: unknown }).permissions,
       );
@@ -186,7 +198,7 @@ export class UserService {
 
     const userResult = this.mapToEntity(updatedUsers[0]);
 
-    // If password was changed, trigger token revocation through hook system
+    // 密码修改后撤销所有令牌，强制用户重新登录
     if (passwordChanged) {
       await this.hookService.doAction('user|afterPasswordChange', {
         userId: id,
@@ -194,7 +206,7 @@ export class UserService {
       });
     }
 
-    // Trigger webhook event
+    // 触发 user|afterUpdate 钩子
     await this.hookService.doAction('user|afterUpdate', userResult, {
       id: userResult.id,
       username: userResult.username,
@@ -208,7 +220,7 @@ export class UserService {
   }
 
   async remove(id: number): Promise<void> {
-    // Trigger user|beforeDelete hook
+    // 触发 user|beforeDelete 钩子
     try {
       await this.hookService.doAction(
         'user|beforeDelete',
@@ -218,7 +230,7 @@ export class UserService {
         },
       );
     } catch {
-      // Hook errors should not break the main flow
+      // 钩子错误不应中断主流程
     }
 
     const result = await this.db.delete(users).where(eq(users.id, id)).returning();
@@ -227,7 +239,7 @@ export class UserService {
       throw new NotFoundException(`User with ID ${String(id)} not found`);
     }
 
-    // Trigger webhook event
+    // 触发 user|afterDelete 钩子
     await this.hookService.doAction('user|afterDelete', { id });
   }
 
@@ -237,11 +249,23 @@ export class UserService {
     return user ? this.mapToEntity(user, true) : null;
   }
 
+  /**
+   * 将数据库用户记录映射为实体对象
+   *
+   * 处理数据库与实体之间的数据格式差异:
+   * - 权限字段从 JSON 字符串解析为字符串数组
+   * - 可选字段从 null 转换为 undefined
+   * - 根据参数决定是否包含密码字段
+   *
+   * @param dbUser 数据库查询结果
+   * @param includePassword 是否在结果中包含密码字段（默认不包含）
+   * @returns 用户实体对象
+   */
   private mapToEntity(dbUser: typeof users.$inferSelect, includePassword = false): User {
-    // Normalize permissions: DB stores JSON string (or null) -> entity expects string[] | undefined
+    // 规范化权限: 数据库存储 JSON 字符串（或 null）-> 实体期望 string[] | undefined
     const permissions: string[] | undefined = (() => {
       const raw = dbUser.permissions;
-      if (raw == null) return undefined; // null -> undefined (not set)
+      if (raw == null) return undefined; // null -> undefined（未设置）
       if (raw === '') return [];
       try {
         const parsedUnknown: unknown = JSON.parse(raw);

@@ -25,6 +25,14 @@ export class TagService {
     private readonly hookService: HookService,
   ) {}
 
+  /**
+   * 获取所有标签
+   *
+   * 使用批量查询优化，避免 N+1 查询问题
+   * 同时统计每个标签关联的文章数量
+   *
+   * @returns 标签列表和总数
+   */
   async findAll(): Promise<z.infer<typeof TagListResponseSchema>> {
     return await this.queryOptimizer.withPerformanceMonitoring('TagService.findAll', async () => {
       const tagResults = await this.db.select().from(tags);
@@ -181,6 +189,14 @@ export class TagService {
     });
   }
 
+  /**
+   * 查找或创建标签
+   *
+   * 如果标签不存在则自动创建，确保标签系统的完整性
+   *
+   * @param tagNames 标签名称数组
+   * @returns 标签实体数组（包含新创建和已存在的）
+   */
   async findOrCreateTags(tagNames: string[]): Promise<Tag[]> {
     const existingTags = await this.db.select().from(tags);
     const existingTagNames = new Set(existingTags.map((tag) => tag.name));
@@ -217,6 +233,13 @@ export class TagService {
     );
   }
 
+  /**
+   * 获取标签及其关联的分类统计
+   *
+   * 返回所有标签以及每个标签在不同分类中的使用情况
+   *
+   * @returns 标签和分类统计数据数组
+   */
   async getTagsWithCategories(): Promise<
     {
       tag: Tag;
@@ -225,8 +248,10 @@ export class TagService {
   > {
     const tagList = await this.db.select().from(tags);
 
+    // 并发查询每个标签的分类统计
     const results = await Promise.all(
       tagList.map(async (tag) => {
+        // 使用 LIKE 查询包含该标签的文章，并按分类分组统计
         const categoryStats = await this.db
           .select({
             category: articles.category,

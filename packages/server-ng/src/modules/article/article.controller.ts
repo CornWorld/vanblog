@@ -312,6 +312,7 @@ export class ArticleController {
    * 验证文章密码（通过 ID）
    *
    * 验证受密码保护文章的访问密码，成功后返回访问令牌。
+   * 令牌会绑定当前用户（如果已登录），未登录用户使用匿名访问令牌。
    *
    * @param id 文章 ID
    * @param verifyPasswordDto 密码验证数据
@@ -344,6 +345,7 @@ export class ArticleController {
    * 验证文章密码（通过路径）
    *
    * 根据文章路径验证受密码保护文章的访问密码，成功后返回访问令牌。
+   * 令牌会绑定当前用户（如果已登录），未登录用户使用匿名访问令牌。
    *
    * @param pathname 文章路径名称
    * @param verifyPasswordDto 密码验证数据

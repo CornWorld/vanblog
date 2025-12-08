@@ -132,9 +132,6 @@ export class PerformanceMonitoringMiddleware implements NestMiddleware {
 
   /**
    * 记录内存快照
-   */
-  /**
-   * 记录内存快照
    *
    * 定期记录内存使用情况，用于内存泄漏检测和趋势分析。
    * 采用固定间隔采样，避免过度频繁的内存检查。
@@ -160,9 +157,6 @@ export class PerformanceMonitoringMiddleware implements NestMiddleware {
     }
   }
 
-  /**
-   * 收集请求指标
-   */
   /**
    * 收集性能指标
    *
@@ -201,9 +195,6 @@ export class PerformanceMonitoringMiddleware implements NestMiddleware {
 
   /**
    * 获取性能统计
-   */
-  /**
-   * 获取性能统计
    *
    * 计算并返回系统的整体性能统计数据。
    * 包括平均响应时间、请求量、错误率等关键指标。
@@ -240,9 +231,6 @@ export class PerformanceMonitoringMiddleware implements NestMiddleware {
     };
   }
 
-  /**
-   * 获取详细的性能指标
-   */
   /**
    * 获取详细性能指标
    *
@@ -287,9 +275,6 @@ export class PerformanceMonitoringMiddleware implements NestMiddleware {
   }
 
   /**
-   * 重置性能统计
-   */
-  /**
    * 重置统计数据
    *
    * 清空所有性能统计数据，重新开始监控。
@@ -303,9 +288,6 @@ export class PerformanceMonitoringMiddleware implements NestMiddleware {
     this.lastMemorySnapshot = 0;
   }
 
-  /**
-   * 获取内存使用趋势
-   */
   /**
    * 获取内存使用趋势
    *
@@ -344,9 +326,6 @@ export class PerformanceMonitoringMiddleware implements NestMiddleware {
     };
   }
 
-  /**
-   * 获取性能警告
-   */
   /**
    * 获取性能警告
    *
@@ -390,9 +369,6 @@ export class PerformanceMonitoringMiddleware implements NestMiddleware {
     return warnings;
   }
 
-  /**
-   * 向后兼容的方法
-   */
   /**
    * 获取基础性能指标
    *

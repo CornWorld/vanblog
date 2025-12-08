@@ -7,8 +7,23 @@ import { LoggerService } from '../core/logger/logger.service';
 
 import { createDatabaseConnection } from './connection';
 
+/**
+ * 数据库连接的依赖注入 Token
+ * 用于在其他模块中注入数据库实例
+ */
 export const DATABASE_CONNECTION = 'DATABASE_CONNECTION';
 
+/**
+ * 数据库模块
+ *
+ * 使用 @Global() 装饰器声明为全局模块，所有其他模块都可以直接使用数据库连接，
+ * 无需重复导入 DatabaseModule。
+ *
+ * 提供功能：
+ * - 根据配置创建数据库连接（支持 local/turso/d1）
+ * - 提供 Drizzle ORM 数据库实例供其他模块使用
+ * - 自动管理数据库连接生命周期
+ */
 @Global()
 @Module({
   imports: [ConfigModule.forFeature(databaseConfig), LoggerModule],

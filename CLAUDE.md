@@ -1,89 +1,123 @@
-# VanBlog 架构文档
+# CLAUDE.md
 
-## Shared 包类型系统架构
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-### 设计目标
+## Project Overview
 
-实现 **单一类型来源 (Single Source of Truth)** 的类型系统，避免重复定义，确保前后端类型一致。
+VanBlog is a personal blog system with admin dashboard, public-facing website, and API server. This is a fork maintained by [CornWorld](https://github.com/CornWorld).
 
-### 技术栈
+## Development Commands
 
-- **Drizzle ORM** - 数据库 schema 定义（唯一类型来源）
-- **drizzle-zod** - 从 Drizzle tables 生成 Zod schemas
-- **Zod** - 运行时类型验证
-- **ts-rest** - 类型安全的 REST API contracts
+```bash
+# Install dependencies
+pnpm i
 
-### 数据流
+# Development (all services)
+pnpm dev                    # server-ng (3050) + admin (3002)
+pnpm dev:server             # server-ng only
+pnpm dev:admin              # admin only
+pnpm dev:website            # website only (3001)
+
+# Build
+pnpm build                  # all packages
+pnpm build:server           # server-ng
+pnpm build:admin            # admin
+pnpm build:website          # website
+
+# Testing (server-ng)
+pnpm --filter @vanblog/server-ng test        # unit tests
+pnpm --filter @vanblog/server-ng test:e2e    # e2e tests
+pnpm --filter @vanblog/server-ng test:cov    # coverage report
+
+# Run single test file
+pnpm --filter @vanblog/server-ng test path/to/file.spec.ts
+
+# Database (server-ng uses Drizzle + SQLite)
+pnpm --filter @vanblog/server-ng db:generate  # generate migrations
+pnpm --filter @vanblog/server-ng db:push      # push schema to DB
+pnpm --filter @vanblog/server-ng db:studio    # open Drizzle Studio
+
+# Linting
+pnpm lint                   # lint all
+pnpm lint --fix             # auto-fix
+```
+
+## Monorepo Structure
 
 ```
-Drizzle Tables (唯一来源)
+packages/
+├── server-ng/    # NestJS API server (Drizzle ORM, ts-rest) - ACTIVE
+├── admin/        # React 19 + Vite + Ant Design dashboard
+├── website/      # Next.js 15 public blog (SSG/ISR)
+├── shared/       # Contracts, schemas, types (single source of truth)
+├── server/       # Legacy NestJS + Mongoose server (being phased out / deprecated v1 api)
+├── cli/          # CLI utilities
+└── waline/       # Comment system
+```
+
+## Shared Package Type System
+
+### Design: Single Source of Truth
+
+```
+Drizzle Tables (packages/shared/src/runtime/db.ts)
       ↓ drizzle-zod
-Zod Schemas ($User, $Article, User, ArticleReq...)
+Zod Schemas (packages/shared/src/runtime/schema.ts)
       ↓
-ts-rest Contracts (使用 Zod schemas 定义 API)
+ts-rest Contracts (packages/shared/src/contracts/*.contract.ts)
       ↓
-┌─────────────────────────────────────┐
-│  前端: initClient(contract)         │  ← 自动类型推导
-│  后端: initServer(contract)         │  ← 运行时验证
-└─────────────────────────────────────┘
+Frontend (type inference) + Backend (runtime validation)
 ```
 
-### 包结构
+### Naming Convention
 
-```
-packages/shared/
-├── src/
-│   ├── runtime/
-│   │   ├── db.ts           # Drizzle table 定义（唯一类型来源）
-│   │   ├── schema.ts       # drizzle-zod 生成的 Zod schemas
-│   │   ├── date.ts         # dayjs 工具
-│   │   ├── json.ts         # JSON 工具
-│   │   └── index.ts
-│   ├── type/
-│   │   └── schema.ts       # 纯类型导出（export type）
-│   └── contracts/
-│       └── *.contract.ts   # ts-rest contracts（使用 Zod schemas）
-```
+| Layer | Prefix     | Purpose              | Example                         |
+| ----- | ---------- | -------------------- | ------------------------------- |
+| DB    | `$` prefix | Database operations  | `$User`, `$UserIns`, `$UserUpd` |
+| API   | No prefix  | API request/response | `User`, `UserReq`, `UserPatch`  |
 
-### 命名规范
+- `$Entity` - SELECT schema (read from DB)
+- `$EntityIns` - INSERT schema (write to DB)
+- `$EntityUpd` - UPDATE schema (update DB)
+- `Entity` - API response (usually $Entity without sensitive fields)
+- `EntityReq` - API request body (create)
+- `EntityPatch` - API request body (update)
 
-| 层级   | 前缀/命名 | 用途          | 示例                            |
-| ------ | --------- | ------------- | ------------------------------- |
-| DB 层  | `$` 前缀  | 数据库操作    | `$User`, `$UserIns`, `$UserUpd` |
-| API 层 | 无前缀    | API 响应/请求 | `User`, `UserReq`, `UserPatch`  |
+### Package Exports
 
-- `$Entity` - SELECT schema（从 DB 读取）
-- `$EntityIns` - INSERT schema（写入 DB）
-- `$EntityUpd` - UPDATE schema（更新 DB）
-- `Entity` - API 响应（通常是 $Entity 去除敏感字段）
-- `EntityReq` - API 请求体（创建）
-- `EntityPatch` - API 请求体（更新）
+| Path                        | Content                      | Use Case              |
+| --------------------------- | ---------------------------- | --------------------- |
+| `@vanblog/shared`           | contracts + schemas          | Main entry            |
+| `@vanblog/shared/type`      | Pure types (0 bytes JS)      | Frontend type imports |
+| `@vanblog/shared/runtime`   | Zod schemas + Drizzle tables | Backend validation    |
+| `@vanblog/shared/contracts` | ts-rest contracts            | API definitions       |
+| `@vanblog/shared/drizzle`   | Drizzle database utilities   | DB operations         |
 
-### 构建产物
-
-使用 Vite 构建，关键配置：
-
-- **内联依赖**: zod, drizzle-orm, drizzle-zod, dayjs
-- **外部依赖**: @ts-rest/core
-
-| 导出路径                    | 内容                         | 用途         |
-| --------------------------- | ---------------------------- | ------------ |
-| `@vanblog/shared`           | contract + schemas           | 主入口       |
-| `@vanblog/shared/type`      | 纯类型（0 bytes JS）         | 前端类型导入 |
-| `@vanblog/shared/runtime`   | Zod schemas + Drizzle tables | 后端验证     |
-| `@vanblog/shared/contracts` | ts-rest contracts            | API 定义     |
-
-### 前端使用
+### Frontend Usage
 
 ```typescript
 import { initClient } from '@ts-rest/core';
 import { contract } from '@vanblog/shared';
 
-const client = initClient(contract, {
-  baseUrl: '/api',
-});
-
-// 完整类型推导，无需手动导入类型
+const client = initClient(contract, { baseUrl: '/api' });
 const { body: articles } = await client.article.findAll();
-// articles 自动推导为 ArticleList 类型
+// articles automatically inferred as ArticleList type
 ```
+
+## Tech Stack
+
+- **Package Manager**: pnpm 10.x (workspace mode)
+- **Node**: >=22 (server-ng), >=18 (admin)
+- **Build**: Vite 6-7.x, Next.js 15.x
+- **Testing**: Vitest (80% coverage threshold on CI)
+- **Linting**: ESLint 9 (flat config) + Prettier
+- **ORM**: Drizzle (SQLite) - replacing Mongoose
+- **API**: ts-rest + NestJS 11
+
+## Key Configuration Files
+
+- `pnpm-workspace.yaml` - workspace config
+- `tsconfig.base.json` - shared TypeScript config
+- `eslint.config.js` - ESLint flat config
+- `.prettierrc.js` - Prettier config
+- `packages/server-ng/drizzle.config.ts` - Drizzle config

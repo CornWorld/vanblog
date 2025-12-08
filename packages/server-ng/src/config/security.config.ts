@@ -117,36 +117,63 @@ export function getDevelopmentSecurityConfig(corsOrigin: string | string[]): Sec
 }
 
 /**
- * 验证 CORS 源配置
+ * CORS 源验证结果接口
  */
-export function validateCorsOrigin(origin: string | string[], isProduction: boolean): string[] {
-  const errors: string[] = [];
+export interface CorsValidationResult {
+  errors: string[];
+  warnings: string[];
+}
 
+/**
+ * 验证 CORS 源配置
+ *
+ * 检查 CORS 源配置的安全性，包括：
+ * - 生产环境不允许使用通配符 "*"
+ * - 验证 URL 格式的有效性
+ * - 检查生产环境中的 HTTP 协议使用（建议使用 HTTPS）
+ *
+ * @param origin - CORS 源配置（字符串或字符串数组）
+ * @param isProduction - 是否为生产环境
+ * @returns 验证结果，包含错误和警告信息
+ */
+export function validateCorsOrigin(
+  origin: string | string[],
+  isProduction: boolean,
+): CorsValidationResult {
+  const result: CorsValidationResult = {
+    errors: [],
+    warnings: [],
+  };
+
+  // 生产环境不允许通配符
   if (isProduction && origin === '*') {
-    errors.push('CORS origin cannot be "*" in production environment');
+    result.errors.push('CRITICAL: CORS origin cannot be "*" in production environment');
+    return result;
   }
 
   const origins = Array.isArray(origin) ? origin : [origin];
 
   for (const singleOrigin of origins) {
+    // 跳过通配符（非生产环境允许）
     if (singleOrigin === '*') {
       if (isProduction) {
-        errors.push('Wildcard CORS origin is not allowed in production');
+        result.errors.push('CRITICAL: Wildcard CORS origin is not allowed in production');
       }
       continue;
     }
 
+    // 验证 URL 格式
     try {
       new URL(singleOrigin);
     } catch {
-      errors.push(`Invalid CORS origin URL: ${singleOrigin}`);
+      result.errors.push(`Invalid CORS origin URL: ${singleOrigin}`);
     }
 
-    // 检查是否使用 HTTP 在生产环境
+    // 检查生产环境中的 HTTP 协议使用
     if (isProduction && singleOrigin.startsWith('http://')) {
-      errors.push(`HTTP origin not recommended in production: ${singleOrigin}`);
+      result.warnings.push(`HTTP origin not recommended in production: ${singleOrigin}`);
     }
   }
 
-  return errors;
+  return result;
 }

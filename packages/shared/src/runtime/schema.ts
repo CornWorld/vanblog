@@ -1,3 +1,37 @@
+/**
+ * @file runtime/schema.ts
+ *
+ * VanBlog 类型系统核心 - 基于 Drizzle ORM 和 drizzle-zod 的 Schema 定义
+ *
+ * Core type system for VanBlog - Schema definitions based on Drizzle ORM and drizzle-zod
+ *
+ * ## 架构设计 (Architecture)
+ *
+ * 遵循 "单一类型来源 (Single Source of Truth)" 原则：
+ * 1. Drizzle tables (db.ts) → 唯一的类型来源
+ * 2. drizzle-zod → 自动生成 Zod schemas
+ * 3. 本文件覆盖默认行为，添加验证和转换逻辑
+ *
+ * ## 命名规范 (Naming Convention)
+ *
+ * ### DB 层（前缀 `$`）
+ * - `$Entity` - SELECT schema (从数据库读取)
+ * - `$EntityIns` - INSERT schema (写入数据库)
+ * - `$EntityUpd` - UPDATE schema (更新数据库)
+ *
+ * ### API 层（无前缀）
+ * - `Entity` - API 响应 (通常是 $Entity 去除敏感字段)
+ * - `EntityReq` - API 创建请求 (通常是 $EntityIns 去除自动生成字段)
+ * - `EntityPatch` - API 更新请求 (通常是 $EntityUpd 去除自动生成字段)
+ *
+ * ## 类型转换 (Transform)
+ *
+ * 数据库使用 TEXT 存储 JSON：
+ * - 读取时：JSON string → typed object/array
+ * - 写入时：typed object/array → JSON string
+ *
+ * @see {import('./json.js')} - JSON 转换工具
+ */
 import { createSelectSchema, createInsertSchema, createUpdateSchema } from 'drizzle-zod';
 import { z } from 'zod';
 import { jsonToArr, arrToJson, safeParseJson } from './json.js';
@@ -22,8 +56,14 @@ import {
 
 // ============================================================
 // Common Schemas (for override)
+// 通用 Schema（用于覆盖默认的 Drizzle schema 行为）
 // ============================================================
 
+/**
+ * 密码验证 schema - 强制要求包含大小写字母、数字和特殊字符
+ *
+ * Password validation schema - enforces strong password requirements
+ */
 const password = z
   .string()
   .min(8, '密码至少8个字符')
@@ -33,37 +73,95 @@ const password = z
   .regex(/[0-9]/, '密码必须包含至少一个数字')
   .regex(/[^a-zA-Z0-9]/, '密码必须包含至少一个特殊字符');
 
+/**
+ * 邮箱验证 schema
+ *
+ * Email validation schema
+ */
 const emailSchema = z.string().email('请输入有效的邮箱地址');
+
+/**
+ * Slug 验证 schema - 仅允许字母、数字、连字符和下划线
+ *
+ * Slug validation schema - alphanumeric with hyphens and underscores only
+ */
 const slugSchema = z.string().regex(/^[a-zA-Z0-9-_]+$/, 'slug只能包含字母、数字、连字符和下划线');
+
+/**
+ * 路径验证 schema - 仅允许字母、数字、连字符、下划线和斜杠
+ *
+ * Pathname validation schema - alphanumeric with hyphens, underscores and slashes
+ */
 const pathnameSchema = z
   .string()
   .regex(/^[a-zA-Z0-9-_/]+$/, '路径只能包含字母、数字、连字符和下划线');
+
+/**
+ * 标签数组转换 schema - 将 string[] 转换为 JSON 字符串（用于数据库存储）
+ *
+ * Tags transform schema - converts string array to JSON string for database storage
+ */
 const tagsTransform = z.array(z.string()).optional().transform(arrToJson);
 
 // ============================================================
 // USER
+// 用户表相关 Schemas
 // ============================================================
 
+/**
+ * $User - 数据库查询结果（SELECT）
+ *
+ * Database SELECT schema for users table.
+ * Transform: JSON string → string array for permissions field.
+ */
 export const $User = createSelectSchema(users, {
-  permissions: (s) => s.transform(jsonToArr),
+  permissions: (s) => s.transform(jsonToArr), // 将 JSON 字符串转为数组
 });
 
+/**
+ * $UserIns - 数据库插入（INSERT）
+ *
+ * Database INSERT schema for users table.
+ * Transform: string array → JSON string for permissions field.
+ */
 export const $UserIns = createInsertSchema(users, {
   username: z.string().min(3, '用户名至少3个字符').max(20, '用户名最多20个字符'),
   password,
   email: emailSchema.optional(),
-  permissions: tagsTransform,
+  permissions: tagsTransform, // 将数组转为 JSON 字符串
 });
 
+/**
+ * $UserUpd - 数据库更新（UPDATE）
+ *
+ * Database UPDATE schema for users table.
+ */
 export const $UserUpd = createUpdateSchema(users, {
   username: z.string().min(3).max(20).optional(),
   password: password.optional(),
   email: emailSchema.optional(),
-  permissions: tagsTransform,
+  permissions: tagsTransform, // 将数组转为 JSON 字符串
 });
 
+/**
+ * User - API 响应（去除敏感字段）
+ *
+ * API response schema - excludes password field for security.
+ */
 export const User = $User.omit({ password: true });
+
+/**
+ * UserReq - API 创建请求
+ *
+ * API create request schema - excludes auto-generated fields.
+ */
 export const UserReq = $UserIns.omit({ id: true, createdAt: true, updatedAt: true });
+
+/**
+ * UserPatch - API 更新请求
+ *
+ * API update request schema - excludes auto-generated fields.
+ */
 export const UserPatch = $UserUpd.omit({ id: true, createdAt: true, updatedAt: true });
 
 // ============================================================
@@ -579,9 +677,14 @@ export type WebhookLog = z.infer<typeof WebhookLog>;
 
 // ============================================================
 // COMMON API SCHEMAS
+// 通用 API Schemas（跨实体使用）
 // ============================================================
 
-// 分页查询参数
+/**
+ * 分页查询参数
+ *
+ * Pagination query parameters for list endpoints.
+ */
 export const PaginationQuery = z.object({
   page: z.coerce.number().min(1).default(1),
   pageSize: z.coerce.number().min(1).max(100).default(10),
@@ -589,12 +692,20 @@ export const PaginationQuery = z.object({
   sortOrder: z.enum(['asc', 'desc']).optional(),
 });
 
-// 搜索查询参数
+/**
+ * 搜索查询参数（继承分页参数）
+ *
+ * Search query parameters - extends pagination with keyword search.
+ */
 export const SearchQuery = PaginationQuery.extend({
   keyword: z.string().optional(),
 });
 
-// 文章查询参数
+/**
+ * 文章查询参数（继承分页参数，添加文章特定筛选）
+ *
+ * Article-specific query parameters - extends pagination with article filters.
+ */
 export const ArticleQuery = PaginationQuery.extend({
   category: z.string().optional(),
   tag: z.string().optional(),
@@ -603,22 +714,38 @@ export const ArticleQuery = PaginationQuery.extend({
   private: z.coerce.boolean().optional(),
 });
 
-// 通用成功响应
+/**
+ * 通用成功响应
+ *
+ * Generic success response.
+ */
 export const SuccessResponse = z.object({
   success: z.literal(true),
 });
 
-// 通用删除响应
+/**
+ * 通用删除响应
+ *
+ * Generic delete response.
+ */
 export const DeleteResponse = z.object({
   success: z.boolean(),
 });
 
-// 密码验证请求
+/**
+ * 密码验证请求
+ *
+ * Password verification request schema.
+ */
 export const PasswordVerifyReq = z.object({
   password: z.string().min(1),
 });
 
-// 密码验证响应
+/**
+ * 密码验证响应
+ *
+ * Password verification response schema.
+ */
 export const PasswordVerifyResp = z.object({
   valid: z.boolean(),
   content: z.string().optional(),

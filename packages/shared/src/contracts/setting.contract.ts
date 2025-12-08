@@ -1,23 +1,69 @@
 import { initContract } from '@ts-rest/core';
 import { z } from 'zod';
 
-// TODO: 这些 schema 需要从 server-ng DTOs 迁移到 shared/schemas
-// 暂时使用 z.any()，后续精确化
+/**
+ * 关于页面更新 schema
+ */
 const UpdateAboutSchema = z.object({ content: z.string() });
+
+/**
+ * 自定义代码更新 schema
+ */
 const UpdateCustomCodeSchema = z.object({
   css: z.string().optional(),
   script: z.string().optional(),
   html: z.string().optional(),
   head: z.string().optional(),
 });
+
+/**
+ * 友链创建 schema
+ */
 const CreateFriendLinkSchema = z.object({
   name: z.string(),
   url: z.string(),
   description: z.string().optional(),
   avatar: z.string().optional(),
 });
+
+/**
+ * 友链更新 schema
+ */
 const UpdateFriendLinkSchema = CreateFriendLinkSchema.partial();
-const UpdateNavigationSchema = z.object({ items: z.array(z.any()) });
+
+/**
+ * 导航菜单项 schema（支持嵌套）
+ */
+const NavigationItemSchema: z.ZodType<{
+  name: string;
+  path: string;
+  icon?: string;
+  external?: boolean;
+  children?: Array<{
+    name: string;
+    path: string;
+    icon?: string;
+    external?: boolean;
+    children?: unknown[];
+  }>;
+}> = z.lazy(() =>
+  z.object({
+    name: z.string(),
+    path: z.string(),
+    icon: z.string().optional(),
+    external: z.boolean().optional(),
+    children: z.array(NavigationItemSchema).optional(),
+  }),
+);
+
+/**
+ * 导航菜单更新 schema
+ */
+const UpdateNavigationSchema = z.object({ items: z.array(NavigationItemSchema) });
+
+/**
+ * 布局设置更新 schema
+ */
 const UpdateLayoutSchema = z.object({
   showRecentPosts: z.boolean().optional(),
   recentPostsCount: z.number().optional(),
@@ -27,20 +73,74 @@ const UpdateLayoutSchema = z.object({
   showAbout: z.boolean().optional(),
   showSearch: z.boolean().optional(),
 });
+
+/**
+ * 站点信息更新 schema
+ */
 const UpdateSiteInfoSchema = z.object({
   title: z.string().optional(),
   description: z.string().optional(),
   author: z.string().optional(),
   keywords: z.array(z.string()).optional(),
 });
+
+/**
+ * 主题设置更新 schema
+ */
 const UpdateThemeSchema = z.object({
   primaryColor: z.string().optional(),
   darkMode: z.boolean().optional(),
 });
-const UpdateStaticSettingSchema = z.any();
-const StaticSettingSchema = z.any();
-const UpdateHttpsSettingSchema = z.any();
-const HttpsSettingSchema = z.any();
+
+/**
+ * 静态资源设置更新 schema
+ */
+const UpdateStaticSettingSchema = z.object({
+  storageType: z.enum(['local', 'oss', 's3']).optional(),
+  maxSize: z.number().optional(),
+  allowedTypes: z.array(z.string()).optional(),
+});
+
+/**
+ * 静态资源设置 schema
+ */
+const StaticSettingSchema = z.object({
+  storageType: z.enum(['local', 'oss', 's3']),
+  maxSize: z.number(),
+  allowedTypes: z.array(z.string()),
+});
+
+/**
+ * HTTPS 设置更新 schema
+ */
+const UpdateHttpsSettingSchema = z.object({
+  enabled: z.boolean().optional(),
+  autoRedirect: z.boolean().optional(),
+});
+
+/**
+ * HTTPS 设置 schema
+ */
+const HttpsSettingSchema = z.object({
+  enabled: z.boolean(),
+  autoRedirect: z.boolean(),
+});
+
+/**
+ * 验证错误响应 schema
+ *
+ * Validation error response schema - for Zod validation failures
+ */
+const ValidationErrorSchema = z.object({
+  message: z.string(),
+  issues: z.array(
+    z.object({
+      path: z.array(z.union([z.string(), z.number()])),
+      message: z.string(),
+      code: z.string(),
+    }),
+  ),
+});
 
 export const createSettingContract = (c: ReturnType<typeof initContract>) =>
   c.router({
@@ -50,7 +150,7 @@ export const createSettingContract = (c: ReturnType<typeof initContract>) =>
       body: UpdateStaticSettingSchema,
       responses: {
         200: StaticSettingSchema,
-        400: z.object({ message: z.string(), issues: z.any() }),
+        400: ValidationErrorSchema,
       },
     },
     updateHttps: {
@@ -59,7 +159,7 @@ export const createSettingContract = (c: ReturnType<typeof initContract>) =>
       body: UpdateHttpsSettingSchema,
       responses: {
         200: HttpsSettingSchema,
-        400: z.object({ message: z.string(), issues: z.any() }),
+        400: ValidationErrorSchema,
       },
     },
     getSiteInfo: {
@@ -85,7 +185,7 @@ export const createSettingContract = (c: ReturnType<typeof initContract>) =>
           author: z.string(),
           keywords: z.array(z.string()),
         }),
-        400: z.object({ message: z.string(), issues: z.any() }),
+        400: ValidationErrorSchema,
       },
     },
     getLayout: {
@@ -117,7 +217,7 @@ export const createSettingContract = (c: ReturnType<typeof initContract>) =>
           showAbout: z.boolean(),
           showSearch: z.boolean(),
         }),
-        400: z.object({ message: z.string(), issues: z.any() }),
+        400: ValidationErrorSchema,
       },
     },
     getTheme: {
@@ -139,7 +239,7 @@ export const createSettingContract = (c: ReturnType<typeof initContract>) =>
           primaryColor: z.string(),
           darkMode: z.boolean(),
         }),
-        400: z.object({ message: z.string(), issues: z.any() }),
+        400: ValidationErrorSchema,
       },
     },
     getFriendLinks: {
@@ -169,7 +269,7 @@ export const createSettingContract = (c: ReturnType<typeof initContract>) =>
             avatar: z.string().optional(),
           }),
         ),
-        400: z.object({ message: z.string(), issues: z.any() }),
+        400: ValidationErrorSchema,
       },
     },
     updateFriendLink: {
@@ -186,7 +286,7 @@ export const createSettingContract = (c: ReturnType<typeof initContract>) =>
             avatar: z.string().optional(),
           }),
         ),
-        400: z.object({ message: z.string(), issues: z.any() }),
+        400: ValidationErrorSchema,
       },
     },
     deleteFriendLink: {
@@ -208,27 +308,7 @@ export const createSettingContract = (c: ReturnType<typeof initContract>) =>
       method: 'GET',
       path: '/v2/settings/navigation',
       responses: {
-        200: z.array(
-          z.lazy(() =>
-            z.object({
-              name: z.string(),
-              path: z.string(),
-              icon: z.string().optional(),
-              external: z.boolean().optional(),
-              children: z
-                .array(
-                  z.object({
-                    name: z.string(),
-                    path: z.string(),
-                    icon: z.string().optional(),
-                    external: z.boolean().optional(),
-                    children: z.array(z.any()).optional(),
-                  }),
-                )
-                .optional(),
-            }),
-          ),
-        ),
+        200: z.array(NavigationItemSchema),
       },
     },
     updateNavigation: {
@@ -236,28 +316,8 @@ export const createSettingContract = (c: ReturnType<typeof initContract>) =>
       path: '/v2/settings/navigation',
       body: UpdateNavigationSchema,
       responses: {
-        200: z.array(
-          z.lazy(() =>
-            z.object({
-              name: z.string(),
-              path: z.string(),
-              icon: z.string().optional(),
-              external: z.boolean().optional(),
-              children: z
-                .array(
-                  z.object({
-                    name: z.string(),
-                    path: z.string(),
-                    icon: z.string().optional(),
-                    external: z.boolean().optional(),
-                    children: z.array(z.any()).optional(),
-                  }),
-                )
-                .optional(),
-            }),
-          ),
-        ),
-        400: z.object({ message: z.string(), issues: z.any() }),
+        200: z.array(NavigationItemSchema),
+        400: ValidationErrorSchema,
       },
     },
     getCustomCode: {
@@ -283,7 +343,7 @@ export const createSettingContract = (c: ReturnType<typeof initContract>) =>
           html: z.string().optional(),
           head: z.string().optional(),
         }),
-        400: z.object({ message: z.string(), issues: z.any() }),
+        400: ValidationErrorSchema,
       },
     },
     getAbout: {
@@ -299,7 +359,7 @@ export const createSettingContract = (c: ReturnType<typeof initContract>) =>
       body: UpdateAboutSchema,
       responses: {
         200: z.object({ content: z.string(), updatedAt: z.string() }),
-        400: z.object({ message: z.string(), issues: z.any() }),
+        400: ValidationErrorSchema,
       },
     },
   });

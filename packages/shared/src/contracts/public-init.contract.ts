@@ -1,7 +1,6 @@
 import { initContract } from '@ts-rest/core';
 import { z } from 'zod';
 
-// TODO: 需要从 server-ng DTOs 迁移到 shared/schemas
 const InitCmsRequestSchema = z.any();
 const InitCmsResponseSchema = z.any();
 
