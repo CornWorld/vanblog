@@ -1,33 +1,12 @@
 {
+  "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "module": "es2022",
-    "moduleResolution": "bundler",
-    "declaration": true,
-    "removeComments": true,
-    "emitDecoratorMetadata": true,
-    "experimentalDecorators": true,
-    "allowSyntheticDefaultImports": true,
-    "target": "es2022",
-    "sourceMap": true,
+    "composite": true,
     "outDir": "./dist",
     "baseUrl": ".",
-    "incremental": true,
-    "strict": true,
-    "strictNullChecks": true,
-    "strictFunctionTypes": true,
-    "strictBindCallApply": true,
-    "strictPropertyInitialization": true,
-    "noImplicitThis": true,
-    "alwaysStrict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "noImplicitReturns": true,
-    "noFallthroughCasesInSwitch": true,
-    "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true,
-    "skipLibCheck": true,
     "types": ["node", "vitest/globals", "express", "multer"],
-    "composite": true
+    // Disable verbatimModuleSyntax for NestJS DI compatibility
+    "verbatimModuleSyntax": false
   },
   "include": ["src/**/*", "test/**/*", "plugins/**/*", "src/types/**/*.d.ts"],
   "exclude": ["node_modules", "dist"]

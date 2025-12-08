@@ -1,49 +1,56 @@
+/**
+ * Root ESLint configuration for VanBlog monorepo.
+ *
+ * Uses ESLint defineConfig() with typescript-eslint projectService.
+ */
+import { defineConfig } from 'eslint/config';
 import eslint from '@eslint/js';
 import tseslint from 'typescript-eslint';
 import globals from 'globals';
 import prettierConfig from 'eslint-config-prettier';
 import prettierPlugin from 'eslint-plugin-prettier';
+import reactPlugin from 'eslint-plugin-react';
+import reactHooksPlugin from 'eslint-plugin-react-hooks';
 import { dirname } from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-export default tseslint.config(
+export default defineConfig([
   eslint.configs.recommended,
   prettierConfig,
+
   {
     ignores: [
-      'node_modules/**',
+      '**/node_modules/**',
       '**/dist/**',
       '**/build/**',
       '**/*.d.ts',
+      'packages/website/.next/**',
+      'packages/*/eslint.config.*',
+      'packages/server-ng/test-data/**',
+      'packages/admin/config/**',
+      'docs/**',
+      // Legacy JS configs
       '.nano-staged.js',
       '.prettierrc.js',
       '.versionrc.js',
-      'eslint.config.js',
-      'docs/.vuepress/**',
-      'packages/admin/config/**',
-      'packages/server/dist/**',
-      'packages/shared/dist/**',
-      'packages/server-ng/test-data/**',
     ],
   },
+
+  // TypeScript
   {
     files: ['**/*.ts', '**/*.tsx'],
-    extends: [...tseslint.configs.recommended],
+    extends: [tseslint.configs.recommended],
     languageOptions: {
-      ecmaVersion: 'latest',
-      sourceType: 'module',
-      globals: {
-        ...globals.browser,
-        ...globals.node,
+      globals: { ...globals.browser, ...globals.node },
+      parserOptions: {
+        projectService: true,
+        tsconfigRootDir: __dirname,
       },
     },
-    plugins: {
-      prettier: prettierPlugin,
-    },
+    plugins: { prettier: prettierPlugin },
     rules: {
-      // 必须修复的错误
       '@typescript-eslint/no-unused-vars': [
         'error',
         {
@@ -54,36 +61,49 @@ export default tseslint.config(
       ],
       'no-unused-vars': 'off',
       'prettier/prettier': 'error',
-
-      // 禁用需要 parserOptions.project 的规则
       '@typescript-eslint/no-explicit-any': 'warn',
       '@typescript-eslint/no-non-null-assertion': 'warn',
-      'prefer-destructuring': 'warn',
     },
   },
+
+  // React (admin + website)
   {
-    files: ['**/*.spec.ts', '**/*.test.ts', '**/test/**', '**/*.fixtures.spec.ts'],
+    files: ['packages/admin/**/*.{ts,tsx}', 'packages/website/**/*.{ts,tsx}'],
+    plugins: {
+      react: reactPlugin,
+      'react-hooks': reactHooksPlugin,
+    },
+    languageOptions: {
+      parserOptions: { ecmaFeatures: { jsx: true } },
+      globals: {
+        ANT_DESIGN_PRO_ONLY_DO_NOT_USE_IN_YOUR_PRODUCTION: 'readonly',
+        page: 'readonly',
+        REACT_APP_ENV: 'readonly',
+      },
+    },
+    settings: { react: { version: 'detect' } },
+    rules: {
+      'react/jsx-uses-react': 'off',
+      'react/react-in-jsx-scope': 'off',
+      'react-hooks/rules-of-hooks': 'error',
+      'react-hooks/exhaustive-deps': 'warn',
+    },
+  },
+
+  // Test files
+  {
+    files: ['**/*.spec.ts', '**/*.test.ts', '**/test/**/*.ts'],
     rules: {
       '@typescript-eslint/no-explicit-any': 'off',
       '@typescript-eslint/no-non-null-assertion': 'off',
-      'prefer-destructuring': 'off',
     },
   },
+
+  // JavaScript
   {
     files: ['**/*.js', '**/*.cjs', '**/*.mjs'],
-    languageOptions: {
-      ecmaVersion: 'latest',
-      sourceType: 'module',
-      globals: {
-        ...globals.browser,
-        ...globals.node,
-      },
-    },
-    plugins: {
-      prettier: prettierPlugin,
-    },
-    rules: {
-      'prettier/prettier': 'error',
-    },
+    languageOptions: { globals: { ...globals.browser, ...globals.node } },
+    plugins: { prettier: prettierPlugin },
+    rules: { 'prettier/prettier': 'error' },
   },
-);
+]);

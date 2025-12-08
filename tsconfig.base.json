@@ -1,21 +1,44 @@
 {
   "compilerOptions": {
+    // Type checking
     "strict": true,
     "strictNullChecks": true,
-    "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true,
-    "emitDecoratorMetadata": true,
-    "experimentalDecorators": true,
+    "strictFunctionTypes": true,
+    "strictBindCallApply": true,
+    "strictPropertyInitialization": true,
+    "noImplicitAny": true,
+    "noImplicitThis": true,
     "noUnusedLocals": true,
-    "skipLibCheck": true,
-    "sourceMap": true,
-    "incremental": true,
-    "resolveJsonModule": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "forceConsistentCasingInFileNames": true,
+    "allowUnusedLabels": false,
+    "allowUnreachableCode": false,
+
+    // Module resolution
     "moduleResolution": "bundler",
-    "target": "ES2022",
     "module": "ES2022",
+    "target": "ES2022",
     "lib": ["DOM", "DOM.Iterable", "ESNext"],
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true,
     "isolatedModules": true,
-    "verbatimModuleSyntax": true
+    "verbatimModuleSyntax": true,
+
+    // Emit
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "removeComments": false,
+
+    // Build optimization
+    "incremental": true,
+    "skipLibCheck": true,
+
+    // Decorators (for NestJS)
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true
   }
 }

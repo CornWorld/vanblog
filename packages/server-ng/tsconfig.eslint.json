@@ -1,5 +1,9 @@
 {
   "extends": "./tsconfig.json",
+  "compilerOptions": {
+    // ESLint needs to check config files that aren't part of the build
+    "noEmit": true
+  },
   "include": [
     "src/**/*",
     "test/**/*",
