@@ -1,6 +1,5 @@
+import { insertAnalyticsSchema } from '@vanblog/shared/drizzle';
 import { z } from 'zod';
-
-import { insertAnalyticsSchema } from '../../../database';
 
 // 为了在控制器层进行更严格的数据校验，这里基于数据库层的 insertAnalyticsSchema
 // 做进一步约束：

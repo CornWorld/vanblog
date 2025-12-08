@@ -1,6 +1,5 @@
+import { updateUserSchema } from '@vanblog/shared/drizzle';
 import { z } from 'zod';
-
-import { updateUserSchema } from '../../../database';
 
 export const UpdateUserSchema = updateUserSchema
   .omit({

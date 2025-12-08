@@ -1,7 +1,10 @@
 import { c } from '@vanblog/shared';
+import {
+  selectArticleSchema,
+  insertArticleSchema,
+  updateArticleSchema,
+} from '@vanblog/shared/drizzle';
 import { z } from 'zod';
-
-import { selectArticleSchema, insertArticleSchema, updateArticleSchema } from '../../../database';
 
 // 基础文章 Schema - 使用 drizzle-zod 生成的 schema
 export const ArticleSchema = selectArticleSchema;

@@ -2,13 +2,8 @@ import { Injectable, NotFoundException, ConflictException, Inject } from '@nestj
 import * as bcrypt from 'bcrypt';
 import { eq, ne } from 'drizzle-orm';
 
-import {
-  DATABASE_CONNECTION,
-  type Database,
-  insertUserSchema,
-  updateUserSchema,
-} from '../../database';
-import { users } from '@vanblog/shared/drizzle';
+import { DATABASE_CONNECTION, type Database } from '../../database';
+import { users, insertUserSchema, updateUserSchema } from '@vanblog/shared/drizzle';
 import { HookService } from '../plugin/services/hook.service';
 
 import { CreateUserDto, UserType } from './dto/create-user.dto';

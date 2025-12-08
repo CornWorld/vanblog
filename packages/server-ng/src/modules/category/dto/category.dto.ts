@@ -1,10 +1,9 @@
-import { z } from 'zod';
-
 import {
   selectCategorySchema,
   insertCategorySchema,
   updateCategorySchema,
-} from '../../../database';
+} from '@vanblog/shared/drizzle';
+import { z } from 'zod';
 
 // 基础分类 Schema - 使用 drizzle-zod 生成的 schema
 export const CategorySchema = selectCategorySchema;

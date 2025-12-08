@@ -1,6 +1,5 @@
+import { selectTagSchema, insertTagSchema, updateTagSchema } from '@vanblog/shared/drizzle';
 import { z } from 'zod';
-
-import { selectTagSchema, insertTagSchema, updateTagSchema } from '../../../database';
 
 // 基础标签 Schema - 使用 drizzle-zod 生成的 schema
 export const TagSchema = selectTagSchema;

@@ -1,12 +1,11 @@
 import { c } from '@vanblog/shared';
-import { z } from 'zod';
-
 import {
   selectDraftSchema,
   insertDraftSchema,
   updateDraftSchema,
   selectDraftVersionSchema,
-} from '../../../database';
+} from '@vanblog/shared/drizzle';
+import { z } from 'zod';
 
 // 基础草稿 Schema - 使用 drizzle-zod 生成的 schema
 export const DraftSchema = selectDraftSchema;

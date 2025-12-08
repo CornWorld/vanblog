@@ -1,10 +1,9 @@
-import { z } from 'zod';
-
 import {
   selectPermissionGroupSchema,
   insertPermissionGroupSchema,
   updatePermissionGroupSchema,
-} from '../../../database';
+} from '@vanblog/shared/drizzle';
+import { z } from 'zod';
 
 // 权限组基础 Schema
 export const PermissionGroupSchema = selectPermissionGroupSchema;

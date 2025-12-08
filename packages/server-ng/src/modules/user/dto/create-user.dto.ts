@@ -1,6 +1,5 @@
+import { insertUserSchema } from '@vanblog/shared/drizzle';
 import { z } from 'zod';
-
-import { insertUserSchema } from '../../../database';
 
 export const CreateUserSchema = insertUserSchema
   .omit({
