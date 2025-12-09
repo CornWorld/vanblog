@@ -1,0 +1,465 @@
+{
+  "metadata": {
+    "timestamp": "2025-12-09T02:50:35+08:00",
+    "version": "1.1.0",
+    "project": "VanBlog",
+    "description": "VanBlog 是一个现代化的个人博客系统，包含管理后台、公开网站和 API 服务器",
+    "repository": "https://github.com/CornWorld/vanblog"
+  },
+  "rootDocumentation": {
+    "path": "CLAUDE.md",
+    "lastUpdated": "2025-12-09T02:50:35+08:00",
+    "sections": [
+      "项目愿景",
+      "架构总览",
+      "模块结构图",
+      "模块索引",
+      "运行与开发",
+      "测试策略",
+      "编码规范",
+      "Shared Package 使用指引",
+      "AI 使用指引"
+    ]
+  },
+  "modules": [
+    {
+      "name": "server-ng",
+      "path": "packages/server-ng",
+      "documentationPath": "packages/server-ng/CLAUDE.md",
+      "status": "active",
+      "language": "TypeScript",
+      "framework": "NestJS 11",
+      "description": "NestJS API 服务器 (Drizzle ORM, ts-rest)",
+      "entryPoint": "src/main.ts",
+      "port": 3050,
+      "dependencies": {
+        "internal": ["@vanblog/shared"],
+        "key_external": [
+          "@nestjs/core@^11.0.16",
+          "@ts-rest/nest@3.53.0-rc.1",
+          "drizzle-orm@^0.44.4",
+          "@libsql/client@^0.15.10"
+        ]
+      },
+      "features": [
+        "JWT 认证与授权",
+        "文章、草稿、分类、标签管理",
+        "媒体文件上传与处理",
+        "访客统计与分析",
+        "RSS/Sitemap 生成",
+        "插件系统（6 个内置插件）",
+        "数据库备份与恢复"
+      ],
+      "apiEndpoints": {
+        "swagger": "/api/docs",
+        "healthCheck": "/api/v2/health",
+        "metrics": "/api/v2/metrics"
+      },
+      "plugins": [
+        {
+          "name": "rss-plugin",
+          "description": "RSS 订阅扩展（RSS 2.0, Atom 1.0, JSON Feed）",
+          "endpoints": ["/rss/feed.xml", "/rss/feed.json", "/rss/atom.xml"],
+          "hooks": [
+            "article|afterCreate",
+            "article|afterUpdate",
+            "article|afterDelete",
+            "setting|afterUpdate"
+          ]
+        },
+        {
+          "name": "rewards-plugin",
+          "description": "打赏功能管理",
+          "features": ["CRUD API", "Bootstrap 集成", "配置与存储合并去重"]
+        },
+        {
+          "name": "email-notification-plugin",
+          "description": "邮件通知插件",
+          "events": [
+            "article|afterCreate",
+            "article|afterUpdate",
+            "comment|afterUpdate",
+            "draft|afterPublish"
+          ]
+        },
+        {
+          "name": "cat-plugin",
+          "description": "示例插件（在文章内容添加'喵'）",
+          "hooks": ["article|beforeCreate", "article|beforeUpdate"]
+        },
+        {
+          "name": "beian-plugin",
+          "description": "备案信息管理",
+          "hooks": [
+            "bootstrap|beforeGenerate",
+            "bootstrap|transformResponse",
+            "bootstrap|afterGenerate"
+          ]
+        },
+        {
+          "name": "social-links-plugin",
+          "description": "社交链接管理",
+          "features": ["CRUD API", "Zod Schema 验证", "插件注册表集成"]
+        }
+      ],
+      "testing": {
+        "framework": "Vitest",
+        "coverage": "80%",
+        "unitTestFiles": 93,
+        "e2eTestFiles": 27,
+        "totalTestFiles": 120,
+        "testTools": [
+          "MockUtils（数据库/服务 Mock 工具类）",
+          "test-utils（E2E 辅助函数）",
+          "vitest-fixtures（测试夹具）"
+        ],
+        "e2eTests": true
+      },
+      "subModules": [
+        {
+          "name": "AuthModule",
+          "path": "src/modules/auth",
+          "description": "JWT 认证、本地策略、Token 黑名单",
+          "testFiles": 6
+        },
+        {
+          "name": "ArticleModule",
+          "path": "src/modules/article",
+          "description": "文章 CRUD、搜索、批量操作",
+          "testFiles": 1
+        },
+        {
+          "name": "MediaModule",
+          "path": "src/modules/media",
+          "description": "文件上传、图片处理、存储管理",
+          "testFiles": 5
+        },
+        {
+          "name": "PluginModule",
+          "path": "src/modules/plugin",
+          "description": "插件加载、钩子系统",
+          "testFiles": 4
+        },
+        {
+          "name": "AnalyticsModule",
+          "path": "src/modules/analytics",
+          "description": "访客统计、ECharts 格式化、第三方集成",
+          "testFiles": 4
+        }
+      ],
+      "coverage": {
+        "scannedFiles": 580,
+        "criticalPaths": [
+          "src/main.ts",
+          "src/app.module.ts",
+          "src/modules/（21 个功能模块）",
+          "src/core/（filters, interceptors, guards, middlewares）",
+          "src/shared/（services, utils, cache）",
+          "plugins/（6 个内置插件）",
+          "test/（测试工具与 E2E 测试）"
+        ],
+        "gaps": []
+      }
+    },
+    {
+      "name": "admin",
+      "path": "packages/admin",
+      "documentationPath": "packages/admin/CLAUDE.md",
+      "status": "active",
+      "language": "TypeScript",
+      "framework": "React 19 + Vite 6",
+      "description": "React 19 + Vite + Ant Design 管理后台",
+      "entryPoint": "src/main.jsx",
+      "port": 3002,
+      "dependencies": {
+        "internal": ["@vanblog/shared"],
+        "key_external": [
+          "react@^19.0.0",
+          "antd@^5.24.6",
+          "@ant-design/pro-components@^2.8.7",
+          "@ts-rest/core@3.53.0-rc.1",
+          "bytemd@1.22.0"
+        ]
+      },
+      "features": [
+        "文章与草稿管理",
+        "媒体库管理",
+        "分类与标签管理",
+        "系统设置",
+        "数据统计与分析",
+        "Markdown 编辑器（Bytemd + Toast UI）",
+        "国际化支持"
+      ],
+      "routing": {
+        "basePath": "/admin",
+        "proxyTarget": "http://localhost:3050"
+      },
+      "testing": {
+        "framework": "Vitest + Playwright",
+        "coverage": "N/A",
+        "componentTests": true,
+        "e2eTests": true
+      },
+      "coverage": {
+        "scannedFiles": 200,
+        "criticalPaths": ["src/main.jsx", "src/pages/", "src/components/", "src/layouts/"],
+        "gaps": []
+      }
+    },
+    {
+      "name": "website",
+      "path": "packages/website",
+      "documentationPath": "packages/website/CLAUDE.md",
+      "status": "active",
+      "language": "TypeScript",
+      "framework": "Next.js 15",
+      "description": "Next.js 15 公开博客（SSG/ISR）",
+      "entryPoint": "pages/_app.tsx",
+      "port": 3001,
+      "dependencies": {
+        "internal": ["@vanblog/shared"],
+        "key_external": [
+          "next@^15.2.1",
+          "react@^19.0.0",
+          "@ts-rest/core@3.53.0-rc.1",
+          "tailwindcss@^3.3.0",
+          "bytemd@^1.22.0",
+          "@waline/client@^3.5.5"
+        ]
+      },
+      "features": [
+        "博客首页（文章列表）",
+        "文章详情页",
+        "分类与标签页",
+        "时间线页",
+        "RSS 订阅",
+        "Waline 评论系统",
+        "SEO 优化",
+        "ISR 增量静态再生成"
+      ],
+      "renderModes": {
+        "SSG": ["about", "timeline", "404"],
+        "ISR": ["index", "post/[id]", "tag", "tag/[tag]"]
+      },
+      "testing": {
+        "framework": "Vitest",
+        "coverage": "N/A",
+        "testFiles": "少量"
+      },
+      "coverage": {
+        "scannedFiles": 150,
+        "criticalPaths": ["pages/", "components/", "utils/"],
+        "gaps": []
+      }
+    },
+    {
+      "name": "shared",
+      "path": "packages/shared",
+      "documentationPath": "packages/shared/CLAUDE.md",
+      "status": "active",
+      "language": "TypeScript",
+      "framework": "Vite 6",
+      "description": "类型契约、Schema、工具（单一数据源）",
+      "entryPoint": "src/index.ts",
+      "dependencies": {
+        "internal": [],
+        "key_external": [
+          "@ts-rest/core@3.53.0-rc.1",
+          "zod@^4.1.13",
+          "drizzle-orm@^0.44.4",
+          "drizzle-zod@^0.8.2"
+        ]
+      },
+      "exports": {
+        ".": "contracts + schemas",
+        "./type": "纯类型（0 字节 JS）",
+        "./runtime": "Zod schemas + Drizzle 表",
+        "./contracts": "ts-rest 契约",
+        "./drizzle": "Drizzle 工具 + Schema"
+      },
+      "features": [
+        "Drizzle ORM 表定义",
+        "Zod Schema 定义",
+        "ts-rest 契约定义",
+        "纯类型导出",
+        "通用工具函数"
+      ],
+      "contracts": [
+        "authContract",
+        "articleContract",
+        "draftContract",
+        "categoryContract",
+        "tagContract",
+        "mediaContract",
+        "settingContract",
+        "backupContract",
+        "pluginsContract"
+      ],
+      "testing": {
+        "framework": "N/A",
+        "coverage": "N/A"
+      },
+      "coverage": {
+        "scannedFiles": 47,
+        "criticalPaths": [
+          "src/contract.ts",
+          "src/contracts/",
+          "src/drizzle/",
+          "src/runtime/",
+          "src/type/"
+        ],
+        "gaps": []
+      }
+    },
+    {
+      "name": "server",
+      "path": "packages/server",
+      "documentationPath": "packages/server/CLAUDE.md",
+      "status": "deprecated",
+      "language": "TypeScript",
+      "framework": "NestJS + Mongoose",
+      "description": "遗留 NestJS + Mongoose 服务器（已废弃）",
+      "entryPoint": "src/main.ts",
+      "dependencies": {
+        "internal": [],
+        "key_external": ["@nestjs/core@^11.0.16", "mongoose@^8.13.2", "mongodb@^6.15.0"]
+      },
+      "deprecationReason": "替换为 server-ng（Drizzle ORM + ts-rest）",
+      "coverage": {
+        "scannedFiles": 0,
+        "criticalPaths": [],
+        "gaps": ["已废弃，不再扫描"]
+      }
+    },
+    {
+      "name": "cli",
+      "path": "packages/cli",
+      "documentationPath": "packages/cli/CLAUDE.md",
+      "status": "maintenance",
+      "language": "JavaScript",
+      "framework": "Node.js",
+      "description": "命令行工具集",
+      "entryPoint": "resetHttps.js",
+      "dependencies": {
+        "internal": [],
+        "key_external": ["mongodb@^6.14.2"]
+      },
+      "commands": [
+        {
+          "name": "resetHttps",
+          "file": "resetHttps.js",
+          "description": "重置 MongoDB 中的 HTTPS 设置",
+          "usage": "node resetHttps.js",
+          "target": "遗留 MongoDB 版本"
+        }
+      ],
+      "features": ["HTTPS 设置重置", "数据库连接测试（5 秒超时）", "交互式命令行界面"],
+      "coverage": {
+        "scannedFiles": 5,
+        "criticalPaths": ["resetHttps.js", "package.json", "README.md"],
+        "gaps": []
+      }
+    },
+    {
+      "name": "waline",
+      "path": "packages/waline",
+      "documentationPath": "packages/waline/CLAUDE.md",
+      "status": "maintenance",
+      "language": "JavaScript",
+      "framework": "@waline/vercel",
+      "description": "评论系统",
+      "entryPoint": "index.js",
+      "port": 8360,
+      "dependencies": {
+        "internal": [],
+        "key_external": ["@waline/vercel@1.32.3"]
+      },
+      "features": [
+        "评论服务 API",
+        "多种后端存储（SQLite/MySQL/PostgreSQL/MongoDB）",
+        "邮件通知（SMTP）",
+        "多语言支持",
+        "Markdown 评论",
+        "表情包与图片上传",
+        "访客统计",
+        "管理后台（/ui）"
+      ],
+      "configuration": {
+        "database": ["sqlite", "mysql", "pgsql", "mongodb", "vercel", "leancloud"],
+        "smtp": ["Gmail", "QQ", "163", "custom"],
+        "security": ["JWT", "Akismet", "reCAPTCHA"],
+        "storage": ["七牛云", "腾讯云 COS"]
+      },
+      "deployment": {
+        "docker": true,
+        "vercel": true,
+        "standalone": true
+      },
+      "coverage": {
+        "scannedFiles": 4,
+        "criticalPaths": ["index.js", "package.json", "CLAUDE.md"],
+        "gaps": []
+      }
+    }
+  ],
+  "statistics": {
+    "totalModules": 7,
+    "activeModules": 4,
+    "deprecatedModules": 1,
+    "maintenanceModules": 2,
+    "totalScannedFiles": 986,
+    "totalCriticalPaths": 35,
+    "estimatedTotalFiles": 1200,
+    "coveragePercentage": 82.2,
+    "newInThisScan": {
+      "pluginsDocumented": 6,
+      "testToolsDocumented": 3,
+      "commandsDocumented": 1,
+      "configOptionsDocumented": "50+"
+    }
+  },
+  "recommendations": {
+    "nextSteps": [
+      "为 admin 模块补充页面组件详细文档",
+      "为 website 模块补充 ISR 配置详情与 SEO 最佳实践",
+      "创建插件开发指南文档（docs/plugin-development.md）",
+      "创建测试最佳实践文档（docs/testing-guide.md）"
+    ],
+    "gaps": [],
+    "priorityAreas": [
+      "admin: 页面组件文档",
+      "website: ISR 与 SEO 优化文档",
+      "shared: 契约定义最佳实践"
+    ],
+    "completed": [
+      "server-ng: 插件系统详细文档（6 个插件）",
+      "server-ng: 测试策略与工具（120+ 测试文件）",
+      "cli: 命令详细说明与使用示例",
+      "waline: 完整配置选项与部署指南"
+    ]
+  },
+  "ignoredPatterns": [
+    "node_modules/**",
+    ".git/**",
+    ".github/**",
+    "dist/**",
+    "build/**",
+    ".next/**",
+    "__pycache__/**",
+    "coverage/**",
+    "*.lock",
+    "*.log",
+    "*.bin",
+    "*.pdf",
+    "*.png",
+    "*.jpg",
+    "*.jpeg",
+    "*.gif",
+    "*.mp4",
+    "*.zip",
+    "*.tar",
+    "*.gz"
+  ],
+  "truncated": false,
+  "completionReason": "深度补充扫描完成：插件系统、测试策略、CLI 工具、Waline 配置已详细记录"
+}
