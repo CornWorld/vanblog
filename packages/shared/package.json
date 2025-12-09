@@ -40,9 +40,11 @@
     "zod": "^4.1.13"
   },
   "devDependencies": {
+    "@zod-codepen/vite-plugin": "^1.0.0",
     "dayjs": "^1.11.13",
     "drizzle-orm": "^0.44.4",
     "drizzle-zod": "^0.8.2",
+    "tsx": "^4.19.2",
     "typescript": "^5.0.0",
     "vite": "^6.0.3",
     "vite-plugin-dts": "^4.3.0"

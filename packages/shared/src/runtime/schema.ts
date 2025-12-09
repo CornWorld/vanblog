@@ -8,9 +8,9 @@
  * ## 架构设计 (Architecture)
  *
  * 遵循 "单一类型来源 (Single Source of Truth)" 原则：
- * 1. Drizzle tables (db.ts) → 唯一的类型来源
+ * 1. Drizzle tables (db.ts) → 唯一的类型来源，使用 mode: 'json' 自动处理 JSON 序列化
  * 2. drizzle-zod → 自动生成 Zod schemas
- * 3. 本文件覆盖默认行为，添加验证和转换逻辑
+ * 3. 本文件添加额外的验证逻辑（如密码强度、slug 格式）
  *
  * ## 命名规范 (Naming Convention)
  *
@@ -24,17 +24,15 @@
  * - `EntityReq` - API 创建请求 (通常是 $EntityIns 去除自动生成字段)
  * - `EntityPatch` - API 更新请求 (通常是 $EntityUpd 去除自动生成字段)
  *
- * ## 类型转换 (Transform)
+ * ## JSON 处理
  *
- * 数据库使用 TEXT 存储 JSON：
- * - 读取时：JSON string → typed object/array
- * - 写入时：typed object/array → JSON string
- *
- * @see {import('./json.js')} - JSON 转换工具
+ * 数据库层使用 Drizzle 的 `mode: 'json'` 自动处理 JSON 序列化：
+ * - 读取时：自动 JSON.parse
+ * - 写入时：自动 JSON.stringify
+ * - 无需手动 transform
  */
 import { createSelectSchema, createInsertSchema, createUpdateSchema } from 'drizzle-zod';
 import { z } from 'zod';
-import { jsonToArr, arrToJson, safeParseJson } from './json.js';
 import {
   users,
   articles,
@@ -55,8 +53,8 @@ import {
 } from './db.js';
 
 // ============================================================
-// Common Schemas (for override)
-// 通用 Schema（用于覆盖默认的 Drizzle schema 行为）
+// Common Schemas (for validation override)
+// 通用 Schema（用于覆盖默认的验证行为）
 // ============================================================
 
 /**
@@ -96,13 +94,6 @@ const pathnameSchema = z
   .string()
   .regex(/^[a-zA-Z0-9-_/]+$/, '路径只能包含字母、数字、连字符和下划线');
 
-/**
- * 标签数组转换 schema - 将 string[] 转换为 JSON 字符串（用于数据库存储）
- *
- * Tags transform schema - converts string array to JSON string for database storage
- */
-const tagsTransform = z.array(z.string()).optional().transform(arrToJson);
-
 // ============================================================
 // USER
 // 用户表相关 Schemas
@@ -112,23 +103,19 @@ const tagsTransform = z.array(z.string()).optional().transform(arrToJson);
  * $User - 数据库查询结果（SELECT）
  *
  * Database SELECT schema for users table.
- * Transform: JSON string → string array for permissions field.
+ * JSON fields (permissions) are automatically handled by Drizzle mode: 'json'.
  */
-export const $User = createSelectSchema(users, {
-  permissions: (s) => s.transform(jsonToArr), // 将 JSON 字符串转为数组
-});
+export const $User = createSelectSchema(users);
 
 /**
  * $UserIns - 数据库插入（INSERT）
  *
  * Database INSERT schema for users table.
- * Transform: string array → JSON string for permissions field.
  */
 export const $UserIns = createInsertSchema(users, {
   username: z.string().min(3, '用户名至少3个字符').max(20, '用户名最多20个字符'),
   password,
   email: emailSchema.optional(),
-  permissions: tagsTransform, // 将数组转为 JSON 字符串
 });
 
 /**
@@ -140,7 +127,6 @@ export const $UserUpd = createUpdateSchema(users, {
   username: z.string().min(3).max(20).optional(),
   password: password.optional(),
   email: emailSchema.optional(),
-  permissions: tagsTransform, // 将数组转为 JSON 字符串
 });
 
 /**
@@ -168,22 +154,18 @@ export const UserPatch = $UserUpd.omit({ id: true, createdAt: true, updatedAt: t
 // ARTICLE
 // ============================================================
 
-export const $Article = createSelectSchema(articles, {
-  tags: (s) => s.transform(jsonToArr),
-});
+export const $Article = createSelectSchema(articles);
 
 export const $ArticleIns = createInsertSchema(articles, {
   title: z.string().min(1, '标题不能为空').max(200, '标题最多200个字符'),
   content: z.string().min(1, '内容不能为空'),
   pathname: pathnameSchema.optional(),
-  tags: tagsTransform,
   author: z.string().min(1, '作者不能为空'),
 });
 
 export const $ArticleUpd = createUpdateSchema(articles, {
   title: z.string().min(1).max(200).optional(),
   pathname: pathnameSchema.optional(),
-  tags: tagsTransform,
 });
 
 export const Article = $Article;
@@ -252,22 +234,18 @@ export const TagPatch = $TagUpd.omit({ id: true, createdAt: true });
 // DRAFT
 // ============================================================
 
-export const $Draft = createSelectSchema(drafts, {
-  tags: (s) => s.transform(jsonToArr),
-});
+export const $Draft = createSelectSchema(drafts);
 
 export const $DraftIns = createInsertSchema(drafts, {
   title: z.string().min(1, '标题不能为空').max(200, '标题最多200个字符'),
   content: z.string().min(1, '内容不能为空'),
   pathname: pathnameSchema.optional(),
-  tags: tagsTransform,
   author: z.string().min(1, '作者不能为空'),
 });
 
 export const $DraftUpd = createUpdateSchema(drafts, {
   title: z.string().min(1).max(200).optional(),
   pathname: pathnameSchema.optional(),
-  tags: tagsTransform,
 });
 
 export const Draft = $Draft;
@@ -290,14 +268,11 @@ export const DraftList = z.object({
 // DRAFT VERSION
 // ============================================================
 
-export const $DraftVersion = createSelectSchema(draftVersions, {
-  tags: (s) => s.transform(jsonToArr),
-});
+export const $DraftVersion = createSelectSchema(draftVersions);
 
 export const $DraftVersionIns = createInsertSchema(draftVersions, {
   title: z.string().min(1, '标题不能为空').max(200, '标题最多200个字符'),
   content: z.string().min(1, '内容不能为空'),
-  tags: tagsTransform,
   author: z.string().min(1, '作者不能为空'),
 });
 
@@ -328,26 +303,14 @@ export const StaticFileReq = $StaticFileIns.omit({ id: true, createdAt: true });
 // SITE META
 // ============================================================
 
-const genericObject = z.record(z.string(), z.unknown());
-
-export const $SiteMeta = createSelectSchema(siteMeta, {
-  value: (s) => s.transform((str) => safeParseJson(str, genericObject) ?? str),
-});
+export const $SiteMeta = createSelectSchema(siteMeta);
 
 export const $SiteMetaIns = createInsertSchema(siteMeta, {
   key: z.string().min(1, '键名不能为空').max(100, '键名最多100个字符'),
-  value: z
-    .unknown()
-    .optional()
-    .transform((val) => (val === undefined ? null : JSON.stringify(val))),
 });
 
 export const $SiteMetaUpd = createUpdateSchema(siteMeta, {
   key: z.string().min(1).max(100).optional(),
-  value: z
-    .unknown()
-    .optional()
-    .transform((val) => (val === undefined ? null : JSON.stringify(val))),
 });
 
 export const SiteMeta = $SiteMeta;
@@ -392,24 +355,10 @@ export const CustomPagePatch = $CustomPageUpd.omit({ id: true, createdAt: true, 
 // ANALYTICS
 // ============================================================
 
-export const $Analytics = createSelectSchema(analytics, {
-  data: (s) =>
-    s.transform((str) => {
-      if (!str || str === '') return null;
-      try {
-        return JSON.parse(str);
-      } catch {
-        return null;
-      }
-    }),
-});
+export const $Analytics = createSelectSchema(analytics);
 
 export const $AnalyticsIns = createInsertSchema(analytics, {
   type: z.string().refine((val) => ['pageview', 'event', 'api_call'].includes(val), '类型无效'),
-  data: z
-    .any()
-    .optional()
-    .transform((val) => (val !== undefined ? JSON.stringify(val) : null)),
 });
 
 export const Analytics = $Analytics;
@@ -446,18 +395,14 @@ export const PermissionNodePatch = $PermissionNodeUpd.omit({
 // PERMISSION GROUP
 // ============================================================
 
-export const $PermissionGroup = createSelectSchema(permissionGroups, {
-  permissions: (s) => s.transform(jsonToArr),
-});
+export const $PermissionGroup = createSelectSchema(permissionGroups);
 
 export const $PermissionGroupIns = createInsertSchema(permissionGroups, {
   name: z.string().min(1, '权限组名称不能为空').max(100, '权限组名称最多100个字符'),
-  permissions: tagsTransform,
 });
 
 export const $PermissionGroupUpd = createUpdateSchema(permissionGroups, {
   name: z.string().min(1).max(100).optional(),
-  permissions: tagsTransform,
 });
 
 export const PermissionGroup = $PermissionGroup;
@@ -496,17 +441,12 @@ export const PluginDataPatch = $PluginDataUpd;
 // WEBHOOK
 // ============================================================
 
-export const $Webhook = createSelectSchema(webhooks, {
-  events: (s) => s.transform(jsonToArr),
-});
+export const $Webhook = createSelectSchema(webhooks);
 
 export const $WebhookIns = createInsertSchema(webhooks, {
   name: z.string().min(1, 'Webhook名称不能为空').max(100, 'Webhook名称最多100个字符'),
   url: z.string().min(1, 'Webhook URL不能为空'),
-  events: z
-    .array(z.string())
-    .min(1, '至少需要选择一个事件')
-    .transform((arr) => JSON.stringify(arr)),
+  events: z.array(z.string()).min(1, '至少需要选择一个事件'),
 }).omit({
   id: true,
   lastTriggered: true,
@@ -519,11 +459,7 @@ export const $WebhookIns = createInsertSchema(webhooks, {
 export const $WebhookUpd = createUpdateSchema(webhooks, {
   name: z.string().min(1).max(100).optional(),
   url: z.string().min(1).optional(),
-  events: z
-    .array(z.string())
-    .min(1)
-    .transform((arr) => JSON.stringify(arr))
-    .optional(),
+  events: z.array(z.string()).min(1).optional(),
 }).omit({
   id: true,
   lastTriggered: true,
@@ -541,13 +477,10 @@ export const WebhookPatch = $WebhookUpd;
 // WEBHOOK LOG
 // ============================================================
 
-export const $WebhookLog = createSelectSchema(webhookLogs, {
-  payload: (s) => s.transform((str) => safeParseJson(str, genericObject) ?? str),
-});
+export const $WebhookLog = createSelectSchema(webhookLogs);
 
 export const $WebhookLogIns = createInsertSchema(webhookLogs, {
   event: z.string().min(1, '事件名称不能为空'),
-  payload: z.unknown().transform((val) => JSON.stringify(val)),
   status: z.enum(['success', 'failed', 'timeout'], { message: '状态无效' }),
 }).omit({ id: true, createdAt: true });
 

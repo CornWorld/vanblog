@@ -48,7 +48,7 @@ describe('PermissionService', () => {
     id: 1,
     name: 'admin',
     description: 'Administrator group',
-    permissions: JSON.stringify(['article:read', 'article:write']),
+    permissions: ['article:read', 'article:write'],
     isActive: true,
     createdAt: mockDate,
     updatedAt: mockDate,

@@ -142,6 +142,22 @@ export default defineConfig({
     },
   },
 });
+### 代码分包策略
+
+构建输出按依赖关系自动分包，确保前端使用 contracts 时不引入 drizzle-orm：
+
+| Chunk | 大小 | 内容 | 使用者 |
+|-------|------|------|--------|
+| `zod-dayjs-*.js` | ~197 KB | Zod 运行时 + dayjs 时区 | contracts, runtime, drizzle |
+| `drizzle-*.js` | ~299 KB | drizzle-orm + drizzle-zod | runtime, drizzle |
+| `contract-schemas-*.js` | ~40 KB | 契约定义 + 通用 schemas | contracts |
+| `dayjs-*.js` | ~0.7 KB | dayjs 工具函数 | drizzle |
+
+**关键优化**：
+- `contracts` 入口仅依赖 `zod-dayjs` 和 `contract-schemas`，不引入 drizzle（节省 ~299 KB）
+- 通过 `resolve.alias` 将 contracts 中的 schema 导入重定向到预生成的纯 Zod 文件
+- 预构建脚本 `scripts/generate-schemas.ts` 使用 zod-codepen 序列化 Zod schemas
+
 ```
 
 ---

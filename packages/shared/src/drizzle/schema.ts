@@ -12,7 +12,7 @@ export const users = sqliteTable('users', {
   type: text('type', { enum: ['admin', 'editor', 'author', 'subscriber', 'viewer'] })
     .notNull()
     .default('subscriber'),
-  permissions: text('permissions'), // JSON string for permissions array
+  permissions: text('permissions', { mode: 'json' }).$type<string[] | null>(),
   createdAt: text('created_at')
     .notNull()
     .$defaultFn(() => nowIsoTz()),
@@ -29,7 +29,7 @@ export const articles = sqliteTable(
     title: text('title').notNull(),
     content: text('content').notNull(),
     pathname: text('pathname').unique(),
-    tags: text('tags'), // JSON string for tags array
+    tags: text('tags', { mode: 'json' }).$type<string[] | null>(),
     category: text('category').references(() => categories.name, {
       onUpdate: 'cascade',
       onDelete: 'set null',
@@ -112,7 +112,7 @@ export const drafts = sqliteTable(
     title: text('title').notNull(),
     content: text('content').notNull(),
     pathname: text('pathname'),
-    tags: text('tags'), // JSON string
+    tags: text('tags', { mode: 'json' }).$type<string[] | null>(),
     category: text('category'),
     author: text('author').notNull(),
     version: integer('version').notNull().default(1),
@@ -145,7 +145,7 @@ export const draftVersions = sqliteTable(
     title: text('title').notNull(),
     content: text('content').notNull(),
     pathname: text('pathname'),
-    tags: text('tags'), // JSON string
+    tags: text('tags', { mode: 'json' }).$type<string[] | null>(),
     category: text('category'),
     author: text('author').notNull(),
     createdAt: text('created_at')
@@ -195,7 +195,7 @@ export const siteMeta = sqliteTable(
   {
     id: integer('id').primaryKey({ autoIncrement: true }),
     key: text('key').notNull().unique(),
-    value: text('value'), // JSON string for complex values
+    value: text('value', { mode: 'json' }).$type<unknown>(),
     createdAt: text('created_at')
       .notNull()
       .$defaultFn(() => nowIsoTz()),
@@ -266,7 +266,7 @@ export const analytics = sqliteTable(
     referrer: text('referrer'),
     userAgent: text('user_agent'),
     ip: text('ip'),
-    data: text('data'), // JSON string for additional data
+    data: text('data', { mode: 'json' }).$type<unknown>(),
     createdAt: text('created_at')
       .notNull()
       .$defaultFn(() => nowIsoTz()),
@@ -313,7 +313,7 @@ export const permissionGroups = sqliteTable(
     id: integer('id').primaryKey({ autoIncrement: true }),
     name: text('name').notNull().unique(), // 权限组名称，如 'admin', 'editor'
     description: text('description'), // 权限组描述
-    permissions: text('permissions'), // JSON string for permissions array
+    permissions: text('permissions', { mode: 'json' }).$type<string[] | null>(),
     isActive: integer('is_active', { mode: 'boolean' }).default(true), // 是否启用
     createdAt: text('created_at')
       .notNull()
@@ -356,7 +356,7 @@ export const webhooks = sqliteTable('webhooks', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   name: text('name').notNull().unique(),
   url: text('url').notNull(),
-  events: text('events').notNull(), // JSON array of event names
+  events: text('events', { mode: 'json' }).$type<string[]>().notNull(),
   secret: text('secret'), // Optional secret for signature verification
   active: integer('active', { mode: 'boolean' }).notNull().default(true),
   retryCount: integer('retry_count').notNull().default(3),
@@ -380,7 +380,7 @@ export const webhookLogs = sqliteTable(
       .notNull()
       .references(() => webhooks.id, { onDelete: 'cascade' }),
     event: text('event').notNull(),
-    payload: text('payload').notNull(), // JSON payload
+    payload: text('payload', { mode: 'json' }).$type<unknown>().notNull(),
     status: text('status').notNull(), // 'success', 'failed', 'timeout'
     responseCode: integer('response_code'),
     responseBody: text('response_body'),

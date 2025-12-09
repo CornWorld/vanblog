@@ -1,7 +1,12 @@
+/**
+ * @file drizzle/zod-schemas.ts
+ *
+ * Zod schemas generated from Drizzle tables.
+ * With mode: 'json' in schema.ts, Drizzle handles JSON serialization automatically.
+ * No transforms needed - Drizzle reads/writes JSON natively.
+ */
 import { createSelectSchema, createInsertSchema, createUpdateSchema } from 'drizzle-zod';
 import { z } from 'zod';
-
-import { safeParseJson, dataSchemas } from './utils.js';
 
 import {
   users,
@@ -22,22 +27,9 @@ import {
   webhookLogs,
 } from './schema.js';
 
-// User schemas
-export const selectUserSchema = createSelectSchema(users, {
-  permissions: (schema) =>
-    schema.transform((str) => {
-      if (str === '') {
-        return [];
-      }
-      try {
-        return JSON.parse(str) as string[];
-      } catch {
-        return [];
-      }
-    }),
-});
-
-// Password strength validation schema
+// ============================================================
+// Password validation schema (reusable)
+// ============================================================
 const passwordSchema = z
   .string()
   .min(8, '密码至少8个字符')
@@ -47,57 +39,33 @@ const passwordSchema = z
   .regex(/[0-9]/, '密码必须包含至少一个数字')
   .regex(/[^a-zA-Z0-9]/, '密码必须包含至少一个特殊字符');
 
+// ============================================================
+// User schemas
+// ============================================================
+export const selectUserSchema = createSelectSchema(users);
+
 export const insertUserSchema = createInsertSchema(users, {
   username: (schema) => schema.min(3, '用户名至少3个字符').max(20, '用户名最多20个字符'),
   password: passwordSchema,
   email: (schema) => schema.regex(/^[^\s@]+@[^\s@]+\.[^\s@]+$/u, '请输入有效的邮箱地址').optional(),
-  permissions: z
-    .array(z.string())
-    .optional()
-    .transform((arr) => {
-      return arr ? JSON.stringify(arr) : null;
-    }),
 });
 
 export const updateUserSchema = createUpdateSchema(users, {
   username: (schema) => schema.min(3, '用户名至少3个字符').max(20, '用户名最多20个字符').optional(),
   password: passwordSchema.optional(),
   email: (schema) => schema.regex(/^[^\s@]+@[^\s@]+\.[^\s@]+$/u, '请输入有效的邮箱地址').optional(),
-  permissions: z
-    .array(z.string())
-    .optional()
-    .transform((arr) => {
-      return arr ? JSON.stringify(arr) : null;
-    })
-    .optional(),
 });
 
+// ============================================================
 // Article schemas
-export const selectArticleSchema = createSelectSchema(articles, {
-  tags: (schema) =>
-    schema.transform((str) => {
-      if (str === '') {
-        return [];
-      }
-      try {
-        return JSON.parse(str) as string[];
-      } catch {
-        return [];
-      }
-    }),
-});
+// ============================================================
+export const selectArticleSchema = createSelectSchema(articles);
 
 export const insertArticleSchema = createInsertSchema(articles, {
   title: (schema) => schema.min(1, '标题不能为空').max(200, '标题最多200个字符'),
   content: (schema) => schema.min(1, '内容不能为空'),
   pathname: (schema) =>
     schema.regex(/^[a-zA-Z0-9-_/]+$/, '路径只能包含字母、数字、连字符和下划线').optional(),
-  tags: z
-    .array(z.string())
-    .optional()
-    .transform((arr) => {
-      return arr ? JSON.stringify(arr) : null;
-    }),
   author: (schema) => schema.min(1, '作者不能为空'),
 });
 
@@ -105,16 +73,12 @@ export const updateArticleSchema = createUpdateSchema(articles, {
   title: (schema) => schema.min(1, '标题不能为空').max(200, '标题最多200个字符').optional(),
   pathname: (schema) =>
     schema.regex(/^[a-zA-Z0-9-_/]+$/, '路径只能包含字母、数字、连字符和下划线').optional(),
-  tags: z
-    .array(z.string())
-    .optional()
-    .transform((arr) => {
-      return arr ? JSON.stringify(arr) : null;
-    }),
 });
 
+// ============================================================
 // Category schemas
-export const selectCategorySchema = createSelectSchema(categories, {});
+// ============================================================
+export const selectCategorySchema = createSelectSchema(categories);
 
 export const insertCategorySchema = createInsertSchema(categories, {
   name: (schema) => schema.min(1, '分类名称不能为空').max(50, '分类名称最多50个字符'),
@@ -128,8 +92,10 @@ export const updateCategorySchema = createUpdateSchema(categories, {
     schema.regex(/^[a-zA-Z0-9-_]+$/, 'slug只能包含字母、数字、连字符和下划线').optional(),
 });
 
+// ============================================================
 // Tag schemas
-export const selectTagSchema = createSelectSchema(tags, {});
+// ============================================================
+export const selectTagSchema = createSelectSchema(tags);
 
 export const insertTagSchema = createInsertSchema(tags, {
   name: (schema) => schema.min(1, '标签名称不能为空').max(30, '标签名称最多30个字符'),
@@ -143,32 +109,16 @@ export const updateTagSchema = createUpdateSchema(tags, {
     schema.regex(/^[a-zA-Z0-9-_]+$/, 'slug只能包含字母、数字、连字符和下划线').optional(),
 });
 
+// ============================================================
 // Draft schemas
-export const selectDraftSchema = createSelectSchema(drafts, {
-  tags: (schema) =>
-    schema.transform((str) => {
-      if (str === '') {
-        return [];
-      }
-      try {
-        return JSON.parse(str) as string[];
-      } catch {
-        return [];
-      }
-    }),
-});
+// ============================================================
+export const selectDraftSchema = createSelectSchema(drafts);
 
 export const insertDraftSchema = createInsertSchema(drafts, {
   title: (schema) => schema.min(1, '标题不能为空').max(200, '标题最多200个字符'),
   content: (schema) => schema.min(1, '内容不能为空'),
   pathname: (schema) =>
     schema.regex(/^[a-zA-Z0-9-_/]+$/, '路径只能包含字母、数字、连字符和下划线').optional(),
-  tags: z
-    .array(z.string())
-    .optional()
-    .transform((arr) => {
-      return arr ? JSON.stringify(arr) : null;
-    }),
   author: (schema) => schema.min(1, '作者不能为空'),
 });
 
@@ -176,43 +126,23 @@ export const updateDraftSchema = createUpdateSchema(drafts, {
   title: (schema) => schema.min(1, '标题不能为空').max(200, '标题最多200个字符').optional(),
   pathname: (schema) =>
     schema.regex(/^[a-zA-Z0-9-_/]+$/, '路径只能包含字母、数字、连字符和下划线').optional(),
-  tags: z
-    .array(z.string())
-    .optional()
-    .transform((arr) => {
-      return arr ? JSON.stringify(arr) : null;
-    }),
 });
 
+// ============================================================
 // Draft Version schemas
-export const selectDraftVersionSchema = createSelectSchema(draftVersions, {
-  tags: (schema) =>
-    schema.transform((str) => {
-      if (str === '') {
-        return [];
-      }
-      try {
-        return JSON.parse(str) as string[];
-      } catch {
-        return [];
-      }
-    }),
-});
+// ============================================================
+export const selectDraftVersionSchema = createSelectSchema(draftVersions);
 
 export const insertDraftVersionSchema = createInsertSchema(draftVersions, {
   title: (schema) => schema.min(1, '标题不能为空').max(200, '标题最多200个字符'),
   content: (schema) => schema.min(1, '内容不能为空'),
-  tags: z
-    .array(z.string())
-    .optional()
-    .transform((arr) => {
-      return arr ? JSON.stringify(arr) : null;
-    }),
   author: (schema) => schema.min(1, '作者不能为空'),
 });
 
+// ============================================================
 // Static Files schemas
-export const selectStaticFileSchema = createSelectSchema(staticFiles, {});
+// ============================================================
+export const selectStaticFileSchema = createSelectSchema(staticFiles);
 
 export const insertStaticFileSchema = createInsertSchema(staticFiles, {
   filename: (schema) => schema.min(1, '文件名不能为空'),
@@ -229,43 +159,32 @@ export const insertStaticFileSchema = createInsertSchema(staticFiles, {
 
 export const updateStaticFileSchema = createUpdateSchema(staticFiles);
 
+// ============================================================
 // Site Meta schemas
-export const selectSiteMetaSchema = createSelectSchema(siteMeta, {
-  value: (schema) =>
-    schema.transform((str): unknown => {
-      return safeParseJson(str, dataSchemas.genericObject) ?? str;
-    }),
-});
+// ============================================================
+export const selectSiteMetaSchema = createSelectSchema(siteMeta);
 
 export const insertSiteMetaSchema = createInsertSchema(siteMeta, {
   key: (schema) => schema.min(1, '键名不能为空').max(100, '键名最多100个字符'),
-  value: z
-    .unknown()
-    .optional()
-    .transform((val) => {
-      return val === undefined ? null : JSON.stringify(val);
-    }),
 });
 
 export const updateSiteMetaSchema = createUpdateSchema(siteMeta, {
   key: (schema) => schema.min(1, '键名不能为空').max(100, '键名最多100个字符').optional(),
-  value: z
-    .unknown()
-    .optional()
-    .transform((val) => {
-      return val === undefined ? null : JSON.stringify(val);
-    }),
 });
 
+// ============================================================
 // Login Logs schemas
-export const selectLoginLogSchema = createSelectSchema(loginLogs, {});
+// ============================================================
+export const selectLoginLogSchema = createSelectSchema(loginLogs);
 
 export const insertLoginLogSchema = createInsertSchema(loginLogs, {
   username: (schema) => schema.min(1, '用户名不能为空'),
 });
 
+// ============================================================
 // Custom Pages schemas
-export const selectCustomPageSchema = createSelectSchema(customPages, {});
+// ============================================================
+export const selectCustomPageSchema = createSelectSchema(customPages);
 
 export const insertCustomPageSchema = createInsertSchema(customPages, {
   title: (schema) => schema.min(1, '页面标题不能为空').max(200, '页面标题最多200个字符'),
@@ -280,20 +199,10 @@ export const updateCustomPageSchema = createUpdateSchema(customPages, {
   content: (schema) => schema.min(1, '页面内容不能为空').optional(),
 });
 
+// ============================================================
 // Analytics schemas
-export const selectAnalyticsSchema = createSelectSchema(analytics, {
-  data: (schema) =>
-    schema.transform((str): unknown => {
-      if (str === '') {
-        return null;
-      }
-      try {
-        return JSON.parse(str);
-      } catch {
-        return null;
-      }
-    }),
-});
+// ============================================================
+export const selectAnalyticsSchema = createSelectSchema(analytics);
 
 export const insertAnalyticsSchema = createInsertSchema(analytics, {
   type: (schema) =>
@@ -303,15 +212,111 @@ export const insertAnalyticsSchema = createInsertSchema(analytics, {
     ),
   userAgent: (schema) => schema.nullable().optional(),
   ip: (schema) => schema.nullable().optional(),
-  data: z
-    .any()
-    .optional()
-    .transform((val): string | null => {
-      return val !== undefined ? JSON.stringify(val) : null;
-    }),
 });
 
-// Type exports for TypeScript inference
+// ============================================================
+// Permission Node schemas
+// ============================================================
+export const selectPermissionNodeSchema = createSelectSchema(permissionNodes);
+
+export const insertPermissionNodeSchema = createInsertSchema(permissionNodes, {
+  name: (schema) => schema.min(1, '权限节点名称不能为空').max(100, '权限节点名称最多100个字符'),
+  module: (schema) => schema.min(1, '模块名称不能为空').max(50, '模块名称最多50个字符'),
+});
+
+export const updatePermissionNodeSchema = createUpdateSchema(permissionNodes, {
+  name: (schema) =>
+    schema.min(1, '权限节点名称不能为空').max(100, '权限节点名称最多100个字符').optional(),
+  module: (schema) => schema.min(1, '模块名称不能为空').max(50, '模块名称最多50个字符').optional(),
+});
+
+// ============================================================
+// Permission Group schemas
+// ============================================================
+export const selectPermissionGroupSchema = createSelectSchema(permissionGroups);
+
+export const insertPermissionGroupSchema = createInsertSchema(permissionGroups, {
+  name: (schema) => schema.min(1, '权限组名称不能为空').max(100, '权限组名称最多100个字符'),
+});
+
+export const updatePermissionGroupSchema = createUpdateSchema(permissionGroups, {
+  name: (schema) =>
+    schema.min(1, '权限组名称不能为空').max(100, '权限组名称最多100个字符').optional(),
+});
+
+// ============================================================
+// Plugin data schemas
+// ============================================================
+export const selectPluginDataSchema = createSelectSchema(pluginData);
+
+export const insertPluginDataSchema = createInsertSchema(pluginData, {
+  pluginId: (schema) => schema.min(1, '插件ID不能为空'),
+  key: (schema) => schema.min(1, '键名不能为空'),
+}).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const updatePluginDataSchema = createUpdateSchema(pluginData, {
+  pluginId: (schema) => schema.min(1, '插件ID不能为空').optional(),
+  key: (schema) => schema.min(1, '键名不能为空').optional(),
+}).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// ============================================================
+// Webhook schemas
+// ============================================================
+export const selectWebhookSchema = createSelectSchema(webhooks);
+
+export const insertWebhookSchema = createInsertSchema(webhooks, {
+  name: (schema) => schema.min(1, 'Webhook名称不能为空').max(100, 'Webhook名称最多100个字符'),
+  url: (schema) => schema.min(1, 'Webhook URL不能为空'),
+  events: z.array(z.string()).min(1, '至少需要选择一个事件'),
+}).omit({
+  id: true,
+  lastTriggered: true,
+  lastStatus: true,
+  lastError: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const updateWebhookSchema = createUpdateSchema(webhooks, {
+  name: (schema) =>
+    schema.min(1, 'Webhook名称不能为空').max(100, 'Webhook名称最多100个字符').optional(),
+  url: (schema) => schema.min(1, 'Webhook URL不能为空').optional(),
+  events: z.array(z.string()).min(1, '至少需要选择一个事件').optional(),
+}).omit({
+  id: true,
+  lastTriggered: true,
+  lastStatus: true,
+  lastError: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// ============================================================
+// Webhook Log schemas
+// ============================================================
+export const selectWebhookLogSchema = createSelectSchema(webhookLogs);
+
+export const insertWebhookLogSchema = createInsertSchema(webhookLogs, {
+  event: (schema) => schema.min(1, '事件名称不能为空'),
+  status: z.enum(['success', 'failed', 'timeout'], {
+    message: '状态必须是 success、failed 或 timeout',
+  }),
+}).omit({
+  id: true,
+  createdAt: true,
+});
+
+// ============================================================
+// Type exports
+// ============================================================
 export type SelectUser = z.infer<typeof selectUserSchema>;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type UpdateUser = z.infer<typeof updateUserSchema>;
@@ -353,56 +358,6 @@ export type UpdateCustomPage = z.infer<typeof updateCustomPageSchema>;
 export type SelectAnalytics = z.infer<typeof selectAnalyticsSchema>;
 export type InsertAnalytics = z.infer<typeof insertAnalyticsSchema>;
 
-// Permission Node schemas
-export const selectPermissionNodeSchema = createSelectSchema(permissionNodes, {});
-
-export const insertPermissionNodeSchema = createInsertSchema(permissionNodes, {
-  name: (schema) => schema.min(1, '权限节点名称不能为空').max(100, '权限节点名称最多100个字符'),
-  module: (schema) => schema.min(1, '模块名称不能为空').max(50, '模块名称最多50个字符'),
-});
-
-export const updatePermissionNodeSchema = createUpdateSchema(permissionNodes, {
-  name: (schema) =>
-    schema.min(1, '权限节点名称不能为空').max(100, '权限节点名称最多100个字符').optional(),
-  module: (schema) => schema.min(1, '模块名称不能为空').max(50, '模块名称最多50个字符').optional(),
-});
-
-// Permission Group schemas
-export const selectPermissionGroupSchema = createSelectSchema(permissionGroups, {
-  permissions: (schema) =>
-    schema.transform((str) => {
-      if (str === '') {
-        return [];
-      }
-      try {
-        return JSON.parse(str) as string[];
-      } catch {
-        return [];
-      }
-    }),
-});
-
-export const insertPermissionGroupSchema = createInsertSchema(permissionGroups, {
-  name: (schema) => schema.min(1, '权限组名称不能为空').max(100, '权限组名称最多100个字符'),
-  permissions: z
-    .array(z.string())
-    .optional()
-    .transform((arr) => {
-      return arr ? JSON.stringify(arr) : null;
-    }),
-});
-
-export const updatePermissionGroupSchema = createUpdateSchema(permissionGroups, {
-  name: (schema) =>
-    schema.min(1, '权限组名称不能为空').max(100, '权限组名称最多100个字符').optional(),
-  permissions: z
-    .array(z.string())
-    .optional()
-    .transform((arr) => {
-      return arr ? JSON.stringify(arr) : null;
-    }),
-});
-
 export type SelectPermissionNode = z.infer<typeof selectPermissionNodeSchema>;
 export type InsertPermissionNode = z.infer<typeof insertPermissionNodeSchema>;
 export type UpdatePermissionNode = z.infer<typeof updatePermissionNodeSchema>;
@@ -411,103 +366,9 @@ export type SelectPermissionGroup = z.infer<typeof selectPermissionGroupSchema>;
 export type InsertPermissionGroup = z.infer<typeof insertPermissionGroupSchema>;
 export type UpdatePermissionGroup = z.infer<typeof updatePermissionGroupSchema>;
 
-// Plugin data schemas
-export const selectPluginDataSchema = createSelectSchema(pluginData, {});
-
-export const insertPluginDataSchema = createInsertSchema(pluginData, {
-  pluginId: (schema) => schema.min(1, '插件ID不能为空'),
-  key: (schema) => schema.min(1, '键名不能为空'),
-}).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
-export const updatePluginDataSchema = createUpdateSchema(pluginData, {
-  pluginId: (schema) => schema.min(1, '插件ID不能为空').optional(),
-  key: (schema) => schema.min(1, '键名不能为空').optional(),
-}).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
 export type SelectPluginData = z.infer<typeof selectPluginDataSchema>;
 export type InsertPluginData = z.infer<typeof insertPluginDataSchema>;
 export type UpdatePluginData = z.infer<typeof updatePluginDataSchema>;
-
-// Webhook schemas
-export const selectWebhookSchema = createSelectSchema(webhooks, {
-  events: (schema) =>
-    schema.transform((str) => {
-      if (str === '') {
-        return [];
-      }
-      try {
-        return JSON.parse(str) as string[];
-      } catch {
-        return [];
-      }
-    }),
-});
-
-export const insertWebhookSchema = createInsertSchema(webhooks, {
-  name: (schema) => schema.min(1, 'Webhook名称不能为空').max(100, 'Webhook名称最多100个字符'),
-  url: (schema) => schema.min(1, 'Webhook URL不能为空'),
-  events: z
-    .array(z.string())
-    .min(1, '至少需要选择一个事件')
-    .transform((arr) => {
-      return JSON.stringify(arr);
-    }),
-}).omit({
-  id: true,
-  lastTriggered: true,
-  lastStatus: true,
-  lastError: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
-export const updateWebhookSchema = createUpdateSchema(webhooks, {
-  name: (schema) =>
-    schema.min(1, 'Webhook名称不能为空').max(100, 'Webhook名称最多100个字符').optional(),
-  url: (schema) => schema.min(1, 'Webhook URL不能为空').optional(),
-  events: z
-    .array(z.string())
-    .min(1, '至少需要选择一个事件')
-    .transform((arr) => {
-      return JSON.stringify(arr);
-    })
-    .optional(),
-}).omit({
-  id: true,
-  lastTriggered: true,
-  lastStatus: true,
-  lastError: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
-export const selectWebhookLogSchema = createSelectSchema(webhookLogs, {
-  payload: (schema) =>
-    schema.transform((str): unknown => {
-      return safeParseJson(str, dataSchemas.genericObject) ?? str;
-    }),
-});
-
-export const insertWebhookLogSchema = createInsertSchema(webhookLogs, {
-  event: (schema) => schema.min(1, '事件名称不能为空'),
-  payload: z.unknown().transform((val) => {
-    return JSON.stringify(val);
-  }),
-  status: z.enum(['success', 'failed', 'timeout'], {
-    message: '状态必须是 success、failed 或 timeout',
-  }),
-}).omit({
-  id: true,
-  createdAt: true,
-});
 
 export type SelectWebhook = z.infer<typeof selectWebhookSchema>;
 export type InsertWebhook = z.infer<typeof insertWebhookSchema>;
