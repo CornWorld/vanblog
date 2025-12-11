@@ -1,14 +1,13 @@
 import { Injectable, NotFoundException, Inject } from '@nestjs/common';
 import { dayjs } from '@vanblog/shared';
+import { tags, articles } from '@vanblog/shared/drizzle';
 import { eq, sql, like, and, desc } from 'drizzle-orm';
 import { z } from 'zod';
 
 import { DATABASE_CONNECTION, type Database } from '../../database';
-import { tags, articles } from '@vanblog/shared/drizzle';
 import { OverallStatisticsDto } from '../../shared/dto/statistics.dto';
 import { QueryOptimizerService } from '../../shared/services/query-optimizer.service';
 import { StatisticsService } from '../../shared/services/statistics.service';
-import { safeParseJson, dataSchemas } from '@vanblog/shared/drizzle';
 import { ArticleListResponseSchema, ArticleQuerySchema } from '../article/dto/article.dto';
 import { HookService } from '../plugin/services/hook.service';
 
@@ -68,7 +67,7 @@ export class TagService {
     const results = await this.db.select().from(tags).where(eq(tags.id, id)).limit(1);
 
     if (results.length === 0) {
-      throw new NotFoundException(`Tag with ID ${id} not found`);
+      throw new NotFoundException(`Tag with ID ${String(id)} not found`);
     }
 
     const [result] = results;
@@ -128,7 +127,7 @@ export class TagService {
     const result = await this.db.update(tags).set(tagData).where(eq(tags.id, id)).returning();
 
     if (result.length === 0) {
-      throw new NotFoundException(`Tag with ID ${id} not found`);
+      throw new NotFoundException(`Tag with ID ${String(id)} not found`);
     }
 
     const tagResult = new Tag({
@@ -162,7 +161,7 @@ export class TagService {
     const result = await this.db.delete(tags).where(eq(tags.id, id)).returning({ id: tags.id });
 
     if (result.length === 0) {
-      throw new NotFoundException(`Tag with ID ${id} not found`);
+      throw new NotFoundException(`Tag with ID ${String(id)} not found`);
     }
 
     // Trigger webhook event
@@ -334,7 +333,7 @@ export class TagService {
       title: article.title,
       content: article.content,
       pathname: article.pathname,
-      tags: safeParseJson(article.tags, dataSchemas.tagsArray) ?? [],
+      tags: article.tags ?? [],
       category: article.category,
       author: article.author,
       top: article.top,

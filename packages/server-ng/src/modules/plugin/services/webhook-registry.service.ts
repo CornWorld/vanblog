@@ -81,8 +81,8 @@ export class WebhookRegistryService {
       // Add webhook to the event's subscriber list
       const subscribers = this.activeWebhookRegistrations.get(event);
       if (subscribers) {
-        subscribers.add(`webhook:${webhookId}`);
-        this.logger.debug(`Webhook ${webhookId} subscribed to event: ${event}`);
+        subscribers.add(`webhook:${String(webhookId)}`);
+        this.logger.debug(`Webhook ${String(webhookId)} subscribed to event: ${event}`);
       }
     });
   }
@@ -95,8 +95,8 @@ export class WebhookRegistryService {
       const subscribers = this.activeWebhookRegistrations.get(event);
       if (!subscribers) return;
 
-      subscribers.delete(`webhook:${webhookId}`);
-      this.logger.debug(`Webhook ${webhookId} unsubscribed from event: ${event}`);
+      subscribers.delete(`webhook:${String(webhookId)}`);
+      this.logger.debug(`Webhook ${String(webhookId)} unsubscribed from event: ${event}`);
 
       // If no webhooks are listening to this event, remove the hook handler
       const hasWebhookSubscribers = Array.from(subscribers).some((sub) =>
@@ -121,7 +121,7 @@ export class WebhookRegistryService {
     const eventsToUnregister: string[] = [];
 
     this.activeWebhookRegistrations.forEach((subscribers, event) => {
-      if (subscribers.has(`webhook:${webhookId}`)) {
+      if (subscribers.has(`webhook:${String(webhookId)}`)) {
         eventsToUnregister.push(event);
       }
     });

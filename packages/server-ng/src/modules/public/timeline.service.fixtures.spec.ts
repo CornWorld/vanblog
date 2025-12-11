@@ -32,7 +32,7 @@ describe('TimelineService', () => {
           id: 1,
           title: 'NestJS Tips',
           pathname: '/posts/nestjs-tips',
-          tags: JSON.stringify(['nestjs', 'ts']),
+          tags: ['nestjs', 'ts'], // Drizzle mode: 'json' returns array directly
           category: 'Tech',
           author: 'alice',
           top: 0,
@@ -47,7 +47,7 @@ describe('TimelineService', () => {
           id: 2,
           title: 'Life Note',
           pathname: '/posts/life-note',
-          tags: 'invalid-json',
+          tags: null, // null tags
           category: 'Life',
           author: 'bob',
           top: 0,
@@ -75,7 +75,7 @@ describe('TimelineService', () => {
       expect(a2024.private).toBe(false);
 
       const [a2023] = result['2023'];
-      expect(a2023.tags).toEqual([]); // 无效JSON回退为空数组
+      expect(a2023.tags).toEqual([]); // null 回退为空数组
       expect(a2023.viewer).toBe(0); // null 回退为 0
     },
   );
@@ -88,7 +88,7 @@ describe('TimelineService', () => {
           id: 10,
           title: 'Public',
           pathname: '/p',
-          tags: '[]',
+          tags: [],
           category: 'C1',
           author: 'u',
           top: 0,
@@ -114,7 +114,7 @@ describe('TimelineService', () => {
           id: 11,
           title: 'Hidden But Public',
           pathname: '/h',
-          tags: '[]',
+          tags: [],
           category: 'C1',
           author: 'u',
           top: 0,

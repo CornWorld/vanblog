@@ -1,12 +1,12 @@
 import { type INestApplication, ValidationPipe, VersioningType } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
+import { articles, categories, tags } from '@vanblog/shared/drizzle';
 import request from 'supertest';
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 
 import { AppModule } from '../src/app.module';
 import { ConfigService } from '../src/config';
 import { DATABASE_CONNECTION } from '../src/database';
-import { articles, categories, tags } from '@vanblog/shared/drizzle';
 
 import { createUser, cleanupDatabase } from './test-utils';
 
@@ -83,7 +83,7 @@ describe('OptionsController (e2e)', () => {
         author: 'tester',
         pathname: 'test-article-1',
         category: 'Technology',
-        tags: JSON.stringify(['JavaScript', 'React']),
+        tags: ['JavaScript', 'React'],
         hidden: false,
         private: false,
         createdAt: '2024-01-01T00:00:00.000Z',
@@ -95,7 +95,7 @@ describe('OptionsController (e2e)', () => {
         author: 'tester',
         pathname: 'test-article-2',
         category: 'Lifestyle',
-        tags: JSON.stringify(['TypeScript']),
+        tags: ['TypeScript'],
         hidden: false,
         private: false,
         createdAt: '2024-01-02T00:00:00.000Z',
@@ -277,7 +277,7 @@ describe('OptionsController (e2e)', () => {
         author: 'tester',
         pathname: 'dirty-json-opt',
         category: null,
-        tags: '["JavaScript", invalid]', // invalid JSON on purpose
+        tags: ['JavaScript'], // valid array now
         hidden: false,
         private: false,
         createdAt: '2024-01-05T00:00:00.000Z',
@@ -289,7 +289,7 @@ describe('OptionsController (e2e)', () => {
         author: 'tester',
         pathname: 'empty-tags-opt',
         category: null,
-        tags: '', // empty string should be treated as no tags
+        tags: [], // empty array instead of empty string
         hidden: false,
         private: false,
         createdAt: '2024-01-06T00:00:00.000Z',
@@ -301,7 +301,7 @@ describe('OptionsController (e2e)', () => {
         author: 'tester',
         pathname: 'hidden-js-opt',
         category: null,
-        tags: JSON.stringify(['JavaScript']),
+        tags: ['JavaScript'],
         hidden: true,
         private: false,
         createdAt: '2024-01-07T00:00:00.000Z',

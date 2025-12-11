@@ -3,11 +3,11 @@ import * as path from 'path';
 
 import { Injectable, Logger, Inject } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { articles, categories, tags } from '@vanblog/shared/drizzle';
 import { eq, and, sql } from 'drizzle-orm';
 import { SitemapStream, streamToPromise } from 'sitemap';
 
 import { DATABASE_CONNECTION, type Database } from '../../database';
-import { articles, categories, tags } from '@vanblog/shared/drizzle';
 import { HookService } from '../plugin/services/hook.service';
 import {
   SITEMAP_EXTRA_STATIC_PATHS_KEY,
@@ -220,7 +220,7 @@ export class SitemapService {
       .from(articles)
       .where(and(eq(articles.hidden, false), eq(articles.private, false)));
 
-    return articleResults.map((article) => `/post/${article.pathname ?? article.id}`);
+    return articleResults.map((article) => `/post/${String(article.pathname ?? article.id)}`);
   }
 
   /**
@@ -281,7 +281,7 @@ export class SitemapService {
 
     const paths: string[] = [];
     for (let i = 1; i <= totalPages; i++) {
-      paths.push(`/page/${i}`);
+      paths.push(`/page/${String(i)}`);
     }
 
     return paths;

@@ -1,8 +1,8 @@
+import { users } from '@vanblog/shared/drizzle';
 import { hash } from 'bcrypt';
 import request from 'supertest';
 
 import { DATABASE_CONNECTION } from '../src/database';
-import { users } from '@vanblog/shared/drizzle';
 
 import type { INestApplication } from '@nestjs/common';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
@@ -31,7 +31,7 @@ export async function createUser(
     password: hashedPassword,
     nickname: userData.nickname,
     type: userData.type,
-    permissions: JSON.stringify(['all']),
+    permissions: ['all'],
   });
 }
 
@@ -64,7 +64,7 @@ export async function createUserWithPermissions(
     password: hashedPassword,
     nickname,
     type,
-    permissions: JSON.stringify(permissions),
+    permissions,
   });
 }
 

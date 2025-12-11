@@ -173,13 +173,13 @@ export class CDNService {
       return;
     }
 
-    this.logger.log(`Warming up CDN cache for ${urls.length} URLs`);
+    this.logger.log(`Warming up CDN cache for ${String(urls.length)} URLs`);
 
     const promises = urls.map(async (url) => {
       try {
         const response = await fetch(url, { method: 'HEAD' });
         if (!response.ok) {
-          this.logger.warn(`Failed to warmup cache for ${url}: ${response.status}`);
+          this.logger.warn(`Failed to warmup cache for ${url}: ${String(response.status)}`);
         }
       } catch (error) {
         this.logger.error(`Error warming up cache for ${url}:`, error);
@@ -220,10 +220,12 @@ export class CDNService {
       });
 
       if (response.ok) {
-        this.logger.log(`Successfully purged ${urls.length} URLs from CDN cache`);
+        this.logger.log(`Successfully purged ${String(urls.length)} URLs from CDN cache`);
         return true;
       } else {
-        this.logger.error(`Failed to purge CDN cache: ${response.status} ${response.statusText}`);
+        this.logger.error(
+          `Failed to purge CDN cache: ${String(response.status)} ${response.statusText}`,
+        );
         return false;
       }
     } catch (error) {
@@ -263,7 +265,7 @@ export class CDNService {
         return true;
       } else {
         this.logger.error(
-          `Failed to purge all CDN cache: ${response.status} ${response.statusText}`,
+          `Failed to purge all CDN cache: ${String(response.status)} ${response.statusText}`,
         );
         return false;
       }
@@ -330,6 +332,6 @@ export class CDNService {
    */
   generateSrcSet(imagePath: string, sizes: number[] = [320, 640, 768, 1024, 1280, 1920]): string {
     const urls = this.generateResponsiveImageUrls(imagePath, sizes);
-    return urls.map(({ url, width }) => `${url} ${width}w`).join(', ');
+    return urls.map(({ url, width }) => `${url} ${String(width)}w`).join(', ');
   }
 }

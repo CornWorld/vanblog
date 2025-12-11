@@ -116,14 +116,16 @@ export class PerformanceMonitoringMiddleware implements NestMiddleware {
       // 记录日志
       if (duration > 3000) {
         this.logger.warn(
-          `Very slow request: ${method} ${originalUrl} - ${duration}ms (Status: ${statusCode}, IP: ${requestIp}, UA: ${req.get('User-Agent') ?? 'Unknown'})`,
+          `Very slow request: ${method} ${originalUrl} - ${String(duration)}ms (Status: ${String(statusCode)}, IP: ${requestIp}, UA: ${req.get('User-Agent') ?? 'Unknown'})`,
         );
       } else if (duration > 1000) {
         this.logger.warn(
-          `Slow request: ${method} ${originalUrl} - ${duration}ms (Status: ${statusCode}, IP: ${requestIp})`,
+          `Slow request: ${method} ${originalUrl} - ${String(duration)}ms (Status: ${String(statusCode)}, IP: ${requestIp})`,
         );
       } else {
-        this.logger.log(`${method} ${originalUrl} - ${duration}ms (Status: ${statusCode})`);
+        this.logger.log(
+          `${method} ${originalUrl} - ${String(duration)}ms (Status: ${String(statusCode)})`,
+        );
       }
     });
 
@@ -341,7 +343,9 @@ export class PerformanceMonitoringMiddleware implements NestMiddleware {
 
     // 检查平均响应时间
     if (stats.averageResponseTime > 2000) {
-      warnings.push(`High average response time: ${Math.round(stats.averageResponseTime)}ms`);
+      warnings.push(
+        `High average response time: ${String(Math.round(stats.averageResponseTime))}ms`,
+      );
     }
 
     // 检查错误率
@@ -359,7 +363,7 @@ export class PerformanceMonitoringMiddleware implements NestMiddleware {
     // 检查内存使用
     const memoryUsageMB = memoryTrend.current / 1024 / 1024;
     if (memoryUsageMB > 500) {
-      warnings.push(`High memory usage: ${Math.round(memoryUsageMB)}MB`);
+      warnings.push(`High memory usage: ${String(Math.round(memoryUsageMB))}MB`);
     }
 
     if (memoryTrend.isIncreasing) {

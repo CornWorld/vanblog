@@ -164,7 +164,7 @@ export class ErrorRateMonitoringService {
       if (stat.errorCount >= ErrorRateMonitoringService.HIGH_ERROR_COUNT_THRESHOLD) {
         alerts.push({
           type: 'warning',
-          message: `High error count for ${stat.endpoint}: ${stat.errorCount} errors`,
+          message: `High error count for ${stat.endpoint}: ${String(stat.errorCount)} errors`,
           endpoint: stat.endpoint,
           errorRate: stat.errorRate,
           category: 'error_count',
@@ -274,7 +274,9 @@ export class ErrorRateMonitoringService {
         factors.push(`Critical global error rate: ${globalErrorRate.toFixed(1)}%`);
       }
       if (summary.criticalErrorEndpoints > 0) {
-        factors.push(`${summary.criticalErrorEndpoints} endpoints with critical error rates`);
+        factors.push(
+          `${String(summary.criticalErrorEndpoints)} endpoints with critical error rates`,
+        );
       }
 
       return {
@@ -290,11 +292,11 @@ export class ErrorRateMonitoringService {
         factors.push(`Elevated global error rate: ${globalErrorRate.toFixed(1)}%`);
       }
       if (summary.highErrorEndpoints > 0) {
-        factors.push(`${summary.highErrorEndpoints} endpoints with high error rates`);
+        factors.push(`${String(summary.highErrorEndpoints)} endpoints with high error rates`);
       }
       if (summary.performanceCorrelationAlerts > 0) {
         factors.push(
-          `${summary.performanceCorrelationAlerts} endpoints with performance-error correlation`,
+          `${String(summary.performanceCorrelationAlerts)} endpoints with performance-error correlation`,
         );
       }
       if (summary.slowRequestRatio > 20) {
@@ -345,10 +347,10 @@ export class ErrorRateMonitoringService {
 
     if (criticalEndpoints.length > 0) {
       trend = 'degrading';
-      recommendation = `Immediate attention required for ${criticalEndpoints.length} critical endpoints. Focus on: ${criticalEndpoints.slice(0, 3).join(', ')}.`;
+      recommendation = `Immediate attention required for ${String(criticalEndpoints.length)} critical endpoints. Focus on: ${criticalEndpoints.slice(0, 3).join(', ')}.`;
     } else if (performanceImpactedEndpoints.length > 0) {
       trend = 'degrading';
-      recommendation = `Performance optimization needed for ${performanceImpactedEndpoints.length} endpoints with high error-performance correlation.`;
+      recommendation = `Performance optimization needed for ${String(performanceImpactedEndpoints.length)} endpoints with high error-performance correlation.`;
     } else if (this.getGlobalErrorRate() < 1) {
       trend = 'improving';
       recommendation =

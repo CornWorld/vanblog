@@ -20,7 +20,7 @@ export class V1DeprecationMiddleware implements NestMiddleware {
     // 匹配形如 /api/v1/* 的路径
     if (this.isV1ApiPath(url)) {
       this.logger.warn(
-        `Deprecated V1 API access attempt: ${req.method} ${url} from ${req.ip}`,
+        `Deprecated V1 API access attempt: ${req.method} ${url} from ${req.ip ?? 'unknown'}`,
         'V1DeprecationMiddleware',
       );
 

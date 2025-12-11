@@ -1,12 +1,12 @@
 import { type INestApplication, ValidationPipe, VersioningType } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
+import { articles } from '@vanblog/shared/drizzle';
 import request from 'supertest';
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 
 import { AppModule } from '../src/app.module';
 import { ConfigService } from '../src/config';
 import { DATABASE_CONNECTION } from '../src/database';
-import { articles } from '@vanblog/shared/drizzle';
 
 import { createUser, cleanupDatabase } from './test-utils';
 
@@ -61,7 +61,7 @@ describe('TimelineController (e2e)', () => {
         content: 'content',
         author: 'tester',
         pathname: 'visible-2024-a',
-        tags: JSON.stringify(['e2e', 'timeline']),
+        tags: ['e2e', 'timeline'],
         hidden: false,
         private: false,
         createdAt: '2024-05-10T12:00:00.000Z',
@@ -72,7 +72,7 @@ describe('TimelineController (e2e)', () => {
         content: 'content',
         author: 'tester',
         pathname: 'hidden-2024-b',
-        tags: JSON.stringify(['e2e', 'timeline']),
+        tags: ['e2e', 'timeline'],
         hidden: true,
         private: false,
         createdAt: '2024-03-01T00:00:00.000Z',
@@ -83,7 +83,7 @@ describe('TimelineController (e2e)', () => {
         content: 'content',
         author: 'tester',
         pathname: 'visible-2023-c',
-        tags: JSON.stringify(['e2e', 'timeline']),
+        tags: ['e2e', 'timeline'],
         hidden: false,
         private: false,
         createdAt: '2023-12-20T00:00:00.000Z',
@@ -94,7 +94,7 @@ describe('TimelineController (e2e)', () => {
         content: 'content',
         author: 'tester',
         pathname: 'private-2024-d',
-        tags: JSON.stringify(['e2e', 'timeline']),
+        tags: ['e2e', 'timeline'],
         hidden: false,
         private: true,
         createdAt: '2024-06-01T00:00:00.000Z',

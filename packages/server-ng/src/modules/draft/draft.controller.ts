@@ -48,7 +48,7 @@ export class DraftController {
             title: item.title,
             content: item.content,
             category: item.category ?? undefined,
-            tags: item.tags ?? undefined,
+            tags: (item.tags ?? undefined) as string[] | undefined,
             createdAt: item.createdAt,
             updatedAt: item.updatedAt,
           })),
@@ -60,13 +60,11 @@ export class DraftController {
   @TsRestHandler(contract.createDraft)
   createDraft(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.createDraft, async ({ body }) => {
-      // Contract transforms tags from string[] to string via tagsTransform
-      const tagsStr = typeof body.tags === 'string' ? body.tags : JSON.stringify(body.tags ?? []);
       const result = await this.draftService.create({
         title: body.title,
         content: body.content,
         category: body.category ?? null,
-        tags: tagsStr,
+        tags: body.tags ?? null,
         pathname: null,
         author: 'admin',
       });
@@ -78,7 +76,7 @@ export class DraftController {
           title: result.title,
           content: result.content,
           category: result.category ?? undefined,
-          tags: result.tags ?? undefined,
+          tags: (result.tags ?? undefined) as string[] | undefined,
           createdAt: result.createdAt,
           updatedAt: result.updatedAt,
         },
@@ -89,14 +87,11 @@ export class DraftController {
   @TsRestHandler(contract.updateDraft)
   updateDraft(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.updateDraft, async ({ params, body }) => {
-      // Contract transforms tags from string[] to string via tagsTransform
       const updateData: Record<string, unknown> = {};
       if (body.title !== undefined) updateData.title = body.title;
       if (body.content !== undefined) updateData.content = body.content;
       if (body.category !== undefined) updateData.category = body.category;
-      if (body.tags !== undefined) {
-        updateData.tags = typeof body.tags === 'string' ? body.tags : JSON.stringify(body.tags);
-      }
+      if (body.tags !== undefined) updateData.tags = body.tags;
 
       const result = await this.draftService.update(
         Number(params.id),
@@ -110,7 +105,7 @@ export class DraftController {
           title: result.title,
           content: result.content,
           category: result.category ?? undefined,
-          tags: result.tags ?? undefined,
+          tags: (result.tags ?? undefined) as string[] | undefined,
           createdAt: result.createdAt,
           updatedAt: result.updatedAt,
         },
@@ -138,7 +133,7 @@ export class DraftController {
           title: result.title,
           content: result.content,
           category: result.category ?? undefined,
-          tags: result.tags ?? undefined,
+          tags: (result.tags ?? undefined) as string[] | undefined,
           createdAt: result.createdAt,
           updatedAt: result.updatedAt,
         },

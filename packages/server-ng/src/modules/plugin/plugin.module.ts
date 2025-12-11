@@ -75,7 +75,7 @@ export class PluginModule implements OnApplicationBootstrap {
       const actionHooks = this.hookService.getAllActionHooks();
       const filterHooks = this.hookService.getAllFilterHooks();
       logger.log(
-        `[Hooks] Final summary -> actions=${actionHooks.length}, filters=${filterHooks.length}`,
+        `[Hooks] Final summary -> actions=${String(actionHooks.length)}, filters=${String(filterHooks.length)}`,
       );
 
       if (process.env.NODE_ENV !== 'production') {

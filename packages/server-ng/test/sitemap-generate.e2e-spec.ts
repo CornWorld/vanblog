@@ -3,6 +3,7 @@ import * as path from 'path';
 
 import { type INestApplication, ValidationPipe, VersioningType } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
+import { siteMeta } from '@vanblog/shared/drizzle';
 import { eq } from 'drizzle-orm';
 import request from 'supertest';
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
@@ -10,7 +11,6 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { AppModule } from '../src/app.module';
 import { ConfigService as AppConfigService } from '../src/config';
 import { DATABASE_CONNECTION, type Database } from '../src/database';
-import { siteMeta } from '@vanblog/shared/drizzle';
 
 import { createUserWithPermissions, createAuthToken, cleanupDatabase } from './test-utils';
 

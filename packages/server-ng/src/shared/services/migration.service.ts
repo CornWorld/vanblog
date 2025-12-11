@@ -2,10 +2,10 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 
 import { Injectable, Logger, Inject } from '@nestjs/common';
+import { siteMeta } from '@vanblog/shared/drizzle';
 import { eq, sql } from 'drizzle-orm';
 
 import { DATABASE_CONNECTION, type Database } from '../../database';
-import { siteMeta } from '@vanblog/shared/drizzle';
 import { normalizeMigrationData } from '../contracts';
 
 /**
@@ -136,7 +136,7 @@ export class MigrationService {
       return;
     }
 
-    this.logger.log(`Found ${pendingMigrations.length} pending migrations`);
+    this.logger.log(`Found ${String(pendingMigrations.length)} pending migrations`);
 
     for (const migration of pendingMigrations) {
       await this.executeMigration(migration);
@@ -176,7 +176,7 @@ export class MigrationService {
         return [];
       }
 
-      const data = JSON.parse(result[0].value ?? '{}') as { migrations?: MigrationRecord[] };
+      const data = (result[0].value ?? {}) as { migrations?: MigrationRecord[] };
       const migrationData = normalizeMigrationData(data);
       return [...migrationData.migrations];
     } catch (error) {
@@ -356,7 +356,9 @@ export class MigrationService {
         this.migrations.push(moduleExports as Migration);
       }
 
-      this.logger.log(`Loaded ${migrationFiles.length} migration files from ${migrationDir}`);
+      this.logger.log(
+        `Loaded ${String(migrationFiles.length)} migration files from ${migrationDir}`,
+      );
     } catch (error) {
       this.logger.warn(`Failed to load migrations from directory: ${migrationDir}`, error);
     }

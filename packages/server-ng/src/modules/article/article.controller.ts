@@ -19,7 +19,7 @@ import {
 import { ApiOperation, ApiResponse, ApiTags, ApiParam } from '@nestjs/swagger';
 import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
 import { contract, dayjs } from '@vanblog/shared';
-import { Request as ExpressRequest } from 'express';
+import { Request as ExpressRequest, type Request as ExpressRequestType } from 'express';
 import { z } from 'zod';
 
 import { ArticleStatsService } from '../analytics/services/article-stats.service';
@@ -421,13 +421,13 @@ export class ArticleController {
   }
 
   @TsRestHandler(contract.createArticle)
-  createArticleRest(@Req() req: ExpressRequest): ReturnType<typeof tsRestHandler> {
+  createArticleRest(@Req() req: ExpressRequestType): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.createArticle, async ({ body }) => {
       const username = this.getUsernameFromRequest(req);
       const result = await this.articleService.create({
         ...body,
         author: username ?? 'admin',
-        tags: JSON.stringify(Array.isArray(body.tags) ? body.tags : []),
+        tags: body.tags ?? null,
       });
 
       return {

@@ -6,10 +6,10 @@ import {
   type TimelineArticleInput,
   type TimelineArticleDbRow,
 } from '@vanblog/shared';
+import { articles } from '@vanblog/shared/drizzle';
 import { and, desc, eq } from 'drizzle-orm';
 
 import { DATABASE_CONNECTION, type Database } from '../../database';
-import { articles } from '@vanblog/shared/drizzle';
 
 @Injectable()
 export class TimelineService {

@@ -361,7 +361,7 @@ const plugin: Plugin = {
           <h2>草稿发布通知</h2>
           <p><strong>标题：</strong>${draft.title ?? '无标题'}</p>
           <p><strong>作者：</strong>${draft.author ?? '未知'}</p>
-          <p><strong>文章ID：</strong>${draft.articleId ?? '未知'}</p>
+          <p><strong>文章ID：</strong>${String(draft.articleId ?? '未知')}</p>
           <p><strong>发布时间：</strong>${draft.publishedAt ?? draft.createdAt ?? '未知'}</p>
           <p><strong>内容预览：</strong></p>
           <div style="border-left: 3px solid #17a2b8; padding-left: 15px; margin: 10px 0;">

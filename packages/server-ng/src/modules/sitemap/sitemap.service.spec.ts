@@ -3,10 +3,10 @@ import * as path from 'path';
 
 import { ConfigService } from '@nestjs/config';
 import { Test, type TestingModule } from '@nestjs/testing';
+import { articles, categories, tags } from '@vanblog/shared/drizzle';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 import { DATABASE_CONNECTION } from '../../database';
-import { articles, categories, tags } from '@vanblog/shared/drizzle';
 import { HookService } from '../plugin/services/hook.service';
 import { SettingCoreService } from '../setting/services/setting-core.service';
 

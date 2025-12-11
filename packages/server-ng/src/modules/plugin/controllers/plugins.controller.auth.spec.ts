@@ -1,7 +1,12 @@
 import 'reflect-metadata';
 
 // External libs
-import { UnauthorizedException, VersioningType } from '@nestjs/common';
+import {
+  UnauthorizedException,
+  VersioningType,
+  type INestApplication,
+  type CanActivate,
+} from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { afterEach, describe, it } from 'vitest';
@@ -25,14 +30,14 @@ const createLoaderMock = (): Pick<
 });
 
 describe('PluginsController (auth/permission guards)', () => {
-  let app: import('@nestjs/common').INestApplication | null = null;
+  let app: INestApplication | null = null;
 
   // Each test creates its own app with desired guard behaviors
   async function createAppWithGuards(guardImpls: {
-    jwt?: import('@nestjs/common').CanActivate;
-    role?: import('@nestjs/common').CanActivate;
-    perm?: import('@nestjs/common').CanActivate;
-  }): Promise<import('@nestjs/common').INestApplication> {
+    jwt?: CanActivate;
+    role?: CanActivate;
+    perm?: CanActivate;
+  }): Promise<INestApplication> {
     const moduleBuilder = Test.createTestingModule({
       controllers: [PluginsController],
       providers: [{ provide: LoaderService, useValue: createLoaderMock() }],

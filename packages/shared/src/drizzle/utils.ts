@@ -1,6 +1,17 @@
 import { z } from 'zod';
 
-// 通用的 JSON 解析函数
+// 直接验证已解析的数据（用于 Drizzle mode: 'json' 字段）
+export function safeParse<T>(data: unknown, schema: z.ZodType<T>): T | null {
+  if (data == null) {
+    return null;
+  }
+  const result = schema.safeParse(data);
+  return result.success ? result.data : null;
+}
+
+/**
+ * @deprecated Use safeParse instead - Drizzle with mode: 'json' already deserializes JSON
+ */
 export function safeParseJson<T>(
   jsonString: string | null | undefined,
   schema: z.ZodType<T>,

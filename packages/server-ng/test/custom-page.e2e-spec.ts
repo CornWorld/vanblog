@@ -1,12 +1,12 @@
 import { type INestApplication, ValidationPipe, VersioningType } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
+import { customPages } from '@vanblog/shared/drizzle';
 import request from 'supertest';
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 
 import { AppModule } from '../src/app.module';
 import { ConfigService } from '../src/config';
 import { DATABASE_CONNECTION } from '../src/database';
-import { customPages } from '@vanblog/shared/drizzle';
 
 import { createUser, cleanupDatabase } from './test-utils';
 

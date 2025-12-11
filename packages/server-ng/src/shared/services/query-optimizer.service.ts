@@ -1,7 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { sql, type SQL, like, or } from 'drizzle-orm';
-
 import { articles } from '@vanblog/shared/drizzle';
+import { sql, type SQL, like, or } from 'drizzle-orm';
 
 import type { Database } from '../../database';
 
@@ -112,13 +111,13 @@ export class QueryOptimizerService {
       const duration = Date.now() - startTime;
 
       if (duration > threshold) {
-        this.logger.warn(`Slow query detected: ${queryName} took ${duration}ms`);
+        this.logger.warn(`Slow query detected: ${queryName} took ${String(duration)}ms`);
       }
 
       return result;
     } catch (error) {
       const duration = Date.now() - startTime;
-      this.logger.error(`Query failed: ${queryName} after ${duration}ms`, error);
+      this.logger.error(`Query failed: ${queryName} after ${String(duration)}ms`, error);
       throw error;
     }
   }

@@ -78,7 +78,8 @@ describe('SettingRegistryService', () => {
       const testKey = 'testKey';
       const testValue = { test: 'value' };
 
-      mockSelectChain.limit.mockResolvedValue([{ value: JSON.stringify(testValue) }]);
+      // Drizzle with mode: 'json' returns deserialized object directly
+      mockSelectChain.limit.mockResolvedValue([{ value: testValue }]);
 
       const result = await service.getConfig(testKey);
 
@@ -132,13 +133,16 @@ describe('SettingRegistryService', () => {
       expect(mockInsertChain.onConflictDoUpdate).toHaveBeenCalled();
     });
 
-    it('should return null when stored JSON is invalid (parse failure)', async () => {
-      const testKey = 'bad.json';
-      mockSelectChain.limit.mockResolvedValue([{ value: '{invalid-json' }]);
+    it('should return raw value when stored (Drizzle handles JSON automatically)', async () => {
+      const testKey = 'raw.value';
+      const rawValue = '{invalid-json';
+      // Drizzle with mode: 'json' would never store invalid JSON - it serializes objects
+      // This test now verifies that whatever Drizzle returns is passed through
+      mockSelectChain.limit.mockResolvedValue([{ value: rawValue }]);
 
       const result = await service.getConfig(testKey);
 
-      expect(result).toBeNull();
+      expect(result).toBe(rawValue);
     });
   });
 

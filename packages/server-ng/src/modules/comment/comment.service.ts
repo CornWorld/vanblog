@@ -385,7 +385,7 @@ export class CommentService implements OnModuleInit, OnModuleDestroy, BeforeAppl
     const parsed = Number.parseInt(portStr, 10);
     const portNum = Number.isFinite(parsed) ? parsed : 8360;
     if (await this.isPortInUse(host, portNum)) {
-      this.logger.warn(`检测到端口已被占用(${host}:${portNum})，跳过启动 Waline`);
+      this.logger.warn(`检测到端口已被占用(${host}:${String(portNum)})，跳过启动 Waline`);
       await this.releaseWalineLock();
       return;
     }

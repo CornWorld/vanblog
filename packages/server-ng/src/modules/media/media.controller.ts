@@ -16,10 +16,10 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiOperation, ApiResponse, ApiConsumes, ApiBody } from '@nestjs/swagger';
+import { staticFiles } from '@vanblog/shared/drizzle';
 import { memoryStorage } from 'multer';
 // import { z } from 'zod';
 
-import { staticFiles } from '@vanblog/shared/drizzle';
 import { normalizeMediaProcessingOverride } from '../../shared/contracts';
 import { Perm } from '../auth/permissions.decorator';
 import { SettingRegistryService } from '../setting/services/setting-registry.service';
@@ -613,7 +613,8 @@ export class MediaController {
       }
     }
 
-    const filename = body.filename ?? `clipboard-${Date.now()}.${this.extFromMime(mimeType)}`;
+    const filename =
+      body.filename ?? `clipboard-${String(Date.now())}.${this.extFromMime(mimeType)}`;
 
     const file: Express.Multer.File = {
       fieldname: 'file',

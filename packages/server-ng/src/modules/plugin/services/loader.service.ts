@@ -127,7 +127,7 @@ export class LoaderService implements OnModuleInit {
       const totalFilters = Array.isArray(filterHooks) ? filterHooks.length : 0;
 
       this.logger.log(
-        `[Plugin] Registered ${plugin.name}@${plugin.version}. Total hooks: ${totalActions} actions, ${totalFilters} filters`,
+        `[Plugin] Registered ${plugin.name}@${plugin.version}. Total hooks: ${String(totalActions)} actions, ${String(totalFilters)} filters`,
       );
     } catch (e) {
       this.logger.debug(`Failed to log hooks snapshot for ${plugin.name}: ${String(e)}`);
@@ -166,7 +166,7 @@ export class LoaderService implements OnModuleInit {
     // Reload all plugins
     await this.loadPluginsFromDirectories();
 
-    this.logger.log(`Successfully reloaded ${this.loadedPlugins.size} plugins`);
+    this.logger.log(`Successfully reloaded ${String(this.loadedPlugins.size)} plugins`);
   }
 
   async unloadPlugin(pluginName: string): Promise<boolean> {
@@ -368,7 +368,7 @@ export class LoaderService implements OnModuleInit {
       });
 
       this.logger.log(
-        `Plugin loading complete: ${this.loadedPlugins.size} loaded, ${this.failedPlugins.size} failed`,
+        `Plugin loading complete: ${String(this.loadedPlugins.size)} loaded, ${String(this.failedPlugins.size)} failed`,
       );
     } catch (error) {
       this.logger.error(

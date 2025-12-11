@@ -1,6 +1,5 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-
 import { categories, tags, articles } from '@vanblog/shared/drizzle';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 import { StatisticsService } from './statistics.service';
 

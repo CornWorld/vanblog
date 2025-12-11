@@ -1,8 +1,8 @@
 import { Test, type TestingModule } from '@nestjs/testing';
+import { siteMeta } from '@vanblog/shared/drizzle';
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 
 import { DATABASE_CONNECTION, type Database } from '../../database';
-import { siteMeta } from '@vanblog/shared/drizzle';
 
 import { MigrationService } from './migration.service';
 
@@ -12,7 +12,7 @@ describe('MigrationService', () => {
 
   const mockMigrationRecord = {
     key: 'migration_version',
-    value: JSON.stringify({
+    value: {
       version: '1.0.0',
       migrations: [
         {
@@ -22,7 +22,7 @@ describe('MigrationService', () => {
           version: '1.0.0',
         },
       ],
-    }),
+    },
   };
 
   beforeEach(async () => {
@@ -92,7 +92,7 @@ describe('MigrationService', () => {
       // Mock 所有迁移都已执行
       const allMigrationsExecuted = {
         key: 'migration_version',
-        value: JSON.stringify({
+        value: {
           version: '1.2.0',
           migrations: [
             {
@@ -114,7 +114,7 @@ describe('MigrationService', () => {
               version: '1.2.0',
             },
           ],
-        }),
+        },
       };
 
       const mockSelectChain = {

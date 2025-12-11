@@ -1,10 +1,9 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 
+import { articles, siteMeta } from '@vanblog/shared/drizzle';
 import { eq, and, desc } from 'drizzle-orm';
 import { Feed } from 'feed';
-
-import { articles, siteMeta, safeParseJson, dataSchemas } from '@vanblog/shared/drizzle';
 
 import type { Database } from '../../src/database/connection';
 import type { HookService } from '../../src/modules/plugin/services/hook.service';
@@ -66,29 +65,26 @@ export class RssService {
 
       // 获取站点元数据和设置数据
       const siteMetaResults = await this.db.select().from(siteMeta);
-      const siteData = siteMetaResults.reduce<Record<string, string | undefined>>((acc, meta) => {
-        const parsedValue = safeParseJson(meta.value, dataSchemas.genericObject);
-        acc[meta.key] = typeof parsedValue === 'string' ? parsedValue : (meta.value ?? undefined);
+      const siteData = siteMetaResults.reduce<Record<string, unknown>>((acc, meta) => {
+        // With mode: 'json', meta.value is already a native object/array
+        acc[meta.key] = meta.value ?? undefined;
         return acc;
       }, {});
 
       // 构建站点信息
       const siteInfo = {
-        siteName: siteData.siteName ?? 'VanBlog',
-        siteDesc: siteData.siteDesc ?? 'A simple blog',
-        baseUrl: siteData.baseUrl ?? 'http://localhost:3000',
-        author: siteData.author ?? 'Admin',
-        siteLogo: siteData.siteLogo ?? '',
-        favicon: siteData.favicon ?? '',
-        authorLogo: siteData.authorLogo ?? '',
+        siteName: (siteData.siteName as string | undefined) ?? 'VanBlog',
+        siteDesc: (siteData.siteDesc as string | undefined) ?? 'A simple blog',
+        baseUrl: (siteData.baseUrl as string | undefined) ?? 'http://localhost:3000',
+        author: (siteData.author as string | undefined) ?? 'Admin',
+        siteLogo: (siteData.siteLogo as string | undefined) ?? '',
+        favicon: (siteData.favicon as string | undefined) ?? '',
+        authorLogo: (siteData.authorLogo as string | undefined) ?? '',
       };
 
       // 获取作者邮箱
-      let email = process.env.EMAIL ?? siteData.authorEmail ?? undefined;
-      const walineConfig =
-        typeof siteData.waline === 'string'
-          ? safeParseJson(siteData.waline, dataSchemas.genericObject)
-          : null;
+      let email = process.env.EMAIL ?? (siteData.authorEmail as string | undefined) ?? undefined;
+      const walineConfig = siteData.waline as Record<string, unknown> | null;
       if (
         walineConfig !== null &&
         typeof walineConfig === 'object' &&
@@ -133,7 +129,7 @@ export class RssService {
         language: 'zh-cn',
         image: siteLogo,
         favicon,
-        copyright: `All rights reserved ${date.getFullYear()}, ${siteInfo.author}`,
+        copyright: `All rights reserved ${String(date.getFullYear())}, ${siteInfo.author}`,
         updated: date,
         generator: 'RSS Plugin for VanBlog Server-NG',
         feedLinks: {
@@ -145,7 +141,7 @@ export class RssService {
 
       // 添加文章到 RSS
       for (const article of articleResults) {
-        const url = `${siteUrl}post/${article.pathname ?? article.id}`;
+        const url = `${siteUrl}post/${String(article.pathname ?? article.id)}`;
         const category = {
           name: article.category ?? 'Uncategorized',
           domain: `${siteUrl}/category/${article.category ?? 'uncategorized'}`,
@@ -222,7 +218,7 @@ export class RssService {
       this.logger.error(err);
       if (err instanceof Error) {
         this.logger.error(`Error message: ${err.message}`);
-        this.logger.error(`Error stack: ${err.stack}`);
+        this.logger.error(`Error stack: ${err.stack ?? 'unknown'}`);
       }
     }
   }

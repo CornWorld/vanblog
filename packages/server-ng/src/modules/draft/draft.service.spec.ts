@@ -79,7 +79,7 @@ describe('DraftService', () => {
           id: 1,
           title: 'Test Draft',
           content: 'Test content',
-          tags: JSON.stringify(['test']),
+          tags: ['test'],
           author: 'admin',
           pathname: null,
           category: null,
@@ -124,7 +124,7 @@ describe('DraftService', () => {
         id: 1,
         title: 'Test Draft',
         content: 'Test content',
-        tags: JSON.stringify(['test']),
+        tags: ['test'],
         author: 'admin',
         pathname: null,
         category: null,
@@ -153,7 +153,7 @@ describe('DraftService', () => {
         id: 1,
         title: 'New Draft',
         content: 'New content',
-        tags: JSON.stringify(['new']),
+        tags: ['new'],
         author: 'admin',
         pathname: null,
         category: null,
@@ -167,7 +167,7 @@ describe('DraftService', () => {
         title: 'New Draft',
         content: 'New content',
         author: 'test-author',
-        tags: JSON.stringify(['new']),
+        tags: ['new'],
         categories: ['test-category'],
       };
 
@@ -185,7 +185,7 @@ describe('DraftService', () => {
         id: 1,
         title: 'Updated Draft',
         content: 'Updated content',
-        tags: JSON.stringify(['updated']),
+        tags: ['updated'],
         author: 'admin',
         pathname: null,
         category: null,
@@ -200,7 +200,7 @@ describe('DraftService', () => {
       const updateDto = {
         title: 'Updated Draft',
         content: 'Updated content',
-        tags: JSON.stringify(['updated']),
+        tags: ['updated'],
       };
 
       const result = await service.update(1, updateDto);
@@ -216,9 +216,9 @@ describe('DraftService', () => {
         .fn()
         .mockRejectedValue(new NotFoundException('Draft with ID 999 not found'));
 
-      await expect(
-        service.update(999, { title: 'Test', tags: JSON.stringify([]) }),
-      ).rejects.toThrow(NotFoundException);
+      await expect(service.update(999, { title: 'Test', tags: [] })).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -244,7 +244,7 @@ describe('DraftService', () => {
         id: 1,
         title: 'Draft to Publish',
         content: 'Content to publish',
-        tags: JSON.stringify(['publish', 'test']),
+        tags: ['publish', 'test'],
         author: 'admin',
         pathname: 'draft-to-publish',
         category: 'test-category',
@@ -263,7 +263,7 @@ describe('DraftService', () => {
         id: 100,
         title: 'Draft to Publish',
         content: 'Content to publish',
-        tags: JSON.stringify(['publish', 'test']),
+        tags: ['publish', 'test'],
         author: 'admin',
         pathname: 'draft-to-publish',
         category: 'test-category',
@@ -355,7 +355,7 @@ describe('DraftService', () => {
         id: 2,
         title: 'Secret Draft',
         content: 'Top secret content',
-        tags: JSON.stringify(['secret', 'tag']),
+        tags: ['secret', 'tag'],
         author: 'admin',
         pathname: 'secret-draft',
         category: 'test-category',
@@ -408,7 +408,7 @@ describe('DraftService', () => {
               id: 200,
               title: 'Secret Draft',
               content: 'Top secret content',
-              tags: JSON.stringify(['secret', 'tag']),
+              tags: ['secret', 'tag'],
               author: 'admin',
               pathname: 'secret-draft',
               category: 'test-category',
@@ -457,7 +457,7 @@ describe('DraftService', () => {
         id: 3,
         title: 'Draft Fail',
         content: 'Will fail to publish',
-        tags: JSON.stringify([]), // no tags -> createMissingTags will not insert
+        tags: [], // no tags -> createMissingTags will not insert
         author: 'admin',
         pathname: 'draft-fail',
         category: 'none',
@@ -488,14 +488,14 @@ describe('DraftService', () => {
         {
           title: 'Import 1',
           content: 'Content 1',
-          tags: JSON.stringify(['import']),
+          tags: ['import'],
           categories: ['test'],
           author: 'test-author',
         },
         {
           title: 'Import 2',
           content: 'Content 2',
-          tags: JSON.stringify([]),
+          tags: [],
           categories: ['imported'],
           author: 'test-author',
         },
@@ -504,7 +504,7 @@ describe('DraftService', () => {
       const mockResults = draftsToImport.map((draft, index) => ({
         id: index + 1,
         ...draft,
-        tags: JSON.stringify(draft.tags),
+        tags: draft.tags,
         category: null,
         author: 'admin',
         pathname: null,
@@ -533,7 +533,7 @@ describe('DraftService', () => {
         id: 1,
         title: 'Auto-saved Draft',
         content: 'Auto-saved content',
-        tags: JSON.stringify(['auto-save']),
+        tags: ['auto-save'],
         author: 'admin',
         pathname: null,
         category: null,
@@ -546,7 +546,7 @@ describe('DraftService', () => {
       const updateDto = {
         title: 'Auto-saved Draft',
         content: 'Auto-saved content',
-        tags: JSON.stringify([]),
+        tags: [],
       };
 
       const result = await service.autoSave(1, updateDto);

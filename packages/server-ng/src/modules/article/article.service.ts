@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException, Inject, Logger } from '@nestjs/common';
 import { dayjs } from '@vanblog/shared';
+import { articles, tags } from '@vanblog/shared/drizzle';
 import * as bcrypt from 'bcrypt';
 import { eq, and, or, like, desc, asc, sql } from 'drizzle-orm';
 import * as jwt from 'jsonwebtoken';
@@ -7,9 +8,7 @@ import { z } from 'zod';
 
 import { ConfigService } from '../../config/config.service';
 import { DATABASE_CONNECTION, type Database } from '../../database';
-import { articles, tags } from '@vanblog/shared/drizzle';
 import { QueryOptimizerService } from '../../shared/services/query-optimizer.service';
-import { safeParseJson, dataSchemas } from '@vanblog/shared/drizzle';
 import { HookService } from '../plugin/services/hook.service';
 
 import {
@@ -130,7 +129,7 @@ export class ArticleService {
       title: article.title,
       content: article.content,
       pathname: article.pathname,
-      tags: safeParseJson(article.tags, dataSchemas.tagsArray) ?? [],
+      tags: article.tags ?? [],
       category: article.category,
       author: article.author,
       top: article.top,
@@ -261,7 +260,7 @@ export class ArticleService {
           title: article.title,
           summary: undefined,
           cover: undefined,
-          tags: safeParseJson(article.tags, dataSchemas.tagsArray) ?? [],
+          tags: article.tags ?? [],
           categories: article.category ? [article.category] : [],
           publishedAt: dayjs(article.updatedAt).format(),
           highlight: undefined,
@@ -374,7 +373,7 @@ export class ArticleService {
     const articleResult = await this.db.select().from(articles).where(eq(articles.id, id)).limit(1);
 
     if (articleResult.length === 0) {
-      throw new NotFoundException(`Article with ID ${id} not found`);
+      throw new NotFoundException(`Article with ID ${String(id)} not found`);
     }
 
     const [article] = articleResult;
@@ -382,7 +381,7 @@ export class ArticleService {
       ...article,
       // 不返回密码字段，确保安全
       password: undefined,
-      tags: safeParseJson(article.tags, dataSchemas.tagsArray) ?? [],
+      tags: article.tags ?? [],
       pathname: article.pathname,
       category: article.category,
       author: article.author,
@@ -407,7 +406,7 @@ export class ArticleService {
     const [article] = articleResult;
     return new Article({
       ...article,
-      tags: safeParseJson(article.tags, dataSchemas.tagsArray) ?? [],
+      tags: article.tags ?? [],
       pathname: article.pathname,
       category: article.category,
       author: article.author,
@@ -452,7 +451,7 @@ export class ArticleService {
 
     // Create missing tags
     if (Array.isArray(tagNames) && tagNames.length > 0) {
-      await this.createMissingTags(tagNames);
+      await this.createMissingTags(tagNames as string[]);
     }
 
     let newArticleData = {
@@ -466,7 +465,7 @@ export class ArticleService {
       private: articleData.private ?? undefined,
       password: articleData.password ?? undefined,
       viewer: 0,
-      tags: JSON.stringify(Array.isArray(tagNames) ? tagNames : []),
+      tags: Array.isArray(tagNames) && tagNames.length > 0 ? tagNames : null,
       createdAt: dayjs().format(),
       updatedAt: dayjs().format(),
     };
@@ -492,7 +491,7 @@ export class ArticleService {
     const [newArticle] = insertResult;
     const articleResult = new Article({
       ...newArticle,
-      tags: safeParseJson(newArticle.tags, dataSchemas.tagsArray) ?? [],
+      tags: newArticle.tags ?? [],
       pathname: newArticle.pathname,
       category: newArticle.category,
       author: newArticle.author,
@@ -518,17 +517,9 @@ export class ArticleService {
 
     const { tags: tagNames, ...articleData } = updateArticleDto;
 
-    // Create missing tags - tagNames is already transformed to JSON string by schema
-    // Parse it back to array if needed for tag creation
-    if (typeof tagNames === 'string' && tagNames !== '[]' && tagNames !== 'null') {
-      try {
-        const parsedTags = JSON.parse(tagNames) as string[];
-        if (Array.isArray(parsedTags) && parsedTags.length > 0) {
-          await this.createMissingTags(parsedTags);
-        }
-      } catch {
-        // Ignore parse errors
-      }
+    // Create missing tags
+    if (Array.isArray(tagNames) && tagNames.length > 0) {
+      await this.createMissingTags(tagNames as string[]);
     }
 
     let updateData: Record<string, unknown> = {
@@ -541,9 +532,9 @@ export class ArticleService {
       updatedAt: dayjs().format(),
     };
 
-    // tagNames is string | null after schema transform
-    if (typeof tagNames === 'string') {
-      updateData.tags = tagNames;
+    // tagNames is string[] | null | undefined
+    if (tagNames !== undefined) {
+      updateData.tags = Array.isArray(tagNames) && tagNames.length > 0 ? tagNames : null;
     }
 
     // 触发更新前的插件钩子，允许插件修改更新数据
@@ -573,7 +564,7 @@ export class ArticleService {
     const [updatedArticle] = updateResult;
     const articleResult = new Article({
       ...updatedArticle,
-      tags: safeParseJson(updatedArticle.tags, dataSchemas.tagsArray) ?? [],
+      tags: updatedArticle.tags ?? [],
       pathname: updatedArticle.pathname,
       category: updatedArticle.category,
       author: updatedArticle.author,
@@ -602,7 +593,7 @@ export class ArticleService {
       .limit(1);
 
     if (existingArticle.length === 0) {
-      throw new NotFoundException(`Article with ID ${id} not found`);
+      throw new NotFoundException(`Article with ID ${String(id)} not found`);
     }
 
     // 触发删除前的插件钩子，允许插件执行清理操作
@@ -621,7 +612,7 @@ export class ArticleService {
       (article) =>
         new Article({
           ...article,
-          tags: safeParseJson(article.tags, dataSchemas.tagsArray) ?? [],
+          tags: article.tags ?? [],
           pathname: article.pathname,
           category: article.category,
           author: article.author,
@@ -670,7 +661,7 @@ export class ArticleService {
       title: article.title,
       content: article.content,
       pathname: article.pathname,
-      tags: safeParseJson(article.tags, dataSchemas.tagsArray) ?? [],
+      tags: article.tags ?? [],
       category: article.category,
       author: article.author,
       top: article.top,
@@ -727,13 +718,13 @@ export class ArticleService {
     const articleResult = await this.db.select().from(articles).where(eq(articles.id, id)).limit(1);
 
     if (articleResult.length === 0) {
-      throw new NotFoundException(`Article with ID ${id} not found`);
+      throw new NotFoundException(`Article with ID ${String(id)} not found`);
     }
 
     const [article] = articleResult;
     return new Article({
       ...article,
-      tags: safeParseJson(article.tags, dataSchemas.tagsArray) ?? [],
+      tags: article.tags ?? [],
       pathname: article.pathname,
       category: article.category,
       author: article.author,
@@ -761,7 +752,7 @@ export class ArticleService {
     for (const article of result) {
       const processedArticle = new Article({
         ...article,
-        tags: safeParseJson(article.tags, dataSchemas.tagsArray) ?? [],
+        tags: article.tags ?? [],
         pathname: article.pathname,
         category: article.category,
         author: article.author,
@@ -798,7 +789,7 @@ export class ArticleService {
     for (const article of result) {
       const processedArticle = new Article({
         ...article,
-        tags: safeParseJson(article.tags, dataSchemas.tagsArray) ?? [],
+        tags: article.tags ?? [],
         pathname: article.pathname,
         category: article.category,
         author: article.author,

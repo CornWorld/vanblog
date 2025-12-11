@@ -250,7 +250,7 @@ describe('ArticleService', () => {
         id: 1,
         title: 'New Article',
         content: 'New content',
-        tags: JSON.stringify(['new']),
+        tags: ['new'],
       });
 
       const createDto = MockUtils.testData.createArticleDto({
@@ -278,7 +278,7 @@ describe('ArticleService', () => {
         id: 2,
         title: 'With Password',
         content: 'Secret content',
-        tags: JSON.stringify([]),
+        tags: [],
         password: '$2a$10$xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
       });
 
@@ -312,14 +312,14 @@ describe('ArticleService', () => {
         id: 1,
         title: 'Existing Article',
         content: 'Existing content',
-        tags: JSON.stringify(['existing']),
+        tags: ['existing'],
       });
 
       const mockUpdatedArticle = MockUtils.testData.createArticle({
         id: 1,
         title: 'Updated Article',
         content: 'Updated content',
-        tags: JSON.stringify(['updated']),
+        tags: ['updated'],
       });
 
       // Mock for the existence check query
@@ -430,7 +430,7 @@ describe('ArticleService', () => {
           id: 1,
           title: 'Article 1',
           content: 'Content 1',
-          tags: JSON.stringify(['tag1']),
+          tags: ['tag1'],
           viewer: 100,
         }),
         MockUtils.testData.createArticle({

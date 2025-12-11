@@ -41,7 +41,7 @@ const plugin: Plugin = {
     // 从配置中读取额外的 rewards（不写回存储，由提供者在聚合时合并）
     const extraRewardsFromConfig = context.config.get<RewardInfo[]>('extra_rewards', []);
     if (extraRewardsFromConfig.length > 0) {
-      logger.log(`加载了 ${extraRewardsFromConfig.length} 个额外奖励配置`);
+      logger.log(`加载了 ${String(extraRewardsFromConfig.length)} 个额外奖励配置`);
     }
 
     // 注册到插件注册表：提供 rewards 数据
@@ -69,7 +69,7 @@ const plugin: Plugin = {
 
   async destroy(context: PluginContext): Promise<void> {
     const bootCount = (await context.data.get('boot_count')) as number | null | undefined;
-    logger.log(`插件销毁，共启动 ${bootCount ?? 0} 次`);
+    logger.log(`插件销毁，共启动 ${String(bootCount ?? 0)} 次`);
 
     await context.data.clear();
     // 清理服务实例

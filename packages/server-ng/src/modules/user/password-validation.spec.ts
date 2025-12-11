@@ -1,6 +1,5 @@
-import { describe, it, expect } from 'vitest';
-
 import { insertUserSchema, updateUserSchema } from '@vanblog/shared/drizzle';
+import { describe, it, expect } from 'vitest';
 
 describe('Password Validation', () => {
   describe('insertUserSchema password validation', () => {

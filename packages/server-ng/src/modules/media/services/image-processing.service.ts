@@ -1,7 +1,7 @@
 import { promises as fsPromises } from 'fs';
 
 import { Injectable, Logger } from '@nestjs/common';
-import sharp from 'sharp';
+import sharp, { type FormatEnum } from 'sharp';
 
 export interface ImageProcessingOptions {
   quality?: number;
@@ -67,7 +67,7 @@ export class ImageProcessingService {
     const metadata = (await pipeline.metadata()) as {
       width?: number;
       height?: number;
-      format?: keyof import('sharp').FormatEnum;
+      format?: keyof FormatEnum;
       density?: number;
       hasAlpha?: boolean;
     };

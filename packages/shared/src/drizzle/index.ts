@@ -5,5 +5,5 @@ export * from './schema.js';
 export * from './zod-schemas.js';
 
 // Utility functions
-export { safeParseJson, dataSchemas } from './utils.js';
+export { dataSchemas, safeParse, safeParseJson } from './utils.js';
 export type { NavigationNode, DataSchemas } from './utils.js';

@@ -1,10 +1,10 @@
 import { Test, type TestingModule } from '@nestjs/testing';
+import { siteMeta } from '@vanblog/shared/drizzle';
 import { eq } from 'drizzle-orm';
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 
 import { AppModule } from '../src/app.module';
 import { DATABASE_CONNECTION, type Database } from '../src/database';
-import { siteMeta } from '@vanblog/shared/drizzle';
 import { SettingRegistryService } from '../src/modules/setting/services/setting-registry.service';
 
 import { cleanupDatabase } from './test-utils';
@@ -58,7 +58,9 @@ describe('SettingRegistryService Concurrency & Edge (e2e)', () => {
     expect(final.value).toBeTypeOf('string');
 
     if (final.value == null) throw new Error('value should not be null');
-    const parsed = JSON.parse(final.value);
+    // Type assert value as string before JSON.parse
+    const valueStr = typeof final.value === 'string' ? final.value : JSON.stringify(final.value);
+    const parsed = JSON.parse(valueStr) as { n: number };
     expect(parsed).toHaveProperty('n');
     expect(typeof parsed.n === 'number').toBe(true);
   }, 15000);

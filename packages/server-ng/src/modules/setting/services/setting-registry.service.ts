@@ -1,8 +1,8 @@
 import { Injectable, Inject, Logger, BadRequestException } from '@nestjs/common';
+import { siteMeta } from '@vanblog/shared/drizzle';
 import { eq, sql } from 'drizzle-orm';
 
 import { DATABASE_CONNECTION, type Database } from '../../../database';
-import { siteMeta, safeParseJson, dataSchemas } from '@vanblog/shared/drizzle';
 
 export interface ConfigRegistration<T = unknown> {
   key: string;
@@ -46,14 +46,9 @@ export class SettingRegistryService {
   async getConfig<T>(key: string): Promise<T | null> {
     const results = await this.db.select().from(siteMeta).where(eq(siteMeta.key, key)).limit(1);
 
-    if (results.length > 0 && results[0].value) {
-      try {
-        const parsed = safeParseJson(results[0].value, dataSchemas.genericObject);
-        return parsed as T;
-      } catch (error) {
-        this.logger.error(`Failed to parse config value for key "${key}":`, error);
-        return null;
-      }
+    if (results.length > 0 && results[0].value != null) {
+      // Drizzle with mode: 'json' already deserializes the value
+      return results[0].value as T;
     }
 
     // Check if this key has a default value
@@ -83,7 +78,7 @@ export class SettingRegistryService {
     // Oversized payload guard (hard error)
     if (json.length > SettingRegistryService.MAX_JSON_LENGTH) {
       throw new BadRequestException(
-        `Config value too large for key "${key}" (${json.length} > ${SettingRegistryService.MAX_JSON_LENGTH})`,
+        `Config value too large for key "${key}" (${String(json.length)} > ${String(SettingRegistryService.MAX_JSON_LENGTH)})`,
       );
     }
 
@@ -103,7 +98,7 @@ export class SettingRegistryService {
     this.keyUpdateStats.set(key, stat);
     if (stat.count > this.keyUpdateWarnThreshold) {
       this.logger.warn(
-        `High-frequency updates for key "${key}" within ${this.keyUpdateWindowMs}ms: ${stat.count} times`,
+        `High-frequency updates for key "${key}" within ${String(this.keyUpdateWindowMs)}ms: ${String(stat.count)} times`,
       );
     }
 

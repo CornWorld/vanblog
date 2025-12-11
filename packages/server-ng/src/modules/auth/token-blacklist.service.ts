@@ -2,10 +2,10 @@ import { createHash } from 'crypto';
 
 import { Injectable, Logger, Inject } from '@nestjs/common';
 import { dayjs } from '@vanblog/shared';
+import { tokenBlacklist } from '@vanblog/shared/drizzle';
 import { eq, lt } from 'drizzle-orm';
 
 import { DATABASE_CONNECTION, type Database } from '../../database';
-import { tokenBlacklist } from '@vanblog/shared/drizzle';
 
 /**
  * Token Blacklist Service
@@ -49,7 +49,7 @@ export class TokenBlacklistService {
         createdAt: dayjs().format(),
       });
 
-      this.logger.log(`Token revoked: ${tokenType} for user ${userId ?? 'anonymous'}`);
+      this.logger.log(`Token revoked: ${tokenType} for user ${String(userId ?? 'anonymous')}`);
     } catch (error) {
       this.logger.error(`Failed to revoke token: ${String(error)}`);
       throw error;
@@ -87,7 +87,7 @@ export class TokenBlacklistService {
       // This is a simplified approach - in production you'd want to track active tokens
       // For now, we'll create a special entry to mark all user tokens as revoked
       await this.db.insert(tokenBlacklist).values({
-        tokenHash: `user_${userId}_all_tokens`,
+        tokenHash: `user_${String(userId)}_all_tokens`,
         tokenType: 'access',
         userId,
         reason: reason ?? 'All user tokens revoked',
@@ -95,7 +95,7 @@ export class TokenBlacklistService {
         createdAt: dayjs().format(),
       });
 
-      this.logger.log(`All tokens revoked for user ${userId}`);
+      this.logger.log(`All tokens revoked for user ${String(userId)}`);
       return 1; // Simplified return
     } catch (error) {
       this.logger.error(`Failed to revoke all user tokens: ${String(error)}`);
@@ -113,7 +113,7 @@ export class TokenBlacklistService {
       const result = await this.db.delete(tokenBlacklist).where(lt(tokenBlacklist.expiresAt, now));
 
       const deletedCount = result.rowsAffected;
-      this.logger.log(`Cleaned up ${deletedCount} expired blacklist entries`);
+      this.logger.log(`Cleaned up ${String(deletedCount)} expired blacklist entries`);
       return deletedCount;
     } catch (error: unknown) {
       this.logger.error(

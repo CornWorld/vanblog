@@ -107,7 +107,7 @@ describe('MediaService - Concurrency Safety', () => {
           return [
             MockUtils.testData.createMediaFile({
               id,
-              filename: vals?.filename ?? `test-${id}.jpg`,
+              filename: vals?.filename ?? `test-${String(id)}.jpg`,
             }),
           ];
         });
@@ -332,7 +332,7 @@ describe('MediaService - Concurrency Safety', () => {
         return [
           MockUtils.testData.createMediaFile({
             id: idCounter,
-            filename: `large${idCounter}.jpg`,
+            filename: `large${String(idCounter)}.jpg`,
             size: 10 * 1024 * 1024,
           }),
         ];

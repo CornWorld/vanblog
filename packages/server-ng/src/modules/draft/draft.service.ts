@@ -1,12 +1,11 @@
 import { Injectable, NotFoundException, Inject } from '@nestjs/common';
 import { dayjs } from '@vanblog/shared';
+import { drafts, articles, tags } from '@vanblog/shared/drizzle';
 import * as bcrypt from 'bcrypt';
 import { eq, and, or, like, desc, asc, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
 import { DATABASE_CONNECTION, type Database } from '../../database';
-import { drafts, articles, tags } from '@vanblog/shared/drizzle';
-import { safeParseJson, dataSchemas } from '@vanblog/shared/drizzle';
 import { Article } from '../article/entities/article.entity';
 import { HookService } from '../plugin/services/hook.service';
 
@@ -75,7 +74,7 @@ export class DraftService {
         content: draft.content,
         pathname: draft.pathname,
         category: draft.category,
-        tags: safeParseJson(draft.tags, dataSchemas.tagsArray) ?? [],
+        tags: draft.tags ?? [],
         author: draft.author,
         version: draft.version,
         createdAt: dayjs(draft.createdAt).format(),
@@ -94,14 +93,14 @@ export class DraftService {
     const results = await this.db.select().from(drafts).where(eq(drafts.id, id)).limit(1);
 
     if (results.length === 0) {
-      throw new NotFoundException(`Draft with ID ${id} not found`);
+      throw new NotFoundException(`Draft with ID ${String(id)} not found`);
     }
 
     const [draft] = results;
 
     return {
       ...draft,
-      tags: safeParseJson(draft.tags, dataSchemas.tagsArray) ?? [],
+      tags: draft.tags ?? [],
       pathname: draft.pathname,
       category: draft.category,
       createdAt: dayjs(draft.createdAt).format(),
@@ -114,19 +113,33 @@ export class DraftService {
   ): Promise<z.infer<typeof DraftSchema>> {
     const { tags, ...rest } = createDraftDto;
 
-    let draftData = {
+    let draftData: {
+      title: string;
+      content: string;
+      pathname: null;
+      tags: string[] | null;
+      category: null;
+      author: string;
+    } = {
       title: rest.title,
       content: rest.content,
       pathname: null, // pathname not available in CreateDraftDto
-      tags: JSON.stringify(tags),
+      tags: Array.isArray(tags) && tags.length > 0 ? tags : null,
       category: null, // Use first category from categories array if available
       author: 'admin', // Default author since not in CreateDraftDto
     };
 
     // 触发创建前的插件钩子
-    draftData = await this.hookService.applyFilters('draft|beforeCreate', draftData, {
+    const filteredData = await this.hookService.applyFilters('draft|beforeCreate', draftData, {
       action: 'create',
     });
+
+    // Ensure tags is the correct type after filtering
+    draftData = {
+      ...filteredData,
+      tags:
+        Array.isArray(filteredData.tags) && filteredData.tags.length > 0 ? filteredData.tags : null,
+    } as typeof draftData;
 
     const result = await this.db.insert(drafts).values(draftData).returning();
 
@@ -138,7 +151,7 @@ export class DraftService {
 
     const draftResult = {
       ...newDraft,
-      tags: safeParseJson(newDraft.tags, dataSchemas.tagsArray) ?? [],
+      tags: newDraft.tags ?? [],
       pathname: newDraft.pathname,
       category: newDraft.category,
       createdAt: dayjs(newDraft.createdAt).format(),
@@ -174,7 +187,7 @@ export class DraftService {
       updateData.pathname = rest.pathname ?? null;
     }
 
-    // tags is already JSON stringified by the schema transform, can be string or null
+    // tags is string[] | null, Drizzle handles JSON serialization automatically
     updateData.tags = tags;
 
     if ('category' in rest && rest.category !== undefined) {
@@ -200,14 +213,14 @@ export class DraftService {
       .returning();
 
     if (result.length === 0) {
-      throw new NotFoundException(`Draft with ID ${id} not found`);
+      throw new NotFoundException(`Draft with ID ${String(id)} not found`);
     }
 
     const [updatedDraft] = result;
 
     const draftResult = {
       ...updatedDraft,
-      tags: safeParseJson(updatedDraft.tags, dataSchemas.tagsArray) ?? [],
+      tags: updatedDraft.tags ?? [],
       pathname: updatedDraft.pathname,
       category: updatedDraft.category,
       createdAt: dayjs(updatedDraft.createdAt).format(),
@@ -233,7 +246,7 @@ export class DraftService {
       .returning({ id: drafts.id });
 
     if (result.length === 0) {
-      throw new NotFoundException(`Draft with ID ${id} not found`);
+      throw new NotFoundException(`Draft with ID ${String(id)} not found`);
     }
 
     // 触发删除后的插件钩子
@@ -253,10 +266,11 @@ export class DraftService {
   async publish(id: number, publishDto: z.infer<typeof PublishDraftSchema>): Promise<Article> {
     // First, get the draft
     const draft = await this.findOne(id);
+    const draftTags = (draft.tags ?? []) as string[];
 
     // Auto-create tags if they don't exist
-    if (draft.tags && draft.tags.length > 0) {
-      await this.createMissingTags(draft.tags);
+    if (draftTags.length > 0) {
+      await this.createMissingTags(draftTags);
     }
 
     // hash password if provided
@@ -269,7 +283,7 @@ export class DraftService {
         {
           title: draft.title,
           content: draft.content,
-          tags: JSON.stringify(draft.tags ?? []),
+          tags: draftTags.length > 0 ? draftTags : null,
           author: draft.author,
           pathname: draft.pathname,
           category: draft.category,
@@ -293,7 +307,7 @@ export class DraftService {
 
     const articleResult = new Article({
       ...newArticle,
-      tags: safeParseJson(newArticle.tags, dataSchemas.tagsArray) ?? [],
+      tags: newArticle.tags ?? [],
       pathname: newArticle.pathname,
       category: newArticle.category,
       author: newArticle.author,
@@ -318,7 +332,7 @@ export class DraftService {
 
     return new Article({
       ...newArticle,
-      tags: safeParseJson(newArticle.tags, dataSchemas.tagsArray) ?? [],
+      tags: newArticle.tags ?? [],
       pathname: newArticle.pathname,
       category: newArticle.category,
       author: newArticle.author,
@@ -358,7 +372,7 @@ export class DraftService {
       updateData.pathname = rest.pathname ?? null;
     }
 
-    // tags is already JSON stringified by the schema transform, can be string or null
+    // tags is string[] | null, Drizzle handles JSON serialization automatically
     updateData.tags = tags;
 
     if ('category' in rest && rest.category !== undefined) {
@@ -378,14 +392,14 @@ export class DraftService {
       .returning();
 
     if (result.length === 0) {
-      throw new NotFoundException(`Draft with ID ${id} not found`);
+      throw new NotFoundException(`Draft with ID ${String(id)} not found`);
     }
 
     const [updatedDraft] = result;
 
     return {
       ...updatedDraft,
-      tags: safeParseJson(updatedDraft.tags, dataSchemas.tagsArray) ?? [],
+      tags: updatedDraft.tags ?? [],
       pathname: updatedDraft.pathname,
       category: updatedDraft.category,
       createdAt: dayjs(updatedDraft.createdAt).format(),

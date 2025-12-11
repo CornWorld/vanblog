@@ -172,7 +172,7 @@ describe('RssService', () => {
             orderBy: vi.fn().mockResolvedValue(
               mockArticles.map((article) => ({
                 ...article,
-                tags: JSON.stringify(article.tags),
+                tags: article.tags,
                 createdAt: dayjs(article.createdAt as any).format(),
                 updatedAt: dayjs(article.updatedAt as any).format(),
               })),

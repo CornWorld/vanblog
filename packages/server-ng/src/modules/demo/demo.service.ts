@@ -2,8 +2,6 @@ import { Injectable, Logger, Inject, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Cron } from '@nestjs/schedule';
 import { dayjs } from '@vanblog/shared';
-
-import { DATABASE_CONNECTION, type Database } from '../../database';
 import {
   articles,
   drafts,
@@ -14,6 +12,8 @@ import {
   customPages,
   analytics,
 } from '@vanblog/shared/drizzle';
+
+import { DATABASE_CONNECTION, type Database } from '../../database';
 
 export interface DemoSnapshot {
   timestamp: number;
@@ -77,7 +77,7 @@ export class DemoService implements OnModuleInit {
       };
 
       this.demoSnapshot = snapshot;
-      this.logger.log(`Demo snapshot created with ${snapshot.articles.length} articles`);
+      this.logger.log(`Demo snapshot created with ${String(snapshot.articles.length)} articles`);
     } catch (error) {
       this.logger.error('Failed to create demo snapshot:', error);
       throw error;

@@ -1,9 +1,9 @@
 import { Injectable, NotFoundException, ConflictException, Inject } from '@nestjs/common';
+import { users, insertUserSchema, updateUserSchema } from '@vanblog/shared/drizzle';
 import * as bcrypt from 'bcrypt';
 import { eq, ne } from 'drizzle-orm';
 
 import { DATABASE_CONNECTION, type Database } from '../../database';
-import { users, insertUserSchema, updateUserSchema } from '@vanblog/shared/drizzle';
 import { HookService } from '../plugin/services/hook.service';
 
 import { CreateUserDto, UserType } from './dto/create-user.dto';
@@ -21,27 +21,31 @@ export class UserService {
   /**
    * 规范化权限数据格式
    *
-   * 将多种权限输入格式统一转换为字符串数组:
-   * - 数组格式: 直接过滤并返回字符串元素
-   * - 字符串格式: 按逗号分割后去除空白，返回非空字符串数组
-   * - 其他格式: 返回 undefined
+   * 将多种权限输入格式统一转换为字符串数组或 null:
+   * - 数组格式: 直接过滤并返回字符串元素（如为空则返回 null）
+   * - 字符串格式: 按逗号分割后去除空白，返回非空字符串数组（如为空则返回 null）
+   * - undefined: 返回 undefined（表示不修改该字段）
+   * - 其他格式: 返回 null
    *
    * @param input 输入的权限数据（可能是数组、字符串或其他类型）
-   * @returns 规范化后的权限数组或 undefined
+   * @returns 规范化后的权限数组、null 或 undefined
    */
-  private normalizePermissions(input: unknown): string[] | undefined {
+  private normalizePermissions(input: unknown): string[] | null | undefined {
+    if (input === undefined) {
+      return undefined;
+    }
     if (Array.isArray(input)) {
       const arr = input.filter((v): v is string => typeof v === 'string');
-      return arr;
+      return arr.length > 0 ? arr : null;
     }
     if (typeof input === 'string') {
       const parts = input
         .split(',')
         .map((s: string) => s.trim())
         .filter((s: string) => s.length > 0);
-      return parts;
+      return parts.length > 0 ? parts : null;
     }
-    return undefined;
+    return null;
   }
 
   async create(createUserDto: CreateUserDto): Promise<User> {
@@ -68,11 +72,15 @@ export class UserService {
 
     const hashedPassword = await bcrypt.hash(userData.password, 10);
 
-    // 权限数据转换：API 格式（string[] | string）-> DB 格式（JSON string | null）
+    // 权限数据转换：API 格式（string[] | string）-> DB 格式（string[] | null）
+    // Drizzle 的 mode: 'json' 会自动处理序列化，无需手动 JSON.stringify
     const normalizedPermissions = this.normalizePermissions(
       (userData as unknown as { permissions?: unknown }).permissions,
     );
-    const permissionsDb = insertUserSchema.shape.permissions.parse(normalizedPermissions);
+    const permissionsDb = insertUserSchema.shape.permissions.parse(normalizedPermissions) as
+      | string[]
+      | null
+      | undefined;
 
     const newUser = await this.db
       .insert(users)
@@ -83,7 +91,7 @@ export class UserService {
         email: userData.email,
         avatar: userData.avatar,
         type: userData.type,
-        permissions: permissionsDb,
+        permissions: permissionsDb as unknown as string[] | null | undefined,
       })
       .returning()
       .get();
@@ -156,7 +164,7 @@ export class UserService {
       email?: string;
       avatar?: string;
       type?: UserType;
-      permissions?: string | null;
+      permissions?: string[] | null;
     } = {};
 
     // 密码更新：加密后存储
@@ -178,11 +186,15 @@ export class UserService {
       updateData.type = userData.type;
     }
     if (userData.permissions !== undefined) {
-      // 权限数据转换：API 格式（string[]）-> DB 格式（JSON string）
+      // 权限数据转换：API 格式（string[]）-> DB 格式（string[] | null）
+      // Drizzle 的 mode: 'json' 会自动处理序列化，无需手动 JSON.stringify
       const normalizedPermissions = this.normalizePermissions(
         (userData as unknown as { permissions?: unknown }).permissions,
       );
-      const permissionsDb = updateUserSchema.shape.permissions.parse(normalizedPermissions);
+      const permissionsDb = updateUserSchema.shape.permissions.parse(normalizedPermissions) as
+        | string[]
+        | null
+        | undefined;
       updateData.permissions = permissionsDb;
     }
 
@@ -253,7 +265,7 @@ export class UserService {
    * 将数据库用户记录映射为实体对象
    *
    * 处理数据库与实体之间的数据格式差异:
-   * - 权限字段从 JSON 字符串解析为字符串数组
+   * - 权限字段已由 Drizzle 自动解析为 string[] | null（mode: 'json'）
    * - 可选字段从 null 转换为 undefined
    * - 根据参数决定是否包含密码字段
    *
@@ -262,23 +274,15 @@ export class UserService {
    * @returns 用户实体对象
    */
   private mapToEntity(dbUser: typeof users.$inferSelect, includePassword = false): User {
-    // 规范化权限: 数据库存储 JSON 字符串（或 null）-> 实体期望 string[] | undefined
+    // 规范化权限：Drizzle 已返回 string[] | null（mode: 'json' 自动处理）
+    // -> 实体期望 string[] | undefined
     const permissions: string[] | undefined = (() => {
       const raw = dbUser.permissions;
       if (raw == null) return undefined; // null -> undefined（未设置）
-      if (raw === '') return [];
-      try {
-        const parsedUnknown: unknown = JSON.parse(raw);
-        if (
-          Array.isArray(parsedUnknown) &&
-          parsedUnknown.every((v: unknown): v is string => typeof v === 'string')
-        ) {
-          return parsedUnknown;
-        }
-        return [];
-      } catch {
-        return [];
+      if (Array.isArray(raw)) {
+        return raw.length > 0 ? raw : undefined;
       }
+      return undefined;
     })();
 
     return new User({

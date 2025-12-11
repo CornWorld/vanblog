@@ -85,7 +85,7 @@ describe('MediaService - Batch Operation Limits', () => {
       const mockFiles = ids.map((id) =>
         createTestMediaFile({
           id,
-          filename: `file${id}.jpg`,
+          filename: `file${String(id)}.jpg`,
           provider: 'local',
         }),
       );
@@ -123,7 +123,7 @@ describe('MediaService - Batch Operation Limits', () => {
       const mockFiles = exactlyHundredIds.map((id) =>
         createTestMediaFile({
           id,
-          filename: `file${id}.jpg`,
+          filename: `file${String(id)}.jpg`,
           provider: 'local',
         }),
       );
@@ -170,7 +170,7 @@ describe('MediaService - Batch Operation Limits', () => {
       const mockFiles = ids.map((id) =>
         createTestMediaFile({
           id,
-          filename: `file${id}.jpg`,
+          filename: `file${String(id)}.jpg`,
           provider: 'local',
         }),
       );
@@ -208,7 +208,7 @@ describe('MediaService - Batch Operation Limits', () => {
       const mockFiles = maxIds.map((id) =>
         createTestMediaFile({
           id,
-          filename: `perf${id}.jpg`,
+          filename: `perf${String(id)}.jpg`,
           provider: 'local',
         }),
       );

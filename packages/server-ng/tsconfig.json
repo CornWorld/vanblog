@@ -8,6 +8,15 @@
     // Disable verbatimModuleSyntax for NestJS DI compatibility
     "verbatimModuleSyntax": false
   },
-  "include": ["src/**/*", "test/**/*", "plugins/**/*", "src/types/**/*.d.ts"],
+  "include": [
+    "src/**/*",
+    "test/**/*",
+    "plugins/**/*",
+    "src/types/**/*.d.ts",
+    "drizzle.config.ts",
+    "vitest.config.ts",
+    "vitest.config.e2e.ts",
+    "vite-env.d.ts"
+  ],
   "exclude": ["node_modules", "dist"]
 }

@@ -1,7 +1,7 @@
 import { initContract } from '@ts-rest/core';
 import { z } from 'zod';
 import { dateStr } from '../date-codecs.js';
-import { TimelineArticleInputSchema } from '../timeline-schemas.js';
+import { TimelineArticleInputSchema } from '../schemas.js';
 
 export const createTimelineContract = (c: ReturnType<typeof initContract>) =>
   c.router({

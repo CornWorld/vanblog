@@ -12,10 +12,6 @@ import {
   Inject,
 } from '@nestjs/common';
 import { dayjs } from '@vanblog/shared';
-import { z } from 'zod';
-
-import { LoggerService } from '../../core/logger/logger.service';
-import { DATABASE_CONNECTION, type Database } from '../../database';
 import {
   users,
   articles,
@@ -34,6 +30,10 @@ import {
   webhooks,
   webhookLogs,
 } from '@vanblog/shared/drizzle';
+import { z } from 'zod';
+
+import { LoggerService } from '../../core/logger/logger.service';
+import { DATABASE_CONNECTION, type Database } from '../../database';
 
 import {
   CreateBackupSchema,
@@ -142,7 +142,7 @@ export class BackupService {
       // 获取文件信息
       const stats = await fs.stat(filepath);
 
-      this.logger.log(`Backup created successfully: ${filename} (${stats.size} bytes)`);
+      this.logger.log(`Backup created successfully: ${filename} (${String(stats.size)} bytes)`);
 
       return {
         id: backupId,

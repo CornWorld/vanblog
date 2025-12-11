@@ -49,13 +49,13 @@ pnpm --filter @vanblog/shared dev
 
 ### 导出路径
 
-| 路径                        | 内容                     | 使用场景     | 示例                                                                |
-| --------------------------- | ------------------------ | ------------ | ------------------------------------------------------------------- |
-| `@vanblog/shared`           | contracts + schemas      | 主入口       | `import { contract } from '@vanblog/shared'`                        |
-| `@vanblog/shared/type`      | 纯类型（0 字节 JS）      | 前端类型导入 | `import type { Article } from '@vanblog/shared/type'`               |
-| `@vanblog/shared/runtime`   | Zod schemas + Drizzle 表 | 后端校验     | `import { $Article } from '@vanblog/shared/runtime'`                |
-| `@vanblog/shared/contracts` | ts-rest 契约             | API 定义     | `import { articleContract } from '@vanblog/shared/contracts'`       |
-| `@vanblog/shared/drizzle`   | Drizzle 工具 + Schema    | DB 操作      | `import { $Article, safeParseJson } from '@vanblog/shared/drizzle'` |
+| 路径                        | 内容                     | 使用场景     | 示例                                                              |
+| --------------------------- | ------------------------ | ------------ | ----------------------------------------------------------------- |
+| `@vanblog/shared`           | contracts + schemas      | 主入口       | `import { contract } from '@vanblog/shared'`                      |
+| `@vanblog/shared/type`      | 纯类型（0 字节 JS）      | 前端类型导入 | `import type { Article } from '@vanblog/shared/type'`             |
+| `@vanblog/shared/runtime`   | Zod schemas + Drizzle 表 | 后端校验     | `import { $Article } from '@vanblog/shared/runtime'`              |
+| `@vanblog/shared/contracts` | ts-rest 契约             | API 定义     | `import { articleContract } from '@vanblog/shared/contracts'`     |
+| `@vanblog/shared/drizzle`   | Drizzle 工具 + Schema    | DB 操作      | `import { $Article, dataSchemas } from '@vanblog/shared/drizzle'` |
 
 ### 核心导出
 
@@ -72,7 +72,7 @@ export { $UserIns, $ArticleIns, ... }
 export { $UserUpd, $ArticleUpd, ... }
 
 // 工具函数
-export { safeParseJson, dataSchemas }
+export { dataSchemas }
 ```
 
 #### 2. ts-rest 契约（`@vanblog/shared/contracts`）
@@ -99,7 +99,6 @@ export type { UserPatch, ArticlePatch, ... }
 
 ```typescript
 export { dayjs, configureDayjs }  // 日期处理
-export { safeParseJson }          // JSON 解析
 export { $Article, $User, ... }   // Drizzle 表（同 drizzle 导出）
 export { ArticleSchema, ... }     // Zod Schema
 ```
@@ -188,8 +187,7 @@ src/
 │   ├── index.ts
 │   ├── db.ts                  # Drizzle 表导出
 │   ├── schema.ts              # Zod Schema 导出
-│   ├── date.ts                # 日期工具
-│   └── json.ts                # JSON 工具
+│   └── date.ts                # 日期工具
 └── type/                      # 纯类型
     ├── index.ts
     └── schema.ts              # 类型推导
@@ -440,14 +438,19 @@ import { contract } from '@vanblog/shared';
 type ArticleListResponse = Awaited<ReturnType<typeof contract.article.findAll>>['body'];
 ```
 
-### Q4: 如何处理 JSON 字段？
+### Q4: JSON 字段如何自动处理？
 
-使用 `safeParseJson` 工具：
+使用 Drizzle 的 `mode: 'json'`，JSON 字段自动序列化/反序列化为原生 JS 类型：
 
 ```typescript
-import { safeParseJson } from '@vanblog/shared/drizzle';
+// Drizzle schema 定义（mode: 'json' 自动处理）
+const articles = sqliteTable('articles', {
+  tags: text('tags', { mode: 'json' }).$type<string[]>(),
+});
 
-const data = safeParseJson<{ foo: string }>(jsonString, { foo: 'default' });
+// 直接使用原生数组，无需手动 JSON.parse/stringify
+const article = await db.select().from(articles).limit(1);
+console.log(article.tags); // string[] 类型
 ```
 
 ### Q5: dayjs 如何配置？
@@ -480,8 +483,7 @@ src/
 ├── runtime/                   # 运行时工具
 │   ├── db.ts
 │   ├── schema.ts
-│   ├── date.ts
-│   └── json.ts
+│   └── date.ts
 └── type/                      # 纯类型
     └── schema.ts
 ```

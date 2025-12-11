@@ -1,9 +1,9 @@
 import { Injectable, NotFoundException, Logger, Inject } from '@nestjs/common';
 import { dayjs } from '@vanblog/shared';
+import { permissionNodes, permissionGroups } from '@vanblog/shared/drizzle';
 import { eq, desc, and } from 'drizzle-orm';
 
 import { DATABASE_CONNECTION, type Database } from '../../database';
-import { permissionNodes, permissionGroups } from '@vanblog/shared/drizzle';
 
 import {
   CreatePermissionGroupType,
@@ -456,7 +456,10 @@ export class PermissionService {
   ): Promise<PermissionGroupType> {
     const [result] = await this.db
       .insert(permissionGroups)
-      .values(createPermissionGroupDto)
+      .values({
+        ...createPermissionGroupDto,
+        permissions: createPermissionGroupDto.permissions as string[] | null,
+      })
       .returning();
     // 影响角色权限：失效缓存
     this.rolePermissionsCache.clear();
@@ -508,9 +511,21 @@ export class PermissionService {
     id: number,
     updatePermissionGroupDto: UpdatePermissionGroupType,
   ): Promise<PermissionGroupType> {
+    const updates: {
+      name?: string;
+      description?: string | null;
+      permissions?: string[] | null;
+      isActive?: boolean | null;
+      updatedAt: string;
+    } = {
+      ...updatePermissionGroupDto,
+      permissions: updatePermissionGroupDto.permissions as string[] | null | undefined,
+      updatedAt: dayjs().format(),
+    };
+
     const result = await this.db
       .update(permissionGroups)
-      .set({ ...updatePermissionGroupDto, updatedAt: dayjs().format() })
+      .set(updates)
       .where(eq(permissionGroups.id, id))
       .returning();
 
@@ -570,10 +585,9 @@ export class PermissionService {
       return filtered;
     }
 
-    const dbPermissions =
-      PermissionGroupSchema.parse(
-        this.normalizePermissionGroupRow(group[0] as PermissionGroupSelect),
-      ).permissions ?? [];
+    const dbPermissions = (PermissionGroupSchema.parse(
+      this.normalizePermissionGroupRow(group[0] as PermissionGroupSelect),
+    ).permissions ?? []) as string[];
 
     // 过滤非法/未注册权限
     const known = this.getKnownPermissionsSet();
@@ -596,7 +610,7 @@ export class PermissionService {
   }
 
   private async ensurePredefinedGroups(): Promise<void> {
-    this.logger.log(`开始确保预定义权限组，当前角色数量: ${this.predefinedRoles.size}`);
+    this.logger.log(`开始确保预定义权限组，当前角色数量: ${String(this.predefinedRoles.size)}`);
 
     for (const [roleName, permissions] of this.predefinedRoles) {
       this.logger.log(`处理角色 ${roleName}，权限: ${JSON.stringify(permissions)}`);
@@ -614,7 +628,7 @@ export class PermissionService {
         await this.db.insert(permissionGroups).values({
           name: roleName,
           description: `预定义角色: ${roleName}`,
-          permissions: JSON.stringify(permissions),
+          permissions,
           isActive: true,
         });
       } else {
@@ -622,7 +636,7 @@ export class PermissionService {
         this.logger.log(`更新现有权限组: ${roleName}`);
         await this.db
           .update(permissionGroups)
-          .set({ permissions: JSON.stringify(permissions) })
+          .set({ permissions })
           .where(eq(permissionGroups.name, roleName));
       }
     }

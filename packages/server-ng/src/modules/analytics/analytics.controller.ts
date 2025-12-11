@@ -14,7 +14,6 @@ import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
 import { contract } from '@vanblog/shared';
-import { Request } from 'express';
 
 import { DerivedView } from '../../shared/decorators/derived-view.decorator';
 import { Perm } from '../auth/permissions.decorator';
@@ -34,6 +33,8 @@ import { ArticleStatsService, ArticleStats } from './services/article-stats.serv
 import { EchartsFormatterService, EchartsOption } from './services/echarts-formatter.service';
 import { PublicAnalyticsService } from './services/public-analytics.service';
 import { ThirdPartyAnalyticsService } from './services/third-party-analytics.service';
+
+import type { Request } from 'express';
 
 /**
  * 分析数据控制器

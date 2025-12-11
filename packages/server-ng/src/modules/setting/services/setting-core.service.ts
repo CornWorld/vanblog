@@ -9,12 +9,12 @@ import {
   type SocialType,
   type RewardItem,
 } from '@vanblog/shared';
+import { siteMeta, safeParse, dataSchemas, NavigationNode } from '@vanblog/shared/drizzle';
 import axios from 'axios';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
 import { DATABASE_CONNECTION, type Database } from '../../../database';
-import { siteMeta, safeParseJson, dataSchemas, NavigationNode } from '@vanblog/shared/drizzle';
 import { normalizeCustomCode } from '../../../shared/contracts';
 import { HookService } from '../../plugin/services/hook.service';
 
@@ -155,16 +155,12 @@ export class SettingCoreService implements OnModuleInit {
   async getConfig<T>(key: string, defaultValue?: T, schema?: z.ZodType<T>): Promise<T | null> {
     const results = await this.db.select().from(siteMeta).where(eq(siteMeta.key, key)).limit(1);
 
-    if (results.length > 0 && results[0].value) {
+    if (results.length > 0 && results[0].value != null) {
+      // Drizzle with mode: 'json' already deserializes the value
       if (schema) {
-        const parsed = safeParseJson<T>(results[0].value, schema);
-        return parsed;
+        return safeParse<T>(results[0].value, schema);
       }
-      const parsed = safeParseJson<Record<string, unknown>>(
-        results[0].value,
-        dataSchemas.genericObject,
-      );
-      return parsed as unknown as T | null;
+      return results[0].value as T;
     }
 
     if (defaultValue !== undefined) {
@@ -190,21 +186,12 @@ export class SettingCoreService implements OnModuleInit {
     // Delegate write to registry service (single-statement upsert, idempotent)
     await this.registryService.updateConfig(key, filteredData.value);
 
-    const parsed = oldValue != null ? safeParseJson(oldValue, dataSchemas.genericObject) : null;
-
-    // Extended payload: emit with parsed oldValue object and updatedAt FIRST
-    await this.hookService.doAction('setting|afterUpdate', {
-      key,
-      value: filteredData.value,
-      oldValue: parsed,
-      updatedAt: dayjs().format(),
-    });
-
-    // Backward compatibility: emit with raw string oldValue AFTER
+    // Extended payload: emit with oldValue object and updatedAt FIRST
     await this.hookService.doAction('setting|afterUpdate', {
       key,
       value: filteredData.value,
       oldValue,
+      updatedAt: dayjs().format(),
     });
 
     return filteredData.value;

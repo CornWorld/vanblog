@@ -119,6 +119,7 @@ export default defineConfig([
       '@typescript-eslint/no-unsafe-argument': 'off',
       'no-console': 'off',
       'no-restricted-imports': 'off',
+      'import/order': 'off', // Test files often need special import order for mocking
     },
   },
 

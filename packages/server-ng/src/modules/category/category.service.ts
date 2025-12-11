@@ -1,16 +1,15 @@
 import { Injectable, NotFoundException, Inject } from '@nestjs/common';
 import { dayjs } from '@vanblog/shared';
+import { categories, articles } from '@vanblog/shared/drizzle';
 import * as bcrypt from 'bcrypt';
 import { and, eq, sql, desc } from 'drizzle-orm';
 import * as jwt from 'jsonwebtoken';
 
 import { ConfigService } from '../../config/config.service';
 import { DATABASE_CONNECTION, type Database } from '../../database';
-import { categories, articles } from '@vanblog/shared/drizzle';
 import { OverallStatisticsDto } from '../../shared/dto/statistics.dto';
 import { QueryOptimizerService } from '../../shared/services/query-optimizer.service';
 import { StatisticsService } from '../../shared/services/statistics.service';
-import { safeParseJson, dataSchemas } from '@vanblog/shared/drizzle';
 import { ArticleListResponseDto, ArticleQueryDto } from '../article/dto/article.dto';
 import { HookService } from '../plugin/services/hook.service';
 
@@ -75,7 +74,7 @@ export class CategoryService {
     const results = await this.db.select().from(categories).where(eq(categories.id, id)).limit(1);
 
     if (results.length === 0) {
-      throw new NotFoundException(`Category with ID ${id} not found`);
+      throw new NotFoundException(`Category with ID ${String(id)} not found`);
     }
 
     return {
@@ -156,7 +155,7 @@ export class CategoryService {
       .returning();
 
     if (result.length === 0) {
-      throw new NotFoundException(`Category with ID ${id} not found`);
+      throw new NotFoundException(`Category with ID ${String(id)} not found`);
     }
 
     // Foreign key constraint will handle cascade update automatically
@@ -206,7 +205,7 @@ export class CategoryService {
 
     if (articlesInCategory > 0) {
       throw new Error(
-        `Cannot delete category "${category.name}" because it contains ${articlesInCategory} articles`,
+        `Cannot delete category "${category.name}" because it contains ${String(articlesInCategory)} articles`,
       );
     }
 
@@ -216,7 +215,7 @@ export class CategoryService {
       .returning({ id: categories.id });
 
     if (result.length === 0) {
-      throw new NotFoundException(`Category with ID ${id} not found`);
+      throw new NotFoundException(`Category with ID ${String(id)} not found`);
     }
 
     // Trigger webhook event
@@ -312,9 +311,9 @@ export class CategoryService {
           .where(sql`${articles.category} IS NOT NULL`);
 
         // 在内存中按分类分组文章标签
-        const articlesByCategory = new Map<string, string[]>();
+        const articlesByCategory = new Map<string, (string[] | null)[]>();
         allArticlesWithTags.forEach((article) => {
-          if (article.category && article.tags) {
+          if (article.category) {
             if (!articlesByCategory.has(article.category)) {
               articlesByCategory.set(article.category, []);
             }
@@ -331,8 +330,8 @@ export class CategoryService {
 
           // 统计标签出现次数
           const tagCount = new Map<string, number>();
-          categoryTags.forEach((tagsJson) => {
-            const articleTags = safeParseJson(tagsJson, dataSchemas.tagsArray) ?? [];
+          categoryTags.forEach((tags) => {
+            const articleTags = tags ?? [];
             articleTags.forEach((tag) => {
               tagCount.set(tag, (tagCount.get(tag) ?? 0) + 1);
             });
@@ -395,7 +394,7 @@ export class CategoryService {
       title: article.title,
       content: article.content,
       pathname: article.pathname,
-      tags: safeParseJson(article.tags, dataSchemas.tagsArray) ?? [],
+      tags: article.tags ?? [],
       category: article.category,
       author: article.author,
       top: article.top,

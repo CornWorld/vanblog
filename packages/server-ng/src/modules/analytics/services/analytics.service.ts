@@ -1,11 +1,11 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { dayjs } from '@vanblog/shared';
+import { analytics } from '@vanblog/shared/drizzle';
 import { eq, and, gte, lte, sql, desc } from 'drizzle-orm';
 import { UAParser } from 'ua-parser-js';
 import { z } from 'zod';
 
 import { DATABASE_CONNECTION, type Database } from '../../../database';
-import { analytics } from '@vanblog/shared/drizzle';
 import { AnalyticsCacheService } from '../../../shared/cache/analytics-cache.service';
 import { toDatejs } from '../../../shared/utils/date.utils';
 import {

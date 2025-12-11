@@ -4,12 +4,12 @@ import * as path from 'path';
 import { Injectable, Logger, Inject } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { dayjs } from '@vanblog/shared';
+import { articles } from '@vanblog/shared/drizzle';
 import { eq, and, desc } from 'drizzle-orm';
 import { Feed } from 'feed';
 import { z } from 'zod';
 
 import { DATABASE_CONNECTION, type Database } from '../../database';
-import { articles } from '@vanblog/shared/drizzle';
 import { MarkdownService } from '../../shared/services/markdown.service';
 import { HookService } from '../plugin/services/hook.service';
 import { SettingCoreService, type SiteInfo } from '../setting/services/setting-core.service';
@@ -140,7 +140,7 @@ export class RssService {
         language: 'zh-cn',
         image: siteLogo,
         favicon,
-        copyright: `All rights reserved ${date.getFullYear()}, ${siteInfo.author}`,
+        copyright: `All rights reserved ${String(date.getFullYear())}, ${siteInfo.author}`,
         updated: date,
         generator: 'Feed for VanBlog Server-NG',
         feedLinks: {
@@ -152,7 +152,7 @@ export class RssService {
 
       // 添加文章到 RSS
       for (const article of articleResults) {
-        const url = `${siteUrl}post/${article.pathname ?? article.id}`;
+        const url = `${siteUrl}post/${String(article.pathname ?? article.id)}`;
         const category = {
           name: article.category ?? 'Uncategorized',
           domain: `${siteUrl}/category/${article.category ?? 'uncategorized'}`,

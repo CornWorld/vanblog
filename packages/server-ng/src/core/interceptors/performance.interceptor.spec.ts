@@ -251,7 +251,7 @@ describe('PerformanceInterceptor', () => {
           switchToHttp: vi.fn().mockReturnValue({
             getRequest: vi.fn().mockReturnValue({
               method: 'GET',
-              url: `/api/test-${i}`,
+              url: `/api/test-${String(i)}`,
               ip: '127.0.0.1',
               socket: { remoteAddress: '127.0.0.1' },
               headers: { 'user-agent': 'test-agent' },

@@ -1,8 +1,8 @@
 import { Injectable, Inject } from '@nestjs/common';
+import { analytics, articles } from '@vanblog/shared/drizzle';
 import { eq, and, sql, desc } from 'drizzle-orm';
 
 import { DATABASE_CONNECTION, type Database } from '../../../database';
-import { analytics, articles } from '@vanblog/shared/drizzle';
 import { AnalyticsType } from '../entities/analytics.entity';
 
 export interface ArticleStats {

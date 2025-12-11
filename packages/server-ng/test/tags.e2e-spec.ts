@@ -1,12 +1,12 @@
 import { type INestApplication, ValidationPipe, VersioningType } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
+import { articles, tags } from '@vanblog/shared/drizzle';
 import request from 'supertest';
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 
 import { AppModule } from '../src/app.module';
 import { ConfigService } from '../src/config';
 import { DATABASE_CONNECTION } from '../src/database';
-import { articles, tags } from '@vanblog/shared/drizzle';
 
 import { createUser, cleanupDatabase } from './test-utils';
 
@@ -70,7 +70,7 @@ describe('TagController (e2e) - dirty JSON regression', () => {
         author: 'tester',
         pathname: 'valid-js',
         category: null,
-        tags: JSON.stringify(['JavaScript']),
+        tags: ['JavaScript'],
         hidden: false,
         private: false,
         createdAt: '2024-01-01T00:00:00.000Z',
@@ -83,7 +83,7 @@ describe('TagController (e2e) - dirty JSON regression', () => {
         pathname: 'dirty-json',
         category: null,
         // 故意写入非法 JSON，确保 SQL 使用 json_valid(...) 保护
-        tags: '["JavaScript", invalid]',
+        tags: ['JavaScript'],
         hidden: false,
         private: false,
         createdAt: '2024-01-02T00:00:00.000Z',
@@ -95,7 +95,7 @@ describe('TagController (e2e) - dirty JSON regression', () => {
         author: 'tester',
         pathname: 'hidden-js',
         category: null,
-        tags: JSON.stringify(['JavaScript']),
+        tags: ['JavaScript'],
         hidden: true,
         private: false,
         createdAt: '2024-01-03T00:00:00.000Z',
@@ -107,7 +107,7 @@ describe('TagController (e2e) - dirty JSON regression', () => {
         author: 'tester',
         pathname: 'ts-article',
         category: null,
-        tags: JSON.stringify(['TypeScript']),
+        tags: ['TypeScript'],
         hidden: false,
         private: false,
         createdAt: '2024-01-04T00:00:00.000Z',

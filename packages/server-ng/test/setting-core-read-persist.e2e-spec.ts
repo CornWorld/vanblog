@@ -1,10 +1,10 @@
 import { Test, type TestingModule } from '@nestjs/testing';
+import { siteMeta } from '@vanblog/shared/drizzle';
 import { eq } from 'drizzle-orm';
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 
 import { AppModule } from '../src/app.module';
 import { DATABASE_CONNECTION, type Database } from '../src/database';
-import { siteMeta } from '@vanblog/shared/drizzle';
 import { SettingCoreService } from '../src/modules/setting/services/setting-core.service';
 
 import { cleanupDatabase } from './test-utils';
@@ -53,7 +53,9 @@ describe('SettingCoreService read-path default persistence (e2e)', () => {
     expect(row.value).toBeTypeOf('string');
     if (row.value == null) throw new Error('value should not be null');
 
-    const parsed = JSON.parse(row.value) as unknown;
+    // Type assert value as string before JSON.parse
+    const valueStr = typeof row.value === 'string' ? row.value : JSON.stringify(row.value);
+    const parsed = JSON.parse(valueStr) as typeof def;
     expect(parsed).toMatchObject(def);
   }, 15000);
 
@@ -75,7 +77,9 @@ describe('SettingCoreService read-path default persistence (e2e)', () => {
     const [row] = rows;
     expect(row.value).toBeTypeOf('string');
     if (row.value == null) throw new Error('value should not be null');
-    const parsed = JSON.parse(row.value) as { n: number };
+    // Type assert value as string before JSON.parse
+    const valueStr = typeof row.value === 'string' ? row.value : JSON.stringify(row.value);
+    const parsed = JSON.parse(valueStr) as typeof first;
     expect(parsed.n).toBe(1);
   }, 15000);
 
@@ -101,7 +105,9 @@ describe('SettingCoreService read-path default persistence (e2e)', () => {
     const [row] = rows;
     expect(row.value).toBeTypeOf('string');
     if (row.value == null) throw new Error('value should not be null');
-    const parsed = JSON.parse(row.value) as { v: string; n: number };
+    // Type assert value as string before JSON.parse
+    const valueStr = typeof row.value === 'string' ? row.value : JSON.stringify(row.value);
+    const parsed = JSON.parse(valueStr) as { v: string; n: number };
 
     // Persisted value must be either defA or defB
     expect([

@@ -86,7 +86,7 @@ export class PermissionsGuard implements CanActivate {
         userPermissions,
         requiredPermissions,
       );
-      this.logger.debug(`权限检查结果: ${result}`);
+      this.logger.debug(`权限检查结果: ${String(result)}`);
       return result;
     }
 
@@ -95,7 +95,7 @@ export class PermissionsGuard implements CanActivate {
     const controllerName = context.getClass().name;
     const moduleName = this.extractModuleNameFromController(controllerName);
 
-    this.logger.debug(`控制器名称: ${controllerName}, 推导模块名: ${moduleName}`);
+    this.logger.debug(`控制器名称: ${controllerName}, 推导模块名: ${String(moduleName)}`);
 
     if (moduleName) {
       resolvedPermissions = this.permissionService.resolvePermissionNames(
@@ -113,7 +113,7 @@ export class PermissionsGuard implements CanActivate {
       userPermissions,
       resolvedPermissions,
     );
-    this.logger.debug(`最终权限检查结果: ${result}`);
+    this.logger.debug(`最终权限检查结果: ${String(result)}`);
     return result;
   }
 

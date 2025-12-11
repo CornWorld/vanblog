@@ -35,7 +35,7 @@
  * import { $Article, $ArticleIns } from '@vanblog/shared/runtime';
  *
  * // 导入工具函数
- * import { dayjs, jsonToArr } from '@vanblog/shared/runtime';
+ * import { dayjs } from '@vanblog/shared/runtime';
  *
  * // 导入 contract 用于实现 API
  * import { initServer } from '@ts-rest/nestjs';
@@ -82,9 +82,6 @@ export * from './schemas.js';
 // Date utilities
 export * from './dayjs.js';
 export * from './date-codecs.js';
-
-// Timeline schemas
-export * from './timeline-schemas.js';
 
 // NOTE: DB-derived schemas are available via subpath exports:
 // - @vanblog/shared/type - Pure types (User, Article, Category, etc.)

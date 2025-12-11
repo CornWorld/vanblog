@@ -2,13 +2,13 @@ import { promises as fsPromises } from 'fs';
 import { join } from 'path';
 
 import { Injectable, Inject, NotFoundException, BadRequestException } from '@nestjs/common';
+import { staticFiles, articles } from '@vanblog/shared/drizzle';
 import { and, asc, desc, eq, like, sql, type SQL, inArray } from 'drizzle-orm';
 import sharp from 'sharp';
 import { z } from 'zod';
 
 import { LoggerService } from '../../../core/logger/logger.service';
 import { DATABASE_CONNECTION, type Database } from '../../../database';
-import { staticFiles, articles } from '@vanblog/shared/drizzle';
 import { HookService } from '../../plugin/services/hook.service';
 import { ListStaticFilesSchema } from '../dto/list-static-files.dto';
 import { StorageProvider } from '../dto/storage-config.dto';
@@ -220,7 +220,7 @@ export class MediaService {
   async getFileById(id: number): Promise<typeof staticFiles.$inferSelect> {
     const file = await this.db.select().from(staticFiles).where(eq(staticFiles.id, id)).get();
     if (!file) {
-      throw new NotFoundException(`File with ID ${id} not found`);
+      throw new NotFoundException(`File with ID ${String(id)} not found`);
     }
     return file;
   }
@@ -297,7 +297,7 @@ export class MediaService {
     const result = {
       success: true,
       deletedCount: files.length,
-      message: `${files.length} files deleted successfully`,
+      message: `${String(files.length)} files deleted successfully`,
     };
 
     // Trigger webhook event
@@ -369,7 +369,10 @@ export class MediaService {
     const scanned = urlSet.size;
     const added = missing.length;
 
-    this.logger.info(`scanArticleImages: scanned=${scanned}, added=${added}`, MediaService.name);
+    this.logger.info(
+      `scanArticleImages: scanned=${String(scanned)}, added=${String(added)}`,
+      MediaService.name,
+    );
 
     return { scanned, added };
   }
@@ -518,7 +521,8 @@ export class MediaService {
     if (filename.length === 0 || totalSize <= 0 || chunkSize <= 0 || totalChunks <= 0) {
       throw new BadRequestException('缺少必要参数');
     }
-    const uploadId = params.uploadId ?? `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    const uploadId =
+      params.uploadId ?? `${String(Date.now())}-${Math.random().toString(36).slice(2, 10)}`;
     const dir = join(this.getChunkBaseDir(), uploadId);
     await fsPromises.mkdir(dir, { recursive: true });
     const meta = { filename, totalSize, chunkSize, totalChunks, mimeType, provider };
@@ -556,7 +560,7 @@ export class MediaService {
       throw new NotFoundException('上传会话不存在');
     }
 
-    const chunkPath = join(dir, `chunk.${index}`);
+    const chunkPath = join(dir, `chunk.${String(index)}`);
     // 简单幂等：覆盖写入该分片（客户端不应重复并发发送同一 index）
     await fsPromises.writeFile(chunkPath, file.buffer);
     return { index, size: file.buffer.length };
@@ -582,12 +586,12 @@ export class MediaService {
 
     const parts: Buffer[] = [];
     for (let i = 0; i < meta.totalChunks; i++) {
-      const chunkPath = join(dir, `chunk.${i}`);
+      const chunkPath = join(dir, `chunk.${String(i)}`);
       try {
         const buf = await fsPromises.readFile(chunkPath);
         parts.push(buf);
       } catch {
-        throw new BadRequestException(`缺少分片: ${i}`);
+        throw new BadRequestException(`缺少分片: ${String(i)}`);
       }
     }
     const buffer = Buffer.concat(parts);

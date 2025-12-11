@@ -1,13 +1,13 @@
 import { Injectable, Inject, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { dayjs } from '@vanblog/shared';
-import { eq, and, lt, desc } from 'drizzle-orm';
-
-import { DATABASE_CONNECTION, type Database } from '../../../database';
 import {
   imageProcessingQueue,
   type ImageProcessingQueueInsert,
   type ImageProcessingQueueSelect,
 } from '@vanblog/shared/drizzle';
+import { eq, and, lt, desc } from 'drizzle-orm';
+
+import { DATABASE_CONNECTION, type Database } from '../../../database';
 
 import { ImageProcessingService, type ImageProcessingOptions } from './image-processing.service';
 
@@ -76,6 +76,8 @@ export class ImageProcessingQueueService implements OnModuleInit, OnModuleDestro
       originalBuffer: originalBuffer.toString('base64'),
       attempts: 0,
       maxAttempts: 3,
+      createdAt: dayjs().format(),
+      updatedAt: dayjs().format(),
     };
 
     const result = await this.db.insert(imageProcessingQueue).values(taskData).returning();

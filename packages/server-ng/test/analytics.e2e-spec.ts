@@ -1,13 +1,13 @@
 import { type INestApplication, ValidationPipe, VersioningType } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { dayjs } from '@vanblog/shared';
+import { analytics } from '@vanblog/shared/drizzle';
 import request from 'supertest';
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 
 import { AppModule } from '../src/app.module';
 import { ConfigService } from '../src/config';
 import { DATABASE_CONNECTION } from '../src/database';
-import { analytics } from '@vanblog/shared/drizzle';
 import { AnalyticsType } from '../src/modules/analytics/entities/analytics.entity';
 
 import { createUser, cleanupDatabase, createAuthToken } from './test-utils';
@@ -309,7 +309,7 @@ describe('AnalyticsController (e2e)', () => {
           path: '/seed',
           referrer: null,
           userAgent: null,
-          ip: `127.0.0.${i + 1}`,
+          ip: `127.0.0.${String(i + 1)}`,
           data: null,
           createdAt: d.format('YYYY-MM-DD 12:00:00'),
         });

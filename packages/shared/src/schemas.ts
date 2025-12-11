@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { dateStr } from './date-codecs.js';
+import { dataCodec, dateStr } from './date-codecs.js';
 
 export const c = {
   id: z.number().int().positive('ID must be a positive integer').describe('Unique identifier'),
@@ -560,3 +560,101 @@ export const InitSchema = z.object({
   password: z.string(),
   email: z.string(),
 });
+
+// Timeline
+export const TimelineArticleInputSchema = z.object({
+  id: z.number(),
+  title: z.string(),
+  pathname: z.string().nullable(),
+  tags: z.array(z.string()),
+  category: z.string().nullable(),
+  author: z.string().nullable(),
+  top: z.number().nullable(),
+  hidden: z.boolean(),
+  private: z.boolean(),
+  viewer: z.number(),
+  createdAt: dateStr,
+  updatedAt: dateStr,
+  pubTime: dateStr,
+});
+
+export type TimelineArticleInput = z.input<typeof TimelineArticleInputSchema>;
+
+export type TimelineArticleDecoded = Omit<
+  z.output<typeof TimelineArticleInputSchema>,
+  'createdAt' | 'updatedAt' | 'pubTime'
+> & {
+  createdAt: import('dayjs').Dayjs;
+  updatedAt: import('dayjs').Dayjs;
+  pubTime: import('dayjs').Dayjs;
+};
+
+export const TimelineArticleOutputSchema = z.object({
+  id: z.number(),
+  title: z.string(),
+  pathname: z.string().nullable(),
+  tags: z.array(z.string()),
+  category: z.string().nullable(),
+  author: z.string().nullable(),
+  top: z.number().nullable(),
+  hidden: z.boolean(),
+  private: z.boolean(),
+  viewer: z.number(),
+  createdAt: dateStr,
+  updatedAt: dateStr,
+  pubTime: dateStr,
+});
+
+export type TimelineArticleOutput = z.output<typeof TimelineArticleOutputSchema>;
+
+export function decodeTimelineArticle(input: TimelineArticleInput): TimelineArticleDecoded {
+  return {
+    ...input,
+    createdAt: dataCodec.decode(input.createdAt),
+    updatedAt: dataCodec.decode(input.updatedAt),
+    pubTime: dataCodec.decode(input.pubTime),
+  } as TimelineArticleDecoded;
+}
+
+export function encodeTimelineArticle(decoded: TimelineArticleDecoded): TimelineArticleInput {
+  return {
+    ...decoded,
+    createdAt: dataCodec.encode(decoded.createdAt),
+    updatedAt: dataCodec.encode(decoded.updatedAt),
+    pubTime: dataCodec.encode(decoded.pubTime),
+  } as TimelineArticleInput;
+}
+
+export type TimelineArticleDbRow = {
+  id: number;
+  title: string;
+  pathname: string | null;
+  tags: string[] | null;
+  category: string | null;
+  author: string | null;
+  top: number | null;
+  hidden: boolean | null;
+  private: boolean | null;
+  viewer: number | null;
+  createdAt: string;
+  updatedAt: string;
+  pubTime: string;
+};
+
+export function toTimelineArticleInputFromDb(row: TimelineArticleDbRow): TimelineArticleInput {
+  return {
+    id: row.id,
+    title: row.title,
+    pathname: row.pathname,
+    tags: row.tags ?? [],
+    category: row.category,
+    author: row.author,
+    top: row.top,
+    hidden: !!row.hidden,
+    private: !!row.private,
+    viewer: row.viewer ?? 0,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+    pubTime: row.pubTime,
+  } satisfies TimelineArticleInput;
+}

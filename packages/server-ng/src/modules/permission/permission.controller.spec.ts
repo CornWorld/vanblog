@@ -81,6 +81,7 @@ describe('PermissionController', () => {
           name: 'article:read',
           description: 'Read articles',
           module: 'article',
+          isActive: true,
         };
 
         mockPermissionService.createPermissionNode.mockResolvedValue(mockPermissionNode);
@@ -172,7 +173,7 @@ describe('PermissionController', () => {
         const createDto: CreatePermissionGroupDto = {
           name: 'admin',
           description: 'Administrator group',
-          permissions: JSON.stringify(['article:read', 'article:write']),
+          isActive: true,
         };
 
         mockPermissionService.createPermissionGroup.mockResolvedValue(mockPermissionGroup);

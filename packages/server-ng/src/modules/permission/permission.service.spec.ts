@@ -256,7 +256,7 @@ describe('PermissionService', () => {
       const createDto = {
         name: 'admin',
         description: 'Administrator group',
-        permissions: JSON.stringify(['article:read', 'article:write']),
+        permissions: ['article:read', 'article:write'],
       };
 
       mockDb.insert.mockReturnValue({

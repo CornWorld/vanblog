@@ -74,7 +74,7 @@ describe('PublicAnalyticsController (e2e)', () => {
         .send({
           type: 'pageview',
           path: popularPathWithQuery,
-          ip: `10.0.0.${i + 1}`,
+          ip: `10.0.0.${String(i + 1)}`,
           userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15',
           data: { articleId: createdArticle.id, note: 'popular' },
         })
@@ -87,7 +87,7 @@ describe('PublicAnalyticsController (e2e)', () => {
         .send({
           type: 'pageview',
           path: lessPopularPath,
-          ip: `10.0.1.${i + 1}`,
+          ip: `10.0.1.${String(i + 1)}`,
           userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
           data: { articleId: createdArticle.id, note: 'less-popular' },
         })
@@ -95,7 +95,9 @@ describe('PublicAnalyticsController (e2e)', () => {
     }
 
     // Seed article related analytics: one via article view API, plus two pageviews with duration
-    await request(httpServer).post(`/api/v2/article/${createdArticle.id}/view`).expect(201);
+    await request(httpServer)
+      .post(`/api/v2/article/${String(createdArticle.id)}/view`)
+      .expect(201);
 
     await request(httpServer)
       .post('/api/v2/analytics/record')
@@ -151,7 +153,7 @@ describe('PublicAnalyticsController (e2e)', () => {
 
   it('GET /api/v2/analytics/public/article/:id should return sanitized stats for the article', async () => {
     const res = await request(httpServer)
-      .get(`/api/v2/analytics/public/article/${createdArticle.id}`)
+      .get(`/api/v2/analytics/public/article/${String(createdArticle.id)}`)
       .expect(200);
 
     expect(res.body).toHaveProperty('articleId', createdArticle.id);

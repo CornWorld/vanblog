@@ -44,7 +44,7 @@ export class PluginRegistryService {
 
     return await new Promise<T>((resolve, reject) => {
       const timer = setTimeout(() => {
-        reject(new Error(`Provider timed out after ${timeoutMs}ms`));
+        reject(new Error(`Provider timed out after ${String(timeoutMs)}ms`));
       }, timeoutMs);
 
       Promise.resolve()
@@ -89,7 +89,7 @@ export class PluginRegistryService {
       registeredAt: new Date(),
     });
 
-    this.logger.debug(`Registered plugin '${pluginName}' with priority ${priority}`);
+    this.logger.debug(`Registered plugin '${pluginName}' with priority ${String(priority)}`);
   }
 
   /**
@@ -166,7 +166,7 @@ export class PluginRegistryService {
     });
 
     this.logger.debug(
-      `Collected data from ${Object.keys(results).length}/${sortedRegistrations.length} plugins`,
+      `Collected data from ${String(Object.keys(results).length)}/${String(sortedRegistrations.length)} plugins`,
     );
 
     return results;
@@ -203,7 +203,7 @@ export class PluginRegistryService {
   clear(): void {
     const count = this.registrations.size;
     this.registrations.clear();
-    this.logger.debug(`Cleared ${count} plugin registrations`);
+    this.logger.debug(`Cleared ${String(count)} plugin registrations`);
   }
 
   /**

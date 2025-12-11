@@ -1,11 +1,11 @@
 import { ConflictException, NotFoundException } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
+import { users } from '@vanblog/shared/drizzle';
 import * as bcrypt from 'bcrypt';
 import { vi } from 'vitest';
 
 import { MockUtils } from '../../../test/mock-utils';
 import { DATABASE_CONNECTION } from '../../database';
-import { users } from '@vanblog/shared/drizzle';
 import { HookService } from '../plugin/services/hook.service';
 
 import { UserService } from './user.service';
@@ -73,7 +73,7 @@ describe('UserService', () => {
         nickname: createUserDto.nickname,
         email: createUserDto.email,
         type: createUserDto.type,
-        permissions: JSON.stringify(['read', 'write']), // Store as JSON string
+        permissions: ['read', 'write'], // Drizzle with mode: 'json' returns native arrays
         avatar: null,
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -126,7 +126,7 @@ describe('UserService', () => {
           nickname: 'User 1',
           avatar: null,
           type: 'admin',
-          permissions: '[]',
+          permissions: [], // Drizzle with mode: 'json' returns native arrays
           password: 'hashedpassword1',
           createdAt: new Date(),
           updatedAt: new Date(),
@@ -138,7 +138,7 @@ describe('UserService', () => {
           nickname: 'User 2',
           avatar: null,
           type: 'collaborator',
-          permissions: '["read"]',
+          permissions: ['read'], // Drizzle with mode: 'json' returns native arrays
           password: 'hashedpassword2',
           createdAt: new Date(),
           updatedAt: new Date(),
@@ -156,7 +156,7 @@ describe('UserService', () => {
         email: 'user1@example.com',
         nickname: 'User 1',
         type: 'admin',
-        permissions: [],
+        permissions: undefined, // Empty array is converted to undefined by mapToEntity
       });
       expect(result[0].password).toBeUndefined();
       expect(result[1]).toMatchObject({
@@ -180,7 +180,7 @@ describe('UserService', () => {
         nickname: 'Test User',
         avatar: null,
         type: 'admin',
-        permissions: '[]',
+        permissions: [], // Drizzle with mode: 'json' returns native arrays
         password: 'hashedpassword',
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -195,7 +195,7 @@ describe('UserService', () => {
         email: 'test@example.com',
         nickname: 'Test User',
         type: 'admin',
-        permissions: [],
+        permissions: undefined, // Empty array is converted to undefined by mapToEntity
       });
       expect(result.password).toBeUndefined();
     });
@@ -216,7 +216,7 @@ describe('UserService', () => {
         nickname: 'Test User',
         avatar: null,
         type: 'admin',
-        permissions: '[]',
+        permissions: [], // Drizzle with mode: 'json' returns native arrays
         password: 'hashedpassword',
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -231,7 +231,7 @@ describe('UserService', () => {
         email: 'test@example.com',
         nickname: 'Test User',
         type: 'admin',
-        permissions: [],
+        permissions: undefined, // Empty array is converted to undefined by mapToEntity
       });
       expect(result?.password).toBeUndefined(); // password should not be included
     });
@@ -259,7 +259,7 @@ describe('UserService', () => {
         email: 'updated@example.com',
         avatar: null,
         type: 'admin',
-        permissions: '[]',
+        permissions: [], // Drizzle with mode: 'json' returns native arrays
         password: 'hashedpassword',
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -275,7 +275,7 @@ describe('UserService', () => {
         nickname: 'Updated User',
         email: 'updated@example.com',
         type: 'admin',
-        permissions: [],
+        permissions: undefined, // Empty array is converted to undefined by mapToEntity
       });
       expect(result.password).toBeUndefined(); // password should not be included
       expect(databaseMock.db.update).toHaveBeenCalled();

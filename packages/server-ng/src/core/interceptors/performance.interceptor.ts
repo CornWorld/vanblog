@@ -168,7 +168,7 @@ export class PerformanceInterceptor implements NestInterceptor {
     const logContext = 'PerformanceInterceptor';
 
     // 构造基础日志信息
-    const baseInfo = `${method} ${url} ${statusCode} ${duration}ms [${ip}]`;
+    const baseInfo = `${method} ${url} ${String(statusCode)} ${String(duration)}ms [${ip}]`;
 
     if (error) {
       // 错误请求

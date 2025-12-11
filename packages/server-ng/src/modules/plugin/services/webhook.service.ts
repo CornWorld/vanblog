@@ -1,11 +1,11 @@
 import { createHmac } from 'crypto';
 
 import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
+import { insertWebhookSchema, updateWebhookSchema } from '@vanblog/shared/drizzle';
 import { eq, and, desc, gte, lte, count, like } from 'drizzle-orm';
 import { z } from 'zod';
 
 import { DATABASE_CONNECTION, type Database } from '../../../database';
-import { insertWebhookSchema, updateWebhookSchema } from '@vanblog/shared/drizzle';
 import { webhooks, webhookLogs, type Webhook as WebhookEntity } from '../entities/webhook.schema';
 
 import { WebhookRegistryService } from './webhook-registry.service';
@@ -182,7 +182,7 @@ export class WebhookService {
       return events.includes(event);
     });
 
-    this.logger.debug(`Triggering ${relevantWebhooks.length} webhooks for event: ${event}`);
+    this.logger.debug(`Triggering ${String(relevantWebhooks.length)} webhooks for event: ${event}`);
 
     const promises = relevantWebhooks.map(async (webhook) => {
       const webhookWithParsedEvents: Webhook = {
@@ -236,7 +236,7 @@ export class WebhookService {
 
       try {
         this.logger.debug(
-          `Executing webhook ${webhook.name} (attempt ${attempt}/${webhook.retryCount})`,
+          `Executing webhook ${webhook.name} (attempt ${String(attempt)}/${String(webhook.retryCount)})`,
         );
 
         const headers: Record<string, string> = {
@@ -273,9 +273,9 @@ export class WebhookService {
           success = true;
           this.logger.debug(`Webhook ${webhook.name} executed successfully`);
         } else {
-          lastError = `HTTP ${response.status}: ${responseBody}`;
+          lastError = `HTTP ${String(response.status)}: ${responseBody}`;
           this.logger.warn(
-            `Webhook ${webhook.name} failed with status ${response.status}: ${responseBody}`,
+            `Webhook ${webhook.name} failed with status ${String(response.status)}: ${responseBody}`,
           );
         }
       } catch (error) {
@@ -289,7 +289,9 @@ export class WebhookService {
           lastError = 'Unknown error';
         }
 
-        this.logger.error(`Webhook ${webhook.name} failed (attempt ${attempt}): ${lastError}`);
+        this.logger.error(
+          `Webhook ${webhook.name} failed (attempt ${String(attempt)}): ${lastError}`,
+        );
       }
 
       // Wait before retry (exponential backoff)

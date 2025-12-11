@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import type * as fsPromisesModule from 'fs/promises';
 
 // Hoisted mock for fs/promises with a mutable implementation function for readFile
 let readFileImpl: (p: string | URL, opts?: unknown) => Promise<string> = async () => {
@@ -7,7 +8,7 @@ let readFileImpl: (p: string | URL, opts?: unknown) => Promise<string> = async (
 };
 
 vi.mock('fs/promises', async () => {
-  const actual = await vi.importActual<typeof import('fs/promises')>('fs/promises');
+  const actual = await vi.importActual<typeof fsPromisesModule>('fs/promises');
   return {
     ...actual,
     readFile: async (...args: unknown[]) => await readFileImpl(args[0] as string | URL, args[1]),
@@ -23,8 +24,9 @@ vi.mock('../utils/object-plugin.util', () => {
 import { resolveObjectPluginExport } from '../utils/object-plugin.util';
 
 import { LoaderService } from './loader.service';
-import { PluginContextService } from './plugin-context.service';
+import { PluginContextService, type PluginContextFactory } from './plugin-context.service';
 
+import type { HookService } from './hook.service';
 import type { LoggerService } from '../../../core/logger/logger.service';
 
 type MinimalLogger = Pick<LoggerService, 'log' | 'warn' | 'error' | 'debug'>;
@@ -45,13 +47,13 @@ const createService = (): { service: LoaderService; logger: MinimalLogger } => {
 
   const pluginContextFactory = {
     createContext: vi.fn(),
-  } as unknown as import('./plugin-context.service').PluginContextFactory;
+  } as unknown as PluginContextFactory;
 
   const hookService = {
     addAction: vi.fn(),
     addFilter: vi.fn(),
     clearAll: vi.fn(),
-  } as unknown as import('./hook.service').HookService;
+  } as unknown as HookService;
 
   return {
     service: new LoaderService(logger as any, pluginContextFactory, hookService),
@@ -310,7 +312,7 @@ describe('LoaderService load/unload behavior', () => {
 
     const pluginContextFactory = {
       createContext: vi.fn().mockReturnValue(createdContext),
-    } as unknown as import('./plugin-context.service').PluginContextFactory;
+    } as unknown as PluginContextFactory;
 
     const hookService = {
       addAction: vi.fn(),
@@ -318,7 +320,7 @@ describe('LoaderService load/unload behavior', () => {
       removeAction: vi.fn(),
       removeFilter: vi.fn(),
       clearAll: vi.fn(),
-    } as unknown as import('./hook.service').HookService;
+    } as unknown as HookService;
 
     const service = new LoaderService(logger as any, pluginContextFactory, hookService);
 
@@ -378,7 +380,7 @@ describe('LoaderService load/unload behavior', () => {
 
     const pluginContextFactory = {
       createContext: vi.fn(),
-    } as unknown as import('./plugin-context.service').PluginContextFactory;
+    } as unknown as PluginContextFactory;
 
     const hookService = {
       addAction: vi.fn(),
@@ -386,7 +388,7 @@ describe('LoaderService load/unload behavior', () => {
       removeAction: vi.fn(),
       removeFilter: vi.fn(),
       clearAll: vi.fn(),
-    } as unknown as import('./hook.service').HookService;
+    } as unknown as HookService;
 
     const service = new LoaderService(logger as any, pluginContextFactory, hookService);
 
@@ -414,7 +416,7 @@ describe('LoaderService load/unload behavior', () => {
 
     const pluginContextFactory = {
       createContext: vi.fn(),
-    } as unknown as import('./plugin-context.service').PluginContextFactory;
+    } as unknown as PluginContextFactory;
 
     const hookService = {
       getAllActionHooks: vi.fn().mockReturnValue(['a1', 'a2']),
@@ -424,7 +426,7 @@ describe('LoaderService load/unload behavior', () => {
       removeAction: vi.fn(),
       removeFilter: vi.fn(),
       clearAll: vi.fn(),
-    } as unknown as import('./hook.service').HookService;
+    } as unknown as HookService;
 
     const service = new LoaderService(logger as any, pluginContextFactory, hookService);
 
@@ -467,7 +469,7 @@ describe('LoaderService load/unload behavior', () => {
     } as any;
     const pluginContextFactory = {
       createContext: vi.fn().mockReturnValue(createdContext),
-    } as unknown as import('./plugin-context.service').PluginContextFactory;
+    } as unknown as PluginContextFactory;
 
     const hookService = {
       addAction: vi.fn(),
@@ -475,7 +477,7 @@ describe('LoaderService load/unload behavior', () => {
       removeAction: vi.fn(),
       removeFilter: vi.fn(),
       clearAll: vi.fn(),
-    } as unknown as import('./hook.service').HookService;
+    } as unknown as HookService;
 
     const service = new LoaderService(logger as any, pluginContextFactory, hookService);
     vi.spyOn<any, any>(service as any, 'loadPluginManifest').mockResolvedValue({
@@ -533,7 +535,7 @@ describe('LoaderService load/unload behavior', () => {
           addFilter: vi.fn(),
         },
       } as any),
-    } as unknown as import('./plugin-context.service').PluginContextFactory;
+    } as unknown as PluginContextFactory;
 
     const hookService = {
       addAction: vi.fn(),
@@ -541,7 +543,7 @@ describe('LoaderService load/unload behavior', () => {
       removeAction: vi.fn(),
       removeFilter: vi.fn(),
       clearAll: vi.fn(),
-    } as unknown as import('./hook.service').HookService;
+    } as unknown as HookService;
 
     const service = new LoaderService(logger as any, pluginContextFactory, hookService);
     vi.spyOn<any, any>(service as any, 'loadPluginManifest').mockResolvedValue({
@@ -583,7 +585,7 @@ describe('LoaderService load/unload behavior', () => {
 
     const pluginContextFactory = {
       createContext: vi.fn(),
-    } as unknown as import('./plugin-context.service').PluginContextFactory;
+    } as unknown as PluginContextFactory;
 
     const hookService = {
       addAction: vi.fn(),
@@ -591,7 +593,7 @@ describe('LoaderService load/unload behavior', () => {
       removeAction: vi.fn(),
       removeFilter: vi.fn(),
       clearAll: vi.fn(),
-    } as unknown as import('./hook.service').HookService;
+    } as unknown as HookService;
 
     const service = new LoaderService(logger as any, pluginContextFactory, hookService);
 
@@ -622,7 +624,7 @@ describe('LoaderService load/unload behavior', () => {
 
     const pluginContextFactory = {
       createContext: vi.fn().mockReturnValue(mockContext),
-    } as unknown as import('./plugin-context.service').PluginContextFactory;
+    } as unknown as PluginContextFactory;
 
     const hookService = {
       addAction: vi.fn(),
@@ -630,7 +632,7 @@ describe('LoaderService load/unload behavior', () => {
       removeAction: vi.fn(),
       removeFilter: vi.fn(),
       clearAll: vi.fn(),
-    } as unknown as import('./hook.service').HookService;
+    } as unknown as HookService;
 
     const service = new LoaderService(logger as any, pluginContextFactory, hookService);
 

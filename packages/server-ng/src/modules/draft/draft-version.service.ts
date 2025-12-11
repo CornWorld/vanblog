@@ -1,16 +1,10 @@
 import { Injectable, NotFoundException, Inject } from '@nestjs/common';
 import { dayjs } from '@vanblog/shared';
+import { draftVersions, drafts, selectDraftVersionSchema } from '@vanblog/shared/drizzle';
 import { eq, and, desc, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
 import { DATABASE_CONNECTION, type Database } from '../../database';
-import {
-  draftVersions,
-  drafts,
-  selectDraftVersionSchema,
-  safeParseJson,
-  dataSchemas,
-} from '@vanblog/shared/drizzle';
 
 import { DraftVersionSchema } from './dto/draft.dto';
 
@@ -66,7 +60,7 @@ export class DraftVersionService {
 
     return {
       ...newVersion,
-      tags: safeParseJson(newVersion.tags, dataSchemas.tagsArray) ?? [],
+      tags: newVersion.tags ?? [],
       pathname: newVersion.pathname ?? null,
       category: newVersion.category ?? null,
       createdAt: dayjs(newVersion.createdAt).format(),
@@ -87,7 +81,7 @@ export class DraftVersionService {
       }
       return {
         ...parsed.data,
-        tags: safeParseJson(version.tags, dataSchemas.tagsArray) ?? [],
+        tags: version.tags ?? [],
         pathname: version.pathname ?? null,
         category: version.category ?? null,
         createdAt: dayjs(parsed.data.createdAt).format(),
@@ -116,7 +110,7 @@ export class DraftVersionService {
     const versionData = parseResult.data;
     return {
       ...versionData,
-      tags: safeParseJson(results[0].tags, dataSchemas.tagsArray) ?? [],
+      tags: results[0].tags ?? [],
       pathname: versionData.pathname ?? null,
       category: versionData.category ?? null,
       createdAt: dayjs(versionData.createdAt).format(),
@@ -128,14 +122,15 @@ export class DraftVersionService {
     const versionData = await this.getVersion(draftId, version);
 
     // Update the draft with version data
+    const tagsToUpdate: string[] | null =
+      Array.isArray(versionData.tags) && versionData.tags.length > 0 ? versionData.tags : null;
     await this.db
       .update(drafts)
       .set({
         title: versionData.title,
         content: versionData.content,
         pathname: versionData.pathname ?? null,
-        tags:
-          versionData.tags && versionData.tags.length > 0 ? JSON.stringify(versionData.tags) : null,
+        tags: tagsToUpdate,
         category: versionData.category ?? null,
         author: versionData.author,
         updatedAt: dayjs().format(),

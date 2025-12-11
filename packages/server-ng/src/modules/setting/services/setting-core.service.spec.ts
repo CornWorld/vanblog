@@ -94,7 +94,8 @@ describe('SettingCoreService', () => {
   describe('getConfig', () => {
     it('should return existing config value', async () => {
       const mockValue = { test: 'value' };
-      mockSelectChain.limit.mockResolvedValue([{ value: JSON.stringify(mockValue) }]);
+      // Drizzle with mode: 'json' returns deserialized object directly
+      mockSelectChain.limit.mockResolvedValue([{ value: mockValue }]);
 
       const result = await service.getConfig('testKey');
 
@@ -124,7 +125,7 @@ describe('SettingCoreService', () => {
     it('should parse with provided schema and return typed value', async () => {
       const schema = z.object({ a: z.string(), b: z.number() });
       const stored = { a: 'x', b: 1 };
-      mockSelectChain.limit.mockResolvedValue([{ value: JSON.stringify(stored) }]);
+      mockSelectChain.limit.mockResolvedValue([{ value: stored }]);
 
       const result = await service.getConfig<typeof stored>('schemaKey', undefined, schema);
 
@@ -134,7 +135,7 @@ describe('SettingCoreService', () => {
     it('should return null if schema parsing fails', async () => {
       const schema = z.object({ a: z.string(), b: z.number() });
       const badStored = { a: 'x', b: 'not-number' } as any;
-      mockSelectChain.limit.mockResolvedValue([{ value: JSON.stringify(badStored) }]);
+      mockSelectChain.limit.mockResolvedValue([{ value: badStored }]);
 
       const result = await service.getConfig('schemaKey', undefined, schema);
 
@@ -146,9 +147,10 @@ describe('SettingCoreService', () => {
     it('should update existing config', async () => {
       const testValue = { updated: 'value' };
       const filteredData = { key: 'testKey', value: testValue };
+      const oldValue = { old: 'value' };
 
       mockHookService.applyFilters.mockResolvedValue(filteredData);
-      mockSelectChain.limit.mockResolvedValue([{ value: JSON.stringify({ old: 'value' }) }]);
+      mockSelectChain.limit.mockResolvedValue([{ value: oldValue }]);
       mockRegistryService.updateConfig.mockResolvedValue(testValue);
       mockHookService.doAction.mockResolvedValue(undefined);
 
@@ -160,7 +162,7 @@ describe('SettingCoreService', () => {
         value: testValue,
       });
       expect(mockRegistryService.updateConfig).toHaveBeenCalledWith('testKey', testValue);
-      expect(mockHookService.doAction).toHaveBeenCalledTimes(2);
+      expect(mockHookService.doAction).toHaveBeenCalledTimes(1);
     });
 
     it('should create new config when not exists', async () => {
@@ -178,13 +180,13 @@ describe('SettingCoreService', () => {
       expect(mockRegistryService.updateConfig).toHaveBeenCalledWith('testKey', testValue);
     });
 
-    it('should call doAction with correct payloads including parsed oldValue and updatedAt', async () => {
+    it('should call doAction with correct payload including oldValue and updatedAt', async () => {
       const testValue = { updated: 'value' };
       const filteredData = { key: 'testKey', value: testValue };
       const oldStoredRaw = { old: 'value' };
 
       mockHookService.applyFilters.mockResolvedValue(filteredData);
-      mockSelectChain.limit.mockResolvedValue([{ value: JSON.stringify(oldStoredRaw) }]);
+      mockSelectChain.limit.mockResolvedValue([{ value: oldStoredRaw }]);
       mockRegistryService.updateConfig.mockResolvedValue(testValue);
       mockHookService.doAction.mockResolvedValue(undefined);
 
@@ -193,18 +195,9 @@ describe('SettingCoreService', () => {
       expect(mockHookService.doAction).toHaveBeenCalledWith('setting|afterUpdate', {
         key: 'testKey',
         value: testValue,
-        oldValue: JSON.stringify(oldStoredRaw),
+        oldValue: oldStoredRaw,
+        updatedAt: expect.any(String),
       });
-      const secondCall = mockHookService.doAction.mock.calls.find(
-        (c: any[]) => c[0] === 'setting|afterUpdate',
-      );
-      expect(secondCall).toBeTruthy();
-      if (!secondCall) {
-        throw new Error('Expected hook "setting|afterUpdate" to be called');
-      }
-      const [, payload] = secondCall;
-      expect(payload).toMatchObject({ key: 'testKey', value: testValue, oldValue: oldStoredRaw });
-      expect(typeof payload.updatedAt).toBe('string');
     });
   });
 
@@ -236,7 +229,7 @@ describe('SettingCoreService', () => {
         author: 'Custom Author',
         keywords: ['custom'],
       };
-      mockSelectChain.limit.mockResolvedValue([{ value: JSON.stringify(existingInfo) }]);
+      mockSelectChain.limit.mockResolvedValue([{ value: existingInfo }]);
 
       const result = await service.getSiteInfo();
 
@@ -255,7 +248,7 @@ describe('SettingCoreService', () => {
       const updateDto = { title: 'New Title' };
       const expectedResult = { ...existingInfo, ...updateDto };
 
-      mockSelectChain.limit.mockResolvedValue([{ value: JSON.stringify(existingInfo) }]);
+      mockSelectChain.limit.mockResolvedValue([{ value: existingInfo }]);
       mockHookService.applyFilters.mockResolvedValue({ key: 'siteInfo', value: expectedResult });
       mockRegistryService.updateConfig.mockResolvedValue(expectedResult);
       mockHookService.doAction.mockResolvedValue(undefined);
@@ -423,7 +416,7 @@ describe('SettingCoreService', () => {
     });
 
     it('should throw error for invalid index', async () => {
-      mockSelectChain.limit.mockResolvedValue([{ value: JSON.stringify([]) }]);
+      mockSelectChain.limit.mockResolvedValue([{ value: [] }]);
 
       await expect(service.updateFriendLink(0, { name: 'Test' })).rejects.toThrow('Invalid index');
     });
@@ -462,7 +455,7 @@ describe('SettingCoreService', () => {
     });
 
     it('should throw error for invalid index', async () => {
-      mockSelectChain.limit.mockResolvedValue([{ value: JSON.stringify([]) }]);
+      mockSelectChain.limit.mockResolvedValue([{ value: [] }]);
 
       await expect(service.deleteFriendLink(0)).rejects.toThrow('Invalid index');
     });
@@ -489,7 +482,7 @@ describe('SettingCoreService', () => {
         script: 'console.log("test")',
         html: '<div>test</div>',
       };
-      mockSelectChain.limit.mockResolvedValue([{ value: JSON.stringify(existingCode) }]);
+      mockSelectChain.limit.mockResolvedValue([{ value: existingCode }]);
 
       const result = await service.getCustomCode();
 
@@ -505,7 +498,7 @@ describe('SettingCoreService', () => {
       const updateDto = { script: 'console.log("new")' };
       const expectedResult = { ...existingCode, ...updateDto };
 
-      mockSelectChain.limit.mockResolvedValue([{ value: JSON.stringify(existingCode) }]);
+      mockSelectChain.limit.mockResolvedValue([{ value: existingCode }]);
       mockHookService.applyFilters.mockResolvedValue({ key: 'customCode', value: expectedResult });
       mockRegistryService.updateConfig.mockResolvedValue(expectedResult);
       mockHookService.doAction.mockResolvedValue(undefined);
@@ -534,7 +527,7 @@ describe('SettingCoreService', () => {
 
     it('should return existing about info', async () => {
       const existing = { content: 'Hello', updatedAt: dayjs().format() };
-      mockSelectChain.limit.mockResolvedValue([{ value: JSON.stringify(existing) }]);
+      mockSelectChain.limit.mockResolvedValue([{ value: existing }]);
 
       const result = await service.getAboutInfo();
 
@@ -545,7 +538,7 @@ describe('SettingCoreService', () => {
   describe('updateAboutInfo', () => {
     it('should update about content and timestamp', async () => {
       const existing = { content: 'Old', updatedAt: '2020-01-01T00:00:00.000Z' };
-      mockSelectChain.limit.mockResolvedValueOnce([{ value: JSON.stringify(existing) }]);
+      mockSelectChain.limit.mockResolvedValueOnce([{ value: existing }]);
       mockHookService.applyFilters.mockImplementation((_hook, payload) => payload);
       mockRegistryService.updateConfig.mockResolvedValue(undefined);
       mockHookService.doAction.mockResolvedValue(undefined);

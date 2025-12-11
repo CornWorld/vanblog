@@ -276,9 +276,9 @@ describe('CategoryService', () => {
       ];
 
       const mockArticles = [
-        { category: 'Category1', tags: '["tag1", "tag2"]' },
-        { category: 'Category1', tags: '["tag2", "tag3"]' },
-        { category: 'Category2', tags: '["tag4"]' },
+        { category: 'Category1', tags: ['tag1', 'tag2'] },
+        { category: 'Category1', tags: ['tag2', 'tag3'] },
+        { category: 'Category2', tags: ['tag4'] },
       ];
 
       // Mock the first query: getting all categories

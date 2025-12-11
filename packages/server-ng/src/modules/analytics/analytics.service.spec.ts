@@ -11,11 +11,11 @@ import type { RecordAnalyticsDto } from './dto/record-analytics.dto';
 const _generateBulkAnalyticsData = (count: number): RecordAnalyticsDto[] => {
   return Array.from({ length: count }, (_, i) => ({
     type: i % 2 === 0 ? AnalyticsType.PAGEVIEW : AnalyticsType.EVENT,
-    path: `/page-${i}`,
-    referrer: `https://referrer-${i % 10}.com`,
-    userAgent: `UserAgent-${i % 5}`,
-    ip: `192.168.1.${i % 255}`,
-    data: i % 3 === 0 ? JSON.stringify({ action: 'click', target: `element-${i}` }) : null,
+    path: `/page-${String(i)}`,
+    referrer: `https://referrer-${String(i % 10)}.com`,
+    userAgent: `UserAgent-${String(i % 5)}`,
+    ip: `192.168.1.${String(i % 255)}`,
+    data: i % 3 === 0 ? JSON.stringify({ action: 'click', target: `element-${String(i)}` }) : null,
   }));
 };
 
