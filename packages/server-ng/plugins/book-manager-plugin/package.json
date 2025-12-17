@@ -1,0 +1,29 @@
+{
+  "name": "book-manager-plugin",
+  "version": "1.0.0",
+  "description": "Book management plugin demonstrating v2.0 Plugin API features",
+  "main": "index.ts",
+  "type": "module",
+  "private": true,
+  "keywords": ["vanblog", "plugin", "example", "v2"],
+  "author": "VanBlog",
+  "license": "MIT",
+  "vanblog": {
+    "displayName": "Book Manager (v2.0 Example)",
+    "description": "Demonstrates v2.0 Plugin API: database access, dependency injection, plugin communication",
+    "config": {
+      "enabled": {
+        "type": "boolean",
+        "default": true,
+        "title": "Enable Plugin",
+        "description": "Enable/disable the book manager plugin"
+      },
+      "maxBooksPerAuthor": {
+        "type": "number",
+        "default": 10,
+        "title": "Max Books Per Author",
+        "description": "Maximum number of books allowed per author"
+      }
+    }
+  }
+}

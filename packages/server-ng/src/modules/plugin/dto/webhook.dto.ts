@@ -43,5 +43,4 @@ export class WebhookLogQueryDto {
 // via HookService.getAllActionHooks() instead of being hardcoded here.
 // This allows plugins to register their own webhook events.
 
-// Legacy type for backward compatibility - now just a string
 export type WebhookEvent = string;

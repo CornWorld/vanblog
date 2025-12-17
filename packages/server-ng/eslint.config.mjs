@@ -82,6 +82,43 @@ export default defineConfig([
     },
   },
 
+  // Plugin files - use dynamic typing by design
+  {
+    files: [
+      'plugins/**/*.ts',
+      'src/modules/plugin/**/*.ts',
+      'src/modules/shortcode/**/*.ts',
+      '../shared/src/plugin/**/*.ts',
+    ],
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+      '@typescript-eslint/no-unsafe-member-access': 'off',
+      '@typescript-eslint/no-unsafe-call': 'off',
+      '@typescript-eslint/no-unsafe-return': 'off',
+      '@typescript-eslint/no-unsafe-argument': 'off',
+      '@typescript-eslint/no-unsafe-function-type': 'off', // Plugin handlers use generic Function type
+      '@typescript-eslint/restrict-template-expressions': 'off',
+      '@typescript-eslint/explicit-function-return-type': 'off',
+      '@typescript-eslint/explicit-module-boundary-types': 'off',
+      '@typescript-eslint/require-await': 'off',
+      '@typescript-eslint/no-deprecated': 'off', // Using Zod internal APIs for compatibility
+      '@typescript-eslint/no-unnecessary-type-parameters': 'off',
+      '@typescript-eslint/use-unknown-in-catch-callback-variable': 'off',
+      '@typescript-eslint/no-unnecessary-condition': 'off',
+      '@typescript-eslint/no-redundant-type-constituents': 'off',
+      '@typescript-eslint/no-base-to-string': 'off',
+      '@typescript-eslint/ban-types': 'off',
+      'no-control-regex': 'off', // Shortcode service uses control chars in regex
+      'no-useless-escape': 'off', // Shortcode regex has intentional escapes
+      'prefer-destructuring': 'off', // Not always cleaner for array access
+      'no-case-declarations': 'off', // Case blocks with declarations are fine
+      'require-yield': 'off', // Generator for iterability protocol
+      'import/no-duplicates': 'off', // Split imports for types vs values
+      '@typescript-eslint/no-non-null-assertion': 'off', // Shortcode uses intentional assertions
+    },
+  },
+
   // File-specific overrides
   {
     files: ['src/shared/services/markdown.service.ts'],

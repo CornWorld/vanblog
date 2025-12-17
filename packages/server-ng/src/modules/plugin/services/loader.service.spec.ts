@@ -32,7 +32,6 @@ import type { LoggerService } from '../../../core/logger/logger.service';
 type MinimalLogger = Pick<LoggerService, 'log' | 'warn' | 'error' | 'debug'>;
 
 type VersionHelpers = {
-  parseVersion: (v: string) => [number, number, number];
   satisfiesVanblogEngine: (r: string, v: string) => boolean;
 };
 
@@ -64,21 +63,13 @@ const createService = (): { service: LoaderService; logger: MinimalLogger } => {
 describe('LoaderService version utilities', () => {
   let service: LoaderService;
   let logger: MinimalLogger;
-  let parseVersion: VersionHelpers['parseVersion'];
   let satisfies: VersionHelpers['satisfiesVanblogEngine'];
 
   beforeEach(() => {
     ({ service, logger } = createService());
 
-    const { parseVersion: pv, satisfiesVanblogEngine: sv } = service as unknown as VersionHelpers;
-    parseVersion = pv.bind(service);
+    const { satisfiesVanblogEngine: sv } = service as unknown as VersionHelpers;
     satisfies = sv.bind(service);
-  });
-  it('parseVersion should parse semantic versions and default missing parts to 0', () => {
-    expect(parseVersion('2.1.3')).toEqual([2, 1, 3]);
-    expect(parseVersion('2.1')).toEqual([2, 1, 0]);
-    expect(parseVersion('2')).toEqual([2, 0, 0]);
-    expect(parseVersion('')).toEqual([0, 0, 0]);
   });
 
   it('satisfiesVanblogEngine should support caret ranges', () => {
@@ -280,7 +271,7 @@ describe('LoaderService manifest validation', () => {
 });
 
 describe('LoaderService load/unload behavior', () => {
-  it('loadPlugin should register action/filter hooks with context and priorities', async () => {
+  it('loadPlugin should register action/filter hooks with hookService and priorities', async () => {
     const logger = {
       log: vi.fn(),
       warn: vi.fn(),
@@ -296,18 +287,6 @@ describe('LoaderService load/unload behavior', () => {
       config: {} as any,
       data: {} as any,
       registry: { register: vi.fn(), unregister: vi.fn() },
-      hooks: {
-        addAction: vi.fn().mockImplementation((_hook: string, fn: unknown, priority?: number) => {
-          capturedActionHandler = fn as typeof capturedActionHandler;
-          expect(priority).toBe(10); // default priority when not provided
-          return 'act-1';
-        }),
-        addFilter: vi.fn().mockImplementation((_hook: string, fn: unknown, priority?: number) => {
-          capturedFilterHandler = fn as typeof capturedFilterHandler;
-          expect(priority).toBe(7); // provided priority should be respected
-          return 'fil-7';
-        }),
-      },
     } as any;
 
     const pluginContextFactory = {
@@ -315,8 +294,16 @@ describe('LoaderService load/unload behavior', () => {
     } as unknown as PluginContextFactory;
 
     const hookService = {
-      addAction: vi.fn(),
-      addFilter: vi.fn(),
+      addAction: vi.fn().mockImplementation((_hook: string, fn: unknown, priority?: number) => {
+        capturedActionHandler = fn as typeof capturedActionHandler;
+        expect(priority).toBe(10); // default priority when not provided
+        return 'act-1';
+      }),
+      addFilter: vi.fn().mockImplementation((_hook: string, fn: unknown, priority?: number) => {
+        capturedFilterHandler = fn as typeof capturedFilterHandler;
+        expect(priority).toBe(7); // provided priority should be respected
+        return 'fil-7';
+      }),
       removeAction: vi.fn(),
       removeFilter: vi.fn(),
       clearAll: vi.fn(),
@@ -349,8 +336,8 @@ describe('LoaderService load/unload behavior', () => {
 
     await (service as any).loadPlugin('/fake/dir');
 
-    expect(createdContext.hooks.addAction).toHaveBeenCalledTimes(1);
-    expect(createdContext.hooks.addFilter).toHaveBeenCalledTimes(1);
+    expect(hookService.addAction).toHaveBeenCalledTimes(1);
+    expect(hookService.addFilter).toHaveBeenCalledTimes(1);
 
     // Verify wrappers pass context and return values
     expect(typeof capturedActionHandler).toBe('function');
@@ -459,25 +446,22 @@ describe('LoaderService load/unload behavior', () => {
       config: {},
       data: {},
       registry: { register: vi.fn(), unregister: vi.fn() },
-      hooks: {
-        addAction: vi.fn(),
-        addFilter: vi.fn().mockImplementation((_hook: string, fn: unknown, _priority?: number) => {
-          capturedFilterHandler = fn as typeof capturedFilterHandler;
-          return 'fil-1';
-        }),
-      },
     } as any;
-    const pluginContextFactory = {
-      createContext: vi.fn().mockReturnValue(createdContext),
-    } as unknown as PluginContextFactory;
 
     const hookService = {
       addAction: vi.fn(),
-      addFilter: vi.fn(),
+      addFilter: vi.fn().mockImplementation((_hook: string, fn: unknown, _priority?: number) => {
+        capturedFilterHandler = fn as typeof capturedFilterHandler;
+        return 'fil-1';
+      }),
       removeAction: vi.fn(),
       removeFilter: vi.fn(),
       clearAll: vi.fn(),
     } as unknown as HookService;
+
+    const pluginContextFactory = {
+      createContext: vi.fn().mockReturnValue(createdContext),
+    } as unknown as PluginContextFactory;
 
     const service = new LoaderService(logger as any, pluginContextFactory, hookService);
     vi.spyOn<any, any>(service as any, 'loadPluginManifest').mockResolvedValue({
@@ -524,26 +508,25 @@ describe('LoaderService load/unload behavior', () => {
     } as unknown as MinimalLogger;
 
     let capturedActionHandler: ((...args: unknown[]) => unknown) | undefined;
-    const pluginContextFactory = {
-      createContext: vi.fn().mockReturnValue({
-        pluginId: 'p2',
-        hooks: {
-          addAction: vi.fn().mockImplementation((_hook: string, fn: unknown) => {
-            capturedActionHandler = fn as typeof capturedActionHandler;
-            return 'act-1';
-          }),
-          addFilter: vi.fn(),
-        },
-      } as any),
-    } as unknown as PluginContextFactory;
+
+    const createdContext = {
+      pluginId: 'p2',
+    } as any;
 
     const hookService = {
-      addAction: vi.fn(),
+      addAction: vi.fn().mockImplementation((_hook: string, fn: unknown) => {
+        capturedActionHandler = fn as typeof capturedActionHandler;
+        return 'act-1';
+      }),
       addFilter: vi.fn(),
       removeAction: vi.fn(),
       removeFilter: vi.fn(),
       clearAll: vi.fn(),
     } as unknown as HookService;
+
+    const pluginContextFactory = {
+      createContext: vi.fn().mockReturnValue(createdContext),
+    } as unknown as PluginContextFactory;
 
     const service = new LoaderService(logger as any, pluginContextFactory, hookService);
     vi.spyOn<any, any>(service as any, 'loadPluginManifest').mockResolvedValue({

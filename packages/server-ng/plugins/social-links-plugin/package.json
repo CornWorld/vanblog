@@ -1,0 +1,22 @@
+{
+  "name": "social-links-plugin",
+  "version": "1.0.0",
+  "description": "Manage social media links",
+  "main": "index.ts",
+  "type": "module",
+  "private": true,
+  "keywords": ["vanblog", "plugin", "social", "links"],
+  "author": "VanBlog",
+  "license": "MIT",
+  "vanblog": {
+    "displayName": "Social Links Plugin",
+    "config": {
+      "enabled": {
+        "type": "boolean",
+        "default": true,
+        "title": "启用插件",
+        "description": "是否启用社交链接管理插件"
+      }
+    }
+  }
+}

@@ -1,14 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
+import type { PluginAPI } from '@vanblog/shared/plugin';
+
 import plugin from './index';
-
-import type { PluginContext } from '../../src/modules/plugin/interfaces/plugin-context.interface';
-
-const mockLogger = vi.hoisted(() => ({
-  log: vi.fn(),
-  warn: vi.fn(),
-  error: vi.fn(),
-}));
 
 vi.mock('nodemailer', () => ({
   createTransport: vi.fn().mockReturnValue({
@@ -16,169 +10,136 @@ vi.mock('nodemailer', () => ({
   }),
 }));
 
-vi.mock('@nestjs/common', () => ({
-  Logger: vi.fn().mockImplementation(() => mockLogger),
-}));
-
-describe('EmailNotificationPlugin', () => {
-  let mockContext: PluginContext;
-  let mockConfig: any;
-  let mockData: any;
+describe('Email Notification Plugin (Functional API)', () => {
+  let mockAPI: Partial<PluginAPI>;
+  let storeValues: Map<string, any>;
+  let actionHandlers: Map<string, Function>;
 
   beforeEach(() => {
-    // Reset mock calls
     vi.clearAllMocks();
+    storeValues = new Map();
+    actionHandlers = new Map();
 
-    mockConfig = {
-      get: vi.fn().mockImplementation((key: string, defaultValue?: unknown) => {
-        const configs = {
-          smtp_host: 'smtp.example.com',
-          smtp_port: 587,
-          smtp_secure: false,
-          smtp_user: 'test@example.com',
-          smtp_pass: 'password',
-          email_from: 'test@example.com',
-          email_to: ['admin@example.com'],
-        } as const;
-        return (configs as Record<string, unknown>)[key] ?? defaultValue;
+    mockAPI = {
+      id: 'email-notification-plugin',
+      version: '1.0.0',
+      dir: '/path/to/plugin',
+      config: {
+        smtp_host: 'smtp.example.com',
+        smtp_port: 587,
+        smtp_secure: false,
+        smtp_user: 'test@example.com',
+        smtp_pass: 'password',
+        email_from: 'noreply@example.com',
+        email_to: ['admin@example.com'],
+      },
+      log: {
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+        debug: vi.fn(),
+      } as any,
+      filter: vi.fn(),
+      action: vi.fn((name: string, handler: Function) => {
+        actionHandlers.set(name, handler);
       }),
+      shortcode: vi.fn(),
+      provide: vi.fn(),
+      store: vi.fn((key: string, defaultValue: any) => ({
+        get value() {
+          return storeValues.has(key) ? storeValues.get(key) : defaultValue;
+        },
+        set value(newValue: any) {
+          storeValues.set(key, newValue);
+        },
+      })),
+      onActivate: vi.fn(),
+      onDeactivate: vi.fn(),
+      onConfigChange: vi.fn(),
     };
-
-    mockData = {
-      set: vi.fn(),
-      get: vi.fn(),
-      clear: vi.fn(),
-    };
-
-    mockContext = {
-      pluginId: 'email-notification-plugin',
-      config: mockConfig,
-      data: mockData,
-      registry: {
-        register: vi.fn(),
-        unregister: vi.fn().mockReturnValue(true),
-      } as any,
-      settings: {
-        register: vi.fn(),
-        get: vi.fn(),
-        update: vi.fn(),
-        delete: vi.fn(),
-        listKeys: vi.fn().mockReturnValue([]),
-        getRegistration: vi.fn(),
-      } as any,
-    } as unknown as PluginContext;
   });
 
-  describe('Plugin Basic Info', () => {
-    it('should have correct plugin metadata', () => {
-      expect(plugin.id).toBe('email-notification-plugin');
-      expect(plugin.name).toBe('Email Notification Plugin');
-      expect(plugin.version).toBe('1.0.0');
-      expect(plugin.description).toContain('邮件通知插件');
+  it('should load plugin successfully', () => {
+    expect(() => {
+      plugin(mockAPI as PluginAPI);
+    }).not.toThrow();
+    expect(mockAPI.log?.info).toHaveBeenCalledWith('邮件通知插件正在初始化...');
+  });
+
+  it('should register action hooks', () => {
+    plugin(mockAPI as PluginAPI);
+
+    expect(mockAPI.action).toHaveBeenCalledWith('article.afterCreate', expect.any(Function));
+    expect(mockAPI.action).toHaveBeenCalledWith('article.afterUpdate', expect.any(Function));
+    expect(mockAPI.action).toHaveBeenCalledWith('comment.afterUpdate', expect.any(Function));
+    expect(mockAPI.action).toHaveBeenCalledWith('draft.afterPublish', expect.any(Function));
+  });
+
+  it('should register lifecycle hooks', () => {
+    plugin(mockAPI as PluginAPI);
+
+    expect(mockAPI.onActivate).toHaveBeenCalledWith(expect.any(Function));
+    expect(mockAPI.onDeactivate).toHaveBeenCalledWith(expect.any(Function));
+  });
+
+  it('should initialize stores', () => {
+    plugin(mockAPI as PluginAPI);
+
+    expect(mockAPI.store).toHaveBeenCalledWith('email_enabled', false);
+    expect(mockAPI.store).toHaveBeenCalledWith('emails_sent', 0);
+  });
+
+  describe('Email Configuration', () => {
+    it('should enable email when config is complete', () => {
+      let activateCallback: Function | undefined;
+      mockAPI.onActivate = vi.fn((cb) => {
+        activateCallback = cb;
+      });
+
+      plugin(mockAPI as PluginAPI);
+      activateCallback?.();
+
+      expect(mockAPI.log?.info).toHaveBeenCalledWith('邮件配置验证成功');
+      expect(storeValues.get('email_enabled')).toBe(true);
     });
 
-    it('should have init and destroy methods', () => {
-      expect(typeof plugin.init).toBe('function');
-      expect(typeof plugin.destroy).toBe('function');
+    it('should disable email when config is incomplete', () => {
+      mockAPI.config = {
+        smtp_host: '',
+        smtp_port: 587,
+        smtp_secure: false,
+        smtp_user: '',
+        smtp_pass: '',
+        email_from: '',
+        email_to: [],
+      };
+
+      let activateCallback: Function | undefined;
+      mockAPI.onActivate = vi.fn((cb) => {
+        activateCallback = cb;
+      });
+
+      plugin(mockAPI as PluginAPI);
+      activateCallback?.();
+
+      expect(mockAPI.log?.warn).toHaveBeenCalledWith('邮件配置不完整，插件将不会发送邮件');
+      expect(storeValues.get('email_enabled')).toBe(false);
     });
   });
 
-  describe('Plugin Lifecycle', () => {
-    it('should initialize successfully', async () => {
-      if (typeof plugin.init === 'function') {
-        await expect(plugin.init(mockContext)).resolves.not.toThrow();
-      }
-      expect(mockData.set).toHaveBeenCalledWith('email_enabled', true);
-      expect(mockData.set).toHaveBeenCalledWith('emails_sent', 0);
-    });
-
-    it('should destroy successfully', async () => {
-      if (typeof plugin.destroy === 'function') {
-        await expect(plugin.destroy(mockContext)).resolves.not.toThrow();
-      }
-      expect(mockData.clear).toHaveBeenCalled();
-    });
-  });
-
-  describe('Email Sending', () => {
+  describe('Action Handlers', () => {
     beforeEach(() => {
-      mockData.get.mockImplementation((key: string) => {
-        if (key === 'email_enabled') return true;
-        if (key === 'emails_sent') return 5;
-        return null;
-      });
-
-      mockConfig.get.mockImplementation((key: string, defaultValue: any) => {
-        const configs: Record<string, any> = {
-          smtp_host: 'smtp.example.com',
-          smtp_port: 587,
-          smtp_secure: false,
-          smtp_user: 'test@example.com',
-          smtp_pass: 'password',
-          email_from: 'noreply@example.com',
-          email_to: ['admin@example.com'],
-        };
-        return configs[key] ?? defaultValue;
-      });
+      // Enable email
+      storeValues.set('email_enabled', true);
     });
 
-    it('should skip sending when email is disabled', async () => {
-      mockData.get.mockImplementation((key: string) => {
-        if (key === 'email_enabled') return false;
-        return null;
-      });
+    it('should handle article.afterCreate', async () => {
+      plugin(mockAPI as PluginAPI);
 
-      // Test through hooks since sendEmail is not exported
-      const handler = plugin.hooks?.['article|afterCreate']?.handler;
-      if (!handler) throw new Error('Handler not found');
-      const articleData = { title: 'Test Article' };
+      const handler = actionHandlers.get('article.afterCreate');
+      expect(handler).toBeDefined();
 
-      await handler(articleData, mockContext);
-
-      expect(mockLogger.warn).toHaveBeenCalledWith(
-        expect.stringContaining('email-notification-plugin:邮件功能未启用，跳过发送'),
-      );
-    });
-  });
-
-  describe('Hook Handlers', () => {
-    beforeEach(() => {
-      mockData.get.mockImplementation((key: string) => {
-        if (key === 'email_enabled') return true;
-        if (key === 'emails_sent') return 5;
-        return null;
-      });
-
-      mockConfig.get.mockImplementation((key: string, defaultValue: any) => {
-        const configs: Record<string, any> = {
-          smtp_host: 'smtp.example.com',
-          smtp_port: 587,
-          smtp_secure: false,
-          smtp_user: 'test@example.com',
-          smtp_pass: 'password',
-          email_from: 'noreply@example.com',
-          email_to: ['admin@example.com'],
-        };
-        return configs[key] ?? defaultValue;
-      });
-    });
-
-    it('should have all required hooks', () => {
-      expect(Boolean(plugin.hooks)).toBe(true);
-      expect(Boolean(plugin.hooks?.['article|afterCreate'])).toBe(true);
-      expect(Boolean(plugin.hooks?.['article|afterUpdate'])).toBe(true);
-      expect(Boolean(plugin.hooks?.['comment|afterUpdate'])).toBe(true);
-      expect(Boolean(plugin.hooks?.['draft|afterPublish'])).toBe(true);
-
-      // Check hook types and priorities
-      expect(plugin.hooks?.['article|afterCreate']?.type).toBe('action');
-      expect(plugin.hooks?.['article|afterCreate']?.priority).toBe(10);
-      expect(plugin.hooks?.['article|afterCreate']?.type).toBe('action');
-      expect(plugin.hooks?.['article|afterCreate']?.priority).toBe(10);
-    });
-
-    it('should handle article creation hook', async () => {
-      const articleData = {
+      const article = {
         id: '1',
         title: 'Test Article',
         content: 'This is a test article content',
@@ -186,48 +147,121 @@ describe('EmailNotificationPlugin', () => {
         createdAt: '2024-01-01T00:00:00Z',
       };
 
-      const handler = plugin.hooks?.['article|afterCreate']?.handler;
-      if (!handler) throw new Error('Handler not found');
-      handler(articleData, mockContext);
+      handler?.(article);
 
-      // Wait a bit for the async operation to complete
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      // Wait for async email send
+      await new Promise((resolve) => setTimeout(resolve, 50));
 
-      expect(mockLogger.log).toHaveBeenCalledWith(
-        expect.stringContaining(
-          'email-notification-plugin:邮件发送成功: 📝 新文章发布：Test Article',
-        ),
+      expect(mockAPI.log?.info).toHaveBeenCalledWith(
+        expect.stringContaining('邮件发送成功: 📝 新文章发布：Test Article'),
       );
     });
 
-    it('should handle comment update hook', async () => {
-      const commentData = {
-        articleId: '1',
-        author: 'Test Commenter',
-        content: 'This is a test comment',
-        email: 'commenter@example.com',
+    it('should handle article.afterUpdate', async () => {
+      plugin(mockAPI as PluginAPI);
+
+      const handler = actionHandlers.get('article.afterUpdate');
+      expect(handler).toBeDefined();
+
+      const article = {
+        title: 'Updated Article',
+        content: 'Updated content',
+        author: 'Test Author',
+        updatedAt: '2024-01-02T00:00:00Z',
       };
 
-      const handler = plugin.hooks?.['comment|afterUpdate']?.handler;
-      if (!handler) throw new Error('Handler not found');
-      handler(commentData, mockContext);
+      handler?.(article);
 
-      // Wait a bit for the async operation to complete
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 50));
 
-      expect(mockLogger.log).toHaveBeenCalledWith(
-        expect.stringContaining('email-notification-plugin:邮件发送成功: 💬 评论系统更新通知'),
+      expect(mockAPI.log?.info).toHaveBeenCalledWith(
+        expect.stringContaining('邮件发送成功: ✏️ 文章更新：Updated Article'),
       );
     });
 
-    it('should handle invalid data gracefully', async () => {
-      const handler = plugin.hooks?.['article|afterCreate']?.handler;
-      if (!handler) throw new Error('Handler not found');
-      await handler(null, mockContext);
+    it('should handle comment.afterUpdate', async () => {
+      plugin(mockAPI as PluginAPI);
 
-      expect(mockLogger.warn).toHaveBeenCalledWith(
-        expect.stringContaining('email-notification-plugin:文章创建Hook收到无效数据，跳过邮件发送'),
+      const handler = actionHandlers.get('comment.afterUpdate');
+      expect(handler).toBeDefined();
+
+      const comment = {
+        articleId: '1',
+        author: 'Commenter',
+        content: 'Test comment',
+        email: 'test@example.com',
+      };
+
+      handler?.(comment);
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      expect(mockAPI.log?.info).toHaveBeenCalledWith(
+        expect.stringContaining('邮件发送成功: 💬 评论系统更新通知'),
       );
+    });
+
+    it('should handle draft.afterPublish', async () => {
+      plugin(mockAPI as PluginAPI);
+
+      const handler = actionHandlers.get('draft.afterPublish');
+      expect(handler).toBeDefined();
+
+      const draft = {
+        title: 'Published Draft',
+        author: 'Test Author',
+        articleId: 123,
+        publishedAt: '2024-01-01T00:00:00Z',
+        content: 'Draft content',
+      };
+
+      handler?.(draft);
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      expect(mockAPI.log?.info).toHaveBeenCalledWith(
+        expect.stringContaining('邮件发送成功: 📢 草稿发布通知：Published Draft'),
+      );
+    });
+
+    it('should skip sending when email is disabled', async () => {
+      storeValues.set('email_enabled', false);
+
+      plugin(mockAPI as PluginAPI);
+
+      const handler = actionHandlers.get('article.afterCreate');
+      handler?.({ title: 'Test' });
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      expect(mockAPI.log?.warn).toHaveBeenCalledWith('邮件功能未启用，跳过发送');
+    });
+
+    it('should increment email count on successful send', async () => {
+      plugin(mockAPI as PluginAPI);
+
+      const handler = actionHandlers.get('article.afterCreate');
+      handler?.({ title: 'Test' });
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      expect(storeValues.get('emails_sent')).toBe(1);
+    });
+  });
+
+  describe('Deactivation', () => {
+    it('should log email count on deactivate', () => {
+      storeValues.set('emails_sent', 5);
+
+      let deactivateCallback: Function | undefined;
+      mockAPI.onDeactivate = vi.fn((cb) => {
+        deactivateCallback = cb;
+      });
+
+      plugin(mockAPI as PluginAPI);
+      deactivateCallback?.();
+
+      expect(mockAPI.log?.info).toHaveBeenCalledWith('插件销毁，共发送 5 封邮件');
     });
   });
 });

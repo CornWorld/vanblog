@@ -346,6 +346,42 @@ export const pluginData = sqliteTable(
   ],
 );
 
+// ============ Plugin Metadata ============
+export const pluginMetadata = sqliteTable(
+  'plugin_metadata',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    pluginId: text('plugin_id').notNull(),
+    entityType: text('entity_type').notNull(), // e.g., 'article', 'user', 'draft'
+    entityId: integer('entity_id').notNull(),
+    metaKey: text('meta_key').notNull(),
+    metaValue: text('meta_value', { mode: 'json' }).$type<unknown>(),
+    createdAt: text('created_at')
+      .notNull()
+      .$defaultFn(() => nowIsoTz()),
+    updatedAt: text('updated_at')
+      .notNull()
+      .$defaultFn(() => nowIsoTz()),
+  },
+  (table) => [
+    // Index for querying by entity
+    index('plugin_metadata_entity_idx').on(table.entityType, table.entityId),
+    // Index for querying by plugin
+    index('plugin_metadata_plugin_id_idx').on(table.pluginId),
+    // Index for querying specific metadata
+    index('plugin_metadata_key_idx').on(table.entityType, table.entityId, table.metaKey),
+    // Compound index for plugin + entity queries
+    index('plugin_metadata_plugin_entity_idx').on(table.pluginId, table.entityType, table.entityId),
+    // Unique constraint: one plugin can only have one value for a specific entity's metadata key
+    uniqueIndex('plugin_metadata_unique_idx').on(
+      table.pluginId,
+      table.entityType,
+      table.entityId,
+      table.metaKey,
+    ),
+  ],
+);
+
 // ============ Webhooks ============
 export const webhooks = sqliteTable('webhooks', {
   id: integer('id').primaryKey({ autoIncrement: true }),

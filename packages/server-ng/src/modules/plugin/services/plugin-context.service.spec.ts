@@ -6,7 +6,6 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { ConfigService } from '../../../config/config.service';
 import { DATABASE_CONNECTION, type Database } from '../../../database';
 
-import { HookService } from './hook.service';
 import {
   PluginContextFactory,
   PluginDataStorageService,
@@ -15,6 +14,7 @@ import {
   PluginContextService,
 } from './plugin-context.service';
 import { PluginRegistryService } from './plugin-registry.service';
+import { SignalBus } from './signal.service';
 
 interface MockDatabase {
   select: ReturnType<typeof vi.fn>;
@@ -109,12 +109,12 @@ describe('PluginContext Services', () => {
           },
         },
         {
-          provide: HookService,
+          provide: SignalBus,
           useValue: {
-            addAction: vi.fn(),
-            addFilter: vi.fn(),
-            removeAction: vi.fn(),
-            removeFilter: vi.fn(),
+            connect: vi.fn().mockReturnValue(() => {}),
+            subscribe: vi.fn().mockReturnValue(() => {}),
+            send: vi.fn().mockResolvedValue({}),
+            emit: vi.fn().mockResolvedValue(undefined),
           },
         },
       ],
@@ -331,11 +331,9 @@ describe('PluginContext Services', () => {
       const mockData = new PluginDataStorageService(mockDb as unknown as Database, 'test-plugin');
 
       const mockRegistryService = { register: vi.fn(), unregister: vi.fn() } as any;
-      const mockHookService = {
-        addAction: vi.fn(),
-        addFilter: vi.fn(),
-        removeAction: vi.fn(),
-        removeFilter: vi.fn(),
+      const mockSignalBus = {
+        connect: vi.fn().mockReturnValue(() => {}),
+        subscribe: vi.fn().mockReturnValue(() => {}),
       } as any;
 
       const context = new PluginContextService(
@@ -343,7 +341,7 @@ describe('PluginContext Services', () => {
         mockConfig,
         mockData,
         mockRegistryService,
-        mockHookService,
+        mockSignalBus,
       );
 
       expect(context).toBeDefined();
@@ -351,7 +349,7 @@ describe('PluginContext Services', () => {
       expect(context.config).toBe(mockConfig);
       expect(context.data).toBe(mockData);
       expect(context.registry).toBeDefined();
-      expect(context.hooks).toBeDefined();
+      expect(context.signals).toBeDefined();
       expect(context.logger).toBeDefined();
     });
 
@@ -362,11 +360,10 @@ describe('PluginContext Services', () => {
         register: vi.fn(),
         unregister: vi.fn().mockReturnValue(true),
       } as any;
-      const mockHookService = {
-        addAction: vi.fn().mockReturnValue('id1'),
-        addFilter: vi.fn().mockReturnValue('id2'),
-        removeAction: vi.fn().mockReturnValue(true),
-        removeFilter: vi.fn().mockReturnValue(true),
+      const mockDisconnect = vi.fn();
+      const mockSignalBus = {
+        connect: vi.fn().mockReturnValue(mockDisconnect),
+        subscribe: vi.fn().mockReturnValue(mockDisconnect),
       } as any;
 
       const context = new PluginContextService(
@@ -374,7 +371,7 @@ describe('PluginContext Services', () => {
         mockConfig,
         mockData,
         mockRegistryService,
-        mockHookService,
+        mockSignalBus,
       );
 
       // Register provider
@@ -385,18 +382,14 @@ describe('PluginContext Services', () => {
         undefined,
       );
 
-      // Register hooks
-      context.hooks.addAction('a1', async () => Promise.resolve());
-      expect(mockHookService.addAction).toHaveBeenCalledWith('a1', expect.any(Function), undefined);
-
-      context.hooks.addFilter('f1', (v) => v);
-      expect(mockHookService.addFilter).toHaveBeenCalledWith('f1', expect.any(Function), undefined);
+      // Register signals
+      context.signals.connect({} as any, () => ({}));
+      expect(mockSignalBus.connect).toHaveBeenCalled();
 
       // Cleanup
       context.cleanupRegistrations();
       expect(mockRegistryService.unregister).toHaveBeenCalledWith('p1');
-      expect(mockHookService.removeAction).toHaveBeenCalledWith('a1', 'id1');
-      expect(mockHookService.removeFilter).toHaveBeenCalledWith('f1', 'id2');
+      expect(mockDisconnect).toHaveBeenCalled();
     });
   });
 });

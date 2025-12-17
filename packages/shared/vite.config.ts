@@ -12,6 +12,8 @@ export default defineConfig({
         'runtime/index': resolve(__dirname, 'src/runtime/index.ts'),
         'contracts/index': resolve(__dirname, 'src/contracts/index.ts'),
         'drizzle/index': resolve(__dirname, 'src/drizzle/index.ts'),
+        'signals/index': resolve(__dirname, 'src/signals/index.ts'),
+        'plugin/index': resolve(__dirname, 'src/plugin/index.ts'),
       },
       formats: ['es'],
     },

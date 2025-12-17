@@ -1,68 +1,75 @@
-import { Logger } from '@nestjs/common';
+/**
+ * Social Links Plugin
+ *
+ * 管理社交媒体链接（GitHub, Twitter, 微博等）
+ */
+
 import { z } from 'zod';
 
-import { withPluginPrefix } from '../../src/modules/plugin/utils/prefix.util';
+import type { PluginAPI } from '@vanblog/shared/plugin';
 
-import { SocialLinksService, type SocialLink, SocialLinkSchema } from './social-links.service';
+// 社交链接数据结构
+const _SocialLinkSchema = z.object({
+  type: z.string(), // 社交平台类型（如 "github", "twitter"）
+  url: z.string().url(), // 链接地址
+  icon: z.string().optional(), // 图标 URL（可选）
+  label: z.string().optional(), // 显示文本（可选）
+});
 
-import type { PluginContext } from '../../src/modules/plugin/interfaces/plugin-context.interface';
-import type { Plugin } from '../../src/modules/plugin/services/loader.service';
+type SocialLink = z.infer<typeof _SocialLinkSchema>;
 
-// 插件 Logger 实例
-const logger = new Logger(withPluginPrefix('social-links-plugin'));
+export default (api: PluginAPI) => {
+  // 配置检查
+  const enabled = api.config.enabled as boolean;
+  if (!enabled) {
+    api.log.warn('Social links plugin is disabled');
+    return;
+  }
 
-// 创建服务实例
-const socialLinksService = new SocialLinksService();
+  api.log.info('Social links plugin initializing...');
 
-const plugin: Plugin = {
-  id: 'social-links-plugin',
-  name: 'Social Links Plugin',
-  version: '1.0.0',
-  description: 'Manage social links configuration',
+  // 存储社交链接
+  const socialLinks = api.store<SocialLink[]>('socialLinks', []);
 
-  // 暴露社交链接服务实例
-  socialLinksService,
+  // 暴露社交链接给前端
+  api.provide('socialLinks', () => socialLinks.value);
 
-  async init(context: PluginContext): Promise<void> {
-    logger.log('Social links plugin initializing...');
+  // Action: 添加或更新社交链接
+  api.action('socialLinks|addOrUpdate', (data: SocialLink) => {
+    const index = socialLinks.value.findIndex((link) => link.type === data.type);
 
-    // 初始化社交链接数据
-    await context.data.set('socialLinks', []);
+    if (index >= 0) {
+      // 更新现有链接
+      socialLinks.value[index] = data;
+      api.log.info(`Updated social link: ${data.type}`);
+    } else {
+      // 添加新链接
+      socialLinks.value = [...socialLinks.value, data];
+      api.log.info(`Added social link: ${data.type}`);
+    }
+  });
 
-    // 注册到插件注册表：提供 socialLinks 公共数据（使用 Zod schema envelope）
-    context.registry.register(
-      'socialLinks',
-      async () => {
-        const data = await socialLinksService.getSocialLinks(context);
-        return { schema: z.array(SocialLinkSchema), data };
-      },
-      10,
-    );
+  // Action: 删除社交链接
+  api.action('socialLinks|delete', (type: string) => {
+    const initialLength = socialLinks.value.length;
+    socialLinks.value = socialLinks.value.filter((link) => link.type !== type);
 
-    logger.log('Social links plugin initialized successfully');
-  },
+    if (socialLinks.value.length < initialLength) {
+      api.log.info(`Deleted social link: ${type}`);
+    } else {
+      api.log.warn(`Social link not found: ${type}`);
+    }
+  });
 
-  async destroy(context: PluginContext): Promise<void> {
-    logger.log('Social links plugin destroying...');
-    await context.data.clear();
-    logger.log('Social links plugin destroyed');
-  },
+  // 生命周期
+  api.onActivate(() => {
+    api.log.info('Social links plugin activated');
+    api.log.debug(`Current social links count: ${socialLinks.value.length}`);
+  });
 
-  // 提供便捷的 API 方法
-  async getSocialLinks(context: PluginContext): Promise<SocialLink[]> {
-    return socialLinksService.getSocialLinks(context);
-  },
+  api.onDeactivate(() => {
+    api.log.info('Social links plugin deactivated');
+  });
 
-  async addOrUpdateSocialLink(
-    context: PluginContext,
-    data: { type: string; url: string },
-  ): Promise<SocialLink[]> {
-    return socialLinksService.addOrUpdateSocialLink(context, data);
-  },
-
-  async deleteSocialLink(context: PluginContext, type: string): Promise<SocialLink[]> {
-    return socialLinksService.deleteSocialLink(context, type);
-  },
+  api.log.info('Social links plugin initialized successfully');
 };
-
-export default plugin;

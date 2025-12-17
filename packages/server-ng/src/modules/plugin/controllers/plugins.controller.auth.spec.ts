@@ -16,6 +16,7 @@ import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../../auth/guards/permissions.guard';
 import { RolesGuard } from '../../auth/guards/roles.guard';
 import { LoaderService } from '../services/loader.service';
+import { PluginConfigService } from '../services/plugin-config.service';
 
 import { PluginsController } from './plugins.controller';
 
@@ -29,6 +30,17 @@ const createLoaderMock = (): Pick<
   unloadPlugin: async (_name: string) => Promise.resolve(false),
 });
 
+// Minimal mock for PluginConfigService
+const createConfigMock = (): Pick<
+  PluginConfigService,
+  'getSchema' | 'getConfig' | 'setConfig' | 'setConfigs'
+> => ({
+  getSchema: (_pluginId: string) => undefined,
+  getConfig: async (_pluginId: string) => ({}),
+  setConfig: async (_pluginId: string, _key: string, _value: unknown) => true,
+  setConfigs: async (_pluginId: string, _config: Record<string, unknown>) => true,
+});
+
 describe('PluginsController (auth/permission guards)', () => {
   let app: INestApplication | null = null;
 
@@ -40,7 +52,10 @@ describe('PluginsController (auth/permission guards)', () => {
   }): Promise<INestApplication> {
     const moduleBuilder = Test.createTestingModule({
       controllers: [PluginsController],
-      providers: [{ provide: LoaderService, useValue: createLoaderMock() }],
+      providers: [
+        { provide: LoaderService, useValue: createLoaderMock() },
+        { provide: PluginConfigService, useValue: createConfigMock() },
+      ],
     })
       .overrideGuard(JwtAuthGuard)
       .useValue(guardImpls.jwt ?? { canActivate: () => true })

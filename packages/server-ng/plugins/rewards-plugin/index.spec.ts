@@ -24,10 +24,10 @@ const createMockContext = (): PluginContext => ({
     register: vi.fn(),
     unregister: vi.fn().mockReturnValue(true),
   },
-  hooks: {
-    register: vi.fn(),
-    unregister: vi.fn(),
-  } as any,
+  signals: {
+    connect: vi.fn().mockReturnValue(() => {}),
+    subscribe: vi.fn().mockReturnValue(() => {}),
+  },
   logger: {
     log: vi.fn(),
     error: vi.fn(),

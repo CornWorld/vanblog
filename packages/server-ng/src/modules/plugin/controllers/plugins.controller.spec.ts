@@ -22,6 +22,15 @@ describe('PluginsController', () => {
     reloadPlugins: () => Promise<void>;
     unloadPlugin: (name: string) => Promise<boolean>;
   };
+  let configService: {
+    getSchema: (pluginId: string) => Record<string, unknown> | undefined;
+    getConfig: (pluginId: string) => Promise<Record<string, unknown>>;
+    setConfig: (pluginId: string, key: string, value: unknown) => Promise<boolean>;
+    setConfigs: (
+      pluginId: string,
+      config: Record<string, unknown>,
+    ) => Promise<Record<string, boolean>>;
+  };
 
   beforeEach(() => {
     loader = {
@@ -34,7 +43,13 @@ describe('PluginsController', () => {
         return false;
       }),
     };
-    controller = new PluginsController(loader as any);
+    configService = {
+      getSchema: vi.fn((_: string) => undefined),
+      getConfig: vi.fn(async (_: string) => ({})),
+      setConfig: vi.fn(async (_: string, __: string, ___: unknown) => true),
+      setConfigs: vi.fn(async (_: string, __: Record<string, unknown>) => ({})),
+    };
+    controller = new PluginsController(loader as any, configService as any);
   });
 
   it('should list zero plugins when none loaded', () => {

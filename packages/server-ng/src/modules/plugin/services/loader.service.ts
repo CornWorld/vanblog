@@ -88,6 +88,8 @@ export class LoaderService implements OnModuleInit {
   private readonly pluginContexts = new Map<string, PluginContext>();
   // Track plugin origin directory (for object plugins) to support reload
   private readonly pluginOrigins = new Map<string, string>();
+  // Track cleanup functions for plugins
+  private readonly pluginCleanupFns = new Map<string, Array<() => void>>();
   // Failed plugin loads
   private readonly failedPlugins = new Set<string>();
 
@@ -199,18 +201,31 @@ export class LoaderService implements OnModuleInit {
       }
     }
 
-    // 2) Auto-unregister public data providers and hooks
+    // 2) Auto-unregister public data providers and signals (via context cleanup)
     if (context instanceof PluginContextService) {
       context.cleanupRegistrations();
     }
 
-    // 3) clear registries
+    // 3) Execute cleanup functions (hooks, etc.)
+    const cleanupFns = this.pluginCleanupFns.get(pluginName);
+    if (cleanupFns && cleanupFns.length > 0) {
+      for (const cleanup of cleanupFns) {
+        try {
+          cleanup();
+        } catch (err) {
+          this.logger.warn(
+            `Error during cleanup for plugin '${pluginName}': ${err instanceof Error ? err.message : String(err)}`,
+          );
+        }
+      }
+      this.pluginCleanupFns.delete(pluginName);
+    }
+
+    // 4) clear registries
     this.loadedPlugins.delete(pluginName);
     this.pluginContexts.delete(pluginName);
     // keep origin for potential reload
   }
-
-  // removed unused isVanBlogPlugin
 
   private getServerVersion(): string {
     try {
@@ -261,28 +276,6 @@ export class LoaderService implements OnModuleInit {
 
     // 使用标准 semver 的范围判断（默认不包含预发布）
     return semverSatisfies(v, normalizedRange, { includePrerelease: false, loose: true });
-  }
-
-  /**
-   * @deprecated Replaced by semver.satisfies with semver.coerce/validRange. Kept temporarily for backward-compatible tests.
-   */
-  public parseVersion(input: string): [number, number, number] {
-    const s = input.trim().replace(/^v/i, '');
-    const [maj, min, pat] = s.split('.', 3);
-    const toNum = (x: string | undefined): number => {
-      const n = Number.parseInt(x ?? '0', 10);
-      return Number.isFinite(n) && !Number.isNaN(n) && n >= 0 ? n : 0;
-    };
-    return [toNum(maj), toNum(min), toNum(pat)];
-  }
-
-  /**
-   * @deprecated Replaced by semver comparison. Kept temporarily for backward-compatible tests.
-   */
-  public cmp(a: [number, number, number], b: [number, number, number]): number {
-    if (a[0] !== b[0]) return a[0] - b[0];
-    if (a[1] !== b[1]) return a[1] - b[1];
-    return a[2] - b[2];
   }
 
   private async safeExecuteWithTimeout<T>(
@@ -438,56 +431,65 @@ export class LoaderService implements OnModuleInit {
 
     const context = this.pluginContextFactory.createContext(plugin.name);
 
+    // Track cleanup functions
+    const cleanupFns: Array<() => void> = [];
+
     // Register hooks and keep ids for targeted unload
     if (plugin.hooks) {
       for (const [hookName, hookConfig] of Object.entries(plugin.hooks)) {
+        if (!hookConfig) continue;
+
         if (hookConfig.type === 'action') {
           const { handler } = hookConfig;
           if (typeof handler !== 'function') {
             this.logger.warn(
-              `Plugin '${name}' hook '${hookName}' has invalid action handler, skipped`,
+              `Plugin '${plugin.name}' defined action hook '${hookName}' but handler is not a function`,
             );
             continue;
           }
-          const wrapped: ActionCallback = async (...args: unknown[]) => {
-            await this.safeExecuteWithTimeout(
-              async () => {
-                await handler(...args, context);
-              },
-              10_000,
+          // Wrap handler to catch errors and inject context
+          const wrapped = async (...args: unknown[]) => {
+            return this.safeExecuteWithTimeout(
+              () => handler(...args, context),
+              (hookConfig as any).timeoutMs ?? 5000,
               `plugin:${name}:${hookName}:action`,
             );
           };
-          context.hooks.addAction(hookName, wrapped, hookConfig.priority ?? 10);
-          // No need to track manually anymore, context handles it
+          const id = this.hookService.addAction(hookName, wrapped, hookConfig.priority ?? 10);
+          cleanupFns.push(() => this.hookService.removeAction(hookName, id));
         } else {
           const { handler } = hookConfig;
           if (typeof handler !== 'function') {
             this.logger.warn(
-              `Plugin '${name}' hook '${hookName}' has invalid filter handler, skipped`,
+              `Plugin '${plugin.name}' defined filter hook '${hookName}' but handler is not a function`,
             );
             continue;
           }
-          const wrapped: FilterCallback = async (value: unknown, ...args: unknown[]) => {
+          // Wrap handler
+          const wrapped = async (value: unknown, ...args: unknown[]) => {
             const res = await this.safeExecuteWithTimeout(
-              async () => {
-                return await handler(value, ...args, context);
-              },
-              10_000,
+              () => handler(value, ...args, context),
+              (hookConfig as any).timeoutMs ?? 1000,
               `plugin:${name}:${hookName}:filter`,
             );
-            if (res === undefined) {
+            // If filter returns undefined/null (timeout or error), return original value
+            if (res === undefined || res === null) {
               this.logger.warn(
-                `Filter '${hookName}' of plugin '${name}' returned undefined or timed out - keeping previous value`,
+                `Filter '${hookName}' of plugin '${plugin.name}' returned undefined or timed out - keeping previous value`,
               );
               return value;
             }
             return res;
           };
-          context.hooks.addFilter(hookName, wrapped, hookConfig.priority ?? 10);
-          // No need to track manually anymore, context handles it
+          const id = this.hookService.addFilter(hookName, wrapped, hookConfig.priority ?? 10);
+          cleanupFns.push(() => this.hookService.removeFilter(hookName, id));
         }
       }
+    }
+
+    // Store cleanup functions
+    if (cleanupFns.length > 0) {
+      this.pluginCleanupFns.set(plugin.name, cleanupFns);
     }
 
     if (typeof plugin.init === 'function') {
@@ -510,7 +512,6 @@ export class LoaderService implements OnModuleInit {
     };
     this.loadedPlugins.set(full.name, full);
     this.pluginContexts.set(full.name, context);
-    // this.pluginHookRegistrations.set(full.name, registrations); // Removed
     this.pluginOrigins.set(full.name, pluginDir);
 
     this.logger.log(`Loaded plugin '${full.name}@${full.version}'`);

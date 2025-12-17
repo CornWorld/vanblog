@@ -1,13 +1,18 @@
-// 🐱插件：在文章保存时在内容/标题/标签的结尾添加"喵"
+/**
+ * Cat Plugin - 新版函数式 API 示例
+ *
+ * 🐱插件：在文章保存时在内容/标题/标签的结尾添加"喵"
+ *
+ * 这是使用新的简化 PluginAPI 的示例实现。
+ * 对比旧版本（index.old.ts），代码量减少约 70%。
+ *
+ * ## 功能演示
+ * - Filter hooks：文章创建/更新前处理
+ * - 响应式存储：自动持久化计数器
+ * - Shortcode：在内容中嵌入猫咪表情
+ */
 
-import { Logger } from '@nestjs/common';
-import { dayjs } from '@vanblog/shared';
-
-import { withPluginPrefix } from '../../src/modules/plugin/utils/prefix.util';
-
-import type { FilterCallback } from '../../src/modules/plugin/interfaces/hook.interface';
-import type { PluginContext } from '../../src/modules/plugin/interfaces/plugin-context.interface';
-import type { Plugin } from '../../src/modules/plugin/services/loader.service';
+import type { PluginAPI } from '@vanblog/shared/plugin';
 
 // 定义文章数据类型
 interface ArticleData {
@@ -17,161 +22,108 @@ interface ArticleData {
   tags?: string[];
 }
 
-// 插件 Logger 实例
-const logger = new Logger(withPluginPrefix('cat-plugin'));
+/**
+ * 处理文章数据，添加"喵"
+ */
+function processArticle(article: ArticleData, config: Record<string, unknown>): ArticleData {
+  const result = { ...article };
 
-const plugin: Plugin = {
-  id: 'cat-plugin',
-  name: 'Cat Plugin',
-  version: '1.0.0',
-  description: '🐱插件：在文章保存时在内容/标题/标签的结尾添加喵',
+  const enableTitle = config.enableTitle !== false;
+  const enableContent = config.enableContent !== false;
+  const enableTags = config.enableTags !== false;
 
-  // 插件初始化
-  async init(context: PluginContext): Promise<void> {
-    logger.log(withPluginPrefix('cat-plugin', '插件正在初始化...'));
+  // 处理标题
+  if (enableTitle && typeof result.title === 'string' && !result.title.endsWith('喵')) {
+    result.title = `${result.title}喵`;
+  }
 
-    // 记录插件初始化时间
-    await context.data.set('initialized_at', dayjs().toISOString());
-    await context.data.set('processed_articles', 0);
+  // 处理内容
+  if (enableContent && typeof result.content === 'string' && !result.content.endsWith('喵')) {
+    result.content = `${result.content}喵`;
+  }
 
-    // 读取配置
-    const enableTitle = context.config.get('enable_title', true) as boolean;
-    const enableContent = context.config.get('enable_content', true) as boolean;
-    const enableTags = context.config.get('enable_tags', true) as boolean;
+  // 处理标签
+  if (enableTags && Array.isArray(result.tags)) {
+    result.tags = result.tags.map((tag) => (tag.endsWith('喵') ? tag : `${tag}喵`));
+  }
 
-    logger.log(
-      withPluginPrefix(
-        'cat-plugin',
-        `插件配置 - 标题: ${String(enableTitle)}, 内容: ${String(enableContent)}, 标签: ${String(enableTags)}`,
-      ),
-    );
+  return result;
+}
 
-    logger.log(withPluginPrefix('cat-plugin', '插件初始化成功'));
-  },
-
-  // 插件销毁
-  async destroy(context: PluginContext): Promise<void> {
-    logger.log(withPluginPrefix('cat-plugin', '插件正在销毁...'));
-
-    const processedCount = await context.data.get('processed_articles');
-    logger.log(withPluginPrefix('cat-plugin', `插件已处理 ${String(processedCount)} 篇文章`));
-
-    // 清理数据
-    await context.data.clear();
-
-    logger.log(withPluginPrefix('cat-plugin', '插件销毁完成'));
-  },
-
-  // 钩子定义
-  hooks: {
-    // 文章创建前的过滤器
-    'article|beforeCreate': {
-      type: 'filter',
-      priority: 10,
-      handler: ((value: unknown, context: PluginContext) => {
-        // 在断言之前做类型收窄
-        if (typeof value !== 'object' || value === null) {
-          return value;
-        }
-
-        const result: ArticleData = { ...(value as Record<string, unknown>) };
-
-        // 读取配置
-        const enableTitle = context.config.get('enable_title', true) as boolean;
-        const enableContent = context.config.get('enable_content', true) as boolean;
-        const enableTags = context.config.get('enable_tags', true) as boolean;
-
-        // 处理标题
-        if (enableTitle && typeof result.title === 'string' && !result.title.endsWith('喵')) {
-          result.title = `${result.title}喵`;
-        }
-
-        // 处理内容
-        if (enableContent && typeof result.content === 'string' && !result.content.endsWith('喵')) {
-          result.content = `${result.content}喵`;
-        }
-
-        // 处理标签
-        if (enableTags && Array.isArray(result.tags)) {
-          result.tags = result.tags.map((tag) => {
-            if (!tag.endsWith('喵')) {
-              return `${tag}喵`;
-            }
-            return tag;
-          });
-        }
-
-        logger.log(withPluginPrefix('cat-plugin', '已为文章添加喵~'));
-
-        // 更新处理计数
-        void context.data
-          .get('processed_articles')
-          .then(async (count) => {
-            const newCount = (typeof count === 'number' ? count : 0) + 1;
-            return context.data.set('processed_articles', newCount);
-          })
-          .catch(() => {
-            // 忽略错误
-          });
-
-        return result;
-      }) as FilterCallback,
-    },
-
-    // 文章更新前的过滤器
-    'article|beforeUpdate': {
-      type: 'filter',
-      priority: 10,
-      handler: ((value: unknown, context: PluginContext) => {
-        // 在断言之前做类型收窄
-        if (typeof value !== 'object' || value === null) {
-          return value;
-        }
-
-        const result: ArticleData = { ...(value as Record<string, unknown>) };
-
-        // 读取配置
-        const enableTitle = context.config.get('enable_title', true) as boolean;
-        const enableContent = context.config.get('enable_content', true) as boolean;
-        const enableTags = context.config.get('enable_tags', true) as boolean;
-
-        // 处理标题
-        if (enableTitle && typeof result.title === 'string' && !result.title.endsWith('喵')) {
-          result.title = `${result.title}喵`;
-        }
-
-        // 处理内容
-        if (enableContent && typeof result.content === 'string' && !result.content.endsWith('喵')) {
-          result.content = `${result.content}喵`;
-        }
-
-        // 处理标签
-        if (enableTags && Array.isArray(result.tags)) {
-          result.tags = result.tags.map((tag) => {
-            if (!tag.endsWith('喵')) {
-              return `${tag}喵`;
-            }
-            return tag;
-          });
-        }
-
-        logger.log(withPluginPrefix('cat-plugin', '已为更新的文章添加喵~'));
-
-        // 更新处理计数
-        void context.data
-          .get('processed_articles')
-          .then(async (count) => {
-            const newCount = (typeof count === 'number' ? count : 0) + 1;
-            return context.data.set('processed_articles', newCount);
-          })
-          .catch(() => {
-            // 忽略错误
-          });
-
-        return result;
-      }) as FilterCallback,
-    },
-  },
+// 猫咪表情库
+const CAT_EMOJIS: Record<string, string> = {
+  happy: '😺',
+  grin: '😸',
+  joy: '😹',
+  love: '😻',
+  smirk: '😼',
+  kiss: '😽',
+  scared: '🙀',
+  cry: '😿',
+  angry: '😾',
+  default: '🐱',
 };
 
-export default plugin;
+/**
+ * 插件入口函数
+ *
+ * 新版 API 只需要导出一个函数，接收 PluginAPI 实例
+ */
+export default function catPlugin(api: PluginAPI): void {
+  // 响应式存储：处理计数（自动持久化）
+  const processedCount = api.store('processedCount', 0);
+  const shortcodeCount = api.store('shortcodeCount', 0);
+
+  // 注册 filter：文章创建前
+  api.filter<ArticleData>('article.beforeCreate', (article) => {
+    const result = processArticle(article, api.config);
+    processedCount.value++;
+    api.log.info('已为新文章添加喵~');
+    return result;
+  });
+
+  // 注册 filter：文章更新前
+  api.filter<ArticleData>('article.beforeUpdate', (article) => {
+    const result = processArticle(article, api.config);
+    processedCount.value++;
+    api.log.info('已为更新的文章添加喵~');
+    return result;
+  });
+
+  // 注册 shortcode: [cat] 或 [cat mood="happy"]
+  // 使用示例：
+  //   [cat /] -> 🐱
+  //   [cat mood="happy" /] -> 😺
+  //   [cat mood="love"]喵喵[/cat] -> 😻喵喵😻
+  api.shortcode('cat', (attrs, content) => {
+    const mood = attrs.mood || 'default';
+    const emoji = CAT_EMOJIS[mood] || CAT_EMOJIS.default;
+
+    shortcodeCount.value++;
+
+    if (content) {
+      // 有内容时，用表情包裹内容
+      return `${emoji}${content}${emoji}`;
+    }
+
+    // 无内容时，只返回表情
+    return emoji;
+  });
+
+  // 生命周期：激活时
+  api.onActivate(() => {
+    api.log.info('Cat Plugin 已激活 🐱');
+    api.log.info(
+      `配置: enableTitle=${String(api.config.enableTitle)}, enableContent=${String(api.config.enableContent)}, enableTags=${String(api.config.enableTags)}`,
+    );
+  });
+
+  // 生命周期：停用时
+  api.onDeactivate(() => {
+    api.log.info(
+      `Cat Plugin 停用，共处理 ${String(processedCount.value)} 篇文章，${String(shortcodeCount.value)} 次 shortcode`,
+    );
+  });
+
+  api.log.info('Cat Plugin 加载成功');
+}

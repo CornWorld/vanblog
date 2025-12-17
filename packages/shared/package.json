@@ -29,6 +29,14 @@
     "./drizzle": {
       "types": "./dist/drizzle/index.d.ts",
       "import": "./dist/drizzle/index.js"
+    },
+    "./signals": {
+      "types": "./dist/signals/index.d.ts",
+      "import": "./dist/signals/index.js"
+    },
+    "./plugin": {
+      "types": "./dist/plugin/index.d.ts",
+      "import": "./dist/plugin/index.js"
     }
   },
   "scripts": {

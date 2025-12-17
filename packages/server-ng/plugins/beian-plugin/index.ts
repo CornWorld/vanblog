@@ -1,82 +1,64 @@
-import { Logger } from '@nestjs/common';
+/**
+ * Beian Plugin
+ *
+ * 管理ICP备案信息，并将数据注入到 Bootstrap API
+ */
 
-import { withPluginPrefix } from '../../src/modules/plugin/utils/prefix.util';
+import type { PluginAPI } from '@vanblog/shared/plugin';
 
-import { BeianService, type BeianInfo } from './beian.service';
+interface BeianInfo {
+  icp: string;
+  policeIcp: string;
+}
 
-import type {
-  ActionCallback,
-  FilterCallback,
-} from '../../src/modules/plugin/interfaces/hook.interface';
-import type { PluginContext } from '../../src/modules/plugin/interfaces/plugin-context.interface';
-import type { Plugin } from '../../src/modules/plugin/services/loader.service';
+export default (api: PluginAPI) => {
+  // 配置检查
+  const enabled = api.config.enabled as boolean;
+  if (!enabled) {
+    api.log.warn('Beian plugin is disabled');
+    return;
+  }
 
-const logger = new Logger(withPluginPrefix('beian-plugin'));
-const beianService = new BeianService();
+  api.log.info('Beian plugin initializing...');
 
-const plugin: Plugin = {
-  id: 'beian-plugin',
-  name: 'Beian Plugin',
-  version: '1.0.0',
-  description: 'Manage beian (ICP filing) information',
+  // 存储备案信息
+  const beianInfo = api.store<BeianInfo>('beianInfo', {
+    icp: (api.config.icp as string) || 'ICP 12345678',
+    policeIcp: (api.config.policeIcp as string) || '公网安备 12345678901234 号',
+  });
 
-  async init(context: PluginContext): Promise<void> {
-    logger.log('Beian plugin initializing...');
+  // 暴露备案信息给前端
+  api.provide('beian', () => ({
+    icp: beianInfo.value.icp,
+    policeIcp: beianInfo.value.policeIcp,
+  }));
 
-    // 初始化备案信息数据
-    await context.data.set('beianInfo', {});
+  // 提供更新备案信息的方法
+  api.action('beian|update', (data: BeianInfo) => {
+    api.log.info('Updating beian info:', data);
+    beianInfo.value = data;
+  });
 
-    logger.log('Beian plugin initialized successfully');
-  },
+  // 生命周期
+  api.onActivate(() => {
+    api.log.info('Beian plugin activated');
+    api.log.debug('Current beian info:', beianInfo.value);
+  });
 
-  async destroy(_context: PluginContext): Promise<void> {
-    logger.log('Beian plugin destroying...');
-    // 清理逻辑（如果需要）
-    await Promise.resolve();
-    logger.log('Beian plugin destroyed successfully');
-  },
+  api.onDeactivate(() => {
+    api.log.info('Beian plugin deactivated');
+  });
 
-  async getBeianInfo(context: PluginContext): Promise<BeianInfo> {
-    return beianService.getBeianInfo(context);
-  },
+  // 配置变更监听
+  api.onConfigChange('icp', (newValue) => {
+    beianInfo.value.icp = newValue as string;
+    api.log.info('ICP updated:', newValue);
+  });
 
-  async updateBeianInfo(context: PluginContext, data: BeianInfo): Promise<BeianInfo> {
-    return beianService.updateBeianInfo(context, data);
-  },
+  api.onConfigChange('policeIcp', (newValue) => {
+    beianInfo.value.policeIcp = newValue as string;
+    api.log.info('Police ICP updated:', newValue);
+  });
 
-  hooks: {
-    'bootstrap|beforeGenerate': {
-      type: 'action',
-      priority: 10,
-      handler: (async (_value: unknown, _context: PluginContext) => {
-        logger.debug('Bootstrap before generate - beian');
-        // 保持异步语义，满足测试与 lint 规则
-        await Promise.resolve();
-      }) as ActionCallback,
-    },
-    'bootstrap|transformResponse': {
-      type: 'filter',
-      priority: 10,
-      handler: ((value: unknown, _context: PluginContext) => {
-        if (value == null || typeof value !== 'object') return value;
-        const resp = value as Record<string, unknown>;
-        return {
-          ...resp,
-          beian: {
-            icp: 'ICP 12345678',
-            policeIcp: '公网安备 12345678901234 号',
-          },
-        } as typeof value;
-      }) as FilterCallback,
-    },
-    'bootstrap|afterGenerate': {
-      type: 'action',
-      priority: 10,
-      handler: ((_: unknown, __: PluginContext): void => {
-        // no-op for symmetry with rewards plugin and core
-      }) as ActionCallback,
-    },
-  },
+  api.log.info('Beian plugin initialized successfully');
 };
-
-export default plugin;

@@ -1,8 +1,23 @@
-import { Controller, Get, Post, Delete, Param, HttpCode, HttpStatus, Logger } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Patch,
+  Delete,
+  Param,
+  Body,
+  HttpCode,
+  HttpStatus,
+  Logger,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody } from '@nestjs/swagger';
 
 import { Perm } from '../../auth/permissions.decorator';
 import { LoaderService, type Plugin } from '../services/loader.service';
+import { PluginConfigService } from '../services/plugin-config.service';
 
 export interface PluginInfo {
   name: string;
@@ -32,7 +47,10 @@ export interface PluginUnloadResponse {
 export class PluginsController {
   private readonly logger = new Logger(PluginsController.name);
 
-  constructor(private readonly loaderService: LoaderService) {
+  constructor(
+    private readonly loaderService: LoaderService,
+    private readonly configService: PluginConfigService,
+  ) {
     // Downgrade noisy test-time log to warn to avoid false positives in log scans
     this.logger.warn('PluginsController initialized (WARN LEVEL)');
   }
@@ -194,5 +212,163 @@ export class PluginsController {
   })
   getFailedPlugins(): string[] {
     return Array.from(this.loaderService.getFailedPlugins());
+  }
+
+  // ========== 配置管理 API ==========
+
+  @Get(':name/config/schema')
+  @Perm('plugin', ['read'])
+  @ApiOperation({ summary: 'Get plugin configuration schema' })
+  @ApiParam({ name: 'name', description: 'Plugin name' })
+  @ApiResponse({
+    status: 200,
+    description: 'Plugin configuration schema',
+    schema: {
+      type: 'object',
+      additionalProperties: {
+        type: 'object',
+        properties: {
+          type: { type: 'string', enum: ['string', 'number', 'boolean', 'array', 'object'] },
+          title: { type: 'string' },
+          description: { type: 'string' },
+          default: {},
+          enum: { type: 'array' },
+          min: { type: 'number' },
+          max: { type: 'number' },
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 404, description: 'Plugin not found or no config schema' })
+  getPluginConfigSchema(@Param('name') pluginName: string): Record<string, unknown> {
+    const schema = this.configService.getSchema(pluginName);
+    if (!schema) {
+      throw new NotFoundException(`Plugin '${pluginName}' not found or has no config schema`);
+    }
+    return schema;
+  }
+
+  @Get(':name/config')
+  @Perm('plugin', ['read'])
+  @ApiOperation({ summary: 'Get plugin configuration' })
+  @ApiParam({ name: 'name', description: 'Plugin name' })
+  @ApiResponse({
+    status: 200,
+    description: 'Plugin configuration values',
+    schema: {
+      type: 'object',
+      additionalProperties: true,
+    },
+  })
+  @ApiResponse({ status: 404, description: 'Plugin not found' })
+  async getPluginConfig(@Param('name') pluginName: string): Promise<Record<string, unknown>> {
+    const schema = this.configService.getSchema(pluginName);
+    if (!schema) {
+      throw new NotFoundException(`Plugin '${pluginName}' not found`);
+    }
+    return this.configService.getConfig(pluginName);
+  }
+
+  @Put(':name/config')
+  @Perm('plugin', ['configure'])
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Update plugin configuration (bulk)' })
+  @ApiParam({ name: 'name', description: 'Plugin name' })
+  @ApiBody({
+    description: 'Configuration values to update',
+    schema: {
+      type: 'object',
+      additionalProperties: true,
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Configuration updated successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        message: { type: 'string' },
+        updated: { type: 'number' },
+      },
+    },
+  })
+  @ApiResponse({ status: 404, description: 'Plugin not found' })
+  @ApiResponse({ status: 400, description: 'Invalid configuration value' })
+  async updatePluginConfig(
+    @Param('name') pluginName: string,
+    @Body() config: Record<string, unknown>,
+  ): Promise<{ success: boolean; message: string; updated: number }> {
+    const schema = this.configService.getSchema(pluginName);
+    if (!schema) {
+      throw new NotFoundException(`Plugin '${pluginName}' not found`);
+    }
+
+    const results = await this.configService.setConfigs(pluginName, config);
+    const updated = Object.values(results).filter((r) => r).length;
+    const failed = Object.values(results).filter((r) => !r).length;
+
+    if (failed > 0) {
+      throw new BadRequestException(
+        `Failed to update ${failed} configuration value(s). ${updated} value(s) updated successfully.`,
+      );
+    }
+
+    return {
+      success: true,
+      message: `Successfully updated ${updated} configuration value(s)`,
+      updated,
+    };
+  }
+
+  @Patch(':name/config/:key')
+  @Perm('plugin', ['configure'])
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Update single plugin configuration value' })
+  @ApiParam({ name: 'name', description: 'Plugin name' })
+  @ApiParam({ name: 'key', description: 'Configuration key' })
+  @ApiBody({
+    description: 'Configuration value',
+    schema: {
+      type: 'object',
+      properties: {
+        value: {},
+      },
+      required: ['value'],
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Configuration updated successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        message: { type: 'string' },
+      },
+    },
+  })
+  @ApiResponse({ status: 404, description: 'Plugin not found' })
+  @ApiResponse({ status: 400, description: 'Invalid configuration value' })
+  async updatePluginConfigValue(
+    @Param('name') pluginName: string,
+    @Param('key') key: string,
+    @Body('value') value: unknown,
+  ): Promise<{ success: boolean; message: string }> {
+    const schema = this.configService.getSchema(pluginName);
+    if (!schema) {
+      throw new NotFoundException(`Plugin '${pluginName}' not found`);
+    }
+
+    const success = await this.configService.setConfig(pluginName, key, value);
+
+    if (!success) {
+      throw new BadRequestException(`Invalid value for configuration key '${key}'`);
+    }
+
+    return {
+      success: true,
+      message: `Configuration '${key}' updated successfully`,
+    };
   }
 }

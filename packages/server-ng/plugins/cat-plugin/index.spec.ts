@@ -1,107 +1,175 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import type { PluginAPI } from '@vanblog/shared/plugin';
 
 import plugin from './index';
 
-import type { PluginContext } from '../../src/modules/plugin/interfaces/plugin-context.interface';
-
-// 模拟 PluginContext
-// Mock Logger
-const mockLogger = vi.hoisted(() => ({
-  log: vi.fn(),
-  error: vi.fn(),
-  warn: vi.fn(),
-  debug: vi.fn(),
-  verbose: vi.fn(),
-}));
-
-vi.mock('@nestjs/common', () => ({
-  Logger: vi.fn().mockImplementation(() => mockLogger),
-}));
-
-const createMockContext = (): PluginContext => ({
-  pluginId: 'cat-plugin',
-  data: {
-    get: vi.fn().mockResolvedValue(0),
-    set: vi.fn().mockResolvedValue(undefined),
-    delete: vi.fn().mockResolvedValue(undefined),
-    clear: vi.fn().mockResolvedValue(undefined),
-    has: vi.fn().mockResolvedValue(false),
-    keys: vi.fn().mockResolvedValue([]),
-  },
-  config: {
-    get: vi.fn().mockImplementation((key: string, defaultValue?: unknown) => {
-      if (key === 'enable_title') return true;
-      if (key === 'enable_content') return true;
-      if (key === 'enable_tags') return true;
-      return defaultValue;
-    }),
-    getOrThrow: vi.fn(),
-    has: vi.fn().mockReturnValue(true),
-  },
-  registry: {
-    register: vi.fn(),
-    unregister: vi.fn().mockReturnValue(true),
-  },
-  hooks: {
-    register: vi.fn(),
-    unregister: vi.fn(),
-  } as any,
-  logger: mockLogger as any,
-});
-
-describe('🐱插件', () => {
-  let mockContext: PluginContext;
+describe('Cat Plugin (Functional API)', () => {
+  let mockAPI: Partial<PluginAPI>;
+  let storeValues: Map<string, any>;
 
   beforeEach(() => {
-    mockContext = createMockContext();
-    vi.clearAllMocks();
+    storeValues = new Map();
+
+    mockAPI = {
+      id: 'cat-plugin',
+      version: '1.0.0',
+      dir: '/path/to/plugin',
+      config: {
+        enableTitle: true,
+        enableContent: true,
+        enableTags: true,
+      },
+      log: {
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+        debug: vi.fn(),
+      } as any,
+      filter: vi.fn(),
+      action: vi.fn(),
+      shortcode: vi.fn(),
+      provide: vi.fn(),
+      store: vi.fn((key: string, defaultValue: any) => ({
+        get value() {
+          return storeValues.has(key) ? storeValues.get(key) : defaultValue;
+        },
+        set value(newValue: any) {
+          storeValues.set(key, newValue);
+        },
+      })),
+      onActivate: vi.fn(),
+      onDeactivate: vi.fn(),
+      onConfigChange: vi.fn(),
+    };
   });
 
-  describe('插件基本信息', () => {
-    it('应该有正确的插件信息', () => {
-      expect(plugin.id).toBe('cat-plugin');
-      expect(plugin.name).toBe('Cat Plugin');
-      expect(plugin.version).toBe('1.0.0');
-      expect(plugin.description).toContain('喵');
-    });
+  it('should load plugin successfully', () => {
+    expect(() => {
+      plugin(mockAPI as PluginAPI);
+    }).not.toThrow();
+    expect(mockAPI.log?.info).toHaveBeenCalledWith('Cat Plugin 加载成功');
   });
 
-  describe('初始化与销毁', () => {
-    it('init: 应初始化状态', async () => {
-      if (plugin.init) await plugin.init(mockContext);
-      expect(mockContext.data.set).toHaveBeenCalledWith('initialized_at', expect.any(String));
-      expect(mockContext.data.set).toHaveBeenCalledWith('processed_articles', 0);
-    });
+  it('should register filter hooks', () => {
+    plugin(mockAPI as PluginAPI);
 
-    it('destroy: 应清理数据', async () => {
-      if (plugin.destroy) await plugin.destroy(mockContext);
-      expect(mockContext.data.clear).toHaveBeenCalled();
-    });
+    expect(mockAPI.filter).toHaveBeenCalledWith('article.beforeCreate', expect.any(Function));
+    expect(mockAPI.filter).toHaveBeenCalledWith('article.beforeUpdate', expect.any(Function));
   });
 
-  describe('过滤器行为', () => {
-    beforeEach(() => {
-      (mockContext.data.get as any).mockResolvedValue(0);
+  it('should register shortcode hook', () => {
+    plugin(mockAPI as PluginAPI);
+
+    expect(mockAPI.shortcode).toHaveBeenCalledWith('cat', expect.any(Function));
+  });
+
+  it('should register lifecycle hooks', () => {
+    plugin(mockAPI as PluginAPI);
+
+    expect(mockAPI.onActivate).toHaveBeenCalledWith(expect.any(Function));
+    expect(mockAPI.onDeactivate).toHaveBeenCalledWith(expect.any(Function));
+  });
+
+  it('should process article title when filter is called', () => {
+    let filterHandler: any;
+    mockAPI.filter = vi.fn((hookName, handler) => {
+      if (hookName === 'article.beforeCreate') {
+        filterHandler = handler;
+      }
+    }) as any;
+
+    plugin(mockAPI as PluginAPI);
+
+    const article = { title: 'Test', content: 'Content', tags: ['tag1'] };
+    const result = filterHandler(article);
+
+    expect(result.title).toBe('Test喵');
+    expect(result.content).toBe('Content喵');
+    expect(result.tags).toEqual(['tag1喵']);
+  });
+
+  it('should not add 喵 if already present', () => {
+    let filterHandler: any;
+    mockAPI.filter = vi.fn((hookName, handler) => {
+      if (hookName === 'article.beforeCreate') {
+        filterHandler = handler;
+      }
+    }) as any;
+
+    plugin(mockAPI as PluginAPI);
+
+    const article = { title: 'Test喵', content: 'Content喵', tags: ['tag1喵'] };
+    const result = filterHandler(article);
+
+    expect(result.title).toBe('Test喵');
+    expect(result.content).toBe('Content喵');
+    expect(result.tags).toEqual(['tag1喵']);
+  });
+
+  it('should respect config settings', () => {
+    const apiWithCustomConfig = {
+      ...mockAPI,
+      config: {
+        enableTitle: false,
+        enableContent: true,
+        enableTags: false,
+      },
+    };
+
+    let filterHandler: any;
+    apiWithCustomConfig.filter = vi.fn((hookName, handler) => {
+      if (hookName === 'article.beforeCreate') {
+        filterHandler = handler;
+      }
+    }) as any;
+
+    plugin(apiWithCustomConfig as PluginAPI);
+
+    const article = { title: 'Test', content: 'Content', tags: ['tag1'] };
+    const result = filterHandler(article);
+
+    expect(result.title).toBe('Test'); // not modified
+    expect(result.content).toBe('Content喵'); // modified
+    expect(result.tags).toEqual(['tag1']); // not modified
+  });
+
+  it('should process shortcode correctly', () => {
+    let shortcodeHandler: any;
+    mockAPI.shortcode = vi.fn((name, handler) => {
+      if (name === 'cat') {
+        shortcodeHandler = handler;
+      }
     });
 
-    it('article|beforeCreate: 应添加喵并增加计数', async () => {
-      const hook = plugin.hooks?.['article|beforeCreate'];
-      expect(hook).toBeDefined();
-      if (hook?.type !== 'filter') return;
+    plugin(mockAPI as PluginAPI);
 
-      const input = { title: 'Hello', content: 'World', tags: ['tag1', 'tag2喵'] } as any;
-      const result = (hook as any).handler(input, mockContext);
+    // Default emoji
+    expect(shortcodeHandler({}, '')).toBe('🐱');
 
-      // 结果检查
-      expect(result.title).toBe('Hello喵');
-      expect(result.content).toBe('World喵');
-      expect(result.tags).toEqual(['tag1喵', 'tag2喵']);
+    // With mood
+    expect(shortcodeHandler({ mood: 'happy' }, '')).toBe('😺');
 
-      // 等待微任务队列使内部计数更新触发
-      await Promise.resolve();
+    // With content
+    expect(shortcodeHandler({}, '喵喵')).toBe('🐱喵喵🐱');
+    expect(shortcodeHandler({ mood: 'love' }, '喵喵')).toBe('😻喵喵😻');
+  });
 
-      expect(mockContext.data.set).toHaveBeenCalledWith('processed_articles', 1);
-      expect(mockLogger.log).toHaveBeenCalled();
-    });
+  it('should increment processed count', () => {
+    let filterHandler: any;
+    mockAPI.filter = vi.fn((hookName, handler) => {
+      if (hookName === 'article.beforeCreate') {
+        filterHandler = handler;
+      }
+    }) as any;
+
+    plugin(mockAPI as PluginAPI);
+
+    const article = { title: 'Test', content: 'Content', tags: [] };
+
+    filterHandler(article);
+    expect(storeValues.get('processedCount')).toBe(1);
+
+    filterHandler(article);
+    expect(storeValues.get('processedCount')).toBe(2);
   });
 });

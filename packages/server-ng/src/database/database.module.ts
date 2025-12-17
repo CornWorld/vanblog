@@ -6,12 +6,7 @@ import { LoggerModule } from '../core/logger/logger.module';
 import { LoggerService } from '../core/logger/logger.service';
 
 import { createDatabaseConnection } from './connection';
-
-/**
- * 数据库连接的依赖注入 Token
- * 用于在其他模块中注入数据库实例
- */
-export const DATABASE_CONNECTION = 'DATABASE_CONNECTION';
+import { DATABASE_CONNECTION } from './constants';
 
 /**
  * 数据库模块

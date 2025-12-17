@@ -1,18 +1,50 @@
 {
   "name": "cat-plugin",
-  "version": "1.0.0",
-  "description": "演示用的猫猫插件",
+  "version": "2.0.0",
+  "description": "🐱插件：在文章保存时在内容/标题/标签的结尾添加喵，支持 shortcode",
   "main": "index.ts",
   "type": "module",
   "private": true,
-  "scripts": {
-    "test": "echo \"No tests for this plugin\" && exit 0"
-  },
   "keywords": [
     "vanblog",
     "plugin",
     "demo"
   ],
   "author": "VanBlog",
-  "license": "MIT"
+  "license": "MIT",
+
+  "vanblog": {
+    "displayName": "Cat Plugin 🐱",
+    "icon": "🐱",
+
+    "config": {
+      "enableTitle": {
+        "type": "boolean",
+        "default": true,
+        "title": "处理标题",
+        "description": "在文章标题末尾添加喵"
+      },
+      "enableContent": {
+        "type": "boolean",
+        "default": true,
+        "title": "处理内容",
+        "description": "在文章内容末尾添加喵"
+      },
+      "enableTags": {
+        "type": "boolean",
+        "default": true,
+        "title": "处理标签",
+        "description": "在每个标签末尾添加喵"
+      }
+    },
+
+    "hooks": [
+      "article.beforeCreate",
+      "article.beforeUpdate"
+    ],
+
+    "shortcodes": [
+      "cat"
+    ]
+  }
 }
