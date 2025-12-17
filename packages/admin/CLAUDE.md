@@ -191,11 +191,83 @@ import type { Article, Draft, Category, Tag, Media } from '@vanblog/shared/type'
 | `CustomPage`    | `/admin/custom-page` | 自定义页面管理               |
 | `DataManage`    | `/admin/data`        | 数据管理（分类、标签、友链） |
 | `ImageManage`   | `/admin/image`       | 媒体库                       |
-| `SystemConfig`  | `/admin/system`      | 系统设置                     |
+| `SystemConfig`  | `/admin/system`      | 系统设置（含插件管理）       |
 | `LogManage`     | `/admin/log`         | 日志管理                     |
 | `CommentManage` | `/admin/comment`     | 评论管理                     |
 | `Pipeline`      | `/admin/pipeline`    | 管道（自动化任务）           |
 | `About`         | `/admin/about`       | 关于页面                     |
+
+#### 系统设置 Tab 页
+
+`SystemConfig` 页面包含多个 Tab，用于管理不同的系统配置：
+
+| Tab      | 组件路径             | 功能                    |
+| -------- | -------------------- | ----------------------- |
+| 站点信息 | `tabs/SiteInfo.jsx`  | 站点名称、描述、Logo 等 |
+| 用户管理 | `tabs/User.jsx`      | 管理员账户、协作者      |
+| 图片设置 | `tabs/ImgTab.jsx`    | 图床配置、PicGo 插件    |
+| Waline   | `tabs/WalineTab.jsx` | 评论系统配置            |
+| **插件** | `tabs/Plugin.tsx` ⭐ | **插件管理与配置**      |
+| Caddy    | `tabs/Caddy.jsx`     | Caddy 反向代理配置      |
+| 高级设置 | `tabs/Advance.jsx`   | 高级功能开关            |
+| 数据迁移 | `tabs/Migrate.jsx`   | 数据导入导出            |
+| 备份恢复 | `tabs/Backup.jsx`    | 数据库备份与恢复        |
+| Token    | `tabs/Token.jsx`     | API Token 管理          |
+
+### 插件管理页面（Plugin Tab）
+
+**文件**: `src/pages/SystemConfig/tabs/Plugin.tsx`
+
+**功能**：
+
+- 📋 显示已加载插件列表（名称、版本、描述、状态）
+- 🔄 重新加载所有插件
+- ⚙️ 配置插件参数（基于 package.json 的 config schema）
+- 💾 实时保存配置（无需重启服务）
+
+**核心特性**：
+
+1. **插件列表展示**
+   - 使用 Ant Design `Collapse` 组件展示插件
+   - 显示插件加载状态（loaded/failed）
+   - 显示插件版本和描述
+
+2. **动态配置表单**
+   - 根据插件的 `package.json` 中的 `vanblog.config` 自动生成表单
+   - 支持类型：`boolean`、`string`、`number`、`array`、`object`
+   - 支持枚举值（下拉选择）
+   - 支持最小/最大值限制
+
+3. **配置持久化**
+   - 配置保存到数据库（`plugin_config` 表）
+   - 修改后立即生效，无需重启
+   - 支持环境变量覆盖
+
+**API 端点**：
+
+- `GET /api/v2/admin/plugins` - 获取插件列表
+- `POST /api/v2/admin/plugins/reload` - 重新加载所有插件
+- `GET /api/v2/admin/plugins/:name/config` - 获取插件配置
+- `PUT /api/v2/admin/plugins/:name/config` - 更新插件配置
+
+**使用示例**：
+
+```typescript
+// 加载插件列表
+const response = await fetch('/api/v2/admin/plugins', {
+  credentials: 'include',
+});
+const data = await response.json();
+// data.plugins: PluginInfo[]
+
+// 更新插件配置
+await fetch('/api/v2/admin/plugins/my-plugin/config', {
+  method: 'PUT',
+  headers: { 'Content-Type': 'application/json' },
+  credentials: 'include',
+  body: JSON.stringify({ enabled: true, apiKey: 'xxx' }),
+});
+```
 
 ### 通用组件（src/components/）
 

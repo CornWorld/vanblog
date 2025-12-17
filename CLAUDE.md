@@ -1,10 +1,29 @@
 # CLAUDE.md
 
-**最后更新时间**: 2025-12-09 02:50:35 CST
+**最后更新时间**: 2025-12-17 21:06:47 CST
 
 ---
 
 ## 变更记录 (Changelog)
+
+### 2025-12-17 - 插件系统增量更新
+
+- **新增功能**：
+  - 函数式 Plugin API（`packages/shared/src/plugin/plugin-api.interface.ts`）
+  - Shortcode 系统模块（`packages/server-ng/src/modules/shortcode`）
+  - 2 个新插件：book-manager-plugin、read-time-plugin
+  - admin 插件管理页面（`src/pages/SystemConfig/tabs/Plugin.tsx`）
+  - 响应式信号系统（`@vanblog/shared/signals`）
+
+- **文档更新**：
+  - 新增插件开发指南：`packages/server-ng/docs/PLUGIN_DEVELOPMENT.md`
+  - 新增复杂插件迁移指南：`packages/server-ng/docs/PLUGIN_MIGRATION_COMPLEX.md`
+  - 更新 `.claude/index.json`（版本 1.2.0）
+
+- **架构改进**：
+  - 插件系统支持函数式 API（简化轻量级插件开发）
+  - PluginModule 新增 5 个服务（plugin-api.service、plugin-config.service 等）
+  - Shared package 新增 2 个导出路径（`/signals`、`/plugin`）
 
 ### 2025-12-09 - 架构师初始化
 
@@ -24,7 +43,8 @@ VanBlog 是一个现代化的个人博客系统，包含管理后台、公开网
 - 基于 Drizzle ORM + SQLite 的轻量级数据层
 - ts-rest 驱动的类型安全 API 契约
 - 单一数据源（Single Source of Truth）类型系统
-- 模块化插件架构
+- 模块化插件架构（8 个内置插件 + 函数式 API）
+- Shortcode 系统（插件可注册自定义短代码）
 - 高测试覆盖率（80% 阈值）
 
 ---
@@ -196,6 +216,15 @@ pnpm lint                   # 检查所有包
 pnpm lint --fix             # 自动修复
 ```
 
+### 插件开发
+
+```bash
+# 创建新插件（使用脚手架）
+pnpm plugin:create my-plugin
+
+# 插件位置：packages/server-ng/plugins/
+```
+
 ---
 
 ## 测试策略
@@ -245,17 +274,21 @@ packages/
 │   │   ├── database/         # 数据库连接
 │   │   └── shared/           # 共享工具
 │   ├── test/                 # 测试文件
-│   └── plugins/              # 插件目录
+│   ├── plugins/              # 插件目录（8 个内置插件）
+│   └── docs/                 # 模块文档
 ├── shared/
 │   └── src/
 │       ├── contracts/        # ts-rest 契约
 │       ├── runtime/          # Zod Schema + Drizzle 表
 │       ├── type/             # 纯类型导出
-│       └── drizzle/          # Drizzle 工具
+│       ├── drizzle/          # Drizzle 工具
+│       ├── plugin/           # Plugin API 接口 (NEW)
+│       └── signals/          # 响应式信号 (NEW)
 └── admin/
     └── src/
         ├── pages/            # 页面组件
         ├── components/       # 通用组件
+        ├── hooks/            # React Hooks (NEW)
         └── services/         # API 服务
 ```
 
@@ -265,13 +298,15 @@ packages/
 
 ### 导出路径
 
-| 导出路径                    | 内容                     | 使用场景     |
-| --------------------------- | ------------------------ | ------------ |
-| `@vanblog/shared`           | contracts + schemas      | 主入口       |
-| `@vanblog/shared/type`      | 纯类型（0 字节 JS）      | 前端类型导入 |
-| `@vanblog/shared/runtime`   | Zod schemas + Drizzle 表 | 后端校验     |
-| `@vanblog/shared/contracts` | ts-rest 契约             | API 定义     |
-| `@vanblog/shared/drizzle`   | Drizzle 数据库工具       | DB 操作      |
+| 导出路径                    | 内容                     | 使用场景           |
+| --------------------------- | ------------------------ | ------------------ |
+| `@vanblog/shared`           | contracts + schemas      | 主入口             |
+| `@vanblog/shared/type`      | 纯类型（0 字节 JS）      | 前端类型导入       |
+| `@vanblog/shared/runtime`   | Zod schemas + Drizzle 表 | 后端校验           |
+| `@vanblog/shared/contracts` | ts-rest 契约             | API 定义           |
+| `@vanblog/shared/drizzle`   | Drizzle 数据库工具       | DB 操作            |
+| `@vanblog/shared/signals`   | 响应式信号系统           | 插件状态管理 (NEW) |
+| `@vanblog/shared/plugin`    | Plugin API 接口          | 插件类型定义 (NEW) |
 
 ### 前端使用示例
 
@@ -296,6 +331,74 @@ await db.insert($User).values({ ... });
 // 查询数据
 const users = await db.select().from($User);
 ```
+
+---
+
+## 插件系统使用指引
+
+### 函数式 Plugin API（推荐）
+
+适用于轻量级插件（无需 HTTP 路由、依赖注入）：
+
+```typescript
+// plugins/my-plugin/index.ts
+import type { PluginAPI } from '@vanblog/shared/plugin';
+
+export default (api: PluginAPI) => {
+  // 读取配置
+  const enabled = api.config.enabled as boolean;
+  if (!enabled) return;
+
+  // 注册 Filter Hook（修改数据）
+  api.filter('article|beforeCreate', (article) => {
+    article.tags.push('auto-tag');
+    return article;
+  });
+
+  // 注册 Action Hook（副作用）
+  api.action('article|afterCreate', async (article) => {
+    api.log.info('New article:', article.title);
+    await sendNotification(article);
+  });
+
+  // 注册 Shortcode
+  api.shortcode('highlight', (attrs, content) => {
+    const color = attrs.color || 'yellow';
+    return `<mark style="background: ${color}">${content}</mark>`;
+  });
+
+  // 暴露数据给前端
+  api.provide('myData', { count: 42 });
+
+  // 响应式存储
+  const counter = api.store('counter', 0);
+  counter.value += 1;
+};
+```
+
+### 对象式插件（复杂插件）
+
+适用于包含 Controller/Service 的复杂插件（详见 `packages/server-ng/docs/PLUGIN_DEVELOPMENT.md`）：
+
+```typescript
+import type { Plugin } from '@vanblog/server-ng';
+
+const plugin: Plugin = {
+  id: 'my-complex-plugin',
+  name: 'My Complex Plugin',
+  version: '1.0.0',
+  module: MyPluginModule, // NestJS Module
+  hooks: { ... },
+};
+
+export default plugin;
+```
+
+### 插件文档
+
+- **开发指南**: [packages/server-ng/docs/PLUGIN_DEVELOPMENT.md](./packages/server-ng/docs/PLUGIN_DEVELOPMENT.md)
+- **复杂插件迁移**: [packages/server-ng/docs/PLUGIN_MIGRATION_COMPLEX.md](./packages/server-ng/docs/PLUGIN_MIGRATION_COMPLEX.md)
+- **内置插件示例**: `packages/server-ng/plugins/`
 
 ---
 
@@ -325,6 +428,7 @@ const users = await db.select().from($User);
 5. **文档同步更新**：
    - 更新模块级 CLAUDE.md
    - 更新 API 文档（Swagger/OpenAPI）
+   - 更新 `.claude/index.json`
 
 ### 常见任务
 
@@ -348,6 +452,14 @@ const users = await db.select().from($User);
 2. 更新 admin 或 website 组件
 3. 测试响应式布局与国际化
 
+#### 开发插件
+
+1. 运行 `pnpm plugin:create my-plugin`
+2. 编辑 `plugins/my-plugin/index.ts`（函数式 API）
+3. 配置 `package.json` 的 `vanblog.config`
+4. 编写测试 `index.spec.ts`
+5. 启动 server-ng 验证插件加载
+
 ---
 
 ## 关键配置文件
@@ -362,6 +474,7 @@ const users = await db.select().from($User);
 | `packages/server-ng/vitest.config.ts`  | Vitest 配置          |
 | `packages/admin/vite.config.ts`        | Admin Vite 配置      |
 | `packages/website/next.config.js`      | Website Next.js 配置 |
+| `.claude/index.json`                   | 架构师扫描索引       |
 
 ---
 
@@ -372,3 +485,4 @@ const users = await db.select().from($User);
 - [NestJS 文档](https://nestjs.com/)
 - [Next.js 15 文档](https://nextjs.org/docs)
 - [React 19 文档](https://react.dev/)
+- [插件开发指南](./packages/server-ng/docs/PLUGIN_DEVELOPMENT.md)

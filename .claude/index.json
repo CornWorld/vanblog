@@ -1,14 +1,16 @@
 {
   "metadata": {
-    "timestamp": "2025-12-09T02:50:35+08:00",
-    "version": "1.1.0",
+    "timestamp": "2025-12-17T21:06:47+08:00",
+    "version": "1.2.0",
     "project": "VanBlog",
     "description": "VanBlog 是一个现代化的个人博客系统，包含管理后台、公开网站和 API 服务器",
-    "repository": "https://github.com/CornWorld/vanblog"
+    "repository": "https://github.com/CornWorld/vanblog",
+    "previousScan": "2025-12-09T02:50:35+08:00",
+    "scanType": "增量更新 + 插件系统深度扫描"
   },
   "rootDocumentation": {
     "path": "CLAUDE.md",
-    "lastUpdated": "2025-12-09T02:50:35+08:00",
+    "lastUpdated": "2025-12-17T21:06:47+08:00",
     "sections": [
       "项目愿景",
       "架构总览",
@@ -18,7 +20,8 @@
       "测试策略",
       "编码规范",
       "Shared Package 使用指引",
-      "AI 使用指引"
+      "AI 使用指引",
+      "变更记录"
     ]
   },
   "modules": [
@@ -47,13 +50,44 @@
         "媒体文件上传与处理",
         "访客统计与分析",
         "RSS/Sitemap 生成",
-        "插件系统（6 个内置插件）",
-        "数据库备份与恢复"
+        "插件系统（8 个内置插件 + 函数式 Plugin API）",
+        "数据库备份与恢复",
+        "Shortcode 系统（插件可注册短代码）"
       ],
       "apiEndpoints": {
         "swagger": "/api/docs",
         "healthCheck": "/api/v2/health",
         "metrics": "/api/v2/metrics"
+      },
+      "newInThisScan": {
+        "pluginAPI": {
+          "type": "Functional API",
+          "file": "packages/shared/src/plugin/plugin-api.interface.ts",
+          "features": [
+            "函数式插件 API (api => void)",
+            "Filter & Action Hooks",
+            "Shortcode 注册",
+            "响应式存储 (api.store)",
+            "公共数据暴露 (api.provide)",
+            "配置监听 (api.onConfigChange)",
+            "生命周期钩子 (onActivate/onDeactivate)"
+          ],
+          "documentation": "packages/server-ng/docs/PLUGIN_DEVELOPMENT.md"
+        },
+        "shortcodeModule": {
+          "path": "src/modules/shortcode",
+          "description": "Shortcode 解析与渲染系统",
+          "features": [
+            "支持属性 [shortcode attr=\"value\"]内容[/shortcode]",
+            "自闭合 Shortcode [shortcode/]",
+            "插件注册 Shortcode",
+            "正则解析 + 递归渲染"
+          ]
+        },
+        "pluginDocumentation": {
+          "mainGuide": "packages/server-ng/docs/PLUGIN_DEVELOPMENT.md",
+          "complexMigration": "packages/server-ng/docs/PLUGIN_MIGRATION_COMPLEX.md"
+        }
       },
       "plugins": [
         {
@@ -65,7 +99,8 @@
             "article|afterUpdate",
             "article|afterDelete",
             "setting|afterUpdate"
-          ]
+          ],
+          "readme": "packages/server-ng/plugins/rss-plugin/README.md"
         },
         {
           "name": "rewards-plugin",
@@ -100,6 +135,20 @@
           "name": "social-links-plugin",
           "description": "社交链接管理",
           "features": ["CRUD API", "Zod Schema 验证", "插件注册表集成"]
+        },
+        {
+          "name": "book-manager-plugin",
+          "description": "书籍管理插件 (NEW)",
+          "status": "active",
+          "features": ["书籍 CRUD", "阅读状态管理", "Bootstrap 数据暴露"],
+          "readme": "packages/server-ng/plugins/book-manager-plugin/README.md"
+        },
+        {
+          "name": "read-time-plugin",
+          "description": "阅读时间统计插件 (NEW)",
+          "status": "active",
+          "features": ["自动计算阅读时间", "Filter Hook (article|beforeCreate/Update)"],
+          "readme": "packages/server-ng/plugins/read-time-plugin/README.md"
         }
       ],
       "testing": {
@@ -137,14 +186,28 @@
         {
           "name": "PluginModule",
           "path": "src/modules/plugin",
-          "description": "插件加载、钩子系统",
-          "testFiles": 4
+          "description": "插件加载、钩子系统、函数式 API",
+          "testFiles": 4,
+          "newServices": [
+            "plugin-api.service.ts (Plugin API 适配器)",
+            "plugin-config.service.ts (配置管理)",
+            "plugin-http-registry.service.ts (HTTP 路由注册)",
+            "plugin-service-registry.service.ts (服务注册)",
+            "signal.service.ts (响应式信号系统)"
+          ]
         },
         {
           "name": "AnalyticsModule",
           "path": "src/modules/analytics",
           "description": "访客统计、ECharts 格式化、第三方集成",
           "testFiles": 4
+        },
+        {
+          "name": "ShortcodeModule",
+          "path": "src/modules/shortcode",
+          "description": "Shortcode 解析与渲染 (NEW)",
+          "testFiles": 1,
+          "features": ["解析 [shortcode] 语法", "插件注册 Shortcode", "递归渲染"]
         }
       ],
       "coverage": {
@@ -152,11 +215,13 @@
         "criticalPaths": [
           "src/main.ts",
           "src/app.module.ts",
-          "src/modules/（21 个功能模块）",
+          "src/modules/（21 个功能模块 + shortcode）",
           "src/core/（filters, interceptors, guards, middlewares）",
           "src/shared/（services, utils, cache）",
-          "plugins/（6 个内置插件）",
-          "test/（测试工具与 E2E 测试）"
+          "plugins/（8 个内置插件）",
+          "test/（测试工具与 E2E 测试）",
+          "docs/PLUGIN_DEVELOPMENT.md (NEW)",
+          "docs/PLUGIN_MIGRATION_COMPLEX.md (NEW)"
         ],
         "gaps": []
       }
@@ -188,8 +253,19 @@
         "系统设置",
         "数据统计与分析",
         "Markdown 编辑器（Bytemd + Toast UI）",
-        "国际化支持"
+        "国际化支持",
+        "插件管理页面 (NEW)"
       ],
+      "newInThisScan": {
+        "pluginManagement": {
+          "file": "src/pages/SystemConfig/tabs/Plugin.tsx",
+          "features": ["插件列表展示", "配置编辑", "启用/禁用插件"]
+        },
+        "hooks": {
+          "file": "src/hooks/",
+          "examples": ["usePluginData (获取插件公共数据)"]
+        }
+      },
       "routing": {
         "basePath": "/admin",
         "proxyTarget": "http://localhost:3050"
@@ -202,7 +278,13 @@
       },
       "coverage": {
         "scannedFiles": 200,
-        "criticalPaths": ["src/main.jsx", "src/pages/", "src/components/", "src/layouts/"],
+        "criticalPaths": [
+          "src/main.jsx",
+          "src/pages/",
+          "src/components/",
+          "src/layouts/",
+          "src/hooks/ (NEW)"
+        ],
         "gaps": []
       }
     },
@@ -275,14 +357,28 @@
         "./type": "纯类型（0 字节 JS）",
         "./runtime": "Zod schemas + Drizzle 表",
         "./contracts": "ts-rest 契约",
-        "./drizzle": "Drizzle 工具 + Schema"
+        "./drizzle": "Drizzle 工具 + Schema",
+        "./signals": "响应式信号系统 (NEW)",
+        "./plugin": "Plugin API 接口 (NEW)"
+      },
+      "newInThisScan": {
+        "pluginAPI": {
+          "file": "src/plugin/plugin-api.interface.ts",
+          "description": "函数式 Plugin API 接口定义"
+        },
+        "signals": {
+          "file": "src/signals/",
+          "description": "响应式信号系统（用于插件状态管理）"
+        }
       },
       "features": [
         "Drizzle ORM 表定义",
         "Zod Schema 定义",
         "ts-rest 契约定义",
         "纯类型导出",
-        "通用工具函数"
+        "通用工具函数",
+        "Plugin API 类型 (NEW)",
+        "响应式信号 (NEW)"
       ],
       "contracts": [
         "authContract",
@@ -306,7 +402,9 @@
           "src/contracts/",
           "src/drizzle/",
           "src/runtime/",
-          "src/type/"
+          "src/type/",
+          "src/plugin/ (NEW)",
+          "src/signals/ (NEW)"
         ],
         "gaps": []
       }
@@ -408,34 +506,32 @@
     "deprecatedModules": 1,
     "maintenanceModules": 2,
     "totalScannedFiles": 986,
-    "totalCriticalPaths": 35,
+    "totalCriticalPaths": 40,
     "estimatedTotalFiles": 1200,
     "coveragePercentage": 82.2,
     "newInThisScan": {
-      "pluginsDocumented": 6,
-      "testToolsDocumented": 3,
-      "commandsDocumented": 1,
-      "configOptionsDocumented": "50+"
+      "pluginsAdded": 2,
+      "pluginAPIDocumented": true,
+      "shortcodeModuleDocumented": true,
+      "adminPluginPageAdded": true,
+      "sharedExportsAdded": 2
     }
   },
   "recommendations": {
     "nextSteps": [
-      "为 admin 模块补充页面组件详细文档",
-      "为 website 模块补充 ISR 配置详情与 SEO 最佳实践",
-      "创建插件开发指南文档（docs/plugin-development.md）",
-      "创建测试最佳实践文档（docs/testing-guide.md）"
+      "为新增插件（book-manager, read-time）添加单元测试",
+      "补充 admin 插件管理页面的详细文档",
+      "创建 Shortcode 开发指南（独立文档）",
+      "为响应式信号系统添加使用示例"
     ],
     "gaps": [],
-    "priorityAreas": [
-      "admin: 页面组件文档",
-      "website: ISR 与 SEO 优化文档",
-      "shared: 契约定义最佳实践"
-    ],
+    "priorityAreas": ["插件系统测试覆盖率提升", "Shortcode 文档完善", "Plugin API 最佳实践示例"],
     "completed": [
-      "server-ng: 插件系统详细文档（6 个插件）",
-      "server-ng: 测试策略与工具（120+ 测试文件）",
-      "cli: 命令详细说明与使用示例",
-      "waline: 完整配置选项与部署指南"
+      "server-ng: 插件系统函数式 API 文档",
+      "server-ng: Shortcode 模块集成",
+      "server-ng: 2 个新插件（book-manager, read-time）",
+      "admin: 插件管理页面",
+      "shared: Plugin API 接口 + 响应式信号"
     ]
   },
   "ignoredPatterns": [
@@ -461,5 +557,5 @@
     "*.gz"
   ],
   "truncated": false,
-  "completionReason": "深度补充扫描完成：插件系统、测试策略、CLI 工具、Waline 配置已详细记录"
+  "completionReason": "增量更新完成：函数式 Plugin API、Shortcode 系统、新增插件、admin 插件管理页面已记录"
 }
