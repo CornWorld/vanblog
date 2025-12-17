@@ -17,6 +17,7 @@
     "docs:build": "pnpm run -r docs:build",
     "docs:dev": "pnpm run -r docs:dev",
     "kill": "sudo bash scripts/kill-all.sh",
+    "plugin:create": "node scripts/create-plugin.js",
     "release:unified": "node src/version/index.js",
     "release:fork": "node src/version/index.js --type fork",
     "release:standard": "node src/version/index.js --type standard",
