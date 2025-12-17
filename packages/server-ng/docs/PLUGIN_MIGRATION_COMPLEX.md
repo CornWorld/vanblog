@@ -1,23 +1,11 @@
 # 复杂插件迁移指南
 
-> **⚠️ 文档状态**: 本文档基于 v1.0 设计，结论仍然有效但不完整。
->
-> **v1.0 结论**（正确）：
-> - ✅ 复杂插件（包含 Controller/Service）不应强制迁移到函数式 API
-> - ✅ 保持对象式接口是最佳选择
->
-> **v2.0 补充**（新增）：
-> - ✅ v2.0 增强设计提供了更好的解决方案
-> - ✅ 增强 PluginAPI 支持数据库、DI、HTTP 路由
-> - ✅ 复杂插件可选择升级到 v2.0 增强 API
->
-> 详见：[增强插件系统设计方案](../../../.claude/plan/增强插件系统设计方案.md)
-
----
-
 **文档版本**: 1.0.0
-**最后更新**: 2025-12-13
+**最后更新**: 2025-12-17
 **适用范围**: 包含 NestJS Controller/Service 的复杂插件
+
+> **注意**: 函数式 Plugin API 主要针对轻量级插件。对于需要 HTTP 路由、依赖注入、
+> 复杂业务逻辑的插件，建议保持对象式接口（Object Plugin）。
 
 ---
 
@@ -48,6 +36,7 @@
 ### 为什么需要特殊处理？
 
 函数式 Plugin API 设计目标是**简化轻量级插件**的开发，主要支持：
+
 - Filter hooks（数据转换）
 - Action hooks（副作用）
 - Shortcode（内容扩展）
@@ -55,6 +44,7 @@
 - 响应式存储
 
 但**不直接支持**：
+
 - ❌ HTTP 路由注册
 - ❌ NestJS 依赖注入
 - ❌ Controller/Service 架构
@@ -65,11 +55,11 @@
 
 ### 当前 VanBlog 复杂插件清单
 
-| 插件 | Controller | Service | Contract | 复杂度 |
-|------|-----------|---------|----------|--------|
-| **rss-plugin** | ✅ | ✅ | ❌ | 高 |
-| **rewards-plugin** | ✅ | ✅ | ✅ | 高 |
-| **email-notification-plugin** | ❌ | ✅ | ❌ | 中 |
+| 插件                          | Controller | Service | Contract | 复杂度 |
+| ----------------------------- | ---------- | ------- | -------- | ------ |
+| **rss-plugin**                | ✅         | ✅      | ❌       | 高     |
+| **rewards-plugin**            | ✅         | ✅      | ✅       | 高     |
+| **email-notification-plugin** | ❌         | ✅      | ❌       | 中     |
 
 ### 复杂插件特征识别
 
@@ -89,16 +79,19 @@
 **适用场景**: 所有复杂插件（rss, rewards, email-notification）
 
 **优点**:
+
 - ✅ 零迁移成本
 - ✅ 保持现有架构稳定
 - ✅ 不破坏现有功能
 - ✅ 继续使用 NestJS 最佳实践
 
 **缺点**:
+
 - ⚠️ 无法使用新的函数式 API 特性
 - ⚠️ 维护两套插件体系
 
 **决策建议**:
+
 > 如果插件功能稳定，无需频繁修改，**强烈推荐保留现状**。
 
 ---
@@ -110,11 +103,13 @@
 **实现方式**: 插件同时导出 NestJS Module 和函数式入口
 
 **优点**:
+
 - ✅ 保留 Controller/Service（HTTP 路由）
 - ✅ 可使用函数式 Hook（如 `article.afterCreate`）
 - ✅ 灵活性高
 
 **缺点**:
+
 - ⚠️ 架构复杂度增加
 - ⚠️ 需要维护两套代码
 - ⚠️ 可能导致逻辑重复
@@ -178,6 +173,7 @@ export default {
 ```
 
 **决策建议**:
+
 > 仅当插件**既需要 HTTP 路由，又需要 Hook 功能**时使用混合模式。
 
 ---
@@ -193,6 +189,7 @@ export default {
 3. **代码重构成本高**: 需要重写所有业务逻辑
 
 **结论**:
+
 > **不要**尝试将复杂插件完全迁移到函数式 API。
 
 ---
@@ -212,14 +209,14 @@ export default {
 
 /**
  * RSS Plugin
- * 
+ *
  * 【复杂插件 - 保留对象式接口】
- * 
+ *
  * 原因：
  * - 包含 NestJS Controller（HTTP 路由）
  * - 使用 NestJS 依赖注入系统
  * - 功能稳定，无需迁移
- * 
+ *
  * 迁移策略：保留现状
  */
 
@@ -230,15 +227,15 @@ const plugin: Plugin = {
   id: 'rss-plugin',
   name: 'RSS Plugin',
   version: '2.0.0',
-  
+
   async init(context) {
     // 现有初始化逻辑
   },
-  
+
   async destroy(context) {
     // 现有销毁逻辑
   },
-  
+
   hooks: {
     // 现有钩子定义
   },
@@ -340,11 +337,13 @@ export default {
 ### 混合模式注意事项
 
 ⚠️ **服务实例问题**:
+
 - NestJS Module 中的 Service 由 NestJS DI 管理
 - 函数式 Hook 中的 Service 是手动创建的单例
 - **可能导致状态不一致**
 
 💡 **解决方案**:
+
 1. 确保 Service 是无状态的（Stateless）
 2. 或者在 Module 中导出 Service，在 Hook 中通过依赖注入获取
 
@@ -382,6 +381,7 @@ export default {
 ### 示例 1: rss-plugin（保留现状）
 
 **当前架构**:
+
 - RssController（`/rss/feed.xml` 等路由）
 - RssService（RSS 生成逻辑）
 - Hook: `article|afterCreate`（触发 RSS 重新生成）
@@ -389,6 +389,7 @@ export default {
 **迁移决策**: **保留现状** ⭐
 
 **理由**:
+
 1. ✅ 功能稳定，很少修改
 2. ✅ HTTP 路由是核心功能，无法用函数式 API 替代
 3. ✅ 现有架构已经很好
@@ -400,6 +401,7 @@ export default {
 ### 示例 2: rewards-plugin（保留现状）
 
 **当前架构**:
+
 - RewardController（CRUD API）
 - RewardService（奖励管理逻辑）
 - ts-rest Contract（类型安全 API）
@@ -408,6 +410,7 @@ export default {
 **迁移决策**: **保留现状** ⭐
 
 **理由**:
+
 1. ✅ 包含完整的 CRUD API
 2. ✅ 使用 ts-rest Contract（NestJS 集成）
 3. ✅ 架构复杂，迁移成本高
@@ -419,12 +422,14 @@ export default {
 ### 示例 3: email-notification-plugin（可选迁移）
 
 **当前架构**:
+
 - EmailNotificationService（邮件发送逻辑）
 - Hook: `article|afterCreate`（发送通知）
 
 **迁移决策**: **可选择完全迁移** 🤔
 
 **理由**:
+
 1. ⚠️ 无 Controller，仅使用 Service
 2. ⚠️ Hook 逻辑简单（发送邮件）
 3. ✅ 可以迁移到函数式 API
@@ -503,9 +508,9 @@ export default (api: PluginAPI) => {
 在 `PLUGIN_DEVELOPMENT.md` 中添加以下内容：
 
 > ## 复杂插件开发
-> 
+>
 > 如果你的插件需要注册 HTTP 路由或使用 NestJS 依赖注入，请继续使用**对象式插件接口**。
-> 
+>
 > 详见：[复杂插件迁移指南](./PLUGIN_MIGRATION_COMPLEX.md)
 
 ---

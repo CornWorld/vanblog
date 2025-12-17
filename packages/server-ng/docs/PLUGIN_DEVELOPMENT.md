@@ -1,17 +1,10 @@
 # VanBlog 插件开发指南
 
-> **⚠️ 文档状态**: 本文档基于 v1.0 Plugin API，正在更新以支持 v2.0 增强设计。
->
-> **v2.0 新特性**（开发中）：
-> - ✅ 数据库访问（`api.db`）
-> - ✅ 依赖注入（`api.inject()`）
-> - ✅ HTTP 路由注册（`api.http`）
-> - ✅ 声明式资源注册（学习 WordPress）
-> - ✅ 插件间通信（`api.exposeAPI()`）
->
-> **v1.0 功能仍然完全支持**（向后兼容）。
->
-> 详见：[增强插件系统设计方案](../../../.claude/plan/增强插件系统设计方案.md)
+**文档版本**: 1.0.0
+**最后更新**: 2025-12-17
+**Plugin API 版本**: Functional API
+
+> 本文档描述了 VanBlog 的函数式插件 API，提供简洁、类型安全的插件开发体验。
 
 ---
 
@@ -44,6 +37,7 @@ pnpm plugin:create my-awesome-plugin
 ```
 
 CLI 会提示你输入：
+
 - 插件名称（kebab-case，如 `my-plugin`）
 - 插件描述
 - 作者
@@ -116,13 +110,13 @@ export default (api: PluginAPI) => {
 
 ### 配置 Schema 字段类型
 
-| 类型 | 描述 | 示例默认值 |
-|------|------|-----------|
-| `boolean` | 布尔值 | `true` |
-| `string` | 字符串 | `"default value"` |
-| `number` | 数字 | `42` |
-| `array` | 数组 | `["item1", "item2"]` |
-| `object` | 对象 | `{ "key": "value" }` |
+| 类型      | 描述   | 示例默认值           |
+| --------- | ------ | -------------------- |
+| `boolean` | 布尔值 | `true`               |
+| `string`  | 字符串 | `"default value"`    |
+| `number`  | 数字   | `42`                 |
+| `array`   | 数组   | `["item1", "item2"]` |
+| `object`  | 对象   | `{ "key": "value" }` |
 
 ### 配置字段属性
 
@@ -130,11 +124,11 @@ export default (api: PluginAPI) => {
 interface PluginConfigField {
   type: 'boolean' | 'string' | 'number' | 'array' | 'object';
   default?: any;
-  title?: string;           // 显示名称
-  description?: string;     // 描述文本
-  enum?: any[];             // 枚举值（用于下拉选择）
-  minimum?: number;         // 最小值（number 类型）
-  maximum?: number;         // 最大值（number 类型）
+  title?: string; // 显示名称
+  description?: string; // 描述文本
+  enum?: any[]; // 枚举值（用于下拉选择）
+  minimum?: number; // 最小值（number 类型）
+  maximum?: number; // 最大值（number 类型）
 }
 ```
 
@@ -147,12 +141,12 @@ interface PluginConfigField {
 ```typescript
 interface PluginAPI {
   // 插件标识
-  id: string;           // 插件 ID（package.json 的 name）
-  version: string;      // 插件版本
-  dir: string;          // 插件目录绝对路径
+  id: string; // 插件 ID（package.json 的 name）
+  version: string; // 插件版本
+  dir: string; // 插件目录绝对路径
 
   // 配置
-  config: Record<string, unknown>;  // 当前配置（已合并 DB、ENV、默认值）
+  config: Record<string, unknown>; // 当前配置（已合并 DB、ENV、默认值）
 
   // 日志
   log: Logger;
@@ -199,21 +193,22 @@ VanBlog 提供两种类型的 Hook：
 **用途**：修改数据后返回。
 
 **签名**：
+
 ```typescript
 api.filter(hookName: string, handler: (data: T) => T | Promise<T>): void;
 ```
 
 **可用 Hook**：
 
-| Hook 名称 | 触发时机 | 参数类型 | 返回类型 |
-|-----------|---------|---------|---------|
-| `article\|beforeCreate` | 文章创建前 | `Article` | `Article` |
-| `article\|afterCreate` | 文章创建后（只读） | `Article` | `Article` |
-| `article\|beforeUpdate` | 文章更新前 | `Article` | `Article` |
-| `article\|afterUpdate` | 文章更新后（只读） | `Article` | `Article` |
-| `article\|beforeDelete` | 文章删除前 | `{ id: number }` | `{ id: number }` |
-| `markdown\|render` | Markdown 渲染前 | `string` | `string` |
-| `content\|sanitize` | 内容清理 | `string` | `string` |
+| Hook 名称               | 触发时机           | 参数类型         | 返回类型         |
+| ----------------------- | ------------------ | ---------------- | ---------------- |
+| `article\|beforeCreate` | 文章创建前         | `Article`        | `Article`        |
+| `article\|afterCreate`  | 文章创建后（只读） | `Article`        | `Article`        |
+| `article\|beforeUpdate` | 文章更新前         | `Article`        | `Article`        |
+| `article\|afterUpdate`  | 文章更新后（只读） | `Article`        | `Article`        |
+| `article\|beforeDelete` | 文章删除前         | `{ id: number }` | `{ id: number }` |
+| `markdown\|render`      | Markdown 渲染前    | `string`         | `string`         |
+| `content\|sanitize`     | 内容清理           | `string`         | `string`         |
 
 **示例**：
 
@@ -239,20 +234,21 @@ api.filter('markdown|render', (content) => {
 **用途**：执行副作用（发送通知、记录日志等），不返回值。
 
 **签名**：
+
 ```typescript
 api.action(hookName: string, handler: (data: T) => void | Promise<void>): void;
 ```
 
 **可用 Hook**：
 
-| Hook 名称 | 触发时机 | 参数类型 |
-|-----------|---------|---------|
-| `article\|afterCreate` | 文章创建后 | `Article` |
-| `article\|afterUpdate` | 文章更新后 | `Article` |
-| `article\|afterDelete` | 文章删除后 | `{ id: number }` |
-| `comment\|afterCreate` | 评论创建后 | `Comment` |
-| `server\|startup` | 服务器启动时 | `void` |
-| `server\|shutdown` | 服务器关闭时 | `void` |
+| Hook 名称              | 触发时机     | 参数类型         |
+| ---------------------- | ------------ | ---------------- |
+| `article\|afterCreate` | 文章创建后   | `Article`        |
+| `article\|afterUpdate` | 文章更新后   | `Article`        |
+| `article\|afterDelete` | 文章删除后   | `{ id: number }` |
+| `comment\|afterCreate` | 评论创建后   | `Comment`        |
+| `server\|startup`      | 服务器启动时 | `void`           |
+| `server\|shutdown`     | 服务器关闭时 | `void`           |
 
 **示例**：
 
@@ -282,6 +278,7 @@ api.action('server|startup', async () => {
 ### 注册 Shortcode
 
 **签名**：
+
 ```typescript
 api.shortcode(
   name: string,
@@ -290,6 +287,7 @@ api.shortcode(
 ```
 
 **参数**：
+
 - `name`: Shortcode 名称
 - `handler`: 处理函数
   - `attrs`: 属性对象
@@ -379,10 +377,10 @@ export default (api: PluginAPI) => {
 
 配置项 `camelCase` 自动转换为 `SNAKE_CASE` 环境变量：
 
-| 配置项 | 环境变量 |
-|--------|---------|
-| `enabled` | `PLUGIN_MY_PLUGIN_ENABLED` |
-| `apiKey` | `PLUGIN_MY_PLUGIN_API_KEY` |
+| 配置项       | 环境变量                       |
+| ------------ | ------------------------------ |
+| `enabled`    | `PLUGIN_MY_PLUGIN_ENABLED`     |
+| `apiKey`     | `PLUGIN_MY_PLUGIN_API_KEY`     |
 | `maxRetries` | `PLUGIN_MY_PLUGIN_MAX_RETRIES` |
 
 **环境变量示例**：
@@ -403,7 +401,7 @@ api.onConfigChange('apiKey', (newValue) => {
 });
 
 // 监听多个配置
-['enabled', 'apiKey'].forEach(key => {
+['enabled', 'apiKey'].forEach((key) => {
   api.onConfigChange(key, (newValue) => {
     api.log.info(`${key} changed to:`, newValue);
   });
@@ -452,7 +450,9 @@ function MyComponent() {
     <div>
       <h2>{data.title}</h2>
       <ul>
-        {data.items.map(item => <li key={item}>{item}</li>)}
+        {data.items.map((item) => (
+          <li key={item}>{item}</li>
+        ))}
       </ul>
     </div>
   );
@@ -626,10 +626,7 @@ describe('My Plugin', () => {
   it('should register hooks when enabled', () => {
     plugin(mockAPI as PluginAPI);
 
-    expect(mockAPI.filter).toHaveBeenCalledWith(
-      'article|beforeCreate',
-      expect.any(Function)
-    );
+    expect(mockAPI.filter).toHaveBeenCalledWith('article|beforeCreate', expect.any(Function));
   });
 
   it('should not register hooks when disabled', () => {
@@ -713,11 +710,7 @@ export default (api: PluginAPI) => {
 ```typescript
 api.action('article|afterCreate', async (article) => {
   // 使用 Promise.all 并行执行
-  await Promise.all([
-    sendNotification(article),
-    updateIndex(article),
-    syncToCloud(article),
-  ]);
+  await Promise.all([sendNotification(article), updateIndex(article), syncToCloud(article)]);
 });
 ```
 
@@ -783,9 +776,7 @@ export default (api: PluginAPI) => {
       stats.value.totalArticles += 1;
     }
     stats.value.totalWords += wordCount;
-    stats.value.averageWords = Math.round(
-      stats.value.totalWords / stats.value.totalArticles
-    );
+    stats.value.averageWords = Math.round(stats.value.totalWords / stats.value.totalArticles);
     stats.value.lastUpdate = new Date().toISOString();
   };
 
@@ -941,6 +932,7 @@ PLUGIN_MY_PLUGIN_ENABLED=false pnpm dev:server
 ### Q1: 插件没有加载？
 
 检查：
+
 1. 插件目录是否在 `packages/server-ng/plugins/`
 2. `package.json` 的 `main` 字段是否正确
 3. 是否有语法错误（查看服务器日志）
@@ -948,6 +940,7 @@ PLUGIN_MY_PLUGIN_ENABLED=false pnpm dev:server
 ### Q2: 配置不生效？
 
 检查：
+
 1. `package.json` 的 `vanblog.config` 是否正确
 2. 环境变量命名是否正确
 3. 数据库配置是否已保存
@@ -955,6 +948,7 @@ PLUGIN_MY_PLUGIN_ENABLED=false pnpm dev:server
 ### Q3: Hook 没有触发？
 
 检查：
+
 1. Hook 名称拼写是否正确
 2. 是否在正确的时机注册（不要在异步回调中注册）
 3. Handler 函数是否正确返回数据（Filter Hook）
@@ -962,6 +956,7 @@ PLUGIN_MY_PLUGIN_ENABLED=false pnpm dev:server
 ### Q4: 前端拿不到数据？
 
 检查：
+
 1. `api.provide()` 是否正确调用
 2. Bootstrap API (`/api/v2/public/bootstrap`) 是否包含数据
 3. `usePluginData` 的插件名称是否正确
@@ -1032,6 +1027,7 @@ export default plugin;
 ### 复杂插件示例
 
 VanBlog 内置的复杂插件：
+
 - **rss-plugin** - RSS 订阅生成（包含 Controller）
 - **rewards-plugin** - 打赏管理（包含 Controller + Service + Contract）
 
@@ -1042,6 +1038,7 @@ VanBlog 内置的复杂插件：
 📖 **[复杂插件迁移指南](./PLUGIN_MIGRATION_COMPLEX.md)**
 
 该指南包含：
+
 - 复杂插件识别方法
 - 迁移策略对比（保留现状 vs 混合模式）
 - 混合模式实现示例
