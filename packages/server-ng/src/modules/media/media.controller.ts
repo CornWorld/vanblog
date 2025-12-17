@@ -18,7 +18,6 @@ import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiOperation, ApiResponse, ApiConsumes, ApiBody } from '@nestjs/swagger';
 import { staticFiles } from '@vanblog/shared/drizzle';
 import { memoryStorage } from 'multer';
-// import { z } from 'zod';
 
 import { normalizeMediaProcessingOverride } from '../../shared/contracts';
 import { Perm } from '../auth/permissions.decorator';

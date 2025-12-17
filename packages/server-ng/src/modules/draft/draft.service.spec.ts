@@ -253,12 +253,6 @@ describe('DraftService', () => {
         updatedAt: new Date(),
       };
 
-      // The draft object returned by findOne will have tags parsed
-      // const mockDraft = {
-      //   ...mockDraftRaw,
-      //   tags: ['publish', 'test'],
-      // };
-
       const mockArticle = {
         id: 100,
         title: 'Draft to Publish',
