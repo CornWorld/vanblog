@@ -13,6 +13,7 @@ import SiteInfo from './tabs/SiteInfo';
 import User from './tabs/User';
 import WalineTab from './tabs/WalineTab';
 import Token from './tabs/Token';
+import Plugin from './tabs/Plugin';
 
 export default function () {
   const { t } = useTranslation();
@@ -23,6 +24,7 @@ export default function () {
     user: <User />,
     img: <ImgTab />,
     waline: <WalineTab />,
+    plugin: <Plugin />,
     caddy: <Caddy />,
     advance: <Advance />,
     migrate: <Migrate />,
@@ -57,6 +59,10 @@ export default function () {
         {
           tab: t('system.tabs.waline'),
           key: 'waline',
+        },
+        {
+          tab: '插件',
+          key: 'plugin',
         },
         {
           tab: t('system.tabs.backup'),
