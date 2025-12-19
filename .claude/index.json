@@ -1,16 +1,16 @@
 {
   "metadata": {
-    "timestamp": "2025-12-17T21:06:47+08:00",
-    "version": "1.2.0",
+    "timestamp": "2025-12-20T01:50:03+08:00",
+    "version": "1.2.1",
     "project": "VanBlog",
     "description": "VanBlog 是一个现代化的个人博客系统，包含管理后台、公开网站和 API 服务器",
     "repository": "https://github.com/CornWorld/vanblog",
-    "previousScan": "2025-12-09T02:50:35+08:00",
-    "scanType": "增量更新 + 插件系统深度扫描"
+    "previousScan": "2025-12-17T21:06:47+08:00",
+    "scanType": "文档同步 + 代码优化验证"
   },
   "rootDocumentation": {
     "path": "CLAUDE.md",
-    "lastUpdated": "2025-12-17T21:06:47+08:00",
+    "lastUpdated": "2025-12-20T01:05:54+08:00",
     "sections": [
       "项目愿景",
       "架构总览",
@@ -60,6 +60,19 @@
         "metrics": "/api/v2/metrics"
       },
       "newInThisScan": {
+        "documentationImprovements": {
+          "shortcodeGuide": "packages/server-ng/docs/SHORTCODE_GUIDE.md",
+          "description": "新增 Shortcode 系统完整指南"
+        },
+        "codeOptimizations": {
+          "removedFiles": ["module.ts", "*.service.ts in plugins"],
+          "testMigration": ".test.ts → .spec.ts",
+          "pluginPackageJson": ["beian", "cat", "social-links", "book-manager", "read-time"]
+        },
+        "eslintConfig": {
+          "file": "packages/server-ng/eslint.config.mjs",
+          "description": "新增 server-ng ESLint 配置"
+        },
         "pluginAPI": {
           "type": "Functional API",
           "file": "packages/shared/src/plugin/plugin-api.interface.ts",
@@ -514,22 +527,35 @@
       "pluginAPIDocumented": true,
       "shortcodeModuleDocumented": true,
       "adminPluginPageAdded": true,
-      "sharedExportsAdded": 2
+      "sharedExportsAdded": 2,
+      "codeOptimizations": {
+        "pluginMigration": "所有插件迁移至函数式 API",
+        "testStandardization": "测试文件命名标准化 (.spec.ts)",
+        "eslintAdded": "server-ng ESLint 配置"
+      },
+      "documentationAdded": {
+        "shortcodeGuide": true,
+        "pluginPackageJson": 5
+      }
     }
   },
   "recommendations": {
     "nextSteps": [
-      "为新增插件（book-manager, read-time）添加单元测试",
-      "补充 admin 插件管理页面的详细文档",
-      "创建 Shortcode 开发指南（独立文档）",
-      "为响应式信号系统添加使用示例"
+      "为 Shortcode 系统添加更多内置示例",
+      "完善插件脚手架工具的交互式体验",
+      "为响应式信号系统添加使用示例",
+      "优化插件管理页面的用户体验"
     ],
     "gaps": [],
     "priorityAreas": ["插件系统测试覆盖率提升", "Shortcode 文档完善", "Plugin API 最佳实践示例"],
     "completed": [
       "server-ng: 插件系统函数式 API 文档",
       "server-ng: Shortcode 模块集成",
+      "server-ng: Shortcode 系统指南文档",
       "server-ng: 2 个新插件（book-manager, read-time）",
+      "server-ng: 所有插件迁移至函数式 API",
+      "server-ng: 测试文件命名标准化",
+      "server-ng: ESLint 配置添加",
       "admin: 插件管理页面",
       "shared: Plugin API 接口 + 响应式信号"
     ]
@@ -557,5 +583,5 @@
     "*.gz"
   ],
   "truncated": false,
-  "completionReason": "增量更新完成：函数式 Plugin API、Shortcode 系统、新增插件、admin 插件管理页面已记录"
+  "completionReason": "文档同步完成：根 CLAUDE.md 已更新（2025-12-20），所有模块文档具备导航面包屑，插件系统优化已记录"
 }

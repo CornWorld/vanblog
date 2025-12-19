@@ -1,10 +1,27 @@
 # CLAUDE.md
 
-**最后更新时间**: 2025-12-17 21:06:47 CST
+**最后更新时间**: 2025-12-20 01:05:54 CST
 
 ---
 
 ## 变更记录 (Changelog)
+
+### 2025-12-20 - 文档完善与代码优化
+
+- **文档完善**：
+  - 完成高优先级文档任务
+  - 移除过时的插件开发笔记并修正误导信息
+  - 新增 Shortcode 系统指南（`packages/server-ng/docs/SHORTCODE_GUIDE.md`）
+
+- **代码优化**：
+  - 移除已注释代码和未使用的导入
+  - 重构测试文件命名（`.test.ts` → `.spec.ts`）
+  - 优化插件测试覆盖率（beian、cat、email-notification、social-links）
+
+- **架构改进**：
+  - 所有插件已迁移至函数式 API（简化结构，移除 `module.ts`、`*.service.ts`）
+  - 插件支持独立 `package.json`（beian、cat、social-links、book-manager、read-time）
+  - 新增 ESLint 配置（`server-ng/eslint.config.mjs`）
 
 ### 2025-12-17 - 插件系统增量更新
 
@@ -44,6 +61,14 @@ VanBlog 是一个现代化的个人博客系统，包含管理后台、公开网
 - ts-rest 驱动的类型安全 API 契约
 - 单一数据源（Single Source of Truth）类型系统
 - 模块化插件架构（8 个内置插件 + 函数式 API）
+  - beian-plugin（备案信息）
+  - book-manager-plugin（书籍管理）
+  - cat-plugin（访客追踪）
+  - email-notification-plugin（邮件通知）
+  - read-time-plugin（阅读时长）
+  - rewards-plugin（打赏）
+  - social-links-plugin（社交链接）
+  - waline-plugin（评论系统集成）
 - Shortcode 系统（插件可注册自定义短代码）
 - 高测试覆盖率（80% 阈值）
 
@@ -223,7 +248,15 @@ pnpm lint --fix             # 自动修复
 pnpm plugin:create my-plugin
 
 # 插件位置：packages/server-ng/plugins/
+# 脚手架工具：scripts/create-plugin.js
 ```
+
+**插件脚手架功能**：
+
+- 自动生成插件目录结构（index.ts、index.spec.ts、package.json、README.md）
+- 支持函数式 API 模板
+- 内置测试用例模板
+- 自动配置 vanblog.config
 
 ---
 
@@ -269,6 +302,21 @@ packages/
 ├── server-ng/
 │   ├── src/
 │   │   ├── modules/          # 功能模块
+│   │   │   ├── plugin/       # 插件管理模块
+│   │   │   │   ├── controllers/       # 插件 API 控制器
+│   │   │   │   │   ├── plugin-http.controller.ts    # 插件 HTTP 路由
+│   │   │   │   │   └── plugins.controller.ts        # 插件管理 API
+│   │   │   │   ├── services/          # 插件服务层
+│   │   │   │   │   ├── plugin-api.service.ts        # 函数式 API 实现
+│   │   │   │   │   ├── plugin-config.service.ts     # 配置管理
+│   │   │   │   │   ├── plugin-http-registry.service.ts  # HTTP 路由注册
+│   │   │   │   │   ├── plugin-service-registry.service.ts  # 服务注册
+│   │   │   │   │   └── signal.service.ts            # 响应式信号
+│   │   │   │   └── utils/             # 工具函数
+│   │   │   │       ├── drizzle-to-sql.util.ts       # Drizzle → SQL 转换
+│   │   │   │       ├── schema-to-table.util.ts      # Schema → Table 转换
+│   │   │   │       └── ts-rest-router.util.ts       # ts-rest 路由工具
+│   │   │   └── shortcode/    # Shortcode 系统
 │   │   ├── core/             # 核心功能（filters, interceptors, guards）
 │   │   ├── config/           # 配置管理
 │   │   ├── database/         # 数据库连接
@@ -276,19 +324,32 @@ packages/
 │   ├── test/                 # 测试文件
 │   ├── plugins/              # 插件目录（8 个内置插件）
 │   └── docs/                 # 模块文档
+│       ├── PLUGIN_DEVELOPMENT.md      # 插件开发指南
+│       ├── PLUGIN_MIGRATION_COMPLEX.md  # 复杂插件迁移
+│       └── SHORTCODE_GUIDE.md         # Shortcode 指南
 ├── shared/
 │   └── src/
 │       ├── contracts/        # ts-rest 契约
 │       ├── runtime/          # Zod Schema + Drizzle 表
 │       ├── type/             # 纯类型导出
 │       ├── drizzle/          # Drizzle 工具
-│       ├── plugin/           # Plugin API 接口 (NEW)
-│       └── signals/          # 响应式信号 (NEW)
+│       ├── plugin/           # Plugin API 接口
+│       │   ├── api.ts        # PluginAPI 类型定义
+│       │   ├── manifest.ts   # 插件清单类型
+│       │   └── index.ts
+│       └── signals/          # 响应式信号
+│           ├── definitions/  # 各模块信号定义
+│           ├── types.ts      # 信号类型
+│           └── index.ts
 └── admin/
     └── src/
         ├── pages/            # 页面组件
+        │   └── SystemConfig/
+        │       └── tabs/
+        │           └── Plugin.tsx   # 插件管理页面 (NEW)
         ├── components/       # 通用组件
-        ├── hooks/            # React Hooks (NEW)
+        ├── hooks/            # React Hooks
+        │   └── usePluginData.ts     # 插件数据 Hook (NEW)
         └── services/         # API 服务
 ```
 
@@ -398,7 +459,9 @@ export default plugin;
 
 - **开发指南**: [packages/server-ng/docs/PLUGIN_DEVELOPMENT.md](./packages/server-ng/docs/PLUGIN_DEVELOPMENT.md)
 - **复杂插件迁移**: [packages/server-ng/docs/PLUGIN_MIGRATION_COMPLEX.md](./packages/server-ng/docs/PLUGIN_MIGRATION_COMPLEX.md)
+- **Shortcode 系统**: [packages/server-ng/docs/SHORTCODE_GUIDE.md](./packages/server-ng/docs/SHORTCODE_GUIDE.md)
 - **内置插件示例**: `packages/server-ng/plugins/`
+- **插件脚手架工具**: `scripts/create-plugin.js`
 
 ---
 
@@ -464,17 +527,19 @@ export default plugin;
 
 ## 关键配置文件
 
-| 文件                                   | 用途                 |
-| -------------------------------------- | -------------------- |
-| `pnpm-workspace.yaml`                  | pnpm workspace 配置  |
-| `tsconfig.base.json`                   | TypeScript 基础配置  |
-| `eslint.config.js`                     | ESLint flat 配置     |
-| `.prettierrc.js`                       | Prettier 配置        |
-| `packages/server-ng/drizzle.config.ts` | Drizzle 配置         |
-| `packages/server-ng/vitest.config.ts`  | Vitest 配置          |
-| `packages/admin/vite.config.ts`        | Admin Vite 配置      |
-| `packages/website/next.config.js`      | Website Next.js 配置 |
-| `.claude/index.json`                   | 架构师扫描索引       |
+| 文件                                   | 用途                  |
+| -------------------------------------- | --------------------- |
+| `pnpm-workspace.yaml`                  | pnpm workspace 配置   |
+| `tsconfig.base.json`                   | TypeScript 基础配置   |
+| `eslint.config.js`                     | ESLint flat 配置      |
+| `packages/server-ng/eslint.config.mjs` | server-ng ESLint 配置 |
+| `.prettierrc.js`                       | Prettier 配置         |
+| `packages/server-ng/drizzle.config.ts` | Drizzle 配置          |
+| `packages/server-ng/vitest.config.ts`  | Vitest 配置           |
+| `packages/admin/vite.config.ts`        | Admin Vite 配置       |
+| `packages/website/next.config.js`      | Website Next.js 配置  |
+| `.claude/index.json`                   | 架构师扫描索引        |
+| `scripts/create-plugin.js`             | 插件脚手架工具        |
 
 ---
 
@@ -486,3 +551,4 @@ export default plugin;
 - [Next.js 15 文档](https://nextjs.org/docs)
 - [React 19 文档](https://react.dev/)
 - [插件开发指南](./packages/server-ng/docs/PLUGIN_DEVELOPMENT.md)
+- [Shortcode 系统指南](./packages/server-ng/docs/SHORTCODE_GUIDE.md)
