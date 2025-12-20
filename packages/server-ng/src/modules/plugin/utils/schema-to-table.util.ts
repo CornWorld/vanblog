@@ -6,10 +6,31 @@
  * 提供从 Zod Schema 动态生成 Drizzle 表定义的功能
  */
 
+import { Logger } from '@nestjs/common';
 import { nowIsoTz } from '@vanblog/shared';
 import { sqliteTable, text, integer, real } from 'drizzle-orm/sqlite-core';
 
 import type { z } from 'zod';
+import type { SQLiteTableWithColumns } from 'drizzle-orm/sqlite-core';
+
+const logger = new Logger('SchemaToTableUtil');
+
+/**
+ * Zod 内部定义类型（用于访问 _def）
+ */
+interface ZodDef {
+  typeName: string;
+  innerType?: z.ZodTypeAny;
+  defaultValue?: () => unknown;
+  shape?: Record<string, z.ZodTypeAny> | (() => Record<string, z.ZodTypeAny>);
+  checks?: Array<{ kind: string; value?: unknown }>;
+  type?: z.ZodTypeAny;
+}
+
+/**
+ * Drizzle Column 类型（简化）
+ */
+type DrizzleColumn = ReturnType<typeof text> | ReturnType<typeof integer> | ReturnType<typeof real>;
 
 /**
  * Zod 类型名称
@@ -32,7 +53,7 @@ type ZodTypeName =
  * 获取 Zod Schema 的类型名称
  */
 function getZodTypeName(schema: z.ZodTypeAny): ZodTypeName {
-  return (schema._def as any).typeName as ZodTypeName;
+  return (schema._def as ZodDef).typeName as ZodTypeName;
 }
 
 /**
@@ -58,15 +79,23 @@ function getZodTypeName(schema: z.ZodTypeAny): ZodTypeName {
  * 获取 Zod Object Schema 的 shape
  * 兼容 Zod 3 (shape 是函数) 和 Zod 4 (shape 是属性)
  */
-function getZodShape(schema: z.ZodObject<any>): Record<string, z.ZodTypeAny> {
-  const def = schema._def as any;
+function getZodShape(schema: z.ZodObject<z.ZodRawShape>): Record<string, z.ZodTypeAny> {
+  const def = schema._def as ZodDef;
   // Zod 3: shape is a function, Zod 4: shape is a property
-  return typeof def.shape === 'function' ? def.shape() : def.shape;
+  return typeof def.shape === 'function' ? def.shape() : (def.shape ?? {});
 }
 
-export function createTableFromSchema(tableName: string, schema: z.ZodObject<any>): any {
+export function createTableFromSchema(
+  tableName: string,
+  schema: z.ZodObject<z.ZodRawShape>,
+): SQLiteTableWithColumns<{
+  name: string;
+  schema: undefined;
+  columns: Record<string, DrizzleColumn>;
+  dialect: 'sqlite';
+}> {
   const shape = getZodShape(schema);
-  const columns: Record<string, any> = {};
+  const columns: Record<string, DrizzleColumn> = {};
 
   for (const [key, fieldSchema] of Object.entries(shape)) {
     const column = zodSchemaToColumn(key, fieldSchema);
@@ -97,24 +126,27 @@ export function createTableFromSchema(tableName: string, schema: z.ZodObject<any
  * @param schema - Zod Schema
  * @returns Drizzle Column 定义
  */
-function zodSchemaToColumn(columnName: string, schema: z.ZodTypeAny): any {
+function zodSchemaToColumn(columnName: string, schema: z.ZodTypeAny): DrizzleColumn | null {
   const typeName = getZodTypeName(schema);
 
   // 处理 Optional、Nullable、Default 包装器
   if (typeName === 'ZodOptional' || typeName === 'ZodNullable') {
-    const innerSchema = (schema._def as any).innerType;
+    const innerSchema = (schema._def as ZodDef).innerType;
+    if (!innerSchema) return null;
     const column = zodSchemaToColumn(columnName, innerSchema);
     // Optional/Nullable 不需要 notNull()
     return column;
   }
 
   if (typeName === 'ZodDefault') {
-    const innerSchema = (schema._def as any).innerType;
-    const defaultValue = (schema._def as any).defaultValue();
+    const def = schema._def as ZodDef;
+    const innerSchema = def.innerType;
+    const defaultValue = def.defaultValue?.();
+    if (!innerSchema) return null;
     const column = zodSchemaToColumn(columnName, innerSchema);
     // 添加默认值
-    if (column) {
-      return column.default(defaultValue);
+    if (column && defaultValue !== undefined) {
+      return column.default(defaultValue) as DrizzleColumn;
     }
     return column;
   }
@@ -127,8 +159,8 @@ function zodSchemaToColumn(columnName: string, schema: z.ZodTypeAny): any {
     case 'ZodNumber': {
       // Zod number 可以是整数或浮点数
       // 检查是否有整数限制
-      const checks = (schema as any)._def.checks || [];
-      const isInteger = checks.some((check: any) => check.kind === 'int');
+      const checks = (schema._def as ZodDef).checks || [];
+      const isInteger = checks.some((check) => check.kind === 'int');
 
       if (isInteger) {
         return integer(columnName).notNull();
@@ -161,7 +193,7 @@ function zodSchemaToColumn(columnName: string, schema: z.ZodTypeAny): any {
 
     default:
       // 未知类型默认为 text
-      console.warn(`未知的 Zod 类型: ${typeName}，使用 text 列`);
+      logger.warn(`未知的 Zod 类型: ${typeName}，使用 text 列`);
       return text(columnName);
   }
 }
@@ -173,7 +205,10 @@ function zodSchemaToColumn(columnName: string, schema: z.ZodTypeAny): any {
  * @param tableName - 表名
  * @returns 表是否存在
  */
-export async function tableExists(db: any, tableName: string): Promise<boolean> {
+export async function tableExists(
+  db: { run: (query: { sql: string; args: unknown[] }) => Promise<{ rows: unknown[] }> },
+  tableName: string,
+): Promise<boolean> {
   try {
     const result = await db.run({
       sql: `SELECT name FROM sqlite_master WHERE type='table' AND name=?`,
@@ -191,7 +226,15 @@ export async function tableExists(db: any, tableName: string): Promise<boolean> 
  * @param db - Drizzle 数据库实例
  * @param table - Drizzle 表定义
  */
-export async function createTableIfNotExists(_db: any, _table: any): Promise<void> {
+export async function createTableIfNotExists(
+  _db: { run: (query: { sql: string; args: unknown[] }) => Promise<unknown> },
+  _table: SQLiteTableWithColumns<{
+    name: string;
+    schema: undefined;
+    columns: Record<string, DrizzleColumn>;
+    dialect: 'sqlite';
+  }>,
+): Promise<void> {
   // Drizzle 会在首次使用时自动创建表
   // 实际实现需要从 Drizzle 表定义生成 CREATE TABLE SQL
   // 在生产环境中，应该使用 drizzle-kit 生成 migration
@@ -203,7 +246,7 @@ export async function createTableIfNotExists(_db: any, _table: any): Promise<voi
  * @param schema - Zod Schema
  * @returns TypeScript 类型字符串（用于代码生成）
  */
-export function zodSchemaToTypeScript(schema: z.ZodObject<any>): string {
+export function zodSchemaToTypeScript(schema: z.ZodObject<z.ZodRawShape>): string {
   const shape = getZodShape(schema);
   const fields: string[] = [];
 
@@ -222,17 +265,17 @@ function zodTypeToTypeScript(schema: z.ZodTypeAny): string {
   const typeName = getZodTypeName(schema);
 
   if (typeName === 'ZodOptional') {
-    const innerType = zodTypeToTypeScript((schema._def as any).innerType);
+    const innerType = zodTypeToTypeScript((schema._def as ZodDef).innerType!);
     return `${innerType} | undefined`;
   }
 
   if (typeName === 'ZodNullable') {
-    const innerType = zodTypeToTypeScript((schema._def as any).innerType);
+    const innerType = zodTypeToTypeScript((schema._def as ZodDef).innerType!);
     return `${innerType} | null`;
   }
 
   if (typeName === 'ZodDefault') {
-    return zodTypeToTypeScript((schema._def as any).innerType);
+    return zodTypeToTypeScript((schema._def as ZodDef).innerType!);
   }
 
   switch (typeName) {
@@ -244,9 +287,10 @@ function zodTypeToTypeScript(schema: z.ZodTypeAny): string {
       return 'boolean';
     case 'ZodDate':
       return 'Date';
-    case 'ZodArray':
-      const itemType = zodTypeToTypeScript((schema._def as any).type);
+    case 'ZodArray': {
+      const itemType = zodTypeToTypeScript((schema._def as ZodDef).type!);
       return `Array<${itemType}>`;
+    }
     case 'ZodObject':
       return 'object';
     case 'ZodEnum':
