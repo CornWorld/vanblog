@@ -1,0 +1,7 @@
+{
+  "$schema": "../config.schema.json",
+  "NODE_ENV": "production",
+  "LOG_LEVEL": "warn",
+  "CORS_ORIGIN": "https://yourdomain.com",
+  "DEMO_MODE": false
+}

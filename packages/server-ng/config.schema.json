@@ -1,0 +1,171 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vanblog.mereith.com/schemas/config.0.54.0-corn.6.json",
+  "version": "0.54.0-corn.6",
+  "environment": "development",
+  "title": "VanBlog 配置",
+  "description": "VanBlog server-ng 的完整配置定义（版本: 0.54.0-corn.6）",
+  "type": "object",
+  "properties": {
+    "PORT": {
+      "default": 3000,
+      "type": "integer",
+      "exclusiveMinimum": 0,
+      "maximum": 65535
+    },
+    "NODE_ENV": {
+      "default": "development",
+      "type": "string",
+      "enum": ["development", "production", "test"]
+    },
+    "API_PREFIX": {
+      "default": "api",
+      "type": "string"
+    },
+    "API_VERSION": {
+      "default": "v2",
+      "type": "string"
+    },
+    "DATABASE_DRIVER": {
+      "default": "local",
+      "type": "string",
+      "enum": ["local", "turso", "d1"]
+    },
+    "DATABASE_URL": {
+      "default": "file:./data/vanblog.db",
+      "type": "string"
+    },
+    "DATABASE_AUTH_TOKEN": {
+      "type": "string"
+    },
+    "DATABASE_FILE_PATH": {
+      "type": "string"
+    },
+    "CLOUDFLARE_ACCOUNT_ID": {
+      "type": "string"
+    },
+    "CLOUDFLARE_DATABASE_ID": {
+      "type": "string"
+    },
+    "CLOUDFLARE_D1_TOKEN": {
+      "type": "string"
+    },
+    "JWT_SECRET": {
+      "type": "string",
+      "minLength": 1
+    },
+    "JWT_EXPIRES_IN": {
+      "default": "7d",
+      "type": "string"
+    },
+    "JWT_REFRESH_SECRET": {
+      "type": "string",
+      "minLength": 1
+    },
+    "JWT_REFRESH_EXPIRES_IN": {
+      "default": "30d",
+      "type": "string"
+    },
+    "CORS_ORIGIN": {
+      "default": "http://localhost:3001,http://localhost:3002",
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      ]
+    },
+    "CORS_CREDENTIALS": {
+      "default": true,
+      "type": "boolean"
+    },
+    "UPLOAD_MAX_FILE_SIZE": {
+      "default": 52428800,
+      "type": "integer",
+      "exclusiveMinimum": 0,
+      "maximum": 9007199254740991
+    },
+    "UPLOAD_DESTINATION": {
+      "default": "./uploads",
+      "type": "string"
+    },
+    "STATIC_PATH": {
+      "default": "/app/static",
+      "type": "string"
+    },
+    "LOG_LEVEL": {
+      "default": "info",
+      "type": "string",
+      "enum": ["error", "warn", "info", "debug", "verbose"]
+    },
+    "LOG_DIR": {
+      "default": "/var/log/vanblog",
+      "type": "string"
+    },
+    "WALINE_DB": {
+      "default": "waline",
+      "type": "string"
+    },
+    "DEMO_MODE": {
+      "default": false,
+      "type": "boolean"
+    },
+    "CODE_RUNNER_PATH": {
+      "default": "/app/codeRunner",
+      "type": "string"
+    },
+    "PLUGIN_RUNNER_PATH": {
+      "default": "/app/pluginRunner",
+      "type": "string"
+    }
+  },
+  "required": [
+    "PORT",
+    "NODE_ENV",
+    "API_PREFIX",
+    "API_VERSION",
+    "DATABASE_DRIVER",
+    "DATABASE_URL",
+    "JWT_SECRET",
+    "JWT_EXPIRES_IN",
+    "JWT_REFRESH_SECRET",
+    "JWT_REFRESH_EXPIRES_IN",
+    "CORS_ORIGIN",
+    "CORS_CREDENTIALS",
+    "UPLOAD_MAX_FILE_SIZE",
+    "UPLOAD_DESTINATION",
+    "STATIC_PATH",
+    "LOG_LEVEL",
+    "LOG_DIR",
+    "WALINE_DB",
+    "DEMO_MODE",
+    "CODE_RUNNER_PATH",
+    "PLUGIN_RUNNER_PATH"
+  ],
+  "additionalProperties": false,
+  "examples": [
+    {
+      "PORT": 3050,
+      "NODE_ENV": "development",
+      "API_PREFIX": "api",
+      "API_VERSION": "v2",
+      "DATABASE_DRIVER": "local",
+      "DATABASE_URL": "file:./data/vanblog.db",
+      "JWT_SECRET": "your-secret-key-at-least-32-characters-long-for-security",
+      "JWT_EXPIRES_IN": "7d",
+      "JWT_REFRESH_SECRET": "your-refresh-secret-at-least-32-characters-long-too",
+      "JWT_REFRESH_EXPIRES_IN": "30d",
+      "CORS_ORIGIN": "http://localhost:3001,http://localhost:3002",
+      "CORS_CREDENTIALS": true,
+      "UPLOAD_MAX_FILE_SIZE": 52428800,
+      "UPLOAD_DESTINATION": "./uploads",
+      "LOG_LEVEL": "info",
+      "DEMO_MODE": false
+    }
+  ]
+}

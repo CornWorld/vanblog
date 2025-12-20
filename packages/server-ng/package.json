@@ -19,8 +19,8 @@
   },
   "homepage": "https://vanblog.mereith.com",
   "scripts": {
-    "dev": "vite",
-    "prebuild": "rimraf dist",
+    "dev": "pnpm config:schema && vite",
+    "prebuild": "rimraf dist && pnpm config:schema",
     "build": "vite build",
     "build:plugins": "vite build --config vite.plugin.config.mts",
     "build:all": "pnpm run build && pnpm run build:plugins",
@@ -40,7 +40,8 @@
     "test:cov": "vitest run --coverage",
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "config:schema": "tsx scripts/generate-config-schema.ts"
   },
   "dependencies": {
     "@libsql/client": "^0.15.10",

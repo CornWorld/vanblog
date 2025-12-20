@@ -38,6 +38,17 @@ yarn-error.log*
 .env.*
 !.env.example
 
+# JSON 配置文件（保留示例文件）
+config/development.json
+config/test.json
+config/local.json
+config/*.local.json
+# 注意：config/default.json 和 config/production.json 作为模板提交
+
+# JSON Schema 文件（自动生成）
+config.v*.schema.json
+# 注意：config.schema.json (latest) 提交到版本控制
+
 # Database
 /data
 /test-data

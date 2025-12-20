@@ -44,5 +44,18 @@
       "command": "typescript.restartTsServer",
       "isLanguage": "typescript"
     }
+  ],
+  // JSON Schema 配置：为配置文件提供智能提示和校验
+  "json.schemas": [
+    {
+      "fileMatch": [
+        "**/config/default.json",
+        "**/config/development.json",
+        "**/config/production.json",
+        "**/config/test.json",
+        "**/packages/server-ng/config.json"
+      ],
+      "url": "./packages/server-ng/config.schema.json"
+    }
   ]
 }
