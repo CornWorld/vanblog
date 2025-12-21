@@ -2,6 +2,7 @@ import { notification } from 'antd';
 import { isLoggedIn, removeAccessToken } from './auth';
 import { ROUTES, withPrefix } from '../router';
 import i18next from 'i18next';
+import { logger } from './logger';
 
 // Use i18next directly instead of the hook in non-component code
 const t = (key) => i18next.t(key);
@@ -154,7 +155,7 @@ const request = async (url, options = {}) => {
 
     // Mock API响应（开发模式）
     if (needMock && mockResponses[url] && !options.skipMock) {
-      console.log('[MOCK] Returning mock data for', url);
+      logger.debug('Returning mock data for', { url });
       return {
         statusCode: 200,
         data: mockResponses[url],
@@ -172,7 +173,7 @@ const request = async (url, options = {}) => {
     try {
       responseData = await response.json();
     } catch (e) {
-      console.error('[DEBUG] Failed to parse JSON response:', e);
+      logger.error('Failed to parse JSON response', e);
       responseData = { message: t('request.message.parse_failed') };
     }
 
@@ -187,17 +188,13 @@ const request = async (url, options = {}) => {
       error.data = responseData;
       error.status = 401;
 
-      console.log('[DEBUG] 401 Unauthorized detected in response:', JSON.stringify(responseData));
-      console.log('[DEBUG] Request URL:', url);
-      console.log(
-        '[DEBUG] Request headers:',
-        JSON.stringify({
-          ...newOptions.headers,
-          Token: newOptions.headers?.Token
-            ? `${newOptions.headers.Token.substring(0, 15)}...`
-            : undefined,
-        }),
-      );
+      logger.debug('401 Unauthorized detected in response', {
+        data: responseData,
+        url,
+        token: newOptions.headers?.Token
+          ? `${newOptions.headers.Token.substring(0, 15)}...`
+          : undefined,
+      });
 
       // 如果调用方要求跳过错误处理，直接抛出错误
       if (skipErrorHandler) {
@@ -215,12 +212,11 @@ const request = async (url, options = {}) => {
   } catch (error) {
     // 开发模式下记录更详细的错误信息
     if (needMock) {
-      console.warn(`[DEV] API error:`, error);
-      console.warn(`[DEV] Details:`, {
+      logger.debug('API error', {
+        error: error.message,
         status: error.response?.status,
         statusText: error.response?.statusText,
         data: error.data,
-        message: error.message,
       });
     }
 

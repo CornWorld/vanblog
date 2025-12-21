@@ -6,6 +6,7 @@ import { getSiteInfo, updateSiteInfo } from '@/services/van-blog/api';
 import { useTab } from '@/services/van-blog/useTab';
 import { ProForm } from '@ant-design/pro-components';
 import { Card, message, Modal } from 'antd';
+import { logger } from '@/utils/logger';
 
 export default function () {
   const { t } = useTranslation();
@@ -40,7 +41,7 @@ export default function () {
             const { data } = await getSiteInfo();
             return data;
           } catch (error) {
-            console.error('Failed to get site info:', error);
+            logger.error('Failed to get site info', error);
             message.error('Failed to load site information');
             return {};
           }
@@ -51,7 +52,7 @@ export default function () {
           try {
             new URL(data.baseUrl);
           } catch (error) {
-            console.error('Invalid base URL:', error);
+            logger.debug('Invalid base URL', error);
             ok = false;
           }
           if (!data.baseUrl) {
@@ -77,7 +78,7 @@ export default function () {
             await updateSiteInfo(data);
             message.success(t('site_info.message.update_success'));
           } catch (error) {
-            console.error('Failed to update site info:', error);
+            logger.error('Failed to update site info', error);
             message.error('Failed to update site information');
           }
         }}
