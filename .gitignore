@@ -73,6 +73,7 @@ typings/
 .env
 .env.test
 .env.local
+.env.*.local
 .env.development.local
 .env.test.local
 .env.production.local
@@ -84,6 +85,8 @@ typings/
 # Next.js build output
 .next
 out
+packages/website/.next/
+packages/website/out/
 
 # Nuxt.js build / generate output
 .nuxt
@@ -118,7 +121,8 @@ dist-ssr
 .vscode/*
 !.vscode/extensions.json
 !.vscode/settings.json
-.idea
+.idea/*
+!.idea/vcs.xml
 .DS_Store
 *.suo
 *.ntvs*
@@ -147,5 +151,8 @@ docs/.vuepress/dist/
 temp.json
 staticFolder
 localBuild.sh
-log
-log/**
+log/
+
+# Build caches (monorepo)
+.turbo/
+.pnpm-store/
