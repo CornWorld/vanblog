@@ -9,7 +9,7 @@ export default ({
   showViewerNum,
   showRecentViewTime,
 }: {
-  // FIXME: Add Article type
+  // TODO: Add Article type from @vanblog/shared/type
   articles: any[];
   showViewerNum: boolean;
   showRecentViewTime: boolean;
@@ -17,7 +17,7 @@ export default ({
   <div>
     {articles.map(({ id, title, viewer = 0, lastVisitedTime }) => (
       <a
-        // FIXME: uaa is not a good name
+        // TODO: Rename 'uaa' class to more semantic name
         className="article-list-item uaa"
         key={id}
         href={`/post/${id}`}

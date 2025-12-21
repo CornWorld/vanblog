@@ -10,7 +10,7 @@ const CUSTOM_CONTAINER_TITLE: Record<string, string> = {
   tip: '提示',
 };
 
-// FIXME: Addd Types
+// TODO: Add proper TypeScript types
 const customContainerPlugin = () => (tree) => {
   visit(tree, (node) => {
     if (

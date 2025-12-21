@@ -7,7 +7,7 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { coldarkDark } from 'react-syntax-highlighter/dist/cjs/styles/prism';
 import clsx from 'clsx';
 
-// FIXME: Addd Types
+// TODO: Add proper TypeScript types
 const codeBlockPlugin = () => (tree) => {
   visit(tree, (node) => {
     if (node.type === 'element' && node.tagName === 'pre') {
