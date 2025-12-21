@@ -364,7 +364,7 @@ export async function getTagPagesProps(currTag: string): Promise<TagPagesProps> 
       curNum: articles.length,
     };
   } catch (err) {
-    console.log(err);
+    logger.error('Error in getTagPagesProps', err);
     return {
       layoutProps: await getLayoutProps(),
       authorCardProps: defaultAuthorCardProps,
@@ -377,7 +377,7 @@ export async function getTagPagesProps(currTag: string): Promise<TagPagesProps> 
 }
 
 export async function getPostPagesProps(curId: string): Promise<PostPagesProps> {
-  console.log(`[getPostPagesProps] Fetching post props for ID: ${curId}`);
+  logger.debug(`Fetching post props for ID: ${curId}`);
 
   try {
     const rawData = await getPublicMeta();
@@ -386,11 +386,11 @@ export async function getPostPagesProps(curId: string): Promise<PostPagesProps> 
     let articleData;
 
     try {
-      console.log(`[getPostPagesProps] Fetching article details for ID: ${curId}`);
+      logger.debug(`Fetching article details for ID: ${curId}`);
       articleData = await getArticleByIdOrPathname(curId);
 
       if (!articleData) {
-        console.error(`[getPostPagesProps] No article data returned for ID: ${curId}`);
+        logger.error(`No article data returned for ID: ${curId}`);
         // Create a default empty article
         articleData = {
           id: 0,
@@ -404,8 +404,8 @@ export async function getPostPagesProps(curId: string): Promise<PostPagesProps> 
           top: 0,
         };
       } else {
-        console.log(
-          `[getPostPagesProps] Successfully fetched article: "${articleData.title}" (ID: ${articleData.id})`,
+        logger.debug(
+          `Successfully fetched article: "${articleData.title}" (ID: ${articleData.id})`,
         );
       }
 
@@ -414,7 +414,7 @@ export async function getPostPagesProps(curId: string): Promise<PostPagesProps> 
         articleData.content = '';
       }
     } catch (e) {
-      console.error(`[getPostPagesProps] Error fetching article with ID ${curId}:`, e);
+      logger.error(`Error fetching article with ID ${curId}`, e);
       // Create a default empty article on error
       articleData = {
         id: 0,
@@ -452,12 +452,10 @@ export async function getPostPagesProps(curId: string): Promise<PostPagesProps> 
       next: next,
     };
 
-    console.log(
-      `[getPostPagesProps] Props prepared successfully for article "${articleData.title}"`,
-    );
+    logger.debug(`Props prepared successfully for article "${articleData.title}"`);
     return result;
   } catch (error) {
-    console.error(`[getPostPagesProps] Failed to get post page props for ID ${curId}:`, error);
+    logger.error(`Failed to get post page props for ID ${curId}`, error);
     throw error;
   }
 }
@@ -476,11 +474,11 @@ export async function getPagePagesProps(curId: string): Promise<PagePagesProps> 
 
   try {
     const data = await getPublicMeta();
-    console.log(data);
+    logger.debug('Public meta fetched', data);
     const layoutProps = getLayoutPropsFromData(data);
-    console.log(layoutProps);
+    logger.debug('Layout props prepared', layoutProps);
     const authorCardProps = getAuthorCardProps(data);
-    console.log(authorCardProps);
+    logger.debug('Author card props prepared', authorCardProps);
 
     let articles = [];
     try {
@@ -493,10 +491,10 @@ export async function getPagePagesProps(curId: string): Promise<PagePagesProps> 
       if (response && response.data) {
         articles = response.data;
       } else {
-        console.warn(`No articles found for page ${curId}, using empty array`);
+        logger.warn(`No articles found for page ${curId}, using empty array`);
       }
     } catch (error) {
-      console.error(`[getPagePagesProps] Failed to fetch articles for page ${curId}:`, error);
+      logger.error(`Failed to fetch articles for page ${curId}`, error);
     }
 
     return {
@@ -506,7 +504,7 @@ export async function getPagePagesProps(curId: string): Promise<PagePagesProps> 
       currPage: parseInt(curId) || 1,
     };
   } catch (error) {
-    console.error(`[getPagePagesProps] Error in getPagePagesProps for page ${curId}:`, error);
+    logger.error(`Error in getPagePagesProps for page ${curId}`, error);
     return defaultReturn;
   }
 }
@@ -533,7 +531,7 @@ export async function getCategoryPagesProps(curCategory: string): Promise<Catego
       curNum: articles.length,
     };
   } catch (err) {
-    console.log(err);
+    logger.error('Error in getCategoryPagesProps', err);
     return {
       layoutProps: await getLayoutProps(),
       authorCardProps: defaultAuthorCardProps,
