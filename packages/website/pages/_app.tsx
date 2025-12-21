@@ -18,6 +18,9 @@ import { getPageview, updatePageview } from '../api/pageView';
 import Head from 'next/head';
 import { appWithTranslation } from 'next-i18next';
 import { PageViewDataContract, normalizePageViewData } from '../types/contracts';
+import { createLogger } from '../utils/logger';
+
+const logger = createLogger('App');
 
 type AppPropsWithPageViewData = AppProps & {
   pageProps: {
@@ -49,21 +52,21 @@ function MyApp({ Component, pageProps }: AppPropsWithPageViewData) {
           const { viewer, visited } = await getPageview(pathname);
           setGlobalState((prev) => ({ ...prev, viewer, visited }));
         } catch (error) {
-          console.error('[App] Failed to get pageview:', error);
+          logger.error('Failed to get pageview:', error);
           // Don't update state on error to keep previous values
         }
       } else {
-        console.log('[更新访客]', reason, pathname);
+        logger.info('更新访客:', reason, pathname);
         try {
           const { viewer, visited } = await updatePageview(pathname);
           setGlobalState((prev) => ({ ...prev, viewer, visited }));
         } catch (error) {
-          console.error('[App] Failed to update pageview:', error);
+          logger.error('Failed to update pageview:', error);
           // Don't update state on error to keep previous values
         }
       }
     } catch (error) {
-      console.error('[App] Error in updateClientPageview:', error);
+      logger.error('Error in updateClientPageview:', error);
       // Prevent the error from affecting the user experience
     }
   }, []);
