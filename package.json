@@ -45,8 +45,8 @@
       "stylelint-config-standard": "^39.0.1",
       "stylelint-order": "^7.0.0",
       "typescript": "^5.8.3",
-      "vite": "^6.2.6",
-      "vitest": "^3.2.3",
+      "vite": "^7.2.4",
+      "vitest": "^4.0.14",
       "dayjs": "^1.11.19",
       "lodash-es": "^4.17.21",
       "axios": "^1.8.4",
@@ -104,8 +104,8 @@
     "tsc-files-workspace": "^2.0.1",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.38.0",
-    "vite": "^6.2.6",
-    "vitest": "^3.2.3"
+    "vite": "^7.2.4",
+    "vitest": "^4.0.14"
   },
   "dependencies": {
     "semver": "^7.7.2"
