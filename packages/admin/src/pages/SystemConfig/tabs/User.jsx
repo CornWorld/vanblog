@@ -8,6 +8,7 @@ import { ProForm, ProFormText, ProTable } from '@ant-design/pro-components';
 import { Button, Card, message, Modal, Space } from 'antd';
 import { useRef } from 'react';
 import { history, useModel } from '@/router';
+import { logger } from '@/utils/logger';
 
 export default function () {
   const { t } = useTranslation();
@@ -90,7 +91,7 @@ export default function () {
               history.push('/');
               message.success(t('user.message.update.success'));
             } catch (error) {
-              console.error('Failed to update user:', error);
+              logger.error('Failed to update user', error);
               message.error('Failed to update user information');
             }
           }}
@@ -183,7 +184,7 @@ export default function () {
                 total: data.length,
               };
             } catch (error) {
-              console.error('Failed to get collaborators:', error);
+              logger.error('Failed to get collaborators', error);
               message.error('Failed to load collaborators');
               return {
                 data: [],

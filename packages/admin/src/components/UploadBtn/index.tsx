@@ -78,9 +78,6 @@ export default function UploadBtn(props: UploadBtnProps) {
       }}
       onChange={(info) => {
         props?.setLoading(true);
-        if (info.file.status !== 'uploading') {
-          // console.log(info.file, info.fileList);
-        }
         if (info.file.status === 'done') {
           props?.setLoading(false);
           props?.onFinish(info.file);

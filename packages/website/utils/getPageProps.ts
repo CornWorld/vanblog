@@ -28,6 +28,7 @@ import { TagPagesProps } from '../pages/tag/[tag]';
 import { getServerPageview, PageViewData } from '../api/pageView';
 import { AuthorCardProps } from '../components/AuthorCard';
 import { normalizePublicMeta } from '../types/contracts';
+import { logger } from './logger';
 import { Article } from '../types/article';
 import { ApiV2Response, PaginatedData } from '../types/api';
 
@@ -94,7 +95,7 @@ async function getPageViewData(): Promise<PageViewData> {
   try {
     return await getServerPageview();
   } catch (error) {
-    console.error('[getPageProps] Failed to get pageview data:', error);
+    logger.error('Failed to get pageview data', error);
     return { viewer: 0, visited: 0 };
   }
 }
@@ -125,40 +126,36 @@ export async function getIndexPageProps(): Promise<IndexPageProps> {
       });
 
       if (response && response.data) {
-        console.log(`[getIndexPageProps] Successfully fetched ${response.data.length} articles`);
+        logger.debug(`Successfully fetched ${response.data.length} articles`);
         articles = response.data;
       }
       // Check if response has the ArticleResponse structure
       else if (typeof response === 'object' && 'data' in response && response.data) {
         // Handle v1 API response format
         if (Array.isArray(response.data)) {
-          console.log(
-            `[getIndexPageProps] Found articles in v1 format: ${response.data.length} articles`,
-          );
+          logger.debug(`Found articles in v1 format: ${response.data.length} articles`);
           articles = response.data;
         }
         // Handle v2 API response format
         else if (response.data && typeof response.data === 'object' && 'items' in response.data) {
           const v2Response = response as unknown as ApiV2Response<PaginatedData<Article>>;
-          console.log(
-            `[getIndexPageProps] Found articles in v2 format: ${v2Response.data.items.length} articles`,
-          );
+          logger.debug(`Found articles in v2 format: ${v2Response.data.items.length} articles`);
           articles = v2Response.data.items;
         } else {
-          console.error('[getIndexPageProps] Unexpected data structure:', response);
+          logger.error('Unexpected data structure', response);
         }
       } else {
-        console.error('[getIndexPageProps] Unexpected response structure:', response);
+        logger.error('Unexpected response structure', response);
       }
     } catch (error) {
-      console.error('[getIndexPageProps] Failed to fetch articles:', error);
+      logger.error('Failed to fetch articles', error);
     }
 
     // Fetch pageview data
     const pageViewData = await getPageViewData();
 
     // Log the final output for debugging
-    console.log(`[getIndexPageProps] Returning ${articles.length} articles`);
+    logger.debug(`Returning ${articles.length} articles`);
 
     return {
       layoutProps,
@@ -168,7 +165,7 @@ export async function getIndexPageProps(): Promise<IndexPageProps> {
       pageViewData,
     };
   } catch (error) {
-    console.error('[getIndexPageProps] Error in getIndexPageProps:', error);
+    logger.error('Error in getIndexPageProps', error);
     return emptyRet;
   }
 }
