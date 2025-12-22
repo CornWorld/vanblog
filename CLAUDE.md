@@ -1,10 +1,20 @@
 # CLAUDE.md
 
-**最后更新时间**: 2025-12-20 01:05:54 CST
+**最后更新时间**: 2025-12-22 13:05:00 CST
 
 ---
 
 ## 变更记录 (Changelog)
+
+### 2025-12-22 - Logger 规范调整与 server-ng 迁移完成
+
+- **规范调整**：
+  - Logger 使用规范调整为**仅后端（server-ng）强制使用**
+  - 前端（admin/website）保留 console，用于快速开发调试
+  - 理由：前端调试主要在浏览器 DevTools，console 更灵活；后端需要结构化日志用于生产监控
+
+- **server-ng 迁移成果**：
+  - ✅ server-ng 包 Logger 迁移完成（生产代码 100% 使用 NestJS Logger）
 
 ### 2025-12-20 - 文档完善与代码优化
 
@@ -68,7 +78,7 @@ VanBlog 是一个现代化的个人博客系统，包含管理后台、公开网
   - read-time-plugin（阅读时长）
   - rewards-plugin（打赏）
   - social-links-plugin（社交链接）
-  - waline-plugin（评论系统集成）
+  - rss-plugin（RSS 订阅）
 - Shortcode 系统（插件可注册自定义短代码）
 - 高测试覆盖率（80% 阈值）
 
@@ -153,15 +163,15 @@ graph TD
 
 ## 模块索引
 
-| 模块          | 路径                  | 职责                                     | 状态      | 语言       | 文档                                        |
-| ------------- | --------------------- | ---------------------------------------- | --------- | ---------- | ------------------------------------------- |
-| **server-ng** | `packages/server-ng/` | NestJS API 服务器 (Drizzle ORM, ts-rest) | 🟢 活跃   | TypeScript | [CLAUDE.md](./packages/server-ng/CLAUDE.md) |
-| **admin**     | `packages/admin/`     | React 19 + Vite + Ant Design 管理后台    | 🟢 活跃   | TypeScript | [CLAUDE.md](./packages/admin/CLAUDE.md)     |
-| **website**   | `packages/website/`   | Next.js 15 公开博客（SSG/ISR）           | 🟢 活跃   | TypeScript | [CLAUDE.md](./packages/website/CLAUDE.md)   |
-| **shared**    | `packages/shared/`    | 类型契约、Schema、工具（单一数据源）     | 🟢 活跃   | TypeScript | [CLAUDE.md](./packages/shared/CLAUDE.md)    |
-| **server**    | `packages/server/`    | 遗留 NestJS + Mongoose 服务器            | 🔴 已废弃 | TypeScript | [CLAUDE.md](./packages/server/CLAUDE.md)    |
-| **cli**       | `packages/cli/`       | 命令行工具                               | 🟡 维护中 | JavaScript | [CLAUDE.md](./packages/cli/CLAUDE.md)       |
-| **waline**    | `packages/waline/`    | 评论系统                                 | 🟡 维护中 | JavaScript | [CLAUDE.md](./packages/waline/CLAUDE.md)    |
+| 模块          | 路径                  | 职责                                     | 状态      | 语言       | 版本          | 文档                                        |
+| ------------- | --------------------- | ---------------------------------------- | --------- | ---------- | ------------- | ------------------------------------------- |
+| **server-ng** | `packages/server-ng/` | NestJS API 服务器 (Drizzle ORM, ts-rest) | 🟢 活跃   | TypeScript | 0.54.0-corn.6 | [CLAUDE.md](./packages/server-ng/CLAUDE.md) |
+| **admin**     | `packages/admin/`     | React 19 + Vite + Ant Design 管理后台    | 🟢 活跃   | TypeScript | 0.54.0-corn.6 | [CLAUDE.md](./packages/admin/CLAUDE.md)     |
+| **website**   | `packages/website/`   | Next.js 15 公开博客（SSG/ISR）           | 🟢 活跃   | TypeScript | 0.54.0-corn.6 | [CLAUDE.md](./packages/website/CLAUDE.md)   |
+| **shared**    | `packages/shared/`    | 类型契约、Schema、工具（单一数据源）     | 🟢 活跃   | TypeScript | 0.0.1         | [CLAUDE.md](./packages/shared/CLAUDE.md)    |
+| **server**    | `packages/server/`    | 遗留 NestJS + Mongoose 服务器            | 🔴 已废弃 | TypeScript | -             | [CLAUDE.md](./packages/server/CLAUDE.md)    |
+| **cli**       | `packages/cli/`       | 命令行工具                               | 🟡 维护中 | JavaScript | -             | [CLAUDE.md](./packages/cli/CLAUDE.md)       |
+| **waline**    | `packages/waline/`    | 评论系统                                 | 🟡 维护中 | JavaScript | -             | [CLAUDE.md](./packages/waline/CLAUDE.md)    |
 
 **图例**：
 
@@ -266,7 +276,7 @@ pnpm plugin:create my-plugin
 
 - **server-ng**: 80% 覆盖率阈值（Vitest + v8）
 - **admin**: 组件测试（Vitest）
-- **website**: 少量测试（Vitest 3.0.8）
+- **website**: 少量测试（Vitest 4.0.14）
 
 ### 测试工具
 
@@ -295,13 +305,53 @@ pnpm plugin:create my-plugin
 - **模块配置**: 各 package 继承基础配置
 - **严格模式**: 启用
 
+### Logger 使用规范
+
+**强制要求**：
+
+- **后端（server-ng）**：所有新代码必须使用 NestJS Logger，禁止使用 `console.*`
+- **前端（admin/website）**：可使用 `console.*` 进行开发调试，Logger 为可选
+
+**创建 Logger**：
+
+```typescript
+// 后端（server-ng） - 强制使用
+import { Logger } from '@nestjs/common';
+
+// 在类中
+export class MyService {
+  private readonly logger = new Logger(MyService.name);
+}
+
+// 在函数中
+const logger = new Logger('FunctionContext');
+```
+
+**使用 Logger**：
+
+```typescript
+logger.log('info message');
+logger.warn('warning message');
+logger.error('error message', error.stack);
+logger.debug('debug message');
+logger.verbose('verbose message');
+```
+
+**Logger 迁移状态**：
+
+| 模块          | 状态    | 说明                              |
+| ------------- | ------- | --------------------------------- |
+| **server-ng** | ✅ 完成 | 100% 生产代码已使用 NestJS Logger |
+| **admin**     | N/A     | 保留 console，用于快速开发调试    |
+| **website**   | N/A     | 保留 console，用于快速开发调试    |
+
 ### 目录结构约定
 
 ```
 packages/
 ├── server-ng/
 │   ├── src/
-│   │   ├── modules/          # 功能模块
+│   │   ├── modules/          # 功能模块（21 个）
 │   │   │   ├── plugin/       # 插件管理模块
 │   │   │   │   ├── controllers/       # 插件 API 控制器
 │   │   │   │   │   ├── plugin-http.controller.ts    # 插件 HTTP 路由
@@ -346,10 +396,10 @@ packages/
         ├── pages/            # 页面组件
         │   └── SystemConfig/
         │       └── tabs/
-        │           └── Plugin.tsx   # 插件管理页面 (NEW)
+        │           └── Plugin.tsx   # 插件管理页面
         ├── components/       # 通用组件
         ├── hooks/            # React Hooks
-        │   └── usePluginData.ts     # 插件数据 Hook (NEW)
+        │   └── usePluginData.ts     # 插件数据 Hook
         └── services/         # API 服务
 ```
 
@@ -359,15 +409,15 @@ packages/
 
 ### 导出路径
 
-| 导出路径                    | 内容                     | 使用场景           |
-| --------------------------- | ------------------------ | ------------------ |
-| `@vanblog/shared`           | contracts + schemas      | 主入口             |
-| `@vanblog/shared/type`      | 纯类型（0 字节 JS）      | 前端类型导入       |
-| `@vanblog/shared/runtime`   | Zod schemas + Drizzle 表 | 后端校验           |
-| `@vanblog/shared/contracts` | ts-rest 契约             | API 定义           |
-| `@vanblog/shared/drizzle`   | Drizzle 数据库工具       | DB 操作            |
-| `@vanblog/shared/signals`   | 响应式信号系统           | 插件状态管理 (NEW) |
-| `@vanblog/shared/plugin`    | Plugin API 接口          | 插件类型定义 (NEW) |
+| 导出路径                    | 内容                     | 使用场景     |
+| --------------------------- | ------------------------ | ------------ |
+| `@vanblog/shared`           | contracts + schemas      | 主入口       |
+| `@vanblog/shared/type`      | 纯类型（0 字节 JS）      | 前端类型导入 |
+| `@vanblog/shared/runtime`   | Zod schemas + Drizzle 表 | 后端校验     |
+| `@vanblog/shared/contracts` | ts-rest 契约             | API 定义     |
+| `@vanblog/shared/drizzle`   | Drizzle 数据库工具       | DB 操作      |
+| `@vanblog/shared/signals`   | 响应式信号系统           | 插件状态管理 |
+| `@vanblog/shared/plugin`    | Plugin API 接口          | 插件类型定义 |
 
 ### 前端使用示例
 
@@ -488,7 +538,11 @@ export default plugin;
    - 新功能优先作为 NestJS 模块（server-ng/src/modules/）
    - 考虑是否可以作为插件（server-ng/plugins/）
 
-5. **文档同步更新**：
+5. **Logger 使用要求**：
+   - 后端（server-ng）：强制使用 NestJS Logger，禁止 `console.*`
+   - 前端（admin/website）：可使用 `console.*`
+
+6. **文档同步更新**：
    - 更新模块级 CLAUDE.md
    - 更新 API 文档（Swagger/OpenAPI）
    - 更新 `.claude/index.json`

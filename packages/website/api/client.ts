@@ -1,5 +1,6 @@
 import { config, isBuildTime, isDevelopment } from '../utils/loadConfig';
 import { CsrfResponse } from '../types/api';
+import Logger from '../utils/logger';
 
 const isBrowser = typeof window !== 'undefined';
 
@@ -55,10 +56,10 @@ export class ApiClient {
 
     // Validate that baseUrl is properly set
     if (!this.baseUrl) {
-      console.warn('[ApiClient] No baseUrl provided. Setting default fallback URL.');
+      Logger.warn('[ApiClient] No baseUrl provided. Setting default fallback URL.');
       this.baseUrl = 'http://127.0.0.1:3000';
     } else if (this.baseUrl !== 'window.location.origin' && !this.isValidUrlString(this.baseUrl)) {
-      console.warn(
+      Logger.warn(
         `[ApiClient] Invalid baseUrl format: "${this.baseUrl}". Setting default fallback URL.`,
       );
       this.baseUrl = 'http://127.0.0.1:3000';
@@ -69,7 +70,7 @@ export class ApiClient {
 
     // Log configuration in development mode
     if (isDevelopment) {
-      console.log(`[ApiClient] Initialized with baseUrl: ${this.baseUrl}`);
+      Logger.log(`[ApiClient] Initialized with baseUrl: ${this.baseUrl}`);
       this.validateEnvironmentVariables();
     }
   }
@@ -80,28 +81,28 @@ export class ApiClient {
       typeof process !== 'undefined' ? process.env.NEXT_PUBLIC_VANBLOG_SERVER_URL : undefined;
 
     if (isDevelopment) {
-      console.log('[ApiClient] Environment check:');
-      console.log(`- VAN_BLOG_SERVER_URL: ${serverUrl || 'not set'}`);
-      console.log(`- NEXT_PUBLIC_VANBLOG_SERVER_URL: ${clientUrl || 'not set'}`);
+      Logger.log('[ApiClient] Environment check:');
+      Logger.log(`- VAN_BLOG_SERVER_URL: ${serverUrl || 'not set'}`);
+      Logger.log(`- NEXT_PUBLIC_VANBLOG_SERVER_URL: ${clientUrl || 'not set'}`);
     }
 
     // Check if we're in the browser and using the right URL
     if (isBrowser) {
       if (serverUrl && !clientUrl) {
-        console.warn(
+        Logger.warn(
           `[ApiClient] Warning: Running in browser but only VAN_BLOG_SERVER_URL is set. This might cause issues as browser code cannot directly access non-NEXT_PUBLIC_ variables.`,
         );
       }
 
       if (clientUrl && this.baseUrl !== clientUrl) {
-        console.warn(
+        Logger.warn(
           `[ApiClient] Warning: Current baseUrl (${this.baseUrl}) doesn't match NEXT_PUBLIC_VANBLOG_SERVER_URL (${clientUrl})`,
         );
       }
     } else {
       // Server-side
       if (serverUrl && this.baseUrl !== serverUrl) {
-        console.warn(
+        Logger.warn(
           `[ApiClient] Warning: Current baseUrl (${this.baseUrl}) doesn't match VAN_BLOG_SERVER_URL (${serverUrl})`,
         );
       }
@@ -159,7 +160,7 @@ export class ApiClient {
     }
 
     if (isDevelopment) {
-      console.log(`[ApiClient] Fetching ${url} (${context})`);
+      Logger.log(`[ApiClient] Fetching ${url} (${context})`);
     }
 
     let lastError: unknown = null;
@@ -192,7 +193,7 @@ export class ApiClient {
               errorData = JSON.parse(errorText);
             }
           } catch (parseError) {
-            console.error(`[ApiClient] Error parsing error response: ${parseError}`);
+            Logger.error(`[ApiClient] Error parsing error response: ${parseError}`);
           }
 
           const detailMessage =
@@ -215,14 +216,14 @@ export class ApiClient {
         // Check if the response is JSON
         const contentType = response.headers.get('content-type');
         if (!contentType || !contentType.includes('application/json')) {
-          console.warn(`[ApiClient] Response is not JSON: ${contentType}`);
+          Logger.warn(`[ApiClient] Response is not JSON: ${contentType}`);
           // Try to parse as JSON anyway, but be prepared for failure
           try {
             const text = await response.text();
             const data = text ? JSON.parse(text) : {};
             return data as T;
           } catch (parseError) {
-            console.error(`[ApiClient] Error parsing non-JSON response: ${parseError}`);
+            Logger.error(`[ApiClient] Error parsing non-JSON response: ${parseError}`);
             throw new ApiError(
               `Invalid response format: ${contentType}`,
               response.status,
@@ -247,13 +248,13 @@ export class ApiClient {
       } catch (error: unknown) {
         lastError = error;
         if (isDevelopment) {
-          console.error(`[ApiClient] Fetch attempt ${i + 1}/${retries} failed:`, error);
+          Logger.error(`[ApiClient] Fetch attempt ${i + 1}/${retries} failed:`, error);
         }
 
         if (i < retries - 1) {
           const delay = 1000 * (i + 1);
           if (isDevelopment) {
-            console.log(`[ApiClient] Retrying in ${delay}ms...`);
+            Logger.log(`[ApiClient] Retrying in ${delay}ms...`);
           }
           await new Promise((resolve) => setTimeout(resolve, delay));
         }
@@ -271,7 +272,7 @@ export class ApiClient {
       const clientUrl =
         typeof process !== 'undefined' ? process.env.NEXT_PUBLIC_VANBLOG_SERVER_URL : undefined;
 
-      console.error(`
+      Logger.error(`
         [ApiClient] Connection Error: Unable to connect to ${this.baseUrl}
 
         This could be due to:
@@ -395,7 +396,7 @@ export class ApiClient {
     } catch (e) {
       // Log but do not throw; subsequent POST may fail and surface error appropriately
       if (isDevelopment) {
-        console.warn('[ApiClient] Failed to fetch CSRF token:', e);
+        Logger.warn('[ApiClient] Failed to fetch CSRF token:', e);
       }
     }
   }

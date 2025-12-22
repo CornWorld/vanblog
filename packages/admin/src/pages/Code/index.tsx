@@ -25,6 +25,7 @@ import RunCodeModal from '../Pipeline/components/RunCodeModal';
 import './index.less';
 import type { ReactNode } from 'react';
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
+import Logger from '@/services/Logger';
 const { DirectoryTree } = Tree;
 
 interface TreeNode extends DataNode {
@@ -136,7 +137,7 @@ export default function CodePage() {
       const { data } = await getCustomPageFileDataByPath(path, node.key);
       setValue(data as string);
     } catch (error) {
-      console.error('Failed to fetch file data:', error);
+      Logger.error('Failed to fetch file data:', error);
       message.error('获取文件数据失败！');
     } finally {
       setEditorLoading(false);
@@ -303,7 +304,7 @@ export default function CodePage() {
         setEditorLoading(false);
       }
     } catch (error) {
-      console.error('Failed to fetch data:', error);
+      Logger.error('Failed to fetch data:', error);
       message.error('获取数据失败！');
     }
   }, [path, id, type, isFolder]);

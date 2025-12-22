@@ -1,6 +1,7 @@
 import { GetArticleOption, ArticleResponse, ArticleDetail } from '../types/api';
 import { Article } from '../types/article';
 import { apiService } from './service';
+import Logger from '../utils/logger';
 
 // Re-export types for backward compatibility
 export type { GetArticleOption, SortOrder } from '../types/api';
@@ -26,7 +27,7 @@ export const getArticleByIdOrPathname = async (
   idOrPathname: string | number,
 ): Promise<ArticleDetail> => {
   if (!idOrPathname || idOrPathname === 'undefined') {
-    console.error(`Invalid article ID or pathname: ${idOrPathname}`);
+    Logger.error(`Invalid article ID or pathname: ${idOrPathname}`);
     // Return a default article instead of throwing
     return {
       id: 0,
@@ -50,7 +51,7 @@ export const getArticleByIdOrPathname = async (
   try {
     return await apiService.getArticleByIdOrPathname(idOrPathname);
   } catch (error) {
-    console.error(`Error fetching article with ID ${idOrPathname}:`, error);
+    Logger.error(`Error fetching article with ID ${idOrPathname}:`, error);
     // Return a default article on error
     return {
       id: 0,

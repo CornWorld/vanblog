@@ -14,6 +14,7 @@ import { getArticlesKeyWord } from '../../utils/keywords';
 import { revalidate, isBuildTime, isDevelopment } from '../../utils/loadConfig';
 import Custom404 from '../404';
 import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
+import Logger from '../../utils/logger';
 // Default layout props for loading state
 const defaultLayoutProps: LayoutProps = {
   description: '',
@@ -83,13 +84,13 @@ const PostPages = (props: PostPagesProps) => {
 
     if (isDevelopment) {
       if (props.error) {
-        console.error(`[PostPages] Error received from props: ${props.error}`);
+        Logger.error(`[PostPages] Error received from props: ${props.error}`);
       }
 
       if (!props.article || !props.article.id) {
-        console.error('[PostPages] No valid article data received');
+        Logger.error('[PostPages] No valid article data received');
       } else {
-        console.log(
+        Logger.log(
           `[PostPages] Displaying article: "${props.article.title}" (ID: ${props.article.id})`,
         );
       }
@@ -186,24 +187,24 @@ export async function getStaticPaths() {
 
   try {
     // In development or when not in build time, get all articles
-    console.log('[getStaticPaths] Fetching articles to generate paths');
+    Logger.log('[getStaticPaths] Fetching articles to generate paths');
     const response = await getArticlesByOption({
       page: 1,
       pageSize: -1, // Get all articles
     });
 
     if (!response || !response.data) {
-      console.warn('[getStaticPaths] No articles returned from API');
+      Logger.warn('[getStaticPaths] No articles returned from API');
       return {
         paths: [],
         fallback: 'blocking',
       };
     }
 
-    console.log(`[getStaticPaths] Found ${response.data.length} articles`);
+    Logger.log(`[getStaticPaths] Found ${response.data.length} articles`);
     const paths = response.data.map((article) => {
       const id = article.pathname || article.id.toString();
-      console.log(`[getStaticPaths] Adding path for article: ${article.title} (${id})`);
+      Logger.log(`[getStaticPaths] Adding path for article: ${article.title} (${id})`);
       return {
         params: { id },
       };
@@ -214,7 +215,7 @@ export async function getStaticPaths() {
       fallback: 'blocking',
     };
   } catch (error) {
-    console.error('[getStaticPaths] Error getting article paths:', error);
+    Logger.error('[getStaticPaths] Error getting article paths:', error);
     return {
       paths: [],
       fallback: 'blocking',
@@ -239,7 +240,7 @@ export async function getStaticProps({
     };
     return result;
   } catch (error) {
-    console.error(`[getStaticProps] Error getting post props: ${error}`);
+    Logger.error(`[getStaticProps] Error getting post props: ${error}`);
     return {
       notFound: true,
     };

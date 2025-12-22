@@ -3,6 +3,7 @@ import { useNum } from '@/services/van-blog/useNum';
 import { ProTable } from '@ant-design/pro-components';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
+import Logger from '@/services/Logger';
 
 export default function () {
   const { t } = useTranslation();
@@ -99,7 +100,7 @@ export default function () {
               total: data?.total || 0,
             };
           } catch (error) {
-            console.error('Error fetching login records:', error);
+            Logger.error('Failed to fetch login records:', error);
             return {
               data: [],
               success: false,

@@ -35,9 +35,6 @@ export default function () {
             }}
             onChange={(info) => {
               setLoading(true);
-              if (info.file.status !== 'uploading') {
-                // console.log(info.file, info.fileList);
-              }
               if (info.file.status === 'done') {
                 if (location.hostname == 'blog-demo.mereith.com') {
                   Modal.info({

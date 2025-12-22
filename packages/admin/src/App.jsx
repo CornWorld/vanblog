@@ -11,6 +11,7 @@ import { getAccessToken } from './utils/auth';
 import { ROUTES, initGlobalHistory, useModel } from './router';
 import BasicLayout from './layouts/BasicLayout';
 import BlankLayout from './layouts/BlankLayout';
+import { createLogger } from './utils/logger';
 
 // Preload SVG resources
 function preloadSvgIcons() {
@@ -63,10 +64,11 @@ const ProtectedRoute = React.memo(({ isAdmin, children }) => {
   const location = useLocation();
   const token = getAccessToken();
   const { initialState } = useModel();
+  const logger = createLogger('ProtectedRoute');
 
   // 如果没有令牌，重定向到登录页面并保存当前路径
   if (!token) {
-    console.log(t('app.debug.no_token'));
+    logger.info(t('app.debug.no_token'));
     return (
       <Navigate to={`${ROUTES.LOGIN}?redirect=${encodeURIComponent(location.pathname)}`} replace />
     );
@@ -74,7 +76,7 @@ const ProtectedRoute = React.memo(({ isAdmin, children }) => {
 
   // 如果是管理员路由，但用户不是管理员
   if (isAdmin && initialState?.user?.type !== 'admin') {
-    console.log(t('app.debug.admin_denied'));
+    logger.info(t('app.debug.admin_denied'));
     return <Navigate to="/404" replace />;
   }
 

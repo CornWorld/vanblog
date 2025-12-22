@@ -1,6 +1,7 @@
 import { apiClient } from './client';
 import { tsRestClient } from './ts-rest-client';
 import dayjs from 'dayjs';
+import Logger from '../utils/logger';
 import {
   ArticleResponse,
   ArticleDetail,
@@ -121,7 +122,7 @@ export class ApiService {
       });
 
       if (status === 200) {
-        console.log(
+        Logger.log(
           `[ApiService] getArticles successfully retrieved ${
             Array.isArray(body.items) ? body.items.length : 'unknown'
           } articles`,
@@ -135,7 +136,7 @@ export class ApiService {
         };
       }
 
-      console.warn('[ApiService] Response does not have expected v2 structure:', body);
+      Logger.warn('[ApiService] Response does not have expected v2 structure:', body);
       return {
         data: [],
         total: 0,
@@ -143,7 +144,7 @@ export class ApiService {
         pageSize: options.pageSize || 10,
       };
     } catch (error) {
-      console.error('[ApiService] getArticles error:', error);
+      Logger.error('[ApiService] getArticles error:', error);
 
       return {
         data: [],
@@ -156,7 +157,7 @@ export class ApiService {
 
   async getArticleByIdOrPathname(idOrPathname: string | number): Promise<ArticleDetail> {
     try {
-      console.log(`[ApiService] Fetching article with ID or pathname: ${idOrPathname}`);
+      Logger.log(`[ApiService] Fetching article with ID or pathname: ${idOrPathname}`);
       const { body, status } = await tsRestClient.getPublicArticle({
         params: { idOrPathname: String(idOrPathname) },
       });
@@ -168,7 +169,7 @@ export class ApiService {
           next: body.next ? this.mapArticle(body.next) : undefined,
         };
 
-        console.log(
+        Logger.log(
           `[ApiService] Successfully fetched article "${result.title}" (ID: ${result.id})`,
         );
         return result as ArticleDetail;
@@ -176,7 +177,7 @@ export class ApiService {
 
       throw new Error('Failed to fetch article');
     } catch (error) {
-      console.error(`[ApiService] Error fetching article with ID ${idOrPathname}:`, error);
+      Logger.error(`[ApiService] Error fetching article with ID ${idOrPathname}:`, error);
 
       return {
         id: 0,
@@ -355,7 +356,7 @@ export class ApiService {
       });
     } catch (e) {
       if (process.env.NODE_ENV !== 'production') {
-        console.warn(
+        Logger.warn(
           '[ApiService] updatePageView analytics/record failed, will fallback to overview',
           e,
         );

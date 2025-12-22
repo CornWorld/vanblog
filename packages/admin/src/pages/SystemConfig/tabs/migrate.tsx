@@ -4,6 +4,7 @@ import { createArticle, createDraft } from '@/services/van-blog/api';
 import { parseMarkdownFile } from '@/services/van-blog/parseMarkdownFile';
 import { Alert, Button, Card, message, Space, Spin, Upload } from 'antd';
 import { useState } from 'react';
+import Logger from '@/services/Logger';
 
 interface BatchImportProps {
   type: 'article' | 'draft';
@@ -47,7 +48,7 @@ export default function MigrateTab() {
         }
       }
     } catch (error) {
-      console.error('Error importing file:', error);
+      Logger.error('Failed to import file:', error);
       message.error('导入失败，请检查文件格式');
     }
     setLoading(false);

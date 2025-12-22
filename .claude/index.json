@@ -1,12 +1,12 @@
 {
   "metadata": {
-    "timestamp": "2025-12-20T01:50:03+08:00",
-    "version": "1.2.1",
+    "timestamp": "2025-12-22T05:03:08.000Z",
+    "version": "1.3.0",
     "project": "VanBlog",
     "description": "VanBlog 是一个现代化的个人博客系统，包含管理后台、公开网站和 API 服务器",
     "repository": "https://github.com/CornWorld/vanblog",
-    "previousScan": "2025-12-17T21:06:47+08:00",
-    "scanType": "文档同步 + 代码优化验证"
+    "previousScan": "2025-12-20T01:50:03+08:00",
+    "scanType": "Logger 重构进度监控 + 架构完整性验证"
   },
   "rootDocumentation": {
     "path": "CLAUDE.md",
@@ -20,6 +20,7 @@
       "测试策略",
       "编码规范",
       "Shared Package 使用指引",
+      "插件系统使用指引",
       "AI 使用指引",
       "变更记录"
     ]
@@ -33,8 +34,11 @@
       "language": "TypeScript",
       "framework": "NestJS 11",
       "description": "NestJS API 服务器 (Drizzle ORM, ts-rest)",
+      "version": "0.54.0-corn.6",
       "entryPoint": "src/main.ts",
       "port": 3050,
+      "nodeVersion": ">=22",
+      "pnpmVersion": ">=10",
       "dependencies": {
         "internal": ["@vanblog/shared"],
         "key_external": [
@@ -60,46 +64,12 @@
         "metrics": "/api/v2/metrics"
       },
       "newInThisScan": {
-        "documentationImprovements": {
-          "shortcodeGuide": "packages/server-ng/docs/SHORTCODE_GUIDE.md",
-          "description": "新增 Shortcode 系统完整指南"
-        },
-        "codeOptimizations": {
-          "removedFiles": ["module.ts", "*.service.ts in plugins"],
-          "testMigration": ".test.ts → .spec.ts",
-          "pluginPackageJson": ["beian", "cat", "social-links", "book-manager", "read-time"]
-        },
-        "eslintConfig": {
-          "file": "packages/server-ng/eslint.config.mjs",
-          "description": "新增 server-ng ESLint 配置"
-        },
-        "pluginAPI": {
-          "type": "Functional API",
-          "file": "packages/shared/src/plugin/plugin-api.interface.ts",
-          "features": [
-            "函数式插件 API (api => void)",
-            "Filter & Action Hooks",
-            "Shortcode 注册",
-            "响应式存储 (api.store)",
-            "公共数据暴露 (api.provide)",
-            "配置监听 (api.onConfigChange)",
-            "生命周期钩子 (onActivate/onDeactivate)"
-          ],
-          "documentation": "packages/server-ng/docs/PLUGIN_DEVELOPMENT.md"
-        },
-        "shortcodeModule": {
-          "path": "src/modules/shortcode",
-          "description": "Shortcode 解析与渲染系统",
-          "features": [
-            "支持属性 [shortcode attr=\"value\"]内容[/shortcode]",
-            "自闭合 Shortcode [shortcode/]",
-            "插件注册 Shortcode",
-            "正则解析 + 递归渲染"
-          ]
-        },
-        "pluginDocumentation": {
-          "mainGuide": "packages/server-ng/docs/PLUGIN_DEVELOPMENT.md",
-          "complexMigration": "packages/server-ng/docs/PLUGIN_MIGRATION_COMPLEX.md"
+        "loggerRefactoring": {
+          "status": "in_progress",
+          "description": "Console → Logger 迁移进行中",
+          "totalOccurrences": 648,
+          "filesWithLoggerOrConsole": 176,
+          "estimatedProgress": "~15%（基于模块化日志系统已建立）"
         }
       },
       "plugins": [
@@ -151,14 +121,14 @@
         },
         {
           "name": "book-manager-plugin",
-          "description": "书籍管理插件 (NEW)",
+          "description": "书籍管理插件",
           "status": "active",
           "features": ["书籍 CRUD", "阅读状态管理", "Bootstrap 数据暴露"],
           "readme": "packages/server-ng/plugins/book-manager-plugin/README.md"
         },
         {
           "name": "read-time-plugin",
-          "description": "阅读时间统计插件 (NEW)",
+          "description": "阅读时间统计插件",
           "status": "active",
           "features": ["自动计算阅读时间", "Filter Hook (article|beforeCreate/Update)"],
           "readme": "packages/server-ng/plugins/read-time-plugin/README.md"
@@ -218,9 +188,65 @@
         {
           "name": "ShortcodeModule",
           "path": "src/modules/shortcode",
-          "description": "Shortcode 解析与渲染 (NEW)",
+          "description": "Shortcode 解析与渲染",
           "testFiles": 1,
           "features": ["解析 [shortcode] 语法", "插件注册 Shortcode", "递归渲染"]
+        },
+        {
+          "name": "CategoryModule",
+          "path": "src/modules/category"
+        },
+        {
+          "name": "TagModule",
+          "path": "src/modules/tag"
+        },
+        {
+          "name": "DraftModule",
+          "path": "src/modules/draft"
+        },
+        {
+          "name": "SettingModule",
+          "path": "src/modules/setting"
+        },
+        {
+          "name": "PublicModule",
+          "path": "src/modules/public"
+        },
+        {
+          "name": "UserModule",
+          "path": "src/modules/user"
+        },
+        {
+          "name": "BackupModule",
+          "path": "src/modules/backup"
+        },
+        {
+          "name": "RssModule",
+          "path": "src/modules/rss"
+        },
+        {
+          "name": "SitemapModule",
+          "path": "src/modules/sitemap"
+        },
+        {
+          "name": "HealthModule",
+          "path": "src/modules/health"
+        },
+        {
+          "name": "MetricsModule",
+          "path": "src/modules/metrics"
+        },
+        {
+          "name": "PermissionModule",
+          "path": "src/modules/permission"
+        },
+        {
+          "name": "AdminModule",
+          "path": "src/modules/admin"
+        },
+        {
+          "name": "DemoModule",
+          "path": "src/modules/demo"
         }
       ],
       "coverage": {
@@ -228,13 +254,14 @@
         "criticalPaths": [
           "src/main.ts",
           "src/app.module.ts",
-          "src/modules/（21 个功能模块 + shortcode）",
+          "src/modules/（21 个功能模块）",
           "src/core/（filters, interceptors, guards, middlewares）",
           "src/shared/（services, utils, cache）",
           "plugins/（8 个内置插件）",
           "test/（测试工具与 E2E 测试）",
-          "docs/PLUGIN_DEVELOPMENT.md (NEW)",
-          "docs/PLUGIN_MIGRATION_COMPLEX.md (NEW)"
+          "docs/PLUGIN_DEVELOPMENT.md",
+          "docs/PLUGIN_MIGRATION_COMPLEX.md",
+          "docs/SHORTCODE_GUIDE.md"
         ],
         "gaps": []
       }
@@ -247,8 +274,10 @@
       "language": "TypeScript",
       "framework": "React 19 + Vite 6",
       "description": "React 19 + Vite + Ant Design 管理后台",
+      "version": "0.54.0-corn.6",
       "entryPoint": "src/main.jsx",
       "port": 3002,
+      "nodeVersion": "^18.0.0 || >= 20.0.0",
       "dependencies": {
         "internal": ["@vanblog/shared"],
         "key_external": [
@@ -267,9 +296,14 @@
         "数据统计与分析",
         "Markdown 编辑器（Bytemd + Toast UI）",
         "国际化支持",
-        "插件管理页面 (NEW)"
+        "插件管理页面"
       ],
       "newInThisScan": {
+        "loggerMigration": {
+          "file": "src/components/Footer/index.jsx",
+          "status": "completed",
+          "description": "已迁移到 createLogger 模式"
+        },
         "pluginManagement": {
           "file": "src/pages/SystemConfig/tabs/Plugin.tsx",
           "features": ["插件列表展示", "配置编辑", "启用/禁用插件"]
@@ -296,7 +330,8 @@
           "src/pages/",
           "src/components/",
           "src/layouts/",
-          "src/hooks/ (NEW)"
+          "src/hooks/",
+          "src/utils/logger.ts"
         ],
         "gaps": []
       }
@@ -309,6 +344,7 @@
       "language": "TypeScript",
       "framework": "Next.js 15",
       "description": "Next.js 15 公开博客（SSG/ISR）",
+      "version": "0.54.0-corn.6",
       "entryPoint": "pages/_app.tsx",
       "port": 3001,
       "dependencies": {
@@ -343,7 +379,7 @@
       },
       "coverage": {
         "scannedFiles": 150,
-        "criticalPaths": ["pages/", "components/", "utils/"],
+        "criticalPaths": ["pages/", "components/", "utils/", "utils/logger.ts"],
         "gaps": []
       }
     },
@@ -355,6 +391,7 @@
       "language": "TypeScript",
       "framework": "Vite 6",
       "description": "类型契约、Schema、工具（单一数据源）",
+      "version": "0.0.1",
       "entryPoint": "src/index.ts",
       "dependencies": {
         "internal": [],
@@ -371,18 +408,8 @@
         "./runtime": "Zod schemas + Drizzle 表",
         "./contracts": "ts-rest 契约",
         "./drizzle": "Drizzle 工具 + Schema",
-        "./signals": "响应式信号系统 (NEW)",
-        "./plugin": "Plugin API 接口 (NEW)"
-      },
-      "newInThisScan": {
-        "pluginAPI": {
-          "file": "src/plugin/plugin-api.interface.ts",
-          "description": "函数式 Plugin API 接口定义"
-        },
-        "signals": {
-          "file": "src/signals/",
-          "description": "响应式信号系统（用于插件状态管理）"
-        }
+        "./signals": "响应式信号系统",
+        "./plugin": "Plugin API 接口"
       },
       "features": [
         "Drizzle ORM 表定义",
@@ -390,8 +417,8 @@
         "ts-rest 契约定义",
         "纯类型导出",
         "通用工具函数",
-        "Plugin API 类型 (NEW)",
-        "响应式信号 (NEW)"
+        "Plugin API 类型",
+        "响应式信号"
       ],
       "contracts": [
         "authContract",
@@ -416,8 +443,8 @@
           "src/drizzle/",
           "src/runtime/",
           "src/type/",
-          "src/plugin/ (NEW)",
-          "src/signals/ (NEW)"
+          "src/plugin/",
+          "src/signals/"
         ],
         "gaps": []
       }
@@ -523,40 +550,41 @@
     "estimatedTotalFiles": 1200,
     "coveragePercentage": 82.2,
     "newInThisScan": {
-      "pluginsAdded": 2,
-      "pluginAPIDocumented": true,
-      "shortcodeModuleDocumented": true,
-      "adminPluginPageAdded": true,
-      "sharedExportsAdded": 2,
-      "codeOptimizations": {
-        "pluginMigration": "所有插件迁移至函数式 API",
-        "testStandardization": "测试文件命名标准化 (.spec.ts)",
-        "eslintAdded": "server-ng ESLint 配置"
+      "loggerRefactoring": {
+        "status": "in_progress",
+        "progress": "~15%",
+        "completedFiles": ["admin/src/components/Footer/index.jsx"],
+        "totalOccurrences": 648,
+        "affectedFiles": 176
       },
-      "documentationAdded": {
-        "shortcodeGuide": true,
-        "pluginPackageJson": 5
-      }
+      "versionUnified": "0.54.0-corn.6 (server-ng, admin, website)"
     }
   },
   "recommendations": {
     "nextSteps": [
+      "继续 Logger 迁移：优先处理 admin 和 website 核心页面",
       "为 Shortcode 系统添加更多内置示例",
       "完善插件脚手架工具的交互式体验",
       "为响应式信号系统添加使用示例",
       "优化插件管理页面的用户体验"
     ],
     "gaps": [],
-    "priorityAreas": ["插件系统测试覆盖率提升", "Shortcode 文档完善", "Plugin API 最佳实践示例"],
+    "priorityAreas": [
+      "Logger 迁移完成度提升至 50%（重点：admin pages/ 目录）",
+      "插件系统测试覆盖率提升",
+      "Shortcode 文档完善",
+      "Plugin API 最佳实践示例"
+    ],
     "completed": [
       "server-ng: 插件系统函数式 API 文档",
       "server-ng: Shortcode 模块集成",
       "server-ng: Shortcode 系统指南文档",
-      "server-ng: 2 个新插件（book-manager, read-time）",
+      "server-ng: 8 个内置插件",
       "server-ng: 所有插件迁移至函数式 API",
       "server-ng: 测试文件命名标准化",
       "server-ng: ESLint 配置添加",
       "admin: 插件管理页面",
+      "admin: Footer 组件 Logger 迁移",
       "shared: Plugin API 接口 + 响应式信号"
     ]
   },
@@ -583,5 +611,5 @@
     "*.gz"
   ],
   "truncated": false,
-  "completionReason": "文档同步完成：根 CLAUDE.md 已更新（2025-12-20），所有模块文档具备导航面包屑，插件系统优化已记录"
+  "completionReason": "Logger 重构进度监控完成：已识别 648 个 Logger/console 使用点，admin Footer 组件已完成迁移，整体进度约 15%"
 }

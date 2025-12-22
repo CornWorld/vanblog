@@ -158,7 +158,6 @@ void init().then(async (app) => {
   const { port } = configService.app;
   await app.listen(port, '0.0.0.0');
 
-  // Use logger instead of console.log
   const logger = app.get(LoggerService);
   logger.log(`Application is running on: http://localhost:${String(port)}`, 'Bootstrap');
   logger.log(

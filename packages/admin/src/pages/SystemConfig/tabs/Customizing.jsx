@@ -5,6 +5,7 @@ import { getCustomCode, updateCustomCode } from '@/services/van-blog/api';
 import { useTab } from '@/services/van-blog/useTab';
 import { Button, Card, message, Modal, Spin } from 'antd';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import Logger from '@/services/Logger';
 
 export default function () {
   const { t } = useTranslation();
@@ -38,7 +39,7 @@ export default function () {
         });
       }
     } catch (error) {
-      console.error('Failed to fetch layout config:', error);
+      Logger.error('Failed to fetch custom code:', error);
       message.error('Failed to fetch customization settings');
     } finally {
       setLoading(false);
@@ -54,7 +55,7 @@ export default function () {
           await updateCustomCode(values);
           message.success(t('customizing.message.update.success'));
         } catch (error) {
-          console.error('Failed to update layout config:', error);
+          Logger.error('Failed to update custom code:', error);
           message.error('Failed to save customization settings');
         } finally {
           setLoading(false);
