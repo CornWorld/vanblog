@@ -63,7 +63,9 @@ export class PipelineService {
     const results = await this.db
       .select()
       .from(pipelines)
+
       .where(eq(pipelines.deleted, false))
+
       .orderBy(desc(pipelines.createdAt));
 
     return {
@@ -79,10 +81,16 @@ export class PipelineService {
     const [pipeline] = await this.db
       .select()
       .from(pipelines)
-      .where(and(eq(pipelines.id, id), eq(pipelines.deleted, false)));
+      .where(
+        and(
+          eq(pipelines.id, id),
+
+          eq(pipelines.deleted, false),
+        ),
+      );
 
     if (!pipeline) {
-      throw new NotFoundException(`Pipeline with ID ${id} not found`);
+      throw new NotFoundException(`Pipeline with ID ${String(id)} not found`);
     }
 
     return pipeline;
@@ -98,7 +106,9 @@ export class PipelineService {
       .where(
         and(
           eq(pipelines.eventName, eventName),
+
           eq(pipelines.deleted, false),
+
           eq(pipelines.enabled, true),
         ),
       );
@@ -113,7 +123,7 @@ export class PipelineService {
     this.logger.log(`Creating pipeline: ${createDto.name}`);
 
     // Validate event name
-    await this.validateEventName(createDto.eventName);
+    this.validateEventName(createDto.eventName);
 
     // Set default script if empty
     let { script } = createDto;
@@ -136,9 +146,10 @@ console.log('Pipeline executed with input:', input);
       .returning();
 
     // Save script to runner path
-    await this.saveOrUpdateScriptToRunnerPath(newPipeline.id, newPipeline.script);
 
-    this.logger.log(`Created pipeline: ${newPipeline.id} - ${newPipeline.name}`);
+    this.saveOrUpdateScriptToRunnerPath(newPipeline.id, newPipeline.script);
+
+    this.logger.log(`Created pipeline: ${String(newPipeline.id)} - ${String(newPipeline.name)}`);
 
     return newPipeline;
   }
@@ -150,14 +161,14 @@ console.log('Pipeline executed with input:', input);
     id: number,
     updateDto: z.infer<typeof UpdatePipelineSchema>,
   ): Promise<z.infer<typeof PipelineSchema>> {
-    this.logger.log(`Updating pipeline: ${id}`);
+    this.logger.log(`Updating pipeline: ${String(id)}`);
 
     // Check if pipeline exists
     await this.findOne(id);
 
     // Validate event name if provided
     if (updateDto.eventName) {
-      await this.validateEventName(updateDto.eventName);
+      this.validateEventName(updateDto.eventName);
     }
 
     const [updatedPipeline] = await this.db
@@ -166,15 +177,16 @@ console.log('Pipeline executed with input:', input);
         ...updateDto,
         updatedAt: new Date().toISOString(),
       })
+
       .where(eq(pipelines.id, id))
       .returning();
 
     // Update script file if script changed
     if (updateDto.script) {
-      await this.saveOrUpdateScriptToRunnerPath(id, updateDto.script);
+      this.saveOrUpdateScriptToRunnerPath(id, updateDto.script);
     }
 
-    this.logger.log(`Updated pipeline: ${id}`);
+    this.logger.log(`Updated pipeline: ${String(id)}`);
 
     return updatedPipeline;
   }
@@ -183,7 +195,7 @@ console.log('Pipeline executed with input:', input);
    * Delete a pipeline (soft delete)
    */
   async remove(id: number): Promise<void> {
-    this.logger.log(`Deleting pipeline: ${id}`);
+    this.logger.log(`Deleting pipeline: ${String(id)}`);
 
     // Check if pipeline exists
     await this.findOne(id);
@@ -191,21 +203,21 @@ console.log('Pipeline executed with input:', input);
     await this.db.update(pipelines).set({ deleted: true }).where(eq(pipelines.id, id));
 
     // Delete script file
-    await this.deleteScriptById(id);
+    this.deleteScriptById(id);
 
-    this.logger.log(`Deleted pipeline: ${id}`);
+    this.logger.log(`Deleted pipeline: ${String(id)}`);
   }
 
   /**
    * Trigger a pipeline by ID
    */
   async triggerById(id: number, input: unknown): Promise<PipelineExecutionResult> {
-    this.logger.log(`Triggering pipeline: ${id}`);
+    this.logger.log(`Triggering pipeline: ${String(id)}`);
 
     const pipeline = await this.findOne(id);
 
     if (!pipeline.enabled) {
-      throw new BadRequestException(`Pipeline ${id} is disabled`);
+      throw new BadRequestException(`Pipeline ${String(id)} is disabled`);
     }
 
     const result = await this.runCodeByPipelineId(id, input);
@@ -220,14 +232,20 @@ console.log('Pipeline executed with input:', input);
     const eventPipelines = await this.findByEventName(eventName);
     const results: PipelineExecutionResult[] = [];
 
-    this.logger.log(`Dispatching event '${eventName}' to ${eventPipelines.length} pipelines`);
+    this.logger.log(
+      `Dispatching event '${eventName}' to ${String(eventPipelines.length)} pipelines`,
+    );
 
     for (const pipeline of eventPipelines) {
       try {
         const result = await this.runCodeByPipelineId(pipeline.id, data);
         results.push(result);
       } catch (err) {
-        this.logger.error(`Pipeline ${pipeline.id} execution failed:`, err);
+        const pipelineId = pipeline.id;
+        this.logger.error(
+          `Pipeline ${String(pipelineId)} execution failed:`,
+          err instanceof Error ? err : new Error(String(err)),
+        );
         results.push({
           status: 'error',
           logs: [err instanceof Error ? err.message : String(err)],
@@ -242,7 +260,7 @@ console.log('Pipeline executed with input:', input);
   /**
    * Get pipeline config (available event names)
    */
-  async getConfig(): Promise<{ events: string[] }> {
+  getConfig(): { events: string[] } {
     // Get available event names from hook service or return default list
     const defaultEvents = [
       'article|beforeCreate',
@@ -266,9 +284,10 @@ console.log('Pipeline executed with input:', input);
     const pipeline = await this.findOne(id);
     const traceId = new Date().getTime();
 
-    this.logger.log(`[${traceId}] Running pipeline: ${id} - ${pipeline.name}`);
+    this.logger.log(
+      `[${String(traceId)}] Running pipeline: ${String(id)} - ${String(pipeline.name)}`,
+    );
 
-    // Update pipeline status
     await this.db.update(pipelines).set({ status: 'running' }).where(eq(pipelines.id, id));
 
     const scriptPath = this.getPathById(id);
@@ -285,9 +304,10 @@ console.log('Pipeline executed with input:', input);
           lastStatus: 'success',
           lastError: null,
         })
+
         .where(eq(pipelines.id, id));
 
-      this.logger.log(`[${traceId}] Pipeline ${id} completed successfully`);
+      this.logger.log(`[${String(traceId)}] Pipeline ${String(id)} completed successfully`);
 
       return result;
     } catch (err) {
@@ -302,15 +322,16 @@ console.log('Pipeline executed with input:', input);
           lastStatus: 'error',
           lastError: error.message,
         })
+
         .where(eq(pipelines.id, id));
 
-      this.logger.error(`[${traceId}] Pipeline ${id} failed:`, error);
+      this.logger.error(`[${String(traceId)}] Pipeline ${String(id)} failed:`, error);
 
       throw error;
     } finally {
       // Reset status to idle
-      setTimeout(async () => {
-        await this.db.update(pipelines).set({ status: 'idle' }).where(eq(pipelines.id, id));
+      setTimeout(() => {
+        void this.db.update(pipelines).set({ status: 'idle' }).where(eq(pipelines.id, id));
       }, 1000);
     }
   }
@@ -343,7 +364,7 @@ console.log('Pipeline executed with input:', input);
       // Handle child process exit
       subProcess.on('exit', (code) => {
         if (code !== 0 && code !== null) {
-          reject(new Error(`Process exited with code ${code}`));
+          reject(new Error(`Process exited with code ${String(code)}`));
         }
       });
 
@@ -358,8 +379,7 @@ console.log('Pipeline executed with input:', input);
   /**
    * Validate event name
    */
-  private async validateEventName(eventName: string): Promise<void> {
-    const _config = await this.getConfig();
+  private validateEventName(eventName: string): void {
     // For now, we allow any event name
     // In the future, we can validate against the config.events list
     if (!eventName || !eventName.trim()) {
@@ -371,13 +391,13 @@ console.log('Pipeline executed with input:', input);
    * Get script file path by pipeline ID
    */
   private getPathById(id: number): string {
-    return join(this.runnerPath, `${id}.js`);
+    return join(this.runnerPath, `${String(id)}.js`);
   }
 
   /**
    * Save or update script to runner path
    */
-  private async saveOrUpdateScriptToRunnerPath(id: number, script: string): Promise<void> {
+  private saveOrUpdateScriptToRunnerPath(id: number, script: string): void {
     const filePath = this.getPathById(id);
 
     // Wrap user script in execution environment
@@ -418,21 +438,24 @@ process.on('message', async (msg) => {
     `;
 
     writeFileSync(filePath, scriptToSave, { encoding: 'utf-8' });
-    this.logger.log(`Saved script for pipeline ${id} to ${filePath}`);
+    this.logger.log(`Saved script for pipeline ${String(id)} to ${filePath}`);
   }
 
   /**
    * Delete script file by pipeline ID
    */
-  private async deleteScriptById(id: number): Promise<void> {
+  private deleteScriptById(id: number): void {
     const filePath = this.getPathById(id);
     try {
       if (existsSync(filePath)) {
         rmSync(filePath);
-        this.logger.log(`Deleted script for pipeline ${id}`);
+        this.logger.log(`Deleted script for pipeline ${String(id)}`);
       }
     } catch (err) {
-      this.logger.error(`Failed to delete script for pipeline ${id}:`, err);
+      this.logger.error(
+        `Failed to delete script for pipeline ${String(id)}:`,
+        err instanceof Error ? err : new Error(String(err)),
+      );
     }
   }
 }

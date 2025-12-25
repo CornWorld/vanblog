@@ -25,18 +25,31 @@ export class Pipeline {
 
   constructor(data: z.infer<typeof PipelineSchema>) {
     this.id = data.id;
+
     this.name = data.name;
+
     this.description = data.description;
+
     this.enabled = data.enabled;
+
     this.eventName = data.eventName;
+
     this.script = data.script;
+
     this.deps = data.deps || [];
+
     this.status = data.status;
+
     this.lastRun = data.lastRun;
+
     this.lastStatus = data.lastStatus;
+
     this.lastError = data.lastError;
+
     this.deleted = data.deleted;
+
     this.createdAt = data.createdAt;
+
     this.updatedAt = data.updatedAt;
   }
 }

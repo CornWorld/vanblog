@@ -15,7 +15,9 @@
  */
 import { writeFileSync, readFileSync, existsSync } from 'fs';
 import { resolve } from 'path';
+
 import { z } from 'zod';
+
 import { configSchema } from '../src/config/config.schema';
 
 /**
@@ -30,12 +32,12 @@ function getVersion(): { version: string; environment: 'production' | 'developme
     ? rootPackageJsonPath
     : serverPackageJsonPath;
 
-  const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf-8'));
-  const version = packageJson.version || '0.0.0';
+  const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf-8')) as Record<string, unknown>;
+  const version = (packageJson.version as string | undefined) || '0.0.0';
 
   // 判断环境：包含 dev/alpha/beta/rc 为开发版
   const isDev = /-(dev|alpha|beta|rc|corn)/.test(version);
-  const environment = isDev ? 'development' : 'production';
+  const environment: 'production' | 'development' = isDev ? 'development' : 'production';
 
   return { version, environment };
 }
@@ -43,12 +45,15 @@ function getVersion(): { version: string; environment: 'production' | 'developme
 /**
  * 生成配置的 JSON Schema
  */
-function generateConfigJsonSchema(version: string, environment: string) {
+function generateConfigJsonSchema(
+  version: string,
+  environment: 'production' | 'development',
+): Record<string, unknown> {
   // 使用 Zod 原生的 toJSONSchema() 方法
-  const jsonSchema = z.toJSONSchema(configSchema);
+  const jsonSchema = z.toJSONSchema(configSchema) as Record<string, unknown>;
 
   // 增强 JSON Schema：添加版本信息、元数据、示例
-  const enhancedSchema = {
+  const enhancedSchema: Record<string, unknown> = {
     $schema: 'http://json-schema.org/draft-07/schema#',
     $id: `https://vanblog.mereith.com/schemas/config.${version}.json`,
     version, // 添加版本字段
@@ -85,7 +90,7 @@ function generateConfigJsonSchema(version: string, environment: string) {
 /**
  * 主函数
  */
-function main() {
+function main(): void {
   const { version, environment } = getVersion();
   const schema = generateConfigJsonSchema(version, environment);
   const baseDir = resolve(__dirname, '..');

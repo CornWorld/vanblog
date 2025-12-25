@@ -43,7 +43,7 @@ export class PipelineController {
   @Permission('pipeline:read')
   @ApiOperation({ summary: 'Get pipeline configuration' })
   @ApiResponse({ status: 200, description: 'Return pipeline config' })
-  async getConfig(): Promise<{ events: string[] }> {
+  getConfig(): { events: string[] } {
     return this.pipelineService.getConfig();
   }
 
