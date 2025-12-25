@@ -441,6 +441,45 @@ export const tokenBlacklist = sqliteTable(
   ],
 );
 
+// Pipelines table
+export const pipelines = sqliteTable(
+  'pipelines',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    name: text('name').notNull(),
+    description: text('description'),
+    enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
+    eventName: text('event_name').notNull(),
+    script: text('script').notNull(),
+    deps: text('deps', { mode: 'json' })
+      .$type<string[]>()
+      .notNull()
+      .$defaultFn(() => []),
+    status: text('status', { enum: ['idle', 'running', 'success', 'error'] })
+      .notNull()
+      .default('idle'),
+    lastRun: text('last_run'),
+    lastStatus: text('last_status'),
+    lastError: text('last_error'),
+    deleted: integer('deleted', { mode: 'boolean' }).notNull().default(false),
+    createdAt: text('created_at')
+      .notNull()
+      .$defaultFn(() => nowIsoTz()),
+    updatedAt: text('updated_at')
+      .notNull()
+      .$defaultFn(() => nowIsoTz()),
+  },
+  (table) => [
+    index('pipelines_event_name_idx').on(table.eventName),
+    index('pipelines_enabled_idx').on(table.enabled),
+    index('pipelines_deleted_idx').on(table.deleted),
+    index('pipelines_status_idx').on(table.status),
+    index('pipelines_created_at_idx').on(table.createdAt),
+    // Composite indexes for common queries
+    index('pipelines_event_enabled_idx').on(table.eventName, table.enabled, table.deleted),
+  ],
+);
+
 // Type exports
 export type ImageProcessingQueueInsert = typeof imageProcessingQueue.$inferInsert;
 export type ImageProcessingQueueSelect = typeof imageProcessingQueue.$inferSelect;
