@@ -1,6 +1,6 @@
 import Link from 'next/link';
-import { CSSProperties } from 'react';
-import { PageItem } from './core';
+import type { CSSProperties } from 'react';
+import type { PageItem } from './core';
 const commonCls = 'inline-flex justify-center items-center   transition-all text-gray-600';
 const btnCls = 'bg-white hover:bg-gray-200 dark:hover:bg-dark-hover dark:hover:pg-text-dark-hover';
 const commonStyle: CSSProperties = {
@@ -36,7 +36,7 @@ const renderLink = (item: PageItem, isCur: boolean) => {
     </Link>
   );
 };
-const renderBtn = (item: PageItem, disable: boolean, isNext: boolean) => {
+const renderBtn = (item: PageItem, _disable: boolean, isNext: boolean) => {
   const href = item.href || null;
   const inner = (
     <div style={commonStyle} className={`${commonCls} dark:bg-dark-1 dark:pg-text-dark  ${btnCls}`}>

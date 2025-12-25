@@ -1,4 +1,4 @@
-import { SocialType } from '../api/getAllData';
+import type { SocialType } from '../api/getAllData';
 
 export function getIcon(type: SocialType, size: number) {
   if (type == 'bilibili') {
@@ -82,4 +82,6 @@ export function getIcon(type: SocialType, size: number) {
       </svg>
     );
   }
+  // Return null for unknown icon types
+  return null;
 }

@@ -1,11 +1,11 @@
 import Link from 'next/link';
-import AuthorCard, { AuthorCardProps } from '../components/AuthorCard';
+import AuthorCard, { type AuthorCardProps } from '../components/AuthorCard';
 import Layout from '../components/Layout';
 import { encodeQuerystring } from '../utils/encode';
-import { LayoutProps } from '../utils/getLayoutProps';
+import type { LayoutProps } from '../utils/getLayoutProps';
 import { getTagPageProps } from '../utils/getPageProps';
 import { revalidate } from '../utils/loadConfig';
-import { PageViewData } from '../api/pageView';
+import type { PageViewData } from '../api/pageView';
 import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
 import { useTranslation } from 'next-i18next';
 
@@ -50,7 +50,7 @@ const TagPage = (props: TagPageProps) => {
 };
 
 export default TagPage;
-export async function getStaticProps({ locale }) {
+export async function getStaticProps({ locale }: { locale: string }) {
   const result = {
     props: {
       ...(await getTagPageProps()),

@@ -1,6 +1,6 @@
 import { apiService } from './service';
-import { PageViewDataContract, createDefaultPageViewData } from '../types/contracts';
-import Logger from '../utils/logger';
+import type { PageViewDataContract } from '../types/contracts';
+import { createDefaultPageViewData } from '../types/contracts';
 
 const DEFAULT_PAGEVIEW_RESPONSE: PageViewDataContract = createDefaultPageViewData();
 
@@ -13,7 +13,7 @@ export const getPageview = async (..._args: [pathname?: string]): Promise<PageVi
   try {
     return await apiService.getPageView();
   } catch (err) {
-    Logger.error('[PageView] Error getting pageview:', err);
+    console.error('[PageView] Error getting pageview:', err);
     return DEFAULT_PAGEVIEW_RESPONSE;
   }
 };
@@ -23,7 +23,7 @@ export const getServerPageview = async (): Promise<PageViewDataContract> => {
   try {
     return await apiService.getPageView();
   } catch (err) {
-    Logger.error('[PageView] Error getting server pageview:', err);
+    console.error('[PageView] Error getting server pageview:', err);
     return DEFAULT_PAGEVIEW_RESPONSE;
   }
 };
@@ -50,12 +50,12 @@ export const updatePageview = async (pathname: string): Promise<PageViewDataCont
     try {
       return await apiService.updatePageView(options);
     } catch (err) {
-      Logger.error('[PageView] Error updating pageview:', err);
+      console.error('[PageView] Error updating pageview:', err);
       // Fallback to getting current pageview data
       return await apiService.getPageView();
     }
   } catch (err) {
-    Logger.error('[PageView] Error in updatePageview:', err);
+    console.error('[PageView] Error in updatePageview:', err);
     return DEFAULT_PAGEVIEW_RESPONSE;
   }
 };

@@ -1,5 +1,5 @@
 import { useContext, useMemo, useState } from 'react';
-import { SocialItem } from '../../api/getAllData';
+import type { SocialItem } from '../../api/getAllData';
 import { getIcon } from '../../utils/getIcon';
 import { Popover, ArrowContainer } from 'react-tiny-popover';
 import { capitalize } from '../../utils/capitalize';
@@ -55,10 +55,18 @@ export default function (props: { item: SocialItem }) {
           setShow(false);
         }}
         positions={['top', 'left']}
-        content={({ position, childRect, popoverRect }) => {
+        content={({
+          position,
+          childRect,
+          popoverRect,
+        }: {
+          position: any;
+          childRect: DOMRect;
+          popoverRect: DOMRect;
+        }) => {
           return (
             <ArrowContainer // if you'd like an arrow, you can import the ArrowContainer!
-              position={position}
+              position={position as any}
               childRect={childRect}
               popoverRect={popoverRect}
               arrowColor={arrowColor}

@@ -4,7 +4,7 @@ import { useContext, useEffect, useMemo, useState } from 'react';
 import SearchCard from '../SearchCard';
 import ThemeButton from '../ThemeButton';
 import KeyCard from '../KeyCard';
-import { MenuItem } from '../../api/getAllData';
+import type { MenuItem } from '../../api/getAllData';
 import AdminButton from '../AdminButton';
 import { ThemeContext } from '../../utils/themeContext';
 import RssButton from '../RssButton';

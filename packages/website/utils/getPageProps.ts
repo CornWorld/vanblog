@@ -7,30 +7,29 @@ import {
   getArticlesByCategoryName,
 } from '../api/getArticles';
 import { getPublicMeta } from '../api/getAllData';
-import { IndexPageProps } from '../pages/index';
-import { LinkPageProps } from '../pages/link';
-import { TagPageProps } from '../pages/tag';
-import { PostPagesProps } from '../pages/post/[id]';
-import { CategoryPagesProps } from '../pages/category/[category]';
-import { PagePagesProps } from '../pages/page/[p]';
-import { TimeLinePageProps } from '../pages/timeline';
-import { CategoryPageProps } from '../pages/category';
+import type { IndexPageProps } from '../pages/index';
+import type { LinkPageProps } from '../pages/link';
+import type { TagPageProps } from '../pages/tag';
+import type { PostPagesProps } from '../pages/post/[id]';
+import type { CategoryPagesProps } from '../pages/category/[category]';
+import type { PagePagesProps } from '../pages/page/[p]';
+import type { TimeLinePageProps } from '../pages/timeline';
+import type { CategoryPageProps } from '../pages/category';
 import {
   getLayoutProps,
   getLayoutPropsFromData,
   getAuthorCardProps,
-  LayoutProps,
+  type LayoutProps,
 } from './getLayoutProps';
 import { washArticlesByKey } from './washArticles';
-import { AboutPageProps } from '../pages/about';
+import type { AboutPageProps } from '../pages/about';
 import { isBuildTime } from './loadConfig';
-import { TagPagesProps } from '../pages/tag/[tag]';
-import { getServerPageview, PageViewData } from '../api/pageView';
-import { AuthorCardProps } from '../components/AuthorCard';
+import type { TagPagesProps } from '../pages/tag/[tag]';
+import { getServerPageview, type PageViewData } from '../api/pageView';
+import type { AuthorCardProps } from '../components/AuthorCard';
 import { normalizePublicMeta } from '../types/contracts';
-import { logger } from './logger';
-import { Article } from '../types/article';
-import { ApiV2Response, PaginatedData } from '../types/api';
+import type { Article } from '../types/article';
+import type { ApiV2Response, PaginatedData } from '../types/api';
 
 const defaultLayoutProps: LayoutProps = {
   description: '',
@@ -95,7 +94,7 @@ async function getPageViewData(): Promise<PageViewData> {
   try {
     return await getServerPageview();
   } catch (error) {
-    logger.error('Failed to get pageview data', error);
+    console.error('Failed to get pageview data', error);
     return { viewer: 0, visited: 0 };
   }
 }
@@ -118,7 +117,7 @@ export async function getIndexPageProps(): Promise<IndexPageProps> {
     const layoutProps = getLayoutPropsFromData(data);
     const authorCardProps = getAuthorCardProps(data);
 
-    let articles = [];
+    let articles: Article[] = [];
     try {
       const response = await getArticlesByOption({
         page: 1,
@@ -126,36 +125,36 @@ export async function getIndexPageProps(): Promise<IndexPageProps> {
       });
 
       if (response && response.data) {
-        logger.debug(`Successfully fetched ${response.data.length} articles`);
+        console.debug(`Successfully fetched ${response.data.length} articles`);
         articles = response.data;
       }
       // Check if response has the ArticleResponse structure
       else if (typeof response === 'object' && 'data' in response && response.data) {
         // Handle v1 API response format
         if (Array.isArray(response.data)) {
-          logger.debug(`Found articles in v1 format: ${response.data.length} articles`);
+          console.debug(`Found articles in v1 format: ${response.data.length} articles`);
           articles = response.data;
         }
         // Handle v2 API response format
         else if (response.data && typeof response.data === 'object' && 'items' in response.data) {
           const v2Response = response as unknown as ApiV2Response<PaginatedData<Article>>;
-          logger.debug(`Found articles in v2 format: ${v2Response.data.items.length} articles`);
+          console.debug(`Found articles in v2 format: ${v2Response.data.items.length} articles`);
           articles = v2Response.data.items;
         } else {
-          logger.error('Unexpected data structure', response);
+          console.error('Unexpected data structure', response);
         }
       } else {
-        logger.error('Unexpected response structure', response);
+        console.error('Unexpected response structure', response);
       }
     } catch (error) {
-      logger.error('Failed to fetch articles', error);
+      console.error('Failed to fetch articles', error);
     }
 
     // Fetch pageview data
     const pageViewData = await getPageViewData();
 
     // Log the final output for debugging
-    logger.debug(`Returning ${articles.length} articles`);
+    console.debug(`Returning ${articles.length} articles`);
 
     return {
       layoutProps,
@@ -165,7 +164,7 @@ export async function getIndexPageProps(): Promise<IndexPageProps> {
       pageViewData,
     };
   } catch (error) {
-    logger.error('Error in getIndexPageProps', error);
+    console.error('Error in getIndexPageProps', error);
     return emptyRet;
   }
 }
@@ -364,7 +363,7 @@ export async function getTagPagesProps(currTag: string): Promise<TagPagesProps> 
       curNum: articles.length,
     };
   } catch (err) {
-    logger.error('Error in getTagPagesProps', err);
+    console.error('Error in getTagPagesProps', err);
     return {
       layoutProps: await getLayoutProps(),
       authorCardProps: defaultAuthorCardProps,
@@ -377,7 +376,7 @@ export async function getTagPagesProps(currTag: string): Promise<TagPagesProps> 
 }
 
 export async function getPostPagesProps(curId: string): Promise<PostPagesProps> {
-  logger.debug(`Fetching post props for ID: ${curId}`);
+  console.debug(`Fetching post props for ID: ${curId}`);
 
   try {
     const rawData = await getPublicMeta();
@@ -386,25 +385,29 @@ export async function getPostPagesProps(curId: string): Promise<PostPagesProps> 
     let articleData;
 
     try {
-      logger.debug(`Fetching article details for ID: ${curId}`);
+      console.debug(`Fetching article details for ID: ${curId}`);
       articleData = await getArticleByIdOrPathname(curId);
 
       if (!articleData) {
-        logger.error(`No article data returned for ID: ${curId}`);
+        console.error(`No article data returned for ID: ${curId}`);
         // Create a default empty article
         articleData = {
           id: 0,
           title: 'Article Not Found',
           content: '',
+          pathname: '',
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
           category: '',
           tags: [],
           private: false,
           top: 0,
+          author: '',
+          hidden: false,
+          viewer: 0,
         };
       } else {
-        logger.debug(
+        console.debug(
           `Successfully fetched article: "${articleData.title}" (ID: ${articleData.id})`,
         );
       }
@@ -414,18 +417,22 @@ export async function getPostPagesProps(curId: string): Promise<PostPagesProps> 
         articleData.content = '';
       }
     } catch (e) {
-      logger.error(`Error fetching article with ID ${curId}`, e);
+      console.error(`Error fetching article with ID ${curId}`, e);
       // Create a default empty article on error
       articleData = {
         id: 0,
         title: 'Error Loading Article',
         content: '',
+        pathname: '',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         category: '',
         tags: [],
         private: false,
         top: 0,
+        author: '',
+        hidden: false,
+        viewer: 0,
       };
     }
 
@@ -452,10 +459,10 @@ export async function getPostPagesProps(curId: string): Promise<PostPagesProps> 
       next: next,
     };
 
-    logger.debug(`Props prepared successfully for article "${articleData.title}"`);
+    console.debug(`Props prepared successfully for article "${articleData.title}"`);
     return result;
   } catch (error) {
-    logger.error(`Failed to get post page props for ID ${curId}`, error);
+    console.error(`Failed to get post page props for ID ${curId}`, error);
     throw error;
   }
 }
@@ -474,13 +481,13 @@ export async function getPagePagesProps(curId: string): Promise<PagePagesProps> 
 
   try {
     const data = await getPublicMeta();
-    logger.debug('Public meta fetched', data);
+    console.debug('Public meta fetched', data);
     const layoutProps = getLayoutPropsFromData(data);
-    logger.debug('Layout props prepared', layoutProps);
+    console.debug('Layout props prepared', layoutProps);
     const authorCardProps = getAuthorCardProps(data);
-    logger.debug('Author card props prepared', authorCardProps);
+    console.debug('Author card props prepared', authorCardProps);
 
-    let articles = [];
+    let articles: Article[] = [];
     try {
       const response = await getArticlesByOption({
         page: parseInt(curId) || 1,
@@ -491,10 +498,10 @@ export async function getPagePagesProps(curId: string): Promise<PagePagesProps> 
       if (response && response.data) {
         articles = response.data;
       } else {
-        logger.warn(`No articles found for page ${curId}, using empty array`);
+        console.warn(`No articles found for page ${curId}, using empty array`);
       }
     } catch (error) {
-      logger.error(`Failed to fetch articles for page ${curId}`, error);
+      console.error(`Failed to fetch articles for page ${curId}`, error);
     }
 
     return {
@@ -504,7 +511,7 @@ export async function getPagePagesProps(curId: string): Promise<PagePagesProps> 
       currPage: parseInt(curId) || 1,
     };
   } catch (error) {
-    logger.error(`Error in getPagePagesProps for page ${curId}`, error);
+    console.error(`Error in getPagePagesProps for page ${curId}`, error);
     return defaultReturn;
   }
 }
@@ -531,7 +538,7 @@ export async function getCategoryPagesProps(curCategory: string): Promise<Catego
       curNum: articles.length,
     };
   } catch (err) {
-    logger.error('Error in getCategoryPagesProps', err);
+    console.error('Error in getCategoryPagesProps', err);
     return {
       layoutProps: await getLayoutProps(),
       authorCardProps: defaultAuthorCardProps,

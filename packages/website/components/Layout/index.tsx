@@ -1,12 +1,13 @@
 import Head from 'next/head';
 import BackToTopBtn from '../BackToTop';
 import NavBar from '../NavBar';
-import { useEffect, useRef, useState, ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import BaiduAnalysis from '../BaiduAnalysis';
 import GaAnalysis from '../gaAnalysis';
-import { LayoutProps } from '../../utils/getLayoutProps';
+import type { LayoutProps } from '../../utils/getLayoutProps';
 // import ImageProvider from "../ImageProvider";
-import { RealThemeType, ThemeContext } from '../../utils/themeContext';
+import type { RealThemeType } from '../../utils/themeContext';
+import { ThemeContext } from '../../utils/themeContext';
 import { getTheme } from '../../utils/theme';
 import CustomLayout from '../CustomLayout';
 import { Toaster } from 'react-hot-toast';

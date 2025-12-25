@@ -11,16 +11,14 @@ import '../styles/code-light.css';
 import '../styles/code-dark.css';
 import '../styles/zoom.css';
 import type { AppProps } from 'next/app';
-import { GlobalContext, GlobalState } from '../utils/globalContext';
+import { GlobalContext, type GlobalState } from '../utils/globalContext';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/router';
 import { getPageview, updatePageview } from '../api/pageView';
 import Head from 'next/head';
 import { appWithTranslation } from 'next-i18next';
-import { PageViewDataContract, normalizePageViewData } from '../types/contracts';
-import { createLogger } from '../utils/logger';
-
-const logger = createLogger('App');
+import type { PageViewDataContract } from '../types/contracts';
+import { normalizePageViewData } from '../types/contracts';
 
 type AppPropsWithPageViewData = AppProps & {
   pageProps: {
@@ -52,27 +50,27 @@ function MyApp({ Component, pageProps }: AppPropsWithPageViewData) {
           const { viewer, visited } = await getPageview(pathname);
           setGlobalState((prev) => ({ ...prev, viewer, visited }));
         } catch (error) {
-          logger.error('Failed to get pageview:', error);
+          console.error('Failed to get pageview:', error);
           // Don't update state on error to keep previous values
         }
       } else {
-        logger.info('更新访客:', reason, pathname);
+        console.log('更新访客:', reason, pathname);
         try {
           const { viewer, visited } = await updatePageview(pathname);
           setGlobalState((prev) => ({ ...prev, viewer, visited }));
         } catch (error) {
-          logger.error('Failed to update pageview:', error);
+          console.error('Failed to update pageview:', error);
           // Don't update state on error to keep previous values
         }
       }
     } catch (error) {
-      logger.error('Error in updateClientPageview:', error);
+      console.error('Error in updateClientPageview:', error);
       // Prevent the error from affecting the user experience
     }
   }, []);
 
   const handleRouteChange = useCallback(
-    (url: string, { shallow }: { shallow: boolean }) => {
+    (_url: string, { shallow }: { shallow: boolean }) => {
       if (!shallow) {
         updateClientPageview(`页面跳转`);
       }
@@ -95,6 +93,7 @@ function MyApp({ Component, pageProps }: AppPropsWithPageViewData) {
         router.events.off('routeChangeComplete', handleRouteChange);
       };
     }
+    return undefined;
   }, [current, updateClientPageview, router.events, handleRouteChange, pageProps.pageViewData]);
 
   return (

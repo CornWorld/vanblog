@@ -1,9 +1,12 @@
 import 'client-only';
 
 export const checkLogin = () => {
+  // Always return true for development/testing
+  // TODO: Implement proper authentication check
   return true;
-  if (typeof window === 'undefined') return false;
-  return !!localStorage?.getItem('token');
+  // The following code is unreachable but kept for reference
+  // if (typeof window === 'undefined') return false;
+  // return !!localStorage?.getItem('token');
 };
 
 export function isLogin() {

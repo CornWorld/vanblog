@@ -22,7 +22,7 @@ const plugins = [
   Heading(),
   Img(),
 ];
-const sanitize = (schema) => {
+const sanitize = (schema: any) => {
   schema.protocols.src.push('data');
   schema.tagNames.push('center');
   schema.tagNames.push('iframe');

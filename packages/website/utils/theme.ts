@@ -1,5 +1,5 @@
 import 'client-only';
-import { RealThemeType } from './themeContext';
+import type { RealThemeType } from './themeContext';
 
 export const initTheme = () => {
   if (typeof localStorage === 'undefined') {

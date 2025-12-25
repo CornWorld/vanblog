@@ -1,4 +1,4 @@
-import { BytemdPlugin } from 'bytemd';
+import type { BytemdPlugin } from 'bytemd';
 import rehypeRaw from 'rehype-raw';
 
 export default function (): BytemdPlugin {

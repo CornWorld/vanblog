@@ -1,4 +1,4 @@
-import { BytemdPlugin } from 'bytemd';
+import type { BytemdPlugin } from 'bytemd';
 import remarkDirective from 'remark-directive';
 import { visit } from 'unist-util-visit';
 
@@ -11,7 +11,7 @@ const CUSTOM_CONTAINER_TITLE: Record<string, string> = {
 };
 
 // TODO: Add proper TypeScript types
-const customContainerPlugin = () => (tree) => {
+const customContainerPlugin = () => (tree: any) => {
   visit(tree, (node) => {
     if (
       node.type === 'textDirective' ||

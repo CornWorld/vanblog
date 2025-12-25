@@ -1,6 +1,5 @@
 // Next.js API route support: https://nextjs.org/docs/api-routes/introduction
 import type { NextApiRequest, NextApiResponse } from 'next';
-import Logger from '../../utils/logger';
 
 // Helper function to set CORS headers
 function setCorsHeaders(res: NextApiResponse) {
@@ -40,7 +39,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   } catch (err) {
     // If there was an error, Next.js will continue
     // to show the last successfully generated page
-    Logger.error('[revalidate] Error during revalidation:', err);
+    console.error('[revalidate] Error during revalidation:', err);
     return res.status(500).send('触发增量增量渲染失败');
   }
 }

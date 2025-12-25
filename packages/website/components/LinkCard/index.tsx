@@ -1,4 +1,4 @@
-import { LinkItem } from '../../api/getAllData';
+import type { LinkItem } from '../../api/getAllData';
 import ImageBox from '../ImageBox';
 
 export default function (props: { link: LinkItem }) {

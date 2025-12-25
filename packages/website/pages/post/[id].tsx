@@ -4,17 +4,16 @@ import { getArticlesByOption } from '../../api/getArticles';
 import Layout from '../../components/Layout';
 import PostCard from '../../components/PostCard';
 import Toc from '../../components/Toc';
-import { Article } from '../../types/article';
+import { type Article } from '../../types/article';
 import { normalizeArticle } from '../../types/contracts';
 import { getArticlePath } from '../../utils/getArticlePath';
-import { LayoutProps } from '../../utils/getLayoutProps';
+import { type LayoutProps } from '../../utils/getLayoutProps';
 import { getPostPagesProps } from '../../utils/getPageProps';
 import { hasToc } from '../../utils/hasToc';
 import { getArticlesKeyWord } from '../../utils/keywords';
 import { revalidate, isBuildTime, isDevelopment } from '../../utils/loadConfig';
 import Custom404 from '../404';
 import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
-import Logger from '../../utils/logger';
 // Default layout props for loading state
 const defaultLayoutProps: LayoutProps = {
   description: '',
@@ -84,13 +83,13 @@ const PostPages = (props: PostPagesProps) => {
 
     if (isDevelopment) {
       if (props.error) {
-        Logger.error(`[PostPages] Error received from props: ${props.error}`);
+        console.error(`[PostPages] Error received from props: ${props.error}`);
       }
 
       if (!props.article || !props.article.id) {
-        Logger.error('[PostPages] No valid article data received');
+        console.error('[PostPages] No valid article data received');
       } else {
-        Logger.log(
+        console.log(
           `[PostPages] Displaying article: "${props.article.title}" (ID: ${props.article.id})`,
         );
       }
@@ -187,24 +186,24 @@ export async function getStaticPaths() {
 
   try {
     // In development or when not in build time, get all articles
-    Logger.log('[getStaticPaths] Fetching articles to generate paths');
+    console.log('[getStaticPaths] Fetching articles to generate paths');
     const response = await getArticlesByOption({
       page: 1,
       pageSize: -1, // Get all articles
     });
 
     if (!response || !response.data) {
-      Logger.warn('[getStaticPaths] No articles returned from API');
+      console.warn('[getStaticPaths] No articles returned from API');
       return {
         paths: [],
         fallback: 'blocking',
       };
     }
 
-    Logger.log(`[getStaticPaths] Found ${response.data.length} articles`);
+    console.log(`[getStaticPaths] Found ${response.data.length} articles`);
     const paths = response.data.map((article) => {
       const id = article.pathname || article.id.toString();
-      Logger.log(`[getStaticPaths] Adding path for article: ${article.title} (${id})`);
+      console.log(`[getStaticPaths] Adding path for article: ${article.title} (${id})`);
       return {
         params: { id },
       };
@@ -215,7 +214,7 @@ export async function getStaticPaths() {
       fallback: 'blocking',
     };
   } catch (error) {
-    Logger.error('[getStaticPaths] Error getting article paths:', error);
+    console.error('[getStaticPaths] Error getting article paths:', error);
     return {
       paths: [],
       fallback: 'blocking',
@@ -240,7 +239,7 @@ export async function getStaticProps({
     };
     return result;
   } catch (error) {
-    Logger.error(`[getStaticProps] Error getting post props: ${error}`);
+    console.error(`[getStaticProps] Error getting post props: ${error}`);
     return {
       notFound: true,
     };

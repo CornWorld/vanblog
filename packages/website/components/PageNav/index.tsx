@@ -1,4 +1,4 @@
-import { calItemList, PageNavProps } from './core';
+import { calItemList, type PageNavProps } from './core';
 import { RenderItemList } from './render';
 export default function (props: PageNavProps) {
   const pageSize = props?.pageSize || 5;

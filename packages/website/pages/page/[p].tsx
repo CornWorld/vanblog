@@ -1,13 +1,13 @@
 import Head from 'next/head';
 import { getPublicMeta } from '../../api/getAllData';
-import AuthorCard, { AuthorCardProps } from '../../components/AuthorCard';
+import AuthorCard, { type AuthorCardProps } from '../../components/AuthorCard';
 import Layout from '../../components/Layout';
 import PageNav from '../../components/PageNav';
 import PostCard from '../../components/PostCard';
 import Waline from '../../components/WaLine';
-import { Article } from '../../types/article';
+import type { Article } from '../../types/article';
 import { getArticlePath } from '../../utils/getArticlePath';
-import { LayoutProps } from '../../utils/getLayoutProps';
+import type { LayoutProps } from '../../utils/getLayoutProps';
 import { getPagePagesProps } from '../../utils/getPageProps';
 import { getArticlesKeyWord } from '../../utils/keywords';
 import { revalidate } from '../../utils/loadConfig';

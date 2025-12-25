@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { SocialItem } from '../../api/getAllData';
+import type { SocialItem } from '../../api/getAllData';
 import SocialIcon from '../SocialIcon';
 
 export default function (props: { socials: SocialItem[] }) {

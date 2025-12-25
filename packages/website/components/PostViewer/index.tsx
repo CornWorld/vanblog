@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { getArticleViewer } from '../../api/getAllData';
-import { GetStaticProps } from 'next';
+import type { GetStaticProps } from 'next';
 
 interface PostViewerProps {
   shouldAddViewer: boolean;

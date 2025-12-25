@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { Article } from '../types/article';
-import { ArticleDetail, ApiV2Response, PaginatedData } from '../types/api';
+import type { Article } from '../types/article';
+import type { ArticleDetail, ApiV2Response, PaginatedData } from '../types/api';
 
 describe('Type Compatibility Tests', () => {
   it('should handle Article with number id', () => {

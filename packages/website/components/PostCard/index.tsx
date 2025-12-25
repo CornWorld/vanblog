@@ -144,17 +144,17 @@ export default function (props: {
         {showDonate && props.pay && (
           <Reward
             {...normalizePayment(props.pay, props.payDark)}
-            author={props.author}
+            author={props.author || ''}
             id={props.id}
           ></Reward>
         )}
         {props.type == 'article' && !lock && !props?.hideCopyRight && (
           <CopyRight
             customCopyRight={props.customCopyRight}
-            author={props.author}
+            author={props.author || ''}
             id={props.id}
             showDonate={showDonate}
-            copyrightAggreement={props.copyrightAggreement}
+            copyrightAggreement={props.copyrightAggreement || ''}
           ></CopyRight>
         )}
 

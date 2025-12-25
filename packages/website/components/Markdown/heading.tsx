@@ -1,5 +1,5 @@
 import React from 'react';
-import { BytemdPlugin } from 'bytemd';
+import type { BytemdPlugin } from 'bytemd';
 import { visit } from 'unist-util-visit';
 
 /**

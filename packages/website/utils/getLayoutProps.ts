@@ -1,7 +1,7 @@
-import { defaultMenu, MenuItem, PublicMetaProp } from '../api/getAllData';
+import { defaultMenu, type MenuItem, type PublicMetaProp } from '../api/getAllData';
 import { normalizePublicMeta } from '../types/contracts';
 import dayjs from 'dayjs';
-import { AuthorCardProps } from '../components/AuthorCard';
+import type { AuthorCardProps } from '../components/AuthorCard';
 import { getPublicMeta } from '../api/getAllData';
 
 export interface LayoutProps {

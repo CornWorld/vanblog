@@ -1,6 +1,6 @@
 // import "react-photo-view/dist/react-photo-view.css";
 // import { PhotoView } from "react-photo-view";
-import { useEffect, useRef, useState, CSSProperties } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import m from 'medium-zoom';
 import imgBoxPlaceholder from '../../public/img-box-placeholder.png';
 import { useTranslation } from 'next-i18next';

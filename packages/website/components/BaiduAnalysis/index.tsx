@@ -17,7 +17,11 @@ export default function BaiduAnalysis(props: { id: string }) {
   useEffect(() => {
     if (!current.hasInit && props.id !== '') {
       current.hasInit = true;
-      const _hmt: HmtObject = (window as Window & { _hmt?: HmtObject })._hmt || [];
+      const windowWithHmt = window as Window & { _hmt?: HmtObject };
+      if (!windowWithHmt._hmt) {
+        windowWithHmt._hmt = { push: () => {}, length: 0 } as unknown as HmtObject;
+      }
+      const _hmt: HmtObject = windowWithHmt._hmt;
       // Initialize _hmt for tracking
       _hmt.push(['_setAutoPageview', true]);
     }

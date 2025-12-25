@@ -1,11 +1,11 @@
-import AuthorCard, { AuthorCardProps } from '../components/AuthorCard';
+import AuthorCard, { type AuthorCardProps } from '../components/AuthorCard';
 import Layout from '../components/Layout';
 import TimeLineItem from '../components/TimeLineItem';
-import { Article } from '../types/article';
-import { LayoutProps } from '../utils/getLayoutProps';
+import type { Article } from '../types/article';
+import type { LayoutProps } from '../utils/getLayoutProps';
 import { getTimeLinePageProps } from '../utils/getPageProps';
 import { revalidate } from '../utils/loadConfig';
-import { PageViewData } from '../api/pageView';
+import type { PageViewData } from '../api/pageView';
 import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
 import { useTranslation } from 'next-i18next';
 import { normalizeArticles } from '../types/contracts';
@@ -84,7 +84,7 @@ const TimeLine = (props: TimeLinePageProps) => {
 };
 
 export default TimeLine;
-export async function getStaticProps({ locale }) {
+export async function getStaticProps({ locale }: { locale: string }) {
   const result = {
     props: {
       ...(await getTimeLinePageProps()),

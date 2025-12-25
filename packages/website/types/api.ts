@@ -1,5 +1,5 @@
-import { Article } from './article';
-import { HeadTag } from '../utils/getLayoutProps';
+import type { Article } from './article';
+import type { HeadTag } from '../utils/getLayoutProps';
 
 export interface SortOrder {
   field: string;

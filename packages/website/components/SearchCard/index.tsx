@@ -3,7 +3,7 @@ import { getArticlesBySearch as searchArticles } from '../../api/getArticles';
 import { useDebounce } from 'react-use';
 import ArticleList from '../ArticleList';
 import KeyCard from '../KeyCard';
-import { Article } from '../../types/article';
+import type { Article } from '../../types/article';
 import { useTranslation } from 'next-i18next';
 
 interface SearchCardProps {

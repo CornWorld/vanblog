@@ -1,7 +1,7 @@
-import { BytemdPlugin } from 'bytemd';
+import type { BytemdPlugin } from 'bytemd';
 import { visit } from 'unist-util-visit';
 
-const aTargetPlugin = () => (tree) => {
+const aTargetPlugin = () => (tree: any) => {
   visit(tree, (node) => {
     if (node.type === 'element' && node.tagName === 'a') {
       node.properties.target = '_blank';

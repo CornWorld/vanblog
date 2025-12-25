@@ -1,16 +1,16 @@
-import AuthorCard, { AuthorCardProps } from '../components/AuthorCard';
+import AuthorCard, { type AuthorCardProps } from '../components/AuthorCard';
 import Layout from '../components/Layout';
 import PageNav from '../components/PageNav';
 import PostCard from '../components/PostCard';
-import { Article } from '../types/article';
-import { LayoutProps } from '../utils/getLayoutProps';
+import type { Article } from '../types/article';
+import type { LayoutProps } from '../utils/getLayoutProps';
 import { getIndexPageProps } from '../utils/getPageProps';
 import { revalidate } from '../utils/loadConfig';
 import Waline from '../components/WaLine';
 import Head from 'next/head';
 import { getArticlesKeyWord } from '../utils/keywords';
 import { getArticlePath } from '../utils/getArticlePath';
-import { PageViewData } from '../api/pageView';
+import type { PageViewData } from '../api/pageView';
 import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
 import { useTranslation } from 'next-i18next';
 import { normalizeArticles } from '../types/contracts';
@@ -83,7 +83,7 @@ const Home = (props: IndexPageProps) => {
 
 export default Home;
 
-export async function getStaticProps({ locale }) {
+export async function getStaticProps({ locale }: { locale: string }) {
   const result = {
     props: {
       ...(await getIndexPageProps()),

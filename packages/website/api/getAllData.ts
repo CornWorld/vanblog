@@ -1,8 +1,8 @@
-import { HeadTag } from '../utils/getLayoutProps';
+import type { HeadTag } from '../utils/getLayoutProps';
 import { logDefaultValueUsage, isBuildTime } from '../utils/loadConfig';
 import { apiService } from './service';
-import { PageViewDataContract, createDefaultPageViewData } from '../types/contracts';
-import Logger from '../utils/logger';
+import type { PageViewDataContract } from '../types/contracts';
+import { createDefaultPageViewData } from '../types/contracts';
 
 // Re-export types used in public interface
 export type SocialType = 'bilibili' | 'email' | 'github' | 'wechat' | 'gitee' | 'wechat-dark';
@@ -162,7 +162,7 @@ export const getPublicMeta = async (): Promise<PublicMetaProp> => {
   try {
     return await apiService.getMeta();
   } catch (err) {
-    Logger.error('Error fetching public meta:', err);
+    console.error('Error fetching public meta:', err);
 
     if (isBuildTime) {
       logDefaultValueUsage('getPublicMeta');
@@ -226,7 +226,7 @@ export const getAllCustomPages = async (): Promise<CustomPageList[]> => {
   try {
     return await apiService.getAllCustomPages();
   } catch (err) {
-    Logger.error('Error fetching custom pages:', err);
+    console.error('Error fetching custom pages:', err);
     return [];
   }
 };
@@ -238,7 +238,7 @@ export const getCustomPage = async (path: string): Promise<CustomPage | null> =>
   try {
     return await apiService.getCustomPage(path);
   } catch (err) {
-    Logger.error(`Error fetching custom page (${path}):`, err);
+    console.error(`Error fetching custom page (${path}):`, err);
     return null;
   }
 };
