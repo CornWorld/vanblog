@@ -1,3 +1,19 @@
+/**
+ * CategoryService - Core CRUD Tests
+ *
+ * 测试分类服务的核心 CRUD 操作：
+ * - findAll（获取所有分类及文章数）
+ * - findOne（获取单个分类）
+ * - create（创建分类）
+ * - update（更新分类）
+ * - remove（删除分类，含钩子触发）
+ * - findByName（按名称查找）
+ * - getStatistics（获取统计信息）
+ *
+ * @module CategoryService
+ * @group core
+ */
+
 import { NotFoundException } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { vi, describe, beforeEach, it, expect } from 'vitest';
@@ -28,6 +44,8 @@ describe('CategoryService', () => {
     leftJoin: ReturnType<typeof vi.fn>;
     groupBy: ReturnType<typeof vi.fn>;
     then?: ReturnType<typeof vi.fn>;
+    orderBy: ReturnType<typeof vi.fn>;
+    offset: ReturnType<typeof vi.fn>;
   };
 
   beforeEach(async () => {
@@ -44,6 +62,8 @@ describe('CategoryService', () => {
       delete: vi.fn().mockReturnThis(),
       leftJoin: vi.fn().mockReturnThis(),
       groupBy: vi.fn().mockReturnThis(),
+      orderBy: vi.fn().mockReturnThis(),
+      offset: vi.fn().mockReturnThis(),
     };
 
     mockHookService = {
@@ -233,13 +253,22 @@ describe('CategoryService', () => {
         updatedAt: new Date(),
       };
 
-      // Mock findOne call
-      mockDb.limit.mockResolvedValueOnce([mockCategory]);
-      // Mock article count check - need to set up the mock chain properly
-      mockDb.select.mockReturnValueOnce(mockDb);
-      mockDb.from.mockReturnValueOnce(mockDb);
-      mockDb.where.mockReturnValueOnce(mockDb);
-      mockDb.then = vi.fn().mockResolvedValueOnce([{ count: 0 }]);
+      // Mock findOne call - first select query
+      mockDb.select.mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue([mockCategory]),
+          }),
+        }),
+      });
+
+      // Mock article count check - second select query - proper Promise chain
+      mockDb.select.mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue([{ count: 0 }]),
+        }),
+      });
+
       // Mock delete returning
       mockDb.returning.mockResolvedValueOnce([{ id: 1 }]);
 
@@ -252,48 +281,127 @@ describe('CategoryService', () => {
 
       await expect(service.remove(999)).rejects.toThrow(NotFoundException);
     });
+
+    it('should throw error when category contains articles', async () => {
+      const mockCategory = {
+        id: 1,
+        name: 'CategoryWithArticles',
+        slug: null,
+        description: null,
+        private: false,
+        password: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      // Mock findOne call - first select query
+      mockDb.select.mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue([mockCategory]),
+          }),
+        }),
+      });
+
+      // Mock article count check - second select query - proper Promise chain
+      mockDb.select.mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue([{ count: 5 }]),
+        }),
+      });
+
+      await expect(service.remove(1)).rejects.toThrow(
+        'Cannot delete category "CategoryWithArticles" because it contains 5 articles',
+      );
+    });
+
+    it('should call beforeDelete and afterDelete hooks', async () => {
+      const mockCategory = {
+        id: 1,
+        name: 'Category1',
+        slug: null,
+        description: null,
+        private: false,
+        password: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      // Mock findOne call - first select query
+      mockDb.select.mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue([mockCategory]),
+          }),
+        }),
+      });
+
+      // Mock article count check - second select query - need to create a proper thenable chain
+      const thenableMock = {
+        then: vi.fn().mockImplementation((resolve) => resolve([{ count: 0 }])),
+      };
+
+      mockDb.select.mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue(thenableMock),
+        }),
+      });
+
+      // Mock delete returning
+      mockDb.returning.mockResolvedValueOnce([{ id: 1 }]);
+
+      await service.remove(1);
+
+      expect(mockHookService.doAction).toHaveBeenCalledWith(
+        'category|beforeDelete',
+        expect.any(Object),
+        expect.objectContaining({ action: 'delete' }),
+      );
+      expect(mockHookService.doAction).toHaveBeenCalledWith(
+        'category|afterDelete',
+        expect.objectContaining({ id: 1, name: 'Category1' }),
+      );
+    });
   });
 
-  describe('getCategoriesWithTags', () => {
-    it('should return categories with their tags', async () => {
-      const mockCategories = [
-        {
-          id: 1,
-          name: 'Category1',
-          slug: undefined,
-          description: null,
-          private: false,
-          password: null,
-        },
-        {
-          id: 2,
-          name: 'Category2',
-          slug: undefined,
-          description: null,
-          private: false,
-          password: null,
-        },
-      ];
+  describe('findByName', () => {
+    it('should return category when found', async () => {
+      const mockCategory = {
+        id: 1,
+        name: 'Technology',
+        slug: 'tech',
+        description: 'Tech articles',
+        private: false,
+        password: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
 
-      const mockArticles = [
-        { category: 'Category1', tags: ['tag1', 'tag2'] },
-        { category: 'Category1', tags: ['tag2', 'tag3'] },
-        { category: 'Category2', tags: ['tag4'] },
-      ];
+      mockDb.limit.mockResolvedValueOnce([mockCategory]);
 
-      // Mock the first query: getting all categories
-      mockDb.from.mockResolvedValueOnce(mockCategories);
+      const result = await service.findByName('Technology');
 
-      // Mock the second query: getting articles with tags
-      mockDb.where.mockResolvedValueOnce(mockArticles);
+      expect(result).toBeDefined();
+      expect(result?.name).toBe('Technology');
+    });
 
-      const result = await service.getCategoriesWithTags();
+    it('should return null when category not found', async () => {
+      mockDb.limit.mockResolvedValueOnce([]);
 
-      expect(result).toHaveLength(2);
-      expect(result[0].category.name).toBe('Category1');
-      expect(result[0].tags).toHaveLength(3); // tag1, tag2, tag3
-      expect(result[1].category.name).toBe('Category2');
-      expect(result[1].tags).toHaveLength(1); // tag4
+      const result = await service.findByName('NonExistent');
+
+      expect(result).toBeNull();
+    });
+  });
+
+  describe('getStatistics', () => {
+    it('should return overall statistics', async () => {
+      const result = await service.getStatistics();
+
+      expect(result).toBeDefined();
+      expect(result.totalCategories).toBe(0);
+      expect(result.totalTags).toBe(0);
+      expect(result.totalArticles).toBe(0);
     });
   });
 });
