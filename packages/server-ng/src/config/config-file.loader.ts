@@ -1,7 +1,9 @@
 import { readFileSync, existsSync } from 'fs';
 import { resolve } from 'path';
-import { ConfigFactory } from '@nestjs/config';
+
 import { Logger } from '@nestjs/common';
+
+import type { ConfigFactory } from '@nestjs/config';
 
 const logger = new Logger('ConfigFileLoader');
 
@@ -101,7 +103,7 @@ export function createConfigFileLoader(options: ConfigFileLoaderOptions = {}): C
       const config = parseJsonConfig(content, filePath);
 
       logger.log(`✅ 成功加载配置: ${filePath}`);
-      logger.log(`   配置项数量: ${Object.keys(config).length}`);
+      logger.log(`   配置项数量: ${String(Object.keys(config).length)}`);
 
       return config;
     } catch (error) {
