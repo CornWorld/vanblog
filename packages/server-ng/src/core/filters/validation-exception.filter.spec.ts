@@ -102,4 +102,131 @@ describe('ValidationExceptionFilter', () => {
     expect(payload.message).toEqual(msg);
     expect((mockLogger as any).warn).toHaveBeenCalled();
   });
+
+  it('should handle empty array validation errors', () => {
+    const exception = new BadRequestException({ message: [], error: 'Bad Request' });
+
+    filter.catch(exception, mockArgumentsHost);
+
+    expect(mockResponse.status).toHaveBeenCalledWith(400);
+    expect(mockResponse.json).toHaveBeenCalledWith({
+      statusCode: 400,
+      timestamp: expect.any(String) as string,
+      path: '/api/test',
+      method: 'POST',
+      error: 'Validation Failed',
+      message: [],
+    });
+  });
+
+  it('should handle multiple validation errors', () => {
+    const validationErrors = [
+      'email must be a valid email',
+      'password must be longer than 8 characters',
+      'username is required',
+    ];
+    const exception = new BadRequestException({ message: validationErrors, error: 'Bad Request' });
+
+    filter.catch(exception, mockArgumentsHost);
+
+    expect(mockResponse.status).toHaveBeenCalledWith(400);
+    expect(mockResponse.json).toHaveBeenCalledWith({
+      statusCode: 400,
+      timestamp: expect.any(String) as string,
+      path: '/api/test',
+      method: 'POST',
+      error: 'Validation Failed',
+      message: validationErrors,
+    });
+    expect(mockLogger.warn).toHaveBeenCalledWith(
+      `Validation Failed: POST /api/test - ${JSON.stringify(validationErrors)}`,
+      'ValidationExceptionFilter',
+    );
+  });
+
+  it('should handle validation on different URL paths', () => {
+    const paths = ['/api/users', '/api/v2/articles', '/admin/settings'];
+
+    paths.forEach((path) => {
+      mockRequest.url = path;
+      const exception = new BadRequestException({ message: ['error'], error: 'Bad Request' });
+
+      filter.catch(exception, mockArgumentsHost);
+
+      expect(mockResponse.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          path,
+        }),
+      );
+    });
+  });
+
+  it('should handle validation with different HTTP methods', () => {
+    const methods = ['POST', 'PUT', 'PATCH'];
+
+    methods.forEach((method) => {
+      mockRequest.method = method;
+      const exception = new BadRequestException({
+        message: ['validation error'],
+        error: 'Bad Request',
+      });
+
+      filter.catch(exception, mockArgumentsHost);
+
+      expect(mockResponse.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          method,
+        }),
+      );
+    });
+  });
+
+  it('should log correct context in warning', () => {
+    const errors = ['field1 is invalid', 'field2 is required'];
+    const exception = new BadRequestException({ message: errors, error: 'Bad Request' });
+
+    filter.catch(exception, mockArgumentsHost);
+
+    expect(mockLogger.warn).toHaveBeenCalledWith(
+      `Validation Failed: POST /api/test - ${JSON.stringify(errors)}`,
+      'ValidationExceptionFilter',
+    );
+  });
+
+  it('should handle nested validation error objects', () => {
+    const nestedErrors = [
+      { field: 'email', message: 'Invalid email format' },
+      { field: 'password', message: 'Too short' },
+    ];
+    const exception = new BadRequestException({
+      message: nestedErrors as any,
+      error: 'Bad Request',
+    });
+
+    filter.catch(exception, mockArgumentsHost);
+
+    expect(mockResponse.status).toHaveBeenCalledWith(400);
+    const calls = (mockResponse.json as any).mock.calls as any[];
+    const [lastCall] = calls.slice(-1);
+    const [payload] = lastCall;
+    expect(payload).toMatchObject({
+      statusCode: 400,
+      path: '/api/test',
+      method: 'POST',
+      error: 'Validation Failed',
+      message: nestedErrors,
+    });
+  });
+
+  it('should include timestamp in response', () => {
+    const exception = new BadRequestException({ message: ['error'], error: 'Bad Request' });
+
+    filter.catch(exception, mockArgumentsHost);
+
+    const calls = (mockResponse.json as any).mock.calls as any[];
+    const [lastCall] = calls.slice(-1);
+    const [payload] = lastCall;
+    expect(payload.timestamp).toBeDefined();
+    expect(typeof payload.timestamp).toBe('string');
+  });
 });

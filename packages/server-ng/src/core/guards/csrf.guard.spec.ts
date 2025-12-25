@@ -97,4 +97,132 @@ describe('CsrfGuard', () => {
     const result = guard.canActivate(mockExecutionContext);
     expect(result).toBe(true);
   });
+
+  it('should allow PATCH requests (CSRF validation handled by middleware)', () => {
+    const mockExecutionContext = {
+      switchToHttp: () => ({
+        getRequest: () => ({
+          method: 'PATCH',
+        }),
+      }),
+    } as ExecutionContext;
+
+    const result = guard.canActivate(mockExecutionContext);
+    expect(result).toBe(true);
+  });
+
+  it('should allow custom HTTP methods (CSRF validation handled by middleware)', () => {
+    const mockExecutionContext = {
+      switchToHttp: () => ({
+        getRequest: () => ({
+          method: 'CUSTOM',
+        }),
+      }),
+    } as ExecutionContext;
+
+    const result = guard.canActivate(mockExecutionContext);
+    expect(result).toBe(true);
+  });
+
+  describe('safe HTTP methods', () => {
+    it('should skip CSRF validation for all safe methods', () => {
+      const safeMethods = ['GET', 'HEAD', 'OPTIONS'];
+
+      safeMethods.forEach((method) => {
+        const mockExecutionContext = {
+          switchToHttp: () => ({
+            getRequest: () => ({ method }),
+          }),
+        } as ExecutionContext;
+
+        const result = guard.canActivate(mockExecutionContext);
+        expect(result).toBe(true);
+      });
+    });
+  });
+
+  describe('unsafe HTTP methods', () => {
+    it('should allow all unsafe methods (validated by middleware)', () => {
+      const unsafeMethods = ['POST', 'PUT', 'DELETE', 'PATCH'];
+
+      unsafeMethods.forEach((method) => {
+        const mockExecutionContext = {
+          switchToHttp: () => ({
+            getRequest: () => ({ method }),
+          }),
+        } as ExecutionContext;
+
+        const result = guard.canActivate(mockExecutionContext);
+        expect(result).toBe(true);
+      });
+    });
+  });
+
+  describe('edge cases', () => {
+    it('should not validate case for lowercase method names (allows through)', () => {
+      const mockExecutionContext = {
+        switchToHttp: () => ({
+          getRequest: () => ({
+            method: 'get',
+          }),
+        }),
+      } as ExecutionContext;
+
+      // Guard allows through all non-uppercase safe methods since validation is middleware's job
+      const result = guard.canActivate(mockExecutionContext);
+      expect(result).toBe(true);
+    });
+
+    it('should not validate case for mixed case method names (allows through)', () => {
+      const mockExecutionContext = {
+        switchToHttp: () => ({
+          getRequest: () => ({
+            method: 'Get',
+          }),
+        }),
+      } as ExecutionContext;
+
+      // Guard allows through all non-uppercase safe methods since validation is middleware's job
+      const result = guard.canActivate(mockExecutionContext);
+      expect(result).toBe(true);
+    });
+
+    it('should handle requests with csrfToken method', () => {
+      const mockExecutionContext = {
+        switchToHttp: () => ({
+          getRequest: () => ({
+            method: 'POST',
+            csrfToken: () => 'test-token',
+          }),
+        }),
+      } as ExecutionContext;
+
+      const result = guard.canActivate(mockExecutionContext);
+      expect(result).toBe(true);
+    });
+
+    it('should handle empty method name', () => {
+      const mockExecutionContext = {
+        switchToHttp: () => ({
+          getRequest: () => ({
+            method: '',
+          }),
+        }),
+      } as ExecutionContext;
+
+      const result = guard.canActivate(mockExecutionContext);
+      expect(result).toBe(true);
+    });
+
+    it('should handle request without method property', () => {
+      const mockExecutionContext = {
+        switchToHttp: () => ({
+          getRequest: () => ({}) as any,
+        }),
+      } as ExecutionContext;
+
+      const result = guard.canActivate(mockExecutionContext);
+      expect(result).toBe(true);
+    });
+  });
 });

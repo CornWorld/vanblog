@@ -13,6 +13,9 @@ describe('PerformanceInterceptor', () => {
   let mockCallHandler: CallHandler;
 
   beforeEach(() => {
+    // 启用 Fake Timers 以获得更稳定的时间控制
+    vi.useFakeTimers();
+
     mockLogger = {
       log: vi.fn(),
       warn: vi.fn(),
@@ -45,6 +48,7 @@ describe('PerformanceInterceptor', () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     vi.restoreAllMocks();
     PerformanceInterceptor.resetStats();
   });
@@ -54,49 +58,43 @@ describe('PerformanceInterceptor', () => {
       const originalEnv = process.env.NODE_ENV;
       process.env.NODE_ENV = 'development';
 
-      const mockDateNow = vi.spyOn(Date, 'now');
-      // 第一次调用：startTime = 1000
-      // 第二次调用：tap中的duration计算 = 1100
-      // 第三次调用：logRequest中的duration计算 = 1100
-      mockDateNow.mockReturnValueOnce(1000).mockReturnValueOnce(1100).mockReturnValueOnce(1100);
+      try {
+        const result = interceptor.intercept(mockExecutionContext, mockCallHandler);
 
-      const result = interceptor.intercept(mockExecutionContext, mockCallHandler);
-      await firstValueFrom(result);
+        // 模拟请求耗时 100ms
+        vi.advanceTimersByTime(100);
+        await firstValueFrom(result);
 
-      expect(mockLogger.log).toHaveBeenCalledWith(
-        'GET /api/test 200 100ms [127.0.0.1]',
-        'PerformanceInterceptor',
-      );
-
-      process.env.NODE_ENV = originalEnv;
+        expect(mockLogger.log).toHaveBeenCalledWith(
+          'GET /api/test 200 100ms [127.0.0.1]',
+          'PerformanceInterceptor',
+        );
+      } finally {
+        process.env.NODE_ENV = originalEnv;
+      }
     });
 
     it('应该在生产环境不记录正常请求', async () => {
       const originalEnv = process.env.NODE_ENV;
       process.env.NODE_ENV = 'production';
 
-      const mockDateNow = vi.spyOn(Date, 'now');
-      // 第一次调用：startTime = 1000
-      // 第二次调用：tap中的duration计算 = 1100
-      // 第三次调用：logRequest中的duration计算 = 1100
-      mockDateNow.mockReturnValueOnce(1000).mockReturnValueOnce(1100).mockReturnValueOnce(1100);
+      try {
+        const result = interceptor.intercept(mockExecutionContext, mockCallHandler);
 
-      const result = interceptor.intercept(mockExecutionContext, mockCallHandler);
-      await firstValueFrom(result);
+        vi.advanceTimersByTime(100);
+        await firstValueFrom(result);
 
-      expect(mockLogger.log).not.toHaveBeenCalled();
-
-      process.env.NODE_ENV = originalEnv;
+        expect(mockLogger.log).not.toHaveBeenCalled();
+      } finally {
+        process.env.NODE_ENV = originalEnv;
+      }
     });
 
     it('应该记录慢请求警告', async () => {
-      const mockDateNow = vi.spyOn(Date, 'now');
-      // 第一次调用：startTime = 1000
-      // 第二次调用：tap中的duration计算 = 2500
-      // 第三次调用：logRequest中的duration计算 = 2500
-      mockDateNow.mockReturnValueOnce(1000).mockReturnValueOnce(2500).mockReturnValueOnce(2500);
-
       const result = interceptor.intercept(mockExecutionContext, mockCallHandler);
+
+      // 模拟请求耗时 1500ms（超过 SLOW_REQUEST_THRESHOLD 1000ms）
+      vi.advanceTimersByTime(1500);
       await firstValueFrom(result);
 
       expect(mockLogger.warn).toHaveBeenCalledWith(
@@ -106,13 +104,10 @@ describe('PerformanceInterceptor', () => {
     });
 
     it('应该记录非常慢的请求错误', async () => {
-      const mockDateNow = vi.spyOn(Date, 'now');
-      // 第一次调用：startTime = 1000
-      // 第二次调用：tap中的duration计算 = 4500
-      // 第三次调用：logRequest中的duration计算 = 4500
-      mockDateNow.mockReturnValueOnce(1000).mockReturnValueOnce(4500).mockReturnValueOnce(4500);
-
       const result = interceptor.intercept(mockExecutionContext, mockCallHandler);
+
+      // 模拟请求耗时 3500ms（超过 VERY_SLOW_REQUEST_THRESHOLD 3000ms）
+      vi.advanceTimersByTime(3500);
       await firstValueFrom(result);
 
       expect(mockLogger.error).toHaveBeenCalledWith(
@@ -125,10 +120,9 @@ describe('PerformanceInterceptor', () => {
       const testError = new Error('Test error');
       mockCallHandler.handle = vi.fn().mockReturnValue(throwError(() => testError));
 
-      const mockDateNow = vi.spyOn(Date, 'now');
-      mockDateNow.mockReturnValueOnce(1000).mockReturnValueOnce(1200); // 200ms duration
-
       const result = interceptor.intercept(mockExecutionContext, mockCallHandler);
+
+      vi.advanceTimersByTime(200);
 
       try {
         await firstValueFrom(result);
@@ -146,17 +140,15 @@ describe('PerformanceInterceptor', () => {
 
   describe('端点性能统计测试', () => {
     it('应该正确记录端点统计信息', async () => {
-      const mockDateNow = vi.spyOn(Date, 'now');
-
       // 第一个请求：100ms
-      mockDateNow.mockReturnValueOnce(1000).mockReturnValueOnce(1100);
-      let result = interceptor.intercept(mockExecutionContext, mockCallHandler);
-      await firstValueFrom(result);
+      const result1 = interceptor.intercept(mockExecutionContext, mockCallHandler);
+      vi.advanceTimersByTime(100);
+      await firstValueFrom(result1);
 
       // 第二个请求：200ms
-      mockDateNow.mockReturnValueOnce(2000).mockReturnValueOnce(2200);
-      result = interceptor.intercept(mockExecutionContext, mockCallHandler);
-      await firstValueFrom(result);
+      const result2 = interceptor.intercept(mockExecutionContext, mockCallHandler);
+      vi.advanceTimersByTime(200);
+      await firstValueFrom(result2);
 
       const stats = PerformanceInterceptor.getEndpointStats();
       const endpointStats = stats.get('GET /api/test');
@@ -170,27 +162,25 @@ describe('PerformanceInterceptor', () => {
     });
 
     it('应该正确统计响应时间分布', async () => {
-      const mockDateNow = vi.spyOn(Date, 'now');
-
       // 快速请求：50ms
-      mockDateNow.mockReturnValueOnce(1000).mockReturnValueOnce(1050);
-      let result = interceptor.intercept(mockExecutionContext, mockCallHandler);
-      await firstValueFrom(result);
+      const result1 = interceptor.intercept(mockExecutionContext, mockCallHandler);
+      vi.advanceTimersByTime(50);
+      await firstValueFrom(result1);
 
       // 正常请求：300ms
-      mockDateNow.mockReturnValueOnce(2000).mockReturnValueOnce(2300);
-      result = interceptor.intercept(mockExecutionContext, mockCallHandler);
-      await firstValueFrom(result);
+      const result2 = interceptor.intercept(mockExecutionContext, mockCallHandler);
+      vi.advanceTimersByTime(300);
+      await firstValueFrom(result2);
 
       // 慢请求：800ms
-      mockDateNow.mockReturnValueOnce(3000).mockReturnValueOnce(3800);
-      result = interceptor.intercept(mockExecutionContext, mockCallHandler);
-      await firstValueFrom(result);
+      const result3 = interceptor.intercept(mockExecutionContext, mockCallHandler);
+      vi.advanceTimersByTime(800);
+      await firstValueFrom(result3);
 
       // 非常慢请求：1500ms
-      mockDateNow.mockReturnValueOnce(4000).mockReturnValueOnce(5500);
-      result = interceptor.intercept(mockExecutionContext, mockCallHandler);
-      await firstValueFrom(result);
+      const result4 = interceptor.intercept(mockExecutionContext, mockCallHandler);
+      vi.advanceTimersByTime(1500);
+      await firstValueFrom(result4);
 
       const stats = PerformanceInterceptor.getEndpointStats();
       const endpointStats = stats.get('GET /api/test');
@@ -202,15 +192,12 @@ describe('PerformanceInterceptor', () => {
     });
 
     it('应该正确生成性能摘要', async () => {
-      const mockDateNow = vi.spyOn(Date, 'now');
+      // 端点1：快速请求 50ms
+      const result1 = interceptor.intercept(mockExecutionContext, mockCallHandler);
+      vi.advanceTimersByTime(50);
+      await firstValueFrom(result1);
 
-      // 添加多个端点的请求
-      // 端点1：快速请求
-      mockDateNow.mockReturnValueOnce(1000).mockReturnValueOnce(1050);
-      let result = interceptor.intercept(mockExecutionContext, mockCallHandler);
-      await firstValueFrom(result);
-
-      // 端点2：慢请求
+      // 端点2：慢请求 1500ms
       const slowContext = {
         ...mockExecutionContext,
         switchToHttp: vi.fn().mockReturnValue({
@@ -227,9 +214,9 @@ describe('PerformanceInterceptor', () => {
         }),
       } as unknown as ExecutionContext;
 
-      mockDateNow.mockReturnValueOnce(2000).mockReturnValueOnce(3500); // 1500ms
-      result = interceptor.intercept(slowContext, mockCallHandler);
-      await firstValueFrom(result);
+      const result2 = interceptor.intercept(slowContext, mockCallHandler);
+      vi.advanceTimersByTime(1500);
+      await firstValueFrom(result2);
 
       const summary = PerformanceInterceptor.getPerformanceSummary();
 
@@ -242,8 +229,6 @@ describe('PerformanceInterceptor', () => {
     });
 
     it('应该限制最大端点数量', async () => {
-      const mockDateNow = vi.spyOn(Date, 'now');
-
       // 创建超过限制的端点数量（模拟1001个端点）
       for (let i = 0; i < 1001; i++) {
         const context = {
@@ -262,8 +247,8 @@ describe('PerformanceInterceptor', () => {
           }),
         } as unknown as ExecutionContext;
 
-        mockDateNow.mockReturnValueOnce(1000 + i).mockReturnValueOnce(1100 + i);
         const result = interceptor.intercept(context, mockCallHandler);
+        vi.advanceTimersByTime(1);
         await firstValueFrom(result);
       }
 
@@ -274,10 +259,8 @@ describe('PerformanceInterceptor', () => {
 
   describe('静态方法测试', () => {
     it('应该能够重置统计数据', async () => {
-      const mockDateNow = vi.spyOn(Date, 'now');
-      mockDateNow.mockReturnValueOnce(1000).mockReturnValueOnce(1100);
-
       const result = interceptor.intercept(mockExecutionContext, mockCallHandler);
+      vi.advanceTimersByTime(100);
       await firstValueFrom(result);
 
       expect(PerformanceInterceptor.getEndpointStats().size).toBe(1);
@@ -289,10 +272,8 @@ describe('PerformanceInterceptor', () => {
     });
 
     it('应该返回端点统计的副本', async () => {
-      const mockDateNow = vi.spyOn(Date, 'now');
-      mockDateNow.mockReturnValueOnce(1000).mockReturnValueOnce(1100);
-
       const result = interceptor.intercept(mockExecutionContext, mockCallHandler);
+      vi.advanceTimersByTime(100);
       await firstValueFrom(result);
 
       const stats1 = PerformanceInterceptor.getEndpointStats();
