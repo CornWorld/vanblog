@@ -16,7 +16,9 @@
     "drizzle.config.ts",
     "vitest.config.ts",
     "vitest.config.e2e.ts",
-    "vite-env.d.ts"
+    "vitest.config.perf.ts",
+    "vite-env.d.ts",
+    "scripts/**/*.ts"
   ],
   "exclude": ["node_modules", "dist"]
 }
