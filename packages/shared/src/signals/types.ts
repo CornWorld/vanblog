@@ -35,7 +35,10 @@ import type { z } from 'zod';
  * @template T - Zod Schema 类型
  * @template Type - Signal 类型：'sync' 可修改数据，'async' 用于副作用
  */
-export interface SignalDef<T extends z.ZodType = z.ZodType, Type extends 'sync' | 'async' = 'sync'> {
+export interface SignalDef<
+  T extends z.ZodType = z.ZodType,
+  Type extends 'sync' | 'async' = 'sync',
+> {
   /** Signal 唯一标识符（用于日志/调试/序列化） */
   readonly id: string;
   /** Zod Schema（用于类型推导和运行时校验） */

@@ -308,10 +308,7 @@ export type PluginMetadata = z.infer<typeof PluginMetadataSchema>;
  * @param dir - 插件目录绝对路径
  * @returns 解析后的插件元数据
  */
-export function parsePluginMetadata(
-  packageJson: PluginPackageJson,
-  dir: string,
-): PluginMetadata {
+export function parsePluginMetadata(packageJson: PluginPackageJson, dir: string): PluginMetadata {
   const vanblog = packageJson.vanblog ?? {};
   const repository =
     typeof packageJson.repository === 'string'

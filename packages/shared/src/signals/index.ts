@@ -139,7 +139,12 @@ export const signalMetaRegistry = new Map<
 function registerSignals() {
   for (const [moduleName, moduleSignals] of Object.entries(signals)) {
     for (const [signalName, signalDef] of Object.entries(moduleSignals)) {
-      const def = signalDef as { id: string; schema: z.ZodType; type: 'sync' | 'async'; description?: string };
+      const def = signalDef as {
+        id: string;
+        schema: z.ZodType;
+        type: 'sync' | 'async';
+        description?: string;
+      };
       signalSchemaRegistry.set(def.id, def.schema);
       signalMetaRegistry.set(def.id, {
         type: def.type,
@@ -215,7 +220,10 @@ export type Signals = typeof signals;
 export type ModuleSignals<M extends keyof Signals> = Signals[M];
 
 /** 获取某个具体 Signal 的数据类型 */
-export type SignalDataType<M extends keyof Signals, S extends keyof Signals[M]> = Signals[M][S] extends {
+export type SignalDataType<
+  M extends keyof Signals,
+  S extends keyof Signals[M],
+> = Signals[M][S] extends {
   schema: z.ZodType<infer T>;
 }
   ? T

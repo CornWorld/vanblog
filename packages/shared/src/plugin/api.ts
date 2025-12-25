@@ -381,7 +381,11 @@ export interface MetadataManager {
    * api.meta.register('article', 'readTime', z.number().int().positive());
    * ```
    */
-  register(entityType: 'article' | 'user' | 'category' | 'tag', metaKey: string, schema: z.ZodType): void;
+  register(
+    entityType: 'article' | 'user' | 'category' | 'tag',
+    metaKey: string,
+    schema: z.ZodType,
+  ): void;
 
   /**
    * 获取元数据
