@@ -6,6 +6,18 @@
 
 ## 变更记录 (Changelog)
 
+### 2025-12-25 - 测试重构 Phase 2 完成与文档清理
+
+- **测试重构 Phase 2 完成**：
+  - 重构 5 个大型测试文件（loader.service、category.service、tag.service、user.service、webhook.service）
+  - 拆分为 21 个专项测试文件（场景分离原则）
+  - 所有 237 个测试通过（3,778/3,803 总测试）
+  - 遵循测试组织规范（一对一、就近、场景拆分）
+
+- **文档清理**：
+  - 删除 11 个过时分析文档（TEST*ANALYSIS*_, BATCH\_\_TEST_\*, DUPLICATE_TEST_FILES_ANALYSIS, TEST_REFACTORING_PLAN）
+  - 保留 6 个核心永久文档（配置优化、插件开发、测试组织指南等）
+
 ### 2025-12-09 - 深度补充扫描
 
 - 补充插件系统详细文档（6 个内置插件）
@@ -318,19 +330,37 @@ const token = await createAuthToken(app, {
 await cleanupDatabase(app);
 ```
 
-#### 3. Vitest Fixtures（test/vitest-fixtures.test.ts）
+#### 3. 测试组织规范
 
-提供测试夹具（fixture）支持：
+**重要**：为了避免测试文件重复和混淆，项目采用了严格的测试组织规范。
 
-```typescript
-import { test as configTest } from './vitest-fixtures.test';
+**核心原则**：
 
-describe('MyService', () => {
-  configTest('should work with fixtures', async ({ app }) => {
-    // 自动提供 app 实例
-    expect(app).toBeDefined();
-  });
-});
+- 一对一：每个源文件只有一个对应测试文件
+- 就近：测试文件与源文件在同一目录
+- 场景拆分：>800 行时使用描述性后缀（如 `.concurrency.spec.ts`）
+
+**详细文档**：
+
+- [测试组织完整指南](./docs/TEST_ORGANIZATION_GUIDE.md) - 详细规范和最佳实践
+- [快速参考](./docs/TEST_QUICK_REFERENCE.md) - 一页速查表
+
+**示例**：
+
+```
+✅ 正确：
+src/modules/media/services/
+├── media.service.ts
+├── media.service.spec.ts               # 核心 CRUD
+├── media.service.concurrency.spec.ts   # 并发场景
+└── media.service.batch-limits.spec.ts  # 批量限制
+
+❌ 错误（重复且误导）：
+src/modules/media/
+├── services/
+│   ├── media.service.ts
+│   └── media.service.spec.ts           # 详细测试
+└── media.service.spec.ts               # 重复！
 ```
 
 ### 测试覆盖的模块
