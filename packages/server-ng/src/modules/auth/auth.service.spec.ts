@@ -113,6 +113,12 @@ describe('AuthService', () => {
       );
       expect(mockUserService.findByUsernameWithPassword).toHaveBeenCalledWith('testuser');
       expect(bcrypt.compare).toHaveBeenCalledWith('password', 'hashedPassword');
+      expect(mockHookService.doAction).toHaveBeenCalledWith('auth|beforeValidateUser', {
+        username: 'testuser',
+      });
+      expect(mockHookService.doAction).toHaveBeenCalledWith('auth|validatedUser', {
+        user: userWithoutPassword,
+      });
     });
 
     it('should return null when user not found', async () => {
@@ -123,6 +129,34 @@ describe('AuthService', () => {
       expect(result).toBeNull();
       expect(mockUserService.findByUsernameWithPassword).toHaveBeenCalledWith('testuser');
       expect(bcrypt.compare).not.toHaveBeenCalled();
+      expect(mockHookService.doAction).toHaveBeenCalledWith('auth|validateUserFailed', {
+        username: 'testuser',
+        reason: 'user_not_found',
+      });
+    });
+
+    it('should return null when user has no password', async () => {
+      const userWithoutPassword = new User({
+        id: 1,
+        username: 'testuser',
+        password: undefined,
+        nickname: 'Test User',
+        type: UserType.ADMIN,
+        permissions: [],
+        createdAt: dayjs().format(),
+        updatedAt: dayjs().format(),
+      });
+      mockUserService.findByUsernameWithPassword.mockResolvedValue(userWithoutPassword);
+
+      const result = await service.validateUser('testuser', 'password');
+
+      expect(result).toBeNull();
+      expect(mockUserService.findByUsernameWithPassword).toHaveBeenCalledWith('testuser');
+      expect(bcrypt.compare).not.toHaveBeenCalled();
+      expect(mockHookService.doAction).toHaveBeenCalledWith('auth|validateUserFailed', {
+        username: 'testuser',
+        reason: 'no_password',
+      });
     });
 
     it('should return null when password is invalid', async () => {
@@ -135,6 +169,10 @@ describe('AuthService', () => {
 
       expect(result).toBeNull();
       expect(bcrypt.compare).toHaveBeenCalledWith('wrongpassword', 'hashedPassword');
+      expect(mockHookService.doAction).toHaveBeenCalledWith('auth|validateUserFailed', {
+        username: 'testuser',
+        reason: 'invalid_password',
+      });
     });
   });
 
@@ -164,6 +202,24 @@ describe('AuthService', () => {
         },
       });
       expect(mockTokenService.generateTokenPair).toHaveBeenCalledWith(mockUser);
+    });
+
+    it('should trigger beforeLogin and loggedIn hooks', () => {
+      const tokenPair = {
+        accessToken: 'access.token.here',
+        refreshToken: 'refresh.token.here',
+      };
+      mockTokenService.generateTokenPair.mockReturnValue(tokenPair);
+
+      service.login(mockUser);
+
+      expect(mockHookService.doAction).toHaveBeenCalledWith('auth|beforeLogin', {
+        user: mockUser,
+      });
+      expect(mockHookService.doAction).toHaveBeenCalledWith('auth|loggedIn', {
+        user: mockUser,
+        token: tokenPair.accessToken,
+      });
     });
   });
 
@@ -216,6 +272,66 @@ describe('AuthService', () => {
       service.revokeAllUserTokens(1);
 
       expect(mockTokenService.revokeAllUserTokens).toHaveBeenCalledWith(1);
+    });
+  });
+
+  describe('generateAnonymousToken', () => {
+    beforeEach(() => {
+      mockTokenService.generateAnonymousAccessToken = vi.fn().mockReturnValue('anonymous.token');
+    });
+
+    it('should generate anonymous token with default expiration (12h)', () => {
+      const result = service.generateAnonymousToken();
+
+      expect(result).toEqual({
+        access_token: 'anonymous.token',
+        expiresAt: expect.any(String),
+      });
+      expect(mockTokenService.generateAnonymousAccessToken).toHaveBeenCalledWith(
+        'anonymous',
+        undefined,
+      );
+
+      // Verify expiresAt is approximately 12 hours from now
+      const expiresAt = dayjs(result.expiresAt);
+      const expectedExpiry = dayjs().add(12, 'hour');
+      const diff = Math.abs(expiresAt.diff(expectedExpiry, 'minute'));
+      expect(diff).toBeLessThan(1); // Allow 1 minute tolerance
+    });
+
+    it('should generate anonymous token with custom expiration (24h)', () => {
+      const result = service.generateAnonymousToken('24h');
+
+      expect(result).toEqual({
+        access_token: 'anonymous.token',
+        expiresAt: expect.any(String),
+      });
+      expect(mockTokenService.generateAnonymousAccessToken).toHaveBeenCalledWith(
+        'anonymous',
+        '24h',
+      );
+
+      // Verify expiresAt is approximately 24 hours from now
+      const expiresAt = dayjs(result.expiresAt);
+      const expectedExpiry = dayjs().add(24, 'hour');
+      const diff = Math.abs(expiresAt.diff(expectedExpiry, 'minute'));
+      expect(diff).toBeLessThan(1); // Allow 1 minute tolerance
+    });
+
+    it('should generate anonymous token with custom expiration (1h)', () => {
+      const result = service.generateAnonymousToken('1h');
+
+      expect(result).toEqual({
+        access_token: 'anonymous.token',
+        expiresAt: expect.any(String),
+      });
+      expect(mockTokenService.generateAnonymousAccessToken).toHaveBeenCalledWith('anonymous', '1h');
+
+      // Verify expiresAt is approximately 1 hour from now
+      const expiresAt = dayjs(result.expiresAt);
+      const expectedExpiry = dayjs().add(1, 'hour');
+      const diff = Math.abs(expiresAt.diff(expectedExpiry, 'minute'));
+      expect(diff).toBeLessThan(1); // Allow 1 minute tolerance
     });
   });
 });

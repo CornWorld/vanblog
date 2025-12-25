@@ -168,5 +168,67 @@ describe('JwtStrategy', () => {
 
       expect(userService.findOne).toHaveBeenCalledWith(1);
     });
+
+    // Edge case tests for sub field
+    it('should treat sub=0 as valid user ID (not anonymous)', async () => {
+      const payload: JwtPayload = {
+        sub: 0,
+        username: 'admin',
+        type: UserType.ADMIN,
+      };
+
+      mockUserService.findOne.mockResolvedValue(mockUser);
+
+      const result = await strategy.validate(payload);
+
+      expect(result).toBe(mockUser);
+      expect(userService.findOne).toHaveBeenCalledWith(0);
+    });
+
+    it('should treat negative sub as invalid and throw error', async () => {
+      const payload: JwtPayload = {
+        sub: -1,
+        username: 'testuser',
+        type: UserType.ADMIN,
+      };
+
+      mockUserService.findOne.mockRejectedValue(new Error('Invalid user ID'));
+
+      await expect(strategy.validate(payload)).rejects.toThrow(
+        new UnauthorizedException('Invalid token'),
+      );
+
+      expect(userService.findOne).toHaveBeenCalledWith(-1);
+    });
+
+    it('should treat undefined sub (when not anonymous) as invalid', async () => {
+      const payload: JwtPayload = {
+        sub: undefined as any,
+        username: 'testuser',
+        type: UserType.ADMIN,
+      };
+
+      mockUserService.findOne.mockRejectedValue(new Error('Invalid sub'));
+
+      await expect(strategy.validate(payload)).rejects.toThrow(
+        new UnauthorizedException('Invalid token'),
+      );
+    });
+
+    it('should handle very large sub values', async () => {
+      const largeId = 9999999999;
+      const payload: JwtPayload = {
+        sub: largeId,
+        username: 'testuser',
+        type: UserType.ADMIN,
+      };
+
+      mockUserService.findOne.mockResolvedValue(mockUser);
+
+      const result = await strategy.validate(payload);
+
+      expect(result).toBe(mockUser);
+      expect(userService.findOne).toHaveBeenCalledWith(largeId);
+    });
   });
 });
