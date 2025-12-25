@@ -10,8 +10,8 @@ import { Logger } from '@nestjs/common';
 import { nowIsoTz } from '@vanblog/shared';
 import { sqliteTable, text, integer, real } from 'drizzle-orm/sqlite-core';
 
-import type { z } from 'zod';
 import type { SQLiteTableWithColumns } from 'drizzle-orm/sqlite-core';
+import type { z } from 'zod';
 
 const logger = new Logger('SchemaToTableUtil');
 
@@ -146,7 +146,7 @@ function zodSchemaToColumn(columnName: string, schema: z.ZodTypeAny): DrizzleCol
     const column = zodSchemaToColumn(columnName, innerSchema);
     // 添加默认值
     if (column && defaultValue !== undefined) {
-      return column.default(defaultValue) as DrizzleColumn;
+      return column.default(defaultValue);
     }
     return column;
   }

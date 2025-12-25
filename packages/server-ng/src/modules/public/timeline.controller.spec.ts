@@ -38,4 +38,37 @@ describe('TimelineController (Public)', () => {
     expect(mockTimelineService.getTimeline).toHaveBeenCalledWith(true);
     expect(result).toEqual({ statusCode: 200, data });
   });
+
+  it('getTimelineHandler should parse includeHidden from query string', async () => {
+    const mockData = { '2024': [] };
+    mockTimelineService.getTimeline.mockResolvedValue(mockData);
+
+    const handler = controller.getTimelineHandler();
+    const result = await handler({ query: { includeHidden: 'true' } });
+
+    expect(mockTimelineService.getTimeline).toHaveBeenCalledWith(true);
+    expect(result).toEqual({ status: 200, body: mockData });
+  });
+
+  it('getTimelineHandler should default includeHidden to false when query is undefined', async () => {
+    const mockData = { '2024': [] };
+    mockTimelineService.getTimeline.mockResolvedValue(mockData);
+
+    const handler = controller.getTimelineHandler();
+    const result = await handler({ query: undefined });
+
+    expect(mockTimelineService.getTimeline).toHaveBeenCalledWith(false);
+    expect(result).toEqual({ status: 200, body: mockData });
+  });
+
+  it('getTimelineHandler should treat non-"true" values as false', async () => {
+    const mockData = { '2024': [] };
+    mockTimelineService.getTimeline.mockResolvedValue(mockData);
+
+    const handler = controller.getTimelineHandler();
+    const result = await handler({ query: { includeHidden: 'false' } });
+
+    expect(mockTimelineService.getTimeline).toHaveBeenCalledWith(false);
+    expect(result).toEqual({ status: 200, body: mockData });
+  });
 });

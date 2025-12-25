@@ -2,43 +2,14 @@ import { Logger } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
-import { DATABASE_CONNECTION } from '../../../database';
-
 import { HookService } from './hook.service';
-import { PluginContextFactory } from './plugin-context.service';
 
 describe('HookService', () => {
   let service: HookService;
 
   beforeEach(async () => {
-    const mockDatabase = {
-      select: vi.fn().mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockResolvedValue([]),
-        }),
-      }),
-    };
-
-    const mockPluginContextFactory = {
-      create: vi.fn().mockReturnValue({
-        data: {},
-        logger: { log: vi.fn(), error: vi.fn() },
-        config: { get: vi.fn() },
-      }),
-    };
-
     const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        HookService,
-        {
-          provide: DATABASE_CONNECTION,
-          useValue: mockDatabase,
-        },
-        {
-          provide: PluginContextFactory,
-          useValue: mockPluginContextFactory,
-        },
-      ],
+      providers: [HookService],
     }).compile();
 
     service = module.get<HookService>(HookService);
@@ -613,6 +584,282 @@ describe('HookService', () => {
       expect(() => {
         service.addAction('', vi.fn());
       }).toThrow(/Invalid hook name.*Expected format: module\|event/);
+    });
+
+    it('should reject whitespace-only hook names', () => {
+      expect(() => {
+        service.addAction('   ', vi.fn());
+      }).toThrow(/Invalid hook name.*Expected format: module\|event/);
+    });
+
+    it('should reject hook names with only module part', () => {
+      expect(() => {
+        service.addAction('user|', vi.fn());
+      }).toThrow(/Invalid hook name.*Expected format: module\|event/);
+    });
+
+    it('should reject hook names with only event part', () => {
+      expect(() => {
+        service.addAction('|afterCreate', vi.fn());
+      }).toThrow(/Invalid hook name.*Expected format: module\|event/);
+    });
+
+    it('should reject module names with uppercase letters', () => {
+      expect(() => {
+        service.addAction('UserAuth|afterCreate', vi.fn());
+      }).toThrow(/Invalid module name 'UserAuth'.*must be lowercase/);
+    });
+
+    it('should accept module names with hyphens', () => {
+      expect(() => {
+        service.addAction('user-auth|afterCreate', vi.fn());
+      }).not.toThrow();
+      expect(service.hasAction('user-auth|afterCreate')).toBe(true);
+    });
+
+    it('should provide fallback camelCase suggestion for non-standard separators', () => {
+      expect(() => {
+        service.addAction('user|email_verified_status', vi.fn());
+      }).toThrow(/Invalid event name 'email_verified_status'/);
+    });
+
+    it('should reject module names with uppercase first letter', () => {
+      expect(() => {
+        service.addAction('Article|afterCreate', vi.fn());
+      }).toThrow(/Invalid module name 'Article'/);
+    });
+  });
+
+  describe('hook name validation edge cases', () => {
+    it('should split on first pipe and validate event part', () => {
+      // 'user|after|create' splits to ['user', 'after'] and 'after' is not valid camelCase
+      expect(() => {
+        service.addAction('user|after|create', vi.fn());
+      }).not.toThrow();
+      // The event part 'after' is actually valid camelCase (lowercase), so this should succeed
+      expect(service.hasAction('user|after')).toBe(true);
+    });
+
+    it('should trim whitespace from hook names', () => {
+      const callback = vi.fn();
+      const id = service.addAction('  user|afterCreate  ', callback);
+      expect(id).toBeDefined();
+      expect(service.hasAction('user|afterCreate')).toBe(true);
+    });
+
+    it('should reject hook names with special characters in module', () => {
+      expect(() => {
+        service.addAction('user@auth|afterCreate', vi.fn());
+      }).toThrow(/Invalid module name/);
+    });
+
+    it('should reject event names starting with uppercase', () => {
+      expect(() => {
+        service.addAction('user|AfterCreate', vi.fn());
+      }).toThrow(/Invalid event name 'AfterCreate'/);
+    });
+
+    it('should accept complex valid camelCase event names', () => {
+      expect(() => {
+        service.addAction('user|afterPasswordResetTokenGenerate', vi.fn());
+        service.addFilter('article|beforeHTMLRender', vi.fn());
+      }).not.toThrow();
+    });
+  });
+
+  describe('removeFilter edge cases', () => {
+    it('should return false for non-existent id in existing hook', () => {
+      const callback = vi.fn((value: string) => value);
+      service.addFilter('test|hook', callback);
+
+      expect(service.removeFilter('test|hook', 'non-existent-id')).toBe(false);
+      expect(service.hasFilter('test|hook')).toBe(true);
+    });
+  });
+
+  describe('action and filter execution with multiple priorities', () => {
+    it('should execute actions with same priority in registration order', async () => {
+      const order: number[] = [];
+      service.addAction(
+        'test|samePriority',
+        () => {
+          order.push(1);
+        },
+        10,
+      );
+      service.addAction(
+        'test|samePriority',
+        () => {
+          order.push(2);
+        },
+        10,
+      );
+      service.addAction(
+        'test|samePriority',
+        () => {
+          order.push(3);
+        },
+        10,
+      );
+
+      await service.doAction('test|samePriority');
+      expect(order).toEqual([1, 2, 3]);
+    });
+
+    it('should apply filters with same priority in registration order', async () => {
+      const filter1 = vi.fn((value: string) => `${value}:1`);
+      const filter2 = vi.fn((value: string) => `${value}:2`);
+      const filter3 = vi.fn((value: string) => `${value}:3`);
+
+      service.addFilter('test|samePriority', filter1, 10);
+      service.addFilter('test|samePriority', filter2, 10);
+      service.addFilter('test|samePriority', filter3, 10);
+
+      const result = await service.applyFilters('test|samePriority', 'start');
+      expect(result).toBe('start:1:2:3');
+    });
+  });
+
+  describe('getAllActionHooks and getAllFilterHooks', () => {
+    it('should return empty arrays when no hooks registered', () => {
+      expect(service.getAllActionHooks()).toEqual([]);
+      expect(service.getAllFilterHooks()).toEqual([]);
+    });
+
+    it('should return all unique action hook names', () => {
+      service.addAction('hook1|event', vi.fn());
+      service.addAction('hook1|event', vi.fn()); // Same hook, different callback
+      service.addAction('hook2|event', vi.fn());
+      service.addAction('hook3|event', vi.fn());
+
+      const hooks = service.getAllActionHooks();
+      expect(hooks.length).toBe(3);
+      expect(hooks).toContain('hook1|event');
+      expect(hooks).toContain('hook2|event');
+      expect(hooks).toContain('hook3|event');
+    });
+
+    it('should return all unique filter hook names', () => {
+      service.addFilter(
+        'hook1|event',
+        vi.fn((v: unknown) => v),
+      );
+      service.addFilter(
+        'hook1|event',
+        vi.fn((v: unknown) => v),
+      ); // Same hook, different callback
+      service.addFilter(
+        'hook2|event',
+        vi.fn((v: unknown) => v),
+      );
+
+      const hooks = service.getAllFilterHooks();
+      expect(hooks.length).toBe(2);
+      expect(hooks).toContain('hook1|event');
+      expect(hooks).toContain('hook2|event');
+    });
+  });
+
+  describe('clearHook', () => {
+    it('should clear both actions and filters for specific hook', () => {
+      service.addAction('clear|test', vi.fn());
+      service.addAction('clear|test', vi.fn());
+      service.addFilter(
+        'clear|test',
+        vi.fn((v: unknown) => v),
+      );
+      service.addAction('keep|test', vi.fn());
+
+      expect(service.getActionCount('clear|test')).toBe(2);
+      expect(service.getFilterCount('clear|test')).toBe(1);
+      expect(service.hasAction('keep|test')).toBe(true);
+
+      service.clearHook('clear|test');
+
+      expect(service.hasAction('clear|test')).toBe(false);
+      expect(service.hasFilter('clear|test')).toBe(false);
+      expect(service.getActionCount('clear|test')).toBe(0);
+      expect(service.getFilterCount('clear|test')).toBe(0);
+      expect(service.hasAction('keep|test')).toBe(true);
+    });
+
+    it('should validate hook name when clearing', () => {
+      expect(() => {
+        service.clearHook('invalid-hook-name');
+      }).toThrow(/Invalid hook name/);
+    });
+  });
+
+  describe('error handling in doAction', () => {
+    it('should log errors with Error objects', async () => {
+      const errorSpy = vi.spyOn(Logger.prototype, 'error');
+      const testError = new Error('Test error message');
+      const callback = vi.fn(() => {
+        throw testError;
+      });
+
+      service.addAction('error|test', callback);
+      await service.doAction('error|test');
+
+      expect(errorSpy).toHaveBeenCalledWith(
+        expect.stringContaining("Error executing action for hook 'error|test'"),
+        'Test error message',
+      );
+    });
+
+    it('should log errors with non-Error objects', async () => {
+      const errorSpy = vi.spyOn(Logger.prototype, 'error');
+      const callback = vi.fn(() => {
+        throw 'String error';
+      });
+
+      service.addAction('error|nonError', callback);
+      await service.doAction('error|nonError');
+
+      expect(errorSpy).toHaveBeenCalledWith(
+        expect.stringContaining("Error executing action for hook 'error|nonError'"),
+        'String error',
+      );
+    });
+  });
+
+  describe('error handling in applyFilters', () => {
+    it('should log errors with Error objects and preserve current value', async () => {
+      const errorSpy = vi.spyOn(Logger.prototype, 'error');
+      const testError = new Error('Filter error');
+      const filter1 = vi.fn((value: string) => `${value}:1`);
+      const filter2 = vi.fn(() => {
+        throw testError;
+      });
+      const filter3 = vi.fn((value: string) => `${value}:3`);
+
+      service.addFilter('error|filter', filter1, 5);
+      service.addFilter('error|filter', filter2, 10);
+      service.addFilter('error|filter', filter3, 15);
+
+      const result = await service.applyFilters('error|filter', 'start');
+
+      expect(errorSpy).toHaveBeenCalledWith(
+        expect.stringContaining("Error applying filter for hook 'error|filter'"),
+        'Filter error',
+      );
+      expect(result).toBe('start:1:3'); // Should skip errored filter but continue
+    });
+
+    it('should log errors with non-Error objects in filters', async () => {
+      const errorSpy = vi.spyOn(Logger.prototype, 'error');
+      const filter = vi.fn(() => {
+        throw { custom: 'error' };
+      });
+
+      service.addFilter('error|customFilter', filter);
+      const result = await service.applyFilters('error|customFilter', 'original');
+
+      expect(errorSpy).toHaveBeenCalledWith(
+        expect.stringContaining("Error applying filter for hook 'error|customFilter'"),
+        { custom: 'error' },
+      );
+      expect(result).toBe('original'); // Should return original value on error
     });
   });
 });

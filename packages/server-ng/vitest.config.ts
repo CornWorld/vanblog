@@ -13,6 +13,7 @@ export default defineConfig({
       '**/*.fixtures.test.ts',
       '**/vitest-fixtures.test.ts',
       '**/*.e2e-spec.ts',
+      '**/*.perf.spec.ts', // Exclude performance tests from default test run
     ],
     // 启用测试报告（JUnit，用于 CI Artifact）
     reporters: ['default', 'junit'],

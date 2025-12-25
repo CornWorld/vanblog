@@ -86,7 +86,6 @@ describe('PluginContext Services', () => {
         }
         return defaultValue;
       }),
-      configService: {},
     } as unknown as ConfigService;
 
     const module: TestingModule = await Test.createTestingModule({

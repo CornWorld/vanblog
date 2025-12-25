@@ -354,5 +354,460 @@ describe('SitemapService', () => {
 
       expect(urls).toContain('/one');
     });
+
+    it('should ignore setting read errors silently', async () => {
+      (settingCoreService.getConfig as any).mockImplementation(async (key: string) => {
+        if (key === 'sitemapExtraStaticPaths') throw new Error('Setting error');
+        if (key === 'baseUrl') return await Promise.resolve('https://example.com');
+        return await Promise.resolve(null);
+      });
+
+      const urls = await service.getSiteUrls();
+
+      expect(urls).toContain('/');
+      expect(urls).toContain('/category');
+      expect(urls).toContain('/tag');
+    });
+  });
+
+  describe('getArticleUrls', () => {
+    it('should return article URLs with pathname', async () => {
+      const mockArticles = [
+        { id: 1, pathname: 'custom-path' },
+        { id: 2, pathname: 'another-path' },
+      ];
+
+      Object.defineProperty(service, 'db', {
+        value: {
+          select: vi.fn().mockReturnValue({
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockResolvedValue(mockArticles),
+            }),
+          }),
+        },
+        writable: true,
+      });
+
+      const urls = await service.getArticleUrls();
+
+      expect(urls).toContain('/post/custom-path');
+      expect(urls).toContain('/post/another-path');
+    });
+
+    it('should use id when pathname is null', async () => {
+      const mockArticles = [
+        { id: 1, pathname: null },
+        { id: 2, pathname: null },
+      ];
+
+      Object.defineProperty(service, 'db', {
+        value: {
+          select: vi.fn().mockReturnValue({
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockResolvedValue(mockArticles),
+            }),
+          }),
+        },
+        writable: true,
+      });
+
+      const urls = await service.getArticleUrls();
+
+      expect(urls).toContain('/post/1');
+      expect(urls).toContain('/post/2');
+    });
+  });
+
+  describe('getCategoryUrls', () => {
+    it('should return encoded category URLs', async () => {
+      const mockCategories = [{ name: 'Tech & Science' }, { name: '中文分类' }];
+
+      Object.defineProperty(service, 'db', {
+        value: {
+          select: vi.fn().mockReturnValue({
+            from: vi.fn().mockResolvedValue(mockCategories),
+          }),
+        },
+        writable: true,
+      });
+
+      const urls = await service.getCategoryUrls();
+
+      expect(urls).toContain('/category/Tech%20%26%20Science');
+      expect(urls).toContain(`/category/${encodeURIComponent('中文分类')}`);
+    });
+  });
+
+  describe('getTagUrls', () => {
+    it('should return encoded tag URLs', async () => {
+      const mockTags = [{ name: 'JavaScript' }, { name: 'Node.js' }];
+
+      Object.defineProperty(service, 'db', {
+        value: {
+          select: vi.fn().mockReturnValue({
+            from: vi.fn().mockResolvedValue(mockTags),
+          }),
+        },
+        writable: true,
+      });
+
+      const urls = await service.getTagUrls();
+
+      expect(urls).toContain('/tag/JavaScript');
+      expect(urls).toContain('/tag/Node.js');
+    });
+  });
+
+  describe('getPageUrls', () => {
+    it('should generate correct number of pages', async () => {
+      (settingCoreService.getConfig as any).mockResolvedValue(10);
+
+      Object.defineProperty(service, 'db', {
+        value: {
+          select: vi.fn().mockReturnValue({
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockResolvedValue([{ count: 25 }]),
+            }),
+          }),
+        },
+        writable: true,
+      });
+
+      const urls = await service.getPageUrls();
+
+      expect(urls).toHaveLength(3);
+      expect(urls).toContain('/page/1');
+      expect(urls).toContain('/page/2');
+      expect(urls).toContain('/page/3');
+    });
+
+    it('should handle zero articles', async () => {
+      (settingCoreService.getConfig as any).mockResolvedValue(10);
+
+      let selectCallCount = 0;
+      Object.defineProperty(service, 'db', {
+        value: {
+          select: vi.fn().mockImplementation(() => {
+            selectCallCount++;
+            if (selectCallCount === 1) {
+              return {
+                from: vi.fn().mockReturnValue({
+                  where: vi.fn().mockResolvedValue([{ count: 0 }]),
+                }),
+              };
+            } else {
+              return {
+                from: vi.fn().mockReturnValue({
+                  where: vi.fn().mockResolvedValue([]),
+                }),
+              };
+            }
+          }),
+        },
+        writable: true,
+      });
+
+      const urls = await service.getPageUrls();
+
+      expect(urls).toHaveLength(0);
+    });
+
+    it('should fallback to list length when count fails', async () => {
+      (settingCoreService.getConfig as any).mockResolvedValue(5);
+
+      let selectCallCount = 0;
+      Object.defineProperty(service, 'db', {
+        value: {
+          select: vi.fn().mockImplementation(() => {
+            selectCallCount++;
+            if (selectCallCount === 1) {
+              return {
+                from: vi.fn().mockReturnValue({
+                  where: vi.fn().mockRejectedValue(new Error('Count failed')),
+                }),
+              };
+            } else {
+              return {
+                from: vi.fn().mockReturnValue({
+                  where: vi.fn().mockResolvedValue([{ id: 1 }, { id: 2 }, { id: 3 }]),
+                }),
+              };
+            }
+          }),
+        },
+        writable: true,
+      });
+
+      const urls = await service.getPageUrls();
+
+      expect(urls).toHaveLength(1);
+      expect(urls).toContain('/page/1');
+    });
+  });
+
+  describe('generateSitemap', () => {
+    it('should debounce sitemap generation', async () => {
+      vi.useFakeTimers();
+
+      const generateSpy = vi.spyOn(service, 'generateSitemapFn');
+
+      service.generateSitemap('First call', 1000);
+      service.generateSitemap('Second call', 1000);
+      service.generateSitemap('Third call', 1000);
+
+      expect(generateSpy).not.toHaveBeenCalled();
+
+      vi.advanceTimersByTime(1000);
+
+      expect(generateSpy).toHaveBeenCalledTimes(1);
+      expect(generateSpy).toHaveBeenCalledWith('Third call');
+
+      vi.useRealTimers();
+    });
+
+    it('should use default delay when not provided', () => {
+      vi.useFakeTimers();
+
+      const generateSpy = vi.spyOn(service, 'generateSitemapFn');
+
+      service.generateSitemap('Test');
+
+      vi.advanceTimersByTime(60000);
+
+      expect(generateSpy).toHaveBeenCalledTimes(1);
+
+      vi.useRealTimers();
+    });
+  });
+
+  describe('washUrl', () => {
+    it('should add trailing slash if missing', () => {
+      const result = service['washUrl']('https://example.com');
+      expect(result).toBe('https://example.com/');
+    });
+
+    it('should not add trailing slash if already present', () => {
+      const result = service['washUrl']('https://example.com/');
+      expect(result).toBe('https://example.com/');
+    });
+
+    it('should handle empty string', () => {
+      const result = service['washUrl']('');
+      expect(result).toBe('http://localhost:3000/');
+    });
+  });
+
+  describe('dedupe', () => {
+    it('should remove duplicate URLs', () => {
+      const urls = ['/', '/post/1', '/', '/post/2', '/post/1'];
+      const result = service['dedupe'](urls);
+      expect(result).toEqual(['/', '/post/1', '/post/2']);
+    });
+
+    it('should preserve order of first occurrence', () => {
+      const urls = ['/a', '/b', '/a', '/c', '/b'];
+      const result = service['dedupe'](urls);
+      expect(result).toEqual(['/a', '/b', '/c']);
+    });
+  });
+
+  describe('normalizeUrls', () => {
+    it('should normalize relative paths', () => {
+      const urls = ['/post/1', 'category/tech', '//double//slashes'];
+      const result = service['normalizeUrls']('https://example.com', urls);
+      expect(result).toContain('/post/1');
+      expect(result).toContain('/category/tech');
+      expect(result).toContain('/double/slashes');
+    });
+
+    it('should filter out cross-origin URLs', () => {
+      const urls = ['https://example.com/post/1', 'https://other.com/post/2'];
+      const result = service['normalizeUrls']('https://example.com', urls);
+      expect(result).toContain('/post/1');
+      expect(result).not.toContain('/post/2');
+    });
+
+    it('should remove trailing slashes except for root', () => {
+      const urls = ['/', '/post/1/', '/category/tech/'];
+      const result = service['normalizeUrls']('https://example.com', urls);
+      expect(result).toContain('/');
+      expect(result).toContain('/post/1');
+      expect(result).toContain('/category/tech');
+    });
+
+    it('should handle empty strings', () => {
+      const urls = ['', '  ', '/valid'];
+      const result = service['normalizeUrls']('https://example.com', urls);
+      expect(result).toContain('/valid');
+      expect(result).not.toContain('');
+    });
+
+    it('should handle malformed URLs gracefully', () => {
+      const urls = ['ht tp://invalid', '/valid', 'just-text'];
+      const result = service['normalizeUrls']('https://example.com', urls);
+      expect(result).toContain('/valid');
+      expect(result).toContain('/just-text');
+    });
+  });
+
+  describe('getChangeFreq', () => {
+    it('should return correct frequency for root', () => {
+      const freq = service['getChangeFreq']('/');
+      expect(freq).toBe('daily');
+    });
+
+    it('should return correct frequency for posts', () => {
+      const freq = service['getChangeFreq']('/post/test');
+      expect(freq).toBe('weekly');
+    });
+
+    it('should return correct frequency for categories', () => {
+      const freq = service['getChangeFreq']('/category/tech');
+      expect(freq).toBe('weekly');
+    });
+
+    it('should return correct frequency for tags', () => {
+      const freq = service['getChangeFreq']('/tag/javascript');
+      expect(freq).toBe('weekly');
+    });
+
+    it('should return correct frequency for pages', () => {
+      const freq = service['getChangeFreq']('/page/1');
+      expect(freq).toBe('daily');
+    });
+
+    it('should return correct frequency for other URLs', () => {
+      const freq = service['getChangeFreq']('/about');
+      expect(freq).toBe('monthly');
+    });
+  });
+
+  describe('getPriority', () => {
+    it('should return correct priority for root', () => {
+      const priority = service['getPriority']('/');
+      expect(priority).toBe(1.0);
+    });
+
+    it('should return correct priority for posts', () => {
+      const priority = service['getPriority']('/post/test');
+      expect(priority).toBe(0.8);
+    });
+
+    it('should return correct priority for categories', () => {
+      const priority = service['getPriority']('/category/tech');
+      expect(priority).toBe(0.6);
+    });
+
+    it('should return correct priority for tags', () => {
+      const priority = service['getPriority']('/tag/javascript');
+      expect(priority).toBe(0.6);
+    });
+
+    it('should return correct priority for pages', () => {
+      const priority = service['getPriority']('/page/1');
+      expect(priority).toBe(0.5);
+    });
+
+    it('should return correct priority for other URLs', () => {
+      const priority = service['getPriority']('/about');
+      expect(priority).toBe(0.4);
+    });
+  });
+
+  describe('hook integration', () => {
+    it('should apply sitemap|collect_urls filter', async () => {
+      const extraUrls = ['/custom-1', '/custom-2'];
+      (hookService.applyFilters as any).mockImplementation(
+        async (_hook: string, urls: string[]) => {
+          return [...urls, ...extraUrls];
+        },
+      );
+
+      const urls = await service.getSiteUrls();
+
+      expect(hookService.applyFilters).toHaveBeenCalledWith(
+        'sitemap|collect_urls',
+        expect.any(Array),
+      );
+      expect(urls).toContain('/custom-1');
+      expect(urls).toContain('/custom-2');
+    });
+
+    it('should handle hook errors gracefully', async () => {
+      (hookService.applyFilters as any).mockRejectedValue(new Error('Hook error'));
+
+      const urls = await service.getSiteUrls();
+
+      expect(urls).toBeDefined();
+      expect(Array.isArray(urls)).toBe(true);
+    });
+
+    it('should trigger beforeGenerate hook with correct data', async () => {
+      vi.mocked(fs.mkdir).mockResolvedValue(undefined);
+      vi.mocked(fs.writeFile).mockResolvedValue(undefined);
+      vi.mocked(fs.access).mockResolvedValue(undefined);
+
+      const loggerSpy = vi.spyOn(service['logger'], 'log').mockImplementation(() => {});
+      const errorSpy = vi.spyOn(service['logger'], 'error').mockImplementation(() => {});
+
+      await service.generateSitemapFn('Test');
+
+      expect(errorSpy).not.toHaveBeenCalled();
+      expect(hookService.doAction).toHaveBeenCalledWith(
+        'sitemap|beforeGenerate',
+        expect.objectContaining({
+          urls: expect.any(Array),
+          siteUrl: expect.any(String),
+        }),
+      );
+
+      loggerSpy.mockRestore();
+      errorSpy.mockRestore();
+    });
+
+    it('should trigger afterGenerate hook with correct data', async () => {
+      vi.mocked(fs.mkdir).mockResolvedValue(undefined);
+      vi.mocked(fs.writeFile).mockResolvedValue(undefined);
+      vi.mocked(fs.access).mockResolvedValue(undefined);
+
+      const loggerSpy = vi.spyOn(service['logger'], 'log').mockImplementation(() => {});
+      const errorSpy = vi.spyOn(service['logger'], 'error').mockImplementation(() => {});
+
+      await service.generateSitemapFn('Test');
+
+      expect(errorSpy).not.toHaveBeenCalled();
+      expect(hookService.doAction).toHaveBeenCalledWith(
+        'sitemap|afterGenerate',
+        expect.objectContaining({
+          sitemapPath: expect.any(String),
+          file: 'sitemap.xml',
+        }),
+      );
+
+      loggerSpy.mockRestore();
+      errorSpy.mockRestore();
+    });
+
+    it('should handle hook errors without breaking sitemap generation', async () => {
+      vi.mocked(fs.mkdir).mockResolvedValue(undefined);
+      vi.mocked(fs.writeFile).mockResolvedValue(undefined);
+      vi.mocked(fs.access).mockResolvedValue(undefined);
+
+      (hookService.doAction as any).mockRejectedValue(new Error('Hook error'));
+
+      const loggerSpy = vi.spyOn(service['logger'], 'log').mockImplementation(() => {});
+      const loggerErrorSpy = vi.spyOn(service['logger'], 'error').mockImplementation(() => {});
+
+      await service.generateSitemapFn('Test');
+
+      expect(loggerErrorSpy).toHaveBeenCalledWith(
+        'Error in sitemap|beforeGenerate hook:',
+        expect.any(Error),
+      );
+      expect(fs.writeFile).toHaveBeenCalled();
+
+      loggerSpy.mockRestore();
+      loggerErrorSpy.mockRestore();
+    });
   });
 });

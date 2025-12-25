@@ -69,7 +69,8 @@ export class ShortcodeService {
     }
 
     // 检查非法字符（类似 WordPress 的限制）
-    if (/[<>&/\[\]\x00-\x20=]/.test(tag)) {
+
+    if (/[<>&/[\]\u0000-\u0020=]/.test(tag)) {
       this.logger.warn(
         `Invalid shortcode name: ${tag}. Do not use spaces or reserved characters: & / < > [ ] =`,
       );
@@ -78,8 +79,9 @@ export class ShortcodeService {
 
     // 检查是否已存在
     if (this.shortcodes.has(tag)) {
+      const existing = this.shortcodes.get(tag);
       this.logger.warn(
-        `Shortcode "${tag}" already registered by plugin "${this.shortcodes.get(tag)!.pluginId}", overwriting with plugin "${pluginId}"`,
+        `Shortcode "${tag}" already registered by plugin "${existing?.pluginId}", overwriting with plugin "${pluginId}"`,
       );
     }
 
@@ -140,11 +142,19 @@ export class ShortcodeService {
     }
 
     // 快速匹配所有可能的标签
-    const matches = content.match(/@\[([^<>&/\[\]\x00-\x20=]+)/g) || [];
+
+    const matches = content.match(/[([^<>&/[\]\u0000-\u0020=]+)/g) || [];
     const potentialTags = matches.map((m) => m.slice(1));
 
-    // 过滤出已注册的标签
-    return potentialTags.filter((tag) => this.shortcodes.has(tag));
+    // 过滤出已注册的标签并去重
+    const uniqueTags = new Set<string>();
+    for (const tag of potentialTags) {
+      if (this.shortcodes.has(tag)) {
+        uniqueTags.add(tag);
+      }
+    }
+
+    return Array.from(uniqueTags);
   }
 
   /**
@@ -266,7 +276,8 @@ export class ShortcodeService {
    */
   private findTagsInContent(content: string): string[] {
     // 快速预匹配所有可能的标签
-    const matches = content.matchAll(/\[([^<>&/\[\]\x00-\x20=]+)/g);
+
+    const matches = content.matchAll(/[([^<>&/[\]\u0000-\u0020=]+)/g);
     const potentialTags = new Set<string>();
 
     for (const match of matches) {

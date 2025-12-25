@@ -635,4 +635,409 @@ describe('LoaderService load/unload behavior', () => {
 
     expect(mockContext.cleanupRegistrations).toHaveBeenCalled();
   });
+
+  it('unloadPlugin should return false when plugin not found', async () => {
+    const { service } = createService();
+
+    const result = await service.unloadPlugin('non-existent');
+
+    expect(result).toBe(false);
+  });
+
+  it('cleanupPlugin should call plugin.destroy with timeout', async () => {
+    const logger = {
+      log: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+      debug: vi.fn(),
+    } as unknown as MinimalLogger;
+
+    const destroySpy = vi.fn();
+    const mockContext = {
+      pluginId: 'p6',
+    } as any;
+
+    const pluginContextFactory = {
+      createContext: vi.fn().mockReturnValue(mockContext),
+    } as unknown as PluginContextFactory;
+
+    const hookService = {
+      addAction: vi.fn(),
+      addFilter: vi.fn(),
+      removeAction: vi.fn(),
+      removeFilter: vi.fn(),
+      clearAll: vi.fn(),
+    } as unknown as HookService;
+
+    const service = new LoaderService(logger as any, pluginContextFactory, hookService);
+
+    vi.spyOn<any, any>(service as any, 'loadPluginManifest').mockResolvedValue({
+      name: 'p6',
+      version: '1.0.0',
+    });
+    vi.spyOn<any, any>(service as any, 'getServerVersion').mockReturnValue('1.0.0');
+
+    (resolveObjectPluginExport as any).mockResolvedValue({
+      name: 'p6',
+      version: '1.0.0',
+      destroy: destroySpy,
+    });
+
+    await (service as any).loadPlugin('/p6');
+    await service.unloadPlugin('p6');
+
+    expect(destroySpy).toHaveBeenCalledWith(mockContext);
+  });
+
+  it('cleanupPlugin should handle destroy errors gracefully', async () => {
+    const logger = {
+      log: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+      debug: vi.fn(),
+    } as unknown as MinimalLogger;
+
+    const destroySpy = vi.fn().mockRejectedValue(new Error('Destroy failed'));
+    const mockContext = {
+      pluginId: 'p7',
+    } as any;
+
+    const pluginContextFactory = {
+      createContext: vi.fn().mockReturnValue(mockContext),
+    } as unknown as PluginContextFactory;
+
+    const hookService = {
+      addAction: vi.fn(),
+      addFilter: vi.fn(),
+      removeAction: vi.fn(),
+      removeFilter: vi.fn(),
+      clearAll: vi.fn(),
+    } as unknown as HookService;
+
+    const service = new LoaderService(logger as any, pluginContextFactory, hookService);
+
+    vi.spyOn<any, any>(service as any, 'loadPluginManifest').mockResolvedValue({
+      name: 'p7',
+      version: '1.0.0',
+    });
+    vi.spyOn<any, any>(service as any, 'getServerVersion').mockReturnValue('1.0.0');
+
+    (resolveObjectPluginExport as any).mockResolvedValue({
+      name: 'p7',
+      version: '1.0.0',
+      destroy: destroySpy,
+    });
+
+    await (service as any).loadPlugin('/p7');
+    await service.unloadPlugin('p7');
+
+    expect(logger.error).toHaveBeenCalled();
+  });
+
+  it('cleanupPlugin should execute cleanup functions', async () => {
+    const logger = {
+      log: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+      debug: vi.fn(),
+    } as unknown as MinimalLogger;
+
+    const cleanupSpy1 = vi.fn();
+    const cleanupSpy2 = vi.fn();
+
+    const mockContext = {
+      pluginId: 'p8',
+    } as any;
+
+    const pluginContextFactory = {
+      createContext: vi.fn().mockReturnValue(mockContext),
+    } as unknown as PluginContextFactory;
+
+    const hookService = {
+      addAction: vi.fn().mockImplementation(() => 'action-1'),
+      addFilter: vi.fn().mockImplementation(() => 'filter-1'),
+      removeAction: cleanupSpy1,
+      removeFilter: cleanupSpy2,
+      clearAll: vi.fn(),
+    } as unknown as HookService;
+
+    const service = new LoaderService(logger as any, pluginContextFactory, hookService);
+
+    vi.spyOn<any, any>(service as any, 'loadPluginManifest').mockResolvedValue({
+      name: 'p8',
+      version: '1.0.0',
+    });
+    vi.spyOn<any, any>(service as any, 'getServerVersion').mockReturnValue('1.0.0');
+
+    (resolveObjectPluginExport as any).mockResolvedValue({
+      name: 'p8',
+      version: '1.0.0',
+      hooks: {
+        a: { type: 'action', handler: vi.fn() },
+        f: { type: 'filter', handler: vi.fn() },
+      },
+    });
+
+    await (service as any).loadPlugin('/p8');
+    await service.unloadPlugin('p8');
+
+    expect(cleanupSpy1).toHaveBeenCalledWith('a', 'action-1');
+    expect(cleanupSpy2).toHaveBeenCalledWith('f', 'filter-1');
+  });
+
+  it('cleanupPlugin should warn on cleanup function errors', async () => {
+    const logger = {
+      log: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+      debug: vi.fn(),
+    } as unknown as MinimalLogger;
+
+    const mockContext = {
+      pluginId: 'p9',
+    } as any;
+
+    const pluginContextFactory = {
+      createContext: vi.fn().mockReturnValue(mockContext),
+    } as unknown as PluginContextFactory;
+
+    const hookService = {
+      addAction: vi.fn().mockImplementation(() => 'action-1'),
+      addFilter: vi.fn(),
+      removeAction: vi.fn().mockImplementation(() => {
+        throw new Error('Cleanup error');
+      }),
+      removeFilter: vi.fn(),
+      clearAll: vi.fn(),
+    } as unknown as HookService;
+
+    const service = new LoaderService(logger as any, pluginContextFactory, hookService);
+
+    vi.spyOn<any, any>(service as any, 'loadPluginManifest').mockResolvedValue({
+      name: 'p9',
+      version: '1.0.0',
+    });
+    vi.spyOn<any, any>(service as any, 'getServerVersion').mockReturnValue('1.0.0');
+
+    (resolveObjectPluginExport as any).mockResolvedValue({
+      name: 'p9',
+      version: '1.0.0',
+      hooks: {
+        a: { type: 'action', handler: vi.fn() },
+      },
+    });
+
+    await (service as any).loadPlugin('/p9');
+    await service.unloadPlugin('p9');
+
+    expect(logger.warn).toHaveBeenCalled();
+  });
+});
+
+describe('LoaderService plugin lifecycle', () => {
+  it('onModuleInit should log initialization message', () => {
+    const { service, logger } = createService();
+
+    service.onModuleInit();
+
+    expect(logger.log).toHaveBeenCalledWith(
+      'LoaderService: plugin modules are loaded via PluginModule.forRoot, skip internal scanning',
+    );
+  });
+
+  it('reloadPlugins should cleanup all plugins and reload from directory', async () => {
+    const logger = {
+      log: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+      debug: vi.fn(),
+    } as unknown as MinimalLogger;
+
+    const mockContext = {
+      pluginId: 'p10',
+    } as any;
+
+    const pluginContextFactory = {
+      createContext: vi.fn().mockReturnValue(mockContext),
+    } as unknown as PluginContextFactory;
+
+    const hookService = {
+      addAction: vi.fn(),
+      addFilter: vi.fn(),
+      removeAction: vi.fn(),
+      removeFilter: vi.fn(),
+      clearAll: vi.fn(),
+    } as unknown as HookService;
+
+    const service = new LoaderService(logger as any, pluginContextFactory, hookService);
+
+    // Mock initial plugin loading
+    vi.spyOn<any, any>(service as any, 'loadPluginManifest').mockResolvedValue({
+      name: 'p10',
+      version: '1.0.0',
+    });
+    vi.spyOn<any, any>(service as any, 'getServerVersion').mockReturnValue('1.0.0');
+    (resolveObjectPluginExport as any).mockResolvedValue({
+      name: 'p10',
+      version: '1.0.0',
+    });
+
+    await (service as any).loadPlugin('/p10');
+
+    // Mock loadPluginsFromDirectories
+    vi.spyOn<any, any>(service as any, 'loadPluginsFromDirectories').mockResolvedValue(undefined);
+
+    await service.reloadPlugins();
+
+    expect(logger.log).toHaveBeenCalledWith('Starting plugin reload...');
+    expect(logger.log).toHaveBeenCalledWith(expect.stringContaining('Successfully reloaded'));
+  });
+
+  it('reloadPlugins should clear failed plugins set', async () => {
+    const { service } = createService();
+
+    vi.spyOn<any, any>(service as any, 'loadPluginsFromDirectories').mockResolvedValue(undefined);
+
+    // Add a failed plugin manually
+    (service as any).failedPlugins.add('failed-plugin');
+    expect(service.getFailedPlugins().size).toBe(1);
+
+    await service.reloadPlugins();
+
+    expect(service.getFailedPlugins().size).toBe(0);
+  });
+
+  it('getFailedPlugins should return copy of failed plugins set', () => {
+    const { service } = createService();
+
+    (service as any).failedPlugins.add('failed1');
+    (service as any).failedPlugins.add('failed2');
+
+    const failed = service.getFailedPlugins();
+
+    expect(failed.size).toBe(2);
+    expect(failed.has('failed1')).toBe(true);
+    expect(failed.has('failed2')).toBe(true);
+
+    // Verify it's a copy
+    failed.add('failed3');
+    expect(service.getFailedPlugins().size).toBe(2);
+  });
+
+  it('getLoadedPlugins should return copy of loaded plugins map', () => {
+    const { service } = createService();
+
+    const plugin1 = { name: 'p1', version: '1.0.0' } as any;
+    const plugin2 = { name: 'p2', version: '1.0.0' } as any;
+
+    (service as any).loadedPlugins.set('p1', plugin1);
+    (service as any).loadedPlugins.set('p2', plugin2);
+
+    const loaded = service.getLoadedPlugins();
+
+    expect(loaded.size).toBe(2);
+    expect(loaded.get('p1')).toBe(plugin1);
+    expect(loaded.get('p2')).toBe(plugin2);
+
+    // Verify it's a copy
+    loaded.set('p3', { name: 'p3', version: '1.0.0' } as any);
+    expect(service.getLoadedPlugins().size).toBe(2);
+  });
+
+  it('getPluginContext should return undefined for non-existent plugin', () => {
+    const { service } = createService();
+
+    const context = service.getPluginContext('non-existent');
+
+    expect(context).toBeUndefined();
+  });
+
+  it('retryPlugin should return false if plugin is not in failed set', async () => {
+    const { service } = createService();
+
+    const result = await service.retryPlugin('not-failed');
+
+    expect(result).toBe(false);
+  });
+
+  it('retryPlugin should load plugin and remove from failed set on success', async () => {
+    const logger = {
+      log: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+      debug: vi.fn(),
+    } as unknown as MinimalLogger;
+
+    const mockContext = {
+      pluginId: 'p11',
+    } as any;
+
+    const pluginContextFactory = {
+      createContext: vi.fn().mockReturnValue(mockContext),
+    } as unknown as PluginContextFactory;
+
+    const hookService = {
+      addAction: vi.fn(),
+      addFilter: vi.fn(),
+      removeAction: vi.fn(),
+      removeFilter: vi.fn(),
+      clearAll: vi.fn(),
+    } as unknown as HookService;
+
+    const service = new LoaderService(logger as any, pluginContextFactory, hookService);
+
+    // Add plugin to failed set
+    (service as any).failedPlugins.add('p11');
+
+    // Mock successful load
+    vi.spyOn<any, any>(service as any, 'loadPluginManifest').mockResolvedValue({
+      name: 'p11',
+      version: '1.0.0',
+    });
+    vi.spyOn<any, any>(service as any, 'getServerVersion').mockReturnValue('1.0.0');
+    (resolveObjectPluginExport as any).mockResolvedValue({
+      name: 'p11',
+      version: '1.0.0',
+    });
+
+    const result = await service.retryPlugin('p11', '/p11');
+
+    expect(result).toBe(true);
+    expect(service.getFailedPlugins().has('p11')).toBe(false);
+  });
+
+  it('retryPlugin should keep plugin in failed set on failure', async () => {
+    const logger = {
+      log: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+      debug: vi.fn(),
+    } as unknown as MinimalLogger;
+
+    const pluginContextFactory = {
+      createContext: vi.fn(),
+    } as unknown as PluginContextFactory;
+
+    const hookService = {
+      addAction: vi.fn(),
+      addFilter: vi.fn(),
+      removeAction: vi.fn(),
+      removeFilter: vi.fn(),
+      clearAll: vi.fn(),
+    } as unknown as HookService;
+
+    const service = new LoaderService(logger as any, pluginContextFactory, hookService);
+
+    // Add plugin to failed set
+    (service as any).failedPlugins.add('p12');
+
+    // Mock failed load
+    vi.spyOn<any, any>(service as any, 'loadPlugin').mockRejectedValue(new Error('Load failed'));
+
+    const result = await service.retryPlugin('p12', '/p12');
+
+    expect(result).toBe(false);
+    expect(service.getFailedPlugins().has('p12')).toBe(true);
+    expect(logger.error).toHaveBeenCalled();
+  });
 });

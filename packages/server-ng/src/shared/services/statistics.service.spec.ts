@@ -52,33 +52,52 @@ describe('StatisticsService', () => {
     const select = vi.fn().mockImplementation((fields?: Record<string, unknown>) => {
       const from = vi.fn().mockImplementation((table: unknown) => {
         // Selecting all categories
-        if (table === categories && (fields == null || Object.keys(fields).length === 0)) {
+        if (table === categories) {
           return allCategories;
         }
         // Selecting all tags
-        if (table === tags && (fields == null || Object.keys(fields).length === 0)) {
+        if (table === tags) {
           return allTags;
         }
         // Article statistics selection branches
         if (table === articles) {
-          // Overall article statistics (no where())
-          if (fields && 'totalArticles' in fields && 'publishedArticles' in fields) {
+          // Check if this is a call for overall article statistics
+          const isOverallStats =
+            typeof fields === 'object' &&
+            fields !== null &&
+            'totalArticles' in fields &&
+            'publishedArticles' in fields;
+          if (isOverallStats) {
             return [overallArticleStatsRow];
           }
-          // Category statistics (with where())
-          if (fields && 'publishedCount' in fields && 'privateCount' in fields) {
+
+          // Check if this is a call for category statistics
+          const isCategoryStats =
+            typeof fields === 'object' &&
+            fields !== null &&
+            'publishedCount' in fields &&
+            'privateCount' in fields;
+          if (isCategoryStats) {
             return {
               where: vi.fn().mockImplementation((_cond: unknown) => [categoryStatsQueue.shift()]),
             } as unknown;
           }
-          // Tag statistics (with where())
-          if (fields && 'articleCount' in fields && !('publishedCount' in fields)) {
+
+          // Check if this is a call for tag statistics
+          const isTagStats =
+            typeof fields === 'object' &&
+            fields !== null &&
+            'articleCount' in fields &&
+            !('publishedCount' in fields);
+          if (isTagStats) {
             return {
               where: vi.fn().mockImplementation((_cond: unknown) => [tagStatsQueue.shift()]),
             } as unknown;
           }
-          // Total published word count path: fields has { total: ... } and then .where()
-          if (fields && 'total' in fields) {
+
+          // Check if this is a call for total published word count
+          const isWordCount = typeof fields === 'object' && fields !== null && 'total' in fields;
+          if (isWordCount) {
             return {
               where: vi.fn().mockResolvedValue([{ total: 1234 }]),
             } as unknown;
@@ -145,6 +164,101 @@ describe('StatisticsService', () => {
     });
   });
 
+  it('should handle categories with null slugs', async () => {
+    const allCategoriesWithNullSlug = [{ id: 1, name: 'CatA', slug: null }];
+
+    const categoryStatsQueue = [
+      {
+        articleCount: 3,
+        publishedCount: 2,
+        privateCount: 1,
+        totalViews: 30,
+      },
+    ];
+
+    const select = vi.fn().mockImplementation((fields?: Record<string, unknown>) => {
+      const from = vi.fn().mockImplementation((table: unknown) => {
+        if (table === categories && (fields == null || Object.keys(fields).length === 0)) {
+          return allCategoriesWithNullSlug;
+        }
+        if (table === articles) {
+          if (fields && 'publishedCount' in fields) {
+            return {
+              where: vi.fn().mockImplementation(() => [categoryStatsQueue.shift()]),
+            } as unknown;
+          }
+          if (fields && 'totalArticles' in fields) {
+            return [
+              {
+                totalArticles: 3,
+                publishedArticles: 2,
+                privateArticles: 1,
+                hiddenArticles: 0,
+                totalViews: 30,
+              },
+            ];
+          }
+        }
+        if (table === tags) {
+          return [];
+        }
+        return [];
+      });
+      return { from };
+    });
+
+    const testDb = { select } as unknown as Record<string, unknown>;
+    const testService = new StatisticsService(testDb as any);
+
+    const res = await testService.getOverallStatistics();
+
+    expect(res.categories[0].slug).toBeUndefined();
+  });
+
+  it('should handle tags with null slugs', async () => {
+    const allTagsWithNullSlug = [{ id: 1, name: 'TagA', slug: null }];
+
+    const tagStatsQueue = [{ articleCount: 4, totalViews: 40 }];
+
+    const select = vi.fn().mockImplementation((fields?: Record<string, unknown>) => {
+      const from = vi.fn().mockImplementation((table: unknown) => {
+        if (table === tags && (fields == null || Object.keys(fields).length === 0)) {
+          return allTagsWithNullSlug;
+        }
+        if (table === articles) {
+          if (fields && 'articleCount' in fields && !('publishedCount' in fields)) {
+            return {
+              where: vi.fn().mockImplementation(() => [tagStatsQueue.shift()]),
+            } as unknown;
+          }
+          if (fields && 'totalArticles' in fields) {
+            return [
+              {
+                totalArticles: 4,
+                publishedArticles: 3,
+                privateArticles: 1,
+                hiddenArticles: 0,
+                totalViews: 40,
+              },
+            ];
+          }
+        }
+        if (table === categories) {
+          return [];
+        }
+        return [];
+      });
+      return { from };
+    });
+
+    const testDb = { select } as unknown as Record<string, unknown>;
+    const testService = new StatisticsService(testDb as any);
+
+    const res = await testService.getOverallStatistics();
+
+    expect(res.tags[0].slug).toBeUndefined();
+  });
+
   it('should return 0 when total published word count is null/empty', async () => {
     // Override the select mock for the word-count query to return null
     const originalSelect = (db as any).select as ReturnType<typeof vi.fn>;
@@ -165,8 +279,80 @@ describe('StatisticsService', () => {
     (db as any).select = originalSelect;
   });
 
+  it('should handle negative or invalid word counts', async () => {
+    const select = vi.fn().mockImplementation((fields?: Record<string, unknown>) => {
+      const from = vi.fn().mockImplementation((table: unknown) => {
+        if (table === articles && fields && 'total' in fields) {
+          return { where: vi.fn().mockResolvedValue([{ total: -100 }]) } as unknown;
+        }
+        return [];
+      });
+      return { from };
+    });
+
+    const testDb = { select } as unknown as Record<string, unknown>;
+    const testService = new StatisticsService(testDb as any);
+
+    const total = await testService.getTotalPublishedWordCount();
+    expect(total).toBe(0);
+  });
+
+  it('should handle NaN word counts', async () => {
+    const select = vi.fn().mockImplementation((fields?: Record<string, unknown>) => {
+      const from = vi.fn().mockImplementation((table: unknown) => {
+        if (table === articles && fields && 'total' in fields) {
+          return { where: vi.fn().mockResolvedValue([{ total: NaN }]) } as unknown;
+        }
+        return [];
+      });
+      return { from };
+    });
+
+    const testDb = { select } as unknown as Record<string, unknown>;
+    const testService = new StatisticsService(testDb as any);
+
+    const total = await testService.getTotalPublishedWordCount();
+    expect(total).toBe(0);
+  });
+
+  it('should handle Infinity word counts', async () => {
+    const select = vi.fn().mockImplementation((fields?: Record<string, unknown>) => {
+      const from = vi.fn().mockImplementation((table: unknown) => {
+        if (table === articles && fields && 'total' in fields) {
+          return { where: vi.fn().mockResolvedValue([{ total: Infinity }]) } as unknown;
+        }
+        return [];
+      });
+      return { from };
+    });
+
+    const testDb = { select } as unknown as Record<string, unknown>;
+    const testService = new StatisticsService(testDb as any);
+
+    const total = await testService.getTotalPublishedWordCount();
+    expect(total).toBe(0);
+  });
+
   it('should compute total published word count properly', async () => {
     const total = await service.getTotalPublishedWordCount();
     expect(total).toBe(1234);
+  });
+
+  it('should handle empty result set for word count', async () => {
+    const select = vi.fn().mockImplementation((fields?: Record<string, unknown>) => {
+      const from = vi.fn().mockImplementation((table: unknown) => {
+        if (table === articles && fields && 'total' in fields) {
+          return { where: vi.fn().mockResolvedValue([]) } as unknown;
+        }
+        return [];
+      });
+      return { from };
+    });
+
+    const testDb = { select } as unknown as Record<string, unknown>;
+    const testService = new StatisticsService(testDb as any);
+
+    const total = await testService.getTotalPublishedWordCount();
+    expect(total).toBe(0);
   });
 });

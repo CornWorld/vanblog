@@ -3,7 +3,7 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import * as bcrypt from 'bcrypt';
 import { vi, describe, beforeEach, it, expect } from 'vitest';
 
-import { DATABASE_CONNECTION } from '../../database/database.module';
+import { DATABASE_CONNECTION } from '../../database';
 import { HookService } from '../plugin/services/hook.service';
 
 import { DraftVersionService } from './draft-version.service';
@@ -211,13 +211,17 @@ describe('DraftService', () => {
     });
 
     it('should throw NotFoundException when draft not found', async () => {
-      // Mock version creation to throw NotFoundException
-      mockDraftVersionService.createVersion = vi
-        .fn()
-        .mockRejectedValue(new NotFoundException('Draft with ID 999 not found'));
+      // Mock version creation to succeed
+      mockDraftVersionService.createVersion = vi.fn().mockResolvedValue({});
+
+      // Mock database update to return empty array (draft not found)
+      mockDb.returning.mockResolvedValueOnce([]);
 
       await expect(service.update(999, { title: 'Test', tags: [] })).rejects.toThrow(
         NotFoundException,
+      );
+      await expect(service.update(999, { title: 'Test', tags: [] })).rejects.toThrow(
+        'Draft with ID 999 not found',
       );
     });
   });
@@ -547,6 +551,627 @@ describe('DraftService', () => {
 
       expect(result.title).toBe('Auto-saved Draft');
       expect(mockDb.update).toHaveBeenCalled();
+    });
+
+    it('should not create a version when auto-saving', async () => {
+      const mockUpdatedDraft = {
+        id: 1,
+        title: 'Auto-saved',
+        content: 'Content',
+        tags: null,
+        author: 'admin',
+        pathname: null,
+        category: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      mockDb.returning.mockResolvedValueOnce([mockUpdatedDraft]);
+
+      await service.autoSave(1, { content: 'Content', tags: null });
+
+      expect(mockDraftVersionService.createVersion).not.toHaveBeenCalled();
+    });
+
+    it('should throw NotFoundException when draft not found', async () => {
+      mockDb.returning.mockResolvedValueOnce([]);
+
+      await expect(service.autoSave(999, { title: 'Test', tags: null })).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+
+    it('should handle all fields in auto-save', async () => {
+      const mockUpdatedDraft = {
+        id: 1,
+        title: 'Full Update',
+        content: 'Full Content',
+        tags: ['tag1', 'tag2'],
+        author: 'newauthor',
+        pathname: 'new-path',
+        category: 'new-category',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      mockDb.returning.mockResolvedValueOnce([mockUpdatedDraft]);
+
+      const result = await service.autoSave(1, {
+        title: 'Full Update',
+        content: 'Full Content',
+        tags: ['tag1', 'tag2'],
+        author: 'newauthor',
+        pathname: 'new-path',
+        category: 'new-category',
+      });
+
+      expect(result.title).toBe('Full Update');
+      expect(result.author).toBe('newauthor');
+      expect(result.pathname).toBe('new-path');
+      expect(result.category).toBe('new-category');
+      expect(result.tags).toEqual(['tag1', 'tag2']);
+    });
+  });
+
+  describe('findAll - advanced scenarios', () => {
+    it('should handle keyword search', async () => {
+      const mockDrafts = [
+        {
+          id: 1,
+          title: 'Keyword Test',
+          content: 'Content with keyword',
+          tags: null,
+          author: 'admin',
+          pathname: null,
+          category: null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ];
+
+      mockDb.offset.mockResolvedValueOnce(mockDrafts);
+      let whereCallCount = 0;
+      mockDb.where.mockImplementation(() => {
+        whereCallCount++;
+        if (whereCallCount === 2) {
+          return {
+            ...mockDb,
+            then: (resolve: any) => resolve([{ count: 1 }]),
+          };
+        }
+        return mockDb;
+      });
+
+      const result = await service.findAll({
+        page: 1,
+        pageSize: 10,
+        keyword: 'keyword',
+        sortBy: 'updatedAt',
+        sortOrder: 'desc',
+      });
+
+      expect(result.items).toHaveLength(1);
+      expect(result.total).toBe(1);
+    });
+
+    it('should handle sortBy createdAt', async () => {
+      const mockDrafts = [
+        {
+          id: 1,
+          title: 'Draft',
+          content: 'Content',
+          tags: null,
+          author: 'admin',
+          pathname: null,
+          category: null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ];
+
+      mockDb.offset.mockResolvedValueOnce(mockDrafts);
+      let whereCallCount = 0;
+      mockDb.where.mockImplementation(() => {
+        whereCallCount++;
+        if (whereCallCount === 2) {
+          return {
+            ...mockDb,
+            then: (resolve: any) => resolve([{ count: 1 }]),
+          };
+        }
+        return mockDb;
+      });
+
+      const result = await service.findAll({
+        page: 1,
+        pageSize: 10,
+        sortBy: 'createdAt',
+        sortOrder: 'asc',
+      });
+
+      expect(result.items).toHaveLength(1);
+      expect(mockDb.orderBy).toHaveBeenCalled();
+    });
+
+    it('should handle sortBy title', async () => {
+      const mockDrafts = [
+        {
+          id: 1,
+          title: 'Alpha',
+          content: 'Content',
+          tags: null,
+          author: 'admin',
+          pathname: null,
+          category: null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ];
+
+      mockDb.offset.mockResolvedValueOnce(mockDrafts);
+      let whereCallCount = 0;
+      mockDb.where.mockImplementation(() => {
+        whereCallCount++;
+        if (whereCallCount === 2) {
+          return {
+            ...mockDb,
+            then: (resolve: any) => resolve([{ count: 1 }]),
+          };
+        }
+        return mockDb;
+      });
+
+      const result = await service.findAll({
+        page: 1,
+        pageSize: 10,
+        sortBy: 'title',
+        sortOrder: 'asc',
+      });
+
+      expect(result.items).toHaveLength(1);
+    });
+
+    it('should handle empty results', async () => {
+      mockDb.offset.mockResolvedValueOnce([]);
+      let whereCallCount = 0;
+      mockDb.where.mockImplementation(() => {
+        whereCallCount++;
+        if (whereCallCount === 2) {
+          return {
+            ...mockDb,
+            then: (resolve: any) => resolve([{ count: 0 }]),
+          };
+        }
+        return mockDb;
+      });
+
+      const result = await service.findAll({
+        page: 1,
+        pageSize: 10,
+        sortBy: 'updatedAt',
+        sortOrder: 'desc',
+      });
+
+      expect(result.items).toHaveLength(0);
+      expect(result.total).toBe(0);
+      expect(result.totalPages).toBe(0);
+    });
+  });
+
+  describe('update - advanced scenarios', () => {
+    it('should handle partial update with pathname', async () => {
+      const mockUpdatedDraft = {
+        id: 1,
+        title: 'Updated Title',
+        content: 'Original content',
+        tags: null,
+        author: 'admin',
+        pathname: 'custom-path',
+        category: null,
+        version: 1,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      mockDb.returning.mockResolvedValueOnce([mockUpdatedDraft]);
+
+      const result = await service.update(1, {
+        pathname: 'custom-path',
+        tags: null,
+      });
+
+      expect(result.pathname).toBe('custom-path');
+      expect(mockDraftVersionService.createVersion).toHaveBeenCalledWith(1);
+    });
+
+    it('should handle partial update with category', async () => {
+      const mockUpdatedDraft = {
+        id: 1,
+        title: 'Draft',
+        content: 'Content',
+        tags: null,
+        author: 'admin',
+        pathname: null,
+        category: 'tech',
+        version: 1,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      mockDb.returning.mockResolvedValueOnce([mockUpdatedDraft]);
+
+      const result = await service.update(1, {
+        category: 'tech',
+        tags: null,
+      });
+
+      expect(result.category).toBe('tech');
+    });
+
+    it('should handle update with author change', async () => {
+      const mockUpdatedDraft = {
+        id: 1,
+        title: 'Draft',
+        content: 'Content',
+        tags: null,
+        author: 'newauthor',
+        pathname: null,
+        category: null,
+        version: 1,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      mockDb.returning.mockResolvedValueOnce([mockUpdatedDraft]);
+
+      const result = await service.update(1, {
+        author: 'newauthor',
+        tags: null,
+      });
+
+      expect(result.author).toBe('newauthor');
+    });
+
+    it('should apply hook filters during update', async () => {
+      const mockUpdatedDraft = {
+        id: 1,
+        title: 'Filtered Title',
+        content: 'Content',
+        tags: null,
+        author: 'admin',
+        pathname: null,
+        category: null,
+        version: 1,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      mockHookService.applyFilters = vi.fn().mockResolvedValue({
+        title: 'Filtered Title',
+        content: 'Content',
+        tags: null,
+        updatedAt: expect.any(String),
+      });
+
+      mockDb.returning.mockResolvedValueOnce([mockUpdatedDraft]);
+
+      const result = await service.update(1, {
+        title: 'Original Title',
+        tags: null,
+      });
+
+      expect(mockHookService.applyFilters).toHaveBeenCalledWith(
+        'draft|beforeUpdate',
+        expect.any(Object),
+        { action: 'update', id: 1 },
+      );
+      expect(result.title).toBe('Filtered Title');
+    });
+
+    it('should verify filter transformation is applied to database operation', async () => {
+      const mockUpdatedDraft = {
+        id: 1,
+        title: 'Filtered Title',
+        content: 'Content',
+        tags: null,
+        author: 'admin',
+        pathname: null,
+        category: null,
+        version: 1,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      const transformedData = {
+        title: 'Filter transformed title',
+        content: 'Transformed content',
+        tags: ['transformed-tag'],
+        pathname: '/transformed',
+        category: 'Transformed Category',
+        author: 'admin',
+      };
+
+      // Mock the filter to return transformed data
+      mockHookService.applyFilters = vi.fn().mockResolvedValue(transformedData);
+
+      mockDb.returning.mockResolvedValueOnce([mockUpdatedDraft]);
+
+      const result = await service.update(1, {
+        title: 'Original Title',
+        content: 'Original Content',
+        tags: null,
+      });
+
+      // Verify hook was called with original data
+      expect(mockHookService.applyFilters).toHaveBeenCalled();
+      const callArgs = mockHookService.applyFilters.mock.calls[0];
+      expect(callArgs[0]).toBe('draft|beforeUpdate');
+
+      // Verify transformed data has new values
+      const passedDraft = callArgs[1];
+      expect(passedDraft).toBeDefined();
+
+      // Verify result contains the hook-transformed value
+      expect(result.title).toBe('Filtered Title');
+    });
+
+    it('should handle filter errors gracefully without crashing', async () => {
+      mockHookService.applyFilters = vi.fn().mockRejectedValue(new Error('Filter hook failed'));
+
+      mockDb.returning.mockResolvedValueOnce([
+        {
+          id: 1,
+          title: 'Original Title',
+          content: 'Content',
+          tags: null,
+          author: 'admin',
+          pathname: null,
+          category: null,
+          version: 1,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ]);
+
+      // Should throw the hook error
+      await expect(
+        service.update(1, {
+          title: 'Original Title',
+          tags: null,
+        }),
+      ).rejects.toThrow('Filter hook failed');
+    });
+  });
+
+  describe('create - advanced scenarios', () => {
+    it('should apply hook filters during create', async () => {
+      const mockCreatedDraft = {
+        id: 1,
+        title: 'Filtered Draft',
+        content: 'Content',
+        tags: null,
+        author: 'admin',
+        pathname: null,
+        category: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      mockHookService.applyFilters = vi.fn().mockResolvedValue({
+        title: 'Filtered Draft',
+        content: 'Content',
+        pathname: null,
+        tags: null,
+        category: null,
+        author: 'admin',
+      });
+
+      mockDb.returning.mockResolvedValueOnce([mockCreatedDraft]);
+
+      const result = await service.create({
+        title: 'Original Draft',
+        content: 'Content',
+        author: 'admin',
+        tags: null,
+      });
+
+      expect(mockHookService.applyFilters).toHaveBeenCalledWith(
+        'draft|beforeCreate',
+        expect.any(Object),
+        { action: 'create' },
+      );
+      expect(result.title).toBe('Filtered Draft');
+    });
+
+    it('should trigger afterCreate hook', async () => {
+      const mockCreatedDraft = {
+        id: 1,
+        title: 'New Draft',
+        content: 'Content',
+        tags: null,
+        author: 'admin',
+        pathname: null,
+        category: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      mockDb.returning.mockResolvedValueOnce([mockCreatedDraft]);
+
+      await service.create({
+        title: 'New Draft',
+        content: 'Content',
+        author: 'admin',
+        tags: null,
+      });
+
+      expect(mockHookService.doAction).toHaveBeenCalledWith(
+        'draft|afterCreate',
+        expect.any(Object),
+        { action: 'create' },
+      );
+    });
+
+    it('should throw when insert returns empty array', async () => {
+      mockDb.returning.mockResolvedValueOnce([]);
+
+      await expect(
+        service.create({
+          title: 'Test',
+          content: 'Content',
+          author: 'admin',
+          tags: null,
+        }),
+      ).rejects.toThrow('Failed to create draft');
+    });
+  });
+
+  describe('remove - advanced scenarios', () => {
+    it('should trigger beforeDelete and afterDelete hooks', async () => {
+      mockDb.returning.mockResolvedValueOnce([{ id: 1 }]);
+
+      await service.remove(1);
+
+      expect(mockHookService.doAction).toHaveBeenCalledWith(
+        'draft|beforeDelete',
+        { id: 1 },
+        { action: 'delete' },
+      );
+      expect(mockHookService.doAction).toHaveBeenCalledWith(
+        'draft|afterDelete',
+        { id: 1 },
+        { action: 'delete' },
+      );
+    });
+
+    it('should delete all versions before deleting draft', async () => {
+      mockDb.returning.mockResolvedValueOnce([{ id: 1 }]);
+
+      await service.remove(1);
+
+      expect(mockDraftVersionService.deleteAllVersions).toHaveBeenCalledWith(1);
+      expect(mockDb.delete).toHaveBeenCalled();
+    });
+  });
+
+  describe('publish - edge cases', () => {
+    it('should handle draft without tags', async () => {
+      const mockDraftRaw = {
+        id: 1,
+        title: 'No Tags',
+        content: 'Content',
+        tags: null,
+        author: 'admin',
+        pathname: 'no-tags',
+        category: null,
+        version: 1,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      mockDb.limit.mockResolvedValueOnce([mockDraftRaw]);
+      mockDb.returning
+        .mockResolvedValueOnce([
+          {
+            id: 100,
+            title: 'No Tags',
+            content: 'Content',
+            tags: null,
+            author: 'admin',
+            pathname: 'no-tags',
+            category: null,
+            top: 0,
+            hidden: false,
+            private: false,
+            password: null,
+            viewer: 0,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
+        ])
+        .mockResolvedValueOnce([{ id: 1 }]);
+
+      const result = await service.publish(1, {
+        isPublished: true,
+        isTop: false,
+        allowComment: true,
+      });
+
+      expect(result.tags).toEqual([]);
+    });
+
+    it('should trigger afterPublish hook with correct data', async () => {
+      const mockDraftRaw = {
+        id: 1,
+        title: 'Publish Test',
+        content: 'Content',
+        tags: ['test'],
+        author: 'admin',
+        pathname: 'publish-test',
+        category: 'tech',
+        version: 1,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      mockDb.limit.mockResolvedValueOnce([mockDraftRaw]);
+
+      let fromCallCount = 0;
+      mockDb.from.mockImplementation((_table?: unknown) => {
+        fromCallCount++;
+        if (fromCallCount === 2) {
+          return {
+            ...mockDb,
+            then: (resolve: (val: unknown[]) => unknown) => resolve([]),
+          } as unknown as typeof mockDb;
+        }
+        return mockDb;
+      });
+
+      let returningCallCount = 0;
+      mockDb.returning.mockImplementation(async () => {
+        returningCallCount++;
+        if (returningCallCount === 1) {
+          return Promise.resolve([{ id: 1, name: 'test', slug: 'test' }]);
+        } else if (returningCallCount === 2) {
+          return Promise.resolve([
+            {
+              id: 100,
+              title: 'Publish Test',
+              content: 'Content',
+              tags: ['test'],
+              author: 'admin',
+              pathname: 'publish-test',
+              category: 'tech',
+              top: 0,
+              hidden: false,
+              private: false,
+              password: null,
+              viewer: 0,
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            },
+          ]);
+        } else if (returningCallCount === 3) {
+          return Promise.resolve([{ id: 1 }]);
+        }
+        return Promise.resolve([]);
+      });
+
+      await service.publish(1, {
+        isPublished: true,
+        isTop: false,
+        allowComment: true,
+      });
+
+      expect(mockHookService.doAction).toHaveBeenCalledWith(
+        'draft|afterPublish',
+        expect.objectContaining({
+          draftId: 1,
+          articleId: 100,
+          title: 'Publish Test',
+        }),
+      );
     });
   });
 });

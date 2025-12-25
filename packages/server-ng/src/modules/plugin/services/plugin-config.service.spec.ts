@@ -67,7 +67,9 @@ describe('PluginConfigService', () => {
 
   afterEach(() => {
     // Clean up
-    service.unregisterPlugin('test-plugin');
+    if (service) {
+      service.unregisterPlugin('test-plugin');
+    }
     vi.clearAllMocks();
   });
 

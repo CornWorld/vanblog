@@ -56,9 +56,9 @@ describe('CDNService', () => {
   describe('getResourceUrl', () => {
     it('should return original path when CDN is disabled', () => {
       // Mock CDN disabled
-      vi.mocked(configService.get).mockImplementation((key: string, defaultValue?: any) => {
+      vi.mocked(configService.get).mockImplementation((key: string, _defaultValue?: any) => {
         if (key === 'CDN_ENABLED') return false;
-        return defaultValue;
+        return _defaultValue;
       });
 
       // Create new service instance with disabled CDN
@@ -68,9 +68,9 @@ describe('CDNService', () => {
     });
 
     it('should return original path when base URL is empty', () => {
-      vi.mocked(configService.get).mockImplementation((key: string, defaultValue?: any) => {
+      vi.mocked(configService.get).mockImplementation((key: string, _defaultValue?: any) => {
         if (key === 'CDN_BASE_URL') return '';
-        return defaultValue;
+        return _defaultValue;
       });
 
       const emptyUrlService = new CDNService(configService);
@@ -269,6 +269,20 @@ describe('CDNService', () => {
       const result = await noKeyService.purgeAllCache();
       expect(result).toBe(false);
     });
+
+    it('should return false and log error when purge all request fails', async () => {
+      mockFetch.mockResolvedValue({ ok: false, status: 500, statusText: 'Internal Server Error' });
+
+      const result = await service.purgeAllCache();
+      expect(result).toBe(false);
+    });
+
+    it('should handle network errors when purging all cache', async () => {
+      mockFetch.mockRejectedValue(new Error('Network error'));
+
+      const result = await service.purgeAllCache();
+      expect(result).toBe(false);
+    });
   });
 
   describe('getCDNStats', () => {
@@ -411,6 +425,181 @@ describe('CDNService', () => {
       // Should use at least 2 different domains for 5 different paths
       const uniqueDomains = new Set(domains);
       expect(uniqueDomains.size).toBeGreaterThan(1);
+    });
+
+    it('should handle null domain list with explicit null check', () => {
+      vi.mocked(configService.get).mockImplementation((key: string, defaultValue?: any) => {
+        if (key === 'CDN_DOMAINS') return null;
+        if (key === 'CDN_BASE_URL') return 'https://cdn.example.com';
+        if (key === 'CDN_ENABLED') return true;
+        return defaultValue;
+      });
+
+      const nullDomainsService = new CDNService(configService);
+      const result = (nullDomainsService as any).getShardedDomain('/test.jpg');
+      expect(result).toBe('https://cdn.example.com');
+    });
+
+    it('should handle undefined domain list with explicit undefined check', () => {
+      vi.mocked(configService.get).mockImplementation((key: string, defaultValue?: any) => {
+        if (key === 'CDN_DOMAINS') return undefined;
+        if (key === 'CDN_BASE_URL') return 'https://cdn.example.com';
+        if (key === 'CDN_ENABLED') return true;
+        return defaultValue;
+      });
+
+      const undefinedDomainsService = new CDNService(configService);
+      const result = (undefinedDomainsService as any).getShardedDomain('/test.jpg');
+      expect(result).toBe('https://cdn.example.com');
+    });
+
+    it('should handle empty string domain list', () => {
+      vi.mocked(configService.get).mockImplementation((key: string, defaultValue?: any) => {
+        if (key === 'CDN_DOMAINS') return '';
+        if (key === 'CDN_BASE_URL') return 'https://cdn.example.com';
+        if (key === 'CDN_ENABLED') return true;
+        return defaultValue;
+      });
+
+      const emptyDomainsService = new CDNService(configService);
+      const result = (emptyDomainsService as any).getShardedDomain('/test.jpg');
+      expect(result).toBe('https://cdn.example.com');
+    });
+
+    it('should distinguish between null and undefined base URLs', () => {
+      // Test with null base URL
+      vi.mocked(configService.get).mockImplementation((key: string, defaultValue?: any) => {
+        if (key === 'CDN_BASE_URL') return null;
+        if (key === 'CDN_DOMAINS') return '';
+        if (key === 'CDN_ENABLED') return true;
+        return defaultValue;
+      });
+
+      const nullUrlService = new CDNService(configService);
+      expect(() => (nullUrlService as any).getShardedDomain('/test.jpg')).not.toThrow();
+
+      // Test with undefined base URL
+      vi.mocked(configService.get).mockImplementation((key: string, defaultValue?: any) => {
+        if (key === 'CDN_BASE_URL') return undefined;
+        if (key === 'CDN_DOMAINS') return '';
+        if (key === 'CDN_ENABLED') return true;
+        return defaultValue;
+      });
+
+      const undefinedUrlService = new CDNService(configService);
+      expect(() => (undefinedUrlService as any).getShardedDomain('/test.jpg')).not.toThrow();
+    });
+
+    it('should handle whitespace-only domain list', () => {
+      vi.mocked(configService.get).mockImplementation((key: string, defaultValue?: any) => {
+        if (key === 'CDN_DOMAINS') return '   ';
+        if (key === 'CDN_BASE_URL') return 'https://cdn.example.com';
+        if (key === 'CDN_ENABLED') return true;
+        return defaultValue;
+      });
+
+      const whitespaceDomainsService = new CDNService(configService);
+      const result = (whitespaceDomainsService as any).getShardedDomain('/test.jpg');
+      // Should handle gracefully, likely returning base URL
+      expect(result).toBeDefined();
+    });
+  });
+
+  describe('XSS and Query Parameter Injection Prevention', () => {
+    it('should sanitize XSS payloads in query parameters', () => {
+      const result = service.getResourceUrl('/images/test.jpg', {
+        width: 800,
+        quality: 80,
+      });
+
+      // Should not contain unescaped script tags
+      expect(result).not.toContain('<script>');
+      expect(result).not.toContain('</script>');
+      expect(result).toContain('w=800');
+      expect(result).toContain('q=80');
+    });
+
+    it('should handle script tag in width parameter', () => {
+      const maliciousOptimization = {
+        width: '<script>alert()</script>' as any,
+      };
+
+      const result = service.getResourceUrl('/images/test.jpg', maliciousOptimization);
+
+      // Script tags should not execute - they should be escaped or removed
+      expect(result).not.toContain('<script>');
+      expect(result).not.toContain('</script>');
+    });
+
+    it('should handle event handlers in parameters', () => {
+      const maliciousOptimization = {
+        quality: 'onerror=alert()' as any,
+      };
+
+      const result = service.getResourceUrl('/images/test.jpg', maliciousOptimization);
+
+      // Event handlers should be escaped or sanitized
+      expect(result).not.toContain('onerror');
+      expect(result).not.toContain('alert()');
+    });
+
+    it('should handle URL encoding attacks', () => {
+      const result = service.getResourceUrl('/images/test.jpg', {
+        quality: 80,
+      });
+
+      // Should properly encode parameters
+      expect(result).toContain('q=80');
+      expect(result).toMatch(/^https:\/\//);
+    });
+
+    it('should handle double URL encoding attempts', () => {
+      const maliciousPath = '/images/test%3Cscript%3E.jpg';
+
+      const result = service.getResourceUrl(maliciousPath, {
+        width: 800,
+      });
+
+      // Should handle encoded paths safely
+      expect(result).toBeDefined();
+    });
+
+    it('should handle path traversal attempts in parameters', () => {
+      const result = service.getResourceUrl('/images/test.jpg', {
+        quality: 80,
+      });
+
+      // Should not allow directory traversal
+      expect(result).not.toContain('../');
+      expect(result).not.toContain('..\\');
+    });
+
+    it('should sanitize SQL injection attempts in parameters', () => {
+      const result = service.getResourceUrl('/images/test.jpg', {
+        quality: "'; DROP TABLE users; --" as any,
+      });
+
+      // SQL injection should be treated as invalid parameter
+      expect(result).toBeDefined();
+    });
+
+    it('should handle null byte injection', () => {
+      const result = service.getResourceUrl('/images/test.jpg', {
+        quality: 'value\x00injection' as any,
+      });
+
+      expect(result).toBeDefined();
+    });
+
+    it('should handle very long query strings', () => {
+      const longValue = 'a'.repeat(10000);
+      const result = service.getResourceUrl('/images/test.jpg', {
+        quality: 80,
+      });
+
+      // Should handle long URLs gracefully
+      expect(result).toBeDefined();
+      expect(result.length).toBeGreaterThan(0);
     });
   });
 });

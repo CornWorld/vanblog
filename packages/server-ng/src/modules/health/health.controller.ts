@@ -2,7 +2,7 @@ import { Controller } from '@nestjs/common';
 import { initContract } from '@ts-rest/core';
 import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
 import { dayjs } from '@vanblog/shared';
-import { createHealthContract } from '@vanblog/shared/contracts/health.contract';
+import { createHealthContract } from '@vanblog/shared/contracts';
 
 const c = initContract();
 const healthContract = createHealthContract(c);

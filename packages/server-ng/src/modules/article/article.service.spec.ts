@@ -1,6 +1,6 @@
 import { NotFoundException } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
-import { describe, beforeEach, it, expect, vi } from 'vitest';
+import { describe, beforeEach, it, expect, vi, afterEach } from 'vitest';
 
 import { MockUtils, type DatabaseMockBuilder } from '../../../test/mock-utils';
 import { ConfigService } from '../../config/config.service';
@@ -14,17 +14,28 @@ import type { ArticleSearchDto } from './dto/article.dto';
 
 describe('ArticleService', () => {
   let service: ArticleService;
-
   let mockHookService: Partial<HookService>;
   let databaseMock: DatabaseMockBuilder;
+  let mockQueryOptimizer: Partial<QueryOptimizerService>;
+  let mockConfigService: Partial<ConfigService>;
 
   beforeEach(async () => {
     // 使用Mock工具类创建数据库Mock
     databaseMock = new MockUtils.database();
-
-    // 使用Mock工具类创建服务Mock
-
     mockHookService = MockUtils.services.createHookServiceMock();
+
+    mockQueryOptimizer = {
+      withPerformanceMonitoring: vi.fn().mockImplementation((_name, fn) => fn()),
+      batchCountArticlesByTags: vi.fn().mockResolvedValue(new Map()),
+      batchCountArticlesByCategories: vi.fn().mockResolvedValue(new Map()),
+      buildOptimizedSearchQuery: vi.fn().mockReturnValue([]),
+      logSlowQuery: vi.fn(),
+    };
+
+    mockConfigService = {
+      jwt: { secret: 'test-secret-key' },
+      get: vi.fn((_key: string, defaultValue?: unknown) => defaultValue),
+    } as Partial<ConfigService>;
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -33,16 +44,9 @@ describe('ArticleService', () => {
           provide: DATABASE_CONNECTION,
           useValue: databaseMock.build(),
         },
-
         {
           provide: QueryOptimizerService,
-          useValue: {
-            withPerformanceMonitoring: vi.fn().mockImplementation((_name, fn) => fn()),
-            batchCountArticlesByTags: vi.fn().mockResolvedValue(new Map()),
-            batchCountArticlesByCategories: vi.fn().mockResolvedValue(new Map()),
-            buildOptimizedSearchQuery: vi.fn().mockReturnValue([]),
-            logSlowQuery: vi.fn(),
-          },
+          useValue: mockQueryOptimizer,
         },
         {
           provide: HookService,
@@ -50,15 +54,16 @@ describe('ArticleService', () => {
         },
         {
           provide: ConfigService,
-          useValue: {
-            jwt: { secret: 'test-secret-key' },
-            get: vi.fn((_key: string, defaultValue?: unknown) => defaultValue),
-          },
+          useValue: mockConfigService,
         },
       ],
     }).compile();
 
     service = module.get<ArticleService>(ArticleService);
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
   });
 
   describe('findAll', () => {
@@ -504,6 +509,401 @@ describe('ArticleService', () => {
 
       // Verify that the import was successful by checking that the method completed without error
       expect(true).toBe(true);
+    });
+  });
+
+  describe('findByCategory', () => {
+    it('should return articles by category with pagination', async () => {
+      const mockArticles = MockUtils.testData.createArticles(2);
+      const countResult = [{ count: 2 }];
+
+      // Mock for the main query
+      databaseMock.db.select.mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            orderBy: vi.fn().mockReturnValue({
+              limit: vi.fn().mockReturnValue({
+                offset: vi.fn().mockResolvedValue(mockArticles),
+              }),
+            }),
+          }),
+        }),
+      });
+
+      // Mock for the count query
+      databaseMock.db.select.mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue(countResult),
+        }),
+      });
+
+      const result = await service.findByCategory('tech');
+
+      expect(result.items).toHaveLength(2);
+      expect(result.total).toBe(2);
+      expect(result.page).toBe(1);
+      expect(result.pageSize).toBe(10);
+    });
+
+    it('should support custom pagination parameters', async () => {
+      const mockArticles = MockUtils.testData.createArticles(5);
+      const countResult = [{ count: 15 }];
+
+      databaseMock.db.select.mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            orderBy: vi.fn().mockReturnValue({
+              limit: vi.fn().mockReturnValue({
+                offset: vi.fn().mockResolvedValue(mockArticles),
+              }),
+            }),
+          }),
+        }),
+      });
+
+      databaseMock.db.select.mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue(countResult),
+        }),
+      });
+
+      const result = await service.findByCategory('tech', { page: 2, pageSize: 5 });
+
+      expect(result.items).toHaveLength(5);
+      expect(result.total).toBe(15);
+      expect(result.page).toBe(2);
+      expect(result.pageSize).toBe(5);
+      expect(result.totalPages).toBe(3);
+    });
+  });
+
+  describe('findOneByPathname', () => {
+    it('should return article by pathname', async () => {
+      const mockArticle = MockUtils.testData.createArticle({ id: 1, pathname: 'test-article' });
+
+      databaseMock.db.select.mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue([mockArticle]),
+          }),
+        }),
+      });
+
+      const result = await service.findOneByPathname('test-article');
+
+      expect(result.id).toBe(1);
+      expect(result.pathname).toBe('test-article');
+    });
+
+    it('should throw NotFoundException when article with pathname not found', async () => {
+      databaseMock.db.select.mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue([]),
+          }),
+        }),
+      });
+
+      await expect(service.findOneByPathname('non-existent')).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('isPrivateById', () => {
+    it('should return true for private article', async () => {
+      databaseMock.db.select.mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue([{ private: true }]),
+          }),
+        }),
+      });
+
+      const result = await service.isPrivateById(1);
+
+      expect(result).toBe(true);
+    });
+
+    it('should return false for public article', async () => {
+      databaseMock.db.select.mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue([{ private: false }]),
+          }),
+        }),
+      });
+
+      const result = await service.isPrivateById(1);
+
+      expect(result).toBe(false);
+    });
+
+    it('should return null when article not found', async () => {
+      databaseMock.db.select.mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue([]),
+          }),
+        }),
+      });
+
+      const result = await service.isPrivateById(999);
+
+      expect(result).toBe(null);
+    });
+  });
+
+  describe('isPrivateByPathname', () => {
+    it('should return true for private article by pathname', async () => {
+      databaseMock.db.select.mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue([{ private: true }]),
+          }),
+        }),
+      });
+
+      const result = await service.isPrivateByPathname('private-article');
+
+      expect(result).toBe(true);
+    });
+
+    it('should return false for public article by pathname', async () => {
+      databaseMock.db.select.mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue([{ private: false }]),
+          }),
+        }),
+      });
+
+      const result = await service.isPrivateByPathname('public-article');
+
+      expect(result).toBe(false);
+    });
+
+    it('should return null when article not found by pathname', async () => {
+      databaseMock.db.select.mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue([]),
+          }),
+        }),
+      });
+
+      const result = await service.isPrivateByPathname('non-existent');
+
+      expect(result).toBe(null);
+    });
+  });
+
+  describe('verifyPassword', () => {
+    it('should return success for public article without password', async () => {
+      const mockArticle = MockUtils.testData.createArticle({
+        id: 1,
+        private: false,
+        password: null,
+      });
+
+      databaseMock.db.select.mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue([mockArticle]),
+          }),
+        }),
+      });
+
+      const result = await service.verifyPassword(1, 'any-password');
+
+      expect(result.success).toBe(true);
+      expect(result.message).toBe('Article is not private');
+    });
+
+    it('should return failure for incorrect password', async () => {
+      const mockArticle = MockUtils.testData.createArticle({
+        id: 1,
+        private: true,
+        password: '$2a$10$hashedPassword',
+      });
+
+      databaseMock.db.select.mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue([mockArticle]),
+          }),
+        }),
+      });
+
+      const result = await service.verifyPassword(1, 'wrong-password');
+
+      expect(result.success).toBe(false);
+      expect(result.message).toBe('Invalid password');
+    });
+  });
+
+  describe('verifyPasswordByPathname', () => {
+    it('should return success for public article by pathname', async () => {
+      const mockArticle = MockUtils.testData.createArticle({
+        id: 1,
+        pathname: 'public-article',
+        private: false,
+        password: null,
+      });
+
+      databaseMock.db.select.mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue([mockArticle]),
+          }),
+        }),
+      });
+
+      const result = await service.verifyPasswordByPathname('public-article', 'any-password');
+
+      expect(result.success).toBe(true);
+      expect(result.message).toBe('Article is not private');
+    });
+  });
+
+  describe('getArticlesGroupedByCategory', () => {
+    it('should return articles grouped by category', async () => {
+      const mockArticles = [
+        MockUtils.testData.createArticle({
+          id: 1,
+          title: 'Article 1',
+          category: 'Tech',
+          private: false,
+          hidden: false,
+        }),
+        MockUtils.testData.createArticle({
+          id: 2,
+          title: 'Article 2',
+          category: 'Tech',
+          private: false,
+          hidden: false,
+        }),
+        MockUtils.testData.createArticle({
+          id: 3,
+          title: 'Article 3',
+          category: 'Lifestyle',
+          private: false,
+          hidden: false,
+        }),
+      ];
+
+      databaseMock.db.select.mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            orderBy: vi.fn().mockResolvedValue(mockArticles),
+          }),
+        }),
+      });
+
+      const result = await service.getArticlesGroupedByCategory();
+
+      expect(result).toHaveProperty('Tech');
+      expect(result).toHaveProperty('Lifestyle');
+      expect(result.Tech).toHaveLength(2);
+      expect(result.Lifestyle).toHaveLength(1);
+    });
+
+    it('should group articles without category as Uncategorized', async () => {
+      const mockArticles = [
+        MockUtils.testData.createArticle({
+          id: 1,
+          title: 'No Category',
+          category: null,
+          private: false,
+          hidden: false,
+        }),
+      ];
+
+      databaseMock.db.select.mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            orderBy: vi.fn().mockResolvedValue(mockArticles),
+          }),
+        }),
+      });
+
+      const result = await service.getArticlesGroupedByCategory();
+
+      expect(result).toHaveProperty('Uncategorized');
+      expect(result.Uncategorized).toHaveLength(1);
+    });
+
+    it('should exclude private and hidden articles', async () => {
+      databaseMock.db.select.mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            orderBy: vi.fn().mockResolvedValue([]),
+          }),
+        }),
+      });
+
+      const result = await service.getArticlesGroupedByCategory();
+
+      expect(result).toEqual({});
+    });
+  });
+
+  describe('getArticlesGroupedByTag', () => {
+    it('should return articles grouped by tag', async () => {
+      const mockArticles = [
+        MockUtils.testData.createArticle({
+          id: 1,
+          title: 'Article 1',
+          tags: ['javascript', 'nodejs'],
+          private: false,
+          hidden: false,
+        }),
+        MockUtils.testData.createArticle({
+          id: 2,
+          title: 'Article 2',
+          tags: ['javascript'],
+          private: false,
+          hidden: false,
+        }),
+      ];
+
+      databaseMock.db.select.mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            orderBy: vi.fn().mockResolvedValue(mockArticles),
+          }),
+        }),
+      });
+
+      const result = await service.getArticlesGroupedByTag();
+
+      expect(result).toHaveProperty('javascript');
+      expect(result).toHaveProperty('nodejs');
+      expect(result.javascript).toHaveLength(2);
+      expect(result.nodejs).toHaveLength(1);
+    });
+
+    it('should group articles without tags as Untagged', async () => {
+      const mockArticles = [
+        MockUtils.testData.createArticle({
+          id: 1,
+          title: 'No Tags',
+          tags: [],
+          private: false,
+          hidden: false,
+        }),
+      ];
+
+      databaseMock.db.select.mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            orderBy: vi.fn().mockResolvedValue(mockArticles),
+          }),
+        }),
+      });
+
+      const result = await service.getArticlesGroupedByTag();
+
+      expect(result).toHaveProperty('Untagged');
+      expect(result.Untagged).toHaveLength(1);
     });
   });
 });
