@@ -142,7 +142,7 @@ describe('CustomPageService', () => {
 
       expect(mockDb.where).toHaveBeenCalled();
       // The where clause uses eq() from drizzle-orm
-      const whereCall = mockDb.where.mock.calls[0][0];
+      const [[whereCall]] = mockDb.where.mock.calls;
       expect(whereCall).toBeDefined();
     });
 

@@ -298,7 +298,8 @@ describe('BackupService', () => {
         restoreAnalytics: false,
         restoreLogs: false,
       };
-      const { taskId } = await service.restoreBackup('test-backup.vbak', restoreDto);
+      const result = await service.restoreBackup('test-backup.vbak', restoreDto);
+      const { taskId } = result;
 
       const progress = service.getRestoreProgress(taskId);
 

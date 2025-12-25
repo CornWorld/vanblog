@@ -61,7 +61,7 @@ describe('PerformanceMonitoringMiddleware', () => {
       expect(mockResponse.on).toHaveBeenCalledWith('finish', expect.any(Function));
     });
 
-    it('should collect metrics when response finishes', async () => {
+    it('should collect metrics when response finishes', () => {
       middleware.use(mockRequest as Request, mockResponse as Response, mockNext);
 
       // Trigger finish event
@@ -345,7 +345,7 @@ describe('PerformanceMonitoringMiddleware', () => {
 
     it('should handle multiple concurrent requests', () => {
       for (let i = 0; i < 5; i++) {
-        const req = { ...mockRequest, originalUrl: `/test${i}` };
+        const req = { ...mockRequest, originalUrl: `/test${String(i)}` };
         const res = {
           on: vi.fn((event: string, callback: () => void) => {
             if (event === 'finish') {

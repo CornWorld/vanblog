@@ -2,8 +2,6 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, beforeEach, afterEach, expect, vi } from 'vitest';
 import { dayjs } from '@vanblog/shared';
 
-import { MockUtils } from '../../../test/mock-utils';
-
 import { DraftVersionService } from './draft-version.service';
 import { DraftController } from './draft.controller';
 import { DraftService } from './draft.service';
@@ -694,7 +692,7 @@ describe('DraftController', () => {
       const handler = controller.updateDraft();
       await handler({ params: { id: '1' }, body: updateDto });
 
-      const updateData = mockDraftService.update.mock.calls[0][1];
+      const [[, updateData]] = mockDraftService.update.mock.calls;
       expect(updateData).toHaveProperty('title', 'Updated');
       expect(updateData).not.toHaveProperty('content');
       expect(updateData).not.toHaveProperty('category');

@@ -682,13 +682,11 @@ describe('MediaController', () => {
         1,
         expect.objectContaining({ buffer: wm1, originalname: 'f1.png' }),
         'f1.png',
-        undefined,
       );
       expect(mockMediaService.uploadFile).toHaveBeenNthCalledWith(
         2,
         expect.objectContaining({ buffer: wm2, originalname: 'f2.png' }),
         'f2.png',
-        undefined,
       );
       expect(result).toEqual([{ id: 1 }, { id: 2 }]);
     });

@@ -51,11 +51,11 @@ describe('PasswordChangeHandlerService', () => {
       );
     });
 
-    it('should revoke all tokens when password is changed', async () => {
+    it('should revoke all tokens when password is changed', async (): Promise<void> => {
       service.onModuleInit();
 
       // Get the registered hook handler
-      const [, hookHandler] = mockHookService.addAction.mock.calls[0];
+      const [[, hookHandler]] = mockHookService.addAction.mock.calls;
 
       // Simulate password change event
       const eventData = { userId: 123 };
@@ -64,10 +64,10 @@ describe('PasswordChangeHandlerService', () => {
       expect(tokenService.revokeAllUserTokens).toHaveBeenCalledWith(123);
     });
 
-    it('should handle hook execution for different users', async () => {
+    it('should handle hook execution for different users', async (): Promise<void> => {
       service.onModuleInit();
 
-      const [, hookHandler] = mockHookService.addAction.mock.calls[0];
+      const [[, hookHandler]] = mockHookService.addAction.mock.calls;
 
       // Test with user 1
       await hookHandler({ userId: 1 });
@@ -80,10 +80,10 @@ describe('PasswordChangeHandlerService', () => {
       expect(tokenService.revokeAllUserTokens).toHaveBeenCalledTimes(2);
     });
 
-    it('should handle missing userId gracefully', () => {
+    it('should handle missing userId gracefully', (): void => {
       service.onModuleInit();
 
-      const [, hookHandler] = mockHookService.addAction.mock.calls[0];
+      const [[, hookHandler]] = mockHookService.addAction.mock.calls;
 
       // Test with missing userId (should not throw)
       expect(() => hookHandler({})).not.toThrow();
@@ -104,30 +104,30 @@ describe('PasswordChangeHandlerService', () => {
 
   describe('Security - userId Validation', () => {
     describe('userId existence checks', () => {
-      it('should handle missing userId gracefully', () => {
+      it('should handle missing userId gracefully', (): void => {
         service.onModuleInit();
 
-        const [, hookHandler] = mockHookService.addAction.mock.calls[0];
+        const [[, hookHandler]] = mockHookService.addAction.mock.calls;
 
         // Test with missing userId (should not throw)
         expect(() => hookHandler({})).not.toThrow();
         expect(tokenService.revokeAllUserTokens).toHaveBeenCalledWith(undefined);
       });
 
-      it('should not process when userId is null', () => {
+      it('should not process when userId is null', (): void => {
         service.onModuleInit();
 
-        const [, hookHandler] = mockHookService.addAction.mock.calls[0];
+        const [[, hookHandler]] = mockHookService.addAction.mock.calls;
 
         // Test with null userId
         expect(() => hookHandler({ userId: null })).not.toThrow();
         expect(tokenService.revokeAllUserTokens).toHaveBeenCalledWith(null);
       });
 
-      it('should not process when userId is undefined', () => {
+      it('should not process when userId is undefined', (): void => {
         service.onModuleInit();
 
-        const [, hookHandler] = mockHookService.addAction.mock.calls[0];
+        const [[, hookHandler]] = mockHookService.addAction.mock.calls;
 
         // Test with explicit undefined
         expect(() => hookHandler({ userId: undefined })).not.toThrow();
@@ -136,20 +136,20 @@ describe('PasswordChangeHandlerService', () => {
     });
 
     describe('userId type validation', () => {
-      it('should handle string userId (type error)', () => {
+      it('should handle string userId (type error)', (): void => {
         service.onModuleInit();
 
-        const [, hookHandler] = mockHookService.addAction.mock.calls[0];
+        const [[, hookHandler]] = mockHookService.addAction.mock.calls;
 
         // Test with string instead of number
         expect(() => hookHandler({ userId: '123' })).not.toThrow();
         expect(tokenService.revokeAllUserTokens).toHaveBeenCalledWith('123');
       });
 
-      it('should handle invalid numeric values', () => {
+      it('should handle invalid numeric values', (): void => {
         service.onModuleInit();
 
-        const [, hookHandler] = mockHookService.addAction.mock.calls[0];
+        const [[, hookHandler]] = [mockHookService.addAction.mock.calls[0]];
 
         // Test with zero (invalid user id)
         expect(() => hookHandler({ userId: 0 })).not.toThrow();
@@ -164,30 +164,30 @@ describe('PasswordChangeHandlerService', () => {
         expect(tokenService.revokeAllUserTokens).toHaveBeenCalledWith(NaN);
       });
 
-      it('should handle boolean userId (type error)', () => {
+      it('should handle boolean userId (type error)', (): void => {
         service.onModuleInit();
 
-        const [, hookHandler] = mockHookService.addAction.mock.calls[0];
+        const [[, hookHandler]] = [mockHookService.addAction.mock.calls[0]];
 
         // Test with boolean
         expect(() => hookHandler({ userId: true })).not.toThrow();
         expect(tokenService.revokeAllUserTokens).toHaveBeenCalledWith(true);
       });
 
-      it('should handle object userId (type error)', () => {
+      it('should handle object userId (type error)', (): void => {
         service.onModuleInit();
 
-        const [, hookHandler] = mockHookService.addAction.mock.calls[0];
+        const [[, hookHandler]] = mockHookService.addAction.mock.calls;
 
         // Test with object
         expect(() => hookHandler({ userId: {} })).not.toThrow();
         expect(tokenService.revokeAllUserTokens).toHaveBeenCalledWith({});
       });
 
-      it('should handle array userId (type error)', () => {
+      it('should handle array userId (type error)', (): void => {
         service.onModuleInit();
 
-        const [, hookHandler] = mockHookService.addAction.mock.calls[0];
+        const [[, hookHandler]] = mockHookService.addAction.mock.calls;
 
         // Test with array
         expect(() => hookHandler({ userId: [123] })).not.toThrow();
@@ -196,10 +196,10 @@ describe('PasswordChangeHandlerService', () => {
     });
 
     describe('prevent modifying other users passwords', () => {
-      it('should only revoke tokens for the specified user', async () => {
+      it('should only revoke tokens for the specified user', async (): Promise<void> => {
         service.onModuleInit();
 
-        const [, hookHandler] = mockHookService.addAction.mock.calls[0];
+        const [[, hookHandler]] = mockHookService.addAction.mock.calls;
 
         // Simulate user A changing password
         const userAId = 100;
@@ -213,10 +213,10 @@ describe('PasswordChangeHandlerService', () => {
         expect(tokenService.revokeAllUserTokens).not.toHaveBeenCalledWith(102);
       });
 
-      it('should not allow token revocation for non-existent users', async () => {
+      it('should not allow token revocation for non-existent users', async (): Promise<void> => {
         service.onModuleInit();
 
-        const [, hookHandler] = mockHookService.addAction.mock.calls[0];
+        const [[, hookHandler]] = mockHookService.addAction.mock.calls;
 
         // Even for non-existent user IDs, tokens are attempted to be revoked
         // (actual validation should be in TokenService)
@@ -226,10 +226,10 @@ describe('PasswordChangeHandlerService', () => {
         expect(tokenService.revokeAllUserTokens).toHaveBeenCalledWith(nonExistentUserId);
       });
 
-      it('should not leak data through invalid userId values', async () => {
+      it('should not leak data through invalid userId values', async (): Promise<void> => {
         service.onModuleInit();
 
-        const [, hookHandler] = mockHookService.addAction.mock.calls[0];
+        const [[, hookHandler]] = mockHookService.addAction.mock.calls;
 
         // Test various invalid IDs to ensure no data leakage
         const invalidIds = [null, undefined, 0, -1, NaN];
@@ -243,10 +243,10 @@ describe('PasswordChangeHandlerService', () => {
     });
 
     describe('concurrent password changes', () => {
-      it('should handle concurrent password changes for different users', async () => {
+      it('should handle concurrent password changes for different users', async (): Promise<void> => {
         service.onModuleInit();
 
-        const [, hookHandler] = mockHookService.addAction.mock.calls[0];
+        const [[, hookHandler]] = mockHookService.addAction.mock.calls;
 
         // Simulate concurrent password changes
         const promises = [
@@ -263,10 +263,10 @@ describe('PasswordChangeHandlerService', () => {
         expect(tokenService.revokeAllUserTokens).toHaveBeenCalledWith(3);
       });
 
-      it('should handle concurrent password changes for same user', async () => {
+      it('should handle concurrent password changes for same user', async (): Promise<void> => {
         service.onModuleInit();
 
-        const [, hookHandler] = mockHookService.addAction.mock.calls[0];
+        const [[, hookHandler]] = mockHookService.addAction.mock.calls;
 
         // Simulate concurrent password changes for same user
         const userId = 42;

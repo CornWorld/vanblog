@@ -196,7 +196,7 @@ describe('CacheService', () => {
       const value = 'test-value';
       mockCache.get.mockResolvedValue(value);
 
-      const promises = Array.from({ length: 10 }, (_, i) => service.get(`${key}-${i}`));
+      const promises = Array.from({ length: 10 }, (_, i) => service.get(`${key}-${String(i)}`));
 
       const results = await Promise.all(promises);
 
@@ -206,7 +206,9 @@ describe('CacheService', () => {
     });
 
     it('should handle 10 concurrent write operations', async () => {
-      const promises = Array.from({ length: 10 }, (_, i) => service.set(`key-${i}`, `value-${i}`));
+      const promises = Array.from({ length: 10 }, (_, i) =>
+        service.set(`key-${String(i)}`, `value-${String(i)}`),
+      );
 
       await Promise.all(promises);
 
@@ -239,9 +241,9 @@ describe('CacheService', () => {
       const operations = [];
       for (let i = 0; i < 20; i++) {
         if (i % 2 === 0) {
-          operations.push(service.set(`key-${i}`, `value-${i}`));
+          operations.push(service.set(`key-${String(i)}`, `value-${String(i)}`));
         } else {
-          operations.push(service.get(`key-${i}`));
+          operations.push(service.get(`key-${String(i)}`));
         }
       }
 
@@ -263,23 +265,22 @@ describe('CacheService', () => {
       let generatorExecutionCount = 0;
 
       // Enhanced mock that tracks atomic state
-      mockCache.get.mockImplementation(async (k: string) => {
-        if (k === key && inFlightOperations.has(key)) {
+      mockCache.get.mockImplementation((_k: string) => {
+        if (_k === key && inFlightOperations.has(key)) {
           // Key is being regenerated - return undefined to simulate cache miss
           return undefined;
         }
         return factoryValue;
       });
 
-      mockCache.set.mockImplementation(async (k: string, value: any) => {
+      mockCache.set.mockImplementation((k: string, _value: any) => {
         if (k === key) {
           inFlightOperations.delete(key);
         }
       });
 
       // Track when factory is actually called
-      const originalFactory = factory;
-      factory.mockImplementation(async () => {
+      factory.mockImplementation(() => {
         if (inFlightOperations.has(key)) {
           generatorExecutionCount++;
         } else {
@@ -327,20 +328,20 @@ describe('CacheService', () => {
         );
       });
 
-      mockCache.get.mockImplementation(async (k: string) => {
+      mockCache.get.mockImplementation((_k: string) => {
         // If key is being generated, return undefined to simulate miss
-        if (generatingKeys.has(k)) {
+        if (generatingKeys.has(_k)) {
           return undefined;
         }
         return slowFactoryValue;
       });
 
-      mockCache.set.mockImplementation(async (k: string, value: any) => {
+      mockCache.set.mockImplementation((k: string, _value: any) => {
         generatingKeys.delete(k);
       });
 
       // Wrap the slow factory to track generation state
-      const wrappedFactory = async () => {
+      const wrappedFactory = async (): Promise<string> => {
         // Mark key as generating
         const promise = slowFactory();
         generatingKeys.set(key, promise);
@@ -355,7 +356,7 @@ describe('CacheService', () => {
 
       // All results should be valid
       expect(results).toHaveLength(5);
-      expect(results.every((r) => r === slowFactoryValue || r === undefined)).toBe(true);
+      expect(results.every((r) => typeof r === 'string')).toBe(true);
 
       // Critical assertion: the factory should only be called 1-2 times max
       // NOT 5 times (once per concurrent request)
@@ -388,7 +389,7 @@ describe('CacheService', () => {
       });
 
       let getCalls = 0;
-      mockCache.get.mockImplementation(async (k: string) => {
+      mockCache.get.mockImplementation((_k: string) => {
         getCalls++;
         // Simulate initial miss, then subsequent calls return the value
         return getCalls === 1 ? undefined : resultValue;
@@ -408,7 +409,7 @@ describe('CacheService', () => {
     });
 
     it('should handle concurrent delete operations', async () => {
-      const promises = Array.from({ length: 10 }, (_, i) => service.del(`key-${i}`));
+      const promises = Array.from({ length: 10 }, (_, i) => service.del(`key-${String(i)}`));
 
       await Promise.all(promises);
 
@@ -420,14 +421,14 @@ describe('CacheService', () => {
       mockCache.set.mockResolvedValue(undefined);
       mockCache.get.mockResolvedValue(undefined);
 
-      const promises = Array.from({ length: 5 }, (_, i) => service.set(key, `value-${i}`));
+      const promises = Array.from({ length: 5 }, (_, i) => service.set(key, `value-${String(i)}`));
 
       await Promise.all(promises);
 
       expect(mockCache.set).toHaveBeenCalledTimes(5);
       // Last write wins
-      const lastCall = mockCache.set.mock.calls[mockCache.set.mock.calls.length - 1];
-      expect(lastCall[0]).toBe(key);
+      const [lastKey] = mockCache.set.mock.calls[mockCache.set.mock.calls.length - 1];
+      expect(lastKey).toBe(key);
     });
 
     it('should handle high frequency concurrent operations sequentially completing', async () => {
@@ -440,7 +441,9 @@ describe('CacheService', () => {
         return Promise.resolve(undefined);
       });
 
-      const promises = Array.from({ length: 15 }, (_, i) => service.set(`key-${i}`, `value-${i}`));
+      const promises = Array.from({ length: 15 }, (_, i) =>
+        service.set(`key-${String(i)}`, `value-${String(i)}`),
+      );
 
       await Promise.all(promises);
 
@@ -460,7 +463,10 @@ describe('CacheService', () => {
         return Promise.resolve('value');
       });
 
-      const promises = [service.get('error-key').catch((e) => e), service.get('success-key')];
+      const promises = [
+        service.get('error-key').catch((e: unknown) => e),
+        service.get('success-key'),
+      ];
 
       const results = await Promise.all(promises);
 
@@ -483,7 +489,7 @@ describe('CacheService', () => {
       let factoryCallCount = 0;
       const factory = vi.fn().mockImplementation(() => {
         factoryCallCount++;
-        return Promise.resolve(`result-${factoryCallCount}`);
+        return Promise.resolve(`result-${String(factoryCallCount)}`);
       });
 
       // Simulate first call cache miss
@@ -507,8 +513,9 @@ describe('CacheService', () => {
       let value = 'original';
 
       mockCache.get.mockImplementation(() => Promise.resolve(value));
-      mockCache.set.mockImplementation(async (k, v) => {
+      mockCache.set.mockImplementation((_k: string, v: string) => {
         value = v;
+        return Promise.resolve();
       });
 
       const promises = [service.get(key), service.set(key, 'updated'), service.get(key)];
@@ -538,12 +545,12 @@ describe('CacheService', () => {
 
       // TTL is converted to milliseconds as-is (-100 * 1000 = -100000)
       expect(mockCache.set).toHaveBeenCalled();
-      const callArgs = mockCache.set.mock.calls[0];
-      expect(callArgs[0]).toBe(key);
-      expect(callArgs[1]).toBe(value);
+      const [[callKey, callValue, callTtl]] = mockCache.set.mock.calls;
+      expect(callKey).toBe(key);
+      expect(callValue).toBe(value);
       // TTL should be in milliseconds (may be negative if input is negative)
-      expect(typeof callArgs[2]).toBe('number');
-      expect(callArgs[2]).toBe(-100000);
+      expect(typeof callTtl).toBe('number');
+      expect(callTtl).toBe(-100000);
     });
 
     it('should handle very small TTL (1 second)', async () => {
@@ -573,8 +580,8 @@ describe('CacheService', () => {
       await service.set(key, value, overflowTTL);
 
       expect(mockCache.set).toHaveBeenCalled();
-      const callArgs = mockCache.set.mock.calls[0];
-      expect(typeof callArgs[2]).toBe('number');
+      const [[_overflowKey, _overflowValue, overflowTtl]] = mockCache.set.mock.calls;
+      expect(typeof overflowTtl).toBe('number');
     });
 
     it('should handle fractional TTL values', async () => {
@@ -594,9 +601,9 @@ describe('CacheService', () => {
       await service.set(key, value, Number.NaN as any);
 
       expect(mockCache.set).toHaveBeenCalled();
-      const callArgs = mockCache.set.mock.calls[0];
+      const [[_nanKey, _nanValue, nanTtl]] = mockCache.set.mock.calls;
       // Should either convert to default or handle gracefully
-      expect(callArgs[2]).toBeDefined();
+      expect(nanTtl).toBeDefined();
     });
 
     it('should handle Infinity TTL', async () => {
@@ -606,8 +613,8 @@ describe('CacheService', () => {
       await service.set(key, value, Number.POSITIVE_INFINITY as any);
 
       expect(mockCache.set).toHaveBeenCalled();
-      const callArgs = mockCache.set.mock.calls[0];
-      expect(callArgs[2]).toBeDefined();
+      const [[_infinityKey, _infinityValue, infinityTtl]] = mockCache.set.mock.calls;
+      expect(infinityTtl).toBeDefined();
     });
 
     it('should handle undefined TTL (default)', async () => {

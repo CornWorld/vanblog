@@ -127,7 +127,7 @@ describe('Authentication Flow Integration (e2e)', () => {
       // Access protected route
       const protectedRes = await request(httpServer)
         .get('/api/v2/articles')
-        .set('Authorization', `Bearer ${token}`)
+        .set('Authorization', `Bearer ${String(token)}`)
         .expect(200);
 
       expect(protectedRes.body).toBeDefined();
@@ -184,13 +184,13 @@ describe('Authentication Flow Integration (e2e)', () => {
       // Verify token works
       await request(httpServer)
         .get('/api/v2/articles')
-        .set('Authorization', `Bearer ${token}`)
+        .set('Authorization', `Bearer ${String(token)}`)
         .expect(200);
 
       // Logout
       const logoutRes = await request(httpServer)
         .post('/api/v2/auth/logout')
-        .set('Authorization', `Bearer ${token}`)
+        .set('Authorization', `Bearer ${String(token)}`)
         .expect([200, 204]);
 
       expect(logoutRes.status).toBeGreaterThanOrEqual(200);
@@ -198,7 +198,7 @@ describe('Authentication Flow Integration (e2e)', () => {
       // Try to use token after logout - should fail
       const afterLogoutRes = await request(httpServer)
         .get('/api/v2/articles')
-        .set('Authorization', `Bearer ${token}`);
+        .set('Authorization', `Bearer ${String(token)}`);
 
       // Either 401, 403, or still works depending on implementation
       // Some systems don't immediately blacklist tokens
@@ -223,7 +223,7 @@ describe('Authentication Flow Integration (e2e)', () => {
       // Change password (if endpoint exists)
       const changeRes = await request(httpServer)
         .post('/api/v2/auth/change-password')
-        .set('Authorization', `Bearer ${token}`)
+        .set('Authorization', `Bearer ${String(token)}`)
         .send({
           oldPassword: testUser.password,
           newPassword,
@@ -286,7 +286,7 @@ describe('Authentication Flow Integration (e2e)', () => {
           // New token should work
           await request(httpServer)
             .get('/api/v2/articles')
-            .set('Authorization', `Bearer ${newAccessToken}`)
+            .set('Authorization', `Bearer ${String(newAccessToken)}`)
             .expect(200);
         }
       }
@@ -330,17 +330,17 @@ describe('Authentication Flow Integration (e2e)', () => {
       // All tokens should work independently
       const verify1 = await request(httpServer)
         .get('/api/v2/articles')
-        .set('Authorization', `Bearer ${token1}`)
+        .set('Authorization', `Bearer ${String(token1)}`)
         .expect(200);
 
       const verify2 = await request(httpServer)
         .get('/api/v2/articles')
-        .set('Authorization', `Bearer ${token2}`)
+        .set('Authorization', `Bearer ${String(token2)}`)
         .expect(200);
 
       const verify3 = await request(httpServer)
         .get('/api/v2/articles')
-        .set('Authorization', `Bearer ${token3}`)
+        .set('Authorization', `Bearer ${String(token3)}`)
         .expect(200);
 
       expect(verify1.status).toBe(200);
@@ -441,12 +441,12 @@ describe('Authentication Flow Integration (e2e)', () => {
       // Each token should work independently
       const access1 = await request(httpServer)
         .get('/api/v2/articles')
-        .set('Authorization', `Bearer ${token1}`)
+        .set('Authorization', `Bearer ${String(token1)}`)
         .expect(200);
 
       const access2 = await request(httpServer)
         .get('/api/v2/articles')
-        .set('Authorization', `Bearer ${token2}`)
+        .set('Authorization', `Bearer ${String(token2)}`)
         .expect(200);
 
       expect(access1.status).toBe(200);
@@ -455,11 +455,11 @@ describe('Authentication Flow Integration (e2e)', () => {
       // Swapping tokens should still work for reading
       const swapped1 = await request(httpServer)
         .get('/api/v2/articles')
-        .set('Authorization', `Bearer ${token2}`);
+        .set('Authorization', `Bearer ${String(token2)}`);
 
       const swapped2 = await request(httpServer)
         .get('/api/v2/articles')
-        .set('Authorization', `Bearer ${token1}`);
+        .set('Authorization', `Bearer ${String(token1)}`);
 
       // Both should either work or be protected
       expect([200, 401, 403]).toContain(swapped1.status);
@@ -483,7 +483,7 @@ describe('Authentication Flow Integration (e2e)', () => {
       // Get user profile (if endpoint exists)
       const profileRes = await request(httpServer)
         .get('/api/v2/auth/me')
-        .set('Authorization', `Bearer ${token}`)
+        .set('Authorization', `Bearer ${String(token)}`)
         .expect([200, 404]);
 
       if (profileRes.status === 200) {

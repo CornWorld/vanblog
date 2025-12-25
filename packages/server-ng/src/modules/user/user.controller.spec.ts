@@ -324,8 +324,15 @@ describe('UserController', () => {
       };
 
       const updatedUser = new User({
-        ...mockUser,
+        id: mockUser.id,
+        username: mockUser.username,
+        password: mockUser.password,
+        nickname: mockUser.nickname,
         email: 'newemail@example.com',
+        avatar: mockUser.avatar,
+        type: mockUser.type,
+        permissions: mockUser.permissions,
+        createdAt: mockUser.createdAt,
         updatedAt: dayjs().format(),
       });
 
@@ -342,8 +349,15 @@ describe('UserController', () => {
       };
 
       const updatedUser = new User({
-        ...mockUser,
+        id: mockUser.id,
+        username: mockUser.username,
+        password: mockUser.password,
+        nickname: mockUser.nickname,
+        email: mockUser.email,
+        avatar: mockUser.avatar,
+        type: mockUser.type,
         permissions: ['article:create', 'article:delete'],
+        createdAt: mockUser.createdAt,
         updatedAt: dayjs().format(),
       });
 
@@ -360,8 +374,15 @@ describe('UserController', () => {
       };
 
       const updatedUser = new User({
-        ...mockUser,
+        id: mockUser.id,
+        username: mockUser.username,
+        password: mockUser.password,
+        nickname: mockUser.nickname,
+        email: mockUser.email,
         avatar: 'https://example.com/avatar.png',
+        type: mockUser.type,
+        permissions: mockUser.permissions,
+        createdAt: mockUser.createdAt,
         updatedAt: dayjs().format(),
       });
 
@@ -402,10 +423,15 @@ describe('UserController', () => {
       };
 
       const updatedUser = new User({
-        ...mockUser,
+        id: mockUser.id,
+        username: mockUser.username,
+        password: mockUser.password,
         nickname: 'New Name',
         email: 'new@example.com',
         avatar: 'https://example.com/new.png',
+        type: mockUser.type,
+        permissions: mockUser.permissions,
+        createdAt: mockUser.createdAt,
         updatedAt: dayjs().format(),
       });
 
@@ -432,8 +458,16 @@ describe('UserController', () => {
 
     it('should handle user with permissions in request', () => {
       const userWithPerms = new User({
-        ...mockUser,
+        id: mockUser.id,
+        username: mockUser.username,
+        password: mockUser.password,
+        nickname: mockUser.nickname,
+        email: mockUser.email,
+        avatar: mockUser.avatar,
+        type: mockUser.type,
         permissions: ['article:create', 'article:read'],
+        createdAt: mockUser.createdAt,
+        updatedAt: mockUser.updatedAt,
       });
 
       const mockRequest = {
@@ -809,7 +843,7 @@ describe('UserController', () => {
 
       mockUserService.findOne.mockResolvedValue(zeroUser);
 
-      const result = await controller.findOne('');
+      await controller.findOne('');
       expect(service.findOne).toHaveBeenCalledWith(0);
     });
 
@@ -825,7 +859,7 @@ describe('UserController', () => {
 
       mockUserService.findOne.mockResolvedValue(zeroUser);
 
-      const result = await controller.findOne('   ');
+      await controller.findOne('   ');
       expect(service.findOne).toHaveBeenCalledWith(0);
     });
 
@@ -851,7 +885,15 @@ describe('UserController', () => {
     it('should allow update with empty object (optional fields)', async () => {
       // UpdateUserSchema allows all fields to be optional
       const updatedUser = new User({
-        ...mockUser,
+        id: mockUser.id,
+        username: mockUser.username,
+        password: mockUser.password,
+        nickname: mockUser.nickname,
+        email: mockUser.email,
+        avatar: mockUser.avatar,
+        type: mockUser.type,
+        permissions: mockUser.permissions,
+        createdAt: mockUser.createdAt,
         updatedAt: dayjs().format(),
       });
 

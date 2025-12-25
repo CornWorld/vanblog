@@ -7,8 +7,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { NotFoundException } from '@nestjs/common';
 import { WebhookController } from './webhook.controller';
-import { WebhookService } from '../services/webhook.service';
-import { WebhookRegistryService } from '../services/webhook-registry.service';
 import type { WebhookDto } from '../dto/webhook.dto';
 
 describe('WebhookController', () => {

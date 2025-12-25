@@ -216,7 +216,7 @@ describe('ShortcodeService', () => {
       service.register(
         'async',
         async () => {
-          await new Promise((r) => setTimeout(r, 10));
+          await new Promise((resolve) => setTimeout(resolve, 10));
           return 'async result';
         },
         'test-plugin',
@@ -525,7 +525,10 @@ describe('ShortcodeService', () => {
     it('should handle large number of shortcodes', async () => {
       service.register('item', (_attrs, content) => `<li>${content ?? ''}</li>`, 'test-plugin');
 
-      const items = Array.from({ length: 100 }, (_, i) => `[item]Item ${i}[/item]`).join('\n');
+      const items = Array.from(
+        { length: 100 },
+        (_item, index) => `[item]Item ${index}[/item]`,
+      ).join('\n');
       const result = await service.process(items, defaultOptions);
 
       expect(result).toContain('<li>Item 0</li>');

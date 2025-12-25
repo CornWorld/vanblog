@@ -788,7 +788,7 @@ describe('CategoryController', () => {
       const handler = controller.getArticlesByCategory();
       const result = await handler({ params: { name: 'Technology' } });
 
-      const article = result.body[0];
+      const [article] = result.body;
       expect(article.id).toBe(1);
       expect(article.title).toBe('Article 1');
       expect(article.content).toBe('Content 1');

@@ -2,7 +2,6 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import axios from 'axios';
 import * as fs from 'fs';
 import * as path from 'path';
-import * as semver from 'semver';
 import { beforeEach, describe, expect, it, vi, afterEach } from 'vitest';
 
 import { MetaService } from './meta.service';
@@ -38,8 +37,8 @@ describe('MetaService', () => {
 
   afterEach(() => {
     vi.clearAllMocks();
-    consoleWarnSpy?.mockRestore();
-    consoleLogSpy?.mockRestore();
+    consoleWarnSpy.mockRestore();
+    consoleLogSpy.mockRestore();
   });
 
   describe('constructor and initVersion', () => {
@@ -369,7 +368,7 @@ describe('MetaService', () => {
 
       // Now the check should run because interval has "expired"
       await (service as any).checkUpdate();
-      expect(mockedAxios.get.mock.calls.length).toBe(callCountAfterInit + 1);
+      expect(mockedAxios.get.mock.calls.length).toBe((callCountAfterInit as number) + 1);
     });
 
     it('should handle network errors gracefully', async () => {

@@ -213,7 +213,7 @@ describe('OptionsService (Public)', () => {
   });
 
   it('should filter out non-string values in include array', async () => {
-    const result = await service.getOptions({
+    const _result = await service.getOptions({
       include: ['articles', 123, null, undefined, 'categories'] as any,
     });
 

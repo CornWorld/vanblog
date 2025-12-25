@@ -498,7 +498,7 @@ describe('ImageProcessingService', () => {
 
       expect(result).toBe(outputBuffer);
       expect(mockSharp.composite).toHaveBeenCalled();
-      const compositeCall = mockSharp.composite.mock.calls[0][0];
+      const [[compositeCall]] = mockSharp.composite.mock.calls;
       expect(compositeCall[0].gravity).toBe('center');
     });
 
@@ -520,7 +520,7 @@ describe('ImageProcessingService', () => {
           position,
         });
 
-        const compositeCall = mockSharp.composite.mock.calls[0][0];
+        const [[compositeCall]] = mockSharp.composite.mock.calls;
         expect(compositeCall[0].gravity).toBe(position);
       }
     });
@@ -690,7 +690,7 @@ describe('ImageProcessingService', () => {
         position: undefined,
       });
 
-      const compositeCall = mockSharp.composite.mock.calls[0][0];
+      const [[compositeCall]] = mockSharp.composite.mock.calls;
       expect(compositeCall[0].gravity).toBe('center');
     });
   });
@@ -760,7 +760,7 @@ describe('ImageProcessingService', () => {
 
     it('should provide descriptive logging for file errors', async () => {
       const inputBuffer = Buffer.from('test image');
-      const mockLogger = vi.spyOn(service as any, 'logger' as any, 'get').mockReturnValue({
+      vi.spyOn(service as any, 'logger' as any, 'get').mockReturnValue({
         error: vi.fn(),
         warn: vi.fn(),
         log: vi.fn(),

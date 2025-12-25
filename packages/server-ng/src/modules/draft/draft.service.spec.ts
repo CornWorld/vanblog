@@ -904,11 +904,8 @@ describe('DraftService', () => {
 
       // Verify hook was called with original data
       expect(mockHookService.applyFilters).toHaveBeenCalled();
-      const callArgs = mockHookService.applyFilters.mock.calls[0];
-      expect(callArgs[0]).toBe('draft|beforeUpdate');
-
-      // Verify transformed data has new values
-      const passedDraft = callArgs[1];
+      const [[hookName, passedDraft]] = mockHookService.applyFilters.mock.calls;
+      expect(hookName).toBe('draft|beforeUpdate');
       expect(passedDraft).toBeDefined();
 
       // Verify result contains the hook-transformed value

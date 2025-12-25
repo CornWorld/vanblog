@@ -150,13 +150,16 @@ describe('Cache Invalidation Workflow (e2e)', () => {
       const articleId = createRes.body.id;
 
       // Get article list (caches it)
-      const beforeRes = await request(httpServer).get(`/api/v2/articles/${articleId}`).expect(200);
+      const articleIdStr = String(articleId);
+      const beforeRes = await request(httpServer)
+        .get(`/api/v2/articles/${articleIdStr}`)
+        .expect(200);
 
       expect(beforeRes.body.title).toBe('Original Title');
 
       // Update article
       await request(httpServer)
-        .put(`/api/v2/articles/${articleId}`)
+        .put(`/api/v2/articles/${articleIdStr}`)
         .set('Authorization', `Bearer ${authToken}`)
         .send({
           title: 'Updated Title',
@@ -165,7 +168,9 @@ describe('Cache Invalidation Workflow (e2e)', () => {
         .expect(200);
 
       // Get article again - cache should reflect update
-      const afterRes = await request(httpServer).get(`/api/v2/articles/${articleId}`).expect(200);
+      const afterRes = await request(httpServer)
+        .get(`/api/v2/articles/${articleIdStr}`)
+        .expect(200);
 
       expect(afterRes.body.title).toBe('Updated Title');
     });
@@ -184,7 +189,7 @@ describe('Cache Invalidation Workflow (e2e)', () => {
         })
         .expect(201);
 
-      const res2 = await request(httpServer)
+      await request(httpServer)
         .post('/api/v2/articles')
         .set('Authorization', `Bearer ${authToken}`)
         .send({

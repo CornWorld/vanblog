@@ -1,7 +1,6 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import { dayjs } from '@vanblog/shared';
 import { analytics } from '@vanblog/shared/drizzle';
-import { desc, sql } from 'drizzle-orm';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 import { DATABASE_CONNECTION } from '../../../database';
@@ -219,7 +218,7 @@ describe('AnalyticsService', () => {
 
     it('should use default limit of 10', async () => {
       const mockRankings = Array.from({ length: 15 }, (_, i) => ({
-        path: `/page${i}`,
+        path: `/page${String(i)}`,
         views: 100 - i,
         uniqueVisitors: 50 - i,
       }));
@@ -280,9 +279,9 @@ describe('AnalyticsService', () => {
 
       expect(result.pageviews).toHaveLength(3);
       expect(result.visitors).toHaveLength(3);
-      expect(result.pageviews[0].value).toBe(0); // 默认填充 0
-      expect(result.pageviews[1].value).toBe(0);
-      expect(result.pageviews[2].value).toBeGreaterThanOrEqual(0);
+      expect(result.pageviews[String(0)].value).toBe(0); // 默认填充 0
+      expect(result.pageviews[String(1)].value).toBe(0);
+      expect(result.pageviews[String(2)].value).toBeGreaterThanOrEqual(0);
     });
 
     it('should fill missing dates with zero values', async () => {
@@ -305,7 +304,7 @@ describe('AnalyticsService', () => {
       expect(result.visitors[todayIndex].value).toBe(50);
 
       // 检查其他天数有默认值 0
-      expect(result.pageviews[0].value).toBe(0);
+      expect(result.pageviews[String(0)].value).toBe(0);
     });
 
     it('should format date labels correctly', async () => {
@@ -405,7 +404,7 @@ describe('AnalyticsService', () => {
   describe('getBrowserStats', () => {
     it('should aggregate browser statistics and limit to top 10', async () => {
       const mockResult = Array.from({ length: 15 }, (_, i) => ({
-        userAgent: `Mozilla/5.0 (compatible; Browser${i}/1.0)`,
+        userAgent: `Mozilla/5.0 (compatible; Browser${String(i)}/1.0)`,
         count: 100 - i * 5,
       }));
 
@@ -641,7 +640,7 @@ describe('AnalyticsService', () => {
       for (let i = 0; i < 10; i++) {
         const dto: RecordAnalyticsDto = {
           type: AnalyticsType.PAGEVIEW,
-          path: `/page-${i}`,
+          path: `/page-${String(i)}`,
           data: { index: i },
         };
         mockDb.insert.mockReturnValue({
@@ -671,7 +670,7 @@ describe('AnalyticsService', () => {
         });
         await service.recordAnalytics({
           type: AnalyticsType.PAGEVIEW,
-          path: `/base-${i}`,
+          path: `/base-${String(i)}`,
         });
       }
       baselineTime = Date.now() - baselineTime;
@@ -687,7 +686,7 @@ describe('AnalyticsService', () => {
         });
         await service.recordAnalytics({
           type: AnalyticsType.PAGEVIEW,
-          path: `/test-${i}`,
+          path: `/test-${String(i)}`,
         });
       }
       testTime = Date.now() - testTime;
@@ -695,6 +694,8 @@ describe('AnalyticsService', () => {
       // Both should complete with fake timers instantly
       // The point is comparing relative call counts, not actual time
       expect(mockDb.insert).toHaveBeenCalled();
+      expect(baselineTime).toBeDefined();
+      expect(testTime).toBeDefined();
 
       vi.useRealTimers();
     });
@@ -710,7 +711,7 @@ describe('AnalyticsService', () => {
         });
         await service.recordAnalytics({
           type: AnalyticsType.PAGEVIEW,
-          path: `/scale-100-${i}`,
+          path: `/scale-100-${String(i)}`,
         });
       }
       const time100 = Date.now() - start100;
@@ -725,7 +726,7 @@ describe('AnalyticsService', () => {
         });
         await service.recordAnalytics({
           type: AnalyticsType.PAGEVIEW,
-          path: `/scale-1000-${i}`,
+          path: `/scale-1000-${String(i)}`,
         });
       }
       const time1000 = Date.now() - start1000;
@@ -780,7 +781,7 @@ describe('AnalyticsService', () => {
           where: vi.fn().mockReturnValue({
             groupBy: vi.fn().mockResolvedValue(
               Array.from({ length: 5 }, (_, i) => ({
-                userAgent: `Mozilla/5.0 (Device${i})`,
+                userAgent: `Mozilla/5.0 (Device${String(i)})`,
                 count: 100 - i * 10,
               })),
             ),
@@ -800,7 +801,7 @@ describe('AnalyticsService', () => {
           where: vi.fn().mockReturnValue({
             groupBy: vi.fn().mockResolvedValue(
               Array.from({ length: 50 }, (_, i) => ({
-                userAgent: `Mozilla/5.0 (Device${i})`,
+                userAgent: `Mozilla/5.0 (Device${String(i)})`,
                 count: 100 - i,
               })),
             ),

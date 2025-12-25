@@ -300,10 +300,10 @@ ${'- '.repeat(25)}Item with \`code\`
       let largeDoc = '# Main Title\n\n';
 
       for (let i = 0; i < 100; i++) {
-        largeDoc += `## Section ${i}\n`;
-        largeDoc += `This is paragraph ${i} with **bold**, *italic*, and \`code\`.\n\n`;
-        largeDoc += `- List item ${i}.1\n- List item ${i}.2\n\n`;
-        largeDoc += `> Quote ${i}\n\n`;
+        largeDoc += `## Section ${String(i)}\n`;
+        largeDoc += `This is paragraph ${String(i)} with **bold**, *italic*, and \`code\`.\n\n`;
+        largeDoc += `- List item ${String(i)}.1\n- List item ${String(i)}.2\n\n`;
+        largeDoc += `> Quote ${String(i)}\n\n`;
       }
 
       const result = service.renderMarkdown(largeDoc);

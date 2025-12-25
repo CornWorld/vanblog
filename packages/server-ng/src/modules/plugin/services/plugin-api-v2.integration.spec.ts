@@ -34,7 +34,7 @@ const createMockDatabase = () => {
       limit: vi.fn().mockResolvedValue([]),
       // Make the chain itself iterable (returns empty array)
       *[Symbol.iterator]() {
-        return;
+        yield [];
       },
       // Also make it thenable so await works
       then: (resolve: any) => resolve([]),

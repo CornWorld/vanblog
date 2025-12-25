@@ -58,7 +58,7 @@ describe('Plugin Hook System Performance (plugin-hooks.perf.spec.ts)', () => {
 
     // Load all plugins in parallel
     const plugins = await Promise.all(
-      Array.from({ length: pluginCount }, (_, i) => loadPlugin(`plugin-${i}`)),
+      Array.from({ length: pluginCount }, (_, i) => loadPlugin(`plugin-${String(i)}`)),
     );
 
     const endTime = performance.now();
@@ -97,7 +97,7 @@ describe('Plugin Hook System Performance (plugin-hooks.perf.spec.ts)', () => {
         if (!this.handlers.has(hook)) {
           this.handlers.set(hook, []);
         }
-        this.handlers.get(hook)!.push(handler);
+        this.handlers.get(hook)?.push(handler);
       }
 
       async executeHook(hook: string, data: any): Promise<any> {
@@ -125,7 +125,7 @@ describe('Plugin Hook System Performance (plugin-hooks.perf.spec.ts)', () => {
 
     // Execute hook 50 times and measure
     for (let i = 0; i < 50; i++) {
-      const testArticle = { id: `article-${i}`, title: 'Test' };
+      const testArticle = { id: `article-${String(i)}`, title: 'Test' };
       const start = performance.now();
 
       const result = await registry.executeHook('article|beforeCreate', testArticle);
@@ -133,7 +133,7 @@ describe('Plugin Hook System Performance (plugin-hooks.perf.spec.ts)', () => {
       const end = performance.now();
       measurements.push(end - start);
 
-      expect(result.id).toBe(`article-${i}`);
+      expect(result.id).toBe(`article-${String(i)}`);
     }
 
     const mean = measurements.reduce((a, b) => a + b, 0) / measurements.length;
@@ -158,7 +158,7 @@ describe('Plugin Hook System Performance (plugin-hooks.perf.spec.ts)', () => {
    * Benchmark: Filter hook transformation (1000 iterations)
    * Tests data transformation performance through hooks
    */
-  it('should transform data through filter hooks 1000 times without slowdown', async () => {
+  it('should transform data through filter hooks 1000 times without slowdown', () => {
     const iterations = 1000;
     const measurements: number[] = [];
 
@@ -170,7 +170,7 @@ describe('Plugin Hook System Performance (plugin-hooks.perf.spec.ts)', () => {
         if (!this.filters.has(hook)) {
           this.filters.set(hook, []);
         }
-        this.filters.get(hook)!.push(filter);
+        this.filters.get(hook)?.push(filter);
       }
 
       applyFilters(hook: string, data: any): any {
@@ -219,8 +219,8 @@ describe('Plugin Hook System Performance (plugin-hooks.perf.spec.ts)', () => {
 
       for (let i = 0; i < 10; i++) {
         const article = {
-          id: `article-${batch * 10 + i}`,
-          title: `Article ${batch * 10 + i}`,
+          id: `article-${String(batch * 10 + i)}`,
+          title: `Article ${String(batch * 10 + i)}`,
           content: 'Test content',
         };
 
@@ -276,14 +276,14 @@ describe('Plugin Hook System Performance (plugin-hooks.perf.spec.ts)', () => {
     };
 
     // Simulate database query
-    const mockDbQuery = async () => {
+    const mockDbQuery = async (): Promise<{ data: string }> => {
       await new Promise((resolve) => setTimeout(resolve, 5)); // Simulate DB latency
       return { data: 'db-result' };
     };
 
     // Run 50 hook+query executions
     for (let i = 0; i < queryCount; i++) {
-      const article = MockUtils.testData.createArticle({ id: `article-${i}` });
+      const article = MockUtils.testData.createArticle({ id: `article-${String(i)}` });
 
       const start = performance.now();
 
@@ -320,8 +320,8 @@ describe('Plugin Hook System Performance (plugin-hooks.perf.spec.ts)', () => {
    */
   it('should safely handle concurrent hook executions (100 concurrent)', async () => {
     const concurrentCount = 100;
-    const results: any[] = [];
-    const threadSafetyViolations = 0;
+    const _results: any[] = [];
+    const _threadSafetyViolations = 0;
 
     // Simulate thread-safe hook registry
     class ThreadSafeHookRegistry {
@@ -333,7 +333,7 @@ describe('Plugin Hook System Performance (plugin-hooks.perf.spec.ts)', () => {
         if (!this.handlers.has(hook)) {
           this.handlers.set(hook, []);
         }
-        this.handlers.get(hook)!.push(handler);
+        this.handlers.get(hook)?.push(handler);
       }
 
       async executeHook(hook: string, data: any): Promise<any> {
@@ -373,7 +373,7 @@ describe('Plugin Hook System Performance (plugin-hooks.perf.spec.ts)', () => {
 
     // Execute 100 concurrent hooks
     const promises = Array.from({ length: concurrentCount }, async (_, i) => {
-      const article = MockUtils.testData.createArticle({ id: `article-${i}` });
+      const article = MockUtils.testData.createArticle({ id: `article-${String(i)}` });
       return registry.executeHook('article|afterCreate', article);
     });
 
@@ -391,12 +391,12 @@ describe('Plugin Hook System Performance (plugin-hooks.perf.spec.ts)', () => {
     };
 
     logger.log(
-      `Concurrent hook executions (100) - Total: ${totalTime.toFixed(2)}ms, Per-hook: ${(totalTime / concurrentCount).toFixed(2)}ms, Max concurrent: ${maxConcurrent}`,
+      `Concurrent hook executions (100) - Total: ${totalTime.toFixed(2)}ms, Per-hook: ${(totalTime / concurrentCount).toFixed(2)}ms, Max concurrent: ${String(maxConcurrent)}`,
     );
 
     expect(concurrentResults).toHaveLength(concurrentCount);
     expect(concurrentResults.every((r) => r.processed)).toBe(true);
-    expect(threadSafetyViolations).toBe(0);
+    expect(_threadSafetyViolations).toBe(0);
   });
 
   /**
@@ -417,7 +417,7 @@ describe('Plugin Hook System Performance (plugin-hooks.perf.spec.ts)', () => {
         if (!this.handlers.has(hook)) {
           this.handlers.set(hook, []);
         }
-        this.handlers.get(hook)!.push({ priority, handler });
+        this.handlers.get(hook)?.push({ priority, handler });
       }
 
       async executeHook(hook: string, data: any): Promise<any> {
@@ -438,22 +438,22 @@ describe('Plugin Hook System Performance (plugin-hooks.perf.spec.ts)', () => {
     const registry = new PrioritizedHookRegistry();
 
     // Register handlers with different priorities
-    registry.registerHandler('article|beforeCreate', 10, async (article) => {
+    registry.registerHandler('article|beforeCreate', 10, (article) => {
       executionOrder.push('handler-10');
       return article;
     });
 
-    registry.registerHandler('article|beforeCreate', 5, async (article) => {
+    registry.registerHandler('article|beforeCreate', 5, (article) => {
       executionOrder.push('handler-5');
       return article;
     });
 
-    registry.registerHandler('article|beforeCreate', 20, async (article) => {
+    registry.registerHandler('article|beforeCreate', 20, (article) => {
       executionOrder.push('handler-20');
       return article;
     });
 
-    registry.registerHandler('article|beforeCreate', 15, async (article) => {
+    registry.registerHandler('article|beforeCreate', 15, (article) => {
       executionOrder.push('handler-15');
       return article;
     });

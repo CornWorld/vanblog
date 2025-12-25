@@ -128,7 +128,7 @@ describe('Article Query Performance (article-queries.perf.spec.ts)', () => {
     performanceResults['pagination-1000'] = [{ mean, min, max }];
 
     logger.log(
-      `Pagination (${totalArticles} articles) - Mean: ${mean.toFixed(2)}ms, Min: ${min.toFixed(2)}ms, Max: ${max.toFixed(2)}ms`,
+      `Pagination (${String(totalArticles)} articles) - Mean: ${mean.toFixed(2)}ms, Min: ${min.toFixed(2)}ms, Max: ${max.toFixed(2)}ms`,
     );
 
     // Assert each page query is reasonable
@@ -284,8 +284,8 @@ describe('Article Query Performance (article-queries.perf.spec.ts)', () => {
     const articleWith100Tags = {
       ...MockUtils.testData.createArticle(),
       tags: Array.from({ length: 100 }, (_, i) => ({
-        id: `tag-${i}`,
-        name: `tag-${i}`,
+        id: `tag-${String(i)}`,
+        name: `tag-${String(i)}`,
         count: 1,
       })),
     };
@@ -331,7 +331,7 @@ describe('Article Query Performance (article-queries.perf.spec.ts)', () => {
    * Test: Memory usage stability
    * Verifies that repeated queries don't cause memory leaks
    */
-  it('should maintain stable memory usage over repeated queries', async () => {
+  it('should maintain stable memory usage over repeated queries', () => {
     const mockArticle = MockUtils.testData.createArticle();
 
     databaseMock.db.select.mockReturnValue({
@@ -350,7 +350,7 @@ describe('Article Query Performance (article-queries.perf.spec.ts)', () => {
 
     // Run 1000 queries
     for (let i = 0; i < 1000; i++) {
-      await Promise.resolve(db.select());
+      void Promise.resolve(db.select());
     }
 
     // Force garbage collection if available

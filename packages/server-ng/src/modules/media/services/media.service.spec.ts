@@ -729,7 +729,10 @@ describe('MediaService', () => {
     });
 
     it('should handle large batches of URLs', async () => {
-      const urls = Array.from({ length: 600 }, (_, i) => `https://example.com/image${i}.jpg`);
+      const urls = Array.from(
+        { length: 600 },
+        (_, i) => `https://example.com/image${String(i)}.jpg`,
+      );
       const content = urls.map((url) => `![test](${url})`).join(' ');
       const mockArticles = [{ id: 1, content }];
 
@@ -978,7 +981,7 @@ describe('MediaService', () => {
           }),
         });
 
-      service.scanArticleImages();
+      void service.scanArticleImages();
 
       // If images are detected, they should be scanned
       expect(mockDb.db.select).toHaveBeenCalled();

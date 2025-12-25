@@ -1,7 +1,6 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import { dayjs } from '@vanblog/shared';
 import { loginLogs } from '@vanblog/shared/drizzle';
-import { eq, and, gte, lte, desc } from 'drizzle-orm';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 import { DATABASE_CONNECTION, type Database } from '../../database';

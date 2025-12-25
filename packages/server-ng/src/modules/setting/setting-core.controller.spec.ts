@@ -1028,7 +1028,7 @@ describe('SettingCoreController', () => {
         } as any);
 
         expect(mockSettingCoreService.updateNavigation).toHaveBeenCalled();
-        const callArg = mockSettingCoreService.updateNavigation.mock.calls[0][0];
+        const [[callArg]] = mockSettingCoreService.updateNavigation.mock.calls;
         expect(callArg[0].children).toBeDefined();
         expect(callArg[0].children[0].name).toBe('Child');
       });

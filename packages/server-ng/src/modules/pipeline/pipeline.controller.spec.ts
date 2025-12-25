@@ -76,8 +76,8 @@ describe('PipelineController', () => {
   });
 
   describe('getConfig', () => {
-    it('should return pipeline configuration', async () => {
-      const result = await controller.getConfig();
+    it('should return pipeline configuration', () => {
+      const result = controller.getConfig();
 
       expect(result.events).toBeDefined();
       expect(Array.isArray(result.events)).toBe(true);

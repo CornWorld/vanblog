@@ -1,8 +1,7 @@
-import {
-  ConfigModule as NestConfigModule,
-  type ConfigService as NestConfigService,
-} from '@nestjs/config';
-import { Test, type TestingModule } from '@nestjs/testing';
+import type { ConfigService as NestConfigService } from '@nestjs/config';
+import { ConfigModule as NestConfigModule } from '@nestjs/config';
+import type { TestingModule } from '@nestjs/testing';
+import { Test } from '@nestjs/testing';
 
 import { ConfigService } from './config.service';
 import databaseConfig from './database.config';
@@ -11,7 +10,7 @@ describe('ConfigService', () => {
   let service: ConfigService;
 
   beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
+    const testingModule: TestingModule = await Test.createTestingModule({
       imports: [
         NestConfigModule.forRoot({
           isGlobal: false,
@@ -47,7 +46,7 @@ describe('ConfigService', () => {
       providers: [ConfigService],
     }).compile();
 
-    service = module.get<ConfigService>(ConfigService);
+    service = testingModule.get<ConfigService>(ConfigService);
   });
 
   it('should be defined', () => {
@@ -97,15 +96,15 @@ describe('ConfigService', () => {
     });
 
     it('should parse multiple origins', () => {
-      const mockConfigService = {
+      const mockConfigService: NestConfigService = {
         get: <T = unknown>(key: string, defaultValue?: T): T => {
-          if (key === 'CORS_ORIGIN') {
-            return 'http://localhost:3000,http://localhost:3001' as T;
-          }
-          return defaultValue as T;
+          const config: Record<string, string> = {
+            CORS_ORIGIN: 'http://localhost:3000,http://localhost:3001',
+          };
+          return (config[key] ?? defaultValue) as T;
         },
-      };
-      const configService = new ConfigService(mockConfigService as NestConfigService);
+      } as NestConfigService;
+      const configService = new ConfigService(mockConfigService);
       const corsConfig = configService.cors;
       expect(corsConfig.origin).toEqual(['http://localhost:3000', 'http://localhost:3001']);
     });

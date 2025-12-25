@@ -318,7 +318,7 @@ describe('Plugin Lifecycle Integration (e2e)', () => {
 
       // Update the category
       const updateRes = await request(httpServer)
-        .put(`/api/v2/categories/${createRes.body.id}`)
+        .put(`/api/v2/categories/${String(createRes.body.id)}`)
         .set('Authorization', `Bearer ${authToken}`)
         .send({
           name: 'Updated Hook Test Category',

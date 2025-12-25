@@ -536,7 +536,7 @@ describe('ArticleController', () => {
       const handler = controller.getAdminArticles();
       const result = await handler({ query: { page: 1, pageSize: 10 } });
 
-      const article = result.body.items[0];
+      const [article] = result.body.items;
       expect(article.id).toBe(1);
       expect(article.title).toBe('Test');
       expect(article.content).toBe('Content');

@@ -64,7 +64,6 @@ describe('StatisticsService', () => {
           // Check if this is a call for overall article statistics
           const isOverallStats =
             typeof fields === 'object' &&
-            fields !== null &&
             'totalArticles' in fields &&
             'publishedArticles' in fields;
           if (isOverallStats) {
@@ -73,10 +72,7 @@ describe('StatisticsService', () => {
 
           // Check if this is a call for category statistics
           const isCategoryStats =
-            typeof fields === 'object' &&
-            fields !== null &&
-            'publishedCount' in fields &&
-            'privateCount' in fields;
+            typeof fields === 'object' && 'publishedCount' in fields && 'privateCount' in fields;
           if (isCategoryStats) {
             return {
               where: vi.fn().mockImplementation((_cond: unknown) => [categoryStatsQueue.shift()]),
@@ -85,10 +81,7 @@ describe('StatisticsService', () => {
 
           // Check if this is a call for tag statistics
           const isTagStats =
-            typeof fields === 'object' &&
-            fields !== null &&
-            'articleCount' in fields &&
-            !('publishedCount' in fields);
+            typeof fields === 'object' && 'articleCount' in fields && !('publishedCount' in fields);
           if (isTagStats) {
             return {
               where: vi.fn().mockImplementation((_cond: unknown) => [tagStatsQueue.shift()]),
@@ -96,7 +89,7 @@ describe('StatisticsService', () => {
           }
 
           // Check if this is a call for total published word count
-          const isWordCount = typeof fields === 'object' && fields !== null && 'total' in fields;
+          const isWordCount = typeof fields === 'object' && 'total' in fields;
           if (isWordCount) {
             return {
               where: vi.fn().mockResolvedValue([{ total: 1234 }]),

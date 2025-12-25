@@ -225,7 +225,7 @@ describe('TimelineService', () => {
 
       const result = await service.getTimeline();
 
-      const article = result['2024'][0];
+      const [article] = result['2024'];
       expect(article.tags).toEqual([]);
       expect(article.viewer).toBe(0);
       expect(article.category).toBe('Tech');
@@ -294,7 +294,7 @@ describe('TimelineService', () => {
 
       const result = await service.getTimeline();
 
-      const article = result['2024'][0];
+      const [article] = result['2024'];
       expect(article.tags).toEqual([]);
       expect(article.viewer).toBe(0);
       expect(article.category).toBe(null);
@@ -387,7 +387,7 @@ describe('TimelineService', () => {
 
       const result = await service.getTimeline();
 
-      const article = result['2024'][0];
+      const [article] = result['2024'];
       expect(article.id).toBe(42);
       expect(article.title).toBe('Test Article');
       expect(article.pathname).toBe('/test/article');

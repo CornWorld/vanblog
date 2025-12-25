@@ -34,7 +34,7 @@ describe('Cache Performance (cache.perf.spec.ts)', () => {
    * Benchmark: 10,000 cache writes
    * Verifies no memory leak over many write operations
    */
-  it('should handle 10000 cache writes without memory leak', async () => {
+  it('should handle 10000 cache writes without memory leak', () => {
     const cacheSize = 10000;
     const cache = new Map<string, unknown>();
     const initialMemory = process.memoryUsage().heapUsed;
@@ -42,12 +42,12 @@ describe('Cache Performance (cache.perf.spec.ts)', () => {
 
     // Simulate cache writes
     for (let i = 0; i < cacheSize; i++) {
-      const key = `cache-key-${i}`;
+      const key = `cache-key-${String(i)}`;
       const value = {
         id: i,
-        data: `value-${i}`,
+        data: `value-${String(i)}`,
         metadata: { timestamp: Date.now(), ttl: 3600 },
-        tags: Array.from({ length: 10 }, (_, j) => `tag-${j}`),
+        tags: Array.from({ length: 10 }, (_, j) => `tag-${String(j)}`),
       };
 
       cache.set(key, value);
@@ -98,13 +98,13 @@ describe('Cache Performance (cache.perf.spec.ts)', () => {
     const stampedKey = 'stampede-test-key';
 
     // Simulate cache getter with stampede protection
-    const getCached = async (key: string, generator: () => Promise<unknown>): Promise<unknown> => {
-      if (cache.has(key)) {
-        return cache.get(key)?.value;
+    const getCached = async (_key: string, generator: () => Promise<unknown>): Promise<unknown> => {
+      if (cache.has(_key)) {
+        return cache.get(_key)?.value;
       }
 
       // Simulate stampede protection using a pending promise
-      const existing = (cache as any).pending?.[key];
+      const existing = (cache as any).pending?.[_key];
       if (existing) {
         return existing;
       }
@@ -113,17 +113,21 @@ describe('Cache Performance (cache.perf.spec.ts)', () => {
       const pending = (async () => {
         generatorCallCount++;
         const value = await generator();
-        cache.set(key, { value, timestamp: Date.now() });
+        cache.set(_key, { value, timestamp: Date.now() });
         return value;
       })();
 
       if (!(cache as any).pending) {
         (cache as any).pending = {};
       }
-      (cache as any).pending[key] = pending;
+      (cache as any).pending[_key] = pending;
 
       const result = await pending;
-      delete (cache as any).pending[key];
+      if ((cache as any).pending) {
+        // Use Object.assign with undefined to safely remove the key
+        const { [_key]: _, ...remaining } = (cache as any).pending;
+        (cache as any).pending = remaining;
+      }
       return result;
     };
 
@@ -145,7 +149,9 @@ describe('Cache Performance (cache.perf.spec.ts)', () => {
       operations: generatorCallCount,
     };
 
-    logger.log(`Cache stampede - Concurrent requests: 100, Generator calls: ${generatorCallCount}`);
+    logger.log(
+      `Cache stampede - Concurrent requests: 100, Generator calls: ${String(generatorCallCount)}`,
+    );
 
     expect(results).toHaveLength(100);
     expect(generatorCallCount).toBeLessThanOrEqual(2); // Should be called only once (or maybe twice due to async timing)
@@ -156,7 +162,7 @@ describe('Cache Performance (cache.perf.spec.ts)', () => {
    * Benchmark: LRU eviction with 1000+ keys
    * Tests cache eviction efficiency under capacity
    */
-  it('should efficiently evict LRU entries with 1000+ keys', async () => {
+  it('should efficiently evict LRU entries with 1000+ keys', () => {
     const maxCacheSize = 1000;
     const totalInserts = 2000; // Try to insert more than max
     const cache = new Map<string, { value: string; timestamp: number; accessCount: number }>();
@@ -192,7 +198,7 @@ describe('Cache Performance (cache.perf.spec.ts)', () => {
 
     // Insert more keys than cache capacity
     for (let i = 0; i < totalInserts; i++) {
-      setCacheWithLRU(`key-${i}`, `value-${i}`);
+      setCacheWithLRU(`key-${String(i)}`, `value-${String(i)}`);
     }
 
     const finalSize = cache.size;
@@ -205,7 +211,7 @@ describe('Cache Performance (cache.perf.spec.ts)', () => {
     };
 
     logger.log(
-      `LRU eviction - Final cache size: ${finalSize}, Evictions: ${evictionCount}, Rate: ${evictionRate.toFixed(2)}%`,
+      `LRU eviction - Final cache size: ${String(finalSize)}, Evictions: ${String(evictionCount)}, Rate: ${evictionRate.toFixed(2)}%`,
     );
 
     expect(finalSize).toBeLessThanOrEqual(maxCacheSize + 1); // Allow small overshoot
@@ -217,28 +223,28 @@ describe('Cache Performance (cache.perf.spec.ts)', () => {
    * Benchmark: Cache serialization
    * Measures serialization time for complex objects
    */
-  it('should serialize complex cache objects in < 100ms', async () => {
+  it('should serialize complex cache objects in < 100ms', () => {
     const measurements: number[] = [];
 
     // Create complex object with nested structures
-    const createComplexObject = (index: number) => ({
-      id: `object-${index}`,
+    const createComplexObject = (index: number): object => ({
+      id: `object-${String(index)}`,
       nested: {
         level1: {
           level2: {
             level3: {
-              data: Array.from({ length: 50 }, (_, i) => `item-${i}`),
+              data: Array.from({ length: 50 }, (_, i) => `item-${String(i)}`),
             },
           },
         },
       },
       arrays: {
         numbers: Array.from({ length: 100 }, (_, i) => i),
-        strings: Array.from({ length: 100 }, (_, i) => `string-${i}`),
+        strings: Array.from({ length: 100 }, (_, i) => `string-${String(i)}`),
       },
       tags: Array.from({ length: 20 }, (_, i) => ({
-        id: `tag-${i}`,
-        name: `Tag ${i}`,
+        id: `tag-${String(i)}`,
+        name: `Tag ${String(i)}`,
         metadata: { created: Date.now(), modified: Date.now() },
       })),
     });
@@ -256,7 +262,7 @@ describe('Cache Performance (cache.perf.spec.ts)', () => {
 
       // Verify deserialization works
       const deserialized = JSON.parse(serialized);
-      expect(deserialized.id).toBe(`object-${i}`);
+      expect(deserialized.id).toBe(`object-${String(i)}`);
     }
 
     const mean = measurements.reduce((a, b) => a + b, 0) / measurements.length;
@@ -281,7 +287,7 @@ describe('Cache Performance (cache.perf.spec.ts)', () => {
    * Benchmark: Concurrent read/write (50/50 mix)
    * Tests cache performance under mixed concurrent operations
    */
-  it('should handle concurrent read/write mix (50/50) without deadlock', async () => {
+  it('should handle concurrent read/write mix (50/50) without deadlock', () => {
     const cache = new Map<string, unknown>();
     const operationCount = 1000;
     const readWriteResults: { type: string; duration: number }[] = [];
@@ -294,7 +300,7 @@ describe('Cache Performance (cache.perf.spec.ts)', () => {
 
       if (isRead) {
         // Read operation
-        const key = `key-${Math.floor(Math.random() * 100)}`;
+        const key = `key-${String(Math.floor(Math.random() * 100))}`;
         const value = cache.get(key);
         const end = performance.now();
         return {
@@ -302,13 +308,12 @@ describe('Cache Performance (cache.perf.spec.ts)', () => {
           duration: end - start,
           success: value !== undefined || Math.random() > 0.5,
         };
-      } else {
-        // Write operation
-        const key = `key-${Math.floor(Math.random() * 100)}`;
-        cache.set(key, { timestamp: Date.now(), data: `value-${i}` });
-        const end = performance.now();
-        return { type: 'write', duration: end - start, success: true };
       }
+      // Write operation
+      const key = `key-${String(Math.floor(Math.random() * 100))}`;
+      cache.set(key, { timestamp: Date.now(), data: `value-${String(i)}` });
+      const end = performance.now();
+      return { type: 'write', duration: end - start, success: true };
     });
 
     // Execute all operations concurrently
@@ -342,7 +347,7 @@ describe('Cache Performance (cache.perf.spec.ts)', () => {
     };
 
     logger.log(
-      `Concurrent R/W - Reads: ${reads.length}, Writes: ${writes.length}, Avg read: ${avgReadTime.toFixed(3)}ms, Avg write: ${avgWriteTime.toFixed(3)}ms, Cache size: ${cache.size}`,
+      `Concurrent R/W - Reads: ${String(reads.length)}, Writes: ${String(writes.length)}, Avg read: ${avgReadTime.toFixed(3)}ms, Avg write: ${avgWriteTime.toFixed(3)}ms, Cache size: ${String(cache.size)}`,
     );
 
     expect(deadlockDetected).toBe(false);
@@ -359,8 +364,8 @@ describe('Cache Performance (cache.perf.spec.ts)', () => {
 
     // Add 1000 entries
     for (let i = 0; i < 1000; i++) {
-      cache.set(`key-${i}`, {
-        value: `value-${i}`,
+      cache.set(`key-${String(i)}`, {
+        value: `value-${String(i)}`,
         expiresAt: Date.now() + ttlMs,
       });
     }
@@ -389,7 +394,9 @@ describe('Cache Performance (cache.perf.spec.ts)', () => {
       operations: expiredCount,
     };
 
-    logger.log(`TTL expiration - Expired entries: ${expiredCount}, Remaining: ${cache.size}`);
+    logger.log(
+      `TTL expiration - Expired entries: ${String(expiredCount)}, Remaining: ${String(cache.size)}`,
+    );
 
     expect(expiredCount).toBe(1000); // All should expire
     expect(cache.size).toBe(0);
@@ -406,10 +413,12 @@ describe('Cache Performance (cache.perf.spec.ts)', () => {
         console.log(`  Mean latency: ${metrics.mean.toFixed(3)}ms`);
       }
       if (metrics.peakMemory > 0) {
-        console.log(`  Peak/Size:    ${metrics.peakMemory.toFixed(2)}`);
+        console.log(
+          `  Peak/Size:    ${String(metrics.peakMemory).padStart(8)} (${metrics.peakMemory.toFixed(2)})`,
+        );
       }
       if (metrics.operations > 0) {
-        console.log(`  Operations:   ${metrics.operations}`);
+        console.log(`  Operations:   ${String(metrics.operations)}`);
       }
     });
     console.log('==================================\n');

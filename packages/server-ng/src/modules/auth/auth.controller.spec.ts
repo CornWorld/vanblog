@@ -1,4 +1,4 @@
-import { BadRequestException, HttpException, HttpStatus } from '@nestjs/common';
+import { BadRequestException, HttpException } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { ThrottlerGuard } from '@nestjs/throttler';
 import { dayjs } from '@vanblog/shared';
@@ -265,8 +265,15 @@ describe('AuthController', () => {
 
     it('should throw error for non-admin user', async () => {
       const nonAdminUser = new User({
-        ...mockUser,
+        id: mockUser.id,
+        username: mockUser.username,
+        password: mockUser.password,
+        nickname: mockUser.nickname,
+        email: mockUser.email,
         type: UserType.COLLABORATOR,
+        permissions: mockUser.permissions,
+        createdAt: mockUser.createdAt,
+        updatedAt: mockUser.updatedAt,
       });
 
       const req = {
@@ -354,8 +361,15 @@ describe('AuthController', () => {
   describe('login_tsrest', () => {
     it('should login successfully via ts-rest', async () => {
       const user = new User({
-        ...mockUser,
+        id: mockUser.id,
+        username: mockUser.username,
         password: undefined,
+        nickname: mockUser.nickname,
+        email: mockUser.email,
+        type: mockUser.type,
+        permissions: mockUser.permissions,
+        createdAt: mockUser.createdAt,
+        updatedAt: mockUser.updatedAt,
       });
 
       mockAuthService.validateUser.mockResolvedValue(user);

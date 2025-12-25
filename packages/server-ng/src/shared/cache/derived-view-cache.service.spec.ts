@@ -148,9 +148,9 @@ describe('DerivedViewCacheService', () => {
       const result = await service.getDerivedView({
         key,
         generator,
-        ttl: 1,
+        ttl: String(1),
         swr: true,
-        swrTolerance: 60,
+        swrTolerance: String(60),
       });
 
       // At exact TTL boundary (ttl + 0), should still be within SWR window
@@ -183,9 +183,9 @@ describe('DerivedViewCacheService', () => {
       const result = await service.getDerivedView({
         key,
         generator,
-        ttl: 1,
+        ttl: String(1),
         swr: true,
-        swrTolerance: 40,
+        swrTolerance: String(40),
       });
 
       // Should still be within SWR window (0.25 * tolerance is well within)
@@ -221,9 +221,9 @@ describe('DerivedViewCacheService', () => {
       const result = await service.getDerivedView({
         key,
         generator,
-        ttl: 2,
+        ttl: String(2),
         swr: true,
-        swrTolerance: 60,
+        swrTolerance: String(60),
       });
 
       // At 50% through SWR window, should still return stale
@@ -258,9 +258,9 @@ describe('DerivedViewCacheService', () => {
       const result = await service.getDerivedView({
         key,
         generator,
-        ttl: 1,
+        ttl: String(1),
         swr: true,
-        swrTolerance: 80,
+        swrTolerance: String(80),
       });
 
       // At 75% through SWR window, still within bounds
@@ -295,9 +295,9 @@ describe('DerivedViewCacheService', () => {
       const result = await service.getDerivedView({
         key,
         generator,
-        ttl: 1,
+        ttl: String(1),
         swr: true,
-        swrTolerance: 30,
+        swrTolerance: String(30),
       });
 
       // Outside the SWR window (beyond TTL + swrTolerance), should be synchronous regeneration
@@ -326,11 +326,11 @@ describe('DerivedViewCacheService', () => {
         const testPoint = testPoints[i];
         vi.clearAllMocks();
 
-        const key = `test:swr-intervals-${i}`;
+        const key = `test:swr-intervals-${String(i)}`;
         const createdAt = Date.now();
 
         const cached: CachedResult = {
-          data: { value: `stale-${i}` }, // Use index instead of offset to match
+          data: { value: `stale-${String(i)}` }, // Use index instead of offset to match
           meta: { timestamp: createdAt, regenerating: false },
         };
         await cache.set(key, cached);
@@ -339,7 +339,7 @@ describe('DerivedViewCacheService', () => {
         const timeAtOffset = createdAt + ttl + testPoint.offset * swrTolerance;
         vi.setSystemTime(timeAtOffset);
 
-        const generator = vi.fn().mockResolvedValue({ value: `fresh-${i}` });
+        const generator = vi.fn().mockResolvedValue({ value: `fresh-${String(i)}` });
 
         const result = await service.getDerivedView({
           key,
@@ -350,7 +350,7 @@ describe('DerivedViewCacheService', () => {
         });
 
         // All intermediate points should return stale and trigger async regen
-        expect(result.value).toBe(`stale-${i}`);
+        expect(result.value).toBe(`stale-${String(i)}`);
       }
 
       vi.useRealTimers();
@@ -600,7 +600,7 @@ describe('DerivedViewCacheService', () => {
 
       // Simulate multiple concurrent requests during regeneration window
       const promises = Array(5)
-        .fill(null)
+        .fill(undefined)
         .map(() => service.getDerivedView({ key, generator, ttl, swr: true, swrTolerance }));
 
       const results = await Promise.all(promises);
@@ -639,10 +639,10 @@ describe('DerivedViewCacheService', () => {
       await cache.set(key, cached);
 
       let generatorCallCount = 0;
-      const generator = vi.fn().mockImplementation(async () => {
+      const generator = vi.fn().mockImplementation(() => {
         generatorCallCount++;
         // No real setTimeout - use fake timer version that completes immediately
-        return { value: `fresh-${generatorCallCount}` };
+        return { value: `fresh-${String(generatorCallCount)}` };
       });
 
       // Multiple concurrent requests outside SWR window all trigger synchronous regeneration

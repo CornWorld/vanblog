@@ -240,8 +240,8 @@ describe('Permission Types', () => {
         permissions: LimitPermission[],
       ): Record<string, LimitPermission[]> => {
         return permissions.reduce<Record<string, LimitPermission[]>>((acc, perm) => {
-          const resource = perm.split(':')[0];
-          if (!acc[resource]) {
+          const [resource] = perm.split(':');
+          if (!(resource in acc)) {
             acc[resource] = [];
           }
           acc[resource].push(perm);

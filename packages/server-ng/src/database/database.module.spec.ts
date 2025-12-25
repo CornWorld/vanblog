@@ -1,6 +1,6 @@
-import { Global, Module } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 
 import type { ConfigService } from '../config/config.service';
 import type { LoggerService } from '../core/logger/logger.service';
@@ -58,7 +58,7 @@ describe('DatabaseModule', () => {
     it('should have module metadata', () => {
       // Check if it's decorated (has design:paramtypes metadata)
       const hasMetadata = Reflect.hasMetadata('design:paramtypes', DatabaseModule);
-      expect(hasMetadata !== undefined).toBe(true);
+      expect(hasMetadata).toBe(true);
     });
   });
 

@@ -592,7 +592,6 @@ describe('CDNService', () => {
     });
 
     it('should handle very long query strings', () => {
-      const longValue = 'a'.repeat(10000);
       const result = service.getResourceUrl('/images/test.jpg', {
         quality: 80,
       });

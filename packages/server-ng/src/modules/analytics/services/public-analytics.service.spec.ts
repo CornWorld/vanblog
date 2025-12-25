@@ -182,13 +182,16 @@ describe('PublicAnalyticsService', () => {
       const result = await service.getPublicArticleStats(123);
 
       expect(result).not.toHaveProperty('internalData');
-      expect(Object.keys(result!)).toEqual([
-        'articleId',
-        'title',
-        'views',
-        'uniqueVisitors',
-        'avgReadTime',
-      ]);
+      expect(result).not.toBeNull();
+      if (result !== null) {
+        expect(Object.keys(result)).toEqual([
+          'articleId',
+          'title',
+          'views',
+          'uniqueVisitors',
+          'avgReadTime',
+        ]);
+      }
     });
   });
 

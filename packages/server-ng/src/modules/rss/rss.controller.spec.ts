@@ -183,10 +183,10 @@ describe('RssController', () => {
       ];
 
       let callCount = 0;
-      vi.mocked(fs.stat).mockImplementation(async () => {
+      vi.mocked(fs.stat).mockImplementation(() => {
         const mtime = dates[callCount % dates.length];
         callCount++;
-        return { mtime } as any;
+        return Promise.resolve({ mtime } as any);
       });
 
       const handler = controller.getRssStatus();
@@ -197,12 +197,12 @@ describe('RssController', () => {
 
     it('should handle partial file stats errors', async () => {
       let callCount = 0;
-      vi.mocked(fs.stat).mockImplementation(async () => {
+      vi.mocked(fs.stat).mockImplementation(() => {
         callCount++;
         if (callCount === 1) {
-          return { mtime: new Date('2024-01-15T12:00:00Z') } as any;
+          return Promise.resolve({ mtime: new Date('2024-01-15T12:00:00Z') } as any);
         }
-        throw new Error('File not found');
+        return Promise.reject(new Error('File not found'));
       });
 
       const handler = controller.getRssStatus();

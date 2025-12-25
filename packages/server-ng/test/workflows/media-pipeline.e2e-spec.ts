@@ -3,8 +3,6 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import { media as mediaTable } from '@vanblog/shared/drizzle';
 import request from 'supertest';
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
-import * as fs from 'fs';
-import * as path from 'path';
 
 import { AppModule } from '../../src/app.module';
 import { ConfigService } from '../../src/config';
@@ -70,11 +68,11 @@ describe('Media Upload Pipeline (e2e)', () => {
   function createTestImageBuffer(): Buffer {
     // Minimal valid PNG header + IHDR + IEND
     const png = Buffer.from([
-      0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52,
-      0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x06, 0x00, 0x00, 0x00, 0x1f, 0x15, 0xc4,
-      0x89, 0x00, 0x00, 0x00, 0x0a, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9c, 0x63, 0x00, 0x01, 0x00, 0x00,
-      0x05, 0x00, 0x01, 0x0d, 0x0a, 0x2d, 0xb4, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4e, 0x44, 0xae,
-      0x42, 0x60, 0x82,
+      0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44,
+      0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x06, 0x00, 0x00, 0x00, 0x1f,
+      0x15, 0xc4, 0x89, 0x00, 0x00, 0x00, 0x0a, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9c, 0x63, 0x00,
+      0x01, 0x00, 0x00, 0x05, 0x00, 0x01, 0x0d, 0x0a, 0x2d, 0xb4, 0x00, 0x00, 0x00, 0x00, 0x49,
+      0x45, 0x4e, 0x44, 0xae, 0x42, 0x60, 0x82,
     ]);
     return png;
   }
@@ -85,11 +83,11 @@ describe('Media Upload Pipeline (e2e)', () => {
 
       const res = await request(httpServer)
         .post('/api/v2/media/upload')
-        .set('Authorization', 'Bearer ' + authToken)
+        .set('Authorization', `Bearer ${authToken}`)
         .attach('file', imageBuffer, 'test-image.png')
         .expect([200, 201]);
 
-      const { url, filename, id } = res.body.data || res.body;
+      const { url, filename } = res.body.data || res.body;
 
       expect(url).toBeDefined();
       expect(filename).toBeDefined();
@@ -97,7 +95,7 @@ describe('Media Upload Pipeline (e2e)', () => {
       // Verify media record was created
       const mediaRes = await request(httpServer)
         .get('/api/v2/media')
-        .set('Authorization', 'Bearer ' + authToken)
+        .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
 
       expect(mediaRes.body.data.some((m: any) => m.filename === filename)).toBe(true);
@@ -113,17 +111,17 @@ describe('Media Upload Pipeline (e2e)', () => {
       // Simulate concurrent uploads
       const upload1 = request(httpServer)
         .post('/api/v2/media/upload')
-        .set('Authorization', 'Bearer ' + authToken)
+        .set('Authorization', `Bearer ${authToken}`)
         .attach('file', imageBuffer1, 'batch-image-1.png');
 
       const upload2 = request(httpServer)
         .post('/api/v2/media/upload')
-        .set('Authorization', 'Bearer ' + authToken)
+        .set('Authorization', `Bearer ${authToken}`)
         .attach('file', imageBuffer2, 'batch-image-2.png');
 
       const upload3 = request(httpServer)
         .post('/api/v2/media/upload')
-        .set('Authorization', 'Bearer ' + authToken)
+        .set('Authorization', `Bearer ${authToken}`)
         .attach('file', imageBuffer3, 'batch-image-3.png');
 
       const [res1, res2, res3] = await Promise.all([upload1, upload2, upload3]);
@@ -136,11 +134,13 @@ describe('Media Upload Pipeline (e2e)', () => {
       // Verify all files were saved to database
       const listRes = await request(httpServer)
         .get('/api/v2/media')
-        .set('Authorization', 'Bearer ' + authToken)
+        .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
 
       const filenames = listRes.body.data.map((m: any) => m.filename);
-      expect(filenames.filter((f: any) => f.startsWith('batch-image')).length).toBeGreaterThanOrEqual(3);
+      expect(
+        filenames.filter((f: any) => f.startsWith('batch-image')).length,
+      ).toBeGreaterThanOrEqual(3);
     });
   });
 
@@ -153,8 +153,8 @@ describe('Media Upload Pipeline (e2e)', () => {
       const uploads = Array.from({ length: uploadCount }, (_, i) =>
         request(httpServer)
           .post('/api/v2/media/upload')
-          .set('Authorization', 'Bearer ' + authToken)
-          .attach('file', imageBuffer, `concurrent-${i}.png')
+          .set('Authorization', `Bearer ${authToken}`)
+          .attach('file', imageBuffer, `concurrent-${String(i)}.png`),
       );
 
       const results = await Promise.all(uploads);
@@ -167,10 +167,12 @@ describe('Media Upload Pipeline (e2e)', () => {
       // Verify all uploads were recorded
       const listRes = await request(httpServer)
         .get('/api/v2/media')
-        .set('Authorization', 'Bearer ' + authToken)
+        .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
 
-      const concurrentFiles = listRes.body.data.filter((m: any) => m.filename.startsWith('concurrent-'));
+      const concurrentFiles = listRes.body.data.filter((m: any) =>
+        m.filename.startsWith('concurrent-'),
+      );
       expect(concurrentFiles.length).toBe(uploadCount);
     });
   });
@@ -181,7 +183,7 @@ describe('Media Upload Pipeline (e2e)', () => {
 
       const res = await request(httpServer)
         .post('/api/v2/media/upload')
-        .set('Authorization', 'Bearer ' + authToken)
+        .set('Authorization', `Bearer ${authToken}`)
         .attach('file', imageBuffer, 'metadata-test.png')
         .expect([200, 201]);
 
@@ -190,8 +192,8 @@ describe('Media Upload Pipeline (e2e)', () => {
 
       // Get media details
       const detailRes = await request(httpServer)
-        .get('/api/v2/media/' + id)
-        .set('Authorization', 'Bearer ' + authToken);
+        .get(`/api/v2/media/${String(id)}`)
+        .set('Authorization', `Bearer ${authToken}`);
 
       if (detailRes.status === 200) {
         expect(detailRes.body.filename).toBeDefined();
@@ -213,22 +215,22 @@ describe('Media Upload Pipeline (e2e)', () => {
       // Upload image
       const uploadRes = await request(httpServer)
         .post('/api/v2/media/upload')
-        .set('Authorization', 'Bearer ' + authToken)
+        .set('Authorization', `Bearer ${authToken}`)
         .attach('file', imageBuffer, 'delete-test.png')
         .expect([200, 201]);
 
       const { id } = uploadRes.body.data || uploadRes.body;
 
       // Delete media
-      const deleteRes = await request(httpServer)
-        .delete('/api/v2/media/' + id)
-        .set('Authorization', 'Bearer ' + authToken)
+      const _deleteRes = await request(httpServer)
+        .delete(`/api/v2/media/${String(id)}`)
+        .set('Authorization', `Bearer ${authToken}`)
         .expect([200, 204]);
 
       // Verify deletion
       const listRes = await request(httpServer)
         .get('/api/v2/media')
-        .set('Authorization', 'Bearer ' + authToken)
+        .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
 
       expect(listRes.body.data.some((m: any) => m.id === id)).toBe(false);
@@ -242,13 +244,13 @@ describe('Media Upload Pipeline (e2e)', () => {
       // Upload multiple images
       const upload1 = await request(httpServer)
         .post('/api/v2/media/upload')
-        .set('Authorization', 'Bearer ' + authToken)
+        .set('Authorization', `Bearer ${authToken}`)
         .attach('file', imageBuffer, 'batch-delete-1.png')
         .expect([200, 201]);
 
       const upload2 = await request(httpServer)
         .post('/api/v2/media/upload')
-        .set('Authorization', 'Bearer ' + authToken)
+        .set('Authorization', `Bearer ${authToken}`)
         .attach('file', imageBuffer, 'batch-delete-2.png')
         .expect([200, 201]);
 
@@ -258,7 +260,7 @@ describe('Media Upload Pipeline (e2e)', () => {
       // Batch delete
       const deleteRes = await request(httpServer)
         .post('/api/v2/media/batch-delete')
-        .set('Authorization', 'Bearer ' + authToken)
+        .set('Authorization', `Bearer ${authToken}`)
         .send({ ids: [id1, id2] })
         .expect([200, 204]);
 
@@ -269,7 +271,7 @@ describe('Media Upload Pipeline (e2e)', () => {
       // Verify deletion
       const listRes = await request(httpServer)
         .get('/api/v2/media')
-        .set('Authorization', 'Bearer ' + authToken)
+        .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
 
       expect(listRes.body.data.some((m: any) => m.id === id1 || m.id === id2)).toBe(false);
@@ -286,14 +288,14 @@ describe('Media Upload Pipeline (e2e)', () => {
           .post('/api/v2/media/upload')
           .set('Authorization', `Bearer ${authToken}`)
           .attach('file', imageBuffer, `paginate-${String(i)}.png`)
-          .expect([200, 201]);
+          .expect(200);
       }
 
       // Get first page
       const page1Res = await request(httpServer)
         .get('/api/v2/media')
         .query({ page: 1, limit: 2 })
-        .set('Authorization', 'Bearer ' + authToken)
+        .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
 
       expect(page1Res.body.data).toBeDefined();

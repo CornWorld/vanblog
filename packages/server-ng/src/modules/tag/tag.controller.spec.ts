@@ -850,7 +850,7 @@ describe('TagController', () => {
 
     it('should handle unicode normalization differences', async () => {
       const composedName = 'café'; // é as single character (composed)
-      const decomposedName = 'cafe\u0301'; // e + combining acute accent (decomposed)
+      const _decomposedName = 'cafe\u0301'; // e + combining acute accent (decomposed)
       const createDto = {
         name: composedName,
         slug: 'cafe-tag',

@@ -422,8 +422,8 @@ console.log('Pipeline executed with input:', input);
   });
 
   describe('getConfig', () => {
-    it('should return available event names', async () => {
-      const result = await service.getConfig();
+    it('should return available event names', () => {
+      const result = service.getConfig();
 
       expect(result.events).toBeDefined();
       expect(Array.isArray(result.events)).toBe(true);

@@ -195,10 +195,10 @@ describe('SettingCoreService', () => {
       await service.getConfig('test');
 
       // Get call order from mock
-      const selectCall = mockDb.select.mock.invocationCallOrder[0];
-      const fromCall = mockSimpleSelectChain.from.mock.invocationCallOrder[0];
-      const whereCall = mockSimpleSelectChain.where.mock.invocationCallOrder[0];
-      const limitCall = mockSimpleSelectChain.limit.mock.invocationCallOrder[0];
+      const [selectCall] = mockDb.select.mock.invocationCallOrder;
+      const [fromCall] = mockSimpleSelectChain.from.mock.invocationCallOrder;
+      const [whereCall] = mockSimpleSelectChain.where.mock.invocationCallOrder;
+      const [limitCall] = mockSimpleSelectChain.limit.mock.invocationCallOrder;
 
       // Verify order: select < from < where < limit
       expect(selectCall).toBeLessThan(fromCall);

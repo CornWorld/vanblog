@@ -7,7 +7,6 @@ import { SettingRegistryService } from '../setting/services/setting-registry.ser
 import { SettingCoreService } from '../setting/services/setting-core.service';
 import { HookService } from '../plugin/services/hook.service';
 
-import { MediaModule } from './media.module';
 import { MediaController } from './media.controller';
 import { PicgoPluginsController } from './controllers/picgo-plugins.controller';
 import { MediaService } from './services/media.service';

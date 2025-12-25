@@ -2,7 +2,7 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, expect, vi, beforeEach, afterEach, afterAll } from 'vitest';
 import { dayjs } from '@vanblog/shared';
 
-import { DATABASE_CONNECTION, type Database } from '../../database';
+import { DATABASE_CONNECTION } from '../../database';
 import { CacheService } from './cache.service';
 import { AnalyticsCacheService } from './analytics-cache.service';
 
@@ -450,7 +450,7 @@ describe('AnalyticsCacheService', () => {
   });
 
   describe('data consistency', () => {
-    it('should use consistent date format across all methods', async () => {
+    it('should use consistent date format across all methods', () => {
       const expectedDateFormat = 'YYYY-MM-DD';
       const today = dayjs().format(expectedDateFormat);
 
@@ -458,7 +458,7 @@ describe('AnalyticsCacheService', () => {
       expect(today).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     });
 
-    it('should calculate 30 days ago correctly for chart data', async () => {
+    it('should calculate 30 days ago correctly for chart data', () => {
       const thirtyDaysAgo = dayjs().subtract(30, 'day').format('YYYY-MM-DD');
 
       // Verify date is in the past

@@ -315,7 +315,7 @@ describe('SitemapService', () => {
       const expectedSorted = [...expected].sort();
 
       const { calls } = vi.mocked(hookService.doAction).mock;
-      const beforeArgs = calls.find(([name]) => name === 'sitemap|beforeGenerate');
+      const beforeArgs = calls.find((args) => args[0] === 'sitemap|beforeGenerate');
       expect(beforeArgs).toBeTruthy();
       const [, payload] = beforeArgs as [string, { siteUrl: string; urls: string[] }];
       expect(payload.siteUrl).toBe('https://example.com/');
@@ -546,7 +546,7 @@ describe('SitemapService', () => {
   });
 
   describe('generateSitemap', () => {
-    it('should debounce sitemap generation', async () => {
+    it('should debounce sitemap generation', () => {
       vi.useFakeTimers();
 
       const generateSpy = vi.spyOn(service, 'generateSitemapFn');
@@ -717,11 +717,9 @@ describe('SitemapService', () => {
   describe('hook integration', () => {
     it('should apply sitemap|collect_urls filter', async () => {
       const extraUrls = ['/custom-1', '/custom-2'];
-      (hookService.applyFilters as any).mockImplementation(
-        async (_hook: string, urls: string[]) => {
-          return [...urls, ...extraUrls];
-        },
-      );
+      (hookService.applyFilters as any).mockImplementation((_hook: string, urls: string[]) => {
+        return Promise.resolve([...urls, ...extraUrls]);
+      });
 
       const urls = await service.getSiteUrls();
 

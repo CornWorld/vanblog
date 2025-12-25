@@ -232,18 +232,10 @@ describe('TokenService', () => {
 
     it('should expire and reject expired refresh token', async () => {
       // Create a token but let it expire
-      const user = { ...mockUser };
       const accessToken = 'access-token';
       mockJwtSign.mockReturnValueOnce(accessToken);
 
       // Manually set an expired refresh token to test expiration
-      const expiredPayload = {
-        sub: mockUser.id,
-        username: mockUser.username,
-        type: mockUser.type,
-        tokenType: 'refresh',
-        // Token with exp claim in the past
-      };
 
       // Create JWT with expiration in the past
       const expiredToken =
@@ -312,7 +304,7 @@ describe('TokenService', () => {
       // Mock JWT sign for consistent token generation
       let signCallCount = 0;
       mockJwtSign.mockImplementation(() => {
-        return `token-${signCallCount++}`;
+        return `token-${String(signCallCount++)}`;
       });
 
       // Generate tokens for user 1
@@ -362,7 +354,7 @@ describe('TokenService', () => {
 
   describe('getUserActiveTokenCount', () => {
     it('should return active token count for user', () => {
-      const user = { id: 11, username: 'user11', type: UserType.AUTHOR } as any;
+      const user = { id: String(11), username: 'user11', type: UserType.AUTHOR } as any;
 
       // Generate multiple tokens for same user
       mockJwtSign
@@ -371,11 +363,11 @@ describe('TokenService', () => {
         .mockReturnValueOnce('access2')
         .mockReturnValueOnce('refresh2');
 
-      const tokens1 = service.generateTokenPair(user);
-      const tokens2 = service.generateTokenPair(user);
+      service.generateTokenPair(user);
+      service.generateTokenPair(user);
 
       // Both tokens should be active
-      const count = service.getUserActiveTokenCount(11);
+      const count = service.getUserActiveTokenCount(String(11));
       expect(count).toBe(2);
     });
   });

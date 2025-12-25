@@ -13,7 +13,7 @@ vi.mock('nodemailer', () => ({
 describe('Email Notification Plugin (Functional API)', () => {
   let mockAPI: Partial<PluginAPI>;
   let storeValues: Map<string, any>;
-  let actionHandlers: Map<string, Function>;
+  let actionHandlers: Map<string, (...args: any[]) => void>;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -40,7 +40,7 @@ describe('Email Notification Plugin (Functional API)', () => {
         debug: vi.fn(),
       } as any,
       filter: vi.fn(),
-      action: vi.fn((name: string, handler: Function) => {
+      action: vi.fn((name: string, handler: (...args: any[]) => void) => {
         actionHandlers.set(name, handler);
       }),
       shortcode: vi.fn(),
@@ -91,7 +91,7 @@ describe('Email Notification Plugin (Functional API)', () => {
 
   describe('Email Configuration', () => {
     it('should enable email when config is complete', () => {
-      let activateCallback: Function | undefined;
+      let activateCallback: ((...args: any[]) => void) | undefined;
       mockAPI.onActivate = vi.fn((cb) => {
         activateCallback = cb;
       });
@@ -114,7 +114,7 @@ describe('Email Notification Plugin (Functional API)', () => {
         email_to: [],
       };
 
-      let activateCallback: Function | undefined;
+      let activateCallback: ((...args: any[]) => void) | undefined;
       mockAPI.onActivate = vi.fn((cb) => {
         activateCallback = cb;
       });
@@ -253,7 +253,7 @@ describe('Email Notification Plugin (Functional API)', () => {
     it('should log email count on deactivate', () => {
       storeValues.set('emails_sent', 5);
 
-      let deactivateCallback: Function | undefined;
+      let deactivateCallback: ((...args: any[]) => void) | undefined;
       mockAPI.onDeactivate = vi.fn((cb) => {
         deactivateCallback = cb;
       });

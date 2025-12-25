@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { Roles, ROLES_KEY } from './roles.decorator';
 import { Perm, Permission, PERMISSION_KEY, type PermOptions } from './permissions.decorator';
 
@@ -7,7 +7,7 @@ describe('Roles Decorator', () => {
     // Create a simple test function
     class TestClass {
       @Roles('admin')
-      testMethod() {
+      testMethod(): void {
         // method body
       }
     }
@@ -19,10 +19,10 @@ describe('Roles Decorator', () => {
     expect(metadata).toContain('admin');
   });
 
-  it('should set multiple roles', () => {
+  it('should set multiple roles', (): void => {
     class TestClass {
       @Roles('admin', 'editor')
-      testMethod() {
+      testMethod(): void {
         // method body
       }
     }
@@ -43,10 +43,10 @@ describe('Roles Decorator', () => {
 });
 
 describe('Perm Decorator', () => {
-  it('should set permission metadata with string array', () => {
+  it('should set permission metadata with string array', (): void => {
     class TestClass {
       @Perm('article:read', 'article:write')
-      testMethod() {
+      testMethod(): void {
         // method body
       }
     }
@@ -58,10 +58,10 @@ describe('Perm Decorator', () => {
     expect(metadata).toContain('article:write');
   });
 
-  it('should set permission metadata with module tuple format', () => {
+  it('should set permission metadata with module tuple format', (): void => {
     class TestClass {
       @Perm('article', ['read', 'write'])
-      testMethod() {
+      testMethod(): void {
         // method body
       }
     }
@@ -82,7 +82,7 @@ describe('Perm Decorator', () => {
 
     class TestClass {
       @Perm(options)
-      testMethod() {
+      testMethod(): void {
         // method body
       }
     }
@@ -100,10 +100,10 @@ describe('Perm Decorator', () => {
     expect(Permission).toBe(Perm);
   });
 
-  it('should work without any arguments', () => {
+  it('should work without any arguments', (): void => {
     class TestClass {
       @Perm()
-      testMethod() {
+      testMethod(): void {
         // method body
       }
     }
@@ -111,10 +111,10 @@ describe('Perm Decorator', () => {
     expect(TestClass.prototype.testMethod).toBeDefined();
   });
 
-  it('should handle single permission string in array', () => {
+  it('should handle single permission string in array', (): void => {
     class TestClass {
       @Perm('article:read')
-      testMethod() {
+      testMethod(): void {
         // method body
       }
     }
@@ -127,15 +127,15 @@ describe('Perm Decorator', () => {
     }
   });
 
-  it('should apply decorator to class methods', () => {
+  it('should apply decorator to class methods', (): void => {
     class TestClass {
       @Perm('user:delete')
-      deleteUser() {
+      deleteUser(): string {
         return 'deleted';
       }
 
       @Perm('user:create')
-      createUser() {
+      createUser(): string {
         return 'created';
       }
     }
@@ -147,10 +147,10 @@ describe('Perm Decorator', () => {
     expect(createMetadata).toContain('user:create');
   });
 
-  it('should normalize module-based permissions', () => {
+  it('should normalize module-based permissions', (): void => {
     class TestClass {
       @Perm('category', ['create', 'update', 'delete'])
-      manageCategories() {
+      manageCategories(): void {
         // method body
       }
     }
@@ -183,7 +183,7 @@ describe('Perm Decorator', () => {
 
     class TestClass {
       @Perm(options)
-      publishArticle() {
+      publishArticle(): string {
         return 'published';
       }
     }

@@ -7,11 +7,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { join } from 'path';
 import { mkdir, writeFile, rm } from 'fs/promises';
-import {
-  detectPluginType,
-  loadFunctionalPlugin,
-  type PluginLoadResult,
-} from './functional-plugin.util';
+import { detectPluginType, loadFunctionalPlugin } from './functional-plugin.util';
 
 // Mock logger
 const mockLogger = {

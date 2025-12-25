@@ -810,7 +810,7 @@ describe('HookService', () => {
     it('should log errors with non-Error objects', async () => {
       const errorSpy = vi.spyOn(Logger.prototype, 'error');
       const callback = vi.fn(() => {
-        throw 'String error';
+        throw new Error('String error');
       });
 
       service.addAction('error|nonError', callback);
@@ -849,7 +849,7 @@ describe('HookService', () => {
     it('should log errors with non-Error objects in filters', async () => {
       const errorSpy = vi.spyOn(Logger.prototype, 'error');
       const filter = vi.fn(() => {
-        throw { custom: 'error' };
+        throw new Error('Custom error object');
       });
 
       service.addFilter('error|customFilter', filter);
@@ -857,7 +857,7 @@ describe('HookService', () => {
 
       expect(errorSpy).toHaveBeenCalledWith(
         expect.stringContaining("Error applying filter for hook 'error|customFilter'"),
-        { custom: 'error' },
+        'Custom error object',
       );
       expect(result).toBe('original'); // Should return original value on error
     });

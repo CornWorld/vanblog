@@ -1,5 +1,4 @@
 import { describe, it, expect } from 'vitest';
-import { z } from 'zod';
 
 // Import all setting DTOs
 import { UpdateAboutSchema, type UpdateAboutDto } from './about.dto';

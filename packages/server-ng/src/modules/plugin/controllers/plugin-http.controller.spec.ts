@@ -5,10 +5,8 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { HttpException, HttpStatus } from '@nestjs/common';
+import { HttpException } from '@nestjs/common';
 import { PluginHttpController } from './plugin-http.controller';
-import { PluginHttpRegistryService } from '../services/plugin-http-registry.service';
-import type { Request, Response } from 'express';
 
 describe('PluginHttpController', () => {
   let controller: PluginHttpController;
@@ -369,8 +367,6 @@ describe('PluginHttpController', () => {
 
   describe('Error Handling', () => {
     it('should convert HttpException to be re-thrown', async () => {
-      const httpException = new HttpException('Not found', HttpStatus.NOT_FOUND);
-
       mockHttpRegistry.findContractRoutes.mockReturnValue([]);
       mockHttpRegistry.findRawRoute.mockReturnValue(null);
 

@@ -506,8 +506,9 @@ describe('TagService', () => {
     it('should call hooks in correct order', async () => {
       const hookCalls: string[] = [];
 
-      mockHookService.doAction = vi.fn().mockImplementation(async (hookName) => {
+      mockHookService.doAction = vi.fn().mockImplementation((hookName) => {
         hookCalls.push(hookName);
+        return Promise.resolve();
       });
 
       mockDb.returning.mockResolvedValueOnce([{ id: 1 }]);

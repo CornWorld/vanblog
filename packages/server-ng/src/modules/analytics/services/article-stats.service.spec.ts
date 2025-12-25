@@ -1,6 +1,5 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import { analytics, articles } from '@vanblog/shared/drizzle';
-import { sql } from 'drizzle-orm';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 import { DATABASE_CONNECTION } from '../../../database';
@@ -66,7 +65,7 @@ describe('ArticleStatsService', () => {
       expect(mockDb.insert).toHaveBeenCalledWith(analytics);
       expect(mockDb.insert().values).toHaveBeenCalledWith({
         type: AnalyticsType.PAGEVIEW,
-        path: '/article/test-article',
+        path: `/article/test-article`,
         ip,
         userAgent,
         data: JSON.stringify({ articleId }),
@@ -102,7 +101,7 @@ describe('ArticleStatsService', () => {
 
       expect(mockDb.insert().values).toHaveBeenCalledWith(
         expect.objectContaining({
-          path: `/article/${articleId}`,
+          path: `/article/${String(articleId)}`,
         }),
       );
     });
@@ -395,7 +394,7 @@ describe('ArticleStatsService', () => {
     it('should respect custom limit parameter', async () => {
       const mockResult = Array.from({ length: 20 }, (_, i) => ({
         articleId: i + 1,
-        title: `Article ${i + 1}`,
+        title: `Article ${String(i + 1)}`,
         views: 100 - i,
         uniqueVisitors: 50 - i,
         avgReadTime: 200,
@@ -417,7 +416,7 @@ describe('ArticleStatsService', () => {
         }),
       });
 
-      const result = await service.getTopArticles(5);
+      const _result = await service.getTopArticles(5);
 
       expect(
         mockDb.select().from().leftJoin().where().groupBy().orderBy().limit,
@@ -560,9 +559,13 @@ describe('ArticleStatsService', () => {
       expect(mockDb.insert).toHaveBeenCalledWith(analytics);
       expect(mockDb.insert().values).toHaveBeenCalledWith({
         type: AnalyticsType.EVENT,
-        path: `/article/${articleId}`,
+        path: `/article/${String(articleId)}`,
         ip,
-        data: JSON.stringify({ articleId, duration, event: 'reading_time' }),
+        data: JSON.stringify({
+          articleId,
+          duration,
+          event: 'reading_time',
+        }),
       });
     });
 
@@ -575,7 +578,11 @@ describe('ArticleStatsService', () => {
 
       expect(mockDb.insert().values).toHaveBeenCalledWith(
         expect.objectContaining({
-          data: JSON.stringify({ articleId: 1, duration: 0, event: 'reading_time' }),
+          data: JSON.stringify({
+            articleId: 1,
+            duration: 0,
+            event: 'reading_time',
+          }),
         }),
       );
     });
@@ -590,7 +597,7 @@ describe('ArticleStatsService', () => {
 
       expect(mockDb.insert().values).toHaveBeenCalledWith(
         expect.objectContaining({
-          data: expect.stringContaining(`"duration":${largeDuration}`),
+          data: expect.stringContaining(`"duration":${String(largeDuration)}`),
         }),
       );
     });

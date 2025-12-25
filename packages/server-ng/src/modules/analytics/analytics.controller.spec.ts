@@ -195,7 +195,7 @@ describe('AnalyticsController', () => {
       // Behavior: null is falsy, so falls through to header
       // Actual precedence: DTO if defined (not null), else header
       const callCount = mockAnalyticsService.recordAnalytics.mock.calls.length;
-      const call = mockAnalyticsService.recordAnalytics.mock.calls[callCount - 1][0];
+      const [[call]] = mockAnalyticsService.recordAnalytics.mock.calls.slice(callCount - 1);
       expect(call.userAgent).toBeDefined();
     });
 
@@ -212,7 +212,7 @@ describe('AnalyticsController', () => {
 
       // Empty string is falsy in JavaScript, may fall through to header
       const callCount = mockAnalyticsService.recordAnalytics.mock.calls.length;
-      const call = mockAnalyticsService.recordAnalytics.mock.calls[callCount - 1][0];
+      const [[call]] = mockAnalyticsService.recordAnalytics.mock.calls.slice(callCount - 1);
       expect(call.userAgent).toBeDefined();
     });
 

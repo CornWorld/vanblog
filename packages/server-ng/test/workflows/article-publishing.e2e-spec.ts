@@ -1,7 +1,6 @@
 import { type INestApplication, ValidationPipe, VersioningType } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { articles, drafts, tags, categories } from '@vanblog/shared/drizzle';
-import { eq } from 'drizzle-orm';
 import request from 'supertest';
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 
@@ -85,7 +84,7 @@ describe('Article Publishing Workflow (e2e)', () => {
 
       // Step 2: Edit article
       const editRes = await request(httpServer)
-        .put(`/api/v2/articles/${articleId}`)
+        .put(`/api/v2/articles/${String(articleId)}`)
         .set('Authorization', `Bearer ${authToken}`)
         .send({
           title: 'My First Article - Updated',
@@ -96,7 +95,9 @@ describe('Article Publishing Workflow (e2e)', () => {
       expect(editRes.body.title).toBe('My First Article - Updated');
 
       // Step 3: Verify article was updated
-      const getRes = await request(httpServer).get(`/api/v2/articles/${articleId}`).expect(200);
+      const getRes = await request(httpServer)
+        .get(`/api/v2/articles/${String(articleId)}`)
+        .expect(200);
 
       expect(getRes.body.title).toBe('My First Article - Updated');
       expect(getRes.body.content).toBe('This is the updated content with more details');
@@ -129,7 +130,9 @@ describe('Article Publishing Workflow (e2e)', () => {
       const articleId = createRes.body.id;
 
       // Verify article has correct tags
-      const articleRes = await request(httpServer).get(`/api/v2/articles/${articleId}`).expect(200);
+      const articleRes = await request(httpServer)
+        .get(`/api/v2/articles/${String(articleId)}`)
+        .expect(200);
 
       expect(articleRes.body.tags).toContain('typescript');
       expect(articleRes.body.tags).toContain('advanced');
@@ -165,7 +168,9 @@ describe('Article Publishing Workflow (e2e)', () => {
       const articleId = createRes.body.id;
 
       // Verify article exists
-      const articleRes = await request(httpServer).get(`/api/v2/articles/${articleId}`).expect(200);
+      const articleRes = await request(httpServer)
+        .get(`/api/v2/articles/${String(articleId)}`)
+        .expect(200);
 
       expect(articleRes.body.title).toBe('Secret Article');
 
@@ -200,7 +205,7 @@ describe('Article Publishing Workflow (e2e)', () => {
 
       // Simulate concurrent edits
       const edit1 = request(httpServer)
-        .put(`/api/v2/articles/${articleId}`)
+        .put(`/api/v2/articles/${String(articleId)}`)
         .set('Authorization', `Bearer ${authToken}`)
         .send({
           title: 'Updated Title A',
@@ -208,7 +213,7 @@ describe('Article Publishing Workflow (e2e)', () => {
         });
 
       const edit2 = request(httpServer)
-        .put(`/api/v2/articles/${articleId}`)
+        .put(`/api/v2/articles/${String(articleId)}`)
         .set('Authorization', `Bearer ${authToken}`)
         .send({
           title: 'Updated Title B',
@@ -222,7 +227,9 @@ describe('Article Publishing Workflow (e2e)', () => {
       expect([200, 409]).toContain(res2.status);
 
       // Final state should be consistent
-      const finalRes = await request(httpServer).get(`/api/v2/articles/${articleId}`).expect(200);
+      const finalRes = await request(httpServer)
+        .get(`/api/v2/articles/${String(articleId)}`)
+        .expect(200);
 
       expect(finalRes.body).toHaveProperty('id', articleId);
       expect(finalRes.body).toHaveProperty('title');
@@ -255,7 +262,9 @@ Some text here.
       const articleId = createRes.body.id;
 
       // Verify images are still in content
-      const articleRes = await request(httpServer).get(`/api/v2/articles/${articleId}`).expect(200);
+      const articleRes = await request(httpServer)
+        .get(`/api/v2/articles/${String(articleId)}`)
+        .expect(200);
 
       expect(articleRes.body.content).toContain('/images/test.png');
       expect(articleRes.body.content).toContain('/images/another.jpg');

@@ -21,7 +21,6 @@ describe('RssService', () => {
   let settingCoreService: any;
   let hookService: any;
   let markdownService: any;
-  let configService: any;
 
   const mockArticles = [
     {
@@ -143,7 +142,6 @@ describe('RssService', () => {
     settingCoreService = module.get(SettingCoreService);
     hookService = module.get(HookService);
     markdownService = module.get(MarkdownService);
-    configService = module.get(ConfigService);
 
     // Mock fs operations
     vi.mocked(fs.access).mockRejectedValue(new Error('Directory does not exist'));
@@ -336,23 +334,25 @@ describe('RssService', () => {
 
       // RSS should contain correct article URLs
       expect(fs.writeFile).toHaveBeenCalled();
-      const feedXmlCall = vi
-        .mocked(fs.writeFile)
-        .mock.calls.find((call) => call[0].toString().includes('feed.xml'));
+      const feedXmlCall = vi.mocked(fs.writeFile).mock.calls.find((call) => {
+        const path = call[0] as string;
+        return path.includes('feed.xml');
+      });
       expect(feedXmlCall).toBeDefined();
-      const feedXml = feedXmlCall![1] as string;
+      const feedXml = feedXmlCall?.[1] as string;
       expect(feedXml).toContain('https://test-blog.com/post/test-article-1');
     });
 
     it('should format JSON feed dates correctly', async () => {
       await service.generateRssFeedFn();
 
-      const feedJsonCall = vi
-        .mocked(fs.writeFile)
-        .mock.calls.find((call) => call[0].toString().includes('feed.json'));
+      const feedJsonCall = vi.mocked(fs.writeFile).mock.calls.find((call) => {
+        const path = call[0] as string;
+        return path.includes('feed.json');
+      });
       expect(feedJsonCall).toBeDefined();
 
-      const feedJson = feedJsonCall![1] as string;
+      const feedJson = feedJsonCall?.[1] as string;
       const jsonData = JSON.parse(feedJson);
 
       // Check that dates are formatted strings
@@ -492,10 +492,11 @@ describe('RssService', () => {
     it('should include all required feed metadata', async () => {
       await service.generateRssFeedFn();
 
-      const feedXmlCall = vi
-        .mocked(fs.writeFile)
-        .mock.calls.find((call) => call[0].toString().includes('feed.xml'));
-      const feedXml = feedXmlCall![1] as string;
+      const feedXmlCall = vi.mocked(fs.writeFile).mock.calls.find((call) => {
+        const path = call[0] as string;
+        return path.includes('feed.xml');
+      });
+      const feedXml = feedXmlCall?.[1] as string;
 
       // Check feed metadata
       expect(feedXml).toContain('Test Blog');
@@ -506,10 +507,11 @@ describe('RssService', () => {
     it('should include article categories in feed', async () => {
       await service.generateRssFeedFn();
 
-      const feedXmlCall = vi
-        .mocked(fs.writeFile)
-        .mock.calls.find((call) => call[0].toString().includes('feed.xml'));
-      const feedXml = feedXmlCall![1] as string;
+      const feedXmlCall = vi.mocked(fs.writeFile).mock.calls.find((call) => {
+        const path = call[0] as string;
+        return path.includes('feed.xml');
+      });
+      const feedXml = feedXmlCall?.[1] as string;
 
       expect(feedXml).toContain('Tech');
       expect(feedXml).toContain('Design');
@@ -518,10 +520,11 @@ describe('RssService', () => {
     it('should include proper feed links', async () => {
       await service.generateRssFeedFn();
 
-      const feedJsonCall = vi
-        .mocked(fs.writeFile)
-        .mock.calls.find((call) => call[0].toString().includes('feed.json'));
-      const feedJson = JSON.parse(feedJsonCall![1] as string);
+      const feedJsonCall = vi.mocked(fs.writeFile).mock.calls.find((call) => {
+        const path = call[0] as string;
+        return path.includes('feed.json');
+      });
+      const feedJson = JSON.parse(feedJsonCall?.[1] as string);
 
       expect(feedJson.feed_url).toBeDefined();
       expect(feedJson.home_page_url).toBe('https://test-blog.com/');
@@ -592,12 +595,13 @@ describe('RssService', () => {
     it('should successfully validate and format valid JSON Feed dates', async () => {
       await service.generateRssFeedFn();
 
-      const feedJsonCall = vi
-        .mocked(fs.writeFile)
-        .mock.calls.find((call) => call[0].toString().includes('feed.json'));
+      const feedJsonCall = vi.mocked(fs.writeFile).mock.calls.find((call) => {
+        const path = call[0] as string;
+        return path.includes('feed.json');
+      });
       expect(feedJsonCall).toBeDefined();
 
-      const feedJson = JSON.parse(feedJsonCall![1] as string);
+      const feedJson = JSON.parse(feedJsonCall?.[1] as string);
 
       // Verify dates are properly formatted (ISO 8601)
       // date_modified is optional but if present should be formatted correctly
@@ -823,12 +827,13 @@ describe('RssService', () => {
     it('should generate valid RSS 2.0 XML format', async () => {
       await service.generateRssFeedFn();
 
-      const feedXmlCall = vi
-        .mocked(fs.writeFile)
-        .mock.calls.find((call) => call[0].toString().includes('feed.xml'));
+      const feedXmlCall = vi.mocked(fs.writeFile).mock.calls.find((call) => {
+        const path = call[0] as string;
+        return path.includes('feed.xml');
+      });
       expect(feedXmlCall).toBeDefined();
 
-      const feedXml = feedXmlCall![1] as string;
+      const feedXml = feedXmlCall?.[1] as string;
 
       // Check RSS 2.0 structure
       expect(feedXml).toContain('<?xml version=');
@@ -841,12 +846,13 @@ describe('RssService', () => {
     it('should generate valid Atom 1.0 XML format', async () => {
       await service.generateRssFeedFn();
 
-      const atomXmlCall = vi
-        .mocked(fs.writeFile)
-        .mock.calls.find((call) => call[0].toString().includes('atom.xml'));
+      const atomXmlCall = vi.mocked(fs.writeFile).mock.calls.find((call) => {
+        const path = call[0] as string;
+        return path.includes('atom.xml');
+      });
       expect(atomXmlCall).toBeDefined();
 
-      const atomXml = atomXmlCall![1] as string;
+      const atomXml = atomXmlCall?.[1] as string;
 
       // Check Atom 1.0 structure
       expect(atomXml).toContain('<?xml version=');
@@ -858,12 +864,13 @@ describe('RssService', () => {
     it('should generate valid JSON Feed format', async () => {
       await service.generateRssFeedFn();
 
-      const feedJsonCall = vi
-        .mocked(fs.writeFile)
-        .mock.calls.find((call) => call[0].toString().includes('feed.json'));
+      const feedJsonCall = vi.mocked(fs.writeFile).mock.calls.find((call) => {
+        const path = call[0] as string;
+        return path.includes('feed.json');
+      });
       expect(feedJsonCall).toBeDefined();
 
-      const feedJsonStr = feedJsonCall![1] as string;
+      const feedJsonStr = feedJsonCall?.[1] as string;
       const feedJson = JSON.parse(feedJsonStr);
 
       // Check JSON Feed structure
@@ -891,10 +898,11 @@ describe('RssService', () => {
     it('should include stylesheet links in RSS HTML content', async () => {
       await service.generateRssFeedFn();
 
-      const feedXmlCall = vi
-        .mocked(fs.writeFile)
-        .mock.calls.find((call) => call[0].toString().includes('feed.xml'));
-      const feedXml = feedXmlCall![1] as string;
+      const feedXmlCall = vi.mocked(fs.writeFile).mock.calls.find((call) => {
+        const path = call[0] as string;
+        return path.includes('feed.xml');
+      });
+      const feedXml = feedXmlCall?.[1] as string;
 
       // Check for stylesheet links
       expect(feedXml).toContain('markdown.css');
@@ -905,10 +913,11 @@ describe('RssService', () => {
     it('should generate proper article URLs with pathname', async () => {
       await service.generateRssFeedFn();
 
-      const feedXmlCall = vi
-        .mocked(fs.writeFile)
-        .mock.calls.find((call) => call[0].toString().includes('feed.xml'));
-      const feedXml = feedXmlCall![1] as string;
+      const feedXmlCall = vi.mocked(fs.writeFile).mock.calls.find((call) => {
+        const path = call[0] as string;
+        return path.includes('feed.xml');
+      });
+      const feedXml = feedXmlCall?.[1] as string;
 
       // Verify article URLs use pathname
       expect(feedXml).toContain('https://test-blog.com/post/test-article-1');
@@ -918,10 +927,11 @@ describe('RssService', () => {
     it('should handle articles with tags', async () => {
       await service.generateRssFeedFn();
 
-      const feedJsonCall = vi
-        .mocked(fs.writeFile)
-        .mock.calls.find((call) => call[0].toString().includes('feed.json'));
-      const feedJson = JSON.parse(feedJsonCall![1] as string);
+      const feedJsonCall = vi.mocked(fs.writeFile).mock.calls.find((call) => {
+        const path = call[0] as string;
+        return path.includes('feed.json');
+      });
+      const feedJson = JSON.parse(feedJsonCall?.[1] as string);
 
       // Tags are included in the feed items
       expect(feedJson.items).toBeDefined();

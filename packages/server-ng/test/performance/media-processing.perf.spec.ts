@@ -1,6 +1,5 @@
 import { describe, it, beforeEach, afterEach, expect, vi } from 'vitest';
 import { Logger } from '@nestjs/common';
-import { MockUtils } from '../mock-utils';
 
 /**
  * Media Processing Performance Tests
@@ -53,7 +52,7 @@ describe('Media Processing Performance (media-processing.perf.spec.ts)', () => {
 
     // Process all images in parallel
     const results = await Promise.all(
-      Array.from({ length: imageCount }, (_, i) => processImage(`img-${i}`)),
+      Array.from({ length: imageCount }, (_, i) => processImage(`img-${String(i)}`)),
     );
 
     const endTime = performance.now();
@@ -145,7 +144,7 @@ describe('Media Processing Performance (media-processing.perf.spec.ts)', () => {
 
       const batchImages = Array.from(
         { length: batchSize },
-        (_, i) => `img-${batch * batchSize + i}`,
+        (_, i) => `img-${String(batch * batchSize + i)}`,
       );
       const results = await Promise.all(batchImages.map((id) => watermarkImage(id)));
 
@@ -167,7 +166,7 @@ describe('Media Processing Performance (media-processing.perf.spec.ts)', () => {
     };
 
     logger.log(
-      `Watermark 50 images (batch ${batchSize}) - Total: ${totalTime.toFixed(2)}ms, Throughput: ${throughput.toFixed(2)} img/s`,
+      `Watermark 50 images (batch ${String(batchSize)}) - Total: ${totalTime.toFixed(2)}ms, Throughput: ${throughput.toFixed(2)} img/s`,
     );
 
     expect(totalTime).toBeLessThan(3000); // Should complete in under 3 seconds
@@ -183,7 +182,7 @@ describe('Media Processing Performance (media-processing.perf.spec.ts)', () => {
     const memorySnapshots: number[] = [];
 
     // Simulate thumbnail generation
-    const generateThumbnail = async (imageId: string): Promise<Buffer> => {
+    const generateThumbnail = async (_imageId: string): Promise<Buffer> => {
       // Simulate thumbnail generation: ~5ms per thumbnail
       await new Promise((resolve) => setTimeout(resolve, 5));
       return Buffer.alloc(100 * 1024); // 100KB thumbnail
@@ -194,7 +193,7 @@ describe('Media Processing Performance (media-processing.perf.spec.ts)', () => {
     for (let i = 0; i < Math.ceil(thumbnailCount / chunkSize); i++) {
       const chunk = Array.from(
         { length: Math.min(chunkSize, thumbnailCount - i * chunkSize) },
-        (_, j) => generateThumbnail(`img-${i * chunkSize + j}`),
+        (_, j) => generateThumbnail(`img-${String(i * chunkSize + j)}`),
       );
 
       const results = await Promise.all(chunk);
@@ -295,7 +294,7 @@ describe('Media Processing Performance (media-processing.perf.spec.ts)', () => {
     const processingRate = 50; // items per second
 
     // Simulate image processing with queue
-    const addToQueue = (imageId: string): Promise<boolean> => {
+    const addToQueue = async (_imageId: string): Promise<boolean> => {
       currentQueueDepth++;
       queueDepthSnapshots.push(currentQueueDepth);
 
@@ -312,7 +311,7 @@ describe('Media Processing Performance (media-processing.perf.spec.ts)', () => {
     // Add a modest number of items
     const results: Promise<boolean>[] = [];
     for (let i = 0; i < 50; i++) {
-      results.push(addToQueue(`img-${i}`));
+      results.push(addToQueue(`img-${String(i)}`));
     }
 
     const processingResults = await Promise.all(results);
@@ -328,7 +327,7 @@ describe('Media Processing Performance (media-processing.perf.spec.ts)', () => {
     };
 
     logger.log(
-      `Queue stability - Average depth: ${avgQueueDepth.toFixed(2)}, Max depth: ${maxObservedQueueDepth}, Processed: ${totalProcessed}, Rate: ${processingRate}/sec`,
+      `Queue stability - Average depth: ${avgQueueDepth.toFixed(2)}, Max depth: ${String(maxObservedQueueDepth)}, Processed: ${String(totalProcessed)}, Rate: ${String(processingRate)}/sec`,
     );
 
     // All items should process successfully

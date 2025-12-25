@@ -19,7 +19,7 @@
  * - 生命周期（onActivate, onDeactivate）
  */
 
-import { Logger, Type } from '@nestjs/common';
+import { Logger } from '@nestjs/common';
 import { ModuleRef } from '@nestjs/core';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, expect, beforeEach, afterEach, vi, type Mock } from 'vitest';

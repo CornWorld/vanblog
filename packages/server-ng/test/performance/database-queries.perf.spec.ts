@@ -58,9 +58,9 @@ describe('Database Query Optimization (database-queries.perf.spec.ts)', () => {
 
       // Create batch data
       const batchArticles = Array.from({ length: batchSize }, (_, i) => ({
-        id: `article-${batch * batchSize + i}`,
-        title: `Article ${batch * batchSize + i}`,
-        content: `Content for article ${batch * batchSize + i}`,
+        id: `article-${String(batch * batchSize + i)}`,
+        title: `Article ${String(batch * batchSize + i)}`,
+        content: `Content for article ${String(batch * batchSize + i)}`,
         published: true,
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -88,7 +88,7 @@ describe('Database Query Optimization (database-queries.perf.spec.ts)', () => {
     };
 
     logger.log(
-      `Bulk insert 1000 articles (batch ${batchSize}) - Total: ${totalTime.toFixed(2)}ms, Throughput: ${throughput.toFixed(0)} articles/s`,
+      `Bulk insert 1000 articles (batch ${String(batchSize)}) - Total: ${totalTime.toFixed(String(2))}ms, Throughput: ${throughput.toFixed(String(0))} articles/s`,
     );
 
     expect(totalTime).toBeLessThan(5000);
@@ -125,7 +125,7 @@ describe('Database Query Optimization (database-queries.perf.spec.ts)', () => {
     const db = databaseMock.build();
 
     // Run JOIN benchmark 10 times
-    for (let i = 0; i < 10; i++) {
+    for (let _i = 0; _i < 10; _i++) {
       const start = performance.now();
 
       // Simulate: select().from(articles)
@@ -155,7 +155,7 @@ describe('Database Query Optimization (database-queries.perf.spec.ts)', () => {
     };
 
     logger.log(
-      `Complex JOIN - Mean: ${mean.toFixed(2)}ms, Min: ${min.toFixed(2)}ms, Max: ${max.toFixed(2)}ms`,
+      `Complex JOIN - Mean: ${mean.toFixed(String(2))}ms, Min: ${min.toFixed(String(2))}ms, Max: ${max.toFixed(String(2))}ms`,
     );
 
     // JOIN should be fast with proper indexing
@@ -189,7 +189,7 @@ describe('Database Query Optimization (database-queries.perf.spec.ts)', () => {
     const db = databaseMock.build();
 
     // Run aggregation benchmark 10 times
-    for (let i = 0; i < 10; i++) {
+    for (let _i = 0; _i < 10; _i++) {
       const start = performance.now();
 
       // Simulate: select(count(id)).from(articles)
@@ -217,7 +217,7 @@ describe('Database Query Optimization (database-queries.perf.spec.ts)', () => {
     };
 
     logger.log(
-      `Aggregation queries - Mean: ${mean.toFixed(2)}ms, Min: ${min.toFixed(2)}ms, Max: ${max.toFixed(2)}ms`,
+      `Aggregation queries - Mean: ${mean.toFixed(String(2))}ms, Min: ${min.toFixed(String(2))}ms, Max: ${max.toFixed(String(2))}ms`,
     );
 
     // Aggregations should be fast with proper grouping indexes
@@ -307,7 +307,7 @@ describe('Database Query Optimization (database-queries.perf.spec.ts)', () => {
 
       // Simulate: delete from articles where categoryId = ?
       const deleteQuery = db.delete('articles').where({
-        categoryId: `cat-${i}`,
+        categoryId: `cat-${String(i)}`,
       });
 
       if (deleteQuery && typeof deleteQuery === 'object') {
@@ -331,7 +331,7 @@ describe('Database Query Optimization (database-queries.perf.spec.ts)', () => {
     };
 
     logger.log(
-      `Cascade delete 1000 records - Mean: ${mean.toFixed(2)}ms, Min: ${min.toFixed(2)}ms, Max: ${max.toFixed(2)}ms, Throughput: ${((recordsToDelete * measurements.length) / (totalTime / 1000)).toFixed(0)} records/s`,
+      `Cascade delete 1000 records - Mean: ${mean.toFixed(String(2))}ms, Min: ${min.toFixed(String(2))}ms, Max: ${max.toFixed(String(2))}ms, Throughput: ${((recordsToDelete * measurements.length) / (totalTime / 1000)).toFixed(String(0))} records/s`,
     );
 
     expect(mean).toBeLessThan(500);
@@ -365,7 +365,7 @@ describe('Database Query Optimization (database-queries.perf.spec.ts)', () => {
     const db = databaseMock.build();
 
     // Test indexed query (on categoryId which should have index)
-    for (let i = 0; i < 10; i++) {
+    for (let _i = 0; _i < 10; _i++) {
       const start = performance.now();
       const query = db.select().from('articles').where({ categoryId: 'cat-1' });
       if (query && typeof query === 'object' && 'where' in query) {
@@ -376,7 +376,7 @@ describe('Database Query Optimization (database-queries.perf.spec.ts)', () => {
     }
 
     // Simulate non-indexed query (on description field, no index)
-    for (let i = 0; i < 10; i++) {
+    for (let _i = 0; _i < 10; _i++) {
       const start = performance.now();
       const query = db
         .select()
@@ -405,7 +405,7 @@ describe('Database Query Optimization (database-queries.perf.spec.ts)', () => {
     };
 
     logger.log(
-      `Index efficiency - Indexed mean: ${indexedMean.toFixed(2)}ms, Non-indexed mean: ${nonIndexedMean.toFixed(2)}ms, Improvement ratio: ${improvementRatio.toFixed(1)}x`,
+      `Index efficiency - Indexed mean: ${indexedMean.toFixed(String(2))}ms, Non-indexed mean: ${nonIndexedMean.toFixed(String(2))}ms, Improvement ratio: ${improvementRatio.toFixed(String(1))}x`,
     );
 
     // For mock-based testing, both should execute quickly
