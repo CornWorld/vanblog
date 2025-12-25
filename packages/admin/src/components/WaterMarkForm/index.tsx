@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { getStaticSetting, updateStaticSetting } from '@/services/van-blog/api';
 import { checkNoChinese } from '@/services/van-blog/checkString';

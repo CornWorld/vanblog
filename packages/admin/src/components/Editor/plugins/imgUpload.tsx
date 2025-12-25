@@ -1,8 +1,8 @@
-import i18next, { TFunction } from 'i18next';
+import i18next, { type TFunction } from 'i18next';
 import { copyImgLink, getImgLink } from '@/pages/ImageManage/components/tools';
 import { message as antMessage } from 'antd';
 import type { MessageInstance } from 'antd/es/message/interface';
-import { BytemdPlugin } from 'bytemd';
+import type { BytemdPlugin } from 'bytemd';
 import { icons } from '../icons';
 
 // Define types for bytemd context

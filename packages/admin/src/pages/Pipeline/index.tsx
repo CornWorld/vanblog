@@ -1,9 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React from 'react';
 import { useTranslation } from 'react-i18next';
 import TipTitle from '@/components/TipTitle';
 import { PageContainer } from '@ant-design/pro-layout';
-import ProTable, { ActionType } from '@ant-design/pro-table';
+import ProTable, { type ActionType } from '@ant-design/pro-table';
 import { Button, message, Modal, Space, Tag } from 'antd';
 import { getPiplelines, getPipelineConfig, deletePipelineById } from '@/services/van-blog/api';
 import PipelineModal from './components/PipelineModal';

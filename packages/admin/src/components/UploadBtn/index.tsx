@@ -1,9 +1,8 @@
-import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button, message, Upload } from 'antd';
 import ImgCrop from 'antd-img-crop';
-import { RcFile } from 'antd/lib/upload';
-import { UploadFile } from 'antd/lib/upload/interface';
+import type { RcFile } from 'antd/lib/upload';
+import type { UploadFile } from 'antd/lib/upload/interface';
 
 interface UploadBtnProps {
   setLoading: (loading: boolean) => void;

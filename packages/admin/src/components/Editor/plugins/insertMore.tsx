@@ -1,5 +1,5 @@
-import { BytemdPlugin } from 'bytemd';
-import { TFunction } from 'i18next';
+import type { BytemdPlugin } from 'bytemd';
+import type { TFunction } from 'i18next';
 import { icons } from '../icons';
 
 interface InsertMoreOptions {

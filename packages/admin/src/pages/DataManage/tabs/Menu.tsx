@@ -1,12 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { getMenu, updateMenu } from '@/services/van-blog/api';
-import { ActionType, ProColumns, EditableProTable } from '@ant-design/pro-components';
+import { EditableProTable, type ActionType, type ProColumns } from '@ant-design/pro-components';
 import { message, Modal, Spin } from 'antd';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Key } from 'react';
-import Logger from '@/services/Logger';
 
 interface MenuItem {
   id: string | number;
@@ -53,7 +51,7 @@ export default function MenuTab() {
         .map((e: MenuItem) => e.id);
       setExpendKeys(expendKs);
     } catch (error) {
-      Logger.error('Failed to fetch menu data:', error);
+      console.error('Failed to fetch menu data:', error);
       message.error('获取菜单数据失败');
     } finally {
       setLoading(false);
@@ -66,7 +64,7 @@ export default function MenuTab() {
         await updateMenu({ data: vals });
         fetchData();
       } catch (error) {
-        Logger.error('Failed to update menu:', error);
+        console.error('Failed to update menu:', error);
         message.error('更新菜单失败');
       }
     },
@@ -206,7 +204,7 @@ export default function MenuTab() {
             try {
               await update(dataSource);
             } catch (error) {
-              Logger.error('Failed to save menu changes:', error);
+              console.error('Failed to save menu changes:', error);
             }
           },
           onDelete: async (_, row) => {

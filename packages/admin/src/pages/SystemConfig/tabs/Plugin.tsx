@@ -223,6 +223,7 @@ function PluginConfigForm({ pluginName }: { pluginName: string }) {
 
   useEffect(() => {
     loadConfig();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pluginName]);
 
   if (loading) {

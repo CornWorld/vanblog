@@ -1,13 +1,12 @@
-import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { message, Alert } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import {
   ProFormText,
-  StepsForm,
-  ProFormInstance,
+  type ProFormInstance,
   ProFormSelect,
   ProFormDateTimePicker,
+  StepsForm,
 } from '@ant-design/pro-components';
 import { useEffect, useRef } from 'react';
 import { resetRedirectCycle } from '@/utils/auth';

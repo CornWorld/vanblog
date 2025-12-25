@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { ModalForm, ProFormSelect, ProFormText } from '@ant-design/pro-components';
 import { Alert, Modal } from 'antd';

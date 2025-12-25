@@ -1,4 +1,3 @@
-import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { errorImg } from '@/assets/error';
 import { getImgLink } from '@/pages/ImageManage/components/tools';

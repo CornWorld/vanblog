@@ -5,7 +5,6 @@ import WatchMarkForm from '@/components/WaterMarkForm';
 import { exportAllImgs, scanImgsOfArticles } from '@/services/van-blog/api';
 import { Alert, Button, Card, message, Modal, Table, Typography } from 'antd';
 import { useState } from 'react';
-import Logger from '@/services/Logger';
 
 export default function () {
   const { t } = useTranslation();
@@ -71,7 +70,7 @@ export default function () {
                 });
               }
             } catch (error) {
-              Logger.error('Failed to scan images:', error);
+              console.error('Failed to scan images:', error);
               message.error(t('img.message.scan.failed'));
               setLoading(false);
             }
@@ -96,7 +95,7 @@ export default function () {
               link.click();
               setExporting(false);
             } catch (error) {
-              Logger.error('Failed to export images:', error);
+              console.error('Failed to export images:', error);
               message.error(t('img.message.export.failed'));
               setExporting(false);
             }

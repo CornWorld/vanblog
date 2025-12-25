@@ -10,7 +10,6 @@ import {
 import { ProForm, ProFormDigit, ProFormSelect } from '@ant-design/pro-components';
 import { Alert, Button, Card, message, Modal } from 'antd';
 import { useState } from 'react';
-import Logger from '@/services/Logger';
 
 export default function () {
   const { t } = useTranslation();
@@ -31,7 +30,7 @@ export default function () {
               const { data } = await getLoginConfig();
               return data || { enableMaxLoginRetry: false };
             } catch (err) {
-              Logger.error('Failed to fetch login config:', err);
+              console.error('Failed to fetch login config:', err);
               return { enableMaxLoginRetry: false };
             }
           }}
@@ -95,7 +94,7 @@ export default function () {
               const { data } = await getISRConfig();
               return data;
             } catch (err) {
-              Logger.error('Failed to fetch ISR config:', err);
+              console.error('Failed to fetch ISR config:', err);
               return {};
             }
           }}
@@ -147,7 +146,7 @@ export default function () {
               await activeISR();
               message.success(t('advance.isr_manual.message.success'));
             } catch (error) {
-              Logger.error('ISR activation failed:', error);
+              console.error('ISR activation failed:', error);
               message.error(t('advance.isr_manual.message.error'));
             }
             setIsrLoading(false);

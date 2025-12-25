@@ -5,9 +5,7 @@ import dayjs from '@/utils/dayjs';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { fetchAllMeta, fetchLatestVersionInfo } from '../services/van-blog/api';
 import { ROUTES } from '../router';
-import { createLogger } from '@/utils/logger';
 
-const logger = createLogger('AppContext');
 const AppContext = createContext(null);
 
 export const useAppContext = () => {
@@ -34,40 +32,40 @@ export const AppProvider = ({ children }) => {
   const fetchInitData = useCallback(
     async (option) => {
       try {
-        logger.debug('Fetching init data with options:', { option });
+        console.log('Fetching init data with options:', { option });
         const msg = await fetchAllMeta(option);
-        logger.debug('Init data response status:', msg.statusCode);
+        console.log('Init data response status:', msg.statusCode);
 
         // 如果需要初始化并且不在初始化页面，就重定向到初始化页面
         if (msg.statusCode === 233) {
-          logger.debug('App needs initialization');
+          console.log('App needs initialization');
           if (location.pathname !== initPath) {
-            logger.debug('Redirecting to /init');
+            console.log('Redirecting to /init');
             navigate(initPath, { replace: true });
           } else {
-            logger.debug('Already on init page, not redirecting');
+            console.log('Already on init page, not redirecting');
           }
           return msg.data || {};
         } else if (location.pathname === initPath && msg.statusCode === 200) {
-          logger.debug('On init page but app is initialized, redirecting to home');
+          console.log('On init page but app is initialized, redirecting to home');
           navigate('/', { replace: true });
         }
 
         if (msg.statusCode === 200 && msg.data) {
-          logger.debug('Init data successfully fetched');
+          console.log('Init data successfully fetched');
           return msg.data;
         } else {
-          logger.warn('Failed to fetch init data:', msg);
+          console.warn('Failed to fetch init data:', msg);
           return {};
         }
       } catch (error) {
-        logger.error('Error fetching init data:', error);
+        console.error('Error fetching init data:', error);
 
         // 如果状态码是 233，表示需要初始化
         if (error.response?.status === 233 || error.data?.statusCode === 233) {
-          logger.debug('System needs initialization');
+          console.log('System needs initialization');
           if (location.pathname !== initPath) {
-            logger.debug('Redirecting to init page');
+            console.log('Redirecting to init page');
             navigate(initPath, { replace: true });
           }
           return {};
@@ -75,7 +73,7 @@ export const AppProvider = ({ children }) => {
 
         // In development mode, provide default data instead of redirecting to login
         if (needMock) {
-          logger.warn('Using mock data for development');
+          console.warn('Using mock data for development');
           return {
             latestVersion: '0.0.0-dev',
             updatedAt: new Date().toISOString(),
@@ -90,10 +88,10 @@ export const AppProvider = ({ children }) => {
           location.pathname.includes(loginPath) || location.pathname.includes(initPath);
 
         if (!isOnAuthPage) {
-          logger.debug('Not on auth page, redirecting to login');
+          console.log('Not on auth page, redirecting to login');
           navigate(loginPath, { replace: true });
         } else {
-          logger.debug('Already on auth page, not redirecting');
+          console.log('Already on auth page, not redirecting');
         }
 
         return {};
@@ -114,7 +112,7 @@ export const AppProvider = ({ children }) => {
       const { data } = await fetchLatestVersionInfo();
 
       if (data && data.version && data.version !== currentVersion) {
-        logger.info('New version available:', data.version);
+        console.log('New version available:', data.version);
 
         Modal.info({
           title: '版本更新',
@@ -151,7 +149,7 @@ export const AppProvider = ({ children }) => {
         });
       }
     } catch (error) {
-      logger.error('Error checking version update:', error);
+      console.error('Error checking version update:', error);
     }
   };
 
@@ -188,7 +186,7 @@ export const AppProvider = ({ children }) => {
         document.documentElement.style.setProperty('--vh', `${window.innerHeight * 0.01}px`);
         document.documentElement.style.setProperty('--window-height', `${window.innerHeight}px`);
       } catch (error) {
-        logger.error('Error setting viewport height variables:', error);
+        console.error('Error setting viewport height variables:', error);
       }
     };
 

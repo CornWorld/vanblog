@@ -93,6 +93,7 @@ export function usePluginData<T = unknown>(pluginName: string): UsePluginDataRes
 
   useEffect(() => {
     fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pluginName]);
 
   return {

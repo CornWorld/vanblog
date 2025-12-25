@@ -1,11 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { getLog } from '@/services/van-blog/api';
 import { Button, Card, Space, Spin } from 'antd';
 import { useEffect, useRef, useState } from 'react';
 import TerminalDisplay from '@/components/TerminalDisplay';
-import Logger from '@/services/Logger';
 
 export default function () {
   const { t } = useTranslation();
@@ -20,7 +18,7 @@ export default function () {
       const logString = data.data.reverse().join('\n');
       setContent(logString);
     } catch (err) {
-      Logger.error('Failed to fetch system logs:', err);
+      console.error('Failed to fetch system logs:', err);
     }
   };
   useEffect(() => {

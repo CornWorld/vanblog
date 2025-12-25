@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { getWalineConfig, updateWalineConfig } from '@/services/van-blog/api';
 import {

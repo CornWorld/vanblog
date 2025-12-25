@@ -2,7 +2,6 @@ import { notification } from 'antd';
 import { isLoggedIn, removeAccessToken } from './auth';
 import { ROUTES, withPrefix } from '../router';
 import i18next from 'i18next';
-import { logger } from './logger';
 
 // Use i18next directly instead of the hook in non-component code
 const t = (key) => i18next.t(key);
@@ -155,7 +154,7 @@ const request = async (url, options = {}) => {
 
     // Mock API响应（开发模式）
     if (needMock && mockResponses[url] && !options.skipMock) {
-      logger.debug('Returning mock data for', { url });
+      console.log('Returning mock data for', { url });
       return {
         statusCode: 200,
         data: mockResponses[url],
@@ -173,7 +172,7 @@ const request = async (url, options = {}) => {
     try {
       responseData = await response.json();
     } catch (e) {
-      logger.error('Failed to parse JSON response', e);
+      console.error('Failed to parse JSON response', e);
       responseData = { message: t('request.message.parse_failed') };
     }
 
@@ -188,7 +187,7 @@ const request = async (url, options = {}) => {
       error.data = responseData;
       error.status = 401;
 
-      logger.debug('401 Unauthorized detected in response', {
+      console.log('401 Unauthorized detected in response', {
         data: responseData,
         url,
         token: newOptions.headers?.Token
@@ -212,7 +211,7 @@ const request = async (url, options = {}) => {
   } catch (error) {
     // 开发模式下记录更详细的错误信息
     if (needMock) {
-      logger.debug('API error', {
+      console.log('API error', {
         error: error.message,
         status: error.response?.status,
         statusText: error.response?.statusText,

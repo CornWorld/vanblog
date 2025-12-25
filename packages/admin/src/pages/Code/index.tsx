@@ -1,6 +1,4 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable @typescript-eslint/no-unused-vars */
-import React from 'react';
 import CodeEditor from '@/components/CodeEditor';
 import UploadBtn from '@/components/UploadBtn';
 import {
@@ -15,17 +13,15 @@ import {
 } from '@/services/van-blog/api';
 import { DownOutlined } from '@ant-design/icons';
 import { PageContainer } from '@ant-design/pro-layout';
-import { Button, Dropdown, Menu, message, Modal, Space, Spin, Tag, Tree } from 'antd';
+import { Button, Dropdown, message, Modal, Space, Spin, Tag, Tree } from 'antd';
 import type { DataNode } from 'antd/es/tree';
-import type { Key } from 'react';
+import type { Key, ReactNode } from 'react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { history } from '@/router';
 import PipelineModal from '../Pipeline/components/PipelineModal';
 import RunCodeModal from '../Pipeline/components/RunCodeModal';
 import './index.less';
-import type { ReactNode } from 'react';
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
-import Logger from '@/services/Logger';
 const { DirectoryTree } = Tree;
 
 interface TreeNode extends DataNode {
@@ -137,7 +133,7 @@ export default function CodePage() {
       const { data } = await getCustomPageFileDataByPath(path, node.key);
       setValue(data as string);
     } catch (error) {
-      Logger.error('Failed to fetch file data:', error);
+      console.error('Failed to fetch file data:', error);
       message.error('获取文件数据失败！');
     } finally {
       setEditorLoading(false);
@@ -304,7 +300,7 @@ export default function CodePage() {
         setEditorLoading(false);
       }
     } catch (error) {
-      Logger.error('Failed to fetch data:', error);
+      console.error('Failed to fetch data:', error);
       message.error('获取数据失败！');
     }
   }, [path, id, type, isFolder]);

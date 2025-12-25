@@ -1,4 +1,3 @@
-import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { getLog, getPipelineConfig } from '@/services/van-blog/api';
 import { ProTable, type ActionType, type ProColumns } from '@ant-design/pro-components';

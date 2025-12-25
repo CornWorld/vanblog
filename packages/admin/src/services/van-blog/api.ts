@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import { settingService } from './setting';
 import { authService } from './auth';
 import { userService } from './user';
@@ -15,10 +14,9 @@ import { pipelineService } from './pipeline';
 import { tokenService } from './token';
 import { customPageService } from './custom-page';
 import { backupService } from './backup';
-import { encodeQuerystring } from './encode';
 import { encryptPwd } from './encryptPwd';
 
-export async function fetchAllMeta(options?: any) {
+export async function fetchAllMeta() {
   const { body } = await metaService.getPublicMeta();
   return { data: body };
 }
@@ -221,7 +219,7 @@ export async function deleteArticle(id: any) {
   return body;
 }
 
-export async function createCollaborator(body: any, options?: any) {
+export async function createCollaborator(body: any) {
   const { body: result } = await userService.createCollaborator({ body });
   return result;
 }
@@ -286,22 +284,22 @@ export async function getCustomPageFileDataByPath(path: any, key: any) {
   return { data: body };
 }
 
-export async function updateCollaborator(body: any, options?: any) {
+export async function updateCollaborator(body: any) {
   const { body: result } = await userService.updateCollaborator({ body });
   return result;
 }
 
-export async function deleteCollaborator(id: any, options?: any) {
+export async function deleteCollaborator(id: any) {
   const { body } = await userService.deleteCollaborator({ params: { id } });
   return body;
 }
 
-export async function getAllCollaborators(options?: any) {
+export async function getAllCollaborators() {
   const { body } = await userService.getCollaborators();
   return { data: body };
 }
 
-export async function getAllCategories(withAllData = false) {
+export async function getAllCategories() {
   const { body } = await categoryService.getCategories();
   return { data: body };
 }
@@ -325,7 +323,7 @@ export async function getLog(type: any, page: any, pageSize: any = 10) {
   };
 }
 
-export async function updateUser(body: any, options?: any) {
+export async function updateUser(body: any) {
   const { body: result } = await userService.updateProfile({ body });
   return result;
 }
@@ -350,7 +348,7 @@ export async function deleteCategory(name: any) {
   return body;
 }
 
-export async function getAllTags(withAllData = false) {
+export async function getAllTags() {
   const { body } = await tagService.getTags();
   return { data: body };
 }
@@ -504,7 +502,7 @@ export async function getOverview() {
   return { data: body };
 }
 
-export async function getAnalysis(from: any, to: any) {
+export async function getAnalysis() {
   return {};
 }
 
@@ -551,7 +549,7 @@ export async function createToken(body: any) {
   return result;
 }
 
-export async function updateToken(id: any, body: any) {
+export async function updateToken() {
   return {};
 }
 

@@ -1,4 +1,3 @@
-import React from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ProFormDateTimePicker,
@@ -8,7 +7,7 @@ import {
 } from '@ant-design/pro-components';
 import UrlFormItem from '../UrlFormItem';
 import { Col } from 'antd';
-import { FormInstance } from 'antd/lib/form';
+import type { FormInstance } from 'antd/lib/form';
 
 interface SiteInfoFormProps {
   showOption: boolean;

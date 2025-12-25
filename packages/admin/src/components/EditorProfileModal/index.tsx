@@ -1,8 +1,7 @@
-import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { ModalForm, ProFormSelect } from '@ant-design/pro-form';
 import { Alert, message } from 'antd';
-import { ReactNode } from 'react';
+import type { ReactNode } from 'react';
 
 interface EditorProfileProps {
   setValue: (value: Record<string, unknown>) => void;

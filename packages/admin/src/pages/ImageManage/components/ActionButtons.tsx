@@ -1,7 +1,6 @@
-import React from 'react';
 import { Button, Modal, Space, message } from 'antd';
 import { DeleteOutlined, ReloadOutlined } from '@ant-design/icons';
-import { ActionButtonsProps } from '../types';
+import type { ActionButtonsProps } from '../types';
 import { deleteAllIMG } from '@/services/van-blog/api';
 import CopyUploadBtn from '@/components/CopyUploadBtn';
 import UploadBtn from '@/components/UploadBtn';

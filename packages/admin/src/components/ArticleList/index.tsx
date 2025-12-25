@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React from 'react';
 import i18next from 'i18next';
 import { getRecentTimeDes } from '@/services/van-blog/tool';
 import './index.css';

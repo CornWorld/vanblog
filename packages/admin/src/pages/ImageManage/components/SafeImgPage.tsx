@@ -1,8 +1,8 @@
-import React, { useCallback, useState } from 'react';
+import { useCallback, useState } from 'react';
 import i18next from 'i18next';
 import { Empty, Image, Spin } from 'antd';
 import { getImgLink } from './tools';
-import { StaticItem } from '../types';
+import type { StaticItem } from '../types';
 
 interface SafeImgPageProps {
   data: StaticItem[];

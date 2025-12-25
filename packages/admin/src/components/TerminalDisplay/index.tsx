@@ -1,4 +1,3 @@
-import React from 'react';
 import convert from 'ansi-to-html';
 const ansiToHtml = new convert();
 export default function ({ content }: { content: string }) {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { App, Button, Dropdown, Input, Space, Tag, Modal } from 'antd';
 import type { MenuProps } from 'antd';
@@ -472,7 +472,7 @@ function EditorContent() {
                 if (window.location.hostname === 'blog-demo.mereith.com' && type === 'article') {
                   if ([28, 29].includes(Number(currObj.id))) {
                     message.warning(t('editor.message.demo.delete.error'));
-                    return false;
+                    return;
                   }
                 }
                 if (type === 'article') {

@@ -2,11 +2,9 @@ import React from 'react';
 import i18next from 'i18next';
 import { Button, message, notification } from 'antd';
 import defaultSettings from '../config/defaultSettings';
-import { createLogger } from './utils/logger';
 
 const { pwa } = defaultSettings;
 const isHttps = document.location.protocol === 'https:';
-const logger = createLogger('ServiceWorker');
 
 // Use i18next directly instead of the hook
 const t = (key) => i18next.t(key);
@@ -21,7 +19,7 @@ const clearCache = () => {
           caches.delete(key);
         });
       })
-      .catch((e) => logger.error('Failed to clear caches:', e));
+      .catch((e) => console.error('Failed to clear caches:', e));
   }
 }; // if pwa is true
 

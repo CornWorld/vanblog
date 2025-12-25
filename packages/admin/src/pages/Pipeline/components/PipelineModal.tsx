@@ -3,7 +3,6 @@ import { ModalForm, ProFormSelect, ProFormSwitch, ProFormText } from '@ant-desig
 import { getPipelineConfig, createPipeline, updatePipelineById } from '@/services/van-blog/api';
 import { useEffect, useState } from 'react';
 import { Form, message } from 'antd';
-import Logger from '@/services/Logger';
 
 interface PipelineConfig {
   eventName: string;
@@ -66,7 +65,7 @@ export default function PipelineModal({
     <ModalForm
       trigger={trigger}
       onFinish={async (vals) => {
-        Logger.log('Pipeline form submission:', vals);
+        console.log('Pipeline form submission:', vals);
         if (!check(vals as PipelineData)) {
           message.error('请填写完整信息后提交！');
           return false;

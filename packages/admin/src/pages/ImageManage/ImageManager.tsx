@@ -13,10 +13,9 @@ import { ImageGrid } from './components/ImageGrid';
 import { PaginationComponent } from './components/Pagination';
 import { ActionButtons } from './components/ActionButtons';
 import { ContextMenuPortal } from './components/ContextMenuPortal';
-import { StaticItem } from './types';
+import type { StaticItem } from './types';
 import 'react-contexify/dist/ReactContexify.css';
 import './index.less';
-import { logger } from '@/utils/logger';
 
 import { deleteImgBySign, getImgs, searchArtclesByLink } from '@/services/van-blog/api';
 import { mergeMetaInfo, copyImgLink, downloadImg, getImgLink } from './components/tools';
@@ -78,7 +77,7 @@ const ImageManager: React.FC = () => {
         setTotal(0);
       }
     } catch (error) {
-      logger.error('Failed to fetch images', error);
+      console.error('Failed to fetch images', error);
       message.error(t('image.error.get'));
       setData([]);
     } finally {
@@ -128,7 +127,7 @@ const ImageManager: React.FC = () => {
                 );
                 fetchData();
               } catch (error) {
-                logger.error('Failed to delete image', error);
+                console.error('Failed to delete image', error);
                 setLoading(false);
                 message.error(t('image.message.delete.error'));
               }
@@ -184,7 +183,7 @@ const ImageManager: React.FC = () => {
   );
 
   // Display menu method
-  const displayMenu = useCallback((e: React.MouseEvent, item: StaticItem) => {
+  const displayMenu = useCallback((_e: React.MouseEvent, item: StaticItem) => {
     setClickItem(item);
     // The show function is handled by the ContextMenuPortal component
   }, []);

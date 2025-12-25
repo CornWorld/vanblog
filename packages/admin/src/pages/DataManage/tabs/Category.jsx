@@ -11,7 +11,6 @@ import { PlusOutlined } from '@ant-design/icons';
 import { ModalForm, ProFormSelect, ProFormText, ProTable } from '@ant-design/pro-components';
 import { Button, message, Modal } from 'antd';
 import { useRef } from 'react';
-import Logger from '@/services/Logger';
 
 export default function () {
   const { t } = useTranslation();
@@ -131,7 +130,7 @@ export default function () {
                   await deleteCategory(record.name);
                   message.success(t('category.modal.delete.success'));
                 } catch (error) {
-                  Logger.error('Failed to delete category:', error);
+                  console.error('Failed to delete category:', error);
                   message.error(t('category.modal.delete.error') || '删除分类失败');
                 }
                 action?.reload();
