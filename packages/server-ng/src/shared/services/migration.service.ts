@@ -176,7 +176,8 @@ export class MigrationService {
         return [];
       }
 
-      const data = (result[0].value ?? {}) as { migrations?: MigrationRecord[] };
+      const row = result[0] as { key: string; value: unknown };
+      const data = (row.value ?? {}) as { migrations?: MigrationRecord[] };
       const migrationData = normalizeMigrationData(data);
       return [...migrationData.migrations];
     } catch (error) {

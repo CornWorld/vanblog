@@ -242,9 +242,9 @@ export class UserService {
       // 钩子错误不应中断主流程
     }
 
-    const result = await this.db.delete(users).where(eq(users.id, id)).returning();
+    const results = await this.db.delete(users).where(eq(users.id, id)).returning();
 
-    if (result.length === 0) {
+    if (results.length === 0) {
       throw new NotFoundException(`User with ID ${String(id)} not found`);
     }
 

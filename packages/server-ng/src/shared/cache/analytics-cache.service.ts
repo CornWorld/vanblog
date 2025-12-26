@@ -156,10 +156,11 @@ export class AnalyticsCacheService {
     yesterday.setDate(yesterday.getDate() - 1);
 
     // 使用单个查询获取所有统计数据
-    const todayStr = dayjs(today).format('YYYY-MM-DD');
+    const dayjsInstance = dayjs(today);
+    const todayStr = dayjsInstance.format('YYYY-MM-DD');
     const yesterdayStr = dayjs(yesterday).format('YYYY-MM-DD');
 
-    const [result] = await this.db
+    const results = await this.db
       .select({
         totalViews: sql<number>`count(*)`,
         totalUniqueVisitors: sql<number>`count(distinct ${analytics.ip})`,
@@ -170,6 +171,12 @@ export class AnalyticsCacheService {
       })
       .from(analytics);
 
+    const result: OverviewData | undefined = results[0];
+
+    if (!result) {
+      throw new Error('Failed to calculate overview: no result returned from database');
+    }
+
     return result;
   }
 
@@ -177,7 +184,7 @@ export class AnalyticsCacheService {
    * 计算页面排名
    */
   private async calculatePageRankings(): Promise<PageRankingData[]> {
-    return this.db
+    const results = await this.db
       .select({
         path: analytics.path,
         views: sql<number>`count(*)`,
@@ -186,13 +193,15 @@ export class AnalyticsCacheService {
       .from(analytics)
       .groupBy(analytics.path)
       .orderBy(desc(sql<number>`count(*)`));
+
+    return results as PageRankingData[];
   }
 
   /**
    * 计算引用来源统计
    */
   private async calculateReferrerStats(): Promise<ReferrerData[]> {
-    return this.db
+    const results = await this.db
       .select({
         referrer: analytics.referrer,
         views: sql<number>`count(*)`,
@@ -202,15 +211,18 @@ export class AnalyticsCacheService {
       .where(sql`${analytics.referrer} is not null and ${analytics.referrer} != ''`)
       .groupBy(analytics.referrer)
       .orderBy(desc(sql<number>`count(*)`));
+
+    return results as ReferrerData[];
   }
 
   /**
    * 计算图表数据 - 优化为单次查询
    */
   private async calculateChartData(): Promise<ChartData[]> {
-    const thirtyDaysAgo = dayjs().subtract(30, 'day').format('YYYY-MM-DD');
+    const dayjsInstance = dayjs();
+    const thirtyDaysAgo = dayjsInstance.subtract(30, 'day').format('YYYY-MM-DD');
 
-    return this.db
+    const results = await this.db
       .select({
         date: sql<string>`date(${analytics.createdAt})`,
         views: sql<number>`count(*)`,
@@ -220,5 +232,7 @@ export class AnalyticsCacheService {
       .where(sql`date(${analytics.createdAt}) >= ${thirtyDaysAgo}`)
       .groupBy(sql<string>`date(${analytics.createdAt})`)
       .orderBy(sql<string>`date(${analytics.createdAt})`);
+
+    return results as ChartData[];
   }
 }

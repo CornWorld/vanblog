@@ -2,13 +2,14 @@ import { dayjs, toIsoTzString } from '@vanblog/shared';
 import { sql } from 'drizzle-orm';
 
 import type { Database } from '../../database';
+import type { Dayjs } from '@vanblog/shared';
 
 const normalizeValue = (val: unknown): string => {
   if (typeof val === 'string' && val.trim() !== '') {
-    const parsed = dayjs(val);
+    const parsed: Dayjs = dayjs(val);
     if (parsed.isValid()) return toIsoTzString(parsed);
   }
-  const now = dayjs();
+  const now: Dayjs = dayjs();
   return toIsoTzString(now);
 };
 
