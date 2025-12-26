@@ -53,6 +53,9 @@ jobs:
       - name: Install dependencies
         run: pnpm i --frozen-lockfile
 
+      - name: Build shared package
+        run: pnpm --filter @vanblog/shared build
+
       - name: Unit tests
         run: pnpm -C packages/server-ng run test
 
