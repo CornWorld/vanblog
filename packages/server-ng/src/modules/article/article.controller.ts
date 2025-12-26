@@ -375,9 +375,7 @@ export class ArticleController {
   }
 
   private getUsernameFromRequest(req: ExpressRequest): string | undefined {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const maybeUser = (req as any)?.user;
-
+    const maybeUser = req.user as { username?: unknown } | undefined;
     const username = maybeUser?.username;
     return typeof username === 'string' ? username : undefined;
   }

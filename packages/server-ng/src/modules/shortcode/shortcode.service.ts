@@ -69,7 +69,6 @@ export class ShortcodeService {
     }
 
     // 检查非法字符（类似 WordPress 的限制）
-    // eslint-disable-next-line no-control-regex
     if (/[<>&/[\]\u0000-\u0020=]/.test(tag)) {
       this.logger.warn(
         `Invalid shortcode name: ${tag}. Do not use spaces or reserved characters: & / < > [ ] =`,
@@ -142,7 +141,6 @@ export class ShortcodeService {
     }
 
     // 快速匹配所有可能的标签
-    // eslint-disable-next-line no-control-regex
     const matches = content.match(/\[([^<>&/[\]\u0000-\u0020=]+)\]/g) || [];
     const potentialTags = matches.map((m) => m.slice(1, -1));
 
@@ -276,7 +274,6 @@ export class ShortcodeService {
    */
   private findTagsInContent(content: string): string[] {
     // 快速预匹配所有可能的标签
-    // eslint-disable-next-line no-control-regex
     const matches = content.matchAll(/\[([^<>&/[\]\u0000-\u0020=]+)\]/g);
     const potentialTags = new Set<string>();
 

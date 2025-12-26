@@ -36,7 +36,7 @@ export class Pipeline {
 
     this.script = data.script;
 
-    this.deps = data.deps || [];
+    this.deps = data.deps;
 
     this.status = data.status;
 

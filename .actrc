@@ -1,0 +1,9 @@
+# Act configuration - 使用完整的 GitHub Actions runner 镜像
+# 这样可以包含 Python 等构建工具
+
+-P ubuntu-latest=catthehacker/ubuntu:act-latest
+-P ubuntu-22.04=catthehacker/ubuntu:act-22.04
+-P ubuntu-20.04=catthehacker/ubuntu:act-20.04
+
+# 或者使用完整的 Node.js 镜像（非 slim 版本）
+# -P ubuntu-latest=node:22-bullseye

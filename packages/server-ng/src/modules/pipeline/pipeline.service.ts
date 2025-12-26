@@ -75,7 +75,7 @@ export class PipelineService {
    * Find pipeline by ID
    */
   async findOne(id: number): Promise<z.infer<typeof PipelineSchema>> {
-    const [pipeline] = await this.db
+    const results = await this.db
       .select()
       .from(pipelines)
       .where(
@@ -86,7 +86,8 @@ export class PipelineService {
         ),
       );
 
-    if (!pipeline) {
+    const pipeline = results[0] as z.infer<typeof PipelineSchema> | undefined;
+    if (pipeline === undefined) {
       throw new NotFoundException(`Pipeline with ID ${String(id)} not found`);
     }
 
