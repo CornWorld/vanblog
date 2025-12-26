@@ -159,7 +159,6 @@ describe('ConfigModule', () => {
 
   describe('environment-specific configuration', () => {
     it('should load configuration based on NODE_ENV', () => {
-      const _nodeEnv = process.env.NODE_ENV || 'test';
       const config = nestConfigService.get('NODE_ENV', 'development');
 
       // 在测试环境中应该加载测试配置

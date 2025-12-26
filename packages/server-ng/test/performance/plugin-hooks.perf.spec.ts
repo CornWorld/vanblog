@@ -266,7 +266,7 @@ describe('Plugin Hook System Performance (plugin-hooks.perf.spec.ts)', () => {
       dbQuery: () => Promise<any>,
     ): Promise<any> => {
       // Execute before-hook
-      const beforeResult = { ...data, processed: true };
+      const beforeResult = { ...data, processed: true, hookName };
 
       // Execute database query
       const dbResult = await dbQuery();
@@ -320,7 +320,7 @@ describe('Plugin Hook System Performance (plugin-hooks.perf.spec.ts)', () => {
    */
   it('should safely handle concurrent hook executions (100 concurrent)', async () => {
     const concurrentCount = 100;
-    const _results: any[] = [];
+
     const _threadSafetyViolations = 0;
 
     // Simulate thread-safe hook registry

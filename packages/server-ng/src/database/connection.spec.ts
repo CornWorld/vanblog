@@ -49,7 +49,7 @@ describe('Database Connection', () => {
 
     // Setup mocks
     (createClient as Mock).mockReturnValue(mockClient);
-    (drizzle as Mock).mockReturnValue(mockDb);
+    (drizzle as unknown as Mock).mockReturnValue(mockDb);
   });
 
   describe('Local Driver', () => {
@@ -534,7 +534,7 @@ describe('Database Connection', () => {
       };
 
       const drizzleError = new Error('Drizzle initialization failed');
-      (drizzle as Mock).mockImplementationOnce(() => {
+      (drizzle as unknown as Mock).mockImplementationOnce(() => {
         throw drizzleError;
       });
 
@@ -556,7 +556,7 @@ describe('Database Connection', () => {
       });
 
       // This test verifies the function at least attempts connection
-      const _connectionPromise = createDatabaseConnection(config, mockLogger);
+      void createDatabaseConnection(config, mockLogger);
       await new Promise((resolve) => setTimeout(resolve, 50));
 
       expect(createClient).toHaveBeenCalled();

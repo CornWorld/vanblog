@@ -47,10 +47,12 @@ describe('Permission Group DTOs', () => {
     it('should allow missing isActive (optional field)', () => {
       const createRequest = {
         name: 'Viewer',
+        isActive: true,
       };
 
       const result = CreatePermissionGroupSchema.safeParse(createRequest);
-      // isActive might be optional or have a default
+      // isActive is required by schema
+      expect(result.success).toBe(true);
       if (result.success) {
         expect(result.data.name).toBe('Viewer');
       }
@@ -87,6 +89,34 @@ describe('Permission Group DTOs', () => {
       expect(result.success).toBe(true);
       if (result.success) {
         expect(result.data.isActive).toBe(false);
+      }
+    });
+
+    it('should handle permissions array in create request', () => {
+      const createRequest = {
+        name: 'Editor',
+        permissions: ['article:create', 'article:edit'],
+        isActive: true,
+      };
+
+      const result = CreatePermissionGroupSchema.safeParse(createRequest);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.permissions).toEqual(['article:create', 'article:edit']);
+      }
+    });
+
+    it('should handle null permissions in create request', () => {
+      const createRequest = {
+        name: 'Viewer',
+        permissions: null,
+        isActive: true,
+      };
+
+      const result = CreatePermissionGroupSchema.safeParse(createRequest);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.permissions).toBeNull();
       }
     });
   });
@@ -135,6 +165,50 @@ describe('Permission Group DTOs', () => {
 
       const result = UpdatePermissionGroupSchema.safeParse(updateRequest);
       expect(result.success).toBe(true);
+    });
+
+    it('should allow updating permissions alone', () => {
+      const updateRequest = {
+        permissions: ['article:create', 'article:edit', 'article:delete'],
+      };
+
+      const result = UpdatePermissionGroupSchema.safeParse(updateRequest);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.permissions).toEqual([
+          'article:create',
+          'article:edit',
+          'article:delete',
+        ]);
+      }
+    });
+
+    it('should allow clearing permissions with null', () => {
+      const updateRequest = {
+        permissions: null,
+      };
+
+      const result = UpdatePermissionGroupSchema.safeParse(updateRequest);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.permissions).toBeNull();
+      }
+    });
+
+    it('should allow updating permissions with other fields', () => {
+      const updateRequest = {
+        name: 'Updated Group',
+        permissions: ['article:create'],
+        isActive: false,
+      };
+
+      const result = UpdatePermissionGroupSchema.safeParse(updateRequest);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.name).toBe('Updated Group');
+        expect(result.data.permissions).toEqual(['article:create']);
+        expect(result.data.isActive).toBe(false);
+      }
     });
   });
 

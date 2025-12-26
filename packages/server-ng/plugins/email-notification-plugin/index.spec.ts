@@ -40,9 +40,14 @@ describe('Email Notification Plugin (Functional API)', () => {
         debug: vi.fn(),
       } as any,
       filter: vi.fn(),
-      action: vi.fn((name: string, handler: (...args: any[]) => void) => {
-        actionHandlers.set(name, handler);
-      }),
+      action: vi.fn(
+        (name: string, handler: (...args: any[]) => void | Promise<void>): (() => void) => {
+          actionHandlers.set(name, handler);
+          return () => {
+            actionHandlers.delete(name);
+          };
+        },
+      ),
       shortcode: vi.fn(),
       provide: vi.fn(),
       store: vi.fn((key: string, defaultValue: any) => ({
@@ -104,7 +109,7 @@ describe('Email Notification Plugin (Functional API)', () => {
     });
 
     it('should disable email when config is incomplete', () => {
-      mockAPI.config = {
+      const incompleteConfig = {
         smtp_host: '',
         smtp_port: 587,
         smtp_secure: false,
@@ -113,6 +118,7 @@ describe('Email Notification Plugin (Functional API)', () => {
         email_from: '',
         email_to: [],
       };
+      mockAPI = { ...mockAPI, config: incompleteConfig };
 
       let activateCallback: ((...args: any[]) => void) | undefined;
       mockAPI.onActivate = vi.fn((cb) => {

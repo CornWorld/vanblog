@@ -2,6 +2,7 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { ConfigService } from '../../config/config.service';
+import { createConfigServiceMock } from '../../../test/mock-utils';
 
 import { CacheModule } from './cache.module';
 import { CacheService } from './cache.service';
@@ -10,12 +11,8 @@ import { DerivedViewCacheService } from './derived-view-cache.service';
 describe('CacheModule', () => {
   let module: TestingModule;
 
-  // Mock ConfigService
-  const mockConfigService = {
-    app: {
-      name: 'test-app',
-    },
-  } as ConfigService;
+  // Mock ConfigService using the proper mock helper
+  const mockConfigService = createConfigServiceMock();
 
   beforeEach(async () => {
     module = await Test.createTestingModule({

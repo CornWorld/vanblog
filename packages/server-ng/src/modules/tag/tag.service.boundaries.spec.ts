@@ -211,7 +211,7 @@ describe('TagService - Boundary Conditions', () => {
       const result = await service.create(createDto);
 
       expect(result.slug).toBe(longSlug);
-      expect(result.slug.length).toBe(1001);
+      expect(result.slug?.length).toBe(1001);
     });
   });
 

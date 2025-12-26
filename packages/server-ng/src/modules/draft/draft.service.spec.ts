@@ -904,7 +904,8 @@ describe('DraftService', () => {
 
       // Verify hook was called with original data
       expect(mockHookService.applyFilters).toHaveBeenCalled();
-      const [[hookName, passedDraft]] = mockHookService.applyFilters.mock.calls;
+      const [[hookName, passedDraft]] = (mockHookService.applyFilters as ReturnType<typeof vi.fn>)
+        .mock.calls;
       expect(hookName).toBe('draft|beforeUpdate');
       expect(passedDraft).toBeDefined();
 

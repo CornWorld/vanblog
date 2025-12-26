@@ -27,13 +27,16 @@ describe('ArticleService', () => {
     mockQueryOptimizer = {
       withPerformanceMonitoring: vi.fn().mockImplementation((_name, fn) => fn()),
       batchCountArticlesByTags: vi.fn().mockResolvedValue(new Map()),
-      batchCountArticlesByCategories: vi.fn().mockResolvedValue(new Map()),
       buildOptimizedSearchQuery: vi.fn().mockReturnValue([]),
-      logSlowQuery: vi.fn(),
     };
 
     mockConfigService = {
-      jwt: { secret: 'test-secret-key' },
+      jwt: {
+        secret: 'test-secret-key',
+        expiresIn: '7d',
+        refreshSecret: 'test-refresh-secret',
+        refreshExpiresIn: '30d',
+      },
       get: vi.fn((_key: string, defaultValue?: unknown) => defaultValue),
     } as Partial<ConfigService>;
 
@@ -341,7 +344,7 @@ describe('ArticleService', () => {
       const updateDto = {
         title: 'Updated Article',
         content: 'Updated content',
-        tags: JSON.stringify(['updated']),
+        tags: ['updated'],
       };
 
       const result = await service.update(1, updateDto);
@@ -388,7 +391,7 @@ describe('ArticleService', () => {
       });
 
       await expect(
-        service.update(999, { title: 'Test', content: 'Test content', tags: JSON.stringify([]) }),
+        service.update(999, { title: 'Test', content: 'Test content', tags: [] }),
       ).rejects.toThrow(NotFoundException);
     });
   });

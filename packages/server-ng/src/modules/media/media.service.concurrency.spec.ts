@@ -10,7 +10,6 @@ import { MediaService } from './services/media.service';
 import type { StorageService } from './interfaces/storage.interface';
 import type { StorageFactoryService } from './services/storage-factory.service';
 import type { LoggerService } from '../../core/logger/logger.service';
-import type { Database } from '../../database';
 import type { HookService } from '../plugin/services/hook.service';
 
 vi.mock('sharp', () => ({
@@ -69,10 +68,10 @@ describe('MediaService - Concurrency Safety', () => {
       warn: vi.fn(),
       debug: vi.fn(),
       verbose: vi.fn(),
-    } as unknown as LoggerService;
+    } as any;
 
     service = new MediaService(
-      databaseMock.build() as unknown as Database,
+      databaseMock.build() as any,
       mockStorageFactoryService as StorageFactoryService,
       mockHookService as HookService,
       mockLogger,

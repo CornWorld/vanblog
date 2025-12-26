@@ -213,7 +213,7 @@ describe('OptionsService (Public)', () => {
   });
 
   it('should filter out non-string values in include array', async () => {
-    const _result = await service.getOptions({
+    await service.getOptions({
       include: ['articles', 123, null, undefined, 'categories'] as any,
     });
 
@@ -255,8 +255,8 @@ describe('OptionsService (Public)', () => {
 
       const result = await service.getOptions({ include: ['categories'] });
 
-      expect(result.categories?.[0].description).toBeUndefined();
-      expect(result.categories?.[1].description).toBeUndefined();
+      expect((result.categories as any)?.[0]?.description).toBeUndefined();
+      expect((result.categories as any)?.[1]?.description).toBeUndefined();
     });
 
     it('should handle empty articles array', async () => {
@@ -307,7 +307,7 @@ describe('OptionsService (Public)', () => {
 
       const result = await service.getOptions({ include: ['categories'] });
 
-      expect(result.categories?.[0].slug).toBe('');
+      expect((result.categories as any)?.[0]?.slug).toBe('');
     });
 
     it('should handle undefined null in tag slug', async () => {
@@ -319,7 +319,7 @@ describe('OptionsService (Public)', () => {
 
       const result = await service.getOptions({ include: ['tags'] });
 
-      expect(result.tags?.[0].slug).toBe('');
+      expect((result.tags as any)?.[0]?.slug).toBe('');
     });
 
     it('should handle walineConfig with null serverURL', async () => {

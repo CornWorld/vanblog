@@ -199,9 +199,6 @@ describe('RssPlugin', () => {
 
   describe('RSS Plugin filesystem exception handling', () => {
     it('should handle file write failure gracefully', async () => {
-      const errorMessage = "EACCES: permission denied, open '/invalid/path/feed.xml'";
-      const _writeError = new Error(errorMessage);
-
       plugin.onModuleInit();
 
       // Verify plugin remains stable after initialization
@@ -209,9 +206,6 @@ describe('RssPlugin', () => {
     });
 
     it('should handle directory does not exist error', async () => {
-      const errorMessage = "ENOENT: no such file or directory, open '/missing/directory/feed.xml'";
-      const _noentError = new Error(errorMessage);
-
       plugin.onModuleInit();
 
       // Verify rssService is initialized despite missing directory scenario
@@ -220,9 +214,6 @@ describe('RssPlugin', () => {
     });
 
     it('should handle disk space exhausted error', async () => {
-      const errorMessage = 'ENOSPC: no space left on device, write';
-      const _enospcError = new Error(errorMessage);
-
       plugin.onModuleInit();
 
       // Verify plugin handles disk full scenario without crashing
@@ -231,9 +222,6 @@ describe('RssPlugin', () => {
     });
 
     it('should log file system errors for debugging', async () => {
-      const errorMessage = 'EISDIR: illegal operation on a directory, read';
-      const _isdirError = new Error(errorMessage);
-
       plugin.onModuleInit();
 
       // Verify error handling logs appropriately
@@ -266,8 +254,6 @@ describe('RssPlugin', () => {
     });
 
     it('should handle partial file write on error', async () => {
-      const _partialWriteError = new Error('Write interrupted: only 512 bytes written out of 1024');
-
       plugin.onModuleInit();
 
       const rssService = plugin['rssService'];
@@ -277,8 +263,6 @@ describe('RssPlugin', () => {
     });
 
     it('should cleanup temporary files on write failure', async () => {
-      const _writeError = new Error('Disk write failed');
-
       plugin.onModuleInit();
 
       const rssService = plugin['rssService'];
@@ -313,8 +297,6 @@ describe('RssPlugin', () => {
     });
 
     it('should handle file system quota exceeded error', async () => {
-      const _quotaError = new Error('EDQUOT: Disk quota exceeded');
-
       plugin.onModuleInit();
 
       const rssService = plugin['rssService'];
@@ -324,14 +306,12 @@ describe('RssPlugin', () => {
     });
 
     it('should log detailed filesystem error information for troubleshooting', async () => {
-      const _fileError = new Error('EBADF: bad file descriptor, write');
-
       plugin.onModuleInit();
 
       const rssService = plugin['rssService'];
 
       // Mock logger to capture error details
-      const _loggerErrorSpy = vi.spyOn(plugin['logger'], 'error');
+      vi.spyOn(plugin['logger'], 'error');
 
       // Plugin should be able to handle and log errors
       expect(rssService).toBeDefined();

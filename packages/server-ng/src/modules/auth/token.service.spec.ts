@@ -354,7 +354,7 @@ describe('TokenService', () => {
 
   describe('getUserActiveTokenCount', () => {
     it('should return active token count for user', () => {
-      const user = { id: String(11), username: 'user11', type: UserType.AUTHOR } as any;
+      const user = { id: 11, username: 'user11', type: UserType.AUTHOR } as any;
 
       // Generate multiple tokens for same user
       mockJwtSign
@@ -367,7 +367,7 @@ describe('TokenService', () => {
       service.generateTokenPair(user);
 
       // Both tokens should be active
-      const count = service.getUserActiveTokenCount(String(11));
+      const count = service.getUserActiveTokenCount(11);
       expect(count).toBe(2);
     });
   });

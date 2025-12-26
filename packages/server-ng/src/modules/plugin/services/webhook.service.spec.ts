@@ -234,7 +234,7 @@ describe('WebhookService', () => {
         total: 2,
         totalPages: 1,
       });
-      expect(result.data[0].events).toEqual(['article|afterCreate']);
+      expect((result as any).data[0].events).toEqual(['article|afterCreate']);
     });
 
     it('should filter by active status', async () => {
@@ -572,6 +572,11 @@ describe('WebhookService', () => {
         active: true,
         retryCount: 1,
         timeout: 5000,
+        lastTriggered: null,
+        lastStatus: null,
+        lastError: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
       };
 
       vi.spyOn(service, 'findOne').mockResolvedValue(webhook);

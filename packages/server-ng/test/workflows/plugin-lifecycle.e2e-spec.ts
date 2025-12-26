@@ -5,10 +5,8 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 
 import { AppModule } from '../../src/app.module';
 import { ConfigService } from '../../src/config';
-import { DATABASE_CONNECTION } from '../../src/database';
 import { cleanupDatabase, createAuthToken, createUser } from '../test-utils';
 
-import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import type { Server } from 'http';
 
 /**
@@ -23,7 +21,6 @@ import type { Server } from 'http';
  */
 describe('Plugin Lifecycle Integration (e2e)', () => {
   let app: INestApplication;
-  let _db: LibSQLDatabase;
   let httpServer: Server;
   let authToken: string;
 
@@ -43,7 +40,6 @@ describe('Plugin Lifecycle Integration (e2e)', () => {
 
     await app.init();
     httpServer = app.getHttpServer() as Server;
-    _db = app.get<LibSQLDatabase>(DATABASE_CONNECTION);
 
     // Setup test user
     await createUser(app);
@@ -94,6 +90,8 @@ describe('Plugin Lifecycle Integration (e2e)', () => {
           pathname: 'hook-test',
         })
         .expect(201);
+
+      const articleId = createRes.body.id;
 
       expect(createRes.body.id).toBeDefined();
       expect(createRes.body.title).toBe('Hook Test Article');

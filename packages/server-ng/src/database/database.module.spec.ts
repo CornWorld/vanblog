@@ -1,7 +1,8 @@
 import { Module } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { createConfigServiceMock } from '../../test/mock-utils';
 import type { ConfigService } from '../config/config.service';
 import type { LoggerService } from '../core/logger/logger.service';
 
@@ -27,13 +28,13 @@ describe('DatabaseModule', () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    // Mock ConfigService
-    mockConfigService = {
+    // Mock ConfigService using the proper mock helper
+    mockConfigService = createConfigServiceMock({
       database: {
         driver: 'local',
         url: 'file:./test.db',
       },
-    } as ConfigService;
+    });
 
     // Mock LoggerService
     mockLogger = {

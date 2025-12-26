@@ -14,7 +14,7 @@ describe('QueryOptimizerService', () => {
       all: vi.fn(),
       get: vi.fn(),
       run: vi.fn(),
-    } as unknown as Database;
+    } as any;
 
     service = new QueryOptimizerService();
   });

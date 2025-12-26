@@ -191,10 +191,7 @@ export class UserService {
       const normalizedPermissions = this.normalizePermissions(
         (userData as unknown as { permissions?: unknown }).permissions,
       );
-      const permissionsDb = updateUserSchema.shape.permissions.parse(normalizedPermissions) as
-        | string[]
-        | null
-        | undefined;
+      const permissionsDb = updateUserSchema.shape.permissions.parse(normalizedPermissions);
       updateData.permissions = permissionsDb;
     }
 

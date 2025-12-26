@@ -39,7 +39,7 @@ vi.mock('../utils/object-plugin.util', () => {
 
 import { resolveObjectPluginExport } from '../utils/object-plugin.util';
 
-import { LoaderService } from './loader.service';
+import { LoaderService, type PluginManifest } from './loader.service';
 
 import type { HookService } from './hook.service';
 import type { LoggerService } from '../../../core/logger/logger.service';
@@ -70,15 +70,15 @@ describe('LoaderService concurrent plugin loading (Race Condition Prevention)', 
     const service = new LoaderService(logger as any, pluginContextFactory, hookService);
 
     // Mock manifest and server version
-    vi.spyOn<any, any>(service as any, 'loadPluginManifest').mockImplementation(
-      async (path: string) => {
-        const pluginId = path.split('/').pop();
-        return {
-          name: pluginId,
-          version: '1.0.0',
-        };
-      },
-    );
+    vi.spyOn(service as any, 'loadPluginManifest').mockImplementation((async (
+      path: string,
+    ): Promise<PluginManifest | null> => {
+      const pluginId = path.split('/').pop();
+      return {
+        name: pluginId ?? 'unknown',
+        version: '1.0.0',
+      };
+    }) as any);
 
     vi.spyOn<any, any>(service as any, 'getServerVersion').mockReturnValue('1.0.0');
 
@@ -161,15 +161,15 @@ describe('LoaderService concurrent plugin loading (Race Condition Prevention)', 
       };
     });
 
-    vi.spyOn<any, any>(service as any, 'loadPluginManifest').mockImplementation(
-      async (path: string) => {
-        const pluginId = path.split('/').pop();
-        return {
-          name: pluginId,
-          version: '1.0.0',
-        };
-      },
-    );
+    vi.spyOn(service as any, 'loadPluginManifest').mockImplementation((async (
+      path: string,
+    ): Promise<PluginManifest | null> => {
+      const pluginId = path.split('/').pop();
+      return {
+        name: pluginId ?? 'unknown',
+        version: '1.0.0',
+      };
+    }) as any);
 
     vi.spyOn<any, any>(service as any, 'getServerVersion').mockReturnValue('1.0.0');
 
@@ -231,19 +231,19 @@ describe('LoaderService concurrent plugin loading (Race Condition Prevention)', 
     const service = new LoaderService(logger as any, pluginContextFactory, hookService);
 
     let callCount = 0;
-    vi.spyOn<any, any>(service as any, 'loadPluginManifest').mockImplementation(
-      async (path: string) => {
-        callCount++;
-        const pluginId = path.split('/').pop();
-        if (pluginId === 'plugin2') {
-          throw new Error('Failed to load manifest');
-        }
-        return {
-          name: pluginId,
-          version: '1.0.0',
-        };
-      },
-    );
+    vi.spyOn(service as any, 'loadPluginManifest').mockImplementation((async (
+      path: string,
+    ): Promise<PluginManifest | null> => {
+      callCount++;
+      const pluginId = path.split('/').pop();
+      if (pluginId === 'plugin2') {
+        throw new Error('Failed to load manifest');
+      }
+      return {
+        name: pluginId ?? 'unknown',
+        version: '1.0.0',
+      };
+    }) as any);
 
     vi.spyOn<any, any>(service as any, 'getServerVersion').mockReturnValue('1.0.0');
 

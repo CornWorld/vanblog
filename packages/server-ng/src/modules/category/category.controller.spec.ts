@@ -273,12 +273,12 @@ describe('CategoryController', () => {
         id: 2,
         name: 'Category B',
         slug: 'cat-b',
-        description: undefined,
+        description: null,
         private: null,
         password: null,
         createdAt: '2024-01-01T00:00:00Z',
         updatedAt: '2024-01-01T00:00:00Z',
-      };
+      } as any;
 
       vi.mocked(service.create).mockResolvedValueOnce(mockCategoryNull);
       const handler = controller.createCategory();

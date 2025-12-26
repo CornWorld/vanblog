@@ -147,6 +147,7 @@ export default defineConfig([
   {
     files: ['**/*.test.ts', '**/*.spec.ts', '**/test/**/*.ts'],
     rules: {
+      // Type safety relaxation for tests
       '@typescript-eslint/unbound-method': 'off',
       '@typescript-eslint/no-explicit-any': 'off',
       '@typescript-eslint/no-unsafe-member-access': 'off',
@@ -154,9 +155,16 @@ export default defineConfig([
       '@typescript-eslint/no-unsafe-call': 'off',
       '@typescript-eslint/no-unsafe-return': 'off',
       '@typescript-eslint/no-unsafe-argument': 'off',
+      '@typescript-eslint/no-misused-promises': 'off', // Callbacks in test setup/teardown
+      '@typescript-eslint/no-unnecessary-type-assertion': 'off', // Type guards for testing
+      '@typescript-eslint/explicit-function-return-type': 'off', // Implicit returns in test helpers
+      '@typescript-eslint/no-unnecessary-condition': 'off', // Conditional tests
+
+      // Import and style relaxation
       'no-console': 'off',
       'no-restricted-imports': 'off',
       'import/order': 'off', // Test files often need special import order for mocking
+      'prefer-destructuring': 'off', // Not always cleaner in test setup
     },
   },
 

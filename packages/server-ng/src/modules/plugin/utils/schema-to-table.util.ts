@@ -53,7 +53,7 @@ type ZodTypeName =
  * 获取 Zod Schema 的类型名称
  */
 function getZodTypeName(schema: z.ZodTypeAny): ZodTypeName {
-  return (schema._def as ZodDef).typeName as ZodTypeName;
+  return (schema._def as unknown as ZodDef).typeName as ZodTypeName;
 }
 
 /**
@@ -80,7 +80,7 @@ function getZodTypeName(schema: z.ZodTypeAny): ZodTypeName {
  * 兼容 Zod 3 (shape 是函数) 和 Zod 4 (shape 是属性)
  */
 function getZodShape(schema: z.ZodObject<z.ZodRawShape>): Record<string, z.ZodTypeAny> {
-  const def = schema._def as ZodDef;
+  const def = schema._def as unknown as ZodDef;
   // Zod 3: shape is a function, Zod 4: shape is a property
   return typeof def.shape === 'function' ? def.shape() : (def.shape ?? {});
 }
@@ -131,7 +131,7 @@ function zodSchemaToColumn(columnName: string, schema: z.ZodTypeAny): DrizzleCol
 
   // 处理 Optional、Nullable、Default 包装器
   if (typeName === 'ZodOptional' || typeName === 'ZodNullable') {
-    const innerSchema = (schema._def as ZodDef).innerType;
+    const innerSchema = (schema._def as unknown as ZodDef).innerType;
     if (!innerSchema) return null;
     const column = zodSchemaToColumn(columnName, innerSchema);
     // Optional/Nullable 不需要 notNull()
@@ -139,7 +139,7 @@ function zodSchemaToColumn(columnName: string, schema: z.ZodTypeAny): DrizzleCol
   }
 
   if (typeName === 'ZodDefault') {
-    const def = schema._def as ZodDef;
+    const def = schema._def as unknown as ZodDef;
     const innerSchema = def.innerType;
     const defaultValue = def.defaultValue?.();
     if (!innerSchema) return null;
@@ -159,7 +159,7 @@ function zodSchemaToColumn(columnName: string, schema: z.ZodTypeAny): DrizzleCol
     case 'ZodNumber': {
       // Zod number 可以是整数或浮点数
       // 检查是否有整数限制
-      const checks = (schema._def as ZodDef).checks || [];
+      const checks = (schema._def as unknown as ZodDef).checks || [];
       const isInteger = checks.some((check) => check.kind === 'int');
 
       if (isInteger) {
@@ -265,17 +265,20 @@ function zodTypeToTypeScript(schema: z.ZodTypeAny): string {
   const typeName = getZodTypeName(schema);
 
   if (typeName === 'ZodOptional') {
-    const innerType = zodTypeToTypeScript((schema._def as ZodDef).innerType!);
+    const def = (schema._def as unknown as ZodDef).innerType;
+    const innerType = def ? zodTypeToTypeScript(def) : 'unknown';
     return `${innerType} | undefined`;
   }
 
   if (typeName === 'ZodNullable') {
-    const innerType = zodTypeToTypeScript((schema._def as ZodDef).innerType!);
+    const def = (schema._def as unknown as ZodDef).innerType;
+    const innerType = def ? zodTypeToTypeScript(def) : 'unknown';
     return `${innerType} | null`;
   }
 
   if (typeName === 'ZodDefault') {
-    return zodTypeToTypeScript((schema._def as ZodDef).innerType!);
+    const def = (schema._def as unknown as ZodDef).innerType;
+    return def ? zodTypeToTypeScript(def) : 'unknown';
   }
 
   switch (typeName) {
@@ -288,7 +291,8 @@ function zodTypeToTypeScript(schema: z.ZodTypeAny): string {
     case 'ZodDate':
       return 'Date';
     case 'ZodArray': {
-      const itemType = zodTypeToTypeScript((schema._def as ZodDef).type!);
+      const def = (schema._def as unknown as ZodDef).type;
+      const itemType = def ? zodTypeToTypeScript(def) : 'unknown';
       return `Array<${itemType}>`;
     }
     case 'ZodObject':

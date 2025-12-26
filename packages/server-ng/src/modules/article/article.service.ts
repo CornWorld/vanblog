@@ -451,7 +451,7 @@ export class ArticleService {
 
     // Create missing tags
     if (Array.isArray(tagNames) && tagNames.length > 0) {
-      await this.createMissingTags(tagNames as string[]);
+      await this.createMissingTags(tagNames);
     }
 
     let newArticleData = {
@@ -519,7 +519,7 @@ export class ArticleService {
 
     // Create missing tags
     if (Array.isArray(tagNames) && tagNames.length > 0) {
-      await this.createMissingTags(tagNames as string[]);
+      await this.createMissingTags(tagNames);
     }
 
     let updateData: Record<string, unknown> = {

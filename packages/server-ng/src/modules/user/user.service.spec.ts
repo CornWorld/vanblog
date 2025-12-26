@@ -164,10 +164,6 @@ describe('UserService', () => {
 
       await service.create(createUserDto);
 
-      // Get call order from mock
-      const _selectCalls = (databaseMock.db.select as any).mock.callOrder || 0;
-      const _insertCalls = (databaseMock.db.insert as any).mock.callOrder || 0;
-
       // Verify both were called (the order is implicit in service logic)
       expect(databaseMock.db.select).toHaveBeenCalled();
       expect(databaseMock.db.insert).toHaveBeenCalled();

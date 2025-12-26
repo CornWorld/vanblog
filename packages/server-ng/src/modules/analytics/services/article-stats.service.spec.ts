@@ -416,7 +416,7 @@ describe('ArticleStatsService', () => {
         }),
       });
 
-      const _result = await service.getTopArticles(5);
+      await service.getTopArticles(5);
 
       expect(
         mockDb.select().from().leftJoin().where().groupBy().orderBy().limit,

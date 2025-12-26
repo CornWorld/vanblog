@@ -115,7 +115,7 @@ describe('BootstrapService', () => {
       mockPluginRegistryService.getAllPublicData.mockResolvedValue({
         testPlugin: { enabled: true },
       });
-      mockPluginDataValidator.normalizeProviderResult.mockImplementation((name, data) => data);
+      mockPluginDataValidator.normalizeProviderResult.mockImplementation((_, data) => data);
       mockHookService.doAction.mockResolvedValue(undefined);
       mockHookService.applyFilters.mockImplementation((_, data) => Promise.resolve(data));
 

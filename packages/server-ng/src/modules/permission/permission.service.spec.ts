@@ -773,6 +773,7 @@ describe('PermissionService', () => {
           name: 'admin',
           description: 'Administrator group',
           permissions: ['article:read', 'article:write'],
+          isActive: true,
         };
 
         mockDb.insert.mockReturnValue({
@@ -798,6 +799,7 @@ describe('PermissionService', () => {
           name: 'admin',
           description: 'Admin',
           permissions: ['new:permission'],
+          isActive: true,
         });
 
         expect(service['rolePermissionsCache'].size).toBe(0);

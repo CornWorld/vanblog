@@ -343,9 +343,9 @@ describe('Setting DTOs', () => {
 
     it('should correctly infer UpdateCustomCodeDto type', () => {
       const dto: UpdateCustomCodeDto = {
-        headerCode: '<script></script>',
+        head: '<script></script>',
       };
-      expect(dto.headerCode).toBe('<script></script>');
+      expect(dto.head).toBe('<script></script>');
     });
 
     it('should correctly infer CreateFriendLinkDto type', () => {
@@ -357,8 +357,16 @@ describe('Setting DTOs', () => {
     });
 
     it('should correctly infer UpdateLayoutDto type', () => {
-      const dto: UpdateLayoutDto = { layout: 'grid' };
-      expect(dto.layout).toBe('grid');
+      const dto: UpdateLayoutDto = {
+        showRecentPosts: true,
+        recentPostsCount: 5,
+        showCategories: true,
+        showTags: true,
+        showArchive: true,
+        showAbout: true,
+        showSearch: true,
+      };
+      expect(dto.showRecentPosts).toBe(true);
     });
 
     it('should correctly infer UpdateSiteInfoDto type', () => {

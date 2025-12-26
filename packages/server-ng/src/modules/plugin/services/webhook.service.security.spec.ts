@@ -92,7 +92,7 @@ describe('WebhookService - Security', () => {
       const _payload = JSON.stringify({ test: 'data' });
       const secret = 'my-secret';
 
-      const signature = (service as any).generateSignature(payload, secret);
+      const signature = (service as any).generateSignature(_payload, secret);
 
       expect(signature).toBeDefined();
       expect(typeof signature).toBe('string');
@@ -103,8 +103,8 @@ describe('WebhookService - Security', () => {
       const _payload = JSON.stringify({ test: 'data' });
       const secret = 'my-secret';
 
-      const sig1 = (service as any).generateSignature(payload, secret);
-      const sig2 = (service as any).generateSignature(payload, secret);
+      const sig1 = (service as any).generateSignature(_payload, secret);
+      const sig2 = (service as any).generateSignature(_payload, secret);
 
       expect(sig1).toBe(sig2);
     });
@@ -150,7 +150,7 @@ describe('WebhookService - Security', () => {
         values: vi.fn().mockResolvedValue(undefined),
       });
 
-      await (service as any).executeWebhook(webhook, 'article|afterCreate', { articleId: 1 });
+      await (service as any).executeWebhook(_webhook, 'article|afterCreate', { articleId: 1 });
 
       expect(global.fetch).toHaveBeenCalled();
       const fetchCall = (global.fetch as Mock).mock.calls[0];
@@ -185,7 +185,7 @@ describe('WebhookService - Security', () => {
         values: vi.fn().mockResolvedValue(undefined),
       });
 
-      await (service as any).executeWebhook(webhook, 'article|afterCreate', { articleId: 1 });
+      await (service as any).executeWebhook(_webhook, 'article|afterCreate', { articleId: 1 });
 
       // Verify signature header was included
       expect(global.fetch).toHaveBeenCalled();
@@ -212,8 +212,9 @@ describe('WebhookService - Security', () => {
         timeout: 5000,
       };
 
-      // Mock signature generation
-      const _payload = JSON.stringify({
+      // Mock signature generation - payload structure shown for clarity
+
+      JSON.stringify({
         event: 'article|afterCreate',
         timestamp: Math.floor(Date.now() / 1000),
         data: { articleId: 1 },
@@ -236,7 +237,7 @@ describe('WebhookService - Security', () => {
       });
 
       // Execute webhook with current timestamp
-      const result = await (service as any).executeWebhook(webhook, 'article|afterCreate', {
+      const result = await (service as any).executeWebhook(_webhook, 'article|afterCreate', {
         articleId: 1,
       });
 
@@ -245,20 +246,9 @@ describe('WebhookService - Security', () => {
     });
 
     it('should reject webhook payload with timestamp older than 5 minutes', async () => {
-      const _webhook = {
-        id: 1,
-        name: 'Test Webhook',
-        url: 'https://example.com/webhook',
-        events: ['article|afterCreate'],
-        secret: 'test-secret',
-        active: true,
-        retryCount: 1,
-        timeout: 5000,
-      };
-
       // Create payload with old timestamp (older than 5 minutes)
       const oldTimestamp = Math.floor(Date.now() / 1000) - 6 * 60; // 6 minutes ago
-      const _payload = JSON.stringify({
+      JSON.stringify({
         event: 'article|afterCreate',
         timestamp: oldTimestamp,
         data: { articleId: 1 },
@@ -289,8 +279,8 @@ describe('WebhookService - Security', () => {
       const payload2 = JSON.stringify({ articleId: 1, title: 'Test' });
 
       // Generate signatures for identical payloads
-      const sig1 = (service as any).generateSignature(payload1, webhook.secret);
-      const sig2 = (service as any).generateSignature(payload2, webhook.secret);
+      const sig1 = (service as any).generateSignature(payload1, _webhook.secret);
+      const sig2 = (service as any).generateSignature(payload2, _webhook.secret);
 
       // Signatures should be identical for identical payloads
       expect(sig1).toBe(sig2);
@@ -315,11 +305,11 @@ describe('WebhookService - Security', () => {
       });
 
       // Execute same webhook request twice
-      await (service as any).executeWebhook(webhook, 'article|afterCreate', {
+      await (service as any).executeWebhook(_webhook, 'article|afterCreate', {
         articleId: 1,
       });
 
-      await (service as any).executeWebhook(webhook, 'article|afterCreate', {
+      await (service as any).executeWebhook(_webhook, 'article|afterCreate', {
         articleId: 1,
       });
 
@@ -356,7 +346,7 @@ describe('WebhookService - Security', () => {
       });
 
       const preExecuteTime = Math.floor(Date.now() / 1000);
-      await (service as any).executeWebhook(webhook, 'article|afterCreate', { articleId: 1 });
+      await (service as any).executeWebhook(_webhook, 'article|afterCreate', { articleId: 1 });
       const postExecuteTime = Math.floor(Date.now() / 1000);
 
       // Verify fetch was called
@@ -369,8 +359,8 @@ describe('WebhookService - Security', () => {
         if (typeof requestBody === 'string') {
           const _payload = JSON.parse(requestBody);
           // Verify payload contains timestamp
-          expect(payload).toHaveProperty('timestamp');
-          const timestamp = payload.timestamp;
+          expect(_payload).toHaveProperty('timestamp');
+          const timestamp = _payload.timestamp;
           // Verify timestamp is recent (timestamp is in milliseconds from the payload)
           // Convert to seconds for comparison
           const timestampSeconds = Math.floor(timestamp / 1000);
@@ -428,7 +418,7 @@ describe('WebhookService - Security', () => {
         values: vi.fn().mockResolvedValue(undefined),
       });
 
-      const result = await (service as any).executeWebhook(webhook, 'article|afterCreate', {
+      const result = await (service as any).executeWebhook(_webhook, 'article|afterCreate', {
         articleId: 1,
       });
 

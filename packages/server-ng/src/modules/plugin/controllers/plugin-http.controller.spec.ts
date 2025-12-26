@@ -324,7 +324,7 @@ describe('PluginHttpController', () => {
   describe('getAllPluginRoutes', () => {
     it('should return all plugin routes', async () => {
       mockHttpRegistry.getAllPluginIds.mockReturnValue(['plugin-1', 'plugin-2', 'plugin-3']);
-      mockHttpRegistry.getPluginRoutes.mockImplementation((pluginId) => {
+      mockHttpRegistry.getPluginRoutes.mockImplementation((pluginId: string) => {
         const counts: any = {
           'plugin-1': [{ type: 'raw' }, { type: 'raw' }],
           'plugin-2': [{ type: 'contract' }],
@@ -352,7 +352,7 @@ describe('PluginHttpController', () => {
 
     it('should count routes per plugin correctly', async () => {
       mockHttpRegistry.getAllPluginIds.mockReturnValue(['plugin-a', 'plugin-b']);
-      mockHttpRegistry.getPluginRoutes.mockImplementation((pluginId) => {
+      mockHttpRegistry.getPluginRoutes.mockImplementation((pluginId: string) => {
         if (pluginId === 'plugin-a') return [{}, {}, {}];
         if (pluginId === 'plugin-b') return [{}];
         return [];

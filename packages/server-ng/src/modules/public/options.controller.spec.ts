@@ -185,10 +185,10 @@ describe('OptionsController (Public)', () => {
 
       const result = await controller.getOptions(query);
 
-      expect(result.data.articles.items).toHaveLength(2);
+      expect(result.data.articles?.items).toHaveLength(2);
       expect(result.data.categories).toHaveLength(2);
-      expect(result.data.articles.items[0]).toHaveProperty('id');
-      expect(result.data.articles.items[0]).toHaveProperty('title');
+      expect(result.data.articles?.items?.[0]).toHaveProperty('id');
+      expect(result.data.articles?.items?.[0]).toHaveProperty('title');
     });
   });
 

@@ -49,6 +49,7 @@ describe('AuthService', () => {
     revokeToken: vi.fn(),
     revokeAllUserTokens: vi.fn(),
     isTokenRevoked: vi.fn(),
+    generateAnonymousAccessToken: vi.fn(),
   };
 
   beforeEach(async () => {
@@ -276,11 +277,9 @@ describe('AuthService', () => {
   });
 
   describe('generateAnonymousToken', () => {
-    beforeEach(() => {
-      mockTokenService.generateAnonymousAccessToken = vi.fn().mockReturnValue('anonymous.token');
-    });
-
     it('should generate anonymous token with default expiration (12h)', () => {
+      mockTokenService.generateAnonymousAccessToken = vi.fn().mockReturnValue('anonymous.token');
+
       const result = service.generateAnonymousToken();
 
       expect(result).toEqual({
@@ -300,6 +299,8 @@ describe('AuthService', () => {
     });
 
     it('should generate anonymous token with custom expiration (24h)', () => {
+      mockTokenService.generateAnonymousAccessToken = vi.fn().mockReturnValue('anonymous.token');
+
       const result = service.generateAnonymousToken('24h');
 
       expect(result).toEqual({
@@ -319,6 +320,8 @@ describe('AuthService', () => {
     });
 
     it('should generate anonymous token with custom expiration (1h)', () => {
+      mockTokenService.generateAnonymousAccessToken = vi.fn().mockReturnValue('anonymous.token');
+
       const result = service.generateAnonymousToken('1h');
 
       expect(result).toEqual({

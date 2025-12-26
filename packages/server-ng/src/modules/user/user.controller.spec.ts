@@ -555,7 +555,9 @@ describe('UserController', () => {
 
       mockUserService.update.mockResolvedValue(mockUpdatedUser);
 
-      const handler = controller.updateProfile(mockRequest);
+      const handler = controller.updateProfile(mockRequest) as unknown as (
+        ctx: any,
+      ) => Promise<any>;
       const result = await handler({ body: updateDto });
 
       expect(service.update).toHaveBeenCalledWith(1, {
@@ -589,7 +591,9 @@ describe('UserController', () => {
 
       mockUserService.update.mockResolvedValue(mockUpdatedUser);
 
-      const handler = controller.updateProfile(mockRequest);
+      const handler = controller.updateProfile(mockRequest) as unknown as (
+        ctx: any,
+      ) => Promise<any>;
       await handler({ body: updateDto });
 
       expect(service.update).toHaveBeenCalledWith(
@@ -603,7 +607,9 @@ describe('UserController', () => {
     it('should return 401 when user is not authenticated', async () => {
       const mockRequest = {} as any;
 
-      const handler = controller.updateProfile(mockRequest);
+      const handler = controller.updateProfile(mockRequest) as unknown as (
+        ctx: any,
+      ) => Promise<any>;
       const result = await handler({ body: { nickname: 'Test' } });
 
       expect(result.status).toBe(401);
@@ -631,7 +637,9 @@ describe('UserController', () => {
 
       mockUserService.update.mockResolvedValue(mockUpdatedUser);
 
-      const handler = controller.updateProfile(mockRequest);
+      const handler = controller.updateProfile(mockRequest) as unknown as (
+        ctx: any,
+      ) => Promise<any>;
       const result = await handler({ body: updateDto });
 
       expect(result.body.avatar).toBe('https://example.com/avatar.png');
@@ -663,7 +671,7 @@ describe('UserController', () => {
 
       mockUserService.getCollaborators.mockResolvedValue(mockCollaborators);
 
-      const handler = controller.getCollaborators_tsrest();
+      const handler = controller.getCollaborators_tsrest() as unknown as () => Promise<any>;
       const result = await handler();
 
       expect(service.getCollaborators).toHaveBeenCalled();
@@ -676,7 +684,7 @@ describe('UserController', () => {
     it('should return empty array when no collaborators', async () => {
       mockUserService.getCollaborators.mockResolvedValue([]);
 
-      const handler = controller.getCollaborators_tsrest();
+      const handler = controller.getCollaborators_tsrest() as unknown as () => Promise<any>;
       const result = await handler();
 
       expect(result.status).toBe(200);
@@ -705,7 +713,7 @@ describe('UserController', () => {
 
       mockUserService.create.mockResolvedValue(mockNewUser);
 
-      const handler = controller.createCollaborator();
+      const handler = controller.createCollaborator() as unknown as (ctx: any) => Promise<any>;
       const result = await handler({ body: createDto });
 
       expect(service.create).toHaveBeenCalledWith({
@@ -740,7 +748,7 @@ describe('UserController', () => {
 
       mockUserService.create.mockResolvedValue(mockNewUser);
 
-      const handler = controller.createCollaborator();
+      const handler = controller.createCollaborator() as unknown as (ctx: any) => Promise<any>;
       const result = await handler({ body: createDto });
 
       expect(result.status).toBe(201);
@@ -769,7 +777,7 @@ describe('UserController', () => {
 
       mockUserService.update.mockResolvedValue(mockUpdatedUser);
 
-      const handler = controller.updateCollaborator();
+      const handler = controller.updateCollaborator() as unknown as (ctx: any) => Promise<any>;
       const result = await handler({ body: updateDto });
 
       expect(service.update).toHaveBeenCalledWith(2, {
@@ -800,7 +808,7 @@ describe('UserController', () => {
 
       mockUserService.update.mockResolvedValue(mockUpdatedUser);
 
-      const handler = controller.updateCollaborator();
+      const handler = controller.updateCollaborator() as unknown as (ctx: any) => Promise<any>;
       const result = await handler({ body: updateDto });
 
       expect(result.body.nickname).toBe('Just Nickname');
@@ -811,7 +819,7 @@ describe('UserController', () => {
     it('should delete a collaborator by ID', async () => {
       mockUserService.remove.mockResolvedValue(undefined);
 
-      const handler = controller.deleteCollaborator();
+      const handler = controller.deleteCollaborator() as unknown as (ctx: any) => Promise<any>;
       const result = await handler({ params: { id: '3' } });
 
       expect(service.remove).toHaveBeenCalledWith(3);
@@ -822,7 +830,7 @@ describe('UserController', () => {
     it('should handle deletion with string ID', async () => {
       mockUserService.remove.mockResolvedValue(undefined);
 
-      const handler = controller.deleteCollaborator();
+      const handler = controller.deleteCollaborator() as unknown as (ctx: any) => Promise<any>;
       const result = await handler({ params: { id: '10' } });
 
       expect(service.remove).toHaveBeenCalledWith(10);

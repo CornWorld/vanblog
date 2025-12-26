@@ -56,7 +56,7 @@ describe('Hook Integration (e2e)', () => {
       const createArticleDto = {
         title: 'Original Title',
         content: 'Test content',
-        tags: 'test',
+        tags: ['test'],
         categories: 'tech',
         pathname: 'test-article',
         author: 'admin',
@@ -81,7 +81,7 @@ describe('Hook Integration (e2e)', () => {
       const createArticleDto = {
         title: 'Test Article',
         content: 'Test content',
-        tags: 'test',
+        tags: ['test'],
         categories: 'tech',
         pathname: 'test-article-2',
         author: 'admin',
@@ -103,7 +103,7 @@ describe('Hook Integration (e2e)', () => {
       const createArticleDto = {
         title: 'Original Article',
         content: 'Original content',
-        tags: 'test',
+        tags: ['test'],
         categories: 'tech',
         pathname: 'original-article',
         author: 'admin',
@@ -122,7 +122,7 @@ describe('Hook Integration (e2e)', () => {
       const updateArticleDto = {
         title: 'Updated Title',
         content: 'Updated content',
-        tags: 'updated',
+        tags: ['updated'],
       };
 
       const result = await articleService.update(createdArticle.id, updateArticleDto);
@@ -142,7 +142,7 @@ describe('Hook Integration (e2e)', () => {
       const createArticleDto = {
         title: 'Article to Delete',
         content: 'Content to delete',
-        tags: 'test',
+        tags: ['test'],
         categories: 'tech',
         pathname: 'article-to-delete',
         author: 'admin',
@@ -179,7 +179,7 @@ describe('Hook Integration (e2e)', () => {
       const createDraftDto = {
         title: 'Original Draft Title',
         content: 'Test draft content',
-        tags: 'draft',
+        tags: ['draft'],
         author: 'admin',
       };
 
@@ -202,7 +202,7 @@ describe('Hook Integration (e2e)', () => {
       const createDraftDto = {
         title: 'Test Draft',
         content: 'Test draft content',
-        tags: 'draft',
+        tags: ['draft'],
         author: 'admin',
       };
 
@@ -222,7 +222,7 @@ describe('Hook Integration (e2e)', () => {
       const createDraftDto = {
         title: 'Original Draft',
         content: 'Original draft content',
-        tags: 'draft',
+        tags: ['draft'],
         author: 'admin',
       };
       const createdDraft = await draftService.create(createDraftDto);
@@ -239,7 +239,7 @@ describe('Hook Integration (e2e)', () => {
       const updateDraftDto = {
         title: 'Updated Draft Title',
         content: 'Updated draft content',
-        tags: 'updated',
+        tags: ['updated'],
       };
 
       const result = await draftService.update(createdDraft.id, updateDraftDto);
@@ -259,7 +259,7 @@ describe('Hook Integration (e2e)', () => {
       const createDraftDto = {
         title: 'Draft to Delete',
         content: 'Draft content to delete',
-        tags: 'draft',
+        tags: ['draft'],
         author: 'admin',
       };
       const createdDraft = await draftService.create(createDraftDto);
@@ -318,7 +318,7 @@ describe('Hook Integration (e2e)', () => {
       const createArticleDto = {
         title: 'Multi Hook Test',
         content: 'Test content',
-        tags: 'test',
+        tags: ['test'],
         categories: 'tech',
         pathname: 'multi-hook-test',
         author: 'admin',

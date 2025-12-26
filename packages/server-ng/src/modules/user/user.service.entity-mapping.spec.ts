@@ -16,7 +16,6 @@
 
 import { Test, type TestingModule } from '@nestjs/testing';
 // import { users } from '@vanblog/shared/drizzle';
-import * as bcrypt from 'bcrypt';
 import { vi } from 'vitest';
 
 import { MockUtils } from '../../../test/mock-utils';
@@ -26,7 +25,6 @@ import { HookService } from '../plugin/services/hook.service';
 import { UserService } from './user.service';
 
 vi.mock('bcrypt');
-const _mockedBcrypt = vi.mocked(bcrypt);
 
 describe('UserService - Entity Mapping', () => {
   let service: UserService;

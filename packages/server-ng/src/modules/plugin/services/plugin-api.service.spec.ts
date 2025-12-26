@@ -159,6 +159,8 @@ describe('PluginAPIFactory', () => {
       const packageJson: PluginPackageJson = {
         name: '@vanblog/test-plugin',
         version: '1.0.0',
+        main: 'index.ts',
+        type: 'module',
         vanblog: {
           config: {
             enabled: {
@@ -198,9 +200,11 @@ describe('PluginAPIFactory', () => {
       metadata = {
         id: 'test-plugin',
         name: 'Test Plugin',
+        displayName: 'Test Plugin',
         version: '1.0.0',
         description: 'A test plugin',
         author: 'Test Author',
+        main: 'index.ts',
         dir: '/plugins/test-plugin',
         config: {
           enabled: {
@@ -254,6 +258,8 @@ describe('PluginAPIFactory', () => {
     beforeEach(async () => {
       const metadata: PluginMetadata = {
         id: 'test-plugin',
+        displayName: 'Test Plugin',
+        main: 'index.ts',
         name: 'Test Plugin',
         version: '1.0.0',
         dir: '/plugins/test-plugin',
@@ -311,7 +317,9 @@ describe('PluginAPIFactory', () => {
       const metadata: PluginMetadata = {
         id: 'new-plugin',
         name: 'New Plugin',
+        displayName: 'New Plugin',
         version: '1.0.0',
+        main: 'index.ts',
         dir: '/plugins/new-plugin',
         config: {
           value: {
@@ -346,6 +354,8 @@ describe('PluginAPIFactory', () => {
     beforeEach(async () => {
       const metadata: PluginMetadata = {
         id: 'test-plugin',
+        displayName: 'Test Plugin',
+        main: 'index.ts',
         name: 'Test Plugin',
         version: '1.0.0',
         dir: '/plugins/test-plugin',
@@ -406,6 +416,8 @@ describe('PluginAPIFactory', () => {
     beforeEach(async () => {
       const metadata: PluginMetadata = {
         id: 'test-plugin',
+        displayName: 'Test Plugin',
+        main: 'index.ts',
         name: 'Test Plugin',
         version: '1.0.0',
         dir: '/plugins/test-plugin',
@@ -473,6 +485,8 @@ describe('PluginAPIFactory', () => {
     beforeEach(async () => {
       const metadata: PluginMetadata = {
         id: 'test-plugin',
+        displayName: 'Test Plugin',
+        main: 'index.ts',
         name: 'Test Plugin',
         version: '1.0.0',
         dir: '/plugins/test-plugin',
@@ -598,6 +612,8 @@ describe('PluginAPIFactory', () => {
     beforeEach(async () => {
       const metadata: PluginMetadata = {
         id: 'test-plugin',
+        displayName: 'Test Plugin',
+        main: 'index.ts',
         name: 'Test Plugin',
         version: '1.0.0',
         dir: '/plugins/test-plugin',
@@ -718,6 +734,8 @@ describe('PluginAPIFactory', () => {
     beforeEach(async () => {
       const metadata: PluginMetadata = {
         id: 'test-plugin',
+        displayName: 'Test Plugin',
+        main: 'index.ts',
         name: 'Test Plugin',
         version: '1.0.0',
         dir: '/plugins/test-plugin',
@@ -781,6 +799,8 @@ describe('PluginAPIFactory', () => {
     beforeEach(async () => {
       const metadata: PluginMetadata = {
         id: 'test-plugin',
+        displayName: 'Test Plugin',
+        main: 'index.ts',
         name: 'Test Plugin',
         version: '1.0.0',
         dir: '/plugins/test-plugin',
@@ -847,6 +867,8 @@ describe('PluginAPIFactory', () => {
     beforeEach(async () => {
       const metadata: PluginMetadata = {
         id: 'test-plugin',
+        displayName: 'Test Plugin',
+        main: 'index.ts',
         name: 'Test Plugin',
         version: '1.0.0',
         dir: '/plugins/test-plugin',
@@ -899,6 +921,8 @@ describe('PluginAPIFactory', () => {
     beforeEach(async () => {
       const metadata: PluginMetadata = {
         id: 'test-plugin',
+        displayName: 'Test Plugin',
+        main: 'index.ts',
         name: 'Test Plugin',
         version: '1.0.0',
         dir: '/plugins/test-plugin',
@@ -971,6 +995,8 @@ describe('PluginAPIFactory', () => {
     beforeEach(async () => {
       const metadata: PluginMetadata = {
         id: 'test-plugin',
+        displayName: 'Test Plugin',
+        main: 'index.ts',
         name: 'Test Plugin',
         version: '1.0.0',
         dir: '/plugins/test-plugin',
@@ -993,7 +1019,7 @@ describe('PluginAPIFactory', () => {
     });
 
     it('should register shortcode', () => {
-      const handler = vi.fn((attrs, content) => content);
+      const handler = vi.fn((_attrs: any, content) => content);
       api.shortcode('highlight', handler);
 
       expect(mockShortcodeService.register).toHaveBeenCalledWith(
@@ -1010,6 +1036,8 @@ describe('PluginAPIFactory', () => {
     beforeEach(async () => {
       const metadata: PluginMetadata = {
         id: 'test-plugin',
+        displayName: 'Test Plugin',
+        main: 'index.ts',
         name: 'Test Plugin',
         version: '1.0.0',
         dir: '/plugins/test-plugin',
@@ -1060,6 +1088,8 @@ describe('PluginAPIFactory', () => {
     beforeEach(async () => {
       const metadata: PluginMetadata = {
         id: 'test-plugin',
+        displayName: 'Test Plugin',
+        main: 'index.ts',
         name: 'Test Plugin',
         version: '1.0.0',
         dir: '/plugins/test-plugin',
@@ -1136,6 +1166,8 @@ describe('PluginAPIFactory', () => {
     beforeEach(async () => {
       const metadata: PluginMetadata = {
         id: 'test-plugin',
+        displayName: 'Test Plugin',
+        main: 'index.ts',
         name: 'Test Plugin',
         version: '1.0.0',
         dir: '/plugins/test-plugin',
@@ -1171,7 +1203,7 @@ describe('PluginAPIFactory', () => {
       // Register various hooks
       api.filter('test|filter', (data: any) => data);
       api.action('test|action', () => {});
-      api.shortcode('test', (_, content) => content);
+      api.shortcode('test', (_, content) => content ?? '');
       api.onConfigChange('key', () => {});
 
       // Cleanup

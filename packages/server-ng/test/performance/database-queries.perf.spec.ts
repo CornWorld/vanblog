@@ -67,9 +67,12 @@ describe('Database Query Optimization (database-queries.perf.spec.ts)', () => {
       }));
 
       // Simulate insert
-      const result = db.insert('articles').values(batchArticles);
-      if (result && typeof result === 'object' && 'returning' in result) {
-        await Promise.resolve(result.returning());
+      const result = (db.insert as any)('articles');
+      if (result && typeof result === 'object' && 'values' in result) {
+        const valuesResult = (result.values as unknown as any)(batchArticles);
+        if (valuesResult && typeof valuesResult === 'object' && 'returning' in valuesResult) {
+          await Promise.resolve((valuesResult.returning as any)());
+        }
       }
 
       const end = performance.now();
@@ -88,7 +91,7 @@ describe('Database Query Optimization (database-queries.perf.spec.ts)', () => {
     };
 
     logger.log(
-      `Bulk insert 1000 articles (batch ${String(batchSize)}) - Total: ${totalTime.toFixed(String(2))}ms, Throughput: ${throughput.toFixed(String(0))} articles/s`,
+      `Bulk insert 1000 articles (batch ${String(batchSize)}) - Total: ${totalTime.toFixed(2)}ms, Throughput: ${throughput.toFixed(0)} articles/s`,
     );
 
     expect(totalTime).toBeLessThan(5000);
@@ -131,11 +134,14 @@ describe('Database Query Optimization (database-queries.perf.spec.ts)', () => {
       // Simulate: select().from(articles)
       //   .innerJoin(articleTags).on(articles.id == articleTags.articleId)
       //   .leftJoin(categories).on(articles.categoryId == categories.id)
-      const query = db.select().from('articles').innerJoin('articleTags');
-      if (query && typeof query === 'object' && 'on' in query) {
-        const joined = query.on();
-        if (joined && typeof joined === 'object' && 'leftJoin' in joined) {
-          await Promise.resolve(joined.leftJoin('categories'));
+      const selectResult = (db.select as unknown as any)();
+      if (selectResult && typeof selectResult === 'object' && 'from' in selectResult) {
+        const query = (selectResult.from as any)('articles').innerJoin('articleTags');
+        if (query && typeof query === 'object' && 'on' in query) {
+          const joined = (query.on as any)();
+          if (joined && typeof joined === 'object' && 'leftJoin' in joined) {
+            await Promise.resolve((joined.leftJoin as any)('categories'));
+          }
         }
       }
 
@@ -155,7 +161,7 @@ describe('Database Query Optimization (database-queries.perf.spec.ts)', () => {
     };
 
     logger.log(
-      `Complex JOIN - Mean: ${mean.toFixed(String(2))}ms, Min: ${min.toFixed(String(2))}ms, Max: ${max.toFixed(String(2))}ms`,
+      `Complex JOIN - Mean: ${mean.toFixed(2)}ms, Min: ${min.toFixed(2)}ms, Max: ${max.toFixed(2)}ms`,
     );
 
     // JOIN should be fast with proper indexing
@@ -195,10 +201,13 @@ describe('Database Query Optimization (database-queries.perf.spec.ts)', () => {
       // Simulate: select(count(id)).from(articles)
       //   .where(published = true)
       //   .groupBy(categoryId)
-      const query = db.select('count(*)').from('articles').where({ published: true });
+      const selectResult = (db.select as unknown as any)('count(*)');
+      if (selectResult && typeof selectResult === 'object' && 'from' in selectResult) {
+        const query = (selectResult.from as any)('articles').where({ published: true });
 
-      if (query && typeof query === 'object' && 'groupBy' in query) {
-        await Promise.resolve(query.groupBy('categoryId'));
+        if (query && typeof query === 'object' && 'groupBy' in query) {
+          await Promise.resolve((query.groupBy as any)('categoryId'));
+        }
       }
 
       const end = performance.now();
@@ -217,7 +226,7 @@ describe('Database Query Optimization (database-queries.perf.spec.ts)', () => {
     };
 
     logger.log(
-      `Aggregation queries - Mean: ${mean.toFixed(String(2))}ms, Min: ${min.toFixed(String(2))}ms, Max: ${max.toFixed(String(2))}ms`,
+      `Aggregation queries - Mean: ${mean.toFixed(2)}ms, Min: ${min.toFixed(2)}ms, Max: ${max.toFixed(2)}ms`,
     );
 
     // Aggregations should be fast with proper grouping indexes
@@ -235,11 +244,8 @@ describe('Database Query Optimization (database-queries.perf.spec.ts)', () => {
     // Create mock search results
     const mockSearchResults = MockUtils.testData.createArticles(20);
 
-    databaseMock.db.select.mockReturnValue({
-      from: vi.fn().mockReturnValue({
-        where: vi.fn().mockResolvedValue(mockSearchResults),
-      }),
-    });
+    // Use setQueryResult to properly configure the mock with chainable methods
+    databaseMock.setQueryResult(mockSearchResults);
 
     const db = databaseMock.build();
 
@@ -249,16 +255,16 @@ describe('Database Query Optimization (database-queries.perf.spec.ts)', () => {
 
       // Simulate: select().from(articles)
       //   .where(title ILIKE '%term%' OR content ILIKE '%term%')
-      const query = db
-        .select()
-        .from('articles')
-        .where({
+      const selectResult = (db.select as unknown as any)();
+      if (selectResult && typeof selectResult === 'object' && 'from' in selectResult) {
+        const query = (selectResult.from as any)('articles').where({
           $or: [{ title: { ilike: `%${term}%` } }, { content: { ilike: `%${term}%` } }],
         });
 
-      // Simulate query execution
-      if (query && typeof query === 'object') {
-        await Promise.resolve(query);
+        // Simulate query execution
+        if (query && typeof query === 'object') {
+          await Promise.resolve(query);
+        }
       }
 
       const end = performance.now();
@@ -306,12 +312,15 @@ describe('Database Query Optimization (database-queries.perf.spec.ts)', () => {
       const start = performance.now();
 
       // Simulate: delete from articles where categoryId = ?
-      const deleteQuery = db.delete('articles').where({
-        categoryId: `cat-${String(i)}`,
-      });
+      const deleteResult = (db.delete as unknown as any)('articles');
+      if (deleteResult && typeof deleteResult === 'object' && 'where' in deleteResult) {
+        const deleteQuery = (deleteResult.where as any)({
+          categoryId: `cat-${String(i)}`,
+        });
 
-      if (deleteQuery && typeof deleteQuery === 'object') {
-        await Promise.resolve(deleteQuery);
+        if (deleteQuery && typeof deleteQuery === 'object') {
+          await Promise.resolve(deleteQuery);
+        }
       }
 
       const end = performance.now();
@@ -331,7 +340,7 @@ describe('Database Query Optimization (database-queries.perf.spec.ts)', () => {
     };
 
     logger.log(
-      `Cascade delete 1000 records - Mean: ${mean.toFixed(String(2))}ms, Min: ${min.toFixed(String(2))}ms, Max: ${max.toFixed(String(2))}ms, Throughput: ${((recordsToDelete * measurements.length) / (totalTime / 1000)).toFixed(String(0))} records/s`,
+      `Cascade delete 1000 records - Mean: ${mean.toFixed(2)}ms, Min: ${min.toFixed(2)}ms, Max: ${max.toFixed(2)}ms, Throughput: ${((recordsToDelete * measurements.length) / (totalTime / 1000)).toFixed(0)} records/s`,
     );
 
     expect(mean).toBeLessThan(500);
@@ -367,9 +376,12 @@ describe('Database Query Optimization (database-queries.perf.spec.ts)', () => {
     // Test indexed query (on categoryId which should have index)
     for (let _i = 0; _i < 10; _i++) {
       const start = performance.now();
-      const query = db.select().from('articles').where({ categoryId: 'cat-1' });
-      if (query && typeof query === 'object' && 'where' in query) {
-        await Promise.resolve(query.where());
+      const selectResult = (db.select as unknown as any)();
+      if (selectResult && typeof selectResult === 'object' && 'from' in selectResult) {
+        const query = (selectResult.from as any)('articles').where({ categoryId: 'cat-1' });
+        if (query && typeof query === 'object') {
+          await Promise.resolve(query);
+        }
       }
       const end = performance.now();
       measurements.indexed.push(end - start);
@@ -378,14 +390,14 @@ describe('Database Query Optimization (database-queries.perf.spec.ts)', () => {
     // Simulate non-indexed query (on description field, no index)
     for (let _i = 0; _i < 10; _i++) {
       const start = performance.now();
-      const query = db
-        .select()
-        .from('articles')
-        .where({
+      const selectResult = (db.select as unknown as any)();
+      if (selectResult && typeof selectResult === 'object' && 'from' in selectResult) {
+        const query = (selectResult.from as any)('articles').where({
           description: { ilike: '%search-term%' },
         });
-      if (query && typeof query === 'object' && 'where' in query) {
-        await Promise.resolve(query.where());
+        if (query && typeof query === 'object') {
+          await Promise.resolve(query);
+        }
       }
       const end = performance.now();
       measurements.nonIndexed.push(end - start);
@@ -405,7 +417,7 @@ describe('Database Query Optimization (database-queries.perf.spec.ts)', () => {
     };
 
     logger.log(
-      `Index efficiency - Indexed mean: ${indexedMean.toFixed(String(2))}ms, Non-indexed mean: ${nonIndexedMean.toFixed(String(2))}ms, Improvement ratio: ${improvementRatio.toFixed(String(1))}x`,
+      `Index efficiency - Indexed mean: ${indexedMean.toFixed(2)}ms, Non-indexed mean: ${nonIndexedMean.toFixed(2)}ms, Improvement ratio: ${improvementRatio.toFixed(1)}x`,
     );
 
     // For mock-based testing, both should execute quickly

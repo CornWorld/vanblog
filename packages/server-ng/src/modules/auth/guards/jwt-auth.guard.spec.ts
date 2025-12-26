@@ -176,8 +176,6 @@ describe('JwtAuthGuard', () => {
     });
 
     it('should reject token with modified signature', async () => {
-      const _originalToken =
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjEsInVzZXJuYW1lIjoidGVzdCJ9.signature123';
       const modifiedSignatureToken =
         'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjEsInVzZXJuYW1lIjoidGVzdCJ9.wrongsignature';
 

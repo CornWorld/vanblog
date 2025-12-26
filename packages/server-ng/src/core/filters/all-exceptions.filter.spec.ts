@@ -69,7 +69,7 @@ describe('AllExceptionsFilter', () => {
     filter.catch(unknown, mockArgumentsHost);
 
     expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.INTERNAL_SERVER_ERROR);
-    const calls = (mockResponse.json as any).mock.calls as any[];
+    const calls = vi.mocked(mockResponse.json).mock.calls as any[];
     expect(calls.length).toBeGreaterThan(0);
     const [lastCall] = calls.slice(-1);
     const [payload] = lastCall;
@@ -90,7 +90,7 @@ describe('AllExceptionsFilter', () => {
       filter.catch(err, mockArgumentsHost);
 
       expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.INTERNAL_SERVER_ERROR);
-      const callsProd = (mockResponse.json as any).mock.calls as any[];
+      const callsProd = vi.mocked(mockResponse.json).mock.calls as any[];
       expect(callsProd.length).toBeGreaterThan(0);
       const [lastProdCall] = callsProd.slice(-1);
       const [prodPayload] = lastProdCall;
@@ -108,7 +108,7 @@ describe('AllExceptionsFilter', () => {
       const errDev = new Error('kaboom');
       filter.catch(errDev, mockArgumentsHost);
 
-      const callsDev = (mockResponse.json as any).mock.calls as any[];
+      const callsDev = vi.mocked(mockResponse.json).mock.calls as any[];
       expect(callsDev.length).toBeGreaterThan(0);
       const [lastDevCall] = callsDev.slice(-1);
       const [devPayload] = lastDevCall;

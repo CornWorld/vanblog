@@ -53,10 +53,15 @@ describe('LoginLogService', () => {
         message: 'Login successful',
       };
 
+      const mockInsertBuilder = {
+        values: vi.fn().mockResolvedValue(undefined),
+      };
+      mockDb.insert = vi.fn().mockReturnValue(mockInsertBuilder);
+
       await service.createLog(logData);
 
       expect(mockDb.insert).toHaveBeenCalledWith(loginLogs);
-      expect(mockDb.insert(loginLogs).values).toHaveBeenCalledWith({
+      expect(mockInsertBuilder.values).toHaveBeenCalledWith({
         username: logData.username,
         ip: logData.ip,
         userAgent: logData.userAgent,
@@ -72,9 +77,14 @@ describe('LoginLogService', () => {
         message: 'Invalid credentials',
       };
 
+      const mockInsertBuilder = {
+        values: vi.fn().mockResolvedValue(undefined),
+      };
+      mockDb.insert = vi.fn().mockReturnValue(mockInsertBuilder);
+
       await service.createLog(logData);
 
-      expect(mockDb.insert(loginLogs).values).toHaveBeenCalledWith({
+      expect(mockInsertBuilder.values).toHaveBeenCalledWith({
         username: logData.username,
         ip: null,
         userAgent: null,
@@ -91,9 +101,14 @@ describe('LoginLogService', () => {
         success: true,
       };
 
+      const mockInsertBuilder = {
+        values: vi.fn().mockResolvedValue(undefined),
+      };
+      mockDb.insert = vi.fn().mockReturnValue(mockInsertBuilder);
+
       await service.createLog(logData);
 
-      expect(mockDb.insert(loginLogs).values).toHaveBeenCalledWith({
+      expect(mockInsertBuilder.values).toHaveBeenCalledWith({
         username: logData.username,
         ip: logData.ip,
         userAgent: logData.userAgent,

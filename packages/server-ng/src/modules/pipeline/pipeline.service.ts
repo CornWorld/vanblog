@@ -9,7 +9,6 @@ import { eq, and, desc } from 'drizzle-orm';
 import { z } from 'zod';
 
 import { DATABASE_CONNECTION, type Database } from '../../database';
-import { HookService } from '../plugin/services/hook.service';
 
 import {
   CreatePipelineSchema,
@@ -30,13 +29,11 @@ import {
 export class PipelineService {
   private readonly logger = new Logger(PipelineService.name);
   private readonly runnerPath: string;
-  private readonly idLock = false;
 
   constructor(
     @Inject(DATABASE_CONNECTION)
     private readonly db: Database,
     private readonly configService: ConfigService,
-    private readonly hookService: HookService,
   ) {
     // Initialize runner path from config or use default
     this.runnerPath = this.configService.get<string>(
@@ -149,7 +146,7 @@ console.log('Pipeline executed with input:', input);
 
     this.saveOrUpdateScriptToRunnerPath(newPipeline.id, newPipeline.script);
 
-    this.logger.log(`Created pipeline: ${String(newPipeline.id)} - ${String(newPipeline.name)}`);
+    this.logger.log(`Created pipeline: ${String(newPipeline.id)} - ${newPipeline.name}`);
 
     return newPipeline;
   }
@@ -284,9 +281,7 @@ console.log('Pipeline executed with input:', input);
     const pipeline = await this.findOne(id);
     const traceId = new Date().getTime();
 
-    this.logger.log(
-      `[${String(traceId)}] Running pipeline: ${String(id)} - ${String(pipeline.name)}`,
-    );
+    this.logger.log(`[${String(traceId)}] Running pipeline: ${String(id)} - ${pipeline.name}`);
 
     await this.db.update(pipelines).set({ status: 'running' }).where(eq(pipelines.id, id));
 

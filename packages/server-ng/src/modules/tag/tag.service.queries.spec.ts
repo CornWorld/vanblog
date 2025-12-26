@@ -185,6 +185,8 @@ describe('TagService - Complex Queries', () => {
       const result = await service.getArticlesByTagName('Technology', {
         page: 1,
         pageSize: 10,
+        sortBy: 'createdAt',
+        sortOrder: 'desc',
       });
 
       expect(result.items).toHaveLength(1);
@@ -202,7 +204,12 @@ describe('TagService - Complex Queries', () => {
       });
 
       await expect(
-        service.getArticlesByTagName('NonExistent', { page: 1, pageSize: 10 }),
+        service.getArticlesByTagName('NonExistent', {
+          page: 1,
+          pageSize: 10,
+          sortBy: 'createdAt',
+          sortOrder: 'desc',
+        }),
       ).rejects.toThrow(NotFoundException);
     });
   });
@@ -270,6 +277,8 @@ describe('TagService - Complex Queries', () => {
       const result = await service.getArticlesByTagId(1, {
         page: 1,
         pageSize: 10,
+        sortBy: 'createdAt',
+        sortOrder: 'desc',
       });
 
       expect(result.items).toHaveLength(1);
@@ -323,6 +332,8 @@ describe('TagService - Complex Queries', () => {
       const result = await service.getArticlesByTagId(1, {
         page: 2,
         pageSize: 10,
+        sortBy: 'createdAt',
+        sortOrder: 'desc',
       });
 
       expect(result.page).toBe(2);
@@ -394,6 +405,8 @@ describe('TagService - Complex Queries', () => {
         page: 1,
         pageSize: 10,
         includeHidden: true,
+        sortBy: 'createdAt',
+        sortOrder: 'desc',
       });
 
       expect(result).toBeDefined();
@@ -404,9 +417,14 @@ describe('TagService - Complex Queries', () => {
     it('should throw NotFoundException when tag not found', async () => {
       mockDb.limit.mockResolvedValueOnce([]);
 
-      await expect(service.getArticlesByTagId(999, { page: 1, pageSize: 10 })).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        service.getArticlesByTagId(999, {
+          page: 1,
+          pageSize: 10,
+          sortBy: 'createdAt',
+          sortOrder: 'desc',
+        }),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('should handle zero total pages correctly', async () => {
@@ -452,6 +470,8 @@ describe('TagService - Complex Queries', () => {
       const result = await service.getArticlesByTagId(1, {
         page: 1,
         pageSize: 10,
+        sortBy: 'createdAt',
+        sortOrder: 'desc',
       });
 
       expect(result.items).toHaveLength(0);

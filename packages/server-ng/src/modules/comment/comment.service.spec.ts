@@ -2,7 +2,6 @@ import { ConfigService } from '@nestjs/config';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 
-import type { AllConfig } from '../../config/config.interface';
 import { HookService } from '../plugin/services/hook.service';
 import { SettingCoreService } from '../setting/services/setting-core.service';
 
@@ -13,7 +12,6 @@ describe('CommentService', () => {
   let service: CommentService;
   let settingService: SettingCoreService;
   let hookService: HookService;
-  let _configService: ConfigService<AllConfig>;
 
   const mockWalineSetting: WalineSetting = {
     'smtp.enabled': true,
@@ -76,7 +74,6 @@ describe('CommentService', () => {
     service = module.get<CommentService>(CommentService);
     settingService = module.get(SettingCoreService);
     hookService = module.get(HookService);
-    _configService = module.get(ConfigService);
 
     // Clear any walineProcess state between tests
     try {

@@ -143,8 +143,8 @@ export class ShortcodeService {
 
     // 快速匹配所有可能的标签
     // eslint-disable-next-line no-control-regex
-    const matches = content.match(/[([^<>&/[\]\u0000-\u0020=]+)/g) || [];
-    const potentialTags = matches.map((m) => m.slice(1));
+    const matches = content.match(/\[([^<>&/[\]\u0000-\u0020=]+)\]/g) || [];
+    const potentialTags = matches.map((m) => m.slice(1, -1));
 
     // 过滤出已注册的标签并去重
     const uniqueTags = new Set<string>();
@@ -277,7 +277,7 @@ export class ShortcodeService {
   private findTagsInContent(content: string): string[] {
     // 快速预匹配所有可能的标签
     // eslint-disable-next-line no-control-regex
-    const matches = content.matchAll(/[([^<>&/[\]\u0000-\u0020=]+)/g);
+    const matches = content.matchAll(/\[([^<>&/[\]\u0000-\u0020=]+)\]/g);
     const potentialTags = new Set<string>();
 
     for (const match of matches) {

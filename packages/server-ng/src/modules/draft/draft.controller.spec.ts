@@ -366,7 +366,7 @@ describe('DraftController', () => {
     });
 
     it('should handle empty versions', async () => {
-      const versions = [];
+      const versions: unknown[] = [];
       mockDraftVersionService.getVersions.mockResolvedValue(versions);
 
       const result = await controller.getVersions(1);

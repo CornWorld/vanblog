@@ -25,7 +25,7 @@ describe('ArticleAccessGuard', () => {
       }),
       getHandler: vi.fn().mockReturnValue(() => ({})),
       getClass: vi.fn().mockReturnValue({}),
-    } as unknown as ExecutionContext;
+    } as any;
   };
 
   beforeEach(async () => {

@@ -1,13 +1,13 @@
 import { categories, tags, articles } from '@vanblog/shared/drizzle';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
-import { StatisticsService } from './statistics.service';
+import type { Database } from '../../database';
 
-// 我们不需要真实的 drizzle Database；构造一个轻量 mock，匹配调用模式
+import { StatisticsService } from './statistics.service';
 
 describe('StatisticsService', () => {
   let service: StatisticsService;
-  let db: Record<string, unknown>;
+  let db: Database;
 
   beforeEach(() => {
     const allCategories = [
@@ -102,8 +102,8 @@ describe('StatisticsService', () => {
       return { from };
     });
 
-    db = { select } as unknown as Record<string, unknown>;
-    service = new StatisticsService(db as any);
+    db = { select } as unknown as Database;
+    service = new StatisticsService(db);
   });
 
   it('should compute overall statistics correctly', async () => {
@@ -200,8 +200,8 @@ describe('StatisticsService', () => {
       return { from };
     });
 
-    const testDb = { select } as unknown as Record<string, unknown>;
-    const testService = new StatisticsService(testDb as any);
+    const testDb = { select } as unknown as Database;
+    const testService = new StatisticsService(testDb);
 
     const res = await testService.getOverallStatistics();
 
@@ -244,8 +244,8 @@ describe('StatisticsService', () => {
       return { from };
     });
 
-    const testDb = { select } as unknown as Record<string, unknown>;
-    const testService = new StatisticsService(testDb as any);
+    const testDb = { select } as unknown as Database;
+    const testService = new StatisticsService(testDb);
 
     const res = await testService.getOverallStatistics();
 
@@ -254,16 +254,19 @@ describe('StatisticsService', () => {
 
   it('should return 0 when total published word count is null/empty', async () => {
     // Override the select mock for the word-count query to return null
-    const originalSelect = (db as any).select as ReturnType<typeof vi.fn>;
-    (db as any).select = vi.fn().mockImplementation((fields?: Record<string, unknown>) => {
-      const from = vi.fn().mockImplementation((table: unknown) => {
-        if (table === articles && fields && 'total' in fields) {
-          return { where: vi.fn().mockResolvedValue([{ total: null }]) } as unknown;
-        }
-        return [];
+    const originalSelect = (db as unknown as Database & Record<string, ReturnType<typeof vi.fn>>)
+      .select as ReturnType<typeof vi.fn>;
+    (db as unknown as Database & Record<string, ReturnType<typeof vi.fn>>).select = vi
+      .fn()
+      .mockImplementation((fields?: Record<string, unknown>) => {
+        const from = vi.fn().mockImplementation((table: unknown) => {
+          if (table === articles && fields && 'total' in fields) {
+            return { where: vi.fn().mockResolvedValue([{ total: null }]) } as unknown;
+          }
+          return [];
+        });
+        return { from };
       });
-      return { from };
-    });
 
     const total = await service.getTotalPublishedWordCount();
     expect(total).toBe(0);
@@ -283,8 +286,8 @@ describe('StatisticsService', () => {
       return { from };
     });
 
-    const testDb = { select } as unknown as Record<string, unknown>;
-    const testService = new StatisticsService(testDb as any);
+    const testDb = { select } as unknown as Database;
+    const testService = new StatisticsService(testDb);
 
     const total = await testService.getTotalPublishedWordCount();
     expect(total).toBe(0);
@@ -301,8 +304,8 @@ describe('StatisticsService', () => {
       return { from };
     });
 
-    const testDb = { select } as unknown as Record<string, unknown>;
-    const testService = new StatisticsService(testDb as any);
+    const testDb = { select } as unknown as Database;
+    const testService = new StatisticsService(testDb);
 
     const total = await testService.getTotalPublishedWordCount();
     expect(total).toBe(0);
@@ -319,8 +322,8 @@ describe('StatisticsService', () => {
       return { from };
     });
 
-    const testDb = { select } as unknown as Record<string, unknown>;
-    const testService = new StatisticsService(testDb as any);
+    const testDb = { select } as unknown as Database;
+    const testService = new StatisticsService(testDb);
 
     const total = await testService.getTotalPublishedWordCount();
     expect(total).toBe(0);
@@ -342,8 +345,8 @@ describe('StatisticsService', () => {
       return { from };
     });
 
-    const testDb = { select } as unknown as Record<string, unknown>;
-    const testService = new StatisticsService(testDb as any);
+    const testDb = { select } as unknown as Database;
+    const testService = new StatisticsService(testDb);
 
     const total = await testService.getTotalPublishedWordCount();
     expect(total).toBe(0);

@@ -42,13 +42,15 @@ export type UpdatePermissionGroupType = z.infer<typeof UpdatePermissionGroupSche
 // DTO 类（用于装饰器参数，支持 isolatedModules）
 export class CreatePermissionGroupDto {
   name!: string;
-  description?: string;
-  isActive!: boolean;
+  description?: string | null;
+  permissions: string[] | null = null;
+  isActive: boolean | null = null;
 }
 
 export class UpdatePermissionGroupDto {
   name?: string;
   description?: string;
+  permissions?: string[] | null;
   isActive?: boolean;
 }
 

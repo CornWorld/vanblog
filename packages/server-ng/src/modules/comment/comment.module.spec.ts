@@ -14,7 +14,7 @@ describe('CommentModule', () => {
 
   const mockHookService = {
     doAction: vi.fn().mockResolvedValue(undefined),
-    applyFilters: vi.fn((name, data) => Promise.resolve(data)),
+    applyFilters: vi.fn((_name, data) => Promise.resolve(data)),
   };
 
   const mockSettingCoreService = {

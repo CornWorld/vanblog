@@ -20,6 +20,7 @@ describe('PipelineController', () => {
     lastRun: null,
     lastStatus: null,
     lastError: null,
+    deps: [],
     createdAt: '2024-01-01T00:00:00Z',
     updatedAt: '2024-01-01T00:00:00Z',
   };
@@ -44,7 +45,7 @@ describe('PipelineController', () => {
       remove: vi.fn().mockResolvedValue(undefined),
       getConfig: vi
         .fn()
-        .mockResolvedValue({ events: ['article|afterCreate', 'article|afterUpdate'] }),
+        .mockReturnValue({ events: ['article|afterCreate', 'article|afterUpdate'] }),
       triggerById: vi.fn().mockResolvedValue(mockExecutionResult),
       dispatchEvent: vi.fn().mockResolvedValue([mockExecutionResult]),
     };
@@ -110,6 +111,7 @@ describe('PipelineController', () => {
         eventName: 'article|afterCreate',
         script: 'console.log("new")',
         enabled: true,
+        deps: [],
       };
 
       const result = await controller.create(createDto);
@@ -124,6 +126,7 @@ describe('PipelineController', () => {
         eventName: '',
         script: 'console.log("test")',
         enabled: true,
+        deps: [],
       };
 
       vi.mocked(mockService.create as any).mockRejectedValueOnce(

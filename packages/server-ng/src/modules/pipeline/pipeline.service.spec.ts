@@ -256,6 +256,7 @@ describe('PipelineService', () => {
         eventName: 'article|afterCreate',
         script: 'console.log("new")',
         enabled: true,
+        deps: [],
       };
 
       const mockCreated = {
@@ -270,6 +271,7 @@ describe('PipelineService', () => {
         updatedAt: '2024-01-01T00:00:00Z',
       };
 
+      mockInsertChain.values.mockReturnThis();
       mockInsertChain.returning.mockResolvedValue([mockCreated]);
 
       vi.mocked(writeFileSync).mockReturnValue(undefined);
@@ -286,6 +288,7 @@ describe('PipelineService', () => {
         eventName: 'article|afterCreate',
         script: '',
         enabled: true,
+        deps: [],
       };
 
       const mockCreated = {
@@ -307,8 +310,10 @@ console.log('Pipeline executed with input:', input);
         lastError: null,
         createdAt: '2024-01-01T00:00:00Z',
         updatedAt: '2024-01-01T00:00:00Z',
+        deps: [],
       };
 
+      mockInsertChain.values.mockReturnThis();
       mockInsertChain.returning.mockResolvedValue([mockCreated]);
 
       vi.mocked(writeFileSync).mockReturnValue(undefined);
@@ -325,6 +330,7 @@ console.log('Pipeline executed with input:', input);
         eventName: '',
         script: 'console.log("test")',
         enabled: true,
+        deps: [],
       };
 
       await expect(service.create(createDto)).rejects.toThrow(BadRequestException);

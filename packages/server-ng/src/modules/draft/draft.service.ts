@@ -266,7 +266,7 @@ export class DraftService {
   async publish(id: number, publishDto: z.infer<typeof PublishDraftSchema>): Promise<Article> {
     // First, get the draft
     const draft = await this.findOne(id);
-    const draftTags = (draft.tags ?? []) as string[];
+    const draftTags = draft.tags ?? [];
 
     // Auto-create tags if they don't exist
     if (draftTags.length > 0) {

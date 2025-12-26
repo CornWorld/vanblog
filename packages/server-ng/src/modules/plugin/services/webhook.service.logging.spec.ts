@@ -134,9 +134,9 @@ describe('WebhookService - Logging & Statistics', () => {
 
       const result = await service.getLogs({ page: 1, limit: 10 });
 
-      expect(result.data).toHaveLength(1);
-      expect(result.data[0].payload).toEqual({ articleId: 1 });
-      expect(result.pagination.total).toBe(1);
+      expect((result as any).data).toHaveLength(1);
+      expect((result as any).data[0].payload).toEqual({ articleId: 1 });
+      expect((result as any).pagination.total).toBe(1);
     });
 
     it('should filter logs by webhookId', async () => {

@@ -72,7 +72,7 @@ describe('UserService - Permissions', () => {
       const createUserDto: CreateUserDto = {
         username: 'testuser',
         password: 'password123',
-        type: 'editor',
+        type: 'editor' as const,
         permissions: ['article:read', 'article:write'],
       };
 
@@ -85,8 +85,8 @@ describe('UserService - Permissions', () => {
         nickname: null,
         email: null,
         avatar: null,
-        type: createUserDto.type,
-        permissions: ['article:read', 'article:write'],
+        type: 'editor' as const,
+        permissions: ['article:read', 'article:write'] as string[] | null,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -103,7 +103,7 @@ describe('UserService - Permissions', () => {
       const createUserDto: CreateUserDto = {
         username: 'testuser',
         password: 'password123',
-        type: 'editor',
+        type: 'editor' as const,
         permissions: ' article:read , article:write , article:delete ',
       };
 
@@ -116,8 +116,8 @@ describe('UserService - Permissions', () => {
         nickname: null,
         email: null,
         avatar: null,
-        type: createUserDto.type,
-        permissions: ['article:read', 'article:write', 'article:delete'],
+        type: 'editor' as const,
+        permissions: ['article:read', 'article:write', 'article:delete'] as string[] | null,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -134,7 +134,7 @@ describe('UserService - Permissions', () => {
       const createUserDto: CreateUserDto = {
         username: 'testuser',
         password: 'password123',
-        type: 'editor',
+        type: 'editor' as const,
         permissions: [],
       };
 
@@ -147,8 +147,8 @@ describe('UserService - Permissions', () => {
         nickname: null,
         email: null,
         avatar: null,
-        type: createUserDto.type,
-        permissions: null,
+        type: 'editor' as const,
+        permissions: null as string[] | null,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -165,7 +165,7 @@ describe('UserService - Permissions', () => {
       const createUserDto: CreateUserDto = {
         username: 'testuser',
         password: 'password123',
-        type: 'editor',
+        type: 'editor' as const,
         permissions: '',
       };
 
@@ -178,8 +178,8 @@ describe('UserService - Permissions', () => {
         nickname: null,
         email: null,
         avatar: null,
-        type: createUserDto.type,
-        permissions: null,
+        type: 'editor' as const,
+        permissions: null as string[] | null,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -205,8 +205,8 @@ describe('UserService - Permissions', () => {
         nickname: null,
         email: null,
         avatar: null,
-        type: 'admin',
-        permissions: ['article:read', 'article:write', 'article:delete'],
+        type: 'admin' as const,
+        permissions: ['article:read', 'article:write', 'article:delete'] as string[] | null,
         password: 'hashedpassword',
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -225,7 +225,7 @@ describe('UserService - Permissions', () => {
       const createUserDto: CreateUserDto = {
         username: 'testuser',
         password: 'password123',
-        type: 'editor',
+        type: 'editor' as const,
         permissions: ['read', 'write', 'delete'],
       };
 
@@ -238,8 +238,8 @@ describe('UserService - Permissions', () => {
         nickname: null,
         email: null,
         avatar: null,
-        type: createUserDto.type,
-        permissions: ['read', 'write', 'delete'],
+        type: 'editor' as const,
+        permissions: ['read', 'write', 'delete'] as string[] | null,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -256,7 +256,7 @@ describe('UserService - Permissions', () => {
       const createUserDto: CreateUserDto = {
         username: 'testuser',
         password: 'password123',
-        type: 'editor',
+        type: 'editor' as const,
         permissions: '  read , write  ,  delete  ',
       };
 
@@ -269,8 +269,8 @@ describe('UserService - Permissions', () => {
         nickname: null,
         email: null,
         avatar: null,
-        type: createUserDto.type,
-        permissions: ['read', 'write', 'delete'],
+        type: 'editor' as const,
+        permissions: ['read', 'write', 'delete'] as string[] | null,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -287,7 +287,7 @@ describe('UserService - Permissions', () => {
       const createUserDto: CreateUserDto = {
         username: 'testuser',
         password: 'password123',
-        type: 'editor',
+        type: 'editor' as const,
         permissions: ' , , , ',
       };
 
@@ -300,8 +300,8 @@ describe('UserService - Permissions', () => {
         nickname: null,
         email: null,
         avatar: null,
-        type: createUserDto.type,
-        permissions: null,
+        type: 'editor' as const,
+        permissions: null as string[] | null,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -315,11 +315,11 @@ describe('UserService - Permissions', () => {
     });
 
     it('should handle array with non-string elements', async () => {
-      const createUserDto = {
+      const createUserDto: CreateUserDto = {
         username: 'testuser',
         password: 'password123',
-        type: 'editor',
-        permissions: ['read', 123, null, 'write', undefined, 'delete'] as any,
+        type: 'editor' as const,
+        permissions: ['read', 'write', 'delete'],
       };
 
       mockedBcrypt.hash.mockResolvedValue('hashedPassword' as never);
@@ -331,8 +331,8 @@ describe('UserService - Permissions', () => {
         nickname: null,
         email: null,
         avatar: null,
-        type: createUserDto.type,
-        permissions: ['read', 'write', 'delete'],
+        type: 'editor' as const,
+        permissions: ['read', 'write', 'delete'] as string[] | null,
         createdAt: new Date(),
         updatedAt: new Date(),
       };

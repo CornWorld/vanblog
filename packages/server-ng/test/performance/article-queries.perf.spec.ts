@@ -38,10 +38,10 @@ describe('Article Query Performance (article-queries.perf.spec.ts)', () => {
     const mockArticle = MockUtils.testData.createArticle({ id: '1' });
     const measurements: number[] = [];
 
+    const fromMock = vi.fn().mockResolvedValue([mockArticle]);
+
     databaseMock.db.select.mockReturnValue({
-      from: vi.fn().mockReturnValue({
-        where: vi.fn().mockResolvedValue([mockArticle]),
-      }),
+      from: vi.fn().mockReturnValue({ where: fromMock }),
     });
 
     // Simulate database operation
@@ -52,10 +52,11 @@ describe('Article Query Performance (article-queries.perf.spec.ts)', () => {
       const start = performance.now();
 
       // Simulate select().from().where() query
-      const result = await Promise.resolve(db.select());
+      const result = await Promise.resolve((db.select as any)());
       await new Promise((resolve) => {
         if (result && typeof result === 'object' && 'from' in result) {
-          resolve(result);
+          const fromResult = (result.from as any)();
+          resolve(fromResult);
         }
       });
 
@@ -89,17 +90,8 @@ describe('Article Query Performance (article-queries.perf.spec.ts)', () => {
     // Create mock data for a single page
     const mockPageData = MockUtils.testData.createArticles(pageSize);
 
-    databaseMock.db.select.mockReturnValue({
-      from: vi.fn().mockReturnValue({
-        where: vi.fn().mockReturnValue({
-          orderBy: vi.fn().mockReturnValue({
-            limit: vi.fn().mockReturnValue({
-              offset: vi.fn().mockResolvedValue(mockPageData),
-            }),
-          }),
-        }),
-      }),
-    });
+    // Use setQueryResult to properly configure the mock with chainable methods
+    databaseMock.setQueryResult(mockPageData);
 
     const db = databaseMock.build();
 
@@ -109,11 +101,18 @@ describe('Article Query Performance (article-queries.perf.spec.ts)', () => {
       const start = performance.now();
 
       // Simulate: select().from().where().orderBy().limit().offset()
-      const query = db.select().from('articles').where({ published: true });
-      if (query && typeof query === 'object' && 'orderBy' in query) {
-        const ordered = query.orderBy('createdAt');
-        if (ordered && typeof ordered === 'object' && 'limit' in query) {
-          await Promise.resolve(ordered.limit(pageSize));
+      const selectFn = db.select as unknown as () => {
+        from: (table: string) => {
+          where: (conditions: Record<string, unknown>) => {
+            orderBy: (field: string) => { limit: (size: number) => Promise<unknown> };
+          };
+        };
+      };
+      const queryResult = selectFn?.()?.from('articles')?.where({ published: true });
+      if (queryResult && typeof queryResult === 'object' && 'orderBy' in queryResult) {
+        const ordered = queryResult.orderBy('createdAt');
+        if (ordered && typeof ordered === 'object' && 'limit' in ordered) {
+          await Promise.resolve((ordered.limit as (size: number) => Promise<unknown>)(pageSize));
         }
       }
 
@@ -143,13 +142,8 @@ describe('Article Query Performance (article-queries.perf.spec.ts)', () => {
     const measurements: number[] = [];
     const mockResults = MockUtils.testData.createArticles(50);
 
-    databaseMock.db.select.mockReturnValue({
-      from: vi.fn().mockReturnValue({
-        where: vi.fn().mockReturnValue({
-          orderBy: vi.fn().mockResolvedValue(mockResults),
-        }),
-      }),
-    });
+    // Use setQueryResult to properly configure the mock with chainable methods
+    databaseMock.setQueryResult(mockResults);
 
     const db = databaseMock.build();
 
@@ -159,18 +153,29 @@ describe('Article Query Performance (article-queries.perf.spec.ts)', () => {
 
       // Simulate complex filter:
       // WHERE published = true AND category IN (...) AND tags CONTAINS (...) AND createdAt >= ...
-      const query = db
-        .select()
-        .from('articles')
-        .where({
+      const selectFn = db.select as unknown as () => {
+        from: (table: string) => {
+          where: (conditions: Record<string, unknown>) => {
+            orderBy: (field: string, direction?: string) => Promise<unknown>;
+          };
+        };
+      };
+      const queryResult = selectFn?.()
+        ?.from('articles')
+        ?.where({
           published: true,
           categoryId: { in: ['cat1', 'cat2', 'cat3'] },
           createdAt: { gte: new Date('2024-01-01') },
         });
 
       // Simulate OrderBy on query result
-      if (query && typeof query === 'object' && 'orderBy' in query) {
-        await Promise.resolve(query.orderBy('createdAt', 'DESC'));
+      if (queryResult && typeof queryResult === 'object' && 'orderBy' in queryResult) {
+        await Promise.resolve(
+          (queryResult.orderBy as (field: string, direction?: string) => Promise<unknown>)(
+            'createdAt',
+            'DESC',
+          ),
+        );
       }
 
       const end = performance.now();
@@ -198,11 +203,14 @@ describe('Article Query Performance (article-queries.perf.spec.ts)', () => {
     const mockArticle = MockUtils.testData.createArticle();
     let degradationDetected = false;
 
-    databaseMock.db.select.mockReturnValue({
+    const selectFn = vi.fn();
+    selectFn.mockReturnValue({
       from: vi.fn().mockReturnValue({
         where: vi.fn().mockResolvedValue([mockArticle]),
       }),
     });
+
+    databaseMock.db.select = selectFn as any;
 
     const db = databaseMock.build();
 
@@ -211,7 +219,17 @@ describe('Article Query Performance (article-queries.perf.spec.ts)', () => {
     const firstBatch = await Promise.all(
       Array(10)
         .fill(null)
-        .map(() => Promise.resolve(db.select())),
+        .map(() =>
+          Promise.resolve(
+            (
+              db.select as unknown as () => {
+                from: (table: string) => {
+                  where: (conditions: Record<string, unknown>) => Promise<unknown[]>;
+                };
+              }
+            )(),
+          ),
+        ),
     );
     const firstBatchTime = performance.now() - firstBatchStart;
 
@@ -220,7 +238,17 @@ describe('Article Query Performance (article-queries.perf.spec.ts)', () => {
     const secondBatch = await Promise.all(
       Array(10)
         .fill(null)
-        .map(() => Promise.resolve(db.select())),
+        .map(() =>
+          Promise.resolve(
+            (
+              db.select as unknown as () => {
+                from: (table: string) => {
+                  where: (conditions: Record<string, unknown>) => Promise<unknown[]>;
+                };
+              }
+            )(),
+          ),
+        ),
     );
     const secondBatchTime = performance.now() - secondBatchStart;
 
@@ -229,7 +257,17 @@ describe('Article Query Performance (article-queries.perf.spec.ts)', () => {
     const thirdBatch = await Promise.all(
       Array(10)
         .fill(null)
-        .map(() => Promise.resolve(db.select())),
+        .map(() =>
+          Promise.resolve(
+            (
+              db.select as unknown as () => {
+                from: (table: string) => {
+                  where: (conditions: Record<string, unknown>) => Promise<unknown[]>;
+                };
+              }
+            )(),
+          ),
+        ),
     );
     const thirdBatchTime = performance.now() - thirdBatchStart;
 
@@ -238,7 +276,17 @@ describe('Article Query Performance (article-queries.perf.spec.ts)', () => {
     const finalBatch = await Promise.all(
       Array(20)
         .fill(null)
-        .map(() => Promise.resolve(db.select())),
+        .map(() =>
+          Promise.resolve(
+            (
+              db.select as unknown as () => {
+                from: (table: string) => {
+                  where: (conditions: Record<string, unknown>) => Promise<unknown[]>;
+                };
+              }
+            )(),
+          ),
+        ),
     );
     const finalBatchTime = performance.now() - finalBatchStart;
 
@@ -290,13 +338,16 @@ describe('Article Query Performance (article-queries.perf.spec.ts)', () => {
       })),
     };
 
-    databaseMock.db.select.mockReturnValue({
+    const selectFn = vi.fn();
+    selectFn.mockReturnValue({
       from: vi.fn().mockReturnValue({
         where: vi.fn().mockReturnValue({
           with: vi.fn().mockResolvedValue([articleWith100Tags]),
         }),
       }),
     });
+
+    databaseMock.db.select = selectFn as any;
 
     const db = databaseMock.build();
 
@@ -305,9 +356,16 @@ describe('Article Query Performance (article-queries.perf.spec.ts)', () => {
       const start = performance.now();
 
       // Simulate: select().from('articles').where(...).with('tags', ...)
-      const query = db.select().from('articles').where({ id: '1' });
+      const selectQuery = db.select as unknown as () => {
+        from: (table: string) => {
+          where: (conditions: Record<string, unknown>) => {
+            with: (relation: string) => Promise<unknown[]>;
+          };
+        };
+      };
+      const query = selectQuery().from('articles').where({ id: '1' });
       if (query && typeof query === 'object' && 'with' in query) {
-        await Promise.resolve(query.with('tags'));
+        await Promise.resolve((query.with as (relation: string) => Promise<unknown[]>)('tags'));
       }
 
       const end = performance.now();
@@ -334,11 +392,8 @@ describe('Article Query Performance (article-queries.perf.spec.ts)', () => {
   it('should maintain stable memory usage over repeated queries', () => {
     const mockArticle = MockUtils.testData.createArticle();
 
-    databaseMock.db.select.mockReturnValue({
-      from: vi.fn().mockReturnValue({
-        where: vi.fn().mockResolvedValue([mockArticle]),
-      }),
-    });
+    // Use setQueryResult to properly configure the mock with chainable methods
+    databaseMock.setQueryResult([mockArticle]);
 
     const db = databaseMock.build();
 
@@ -350,7 +405,9 @@ describe('Article Query Performance (article-queries.perf.spec.ts)', () => {
 
     // Run 1000 queries
     for (let i = 0; i < 1000; i++) {
-      void Promise.resolve(db.select());
+      void Promise.resolve(
+        (db.select as unknown as () => { from: (table: string) => Promise<unknown[]> })?.(),
+      );
     }
 
     // Force garbage collection if available

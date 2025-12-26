@@ -73,12 +73,6 @@ describe('UserService - Create Advanced', () => {
         type: 'admin',
       };
 
-      const _createUserDto2: CreateUserDto = {
-        username: 'concurrentuser',
-        password: 'password456',
-        type: 'editor',
-      };
-
       mockedBcrypt.hash.mockResolvedValue('hashedPassword' as never);
 
       // First call finds no user, second call also finds no user (simulating race condition)

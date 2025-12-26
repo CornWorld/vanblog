@@ -60,7 +60,7 @@ describe('DerivedViewCacheService', () => {
     const result = await service.getDerivedView({ key, generator, ttl: 60 });
 
     expect(generator).toHaveBeenCalledTimes(1);
-    expect(result).toEqual({ value: 42 });
+    expect(result as any).toEqual({ value: 42 });
 
     const cached = (await cache.get<CachedResult>(key)) as CachedResult;
     expect(cached).toBeTruthy();
@@ -81,7 +81,7 @@ describe('DerivedViewCacheService', () => {
     const generator = vi.fn().mockResolvedValue({ value: 'new' });
     const result = await service.getDerivedView({ key, generator, ttl: 60 });
 
-    expect(result).toEqual({ value: 'fresh' });
+    expect(result as any).toEqual({ value: 'fresh' });
     expect(generator).not.toHaveBeenCalled();
   });
 
@@ -107,7 +107,7 @@ describe('DerivedViewCacheService', () => {
     });
 
     // 立即返回旧数据
-    expect(result).toEqual({ value: 'stale' });
+    expect(result as any).toEqual({ value: 'stale' });
 
     // Wait briefly for async regeneration (with real timers since not in fake timer mode)
     await new Promise((resolve) => setTimeout(resolve, 50));
@@ -130,8 +130,8 @@ describe('DerivedViewCacheService', () => {
       vi.useFakeTimers();
 
       const key = 'test:exact-ttl';
-      const ttl = 1000; // 1 second in milliseconds
-      const _swrTolerance = 60000; // 60 seconds
+      const ttl = 1; // 1 second
+      const swrTolerance = 60; // 60 seconds
       const createdAt = Date.now(); // Current fake time
 
       const cached: CachedResult = {
@@ -141,21 +141,21 @@ describe('DerivedViewCacheService', () => {
       await cache.set(key, cached);
 
       // Jump to exactly TTL seconds later
-      vi.setSystemTime(createdAt + ttl);
+      vi.setSystemTime(createdAt + ttl * 1000);
 
       const generator = vi.fn().mockResolvedValue({ value: 'fresh-at-ttl' });
 
       const result = await service.getDerivedView({
         key,
         generator,
-        ttl: String(1),
+        ttl,
         swr: true,
-        swrTolerance: String(60),
+        swrTolerance,
       });
 
       // At exact TTL boundary (ttl + 0), should still be within SWR window
       // So should return stale and trigger async regen
-      expect(result.value).toBe('stale');
+      expect((result as any).value).toBe('stale');
 
       vi.useRealTimers();
     });
@@ -164,8 +164,8 @@ describe('DerivedViewCacheService', () => {
       vi.useFakeTimers();
 
       const key = 'test:swr-quarter';
-      const ttl = 1000; // 1 second
-      const swrTolerance = 40000; // 40 seconds
+      const ttl = 1; // 1 second
+      const swrTolerance = 40; // 40 seconds
       const createdAt = Date.now();
 
       const cached: CachedResult = {
@@ -175,7 +175,7 @@ describe('DerivedViewCacheService', () => {
       await cache.set(key, cached);
 
       // Jump to TTL + 0.25 * swrTolerance
-      const timeAtQuarter = createdAt + ttl + 0.25 * swrTolerance;
+      const timeAtQuarter = createdAt + ttl * 1000 + 0.25 * swrTolerance * 1000;
       vi.setSystemTime(timeAtQuarter);
 
       const generator = vi.fn().mockResolvedValue({ value: 'fresh-quarter' });
@@ -183,13 +183,13 @@ describe('DerivedViewCacheService', () => {
       const result = await service.getDerivedView({
         key,
         generator,
-        ttl: String(1),
+        ttl,
         swr: true,
-        swrTolerance: String(40),
+        swrTolerance,
       });
 
       // Should still be within SWR window (0.25 * tolerance is well within)
-      expect(result.value).toBe('stale-quarter');
+      expect((result as any).value).toBe('stale-quarter');
 
       // Advance fake timers to let async regen happen
       vi.advanceTimersByTime(100);
@@ -202,8 +202,8 @@ describe('DerivedViewCacheService', () => {
       vi.useFakeTimers();
 
       const key = 'test:swr-middle';
-      const ttl = 2000; // 2 seconds
-      const swrTolerance = 60000; // 60 seconds
+      const ttl = 2; // 2 seconds
+      const swrTolerance = 60; // 60 seconds
       const createdAt = Date.now();
 
       const cached: CachedResult = {
@@ -213,7 +213,7 @@ describe('DerivedViewCacheService', () => {
       await cache.set(key, cached);
 
       // Jump to TTL + 0.5 * swrTolerance
-      const timeAtMiddle = createdAt + ttl + 0.5 * swrTolerance;
+      const timeAtMiddle = createdAt + ttl * 1000 + 0.5 * swrTolerance * 1000;
       vi.setSystemTime(timeAtMiddle);
 
       const generator = vi.fn().mockResolvedValue({ value: 'fresh-middle' });
@@ -221,13 +221,13 @@ describe('DerivedViewCacheService', () => {
       const result = await service.getDerivedView({
         key,
         generator,
-        ttl: String(2),
+        ttl,
         swr: true,
-        swrTolerance: String(60),
+        swrTolerance,
       });
 
       // At 50% through SWR window, should still return stale
-      expect(result.value).toBe('stale-middle');
+      expect((result as any).value).toBe('stale-middle');
 
       vi.advanceTimersByTime(100);
       await vi.runAllTimersAsync();
@@ -239,8 +239,8 @@ describe('DerivedViewCacheService', () => {
       vi.useFakeTimers();
 
       const key = 'test:swr-late';
-      const ttl = 1000;
-      const swrTolerance = 80000; // 80 seconds
+      const ttl = 1;
+      const swrTolerance = 80; // 80 seconds
       const createdAt = Date.now();
 
       const cached: CachedResult = {
@@ -250,7 +250,7 @@ describe('DerivedViewCacheService', () => {
       await cache.set(key, cached);
 
       // Jump to TTL + 0.75 * swrTolerance
-      const timeAtLate = createdAt + ttl + 0.75 * swrTolerance;
+      const timeAtLate = createdAt + ttl * 1000 + 0.75 * swrTolerance * 1000;
       vi.setSystemTime(timeAtLate);
 
       const generator = vi.fn().mockResolvedValue({ value: 'fresh-late' });
@@ -258,13 +258,13 @@ describe('DerivedViewCacheService', () => {
       const result = await service.getDerivedView({
         key,
         generator,
-        ttl: String(1),
+        ttl,
         swr: true,
-        swrTolerance: String(80),
+        swrTolerance,
       });
 
       // At 75% through SWR window, still within bounds
-      expect(result.value).toBe('stale-late');
+      expect((result as any).value).toBe('stale-late');
 
       vi.advanceTimersByTime(100);
       await vi.runAllTimersAsync();
@@ -276,8 +276,8 @@ describe('DerivedViewCacheService', () => {
       vi.useFakeTimers();
 
       const key = 'test:swr-boundary';
-      const ttl = 1000; // 1 second
-      const swrTolerance = 30000; // 30 seconds
+      const ttl = 1; // 1 second
+      const swrTolerance = 30; // 30 seconds
       const createdAt = Date.now();
 
       const cached: CachedResult = {
@@ -287,7 +287,7 @@ describe('DerivedViewCacheService', () => {
       await cache.set(key, cached);
 
       // Jump to PAST the TTL + swrTolerance boundary (outside SWR window)
-      const timeOutsideBoundary = createdAt + ttl + swrTolerance + 1;
+      const timeOutsideBoundary = createdAt + (ttl + swrTolerance) * 1000 + 1;
       vi.setSystemTime(timeOutsideBoundary);
 
       const generator = vi.fn().mockResolvedValue({ value: 'fresh-boundary' });
@@ -295,14 +295,14 @@ describe('DerivedViewCacheService', () => {
       const result = await service.getDerivedView({
         key,
         generator,
-        ttl: String(1),
+        ttl,
         swr: true,
-        swrTolerance: String(30),
+        swrTolerance,
       });
 
       // Outside the SWR window (beyond TTL + swrTolerance), should be synchronous regeneration
       // Result should be fresh, not stale
-      expect(result.value).toBe('fresh-boundary');
+      expect((result as any).value).toBe('fresh-boundary');
 
       vi.useRealTimers();
     });
@@ -310,8 +310,8 @@ describe('DerivedViewCacheService', () => {
     it('should provide stale-while-revalidate at various intermediate points', async () => {
       vi.useFakeTimers();
 
-      const ttl = 5000; // 5 seconds
-      const swrTolerance = 100000; // 100 seconds
+      const ttl = 5; // 5 seconds
+      const swrTolerance = 100; // 100 seconds
 
       // Test at multiple points within SWR window
       const testPoints = [
@@ -336,7 +336,7 @@ describe('DerivedViewCacheService', () => {
         await cache.set(key, cached);
 
         // Jump to offset within SWR window
-        const timeAtOffset = createdAt + ttl + testPoint.offset * swrTolerance;
+        const timeAtOffset = createdAt + ttl * 1000 + testPoint.offset * swrTolerance * 1000;
         vi.setSystemTime(timeAtOffset);
 
         const generator = vi.fn().mockResolvedValue({ value: `fresh-${String(i)}` });
@@ -344,13 +344,13 @@ describe('DerivedViewCacheService', () => {
         const result = await service.getDerivedView({
           key,
           generator,
-          ttl: 5,
+          ttl,
           swr: true,
-          swrTolerance: 100,
+          swrTolerance,
         });
 
         // All intermediate points should return stale and trigger async regen
-        expect(result.value).toBe(`stale-${String(i)}`);
+        expect((result as any).value).toBe(`stale-${String(i)}`);
       }
 
       vi.useRealTimers();
@@ -379,7 +379,7 @@ describe('DerivedViewCacheService', () => {
       const result = await service.getDerivedView({ key, generator, ttl, swr: true, swrTolerance });
 
       // Should be in SWR window (async regen)
-      expect(result.value).toBe('test-math');
+      expect((result as any).value).toBe('test-math');
 
       // Verify math:
       // age = now - timestamp = (createdAt + ttl*1000 + elapsedInSwr) - createdAt
@@ -412,7 +412,7 @@ describe('DerivedViewCacheService', () => {
 
     const result = await service.getDerivedView({ key, generator, ttl, swr: true, swrTolerance });
 
-    expect(result).toEqual({ value: 'new-sync' });
+    expect(result as any).toEqual({ value: 'new-sync' });
 
     const updated = (await cache.get<CachedResult>(key)) as CachedResult;
     expect(updated.data).toEqual({ value: 'new-sync' });
@@ -433,7 +433,7 @@ describe('DerivedViewCacheService', () => {
 
     const result = await service.getDerivedView({ key, generator, ttl, swr: false });
 
-    expect(result).toEqual({ value: 'fresh' });
+    expect(result as any).toEqual({ value: 'fresh' });
   });
 
   it('should invalidate cache', async () => {
@@ -523,7 +523,7 @@ describe('DerivedViewCacheService', () => {
     // This should still return stale data and attempt async regeneration
     const result = await service.getDerivedView({ key, generator, ttl, swr: true, swrTolerance });
 
-    expect(result).toEqual({ value: 'stale' });
+    expect(result as any).toEqual({ value: 'stale' });
 
     // Advance fake timers for async regeneration attempt
     vi.advanceTimersByTime(100);
@@ -562,7 +562,7 @@ describe('DerivedViewCacheService', () => {
     const results = await Promise.all(promises);
 
     // All should return stale data
-    expect(results).toEqual([{ value: 'stale' }, { value: 'stale' }, { value: 'stale' }]);
+    expect(results as any).toEqual([{ value: 'stale' }, { value: 'stale' }, { value: 'stale' }]);
 
     // Advance fake timers for async regeneration
     vi.advanceTimersByTime(100);
@@ -607,7 +607,7 @@ describe('DerivedViewCacheService', () => {
 
       // All should return the stale value initially
       results.forEach((result) => {
-        expect(result.value).toBe('stale');
+        expect((result as any).value).toBe('stale');
       });
 
       // Advance fake timers to let async regeneration complete
@@ -619,7 +619,7 @@ describe('DerivedViewCacheService', () => {
 
       // Final value should be updated
       const final = await cache.get<CachedResult>(key);
-      expect(final?.data.value).toBe('fresh');
+      expect((final as any)?.data.value).toBe('fresh');
 
       vi.useRealTimers();
     });
@@ -659,7 +659,7 @@ describe('DerivedViewCacheService', () => {
 
       // Final cache state should be updated
       const final = await cache.get<CachedResult>(key);
-      expect(final?.data).toBeDefined();
+      expect((final as any)?.data).toBeDefined();
 
       vi.useRealTimers();
     });
@@ -694,7 +694,7 @@ describe('DerivedViewCacheService', () => {
       ]);
 
       // All return stale value
-      expect(results).toEqual([{ value: 'stale' }, { value: 'stale' }]);
+      expect(results as any).toEqual([{ value: 'stale' }, { value: 'stale' }]);
 
       // Advance timers for regeneration
       vi.advanceTimersByTime(100);

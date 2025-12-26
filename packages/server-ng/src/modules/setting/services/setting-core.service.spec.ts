@@ -1,5 +1,6 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import { dayjs, type FriendLink, type CreateFriendLink } from '@vanblog/shared';
+import { describe, it, beforeEach, afterEach, expect, vi } from 'vitest';
 import { z } from 'zod';
 
 import { DATABASE_CONNECTION } from '../../../database';
@@ -106,8 +107,8 @@ describe('SettingCoreService', () => {
 
       expect(result).toEqual(mockValue);
       expect(mockDb.select).toHaveBeenCalled();
-      expect(mockDb.select().from).toHaveBeenCalled();
-      expect(mockDb.select().from().where).toHaveBeenCalled();
+      expect(mockSimpleSelectChain.from).toHaveBeenCalled();
+      expect(mockSimpleSelectChain.where).toHaveBeenCalled();
     });
 
     it('should return default value when config not found', async () => {

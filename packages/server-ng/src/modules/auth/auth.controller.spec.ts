@@ -270,7 +270,7 @@ describe('AuthController', () => {
         password: mockUser.password,
         nickname: mockUser.nickname,
         email: mockUser.email,
-        type: UserType.COLLABORATOR,
+        type: UserType.EDITOR,
         permissions: mockUser.permissions,
         createdAt: mockUser.createdAt,
         updatedAt: mockUser.updatedAt,

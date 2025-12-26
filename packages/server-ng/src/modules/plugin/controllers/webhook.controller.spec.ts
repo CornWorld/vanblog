@@ -44,7 +44,6 @@ describe('WebhookController', () => {
       getEventCategories: vi.fn().mockReturnValue({ article: ['afterCreate', 'afterUpdate'] }),
       registerWebhook: vi.fn(),
       unregisterWebhookFromAllEvents: vi.fn(),
-      getAvailableEvents: vi.fn(),
       isEventSupported: vi.fn(),
       triggerEvent: vi.fn(),
     };

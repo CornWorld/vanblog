@@ -20,7 +20,7 @@ describe('SitemapController', () => {
 
   const mockConfigService = {
     get: vi.fn((_key: string, defaultValue?: any) => defaultValue),
-  } as unknown as ConfigService;
+  } as any;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({

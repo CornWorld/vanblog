@@ -10,7 +10,7 @@ describe('ConfigService', () => {
   let service: ConfigService;
 
   beforeEach(async () => {
-    const testingModule: TestingModule = await Test.createTestingModule({
+    const _testingModule: TestingModule = await Test.createTestingModule({
       imports: [
         NestConfigModule.forRoot({
           isGlobal: false,
@@ -46,7 +46,7 @@ describe('ConfigService', () => {
       providers: [ConfigService],
     }).compile();
 
-    service = testingModule.get<ConfigService>(ConfigService);
+    service = _testingModule.get<ConfigService>(ConfigService);
   });
 
   it('should be defined', () => {

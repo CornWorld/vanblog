@@ -25,7 +25,6 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'html', 'lcov', 'json-summary'],
       reportsDirectory: './coverage',
-      all: true,
       include: ['src/**/*.ts'],
       exclude: ['src/**/*.spec.ts', 'src/**/*.e2e-spec.ts', 'src/**/__mocks__/**', '**/*.d.ts'],
     },
@@ -34,20 +33,13 @@ export default defineConfig({
     // CPU: 4 性能核 + 6 能效核
     // 每个 fork 进程峰值: ~350-400 MB
     pool: 'forks',
-    poolOptions: {
-      forks: {
-        singleFork: false,
-        // 6 个并发测试文件（充分利用内存和 CPU）
-        // 预期内存占用: 6 × 400MB = 2.4GB（远低于 4.15GB 可用）
-        maxForks: 6,
-        minForks: 1,
-      },
-    },
+    // Vitest 4: poolOptions 已废弃，使用顶级配置替代
+    // 禁用文件级并行，由 fileParallelism 控制
+    fileParallelism: true,
     // 单个测试文件内的并发控制
     // 设为 5，充分利用 CPU 核心
     maxConcurrency: 5,
-    // 总并发度: 6 (forks) × 5 (concurrency) = 30 个并发任务
-    // 从之前的 32 降到 30，略有降低但保持高性能
+    // 总并发度: ~5 (forks) × 5 (concurrency) = 25 个并发任务
   },
   plugins: [
     swc.vite({

@@ -279,9 +279,9 @@ describe('AnalyticsService', () => {
 
       expect(result.pageviews).toHaveLength(3);
       expect(result.visitors).toHaveLength(3);
-      expect(result.pageviews[String(0)].value).toBe(0); // 默认填充 0
-      expect(result.pageviews[String(1)].value).toBe(0);
-      expect(result.pageviews[String(2)].value).toBeGreaterThanOrEqual(0);
+      expect((result.pageviews[0] as any).value).toBe(0); // 默认填充 0
+      expect((result.pageviews[1] as any).value).toBe(0);
+      expect((result.pageviews[2] as any).value).toBeGreaterThanOrEqual(0);
     });
 
     it('should fill missing dates with zero values', async () => {
@@ -304,7 +304,7 @@ describe('AnalyticsService', () => {
       expect(result.visitors[todayIndex].value).toBe(50);
 
       // 检查其他天数有默认值 0
-      expect(result.pageviews[String(0)].value).toBe(0);
+      expect((result.pageviews[0] as any).value).toBe(0);
     });
 
     it('should format date labels correctly', async () => {
@@ -474,7 +474,7 @@ describe('AnalyticsService', () => {
 
       expect(result).toHaveLength(1);
       expect(result[0]).toHaveProperty('createdAt');
-      expect(result[0].data).toEqual({ articleId: 123 });
+      expect((result[0] as any).data).toEqual({ articleId: 123 });
     });
 
     it('should filter by type', async () => {
@@ -505,8 +505,8 @@ describe('AnalyticsService', () => {
       });
 
       const query: QueryAnalyticsDto = {
-        startDate: new Date('2024-01-01'),
-        endDate: new Date('2024-01-31'),
+        startDate: '2024-01-01' as any,
+        endDate: '2024-01-31' as any,
       };
 
       await service.exportAnalyticsData(query);
@@ -553,7 +553,7 @@ describe('AnalyticsService', () => {
 
       const result = await service.exportAnalyticsData({});
 
-      expect(result[0].data).toBeNull();
+      expect((result[0] as any).data).toBeNull();
     });
 
     it('should handle empty data field', async () => {
@@ -577,7 +577,7 @@ describe('AnalyticsService', () => {
 
       const result = await service.exportAnalyticsData({});
 
-      expect(result[0].data).toBeNull();
+      expect((result[0] as any).data).toBeNull();
     });
 
     it('should format createdAt as ISO string', async () => {
@@ -602,7 +602,7 @@ describe('AnalyticsService', () => {
 
       const result = await service.exportAnalyticsData({});
 
-      expect(result[0].createdAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
+      expect((result[0] as any).createdAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
     });
   });
 
@@ -634,7 +634,7 @@ describe('AnalyticsService', () => {
 
     it('should process small dataset (10 records) efficiently', async () => {
       vi.useFakeTimers();
-      const startTime = Date.now();
+      const _startTime = Date.now();
 
       // Simulate processing 10 analytics records
       for (let i = 0; i < 10; i++) {
@@ -649,12 +649,12 @@ describe('AnalyticsService', () => {
         await service.recordAnalytics(dto);
       }
 
-      const endTime = Date.now();
-      const elapsed = endTime - startTime;
+      const _endTime = Date.now();
+      const _elapsed = _endTime - _startTime;
 
       // With fake timers, elapsed should be 0 or very small
       // Document that this test uses fake timers for consistency
-      expect(elapsed).toBeGreaterThanOrEqual(0);
+      expect(_elapsed).toBeGreaterThanOrEqual(0);
 
       vi.useRealTimers();
     });
@@ -704,7 +704,7 @@ describe('AnalyticsService', () => {
       vi.useFakeTimers();
 
       // Test with 100 records
-      const start100 = Date.now();
+      const _start100 = Date.now();
       for (let i = 0; i < 100; i++) {
         mockDb.insert.mockReturnValue({
           values: vi.fn().mockResolvedValue(undefined),
@@ -714,12 +714,12 @@ describe('AnalyticsService', () => {
           path: `/scale-100-${String(i)}`,
         });
       }
-      const time100 = Date.now() - start100;
+      const _time100 = Date.now() - _start100;
 
       vi.clearAllMocks();
 
       // Test with 1000 records (10x more)
-      const start1000 = Date.now();
+      const _start1000 = Date.now();
       for (let i = 0; i < 1000; i++) {
         mockDb.insert.mockReturnValue({
           values: vi.fn().mockResolvedValue(undefined),
@@ -729,12 +729,12 @@ describe('AnalyticsService', () => {
           path: `/scale-1000-${String(i)}`,
         });
       }
-      const time1000 = Date.now() - start1000;
+      const _time1000 = Date.now() - _start1000;
 
       // With fake timers, both should be instant
       // Real comparison would be in actual timing tests
-      expect(time100).toBeDefined();
-      expect(time1000).toBeDefined();
+      expect(_time100).toBeDefined();
+      expect(_time1000).toBeDefined();
 
       vi.useRealTimers();
     });
@@ -754,20 +754,20 @@ describe('AnalyticsService', () => {
 
       mockCacheService.getOverview.mockResolvedValue(mockOverview);
 
-      const startTime = Date.now();
+      const _startTime = Date.now();
 
       // Simulate 10 concurrent requests
       const promises = Array.from({ length: 10 }, () => service.getOverview());
       const results = await Promise.all(promises);
 
-      const elapsedTime = Date.now() - startTime;
+      const _elapsedTime = Date.now() - _startTime;
 
       expect(results).toHaveLength(10);
       expect(results.every((r) => r.todayPageviews === 100)).toBe(true);
 
       // With fake timers, should complete instantly
       // Document that timing is deterministic with fake timers
-      expect(elapsedTime).toBeGreaterThanOrEqual(0);
+      expect(_elapsedTime).toBeGreaterThanOrEqual(0);
 
       vi.useRealTimers();
     });
@@ -789,9 +789,9 @@ describe('AnalyticsService', () => {
         }),
       });
 
-      const time5 = Date.now();
+      const _time5 = Date.now();
       await service.getDeviceStats();
-      const elapsed5 = Date.now() - time5;
+      const _elapsed5 = Date.now() - _time5;
 
       vi.clearAllMocks();
 
@@ -809,14 +809,14 @@ describe('AnalyticsService', () => {
         }),
       });
 
-      const time50 = Date.now();
+      const _time50 = Date.now();
       await service.getDeviceStats();
-      const elapsed50 = Date.now() - time50;
+      const _elapsed50 = Date.now() - _time50;
 
       // Document: Using fake timers ensures consistent results
       // Relative comparison is more meaningful than absolute times
-      expect(elapsed5).toBeDefined();
-      expect(elapsed50).toBeDefined();
+      expect(_elapsed5).toBeDefined();
+      expect(_elapsed50).toBeDefined();
 
       vi.useRealTimers();
     });

@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import hljs from 'highlight.js';
-import MarkdownIt, { type PluginSimple } from 'markdown-it';
+import MarkdownIt from 'markdown-it';
 import katex from 'markdown-it-katex';
 import taskLists from 'markdown-it-task-lists';
 
@@ -38,9 +38,7 @@ export class MarkdownService {
         )}</code></pre>`;
       },
     });
-    const taskListsPlugin = taskLists as unknown as PluginSimple;
-    const katexPlugin = katex as unknown as PluginSimple;
-    this.md.use(taskListsPlugin).use(katexPlugin);
+    this.md.use(taskLists).use(katex);
   }
 
   /**

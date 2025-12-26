@@ -173,6 +173,7 @@ describe('PermissionController', () => {
         const createDto: CreatePermissionGroupDto = {
           name: 'admin',
           description: 'Administrator group',
+          permissions: null,
           isActive: true,
         };
 

@@ -594,7 +594,10 @@ describe('TagController', () => {
 
       vi.mocked(service.findAll).mockResolvedValue(mockTags);
 
-      const handler = controller.getTags();
+      const handler = controller.getTags() as unknown as () => Promise<{
+        status: number;
+        body: any[];
+      }>;
       const result = await handler();
 
       expect(service.findAll).toHaveBeenCalled();
@@ -620,7 +623,10 @@ describe('TagController', () => {
 
       vi.mocked(service.findAll).mockResolvedValue(mockEmptyTags);
 
-      const handler = controller.getTags();
+      const handler = controller.getTags() as unknown as () => Promise<{
+        status: number;
+        body: any[];
+      }>;
       const result = await handler();
 
       expect(result.status).toBe(200);
@@ -645,7 +651,9 @@ describe('TagController', () => {
 
       vi.mocked(service.create).mockResolvedValue(mockCreatedTag);
 
-      const handler = controller.createTag();
+      const handler = controller.createTag() as unknown as (
+        ctx: any,
+      ) => Promise<{ status: number; body: any }>;
       const result = await handler({ body: createDto });
 
       expect(service.create).toHaveBeenCalledWith(createDto);
@@ -676,7 +684,9 @@ describe('TagController', () => {
 
       vi.mocked(service.create).mockResolvedValue(mockCreatedTag);
 
-      const handler = controller.createTag();
+      const handler = controller.createTag() as unknown as (
+        ctx: any,
+      ) => Promise<{ status: number; body: any }>;
       const result = await handler({ body: createDto });
 
       expect(result.body.updatedAt).toBeUndefined();
@@ -708,7 +718,7 @@ describe('TagController', () => {
       vi.mocked(service.findByName).mockResolvedValue(mockFoundTag);
       vi.mocked(service.update).mockResolvedValue(mockUpdatedTag);
 
-      const handler = controller.updateTag();
+      const handler = controller.updateTag() as unknown as (ctx: any) => Promise<any>;
       const result = await handler({ params: { name: 'JavaScript' }, body: updateDto });
 
       expect(service.findByName).toHaveBeenCalledWith('JavaScript');
@@ -732,7 +742,7 @@ describe('TagController', () => {
 
       vi.mocked(service.findByName).mockResolvedValue(null);
 
-      const handler = controller.updateTag();
+      const handler = controller.updateTag() as unknown as (ctx: any) => Promise<any>;
 
       await expect(handler({ params: { name: 'NonExistent' }, body: updateDto })).rejects.toThrow(
         NotFoundException,
@@ -756,7 +766,7 @@ describe('TagController', () => {
       vi.mocked(service.findByName).mockResolvedValue(mockFoundTag);
       vi.mocked(service.remove).mockResolvedValue(undefined);
 
-      const handler = controller.deleteTag();
+      const handler = controller.deleteTag() as unknown as (ctx: any) => Promise<any>;
       const result = await handler({ params: { name: 'ToDelete' } });
 
       expect(service.findByName).toHaveBeenCalledWith('ToDelete');
@@ -770,7 +780,7 @@ describe('TagController', () => {
     it('should throw NotFoundException when tag not found by name', async () => {
       vi.mocked(service.findByName).mockResolvedValue(null);
 
-      const handler = controller.deleteTag();
+      const handler = controller.deleteTag() as unknown as (ctx: any) => Promise<any>;
 
       await expect(handler({ params: { name: 'NonExistent' } })).rejects.toThrow(NotFoundException);
       await expect(handler({ params: { name: 'NonExistent' } })).rejects.toThrow(
@@ -850,7 +860,9 @@ describe('TagController', () => {
 
     it('should handle unicode normalization differences', async () => {
       const composedName = 'café'; // é as single character (composed)
-      const _decomposedName = 'cafe\u0301'; // e + combining acute accent (decomposed)
+      // const decomposedName = 'cafe\u0301'; // e + combining acute accent (decomposed)
+      // Note: Currently testing only composed form; decomposed form test would require normalization handling
+
       const createDto = {
         name: composedName,
         slug: 'cafe-tag',

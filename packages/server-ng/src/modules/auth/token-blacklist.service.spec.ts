@@ -45,10 +45,15 @@ describe('TokenBlacklistService', () => {
       const token = 'test.access.token';
       const expiresAt = new Date(Date.now() + 3600000);
 
+      const mockInsertBuilder = {
+        values: vi.fn().mockResolvedValue(undefined),
+      };
+      mockDb.insert = vi.fn().mockReturnValue(mockInsertBuilder);
+
       await service.revokeToken(token, 'access', expiresAt, 1, 'User logout');
 
       expect(mockDb.insert).toHaveBeenCalledWith(tokenBlacklist);
-      expect(mockDb.insert(tokenBlacklist).values).toHaveBeenCalledWith(
+      expect(mockInsertBuilder.values).toHaveBeenCalledWith(
         expect.objectContaining({
           tokenType: 'access',
           userId: 1,
@@ -61,9 +66,14 @@ describe('TokenBlacklistService', () => {
       const token = 'test.refresh.token';
       const expiresAt = new Date(Date.now() + 86400000);
 
+      const mockInsertBuilder = {
+        values: vi.fn().mockResolvedValue(undefined),
+      };
+      mockDb.insert = vi.fn().mockReturnValue(mockInsertBuilder);
+
       await service.revokeToken(token, 'refresh', expiresAt, 2);
 
-      expect(mockDb.insert(tokenBlacklist).values).toHaveBeenCalledWith(
+      expect(mockInsertBuilder.values).toHaveBeenCalledWith(
         expect.objectContaining({
           tokenType: 'refresh',
           userId: 2,
@@ -75,9 +85,14 @@ describe('TokenBlacklistService', () => {
       const token = 'anonymous.token';
       const expiresAt = new Date(Date.now() + 3600000);
 
+      const mockInsertBuilder = {
+        values: vi.fn().mockResolvedValue(undefined),
+      };
+      mockDb.insert = vi.fn().mockReturnValue(mockInsertBuilder);
+
       await service.revokeToken(token, 'access', expiresAt);
 
-      expect(mockDb.insert(tokenBlacklist).values).toHaveBeenCalledWith(
+      expect(mockInsertBuilder.values).toHaveBeenCalledWith(
         expect.objectContaining({
           tokenType: 'access',
           userId: undefined,
@@ -89,9 +104,14 @@ describe('TokenBlacklistService', () => {
       const token = 'test.token';
       const expiresAt = new Date(Date.now() + 3600000);
 
+      const mockInsertBuilder = {
+        values: vi.fn().mockResolvedValue(undefined),
+      };
+      mockDb.insert = vi.fn().mockReturnValue(mockInsertBuilder);
+
       await service.revokeToken(token, 'access', expiresAt, 1);
 
-      expect(mockDb.insert(tokenBlacklist).values).toHaveBeenCalledWith(
+      expect(mockInsertBuilder.values).toHaveBeenCalledWith(
         expect.objectContaining({
           tokenType: 'access',
           userId: 1,
@@ -169,11 +189,16 @@ describe('TokenBlacklistService', () => {
       const userId = 123;
       const reason = 'Password changed';
 
+      const mockInsertBuilder = {
+        values: vi.fn().mockResolvedValue(undefined),
+      };
+      mockDb.insert = vi.fn().mockReturnValue(mockInsertBuilder);
+
       const result = await service.revokeAllUserTokens(userId, reason);
 
       expect(result).toBe(1);
       expect(mockDb.insert).toHaveBeenCalledWith(tokenBlacklist);
-      expect(mockDb.insert(tokenBlacklist).values).toHaveBeenCalledWith(
+      expect(mockInsertBuilder.values).toHaveBeenCalledWith(
         expect.objectContaining({
           tokenHash: `user_${String(userId)}_all_tokens`,
           tokenType: 'access',
@@ -186,9 +211,14 @@ describe('TokenBlacklistService', () => {
     it('should use default reason when not provided', async () => {
       const userId = 456;
 
+      const mockInsertBuilder = {
+        values: vi.fn().mockResolvedValue(undefined),
+      };
+      mockDb.insert = vi.fn().mockReturnValue(mockInsertBuilder);
+
       await service.revokeAllUserTokens(userId);
 
-      expect(mockDb.insert(tokenBlacklist).values).toHaveBeenCalledWith(
+      expect(mockInsertBuilder.values).toHaveBeenCalledWith(
         expect.objectContaining({
           reason: 'All user tokens revoked',
         }),

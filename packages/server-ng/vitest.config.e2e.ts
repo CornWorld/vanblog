@@ -5,18 +5,10 @@ export default defineConfig({
   test: {
     include: ['**/*.e2e-spec.ts'],
     globals: true,
-    alias: {
-      '@src': './src',
-      '@test': './test',
-    },
     root: './',
     // Run E2E tests sequentially to avoid database conflicts
     pool: 'forks',
-    poolOptions: {
-      forks: {
-        singleFork: true,
-      },
-    },
+    // Vitest 4: 配置已提升到顶级，替代已废弃的 poolOptions
     // 禁用文件级并行 & 测试并发，彻底串行化执行
     fileParallelism: false,
     sequence: {

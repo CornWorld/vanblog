@@ -232,7 +232,7 @@ describe('CategoryService - Boundary Conditions', () => {
       const result = await service.create(createDto);
 
       expect(result.slug).toBe(longSlug);
-      expect(result.slug.length).toBe(1001);
+      expect(result.slug?.length).toBe(1001);
     });
 
     it('should handle category description exceeding 5000 characters', async () => {

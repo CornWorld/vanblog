@@ -20,22 +20,16 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'html', 'lcov', 'json-summary'],
       reportsDirectory: './coverage-perf',
-      all: true,
       include: ['src/**/*.ts'],
       exclude: ['src/**/*.spec.ts', 'src/**/*.e2e-spec.ts', 'src/**/__mocks__/**', '**/*.d.ts'],
     },
     // 性能测试使用更小的并发度，避免互相干扰
     pool: 'forks',
-    poolOptions: {
-      forks: {
-        singleFork: false,
-        // 2-3 个并发以获得准确的性能指标
-        maxForks: 3,
-        minForks: 1,
-      },
-    },
+    // Vitest 4: poolOptions 已废弃，使用顶级配置替代
+    fileParallelism: false,
     // 单个测试文件内的并发控制
-    maxConcurrency: 2,
+    // 性能测试设为 1-2，减少干扰以获得准确的性能指标
+    maxConcurrency: 1,
   },
   plugins: [
     swc.vite({

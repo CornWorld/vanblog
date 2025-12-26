@@ -5,6 +5,7 @@ import { DATABASE_CONNECTION } from '../src/database';
 import { StorageProvider } from '../src/modules/media/dto/storage-config.dto';
 
 import type { ConfigService } from '../src/config/config.service';
+import type { Database } from '../src/database';
 import type {
   StorageService,
   UploadResult,
@@ -13,8 +14,134 @@ import type { StorageFactoryService } from '../src/modules/media/services/storag
 import type { HookService } from '../src/modules/plugin/services/hook.service';
 
 /**
- * 数据库Mock工具类
- * 提供统一的数据库连接Mock配置
+ * 创建Mock数据库实例的工厂函数
+ * 返回实现Database接口的Mock对象，支持完整的Drizzle ORM链式调用
+ *
+ * @example
+ * const db = createDatabaseMock();
+ * db.select().from(articles).where(eq(articles.id, 1));
+ */
+export function createDatabaseMock(): Database {
+  const createChainMock = (data: unknown[] = []): any => {
+    const chainMock: any = {
+      where: vi.fn(),
+      get: vi.fn().mockResolvedValue(data[0] ?? null),
+      all: vi.fn().mockResolvedValue(data),
+      orderBy: vi.fn(),
+      limit: vi.fn(),
+      offset: vi.fn(),
+      groupBy: vi.fn(),
+      having: vi.fn(),
+      innerJoin: vi.fn(),
+      leftJoin: vi.fn(),
+      rightJoin: vi.fn(),
+      union: vi.fn(),
+      unionAll: vi.fn(),
+      with: vi.fn(),
+      withRecursive: vi.fn(),
+      as: vi.fn(),
+      distinct: vi.fn(),
+      distinctOn: vi.fn(),
+      for: vi.fn(),
+      $dynamic: vi.fn(),
+    };
+
+    // 设置where方法返回包含get和all的对象（支持链式调用）
+    chainMock.where.mockReturnValue({
+      get: vi.fn().mockResolvedValue(data[0] ?? null),
+      all: vi.fn().mockResolvedValue(data),
+      limit: vi.fn().mockReturnValue({
+        get: vi.fn().mockResolvedValue(data[0] ?? null),
+        all: vi.fn().mockResolvedValue(data),
+      }),
+      offset: vi.fn().mockReturnValue({
+        get: vi.fn().mockResolvedValue(data[0] ?? null),
+        all: vi.fn().mockResolvedValue(data),
+      }),
+      orderBy: vi.fn().mockReturnValue({
+        get: vi.fn().mockResolvedValue(data[0] ?? null),
+        all: vi.fn().mockResolvedValue(data),
+      }),
+    });
+
+    // 设置其他方法都返回自身以支持链式调用
+    Object.keys(chainMock).forEach((key) => {
+      if (!['where', 'get', 'all'].includes(key)) {
+        chainMock[key].mockReturnValue(chainMock);
+      }
+    });
+
+    return chainMock;
+  };
+
+  const mockDb: any = {
+    select: vi.fn().mockImplementation(() => {
+      const fromMock = vi.fn().mockImplementation((_table: unknown) => {
+        return createChainMock();
+      });
+      return { from: fromMock };
+    }),
+    from: vi.fn().mockImplementation(() => createChainMock()),
+    where: vi.fn().mockImplementation(() => createChainMock()),
+    orderBy: vi.fn().mockImplementation(() => createChainMock()),
+    limit: vi.fn().mockImplementation(() => createChainMock()),
+    offset: vi.fn().mockImplementation(() => createChainMock()),
+    insert: vi.fn().mockImplementation(() => ({
+      values: vi.fn().mockResolvedValue(undefined),
+    })),
+    values: vi.fn().mockResolvedValue(undefined),
+    returning: vi.fn().mockResolvedValue([]),
+    update: vi.fn().mockImplementation(() => ({
+      set: vi.fn().mockReturnValue({
+        returning: vi.fn().mockResolvedValue([]),
+      }),
+    })),
+    set: vi.fn().mockReturnValue({
+      returning: vi.fn().mockResolvedValue([]),
+    }),
+    delete: vi.fn().mockImplementation(() => ({
+      returning: vi.fn().mockResolvedValue([]),
+    })),
+    onConflictDoUpdate: vi.fn().mockImplementation(function (this: any) {
+      return this;
+    }),
+    groupBy: vi.fn().mockImplementation(() => createChainMock()),
+    count: vi.fn().mockImplementation(() => createChainMock()),
+    innerJoin: vi.fn().mockImplementation(() => createChainMock()),
+    leftJoin: vi.fn().mockImplementation(() => createChainMock()),
+    rightJoin: vi.fn().mockImplementation(() => createChainMock()),
+    having: vi.fn().mockImplementation(() => createChainMock()),
+    union: vi.fn().mockImplementation(() => createChainMock()),
+    unionAll: vi.fn().mockImplementation(() => createChainMock()),
+    with: vi.fn().mockImplementation(() => createChainMock()),
+    withRecursive: vi.fn().mockImplementation(() => createChainMock()),
+    as: vi.fn().mockImplementation(() => createChainMock()),
+    distinct: vi.fn().mockImplementation(() => createChainMock()),
+    distinctOn: vi.fn().mockImplementation(() => createChainMock()),
+    for: vi.fn().mockImplementation(() => createChainMock()),
+    $dynamic: vi.fn().mockImplementation(() => createChainMock()),
+    transaction: vi.fn().mockImplementation(async function (
+      this: any,
+      callback: (tx: any) => Promise<any>,
+    ) {
+      return await callback(this);
+    }),
+    run: vi.fn().mockResolvedValue(undefined),
+  };
+
+  return mockDb as Database;
+}
+
+/**
+ * 数据库Mock工具类（Builder 模式）
+ * 提供流畅的API来配置Mock数据库的查询结果
+ *
+ * @example
+ * const dbMock = new DatabaseMockBuilder();
+ * dbMock
+ *   .setQueryResult([{ id: 1, title: 'Test' }])
+ *   .setInsertResult([{ id: 1 }]);
+ * const db = dbMock.build();
  */
 export class DatabaseMockBuilder {
   private mockDb: Record<string, ReturnType<typeof vi.fn>> = {};
@@ -271,16 +398,128 @@ export function createHookServiceMock(): Partial<HookService> {
 
 /**
  * 创建ConfigService Mock
+ * 完整实现ConfigService接口，支持所有配置属性访问
  */
-export function createConfigServiceMock(configMap: Record<string, unknown> = {}): ConfigService {
+export function createConfigServiceMock(
+  overrides: Partial<Record<string, unknown>> = {},
+): ConfigService {
+  // 默认配置
+  const defaultConfig = {
+    app: {
+      port: 3000,
+      nodeEnv: 'test',
+      apiPrefix: 'api',
+      apiVersion: 'v2',
+      locale: 'zh-cn',
+      isProduction: false,
+      isDevelopment: false,
+    },
+    database: {
+      type: 'sqlite',
+      host: 'localhost',
+      port: 0,
+      username: '',
+      password: '',
+      database: ':memory:',
+      synchronize: false,
+      logging: false,
+    },
+    jwt: {
+      secret: 'test-secret',
+      expiresIn: '7d',
+      refreshSecret: 'test-refresh-secret',
+      refreshExpiresIn: '30d',
+    },
+    cors: {
+      origin: '*',
+      credentials: true,
+    },
+    upload: {
+      maxFileSize: 52428800,
+      destination: './uploads',
+    },
+    static: {
+      path: '/app/static',
+    },
+    log: {
+      level: 'info',
+      dir: '/var/log/vanblog',
+    },
+    waline: {
+      db: 'waline',
+    },
+    runtime: {
+      demoMode: false,
+      codeRunnerPath: '/app/codeRunner',
+      pluginRunnerPath: '/app/pluginRunner',
+    },
+  };
+
+  // 合并用户提供的覆盖值
+  const mergedConfig = {
+    ...defaultConfig,
+    ...overrides,
+  };
+
   return {
+    // 所有配置属性的getter
+    get app() {
+      return mergedConfig.app;
+    },
+    get database() {
+      return mergedConfig.database;
+    },
+    get jwt() {
+      return mergedConfig.jwt;
+    },
+    get cors() {
+      return mergedConfig.cors;
+    },
+    get upload() {
+      return mergedConfig.upload;
+    },
+    get static() {
+      return mergedConfig.static;
+    },
+    get log() {
+      return mergedConfig.log;
+    },
+    get waline() {
+      return mergedConfig.waline;
+    },
+    get runtime() {
+      return mergedConfig.runtime;
+    },
+    get all() {
+      return {
+        app: mergedConfig.app,
+        database: mergedConfig.database,
+        jwt: mergedConfig.jwt,
+        cors: mergedConfig.cors,
+        upload: mergedConfig.upload,
+        static: mergedConfig.static,
+        log: mergedConfig.log,
+        waline: mergedConfig.waline,
+        runtime: mergedConfig.runtime,
+      };
+    },
+
+    // get() 方法 - 支持任意键访问和默认值
     get: vi.fn((key: string, defaultValue?: unknown) => {
-      if (configMap[key] !== undefined) {
-        return configMap[key];
+      // 逐级访问对象属性（支持 'app.port' 或 'database.host' 等）
+      const keys = key.split('.');
+      let value: unknown = mergedConfig;
+
+      for (const k of keys) {
+        if (value && typeof value === 'object' && k in value) {
+          value = (value as Record<string, unknown>)[k];
+        } else {
+          return defaultValue;
+        }
       }
-      return defaultValue;
+
+      return value ?? defaultValue;
     }),
-    configService: {},
   } as unknown as ConfigService;
 }
 
@@ -530,6 +769,7 @@ export function createTestModuleConfig(options: {
  * 提供统一的Mock工具访问入口
  */
 export const MockUtils = {
+  createDatabaseMock,
   database: DatabaseMockBuilder,
   services: ServiceMockBuilder,
   data: TestDataFactory,

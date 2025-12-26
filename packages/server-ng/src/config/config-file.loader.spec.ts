@@ -381,7 +381,7 @@ describe('config-file.loader', () => {
 
       // Should load env-specific config first
       expect(config).toEqual(envConfig);
-      expect(config.priority).toBe(1);
+      expect((config as Record<string, unknown>).priority).toBe(1);
 
       // Cleanup
       rmSync(configDir, { recursive: true, force: true });
@@ -402,8 +402,10 @@ describe('config-file.loader', () => {
       const config = configFactory();
 
       expect(config).toEqual(configData);
-      expect(config.DATABASE_URL).toBe('postgresql://localhost:5432/test');
-      expect(config.API_KEY).toBe('test-key');
+      expect((config as Record<string, unknown>).DATABASE_URL).toBe(
+        'postgresql://localhost:5432/test',
+      );
+      expect((config as Record<string, unknown>).API_KEY).toBe('test-key');
     });
 
     it('should return config compatible with ConfigModule.forRoot', () => {
@@ -440,8 +442,8 @@ describe('config-file.loader', () => {
       const config = loader();
 
       expect(config).toEqual(configData);
-      expect(config.message).toBe('你好世界');
-      expect(config.emoji).toBe('😀');
+      expect((config as Record<string, unknown>).message).toBe('你好世界');
+      expect((config as Record<string, unknown>).emoji).toBe('😀');
     });
   });
 });

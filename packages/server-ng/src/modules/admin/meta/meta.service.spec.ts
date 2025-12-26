@@ -11,9 +11,20 @@ vi.mock('axios');
 vi.mock('fs');
 vi.mock('path');
 
-const mockedAxios = vi.mocked(axios);
+// Get the actual mocked functions - axios is the default export, but we need to mock .get
+const mockedAxiosModule = vi.mocked(axios, { partial: true });
+const mockAxiosGet = vi.fn();
+// Set up the mock to return the get function
+mockedAxiosModule.get = mockAxiosGet;
+
 const mockedFs = vi.mocked(fs);
 const mockedPath = vi.mocked(path);
+
+// Helper function to reset axios mock
+const resetAxiosMock = (fn = mockAxiosGet) => {
+  fn.mockClear();
+  return fn;
+};
 
 describe('MetaService', () => {
   let service: MetaService;
@@ -23,6 +34,7 @@ describe('MetaService', () => {
   beforeEach(() => {
     // Reset all mocks
     vi.clearAllMocks();
+    resetAxiosMock();
 
     // Suppress console output during tests
     consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
@@ -49,7 +61,7 @@ describe('MetaService', () => {
       mockedFs.readFileSync.mockReturnValue(mockPackageJson);
 
       // Mock axios to prevent actual HTTP call during initialization
-      mockedAxios.get.mockRejectedValue(new Error('Network error'));
+      mockAxiosGet.mockRejectedValue(new Error('Network error'));
 
       // Create new service instance to test constructor
       const module: TestingModule = await Test.createTestingModule({
@@ -69,7 +81,7 @@ describe('MetaService', () => {
       process.env.npm_package_version = '2.0.0';
 
       // Mock axios to prevent actual HTTP call
-      mockedAxios.get.mockRejectedValue(new Error('Network error'));
+      mockAxiosGet.mockRejectedValue(new Error('Network error'));
 
       const module: TestingModule = await Test.createTestingModule({
         providers: [MetaService],
@@ -89,7 +101,7 @@ describe('MetaService', () => {
       delete process.env.npm_package_version;
 
       // Mock axios to prevent actual HTTP call
-      mockedAxios.get.mockRejectedValue(new Error('Network error'));
+      mockAxiosGet.mockRejectedValue(new Error('Network error'));
 
       const module: TestingModule = await Test.createTestingModule({
         providers: [MetaService],
@@ -109,7 +121,7 @@ describe('MetaService', () => {
       process.env.npm_package_version = '3.0.0';
 
       // Mock axios to prevent actual HTTP call
-      mockedAxios.get.mockRejectedValue(new Error('Network error'));
+      mockAxiosGet.mockRejectedValue(new Error('Network error'));
 
       const module: TestingModule = await Test.createTestingModule({
         providers: [MetaService],
@@ -130,7 +142,7 @@ describe('MetaService', () => {
       delete process.env.npm_package_version;
 
       // Mock axios to prevent actual HTTP call
-      mockedAxios.get.mockRejectedValue(new Error('Network error'));
+      mockAxiosGet.mockRejectedValue(new Error('Network error'));
 
       const module: TestingModule = await Test.createTestingModule({
         providers: [MetaService],
@@ -147,7 +159,7 @@ describe('MetaService', () => {
     it('should return version info when no update info is available', async () => {
       mockedFs.existsSync.mockReturnValue(true);
       mockedFs.readFileSync.mockReturnValue(JSON.stringify({ version: '1.0.0' }));
-      mockedAxios.get.mockRejectedValue(new Error('Network error'));
+      mockAxiosGet.mockRejectedValue(new Error('Network error'));
 
       const module: TestingModule = await Test.createTestingModule({
         providers: [MetaService],
@@ -168,7 +180,7 @@ describe('MetaService', () => {
     it('should trigger checkUpdate in background', async () => {
       mockedFs.existsSync.mockReturnValue(true);
       mockedFs.readFileSync.mockReturnValue(JSON.stringify({ version: '1.0.0' }));
-      mockedAxios.get.mockRejectedValue(new Error('Network error'));
+      mockAxiosGet.mockRejectedValue(new Error('Network error'));
 
       const module: TestingModule = await Test.createTestingModule({
         providers: [MetaService],
@@ -194,7 +206,7 @@ describe('MetaService', () => {
         html_url: 'https://github.com/Mereithhh/vanblog/releases/tag/v2.0.0',
       };
 
-      mockedAxios.get.mockResolvedValue({ data: mockReleaseData });
+      mockAxiosGet.mockResolvedValue({ data: mockReleaseData });
 
       const module: TestingModule = await Test.createTestingModule({
         providers: [MetaService],
@@ -227,7 +239,7 @@ describe('MetaService', () => {
         html_url: 'https://github.com/Mereithhh/vanblog/releases/tag/v1.0.0',
       };
 
-      mockedAxios.get.mockResolvedValue({ data: mockReleaseData });
+      mockAxiosGet.mockResolvedValue({ data: mockReleaseData });
 
       const module: TestingModule = await Test.createTestingModule({
         providers: [MetaService],
@@ -247,7 +259,7 @@ describe('MetaService', () => {
     it('should return current version as latest when update check fails', async () => {
       mockedFs.existsSync.mockReturnValue(true);
       mockedFs.readFileSync.mockReturnValue(JSON.stringify({ version: '1.0.0' }));
-      mockedAxios.get.mockRejectedValue(new Error('Network error'));
+      mockAxiosGet.mockRejectedValue(new Error('Network error'));
 
       const module: TestingModule = await Test.createTestingModule({
         providers: [MetaService],
@@ -275,7 +287,7 @@ describe('MetaService', () => {
         html_url: 'https://github.com/Mereithhh/vanblog/releases/tag/v2.0.0',
       };
 
-      mockedAxios.get.mockResolvedValue({ data: mockReleaseData });
+      mockAxiosGet.mockResolvedValue({ data: mockReleaseData });
 
       const module: TestingModule = await Test.createTestingModule({
         providers: [MetaService],
@@ -293,7 +305,7 @@ describe('MetaService', () => {
         description: 'New features:\n- Feature 1\n- Feature 2',
         url: 'https://github.com/Mereithhh/vanblog/releases/tag/v2.0.0',
       });
-      expect(mockedAxios.get).toHaveBeenCalledWith(
+      expect(mockAxiosGet).toHaveBeenCalledWith(
         'https://api.github.com/repos/Mereithhh/vanblog/releases/latest',
         {
           timeout: 5000,
@@ -311,7 +323,7 @@ describe('MetaService', () => {
         html_url: 'https://github.com/Mereithhh/vanblog/releases/tag/v2.0.0',
       };
 
-      mockedAxios.get.mockResolvedValue({ data: mockReleaseData });
+      mockAxiosGet.mockResolvedValue({ data: mockReleaseData });
 
       const module: TestingModule = await Test.createTestingModule({
         providers: [MetaService],
@@ -324,15 +336,15 @@ describe('MetaService', () => {
 
       // At this point, latestVersionInfo should be set and lastCheckTime should be recent
       // Store call count after constructor
-      const callCountAfterInit = mockedAxios.get.mock.calls.length;
+      const callCountAfterInit = mockAxiosGet.mock.calls.length;
 
       // First explicit call - should skip because cache exists and within interval
       await (service as any).checkUpdate();
-      expect(mockedAxios.get.mock.calls.length).toBe(callCountAfterInit); // Should not increase
+      expect(mockAxiosGet.mock.calls.length).toBe(callCountAfterInit); // Should not increase
 
       // Second call immediately - should also skip
       await (service as any).checkUpdate();
-      expect(mockedAxios.get.mock.calls.length).toBe(callCountAfterInit); // Should still not increase
+      expect(mockAxiosGet.mock.calls.length).toBe(callCountAfterInit); // Should still not increase
     });
 
     it('should check again after CHECK_INTERVAL expires', async () => {
@@ -345,7 +357,7 @@ describe('MetaService', () => {
         html_url: 'https://github.com/Mereithhh/vanblog/releases/tag/v2.0.0',
       };
 
-      mockedAxios.get.mockResolvedValue({ data: mockReleaseData });
+      mockAxiosGet.mockResolvedValue({ data: mockReleaseData });
 
       const module: TestingModule = await Test.createTestingModule({
         providers: [MetaService],
@@ -357,18 +369,18 @@ describe('MetaService', () => {
       await new Promise((resolve) => setTimeout(resolve, 100));
 
       // Store call count after constructor
-      const callCountAfterInit = mockedAxios.get.mock.calls.length;
+      const callCountAfterInit = mockAxiosGet.mock.calls.length;
 
       // First explicit call - should skip due to interval
       await (service as any).checkUpdate();
-      expect(mockedAxios.get.mock.calls.length).toBe(callCountAfterInit);
+      expect(mockAxiosGet.mock.calls.length).toBe(callCountAfterInit);
 
       // Manually set lastCheckTime to 0 to simulate interval expiry
       (service as any).lastCheckTime = 0;
 
       // Now the check should run because interval has "expired"
       await (service as any).checkUpdate();
-      expect(mockedAxios.get.mock.calls.length).toBe((callCountAfterInit as number) + 1);
+      expect(mockAxiosGet.mock.calls.length).toBe((callCountAfterInit as number) + 1);
     });
 
     it('should handle network errors gracefully', async () => {
@@ -376,7 +388,7 @@ describe('MetaService', () => {
       mockedFs.readFileSync.mockReturnValue(JSON.stringify({ version: '1.0.0' }));
 
       const networkError = new Error('Network timeout');
-      mockedAxios.get.mockRejectedValue(networkError);
+      mockAxiosGet.mockRejectedValue(networkError);
 
       const module: TestingModule = await Test.createTestingModule({
         providers: [MetaService],
@@ -399,7 +411,7 @@ describe('MetaService', () => {
       mockedFs.readFileSync.mockReturnValue(JSON.stringify({ version: '1.0.0' }));
 
       const apiError = { response: { status: 404, data: 'Not found' } };
-      mockedAxios.get.mockRejectedValue(apiError);
+      mockAxiosGet.mockRejectedValue(apiError);
 
       const module: TestingModule = await Test.createTestingModule({
         providers: [MetaService],
@@ -423,7 +435,7 @@ describe('MetaService', () => {
       const rateLimitError = {
         response: { status: 403, data: { message: 'API rate limit exceeded' } },
       };
-      mockedAxios.get.mockRejectedValue(rateLimitError);
+      mockAxiosGet.mockRejectedValue(rateLimitError);
 
       const module: TestingModule = await Test.createTestingModule({
         providers: [MetaService],
@@ -444,7 +456,7 @@ describe('MetaService', () => {
       mockedFs.readFileSync.mockReturnValue(JSON.stringify({ version: '1.0.0' }));
 
       const timeoutError = new Error('timeout of 5000ms exceeded');
-      mockedAxios.get.mockRejectedValue(timeoutError);
+      mockAxiosGet.mockRejectedValue(timeoutError);
 
       const module: TestingModule = await Test.createTestingModule({
         providers: [MetaService],
@@ -471,7 +483,7 @@ describe('MetaService', () => {
         html_url: 'https://github.com/example',
       };
 
-      mockedAxios.get.mockResolvedValue({ data: malformedData as any });
+      mockAxiosGet.mockResolvedValue({ data: malformedData as any });
 
       const module: TestingModule = await Test.createTestingModule({
         providers: [MetaService],
@@ -492,7 +504,7 @@ describe('MetaService', () => {
 
       const beforeTime = Date.now();
 
-      mockedAxios.get.mockResolvedValue({
+      mockAxiosGet.mockResolvedValue({
         data: {
           tag_name: 'v2.0.0',
           body: 'Release',
@@ -525,7 +537,7 @@ describe('MetaService', () => {
         body: 'Release notes',
         html_url: 'https://github.com/example',
       };
-      mockedAxios.get.mockResolvedValueOnce({ data: mockReleaseData });
+      mockAxiosGet.mockResolvedValueOnce({ data: mockReleaseData });
 
       const module: TestingModule = await Test.createTestingModule({
         providers: [MetaService],
@@ -542,7 +554,7 @@ describe('MetaService', () => {
       (service as any).lastCheckTime = 0;
 
       // Second check fails
-      mockedAxios.get.mockRejectedValueOnce(new Error('Network error'));
+      mockAxiosGet.mockRejectedValueOnce(new Error('Network error'));
 
       await (service as any).checkUpdate();
 
@@ -556,12 +568,12 @@ describe('MetaService', () => {
   describe('semver version comparison', () => {
     beforeEach(() => {
       mockedFs.existsSync.mockReturnValue(true);
-      mockedAxios.get.mockRejectedValue(new Error('Network error'));
+      mockAxiosGet.mockRejectedValue(new Error('Network error'));
     });
 
     it('should detect update when major version increases', async () => {
       mockedFs.readFileSync.mockReturnValue(JSON.stringify({ version: '1.0.0' }));
-      mockedAxios.get.mockResolvedValueOnce({
+      mockAxiosGet.mockResolvedValueOnce({
         data: {
           tag_name: 'v2.0.0',
           body: 'Major release',
@@ -584,7 +596,7 @@ describe('MetaService', () => {
 
     it('should detect update when minor version increases', async () => {
       mockedFs.readFileSync.mockReturnValue(JSON.stringify({ version: '1.0.0' }));
-      mockedAxios.get.mockResolvedValueOnce({
+      mockAxiosGet.mockResolvedValueOnce({
         data: {
           tag_name: 'v1.1.0',
           body: 'Minor release',
@@ -606,7 +618,7 @@ describe('MetaService', () => {
 
     it('should detect update when patch version increases', async () => {
       mockedFs.readFileSync.mockReturnValue(JSON.stringify({ version: '1.0.0' }));
-      mockedAxios.get.mockResolvedValueOnce({
+      mockAxiosGet.mockResolvedValueOnce({
         data: {
           tag_name: 'v1.0.1',
           body: 'Patch release',
@@ -628,7 +640,7 @@ describe('MetaService', () => {
 
     it('should handle prerelease versions correctly', async () => {
       mockedFs.readFileSync.mockReturnValue(JSON.stringify({ version: '1.0.0-beta.1' }));
-      mockedAxios.get.mockResolvedValueOnce({
+      mockAxiosGet.mockResolvedValueOnce({
         data: {
           tag_name: 'v1.0.0',
           body: 'Stable release',
@@ -654,7 +666,7 @@ describe('MetaService', () => {
       mockedFs.existsSync.mockReturnValue(false);
       delete process.env.npm_package_version;
 
-      mockedAxios.get.mockResolvedValue({
+      mockAxiosGet.mockResolvedValue({
         data: {
           tag_name: 'v1.0.0',
           body: 'Release',
@@ -678,7 +690,7 @@ describe('MetaService', () => {
       mockedFs.existsSync.mockReturnValue(true);
       mockedFs.readFileSync.mockReturnValue(JSON.stringify({ version: 'v1.0.0' }));
 
-      mockedAxios.get.mockResolvedValueOnce({
+      mockAxiosGet.mockResolvedValueOnce({
         data: {
           tag_name: 'v2.0.0',
           body: 'Release',
@@ -703,7 +715,7 @@ describe('MetaService', () => {
       mockedFs.existsSync.mockReturnValue(true);
       mockedFs.readFileSync.mockReturnValue(JSON.stringify({ version: '1.0.0' }));
 
-      mockedAxios.get.mockResolvedValueOnce({
+      mockAxiosGet.mockResolvedValueOnce({
         data: {
           tag_name: 'v2.0.0',
           body: '',

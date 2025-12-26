@@ -436,7 +436,7 @@ export class PermissionService {
       createdAt: string | number | Date | Dayjs | null | undefined;
       updatedAt: string | number | Date | Dayjs | null | undefined;
     },
-  >(row: T): T & { createdAt: string; updatedAt: string } {
+  >(row: T): Omit<T, 'createdAt' | 'updatedAt'> & { createdAt: string; updatedAt: string } {
     const toIso = (v: string | number | Date | Dayjs | null | undefined): string => {
       if (typeof v === 'string') return v;
       const d = dayjs(v ?? undefined);
@@ -447,7 +447,7 @@ export class PermissionService {
       ...row,
       createdAt: toIso(row.createdAt),
       updatedAt: toIso(row.updatedAt),
-    };
+    } as Omit<T, 'createdAt' | 'updatedAt'> & { createdAt: string; updatedAt: string };
   }
 
   // CRUD 操作 - 权限组
@@ -458,7 +458,7 @@ export class PermissionService {
       .insert(permissionGroups)
       .values({
         ...createPermissionGroupDto,
-        permissions: createPermissionGroupDto.permissions as string[] | null,
+        permissions: createPermissionGroupDto.permissions,
       })
       .returning();
     // 影响角色权限：失效缓存
@@ -519,7 +519,7 @@ export class PermissionService {
       updatedAt: string;
     } = {
       ...updatePermissionGroupDto,
-      permissions: updatePermissionGroupDto.permissions as string[] | null | undefined,
+      permissions: updatePermissionGroupDto.permissions,
       updatedAt: dayjs().format(),
     };
 
@@ -585,9 +585,10 @@ export class PermissionService {
       return filtered;
     }
 
-    const dbPermissions = (PermissionGroupSchema.parse(
-      this.normalizePermissionGroupRow(group[0] as PermissionGroupSelect),
-    ).permissions ?? []) as string[];
+    const dbPermissions =
+      PermissionGroupSchema.parse(
+        this.normalizePermissionGroupRow(group[0] as PermissionGroupSelect),
+      ).permissions ?? [];
 
     // 过滤非法/未注册权限
     const known = this.getKnownPermissionsSet();

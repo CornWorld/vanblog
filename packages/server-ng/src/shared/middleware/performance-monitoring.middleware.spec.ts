@@ -22,7 +22,7 @@ describe('PerformanceMonitoringMiddleware', () => {
         if (header === 'User-Agent') return 'test-agent';
         return undefined;
       }),
-    } as Partial<Request>;
+    } as unknown as Partial<Request>;
 
     finishCallback = null;
     mockResponse = {
@@ -30,9 +30,10 @@ describe('PerformanceMonitoringMiddleware', () => {
         if (event === 'finish') {
           finishCallback = callback;
         }
+        return mockResponse;
       }),
       statusCode: 200,
-    } as Partial<Response>;
+    } as unknown as Partial<Response>;
 
     mockNext = vi.fn();
 
@@ -259,20 +260,21 @@ describe('PerformanceMonitoringMiddleware', () => {
     it('should warn about high error rate', () => {
       // Create multiple error requests
       for (let i = 0; i < 10; i++) {
-        mockResponse.statusCode = 500;
-        middleware.use(mockRequest as Request, mockResponse as Response, mockNext);
-        if (finishCallback) finishCallback();
-
-        // Reset for next iteration
-        finishCallback = null;
-        mockResponse = {
+        const newMockResponse = {
           on: vi.fn((event: string, callback: () => void) => {
             if (event === 'finish') {
               finishCallback = callback;
             }
+            return newMockResponse;
           }),
           statusCode: 500,
-        } as Partial<Response>;
+        } as unknown as Partial<Response>;
+
+        middleware.use(mockRequest as Request, newMockResponse as Response, mockNext);
+        if (finishCallback) finishCallback();
+
+        // Reset for next iteration
+        finishCallback = null;
       }
 
       const warnings = PerformanceMonitoringMiddleware.getPerformanceWarnings();
@@ -326,8 +328,17 @@ describe('PerformanceMonitoringMiddleware', () => {
 
   describe('edge cases', () => {
     it('should handle request without IP', () => {
-      mockRequest.ip = undefined;
-      middleware.use(mockRequest as Request, mockResponse as Response, mockNext);
+      const reqWithoutIp = {
+        method: 'GET',
+        originalUrl: '/test',
+        ip: undefined,
+        get: vi.fn((header: string) => {
+          if (header === 'User-Agent') return 'test-agent';
+          return undefined;
+        }),
+      } as unknown as Partial<Request>;
+
+      middleware.use(reqWithoutIp as Request, mockResponse as Response, mockNext);
       if (finishCallback) finishCallback();
 
       const metrics = PerformanceMonitoringMiddleware.getDetailedMetrics();
@@ -345,15 +356,21 @@ describe('PerformanceMonitoringMiddleware', () => {
 
     it('should handle multiple concurrent requests', () => {
       for (let i = 0; i < 5; i++) {
-        const req = { ...mockRequest, originalUrl: `/test${String(i)}` };
+        const req = {
+          method: 'GET',
+          originalUrl: `/test${String(i)}`,
+          ip: '127.0.0.1',
+          get: vi.fn(() => undefined),
+        } as unknown as Partial<Request>;
         const res = {
           on: vi.fn((event: string, callback: () => void) => {
             if (event === 'finish') {
               callback();
             }
+            return res;
           }),
           statusCode: 200,
-        };
+        } as unknown as Partial<Response>;
         middleware.use(req as Request, res as Response, mockNext);
       }
 
@@ -364,19 +381,17 @@ describe('PerformanceMonitoringMiddleware', () => {
     it('should maintain maximum history size', () => {
       // Create more than MAX_METRICS_HISTORY requests
       for (let i = 0; i < 1100; i++) {
-        middleware.use(mockRequest as Request, mockResponse as Response, mockNext);
-        if (finishCallback) finishCallback();
-
-        // Reset callback for next iteration
-        finishCallback = null;
-        mockResponse = {
+        const newMockResponse = {
           on: vi.fn((event: string, callback: () => void) => {
             if (event === 'finish') {
-              finishCallback = callback;
+              callback();
             }
+            return newMockResponse;
           }),
           statusCode: 200,
-        } as Partial<Response>;
+        } as unknown as Partial<Response>;
+
+        middleware.use(mockRequest as Request, newMockResponse as Response, mockNext);
       }
 
       const stats = PerformanceMonitoringMiddleware.getPerformanceStats();
@@ -409,22 +424,25 @@ describe('PerformanceMonitoringMiddleware', () => {
     });
 
     it('should accumulate endpoint statistics', () => {
-      mockRequest.originalUrl = '/api/accumulate';
+      const reqWithUrl = {
+        method: 'GET',
+        originalUrl: '/api/accumulate',
+        ip: '127.0.0.1',
+        get: vi.fn(() => 'test-agent'),
+      } as unknown as Partial<Request>;
 
       for (let i = 0; i < 3; i++) {
-        middleware.use(mockRequest as Request, mockResponse as Response, mockNext);
-        if (finishCallback) finishCallback();
-
-        // Reset callback for next iteration
-        finishCallback = null;
-        mockResponse = {
+        const newMockResponse = {
           on: vi.fn((event: string, callback: () => void) => {
             if (event === 'finish') {
-              finishCallback = callback;
+              callback();
             }
+            return newMockResponse;
           }),
           statusCode: 200,
-        } as Partial<Response>;
+        } as unknown as Partial<Response>;
+
+        middleware.use(reqWithUrl as Request, newMockResponse as Response, mockNext);
       }
 
       const metrics = PerformanceMonitoringMiddleware.getDetailedMetrics();
