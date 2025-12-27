@@ -22,10 +22,10 @@ vi.mock('path', () => ({
   join: vi.fn((...args) => args.join('/')),
 }));
 vi.mock('sitemap', () => ({
-  SitemapStream: vi.fn().mockImplementation(() => ({
-    write: vi.fn(),
-    end: vi.fn(),
-  })),
+  SitemapStream: vi.fn(function (this: any) {
+    this.write = vi.fn();
+    this.end = vi.fn();
+  }),
   streamToPromise: vi
     .fn()
     .mockResolvedValue(

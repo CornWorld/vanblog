@@ -152,8 +152,12 @@ export class MigrationService {
     try {
       // 检查是否已有迁移记录
       await this.db.select().from(siteMeta).where(eq(siteMeta.key, 'migration_version')).limit(1);
-    } catch {
+    } catch (error: unknown) {
       // 如果查询失败，说明可能是新数据库，初始化迁移记录
+      this.logger.debug(
+        'Migration table check failed, initializing:',
+        error instanceof Error ? error.message : String(error),
+      );
       await this.db.insert(siteMeta).values({
         key: 'migration_version',
         value: JSON.stringify({ version: '1.0.0', migrations: [] }),
@@ -180,8 +184,11 @@ export class MigrationService {
       const data = (row.value ?? {}) as { migrations?: MigrationRecord[] };
       const migrationData = normalizeMigrationData(data);
       return [...migrationData.migrations];
-    } catch (error) {
-      this.logger.error('Failed to get executed migrations:', error);
+    } catch (error: unknown) {
+      this.logger.error(
+        'Failed to get executed migrations:',
+        error instanceof Error ? error : new Error(String(error)),
+      );
       return [];
     }
   }
@@ -200,9 +207,10 @@ export class MigrationService {
       await this.recordMigration(migration);
 
       this.logger.log(`Migration completed: ${migration.name}`);
-    } catch (error) {
-      this.logger.error(`Migration failed: ${migration.name}`, error);
-      throw error;
+    } catch (error: unknown) {
+      const errorObj = error instanceof Error ? error : new Error(String(error));
+      this.logger.error(`Migration failed: ${migration.name}`, errorObj);
+      throw errorObj;
     }
   }
 
@@ -264,9 +272,10 @@ export class MigrationService {
       await migration.down(this.db);
       await this.removeMigrationRecord(migrationId);
       this.logger.log(`Migration rolled back: ${migration.name}`);
-    } catch (error) {
-      this.logger.error(`Migration rollback failed: ${migration.name}`, error);
-      throw error;
+    } catch (error: unknown) {
+      const errorObj = error instanceof Error ? error : new Error(String(error));
+      this.logger.error(`Migration rollback failed: ${migration.name}`, errorObj);
+      throw errorObj;
     }
   }
 
@@ -360,8 +369,9 @@ export class MigrationService {
       this.logger.log(
         `Loaded ${String(migrationFiles.length)} migration files from ${migrationDir}`,
       );
-    } catch (error) {
-      this.logger.warn(`Failed to load migrations from directory: ${migrationDir}`, error);
+    } catch (error: unknown) {
+      const errorObj = error instanceof Error ? error : new Error(String(error));
+      this.logger.warn(`Failed to load migrations from directory: ${migrationDir}`, errorObj);
     }
   }
 

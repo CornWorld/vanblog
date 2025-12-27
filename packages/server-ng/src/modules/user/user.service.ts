@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ConflictException, Inject } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, Inject, Logger } from '@nestjs/common';
 import { users, insertUserSchema, updateUserSchema } from '@vanblog/shared/drizzle';
 import * as bcrypt from 'bcrypt';
 import { eq, ne } from 'drizzle-orm';
@@ -12,6 +12,8 @@ import { User } from './entities/user.entity';
 
 @Injectable()
 export class UserService {
+  private readonly logger = new Logger(UserService.name);
+
   constructor(
     @Inject(DATABASE_CONNECTION)
     private readonly db: Database,
@@ -56,8 +58,10 @@ export class UserService {
       userData = await this.hookService.applyFilters('user|beforeCreate', userData, {
         action: 'create',
       });
-    } catch {
-      // 钩子错误不应中断主流程
+    } catch (error: unknown) {
+      // 钩子错误不应中断主流程,记录日志后继续
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.logger.warn(`Hook error in user|beforeCreate: ${errorMessage}`);
     }
 
     const existingUser = await this.db
@@ -74,13 +78,10 @@ export class UserService {
 
     // 权限数据转换：API 格式（string[] | string）-> DB 格式（string[] | null）
     // Drizzle 的 mode: 'json' 会自动处理序列化，无需手动 JSON.stringify
-    const normalizedPermissions = this.normalizePermissions(
-      (userData as unknown as { permissions?: unknown }).permissions,
-    );
-    const permissionsDb = insertUserSchema.shape.permissions.parse(normalizedPermissions) as
-      | string[]
-      | null
-      | undefined;
+    const userDataWithPermissions = userData as { permissions?: unknown };
+    const normalizedPermissions = this.normalizePermissions(userDataWithPermissions.permissions);
+    // Zod schema 要求 array | null，不接受 undefined，所以需要转换
+    const permissionsDb = insertUserSchema.shape.permissions.parse(normalizedPermissions ?? null);
 
     const newUser = await this.db
       .insert(users)
@@ -91,7 +92,7 @@ export class UserService {
         email: userData.email,
         avatar: userData.avatar,
         type: userData.type,
-        permissions: permissionsDb as unknown as string[] | null | undefined,
+        permissions: permissionsDb,
       })
       .returning()
       .get();
@@ -153,8 +154,10 @@ export class UserService {
         action: 'update',
         id,
       });
-    } catch {
-      // 钩子错误不应中断主流程
+    } catch (error: unknown) {
+      // 钩子错误不应中断主流程,记录日志后继续
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.logger.warn(`Hook error in user|beforeUpdate: ${errorMessage}`);
     }
 
     // 构建更新数据对象，仅包含提供的字段
@@ -188,10 +191,12 @@ export class UserService {
     if (userData.permissions !== undefined) {
       // 权限数据转换：API 格式（string[]）-> DB 格式（string[] | null）
       // Drizzle 的 mode: 'json' 会自动处理序列化，无需手动 JSON.stringify
-      const normalizedPermissions = this.normalizePermissions(
-        (userData as unknown as { permissions?: unknown }).permissions,
-      );
-      const permissionsDb = updateUserSchema.shape.permissions.parse(normalizedPermissions);
+      const userDataWithPermissions = userData as {
+        permissions?: unknown;
+      };
+      const normalizedPermissions = this.normalizePermissions(userDataWithPermissions.permissions);
+      // Zod schema 要求 array | null，不接受 undefined，所以需要转换
+      const permissionsDb = updateUserSchema.shape.permissions.parse(normalizedPermissions ?? null);
       updateData.permissions = permissionsDb;
     }
 
@@ -205,7 +210,9 @@ export class UserService {
       throw new NotFoundException(`User with ID ${String(id)} not found`);
     }
 
-    const userResult = this.mapToEntity(updatedUsers[0]);
+    const [updatedUser] = updatedUsers;
+
+    const userResult = this.mapToEntity(updatedUser);
 
     // 密码修改后撤销所有令牌，强制用户重新登录
     if (passwordChanged) {
@@ -238,8 +245,10 @@ export class UserService {
           action: 'delete',
         },
       );
-    } catch {
-      // 钩子错误不应中断主流程
+    } catch (error: unknown) {
+      // 钩子错误不应中断主流程,记录日志后继续
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.logger.warn(`Hook error in user|beforeDelete: ${errorMessage}`);
     }
 
     const results = await this.db.delete(users).where(eq(users.id, id)).returning();
@@ -275,11 +284,16 @@ export class UserService {
     // -> 实体期望 string[] | undefined
     const permissions: string[] | undefined = (() => {
       const raw = dbUser.permissions;
-      if (raw == null) return undefined; // null -> undefined（未设置）
-      if (Array.isArray(raw)) {
-        return raw.length > 0 ? raw : undefined;
+      if (raw == null) {
+        return undefined; // null -> undefined（未设置）
       }
-      return undefined;
+      // Type guard to ensure raw is an array
+      if (!Array.isArray(raw)) {
+        return undefined;
+      }
+      // Filter to ensure all elements are strings
+      const stringArray = raw.filter((v): v is string => typeof v === 'string');
+      return stringArray.length > 0 ? stringArray : undefined;
     })();
 
     return new User({

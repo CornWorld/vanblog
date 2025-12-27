@@ -161,6 +161,7 @@ export const $ArticleIns = createInsertSchema(articles, {
   content: z.string().min(1, '内容不能为空'),
   pathname: pathnameSchema.optional(),
   author: z.string().min(1, '作者不能为空'),
+  tags: z.array(z.string()).nullable().optional(),
 });
 
 export const $ArticleUpd = createUpdateSchema(articles, {
@@ -241,6 +242,7 @@ export const $DraftIns = createInsertSchema(drafts, {
   content: z.string().min(1, '内容不能为空'),
   pathname: pathnameSchema.optional(),
   author: z.string().min(1, '作者不能为空'),
+  tags: z.array(z.string()).nullable().optional(),
 });
 
 export const $DraftUpd = createUpdateSchema(drafts, {

@@ -456,10 +456,37 @@ export function createConfigServiceMock(
   };
 
   // 合并用户提供的覆盖值
-  const mergedConfig = {
-    ...defaultConfig,
-    ...overrides,
-  };
+  // 支持扁平化的dot-notation键（如 'app.name'）和嵌套对象
+  const mergedConfig = { ...defaultConfig };
+
+  // 处理覆盖值，支持dot-notation
+  for (const [key, value] of Object.entries(overrides)) {
+    if (key.includes('.')) {
+      // 处理dot-notation键（如 'app.name'）
+      const keys = key.split('.');
+      let current: any = mergedConfig;
+      for (let i = 0; i < keys.length - 1; i++) {
+        const k = keys[i];
+        if (!(k in current)) {
+          current[k] = {};
+        }
+        current = current[k];
+      }
+      current[keys[keys.length - 1]] = value;
+    } else {
+      // 处理顶层键或嵌套对象
+      if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+        const configRecord = mergedConfig as Record<string, unknown>;
+        const existing = configRecord[key];
+        configRecord[key] = {
+          ...(typeof existing === 'object' && existing !== null ? existing : {}),
+          ...value,
+        };
+      } else {
+        (mergedConfig as Record<string, unknown>)[key] = value;
+      }
+    }
+  }
 
   return {
     // 所有配置属性的getter

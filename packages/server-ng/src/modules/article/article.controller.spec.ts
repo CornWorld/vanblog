@@ -176,8 +176,8 @@ describe('ArticleController', () => {
   describe('import', () => {
     it('should import multiple articles', async () => {
       const mockArticles = [
-        { title: 'Article 1', content: 'Content 1', author: 'admin' },
-        { title: 'Article 2', content: 'Content 2', author: 'admin' },
+        { title: 'Article 1', content: 'Content 1', author: 'admin', tags: [] },
+        { title: 'Article 2', content: 'Content 2', author: 'admin', tags: [] },
       ];
       mockArticleService.importArticles.mockResolvedValue(undefined);
 
@@ -213,7 +213,7 @@ describe('ArticleController', () => {
 
   describe('create', () => {
     it('should create a new article', async () => {
-      const createDto = { title: 'New Article', content: 'Content', author: 'admin' };
+      const createDto = { title: 'New Article', content: 'Content', author: 'admin', tags: [] };
       const mockArticle = new Article(MockUtils.testData.createArticle({ title: 'New Article' }));
       mockArticleService.create.mockResolvedValue(mockArticle);
 
@@ -859,7 +859,7 @@ describe('ArticleController', () => {
 
       // Valid DTO
       await expect(
-        controller.create({ title: 'Test', content: 'Content', author: 'admin' }),
+        controller.create({ title: 'Test', content: 'Content', author: 'admin', tags: [] }),
       ).resolves.toBeDefined();
 
       // Invalid DTO - missing required fields
@@ -883,8 +883,8 @@ describe('ArticleController', () => {
       // Valid array
       await expect(
         controller.import([
-          { title: 'Article 1', content: 'Content 1', author: 'admin' },
-          { title: 'Article 2', content: 'Content 2', author: 'admin' },
+          { title: 'Article 1', content: 'Content 1', author: 'admin', tags: [] },
+          { title: 'Article 2', content: 'Content 2', author: 'admin', tags: [] },
         ]),
       ).resolves.toBeUndefined();
 

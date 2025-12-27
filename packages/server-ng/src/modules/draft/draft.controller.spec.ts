@@ -163,7 +163,7 @@ describe('DraftController', () => {
 
   describe('create', () => {
     it('should pass dto with required fields', async () => {
-      const dto = { title: 't', content: 'content', author: 'admin' };
+      const dto = { title: 't', content: 'content', author: 'admin', tags: null };
       const created = { id: 1, ...dto };
       mockDraftService.create.mockResolvedValue(created);
 
@@ -189,7 +189,7 @@ describe('DraftController', () => {
     });
 
     it('should handle dto with category', async () => {
-      const dto = { title: 't', content: 'content', author: 'admin', category: 'tech' };
+      const dto = { title: 't', content: 'content', author: 'admin', category: 'tech', tags: null };
       const created = { id: 1, ...dto };
       mockDraftService.create.mockResolvedValue(created);
 
@@ -294,7 +294,7 @@ describe('DraftController', () => {
 
   describe('importDrafts', () => {
     it('should pass array with required fields', async () => {
-      const drafts = [{ title: 'a', content: 'content', author: 'admin' }];
+      const drafts = [{ title: 'a', content: 'content', author: 'admin', tags: null }];
       mockDraftService.importDrafts.mockResolvedValue(undefined);
 
       await controller.importDrafts(drafts);
@@ -304,9 +304,9 @@ describe('DraftController', () => {
 
     it('should handle multiple drafts', async () => {
       const drafts = [
-        { title: 'Draft 1', content: 'content 1', author: 'admin' },
-        { title: 'Draft 2', content: 'content 2', author: 'admin' },
-        { title: 'Draft 3', content: 'content 3', author: 'admin' },
+        { title: 'Draft 1', content: 'content 1', author: 'admin', tags: null },
+        { title: 'Draft 2', content: 'content 2', author: 'admin', tags: null },
+        { title: 'Draft 3', content: 'content 3', author: 'admin', tags: null },
       ];
       mockDraftService.importDrafts.mockResolvedValue(undefined);
 
@@ -975,6 +975,7 @@ describe('DraftController', () => {
         title: 'Special chars: @#$%^&*()',
         content: 'Content',
         author: 'admin',
+        tags: null,
       };
       const created = { id: 1, ...dto };
       mockDraftService.create.mockResolvedValue(created);
@@ -994,6 +995,7 @@ describe('DraftController', () => {
         title: 'Long content',
         content: longContent,
         author: 'admin',
+        tags: null,
       };
       const created = { id: 1, ...dto };
       mockDraftService.create.mockResolvedValue(created);
@@ -1048,12 +1050,13 @@ describe('DraftController', () => {
         title: 'Test',
         content: 'Content',
         author: 'admin',
+        tags: null,
       };
       mockDraftService.create.mockResolvedValue(mockDraft);
 
       // Valid DTO
       await expect(
-        controller.create({ title: 'Test', content: 'Content', author: 'admin' }),
+        controller.create({ title: 'Test', content: 'Content', author: 'admin', tags: null }),
       ).resolves.toBeDefined();
 
       // Invalid DTO - missing required fields
@@ -1090,8 +1093,8 @@ describe('DraftController', () => {
       // Valid array
       await expect(
         controller.importDrafts([
-          { title: 'Draft 1', content: 'Content 1', author: 'admin' },
-          { title: 'Draft 2', content: 'Content 2', author: 'admin' },
+          { title: 'Draft 1', content: 'Content 1', author: 'admin', tags: null },
+          { title: 'Draft 2', content: 'Content 2', author: 'admin', tags: null },
         ]),
       ).resolves.toBeUndefined();
 

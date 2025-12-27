@@ -54,7 +54,7 @@ export const insertUserSchema = createInsertSchema(users, {
   password: passwordSchema,
   email: (schema) => schema.regex(/^[^\s@]+@[^\s@]+\.[^\s@]+$/u, '请输入有效的邮箱地址').optional(),
 }).extend({
-  permissions: z.array(z.string()).nullable(),
+  permissions: z.array(z.string()).nullable().optional(),
 });
 
 export const updateUserSchema = createUpdateSchema(users, {

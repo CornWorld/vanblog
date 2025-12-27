@@ -10,6 +10,23 @@ import {
 } from '../dto/statistics.dto';
 
 /**
+ * Type guard to check if a value is a valid number
+ */
+function isValidNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value);
+}
+
+/**
+ * Safely converts a value to a non-negative number
+ */
+function toSafeNumber(value: unknown): number {
+  if (isValidNumber(value)) {
+    return Math.max(0, value);
+  }
+  return 0;
+}
+
+/**
  * 统计数据服务
  *
  * 提供系统各种统计数据的计算和查询功能，包括文章、分类、标签等
@@ -68,31 +85,31 @@ export class StatisticsService {
       allCategories.map(async (category) => {
         const results = await this.db
           .select({
-            articleCount: sql<number>`count(*)`,
-            publishedCount: sql<number>`count(case when hidden = false and private = false then 1 end)`,
-            privateCount: sql<number>`count(case when private = true then 1 end)`,
-            totalViews: sql<number>`sum(viewer)`,
+            articleCount: sql<unknown>`count(*)`,
+            publishedCount: sql<unknown>`count(case when hidden = false and private = false then 1 end)`,
+            privateCount: sql<unknown>`count(case when private = true then 1 end)`,
+            totalViews: sql<unknown>`sum(viewer)`,
           })
           .from(articles)
           .where(eq(articles.category, category.name));
 
-        const result = results[0] as
-          | {
-              articleCount: number;
-              publishedCount: number;
-              privateCount: number;
-              totalViews: number | null;
-            }
-          | undefined;
+        const [
+          result = {
+            articleCount: 0,
+            publishedCount: 0,
+            privateCount: 0,
+            totalViews: 0,
+          },
+        ] = results;
 
         return {
           id: category.id,
           name: category.name,
           slug: category.slug ?? undefined,
-          articleCount: Math.max(0, result?.articleCount ?? 0),
-          publishedCount: Math.max(0, result?.publishedCount ?? 0),
-          privateCount: Math.max(0, result?.privateCount ?? 0),
-          totalViews: Math.max(0, result?.totalViews ?? 0),
+          articleCount: toSafeNumber(result.articleCount),
+          publishedCount: toSafeNumber(result.publishedCount),
+          privateCount: toSafeNumber(result.privateCount),
+          totalViews: toSafeNumber(result.totalViews),
         };
       }),
     );
@@ -115,25 +132,25 @@ export class StatisticsService {
       allTags.map(async (tag) => {
         const results = await this.db
           .select({
-            articleCount: sql<number>`count(*)`,
-            totalViews: sql<number>`sum(viewer)`,
+            articleCount: sql<unknown>`count(*)`,
+            totalViews: sql<unknown>`sum(viewer)`,
           })
           .from(articles)
           .where(like(articles.tags, `"%${tag.name}%"`.replace('"%', '%"').replace('%"', '"%')));
 
-        const result = results[0] as
-          | {
-              articleCount: number;
-              totalViews: number | null;
-            }
-          | undefined;
+        const [
+          result = {
+            articleCount: 0,
+            totalViews: 0,
+          },
+        ] = results;
 
         return {
           id: tag.id,
           name: tag.name,
           slug: tag.slug ?? undefined,
-          articleCount: Math.max(0, result?.articleCount ?? 0),
-          totalViews: Math.max(0, result?.totalViews ?? 0),
+          articleCount: toSafeNumber(result.articleCount),
+          totalViews: toSafeNumber(result.totalViews),
         };
       }),
     );
@@ -158,30 +175,30 @@ export class StatisticsService {
   }> {
     const results = await this.db
       .select({
-        totalArticles: sql<number>`count(*)`,
-        publishedArticles: sql<number>`count(case when hidden = false and private = false then 1 end)`,
-        privateArticles: sql<number>`count(case when private = true then 1 end)`,
-        hiddenArticles: sql<number>`count(case when hidden = true then 1 end)`,
-        totalViews: sql<number>`sum(viewer)`,
+        totalArticles: sql<unknown>`count(*)`,
+        publishedArticles: sql<unknown>`count(case when hidden = false and private = false then 1 end)`,
+        privateArticles: sql<unknown>`count(case when private = true then 1 end)`,
+        hiddenArticles: sql<unknown>`count(case when hidden = true then 1 end)`,
+        totalViews: sql<unknown>`sum(viewer)`,
       })
       .from(articles);
 
-    const result = results[0] as
-      | {
-          totalArticles: number;
-          publishedArticles: number;
-          privateArticles: number;
-          hiddenArticles: number;
-          totalViews: number | null;
-        }
-      | undefined;
+    const [
+      result = {
+        totalArticles: 0,
+        publishedArticles: 0,
+        privateArticles: 0,
+        hiddenArticles: 0,
+        totalViews: 0,
+      },
+    ] = results;
 
     return {
-      totalArticles: Math.max(0, result?.totalArticles ?? 0),
-      publishedArticles: Math.max(0, result?.publishedArticles ?? 0),
-      privateArticles: Math.max(0, result?.privateArticles ?? 0),
-      hiddenArticles: Math.max(0, result?.hiddenArticles ?? 0),
-      totalViews: Math.max(0, result?.totalViews ?? 0),
+      totalArticles: toSafeNumber(result.totalArticles),
+      publishedArticles: toSafeNumber(result.publishedArticles),
+      privateArticles: toSafeNumber(result.privateArticles),
+      hiddenArticles: toSafeNumber(result.hiddenArticles),
+      totalViews: toSafeNumber(result.totalViews),
     };
   }
 
@@ -195,11 +212,12 @@ export class StatisticsService {
   async getTotalPublishedWordCount(): Promise<number> {
     // 基于 SQLite 的 length() 统计字符数，保持与 Draft.wordCount 一致（以字符数为度量）
     const res = await this.db
-      .select({ total: sql<number>`sum(length(${articles.content}))` })
+      .select({ total: sql<unknown>`sum(length(${articles.content}))` })
       .from(articles)
       .where(and(eq(articles.hidden, false), eq(articles.private, false)));
 
-    const total = res[0]?.total ?? 0;
-    return Number.isFinite(total) && total > 0 ? total : 0;
+    const [result = { total: 0 }] = res;
+
+    return toSafeNumber(result.total);
   }
 }

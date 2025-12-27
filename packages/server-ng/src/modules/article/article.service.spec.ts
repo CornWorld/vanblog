@@ -330,14 +330,19 @@ describe('ArticleService', () => {
         tags: ['updated'],
       });
 
-      // Mock for the existence check query
-      databaseMock.db.select.mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([mockExistingArticle]),
+      // Mock for the existence check query (findOne)
+      databaseMock.db.select
+        .mockReturnValueOnce({
+          from: vi.fn().mockReturnValue({
+            where: vi.fn().mockReturnValue({
+              limit: vi.fn().mockResolvedValue([mockExistingArticle]),
+            }),
           }),
-        }),
-      });
+        })
+        // Mock for the tags query (createMissingTags)
+        .mockReturnValueOnce({
+          from: vi.fn().mockResolvedValue([]), // Return empty array, no existing tags
+        });
 
       databaseMock.setUpdateResult([mockUpdatedArticle]); // 更新结果
 

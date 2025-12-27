@@ -9,11 +9,15 @@ import { z } from 'zod';
 export const PermissionGroupSchema = selectPermissionGroupSchema;
 
 // 创建权限组 Schema
-export const CreatePermissionGroupSchema = insertPermissionGroupSchema.omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
+export const CreatePermissionGroupSchema = insertPermissionGroupSchema
+  .omit({
+    id: true,
+    createdAt: true,
+    updatedAt: true,
+  })
+  .extend({
+    permissions: insertPermissionGroupSchema.shape.permissions.optional(),
+  });
 
 // 更新权限组 Schema
 export const UpdatePermissionGroupSchema = updatePermissionGroupSchema

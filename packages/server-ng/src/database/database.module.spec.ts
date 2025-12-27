@@ -57,9 +57,14 @@ describe('DatabaseModule', () => {
     });
 
     it('should have module metadata', () => {
-      // Check if it's decorated (has design:paramtypes metadata)
-      const hasMetadata = Reflect.hasMetadata('design:paramtypes', DatabaseModule);
-      expect(hasMetadata).toBe(true);
+      // Check if it's decorated with @Module() by checking for the metadata
+      // NestJS stores module metadata under specific keys
+      const metadata = Reflect.getMetadata('imports', DatabaseModule);
+      const providers = Reflect.getMetadata('providers', DatabaseModule);
+      const exports = Reflect.getMetadata('exports', DatabaseModule);
+
+      // At least one of these should be defined for a valid @Module() decorated class
+      expect(metadata !== undefined || providers !== undefined || exports !== undefined).toBe(true);
     });
   });
 

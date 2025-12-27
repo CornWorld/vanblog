@@ -1,6 +1,6 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import { dayjs } from '@vanblog/shared';
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 import { HealthController } from './health.controller';
 
@@ -13,6 +13,10 @@ describe('HealthController', () => {
     }).compile();
 
     controller = module.get<HealthController>(HealthController);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it('should be defined', () => {

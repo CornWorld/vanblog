@@ -20,15 +20,24 @@ vi.mock('crypto', () => ({
   createHash: vi.fn(),
 }));
 
-vi.mock('picgo', () => ({
-  PicGo: vi.fn().mockImplementation(() => ({
+vi.mock('picgo', () => {
+  const mockPicGoInstance = {
     setConfig: vi.fn(),
     upload: vi.fn(),
     pluginHandler: {
       install: vi.fn(),
     },
-  })),
-}));
+  };
+
+  return {
+    default: vi.fn(function PicGo() {
+      return mockPicGoInstance;
+    }),
+    PicGo: vi.fn(function PicGo() {
+      return mockPicGoInstance;
+    }),
+  };
+});
 
 describe('PicgoStorageService', () => {
   let service: PicgoStorageService;

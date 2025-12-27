@@ -64,7 +64,9 @@ export class AnalyticsCacheService {
       await this.cache.set('analytics:overview', overview, 300); // 5 分钟缓存
       this.logger.debug('Overview cache updated');
     } catch (error) {
-      this.logger.error('Failed to update overview cache', error as Error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorStack = error instanceof Error ? error.stack : undefined;
+      this.logger.error('Failed to update overview cache', errorStack ?? errorMessage);
     }
   }
 
@@ -78,7 +80,9 @@ export class AnalyticsCacheService {
       await this.cache.set('analytics:page-rankings', rankings, 600); // 10 分钟缓存
       this.logger.debug('Page rankings cache updated');
     } catch (error) {
-      this.logger.error('Failed to update page rankings cache', error as Error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorStack = error instanceof Error ? error.stack : undefined;
+      this.logger.error('Failed to update page rankings cache', errorStack ?? errorMessage);
     }
   }
 
@@ -92,7 +96,9 @@ export class AnalyticsCacheService {
       await this.cache.set('analytics:referrer-stats', stats, 900); // 15 分钟缓存
       this.logger.debug('Referrer stats cache updated');
     } catch (error) {
-      this.logger.error('Failed to update referrer stats cache', error as Error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorStack = error instanceof Error ? error.stack : undefined;
+      this.logger.error('Failed to update referrer stats cache', errorStack ?? errorMessage);
     }
   }
 
@@ -106,7 +112,9 @@ export class AnalyticsCacheService {
       await this.cache.set('analytics:chart-data', chartData, 3600); // 1 小时缓存
       this.logger.debug('Chart data cache updated');
     } catch (error) {
-      this.logger.error('Failed to update chart data cache', error as Error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorStack = error instanceof Error ? error.stack : undefined;
+      this.logger.error('Failed to update chart data cache', errorStack ?? errorMessage);
     }
   }
 
@@ -156,8 +164,7 @@ export class AnalyticsCacheService {
     yesterday.setDate(yesterday.getDate() - 1);
 
     // 使用单个查询获取所有统计数据
-    const dayjsInstance = dayjs(today);
-    const todayStr = dayjsInstance.format('YYYY-MM-DD');
+    const todayStr = dayjs(today).format('YYYY-MM-DD');
     const yesterdayStr = dayjs(yesterday).format('YYYY-MM-DD');
 
     const results = await this.db
@@ -171,13 +178,26 @@ export class AnalyticsCacheService {
       })
       .from(analytics);
 
-    const result: OverviewData | undefined = results[0];
+    // SQL aggregation queries always return at least one row (even if table is empty)
+    const [
+      result = {
+        totalViews: 0,
+        totalUniqueVisitors: 0,
+        todayViews: 0,
+        todayUniqueVisitors: 0,
+        yesterdayViews: 0,
+        yesterdayUniqueVisitors: 0,
+      },
+    ] = results;
 
-    if (!result) {
-      throw new Error('Failed to calculate overview: no result returned from database');
-    }
-
-    return result;
+    return {
+      totalViews: result.totalViews,
+      totalUniqueVisitors: result.totalUniqueVisitors,
+      todayViews: result.todayViews,
+      todayUniqueVisitors: result.todayUniqueVisitors,
+      yesterdayViews: result.yesterdayViews,
+      yesterdayUniqueVisitors: result.yesterdayUniqueVisitors,
+    };
   }
 
   /**
@@ -194,7 +214,11 @@ export class AnalyticsCacheService {
       .groupBy(analytics.path)
       .orderBy(desc(sql<number>`count(*)`));
 
-    return results as PageRankingData[];
+    return results.map((row) => ({
+      path: row.path,
+      views: row.views,
+      uniqueVisitors: row.uniqueVisitors,
+    }));
   }
 
   /**
@@ -212,15 +236,18 @@ export class AnalyticsCacheService {
       .groupBy(analytics.referrer)
       .orderBy(desc(sql<number>`count(*)`));
 
-    return results as ReferrerData[];
+    return results.map((row) => ({
+      referrer: row.referrer,
+      views: row.views,
+      uniqueVisitors: row.uniqueVisitors,
+    }));
   }
 
   /**
    * 计算图表数据 - 优化为单次查询
    */
   private async calculateChartData(): Promise<ChartData[]> {
-    const dayjsInstance = dayjs();
-    const thirtyDaysAgo = dayjsInstance.subtract(30, 'day').format('YYYY-MM-DD');
+    const thirtyDaysAgo = dayjs().subtract(30, 'day').format('YYYY-MM-DD');
 
     const results = await this.db
       .select({
@@ -233,6 +260,10 @@ export class AnalyticsCacheService {
       .groupBy(sql<string>`date(${analytics.createdAt})`)
       .orderBy(sql<string>`date(${analytics.createdAt})`);
 
-    return results as ChartData[];
+    return results.map((row) => ({
+      date: row.date,
+      views: row.views,
+      uniqueVisitors: row.uniqueVisitors,
+    }));
   }
 }

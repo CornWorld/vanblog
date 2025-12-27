@@ -118,7 +118,7 @@ describe('QueryOptimizerService', () => {
 
       expect(loggerSpy).toHaveBeenCalledWith(
         expect.stringContaining('Query failed: failing-query after'),
-        expect.any(Error),
+        expect.stringContaining('Error: Query failed'),
       );
     });
   });

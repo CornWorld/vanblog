@@ -64,7 +64,10 @@ export class QueryOptimizerService {
 
       return countMap;
     } catch (error) {
-      this.logger.error('Failed to batch count articles by tags:', error);
+      this.logger.error(
+        'Failed to batch count articles by tags:',
+        error instanceof Error ? error.message : String(error),
+      );
       return {};
     }
   }
@@ -117,7 +120,10 @@ export class QueryOptimizerService {
       return result;
     } catch (error) {
       const duration = Date.now() - startTime;
-      this.logger.error(`Query failed: ${queryName} after ${String(duration)}ms`, error);
+      this.logger.error(
+        `Query failed: ${queryName} after ${String(duration)}ms`,
+        error instanceof Error ? error.stack : String(error),
+      );
       throw error;
     }
   }

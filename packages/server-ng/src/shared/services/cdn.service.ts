@@ -41,10 +41,11 @@ export class CDNService {
   private readonly config: CDNConfig;
 
   constructor(private readonly configService: ConfigService) {
+    const cdnDomains = this.configService.get<string>('CDN_DOMAINS', '') || '';
     this.config = {
       enabled: this.configService.get<boolean>('CDN_ENABLED', false),
       baseUrl: this.configService.get<string>('CDN_BASE_URL', ''),
-      domains: this.configService.get<string>('CDN_DOMAINS', '').split(',').filter(Boolean),
+      domains: cdnDomains.split(',').filter(Boolean),
       enableImageOptimization: this.configService.get<boolean>('CDN_IMAGE_OPTIMIZATION', true),
       enableWebP: this.configService.get<boolean>('CDN_WEBP_ENABLED', true),
       cacheTTL: this.configService.get<number>('CDN_CACHE_TTL', 86400), // 24小时
