@@ -1,7 +1,9 @@
 import type { TestingModule } from '@nestjs/testing';
 import { Test } from '@nestjs/testing';
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 
+import { DATABASE_CONNECTION } from '../../database';
+import { MockUtils } from '../../../test/mock-utils';
 import { HookService } from '../plugin/services/hook.service';
 import { SettingCoreService } from '../setting/services/setting-core.service';
 import { SettingRegistryService } from '../setting/services/setting-registry.service';
@@ -12,30 +14,23 @@ import { CommentService } from './comment.service';
 describe('CommentModule', () => {
   let module: TestingModule;
 
-  const mockHookService = {
-    doAction: vi.fn().mockResolvedValue(undefined),
-    applyFilters: vi.fn((_name, data) => Promise.resolve(data)),
-  };
-
-  const mockSettingCoreService = {
-    getSiteMeta: vi.fn().mockResolvedValue({}),
-  };
-
-  const mockSettingRegistryService = {
-    registerConfig: vi.fn(),
-    getConfig: vi.fn().mockResolvedValue(null),
-  };
-
   beforeEach(async () => {
     module = await Test.createTestingModule({
       imports: [CommentModule],
     })
+      .overrideProvider(DATABASE_CONNECTION)
+      .useValue(MockUtils.createDatabaseMock())
       .overrideProvider(HookService)
-      .useValue(mockHookService)
+      .useValue(MockUtils.services.createHookServiceMock())
       .overrideProvider(SettingCoreService)
-      .useValue(mockSettingCoreService)
+      .useValue({
+        getSiteMeta: MockUtils.services.createHookServiceMock().doAction,
+      })
       .overrideProvider(SettingRegistryService)
-      .useValue(mockSettingRegistryService)
+      .useValue({
+        registerConfig: MockUtils.services.createHookServiceMock().doAction,
+        getConfig: MockUtils.services.createHookServiceMock().doAction,
+      })
       .compile();
   });
 
