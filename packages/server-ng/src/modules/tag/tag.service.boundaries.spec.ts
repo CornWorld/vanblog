@@ -13,6 +13,7 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import { vi, describe, beforeEach, it, expect, afterEach } from 'vitest';
 
+import { MockUtils } from '../../../test/mock-utils';
 import { DATABASE_CONNECTION } from '../../database';
 import { QueryOptimizerService } from '../../shared/services/query-optimizer.service';
 import { StatisticsService } from '../../shared/services/statistics.service';
@@ -24,44 +25,14 @@ describe('TagService - Boundary Conditions', () => {
   let service: TagService;
   let module: TestingModule;
   let mockHookService: Partial<HookService>;
-
-  let mockDb: {
-    select: ReturnType<typeof vi.fn>;
-    from: ReturnType<typeof vi.fn>;
-    where: ReturnType<typeof vi.fn>;
-    limit: ReturnType<typeof vi.fn>;
-    insert: ReturnType<typeof vi.fn>;
-    values: ReturnType<typeof vi.fn>;
-    returning: ReturnType<typeof vi.fn>;
-    update: ReturnType<typeof vi.fn>;
-    set: ReturnType<typeof vi.fn>;
-    delete: ReturnType<typeof vi.fn>;
-    groupBy: ReturnType<typeof vi.fn>;
-    orderBy: ReturnType<typeof vi.fn>;
-    offset: ReturnType<typeof vi.fn>;
-  };
+  let databaseMockBuilder: MockUtils['database'];
+  let mockDb: any;
 
   beforeEach(async () => {
-    mockDb = {
-      select: vi.fn().mockReturnThis(),
-      from: vi.fn().mockReturnThis(),
-      where: vi.fn().mockReturnThis(),
-      limit: vi.fn().mockReturnThis(),
-      insert: vi.fn().mockReturnThis(),
-      values: vi.fn().mockReturnThis(),
-      returning: vi.fn().mockReturnThis(),
-      update: vi.fn().mockReturnThis(),
-      set: vi.fn().mockReturnThis(),
-      delete: vi.fn().mockReturnThis(),
-      groupBy: vi.fn().mockReturnThis(),
-      orderBy: vi.fn().mockReturnThis(),
-      offset: vi.fn().mockReturnThis(),
-    };
+    databaseMockBuilder = new MockUtils.database();
+    mockDb = databaseMockBuilder.build();
 
-    mockHookService = {
-      applyFilters: vi.fn().mockImplementation(async (_hookName, data) => Promise.resolve(data)),
-      doAction: vi.fn().mockResolvedValue(undefined),
-    };
+    mockHookService = MockUtils.services.createHookServiceMock();
 
     module = await Test.createTestingModule({
       imports: [],

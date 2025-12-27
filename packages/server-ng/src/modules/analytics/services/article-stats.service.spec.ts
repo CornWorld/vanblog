@@ -4,6 +4,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 import { DATABASE_CONNECTION } from '../../../database';
 import { AnalyticsType } from '../entities/analytics.entity';
+import { MockUtils } from '../../../../test/mock-utils';
 
 import { ArticleStatsService } from './article-stats.service';
 
@@ -12,12 +13,9 @@ describe('ArticleStatsService', () => {
   let mockDb: any;
 
   beforeEach(async () => {
-    // 创建数据库 Mock
-    mockDb = {
-      select: vi.fn(),
-      insert: vi.fn(),
-      update: vi.fn(),
-    };
+    // 使用 MockUtils 创建数据库 Mock
+    const databaseMock = new MockUtils.database();
+    mockDb = databaseMock.build();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -32,32 +30,72 @@ describe('ArticleStatsService', () => {
     service = module.get<ArticleStatsService>(ArticleStatsService);
   });
 
+  // 辅助函数：设置 select().from().where().limit() 链
+  const setupSelectChain = (data: unknown[]) => {
+    mockDb.select.mockReturnValue({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          limit: vi.fn().mockResolvedValue(data),
+        }),
+      }),
+    });
+  };
+
+  // 辅助函数：设置 insert().values() 链
+  const setupInsertChain = () => {
+    mockDb.insert.mockReturnValue({
+      values: vi.fn().mockResolvedValue(undefined),
+    });
+  };
+
+  // 辅助函数：设置 update().set().where() 链
+  const setupUpdateChain = () => {
+    mockDb.update.mockReturnValue({
+      set: vi.fn().mockReturnValue({
+        where: vi.fn().mockResolvedValue(undefined),
+      }),
+    });
+  };
+
+  // 辅助函数：设置 select().from().leftJoin().where().groupBy() 链（用于 getTopArticles）
+  const setupLeftJoinChainForTop = (data: unknown[]) => {
+    mockDb.select.mockReturnValue({
+      from: vi.fn().mockReturnValue({
+        leftJoin: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            groupBy: vi.fn().mockReturnValue({
+              orderBy: vi.fn().mockReturnValue({
+                limit: vi.fn().mockResolvedValue(data),
+              }),
+            }),
+          }),
+        }),
+      }),
+    });
+  };
+
+  // 辅助函数：设置 select().from().leftJoin().where().groupBy() 链（用于 getArticleStats）
+  const setupLeftJoinChainForStats = (data: unknown[]) => {
+    mockDb.select.mockReturnValue({
+      from: vi.fn().mockReturnValue({
+        leftJoin: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            groupBy: vi.fn().mockResolvedValue(data),
+          }),
+        }),
+      }),
+    });
+  };
+
   describe('recordArticleView', () => {
     it('should record article view by ID', async () => {
       const articleId = 123;
       const ip = '192.168.1.1';
       const userAgent = 'Mozilla/5.0';
 
-      // Mock 查询文章
-      mockDb.select.mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([{ id: articleId, pathname: 'test-article' }]),
-          }),
-        }),
-      });
-
-      // Mock 插入分析记录
-      mockDb.insert.mockReturnValue({
-        values: vi.fn().mockResolvedValue(undefined),
-      });
-
-      // Mock 更新文章浏览次数
-      mockDb.update.mockReturnValue({
-        set: vi.fn().mockReturnValue({
-          where: vi.fn().mockResolvedValue(undefined),
-        }),
-      });
+      setupSelectChain([{ id: articleId, pathname: 'test-article' }]);
+      setupInsertChain();
+      setupUpdateChain();
 
       await service.recordArticleView(articleId, ip, userAgent);
 
@@ -79,23 +117,9 @@ describe('ArticleStatsService', () => {
       const articleId = 456;
       const ip = '127.0.0.1';
 
-      mockDb.select.mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([{ id: articleId, pathname: null }]),
-          }),
-        }),
-      });
-
-      mockDb.insert.mockReturnValue({
-        values: vi.fn().mockResolvedValue(undefined),
-      });
-
-      mockDb.update.mockReturnValue({
-        set: vi.fn().mockReturnValue({
-          where: vi.fn().mockResolvedValue(undefined),
-        }),
-      });
+      setupSelectChain([{ id: articleId, pathname: null }]);
+      setupInsertChain();
+      setupUpdateChain();
 
       await service.recordArticleView(articleId, ip);
 
@@ -110,23 +134,9 @@ describe('ArticleStatsService', () => {
       const articleId = 789;
       const ip = '192.168.1.2';
 
-      mockDb.select.mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([{ id: articleId, pathname: null }]),
-          }),
-        }),
-      });
-
-      mockDb.insert.mockReturnValue({
-        values: vi.fn().mockResolvedValue(undefined),
-      });
-
-      mockDb.update.mockReturnValue({
-        set: vi.fn().mockReturnValue({
-          where: vi.fn().mockResolvedValue(undefined),
-        }),
-      });
+      setupSelectChain([{ id: articleId, pathname: null }]);
+      setupInsertChain();
+      setupUpdateChain();
 
       // Should not throw and should handle null pathname gracefully
       await expect(service.recordArticleView(articleId, ip)).resolves.not.toThrow();
@@ -137,23 +147,9 @@ describe('ArticleStatsService', () => {
       const articleId = 123;
       const ip = null as any;
 
-      mockDb.select.mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([{ id: articleId, pathname: 'test' }]),
-          }),
-        }),
-      });
-
-      mockDb.insert.mockReturnValue({
-        values: vi.fn().mockResolvedValue(undefined),
-      });
-
-      mockDb.update.mockReturnValue({
-        set: vi.fn().mockReturnValue({
-          where: vi.fn().mockResolvedValue(undefined),
-        }),
-      });
+      setupSelectChain([{ id: articleId, pathname: 'test' }]);
+      setupInsertChain();
+      setupUpdateChain();
 
       // Should not throw and should handle null IP gracefully
       await expect(service.recordArticleView(articleId, ip)).resolves.not.toThrow();
@@ -165,23 +161,9 @@ describe('ArticleStatsService', () => {
       const ip = '192.168.1.1';
       const userAgent = null as any;
 
-      mockDb.select.mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([{ id: articleId, pathname: 'test' }]),
-          }),
-        }),
-      });
-
-      mockDb.insert.mockReturnValue({
-        values: vi.fn().mockResolvedValue(undefined),
-      });
-
-      mockDb.update.mockReturnValue({
-        set: vi.fn().mockReturnValue({
-          where: vi.fn().mockResolvedValue(undefined),
-        }),
-      });
+      setupSelectChain([{ id: articleId, pathname: 'test' }]);
+      setupInsertChain();
+      setupUpdateChain();
 
       // Should not throw and should handle null userAgent gracefully
       await expect(service.recordArticleView(articleId, ip, userAgent)).resolves.not.toThrow();
@@ -189,13 +171,7 @@ describe('ArticleStatsService', () => {
     });
 
     it('should not record view for non-existent article', async () => {
-      mockDb.select.mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([]),
-          }),
-        }),
-      });
+      setupSelectChain([]);
 
       await service.recordArticleView(999, '192.168.1.1');
 
@@ -207,23 +183,9 @@ describe('ArticleStatsService', () => {
       const articleId = 123;
       const ip = '192.168.1.1';
 
-      mockDb.select.mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([{ id: articleId, pathname: 'test' }]),
-          }),
-        }),
-      });
-
-      mockDb.insert.mockReturnValue({
-        values: vi.fn().mockResolvedValue(undefined),
-      });
-
-      mockDb.update.mockReturnValue({
-        set: vi.fn().mockReturnValue({
-          where: vi.fn().mockResolvedValue(undefined),
-        }),
-      });
+      setupSelectChain([{ id: articleId, pathname: 'test' }]);
+      setupInsertChain();
+      setupUpdateChain();
 
       await service.recordArticleView(articleId, ip);
 
@@ -241,24 +203,9 @@ describe('ArticleStatsService', () => {
       const ip = '192.168.1.1';
       const userAgent = 'Mozilla/5.0';
 
-      // Mock 查询文章
-      mockDb.select.mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([{ id: 123, pathname }]),
-          }),
-        }),
-      });
-
-      mockDb.insert.mockReturnValue({
-        values: vi.fn().mockResolvedValue(undefined),
-      });
-
-      mockDb.update.mockReturnValue({
-        set: vi.fn().mockReturnValue({
-          where: vi.fn().mockResolvedValue(undefined),
-        }),
-      });
+      setupSelectChain([{ id: 123, pathname }]);
+      setupInsertChain();
+      setupUpdateChain();
 
       await service.recordArticleViewByPathname(pathname, ip, userAgent);
 
@@ -271,13 +218,7 @@ describe('ArticleStatsService', () => {
     });
 
     it('should not record view for non-existent pathname', async () => {
-      mockDb.select.mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([]),
-          }),
-        }),
-      });
+      setupSelectChain([]);
 
       await service.recordArticleViewByPathname('non-existent', '192.168.1.1');
 
@@ -305,19 +246,7 @@ describe('ArticleStatsService', () => {
         },
       ];
 
-      mockDb.select.mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          leftJoin: vi.fn().mockReturnValue({
-            where: vi.fn().mockReturnValue({
-              groupBy: vi.fn().mockReturnValue({
-                orderBy: vi.fn().mockReturnValue({
-                  limit: vi.fn().mockResolvedValue(mockResult),
-                }),
-              }),
-            }),
-          }),
-        }),
-      });
+      setupLeftJoinChainForTop(mockResult);
 
       const result = await service.getTopArticles(10);
 
@@ -342,19 +271,7 @@ describe('ArticleStatsService', () => {
         },
       ];
 
-      mockDb.select.mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          leftJoin: vi.fn().mockReturnValue({
-            where: vi.fn().mockReturnValue({
-              groupBy: vi.fn().mockReturnValue({
-                orderBy: vi.fn().mockReturnValue({
-                  limit: vi.fn().mockResolvedValue(mockResult),
-                }),
-              }),
-            }),
-          }),
-        }),
-      });
+      setupLeftJoinChainForTop(mockResult);
 
       const result = await service.getTopArticles();
 
@@ -372,19 +289,7 @@ describe('ArticleStatsService', () => {
         },
       ];
 
-      mockDb.select.mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          leftJoin: vi.fn().mockReturnValue({
-            where: vi.fn().mockReturnValue({
-              groupBy: vi.fn().mockReturnValue({
-                orderBy: vi.fn().mockReturnValue({
-                  limit: vi.fn().mockResolvedValue(mockResult),
-                }),
-              }),
-            }),
-          }),
-        }),
-      });
+      setupLeftJoinChainForTop(mockResult);
 
       const result = await service.getTopArticles();
 
@@ -400,21 +305,7 @@ describe('ArticleStatsService', () => {
         avgReadTime: 200,
       }));
 
-      mockDb.select.mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          leftJoin: vi.fn().mockReturnValue({
-            where: vi.fn().mockReturnValue({
-              groupBy: vi.fn().mockReturnValue({
-                orderBy: vi.fn().mockReturnValue({
-                  limit: vi.fn().mockImplementation((limit) => {
-                    return Promise.resolve(mockResult.slice(0, limit));
-                  }),
-                }),
-              }),
-            }),
-          }),
-        }),
-      });
+      setupLeftJoinChainForTop(mockResult);
 
       await service.getTopArticles(5);
 
@@ -424,19 +315,7 @@ describe('ArticleStatsService', () => {
     });
 
     it('should return empty array when no articles found', async () => {
-      mockDb.select.mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          leftJoin: vi.fn().mockReturnValue({
-            where: vi.fn().mockReturnValue({
-              groupBy: vi.fn().mockReturnValue({
-                orderBy: vi.fn().mockReturnValue({
-                  limit: vi.fn().mockResolvedValue([]),
-                }),
-              }),
-            }),
-          }),
-        }),
-      });
+      setupLeftJoinChainForTop([]);
 
       const result = await service.getTopArticles();
 
@@ -456,15 +335,7 @@ describe('ArticleStatsService', () => {
         },
       ];
 
-      mockDb.select.mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          leftJoin: vi.fn().mockReturnValue({
-            where: vi.fn().mockReturnValue({
-              groupBy: vi.fn().mockResolvedValue(mockResult),
-            }),
-          }),
-        }),
-      });
+      setupLeftJoinChainForStats(mockResult);
 
       const result = await service.getArticleStats(articleId);
 
@@ -478,15 +349,7 @@ describe('ArticleStatsService', () => {
     });
 
     it('should return null when article not found', async () => {
-      mockDb.select.mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          leftJoin: vi.fn().mockReturnValue({
-            where: vi.fn().mockReturnValue({
-              groupBy: vi.fn().mockResolvedValue([]),
-            }),
-          }),
-        }),
-      });
+      setupLeftJoinChainForStats([]);
 
       const result = await service.getArticleStats(999);
 
@@ -503,15 +366,7 @@ describe('ArticleStatsService', () => {
         },
       ];
 
-      mockDb.select.mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          leftJoin: vi.fn().mockReturnValue({
-            where: vi.fn().mockReturnValue({
-              groupBy: vi.fn().mockResolvedValue(mockResult),
-            }),
-          }),
-        }),
-      });
+      setupLeftJoinChainForStats(mockResult);
 
       const result = await service.getArticleStats(1);
 
@@ -528,15 +383,7 @@ describe('ArticleStatsService', () => {
         },
       ];
 
-      mockDb.select.mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          leftJoin: vi.fn().mockReturnValue({
-            where: vi.fn().mockReturnValue({
-              groupBy: vi.fn().mockResolvedValue(mockResult),
-            }),
-          }),
-        }),
-      });
+      setupLeftJoinChainForStats(mockResult);
 
       const result = await service.getArticleStats(1);
 
@@ -550,9 +397,7 @@ describe('ArticleStatsService', () => {
       const duration = 300;
       const ip = '192.168.1.1';
 
-      mockDb.insert.mockReturnValue({
-        values: vi.fn().mockResolvedValue(undefined),
-      });
+      setupInsertChain();
 
       await service.recordReadingTime(articleId, duration, ip);
 
@@ -570,9 +415,7 @@ describe('ArticleStatsService', () => {
     });
 
     it('should handle zero duration', async () => {
-      mockDb.insert.mockReturnValue({
-        values: vi.fn().mockResolvedValue(undefined),
-      });
+      setupInsertChain();
 
       await service.recordReadingTime(1, 0, '127.0.0.1');
 
@@ -588,9 +431,7 @@ describe('ArticleStatsService', () => {
     });
 
     it('should handle large duration values', async () => {
-      mockDb.insert.mockReturnValue({
-        values: vi.fn().mockResolvedValue(undefined),
-      });
+      setupInsertChain();
 
       const largeDuration = 999999;
       await service.recordReadingTime(1, largeDuration, '127.0.0.1');
@@ -617,14 +458,7 @@ describe('ArticleStatsService', () => {
     });
 
     it('should handle database errors on insert', async () => {
-      mockDb.select.mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([{ id: 1, pathname: 'test' }]),
-          }),
-        }),
-      });
-
+      setupSelectChain([{ id: 1, pathname: 'test' }]);
       mockDb.insert.mockReturnValue({
         values: vi.fn().mockRejectedValue(new Error('Insert failed')),
       });
@@ -657,33 +491,16 @@ describe('ArticleStatsService', () => {
       const ip = '10.0.0.1';
       const userAgent = 'Test Browser';
 
-      // 设置完整的 Mock 链
-      mockDb.select.mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([{ id: articleId, pathname: 'integration-test' }]),
-          }),
-        }),
-      });
-
-      const insertMock = vi.fn().mockResolvedValue(undefined);
-      mockDb.insert.mockReturnValue({
-        values: insertMock,
-      });
-
-      const updateMock = vi.fn().mockResolvedValue(undefined);
-      mockDb.update.mockReturnValue({
-        set: vi.fn().mockReturnValue({
-          where: updateMock,
-        }),
-      });
+      setupSelectChain([{ id: articleId, pathname: 'integration-test' }]);
+      setupInsertChain();
+      setupUpdateChain();
 
       await service.recordArticleView(articleId, ip, userAgent);
 
       // 验证完整的调用链
       expect(mockDb.select).toHaveBeenCalled();
-      expect(insertMock).toHaveBeenCalled();
-      expect(updateMock).toHaveBeenCalled();
+      expect(mockDb.insert).toHaveBeenCalled();
+      expect(mockDb.update).toHaveBeenCalled();
     });
   });
 });

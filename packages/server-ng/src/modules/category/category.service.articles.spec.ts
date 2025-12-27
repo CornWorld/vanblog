@@ -18,6 +18,7 @@ import { NotFoundException } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { vi, describe, beforeEach, it, expect } from 'vitest';
 
+import { MockUtils } from '../../../test/mock-utils';
 import { ConfigService } from '../../config/config.service';
 import { DATABASE_CONNECTION } from '../../database';
 import { QueryOptimizerService } from '../../shared/services/query-optimizer.service';
@@ -66,10 +67,7 @@ describe('CategoryService - Articles Query', () => {
       offset: vi.fn().mockReturnThis(),
     };
 
-    mockHookService = {
-      applyFilters: vi.fn().mockImplementation(async (_hookName, data) => Promise.resolve(data)),
-      doAction: vi.fn().mockResolvedValue(undefined),
-    };
+    mockHookService = MockUtils.services.createHookServiceMock();
 
     const module: TestingModule = await Test.createTestingModule({
       imports: [],
@@ -111,10 +109,7 @@ describe('CategoryService - Articles Query', () => {
         },
         {
           provide: ConfigService,
-          useValue: {
-            jwt: { secret: 'test-secret-key' },
-            get: vi.fn((_key: string, defaultValue?: unknown) => defaultValue),
-          },
+          useValue: MockUtils.services.createConfigServiceMock(),
         },
       ],
     }).compile();

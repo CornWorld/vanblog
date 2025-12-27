@@ -16,13 +16,13 @@ import { DATABASE_CONNECTION } from '../../database';
 import { QueryOptimizerService } from '../../shared/services/query-optimizer.service';
 import { StatisticsService } from '../../shared/services/statistics.service';
 import { HookService } from '../plugin/services/hook.service';
+import { MockUtils } from '../../../test/mock-utils';
 
 import { TagService } from './tag.service';
 
 describe('TagService - Associations', () => {
   let service: TagService;
   let module: TestingModule;
-  let mockHookService: Partial<HookService>;
 
   let mockDb: {
     select: ReturnType<typeof vi.fn>;
@@ -57,10 +57,7 @@ describe('TagService - Associations', () => {
       offset: vi.fn().mockReturnThis(),
     };
 
-    mockHookService = {
-      applyFilters: vi.fn().mockImplementation(async (_hookName, data) => Promise.resolve(data)),
-      doAction: vi.fn().mockResolvedValue(undefined),
-    };
+    const mockHookService = MockUtils.services.createHookServiceMock();
 
     module = await Test.createTestingModule({
       imports: [],

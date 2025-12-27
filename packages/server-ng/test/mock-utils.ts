@@ -379,6 +379,20 @@ export class DatabaseMockBuilder {
  */
 
 /**
+ * 创建Logger Mock
+ * 提供NestJS Logger接口的所有方法
+ */
+export function createLoggerMock() {
+  return {
+    log: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn(),
+    verbose: vi.fn(),
+  };
+}
+
+/**
  * 创建HookService Mock
  */
 export function createHookServiceMock(): Partial<HookService> {
@@ -584,6 +598,7 @@ export function createStorageFactoryServiceMock(
   };
 }
 export const ServiceMockBuilder = {
+  createLoggerMock,
   createHookServiceMock,
   createConfigServiceMock,
   createStorageServiceMock,
