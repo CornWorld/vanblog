@@ -770,3 +770,109 @@ describe('MockUtils - TestData Factory', () => {
     });
   });
 });
+
+describe('MockUtils - Type Safety', () => {
+  describe('DatabaseMockBuilder with generics', () => {
+    it('should support typed SELECT queries', async () => {
+      interface Article {
+        id: number;
+        title: string;
+        content: string;
+      }
+
+      const testArticles: Article[] = [
+        { id: 1, title: 'TypeScript', content: 'TypeScript rocks!' },
+        { id: 2, title: 'Vitest', content: 'Fast and modern testing' },
+      ];
+
+      const builder = new MockUtils.database<Article>();
+      builder.setQueryResult(testArticles);
+      const db = builder.build();
+
+      const result = await db.select().from({}).all();
+
+      expect(result).toEqual(testArticles);
+      expect(result[0].title).toBe('TypeScript');
+    });
+
+    it('should support typed INSERT operations', async () => {
+      interface ArticleInsert {
+        id: number;
+        title: string;
+      }
+
+      const insertedData: ArticleInsert[] = [{ id: 1, title: 'New Article' }];
+
+      const builder = new MockUtils.database<any, ArticleInsert>();
+      builder.setInsertResult(insertedData);
+      const db = builder.build();
+
+      const result = await db.insert({}).values({}).returning();
+
+      expect(result[0]).toEqual(insertedData[0]);
+      expect(result[0].id).toBe(1);
+    });
+
+    it('should support typed UPDATE operations', async () => {
+      interface ArticleUpdate {
+        id: number;
+        title: string;
+        updatedAt: string;
+      }
+
+      const updatedData: ArticleUpdate[] = [{ id: 1, title: 'Updated', updatedAt: '2024-01-01' }];
+
+      const builder = new MockUtils.database<any, any, ArticleUpdate>();
+      builder.setUpdateResult(updatedData);
+      const db = builder.build();
+
+      const result = await db.update({}).set({}).where({}).returning();
+
+      expect(result[0]).toEqual(updatedData[0]);
+      expect(result[0].title).toBe('Updated');
+    });
+
+    it('should support typed DELETE operations', async () => {
+      interface ArticleDelete {
+        id: number;
+        deletedAt: string;
+      }
+
+      const deletedData: ArticleDelete[] = [{ id: 1, deletedAt: '2024-01-01' }];
+
+      const builder = new MockUtils.database<any, any, any, ArticleDelete>();
+      builder.setDeleteResult(deletedData);
+      const db = builder.build();
+
+      const result = await db.delete({}).where({}).returning();
+
+      expect(result[0]).toEqual(deletedData[0]);
+      expect(result[0].id).toBe(1);
+    });
+
+    it('should support multiple operation types in one builder', async () => {
+      interface Article {
+        id: number;
+        title: string;
+      }
+
+      const builder = new MockUtils.database<Article, Article, Article, Article>();
+      builder.setQueryResult([{ id: 1, title: 'Query' }]);
+      builder.setInsertResult([{ id: 2, title: 'Insert' }]);
+      builder.setUpdateResult([{ id: 3, title: 'Update' }]);
+      builder.setDeleteResult([{ id: 4, title: 'Delete' }]);
+
+      const db = builder.build();
+
+      const queryResult = await db.select().from({}).get();
+      const insertResult = await db.insert({}).values({}).returning();
+      const updateResult = await db.update({}).set({}).where({}).returning();
+      const deleteResult = await db.delete({}).where({}).returning();
+
+      expect(queryResult?.title).toBe('Query');
+      expect(insertResult[0].title).toBe('Insert');
+      expect(updateResult[0].title).toBe('Update');
+      expect(deleteResult[0].title).toBe('Delete');
+    });
+  });
+});

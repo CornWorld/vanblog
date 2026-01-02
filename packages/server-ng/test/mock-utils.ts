@@ -25,6 +25,82 @@ import type { StorageFactoryService } from '../src/modules/media/services/storag
 import type { HookService } from '../src/modules/plugin/services/hook.service';
 
 /**
+ * 类型安全的数据库查询链 Mock 接口
+ * 定义完整的 Drizzle ORM 链式调用签名
+ */
+interface MockQueryChain<T = any> {
+  where: ReturnType<typeof vi.fn> & ((condition: any) => MockQueryChain<T>);
+  orderBy: ReturnType<typeof vi.fn> & ((order: any) => MockQueryChain<T>);
+  limit: ReturnType<typeof vi.fn> & ((count: number) => MockQueryChain<T>);
+  offset: ReturnType<typeof vi.fn> & ((count: number) => MockQueryChain<T>);
+  groupBy: ReturnType<typeof vi.fn> & ((columns: any) => MockQueryChain<T>);
+  having: ReturnType<typeof vi.fn> & ((condition: any) => MockQueryChain<T>);
+  innerJoin: ReturnType<typeof vi.fn> & ((table: any, condition: any) => MockQueryChain<T>);
+  leftJoin: ReturnType<typeof vi.fn> & ((table: any, condition: any) => MockQueryChain<T>);
+  rightJoin: ReturnType<typeof vi.fn> & ((table: any, condition: any) => MockQueryChain<T>);
+  union: ReturnType<typeof vi.fn> & ((query: any) => MockQueryChain<T>);
+  unionAll: ReturnType<typeof vi.fn> & ((query: any) => MockQueryChain<T>);
+  with: ReturnType<typeof vi.fn> & ((alias: string, query: any) => MockQueryChain<T>);
+  withRecursive: ReturnType<typeof vi.fn> & ((alias: string, query: any) => MockQueryChain<T>);
+  as: ReturnType<typeof vi.fn> & ((alias: string) => MockQueryChain<T>);
+  distinct: ReturnType<typeof vi.fn> & (() => MockQueryChain<T>);
+  distinctOn: ReturnType<typeof vi.fn> & ((columns: any) => MockQueryChain<T>);
+  for: ReturnType<typeof vi.fn> & ((lockStrength: any) => MockQueryChain<T>);
+  $dynamic: ReturnType<typeof vi.fn> & (() => MockQueryChain<T>);
+  get: ReturnType<typeof vi.fn> & (() => Promise<T | null>);
+  all: ReturnType<typeof vi.fn> & (() => Promise<T[]>);
+}
+
+/**
+ * 类型安全的 INSERT/UPDATE/DELETE returning 结果
+ * 同时支持数组访问和 .get()/.all() 方法
+ */
+interface MockReturningResult<T = any> extends Array<T> {
+  get: ReturnType<typeof vi.fn> & (() => Promise<T>);
+  all: ReturnType<typeof vi.fn> & (() => Promise<T[]>);
+}
+
+/**
+ * 类型安全的 INSERT 操作链
+ * @internal - 预留用于未来类型增强
+ */
+// interface MockInsertChain<T = any> {
+//   values: ReturnType<typeof vi.fn> & ((values: any) => {
+//     returning: ReturnType<typeof vi.fn> & (() => MockReturningResult<T>);
+//     onConflictDoUpdate: ReturnType<typeof vi.fn> & ((config: any) => {
+//       returning: ReturnType<typeof vi.fn> & (() => MockReturningResult<T>);
+//     });
+//     onConflictDoNothing: ReturnType<typeof vi.fn> & ((config?: any) => {
+//       returning: ReturnType<typeof vi.fn> & (() => MockReturningResult<T>);
+//     });
+//   });
+// }
+
+/**
+ * 类型安全的 UPDATE 操作链
+ * @internal - 预留用于未来类型增强
+ */
+// interface MockUpdateChain<T = any> {
+//   set: ReturnType<typeof vi.fn> & ((values: any) => {
+//     where: ReturnType<typeof vi.fn> & ((condition: any) => {
+//       returning: ReturnType<typeof vi.fn> & (() => MockReturningResult<T>);
+//     });
+//     returning: ReturnType<typeof vi.fn> & (() => MockReturningResult<T>);
+//   });
+// }
+
+/**
+ * 类型安全的 DELETE 操作链
+ * @internal - 预留用于未来类型增强
+ */
+// interface MockDeleteChain<T = any> {
+//   where: ReturnType<typeof vi.fn> & ((condition: any) => {
+//     returning: ReturnType<typeof vi.fn> & (() => MockReturningResult<T>);
+//   });
+//   returning: ReturnType<typeof vi.fn> & (() => MockReturningResult<T>);
+// }
+
+/**
  * 创建Mock数据库实例的工厂函数
  * 返回实现Database接口的Mock对象，支持完整的Drizzle ORM链式调用
  *
@@ -147,22 +223,36 @@ export function createDatabaseMock(): Database {
  * 数据库Mock工具类（Builder 模式）
  * 提供流畅的API来配置Mock数据库的查询结果
  *
+ * @template TSelect - SELECT 查询返回的数据类型
+ * @template TInsert - INSERT 操作返回的数据类型
+ * @template TUpdate - UPDATE 操作返回的数据类型
+ * @template TDelete - DELETE 操作返回的数据类型
+ *
  * @example
+ * // 基础用法
  * const dbMock = new DatabaseMockBuilder();
  * dbMock
  *   .setQueryResult([{ id: 1, title: 'Test' }])
  *   .setInsertResult([{ id: 1 }]);
  * const db = dbMock.build();
+ *
+ * @example
+ * // 类型安全用法
+ * interface Article { id: number; title: string; }
+ * const dbMock = new DatabaseMockBuilder<Article, Article, Article, Article>();
+ * dbMock.setQueryResult([{ id: 1, title: 'Test' }]); // 类型检查
+ * const result = await db.select().from(articles).get(); // result: Article | null
  */
-export class DatabaseMockBuilder {
-  private mockDb = {};
+export class DatabaseMockBuilder<TSelect = any, TInsert = any, TUpdate = any, TDelete = any> {
+  private mockDb: Record<string, ReturnType<typeof vi.fn>> = {};
 
   constructor() {
     this.createMockDb();
   }
 
   /**
-   * 获取Mock数据库实例
+   * 获取Mock数据库实例（仅供内部使用）
+   * @internal
    */
   get db(): Record<string, ReturnType<typeof vi.fn>> {
     return this.mockDb;
@@ -176,7 +266,7 @@ export class DatabaseMockBuilder {
    * @returns this - 支持链式调用
    *
    * @example
-   * const dbMock = new DatabaseMockBuilder();
+   * const dbMock = new DatabaseMockBuilder<Article>();
    * dbMock.setQueryResult([{ id: 1, title: 'Test' }]);
    *
    * // 支持以下所有查询模式：
@@ -186,9 +276,9 @@ export class DatabaseMockBuilder {
    * await db.select().from(articles).orderBy(...).where(...).get();
    * await db.select().from(articles).where(...).orderBy(...).limit(10).offset(5).get();
    */
-  setQueryResult(data: unknown[]): this {
+  setQueryResult(data: TSelect[]): this {
     // 创建完整的链式调用Mock，支持任意顺序的方法调用
-    const createChainMock = (resultData: unknown[]): any => {
+    const createChainMock = (resultData: TSelect[]): MockQueryChain<TSelect> => {
       const chainMock: any = {
         where: vi.fn(),
         get: vi.fn().mockResolvedValue(resultData[0] ?? null),
@@ -248,7 +338,7 @@ export class DatabaseMockBuilder {
    * @returns this - 支持链式调用
    *
    * @example
-   * const dbMock = new DatabaseMockBuilder();
+   * const dbMock = new DatabaseMockBuilder<any, Article>();
    * dbMock.setInsertResult([{ id: 1, title: 'New Article' }]);
    *
    * // 支持以下操作模式：
@@ -256,9 +346,9 @@ export class DatabaseMockBuilder {
    * const [result] = await db.insert(articles).values({ title: 'Test' }).returning();
    * const result = await db.insert(articles).values({ title: 'Test' }).returning().get();
    */
-  setInsertResult(data: unknown[]): this {
+  setInsertResult(data: TInsert[]): this {
     // 创建支持多种访问方式的返回值 Mock
-    const returningMock = Object.create(Array.prototype);
+    const returningMock = Object.create(Array.prototype) as MockReturningResult<TInsert>;
     Object.assign(returningMock, data);
     returningMock.length = data.length;
     returningMock.get = vi.fn().mockResolvedValue(data[0]); // .get() 返回第一项
@@ -300,7 +390,7 @@ export class DatabaseMockBuilder {
    * @returns this - 支持链式调用
    *
    * @example
-   * const dbMock = new DatabaseMockBuilder();
+   * const dbMock = new DatabaseMockBuilder<any, any, Article>();
    * dbMock.setUpdateResult([{ id: 1, title: 'Updated Title' }]);
    *
    * // 支持以下操作模式：
@@ -308,9 +398,9 @@ export class DatabaseMockBuilder {
    * const [result] = await db.update(articles).set({ title: 'New' }).where(...).returning();
    * const result = await db.update(articles).set({ title: 'New' }).returning().get();
    */
-  setUpdateResult(data: unknown[]): this {
+  setUpdateResult(data: TUpdate[]): this {
     // 创建支持多种访问方式的返回值 Mock
-    const returningMock = Object.create(Array.prototype);
+    const returningMock = Object.create(Array.prototype) as MockReturningResult<TUpdate>;
     Object.assign(returningMock, data);
     returningMock.length = data.length;
     returningMock.get = vi.fn().mockResolvedValue(data[0]);
@@ -353,7 +443,7 @@ export class DatabaseMockBuilder {
    * @returns this - 支持链式调用
    *
    * @example
-   * const dbMock = new DatabaseMockBuilder();
+   * const dbMock = new DatabaseMockBuilder<any, any, any, Article>();
    * dbMock.setDeleteResult([{ id: 1 }]); // 返回被删除的记录
    * // 或
    * dbMock.setDeleteResult(3); // 删除了 3 行
@@ -363,16 +453,16 @@ export class DatabaseMockBuilder {
    * const [result] = await db.delete(articles).where(...).returning();
    * const result = await db.delete(articles).returning().get();
    */
-  setDeleteResult(data: unknown[] | number = 1): this {
+  setDeleteResult(data: TDelete[] | number = 1): this {
     // 处理数字参数：创建对应数量的默认对象
-    const resultData = Array.isArray(data)
+    const resultData: TDelete[] = Array.isArray(data)
       ? data
       : Array(data)
           .fill({})
-          .map((_, index) => ({ id: index + 1 }));
+          .map((_, index) => ({ id: index + 1 }) as TDelete);
 
     // 创建支持多种访问方式的返回值 Mock
-    const returningMock = Object.create(Array.prototype);
+    const returningMock = Object.create(Array.prototype) as MockReturningResult<TDelete>;
     Object.assign(returningMock, resultData);
     returningMock.length = resultData.length;
     returningMock.get = vi.fn().mockResolvedValue(resultData[0]);
