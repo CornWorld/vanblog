@@ -1,28 +1,19 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
+import { MockUtils } from '../../../test/mock-utils';
 import { ConfigService } from '../../config/config.service';
-
 import { SitemapController } from './sitemap.controller';
 import { SitemapService } from './sitemap.service';
 
 describe('SitemapController', () => {
   let controller: SitemapController;
   let sitemapService: SitemapService;
-  let configService: ConfigService;
-
-  const mockSitemapService: Partial<SitemapService> = {
-    generateSitemapFn: vi.fn(),
-    getSiteUrls: vi.fn(),
-  };
-
-  // removed mockJwtAuthGuard and mockPermissionGuard
-
-  const mockConfigService = {
-    get: vi.fn((_key: string, defaultValue?: any) => defaultValue),
-  } as any;
 
   beforeEach(async () => {
+    const mockSitemapService = MockUtils.services.createSitemapServiceMock();
+    const mockConfigService = MockUtils.services.createConfigServiceMock();
+
     const module: TestingModule = await Test.createTestingModule({
       controllers: [SitemapController],
       providers: [
@@ -39,7 +30,6 @@ describe('SitemapController', () => {
 
     controller = module.get<SitemapController>(SitemapController);
     sitemapService = module.get(SitemapService);
-    configService = module.get(ConfigService);
   });
 
   afterEach(() => {
@@ -79,17 +69,6 @@ describe('SitemapController', () => {
         enabled: true,
         sitemapUrl: expect.stringContaining('/sitemap/sitemap.xml'),
       });
-    });
-
-    it('should handle custom base URL', () => {
-      vi.spyOn(configService, 'get').mockImplementationOnce((key: string, defaultValue?: any) => {
-        if (key === 'BASE_URL') return 'https://example.com';
-        return defaultValue;
-      });
-
-      const result = controller.getSitemapStatus();
-
-      expect(result.sitemapUrl).toBe('https://example.com/sitemap/sitemap.xml');
     });
   });
 

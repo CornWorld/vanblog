@@ -1,6 +1,8 @@
 import { of, throwError, firstValueFrom } from 'rxjs';
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 
+import { createExecutionContextMock } from '../../../test/mock-utils';
+
 import { PerformanceInterceptor } from './performance.interceptor';
 
 import type { LoggerService } from '../logger/logger.service';
@@ -24,20 +26,18 @@ describe('PerformanceInterceptor', () => {
 
     interceptor = new PerformanceInterceptor(mockLogger);
 
-    mockExecutionContext = {
-      switchToHttp: vi.fn().mockReturnValue({
-        getRequest: vi.fn().mockReturnValue({
-          method: 'GET',
-          url: '/api/test',
-          ip: '127.0.0.1',
-          socket: { remoteAddress: '127.0.0.1' },
-          headers: { 'user-agent': 'test-agent' },
-        }),
-        getResponse: vi.fn().mockReturnValue({
-          statusCode: 200,
-        }),
-      }),
-    } as unknown as ExecutionContext;
+    mockExecutionContext = createExecutionContextMock({
+      request: {
+        method: 'GET',
+        url: '/api/test',
+        ip: '127.0.0.1',
+        socket: { remoteAddress: '127.0.0.1' },
+        headers: { 'user-agent': 'test-agent' },
+      },
+      response: {
+        statusCode: 200,
+      },
+    }) as unknown as ExecutionContext;
 
     mockCallHandler = {
       handle: vi.fn().mockReturnValue(of('test response')),
@@ -198,21 +198,18 @@ describe('PerformanceInterceptor', () => {
       await firstValueFrom(result1);
 
       // 端点2：慢请求 1500ms
-      const slowContext = {
-        ...mockExecutionContext,
-        switchToHttp: vi.fn().mockReturnValue({
-          getRequest: vi.fn().mockReturnValue({
-            method: 'POST',
-            url: '/api/slow',
-            ip: '127.0.0.1',
-            socket: { remoteAddress: '127.0.0.1' },
-            headers: { 'user-agent': 'test-agent' },
-          }),
-          getResponse: vi.fn().mockReturnValue({
-            statusCode: 200,
-          }),
-        }),
-      } as unknown as ExecutionContext;
+      const slowContext = createExecutionContextMock({
+        request: {
+          method: 'POST',
+          url: '/api/slow',
+          ip: '127.0.0.1',
+          socket: { remoteAddress: '127.0.0.1' },
+          headers: { 'user-agent': 'test-agent' },
+        },
+        response: {
+          statusCode: 200,
+        },
+      }) as unknown as ExecutionContext;
 
       const result2 = interceptor.intercept(slowContext, mockCallHandler);
       vi.advanceTimersByTime(1500);
@@ -231,21 +228,18 @@ describe('PerformanceInterceptor', () => {
     it('应该限制最大端点数量', async () => {
       // 创建超过限制的端点数量（模拟1001个端点）
       for (let i = 0; i < 1001; i++) {
-        const context = {
-          ...mockExecutionContext,
-          switchToHttp: vi.fn().mockReturnValue({
-            getRequest: vi.fn().mockReturnValue({
-              method: 'GET',
-              url: `/api/test-${String(i)}`,
-              ip: '127.0.0.1',
-              socket: { remoteAddress: '127.0.0.1' },
-              headers: { 'user-agent': 'test-agent' },
-            }),
-            getResponse: vi.fn().mockReturnValue({
-              statusCode: 200,
-            }),
-          }),
-        } as unknown as ExecutionContext;
+        const context = createExecutionContextMock({
+          request: {
+            method: 'GET',
+            url: `/api/test-${String(i)}`,
+            ip: '127.0.0.1',
+            socket: { remoteAddress: '127.0.0.1' },
+            headers: { 'user-agent': 'test-agent' },
+          },
+          response: {
+            statusCode: 200,
+          },
+        }) as unknown as ExecutionContext;
 
         const result = interceptor.intercept(context, mockCallHandler);
         vi.advanceTimersByTime(1);

@@ -17,7 +17,7 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import * as bcrypt from 'bcrypt';
 import { vi } from 'vitest';
 
-import { MockUtils } from '../../../test/mock-utils';
+import { createMockUser, MockUtils } from '../../../test/mock-utils';
 import { DATABASE_CONNECTION } from '../../database';
 import { HookService } from '../plugin/services/hook.service';
 
@@ -31,17 +31,14 @@ const mockedBcrypt = vi.mocked(bcrypt);
 describe('UserService - Create Advanced', () => {
   let service: UserService;
   let databaseMock: InstanceType<typeof MockUtils.database>;
-  let mockHookService: Partial<HookService>;
+  let mockHookService: ReturnType<typeof MockUtils.services.createHookServiceMock>;
 
   beforeEach(async () => {
     // 使用Mock工具类创建数据库Mock
     databaseMock = new MockUtils.database();
 
     // 创建Hook服务Mock
-    mockHookService = {
-      applyFilters: vi.fn().mockImplementation((_, data) => data),
-      doAction: vi.fn(),
-    };
+    mockHookService = MockUtils.services.createHookServiceMock();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -78,18 +75,11 @@ describe('UserService - Create Advanced', () => {
       // First call finds no user, second call also finds no user (simulating race condition)
       databaseMock.setQueryResult([]);
 
-      const createdDbUser = {
-        id: 1,
+      const createdDbUser = createMockUser({
         username: 'concurrentuser',
-        password: 'hashedPassword',
-        nickname: null,
-        email: null,
-        avatar: null,
         type: 'admin',
-        permissions: null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+        password: 'hashedPassword',
+      });
 
       databaseMock.setInsertResult([createdDbUser]);
 
@@ -110,18 +100,11 @@ describe('UserService - Create Advanced', () => {
 
       mockedBcrypt.hash.mockResolvedValue('hashedPassword' as never);
 
-      const createdDbUser = {
-        id: 1,
+      const createdDbUser = createMockUser({
         username: createUserDto.username,
-        password: 'hashedPassword',
-        nickname: null,
-        email: null,
-        avatar: null,
         type: createUserDto.type,
-        permissions: null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+        password: 'hashedPassword',
+      });
 
       databaseMock.setQueryResult([]);
       databaseMock.setInsertResult([createdDbUser]);
@@ -137,7 +120,7 @@ describe('UserService - Create Advanced', () => {
         'user|afterCreate',
         expect.any(Object),
         expect.objectContaining({
-          id: 1,
+          id: expect.any(Number),
           username: 'testuser',
         }),
       );
@@ -153,18 +136,11 @@ describe('UserService - Create Advanced', () => {
       mockHookService.applyFilters = vi.fn().mockRejectedValue(new Error('Hook error'));
       mockedBcrypt.hash.mockResolvedValue('hashedPassword' as never);
 
-      const createdDbUser = {
-        id: 1,
+      const createdDbUser = createMockUser({
         username: createUserDto.username,
-        password: 'hashedPassword',
-        nickname: null,
-        email: null,
-        avatar: null,
         type: createUserDto.type,
-        permissions: null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+        password: 'hashedPassword',
+      });
 
       databaseMock.setQueryResult([]);
       databaseMock.setInsertResult([createdDbUser]);
@@ -189,18 +165,12 @@ describe('UserService - Create Advanced', () => {
       mockHookService.applyFilters = vi.fn().mockResolvedValue(modifiedDto);
       mockedBcrypt.hash.mockResolvedValue('hashedPassword' as never);
 
-      const createdDbUser = {
-        id: 1,
+      const createdDbUser = createMockUser({
         username: modifiedDto.username,
+        type: modifiedDto.type,
         password: 'hashedPassword',
         nickname: modifiedDto.nickname,
-        email: null,
-        avatar: null,
-        type: modifiedDto.type,
-        permissions: null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+      });
 
       databaseMock.setQueryResult([]);
       databaseMock.setInsertResult([createdDbUser]);

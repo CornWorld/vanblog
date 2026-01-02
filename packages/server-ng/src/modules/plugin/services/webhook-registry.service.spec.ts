@@ -1,38 +1,25 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
+import { MockUtils } from '../../../../test/mock-utils';
 import type { HookService } from './hook.service';
 import { WebhookRegistryService } from './webhook-registry.service';
 import type { WebhookService } from './webhook.service';
 
 describe('WebhookRegistryService', () => {
   let service: WebhookRegistryService;
-  let hookService: {
-    doAction: ReturnType<typeof vi.fn>;
-    getAllActionHooks: ReturnType<typeof vi.fn>;
-    hasAction: ReturnType<typeof vi.fn>;
-    addAction: ReturnType<typeof vi.fn>;
-    removeAction: ReturnType<typeof vi.fn>;
-  };
-  let webhookService: {
-    triggerForEvent: ReturnType<typeof vi.fn>;
-  };
+  let hookService: ReturnType<typeof MockUtils.services.createHookServiceMock>;
+  let webhookService: Partial<WebhookService>;
 
   beforeEach(() => {
-    hookService = {
-      doAction: vi.fn(),
-      getAllActionHooks: vi.fn(),
-      hasAction: vi.fn(),
-      addAction: vi.fn(),
-      removeAction: vi.fn(),
-    };
+    hookService = MockUtils.services.createHookServiceMock();
 
     webhookService = {
-      triggerForEvent: vi.fn(),
+      triggerForEvent: vi.fn().mockResolvedValue(undefined),
     };
 
     service = new WebhookRegistryService(
-      hookService as any as HookService,
-      webhookService as any as WebhookService,
+      hookService as HookService,
+      webhookService as WebhookService,
     );
   });
 
@@ -47,7 +34,7 @@ describe('WebhookRegistryService', () => {
     });
 
     it('should handle async trigger', async () => {
-      hookService.doAction.mockResolvedValue(undefined);
+      (hookService.doAction as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
       await service.triggerEvent('test|event', { foo: 'bar' });
       expect(hookService.doAction).toHaveBeenCalled();
     });
@@ -56,7 +43,7 @@ describe('WebhookRegistryService', () => {
   describe('getAvailableEvents', () => {
     it('should return all action hooks from hook service', () => {
       const events = ['article|afterCreate', 'article|afterUpdate', 'comment|afterCreate'];
-      hookService.getAllActionHooks.mockReturnValue(events);
+      (hookService.getAllActionHooks as ReturnType<typeof vi.fn>).mockReturnValue(events);
 
       const result = service.getAvailableEvents();
 
@@ -65,7 +52,7 @@ describe('WebhookRegistryService', () => {
     });
 
     it('should return empty array when no events', () => {
-      hookService.getAllActionHooks.mockReturnValue([]);
+      (hookService.getAllActionHooks as ReturnType<typeof vi.fn>).mockReturnValue([]);
       const result = service.getAvailableEvents();
       expect(result).toEqual([]);
     });
@@ -73,7 +60,7 @@ describe('WebhookRegistryService', () => {
 
   describe('isEventSupported', () => {
     it('should return true for supported events', () => {
-      hookService.hasAction.mockReturnValue(true);
+      (hookService.hasAction as ReturnType<typeof vi.fn>).mockReturnValue(true);
 
       const result = service.isEventSupported('article|afterCreate');
 
@@ -82,7 +69,7 @@ describe('WebhookRegistryService', () => {
     });
 
     it('should return false for unsupported events', () => {
-      hookService.hasAction.mockReturnValue(false);
+      (hookService.hasAction as ReturnType<typeof vi.fn>).mockReturnValue(false);
 
       const result = service.isEventSupported('nonexistent|event');
 
@@ -99,7 +86,7 @@ describe('WebhookRegistryService', () => {
         'comment|afterCreate',
         'draft|afterPublish',
       ];
-      hookService.getAllActionHooks.mockReturnValue(events);
+      (hookService.getAllActionHooks as ReturnType<typeof vi.fn>).mockReturnValue(events);
 
       const result = service.getEventCategories();
 
@@ -111,13 +98,16 @@ describe('WebhookRegistryService', () => {
     });
 
     it('should handle empty events list', () => {
-      hookService.getAllActionHooks.mockReturnValue([]);
+      (hookService.getAllActionHooks as ReturnType<typeof vi.fn>).mockReturnValue([]);
       const result = service.getEventCategories();
       expect(result).toEqual({});
     });
 
     it('should handle events without category prefix', () => {
-      hookService.getAllActionHooks.mockReturnValue(['simple-event', 'another-event']);
+      (hookService.getAllActionHooks as ReturnType<typeof vi.fn>).mockReturnValue([
+        'simple-event',
+        'another-event',
+      ]);
       const result = service.getEventCategories();
       expect(result).toEqual({
         'simple-event': ['simple-event'],
@@ -126,7 +116,9 @@ describe('WebhookRegistryService', () => {
     });
 
     it('should handle events with multiple pipes', () => {
-      hookService.getAllActionHooks.mockReturnValue(['category|subcategory|event']);
+      (hookService.getAllActionHooks as ReturnType<typeof vi.fn>).mockReturnValue([
+        'category|subcategory|event',
+      ]);
       const result = service.getEventCategories();
       expect(result).toEqual({
         category: ['category|subcategory|event'],
@@ -138,8 +130,8 @@ describe('WebhookRegistryService', () => {
     it('should register webhook to multiple events', () => {
       const webhookId = 1;
       const events = ['article|afterCreate', 'article|afterUpdate'];
-      hookService.hasAction.mockReturnValue(true);
-      hookService.addAction.mockReturnValue('hook-reg-id');
+      (hookService.hasAction as ReturnType<typeof vi.fn>).mockReturnValue(true);
+      (hookService.addAction as ReturnType<typeof vi.fn>).mockReturnValue('hook-reg-id');
 
       service.registerWebhook(webhookId, events);
 
@@ -151,8 +143,10 @@ describe('WebhookRegistryService', () => {
     it('should skip unsupported events', () => {
       const webhookId = 1;
       const events = ['article|afterCreate', 'invalid|event'];
-      hookService.hasAction.mockImplementation((event: string) => event === 'article|afterCreate');
-      hookService.addAction.mockReturnValue('hook-reg-id');
+      (hookService.hasAction as ReturnType<typeof vi.fn>).mockImplementation(
+        (event: string) => event === 'article|afterCreate',
+      );
+      (hookService.addAction as ReturnType<typeof vi.fn>).mockReturnValue('hook-reg-id');
 
       service.registerWebhook(webhookId, events);
 
@@ -160,8 +154,8 @@ describe('WebhookRegistryService', () => {
     });
 
     it('should reuse existing hook handler for same event', () => {
-      hookService.hasAction.mockReturnValue(true);
-      hookService.addAction.mockReturnValue('hook-reg-id');
+      (hookService.hasAction as ReturnType<typeof vi.fn>).mockReturnValue(true);
+      (hookService.addAction as ReturnType<typeof vi.fn>).mockReturnValue('hook-reg-id');
 
       // Register first webhook
       service.registerWebhook(1, ['article|afterCreate']);
@@ -173,12 +167,14 @@ describe('WebhookRegistryService', () => {
     });
 
     it('should execute webhook trigger when hook fires', async () => {
-      hookService.hasAction.mockReturnValue(true);
+      (hookService.hasAction as ReturnType<typeof vi.fn>).mockReturnValue(true);
       let capturedHandler: any;
-      hookService.addAction.mockImplementation((_event: string, handler: any) => {
-        capturedHandler = handler;
-        return 'hook-reg-id';
-      });
+      (hookService.addAction as ReturnType<typeof vi.fn>).mockImplementation(
+        (_event: string, handler: any) => {
+          capturedHandler = handler;
+          return 'hook-reg-id';
+        },
+      );
 
       service.registerWebhook(1, ['article|afterCreate']);
 
@@ -192,8 +188,8 @@ describe('WebhookRegistryService', () => {
 
   describe('unregisterWebhook', () => {
     beforeEach(() => {
-      hookService.hasAction.mockReturnValue(true);
-      hookService.addAction.mockReturnValue('hook-reg-id');
+      (hookService.hasAction as ReturnType<typeof vi.fn>).mockReturnValue(true);
+      (hookService.addAction as ReturnType<typeof vi.fn>).mockReturnValue('hook-reg-id');
     });
 
     it('should unregister webhook from events', () => {
@@ -238,8 +234,8 @@ describe('WebhookRegistryService', () => {
 
   describe('unregisterWebhookFromAllEvents', () => {
     beforeEach(() => {
-      hookService.hasAction.mockReturnValue(true);
-      hookService.addAction.mockReturnValue('hook-reg-id');
+      (hookService.hasAction as ReturnType<typeof vi.fn>).mockReturnValue(true);
+      (hookService.addAction as ReturnType<typeof vi.fn>).mockReturnValue('hook-reg-id');
     });
 
     it('should unregister webhook from all subscribed events', () => {
@@ -277,8 +273,8 @@ describe('WebhookRegistryService', () => {
 
   describe('getWebhooksForEvent', () => {
     beforeEach(() => {
-      hookService.hasAction.mockReturnValue(true);
-      hookService.addAction.mockReturnValue('hook-reg-id');
+      (hookService.hasAction as ReturnType<typeof vi.fn>).mockReturnValue(true);
+      (hookService.addAction as ReturnType<typeof vi.fn>).mockReturnValue('hook-reg-id');
     });
 
     it('should return list of webhook IDs for event', () => {
@@ -324,8 +320,8 @@ describe('WebhookRegistryService', () => {
 
   describe('integration scenarios', () => {
     beforeEach(() => {
-      hookService.hasAction.mockReturnValue(true);
-      hookService.addAction.mockReturnValue('hook-reg-id');
+      (hookService.hasAction as ReturnType<typeof vi.fn>).mockReturnValue(true);
+      (hookService.addAction as ReturnType<typeof vi.fn>).mockReturnValue('hook-reg-id');
     });
 
     it('should handle complete webhook lifecycle', () => {

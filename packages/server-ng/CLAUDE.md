@@ -6,6 +6,22 @@
 
 ## 变更记录 (Changelog)
 
+### 2025-12-28 - ESLint 错误全面清零
+
+- **代码质量提升**：
+  - 修复所有 178 个 ESLint 和 TypeScript 错误，达到 0 错误状态
+  - 42 个并发 Haiku 任务批量修复（3 批次，每批 14 任务）
+  - 手动修复测试 fixture 文件（test-data.ts, mock-utils.spec.ts）
+  - 应用 String() 类型转换规范（模板字面量）
+  - 统一 import type 导入规范
+  - 移除未使用变量与导入
+
+- **修复类别**：
+  - Template literal 类型安全：6+ 处（@typescript-eslint/restrict-template-expressions）
+  - Prettier 格式化：12+ 处（prettier/prettier）
+  - 未使用变量/导入：3 处（no-unused-vars, @typescript-eslint/no-unused-vars）
+  - Import type 一致性：1 处（@typescript-eslint/consistent-type-imports）
+
 ### 2025-12-25 - 测试重构 Phase 2 完成与文档清理
 
 - **测试重构 Phase 2 完成**：

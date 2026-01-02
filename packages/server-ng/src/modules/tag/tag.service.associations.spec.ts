@@ -9,13 +9,9 @@
  * - tag.service.queries.spec.ts - Complex article queries
  * - tag.service.boundaries.spec.ts - Boundary conditions
  */
-import { Test, type TestingModule } from '@nestjs/testing';
+import { type TestingModule } from '@nestjs/testing';
 import { vi, describe, beforeEach, it, expect, afterEach } from 'vitest';
 
-import { DATABASE_CONNECTION } from '../../database';
-import { QueryOptimizerService } from '../../shared/services/query-optimizer.service';
-import { StatisticsService } from '../../shared/services/statistics.service';
-import { HookService } from '../plugin/services/hook.service';
 import { MockUtils } from '../../../test/mock-utils';
 
 import { TagService } from './tag.service';
@@ -23,81 +19,15 @@ import { TagService } from './tag.service';
 describe('TagService - Associations', () => {
   let service: TagService;
   let module: TestingModule;
-
-  let mockDb: {
-    select: ReturnType<typeof vi.fn>;
-    from: ReturnType<typeof vi.fn>;
-    where: ReturnType<typeof vi.fn>;
-    limit: ReturnType<typeof vi.fn>;
-    insert: ReturnType<typeof vi.fn>;
-    values: ReturnType<typeof vi.fn>;
-    returning: ReturnType<typeof vi.fn>;
-    update: ReturnType<typeof vi.fn>;
-    set: ReturnType<typeof vi.fn>;
-    delete: ReturnType<typeof vi.fn>;
-    groupBy: ReturnType<typeof vi.fn>;
-    orderBy: ReturnType<typeof vi.fn>;
-    offset: ReturnType<typeof vi.fn>;
-  };
+  let mockDb: any;
 
   beforeEach(async () => {
-    mockDb = {
-      select: vi.fn().mockReturnThis(),
-      from: vi.fn().mockReturnThis(),
-      where: vi.fn().mockReturnThis(),
-      limit: vi.fn().mockReturnThis(),
-      insert: vi.fn().mockReturnThis(),
-      values: vi.fn().mockReturnThis(),
-      returning: vi.fn().mockReturnThis(),
-      update: vi.fn().mockReturnThis(),
-      set: vi.fn().mockReturnThis(),
-      delete: vi.fn().mockReturnThis(),
-      groupBy: vi.fn().mockReturnThis(),
-      orderBy: vi.fn().mockReturnThis(),
-      offset: vi.fn().mockReturnThis(),
-    };
+    const databaseMockBuilder = new MockUtils.database();
+    mockDb = databaseMockBuilder.build();
 
-    const mockHookService = MockUtils.services.createHookServiceMock();
-
-    module = await Test.createTestingModule({
-      imports: [],
-      providers: [
-        TagService,
-        {
-          provide: DATABASE_CONNECTION,
-          useValue: mockDb,
-        },
-        {
-          provide: StatisticsService,
-          useValue: {
-            getOverallStatistics: vi.fn().mockResolvedValue({
-              totalCategories: 0,
-              totalTags: 0,
-              totalArticles: 0,
-              publishedArticles: 0,
-              privateArticles: 0,
-              hiddenArticles: 0,
-              totalViews: 0,
-              categories: [],
-              tags: [],
-            }),
-          },
-        },
-        {
-          provide: QueryOptimizerService,
-          useValue: {
-            withPerformanceMonitoring: vi.fn().mockImplementation((_name, fn) => fn()),
-            batchCountArticlesByTags: vi.fn().mockResolvedValue(new Map()),
-            batchCountArticlesByCategories: vi.fn().mockResolvedValue(new Map()),
-            buildOptimizedSearchQuery: vi.fn().mockReturnValue([]),
-            logSlowQuery: vi.fn(),
-          },
-        },
-        {
-          provide: HookService,
-          useValue: mockHookService,
-        },
-      ],
+    module = await MockUtils.createTagServiceTestingModule({
+      service: TagService,
+      dbMock: mockDb,
     }).compile();
 
     service = module.get<TagService>(TagService);

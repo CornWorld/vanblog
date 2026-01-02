@@ -20,53 +20,19 @@ import { DATABASE_CONNECTION } from '../../database';
 import { QueryOptimizerService } from '../../shared/services/query-optimizer.service';
 import { StatisticsService } from '../../shared/services/statistics.service';
 import { HookService } from '../plugin/services/hook.service';
+import { MockUtils } from '../../../test/mock-utils';
 
 import { CategoryService } from './category.service';
 
 describe('CategoryService - Password Management', () => {
   let service: CategoryService;
   let mockHookService: Partial<HookService>;
-
-  let mockDb: {
-    select: ReturnType<typeof vi.fn>;
-    from: ReturnType<typeof vi.fn>;
-    where: ReturnType<typeof vi.fn>;
-    limit: ReturnType<typeof vi.fn>;
-    insert: ReturnType<typeof vi.fn>;
-    values: ReturnType<typeof vi.fn>;
-    returning: ReturnType<typeof vi.fn>;
-    update: ReturnType<typeof vi.fn>;
-    set: ReturnType<typeof vi.fn>;
-    delete: ReturnType<typeof vi.fn>;
-    leftJoin: ReturnType<typeof vi.fn>;
-    groupBy: ReturnType<typeof vi.fn>;
-    then?: ReturnType<typeof vi.fn>;
-    orderBy: ReturnType<typeof vi.fn>;
-    offset: ReturnType<typeof vi.fn>;
-  };
+  let mockDb: any;
 
   beforeEach(async () => {
-    mockDb = {
-      select: vi.fn().mockReturnThis(),
-      from: vi.fn().mockReturnThis(),
-      where: vi.fn().mockReturnThis(),
-      limit: vi.fn().mockReturnThis(),
-      insert: vi.fn().mockReturnThis(),
-      values: vi.fn().mockReturnThis(),
-      returning: vi.fn().mockReturnThis(),
-      update: vi.fn().mockReturnThis(),
-      set: vi.fn().mockReturnThis(),
-      delete: vi.fn().mockReturnThis(),
-      leftJoin: vi.fn().mockReturnThis(),
-      groupBy: vi.fn().mockReturnThis(),
-      orderBy: vi.fn().mockReturnThis(),
-      offset: vi.fn().mockReturnThis(),
-    };
-
-    mockHookService = {
-      applyFilters: vi.fn().mockImplementation(async (_hookName, data) => Promise.resolve(data)),
-      doAction: vi.fn().mockResolvedValue(undefined),
-    };
+    const databaseMockBuilder = new MockUtils.database();
+    mockDb = databaseMockBuilder.build();
+    mockHookService = MockUtils.services.createHookServiceMock();
 
     const module: TestingModule = await Test.createTestingModule({
       imports: [],
@@ -78,29 +44,11 @@ describe('CategoryService - Password Management', () => {
         },
         {
           provide: StatisticsService,
-          useValue: {
-            getOverallStatistics: vi.fn().mockResolvedValue({
-              totalCategories: 0,
-              totalTags: 0,
-              totalArticles: 0,
-              publishedArticles: 0,
-              privateArticles: 0,
-              hiddenArticles: 0,
-              totalViews: 0,
-              categories: [],
-              tags: [],
-            }),
-          },
+          useValue: MockUtils.services.createStatisticsServiceMock(),
         },
         {
           provide: QueryOptimizerService,
-          useValue: {
-            withPerformanceMonitoring: vi.fn().mockImplementation((_name, fn) => fn()),
-            batchCountArticlesByTags: vi.fn().mockResolvedValue(new Map()),
-            batchCountArticlesByCategories: vi.fn().mockResolvedValue(new Map()),
-            buildOptimizedSearchQuery: vi.fn().mockReturnValue([]),
-            logSlowQuery: vi.fn(),
-          },
+          useValue: MockUtils.services.createQueryOptimizerServiceMock(),
         },
         {
           provide: HookService,
@@ -108,10 +56,7 @@ describe('CategoryService - Password Management', () => {
         },
         {
           provide: ConfigService,
-          useValue: {
-            jwt: { secret: 'test-secret-key' },
-            get: vi.fn((_key: string, defaultValue?: unknown) => defaultValue),
-          },
+          useValue: MockUtils.services.createConfigServiceMock({ 'jwt.secret': 'test-secret-key' }),
         },
       ],
     }).compile();
@@ -127,16 +72,12 @@ describe('CategoryService - Password Management', () => {
         password: 'plaintext-password',
       };
 
-      const mockCreatedCategory = {
-        id: 1,
+      const mockCreatedCategory = MockUtils.testData.createCategory({
         name: 'Private Category',
-        slug: undefined,
         description: 'A private category',
         private: true,
         password: 'hashed-password',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+      });
 
       mockDb.returning.mockResolvedValueOnce([mockCreatedCategory]);
 
@@ -144,7 +85,6 @@ describe('CategoryService - Password Management', () => {
 
       expect(result.id).toBe(1);
       expect(result.name).toBe('Private Category');
-      // Password should be hashed (not equal to original)
       expect(mockHookService.applyFilters).toHaveBeenCalledWith(
         'category|beforeCreate',
         expect.any(Object),
@@ -172,15 +112,9 @@ describe('CategoryService - Password Management', () => {
         .fn()
         .mockImplementation(async (_hookName, _data) => Promise.resolve(modifiedDto));
 
-      const mockCreatedCategory = {
-        id: 1,
+      const mockCreatedCategory = MockUtils.testData.createCategory({
         ...modifiedDto,
-        slug: undefined,
-        private: null,
-        password: null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+      });
 
       mockDb.returning.mockResolvedValueOnce([mockCreatedCategory]);
 
@@ -211,16 +145,11 @@ describe('CategoryService - Password Management', () => {
         password: 'new-password',
       };
 
-      const mockUpdatedCategory = {
-        id: 1,
+      const mockUpdatedCategory = MockUtils.testData.createCategory({
         name: 'Updated Category',
-        slug: null,
-        description: null,
         private: true,
         password: 'hashed-password',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+      });
 
       mockDb.returning.mockResolvedValueOnce([mockUpdatedCategory]);
 
@@ -254,15 +183,7 @@ describe('CategoryService - Password Management', () => {
         .fn()
         .mockImplementation(async (_hookName, _data) => Promise.resolve(modifiedDto));
 
-      const mockUpdatedCategory = {
-        id: 1,
-        ...modifiedDto,
-        slug: null,
-        private: null,
-        password: null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+      const mockUpdatedCategory = MockUtils.testData.createCategory(modifiedDto);
 
       mockDb.returning.mockResolvedValueOnce([mockUpdatedCategory]);
 
@@ -278,20 +199,12 @@ describe('CategoryService - Password Management', () => {
 
   describe('verifyPassword', () => {
     it('should return success for non-private category', async () => {
-      const mockCategory = {
-        id: 1,
-        name: 'Public Category',
-        slug: null,
-        description: null,
-        private: null,
+      const mockCategory = MockUtils.testData.createCategory({
+        private: false,
         password: null,
-        createdAt: '2024-01-01T00:00:00Z',
-        updatedAt: '2024-01-01T00:00:00Z',
-      };
+      });
 
-      mockDb.limit.mockResolvedValueOnce([
-        { ...mockCategory, createdAt: new Date(), updatedAt: new Date() },
-      ]);
+      mockDb.limit.mockResolvedValueOnce([mockCategory]);
 
       const result = await service.verifyPassword(1, 'any-password');
 
@@ -301,16 +214,10 @@ describe('CategoryService - Password Management', () => {
     });
 
     it('should return failure for invalid password', async () => {
-      const mockCategory = {
-        id: 1,
-        name: 'Private Category',
-        slug: null,
-        description: null,
+      const mockCategory = MockUtils.testData.createCategory({
         private: true,
-        password: '$2b$10$somehash', // bcrypt hash
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+        password: '$2b$10$somehash',
+      });
 
       mockDb.limit.mockResolvedValueOnce([mockCategory]);
 

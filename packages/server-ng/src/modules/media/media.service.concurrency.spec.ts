@@ -2,7 +2,7 @@ import { promises as fsPromises } from 'fs';
 
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 
-import { MockUtils, type DatabaseMockBuilder } from '../../../test/mock-utils';
+import { MockUtils, createMockFile, type DatabaseMockBuilder } from '../../../test/mock-utils';
 
 import { StorageProvider } from './dto/storage-config.dto';
 import { MediaService } from './services/media.service';
@@ -45,30 +45,17 @@ describe('MediaService - Concurrency Safety', () => {
   let databaseMock: DatabaseMockBuilder;
   let mockStorageFactoryService: Partial<StorageFactoryService>;
   let mockHookService: Partial<HookService>;
-  let mockLogger: LoggerService;
+  let mockLogger: Partial<LoggerService>;
 
   beforeEach(() => {
     databaseMock = new MockUtils.database();
     mockStorageService = MockUtils.services.createStorageServiceMock();
-
-    mockStorageFactoryService = {
-      getStorageService: vi.fn().mockResolvedValue(mockStorageService),
-      getCurrentProvider: vi.fn().mockResolvedValue(StorageProvider.LOCAL),
-    };
-
-    mockHookService = {
-      applyFilters: vi.fn().mockImplementation(async (_hookName, data) => Promise.resolve(data)),
-      doAction: vi.fn().mockResolvedValue(undefined),
-    };
-
-    mockLogger = {
-      log: vi.fn(),
-      info: vi.fn(),
-      error: vi.fn(),
-      warn: vi.fn(),
-      debug: vi.fn(),
-      verbose: vi.fn(),
-    } as any;
+    mockStorageFactoryService = MockUtils.services.createStorageFactoryServiceMock(
+      mockStorageService,
+      StorageProvider.LOCAL,
+    );
+    mockHookService = MockUtils.services.createHookServiceMock();
+    mockLogger = MockUtils.services.createLoggerMock();
 
     service = new MediaService(
       databaseMock.build() as any,
@@ -84,12 +71,12 @@ describe('MediaService - Concurrency Safety', () => {
 
   describe('Race Condition Tests', () => {
     it('should handle concurrent uploads of same file without data corruption', async () => {
-      const mockFile = {
+      const mockFile = createMockFile({
         originalname: 'test.jpg',
         buffer: Buffer.from('test'),
         size: 1024,
         mimetype: 'image/jpeg',
-      } as Express.Multer.File;
+      });
 
       // 模拟数据库插入延迟（通过 values 的实现来处理）
       // 使用自增计数器模拟数据库自增主键，确保并发下 ID 唯一且确定
@@ -147,12 +134,12 @@ describe('MediaService - Concurrency Safety', () => {
     });
 
     it('should handle storage failure without leaving orphaned database records', async () => {
-      const mockFile = {
+      const mockFile = createMockFile({
         originalname: 'test.jpg',
         buffer: Buffer.from('test'),
         size: 1024,
         mimetype: 'image/jpeg',
-      } as Express.Multer.File;
+      });
 
       // 模拟存储服务失败
       mockStorageService.upload = vi.fn().mockRejectedValue(new Error('Storage failed'));
@@ -177,12 +164,12 @@ describe('MediaService - Concurrency Safety', () => {
     });
 
     it('should handle database failure without leaving orphaned storage files', async () => {
-      const mockFile = {
+      const mockFile = createMockFile({
         originalname: 'test.jpg',
         buffer: Buffer.from('test'),
         size: 1024,
         mimetype: 'image/jpeg',
-      } as Express.Multer.File;
+      });
 
       // 模拟数据库插入失败
       const mockReturning = vi.fn().mockRejectedValue(new Error('Database failed'));
@@ -243,9 +230,9 @@ describe('MediaService - Concurrency Safety', () => {
   describe('Chunk Upload Concurrency', () => {
     it('should handle concurrent chunk uploads for same uploadId', async () => {
       const uploadId = 'test-upload-123';
-      const mockFile = {
+      const mockFile = createMockFile({
         buffer: Buffer.from('chunk-data'),
-      } as Express.Multer.File;
+      });
 
       // 模拟文件系统操作
       vi.mocked(fsPromises.access).mockResolvedValue(undefined);
@@ -270,9 +257,9 @@ describe('MediaService - Concurrency Safety', () => {
 
     it('should handle chunk upload directory race condition', async () => {
       const uploadId = 'test-upload-456';
-      const mockFile = {
+      const mockFile = createMockFile({
         buffer: Buffer.from('chunk-data'),
-      } as Express.Multer.File;
+      });
 
       // 模拟目录不存在的情况
       vi.mocked(fsPromises.access).mockRejectedValue(new Error('Directory not found'));
@@ -285,12 +272,12 @@ describe('MediaService - Concurrency Safety', () => {
 
   describe('Memory and Resource Safety', () => {
     it('should handle large file uploads without memory leaks', async () => {
-      const largeFile = {
+      const largeFile = createMockFile({
         originalname: 'large.jpg',
         buffer: Buffer.alloc(50 * 1024 * 1024), // 50MB
         size: 50 * 1024 * 1024,
         mimetype: 'image/jpeg',
-      } as Express.Multer.File;
+      });
 
       const mockMediaFile = MockUtils.testData.createMediaFile({
         id: 1,
@@ -310,14 +297,13 @@ describe('MediaService - Concurrency Safety', () => {
     });
 
     it('should handle multiple concurrent large file uploads', async () => {
-      const createLargeFile = (name: string): Express.Multer.File => {
-        return {
+      const createLargeFile = (name: string) =>
+        createMockFile({
           originalname: name,
           buffer: Buffer.alloc(10 * 1024 * 1024), // 10MB each
           size: 10 * 1024 * 1024,
           mimetype: 'image/jpeg',
-        } as Express.Multer.File;
-      };
+        });
 
       const files = [
         createLargeFile('large1.jpg'),

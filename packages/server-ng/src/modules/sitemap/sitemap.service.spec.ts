@@ -1,11 +1,11 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 
-import { ConfigService } from '@nestjs/config';
 import { Test, type TestingModule } from '@nestjs/testing';
-import { articles, categories, tags } from '@vanblog/shared/drizzle';
+import { ConfigService } from '@nestjs/config';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
+import { MockUtils } from '../../../test/mock-utils';
 import { DATABASE_CONNECTION } from '../../database';
 import { HookService } from '../plugin/services/hook.service';
 import { SettingCoreService } from '../setting/services/setting-core.service';
@@ -35,106 +35,60 @@ vi.mock('sitemap', () => ({
 
 describe('SitemapService', () => {
   let service: SitemapService;
-  let configService: ConfigService;
-  let hookService: HookService;
-  let settingCoreService: SettingCoreService;
-
-  const mockArticles = [
-    {
-      id: 1,
-      pathname: 'test-article-1',
-    },
-    {
-      id: 2,
-      pathname: 'test-article-2',
-    },
-  ];
-
-  const mockCategories = [{ name: 'Technology' }, { name: 'Life' }];
-
-  const mockTags = [{ name: 'JavaScript' }, { name: 'TypeScript' }];
+  let hookService: any;
+  let settingCoreService: any;
+  let dbMock: any;
 
   beforeEach(async () => {
-    const mockConfigService = {
-      get: vi.fn(),
-    };
+    hookService = MockUtils.services.createHookServiceMock();
+    hookService.applyFilters = vi
+      .fn()
+      .mockImplementation((_hook: string, urls: string[]) => Promise.resolve(urls));
 
-    const mockHookService = {
-      doAction: vi.fn(),
-      applyFilters: vi.fn().mockImplementation((_hook: string, urls: string[]) => urls),
-    };
-
-    const mockSettingCoreService = {
+    settingCoreService = {
       getConfig: vi.fn().mockResolvedValue('https://example.com'),
     };
+
+    const configService = MockUtils.services.createConfigServiceMock({
+      'static.path': '/tmp/static',
+    });
+
+    // Create database mock with test articles
+    const databaseMockBuilder = new MockUtils.database();
+    databaseMockBuilder.setQueryResult([
+      { id: 1, pathname: 'test-article-1' },
+      { id: 2, pathname: 'test-article-2' },
+    ]);
+    dbMock = databaseMockBuilder.build();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         SitemapService,
         {
           provide: ConfigService,
-          useValue: mockConfigService,
+          useValue: configService,
         },
         {
           provide: HookService,
-          useValue: mockHookService,
+          useValue: hookService,
         },
         {
           provide: SettingCoreService,
-          useValue: mockSettingCoreService,
+          useValue: settingCoreService,
         },
         {
           provide: DATABASE_CONNECTION,
-          useValue: {}, // 将在后面重新定义
+          useValue: dbMock,
         },
       ],
     }).compile();
 
     service = module.get<SitemapService>(SitemapService);
-    configService = module.get(ConfigService);
-    hookService = module.get(HookService);
-    settingCoreService = module.get(SettingCoreService);
-
-    // Setup default mocks
-    (configService.get as any).mockReturnValue('/tmp/static');
-
-    // 创建一个更复杂的 mock 来处理不同的查询
-    const dbMock = {
-      select: vi.fn().mockImplementation((_fields) => {
-        return {
-          from: vi.fn().mockImplementation((_table) => {
-            // 根据表名返回不同的数据
-            if (_table === articles) {
-              return {
-                where: vi.fn().mockResolvedValue(
-                  mockArticles.map((article) => ({
-                    id: article.id,
-                    pathname: article.pathname,
-                  })),
-                ),
-              };
-            }
-            if (_table === categories) {
-              return mockCategories;
-            }
-            if (_table === tags) {
-              return mockTags;
-            }
-            return [];
-          }),
-        };
-      }),
-    };
-
-    Object.defineProperty(service, 'db', {
-      value: dbMock,
-      writable: true,
-    });
 
     // Mock fs operations
     vi.mocked(fs.mkdir).mockResolvedValue(undefined);
     vi.mocked(fs.writeFile).mockResolvedValue(undefined);
-    vi.mocked(fs.access).mockResolvedValue(undefined); // Default: directory exists
+    vi.mocked(fs.access).mockResolvedValue(undefined);
     vi.mocked(path.join).mockImplementation((...args) => args.join('/'));
   });
 
@@ -148,18 +102,15 @@ describe('SitemapService', () => {
 
   describe('generateSitemapFn', () => {
     it('should generate sitemap successfully', async () => {
-      // Reset mocks before test
       vi.mocked(fs.mkdir).mockResolvedValue(undefined);
       vi.mocked(fs.writeFile).mockResolvedValue(undefined);
       vi.mocked(fs.access).mockResolvedValue(undefined);
 
-      // Mock logger to avoid console output
       const loggerSpy = vi.spyOn(service['logger'], 'log').mockImplementation(() => {});
       const errorSpy = vi.spyOn(service['logger'], 'error').mockImplementation(() => {});
 
       await service.generateSitemapFn('Test generation');
 
-      // Check if there were any errors
       expect(errorSpy).not.toHaveBeenCalled();
 
       expect(fs.writeFile).toHaveBeenCalledWith(
@@ -180,21 +131,16 @@ describe('SitemapService', () => {
     });
 
     it('should create directory if it does not exist', async () => {
-      // Reset mocks before test
       vi.mocked(fs.mkdir).mockResolvedValue(undefined);
       vi.mocked(fs.writeFile).mockResolvedValue(undefined);
-      // Mock fs.access to throw error (directory doesn't exist)
       vi.mocked(fs.access).mockRejectedValue(new Error('Directory not found'));
 
-      // Mock logger to avoid console output
       const loggerSpy = vi.spyOn(service['logger'], 'log').mockImplementation(() => {});
       const errorSpy = vi.spyOn(service['logger'], 'error').mockImplementation(() => {});
 
       await service.generateSitemapFn('Test generation');
 
-      // Check if there were any errors
       expect(errorSpy).not.toHaveBeenCalled();
-
       expect(fs.mkdir).toHaveBeenCalledWith('/tmp/static/sitemap', { recursive: true });
 
       loggerSpy.mockRestore();
@@ -204,13 +150,16 @@ describe('SitemapService', () => {
     it('should handle errors gracefully', async () => {
       const loggerSpy = vi.spyOn(service['logger'], 'error').mockImplementation(() => {});
 
-      // Mock database error
+      const dbMockError = new MockUtils.database();
+      dbMockError.setQueryResult([]);
+      const dbMockErrorBuilt = dbMockError.build();
+
+      dbMockErrorBuilt.select = vi.fn().mockReturnValue({
+        from: vi.fn().mockRejectedValue(new Error('Database error')),
+      });
+
       Object.defineProperty(service, 'db', {
-        value: {
-          select: vi.fn().mockReturnValue({
-            from: vi.fn().mockRejectedValue(new Error('Database error')),
-          }),
-        },
+        value: dbMockErrorBuilt,
         writable: true,
       });
 
@@ -220,12 +169,13 @@ describe('SitemapService', () => {
       expect(loggerSpy).toHaveBeenCalledWith(expect.any(Error));
       expect(loggerSpy).toHaveBeenCalledWith('Error message: Database error');
       expect(loggerSpy).toHaveBeenCalledWith(expect.stringContaining('Error stack:'));
+
+      loggerSpy.mockRestore();
     });
   });
 
   describe('getSiteUrls', () => {
     it('should return all site URLs', async () => {
-      // Mock all URL methods
       vi.spyOn(service, 'getArticleUrls').mockResolvedValue(['/post/test-1', '/post/test-2']);
       vi.spyOn(service, 'getCategoryUrls').mockResolvedValue(['/category/tech', '/category/life']);
       vi.spyOn(service, 'getTagUrls').mockResolvedValue(['/tag/js', '/tag/ts']);
@@ -248,7 +198,6 @@ describe('SitemapService', () => {
 
   describe('getPageUrls', () => {
     it('should fall back to default pageSize when config is null', async () => {
-      // 2 articles mocked in beforeEach, fallback 5 => totalPages=1
       (settingCoreService.getConfig as any).mockResolvedValueOnce(null);
       const paths = await service.getPageUrls();
       expect(paths).toEqual(['/page/1']);
@@ -263,26 +212,21 @@ describe('SitemapService', () => {
     it('should respect configured pageSize when it is a positive number', async () => {
       (settingCoreService.getConfig as any).mockResolvedValueOnce(10);
       const paths = await service.getPageUrls();
-      // 2 articles, pageSize 10 => totalPages=1
       expect(paths).toEqual(['/page/1']);
     });
   });
 
-  // Additional cases
   describe('generateSitemapFn - normalization & hook payload', () => {
     it('should normalize, same-origin filter, dedupe and sort urls then pass to beforeGenerate', async () => {
-      // ensure FS ok
       vi.mocked(fs.mkdir).mockResolvedValue(undefined);
       vi.mocked(fs.writeFile).mockResolvedValue(undefined);
       vi.mocked(fs.access).mockResolvedValue(undefined);
 
-      // keep baseUrl as default https://example.com
       (settingCoreService.getConfig as any).mockImplementation(async (key: string) => {
         if (key === 'baseUrl') return await Promise.resolve('https://example.com');
         return await Promise.resolve(null);
       });
 
-      // craft raw urls with mix
       const rawUrls = [
         '/',
         '/b',
@@ -319,9 +263,7 @@ describe('SitemapService', () => {
       expect(beforeArgs).toBeTruthy();
       const [, payload] = beforeArgs as [string, { siteUrl: string; urls: string[] }];
       expect(payload.siteUrl).toBe('https://example.com/');
-      // ensure sorted
       expect(payload.urls).toEqual([...payload.urls].sort());
-      // ensure expected set
       expect(payload.urls).toEqual(expectedSorted);
     });
   });
@@ -377,14 +319,12 @@ describe('SitemapService', () => {
         { id: 2, pathname: 'another-path' },
       ];
 
+      const databaseMockBuilder = new MockUtils.database();
+      databaseMockBuilder.setQueryResult(mockArticles);
+      const mockDb = databaseMockBuilder.build();
+
       Object.defineProperty(service, 'db', {
-        value: {
-          select: vi.fn().mockReturnValue({
-            from: vi.fn().mockReturnValue({
-              where: vi.fn().mockResolvedValue(mockArticles),
-            }),
-          }),
-        },
+        value: mockDb,
         writable: true,
       });
 
@@ -400,14 +340,12 @@ describe('SitemapService', () => {
         { id: 2, pathname: null },
       ];
 
+      const databaseMockBuilder = new MockUtils.database();
+      databaseMockBuilder.setQueryResult(mockArticles);
+      const mockDb = databaseMockBuilder.build();
+
       Object.defineProperty(service, 'db', {
-        value: {
-          select: vi.fn().mockReturnValue({
-            from: vi.fn().mockReturnValue({
-              where: vi.fn().mockResolvedValue(mockArticles),
-            }),
-          }),
-        },
+        value: mockDb,
         writable: true,
       });
 
@@ -422,12 +360,12 @@ describe('SitemapService', () => {
     it('should return encoded category URLs', async () => {
       const mockCategories = [{ name: 'Tech & Science' }, { name: '中文分类' }];
 
+      const databaseMockBuilder = new MockUtils.database();
+      databaseMockBuilder.setQueryResult(mockCategories);
+      const mockDb = databaseMockBuilder.build();
+
       Object.defineProperty(service, 'db', {
-        value: {
-          select: vi.fn().mockReturnValue({
-            from: vi.fn().mockResolvedValue(mockCategories),
-          }),
-        },
+        value: mockDb,
         writable: true,
       });
 
@@ -442,12 +380,12 @@ describe('SitemapService', () => {
     it('should return encoded tag URLs', async () => {
       const mockTags = [{ name: 'JavaScript' }, { name: 'Node.js' }];
 
+      const databaseMockBuilder = new MockUtils.database();
+      databaseMockBuilder.setQueryResult(mockTags);
+      const mockDb = databaseMockBuilder.build();
+
       Object.defineProperty(service, 'db', {
-        value: {
-          select: vi.fn().mockReturnValue({
-            from: vi.fn().mockResolvedValue(mockTags),
-          }),
-        },
+        value: mockDb,
         writable: true,
       });
 
@@ -458,18 +396,16 @@ describe('SitemapService', () => {
     });
   });
 
-  describe('getPageUrls', () => {
+  describe('getPageUrls - pagination', () => {
     it('should generate correct number of pages', async () => {
       (settingCoreService.getConfig as any).mockResolvedValue(10);
 
+      const databaseMockBuilder = new MockUtils.database();
+      databaseMockBuilder.setCountResult(25);
+      const mockDb = databaseMockBuilder.build();
+
       Object.defineProperty(service, 'db', {
-        value: {
-          select: vi.fn().mockReturnValue({
-            from: vi.fn().mockReturnValue({
-              where: vi.fn().mockResolvedValue([{ count: 25 }]),
-            }),
-          }),
-        },
+        value: mockDb,
         writable: true,
       });
 
@@ -484,26 +420,12 @@ describe('SitemapService', () => {
     it('should handle zero articles', async () => {
       (settingCoreService.getConfig as any).mockResolvedValue(10);
 
-      let selectCallCount = 0;
+      const databaseMockBuilder = new MockUtils.database();
+      databaseMockBuilder.setCountResult(0);
+      const mockDb = databaseMockBuilder.build();
+
       Object.defineProperty(service, 'db', {
-        value: {
-          select: vi.fn().mockImplementation(() => {
-            selectCallCount++;
-            if (selectCallCount === 1) {
-              return {
-                from: vi.fn().mockReturnValue({
-                  where: vi.fn().mockResolvedValue([{ count: 0 }]),
-                }),
-              };
-            } else {
-              return {
-                from: vi.fn().mockReturnValue({
-                  where: vi.fn().mockResolvedValue([]),
-                }),
-              };
-            }
-          }),
-        },
+        value: mockDb,
         writable: true,
       });
 
@@ -516,25 +438,27 @@ describe('SitemapService', () => {
       (settingCoreService.getConfig as any).mockResolvedValue(5);
 
       let selectCallCount = 0;
+      const mockDb = {
+        select: vi.fn().mockImplementation(() => {
+          selectCallCount++;
+          if (selectCallCount === 1) {
+            return {
+              from: vi.fn().mockReturnValue({
+                where: vi.fn().mockRejectedValue(new Error('Count failed')),
+              }),
+            };
+          } else {
+            return {
+              from: vi.fn().mockReturnValue({
+                where: vi.fn().mockResolvedValue([{ id: 1 }, { id: 2 }, { id: 3 }]),
+              }),
+            };
+          }
+        }),
+      };
+
       Object.defineProperty(service, 'db', {
-        value: {
-          select: vi.fn().mockImplementation(() => {
-            selectCallCount++;
-            if (selectCallCount === 1) {
-              return {
-                from: vi.fn().mockReturnValue({
-                  where: vi.fn().mockRejectedValue(new Error('Count failed')),
-                }),
-              };
-            } else {
-              return {
-                from: vi.fn().mockReturnValue({
-                  where: vi.fn().mockResolvedValue([{ id: 1 }, { id: 2 }, { id: 3 }]),
-                }),
-              };
-            }
-          }),
-        },
+        value: mockDb,
         writable: true,
       });
 
@@ -545,7 +469,7 @@ describe('SitemapService', () => {
     });
   });
 
-  describe('generateSitemap', () => {
+  describe('generateSitemap - debounce', () => {
     it('should debounce sitemap generation', () => {
       vi.useFakeTimers();
 
@@ -580,39 +504,35 @@ describe('SitemapService', () => {
     });
   });
 
-  describe('washUrl', () => {
-    it('should add trailing slash if missing', () => {
+  describe('URL utilities', () => {
+    it('washUrl should add trailing slash if missing', () => {
       const result = service['washUrl']('https://example.com');
       expect(result).toBe('https://example.com/');
     });
 
-    it('should not add trailing slash if already present', () => {
+    it('washUrl should not add trailing slash if already present', () => {
       const result = service['washUrl']('https://example.com/');
       expect(result).toBe('https://example.com/');
     });
 
-    it('should handle empty string', () => {
+    it('washUrl should handle empty string', () => {
       const result = service['washUrl']('');
       expect(result).toBe('http://localhost:3000/');
     });
-  });
 
-  describe('dedupe', () => {
-    it('should remove duplicate URLs', () => {
+    it('dedupe should remove duplicate URLs', () => {
       const urls = ['/', '/post/1', '/', '/post/2', '/post/1'];
       const result = service['dedupe'](urls);
       expect(result).toEqual(['/', '/post/1', '/post/2']);
     });
 
-    it('should preserve order of first occurrence', () => {
+    it('dedupe should preserve order of first occurrence', () => {
       const urls = ['/a', '/b', '/a', '/c', '/b'];
       const result = service['dedupe'](urls);
       expect(result).toEqual(['/a', '/b', '/c']);
     });
-  });
 
-  describe('normalizeUrls', () => {
-    it('should normalize relative paths', () => {
+    it('normalizeUrls should normalize relative paths', () => {
       const urls = ['/post/1', 'category/tech', '//double//slashes'];
       const result = service['normalizeUrls']('https://example.com', urls);
       expect(result).toContain('/post/1');
@@ -620,14 +540,14 @@ describe('SitemapService', () => {
       expect(result).toContain('/double/slashes');
     });
 
-    it('should filter out cross-origin URLs', () => {
+    it('normalizeUrls should filter out cross-origin URLs', () => {
       const urls = ['https://example.com/post/1', 'https://other.com/post/2'];
       const result = service['normalizeUrls']('https://example.com', urls);
       expect(result).toContain('/post/1');
       expect(result).not.toContain('/post/2');
     });
 
-    it('should remove trailing slashes except for root', () => {
+    it('normalizeUrls should remove trailing slashes except for root', () => {
       const urls = ['/', '/post/1/', '/category/tech/'];
       const result = service['normalizeUrls']('https://example.com', urls);
       expect(result).toContain('/');
@@ -635,14 +555,14 @@ describe('SitemapService', () => {
       expect(result).toContain('/category/tech');
     });
 
-    it('should handle empty strings', () => {
+    it('normalizeUrls should handle empty strings', () => {
       const urls = ['', '  ', '/valid'];
       const result = service['normalizeUrls']('https://example.com', urls);
       expect(result).toContain('/valid');
       expect(result).not.toContain('');
     });
 
-    it('should handle malformed URLs gracefully', () => {
+    it('normalizeUrls should handle malformed URLs gracefully', () => {
       const urls = ['ht tp://invalid', '/valid', 'just-text'];
       const result = service['normalizeUrls']('https://example.com', urls);
       expect(result).toContain('/valid');
@@ -650,67 +570,23 @@ describe('SitemapService', () => {
     });
   });
 
-  describe('getChangeFreq', () => {
-    it('should return correct frequency for root', () => {
-      const freq = service['getChangeFreq']('/');
-      expect(freq).toBe('daily');
+  describe('priority and frequency', () => {
+    it('getChangeFreq should return correct frequency for each section', () => {
+      expect(service['getChangeFreq']('/')).toBe('daily');
+      expect(service['getChangeFreq']('/post/test')).toBe('weekly');
+      expect(service['getChangeFreq']('/category/tech')).toBe('weekly');
+      expect(service['getChangeFreq']('/tag/javascript')).toBe('weekly');
+      expect(service['getChangeFreq']('/page/1')).toBe('daily');
+      expect(service['getChangeFreq']('/about')).toBe('monthly');
     });
 
-    it('should return correct frequency for posts', () => {
-      const freq = service['getChangeFreq']('/post/test');
-      expect(freq).toBe('weekly');
-    });
-
-    it('should return correct frequency for categories', () => {
-      const freq = service['getChangeFreq']('/category/tech');
-      expect(freq).toBe('weekly');
-    });
-
-    it('should return correct frequency for tags', () => {
-      const freq = service['getChangeFreq']('/tag/javascript');
-      expect(freq).toBe('weekly');
-    });
-
-    it('should return correct frequency for pages', () => {
-      const freq = service['getChangeFreq']('/page/1');
-      expect(freq).toBe('daily');
-    });
-
-    it('should return correct frequency for other URLs', () => {
-      const freq = service['getChangeFreq']('/about');
-      expect(freq).toBe('monthly');
-    });
-  });
-
-  describe('getPriority', () => {
-    it('should return correct priority for root', () => {
-      const priority = service['getPriority']('/');
-      expect(priority).toBe(1.0);
-    });
-
-    it('should return correct priority for posts', () => {
-      const priority = service['getPriority']('/post/test');
-      expect(priority).toBe(0.8);
-    });
-
-    it('should return correct priority for categories', () => {
-      const priority = service['getPriority']('/category/tech');
-      expect(priority).toBe(0.6);
-    });
-
-    it('should return correct priority for tags', () => {
-      const priority = service['getPriority']('/tag/javascript');
-      expect(priority).toBe(0.6);
-    });
-
-    it('should return correct priority for pages', () => {
-      const priority = service['getPriority']('/page/1');
-      expect(priority).toBe(0.5);
-    });
-
-    it('should return correct priority for other URLs', () => {
-      const priority = service['getPriority']('/about');
-      expect(priority).toBe(0.4);
+    it('getPriority should return correct priority for each section', () => {
+      expect(service['getPriority']('/')).toBe(1.0);
+      expect(service['getPriority']('/post/test')).toBe(0.8);
+      expect(service['getPriority']('/category/tech')).toBe(0.6);
+      expect(service['getPriority']('/tag/javascript')).toBe(0.6);
+      expect(service['getPriority']('/page/1')).toBe(0.5);
+      expect(service['getPriority']('/about')).toBe(0.4);
     });
   });
 

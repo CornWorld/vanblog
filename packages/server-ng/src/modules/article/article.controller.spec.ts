@@ -9,33 +9,16 @@ import { ArticleService } from './article.service';
 import { Article } from './entities/article.entity';
 import { ArticleAccessGuard } from './guards/article-access.guard';
 
-// Mocks
-const mockArticleService = {
-  findAll: vi.fn(),
-  search: vi.fn(),
-  exportArticles: vi.fn(),
-  findByCategory: vi.fn(),
-  importArticles: vi.fn(),
-  findOne: vi.fn(),
-  findOneByPathname: vi.fn(),
-  create: vi.fn(),
-  update: vi.fn(),
-  remove: vi.fn(),
-  verifyPassword: vi.fn(),
-  verifyPasswordByPathname: vi.fn(),
-  getArticlesGroupedByCategory: vi.fn(),
-  getArticlesGroupedByTag: vi.fn(),
-};
-
-const mockArticleStatsService = {
-  recordArticleView: vi.fn(),
-  recordArticleViewByPathname: vi.fn(),
-};
-
 describe('ArticleController', () => {
   let controller: ArticleController;
+  let mockArticleService: any;
+  let mockArticleStatsService: any;
 
   beforeEach(async () => {
+    // 使用 MockUtils 创建服务 Mock
+    mockArticleService = MockUtils.services.createArticleServiceMock();
+    mockArticleStatsService = MockUtils.services.createArticleStatsServiceMock();
+
     const module: TestingModule = await Test.createTestingModule({
       controllers: [ArticleController],
       providers: [

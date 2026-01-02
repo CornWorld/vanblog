@@ -2,28 +2,18 @@ import { NotFoundException } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { vi, describe, beforeEach, afterEach, it, expect } from 'vitest';
 
+import { MockUtils } from '../../../test/mock-utils';
+
 import { TagController } from './tag.controller';
 import { TagService } from './tag.service';
 import { Tag } from './entities/tag.entity';
 
 describe('TagController', () => {
   let controller: TagController;
-  let service: TagService;
-  let mockTagService: Partial<TagService>;
+  let mockTagService: any;
 
   beforeEach(async () => {
-    mockTagService = {
-      findAll: vi.fn(),
-      findOne: vi.fn(),
-      findByName: vi.fn(),
-      create: vi.fn(),
-      update: vi.fn(),
-      remove: vi.fn(),
-      getStatistics: vi.fn(),
-      getTagsWithCategories: vi.fn(),
-      getArticlesByTagName: vi.fn(),
-      getArticlesByTagId: vi.fn(),
-    };
+    mockTagService = MockUtils.services.createTagServiceMock();
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [TagController],
@@ -36,7 +26,6 @@ describe('TagController', () => {
     }).compile();
 
     controller = module.get<TagController>(TagController);
-    service = module.get<TagService>(TagService);
   });
 
   afterEach(() => {
@@ -69,11 +58,11 @@ describe('TagController', () => {
         total: 2,
       };
 
-      vi.mocked(service.findAll).mockResolvedValue(mockTags);
+      mockTagService.findAll.mockResolvedValue(mockTags);
 
       const result = await controller.findAll();
 
-      expect(service.findAll).toHaveBeenCalled();
+      expect(mockTagService.findAll).toHaveBeenCalled();
       expect(result).toEqual(mockTags);
       expect(result.items).toHaveLength(2);
       expect(result.total).toBe(2);
@@ -85,11 +74,11 @@ describe('TagController', () => {
         total: 0,
       };
 
-      vi.mocked(service.findAll).mockResolvedValue(mockEmptyTags);
+      mockTagService.findAll.mockResolvedValue(mockEmptyTags);
 
       const result = await controller.findAll();
 
-      expect(service.findAll).toHaveBeenCalled();
+      expect(mockTagService.findAll).toHaveBeenCalled();
       expect(result.items).toHaveLength(0);
       expect(result.total).toBe(0);
     });
@@ -97,28 +86,27 @@ describe('TagController', () => {
 
   describe('findOne', () => {
     it('should return a tag by ID', async () => {
-      const mockTag = new Tag({
-        id: 1,
-        name: 'JavaScript',
-        slug: 'javascript',
-        createdAt: '2024-01-01T00:00:00Z',
-        updatedAt: undefined,
-      });
+      const mockTag = new Tag(
+        MockUtils.testData.createTag({
+          id: 1,
+          name: 'JavaScript',
+          slug: 'javascript',
+          createdAt: '2024-01-01T00:00:00Z',
+        }),
+      );
 
-      vi.mocked(service.findOne).mockResolvedValue(mockTag);
+      mockTagService.findOne.mockResolvedValue(mockTag);
 
       const result = await controller.findOne(1);
 
-      expect(service.findOne).toHaveBeenCalledWith(1);
+      expect(mockTagService.findOne).toHaveBeenCalledWith(1);
       expect(result).toEqual(mockTag);
       expect(result.id).toBe(1);
       expect(result.name).toBe('JavaScript');
     });
 
     it('should throw NotFoundException when tag not found', async () => {
-      vi.mocked(service.findOne).mockRejectedValue(
-        new NotFoundException('Tag with ID 999 not found'),
-      );
+      mockTagService.findOne.mockRejectedValue(new NotFoundException('Tag with ID 999 not found'));
 
       await expect(controller.findOne(999)).rejects.toThrow(NotFoundException);
       await expect(controller.findOne(999)).rejects.toThrow('Tag with ID 999 not found');
@@ -132,19 +120,20 @@ describe('TagController', () => {
         slug: 'react',
       };
 
-      const mockCreatedTag = new Tag({
-        id: 1,
-        name: 'React',
-        slug: 'react',
-        createdAt: '2024-01-01T00:00:00Z',
-        updatedAt: undefined,
-      });
+      const mockCreatedTag = new Tag(
+        MockUtils.testData.createTag({
+          id: 1,
+          name: 'React',
+          slug: 'react',
+          createdAt: '2024-01-01T00:00:00Z',
+        }),
+      );
 
-      vi.mocked(service.create).mockResolvedValue(mockCreatedTag);
+      mockTagService.create.mockResolvedValue(mockCreatedTag);
 
       const result = await controller.create(createDto);
 
-      expect(service.create).toHaveBeenCalledWith(createDto);
+      expect(mockTagService.create).toHaveBeenCalledWith(createDto);
       expect(result).toEqual(mockCreatedTag);
       expect(result.id).toBe(1);
       expect(result.name).toBe('React');
@@ -155,19 +144,20 @@ describe('TagController', () => {
         name: 'Vue.js',
       };
 
-      const mockCreatedTag = new Tag({
-        id: 2,
-        name: 'Vue.js',
-        slug: 'vue-js',
-        createdAt: '2024-01-01T00:00:00Z',
-        updatedAt: undefined,
-      });
+      const mockCreatedTag = new Tag(
+        MockUtils.testData.createTag({
+          id: 2,
+          name: 'Vue.js',
+          slug: 'vue-js',
+          createdAt: '2024-01-01T00:00:00Z',
+        }),
+      );
 
-      vi.mocked(service.create).mockResolvedValue(mockCreatedTag);
+      mockTagService.create.mockResolvedValue(mockCreatedTag);
 
       const result = await controller.create(createDto);
 
-      expect(service.create).toHaveBeenCalledWith(createDto);
+      expect(mockTagService.create).toHaveBeenCalledWith(createDto);
       expect(result.slug).toBe('vue-js');
     });
 
@@ -202,12 +192,12 @@ describe('TagController', () => {
         createdAt: '2024-01-01T00:00:00Z',
       });
 
-      vi.mocked(service.create).mockResolvedValueOnce(mockTag1);
+      mockTagService.create.mockResolvedValueOnce(mockTag1);
       const result1 = await controller.create(createDtoWithSlug);
       expect(result1.id).toBe(1);
       expect(result1.slug).toBe('tag-a');
 
-      vi.mocked(service.create).mockResolvedValueOnce(mockTag2);
+      mockTagService.create.mockResolvedValueOnce(mockTag2);
       const result2 = await controller.create(createDtoWithoutSlug);
       expect(result2.id).toBe(2);
     });
@@ -224,7 +214,7 @@ describe('TagController', () => {
         createdAt: '2024-01-01T00:00:00Z',
       });
 
-      vi.mocked(service.create).mockResolvedValue(mockTag);
+      mockTagService.create.mockResolvedValue(mockTag);
       const result = await controller.create(createDtoAutoSlug);
       expect(result.slug).toBe('tag-with-auto-slug');
     });
@@ -245,11 +235,11 @@ describe('TagController', () => {
         updatedAt: '2024-01-15T00:00:00Z',
       });
 
-      vi.mocked(service.update).mockResolvedValue(mockUpdatedTag);
+      mockTagService.update.mockResolvedValue(mockUpdatedTag);
 
       const result = await controller.update(1, updateDto);
 
-      expect(service.update).toHaveBeenCalledWith(1, updateDto);
+      expect(mockTagService.update).toHaveBeenCalledWith(1, updateDto);
       expect(result).toEqual(mockUpdatedTag);
       expect(result.name).toBe('JavaScript ES2024');
       expect(result.updatedAt).toBe('2024-01-15T00:00:00Z');
@@ -260,9 +250,7 @@ describe('TagController', () => {
         name: 'Updated Tag',
       };
 
-      vi.mocked(service.update).mockRejectedValue(
-        new NotFoundException('Tag with ID 999 not found'),
-      );
+      mockTagService.update.mockRejectedValue(new NotFoundException('Tag with ID 999 not found'));
 
       await expect(controller.update(999, updateDto)).rejects.toThrow(NotFoundException);
       await expect(controller.update(999, updateDto)).rejects.toThrow('Tag with ID 999 not found');
@@ -281,11 +269,11 @@ describe('TagController', () => {
         updatedAt: '2024-01-15T00:00:00Z',
       });
 
-      vi.mocked(service.update).mockResolvedValue(mockUpdatedTag);
+      mockTagService.update.mockResolvedValue(mockUpdatedTag);
 
       const result = await controller.update(2, updateDto);
 
-      expect(service.update).toHaveBeenCalledWith(2, updateDto);
+      expect(mockTagService.update).toHaveBeenCalledWith(2, updateDto);
       expect(result.name).toBe('TypeScript Updated');
       expect(result.slug).toBe('typescript');
     });
@@ -293,17 +281,15 @@ describe('TagController', () => {
 
   describe('remove', () => {
     it('should delete a tag', async () => {
-      vi.mocked(service.remove).mockResolvedValue(undefined);
+      mockTagService.remove.mockResolvedValue(undefined);
 
       await controller.remove(1);
 
-      expect(service.remove).toHaveBeenCalledWith(1);
+      expect(mockTagService.remove).toHaveBeenCalledWith(1);
     });
 
     it('should throw NotFoundException when deleting non-existent tag', async () => {
-      vi.mocked(service.remove).mockRejectedValue(
-        new NotFoundException('Tag with ID 999 not found'),
-      );
+      mockTagService.remove.mockRejectedValue(new NotFoundException('Tag with ID 999 not found'));
 
       await expect(controller.remove(999)).rejects.toThrow(NotFoundException);
       await expect(controller.remove(999)).rejects.toThrow('Tag with ID 999 not found');
@@ -319,11 +305,11 @@ describe('TagController', () => {
         averageCategoriesPerArticle: 1.2,
       };
 
-      vi.mocked(service.getStatistics).mockResolvedValue(mockStatistics as any);
+      mockTagService.getStatistics.mockResolvedValue(mockStatistics as any);
 
       const result = await controller.getStatistics();
 
-      expect(service.getStatistics).toHaveBeenCalled();
+      expect(mockTagService.getStatistics).toHaveBeenCalled();
       expect(result).toEqual(mockStatistics);
     });
   });
@@ -354,11 +340,11 @@ describe('TagController', () => {
         },
       ];
 
-      vi.mocked(service.getTagsWithCategories).mockResolvedValue(mockTagsWithCategories);
+      mockTagService.getTagsWithCategories.mockResolvedValue(mockTagsWithCategories);
 
       const result = await controller.getTagsWithCategories();
 
-      expect(service.getTagsWithCategories).toHaveBeenCalled();
+      expect(mockTagService.getTagsWithCategories).toHaveBeenCalled();
       expect(result).toEqual(mockTagsWithCategories);
       expect(result).toHaveLength(2);
       expect(result[0].categories).toHaveLength(2);
@@ -378,7 +364,7 @@ describe('TagController', () => {
         },
       ];
 
-      vi.mocked(service.getTagsWithCategories).mockResolvedValue(mockTagsWithNoCategories);
+      mockTagService.getTagsWithCategories.mockResolvedValue(mockTagsWithNoCategories);
 
       const result = await controller.getTagsWithCategories();
 
@@ -413,14 +399,14 @@ describe('TagController', () => {
         totalPages: 1,
       };
 
-      vi.mocked(service.getArticlesByTagName).mockResolvedValue(mockArticles);
+      mockTagService.getArticlesByTagName.mockResolvedValue(mockArticles);
 
       const result = await controller.getArticlesByTagName('JavaScript', {
         page: 1,
         pageSize: 10,
       });
 
-      expect(service.getArticlesByTagName).toHaveBeenCalledWith(
+      expect(mockTagService.getArticlesByTagName).toHaveBeenCalledWith(
         'JavaScript',
         expect.objectContaining({
           page: 1,
@@ -432,7 +418,7 @@ describe('TagController', () => {
     });
 
     it('should throw NotFoundException when tag not found', async () => {
-      vi.mocked(service.getArticlesByTagName).mockRejectedValue(
+      mockTagService.getArticlesByTagName.mockRejectedValue(
         new NotFoundException('Tag with name "NonExistent" not found'),
       );
 
@@ -453,7 +439,7 @@ describe('TagController', () => {
         totalPages: 0,
       };
 
-      vi.mocked(service.getArticlesByTagName).mockResolvedValue(mockEmptyArticles);
+      mockTagService.getArticlesByTagName.mockResolvedValue(mockEmptyArticles);
 
       const result = await controller.getArticlesByTagName('EmptyTag', {
         page: 1,
@@ -473,14 +459,14 @@ describe('TagController', () => {
         totalPages: 3,
       };
 
-      vi.mocked(service.getArticlesByTagName).mockResolvedValue(mockArticles);
+      mockTagService.getArticlesByTagName.mockResolvedValue(mockArticles);
 
       const result = await controller.getArticlesByTagName('JavaScript', {
         page: 2,
         pageSize: 20,
       });
 
-      expect(service.getArticlesByTagName).toHaveBeenCalledWith(
+      expect(mockTagService.getArticlesByTagName).toHaveBeenCalledWith(
         'JavaScript',
         expect.objectContaining({
           page: 2,
@@ -520,14 +506,14 @@ describe('TagController', () => {
         totalPages: 1,
       };
 
-      vi.mocked(service.getArticlesByTagId).mockResolvedValue(mockArticles);
+      mockTagService.getArticlesByTagId.mockResolvedValue(mockArticles);
 
       const result = await controller.getArticlesByTagId(1, {
         page: 1,
         pageSize: 10,
       });
 
-      expect(service.getArticlesByTagId).toHaveBeenCalledWith(
+      expect(mockTagService.getArticlesByTagId).toHaveBeenCalledWith(
         1,
         expect.objectContaining({
           page: 1,
@@ -539,7 +525,7 @@ describe('TagController', () => {
     });
 
     it('should throw NotFoundException when tag ID not found', async () => {
-      vi.mocked(service.getArticlesByTagId).mockRejectedValue(
+      mockTagService.getArticlesByTagId.mockRejectedValue(
         new NotFoundException('Tag with ID 999 not found'),
       );
 
@@ -560,7 +546,7 @@ describe('TagController', () => {
         totalPages: 0,
       };
 
-      vi.mocked(service.getArticlesByTagId).mockResolvedValue(mockArticles);
+      mockTagService.getArticlesByTagId.mockResolvedValue(mockArticles);
 
       await controller.getArticlesByTagId(1, {
         page: 1,
@@ -568,7 +554,7 @@ describe('TagController', () => {
         includeHidden: true,
       });
 
-      expect(service.getArticlesByTagId).toHaveBeenCalledWith(
+      expect(mockTagService.getArticlesByTagId).toHaveBeenCalledWith(
         1,
         expect.objectContaining({
           includeHidden: true,
@@ -592,7 +578,7 @@ describe('TagController', () => {
         total: 1,
       };
 
-      vi.mocked(service.findAll).mockResolvedValue(mockTags);
+      mockTagService.findAll.mockResolvedValue(mockTags);
 
       const handler = controller.getTags() as unknown as () => Promise<{
         status: number;
@@ -600,7 +586,7 @@ describe('TagController', () => {
       }>;
       const result = await handler();
 
-      expect(service.findAll).toHaveBeenCalled();
+      expect(mockTagService.findAll).toHaveBeenCalled();
       expect(result).toEqual({
         status: 200,
         body: [
@@ -621,7 +607,7 @@ describe('TagController', () => {
         total: 0,
       };
 
-      vi.mocked(service.findAll).mockResolvedValue(mockEmptyTags);
+      mockTagService.findAll.mockResolvedValue(mockEmptyTags);
 
       const handler = controller.getTags() as unknown as () => Promise<{
         status: number;
@@ -649,14 +635,14 @@ describe('TagController', () => {
         updatedAt: '2024-01-02T00:00:00Z',
       });
 
-      vi.mocked(service.create).mockResolvedValue(mockCreatedTag);
+      mockTagService.create.mockResolvedValue(mockCreatedTag);
 
       const handler = controller.createTag() as unknown as (
         ctx: any,
       ) => Promise<{ status: number; body: any }>;
       const result = await handler({ body: createDto });
 
-      expect(service.create).toHaveBeenCalledWith(createDto);
+      expect(mockTagService.create).toHaveBeenCalledWith(createDto);
       expect(result).toEqual({
         status: 201,
         body: {
@@ -682,7 +668,7 @@ describe('TagController', () => {
         updatedAt: undefined,
       });
 
-      vi.mocked(service.create).mockResolvedValue(mockCreatedTag);
+      mockTagService.create.mockResolvedValue(mockCreatedTag);
 
       const handler = controller.createTag() as unknown as (
         ctx: any,
@@ -715,14 +701,14 @@ describe('TagController', () => {
         updatedAt: '2024-01-15T00:00:00Z',
       });
 
-      vi.mocked(service.findByName).mockResolvedValue(mockFoundTag);
-      vi.mocked(service.update).mockResolvedValue(mockUpdatedTag);
+      mockTagService.findByName.mockResolvedValue(mockFoundTag);
+      mockTagService.update.mockResolvedValue(mockUpdatedTag);
 
       const handler = controller.updateTag() as unknown as (ctx: any) => Promise<any>;
       const result = await handler({ params: { name: 'JavaScript' }, body: updateDto });
 
-      expect(service.findByName).toHaveBeenCalledWith('JavaScript');
-      expect(service.update).toHaveBeenCalledWith(1, updateDto);
+      expect(mockTagService.findByName).toHaveBeenCalledWith('JavaScript');
+      expect(mockTagService.update).toHaveBeenCalledWith(1, updateDto);
       expect(result).toEqual({
         status: 200,
         body: {
@@ -740,7 +726,7 @@ describe('TagController', () => {
         name: 'Updated Name',
       };
 
-      vi.mocked(service.findByName).mockResolvedValue(null);
+      mockTagService.findByName.mockResolvedValue(null);
 
       const handler = controller.updateTag() as unknown as (ctx: any) => Promise<any>;
 
@@ -763,14 +749,14 @@ describe('TagController', () => {
         updatedAt: undefined,
       });
 
-      vi.mocked(service.findByName).mockResolvedValue(mockFoundTag);
-      vi.mocked(service.remove).mockResolvedValue(undefined);
+      mockTagService.findByName.mockResolvedValue(mockFoundTag);
+      mockTagService.remove.mockResolvedValue(undefined);
 
       const handler = controller.deleteTag() as unknown as (ctx: any) => Promise<any>;
       const result = await handler({ params: { name: 'ToDelete' } });
 
-      expect(service.findByName).toHaveBeenCalledWith('ToDelete');
-      expect(service.remove).toHaveBeenCalledWith(1);
+      expect(mockTagService.findByName).toHaveBeenCalledWith('ToDelete');
+      expect(mockTagService.remove).toHaveBeenCalledWith(1);
       expect(result).toEqual({
         status: 200,
         body: { success: true },
@@ -778,7 +764,7 @@ describe('TagController', () => {
     });
 
     it('should throw NotFoundException when tag not found by name', async () => {
-      vi.mocked(service.findByName).mockResolvedValue(null);
+      mockTagService.findByName.mockResolvedValue(null);
 
       const handler = controller.deleteTag() as unknown as (ctx: any) => Promise<any>;
 
@@ -806,7 +792,7 @@ describe('TagController', () => {
         updatedAt: undefined,
       });
 
-      vi.mocked(service.create).mockResolvedValue(mockCreatedTag);
+      mockTagService.create.mockResolvedValue(mockCreatedTag);
 
       const result = await controller.create(createDto);
 
@@ -829,7 +815,7 @@ describe('TagController', () => {
         updatedAt: undefined,
       });
 
-      vi.mocked(service.create).mockResolvedValue(mockCreatedTag);
+      mockTagService.create.mockResolvedValue(mockCreatedTag);
 
       const result = await controller.create(createDto);
 
@@ -851,7 +837,7 @@ describe('TagController', () => {
         updatedAt: undefined,
       });
 
-      vi.mocked(service.create).mockResolvedValue(mockCreatedTag);
+      mockTagService.create.mockResolvedValue(mockCreatedTag);
 
       const result = await controller.create(createDto);
 
@@ -876,7 +862,7 @@ describe('TagController', () => {
         updatedAt: undefined,
       });
 
-      vi.mocked(service.create).mockResolvedValue(mockCreatedTag);
+      mockTagService.create.mockResolvedValue(mockCreatedTag);
 
       const result = await controller.create(createDto);
 
@@ -898,7 +884,7 @@ describe('TagController', () => {
         updatedAt: undefined,
       });
 
-      vi.mocked(service.create).mockResolvedValue(mockCreatedTag);
+      mockTagService.create.mockResolvedValue(mockCreatedTag);
 
       const result = await controller.create(createDto);
 
@@ -920,7 +906,7 @@ describe('TagController', () => {
         updatedAt: undefined,
       });
 
-      vi.mocked(service.create).mockResolvedValue(mockCreatedTag);
+      mockTagService.create.mockResolvedValue(mockCreatedTag);
 
       const result = await controller.create(createDto);
 

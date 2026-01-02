@@ -12,51 +12,38 @@ import { SettingCoreService } from '../setting/services/setting-core.service';
 import { TagService } from '../tag/tag.service';
 
 import { BootstrapService } from './bootstrap.service';
-
-const mockConfigService = {
-  get: vi.fn(),
-};
-
-const mockStatisticsService = {
-  getOverallStatistics: vi.fn(),
-  getTotalPublishedWordCount: vi.fn(),
-};
-
-const mockSettingCoreService = {
-  getSiteInfo: vi.fn(),
-  getNavigation: vi.fn(),
-  getFriendLinks: vi.fn(),
-};
-
-const mockCommentService = {
-  getResolvedWalineConfig: vi.fn(),
-};
-
-const mockTagService = {
-  findAll: vi.fn(),
-};
-
-const mockCategoryService = {
-  findAll: vi.fn(),
-};
-
-const mockHookService = {
-  doAction: vi.fn(),
-  applyFilters: vi.fn(),
-};
-
-const mockPluginRegistryService = {
-  getAllPublicData: vi.fn(),
-};
-
-const mockPluginDataValidator = {
-  normalizeProviderResult: vi.fn(),
-};
+import { MockUtils } from '../../../test/mock-utils';
 
 describe('BootstrapService', () => {
   let service: BootstrapService;
+  let mockConfigService: any;
+  let mockStatisticsService: any;
+  let mockSettingCoreService: any;
+  let mockCommentService: any;
+  let mockTagService: any;
+  let mockCategoryService: any;
+  let mockHookService: any;
+  let mockPluginRegistryService: any;
+  let mockPluginDataValidator: any;
 
   beforeEach(async () => {
+    // 使用 MockUtils 创建所有 Mock 服务
+    mockConfigService = {
+      get: vi.fn(),
+    };
+    mockStatisticsService = MockUtils.services.createStatisticsServiceMock();
+    mockSettingCoreService = MockUtils.services.createSettingCoreServiceMock();
+    mockCommentService = MockUtils.services.createCommentServiceMock();
+    mockTagService = MockUtils.services.createTagServiceMock();
+    mockCategoryService = MockUtils.services.createCategoryServiceMock();
+    mockHookService = MockUtils.services.createHookServiceMock();
+    mockPluginRegistryService = {
+      getAllPublicData: vi.fn(),
+    };
+    mockPluginDataValidator = {
+      normalizeProviderResult: vi.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         BootstrapService,

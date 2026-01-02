@@ -1,21 +1,18 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
+import { MockUtils } from '../../../test/mock-utils';
+
 import { DemoController } from './demo.controller';
 import { DemoService } from './demo.service';
-
-const mockDemoService = {
-  isDemoModeEnabled: vi.fn(),
-  getSnapshotInfo: vi.fn(),
-  manualRestore: vi.fn(),
-  createSnapshot: vi.fn(),
-};
 
 describe('DemoController', () => {
   let controller: DemoController;
   let demoService: DemoService;
 
   beforeEach(async () => {
+    const mockDemoService = MockUtils.services.createDemoServiceMock();
+
     const module: TestingModule = await Test.createTestingModule({
       controllers: [DemoController],
       providers: [
@@ -47,8 +44,8 @@ describe('DemoController', () => {
         draftsCount: 2,
       };
 
-      mockDemoService.isDemoModeEnabled.mockReturnValue(true);
-      mockDemoService.getSnapshotInfo.mockReturnValue(mockSnapshotInfo);
+      (demoService.isDemoModeEnabled as any).mockReturnValue(true);
+      (demoService.getSnapshotInfo as any).mockReturnValue(mockSnapshotInfo);
 
       const result = controller.getStatus();
 
@@ -65,8 +62,8 @@ describe('DemoController', () => {
         hasSnapshot: false,
       };
 
-      mockDemoService.isDemoModeEnabled.mockReturnValue(false);
-      mockDemoService.getSnapshotInfo.mockReturnValue(mockSnapshotInfo);
+      (demoService.isDemoModeEnabled as any).mockReturnValue(false);
+      (demoService.getSnapshotInfo as any).mockReturnValue(mockSnapshotInfo);
 
       const result = controller.getStatus();
 
@@ -84,7 +81,7 @@ describe('DemoController', () => {
         message: 'Demo data restored successfully',
       };
 
-      mockDemoService.manualRestore.mockResolvedValue(mockResult);
+      (demoService.manualRestore as any).mockResolvedValue(mockResult);
 
       const result = await controller.restoreDemo();
 
@@ -98,7 +95,7 @@ describe('DemoController', () => {
         message: 'Demo mode is not enabled',
       };
 
-      mockDemoService.manualRestore.mockResolvedValue(mockResult);
+      (demoService.manualRestore as any).mockResolvedValue(mockResult);
 
       const result = await controller.restoreDemo();
 
@@ -108,7 +105,7 @@ describe('DemoController', () => {
 
   describe('createSnapshot', () => {
     it('should create snapshot successfully', async () => {
-      mockDemoService.createSnapshot.mockResolvedValue(undefined);
+      (demoService.createSnapshot as any).mockResolvedValue(undefined);
 
       const result = await controller.createSnapshot();
 
@@ -121,7 +118,7 @@ describe('DemoController', () => {
 
     it('should handle snapshot creation failure', async () => {
       const error = new Error('Database error');
-      mockDemoService.createSnapshot.mockRejectedValue(error);
+      (demoService.createSnapshot as any).mockRejectedValue(error);
 
       const result = await controller.createSnapshot();
 

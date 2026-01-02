@@ -2,6 +2,8 @@ import { ConfigService } from '@nestjs/config';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { vi, describe, beforeEach, it, expect, afterEach } from 'vitest';
 
+import { MockUtils } from '../../../test/mock-utils';
+
 import { CDNService } from './cdn.service';
 
 // Mock fetch globally
@@ -10,26 +12,20 @@ global.fetch = mockFetch;
 
 describe('CDNService', () => {
   let service: CDNService;
-  let configService: ConfigService;
+  let _configService: ConfigService;
   let module: TestingModule;
 
   beforeEach(async () => {
-    const mockConfigService = {
-      get: vi.fn((key: string, defaultValue?: any) => {
-        // Provide test configuration values
-        const config: Record<string, any> = {
-          CDN_ENABLED: true,
-          CDN_BASE_URL: 'https://cdn.example.com',
-          CDN_DOMAINS: 'https://cdn1.example.com,https://cdn2.example.com,https://cdn3.example.com',
-          CDN_IMAGE_OPTIMIZATION: true,
-          CDN_WEBP_ENABLED: true,
-          CDN_CACHE_TTL: 86400,
-          CDN_PURGE_API_KEY: 'test-api-key',
-          CDN_PURGE_ENDPOINT: 'https://api.example.com/purge',
-        };
-        return config[key] ?? defaultValue;
-      }),
-    };
+    const mockConfigService = MockUtils.services.createConfigServiceMock({
+      CDN_ENABLED: true,
+      CDN_BASE_URL: 'https://cdn.example.com',
+      CDN_DOMAINS: 'https://cdn1.example.com,https://cdn2.example.com,https://cdn3.example.com',
+      CDN_IMAGE_OPTIMIZATION: true,
+      CDN_WEBP_ENABLED: true,
+      CDN_CACHE_TTL: 86400,
+      CDN_PURGE_API_KEY: 'test-api-key',
+      CDN_PURGE_ENDPOINT: 'https://api.example.com/purge',
+    });
 
     module = await Test.createTestingModule({
       providers: [
@@ -42,7 +38,7 @@ describe('CDNService', () => {
     }).compile();
 
     service = module.get<CDNService>(CDNService);
-    configService = module.get<ConfigService>(ConfigService);
+    _configService = module.get<ConfigService>(ConfigService);
   });
 
   afterEach(() => {
@@ -55,25 +51,20 @@ describe('CDNService', () => {
 
   describe('getResourceUrl', () => {
     it('should return original path when CDN is disabled', () => {
-      // Mock CDN disabled
-      vi.mocked(configService.get).mockImplementation((key: string, _defaultValue?: any) => {
-        if (key === 'CDN_ENABLED') return false;
-        return _defaultValue;
-      });
-
       // Create new service instance with disabled CDN
-      const disabledService = new CDNService(configService);
+      const disabledConfigService = MockUtils.services.createConfigServiceMock({
+        CDN_ENABLED: false,
+      });
+      const disabledService = new CDNService(disabledConfigService);
       const result = disabledService.getResourceUrl('/images/test.jpg');
       expect(result).toBe('/images/test.jpg');
     });
 
     it('should return original path when base URL is empty', () => {
-      vi.mocked(configService.get).mockImplementation((key: string, _defaultValue?: any) => {
-        if (key === 'CDN_BASE_URL') return '';
-        return _defaultValue;
+      const emptyUrlConfigService = MockUtils.services.createConfigServiceMock({
+        CDN_BASE_URL: '',
       });
-
-      const emptyUrlService = new CDNService(configService);
+      const emptyUrlService = new CDNService(emptyUrlConfigService);
       const result = emptyUrlService.getResourceUrl('/images/test.jpg');
       expect(result).toBe('/images/test.jpg');
     });
@@ -155,12 +146,10 @@ describe('CDNService', () => {
 
   describe('warmupCache', () => {
     it('should skip warmup when CDN is disabled', async () => {
-      vi.mocked(configService.get).mockImplementation((key: string, defaultValue?: any) => {
-        if (key === 'CDN_ENABLED') return false;
-        return defaultValue;
+      const disabledConfigService = MockUtils.services.createConfigServiceMock({
+        CDN_ENABLED: false,
       });
-
-      const disabledService = new CDNService(configService);
+      const disabledService = new CDNService(disabledConfigService);
       await disabledService.warmupCache(['https://example.com/test.jpg']);
       expect(mockFetch).not.toHaveBeenCalled();
     });
@@ -191,23 +180,19 @@ describe('CDNService', () => {
 
   describe('purgeCache', () => {
     it('should return false when CDN is disabled', async () => {
-      vi.mocked(configService.get).mockImplementation((key: string, defaultValue?: any) => {
-        if (key === 'CDN_IMAGE_OPTIMIZATION') return false;
-        return defaultValue;
+      const disabledConfigService = MockUtils.services.createConfigServiceMock({
+        CDN_IMAGE_OPTIMIZATION: false,
       });
-
-      const disabledService = new CDNService(configService);
+      const disabledService = new CDNService(disabledConfigService);
       const result = await disabledService.purgeCache(['https://example.com/test.jpg']);
       expect(result).toBe(false);
     });
 
     it('should return false when purge endpoint is not configured', async () => {
-      vi.mocked(configService.get).mockImplementation((key: string, defaultValue?: any) => {
-        if (key === 'CDN_PURGE_ENDPOINT') return undefined;
-        return defaultValue;
+      const noPurgeConfigService = MockUtils.services.createConfigServiceMock({
+        CDN_PURGE_ENDPOINT: undefined,
       });
-
-      const noPurgeService = new CDNService(configService);
+      const noPurgeService = new CDNService(noPurgeConfigService);
       const result = await noPurgeService.purgeCache(['https://example.com/test.jpg']);
       expect(result).toBe(false);
     });
@@ -260,12 +245,10 @@ describe('CDNService', () => {
     });
 
     it('should return false when not configured', async () => {
-      vi.mocked(configService.get).mockImplementation((key: string, defaultValue?: any) => {
-        if (key === 'CDN_PURGE_API_KEY') return undefined;
-        return defaultValue;
+      const noKeyConfigService = MockUtils.services.createConfigServiceMock({
+        CDN_PURGE_API_KEY: undefined,
       });
-
-      const noKeyService = new CDNService(configService);
+      const noKeyService = new CDNService(noKeyConfigService);
       const result = await noKeyService.purgeAllCache();
       expect(result).toBe(false);
     });
@@ -384,13 +367,11 @@ describe('CDNService', () => {
       const baseUrl = 'https://cdn.example.com/test.jpg';
       const params = {};
 
-      // Mock WebP disabled
-      vi.mocked(configService.get).mockImplementation((key: string, defaultValue?: any) => {
-        if (key === 'CDN_WEBP_ENABLED') return false;
-        return defaultValue;
+      // Create service with WebP disabled
+      const noWebpConfigService = MockUtils.services.createConfigServiceMock({
+        CDN_WEBP_ENABLED: false,
       });
-
-      const noWebpService = new CDNService(configService);
+      const noWebpService = new CDNService(noWebpConfigService);
       const result = (noWebpService as any).buildOptimizedImageUrl(baseUrl, params);
 
       expect(result).toBe(baseUrl);
@@ -399,14 +380,12 @@ describe('CDNService', () => {
 
   describe('getShardedDomain', () => {
     it('should return base URL when no domains configured', () => {
-      vi.mocked(configService.get).mockImplementation((key: string, defaultValue?: any) => {
-        if (key === 'CDN_DOMAINS') return '';
-        if (key === 'CDN_BASE_URL') return 'https://cdn.example.com';
-        if (key === 'CDN_ENABLED') return true;
-        return defaultValue;
+      const noDomainsConfigService = MockUtils.services.createConfigServiceMock({
+        CDN_DOMAINS: '',
+        CDN_BASE_URL: 'https://cdn.example.com',
+        CDN_ENABLED: true,
       });
-
-      const noDomainsService = new CDNService(configService);
+      const noDomainsService = new CDNService(noDomainsConfigService);
       const result = (noDomainsService as any).getShardedDomain('/test.jpg');
       expect(result).toBe('https://cdn.example.com');
     });
@@ -428,77 +407,65 @@ describe('CDNService', () => {
     });
 
     it('should handle null domain list with explicit null check', () => {
-      vi.mocked(configService.get).mockImplementation((key: string, defaultValue?: any) => {
-        if (key === 'CDN_DOMAINS') return null;
-        if (key === 'CDN_BASE_URL') return 'https://cdn.example.com';
-        if (key === 'CDN_ENABLED') return true;
-        return defaultValue;
+      const nullDomainsConfigService = MockUtils.services.createConfigServiceMock({
+        CDN_DOMAINS: null,
+        CDN_BASE_URL: 'https://cdn.example.com',
+        CDN_ENABLED: true,
       });
-
-      const nullDomainsService = new CDNService(configService);
+      const nullDomainsService = new CDNService(nullDomainsConfigService);
       const result = (nullDomainsService as any).getShardedDomain('/test.jpg');
       expect(result).toBe('https://cdn.example.com');
     });
 
     it('should handle undefined domain list with explicit undefined check', () => {
-      vi.mocked(configService.get).mockImplementation((key: string, defaultValue?: any) => {
-        if (key === 'CDN_DOMAINS') return undefined;
-        if (key === 'CDN_BASE_URL') return 'https://cdn.example.com';
-        if (key === 'CDN_ENABLED') return true;
-        return defaultValue;
+      const undefinedDomainsConfigService = MockUtils.services.createConfigServiceMock({
+        CDN_DOMAINS: undefined,
+        CDN_BASE_URL: 'https://cdn.example.com',
+        CDN_ENABLED: true,
       });
-
-      const undefinedDomainsService = new CDNService(configService);
+      const undefinedDomainsService = new CDNService(undefinedDomainsConfigService);
       const result = (undefinedDomainsService as any).getShardedDomain('/test.jpg');
       expect(result).toBe('https://cdn.example.com');
     });
 
     it('should handle empty string domain list', () => {
-      vi.mocked(configService.get).mockImplementation((key: string, defaultValue?: any) => {
-        if (key === 'CDN_DOMAINS') return '';
-        if (key === 'CDN_BASE_URL') return 'https://cdn.example.com';
-        if (key === 'CDN_ENABLED') return true;
-        return defaultValue;
+      const emptyDomainsConfigService = MockUtils.services.createConfigServiceMock({
+        CDN_DOMAINS: '',
+        CDN_BASE_URL: 'https://cdn.example.com',
+        CDN_ENABLED: true,
       });
-
-      const emptyDomainsService = new CDNService(configService);
+      const emptyDomainsService = new CDNService(emptyDomainsConfigService);
       const result = (emptyDomainsService as any).getShardedDomain('/test.jpg');
       expect(result).toBe('https://cdn.example.com');
     });
 
     it('should distinguish between null and undefined base URLs', () => {
       // Test with null base URL
-      vi.mocked(configService.get).mockImplementation((key: string, defaultValue?: any) => {
-        if (key === 'CDN_BASE_URL') return null;
-        if (key === 'CDN_DOMAINS') return '';
-        if (key === 'CDN_ENABLED') return true;
-        return defaultValue;
+      const nullUrlConfigService = MockUtils.services.createConfigServiceMock({
+        CDN_BASE_URL: null,
+        CDN_DOMAINS: '',
+        CDN_ENABLED: true,
       });
-
-      const nullUrlService = new CDNService(configService);
+      const nullUrlService = new CDNService(nullUrlConfigService);
       expect(() => (nullUrlService as any).getShardedDomain('/test.jpg')).not.toThrow();
 
       // Test with undefined base URL
-      vi.mocked(configService.get).mockImplementation((key: string, defaultValue?: any) => {
-        if (key === 'CDN_BASE_URL') return undefined;
-        if (key === 'CDN_DOMAINS') return '';
-        if (key === 'CDN_ENABLED') return true;
-        return defaultValue;
+      const undefinedUrlConfigService = MockUtils.services.createConfigServiceMock({
+        CDN_BASE_URL: undefined,
+        CDN_DOMAINS: '',
+        CDN_ENABLED: true,
       });
-
-      const undefinedUrlService = new CDNService(configService);
+      const undefinedUrlService = new CDNService(undefinedUrlConfigService);
       expect(() => (undefinedUrlService as any).getShardedDomain('/test.jpg')).not.toThrow();
     });
 
     it('should handle whitespace-only domain list', () => {
-      vi.mocked(configService.get).mockImplementation((key: string, defaultValue?: any) => {
-        if (key === 'CDN_DOMAINS') return '   ';
-        if (key === 'CDN_BASE_URL') return 'https://cdn.example.com';
-        if (key === 'CDN_ENABLED') return true;
-        return defaultValue;
+      const whitespaceDomainsConfigService = MockUtils.services.createConfigServiceMock({
+        CDN_DOMAINS: '   ',
+        CDN_BASE_URL: 'https://cdn.example.com',
+        CDN_ENABLED: true,
       });
-
-      const whitespaceDomainsService = new CDNService(configService);
+      const whitespaceDomainsService = new CDNService(whitespaceDomainsConfigService);
       const result = (whitespaceDomainsService as any).getShardedDomain('/test.jpg');
       // Should handle gracefully, likely returning base URL
       expect(result).toBeDefined();

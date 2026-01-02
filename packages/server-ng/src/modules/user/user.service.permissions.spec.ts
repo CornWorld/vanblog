@@ -33,17 +33,14 @@ const mockedBcrypt = vi.mocked(bcrypt);
 describe('UserService - Permissions', () => {
   let service: UserService;
   let databaseMock: InstanceType<typeof MockUtils.database>;
-  let mockHookService: Partial<HookService>;
+  let mockHookService: ReturnType<typeof MockUtils.services.createHookServiceMock>;
 
   beforeEach(async () => {
     // 使用Mock工具类创建数据库Mock
     databaseMock = new MockUtils.database();
 
     // 创建Hook服务Mock
-    mockHookService = {
-      applyFilters: vi.fn().mockImplementation((_, data) => data),
-      doAction: vi.fn(),
-    };
+    mockHookService = MockUtils.services.createHookServiceMock();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [

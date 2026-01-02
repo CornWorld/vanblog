@@ -18,7 +18,7 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import * as bcrypt from 'bcrypt';
 import { vi } from 'vitest';
 
-import { MockUtils } from '../../../test/mock-utils';
+import { createMockUser, MockUtils } from '../../../test/mock-utils';
 import { DATABASE_CONNECTION } from '../../database';
 import { HookService } from '../plugin/services/hook.service';
 
@@ -30,17 +30,14 @@ const mockedBcrypt = vi.mocked(bcrypt);
 describe('UserService - Update Password', () => {
   let service: UserService;
   let databaseMock: InstanceType<typeof MockUtils.database>;
-  let mockHookService: Partial<HookService>;
+  let mockHookService: ReturnType<typeof MockUtils.services.createHookServiceMock>;
 
   beforeEach(async () => {
     // 使用Mock工具类创建数据库Mock
     databaseMock = new MockUtils.database();
 
     // 创建Hook服务Mock
-    mockHookService = {
-      applyFilters: vi.fn().mockImplementation((_, data) => data),
-      doAction: vi.fn(),
-    };
+    mockHookService = MockUtils.services.createHookServiceMock();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -72,18 +69,12 @@ describe('UserService - Update Password', () => {
 
       mockedBcrypt.hash.mockResolvedValue('newHashedPassword' as never);
 
-      const updatedDbUser = {
-        id: 1,
-        username: 'testuser',
+      const updatedDbUser = createMockUser({
         nickname: null,
         email: null,
-        avatar: null,
-        type: 'admin',
         permissions: null,
         password: 'newHashedPassword',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+      });
 
       databaseMock.setUpdateResult([updatedDbUser]);
 
@@ -106,18 +97,12 @@ describe('UserService - Update Password', () => {
 
       mockedBcrypt.hash.mockResolvedValue('newHashedPassword' as never);
 
-      const updatedDbUser = {
-        id: 1,
-        username: 'testuser',
+      const updatedDbUser = createMockUser({
         nickname: 'Updated',
         email: null,
-        avatar: null,
-        type: 'admin',
         permissions: null,
         password: 'newHashedPassword',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+      });
 
       databaseMock.setUpdateResult([updatedDbUser]);
 
@@ -134,18 +119,11 @@ describe('UserService - Update Password', () => {
         nickname: 'Updated',
       };
 
-      const updatedDbUser = {
-        id: 1,
-        username: 'testuser',
+      const updatedDbUser = createMockUser({
         nickname: 'Updated',
         email: null,
-        avatar: null,
-        type: 'admin',
         permissions: null,
-        password: 'hashedpassword',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+      });
 
       databaseMock.setUpdateResult([updatedDbUser]);
 

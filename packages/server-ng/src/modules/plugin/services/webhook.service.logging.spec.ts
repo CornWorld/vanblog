@@ -21,6 +21,7 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, expect, beforeEach, afterEach, vi, type Mock } from 'vitest';
 
 import { DATABASE_CONNECTION } from '../../../database';
+import { MockUtils } from '../../../../test/mock-utils';
 import { WebhookRegistryService } from './webhook-registry.service';
 import { WebhookService } from './webhook.service';
 
@@ -29,36 +30,15 @@ global.fetch = vi.fn();
 
 describe('WebhookService - Logging & Statistics', () => {
   let service: WebhookService;
-  let mockDb: {
-    insert: Mock;
-    select: Mock;
-    update: Mock;
-    delete: Mock;
-    $client: { execute: Mock };
-  };
+  let mockDb: ReturnType<typeof MockUtils.createDatabaseMock>;
   let mockWebhookRegistry: {
     registerWebhook: Mock;
     unregisterWebhookFromAllEvents: Mock;
   };
 
-  beforeEach(async () => {
-    // Mock database
-    mockDb = {
-      insert: vi.fn().mockReturnThis(),
-      select: vi.fn().mockReturnThis(),
-      update: vi.fn().mockReturnThis(),
-      delete: vi.fn().mockReturnThis(),
-      $client: {
-        execute: vi.fn().mockResolvedValue(undefined),
-      },
-    };
-
-    // Mock webhook registry
-    mockWebhookRegistry = {
-      registerWebhook: vi.fn(),
-      unregisterWebhookFromAllEvents: vi.fn(),
-    };
-
+  // Helper to rebuild service with new mockDb
+  async function rebuildService(db: ReturnType<typeof MockUtils.createDatabaseMock>) {
+    mockDb = db;
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         WebhookService,
@@ -72,8 +52,20 @@ describe('WebhookService - Logging & Statistics', () => {
         },
       ],
     }).compile();
-
     service = module.get<WebhookService>(WebhookService);
+  }
+
+  beforeEach(async () => {
+    // Mock database using MockUtils
+    mockDb = MockUtils.createDatabaseMock();
+
+    // Mock webhook registry
+    mockWebhookRegistry = {
+      registerWebhook: vi.fn(),
+      unregisterWebhookFromAllEvents: vi.fn(),
+    };
+
+    await rebuildService(mockDb);
 
     // Mock logger to avoid console output during tests
     vi.spyOn(Logger.prototype, 'debug').mockImplementation(() => {});
@@ -103,34 +95,38 @@ describe('WebhookService - Logging & Statistics', () => {
         },
       ];
 
-      mockDb.select = vi.fn().mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            orderBy: vi.fn().mockReturnValue({
-              limit: vi.fn().mockReturnValue({
-                offset: vi.fn().mockResolvedValue(logs),
+      // Setup database mock with proper query chain
+      const dbBuilder = new MockUtils.database();
+      const db = dbBuilder.build();
+
+      // Mock the select method to handle both queries
+      let selectCallCount = 0;
+      db.select = vi.fn().mockImplementation(() => {
+        selectCallCount++;
+        if (selectCallCount === 1) {
+          // First call: main query for logs
+          return {
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockReturnValue({
+                orderBy: vi.fn().mockReturnValue({
+                  limit: vi.fn().mockReturnValue({
+                    offset: vi.fn().mockResolvedValue(logs),
+                  }),
+                }),
               }),
             }),
-          }),
-        }),
+          };
+        } else {
+          // Second call: count query
+          return {
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockResolvedValue([{ count: 1 }]),
+            }),
+          };
+        }
       });
 
-      mockDb.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            orderBy: vi.fn().mockReturnValue({
-              limit: vi.fn().mockReturnValue({
-                offset: vi.fn().mockResolvedValue(logs),
-              }),
-            }),
-          }),
-        }),
-      });
-      mockDb.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockResolvedValue([{ count: 1 }]),
-        }),
-      });
+      await rebuildService(db);
 
       const result = await service.getLogs({ page: 1, limit: 10 });
 
@@ -140,111 +136,120 @@ describe('WebhookService - Logging & Statistics', () => {
     });
 
     it('should filter logs by webhookId', async () => {
-      mockDb.select = vi.fn().mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            orderBy: vi.fn().mockReturnValue({
-              limit: vi.fn().mockReturnValue({
-                offset: vi.fn().mockResolvedValue([]),
+      const dbBuilder = new MockUtils.database();
+      const db = dbBuilder.build();
+
+      // Mock the select method to handle both queries
+      let selectCallCount = 0;
+      db.select = vi.fn().mockImplementation(() => {
+        selectCallCount++;
+        if (selectCallCount === 1) {
+          // First call: main query for logs
+          return {
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockReturnValue({
+                orderBy: vi.fn().mockReturnValue({
+                  limit: vi.fn().mockReturnValue({
+                    offset: vi.fn().mockResolvedValue([]),
+                  }),
+                }),
               }),
             }),
-          }),
-        }),
+          };
+        } else {
+          // Second call: count query
+          return {
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockResolvedValue([{ count: 0 }]),
+            }),
+          };
+        }
       });
 
-      mockDb.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            orderBy: vi.fn().mockReturnValue({
-              limit: vi.fn().mockReturnValue({
-                offset: vi.fn().mockResolvedValue([]),
-              }),
-            }),
-          }),
-        }),
-      });
-      mockDb.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockResolvedValue([{ count: 0 }]),
-        }),
-      });
+      await rebuildService(db);
 
       await service.getLogs({ webhookId: 1 });
 
-      expect(mockDb.select).toHaveBeenCalled();
+      expect(db.select).toHaveBeenCalled();
     });
 
     it('should filter logs by status', async () => {
-      mockDb.select = vi.fn().mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            orderBy: vi.fn().mockReturnValue({
-              limit: vi.fn().mockReturnValue({
-                offset: vi.fn().mockResolvedValue([]),
+      const dbBuilder = new MockUtils.database();
+      const db = dbBuilder.build();
+
+      // Mock the select method to handle both queries
+      let selectCallCount = 0;
+      db.select = vi.fn().mockImplementation(() => {
+        selectCallCount++;
+        if (selectCallCount === 1) {
+          // First call: main query for logs
+          return {
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockReturnValue({
+                orderBy: vi.fn().mockReturnValue({
+                  limit: vi.fn().mockReturnValue({
+                    offset: vi.fn().mockResolvedValue([]),
+                  }),
+                }),
               }),
             }),
-          }),
-        }),
+          };
+        } else {
+          // Second call: count query
+          return {
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockResolvedValue([{ count: 0 }]),
+            }),
+          };
+        }
       });
 
-      mockDb.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            orderBy: vi.fn().mockReturnValue({
-              limit: vi.fn().mockReturnValue({
-                offset: vi.fn().mockResolvedValue([]),
-              }),
-            }),
-          }),
-        }),
-      });
-      mockDb.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockResolvedValue([{ count: 0 }]),
-        }),
-      });
+      await rebuildService(db);
 
       await service.getLogs({ status: 'success' });
 
-      expect(mockDb.select).toHaveBeenCalled();
+      expect(db.select).toHaveBeenCalled();
     });
 
     it('should filter logs by date range', async () => {
-      mockDb.select = vi.fn().mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            orderBy: vi.fn().mockReturnValue({
-              limit: vi.fn().mockReturnValue({
-                offset: vi.fn().mockResolvedValue([]),
+      const dbBuilder = new MockUtils.database();
+      const db = dbBuilder.build();
+
+      // Mock the select method to handle both queries
+      let selectCallCount = 0;
+      db.select = vi.fn().mockImplementation(() => {
+        selectCallCount++;
+        if (selectCallCount === 1) {
+          // First call: main query for logs
+          return {
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockReturnValue({
+                orderBy: vi.fn().mockReturnValue({
+                  limit: vi.fn().mockReturnValue({
+                    offset: vi.fn().mockResolvedValue([]),
+                  }),
+                }),
               }),
             }),
-          }),
-        }),
+          };
+        } else {
+          // Second call: count query
+          return {
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockResolvedValue([{ count: 0 }]),
+            }),
+          };
+        }
       });
 
-      mockDb.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            orderBy: vi.fn().mockReturnValue({
-              limit: vi.fn().mockReturnValue({
-                offset: vi.fn().mockResolvedValue([]),
-              }),
-            }),
-          }),
-        }),
-      });
-      mockDb.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockResolvedValue([{ count: 0 }]),
-        }),
-      });
+      await rebuildService(db);
 
       await service.getLogs({
         startDate: '2025-01-01',
         endDate: '2025-12-31',
       });
 
-      expect(mockDb.select).toHaveBeenCalled();
+      expect(db.select).toHaveBeenCalled();
     });
   });
 
@@ -258,11 +263,17 @@ describe('WebhookService - Logging & Statistics', () => {
       ];
 
       let queryIndex = 0;
-      mockDb.select = vi.fn().mockImplementation(() => ({
+      const dbBuilder = new MockUtils.database();
+      const db = dbBuilder.build();
+
+      // Override select for multiple sequential queries
+      db.select = vi.fn().mockImplementation(() => ({
         from: vi.fn().mockReturnValue({
           where: vi.fn().mockResolvedValue(mockQueries[queryIndex++]),
         }),
       }));
+
+      await rebuildService(db);
 
       const result = await service.getStats();
 
@@ -284,11 +295,17 @@ describe('WebhookService - Logging & Statistics', () => {
       ];
 
       let queryIndex = 0;
-      mockDb.select = vi.fn().mockImplementation(() => ({
+      const dbBuilder = new MockUtils.database();
+      const db = dbBuilder.build();
+
+      // Override select for multiple sequential queries
+      db.select = vi.fn().mockImplementation(() => ({
         from: vi.fn().mockReturnValue({
           where: vi.fn().mockResolvedValue(mockQueries[queryIndex++]),
         }),
       }));
+
+      await rebuildService(db);
 
       const result = await service.getStats(1);
 
@@ -310,11 +327,17 @@ describe('WebhookService - Logging & Statistics', () => {
       ];
 
       let queryIndex = 0;
-      mockDb.select = vi.fn().mockImplementation(() => ({
+      const dbBuilder = new MockUtils.database();
+      const db = dbBuilder.build();
+
+      // Override select for multiple sequential queries
+      db.select = vi.fn().mockImplementation(() => ({
         from: vi.fn().mockReturnValue({
           where: vi.fn().mockResolvedValue(mockQueries[queryIndex++]),
         }),
       }));
+
+      await rebuildService(db);
 
       const result = await service.getStats();
 

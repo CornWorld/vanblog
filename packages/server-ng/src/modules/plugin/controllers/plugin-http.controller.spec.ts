@@ -8,49 +8,57 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { HttpException } from '@nestjs/common';
 import { PluginHttpController } from './plugin-http.controller';
 
+import type { PluginHttpRegistryService } from '../services/plugin-http-registry.service';
+import type { Request, Response } from 'express';
+
+const createPluginHttpRegistryServiceMock = (): Partial<PluginHttpRegistryService> => ({
+  findContractRoutes: vi.fn().mockReturnValue([]),
+  findRawRoute: vi.fn().mockReturnValue(null),
+  getPluginRoutes: vi.fn().mockReturnValue([]),
+  getAllPluginIds: vi.fn().mockReturnValue([]),
+});
+
+const createMockRequest = (overrides: Partial<Request> = {}): Partial<Request> => ({
+  path: '/api/v2/plugins/test-plugin/books',
+  method: 'GET',
+  params: { pluginId: 'test-plugin' },
+  query: {},
+  body: null,
+  headers: {},
+  ...overrides,
+});
+
+const createMockResponse = (): Partial<Response> => {
+  const res: any = {
+    headersSent: false,
+  };
+  res.status = vi.fn().mockReturnValue(res);
+  res.json = vi.fn().mockReturnValue(res);
+  res.setHeader = vi.fn().mockReturnValue(res);
+  return res;
+};
+
 describe('PluginHttpController', () => {
   let controller: PluginHttpController;
-  let mockHttpRegistry: any;
-  let mockReq: any;
-  let mockRes: any;
+  let mockHttpRegistry: Partial<PluginHttpRegistryService>;
+  let mockReq: Partial<Request>;
+  let mockRes: Partial<Response>;
 
   beforeEach(() => {
-    // Mock PluginHttpRegistryService
-    mockHttpRegistry = {
-      findContractRoutes: vi.fn().mockReturnValue([]),
-      findRawRoute: vi.fn().mockReturnValue(null),
-      getPluginRoutes: vi.fn().mockReturnValue([]),
-      getAllPluginIds: vi.fn().mockReturnValue([]),
-    };
-
-    // Mock Express Request and Response
-    mockReq = {
-      path: '/api/v2/plugins/test-plugin/books',
-      method: 'GET',
-      params: { pluginId: 'test-plugin' },
-      query: {},
-      body: null,
-      headers: {},
-    } as any;
-
-    mockRes = {
-      status: vi.fn().mockReturnThis(),
-      json: vi.fn().mockReturnThis(),
-      setHeader: vi.fn().mockReturnThis(),
-      headersSent: false,
-    } as any;
-
-    controller = new PluginHttpController(mockHttpRegistry);
+    mockHttpRegistry = createPluginHttpRegistryServiceMock();
+    mockReq = createMockRequest();
+    mockRes = createMockResponse();
+    controller = new PluginHttpController(mockHttpRegistry as any);
   });
 
   describe('handlePluginRoute', () => {
     it('should throw NOT_FOUND when no routes match', async () => {
-      mockHttpRegistry.findContractRoutes.mockReturnValue([]);
-      mockHttpRegistry.findRawRoute.mockReturnValue(null);
+      vi.mocked(mockHttpRegistry.findContractRoutes!).mockReturnValue([]);
+      vi.mocked(mockHttpRegistry.findRawRoute!).mockReturnValue(null);
 
-      await expect(controller.handlePluginRoute('test-plugin', mockReq, mockRes)).rejects.toThrow(
-        HttpException,
-      );
+      await expect(
+        controller.handlePluginRoute('test-plugin', mockReq as any, mockRes as any),
+      ).rejects.toThrow(HttpException);
     });
 
     it('should handle contract routes successfully', async () => {
@@ -61,15 +69,17 @@ describe('PluginHttpController', () => {
       });
 
       const mockContractRoute = {
+        type: 'contract' as const,
+        pluginId: 'test-plugin',
         contract: {
           getBooks: { method: 'GET', path: '/books', responses: { 200: {} } },
         },
         handlers: { getBooks: mockContractHandler },
       };
 
-      mockHttpRegistry.findContractRoutes.mockReturnValue([mockContractRoute]);
+      vi.mocked(mockHttpRegistry.findContractRoutes!).mockReturnValue([mockContractRoute]);
 
-      await controller.handlePluginRoute('test-plugin', mockReq, mockRes);
+      await controller.handlePluginRoute('test-plugin', mockReq as any, mockRes as any);
 
       expect(mockRes.status).toHaveBeenCalledWith(200);
       expect(mockRes.json).toHaveBeenCalledWith({ message: 'Success' });
@@ -78,14 +88,14 @@ describe('PluginHttpController', () => {
     it('should handle raw routes successfully', async () => {
       const mockRawHandler = vi.fn().mockResolvedValue(undefined);
 
-      mockHttpRegistry.findContractRoutes.mockReturnValue([]);
-      mockHttpRegistry.findRawRoute.mockReturnValue({
+      vi.mocked(mockHttpRegistry.findContractRoutes!).mockReturnValue([]);
+      vi.mocked(mockHttpRegistry.findRawRoute!).mockReturnValue({
         handler: mockRawHandler,
-      });
+      } as any);
 
-      mockRes.headersSent = false;
+      (mockRes as any).headersSent = false;
 
-      await controller.handlePluginRoute('test-plugin', mockReq, mockRes);
+      await controller.handlePluginRoute('test-plugin', mockReq as any, mockRes as any);
 
       expect(mockRawHandler).toHaveBeenCalledWith(mockReq, mockRes);
       expect(mockRes.status).toHaveBeenCalledWith(200);
@@ -100,40 +110,44 @@ describe('PluginHttpController', () => {
       });
 
       const mockContractRoute = {
+        type: 'contract' as const,
+        pluginId: 'test-plugin',
         contract: {
           getBooks: { method: 'GET', path: '/books', responses: { 200: {} } },
         },
         handlers: { getBooks: mockContractHandler },
       };
 
-      mockHttpRegistry.findContractRoutes.mockReturnValue([mockContractRoute]);
+      vi.mocked(mockHttpRegistry.findContractRoutes!).mockReturnValue([mockContractRoute]);
 
-      await controller.handlePluginRoute('test-plugin', mockReq, mockRes);
+      await controller.handlePluginRoute('test-plugin', mockReq as any, mockRes as any);
 
       expect(mockRes.setHeader).toHaveBeenCalledWith('X-Custom-Header', 'value');
       expect(mockRes.setHeader).toHaveBeenCalledWith('Content-Type', 'application/json');
     });
 
     it('should handle different HTTP methods', async () => {
-      // When contract routes are empty, it tries raw routes
-      mockHttpRegistry.findContractRoutes.mockReturnValue([]);
+      mockReq = createMockRequest({ method: 'POST' });
+      mockRes = createMockResponse();
 
-      mockReq.method = 'POST';
+      vi.mocked(mockHttpRegistry.findContractRoutes!).mockReturnValue([]);
+
       const mockHandler = vi.fn().mockResolvedValue(undefined);
-      mockHttpRegistry.findRawRoute.mockReturnValue({
+      vi.mocked(mockHttpRegistry.findRawRoute!).mockReturnValue({
         handler: mockHandler,
-      });
+      } as any);
 
-      mockRes.headersSent = false;
+      (mockRes as any).headersSent = false;
 
-      await controller.handlePluginRoute('test-plugin', mockReq, mockRes);
+      await controller.handlePluginRoute('test-plugin', mockReq as any, mockRes as any);
 
-      // Handler should be called for the POST method
       expect(mockHandler).toHaveBeenCalled();
     });
 
     it('should extract plugin path correctly', async () => {
-      mockReq.path = '/api/v2/plugins/my-plugin/api/users/123/posts';
+      mockReq = createMockRequest({ path: '/api/v2/plugins/my-plugin/api/users/123/posts' });
+      mockRes = createMockResponse();
+
       const mockHandler = vi.fn().mockResolvedValue({
         status: 200,
         body: { ok: true },
@@ -141,107 +155,105 @@ describe('PluginHttpController', () => {
       });
 
       const mockRoute = {
+        type: 'contract' as const,
+        pluginId: 'my-plugin',
         contract: {
           action: { method: 'GET', path: '/api/users/:id/posts', responses: { 200: {} } },
         },
         handlers: { action: mockHandler },
       };
 
-      mockHttpRegistry.findContractRoutes.mockReturnValue([mockRoute]);
+      vi.mocked(mockHttpRegistry.findContractRoutes!).mockReturnValue([mockRoute]);
 
-      await controller.handlePluginRoute('my-plugin', mockReq, mockRes);
+      await controller.handlePluginRoute('my-plugin', mockReq as any, mockRes as any);
 
-      // Verify the handler was called with the extracted plugin path
       expect(mockRes.status).toHaveBeenCalledWith(200);
     });
 
     it('should handle raw route errors gracefully', async () => {
       const mockRawHandler = vi.fn().mockRejectedValue(new Error('Database error'));
 
-      mockHttpRegistry.findContractRoutes.mockReturnValue([]);
-      mockHttpRegistry.findRawRoute.mockReturnValue({
+      vi.mocked(mockHttpRegistry.findContractRoutes!).mockReturnValue([]);
+      vi.mocked(mockHttpRegistry.findRawRoute!).mockReturnValue({
         handler: mockRawHandler,
-      });
+      } as any);
 
-      mockRes.headersSent = false;
+      (mockRes as any).headersSent = false;
 
-      await expect(controller.handlePluginRoute('test-plugin', mockReq, mockRes)).rejects.toThrow(
-        HttpException,
-      );
+      await expect(
+        controller.handlePluginRoute('test-plugin', mockReq as any, mockRes as any),
+      ).rejects.toThrow(HttpException);
     });
 
     it('should skip to next route if contract route handler fails', async () => {
-      // When contract routes fail to match, it should fall back to raw routes
-      mockHttpRegistry.findContractRoutes.mockReturnValue([]);
+      vi.mocked(mockHttpRegistry.findContractRoutes!).mockReturnValue([]);
 
       const mockWorkingHandler = vi.fn().mockResolvedValue(undefined);
-      mockHttpRegistry.findRawRoute.mockReturnValue({
+      vi.mocked(mockHttpRegistry.findRawRoute!).mockReturnValue({
         handler: mockWorkingHandler,
-      });
+      } as any);
 
-      mockRes.headersSent = false;
+      (mockRes as any).headersSent = false;
 
-      await controller.handlePluginRoute('test-plugin', mockReq, mockRes);
+      await controller.handlePluginRoute('test-plugin', mockReq as any, mockRes as any);
 
-      // Should have fallen back to raw route
       expect(mockWorkingHandler).toHaveBeenCalled();
     });
 
     it('should not send response if handler already sent headers', async () => {
       const mockRawHandler = vi.fn().mockResolvedValue(undefined);
 
-      mockHttpRegistry.findContractRoutes.mockReturnValue([]);
-      mockHttpRegistry.findRawRoute.mockReturnValue({
+      vi.mocked(mockHttpRegistry.findContractRoutes!).mockReturnValue([]);
+      vi.mocked(mockHttpRegistry.findRawRoute!).mockReturnValue({
         handler: mockRawHandler,
-      });
+      } as any);
 
-      mockRes.headersSent = true;
+      (mockRes as any).headersSent = true;
 
-      await controller.handlePluginRoute('test-plugin', mockReq, mockRes);
+      await controller.handlePluginRoute('test-plugin', mockReq as any, mockRes as any);
 
-      // Should not call json when headers already sent
       expect(mockRes.json).not.toHaveBeenCalled();
     });
 
     it('should handle unmatched contract route and find raw route', async () => {
       const mockRawHandler = vi.fn().mockResolvedValue(undefined);
 
-      // Contract route exists but doesn't match the request
       const mockRoute = {
+        type: 'contract' as const,
+        pluginId: 'test-plugin',
         contract: {
           otherAction: { method: 'POST', path: '/other', responses: { 200: {} } },
         },
         handlers: { otherAction: vi.fn() },
       };
 
-      mockHttpRegistry.findContractRoutes.mockReturnValue([mockRoute]);
-      mockHttpRegistry.findRawRoute.mockReturnValue({
+      vi.mocked(mockHttpRegistry.findContractRoutes!).mockReturnValue([mockRoute]);
+      vi.mocked(mockHttpRegistry.findRawRoute!).mockReturnValue({
         handler: mockRawHandler,
-      });
+      } as any);
 
-      mockRes.headersSent = false;
+      (mockRes as any).headersSent = false;
 
-      await controller.handlePluginRoute('test-plugin', mockReq, mockRes);
+      await controller.handlePluginRoute('test-plugin', mockReq as any, mockRes as any);
 
       expect(mockRawHandler).toHaveBeenCalled();
     });
 
     it('should handle case insensitive HTTP methods', async () => {
-      mockReq.method = 'get'; // lowercase
-      mockReq.path = '/api/v2/plugins/test-plugin/action';
+      mockReq = createMockRequest({ method: 'get', path: '/api/v2/plugins/test-plugin/action' });
+      mockRes = createMockResponse();
 
-      mockHttpRegistry.findContractRoutes.mockReturnValue([]);
+      vi.mocked(mockHttpRegistry.findContractRoutes!).mockReturnValue([]);
 
       const mockHandler = vi.fn().mockResolvedValue(undefined);
-      mockHttpRegistry.findRawRoute.mockReturnValue({
+      vi.mocked(mockHttpRegistry.findRawRoute!).mockReturnValue({
         handler: mockHandler,
-      });
+      } as any);
 
-      mockRes.headersSent = false;
+      (mockRes as any).headersSent = false;
 
-      await controller.handlePluginRoute('test-plugin', mockReq, mockRes);
+      await controller.handlePluginRoute('test-plugin', mockReq as any, mockRes as any);
 
-      // Verify the handler was called
       expect(mockHandler).toHaveBeenCalled();
       expect(mockRes.status).toHaveBeenCalledWith(200);
     });
@@ -249,15 +261,13 @@ describe('PluginHttpController', () => {
     it('should preserve original exception if headers already sent', async () => {
       const originalError = new Error('Original error');
 
-      mockHttpRegistry.findContractRoutes.mockImplementation(() => {
+      vi.mocked(mockHttpRegistry.findContractRoutes!).mockImplementation(() => {
         throw originalError;
       });
 
-      mockRes.headersSent = true;
+      (mockRes as any).headersSent = true;
 
-      // Should not throw when headers already sent
-      await controller.handlePluginRoute('test-plugin', mockReq, mockRes);
-      // Since headers are already sent, the error is logged but not rethrown
+      await controller.handlePluginRoute('test-plugin', mockReq as any, mockRes as any);
     });
   });
 
@@ -268,7 +278,7 @@ describe('PluginHttpController', () => {
         { type: 'raw', method: 'POST', path: '/users' },
       ];
 
-      mockHttpRegistry.getPluginRoutes.mockReturnValue(mockRoutes);
+      vi.mocked(mockHttpRegistry.getPluginRoutes!).mockReturnValue(mockRoutes as any);
 
       const result = await controller.getPluginRoutes('test-plugin');
 
@@ -285,7 +295,7 @@ describe('PluginHttpController', () => {
         },
       ];
 
-      mockHttpRegistry.getPluginRoutes.mockReturnValue(mockRoutes);
+      vi.mocked(mockHttpRegistry.getPluginRoutes!).mockReturnValue(mockRoutes as any);
 
       const result = await controller.getPluginRoutes('test-plugin');
 
@@ -302,7 +312,7 @@ describe('PluginHttpController', () => {
         },
       ];
 
-      mockHttpRegistry.getPluginRoutes.mockReturnValue(mockRoutes);
+      vi.mocked(mockHttpRegistry.getPluginRoutes!).mockReturnValue(mockRoutes as any);
 
       const result = await controller.getPluginRoutes('test-plugin');
 
@@ -312,7 +322,7 @@ describe('PluginHttpController', () => {
     });
 
     it('should handle plugin with no routes', async () => {
-      mockHttpRegistry.getPluginRoutes.mockReturnValue([]);
+      vi.mocked(mockHttpRegistry.getPluginRoutes!).mockReturnValue([]);
 
       const result = await controller.getPluginRoutes('empty-plugin');
 
@@ -323,8 +333,12 @@ describe('PluginHttpController', () => {
 
   describe('getAllPluginRoutes', () => {
     it('should return all plugin routes', async () => {
-      mockHttpRegistry.getAllPluginIds.mockReturnValue(['plugin-1', 'plugin-2', 'plugin-3']);
-      mockHttpRegistry.getPluginRoutes.mockImplementation((pluginId: string) => {
+      vi.mocked(mockHttpRegistry.getAllPluginIds!).mockReturnValue([
+        'plugin-1',
+        'plugin-2',
+        'plugin-3',
+      ]);
+      vi.mocked(mockHttpRegistry.getPluginRoutes!).mockImplementation((pluginId: string) => {
         const counts: any = {
           'plugin-1': [{ type: 'raw' }, { type: 'raw' }],
           'plugin-2': [{ type: 'contract' }],
@@ -342,7 +356,7 @@ describe('PluginHttpController', () => {
     });
 
     it('should handle no plugins', async () => {
-      mockHttpRegistry.getAllPluginIds.mockReturnValue([]);
+      vi.mocked(mockHttpRegistry.getAllPluginIds!).mockReturnValue([]);
 
       const result = await controller.getAllPluginRoutes();
 
@@ -351,10 +365,10 @@ describe('PluginHttpController', () => {
     });
 
     it('should count routes per plugin correctly', async () => {
-      mockHttpRegistry.getAllPluginIds.mockReturnValue(['plugin-a', 'plugin-b']);
-      mockHttpRegistry.getPluginRoutes.mockImplementation((pluginId: string) => {
-        if (pluginId === 'plugin-a') return [{}, {}, {}];
-        if (pluginId === 'plugin-b') return [{}];
+      vi.mocked(mockHttpRegistry.getAllPluginIds!).mockReturnValue(['plugin-a', 'plugin-b']);
+      vi.mocked(mockHttpRegistry.getPluginRoutes!).mockImplementation((pluginId: string) => {
+        if (pluginId === 'plugin-a') return [{}, {}, {}] as any;
+        if (pluginId === 'plugin-b') return [{}] as any;
         return [];
       });
 
@@ -367,26 +381,26 @@ describe('PluginHttpController', () => {
 
   describe('Error Handling', () => {
     it('should convert HttpException to be re-thrown', async () => {
-      mockHttpRegistry.findContractRoutes.mockReturnValue([]);
-      mockHttpRegistry.findRawRoute.mockReturnValue(null);
+      vi.mocked(mockHttpRegistry.findContractRoutes!).mockReturnValue([]);
+      vi.mocked(mockHttpRegistry.findRawRoute!).mockReturnValue(null);
 
-      mockRes.headersSent = false;
+      (mockRes as any).headersSent = false;
 
-      await expect(controller.handlePluginRoute('test-plugin', mockReq, mockRes)).rejects.toThrow(
-        HttpException,
-      );
+      await expect(
+        controller.handlePluginRoute('test-plugin', mockReq as any, mockRes as any),
+      ).rejects.toThrow(HttpException);
     });
 
     it('should wrap non-HttpException errors', async () => {
-      mockHttpRegistry.findContractRoutes.mockImplementation(() => {
+      vi.mocked(mockHttpRegistry.findContractRoutes!).mockImplementation(() => {
         throw new Error('Unexpected error');
       });
 
-      mockRes.headersSent = false;
+      (mockRes as any).headersSent = false;
 
-      await expect(controller.handlePluginRoute('test-plugin', mockReq, mockRes)).rejects.toThrow(
-        HttpException,
-      );
+      await expect(
+        controller.handlePluginRoute('test-plugin', mockReq as any, mockRes as any),
+      ).rejects.toThrow(HttpException);
     });
   });
 });

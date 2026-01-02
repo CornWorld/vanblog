@@ -4,7 +4,7 @@ import * as zlib from 'zlib';
 
 import { describe, it, beforeEach, expect, vi } from 'vitest';
 
-import { DatabaseMockBuilder } from '../../../test/mock-utils';
+import { DatabaseMockBuilder, MockUtils } from '../../../test/mock-utils';
 
 import { BackupService } from './backup.service';
 
@@ -14,19 +14,14 @@ import type { CreateBackupDto, RestoreBackupDto, GetBackupsDto } from './dto/bac
 vi.mock('fs/promises');
 const mockFs = fs as any;
 
-// Mock logger
-const mockLogger = {
-  log: vi.fn(),
-  error: vi.fn(),
-  warn: vi.fn(),
-};
-
 describe('BackupService', () => {
   let service: BackupService;
   let mockDb: DatabaseMockBuilder;
+  let mockLogger: any;
 
   beforeEach(() => {
     mockDb = new DatabaseMockBuilder();
+    mockLogger = MockUtils.services.createLoggerMock();
     service = new BackupService(mockDb.db as any, mockLogger as any);
 
     // Reset mocks

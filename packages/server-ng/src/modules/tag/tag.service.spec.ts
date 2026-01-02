@@ -9,76 +9,36 @@
  * - tag.service.boundaries.spec.ts - Boundary conditions and edge cases
  */
 import { NotFoundException } from '@nestjs/common';
-import { Test, type TestingModule } from '@nestjs/testing';
-import { vi, describe, beforeEach, it, expect, afterEach } from 'vitest';
+import { describe, beforeEach, it, expect, afterEach, vi } from 'vitest';
 
-import { DATABASE_CONNECTION } from '../../database';
+import { MockUtils } from '../../../test/mock-utils';
 import { QueryOptimizerService } from '../../shared/services/query-optimizer.service';
 import { StatisticsService } from '../../shared/services/statistics.service';
 import { HookService } from '../plugin/services/hook.service';
-import { MockUtils } from '../../../test/mock-utils';
 
 import { TagService } from './tag.service';
 
 describe('TagService', () => {
   let service: TagService;
-  let module: TestingModule;
-  let mockHookService: Partial<HookService>;
+  let module: any;
   let mockDb: any;
   let mockQueryOptimizer: any;
+  let mockHookService: any;
   let mockStatisticsService: any;
 
   beforeEach(async () => {
     const databaseMock = new MockUtils.database();
     mockDb = databaseMock.build();
 
-    mockHookService = MockUtils.services.createHookServiceMock();
-
-    mockStatisticsService = {
-      getOverallStatistics: vi.fn().mockResolvedValue({
-        totalCategories: 0,
-        totalTags: 0,
-        totalArticles: 0,
-        publishedArticles: 0,
-        privateArticles: 0,
-        hiddenArticles: 0,
-        totalViews: 0,
-        categories: [],
-        tags: [],
-      }),
-    };
-
-    module = await Test.createTestingModule({
-      imports: [],
-      providers: [
-        TagService,
-        {
-          provide: DATABASE_CONNECTION,
-          useValue: mockDb,
-        },
-        {
-          provide: StatisticsService,
-          useValue: mockStatisticsService,
-        },
-        {
-          provide: QueryOptimizerService,
-          useValue: {
-            withPerformanceMonitoring: vi.fn().mockImplementation((_name, fn) => fn()),
-            batchCountArticlesByTags: vi.fn().mockResolvedValue(new Map()),
-            batchCountArticlesByCategories: vi.fn().mockResolvedValue(new Map()),
-            buildOptimizedSearchQuery: vi.fn().mockReturnValue([]),
-            logSlowQuery: vi.fn(),
-          },
-        },
-        {
-          provide: HookService,
-          useValue: mockHookService,
-        },
-      ],
+    module = await MockUtils.createTagServiceTestingModule({
+      service: TagService,
+      dbMock: mockDb,
     }).compile();
 
     service = module.get<TagService>(TagService);
     mockQueryOptimizer = module.get(QueryOptimizerService);
+    mockHookService = module.get(HookService);
+    mockStatisticsService = module.get(StatisticsService);
   });
 
   afterEach(() => {

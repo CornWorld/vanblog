@@ -19,18 +19,13 @@ describe('CommentModule', () => {
       imports: [CommentModule],
     })
       .overrideProvider(DATABASE_CONNECTION)
-      .useValue(MockUtils.createDatabaseMock())
+      .useValue(new MockUtils.database().build())
       .overrideProvider(HookService)
       .useValue(MockUtils.services.createHookServiceMock())
       .overrideProvider(SettingCoreService)
-      .useValue({
-        getSiteMeta: MockUtils.services.createHookServiceMock().doAction,
-      })
+      .useValue(MockUtils.services.createSettingCoreServiceMock())
       .overrideProvider(SettingRegistryService)
-      .useValue({
-        registerConfig: MockUtils.services.createHookServiceMock().doAction,
-        getConfig: MockUtils.services.createHookServiceMock().doAction,
-      })
+      .useValue(MockUtils.services.createSettingRegistryServiceMock())
       .compile();
   });
 

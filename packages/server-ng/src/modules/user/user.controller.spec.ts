@@ -3,6 +3,7 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import { dayjs } from '@vanblog/shared';
 import { describe, it, beforeEach, afterEach, expect, vi } from 'vitest';
 
+import { MockUtils } from '../../../test/mock-utils';
 import { PermissionService } from '../permission/permission.service';
 
 import { UserType, type CreateUserDto } from './dto/create-user.dto';
@@ -16,6 +17,11 @@ describe('UserController', () => {
   let controller: UserController;
   let service: UserService;
 
+  // Use MockUtils to create service mocks
+  const mockUserService = MockUtils.services.createUserServiceMock();
+  const mockPermissionService = MockUtils.services.createPermissionServiceMock();
+
+  // Use MockUtils to create test user data
   const mockUser = new User({
     id: 1,
     username: 'testuser',
@@ -28,21 +34,6 @@ describe('UserController', () => {
     createdAt: dayjs().format(),
     updatedAt: dayjs().format(),
   });
-
-  const mockUserService = {
-    create: vi.fn(),
-    findAll: vi.fn(),
-    findOne: vi.fn(),
-    update: vi.fn(),
-    remove: vi.fn(),
-    getCollaborators: vi.fn(),
-  };
-
-  const mockPermissionService = {
-    hasPermission: vi.fn(),
-    getUserPermissions: vi.fn(),
-    checkPermissions: vi.fn(),
-  };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({

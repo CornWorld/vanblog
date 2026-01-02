@@ -3,26 +3,11 @@ import { createHash } from 'crypto';
 import { firstValueFrom, of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
+import { createExecutionContextMock } from '../../../test/mock-utils';
+
 import { ETagCacheInterceptor } from './etag-cache.interceptor';
 
 import type { CallHandler, ExecutionContext } from '@nestjs/common';
-import type { Request, Response } from 'express';
-
-function createContext(req: Partial<Request>, res: Partial<Response>): ExecutionContext {
-  return {
-    switchToHttp: () => ({
-      getRequest: () => req as Request,
-      getResponse: () => res as Response,
-    }),
-    getClass: () => ({}) as any,
-    getHandler: () => ({}) as any,
-    getArgByIndex: () => undefined as any,
-    switchToRpc: () => ({}) as any,
-    switchToWs: () => ({}) as any,
-    getArgs: () => [],
-    getType: () => 'http',
-  } as unknown as ExecutionContext;
-}
 
 function createCallHandler(data: unknown): CallHandler {
   return {
@@ -37,10 +22,11 @@ describe('ETagCacheInterceptor', () => {
     const setHeader = vi.fn();
     const status = vi.fn();
 
-    const req: Partial<Request> = { method: 'POST', headers: {} };
-    const res: Partial<Response> = { setHeader, status } as any;
+    const ctx = createExecutionContextMock({
+      request: { method: 'POST', headers: {} },
+      response: { setHeader, status } as any,
+    }) as unknown as ExecutionContext;
 
-    const ctx = createContext(req, res);
     const next = createCallHandler({ ok: true });
 
     const result = await firstValueFrom(interceptor.intercept(ctx, next));
@@ -56,10 +42,11 @@ describe('ETagCacheInterceptor', () => {
     const setHeader = vi.fn();
     const status = vi.fn();
 
-    const req: Partial<Request> = { method: 'GET', headers: {} };
-    const res: Partial<Response> = { setHeader, status } as any;
+    const ctx = createExecutionContextMock({
+      request: { method: 'GET', headers: {} },
+      response: { setHeader, status } as any,
+    }) as unknown as ExecutionContext;
 
-    const ctx = createContext(req, res);
     const body = { hello: 'world' };
     const next = createCallHandler(body);
 
@@ -81,10 +68,11 @@ describe('ETagCacheInterceptor', () => {
     const body = { value: 42 };
     const etag = `"${createHash('md5').update(JSON.stringify(body)).digest('hex')}"`;
 
-    const req: Partial<Request> = { method: 'GET', headers: { 'if-none-match': etag } };
-    const res: Partial<Response> = { setHeader, status } as any;
+    const ctx = createExecutionContextMock({
+      request: { method: 'GET', headers: { 'if-none-match': etag } },
+      response: { setHeader, status } as any,
+    }) as unknown as ExecutionContext;
 
-    const ctx = createContext(req, res);
     const next = createCallHandler(body);
 
     const result = await firstValueFrom(interceptor.intercept(ctx, next));

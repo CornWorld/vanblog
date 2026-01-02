@@ -29,17 +29,14 @@ import { LoaderService } from './loader.service';
 import { PluginContextService, type PluginContextFactory } from './plugin-context.service';
 
 import type { HookService } from './hook.service';
-import type { LoggerService } from '../../../core/logger/logger.service';
-
-type MinimalLogger = Pick<LoggerService, 'log' | 'warn' | 'error' | 'debug'>;
 
 type VersionHelpers = {
   satisfiesVanblogEngine: (r: string, v: string) => boolean;
 };
 
-// Minimal mocks for dependencies; we won't use them in these tests
-const createService = (): { service: LoaderService; logger: MinimalLogger } => {
-  const logger = MockUtils.services.createLoggerMock() as unknown as MinimalLogger;
+// Helper to create LoaderService with mocked dependencies
+const createService = () => {
+  const logger = MockUtils.services.createLoggerMock();
 
   const pluginContextFactory = {
     createContext: vi.fn(),
@@ -55,7 +52,7 @@ const createService = (): { service: LoaderService; logger: MinimalLogger } => {
 
 describe('LoaderService version utilities', () => {
   let service: LoaderService;
-  let logger: MinimalLogger;
+  let logger: ReturnType<typeof MockUtils.services.createLoggerMock>;
   let satisfies: VersionHelpers['satisfiesVanblogEngine'];
 
   beforeEach(() => {
@@ -147,7 +144,7 @@ describe('LoaderService version utilities', () => {
 
 describe('LoaderService manifest validation', () => {
   let service: LoaderService;
-  let logger: MinimalLogger;
+  let logger: ReturnType<typeof MockUtils.services.createLoggerMock>;
 
   beforeEach(() => {
     ({ service, logger } = createService());
@@ -265,7 +262,7 @@ describe('LoaderService manifest validation', () => {
 
 describe('LoaderService load/unload behavior', () => {
   it('loadPlugin should register action/filter hooks with hookService and priorities', async () => {
-    const logger = MockUtils.services.createLoggerMock() as unknown as MinimalLogger;
+    const logger = MockUtils.services.createLoggerMock();
 
     let capturedActionHandler: ((...args: unknown[]) => unknown) | undefined;
     let capturedFilterHandler: ((...args: unknown[]) => unknown) | undefined;
@@ -344,7 +341,7 @@ describe('LoaderService load/unload behavior', () => {
   });
 
   it('loadPlugin should skip when engines.vanblog does not satisfy current version', async () => {
-    const logger = MockUtils.services.createLoggerMock() as unknown as MinimalLogger;
+    const logger = MockUtils.services.createLoggerMock();
 
     const pluginContextFactory = {
       createContext: vi.fn(),
@@ -369,7 +366,7 @@ describe('LoaderService load/unload behavior', () => {
   });
 
   it('registerExternalPlugin should persist meta and log hook totals snapshot', () => {
-    const logger = MockUtils.services.createLoggerMock() as unknown as MinimalLogger;
+    const logger = MockUtils.services.createLoggerMock();
 
     const pluginContextFactory = {
       createContext: vi.fn(),
@@ -399,7 +396,7 @@ describe('LoaderService load/unload behavior', () => {
   });
 
   it('filter wrapper should fall back to previous value when handler times out or returns undefined', async () => {
-    const logger = MockUtils.services.createLoggerMock() as unknown as MinimalLogger;
+    const logger = MockUtils.services.createLoggerMock();
 
     let capturedFilterHandler: ((...args: unknown[]) => unknown) | undefined;
     const createdContext = {
@@ -458,7 +455,7 @@ describe('LoaderService load/unload behavior', () => {
   });
 
   it('action wrapper should use safeExecuteWithTimeout and not throw on errors/timeouts', async () => {
-    const logger = MockUtils.services.createLoggerMock() as unknown as MinimalLogger;
+    const logger = MockUtils.services.createLoggerMock();
 
     let capturedActionHandler: ((...args: unknown[]) => unknown) | undefined;
 
@@ -509,7 +506,7 @@ describe('LoaderService load/unload behavior', () => {
   });
 
   it('loadPlugin should skip when engines.vanblog does not satisfy current version', async () => {
-    const logger = MockUtils.services.createLoggerMock() as unknown as MinimalLogger;
+    const logger = MockUtils.services.createLoggerMock();
 
     const pluginContextFactory = {
       createContext: vi.fn(),
@@ -534,7 +531,7 @@ describe('LoaderService load/unload behavior', () => {
   });
 
   it('unloadPlugin should call cleanupRegistrations if context is PluginContextService', async () => {
-    const logger = MockUtils.services.createLoggerMock() as unknown as MinimalLogger;
+    const logger = MockUtils.services.createLoggerMock();
 
     const mockContext = Object.create(PluginContextService.prototype);
     mockContext.cleanupRegistrations = vi.fn();
@@ -573,7 +570,7 @@ describe('LoaderService load/unload behavior', () => {
   });
 
   it('cleanupPlugin should call plugin.destroy with timeout', async () => {
-    const logger = MockUtils.services.createLoggerMock() as unknown as MinimalLogger;
+    const logger = MockUtils.services.createLoggerMock();
 
     const destroySpy = vi.fn();
     const mockContext = {
@@ -607,7 +604,7 @@ describe('LoaderService load/unload behavior', () => {
   });
 
   it('cleanupPlugin should handle destroy errors gracefully', async () => {
-    const logger = MockUtils.services.createLoggerMock() as unknown as MinimalLogger;
+    const logger = MockUtils.services.createLoggerMock();
 
     const destroySpy = vi.fn().mockRejectedValue(new Error('Destroy failed'));
     const mockContext = {
@@ -641,7 +638,7 @@ describe('LoaderService load/unload behavior', () => {
   });
 
   it('cleanupPlugin should execute cleanup functions', async () => {
-    const logger = MockUtils.services.createLoggerMock() as unknown as MinimalLogger;
+    const logger = MockUtils.services.createLoggerMock();
 
     const cleanupSpy1 = vi.fn();
     const cleanupSpy2 = vi.fn();
@@ -687,7 +684,7 @@ describe('LoaderService load/unload behavior', () => {
   });
 
   it('cleanupPlugin should warn on cleanup function errors', async () => {
-    const logger = MockUtils.services.createLoggerMock() as unknown as MinimalLogger;
+    const logger = MockUtils.services.createLoggerMock();
 
     const mockContext = {
       pluginId: 'p9',
@@ -740,7 +737,7 @@ describe('LoaderService plugin lifecycle', () => {
   });
 
   it('reloadPlugins should cleanup all plugins and reload from directory', async () => {
-    const logger = MockUtils.services.createLoggerMock() as unknown as MinimalLogger;
+    const logger = MockUtils.services.createLoggerMock();
 
     const mockContext = {
       pluginId: 'p10',
@@ -844,7 +841,7 @@ describe('LoaderService plugin lifecycle', () => {
   });
 
   it('retryPlugin should load plugin and remove from failed set on success', async () => {
-    const logger = MockUtils.services.createLoggerMock() as unknown as MinimalLogger;
+    const logger = MockUtils.services.createLoggerMock();
 
     const mockContext = {
       pluginId: 'p11',
@@ -879,7 +876,7 @@ describe('LoaderService plugin lifecycle', () => {
   });
 
   it('retryPlugin should keep plugin in failed set on failure', async () => {
-    const logger = MockUtils.services.createLoggerMock() as unknown as MinimalLogger;
+    const logger = MockUtils.services.createLoggerMock();
 
     const pluginContextFactory = {
       createContext: vi.fn(),

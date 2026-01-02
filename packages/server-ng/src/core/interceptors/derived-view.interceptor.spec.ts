@@ -1,29 +1,14 @@
 import { firstValueFrom, of } from 'rxjs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { createExecutionContextMock } from '../../../test/mock-utils';
+
 import { DerivedViewCacheService } from '../../shared/cache';
 
 import { DerivedViewInterceptor } from './derived-view.interceptor';
 
 import type { CallHandler, ExecutionContext } from '@nestjs/common';
 import type { Reflector } from '@nestjs/core';
-import type { Request, Response } from 'express';
-
-function createContext(req: Partial<Request>, _res?: Partial<Response>): ExecutionContext {
-  return {
-    switchToHttp: () => ({
-      getRequest: () => req as Request,
-      getResponse: () => ({}) as Response,
-    }),
-    getClass: () => ({}) as any,
-    getHandler: () => ({}) as any,
-    getArgByIndex: () => undefined as any,
-    switchToRpc: () => ({}) as any,
-    switchToWs: () => ({}) as any,
-    getArgs: () => [],
-    getType: () => 'http',
-  } as unknown as ExecutionContext;
-}
 
 function createCallHandler(data: unknown): CallHandler {
   return {
@@ -44,8 +29,9 @@ describe('DerivedViewInterceptor', () => {
 
     const interceptor = new DerivedViewInterceptor(reflector as Reflector, cache);
 
-    const req: Partial<Request> = { method: 'GET', params: {}, query: {} };
-    const ctx = createContext(req);
+    const ctx = createExecutionContextMock({
+      request: { method: 'GET', params: {}, query: {} },
+    }) as unknown as ExecutionContext;
 
     const next = createCallHandler({ ok: true });
 
@@ -65,12 +51,13 @@ describe('DerivedViewInterceptor', () => {
 
     const interceptor = new DerivedViewInterceptor(reflector as Reflector, cache);
 
-    const req: Partial<Request> = {
-      method: 'GET',
-      params: { id: 5 as any, z: 'last', a: 'first' },
-      query: { page: 2, include: 'b, a , a, c', flag: true, empty: undefined },
-    } as any;
-    const ctx = createContext(req);
+    const ctx = createExecutionContextMock({
+      request: {
+        method: 'GET',
+        params: { id: 5 as any, z: 'last', a: 'first' },
+        query: { page: 2, include: 'b, a , a, c', flag: true, empty: undefined },
+      } as any,
+    }) as unknown as ExecutionContext;
 
     // Spy static key helper to validate parts passed
     const keySpy = vi.spyOn(DerivedViewCacheService, 'key');
@@ -110,8 +97,9 @@ describe('DerivedViewInterceptor', () => {
 
     const interceptor = new DerivedViewInterceptor(reflector as Reflector, cache);
 
-    const req: Partial<Request> = { method: 'GET', params: {}, query: {} };
-    const ctx = createContext(req);
+    const ctx = createExecutionContextMock({
+      request: { method: 'GET', params: {}, query: {} },
+    }) as unknown as ExecutionContext;
 
     const payload = { hello: 'world' };
     const next = createCallHandler(payload);
@@ -130,12 +118,13 @@ describe('DerivedViewInterceptor', () => {
     const cache = { getDerivedView: cacheGet } as unknown as DerivedViewCacheService;
     const interceptor = new DerivedViewInterceptor(reflector as Reflector, cache);
 
-    const req: Partial<Request> = {
-      method: 'GET',
-      params: {},
-      query: { include: ['b,c', 'a', 'a, b', 'c'] },
-    } as any;
-    const ctx = createContext(req);
+    const ctx = createExecutionContextMock({
+      request: {
+        method: 'GET',
+        params: {},
+        query: { include: ['b,c', 'a', 'a, b', 'c'] },
+      } as any,
+    }) as unknown as ExecutionContext;
 
     const keySpy = vi.spyOn(DerivedViewCacheService, 'key');
 
@@ -153,12 +142,13 @@ describe('DerivedViewInterceptor', () => {
     const cache = { getDerivedView: cacheGet } as unknown as DerivedViewCacheService;
     const interceptor = new DerivedViewInterceptor(reflector as Reflector, cache);
 
-    const req: Partial<Request> = {
-      method: 'GET',
-      params: {},
-      query: { include: 123 as any },
-    } as any;
-    const ctx = createContext(req);
+    const ctx = createExecutionContextMock({
+      request: {
+        method: 'GET',
+        params: {},
+        query: { include: 123 as any },
+      } as any,
+    }) as unknown as ExecutionContext;
 
     const keySpy = vi.spyOn(DerivedViewCacheService, 'key');
 

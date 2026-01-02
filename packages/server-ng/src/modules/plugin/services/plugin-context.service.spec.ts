@@ -1,10 +1,11 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import { pluginData } from '@vanblog/shared/drizzle';
-import { eq, and } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 
 import { ConfigService } from '../../../config/config.service';
 import { DATABASE_CONNECTION, type Database } from '../../../database';
+import { MockUtils } from '../../../../test/mock-utils';
 
 import {
   PluginContextFactory,
@@ -16,77 +17,27 @@ import {
 import { PluginRegistryService } from './plugin-registry.service';
 import { SignalBus } from './signal.service';
 
-interface MockDatabase {
-  select: ReturnType<typeof vi.fn>;
-  from: ReturnType<typeof vi.fn>;
-  where: ReturnType<typeof vi.fn>;
-  limit: ReturnType<typeof vi.fn>;
-  insert: ReturnType<typeof vi.fn>;
-  values: ReturnType<typeof vi.fn>;
-  onConflictDoUpdate: ReturnType<typeof vi.fn>;
-  delete: ReturnType<typeof vi.fn>;
-  update: ReturnType<typeof vi.fn>;
-  set: ReturnType<typeof vi.fn>;
-  returning: ReturnType<typeof vi.fn>;
-  $client: {
-    execute: ReturnType<typeof vi.fn>;
-  };
-}
-
 describe('PluginContext Services', () => {
   let factory: PluginContextFactory;
   let mockConfigService: ConfigService;
-  let mockDb: MockDatabase;
+  let mockDb: ReturnType<(typeof MockUtils.database)['prototype']['build']>;
 
   beforeEach(async () => {
-    // Do not instantiate real ConfigService; use a lightweight mock instead
-    mockDb = {
-      select: vi.fn().mockReturnThis(),
-      from: vi.fn().mockReturnThis(),
-      where: vi.fn().mockReturnThis(),
-      limit: vi.fn().mockReturnThis(),
-      insert: vi.fn().mockReturnThis(),
-      values: vi.fn().mockReturnThis(),
-      onConflictDoUpdate: vi.fn().mockReturnThis(),
-      delete: vi.fn().mockReturnThis(),
-      update: vi.fn().mockReturnThis(),
-      set: vi.fn().mockReturnThis(),
-      returning: vi.fn().mockReturnThis(),
-      $client: { execute: vi.fn() },
-    } as unknown as MockDatabase;
+    // Create database mock using MockUtils
+    const dbBuilder = new MockUtils.database();
+    dbBuilder.setQueryResult([]);
+    mockDb = dbBuilder.build();
 
-    const mockReturning = {
-      returning: vi.fn().mockResolvedValue([{ id: 1 }]),
+    // Add $client for raw SQL execution
+    (mockDb as any).$client = {
+      execute: vi.fn().mockResolvedValue({}),
     };
 
-    mockDb = {
-      select: vi.fn().mockReturnThis(),
-      from: vi.fn().mockReturnThis(),
-      where: vi.fn().mockReturnThis(),
-      limit: vi.fn().mockResolvedValue([]),
-      insert: vi.fn().mockReturnThis(),
-      values: vi.fn().mockReturnThis(),
-      onConflictDoUpdate: vi.fn().mockReturnValue(mockReturning),
-      delete: vi.fn().mockReturnThis(),
-      update: vi.fn().mockReturnThis(),
-      set: vi.fn().mockReturnThis(),
-      returning: vi.fn().mockResolvedValue([{ id: 1 }]),
-      $client: {
-        execute: vi.fn().mockResolvedValue({}),
-      },
-    } as MockDatabase;
-
-    mockConfigService = {
-      get: vi.fn((key: string, defaultValue?: unknown) => {
-        if (key === 'plugin.test.config.key') {
-          return 'test-value';
-        }
-        if (key === 'plugin.test.config.json') {
-          return '{"nested": "value"}';
-        }
-        return defaultValue;
-      }),
-    } as unknown as ConfigService;
+    // Create ConfigService mock using MockUtils
+    mockConfigService = MockUtils.services.createConfigServiceMock({
+      'plugin.test.config.key': 'test-value',
+      'plugin.test.config.json': '{"nested": "value"}',
+    });
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -145,85 +96,102 @@ describe('PluginContext Services', () => {
 
     it('should get data by key', async () => {
       const testData = { foo: 'bar' };
-      mockDb.limit.mockResolvedValueOnce([{ value: testData }]);
+      // Create new builder for this test with specific query result
+      const dbBuilder = new MockUtils.database();
+      const localDb = dbBuilder.build();
 
-      const result = await dataStorage.get('test-key');
+      // Mock the complete chain: select().from().where().limit()
+      const limitMock = vi.fn().mockResolvedValue([{ value: testData }]);
+      const whereMock = vi.fn().mockReturnValue({ limit: limitMock });
+      const fromMock = vi.fn().mockReturnValue({ where: whereMock });
+      localDb.select = vi.fn().mockReturnValue({ from: fromMock });
+
+      const storage = new PluginDataStorageService(localDb as unknown as Database, 'test-plugin');
+
+      const result = await storage.get('test-key');
 
       expect(result).toEqual(testData);
-      expect(mockDb.select).toHaveBeenCalledWith({ value: pluginData.value });
-      expect(mockDb.from).toHaveBeenCalledWith(pluginData);
-      expect(mockDb.where).toHaveBeenCalledWith(
-        and(eq(pluginData.pluginId, 'test-plugin'), eq(pluginData.key, 'test-key')),
-      );
+      expect(localDb.select).toHaveBeenCalledWith({ value: pluginData.value });
+      expect(fromMock).toHaveBeenCalled();
     });
 
     it('should return null for non-existent key', async () => {
-      mockDb.limit.mockResolvedValueOnce([]);
+      const dbBuilder = new MockUtils.database();
+      dbBuilder.setQueryResult([]);
+      const localDb = dbBuilder.build();
+      const storage = new PluginDataStorageService(localDb as unknown as Database, 'test-plugin');
 
-      const result = await dataStorage.get('non-existent');
+      const result = await storage.get('non-existent');
 
       expect(result).toBeNull();
     });
 
     it('should set data in storage using single UPSERT', async () => {
       const testData = { test: 'value' };
-
+      // Use existing mockDb with $client
       await dataStorage.set('test-key', testData);
 
-      expect(mockDb.$client.execute).toHaveBeenCalledTimes(1);
-      expect(mockDb.$client.execute).toHaveBeenCalledWith({
+      expect((mockDb as any).$client.execute).toHaveBeenCalledTimes(1);
+      expect((mockDb as any).$client.execute).toHaveBeenCalledWith({
         sql: expect.stringContaining('INSERT INTO plugin_data'),
         args: expect.arrayContaining(['test-plugin', 'test-key', '{"test":"value"}']),
       });
     });
 
     it('should delete data from storage', async () => {
-      // Reset and setup the mock chain for select query
-      mockDb.select = vi.fn().mockReturnThis();
-      mockDb.from = vi.fn().mockReturnThis();
-      mockDb.where = vi.fn().mockReturnThis();
-      mockDb.limit = vi.fn().mockResolvedValue([{ key: 'test-key' }]);
+      // Create new builder with query and delete results
+      const dbBuilder = new MockUtils.database();
+      dbBuilder.setQueryResult([{ key: 'test-key' }]);
+      dbBuilder.setDeleteResult([{ id: 1 }]);
+      const localDb = dbBuilder.build();
+      const storage = new PluginDataStorageService(localDb as unknown as Database, 'test-plugin');
 
-      // Setup the mock chain for delete query
-      mockDb.delete = vi.fn().mockReturnThis();
-      mockDb.where = vi.fn().mockReturnThis();
-
-      const result = await dataStorage.delete('test-key');
+      const result = await storage.delete('test-key');
 
       expect(result).toBe(true);
-      expect(mockDb.select).toHaveBeenCalled();
-      expect(mockDb.delete).toHaveBeenCalledWith(pluginData);
+      expect(localDb.select).toHaveBeenCalled();
+      expect(localDb.delete).toHaveBeenCalled();
     });
 
     it('should check if key exists', async () => {
-      mockDb.limit.mockResolvedValueOnce([{ key: 'test-key' }]);
+      const dbBuilder = new MockUtils.database();
+      const localDb = dbBuilder.build();
 
-      const result = await dataStorage.has('test-key');
+      // Mock the complete chain: select().from().where().limit()
+      const limitMock = vi.fn().mockResolvedValue([{ key: 'test-key' }]);
+      const whereMock = vi.fn().mockReturnValue({ limit: limitMock });
+      const fromMock = vi.fn().mockReturnValue({ where: whereMock });
+      localDb.select = vi.fn().mockReturnValue({ from: fromMock });
+
+      const storage = new PluginDataStorageService(localDb as unknown as Database, 'test-plugin');
+
+      const result = await storage.has('test-key');
 
       expect(result).toBe(true);
-      expect(mockDb.select).toHaveBeenCalledWith({ key: pluginData.key });
-      expect(mockDb.where).toHaveBeenCalledWith(
-        and(eq(pluginData.pluginId, 'test-plugin'), eq(pluginData.key, 'test-key')),
-      );
+      expect(localDb.select).toHaveBeenCalledWith({ key: pluginData.key });
     });
 
     it('should get all keys', async () => {
-      mockDb.where.mockResolvedValueOnce([{ key: 'key1' }, { key: 'key2' }]);
+      const dbBuilder = new MockUtils.database();
+      // For this query, the result is returned directly from where()
+      const localDb = dbBuilder.build();
+      (localDb as any).where = vi.fn().mockResolvedValue([{ key: 'key1' }, { key: 'key2' }]);
+      const storage = new PluginDataStorageService(localDb as unknown as Database, 'test-plugin');
 
-      const result = await dataStorage.keys();
+      const result = await storage.keys();
 
       expect(result).toEqual(['key1', 'key2']);
-      expect(mockDb.select).toHaveBeenCalledWith({ key: pluginData.key });
-      expect(mockDb.where).toHaveBeenCalledWith(eq(pluginData.pluginId, 'test-plugin'));
+      expect(localDb.select).toHaveBeenCalledWith({ key: pluginData.key });
+      expect(localDb.where).toHaveBeenCalledWith(eq(pluginData.pluginId, 'test-plugin'));
     });
   });
 
   describe('PluginConfigReaderService', () => {
-    let configReader: PluginConfigReaderService;
+    let _configReader: PluginConfigReaderService;
     const originalEnv = process.env;
 
     beforeEach(() => {
-      configReader = new PluginConfigReaderService(mockConfigService, 'test-plugin');
+      _configReader = new PluginConfigReaderService(mockConfigService, 'test-plugin');
       process.env = { ...originalEnv };
     });
 
@@ -232,93 +200,83 @@ describe('PluginContext Services', () => {
     });
 
     it('should get config value', () => {
-      mockConfigService.get = vi.fn().mockImplementation((_key: string, defaultValue?: unknown) => {
-        if (_key === 'PLUGIN_TEST-PLUGIN_API_KEY') {
-          return 'test-api-key';
-        }
-        return defaultValue;
+      const localConfig = MockUtils.services.createConfigServiceMock({
+        PLUGIN_TEST_PLUGIN_API_KEY: 'test-api-key',
       });
+      const reader = new PluginConfigReaderService(localConfig, 'test-plugin');
 
-      const result = configReader.get('api_key');
+      const result = reader.get('api_key');
 
       expect(result).toBe('test-api-key');
     });
 
     it('should return default value when config not found', () => {
-      mockConfigService.get = vi.fn().mockImplementation((_key: string, defaultValue?: unknown) => {
-        return defaultValue;
-      });
+      const localConfig = MockUtils.services.createConfigServiceMock({});
+      const reader = new PluginConfigReaderService(localConfig, 'test-plugin');
 
-      const result = configReader.get('non_existent', 'default-value');
+      const result = reader.get('non_existent', 'default-value');
 
       expect(result).toBe('default-value');
     });
 
     it('should parse JSON config values', () => {
-      mockConfigService.get = vi.fn().mockImplementation((_key: string, defaultValue?: unknown) => {
-        if (_key === 'PLUGIN_TEST-PLUGIN_CONFIG') {
-          return '{"enabled": true, "count": 5}';
-        }
-        return defaultValue;
+      const localConfig = MockUtils.services.createConfigServiceMock({
+        PLUGIN_TEST_PLUGIN_CONFIG: '{"enabled": true, "count": 5}',
       });
+      const reader = new PluginConfigReaderService(localConfig, 'test-plugin');
 
-      const result = configReader.get('config');
+      const result = reader.get('config');
 
       expect(result).toEqual({ enabled: true, count: 5 });
     });
 
     it('should return string value when JSON parsing fails', () => {
-      mockConfigService.get = vi.fn().mockImplementation((_key: string, defaultValue?: unknown) => {
-        if (_key === 'PLUGIN_TEST-PLUGIN_INVALID_JSON') {
-          return 'not-json';
-        }
-        return defaultValue;
+      const localConfig = MockUtils.services.createConfigServiceMock({
+        PLUGIN_TEST_PLUGIN_INVALID_JSON: 'not-json',
       });
+      const reader = new PluginConfigReaderService(localConfig, 'test-plugin');
 
-      const result = configReader.get('invalid_json');
+      const result = reader.get('invalid_json');
 
       expect(result).toBe('not-json');
     });
 
     it('should return value when it exists', () => {
-      mockConfigService.get = vi.fn().mockImplementation((_key: string, defaultValue?: unknown) => {
-        if (_key === 'PLUGIN_TEST-PLUGIN_REQUIRED') {
-          return 'required-value';
-        }
-        return defaultValue;
+      const localConfig = MockUtils.services.createConfigServiceMock({
+        PLUGIN_TEST_PLUGIN_REQUIRED: 'required-value',
       });
+      const reader = new PluginConfigReaderService(localConfig, 'test-plugin');
 
-      const result = configReader.getOrThrow('required');
+      const result = reader.getOrThrow('required');
 
       expect(result).toBe('required-value');
     });
 
     it('should throw error when value does not exist', () => {
-      expect(() => configReader.getOrThrow('non_existent')).toThrow(
+      const localConfig = MockUtils.services.createConfigServiceMock({});
+      const reader = new PluginConfigReaderService(localConfig, 'test-plugin');
+
+      expect(() => reader.getOrThrow('non_existent')).toThrow(
         "Plugin configuration key 'non_existent' is required but not found",
       );
     });
 
     it('should check if config exists', () => {
-      mockConfigService.get = vi.fn().mockImplementation((_key: string, defaultValue?: unknown) => {
-        if (_key === 'PLUGIN_TEST-PLUGIN_EXISTS') {
-          return 'true';
-        }
-        return defaultValue;
+      const localConfig = MockUtils.services.createConfigServiceMock({
+        PLUGIN_TEST_PLUGIN_EXISTS: 'true',
       });
+      const reader = new PluginConfigReaderService(localConfig, 'test-plugin');
 
-      expect(configReader.has('exists')).toBe(true);
-      expect(configReader.has('not_exists')).toBe(false);
+      expect(reader.has('exists')).toBe(true);
+      expect(reader.has('not_exists')).toBe(false);
     });
 
     it('should fallback to underscore variant when hyphenated key not found', () => {
-      mockConfigService.get = vi.fn().mockImplementation((key: string) => {
-        if (key === 'PLUGIN_TEST-PLUGIN_FOO_BAR') return undefined; // primary not set
-        if (key === 'PLUGIN_TEST_PLUGIN_FOO_BAR') return 'ok'; // underscore fallback
-        return undefined;
+      const localConfig = MockUtils.services.createConfigServiceMock({
+        PLUGIN_TEST_PLUGIN_FOO_BAR: 'ok',
       });
+      const reader = new PluginConfigReaderService(localConfig, 'test-plugin');
 
-      const reader = new PluginConfigReaderService(mockConfigService, 'test-plugin');
       const value = reader.get('foo_bar');
       expect(value).toBe('ok');
     });

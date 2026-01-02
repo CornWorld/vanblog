@@ -20,7 +20,7 @@ import { users } from '@vanblog/shared/drizzle';
 import * as bcrypt from 'bcrypt';
 import { vi } from 'vitest';
 
-import { MockUtils } from '../../../test/mock-utils';
+import { createMockUser, MockUtils } from '../../../test/mock-utils';
 import { DATABASE_CONNECTION } from '../../database';
 import { HookService } from '../plugin/services/hook.service';
 
@@ -34,17 +34,14 @@ const mockedBcrypt = vi.mocked(bcrypt);
 describe('UserService', () => {
   let service: UserService;
   let databaseMock: InstanceType<typeof MockUtils.database>;
-  let mockHookService: Partial<HookService>;
+  let mockHookService: ReturnType<typeof MockUtils.services.createHookServiceMock>;
 
   beforeEach(async () => {
     // 使用Mock工具类创建数据库Mock
     databaseMock = new MockUtils.database();
 
     // 创建Hook服务Mock
-    mockHookService = {
-      applyFilters: vi.fn().mockImplementation((_, data) => data),
-      doAction: vi.fn(),
-    };
+    mockHookService = MockUtils.services.createHookServiceMock();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -82,18 +79,16 @@ describe('UserService', () => {
       const hashedPassword = 'hashedPassword123';
       mockedBcrypt.hash.mockResolvedValue(hashedPassword as never);
 
-      const createdDbUser = {
-        id: 1,
+      const createdDbUser = createMockUser({
         username: createUserDto.username,
         password: hashedPassword,
         nickname: createUserDto.nickname,
         email: createUserDto.email,
         type: createUserDto.type,
-        permissions: ['read', 'write'], // Drizzle with mode: 'json' returns native arrays
-        avatar: null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+        permissions: ['read', 'write'],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      });
 
       // First query checks if username exists (should return empty)
       databaseMock.setQueryResult([]);
@@ -126,7 +121,7 @@ describe('UserService', () => {
       };
 
       // Mock existing user found
-      databaseMock.setQueryResult([{ id: 1, username: 'existinguser' }]);
+      databaseMock.setQueryResult([createMockUser({ username: 'existinguser' })]);
 
       await expect(service.create(createUserDto)).rejects.toThrow(ConflictException);
       await expect(service.create(createUserDto)).rejects.toThrow('Username already exists');
@@ -145,7 +140,7 @@ describe('UserService', () => {
       const hashedPassword = 'hashedPassword123';
       mockedBcrypt.hash.mockResolvedValue(hashedPassword as never);
 
-      const createdDbUser = {
+      const createdDbUser = createMockUser({
         id: 2,
         username: createUserDto.username,
         password: hashedPassword,
@@ -153,10 +148,7 @@ describe('UserService', () => {
         email: createUserDto.email,
         type: createUserDto.type,
         permissions: ['read'],
-        avatar: null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+      });
 
       // Verify call order: select should be called before insert
       databaseMock.setQueryResult([]);
@@ -173,30 +165,22 @@ describe('UserService', () => {
   describe('findAll', () => {
     it('should return all users', async () => {
       const dbUsers = [
-        {
+        createMockUser({
           id: 1,
           username: 'user1',
           email: 'user1@example.com',
           nickname: 'User 1',
-          avatar: null,
           type: 'admin',
-          permissions: [], // Drizzle with mode: 'json' returns native arrays
-          password: 'hashedpassword1',
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-        {
+          permissions: [],
+        }),
+        createMockUser({
           id: 2,
           username: 'user2',
           email: 'user2@example.com',
           nickname: 'User 2',
-          avatar: null,
           type: 'collaborator',
-          permissions: ['read'], // Drizzle with mode: 'json' returns native arrays
-          password: 'hashedpassword2',
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
+          permissions: ['read'],
+        }),
       ];
 
       databaseMock.setQueryResult(dbUsers);
@@ -227,18 +211,13 @@ describe('UserService', () => {
 
   describe('findOne', () => {
     it('should return a user by id', async () => {
-      const dbUser = {
-        id: 1,
+      const dbUser = createMockUser({
         username: 'testuser',
         email: 'test@example.com',
         nickname: 'Test User',
-        avatar: null,
         type: 'admin',
-        permissions: [], // Drizzle with mode: 'json' returns native arrays
-        password: 'hashedpassword',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+        permissions: [],
+      });
       databaseMock.setQueryResult([dbUser]);
 
       const result = await service.findOne(1);
@@ -263,18 +242,13 @@ describe('UserService', () => {
 
   describe('findByUsername', () => {
     it('should return a user by username', async () => {
-      const dbUser = {
-        id: 1,
+      const dbUser = createMockUser({
         username: 'testuser',
         email: 'test@example.com',
         nickname: 'Test User',
-        avatar: null,
         type: 'admin',
-        permissions: [], // Drizzle with mode: 'json' returns native arrays
-        password: 'hashedpassword',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+        permissions: [],
+      });
       databaseMock.setQueryResult([dbUser]);
 
       const result = await service.findByUsername('testuser');
@@ -306,18 +280,13 @@ describe('UserService', () => {
         email: 'updated@example.com',
       };
 
-      const updatedDbUser = {
-        id: 1,
+      const updatedDbUser = createMockUser({
         username: 'testuser',
         nickname: 'Updated User',
         email: 'updated@example.com',
-        avatar: null,
         type: 'admin',
-        permissions: [], // Drizzle with mode: 'json' returns native arrays
-        password: 'hashedpassword',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+        permissions: [],
+      });
 
       databaseMock.setUpdateResult([updatedDbUser]);
 
@@ -374,18 +343,12 @@ describe('UserService', () => {
         avatar: null,
       };
 
-      const updatedDbUser = {
-        id: 1,
-        username: 'testuser',
+      const updatedDbUser = createMockUser({
         nickname: null,
         email: null,
         avatar: null,
-        type: 'admin',
         permissions: null,
-        password: 'hashedpassword',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+      });
 
       databaseMock.setUpdateResult([updatedDbUser]);
 
@@ -399,18 +362,11 @@ describe('UserService', () => {
         nickname: 'Updated',
       };
 
-      const updatedDbUser = {
-        id: 1,
-        username: 'testuser',
+      const updatedDbUser = createMockUser({
         nickname: 'Updated',
         email: null,
-        avatar: null,
-        type: 'admin',
         permissions: null,
-        password: 'hashedpassword',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+      });
 
       databaseMock.setUpdateResult([updatedDbUser]);
 
@@ -437,18 +393,11 @@ describe('UserService', () => {
 
       mockHookService.applyFilters = vi.fn().mockRejectedValue(new Error('Hook error'));
 
-      const updatedDbUser = {
-        id: 1,
-        username: 'testuser',
+      const updatedDbUser = createMockUser({
         nickname: 'Updated',
         email: null,
-        avatar: null,
-        type: 'admin',
         permissions: null,
-        password: 'hashedpassword',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+      });
 
       databaseMock.setUpdateResult([updatedDbUser]);
 
@@ -547,18 +496,13 @@ describe('UserService', () => {
 
   describe('getAdminUser', () => {
     it('should return admin user when exists', async () => {
-      const adminUser = {
-        id: 1,
+      const adminUser = createMockUser({
         username: 'admin',
         email: 'admin@example.com',
         nickname: 'Administrator',
-        avatar: null,
         type: 'admin',
         permissions: ['all'],
-        password: 'hashedpassword',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+      });
 
       databaseMock.setQueryResult([adminUser]);
 
@@ -582,30 +526,22 @@ describe('UserService', () => {
   describe('getCollaborators', () => {
     it('should return all non-admin users', async () => {
       const collaborators = [
-        {
+        createMockUser({
           id: 2,
           username: 'editor1',
           email: 'editor1@example.com',
           nickname: 'Editor 1',
-          avatar: null,
           type: 'editor',
           permissions: ['article:read', 'article:write'],
-          password: 'hashedpassword',
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-        {
+        }),
+        createMockUser({
           id: 3,
           username: 'author1',
           email: 'author1@example.com',
           nickname: 'Author 1',
-          avatar: null,
           type: 'author',
           permissions: ['article:read'],
-          password: 'hashedpassword',
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
+        }),
       ];
 
       databaseMock.setQueryResult(collaborators);
@@ -630,18 +566,14 @@ describe('UserService', () => {
 
   describe('findByUsernameWithPassword', () => {
     it('should return user with password when found', async () => {
-      const dbUser = {
-        id: 1,
+      const dbUser = createMockUser({
         username: 'testuser',
         email: 'test@example.com',
         nickname: 'Test User',
-        avatar: null,
         type: 'admin',
         permissions: ['all'],
         password: 'hashedPassword123',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+      });
 
       databaseMock.setQueryResult([dbUser]);
 

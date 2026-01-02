@@ -1,38 +1,21 @@
 import { NotFoundException } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { dayjs } from '@vanblog/shared';
-import { vi, describe, beforeEach, it, expect } from 'vitest';
+import { describe, beforeEach, it, expect } from 'vitest';
 
 import { DATABASE_CONNECTION } from '../../database';
 
 import { DraftVersionService } from './draft-version.service';
+import { MockUtils } from '../../../test/mock-utils';
 
 describe('DraftVersionService', () => {
   let service: DraftVersionService;
-  let mockDb: Record<string, ReturnType<typeof vi.fn>>;
+  let mockDb: any;
 
   beforeEach(async () => {
-    // Create chainable mock object
-    const createChainableMock = (): Record<string, ReturnType<typeof vi.fn>> => {
-      const mock: Record<string, ReturnType<typeof vi.fn>> = {
-        select: vi.fn().mockReturnThis(),
-        from: vi.fn().mockReturnThis(),
-        where: vi.fn().mockReturnThis(),
-        orderBy: vi.fn().mockReturnThis(),
-        limit: vi.fn().mockReturnThis(),
-        offset: vi.fn().mockReturnThis(),
-        insert: vi.fn().mockReturnThis(),
-        values: vi.fn().mockReturnThis(),
-        returning: vi.fn().mockResolvedValue([]),
-        update: vi.fn().mockReturnThis(),
-        set: vi.fn().mockReturnThis(),
-        delete: vi.fn().mockReturnThis(),
-      };
-
-      return mock;
-    };
-
-    mockDb = createChainableMock();
+    // Use DatabaseMockBuilder for flexible mock database setup
+    const dbMock = new MockUtils.database();
+    mockDb = dbMock.build();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [

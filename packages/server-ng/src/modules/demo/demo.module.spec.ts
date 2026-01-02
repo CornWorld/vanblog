@@ -1,8 +1,10 @@
 import type { TestingModule } from '@nestjs/testing';
 import { Test } from '@nestjs/testing';
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 
 import { DATABASE_CONNECTION } from '../../database';
+import { DatabaseMockBuilder } from '../../../test/mock-utils';
+
 import { DemoModule } from './demo.module';
 import { DemoController } from './demo.controller';
 import { DemoService } from './demo.service';
@@ -10,19 +12,15 @@ import { DemoService } from './demo.service';
 describe('DemoModule', () => {
   let module: TestingModule;
 
-  const mockDatabase = {
-    select: vi.fn().mockReturnThis(),
-    from: vi.fn().mockReturnThis(),
-    where: vi.fn().mockReturnThis(),
-    execute: vi.fn().mockResolvedValue([]),
-  };
-
   beforeEach(async () => {
+    const dbMock = new DatabaseMockBuilder();
+    dbMock.setQueryResult([]);
+
     module = await Test.createTestingModule({
       imports: [DemoModule],
     })
       .overrideProvider(DATABASE_CONNECTION)
-      .useValue(mockDatabase)
+      .useValue(dbMock.build())
       .compile();
   });
 

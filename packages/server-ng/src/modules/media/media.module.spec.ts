@@ -1,6 +1,7 @@
 import { Test, type TestingModule } from '@nestjs/testing';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 
+import { MockUtils } from '../../../test/mock-utils';
 import { DATABASE_CONNECTION } from '../../database';
 import { LoggerService } from '../../core/logger/logger.service';
 import { SettingRegistryService } from '../setting/services/setting-registry.service';
@@ -20,39 +21,7 @@ import { PicgoStorageService } from './services/storages/picgo-storage.service';
 describe('MediaModule', () => {
   let module: TestingModule;
 
-  // Mock dependencies
-  const mockDatabase = {
-    select: vi.fn().mockReturnThis(),
-    from: vi.fn().mockReturnThis(),
-    where: vi.fn().mockReturnThis(),
-    execute: vi.fn().mockResolvedValue([]),
-    insert: vi.fn().mockReturnThis(),
-    values: vi.fn().mockReturnThis(),
-    returning: vi.fn().mockResolvedValue([]),
-    update: vi.fn().mockReturnThis(),
-    set: vi.fn().mockReturnThis(),
-    delete: vi.fn().mockReturnThis(),
-  };
-
-  const mockSettingRegistryService = {
-    registerConfig: vi.fn(),
-    getConfig: vi.fn().mockResolvedValue(null),
-    updateConfig: vi.fn().mockResolvedValue(undefined),
-  };
-
-  const mockHookService = {
-    doAction: vi.fn().mockResolvedValue(undefined),
-    applyFilters: vi.fn((_name, data) => Promise.resolve(data)),
-  };
-
-  const mockSettingCoreService = {
-    getSiteInfo: vi.fn().mockResolvedValue({}),
-    updateSiteInfo: vi.fn().mockResolvedValue(undefined),
-  };
-
   beforeEach(async () => {
-    vi.clearAllMocks();
-
     // Create testing module without importing MediaModule
     // to avoid circular dependency issues with PluginModule/HookService
     module = await Test.createTestingModule({
@@ -67,28 +36,23 @@ describe('MediaModule', () => {
         PicgoStorageService,
         {
           provide: DATABASE_CONNECTION,
-          useValue: mockDatabase,
+          useValue: MockUtils.createDatabaseMock(),
         },
         {
           provide: SettingRegistryService,
-          useValue: mockSettingRegistryService,
+          useValue: MockUtils.services.createSettingRegistryServiceMock(),
         },
         {
           provide: SettingCoreService,
-          useValue: mockSettingCoreService,
+          useValue: MockUtils.services.createSettingCoreServiceMock(),
         },
         {
           provide: HookService,
-          useValue: mockHookService,
+          useValue: MockUtils.services.createHookServiceMock(),
         },
         {
           provide: LoggerService,
-          useValue: {
-            log: vi.fn(),
-            error: vi.fn(),
-            warn: vi.fn(),
-            debug: vi.fn(),
-          },
+          useValue: MockUtils.services.createLoggerMock(),
         },
       ],
     }).compile();

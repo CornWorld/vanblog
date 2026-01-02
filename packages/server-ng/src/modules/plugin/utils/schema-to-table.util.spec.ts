@@ -9,14 +9,18 @@ import { z } from 'zod';
 import { createTableFromSchema, tableExists, zodSchemaToTypeScript } from './schema-to-table.util';
 
 // Mock the Logger
-vi.mock('@nestjs/common', () => ({
-  Logger: class {
-    warn = vi.fn();
-    error = vi.fn();
-    log = vi.fn();
-    debug = vi.fn();
-  },
-}));
+vi.mock('@nestjs/common', async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...actual,
+    Logger: class {
+      warn = vi.fn();
+      error = vi.fn();
+      log = vi.fn();
+      debug = vi.fn();
+    },
+  };
+});
 
 describe('Schema to Table Util', () => {
   describe('createTableFromSchema', () => {

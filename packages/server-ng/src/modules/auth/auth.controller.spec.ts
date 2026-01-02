@@ -4,6 +4,7 @@ import { ThrottlerGuard } from '@nestjs/throttler';
 import { dayjs } from '@vanblog/shared';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
+import { MockUtils } from '../../../test/mock-utils';
 import { UserType } from '../user/dto/create-user.dto';
 import { User } from '../user/entities/user.entity';
 
@@ -18,17 +19,19 @@ describe('AuthController', () => {
   let authService: AuthService;
   let loginLogService: LoginLogService;
 
-  const mockUser = new User({
-    id: 1,
-    username: 'testuser',
-    password: 'hashedPassword',
-    nickname: 'Test User',
-    email: 'test@example.com',
-    type: UserType.ADMIN,
-    permissions: ['read', 'write'],
-    createdAt: dayjs().format(),
-    updatedAt: dayjs().format(),
-  });
+  const mockUser = new User(
+    MockUtils.testData.createUser({
+      id: 1,
+      username: 'testuser',
+      password: 'hashedPassword',
+      nickname: 'Test User',
+      email: 'test@example.com',
+      type: UserType.ADMIN,
+      permissions: ['read', 'write'],
+      createdAt: dayjs().format(),
+      updatedAt: dayjs().format(),
+    }),
+  );
 
   const mockAuthService = {
     login: vi.fn(),
@@ -48,14 +51,8 @@ describe('AuthController', () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [AuthController],
       providers: [
-        {
-          provide: AuthService,
-          useValue: mockAuthService,
-        },
-        {
-          provide: LoginLogService,
-          useValue: mockLoginLogService,
-        },
+        { provide: AuthService, useValue: mockAuthService },
+        { provide: LoginLogService, useValue: mockLoginLogService },
       ],
     })
       .overrideGuard(ThrottlerGuard)
@@ -69,7 +66,6 @@ describe('AuthController', () => {
     controller = module.get<AuthController>(AuthController);
     authService = module.get<AuthService>(AuthService);
     loginLogService = module.get<LoginLogService>(LoginLogService);
-
     vi.clearAllMocks();
   });
 

@@ -3,57 +3,30 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 import { PermissionService } from '../permission/permission.service';
+import { MockUtils } from '../../../test/mock-utils';
 
 import { CommentController } from './comment.controller';
 import { CommentService } from './comment.service';
-
-import type { WalineSetting } from './comment.schema';
 
 describe('CommentController', () => {
   let controller: CommentController;
   let commentService: CommentService;
 
-  const mockWalineSetting: WalineSetting = {
-    'smtp.enabled': true,
-    'smtp.port': 587,
-    'smtp.host': 'smtp.example.com',
-    'smtp.user': 'user@example.com',
-    'smtp.password': 'password',
-    'sender.name': 'VanBlog',
-    'sender.email': 'noreply@example.com',
-    authorEmail: 'admin@example.com',
-    webhook: 'https://example.com/webhook',
-    forceLoginComment: false,
-    otherConfig: '{"key":"value"}',
-    serverURL: 'https://waline.example.com',
-  };
-
   beforeEach(async () => {
-    const mockCommentService = {
-      getWalineSetting: vi.fn(),
-      updateWalineSetting: vi.fn(),
-      restart: vi.fn(),
-      getStatus: vi.fn(),
-    };
-
     const module: TestingModule = await Test.createTestingModule({
       controllers: [CommentController],
       providers: [
         {
           provide: CommentService,
-          useValue: mockCommentService,
+          useValue: MockUtils.services.createCommentServiceMock(),
         },
         {
           provide: ConfigService,
-          useValue: {
-            get: vi.fn().mockReturnValue(false) as any, // demoMode = false
-          },
+          useValue: MockUtils.services.createConfigServiceMock({ 'app.demoMode': false }),
         },
         {
           provide: PermissionService,
-          useValue: {
-            hasPermission: vi.fn().mockReturnValue(true),
-          },
+          useValue: MockUtils.services.createPermissionServiceMock(),
         },
       ],
     }).compile();
@@ -68,6 +41,7 @@ describe('CommentController', () => {
 
   describe('getWalineSetting', () => {
     it('should return waline setting', async () => {
+      const mockWalineSetting = MockUtils.testData.createWalineSetting();
       vi.mocked(commentService.getWalineSetting).mockResolvedValue(mockWalineSetting);
 
       const result = await controller.getWalineSetting();
@@ -77,20 +51,15 @@ describe('CommentController', () => {
     });
 
     it('should return default setting if no setting found', async () => {
-      const defaultSetting: WalineSetting = {
+      const defaultSetting = MockUtils.testData.createWalineSetting({
         'smtp.enabled': false,
-        'smtp.port': 587,
         'smtp.host': '',
         'smtp.user': '',
         'smtp.password': '',
         'sender.name': '',
-        'sender.email': 'noreply@example.com',
-        authorEmail: 'admin@example.com',
         webhook: '',
-        forceLoginComment: false,
-        otherConfig: '',
         serverURL: '',
-      };
+      } as Record<string, unknown>);
       vi.mocked(commentService.getWalineSetting).mockResolvedValue(defaultSetting);
 
       const result = await controller.getWalineSetting();
@@ -101,7 +70,8 @@ describe('CommentController', () => {
 
   describe('updateWalineSetting', () => {
     it('should update waline setting', async () => {
-      const updateData = { 'smtp.enabled': false };
+      const mockWalineSetting = MockUtils.testData.createWalineSetting();
+      const updateData: Record<string, unknown> = { 'smtp.enabled': false };
       const updatedSetting = { ...mockWalineSetting, ...updateData };
 
       vi.mocked(commentService.updateWalineSetting).mockResolvedValue(updatedSetting);

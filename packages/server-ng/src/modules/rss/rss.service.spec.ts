@@ -1,10 +1,11 @@
 import * as fs from 'fs/promises';
 
-import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { Logger } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
+import { MockUtils } from '../../../test/mock-utils';
 import { DATABASE_CONNECTION } from '../../database';
 import { MarkdownService } from '../../shared/services/markdown.service';
 import { HookService } from '../plugin/services/hook.service';
@@ -17,10 +18,12 @@ vi.mock('fs/promises');
 
 describe('RssService', () => {
   let service: RssService;
+  let module: TestingModule;
   let mockDb: any;
   let settingCoreService: any;
   let hookService: any;
   let markdownService: any;
+  let configService: any;
 
   const mockArticles = [
     {
@@ -69,18 +72,24 @@ describe('RssService', () => {
   };
 
   beforeEach(async () => {
-    // Setup mocks
-    const mockSelect = {
-      from: vi.fn().mockReturnThis(),
-      where: vi.fn().mockReturnThis(),
-      orderBy: vi.fn().mockResolvedValue(mockArticles),
-    };
+    // Setup mocks using MockUtils - articles query
+    // For RSS service, we need to support: db.select().from(articles).where(...).orderBy(...)
+    const dbMock = new MockUtils.database();
+    dbMock.setQueryResult(mockArticles);
+    mockDb = dbMock.build();
 
-    mockDb = {
-      select: vi.fn().mockReturnValue(mockSelect),
-    };
+    // Ensure proper chaining for article queries with where and orderBy
+    mockDb.select.mockReturnValue({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          orderBy: vi.fn().mockResolvedValue(mockArticles),
+        }),
+        orderBy: vi.fn().mockResolvedValue(mockArticles),
+      }),
+    });
 
-    const mockSettingCoreService = {
+    // Setup service mocks
+    settingCoreService = {
       getConfig: vi.fn().mockImplementation((key: string, defaultValue?: any) => {
         const configs: Record<string, any> = {
           showRSS: true,
@@ -96,23 +105,17 @@ describe('RssService', () => {
       }),
     };
 
-    const mockHookService = {
-      doAction: vi.fn().mockResolvedValue(undefined),
-    };
-
-    const mockMarkdownService = {
+    hookService = MockUtils.services.createHookServiceMock();
+    markdownService = {
       renderForRss: vi.fn().mockImplementation((content: string) => `<p>${content}</p>`),
       getDescription: vi.fn().mockImplementation((content: string) => content.substring(0, 100)),
     };
 
-    const mockConfigService = {
-      get: vi.fn().mockImplementation((key: string, defaultValue?: any) => {
-        if (key === 'STATIC_PATH') return './test-static';
-        return defaultValue;
-      }),
-    };
+    configService = MockUtils.services.createConfigServiceMock({
+      'static.path': './test-static',
+    });
 
-    const module: TestingModule = await Test.createTestingModule({
+    module = await Test.createTestingModule({
       providers: [
         RssService,
         {
@@ -121,27 +124,24 @@ describe('RssService', () => {
         },
         {
           provide: ConfigService,
-          useValue: mockConfigService,
+          useValue: configService,
         },
         {
           provide: MarkdownService,
-          useValue: mockMarkdownService,
+          useValue: markdownService,
         },
         {
           provide: HookService,
-          useValue: mockHookService,
+          useValue: hookService,
         },
         {
           provide: SettingCoreService,
-          useValue: mockSettingCoreService,
+          useValue: settingCoreService,
         },
       ],
     }).compile();
 
     service = module.get<RssService>(RssService);
-    settingCoreService = module.get(SettingCoreService);
-    hookService = module.get(HookService);
-    markdownService = module.get(MarkdownService);
 
     // Mock fs operations
     vi.mocked(fs.access).mockRejectedValue(new Error('Directory does not exist'));

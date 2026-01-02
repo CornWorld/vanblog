@@ -23,22 +23,8 @@ describe('ArticleService', () => {
     // 使用Mock工具类创建数据库Mock
     databaseMock = new MockUtils.database();
     mockHookService = MockUtils.services.createHookServiceMock();
-
-    mockQueryOptimizer = {
-      withPerformanceMonitoring: vi.fn().mockImplementation((_name, fn) => fn()),
-      batchCountArticlesByTags: vi.fn().mockResolvedValue(new Map()),
-      buildOptimizedSearchQuery: vi.fn().mockReturnValue([]),
-    };
-
-    mockConfigService = {
-      jwt: {
-        secret: 'test-secret-key',
-        expiresIn: '7d',
-        refreshSecret: 'test-refresh-secret',
-        refreshExpiresIn: '30d',
-      },
-      get: vi.fn((_key: string, defaultValue?: unknown) => defaultValue),
-    } as Partial<ConfigService>;
+    mockQueryOptimizer = MockUtils.services.createQueryOptimizerServiceMock();
+    mockConfigService = MockUtils.services.createConfigServiceMock();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [

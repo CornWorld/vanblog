@@ -14,15 +14,19 @@ import {
 } from './drizzle-to-sql.util';
 
 // Mock logger
-vi.mock('@nestjs/common', () => ({
-  Logger: class {
-    debug = vi.fn();
-    log = vi.fn();
-    info = vi.fn();
-    warn = vi.fn();
-    error = vi.fn();
-  },
-}));
+vi.mock('@nestjs/common', async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...actual,
+    Logger: class {
+      debug = vi.fn();
+      log = vi.fn();
+      info = vi.fn();
+      warn = vi.fn();
+      error = vi.fn();
+    },
+  };
+});
 
 describe('Drizzle to SQL Utilities', () => {
   describe('generateCreateTableSQL', () => {

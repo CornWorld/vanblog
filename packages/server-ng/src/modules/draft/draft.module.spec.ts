@@ -1,10 +1,11 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { Test } from '@nestjs/testing';
 
 import { DraftController } from './draft.controller';
 import { DraftService } from './draft.service';
 import { DraftVersionService } from './draft-version.service';
 import { DraftModule } from './draft.module';
+import { MockUtils } from '../../../test/mock-utils';
 
 describe('DraftModule', () => {
   describe('module definition', () => {
@@ -24,15 +25,7 @@ describe('DraftModule', () => {
 
   describe('module exports', () => {
     it('should export DraftService', async () => {
-      const mockDraftService = {
-        findAll: vi.fn().mockResolvedValue({ items: [], total: 0 }),
-        findOne: vi.fn(),
-        create: vi.fn(),
-        update: vi.fn(),
-        remove: vi.fn(),
-        publish: vi.fn(),
-        getStatistics: vi.fn(),
-      };
+      const mockDraftService = MockUtils.services.createDraftServiceMock();
 
       const testModule = await Test.createTestingModule({
         providers: [
@@ -72,15 +65,8 @@ describe('DraftModule', () => {
 
   describe('service injection', () => {
     it('should provide DraftService to controllers', async () => {
-      const mockService = {
-        findAll: vi.fn().mockResolvedValue({ items: [], total: 0 }),
-        findOne: vi.fn(),
-        create: vi.fn(),
-        update: vi.fn(),
-        remove: vi.fn(),
-        publish: vi.fn(),
-        getStatistics: vi.fn(),
-      };
+      const mockService = MockUtils.services.createDraftServiceMock();
+      const mockVersionService = MockUtils.services.createDraftVersionServiceMock();
 
       const testModule = await Test.createTestingModule({
         controllers: [DraftController],
@@ -91,10 +77,7 @@ describe('DraftModule', () => {
           },
           {
             provide: DraftVersionService,
-            useValue: {
-              findVersions: vi.fn(),
-              getVersion: vi.fn(),
-            },
+            useValue: mockVersionService,
           },
         ],
       }).compile();
@@ -107,12 +90,7 @@ describe('DraftModule', () => {
     });
 
     it('should provide DraftVersionService alongside DraftService', async () => {
-      const mockVersionService = {
-        findVersions: vi.fn().mockResolvedValue([]),
-        getVersion: vi.fn(),
-        createVersion: vi.fn(),
-        deleteVersion: vi.fn(),
-      };
+      const mockVersionService = MockUtils.services.createDraftVersionServiceMock();
 
       const testModule = await Test.createTestingModule({
         providers: [
@@ -147,19 +125,8 @@ describe('DraftModule', () => {
     });
 
     it('should provide both DraftService and DraftVersionService', async () => {
-      const mockDraftService = {
-        findAll: vi.fn(),
-        findOne: vi.fn(),
-        create: vi.fn(),
-        update: vi.fn(),
-        remove: vi.fn(),
-        publish: vi.fn(),
-      };
-
-      const mockVersionService = {
-        findVersions: vi.fn(),
-        getVersion: vi.fn(),
-      };
+      const mockDraftService = MockUtils.services.createDraftServiceMock();
+      const mockVersionService = MockUtils.services.createDraftVersionServiceMock();
 
       const testModule = await Test.createTestingModule({
         providers: [

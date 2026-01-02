@@ -1,6 +1,7 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import type * as winston from 'winston';
 
+import { MockUtils } from '../../../test/mock-utils';
 import { ConfigService } from '../../config/config.service';
 
 import { LoggerService } from './logger.service';
@@ -8,7 +9,7 @@ import { LoggerService } from './logger.service';
 describe('LoggerService', () => {
   let service: LoggerService;
 
-  const mockConfigService = {
+  const mockConfigService = MockUtils.services.createConfigServiceMock({
     app: {
       isDevelopment: false,
       nodeEnv: 'test',
@@ -17,7 +18,7 @@ describe('LoggerService', () => {
       level: 'info',
       dir: 'logs',
     },
-  };
+  });
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -155,7 +156,7 @@ describe('LoggerService', () => {
     });
 
     it('should use different configuration for development environment', () => {
-      const devMockConfigService = {
+      const devMockConfigService = MockUtils.services.createConfigServiceMock({
         app: {
           isDevelopment: true,
           nodeEnv: 'development',
@@ -164,16 +165,16 @@ describe('LoggerService', () => {
           level: 'debug',
           dir: 'logs',
         },
-      };
+      });
 
-      const devService = new LoggerService(devMockConfigService as ConfigService);
+      const devService = new LoggerService(devMockConfigService);
       expect(devService).toBeDefined();
       const { logger } = devService as unknown as { logger: winston.Logger };
       expect(logger.level).toBe('debug');
     });
 
     it('should configure logger for production environment', () => {
-      const prodMockConfigService = {
+      const prodMockConfigService = MockUtils.services.createConfigServiceMock({
         app: {
           isDevelopment: false,
           nodeEnv: 'production',
@@ -182,16 +183,16 @@ describe('LoggerService', () => {
           level: 'warn',
           dir: '/var/log/app',
         },
-      };
+      });
 
-      const prodService = new LoggerService(prodMockConfigService as ConfigService);
+      const prodService = new LoggerService(prodMockConfigService);
       expect(prodService).toBeDefined();
       const { logger } = prodService as unknown as { logger: winston.Logger };
       expect(logger.level).toBe('warn');
     });
 
     it('should apply custom log level from config', () => {
-      const customConfigService = {
+      const customConfigService = MockUtils.services.createConfigServiceMock({
         app: {
           isDevelopment: false,
           nodeEnv: 'test',
@@ -200,9 +201,9 @@ describe('LoggerService', () => {
           level: 'verbose',
           dir: 'logs',
         },
-      };
+      });
 
-      const customService = new LoggerService(customConfigService as ConfigService);
+      const customService = new LoggerService(customConfigService);
       expect(customService).toBeDefined();
       const { logger } = customService as unknown as { logger: winston.Logger };
       expect(logger.level).toBe('verbose');
@@ -211,7 +212,7 @@ describe('LoggerService', () => {
 
   describe('winston format configuration', () => {
     it('should format log with context in development mode', () => {
-      const devConfigService = {
+      const devConfigService = MockUtils.services.createConfigServiceMock({
         app: {
           isDevelopment: true,
           nodeEnv: 'development',
@@ -220,9 +221,9 @@ describe('LoggerService', () => {
           level: 'info',
           dir: 'logs',
         },
-      };
+      });
 
-      const devService = new LoggerService(devConfigService as ConfigService);
+      const devService = new LoggerService(devConfigService);
       const { logger } = devService as unknown as { logger: winston.Logger };
 
       // Test that logger is configured with formats
@@ -230,7 +231,7 @@ describe('LoggerService', () => {
     });
 
     it('should format log without context', () => {
-      const devConfigService = {
+      const devConfigService = MockUtils.services.createConfigServiceMock({
         app: {
           isDevelopment: true,
           nodeEnv: 'development',
@@ -239,9 +240,9 @@ describe('LoggerService', () => {
           level: 'info',
           dir: 'logs',
         },
-      };
+      });
 
-      const devService = new LoggerService(devConfigService as ConfigService);
+      const devService = new LoggerService(devConfigService);
       expect(devService).toBeDefined();
     });
 
@@ -261,7 +262,7 @@ describe('LoggerService', () => {
     });
 
     it('should handle log with additional metadata', () => {
-      const devConfigService = {
+      const devConfigService = MockUtils.services.createConfigServiceMock({
         app: {
           isDevelopment: true,
           nodeEnv: 'development',
@@ -270,9 +271,9 @@ describe('LoggerService', () => {
           level: 'info',
           dir: 'logs',
         },
-      };
+      });
 
-      const devService = new LoggerService(devConfigService as ConfigService);
+      const devService = new LoggerService(devConfigService);
       const { logger } = devService as unknown as { logger: winston.Logger };
 
       // Test logging with metadata
@@ -288,7 +289,7 @@ describe('LoggerService', () => {
 
   describe('file transports', () => {
     it('should not add file transports in development environment', () => {
-      const devConfigService = {
+      const devConfigService = MockUtils.services.createConfigServiceMock({
         app: {
           isDevelopment: true,
           nodeEnv: 'development',
@@ -297,9 +298,9 @@ describe('LoggerService', () => {
           level: 'info',
           dir: 'logs',
         },
-      };
+      });
 
-      const devService = new LoggerService(devConfigService as ConfigService);
+      const devService = new LoggerService(devConfigService);
       const { logger } = devService as unknown as { logger: winston.Logger };
 
       // In development, should only have console transport
@@ -316,7 +317,7 @@ describe('LoggerService', () => {
     });
 
     it('should attempt to add file transports in production environment', async () => {
-      const prodConfigService = {
+      const prodConfigService = MockUtils.services.createConfigServiceMock({
         app: {
           isDevelopment: false,
           nodeEnv: 'production',
@@ -325,9 +326,9 @@ describe('LoggerService', () => {
           level: 'info',
           dir: '/var/log/app',
         },
-      };
+      });
 
-      const prodService = new LoggerService(prodConfigService as ConfigService);
+      const prodService = new LoggerService(prodConfigService);
       expect(prodService).toBeDefined();
 
       // Give time for async addFileTransports to potentially complete
@@ -341,7 +342,7 @@ describe('LoggerService', () => {
 
   describe('error handling', () => {
     it('should continue logging even if file transport setup fails', async () => {
-      const prodConfigService = {
+      const prodConfigService = MockUtils.services.createConfigServiceMock({
         app: {
           isDevelopment: false,
           nodeEnv: 'production',
@@ -350,9 +351,9 @@ describe('LoggerService', () => {
           level: 'info',
           dir: '/tmp/claude/test-logs',
         },
-      };
+      });
 
-      const prodService = new LoggerService(prodConfigService as ConfigService);
+      const prodService = new LoggerService(prodConfigService);
 
       // Should still be able to log via console transport
       const mockLogger = {

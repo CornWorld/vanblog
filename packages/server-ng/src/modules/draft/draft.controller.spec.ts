@@ -6,29 +6,17 @@ import { DraftVersionService } from './draft-version.service';
 import { DraftController } from './draft.controller';
 import { DraftService } from './draft.service';
 import { Article } from '../article/entities/article.entity';
-
-const mockDraftService = {
-  findAll: vi.fn(),
-  findOne: vi.fn(),
-  create: vi.fn(),
-  update: vi.fn(),
-  remove: vi.fn(),
-  publish: vi.fn(),
-  importDrafts: vi.fn(),
-  autoSave: vi.fn(),
-};
-
-const mockDraftVersionService = {
-  getVersions: vi.fn(),
-  getVersion: vi.fn(),
-  restoreVersion: vi.fn(),
-  deleteVersion: vi.fn(),
-};
+import { MockUtils } from '../../../test/mock-utils';
 
 describe('DraftController', () => {
   let controller: DraftController;
+  let mockDraftService: any;
+  let mockDraftVersionService: any;
 
   beforeEach(async () => {
+    mockDraftService = MockUtils.services.createDraftServiceMock();
+    mockDraftVersionService = MockUtils.services.createDraftVersionServiceMock();
+
     const module: TestingModule = await Test.createTestingModule({
       controllers: [DraftController],
       providers: [

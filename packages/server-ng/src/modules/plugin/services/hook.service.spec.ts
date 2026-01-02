@@ -1,21 +1,23 @@
-import { Logger } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
+import { MockUtils } from '../../../../test/mock-utils';
 import { HookService } from './hook.service';
 
 describe('HookService', () => {
   let service: HookService;
+  let loggerMock: ReturnType<typeof MockUtils.services.createLoggerMock>;
 
   beforeEach(async () => {
+    loggerMock = MockUtils.services.createLoggerMock();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [HookService],
     }).compile();
 
     service = module.get<HookService>(HookService);
-    // Mock logger to avoid console output during tests
-    vi.spyOn(Logger.prototype, 'debug').mockImplementation(() => {});
-    vi.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
+    // Replace logger with mock to avoid console output during tests
+    (service as any).logger = loggerMock;
   });
 
   afterEach(() => {
@@ -792,7 +794,6 @@ describe('HookService', () => {
 
   describe('error handling in doAction', () => {
     it('should log errors with Error objects', async () => {
-      const errorSpy = vi.spyOn(Logger.prototype, 'error');
       const testError = new Error('Test error message');
       const callback = vi.fn(() => {
         throw testError;
@@ -801,14 +802,13 @@ describe('HookService', () => {
       service.addAction('error|test', callback);
       await service.doAction('error|test');
 
-      expect(errorSpy).toHaveBeenCalledWith(
+      expect(loggerMock.error).toHaveBeenCalledWith(
         expect.stringContaining("Error executing action for hook 'error|test'"),
         'Test error message',
       );
     });
 
     it('should log errors with non-Error objects', async () => {
-      const errorSpy = vi.spyOn(Logger.prototype, 'error');
       const callback = vi.fn(() => {
         throw new Error('String error');
       });
@@ -816,7 +816,7 @@ describe('HookService', () => {
       service.addAction('error|nonError', callback);
       await service.doAction('error|nonError');
 
-      expect(errorSpy).toHaveBeenCalledWith(
+      expect(loggerMock.error).toHaveBeenCalledWith(
         expect.stringContaining("Error executing action for hook 'error|nonError'"),
         'String error',
       );
@@ -825,7 +825,6 @@ describe('HookService', () => {
 
   describe('error handling in applyFilters', () => {
     it('should log errors with Error objects and preserve current value', async () => {
-      const errorSpy = vi.spyOn(Logger.prototype, 'error');
       const testError = new Error('Filter error');
       const filter1 = vi.fn((value: string) => `${value}:1`);
       const filter2 = vi.fn(() => {
@@ -839,7 +838,7 @@ describe('HookService', () => {
 
       const result = await service.applyFilters('error|filter', 'start');
 
-      expect(errorSpy).toHaveBeenCalledWith(
+      expect(loggerMock.error).toHaveBeenCalledWith(
         expect.stringContaining("Error applying filter for hook 'error|filter'"),
         'Filter error',
       );
@@ -847,7 +846,6 @@ describe('HookService', () => {
     });
 
     it('should log errors with non-Error objects in filters', async () => {
-      const errorSpy = vi.spyOn(Logger.prototype, 'error');
       const filter = vi.fn(() => {
         throw new Error('Custom error object');
       });
@@ -855,7 +853,7 @@ describe('HookService', () => {
       service.addFilter('error|customFilter', filter);
       const result = await service.applyFilters('error|customFilter', 'original');
 
-      expect(errorSpy).toHaveBeenCalledWith(
+      expect(loggerMock.error).toHaveBeenCalledWith(
         expect.stringContaining("Error applying filter for hook 'error|customFilter'"),
         'Custom error object',
       );

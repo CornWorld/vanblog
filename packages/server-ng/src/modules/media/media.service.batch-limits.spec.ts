@@ -4,22 +4,11 @@ import { vi, describe, beforeEach, it, expect } from 'vitest';
 import { LoggerService } from '../../core/logger/logger.service';
 import { DATABASE_CONNECTION } from '../../database';
 import { HookService } from '../plugin/services/hook.service';
+import { MockUtils } from '../../../test/mock-utils';
+import { StorageProvider } from './dto/storage-config.dto';
 
 import { MediaService } from './services/media.service';
 import { StorageFactoryService } from './services/storage-factory.service';
-
-// Simple test data factory
-const createTestMediaFile = (overrides: any = {}): any => ({
-  id: 1,
-  filename: 'test.jpg',
-  path: '/uploads/test.jpg',
-  size: 1024,
-  mimeType: 'image/jpeg',
-  provider: 'local',
-  createdAt: new Date(),
-  updatedAt: new Date(),
-  ...overrides,
-});
 
 describe('MediaService - Batch Operation Limits', () => {
   let service: MediaService;
@@ -30,30 +19,13 @@ describe('MediaService - Batch Operation Limits', () => {
   let mockDb: any;
 
   beforeEach(async () => {
-    // Mock storage service
-    mockStorageService = {
-      upload: vi.fn(),
-      delete: vi.fn().mockResolvedValue(true),
-      getUrl: vi.fn(),
-    };
-
-    // Mock storage factory
-    mockStorageFactory = {
-      getStorageService: vi.fn().mockResolvedValue(mockStorageService),
-      getCurrentProvider: vi.fn().mockResolvedValue('local'),
-    };
-
-    // Mock hook service
-    mockHookService = {
-      applyFilters: vi.fn().mockImplementation((_, data) => data),
-      doAction: vi.fn().mockResolvedValue(undefined),
-    };
-
-    // Mock logger
-    mockLogger = {
-      error: vi.fn(),
-      warn: vi.fn(),
-    };
+    mockStorageService = MockUtils.services.createStorageServiceMock();
+    mockStorageFactory = MockUtils.services.createStorageFactoryServiceMock(
+      mockStorageService,
+      StorageProvider.LOCAL,
+    );
+    mockHookService = MockUtils.services.createHookServiceMock();
+    mockLogger = MockUtils.services.createLoggerMock();
 
     // Mock database
     mockDb = {
@@ -83,7 +55,7 @@ describe('MediaService - Batch Operation Limits', () => {
     it('should allow deletion of 100 files', async () => {
       const ids = Array.from({ length: 100 }, (_, i) => i + 1);
       const mockFiles = ids.map((id) =>
-        createTestMediaFile({
+        MockUtils.testData.createMediaFile({
           id,
           filename: `file${String(id)}.jpg`,
           provider: 'local',
@@ -121,7 +93,7 @@ describe('MediaService - Batch Operation Limits', () => {
     it('should handle edge case of exactly 100 files', async () => {
       const exactlyHundredIds = Array.from({ length: 100 }, (_, i) => i + 1);
       const mockFiles = exactlyHundredIds.map((id) =>
-        createTestMediaFile({
+        MockUtils.testData.createMediaFile({
           id,
           filename: `file${String(id)}.jpg`,
           provider: 'local',
@@ -144,7 +116,7 @@ describe('MediaService - Batch Operation Limits', () => {
 
     it('should handle single file deletion within limits', async () => {
       const singleId = [1];
-      const mockFile = createTestMediaFile({
+      const mockFile = MockUtils.testData.createMediaFile({
         id: 1,
         filename: 'single.jpg',
         provider: 'local',
@@ -168,7 +140,7 @@ describe('MediaService - Batch Operation Limits', () => {
     it('should handle storage deletion failures gracefully within limits', async () => {
       const ids = [1, 2, 3];
       const mockFiles = ids.map((id) =>
-        createTestMediaFile({
+        MockUtils.testData.createMediaFile({
           id,
           filename: `file${String(id)}.jpg`,
           provider: 'local',
@@ -206,7 +178,7 @@ describe('MediaService - Batch Operation Limits', () => {
     it('should handle maximum allowed batch size efficiently', async () => {
       const maxIds = Array.from({ length: 100 }, (_, i) => i + 1);
       const mockFiles = maxIds.map((id) =>
-        createTestMediaFile({
+        MockUtils.testData.createMediaFile({
           id,
           filename: `perf${String(id)}.jpg`,
           provider: 'local',

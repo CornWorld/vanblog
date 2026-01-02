@@ -2,11 +2,10 @@ import { Reflector } from '@nestjs/core';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, beforeEach, expect, vi } from 'vitest';
 
+import { MockUtils } from '../../../../test/mock-utils';
 import { UserType } from '../../user/dto/create-user.dto';
 
 import { RolesGuard } from './roles.guard';
-
-import type { ExecutionContext } from '@nestjs/common';
 
 describe('RolesGuard', () => {
   let guard: RolesGuard;
@@ -27,15 +26,9 @@ describe('RolesGuard', () => {
 
   describe('canActivate', () => {
     it('should return true when no roles are required', () => {
-      const mockContext = {
-        getHandler: () => ({}),
-        getClass: () => ({}),
-        switchToHttp: () => ({
-          getRequest: () => ({
-            user: { id: 1, type: UserType.ADMIN },
-          }),
-        }),
-      } as ExecutionContext;
+      const mockContext = MockUtils.services.createExecutionContextMock({
+        request: { user: { id: 1, type: UserType.ADMIN } },
+      });
 
       vi.spyOn(reflector, 'getAllAndOverride').mockReturnValue(undefined);
 
@@ -45,15 +38,9 @@ describe('RolesGuard', () => {
     });
 
     it('should return true when user has required role', () => {
-      const mockContext = {
-        getHandler: () => ({}),
-        getClass: () => ({}),
-        switchToHttp: () => ({
-          getRequest: () => ({
-            user: { id: 1, type: UserType.ADMIN },
-          }),
-        }),
-      } as ExecutionContext;
+      const mockContext = MockUtils.services.createExecutionContextMock({
+        request: { user: { id: 1, type: UserType.ADMIN } },
+      });
 
       const requiredRoles = [UserType.ADMIN];
       vi.spyOn(reflector, 'getAllAndOverride').mockReturnValue(requiredRoles);
@@ -64,15 +51,9 @@ describe('RolesGuard', () => {
     });
 
     it('should return false when user lacks required role', () => {
-      const mockContext = {
-        getHandler: () => ({}),
-        getClass: () => ({}),
-        switchToHttp: () => ({
-          getRequest: () => ({
-            user: { id: 1, type: UserType.AUTHOR },
-          }),
-        }),
-      } as ExecutionContext;
+      const mockContext = MockUtils.services.createExecutionContextMock({
+        request: { user: { id: 1, type: UserType.AUTHOR } },
+      });
 
       const requiredRoles = [UserType.ADMIN];
       vi.spyOn(reflector, 'getAllAndOverride').mockReturnValue(requiredRoles);
@@ -83,15 +64,9 @@ describe('RolesGuard', () => {
     });
 
     it('should return true when user has one of multiple required roles', () => {
-      const mockContext = {
-        getHandler: () => ({}),
-        getClass: () => ({}),
-        switchToHttp: () => ({
-          getRequest: () => ({
-            user: { id: 1, type: UserType.ADMIN },
-          }),
-        }),
-      } as ExecutionContext;
+      const mockContext = MockUtils.services.createExecutionContextMock({
+        request: { user: { id: 1, type: UserType.ADMIN } },
+      });
 
       const requiredRoles = [UserType.ADMIN, UserType.EDITOR];
       vi.spyOn(reflector, 'getAllAndOverride').mockReturnValue(requiredRoles);
@@ -102,15 +77,9 @@ describe('RolesGuard', () => {
     });
 
     it('should return false when user has none of the required roles', () => {
-      const mockContext = {
-        getHandler: () => ({}),
-        getClass: () => ({}),
-        switchToHttp: () => ({
-          getRequest: () => ({
-            user: { id: 1, type: UserType.AUTHOR },
-          }),
-        }),
-      } as ExecutionContext;
+      const mockContext = MockUtils.services.createExecutionContextMock({
+        request: { user: { id: 1, type: UserType.AUTHOR } },
+      });
 
       const requiredRoles = [UserType.ADMIN, UserType.EDITOR];
       vi.spyOn(reflector, 'getAllAndOverride').mockReturnValue(requiredRoles);
@@ -121,13 +90,9 @@ describe('RolesGuard', () => {
     });
 
     it('should return false when user is missing from request', () => {
-      const mockContext = {
-        getHandler: () => ({}),
-        getClass: () => ({}),
-        switchToHttp: () => ({
-          getRequest: () => ({}),
-        }),
-      } as ExecutionContext;
+      const mockContext = MockUtils.services.createExecutionContextMock({
+        request: {},
+      });
 
       const requiredRoles = [UserType.ADMIN];
       vi.spyOn(reflector, 'getAllAndOverride').mockReturnValue(requiredRoles);
@@ -138,15 +103,9 @@ describe('RolesGuard', () => {
     });
 
     it('should return false when user type is missing', () => {
-      const mockContext = {
-        getHandler: () => ({}),
-        getClass: () => ({}),
-        switchToHttp: () => ({
-          getRequest: () => ({
-            user: { id: 1 },
-          }),
-        }),
-      } as ExecutionContext;
+      const mockContext = MockUtils.services.createExecutionContextMock({
+        request: { user: { id: 1 } },
+      });
 
       const requiredRoles = [UserType.ADMIN];
       vi.spyOn(reflector, 'getAllAndOverride').mockReturnValue(requiredRoles);

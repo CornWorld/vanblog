@@ -1,6 +1,8 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, expect, beforeEach } from 'vitest';
 
+import { createExecutionContextMock } from '../../../test/mock-utils';
+
 import { CsrfGuard } from './csrf.guard';
 
 import type { ExecutionContext } from '@nestjs/common';
@@ -21,104 +23,72 @@ describe('CsrfGuard', () => {
   });
 
   it('should allow GET requests', () => {
-    const mockExecutionContext = {
-      switchToHttp: () => ({
-        getRequest: () => ({
-          method: 'GET',
-        }),
-      }),
-    } as ExecutionContext;
+    const mockExecutionContext = createExecutionContextMock({
+      request: { method: 'GET' },
+    }) as unknown as ExecutionContext;
 
     const result = guard.canActivate(mockExecutionContext);
     expect(result).toBe(true);
   });
 
   it('should allow HEAD requests', () => {
-    const mockExecutionContext = {
-      switchToHttp: () => ({
-        getRequest: () => ({
-          method: 'HEAD',
-        }),
-      }),
-    } as ExecutionContext;
+    const mockExecutionContext = createExecutionContextMock({
+      request: { method: 'HEAD' },
+    }) as unknown as ExecutionContext;
 
     const result = guard.canActivate(mockExecutionContext);
     expect(result).toBe(true);
   });
 
   it('should allow OPTIONS requests', () => {
-    const mockExecutionContext = {
-      switchToHttp: () => ({
-        getRequest: () => ({
-          method: 'OPTIONS',
-        }),
-      }),
-    } as ExecutionContext;
+    const mockExecutionContext = createExecutionContextMock({
+      request: { method: 'OPTIONS' },
+    }) as unknown as ExecutionContext;
 
     const result = guard.canActivate(mockExecutionContext);
     expect(result).toBe(true);
   });
 
   it('should allow POST requests (CSRF validation handled by middleware)', () => {
-    const mockExecutionContext = {
-      switchToHttp: () => ({
-        getRequest: () => ({
-          method: 'POST',
-        }),
-      }),
-    } as ExecutionContext;
+    const mockExecutionContext = createExecutionContextMock({
+      request: { method: 'POST' },
+    }) as unknown as ExecutionContext;
 
     const result = guard.canActivate(mockExecutionContext);
     expect(result).toBe(true);
   });
 
   it('should allow PUT requests (CSRF validation handled by middleware)', () => {
-    const mockExecutionContext = {
-      switchToHttp: () => ({
-        getRequest: () => ({
-          method: 'PUT',
-        }),
-      }),
-    } as ExecutionContext;
+    const mockExecutionContext = createExecutionContextMock({
+      request: { method: 'PUT' },
+    }) as unknown as ExecutionContext;
 
     const result = guard.canActivate(mockExecutionContext);
     expect(result).toBe(true);
   });
 
   it('should allow DELETE requests (CSRF validation handled by middleware)', () => {
-    const mockExecutionContext = {
-      switchToHttp: () => ({
-        getRequest: () => ({
-          method: 'DELETE',
-        }),
-      }),
-    } as ExecutionContext;
+    const mockExecutionContext = createExecutionContextMock({
+      request: { method: 'DELETE' },
+    }) as unknown as ExecutionContext;
 
     const result = guard.canActivate(mockExecutionContext);
     expect(result).toBe(true);
   });
 
   it('should allow PATCH requests (CSRF validation handled by middleware)', () => {
-    const mockExecutionContext = {
-      switchToHttp: () => ({
-        getRequest: () => ({
-          method: 'PATCH',
-        }),
-      }),
-    } as ExecutionContext;
+    const mockExecutionContext = createExecutionContextMock({
+      request: { method: 'PATCH' },
+    }) as unknown as ExecutionContext;
 
     const result = guard.canActivate(mockExecutionContext);
     expect(result).toBe(true);
   });
 
   it('should allow custom HTTP methods (CSRF validation handled by middleware)', () => {
-    const mockExecutionContext = {
-      switchToHttp: () => ({
-        getRequest: () => ({
-          method: 'CUSTOM',
-        }),
-      }),
-    } as ExecutionContext;
+    const mockExecutionContext = createExecutionContextMock({
+      request: { method: 'CUSTOM' },
+    }) as unknown as ExecutionContext;
 
     const result = guard.canActivate(mockExecutionContext);
     expect(result).toBe(true);
@@ -129,11 +99,9 @@ describe('CsrfGuard', () => {
       const safeMethods = ['GET', 'HEAD', 'OPTIONS'];
 
       safeMethods.forEach((method) => {
-        const mockExecutionContext = {
-          switchToHttp: () => ({
-            getRequest: () => ({ method }),
-          }),
-        } as ExecutionContext;
+        const mockExecutionContext = createExecutionContextMock({
+          request: { method },
+        }) as unknown as ExecutionContext;
 
         const result = guard.canActivate(mockExecutionContext);
         expect(result).toBe(true);
@@ -146,11 +114,9 @@ describe('CsrfGuard', () => {
       const unsafeMethods = ['POST', 'PUT', 'DELETE', 'PATCH'];
 
       unsafeMethods.forEach((method) => {
-        const mockExecutionContext = {
-          switchToHttp: () => ({
-            getRequest: () => ({ method }),
-          }),
-        } as ExecutionContext;
+        const mockExecutionContext = createExecutionContextMock({
+          request: { method },
+        }) as unknown as ExecutionContext;
 
         const result = guard.canActivate(mockExecutionContext);
         expect(result).toBe(true);
@@ -160,13 +126,9 @@ describe('CsrfGuard', () => {
 
   describe('edge cases', () => {
     it('should not validate case for lowercase method names (allows through)', () => {
-      const mockExecutionContext = {
-        switchToHttp: () => ({
-          getRequest: () => ({
-            method: 'get',
-          }),
-        }),
-      } as ExecutionContext;
+      const mockExecutionContext = createExecutionContextMock({
+        request: { method: 'get' },
+      }) as unknown as ExecutionContext;
 
       // Guard allows through all non-uppercase safe methods since validation is middleware's job
       const result = guard.canActivate(mockExecutionContext);
@@ -174,13 +136,9 @@ describe('CsrfGuard', () => {
     });
 
     it('should not validate case for mixed case method names (allows through)', () => {
-      const mockExecutionContext = {
-        switchToHttp: () => ({
-          getRequest: () => ({
-            method: 'Get',
-          }),
-        }),
-      } as ExecutionContext;
+      const mockExecutionContext = createExecutionContextMock({
+        request: { method: 'Get' },
+      }) as unknown as ExecutionContext;
 
       // Guard allows through all non-uppercase safe methods since validation is middleware's job
       const result = guard.canActivate(mockExecutionContext);
@@ -188,38 +146,30 @@ describe('CsrfGuard', () => {
     });
 
     it('should handle requests with csrfToken method', () => {
-      const mockExecutionContext = {
-        switchToHttp: () => ({
-          getRequest: () => ({
-            method: 'POST',
-            csrfToken: () => 'test-token',
-          }),
-        }),
-      } as ExecutionContext;
+      const mockExecutionContext = createExecutionContextMock({
+        request: {
+          method: 'POST',
+          csrfToken: () => 'test-token',
+        },
+      }) as unknown as ExecutionContext;
 
       const result = guard.canActivate(mockExecutionContext);
       expect(result).toBe(true);
     });
 
     it('should handle empty method name', () => {
-      const mockExecutionContext = {
-        switchToHttp: () => ({
-          getRequest: () => ({
-            method: '',
-          }),
-        }),
-      } as ExecutionContext;
+      const mockExecutionContext = createExecutionContextMock({
+        request: { method: '' },
+      }) as unknown as ExecutionContext;
 
       const result = guard.canActivate(mockExecutionContext);
       expect(result).toBe(true);
     });
 
     it('should handle request without method property', () => {
-      const mockExecutionContext = {
-        switchToHttp: () => ({
-          getRequest: () => ({}) as any,
-        }),
-      } as ExecutionContext;
+      const mockExecutionContext = createExecutionContextMock({
+        request: {} as any,
+      }) as unknown as ExecutionContext;
 
       const result = guard.canActivate(mockExecutionContext);
       expect(result).toBe(true);

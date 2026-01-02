@@ -4,6 +4,7 @@ import { dayjs } from '@vanblog/shared';
 import * as bcrypt from 'bcrypt';
 import { vi } from 'vitest';
 
+import { MockUtils } from '../../../test/mock-utils';
 import { HookService } from '../plugin/services/hook.service';
 import { UserType } from '../user/dto';
 import { User } from '../user/entities/user.entity';
@@ -18,10 +19,10 @@ vi.mock('bcrypt', () => ({
   hash: vi.fn().mockResolvedValue('hashedPassword'),
 }));
 
-// Remove the problematic mock variable
-
 describe('AuthService', () => {
   let service: AuthService;
+  let mockUserService: any;
+  let mockTokenService: any;
   let mockHookService: Partial<HookService>;
 
   const mockUser = new User({
@@ -35,55 +36,36 @@ describe('AuthService', () => {
     updatedAt: dayjs().format(),
   });
 
-  const mockUserService = {
-    findByUsername: vi.fn(),
-    findByUsernameWithPassword: vi.fn(),
-    findOne: vi.fn(),
-  };
-
-  const mockTokenService = {
-    generateTokenPair: vi.fn(),
-    verifyAccessToken: vi.fn(),
-    verifyRefreshToken: vi.fn(),
-    refreshTokenPair: vi.fn(),
-    revokeToken: vi.fn(),
-    revokeAllUserTokens: vi.fn(),
-    isTokenRevoked: vi.fn(),
-    generateAnonymousAccessToken: vi.fn(),
-  };
-
   beforeEach(async () => {
-    mockHookService = {
-      applyFilters: vi.fn().mockImplementation(async (_hookName, data) => Promise.resolve(data)),
-      doAction: vi.fn().mockResolvedValue(undefined),
-    };
+    mockUserService = {
+      findByUsername: vi.fn() as any,
+      findByUsernameWithPassword: vi.fn() as any,
+      findOne: vi.fn() as any,
+    } as any;
+
+    mockTokenService = {
+      generateTokenPair: vi.fn() as any,
+      verifyAccessToken: vi.fn() as any,
+      verifyRefreshToken: vi.fn() as any,
+      refreshTokenPair: vi.fn() as any,
+      revokeToken: vi.fn() as any,
+      revokeAllUserTokens: vi.fn() as any,
+      isTokenRevoked: vi.fn() as any,
+      generateAnonymousAccessToken: vi.fn() as any,
+    } as any;
+
+    mockHookService = MockUtils.services.createHookServiceMock();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AuthService,
-        {
-          provide: UserService,
-          useValue: mockUserService,
-        },
-        {
-          provide: TokenService,
-          useValue: mockTokenService,
-        },
-        {
-          provide: HookService,
-          useValue: mockHookService,
-        },
+        { provide: UserService, useValue: mockUserService },
+        { provide: TokenService, useValue: mockTokenService },
+        { provide: HookService, useValue: mockHookService },
       ],
     }).compile();
 
     service = module.get<AuthService>(AuthService);
-  });
-
-  beforeEach(() => {
-    // Mock behavior is set in vi.mock above
-  });
-
-  afterEach(() => {
     vi.clearAllMocks();
   });
 

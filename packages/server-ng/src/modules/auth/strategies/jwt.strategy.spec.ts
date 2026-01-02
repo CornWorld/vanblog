@@ -4,6 +4,7 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import { dayjs } from '@vanblog/shared';
 import { describe, it, beforeEach, expect, vi } from 'vitest';
 
+import { MockUtils } from '../../../../test/mock-utils';
 import { UserType } from '../../user/dto/create-user.dto';
 import { User } from '../../user/entities/user.entity';
 import { UserService } from '../../user/user.service';
@@ -13,46 +14,35 @@ import { JwtStrategy, type JwtPayload } from './jwt.strategy';
 describe('JwtStrategy', () => {
   let strategy: JwtStrategy;
   let userService: UserService;
-  let configService: ConfigService;
 
-  const mockUser = new User({
+  const mockUser = MockUtils.testData.createUser({
     id: 1,
     username: 'testuser',
     type: UserType.ADMIN,
     permissions: ['user:read', 'user:write'],
     createdAt: dayjs().format(),
     updatedAt: dayjs().format(),
-  });
+  }) as User;
 
   const mockUserService = {
     findOne: vi.fn(),
   };
 
-  const mockConfigService = {
-    get: vi.fn(),
-  };
+  const mockConfigService = MockUtils.services.createConfigServiceMock({
+    JWT_SECRET: 'test-secret',
+  });
 
   beforeEach(async () => {
-    mockConfigService.get.mockReturnValue('test-secret');
-
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         JwtStrategy,
-        {
-          provide: UserService,
-          useValue: mockUserService,
-        },
-        {
-          provide: ConfigService,
-          useValue: mockConfigService,
-        },
+        { provide: UserService, useValue: mockUserService },
+        { provide: ConfigService, useValue: mockConfigService },
       ],
     }).compile();
 
     strategy = module.get<JwtStrategy>(JwtStrategy);
     userService = module.get<UserService>(UserService);
-    configService = module.get<ConfigService>(ConfigService);
-
     vi.clearAllMocks();
   });
 
@@ -61,10 +51,12 @@ describe('JwtStrategy', () => {
   });
 
   it('should throw error when JWT_SECRET is not configured', () => {
-    mockConfigService.get.mockReturnValue(undefined);
+    const badConfigService = MockUtils.services.createConfigServiceMock({
+      JWT_SECRET: undefined,
+    });
 
     expect(() => {
-      new JwtStrategy(configService, userService);
+      new JwtStrategy(badConfigService, userService);
     }).toThrow('JWT_SECRET is not configured');
   });
 

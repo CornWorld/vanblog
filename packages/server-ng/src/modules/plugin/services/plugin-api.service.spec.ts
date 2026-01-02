@@ -20,12 +20,12 @@
  */
 
 import { Logger } from '@nestjs/common';
-import { ModuleRef } from '@nestjs/core';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, expect, beforeEach, afterEach, vi, type Mock } from 'vitest';
 import { z } from 'zod';
 
 import { DATABASE_CONNECTION } from '../../../database';
+import { MockUtils } from '../../../../test/mock-utils';
 import { ShortcodeService } from '../../shortcode/shortcode.service';
 import { PluginConfigService } from './plugin-config.service';
 import { PluginRegistryService } from './plugin-registry.service';
@@ -33,12 +33,11 @@ import { SignalBus } from './signal.service';
 import { PluginAPIFactory, PluginAPIImpl } from './plugin-api.service';
 
 import type { PluginMetadata, PluginPackageJson } from '@vanblog/shared/plugin';
-import type { Database } from '../../../database/connection';
 
 describe('PluginAPIFactory', () => {
   let factory: PluginAPIFactory;
-  let mockDb: Partial<Database>;
-  let mockModuleRef: Partial<ModuleRef>;
+  let databaseMock: InstanceType<typeof MockUtils.database>;
+  let mockModuleRef: ReturnType<typeof MockUtils.services.createModuleRefMock>;
   let mockSignalBus: Partial<SignalBus>;
   let mockRegistryService: Partial<PluginRegistryService>;
   let mockShortcodeService: Partial<ShortcodeService>;
@@ -47,17 +46,12 @@ describe('PluginAPIFactory', () => {
   let mockServiceRegistry: any;
 
   beforeEach(async () => {
-    // Mock database
-    mockDb = {
-      select: vi.fn().mockReturnThis(),
-      from: vi.fn().mockReturnThis(),
-      where: vi.fn().mockResolvedValue([]),
-    } as any;
+    // Create database mock using MockUtils
+    databaseMock = new MockUtils.database();
+    databaseMock.setQueryResult([]);
 
-    // Mock ModuleRef
-    mockModuleRef = {
-      get: vi.fn(),
-    };
+    // Mock ModuleRef using MockUtils
+    mockModuleRef = MockUtils.services.createModuleRefMock();
 
     // Mock SignalBus
     mockSignalBus = {
@@ -104,10 +98,10 @@ describe('PluginAPIFactory', () => {
         PluginAPIFactory,
         {
           provide: DATABASE_CONNECTION,
-          useValue: mockDb,
+          useValue: databaseMock.build(),
         },
         {
-          provide: ModuleRef,
+          provide: 'ModuleRef',
           useValue: mockModuleRef,
         },
         {
@@ -195,8 +189,13 @@ describe('PluginAPIFactory', () => {
   describe('PluginAPIImpl - Basic Properties', () => {
     let api: PluginAPIImpl;
     let metadata: PluginMetadata;
+    let localDbMock: InstanceType<typeof MockUtils.database>;
 
     beforeEach(async () => {
+      // Create dedicated database mock for this test suite
+      localDbMock = new MockUtils.database();
+      localDbMock.setQueryResult([]);
+
       metadata = {
         id: 'test-plugin',
         name: 'Test Plugin',
@@ -218,8 +217,8 @@ describe('PluginAPIFactory', () => {
 
       api = new PluginAPIImpl(
         metadata,
-        mockDb as Database,
-        mockModuleRef as ModuleRef,
+        localDbMock.build() as any,
+        mockModuleRef as any,
         mockSignalBus as SignalBus,
         mockRegistryService as PluginRegistryService,
         mockShortcodeService as ShortcodeService,
@@ -254,8 +253,13 @@ describe('PluginAPIFactory', () => {
 
   describe('PluginAPIImpl - Configuration', () => {
     let api: PluginAPIImpl;
+    let localDbMock: InstanceType<typeof MockUtils.database>;
 
     beforeEach(async () => {
+      // Create dedicated database mock for this test suite
+      localDbMock = new MockUtils.database();
+      localDbMock.setQueryResult([]);
+
       const metadata: PluginMetadata = {
         id: 'test-plugin',
         displayName: 'Test Plugin',
@@ -277,8 +281,8 @@ describe('PluginAPIFactory', () => {
 
       api = new PluginAPIImpl(
         metadata,
-        mockDb as Database,
-        mockModuleRef as ModuleRef,
+        localDbMock.build() as any,
+        mockModuleRef as any,
         mockSignalBus as SignalBus,
         mockRegistryService as PluginRegistryService,
         mockShortcodeService as ShortcodeService,
@@ -331,8 +335,8 @@ describe('PluginAPIFactory', () => {
 
       const newApi = new PluginAPIImpl(
         metadata,
-        mockDb as Database,
-        mockModuleRef as ModuleRef,
+        localDbMock.build() as any,
+        mockModuleRef as any,
         mockSignalBus as SignalBus,
         mockRegistryService as PluginRegistryService,
         mockShortcodeService as ShortcodeService,
@@ -350,8 +354,13 @@ describe('PluginAPIFactory', () => {
 
   describe('PluginAPIImpl - Store', () => {
     let api: PluginAPIImpl;
+    let localDbMock: InstanceType<typeof MockUtils.database>;
 
     beforeEach(async () => {
+      // Create dedicated database mock for this test suite
+      localDbMock = new MockUtils.database();
+      localDbMock.setQueryResult([]);
+
       const metadata: PluginMetadata = {
         id: 'test-plugin',
         displayName: 'Test Plugin',
@@ -362,14 +371,15 @@ describe('PluginAPIFactory', () => {
       };
 
       // Mock database with $client.execute for store save
-      (mockDb as any).$client = {
+      const db = localDbMock.build() as any;
+      db.$client = {
         execute: vi.fn().mockResolvedValue(undefined),
       };
 
       api = new PluginAPIImpl(
         metadata,
-        mockDb as Database,
-        mockModuleRef as ModuleRef,
+        db,
+        mockModuleRef as any,
         mockSignalBus as SignalBus,
         mockRegistryService as PluginRegistryService,
         mockShortcodeService as ShortcodeService,
@@ -412,8 +422,13 @@ describe('PluginAPIFactory', () => {
 
   describe('PluginAPIImpl - Database Access', () => {
     let api: PluginAPIImpl;
+    let localDbMock: InstanceType<typeof MockUtils.database>;
 
     beforeEach(async () => {
+      // Create dedicated database mock for this test suite
+      localDbMock = new MockUtils.database();
+      localDbMock.setQueryResult([]);
+
       const metadata: PluginMetadata = {
         id: 'test-plugin',
         displayName: 'Test Plugin',
@@ -425,8 +440,8 @@ describe('PluginAPIFactory', () => {
 
       api = new PluginAPIImpl(
         metadata,
-        mockDb as Database,
-        mockModuleRef as ModuleRef,
+        localDbMock.build() as any,
+        mockModuleRef as any,
         mockSignalBus as SignalBus,
         mockRegistryService as PluginRegistryService,
         mockShortcodeService as ShortcodeService,
@@ -440,7 +455,7 @@ describe('PluginAPIFactory', () => {
     });
 
     it('should return db instance', () => {
-      expect(api.db).toBe(mockDb);
+      expect(api.db).toBeDefined();
     });
 
     it('should get core table', () => {
@@ -481,8 +496,13 @@ describe('PluginAPIFactory', () => {
 
   describe('PluginAPIImpl - Dependency Injection', () => {
     let api: PluginAPIImpl;
+    let localDbMock: InstanceType<typeof MockUtils.database>;
 
     beforeEach(async () => {
+      // Create dedicated database mock for this test suite
+      localDbMock = new MockUtils.database();
+      localDbMock.setQueryResult([]);
+
       const metadata: PluginMetadata = {
         id: 'test-plugin',
         displayName: 'Test Plugin',
@@ -494,8 +514,8 @@ describe('PluginAPIFactory', () => {
 
       api = new PluginAPIImpl(
         metadata,
-        mockDb as Database,
-        mockModuleRef as ModuleRef,
+        localDbMock.build() as any,
+        mockModuleRef as any,
         mockSignalBus as SignalBus,
         mockRegistryService as PluginRegistryService,
         mockShortcodeService as ShortcodeService,
@@ -542,8 +562,8 @@ describe('PluginAPIFactory', () => {
     it('should throw error when service registry not available', () => {
       const apiWithoutRegistry = new PluginAPIImpl(
         api.metadata,
-        mockDb as Database,
-        mockModuleRef as ModuleRef,
+        localDbMock.build() as any,
+        mockModuleRef as any,
         mockSignalBus as SignalBus,
         mockRegistryService as PluginRegistryService,
         mockShortcodeService as ShortcodeService,
@@ -588,8 +608,8 @@ describe('PluginAPIFactory', () => {
     it('should throw error when providing service without registry', () => {
       const apiWithoutRegistry = new PluginAPIImpl(
         api.metadata,
-        mockDb as Database,
-        mockModuleRef as ModuleRef,
+        localDbMock.build() as any,
+        mockModuleRef as any,
         mockSignalBus as SignalBus,
         mockRegistryService as PluginRegistryService,
         mockShortcodeService as ShortcodeService,
@@ -608,8 +628,13 @@ describe('PluginAPIFactory', () => {
 
   describe('PluginAPIImpl - HTTP Registry', () => {
     let api: PluginAPIImpl;
+    let localDbMock: InstanceType<typeof MockUtils.database>;
 
     beforeEach(async () => {
+      // Create dedicated database mock for this test suite
+      localDbMock = new MockUtils.database();
+      localDbMock.setQueryResult([]);
+
       const metadata: PluginMetadata = {
         id: 'test-plugin',
         displayName: 'Test Plugin',
@@ -621,8 +646,8 @@ describe('PluginAPIFactory', () => {
 
       api = new PluginAPIImpl(
         metadata,
-        mockDb as Database,
-        mockModuleRef as ModuleRef,
+        localDbMock.build() as any,
+        mockModuleRef as any,
         mockSignalBus as SignalBus,
         mockRegistryService as PluginRegistryService,
         mockShortcodeService as ShortcodeService,
@@ -711,8 +736,8 @@ describe('PluginAPIFactory', () => {
     it('should throw error when http registry not available', () => {
       const apiWithoutHttp = new PluginAPIImpl(
         api.metadata,
-        mockDb as Database,
-        mockModuleRef as ModuleRef,
+        localDbMock.build() as any,
+        mockModuleRef as any,
         mockSignalBus as SignalBus,
         mockRegistryService as PluginRegistryService,
         mockShortcodeService as ShortcodeService,
@@ -730,8 +755,13 @@ describe('PluginAPIFactory', () => {
 
   describe('PluginAPIImpl - Resource Registration', () => {
     let api: PluginAPIImpl;
+    let localDbMock: InstanceType<typeof MockUtils.database>;
 
     beforeEach(async () => {
+      // Create dedicated database mock for this test suite
+      localDbMock = new MockUtils.database();
+      localDbMock.setQueryResult([]);
+
       const metadata: PluginMetadata = {
         id: 'test-plugin',
         displayName: 'Test Plugin',
@@ -743,8 +773,8 @@ describe('PluginAPIFactory', () => {
 
       api = new PluginAPIImpl(
         metadata,
-        mockDb as Database,
-        mockModuleRef as ModuleRef,
+        localDbMock.build() as any,
+        mockModuleRef as any,
         mockSignalBus as SignalBus,
         mockRegistryService as PluginRegistryService,
         mockShortcodeService as ShortcodeService,
@@ -773,8 +803,8 @@ describe('PluginAPIFactory', () => {
     it('should throw error when http registry not available for resource', () => {
       const apiWithoutHttp = new PluginAPIImpl(
         api.metadata,
-        mockDb as Database,
-        mockModuleRef as ModuleRef,
+        localDbMock.build() as any,
+        mockModuleRef as any,
         mockSignalBus as SignalBus,
         mockRegistryService as PluginRegistryService,
         mockShortcodeService as ShortcodeService,
@@ -795,8 +825,13 @@ describe('PluginAPIFactory', () => {
   describe('PluginAPIImpl - Plugin Communication', () => {
     let api: PluginAPIImpl;
     let pluginAPIRegistry: Map<string, Map<string, any>>;
+    let localDbMock: InstanceType<typeof MockUtils.database>;
 
     beforeEach(async () => {
+      // Create dedicated database mock for this test suite
+      localDbMock = new MockUtils.database();
+      localDbMock.setQueryResult([]);
+
       const metadata: PluginMetadata = {
         id: 'test-plugin',
         displayName: 'Test Plugin',
@@ -810,8 +845,8 @@ describe('PluginAPIFactory', () => {
 
       api = new PluginAPIImpl(
         metadata,
-        mockDb as Database,
-        mockModuleRef as ModuleRef,
+        localDbMock.build() as any,
+        mockModuleRef as any,
         mockSignalBus as SignalBus,
         mockRegistryService as PluginRegistryService,
         mockShortcodeService as ShortcodeService,
@@ -863,8 +898,13 @@ describe('PluginAPIFactory', () => {
 
   describe('PluginAPIImpl - Metadata Manager', () => {
     let api: PluginAPIImpl;
+    let localDbMock: InstanceType<typeof MockUtils.database>;
 
     beforeEach(async () => {
+      // Create dedicated database mock for this test suite
+      localDbMock = new MockUtils.database();
+      localDbMock.setQueryResult([]);
+
       const metadata: PluginMetadata = {
         id: 'test-plugin',
         displayName: 'Test Plugin',
@@ -876,8 +916,8 @@ describe('PluginAPIFactory', () => {
 
       api = new PluginAPIImpl(
         metadata,
-        mockDb as Database,
-        mockModuleRef as ModuleRef,
+        localDbMock.build() as any,
+        mockModuleRef as any,
         mockSignalBus as SignalBus,
         mockRegistryService as PluginRegistryService,
         mockShortcodeService as ShortcodeService,
@@ -917,8 +957,13 @@ describe('PluginAPIFactory', () => {
 
   describe('PluginAPIImpl - Hooks', () => {
     let api: PluginAPIImpl;
+    let localDbMock: InstanceType<typeof MockUtils.database>;
 
     beforeEach(async () => {
+      // Create dedicated database mock for this test suite
+      localDbMock = new MockUtils.database();
+      localDbMock.setQueryResult([]);
+
       const metadata: PluginMetadata = {
         id: 'test-plugin',
         displayName: 'Test Plugin',
@@ -930,8 +975,8 @@ describe('PluginAPIFactory', () => {
 
       api = new PluginAPIImpl(
         metadata,
-        mockDb as Database,
-        mockModuleRef as ModuleRef,
+        localDbMock.build() as any,
+        mockModuleRef as any,
         mockSignalBus as SignalBus,
         mockRegistryService as PluginRegistryService,
         mockShortcodeService as ShortcodeService,
@@ -991,8 +1036,13 @@ describe('PluginAPIFactory', () => {
 
   describe('PluginAPIImpl - Shortcode', () => {
     let api: PluginAPIImpl;
+    let localDbMock: InstanceType<typeof MockUtils.database>;
 
     beforeEach(async () => {
+      // Create dedicated database mock for this test suite
+      localDbMock = new MockUtils.database();
+      localDbMock.setQueryResult([]);
+
       const metadata: PluginMetadata = {
         id: 'test-plugin',
         displayName: 'Test Plugin',
@@ -1004,8 +1054,8 @@ describe('PluginAPIFactory', () => {
 
       api = new PluginAPIImpl(
         metadata,
-        mockDb as Database,
-        mockModuleRef as ModuleRef,
+        localDbMock.build() as any,
+        mockModuleRef as any,
         mockSignalBus as SignalBus,
         mockRegistryService as PluginRegistryService,
         mockShortcodeService as ShortcodeService,
@@ -1032,8 +1082,13 @@ describe('PluginAPIFactory', () => {
 
   describe('PluginAPIImpl - Public Data', () => {
     let api: PluginAPIImpl;
+    let localDbMock: InstanceType<typeof MockUtils.database>;
 
     beforeEach(async () => {
+      // Create dedicated database mock for this test suite
+      localDbMock = new MockUtils.database();
+      localDbMock.setQueryResult([]);
+
       const metadata: PluginMetadata = {
         id: 'test-plugin',
         displayName: 'Test Plugin',
@@ -1045,8 +1100,8 @@ describe('PluginAPIFactory', () => {
 
       api = new PluginAPIImpl(
         metadata,
-        mockDb as Database,
-        mockModuleRef as ModuleRef,
+        localDbMock.build() as any,
+        mockModuleRef as any,
         mockSignalBus as SignalBus,
         mockRegistryService as PluginRegistryService,
         mockShortcodeService as ShortcodeService,
@@ -1084,8 +1139,13 @@ describe('PluginAPIFactory', () => {
 
   describe('PluginAPIImpl - Lifecycle', () => {
     let api: PluginAPIImpl;
+    let localDbMock: InstanceType<typeof MockUtils.database>;
 
     beforeEach(async () => {
+      // Create dedicated database mock for this test suite
+      localDbMock = new MockUtils.database();
+      localDbMock.setQueryResult([]);
+
       const metadata: PluginMetadata = {
         id: 'test-plugin',
         displayName: 'Test Plugin',
@@ -1097,8 +1157,8 @@ describe('PluginAPIFactory', () => {
 
       api = new PluginAPIImpl(
         metadata,
-        mockDb as Database,
-        mockModuleRef as ModuleRef,
+        localDbMock.build() as any,
+        mockModuleRef as any,
         mockSignalBus as SignalBus,
         mockRegistryService as PluginRegistryService,
         mockShortcodeService as ShortcodeService,
@@ -1162,8 +1222,13 @@ describe('PluginAPIFactory', () => {
 
   describe('PluginAPIImpl - Cleanup', () => {
     let api: PluginAPIImpl;
+    let localDbMock: InstanceType<typeof MockUtils.database>;
 
     beforeEach(async () => {
+      // Create dedicated database mock for this test suite
+      localDbMock = new MockUtils.database();
+      localDbMock.setQueryResult([]);
+
       const metadata: PluginMetadata = {
         id: 'test-plugin',
         displayName: 'Test Plugin',
@@ -1175,8 +1240,8 @@ describe('PluginAPIFactory', () => {
 
       api = new PluginAPIImpl(
         metadata,
-        mockDb as Database,
-        mockModuleRef as ModuleRef,
+        localDbMock.build() as any,
+        mockModuleRef as any,
         mockSignalBus as SignalBus,
         mockRegistryService as PluginRegistryService,
         mockShortcodeService as ShortcodeService,

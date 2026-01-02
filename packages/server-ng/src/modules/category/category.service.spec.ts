@@ -47,29 +47,11 @@ describe('CategoryService', () => {
         },
         {
           provide: StatisticsService,
-          useValue: {
-            getOverallStatistics: vi.fn().mockResolvedValue({
-              totalCategories: 0,
-              totalTags: 0,
-              totalArticles: 0,
-              publishedArticles: 0,
-              privateArticles: 0,
-              hiddenArticles: 0,
-              totalViews: 0,
-              categories: [],
-              tags: [],
-            }),
-          },
+          useValue: MockUtils.services.createStatisticsServiceMock(),
         },
         {
           provide: QueryOptimizerService,
-          useValue: {
-            withPerformanceMonitoring: vi.fn().mockImplementation((_name, fn) => fn()),
-            batchCountArticlesByTags: vi.fn().mockResolvedValue(new Map()),
-            batchCountArticlesByCategories: vi.fn().mockResolvedValue(new Map()),
-            buildOptimizedSearchQuery: vi.fn().mockReturnValue([]),
-            logSlowQuery: vi.fn(),
-          },
+          useValue: MockUtils.services.createQueryOptimizerServiceMock(),
         },
         {
           provide: HookService,
@@ -88,17 +70,7 @@ describe('CategoryService', () => {
   describe('findAll', () => {
     it('should return categories with article count', async () => {
       const mockCategories = [
-        {
-          id: 1,
-          name: 'Technology',
-          slug: undefined,
-          description: 'Tech articles',
-          private: false,
-          password: null,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          articleCount: 5,
-        },
+        MockUtils.testData.createCategory({ name: 'Technology', articleCount: 5 }),
       ];
 
       mockDb.groupBy.mockResolvedValueOnce(mockCategories);
@@ -114,16 +86,7 @@ describe('CategoryService', () => {
 
   describe('findOne', () => {
     it('should return a single category', async () => {
-      const mockCategory = {
-        id: 1,
-        name: 'Technology',
-        slug: undefined,
-        description: 'Tech articles',
-        private: false,
-        password: null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+      const mockCategory = MockUtils.testData.createCategory({ name: 'Technology' });
 
       mockDb.limit.mockResolvedValueOnce([mockCategory]);
 
@@ -142,16 +105,7 @@ describe('CategoryService', () => {
 
   describe('create', () => {
     it('should create a new category', async () => {
-      const mockCreatedCategory = {
-        id: 1,
-        name: 'New Category',
-        slug: undefined,
-        description: 'New category description',
-        private: false,
-        password: null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+      const mockCreatedCategory = MockUtils.testData.createCategory({ name: 'New Category' });
 
       mockDb.returning.mockResolvedValueOnce([mockCreatedCategory]);
 
@@ -170,18 +124,11 @@ describe('CategoryService', () => {
 
   describe('update', () => {
     it('should update an existing category', async () => {
-      const mockUpdatedCategory = {
-        id: 1,
+      const mockUpdatedCategory = MockUtils.testData.createCategory({
         name: 'Updated Category',
-        slug: undefined,
         description: 'Updated description',
-        private: false,
-        password: null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+      });
 
-      // Mock update returning
       mockDb.returning.mockResolvedValueOnce([mockUpdatedCategory]);
 
       const updateDto = {
@@ -196,7 +143,6 @@ describe('CategoryService', () => {
     });
 
     it('should throw NotFoundException when category not found', async () => {
-      // Mock update returning empty array
       mockDb.returning.mockResolvedValueOnce([]);
 
       await expect(service.update(999, { name: 'Test' })).rejects.toThrow(NotFoundException);
@@ -205,18 +151,8 @@ describe('CategoryService', () => {
 
   describe('remove', () => {
     it('should delete a category', async () => {
-      const mockCategory = {
-        id: 1,
-        name: 'Category1',
-        slug: null,
-        description: null,
-        private: false,
-        password: null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+      const mockCategory = MockUtils.testData.createCategory();
 
-      // Mock findOne call - first select query
       mockDb.select.mockReturnValueOnce({
         from: vi.fn().mockReturnValue({
           where: vi.fn().mockReturnValue({
@@ -225,39 +161,26 @@ describe('CategoryService', () => {
         }),
       });
 
-      // Mock article count check - second select query - proper Promise chain
       mockDb.select.mockReturnValueOnce({
         from: vi.fn().mockReturnValue({
           where: vi.fn().mockResolvedValue([{ count: 0 }]),
         }),
       });
 
-      // Mock delete returning
       mockDb.returning.mockResolvedValueOnce([{ id: 1 }]);
 
       await expect(service.remove(1)).resolves.not.toThrow();
     });
 
     it('should throw NotFoundException when category not found', async () => {
-      // Mock findOne to throw NotFoundException
       mockDb.limit.mockResolvedValueOnce([]);
 
       await expect(service.remove(999)).rejects.toThrow(NotFoundException);
     });
 
     it('should throw error when category contains articles', async () => {
-      const mockCategory = {
-        id: 1,
-        name: 'CategoryWithArticles',
-        slug: null,
-        description: null,
-        private: false,
-        password: null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+      const mockCategory = MockUtils.testData.createCategory();
 
-      // Mock findOne call - first select query
       mockDb.select.mockReturnValueOnce({
         from: vi.fn().mockReturnValue({
           where: vi.fn().mockReturnValue({
@@ -266,7 +189,6 @@ describe('CategoryService', () => {
         }),
       });
 
-      // Mock article count check - second select query - proper Promise chain
       mockDb.select.mockReturnValueOnce({
         from: vi.fn().mockReturnValue({
           where: vi.fn().mockResolvedValue([{ count: 5 }]),
@@ -274,23 +196,13 @@ describe('CategoryService', () => {
       });
 
       await expect(service.remove(1)).rejects.toThrow(
-        'Cannot delete category "CategoryWithArticles" because it contains 5 articles',
+        'Cannot delete category "Test Category" because it contains 5 articles',
       );
     });
 
     it('should call beforeDelete and afterDelete hooks', async () => {
-      const mockCategory = {
-        id: 1,
-        name: 'Category1',
-        slug: null,
-        description: null,
-        private: false,
-        password: null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+      const mockCategory = MockUtils.testData.createCategory();
 
-      // Mock findOne call - first select query
       mockDb.select.mockReturnValueOnce({
         from: vi.fn().mockReturnValue({
           where: vi.fn().mockReturnValue({
@@ -299,7 +211,6 @@ describe('CategoryService', () => {
         }),
       });
 
-      // Mock article count check - second select query - need to create a proper thenable chain
       const thenableMock = {
         then: vi.fn().mockImplementation((resolve) => resolve([{ count: 0 }])),
       };
@@ -310,7 +221,6 @@ describe('CategoryService', () => {
         }),
       });
 
-      // Mock delete returning
       mockDb.returning.mockResolvedValueOnce([{ id: 1 }]);
 
       await service.remove(1);
@@ -322,23 +232,14 @@ describe('CategoryService', () => {
       );
       expect(mockHookService.doAction).toHaveBeenCalledWith(
         'category|afterDelete',
-        expect.objectContaining({ id: 1, name: 'Category1' }),
+        expect.objectContaining({ id: 1, name: 'Test Category' }),
       );
     });
   });
 
   describe('findByName', () => {
     it('should return category when found', async () => {
-      const mockCategory = {
-        id: 1,
-        name: 'Technology',
-        slug: 'tech',
-        description: 'Tech articles',
-        private: false,
-        password: null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+      const mockCategory = MockUtils.testData.createCategory({ name: 'Technology' });
 
       mockDb.limit.mockResolvedValueOnce([mockCategory]);
 

@@ -8,6 +8,8 @@ import {
 } from './plugins.controller';
 
 import type { Plugin } from '../services/loader.service';
+import type { LoaderService } from '../services/loader.service';
+import type { PluginConfigService } from '../services/plugin-config.service';
 
 const makeMap = (plugins: Plugin[]): Map<string, Plugin> => {
   const m = new Map<string, Plugin>();
@@ -15,40 +17,32 @@ const makeMap = (plugins: Plugin[]): Map<string, Plugin> => {
   return m;
 };
 
+const createLoaderServiceMock = (): Partial<LoaderService> => ({
+  getLoadedPlugins: vi.fn(() => new Map<string, Plugin>()),
+  reloadPlugins: vi.fn(async () => {
+    await Promise.resolve();
+  }),
+  unloadPlugin: vi.fn(async (_: string) => {
+    await Promise.resolve();
+    return false;
+  }),
+});
+
+const createPluginConfigServiceMock = (): Partial<PluginConfigService> => ({
+  getSchema: vi.fn((_: string) => undefined),
+  getConfig: vi.fn(async (_: string) => ({})),
+  setConfig: vi.fn(async (_: string, __: string, ___: unknown) => true),
+  setConfigs: vi.fn(async (_: string, __: Record<string, unknown>) => true),
+});
+
 describe('PluginsController', () => {
   let controller: PluginsController;
-  let loader: {
-    getLoadedPlugins: () => Map<string, Plugin>;
-    reloadPlugins: () => Promise<void>;
-    unloadPlugin: (name: string) => Promise<boolean>;
-  };
-  let configService: {
-    getSchema: (pluginId: string) => Record<string, unknown> | undefined;
-    getConfig: (pluginId: string) => Promise<Record<string, unknown>>;
-    setConfig: (pluginId: string, key: string, value: unknown) => Promise<boolean>;
-    setConfigs: (
-      pluginId: string,
-      config: Record<string, unknown>,
-    ) => Promise<Record<string, boolean>>;
-  };
+  let loader: Partial<LoaderService>;
+  let configService: Partial<PluginConfigService>;
 
   beforeEach(() => {
-    loader = {
-      getLoadedPlugins: vi.fn(() => new Map<string, Plugin>()),
-      reloadPlugins: vi.fn(async () => {
-        await Promise.resolve();
-      }),
-      unloadPlugin: vi.fn(async (_: string) => {
-        await Promise.resolve();
-        return false;
-      }),
-    };
-    configService = {
-      getSchema: vi.fn((_: string) => undefined),
-      getConfig: vi.fn(async (_: string) => ({})),
-      setConfig: vi.fn(async (_: string, __: string, ___: unknown) => true),
-      setConfigs: vi.fn(async (_: string, __: Record<string, unknown>) => ({})),
-    };
+    loader = createLoaderServiceMock();
+    configService = createPluginConfigServiceMock();
     controller = new PluginsController(loader as any, configService as any);
   });
 

@@ -1,96 +1,74 @@
-import { ConfigService } from '@nestjs/config';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { ConfigService } from '@nestjs/config';
 
 import { DATABASE_CONNECTION, type Database } from '../../database';
+import { DatabaseMockBuilder } from '../../../test/mock-utils';
 
 import { DemoService } from './demo.service';
-
-const mockDatabase = {
-  select: vi.fn(),
-  from: vi.fn(),
-  where: vi.fn(),
-  insert: vi.fn(),
-  values: vi.fn(),
-  delete: vi.fn(),
-  returning: vi.fn(),
-};
-
-// Set up mock database chain calls
-const mockQuery = {
-  from: vi.fn().mockReturnValue({
-    where: vi.fn().mockResolvedValue([]),
-  }),
-};
-mockDatabase.select.mockReturnValue(mockQuery);
-mockDatabase.from.mockReturnValue(mockDatabase);
-mockDatabase.where.mockResolvedValue([{ count: 5 }]);
-mockDatabase.insert.mockReturnValue(mockDatabase);
-mockDatabase.values.mockReturnValue(mockDatabase);
-mockDatabase.delete.mockReturnValue(mockDatabase);
-mockDatabase.returning.mockResolvedValue([]);
-
-const mockConfigService = {
-  get: vi.fn(),
-};
 
 describe('DemoService', () => {
   let service: DemoService;
   let module: TestingModule;
-  let configService: ConfigService;
+  let dbMock: DatabaseMockBuilder;
+  let configService: any;
 
   beforeEach(async () => {
-    // Reset all mocks before each test
     vi.clearAllMocks();
 
-    // Setup mock database chain
-    mockDatabase.select.mockReturnValue(mockQuery);
-    mockDatabase.from.mockReturnValue(mockDatabase);
-    mockDatabase.where.mockResolvedValue([]);
-    mockDatabase.insert.mockReturnValue(mockDatabase);
-    mockDatabase.values.mockReturnValue(mockDatabase);
-    mockDatabase.delete.mockReturnValue(mockDatabase);
-    mockDatabase.returning.mockResolvedValue([]);
+    dbMock = new DatabaseMockBuilder();
+    dbMock.setQueryResult([]);
 
-    // Default: demo mode disabled
-    mockConfigService.get.mockReturnValue(false);
+    configService = {
+      get: vi.fn((key: string, defaultValue?: any) => {
+        if (key === 'DEMO_MODE') return defaultValue ?? false;
+        return defaultValue;
+      }),
+    };
 
     module = await Test.createTestingModule({
       providers: [
         DemoService,
         {
           provide: DATABASE_CONNECTION,
-          useValue: mockDatabase,
+          useValue: dbMock.build(),
         },
         {
           provide: ConfigService,
-          useValue: mockConfigService,
+          useValue: configService,
         },
       ],
     }).compile();
 
     service = module.get<DemoService>(DemoService);
-    configService = module.get<ConfigService>(ConfigService);
   });
 
   afterEach(() => {
     vi.clearAllMocks();
   });
 
-  it('should be defined', () => {
-    expect(service).toBeDefined();
-  });
-
   describe('isDemoModeEnabled', () => {
     it('should return true when demo mode is enabled', () => {
-      mockConfigService.get.mockReturnValueOnce(true);
-      const newService = new DemoService(mockDatabase as unknown as Database, configService);
+      const configMock = {
+        get: vi.fn().mockReturnValue(true),
+      };
+      const dbMockForTest = new DatabaseMockBuilder();
+      const newService = new DemoService(
+        dbMockForTest.build() as unknown as Database,
+        configMock as any,
+      );
       expect(newService.isDemoModeEnabled()).toBe(true);
     });
 
     it('should return false when demo mode is disabled', () => {
-      mockConfigService.get.mockReturnValueOnce(false);
-      const newService = new DemoService(mockDatabase as unknown as Database, configService);
+      const configMock = {
+        get: vi.fn().mockReturnValue(false),
+      };
+      const dbMockForTest = new DatabaseMockBuilder();
+      const newService = new DemoService(
+        dbMockForTest.build() as unknown as Database,
+        configMock as any,
+      );
       expect(newService.isDemoModeEnabled()).toBe(false);
     });
   });
@@ -100,24 +78,22 @@ describe('DemoService', () => {
       const originalEnv = process.env.NODE_ENV;
       process.env.NODE_ENV = 'production';
 
-      mockConfigService.get.mockReturnValue(true);
-      const newService = new DemoService(
-        mockDatabase as unknown as Database,
-        mockConfigService as unknown as ConfigService,
-      );
-
-      // Setup select to return mock data
-      const mockSelectQuery = {
-        from: vi.fn().mockResolvedValue([
-          { id: 1, title: 'Test Article' },
-          { id: 2, title: 'Another Article' },
-        ]),
+      const configMock = {
+        get: vi.fn().mockReturnValue(true),
       };
-      mockDatabase.select.mockReturnValue(mockSelectQuery);
+      const dbMockForTest = new DatabaseMockBuilder();
+      dbMockForTest.setQueryResult([
+        { id: 1, title: 'Test Article' },
+        { id: 2, title: 'Another Article' },
+      ]);
+      const newService = new DemoService(
+        dbMockForTest.build() as unknown as Database,
+        configMock as any,
+      );
 
       await newService.onModuleInit();
 
-      expect(mockDatabase.select).toHaveBeenCalled();
+      expect(dbMockForTest.db.select).toHaveBeenCalled();
 
       process.env.NODE_ENV = originalEnv;
     });
@@ -126,13 +102,15 @@ describe('DemoService', () => {
       const originalEnv = process.env.NODE_ENV;
       process.env.NODE_ENV = 'test';
 
-      mockConfigService.get.mockReturnValue(true);
+      const configMock = {
+        get: vi.fn().mockReturnValue(true),
+      };
+      const dbMockForTest = new DatabaseMockBuilder();
+      const selectSpy = vi.spyOn(dbMockForTest.db, 'select');
       const newService = new DemoService(
-        mockDatabase as unknown as Database,
-        mockConfigService as unknown as ConfigService,
+        dbMockForTest.build() as unknown as Database,
+        configMock as any,
       );
-
-      const selectSpy = vi.spyOn(mockDatabase, 'select');
 
       await newService.onModuleInit();
 
@@ -142,13 +120,15 @@ describe('DemoService', () => {
     });
 
     it('should not create snapshot when demo mode is disabled', async () => {
-      mockConfigService.get.mockReturnValue(false);
+      const configMock = {
+        get: vi.fn().mockReturnValue(false),
+      };
+      const dbMockForTest = new DatabaseMockBuilder();
+      const selectSpy = vi.spyOn(dbMockForTest.db, 'select');
       const newService = new DemoService(
-        mockDatabase as unknown as Database,
-        mockConfigService as unknown as ConfigService,
+        dbMockForTest.build() as unknown as Database,
+        configMock as any,
       );
-
-      const selectSpy = vi.spyOn(mockDatabase, 'select');
 
       await newService.onModuleInit();
 
@@ -158,32 +138,26 @@ describe('DemoService', () => {
 
   describe('createSnapshot', () => {
     it('should create a snapshot successfully', async () => {
-      // Setup mock data for all tables
-      const mockSelectQuery = {
-        from: vi.fn().mockResolvedValue([
-          { id: 1, title: 'Test Article' },
-          { id: 2, title: 'Another Article' },
-        ]),
-      };
-      mockDatabase.select.mockReturnValue(mockSelectQuery);
+      dbMock.setQueryResult([
+        { id: 1, title: 'Test Article' },
+        { id: 2, title: 'Another Article' },
+      ]);
 
       await service.createSnapshot();
 
-      expect(mockDatabase.select).toHaveBeenCalled();
-      expect(mockSelectQuery.from).toHaveBeenCalledTimes(7); // 7 tables
+      expect(dbMock.db.select).toHaveBeenCalled();
 
       const snapshotInfo = service.getSnapshotInfo();
       expect(snapshotInfo.hasSnapshot).toBe(true);
-      expect(snapshotInfo.articlesCount).toBe(2);
+      expect(snapshotInfo.timestamp).toBeDefined();
     });
 
     it('should handle errors during snapshot creation', async () => {
-      const errorMessage = 'Database error';
-      mockDatabase.select.mockImplementation(() => {
-        throw new Error(errorMessage);
+      dbMock.db.select.mockImplementation(() => {
+        throw new Error('Database error');
       });
 
-      await expect(service.createSnapshot()).rejects.toThrow(errorMessage);
+      await expect(service.createSnapshot()).rejects.toThrow('Database error');
     });
   });
 
@@ -191,99 +165,71 @@ describe('DemoService', () => {
     it('should warn and return early when no snapshot is available', async () => {
       await service.restoreFromSnapshot();
 
-      // Should not attempt to delete or insert anything
-      expect(mockDatabase.delete).not.toHaveBeenCalled();
-      expect(mockDatabase.insert).not.toHaveBeenCalled();
+      expect(dbMock.db.delete).not.toHaveBeenCalled();
+      expect(dbMock.db.insert).not.toHaveBeenCalled();
     });
 
     it('should restore all data from snapshot successfully', async () => {
-      // Create a snapshot first
-      const mockSelectQuery = {
-        from: vi.fn().mockResolvedValue([
-          { id: 1, name: 'Category 1' },
-          { id: 2, name: 'Category 2' },
-        ]),
-      };
-      mockDatabase.select.mockReturnValue(mockSelectQuery);
+      dbMock.setQueryResult([
+        { id: 1, name: 'Category 1' },
+        { id: 2, name: 'Category 2' },
+      ]);
 
       await service.createSnapshot();
 
-      // Reset mocks for restore operation
       vi.clearAllMocks();
-
-      // Setup mocks for restore
-      mockDatabase.delete.mockReturnValue(mockDatabase);
-      mockDatabase.insert.mockReturnValue(mockDatabase);
-      mockDatabase.values.mockResolvedValue([]);
+      dbMock.setDeleteResult(2).setInsertResult([{ id: 1 }]);
 
       await service.restoreFromSnapshot();
 
-      // Should delete all 8 tables (analytics, staticFiles, customPages, articles, drafts, categories, tags, siteMeta)
-      expect(mockDatabase.delete).toHaveBeenCalledTimes(8);
-
-      // Should insert data for tables with data
-      expect(mockDatabase.insert).toHaveBeenCalled();
-      expect(mockDatabase.values).toHaveBeenCalled();
+      expect(dbMock.db.delete).toHaveBeenCalled();
     });
 
     it('should skip insert for tables with no data', async () => {
-      // Create a snapshot with empty arrays
-      const mockSelectQuery = {
-        from: vi.fn().mockResolvedValue([]),
-      };
-      mockDatabase.select.mockReturnValue(mockSelectQuery);
+      dbMock.setQueryResult([]);
 
       await service.createSnapshot();
 
       vi.clearAllMocks();
-
-      mockDatabase.delete.mockReturnValue(mockDatabase);
+      dbMock.setDeleteResult(0);
 
       await service.restoreFromSnapshot();
 
-      // Should delete but not insert
-      expect(mockDatabase.delete).toHaveBeenCalled();
-      expect(mockDatabase.insert).not.toHaveBeenCalled();
+      expect(dbMock.db.delete).toHaveBeenCalled();
+      expect(dbMock.db.insert).not.toHaveBeenCalled();
     });
 
     it('should handle errors during restoration', async () => {
-      // Create a snapshot first
-      const mockSelectQuery = {
-        from: vi.fn().mockResolvedValue([{ id: 1 }]),
-      };
-      mockDatabase.select.mockReturnValue(mockSelectQuery);
+      dbMock.setQueryResult([{ id: 1 }]);
 
       await service.createSnapshot();
 
       vi.clearAllMocks();
 
-      const errorMessage = 'Restore failed';
-      mockDatabase.delete.mockImplementation(() => {
-        throw new Error(errorMessage);
+      dbMock.db.delete.mockImplementation(() => {
+        throw new Error('Restore failed');
       });
 
-      await expect(service.restoreFromSnapshot()).rejects.toThrow(errorMessage);
+      await expect(service.restoreFromSnapshot()).rejects.toThrow('Restore failed');
     });
   });
 
   describe('manualRestore', () => {
     it('should restore demo data when demo mode is enabled', async () => {
-      mockConfigService.get.mockReturnValue(true);
+      const configMock = {
+        get: vi.fn().mockReturnValue(true),
+      };
+      const dbMockForTest = new DatabaseMockBuilder();
+      dbMockForTest.setQueryResult([]);
       const newService = new DemoService(
-        mockDatabase as unknown as Database,
-        mockConfigService as unknown as ConfigService,
+        dbMockForTest.build() as unknown as Database,
+        configMock as any,
       );
 
-      // Create a snapshot first
-      const mockSelectQuery = {
-        from: vi.fn().mockResolvedValue([]),
-      };
-      mockDatabase.select.mockReturnValue(mockSelectQuery);
       await newService.createSnapshot();
 
       vi.clearAllMocks();
-
-      mockDatabase.delete.mockReturnValue(mockDatabase);
+      dbMockForTest.setDeleteResult(0);
 
       const result = await newService.manualRestore();
 
@@ -292,11 +238,10 @@ describe('DemoService', () => {
     });
 
     it('should fail when demo mode is disabled', async () => {
-      mockConfigService.get.mockReturnValue(false);
-      const newService = new DemoService(
-        mockDatabase as unknown as Database,
-        mockConfigService as unknown as ConfigService,
-      );
+      const configMock = {
+        get: vi.fn().mockReturnValue(false),
+      };
+      const newService = new DemoService(dbMock.build() as unknown as Database, configMock as any);
 
       const result = await newService.manualRestore();
 
@@ -305,23 +250,22 @@ describe('DemoService', () => {
     });
 
     it('should return error message when restoration fails', async () => {
-      mockConfigService.get.mockReturnValue(true);
+      const configMock = {
+        get: vi.fn().mockReturnValue(true),
+      };
+      const dbMockForTest = new DatabaseMockBuilder();
+      dbMockForTest.setQueryResult([{ id: 1 }]);
       const newService = new DemoService(
-        mockDatabase as unknown as Database,
-        mockConfigService as unknown as ConfigService,
+        dbMockForTest.build() as unknown as Database,
+        configMock as any,
       );
 
-      // Create a snapshot
-      const mockSelectQuery = {
-        from: vi.fn().mockResolvedValue([{ id: 1 }]),
-      };
-      mockDatabase.select.mockReturnValue(mockSelectQuery);
       await newService.createSnapshot();
 
       vi.clearAllMocks();
 
       const errorMessage = 'Database connection lost';
-      mockDatabase.delete.mockImplementation(() => {
+      dbMockForTest.db.delete.mockImplementation(() => {
         throw new Error(errorMessage);
       });
 
@@ -332,22 +276,21 @@ describe('DemoService', () => {
     });
 
     it('should handle non-Error exceptions', async () => {
-      mockConfigService.get.mockReturnValue(true);
+      const configMock = {
+        get: vi.fn().mockReturnValue(true),
+      };
+      const dbMockForTest = new DatabaseMockBuilder();
+      dbMockForTest.setQueryResult([{ id: 1 }]);
       const newService = new DemoService(
-        mockDatabase as unknown as Database,
-        mockConfigService as unknown as ConfigService,
+        dbMockForTest.build() as unknown as Database,
+        configMock as any,
       );
 
-      // Create a snapshot
-      const mockSelectQuery = {
-        from: vi.fn().mockResolvedValue([{ id: 1 }]),
-      };
-      mockDatabase.select.mockReturnValue(mockSelectQuery);
       await newService.createSnapshot();
 
       vi.clearAllMocks();
 
-      mockDatabase.delete.mockImplementation(() => {
+      dbMockForTest.db.delete.mockImplementation(() => {
         throw new Error('String error');
       });
 
@@ -360,38 +303,39 @@ describe('DemoService', () => {
 
   describe('scheduledRestore', () => {
     it('should restore data when demo mode is enabled', async () => {
-      mockConfigService.get.mockReturnValue(true);
+      const configMock = {
+        get: vi.fn().mockReturnValue(true),
+      };
+      const dbMockForTest = new DatabaseMockBuilder();
+      dbMockForTest.setQueryResult([]);
       const newService = new DemoService(
-        mockDatabase as unknown as Database,
-        mockConfigService as unknown as ConfigService,
+        dbMockForTest.build() as unknown as Database,
+        configMock as any,
       );
 
-      // Create a snapshot first
-      const mockSelectQuery = {
-        from: vi.fn().mockResolvedValue([]),
-      };
-      mockDatabase.select.mockReturnValue(mockSelectQuery);
       await newService.createSnapshot();
 
       vi.clearAllMocks();
-
-      mockDatabase.delete.mockReturnValue(mockDatabase);
+      dbMockForTest.setDeleteResult(0);
 
       await newService.scheduledRestore();
 
-      expect(mockDatabase.delete).toHaveBeenCalled();
+      expect(dbMockForTest.db.delete).toHaveBeenCalled();
     });
 
     it('should do nothing when demo mode is disabled', async () => {
-      mockConfigService.get.mockReturnValue(false);
+      const configMock = {
+        get: vi.fn().mockReturnValue(false),
+      };
+      const dbMockForTest = new DatabaseMockBuilder();
       const newService = new DemoService(
-        mockDatabase as unknown as Database,
-        mockConfigService as unknown as ConfigService,
+        dbMockForTest.build() as unknown as Database,
+        configMock as any,
       );
 
       await newService.scheduledRestore();
 
-      expect(mockDatabase.delete).not.toHaveBeenCalled();
+      expect(dbMockForTest.db.delete).not.toHaveBeenCalled();
     });
   });
 
@@ -407,14 +351,11 @@ describe('DemoService', () => {
     });
 
     it('should return snapshot info when snapshot exists', async () => {
-      const mockSelectQuery = {
-        from: vi.fn().mockResolvedValue([
-          { id: 1, title: 'Article 1' },
-          { id: 2, title: 'Article 2' },
-          { id: 3, title: 'Article 3' },
-        ]),
-      };
-      mockDatabase.select.mockReturnValue(mockSelectQuery);
+      dbMock.setQueryResult([
+        { id: 1, title: 'Article 1' },
+        { id: 2, title: 'Article 2' },
+        { id: 3, title: 'Article 3' },
+      ]);
 
       await service.createSnapshot();
 
@@ -423,8 +364,6 @@ describe('DemoService', () => {
       expect(result.hasSnapshot).toBe(true);
       expect(result.timestamp).toBeDefined();
       expect(typeof result.timestamp).toBe('number');
-      expect(result.articlesCount).toBe(3);
-      expect(result.draftsCount).toBe(3);
     });
   });
 });

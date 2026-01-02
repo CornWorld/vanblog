@@ -2,13 +2,12 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import { vi, describe, beforeEach, afterEach, it, expect } from 'vitest';
 
 import { StorageProvider } from '../dto/storage-config.dto';
+import { MockUtils } from '../../../../test/mock-utils';
 
 import { StorageConfigService } from './storage-config.service';
 import { StorageFactoryService } from './storage-factory.service';
 import { LocalStorageService } from './storages/local-storage.service';
 import { PicgoStorageService } from './storages/picgo-storage.service';
-
-import type { StorageService } from '../interfaces/storage.interface';
 
 describe('StorageFactoryService', () => {
   let service: StorageFactoryService;
@@ -22,18 +21,11 @@ describe('StorageFactoryService', () => {
       getStorageConfig: vi.fn(),
     };
 
-    const mockLocalStorageService = {
-      upload: vi.fn(),
-      delete: vi.fn(),
-      getUrl: vi.fn(),
-    } as StorageService;
-
+    const mockLocalStorageService = MockUtils.services.createStorageServiceMock();
     const mockPicgoStorageService = {
-      upload: vi.fn(),
-      delete: vi.fn(),
-      getUrl: vi.fn(),
+      ...MockUtils.services.createStorageServiceMock(),
       configure: vi.fn(),
-    } as StorageService & { configure: (config: Record<string, unknown>) => void };
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [

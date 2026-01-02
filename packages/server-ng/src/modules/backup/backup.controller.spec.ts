@@ -4,10 +4,11 @@ import { StreamableFile } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, beforeEach, expect, vi } from 'vitest';
 
-import { PermissionService } from '../permission/permission.service';
-
 import { BackupController } from './backup.controller';
 import { BackupService } from './backup.service';
+import { PermissionService } from '../permission/permission.service';
+
+import { MockUtils } from '../../../test/mock-utils';
 
 import type { CreateBackupDto, RestoreBackupDto, GetBackupsDto } from './dto/backup.dto';
 import type { Response } from 'express';
@@ -16,26 +17,15 @@ import type { Response } from 'express';
 vi.mock('fs');
 const mockFs = fs as any;
 
-// Mock BackupService
-const mockBackupService = {
-  createBackup: vi.fn(),
-  getBackups: vi.fn(),
-  deleteBackup: vi.fn(),
-  restoreBackup: vi.fn(),
-  getRestoreProgress: vi.fn(),
-};
-
-const mockPermissionService = {
-  hasPermission: vi.fn(),
-  getUserPermissions: vi.fn(),
-  checkPermissions: vi.fn(),
-};
-
 describe('BackupController', () => {
   let controller: BackupController;
-  let service: BackupService;
+  let mockBackupService: any;
+  let mockPermissionService: any;
 
   beforeEach(async () => {
+    mockBackupService = MockUtils.services.createBackupServiceMock();
+    mockPermissionService = MockUtils.services.createPermissionServiceMock();
+
     const module: TestingModule = await Test.createTestingModule({
       controllers: [BackupController],
       providers: [
@@ -51,7 +41,6 @@ describe('BackupController', () => {
     }).compile();
 
     controller = module.get<BackupController>(BackupController);
-    service = module.get<BackupService>(BackupService);
 
     // Reset mocks
     vi.clearAllMocks();
@@ -89,7 +78,7 @@ describe('BackupController', () => {
 
       const result = await controller.createBackup(createBackupDto);
 
-      expect(service.createBackup).toHaveBeenCalledWith(createBackupDto);
+      expect(mockBackupService.createBackup).toHaveBeenCalledWith(createBackupDto);
       expect(result).toEqual(expectedResult);
     });
 
@@ -119,7 +108,7 @@ describe('BackupController', () => {
 
       const result = await controller.createBackup(createBackupDto);
 
-      expect(service.createBackup).toHaveBeenCalledWith(createBackupDto);
+      expect(mockBackupService.createBackup).toHaveBeenCalledWith(createBackupDto);
       expect(result).toEqual(expectedResult);
     });
   });
@@ -155,7 +144,7 @@ describe('BackupController', () => {
 
       const result = await controller.getBackups(getBackupsDto);
 
-      expect(service.getBackups).toHaveBeenCalledWith(getBackupsDto);
+      expect(mockBackupService.getBackups).toHaveBeenCalledWith(getBackupsDto);
       expect(result).toEqual(expectedResult);
     });
 
@@ -190,7 +179,7 @@ describe('BackupController', () => {
 
       const result = await controller.getBackups(getBackupsDto);
 
-      expect(service.getBackups).toHaveBeenCalledWith(getBackupsDto);
+      expect(mockBackupService.getBackups).toHaveBeenCalledWith(getBackupsDto);
       expect(result).toEqual(expectedResult);
     });
   });
@@ -250,7 +239,7 @@ describe('BackupController', () => {
 
       await controller.deleteBackup(filename);
 
-      expect(service.deleteBackup).toHaveBeenCalledWith(filename);
+      expect(mockBackupService.deleteBackup).toHaveBeenCalledWith(filename);
     });
 
     it('should throw error for invalid filename', async () => {
@@ -276,7 +265,7 @@ describe('BackupController', () => {
 
       const result = await controller.restoreBackup(filename, restoreBackupDto);
 
-      expect(service.restoreBackup).toHaveBeenCalledWith(filename, restoreBackupDto);
+      expect(mockBackupService.restoreBackup).toHaveBeenCalledWith(filename, restoreBackupDto);
       expect(result).toEqual(expectedResult);
     });
 
@@ -296,7 +285,7 @@ describe('BackupController', () => {
 
       const result = await controller.restoreBackup(filename, restoreBackupDto);
 
-      expect(service.restoreBackup).toHaveBeenCalledWith(filename, restoreBackupDto);
+      expect(mockBackupService.restoreBackup).toHaveBeenCalledWith(filename, restoreBackupDto);
       expect(result).toEqual(expectedResult);
     });
 
@@ -330,7 +319,7 @@ describe('BackupController', () => {
 
       const result = controller.getRestoreProgress(taskId);
 
-      expect(service.getRestoreProgress).toHaveBeenCalledWith(taskId);
+      expect(mockBackupService.getRestoreProgress).toHaveBeenCalledWith(taskId);
       expect(result).toEqual(expectedResult);
     });
 
@@ -347,7 +336,7 @@ describe('BackupController', () => {
 
       const result = controller.getRestoreProgress(taskId);
 
-      expect(service.getRestoreProgress).toHaveBeenCalledWith(taskId);
+      expect(mockBackupService.getRestoreProgress).toHaveBeenCalledWith(taskId);
       expect(result).toEqual(expectedResult);
     });
 
@@ -365,7 +354,7 @@ describe('BackupController', () => {
 
       const result = controller.getRestoreProgress(taskId);
 
-      expect(service.getRestoreProgress).toHaveBeenCalledWith(taskId);
+      expect(mockBackupService.getRestoreProgress).toHaveBeenCalledWith(taskId);
       expect(result).toEqual(expectedResult);
     });
   });

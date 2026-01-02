@@ -22,6 +22,7 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, expect, beforeEach, afterEach, vi, type Mock } from 'vitest';
 
 import { DATABASE_CONNECTION } from '../../../database';
+import { MockUtils } from '../../../../test/mock-utils';
 import { WebhookRegistryService } from './webhook-registry.service';
 import { WebhookService } from './webhook.service';
 
@@ -30,29 +31,15 @@ global.fetch = vi.fn();
 
 describe('WebhookService - Execution & Retry', () => {
   let service: WebhookService;
-  let mockDb: {
-    insert: Mock;
-    select: Mock;
-    update: Mock;
-    delete: Mock;
-    $client: { execute: Mock };
-  };
+  let mockDb: ReturnType<typeof MockUtils.createDatabaseMock>;
   let mockWebhookRegistry: {
     registerWebhook: Mock;
     unregisterWebhookFromAllEvents: Mock;
   };
 
   beforeEach(async () => {
-    // Mock database
-    mockDb = {
-      insert: vi.fn().mockReturnThis(),
-      select: vi.fn().mockReturnThis(),
-      update: vi.fn().mockReturnThis(),
-      delete: vi.fn().mockReturnThis(),
-      $client: {
-        execute: vi.fn().mockResolvedValue(undefined),
-      },
-    };
+    // Mock database using MockUtils
+    mockDb = MockUtils.createDatabaseMock();
 
     // Mock webhook registry
     mockWebhookRegistry = {
@@ -106,13 +93,15 @@ describe('WebhookService - Execution & Retry', () => {
         text: vi.fn().mockResolvedValue('Success'),
       });
 
-      mockDb.update = vi.fn().mockReturnValue({
+      // Setup update mock
+      mockDb.update.mockReturnValue({
         set: vi.fn().mockReturnValue({
           where: vi.fn().mockResolvedValue(undefined),
         }),
       });
 
-      mockDb.insert = vi.fn().mockReturnValue({
+      // Setup insert mock
+      mockDb.insert.mockReturnValue({
         values: vi.fn().mockResolvedValue(undefined),
       });
 
@@ -148,13 +137,15 @@ describe('WebhookService - Execution & Retry', () => {
           text: vi.fn().mockResolvedValue('Success'),
         });
 
-      mockDb.update = vi.fn().mockReturnValue({
+      // Setup update mock
+      mockDb.update.mockReturnValue({
         set: vi.fn().mockReturnValue({
           where: vi.fn().mockResolvedValue(undefined),
         }),
       });
 
-      mockDb.insert = vi.fn().mockReturnValue({
+      // Setup insert mock
+      mockDb.insert.mockReturnValue({
         values: vi.fn().mockResolvedValue(undefined),
       });
 
@@ -192,13 +183,15 @@ describe('WebhookService - Execution & Retry', () => {
       abortError.name = 'AbortError';
       (global.fetch as Mock).mockRejectedValue(abortError);
 
-      mockDb.update = vi.fn().mockReturnValue({
+      // Setup update mock
+      mockDb.update.mockReturnValue({
         set: vi.fn().mockReturnValue({
           where: vi.fn().mockResolvedValue(undefined),
         }),
       });
 
-      mockDb.insert = vi.fn().mockReturnValue({
+      // Setup insert mock
+      mockDb.insert.mockReturnValue({
         values: vi.fn().mockResolvedValue(undefined),
       });
 
@@ -229,13 +222,15 @@ describe('WebhookService - Execution & Retry', () => {
         text: vi.fn().mockResolvedValue('Internal Server Error'),
       });
 
-      mockDb.update = vi.fn().mockReturnValue({
+      // Setup update mock
+      mockDb.update.mockReturnValue({
         set: vi.fn().mockReturnValue({
           where: vi.fn().mockResolvedValue(undefined),
         }),
       });
 
-      mockDb.insert = vi.fn().mockReturnValue({
+      // Setup insert mock
+      mockDb.insert.mockReturnValue({
         values: vi.fn().mockResolvedValue(undefined),
       });
 
@@ -275,14 +270,16 @@ describe('WebhookService - Execution & Retry', () => {
         text: vi.fn().mockResolvedValue('Success'),
       });
 
-      mockDb.update = vi.fn().mockReturnValue({
+      // Setup update mock
+      mockDb.update.mockReturnValue({
         set: vi.fn().mockReturnValue({
           where: vi.fn().mockResolvedValue(undefined),
         }),
       });
 
       const insertMock = vi.fn().mockResolvedValue(undefined);
-      mockDb.insert = vi.fn().mockReturnValue({
+      // Setup insert mock
+      mockDb.insert.mockReturnValue({
         values: insertMock,
       });
 

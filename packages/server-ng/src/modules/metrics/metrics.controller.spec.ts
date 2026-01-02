@@ -1,7 +1,9 @@
 import { Test, type TestingModule } from '@nestjs/testing';
+import { vi } from 'vitest';
 
 import { PerformanceMonitoringMiddleware } from '../../shared/middleware/performance-monitoring.middleware';
 import { ErrorRateMonitoringService } from '../../shared/services/error-rate-monitoring.service';
+import { MockUtils } from '../../../test/mock-utils';
 
 import { MetricsController } from './metrics.controller';
 
@@ -10,16 +12,14 @@ describe('MetricsController', () => {
   let errorRateMonitoringService: ErrorRateMonitoringService;
 
   beforeEach(async () => {
+    const mockErrorRateService = MockUtils.services.createErrorRateMonitoringServiceMock();
+
     const module: TestingModule = await Test.createTestingModule({
       controllers: [MetricsController],
       providers: [
         {
           provide: ErrorRateMonitoringService,
-          useValue: {
-            getGlobalErrorRate: vi.fn(),
-            getEndpointErrorRates: vi.fn(),
-            getSystemHealthStatus: vi.fn(),
-          },
+          useValue: mockErrorRateService,
         },
       ],
     }).compile();
@@ -35,17 +35,11 @@ describe('MetricsController', () => {
   describe('getMetrics', () => {
     it('should return Prometheus format metrics', () => {
       // Mock the static method
-      const mockStats = {
-        totalRequests: 100,
-        errorRequests: 5,
-        slowRequests: 10,
-        averageResponseTime: 250,
-        requestsPerSecond: 2.5,
-        memoryTrend: [100, 110, 105],
-        topSlowEndpoints: [{ path: '/api/v2/articles', avgDuration: 500, count: 20 }],
-      };
+      const mockStats = MockUtils.testData.createPerformanceStats();
 
-      vi.spyOn(PerformanceMonitoringMiddleware, 'getPerformanceStats').mockReturnValue(mockStats);
+      vi.spyOn(PerformanceMonitoringMiddleware, 'getPerformanceStats').mockReturnValue(
+        mockStats as any,
+      );
 
       vi.spyOn(errorRateMonitoringService, 'getGlobalErrorRate').mockReturnValue(5.0);
       vi.spyOn(errorRateMonitoringService, 'getEndpointErrorRates').mockReturnValue([
@@ -60,12 +54,9 @@ describe('MetricsController', () => {
           errorResponseTimeCorrelation: 'low' as const,
         },
       ]);
-      vi.spyOn(errorRateMonitoringService, 'getSystemHealthStatus').mockReturnValue({
-        status: 'healthy',
-        message: 'System is healthy',
-        errorRate: 5.0,
-        factors: [],
-      });
+      vi.spyOn(errorRateMonitoringService, 'getSystemHealthStatus').mockReturnValue(
+        MockUtils.testData.createHealthStatus() as any,
+      );
 
       const result = controller.getMetrics();
 
@@ -79,15 +70,10 @@ describe('MetricsController', () => {
 
   describe('getHealth', () => {
     it('should return system health status', () => {
-      const mockHealthStatus = {
-        status: 'healthy' as const,
-        message: 'System is healthy',
-        errorRate: 2.5,
-        factors: [],
-      };
+      const mockHealthStatus = MockUtils.testData.createHealthStatus();
 
       vi.spyOn(errorRateMonitoringService, 'getSystemHealthStatus').mockReturnValue(
-        mockHealthStatus,
+        mockHealthStatus as any,
       );
 
       const result = controller.getHealth();

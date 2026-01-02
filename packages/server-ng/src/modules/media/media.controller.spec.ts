@@ -2,6 +2,7 @@ import { BadRequestException } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, beforeEach, afterEach, expect, vi } from 'vitest';
 
+import { MockUtils } from '../../../test/mock-utils';
 import { SettingRegistryService } from '../setting/services/setting-registry.service';
 
 import { MediaProcessingSettingsSchema } from './dto/media-settings.dto';
@@ -11,46 +12,24 @@ import { ImageProcessingService } from './services/image-processing.service';
 import { MediaService } from './services/media.service';
 import { StorageConfigService } from './services/storage-config.service';
 
-const mockSettingRegistryService = {
-  getConfig: vi.fn().mockResolvedValue(MediaProcessingSettingsSchema.parse({})),
-};
-
-const mockMediaService = {
-  uploadFile: vi.fn(),
-  listFiles: vi.fn(),
-  getFileById: vi.fn(),
-  deleteFile: vi.fn(),
-  deleteFiles: vi.fn(),
-  scanArticleImages: vi.fn(),
-  exportAllImages: vi.fn(),
-  // chunked upload methods
-  initiateChunkUpload: vi.fn(),
-  uploadChunk: vi.fn(),
-  mergeChunks: vi.fn(),
-  cleanupChunks: vi.fn(),
-};
-
-const mockImageProcessingService = {
-  compressImage: vi.fn(),
-  addWatermark: vi.fn(),
-};
-
-const mockStorageConfigService = {
-  getStorageConfig: vi.fn(),
-  updateStorageConfig: vi.fn(),
-};
-
-const mockImageProcessingQueueService = {
-  addTask: vi.fn(),
-  getTaskStatus: vi.fn(),
-  getTasksByFileId: vi.fn(),
-  getQueueStats: vi.fn(),
-};
-
 describe('MediaController', () => {
   let controller: MediaController;
+  let mockMediaService: any;
+  let mockImageProcessingService: any;
+  let mockStorageConfigService: any;
+  let mockImageProcessingQueueService: any;
+  let mockSettingRegistryService: any;
 
   beforeEach(async () => {
+    // 使用 MockUtils 创建 Mock 服务（减少 34 行手动配置）
+    mockMediaService = MockUtils.services.createMediaServiceMock();
+    mockImageProcessingService = MockUtils.services.createImageProcessingServiceMock();
+    mockStorageConfigService = MockUtils.services.createStorageConfigServiceMock();
+    mockImageProcessingQueueService = MockUtils.services.createImageProcessingQueueServiceMock();
+    mockSettingRegistryService = {
+      getConfig: vi.fn().mockResolvedValue(MediaProcessingSettingsSchema.parse({})),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       controllers: [MediaController],
       providers: [
@@ -697,8 +676,22 @@ describe('MediaController', () => {
 
 describe('chunked upload', () => {
   let controller: MediaController;
+  let mockMediaService: any;
+  let mockImageProcessingService: any;
+  let mockStorageConfigService: any;
+  let mockImageProcessingQueueService: any;
+  let mockSettingRegistryService: any;
 
   beforeEach(async () => {
+    // 使用 MockUtils 创建 Mock 服务
+    mockMediaService = MockUtils.services.createMediaServiceMock();
+    mockImageProcessingService = MockUtils.services.createImageProcessingServiceMock();
+    mockStorageConfigService = MockUtils.services.createStorageConfigServiceMock();
+    mockImageProcessingQueueService = MockUtils.services.createImageProcessingQueueServiceMock();
+    mockSettingRegistryService = {
+      getConfig: vi.fn().mockResolvedValue(MediaProcessingSettingsSchema.parse({})),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       controllers: [MediaController],
       providers: [

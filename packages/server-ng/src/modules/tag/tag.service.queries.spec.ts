@@ -10,68 +10,24 @@
  * - tag.service.boundaries.spec.ts - Boundary conditions
  */
 import { NotFoundException } from '@nestjs/common';
-import { Test, type TestingModule } from '@nestjs/testing';
-import { vi, describe, beforeEach, it, expect, afterEach } from 'vitest';
+import { describe, beforeEach, it, expect, afterEach, vi } from 'vitest';
 
-import { DATABASE_CONNECTION } from '../../database';
-import { QueryOptimizerService } from '../../shared/services/query-optimizer.service';
-import { StatisticsService } from '../../shared/services/statistics.service';
-import { HookService } from '../plugin/services/hook.service';
 import { MockUtils } from '../../../test/mock-utils';
 
 import { TagService } from './tag.service';
 
 describe('TagService - Complex Queries', () => {
   let service: TagService;
-  let module: TestingModule;
-  let mockHookService: Partial<HookService>;
-  let mockDb: Record<string, ReturnType<typeof vi.fn>>;
+  let module: any;
+  let mockDb: any;
 
   beforeEach(async () => {
     const databaseMockBuilder = new MockUtils.database();
     mockDb = databaseMockBuilder.build();
 
-    mockHookService = MockUtils.services.createHookServiceMock();
-
-    module = await Test.createTestingModule({
-      imports: [],
-      providers: [
-        TagService,
-        {
-          provide: DATABASE_CONNECTION,
-          useValue: mockDb,
-        },
-        {
-          provide: StatisticsService,
-          useValue: {
-            getOverallStatistics: vi.fn().mockResolvedValue({
-              totalCategories: 0,
-              totalTags: 0,
-              totalArticles: 0,
-              publishedArticles: 0,
-              privateArticles: 0,
-              hiddenArticles: 0,
-              totalViews: 0,
-              categories: [],
-              tags: [],
-            }),
-          },
-        },
-        {
-          provide: QueryOptimizerService,
-          useValue: {
-            withPerformanceMonitoring: vi.fn().mockImplementation((_name, fn) => fn()),
-            batchCountArticlesByTags: vi.fn().mockResolvedValue(new Map()),
-            batchCountArticlesByCategories: vi.fn().mockResolvedValue(new Map()),
-            buildOptimizedSearchQuery: vi.fn().mockReturnValue([]),
-            logSlowQuery: vi.fn(),
-          },
-        },
-        {
-          provide: HookService,
-          useValue: mockHookService,
-        },
-      ],
+    module = await MockUtils.createTagServiceTestingModule({
+      service: TagService,
+      dbMock: mockDb,
     }).compile();
 
     service = module.get<TagService>(TagService);

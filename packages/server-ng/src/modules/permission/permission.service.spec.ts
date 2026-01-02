@@ -2,6 +2,7 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
 import { describe, it, beforeEach, afterEach, expect, vi } from 'vitest';
 
+import { MockUtils } from '../../../test/mock-utils';
 import { DATABASE_CONNECTION } from '../../database';
 
 import { PermissionService } from './permission.service';
@@ -21,20 +22,7 @@ type MockQueryBuilder = {
 
 describe('PermissionService', () => {
   let service: PermissionService;
-  let mockDb: {
-    select: ReturnType<typeof vi.fn>;
-    from: ReturnType<typeof vi.fn>;
-    where: ReturnType<typeof vi.fn>;
-    limit: ReturnType<typeof vi.fn>;
-    offset: ReturnType<typeof vi.fn>;
-    orderBy: ReturnType<typeof vi.fn>;
-    insert: ReturnType<typeof vi.fn>;
-    values: ReturnType<typeof vi.fn>;
-    returning: ReturnType<typeof vi.fn>;
-    update: ReturnType<typeof vi.fn>;
-    set: ReturnType<typeof vi.fn>;
-    delete: ReturnType<typeof vi.fn>;
-  };
+  let mockDb: Record<string, ReturnType<typeof vi.fn>>;
 
   const mockDate = '2025-08-08T06:36:15+00:00';
   const mockPermissionNode = {
@@ -58,20 +46,14 @@ describe('PermissionService', () => {
   };
 
   beforeEach(async () => {
-    mockDb = {
-      select: vi.fn().mockReturnThis(),
-      from: vi.fn().mockReturnThis(),
-      where: vi.fn().mockReturnThis(),
-      limit: vi.fn().mockReturnThis(),
-      offset: vi.fn().mockReturnThis(),
-      orderBy: vi.fn().mockReturnThis(),
-      insert: vi.fn().mockReturnThis(),
-      values: vi.fn().mockReturnThis(),
-      returning: vi.fn().mockResolvedValue([mockPermissionNode]),
-      update: vi.fn().mockReturnThis(),
-      set: vi.fn().mockReturnThis(),
-      delete: vi.fn().mockReturnThis(),
-    };
+    // 创建基础 database mock 配置
+    const dbMockBuilder = new MockUtils.database();
+    dbMockBuilder.setQueryResult([mockPermissionNode]);
+    dbMockBuilder.setInsertResult([mockPermissionNode]);
+    mockDb = dbMockBuilder.build();
+
+    // 保留手动微调，以支持特定的测试场景
+    mockDb.returning.mockResolvedValue([mockPermissionNode]);
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [

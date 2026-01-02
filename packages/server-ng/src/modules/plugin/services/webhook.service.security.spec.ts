@@ -22,6 +22,7 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, expect, beforeEach, afterEach, vi, type Mock } from 'vitest';
 
 import { DATABASE_CONNECTION } from '../../../database';
+import { MockUtils } from '../../../../test/mock-utils';
 import { WebhookRegistryService } from './webhook-registry.service';
 import { WebhookService } from './webhook.service';
 
@@ -30,29 +31,15 @@ global.fetch = vi.fn();
 
 describe('WebhookService - Security', () => {
   let service: WebhookService;
-  let mockDb: {
-    insert: Mock;
-    select: Mock;
-    update: Mock;
-    delete: Mock;
-    $client: { execute: Mock };
-  };
+  let dbMock: ReturnType<typeof MockUtils.createDatabaseMock>;
   let mockWebhookRegistry: {
     registerWebhook: Mock;
     unregisterWebhookFromAllEvents: Mock;
   };
 
   beforeEach(async () => {
-    // Mock database
-    mockDb = {
-      insert: vi.fn().mockReturnThis(),
-      select: vi.fn().mockReturnThis(),
-      update: vi.fn().mockReturnThis(),
-      delete: vi.fn().mockReturnThis(),
-      $client: {
-        execute: vi.fn().mockResolvedValue(undefined),
-      },
-    };
+    // Create database mock using MockUtils
+    dbMock = MockUtils.createDatabaseMock();
 
     // Mock webhook registry
     mockWebhookRegistry = {
@@ -65,7 +52,7 @@ describe('WebhookService - Security', () => {
         WebhookService,
         {
           provide: DATABASE_CONNECTION,
-          useValue: mockDb,
+          useValue: dbMock,
         },
         {
           provide: WebhookRegistryService,
@@ -140,15 +127,14 @@ describe('WebhookService - Security', () => {
         text: vi.fn().mockResolvedValue('Success'),
       });
 
-      mockDb.update = vi.fn().mockReturnValue({
-        set: vi.fn().mockReturnValue({
-          where: vi.fn().mockResolvedValue(undefined),
-        }),
-      });
+      // Use DatabaseMockBuilder for update and insert
+      const builder = new MockUtils.database();
+      builder.setUpdateResult([{ lastExecutedAt: new Date().toISOString() }]);
+      builder.setInsertResult([{ id: 1 }]);
 
-      mockDb.insert = vi.fn().mockReturnValue({
-        values: vi.fn().mockResolvedValue(undefined),
-      });
+      // Update dbMock with builder results
+      dbMock.update = builder.db.update;
+      dbMock.insert = builder.db.insert;
 
       await (service as any).executeWebhook(_webhook, 'article|afterCreate', { articleId: 1 });
 
@@ -175,15 +161,14 @@ describe('WebhookService - Security', () => {
         text: vi.fn().mockResolvedValue('OK'),
       });
 
-      mockDb.update = vi.fn().mockReturnValue({
-        set: vi.fn().mockReturnValue({
-          where: vi.fn().mockResolvedValue(undefined),
-        }),
-      });
+      // Use DatabaseMockBuilder for update and insert
+      const builder = new MockUtils.database();
+      builder.setUpdateResult([{ lastExecutedAt: new Date().toISOString() }]);
+      builder.setInsertResult([{ id: 1 }]);
 
-      mockDb.insert = vi.fn().mockReturnValue({
-        values: vi.fn().mockResolvedValue(undefined),
-      });
+      // Update dbMock with builder results
+      dbMock.update = builder.db.update;
+      dbMock.insert = builder.db.insert;
 
       await (service as any).executeWebhook(_webhook, 'article|afterCreate', { articleId: 1 });
 
@@ -226,15 +211,14 @@ describe('WebhookService - Security', () => {
         text: vi.fn().mockResolvedValue('OK'),
       });
 
-      mockDb.update = vi.fn().mockReturnValue({
-        set: vi.fn().mockReturnValue({
-          where: vi.fn().mockResolvedValue(undefined),
-        }),
-      });
+      // Use DatabaseMockBuilder for update and insert
+      const builder = new MockUtils.database();
+      builder.setUpdateResult([{ lastExecutedAt: new Date().toISOString() }]);
+      builder.setInsertResult([{ id: 1 }]);
 
-      mockDb.insert = vi.fn().mockReturnValue({
-        values: vi.fn().mockResolvedValue(undefined),
-      });
+      // Update dbMock with builder results
+      dbMock.update = builder.db.update;
+      dbMock.insert = builder.db.insert;
 
       // Execute webhook with current timestamp
       const result = await (service as any).executeWebhook(_webhook, 'article|afterCreate', {
@@ -294,15 +278,14 @@ describe('WebhookService - Security', () => {
         });
       });
 
-      mockDb.update = vi.fn().mockReturnValue({
-        set: vi.fn().mockReturnValue({
-          where: vi.fn().mockResolvedValue(undefined),
-        }),
-      });
+      // Use DatabaseMockBuilder for update and insert
+      const builder = new MockUtils.database();
+      builder.setUpdateResult([{ lastExecutedAt: new Date().toISOString() }]);
+      builder.setInsertResult([{ id: 1 }]);
 
-      mockDb.insert = vi.fn().mockReturnValue({
-        values: vi.fn().mockResolvedValue(undefined),
-      });
+      // Update dbMock with builder results
+      dbMock.update = builder.db.update;
+      dbMock.insert = builder.db.insert;
 
       // Execute same webhook request twice
       await (service as any).executeWebhook(_webhook, 'article|afterCreate', {
@@ -314,7 +297,7 @@ describe('WebhookService - Security', () => {
       });
 
       // Both should create separate log entries (replay detection requires timestamp + signature)
-      expect(mockDb.insert).toHaveBeenCalled();
+      expect(dbMock.insert).toHaveBeenCalled();
     });
 
     it('should include timestamp in webhook payload for replay attack prevention', async () => {
@@ -335,15 +318,14 @@ describe('WebhookService - Security', () => {
         text: vi.fn().mockResolvedValue('OK'),
       });
 
-      mockDb.update = vi.fn().mockReturnValue({
-        set: vi.fn().mockReturnValue({
-          where: vi.fn().mockResolvedValue(undefined),
-        }),
-      });
+      // Use DatabaseMockBuilder for update and insert
+      const builder = new MockUtils.database();
+      builder.setUpdateResult([{ lastExecutedAt: new Date().toISOString() }]);
+      builder.setInsertResult([{ id: 1 }]);
 
-      mockDb.insert = vi.fn().mockReturnValue({
-        values: vi.fn().mockResolvedValue(undefined),
-      });
+      // Update dbMock with builder results
+      dbMock.update = builder.db.update;
+      dbMock.insert = builder.db.insert;
 
       const preExecuteTime = Math.floor(Date.now() / 1000);
       await (service as any).executeWebhook(_webhook, 'article|afterCreate', { articleId: 1 });
@@ -408,15 +390,14 @@ describe('WebhookService - Security', () => {
       const networkError = new Error('Network unreachable');
       (global.fetch as Mock).mockRejectedValue(networkError);
 
-      mockDb.update = vi.fn().mockReturnValue({
-        set: vi.fn().mockReturnValue({
-          where: vi.fn().mockResolvedValue(undefined),
-        }),
-      });
+      // Use DatabaseMockBuilder for update and insert
+      const builder = new MockUtils.database();
+      builder.setUpdateResult([{ lastExecutedAt: new Date().toISOString() }]);
+      builder.setInsertResult([{ id: 1 }]);
 
-      mockDb.insert = vi.fn().mockReturnValue({
-        values: vi.fn().mockResolvedValue(undefined),
-      });
+      // Update dbMock with builder results
+      dbMock.update = builder.db.update;
+      dbMock.insert = builder.db.insert;
 
       const result = await (service as any).executeWebhook(_webhook, 'article|afterCreate', {
         articleId: 1,
@@ -427,7 +408,7 @@ describe('WebhookService - Security', () => {
       expect(result.error).toBeDefined();
 
       // Verify insert was called to log the failed attempt
-      expect(mockDb.insert).toHaveBeenCalled();
+      expect(dbMock.insert).toHaveBeenCalled();
     });
   });
 });

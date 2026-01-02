@@ -1,6 +1,7 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, beforeEach, afterEach, expect, vi } from 'vitest';
 
+import { MockUtils } from '../../../test/mock-utils';
 import { AnalyticsController } from './analytics.controller';
 import { AnalyticsService } from './services/analytics.service';
 import { ArticleStatsService } from './services/article-stats.service';
@@ -8,50 +9,24 @@ import { EchartsFormatterService } from './services/echarts-formatter.service';
 import { PublicAnalyticsService } from './services/public-analytics.service';
 import { ThirdPartyAnalyticsService } from './services/third-party-analytics.service';
 
-// Mocks
-const mockAnalyticsService = {
-  recordAnalytics: vi.fn(),
-  getOverview: vi.fn(),
-  getReferrerStats: vi.fn(),
-  getDeviceStats: vi.fn(),
-  getBrowserStats: vi.fn(),
-  exportAnalytics: vi.fn(),
-  getPageRankings: vi.fn(),
-  getChartData: vi.fn(),
-  exportAnalyticsData: vi.fn(),
-  getTopPages: vi.fn(),
-  getTimeSeriesData: vi.fn(),
-};
-
-const mockArticleStatsService = {
-  getArticleStats: vi.fn(),
-  recordArticleView: vi.fn(),
-  recordReadingTime: vi.fn(),
-  getTopArticles: vi.fn(),
-};
-
-const mockThirdPartyAnalyticsService = {
-  trackPageview: vi.fn(),
-};
-
-const mockPublicAnalyticsService = {
-  getPublicOverview: vi.fn(),
-  getPublicArticleStats: vi.fn(),
-};
-
-const mockEchartsFormatterService = {
-  formatTimeSeriesData: vi.fn(),
-  formatDashboard: vi.fn(),
-  formatTimeSeriesChart: vi.fn(),
-  formatDevicePieChart: vi.fn(),
-  formatBrowserBarChart: vi.fn(),
-  formatPageRankingsChart: vi.fn(),
-};
-
 describe('AnalyticsController', () => {
   let controller: AnalyticsController;
+  let mockAnalyticsService: any;
+  let mockArticleStatsService: any;
+  let mockThirdPartyAnalyticsService: any;
+  let mockPublicAnalyticsService: any;
+  let mockEchartsFormatterService: any;
 
   beforeEach(async () => {
+    // 使用 MockUtils 创建所有 Mock
+    mockAnalyticsService = MockUtils.services.createAnalyticsServiceMock();
+    mockArticleStatsService = MockUtils.services.createArticleStatsServiceMock();
+    mockThirdPartyAnalyticsService = {
+      trackPageview: vi.fn(),
+    };
+    mockPublicAnalyticsService = MockUtils.services.createPublicAnalyticsServiceMock();
+    mockEchartsFormatterService = MockUtils.services.createEchartsFormatterServiceMock();
+
     const module: TestingModule = await Test.createTestingModule({
       controllers: [AnalyticsController],
       providers: [
@@ -77,7 +52,6 @@ describe('AnalyticsController', () => {
 
   describe('recordAnalytics', () => {
     it('should record pageview via third-party and persist analytics', async () => {
-      // pageview requires data.articleId to be a number
       const dto = { type: 'pageview', path: '/home', data: { articleId: 1 } };
 
       await controller.recordAnalytics(dto);
@@ -110,38 +84,31 @@ describe('AnalyticsController', () => {
         type: 'pageview',
         path: '/home',
         data: { articleId: 1 },
-        userAgent: 'Mozilla/5.0 (DTO)', // DTO value
+        userAgent: 'Mozilla/5.0 (DTO)',
       };
-      const headerUserAgent = 'Safari/5.0 (Header)'; // Header value
 
-      await controller.recordAnalytics(dto, headerUserAgent);
+      await controller.recordAnalytics(dto, 'Safari/5.0 (Header)');
 
-      // DTO userAgent should take precedence over header
       expect(mockAnalyticsService.recordAnalytics).toHaveBeenCalledWith(
         expect.objectContaining({
-          userAgent: 'Mozilla/5.0 (DTO)', // Should use DTO value
+          userAgent: 'Mozilla/5.0 (DTO)',
         }),
       );
     });
 
     it('should use request header userAgent when DTO userAgent is missing or not provided', async () => {
-      // When userAgent is not in the DTO at all (undefined), it should fall through to header
       const dto = {
         type: 'pageview',
         path: '/home',
         data: { articleId: 1 },
-        // userAgent not provided in DTO - will be undefined
       };
-      const headerUserAgent = 'Safari/5.0 (Header)'; // Header value
+      const headerUserAgent = 'Safari/5.0 (Header)';
 
       await controller.recordAnalytics(dto, headerUserAgent);
 
-      // Should use header value when DTO is missing
       const callCount = mockAnalyticsService.recordAnalytics.mock.calls.length;
       const userAgentUsed =
         mockAnalyticsService.recordAnalytics.mock.calls[callCount - 1][0].userAgent;
-      // Either uses header or falls back to null depending on implementation
-      // But should not be undefined
       expect(userAgentUsed === 'Safari/5.0 (Header)' || userAgentUsed === null).toBe(true);
     });
 
@@ -150,13 +117,12 @@ describe('AnalyticsController', () => {
         type: 'pageview',
         path: '/page',
         data: { articleId: 2 },
-        userAgent: 'Chrome/90', // Explicit DTO value
+        userAgent: 'Chrome/90',
       };
-      const headerUserAgent = 'Firefox/88'; // Header value
+      const headerUserAgent = 'Firefox/88';
 
       await controller.recordAnalytics(dto, headerUserAgent);
 
-      // DTO value should win in precedence
       const callCount = mockAnalyticsService.recordAnalytics.mock.calls.length;
       expect(mockAnalyticsService.recordAnalytics.mock.calls[callCount - 1][0].userAgent).toBe(
         'Chrome/90',
@@ -168,11 +134,9 @@ describe('AnalyticsController', () => {
         type: 'pageview',
         path: '/home',
         data: { articleId: 1 },
-        // No userAgent in DTO
       };
-      const headerUserAgent = undefined; // No header
 
-      await controller.recordAnalytics(dto, headerUserAgent);
+      await controller.recordAnalytics(dto, undefined);
 
       const callCount = mockAnalyticsService.recordAnalytics.mock.calls.length;
       expect(mockAnalyticsService.recordAnalytics.mock.calls[callCount - 1][0].userAgent).toBe(
@@ -185,15 +149,12 @@ describe('AnalyticsController', () => {
         type: 'pageview',
         path: '/home',
         data: { articleId: 1 },
-        userAgent: null, // Explicit null in DTO
+        userAgent: null,
       };
-      const headerUserAgent = 'Safari/5.0'; // Header provided
+      const headerUserAgent = 'Safari/5.0';
 
       await controller.recordAnalytics(dto, headerUserAgent);
 
-      // DTO null should be respected (null coalescing prefers DTO first)
-      // Behavior: null is falsy, so falls through to header
-      // Actual precedence: DTO if defined (not null), else header
       const callCount = mockAnalyticsService.recordAnalytics.mock.calls.length;
       const [[call]] = mockAnalyticsService.recordAnalytics.mock.calls.slice(callCount - 1);
       expect(call.userAgent).toBeDefined();
@@ -204,25 +165,18 @@ describe('AnalyticsController', () => {
         type: 'pageview',
         path: '/home',
         data: { articleId: 1 },
-        userAgent: '', // Empty string in DTO
+        userAgent: '',
       };
       const headerUserAgent = 'Safari/5.0';
 
       await controller.recordAnalytics(dto, headerUserAgent);
 
-      // Empty string is falsy in JavaScript, may fall through to header
       const callCount = mockAnalyticsService.recordAnalytics.mock.calls.length;
       const [[call]] = mockAnalyticsService.recordAnalytics.mock.calls.slice(callCount - 1);
       expect(call.userAgent).toBeDefined();
     });
 
     it('should document precedence order: DTO userAgent > request header > null', async () => {
-      // This test documents the expected precedence:
-      // 1. Use DTO userAgent if provided and truthy
-      // 2. Use request header if DTO missing/falsy
-      // 3. Use null if both missing
-
-      // Case 1: DTO provided - should use DTO value
       const case1 = {
         type: 'pageview',
         path: '/home',
@@ -231,7 +185,6 @@ describe('AnalyticsController', () => {
       };
       await controller.recordAnalytics(case1, 'Header-Agent');
 
-      // Verify using most recent call
       const callCount = mockAnalyticsService.recordAnalytics.mock.calls.length;
       expect(mockAnalyticsService.recordAnalytics.mock.calls[callCount - 1][0].userAgent).toBe(
         'DTO-Agent',
@@ -311,6 +264,387 @@ describe('AnalyticsController', () => {
 
       expect(mockAnalyticsService.getOverview).toHaveBeenCalled();
       expect(result).toBe(overview);
+    });
+  });
+
+  describe('getPageRankings', () => {
+    it('should return page rankings with default limit', async () => {
+      const rankings = [
+        { path: '/article/1', views: 100 },
+        { path: '/article/2', views: 80 },
+      ] as any;
+      mockAnalyticsService.getPageRankings.mockResolvedValue(rankings);
+
+      const result = await controller.getPageRankings();
+
+      expect(mockAnalyticsService.getPageRankings).toHaveBeenCalledWith(undefined);
+      expect(result).toBe(rankings);
+    });
+
+    it('should return page rankings with custom limit', async () => {
+      const limit = 5;
+      const rankings = [{ path: '/article/1', views: 100 }] as any;
+      mockAnalyticsService.getPageRankings.mockResolvedValue(rankings);
+
+      const result = await controller.getPageRankings(limit);
+
+      expect(mockAnalyticsService.getPageRankings).toHaveBeenCalledWith(limit);
+      expect(result).toBe(rankings);
+    });
+  });
+
+  describe('getReferrerStats', () => {
+    it('should return referrer statistics', async () => {
+      const stats = [
+        { referrer: 'google.com', count: 50 },
+        { referrer: 'twitter.com', count: 30 },
+      ] as any;
+      mockAnalyticsService.getReferrerStats.mockResolvedValue(stats);
+
+      const result = await controller.getReferrerStats();
+
+      expect(mockAnalyticsService.getReferrerStats).toHaveBeenCalledWith(undefined);
+      expect(result).toBe(stats);
+    });
+
+    it('should return referrer statistics with limit', async () => {
+      const limit = 10;
+      const stats = [{ referrer: 'google.com', count: 50 }] as any;
+      mockAnalyticsService.getReferrerStats.mockResolvedValue(stats);
+
+      const result = await controller.getReferrerStats(limit);
+
+      expect(mockAnalyticsService.getReferrerStats).toHaveBeenCalledWith(limit);
+      expect(result).toBe(stats);
+    });
+  });
+
+  describe('getChartData', () => {
+    it('should return chart data with default days', async () => {
+      const chartData = { dates: ['2024-01-01'], views: [100] } as any;
+      mockAnalyticsService.getChartData.mockResolvedValue(chartData);
+
+      const result = await controller.getChartData();
+
+      expect(mockAnalyticsService.getChartData).toHaveBeenCalledWith(undefined);
+      expect(result).toBe(chartData);
+    });
+
+    it('should return chart data with custom days', async () => {
+      const days = 7;
+      const chartData = { dates: ['2024-01-01'], views: [100] } as any;
+      mockAnalyticsService.getChartData.mockResolvedValue(chartData);
+
+      const result = await controller.getChartData(days);
+
+      expect(mockAnalyticsService.getChartData).toHaveBeenCalledWith(days);
+      expect(result).toBe(chartData);
+    });
+  });
+
+  describe('getDeviceStats', () => {
+    it('should return device statistics', async () => {
+      const deviceStats = [
+        { device: 'desktop', count: 500 },
+        { device: 'mobile', count: 300 },
+      ] as any;
+      mockAnalyticsService.getDeviceStats.mockResolvedValue(deviceStats);
+
+      const result = await controller.getDeviceStats();
+
+      expect(mockAnalyticsService.getDeviceStats).toHaveBeenCalled();
+      expect(result).toBe(deviceStats);
+    });
+  });
+
+  describe('getBrowserStats', () => {
+    it('should return browser statistics', async () => {
+      const browserStats = [
+        { browser: 'Chrome', count: 600 },
+        { browser: 'Firefox', count: 200 },
+      ] as any;
+      mockAnalyticsService.getBrowserStats.mockResolvedValue(browserStats);
+
+      const result = await controller.getBrowserStats();
+
+      expect(mockAnalyticsService.getBrowserStats).toHaveBeenCalled();
+      expect(result).toBe(browserStats);
+    });
+  });
+
+  describe('getTopArticles', () => {
+    it('should return top articles with default limit', async () => {
+      const topArticles = [
+        { articleId: 1, views: 1000 },
+        { articleId: 2, views: 800 },
+      ] as any;
+      mockArticleStatsService.getTopArticles.mockResolvedValue(topArticles);
+
+      const result = await controller.getTopArticles();
+
+      expect(mockArticleStatsService.getTopArticles).toHaveBeenCalledWith(undefined);
+      expect(result).toBe(topArticles);
+    });
+
+    it('should return top articles with custom limit', async () => {
+      const limit = 5;
+      const topArticles = [{ articleId: 1, views: 1000 }] as any;
+      mockArticleStatsService.getTopArticles.mockResolvedValue(topArticles);
+
+      const result = await controller.getTopArticles(limit);
+
+      expect(mockArticleStatsService.getTopArticles).toHaveBeenCalledWith(limit);
+      expect(result).toBe(topArticles);
+    });
+  });
+
+  describe('exportAnalyticsData', () => {
+    it('should export analytics data with query parameters', async () => {
+      const query = { type: 'pageview', startDate: '2024-01-01' };
+      const exportedData = [{ id: 1, type: 'pageview' }] as any;
+      mockAnalyticsService.exportAnalyticsData.mockResolvedValue(exportedData);
+
+      const result = await controller.exportAnalyticsData(query);
+
+      expect(mockAnalyticsService.exportAnalyticsData).toHaveBeenCalledWith(query);
+      expect(result).toBe(exportedData);
+    });
+  });
+
+  describe('Echarts endpoints', () => {
+    it('getEchartsDashboard should return formatted dashboard data', async () => {
+      const timeSeries = { dates: ['2024-01-01'], views: [100] } as any;
+      const devices = [{ device: 'desktop', count: 500 }] as any;
+      const browsers = [{ browser: 'Chrome', count: 600 }] as any;
+      const dashboard = { timeSeriesChart: {}, deviceChart: {}, browserChart: {} } as any;
+
+      mockAnalyticsService.getChartData.mockResolvedValue(timeSeries);
+      mockAnalyticsService.getDeviceStats.mockResolvedValue(devices);
+      mockAnalyticsService.getBrowserStats.mockResolvedValue(browsers);
+      mockEchartsFormatterService.formatDashboard.mockReturnValue(dashboard);
+
+      const result = await controller.getEchartsDashboard();
+
+      expect(mockAnalyticsService.getChartData).toHaveBeenCalledWith(undefined);
+      expect(mockAnalyticsService.getDeviceStats).toHaveBeenCalled();
+      expect(mockAnalyticsService.getBrowserStats).toHaveBeenCalled();
+      expect(mockEchartsFormatterService.formatDashboard).toHaveBeenCalledWith(
+        timeSeries,
+        devices,
+        browsers,
+      );
+      expect(result).toBe(dashboard);
+    });
+
+    it('getEchartsDashboard should accept days parameter', async () => {
+      const days = 30;
+      const timeSeries = { dates: [], views: [] } as any;
+      const devices = [] as any;
+      const browsers = [] as any;
+      const dashboard = {} as any;
+
+      mockAnalyticsService.getChartData.mockResolvedValue(timeSeries);
+      mockAnalyticsService.getDeviceStats.mockResolvedValue(devices);
+      mockAnalyticsService.getBrowserStats.mockResolvedValue(browsers);
+      mockEchartsFormatterService.formatDashboard.mockReturnValue(dashboard);
+
+      await controller.getEchartsDashboard(days);
+
+      expect(mockAnalyticsService.getChartData).toHaveBeenCalledWith(days);
+    });
+
+    it('getEchartsTimeSeries should return formatted time series chart', async () => {
+      const chartData = { dates: ['2024-01-01'], views: [100] } as any;
+      const echartsOption = { title: {}, series: [] } as any;
+
+      mockAnalyticsService.getChartData.mockResolvedValue(chartData);
+      mockEchartsFormatterService.formatTimeSeriesChart.mockReturnValue(echartsOption);
+
+      const result = await controller.getEchartsTimeSeries();
+
+      expect(mockAnalyticsService.getChartData).toHaveBeenCalledWith(undefined);
+      expect(mockEchartsFormatterService.formatTimeSeriesChart).toHaveBeenCalledWith(chartData);
+      expect(result).toBe(echartsOption);
+    });
+
+    it('getEchartsDevices should return formatted device pie chart', async () => {
+      const deviceStats = [{ device: 'desktop', count: 500 }] as any;
+      const echartsOption = { title: {}, series: [] } as any;
+
+      mockAnalyticsService.getDeviceStats.mockResolvedValue(deviceStats);
+      mockEchartsFormatterService.formatDevicePieChart.mockReturnValue(echartsOption);
+
+      const result = await controller.getEchartsDevices();
+
+      expect(mockAnalyticsService.getDeviceStats).toHaveBeenCalled();
+      expect(mockEchartsFormatterService.formatDevicePieChart).toHaveBeenCalledWith(deviceStats);
+      expect(result).toBe(echartsOption);
+    });
+
+    it('getEchartsBrowsers should return formatted browser bar chart', async () => {
+      const browserStats = [{ browser: 'Chrome', count: 600 }] as any;
+      const echartsOption = { title: {}, series: [] } as any;
+
+      mockAnalyticsService.getBrowserStats.mockResolvedValue(browserStats);
+      mockEchartsFormatterService.formatBrowserBarChart.mockReturnValue(echartsOption);
+
+      const result = await controller.getEchartsBrowsers();
+
+      expect(mockAnalyticsService.getBrowserStats).toHaveBeenCalled();
+      expect(mockEchartsFormatterService.formatBrowserBarChart).toHaveBeenCalledWith(browserStats);
+      expect(result).toBe(echartsOption);
+    });
+
+    it('getEchartsPageRankings should return formatted page rankings chart', async () => {
+      const rankings = [{ path: '/article/1', views: 100 }] as any;
+      const echartsOption = { title: {}, series: [] } as any;
+
+      mockAnalyticsService.getPageRankings.mockResolvedValue(rankings);
+      mockEchartsFormatterService.formatPageRankingsChart.mockReturnValue(echartsOption);
+
+      const result = await controller.getEchartsPageRankings();
+
+      expect(mockAnalyticsService.getPageRankings).toHaveBeenCalledWith(undefined);
+      expect(mockEchartsFormatterService.formatPageRankingsChart).toHaveBeenCalledWith(rankings);
+      expect(result).toBe(echartsOption);
+    });
+
+    it('getEchartsPageRankings should accept limit parameter', async () => {
+      const limit = 10;
+      const rankings = [] as any;
+      const echartsOption = {} as any;
+
+      mockAnalyticsService.getPageRankings.mockResolvedValue(rankings);
+      mockEchartsFormatterService.formatPageRankingsChart.mockReturnValue(echartsOption);
+
+      await controller.getEchartsPageRankings(limit);
+
+      expect(mockAnalyticsService.getPageRankings).toHaveBeenCalledWith(limit);
+    });
+  });
+
+  describe('TsRest handlers', () => {
+    it('getPublicViewer should return public overview data', async () => {
+      const overview = {
+        totalPageviews: 1000,
+        totalVisitors: 500,
+        todayPageviews: 50,
+        todayVisitors: 25,
+      } as any;
+      mockPublicAnalyticsService.getPublicOverview.mockResolvedValue(overview);
+
+      const handler = controller.getPublicViewer();
+      const result = await handler();
+
+      expect(result).toEqual({
+        status: 200,
+        body: {
+          totalPageviews: 1000,
+          totalVisitors: 500,
+        },
+      });
+    });
+
+    it('getArticleViewer should return article stats', async () => {
+      const articleStats = {
+        articleId: 123,
+        title: 'Test Article',
+        views: 100,
+        uniqueVisitors: 50,
+        avgReadTime: 120,
+      } as any;
+      mockPublicAnalyticsService.getPublicArticleStats.mockResolvedValue(articleStats);
+
+      const handler = controller.getArticleViewer();
+      const result = await handler({ params: { id: '123' } });
+
+      expect(result).toEqual({
+        status: 200,
+        body: {
+          articleId: 123,
+          title: 'Test Article',
+          views: 100,
+          uniqueVisitors: 50,
+          avgReadTime: 120,
+        },
+      });
+    });
+
+    it('getArticleViewer should return null when article not found', async () => {
+      mockPublicAnalyticsService.getPublicArticleStats.mockResolvedValue(null);
+
+      const handler = controller.getArticleViewer();
+      const result = await handler({ params: { id: '999' } });
+
+      expect(result).toEqual({
+        status: 200,
+        body: null,
+      });
+    });
+
+    it('recordPublicViewer should record analytics and track pageview', async () => {
+      const req = { ip: '192.168.1.1' } as any;
+      const body = {
+        type: 'pageview',
+        path: '/article/1',
+        referrer: 'google.com',
+        userAgent: 'Mozilla/5.0',
+        data: { articleId: 1 },
+      };
+
+      const handler = controller.recordPublicViewer(req);
+      const result = await handler({ body, headers: { 'user-agent': 'Safari' } });
+
+      expect(mockAnalyticsService.recordAnalytics).toHaveBeenCalledWith({
+        type: 'pageview',
+        path: '/article/1',
+        referrer: 'google.com',
+        userAgent: 'Mozilla/5.0',
+        ip: '192.168.1.1',
+        data: { articleId: 1 },
+      });
+      expect(mockThirdPartyAnalyticsService.trackPageview).toHaveBeenCalledWith(
+        '/article/1',
+        '192.168.1.1',
+        'Mozilla/5.0',
+      );
+      expect(result).toEqual({ status: 201, body: undefined });
+    });
+
+    it('recordPublicViewer should not track pageview for non-pageview events', async () => {
+      const req = { ip: '192.168.1.1' } as any;
+      const body = {
+        type: 'event',
+        data: { target: 'button' },
+      };
+
+      const handler = controller.recordPublicViewer(req);
+      await handler({ body, headers: {} });
+
+      expect(mockThirdPartyAnalyticsService.trackPageview).not.toHaveBeenCalled();
+    });
+
+    it('getAnalyticsOverview should return analytics overview', async () => {
+      const overview = {
+        totalPageviews: 1000,
+        totalVisitors: 500,
+        todayPageviews: 50,
+        todayVisitors: 25,
+      } as any;
+      mockAnalyticsService.getOverview.mockResolvedValue(overview);
+
+      const handler = controller.getAnalyticsOverview();
+      const result = await handler();
+
+      expect(result).toEqual({
+        status: 200,
+        body: {
+          totalPageviews: 1000,
+          totalVisitors: 500,
+          todayPageviews: 50,
+          todayVisitors: 25,
+        },
+      });
     });
   });
 
