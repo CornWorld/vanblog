@@ -20,7 +20,7 @@ import { SignalBus } from './signal.service';
 describe('PluginContext Services', () => {
   let factory: PluginContextFactory;
   let mockConfigService: ConfigService;
-  let mockDb: ReturnType<(typeof DatabaseMockBuilder)['prototype']['build']>;
+  let mockDb: ReturnType<typeof Mock.db>['db'];
 
   beforeEach(async () => {
     // Create database mock using MockUtils
@@ -187,11 +187,10 @@ describe('PluginContext Services', () => {
   });
 
   describe('PluginConfigReaderService', () => {
-    let _configReader: PluginConfigReaderService;
     const originalEnv = process.env;
 
     beforeEach(() => {
-      _configReader = new PluginConfigReaderService(mockConfigService, 'test-plugin');
+      // configReader is created but not needed for tests
       process.env = { ...originalEnv };
     });
 

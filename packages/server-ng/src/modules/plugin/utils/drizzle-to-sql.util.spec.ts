@@ -15,7 +15,7 @@ import {
 
 // Mock logger
 vi.mock('@nestjs/common', async (importOriginal) => {
-  const actual = await importOriginal();
+  const actual = (await importOriginal()) as any;
   return {
     ...actual,
     Logger: class {

@@ -288,7 +288,7 @@ describe('MockUtils - Service Mocks', () => {
         filename: 'custom.jpg',
       });
 
-      expect(storage.getUrl?.()).toBe('/custom/path/file.jpg');
+      expect((storage.getUrl as any)()).toBe('/custom/path/file.jpg');
     });
   });
 

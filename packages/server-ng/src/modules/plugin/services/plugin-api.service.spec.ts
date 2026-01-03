@@ -21,7 +21,7 @@
 
 import { Logger } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
-import { describe, it, expect, beforeEach, afterEach, vi, type Mock } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { z } from 'zod';
 
 import { DATABASE_CONNECTION } from '../../../database';
@@ -36,7 +36,7 @@ import type { PluginMetadata, PluginPackageJson } from '@vanblog/shared/plugin';
 
 describe('PluginAPIFactory', () => {
   let factory: PluginAPIFactory;
-  let databaseMock: InstanceType<typeof DatabaseMockBuilder>;
+  let databaseMock: ReturnType<typeof Mock.db>;
   let mockModuleRef: ReturnType<typeof Mock.moduleRef>;
   let mockSignalBus: Partial<SignalBus>;
   let mockRegistryService: Partial<PluginRegistryService>;
@@ -189,7 +189,7 @@ describe('PluginAPIFactory', () => {
   describe('PluginAPIImpl - Basic Properties', () => {
     let api: PluginAPIImpl;
     let metadata: PluginMetadata;
-    let localDbMock: InstanceType<typeof DatabaseMockBuilder>;
+    let localDbMock: ReturnType<typeof Mock.db>;
 
     beforeEach(async () => {
       // Create dedicated database mock for this test suite
@@ -253,7 +253,7 @@ describe('PluginAPIFactory', () => {
 
   describe('PluginAPIImpl - Configuration', () => {
     let api: PluginAPIImpl;
-    let localDbMock: InstanceType<typeof DatabaseMockBuilder>;
+    let localDbMock: ReturnType<typeof Mock.db>;
 
     beforeEach(async () => {
       // Create dedicated database mock for this test suite
@@ -354,7 +354,7 @@ describe('PluginAPIFactory', () => {
 
   describe('PluginAPIImpl - Store', () => {
     let api: PluginAPIImpl;
-    let localDbMock: InstanceType<typeof DatabaseMockBuilder>;
+    let localDbMock: ReturnType<typeof Mock.db>;
 
     beforeEach(async () => {
       // Create dedicated database mock for this test suite
@@ -422,7 +422,7 @@ describe('PluginAPIFactory', () => {
 
   describe('PluginAPIImpl - Database Access', () => {
     let api: PluginAPIImpl;
-    let localDbMock: InstanceType<typeof DatabaseMockBuilder>;
+    let localDbMock: ReturnType<typeof Mock.db>;
 
     beforeEach(async () => {
       // Create dedicated database mock for this test suite
@@ -496,7 +496,7 @@ describe('PluginAPIFactory', () => {
 
   describe('PluginAPIImpl - Dependency Injection', () => {
     let api: PluginAPIImpl;
-    let localDbMock: InstanceType<typeof DatabaseMockBuilder>;
+    let localDbMock: ReturnType<typeof Mock.db>;
 
     beforeEach(async () => {
       // Create dedicated database mock for this test suite
@@ -628,7 +628,7 @@ describe('PluginAPIFactory', () => {
 
   describe('PluginAPIImpl - HTTP Registry', () => {
     let api: PluginAPIImpl;
-    let localDbMock: InstanceType<typeof DatabaseMockBuilder>;
+    let localDbMock: ReturnType<typeof Mock.db>;
 
     beforeEach(async () => {
       // Create dedicated database mock for this test suite
@@ -755,7 +755,7 @@ describe('PluginAPIFactory', () => {
 
   describe('PluginAPIImpl - Resource Registration', () => {
     let api: PluginAPIImpl;
-    let localDbMock: InstanceType<typeof DatabaseMockBuilder>;
+    let localDbMock: ReturnType<typeof Mock.db>;
 
     beforeEach(async () => {
       // Create dedicated database mock for this test suite
@@ -825,7 +825,7 @@ describe('PluginAPIFactory', () => {
   describe('PluginAPIImpl - Plugin Communication', () => {
     let api: PluginAPIImpl;
     let pluginAPIRegistry: Map<string, Map<string, any>>;
-    let localDbMock: InstanceType<typeof DatabaseMockBuilder>;
+    let localDbMock: ReturnType<typeof Mock.db>;
 
     beforeEach(async () => {
       // Create dedicated database mock for this test suite
@@ -898,7 +898,7 @@ describe('PluginAPIFactory', () => {
 
   describe('PluginAPIImpl - Metadata Manager', () => {
     let api: PluginAPIImpl;
-    let localDbMock: InstanceType<typeof DatabaseMockBuilder>;
+    let localDbMock: ReturnType<typeof Mock.db>;
 
     beforeEach(async () => {
       // Create dedicated database mock for this test suite
@@ -957,7 +957,7 @@ describe('PluginAPIFactory', () => {
 
   describe('PluginAPIImpl - Hooks', () => {
     let api: PluginAPIImpl;
-    let localDbMock: InstanceType<typeof DatabaseMockBuilder>;
+    let localDbMock: ReturnType<typeof Mock.db>;
 
     beforeEach(async () => {
       // Create dedicated database mock for this test suite
@@ -1036,7 +1036,7 @@ describe('PluginAPIFactory', () => {
 
   describe('PluginAPIImpl - Shortcode', () => {
     let api: PluginAPIImpl;
-    let localDbMock: InstanceType<typeof DatabaseMockBuilder>;
+    let localDbMock: ReturnType<typeof Mock.db>;
 
     beforeEach(async () => {
       // Create dedicated database mock for this test suite
@@ -1082,7 +1082,7 @@ describe('PluginAPIFactory', () => {
 
   describe('PluginAPIImpl - Public Data', () => {
     let api: PluginAPIImpl;
-    let localDbMock: InstanceType<typeof DatabaseMockBuilder>;
+    let localDbMock: ReturnType<typeof Mock.db>;
 
     beforeEach(async () => {
       // Create dedicated database mock for this test suite
@@ -1139,7 +1139,7 @@ describe('PluginAPIFactory', () => {
 
   describe('PluginAPIImpl - Lifecycle', () => {
     let api: PluginAPIImpl;
-    let localDbMock: InstanceType<typeof DatabaseMockBuilder>;
+    let localDbMock: ReturnType<typeof Mock.db>;
 
     beforeEach(async () => {
       // Create dedicated database mock for this test suite
@@ -1222,7 +1222,7 @@ describe('PluginAPIFactory', () => {
 
   describe('PluginAPIImpl - Cleanup', () => {
     let api: PluginAPIImpl;
-    let localDbMock: InstanceType<typeof DatabaseMockBuilder>;
+    let localDbMock: ReturnType<typeof Mock.db>;
 
     beforeEach(async () => {
       // Create dedicated database mock for this test suite

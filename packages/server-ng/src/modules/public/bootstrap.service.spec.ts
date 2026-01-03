@@ -103,9 +103,11 @@ describe('BootstrapService', () => {
       mockPluginRegistryService.getAllPublicData.mockResolvedValue({
         testPlugin: { enabled: true },
       });
-      mockPluginDataValidator.normalizeProviderResult.mockImplementation((_, data) => data);
+      mockPluginDataValidator.normalizeProviderResult.mockImplementation(
+        (_: any, data: any) => data,
+      );
       mockHookService.doAction.mockResolvedValue(undefined);
-      mockHookService.applyFilters.mockImplementation((_, data) => Promise.resolve(data));
+      mockHookService.applyFilters.mockImplementation((_: any, data: any) => Promise.resolve(data));
 
       // Execute
       const result = await service.getPublicBootstrap();

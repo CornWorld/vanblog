@@ -18,7 +18,7 @@
 
 import { Logger } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
-import { describe, it, expect, beforeEach, afterEach, vi, type Mock } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 import { DATABASE_CONNECTION } from '../../../database';
 import { createDatabaseMock, Mock } from '@test/mock';
@@ -32,8 +32,8 @@ describe('WebhookService - Logging & Statistics', () => {
   let service: WebhookService;
   let mockDb: ReturnType<typeof createDatabaseMock>;
   let mockWebhookRegistry: {
-    registerWebhook: Mock;
-    unregisterWebhookFromAllEvents: Mock;
+    registerWebhook: import('vitest').Mock;
+    unregisterWebhookFromAllEvents: import('vitest').Mock;
   };
 
   // Helper to rebuild service with new mockDb

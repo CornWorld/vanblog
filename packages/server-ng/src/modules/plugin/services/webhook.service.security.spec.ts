@@ -19,7 +19,7 @@
 
 import { Logger } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
-import { describe, it, expect, beforeEach, afterEach, vi, type Mock } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 import { DATABASE_CONNECTION } from '../../../database';
 import { createDatabaseMock, Mock } from '@test/mock';
@@ -33,8 +33,8 @@ describe('WebhookService - Security', () => {
   let service: WebhookService;
   let dbMock: ReturnType<typeof createDatabaseMock>;
   let mockWebhookRegistry: {
-    registerWebhook: Mock;
-    unregisterWebhookFromAllEvents: Mock;
+    registerWebhook: import('vitest').Mock;
+    unregisterWebhookFromAllEvents: import('vitest').Mock;
   };
 
   beforeEach(async () => {
@@ -121,7 +121,7 @@ describe('WebhookService - Security', () => {
         timeout: 5000,
       };
 
-      (global.fetch as Mock).mockResolvedValue({
+      (global.fetch as import('vitest').Mock).mockResolvedValue({
         ok: true,
         status: 200,
         text: vi.fn().mockResolvedValue('Success'),
@@ -139,7 +139,7 @@ describe('WebhookService - Security', () => {
       await (service as any).executeWebhook(_webhook, 'article|afterCreate', { articleId: 1 });
 
       expect(global.fetch).toHaveBeenCalled();
-      const fetchCall = (global.fetch as Mock).mock.calls[0];
+      const fetchCall = (global.fetch as import('vitest').Mock).mock.calls[0];
       expect(fetchCall[1].headers['X-VanBlog-Signature']).toBeDefined();
     });
 
@@ -155,7 +155,7 @@ describe('WebhookService - Security', () => {
         timeout: 5000,
       };
 
-      (global.fetch as Mock).mockResolvedValue({
+      (global.fetch as import('vitest').Mock).mockResolvedValue({
         ok: true,
         status: 200,
         text: vi.fn().mockResolvedValue('OK'),
@@ -174,7 +174,7 @@ describe('WebhookService - Security', () => {
 
       // Verify signature header was included
       expect(global.fetch).toHaveBeenCalled();
-      const fetchCall = (global.fetch as Mock).mock.calls[0];
+      const fetchCall = (global.fetch as import('vitest').Mock).mock.calls[0];
       if (fetchCall && fetchCall[1] && fetchCall[1].headers) {
         expect(fetchCall[1].headers['X-VanBlog-Signature']).toBeDefined();
         expect(typeof fetchCall[1].headers['X-VanBlog-Signature']).toBe('string');
@@ -205,7 +205,7 @@ describe('WebhookService - Security', () => {
         data: { articleId: 1 },
       });
 
-      (global.fetch as Mock).mockResolvedValue({
+      (global.fetch as import('vitest').Mock).mockResolvedValue({
         ok: true,
         status: 200,
         text: vi.fn().mockResolvedValue('OK'),
@@ -270,7 +270,7 @@ describe('WebhookService - Security', () => {
       expect(sig1).toBe(sig2);
 
       // Mock fetch for webhook execution
-      (global.fetch as Mock).mockImplementation(() => {
+      (global.fetch as import('vitest').Mock).mockImplementation(() => {
         return Promise.resolve({
           ok: true,
           status: 200,
@@ -312,7 +312,7 @@ describe('WebhookService - Security', () => {
         timeout: 5000,
       };
 
-      (global.fetch as Mock).mockResolvedValue({
+      (global.fetch as import('vitest').Mock).mockResolvedValue({
         ok: true,
         status: 200,
         text: vi.fn().mockResolvedValue('OK'),
@@ -335,7 +335,7 @@ describe('WebhookService - Security', () => {
       expect(global.fetch).toHaveBeenCalled();
 
       // Get the request body from fetch call
-      const fetchCall = (global.fetch as Mock).mock.calls[0];
+      const fetchCall = (global.fetch as import('vitest').Mock).mock.calls[0];
       if (fetchCall && fetchCall[1]) {
         const requestBody = fetchCall[1].body;
         if (typeof requestBody === 'string') {
@@ -388,7 +388,7 @@ describe('WebhookService - Security', () => {
       };
 
       const networkError = new Error('Network unreachable');
-      (global.fetch as Mock).mockRejectedValue(networkError);
+      (global.fetch as import('vitest').Mock).mockRejectedValue(networkError);
 
       // Use DatabaseMockBuilder for update and insert
       const builder = Mock.db();

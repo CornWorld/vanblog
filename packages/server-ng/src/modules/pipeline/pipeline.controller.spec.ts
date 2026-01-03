@@ -9,18 +9,18 @@ import { PipelineService } from './pipeline.service';
 
 describe('PipelineController', () => {
   let controller: PipelineController;
-  let mockService: ReturnType<typeof Mock.createPipelineServiceMock>;
+  let mockService: ReturnType<typeof Mock.pipelineService>;
 
   beforeEach(async () => {
     // 使用 MockUtils 创建 PipelineService Mock
-    mockService = Mock.createPipelineServiceMock();
+    mockService = Mock.pipelineService();
 
-    const mockPipeline = Mock.createPipeline();
+    const mockPipeline = Mock.pipeline();
     const mockPipelineList = {
       items: [mockPipeline],
       total: 1,
     };
-    const mockExecutionResult = Mock.createPipelineExecutionResult();
+    const mockExecutionResult = Mock.pipelineExecutionResult();
 
     // 配置 mock 返回值
     vi.mocked(mockService.findAll as any).mockResolvedValue(mockPipelineList);
@@ -130,7 +130,7 @@ describe('PipelineController', () => {
       };
 
       const updatedPipeline = {
-        ...Mock.createPipeline(),
+        ...Mock.pipeline(),
         ...updateDto,
       };
 

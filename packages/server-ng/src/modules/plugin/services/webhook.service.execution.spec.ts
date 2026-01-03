@@ -19,7 +19,7 @@
 
 import { Logger } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
-import { describe, it, expect, beforeEach, afterEach, vi, type Mock } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 import { DATABASE_CONNECTION } from '../../../database';
 import { createDatabaseMock } from '@test/mock';
@@ -33,8 +33,8 @@ describe('WebhookService - Execution & Retry', () => {
   let service: WebhookService;
   let mockDb: ReturnType<typeof createDatabaseMock>;
   let mockWebhookRegistry: {
-    registerWebhook: Mock;
-    unregisterWebhookFromAllEvents: Mock;
+    registerWebhook: import('vitest').Mock;
+    unregisterWebhookFromAllEvents: import('vitest').Mock;
   };
 
   beforeEach(async () => {
@@ -87,21 +87,21 @@ describe('WebhookService - Execution & Retry', () => {
         timeout: 5000,
       };
 
-      (global.fetch as Mock).mockResolvedValue({
+      (global.fetch as import('vitest').Mock).mockResolvedValue({
         ok: true,
         status: 200,
         text: vi.fn().mockResolvedValue('Success'),
       });
 
       // Setup update mock
-      mockDb.update.mockReturnValue({
+      (mockDb.update as any).mockReturnValue({
         set: vi.fn().mockReturnValue({
           where: vi.fn().mockResolvedValue(undefined),
         }),
       });
 
       // Setup insert mock
-      mockDb.insert.mockReturnValue({
+      (mockDb.insert as any).mockReturnValue({
         values: vi.fn().mockResolvedValue(undefined),
       });
 
@@ -128,7 +128,7 @@ describe('WebhookService - Execution & Retry', () => {
       };
 
       // First two attempts fail, third succeeds
-      (global.fetch as Mock)
+      (global.fetch as import('vitest').Mock)
         .mockRejectedValueOnce(new Error('Network error'))
         .mockRejectedValueOnce(new Error('Network error'))
         .mockResolvedValueOnce({
@@ -138,14 +138,14 @@ describe('WebhookService - Execution & Retry', () => {
         });
 
       // Setup update mock
-      mockDb.update.mockReturnValue({
+      (mockDb.update as any).mockReturnValue({
         set: vi.fn().mockReturnValue({
           where: vi.fn().mockResolvedValue(undefined),
         }),
       });
 
       // Setup insert mock
-      mockDb.insert.mockReturnValue({
+      (mockDb.insert as any).mockReturnValue({
         values: vi.fn().mockResolvedValue(undefined),
       });
 
@@ -181,17 +181,17 @@ describe('WebhookService - Execution & Retry', () => {
 
       const abortError = new Error('Timeout');
       abortError.name = 'AbortError';
-      (global.fetch as Mock).mockRejectedValue(abortError);
+      (global.fetch as import('vitest').Mock).mockRejectedValue(abortError);
 
       // Setup update mock
-      mockDb.update.mockReturnValue({
+      (mockDb.update as any).mockReturnValue({
         set: vi.fn().mockReturnValue({
           where: vi.fn().mockResolvedValue(undefined),
         }),
       });
 
       // Setup insert mock
-      mockDb.insert.mockReturnValue({
+      (mockDb.insert as any).mockReturnValue({
         values: vi.fn().mockResolvedValue(undefined),
       });
 
@@ -216,21 +216,21 @@ describe('WebhookService - Execution & Retry', () => {
         timeout: 5000,
       };
 
-      (global.fetch as Mock).mockResolvedValue({
+      (global.fetch as import('vitest').Mock).mockResolvedValue({
         ok: false,
         status: 500,
         text: vi.fn().mockResolvedValue('Internal Server Error'),
       });
 
       // Setup update mock
-      mockDb.update.mockReturnValue({
+      (mockDb.update as any).mockReturnValue({
         set: vi.fn().mockReturnValue({
           where: vi.fn().mockResolvedValue(undefined),
         }),
       });
 
       // Setup insert mock
-      mockDb.insert.mockReturnValue({
+      (mockDb.insert as any).mockReturnValue({
         values: vi.fn().mockResolvedValue(undefined),
       });
 
@@ -264,14 +264,14 @@ describe('WebhookService - Execution & Retry', () => {
         timeout: 5000,
       };
 
-      (global.fetch as Mock).mockResolvedValue({
+      (global.fetch as import('vitest').Mock).mockResolvedValue({
         ok: true,
         status: 200,
         text: vi.fn().mockResolvedValue('Success'),
       });
 
       // Setup update mock
-      mockDb.update.mockReturnValue({
+      (mockDb.update as any).mockReturnValue({
         set: vi.fn().mockReturnValue({
           where: vi.fn().mockResolvedValue(undefined),
         }),
@@ -279,7 +279,7 @@ describe('WebhookService - Execution & Retry', () => {
 
       const insertMock = vi.fn().mockResolvedValue(undefined);
       // Setup insert mock
-      mockDb.insert.mockReturnValue({
+      (mockDb.insert as any).mockReturnValue({
         values: insertMock,
       });
 

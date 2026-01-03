@@ -10,7 +10,7 @@ import { createTableFromSchema, tableExists, zodSchemaToTypeScript } from './sch
 
 // Mock the Logger
 vi.mock('@nestjs/common', async (importOriginal) => {
-  const actual = await importOriginal();
+  const actual = (await importOriginal()) as any;
   return {
     ...actual,
     Logger: class {

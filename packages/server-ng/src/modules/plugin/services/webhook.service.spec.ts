@@ -102,7 +102,7 @@ describe('WebhookService', () => {
       };
 
       // Setup insert mock to return the webhook
-      mockDb.insert.mockReturnValue({
+      (mockDb.insert as any).mockReturnValue({
         values: vi.fn().mockReturnValue({
           returning: vi.fn().mockResolvedValue([dbWebhook]),
         }),
@@ -145,7 +145,7 @@ describe('WebhookService', () => {
       };
 
       // Setup insert mock to return the inactive webhook
-      mockDb.insert.mockReturnValue({
+      (mockDb.insert as any).mockReturnValue({
         values: vi.fn().mockReturnValue({
           returning: vi.fn().mockResolvedValue([dbWebhook]),
         }),
@@ -184,7 +184,7 @@ describe('WebhookService', () => {
       ];
 
       // Setup select mock for main query
-      mockDb.select.mockReturnValueOnce({
+      (mockDb.select as any).mockReturnValueOnce({
         from: vi.fn().mockReturnValue({
           where: vi.fn().mockReturnValue({
             orderBy: vi.fn().mockReturnValue({
@@ -197,7 +197,7 @@ describe('WebhookService', () => {
       });
 
       // Setup select mock for count query
-      mockDb.select.mockReturnValueOnce({
+      (mockDb.select as any).mockReturnValueOnce({
         from: vi.fn().mockReturnValue({
           where: vi.fn().mockResolvedValue([{ count: 2 }]),
         }),
@@ -217,7 +217,7 @@ describe('WebhookService', () => {
 
     it('should filter by active status', async () => {
       // Setup select mock for main query
-      mockDb.select.mockReturnValueOnce({
+      (mockDb.select as any).mockReturnValueOnce({
         from: vi.fn().mockReturnValue({
           where: vi.fn().mockReturnValue({
             orderBy: vi.fn().mockReturnValue({
@@ -230,7 +230,7 @@ describe('WebhookService', () => {
       });
 
       // Setup select mock for count query
-      mockDb.select.mockReturnValueOnce({
+      (mockDb.select as any).mockReturnValueOnce({
         from: vi.fn().mockReturnValue({
           where: vi.fn().mockResolvedValue([{ count: 0 }]),
         }),
@@ -243,7 +243,7 @@ describe('WebhookService', () => {
 
     it('should filter by event', async () => {
       // Setup select mock for main query
-      mockDb.select.mockReturnValueOnce({
+      (mockDb.select as any).mockReturnValueOnce({
         from: vi.fn().mockReturnValue({
           where: vi.fn().mockReturnValue({
             orderBy: vi.fn().mockReturnValue({
@@ -256,7 +256,7 @@ describe('WebhookService', () => {
       });
 
       // Setup select mock for count query
-      mockDb.select.mockReturnValueOnce({
+      (mockDb.select as any).mockReturnValueOnce({
         from: vi.fn().mockReturnValue({
           where: vi.fn().mockResolvedValue([{ count: 0 }]),
         }),
@@ -281,7 +281,7 @@ describe('WebhookService', () => {
         createdAt: new Date(),
       };
 
-      mockDb.select.mockReturnValue({
+      (mockDb.select as any).mockReturnValue({
         from: vi.fn().mockReturnValue({
           where: vi.fn().mockReturnValue({
             limit: vi.fn().mockResolvedValue([webhook]),
@@ -299,7 +299,7 @@ describe('WebhookService', () => {
     });
 
     it('should return null if webhook not found', async () => {
-      mockDb.select.mockReturnValue({
+      (mockDb.select as any).mockReturnValue({
         from: vi.fn().mockReturnValue({
           where: vi.fn().mockReturnValue({
             limit: vi.fn().mockResolvedValue([]),
@@ -324,7 +324,7 @@ describe('WebhookService', () => {
         createdAt: new Date(),
       };
 
-      mockDb.select.mockReturnValue({
+      (mockDb.select as any).mockReturnValue({
         from: vi.fn().mockReturnValue({
           where: vi.fn().mockReturnValue({
             limit: vi.fn().mockResolvedValue([webhook]),
@@ -359,7 +359,7 @@ describe('WebhookService', () => {
         updatedAt: new Date(),
       };
 
-      mockDb.update.mockReturnValue({
+      (mockDb.update as any).mockReturnValue({
         set: vi.fn().mockReturnValue({
           where: vi.fn().mockReturnValue({
             returning: vi.fn().mockResolvedValue([updatedWebhook]),
@@ -375,7 +375,7 @@ describe('WebhookService', () => {
     });
 
     it('should return null if webhook not found', async () => {
-      mockDb.update.mockReturnValue({
+      (mockDb.update as any).mockReturnValue({
         set: vi.fn().mockReturnValue({
           where: vi.fn().mockReturnValue({
             returning: vi.fn().mockResolvedValue([]),
@@ -391,7 +391,7 @@ describe('WebhookService', () => {
 
   describe('remove', () => {
     it('should delete a webhook', async () => {
-      mockDb.delete.mockReturnValue({
+      (mockDb.delete as any).mockReturnValue({
         where: vi.fn().mockResolvedValue(undefined),
       });
 
@@ -427,7 +427,7 @@ describe('WebhookService', () => {
         },
       ];
 
-      mockDb.select.mockReturnValue({
+      (mockDb.select as any).mockReturnValue({
         from: vi.fn().mockReturnValue({
           where: vi.fn().mockResolvedValue(webhooks),
         }),
@@ -441,13 +441,13 @@ describe('WebhookService', () => {
       });
 
       // Mock update and insert operations
-      mockDb.update.mockReturnValue({
+      (mockDb.update as any).mockReturnValue({
         set: vi.fn().mockReturnValue({
           where: vi.fn().mockResolvedValue(undefined),
         }),
       });
 
-      mockDb.insert.mockReturnValue({
+      (mockDb.insert as any).mockReturnValue({
         values: vi.fn().mockResolvedValue(undefined),
       });
 
@@ -480,7 +480,7 @@ describe('WebhookService', () => {
         },
       ];
 
-      mockDb.select.mockReturnValue({
+      (mockDb.select as any).mockReturnValue({
         from: vi.fn().mockReturnValue({
           where: vi.fn().mockResolvedValue(webhooks),
         }),
@@ -492,13 +492,13 @@ describe('WebhookService', () => {
         text: vi.fn().mockResolvedValue('OK'),
       });
 
-      mockDb.update.mockReturnValue({
+      (mockDb.update as any).mockReturnValue({
         set: vi.fn().mockReturnValue({
           where: vi.fn().mockResolvedValue(undefined),
         }),
       });
 
-      mockDb.insert.mockReturnValue({
+      (mockDb.insert as any).mockReturnValue({
         values: vi.fn().mockResolvedValue(undefined),
       });
 
@@ -547,13 +547,13 @@ describe('WebhookService', () => {
         text: vi.fn().mockResolvedValue('OK'),
       });
 
-      mockDb.update.mockReturnValue({
+      (mockDb.update as any).mockReturnValue({
         set: vi.fn().mockReturnValue({
           where: vi.fn().mockResolvedValue(undefined),
         }),
       });
 
-      mockDb.insert.mockReturnValue({
+      (mockDb.insert as any).mockReturnValue({
         values: vi.fn().mockResolvedValue(undefined),
       });
 

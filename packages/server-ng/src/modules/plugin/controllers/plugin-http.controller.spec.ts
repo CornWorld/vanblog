@@ -75,7 +75,7 @@ describe('PluginHttpController', () => {
           getBooks: { method: 'GET', path: '/books', responses: { 200: {} } },
         },
         handlers: { getBooks: mockContractHandler },
-      };
+      } as any;
 
       vi.mocked(mockHttpRegistry.findContractRoutes!).mockReturnValue([mockContractRoute]);
 
@@ -116,7 +116,7 @@ describe('PluginHttpController', () => {
           getBooks: { method: 'GET', path: '/books', responses: { 200: {} } },
         },
         handlers: { getBooks: mockContractHandler },
-      };
+      } as any;
 
       vi.mocked(mockHttpRegistry.findContractRoutes!).mockReturnValue([mockContractRoute]);
 
@@ -161,7 +161,7 @@ describe('PluginHttpController', () => {
           action: { method: 'GET', path: '/api/users/:id/posts', responses: { 200: {} } },
         },
         handlers: { action: mockHandler },
-      };
+      } as any;
 
       vi.mocked(mockHttpRegistry.findContractRoutes!).mockReturnValue([mockRoute]);
 
@@ -225,7 +225,7 @@ describe('PluginHttpController', () => {
           otherAction: { method: 'POST', path: '/other', responses: { 200: {} } },
         },
         handlers: { otherAction: vi.fn() },
-      };
+      } as any;
 
       vi.mocked(mockHttpRegistry.findContractRoutes!).mockReturnValue([mockRoute]);
       vi.mocked(mockHttpRegistry.findRawRoute!).mockReturnValue({

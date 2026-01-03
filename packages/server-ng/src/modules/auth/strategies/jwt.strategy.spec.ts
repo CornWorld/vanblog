@@ -22,7 +22,7 @@ describe('JwtStrategy', () => {
     permissions: ['user:read', 'user:write'],
     createdAt: dayjs().format(),
     updatedAt: dayjs().format(),
-  }) as User; // Type assertion for User instance
+  }) as unknown as User; // Type assertion for User instance
 
   const mockUserService = {
     findOne: vi.fn(),

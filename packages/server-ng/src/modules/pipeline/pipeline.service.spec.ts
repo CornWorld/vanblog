@@ -123,12 +123,12 @@ describe('PipelineService', () => {
   describe('findAll', () => {
     it('should return all non-deleted pipelines', async () => {
       const mockPipelines = [
-        Mock.createPipeline({
+        Mock.pipeline({
           id: 1,
           name: 'Pipeline 1',
           eventName: 'article|afterCreate',
         }),
-        Mock.createPipeline({
+        Mock.pipeline({
           id: 2,
           name: 'Pipeline 2',
           eventName: 'article|afterUpdate',
@@ -170,7 +170,7 @@ describe('PipelineService', () => {
 
   describe('findOne', () => {
     it('should return pipeline by id', async () => {
-      const mockPipeline = Mock.createPipeline({ id: 1 });
+      const mockPipeline = Mock.pipeline({ id: 1 });
 
       databaseMock.select.mockReturnValue({
         from: vi.fn().mockReturnValue({
@@ -199,7 +199,7 @@ describe('PipelineService', () => {
   describe('findByEventName', () => {
     it('should return enabled pipelines for event', async () => {
       const mockPipelines = [
-        Mock.createPipeline({
+        Mock.pipeline({
           id: 1,
           name: 'Pipeline 1',
           eventName: 'article|afterCreate',
@@ -241,7 +241,7 @@ describe('PipelineService', () => {
         deps: [],
       };
 
-      const mockCreated = Mock.createPipeline({ ...createDto, id: 1 });
+      const mockCreated = Mock.pipeline({ ...createDto, id: 1 });
 
       databaseMock.insert.mockReturnValue({
         values: vi.fn().mockReturnValue({
@@ -274,7 +274,7 @@ describe('PipelineService', () => {
 console.log('Pipeline executed with input:', input);
 `;
 
-      const mockCreated = Mock.createPipeline({
+      const mockCreated = Mock.pipeline({
         id: 2,
         name: createDto.name,
         eventName: createDto.eventName,
@@ -312,7 +312,7 @@ console.log('Pipeline executed with input:', input);
 
   describe('update', () => {
     it('should update an existing pipeline', async () => {
-      const existingPipeline = Mock.createPipeline({ id: 1 });
+      const existingPipeline = Mock.pipeline({ id: 1 });
 
       const updateDto = {
         name: 'Updated Name',
@@ -358,7 +358,7 @@ console.log('Pipeline executed with input:', input);
     });
 
     it('should validate event name when provided in update', async () => {
-      const existingPipeline = Mock.createPipeline({ id: 1 });
+      const existingPipeline = Mock.pipeline({ id: 1 });
 
       databaseMock.select.mockReturnValue({
         from: vi.fn().mockReturnValue({
@@ -376,7 +376,7 @@ console.log('Pipeline executed with input:', input);
 
   describe('remove', () => {
     it('should soft delete a pipeline', async () => {
-      const existingPipeline = Mock.createPipeline({ id: 1 });
+      const existingPipeline = Mock.pipeline({ id: 1 });
 
       databaseMock.select.mockReturnValue({
         from: vi.fn().mockReturnValue({
@@ -425,7 +425,7 @@ console.log('Pipeline executed with input:', input);
 
   describe('triggerById', () => {
     it('should throw BadRequestException when pipeline is disabled', async () => {
-      const disabledPipeline = Mock.createPipeline({
+      const disabledPipeline = Mock.pipeline({
         id: 1,
         enabled: false,
       });
