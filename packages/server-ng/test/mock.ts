@@ -7,7 +7,6 @@ import { StorageProvider } from '../src/modules/media/dto/storage-config.dto';
 import { ArticleService } from '../src/modules/article/article.service';
 import { CategoryService } from '../src/modules/category/category.service';
 import { CommentService } from '../src/modules/comment/comment.service';
-import { HookService } from '../src/modules/plugin/services/hook.service';
 import { PluginDataValidator } from '../src/modules/plugin/services/plugin-data.validator';
 import { PluginRegistryService } from '../src/modules/plugin/services/plugin-registry.service';
 import { SettingCoreService } from '../src/modules/setting/services/setting-core.service';
@@ -22,7 +21,7 @@ import type {
   UploadResult,
 } from '../src/modules/media/interfaces/storage.interface';
 import type { StorageFactoryService } from '../src/modules/media/services/storage-factory.service';
-import type { HookService } from '../src/modules/plugin/services/hook.service';
+import { HookService } from '../src/modules/plugin/services/hook.service';
 
 /**
  * 类型安全的数据库查询链 Mock 接口
@@ -358,7 +357,10 @@ export class DatabaseMockBuilder<TSelect = any, TInsert = any, TUpdate = any, TD
     const valuesMock = vi.fn();
     valuesMock.mockImplementation((_values) => {
       // 同时调用 top-level values mock 以便测试可以检查
-      this.mockDb.values(_values);
+      const valuesFunc = this.mockDb.values as any;
+      if (typeof valuesFunc === 'function') {
+        valuesFunc(_values);
+      }
       return {
         returning: vi.fn().mockReturnValue(returningMock),
         onConflictDoUpdate: vi.fn().mockReturnValue({
@@ -410,7 +412,10 @@ export class DatabaseMockBuilder<TSelect = any, TInsert = any, TUpdate = any, TD
     const setMock = vi.fn();
     setMock.mockImplementation((_values) => {
       // 同时调用 top-level set mock 以便测试可以检查
-      this.mockDb.set(_values);
+      const setFunc = this.mockDb.set as any;
+      if (typeof setFunc === 'function') {
+        setFunc(_values);
+      }
 
       const whereMock = vi.fn();
       whereMock.mockReturnValue({
@@ -637,11 +642,7 @@ export class DatabaseMockBuilder<TSelect = any, TInsert = any, TUpdate = any, TD
  * 创建Logger Mock
  * 提供NestJS Logger接口的所有方法
  */
-/**
- * 创建Logger Mock
- * 提供NestJS Logger接口的所有方法
- */
-export function createLoggerMock(): ReturnType<typeof vi.fn> {
+export function createLoggerMock(): any {
   return {
     log: vi.fn(),
     error: vi.fn(),
@@ -2327,7 +2328,7 @@ export const MockUtils = {
 export const Mock = {
   // ========== Database ==========
   /** Create DatabaseMockBuilder instance */
-  db: () => new DatabaseMockBuilder(),
+  db: (): DatabaseMockBuilder => new DatabaseMockBuilder(),
 
   // ========== NestJS Framework Mocks ==========
   /** Create Logger mock */
@@ -2371,7 +2372,7 @@ export const Mock = {
   /** Create DraftService mock */
   draftService: createDraftServiceMock,
   /** Create DraftVersionService mock */
-  draftVersion: createDraftVersionServiceMock,
+  draftVersionService: createDraftVersionServiceMock,
   /** Create DemoService mock */
   demo: createDemoServiceMock,
   /** Create PipelineService mock */
@@ -2443,7 +2444,7 @@ export const Mock = {
 
   // ========== Test Data Factories (Batch) ==========
   /** Create multiple User test data */
-  users: (count: number, overrides?: Record<string, unknown>) =>
+  users: (count: number, overrides?: Record<string, unknown>): ReturnType<typeof createUser>[] =>
     Array.from({ length: count }, (_, i) => createUser({ id: i + 1, ...overrides })),
   /** Create multiple Article test data */
   articles: createArticles,

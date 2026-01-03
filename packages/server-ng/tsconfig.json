@@ -4,6 +4,9 @@
     "composite": true,
     "outDir": "./dist",
     "baseUrl": ".",
+    "paths": {
+      "@test/*": ["./test/*"]
+    },
     "types": ["node", "vitest/globals", "express", "multer"],
     // Disable verbatimModuleSyntax for NestJS DI compatibility
     "verbatimModuleSyntax": false,
