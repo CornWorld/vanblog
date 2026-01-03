@@ -2,6 +2,8 @@ import { Reflector } from '@nestjs/core';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, beforeEach, expect, vi } from 'vitest';
 
+import { Mock } from '@test/mock';
+
 import { UserType } from '../../user/dto/create-user.dto';
 
 import { RolesGuard } from './roles.guard';

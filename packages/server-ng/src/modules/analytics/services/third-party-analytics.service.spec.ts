@@ -3,6 +3,7 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import axios from 'axios';
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 
+import { Mock } from '@test/mock';
 import { ThirdPartyAnalyticsService } from './third-party-analytics.service';
 
 vi.mock('axios');
@@ -12,7 +13,7 @@ describe('ThirdPartyAnalyticsService', () => {
   let configService: ConfigService;
 
   beforeEach(async () => {
-    // 使用 MockUtils 创建 ConfigService Mock
+    // 使用 Mock 创建 ConfigService Mock
     configService = Mock.config({
       GOOGLE_ANALYTICS_ID: 'UA-123456789-1',
       BAIDU_ANALYTICS_ID: 'baidu123',

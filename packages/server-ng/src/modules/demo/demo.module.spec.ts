@@ -3,7 +3,7 @@ import { Test } from '@nestjs/testing';
 import { describe, it, expect, beforeEach } from 'vitest';
 
 import { DATABASE_CONNECTION } from '../../database';
-import { DatabaseMockBuilder } from '../../../test/mock';
+import { DatabaseMockBuilder } from '@test/mock';
 
 import { DemoModule } from './demo.module';
 import { DemoController } from './demo.controller';

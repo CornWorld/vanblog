@@ -2,6 +2,7 @@ import { ConfigService } from '@nestjs/config';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { vi, describe, beforeEach, it, expect, afterEach } from 'vitest';
 
+import { Mock } from '@test/mock';
 import { CDNService } from './cdn.service';
 
 // Mock fetch globally
@@ -10,7 +11,6 @@ global.fetch = mockFetch;
 
 describe('CDNService', () => {
   let service: CDNService;
-  let _configService: ConfigService;
   let module: TestingModule;
 
   beforeEach(async () => {
@@ -23,7 +23,7 @@ describe('CDNService', () => {
       CDN_CACHE_TTL: 86400,
       CDN_PURGE_API_KEY: 'test-api-key',
       CDN_PURGE_ENDPOINT: 'https://api.example.com/purge',
-    });
+    }) as any;
 
     module = await Test.createTestingModule({
       providers: [
@@ -36,7 +36,6 @@ describe('CDNService', () => {
     }).compile();
 
     service = module.get<CDNService>(CDNService);
-    _configService = module.get<ConfigService>(ConfigService);
   });
 
   afterEach(() => {
@@ -52,7 +51,7 @@ describe('CDNService', () => {
       // Create new service instance with disabled CDN
       const disabledConfigService = Mock.config({
         CDN_ENABLED: false,
-      });
+      }) as any;
       const disabledService = new CDNService(disabledConfigService);
       const result = disabledService.getResourceUrl('/images/test.jpg');
       expect(result).toBe('/images/test.jpg');
@@ -61,7 +60,7 @@ describe('CDNService', () => {
     it('should return original path when base URL is empty', () => {
       const emptyUrlConfigService = Mock.config({
         CDN_BASE_URL: '',
-      });
+      }) as any;
       const emptyUrlService = new CDNService(emptyUrlConfigService);
       const result = emptyUrlService.getResourceUrl('/images/test.jpg');
       expect(result).toBe('/images/test.jpg');
@@ -146,7 +145,7 @@ describe('CDNService', () => {
     it('should skip warmup when CDN is disabled', async () => {
       const disabledConfigService = Mock.config({
         CDN_ENABLED: false,
-      });
+      }) as any;
       const disabledService = new CDNService(disabledConfigService);
       await disabledService.warmupCache(['https://example.com/test.jpg']);
       expect(mockFetch).not.toHaveBeenCalled();
@@ -180,7 +179,7 @@ describe('CDNService', () => {
     it('should return false when CDN is disabled', async () => {
       const disabledConfigService = Mock.config({
         CDN_IMAGE_OPTIMIZATION: false,
-      });
+      }) as any;
       const disabledService = new CDNService(disabledConfigService);
       const result = await disabledService.purgeCache(['https://example.com/test.jpg']);
       expect(result).toBe(false);
@@ -189,7 +188,7 @@ describe('CDNService', () => {
     it('should return false when purge endpoint is not configured', async () => {
       const noPurgeConfigService = Mock.config({
         CDN_PURGE_ENDPOINT: undefined,
-      });
+      }) as any;
       const noPurgeService = new CDNService(noPurgeConfigService);
       const result = await noPurgeService.purgeCache(['https://example.com/test.jpg']);
       expect(result).toBe(false);
@@ -245,7 +244,7 @@ describe('CDNService', () => {
     it('should return false when not configured', async () => {
       const noKeyConfigService = Mock.config({
         CDN_PURGE_API_KEY: undefined,
-      });
+      }) as any;
       const noKeyService = new CDNService(noKeyConfigService);
       const result = await noKeyService.purgeAllCache();
       expect(result).toBe(false);
@@ -368,7 +367,7 @@ describe('CDNService', () => {
       // Create service with WebP disabled
       const noWebpConfigService = Mock.config({
         CDN_WEBP_ENABLED: false,
-      });
+      }) as any;
       const noWebpService = new CDNService(noWebpConfigService);
       const result = (noWebpService as any).buildOptimizedImageUrl(baseUrl, params);
 
@@ -382,7 +381,7 @@ describe('CDNService', () => {
         CDN_DOMAINS: '',
         CDN_BASE_URL: 'https://cdn.example.com',
         CDN_ENABLED: true,
-      });
+      }) as any;
       const noDomainsService = new CDNService(noDomainsConfigService);
       const result = (noDomainsService as any).getShardedDomain('/test.jpg');
       expect(result).toBe('https://cdn.example.com');
@@ -409,7 +408,7 @@ describe('CDNService', () => {
         CDN_DOMAINS: null,
         CDN_BASE_URL: 'https://cdn.example.com',
         CDN_ENABLED: true,
-      });
+      }) as any;
       const nullDomainsService = new CDNService(nullDomainsConfigService);
       const result = (nullDomainsService as any).getShardedDomain('/test.jpg');
       expect(result).toBe('https://cdn.example.com');
@@ -420,7 +419,7 @@ describe('CDNService', () => {
         CDN_DOMAINS: undefined,
         CDN_BASE_URL: 'https://cdn.example.com',
         CDN_ENABLED: true,
-      });
+      }) as any;
       const undefinedDomainsService = new CDNService(undefinedDomainsConfigService);
       const result = (undefinedDomainsService as any).getShardedDomain('/test.jpg');
       expect(result).toBe('https://cdn.example.com');
@@ -431,7 +430,7 @@ describe('CDNService', () => {
         CDN_DOMAINS: '',
         CDN_BASE_URL: 'https://cdn.example.com',
         CDN_ENABLED: true,
-      });
+      }) as any;
       const emptyDomainsService = new CDNService(emptyDomainsConfigService);
       const result = (emptyDomainsService as any).getShardedDomain('/test.jpg');
       expect(result).toBe('https://cdn.example.com');
@@ -443,7 +442,7 @@ describe('CDNService', () => {
         CDN_BASE_URL: null,
         CDN_DOMAINS: '',
         CDN_ENABLED: true,
-      });
+      }) as any;
       const nullUrlService = new CDNService(nullUrlConfigService);
       expect(() => (nullUrlService as any).getShardedDomain('/test.jpg')).not.toThrow();
 
@@ -452,7 +451,7 @@ describe('CDNService', () => {
         CDN_BASE_URL: undefined,
         CDN_DOMAINS: '',
         CDN_ENABLED: true,
-      });
+      }) as any;
       const undefinedUrlService = new CDNService(undefinedUrlConfigService);
       expect(() => (undefinedUrlService as any).getShardedDomain('/test.jpg')).not.toThrow();
     });
@@ -462,7 +461,7 @@ describe('CDNService', () => {
         CDN_DOMAINS: '   ',
         CDN_BASE_URL: 'https://cdn.example.com',
         CDN_ENABLED: true,
-      });
+      }) as any;
       const whitespaceDomainsService = new CDNService(whitespaceDomainsConfigService);
       const result = (whitespaceDomainsService as any).getShardedDomain('/test.jpg');
       // Should handle gracefully, likely returning base URL

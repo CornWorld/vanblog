@@ -3,7 +3,7 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import { dayjs } from '@vanblog/shared';
 import { describe, it, beforeEach, afterEach, expect, vi } from 'vitest';
 
-import { Mock } from '../../../test/mock';
+import { Mock } from '@test/mock';
 import { PermissionService } from '../permission/permission.service';
 
 import { UserType, type CreateUserDto } from './dto/create-user.dto';

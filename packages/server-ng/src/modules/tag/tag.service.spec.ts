@@ -11,6 +11,8 @@
 import { NotFoundException } from '@nestjs/common';
 import { describe, beforeEach, it, expect, afterEach, vi } from 'vitest';
 
+import { Mock } from '@test/mock';
+
 import { QueryOptimizerService } from '../../shared/services/query-optimizer.service';
 import { StatisticsService } from '../../shared/services/statistics.service';
 import { HookService } from '../plugin/services/hook.service';
@@ -29,12 +31,12 @@ describe('TagService', () => {
     const databaseMock = Mock.db();
     mockDb = databaseMock.build();
 
-    module = await MockUtils.createTagServiceTestingModule({
+    module = await Mock.tagServiceModule({
       service: TagService,
       dbMock: mockDb,
     }).compile();
 
-    service = module.get<TagService>(TagService);
+    service = module.get(TagService);
     mockQueryOptimizer = module.get(QueryOptimizerService);
     mockHookService = module.get(HookService);
     mockStatisticsService = module.get(StatisticsService);

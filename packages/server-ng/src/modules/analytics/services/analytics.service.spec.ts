@@ -3,6 +3,7 @@ import { dayjs } from '@vanblog/shared';
 import { analytics } from '@vanblog/shared/drizzle';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
+import { Mock } from '@test/mock';
 import { DATABASE_CONNECTION } from '../../../database';
 import { AnalyticsCacheService } from '../../../shared/cache/analytics-cache.service';
 import type { RecordAnalyticsDto } from '../dto/record-analytics.dto';

@@ -18,7 +18,7 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import * as bcrypt from 'bcrypt';
 import { vi } from 'vitest';
 
-import { createMockUser, Mock, DatabaseMockBuilder } from '../../../test/mock';
+import { createMockUser, Mock, DatabaseMockBuilder } from '@test/mock';
 import { DATABASE_CONNECTION } from '../../database';
 import { HookService } from '../plugin/services/hook.service';
 

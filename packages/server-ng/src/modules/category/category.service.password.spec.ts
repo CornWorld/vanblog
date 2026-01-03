@@ -15,6 +15,8 @@ import { NotFoundException } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { vi, describe, beforeEach, it, expect } from 'vitest';
 
+import { Mock } from '@test/mock';
+
 import { ConfigService } from '../../config/config.service';
 import { DATABASE_CONNECTION } from '../../database';
 import { QueryOptimizerService } from '../../shared/services/query-optimizer.service';

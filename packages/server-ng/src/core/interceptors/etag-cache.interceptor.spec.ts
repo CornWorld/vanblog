@@ -3,7 +3,7 @@ import { createHash } from 'crypto';
 import { firstValueFrom, of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
-import { createExecutionContextMock } from '../../../test/mock';
+import { createExecutionContextMock } from '@test/mock';
 
 import { ETagCacheInterceptor } from './etag-cache.interceptor';
 

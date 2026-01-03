@@ -1,7 +1,7 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import type * as winston from 'winston';
 
-import { Mock } from '../../../test/mock';
+import { Mock } from '@test/mock';
 import { ConfigService } from '../../config/config.service';
 
 import { LoggerService } from './logger.service';

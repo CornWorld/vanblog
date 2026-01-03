@@ -2,6 +2,8 @@ import { ConfigService } from '@nestjs/config';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, beforeEach, afterEach, expect, vi } from 'vitest';
 
+import { Mock } from '@test/mock';
+
 import { StatisticsService } from '../../shared/services/statistics.service';
 import { CategoryService } from '../category/category.service';
 import { CommentService } from '../comment/comment.service';
@@ -159,7 +161,7 @@ describe('BootstrapService', () => {
       mockCommentService.getResolvedWalineConfig.mockResolvedValue(undefined);
       mockPluginRegistryService.getAllPublicData.mockResolvedValue({});
       mockHookService.doAction.mockResolvedValue(undefined);
-      mockHookService.applyFilters.mockImplementation((_, data) => Promise.resolve(data));
+      mockHookService.applyFilters.mockImplementation((_: any, data: any) => Promise.resolve(data));
 
       const result = await service.getPublicBootstrap();
 
@@ -229,10 +231,10 @@ describe('BootstrapService', () => {
         invalidPlugin: { data: 'invalid' },
       });
       mockHookService.doAction.mockResolvedValue(undefined);
-      mockHookService.applyFilters.mockImplementation((_, data) => Promise.resolve(data));
+      mockHookService.applyFilters.mockImplementation((_: any, data: any) => Promise.resolve(data));
 
       // Only normalize valid plugin
-      mockPluginDataValidator.normalizeProviderResult.mockImplementation((name, data) => {
+      mockPluginDataValidator.normalizeProviderResult.mockImplementation((name: any, data: any) => {
         if (name === 'validPlugin') return data;
         return undefined;
       });
@@ -260,7 +262,7 @@ describe('BootstrapService', () => {
       mockCommentService.getResolvedWalineConfig.mockResolvedValue(undefined);
       mockPluginRegistryService.getAllPublicData.mockResolvedValue({});
       mockHookService.doAction.mockResolvedValue(undefined);
-      mockHookService.applyFilters.mockImplementation((_, data) => Promise.resolve(data));
+      mockHookService.applyFilters.mockImplementation((_: any, data: any) => Promise.resolve(data));
 
       const result = await service.getPublicBootstrap();
 
@@ -284,7 +286,7 @@ describe('BootstrapService', () => {
       mockCommentService.getResolvedWalineConfig.mockResolvedValue(undefined);
       mockPluginRegistryService.getAllPublicData.mockResolvedValue({});
       mockHookService.doAction.mockResolvedValue(undefined);
-      mockHookService.applyFilters.mockImplementation((_, data) => Promise.resolve(data));
+      mockHookService.applyFilters.mockImplementation((_: any, data: any) => Promise.resolve(data));
 
       const result = await service.getPublicBootstrap();
 

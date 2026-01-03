@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 
-import { type DatabaseMockBuilder } from './mock';
+import { Mock, type DatabaseMockBuilder } from './mock';
 
 describe('MockUtils', () => {
   describe('DatabaseMockBuilder', () => {
@@ -100,7 +100,7 @@ describe('MockUtils', () => {
     });
 
     it('should create media file test data', () => {
-      const mediaFile = Mock.createMediaFile({ filename: 'custom.jpg' });
+      const mediaFile = Mock.mediaFile({ filename: 'custom.jpg' });
 
       expect(mediaFile.id).toBe(1);
       expect(mediaFile.filename).toBe('custom.jpg');
@@ -109,7 +109,7 @@ describe('MockUtils', () => {
 
     it('should create paginated result', () => {
       const items = [{ id: 1 }, { id: 2 }];
-      const result = Mock.createPaginatedResult(items, 10, 1, 5);
+      const result = Mock.paginated(items, 10, 1, 5);
 
       expect(result.items).toEqual(items);
       expect(result.total).toBe(10);

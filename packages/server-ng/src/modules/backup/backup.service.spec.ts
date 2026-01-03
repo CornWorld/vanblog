@@ -4,7 +4,7 @@ import * as zlib from 'zlib';
 
 import { describe, it, beforeEach, expect, vi } from 'vitest';
 
-import { DatabaseMockBuilder } from '../../../test/mock';
+import { DatabaseMockBuilder, Mock } from '@test/mock';
 
 import { BackupService } from './backup.service';
 

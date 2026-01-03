@@ -12,6 +12,8 @@
  */
 import { describe, beforeEach, it, expect, afterEach, vi } from 'vitest';
 
+import { Mock } from '@test/mock';
+
 import { TagService } from './tag.service';
 
 describe('TagService - Boundary Conditions', () => {
@@ -23,12 +25,12 @@ describe('TagService - Boundary Conditions', () => {
     const databaseMockBuilder = Mock.db();
     mockDb = databaseMockBuilder.build();
 
-    module = await MockUtils.createTagServiceTestingModule({
+    module = await Mock.tagServiceModule({
       service: TagService,
       dbMock: mockDb,
     }).compile();
 
-    service = module.get<TagService>(TagService);
+    service = module.get(TagService);
   });
 
   afterEach(() => {

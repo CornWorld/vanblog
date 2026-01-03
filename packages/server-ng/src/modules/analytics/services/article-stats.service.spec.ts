@@ -2,6 +2,7 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import { analytics, articles } from '@vanblog/shared/drizzle';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
+import { Mock } from '@test/mock';
 import { DATABASE_CONNECTION } from '../../../database';
 import { AnalyticsType } from '../entities/analytics.entity';
 

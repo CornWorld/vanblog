@@ -2,6 +2,8 @@ import { NotFoundException } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { vi, describe, beforeEach, afterEach, it, expect } from 'vitest';
 
+import { Mock } from '@test/mock';
+
 import { TagController } from './tag.controller';
 import { TagService } from './tag.service';
 import { Tag } from './entities/tag.entity';

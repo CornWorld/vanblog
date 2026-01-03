@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type * as fsPromisesModule from 'fs/promises';
 
-import { Mock } from '../../../../test/mock';
+import { Mock } from '@test/mock';
 
 // Hoisted mock for fs/promises with a mutable implementation function for readFile
 let readFileImpl: (p: string | URL, opts?: unknown) => Promise<string> = async () => {

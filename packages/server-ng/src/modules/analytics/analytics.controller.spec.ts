@@ -1,6 +1,7 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, beforeEach, afterEach, expect, vi } from 'vitest';
 
+import { Mock } from '@test/mock';
 import { AnalyticsController } from './analytics.controller';
 import { AnalyticsService } from './services/analytics.service';
 import { ArticleStatsService } from './services/article-stats.service';
@@ -18,13 +19,13 @@ describe('AnalyticsController', () => {
 
   beforeEach(async () => {
     // 使用 MockUtils 创建所有 Mock
-    mockAnalyticsService = Mock.createAnalyticsServiceMock();
-    mockArticleStatsService = Mock.articleStatsServiceMock();
+    mockAnalyticsService = Mock.analytics();
+    mockArticleStatsService = Mock.articleStatsService();
     mockThirdPartyAnalyticsService = {
       trackPageview: vi.fn(),
     };
-    mockPublicAnalyticsService = Mock.createPublicAnalyticsServiceMock();
-    mockEchartsFormatterService = Mock.createEchartsFormatterServiceMock();
+    mockPublicAnalyticsService = Mock.publicAnalytics();
+    mockEchartsFormatterService = Mock.echartsFormatter();
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [AnalyticsController],

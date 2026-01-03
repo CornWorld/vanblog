@@ -5,6 +5,8 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, beforeEach, it, expect, vi } from 'vitest';
 import * as jwt from 'jsonwebtoken';
 
+import { Mock } from '@test/mock';
+
 import { ConfigService } from '../../../config/config.service';
 import { ArticleService } from '../article.service';
 import { ARTICLE_ACCESS_KEY } from '../decorators/article-access.decorator';

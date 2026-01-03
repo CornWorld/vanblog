@@ -20,7 +20,7 @@ import { users } from '@vanblog/shared/drizzle';
 import * as bcrypt from 'bcrypt';
 import { vi } from 'vitest';
 
-import { createMockUser, Mock, DatabaseMockBuilder } from '../../../test/mock';
+import { createMockUser, Mock, DatabaseMockBuilder } from '@test/mock';
 import { DATABASE_CONNECTION } from '../../database';
 import { HookService } from '../plugin/services/hook.service';
 
@@ -178,7 +178,7 @@ describe('UserService', () => {
           username: 'user2',
           email: 'user2@example.com',
           nickname: 'User 2',
-          type: 'collaborator',
+          type: 'editor',
           permissions: ['read'],
         }),
       ];

@@ -25,7 +25,7 @@ import { describe, it, expect, beforeEach, afterEach, vi, type Mock } from 'vite
 import { z } from 'zod';
 
 import { DATABASE_CONNECTION } from '../../../database';
-import { Mock } from '../../../../test/mock';
+import { Mock } from '@test/mock';
 import { ShortcodeService } from '../../shortcode/shortcode.service';
 import { PluginConfigService } from './plugin-config.service';
 import { PluginRegistryService } from './plugin-registry.service';

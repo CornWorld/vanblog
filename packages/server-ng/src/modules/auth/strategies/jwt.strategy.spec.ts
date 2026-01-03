@@ -4,7 +4,7 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import { dayjs } from '@vanblog/shared';
 import { describe, it, beforeEach, expect, vi } from 'vitest';
 
-import { Mock } from '../../../../test/mock';
+import { Mock } from '@test/mock';
 import { UserType } from '../../user/dto/create-user.dto';
 import { User } from '../../user/entities/user.entity';
 import { UserService } from '../../user/user.service';
@@ -22,7 +22,7 @@ describe('JwtStrategy', () => {
     permissions: ['user:read', 'user:write'],
     createdAt: dayjs().format(),
     updatedAt: dayjs().format(),
-  }) as User;
+  }) as User; // Type assertion for User instance
 
   const mockUserService = {
     findOne: vi.fn(),
@@ -30,7 +30,7 @@ describe('JwtStrategy', () => {
 
   const mockConfigService = Mock.config({
     JWT_SECRET: 'test-secret',
-  });
+  }) as any;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -53,7 +53,7 @@ describe('JwtStrategy', () => {
   it('should throw error when JWT_SECRET is not configured', () => {
     const badConfigService = Mock.config({
       JWT_SECRET: undefined,
-    });
+    }) as any;
 
     expect(() => {
       new JwtStrategy(badConfigService, userService);

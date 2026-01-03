@@ -2,7 +2,7 @@ import { NotFoundException } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, beforeEach, it, expect, vi, afterEach } from 'vitest';
 
-import { type DatabaseMockBuilder } from '../../../test/mock';
+import { type DatabaseMockBuilder, Mock } from '@test/mock';
 import { ConfigService } from '../../config/config.service';
 import { DATABASE_CONNECTION } from '../../database';
 import { QueryOptimizerService } from '../../shared/services/query-optimizer.service';

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-import { Mock } from '../../../../test/mock';
+import { Mock } from '@test/mock';
 import type { HookService } from './hook.service';
 import { WebhookRegistryService } from './webhook-registry.service';
 import type { WebhookService } from './webhook.service';

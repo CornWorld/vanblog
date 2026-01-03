@@ -1,6 +1,7 @@
 import { describe, it, beforeEach, afterEach, expect, vi } from 'vitest';
 import { Logger } from '@nestjs/common';
-import { type DatabaseMockBuilder } from '../mock';
+
+import { Mock, type DatabaseMockBuilder } from '../mock';
 
 /**
  * Article Query Performance Tests

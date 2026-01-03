@@ -4,6 +4,8 @@ import { dayjs } from '@vanblog/shared';
 import * as bcrypt from 'bcrypt';
 import { vi } from 'vitest';
 
+import { Mock } from '@test/mock';
+
 import { HookService } from '../plugin/services/hook.service';
 import { UserType } from '../user/dto';
 import { User } from '../user/entities/user.entity';

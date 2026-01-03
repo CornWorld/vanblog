@@ -1,6 +1,8 @@
 import { describe, it, beforeEach, afterEach, expect, vi } from 'vitest';
 import { Logger } from '@nestjs/common';
 
+import { Mock } from '../mock';
+
 /**
  * Plugin Hook System Performance Tests
  *

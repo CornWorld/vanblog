@@ -1,6 +1,7 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, beforeEach, afterEach, expect, vi } from 'vitest';
 
+import { Mock } from '@test/mock';
 import { DraftVersionService } from './draft-version.service';
 import { DraftVersionTsRestController } from './draft-version.controller';
 

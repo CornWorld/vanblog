@@ -521,7 +521,7 @@ describe('MockUtils - DatabaseMockBuilder', () => {
       builder.setTransactionBehavior(true);
       const db = builder.build();
 
-      const result = await db.transaction(async (_tx) => {
+      const result = await db.transaction((_tx: any) => {
         return { success: true };
       });
 
@@ -534,7 +534,7 @@ describe('MockUtils - DatabaseMockBuilder', () => {
       const db = builder.build();
 
       await expect(
-        db.transaction(async () => {
+        db.transaction(() => {
           return 'should fail';
         }),
       ).rejects.toThrow('Transaction failed');
@@ -555,7 +555,7 @@ describe('MockUtils - DatabaseMockBuilder', () => {
       builder.setTransactionBehavior(true, customTx);
       const db = builder.build();
 
-      const result = await db.transaction(async (tx) => {
+      const result = await db.transaction(async (tx: any) => {
         const data = await tx.select().from({}).where({}).get();
         return data;
       });
@@ -761,7 +761,7 @@ describe('MockUtils - TestData Factory', () => {
 
       expect(result).toEqual(testArticles);
       expect(result).toHaveLength(3);
-      result.forEach((article) => {
+      result.forEach((article: any) => {
         expect(article).toHaveProperty('id');
         expect(article).toHaveProperty('title');
         expect(article).toHaveProperty('content');

@@ -5,6 +5,8 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
+import { Mock } from '../../../test/mock';
+
 import { DATABASE_CONNECTION } from '../../database';
 import { HookService } from '../plugin/services/hook.service';
 import { SettingCoreService } from '../setting/services/setting-core.service';
@@ -258,7 +260,7 @@ describe('SitemapService', () => {
       const expectedSorted = [...expected].sort();
 
       const { calls } = vi.mocked(hookService.doAction).mock;
-      const beforeArgs = calls.find((args) => args[0] === 'sitemap|beforeGenerate');
+      const beforeArgs = calls.find((args: any) => args[0] === 'sitemap|beforeGenerate');
       expect(beforeArgs).toBeTruthy();
       const [, payload] = beforeArgs as [string, { siteUrl: string; urls: string[] }];
       expect(payload.siteUrl).toBe('https://example.com/');

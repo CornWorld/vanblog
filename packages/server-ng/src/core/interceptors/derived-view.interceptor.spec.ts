@@ -1,7 +1,7 @@
 import { firstValueFrom, of } from 'rxjs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { createExecutionContextMock } from '../../../test/mock';
+import { createExecutionContextMock } from '@test/mock';
 
 import { DerivedViewCacheService } from '../../shared/cache';
 

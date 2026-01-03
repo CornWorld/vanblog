@@ -21,7 +21,7 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, expect, beforeEach, afterEach, vi, type Mock } from 'vitest';
 
 import { DATABASE_CONNECTION } from '../../../database';
-import { createDatabaseMock } from '../../../../test/mock';
+import { createDatabaseMock } from '@test/mock';
 import { WebhookRegistryService } from './webhook-registry.service';
 import { WebhookService } from './webhook.service';
 

@@ -1,6 +1,8 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
+import { Mock } from '../../../test/mock';
+
 import { HookService } from './hook.service';
 
 describe('HookService', () => {

@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { Test } from '@nestjs/testing';
 
+import { Mock } from '@test/mock';
 import { DraftController } from './draft.controller';
 import { DraftService } from './draft.service';
 import { DraftVersionService } from './draft-version.service';

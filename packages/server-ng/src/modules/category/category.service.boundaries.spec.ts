@@ -15,6 +15,8 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import { vi, describe, beforeEach, it, expect } from 'vitest';
 
+import { Mock } from '@test/mock';
+
 import { ConfigService } from '../../config/config.service';
 import { DATABASE_CONNECTION } from '../../database';
 import { QueryOptimizerService } from '../../shared/services/query-optimizer.service';
@@ -26,7 +28,7 @@ import { CategoryService } from './category.service';
 describe('CategoryService - Boundary Conditions', () => {
   let service: CategoryService;
   let mockDb: any;
-  let dbMockBuilder: InstanceType<typeof DatabaseMockBuilder>;
+  let dbMockBuilder: ReturnType<typeof Mock.db>;
 
   beforeEach(async () => {
     dbMockBuilder = Mock.db();

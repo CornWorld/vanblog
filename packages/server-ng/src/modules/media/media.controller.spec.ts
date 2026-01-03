@@ -2,6 +2,7 @@ import { BadRequestException } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, beforeEach, afterEach, expect, vi } from 'vitest';
 
+import { Mock } from '@test/mock';
 import { SettingRegistryService } from '../setting/services/setting-registry.service';
 
 import { MediaProcessingSettingsSchema } from './dto/media-settings.dto';
@@ -21,10 +22,10 @@ describe('MediaController', () => {
 
   beforeEach(async () => {
     // 使用 MockUtils 创建 Mock 服务（减少 34 行手动配置）
-    mockMediaService = Mock.createMediaServiceMock();
-    mockImageProcessingService = Mock.createImageProcessingServiceMock();
-    mockStorageConfigService = Mock.createStorageConfigServiceMock();
-    mockImageProcessingQueueService = Mock.createImageProcessingQueueServiceMock();
+    mockMediaService = Mock.mediaService();
+    mockImageProcessingService = Mock.imageProcessing();
+    mockStorageConfigService = Mock.storageConfig();
+    mockImageProcessingQueueService = Mock.imageProcessingQueue();
     mockSettingRegistryService = {
       getConfig: vi.fn().mockResolvedValue(MediaProcessingSettingsSchema.parse({})),
     };
@@ -683,10 +684,10 @@ describe('chunked upload', () => {
 
   beforeEach(async () => {
     // 使用 MockUtils 创建 Mock 服务
-    mockMediaService = Mock.createMediaServiceMock();
-    mockImageProcessingService = Mock.createImageProcessingServiceMock();
-    mockStorageConfigService = Mock.createStorageConfigServiceMock();
-    mockImageProcessingQueueService = Mock.createImageProcessingQueueServiceMock();
+    mockMediaService = Mock.mediaService();
+    mockImageProcessingService = Mock.imageProcessing();
+    mockStorageConfigService = Mock.storageConfig();
+    mockImageProcessingQueueService = Mock.imageProcessingQueue();
     mockSettingRegistryService = {
       getConfig: vi.fn().mockResolvedValue(MediaProcessingSettingsSchema.parse({})),
     };

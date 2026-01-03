@@ -1,6 +1,8 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
+import { Mock } from '../../../test/mock';
+
 import { ConfigService } from '../../config/config.service';
 import { SitemapController } from './sitemap.controller';
 import { SitemapService } from './sitemap.service';
@@ -10,7 +12,7 @@ describe('SitemapController', () => {
   let sitemapService: SitemapService;
 
   beforeEach(async () => {
-    const mockSitemapService = Mock.createSitemapServiceMock();
+    const mockSitemapService = Mock.sitemap();
     const mockConfigService = Mock.config();
 
     const module: TestingModule = await Test.createTestingModule({

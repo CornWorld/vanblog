@@ -3,6 +3,7 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import * as bcrypt from 'bcrypt';
 import { vi, describe, beforeEach, it, expect } from 'vitest';
 
+import { Mock } from '@test/mock';
 import { DATABASE_CONNECTION } from '../../database';
 import { HookService } from '../plugin/services/hook.service';
 

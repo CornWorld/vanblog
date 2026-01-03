@@ -4,6 +4,8 @@ import { StreamableFile } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, beforeEach, expect, vi } from 'vitest';
 
+import { Mock } from '@test/mock';
+
 import { BackupController } from './backup.controller';
 import { BackupService } from './backup.service';
 import { PermissionService } from '../permission/permission.service';
@@ -21,8 +23,8 @@ describe('BackupController', () => {
   let mockPermissionService: any;
 
   beforeEach(async () => {
-    mockBackupService = Mock.createBackupServiceMock();
-    mockPermissionService = Mock.createPermissionServiceMock();
+    mockBackupService = Mock.backup();
+    mockPermissionService = Mock.permission();
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [BackupController],

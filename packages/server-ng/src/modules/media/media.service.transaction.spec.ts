@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 
-import { type DatabaseMockBuilder } from '../../../test/mock';
+import { type DatabaseMockBuilder, Mock } from '@test/mock';
 
 import { MediaService } from './services/media.service';
 

@@ -1,6 +1,7 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import { beforeEach, describe, expect, it } from 'vitest';
 
+import { Mock } from '@test/mock';
 import { DATABASE_CONNECTION } from '../../database';
 import { LoggerService } from '../../core/logger/logger.service';
 import { SettingRegistryService } from '../setting/services/setting-registry.service';
@@ -35,7 +36,7 @@ describe('MediaModule', () => {
         PicgoStorageService,
         {
           provide: DATABASE_CONNECTION,
-          useValue: createDatabaseMock(),
+          useValue: Mock.db().build(),
         },
         {
           provide: SettingRegistryService,

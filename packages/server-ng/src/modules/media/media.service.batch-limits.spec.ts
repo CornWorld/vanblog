@@ -1,6 +1,7 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import { vi, describe, beforeEach, it, expect } from 'vitest';
 
+import { Mock } from '@test/mock';
 import { LoggerService } from '../../core/logger/logger.service';
 import { DATABASE_CONNECTION } from '../../database';
 import { HookService } from '../plugin/services/hook.service';
@@ -51,7 +52,7 @@ describe('MediaService - Batch Operation Limits', () => {
     it('should allow deletion of 100 files', async () => {
       const ids = Array.from({ length: 100 }, (_, i) => i + 1);
       const mockFiles = ids.map((id) =>
-        Mock.createMediaFile({
+        Mock.mediaFile({
           id,
           filename: `file${String(id)}.jpg`,
           provider: 'local',
@@ -89,7 +90,7 @@ describe('MediaService - Batch Operation Limits', () => {
     it('should handle edge case of exactly 100 files', async () => {
       const exactlyHundredIds = Array.from({ length: 100 }, (_, i) => i + 1);
       const mockFiles = exactlyHundredIds.map((id) =>
-        Mock.createMediaFile({
+        Mock.mediaFile({
           id,
           filename: `file${String(id)}.jpg`,
           provider: 'local',
@@ -112,7 +113,7 @@ describe('MediaService - Batch Operation Limits', () => {
 
     it('should handle single file deletion within limits', async () => {
       const singleId = [1];
-      const mockFile = Mock.createMediaFile({
+      const mockFile = Mock.mediaFile({
         id: 1,
         filename: 'single.jpg',
         provider: 'local',
@@ -136,7 +137,7 @@ describe('MediaService - Batch Operation Limits', () => {
     it('should handle storage deletion failures gracefully within limits', async () => {
       const ids = [1, 2, 3];
       const mockFiles = ids.map((id) =>
-        Mock.createMediaFile({
+        Mock.mediaFile({
           id,
           filename: `file${String(id)}.jpg`,
           provider: 'local',
@@ -174,7 +175,7 @@ describe('MediaService - Batch Operation Limits', () => {
     it('should handle maximum allowed batch size efficiently', async () => {
       const maxIds = Array.from({ length: 100 }, (_, i) => i + 1);
       const mockFiles = maxIds.map((id) =>
-        Mock.createMediaFile({
+        Mock.mediaFile({
           id,
           filename: `perf${String(id)}.jpg`,
           provider: 'local',

@@ -19,6 +19,8 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import * as bcrypt from 'bcrypt';
 import { vi } from 'vitest';
 
+import { Mock } from '../../../test/mock';
+
 import { DATABASE_CONNECTION } from '../../database';
 import { HookService } from '../plugin/services/hook.service';
 
@@ -31,7 +33,7 @@ const mockedBcrypt = vi.mocked(bcrypt);
 
 describe('UserService - Permissions', () => {
   let service: UserService;
-  let databaseMock: InstanceType<typeof DatabaseMockBuilder>;
+  let databaseMock: ReturnType<typeof Mock.db>;
   let mockHookService: ReturnType<typeof Mock.hook>;
 
   beforeEach(async () => {

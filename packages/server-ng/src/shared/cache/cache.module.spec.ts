@@ -2,7 +2,7 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { ConfigService } from '../../config/config.service';
-import { createConfigServiceMock } from '../../../test/mock';
+import { createConfigServiceMock } from '@test/mock';
 
 import { CacheModule } from './cache.module';
 import { CacheService } from './cache.service';

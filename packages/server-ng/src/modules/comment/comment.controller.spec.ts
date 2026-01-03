@@ -2,6 +2,8 @@ import { ConfigService } from '@nestjs/config';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
+import { Mock } from '../../../test/mock';
+
 import { PermissionService } from '../permission/permission.service';
 
 import { CommentController } from './comment.controller';
@@ -25,7 +27,7 @@ describe('CommentController', () => {
         },
         {
           provide: PermissionService,
-          useValue: Mock.createPermissionServiceMock(),
+          useValue: Mock.permission(),
         },
       ],
     }).compile();
@@ -40,7 +42,7 @@ describe('CommentController', () => {
 
   describe('getWalineSetting', () => {
     it('should return waline setting', async () => {
-      const mockWalineSetting = Mock.createWalineSetting();
+      const mockWalineSetting = Mock.walineSetting() as any; // Type assertion for walineSetting mock
       vi.mocked(commentService.getWalineSetting).mockResolvedValue(mockWalineSetting);
 
       const result = await controller.getWalineSetting();
@@ -50,7 +52,7 @@ describe('CommentController', () => {
     });
 
     it('should return default setting if no setting found', async () => {
-      const defaultSetting = Mock.createWalineSetting({
+      const defaultSetting = Mock.walineSetting({
         'smtp.enabled': false,
         'smtp.host': '',
         'smtp.user': '',
@@ -58,7 +60,7 @@ describe('CommentController', () => {
         'sender.name': '',
         webhook: '',
         serverURL: '',
-      } as Record<string, unknown>);
+      } as Record<string, unknown>) as any; // Type assertion for walineSetting mock
       vi.mocked(commentService.getWalineSetting).mockResolvedValue(defaultSetting);
 
       const result = await controller.getWalineSetting();
@@ -69,7 +71,7 @@ describe('CommentController', () => {
 
   describe('updateWalineSetting', () => {
     it('should update waline setting', async () => {
-      const mockWalineSetting = Mock.createWalineSetting();
+      const mockWalineSetting = Mock.walineSetting() as any; // Type assertion for walineSetting mock
       const updateData: Record<string, unknown> = { 'smtp.enabled': false };
       const updatedSetting = { ...mockWalineSetting, ...updateData };
 

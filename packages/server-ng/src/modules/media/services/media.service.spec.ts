@@ -14,7 +14,8 @@ import {
   createStorageFactoryServiceMock,
   createStorageServiceMock,
   createMockFile,
-} from '../../../../test/mock';
+  Mock,
+} from '@test/mock';
 import { StorageProvider } from '../dto/storage-config.dto';
 
 import { MediaService } from './media.service';
@@ -104,7 +105,7 @@ describe('MediaService', () => {
   describe('uploadFile', () => {
     it('should upload file successfully with image metadata', async () => {
       const mockFile = createMockFile();
-      const uploadedFile = Mock.createMediaFile({
+      const uploadedFile = Mock.mediaFile({
         filename: 'test.jpg',
         path: '/uploads/images/test.jpg',
         width: 1920,
@@ -133,7 +134,7 @@ describe('MediaService', () => {
     it('should upload file with custom filename', async () => {
       const mockFile = createMockFile();
       const customFilename = 'custom-name.jpg';
-      const uploadedFile = Mock.createMediaFile({
+      const uploadedFile = Mock.mediaFile({
         filename: customFilename,
       });
 
@@ -150,7 +151,7 @@ describe('MediaService', () => {
         originalname: 'document.pdf',
         mimetype: 'application/pdf',
       });
-      const uploadedFile = Mock.createMediaFile({
+      const uploadedFile = Mock.mediaFile({
         filename: 'document.pdf',
         mimeType: 'application/pdf',
         width: null,
@@ -169,7 +170,7 @@ describe('MediaService', () => {
 
     it('should handle image metadata extraction error gracefully', async () => {
       const mockFile = createMockFile();
-      const uploadedFile = Mock.createMediaFile({
+      const uploadedFile = Mock.mediaFile({
         width: null,
         height: null,
       });
@@ -216,7 +217,7 @@ describe('MediaService', () => {
 
     it('should log warning when upload hook fails', async () => {
       const mockFile = createMockFile();
-      const uploadedFile = Mock.createMediaFile();
+      const uploadedFile = Mock.mediaFile();
 
       mockDb.setTransactionBehavior(true);
       mockDb.setInsertResult([uploadedFile]);
@@ -230,7 +231,7 @@ describe('MediaService', () => {
 
     it('should apply beforeUpload filter', async () => {
       const mockFile = createMockFile();
-      const uploadedFile = Mock.createMediaFile();
+      const uploadedFile = Mock.mediaFile();
 
       mockHookService.applyFilters = vi
         .fn()
@@ -246,7 +247,7 @@ describe('MediaService', () => {
 
   describe('listFiles', () => {
     it('should list files with pagination', async () => {
-      const mockFiles = Mock.createMediaFiles(5);
+      const mockFiles = Mock.mediaFiles(5);
       const query = {
         page: 1,
         pageSize: 10,
@@ -289,7 +290,7 @@ describe('MediaService', () => {
     });
 
     it('should filter files by keyword', async () => {
-      const mockFiles = [Mock.createMediaFile({ filename: 'test-image.jpg' })];
+      const mockFiles = [Mock.mediaFile({ filename: 'test-image.jpg' })];
       const query = {
         page: 1,
         pageSize: 10,
@@ -334,8 +335,8 @@ describe('MediaService', () => {
 
     it('should filter files by type (image)', async () => {
       const mockFiles = [
-        Mock.createMediaFile({ mimeType: 'image/jpeg' }),
-        Mock.createMediaFile({ mimeType: 'image/png' }),
+        Mock.mediaFile({ mimeType: 'image/jpeg' }),
+        Mock.mediaFile({ mimeType: 'image/png' }),
       ];
       const query = {
         page: 1,
@@ -378,7 +379,7 @@ describe('MediaService', () => {
     });
 
     it('should sort files by different fields', async () => {
-      const mockFiles = Mock.createMediaFiles(3);
+      const mockFiles = Mock.mediaFiles(3);
       const query = {
         page: 1,
         pageSize: 10,
@@ -416,7 +417,7 @@ describe('MediaService', () => {
 
   describe('getFileById', () => {
     it('should return file by id', async () => {
-      const mockFile = Mock.createMediaFile({ id: 1 });
+      const mockFile = Mock.mediaFile({ id: 1 });
 
       mockDb.db.select = vi.fn().mockReturnValue({
         from: vi.fn().mockReturnValue({
@@ -447,7 +448,7 @@ describe('MediaService', () => {
 
   describe('deleteFile', () => {
     it('should delete file successfully', async () => {
-      const mockFile = Mock.createMediaFile({ id: 1, provider: 'local' });
+      const mockFile = Mock.mediaFile({ id: 1, provider: 'local' });
 
       mockDb.db.select = vi.fn().mockReturnValue({
         from: vi.fn().mockReturnValue({
@@ -472,7 +473,7 @@ describe('MediaService', () => {
     });
 
     it('should delete file even if storage deletion fails', async () => {
-      const mockFile = Mock.createMediaFile({ id: 1, provider: 'local' });
+      const mockFile = Mock.mediaFile({ id: 1, provider: 'local' });
 
       mockDb.db.select = vi.fn().mockReturnValue({
         from: vi.fn().mockReturnValue({
@@ -495,7 +496,7 @@ describe('MediaService', () => {
     });
 
     it('should skip storage deletion for non-local provider', async () => {
-      const mockFile = Mock.createMediaFile({ id: 1, provider: 'picgo' });
+      const mockFile = Mock.mediaFile({ id: 1, provider: 'picgo' });
 
       mockDb.db.select = vi.fn().mockReturnValue({
         from: vi.fn().mockReturnValue({
@@ -517,7 +518,7 @@ describe('MediaService', () => {
 
   describe('deleteFiles', () => {
     it('should delete multiple files successfully', async () => {
-      const mockFiles = [Mock.createMediaFile({ id: 1 }), Mock.createMediaFile({ id: 2 })];
+      const mockFiles = [Mock.mediaFile({ id: 1 }), Mock.mediaFile({ id: 2 })];
 
       mockDb.db.select = vi.fn().mockReturnValue({
         from: vi.fn().mockReturnValue({
@@ -558,7 +559,7 @@ describe('MediaService', () => {
     });
 
     it('should continue deleting even if some storage deletions fail', async () => {
-      const mockFiles = [Mock.createMediaFile({ id: 1 }), Mock.createMediaFile({ id: 2 })];
+      const mockFiles = [Mock.mediaFile({ id: 1 }), Mock.mediaFile({ id: 2 })];
 
       mockDb.db.select = vi.fn().mockReturnValue({
         from: vi.fn().mockReturnValue({
@@ -731,7 +732,7 @@ describe('MediaService', () => {
 
   describe('exportAllImages', () => {
     it('should export all images', async () => {
-      const mockFiles = Mock.createMediaFiles(3);
+      const mockFiles = Mock.mediaFiles(3);
 
       mockDb.db.select = vi.fn().mockReturnValue({
         from: vi.fn().mockReturnValue({

@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { describe, beforeEach, it, expect, vi, afterEach } from 'vitest';
 import { existsSync, mkdirSync, rmSync, writeFileSync } from 'fs';
 
+import { Mock } from '@test/mock';
 import { DATABASE_CONNECTION } from '../../database';
 import { HookService } from '../plugin/services/hook.service';
 import { PipelineService } from './pipeline.service';

@@ -1,6 +1,8 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, beforeEach, afterEach, expect, vi } from 'vitest';
 
+import { Mock } from '@test/mock';
+
 import { ArticleStatsService } from '../analytics/services/article-stats.service';
 
 import { ArticleController } from './article.controller';
@@ -16,7 +18,7 @@ describe('ArticleController', () => {
   beforeEach(async () => {
     // 使用 MockUtils 创建服务 Mock
     mockArticleService = Mock.articleService();
-    mockArticleStatsService = Mock.articleStatsServiceMock();
+    mockArticleStatsService = Mock.articleStatsService();
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [ArticleController],

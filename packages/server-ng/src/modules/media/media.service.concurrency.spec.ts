@@ -2,7 +2,7 @@ import { promises as fsPromises } from 'fs';
 
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 
-import { createMockFile, type DatabaseMockBuilder } from '../../../test/mock';
+import { createMockFile, type DatabaseMockBuilder, Mock } from '@test/mock';
 
 import { StorageProvider } from './dto/storage-config.dto';
 import { MediaService } from './services/media.service';
@@ -58,7 +58,7 @@ describe('MediaService - Concurrency Safety', () => {
       databaseMock.build() as any,
       mockStorageFactoryService as StorageFactoryService,
       mockHookService as HookService,
-      mockLogger,
+      mockLogger as any, // Type assertion for LoggerService mock
     );
   });
 
@@ -88,7 +88,7 @@ describe('MediaService - Concurrency Safety', () => {
             await new Promise((resolve) => setTimeout(resolve, 60));
           }
           return [
-            Mock.createMediaFile({
+            Mock.mediaFile({
               id,
               filename: vals?.filename ?? `test-${String(id)}.jpg`,
             }),
@@ -187,7 +187,7 @@ describe('MediaService - Concurrency Safety', () => {
       const fileIds = [1, 2, 3, 4, 5];
 
       // 模拟数据库查询返回文件列表
-      const mockFiles = fileIds.map((id) => Mock.createMediaFile({ id }));
+      const mockFiles = fileIds.map((id) => Mock.mediaFile({ id }));
       const mockWhere = vi.fn().mockResolvedValue(mockFiles);
       const mockFrom = vi.fn().mockReturnValue({ where: mockWhere });
       service.db.select = vi.fn().mockReturnValue({ from: mockFrom });
@@ -276,7 +276,7 @@ describe('MediaService - Concurrency Safety', () => {
         mimetype: 'image/jpeg',
       });
 
-      const mockMediaFile = Mock.createMediaFile({
+      const mockMediaFile = Mock.mediaFile({
         id: 1,
         filename: 'large.jpg',
         size: 50 * 1024 * 1024,
@@ -312,7 +312,7 @@ describe('MediaService - Concurrency Safety', () => {
       const mockReturning = vi.fn().mockImplementation(() => {
         idCounter++;
         return [
-          Mock.createMediaFile({
+          Mock.mediaFile({
             id: idCounter,
             filename: `large${String(idCounter)}.jpg`,
             size: 10 * 1024 * 1024,

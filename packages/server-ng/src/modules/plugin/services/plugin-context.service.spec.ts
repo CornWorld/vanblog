@@ -5,7 +5,7 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 
 import { ConfigService } from '../../../config/config.service';
 import { DATABASE_CONNECTION, type Database } from '../../../database';
-import { Mock } from '../../../../test/mock';
+import { Mock } from '@test/mock';
 
 import {
   PluginContextFactory,

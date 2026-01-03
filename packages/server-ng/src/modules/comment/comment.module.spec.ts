@@ -2,6 +2,8 @@ import type { TestingModule } from '@nestjs/testing';
 import { Test } from '@nestjs/testing';
 import { describe, it, expect, beforeEach } from 'vitest';
 
+import { Mock } from '@test/mock';
+
 import { DATABASE_CONNECTION } from '../../database';
 import { HookService } from '../plugin/services/hook.service';
 import { SettingCoreService } from '../setting/services/setting-core.service';

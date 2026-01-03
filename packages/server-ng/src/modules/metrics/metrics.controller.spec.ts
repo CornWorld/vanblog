@@ -1,6 +1,7 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import { vi } from 'vitest';
 
+import { Mock } from '@test/mock';
 import { PerformanceMonitoringMiddleware } from '../../shared/middleware/performance-monitoring.middleware';
 import { ErrorRateMonitoringService } from '../../shared/services/error-rate-monitoring.service';
 

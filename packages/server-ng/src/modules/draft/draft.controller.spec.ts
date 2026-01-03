@@ -2,6 +2,7 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, beforeEach, afterEach, expect, vi } from 'vitest';
 import { dayjs } from '@vanblog/shared';
 
+import { Mock } from '@test/mock';
 import { DraftVersionService } from './draft-version.service';
 import { DraftController } from './draft.controller';
 import { DraftService } from './draft.service';

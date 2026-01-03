@@ -4,7 +4,7 @@ import { ThrottlerGuard } from '@nestjs/throttler';
 import { dayjs } from '@vanblog/shared';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
-import { Mock } from '../../../test/mock';
+import { Mock } from '@test/mock';
 import { UserType } from '../user/dto/create-user.dto';
 import { User } from '../user/entities/user.entity';
 

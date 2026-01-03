@@ -2,6 +2,8 @@ import { ConfigService } from '@nestjs/config';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 
+import { Mock } from '../../../test/mock';
+
 import { HookService } from '../plugin/services/hook.service';
 import { SettingCoreService } from '../setting/services/setting-core.service';
 
@@ -63,7 +65,7 @@ describe('CommentService', () => {
 
   describe('getWalineSetting', () => {
     it('should return waline setting', async () => {
-      const mockWalineSetting = Mock.createWalineSetting();
+      const mockWalineSetting = Mock.walineSetting();
       vi.mocked(settingService.getConfig).mockResolvedValue(mockWalineSetting);
 
       const result = await service.getWalineSetting();
@@ -108,7 +110,7 @@ describe('CommentService', () => {
 
   describe('updateWalineSetting', () => {
     it('should update waline setting and restart service', async () => {
-      const mockWalineSetting = Mock.createWalineSetting();
+      const mockWalineSetting = Mock.walineSetting();
       const updateData: UpdateWalineSetting = { 'smtp.enabled': false };
       const updatedSetting = { ...mockWalineSetting, ...updateData };
 
@@ -128,7 +130,7 @@ describe('CommentService', () => {
     });
 
     it('should trigger comment|beforeUpdate and comment|afterUpdate hooks', async () => {
-      const mockWalineSetting = Mock.createWalineSetting();
+      const mockWalineSetting = Mock.walineSetting();
       const updateData: UpdateWalineSetting = { 'smtp.enabled': false };
       const updatedSetting = { ...mockWalineSetting, ...updateData };
 
@@ -154,7 +156,7 @@ describe('CommentService', () => {
     });
 
     it('should allow filter hook to modify update data', async () => {
-      const mockWalineSetting = Mock.createWalineSetting();
+      const mockWalineSetting = Mock.walineSetting();
       const updateData: UpdateWalineSetting = { 'smtp.port': 465 };
       const modifiedData: UpdateWalineSetting = { 'smtp.port': 587, 'smtp.enabled': true };
       const updatedSetting = { ...mockWalineSetting, ...modifiedData };
@@ -177,7 +179,7 @@ describe('CommentService', () => {
 
   describe('getResolvedWalineConfig', () => {
     it('should return configured serverURL when set', async () => {
-      const mockWalineSetting = Mock.createWalineSetting();
+      const mockWalineSetting = Mock.walineSetting();
       vi.mocked(settingService.getConfig).mockResolvedValue(mockWalineSetting);
 
       const result = await service.getResolvedWalineConfig();
@@ -186,7 +188,7 @@ describe('CommentService', () => {
     });
 
     it('should return default serverURL when not configured', async () => {
-      const settingWithoutUrl = Mock.createWalineSetting({ serverURL: '' });
+      const settingWithoutUrl = Mock.walineSetting({ serverURL: '' });
       vi.mocked(settingService.getConfig).mockResolvedValue(settingWithoutUrl);
 
       const result = await service.getResolvedWalineConfig();
@@ -204,7 +206,7 @@ describe('CommentService', () => {
     });
 
     it('should use walineEnv SERVER_URL when available', async () => {
-      const settingWithoutUrl = Mock.createWalineSetting({ serverURL: '' });
+      const settingWithoutUrl = Mock.walineSetting({ serverURL: '' });
       vi.mocked(settingService.getConfig).mockResolvedValue(settingWithoutUrl);
 
       // Set internal walineEnv
@@ -216,7 +218,7 @@ describe('CommentService', () => {
     });
 
     it('should construct URL from HOST and PORT when SERVER_URL not set', async () => {
-      const settingWithoutUrl = Mock.createWalineSetting({ serverURL: '' });
+      const settingWithoutUrl = Mock.walineSetting({ serverURL: '' });
       vi.mocked(settingService.getConfig).mockResolvedValue(settingWithoutUrl);
 
       // Set internal walineEnv
@@ -230,7 +232,7 @@ describe('CommentService', () => {
 
   describe('mapConfigToEnv', () => {
     it('should map waline config to environment variables', () => {
-      const mockWalineSetting = Mock.createWalineSetting();
+      const mockWalineSetting = Mock.walineSetting();
       const result = service.mapConfigToEnv(mockWalineSetting as any);
 
       expect(result).toEqual({
@@ -248,7 +250,7 @@ describe('CommentService', () => {
     });
 
     it('should handle force login comment', () => {
-      const configWithForceLogin = Mock.createWalineSetting({
+      const configWithForceLogin = Mock.walineSetting({
         forceLoginComment: true,
       });
 
@@ -258,7 +260,7 @@ describe('CommentService', () => {
     });
 
     it('should not set LOGIN when forceLoginComment is false', () => {
-      const config = Mock.createWalineSetting({ forceLoginComment: false });
+      const config = Mock.walineSetting({ forceLoginComment: false });
 
       const result = service.mapConfigToEnv(config as any);
 
@@ -266,7 +268,7 @@ describe('CommentService', () => {
     });
 
     it('should filter out SMTP vars when SMTP is disabled', () => {
-      const configWithoutSMTP = Mock.createWalineSetting({
+      const configWithoutSMTP = Mock.walineSetting({
         'smtp.enabled': false,
       });
 
@@ -282,7 +284,7 @@ describe('CommentService', () => {
     });
 
     it('should parse otherConfig JSON and merge into env', () => {
-      const configWithOther = Mock.createWalineSetting({
+      const configWithOther = Mock.walineSetting({
         otherConfig: '{"CUSTOM_KEY":"custom_value","ANOTHER":"value"}',
       });
 
@@ -293,7 +295,7 @@ describe('CommentService', () => {
     });
 
     it('should handle invalid otherConfig JSON gracefully', () => {
-      const configWithInvalidOther = Mock.createWalineSetting({
+      const configWithInvalidOther = Mock.walineSetting({
         otherConfig: 'invalid json',
       });
 
@@ -305,7 +307,7 @@ describe('CommentService', () => {
     });
 
     it('should handle empty otherConfig', () => {
-      const configWithEmptyOther = Mock.createWalineSetting({
+      const configWithEmptyOther = Mock.walineSetting({
         otherConfig: '',
       });
 

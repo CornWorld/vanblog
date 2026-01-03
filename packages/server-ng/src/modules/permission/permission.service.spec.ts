@@ -2,6 +2,8 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
 import { describe, it, beforeEach, afterEach, expect, vi } from 'vitest';
 
+import { Mock } from '@test/mock';
+
 import { DATABASE_CONNECTION } from '../../database';
 
 import { PermissionService } from './permission.service';

@@ -1,7 +1,7 @@
 import { of, throwError, firstValueFrom } from 'rxjs';
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 
-import { createExecutionContextMock } from '../../../test/mock';
+import { createExecutionContextMock } from '@test/mock';
 
 import { PerformanceInterceptor } from './performance.interceptor';
 

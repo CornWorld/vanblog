@@ -2,6 +2,8 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { describe, beforeEach, it, expect, vi } from 'vitest';
 
+import { Mock } from '@test/mock';
+
 import { PipelineController } from './pipeline.controller';
 import { PipelineService } from './pipeline.service';
 
