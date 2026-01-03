@@ -6,7 +6,6 @@ import { DraftVersionService } from './draft-version.service';
 import { DraftController } from './draft.controller';
 import { DraftService } from './draft.service';
 import { Article } from '../article/entities/article.entity';
-import { MockUtils } from '../../../test/mock-utils';
 
 describe('DraftController', () => {
   let controller: DraftController;
@@ -14,8 +13,8 @@ describe('DraftController', () => {
   let mockDraftVersionService: any;
 
   beforeEach(async () => {
-    mockDraftService = MockUtils.services.createDraftServiceMock();
-    mockDraftVersionService = MockUtils.services.createDraftVersionServiceMock();
+    mockDraftService = Mock.draftService();
+    mockDraftVersionService = Mock.draftVersionService();
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [DraftController],

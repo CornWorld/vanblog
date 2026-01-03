@@ -4,22 +4,21 @@ import { describe, beforeEach, it, expect, vi } from 'vitest';
 
 import { PipelineController } from './pipeline.controller';
 import { PipelineService } from './pipeline.service';
-import { MockUtils } from '../../../test/mock-utils';
 
 describe('PipelineController', () => {
   let controller: PipelineController;
-  let mockService: ReturnType<typeof MockUtils.services.createPipelineServiceMock>;
+  let mockService: ReturnType<typeof Mock.createPipelineServiceMock>;
 
   beforeEach(async () => {
     // 使用 MockUtils 创建 PipelineService Mock
-    mockService = MockUtils.services.createPipelineServiceMock();
+    mockService = Mock.createPipelineServiceMock();
 
-    const mockPipeline = MockUtils.testData.createPipeline();
+    const mockPipeline = Mock.createPipeline();
     const mockPipelineList = {
       items: [mockPipeline],
       total: 1,
     };
-    const mockExecutionResult = MockUtils.testData.createPipelineExecutionResult();
+    const mockExecutionResult = Mock.createPipelineExecutionResult();
 
     // 配置 mock 返回值
     vi.mocked(mockService.findAll as any).mockResolvedValue(mockPipelineList);
@@ -129,7 +128,7 @@ describe('PipelineController', () => {
       };
 
       const updatedPipeline = {
-        ...MockUtils.testData.createPipeline(),
+        ...Mock.createPipeline(),
         ...updateDto,
       };
 

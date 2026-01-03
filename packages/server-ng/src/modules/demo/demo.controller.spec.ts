@@ -1,8 +1,6 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
-import { MockUtils } from '../../../test/mock-utils';
-
 import { DemoController } from './demo.controller';
 import { DemoService } from './demo.service';
 
@@ -11,7 +9,7 @@ describe('DemoController', () => {
   let demoService: DemoService;
 
   beforeEach(async () => {
-    const mockDemoService = MockUtils.services.createDemoServiceMock();
+    const mockDemoService = Mock.demoService();
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [DemoController],

@@ -19,7 +19,6 @@ import { DATABASE_CONNECTION } from '../../database';
 import { QueryOptimizerService } from '../../shared/services/query-optimizer.service';
 import { StatisticsService } from '../../shared/services/statistics.service';
 import { HookService } from '../plugin/services/hook.service';
-import { MockUtils } from '../../../test/mock-utils';
 
 import { CategoryService } from './category.service';
 
@@ -47,7 +46,7 @@ describe('CategoryService - Associations', () => {
       offset: vi.fn().mockReturnThis(),
     };
 
-    mockHookService = MockUtils.services.createHookServiceMock();
+    mockHookService = Mock.hook();
 
     const module: TestingModule = await Test.createTestingModule({
       imports: [],
@@ -89,7 +88,7 @@ describe('CategoryService - Associations', () => {
         },
         {
           provide: ConfigService,
-          useValue: MockUtils.services.createConfigServiceMock({ 'jwt.secret': 'test-secret-key' }),
+          useValue: Mock.config({ 'jwt.secret': 'test-secret-key' }),
         },
       ],
     }).compile();

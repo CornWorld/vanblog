@@ -20,19 +20,18 @@ import { DATABASE_CONNECTION } from '../../database';
 import { QueryOptimizerService } from '../../shared/services/query-optimizer.service';
 import { StatisticsService } from '../../shared/services/statistics.service';
 import { HookService } from '../plugin/services/hook.service';
-import { MockUtils } from '../../../test/mock-utils';
 
 import { CategoryService } from './category.service';
 
 describe('CategoryService - Boundary Conditions', () => {
   let service: CategoryService;
   let mockDb: any;
-  let dbMockBuilder: InstanceType<typeof MockUtils.database>;
+  let dbMockBuilder: InstanceType<typeof DatabaseMockBuilder>;
 
   beforeEach(async () => {
-    dbMockBuilder = new MockUtils.database();
+    dbMockBuilder = Mock.db();
     mockDb = dbMockBuilder.build();
-    const mockHookService = MockUtils.services.createHookServiceMock();
+    const mockHookService = Mock.hook();
 
     const module: TestingModule = await Test.createTestingModule({
       imports: [],
@@ -74,7 +73,7 @@ describe('CategoryService - Boundary Conditions', () => {
         },
         {
           provide: ConfigService,
-          useValue: MockUtils.services.createConfigServiceMock({ 'jwt.secret': 'test-secret-key' }),
+          useValue: Mock.config({ 'jwt.secret': 'test-secret-key' }),
         },
       ],
     }).compile();

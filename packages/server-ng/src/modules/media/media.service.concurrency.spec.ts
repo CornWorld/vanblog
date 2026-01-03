@@ -2,7 +2,7 @@ import { promises as fsPromises } from 'fs';
 
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 
-import { MockUtils, createMockFile, type DatabaseMockBuilder } from '../../../test/mock-utils';
+import { createMockFile, type DatabaseMockBuilder } from '../../../test/mock';
 
 import { StorageProvider } from './dto/storage-config.dto';
 import { MediaService } from './services/media.service';
@@ -48,14 +48,11 @@ describe('MediaService - Concurrency Safety', () => {
   let mockLogger: Partial<LoggerService>;
 
   beforeEach(() => {
-    databaseMock = new MockUtils.database();
-    mockStorageService = MockUtils.services.createStorageServiceMock();
-    mockStorageFactoryService = MockUtils.services.createStorageFactoryServiceMock(
-      mockStorageService,
-      StorageProvider.LOCAL,
-    );
-    mockHookService = MockUtils.services.createHookServiceMock();
-    mockLogger = MockUtils.services.createLoggerMock();
+    databaseMock = Mock.db();
+    mockStorageService = Mock.storage();
+    mockStorageFactoryService = Mock.storageFactory(mockStorageService, StorageProvider.LOCAL);
+    mockHookService = Mock.hook();
+    mockLogger = Mock.logger();
 
     service = new MediaService(
       databaseMock.build() as any,
@@ -91,7 +88,7 @@ describe('MediaService - Concurrency Safety', () => {
             await new Promise((resolve) => setTimeout(resolve, 60));
           }
           return [
-            MockUtils.testData.createMediaFile({
+            Mock.createMediaFile({
               id,
               filename: vals?.filename ?? `test-${String(id)}.jpg`,
             }),
@@ -190,7 +187,7 @@ describe('MediaService - Concurrency Safety', () => {
       const fileIds = [1, 2, 3, 4, 5];
 
       // 模拟数据库查询返回文件列表
-      const mockFiles = fileIds.map((id) => MockUtils.testData.createMediaFile({ id }));
+      const mockFiles = fileIds.map((id) => Mock.createMediaFile({ id }));
       const mockWhere = vi.fn().mockResolvedValue(mockFiles);
       const mockFrom = vi.fn().mockReturnValue({ where: mockWhere });
       service.db.select = vi.fn().mockReturnValue({ from: mockFrom });
@@ -279,7 +276,7 @@ describe('MediaService - Concurrency Safety', () => {
         mimetype: 'image/jpeg',
       });
 
-      const mockMediaFile = MockUtils.testData.createMediaFile({
+      const mockMediaFile = Mock.createMediaFile({
         id: 1,
         filename: 'large.jpg',
         size: 50 * 1024 * 1024,
@@ -315,7 +312,7 @@ describe('MediaService - Concurrency Safety', () => {
       const mockReturning = vi.fn().mockImplementation(() => {
         idCounter++;
         return [
-          MockUtils.testData.createMediaFile({
+          Mock.createMediaFile({
             id: idCounter,
             filename: `large${String(idCounter)}.jpg`,
             size: 10 * 1024 * 1024,

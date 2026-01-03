@@ -3,7 +3,6 @@ import { Test } from '@nestjs/testing';
 import { describe, it, expect, beforeEach } from 'vitest';
 
 import { DATABASE_CONNECTION } from '../../database';
-import { MockUtils } from '../../../test/mock-utils';
 import { HookService } from '../plugin/services/hook.service';
 import { SettingCoreService } from '../setting/services/setting-core.service';
 import { SettingRegistryService } from '../setting/services/setting-registry.service';
@@ -19,13 +18,13 @@ describe('CommentModule', () => {
       imports: [CommentModule],
     })
       .overrideProvider(DATABASE_CONNECTION)
-      .useValue(new MockUtils.database().build())
+      .useValue(Mock.db().build())
       .overrideProvider(HookService)
-      .useValue(MockUtils.services.createHookServiceMock())
+      .useValue(Mock.hook())
       .overrideProvider(SettingCoreService)
-      .useValue(MockUtils.services.createSettingCoreServiceMock())
+      .useValue(Mock.settingCore())
       .overrideProvider(SettingRegistryService)
-      .useValue(MockUtils.services.createSettingRegistryServiceMock())
+      .useValue(Mock.settingRegistry())
       .compile();
   });
 

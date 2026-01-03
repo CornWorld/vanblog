@@ -21,7 +21,7 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, expect, beforeEach, afterEach, vi, type Mock } from 'vitest';
 
 import { DATABASE_CONNECTION } from '../../../database';
-import { MockUtils } from '../../../../test/mock-utils';
+import { createDatabaseMock } from '../../../../test/mock';
 import { WebhookRegistryService } from './webhook-registry.service';
 import { WebhookService } from './webhook.service';
 
@@ -30,7 +30,7 @@ global.fetch = vi.fn();
 
 describe('WebhookService', () => {
   let service: WebhookService;
-  let mockDb: ReturnType<typeof MockUtils.createDatabaseMock>;
+  let mockDb: ReturnType<typeof createDatabaseMock>;
   let mockWebhookRegistry: {
     registerWebhook: Mock;
     unregisterWebhookFromAllEvents: Mock;
@@ -38,7 +38,7 @@ describe('WebhookService', () => {
 
   beforeEach(async () => {
     // Mock database using MockUtils
-    mockDb = MockUtils.createDatabaseMock();
+    mockDb = createDatabaseMock();
 
     // Mock webhook registry
     mockWebhookRegistry = {

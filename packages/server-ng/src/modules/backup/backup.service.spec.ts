@@ -4,7 +4,7 @@ import * as zlib from 'zlib';
 
 import { describe, it, beforeEach, expect, vi } from 'vitest';
 
-import { DatabaseMockBuilder, MockUtils } from '../../../test/mock-utils';
+import { DatabaseMockBuilder } from '../../../test/mock';
 
 import { BackupService } from './backup.service';
 
@@ -21,7 +21,7 @@ describe('BackupService', () => {
 
   beforeEach(() => {
     mockDb = new DatabaseMockBuilder();
-    mockLogger = MockUtils.services.createLoggerMock();
+    mockLogger = Mock.logger();
     service = new BackupService(mockDb.db as any, mockLogger as any);
 
     // Reset mocks

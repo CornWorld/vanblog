@@ -12,8 +12,6 @@
 import { NotFoundException } from '@nestjs/common';
 import { describe, beforeEach, it, expect, afterEach, vi } from 'vitest';
 
-import { MockUtils } from '../../../test/mock-utils';
-
 import { TagService } from './tag.service';
 
 describe('TagService - Complex Queries', () => {
@@ -22,7 +20,7 @@ describe('TagService - Complex Queries', () => {
   let mockDb: any;
 
   beforeEach(async () => {
-    const databaseMockBuilder = new MockUtils.database();
+    const databaseMockBuilder = Mock.db();
     mockDb = databaseMockBuilder.build();
 
     module = await MockUtils.createTagServiceTestingModule({

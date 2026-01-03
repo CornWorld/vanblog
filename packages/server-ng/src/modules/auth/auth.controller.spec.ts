@@ -4,7 +4,7 @@ import { ThrottlerGuard } from '@nestjs/throttler';
 import { dayjs } from '@vanblog/shared';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
-import { MockUtils } from '../../../test/mock-utils';
+import { Mock } from '../../../test/mock';
 import { UserType } from '../user/dto/create-user.dto';
 import { User } from '../user/entities/user.entity';
 
@@ -20,7 +20,7 @@ describe('AuthController', () => {
   let loginLogService: LoginLogService;
 
   const mockUser = new User(
-    MockUtils.testData.createUser({
+    Mock.user({
       id: 1,
       username: 'testuser',
       password: 'hashedPassword',

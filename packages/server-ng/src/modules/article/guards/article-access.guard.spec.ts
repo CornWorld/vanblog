@@ -5,7 +5,6 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, beforeEach, it, expect, vi } from 'vitest';
 import * as jwt from 'jsonwebtoken';
 
-import { MockUtils } from '../../../../test/mock-utils';
 import { ConfigService } from '../../../config/config.service';
 import { ArticleService } from '../article.service';
 import { ARTICLE_ACCESS_KEY } from '../decorators/article-access.decorator';
@@ -26,7 +25,7 @@ describe('ArticleAccessGuard', () => {
       isPrivateByPathname: vi.fn(),
     };
 
-    configService = MockUtils.services.createConfigServiceMock();
+    configService = Mock.config();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -45,7 +44,7 @@ describe('ArticleAccessGuard', () => {
     requestOverrides: any,
   ): { context: ExecutionContext; request: any } => {
     const mockRequest = { ...requestOverrides };
-    const mockContext = MockUtils.services.createExecutionContextMock({ request: mockRequest });
+    const mockContext = Mock.context({ request: mockRequest });
     // Ensure we return the same reference that getRequest returns
     const actualRequest = mockContext.switchToHttp().getRequest();
     return { context: mockContext, request: actualRequest };

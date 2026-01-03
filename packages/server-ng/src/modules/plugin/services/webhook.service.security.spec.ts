@@ -22,7 +22,7 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, expect, beforeEach, afterEach, vi, type Mock } from 'vitest';
 
 import { DATABASE_CONNECTION } from '../../../database';
-import { MockUtils } from '../../../../test/mock-utils';
+import { createDatabaseMock, Mock } from '../../../../test/mock';
 import { WebhookRegistryService } from './webhook-registry.service';
 import { WebhookService } from './webhook.service';
 
@@ -31,7 +31,7 @@ global.fetch = vi.fn();
 
 describe('WebhookService - Security', () => {
   let service: WebhookService;
-  let dbMock: ReturnType<typeof MockUtils.createDatabaseMock>;
+  let dbMock: ReturnType<typeof createDatabaseMock>;
   let mockWebhookRegistry: {
     registerWebhook: Mock;
     unregisterWebhookFromAllEvents: Mock;
@@ -39,7 +39,7 @@ describe('WebhookService - Security', () => {
 
   beforeEach(async () => {
     // Create database mock using MockUtils
-    dbMock = MockUtils.createDatabaseMock();
+    dbMock = createDatabaseMock();
 
     // Mock webhook registry
     mockWebhookRegistry = {
@@ -128,7 +128,7 @@ describe('WebhookService - Security', () => {
       });
 
       // Use DatabaseMockBuilder for update and insert
-      const builder = new MockUtils.database();
+      const builder = Mock.db();
       builder.setUpdateResult([{ lastExecutedAt: new Date().toISOString() }]);
       builder.setInsertResult([{ id: 1 }]);
 
@@ -162,7 +162,7 @@ describe('WebhookService - Security', () => {
       });
 
       // Use DatabaseMockBuilder for update and insert
-      const builder = new MockUtils.database();
+      const builder = Mock.db();
       builder.setUpdateResult([{ lastExecutedAt: new Date().toISOString() }]);
       builder.setInsertResult([{ id: 1 }]);
 
@@ -212,7 +212,7 @@ describe('WebhookService - Security', () => {
       });
 
       // Use DatabaseMockBuilder for update and insert
-      const builder = new MockUtils.database();
+      const builder = Mock.db();
       builder.setUpdateResult([{ lastExecutedAt: new Date().toISOString() }]);
       builder.setInsertResult([{ id: 1 }]);
 
@@ -279,7 +279,7 @@ describe('WebhookService - Security', () => {
       });
 
       // Use DatabaseMockBuilder for update and insert
-      const builder = new MockUtils.database();
+      const builder = Mock.db();
       builder.setUpdateResult([{ lastExecutedAt: new Date().toISOString() }]);
       builder.setInsertResult([{ id: 1 }]);
 
@@ -319,7 +319,7 @@ describe('WebhookService - Security', () => {
       });
 
       // Use DatabaseMockBuilder for update and insert
-      const builder = new MockUtils.database();
+      const builder = Mock.db();
       builder.setUpdateResult([{ lastExecutedAt: new Date().toISOString() }]);
       builder.setInsertResult([{ id: 1 }]);
 
@@ -391,7 +391,7 @@ describe('WebhookService - Security', () => {
       (global.fetch as Mock).mockRejectedValue(networkError);
 
       // Use DatabaseMockBuilder for update and insert
-      const builder = new MockUtils.database();
+      const builder = Mock.db();
       builder.setUpdateResult([{ lastExecutedAt: new Date().toISOString() }]);
       builder.setInsertResult([{ id: 1 }]);
 

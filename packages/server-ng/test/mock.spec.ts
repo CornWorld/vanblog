@@ -9,8 +9,9 @@ import {
   createHookServiceMock,
   createStorageServiceMock,
   createStorageFactoryServiceMock,
-  MockUtils,
-} from './mock-utils';
+  Mock,
+  DatabaseMockBuilder,
+} from './mock';
 
 describe('MockUtils - Service Mocks', () => {
   describe('createLoggerMock', () => {
@@ -309,16 +310,14 @@ describe('MockUtils - Service Mocks', () => {
 
   describe('MockUtils.services - ServiceMockBuilder', () => {
     it('should expose all service mock creators', () => {
-      expect(MockUtils.services.createLoggerMock).toBe(createLoggerMock);
-      expect(MockUtils.services.createExecutionContextMock).toBe(createExecutionContextMock);
-      expect(MockUtils.services.createModuleRefMock).toBe(createModuleRefMock);
-      expect(MockUtils.services.createReflectorMock).toBe(createReflectorMock);
-      expect(MockUtils.services.createHookServiceMock).toBe(createHookServiceMock);
-      expect(MockUtils.services.createConfigServiceMock).toBe(createConfigServiceMock);
-      expect(MockUtils.services.createStorageServiceMock).toBe(createStorageServiceMock);
-      expect(MockUtils.services.createStorageFactoryServiceMock).toBe(
-        createStorageFactoryServiceMock,
-      );
+      expect(Mock.logger).toBe(createLoggerMock);
+      expect(Mock.context).toBe(createExecutionContextMock);
+      expect(Mock.moduleRef).toBe(createModuleRefMock);
+      expect(Mock.reflector).toBe(createReflectorMock);
+      expect(Mock.hook).toBe(createHookServiceMock);
+      expect(Mock.config).toBe(createConfigServiceMock);
+      expect(Mock.storage).toBe(createStorageServiceMock);
+      expect(Mock.storageFactory).toBe(createStorageFactoryServiceMock);
     });
   });
 
@@ -376,7 +375,7 @@ describe('MockUtils - Service Mocks', () => {
 describe('MockUtils - DatabaseMockBuilder', () => {
   describe('basic construction', () => {
     it('should create a database mock with all methods', () => {
-      const builder = new MockUtils.database();
+      const builder = Mock.db();
       const db = builder.build();
 
       expect(db.select).toBeDefined();
@@ -392,7 +391,7 @@ describe('MockUtils - DatabaseMockBuilder', () => {
     });
 
     it('should support fluent API chaining', () => {
-      const builder = new MockUtils.database();
+      const builder = Mock.db();
 
       const result = builder
         .setQueryResult([{ id: 1, name: 'test' }])
@@ -406,7 +405,7 @@ describe('MockUtils - DatabaseMockBuilder', () => {
   describe('SELECT query mocking', () => {
     it('should mock select().from().get() returning single result', async () => {
       const testData = [{ id: 1, title: 'Test Article' }];
-      const builder = new MockUtils.database();
+      const builder = Mock.db();
       builder.setQueryResult(testData);
       const db = builder.build();
 
@@ -420,7 +419,7 @@ describe('MockUtils - DatabaseMockBuilder', () => {
         { id: 1, title: 'Article 1' },
         { id: 2, title: 'Article 2' },
       ];
-      const builder = new MockUtils.database();
+      const builder = Mock.db();
       builder.setQueryResult(testData);
       const db = builder.build();
 
@@ -431,7 +430,7 @@ describe('MockUtils - DatabaseMockBuilder', () => {
 
     it('should support chainable where/limit/orderBy/offset', async () => {
       const testData = [{ id: 1, title: 'Filtered' }];
-      const builder = new MockUtils.database();
+      const builder = Mock.db();
       builder.setQueryResult(testData);
       const db = builder.build();
 
@@ -441,7 +440,7 @@ describe('MockUtils - DatabaseMockBuilder', () => {
     });
 
     it('should return null when query result is empty', async () => {
-      const builder = new MockUtils.database();
+      const builder = Mock.db();
       builder.setQueryResult([]);
       const db = builder.build();
 
@@ -454,7 +453,7 @@ describe('MockUtils - DatabaseMockBuilder', () => {
   describe('INSERT operation mocking', () => {
     it('should mock insert().values().returning() with proper structure', async () => {
       const insertedData = [{ id: 1, title: 'New Article' }];
-      const builder = new MockUtils.database();
+      const builder = Mock.db();
       builder.setInsertResult(insertedData);
       const db = builder.build();
 
@@ -466,7 +465,7 @@ describe('MockUtils - DatabaseMockBuilder', () => {
     });
 
     it('should support insert without returning', () => {
-      const builder = new MockUtils.database();
+      const builder = Mock.db();
       builder.setInsertResult([{ id: 1 }]);
       const db = builder.build();
 
@@ -480,7 +479,7 @@ describe('MockUtils - DatabaseMockBuilder', () => {
   describe('UPDATE operation mocking', () => {
     it('should mock update().set().where().returning() with proper structure', async () => {
       const updatedData = [{ id: 1, title: 'Updated' }];
-      const builder = new MockUtils.database();
+      const builder = Mock.db();
       builder.setUpdateResult(updatedData);
       const db = builder.build();
 
@@ -494,7 +493,7 @@ describe('MockUtils - DatabaseMockBuilder', () => {
 
   describe('DELETE operation mocking', () => {
     it('should mock delete operation', () => {
-      const builder = new MockUtils.database();
+      const builder = Mock.db();
       builder.setDeleteResult(5);
       const db = builder.build();
 
@@ -505,7 +504,7 @@ describe('MockUtils - DatabaseMockBuilder', () => {
 
   describe('COUNT query mocking', () => {
     it('should mock count query returning number', async () => {
-      const builder = new MockUtils.database();
+      const builder = Mock.db();
       builder.setCountResult(42);
       const db = builder.build();
 
@@ -518,7 +517,7 @@ describe('MockUtils - DatabaseMockBuilder', () => {
 
   describe('TRANSACTION mocking', () => {
     it('should mock successful transaction', async () => {
-      const builder = new MockUtils.database();
+      const builder = Mock.db();
       builder.setTransactionBehavior(true);
       const db = builder.build();
 
@@ -530,7 +529,7 @@ describe('MockUtils - DatabaseMockBuilder', () => {
     });
 
     it('should mock failed transaction', async () => {
-      const builder = new MockUtils.database();
+      const builder = Mock.db();
       builder.setTransactionBehavior(false);
       const db = builder.build();
 
@@ -552,7 +551,7 @@ describe('MockUtils - DatabaseMockBuilder', () => {
         }),
       };
 
-      const builder = new MockUtils.database();
+      const builder = Mock.db();
       builder.setTransactionBehavior(true, customTx);
       const db = builder.build();
 
@@ -567,7 +566,7 @@ describe('MockUtils - DatabaseMockBuilder', () => {
 
   describe('reset functionality', () => {
     it('should reset all mocks to original state', () => {
-      const builder = new MockUtils.database();
+      const builder = Mock.db();
       builder.setQueryResult([{ id: 1 }]);
       const db = builder.build();
 
@@ -585,7 +584,7 @@ describe('MockUtils - DatabaseMockBuilder', () => {
         { id: 2, title: 'Article 2', published: true },
       ];
 
-      const builder = new MockUtils.database();
+      const builder = Mock.db();
       builder.setQueryResult(testArticles);
       const db = builder.build();
 
@@ -603,7 +602,7 @@ describe('MockUtils - DatabaseMockBuilder', () => {
     });
 
     it('should handle mixed operations in sequence', async () => {
-      const builder = new MockUtils.database();
+      const builder = Mock.db();
       builder.setQueryResult([{ id: 1 }]);
       builder.setInsertResult([{ id: 2 }]);
       builder.setUpdateResult([{ id: 1, updated: true }]);
@@ -624,7 +623,7 @@ describe('MockUtils - DatabaseMockBuilder', () => {
 describe('MockUtils - TestData Factory', () => {
   describe('createUser', () => {
     it('should create user with default values', () => {
-      const user = MockUtils.testData.createUser();
+      const user = Mock.user();
 
       expect(user).toHaveProperty('id');
       expect(user).toHaveProperty('username');
@@ -634,7 +633,7 @@ describe('MockUtils - TestData Factory', () => {
     });
 
     it('should support custom overrides', () => {
-      const user = MockUtils.testData.createUser({
+      const user = Mock.user({
         id: 99,
         username: 'custom-user',
         type: 'admin',
@@ -646,8 +645,8 @@ describe('MockUtils - TestData Factory', () => {
     });
 
     it('should generate valid user objects', () => {
-      const user1 = MockUtils.testData.createUser();
-      const user2 = MockUtils.testData.createUser();
+      const user1 = Mock.user();
+      const user2 = Mock.user();
 
       // Both should have valid IDs
       expect(user1.id).toBeGreaterThan(0);
@@ -659,7 +658,7 @@ describe('MockUtils - TestData Factory', () => {
 
   describe('createArticle', () => {
     it('should create article with default values', () => {
-      const article = MockUtils.testData.createArticle();
+      const article = Mock.article();
 
       expect(article).toHaveProperty('id');
       expect(article).toHaveProperty('title');
@@ -669,7 +668,7 @@ describe('MockUtils - TestData Factory', () => {
     });
 
     it('should support custom overrides', () => {
-      const article = MockUtils.testData.createArticle({
+      const article = Mock.article({
         id: 999,
         title: 'Custom Title',
         content: 'Custom Content',
@@ -683,7 +682,7 @@ describe('MockUtils - TestData Factory', () => {
 
   describe('createTag', () => {
     it('should create tag with default values', () => {
-      const tag = MockUtils.testData.createTag();
+      const tag = Mock.tag();
 
       expect(tag).toHaveProperty('id');
       expect(tag).toHaveProperty('name');
@@ -691,7 +690,7 @@ describe('MockUtils - TestData Factory', () => {
     });
 
     it('should support custom overrides', () => {
-      const tag = MockUtils.testData.createTag({
+      const tag = Mock.tag({
         id: 10,
         name: 'CustomTag',
       });
@@ -703,7 +702,7 @@ describe('MockUtils - TestData Factory', () => {
 
   describe('createCategory', () => {
     it('should create category with default values', () => {
-      const category = MockUtils.testData.createCategory();
+      const category = Mock.category();
 
       expect(category).toHaveProperty('id');
       expect(category).toHaveProperty('name');
@@ -711,7 +710,7 @@ describe('MockUtils - TestData Factory', () => {
     });
 
     it('should support custom overrides', () => {
-      const category = MockUtils.testData.createCategory({
+      const category = Mock.category({
         id: 5,
         name: 'Tech',
       });
@@ -723,7 +722,7 @@ describe('MockUtils - TestData Factory', () => {
 
   describe('batch creation helpers', () => {
     it('should create multiple articles', () => {
-      const articles = MockUtils.testData.createArticles(3);
+      const articles = Mock.articles(3);
 
       expect(articles).toHaveLength(3);
       expect(articles[0].id).not.toBe(articles[1].id);
@@ -731,7 +730,7 @@ describe('MockUtils - TestData Factory', () => {
     });
 
     it('should create valid users with basic properties', () => {
-      const users = Array.from({ length: 5 }, () => MockUtils.testData.createUser());
+      const users = Array.from({ length: 5 }, () => Mock.user());
 
       expect(users).toHaveLength(5);
       users.forEach((user) => {
@@ -742,7 +741,7 @@ describe('MockUtils - TestData Factory', () => {
     });
 
     it('should create multiple tags', () => {
-      const tags = MockUtils.testData.createTags(4);
+      const tags = Mock.tags(4);
 
       expect(tags).toHaveLength(4);
       tags.forEach((tag) => {
@@ -753,8 +752,8 @@ describe('MockUtils - TestData Factory', () => {
 
   describe('integration with database mock', () => {
     it('should use test data in database mock', async () => {
-      const testArticles = MockUtils.testData.createArticles(3);
-      const builder = new MockUtils.database();
+      const testArticles = Mock.articles(3);
+      const builder = Mock.db();
       builder.setQueryResult(testArticles);
       const db = builder.build();
 
@@ -785,7 +784,7 @@ describe('MockUtils - Type Safety', () => {
         { id: 2, title: 'Vitest', content: 'Fast and modern testing' },
       ];
 
-      const builder = new MockUtils.database<Article>();
+      const builder = new DatabaseMockBuilder<Article>();
       builder.setQueryResult(testArticles);
       const db = builder.build();
 
@@ -803,7 +802,7 @@ describe('MockUtils - Type Safety', () => {
 
       const insertedData: ArticleInsert[] = [{ id: 1, title: 'New Article' }];
 
-      const builder = new MockUtils.database<any, ArticleInsert>();
+      const builder = new DatabaseMockBuilder<any, ArticleInsert>();
       builder.setInsertResult(insertedData);
       const db = builder.build();
 
@@ -822,7 +821,7 @@ describe('MockUtils - Type Safety', () => {
 
       const updatedData: ArticleUpdate[] = [{ id: 1, title: 'Updated', updatedAt: '2024-01-01' }];
 
-      const builder = new MockUtils.database<any, any, ArticleUpdate>();
+      const builder = new DatabaseMockBuilder<any, any, ArticleUpdate>();
       builder.setUpdateResult(updatedData);
       const db = builder.build();
 
@@ -840,7 +839,7 @@ describe('MockUtils - Type Safety', () => {
 
       const deletedData: ArticleDelete[] = [{ id: 1, deletedAt: '2024-01-01' }];
 
-      const builder = new MockUtils.database<any, any, any, ArticleDelete>();
+      const builder = new DatabaseMockBuilder<any, any, any, ArticleDelete>();
       builder.setDeleteResult(deletedData);
       const db = builder.build();
 
@@ -856,7 +855,7 @@ describe('MockUtils - Type Safety', () => {
         title: string;
       }
 
-      const builder = new MockUtils.database<Article, Article, Article, Article>();
+      const builder = new DatabaseMockBuilder<Article, Article, Article, Article>();
       builder.setQueryResult([{ id: 1, title: 'Query' }]);
       builder.setInsertResult([{ id: 2, title: 'Insert' }]);
       builder.setUpdateResult([{ id: 3, title: 'Update' }]);

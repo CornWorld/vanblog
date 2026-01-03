@@ -3,8 +3,6 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import axios from 'axios';
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 
-import { MockUtils } from '../../../../test/mock-utils';
-
 import { ThirdPartyAnalyticsService } from './third-party-analytics.service';
 
 vi.mock('axios');
@@ -15,7 +13,7 @@ describe('ThirdPartyAnalyticsService', () => {
 
   beforeEach(async () => {
     // 使用 MockUtils 创建 ConfigService Mock
-    configService = MockUtils.services.createConfigServiceMock({
+    configService = Mock.config({
       GOOGLE_ANALYTICS_ID: 'UA-123456789-1',
       BAIDU_ANALYTICS_ID: 'baidu123',
     }) as unknown as ConfigService;
@@ -79,8 +77,7 @@ describe('ThirdPartyAnalyticsService', () => {
 
     it('should not send analytics when tracking IDs are not configured', async () => {
       // 创建没有分析ID的配置服务
-      const emptyConfigService =
-        MockUtils.services.createConfigServiceMock() as unknown as ConfigService;
+      const emptyConfigService = Mock.config() as unknown as ConfigService;
       const newService = new ThirdPartyAnalyticsService(emptyConfigService);
 
       await newService.trackPageview('/test-page');
@@ -123,8 +120,7 @@ describe('ThirdPartyAnalyticsService', () => {
 
     it('should not send event when Google Analytics ID is not configured', async () => {
       // 创建没有Google Analytics ID的配置服务
-      const emptyConfigService =
-        MockUtils.services.createConfigServiceMock() as unknown as ConfigService;
+      const emptyConfigService = Mock.config() as unknown as ConfigService;
       const newService = new ThirdPartyAnalyticsService(emptyConfigService);
 
       await newService.trackEvent('Category', 'Action');

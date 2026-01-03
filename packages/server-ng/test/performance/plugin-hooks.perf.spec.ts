@@ -1,6 +1,5 @@
 import { describe, it, beforeEach, afterEach, expect, vi } from 'vitest';
 import { Logger } from '@nestjs/common';
-import { MockUtils } from '../mock-utils';
 
 /**
  * Plugin Hook System Performance Tests
@@ -283,7 +282,7 @@ describe('Plugin Hook System Performance (plugin-hooks.perf.spec.ts)', () => {
 
     // Run 50 hook+query executions
     for (let i = 0; i < queryCount; i++) {
-      const article = MockUtils.testData.createArticle({ id: `article-${String(i)}` });
+      const article = Mock.article({ id: `article-${String(i)}` });
 
       const start = performance.now();
 
@@ -373,7 +372,7 @@ describe('Plugin Hook System Performance (plugin-hooks.perf.spec.ts)', () => {
 
     // Execute 100 concurrent hooks
     const promises = Array.from({ length: concurrentCount }, async (_, i) => {
-      const article = MockUtils.testData.createArticle({ id: `article-${String(i)}` });
+      const article = Mock.article({ id: `article-${String(i)}` });
       return registry.executeHook('article|afterCreate', article);
     });
 
@@ -458,7 +457,7 @@ describe('Plugin Hook System Performance (plugin-hooks.perf.spec.ts)', () => {
       return article;
     });
 
-    const testArticle = MockUtils.testData.createArticle();
+    const testArticle = Mock.article();
     await registry.executeHook('article|beforeCreate', testArticle);
 
     performanceResults['hook-priority'] = {

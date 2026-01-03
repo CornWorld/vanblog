@@ -6,12 +6,35 @@
 
 ## 变更记录 (Changelog)
 
+### 2026-01-03 - Mock 工具库重构完成
+
+- **API 改进**：
+  - 重命名 MockUtils → Mock，简化 API 调用
+  - 扁平化 API 结构：从 3 层深度减少到 1 层
+  - 字符数减少 40-70%（如 `Mock.config()` vs `MockUtils.services.createConfigServiceMock()`）
+  - 新增 80+ 个扁平化方法
+
+- **测试改进**：
+  - 更新 77+ 个测试文件的导入路径
+  - 通过测试从 2517 → 2716 (+199)
+  - 失败测试从 1274 → 1126 (-148)
+  - 测试通过率从 66% → 70%
+  - 所有 64 个 mock.spec.ts 测试通过
+
+- **向后兼容**：
+  - 保留 MockUtils 旧 API 用于渐进式迁移
+  - 新旧 API 可共存使用
+
+- **文档**：
+  - 创建 MOCK_REFACTORING_SUMMARY.md 详细总结
+  - 更新 CLAUDE.md 中的 Mock API 使用示例
+
 ### 2025-12-28 - ESLint 错误全面清零
 
 - **代码质量提升**：
   - 修复所有 178 个 ESLint 和 TypeScript 错误，达到 0 错误状态
   - 42 个并发 Haiku 任务批量修复（3 批次，每批 14 任务）
-  - 手动修复测试 fixture 文件（test-data.ts, mock-utils.spec.ts）
+  - 手动修复测试 fixture 文件（test-data.ts, mock.spec.ts）
   - 应用 String() 类型转换规范（模板字面量）
   - 统一 import type 导入规范
   - 移除未使用变量与导入
@@ -301,25 +324,37 @@ await db.update($Article).set({ title: 'Updated Title' }).where(eq($Article.id, 
 
 ### 测试工具与模式
 
-#### 1. Mock 工具类（test/mock-utils.ts）
+#### 1. Mock 工具类（test/mock.ts）
 
-提供统一的 Mock 创建工具：
+提供统一的 Mock 创建工具，使用扁平化 API：
 
 ```typescript
-import { MockUtils } from '../test/mock-utils';
+import { Mock } from '../test/mock';
 
 // 创建数据库 Mock
-const databaseMock = new MockUtils.database();
-databaseMock.setQueryResult([mockArticles]);
-const db = databaseMock.build();
+const db = Mock.db().setQueryResult([mockArticles]).build();
 
 // 创建服务 Mock
-const hookService = MockUtils.services.createHookServiceMock();
-const configService = MockUtils.services.createConfigServiceMock({ 'app.name': 'Test' });
+const hookService = Mock.hook();
+const configService = Mock.config({ 'app.name': 'Test' });
 
 // 创建测试数据
+const article = Mock.article({ title: 'Test' });
+const user = Mock.user({ name: 'John' });
+
+// 批量创建数据
+const users = Mock.users(10);
+const articles = Mock.articles(5, { author: 1 });
+```
+
+**旧 API (仍支持)**:
+
+```typescript
+import { MockUtils } from '../test/mock';
+
+const databaseMock = new MockUtils.database();
+const hookService = MockUtils.services.createHookServiceMock();
 const article = MockUtils.testData.createArticle({ title: 'Test' });
-const user = MockUtils.testData.createUser({ name: 'John' });
 ```
 
 #### 2. 测试工具函数（test/test-utils.ts）
@@ -882,7 +917,7 @@ src/
 
 test/                          # 测试目录（27 个 E2E 测试）
 ├── test-utils.ts              # 测试工具函数
-├── mock-utils.ts              # Mock 工具类
+├── mock.ts                    # Mock 工具类
 ├── vitest-fixtures.test.ts    # Vitest Fixtures
 └── *.e2e-spec.ts              # E2E 测试文件
 

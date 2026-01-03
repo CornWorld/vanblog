@@ -71,45 +71,45 @@ src/modules/media/media.service.3.spec.ts  # 不清晰
 
 ### 基础命名
 
-| 源文件类型 | 测试文件命名 | 示例 |
-|-----------|------------|------|
-| Service | `*.service.spec.ts` | `article.service.spec.ts` |
-| Controller | `*.controller.spec.ts` | `article.controller.spec.ts` |
-| Module | `*.module.spec.ts` | `article.module.spec.ts` |
-| Guard | `*.guard.spec.ts` | `jwt-auth.guard.spec.ts` |
+| 源文件类型  | 测试文件命名            | 示例                              |
+| ----------- | ----------------------- | --------------------------------- |
+| Service     | `*.service.spec.ts`     | `article.service.spec.ts`         |
+| Controller  | `*.controller.spec.ts`  | `article.controller.spec.ts`      |
+| Module      | `*.module.spec.ts`      | `article.module.spec.ts`          |
+| Guard       | `*.guard.spec.ts`       | `jwt-auth.guard.spec.ts`          |
 | Interceptor | `*.interceptor.spec.ts` | `performance.interceptor.spec.ts` |
-| Filter | `*.filter.spec.ts` | `http-exception.filter.spec.ts` |
-| Middleware | `*.middleware.spec.ts` | `compression.middleware.spec.ts` |
-| DTO | `*.dto.spec.ts` | `create-article.dto.spec.ts` |
-| Entity | `*.entity.spec.ts` | `user.entity.spec.ts` |
-| Util | `*.util.spec.ts` | `date.util.spec.ts` |
+| Filter      | `*.filter.spec.ts`      | `http-exception.filter.spec.ts`   |
+| Middleware  | `*.middleware.spec.ts`  | `compression.middleware.spec.ts`  |
+| DTO         | `*.dto.spec.ts`         | `create-article.dto.spec.ts`      |
+| Entity      | `*.entity.spec.ts`      | `user.entity.spec.ts`             |
+| Util        | `*.util.spec.ts`        | `date.util.spec.ts`               |
 
 ### 场景拆分命名
 
 **使用 `<base-name>.<scenario>.spec.ts` 格式**
 
-| 场景类型 | 后缀示例 | 用途 |
-|---------|---------|------|
-| 并发测试 | `.concurrency.spec.ts` | 并发操作、竞态条件 |
+| 场景类型 | 后缀示例                | 用途               |
+| -------- | ----------------------- | ------------------ |
+| 并发测试 | `.concurrency.spec.ts`  | 并发操作、竞态条件 |
 | 批量操作 | `.batch-limits.spec.ts` | 批量限制、边界测试 |
-| 事务处理 | `.transaction.spec.ts` | 事务回滚、一致性 |
-| 性能测试 | `.performance.spec.ts` | 性能基准、压力测试 |
-| 集成测试 | `.integration.spec.ts` | 跨模块集成 |
-| 边界测试 | `.edge-cases.spec.ts` | 边界条件、异常输入 |
+| 事务处理 | `.transaction.spec.ts`  | 事务回滚、一致性   |
+| 性能测试 | `.performance.spec.ts`  | 性能基准、压力测试 |
+| 集成测试 | `.integration.spec.ts`  | 跨模块集成         |
+| 边界测试 | `.edge-cases.spec.ts`   | 边界条件、异常输入 |
 
 **示例**：
 
 ```typescript
 // ✅ 正确：清晰的场景命名
-media.service.spec.ts               // 核心 CRUD + 基础功能
-media.service.concurrency.spec.ts  // 并发上传、队列管理
-media.service.batch-limits.spec.ts // 批量删除限制、大文件处理
-media.service.transaction.spec.ts  // 数据库事务、回滚场景
+media.service.spec.ts; // 核心 CRUD + 基础功能
+media.service.concurrency.spec.ts; // 并发上传、队列管理
+media.service.batch - limits.spec.ts; // 批量删除限制、大文件处理
+media.service.transaction.spec.ts; // 数据库事务、回滚场景
 
 // ❌ 错误：模糊的命名
-media.service.test2.spec.ts        // 什么测试？
-media.service.more.spec.ts         // 不清晰
-media.service.advanced.spec.ts     // 太宽泛
+media.service.test2.spec.ts; // 什么测试？
+media.service.more.spec.ts; // 不清晰
+media.service.advanced.spec.ts; // 太宽泛
 ```
 
 ---
@@ -185,7 +185,7 @@ src/modules/media/
 
 ## 测试分类规范
 
-### 1. 单元测试（*.spec.ts）
+### 1. 单元测试（\*.spec.ts）
 
 **位置**：与源文件同目录
 **命名**：`<filename>.spec.ts`
@@ -208,7 +208,7 @@ describe('ArticleService', () => {
 });
 ```
 
-### 2. E2E 测试（*.e2e-spec.ts）
+### 2. E2E 测试（\*.e2e-spec.ts）
 
 **位置**：`test/` 根目录
 **命名**：`<feature>.e2e-spec.ts`
@@ -226,12 +226,13 @@ test/
 
 **位置**：`test/` 目录
 **命名**：
+
 - 工具：`<tool-name>.ts`（不是 `.spec.ts`）
 - 共享夹具：`test/fixtures/<name>.fixture.ts`
 
 ```
 test/
-├── mock-utils.ts             # Mock 工具（不是测试文件）
+├── mock.ts                   # Mock 工具（不是测试文件）
 ├── test-utils.ts             # 测试辅助函数
 └── fixtures/
     ├── user.fixture.ts       # 用户测试数据
@@ -287,7 +288,7 @@ src/modules/article/
 // vitest.config.ts
 export default defineConfig({
   test: {
-    include: ['**/*.spec.ts'],  // 只匹配 .spec.ts
+    include: ['**/*.spec.ts'], // 只匹配 .spec.ts
   },
 });
 ```
@@ -552,11 +553,7 @@ export default defineConfig({
     include: ['**/*.spec.ts'],
 
     // 排除实验性测试
-    exclude: [
-      '**/node_modules/**',
-      '**/experiments/**',
-      '**/*.fixtures.spec.ts',
-    ],
+    exclude: ['**/node_modules/**', '**/experiments/**', '**/*.fixtures.spec.ts'],
   },
 });
 ```
@@ -582,27 +579,27 @@ export default defineConfig({
 
 ### A. 文件后缀对照表
 
-| 后缀 | 用途 | 是否推荐 |
-|------|------|----------|
-| `.spec.ts` | 单元测试 | ✅ 推荐 |
-| `.e2e-spec.ts` | E2E 测试 | ✅ 推荐 |
-| `.test.ts` | 单元测试（Jest 风格） | ❌ 不推荐 |
-| `.fixtures.spec.ts` | 实验性测试 | ❌ 已废弃 |
-| `.<scenario>.spec.ts` | 场景拆分测试 | ✅ 推荐 |
+| 后缀                  | 用途                  | 是否推荐  |
+| --------------------- | --------------------- | --------- |
+| `.spec.ts`            | 单元测试              | ✅ 推荐   |
+| `.e2e-spec.ts`        | E2E 测试              | ✅ 推荐   |
+| `.test.ts`            | 单元测试（Jest 风格） | ❌ 不推荐 |
+| `.fixtures.spec.ts`   | 实验性测试            | ❌ 已废弃 |
+| `.<scenario>.spec.ts` | 场景拆分测试          | ✅ 推荐   |
 
 ### B. 场景后缀推荐列表
 
-| 场景 | 后缀 | 示例 |
-|------|------|------|
-| 并发测试 | `.concurrency.spec.ts` | `upload.concurrency.spec.ts` |
-| 批量操作 | `.batch-limits.spec.ts` | `delete.batch-limits.spec.ts` |
-| 事务处理 | `.transaction.spec.ts` | `order.transaction.spec.ts` |
-| 性能测试 | `.performance.spec.ts` | `search.performance.spec.ts` |
-| 集成测试 | `.integration.spec.ts` | `payment.integration.spec.ts` |
-| 边界测试 | `.edge-cases.spec.ts` | `validation.edge-cases.spec.ts` |
-| 搜索功能 | `.search.spec.ts` | `article.search.spec.ts` |
-| 权限测试 | `.permissions.spec.ts` | `resource.permissions.spec.ts` |
-| 密码保护 | `.password.spec.ts` | `category.password.spec.ts` |
+| 场景     | 后缀                    | 示例                            |
+| -------- | ----------------------- | ------------------------------- |
+| 并发测试 | `.concurrency.spec.ts`  | `upload.concurrency.spec.ts`    |
+| 批量操作 | `.batch-limits.spec.ts` | `delete.batch-limits.spec.ts`   |
+| 事务处理 | `.transaction.spec.ts`  | `order.transaction.spec.ts`     |
+| 性能测试 | `.performance.spec.ts`  | `search.performance.spec.ts`    |
+| 集成测试 | `.integration.spec.ts`  | `payment.integration.spec.ts`   |
+| 边界测试 | `.edge-cases.spec.ts`   | `validation.edge-cases.spec.ts` |
+| 搜索功能 | `.search.spec.ts`       | `article.search.spec.ts`        |
+| 权限测试 | `.permissions.spec.ts`  | `resource.permissions.spec.ts`  |
+| 密码保护 | `.password.spec.ts`     | `category.password.spec.ts`     |
 
 ---
 

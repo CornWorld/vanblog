@@ -2,7 +2,7 @@ import { NotFoundException } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, beforeEach, it, expect, vi, afterEach } from 'vitest';
 
-import { MockUtils, type DatabaseMockBuilder } from '../../../test/mock-utils';
+import { type DatabaseMockBuilder } from '../../../test/mock';
 import { ConfigService } from '../../config/config.service';
 import { DATABASE_CONNECTION } from '../../database';
 import { QueryOptimizerService } from '../../shared/services/query-optimizer.service';
@@ -21,10 +21,10 @@ describe('ArticleService', () => {
 
   beforeEach(async () => {
     // 使用Mock工具类创建数据库Mock
-    databaseMock = new MockUtils.database();
-    mockHookService = MockUtils.services.createHookServiceMock();
-    mockQueryOptimizer = MockUtils.services.createQueryOptimizerServiceMock();
-    mockConfigService = MockUtils.services.createConfigServiceMock();
+    databaseMock = Mock.db();
+    mockHookService = Mock.hook();
+    mockQueryOptimizer = Mock.queryOptimizer();
+    mockConfigService = Mock.config();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -57,7 +57,7 @@ describe('ArticleService', () => {
 
   describe('findAll', () => {
     it('should return articles with pagination', async () => {
-      const mockArticles = MockUtils.testData.createArticles(1);
+      const mockArticles = Mock.articles(1);
       const countResult = [{ count: 1 }];
 
       // Mock for the main query
@@ -96,7 +96,7 @@ describe('ArticleService', () => {
 
   describe('search', () => {
     it('should search articles by query', async () => {
-      const mockArticles = MockUtils.testData.createArticles(1);
+      const mockArticles = Mock.articles(1);
       const countResult = [{ count: 1 }];
 
       // 设置两个并行查询的返回值
@@ -207,7 +207,7 @@ describe('ArticleService', () => {
 
   describe('findOne', () => {
     it('should return a single article', async () => {
-      const mockArticle = MockUtils.testData.createArticle({ id: 1 });
+      const mockArticle = Mock.article({ id: 1 });
 
       // Mock for findOne query
       databaseMock.db.select.mockReturnValue({
@@ -240,14 +240,14 @@ describe('ArticleService', () => {
 
   describe('create', () => {
     it('should create a new article', async () => {
-      const mockCreatedArticle = MockUtils.testData.createArticle({
+      const mockCreatedArticle = Mock.article({
         id: 1,
         title: 'New Article',
         content: 'New content',
         tags: ['new'],
       });
 
-      const createDto = MockUtils.testData.createArticleDto({
+      const createDto = Mock.articleDto({
         title: 'New Article',
         content: 'New content',
         tags: JSON.stringify(['new']),
@@ -268,7 +268,7 @@ describe('ArticleService', () => {
 
     it('should hash password on create when provided', async () => {
       // Arrange
-      const mockCreatedArticle = MockUtils.testData.createArticle({
+      const mockCreatedArticle = Mock.article({
         id: 2,
         title: 'With Password',
         content: 'Secret content',
@@ -276,7 +276,7 @@ describe('ArticleService', () => {
         password: '$2a$10$xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
       });
 
-      const createDto = MockUtils.testData.createArticleDto({
+      const createDto = Mock.articleDto({
         title: 'With Password',
         content: 'Secret content',
         tags: JSON.stringify([]),
@@ -302,14 +302,14 @@ describe('ArticleService', () => {
 
   describe('update', () => {
     it('should update an existing article', async () => {
-      const mockExistingArticle = MockUtils.testData.createArticle({
+      const mockExistingArticle = Mock.article({
         id: 1,
         title: 'Existing Article',
         content: 'Existing content',
         tags: ['existing'],
       });
 
-      const mockUpdatedArticle = MockUtils.testData.createArticle({
+      const mockUpdatedArticle = Mock.article({
         id: 1,
         title: 'Updated Article',
         content: 'Updated content',
@@ -346,7 +346,7 @@ describe('ArticleService', () => {
 
     it('should hash password on update when provided', async () => {
       // Arrange: mock existing article for existence check
-      const mockExistingArticle = MockUtils.testData.createArticle({ id: 3 });
+      const mockExistingArticle = Mock.article({ id: 3 });
 
       databaseMock.db.select.mockReturnValue({
         from: vi.fn().mockReturnValue({
@@ -356,7 +356,7 @@ describe('ArticleService', () => {
         }),
       });
 
-      databaseMock.setUpdateResult([MockUtils.testData.createArticle({ id: 3, password: null })]);
+      databaseMock.setUpdateResult([Mock.article({ id: 3, password: null })]);
 
       // Act
       await service.update(3, { password: 'plain-update' } as unknown as Parameters<
@@ -389,7 +389,7 @@ describe('ArticleService', () => {
 
   describe('remove', () => {
     it('should delete an article', async () => {
-      const mockArticle = MockUtils.testData.createArticle({ id: 1 });
+      const mockArticle = Mock.article({ id: 1 });
 
       // Mock for the existence check query
       databaseMock.db.select.mockReturnValue({
@@ -425,14 +425,14 @@ describe('ArticleService', () => {
   describe('exportArticles', () => {
     it('should export all articles', async () => {
       const mockArticles = [
-        MockUtils.testData.createArticle({
+        Mock.article({
           id: 1,
           title: 'Article 1',
           content: 'Content 1',
           tags: ['tag1'],
           viewer: 100,
         }),
-        MockUtils.testData.createArticle({
+        Mock.article({
           id: 2,
           title: 'Article 2',
           content: 'Content 2',
@@ -464,12 +464,12 @@ describe('ArticleService', () => {
   describe('importArticles', () => {
     it('should import multiple articles', async () => {
       const articlesToImport = [
-        MockUtils.testData.createArticleDto({
+        Mock.articleDto({
           title: 'Import 1',
           content: 'Content 1',
           tags: JSON.stringify(['import']),
         }),
-        MockUtils.testData.createArticleDto({
+        Mock.articleDto({
           title: 'Import 2',
           content: 'Content 2',
           category: 'imported',
@@ -478,8 +478,8 @@ describe('ArticleService', () => {
       ];
 
       const mockResults = [
-        MockUtils.testData.createArticle({ id: 1, title: 'Import 1', tags: ['import'] }),
-        MockUtils.testData.createArticle({
+        Mock.article({ id: 1, title: 'Import 1', tags: ['import'] }),
+        Mock.article({
           id: 2,
           title: 'Import 2',
           category: 'imported',
@@ -508,7 +508,7 @@ describe('ArticleService', () => {
 
   describe('findByCategory', () => {
     it('should return articles by category with pagination', async () => {
-      const mockArticles = MockUtils.testData.createArticles(2);
+      const mockArticles = Mock.articles(2);
       const countResult = [{ count: 2 }];
 
       // Mock for the main query
@@ -540,7 +540,7 @@ describe('ArticleService', () => {
     });
 
     it('should support custom pagination parameters', async () => {
-      const mockArticles = MockUtils.testData.createArticles(5);
+      const mockArticles = Mock.articles(5);
       const countResult = [{ count: 15 }];
 
       databaseMock.db.select.mockReturnValueOnce({
@@ -573,7 +573,7 @@ describe('ArticleService', () => {
 
   describe('findOneByPathname', () => {
     it('should return article by pathname', async () => {
-      const mockArticle = MockUtils.testData.createArticle({ id: 1, pathname: 'test-article' });
+      const mockArticle = Mock.article({ id: 1, pathname: 'test-article' });
 
       databaseMock.db.select.mockReturnValue({
         from: vi.fn().mockReturnValue({
@@ -692,7 +692,7 @@ describe('ArticleService', () => {
 
   describe('verifyPassword', () => {
     it('should return success for public article without password', async () => {
-      const mockArticle = MockUtils.testData.createArticle({
+      const mockArticle = Mock.article({
         id: 1,
         private: false,
         password: null,
@@ -713,7 +713,7 @@ describe('ArticleService', () => {
     });
 
     it('should return failure for incorrect password', async () => {
-      const mockArticle = MockUtils.testData.createArticle({
+      const mockArticle = Mock.article({
         id: 1,
         private: true,
         password: '$2a$10$hashedPassword',
@@ -736,7 +736,7 @@ describe('ArticleService', () => {
 
   describe('verifyPasswordByPathname', () => {
     it('should return success for public article by pathname', async () => {
-      const mockArticle = MockUtils.testData.createArticle({
+      const mockArticle = Mock.article({
         id: 1,
         pathname: 'public-article',
         private: false,
@@ -761,21 +761,21 @@ describe('ArticleService', () => {
   describe('getArticlesGroupedByCategory', () => {
     it('should return articles grouped by category', async () => {
       const mockArticles = [
-        MockUtils.testData.createArticle({
+        Mock.article({
           id: 1,
           title: 'Article 1',
           category: 'Tech',
           private: false,
           hidden: false,
         }),
-        MockUtils.testData.createArticle({
+        Mock.article({
           id: 2,
           title: 'Article 2',
           category: 'Tech',
           private: false,
           hidden: false,
         }),
-        MockUtils.testData.createArticle({
+        Mock.article({
           id: 3,
           title: 'Article 3',
           category: 'Lifestyle',
@@ -802,7 +802,7 @@ describe('ArticleService', () => {
 
     it('should group articles without category as Uncategorized', async () => {
       const mockArticles = [
-        MockUtils.testData.createArticle({
+        Mock.article({
           id: 1,
           title: 'No Category',
           category: null,
@@ -843,14 +843,14 @@ describe('ArticleService', () => {
   describe('getArticlesGroupedByTag', () => {
     it('should return articles grouped by tag', async () => {
       const mockArticles = [
-        MockUtils.testData.createArticle({
+        Mock.article({
           id: 1,
           title: 'Article 1',
           tags: ['javascript', 'nodejs'],
           private: false,
           hidden: false,
         }),
-        MockUtils.testData.createArticle({
+        Mock.article({
           id: 2,
           title: 'Article 2',
           tags: ['javascript'],
@@ -877,7 +877,7 @@ describe('ArticleService', () => {
 
     it('should group articles without tags as Untagged', async () => {
       const mockArticles = [
-        MockUtils.testData.createArticle({
+        Mock.article({
           id: 1,
           title: 'No Tags',
           tags: [],

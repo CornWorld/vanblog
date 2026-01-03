@@ -3,7 +3,7 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import { dayjs } from '@vanblog/shared';
 import { describe, it, beforeEach, afterEach, expect, vi } from 'vitest';
 
-import { MockUtils } from '../../../test/mock-utils';
+import { Mock } from '../../../test/mock';
 import { PermissionService } from '../permission/permission.service';
 
 import { UserType, type CreateUserDto } from './dto/create-user.dto';
@@ -17,9 +17,9 @@ describe('UserController', () => {
   let controller: UserController;
   let service: UserService;
 
-  // Use MockUtils to create service mocks
-  const mockUserService = MockUtils.services.createUserServiceMock();
-  const mockPermissionService = MockUtils.services.createPermissionServiceMock();
+  // Use Mock to create service mocks
+  const mockUserService = Mock.userService();
+  const mockPermissionService = Mock.permission();
 
   // Use MockUtils to create test user data
   const mockUser = new User({

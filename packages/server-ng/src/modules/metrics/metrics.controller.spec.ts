@@ -3,7 +3,6 @@ import { vi } from 'vitest';
 
 import { PerformanceMonitoringMiddleware } from '../../shared/middleware/performance-monitoring.middleware';
 import { ErrorRateMonitoringService } from '../../shared/services/error-rate-monitoring.service';
-import { MockUtils } from '../../../test/mock-utils';
 
 import { MetricsController } from './metrics.controller';
 
@@ -12,7 +11,7 @@ describe('MetricsController', () => {
   let errorRateMonitoringService: ErrorRateMonitoringService;
 
   beforeEach(async () => {
-    const mockErrorRateService = MockUtils.services.createErrorRateMonitoringServiceMock();
+    const mockErrorRateService = Mock.errorRateMonitoring();
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [MetricsController],
@@ -35,7 +34,7 @@ describe('MetricsController', () => {
   describe('getMetrics', () => {
     it('should return Prometheus format metrics', () => {
       // Mock the static method
-      const mockStats = MockUtils.testData.createPerformanceStats();
+      const mockStats = Mock.performanceStats();
 
       vi.spyOn(PerformanceMonitoringMiddleware, 'getPerformanceStats').mockReturnValue(
         mockStats as any,
@@ -55,7 +54,7 @@ describe('MetricsController', () => {
         },
       ]);
       vi.spyOn(errorRateMonitoringService, 'getSystemHealthStatus').mockReturnValue(
-        MockUtils.testData.createHealthStatus() as any,
+        Mock.healthStatus() as any,
       );
 
       const result = controller.getMetrics();
@@ -70,7 +69,7 @@ describe('MetricsController', () => {
 
   describe('getHealth', () => {
     it('should return system health status', () => {
-      const mockHealthStatus = MockUtils.testData.createHealthStatus();
+      const mockHealthStatus = Mock.healthStatus();
 
       vi.spyOn(errorRateMonitoringService, 'getSystemHealthStatus').mockReturnValue(
         mockHealthStatus as any,

@@ -5,7 +5,6 @@ import { Logger } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
-import { MockUtils } from '../../../test/mock-utils';
 import { DATABASE_CONNECTION } from '../../database';
 import { MarkdownService } from '../../shared/services/markdown.service';
 import { HookService } from '../plugin/services/hook.service';
@@ -74,7 +73,7 @@ describe('RssService', () => {
   beforeEach(async () => {
     // Setup mocks using MockUtils - articles query
     // For RSS service, we need to support: db.select().from(articles).where(...).orderBy(...)
-    const dbMock = new MockUtils.database();
+    const dbMock = Mock.db();
     dbMock.setQueryResult(mockArticles);
     mockDb = dbMock.build();
 
@@ -105,13 +104,13 @@ describe('RssService', () => {
       }),
     };
 
-    hookService = MockUtils.services.createHookServiceMock();
+    hookService = Mock.hook();
     markdownService = {
       renderForRss: vi.fn().mockImplementation((content: string) => `<p>${content}</p>`),
       getDescription: vi.fn().mockImplementation((content: string) => content.substring(0, 100)),
     };
 
-    configService = MockUtils.services.createConfigServiceMock({
+    configService = Mock.config({
       'static.path': './test-static',
     });
 

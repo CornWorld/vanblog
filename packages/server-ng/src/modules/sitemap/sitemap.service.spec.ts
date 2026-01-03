@@ -5,7 +5,6 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
-import { MockUtils } from '../../../test/mock-utils';
 import { DATABASE_CONNECTION } from '../../database';
 import { HookService } from '../plugin/services/hook.service';
 import { SettingCoreService } from '../setting/services/setting-core.service';
@@ -40,7 +39,7 @@ describe('SitemapService', () => {
   let dbMock: any;
 
   beforeEach(async () => {
-    hookService = MockUtils.services.createHookServiceMock();
+    hookService = Mock.hook();
     hookService.applyFilters = vi
       .fn()
       .mockImplementation((_hook: string, urls: string[]) => Promise.resolve(urls));
@@ -49,12 +48,12 @@ describe('SitemapService', () => {
       getConfig: vi.fn().mockResolvedValue('https://example.com'),
     };
 
-    const configService = MockUtils.services.createConfigServiceMock({
+    const configService = Mock.config({
       'static.path': '/tmp/static',
     });
 
     // Create database mock with test articles
-    const databaseMockBuilder = new MockUtils.database();
+    const databaseMockBuilder = Mock.db();
     databaseMockBuilder.setQueryResult([
       { id: 1, pathname: 'test-article-1' },
       { id: 2, pathname: 'test-article-2' },
@@ -150,7 +149,7 @@ describe('SitemapService', () => {
     it('should handle errors gracefully', async () => {
       const loggerSpy = vi.spyOn(service['logger'], 'error').mockImplementation(() => {});
 
-      const dbMockError = new MockUtils.database();
+      const dbMockError = Mock.db();
       dbMockError.setQueryResult([]);
       const dbMockErrorBuilt = dbMockError.build();
 
@@ -319,7 +318,7 @@ describe('SitemapService', () => {
         { id: 2, pathname: 'another-path' },
       ];
 
-      const databaseMockBuilder = new MockUtils.database();
+      const databaseMockBuilder = Mock.db();
       databaseMockBuilder.setQueryResult(mockArticles);
       const mockDb = databaseMockBuilder.build();
 
@@ -340,7 +339,7 @@ describe('SitemapService', () => {
         { id: 2, pathname: null },
       ];
 
-      const databaseMockBuilder = new MockUtils.database();
+      const databaseMockBuilder = Mock.db();
       databaseMockBuilder.setQueryResult(mockArticles);
       const mockDb = databaseMockBuilder.build();
 
@@ -360,7 +359,7 @@ describe('SitemapService', () => {
     it('should return encoded category URLs', async () => {
       const mockCategories = [{ name: 'Tech & Science' }, { name: '中文分类' }];
 
-      const databaseMockBuilder = new MockUtils.database();
+      const databaseMockBuilder = Mock.db();
       databaseMockBuilder.setQueryResult(mockCategories);
       const mockDb = databaseMockBuilder.build();
 
@@ -380,7 +379,7 @@ describe('SitemapService', () => {
     it('should return encoded tag URLs', async () => {
       const mockTags = [{ name: 'JavaScript' }, { name: 'Node.js' }];
 
-      const databaseMockBuilder = new MockUtils.database();
+      const databaseMockBuilder = Mock.db();
       databaseMockBuilder.setQueryResult(mockTags);
       const mockDb = databaseMockBuilder.build();
 
@@ -400,7 +399,7 @@ describe('SitemapService', () => {
     it('should generate correct number of pages', async () => {
       (settingCoreService.getConfig as any).mockResolvedValue(10);
 
-      const databaseMockBuilder = new MockUtils.database();
+      const databaseMockBuilder = Mock.db();
       databaseMockBuilder.setCountResult(25);
       const mockDb = databaseMockBuilder.build();
 
@@ -420,7 +419,7 @@ describe('SitemapService', () => {
     it('should handle zero articles', async () => {
       (settingCoreService.getConfig as any).mockResolvedValue(10);
 
-      const databaseMockBuilder = new MockUtils.database();
+      const databaseMockBuilder = Mock.db();
       databaseMockBuilder.setCountResult(0);
       const mockDb = databaseMockBuilder.build();
 

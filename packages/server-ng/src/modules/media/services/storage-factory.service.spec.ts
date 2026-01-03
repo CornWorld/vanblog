@@ -2,7 +2,6 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import { vi, describe, beforeEach, afterEach, it, expect } from 'vitest';
 
 import { StorageProvider } from '../dto/storage-config.dto';
-import { MockUtils } from '../../../../test/mock-utils';
 
 import { StorageConfigService } from './storage-config.service';
 import { StorageFactoryService } from './storage-factory.service';
@@ -21,9 +20,9 @@ describe('StorageFactoryService', () => {
       getStorageConfig: vi.fn(),
     };
 
-    const mockLocalStorageService = MockUtils.services.createStorageServiceMock();
+    const mockLocalStorageService = Mock.storage();
     const mockPicgoStorageService = {
-      ...MockUtils.services.createStorageServiceMock(),
+      ...Mock.storage(),
       configure: vi.fn(),
     };
 

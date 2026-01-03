@@ -1,15 +1,14 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
-import { MockUtils } from '../../../../test/mock-utils';
 import { HookService } from './hook.service';
 
 describe('HookService', () => {
   let service: HookService;
-  let loggerMock: ReturnType<typeof MockUtils.services.createLoggerMock>;
+  let loggerMock: ReturnType<typeof Mock.logger>;
 
   beforeEach(async () => {
-    loggerMock = MockUtils.services.createLoggerMock();
+    loggerMock = Mock.logger();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [HookService],

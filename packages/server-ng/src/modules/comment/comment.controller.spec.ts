@@ -3,7 +3,6 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 import { PermissionService } from '../permission/permission.service';
-import { MockUtils } from '../../../test/mock-utils';
 
 import { CommentController } from './comment.controller';
 import { CommentService } from './comment.service';
@@ -18,15 +17,15 @@ describe('CommentController', () => {
       providers: [
         {
           provide: CommentService,
-          useValue: MockUtils.services.createCommentServiceMock(),
+          useValue: Mock.commentService(),
         },
         {
           provide: ConfigService,
-          useValue: MockUtils.services.createConfigServiceMock({ 'app.demoMode': false }),
+          useValue: Mock.config({ 'app.demoMode': false }),
         },
         {
           provide: PermissionService,
-          useValue: MockUtils.services.createPermissionServiceMock(),
+          useValue: Mock.createPermissionServiceMock(),
         },
       ],
     }).compile();
@@ -41,7 +40,7 @@ describe('CommentController', () => {
 
   describe('getWalineSetting', () => {
     it('should return waline setting', async () => {
-      const mockWalineSetting = MockUtils.testData.createWalineSetting();
+      const mockWalineSetting = Mock.createWalineSetting();
       vi.mocked(commentService.getWalineSetting).mockResolvedValue(mockWalineSetting);
 
       const result = await controller.getWalineSetting();
@@ -51,7 +50,7 @@ describe('CommentController', () => {
     });
 
     it('should return default setting if no setting found', async () => {
-      const defaultSetting = MockUtils.testData.createWalineSetting({
+      const defaultSetting = Mock.createWalineSetting({
         'smtp.enabled': false,
         'smtp.host': '',
         'smtp.user': '',
@@ -70,7 +69,7 @@ describe('CommentController', () => {
 
   describe('updateWalineSetting', () => {
     it('should update waline setting', async () => {
-      const mockWalineSetting = MockUtils.testData.createWalineSetting();
+      const mockWalineSetting = Mock.createWalineSetting();
       const updateData: Record<string, unknown> = { 'smtp.enabled': false };
       const updatedSetting = { ...mockWalineSetting, ...updateData };
 

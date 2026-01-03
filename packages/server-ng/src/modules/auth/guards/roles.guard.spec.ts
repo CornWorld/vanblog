@@ -2,7 +2,6 @@ import { Reflector } from '@nestjs/core';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, beforeEach, expect, vi } from 'vitest';
 
-import { MockUtils } from '../../../../test/mock-utils';
 import { UserType } from '../../user/dto/create-user.dto';
 
 import { RolesGuard } from './roles.guard';
@@ -26,7 +25,7 @@ describe('RolesGuard', () => {
 
   describe('canActivate', () => {
     it('should return true when no roles are required', () => {
-      const mockContext = MockUtils.services.createExecutionContextMock({
+      const mockContext = Mock.context({
         request: { user: { id: 1, type: UserType.ADMIN } },
       });
 
@@ -38,7 +37,7 @@ describe('RolesGuard', () => {
     });
 
     it('should return true when user has required role', () => {
-      const mockContext = MockUtils.services.createExecutionContextMock({
+      const mockContext = Mock.context({
         request: { user: { id: 1, type: UserType.ADMIN } },
       });
 
@@ -51,7 +50,7 @@ describe('RolesGuard', () => {
     });
 
     it('should return false when user lacks required role', () => {
-      const mockContext = MockUtils.services.createExecutionContextMock({
+      const mockContext = Mock.context({
         request: { user: { id: 1, type: UserType.AUTHOR } },
       });
 
@@ -64,7 +63,7 @@ describe('RolesGuard', () => {
     });
 
     it('should return true when user has one of multiple required roles', () => {
-      const mockContext = MockUtils.services.createExecutionContextMock({
+      const mockContext = Mock.context({
         request: { user: { id: 1, type: UserType.ADMIN } },
       });
 
@@ -77,7 +76,7 @@ describe('RolesGuard', () => {
     });
 
     it('should return false when user has none of the required roles', () => {
-      const mockContext = MockUtils.services.createExecutionContextMock({
+      const mockContext = Mock.context({
         request: { user: { id: 1, type: UserType.AUTHOR } },
       });
 
@@ -90,7 +89,7 @@ describe('RolesGuard', () => {
     });
 
     it('should return false when user is missing from request', () => {
-      const mockContext = MockUtils.services.createExecutionContextMock({
+      const mockContext = Mock.context({
         request: {},
       });
 
@@ -103,7 +102,7 @@ describe('RolesGuard', () => {
     });
 
     it('should return false when user type is missing', () => {
-      const mockContext = MockUtils.services.createExecutionContextMock({
+      const mockContext = Mock.context({
         request: { user: { id: 1 } },
       });
 

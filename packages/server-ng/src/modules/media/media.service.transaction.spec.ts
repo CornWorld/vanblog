@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 
-import { MockUtils, type DatabaseMockBuilder } from '../../../test/mock-utils';
+import { type DatabaseMockBuilder } from '../../../test/mock';
 
 import { MediaService } from './services/media.service';
 
@@ -27,7 +27,7 @@ describe('MediaService - Transaction Atomicity', () => {
 
   beforeEach(() => {
     // Create database mock
-    mockDbBuilder = new MockUtils.database();
+    mockDbBuilder = Mock.db();
     mockDatabase = mockDbBuilder.build() as unknown as Database;
 
     // Mock storage service

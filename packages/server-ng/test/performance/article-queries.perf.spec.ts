@@ -1,6 +1,6 @@
 import { describe, it, beforeEach, afterEach, expect, vi } from 'vitest';
 import { Logger } from '@nestjs/common';
-import { MockUtils, type DatabaseMockBuilder } from '../mock-utils';
+import { type DatabaseMockBuilder } from '../mock';
 
 /**
  * Article Query Performance Tests
@@ -22,7 +22,7 @@ describe('Article Query Performance (article-queries.perf.spec.ts)', () => {
   const performanceResults: Record<string, { mean: number; min: number; max: number }[]> = {};
 
   beforeEach(() => {
-    databaseMock = new MockUtils.database();
+    databaseMock = Mock.db();
     logger = new Logger('ArticleQueryPerf');
   });
 
@@ -35,7 +35,7 @@ describe('Article Query Performance (article-queries.perf.spec.ts)', () => {
    * Measures latency for finding a single article by ID
    */
   it('should lookup single article in < 50ms', async () => {
-    const mockArticle = MockUtils.testData.createArticle({ id: '1' });
+    const mockArticle = Mock.article({ id: '1' });
     const measurements: number[] = [];
 
     const fromMock = vi.fn().mockResolvedValue([mockArticle]);
@@ -88,7 +88,7 @@ describe('Article Query Performance (article-queries.perf.spec.ts)', () => {
     const measurements: number[] = [];
 
     // Create mock data for a single page
-    const mockPageData = MockUtils.testData.createArticles(pageSize);
+    const mockPageData = Mock.articles(pageSize);
 
     // Use setQueryResult to properly configure the mock with chainable methods
     databaseMock.setQueryResult(mockPageData);
@@ -140,7 +140,7 @@ describe('Article Query Performance (article-queries.perf.spec.ts)', () => {
    */
   it('should apply complex filters (tags + categories + date range) in < 500ms', async () => {
     const measurements: number[] = [];
-    const mockResults = MockUtils.testData.createArticles(50);
+    const mockResults = Mock.articles(50);
 
     // Use setQueryResult to properly configure the mock with chainable methods
     databaseMock.setQueryResult(mockResults);
@@ -200,7 +200,7 @@ describe('Article Query Performance (article-queries.perf.spec.ts)', () => {
    * Simulates 50 simultaneous read operations
    */
   it('should handle 50 concurrent article reads without degradation', async () => {
-    const mockArticle = MockUtils.testData.createArticle();
+    const mockArticle = Mock.article();
     let degradationDetected = false;
 
     const selectFn = vi.fn();
@@ -330,7 +330,7 @@ describe('Article Query Performance (article-queries.perf.spec.ts)', () => {
 
     // Create article with 100 tags
     const articleWith100Tags = {
-      ...MockUtils.testData.createArticle(),
+      ...Mock.article(),
       tags: Array.from({ length: 100 }, (_, i) => ({
         id: `tag-${String(i)}`,
         name: `tag-${String(i)}`,
@@ -390,7 +390,7 @@ describe('Article Query Performance (article-queries.perf.spec.ts)', () => {
    * Verifies that repeated queries don't cause memory leaks
    */
   it('should maintain stable memory usage over repeated queries', () => {
-    const mockArticle = MockUtils.testData.createArticle();
+    const mockArticle = Mock.article();
 
     // Use setQueryResult to properly configure the mock with chainable methods
     databaseMock.setQueryResult([mockArticle]);

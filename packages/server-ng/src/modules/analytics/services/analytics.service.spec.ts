@@ -4,7 +4,6 @@ import { analytics } from '@vanblog/shared/drizzle';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 import { DATABASE_CONNECTION } from '../../../database';
-import { MockUtils } from '../../../../test/mock-utils';
 import { AnalyticsCacheService } from '../../../shared/cache/analytics-cache.service';
 import type { RecordAnalyticsDto } from '../dto/record-analytics.dto';
 import type { QueryAnalyticsDto } from '../dto/query-analytics.dto';
@@ -19,7 +18,7 @@ describe('AnalyticsService', () => {
 
   beforeEach(async () => {
     // 创建数据库 Mock
-    const dbBuilder = new MockUtils.database();
+    const dbBuilder = Mock.db();
     mockDb = dbBuilder.build();
 
     // 创建缓存服务 Mock

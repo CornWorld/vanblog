@@ -17,7 +17,7 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import { vi } from 'vitest';
 
-import { createMockUser, MockUtils } from '../../../test/mock-utils';
+import { createMockUser } from '../../../test/mock';
 import { DATABASE_CONNECTION } from '../../database';
 import { HookService } from '../plugin/services/hook.service';
 
@@ -27,15 +27,15 @@ vi.mock('bcrypt');
 
 describe('UserService - Entity Mapping', () => {
   let service: UserService;
-  let databaseMock: InstanceType<typeof MockUtils.database>;
-  let mockHookService: ReturnType<typeof MockUtils.services.createHookServiceMock>;
+  let databaseMock: InstanceType<typeof DatabaseMockBuilder>;
+  let mockHookService: ReturnType<typeof Mock.hook>;
 
   beforeEach(async () => {
     // 使用Mock工具类创建数据库Mock
-    databaseMock = new MockUtils.database();
+    databaseMock = Mock.db();
 
     // 创建Hook服务Mock
-    mockHookService = MockUtils.services.createHookServiceMock();
+    mockHookService = Mock.hook();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [

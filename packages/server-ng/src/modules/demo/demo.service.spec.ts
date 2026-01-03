@@ -3,7 +3,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { ConfigService } from '@nestjs/config';
 
 import { DATABASE_CONNECTION, type Database } from '../../database';
-import { DatabaseMockBuilder } from '../../../test/mock-utils';
+import { DatabaseMockBuilder } from '../../../test/mock';
 
 import { DemoService } from './demo.service';
 

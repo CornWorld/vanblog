@@ -25,7 +25,7 @@ import { describe, it, expect, beforeEach, afterEach, vi, type Mock } from 'vite
 import { z } from 'zod';
 
 import { DATABASE_CONNECTION } from '../../../database';
-import { MockUtils } from '../../../../test/mock-utils';
+import { Mock } from '../../../../test/mock';
 import { ShortcodeService } from '../../shortcode/shortcode.service';
 import { PluginConfigService } from './plugin-config.service';
 import { PluginRegistryService } from './plugin-registry.service';
@@ -36,8 +36,8 @@ import type { PluginMetadata, PluginPackageJson } from '@vanblog/shared/plugin';
 
 describe('PluginAPIFactory', () => {
   let factory: PluginAPIFactory;
-  let databaseMock: InstanceType<typeof MockUtils.database>;
-  let mockModuleRef: ReturnType<typeof MockUtils.services.createModuleRefMock>;
+  let databaseMock: InstanceType<typeof DatabaseMockBuilder>;
+  let mockModuleRef: ReturnType<typeof Mock.moduleRef>;
   let mockSignalBus: Partial<SignalBus>;
   let mockRegistryService: Partial<PluginRegistryService>;
   let mockShortcodeService: Partial<ShortcodeService>;
@@ -47,11 +47,11 @@ describe('PluginAPIFactory', () => {
 
   beforeEach(async () => {
     // Create database mock using MockUtils
-    databaseMock = new MockUtils.database();
+    databaseMock = Mock.db();
     databaseMock.setQueryResult([]);
 
     // Mock ModuleRef using MockUtils
-    mockModuleRef = MockUtils.services.createModuleRefMock();
+    mockModuleRef = Mock.moduleRef();
 
     // Mock SignalBus
     mockSignalBus = {
@@ -189,11 +189,11 @@ describe('PluginAPIFactory', () => {
   describe('PluginAPIImpl - Basic Properties', () => {
     let api: PluginAPIImpl;
     let metadata: PluginMetadata;
-    let localDbMock: InstanceType<typeof MockUtils.database>;
+    let localDbMock: InstanceType<typeof DatabaseMockBuilder>;
 
     beforeEach(async () => {
       // Create dedicated database mock for this test suite
-      localDbMock = new MockUtils.database();
+      localDbMock = Mock.db();
       localDbMock.setQueryResult([]);
 
       metadata = {
@@ -253,11 +253,11 @@ describe('PluginAPIFactory', () => {
 
   describe('PluginAPIImpl - Configuration', () => {
     let api: PluginAPIImpl;
-    let localDbMock: InstanceType<typeof MockUtils.database>;
+    let localDbMock: InstanceType<typeof DatabaseMockBuilder>;
 
     beforeEach(async () => {
       // Create dedicated database mock for this test suite
-      localDbMock = new MockUtils.database();
+      localDbMock = Mock.db();
       localDbMock.setQueryResult([]);
 
       const metadata: PluginMetadata = {
@@ -354,11 +354,11 @@ describe('PluginAPIFactory', () => {
 
   describe('PluginAPIImpl - Store', () => {
     let api: PluginAPIImpl;
-    let localDbMock: InstanceType<typeof MockUtils.database>;
+    let localDbMock: InstanceType<typeof DatabaseMockBuilder>;
 
     beforeEach(async () => {
       // Create dedicated database mock for this test suite
-      localDbMock = new MockUtils.database();
+      localDbMock = Mock.db();
       localDbMock.setQueryResult([]);
 
       const metadata: PluginMetadata = {
@@ -422,11 +422,11 @@ describe('PluginAPIFactory', () => {
 
   describe('PluginAPIImpl - Database Access', () => {
     let api: PluginAPIImpl;
-    let localDbMock: InstanceType<typeof MockUtils.database>;
+    let localDbMock: InstanceType<typeof DatabaseMockBuilder>;
 
     beforeEach(async () => {
       // Create dedicated database mock for this test suite
-      localDbMock = new MockUtils.database();
+      localDbMock = Mock.db();
       localDbMock.setQueryResult([]);
 
       const metadata: PluginMetadata = {
@@ -496,11 +496,11 @@ describe('PluginAPIFactory', () => {
 
   describe('PluginAPIImpl - Dependency Injection', () => {
     let api: PluginAPIImpl;
-    let localDbMock: InstanceType<typeof MockUtils.database>;
+    let localDbMock: InstanceType<typeof DatabaseMockBuilder>;
 
     beforeEach(async () => {
       // Create dedicated database mock for this test suite
-      localDbMock = new MockUtils.database();
+      localDbMock = Mock.db();
       localDbMock.setQueryResult([]);
 
       const metadata: PluginMetadata = {
@@ -628,11 +628,11 @@ describe('PluginAPIFactory', () => {
 
   describe('PluginAPIImpl - HTTP Registry', () => {
     let api: PluginAPIImpl;
-    let localDbMock: InstanceType<typeof MockUtils.database>;
+    let localDbMock: InstanceType<typeof DatabaseMockBuilder>;
 
     beforeEach(async () => {
       // Create dedicated database mock for this test suite
-      localDbMock = new MockUtils.database();
+      localDbMock = Mock.db();
       localDbMock.setQueryResult([]);
 
       const metadata: PluginMetadata = {
@@ -755,11 +755,11 @@ describe('PluginAPIFactory', () => {
 
   describe('PluginAPIImpl - Resource Registration', () => {
     let api: PluginAPIImpl;
-    let localDbMock: InstanceType<typeof MockUtils.database>;
+    let localDbMock: InstanceType<typeof DatabaseMockBuilder>;
 
     beforeEach(async () => {
       // Create dedicated database mock for this test suite
-      localDbMock = new MockUtils.database();
+      localDbMock = Mock.db();
       localDbMock.setQueryResult([]);
 
       const metadata: PluginMetadata = {
@@ -825,11 +825,11 @@ describe('PluginAPIFactory', () => {
   describe('PluginAPIImpl - Plugin Communication', () => {
     let api: PluginAPIImpl;
     let pluginAPIRegistry: Map<string, Map<string, any>>;
-    let localDbMock: InstanceType<typeof MockUtils.database>;
+    let localDbMock: InstanceType<typeof DatabaseMockBuilder>;
 
     beforeEach(async () => {
       // Create dedicated database mock for this test suite
-      localDbMock = new MockUtils.database();
+      localDbMock = Mock.db();
       localDbMock.setQueryResult([]);
 
       const metadata: PluginMetadata = {
@@ -898,11 +898,11 @@ describe('PluginAPIFactory', () => {
 
   describe('PluginAPIImpl - Metadata Manager', () => {
     let api: PluginAPIImpl;
-    let localDbMock: InstanceType<typeof MockUtils.database>;
+    let localDbMock: InstanceType<typeof DatabaseMockBuilder>;
 
     beforeEach(async () => {
       // Create dedicated database mock for this test suite
-      localDbMock = new MockUtils.database();
+      localDbMock = Mock.db();
       localDbMock.setQueryResult([]);
 
       const metadata: PluginMetadata = {
@@ -957,11 +957,11 @@ describe('PluginAPIFactory', () => {
 
   describe('PluginAPIImpl - Hooks', () => {
     let api: PluginAPIImpl;
-    let localDbMock: InstanceType<typeof MockUtils.database>;
+    let localDbMock: InstanceType<typeof DatabaseMockBuilder>;
 
     beforeEach(async () => {
       // Create dedicated database mock for this test suite
-      localDbMock = new MockUtils.database();
+      localDbMock = Mock.db();
       localDbMock.setQueryResult([]);
 
       const metadata: PluginMetadata = {
@@ -1036,11 +1036,11 @@ describe('PluginAPIFactory', () => {
 
   describe('PluginAPIImpl - Shortcode', () => {
     let api: PluginAPIImpl;
-    let localDbMock: InstanceType<typeof MockUtils.database>;
+    let localDbMock: InstanceType<typeof DatabaseMockBuilder>;
 
     beforeEach(async () => {
       // Create dedicated database mock for this test suite
-      localDbMock = new MockUtils.database();
+      localDbMock = Mock.db();
       localDbMock.setQueryResult([]);
 
       const metadata: PluginMetadata = {
@@ -1082,11 +1082,11 @@ describe('PluginAPIFactory', () => {
 
   describe('PluginAPIImpl - Public Data', () => {
     let api: PluginAPIImpl;
-    let localDbMock: InstanceType<typeof MockUtils.database>;
+    let localDbMock: InstanceType<typeof DatabaseMockBuilder>;
 
     beforeEach(async () => {
       // Create dedicated database mock for this test suite
-      localDbMock = new MockUtils.database();
+      localDbMock = Mock.db();
       localDbMock.setQueryResult([]);
 
       const metadata: PluginMetadata = {
@@ -1139,11 +1139,11 @@ describe('PluginAPIFactory', () => {
 
   describe('PluginAPIImpl - Lifecycle', () => {
     let api: PluginAPIImpl;
-    let localDbMock: InstanceType<typeof MockUtils.database>;
+    let localDbMock: InstanceType<typeof DatabaseMockBuilder>;
 
     beforeEach(async () => {
       // Create dedicated database mock for this test suite
-      localDbMock = new MockUtils.database();
+      localDbMock = Mock.db();
       localDbMock.setQueryResult([]);
 
       const metadata: PluginMetadata = {
@@ -1222,11 +1222,11 @@ describe('PluginAPIFactory', () => {
 
   describe('PluginAPIImpl - Cleanup', () => {
     let api: PluginAPIImpl;
-    let localDbMock: InstanceType<typeof MockUtils.database>;
+    let localDbMock: InstanceType<typeof DatabaseMockBuilder>;
 
     beforeEach(async () => {
       // Create dedicated database mock for this test suite
-      localDbMock = new MockUtils.database();
+      localDbMock = Mock.db();
       localDbMock.setQueryResult([]);
 
       const metadata: PluginMetadata = {

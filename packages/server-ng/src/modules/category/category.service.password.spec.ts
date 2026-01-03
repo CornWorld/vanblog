@@ -20,7 +20,6 @@ import { DATABASE_CONNECTION } from '../../database';
 import { QueryOptimizerService } from '../../shared/services/query-optimizer.service';
 import { StatisticsService } from '../../shared/services/statistics.service';
 import { HookService } from '../plugin/services/hook.service';
-import { MockUtils } from '../../../test/mock-utils';
 
 import { CategoryService } from './category.service';
 
@@ -30,9 +29,9 @@ describe('CategoryService - Password Management', () => {
   let mockDb: any;
 
   beforeEach(async () => {
-    const databaseMockBuilder = new MockUtils.database();
+    const databaseMockBuilder = Mock.db();
     mockDb = databaseMockBuilder.build();
-    mockHookService = MockUtils.services.createHookServiceMock();
+    mockHookService = Mock.hook();
 
     const module: TestingModule = await Test.createTestingModule({
       imports: [],
@@ -44,11 +43,11 @@ describe('CategoryService - Password Management', () => {
         },
         {
           provide: StatisticsService,
-          useValue: MockUtils.services.createStatisticsServiceMock(),
+          useValue: Mock.statistics(),
         },
         {
           provide: QueryOptimizerService,
-          useValue: MockUtils.services.createQueryOptimizerServiceMock(),
+          useValue: Mock.queryOptimizer(),
         },
         {
           provide: HookService,
@@ -56,7 +55,7 @@ describe('CategoryService - Password Management', () => {
         },
         {
           provide: ConfigService,
-          useValue: MockUtils.services.createConfigServiceMock({ 'jwt.secret': 'test-secret-key' }),
+          useValue: Mock.config({ 'jwt.secret': 'test-secret-key' }),
         },
       ],
     }).compile();
@@ -72,7 +71,7 @@ describe('CategoryService - Password Management', () => {
         password: 'plaintext-password',
       };
 
-      const mockCreatedCategory = MockUtils.testData.createCategory({
+      const mockCreatedCategory = Mock.category({
         name: 'Private Category',
         description: 'A private category',
         private: true,
@@ -112,7 +111,7 @@ describe('CategoryService - Password Management', () => {
         .fn()
         .mockImplementation(async (_hookName, _data) => Promise.resolve(modifiedDto));
 
-      const mockCreatedCategory = MockUtils.testData.createCategory({
+      const mockCreatedCategory = Mock.category({
         ...modifiedDto,
       });
 
@@ -145,7 +144,7 @@ describe('CategoryService - Password Management', () => {
         password: 'new-password',
       };
 
-      const mockUpdatedCategory = MockUtils.testData.createCategory({
+      const mockUpdatedCategory = Mock.category({
         name: 'Updated Category',
         private: true,
         password: 'hashed-password',
@@ -183,7 +182,7 @@ describe('CategoryService - Password Management', () => {
         .fn()
         .mockImplementation(async (_hookName, _data) => Promise.resolve(modifiedDto));
 
-      const mockUpdatedCategory = MockUtils.testData.createCategory(modifiedDto);
+      const mockUpdatedCategory = Mock.category(modifiedDto);
 
       mockDb.returning.mockResolvedValueOnce([mockUpdatedCategory]);
 
@@ -199,7 +198,7 @@ describe('CategoryService - Password Management', () => {
 
   describe('verifyPassword', () => {
     it('should return success for non-private category', async () => {
-      const mockCategory = MockUtils.testData.createCategory({
+      const mockCategory = Mock.category({
         private: false,
         password: null,
       });
@@ -214,7 +213,7 @@ describe('CategoryService - Password Management', () => {
     });
 
     it('should return failure for invalid password', async () => {
-      const mockCategory = MockUtils.testData.createCategory({
+      const mockCategory = Mock.category({
         private: true,
         password: '$2b$10$somehash',
       });

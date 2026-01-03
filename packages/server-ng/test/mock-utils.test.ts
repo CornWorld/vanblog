@@ -1,13 +1,13 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 
-import { MockUtils, type DatabaseMockBuilder } from './mock-utils';
+import { type DatabaseMockBuilder } from './mock';
 
 describe('MockUtils', () => {
   describe('DatabaseMockBuilder', () => {
     let databaseMock: DatabaseMockBuilder;
 
     beforeEach(() => {
-      databaseMock = new MockUtils.database();
+      databaseMock = Mock.db();
     });
 
     it('should create database mock with chained methods', () => {
@@ -53,14 +53,14 @@ describe('MockUtils', () => {
 
   describe('ServiceMockBuilder', () => {
     it('should create hook service mock', () => {
-      const hookMock = MockUtils.services.createHookServiceMock();
+      const hookMock = Mock.hook();
 
       expect(hookMock.doAction).toBeDefined();
     });
 
     it('should create config service mock with custom config', () => {
       const configMap = { 'app.name': 'Test App', 'app.port': 3000 };
-      const configMock = MockUtils.services.createConfigServiceMock(configMap);
+      const configMock = Mock.config(configMap);
 
       expect(configMock.get('app.name')).toBe('Test App');
       expect(configMock.get('app.port')).toBe(3000);
@@ -68,7 +68,7 @@ describe('MockUtils', () => {
     });
 
     it('should create storage service mock', () => {
-      const storageMock = MockUtils.services.createStorageServiceMock();
+      const storageMock = Mock.storage();
 
       expect(storageMock.upload).toBeDefined();
       expect(storageMock.delete).toBeDefined();
@@ -76,7 +76,7 @@ describe('MockUtils', () => {
     });
 
     it('should create storage factory service mock', () => {
-      const factoryMock = MockUtils.services.createStorageFactoryServiceMock();
+      const factoryMock = Mock.storageFactory();
 
       expect(factoryMock.getStorageService).toBeDefined();
     });
@@ -84,7 +84,7 @@ describe('MockUtils', () => {
 
   describe('TestDataFactory', () => {
     it('should create user test data', () => {
-      const user = MockUtils.testData.createUser({ name: 'Custom User' });
+      const user = Mock.user({ name: 'Custom User' });
 
       expect(user.id).toBe(1);
       expect(user.name).toBe('Custom User');
@@ -92,7 +92,7 @@ describe('MockUtils', () => {
     });
 
     it('should create article test data', () => {
-      const article = MockUtils.testData.createArticle({ title: 'Custom Title' });
+      const article = Mock.article({ title: 'Custom Title' });
 
       expect(article.id).toBe(1);
       expect(article.title).toBe('Custom Title');
@@ -100,7 +100,7 @@ describe('MockUtils', () => {
     });
 
     it('should create media file test data', () => {
-      const mediaFile = MockUtils.testData.createMediaFile({ filename: 'custom.jpg' });
+      const mediaFile = Mock.createMediaFile({ filename: 'custom.jpg' });
 
       expect(mediaFile.id).toBe(1);
       expect(mediaFile.filename).toBe('custom.jpg');
@@ -109,7 +109,7 @@ describe('MockUtils', () => {
 
     it('should create paginated result', () => {
       const items = [{ id: 1 }, { id: 2 }];
-      const result = MockUtils.testData.createPaginatedResult(items, 10, 1, 5);
+      const result = Mock.createPaginatedResult(items, 10, 1, 5);
 
       expect(result.items).toEqual(items);
       expect(result.total).toBe(10);

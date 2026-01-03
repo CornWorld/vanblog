@@ -3,14 +3,13 @@ import { describe, it, beforeEach, afterEach, expect, vi } from 'vitest';
 
 import { DraftVersionService } from './draft-version.service';
 import { DraftVersionTsRestController } from './draft-version.controller';
-import { MockUtils } from '../../../test/mock-utils';
 
 describe('DraftVersionTsRestController', () => {
   let controller: DraftVersionTsRestController;
   let mockDraftVersionService: any;
 
   beforeEach(async () => {
-    mockDraftVersionService = MockUtils.services.createDraftVersionServiceMock();
+    mockDraftVersionService = Mock.draftVersionService();
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [DraftVersionTsRestController],

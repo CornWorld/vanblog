@@ -2,8 +2,6 @@ import { ConfigService } from '@nestjs/config';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { vi, describe, beforeEach, it, expect, afterEach } from 'vitest';
 
-import { MockUtils } from '../../../test/mock-utils';
-
 import { CDNService } from './cdn.service';
 
 // Mock fetch globally
@@ -16,7 +14,7 @@ describe('CDNService', () => {
   let module: TestingModule;
 
   beforeEach(async () => {
-    const mockConfigService = MockUtils.services.createConfigServiceMock({
+    const mockConfigService = Mock.config({
       CDN_ENABLED: true,
       CDN_BASE_URL: 'https://cdn.example.com',
       CDN_DOMAINS: 'https://cdn1.example.com,https://cdn2.example.com,https://cdn3.example.com',
@@ -52,7 +50,7 @@ describe('CDNService', () => {
   describe('getResourceUrl', () => {
     it('should return original path when CDN is disabled', () => {
       // Create new service instance with disabled CDN
-      const disabledConfigService = MockUtils.services.createConfigServiceMock({
+      const disabledConfigService = Mock.config({
         CDN_ENABLED: false,
       });
       const disabledService = new CDNService(disabledConfigService);
@@ -61,7 +59,7 @@ describe('CDNService', () => {
     });
 
     it('should return original path when base URL is empty', () => {
-      const emptyUrlConfigService = MockUtils.services.createConfigServiceMock({
+      const emptyUrlConfigService = Mock.config({
         CDN_BASE_URL: '',
       });
       const emptyUrlService = new CDNService(emptyUrlConfigService);
@@ -146,7 +144,7 @@ describe('CDNService', () => {
 
   describe('warmupCache', () => {
     it('should skip warmup when CDN is disabled', async () => {
-      const disabledConfigService = MockUtils.services.createConfigServiceMock({
+      const disabledConfigService = Mock.config({
         CDN_ENABLED: false,
       });
       const disabledService = new CDNService(disabledConfigService);
@@ -180,7 +178,7 @@ describe('CDNService', () => {
 
   describe('purgeCache', () => {
     it('should return false when CDN is disabled', async () => {
-      const disabledConfigService = MockUtils.services.createConfigServiceMock({
+      const disabledConfigService = Mock.config({
         CDN_IMAGE_OPTIMIZATION: false,
       });
       const disabledService = new CDNService(disabledConfigService);
@@ -189,7 +187,7 @@ describe('CDNService', () => {
     });
 
     it('should return false when purge endpoint is not configured', async () => {
-      const noPurgeConfigService = MockUtils.services.createConfigServiceMock({
+      const noPurgeConfigService = Mock.config({
         CDN_PURGE_ENDPOINT: undefined,
       });
       const noPurgeService = new CDNService(noPurgeConfigService);
@@ -245,7 +243,7 @@ describe('CDNService', () => {
     });
 
     it('should return false when not configured', async () => {
-      const noKeyConfigService = MockUtils.services.createConfigServiceMock({
+      const noKeyConfigService = Mock.config({
         CDN_PURGE_API_KEY: undefined,
       });
       const noKeyService = new CDNService(noKeyConfigService);
@@ -368,7 +366,7 @@ describe('CDNService', () => {
       const params = {};
 
       // Create service with WebP disabled
-      const noWebpConfigService = MockUtils.services.createConfigServiceMock({
+      const noWebpConfigService = Mock.config({
         CDN_WEBP_ENABLED: false,
       });
       const noWebpService = new CDNService(noWebpConfigService);
@@ -380,7 +378,7 @@ describe('CDNService', () => {
 
   describe('getShardedDomain', () => {
     it('should return base URL when no domains configured', () => {
-      const noDomainsConfigService = MockUtils.services.createConfigServiceMock({
+      const noDomainsConfigService = Mock.config({
         CDN_DOMAINS: '',
         CDN_BASE_URL: 'https://cdn.example.com',
         CDN_ENABLED: true,
@@ -407,7 +405,7 @@ describe('CDNService', () => {
     });
 
     it('should handle null domain list with explicit null check', () => {
-      const nullDomainsConfigService = MockUtils.services.createConfigServiceMock({
+      const nullDomainsConfigService = Mock.config({
         CDN_DOMAINS: null,
         CDN_BASE_URL: 'https://cdn.example.com',
         CDN_ENABLED: true,
@@ -418,7 +416,7 @@ describe('CDNService', () => {
     });
 
     it('should handle undefined domain list with explicit undefined check', () => {
-      const undefinedDomainsConfigService = MockUtils.services.createConfigServiceMock({
+      const undefinedDomainsConfigService = Mock.config({
         CDN_DOMAINS: undefined,
         CDN_BASE_URL: 'https://cdn.example.com',
         CDN_ENABLED: true,
@@ -429,7 +427,7 @@ describe('CDNService', () => {
     });
 
     it('should handle empty string domain list', () => {
-      const emptyDomainsConfigService = MockUtils.services.createConfigServiceMock({
+      const emptyDomainsConfigService = Mock.config({
         CDN_DOMAINS: '',
         CDN_BASE_URL: 'https://cdn.example.com',
         CDN_ENABLED: true,
@@ -441,7 +439,7 @@ describe('CDNService', () => {
 
     it('should distinguish between null and undefined base URLs', () => {
       // Test with null base URL
-      const nullUrlConfigService = MockUtils.services.createConfigServiceMock({
+      const nullUrlConfigService = Mock.config({
         CDN_BASE_URL: null,
         CDN_DOMAINS: '',
         CDN_ENABLED: true,
@@ -450,7 +448,7 @@ describe('CDNService', () => {
       expect(() => (nullUrlService as any).getShardedDomain('/test.jpg')).not.toThrow();
 
       // Test with undefined base URL
-      const undefinedUrlConfigService = MockUtils.services.createConfigServiceMock({
+      const undefinedUrlConfigService = Mock.config({
         CDN_BASE_URL: undefined,
         CDN_DOMAINS: '',
         CDN_ENABLED: true,
@@ -460,7 +458,7 @@ describe('CDNService', () => {
     });
 
     it('should handle whitespace-only domain list', () => {
-      const whitespaceDomainsConfigService = MockUtils.services.createConfigServiceMock({
+      const whitespaceDomainsConfigService = Mock.config({
         CDN_DOMAINS: '   ',
         CDN_BASE_URL: 'https://cdn.example.com',
         CDN_ENABLED: true,

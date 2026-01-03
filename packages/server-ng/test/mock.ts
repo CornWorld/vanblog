@@ -1761,7 +1761,7 @@ export function createTestModuleConfig(options: {
  * 减少4个服务测试文件中的重复配置（tag.service.spec.ts等）
  *
  * @example
- * const dbMock = new MockUtils.database().setQueryResult([...]);
+ * const dbMock = Mock.db().setQueryResult([...]);
  * const module = await createTagServiceTestingModule({
  *   service: TagService,
  *   dbMock: dbMock.build(),
@@ -1776,10 +1776,10 @@ export function createTagServiceTestingModule(options: {
 }): ReturnType<typeof Test.createTestingModule> {
   const {
     service,
-    dbMock = new MockUtils.database().build(),
-    hookServiceMock = MockUtils.services.createHookServiceMock(),
-    statisticsServiceMock = MockUtils.services.createStatisticsServiceMock(),
-    queryOptimizerMock = MockUtils.services.createQueryOptimizerServiceMock(),
+    dbMock = Mock.db().build(),
+    hookServiceMock = Mock.hook(),
+    statisticsServiceMock = Mock.statistics(),
+    queryOptimizerMock = Mock.queryOptimizer(),
   } = options;
 
   return Test.createTestingModule({
@@ -1848,7 +1848,7 @@ export function createBootstrapServiceTestingModule(
     categoryServiceMock = {
       findAll: vi.fn(),
     },
-    hookServiceMock = MockUtils.services.createHookServiceMock(),
+    hookServiceMock = Mock.hook(),
     pluginRegistryServiceMock = {
       getAllPublicData: vi.fn(),
     },
@@ -1968,7 +1968,7 @@ export function createOptionsServiceTestingModule(
  * 用于 timeline.service, custom-page.service 等依赖数据库的服务
  *
  * @example
- * const dbMock = new MockUtils.database().setQueryResult([...]);
+ * const dbMock = Mock.db().setQueryResult([...]);
  * const module = await createDatabaseServiceTestingModule({
  *   serviceClass: TimelineService,
  *   dbMock: dbMock.build(),
@@ -1979,11 +1979,7 @@ export function createDatabaseServiceTestingModule(options: {
   dbMock?: any;
   additionalProviders?: any[];
 }): ReturnType<typeof Test.createTestingModule> {
-  const {
-    serviceClass,
-    dbMock = new MockUtils.database().build(),
-    additionalProviders = [],
-  } = options;
+  const { serviceClass, dbMock = Mock.db().build(), additionalProviders = [] } = options;
 
   return Test.createTestingModule({
     providers: [
@@ -2291,6 +2287,8 @@ export function createMockFiles(count: number, overrides: Record<string, unknown
   );
 }
 
+// ============ Legacy API (Backward Compatibility) ============
+
 export const MockUtils = {
   createDatabaseMock,
   database: DatabaseMockBuilder,
@@ -2302,6 +2300,197 @@ export const MockUtils = {
   createBootstrapServiceTestingModule,
   createOptionsServiceTestingModule,
   createDatabaseServiceTestingModule,
+};
+
+// ============ New Flattened API ============
+
+/**
+ * Unified Mock API with flattened structure
+ *
+ * @example
+ * // Database
+ * const db = Mock.db().setQueryResult([...]).build();
+ *
+ * // Services
+ * const config = Mock.config({ 'app.name': 'Test' });
+ * const hook = Mock.hook();
+ * const logger = Mock.logger();
+ *
+ * // Test Data
+ * const user = Mock.user({ name: 'John' });
+ * const articles = Mock.articles(5);
+ *
+ * // NestJS Tools
+ * const context = Mock.context();
+ * const module = Mock.testModule({ providers: [...] });
+ */
+export const Mock = {
+  // ========== Database ==========
+  /** Create DatabaseMockBuilder instance */
+  db: () => new DatabaseMockBuilder(),
+
+  // ========== NestJS Framework Mocks ==========
+  /** Create Logger mock */
+  logger: createLoggerMock,
+  /** Create ExecutionContext mock */
+  context: createExecutionContextMock,
+  /** Create ExecutionContext mock (alias) */
+  executionContext: createExecutionContextMock,
+  /** Create ModuleRef mock */
+  moduleRef: createModuleRefMock,
+  /** Create Reflector mock */
+  reflector: createReflectorMock,
+
+  // ========== Core Service Mocks ==========
+  /** Create ConfigService mock */
+  config: createConfigServiceMock,
+  /** Create HookService mock */
+  hook: createHookServiceMock,
+  /** Create StorageService mock */
+  storage: createStorageServiceMock,
+  /** Create StorageFactoryService mock */
+  storageFactory: createStorageFactoryServiceMock,
+  /** Create StorageConfigService mock */
+  storageConfig: createStorageConfigServiceMock,
+
+  // ========== Business Service Mocks ==========
+  /** Create UserService mock */
+  userService: createUserServiceMock,
+  /** Create PermissionService mock */
+  permission: createPermissionServiceMock,
+  /** Create ArticleService mock */
+  articleService: createArticleServiceMock,
+  /** Create CategoryService mock */
+  categoryService: createCategoryServiceMock,
+  /** Create TagService mock */
+  tagService: createTagServiceMock,
+  /** Create MediaService mock */
+  mediaService: createMediaServiceMock,
+  /** Create BackupService mock */
+  backup: createBackupServiceMock,
+  /** Create DraftService mock */
+  draftService: createDraftServiceMock,
+  /** Create DraftVersionService mock */
+  draftVersion: createDraftVersionServiceMock,
+  /** Create DemoService mock */
+  demo: createDemoServiceMock,
+  /** Create PipelineService mock */
+  pipelineService: createPipelineServiceMock,
+  /** Create SitemapService mock */
+  sitemap: createSitemapServiceMock,
+  /** Create CommentService mock */
+  commentService: createCommentServiceMock,
+
+  // ========== Setting Service Mocks ==========
+  /** Create SettingCoreService mock */
+  settingCore: createSettingCoreServiceMock,
+  /** Create SettingRegistryService mock */
+  settingRegistry: createSettingRegistryServiceMock,
+
+  // ========== Analytics Service Mocks ==========
+  /** Create AnalyticsService mock */
+  analytics: createAnalyticsServiceMock,
+  /** Create ArticleStatsService mock */
+  articleStatsService: createArticleStatsServiceMock,
+  /** Create AnalyticsCacheService mock */
+  analyticsCache: createAnalyticsCacheServiceMock,
+  /** Create EchartsFormatterService mock */
+  echartsFormatter: createEchartsFormatterServiceMock,
+  /** Create PublicAnalyticsService mock */
+  publicAnalytics: createPublicAnalyticsServiceMock,
+
+  // ========== Shared Service Mocks ==========
+  /** Create StatisticsService mock */
+  statistics: createStatisticsServiceMock,
+  /** Create QueryOptimizerService mock */
+  queryOptimizer: createQueryOptimizerServiceMock,
+  /** Create MarkdownService mock */
+  markdown: createMarkdownServiceMock,
+  /** Create ErrorRateMonitoringService mock */
+  errorRateMonitoring: createErrorRateMonitoringServiceMock,
+
+  // ========== Media Service Mocks ==========
+  /** Create ImageProcessingService mock */
+  imageProcessing: createImageProcessingServiceMock,
+  /** Create ImageProcessingQueueService mock */
+  imageProcessingQueue: createImageProcessingQueueServiceMock,
+
+  // ========== Test Data Factories (Single) ==========
+  /** Create single User test data */
+  user: createUser,
+  /** Create single Article test data */
+  article: createArticle,
+  /** Create single Article DTO test data */
+  articleDto: createArticleDto,
+  /** Create single Tag test data */
+  tag: createTag,
+  /** Create single Category test data */
+  category: createCategory,
+  /** Create single MediaFile test data */
+  mediaFile: createMediaFile,
+  /** Create single Draft test data */
+  draft: createDraft,
+  /** Create single DraftVersion test data */
+  draftVersion: createDraftVersion,
+  /** Create single Pipeline test data */
+  pipeline: createPipeline,
+  /** Create Pipeline execution result */
+  pipelineExecutionResult: createPipelineExecutionResult,
+  /** Create single Upload Session test data */
+  uploadSession: createUploadSession,
+  /** Create single Mock File (Express) */
+  mockFile: createMockFile,
+
+  // ========== Test Data Factories (Batch) ==========
+  /** Create multiple User test data */
+  users: (count: number, overrides?: Record<string, unknown>) =>
+    Array.from({ length: count }, (_, i) => createUser({ id: i + 1, ...overrides })),
+  /** Create multiple Article test data */
+  articles: createArticles,
+  /** Create multiple Tag test data */
+  tags: createTags,
+  /** Create multiple Category test data */
+  categories: createCategories,
+  /** Create multiple MediaFile test data */
+  mediaFiles: createMediaFiles,
+  /** Create multiple Draft test data */
+  drafts: createDrafts,
+  /** Create multiple DraftVersion test data */
+  draftVersions: createDraftVersions,
+  /** Create multiple Pipeline test data */
+  pipelines: createPipelines,
+  /** Create multiple Mock Files (Express) */
+  mockFiles: createMockFiles,
+
+  // ========== Specialized Test Data ==========
+  /** Create paginated result */
+  paginated: createPaginatedResult,
+  /** Create Waline setting test data */
+  walineSetting: createWalineSetting,
+  /** Create Analytics chart data */
+  analyticsChart: createAnalyticsChartData,
+  /** Create Device stats test data */
+  deviceStats: createDeviceStats,
+  /** Create Browser stats test data */
+  browserStats: createBrowserStats,
+  /** Create Article stats test data */
+  articleStats: createArticleStats,
+  /** Create Performance stats test data */
+  performanceStats: createPerformanceStats,
+  /** Create Health status test data */
+  healthStatus: createHealthStatus,
+
+  // ========== Testing Module Helpers ==========
+  /** Create TestingModule config */
+  testModule: createTestModuleConfig,
+  /** Create TagService TestingModule */
+  tagServiceModule: createTagServiceTestingModule,
+  /** Create BootstrapService TestingModule */
+  bootstrapServiceModule: createBootstrapServiceTestingModule,
+  /** Create OptionsService TestingModule */
+  optionsServiceModule: createOptionsServiceTestingModule,
+  /** Create Database Service TestingModule */
+  databaseServiceModule: createDatabaseServiceTestingModule,
 };
 
 // ============ Re-export Test Data Factories ============

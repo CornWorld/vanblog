@@ -5,7 +5,6 @@ import { DraftController } from './draft.controller';
 import { DraftService } from './draft.service';
 import { DraftVersionService } from './draft-version.service';
 import { DraftModule } from './draft.module';
-import { MockUtils } from '../../../test/mock-utils';
 
 describe('DraftModule', () => {
   describe('module definition', () => {
@@ -25,7 +24,7 @@ describe('DraftModule', () => {
 
   describe('module exports', () => {
     it('should export DraftService', async () => {
-      const mockDraftService = MockUtils.services.createDraftServiceMock();
+      const mockDraftService = Mock.draftService();
 
       const testModule = await Test.createTestingModule({
         providers: [
@@ -65,8 +64,8 @@ describe('DraftModule', () => {
 
   describe('service injection', () => {
     it('should provide DraftService to controllers', async () => {
-      const mockService = MockUtils.services.createDraftServiceMock();
-      const mockVersionService = MockUtils.services.createDraftVersionServiceMock();
+      const mockService = Mock.draftService();
+      const mockVersionService = Mock.draftVersionService();
 
       const testModule = await Test.createTestingModule({
         controllers: [DraftController],
@@ -90,7 +89,7 @@ describe('DraftModule', () => {
     });
 
     it('should provide DraftVersionService alongside DraftService', async () => {
-      const mockVersionService = MockUtils.services.createDraftVersionServiceMock();
+      const mockVersionService = Mock.draftVersionService();
 
       const testModule = await Test.createTestingModule({
         providers: [
@@ -125,8 +124,8 @@ describe('DraftModule', () => {
     });
 
     it('should provide both DraftService and DraftVersionService', async () => {
-      const mockDraftService = MockUtils.services.createDraftServiceMock();
-      const mockVersionService = MockUtils.services.createDraftVersionServiceMock();
+      const mockDraftService = Mock.draftService();
+      const mockVersionService = Mock.draftVersionService();
 
       const testModule = await Test.createTestingModule({
         providers: [

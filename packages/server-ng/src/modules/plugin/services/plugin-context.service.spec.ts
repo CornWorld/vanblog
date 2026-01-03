@@ -5,7 +5,7 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 
 import { ConfigService } from '../../../config/config.service';
 import { DATABASE_CONNECTION, type Database } from '../../../database';
-import { MockUtils } from '../../../../test/mock-utils';
+import { Mock } from '../../../../test/mock';
 
 import {
   PluginContextFactory,
@@ -20,11 +20,11 @@ import { SignalBus } from './signal.service';
 describe('PluginContext Services', () => {
   let factory: PluginContextFactory;
   let mockConfigService: ConfigService;
-  let mockDb: ReturnType<(typeof MockUtils.database)['prototype']['build']>;
+  let mockDb: ReturnType<(typeof DatabaseMockBuilder)['prototype']['build']>;
 
   beforeEach(async () => {
     // Create database mock using MockUtils
-    const dbBuilder = new MockUtils.database();
+    const dbBuilder = Mock.db();
     dbBuilder.setQueryResult([]);
     mockDb = dbBuilder.build();
 
@@ -34,7 +34,7 @@ describe('PluginContext Services', () => {
     };
 
     // Create ConfigService mock using MockUtils
-    mockConfigService = MockUtils.services.createConfigServiceMock({
+    mockConfigService = Mock.config({
       'plugin.test.config.key': 'test-value',
       'plugin.test.config.json': '{"nested": "value"}',
     });
@@ -97,7 +97,7 @@ describe('PluginContext Services', () => {
     it('should get data by key', async () => {
       const testData = { foo: 'bar' };
       // Create new builder for this test with specific query result
-      const dbBuilder = new MockUtils.database();
+      const dbBuilder = Mock.db();
       const localDb = dbBuilder.build();
 
       // Mock the complete chain: select().from().where().limit()
@@ -116,7 +116,7 @@ describe('PluginContext Services', () => {
     });
 
     it('should return null for non-existent key', async () => {
-      const dbBuilder = new MockUtils.database();
+      const dbBuilder = Mock.db();
       dbBuilder.setQueryResult([]);
       const localDb = dbBuilder.build();
       const storage = new PluginDataStorageService(localDb as unknown as Database, 'test-plugin');
@@ -140,7 +140,7 @@ describe('PluginContext Services', () => {
 
     it('should delete data from storage', async () => {
       // Create new builder with query and delete results
-      const dbBuilder = new MockUtils.database();
+      const dbBuilder = Mock.db();
       dbBuilder.setQueryResult([{ key: 'test-key' }]);
       dbBuilder.setDeleteResult([{ id: 1 }]);
       const localDb = dbBuilder.build();
@@ -154,7 +154,7 @@ describe('PluginContext Services', () => {
     });
 
     it('should check if key exists', async () => {
-      const dbBuilder = new MockUtils.database();
+      const dbBuilder = Mock.db();
       const localDb = dbBuilder.build();
 
       // Mock the complete chain: select().from().where().limit()
@@ -172,7 +172,7 @@ describe('PluginContext Services', () => {
     });
 
     it('should get all keys', async () => {
-      const dbBuilder = new MockUtils.database();
+      const dbBuilder = Mock.db();
       // For this query, the result is returned directly from where()
       const localDb = dbBuilder.build();
       (localDb as any).where = vi.fn().mockResolvedValue([{ key: 'key1' }, { key: 'key2' }]);
@@ -200,7 +200,7 @@ describe('PluginContext Services', () => {
     });
 
     it('should get config value', () => {
-      const localConfig = MockUtils.services.createConfigServiceMock({
+      const localConfig = Mock.config({
         PLUGIN_TEST_PLUGIN_API_KEY: 'test-api-key',
       });
       const reader = new PluginConfigReaderService(localConfig, 'test-plugin');
@@ -211,7 +211,7 @@ describe('PluginContext Services', () => {
     });
 
     it('should return default value when config not found', () => {
-      const localConfig = MockUtils.services.createConfigServiceMock({});
+      const localConfig = Mock.config({});
       const reader = new PluginConfigReaderService(localConfig, 'test-plugin');
 
       const result = reader.get('non_existent', 'default-value');
@@ -220,7 +220,7 @@ describe('PluginContext Services', () => {
     });
 
     it('should parse JSON config values', () => {
-      const localConfig = MockUtils.services.createConfigServiceMock({
+      const localConfig = Mock.config({
         PLUGIN_TEST_PLUGIN_CONFIG: '{"enabled": true, "count": 5}',
       });
       const reader = new PluginConfigReaderService(localConfig, 'test-plugin');
@@ -231,7 +231,7 @@ describe('PluginContext Services', () => {
     });
 
     it('should return string value when JSON parsing fails', () => {
-      const localConfig = MockUtils.services.createConfigServiceMock({
+      const localConfig = Mock.config({
         PLUGIN_TEST_PLUGIN_INVALID_JSON: 'not-json',
       });
       const reader = new PluginConfigReaderService(localConfig, 'test-plugin');
@@ -242,7 +242,7 @@ describe('PluginContext Services', () => {
     });
 
     it('should return value when it exists', () => {
-      const localConfig = MockUtils.services.createConfigServiceMock({
+      const localConfig = Mock.config({
         PLUGIN_TEST_PLUGIN_REQUIRED: 'required-value',
       });
       const reader = new PluginConfigReaderService(localConfig, 'test-plugin');
@@ -253,7 +253,7 @@ describe('PluginContext Services', () => {
     });
 
     it('should throw error when value does not exist', () => {
-      const localConfig = MockUtils.services.createConfigServiceMock({});
+      const localConfig = Mock.config({});
       const reader = new PluginConfigReaderService(localConfig, 'test-plugin');
 
       expect(() => reader.getOrThrow('non_existent')).toThrow(
@@ -262,7 +262,7 @@ describe('PluginContext Services', () => {
     });
 
     it('should check if config exists', () => {
-      const localConfig = MockUtils.services.createConfigServiceMock({
+      const localConfig = Mock.config({
         PLUGIN_TEST_PLUGIN_EXISTS: 'true',
       });
       const reader = new PluginConfigReaderService(localConfig, 'test-plugin');
@@ -272,7 +272,7 @@ describe('PluginContext Services', () => {
     });
 
     it('should fallback to underscore variant when hyphenated key not found', () => {
-      const localConfig = MockUtils.services.createConfigServiceMock({
+      const localConfig = Mock.config({
         PLUGIN_TEST_PLUGIN_FOO_BAR: 'ok',
       });
       const reader = new PluginConfigReaderService(localConfig, 'test-plugin');

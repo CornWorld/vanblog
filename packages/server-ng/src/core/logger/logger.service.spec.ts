@@ -1,7 +1,7 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import type * as winston from 'winston';
 
-import { MockUtils } from '../../../test/mock-utils';
+import { Mock } from '../../../test/mock';
 import { ConfigService } from '../../config/config.service';
 
 import { LoggerService } from './logger.service';
@@ -9,7 +9,7 @@ import { LoggerService } from './logger.service';
 describe('LoggerService', () => {
   let service: LoggerService;
 
-  const mockConfigService = MockUtils.services.createConfigServiceMock({
+  const mockConfigService = Mock.config({
     app: {
       isDevelopment: false,
       nodeEnv: 'test',
@@ -156,7 +156,7 @@ describe('LoggerService', () => {
     });
 
     it('should use different configuration for development environment', () => {
-      const devMockConfigService = MockUtils.services.createConfigServiceMock({
+      const devMockConfigService = Mock.config({
         app: {
           isDevelopment: true,
           nodeEnv: 'development',
@@ -174,7 +174,7 @@ describe('LoggerService', () => {
     });
 
     it('should configure logger for production environment', () => {
-      const prodMockConfigService = MockUtils.services.createConfigServiceMock({
+      const prodMockConfigService = Mock.config({
         app: {
           isDevelopment: false,
           nodeEnv: 'production',
@@ -192,7 +192,7 @@ describe('LoggerService', () => {
     });
 
     it('should apply custom log level from config', () => {
-      const customConfigService = MockUtils.services.createConfigServiceMock({
+      const customConfigService = Mock.config({
         app: {
           isDevelopment: false,
           nodeEnv: 'test',
@@ -212,7 +212,7 @@ describe('LoggerService', () => {
 
   describe('winston format configuration', () => {
     it('should format log with context in development mode', () => {
-      const devConfigService = MockUtils.services.createConfigServiceMock({
+      const devConfigService = Mock.config({
         app: {
           isDevelopment: true,
           nodeEnv: 'development',
@@ -231,7 +231,7 @@ describe('LoggerService', () => {
     });
 
     it('should format log without context', () => {
-      const devConfigService = MockUtils.services.createConfigServiceMock({
+      const devConfigService = Mock.config({
         app: {
           isDevelopment: true,
           nodeEnv: 'development',
@@ -262,7 +262,7 @@ describe('LoggerService', () => {
     });
 
     it('should handle log with additional metadata', () => {
-      const devConfigService = MockUtils.services.createConfigServiceMock({
+      const devConfigService = Mock.config({
         app: {
           isDevelopment: true,
           nodeEnv: 'development',
@@ -289,7 +289,7 @@ describe('LoggerService', () => {
 
   describe('file transports', () => {
     it('should not add file transports in development environment', () => {
-      const devConfigService = MockUtils.services.createConfigServiceMock({
+      const devConfigService = Mock.config({
         app: {
           isDevelopment: true,
           nodeEnv: 'development',
@@ -317,7 +317,7 @@ describe('LoggerService', () => {
     });
 
     it('should attempt to add file transports in production environment', async () => {
-      const prodConfigService = MockUtils.services.createConfigServiceMock({
+      const prodConfigService = Mock.config({
         app: {
           isDevelopment: false,
           nodeEnv: 'production',
@@ -342,7 +342,7 @@ describe('LoggerService', () => {
 
   describe('error handling', () => {
     it('should continue logging even if file transport setup fails', async () => {
-      const prodConfigService = MockUtils.services.createConfigServiceMock({
+      const prodConfigService = Mock.config({
         app: {
           isDevelopment: false,
           nodeEnv: 'production',

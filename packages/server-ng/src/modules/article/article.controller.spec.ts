@@ -1,7 +1,6 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, beforeEach, afterEach, expect, vi } from 'vitest';
 
-import { MockUtils } from '../../../test/mock-utils';
 import { ArticleStatsService } from '../analytics/services/article-stats.service';
 
 import { ArticleController } from './article.controller';
@@ -16,8 +15,8 @@ describe('ArticleController', () => {
 
   beforeEach(async () => {
     // 使用 MockUtils 创建服务 Mock
-    mockArticleService = MockUtils.services.createArticleServiceMock();
-    mockArticleStatsService = MockUtils.services.createArticleStatsServiceMock();
+    mockArticleService = Mock.articleService();
+    mockArticleStatsService = Mock.articleStatsServiceMock();
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [ArticleController],
@@ -45,7 +44,7 @@ describe('ArticleController', () => {
   describe('findAll', () => {
     it('should return paginated articles', async () => {
       const mockResult = {
-        items: [MockUtils.testData.createArticle()],
+        items: [Mock.article()],
         total: 1,
         page: 1,
         pageSize: 10,
@@ -128,7 +127,7 @@ describe('ArticleController', () => {
 
   describe('export', () => {
     it('should export all articles', async () => {
-      const mockArticles = [MockUtils.testData.createArticle()];
+      const mockArticles = [Mock.article()];
       mockArticleService.exportArticles.mockResolvedValue(mockArticles);
 
       const result = await controller.export();
@@ -141,7 +140,7 @@ describe('ArticleController', () => {
   describe('findByCategory', () => {
     it('should find articles by category name', async () => {
       const mockResult = {
-        items: [MockUtils.testData.createArticle({ category: 'tech' })],
+        items: [Mock.article({ category: 'tech' })],
         total: 1,
         page: 1,
         pageSize: 10,
@@ -172,7 +171,7 @@ describe('ArticleController', () => {
 
   describe('findOneByPathname', () => {
     it('should find article by pathname', async () => {
-      const mockArticle = new Article(MockUtils.testData.createArticle({ pathname: 'test-post' }));
+      const mockArticle = new Article(Mock.article({ pathname: 'test-post' }));
       mockArticleService.findOneByPathname.mockResolvedValue(mockArticle);
 
       const result = await controller.findOneByPathname('test-post');
@@ -184,7 +183,7 @@ describe('ArticleController', () => {
 
   describe('findOne', () => {
     it('should find article by ID', async () => {
-      const mockArticle = new Article(MockUtils.testData.createArticle({ id: 1 }));
+      const mockArticle = new Article(Mock.article({ id: 1 }));
       mockArticleService.findOne.mockResolvedValue(mockArticle);
 
       const result = await controller.findOne(1);
@@ -197,7 +196,7 @@ describe('ArticleController', () => {
   describe('create', () => {
     it('should create a new article', async () => {
       const createDto = { title: 'New Article', content: 'Content', author: 'admin', tags: [] };
-      const mockArticle = new Article(MockUtils.testData.createArticle({ title: 'New Article' }));
+      const mockArticle = new Article(Mock.article({ title: 'New Article' }));
       mockArticleService.create.mockResolvedValue(mockArticle);
 
       const result = await controller.create(createDto);
@@ -379,7 +378,7 @@ describe('ArticleController', () => {
     it('should return paginated articles for admin', async () => {
       const mockResult = {
         items: [
-          MockUtils.testData.createArticle({
+          Mock.article({
             id: 1,
             title: 'Admin Article',
             category: 'Tech',
@@ -417,7 +416,7 @@ describe('ArticleController', () => {
 
     it('should handle category filter', async () => {
       const mockResult = {
-        items: [MockUtils.testData.createArticle({ category: 'Tech' })],
+        items: [Mock.article({ category: 'Tech' })],
         total: 1,
         page: 1,
         pageSize: 10,
@@ -498,7 +497,7 @@ describe('ArticleController', () => {
     it('should map article fields correctly', async () => {
       const mockResult = {
         items: [
-          MockUtils.testData.createArticle({
+          Mock.article({
             id: 1,
             title: 'Test',
             content: 'Content',
@@ -545,7 +544,7 @@ describe('ArticleController', () => {
         tags: ['test', 'javascript'],
       };
       const mockArticle = new Article(
-        MockUtils.testData.createArticle({
+        Mock.article({
           id: 1,
           title: 'New Article',
           content: 'Content',
@@ -571,7 +570,7 @@ describe('ArticleController', () => {
         title: 'New Article',
         content: 'Content',
       };
-      const mockArticle = new Article(MockUtils.testData.createArticle(createDto));
+      const mockArticle = new Article(Mock.article(createDto));
       mockArticleService.create.mockResolvedValue(mockArticle);
 
       const req = {} as any;
@@ -591,7 +590,7 @@ describe('ArticleController', () => {
         content: 'Content',
         tags: null,
       };
-      const mockArticle = new Article(MockUtils.testData.createArticle(createDto));
+      const mockArticle = new Article(Mock.article(createDto));
       mockArticleService.create.mockResolvedValue(mockArticle);
 
       const req = {} as any;
@@ -607,7 +606,7 @@ describe('ArticleController', () => {
 
     it('should map response correctly', async () => {
       const mockArticle = new Article(
-        MockUtils.testData.createArticle({
+        Mock.article({
           id: 1,
           title: 'Test',
           top: 2,
@@ -637,7 +636,7 @@ describe('ArticleController', () => {
         tags: ['tag1', 'tag2'],
       };
       const mockArticle = new Article(
-        MockUtils.testData.createArticle({
+        Mock.article({
           id: 1,
           title: 'Updated',
         }),
@@ -661,7 +660,7 @@ describe('ArticleController', () => {
         title: 'Updated',
         tags: '["tag1","tag2"]',
       };
-      const mockArticle = new Article(MockUtils.testData.createArticle({ id: 1 }));
+      const mockArticle = new Article(Mock.article({ id: 1 }));
       mockArticleService.update.mockResolvedValue(mockArticle);
 
       const handler = controller.updateArticleRest();
@@ -679,7 +678,7 @@ describe('ArticleController', () => {
       const updateDto = {
         title: 'Updated',
       };
-      const mockArticle = new Article(MockUtils.testData.createArticle({ id: 1 }));
+      const mockArticle = new Article(Mock.article({ id: 1 }));
       mockArticleService.update.mockResolvedValue(mockArticle);
 
       const handler = controller.updateArticleRest();
@@ -696,7 +695,7 @@ describe('ArticleController', () => {
 
     it('should map response correctly', async () => {
       const mockArticle = new Article(
-        MockUtils.testData.createArticle({
+        Mock.article({
           id: 1,
           top: 0,
           viewer: 100,
@@ -742,7 +741,7 @@ describe('ArticleController', () => {
   describe('getAdminArticleRest (ts-rest)', () => {
     it('should return single article for admin', async () => {
       const mockArticle = new Article(
-        MockUtils.testData.createArticle({
+        Mock.article({
           id: 1,
           title: 'Test Article',
           category: 'Tech',
@@ -768,7 +767,7 @@ describe('ArticleController', () => {
 
     it('should map all fields correctly', async () => {
       const mockArticle = new Article(
-        MockUtils.testData.createArticle({
+        Mock.article({
           id: 1,
           top: null,
           viewer: null,
@@ -837,7 +836,7 @@ describe('ArticleController', () => {
     });
 
     it('should validate create article DTO', async () => {
-      const mockArticle = new Article(MockUtils.testData.createArticle());
+      const mockArticle = new Article(Mock.article());
       mockArticleService.create.mockResolvedValue(mockArticle);
 
       // Valid DTO
@@ -850,7 +849,7 @@ describe('ArticleController', () => {
     });
 
     it('should validate update article DTO', async () => {
-      const mockArticle = new Article(MockUtils.testData.createArticle());
+      const mockArticle = new Article(Mock.article());
       mockArticleService.update.mockResolvedValue(mockArticle);
 
       // Valid update
@@ -927,7 +926,7 @@ describe('ArticleController', () => {
     it('should handle articles with null/undefined fields', async () => {
       const mockResult = {
         items: [
-          MockUtils.testData.createArticle({
+          Mock.article({
             category: null,
             tags: null,
             password: null,

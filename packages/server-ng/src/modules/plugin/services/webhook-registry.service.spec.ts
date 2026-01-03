@@ -1,17 +1,17 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-import { MockUtils } from '../../../../test/mock-utils';
+import { Mock } from '../../../../test/mock';
 import type { HookService } from './hook.service';
 import { WebhookRegistryService } from './webhook-registry.service';
 import type { WebhookService } from './webhook.service';
 
 describe('WebhookRegistryService', () => {
   let service: WebhookRegistryService;
-  let hookService: ReturnType<typeof MockUtils.services.createHookServiceMock>;
+  let hookService: ReturnType<typeof Mock.hook>;
   let webhookService: Partial<WebhookService>;
 
   beforeEach(() => {
-    hookService = MockUtils.services.createHookServiceMock();
+    hookService = Mock.hook();
 
     webhookService = {
       triggerForEvent: vi.fn().mockResolvedValue(undefined),

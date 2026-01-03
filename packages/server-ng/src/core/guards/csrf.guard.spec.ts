@@ -1,7 +1,7 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, expect, beforeEach } from 'vitest';
 
-import { createExecutionContextMock } from '../../../test/mock-utils';
+import { createExecutionContextMock } from '../../../test/mock';
 
 import { CsrfGuard } from './csrf.guard';
 

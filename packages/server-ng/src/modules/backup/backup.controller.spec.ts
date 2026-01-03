@@ -8,8 +8,6 @@ import { BackupController } from './backup.controller';
 import { BackupService } from './backup.service';
 import { PermissionService } from '../permission/permission.service';
 
-import { MockUtils } from '../../../test/mock-utils';
-
 import type { CreateBackupDto, RestoreBackupDto, GetBackupsDto } from './dto/backup.dto';
 import type { Response } from 'express';
 
@@ -23,8 +21,8 @@ describe('BackupController', () => {
   let mockPermissionService: any;
 
   beforeEach(async () => {
-    mockBackupService = MockUtils.services.createBackupServiceMock();
-    mockPermissionService = MockUtils.services.createPermissionServiceMock();
+    mockBackupService = Mock.createBackupServiceMock();
+    mockPermissionService = Mock.createPermissionServiceMock();
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [BackupController],

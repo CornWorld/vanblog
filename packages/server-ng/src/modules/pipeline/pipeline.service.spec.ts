@@ -7,7 +7,6 @@ import { existsSync, mkdirSync, rmSync, writeFileSync } from 'fs';
 import { DATABASE_CONNECTION } from '../../database';
 import { HookService } from '../plugin/services/hook.service';
 import { PipelineService } from './pipeline.service';
-import { MockUtils } from '../../../test/mock-utils';
 
 // Mock entire file system module
 vi.mock('fs', () => ({
@@ -55,15 +54,15 @@ describe('PipelineService', () => {
     vi.mocked(mkdirSync).mockReturnValue(undefined as any);
 
     // 使用 MockUtils 创建数据库 Mock
-    databaseMock = new MockUtils.database().build();
+    databaseMock = Mock.db().build();
 
     // 使用 MockUtils 创建配置服务 Mock
-    mockConfigService = MockUtils.services.createConfigServiceMock({
+    mockConfigService = Mock.config({
       'pipeline.runnerPath': '/tmp/test-pipelines',
     });
 
     // 使用 MockUtils 创建钩子服务 Mock
-    mockHookService = MockUtils.services.createHookServiceMock();
+    mockHookService = Mock.hook();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -123,12 +122,12 @@ describe('PipelineService', () => {
   describe('findAll', () => {
     it('should return all non-deleted pipelines', async () => {
       const mockPipelines = [
-        MockUtils.testData.createPipeline({
+        Mock.createPipeline({
           id: 1,
           name: 'Pipeline 1',
           eventName: 'article|afterCreate',
         }),
-        MockUtils.testData.createPipeline({
+        Mock.createPipeline({
           id: 2,
           name: 'Pipeline 2',
           eventName: 'article|afterUpdate',
@@ -170,7 +169,7 @@ describe('PipelineService', () => {
 
   describe('findOne', () => {
     it('should return pipeline by id', async () => {
-      const mockPipeline = MockUtils.testData.createPipeline({ id: 1 });
+      const mockPipeline = Mock.createPipeline({ id: 1 });
 
       databaseMock.select.mockReturnValue({
         from: vi.fn().mockReturnValue({
@@ -199,7 +198,7 @@ describe('PipelineService', () => {
   describe('findByEventName', () => {
     it('should return enabled pipelines for event', async () => {
       const mockPipelines = [
-        MockUtils.testData.createPipeline({
+        Mock.createPipeline({
           id: 1,
           name: 'Pipeline 1',
           eventName: 'article|afterCreate',
@@ -241,7 +240,7 @@ describe('PipelineService', () => {
         deps: [],
       };
 
-      const mockCreated = MockUtils.testData.createPipeline({ ...createDto, id: 1 });
+      const mockCreated = Mock.createPipeline({ ...createDto, id: 1 });
 
       databaseMock.insert.mockReturnValue({
         values: vi.fn().mockReturnValue({
@@ -274,7 +273,7 @@ describe('PipelineService', () => {
 console.log('Pipeline executed with input:', input);
 `;
 
-      const mockCreated = MockUtils.testData.createPipeline({
+      const mockCreated = Mock.createPipeline({
         id: 2,
         name: createDto.name,
         eventName: createDto.eventName,
@@ -312,7 +311,7 @@ console.log('Pipeline executed with input:', input);
 
   describe('update', () => {
     it('should update an existing pipeline', async () => {
-      const existingPipeline = MockUtils.testData.createPipeline({ id: 1 });
+      const existingPipeline = Mock.createPipeline({ id: 1 });
 
       const updateDto = {
         name: 'Updated Name',
@@ -358,7 +357,7 @@ console.log('Pipeline executed with input:', input);
     });
 
     it('should validate event name when provided in update', async () => {
-      const existingPipeline = MockUtils.testData.createPipeline({ id: 1 });
+      const existingPipeline = Mock.createPipeline({ id: 1 });
 
       databaseMock.select.mockReturnValue({
         from: vi.fn().mockReturnValue({
@@ -376,7 +375,7 @@ console.log('Pipeline executed with input:', input);
 
   describe('remove', () => {
     it('should soft delete a pipeline', async () => {
-      const existingPipeline = MockUtils.testData.createPipeline({ id: 1 });
+      const existingPipeline = Mock.createPipeline({ id: 1 });
 
       databaseMock.select.mockReturnValue({
         from: vi.fn().mockReturnValue({
@@ -425,7 +424,7 @@ console.log('Pipeline executed with input:', input);
 
   describe('triggerById', () => {
     it('should throw BadRequestException when pipeline is disabled', async () => {
-      const disabledPipeline = MockUtils.testData.createPipeline({
+      const disabledPipeline = Mock.createPipeline({
         id: 1,
         enabled: false,
       });

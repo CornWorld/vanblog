@@ -21,7 +21,7 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, expect, beforeEach, afterEach, vi, type Mock } from 'vitest';
 
 import { DATABASE_CONNECTION } from '../../../database';
-import { MockUtils } from '../../../../test/mock-utils';
+import { createDatabaseMock, Mock } from '../../../../test/mock';
 import { WebhookRegistryService } from './webhook-registry.service';
 import { WebhookService } from './webhook.service';
 
@@ -30,14 +30,14 @@ global.fetch = vi.fn();
 
 describe('WebhookService - Logging & Statistics', () => {
   let service: WebhookService;
-  let mockDb: ReturnType<typeof MockUtils.createDatabaseMock>;
+  let mockDb: ReturnType<typeof createDatabaseMock>;
   let mockWebhookRegistry: {
     registerWebhook: Mock;
     unregisterWebhookFromAllEvents: Mock;
   };
 
   // Helper to rebuild service with new mockDb
-  async function rebuildService(db: ReturnType<typeof MockUtils.createDatabaseMock>) {
+  async function rebuildService(db: ReturnType<typeof createDatabaseMock>) {
     mockDb = db;
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -57,7 +57,7 @@ describe('WebhookService - Logging & Statistics', () => {
 
   beforeEach(async () => {
     // Mock database using MockUtils
-    mockDb = MockUtils.createDatabaseMock();
+    mockDb = createDatabaseMock();
 
     // Mock webhook registry
     mockWebhookRegistry = {
@@ -96,7 +96,7 @@ describe('WebhookService - Logging & Statistics', () => {
       ];
 
       // Setup database mock with proper query chain
-      const dbBuilder = new MockUtils.database();
+      const dbBuilder = Mock.db();
       const db = dbBuilder.build();
 
       // Mock the select method to handle both queries
@@ -136,7 +136,7 @@ describe('WebhookService - Logging & Statistics', () => {
     });
 
     it('should filter logs by webhookId', async () => {
-      const dbBuilder = new MockUtils.database();
+      const dbBuilder = Mock.db();
       const db = dbBuilder.build();
 
       // Mock the select method to handle both queries
@@ -174,7 +174,7 @@ describe('WebhookService - Logging & Statistics', () => {
     });
 
     it('should filter logs by status', async () => {
-      const dbBuilder = new MockUtils.database();
+      const dbBuilder = Mock.db();
       const db = dbBuilder.build();
 
       // Mock the select method to handle both queries
@@ -212,7 +212,7 @@ describe('WebhookService - Logging & Statistics', () => {
     });
 
     it('should filter logs by date range', async () => {
-      const dbBuilder = new MockUtils.database();
+      const dbBuilder = Mock.db();
       const db = dbBuilder.build();
 
       // Mock the select method to handle both queries
@@ -263,7 +263,7 @@ describe('WebhookService - Logging & Statistics', () => {
       ];
 
       let queryIndex = 0;
-      const dbBuilder = new MockUtils.database();
+      const dbBuilder = Mock.db();
       const db = dbBuilder.build();
 
       // Override select for multiple sequential queries
@@ -295,7 +295,7 @@ describe('WebhookService - Logging & Statistics', () => {
       ];
 
       let queryIndex = 0;
-      const dbBuilder = new MockUtils.database();
+      const dbBuilder = Mock.db();
       const db = dbBuilder.build();
 
       // Override select for multiple sequential queries
@@ -327,7 +327,7 @@ describe('WebhookService - Logging & Statistics', () => {
       ];
 
       let queryIndex = 0;
-      const dbBuilder = new MockUtils.database();
+      const dbBuilder = Mock.db();
       const db = dbBuilder.build();
 
       // Override select for multiple sequential queries

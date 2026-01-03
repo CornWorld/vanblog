@@ -6,7 +6,6 @@ import { describe, beforeEach, it, expect } from 'vitest';
 import { DATABASE_CONNECTION } from '../../database';
 
 import { DraftVersionService } from './draft-version.service';
-import { MockUtils } from '../../../test/mock-utils';
 
 describe('DraftVersionService', () => {
   let service: DraftVersionService;
@@ -14,7 +13,7 @@ describe('DraftVersionService', () => {
 
   beforeEach(async () => {
     // Use DatabaseMockBuilder for flexible mock database setup
-    const dbMock = new MockUtils.database();
+    const dbMock = Mock.db();
     mockDb = dbMock.build();
 
     const module: TestingModule = await Test.createTestingModule({

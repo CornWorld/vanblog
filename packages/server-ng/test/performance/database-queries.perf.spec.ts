@@ -1,6 +1,6 @@
 import { describe, it, beforeEach, afterEach, expect, vi } from 'vitest';
 import { Logger } from '@nestjs/common';
-import { MockUtils, type DatabaseMockBuilder } from '../mock-utils';
+import { type DatabaseMockBuilder } from '../mock';
 
 /**
  * Database Query Optimization Performance Tests
@@ -25,7 +25,7 @@ describe('Database Query Optimization (database-queries.perf.spec.ts)', () => {
   > = {};
 
   beforeEach(() => {
-    databaseMock = new MockUtils.database();
+    databaseMock = Mock.db();
     logger = new Logger('DatabaseQueryPerf');
   });
 
@@ -106,7 +106,7 @@ describe('Database Query Optimization (database-queries.perf.spec.ts)', () => {
     const measurements: number[] = [];
 
     // Create mock data
-    const mockArticles = MockUtils.testData.createArticles(50);
+    const mockArticles = Mock.articles(50);
 
     // Mock the JOIN query
     databaseMock.db.select.mockReturnValue({
@@ -242,7 +242,7 @@ describe('Database Query Optimization (database-queries.perf.spec.ts)', () => {
     const searchTerms = ['typescript', 'nestjs', 'performance', 'database', 'cache'];
 
     // Create mock search results
-    const mockSearchResults = MockUtils.testData.createArticles(20);
+    const mockSearchResults = Mock.articles(20);
 
     // Use setQueryResult to properly configure the mock with chainable methods
     databaseMock.setQueryResult(mockSearchResults);
@@ -351,7 +351,7 @@ describe('Database Query Optimization (database-queries.perf.spec.ts)', () => {
    * Tests the effectiveness of database indexes
    */
   it('should demonstrate index efficiency with indexed vs non-indexed queries', async () => {
-    const mockArticles = MockUtils.testData.createArticles(100);
+    const mockArticles = Mock.articles(100);
     const measurements = { indexed: [] as number[], nonIndexed: [] as number[] };
 
     // Mock indexed query (fast - should be instant)

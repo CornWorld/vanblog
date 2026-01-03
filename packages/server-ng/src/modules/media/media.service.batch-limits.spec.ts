@@ -4,7 +4,6 @@ import { vi, describe, beforeEach, it, expect } from 'vitest';
 import { LoggerService } from '../../core/logger/logger.service';
 import { DATABASE_CONNECTION } from '../../database';
 import { HookService } from '../plugin/services/hook.service';
-import { MockUtils } from '../../../test/mock-utils';
 import { StorageProvider } from './dto/storage-config.dto';
 
 import { MediaService } from './services/media.service';
@@ -19,13 +18,10 @@ describe('MediaService - Batch Operation Limits', () => {
   let mockDb: any;
 
   beforeEach(async () => {
-    mockStorageService = MockUtils.services.createStorageServiceMock();
-    mockStorageFactory = MockUtils.services.createStorageFactoryServiceMock(
-      mockStorageService,
-      StorageProvider.LOCAL,
-    );
-    mockHookService = MockUtils.services.createHookServiceMock();
-    mockLogger = MockUtils.services.createLoggerMock();
+    mockStorageService = Mock.storage();
+    mockStorageFactory = Mock.storageFactory(mockStorageService, StorageProvider.LOCAL);
+    mockHookService = Mock.hook();
+    mockLogger = Mock.logger();
 
     // Mock database
     mockDb = {
@@ -55,7 +51,7 @@ describe('MediaService - Batch Operation Limits', () => {
     it('should allow deletion of 100 files', async () => {
       const ids = Array.from({ length: 100 }, (_, i) => i + 1);
       const mockFiles = ids.map((id) =>
-        MockUtils.testData.createMediaFile({
+        Mock.createMediaFile({
           id,
           filename: `file${String(id)}.jpg`,
           provider: 'local',
@@ -93,7 +89,7 @@ describe('MediaService - Batch Operation Limits', () => {
     it('should handle edge case of exactly 100 files', async () => {
       const exactlyHundredIds = Array.from({ length: 100 }, (_, i) => i + 1);
       const mockFiles = exactlyHundredIds.map((id) =>
-        MockUtils.testData.createMediaFile({
+        Mock.createMediaFile({
           id,
           filename: `file${String(id)}.jpg`,
           provider: 'local',
@@ -116,7 +112,7 @@ describe('MediaService - Batch Operation Limits', () => {
 
     it('should handle single file deletion within limits', async () => {
       const singleId = [1];
-      const mockFile = MockUtils.testData.createMediaFile({
+      const mockFile = Mock.createMediaFile({
         id: 1,
         filename: 'single.jpg',
         provider: 'local',
@@ -140,7 +136,7 @@ describe('MediaService - Batch Operation Limits', () => {
     it('should handle storage deletion failures gracefully within limits', async () => {
       const ids = [1, 2, 3];
       const mockFiles = ids.map((id) =>
-        MockUtils.testData.createMediaFile({
+        Mock.createMediaFile({
           id,
           filename: `file${String(id)}.jpg`,
           provider: 'local',
@@ -178,7 +174,7 @@ describe('MediaService - Batch Operation Limits', () => {
     it('should handle maximum allowed batch size efficiently', async () => {
       const maxIds = Array.from({ length: 100 }, (_, i) => i + 1);
       const mockFiles = maxIds.map((id) =>
-        MockUtils.testData.createMediaFile({
+        Mock.createMediaFile({
           id,
           filename: `perf${String(id)}.jpg`,
           provider: 'local',

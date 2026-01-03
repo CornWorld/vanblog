@@ -23,7 +23,6 @@ import { DATABASE_CONNECTION } from '../../database';
 import { QueryOptimizerService } from '../../shared/services/query-optimizer.service';
 import { StatisticsService } from '../../shared/services/statistics.service';
 import { HookService } from '../plugin/services/hook.service';
-import { MockUtils } from '../../../test/mock-utils';
 
 import { CategoryService } from './category.service';
 
@@ -33,9 +32,9 @@ describe('CategoryService', () => {
   let mockHookService: Partial<HookService>;
 
   beforeEach(async () => {
-    const databaseMockBuilder = new MockUtils.database();
+    const databaseMockBuilder = Mock.db();
     mockDb = databaseMockBuilder.build();
-    mockHookService = MockUtils.services.createHookServiceMock();
+    mockHookService = Mock.hook();
 
     const module: TestingModule = await Test.createTestingModule({
       imports: [],
@@ -47,11 +46,11 @@ describe('CategoryService', () => {
         },
         {
           provide: StatisticsService,
-          useValue: MockUtils.services.createStatisticsServiceMock(),
+          useValue: Mock.statistics(),
         },
         {
           provide: QueryOptimizerService,
-          useValue: MockUtils.services.createQueryOptimizerServiceMock(),
+          useValue: Mock.queryOptimizer(),
         },
         {
           provide: HookService,
@@ -59,7 +58,7 @@ describe('CategoryService', () => {
         },
         {
           provide: ConfigService,
-          useValue: MockUtils.services.createConfigServiceMock({ 'jwt.secret': 'test-secret-key' }),
+          useValue: Mock.config({ 'jwt.secret': 'test-secret-key' }),
         },
       ],
     }).compile();
@@ -69,9 +68,7 @@ describe('CategoryService', () => {
 
   describe('findAll', () => {
     it('should return categories with article count', async () => {
-      const mockCategories = [
-        MockUtils.testData.createCategory({ name: 'Technology', articleCount: 5 }),
-      ];
+      const mockCategories = [Mock.category({ name: 'Technology', articleCount: 5 })];
 
       mockDb.groupBy.mockResolvedValueOnce(mockCategories);
 
@@ -86,7 +83,7 @@ describe('CategoryService', () => {
 
   describe('findOne', () => {
     it('should return a single category', async () => {
-      const mockCategory = MockUtils.testData.createCategory({ name: 'Technology' });
+      const mockCategory = Mock.category({ name: 'Technology' });
 
       mockDb.limit.mockResolvedValueOnce([mockCategory]);
 
@@ -105,7 +102,7 @@ describe('CategoryService', () => {
 
   describe('create', () => {
     it('should create a new category', async () => {
-      const mockCreatedCategory = MockUtils.testData.createCategory({ name: 'New Category' });
+      const mockCreatedCategory = Mock.category({ name: 'New Category' });
 
       mockDb.returning.mockResolvedValueOnce([mockCreatedCategory]);
 
@@ -124,7 +121,7 @@ describe('CategoryService', () => {
 
   describe('update', () => {
     it('should update an existing category', async () => {
-      const mockUpdatedCategory = MockUtils.testData.createCategory({
+      const mockUpdatedCategory = Mock.category({
         name: 'Updated Category',
         description: 'Updated description',
       });
@@ -151,7 +148,7 @@ describe('CategoryService', () => {
 
   describe('remove', () => {
     it('should delete a category', async () => {
-      const mockCategory = MockUtils.testData.createCategory();
+      const mockCategory = Mock.category();
 
       mockDb.select.mockReturnValueOnce({
         from: vi.fn().mockReturnValue({
@@ -179,7 +176,7 @@ describe('CategoryService', () => {
     });
 
     it('should throw error when category contains articles', async () => {
-      const mockCategory = MockUtils.testData.createCategory();
+      const mockCategory = Mock.category();
 
       mockDb.select.mockReturnValueOnce({
         from: vi.fn().mockReturnValue({
@@ -201,7 +198,7 @@ describe('CategoryService', () => {
     });
 
     it('should call beforeDelete and afterDelete hooks', async () => {
-      const mockCategory = MockUtils.testData.createCategory();
+      const mockCategory = Mock.category();
 
       mockDb.select.mockReturnValueOnce({
         from: vi.fn().mockReturnValue({
@@ -239,7 +236,7 @@ describe('CategoryService', () => {
 
   describe('findByName', () => {
     it('should return category when found', async () => {
-      const mockCategory = MockUtils.testData.createCategory({ name: 'Technology' });
+      const mockCategory = Mock.category({ name: 'Technology' });
 
       mockDb.limit.mockResolvedValueOnce([mockCategory]);
 

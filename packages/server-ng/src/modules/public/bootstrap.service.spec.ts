@@ -12,7 +12,6 @@ import { SettingCoreService } from '../setting/services/setting-core.service';
 import { TagService } from '../tag/tag.service';
 
 import { BootstrapService } from './bootstrap.service';
-import { MockUtils } from '../../../test/mock-utils';
 
 describe('BootstrapService', () => {
   let service: BootstrapService;
@@ -31,12 +30,12 @@ describe('BootstrapService', () => {
     mockConfigService = {
       get: vi.fn(),
     };
-    mockStatisticsService = MockUtils.services.createStatisticsServiceMock();
-    mockSettingCoreService = MockUtils.services.createSettingCoreServiceMock();
-    mockCommentService = MockUtils.services.createCommentServiceMock();
-    mockTagService = MockUtils.services.createTagServiceMock();
-    mockCategoryService = MockUtils.services.createCategoryServiceMock();
-    mockHookService = MockUtils.services.createHookServiceMock();
+    mockStatisticsService = Mock.statistics();
+    mockSettingCoreService = Mock.settingCore();
+    mockCommentService = Mock.commentService();
+    mockTagService = Mock.tagService();
+    mockCategoryService = Mock.categoryService();
+    mockHookService = Mock.hook();
     mockPluginRegistryService = {
       getAllPublicData: vi.fn(),
     };

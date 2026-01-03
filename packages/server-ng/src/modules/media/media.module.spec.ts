@@ -1,7 +1,6 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { MockUtils } from '../../../test/mock-utils';
 import { DATABASE_CONNECTION } from '../../database';
 import { LoggerService } from '../../core/logger/logger.service';
 import { SettingRegistryService } from '../setting/services/setting-registry.service';
@@ -36,23 +35,23 @@ describe('MediaModule', () => {
         PicgoStorageService,
         {
           provide: DATABASE_CONNECTION,
-          useValue: MockUtils.createDatabaseMock(),
+          useValue: createDatabaseMock(),
         },
         {
           provide: SettingRegistryService,
-          useValue: MockUtils.services.createSettingRegistryServiceMock(),
+          useValue: Mock.settingRegistry(),
         },
         {
           provide: SettingCoreService,
-          useValue: MockUtils.services.createSettingCoreServiceMock(),
+          useValue: Mock.settingCore(),
         },
         {
           provide: HookService,
-          useValue: MockUtils.services.createHookServiceMock(),
+          useValue: Mock.hook(),
         },
         {
           provide: LoggerService,
-          useValue: MockUtils.services.createLoggerMock(),
+          useValue: Mock.logger(),
         },
       ],
     }).compile();

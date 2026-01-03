@@ -2,7 +2,6 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
 import { describe, it, beforeEach, afterEach, expect, vi } from 'vitest';
 
-import { MockUtils } from '../../../test/mock-utils';
 import { DATABASE_CONNECTION } from '../../database';
 
 import { PermissionService } from './permission.service';
@@ -47,7 +46,7 @@ describe('PermissionService', () => {
 
   beforeEach(async () => {
     // 创建基础 database mock 配置
-    const dbMockBuilder = new MockUtils.database();
+    const dbMockBuilder = Mock.db();
     dbMockBuilder.setQueryResult([mockPermissionNode]);
     dbMockBuilder.setInsertResult([mockPermissionNode]);
     mockDb = dbMockBuilder.build();

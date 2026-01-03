@@ -4,7 +4,6 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 import { DATABASE_CONNECTION } from '../../../database';
 import { AnalyticsType } from '../entities/analytics.entity';
-import { MockUtils } from '../../../../test/mock-utils';
 
 import { ArticleStatsService } from './article-stats.service';
 
@@ -14,7 +13,7 @@ describe('ArticleStatsService', () => {
 
   beforeEach(async () => {
     // 使用 DatabaseMockBuilder 创建数据库 Mock
-    const databaseMock = new MockUtils.database();
+    const databaseMock = Mock.db();
     mockDb = databaseMock.build();
 
     const module: TestingModule = await Test.createTestingModule({

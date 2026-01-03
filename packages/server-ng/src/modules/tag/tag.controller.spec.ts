@@ -2,8 +2,6 @@ import { NotFoundException } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { vi, describe, beforeEach, afterEach, it, expect } from 'vitest';
 
-import { MockUtils } from '../../../test/mock-utils';
-
 import { TagController } from './tag.controller';
 import { TagService } from './tag.service';
 import { Tag } from './entities/tag.entity';
@@ -13,7 +11,7 @@ describe('TagController', () => {
   let mockTagService: any;
 
   beforeEach(async () => {
-    mockTagService = MockUtils.services.createTagServiceMock();
+    mockTagService = Mock.tagService();
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [TagController],
@@ -87,7 +85,7 @@ describe('TagController', () => {
   describe('findOne', () => {
     it('should return a tag by ID', async () => {
       const mockTag = new Tag(
-        MockUtils.testData.createTag({
+        Mock.tag({
           id: 1,
           name: 'JavaScript',
           slug: 'javascript',
@@ -121,7 +119,7 @@ describe('TagController', () => {
       };
 
       const mockCreatedTag = new Tag(
-        MockUtils.testData.createTag({
+        Mock.tag({
           id: 1,
           name: 'React',
           slug: 'react',
@@ -145,7 +143,7 @@ describe('TagController', () => {
       };
 
       const mockCreatedTag = new Tag(
-        MockUtils.testData.createTag({
+        Mock.tag({
           id: 2,
           name: 'Vue.js',
           slug: 'vue-js',

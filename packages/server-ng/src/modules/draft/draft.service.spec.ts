@@ -8,7 +8,6 @@ import { HookService } from '../plugin/services/hook.service';
 
 import { DraftVersionService } from './draft-version.service';
 import { DraftService } from './draft.service';
-import { MockUtils } from '../../../test/mock-utils';
 
 describe('DraftService', () => {
   let service: DraftService;
@@ -17,11 +16,11 @@ describe('DraftService', () => {
   let mockDb: any;
 
   beforeEach(async () => {
-    mockDraftVersionService = MockUtils.services.createDraftVersionServiceMock();
-    mockHookService = MockUtils.services.createHookServiceMock();
+    mockDraftVersionService = Mock.draftVersionService();
+    mockHookService = Mock.hook();
 
     // Use DatabaseMockBuilder for flexible mock database setup
-    const dbMock = new MockUtils.database();
+    const dbMock = Mock.db();
     mockDb = dbMock.build();
 
     const module: TestingModule = await Test.createTestingModule({
@@ -48,7 +47,7 @@ describe('DraftService', () => {
 
   describe('findAll', () => {
     it('should return drafts with pagination', async () => {
-      const mockDrafts = [MockUtils.testData.createDraft()];
+      const mockDrafts = [Mock.draft()];
 
       // Setup for Promise.all - both queries run simultaneously
       mockDb.offset.mockResolvedValueOnce(mockDrafts);
@@ -82,7 +81,7 @@ describe('DraftService', () => {
 
   describe('findOne', () => {
     it('should return a single draft', async () => {
-      const mockDraft = MockUtils.testData.createDraft();
+      const mockDraft = Mock.draft();
 
       mockDb.limit.mockResolvedValueOnce([mockDraft]);
 
@@ -101,7 +100,7 @@ describe('DraftService', () => {
 
   describe('create', () => {
     it('should create a new draft', async () => {
-      const mockCreatedDraft = MockUtils.testData.createDraft({
+      const mockCreatedDraft = Mock.draft({
         title: 'New Draft',
         content: 'New content',
         tags: ['new'],
@@ -127,7 +126,7 @@ describe('DraftService', () => {
 
   describe('update', () => {
     it('should update an existing draft', async () => {
-      const mockUpdatedDraft = MockUtils.testData.createDraft({
+      const mockUpdatedDraft = Mock.draft({
         title: 'Updated Draft',
         content: 'Updated content',
         tags: ['updated'],
@@ -183,7 +182,7 @@ describe('DraftService', () => {
     it('should publish a draft as an article', async () => {
       // Reset all mocks to ensure clean state
       // vi.clearAllMocks(); // Removing this to keep chainable mocks intact
-      const mockDraftRaw = MockUtils.testData.createDraft({
+      const mockDraftRaw = Mock.draft({
         id: 1,
         title: 'Draft to Publish',
         tags: ['publish', 'test'],
@@ -283,7 +282,7 @@ describe('DraftService', () => {
     });
 
     it('should set private=true and hash password when provided', async () => {
-      const mockDraftRaw = MockUtils.testData.createDraft({
+      const mockDraftRaw = Mock.draft({
         id: 2,
         title: 'Secret Draft',
         content: 'Top secret content',
@@ -381,7 +380,7 @@ describe('DraftService', () => {
     });
 
     it('should throw when article creation returns empty array', async () => {
-      const mockDraftRaw = MockUtils.testData.createDraft({
+      const mockDraftRaw = Mock.draft({
         id: 3,
         title: 'Draft Fail',
         content: 'Will fail to publish',
@@ -453,7 +452,7 @@ describe('DraftService', () => {
 
   describe('autoSave', () => {
     it('should auto-save a draft', async () => {
-      const mockUpdatedDraft = MockUtils.testData.createDraft({
+      const mockUpdatedDraft = Mock.draft({
         title: 'Auto-saved Draft',
         content: 'Auto-saved content',
         tags: ['auto-save'],
@@ -474,7 +473,7 @@ describe('DraftService', () => {
     });
 
     it('should not create a version when auto-saving', async () => {
-      const mockUpdatedDraft = MockUtils.testData.createDraft({
+      const mockUpdatedDraft = Mock.draft({
         title: 'Auto-saved',
         content: 'Content',
         tags: null,
@@ -496,7 +495,7 @@ describe('DraftService', () => {
     });
 
     it('should handle all fields in auto-save', async () => {
-      const mockUpdatedDraft = MockUtils.testData.createDraft({
+      const mockUpdatedDraft = Mock.draft({
         title: 'Full Update',
         content: 'Full Content',
         tags: ['tag1', 'tag2'],
@@ -527,7 +526,7 @@ describe('DraftService', () => {
   describe('findAll - advanced scenarios', () => {
     it('should handle keyword search', async () => {
       const mockDrafts = [
-        MockUtils.testData.createDraft({
+        Mock.draft({
           title: 'Keyword Test',
           content: 'Content with keyword',
           tags: null,
@@ -560,7 +559,7 @@ describe('DraftService', () => {
     });
 
     it('should handle sortBy createdAt', async () => {
-      const mockDrafts = [MockUtils.testData.createDraft({ tags: null })];
+      const mockDrafts = [Mock.draft({ tags: null })];
 
       mockDb.offset.mockResolvedValueOnce(mockDrafts);
       let whereCallCount = 0;
@@ -587,7 +586,7 @@ describe('DraftService', () => {
     });
 
     it('should handle sortBy title', async () => {
-      const mockDrafts = [MockUtils.testData.createDraft({ title: 'Alpha', tags: null })];
+      const mockDrafts = [Mock.draft({ title: 'Alpha', tags: null })];
 
       mockDb.offset.mockResolvedValueOnce(mockDrafts);
       let whereCallCount = 0;
@@ -641,7 +640,7 @@ describe('DraftService', () => {
 
   describe('update - advanced scenarios', () => {
     it('should handle partial update with pathname', async () => {
-      const mockUpdatedDraft = MockUtils.testData.createDraft({
+      const mockUpdatedDraft = Mock.draft({
         title: 'Updated Title',
         content: 'Original content',
         tags: null,
@@ -660,7 +659,7 @@ describe('DraftService', () => {
     });
 
     it('should handle partial update with category', async () => {
-      const mockUpdatedDraft = MockUtils.testData.createDraft({ tags: null, category: 'tech' });
+      const mockUpdatedDraft = Mock.draft({ tags: null, category: 'tech' });
 
       mockDb.returning.mockResolvedValueOnce([mockUpdatedDraft]);
 
@@ -673,7 +672,7 @@ describe('DraftService', () => {
     });
 
     it('should handle update with author change', async () => {
-      const mockUpdatedDraft = MockUtils.testData.createDraft({ tags: null, author: 'newauthor' });
+      const mockUpdatedDraft = Mock.draft({ tags: null, author: 'newauthor' });
 
       mockDb.returning.mockResolvedValueOnce([mockUpdatedDraft]);
 
@@ -686,7 +685,7 @@ describe('DraftService', () => {
     });
 
     it('should apply hook filters during update', async () => {
-      const mockUpdatedDraft = MockUtils.testData.createDraft({
+      const mockUpdatedDraft = Mock.draft({
         title: 'Filtered Title',
         content: 'Content',
         tags: null,
@@ -715,7 +714,7 @@ describe('DraftService', () => {
     });
 
     it('should verify filter transformation is applied to database operation', async () => {
-      const mockUpdatedDraft = MockUtils.testData.createDraft({
+      const mockUpdatedDraft = Mock.draft({
         title: 'Filtered Title',
         content: 'Content',
         tags: null,
@@ -756,7 +755,7 @@ describe('DraftService', () => {
       mockHookService.applyFilters = vi.fn().mockRejectedValue(new Error('Filter hook failed'));
 
       mockDb.returning.mockResolvedValueOnce([
-        MockUtils.testData.createDraft({
+        Mock.draft({
           title: 'Original Title',
           content: 'Content',
           tags: null,
@@ -775,7 +774,7 @@ describe('DraftService', () => {
 
   describe('create - advanced scenarios', () => {
     it('should apply hook filters during create', async () => {
-      const mockCreatedDraft = MockUtils.testData.createDraft({
+      const mockCreatedDraft = Mock.draft({
         title: 'Filtered Draft',
         content: 'Content',
         tags: null,
@@ -808,7 +807,7 @@ describe('DraftService', () => {
     });
 
     it('should trigger afterCreate hook', async () => {
-      const mockCreatedDraft = MockUtils.testData.createDraft({
+      const mockCreatedDraft = Mock.draft({
         title: 'New Draft',
         content: 'Content',
         tags: null,
@@ -874,7 +873,7 @@ describe('DraftService', () => {
 
   describe('publish - edge cases', () => {
     it('should handle draft without tags', async () => {
-      const mockDraftRaw = MockUtils.testData.createDraft({
+      const mockDraftRaw = Mock.draft({
         title: 'No Tags',
         tags: null,
         pathname: 'no-tags',
@@ -912,7 +911,7 @@ describe('DraftService', () => {
     });
 
     it('should trigger afterPublish hook with correct data', async () => {
-      const mockDraftRaw = MockUtils.testData.createDraft({
+      const mockDraftRaw = Mock.draft({
         title: 'Publish Test',
         tags: ['test'],
         pathname: 'publish-test',

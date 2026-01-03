@@ -12,8 +12,6 @@
  */
 import { describe, beforeEach, it, expect, afterEach, vi } from 'vitest';
 
-import { MockUtils } from '../../../test/mock-utils';
-
 import { TagService } from './tag.service';
 
 describe('TagService - Boundary Conditions', () => {
@@ -22,7 +20,7 @@ describe('TagService - Boundary Conditions', () => {
   let mockDb: any;
 
   beforeEach(async () => {
-    const databaseMockBuilder = new MockUtils.database();
+    const databaseMockBuilder = Mock.db();
     mockDb = databaseMockBuilder.build();
 
     module = await MockUtils.createTagServiceTestingModule({
