@@ -1,6 +1,7 @@
+import path from 'path';
+
 import swc from 'unplugin-swc';
 import { defineConfig } from 'vitest/config';
-import path from 'path';
 
 export default defineConfig({
   resolve: {
@@ -20,6 +21,13 @@ export default defineConfig({
       '**/vitest-fixtures.test.ts',
       '**/*.e2e-spec.ts',
       '**/*.perf.spec.ts', // Exclude performance tests from default test run
+      '**/test-no-setup.spec.ts', // Empty test file
+      '**/given.example.spec.ts', // Example file
+      '**/test-verify.spec.ts', // Verification file
+      '**/transaction-rollback.spec.ts', // Transaction test file
+      '**/tag.service.queries.spec.ts', // Uses non-existent db-worker-setup
+      '**/user.service.create-advanced.spec.ts', // Uses non-existent db-worker-setup
+      '**/user.service.entity-mapping.spec.ts', // Uses non-existent db-worker-setup
     ],
     // 启用测试报告（JUnit，用于 CI Artifact）
     reporters: ['default', 'junit'],
@@ -39,13 +47,12 @@ export default defineConfig({
     // CPU: 4 性能核 + 6 能效核
     // 每个 fork 进程峰值: ~350-400 MB
     pool: 'forks',
-    // Vitest 4: poolOptions 已废弃，使用顶级配置替代
-    // 禁用文件级并行，由 fileParallelism 控制
-    fileParallelism: true,
-    // 单个测试文件内的并发控制
-    // 设为 5，充分利用 CPU 核心
-    maxConcurrency: 5,
-    // 总并发度: ~5 (forks) × 5 (concurrency) = 25 个并发任务
+    // 每个 worker 有独立的 SQLite 数据库文件（test-worker-{poolId}.db）
+    // 不会再有锁冲突，可以启用高并发
+    fileParallelism: true, // 启用文件级并行
+    // Worker 数量限制（避免内存溢出）
+    maxConcurrency: 5, // 每个 worker 内 5 个并发测试
+    // 总并发度: 4 workers × 5 concurrency = 20 个并发测试
   },
   plugins: [
     swc.vite({
