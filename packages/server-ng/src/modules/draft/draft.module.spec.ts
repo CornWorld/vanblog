@@ -25,6 +25,7 @@ describe('DraftModule', () => {
 
   describe('module exports', () => {
     it('should export DraftService', async () => {
+      // ✅ 优化：使用新的扁平化 Mock API
       const mockDraftService = Mock.draftService();
 
       const testModule = await Test.createTestingModule({
@@ -65,7 +66,9 @@ describe('DraftModule', () => {
 
   describe('service injection', () => {
     it('should provide DraftService to controllers', async () => {
+      // ✅ 优化：使用新的扁平化 Mock API
       const mockService = Mock.draftService();
+      // ✅ 优化：使用新的扁平化 Mock API
       const mockVersionService = Mock.draftVersionService();
 
       const testModule = await Test.createTestingModule({
@@ -90,6 +93,7 @@ describe('DraftModule', () => {
     });
 
     it('should provide DraftVersionService alongside DraftService', async () => {
+      // ✅ 优化：使用新的扁平化 Mock API
       const mockVersionService = Mock.draftVersionService();
 
       const testModule = await Test.createTestingModule({
@@ -125,7 +129,9 @@ describe('DraftModule', () => {
     });
 
     it('should provide both DraftService and DraftVersionService', async () => {
+      // ✅ 优化：使用新的扁平化 Mock API
       const mockDraftService = Mock.draftService();
+      // ✅ 优化：使用新的扁平化 Mock API
       const mockVersionService = Mock.draftVersionService();
 
       const testModule = await Test.createTestingModule({

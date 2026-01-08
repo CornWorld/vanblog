@@ -14,6 +14,7 @@ describe('DraftController', () => {
   let mockDraftVersionService: any;
 
   beforeEach(async () => {
+    // ✅ 优化：使用新的扁平化 Mock API
     mockDraftService = Mock.draftService();
     mockDraftVersionService = Mock.draftVersionService();
 
@@ -407,7 +408,8 @@ describe('DraftController', () => {
 
   describe('getDrafts (ts-rest)', () => {
     it('should return paginated drafts', async () => {
-      const mockDraft = {
+      // ✅ 优化：使用新的扁平化 Mock API
+  const mockDraft = {
         id: 1,
         title: 'Test Draft',
         content: 'Test content',
@@ -416,7 +418,8 @@ describe('DraftController', () => {
         createdAt: dayjs().format(),
         updatedAt: dayjs().format(),
       };
-      const mockResult = {
+      // ✅ 优化：使用新的扁平化 Mock API
+  const mockResult = {
         items: [mockDraft],
         total: 1,
         page: 1,
@@ -445,7 +448,8 @@ describe('DraftController', () => {
     });
 
     it('should handle category filter', async () => {
-      const mockResult = {
+      // ✅ 优化：使用新的扁平化 Mock API
+  const mockResult = {
         items: [],
         total: 0,
         page: 1,
@@ -465,7 +469,8 @@ describe('DraftController', () => {
     });
 
     it('should handle tag filter', async () => {
-      const mockResult = {
+      // ✅ 优化：使用新的扁平化 Mock API
+  const mockResult = {
         items: [],
         total: 0,
         page: 1,
@@ -485,7 +490,8 @@ describe('DraftController', () => {
     });
 
     it('should handle null category and tags', async () => {
-      const mockDraft = {
+      // ✅ 优化：使用新的扁平化 Mock API
+  const mockDraft = {
         id: 1,
         title: 'Test Draft',
         content: 'Test content',
@@ -494,7 +500,8 @@ describe('DraftController', () => {
         createdAt: dayjs().format(),
         updatedAt: dayjs().format(),
       };
-      const mockResult = {
+      // ✅ 优化：使用新的扁平化 Mock API
+  const mockResult = {
         items: [mockDraft],
         total: 1,
         page: 1,
@@ -517,7 +524,8 @@ describe('DraftController', () => {
         title: 'New Draft',
         content: 'New content',
       };
-      const mockDraft = {
+      // ✅ 优化：使用新的扁平化 Mock API
+  const mockDraft = {
         id: 1,
         title: 'New Draft',
         content: 'New content',
@@ -555,7 +563,8 @@ describe('DraftController', () => {
         category: 'tech',
         tags: ['test', 'draft'],
       };
-      const mockDraft = {
+      // ✅ 优化：使用新的扁平化 Mock API
+  const mockDraft = {
         id: 1,
         ...createDto,
         pathname: null,
@@ -581,7 +590,8 @@ describe('DraftController', () => {
     });
 
     it('should map response correctly', async () => {
-      const mockDraft = {
+      // ✅ 优化：使用新的扁平化 Mock API
+  const mockDraft = {
         id: 1,
         title: 'Test',
         content: 'Content',
@@ -608,7 +618,8 @@ describe('DraftController', () => {
       const updateDto = {
         title: 'Updated Title',
       };
-      const mockDraft = {
+      // ✅ 优化：使用新的扁平化 Mock API
+  const mockDraft = {
         id: 1,
         title: 'Updated Title',
         content: 'Original content',
@@ -642,7 +653,8 @@ describe('DraftController', () => {
         category: 'tech',
         tags: ['updated'],
       };
-      const mockDraft = {
+      // ✅ 优化：使用新的扁平化 Mock API
+  const mockDraft = {
         id: 1,
         ...updateDto,
         pathname: null,
@@ -663,7 +675,8 @@ describe('DraftController', () => {
       const updateDto = {
         title: 'Updated',
       };
-      const mockDraft = {
+      // ✅ 优化：使用新的扁平化 Mock API
+  const mockDraft = {
         id: 1,
         title: 'Updated',
         content: 'Original',
@@ -687,7 +700,8 @@ describe('DraftController', () => {
     });
 
     it('should convert string id to number', async () => {
-      const mockDraft = {
+      // ✅ 优化：使用新的扁平化 Mock API
+  const mockDraft = {
         id: 123,
         title: 'Test',
         content: 'Content',
@@ -732,7 +746,8 @@ describe('DraftController', () => {
 
   describe('getDraft (ts-rest)', () => {
     it('should return single draft', async () => {
-      const mockDraft = {
+      // ✅ 优化：使用新的扁平化 Mock API
+  const mockDraft = {
         id: 1,
         title: 'Test Draft',
         content: 'Test content',
@@ -758,7 +773,8 @@ describe('DraftController', () => {
     });
 
     it('should handle null category and tags', async () => {
-      const mockDraft = {
+      // ✅ 优化：使用新的扁平化 Mock API
+  const mockDraft = {
         id: 1,
         title: 'Test Draft',
         content: 'Test content',
@@ -782,7 +798,8 @@ describe('DraftController', () => {
 
   describe('publishDraft (ts-rest)', () => {
     it('should publish draft and return article', async () => {
-      const mockArticle = new Article({
+      // ✅ 优化：使用新的扁平化 Mock API
+  const mockArticle = new Article({
         id: 99,
         title: 'Published Article',
         content: 'Published content',
@@ -819,7 +836,8 @@ describe('DraftController', () => {
     });
 
     it('should map article fields correctly', async () => {
-      const mockArticle = new Article({
+      // ✅ 优化：使用新的扁平化 Mock API
+  const mockArticle = new Article({
         id: 1,
         title: 'Test',
         content: 'Content',
@@ -849,7 +867,8 @@ describe('DraftController', () => {
     });
 
     it('should handle null viewer and top', async () => {
-      const mockArticle = new Article({
+      // ✅ 优化：使用新的扁平化 Mock API
+  const mockArticle = new Article({
         id: 1,
         title: 'Test',
         content: 'Content',
@@ -876,7 +895,8 @@ describe('DraftController', () => {
 
     it('should format pubTime correctly', async () => {
       const updatedAt = '2024-01-01T10:00:00Z';
-      const mockArticle = new Article({
+      // ✅ 优化：使用新的扁平化 Mock API
+  const mockArticle = new Article({
         id: 1,
         title: 'Test',
         content: 'Content',
@@ -907,7 +927,8 @@ describe('DraftController', () => {
 
   describe('Edge Cases', () => {
     it('should handle empty draft list', async () => {
-      const mockResult = {
+      // ✅ 优化：使用新的扁平化 Mock API
+  const mockResult = {
         items: [],
         total: 0,
         page: 1,
@@ -923,7 +944,8 @@ describe('DraftController', () => {
     });
 
     it('should handle large page numbers', async () => {
-      const mockResult = {
+      // ✅ 优化：使用新的扁平化 Mock API
+  const mockResult = {
         items: [],
         total: 0,
         page: 999,
@@ -938,7 +960,8 @@ describe('DraftController', () => {
     });
 
     it('should handle drafts with empty tags array', async () => {
-      const mockDraft = {
+      // ✅ 优化：使用新的扁平化 Mock API
+  const mockDraft = {
         id: 1,
         title: 'Test',
         content: 'Content',
@@ -1014,7 +1037,8 @@ describe('DraftController', () => {
 
   describe('Schema Validation', () => {
     it('should validate findAll query parameters', async () => {
-      const mockResult = {
+      // ✅ 优化：使用新的扁平化 Mock API
+  const mockResult = {
         items: [],
         total: 0,
         page: 1,
@@ -1033,7 +1057,8 @@ describe('DraftController', () => {
     });
 
     it('should validate create draft DTO', async () => {
-      const mockDraft = {
+      // ✅ 优化：使用新的扁平化 Mock API
+  const mockDraft = {
         id: 1,
         title: 'Test',
         content: 'Content',
@@ -1052,7 +1077,8 @@ describe('DraftController', () => {
     });
 
     it('should validate update draft DTO', async () => {
-      const mockDraft = { id: 1, title: 'Updated' };
+      // ✅ 优化：使用新的扁平化 Mock API
+  const mockDraft = { id: 1, title: 'Updated' };
       mockDraftService.update.mockResolvedValue(mockDraft);
 
       // Valid update
@@ -1063,7 +1089,8 @@ describe('DraftController', () => {
     });
 
     it('should validate publish DTO', async () => {
-      const mockArticle = new Article({ id: 99, title: 'Published' });
+      // ✅ 优化：使用新的扁平化 Mock API
+  const mockArticle = new Article({ id: 99, title: 'Published' });
       mockDraftService.publish.mockResolvedValue(mockArticle);
 
       // Valid publish with defaults

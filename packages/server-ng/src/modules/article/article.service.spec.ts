@@ -1,8 +1,14 @@
 import { NotFoundException } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, beforeEach, it, expect, vi, afterEach } from 'vitest';
+import { eq, and } from 'drizzle-orm';
+import * as bcrypt from 'bcrypt';
 
-import { type DatabaseMockBuilder, Mock } from '@test/mock';
+import { Mock } from '@test/mock';
+import { withTestTransaction } from '@test/utils/db-transaction-helper';
+import { db } from '@test/setup.unit';
+import { Given } from '@test/given';
+import { articles, categories, tags, users } from '@vanblog/shared/drizzle';
 import { ConfigService } from '../../config/config.service';
 import { DATABASE_CONNECTION } from '../../database';
 import { QueryOptimizerService } from '../../shared/services/query-optimizer.service';
@@ -12,18 +18,29 @@ import { ArticleService } from './article.service';
 
 import type { ArticleSearchDto } from './dto/article.dto';
 
+// 辅助函数：创建测试用户（自动使用当前事务上下文）
+async function createTestUser(userId: number = 1) {
+  await Given.user({
+    id: userId,
+    username: `testuser${userId}`,
+    name: `Test User ${userId}`,
+    email: `testuser${userId}@example.com`,
+    type: 'admin',
+  });
+}
+
 describe('ArticleService', () => {
   let service: ArticleService;
   let mockHookService: Partial<HookService>;
-  let databaseMock: DatabaseMockBuilder;
   let mockQueryOptimizer: Partial<QueryOptimizerService>;
   let mockConfigService: Partial<ConfigService>;
 
   beforeEach(async () => {
-    // 使用Mock工具类创建数据库Mock
-    databaseMock = Mock.db();
+    // ✅ 优化：使用新的扁平化 Mock API
     mockHookService = Mock.hook();
+    // ✅ 优化：使用新的扁平化 Mock API
     mockQueryOptimizer = Mock.queryOptimizer();
+    // ✅ 优化：使用新的扁平化 Mock API
     mockConfigService = Mock.config();
 
     const module: TestingModule = await Test.createTestingModule({
@@ -31,7 +48,7 @@ describe('ArticleService', () => {
         ArticleService,
         {
           provide: DATABASE_CONNECTION,
-          useValue: databaseMock.build(),
+          useValue: db,
         },
         {
           provide: QueryOptimizerService,
@@ -57,847 +74,872 @@ describe('ArticleService', () => {
 
   describe('findAll', () => {
     it('should return articles with pagination', async () => {
-      const mockArticles = Mock.articles(1);
-      const countResult = [{ count: 1 }];
+      await withTestTransaction(db, async (tx) => {
+        // 注入事务数据库
+        service['db'] = tx;
 
-      // Mock for the main query
-      databaseMock.db.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            orderBy: vi.fn().mockReturnValue({
-              limit: vi.fn().mockReturnValue({
-                offset: vi.fn().mockResolvedValue(mockArticles),
-              }),
-            }),
-          }),
-        }),
+        // 先创建测试用户
+        await createTestUser(1);
+
+        // 创建测试数据
+        const article = await Given.article({
+          id: 1,
+          title: 'Test Article',
+        });
+
+        const result = await service.findAll({
+          page: 1,
+          pageSize: 10,
+          sortBy: 'createdAt',
+          sortOrder: 'desc',
+        });
+
+        expect(result.items).toHaveLength(1);
+        expect(result.total).toBe(1);
+        expect(result.page).toBe(1);
+        expect(result.pageSize).toBe(10);
       });
-
-      // Mock for the count query
-      databaseMock.db.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockResolvedValue(countResult),
-        }),
-      });
-
-      const result = await service.findAll({
-        page: 1,
-        pageSize: 10,
-        sortBy: 'createdAt',
-        sortOrder: 'desc',
-      });
-
-      expect(result.items).toHaveLength(1);
-      expect(result.total).toBe(1);
-      expect(result.page).toBe(1);
-      expect(result.pageSize).toBe(10);
     });
   });
 
   describe('search', () => {
     it('should search articles by query', async () => {
-      const mockArticles = Mock.articles(1);
-      const countResult = [{ count: 1 }];
+      await withTestTransaction(db, async (tx) => {
+        service['db'] = tx;
 
-      // 设置两个并行查询的返回值
-      databaseMock.db.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            orderBy: vi.fn().mockReturnValue({
-              limit: vi.fn().mockReturnValue({
-                offset: vi.fn().mockResolvedValue(mockArticles),
-              }),
-            }),
-          }),
-        }),
+        // 创建测试数据
+        await Given.article({
+          id: 1,
+          title: 'search term',
+        });
+
+        const searchDto: ArticleSearchDto = {
+          keyword: 'search term',
+          query: 'search term',
+          page: 1,
+          pageSize: 10,
+        };
+
+        const result = await service.search(searchDto);
+
+        expect(result.items).toHaveLength(1);
+        expect(result.total).toBe(1);
       });
-
-      databaseMock.db.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockResolvedValue(countResult),
-        }),
-      });
-
-      const searchDto: ArticleSearchDto = {
-        keyword: 'search term',
-        query: 'search term',
-        page: 1,
-        pageSize: 10,
-      };
-
-      const result = await service.search(searchDto);
-
-      expect(result.items).toHaveLength(1);
-      expect(result.total).toBe(1);
     });
 
     it('should search only in title when titleOnly is true', async () => {
-      const countResult = [{ count: 0 }];
+      await withTestTransaction(db, async (tx) => {
+        service['db'] = tx;
 
-      // 设置两个并行查询的返回值
-      databaseMock.db.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            orderBy: vi.fn().mockReturnValue({
-              limit: vi.fn().mockReturnValue({
-                offset: vi.fn().mockResolvedValue([]),
-              }),
-            }),
-          }),
-        }),
+        const searchDto: ArticleSearchDto = {
+          keyword: 'test',
+          page: 1,
+          pageSize: 10,
+          query: 'test',
+          titleOnly: true,
+        };
+
+        const result = await service.search(searchDto);
+
+        expect(result.items).toHaveLength(0);
+        expect(result.total).toBe(0);
       });
-
-      databaseMock.db.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockResolvedValue(countResult),
-        }),
-      });
-
-      const searchDto: ArticleSearchDto = {
-        keyword: 'test',
-        page: 1,
-        pageSize: 10,
-        query: 'test',
-        titleOnly: true,
-      };
-
-      const result = await service.search(searchDto);
-
-      expect(result.items).toHaveLength(0);
-      expect(result.total).toBe(0);
     });
 
     it('should filter by category and tags', async () => {
-      const countResult = [{ count: 0 }];
-      const whereMock = vi.fn().mockResolvedValue(countResult);
+      await withTestTransaction(db, async (tx) => {
+        service['db'] = tx;
 
-      // 设置两个并行查询的返回值
-      databaseMock.db.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            orderBy: vi.fn().mockReturnValue({
-              limit: vi.fn().mockReturnValue({
-                offset: vi.fn().mockResolvedValue([]),
-              }),
-            }),
-          }),
-        }),
+        // 先创建测试用户和分类
+        await createTestUser(1);
+        await Given.category({ name: 'tech', slug: 'tech' });
+
+        // 创建带分类和标签的文章
+        await Given.article({
+          id: 1,
+          category: 'tech',
+          tags: ['javascript', 'node'],
+        });
+
+        const searchDto: ArticleSearchDto = {
+          keyword: 'test',
+          page: 1,
+          pageSize: 10,
+          query: 'test',
+          category: 'tech',
+          tags: ['javascript', 'node'],
+        };
+
+        const result = await service.search(searchDto);
+
+        // 验证结果
+        expect(result.items).toBeDefined();
       });
-
-      databaseMock.db.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: whereMock,
-        }),
-      });
-
-      const searchDto: ArticleSearchDto = {
-        keyword: 'test',
-        page: 1,
-        pageSize: 10,
-        query: 'test',
-        category: 'tech',
-        tags: ['javascript', 'node'],
-      };
-
-      await service.search(searchDto);
-
-      expect(whereMock).toHaveBeenCalled();
     });
   });
 
   describe('findOne', () => {
     it('should return a single article', async () => {
-      const mockArticle = Mock.article({ id: 1 });
+      await withTestTransaction(db, async (tx) => {
+        service['db'] = tx;
 
-      // Mock for findOne query
-      databaseMock.db.select.mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([mockArticle]),
-          }),
-        }),
+        // 创建测试数据
+        const article = await Given.article({
+          id: 1,
+        });
+
+        const result = await service.findOne(1);
+
+        expect(result.id).toBe(1);
+        expect(result.title).toBe('Test Article');
       });
-
-      const result = await service.findOne(1);
-
-      expect(result.id).toBe(1);
-      expect(result.title).toBe('Test Article');
     });
 
     it('should throw NotFoundException when article not found', async () => {
-      // Mock for findOne query returning empty result
-      databaseMock.db.select.mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([]),
-          }),
-        }),
-      });
+      await withTestTransaction(db, async (tx) => {
+        service['db'] = tx;
 
-      await expect(service.findOne(999)).rejects.toThrow(NotFoundException);
+        await expect(service.findOne(999)).rejects.toThrow(NotFoundException);
+      });
     });
   });
 
   describe('create', () => {
     it('should create a new article', async () => {
-      const mockCreatedArticle = Mock.article({
-        id: 1,
-        title: 'New Article',
-        content: 'New content',
-        tags: ['new'],
+      await withTestTransaction(db, async (tx) => {
+        service['db'] = tx;
+
+        // 先创建测试用户
+        await createTestUser(1);
+
+        const createDto = {
+          title: 'New Article',
+          content: 'New content',
+          author: 'testuser1',
+          tags: ['new'], // 使用数组而不是 JSON 字符串
+        };
+
+        const result = await service.create(
+          createDto as unknown as Parameters<typeof service.create>[0],
+        );
+
+        expect(result.id).toBeDefined();
+        expect(result.title).toBe('New Article');
+        expect(result.tags).toEqual(['new']);
+
+        // 验证数据库持久化
+        const [saved] = await tx.select().from(articles).where(eq(articles.id, result.id));
+        expect(saved).toBeDefined();
+        expect(saved.title).toBe('New Article');
+
+        // Tags 现在存储在 article_tags 关联表中，不再是 JSON 字段
+        // 需要通过 service 的 findOne 方法获取（会自动加载 tags）
+        const savedWithTags = await service.findOne(result.id);
+        expect(savedWithTags.tags).toEqual(['new']);
       });
-
-      const createDto = Mock.articleDto({
-        title: 'New Article',
-        content: 'New content',
-        tags: JSON.stringify(['new']),
-      });
-
-      // 使用Mock工具类设置创建结果
-      databaseMock.setInsertResult([mockCreatedArticle]);
-      databaseMock.setQueryResult([]); // 模拟标签查询结果
-
-      const result = await service.create(
-        createDto as unknown as Parameters<typeof service.create>[0],
-      );
-
-      expect(result.id).toBe(1);
-      expect(result.title).toBe('New Article');
-      expect(result.tags).toEqual(['new']);
     });
 
     it('should hash password on create when provided', async () => {
-      // Arrange
-      const mockCreatedArticle = Mock.article({
-        id: 2,
-        title: 'With Password',
-        content: 'Secret content',
-        tags: [],
-        password: '$2a$10$xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+      await withTestTransaction(db, async (tx) => {
+        service['db'] = tx;
+
+        const createDto = Mock.articleDto({
+          title: 'With Password',
+          content: 'Secret content',
+          tags: JSON.stringify([]),
+          password: 'plain-secret',
+        });
+
+        const result = await service.create(
+          createDto as unknown as Parameters<typeof service.create>[0],
+        );
+
+        // 验证密码被哈希
+        const [saved] = await tx.select().from(articles).where(eq(articles.id, result.id));
+        expect(saved.password).toBeTypeOf('string');
+        expect(saved.password).not.toBe('plain-secret');
+        expect(String(saved.password)).toMatch(/^\$2[aby]\$/);
       });
-
-      const createDto = Mock.articleDto({
-        title: 'With Password',
-        content: 'Secret content',
-        tags: JSON.stringify([]),
-        password: 'plain-secret',
-      });
-
-      databaseMock.setInsertResult([mockCreatedArticle]);
-      databaseMock.setQueryResult([]);
-
-      // Act
-      await service.create(createDto as unknown as Parameters<typeof service.create>[0]);
-
-      // Assert: capture values() argument and ensure password is hashed (bcrypt)
-      const [[valuesArg]] = databaseMock.db.values.mock.calls; // service.create uses .values([newArticleData])
-      expect(databaseMock.db.values.mock.calls.length).toBeGreaterThan(0);
-      expect(Array.isArray(valuesArg)).toBe(true);
-      const inserted = valuesArg[0] as Record<string, unknown>;
-      expect(inserted.password).toBeTypeOf('string');
-      expect(inserted.password).not.toBe('plain-secret');
-      expect(String(inserted.password)).toMatch(/^\$2[aby]\$/);
     });
   });
 
   describe('update', () => {
     it('should update an existing article', async () => {
-      const mockExistingArticle = Mock.article({
-        id: 1,
-        title: 'Existing Article',
-        content: 'Existing content',
-        tags: ['existing'],
-      });
+      await withTestTransaction(db, async (tx) => {
+        service['db'] = tx;
 
-      const mockUpdatedArticle = Mock.article({
-        id: 1,
-        title: 'Updated Article',
-        content: 'Updated content',
-        tags: ['updated'],
-      });
-
-      // Mock for the existence check query (findOne)
-      databaseMock.db.select
-        .mockReturnValueOnce({
-          from: vi.fn().mockReturnValue({
-            where: vi.fn().mockReturnValue({
-              limit: vi.fn().mockResolvedValue([mockExistingArticle]),
-            }),
-          }),
-        })
-        // Mock for the tags query (createMissingTags)
-        .mockReturnValueOnce({
-          from: vi.fn().mockResolvedValue([]), // Return empty array, no existing tags
+        // 创建现有文章
+        const existing = await Given.article({
+          id: 1,
+          title: 'Existing Article',
+          content: 'Existing content',
+          tags: ['existing'],
         });
 
-      databaseMock.setUpdateResult([mockUpdatedArticle]); // 更新结果
+        const updateDto = {
+          title: 'Updated Article',
+          content: 'Updated content',
+          tags: ['updated'],
+        };
 
-      const updateDto = {
-        title: 'Updated Article',
-        content: 'Updated content',
-        tags: ['updated'],
-      };
+        const result = await service.update(1, updateDto);
 
-      const result = await service.update(1, updateDto);
+        expect(result.title).toBe('Updated Article');
+        expect(result.tags).toEqual(['updated']);
 
-      expect(result.title).toBe('Updated Article');
-      expect(result.tags).toEqual(['updated']);
+        // 验证数据库更新
+        const [updated] = await tx.select().from(articles).where(eq(articles.id, 1));
+        expect(updated.title).toBe('Updated Article');
+      });
     });
 
     it('should hash password on update when provided', async () => {
-      // Arrange: mock existing article for existence check
-      const mockExistingArticle = Mock.article({ id: 3 });
+      await withTestTransaction(db, async (tx) => {
+        service['db'] = tx;
 
-      databaseMock.db.select.mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([mockExistingArticle]),
-          }),
-        }),
+        // 创建现有文章
+        const existing = await Given.article({
+          id: 3,
+        });
+
+        await service.update(3, { password: 'plain-update' } as unknown as Parameters<
+          typeof service.update
+        >[1]);
+
+        // 验证密码被哈希
+        const [updated] = await tx.select().from(articles).where(eq(articles.id, 3));
+        expect(updated.password).toBeTypeOf('string');
+        expect(updated.password).not.toBe('plain-update');
+        expect(String(updated.password)).toMatch(/^\$2[aby]\$/);
       });
-
-      databaseMock.setUpdateResult([Mock.article({ id: 3, password: null })]);
-
-      // Act
-      await service.update(3, { password: 'plain-update' } as unknown as Parameters<
-        typeof service.update
-      >[1]);
-
-      // Assert: capture set() argument and ensure password is hashed
-      const [[setArg]] = databaseMock.db.set.mock.calls;
-      expect(databaseMock.db.set.mock.calls.length).toBeGreaterThan(0);
-      expect(setArg.password).toBeTypeOf('string');
-      expect(setArg.password).not.toBe('plain-update');
-      expect(String(setArg.password)).toMatch(/^\$2[aby]\$/);
     });
 
     it('should throw NotFoundException when article not found', async () => {
-      // Mock for the existence check query returning empty result
-      databaseMock.db.select.mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([]),
-          }),
-        }),
-      });
+      await withTestTransaction(db, async (tx) => {
+        service['db'] = tx;
 
-      await expect(
-        service.update(999, { title: 'Test', content: 'Test content', tags: [] }),
-      ).rejects.toThrow(NotFoundException);
+        await expect(
+          service.update(999, { title: 'Test', content: 'Test content', tags: [] }),
+        ).rejects.toThrow(NotFoundException);
+      });
     });
   });
 
   describe('remove', () => {
     it('should delete an article', async () => {
-      const mockArticle = Mock.article({ id: 1 });
+      await withTestTransaction(db, async (tx) => {
+        service['db'] = tx;
 
-      // Mock for the existence check query
-      databaseMock.db.select.mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([mockArticle]),
-          }),
-        }),
+        // 创建测试数据
+        const article = await Given.article({
+          id: 1,
+        });
+
+        await expect(service.remove(1)).resolves.not.toThrow();
+
+        // 验证删除
+        const deleted = await tx.select().from(articles).where(eq(articles.id, 1));
+        expect(deleted).toHaveLength(0);
       });
-
-      // Mock for the delete operation
-      databaseMock.db.delete.mockReturnValue({
-        where: vi.fn().mockResolvedValue(undefined),
-      });
-
-      await expect(service.remove(1)).resolves.not.toThrow();
     });
 
     it('should throw NotFoundException when article not found', async () => {
-      // Mock for the existence check query returning empty result
-      databaseMock.db.select.mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([]),
-          }),
-        }),
-      });
+      await withTestTransaction(db, async (tx) => {
+        service['db'] = tx;
 
-      await expect(service.remove(999)).rejects.toThrow(NotFoundException);
+        await expect(service.remove(999)).rejects.toThrow(NotFoundException);
+      });
     });
   });
 
   describe('exportArticles', () => {
     it('should export all articles', async () => {
-      const mockArticles = [
-        Mock.article({
+      await withTestTransaction(db, async (tx) => {
+        service['db'] = tx;
+
+        // 先创建测试用户和分类
+        await createTestUser(1);
+        await Given.category({ name: 'tech', slug: 'tech' });
+
+        // 创建测试数据
+        await Given.article({
           id: 1,
           title: 'Article 1',
           content: 'Content 1',
           tags: ['tag1'],
           viewer: 100,
-        }),
-        Mock.article({
+        });
+        await Given.article({
           id: 2,
           title: 'Article 2',
           content: 'Content 2',
-          tags: null,
           top: 1,
           hidden: true,
           viewer: 50,
           pathname: 'article-2',
           category: 'tech',
-        }),
-      ];
+          tags: [],
+        });
 
-      // Mock for exportArticles: select().from(articles)
-      databaseMock.db.select.mockReturnValue({
-        from: vi.fn().mockResolvedValue(mockArticles),
+        const result = await service.exportArticles();
+
+        expect(result).toHaveLength(2);
+        expect(result[0].title).toBe('Article 1');
+        expect(result[0].tags).toEqual(['tag1']);
+        expect(result[1].title).toBe('Article 2');
+        expect(result[1].tags).toEqual([]);
+        expect(result[1].category).toBe('tech');
       });
-
-      const result = await service.exportArticles();
-
-      expect(result).toHaveLength(2);
-      expect(result[0].title).toBe('Article 1');
-      expect(result[0].tags).toEqual(['tag1']);
-      expect(result[1].title).toBe('Article 2');
-      expect(result[1].tags).toEqual([]);
-      expect(result[1].category).toBe('tech');
     });
   });
 
   describe('importArticles', () => {
-    it('should import multiple articles', async () => {
-      const articlesToImport = [
-        Mock.articleDto({
-          title: 'Import 1',
+    it('should import multiple articles sequentially', async () => {
+      await withTestTransaction(db, async (tx) => {
+        service['db'] = tx;
+
+        // 先创建测试用户和分类
+        await createTestUser(1);
+        await Given.category({
+          name: 'imported',
+          slug: 'imported',
+        });
+
+        const articlesToImport = [
+          Mock.articleDto({
+            title: 'Import 1',
+            content: 'Content 1',
+            author: 'testuser1',
+            tags: JSON.stringify(['import']),
+          }),
+          Mock.articleDto({
+            title: 'Import 2',
+            content: 'Content 2',
+            author: 'testuser1',
+            category: 'imported',
+            tags: JSON.stringify([]),
+          }),
+        ];
+
+        const typedArticlesToImport = articlesToImport as unknown as Parameters<
+          typeof service.importArticles
+        >[0];
+        await service.importArticles(typedArticlesToImport);
+
+        // 验证 afterCreate 钩子被触发了 2 次（每篇文章一次）
+        expect(mockHookService.doAction).toHaveBeenCalledTimes(2);
+
+        // 验证数据库中有 2 篇文章
+        const savedArticles = await tx.select().from(articles);
+        expect(savedArticles).toHaveLength(2);
+      });
+    });
+
+    it('should handle empty array import', async () => {
+      await withTestTransaction(db, async (tx) => {
+        service['db'] = tx;
+
+        await service.importArticles([]);
+
+        // 验证没有插入操作
+        const savedArticles = await tx.select().from(articles);
+        expect(savedArticles).toHaveLength(0);
+        expect(mockHookService.doAction).not.toHaveBeenCalled();
+      });
+    });
+
+    it('should import single article correctly', async () => {
+      await withTestTransaction(db, async (tx) => {
+        service['db'] = tx;
+
+        const singleArticle = [
+          Mock.articleDto({
+            title: 'Single Import',
+            content: 'Single content',
+            tags: JSON.stringify(['single']),
+          }),
+        ];
+
+        const typedArticle = singleArticle as unknown as Parameters<
+          typeof service.importArticles
+        >[0];
+        await service.importArticles(typedArticle);
+
+        // 验证插入操作和钩子触发
+        expect(mockHookService.doAction).toHaveBeenCalledTimes(1);
+        expect(mockHookService.doAction).toHaveBeenCalledWith(
+          'article|afterCreate',
+          expect.any(Object),
+          expect.objectContaining({ action: 'create' }),
+        );
+      });
+    });
+
+    it('should handle large batch import (25 articles)', async () => {
+      await withTestTransaction(db, async (tx) => {
+        service['db'] = tx;
+
+        // 先创建测试用户
+        await createTestUser(1);
+
+        const largeArticles = Array.from({ length: 25 }, (_, i) =>
+          Mock.articleDto({
+            title: `Article ${i + 1}`,
+            content: `Content ${i + 1}`,
+            author: 'testuser1',
+            tags: JSON.stringify([`tag${i + 1}`]),
+          }),
+        );
+
+        const typedArticles = largeArticles as unknown as Parameters<
+          typeof service.importArticles
+        >[0];
+        await service.importArticles(typedArticles);
+
+        // 验证所有文章都被导入（afterCreate 钩子调用次数 = 文章数量）
+        expect(mockHookService.doAction).toHaveBeenCalledTimes(25);
+
+        // 验证数据库中有 25 篇文章
+        const savedArticles = await tx.select().from(articles);
+        expect(savedArticles).toHaveLength(25);
+      });
+    });
+
+    it('should handle import failure and stop processing', async () => {
+      await withTestTransaction(db, async (tx) => {
+        service['db'] = tx;
+
+        // 先创建测试用户
+        await createTestUser(1);
+
+        // 先手动创建第一篇文章（用于后续验证）
+        const firstArticle = await service.create({
+          title: 'Article 1',
           content: 'Content 1',
-          tags: JSON.stringify(['import']),
-        }),
-        Mock.articleDto({
-          title: 'Import 2',
-          content: 'Content 2',
-          category: 'imported',
-          tags: JSON.stringify([]),
-        }),
-      ];
-
-      const mockResults = [
-        Mock.article({ id: 1, title: 'Import 1', tags: ['import'] }),
-        Mock.article({
-          id: 2,
-          title: 'Import 2',
-          category: 'imported',
+          author: 'testuser1',
           tags: [],
-        }),
-      ];
+        } as unknown as Parameters<typeof service.create>[0]);
 
-      // 使用Mock工具类设置导入结果
-      databaseMock.setQueryResult([]); // 标签查询结果
+        // Mock service.create 方法来模拟第二篇文章失败
+        // 不要 mock tx.insert，因为这会破坏 Drizzle 的方法链
+        const createSpy = vi.spyOn(service, 'create')
+          .mockResolvedValueOnce(firstArticle) // 第一次调用返回已创建的文章
+          .mockRejectedValueOnce(new Error('Database error')); // 第二次调用失败
 
-      // 为每个文章的插入设置结果
-      databaseMock.db.returning
-        .mockResolvedValueOnce([{ id: 1, name: 'import', slug: 'import' }]) // 标签创建
-        .mockResolvedValueOnce([mockResults[0]]) // 第一篇文章
-        .mockResolvedValueOnce([mockResults[1]]); // 第二篇文章
+        const articlesToImport = [
+          { title: 'Article 1', content: 'Content 1', author: 'testuser1', tags: [] },
+          { title: 'Article 2', content: 'Content 2', author: 'testuser1', tags: [] },
+          { title: 'Article 3', content: 'Content 3', author: 'testuser1', tags: [] },
+        ];
 
-      const typedArticlesToImport = articlesToImport as unknown as Parameters<
-        typeof service.importArticles
-      >[0];
-      await service.importArticles(typedArticlesToImport);
+        const typedArticles = articlesToImport as unknown as Parameters<
+          typeof service.importArticles
+        >[0];
 
-      // Verify that the import was successful by checking that the method completed without error
-      expect(true).toBe(true);
+        // 验证抛出错误
+        await expect(service.importArticles(typedArticles)).rejects.toThrow('Database error');
+
+        // 验证只调用了两次 create（第一次成功，第二次失败后停止）
+        expect(createSpy).toHaveBeenCalledTimes(2);
+        // 验证只有第一篇文章的 hook 被触发
+        expect(mockHookService.doAction).toHaveBeenCalledTimes(1);
+        expect(mockHookService.doAction).toHaveBeenCalledWith(
+          'article|afterCreate',
+          expect.objectContaining({ title: 'Article 1' }),
+          expect.objectContaining({ action: 'create' }),
+        );
+      });
+    });
+
+    it('should process articles with mixed tags (some with, some without)', async () => {
+      await withTestTransaction(db, async (tx) => {
+        service['db'] = tx;
+
+        const articlesToImport = [
+          Mock.articleDto({
+            title: 'With Tags',
+            content: 'Content',
+            tags: JSON.stringify(['tag1', 'tag2']),
+          }),
+          Mock.articleDto({
+            title: 'No Tags',
+            content: 'Content',
+            tags: JSON.stringify([]),
+          }),
+          Mock.articleDto({
+            title: 'Single Tag',
+            content: 'Content',
+            tags: JSON.stringify(['tag3']),
+          }),
+        ];
+
+        const typedArticles = articlesToImport as unknown as Parameters<
+          typeof service.importArticles
+        >[0];
+        await service.importArticles(typedArticles);
+
+        // 验证所有文章都被处理（3 篇文章 = 3 次钩子调用）
+        expect(mockHookService.doAction).toHaveBeenCalledTimes(3);
+
+        // 验证每次调用都是 afterCreate 钩子
+        for (let i = 0; i < 3; i++) {
+          expect(mockHookService.doAction).toHaveBeenNthCalledWith(
+            i + 1,
+            'article|afterCreate',
+            expect.any(Object),
+            expect.objectContaining({ action: 'create' }),
+          );
+        }
+
+        // 验证钩子被正确传递了文章对象（验证对象包含 id 和 tags 属性）
+        const calls = mockHookService.doAction.mock.calls;
+        expect(calls[0][1]).toHaveProperty('id');
+        expect(calls[0][1]).toHaveProperty('tags');
+        expect(calls[1][1]).toHaveProperty('id');
+        expect(calls[1][1]).toHaveProperty('tags');
+        expect(calls[2][1]).toHaveProperty('id');
+        expect(calls[2][1]).toHaveProperty('tags');
+      });
+    });
+
+    it('should verify sequential processing (not batched)', async () => {
+      await withTestTransaction(db, async (tx) => {
+        service['db'] = tx;
+
+        const articlesToImport = [
+          Mock.articleDto({ title: 'Article 1', content: 'Content 1', tags: JSON.stringify([]) }),
+          Mock.articleDto({ title: 'Article 2', content: 'Content 2', tags: JSON.stringify([]) }),
+        ];
+
+        const typedArticles = articlesToImport as unknown as Parameters<
+          typeof service.importArticles
+        >[0];
+        await service.importArticles(typedArticles);
+
+        // 验证顺序处理：第二个 hook 在第一个完成后才被调用
+        expect(mockHookService.doAction).toHaveBeenNthCalledWith(
+          1,
+          'article|afterCreate',
+          expect.objectContaining({ title: 'Article 1' }),
+          expect.objectContaining({ action: 'create' }),
+        );
+        expect(mockHookService.doAction).toHaveBeenNthCalledWith(
+          2,
+          'article|afterCreate',
+          expect.objectContaining({ title: 'Article 2' }),
+          expect.objectContaining({ action: 'create' }),
+        );
+
+        // 验证是顺序调用（通过检查调用顺序）
+        const calls = mockHookService.doAction.mock.calls;
+        expect(calls.length).toBe(2);
+        expect(calls[0][1]).toHaveProperty('title', 'Article 1');
+        expect(calls[1][1]).toHaveProperty('title', 'Article 2');
+      });
     });
   });
 
   describe('findByCategory', () => {
     it('should return articles by category with pagination', async () => {
-      const mockArticles = Mock.articles(2);
-      const countResult = [{ count: 2 }];
+      await withTestTransaction(db, async (tx) => {
+        service['db'] = tx;
 
-      // Mock for the main query
-      databaseMock.db.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            orderBy: vi.fn().mockReturnValue({
-              limit: vi.fn().mockReturnValue({
-                offset: vi.fn().mockResolvedValue(mockArticles),
-              }),
-            }),
-          }),
-        }),
+        // 先创建测试用户和分类
+        await createTestUser(1);
+        await Given.category({ name: 'tech', slug: 'tech' });
+
+        // 创建测试数据 - 批量创建2篇tech分类文章
+        await Given.articles(2, { category: 'tech' });
+
+        const result = await service.findByCategory('tech');
+
+        expect(result.items).toHaveLength(2);
+        expect(result.total).toBe(2);
+        expect(result.page).toBe(1);
+        expect(result.pageSize).toBe(10);
       });
-
-      // Mock for the count query
-      databaseMock.db.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockResolvedValue(countResult),
-        }),
-      });
-
-      const result = await service.findByCategory('tech');
-
-      expect(result.items).toHaveLength(2);
-      expect(result.total).toBe(2);
-      expect(result.page).toBe(1);
-      expect(result.pageSize).toBe(10);
     });
 
     it('should support custom pagination parameters', async () => {
-      const mockArticles = Mock.articles(5);
-      const countResult = [{ count: 15 }];
+      await withTestTransaction(db, async (tx) => {
+        service['db'] = tx;
 
-      databaseMock.db.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            orderBy: vi.fn().mockReturnValue({
-              limit: vi.fn().mockReturnValue({
-                offset: vi.fn().mockResolvedValue(mockArticles),
-              }),
-            }),
-          }),
-        }),
+        // 先创建测试用户和分类
+        await createTestUser(1);
+        await Given.category({ name: 'tech', slug: 'tech' });
+
+        // 创建 15 篇文章
+        await Given.articles(15, { category: 'tech' });
+
+        const result = await service.findByCategory('tech', { page: 2, pageSize: 5 });
+
+        expect(result.items).toHaveLength(5);
+        expect(result.total).toBe(15);
+        expect(result.page).toBe(2);
+        expect(result.pageSize).toBe(5);
+        expect(result.totalPages).toBe(3);
       });
-
-      databaseMock.db.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockResolvedValue(countResult),
-        }),
-      });
-
-      const result = await service.findByCategory('tech', { page: 2, pageSize: 5 });
-
-      expect(result.items).toHaveLength(5);
-      expect(result.total).toBe(15);
-      expect(result.page).toBe(2);
-      expect(result.pageSize).toBe(5);
-      expect(result.totalPages).toBe(3);
     });
   });
 
   describe('findOneByPathname', () => {
     it('should return article by pathname', async () => {
-      const mockArticle = Mock.article({ id: 1, pathname: 'test-article' });
+      await withTestTransaction(db, async (tx) => {
+        service['db'] = tx;
 
-      databaseMock.db.select.mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([mockArticle]),
-          }),
-        }),
+        // 创建测试数据
+        await Given.article({ id: 1, pathname: 'test-article' });
+
+        const result = await service.findOneByPathname('test-article');
+
+        expect(result.id).toBe(1);
+        expect(result.pathname).toBe('test-article');
       });
-
-      const result = await service.findOneByPathname('test-article');
-
-      expect(result.id).toBe(1);
-      expect(result.pathname).toBe('test-article');
     });
 
     it('should throw NotFoundException when article with pathname not found', async () => {
-      databaseMock.db.select.mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([]),
-          }),
-        }),
-      });
+      await withTestTransaction(db, async (tx) => {
+        service['db'] = tx;
 
-      await expect(service.findOneByPathname('non-existent')).rejects.toThrow(NotFoundException);
+        await expect(service.findOneByPathname('non-existent')).rejects.toThrow(NotFoundException);
+      });
     });
   });
 
   describe('isPrivateById', () => {
     it('should return true for private article', async () => {
-      databaseMock.db.select.mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([{ private: true }]),
-          }),
-        }),
+      await withTestTransaction(db, async (tx) => {
+        service['db'] = tx;
+
+        await Given.article({ id: 1, private: true });
+
+        const result = await service.isPrivateById(1);
+
+        expect(result).toBe(true);
       });
-
-      const result = await service.isPrivateById(1);
-
-      expect(result).toBe(true);
     });
 
     it('should return false for public article', async () => {
-      databaseMock.db.select.mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([{ private: false }]),
-          }),
-        }),
+      await withTestTransaction(db, async (tx) => {
+        service['db'] = tx;
+
+        await Given.article({ id: 1, private: false });
+
+        const result = await service.isPrivateById(1);
+
+        expect(result).toBe(false);
       });
-
-      const result = await service.isPrivateById(1);
-
-      expect(result).toBe(false);
     });
 
     it('should return null when article not found', async () => {
-      databaseMock.db.select.mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([]),
-          }),
-        }),
+      await withTestTransaction(db, async (tx) => {
+        service['db'] = tx;
+
+        const result = await service.isPrivateById(999);
+
+        expect(result).toBe(null);
       });
-
-      const result = await service.isPrivateById(999);
-
-      expect(result).toBe(null);
     });
   });
 
   describe('isPrivateByPathname', () => {
     it('should return true for private article by pathname', async () => {
-      databaseMock.db.select.mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([{ private: true }]),
-          }),
-        }),
+      await withTestTransaction(db, async (tx) => {
+        service['db'] = tx;
+
+        await Given.article({ id: 1, pathname: 'private-article', private: true });
+
+        const result = await service.isPrivateByPathname('private-article');
+
+        expect(result).toBe(true);
       });
-
-      const result = await service.isPrivateByPathname('private-article');
-
-      expect(result).toBe(true);
     });
 
     it('should return false for public article by pathname', async () => {
-      databaseMock.db.select.mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([{ private: false }]),
-          }),
-        }),
+      await withTestTransaction(db, async (tx) => {
+        service['db'] = tx;
+
+        await Given.article({ id: 1, pathname: 'public-article', private: false });
+
+        const result = await service.isPrivateByPathname('public-article');
+
+        expect(result).toBe(false);
       });
-
-      const result = await service.isPrivateByPathname('public-article');
-
-      expect(result).toBe(false);
     });
 
     it('should return null when article not found by pathname', async () => {
-      databaseMock.db.select.mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([]),
-          }),
-        }),
+      await withTestTransaction(db, async (tx) => {
+        service['db'] = tx;
+
+        const result = await service.isPrivateByPathname('non-existent');
+
+        expect(result).toBe(null);
       });
-
-      const result = await service.isPrivateByPathname('non-existent');
-
-      expect(result).toBe(null);
     });
   });
 
   describe('verifyPassword', () => {
     it('should return success for public article without password', async () => {
-      const mockArticle = Mock.article({
-        id: 1,
-        private: false,
-        password: null,
+      await withTestTransaction(db, async (tx) => {
+        service['db'] = tx;
+
+        await Given.article({
+          id: 1,
+          private: false,
+          password: null,
+        });
+
+        const result = await service.verifyPassword(1, 'any-password');
+
+        expect(result.success).toBe(true);
+        expect(result.message).toBe('Article is not private');
       });
-
-      databaseMock.db.select.mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([mockArticle]),
-          }),
-        }),
-      });
-
-      const result = await service.verifyPassword(1, 'any-password');
-
-      expect(result.success).toBe(true);
-      expect(result.message).toBe('Article is not private');
     });
 
     it('should return failure for incorrect password', async () => {
-      const mockArticle = Mock.article({
-        id: 1,
-        private: true,
-        password: '$2a$10$hashedPassword',
+      await withTestTransaction(db, async (tx) => {
+        service['db'] = tx;
+
+        const hashedPassword = await bcrypt.hash('correct-password', 10);
+        await Given.article({
+          id: 1,
+          private: true,
+          password: hashedPassword,
+        });
+
+        const result = await service.verifyPassword(1, 'wrong-password');
+
+        expect(result.success).toBe(false);
+        expect(result.message).toBe('Invalid password');
       });
-
-      databaseMock.db.select.mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([mockArticle]),
-          }),
-        }),
-      });
-
-      const result = await service.verifyPassword(1, 'wrong-password');
-
-      expect(result.success).toBe(false);
-      expect(result.message).toBe('Invalid password');
     });
   });
 
   describe('verifyPasswordByPathname', () => {
     it('should return success for public article by pathname', async () => {
-      const mockArticle = Mock.article({
-        id: 1,
-        pathname: 'public-article',
-        private: false,
-        password: null,
+      await withTestTransaction(db, async (tx) => {
+        service['db'] = tx;
+
+        await Given.article({
+          id: 1,
+          pathname: 'public-article',
+          private: false,
+          password: null,
+        });
+
+        const result = await service.verifyPasswordByPathname('public-article', 'any-password');
+
+        expect(result.success).toBe(true);
+        expect(result.message).toBe('Article is not private');
       });
-
-      databaseMock.db.select.mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([mockArticle]),
-          }),
-        }),
-      });
-
-      const result = await service.verifyPasswordByPathname('public-article', 'any-password');
-
-      expect(result.success).toBe(true);
-      expect(result.message).toBe('Article is not private');
     });
   });
 
   describe('getArticlesGroupedByCategory', () => {
     it('should return articles grouped by category', async () => {
-      const mockArticles = [
-        Mock.article({
+      await withTestTransaction(db, async (tx) => {
+        service['db'] = tx;
+
+        // 先创建测试用户和分类
+        await createTestUser(1);
+        await Given.category({ name: 'Tech', slug: 'tech' });
+        await Given.category({ name: 'Lifestyle', slug: 'lifestyle' });
+
+        // 创建测试数据
+        await Given.article({
           id: 1,
           title: 'Article 1',
           category: 'Tech',
-          private: false,
-          hidden: false,
-        }),
-        Mock.article({
+        });
+        await Given.article({
           id: 2,
           title: 'Article 2',
           category: 'Tech',
-          private: false,
-          hidden: false,
-        }),
-        Mock.article({
+        });
+        await Given.article({
           id: 3,
           title: 'Article 3',
           category: 'Lifestyle',
-          private: false,
-          hidden: false,
-        }),
-      ];
+        });
 
-      databaseMock.db.select.mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            orderBy: vi.fn().mockResolvedValue(mockArticles),
-          }),
-        }),
+        const result = await service.getArticlesGroupedByCategory();
+
+        expect(result).toHaveProperty('Tech');
+        expect(result).toHaveProperty('Lifestyle');
+        expect(result.Tech).toHaveLength(2);
+        expect(result.Lifestyle).toHaveLength(1);
       });
-
-      const result = await service.getArticlesGroupedByCategory();
-
-      expect(result).toHaveProperty('Tech');
-      expect(result).toHaveProperty('Lifestyle');
-      expect(result.Tech).toHaveLength(2);
-      expect(result.Lifestyle).toHaveLength(1);
     });
 
     it('should group articles without category as Uncategorized', async () => {
-      const mockArticles = [
-        Mock.article({
+      await withTestTransaction(db, async (tx) => {
+        service['db'] = tx;
+
+        await Given.article({
           id: 1,
           title: 'No Category',
           category: null,
-          private: false,
-          hidden: false,
-        }),
-      ];
+        });
 
-      databaseMock.db.select.mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            orderBy: vi.fn().mockResolvedValue(mockArticles),
-          }),
-        }),
+        const result = await service.getArticlesGroupedByCategory();
+
+        expect(result).toHaveProperty('Uncategorized');
+        expect(result.Uncategorized).toHaveLength(1);
       });
-
-      const result = await service.getArticlesGroupedByCategory();
-
-      expect(result).toHaveProperty('Uncategorized');
-      expect(result.Uncategorized).toHaveLength(1);
     });
 
     it('should exclude private and hidden articles', async () => {
-      databaseMock.db.select.mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            orderBy: vi.fn().mockResolvedValue([]),
-          }),
-        }),
+      await withTestTransaction(db, async (tx) => {
+        service['db'] = tx;
+
+        const result = await service.getArticlesGroupedByCategory();
+
+        expect(result).toEqual({});
       });
-
-      const result = await service.getArticlesGroupedByCategory();
-
-      expect(result).toEqual({});
     });
   });
 
   describe('getArticlesGroupedByTag', () => {
     it('should return articles grouped by tag', async () => {
-      const mockArticles = [
-        Mock.article({
+      await withTestTransaction(db, async (tx) => {
+        service['db'] = tx;
+
+        // 创建测试数据
+        await Given.article({
           id: 1,
           title: 'Article 1',
           tags: ['javascript', 'nodejs'],
-          private: false,
-          hidden: false,
-        }),
-        Mock.article({
+        });
+        await Given.article({
           id: 2,
           title: 'Article 2',
           tags: ['javascript'],
-          private: false,
-          hidden: false,
-        }),
-      ];
+        });
 
-      databaseMock.db.select.mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            orderBy: vi.fn().mockResolvedValue(mockArticles),
-          }),
-        }),
+        const result = await service.getArticlesGroupedByTag();
+
+        expect(result).toHaveProperty('javascript');
+        expect(result).toHaveProperty('nodejs');
+        expect(result.javascript).toHaveLength(2);
+        expect(result.nodejs).toHaveLength(1);
       });
-
-      const result = await service.getArticlesGroupedByTag();
-
-      expect(result).toHaveProperty('javascript');
-      expect(result).toHaveProperty('nodejs');
-      expect(result.javascript).toHaveLength(2);
-      expect(result.nodejs).toHaveLength(1);
     });
 
     it('should group articles without tags as Untagged', async () => {
-      const mockArticles = [
-        Mock.article({
+      await withTestTransaction(db, async (tx) => {
+        service['db'] = tx;
+
+        await Given.article({
           id: 1,
           title: 'No Tags',
           tags: [],
-          private: false,
-          hidden: false,
-        }),
-      ];
+        });
 
-      databaseMock.db.select.mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            orderBy: vi.fn().mockResolvedValue(mockArticles),
-          }),
-        }),
+        const result = await service.getArticlesGroupedByTag();
+
+        expect(result).toHaveProperty('Untagged');
+        expect(result.Untagged).toHaveLength(1);
       });
-
-      const result = await service.getArticlesGroupedByTag();
-
-      expect(result).toHaveProperty('Untagged');
-      expect(result.Untagged).toHaveLength(1);
     });
   });
 });

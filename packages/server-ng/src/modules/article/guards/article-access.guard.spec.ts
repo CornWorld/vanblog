@@ -46,6 +46,7 @@ describe('ArticleAccessGuard', () => {
     requestOverrides: any,
   ): { context: ExecutionContext; request: any } => {
     const mockRequest = { ...requestOverrides };
+    // ✅ 优化：使用新的扁平化 Mock API
     const mockContext = Mock.context({ request: mockRequest });
     // Ensure we return the same reference that getRequest returns
     const actualRequest = mockContext.switchToHttp().getRequest();
