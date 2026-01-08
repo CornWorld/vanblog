@@ -9,6 +9,7 @@ import {
   Query,
   ParseIntPipe,
   NotFoundException,
+  UseGuards,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery } from '@nestjs/swagger';
 import { dateStr } from '@vanblog/shared';
@@ -20,6 +21,7 @@ import {
 import { z } from 'zod';
 
 import { Perm } from '../../auth/permissions.decorator';
+import { SSRFProtectionGuard } from '../../../core/guards/ssrf-protection.guard';
 import { WebhookDto } from '../dto/webhook.dto';
 import { WebhookRegistryService } from '../services/webhook-registry.service';
 import { WebhookService } from '../services/webhook.service';
@@ -50,6 +52,7 @@ export class WebhookController {
    */
   @Post()
   @Perm('webhook', ['create'])
+  @UseGuards(SSRFProtectionGuard)
   @ApiOperation({ summary: 'Create a new webhook' })
   @ApiResponse({ status: 201, description: 'Webhook created successfully' })
   async create(@Body() raw: unknown): Promise<WebhookDto> {
@@ -206,6 +209,7 @@ export class WebhookController {
 
   @Patch(':id')
   @Perm('webhook', ['update'])
+  @UseGuards(SSRFProtectionGuard)
   @ApiOperation({ summary: 'Update a webhook' })
   @ApiParam({ name: 'id', type: Number })
   @ApiResponse({ status: 200, description: 'Webhook updated successfully' })
