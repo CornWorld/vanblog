@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, Inject } from '@nestjs/common';
 import { dayjs } from '@vanblog/shared';
-import { tags, articles } from '@vanblog/shared/drizzle';
-import { eq, sql, like, and, desc } from 'drizzle-orm';
+import { tags, articles, articleTags } from '@vanblog/shared/drizzle';
+import { eq, sql, like, and, desc, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 
 import { DATABASE_CONNECTION, type Database } from '../../database';
@@ -247,17 +247,34 @@ export class TagService {
   > {
     const tagList = await this.db.select().from(tags);
 
-    // 并发查询每个标签的分类统计
+    // 并发查询每个标签的分类统计（使用 article_tags 关联表）
     const results = await Promise.all(
       tagList.map(async (tag) => {
-        // 使用 LIKE 查询包含该标签的文章，并按分类分组统计
+        // 从 article_tags 关联表查询包含该标签的文章，并按分类分组统计
+        const articleIdsWithTag = await this.db
+          .select({ articleId: articleTags.articleId })
+          .from(articleTags)
+          .where(eq(articleTags.tagName, tag.name));
+
+        if (articleIdsWithTag.length === 0) {
+          return {
+            tag: new Tag({
+              ...tag,
+              slug: tag.slug ?? undefined,
+              createdAt: dayjs(tag.createdAt).format(),
+              updatedAt: undefined,
+            }),
+            categories: [],
+          };
+        }
+
         const categoryStats = await this.db
           .select({
             category: articles.category,
             count: sql<number>`count(*)`,
           })
           .from(articles)
-          .where(like(articles.tags, `%"${tag.name}"%`))
+          .where(inArray(articles.id, articleIdsWithTag.map((a) => a.articleId)))
           .groupBy(articles.category);
 
         return {
