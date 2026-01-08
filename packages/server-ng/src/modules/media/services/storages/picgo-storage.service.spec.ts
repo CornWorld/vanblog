@@ -1,5 +1,4 @@
 import { createHash } from 'crypto';
-import { promises as fsPromises } from 'fs';
 import { join } from 'path';
 
 import { Test, type TestingModule } from '@nestjs/testing';
@@ -16,8 +15,14 @@ vi.mock('fs', () => ({
   },
 }));
 
+// Get references to the mocked functions after mock is applied
+import { promises as fsPromises } from 'fs';
+
 vi.mock('crypto', () => ({
-  createHash: vi.fn(),
+  createHash: vi.fn(() => ({
+    update: vi.fn().mockReturnThis(),
+    digest: vi.fn().mockReturnValue('abcd1234abcd1234'),
+  })),
 }));
 
 vi.mock('picgo', () => {
@@ -127,24 +132,25 @@ describe('PicgoStorageService', () => {
   });
 
   describe('upload', () => {
+    const mockHash = {
+      update: vi.fn().mockReturnThis(),
+      digest: vi.fn().mockReturnValue('abcd1234abcd1234'),
+    };
+
     beforeEach(() => {
       // Mock crypto hash
-      const mockHash = {
-        update: vi.fn().mockReturnThis(),
-        digest: vi.fn().mockReturnValue('abcd1234abcd1234'),
-      };
       vi.mocked(createHash).mockReturnValue(mockHash as any);
-
-      // Mock fs operations
-      vi.mocked(fsPromises.mkdir).mockResolvedValue(undefined);
-      vi.mocked(fsPromises.writeFile).mockResolvedValue(undefined);
-      vi.mocked(fsPromises.unlink).mockResolvedValue(undefined);
     });
 
     it('should upload file successfully', async () => {
       const filename = 'test.jpg';
       const expectedTmpFilename = '1640995200000-abcd1234.jpg';
       const expectedUrl = 'https://example.com/uploaded-image.jpg';
+
+      // Mock fs operations
+      vi.mocked(fsPromises.mkdir).mockResolvedValue(undefined);
+      vi.mocked(fsPromises.writeFile).mockResolvedValue(undefined);
+      vi.mocked(fsPromises.unlink).mockResolvedValue(undefined);
 
       mockPicGo.upload.mockResolvedValue([
         {
@@ -179,6 +185,11 @@ describe('PicgoStorageService', () => {
       const filename = 'test.jpg';
       const uploadError = new Error('Upload failed');
 
+      // Mock fs operations
+      vi.mocked(fsPromises.mkdir).mockResolvedValue(undefined);
+      vi.mocked(fsPromises.writeFile).mockResolvedValue(undefined);
+      vi.mocked(fsPromises.unlink).mockResolvedValue(undefined);
+
       mockPicGo.upload.mockRejectedValue(uploadError);
 
       await expect(service.upload(mockFile, filename)).rejects.toThrow('PicGo upload failed');
@@ -186,6 +197,11 @@ describe('PicgoStorageService', () => {
 
     it('should handle empty upload result', async () => {
       const filename = 'test.jpg';
+
+      // Mock fs operations
+      vi.mocked(fsPromises.mkdir).mockResolvedValue(undefined);
+      vi.mocked(fsPromises.writeFile).mockResolvedValue(undefined);
+      vi.mocked(fsPromises.unlink).mockResolvedValue(undefined);
 
       mockPicGo.upload.mockResolvedValue([]);
 
@@ -196,6 +212,11 @@ describe('PicgoStorageService', () => {
       const filename = 'test';
       const expectedTmpFilename = '1640995200000-abcd1234.test';
       const expectedUrl = 'https://example.com/uploaded-image';
+
+      // Mock fs operations
+      vi.mocked(fsPromises.mkdir).mockResolvedValue(undefined);
+      vi.mocked(fsPromises.writeFile).mockResolvedValue(undefined);
+      vi.mocked(fsPromises.unlink).mockResolvedValue(undefined);
 
       mockPicGo.upload.mockResolvedValue([
         {

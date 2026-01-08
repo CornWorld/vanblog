@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
-export const MediaProcessingSettingsSchema = z.object({
+// Base schema (for type inference and transformations)
+const MediaProcessingSettingsBaseSchema = z.object({
   compress: z
     .object({
       enabled: z.boolean().default(false),
@@ -36,12 +37,30 @@ export const MediaProcessingSettingsSchema = z.object({
     .default({ enabled: false, position: 'southeast', opacity: 0.5 }),
 });
 
-export type MediaProcessingSettings = z.infer<typeof MediaProcessingSettingsSchema>;
+// Schema for database reads (jsonb() column type already handles deserialization)
+export const MediaProcessingSettingsSchema = MediaProcessingSettingsBaseSchema;
 
-export type MediaProcessingSettingsDto = z.infer<typeof MediaProcessingSettingsSchema>;
+export type MediaProcessingSettings = z.infer<typeof MediaProcessingSettingsBaseSchema>;
+
+export type MediaProcessingSettingsDto = z.infer<typeof MediaProcessingSettingsBaseSchema>;
 
 export const MEDIA_PROCESSING_CONFIG_KEY = 'media.processing';
 
 // A partial schema for request-time overrides. Useful for multipart/JSON override parsing.
-export const MediaProcessingOverrideSchema = MediaProcessingSettingsSchema.partial();
+export const MediaProcessingOverrideSchema = MediaProcessingSettingsBaseSchema.partial();
 export type MediaProcessingOverride = z.infer<typeof MediaProcessingOverrideSchema>;
+
+// Helper schema to parse JSON strings (for multipart form data)
+export const MediaProcessingOverrideFromString = z
+  .union([z.string(), z.unknown()])
+  .transform((val) => {
+    if (typeof val === 'string') {
+      try {
+        return JSON.parse(val);
+      } catch {
+        return null;
+      }
+    }
+    return val;
+  })
+  .pipe(MediaProcessingOverrideSchema.nullable());

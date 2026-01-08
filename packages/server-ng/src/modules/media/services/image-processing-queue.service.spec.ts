@@ -122,7 +122,7 @@ describe('ImageProcessingQueueService', () => {
         fileId: 123,
         status: 'pending',
         priority: 0,
-        processingConfig: '{"quality":80}',
+        processingConfig: { quality: 80 }, // jsonb() column returns object
         originalBuffer: 'base64string',
         processedBuffer: null,
         errorMessage: null,

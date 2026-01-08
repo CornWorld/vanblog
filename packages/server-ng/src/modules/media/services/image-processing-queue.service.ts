@@ -6,10 +6,35 @@ import {
   type ImageProcessingQueueSelect,
 } from '@vanblog/shared/drizzle';
 import { eq, and, lt, desc } from 'drizzle-orm';
+import { z } from 'zod';
 
 import { DATABASE_CONNECTION, type Database } from '../../../database';
 
 import { ImageProcessingService, type ImageProcessingOptions } from './image-processing.service';
+
+// Define schemas for JSON validation (jsonb() column type already handles deserialization)
+const ImageProcessingOptionsSchema = z.object({
+  watermark: z
+    .object({
+      text: z.string(),
+      position: z.string().optional(),
+      opacity: z.number().optional(),
+    })
+    .optional(),
+  compress: z
+    .object({
+      quality: z.number().optional(),
+      maxWidth: z.number().optional(),
+      maxHeight: z.number().optional(),
+      format: z.string().optional(),
+      progressive: z.boolean().optional(),
+      optimizeForWeb: z.boolean().optional(),
+      removeMetadata: z.boolean().optional(),
+      fit: z.string().optional(),
+    })
+    .optional(),
+  quality: z.number().optional(),
+});
 
 export interface QueueTask {
   id: number;
@@ -142,12 +167,23 @@ export class ImageProcessingQueueService implements OnModuleInit, OnModuleDestro
         })
         .where(eq(imageProcessingQueue.id, task.id));
 
-      // 处理图片
+      // 处理图片 - 使用 Zod Schema 安全解析配置
       const originalBuffer = Buffer.from(task.originalBuffer ?? '', 'base64');
-      const processingConfig: ImageProcessingOptions =
-        typeof task.processingConfig === 'string'
-          ? (JSON.parse(task.processingConfig) as ImageProcessingOptions)
-          : { quality: 80 };
+      const defaultConfig: ImageProcessingOptions = { quality: 80 };
+
+      // WORKAROUND: jsonb() fromDriver() may not be called in SELECT
+      // Manually parse if it's a string
+      let configValue = task.processingConfig;
+      if (typeof configValue === 'string') {
+        try {
+          configValue = JSON.parse(configValue);
+        } catch {
+          configValue = null;
+        }
+      }
+
+      const parsed = ImageProcessingOptionsSchema.safeParse(configValue);
+      const processingConfig: ImageProcessingOptions = parsed.success ? parsed.data : defaultConfig;
 
       const result = await this.imageProcessingService.compressImage(
         originalBuffer,
@@ -207,15 +243,26 @@ export class ImageProcessingQueueService implements OnModuleInit, OnModuleDestro
   }
 
   private mapToQueueTask(task: ImageProcessingQueueSelect): QueueTask {
+    // WORKAROUND: jsonb() fromDriver() not called in .returning()
+    // Manually parse if it's a string
+    let configValue = task.processingConfig;
+    if (typeof configValue === 'string') {
+      try {
+        configValue = JSON.parse(configValue);
+      } catch {
+        configValue = null;
+      }
+    }
+
+    // Use Zod Schema to safely parse processingConfig
+    const parsed = ImageProcessingOptionsSchema.safeParse(configValue);
+
     return {
       id: task.id,
       fileId: task.fileId,
       status: task.status,
       priority: task.priority,
-      processingConfig:
-        typeof task.processingConfig === 'string'
-          ? (JSON.parse(task.processingConfig) as ImageProcessingOptions)
-          : null,
+      processingConfig: parsed.success ? parsed.data : null,
       originalBuffer: task.originalBuffer,
       processedBuffer: task.processedBuffer,
       errorMessage: task.errorMessage,

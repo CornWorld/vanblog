@@ -13,6 +13,7 @@ import {
   UploadedFiles,
   ParseIntPipe,
   BadRequestException,
+  HttpCode,
 } from '@nestjs/common';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiOperation, ApiResponse, ApiConsumes, ApiBody } from '@nestjs/swagger';
@@ -21,7 +22,7 @@ import { memoryStorage } from 'multer';
 
 import { normalizeMediaProcessingOverride } from '../../shared/contracts';
 import { Perm } from '../auth/permissions.decorator';
-import { SettingRegistryService } from '../setting/services/setting-registry.service';
+import { SettingCoreService } from '../setting/services/setting-core.service';
 
 import { BatchDeleteSchema } from './dto/batch-delete.dto';
 import {
@@ -34,6 +35,7 @@ import {
   MediaProcessingSettings,
   MEDIA_PROCESSING_CONFIG_KEY,
   MediaProcessingSettingsSchema,
+  MediaProcessingOverrideFromString,
 } from './dto/media-settings.dto';
 import { StorageConfigResponseDto, UpdateStorageConfigSchema } from './dto/storage-config.dto';
 import { UploadFileSchema, UploadFile } from './dto/upload-file.dto';
@@ -59,33 +61,33 @@ export class MediaController {
     private readonly imageProcessingService: ImageProcessingService,
     private readonly imageProcessingQueueService: ImageProcessingQueueService,
     private readonly storageConfigService: StorageConfigService,
-    private readonly settingRegistry: SettingRegistryService,
+    private readonly settingCore: SettingCoreService,
   ) {}
 
   private async getMediaProcessingConfig(): Promise<MediaProcessingSettings> {
-    const cfg = await this.settingRegistry.getConfig<MediaProcessingSettings>(
+    // Use SettingCore with Schema - jsonb() column handles JSON deserialization
+    const fallback = MediaProcessingSettingsSchema.parse({});
+    const cfg = await this.settingCore.getConfig<MediaProcessingSettings>(
       MEDIA_PROCESSING_CONFIG_KEY,
+      fallback,
+      MediaProcessingSettingsSchema,
     );
-    // getConfig will auto-upsert default when registered; but keep fallback to schema default for safety
-    return cfg ?? MediaProcessingSettingsSchema.parse({});
+
+    return cfg ?? fallback;
   }
 
-  // Merge request-time override into global config, supporting stringified JSON for multipart
+  // Merge request-time override into global config, using Zod to parse JSON strings
   private mergeConfigOverride(
     base: MediaProcessingSettings,
     override?: unknown,
   ): MediaProcessingSettings {
     if (override == null) return base;
-    let ov: unknown = override;
-    if (typeof override === 'string') {
-      try {
-        ov = JSON.parse(override);
-      } catch {
-        // ignore invalid JSON and treat as no override
-        return base;
-      }
-    }
-    const normalizedOverride = normalizeMediaProcessingOverride(ov);
+
+    // Use Zod schema to parse (handles JSON strings automatically)
+    const parsed = MediaProcessingOverrideFromString.parse(override);
+    if (!parsed) return base;
+
+    const normalizedOverride = normalizeMediaProcessingOverride(parsed);
     return {
       compress: { ...base.compress, ...normalizedOverride.compress },
       watermark: { ...base.watermark, ...normalizedOverride.watermark },
@@ -293,6 +295,7 @@ export class MediaController {
    * @returns 批量删除操作结果，包含删除数量
    */
   @Post('batch-delete')
+  @HttpCode(200)
   @Perm('media', ['delete'])
   @ApiOperation({ summary: '批量删除文件' })
   @ApiResponse({ status: 200, description: '删除成功' })

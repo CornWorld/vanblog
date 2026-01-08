@@ -3,7 +3,7 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, beforeEach, afterEach, expect, vi } from 'vitest';
 
 import { Mock } from '@test/mock';
-import { SettingRegistryService } from '../setting/services/setting-registry.service';
+import { SettingCoreService } from '../setting/services/setting-core.service';
 
 import { MediaProcessingSettingsSchema } from './dto/media-settings.dto';
 import { MediaController } from './media.controller';
@@ -18,7 +18,7 @@ describe('MediaController', () => {
   let mockImageProcessingService: any;
   let mockStorageConfigService: any;
   let mockImageProcessingQueueService: any;
-  let mockSettingRegistryService: any;
+  let mockSettingCore: any;
 
   beforeEach(async () => {
     // 使用 MockUtils 创建 Mock 服务（减少 34 行手动配置）
@@ -26,7 +26,7 @@ describe('MediaController', () => {
     mockImageProcessingService = Mock.imageProcessing();
     mockStorageConfigService = Mock.storageConfig();
     mockImageProcessingQueueService = Mock.imageProcessingQueue();
-    mockSettingRegistryService = {
+    mockSettingCore = {
       getConfig: vi.fn().mockResolvedValue(MediaProcessingSettingsSchema.parse({})),
     };
 
@@ -37,7 +37,7 @@ describe('MediaController', () => {
         { provide: ImageProcessingService, useValue: mockImageProcessingService },
         { provide: ImageProcessingQueueService, useValue: mockImageProcessingQueueService },
         { provide: StorageConfigService, useValue: mockStorageConfigService },
-        { provide: SettingRegistryService, useValue: mockSettingRegistryService },
+        { provide: SettingCoreService, useValue: mockSettingCore },
       ],
     }).compile();
 
@@ -124,7 +124,7 @@ describe('MediaController', () => {
   describe('uploadFromClipboard', () => {
     it('should parse data url, compress image if needed and upload via service', async () => {
       // override default compress.enabled=false to true for this test
-      mockSettingRegistryService.getConfig.mockResolvedValueOnce(
+      mockSettingCore.getConfig.mockResolvedValueOnce(
         MediaProcessingSettingsSchema.parse({ compress: { enabled: true } }),
       );
       const pngData = Buffer.from('test').toString('base64');
@@ -287,7 +287,7 @@ describe('MediaController', () => {
     });
 
     it('should skip all processing for image/svg+xml even if compression enabled', async () => {
-      mockSettingRegistryService.getConfig.mockResolvedValueOnce(
+      mockSettingCore.getConfig.mockResolvedValueOnce(
         MediaProcessingSettingsSchema.parse({ compress: { enabled: true } }),
       );
       const svgBase64 = Buffer.from('<svg/>').toString('base64');
@@ -465,7 +465,7 @@ describe('MediaController', () => {
       const mockUploadedFile = { id: 1, filename: 'test.jpg', path: '/uploads/test.jpg' };
       const mockTask = { id: 123, status: 'pending' };
 
-      mockSettingRegistryService.getConfig.mockResolvedValueOnce(
+      mockSettingCore.getConfig.mockResolvedValueOnce(
         MediaProcessingSettingsSchema.parse({
           compress: { enabled: true },
           watermark: { enabled: true, text: 'Test' },
@@ -507,7 +507,7 @@ describe('MediaController', () => {
         async: true,
       } as any;
 
-      mockSettingRegistryService.getConfig.mockResolvedValueOnce(
+      mockSettingCore.getConfig.mockResolvedValueOnce(
         MediaProcessingSettingsSchema.parse({
           compress: { enabled: false },
           watermark: { enabled: false },
@@ -680,7 +680,7 @@ describe('chunked upload', () => {
   let mockImageProcessingService: any;
   let mockStorageConfigService: any;
   let mockImageProcessingQueueService: any;
-  let mockSettingRegistryService: any;
+  let mockSettingCore: any;
 
   beforeEach(async () => {
     // 使用 MockUtils 创建 Mock 服务
@@ -688,7 +688,7 @@ describe('chunked upload', () => {
     mockImageProcessingService = Mock.imageProcessing();
     mockStorageConfigService = Mock.storageConfig();
     mockImageProcessingQueueService = Mock.imageProcessingQueue();
-    mockSettingRegistryService = {
+    mockSettingCore = {
       getConfig: vi.fn().mockResolvedValue(MediaProcessingSettingsSchema.parse({})),
     };
 
@@ -698,7 +698,7 @@ describe('chunked upload', () => {
         { provide: MediaService, useValue: mockMediaService },
         { provide: ImageProcessingService, useValue: mockImageProcessingService },
         { provide: StorageConfigService, useValue: mockStorageConfigService },
-        { provide: SettingRegistryService, useValue: mockSettingRegistryService },
+        { provide: SettingCoreService, useValue: mockSettingCore },
         { provide: ImageProcessingQueueService, useValue: mockImageProcessingQueueService },
       ],
     }).compile();
