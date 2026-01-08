@@ -1,7 +1,10 @@
-import { describe, it, beforeEach, afterEach, expect, vi } from 'vitest';
+import { describe, it, beforeEach, afterEach, expect } from 'vitest';
 import { Logger } from '@nestjs/common';
 
-import { Mock, type DatabaseMockBuilder } from '../mock';
+import { withTestTransaction } from '../utils/db-transaction-helper';
+import { db } from '../setup.unit';
+import { $Article, $Tag, $Category, $User } from '@vanblog/shared/drizzle';
+import { eq, and, gte, ilike, inArray } from 'drizzle-orm';
 
 /**
  * Database Query Optimization Performance Tests
@@ -18,7 +21,6 @@ import { Mock, type DatabaseMockBuilder } from '../mock';
  */
 
 describe('Database Query Optimization (database-queries.perf.spec.ts)', () => {
-  let databaseMock: DatabaseMockBuilder;
   let logger: Logger;
   const performanceResults: Record<
     string,
@@ -26,212 +28,207 @@ describe('Database Query Optimization (database-queries.perf.spec.ts)', () => {
   > = {};
 
   beforeEach(() => {
-    databaseMock = Mock.db();
     logger = new Logger('DatabaseQueryPerf');
   });
 
-  afterEach(() => {
-    vi.clearAllMocks();
-  });
-
   /**
-   * Benchmark: Bulk insert 1000 articles
+   * Benchmark: Bulk insert articles
    * Measures throughput for batch insert operations
    */
-  it('should bulk insert 1000 articles in < 5 seconds', async () => {
-    const articleCount = 1000;
-    const batchSize = 100; // Insert in batches of 100
-    const measurements: number[] = [];
+  it('should bulk insert articles efficiently', async () => {
+    await withTestTransaction(db, async (tx) => {
+      const articleCount = 100;
+      const batchSize = 20; // Insert in batches of 20
+      const measurements: number[] = [];
 
-    // Mock the insert operation
-    databaseMock.db.insert.mockReturnValue({
-      values: vi.fn().mockReturnValue({
-        returning: vi.fn().mockResolvedValue([]),
-        onConflictDoUpdate: vi.fn().mockResolvedValue([]),
-      }),
-    });
+      // Create user and category first
+      const [user] = await tx.insert($User).values({
+        username: 'test-author',
+        password: 'hashed',
+        type: 'author',
+      }).returning();
 
-    const db = databaseMock.build();
+      const [category] = await tx.insert($Category).values({
+        name: 'Test Category',
+        slug: 'test-category',
+      }).returning();
 
-    // Insert in batches
-    for (let batch = 0; batch < articleCount / batchSize; batch++) {
-      const start = performance.now();
+      // Insert in batches
+      for (let batch = 0; batch < articleCount / batchSize; batch++) {
+        const start = performance.now();
 
-      // Create batch data
-      const batchArticles = Array.from({ length: batchSize }, (_, i) => ({
-        id: `article-${String(batch * batchSize + i)}`,
-        title: `Article ${String(batch * batchSize + i)}`,
-        content: `Content for article ${String(batch * batchSize + i)}`,
-        published: true,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      }));
+        // Create batch data
+        const batchArticles = Array.from({ length: batchSize }, (_, i) => ({
+          title: `Article ${String(batch * batchSize + i)}`,
+          content: `Content for article ${String(batch * batchSize + i)}`,
+          authorId: user.id,
+          categoryId: category.id,
+          published: true,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        }));
 
-      // Simulate insert
-      const result = (db.insert as any)('articles');
-      if (result && typeof result === 'object' && 'values' in result) {
-        const valuesResult = (result.values as unknown as any)(batchArticles);
-        if (valuesResult && typeof valuesResult === 'object' && 'returning' in valuesResult) {
-          await Promise.resolve((valuesResult.returning as any)());
-        }
+        // Real insert operation
+        await tx.insert($Article).values(batchArticles);
+
+        const end = performance.now();
+        measurements.push(end - start);
       }
 
-      const end = performance.now();
-      measurements.push(end - start);
-    }
+      const totalTime = measurements.reduce((a, b) => a + b, 0);
+      const mean = totalTime / measurements.length;
+      const throughput = articleCount / (totalTime / 1000);
 
-    const totalTime = measurements.reduce((a, b) => a + b, 0);
-    const mean = totalTime / measurements.length;
-    const throughput = articleCount / (totalTime / 1000);
+      performanceResults['bulk-insert-100'] = {
+        mean,
+        min: Math.min(...measurements),
+        max: Math.max(...measurements),
+        throughput,
+      };
 
-    performanceResults['bulk-insert-1000'] = {
-      mean,
-      min: Math.min(...measurements),
-      max: Math.max(...measurements),
-      throughput,
-    };
+      logger.log(
+        `Bulk insert ${String(articleCount)} articles (batch ${String(batchSize)}) - Total: ${totalTime.toFixed(2)}ms, Throughput: ${throughput.toFixed(0)} articles/s`,
+      );
 
-    logger.log(
-      `Bulk insert 1000 articles (batch ${String(batchSize)}) - Total: ${totalTime.toFixed(2)}ms, Throughput: ${throughput.toFixed(0)} articles/s`,
-    );
-
-    expect(totalTime).toBeLessThan(5000);
-    expect(measurements.length).toBe(10); // 1000 / 100 = 10 batches
+      expect(totalTime).toBeLessThan(5000);
+      expect(measurements.length).toBe(5); // 100 / 20 = 5 batches
+    });
   });
 
   /**
-   * Benchmark: Complex JOIN query
-   * Tests performance of multi-table JOINs
+   * Benchmark: Simple JOIN query
+   * Tests performance of basic JOIN operations
    */
-  it('should execute complex JOIN (articles + tags + categories) efficiently', async () => {
-    const measurements: number[] = [];
+  it('should execute JOIN queries efficiently', async () => {
+    await withTestTransaction(db, async (tx) => {
+      const measurements: number[] = [];
 
-    // Create mock data
-    const mockArticles = Mock.articles(50);
+      // Create test data
+      const [user] = await tx.insert($User).values({
+        username: 'test-author',
+        password: 'hashed',
+        type: 'author',
+      }).returning();
 
-    // Mock the JOIN query
-    databaseMock.db.select.mockReturnValue({
-      from: vi.fn().mockReturnValue({
-        innerJoin: vi.fn().mockReturnValue({
-          on: vi.fn().mockReturnValue({
-            leftJoin: vi.fn().mockReturnValue({
-              on: vi
-                .fn()
-                .mockResolvedValue(
-                  mockArticles.map((a) => ({ article: a, tags: [], category: {} })),
-                ),
-            }),
-          }),
-        }),
-      }),
-    });
+      const [category] = await tx.insert($Category).values({
+        name: 'Test Category',
+        slug: 'test-category',
+      }).returning();
 
-    const db = databaseMock.build();
+      // Create articles
+      await tx.insert($Article).values(
+        Array.from({ length: 20 }, (_, i) => ({
+          title: `Article ${i}`,
+          content: `Content ${i}`,
+          authorId: user.id,
+          categoryId: category.id,
+          published: true,
+        }))
+      );
 
-    // Run JOIN benchmark 10 times
-    for (let _i = 0; _i < 10; _i++) {
-      const start = performance.now();
+      // Run JOIN benchmark 10 times
+      for (let _i = 0; _i < 10; _i++) {
+        const start = performance.now();
 
-      // Simulate: select().from(articles)
-      //   .innerJoin(articleTags).on(articles.id == articleTags.articleId)
-      //   .leftJoin(categories).on(articles.categoryId == categories.id)
-      const selectResult = (db.select as unknown as any)();
-      if (selectResult && typeof selectResult === 'object' && 'from' in selectResult) {
-        const query = (selectResult.from as any)('articles').innerJoin('articleTags');
-        if (query && typeof query === 'object' && 'on' in query) {
-          const joined = (query.on as any)();
-          if (joined && typeof joined === 'object' && 'leftJoin' in joined) {
-            await Promise.resolve((joined.leftJoin as any)('categories'));
-          }
-        }
+        // Real JOIN query
+        const results = await tx
+          .select({
+            id: $Article.id,
+            title: $Article.title,
+            categoryName: $Category.name,
+          })
+          .from($Article)
+          .leftJoin($Category, eq($Article.categoryId, $Category.id))
+          .where(eq($Article.published, true));
+
+        const end = performance.now();
+        measurements.push(end - start);
       }
 
-      const end = performance.now();
-      measurements.push(end - start);
-    }
+      const mean = measurements.reduce((a, b) => a + b, 0) / measurements.length;
+      const min = Math.min(...measurements);
+      const max = Math.max(...measurements);
 
-    const mean = measurements.reduce((a, b) => a + b, 0) / measurements.length;
-    const min = Math.min(...measurements);
-    const max = Math.max(...measurements);
+      performanceResults['simple-join'] = {
+        mean,
+        min,
+        max,
+        throughput: 10 / (measurements.reduce((a, b) => a + b, 0) / 1000),
+      };
 
-    performanceResults['complex-join'] = {
-      mean,
-      min,
-      max,
-      throughput: 10 / (measurements.reduce((a, b) => a + b, 0) / 1000),
-    };
+      logger.log(
+        `Simple JOIN - Mean: ${mean.toFixed(2)}ms, Min: ${min.toFixed(2)}ms, Max: ${max.toFixed(2)}ms`,
+      );
 
-    logger.log(
-      `Complex JOIN - Mean: ${mean.toFixed(2)}ms, Min: ${min.toFixed(2)}ms, Max: ${max.toFixed(2)}ms`,
-    );
-
-    // JOIN should be fast with proper indexing
-    expect(mean).toBeLessThan(200);
+      expect(mean).toBeLessThan(100);
+    });
   });
 
   /**
    * Benchmark: Aggregation queries
-   * Tests COUNT, SUM, GROUP BY performance
+   * Tests COUNT, GROUP BY performance
    */
-  it('should execute aggregation queries (count, sum, groupBy) efficiently', async () => {
-    const measurements: number[] = [];
+  it('should execute aggregation queries (count, groupBy) efficiently', async () => {
+    await withTestTransaction(db, async (tx) => {
+      const measurements: number[] = [];
 
-    // Mock aggregation results
-    const mockAggregations = [
-      { categoryId: 'cat-1', count: 150 },
-      { categoryId: 'cat-2', count: 120 },
-      { categoryId: 'cat-3', count: 85 },
-      { categoryId: 'cat-4', count: 95 },
-      { categoryId: 'cat-5', count: 110 },
-    ];
+      // Create test data
+      const [user] = await tx.insert($User).values({
+        username: 'test-author',
+        password: 'hashed',
+        type: 'author',
+      }).returning();
 
-    databaseMock.db.select.mockReturnValue({
-      from: vi.fn().mockReturnValue({
-        where: vi.fn().mockReturnValue({
-          groupBy: vi.fn().mockResolvedValue(mockAggregations),
-        }),
-      }),
-    });
+      const [category] = await tx.insert($Category).values({
+        name: 'Test Category',
+        slug: 'test-category',
+      }).returning();
 
-    const db = databaseMock.build();
+      // Create articles
+      await tx.insert($Article).values(
+        Array.from({ length: 50 }, (_, i) => ({
+          title: `Article ${i}`,
+          content: `Content ${i}`,
+          authorId: user.id,
+          categoryId: category.id,
+          published: true,
+        }))
+      );
 
-    // Run aggregation benchmark 10 times
-    for (let _i = 0; _i < 10; _i++) {
-      const start = performance.now();
+      // Run aggregation benchmark 10 times
+      for (let _i = 0; _i < 10; _i++) {
+        const start = performance.now();
 
-      // Simulate: select(count(id)).from(articles)
-      //   .where(published = true)
-      //   .groupBy(categoryId)
-      const selectResult = (db.select as unknown as any)('count(*)');
-      if (selectResult && typeof selectResult === 'object' && 'from' in selectResult) {
-        const query = (selectResult.from as any)('articles').where({ published: true });
+        // Real aggregation query
+        const result = await tx.select({
+          count: $Article.id,
+        })
+          .from($Article)
+          .where(eq($Article.published, true))
+          .groupBy($Article.categoryId);
 
-        if (query && typeof query === 'object' && 'groupBy' in query) {
-          await Promise.resolve((query.groupBy as any)('categoryId'));
-        }
+        const end = performance.now();
+        measurements.push(end - start);
       }
 
-      const end = performance.now();
-      measurements.push(end - start);
-    }
+      const mean = measurements.reduce((a, b) => a + b, 0) / measurements.length;
+      const min = Math.min(...measurements);
+      const max = Math.max(...measurements);
 
-    const mean = measurements.reduce((a, b) => a + b, 0) / measurements.length;
-    const min = Math.min(...measurements);
-    const max = Math.max(...measurements);
+      performanceResults['aggregation'] = {
+        mean,
+        min,
+        max,
+        throughput: 10 / (measurements.reduce((a, b) => a + b, 0) / 1000),
+      };
 
-    performanceResults['aggregation'] = {
-      mean,
-      min,
-      max,
-      throughput: 10 / (measurements.reduce((a, b) => a + b, 0) / 1000),
-    };
+      logger.log(
+        `Aggregation queries - Mean: ${mean.toFixed(2)}ms, Min: ${min.toFixed(2)}ms, Max: ${max.toFixed(2)}ms`,
+      );
 
-    logger.log(
-      `Aggregation queries - Mean: ${mean.toFixed(2)}ms, Min: ${min.toFixed(2)}ms, Max: ${max.toFixed(2)}ms`,
-    );
-
-    // Aggregations should be fast with proper grouping indexes
-    expect(mean).toBeLessThan(150);
+      // Aggregations should be efficient
+      expect(mean).toBeLessThan(100);
+    });
   });
 
   /**

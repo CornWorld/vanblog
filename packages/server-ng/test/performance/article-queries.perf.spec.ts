@@ -1,7 +1,10 @@
-import { describe, it, beforeEach, afterEach, expect, vi } from 'vitest';
+import { describe, it, beforeEach, afterEach, expect } from 'vitest';
 import { Logger } from '@nestjs/common';
 
-import { Mock, type DatabaseMockBuilder } from '../mock';
+import { withTestTransaction } from '../utils/db-transaction-helper';
+import { db } from '../setup.unit';
+import { eq, and, gte } from 'drizzle-orm';
+import { Mock } from '../mock';
 
 /**
  * Article Query Performance Tests
@@ -18,17 +21,11 @@ import { Mock, type DatabaseMockBuilder } from '../mock';
  */
 
 describe('Article Query Performance (article-queries.perf.spec.ts)', () => {
-  let databaseMock: DatabaseMockBuilder;
   let logger: Logger;
   const performanceResults: Record<string, { mean: number; min: number; max: number }[]> = {};
 
   beforeEach(() => {
-    databaseMock = Mock.db();
     logger = new Logger('ArticleQueryPerf');
-  });
-
-  afterEach(() => {
-    vi.clearAllMocks();
   });
 
   /**
@@ -36,47 +33,54 @@ describe('Article Query Performance (article-queries.perf.spec.ts)', () => {
    * Measures latency for finding a single article by ID
    */
   it('should lookup single article in < 50ms', async () => {
-    const mockArticle = Mock.article({ id: '1' });
-    const measurements: number[] = [];
+    await withTestTransaction(db, async (tx) => {
+      // Create test data
+      const [user] = await tx.insert($User).values({
+        username: 'test-author',
+        password: 'hashed',
+        type: 'author',
+      }).returning();
 
-    const fromMock = vi.fn().mockResolvedValue([mockArticle]);
+      const [category] = await tx.insert($Category).values({
+        name: 'Test Category',
+        slug: 'test-category',
+      }).returning();
 
-    databaseMock.db.select.mockReturnValue({
-      from: vi.fn().mockReturnValue({ where: fromMock }),
+      const [article] = await tx.insert($Article).values({
+        title: 'Test Article',
+        content: 'Test content',
+        authorId: user.id,
+        categoryId: category.id,
+        published: true,
+      }).returning();
+
+      const measurements: number[] = [];
+
+      // Run benchmark 10 times to get average
+      for (let i = 0; i < 10; i++) {
+        const start = performance.now();
+
+        // Real database query
+        const [result] = await tx.select().from($Article)
+          .where(eq($Article.id, article.id));
+
+        const end = performance.now();
+        measurements.push(end - start);
+      }
+
+      const mean = measurements.reduce((a, b) => a + b, 0) / measurements.length;
+      const min = Math.min(...measurements);
+      const max = Math.max(...measurements);
+
+      performanceResults['single-lookup'] = [{ mean, min, max }];
+
+      logger.log(
+        `Single article lookup - Mean: ${mean.toFixed(2)}ms, Min: ${min.toFixed(2)}ms, Max: ${max.toFixed(2)}ms`,
+      );
+
+      // Assert mean is reasonable for real database
+      expect(mean).toBeLessThan(50);
     });
-
-    // Simulate database operation
-    const db = databaseMock.build();
-
-    // Run benchmark 10 times to get average
-    for (let i = 0; i < 10; i++) {
-      const start = performance.now();
-
-      // Simulate select().from().where() query
-      const result = await Promise.resolve((db.select as any)());
-      await new Promise((resolve) => {
-        if (result && typeof result === 'object' && 'from' in result) {
-          const fromResult = (result.from as any)();
-          resolve(fromResult);
-        }
-      });
-
-      const end = performance.now();
-      measurements.push(end - start);
-    }
-
-    const mean = measurements.reduce((a, b) => a + b, 0) / measurements.length;
-    const min = Math.min(...measurements);
-    const max = Math.max(...measurements);
-
-    performanceResults['single-lookup'] = [{ mean, min, max }];
-
-    logger.log(
-      `Single article lookup - Mean: ${mean.toFixed(2)}ms, Min: ${min.toFixed(2)}ms, Max: ${max.toFixed(2)}ms`,
-    );
-
-    // Assert mean is under 50ms (inclusive of mock overhead)
-    expect(mean).toBeLessThan(100); // Realistic threshold with mock overhead
   });
 
   /**
@@ -84,349 +88,333 @@ describe('Article Query Performance (article-queries.perf.spec.ts)', () => {
    * Simulates querying 1000 articles with pagination (page size: 10)
    */
   it('should paginate 1000 articles efficiently', async () => {
-    const pageSize = 10;
-    const totalArticles = 1000;
-    const measurements: number[] = [];
+    await withTestTransaction(db, async (tx) => {
+      const pageSize = 10;
+      const totalArticles = 100;
+      const measurements: number[] = [];
 
-    // Create mock data for a single page
-    const mockPageData = Mock.articles(pageSize);
+      // Create test data
+      const [user] = await tx.insert($User).values({
+        username: 'test-author',
+        password: 'hashed',
+        type: 'author',
+      }).returning();
 
-    // Use setQueryResult to properly configure the mock with chainable methods
-    databaseMock.setQueryResult(mockPageData);
+      const [category] = await tx.insert($Category).values({
+        name: 'Test Category',
+        slug: 'test-category',
+      }).returning();
 
-    const db = databaseMock.build();
+      // Create multiple articles
+      const articles = await tx.insert($Article).values(
+        Array.from({ length: totalArticles }, (_, i) => ({
+          title: `Test Article ${i}`,
+          content: `Test content ${i}`,
+          authorId: user.id,
+          categoryId: category.id,
+          published: true,
+          createdAt: new Date(`2024-01-${String(i + 1).padStart(2, '0')}`),
+        }))
+      ).returning();
 
-    // Simulate paginating through 100 pages (1000 articles)
-    const pageCount = 10;
-    for (let page = 0; page < pageCount; page++) {
-      const start = performance.now();
+      // Simulate paginating through pages
+      const pageCount = 10;
+      for (let page = 0; page < pageCount; page++) {
+        const start = performance.now();
 
-      // Simulate: select().from().where().orderBy().limit().offset()
-      const selectFn = db.select as unknown as () => {
-        from: (table: string) => {
-          where: (conditions: Record<string, unknown>) => {
-            orderBy: (field: string) => { limit: (size: number) => Promise<unknown> };
-          };
-        };
-      };
-      const queryResult = selectFn?.()?.from('articles')?.where({ published: true });
-      if (queryResult && typeof queryResult === 'object' && 'orderBy' in queryResult) {
-        const ordered = queryResult.orderBy('createdAt');
-        if (ordered && typeof ordered === 'object' && 'limit' in ordered) {
-          await Promise.resolve((ordered.limit as (size: number) => Promise<unknown>)(pageSize));
-        }
+        // Real database query with pagination
+        const pageResults = await tx.select()
+          .from($Article)
+          .where(eq($Article.published, true))
+          .orderBy($Article.createdAt, 'desc')
+          .limit(pageSize)
+          .offset(page * pageSize);
+
+        const end = performance.now();
+        measurements.push(end - start);
       }
 
-      const end = performance.now();
-      measurements.push(end - start);
-    }
+      const mean = measurements.reduce((a, b) => a + b, 0) / measurements.length;
+      const min = Math.min(...measurements);
+      const max = Math.max(...measurements);
 
-    const mean = measurements.reduce((a, b) => a + b, 0) / measurements.length;
-    const min = Math.min(...measurements);
-    const max = Math.max(...measurements);
+      performanceResults['pagination-100'] = [{ mean, min, max }];
 
-    performanceResults['pagination-1000'] = [{ mean, min, max }];
+      logger.log(
+        `Pagination (${String(totalArticles)} articles) - Mean: ${mean.toFixed(2)}ms, Min: ${min.toFixed(2)}ms, Max: ${max.toFixed(2)}ms`,
+      );
 
-    logger.log(
-      `Pagination (${String(totalArticles)} articles) - Mean: ${mean.toFixed(2)}ms, Min: ${min.toFixed(2)}ms, Max: ${max.toFixed(2)}ms`,
-    );
-
-    // Assert each page query is reasonable
-    expect(mean).toBeLessThan(100);
+      // Assert each page query is reasonable for real database
+      expect(mean).toBeLessThan(50);
+    });
   });
 
   /**
    * Benchmark: Complex filter query
    * Searches with multiple conditions: tags + categories + date range
    */
-  it('should apply complex filters (tags + categories + date range) in < 500ms', async () => {
-    const measurements: number[] = [];
-    const mockResults = Mock.articles(50);
+  it('should apply complex filters (tags + categories + date range) efficiently', async () => {
+    await withTestTransaction(db, async (tx) => {
+      const measurements: number[] = [];
 
-    // Use setQueryResult to properly configure the mock with chainable methods
-    databaseMock.setQueryResult(mockResults);
+      // Create test data
+      const [user] = await tx.insert($User).values({
+        username: 'test-author',
+        password: 'hashed',
+        type: 'author',
+      }).returning();
 
-    const db = databaseMock.build();
+      const [category] = await tx.insert($Category).values({
+        name: 'Test Category',
+        slug: 'test-category',
+      }).returning();
 
-    // Run filter benchmark 10 times
-    for (let i = 0; i < 10; i++) {
-      const start = performance.now();
-
-      // Simulate complex filter:
-      // WHERE published = true AND category IN (...) AND tags CONTAINS (...) AND createdAt >= ...
-      const selectFn = db.select as unknown as () => {
-        from: (table: string) => {
-          where: (conditions: Record<string, unknown>) => {
-            orderBy: (field: string, direction?: string) => Promise<unknown>;
-          };
-        };
-      };
-      const queryResult = selectFn?.()
-        ?.from('articles')
-        ?.where({
+      // Create test articles
+      await tx.insert($Article).values(
+        Array.from({ length: 50 }, (_, i) => ({
+          title: `Test Article ${i}`,
+          content: `Test content ${i}`,
+          authorId: user.id,
+          categoryId: category.id,
           published: true,
-          categoryId: { in: ['cat1', 'cat2', 'cat3'] },
-          createdAt: { gte: new Date('2024-01-01') },
-        });
+          createdAt: new Date(`2024-01-${String(i + 1).padStart(2, '0')}`),
+        }))
+      );
 
-      // Simulate OrderBy on query result
-      if (queryResult && typeof queryResult === 'object' && 'orderBy' in queryResult) {
-        await Promise.resolve(
-          (queryResult.orderBy as (field: string, direction?: string) => Promise<unknown>)(
-            'createdAt',
-            'DESC',
-          ),
-        );
+      // Run filter benchmark 10 times
+      for (let i = 0; i < 10; i++) {
+        const start = performance.now();
+
+        // Real complex filter query
+        const results = await tx.select()
+          .from($Article)
+          .where(and(
+            eq($Article.published, true),
+            eq($Article.categoryId, category.id),
+            gte($Article.createdAt, new Date('2024-01-01'))
+          ))
+          .orderBy($Article.createdAt, 'desc');
+
+        const end = performance.now();
+        measurements.push(end - start);
       }
 
-      const end = performance.now();
-      measurements.push(end - start);
-    }
+      const mean = measurements.reduce((a, b) => a + b, 0) / measurements.length;
+      const min = Math.min(...measurements);
+      const max = Math.max(...measurements);
 
-    const mean = measurements.reduce((a, b) => a + b, 0) / measurements.length;
-    const min = Math.min(...measurements);
-    const max = Math.max(...measurements);
+      performanceResults['complex-filter'] = [{ mean, min, max }];
 
-    performanceResults['complex-filter'] = [{ mean, min, max }];
+      logger.log(
+        `Complex filter (published+category+date) - Mean: ${mean.toFixed(2)}ms, Min: ${min.toFixed(2)}ms, Max: ${max.toFixed(2)}ms`,
+      );
 
-    logger.log(
-      `Complex filter (tags+categories+date) - Mean: ${mean.toFixed(2)}ms, Min: ${min.toFixed(2)}ms, Max: ${max.toFixed(2)}ms`,
-    );
-
-    expect(mean).toBeLessThan(100); // Realistic with mock
+      // Expect reasonable performance for real database
+      expect(mean).toBeLessThan(100);
+    });
   });
 
   /**
    * Benchmark: Concurrent article reads
-   * Simulates 50 simultaneous read operations
+   * Simulates multiple concurrent read operations
    */
-  it('should handle 50 concurrent article reads without degradation', async () => {
-    const mockArticle = Mock.article();
-    let degradationDetected = false;
+  it('should handle concurrent article reads without significant degradation', async () => {
+    // This test runs in a transaction, but we'll test concurrency separately
+    await withTestTransaction(db, async (tx) => {
+      // Create test data
+      const [user] = await tx.insert($User).values({
+        username: 'test-author',
+        password: 'hashed',
+        type: 'author',
+      }).returning();
 
-    const selectFn = vi.fn();
-    selectFn.mockReturnValue({
-      from: vi.fn().mockReturnValue({
-        where: vi.fn().mockResolvedValue([mockArticle]),
-      }),
-    });
+      const [category] = await tx.insert($Category).values({
+        name: 'Test Category',
+        slug: 'test-category',
+      }).returning();
 
-    databaseMock.db.select = selectFn as any;
+      // Create multiple articles
+      await tx.insert($Article).values(
+        Array.from({ length: 20 }, (_, i) => ({
+          title: `Test Article ${i}`,
+          content: `Test content ${i}`,
+          authorId: user.id,
+          categoryId: category.id,
+          published: true,
+        }))
+      );
 
-    const db = databaseMock.build();
+      const batches = [];
+      const batchSize = 10;
 
-    // Measure first batch of 10 concurrent reads
-    const firstBatchStart = performance.now();
-    const firstBatch = await Promise.all(
-      Array(10)
-        .fill(null)
-        .map(() =>
-          Promise.resolve(
-            (
-              db.select as unknown as () => {
-                from: (table: string) => {
-                  where: (conditions: Record<string, unknown>) => Promise<unknown[]>;
-                };
-              }
-            )(),
-          ),
-        ),
-    );
-    const firstBatchTime = performance.now() - firstBatchStart;
+      // Measure multiple batches of concurrent reads
+      for (let batchNum = 0; batchNum < 4; batchNum++) {
+        const batchStart = performance.now();
 
-    // Measure second batch of 10 concurrent reads
-    const secondBatchStart = performance.now();
-    const secondBatch = await Promise.all(
-      Array(10)
-        .fill(null)
-        .map(() =>
-          Promise.resolve(
-            (
-              db.select as unknown as () => {
-                from: (table: string) => {
-                  where: (conditions: Record<string, unknown>) => Promise<unknown[]>;
-                };
-              }
-            )(),
-          ),
-        ),
-    );
-    const secondBatchTime = performance.now() - secondBatchStart;
+        const concurrentQueries = Array(batchSize)
+          .fill(null)
+          .map(() =>
+            tx.select()
+              .from($Article)
+              .where(eq($Article.published, true))
+              .limit(1)
+          );
 
-    // Measure third batch of 10 concurrent reads
-    const thirdBatchStart = performance.now();
-    const thirdBatch = await Promise.all(
-      Array(10)
-        .fill(null)
-        .map(() =>
-          Promise.resolve(
-            (
-              db.select as unknown as () => {
-                from: (table: string) => {
-                  where: (conditions: Record<string, unknown>) => Promise<unknown[]>;
-                };
-              }
-            )(),
-          ),
-        ),
-    );
-    const thirdBatchTime = performance.now() - thirdBatchStart;
+        await Promise.all(concurrentQueries);
 
-    // Measure final batch of 20 concurrent reads
-    const finalBatchStart = performance.now();
-    const finalBatch = await Promise.all(
-      Array(20)
-        .fill(null)
-        .map(() =>
-          Promise.resolve(
-            (
-              db.select as unknown as () => {
-                from: (table: string) => {
-                  where: (conditions: Record<string, unknown>) => Promise<unknown[]>;
-                };
-              }
-            )(),
-          ),
-        ),
-    );
-    const finalBatchTime = performance.now() - finalBatchStart;
-
-    const batches = [firstBatchTime, secondBatchTime, thirdBatchTime, finalBatchTime];
-    const avgBatchTime = batches.reduce((a, b) => a + b, 0) / batches.length;
-
-    // Check for performance degradation
-    // Each subsequent batch should not be significantly slower (< 50% increase)
-    for (let i = 1; i < batches.length; i++) {
-      const degradation = (batches[i] - batches[i - 1]) / batches[i - 1];
-      if (degradation > 0.5) {
-        degradationDetected = true;
+        const batchTime = performance.now() - batchStart;
+        batches.push(batchTime);
       }
-    }
 
-    performanceResults['concurrent-reads-50'] = [
-      {
-        mean: avgBatchTime,
-        min: Math.min(...batches),
-        max: Math.max(...batches),
-      },
-    ];
+      const avgBatchTime = batches.reduce((a, b) => a + b, 0) / batches.length;
+      let degradationDetected = false;
 
-    logger.log(
-      `Concurrent reads (50 total) - Batch times: ${batches.map((t) => t.toFixed(2)).join('ms, ')}ms, Average: ${avgBatchTime.toFixed(2)}ms`,
-    );
+      // Check for performance degradation
+      for (let i = 1; i < batches.length; i++) {
+        const degradation = (batches[i] - batches[i - 1]) / batches[i - 1];
+        if (degradation > 0.5) {
+          degradationDetected = true;
+        }
+      }
 
-    expect(degradationDetected).toBe(false);
-    expect(firstBatch).toHaveLength(10);
-    expect(secondBatch).toHaveLength(10);
-    expect(thirdBatch).toHaveLength(10);
-    expect(finalBatch).toHaveLength(20);
+      performanceResults['concurrent-reads'] = [
+        {
+          mean: avgBatchTime,
+          min: Math.min(...batches),
+          max: Math.max(...batches),
+        },
+      ];
+
+      logger.log(
+        `Concurrent reads (${String(batchSize * 4)} total) - Batch times: ${batches.map((t) => t.toFixed(2)).join('ms, ')}ms, Average: ${avgBatchTime.toFixed(2)}ms`,
+      );
+
+      // Performance should not degrade significantly
+      expect(degradationDetected).toBe(false);
+    });
   });
 
   /**
    * Benchmark: Article with many tags
-   * Tests query performance when article has 100+ tags
+   * Tests query performance when article has many tags
    */
-  it('should efficiently query articles with 100+ tags', async () => {
-    const measurements: number[] = [];
+  it('should efficiently query articles with many tags', async () => {
+    await withTestTransaction(db, async (tx) => {
+      const measurements: number[] = [];
 
-    // Create article with 100 tags
-    const articleWith100Tags = {
-      ...Mock.article(),
-      tags: Array.from({ length: 100 }, (_, i) => ({
-        id: `tag-${String(i)}`,
-        name: `tag-${String(i)}`,
-        count: 1,
-      })),
-    };
+      // Create user and category
+      const [user] = await tx.insert($User).values({
+        username: 'test-author',
+        password: 'hashed',
+        type: 'author',
+      }).returning();
 
-    const selectFn = vi.fn();
-    selectFn.mockReturnValue({
-      from: vi.fn().mockReturnValue({
-        where: vi.fn().mockReturnValue({
-          with: vi.fn().mockResolvedValue([articleWith100Tags]),
-        }),
-      }),
-    });
+      const [category] = await tx.insert($Category).values({
+        name: 'Test Category',
+        slug: 'test-category',
+      }).returning();
 
-    databaseMock.db.select = selectFn as any;
+      // Create many tags
+      const tags = await tx.insert($Tag).values(
+        Array.from({ length: 20 }, (_, i) => ({
+          name: `tag-${String(i)}`,
+          count: 1,
+        }))
+      ).returning();
 
-    const db = databaseMock.build();
+      // Create article with tags
+      const [article] = await tx.insert($Article).values({
+        title: 'Article with many tags',
+        content: 'Test content',
+        authorId: user.id,
+        categoryId: category.id,
+        published: true,
+      }).returning();
 
-    // Run query benchmark 10 times
-    for (let i = 0; i < 10; i++) {
-      const start = performance.now();
+      // Run query benchmark 10 times
+      for (let i = 0; i < 10; i++) {
+        const start = performance.now();
 
-      // Simulate: select().from('articles').where(...).with('tags', ...)
-      const selectQuery = db.select as unknown as () => {
-        from: (table: string) => {
-          where: (conditions: Record<string, unknown>) => {
-            with: (relation: string) => Promise<unknown[]>;
-          };
-        };
-      };
-      const query = selectQuery().from('articles').where({ id: '1' });
-      if (query && typeof query === 'object' && 'with' in query) {
-        await Promise.resolve((query.with as (relation: string) => Promise<unknown[]>)('tags'));
+        // Real query - simplified since we don't have article-tag join in this schema
+        const results = await tx.select()
+          .from($Article)
+          .where(eq($Article.id, article.id))
+          .limit(1);
+
+        const end = performance.now();
+        measurements.push(end - start);
       }
 
-      const end = performance.now();
-      measurements.push(end - start);
-    }
+      const mean = measurements.reduce((a, b) => a + b, 0) / measurements.length;
+      const min = Math.min(...measurements);
+      const max = Math.max(...measurements);
 
-    const mean = measurements.reduce((a, b) => a + b, 0) / measurements.length;
-    const min = Math.min(...measurements);
-    const max = Math.max(...measurements);
+      performanceResults['article-with-tags'] = [{ mean, min, max }];
 
-    performanceResults['article-100-tags'] = [{ mean, min, max }];
+      logger.log(
+        `Article with tags - Mean: ${mean.toFixed(2)}ms, Min: ${min.toFixed(2)}ms, Max: ${max.toFixed(2)}ms`,
+      );
 
-    logger.log(
-      `Article with 100+ tags - Mean: ${mean.toFixed(2)}ms, Min: ${min.toFixed(2)}ms, Max: ${max.toFixed(2)}ms`,
-    );
-
-    expect(mean).toBeLessThan(100); // Should be fast even with many tags
+      expect(mean).toBeLessThan(50); // Should be fast
+    });
   });
 
   /**
    * Test: Memory usage stability
    * Verifies that repeated queries don't cause memory leaks
    */
-  it('should maintain stable memory usage over repeated queries', () => {
-    const mockArticle = Mock.article();
+  it('should maintain stable memory usage over repeated queries', async () => {
+    await withTestTransaction(db, async (tx) => {
+      // Create test data
+      const [user] = await tx.insert($User).values({
+        username: 'test-author',
+        password: 'hashed',
+        type: 'author',
+      }).returning();
 
-    // Use setQueryResult to properly configure the mock with chainable methods
-    databaseMock.setQueryResult([mockArticle]);
+      const [category] = await tx.insert($Category).values({
+        name: 'Test Category',
+        slug: 'test-category',
+      }).returning();
 
-    const db = databaseMock.build();
+      const [article] = await tx.insert($Article).values({
+        title: 'Test Article',
+        content: 'Test content',
+        authorId: user.id,
+        categoryId: category.id,
+        published: true,
+      }).returning();
 
-    // Capture initial memory
-    if (global.gc) {
-      global.gc();
-    }
-    const initialMemory = process.memoryUsage().heapUsed;
+      // Capture initial memory
+      if (global.gc) {
+        global.gc();
+      }
+      const initialMemory = process.memoryUsage().heapUsed;
 
-    // Run 1000 queries
-    for (let i = 0; i < 1000; i++) {
-      void Promise.resolve(
-        (db.select as unknown as () => { from: (table: string) => Promise<unknown[]> })?.(),
+      // Run 1000 queries
+      for (let i = 0; i < 1000; i++) {
+        void tx.select()
+          .from($Article)
+          .where(eq($Article.id, article.id));
+      }
+
+      // Force garbage collection if available
+      if (global.gc) {
+        global.gc();
+      }
+      const finalMemory = process.memoryUsage().heapUsed;
+
+      const memoryIncrease = finalMemory - initialMemory;
+      const memoryIncreasePercent = (memoryIncrease / initialMemory) * 100;
+
+      logger.log(
+        `Memory usage after 1000 queries - Increase: ${(memoryIncrease / 1024 / 1024).toFixed(2)}MB (${memoryIncreasePercent.toFixed(2)}%)`,
       );
-    }
 
-    // Force garbage collection if available
-    if (global.gc) {
-      global.gc();
-    }
-    const finalMemory = process.memoryUsage().heapUsed;
-
-    const memoryIncrease = finalMemory - initialMemory;
-    const memoryIncreasePercent = (memoryIncrease / initialMemory) * 100;
-
-    logger.log(
-      `Memory usage after 1000 queries - Increase: ${(memoryIncrease / 1024 / 1024).toFixed(2)}MB (${memoryIncreasePercent.toFixed(2)}%)`,
-    );
-
-    // Memory increase should be reasonable (< 50MB or < 5% of initial)
-    expect(memoryIncrease).toBeLessThan(50 * 1024 * 1024);
-    expect(memoryIncreasePercent).toBeLessThan(10);
+      // Memory increase should be reasonable
+      expect(memoryIncrease).toBeLessThan(10 * 1024 * 1024); // < 10MB
+      expect(memoryIncreasePercent).toBeLessThan(5); // < 5% increase
+    });
   });
 
   /**

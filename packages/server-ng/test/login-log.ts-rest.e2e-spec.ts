@@ -43,8 +43,7 @@ describe('LoginLog Ts-Rest (e2e)', () => {
     await app.close();
   });
 
-  // TODO: Fix route conflict - currently returns 400 due to AuthController validation
-  it.skip('GET /api/v2/auth/logs should return 200 and array', async () => {
+  it('GET /api/v2/auth/logs should return 200 and array', async () => {
     const res = await request(app.getHttpServer() as Server)
       .get('/api/v2/auth/logs')
       .query({ success: 'true' })
@@ -53,8 +52,7 @@ describe('LoginLog Ts-Rest (e2e)', () => {
     expect(Array.isArray(res.body)).toBe(true);
   });
 
-  // TODO: Fix query param coercion - cutoffMinutes should use z.coerce.number()
-  it.skip('GET /api/v2/auth/logs/failed-attempts/by-username returns count', async () => {
+  it('GET /api/v2/auth/logs/failed-attempts/by-username returns count', async () => {
     const res = await request(app.getHttpServer() as Server)
       .get('/api/v2/auth/logs/failed-attempts/by-username')
       .query({ username: 'nonexistent', cutoffMinutes: '5' })
@@ -63,8 +61,7 @@ describe('LoginLog Ts-Rest (e2e)', () => {
     expect(typeof res.body.count).toBe('number');
   });
 
-  // TODO: Fix query param coercion - cutoffMinutes should use z.coerce.number()
-  it.skip('GET /api/v2/auth/logs/failed-attempts/by-ip returns count', async () => {
+  it('GET /api/v2/auth/logs/failed-attempts/by-ip returns count', async () => {
     const res = await request(app.getHttpServer() as Server)
       .get('/api/v2/auth/logs/failed-attempts/by-ip')
       .query({ ip: '127.0.0.1', cutoffMinutes: '5' })
