@@ -11,9 +11,7 @@
  * @group associations
  */
 
-import { Test, type TestingModule } from '@nestjs/testing';
-import { categories, articles, articleTags, tags } from '@vanblog/shared/drizzle';
-import { eq } from 'drizzle-orm';
+import { articleTags } from '@vanblog/shared/drizzle';
 import { describe, beforeEach, it, expect, vi } from 'vitest';
 
 import { db } from '@test/setup.unit';
@@ -21,16 +19,9 @@ import { withTestTransaction } from '@test/utils/db-transaction-helper';
 import { Mock } from '@test/mock';
 import { Given } from '@test/given';
 
-import { ConfigService } from '../../config/config.service';
-import { DATABASE_CONNECTION } from '../../database';
-import { QueryOptimizerService } from '../../shared/services/query-optimizer.service';
-import { StatisticsService } from '../../shared/services/statistics.service';
-import { HookService } from '../plugin/services/hook.service';
-
 import { CategoryService } from './category.service';
 
 describe('CategoryService - Associations', () => {
-  let service: CategoryService;
   let mockHookService: ReturnType<typeof Mock.hook>;
   let mockStatisticsService: any;
   let mockQueryOptimizer: any;
@@ -78,14 +69,15 @@ describe('CategoryService - Associations', () => {
       await withTestTransaction(db, async (tx) => {
         const txService = createServiceWithTx(tx);
 
-        // Given: 创建测试数据
-        const category1 = await Given.category(tx, { name: 'Category1' });
-        const category2 = await Given.category(tx, { name: 'Category2' });
+        // Given: 创建测试数据（使用唯一名称避免冲突）
+        const uniqueSuffix = Math.random().toString(36).substring(7);
+        const category1 = await Given.category(tx, { name: `Category1-${uniqueSuffix}` });
+        const category2 = await Given.category(tx, { name: `Category2-${uniqueSuffix}` });
 
-        const tag1 = await Given.tag(tx, { name: 'tag1' });
-        const tag2 = await Given.tag(tx, { name: 'tag2' });
-        const tag3 = await Given.tag(tx, { name: 'tag3' });
-        const tag4 = await Given.tag(tx, { name: 'tag4' });
+        const tag1 = await Given.tag(tx, { name: `tag1-${uniqueSuffix}` });
+        const tag2 = await Given.tag(tx, { name: `tag2-${uniqueSuffix}` });
+        const tag3 = await Given.tag(tx, { name: `tag3-${uniqueSuffix}` });
+        const tag4 = await Given.tag(tx, { name: `tag4-${uniqueSuffix}` });
 
         // 创建文章并关联标签
         const article1 = await Given.article(tx, {
@@ -111,17 +103,17 @@ describe('CategoryService - Associations', () => {
         const result = await txService.getCategoriesWithTags();
 
         // Then: 验证结果（使用 find 因为数据库可能有其他分类）
-        const category1Result = result.find((c) => c.category.name === 'Category1');
+        const category1Result = result.find((c) => c.category.name === category1.name);
         expect(category1Result).toBeDefined();
         expect(category1Result!.tags).toHaveLength(3); // tag1, tag2, tag3
-        expect(category1Result!.tags.map((t) => t.name)).toContain('tag1');
-        expect(category1Result!.tags.map((t) => t.name)).toContain('tag2');
-        expect(category1Result!.tags.map((t) => t.name)).toContain('tag3');
+        expect(category1Result!.tags.map((t) => t.name)).toContain(tag1.name);
+        expect(category1Result!.tags.map((t) => t.name)).toContain(tag2.name);
+        expect(category1Result!.tags.map((t) => t.name)).toContain(tag3.name);
 
-        const category2Result = result.find((c) => c.category.name === 'Category2');
+        const category2Result = result.find((c) => c.category.name === category2.name);
         expect(category2Result).toBeDefined();
         expect(category2Result!.tags).toHaveLength(1); // tag4
-        expect(category2Result!.tags[0].name).toBe('tag4');
+        expect(category2Result!.tags[0].name).toBe(tag4.name);
       });
     });
 
@@ -129,14 +121,15 @@ describe('CategoryService - Associations', () => {
       await withTestTransaction(db, async (tx) => {
         const txService = createServiceWithTx(tx);
 
-        // Given: 创建一个没有文章的分类
-        const emptyCategory = await Given.category(tx, { name: 'EmptyCategory' });
+        // Given: 创建一个没有文章的分类（使用唯一名称避免冲突）
+        const uniqueSuffix = Math.random().toString(36).substring(7);
+        const emptyCategory = await Given.category(tx, { name: `EmptyCategory-${uniqueSuffix}` });
 
         // When: 调用 getCategoriesWithTags
         const result = await txService.getCategoriesWithTags();
 
         // Then: 验证结果（使用 find 因为数据库可能有其他分类）
-        const emptyCategoryResult = result.find((c) => c.category.name === 'EmptyCategory');
+        const emptyCategoryResult = result.find((c) => c.category.name === emptyCategory.name);
         expect(emptyCategoryResult).toBeDefined();
         expect(emptyCategoryResult!.tags).toHaveLength(0);
       });
@@ -146,11 +139,13 @@ describe('CategoryService - Associations', () => {
       await withTestTransaction(db, async (tx) => {
         const txService = createServiceWithTx(tx);
 
-        // Given: 创建分类和文章
-        const category1 = await Given.category(tx, { name: 'Category1' });
-        const tag1 = await Given.tag(tx, { name: 'tag1' });
+        // Given: 创建分类和文章（使用唯一名称避免冲突）
+        const uniqueSuffix = Math.random().toString(36).substring(7);
+        const category1 = await Given.category(tx, { name: `Category1-${uniqueSuffix}` });
+        const tag1 = await Given.tag(tx, { name: `tag1-${uniqueSuffix}` });
 
-        const article1 = await Given.article(tx, {
+        // article1 没有标签，article2 有标签
+        await Given.article(tx, {
           categoryId: category1.id,
         });
         const article2 = await Given.article(tx, {
@@ -158,18 +153,20 @@ describe('CategoryService - Associations', () => {
         });
 
         // 只有 article2 有关联的标签
-        await tx.insert(articleTags).values([
-          { articleId: article2.id, tagName: tag1.name, createdAt: new Date().toISOString() },
-        ]);
+        await tx
+          .insert(articleTags)
+          .values([
+            { articleId: article2.id, tagName: tag1.name, createdAt: new Date().toISOString() },
+          ]);
 
         // When: 调用 getCategoriesWithTags
         const result = await txService.getCategoriesWithTags();
 
         // Then: 验证结果（使用 find 因为数据库可能有其他分类）
-        const category1Result = result.find((c) => c.category.name === 'Category1');
+        const category1Result = result.find((c) => c.category.name === category1.name);
         expect(category1Result).toBeDefined();
         expect(category1Result!.tags).toHaveLength(1);
-        expect(category1Result!.tags[0].name).toBe('tag1');
+        expect(category1Result!.tags[0].name).toBe(tag1.name);
       });
     });
   });

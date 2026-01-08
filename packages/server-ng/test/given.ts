@@ -488,17 +488,20 @@ export class Given {
     const executeInsert = async (tx: LibSQLDatabase) => {
       const mock = Mock.tag();
 
-      // 生成唯一的 tag slug 和 id 以避免 UNIQUE 约束冲突
+      // 生成唯一的 tag name, slug 和 id 以避免 UNIQUE 约束冲突
       const uniqueSuffix = Math.random().toString(36).substring(7);
+      const uniqueName =
+        overrides.name !== undefined ? overrides.name : `${mock.name}-${uniqueSuffix}`;
       const uniqueSlug =
         overrides.slug !== undefined ? overrides.slug : `${mock.slug}-${uniqueSuffix}`;
       const uniqueId = overrides.id !== undefined ? overrides.id : generateUniqueId('4');
 
-      // 先应用 overrides,然后确保 id 和 slug 是唯一的
+      // 先应用 overrides,然后确保 id, name 和 slug 是唯一的
       const tagData = {
         ...mock,
         ...overrides,
         id: uniqueId, // 最后设置 id,确保唯一性
+        name: uniqueName, // 最后设置 name,确保唯一性
         slug: uniqueSlug, // 最后设置 slug,确保唯一性
       };
 
