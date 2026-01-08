@@ -1,8 +1,8 @@
 import { Injectable, NotFoundException, Inject } from '@nestjs/common';
 import { dayjs } from '@vanblog/shared';
-import { categories, articles } from '@vanblog/shared/drizzle';
+import { categories, articles, articleTags } from '@vanblog/shared/drizzle';
 import * as bcrypt from 'bcrypt';
-import { and, eq, sql, desc } from 'drizzle-orm';
+import { and, eq, sql, desc, inArray } from 'drizzle-orm';
 import * as jwt from 'jsonwebtoken';
 
 import { ConfigService } from '../../config/config.service';
@@ -301,28 +301,46 @@ export class CategoryService {
         // 获取所有分类
         const categoryList = await this.db.select().from(categories);
 
-        // 一次性获取所有文章的标签信息，按分类分组
-        const allArticlesWithTags = await this.db
+        // 获取所有文章的分类和标签信息（分开查询，不使用 JOIN）
+        const allArticles = await this.db
           .select({
+            id: articles.id,
             category: articles.category,
-            tags: articles.tags,
           })
           .from(articles)
           .where(sql`${articles.category} IS NOT NULL`);
 
-        // 在内存中按分类分组文章标签
-        const articlesByCategory = new Map<string, (string[] | null)[]>();
-        allArticlesWithTags.forEach((article) => {
+        // 获取所有文章标签关联
+        const articleIds = allArticles.map((a) => a.id);
+        const allArticleTags =
+          articleIds.length > 0
+            ? await this.db
+                .select({
+                  articleId: articleTags.articleId,
+                  tagName: articleTags.tagName,
+                })
+                .from(articleTags)
+                .where(inArray(articleTags.articleId, articleIds))
+            : [];
+
+        // 构建 articleId -> tagName[] 映射
+        const tagMap = new Map<number, string[]>();
+        for (const tag of allArticleTags) {
+          const existing = tagMap.get(tag.articleId) ?? [];
+          existing.push(tag.tagName);
+          tagMap.set(tag.articleId, existing);
+        }
+
+        // 构建 category -> tagName[] 映射（通过文章关联）
+        const articlesByCategory = new Map<string, string[]>();
+        for (const article of allArticles) {
+          const tags = tagMap.get(article.id) ?? [];
           if (article.category) {
-            if (!articlesByCategory.has(article.category)) {
-              articlesByCategory.set(article.category, []);
-            }
-            const categoryArticles = articlesByCategory.get(article.category);
-            if (categoryArticles) {
-              categoryArticles.push(article.tags);
-            }
+            const existing = articlesByCategory.get(article.category) ?? [];
+            existing.push(...tags);
+            articlesByCategory.set(article.category, existing);
           }
-        });
+        }
 
         // 处理每个分类的标签统计
         const results = categoryList.map((category) => {
@@ -330,11 +348,8 @@ export class CategoryService {
 
           // 统计标签出现次数
           const tagCount = new Map<string, number>();
-          categoryTags.forEach((tags) => {
-            const articleTags = tags ?? [];
-            articleTags.forEach((tag) => {
-              tagCount.set(tag, (tagCount.get(tag) ?? 0) + 1);
-            });
+          categoryTags.forEach((tag) => {
+            tagCount.set(tag, (tagCount.get(tag) ?? 0) + 1);
           });
 
           return {

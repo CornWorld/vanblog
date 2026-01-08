@@ -31,8 +31,29 @@ describe('CategoryService - Associations', () => {
 
   beforeEach(async () => {
     // Setup mock database with chaining support
+    // Each select() call creates a new chain to avoid interference
+    const createMockChain = () => {
+      const chain: any = {
+        select: vi.fn().mockReturnThis(),
+        from: vi.fn().mockReturnThis(),
+        where: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockReturnThis(),
+        insert: vi.fn().mockReturnThis(),
+        values: vi.fn().mockReturnThis(),
+        returning: vi.fn().mockReturnThis(),
+        update: vi.fn().mockReturnThis(),
+        set: vi.fn().mockReturnThis(),
+        delete: vi.fn().mockReturnThis(),
+        leftJoin: vi.fn().mockReturnThis(),
+        groupBy: vi.fn().mockReturnThis(),
+        orderBy: vi.fn().mockReturnThis(),
+        offset: vi.fn().mockReturnThis(),
+      };
+      return chain;
+    };
+
     mockDb = {
-      select: vi.fn().mockReturnThis(),
+      select: vi.fn().mockImplementation(() => createMockChain()),
       from: vi.fn().mockReturnThis(),
       where: vi.fn().mockReturnThis(),
       limit: vi.fn().mockReturnThis(),
@@ -119,17 +140,26 @@ describe('CategoryService - Associations', () => {
         },
       ];
 
-      const mockArticles = [
-        { category: 'Category1', tags: ['tag1', 'tag2'] },
-        { category: 'Category1', tags: ['tag2', 'tag3'] },
-        { category: 'Category2', tags: ['tag4'] },
-      ];
-
-      // Mock the first query: getting all categories
+      // Query 1: Get all categories
       mockDb.from.mockResolvedValueOnce(mockCategories);
 
-      // Mock the second query: getting articles with tags
-      mockDb.where.mockResolvedValueOnce(mockArticles);
+      // Query 2: Get articles (id, category)
+      const mockArticles = [
+        { id: 1, category: 'Category1' },
+        { id: 2, category: 'Category1' },
+        { id: 3, category: 'Category2' },
+      ];
+      mockDb.from.mockResolvedValueOnce(mockArticles);
+
+      // Query 3: Get article tags (articleId, tagName)
+      const mockArticleTags = [
+        { articleId: 1, tagName: 'tag1' },
+        { articleId: 1, tagName: 'tag2' },
+        { articleId: 2, tagName: 'tag2' },
+        { articleId: 2, tagName: 'tag3' },
+        { articleId: 3, tagName: 'tag4' },
+      ];
+      mockDb.where.mockResolvedValueOnce(mockArticleTags);
 
       const result = await service.getCategoriesWithTags();
 
@@ -152,10 +182,12 @@ describe('CategoryService - Associations', () => {
         },
       ];
 
-      const mockArticles: any[] = [];
-
+      // Query 1: Get all categories
       mockDb.from.mockResolvedValueOnce(mockCategories);
-      mockDb.where.mockResolvedValueOnce(mockArticles);
+
+      // Query 2: Get articles (none)
+      const mockArticles: any[] = [];
+      mockDb.from.mockResolvedValueOnce(mockArticles);
 
       const result = await service.getCategoriesWithTags();
 
@@ -176,13 +208,19 @@ describe('CategoryService - Associations', () => {
         },
       ];
 
-      const mockArticles = [
-        { category: 'Category1', tags: null },
-        { category: 'Category1', tags: ['tag1'] },
-      ];
-
+      // Query 1: Get all categories
       mockDb.from.mockResolvedValueOnce(mockCategories);
-      mockDb.where.mockResolvedValueOnce(mockArticles);
+
+      // Query 2: Get articles
+      const mockArticles = [
+        { id: 1, category: 'Category1' },
+        { id: 2, category: 'Category1' },
+      ];
+      mockDb.from.mockResolvedValueOnce(mockArticles);
+
+      // Query 3: Get article tags (only article 2 has tags)
+      const mockArticleTags = [{ articleId: 2, tagName: 'tag1' }];
+      mockDb.where.mockResolvedValueOnce(mockArticleTags);
 
       const result = await service.getCategoriesWithTags();
 
