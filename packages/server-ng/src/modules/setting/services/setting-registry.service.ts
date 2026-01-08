@@ -47,7 +47,7 @@ export class SettingRegistryService {
     const results = await this.db.select().from(siteMeta).where(eq(siteMeta.key, key)).limit(1);
 
     if (results.length > 0 && results[0].value != null) {
-      // Drizzle with mode: 'json' already deserializes the value
+      // No manual JSON.parse() - let Schema handle it
       return results[0].value as T;
     }
 

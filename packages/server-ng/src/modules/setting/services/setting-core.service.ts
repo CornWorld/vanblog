@@ -156,7 +156,7 @@ export class SettingCoreService implements OnModuleInit {
     const results = await this.db.select().from(siteMeta).where(eq(siteMeta.key, key)).limit(1);
 
     if (results.length > 0 && results[0].value != null) {
-      // Drizzle with mode: 'json' already deserializes the value
+      // jsonb() column already deserialized - direct schema validation
       if (schema) {
         return safeParse<T>(results[0].value, schema);
       }
