@@ -1,32 +1,15 @@
 import { z } from 'zod';
 
-// 直接验证已解析的数据（用于 Drizzle mode: 'json' 字段）
+// 直接验证已解析的数据（用于 jsonb() 列类型）
+// jsonb() 列已自动反序列化，无需 jsonSchema bridge
 export function safeParse<T>(data: unknown, schema: z.ZodType<T>): T | null {
   if (data == null) {
     return null;
   }
+
+  // Direct validation - jsonb() column type already deserializes
   const result = schema.safeParse(data);
   return result.success ? result.data : null;
-}
-
-/**
- * @deprecated Use safeParse instead - Drizzle with mode: 'json' already deserializes JSON
- */
-export function safeParseJson<T>(
-  jsonString: string | null | undefined,
-  schema: z.ZodType<T>,
-): T | null {
-  if (!jsonString) {
-    return null;
-  }
-
-  try {
-    const parsed: unknown = JSON.parse(jsonString);
-    const result = schema.safeParse(parsed);
-    return result.success ? result.data : null;
-  } catch {
-    return null;
-  }
 }
 
 // 导航项严格递归类型
