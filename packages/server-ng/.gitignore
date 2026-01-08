@@ -68,3 +68,7 @@ config.v*.schema.json
 cookies.txt
 
 *.pid
+
+uploads/
+/tsconfig.tsbuildinfo
+.cache/

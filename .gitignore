@@ -156,3 +156,6 @@ log/
 # Build caches (monorepo)
 .turbo/
 .pnpm-store/
+
+# Auto Claude data directory
+.auto-claude/
