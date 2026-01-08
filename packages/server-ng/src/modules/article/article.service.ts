@@ -1,8 +1,8 @@
 import { Injectable, NotFoundException, Inject, Logger } from '@nestjs/common';
 import { dayjs } from '@vanblog/shared';
-import { articles, tags } from '@vanblog/shared/drizzle';
+import { articles, tags, articleTags } from '@vanblog/shared/drizzle';
 import * as bcrypt from 'bcrypt';
-import { eq, and, or, like, desc, asc, sql } from 'drizzle-orm';
+import { eq, and, or, like, desc, asc, sql, inArray } from 'drizzle-orm';
 import * as jwt from 'jsonwebtoken';
 import { z } from 'zod';
 
@@ -33,6 +33,72 @@ export class ArticleService {
     private readonly hookService: HookService,
     private readonly configService: ConfigService,
   ) {}
+
+  /**
+   * 加载文章的标签（从 article_tags 关联表）
+   *
+   * @param articleId 文章 ID
+   * @returns 标签名称数组
+   */
+  private async loadArticleTags(articleId: number): Promise<string[]> {
+    const tagResults = await this.db
+      .select({ tagName: articleTags.tagName })
+      .from(articleTags)
+      .where(eq(articleTags.articleId, articleId));
+
+    return tagResults.map((t) => t.tagName);
+  }
+
+  /**
+   * 批量加载多篇文章的标签（性能优化）
+   *
+   * @param articleIds 文章 ID 数组
+   * @returns Map<articleId, tagNames[]>
+   */
+  private async loadArticleTagsBatch(articleIds: number[]): Promise<Map<number, string[]>> {
+    if (articleIds.length === 0) {
+      return new Map();
+    }
+
+    const tagResults = await this.db
+      .select({
+        articleId: articleTags.articleId,
+        tagName: articleTags.tagName,
+      })
+      .from(articleTags)
+      .where(inArray(articleTags.articleId, articleIds));
+
+    const tagMap = new Map<number, string[]>();
+    for (const result of tagResults) {
+      const existing = tagMap.get(result.articleId) ?? [];
+      existing.push(result.tagName);
+      tagMap.set(result.articleId, existing);
+    }
+
+    return tagMap;
+  }
+
+  /**
+   * 更新文章的标签关联（删除旧的，插入新的）
+   *
+   * @param articleId 文章 ID
+   * @param tagNames 新的标签名称数组
+   */
+  private async updateArticleTags(articleId: number, tagNames: string[]): Promise<void> {
+    // 1. 删除旧的标签关联
+    await this.db.delete(articleTags).where(eq(articleTags.articleId, articleId));
+
+    // 2. 插入新的标签关联
+    if (tagNames.length > 0) {
+      await this.db.insert(articleTags).values(
+        tagNames.map((tagName) => ({
+          articleId,
+          tagName,
+          createdAt: dayjs().format(),
+        })),
+      );
+    }
+  }
 
   /**
    * 派生文章发布时间
@@ -82,11 +148,31 @@ export class ArticleService {
     if (category) {
       whereConditions.push(eq(articles.category, category));
     }
+
+    // Tag filter: Use JOIN with article_tags table (relational query)
+    let tagFilteredArticleIds: number[] | undefined;
     if (tag) {
-      // 标签存储为 JSON 数组，使用 LIKE 匹配
-      const tagConditions = [like(articles.tags, `"%"${tag}"%"`)];
-      whereConditions.push(or(...tagConditions));
+      const tagMatches = await this.db
+        .select({ articleId: articleTags.articleId })
+        .from(articleTags)
+        .where(eq(articleTags.tagName, tag));
+
+      tagFilteredArticleIds = tagMatches.map((m) => m.articleId);
+
+      // If no articles have this tag, return empty result
+      if (tagFilteredArticleIds.length === 0) {
+        return {
+          items: [],
+          total: 0,
+          page,
+          pageSize,
+          totalPages: 0,
+        };
+      }
+
+      whereConditions.push(inArray(articles.id, tagFilteredArticleIds));
     }
+
     if (keyword && keyword !== '') {
       whereConditions.push(
         or(like(articles.title, `%${keyword}%`), like(articles.content, `%${keyword}%`)),
@@ -123,13 +209,17 @@ export class ArticleService {
         .where(whereClause),
     ]);
 
-    // 处理文章数据：解析 JSON 字段，格式化日期
+    // 批量加载标签（性能优化：一次查询获取所有标签）
+    const articleIds = articleResults.map((a) => a.id);
+    const tagsMap = await this.loadArticleTagsBatch(articleIds);
+
+    // 处理文章数据：关联标签，格式化日期
     const processedArticles = articleResults.map((article) => ({
       id: article.id,
       title: article.title,
       content: article.content,
       pathname: article.pathname,
-      tags: article.tags ?? [],
+      tags: tagsMap.get(article.id) ?? [],
       category: article.category,
       author: article.author,
       top: article.top,
@@ -189,10 +279,28 @@ export class ArticleService {
           whereConditions.push(eq(articles.category, category));
         }
 
+        // Tag filter: Use JOIN with article_tags table (relational query)
+        let tagFilteredArticleIds: number[] | undefined;
         if (Array.isArray(tags) && tags.length > 0) {
-          // 标签存储为 JSON 数组，使用 LIKE 匹配多个标签
-          const tagConditions = tags.map((tag: string) => like(articles.tags, `"%"${tag}"%"`));
-          whereConditions.push(or(...tagConditions));
+          const tagMatches = await this.db
+            .select({ articleId: articleTags.articleId })
+            .from(articleTags)
+            .where(inArray(articleTags.tagName, tags));
+
+          tagFilteredArticleIds = tagMatches.map((m) => m.articleId);
+
+          // If no articles have these tags, return empty result
+          if (tagFilteredArticleIds.length === 0) {
+            return {
+              items: [],
+              total: 0,
+              page,
+              pageSize,
+              totalPages: 0,
+            };
+          }
+
+          whereConditions.push(inArray(articles.id, tagFilteredArticleIds));
         }
 
         if (keyword !== '') {
@@ -255,12 +363,16 @@ export class ArticleService {
             .where(whereClause),
         ]);
 
+        // 批量加载标签（性能优化：一次查询获取所有标签）
+        const articleIds = articleResults.map((a) => a.id);
+        const tagsMap = await this.loadArticleTagsBatch(articleIds);
+
         const processedArticles = articleResults.map((article) => ({
           id: article.id,
           title: article.title,
           summary: undefined,
           cover: undefined,
-          tags: article.tags ?? [],
+          tags: tagsMap.get(article.id) ?? [],
           categories: article.category ? [article.category] : [],
           publishedAt: dayjs(article.updatedAt).format(),
           highlight: undefined,
@@ -377,11 +489,15 @@ export class ArticleService {
     }
 
     const [article] = articleResult;
+
+    // 加载标签
+    const tagNames = await this.loadArticleTags(article.id);
+
     return new Article({
       ...article,
       // 不返回密码字段，确保安全
       password: undefined,
-      tags: article.tags ?? [],
+      tags: tagNames,
       pathname: article.pathname,
       category: article.category,
       author: article.author,
@@ -404,9 +520,13 @@ export class ArticleService {
     }
 
     const [article] = articleResult;
+
+    // 加载标签
+    const tagNames = await this.loadArticleTags(article.id);
+
     return new Article({
       ...article,
-      tags: article.tags ?? [],
+      tags: tagNames,
       pathname: article.pathname,
       category: article.category,
       author: article.author,
@@ -465,7 +585,6 @@ export class ArticleService {
       private: articleData.private ?? undefined,
       password: articleData.password ?? undefined,
       viewer: 0,
-      tags: Array.isArray(tagNames) && tagNames.length > 0 ? tagNames : null,
       createdAt: dayjs().format(),
       updatedAt: dayjs().format(),
     };
@@ -489,9 +608,18 @@ export class ArticleService {
     const insertResult = await this.db.insert(articles).values([newArticleData]).returning();
 
     const [newArticle] = insertResult;
+
+    // 插入标签关联
+    if (Array.isArray(tagNames) && tagNames.length > 0) {
+      await this.updateArticleTags(newArticle.id, tagNames);
+    }
+
+    // 加载标签（用于返回）
+    const loadedTags = await this.loadArticleTags(newArticle.id);
+
     const articleResult = new Article({
       ...newArticle,
-      tags: newArticle.tags ?? [],
+      tags: loadedTags,
       pathname: newArticle.pathname,
       category: newArticle.category,
       author: newArticle.author,
@@ -532,11 +660,6 @@ export class ArticleService {
       updatedAt: dayjs().format(),
     };
 
-    // tagNames is string[] | null | undefined
-    if (tagNames !== undefined) {
-      updateData.tags = Array.isArray(tagNames) && tagNames.length > 0 ? tagNames : null;
-    }
-
     // 触发更新前的插件钩子，允许插件修改更新数据
     try {
       // Trigger article|beforeUpdate hook (new hook system)
@@ -562,9 +685,18 @@ export class ArticleService {
       .returning();
 
     const [updatedArticle] = updateResult;
+
+    // 更新标签关联（如果提供了 tagNames）
+    if (tagNames !== undefined) {
+      await this.updateArticleTags(id, Array.isArray(tagNames) ? tagNames : []);
+    }
+
+    // 加载标签（用于返回）
+    const loadedTags = await this.loadArticleTags(id);
+
     const articleResult = new Article({
       ...updatedArticle,
-      tags: updatedArticle.tags ?? [],
+      tags: loadedTags,
       pathname: updatedArticle.pathname,
       category: updatedArticle.category,
       author: updatedArticle.author,
@@ -608,11 +740,15 @@ export class ArticleService {
   async exportArticles(): Promise<Article[]> {
     const articleResults = await this.db.select().from(articles);
 
+    // 批量加载标签
+    const articleIds = articleResults.map((a) => a.id);
+    const tagsMap = await this.loadArticleTagsBatch(articleIds);
+
     return articleResults.map(
       (article) =>
         new Article({
           ...article,
-          tags: article.tags ?? [],
+          tags: tagsMap.get(article.id) ?? [],
           pathname: article.pathname,
           category: article.category,
           author: article.author,
@@ -656,12 +792,16 @@ export class ArticleService {
         .where(whereClause),
     ]);
 
+    // 批量加载标签
+    const articleIds = articleResults.map((a) => a.id);
+    const tagsMap = await this.loadArticleTagsBatch(articleIds);
+
     const processedArticles = articleResults.map((article) => ({
       id: article.id,
       title: article.title,
       content: article.content,
       pathname: article.pathname,
-      tags: article.tags ?? [],
+      tags: tagsMap.get(article.id) ?? [],
       category: article.category,
       author: article.author,
       top: article.top,
@@ -722,9 +862,13 @@ export class ArticleService {
     }
 
     const [article] = articleResult;
+
+    // 加载标签
+    const tagNames = await this.loadArticleTags(article.id);
+
     return new Article({
       ...article,
-      tags: article.tags ?? [],
+      tags: tagNames,
       pathname: article.pathname,
       category: article.category,
       author: article.author,
@@ -747,12 +891,16 @@ export class ArticleService {
       .where(and(eq(articles.private, false), eq(articles.hidden, false)))
       .orderBy(desc(articles.updatedAt));
 
+    // 批量加载标签
+    const articleIds = result.map((a) => a.id);
+    const tagsMap = await this.loadArticleTagsBatch(articleIds);
+
     const grouped: Record<string, Article[]> = {};
 
     for (const article of result) {
       const processedArticle = new Article({
         ...article,
-        tags: article.tags ?? [],
+        tags: tagsMap.get(article.id) ?? [],
         pathname: article.pathname,
         category: article.category,
         author: article.author,
@@ -784,12 +932,16 @@ export class ArticleService {
       .where(and(eq(articles.private, false), eq(articles.hidden, false)))
       .orderBy(desc(articles.updatedAt));
 
+    // 批量加载标签
+    const articleIds = result.map((a) => a.id);
+    const tagsMap = await this.loadArticleTagsBatch(articleIds);
+
     const grouped: Record<string, Article[]> = {};
 
     for (const article of result) {
       const processedArticle = new Article({
         ...article,
-        tags: article.tags ?? [],
+        tags: tagsMap.get(article.id) ?? [],
         pathname: article.pathname,
         category: article.category,
         author: article.author,
