@@ -1,5 +1,6 @@
 import { sqliteTable, text, integer, index, uniqueIndex } from 'drizzle-orm/sqlite-core';
 import { nowIsoTz } from './date.js';
+import { jsonb } from '../drizzle/json-column.js';
 
 // ============ Users ============
 export const users = sqliteTable('users', {
@@ -12,7 +13,7 @@ export const users = sqliteTable('users', {
   type: text('type', { enum: ['admin', 'editor', 'author', 'subscriber', 'viewer'] })
     .notNull()
     .default('subscriber'),
-  permissions: text('permissions', { mode: 'json' }).$type<string[] | null>(),
+  permissions: jsonb<string[] | null>(),
   createdAt: text('created_at')
     .notNull()
     .$defaultFn(() => nowIsoTz()),
@@ -29,7 +30,7 @@ export const articles = sqliteTable(
     title: text('title').notNull(),
     content: text('content').notNull(),
     pathname: text('pathname').unique(),
-    tags: text('tags', { mode: 'json' }).$type<string[] | null>(),
+    tags: jsonb<string[] | null>(),
     category: text('category').references(() => categories.name, {
       onUpdate: 'cascade',
       onDelete: 'set null',
@@ -103,6 +104,48 @@ export const tags = sqliteTable(
   ],
 );
 
+// ============ Article Tags (Many-to-Many) ============
+export const articleTags = sqliteTable(
+  'article_tags',
+  {
+    articleId: integer('article_id')
+      .notNull()
+      .references(() => articles.id, { onDelete: 'cascade' }),
+    tagName: text('tag_name')
+      .notNull()
+      .references(() => tags.name, { onUpdate: 'cascade', onDelete: 'cascade' }),
+    createdAt: text('created_at')
+      .notNull()
+      .$defaultFn(() => nowIsoTz()),
+  },
+  (table) => [
+    index('article_tags_article_id_idx').on(table.articleId),
+    index('article_tags_tag_name_idx').on(table.tagName),
+    uniqueIndex('article_tags_unique').on(table.articleId, table.tagName),
+  ],
+);
+
+// ============ Draft Tags (Many-to-Many) ============
+export const draftTags = sqliteTable(
+  'draft_tags',
+  {
+    draftId: integer('draft_id')
+      .notNull()
+      .references(() => drafts.id, { onDelete: 'cascade' }),
+    tagName: text('tag_name')
+      .notNull()
+      .references(() => tags.name, { onUpdate: 'cascade', onDelete: 'cascade' }),
+    createdAt: text('created_at')
+      .notNull()
+      .$defaultFn(() => nowIsoTz()),
+  },
+  (table) => [
+    index('draft_tags_draft_id_idx').on(table.draftId),
+    index('draft_tags_tag_name_idx').on(table.tagName),
+    uniqueIndex('draft_tags_unique').on(table.draftId, table.tagName),
+  ],
+);
+
 // ============ Drafts ============
 export const drafts = sqliteTable(
   'drafts',
@@ -111,7 +154,7 @@ export const drafts = sqliteTable(
     title: text('title').notNull(),
     content: text('content').notNull(),
     pathname: text('pathname'),
-    tags: text('tags', { mode: 'json' }).$type<string[] | null>(),
+    tags: jsonb<string[] | null>(),
     category: text('category'),
     author: text('author').notNull(),
     version: integer('version').notNull().default(1),
@@ -143,7 +186,7 @@ export const draftVersions = sqliteTable(
     title: text('title').notNull(),
     content: text('content').notNull(),
     pathname: text('pathname'),
-    tags: text('tags', { mode: 'json' }).$type<string[] | null>(),
+    tags: jsonb<string[] | null>(),
     category: text('category'),
     author: text('author').notNull(),
     createdAt: text('created_at')
@@ -192,7 +235,7 @@ export const siteMeta = sqliteTable(
   {
     id: integer('id').primaryKey({ autoIncrement: true }),
     key: text('key').notNull().unique(),
-    value: text('value', { mode: 'json' }).$type<unknown>(),
+    value: jsonb<unknown>(),
     createdAt: text('created_at')
       .notNull()
       .$defaultFn(() => nowIsoTz()),
@@ -263,7 +306,7 @@ export const analytics = sqliteTable(
     referrer: text('referrer'),
     userAgent: text('user_agent'),
     ip: text('ip'),
-    data: text('data', { mode: 'json' }).$type<unknown>(),
+    data: jsonb<unknown>(),
     createdAt: text('created_at')
       .notNull()
       .$defaultFn(() => nowIsoTz()),
@@ -309,7 +352,7 @@ export const permissionGroups = sqliteTable(
     id: integer('id').primaryKey({ autoIncrement: true }),
     name: text('name').notNull().unique(),
     description: text('description'),
-    permissions: text('permissions', { mode: 'json' }).$type<string[] | null>(),
+    permissions: jsonb<string[] | null>(),
     isActive: integer('is_active', { mode: 'boolean' }).default(true),
     createdAt: text('created_at')
       .notNull()
@@ -331,7 +374,7 @@ export const pluginData = sqliteTable(
     id: integer('id').primaryKey({ autoIncrement: true }),
     pluginId: text('plugin_id').notNull(),
     key: text('key').notNull(),
-    value: text('value'),
+    value: jsonb<unknown>(),
     createdAt: text('created_at')
       .notNull()
       .$defaultFn(() => nowIsoTz()),
@@ -355,7 +398,7 @@ export const pluginMetadata = sqliteTable(
     entityType: text('entity_type').notNull(), // e.g., 'article', 'user', 'draft'
     entityId: integer('entity_id').notNull(),
     metaKey: text('meta_key').notNull(),
-    metaValue: text('meta_value', { mode: 'json' }).$type<unknown>(),
+    metaValue: jsonb<unknown>(),
     createdAt: text('created_at')
       .notNull()
       .$defaultFn(() => nowIsoTz()),
@@ -387,7 +430,7 @@ export const webhooks = sqliteTable('webhooks', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   name: text('name').notNull().unique(),
   url: text('url').notNull(),
-  events: text('events', { mode: 'json' }).$type<string[]>().notNull(),
+  events: jsonb<string[]>().notNull(),
   secret: text('secret'),
   active: integer('active', { mode: 'boolean' }).notNull().default(true),
   retryCount: integer('retry_count').notNull().default(3),
@@ -411,7 +454,7 @@ export const webhookLogs = sqliteTable(
       .notNull()
       .references(() => webhooks.id, { onDelete: 'cascade' }),
     event: text('event').notNull(),
-    payload: text('payload', { mode: 'json' }).$type<unknown>().notNull(),
+    payload: jsonb<unknown>().notNull(),
     status: text('status').notNull(),
     responseCode: integer('response_code'),
     responseBody: text('response_body'),
@@ -436,7 +479,7 @@ export const imageProcessingQueue = sqliteTable('image_processing_queue', {
     .notNull()
     .default('pending'),
   priority: integer('priority').notNull().default(0),
-  processingConfig: text('processing_config', { mode: 'json' }),
+  processingConfig: jsonb(),
   originalBuffer: text('original_buffer'),
   processedBuffer: text('processed_buffer'),
   errorMessage: text('error_message'),
@@ -481,7 +524,7 @@ export const pipelines = sqliteTable(
     enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
     eventName: text('event_name').notNull(),
     script: text('script').notNull(),
-    deps: text('deps', { mode: 'json' }).$type<string[]>().default([]),
+    deps: jsonb<string[]>().default([]),
     status: text('status', { enum: ['idle', 'running', 'success', 'error'] })
       .notNull()
       .default('idle'),
