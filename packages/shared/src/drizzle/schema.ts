@@ -104,6 +104,48 @@ export const tags = sqliteTable(
   ],
 );
 
+// Article Tags (Many-to-Many) - Junction table
+export const articleTags = sqliteTable(
+  'article_tags',
+  {
+    articleId: integer('article_id')
+      .notNull()
+      .references(() => articles.id, { onDelete: 'cascade' }),
+    tagName: text('tag_name')
+      .notNull()
+      .references(() => tags.name, { onUpdate: 'cascade', onDelete: 'cascade' }),
+    createdAt: text('created_at')
+      .notNull()
+      .$defaultFn(() => nowIsoTz()),
+  },
+  (table) => [
+    index('article_tags_article_id_idx').on(table.articleId),
+    index('article_tags_tag_name_idx').on(table.tagName),
+    uniqueIndex('article_tags_unique').on(table.articleId, table.tagName),
+  ],
+);
+
+// Draft Tags (Many-to-Many) - Junction table
+export const draftTags = sqliteTable(
+  'draft_tags',
+  {
+    draftId: integer('draft_id')
+      .notNull()
+      .references(() => drafts.id, { onDelete: 'cascade' }),
+    tagName: text('tag_name')
+      .notNull()
+      .references(() => tags.name, { onUpdate: 'cascade', onDelete: 'cascade' }),
+    createdAt: text('created_at')
+      .notNull()
+      .$defaultFn(() => nowIsoTz()),
+  },
+  (table) => [
+    index('draft_tags_draft_id_idx').on(table.draftId),
+    index('draft_tags_tag_name_idx').on(table.tagName),
+    uniqueIndex('draft_tags_unique').on(table.draftId, table.tagName),
+  ],
+);
+
 // Drafts table
 export const drafts = sqliteTable(
   'drafts',

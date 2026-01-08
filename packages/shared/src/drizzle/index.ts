@@ -5,5 +5,11 @@ export * from './schema.js';
 export * from './zod-schemas.js';
 
 // Utility functions
-export { dataSchemas, safeParse, safeParseJson } from './utils.js';
+export { dataSchemas, safeParse } from './utils.js';
 export type { NavigationNode, DataSchemas } from './utils.js';
+
+// JSON Schema Bridge
+export { jsonSchema, jsonSchemaOptional, jsonSchemaWithDefault } from './json-schema.js';
+
+// Custom JSON column type
+export { jsonb } from './json-column.js';
