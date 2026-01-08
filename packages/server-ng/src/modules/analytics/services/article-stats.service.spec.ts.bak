@@ -352,31 +352,26 @@ describe('ArticleStatsService', () => {
           type: AnalyticsType.PAGEVIEW,
           path: `/article/${article1.pathname}`,
           ip: '192.168.1.1',
-          data: { articleId: article1.id },
         });
         await Given.analytics({
           type: AnalyticsType.PAGEVIEW,
           path: `/article/${article1.pathname}`,
           ip: '192.168.1.2',
-          data: { articleId: article1.id },
         });
         await Given.analytics({
           type: AnalyticsType.PAGEVIEW,
           path: `/article/${article1.pathname}`,
           ip: '192.168.1.3',
-          data: { articleId: article1.id },
         });
         await Given.analytics({
           type: AnalyticsType.PAGEVIEW,
           path: `/article/${article1.pathname}`,
           ip: '192.168.1.4',
-          data: { articleId: article1.id },
         });
         await Given.analytics({
           type: AnalyticsType.PAGEVIEW,
           path: `/article/${article1.pathname}`,
-          ip: '192.168.1.1',
-          data: { articleId: article1.id },
+          ip: '192.168.1.5',
         });
 
         // 为第一篇文章添加阅读时长记录（EVENT 类型）
@@ -384,25 +379,21 @@ describe('ArticleStatsService', () => {
           type: AnalyticsType.EVENT,
           path: `/article/${article1.pathname}`,
           ip: '192.168.1.1',
-          data: { event: 'reading_time', articleId: article1.id, duration: 300 },
         });
         await Given.analytics({
           type: AnalyticsType.EVENT,
           path: `/article/${article1.pathname}`,
           ip: '192.168.1.2',
-          data: { event: 'reading_time', articleId: article1.id, duration: 300 },
         });
         await Given.analytics({
           type: AnalyticsType.EVENT,
           path: `/article/${article1.pathname}`,
           ip: '192.168.1.3',
-          data: { event: 'reading_time', articleId: article1.id, duration: 300 },
         });
         await Given.analytics({
           type: AnalyticsType.EVENT,
           path: `/article/${article1.pathname}`,
           ip: '192.168.1.4',
-          data: { event: 'reading_time', articleId: article1.id, duration: 300 },
         });
 
         // 为第二篇文章创建记录（3 次浏览，2 个独立 IP）
@@ -410,19 +401,16 @@ describe('ArticleStatsService', () => {
           type: AnalyticsType.PAGEVIEW,
           path: `/article/${article2.pathname}`,
           ip: '192.168.1.1',
-          data: { articleId: article2.id },
         });
         await Given.analytics({
           type: AnalyticsType.PAGEVIEW,
           path: `/article/${article2.pathname}`,
           ip: '192.168.1.1',
-          data: { articleId: article2.id },
         });
         await Given.analytics({
           type: AnalyticsType.PAGEVIEW,
           path: `/article/${article2.pathname}`,
           ip: '192.168.1.3',
-          data: { articleId: article2.id },
         });
 
         // 为第二篇文章添加阅读时长记录（EVENT 类型）
@@ -430,13 +418,11 @@ describe('ArticleStatsService', () => {
           type: AnalyticsType.EVENT,
           path: `/article/${article2.pathname}`,
           ip: '192.168.1.1',
-          data: { event: 'reading_time', articleId: article2.id, duration: 200 },
         });
         await Given.analytics({
           type: AnalyticsType.EVENT,
           path: `/article/${article2.pathname}`,
           ip: '192.168.1.2',
-          data: { event: 'reading_time', articleId: article2.id, duration: 200 },
         });
 
         const txService = new ArticleStatsService(
@@ -479,7 +465,6 @@ describe('ArticleStatsService', () => {
           type: AnalyticsType.PAGEVIEW,
           path: `/article/${article.pathname}`,
           ip: '192.168.1.1',
-          data: { articleId: article.id },
         });
 
         const txService = new ArticleStatsService(
@@ -511,7 +496,6 @@ describe('ArticleStatsService', () => {
           type: AnalyticsType.PAGEVIEW,
           path: `/article/${article.pathname}`,
           ip: '192.168.1.1',
-          data: { articleId: article.id },
         });
 
         const txService = new ArticleStatsService(
@@ -544,7 +528,6 @@ describe('ArticleStatsService', () => {
             type: AnalyticsType.PAGEVIEW,
             path: `/article/${article.pathname}`,
             ip: '192.168.1.1',
-            data: { articleId: article.id },
           });
         }
 
@@ -592,19 +575,16 @@ describe('ArticleStatsService', () => {
           type: AnalyticsType.PAGEVIEW,
           path: `/article/${article.pathname}`,
           ip: '192.168.1.1',
-          data: { articleId: article.id },
         });
         await Given.analytics({
           type: AnalyticsType.PAGEVIEW,
           path: `/article/${article.pathname}`,
           ip: '192.168.1.2',
-          data: { articleId: article.id },
         });
         await Given.analytics({
           type: AnalyticsType.PAGEVIEW,
           path: `/article/${article.pathname}`,
           ip: '192.168.1.3',
-          data: { articleId: article.id },
         });
 
         // 插入阅读时长记录（EVENT 类型）
@@ -612,19 +592,16 @@ describe('ArticleStatsService', () => {
           type: AnalyticsType.EVENT,
           path: `/article/${article.pathname}`,
           ip: '192.168.1.1',
-          data: { event: 'reading_time', articleId: article.id, duration: 300 },
         });
         await Given.analytics({
           type: AnalyticsType.EVENT,
           path: `/article/${article.pathname}`,
           ip: '192.168.1.2',
-          data: { event: 'reading_time', articleId: article.id, duration: 300 },
         });
         await Given.analytics({
           type: AnalyticsType.EVENT,
           path: `/article/${article.pathname}`,
           ip: '192.168.1.3',
-          data: { event: 'reading_time', articleId: article.id, duration: 300 },
         });
 
         const txService = new ArticleStatsService(
@@ -707,7 +684,6 @@ describe('ArticleStatsService', () => {
           type: AnalyticsType.PAGEVIEW,
           path: `/article/${article.pathname}`,
           ip: '192.168.1.1',
-          data: { articleId: article.id },
         });
 
         const txService = new ArticleStatsService(

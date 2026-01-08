@@ -36,7 +36,7 @@ export class ArticleStatsService {
       path: `/article/${article[0].pathname ?? String(article[0].id)}`,
       ip,
       userAgent,
-      data: JSON.stringify({ articleId }),
+      data: { articleId },
     });
 
     // 更新文章浏览次数
@@ -68,17 +68,15 @@ export class ArticleStatsService {
   }
 
   async getTopArticles(limit = 10): Promise<ArticleStats[]> {
-    // 已统一数据：仅使用新字段 articleId / duration，类型为 pageview
+    // 先获取浏览统计（从 PAGEVIEW 类型的记录）
     const articleIdExpr = sql<number>`CAST(json_extract(${analytics.data}, '$.articleId') AS INTEGER)`;
-    const durationExpr = sql<number>`CAST(json_extract(${analytics.data}, '$.duration') AS INTEGER)`;
 
-    const result = await this.db
+    const pageViewStats = await this.db
       .select({
         articleId: articleIdExpr,
         title: articles.title,
         views: sql<number>`count(*)`,
         uniqueVisitors: sql<number>`count(distinct ${analytics.ip})`,
-        avgReadTime: sql<number>`avg(${durationExpr})`,
       })
       .from(analytics)
       .leftJoin(articles, sql`${articleIdExpr} = ${articles.id}`)
@@ -92,42 +90,99 @@ export class ArticleStatsService {
       .orderBy(desc(sql`count(*)`))
       .limit(limit);
 
-    return result.map((row) => ({
+    // 获取阅读时长（从 EVENT 类型的记录）
+    const articleIds = pageViewStats.map((stat) => stat.articleId);
+    const durationExpr = sql<number>`CAST(json_extract(${analytics.data}, '$.duration') AS INTEGER)`;
+
+    const readingTimeStats =
+      articleIds.length > 0
+        ? await this.db
+            .select({
+              articleId: articleIdExpr,
+              avgReadTime: sql<number>`avg(${durationExpr})`,
+            })
+            .from(analytics)
+            .where(
+              and(
+                eq(analytics.type, AnalyticsType.EVENT),
+                sql`json_extract(${analytics.data}, '$.event') = 'reading_time'`,
+                sql`json_extract(${analytics.data}, '$.articleId') IS NOT NULL`,
+                sql`json_extract(${analytics.data}, '$.duration') IS NOT NULL`,
+                sql`${articleIdExpr} IN ${sql.raw(`(${articleIds.join(',')})`)}`,
+              ),
+            )
+            .groupBy(articleIdExpr)
+        : [];
+
+    // 合并结果
+    const readingTimeMap = new Map(readingTimeStats.map((stat) => [stat.articleId, stat.avgReadTime]));
+
+    return pageViewStats.map((row) => ({
       articleId: row.articleId,
-      title: row.title ?? 'Untitled',
+      title: row.title && row.title.length > 0 ? row.title : 'Untitled',
       views: row.views,
       uniqueVisitors: row.uniqueVisitors,
-      avgReadTime: row.avgReadTime > 0 ? row.avgReadTime : 0,
+      avgReadTime: (readingTimeMap.get(row.articleId) ?? 0) > 0 ? readingTimeMap.get(row.articleId)! : 0,
     }));
   }
 
   async getArticleStats(articleId: number): Promise<ArticleStats | null> {
-    // 已统一数据：仅使用新字段 articleId / duration，类型为 pageview
     const articleIdExpr = sql<number>`CAST(json_extract(${analytics.data}, '$.articleId') AS INTEGER)`;
-    const durationExpr = sql<number>`CAST(json_extract(${analytics.data}, '$.duration') AS INTEGER)`;
 
-    const result = await this.db
+    // 获取文章信息
+    const articleInfo = await this.db
       .select({
         title: articles.title,
-        views: sql<number>`count(*)`,
-        uniqueVisitors: sql<number>`count(distinct ${analytics.ip})`,
-        avgReadTime: sql<number>`avg(${durationExpr})`,
       })
-      .from(analytics)
-      .leftJoin(articles, eq(articles.id, articleId))
-      .where(and(eq(analytics.type, AnalyticsType.PAGEVIEW), sql`${articleIdExpr} = ${articleId}`))
-      .groupBy(articles.title);
+      .from(articles)
+      .where(eq(articles.id, articleId))
+      .limit(1);
 
-    if (result.length === 0) {
+    if (articleInfo.length === 0) {
       return null;
     }
 
+    // 获取浏览统计（从 PAGEVIEW 类型的记录）
+    const pageViewResult = await this.db
+      .select({
+        views: sql<number>`count(*)`,
+        uniqueVisitors: sql<number>`count(distinct ${analytics.ip})`,
+      })
+      .from(analytics)
+      .where(and(eq(analytics.type, AnalyticsType.PAGEVIEW), sql`${articleIdExpr} = ${articleId}`));
+
+    // count(*) without group by always returns one row
+    const views = pageViewResult[0].views;
+    if (views === 0) {
+      // No views found, return null
+      return null;
+    }
+
+    // 获取阅读时长（从 EVENT 类型的记录）
+    const durationExpr = sql<number>`CAST(json_extract(${analytics.data}, '$.duration') AS INTEGER)`;
+    const readingTimeResult = await this.db
+      .select({
+        avgReadTime: sql<number>`avg(${durationExpr})`,
+      })
+      .from(analytics)
+      .where(
+        and(
+          eq(analytics.type, AnalyticsType.EVENT),
+          sql`json_extract(${analytics.data}, '$.event') = 'reading_time'`,
+          sql`json_extract(${analytics.data}, '$.articleId') IS NOT NULL`,
+          sql`json_extract(${analytics.data}, '$.duration') IS NOT NULL`,
+          sql`${articleIdExpr} = ${articleId}`,
+        ),
+      );
+
+    const avgReadTime = readingTimeResult.length > 0 ? readingTimeResult[0].avgReadTime : 0;
+
     return {
       articleId,
-      title: result[0].title ?? 'Untitled',
-      views: result[0].views,
-      uniqueVisitors: result[0].uniqueVisitors,
-      avgReadTime: result[0].avgReadTime > 0 ? result[0].avgReadTime : 0,
+      title: articleInfo[0].title && articleInfo[0].title.length > 0 ? articleInfo[0].title : 'Untitled',
+      views,
+      uniqueVisitors: pageViewResult[0].uniqueVisitors,
+      avgReadTime: avgReadTime > 0 ? avgReadTime : 0,
     };
   }
 
@@ -136,7 +191,7 @@ export class ArticleStatsService {
       type: AnalyticsType.EVENT,
       path: `/article/${String(articleId)}`,
       ip,
-      data: JSON.stringify({ articleId, duration, event: 'reading_time' }),
+      data: { articleId, duration, event: 'reading_time' },
     });
   }
 }
