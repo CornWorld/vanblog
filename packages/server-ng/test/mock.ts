@@ -14,6 +14,14 @@ import { TagService } from '../src/modules/tag/tag.service';
 import { StatisticsService } from '../src/shared/services/statistics.service';
 import { QueryOptimizerService } from '../src/shared/services/query-optimizer.service';
 
+// Import test data factories from fixtures/test-data.ts
+// These are used in the Mock object below
+import {
+  createMockAnalytics,
+  createMockWebhook,
+  createMockPermissionGroup,
+} from './fixtures/test-data';
+
 import type { ConfigService } from '../src/config/config.service';
 import type { Database } from '../src/database';
 import type {
@@ -299,11 +307,19 @@ export class DatabaseMockBuilder<TSelect = any, TInsert = any, TUpdate = any, TD
         distinctOn: vi.fn(),
         for: vi.fn(),
         $dynamic: vi.fn(),
+        // Make the chain thenable (Promise-like) so it can be awaited directly
+        // This allows: await db.select().from(table).where(...) to work
+        then: vi.fn().mockImplementation((resolve) => {
+          return Promise.resolve(resultData).then(resolve);
+        }),
+        catch: vi.fn().mockImplementation((reject) => {
+          return Promise.resolve(resultData).catch(reject);
+        }),
       };
 
       // 设置所有非终止方法返回自身以支持链式调用
       Object.keys(chainMock).forEach((key) => {
-        if (!['get', 'all'].includes(key)) {
+        if (!['get', 'all', 'then', 'catch'].includes(key)) {
           chainMock[key].mockReturnValue(chainMock);
         }
       });
@@ -526,11 +542,18 @@ export class DatabaseMockBuilder<TSelect = any, TInsert = any, TUpdate = any, TD
         innerJoin: vi.fn(),
         leftJoin: vi.fn(),
         rightJoin: vi.fn(),
+        // Make the chain thenable (Promise-like) for COUNT queries
+        then: vi.fn().mockImplementation((resolve) => {
+          return Promise.resolve(countResult).then(resolve);
+        }),
+        catch: vi.fn().mockImplementation((reject) => {
+          return Promise.resolve(countResult).catch(reject);
+        }),
       };
 
       // 设置所有非终止方法返回自身以支持链式调用
       Object.keys(chainMock).forEach((key) => {
-        if (!['get', 'all'].includes(key)) {
+        if (!['get', 'all', 'then', 'catch'].includes(key)) {
           chainMock[key].mockReturnValue(chainMock);
         }
       });
@@ -1410,6 +1433,7 @@ export function createUser(overrides: Record<string, unknown> = {}): Record<stri
     nickname: 'Test User',
     email: 'test@example.com',
     type: 'admin',
+    password: 'hashed-password', // Add password field (NOT NULL constraint)
     createdAt: dayjs().format(),
     updatedAt: dayjs().format(),
     ...overrides,
@@ -1535,6 +1559,24 @@ export function createCategories(
       ...overrides,
     }),
   );
+}
+
+/**
+ * 创建评论测试数据
+ */
+export function createComment(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    id: 1,
+    articleId: 1,
+    parentId: null,
+    author: 'Commenter',
+    email: 'commenter@example.com',
+    content: 'This is a test comment.',
+    status: 'approved',
+    createdAt: dayjs().format(),
+    updatedAt: dayjs().format(),
+    ...overrides,
+  };
 }
 
 /**
@@ -2427,6 +2469,8 @@ export const Mock = {
   tag: createTag,
   /** Create single Category test data */
   category: createCategory,
+  /** Create single Comment test data */
+  comment: createComment,
   /** Create single MediaFile test data */
   mediaFile: createMediaFile,
   /** Create single Draft test data */
@@ -2441,6 +2485,12 @@ export const Mock = {
   uploadSession: createUploadSession,
   /** Create single Mock File (Express) */
   mockFile: createMockFile,
+  /** Create single Analytics test data */
+  analyticsData: createMockAnalytics,
+  /** Create single Webhook test data */
+  webhook: createMockWebhook,
+  /** Create single PermissionGroup test data */
+  permissionGroup: createMockPermissionGroup,
 
   // ========== Test Data Factories (Batch) ==========
   /** Create multiple User test data */

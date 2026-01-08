@@ -2,8 +2,14 @@
 // This file is automatically loaded before tests run
 
 import { execSync } from 'child_process';
-import { mkdirSync, existsSync, unlinkSync, openSync, closeSync, writeFileSync } from 'fs';
-import { join } from 'path';
+import { mkdirSync, existsSync, unlinkSync, writeFileSync, openSync, closeSync } from 'fs';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+// Get current file's directory (ES module way)
+const __filename = fileURLToPath(import.meta.url);
+const testDir = dirname(__filename);
+const packageDir = dirname(testDir); // server-ng package directory
 
 import { createClient } from '@libsql/client';
 import * as schema from '@vanblog/shared/drizzle';
@@ -11,15 +17,20 @@ import { drizzle } from 'drizzle-orm/libsql';
 import { vi } from 'vitest';
 
 // Set up test-specific database configuration
-// Use a fixed database name for all tests to ensure they share the same database
+// Use a separate database file for each worker to avoid conflicts
 const testDbDir = join(process.cwd(), 'test-data');
-const testDbPath = join(testDbDir, 'test-e2e.db');
+
+// Get worker ID from Vitest (default to '0' for single worker)
+const workerId = process.env.VITEST_POOL_ID || process.env.VITEST_WORKER_ID || '0';
+const testDbPath = join(testDbDir, `test-worker-${workerId}.db`);
+
 const testCodeRunnerDir = join(process.cwd(), 'test-data', 'codeRunner');
 const testPluginRunnerDir = join(process.cwd(), 'test-data', 'pluginRunner');
 const testStaticDir = join(process.cwd(), 'test-data', 'static');
+
 // Lock and ready sentinel files to coordinate multi-worker initialization
-const dbInitLockFile = join(testDbDir, 'db.init.lock');
-const dbReadyFile = join(testDbDir, 'db.ready');
+const dbInitLockFile = join(testDbDir, `db.init.lock.${workerId}`);
+const dbReadyFile = join(testDbDir, `db.ready.${workerId}`);
 
 // Ensure test data directories exist
 if (!existsSync(testDbDir)) {
@@ -80,53 +91,78 @@ function tryAcquireInitLock(): boolean {
   }
 }
 
-// Initialize test database with schema using Drizzle ORM (via drizzle-kit push)
+// Initialize test database using drizzle-kit push
+// Each worker initializes its own database independently (no coordination needed)
 export async function setupTestDatabase(): Promise<ReturnType<typeof drizzle>> {
+  console.log(`[Worker ${workerId}] setupTestDatabase() START`);
   try {
-    if (!existsSync(dbReadyFile)) {
-      if (tryAcquireInitLock()) {
-        // We are the initializer: ensure a clean DB file then run push
-        if (existsSync(testDbPath)) {
-          unlinkSync(testDbPath);
-        }
-        // Run schema push using drizzle-kit, respecting drizzle.config.ts and DATABASE_URL
-        // Force working directory to the server-ng package to ensure correct config resolution
-        const packageDir = join(__dirname, '..');
-        execSync('pnpm --silent db:push', {
-          stdio: 'ignore',
+    // Check if this worker's database is already initialized
+    if (existsSync(dbReadyFile)) {
+      console.log(`[Worker ${workerId}] Database already initialized, reusing existing database`);
+    } else {
+      // Initialize this worker's database
+      console.log(`[Worker ${workerId}] Initializing test database at ${testDbPath}`);
+
+      // Ensure clean DB file
+      if (existsSync(testDbPath)) {
+        console.log(`[Worker ${workerId}] Removing old database file`);
+        unlinkSync(testDbPath);
+      }
+
+      // Use drizzle-kit push
+      // drizzle-kit can read TypeScript files directly
+      console.log(`[Worker ${workerId}] Running drizzle-kit push...`);
+      try {
+        execSync('npx drizzle-kit push', {
+          stdio: 'pipe',
           cwd: packageDir,
           env: { ...process.env, DATABASE_URL: `file:${testDbPath}` },
         });
-        // Mark ready for other workers
-        writeFileSync(dbReadyFile, 'ok');
-        // Best effort: remove the lock to not leave stale file (not critical if it remains)
-        if (existsSync(dbInitLockFile)) {
-          try {
-            unlinkSync(dbInitLockFile);
-          } catch {
-            // ignore
-          }
-        }
-      } else {
-        // Another worker is initializing; wait until ready
-        await waitForDbReady();
+      } catch (execError: any) {
+        console.error(`[Worker ${workerId}] drizzle-kit push failed with code ${execError.status}`);
+        console.error(`[Worker ${workerId}] stdout: ${execError.stdout?.toString() || 'none'}`);
+        console.error(`[Worker ${workerId}] stderr: ${execError.stderr?.toString() || 'none'}`);
+        throw new Error(`drizzle-kit push failed: ${execError.message}`);
       }
+
+      console.log(`[Worker ${workerId}] Database initialization complete`);
+
+      // Mark ready for this worker
+      console.log(`[Worker ${workerId}] Creating ready marker: ${dbReadyFile}`);
+      writeFileSync(dbReadyFile, 'ok');
+      console.log(`[Worker ${workerId}] Ready marker created successfully`);
     }
   } catch (error) {
-    console.error('Failed to initialize test database via drizzle-kit push:', error);
-    throw error;
+    console.error('Failed to initialize test database:', error);
+    // Exit immediately to prevent tests from running with broken setup
+    process.exit(1);
   }
 
+  console.log(`[Worker ${workerId}] Creating database client...`);
+  // Create and return database client with WAL mode for better concurrency
   const client = createClient({ url: `file:${testDbPath}` });
   const db = drizzle(client, { schema });
 
-  // Ensure this async function contains an await to satisfy lint rules
-  await Promise.resolve();
+  // Enable WAL mode for better concurrency support
+  // WAL mode allows multiple concurrent readers and one writer
+  console.log(`[Worker ${workerId}] Enabling WAL mode...`);
+  try {
+    await client.execute('PRAGMA journal_mode = WAL;');
+    console.log(`[Worker ${workerId}] WAL mode enabled`);
+  } catch (walError) {
+    console.warn(`[Worker ${workerId}] Failed to enable WAL mode:`, walError);
+    // Continue anyway - tests will use default rollback journal
+  }
 
+  console.log(`[Worker ${workerId}] setupTestDatabase() END`);
   return db;
 }
 
 // Use immediately invoked async function to ensure database is initialized before any tests run
-void (async () => {
-  await setupTestDatabase();
-})();
+// Export the db instance for use in tests
+const db = await setupTestDatabase();
+
+// Also export the raw client for advanced use cases like transactions
+// Drizzle stores the original client in the $client property
+export { db };
+export const dbClient = (db as any).$client;
