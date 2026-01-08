@@ -1,8 +1,8 @@
 import { Injectable, NotFoundException, Inject } from '@nestjs/common';
 import { dayjs } from '@vanblog/shared';
-import { drafts, articles, tags } from '@vanblog/shared/drizzle';
+import { drafts, articles, tags, draftTags } from '@vanblog/shared/drizzle';
 import * as bcrypt from 'bcrypt';
-import { eq, and, or, like, desc, asc, sql } from 'drizzle-orm';
+import { eq, and, or, like, desc, asc, sql, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 
 import { DATABASE_CONNECTION, type Database } from '../../database';
@@ -27,6 +27,91 @@ export class DraftService {
     private readonly draftVersionService: DraftVersionService,
     private readonly hookService: HookService,
   ) {}
+
+  /**
+   * 加载草稿的标签（从 draft_tags 关联表）
+   *
+   * @param draftId 草稿 ID
+   * @returns 标签名称数组
+   */
+  private async loadDraftTags(draftId: number): Promise<string[]> {
+    const tagResults = await this.db
+      .select({ tagName: draftTags.tagName })
+      .from(draftTags)
+      .where(eq(draftTags.draftId, draftId));
+
+    return tagResults.map((t) => t.tagName);
+  }
+
+  /**
+   * 批量加载多个草稿的标签（性能优化）
+   *
+   * @param draftIds 草稿 ID 数组
+   * @returns Map<draftId, tagNames[]>
+   */
+  private async loadDraftTagsBatch(draftIds: number[]): Promise<Map<number, string[]>> {
+    if (draftIds.length === 0) {
+      return new Map();
+    }
+
+    const tagResults = await this.db
+      .select({
+        draftId: draftTags.draftId,
+        tagName: draftTags.tagName,
+      })
+      .from(draftTags)
+      .where(inArray(draftTags.draftId, draftIds));
+
+    const tagMap = new Map<number, string[]>();
+    for (const result of tagResults) {
+      const existing = tagMap.get(result.draftId) ?? [];
+      existing.push(result.tagName);
+      tagMap.set(result.draftId, existing);
+    }
+
+    return tagMap;
+  }
+
+  /**
+   * 更新草稿的标签关联（删除旧的，插入新的）
+   *
+   * @param draftId 草稿 ID
+   * @param tagNames 新的标签名称数组
+   */
+  private async updateDraftTags(draftId: number, tagNames: string[]): Promise<void> {
+    // 1. 删除旧的标签关联
+    await this.db.delete(draftTags).where(eq(draftTags.draftId, draftId));
+
+    // 2. 确保所有标签存在（自动创建缺失的标签）
+    if (tagNames.length > 0) {
+      // 获取现有标签
+      const existingTags = await this.db.select().from(tags);
+      const existingTagNames = new Set(existingTags.map((tag) => tag.name));
+
+      // 找出需要创建的标签
+      const missingTags = tagNames.filter((tagName) => !existingTagNames.has(tagName));
+
+      // 批量创建缺失的标签
+      if (missingTags.length > 0) {
+        await this.db.insert(tags).values(
+          missingTags.map((tagName) => ({
+            name: tagName,
+            slug: tagName.toLowerCase().replace(/\s+/g, '-'),
+            createdAt: dayjs().format(),
+          })),
+        );
+      }
+
+      // 3. 插入新的标签关联
+      await this.db.insert(draftTags).values(
+        tagNames.map((tagName) => ({
+          draftId,
+          tagName,
+          createdAt: dayjs().format(),
+        })),
+      );
+    }
+  }
 
   async findAll(
     query: z.infer<typeof DraftQuerySchema>,
@@ -67,6 +152,10 @@ export class DraftService {
         .where(whereClause),
     ]);
 
+    // 批量加载标签（性能优化：一次查询获取所有标签）
+    const draftIds = draftResults.map((d) => d.id);
+    const tagsMap = await this.loadDraftTagsBatch(draftIds);
+
     return {
       items: draftResults.map((draft) => ({
         id: draft.id,
@@ -74,7 +163,7 @@ export class DraftService {
         content: draft.content,
         pathname: draft.pathname,
         category: draft.category,
-        tags: draft.tags ?? [],
+        tags: tagsMap.get(draft.id) ?? [],
         author: draft.author,
         version: draft.version,
         createdAt: dayjs(draft.createdAt).format(),
@@ -98,9 +187,12 @@ export class DraftService {
 
     const [draft] = results;
 
+    // 从 draft_tags 关联表加载标签
+    const tags = await this.loadDraftTags(draft.id);
+
     return {
       ...draft,
-      tags: draft.tags ?? [],
+      tags,
       pathname: draft.pathname,
       category: draft.category,
       createdAt: dayjs(draft.createdAt).format(),
@@ -113,7 +205,10 @@ export class DraftService {
   ): Promise<z.infer<typeof DraftSchema>> {
     const { tags, ...rest } = createDraftDto;
 
-    let draftData: {
+    // 提取标签数组（用于后续写入关联表）
+    const tagNames = Array.isArray(tags) && tags.length > 0 ? tags : [];
+
+    const draftData: {
       title: string;
       content: string;
       pathname: null;
@@ -124,7 +219,7 @@ export class DraftService {
       title: rest.title,
       content: rest.content,
       pathname: null, // pathname not available in CreateDraftDto
-      tags: Array.isArray(tags) && tags.length > 0 ? tags : null,
+      tags: tagNames.length > 0 ? tagNames : null, // 保留用于钩子
       category: null, // Use first category from categories array if available
       author: 'admin', // Default author since not in CreateDraftDto
     };
@@ -135,13 +230,16 @@ export class DraftService {
     });
 
     // Ensure tags is the correct type after filtering
-    draftData = {
-      ...filteredData,
-      tags:
-        Array.isArray(filteredData.tags) && filteredData.tags.length > 0 ? filteredData.tags : null,
-    } as typeof draftData;
+    const filteredTags =
+      Array.isArray(filteredData.tags) && filteredData.tags.length > 0 ? filteredData.tags : [];
 
-    const result = await this.db.insert(drafts).values(draftData).returning();
+    // 插入草稿（不再写入 tags 字段）
+    const insertData = {
+      ...filteredData,
+      tags: null, // 不再使用 JSON 字段
+    };
+
+    const result = await this.db.insert(drafts).values(insertData).returning();
 
     if (result.length === 0) {
       throw new Error('Failed to create draft');
@@ -149,9 +247,14 @@ export class DraftService {
 
     const [newDraft] = result;
 
+    // 写入标签关联表
+    if (filteredTags.length > 0) {
+      await this.updateDraftTags(newDraft.id, filteredTags);
+    }
+
     const draftResult = {
       ...newDraft,
-      tags: newDraft.tags ?? [],
+      tags: filteredTags,
       pathname: newDraft.pathname,
       category: newDraft.category,
       createdAt: dayjs(newDraft.createdAt).format(),
@@ -187,8 +290,10 @@ export class DraftService {
       updateData.pathname = rest.pathname ?? null;
     }
 
-    // tags is string[] | null, Drizzle handles JSON serialization automatically
-    updateData.tags = tags;
+    // 保留 tags 用于钩子，但不写入数据库
+    if (tags !== undefined) {
+      updateData.tags = tags;
+    }
 
     if ('category' in rest && rest.category !== undefined) {
       updateData.category = rest.category ?? null;
@@ -206,9 +311,15 @@ export class DraftService {
       id,
     });
 
+    // 提取钩子处理后的标签
+    const finalTags = updateData.tags as string[] | undefined;
+
+    // 移除 tags 字段（不再写入 JSON 列）
+    const { tags: _tags, ...dbUpdateData } = updateData;
+
     const result = await this.db
       .update(drafts)
-      .set(updateData)
+      .set(dbUpdateData)
       .where(eq(drafts.id, id))
       .returning();
 
@@ -218,9 +329,17 @@ export class DraftService {
 
     const [updatedDraft] = result;
 
+    // 更新标签关联表
+    if (finalTags !== undefined) {
+      await this.updateDraftTags(id, finalTags ?? []);
+    }
+
+    // 从关联表加载最新标签
+    const currentTags = await this.loadDraftTags(id);
+
     const draftResult = {
       ...updatedDraft,
-      tags: updatedDraft.tags ?? [],
+      tags: currentTags,
       pathname: updatedDraft.pathname,
       category: updatedDraft.category,
       createdAt: dayjs(updatedDraft.createdAt).format(),
@@ -266,7 +385,8 @@ export class DraftService {
   async publish(id: number, publishDto: z.infer<typeof PublishDraftSchema>): Promise<Article> {
     // First, get the draft
     const draft = await this.findOne(id);
-    const draftTags = draft.tags ?? [];
+    // Filter out null/undefined values from tags array
+    const draftTags = Array.isArray(draft.tags) ? draft.tags.filter((tag) => tag != null) : [];
 
     // Auto-create tags if they don't exist
     if (draftTags.length > 0) {
@@ -372,9 +492,6 @@ export class DraftService {
       updateData.pathname = rest.pathname ?? null;
     }
 
-    // tags is string[] | null, Drizzle handles JSON serialization automatically
-    updateData.tags = tags;
-
     if ('category' in rest && rest.category !== undefined) {
       updateData.category = rest.category ?? null;
     }
@@ -397,9 +514,17 @@ export class DraftService {
 
     const [updatedDraft] = result;
 
+    // 更新标签关联表（如果提供了 tags）
+    if (tags !== undefined) {
+      await this.updateDraftTags(id, tags ?? []);
+    }
+
+    // 从关联表加载最新标签
+    const currentTags = await this.loadDraftTags(id);
+
     return {
       ...updatedDraft,
-      tags: updatedDraft.tags ?? [],
+      tags: currentTags,
       pathname: updatedDraft.pathname,
       category: updatedDraft.category,
       createdAt: dayjs(updatedDraft.createdAt).format(),
@@ -419,8 +544,8 @@ export class DraftService {
     const existingTags = await this.db.select().from(tags);
     const existingTagNames = new Set(existingTags.map((tag) => tag.name));
 
-    // 找出需要创建的标签
-    const missingTags = tagNames.filter((tagName) => !existingTagNames.has(tagName));
+    // 找出需要创建的标签（过滤掉 null/undefined）
+    const missingTags = tagNames.filter((tagName) => tagName && !existingTagNames.has(tagName));
 
     // 批量创建缺失的标签
     if (missingTags.length > 0) {
