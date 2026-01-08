@@ -12,6 +12,7 @@ describe('MetricsController', () => {
   let errorRateMonitoringService: ErrorRateMonitoringService;
 
   beforeEach(async () => {
+    // ✅ 优化：使用新的扁平化 Mock API
     const mockErrorRateService = Mock.errorRateMonitoring();
 
     const module: TestingModule = await Test.createTestingModule({

@@ -1,6 +1,5 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import * as zlib from 'zlib';
 
 import { describe, it, beforeEach, expect, vi } from 'vitest';
 
@@ -10,29 +9,71 @@ import { BackupService } from './backup.service';
 
 import type { CreateBackupDto, RestoreBackupDto, GetBackupsDto } from './dto/backup.dto';
 
-// Mock fs module
-vi.mock('fs/promises');
-const mockFs = fs as any;
+// Mock fs and zlib modules
+vi.mock('fs/promises', async () => {
+  const actual = await vi.importActual('fs/promises');
+  return {
+    ...actual,
+    mkdir: vi.fn(),
+    writeFile: vi.fn(),
+    readdir: vi.fn(),
+    stat: vi.fn(),
+    readFile: vi.fn(),
+    unlink: vi.fn(),
+    access: vi.fn(),
+  };
+});
+
+vi.mock('zlib', () => ({
+  gzip: vi.fn((data: any, callback: any) => callback(null, Buffer.from('compressed-data'))),
+  gunzip: vi.fn((data: any, callback: any) => callback(null, Buffer.from('{}'))),
+  gzipSync: vi.fn(() => Buffer.from('compressed-data')),
+  gunzipSync: vi.fn(() => Buffer.from('{}')),
+  default: {
+    gzip: vi.fn((data: any, callback: any) => callback(null, Buffer.from('compressed-data'))),
+    gunzip: vi.fn((data: any, callback: any) => callback(null, Buffer.from('{}'))),
+    gzipSync: vi.fn(() => Buffer.from('compressed-data')),
+    gunzipSync: vi.fn(() => Buffer.from('{}')),
+  },
+}));
 
 describe('BackupService', () => {
   let service: BackupService;
   let mockDb: DatabaseMockBuilder;
   let mockLogger: any;
+  let mockFs: any;
 
-  beforeEach(() => {
+  beforeEach(async () => {
+    // Import mocked modules
+    mockFs = (await import('fs/promises')) as any;
+    const mockZlib = await import('zlib');
+
+    // Create mocks
     mockDb = new DatabaseMockBuilder();
     mockLogger = Mock.logger();
-    service = new BackupService(mockDb.db as any, mockLogger as any);
 
-    // Reset mocks
-    vi.clearAllMocks();
-    mockFs.mkdir = vi.fn().mockResolvedValue(undefined);
-    mockFs.writeFile = vi.fn().mockResolvedValue(undefined);
-    mockFs.readdir = vi.fn().mockResolvedValue([]);
-    mockFs.stat = vi.fn().mockResolvedValue({ size: 1024 } as any);
-    mockFs.readFile = vi.fn().mockResolvedValue('{}');
-    mockFs.unlink = vi.fn().mockResolvedValue(undefined);
-    mockFs.access = vi.fn().mockResolvedValue(undefined);
+    // Setup database query mocks - return empty arrays for all queries
+    mockDb.setQueryResult([]);
+
+    // Setup fs mocks with default values
+    vi.mocked(mockFs.mkdir).mockResolvedValue(undefined);
+    vi.mocked(mockFs.writeFile).mockResolvedValue(undefined);
+    vi.mocked(mockFs.readdir).mockResolvedValue([]);
+    vi.mocked(mockFs.stat).mockResolvedValue({ size: 1024, mtime: new Date('2023-01-01T00:00:00Z') });
+    vi.mocked(mockFs.readFile).mockResolvedValue(Buffer.from('{}'));
+    vi.mocked(mockFs.unlink).mockResolvedValue(undefined);
+    vi.mocked(mockFs.access).mockResolvedValue(undefined);
+
+    // Setup zlib mocks
+    vi.mocked(mockZlib.gzip).mockImplementation((data: any, callback: any) =>
+      callback(null, Buffer.from('compressed-data')),
+    );
+    vi.mocked(mockZlib.gunzip).mockImplementation((data: any, callback: any) =>
+      callback(null, Buffer.from('{}')),
+    );
+
+    // Create service instance
+    service = new BackupService(mockDb.db as any, mockLogger as any);
   });
 
   it('should be defined', () => {
@@ -85,7 +126,7 @@ describe('BackupService', () => {
     });
 
     it('should handle backup creation failure', async () => {
-      mockFs.writeFile.mockRejectedValue(new Error('Write failed'));
+      vi.mocked(mockFs.writeFile).mockRejectedValueOnce(new Error('Write failed'));
 
       const createBackupDto: CreateBackupDto = {
         name: 'failing-backup',
@@ -94,9 +135,7 @@ describe('BackupService', () => {
         includeLogs: false,
       };
 
-      await expect(service.createBackup(createBackupDto)).rejects.toThrow(
-        'Failed to create backup',
-      );
+      await expect(service.createBackup(createBackupDto)).rejects.toThrow('Failed to create backup');
       expect(mockLogger.error).toHaveBeenCalled();
     });
   });
@@ -104,10 +143,10 @@ describe('BackupService', () => {
   describe('getBackups', () => {
     it('should return paginated backup list', async () => {
       const mockFiles = ['backup1.vbak', 'backup2.vbak', 'other.txt'];
-      mockFs.readdir.mockResolvedValue(mockFiles as any);
-      mockFs.stat.mockResolvedValue({ size: 2048 } as any);
+      vi.mocked(mockFs.readdir).mockResolvedValueOnce(mockFiles as any);
+      vi.mocked(mockFs.stat).mockResolvedValue({ size: 2048, mtime: new Date('2023-01-01T00:00:00Z') } as any);
 
-      // Mock compressed backup content
+      // Mock gunzip to return decompressed content
       const mockBackupContent = JSON.stringify({
         metadata: {
           id: 'test-id',
@@ -123,9 +162,12 @@ describe('BackupService', () => {
         },
       });
 
-      // Mock gzip compression
-      const compressed = zlib.gzipSync(Buffer.from(mockBackupContent));
-      mockFs.readFile.mockResolvedValue(compressed);
+      const mockZlib = await import('zlib');
+      vi.mocked(mockZlib.gunzip).mockImplementation((data: any, callback: any) => {
+        callback(null, Buffer.from(mockBackupContent));
+      });
+
+      vi.mocked(mockFs.readFile).mockResolvedValue(Buffer.from('compressed-data'));
 
       const getBackupsDto: GetBackupsDto = {
         page: 1,
@@ -148,47 +190,31 @@ describe('BackupService', () => {
 
     it('should filter backups by search term', async () => {
       const mockFiles = ['important-backup.vbak', 'test-backup.vbak'];
-      mockFs.readdir.mockResolvedValue(mockFiles as any);
-      mockFs.stat.mockResolvedValue({ size: 1024, mtime: new Date('2023-01-01T00:00:00Z') } as any);
+      vi.mocked(mockFs.readdir).mockResolvedValueOnce(mockFiles as any);
+      vi.mocked(mockFs.stat).mockResolvedValue({ size: 1024, mtime: new Date('2023-01-01T00:00:00Z') } as any);
 
-      // Mock different content for each file
-      mockFs.readFile.mockImplementation(async (filepath: string) => {
-        const filename = path.basename(filepath);
-        let mockBackupContent;
-
-        if (filename.includes('important')) {
-          mockBackupContent = JSON.stringify({
-            metadata: {
-              id: 'test-id-1',
-              name: 'important-backup',
-              version: '1.0.0',
-              createdAt: '2023-01-01T00:00:00.000Z',
-              hasPassword: false,
-              includeMedia: true,
-              includeAnalytics: false,
-              includeLogs: false,
-              tables: {},
-            },
-          });
-        } else {
-          mockBackupContent = JSON.stringify({
-            metadata: {
-              id: 'test-id-2',
-              name: 'test-backup',
-              version: '1.0.0',
-              createdAt: '2023-01-01T00:00:00.000Z',
-              hasPassword: false,
-              includeMedia: true,
-              includeAnalytics: false,
-              includeLogs: false,
-              tables: {},
-            },
-          });
-        }
-
-        const compressed = zlib.gzipSync(Buffer.from(mockBackupContent));
-        return Promise.resolve(compressed);
+      // Mock gunzip to return different content for each file
+      let callCount = 0;
+      const mockZlib = await import('zlib');
+      vi.mocked(mockZlib.gunzip).mockImplementation((data: any, callback: any) => {
+        callCount++;
+        const mockBackupContent = JSON.stringify({
+          metadata: {
+            id: `test-id-${callCount}`,
+            name: callCount === 1 ? 'important-backup' : 'test-backup',
+            version: '1.0.0',
+            createdAt: '2023-01-01T00:00:00.000Z',
+            hasPassword: false,
+            includeMedia: true,
+            includeAnalytics: false,
+            includeLogs: false,
+            tables: {},
+          },
+        });
+        callback(null, Buffer.from(mockBackupContent));
       });
+
+      vi.mocked(mockFs.readFile).mockResolvedValue(Buffer.from('compressed-data'));
 
       const getBackupsDto: GetBackupsDto = {
         page: 1,
@@ -204,13 +230,17 @@ describe('BackupService', () => {
 
     it('should handle encrypted backup metadata', async () => {
       const mockFiles = ['encrypted.vbak'];
-      mockFs.readdir.mockResolvedValue(mockFiles as any);
-      mockFs.stat.mockResolvedValue({ size: 1024, mtime: new Date('2023-01-01T00:00:00Z') } as any);
+      vi.mocked(mockFs.readdir).mockResolvedValueOnce(mockFiles as any);
+      vi.mocked(mockFs.stat).mockResolvedValue({ size: 1024, mtime: new Date('2023-01-01T00:00:00Z') } as any);
 
-      // Mock encrypted content that can't be parsed as JSON
+      // Mock gunzip to return non-JSON content (simulating encrypted data)
       const encryptedContent = 'encrypted-data-that-is-not-json';
-      const compressed = zlib.gzipSync(Buffer.from(encryptedContent));
-      mockFs.readFile.mockResolvedValue(compressed);
+      const mockZlib = await import('zlib');
+      vi.mocked(mockZlib.gunzip).mockImplementation((data: any, callback: any) => {
+        callback(null, Buffer.from(encryptedContent));
+      });
+
+      vi.mocked(mockFs.readFile).mockResolvedValue(Buffer.from('encrypted-compressed-data'));
 
       const getBackupsDto: GetBackupsDto = {
         page: 1,
@@ -227,31 +257,24 @@ describe('BackupService', () => {
 
   describe('deleteBackup', () => {
     it('should delete backup successfully', async () => {
-      mockFs.access.mockResolvedValue(undefined);
-      mockFs.unlink.mockResolvedValue(undefined);
-
       await service.deleteBackup('test-backup.vbak');
 
-      expect(mockFs.access).toHaveBeenCalled();
-      expect(mockFs.unlink).toHaveBeenCalled();
+      expect(vi.mocked(mockFs.access)).toHaveBeenCalled();
+      expect(vi.mocked(mockFs.unlink)).toHaveBeenCalled();
       expect(mockLogger.log).toHaveBeenCalledWith(expect.stringContaining('Backup deleted'));
     });
 
     it('should throw NotFoundException for non-existent backup', async () => {
       const error = new Error('File not found');
       (error as any).code = 'ENOENT';
-      mockFs.access.mockRejectedValue(error);
+      vi.mocked(mockFs.access).mockRejectedValueOnce(error);
 
-      await expect(service.deleteBackup('non-existent.vbak')).rejects.toThrow(
-        'Backup file not found',
-      );
+      await expect(service.deleteBackup('non-existent.vbak')).rejects.toThrow('Backup file not found');
     });
   });
 
   describe('restoreBackup', () => {
     it('should start restore task successfully', async () => {
-      mockFs.access.mockResolvedValue(undefined);
-
       const restoreDto: RestoreBackupDto = {
         overwriteExisting: true,
         restoreMedia: true,
@@ -262,13 +285,13 @@ describe('BackupService', () => {
       const result = await service.restoreBackup('test-backup.vbak', restoreDto);
 
       expect(result.taskId).toBeDefined();
-      expect(mockFs.access).toHaveBeenCalled();
+      expect(vi.mocked(mockFs.access)).toHaveBeenCalled();
     });
 
     it('should throw NotFoundException for non-existent backup', async () => {
       const error = new Error('File not found');
       (error as any).code = 'ENOENT';
-      mockFs.access.mockRejectedValue(error);
+      vi.mocked(mockFs.access).mockRejectedValueOnce(error);
 
       const restoreDto: RestoreBackupDto = {
         overwriteExisting: false,
@@ -286,7 +309,6 @@ describe('BackupService', () => {
   describe('getRestoreProgress', () => {
     it('should return restore progress', async () => {
       // First start a restore task
-      mockFs.access.mockResolvedValue(undefined);
       const restoreDto: RestoreBackupDto = {
         overwriteExisting: false,
         restoreMedia: true,
@@ -306,9 +328,7 @@ describe('BackupService', () => {
     });
 
     it('should throw NotFoundException for non-existent task', () => {
-      expect(() => service.getRestoreProgress('non-existent-task')).toThrow(
-        'Restore task not found',
-      );
+      expect(() => service.getRestoreProgress('non-existent-task')).toThrow('Restore task not found');
     });
   });
 });

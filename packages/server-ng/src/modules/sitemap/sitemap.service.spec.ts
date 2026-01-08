@@ -51,7 +51,7 @@ describe('SitemapService', () => {
     };
 
     const configService = Mock.config({
-      'static.path': '/tmp/static',
+      STATIC_PATH: '/tmp/static',
     });
 
     // Create database mock with test articles
@@ -423,6 +423,7 @@ describe('SitemapService', () => {
 
       const databaseMockBuilder = Mock.db();
       databaseMockBuilder.setCountResult(0);
+      databaseMockBuilder.setQueryResult([]); // Also set empty query result for fallback
       const mockDb = databaseMockBuilder.build();
 
       Object.defineProperty(service, 'db', {

@@ -1,8 +1,12 @@
 import { Test, type TestingModule } from '@nestjs/testing';
-import { NotFoundException } from '@nestjs/common';
+import { NotFoundException, Logger } from '@nestjs/common';
 import { describe, it, beforeEach, afterEach, expect, vi } from 'vitest';
+import { eq } from 'drizzle-orm';
 
-import { Mock } from '@test/mock';
+import { withTestTransaction } from '@test/utils/db-transaction-helper';
+import { db } from '@test/setup.unit';
+import { Given } from '@test/given';
+import { permissionNodes, permissionGroups } from '@vanblog/shared/drizzle';
 
 import { DATABASE_CONNECTION } from '../../database';
 
@@ -10,58 +14,16 @@ import { PermissionService } from './permission.service';
 
 import type { PermissionRegistration } from './permission.service';
 
-type MockQueryBuilder = {
-  from: () => MockQueryBuilder;
-  where: () => MockQueryBuilder;
-  limit: () => MockQueryBuilder;
-  offset: () => MockQueryBuilder;
-  values: () => MockQueryBuilder;
-  returning: () => Promise<unknown[]>;
-  orderBy: () => MockQueryBuilder;
-  set: () => MockQueryBuilder;
-};
-
 describe('PermissionService', () => {
   let service: PermissionService;
-  let mockDb: Record<string, ReturnType<typeof vi.fn>>;
-
-  const mockDate = '2025-08-08T06:36:15+00:00';
-  const mockPermissionNode = {
-    id: 1,
-    name: 'article:read',
-    description: 'Read articles',
-    module: 'article',
-    isActive: true,
-    createdAt: mockDate,
-    updatedAt: mockDate,
-  };
-
-  const mockPermissionGroup = {
-    id: 1,
-    name: 'admin',
-    description: 'Administrator group',
-    permissions: ['article:read', 'article:write'],
-    isActive: true,
-    createdAt: mockDate,
-    updatedAt: mockDate,
-  };
 
   beforeEach(async () => {
-    // 创建基础 database mock 配置
-    const dbMockBuilder = Mock.db();
-    dbMockBuilder.setQueryResult([mockPermissionNode]);
-    dbMockBuilder.setInsertResult([mockPermissionNode]);
-    mockDb = dbMockBuilder.build();
-
-    // 保留手动微调，以支持特定的测试场景
-    mockDb.returning.mockResolvedValue([mockPermissionNode]);
-
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         PermissionService,
         {
           provide: DATABASE_CONNECTION,
-          useValue: mockDb,
+          useValue: db,
         },
       ],
     }).compile();
@@ -227,67 +189,81 @@ describe('PermissionService', () => {
 
   describe('registerPermission', () => {
     it('should register a new permission node', async () => {
-      mockDb.select.mockReturnValue({
-        from: vi.fn().mockReturnThis(),
-        where: vi.fn().mockReturnThis(),
-        limit: vi.fn().mockResolvedValue([]),
-      });
+      await withTestTransaction(db, async (tx) => {
+        // Inject transaction database
+        const testService = new PermissionService(tx);
 
-      await service.registerPermission({
-        name: 'article:read',
-        description: 'Read articles',
-        module: 'article',
-      });
-
-      expect(mockDb.insert).toHaveBeenCalled();
-    });
-
-    it('should not register existing permission node', async () => {
-      mockDb.select.mockReturnValue({
-        from: vi.fn().mockReturnThis() as () => MockQueryBuilder,
-        where: vi.fn().mockReturnThis() as () => MockQueryBuilder,
-        limit: vi.fn().mockResolvedValue([mockPermissionNode]) as () => MockQueryBuilder,
-      });
-
-      await service.registerPermission({
-        name: 'article:read',
-        description: 'Read articles',
-        module: 'article',
-      });
-
-      expect(mockDb.insert).not.toHaveBeenCalled();
-    });
-
-    it('should cache registered permissions', async () => {
-      mockDb.select.mockReturnValue({
-        from: vi.fn().mockReturnThis(),
-        where: vi.fn().mockReturnThis(),
-        limit: vi.fn().mockResolvedValue([mockPermissionNode]),
-      });
-
-      await service.registerPermission({
-        name: 'article:read',
-        description: 'Read articles',
-        module: 'article',
-      });
-
-      expect(service['registeredPermissions'].has('article:article:read')).toBe(true);
-    });
-
-    it('should handle registration errors gracefully', async () => {
-      mockDb.select.mockReturnValue({
-        from: vi.fn().mockReturnThis(),
-        where: vi.fn().mockReturnThis(),
-        limit: vi.fn().mockRejectedValue(new Error('Database error')),
-      });
-
-      await expect(
-        service.registerPermission({
+        await testService.registerPermission({
           name: 'article:read',
           description: 'Read articles',
           module: 'article',
-        }),
-      ).resolves.not.toThrow();
+        });
+
+        // Verify database insertion
+        const [saved] = await tx
+          .select()
+          .from(permissionNodes)
+          .where(eq(permissionNodes.name, 'article:read'));
+        expect(saved).toBeDefined();
+        expect(saved.description).toBe('Read articles');
+        expect(saved.module).toBe('article');
+      });
+    });
+
+    it('should not register existing permission node', async () => {
+      await withTestTransaction(db, async (tx) => {
+        const testService = new PermissionService(tx);
+
+        // First registration
+        await testService.registerPermission({
+          name: 'article:read',
+          description: 'Read articles',
+          module: 'article',
+        });
+
+        // Second registration (should skip)
+        await testService.registerPermission({
+          name: 'article:read',
+          description: 'Read articles',
+          module: 'article',
+        });
+
+        // Verify only one entry exists
+        const results = await tx
+          .select()
+          .from(permissionNodes)
+          .where(eq(permissionNodes.name, 'article:read'));
+        expect(results).toHaveLength(1);
+      });
+    });
+
+    it('should cache registered permissions', async () => {
+      await withTestTransaction(db, async (tx) => {
+        const testService = new PermissionService(tx);
+
+        await testService.registerPermission({
+          name: 'article:read',
+          description: 'Read articles',
+          module: 'article',
+        });
+
+        expect(testService['registeredPermissions'].has('article:article:read')).toBe(true);
+      });
+    });
+
+    it('should handle registration errors gracefully', async () => {
+      await withTestTransaction(db, async (tx) => {
+        const testService = new PermissionService(tx);
+
+        // Mock invalid permission node (missing required field)
+        await expect(
+          testService.registerPermission({
+            name: '',
+            description: 'Invalid',
+            module: 'test',
+          } as any),
+        ).resolves.not.toThrow();
+      });
     });
   });
 
@@ -314,55 +290,123 @@ describe('PermissionService', () => {
     });
 
     it('should resolve role permissions', async () => {
-      vi.spyOn(
-        service as unknown as { getRolePermissions: (roleName: string) => Promise<string[]> },
-        'getRolePermissions',
-      ).mockResolvedValue(['article:read', 'article:write', 'user:read']);
+      await withTestTransaction(db, async (tx) => {
+        const testService = new PermissionService(tx);
+        testService.register({
+          module: 'article',
+          permissions: ['read', 'write'],
+          roles: {
+            admin: ['read', 'write'],
+          },
+        });
+        testService.register({
+          module: 'user',
+          permissions: ['read'],
+        });
 
-      const userPermissions = ['role:admin'];
-      const resolved = await service.resolveUserPermissions(userPermissions);
+        // Create permission group for admin
+        await Given.permissionGroup({
+          name: 'admin',
+          description: 'Admin role',
+          permissions: ['article:read', 'article:write', 'user:read'],
+          isActive: true,
+        });
 
-      expect(resolved).toEqual(['article:read', 'article:write', 'user:read']);
+        const userPermissions = ['role:admin'];
+        const resolved = await testService.resolveUserPermissions(userPermissions);
+
+        expect(resolved).toEqual(['article:read', 'article:write', 'user:read']);
+      });
     });
 
     it('should handle disabled permissions', async () => {
-      vi.spyOn(
-        service as unknown as { getRolePermissions: (roleName: string) => Promise<string[]> },
-        'getRolePermissions',
-      ).mockResolvedValue(['article:read', 'article:write', 'user:read']);
+      await withTestTransaction(db, async (tx) => {
+        const testService = new PermissionService(tx);
+        testService.register({
+          module: 'article',
+          permissions: ['read', 'write'],
+          roles: {
+            admin: ['read', 'write'],
+          },
+        });
+        testService.register({
+          module: 'user',
+          permissions: ['read'],
+        });
 
-      const userPermissions = ['role:admin', 'no:article:write'];
-      const resolved = await service.resolveUserPermissions(userPermissions);
+        // Create permission group for admin
+        await Given.permissionGroup({
+          name: 'admin',
+          description: 'Admin role',
+          permissions: ['article:read', 'article:write', 'user:read'],
+          isActive: true,
+        });
 
-      expect(resolved).toEqual(['article:read', 'user:read']);
-      expect(resolved).not.toContain('article:write');
+        const userPermissions = ['role:admin', 'no:article:write'];
+        const resolved = await testService.resolveUserPermissions(userPermissions);
+
+        expect(resolved).toEqual(['article:read', 'user:read']);
+        expect(resolved).not.toContain('article:write');
+      });
     });
 
     it('should handle disabled role permissions', async () => {
-      vi.spyOn(
-        service as unknown as { getRolePermissions: (roleName: string) => Promise<string[]> },
-        'getRolePermissions',
-      ).mockResolvedValue(['article:read', 'article:write', 'user:read']);
+      await withTestTransaction(db, async (tx) => {
+        const testService = new PermissionService(tx);
+        testService.register({
+          module: 'article',
+          permissions: ['read', 'write'],
+          roles: {
+            admin: ['read', 'write'],
+          },
+        });
 
-      const userPermissions = ['role:admin', 'no:role:admin'];
-      const resolved = await service.resolveUserPermissions(userPermissions);
+        // Create permission group for admin
+        await Given.permissionGroup({
+          name: 'admin',
+          description: 'Admin role',
+          permissions: ['article:read', 'article:write', 'user:read'],
+          isActive: true,
+        });
 
-      expect(resolved).toEqual([]);
+        const userPermissions = ['role:admin', 'no:role:admin'];
+        const resolved = await testService.resolveUserPermissions(userPermissions);
+
+        expect(resolved).toEqual([]);
+      });
     });
 
     it('should handle mixed permissions and roles', async () => {
-      vi.spyOn(
-        service as unknown as { getRolePermissions: (roleName: string) => Promise<string[]> },
-        'getRolePermissions',
-      ).mockResolvedValue(['article:read', 'article:write', 'user:read']);
+      await withTestTransaction(db, async (tx) => {
+        const testService = new PermissionService(tx);
+        testService.register({
+          module: 'article',
+          permissions: ['read', 'write'],
+          roles: {
+            admin: ['read', 'write'],
+          },
+        });
+        testService.register({
+          module: 'draft',
+          permissions: ['write'],
+        });
 
-      const userPermissions = ['article:read', 'role:admin', 'no:user:read', 'draft:write'];
-      const resolved = await service.resolveUserPermissions(userPermissions);
+        // Create permission group for admin
+        await Given.permissionGroup({
+          name: 'admin',
+          description: 'Admin role',
+          permissions: ['article:read', 'article:write', 'user:read'],
+          isActive: true,
+        });
 
-      expect(resolved).toContain('article:read');
-      expect(resolved).toContain('article:write');
-      expect(resolved).toContain('draft:write');
-      expect(resolved).not.toContain('user:read');
+        const userPermissions = ['article:read', 'role:admin', 'no:user:read', 'draft:write'];
+        const resolved = await testService.resolveUserPermissions(userPermissions);
+
+        expect(resolved).toContain('article:read');
+        expect(resolved).toContain('article:write');
+        expect(resolved).toContain('draft:write');
+        expect(resolved).not.toContain('user:read');
+      });
     });
 
     it('should filter out unknown permissions', async () => {
@@ -545,206 +589,297 @@ describe('PermissionService', () => {
     });
 
     it('should properly invalidate permission cache on role update', async () => {
-      service['rolePermissionsCache'].set('admin', [
-        'article:read',
-        'article:write',
-        'article:delete',
-      ]);
+      await withTestTransaction(db, async (tx) => {
+        const testService = new PermissionService(tx);
+        testService['rolePermissionsCache'].set('admin', [
+          'article:read',
+          'article:write',
+          'article:delete',
+        ]);
 
-      // Update permission group should invalidate cache
-      mockDb.update.mockReturnValue({
-        set: vi.fn().mockReturnThis(),
-        where: vi.fn().mockReturnThis(),
-        returning: vi.fn().mockResolvedValue([
-          {
-            id: 1,
-            name: 'admin',
-            description: 'Admin updated',
-            permissions: ['article:read'], // Reduced permissions
-            isActive: true,
-            createdAt: '2025-01-01T00:00:00Z',
-            updatedAt: '2025-01-02T00:00:00Z',
-          },
-        ]),
+        // Create permission group for admin
+        const group = await Given.permissionGroup({
+          name: 'admin',
+          description: 'Admin group',
+          permissions: ['article:read', 'article:write', 'article:delete'],
+          isActive: true,
+        });
+
+        const initialCacheSize = testService['rolePermissionsCache'].size;
+        expect(initialCacheSize).toBe(1);
+
+        // Update permission group should invalidate cache
+        await testService.updatePermissionGroup(group.id, { description: 'Admin updated' });
+
+        expect(testService['rolePermissionsCache'].size).toBe(0);
       });
-
-      const initialCacheSize = service['rolePermissionsCache'].size;
-      expect(initialCacheSize).toBe(1);
-
-      // After update, cache should be cleared
-      await service.updatePermissionGroup(1, { description: 'Admin updated' });
-
-      expect(service['rolePermissionsCache'].size).toBe(0);
     });
   });
 
   describe('CRUD Operations - Permission Nodes', () => {
     describe('createPermissionNode', () => {
       it('should create a permission node', async () => {
-        const createDto = {
-          name: 'article:read',
-          description: 'Read articles',
-          module: 'article',
-        };
+        await withTestTransaction(db, async (tx) => {
+          const testService = new PermissionService(tx);
 
-        const result = await service.createPermissionNode(createDto);
+          const createDto = {
+            name: 'article:read',
+            description: 'Read articles',
+            module: 'article',
+          };
 
-        expect(mockDb.insert).toHaveBeenCalled();
-        expect(result).toEqual(mockPermissionNode);
+          const result = await testService.createPermissionNode(createDto);
+
+          // Verify return value
+          expect(result.name).toBe('article:read');
+          expect(result.description).toBe('Read articles');
+          expect(result.module).toBe('article');
+          expect(result.id).toBeDefined();
+
+          // Verify database persistence
+          const [saved] = await tx
+            .select()
+            .from(permissionNodes)
+            .where(eq(permissionNodes.id, result.id));
+          expect(saved).toBeDefined();
+          expect(saved.name).toBe('article:read');
+        });
       });
 
       it('should handle date conversion', async () => {
-        const nodeWithDateObjects = {
-          ...mockPermissionNode,
-          createdAt: new Date(mockDate),
-          updatedAt: new Date(mockDate),
-        };
+        await withTestTransaction(db, async (tx) => {
+          const testService = new PermissionService(tx);
 
-        mockDb.returning.mockResolvedValue([nodeWithDateObjects]);
+          const result = await testService.createPermissionNode({
+            name: 'article:read',
+            description: 'Read articles',
+            module: 'article',
+          });
 
-        const result = await service.createPermissionNode({
-          name: 'article:read',
-          description: 'Read articles',
-          module: 'article',
+          expect(typeof result.createdAt).toBe('string');
+          expect(typeof result.updatedAt).toBe('string');
         });
-
-        expect(typeof result.createdAt).toBe('string');
-        expect(typeof result.updatedAt).toBe('string');
       });
     });
 
     describe('findAllPermissionNodes', () => {
       it('should find all permission nodes with pagination', async () => {
-        mockDb.select.mockReturnValue({
-          from: vi.fn().mockReturnThis(),
-          orderBy: vi.fn().mockReturnThis(),
-          limit: vi.fn().mockReturnThis(),
-          offset: vi.fn().mockResolvedValue([mockPermissionNode]),
+        await withTestTransaction(db, async (tx) => {
+          const testService = new PermissionService(tx);
+
+          // Create test data
+          await tx.insert(permissionNodes).values([
+            {
+              name: 'article:read',
+              description: 'Read articles',
+              module: 'article',
+              isActive: true,
+            },
+            {
+              name: 'article:write',
+              description: 'Write articles',
+              module: 'article',
+              isActive: true,
+            },
+          ]);
+
+          const query = { page: 1, limit: 10 };
+          const result = await testService.findAllPermissionNodes(query);
+
+          expect(result).toHaveLength(2);
+          expect(result.map((r) => r.name)).toContain('article:read');
+          expect(result.map((r) => r.name)).toContain('article:write');
         });
-
-        const query = { page: 1, limit: 10 };
-        const result = await service.findAllPermissionNodes(query);
-
-        expect(result).toEqual([mockPermissionNode]);
       });
 
       it('should filter by module', async () => {
-        const whereMock = vi.fn().mockReturnThis();
-        mockDb.select.mockReturnValue({
-          from: vi.fn().mockReturnThis(),
-          where: whereMock,
-          orderBy: vi.fn().mockReturnThis(),
-          limit: vi.fn().mockReturnThis(),
-          offset: vi.fn().mockResolvedValue([mockPermissionNode]),
+        await withTestTransaction(db, async (tx) => {
+          const testService = new PermissionService(tx);
+
+          // Create test data
+          await tx.insert(permissionNodes).values([
+            {
+              name: 'article:read',
+              description: 'Read articles',
+              module: 'article',
+              isActive: true,
+            },
+            {
+              name: 'user:read',
+              description: 'Read users',
+              module: 'user',
+              isActive: true,
+            },
+          ]);
+
+          const query = { module: 'article', page: 1, limit: 10 };
+          const result = await testService.findAllPermissionNodes(query);
+
+          expect(result).toHaveLength(1);
+          expect(result[0].module).toBe('article');
         });
-
-        const query = { module: 'article', page: 1, limit: 10 };
-        const result = await service.findAllPermissionNodes(query);
-
-        expect(result).toEqual([mockPermissionNode]);
-        expect(whereMock).toHaveBeenCalled();
       });
 
       it('should filter by isActive status', async () => {
-        const whereMock = vi.fn().mockReturnThis();
-        mockDb.select.mockReturnValue({
-          from: vi.fn().mockReturnThis(),
-          where: whereMock,
-          orderBy: vi.fn().mockReturnThis(),
-          limit: vi.fn().mockReturnThis(),
-          offset: vi.fn().mockResolvedValue([mockPermissionNode]),
+        await withTestTransaction(db, async (tx) => {
+          const testService = new PermissionService(tx);
+
+          // Create test data
+          await tx.insert(permissionNodes).values([
+            {
+              name: 'article:read',
+              description: 'Read articles',
+              module: 'article',
+              isActive: true,
+            },
+            {
+              name: 'article:write',
+              description: 'Write articles',
+              module: 'article',
+              isActive: false,
+            },
+          ]);
+
+          const query = { isActive: true, page: 1, limit: 10 };
+          const result = await testService.findAllPermissionNodes(query);
+
+          expect(result).toHaveLength(1);
+          expect(result[0].isActive).toBe(true);
         });
-
-        const query = { isActive: true, page: 1, limit: 10 };
-        const result = await service.findAllPermissionNodes(query);
-
-        expect(result).toEqual([mockPermissionNode]);
-        expect(whereMock).toHaveBeenCalled();
       });
 
       it('should handle pagination correctly', async () => {
-        const limitMock = vi.fn().mockReturnThis();
-        const offsetMock = vi.fn().mockResolvedValue([mockPermissionNode]);
-        mockDb.select.mockReturnValue({
-          from: vi.fn().mockReturnThis(),
-          orderBy: vi.fn().mockReturnThis(),
-          limit: limitMock,
-          offset: offsetMock,
+        await withTestTransaction(db, async (tx) => {
+          const testService = new PermissionService(tx);
+
+          // Create test data
+          await tx.insert(permissionNodes).values(
+            Array.from({ length: 25 }, (_, i) => ({
+              name: `permission:${i}`,
+              description: `Permission ${i}`,
+              module: 'test',
+              isActive: true,
+            })),
+          );
+
+          // First page
+          const page1 = await testService.findAllPermissionNodes({ page: 1, limit: 10 });
+          expect(page1).toHaveLength(10);
+
+          // Second page
+          const page2 = await testService.findAllPermissionNodes({ page: 2, limit: 10 });
+          expect(page2).toHaveLength(10);
+
+          // Verify no overlap
+          const ids1 = new Set(page1.map((p) => p.id));
+          const ids2 = new Set(page2.map((p) => p.id));
+          const intersection = [...ids1].filter((id) => ids2.has(id));
+          expect(intersection).toHaveLength(0);
         });
-
-        await service.findAllPermissionNodes({ page: 2, limit: 20 });
-
-        expect(limitMock).toHaveBeenCalledWith(20);
-        expect(offsetMock).toHaveBeenCalledWith(20);
       });
     });
 
     describe('findPermissionNodeById', () => {
       it('should return a permission node by id', async () => {
-        mockDb.select.mockReturnValue({
-          from: vi.fn().mockReturnThis(),
-          where: vi.fn().mockReturnThis(),
-          limit: vi.fn().mockResolvedValue([mockPermissionNode]),
+        await withTestTransaction(db, async (tx) => {
+          const testService = new PermissionService(tx);
+
+          const [created] = await tx
+            .insert(permissionNodes)
+            .values({
+              name: 'article:read',
+              description: 'Read articles',
+              module: 'article',
+              isActive: true,
+            })
+            .returning();
+
+          const result = await testService.findPermissionNodeById(created.id);
+
+          expect(result.name).toBe('article:read');
+          expect(result.id).toBe(created.id);
         });
-
-        const result = await service.findPermissionNodeById(1);
-
-        expect(result).toEqual(mockPermissionNode);
       });
 
       it('should throw NotFoundException when node not found', async () => {
-        mockDb.select.mockReturnValue({
-          from: vi.fn().mockReturnThis(),
-          where: vi.fn().mockReturnThis(),
-          limit: vi.fn().mockResolvedValue([]),
-        });
+        await withTestTransaction(db, async (tx) => {
+          const testService = new PermissionService(tx);
 
-        await expect(service.findPermissionNodeById(999)).rejects.toThrow(NotFoundException);
+          await expect(testService.findPermissionNodeById(999)).rejects.toThrow(NotFoundException);
+        });
       });
     });
 
     describe('updatePermissionNode', () => {
       it('should update a permission node', async () => {
-        const updateDto = { description: 'Updated description' };
-        const updatedNode = { ...mockPermissionNode, ...updateDto };
+        await withTestTransaction(db, async (tx) => {
+          const testService = new PermissionService(tx);
 
-        mockDb.update.mockReturnValue({
-          set: vi.fn().mockReturnThis(),
-          where: vi.fn().mockReturnThis(),
-          returning: vi.fn().mockResolvedValue([updatedNode]),
+          const [created] = await tx
+            .insert(permissionNodes)
+            .values({
+              name: 'article:read',
+              description: 'Read articles',
+              module: 'article',
+              isActive: true,
+            })
+            .returning();
+
+          const updateDto = { description: 'Updated description' };
+          const result = await testService.updatePermissionNode(created.id, updateDto);
+
+          expect(result.description).toBe('Updated description');
+
+          // Verify database update
+          const [updated] = await tx
+            .select()
+            .from(permissionNodes)
+            .where(eq(permissionNodes.id, created.id));
+          expect(updated.description).toBe('Updated description');
         });
-
-        const result = await service.updatePermissionNode(1, updateDto);
-
-        expect(result.description).toBe('Updated description');
       });
 
       it('should throw NotFoundException when node not found', async () => {
-        mockDb.update.mockReturnValue({
-          set: vi.fn().mockReturnThis(),
-          where: vi.fn().mockReturnThis(),
-          returning: vi.fn().mockResolvedValue([]),
-        });
+        await withTestTransaction(db, async (tx) => {
+          const testService = new PermissionService(tx);
 
-        await expect(service.updatePermissionNode(999, {})).rejects.toThrow(NotFoundException);
+          await expect(testService.updatePermissionNode(999, {})).rejects.toThrow(NotFoundException);
+        });
       });
     });
 
     describe('removePermissionNode', () => {
       it('should remove a permission node', async () => {
-        mockDb.delete.mockReturnValue({
-          where: vi.fn().mockResolvedValue({ rowsAffected: 1 }),
-        });
+        await withTestTransaction(db, async (tx) => {
+          const testService = new PermissionService(tx);
 
-        await expect(service.removePermissionNode(1)).resolves.not.toThrow();
+          const [created] = await tx
+            .insert(permissionNodes)
+            .values({
+              name: 'article:read',
+              description: 'Read articles',
+              module: 'article',
+              isActive: true,
+            })
+            .returning();
+
+          await expect(testService.removePermissionNode(created.id)).resolves.not.toThrow();
+
+          // Verify database deletion
+          const result = await tx
+            .select()
+            .from(permissionNodes)
+            .where(eq(permissionNodes.id, created.id));
+          expect(result).toHaveLength(0);
+        });
       });
 
       it('should throw NotFoundException when node not found', async () => {
-        mockDb.delete.mockReturnValue({
-          where: vi.fn().mockResolvedValue({ rowsAffected: 0 }),
-        });
+        await withTestTransaction(db, async (tx) => {
+          const testService = new PermissionService(tx);
 
-        await expect(service.removePermissionNode(999)).rejects.toThrow(NotFoundException);
+          await expect(testService.removePermissionNode(999)).rejects.toThrow(NotFoundException);
+        });
       });
     });
   });
@@ -752,206 +887,262 @@ describe('PermissionService', () => {
   describe('CRUD Operations - Permission Groups', () => {
     describe('createPermissionGroup', () => {
       it('should create a permission group', async () => {
-        const createDto = {
-          name: 'admin',
-          description: 'Administrator group',
-          permissions: ['article:read', 'article:write'],
-          isActive: true,
-        };
+        await withTestTransaction(db, async (tx) => {
+          const testService = new PermissionService(tx);
 
-        mockDb.insert.mockReturnValue({
-          values: vi.fn().mockReturnThis() as () => MockQueryBuilder,
-          returning: vi.fn().mockResolvedValue([mockPermissionGroup]) as () => Promise<unknown[]>,
+          const createDto = {
+            name: 'admin',
+            description: 'Administrator group',
+            permissions: ['article:read', 'article:write'],
+            isActive: true,
+          };
+
+          const result = await testService.createPermissionGroup(createDto);
+
+          // Verify return value
+          expect(result.name).toBe('admin');
+          expect(result.permissions).toEqual(['article:read', 'article:write']);
+
+          // Verify database persistence
+          const [saved] = await tx
+            .select()
+            .from(permissionGroups)
+            .where(eq(permissionGroups.id, result.id));
+          expect(saved).toBeDefined();
+          expect(saved.name).toBe('admin');
         });
-
-        const result = await service.createPermissionGroup(createDto);
-
-        expect(mockDb.insert).toHaveBeenCalled();
-        expect(result.permissions).toEqual(['article:read', 'article:write']);
       });
 
       it('should invalidate role permissions cache after creation', async () => {
-        service['rolePermissionsCache'].set('admin', ['old:permission']);
+        await withTestTransaction(db, async (tx) => {
+          const testService = new PermissionService(tx);
+          testService['rolePermissionsCache'].set('admin', ['old:permission']);
 
-        mockDb.insert.mockReturnValue({
-          values: vi.fn().mockReturnThis(),
-          returning: vi.fn().mockResolvedValue([mockPermissionGroup]),
+          await testService.createPermissionGroup({
+            name: 'admin',
+            description: 'Admin',
+            permissions: ['new:permission'],
+            isActive: true,
+          });
+
+          expect(testService['rolePermissionsCache'].size).toBe(0);
         });
-
-        await service.createPermissionGroup({
-          name: 'admin',
-          description: 'Admin',
-          permissions: ['new:permission'],
-          isActive: true,
-        });
-
-        expect(service['rolePermissionsCache'].size).toBe(0);
       });
     });
 
     describe('findAllPermissionGroups', () => {
       it('should return all permission groups', async () => {
-        mockDb.select.mockReturnValue({
-          from: vi.fn().mockReturnThis(),
-          orderBy: vi.fn().mockReturnThis(),
-          limit: vi.fn().mockReturnThis(),
-          offset: vi.fn().mockResolvedValue([mockPermissionGroup]),
+        await withTestTransaction(db, async (tx) => {
+          const testService = new PermissionService(tx);
+
+          // Create test data
+          await Given.permissionGroup({
+            name: 'admin',
+            description: 'Administrator',
+            permissions: ['article:read', 'article:write'],
+            isActive: true,
+          });
+
+          await Given.permissionGroup({
+            name: 'viewer',
+            description: 'Viewer',
+            permissions: ['article:read'],
+            isActive: true,
+          });
+
+          const result = await testService.findAllPermissionGroups({ page: 1, limit: 10 });
+
+          expect(result).toHaveLength(2);
         });
-
-        const result = await service.findAllPermissionGroups({ page: 1, limit: 10 });
-
-        expect(result).toHaveLength(1);
-        expect(result[0].name).toBe('admin');
       });
 
       it('should filter by isActive status', async () => {
-        const whereMock = vi.fn().mockReturnThis();
-        mockDb.select.mockReturnValue({
-          from: vi.fn().mockReturnThis(),
-          where: whereMock,
-          orderBy: vi.fn().mockReturnThis(),
-          limit: vi.fn().mockReturnThis(),
-          offset: vi.fn().mockResolvedValue([mockPermissionGroup]),
-        });
+        await withTestTransaction(db, async (tx) => {
+          const testService = new PermissionService(tx);
 
-        const result = await service.findAllPermissionGroups({
-          isActive: true,
-          page: 1,
-          limit: 10,
-        });
+          // Create test data
+          await Given.permissionGroup({
+            name: 'admin',
+            description: 'Administrator',
+            permissions: ['article:read'],
+            isActive: true,
+          });
 
-        expect(result).toHaveLength(1);
-        expect(whereMock).toHaveBeenCalled();
+          await Given.permissionGroup({
+            name: 'inactive',
+            description: 'Inactive group',
+            permissions: [],
+            isActive: false,
+          });
+
+          const result = await testService.findAllPermissionGroups({
+            isActive: true,
+            page: 1,
+            limit: 10,
+          });
+
+          expect(result).toHaveLength(1);
+          expect(result[0].isActive).toBe(true);
+        });
       });
     });
 
     describe('findPermissionGroupById', () => {
       it('should return a permission group by id', async () => {
-        mockDb.select.mockReturnValue({
-          from: vi.fn().mockReturnThis(),
-          where: vi.fn().mockReturnThis(),
-          limit: vi.fn().mockResolvedValue([mockPermissionGroup]),
+        await withTestTransaction(db, async (tx) => {
+          const testService = new PermissionService(tx);
+
+          const created = await Given.permissionGroup({
+            name: 'admin',
+            description: 'Administrator',
+            permissions: ['article:read', 'article:write'],
+            isActive: true,
+          });
+
+          const result = await testService.findPermissionGroupById(created.id);
+
+          expect(result.name).toBe('admin');
+          expect(result.id).toBe(created.id);
         });
-
-        const result = await service.findPermissionGroupById(1);
-
-        expect(result.name).toBe('admin');
       });
 
       it('should throw NotFoundException when group not found', async () => {
-        mockDb.select.mockReturnValue({
-          from: vi.fn().mockReturnThis(),
-          where: vi.fn().mockReturnThis(),
-          limit: vi.fn().mockResolvedValue([]),
-        });
+        await withTestTransaction(db, async (tx) => {
+          const testService = new PermissionService(tx);
 
-        await expect(service.findPermissionGroupById(999)).rejects.toThrow(NotFoundException);
+          await expect(testService.findPermissionGroupById(999)).rejects.toThrow(NotFoundException);
+        });
       });
     });
 
     describe('updatePermissionGroup', () => {
       it('should update a permission group', async () => {
-        const updateDto = { description: 'Updated description' };
-        const updatedGroup = { ...mockPermissionGroup, ...updateDto };
+        await withTestTransaction(db, async (tx) => {
+          const testService = new PermissionService(tx);
 
-        mockDb.update.mockReturnValue({
-          set: vi.fn().mockReturnThis(),
-          where: vi.fn().mockReturnThis(),
-          returning: vi.fn().mockResolvedValue([updatedGroup]),
+          const created = await Given.permissionGroup({
+            name: 'admin',
+            description: 'Administrator',
+            permissions: ['article:read'],
+            isActive: true,
+          });
+
+          const updateDto = { description: 'Updated description' };
+          const result = await testService.updatePermissionGroup(created.id, updateDto);
+
+          expect(result.description).toBe('Updated description');
+
+          // Verify database update
+          const [updated] = await tx
+            .select()
+            .from(permissionGroups)
+            .where(eq(permissionGroups.id, created.id));
+          expect(updated.description).toBe('Updated description');
         });
-
-        const result = await service.updatePermissionGroup(1, updateDto);
-
-        expect(result.description).toBe('Updated description');
       });
 
       it('should invalidate cache after update', async () => {
-        service['rolePermissionsCache'].set('admin', ['old:permission']);
+        await withTestTransaction(db, async (tx) => {
+          const testService = new PermissionService(tx);
+          testService['rolePermissionsCache'].set('admin', ['old:permission']);
 
-        mockDb.update.mockReturnValue({
-          set: vi.fn().mockReturnThis(),
-          where: vi.fn().mockReturnThis(),
-          returning: vi.fn().mockResolvedValue([mockPermissionGroup]),
+          const created = await Given.permissionGroup({
+            name: 'admin',
+            description: 'Administrator',
+            permissions: ['article:read'],
+            isActive: true,
+          });
+
+          await testService.updatePermissionGroup(created.id, { description: 'Updated' });
+
+          expect(testService['rolePermissionsCache'].size).toBe(0);
         });
-
-        await service.updatePermissionGroup(1, { description: 'Updated' });
-
-        expect(service['rolePermissionsCache'].size).toBe(0);
       });
 
       it('should throw NotFoundException when group not found', async () => {
-        mockDb.update.mockReturnValue({
-          set: vi.fn().mockReturnThis(),
-          where: vi.fn().mockReturnThis(),
-          returning: vi.fn().mockResolvedValue([]),
-        });
+        await withTestTransaction(db, async (tx) => {
+          const testService = new PermissionService(tx);
 
-        await expect(service.updatePermissionGroup(999, {})).rejects.toThrow(NotFoundException);
+          await expect(testService.updatePermissionGroup(999, {})).rejects.toThrow(NotFoundException);
+        });
       });
     });
 
     describe('removePermissionGroup', () => {
       it('should remove a permission group', async () => {
-        mockDb.delete.mockReturnValue({
-          where: vi.fn().mockResolvedValue({ rowsAffected: 1 }),
-        });
+        await withTestTransaction(db, async (tx) => {
+          const testService = new PermissionService(tx);
 
-        await expect(service.removePermissionGroup(1)).resolves.not.toThrow();
+          const created = await Given.permissionGroup({
+            name: 'admin',
+            description: 'Administrator',
+            permissions: ['article:read'],
+            isActive: true,
+          });
+
+          await expect(testService.removePermissionGroup(created.id)).resolves.not.toThrow();
+
+          // Verify database deletion
+          const result = await tx
+            .select()
+            .from(permissionGroups)
+            .where(eq(permissionGroups.id, created.id));
+          expect(result).toHaveLength(0);
+        });
       });
 
       it('should invalidate cache after deletion', async () => {
-        service['rolePermissionsCache'].set('admin', ['old:permission']);
+        await withTestTransaction(db, async (tx) => {
+          const testService = new PermissionService(tx);
+          testService['rolePermissionsCache'].set('admin', ['old:permission']);
 
-        mockDb.delete.mockReturnValue({
-          where: vi.fn().mockResolvedValue({ rowsAffected: 1 }),
+          const created = await Given.permissionGroup({
+            name: 'admin',
+            description: 'Administrator',
+            permissions: ['article:read'],
+            isActive: true,
+          });
+
+          await testService.removePermissionGroup(created.id);
+
+          expect(testService['rolePermissionsCache'].size).toBe(0);
         });
-
-        await service.removePermissionGroup(1);
-
-        expect(service['rolePermissionsCache'].size).toBe(0);
       });
 
       it('should throw NotFoundException when group not found', async () => {
-        mockDb.delete.mockReturnValue({
-          where: vi.fn().mockResolvedValue({ rowsAffected: 0 }),
-        });
+        await withTestTransaction(db, async (tx) => {
+          const testService = new PermissionService(tx);
 
-        await expect(service.removePermissionGroup(999)).rejects.toThrow(NotFoundException);
+          await expect(testService.removePermissionGroup(999)).rejects.toThrow(NotFoundException);
+        });
       });
     });
   });
 
   describe('initializePermissions', () => {
     it('should initialize all permissions and groups', async () => {
-      vi.spyOn(
-        service as unknown as { registerAllModulePermissions: () => Promise<void> },
-        'registerAllModulePermissions',
-      ).mockResolvedValue(undefined);
+      await withTestTransaction(db, async (tx) => {
+        const testService = new PermissionService(tx);
+        testService.register({ module: 'article', permissions: ['read', 'write'] });
 
-      vi.spyOn(
-        service as unknown as { ensurePredefinedGroups: () => Promise<void> },
-        'ensurePredefinedGroups',
-      ).mockResolvedValue(undefined);
+        await testService.initializePermissions();
 
-      await service.initializePermissions();
+        // Verify permissions were registered
+        const permissions = await tx.select().from(permissionNodes);
+        expect(permissions.length).toBeGreaterThan(0);
 
-      expect(service['registerAllModulePermissions']).toHaveBeenCalled();
-      expect(service['ensurePredefinedGroups']).toHaveBeenCalled();
+        // Verify groups were created
+        const groups = await tx.select().from(permissionGroups);
+        expect(groups.length).toBeGreaterThan(0);
+      });
     });
 
     it('should invalidate all caches after initialization', async () => {
       service['cachedKnownPermissions'] = new Set(['old']);
       service['rolePermissionsCache'].set('admin', ['old']);
 
-      vi.spyOn(
-        service as unknown as { registerAllModulePermissions: () => Promise<void> },
-        'registerAllModulePermissions',
-      ).mockResolvedValue(undefined);
-
-      vi.spyOn(
-        service as unknown as { ensurePredefinedGroups: () => Promise<void> },
-        'ensurePredefinedGroups',
-      ).mockResolvedValue(undefined);
+      vi.spyOn(service as any, 'registerAllModulePermissions').mockResolvedValue(undefined);
+      vi.spyOn(service as any, 'ensurePredefinedGroups').mockResolvedValue(undefined);
 
       await service.initializePermissions();
 
@@ -1012,6 +1203,8 @@ describe('PermissionService', () => {
         const row = {
           id: 1,
           name: 'test',
+          permissions: ['test:read'],
+          isActive: true,
           createdAt: new Date('2025-01-01'),
           updatedAt: new Date('2025-01-02'),
         };
@@ -1026,6 +1219,8 @@ describe('PermissionService', () => {
         const row = {
           id: 1,
           name: 'test',
+          permissions: ['test:read'],
+          isActive: true,
           createdAt: '2025-01-01T00:00:00Z',
           updatedAt: '2025-01-02T00:00:00Z',
         };
@@ -1040,6 +1235,8 @@ describe('PermissionService', () => {
         const row = {
           id: 1,
           name: 'test',
+          permissions: ['test:read'],
+          isActive: true,
           createdAt: null,
           updatedAt: undefined,
         };
@@ -1049,6 +1246,186 @@ describe('PermissionService', () => {
         expect(typeof normalized.createdAt).toBe('string');
         expect(typeof normalized.updatedAt).toBe('string');
       });
+    });
+  });
+
+  describe('Permission Inheritance', () => {
+    it('should inherit permissions from predefined roles', async () => {
+      await withTestTransaction(db, async (tx) => {
+        const testService = new PermissionService(tx);
+        testService.register({
+          module: 'article',
+          permissions: ['read', 'write', 'delete'],
+          roles: {
+            admin: ['read', 'write', 'delete'],
+            author: ['read', 'write'],
+            viewer: ['read'],
+          },
+        });
+
+        // Create permission groups
+        await Given.permissionGroup({
+          name: 'admin',
+          description: 'Admin',
+          permissions: ['article:read', 'article:write', 'article:delete'],
+          isActive: true,
+        });
+
+        await Given.permissionGroup({
+          name: 'author',
+          description: 'Author',
+          permissions: ['article:read', 'article:write'],
+          isActive: true,
+        });
+
+        await Given.permissionGroup({
+          name: 'viewer',
+          description: 'Viewer',
+          permissions: ['article:read'],
+          isActive: true,
+        });
+
+        // Test admin has all permissions
+        const adminPerms = await testService.resolveUserPermissions(['role:admin']);
+        expect(adminPerms).toContain('article:read');
+        expect(adminPerms).toContain('article:write');
+        expect(adminPerms).toContain('article:delete');
+
+        // Test author has read and write
+        const authorPerms = await testService.resolveUserPermissions(['role:author']);
+        expect(authorPerms).toContain('article:read');
+        expect(authorPerms).toContain('article:write');
+        expect(authorPerms).not.toContain('article:delete');
+
+        // Test viewer only has read
+        const viewerPerms = await testService.resolveUserPermissions(['role:viewer']);
+        expect(viewerPerms).toContain('article:read');
+        expect(viewerPerms).not.toContain('article:write');
+        expect(viewerPerms).not.toContain('article:delete');
+      });
+    });
+
+    it('should handle permission overrides correctly', async () => {
+      await withTestTransaction(db, async (tx) => {
+        const testService = new PermissionService(tx);
+        testService.register({
+          module: 'article',
+          permissions: ['read', 'write', 'delete'],
+          roles: {
+            admin: ['read', 'write', 'delete'],
+            viewer: ['read'],
+          },
+        });
+
+        // Create permission groups
+        await Given.permissionGroup({
+          name: 'admin',
+          description: 'Admin',
+          permissions: ['article:read', 'article:write', 'article:delete'],
+          isActive: true,
+        });
+
+        await Given.permissionGroup({
+          name: 'viewer',
+          description: 'Viewer',
+          permissions: ['article:read'],
+          isActive: true,
+        });
+
+        // Grant admin, then revoke write permission
+        const perms = await testService.resolveUserPermissions([
+          'role:admin',
+          'no:article:write',
+        ]);
+
+        expect(perms).toContain('article:read');
+        expect(perms).toContain('article:delete');
+        expect(perms).not.toContain('article:write');
+      });
+    });
+  });
+
+  describe('Permission Check Logic', () => {
+    beforeEach(() => {
+      service.register({
+        module: 'article',
+        permissions: ['read', 'write', 'delete', 'publish'],
+        roles: {
+          admin: ['read', 'write', 'delete', 'publish'],
+          editor: ['read', 'write', 'publish'],
+          author: ['read', 'write'],
+        },
+      });
+    });
+
+    it('should check multiple permissions with AND logic', async () => {
+      vi.spyOn(service, 'resolveUserPermissions').mockResolvedValue([
+        'article:read',
+        'article:write',
+        'article:publish',
+      ]);
+
+      const result = await service.hasPermissions(
+        ['editor'],
+        ['article:read', 'article:write'],
+      );
+
+      expect(result).toBe(true);
+    });
+
+    it('should fail when any permission is missing', async () => {
+      vi.spyOn(service, 'resolveUserPermissions').mockResolvedValue(['article:read']);
+
+      const result = await service.hasPermissions(
+        ['author'],
+        ['article:read', 'article:delete'],
+      );
+
+      expect(result).toBe(false);
+    });
+
+    it('should grant all permissions to admin', async () => {
+      vi.spyOn(service, 'resolveUserPermissions').mockResolvedValue([
+        'article:read',
+        'article:write',
+        'article:delete',
+        'article:publish',
+      ]);
+
+      const result = await service.hasPermissions(
+        ['admin'],
+        ['article:delete', 'article:publish'],
+      );
+
+      expect(result).toBe(true);
+    });
+
+    it('should restrict author permissions', async () => {
+      vi.spyOn(service, 'resolveUserPermissions').mockResolvedValue([
+        'article:read',
+        'article:write',
+      ]);
+
+      // Author should not have delete or publish
+      const deleteResult = await service.hasPermissions(['author'], ['article:delete']);
+      expect(deleteResult).toBe(false);
+
+      const publishResult = await service.hasPermissions(['author'], ['article:publish']);
+      expect(publishResult).toBe(false);
+    });
+
+    it('should allow editor to publish but not delete', async () => {
+      vi.spyOn(service, 'resolveUserPermissions').mockResolvedValue([
+        'article:read',
+        'article:write',
+        'article:publish',
+      ]);
+
+      const publishResult = await service.hasPermissions(['editor'], ['article:publish']);
+      expect(publishResult).toBe(true);
+
+      const deleteResult = await service.hasPermissions(['editor'], ['article:delete']);
+      expect(deleteResult).toBe(false);
     });
   });
 });

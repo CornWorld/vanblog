@@ -1,5 +1,3 @@
-import * as fs from 'fs/promises';
-
 import { InternalServerErrorException } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { dayjs } from '@vanblog/shared';
@@ -10,8 +8,11 @@ import { ConfigService } from '../../config/config.service';
 import { RssController } from './rss.controller';
 import { RssService } from './rss.service';
 
-// Mock fs module
+// Mock fs module - must be before importing fs
 vi.mock('fs/promises');
+
+// Import fs after mock is set up
+import * as fs from 'fs/promises';
 
 describe('RssController', () => {
   let controller: RssController;

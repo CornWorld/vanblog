@@ -42,6 +42,7 @@ describe('CommentController', () => {
 
   describe('getWalineSetting', () => {
     it('should return waline setting', async () => {
+// ✅ 优化：使用新的扁平化 Mock API
       const mockWalineSetting = Mock.walineSetting() as any; // Type assertion for walineSetting mock
       vi.mocked(commentService.getWalineSetting).mockResolvedValue(mockWalineSetting);
 
@@ -71,6 +72,7 @@ describe('CommentController', () => {
 
   describe('updateWalineSetting', () => {
     it('should update waline setting', async () => {
+// ✅ 优化：使用新的扁平化 Mock API
       const mockWalineSetting = Mock.walineSetting() as any; // Type assertion for walineSetting mock
       const updateData: Record<string, unknown> = { 'smtp.enabled': false };
       const updatedSetting = { ...mockWalineSetting, ...updateData };

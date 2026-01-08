@@ -10,6 +10,7 @@ describe('DemoController', () => {
   let demoService: DemoService;
 
   beforeEach(async () => {
+    // ✅ 优化：使用新的扁平化 Mock API
     const mockDemoService = Mock.demo();
 
     const module: TestingModule = await Test.createTestingModule({

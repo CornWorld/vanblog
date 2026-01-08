@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import { StreamableFile } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, beforeEach, expect, vi } from 'vitest';
+import { mkdirSync, writeFileSync, unlinkSync } from 'fs';
 
 import { Mock } from '@test/mock';
 
@@ -13,14 +14,11 @@ import { PermissionService } from '../permission/permission.service';
 import type { CreateBackupDto, RestoreBackupDto, GetBackupsDto } from './dto/backup.dto';
 import type { Response } from 'express';
 
-// Mock fs module
-vi.mock('fs');
-const mockFs = fs as any;
-
 describe('BackupController', () => {
   let controller: BackupController;
   let mockBackupService: any;
   let mockPermissionService: any;
+  let testBackupDir: string;
 
   beforeEach(async () => {
     mockBackupService = Mock.backup();
@@ -44,6 +42,18 @@ describe('BackupController', () => {
 
     // Reset mocks
     vi.clearAllMocks();
+
+    // Create test backup directory
+    testBackupDir = `${process.cwd()}/data/backups`;
+    mkdirSync(testBackupDir, { recursive: true });
+
+    // Clean up any leftover test file from previous runs
+    const testFilePath = `${testBackupDir}/test-backup.vbak`;
+    try {
+      unlinkSync(testFilePath);
+    } catch {
+      // File doesn't exist, ignore
+    }
   });
 
   it('should be defined', () => {
@@ -185,38 +195,35 @@ describe('BackupController', () => {
   });
 
   describe('downloadBackup', () => {
-    it('should download backup file successfully', () => {
+    it('should download backup file successfully', async () => {
       const filename = 'test-backup.vbak';
       const mockResponse = {
         set: vi.fn(),
       } as unknown as Response;
 
-      // Mock file system
-      const mockReadStream = {
-        pipe: vi.fn(),
-      };
-      mockFs.existsSync = vi.fn().mockReturnValue(true);
-      mockFs.createReadStream = vi.fn().mockReturnValue(mockReadStream as any);
-      mockFs.statSync = vi.fn().mockReturnValue({ size: 1024 } as any);
+      // Create actual test backup file
+      const testFilePath = `${testBackupDir}/${filename}`;
+      writeFileSync(testFilePath, 'mock backup content');
 
       const result = controller.downloadBackup(filename, mockResponse);
 
-      expect(mockFs.existsSync).toHaveBeenCalled();
-      expect(mockFs.createReadStream).toHaveBeenCalled();
-      expect(mockFs.statSync).toHaveBeenCalled();
       expect(mockResponse.set).toHaveBeenCalledWith({
         'Content-Type': 'application/octet-stream',
         'Content-Disposition': `attachment; filename="${filename}"`,
-        'Content-Length': 1024,
+        'Content-Length': 19, // Length of "mock backup content"
       });
       expect(result).toBeInstanceOf(StreamableFile);
+
+      // Close the stream to prevent async errors
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      if (result && 'getStream' in result) {
+        (result as any).getStream().destroy();
+      }
     });
 
     it('should throw error for non-existent file', () => {
       const filename = 'non-existent.vbak';
       const mockResponse = {} as Response;
-
-      mockFs.existsSync.mockReturnValue(false);
 
       expect(() => controller.downloadBackup(filename, mockResponse)).toThrow(
         'Backup file not found',

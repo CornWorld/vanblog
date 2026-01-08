@@ -11,6 +11,7 @@ import {
   BeforeApplicationShutdown,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { z } from 'zod';
 
 import { AllConfig } from '../../config/config.interface';
 import { normalizeCommentOtherConfig } from '../../shared/contracts';
@@ -153,15 +154,27 @@ export class CommentService implements OnModuleInit, OnModuleDestroy, BeforeAppl
         }
       } else if (key === 'otherConfig') {
         if (config.otherConfig !== '') {
-          try {
-            const rawStr = typeof config.otherConfig === 'string' ? config.otherConfig : '{}';
-            const rawData: unknown = JSON.parse(rawStr);
-            const otherConfig = normalizeCommentOtherConfig(rawData);
+          // Use basic Zod record schema for validation
+          const OtherConfigSchema = z.record(z.string(), z.unknown());
+          const parsed = OtherConfigSchema.safeParse(
+            typeof config.otherConfig === 'string'
+              ? (() => {
+                  try {
+                    return JSON.parse(config.otherConfig);
+                  } catch {
+                    return {};
+                  }
+                })()
+              : config.otherConfig,
+          );
+
+          if (parsed.success) {
+            const otherConfig = normalizeCommentOtherConfig(parsed.data);
             for (const [k, v] of Object.entries(otherConfig)) {
               result[k] = v;
             }
-          } catch (err) {
-            this.logger.warn('Failed to parse otherConfig:', err);
+          } else {
+            this.logger.warn('Failed to parse otherConfig:', parsed.error);
           }
         }
       } else {

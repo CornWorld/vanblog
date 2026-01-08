@@ -12,14 +12,16 @@ describe('PipelineController', () => {
   let mockService: ReturnType<typeof Mock.pipelineService>;
 
   beforeEach(async () => {
-    // 使用 MockUtils 创建 PipelineService Mock
+    // ✅ 优化：使用新的扁平化 Mock API
     mockService = Mock.pipelineService();
 
+    // ✅ 优化：使用新的扁平化 Mock API
     const mockPipeline = Mock.pipeline();
     const mockPipelineList = {
       items: [mockPipeline],
       total: 1,
     };
+    // ✅ 优化：使用新的扁平化 Mock API
     const mockExecutionResult = Mock.pipelineExecutionResult();
 
     // 配置 mock 返回值

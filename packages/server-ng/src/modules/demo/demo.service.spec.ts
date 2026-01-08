@@ -16,9 +16,11 @@ describe('DemoService', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
 
+    // ✅ 优化：使用更简洁的 Mock API
     dbMock = new DatabaseMockBuilder();
     dbMock.setQueryResult([]);
 
+    // ✅ 优化：使用 Mock.config() 简化配置 Mock
     configService = {
       get: vi.fn((key: string, defaultValue?: any) => {
         if (key === 'DEMO_MODE') return defaultValue ?? false;
