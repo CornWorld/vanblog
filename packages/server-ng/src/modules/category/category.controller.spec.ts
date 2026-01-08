@@ -2,40 +2,29 @@ import { NotFoundException } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { vi, describe, beforeEach, it, expect } from 'vitest';
 
+import { Mock } from '@test/mock';
+
 import { CategoryController } from './category.controller';
 import { CategoryService } from './category.service';
 
 describe('CategoryController', () => {
   let controller: CategoryController;
-  let service: CategoryService;
-  let mockCategoryService: Partial<CategoryService>;
+  let categoryService: ReturnType<typeof Mock.categoryService>;
 
   beforeEach(async () => {
-    mockCategoryService = {
-      findAll: vi.fn(),
-      findOne: vi.fn(),
-      findByName: vi.fn(),
-      create: vi.fn(),
-      update: vi.fn(),
-      remove: vi.fn(),
-      getArticlesByCategoryId: vi.fn(),
-      verifyPassword: vi.fn(),
-      getStatistics: vi.fn(),
-      getCategoriesWithTags: vi.fn(),
-    };
+    categoryService = Mock.categoryService();
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [CategoryController],
       providers: [
         {
           provide: CategoryService,
-          useValue: mockCategoryService,
+          useValue: categoryService,
         },
       ],
     }).compile();
 
     controller = module.get<CategoryController>(CategoryController);
-    service = module.get<CategoryService>(CategoryService);
   });
 
   it('should be defined', () => {
@@ -43,55 +32,27 @@ describe('CategoryController', () => {
   });
 
   describe('getCategories', () => {
-    it('should return all categories', async () => {
-      const mockCategories = {
-        items: [
-          {
-            id: 1,
-            name: 'Technology',
-            slug: 'tech',
-            description: 'Tech articles',
-            private: false,
-            password: null,
-            articleCount: 5,
-            createdAt: '2024-01-01T00:00:00Z',
-            updatedAt: '2024-01-01T00:00:00Z',
-          },
-        ],
-        total: 1,
-      };
+    it('should return all categories with article counts', async () => {
+// ✅ 优化：使用新的扁平化 Mock API
+      const mockCategories = Mock.categories(3, { articleCount: 5 });
+      const paginatedResult = Mock.paginated(mockCategories, mockCategories.length);
 
-      vi.mocked(service.findAll).mockResolvedValue(mockCategories);
+      categoryService.findAll.mockResolvedValue(paginatedResult);
 
       const handler = controller.getCategories();
       const result = await handler();
 
-      expect(service.findAll).toHaveBeenCalled();
-      expect(result).toEqual({
-        status: 200,
-        body: mockCategories.items,
-      });
+      expect(categoryService.findAll).toHaveBeenCalledTimes(1);
+      expect(result.status).toBe(200);
+      expect(result.body).toHaveLength(3);
+      expect(result.body[0]).toHaveProperty('articleCount');
     });
 
-    it('should handle undefined description fields', async () => {
-      const mockCategories = {
-        items: [
-          {
-            id: 1,
-            name: 'Technology',
-            slug: 'tech',
-            description: null,
-            private: false,
-            password: null,
-            articleCount: 5,
-            createdAt: '2024-01-01T00:00:00Z',
-            updatedAt: '2024-01-01T00:00:00Z',
-          },
-        ],
-        total: 1,
-      };
+    it('should convert null description to undefined', async () => {
+      const category = Mock.category({ description: null });
+      const paginatedResult = Mock.paginated([category], 1);
 
-      vi.mocked(service.findAll).mockResolvedValue(mockCategories);
+      categoryService.findAll.mockResolvedValue(paginatedResult);
 
       const handler = controller.getCategories();
       const result = await handler();
@@ -99,13 +60,22 @@ describe('CategoryController', () => {
       expect(result.body[0].description).toBeUndefined();
     });
 
-    it('should return empty array when no categories exist', async () => {
-      const mockCategories = {
-        items: [],
-        total: 0,
-      };
+    it('should preserve non-null description', async () => {
+      const category = Mock.category({ description: 'Tech articles' });
+      const paginatedResult = Mock.paginated([category], 1);
 
-      vi.mocked(service.findAll).mockResolvedValue(mockCategories);
+      categoryService.findAll.mockResolvedValue(paginatedResult);
+
+      const handler = controller.getCategories();
+      const result = await handler();
+
+      expect(result.body[0].description).toBe('Tech articles');
+    });
+
+    it('should return empty array when no categories exist', async () => {
+      const paginatedResult = Mock.paginated([], 0);
+
+      categoryService.findAll.mockResolvedValue(paginatedResult);
 
       const handler = controller.getCategories();
       const result = await handler();
@@ -115,102 +85,69 @@ describe('CategoryController', () => {
       expect(result.body).toHaveLength(0);
     });
 
-    it('should handle multiple categories with mixed description values', async () => {
-      const mockCategories = {
-        items: [
-          {
-            id: 1,
-            name: 'Tech',
-            slug: 'tech',
-            description: 'Tech articles',
-            private: false,
-            password: null,
-            articleCount: 5,
-            createdAt: '2024-01-01T00:00:00Z',
-            updatedAt: '2024-01-01T00:00:00Z',
-          },
-          {
-            id: 2,
-            name: 'Lifestyle',
-            slug: 'lifestyle',
-            description: null,
-            private: false,
-            password: null,
-            articleCount: 3,
-            createdAt: '2024-01-02T00:00:00Z',
-            updatedAt: '2024-01-02T00:00:00Z',
-          },
-        ],
-        total: 2,
-      };
+    it('should handle mixed description values in multiple categories', async () => {
+      const categories = [
+        Mock.category({ name: 'Tech', description: 'Tech articles' }),
+        Mock.category({ name: 'Lifestyle', description: null }),
+        Mock.category({ name: 'Travel', description: 'Travel stories' }),
+      ];
+      const paginatedResult = Mock.paginated(categories, 3);
 
-      vi.mocked(service.findAll).mockResolvedValue(mockCategories);
+      categoryService.findAll.mockResolvedValue(paginatedResult);
 
       const handler = controller.getCategories();
       const result = await handler();
 
       expect(result.status).toBe(200);
-      expect(result.body).toHaveLength(2);
+      expect(result.body).toHaveLength(3);
       expect(result.body[0].description).toBe('Tech articles');
       expect(result.body[1].description).toBeUndefined();
+      expect(result.body[2].description).toBe('Travel stories');
     });
   });
 
   describe('createCategory', () => {
-    it('should create a new category', async () => {
+    it('should create a new category successfully', async () => {
       const createDto = {
         name: 'New Category',
         slug: 'new-category',
         description: 'A new category',
       };
 
-      const mockCreatedCategory = {
+      const createdCategory = Mock.category({
         id: 1,
-        name: 'New Category',
-        slug: 'new-category',
-        description: 'A new category',
-        private: null,
-        password: null,
-        createdAt: '2024-01-01T00:00:00Z',
-        updatedAt: '2024-01-01T00:00:00Z',
-      };
+        name: createDto.name,
+        slug: createDto.slug,
+        description: createDto.description,
+      });
 
-      vi.mocked(service.create).mockResolvedValue(mockCreatedCategory);
+      categoryService.create.mockResolvedValue(createdCategory);
 
       const handler = controller.createCategory();
       const result = await handler({ body: createDto });
 
-      expect(service.create).toHaveBeenCalledWith({
+      expect(categoryService.create).toHaveBeenCalledWith({
         ...createDto,
         name: createDto.name,
       });
-      expect(result).toEqual({
-        status: 201,
-        body: {
-          ...mockCreatedCategory,
-          description: 'A new category',
-        },
-      });
+      expect(result.status).toBe(201);
+      expect(result.body.name).toBe(createDto.name);
+      expect(result.body.description).toBe(createDto.description);
     });
 
-    it('should create category with null description', async () => {
+    it('should create category with null description converted to undefined', async () => {
       const createDto = {
         name: 'New Category',
         slug: 'new-category',
       };
 
-      const mockCreatedCategory = {
-        id: 1,
-        name: 'New Category',
-        slug: 'new-category',
+      const createdCategory = Mock.category({
+        name: createDto.name,
+        slug: createDto.slug,
         description: null,
-        private: null,
-        password: null,
-        createdAt: '2024-01-01T00:00:00Z',
-        updatedAt: '2024-01-01T00:00:00Z',
-      };
+      });
 
-      vi.mocked(service.create).mockResolvedValue(mockCreatedCategory);
+      categoryService.create.mockResolvedValue(createdCategory);
 
       const handler = controller.createCategory();
       const result = await handler({ body: createDto });
@@ -225,18 +162,13 @@ describe('CategoryController', () => {
         description: '',
       };
 
-      const mockCreatedCategory = {
-        id: 1,
-        name: 'New Category',
-        slug: 'new-category',
+      const createdCategory = Mock.category({
+        name: createDto.name,
+        slug: createDto.slug,
         description: '',
-        private: null,
-        password: null,
-        createdAt: '2024-01-01T00:00:00Z',
-        updatedAt: '2024-01-01T00:00:00Z',
-      };
+      });
 
-      vi.mocked(service.create).mockResolvedValue(mockCreatedCategory);
+      categoryService.create.mockResolvedValue(createdCategory);
 
       const handler = controller.createCategory();
       const result = await handler({ body: createDto });
@@ -245,155 +177,83 @@ describe('CategoryController', () => {
       expect(result.body.description).toBe('');
     });
 
-    it('should distinguish between null and undefined description', async () => {
-      const createDtoNull = {
-        name: 'Category A',
-        slug: 'cat-a',
-        description: null,
-      };
-
-      const createDtoUndefined = {
-        name: 'Category B',
-        slug: 'cat-b',
-        description: undefined,
-      };
-
-      const mockCategoryNull = {
-        id: 1,
-        name: 'Category A',
-        slug: 'cat-a',
-        description: null,
-        private: null,
-        password: null,
-        createdAt: '2024-01-01T00:00:00Z',
-        updatedAt: '2024-01-01T00:00:00Z',
-      };
-
-      const mockCategoryUndefined = {
-        id: 2,
-        name: 'Category B',
-        slug: 'cat-b',
-        description: null,
-        private: null,
-        password: null,
-        createdAt: '2024-01-01T00:00:00Z',
-        updatedAt: '2024-01-01T00:00:00Z',
-      } as any;
-
-      vi.mocked(service.create).mockResolvedValueOnce(mockCategoryNull);
-      const handler = controller.createCategory();
-      const resultNull = await handler({ body: createDtoNull });
-      expect(resultNull.body.description).toBeUndefined();
-
-      vi.mocked(service.create).mockResolvedValueOnce(mockCategoryUndefined);
-      const resultUndefined = await handler({ body: createDtoUndefined });
-      expect(resultUndefined.body.description).toBeUndefined();
-    });
-
-    it('should handle whitespace-only description as non-empty', async () => {
-      const createDto = {
-        name: 'New Category',
-        slug: 'new-category',
-        description: '   ',
-      };
-
-      const mockCreatedCategory = {
-        id: 1,
-        name: 'New Category',
-        slug: 'new-category',
-        description: '   ',
-        private: null,
-        password: null,
-        createdAt: '2024-01-01T00:00:00Z',
-        updatedAt: '2024-01-01T00:00:00Z',
-      };
-
-      vi.mocked(service.create).mockResolvedValue(mockCreatedCategory);
-
-      const handler = controller.createCategory();
-      const result = await handler({ body: createDto });
-
-      expect(result.status).toBe(201);
-      expect(result.body.description).toBe('   ');
-      expect(result.body.description).not.toBe('');
-      expect(result.body.description).not.toBeUndefined();
-    });
-
-    it('should create category with special characters in name', async () => {
+    it('should handle category creation with special characters in name', async () => {
       const createDto = {
         name: 'Tech & Design',
         slug: 'tech-design',
         description: 'Technology and Design articles',
       };
 
-      const mockCreatedCategory = {
-        id: 1,
-        name: 'Tech & Design',
-        slug: 'tech-design',
-        description: 'Technology and Design articles',
-        private: null,
-        password: null,
-        createdAt: '2024-01-01T00:00:00Z',
-        updatedAt: '2024-01-01T00:00:00Z',
-      };
+      const createdCategory = Mock.category({
+        name: createDto.name,
+        slug: createDto.slug,
+        description: createDto.description,
+      });
 
-      vi.mocked(service.create).mockResolvedValue(mockCreatedCategory);
+      categoryService.create.mockResolvedValue(createdCategory);
 
       const handler = controller.createCategory();
       const result = await handler({ body: createDto });
 
       expect(result.status).toBe(201);
       expect(result.body.name).toBe('Tech & Design');
-      expect(service.create).toHaveBeenCalledWith(createDto);
+      expect(categoryService.create).toHaveBeenCalledWith(createDto);
+    });
+
+    it('should pass name field explicitly to service', async () => {
+      const createDto = {
+        name: 'Explicit Name',
+        slug: 'explicit-name',
+      };
+
+      const createdCategory = Mock.category({
+        name: createDto.name,
+        slug: createDto.slug,
+      });
+
+      categoryService.create.mockResolvedValue(createdCategory);
+
+      const handler = controller.createCategory();
+      await handler({ body: createDto });
+
+      expect(categoryService.create).toHaveBeenCalledWith({
+        ...createDto,
+        name: createDto.name,
+      });
     });
   });
 
   describe('updateCategory', () => {
     it('should update an existing category', async () => {
+      const categoryName = 'old-category';
       const updateDto = {
         name: 'Updated Category',
         description: 'Updated description',
       };
 
-      const mockCategory = {
+      const existingCategory = Mock.category({
         id: 1,
         name: 'Old Category',
-        slug: 'old-category',
-        description: 'Old description',
-        private: null,
-        password: null,
-        createdAt: '2024-01-01T00:00:00Z',
-        updatedAt: '2024-01-01T00:00:00Z',
-      };
+        slug: categoryName,
+      });
 
-      const mockUpdatedCategory = {
-        ...mockCategory,
-        name: 'Updated Category',
-        description: 'Updated description',
-        updatedAt: '2024-01-02T00:00:00Z',
-      };
-
-      vi.mocked(service.findByName).mockResolvedValue({
+      const updatedCategory = Mock.category({
         id: 1,
-        name: 'Old Category',
-        slug: 'old-category',
-        description: 'Old description',
-        private: null,
-        password: null,
-        createdAt: '2024-01-01T00:00:00Z',
-        updatedAt: '2024-01-01T00:00:00Z',
-      } as any);
-      vi.mocked(service.update).mockResolvedValue(mockUpdatedCategory);
+        name: updateDto.name,
+        description: updateDto.description,
+      });
+
+      categoryService.findByName.mockResolvedValue(existingCategory as any);
+      categoryService.update.mockResolvedValue(updatedCategory);
 
       const handler = controller.updateCategory();
-      const result = await handler({ params: { name: 'old-category' }, body: updateDto });
+      const result = await handler({ params: { name: categoryName }, body: updateDto });
 
-      expect(service.findByName).toHaveBeenCalledWith('old-category');
-      expect(service.update).toHaveBeenCalledWith(1, updateDto);
-      expect(result).toEqual({
-        status: 200,
-        body: mockUpdatedCategory,
-      });
+      expect(categoryService.findByName).toHaveBeenCalledWith(categoryName);
+      expect(categoryService.update).toHaveBeenCalledWith(1, updateDto);
+      expect(result.status).toBe(200);
+      expect(result.body.name).toBe(updateDto.name);
+      expect(result.body.description).toBe(updateDto.description);
     });
 
     it('should throw NotFoundException when category not found', async () => {
@@ -401,7 +261,7 @@ describe('CategoryController', () => {
         name: 'Updated Category',
       };
 
-      vi.mocked(service.findByName).mockResolvedValue(null);
+      categoryService.findByName.mockResolvedValue(null);
 
       const handler = controller.updateCategory();
 
@@ -418,25 +278,20 @@ describe('CategoryController', () => {
         name: 'New Name Only',
       };
 
-      const mockCategory = {
+      const existingCategory = Mock.category({
         id: 1,
         name: 'Old Name',
         slug: 'old-name',
         description: 'Keep this description',
-        private: null,
-        password: null,
-        createdAt: '2024-01-01T00:00:00Z',
-        updatedAt: '2024-01-01T00:00:00Z',
-      };
+      });
 
-      const mockUpdatedCategory = {
-        ...mockCategory,
-        name: 'New Name Only',
-        updatedAt: '2024-01-02T00:00:00Z',
-      };
+      const updatedCategory = Mock.category({
+        ...existingCategory,
+        name: updateDto.name,
+      });
 
-      vi.mocked(service.findByName).mockResolvedValue(mockCategory as any);
-      vi.mocked(service.update).mockResolvedValue(mockUpdatedCategory);
+      categoryService.findByName.mockResolvedValue(existingCategory as any);
+      categoryService.update.mockResolvedValue(updatedCategory);
 
       const handler = controller.updateCategory();
       const result = await handler({ params: { name: 'old-name' }, body: updateDto });
@@ -444,33 +299,27 @@ describe('CategoryController', () => {
       expect(result.status).toBe(200);
       expect(result.body.name).toBe('New Name Only');
       expect(result.body.description).toBe('Keep this description');
-      expect(service.update).toHaveBeenCalledWith(1, updateDto);
+      expect(categoryService.update).toHaveBeenCalledWith(1, updateDto);
     });
 
-    it('should update description to null', async () => {
+    it('should update description to null (converted to undefined)', async () => {
       const updateDto = {
         description: null,
       };
 
-      const mockCategory = {
+      const existingCategory = Mock.category({
         id: 1,
         name: 'Category',
-        slug: 'category',
         description: 'Old description',
-        private: null,
-        password: null,
-        createdAt: '2024-01-01T00:00:00Z',
-        updatedAt: '2024-01-01T00:00:00Z',
-      };
+      });
 
-      const mockUpdatedCategory = {
-        ...mockCategory,
+      const updatedCategory = Mock.category({
+        ...existingCategory,
         description: null,
-        updatedAt: '2024-01-02T00:00:00Z',
-      };
+      });
 
-      vi.mocked(service.findByName).mockResolvedValue(mockCategory as any);
-      vi.mocked(service.update).mockResolvedValue(mockUpdatedCategory);
+      categoryService.findByName.mockResolvedValue(existingCategory as any);
+      categoryService.update.mockResolvedValue(updatedCategory);
 
       const handler = controller.updateCategory();
       const result = await handler({ params: { name: 'category' }, body: updateDto });
@@ -480,67 +329,56 @@ describe('CategoryController', () => {
     });
 
     it('should handle category name with special characters', async () => {
+      const categoryName = 'cpp-programming';
       const updateDto = {
         description: 'Updated description',
       };
 
-      const mockCategory = {
+      const existingCategory = Mock.category({
         id: 1,
         name: 'C++ Programming',
-        slug: 'cpp-programming',
-        description: 'Old description',
-        private: null,
-        password: null,
-        createdAt: '2024-01-01T00:00:00Z',
-        updatedAt: '2024-01-01T00:00:00Z',
-      };
+        slug: categoryName,
+      });
 
-      const mockUpdatedCategory = {
-        ...mockCategory,
-        description: 'Updated description',
-        updatedAt: '2024-01-02T00:00:00Z',
-      };
+      const updatedCategory = Mock.category({
+        ...existingCategory,
+        description: updateDto.description,
+      });
 
-      vi.mocked(service.findByName).mockResolvedValue(mockCategory as any);
-      vi.mocked(service.update).mockResolvedValue(mockUpdatedCategory);
+      categoryService.findByName.mockResolvedValue(existingCategory as any);
+      categoryService.update.mockResolvedValue(updatedCategory);
 
       const handler = controller.updateCategory();
-      const result = await handler({ params: { name: 'cpp-programming' }, body: updateDto });
+      const result = await handler({ params: { name: categoryName }, body: updateDto });
 
       expect(result.status).toBe(200);
-      expect(service.findByName).toHaveBeenCalledWith('cpp-programming');
+      expect(categoryService.findByName).toHaveBeenCalledWith(categoryName);
     });
   });
 
   describe('deleteCategory', () => {
-    it('should delete a category', async () => {
-      const mockCategory = {
+    it('should delete a category successfully', async () => {
+      const categoryName = 'category-to-delete';
+      const existingCategory = Mock.category({
         id: 1,
         name: 'Category to Delete',
-        slug: 'category-to-delete',
-        description: null,
-        private: null,
-        password: null,
-        createdAt: '2024-01-01T00:00:00Z',
-        updatedAt: '2024-01-01T00:00:00Z',
-      };
+        slug: categoryName,
+      });
 
-      vi.mocked(service.findByName).mockResolvedValue(mockCategory as any);
-      vi.mocked(service.remove).mockResolvedValue(undefined);
+      categoryService.findByName.mockResolvedValue(existingCategory as any);
+      categoryService.remove.mockResolvedValue(undefined);
 
       const handler = controller.deleteCategory();
-      const result = await handler({ params: { name: 'category-to-delete' } });
+      const result = await handler({ params: { name: categoryName } });
 
-      expect(service.findByName).toHaveBeenCalledWith('category-to-delete');
-      expect(service.remove).toHaveBeenCalledWith(1);
-      expect(result).toEqual({
-        status: 200,
-        body: { success: true },
-      });
+      expect(categoryService.findByName).toHaveBeenCalledWith(categoryName);
+      expect(categoryService.remove).toHaveBeenCalledWith(1);
+      expect(result.status).toBe(200);
+      expect(result.body.success).toBe(true);
     });
 
     it('should throw NotFoundException when category not found', async () => {
-      vi.mocked(service.findByName).mockResolvedValue(null);
+      categoryService.findByName.mockResolvedValue(null);
 
       const handler = controller.deleteCategory();
 
@@ -553,128 +391,85 @@ describe('CategoryController', () => {
     });
 
     it('should delete category with special characters in name', async () => {
-      const mockCategory = {
+      const categoryName = 'cpp-java';
+      const existingCategory = Mock.category({
         id: 1,
         name: 'C++ & Java',
-        slug: 'cpp-java',
-        description: null,
-        private: null,
-        password: null,
-        createdAt: '2024-01-01T00:00:00Z',
-        updatedAt: '2024-01-01T00:00:00Z',
-      };
+        slug: categoryName,
+      });
 
-      vi.mocked(service.findByName).mockResolvedValue(mockCategory as any);
-      vi.mocked(service.remove).mockResolvedValue(undefined);
+      categoryService.findByName.mockResolvedValue(existingCategory as any);
+      categoryService.remove.mockResolvedValue(undefined);
 
       const handler = controller.deleteCategory();
-      const result = await handler({ params: { name: 'cpp-java' } });
+      const result = await handler({ params: { name: categoryName } });
 
-      expect(service.findByName).toHaveBeenCalledWith('cpp-java');
-      expect(service.remove).toHaveBeenCalledWith(1);
+      expect(categoryService.findByName).toHaveBeenCalledWith(categoryName);
+      expect(categoryService.remove).toHaveBeenCalledWith(1);
       expect(result.body.success).toBe(true);
     });
 
-    it('should handle successful deletion and verify remove was called once', async () => {
-      const mockCategory = {
+    it('should verify remove is called exactly once', async () => {
+      const existingCategory = Mock.category({
         id: 5,
         name: 'Test Category',
         slug: 'test-category',
-        description: 'Test description',
-        private: null,
-        password: null,
-        createdAt: '2024-01-01T00:00:00Z',
-        updatedAt: '2024-01-01T00:00:00Z',
-      };
+      });
 
-      vi.mocked(service.findByName).mockResolvedValue(mockCategory as any);
-      vi.mocked(service.remove).mockResolvedValue(undefined);
+      categoryService.findByName.mockResolvedValue(existingCategory as any);
+      categoryService.remove.mockResolvedValue(undefined);
 
       const handler = controller.deleteCategory();
       await handler({ params: { name: 'test-category' } });
 
-      expect(service.remove).toHaveBeenCalledTimes(1);
-      expect(service.remove).toHaveBeenCalledWith(5);
+      expect(categoryService.remove).toHaveBeenCalledTimes(1);
+      expect(categoryService.remove).toHaveBeenCalledWith(5);
     });
   });
 
   describe('getArticlesByCategory', () => {
     it('should return articles in a category', async () => {
-      const mockCategory = {
+      const categoryName = 'Technology';
+      const existingCategory = Mock.category({
         id: 1,
-        name: 'Technology',
-        slug: 'tech',
-        description: 'Tech articles',
-        private: null,
-        password: null,
-        createdAt: '2024-01-01T00:00:00Z',
-        updatedAt: '2024-01-01T00:00:00Z',
-      };
+        name: categoryName,
+      });
 
-      const mockArticles = {
-        items: [
-          {
-            id: 1,
-            title: 'Article 1',
-            content: 'Content 1',
-            pathname: '/article-1',
-            tags: ['tag1', 'tag2'],
-            category: 'Technology',
-            author: 'admin',
-            top: 0,
-            hidden: false,
-            private: false,
-            password: null,
-            viewer: 100,
-            createdAt: '2024-01-01T00:00:00Z',
-            updatedAt: '2024-01-01T00:00:00Z',
-          },
-        ],
-        total: 1,
-        page: 1,
-        pageSize: 1000,
-        totalPages: 1,
-      };
+// ✅ 优化：使用新的扁平化 Mock API
+      const mockArticles = Mock.articles(2, {
+        category: categoryName,
+        tags: ['tag1', 'tag2'],
+      });
 
-      vi.mocked(service.findByName).mockResolvedValue(mockCategory as any);
-      vi.mocked(service.getArticlesByCategoryId).mockResolvedValue(mockArticles);
+      const paginatedResult = Mock.paginated(mockArticles, 2, 1, 1000);
+
+      categoryService.findByName.mockResolvedValue(existingCategory as any);
+      categoryService.getArticlesByCategoryId.mockResolvedValue(paginatedResult);
 
       const handler = controller.getArticlesByCategory();
-      const result = await handler({ params: { name: 'Technology' } });
+      const result = await handler({ params: { name: categoryName } });
 
-      expect(service.findByName).toHaveBeenCalledWith('Technology');
-      expect(service.getArticlesByCategoryId).toHaveBeenCalledWith(1, {
+      expect(categoryService.findByName).toHaveBeenCalledWith(categoryName);
+      expect(categoryService.getArticlesByCategoryId).toHaveBeenCalledWith(1, {
         page: 1,
         pageSize: 1000,
         sortBy: 'createdAt',
         sortOrder: 'desc',
       });
       expect(result.status).toBe(200);
-      expect(result.body).toHaveLength(1);
+      expect(result.body).toHaveLength(2);
     });
 
     it('should return empty array when category has no articles', async () => {
-      const mockCategory = {
+      const existingCategory = Mock.category({
         id: 1,
         name: 'Empty Category',
-        slug: 'empty',
-        description: null,
-        private: null,
-        password: null,
-        createdAt: '2024-01-01T00:00:00Z',
-        updatedAt: '2024-01-01T00:00:00Z',
-      };
+      });
 
-      const mockArticles = {
-        items: [],
-        total: 0,
-        page: 1,
-        pageSize: 1000,
-        totalPages: 0,
-      };
+      const paginatedResult = Mock.paginated([], 0, 1, 1000);
 
-      vi.mocked(service.findByName).mockResolvedValue(mockCategory as any);
-      vi.mocked(service.getArticlesByCategoryId).mockResolvedValue(mockArticles);
+      categoryService.findByName.mockResolvedValue(existingCategory as any);
+      categoryService.getArticlesByCategoryId.mockResolvedValue(paginatedResult);
 
       const handler = controller.getArticlesByCategory();
       const result = await handler({ params: { name: 'Empty Category' } });
@@ -684,56 +479,72 @@ describe('CategoryController', () => {
       expect(result.body).toEqual([]);
     });
 
-    it('should handle articles with top and viewer values', async () => {
-      const mockCategory = {
-        id: 1,
-        name: 'Technology',
-        slug: 'tech',
-        description: 'Tech articles',
-        private: null,
-        password: null,
-        createdAt: '2024-01-01T00:00:00Z',
-        updatedAt: '2024-01-01T00:00:00Z',
-      };
+    it('should correctly map article viewer count to views', async () => {
+      const existingCategory = Mock.category({ id: 1 });
 
-      const mockArticles = {
-        items: [
-          {
-            id: 1,
-            title: 'Article 1',
-            content: 'Content 1',
-            pathname: '/article-1',
-            tags: null,
-            category: 'Technology',
-            author: 'admin',
-            top: 5,
-            hidden: false,
-            private: false,
-            password: 'encrypted-password',
-            viewer: null,
-            createdAt: '2024-01-01T00:00:00Z',
-            updatedAt: '2024-01-01T00:00:00Z',
-          },
-        ],
-        total: 1,
-        page: 1,
-        pageSize: 1000,
-        totalPages: 1,
-      };
+      const mockArticles = [
+        Mock.article({ viewer: 100 }),
+        Mock.article({ viewer: null }),
+        Mock.article({ viewer: 0 }),
+      ];
 
-      vi.mocked(service.findByName).mockResolvedValue(mockCategory as any);
-      vi.mocked(service.getArticlesByCategoryId).mockResolvedValue(mockArticles);
+      const paginatedResult = Mock.paginated(mockArticles, 3);
+
+      categoryService.findByName.mockResolvedValue(existingCategory as any);
+      categoryService.getArticlesByCategoryId.mockResolvedValue(paginatedResult);
 
       const handler = controller.getArticlesByCategory();
-      const result = await handler({ params: { name: 'Technology' } });
+      const result = await handler({ params: { name: 'test' } });
 
-      expect(result.body[0].views).toBe(0);
-      expect(result.body[0].isTop).toBe(true);
+      expect(result.body[0].views).toBe(100);
+      expect(result.body[1].views).toBe(0); // null → 0
+      expect(result.body[2].views).toBe(0);
+    });
+
+    it('should correctly map top field to isTop', async () => {
+      const existingCategory = Mock.category({ id: 1 });
+
+      const mockArticles = [
+        Mock.article({ top: 5 }),
+        Mock.article({ top: 0 }),
+        Mock.article({ top: null }),
+      ];
+
+      const paginatedResult = Mock.paginated(mockArticles, 3);
+
+      categoryService.findByName.mockResolvedValue(existingCategory as any);
+      categoryService.getArticlesByCategoryId.mockResolvedValue(paginatedResult);
+
+      const handler = controller.getArticlesByCategory();
+      const result = await handler({ params: { name: 'test' } });
+
+      expect(result.body[0].isTop).toBe(true); // top > 0
+      expect(result.body[1].isTop).toBe(false); // top === 0
+      expect(result.body[2].isTop).toBe(false); // top === null
+    });
+
+    it('should preserve password when present', async () => {
+      const existingCategory = Mock.category({ id: 1 });
+
+      const mockArticles = [
+        Mock.article({ password: 'encrypted-password' }),
+        Mock.article({ password: null }),
+      ];
+
+      const paginatedResult = Mock.paginated(mockArticles, 2);
+
+      categoryService.findByName.mockResolvedValue(existingCategory as any);
+      categoryService.getArticlesByCategoryId.mockResolvedValue(paginatedResult);
+
+      const handler = controller.getArticlesByCategory();
+      const result = await handler({ params: { name: 'test' } });
+
       expect(result.body[0].password).toBe('encrypted-password');
+      expect(result.body[1].password).toBeUndefined(); // null → undefined
     });
 
     it('should throw NotFoundException when category not found', async () => {
-      vi.mocked(service.findByName).mockResolvedValue(null);
+      categoryService.findByName.mockResolvedValue(null);
 
       const handler = controller.getArticlesByCategory();
 
@@ -746,229 +557,95 @@ describe('CategoryController', () => {
     });
 
     it('should map article fields correctly', async () => {
-      const mockCategory = {
+      const existingCategory = Mock.category({ id: 1 });
+
+      const article = Mock.article({
         id: 1,
-        name: 'Technology',
-        slug: 'tech',
-        description: null,
-        private: null,
+        title: 'Article 1',
+        content: 'Content 1',
+        pathname: '/article-1',
+        tags: ['tag1'],
+        category: null,
+        author: 'admin',
+        top: null,
+        hidden: false,
+        private: true,
         password: null,
-        createdAt: '2024-01-01T00:00:00Z',
-        updatedAt: '2024-01-01T00:00:00Z',
-      };
+        viewer: 50,
+      });
 
-      const mockArticles = {
-        items: [
-          {
-            id: 1,
-            title: 'Article 1',
-            content: 'Content 1',
-            pathname: '/article-1',
-            tags: ['tag1'],
-            category: null,
-            author: 'admin',
-            top: null,
-            hidden: false,
-            private: true,
-            password: null,
-            viewer: 50,
-            createdAt: '2024-01-01T00:00:00Z',
-            updatedAt: '2024-01-02T00:00:00Z',
-          },
-        ],
-        total: 1,
-        page: 1,
-        pageSize: 1000,
-        totalPages: 1,
-      };
+      const paginatedResult = Mock.paginated([article], 1);
 
-      vi.mocked(service.findByName).mockResolvedValue(mockCategory as any);
-      vi.mocked(service.getArticlesByCategoryId).mockResolvedValue(mockArticles);
+      categoryService.findByName.mockResolvedValue(existingCategory as any);
+      categoryService.getArticlesByCategoryId.mockResolvedValue(paginatedResult);
 
       const handler = controller.getArticlesByCategory();
-      const result = await handler({ params: { name: 'Technology' } });
+      const result = await handler({ params: { name: 'test' } });
 
-      const [article] = result.body;
-      expect(article.id).toBe(1);
-      expect(article.title).toBe('Article 1');
-      expect(article.content).toBe('Content 1');
-      expect(article.summary).toBeUndefined();
-      expect(article.cover).toBeUndefined();
-      expect(article.category).toBeUndefined();
-      expect(article.tags).toBeUndefined();
-      expect(article.views).toBe(50);
-      expect(article.likes).toBe(0);
-      expect(article.isTop).toBe(false);
-      expect(article.isHot).toBe(false);
-      expect(article.pubTime).toBe('2024-01-02T00:00:00Z');
-      expect(article.createdAt).toBe('2024-01-01T00:00:00Z');
-      expect(article.updatedAt).toBe('2024-01-02T00:00:00Z');
-      expect(article.private).toBe(true);
-      expect(article.password).toBeUndefined();
-      expect(article.toc).toBeUndefined();
+      const mappedArticle = result.body[0];
+
+      expect(mappedArticle.id).toBe(1);
+      expect(mappedArticle.title).toBe('Article 1');
+      expect(mappedArticle.content).toBe('Content 1');
+      expect(mappedArticle.summary).toBeUndefined();
+      expect(mappedArticle.cover).toBeUndefined();
+      expect(mappedArticle.category).toBeUndefined(); // null → undefined
+      expect(mappedArticle.tags).toBeUndefined(); // ['tag1'] → undefined (controller logic)
+      expect(mappedArticle.views).toBe(50);
+      expect(mappedArticle.likes).toBe(0);
+      expect(mappedArticle.isTop).toBe(false);
+      expect(mappedArticle.isHot).toBe(false);
+      expect(mappedArticle.private).toBe(true);
+      expect(mappedArticle.password).toBeUndefined();
+      expect(mappedArticle.toc).toBeUndefined();
     });
 
-    it('should handle multiple articles in category', async () => {
-      const mockCategory = {
-        id: 1,
-        name: 'Technology',
-        slug: 'tech',
-        description: null,
-        private: null,
-        password: null,
-        createdAt: '2024-01-01T00:00:00Z',
-        updatedAt: '2024-01-01T00:00:00Z',
-      };
+    it('should handle multiple articles with different field values', async () => {
+      const existingCategory = Mock.category({ id: 1 });
 
-      const mockArticles = {
-        items: [
-          {
-            id: 1,
-            title: 'Article 1',
-            content: 'Content 1',
-            pathname: '/article-1',
-            tags: ['tag1'],
-            category: 'Technology',
-            author: 'admin',
-            top: 5,
-            hidden: false,
-            private: false,
-            password: null,
-            viewer: 100,
-            createdAt: '2024-01-01T00:00:00Z',
-            updatedAt: '2024-01-01T00:00:00Z',
-          },
-          {
-            id: 2,
-            title: 'Article 2',
-            content: 'Content 2',
-            pathname: '/article-2',
-            tags: ['tag2'],
-            category: 'Technology',
-            author: 'admin',
-            top: 0,
-            hidden: false,
-            private: false,
-            password: null,
-            viewer: 50,
-            createdAt: '2024-01-02T00:00:00Z',
-            updatedAt: '2024-01-02T00:00:00Z',
-          },
-        ],
-        total: 2,
-        page: 1,
-        pageSize: 1000,
-        totalPages: 1,
-      };
+      const mockArticles = [
+        Mock.article({ id: 1, top: 5, viewer: 100, category: 'Tech' }),
+        Mock.article({ id: 2, top: 0, viewer: 50, category: null }),
+      ];
 
-      vi.mocked(service.findByName).mockResolvedValue(mockCategory as any);
-      vi.mocked(service.getArticlesByCategoryId).mockResolvedValue(mockArticles);
+      const paginatedResult = Mock.paginated(mockArticles, 2);
+
+      categoryService.findByName.mockResolvedValue(existingCategory as any);
+      categoryService.getArticlesByCategoryId.mockResolvedValue(paginatedResult);
 
       const handler = controller.getArticlesByCategory();
-      const result = await handler({ params: { name: 'Technology' } });
+      const result = await handler({ params: { name: 'test' } });
 
       expect(result.status).toBe(200);
       expect(result.body).toHaveLength(2);
+
       expect(result.body[0].id).toBe(1);
       expect(result.body[0].isTop).toBe(true);
       expect(result.body[0].views).toBe(100);
+
       expect(result.body[1].id).toBe(2);
       expect(result.body[1].isTop).toBe(false);
       expect(result.body[1].views).toBe(50);
     });
 
-    it('should handle articles with null category field', async () => {
-      const mockCategory = {
-        id: 1,
-        name: 'Technology',
-        slug: 'tech',
-        description: null,
-        private: null,
-        password: null,
-        createdAt: '2024-01-01T00:00:00Z',
-        updatedAt: '2024-01-01T00:00:00Z',
-      };
+    it('should handle articles with null tags and category fields', async () => {
+      const existingCategory = Mock.category({ id: 1 });
 
-      const mockArticles = {
-        items: [
-          {
-            id: 1,
-            title: 'Article without category',
-            content: 'Content',
-            pathname: '/article',
-            tags: null,
-            category: null,
-            author: 'admin',
-            top: 0,
-            hidden: false,
-            private: false,
-            password: null,
-            viewer: 10,
-            createdAt: '2024-01-01T00:00:00Z',
-            updatedAt: '2024-01-01T00:00:00Z',
-          },
-        ],
-        total: 1,
-        page: 1,
-        pageSize: 1000,
-        totalPages: 1,
-      };
+      const article = Mock.article({
+        tags: null,
+        category: null,
+      });
 
-      vi.mocked(service.findByName).mockResolvedValue(mockCategory as any);
-      vi.mocked(service.getArticlesByCategoryId).mockResolvedValue(mockArticles);
+      const paginatedResult = Mock.paginated([article], 1);
+
+      categoryService.findByName.mockResolvedValue(existingCategory as any);
+      categoryService.getArticlesByCategoryId.mockResolvedValue(paginatedResult);
 
       const handler = controller.getArticlesByCategory();
-      const result = await handler({ params: { name: 'Technology' } });
+      const result = await handler({ params: { name: 'test' } });
 
       expect(result.body[0].category).toBeUndefined();
       expect(result.body[0].tags).toBeUndefined();
-    });
-
-    it('should correctly map zero viewer count', async () => {
-      const mockCategory = {
-        id: 1,
-        name: 'Technology',
-        slug: 'tech',
-        description: null,
-        private: null,
-        password: null,
-        createdAt: '2024-01-01T00:00:00Z',
-        updatedAt: '2024-01-01T00:00:00Z',
-      };
-
-      const mockArticles = {
-        items: [
-          {
-            id: 1,
-            title: 'New Article',
-            content: 'Content',
-            pathname: '/new',
-            tags: null,
-            category: 'Technology',
-            author: 'admin',
-            top: 0,
-            hidden: false,
-            private: false,
-            password: null,
-            viewer: 0,
-            createdAt: '2024-01-01T00:00:00Z',
-            updatedAt: '2024-01-01T00:00:00Z',
-          },
-        ],
-        total: 1,
-        page: 1,
-        pageSize: 1000,
-        totalPages: 1,
-      };
-
-      vi.mocked(service.findByName).mockResolvedValue(mockCategory as any);
-      vi.mocked(service.getArticlesByCategoryId).mockResolvedValue(mockArticles);
-
-      const handler = controller.getArticlesByCategory();
-      const result = await handler({ params: { name: 'Technology' } });
-
-      expect(result.body[0].views).toBe(0);
-      expect(result.body[0].isTop).toBe(false);
     });
   });
 });

@@ -2,406 +2,361 @@
  * TagService - Complex Article Queries Tests
  *
  * Tests complex article queries by tag name or ID with pagination.
- * Covers getArticlesByTagName and getArticlesByTagId methods.
+ * Uses real database + transaction rollback for isolation.
  *
  * Related tests:
  * - tag.service.spec.ts - Core CRUD operations
  * - tag.service.associations.spec.ts - Association queries
  * - tag.service.boundaries.spec.ts - Boundary conditions
+ *
+ * Migration: Mock.db() → withTestTransaction (2026-01-05)
  */
+import { Test, type TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
-import { describe, beforeEach, it, expect, afterEach, vi } from 'vitest';
+import { describe, beforeAll, afterAll, beforeEach, it, expect, vi } from 'vitest';
+import { sql } from 'drizzle-orm';
 
-import { Mock } from '@test/mock';
+import { tags, articles } from '@vanblog/shared/drizzle';
+import { DATABASE_CONNECTION } from '../../database';
+import { withTestTransaction } from '@test/utils/db-transaction-helper';
+import { setupWorkerDatabase, cleanupWorkerDatabase, getWorkerIdFromEnv } from '@test/utils/db-worker-setup';
+import { Given } from '@test/given';
+
 import { TagService } from './tag.service';
+import { HookService } from '../plugin/services/hook.service';
+import { QueryOptimizerService } from '../../shared/services/query-optimizer.service';
+import { StatisticsService } from '../../shared/services/statistics.service';
+
+import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 
 describe('TagService - Complex Queries', () => {
+  let db: LibSQLDatabase;
+  let dbPath: string;
   let service: TagService;
-  let module: any;
-  let mockDb: any;
+  let module: TestingModule;
 
-  beforeEach(async () => {
-    const databaseMockBuilder = Mock.db();
-    mockDb = databaseMockBuilder.build();
+  beforeAll(async () => {
+    // Setup test database
+    const workerId = getWorkerIdFromEnv();
+    const setup = await setupWorkerDatabase(workerId);
+    db = setup.db;
+    dbPath = setup.dbPath;
 
-    module = await Mock.tagServiceModule({
-      service: TagService,
-      dbMock: mockDb,
+    // Disable foreign key constraints for testing
+    await db.run('PRAGMA foreign_keys = OFF;');
+
+    // Drop existing tables from migrations to recreate without foreign keys
+    await db.run('DROP TABLE IF EXISTS articles');
+    await db.run('DROP TABLE IF EXISTS tags');
+
+    // Create tables
+    await db.run(sql`
+      CREATE TABLE IF NOT EXISTS tags (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL UNIQUE,
+        slug TEXT UNIQUE,
+        created_at TEXT NOT NULL DEFAULT (strftime('%s', 'now') * 1000)
+      );
+    `);
+
+    await db.run(sql`
+      CREATE TABLE IF NOT EXISTS articles (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        content TEXT NOT NULL,
+        pathname TEXT UNIQUE,
+        tags TEXT,
+        category TEXT,
+        author TEXT NOT NULL,
+        top INTEGER DEFAULT 0,
+        hidden INTEGER DEFAULT 0,
+        private INTEGER DEFAULT 0,
+        password TEXT,
+        viewer INTEGER DEFAULT 0,
+        created_at TEXT NOT NULL DEFAULT (strftime('%s', 'now') * 1000),
+        updated_at TEXT NOT NULL DEFAULT (strftime('%s', 'now') * 1000)
+      );
+    `);
+
+    // Create test module with mocked external services
+    module = await Test.createTestingModule({
+      providers: [
+        TagService,
+        {
+          provide: DATABASE_CONNECTION,
+          useValue: db,
+        },
+        {
+          provide: HookService,
+          useValue: {
+            applyFilters: vi.fn().mockImplementation(async (_hook, data) => data),
+            doAction: vi.fn().mockResolvedValue(undefined),
+          },
+        },
+        {
+          provide: StatisticsService,
+          useValue: {
+            getOverallStatistics: vi.fn(),
+          },
+        },
+        {
+          provide: QueryOptimizerService,
+          useValue: {
+            withPerformanceMonitoring: vi.fn((_, fn) => fn()),
+            batchCountArticlesByTags: vi.fn(() => ({})),
+          },
+        },
+      ],
     }).compile();
 
-    service = module.get(TagService);
+    service = module.get<TagService>(TagService);
   });
 
-  afterEach(() => {
-    vi.clearAllMocks();
+  afterAll(async () => {
+    await cleanupWorkerDatabase(dbPath);
+  });
+
+  beforeEach(async () => {
+    // Clean tables before each test
+    await db.delete(articles);
+    await db.delete(tags);
   });
 
   describe('getArticlesByTagName', () => {
     it('should return articles for a tag by name', async () => {
-      const mockTag = {
-        id: 1,
-        name: 'Technology',
-        slug: 'tech',
-        createdAt: '2024-01-01T00:00:00Z',
-        updatedAt: '2024-01-01T00:00:00Z',
-      };
+      await withTestTransaction(db, async (tx) => {
+        // Create tag
+        const tag = await Given.tag({ name: 'Technology', slug: 'tech' });
 
-      const mockArticles = [
-        {
-          id: 1,
+        // Create article with tag
+        await Given.article({
           title: 'Article 1',
           content: 'Content 1',
           pathname: '/article-1',
           tags: ['Technology', 'Programming'],
           category: 'Tech',
-          author: 'admin',
-          top: 0,
-          hidden: false,
-          private: false,
-          password: null,
-          viewer: 100,
-          createdAt: new Date('2024-01-01'),
-          updatedAt: new Date('2024-01-02'),
-        },
-      ];
+        });
 
-      // Mock findByName
-      mockDb.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi
-              .fn()
-              .mockResolvedValue([{ ...mockTag, createdAt: new Date(), updatedAt: new Date() }]),
-          }),
-        }),
-      });
+        // Create service with transaction database
+        const txService = new TagService(
+          tx,
+          module.get(StatisticsService),
+          module.get(QueryOptimizerService),
+          module.get(HookService),
+        );
 
-      // Mock findOne
-      mockDb.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi
-              .fn()
-              .mockResolvedValue([{ ...mockTag, createdAt: new Date(), updatedAt: new Date() }]),
-          }),
-        }),
-      });
-
-      // Mock articles query (first in Promise.all)
-      mockDb.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            orderBy: vi.fn().mockReturnValue({
-              limit: vi.fn().mockReturnValue({
-                offset: vi.fn().mockResolvedValue(mockArticles),
-              }),
-            }),
-          }),
-        }),
-      });
-
-      // Mock count query (second in Promise.all)
-      mockDb.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockResolvedValue([{ count: 1 }]),
-        }),
-      });
-
-      const result = await service.getArticlesByTagName('Technology', {
-        page: 1,
-        pageSize: 10,
-        sortBy: 'createdAt',
-        sortOrder: 'desc',
-      });
-
-      expect(result.items).toHaveLength(1);
-      expect(result.total).toBe(1);
-    });
-
-    it('should throw NotFoundException when tag name not found', async () => {
-      // Mock the complete chain for findByName
-      mockDb.select.mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([]),
-          }),
-        }),
-      });
-
-      await expect(
-        service.getArticlesByTagName('NonExistent', {
+        // Execute query
+        const result = await txService.getArticlesByTagName('Technology', {
           page: 1,
           pageSize: 10,
           sortBy: 'createdAt',
           sortOrder: 'desc',
-        }),
-      ).rejects.toThrow(NotFoundException);
+        });
+
+        // Verify results
+        expect(result.items).toHaveLength(1);
+        expect(result.total).toBe(1);
+        expect(result.items[0].title).toBe('Article 1');
+        expect(result.items[0].tags).toContain('Technology');
+      });
+    });
+
+    it('should throw NotFoundException when tag name not found', async () => {
+      await withTestTransaction(db, async (tx) => {
+        // Don't create any tag - query should fail
+        const txService = new TagService(
+          tx,
+          module.get(StatisticsService),
+          module.get(QueryOptimizerService),
+          module.get(HookService),
+        );
+
+        await expect(
+          txService.getArticlesByTagName('NonExistent', {
+            page: 1,
+            pageSize: 10,
+            sortBy: 'createdAt',
+            sortOrder: 'desc',
+          }),
+        ).rejects.toThrow(NotFoundException);
+      });
     });
   });
 
   describe('getArticlesByTagId', () => {
     it('should return articles for a tag', async () => {
-      const mockTag = {
-        id: 1,
-        name: 'Technology',
-        slug: 'tech',
-        createdAt: '2024-01-01T00:00:00Z',
-        updatedAt: '2024-01-01T00:00:00Z',
-      };
+      await withTestTransaction(db, async (tx) => {
+        // Create tag
+        const tag = await Given.tag({ name: 'Technology', slug: 'tech' });
 
-      const mockArticles = [
-        {
-          id: 1,
+        // Create article with tag
+        await Given.article({
           title: 'Article 1',
           content: 'Content 1',
           pathname: '/article-1',
           tags: ['Technology'],
           category: 'Tech',
-          author: 'admin',
-          top: 0,
-          hidden: false,
-          private: false,
-          password: null,
-          viewer: 100,
-          createdAt: new Date('2024-01-01'),
-          updatedAt: new Date('2024-01-02'),
-        },
-      ];
+        });
 
-      // Mock findOne - first select query
-      mockDb.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi
-              .fn()
-              .mockResolvedValue([{ ...mockTag, createdAt: new Date(), updatedAt: new Date() }]),
-          }),
-        }),
-      });
+        // Create service with transaction database
+        const txService = new TagService(
+          tx,
+          module.get(StatisticsService),
+          module.get(QueryOptimizerService),
+          module.get(HookService),
+        );
 
-      // Mock articles query (first in Promise.all)
-      mockDb.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            orderBy: vi.fn().mockReturnValue({
-              limit: vi.fn().mockReturnValue({
-                offset: vi.fn().mockResolvedValue(mockArticles),
-              }),
-            }),
-          }),
-        }),
-      });
-
-      // Mock count query (second in Promise.all)
-      mockDb.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockResolvedValue([{ count: 1 }]),
-        }),
-      });
-
-      const result = await service.getArticlesByTagId(1, {
-        page: 1,
-        pageSize: 10,
-        sortBy: 'createdAt',
-        sortOrder: 'desc',
-      });
-
-      expect(result.items).toHaveLength(1);
-      expect(result.total).toBe(1);
-      expect(result.page).toBe(1);
-      expect(result.pageSize).toBe(10);
-      expect(result.totalPages).toBe(1);
-      expect(result.items[0].title).toBe('Article 1');
-    });
-
-    it('should handle pagination correctly', async () => {
-      const mockTag = {
-        id: 1,
-        name: 'Technology',
-        slug: 'tech',
-        createdAt: '2024-01-01T00:00:00Z',
-        updatedAt: '2024-01-01T00:00:00Z',
-      };
-
-      // Mock findOne - first select query
-      mockDb.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi
-              .fn()
-              .mockResolvedValue([{ ...mockTag, createdAt: new Date(), updatedAt: new Date() }]),
-          }),
-        }),
-      });
-
-      // Mock articles query (first in Promise.all) - empty for page 2
-      mockDb.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            orderBy: vi.fn().mockReturnValue({
-              limit: vi.fn().mockReturnValue({
-                offset: vi.fn().mockResolvedValue([]),
-              }),
-            }),
-          }),
-        }),
-      });
-
-      // Mock count query (second in Promise.all)
-      mockDb.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockResolvedValue([{ count: 25 }]),
-        }),
-      });
-
-      const result = await service.getArticlesByTagId(1, {
-        page: 2,
-        pageSize: 10,
-        sortBy: 'createdAt',
-        sortOrder: 'desc',
-      });
-
-      expect(result.page).toBe(2);
-      expect(result.pageSize).toBe(10);
-      expect(result.total).toBe(25);
-      expect(result.totalPages).toBe(3);
-    });
-
-    it('should handle includeHidden parameter', async () => {
-      const mockTag = {
-        id: 1,
-        name: 'Technology',
-        slug: 'tech',
-        createdAt: '2024-01-01T00:00:00Z',
-        updatedAt: '2024-01-01T00:00:00Z',
-      };
-
-      const mockArticles = [
-        {
-          id: 1,
-          title: 'Hidden Article',
-          content: 'Content 1',
-          pathname: '/hidden-article',
-          tags: ['Technology'],
-          category: 'Tech',
-          author: 'admin',
-          top: 0,
-          hidden: true,
-          private: false,
-          password: null,
-          viewer: 10,
-          createdAt: new Date('2024-01-01'),
-          updatedAt: new Date('2024-01-02'),
-        },
-      ];
-
-      // Mock findOne
-      mockDb.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi
-              .fn()
-              .mockResolvedValue([{ ...mockTag, createdAt: new Date(), updatedAt: new Date() }]),
-          }),
-        }),
-      });
-
-      // Mock articles query
-      mockDb.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            orderBy: vi.fn().mockReturnValue({
-              limit: vi.fn().mockReturnValue({
-                offset: vi.fn().mockResolvedValue(mockArticles),
-              }),
-            }),
-          }),
-        }),
-      });
-
-      // Mock count query
-      mockDb.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockResolvedValue([{ count: 1 }]),
-        }),
-      });
-
-      const result = await service.getArticlesByTagId(1, {
-        page: 1,
-        pageSize: 10,
-        includeHidden: true,
-        sortBy: 'createdAt',
-        sortOrder: 'desc',
-      });
-
-      expect(result).toBeDefined();
-      expect(result.items).toBeDefined();
-      expect(result.items).toHaveLength(1);
-    });
-
-    it('should throw NotFoundException when tag not found', async () => {
-      mockDb.limit.mockResolvedValueOnce([]);
-
-      await expect(
-        service.getArticlesByTagId(999, {
+        // Execute query
+        const result = await txService.getArticlesByTagId(tag.id, {
           page: 1,
           pageSize: 10,
           sortBy: 'createdAt',
           sortOrder: 'desc',
-        }),
-      ).rejects.toThrow(NotFoundException);
+        });
+
+        // Verify results
+        expect(result.items).toHaveLength(1);
+        expect(result.total).toBe(1);
+        expect(result.page).toBe(1);
+        expect(result.pageSize).toBe(10);
+        expect(result.totalPages).toBe(1);
+        expect(result.items[0].title).toBe('Article 1');
+      });
+    });
+
+    it('should handle pagination correctly', async () => {
+      await withTestTransaction(db, async (tx) => {
+        // Create tag
+        const tag = await Given.tag({
+          name: 'Technology',
+          slug: 'tech',
+        });
+
+        // Create 25 articles with this tag using Given
+        await Given.articles(25, {
+          category: 'Tech',
+          tags: ['Technology'],
+        });
+
+        // Create service with transaction database
+        const txService = new TagService(
+          tx,
+          module.get(StatisticsService),
+          module.get(QueryOptimizerService),
+          module.get(HookService),
+        );
+
+        // Query page 2 (items 11-20)
+        const result = await txService.getArticlesByTagId(tag.id, {
+          page: 2,
+          pageSize: 10,
+          sortBy: 'createdAt',
+          sortOrder: 'desc',
+        });
+
+        // Verify pagination
+        expect(result.page).toBe(2);
+        expect(result.pageSize).toBe(10);
+        expect(result.total).toBe(25);
+        expect(result.totalPages).toBe(3);
+        expect(result.items).toHaveLength(10);
+      });
+    });
+
+    it('should handle includeHidden parameter', async () => {
+      await withTestTransaction(db, async (tx) => {
+        // Create tag
+        // Create tag
+        const tag = await Given.tag({
+          name: 'Technology',
+          slug: 'tech',
+        });
+
+        // Create hidden article using Given
+        await Given.article({
+          title: 'Hidden Article',
+          content: 'Content 1',
+          tags: ['Technology'],
+          category: 'Tech',
+          hidden: true,
+        });
+
+        // Create service with transaction database
+        const txService = new TagService(
+          tx,
+          module.get(StatisticsService),
+          module.get(QueryOptimizerService),
+          module.get(HookService),
+        );
+
+        // Query with includeHidden=true
+        const result = await txService.getArticlesByTagId(tag.id, {
+          page: 1,
+          pageSize: 10,
+          includeHidden: true,
+          sortBy: 'createdAt',
+          sortOrder: 'desc',
+        });
+
+        expect(result).toBeDefined();
+        expect(result.items).toBeDefined();
+        expect(result.items).toHaveLength(1);
+        expect(result.items[0].title).toBe('Hidden Article');
+      });
+    });
+
+    it('should throw NotFoundException when tag not found', async () => {
+      await withTestTransaction(db, async (tx) => {
+        // Don't create any tag - query should fail
+        const txService = new TagService(
+          tx,
+          module.get(StatisticsService),
+          module.get(QueryOptimizerService),
+          module.get(HookService),
+        );
+
+        await expect(
+          txService.getArticlesByTagId(999, {
+            page: 1,
+            pageSize: 10,
+            sortBy: 'createdAt',
+            sortOrder: 'desc',
+          }),
+        ).rejects.toThrow(NotFoundException);
+      });
     });
 
     it('should handle zero total pages correctly', async () => {
-      const mockTag = {
-        id: 1,
-        name: 'EmptyTag',
-        slug: 'empty',
-        createdAt: '2024-01-01T00:00:00Z',
-        updatedAt: '2024-01-01T00:00:00Z',
-      };
+      await withTestTransaction(db, async (tx) => {
+        // Create tag without articles
+        const [tag] = await tx
+          .insert(tags)
+          .values({
+            name: 'EmptyTag',
+            slug: 'empty',
+          })
+          .returning();
 
-      // Mock findOne
-      mockDb.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi
-              .fn()
-              .mockResolvedValue([{ ...mockTag, createdAt: new Date(), updatedAt: new Date() }]),
-          }),
-        }),
+        // Create service with transaction database
+        const txService = new TagService(
+          tx,
+          module.get(StatisticsService),
+          module.get(QueryOptimizerService),
+          module.get(HookService),
+        );
+
+        // Query articles - should return empty result
+        const result = await txService.getArticlesByTagId(tag.id, {
+          page: 1,
+          pageSize: 10,
+          sortBy: 'createdAt',
+          sortOrder: 'desc',
+        });
+
+        expect(result.items).toHaveLength(0);
+        expect(result.total).toBe(0);
+        expect(result.totalPages).toBe(0);
       });
-
-      // Mock articles query - empty
-      mockDb.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            orderBy: vi.fn().mockReturnValue({
-              limit: vi.fn().mockReturnValue({
-                offset: vi.fn().mockResolvedValue([]),
-              }),
-            }),
-          }),
-        }),
-      });
-
-      // Mock count query - 0 articles
-      mockDb.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockResolvedValue([{ count: 0 }]),
-        }),
-      });
-
-      const result = await service.getArticlesByTagId(1, {
-        page: 1,
-        pageSize: 10,
-        sortBy: 'createdAt',
-        sortOrder: 'desc',
-      });
-
-      expect(result.items).toHaveLength(0);
-      expect(result.total).toBe(0);
-      expect(result.totalPages).toBe(0);
     });
   });
 });

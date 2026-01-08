@@ -7,14 +7,24 @@
  * - 密码验证逻辑
  * - 密码相关的钩子触发
  *
+ * 测试策略：使用真实数据库 + 事务回滚
+ * - 所有数据库操作在事务中执行，测试结束后自动回滚
+ * - Mock bcrypt 避免真实的哈希计算（加快测试速度）
+ * - 验证密码哈希和比对的正确性
+ *
  * @module CategoryService
  * @group password
  */
 
 import { NotFoundException } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
+import { categories } from '@vanblog/shared/drizzle';
+import { eq } from 'drizzle-orm';
+import * as bcrypt from 'bcrypt';
 import { vi, describe, beforeEach, it, expect } from 'vitest';
 
+import { db } from '@test/setup.unit';
+import { withTestTransaction } from '@test/utils/db-transaction-helper';
 import { Mock } from '@test/mock';
 
 import { ConfigService } from '../../config/config.service';
@@ -25,14 +35,16 @@ import { HookService } from '../plugin/services/hook.service';
 
 import { CategoryService } from './category.service';
 
+// Mock bcrypt 模块
+vi.mock('bcrypt');
+const mockedBcrypt = vi.mocked(bcrypt);
+
 describe('CategoryService - Password Management', () => {
   let service: CategoryService;
-  let mockHookService: Partial<HookService>;
-  let mockDb: any;
+  let mockHookService: ReturnType<typeof Mock.hook>;
 
   beforeEach(async () => {
-    const databaseMockBuilder = Mock.db();
-    mockDb = databaseMockBuilder.build();
+    // 创建 Hook 服务 Mock
     mockHookService = Mock.hook();
 
     const module: TestingModule = await Test.createTestingModule({
@@ -41,7 +53,7 @@ describe('CategoryService - Password Management', () => {
         CategoryService,
         {
           provide: DATABASE_CONNECTION,
-          useValue: mockDb,
+          useValue: db,
         },
         {
           provide: StatisticsService,
@@ -65,174 +77,376 @@ describe('CategoryService - Password Management', () => {
     service = module.get<CategoryService>(CategoryService);
   });
 
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
   describe('create - Password Handling', () => {
     it('should hash password when provided', async () => {
-      const createDto = {
-        name: 'Private Category',
-        description: 'A private category',
-        password: 'plaintext-password',
-      };
+      await withTestTransaction(db, async (tx) => {
+        // 注入事务数据库
+        service['db'] = tx;
 
-      const mockCreatedCategory = Mock.category({
-        name: 'Private Category',
-        description: 'A private category',
-        private: true,
-        password: 'hashed-password',
+        const createDto = {
+          name: 'Private Category',
+          description: 'A private category',
+          password: 'plaintext-password',
+        };
+
+        // Mock bcrypt.hash 返回哈希后的密码
+        const hashedPassword = 'hashed-password';
+        mockedBcrypt.hash.mockResolvedValue(hashedPassword as never);
+
+        // 执行创建操作
+        const result = await service.create(createDto);
+
+        // 验证返回值
+        expect(result.id).toBeDefined();
+        expect(result.name).toBe('Private Category');
+        expect(result.description).toBe('A private category');
+
+        // 验证 bcrypt.hash 被正确调用
+        expect(mockedBcrypt.hash).toHaveBeenCalledWith('plaintext-password', 10);
+
+        // 验证数据库持久化
+        const [savedCategory] = await tx
+          .select()
+          .from(categories)
+          .where(eq(categories.id, result.id));
+        expect(savedCategory).toBeDefined();
+        expect(savedCategory.password).toBe(hashedPassword);
+
+        // 验证钩子触发
+        expect(mockHookService.applyFilters).toHaveBeenCalledWith(
+          'category|beforeCreate',
+          expect.any(Object),
+          expect.objectContaining({ action: 'create' }),
+        );
+        expect(mockHookService.doAction).toHaveBeenCalledWith(
+          'category|afterCreate',
+          expect.any(Object),
+          expect.any(Object),
+        );
       });
+    });
 
-      mockDb.returning.mockResolvedValueOnce([mockCreatedCategory]);
+    it('should create category without password', async () => {
+      await withTestTransaction(db, async (tx) => {
+        service['db'] = tx;
 
-      const result = await service.create(createDto);
+        const createDto = {
+          name: 'Public Category',
+          description: 'A public category',
+        };
 
-      expect(result.id).toBe(1);
-      expect(result.name).toBe('Private Category');
-      expect(mockHookService.applyFilters).toHaveBeenCalledWith(
-        'category|beforeCreate',
-        expect.any(Object),
-        expect.objectContaining({ action: 'create' }),
-      );
-      expect(mockHookService.doAction).toHaveBeenCalledWith(
-        'category|afterCreate',
-        expect.any(Object),
-        expect.any(Object),
-      );
+        // 不调用 bcrypt.hash
+        mockedBcrypt.hash.mockResolvedValue(undefined as never);
+
+        const result = await service.create(createDto);
+
+        expect(result.name).toBe('Public Category');
+        expect(result.password).toBeNull();
+
+        // 验证数据库持久化
+        const [savedCategory] = await tx
+          .select()
+          .from(categories)
+          .where(eq(categories.id, result.id));
+        expect(savedCategory.password).toBeNull();
+      });
     });
 
     it('should apply beforeCreate filter hook', async () => {
-      const createDto = {
-        name: 'Test Category',
-        description: 'Test',
-      };
+      await withTestTransaction(db, async (tx) => {
+        service['db'] = tx;
 
-      const modifiedDto = {
-        ...createDto,
-        description: 'Modified by hook',
-      };
+        const createDto = {
+          name: 'Test Category',
+          description: 'Test',
+        };
 
-      mockHookService.applyFilters = vi
-        .fn()
-        .mockImplementation(async (_hookName, _data) => Promise.resolve(modifiedDto));
+        const modifiedDto = {
+          ...createDto,
+          description: 'Modified by hook',
+        };
 
-      const mockCreatedCategory = Mock.category({
-        ...modifiedDto,
+        mockHookService.applyFilters = vi
+          .fn()
+          .mockImplementation(async (_hookName, _data) => Promise.resolve(modifiedDto));
+
+        const result = await service.create(createDto);
+
+        // 验证钩子被调用
+        expect(mockHookService.applyFilters).toHaveBeenCalledWith(
+          'category|beforeCreate',
+          createDto,
+          expect.objectContaining({ action: 'create' }),
+        );
+
+        // 验证修改后的值被保存
+        expect(result.description).toBe('Modified by hook');
+
+        // 验证数据库持久化
+        const [savedCategory] = await tx
+          .select()
+          .from(categories)
+          .where(eq(categories.id, result.id));
+        expect(savedCategory.description).toBe('Modified by hook');
       });
-
-      mockDb.returning.mockResolvedValueOnce([mockCreatedCategory]);
-
-      await service.create(createDto);
-
-      expect(mockHookService.applyFilters).toHaveBeenCalledWith(
-        'category|beforeCreate',
-        createDto,
-        expect.objectContaining({ action: 'create' }),
-      );
-    });
-
-    it('should throw error when insert fails', async () => {
-      const createDto = {
-        name: 'Test Category',
-      };
-
-      mockDb.returning.mockResolvedValueOnce([]);
-
-      await expect(service.create(createDto)).rejects.toThrow('Failed to create category');
     });
   });
 
   describe('update - Password Handling', () => {
     it('should hash password when provided', async () => {
-      const updateDto = {
-        name: 'Updated Category',
-        password: 'new-password',
-      };
+      await withTestTransaction(db, async (tx) => {
+        service['db'] = tx;
 
-      const mockUpdatedCategory = Mock.category({
-        name: 'Updated Category',
-        private: true,
-        password: 'hashed-password',
+        // 先创建一个分类
+        const [category] = await tx
+          .insert(categories)
+          .values({
+            name: 'Test Category',
+            description: 'Test description',
+          })
+          .returning();
+
+        const updateDto = {
+          name: 'Updated Category',
+          password: 'new-password',
+        };
+
+        // Mock bcrypt.hash
+        const hashedPassword = 'new-hashed-password';
+        mockedBcrypt.hash.mockResolvedValue(hashedPassword as never);
+
+        // 执行更新操作
+        const result = await service.update(category.id, updateDto);
+
+        // 验证返回值
+        expect(result.name).toBe('Updated Category');
+
+        // 验证 bcrypt.hash 被正确调用
+        expect(mockedBcrypt.hash).toHaveBeenCalledWith('new-password', 10);
+
+        // 验证数据库持久化
+        const [updatedCategory] = await tx
+          .select()
+          .from(categories)
+          .where(eq(categories.id, category.id));
+        expect(updatedCategory.password).toBe(hashedPassword);
+
+        // 验证钩子触发
+        expect(mockHookService.applyFilters).toHaveBeenCalledWith(
+          'category|beforeUpdate',
+          expect.any(Object),
+          expect.objectContaining({ action: 'update', id: category.id }),
+        );
+        expect(mockHookService.doAction).toHaveBeenCalledWith(
+          'category|afterUpdate',
+          expect.any(Object),
+          expect.any(Object),
+        );
       });
+    });
 
-      mockDb.returning.mockResolvedValueOnce([mockUpdatedCategory]);
+    it('should update category without changing password', async () => {
+      await withTestTransaction(db, async (tx) => {
+        service['db'] = tx;
 
-      const result = await service.update(1, updateDto);
+        // 创建带密码的分类
+        const [category] = await tx
+          .insert(categories)
+          .values({
+            name: 'Private Category',
+            description: 'Private',
+            password: 'existing-password',
+          })
+          .returning();
 
-      expect(result.name).toBe('Updated Category');
-      expect(mockHookService.applyFilters).toHaveBeenCalledWith(
-        'category|beforeUpdate',
-        expect.any(Object),
-        expect.objectContaining({ action: 'update', id: 1 }),
-      );
-      expect(mockHookService.doAction).toHaveBeenCalledWith(
-        'category|afterUpdate',
-        expect.any(Object),
-        expect.any(Object),
-      );
+        const updateDto = {
+          name: 'Updated Name',
+        };
+
+        const result = await service.update(category.id, updateDto);
+
+        expect(result.name).toBe('Updated Name');
+
+        // 验证密码未改变
+        const [updatedCategory] = await tx
+          .select()
+          .from(categories)
+          .where(eq(categories.id, category.id));
+        expect(updatedCategory.password).toBe('existing-password');
+      });
     });
 
     it('should apply beforeUpdate filter hook', async () => {
-      const updateDto = {
-        name: 'Original Name',
-        description: 'Original Description',
-      };
+      await withTestTransaction(db, async (tx) => {
+        service['db'] = tx;
 
-      const modifiedDto = {
-        name: 'Modified Name',
-        description: 'Modified Description',
-      };
+        // 创建分类
+        const [category] = await tx
+          .insert(categories)
+          .values({
+            name: 'Original Name',
+            description: 'Original Description',
+          })
+          .returning();
 
-      mockHookService.applyFilters = vi
-        .fn()
-        .mockImplementation(async (_hookName, _data) => Promise.resolve(modifiedDto));
+        const updateDto = {
+          name: 'Original Name',
+          description: 'Original Description',
+        };
 
-      const mockUpdatedCategory = Mock.category(modifiedDto);
+        const modifiedDto = {
+          name: 'Modified Name',
+          description: 'Modified Description',
+        };
 
-      mockDb.returning.mockResolvedValueOnce([mockUpdatedCategory]);
+        mockHookService.applyFilters = vi
+          .fn()
+          .mockImplementation(async (_hookName, _data) => Promise.resolve(modifiedDto));
 
-      await service.update(1, updateDto);
+        const result = await service.update(category.id, updateDto);
 
-      expect(mockHookService.applyFilters).toHaveBeenCalledWith(
-        'category|beforeUpdate',
-        expect.any(Object),
-        expect.objectContaining({ action: 'update', id: 1 }),
-      );
+        // 验证钩子被调用
+        expect(mockHookService.applyFilters).toHaveBeenCalledWith(
+          'category|beforeUpdate',
+          expect.any(Object),
+          expect.objectContaining({ action: 'update', id: category.id }),
+        );
+
+        // 验证修改后的值被保存
+        expect(result.name).toBe('Modified Name');
+        expect(result.description).toBe('Modified Description');
+
+        // 验证数据库持久化
+        const [updatedCategory] = await tx
+          .select()
+          .from(categories)
+          .where(eq(categories.id, category.id));
+        expect(updatedCategory.name).toBe('Modified Name');
+        expect(updatedCategory.description).toBe('Modified Description');
+      });
     });
   });
 
   describe('verifyPassword', () => {
     it('should return success for non-private category', async () => {
-      const mockCategory = Mock.category({
-        private: false,
-        password: null,
+      await withTestTransaction(db, async (tx) => {
+        service['db'] = tx;
+
+        // 创建非私密分类
+        const [category] = await tx
+          .insert(categories)
+          .values({
+            name: 'Public Category',
+            description: 'Public',
+            private: false,
+            password: null,
+          })
+          .returning();
+
+        const result = await service.verifyPassword(category.id, 'any-password');
+
+        expect(result.success).toBe(true);
+        expect(result.message).toBe('Category is not private');
+        expect(result.token).toBeUndefined();
       });
-
-      mockDb.limit.mockResolvedValueOnce([mockCategory]);
-
-      const result = await service.verifyPassword(1, 'any-password');
-
-      expect(result.success).toBe(true);
-      expect(result.message).toBe('Category is not private');
-      expect(result.token).toBeUndefined();
     });
 
-    it('should return failure for invalid password', async () => {
-      const mockCategory = Mock.category({
-        private: true,
-        password: '$2b$10$somehash',
+    it('should return success for private category with correct password', async () => {
+      await withTestTransaction(db, async (tx) => {
+        service['db'] = tx;
+
+        // 创建私密分类
+        const hashedPassword = '$2b$10$abcdefghijk123456789';
+        const [category] = await tx
+          .insert(categories)
+          .values({
+            name: 'Private Category',
+            description: 'Private',
+            private: true,
+            password: hashedPassword,
+          })
+          .returning();
+
+        // Mock bcrypt.compare 返回 true
+        mockedBcrypt.compare.mockResolvedValue(true as never);
+
+        const result = await service.verifyPassword(category.id, 'correct-password');
+
+        expect(result.success).toBe(true);
+        expect(result.token).toBeDefined();
+        expect(mockedBcrypt.compare).toHaveBeenCalledWith('correct-password', hashedPassword);
       });
+    });
 
-      mockDb.limit.mockResolvedValueOnce([mockCategory]);
+    it('should return failure for private category with incorrect password', async () => {
+      await withTestTransaction(db, async (tx) => {
+        service['db'] = tx;
 
-      const result = await service.verifyPassword(1, 'wrong-password');
+        // 创建私密分类
+        const hashedPassword = '$2b$10$abcdefghijk123456789';
+        const [category] = await tx
+          .insert(categories)
+          .values({
+            name: 'Private Category',
+            description: 'Private',
+            private: true,
+            password: hashedPassword,
+          })
+          .returning();
 
-      expect(result.success).toBe(false);
-      expect(result.message).toBe('Invalid password');
-      expect(result.token).toBeUndefined();
+        // Mock bcrypt.compare 返回 false
+        mockedBcrypt.compare.mockResolvedValue(false as never);
+
+        const result = await service.verifyPassword(category.id, 'wrong-password');
+
+        expect(result.success).toBe(false);
+        expect(result.message).toBe('Invalid password');
+        expect(result.token).toBeUndefined();
+        expect(mockedBcrypt.compare).toHaveBeenCalledWith('wrong-password', hashedPassword);
+      });
     });
 
     it('should throw NotFoundException when category not found', async () => {
-      mockDb.limit.mockResolvedValueOnce([]);
+      await withTestTransaction(db, async (tx) => {
+        service['db'] = tx;
 
-      await expect(service.verifyPassword(999, 'password')).rejects.toThrow(NotFoundException);
+        await expect(service.verifyPassword(999, 'password')).rejects.toThrow(NotFoundException);
+      });
+    });
+
+    it('should generate valid JWT token on successful verification', async () => {
+      await withTestTransaction(db, async (tx) => {
+        service['db'] = tx;
+
+        // 创建私密分类
+        const hashedPassword = '$2b$10$abcdefghijk123456789';
+        const [category] = await tx
+          .insert(categories)
+          .values({
+            name: 'Private Category',
+            description: 'Private',
+            private: true,
+            password: hashedPassword,
+          })
+          .returning();
+
+        // Mock bcrypt.compare 返回 true
+        mockedBcrypt.compare.mockResolvedValue(true as never);
+
+        const result = await service.verifyPassword(category.id, 'correct-password');
+
+        expect(result.success).toBe(true);
+        expect(result.token).toBeDefined();
+        expect(typeof result.token).toBe('string');
+
+        // 验证 token 格式（JWT 应该是 3 部分用点分隔）
+        const parts = result.token.split('.');
+        expect(parts).toHaveLength(3);
+      });
     });
   });
 });
