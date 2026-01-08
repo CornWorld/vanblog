@@ -320,9 +320,26 @@ export class TagService {
 
     const { page = 1, pageSize = 10, includeHidden = false } = query;
 
-    // 构建查询条件：查找包含该标签的文章
+    // 第一步：从 article_tags 关联表获取包含该标签的所有文章 ID
+    const articleIdsWithTag = await this.db
+      .select({ articleId: articleTags.articleId })
+      .from(articleTags)
+      .where(eq(articleTags.tagName, tag.name));
+
+    if (articleIdsWithTag.length === 0) {
+      // 没有文章包含此标签，返回空结果
+      return {
+        items: [],
+        total: 0,
+        page,
+        pageSize,
+        totalPages: 0,
+      };
+    }
+
+    // 构建查询条件
     const whereClause = and(
-      like(articles.tags, `%"${tag.name}"%`),
+      inArray(articles.id, articleIdsWithTag.map((a) => a.articleId)),
       includeHidden ? undefined : eq(articles.hidden, false),
     );
 
