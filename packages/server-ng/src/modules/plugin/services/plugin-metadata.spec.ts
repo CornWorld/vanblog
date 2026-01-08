@@ -45,8 +45,8 @@ vi.mock('@vanblog/shared', () => ({
 // Import the MetadataManagerImpl (we'll test it through reflection)
 // Since it's a private class, we'll need to access it through PluginAPIImpl
 
-// TODO: Skip tests until pluginMetadata table is implemented in @vanblog/shared/drizzle
-describe.skip('MetadataManager', () => {
+// ✅ pluginMetadata table is now implemented in @vanblog/shared/drizzle
+describe('MetadataManager', () => {
   let metadataManager: any;
   let mockLogger: any;
 

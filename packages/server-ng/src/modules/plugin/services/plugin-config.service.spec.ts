@@ -166,10 +166,10 @@ describe('PluginConfigService', () => {
 
       service.registerSchema('test-plugin', schema);
 
-      // Mock database returning a value
+      // Mock database returning a value (jsonb() returns parsed object)
       mockDb.select = vi.fn().mockReturnValue({
         from: vi.fn().mockReturnValue({
-          where: vi.fn().mockResolvedValue([{ key: 'config:enableFeature', value: 'false' }]),
+          where: vi.fn().mockResolvedValue([{ key: 'config:enableFeature', value: false }]),
         }),
       });
 

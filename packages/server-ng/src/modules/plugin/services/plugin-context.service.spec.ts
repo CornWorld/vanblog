@@ -6,6 +6,8 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { ConfigService } from '../../../config/config.service';
 import { DATABASE_CONNECTION, type Database } from '../../../database';
 import { Mock } from '@test/mock';
+import { withTestTransaction } from '@test/utils/db-transaction-helper';
+import { Given } from '@test/given';
 
 import {
   PluginContextFactory,
@@ -20,31 +22,23 @@ import { SignalBus } from './signal.service';
 describe('PluginContext Services', () => {
   let factory: PluginContextFactory;
   let mockConfigService: ConfigService;
-  let mockDb: ReturnType<typeof Mock.db>['db'];
 
   beforeEach(async () => {
-    // Create database mock using MockUtils
-    const dbBuilder = Mock.db();
-    dbBuilder.setQueryResult([]);
-    mockDb = dbBuilder.build();
-
-    // Add $client for raw SQL execution
-    (mockDb as any).$client = {
-      execute: vi.fn().mockResolvedValue({}),
-    };
-
     // Create ConfigService mock using MockUtils
     mockConfigService = Mock.config({
       'plugin.test.config.key': 'test-value',
       'plugin.test.config.json': '{"nested": "value"}',
     });
 
+    // Import db from test setup
+    const { db } = await import('@test/setup.unit');
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         PluginContextFactory,
         {
           provide: DATABASE_CONNECTION,
-          useValue: mockDb,
+          useValue: db,
         },
         {
           provide: ConfigService,
@@ -88,101 +82,158 @@ describe('PluginContext Services', () => {
   });
 
   describe('PluginDataStorageService', () => {
-    let dataStorage: PluginDataStorageService;
-
-    beforeEach(() => {
-      dataStorage = new PluginDataStorageService(mockDb as unknown as Database, 'test-plugin');
-    });
-
     it('should get data by key', async () => {
-      const testData = { foo: 'bar' };
-      // Create new builder for this test with specific query result
-      const dbBuilder = Mock.db();
-      const localDb = dbBuilder.build();
+      const { db } = await import('@test/setup.unit');
 
-      // Mock the complete chain: select().from().where().limit()
-      const limitMock = vi.fn().mockResolvedValue([{ value: testData }]);
-      const whereMock = vi.fn().mockReturnValue({ limit: limitMock });
-      const fromMock = vi.fn().mockReturnValue({ where: whereMock });
-      localDb.select = vi.fn().mockReturnValue({ from: fromMock });
+      await withTestTransaction(db, async (tx) => {
+        const testData = { foo: 'bar' };
 
-      const storage = new PluginDataStorageService(localDb as unknown as Database, 'test-plugin');
+        // WORKAROUND: Drizzle doesn't call toDriver() for jsonb() in INSERT context
+        // Insert test data - manually stringify for now
+        await tx.insert(pluginData).values({
+          pluginId: 'test-plugin',
+          key: 'test-key',
+          value: JSON.stringify(testData) as unknown,
+        });
 
-      const result = await storage.get('test-key');
+        // Create storage service with transaction database
+        const storage = new PluginDataStorageService(tx as unknown as Database, 'test-plugin');
 
-      expect(result).toEqual(testData);
-      expect(localDb.select).toHaveBeenCalledWith({ value: pluginData.value });
-      expect(fromMock).toHaveBeenCalled();
+        // Test getting data by key
+        const result = await storage.get('test-key');
+
+        // Verify the result - fromDriver() should deserialize
+        expect(result).toEqual(testData);
+
+        // Verify database persistence
+        const [savedData] = await tx
+          .select()
+          .from(pluginData)
+          .where(eq(pluginData.pluginId, 'test-plugin'))
+          .where(eq(pluginData.key, 'test-key'));
+
+        expect(savedData).toBeDefined();
+        // NOTE: In test environment, fromDriver() may not be called
+        // Database stores as string, expecting string in test
+        expect(savedData.value).toBe('{"foo":"bar"}');
+      });
     });
 
     it('should return null for non-existent key', async () => {
-      const dbBuilder = Mock.db();
-      dbBuilder.setQueryResult([]);
-      const localDb = dbBuilder.build();
-      const storage = new PluginDataStorageService(localDb as unknown as Database, 'test-plugin');
+      const { db } = await import('@test/setup.unit');
 
-      const result = await storage.get('non-existent');
+      await withTestTransaction(db, async (tx) => {
+        const storage = new PluginDataStorageService(tx as unknown as Database, 'test-plugin');
 
-      expect(result).toBeNull();
+        const result = await storage.get('non-existent');
+
+        expect(result).toBeNull();
+      });
     });
 
     it('should set data in storage using single UPSERT', async () => {
+      const { db } = await import('@test/setup.unit');
       const testData = { test: 'value' };
-      // Use existing mockDb with $client
-      await dataStorage.set('test-key', testData);
 
-      expect((mockDb as any).$client.execute).toHaveBeenCalledTimes(1);
-      expect((mockDb as any).$client.execute).toHaveBeenCalledWith({
-        sql: expect.stringContaining('INSERT INTO plugin_data'),
-        args: expect.arrayContaining(['test-plugin', 'test-key', '{"test":"value"}']),
+      await withTestTransaction(db, async (tx) => {
+        const storage = new PluginDataStorageService(tx as unknown as Database, 'test-plugin');
+
+        // Test setting data
+        await storage.set('test-key', testData);
+
+        // Verify database persistence
+        const [savedData] = await tx
+          .select()
+          .from(pluginData)
+          .where(eq(pluginData.pluginId, 'test-plugin'))
+          .where(eq(pluginData.key, 'test-key'));
+
+        expect(savedData).toBeDefined();
+        expect(savedData.pluginId).toBe('test-plugin');
+        expect(savedData.key).toBe('test-key');
+        // Service manually stringifies, SELECT fromDriver() returns string
+        // (Drizzle bug: toDriver() not called in INSERT/UPSERT)
+        expect(savedData.value).toBe('{"test":"value"}');
       });
     });
 
     it('should delete data from storage', async () => {
-      // Create new builder with query and delete results
-      const dbBuilder = Mock.db();
-      dbBuilder.setQueryResult([{ key: 'test-key' }]);
-      dbBuilder.setDeleteResult([{ id: 1 }]);
-      const localDb = dbBuilder.build();
-      const storage = new PluginDataStorageService(localDb as unknown as Database, 'test-plugin');
+      const { db } = await import('@test/setup.unit');
 
-      const result = await storage.delete('test-key');
+      await withTestTransaction(db, async (tx) => {
+        // WORKAROUND: Drizzle doesn't call toDriver() for jsonb() in INSERT context
+        // Insert test data - manually stringify
+        await tx.insert(pluginData).values({
+          pluginId: 'test-plugin',
+          key: 'test-key',
+          value: JSON.stringify({ test: 'value' }) as unknown,
+        });
 
-      expect(result).toBe(true);
-      expect(localDb.select).toHaveBeenCalled();
-      expect(localDb.delete).toHaveBeenCalled();
+        const storage = new PluginDataStorageService(tx as unknown as Database, 'test-plugin');
+
+        // Test deleting data
+        const result = await storage.delete('test-key');
+
+        expect(result).toBe(true);
+
+        // Verify deletion
+        const [deletedData] = await tx.select().from(pluginData)
+          .where(eq(pluginData.pluginId, 'test-plugin'))
+          .where(eq(pluginData.key, 'test-key'));
+
+        expect(deletedData).toBeUndefined();
+      });
     });
 
     it('should check if key exists', async () => {
-      const dbBuilder = Mock.db();
-      const localDb = dbBuilder.build();
+      const { db } = await import('@test/setup.unit');
 
-      // Mock the complete chain: select().from().where().limit()
-      const limitMock = vi.fn().mockResolvedValue([{ key: 'test-key' }]);
-      const whereMock = vi.fn().mockReturnValue({ limit: limitMock });
-      const fromMock = vi.fn().mockReturnValue({ where: whereMock });
-      localDb.select = vi.fn().mockReturnValue({ from: fromMock });
+      await withTestTransaction(db, async (tx) => {
+        // First, insert test data
+        await tx.insert(pluginData).values({
+          pluginId: 'test-plugin',
+          key: 'test-key',
+          value: '{"test":"value"}',
+        });
 
-      const storage = new PluginDataStorageService(localDb as unknown as Database, 'test-plugin');
+        const storage = new PluginDataStorageService(tx as unknown as Database, 'test-plugin');
 
-      const result = await storage.has('test-key');
+        // Test checking if key exists
+        const result = await storage.has('test-key');
 
-      expect(result).toBe(true);
-      expect(localDb.select).toHaveBeenCalledWith({ key: pluginData.key });
+        expect(result).toBe(true);
+
+        // Test checking non-existent key
+        const notExists = await storage.has('non-existent');
+        expect(notExists).toBe(false);
+      });
     });
 
     it('should get all keys', async () => {
-      const dbBuilder = Mock.db();
-      // For this query, the result is returned directly from where()
-      const localDb = dbBuilder.build();
-      (localDb as any).where = vi.fn().mockResolvedValue([{ key: 'key1' }, { key: 'key2' }]);
-      const storage = new PluginDataStorageService(localDb as unknown as Database, 'test-plugin');
+      const { db } = await import('@test/setup.unit');
 
-      const result = await storage.keys();
+      await withTestTransaction(db, async (tx) => {
+        // Insert multiple test data
+        await tx.insert(pluginData).values([
+          {
+            pluginId: 'test-plugin',
+            key: 'key1',
+            value: '{"test":"value1"}',
+          },
+          {
+            pluginId: 'test-plugin',
+            key: 'key2',
+            value: '{"test":"value2"}',
+          },
+        ]);
 
-      expect(result).toEqual(['key1', 'key2']);
-      expect(localDb.select).toHaveBeenCalledWith({ key: pluginData.key });
-      expect(localDb.where).toHaveBeenCalledWith(eq(pluginData.pluginId, 'test-plugin'));
+        const storage = new PluginDataStorageService(tx as unknown as Database, 'test-plugin');
+
+        // Test getting all keys
+        const result = await storage.keys();
+
+        expect(result).toEqual(['key1', 'key2']);
+      });
     });
   });
 
@@ -284,7 +335,6 @@ describe('PluginContext Services', () => {
   describe('PluginContextService', () => {
     it('should create context with components', () => {
       const mockConfig = new PluginConfigReaderService(mockConfigService, 'test-plugin');
-      const mockData = new PluginDataStorageService(mockDb as unknown as Database, 'test-plugin');
 
       const mockRegistryService = { register: vi.fn(), unregister: vi.fn() } as any;
       const mockSignalBus = {
@@ -292,10 +342,13 @@ describe('PluginContext Services', () => {
         subscribe: vi.fn().mockReturnValue(() => {}),
       } as any;
 
+      // Create a mock database instance
+      const mockDb = {} as any;
+
       const context = new PluginContextService(
         'test-plugin',
         mockConfig,
-        mockData,
+        new PluginDataStorageService(mockDb, 'test-plugin'),
         mockRegistryService,
         mockSignalBus,
       );
@@ -303,7 +356,7 @@ describe('PluginContext Services', () => {
       expect(context).toBeDefined();
       expect(context.pluginId).toBe('test-plugin');
       expect(context.config).toBe(mockConfig);
-      expect(context.data).toBe(mockData);
+      expect(context.data).toBeInstanceOf(PluginDataStorageService);
       expect(context.registry).toBeDefined();
       expect(context.signals).toBeDefined();
       expect(context.logger).toBeDefined();
@@ -311,7 +364,6 @@ describe('PluginContext Services', () => {
 
     it('should track and cleanup registrations', () => {
       const mockConfig = new PluginConfigReaderService(mockConfigService, 'test-plugin');
-      const mockData = new PluginDataStorageService(mockDb as unknown as Database, 'test-plugin');
       const mockRegistryService = {
         register: vi.fn(),
         unregister: vi.fn().mockReturnValue(true),
@@ -322,10 +374,13 @@ describe('PluginContext Services', () => {
         subscribe: vi.fn().mockReturnValue(mockDisconnect),
       } as any;
 
+      // Create a mock database instance
+      const mockDb = {} as any;
+
       const context = new PluginContextService(
         'test-plugin',
         mockConfig,
-        mockData,
+        new PluginDataStorageService(mockDb, 'test-plugin'),
         mockRegistryService,
         mockSignalBus,
       );

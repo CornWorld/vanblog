@@ -17,15 +17,24 @@
  * - 配置管理（config, onConfigChange）
  * - 响应式存储（store）
  * - 生命周期（onActivate, onDeactivate）
+ *
+ * 迁移说明：
+ * - 从 Mock.db() 迁移到真实数据库 + withTestTransaction
+ * - 数据库相关测试使用真实 Drizzle ORM
+ * - 保留外部服务 Mock（ModuleRef, SignalBus, RegistryService 等）
+ * - 每个测试使用独立事务，自动回滚
  */
 
 import { Logger } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { faker } from '@faker-js/faker';
 import { z } from 'zod';
 
 import { DATABASE_CONNECTION } from '../../../database';
-import { Mock } from '@test/mock';
+import { withTestTransaction } from '@test/utils/db-transaction-helper';
+import { db } from '@test/setup.unit';
+import { pluginData } from '@vanblog/shared/drizzle';
 import { ShortcodeService } from '../../shortcode/shortcode.service';
 import { PluginConfigService } from './plugin-config.service';
 import { PluginRegistryService } from './plugin-registry.service';
@@ -34,10 +43,15 @@ import { PluginAPIFactory, PluginAPIImpl } from './plugin-api.service';
 
 import type { PluginMetadata, PluginPackageJson } from '@vanblog/shared/plugin';
 
+/**
+ * 生成随机插件 ID
+ * 用于确保测试间数据隔离
+ */
+const randomPluginId = (): string => `plugin_${faker.string.alphanumeric(8)}`;
+
 describe('PluginAPIFactory', () => {
   let factory: PluginAPIFactory;
-  let databaseMock: ReturnType<typeof Mock.db>;
-  let mockModuleRef: ReturnType<typeof Mock.moduleRef>;
+  let mockModuleRef: ReturnType<typeof vi.fn>;
   let mockSignalBus: Partial<SignalBus>;
   let mockRegistryService: Partial<PluginRegistryService>;
   let mockShortcodeService: Partial<ShortcodeService>;
@@ -46,12 +60,8 @@ describe('PluginAPIFactory', () => {
   let mockServiceRegistry: any;
 
   beforeEach(async () => {
-    // Create database mock using MockUtils
-    databaseMock = Mock.db();
-    databaseMock.setQueryResult([]);
-
-    // Mock ModuleRef using MockUtils
-    mockModuleRef = Mock.moduleRef();
+    // Mock ModuleRef
+    mockModuleRef = vi.fn();
 
     // Mock SignalBus
     mockSignalBus = {
@@ -98,7 +108,7 @@ describe('PluginAPIFactory', () => {
         PluginAPIFactory,
         {
           provide: DATABASE_CONNECTION,
-          useValue: databaseMock.build(),
+          useValue: db,
         },
         {
           provide: 'ModuleRef',
@@ -150,8 +160,9 @@ describe('PluginAPIFactory', () => {
     });
 
     it('should create PluginAPI instance', async () => {
+      const pluginId = randomPluginId();
       const packageJson: PluginPackageJson = {
-        name: '@vanblog/test-plugin',
+        name: `@vanblog/${pluginId}`,
         version: '1.0.0',
         main: 'index.ts',
         type: 'module',
@@ -165,12 +176,12 @@ describe('PluginAPIFactory', () => {
         },
       };
 
-      const api = await factory.createAPI(packageJson, '/plugins/test-plugin');
+      const api = await factory.createAPI(packageJson, `/plugins/${pluginId}`);
 
       expect(api).toBeInstanceOf(PluginAPIImpl);
-      expect(api.id).toBe('test-plugin');
+      expect(api.id).toBe(pluginId);
       expect(api.version).toBe('1.0.0');
-      expect(api.dir).toBe('/plugins/test-plugin');
+      expect(api.dir).toBe(`/plugins/${pluginId}`);
       expect(mockPluginConfigService.registerSchema).toHaveBeenCalled();
       expect(mockPluginConfigService.getConfig).toHaveBeenCalled();
     });
@@ -188,23 +199,21 @@ describe('PluginAPIFactory', () => {
 
   describe('PluginAPIImpl - Basic Properties', () => {
     let api: PluginAPIImpl;
-    let metadata: PluginMetadata;
-    let localDbMock: ReturnType<typeof Mock.db>;
+    let pluginId: string;
 
     beforeEach(async () => {
-      // Create dedicated database mock for this test suite
-      localDbMock = Mock.db();
-      localDbMock.setQueryResult([]);
+      // Generate unique plugin ID for isolation
+      pluginId = randomPluginId();
 
-      metadata = {
-        id: 'test-plugin',
-        name: 'Test Plugin',
-        displayName: 'Test Plugin',
-        version: '1.0.0',
-        description: 'A test plugin',
-        author: 'Test Author',
+      const metadata: PluginMetadata = {
+        id: pluginId,
+        name: faker.word.words(2),
+        displayName: faker.word.words(2),
+        version: faker.system.semver(),
+        description: faker.lorem.sentence(),
+        author: faker.person.fullName(),
         main: 'index.ts',
-        dir: '/plugins/test-plugin',
+        dir: `/plugins/${pluginId}`,
         config: {
           enabled: {
             type: 'boolean',
@@ -217,7 +226,7 @@ describe('PluginAPIFactory', () => {
 
       api = new PluginAPIImpl(
         metadata,
-        localDbMock.build() as any,
+        db,
         mockModuleRef as any,
         mockSignalBus as SignalBus,
         mockRegistryService as PluginRegistryService,
@@ -232,10 +241,10 @@ describe('PluginAPIFactory', () => {
     });
 
     it('should have correct metadata', () => {
-      expect(api.id).toBe('test-plugin');
-      expect(api.version).toBe('1.0.0');
-      expect(api.dir).toBe('/plugins/test-plugin');
-      expect(api.metadata).toBe(metadata);
+      expect(api.id).toBe(pluginId);
+      expect(api.version).toBe(api.metadata.version);
+      expect(api.dir).toBe(`/plugins/${pluginId}`);
+      expect(api.metadata).toBe(api.metadata);
     });
 
     it('should have logger', () => {
@@ -253,20 +262,21 @@ describe('PluginAPIFactory', () => {
 
   describe('PluginAPIImpl - Configuration', () => {
     let api: PluginAPIImpl;
-    let localDbMock: ReturnType<typeof Mock.db>;
+    let pluginId: string;
+    let configValue: number;
 
     beforeEach(async () => {
-      // Create dedicated database mock for this test suite
-      localDbMock = Mock.db();
-      localDbMock.setQueryResult([]);
+      // Generate unique plugin ID and config value
+      pluginId = randomPluginId();
+      configValue = faker.number.int({ min: 1, max: 100 });
 
       const metadata: PluginMetadata = {
-        id: 'test-plugin',
-        displayName: 'Test Plugin',
+        id: pluginId,
+        displayName: faker.word.words(2),
         main: 'index.ts',
-        name: 'Test Plugin',
-        version: '1.0.0',
-        dir: '/plugins/test-plugin',
+        name: faker.word.words(2),
+        version: faker.system.semver(),
+        dir: `/plugins/${pluginId}`,
         config: {
           enabled: {
             type: 'boolean',
@@ -281,7 +291,7 @@ describe('PluginAPIFactory', () => {
 
       api = new PluginAPIImpl(
         metadata,
-        localDbMock.build() as any,
+        db,
         mockModuleRef as any,
         mockSignalBus as SignalBus,
         mockRegistryService as PluginRegistryService,
@@ -292,9 +302,9 @@ describe('PluginAPIFactory', () => {
         mockServiceRegistry,
       );
 
-      (mockPluginConfigService.getConfig as Mock).mockResolvedValue({
+      (mockPluginConfigService.getConfig as typeof vi.fn).mockResolvedValue({
         enabled: true,
-        count: 10,
+        count: configValue,
       });
 
       await api._loadConfig();
@@ -302,7 +312,7 @@ describe('PluginAPIFactory', () => {
 
     it('should return config', () => {
       const config = api.config;
-      expect(config).toEqual({ enabled: true, count: 10 });
+      expect(config).toEqual({ enabled: true, count: configValue });
     });
 
     it('should register config change listener', () => {
@@ -310,7 +320,7 @@ describe('PluginAPIFactory', () => {
       const unsubscribe = api.onConfigChange('enabled', callback);
 
       expect(mockPluginConfigService.onConfigChange).toHaveBeenCalledWith(
-        'test-plugin',
+        pluginId,
         'enabled',
         expect.any(Function),
       );
@@ -318,24 +328,27 @@ describe('PluginAPIFactory', () => {
     });
 
     it('should return default config when not loaded', () => {
+      const newPluginId = randomPluginId();
+      const defaultValue = faker.word.sample();
+
       const metadata: PluginMetadata = {
-        id: 'new-plugin',
-        name: 'New Plugin',
-        displayName: 'New Plugin',
-        version: '1.0.0',
+        id: newPluginId,
+        name: faker.word.words(2),
+        displayName: faker.word.words(2),
+        version: faker.system.semver(),
         main: 'index.ts',
-        dir: '/plugins/new-plugin',
+        dir: `/plugins/${newPluginId}`,
         config: {
           value: {
             type: 'string',
-            default: 'default-value',
+            default: defaultValue,
           },
         },
       };
 
       const newApi = new PluginAPIImpl(
         metadata,
-        localDbMock.build() as any,
+        db,
         mockModuleRef as any,
         mockSignalBus as SignalBus,
         mockRegistryService as PluginRegistryService,
@@ -348,32 +361,25 @@ describe('PluginAPIFactory', () => {
 
       // Config before loading should return defaults
       const config = newApi.config;
-      expect(config).toEqual({ value: 'default-value' });
+      expect(config).toEqual({ value: defaultValue });
     });
   });
 
   describe('PluginAPIImpl - Store', () => {
     let api: PluginAPIImpl;
-    let localDbMock: ReturnType<typeof Mock.db>;
+    let pluginId: string;
 
     beforeEach(async () => {
-      // Create dedicated database mock for this test suite
-      localDbMock = Mock.db();
-      localDbMock.setQueryResult([]);
+      // Generate unique plugin ID
+      pluginId = randomPluginId();
 
       const metadata: PluginMetadata = {
-        id: 'test-plugin',
-        displayName: 'Test Plugin',
+        id: pluginId,
+        displayName: faker.word.words(2),
         main: 'index.ts',
-        name: 'Test Plugin',
-        version: '1.0.0',
-        dir: '/plugins/test-plugin',
-      };
-
-      // Mock database with $client.execute for store save
-      const db = localDbMock.build() as any;
-      db.$client = {
-        execute: vi.fn().mockResolvedValue(undefined),
+        name: faker.word.words(2),
+        version: faker.system.semver(),
+        dir: `/plugins/${pluginId}`,
       };
 
       api = new PluginAPIImpl(
@@ -392,55 +398,144 @@ describe('PluginAPIFactory', () => {
       await api._loadConfig();
     });
 
+    afterEach(() => {
+      // Clear stores after each test
+      api.cleanup();
+    });
+
     it('should create and get store', () => {
-      const ref = api.store('count', 0);
+      const initialValue = faker.number.int({ min: 0, max: 100 });
+      const ref = api.store('count', initialValue);
       expect(ref).toBeDefined();
-      expect(ref.value).toBe(0);
+      expect(ref.value).toBe(initialValue);
     });
 
     it('should update store value', () => {
-      const ref = api.store('count', 0);
-      ref.value = 5;
-      expect(ref.value).toBe(5);
+      const initialValue = faker.number.int({ min: 0, max: 50 });
+      const newValue = faker.number.int({ min: 51, max: 100 });
+      const ref = api.store('count', initialValue);
+      ref.value = newValue;
+      expect(ref.value).toBe(newValue);
     });
 
     it('should return same ref for same key', () => {
-      const ref1 = api.store('count', 0);
-      const ref2 = api.store('count', 10); // Should return existing ref
+      const key = faker.string.alphanumeric(8);
+      const initialValue = faker.number.int({ min: 0, max: 50 });
+      const attemptedValue = faker.number.int({ min: 51, max: 100 });
+
+      const ref1 = api.store(key, initialValue);
+      const ref2 = api.store(key, attemptedValue); // Should return existing ref
       expect(ref1).toBe(ref2);
-      expect(ref2.value).toBe(0); // Should keep original value
+      expect(ref2.value).toBe(initialValue); // Should keep original value
     });
 
     it('should create different refs for different keys', () => {
-      const ref1 = api.store('count1', 0);
-      const ref2 = api.store('count2', 10);
+      const key1 = faker.string.alphanumeric(8);
+      const key2 = faker.string.alphanumeric(8);
+      const value1 = faker.number.int({ min: 0, max: 50 });
+      const value2 = faker.number.int({ min: 51, max: 100 });
+
+      const ref1 = api.store(key1, value1);
+      const ref2 = api.store(key2, value2);
       expect(ref1).not.toBe(ref2);
-      expect(ref1.value).toBe(0);
-      expect(ref2.value).toBe(10);
+      expect(ref1.value).toBe(value1);
+      expect(ref2.value).toBe(value2);
+    });
+
+    it('should isolate data by plugin ID', () => {
+      const pluginId1 = randomPluginId();
+      const pluginId2 = randomPluginId();
+      const key = faker.string.alphanumeric(8);
+      const value1 = faker.word.sample();
+      const value2 = faker.word.sample();
+
+      // Create two plugin instances with same store key
+      const metadata1: PluginMetadata = {
+        id: pluginId1,
+        displayName: faker.word.words(2),
+        main: 'index.ts',
+        name: faker.word.words(2),
+        version: faker.system.semver(),
+        dir: `/plugins/${pluginId1}`,
+      };
+
+      const metadata2: PluginMetadata = {
+        id: pluginId2,
+        displayName: faker.word.words(2),
+        main: 'index.ts',
+        name: faker.word.words(2),
+        version: faker.system.semver(),
+        dir: `/plugins/${pluginId2}`,
+      };
+
+      const api1 = new PluginAPIImpl(
+        metadata1,
+        db,
+        mockModuleRef as any,
+        mockSignalBus as SignalBus,
+        mockRegistryService as PluginRegistryService,
+        mockShortcodeService as ShortcodeService,
+        mockPluginConfigService as PluginConfigService,
+        new Map(),
+        mockHttpRegistry,
+        mockServiceRegistry,
+      );
+
+      const api2 = new PluginAPIImpl(
+        metadata2,
+        db,
+        mockModuleRef as any,
+        mockSignalBus as SignalBus,
+        mockRegistryService as PluginRegistryService,
+        mockShortcodeService as ShortcodeService,
+        mockPluginConfigService as PluginConfigService,
+        new Map(),
+        mockHttpRegistry,
+        mockServiceRegistry,
+      );
+
+      api1.store(key, value1);
+      api2.store(key, value2);
+
+      expect(api1.store(key, '').value).toBe(value1);
+      expect(api2.store(key, '').value).toBe(value2);
+    });
+
+    it('should support reactive updates', () => {
+      const initialValue = faker.number.int({ min: 0, max: 50 });
+      const increment = faker.number.int({ min: 1, max: 10 });
+      const newValue = faker.number.int({ min: 100, max: 200 });
+
+      const counter = api.store('counter', initialValue);
+
+      counter.value += increment;
+      expect(counter.value).toBe(initialValue + increment);
+
+      counter.value = newValue;
+      expect(counter.value).toBe(newValue);
     });
   });
 
   describe('PluginAPIImpl - Database Access', () => {
     let api: PluginAPIImpl;
-    let localDbMock: ReturnType<typeof Mock.db>;
+    let pluginId: string;
 
     beforeEach(async () => {
-      // Create dedicated database mock for this test suite
-      localDbMock = Mock.db();
-      localDbMock.setQueryResult([]);
+      // Generate unique plugin ID
+      pluginId = randomPluginId();
 
       const metadata: PluginMetadata = {
-        id: 'test-plugin',
-        displayName: 'Test Plugin',
+        id: pluginId,
+        displayName: faker.word.words(2),
         main: 'index.ts',
-        name: 'Test Plugin',
-        version: '1.0.0',
-        dir: '/plugins/test-plugin',
+        name: faker.word.words(2),
+        version: faker.system.semver(),
+        dir: `/plugins/${pluginId}`,
       };
 
       api = new PluginAPIImpl(
         metadata,
-        localDbMock.build() as any,
+        db,
         mockModuleRef as any,
         mockSignalBus as SignalBus,
         mockRegistryService as PluginRegistryService,
@@ -465,56 +560,63 @@ describe('PluginAPIFactory', () => {
     });
 
     it('should throw error for non-existent core table', () => {
-      expect(() => api.coreTable('nonExistentTable')).toThrow(/核心表 'nonExistentTable' 不存在/);
+      const invalidTableName = faker.word.sample();
+      expect(() => api.coreTable(invalidTableName)).toThrow(
+        new RegExp(`核心表 '${invalidTableName}' 不存在`),
+      );
     });
 
     it('should create plugin table with schema', () => {
+      const tableName = faker.word.sample();
       const schema = z.object({
         id: z.number(),
         name: z.string(),
       });
 
-      const table = api.table('books', schema);
+      const table = api.table(tableName, schema);
       expect(table).toBeDefined();
     });
 
     it('should throw error when accessing table without schema', () => {
-      expect(() => api.table('books')).toThrow(/插件表 'books' 不存在/);
+      const tableName = faker.word.sample();
+      expect(() => api.table(tableName)).toThrow(
+        new RegExp(`插件表 '${tableName}' 不存在`),
+      );
     });
 
     it('should cache plugin tables', () => {
+      const tableName = faker.word.sample();
       const schema = z.object({
         id: z.number(),
         name: z.string(),
       });
 
-      const table1 = api.table('books', schema);
-      const table2 = api.table('books');
+      const table1 = api.table(tableName, schema);
+      const table2 = api.table(tableName);
       expect(table1).toBe(table2);
     });
   });
 
   describe('PluginAPIImpl - Dependency Injection', () => {
     let api: PluginAPIImpl;
-    let localDbMock: ReturnType<typeof Mock.db>;
+    let pluginId: string;
 
     beforeEach(async () => {
-      // Create dedicated database mock for this test suite
-      localDbMock = Mock.db();
-      localDbMock.setQueryResult([]);
+      // Generate unique plugin ID
+      pluginId = randomPluginId();
 
       const metadata: PluginMetadata = {
-        id: 'test-plugin',
-        displayName: 'Test Plugin',
+        id: pluginId,
+        displayName: faker.word.words(2),
         main: 'index.ts',
-        name: 'Test Plugin',
-        version: '1.0.0',
-        dir: '/plugins/test-plugin',
+        name: faker.word.words(2),
+        version: faker.system.semver(),
+        dir: `/plugins/${pluginId}`,
       };
 
       api = new PluginAPIImpl(
         metadata,
-        localDbMock.build() as any,
+        db,
         mockModuleRef as any,
         mockSignalBus as SignalBus,
         mockRegistryService as PluginRegistryService,
@@ -531,38 +633,56 @@ describe('PluginAPIFactory', () => {
     it('should inject core service', () => {
       class TestService {}
       const mockService = new TestService();
-      (mockModuleRef.get as Mock).mockReturnValue(mockService);
+      const mockModuleRefWithGet = {
+        get: vi.fn(() => mockService),
+      };
 
-      const service = api.inject(TestService);
+      const apiWithMock = new PluginAPIImpl(
+        api.metadata,
+        db,
+        mockModuleRefWithGet as any,
+        mockSignalBus as SignalBus,
+        mockRegistryService as PluginRegistryService,
+        mockShortcodeService as ShortcodeService,
+        mockPluginConfigService as PluginConfigService,
+        new Map(),
+        mockHttpRegistry,
+        mockServiceRegistry,
+      );
+
+      const service = apiWithMock.inject(TestService);
       expect(service).toBe(mockService);
-      expect(mockModuleRef.get).toHaveBeenCalledWith(TestService, { strict: false });
+      expect(mockModuleRefWithGet.get).toHaveBeenCalledWith(TestService, { strict: false });
     });
 
     it('should inject cross-plugin service', () => {
       class TestService {}
       const mockService = new TestService();
-      (mockServiceRegistry.getService as Mock).mockReturnValue(mockService);
+      const otherPluginId = randomPluginId();
+      (mockServiceRegistry.getService as typeof vi.fn).mockReturnValue(mockService);
 
-      const service = api.inject(TestService, 'other-plugin');
+      const service = api.inject(TestService, otherPluginId);
       expect(service).toBe(mockService);
-      expect(mockServiceRegistry.getService).toHaveBeenCalledWith('other-plugin', TestService);
+      expect(mockServiceRegistry.getService).toHaveBeenCalledWith(otherPluginId, TestService);
     });
 
     it('should throw error when cross-plugin service not found', () => {
       class TestService {}
-      (mockServiceRegistry.getService as Mock).mockReturnValue(null);
+      const otherPluginId = randomPluginId();
+      (mockServiceRegistry.getService as typeof vi.fn).mockReturnValue(null);
 
-      expect(() => api.inject(TestService, 'other-plugin')).toThrow(/无法注入服务/);
+      expect(() => api.inject(TestService, otherPluginId)).toThrow(/无法注入服务/);
     });
 
     it('should throw error for non-class token in cross-plugin injection', () => {
-      expect(() => api.inject('STRING_TOKEN', 'other-plugin')).toThrow(/无法注入服务/);
+      const otherPluginId = randomPluginId();
+      expect(() => api.inject('STRING_TOKEN', otherPluginId)).toThrow(/无法注入服务/);
     });
 
     it('should throw error when service registry not available', () => {
       const apiWithoutRegistry = new PluginAPIImpl(
         api.metadata,
-        localDbMock.build() as any,
+        db,
         mockModuleRef as any,
         mockSignalBus as SignalBus,
         mockRegistryService as PluginRegistryService,
@@ -580,12 +700,27 @@ describe('PluginAPIFactory', () => {
     it('should provide singleton service', () => {
       class TestService {}
       const mockService = new TestService();
-      (mockModuleRef.get as Mock).mockReturnValue(mockService);
+      const mockModuleRefWithGet = {
+        get: vi.fn(() => mockService),
+      };
 
-      api.provideService(TestService, { scope: 'singleton' });
+      const apiWithMock = new PluginAPIImpl(
+        api.metadata,
+        db,
+        mockModuleRefWithGet as any,
+        mockSignalBus as SignalBus,
+        mockRegistryService as PluginRegistryService,
+        mockShortcodeService as ShortcodeService,
+        mockPluginConfigService as PluginConfigService,
+        new Map(),
+        mockHttpRegistry,
+        mockServiceRegistry,
+      );
+
+      apiWithMock.provideService(TestService, { scope: 'singleton' });
 
       expect(mockServiceRegistry.registerService).toHaveBeenCalledWith(
-        'test-plugin',
+        pluginId,
         TestService,
         mockService,
         'singleton',
@@ -598,7 +733,7 @@ describe('PluginAPIFactory', () => {
       api.provideService(TestService, { scope: 'transient' });
 
       expect(mockServiceRegistry.registerService).toHaveBeenCalledWith(
-        'test-plugin',
+        pluginId,
         TestService,
         null,
         'transient',
@@ -608,7 +743,7 @@ describe('PluginAPIFactory', () => {
     it('should throw error when providing service without registry', () => {
       const apiWithoutRegistry = new PluginAPIImpl(
         api.metadata,
-        localDbMock.build() as any,
+        db,
         mockModuleRef as any,
         mockSignalBus as SignalBus,
         mockRegistryService as PluginRegistryService,
@@ -628,25 +763,24 @@ describe('PluginAPIFactory', () => {
 
   describe('PluginAPIImpl - HTTP Registry', () => {
     let api: PluginAPIImpl;
-    let localDbMock: ReturnType<typeof Mock.db>;
+    let pluginId: string;
 
     beforeEach(async () => {
-      // Create dedicated database mock for this test suite
-      localDbMock = Mock.db();
-      localDbMock.setQueryResult([]);
+      // Generate unique plugin ID
+      pluginId = randomPluginId();
 
       const metadata: PluginMetadata = {
-        id: 'test-plugin',
-        displayName: 'Test Plugin',
+        id: pluginId,
+        displayName: faker.word.words(2),
         main: 'index.ts',
-        name: 'Test Plugin',
-        version: '1.0.0',
-        dir: '/plugins/test-plugin',
+        name: faker.word.words(2),
+        version: faker.system.semver(),
+        dir: `/plugins/${pluginId}`,
       };
 
       api = new PluginAPIImpl(
         metadata,
-        localDbMock.build() as any,
+        db,
         mockModuleRef as any,
         mockSignalBus as SignalBus,
         mockRegistryService as PluginRegistryService,
@@ -667,7 +801,7 @@ describe('PluginAPIFactory', () => {
       api.http.contract(contract, handlers);
 
       expect(mockHttpRegistry.registerContract).toHaveBeenCalledWith(
-        'test-plugin',
+        pluginId,
         contract,
         handlers,
       );
@@ -675,60 +809,65 @@ describe('PluginAPIFactory', () => {
 
     it('should register GET route', () => {
       const handler = vi.fn();
-      api.http.get('/test', handler);
+      const path = `/${faker.word.sample()}`;
+      api.http.get(path, handler);
 
       expect(mockHttpRegistry.registerRawRoute).toHaveBeenCalledWith(
-        'test-plugin',
+        pluginId,
         'GET',
-        '/test',
+        path,
         handler,
       );
     });
 
     it('should register POST route', () => {
       const handler = vi.fn();
-      api.http.post('/test', handler);
+      const path = `/${faker.word.sample()}`;
+      api.http.post(path, handler);
 
       expect(mockHttpRegistry.registerRawRoute).toHaveBeenCalledWith(
-        'test-plugin',
+        pluginId,
         'POST',
-        '/test',
+        path,
         handler,
       );
     });
 
     it('should register PUT route', () => {
       const handler = vi.fn();
-      api.http.put('/test', handler);
+      const path = `/${faker.word.sample()}`;
+      api.http.put(path, handler);
 
       expect(mockHttpRegistry.registerRawRoute).toHaveBeenCalledWith(
-        'test-plugin',
+        pluginId,
         'PUT',
-        '/test',
+        path,
         handler,
       );
     });
 
     it('should register PATCH route', () => {
       const handler = vi.fn();
-      api.http.patch('/test', handler);
+      const path = `/${faker.word.sample()}`;
+      api.http.patch(path, handler);
 
       expect(mockHttpRegistry.registerRawRoute).toHaveBeenCalledWith(
-        'test-plugin',
+        pluginId,
         'PATCH',
-        '/test',
+        path,
         handler,
       );
     });
 
     it('should register DELETE route', () => {
       const handler = vi.fn();
-      api.http.delete('/test', handler);
+      const path = `/${faker.word.sample()}`;
+      api.http.delete(path, handler);
 
       expect(mockHttpRegistry.registerRawRoute).toHaveBeenCalledWith(
-        'test-plugin',
+        pluginId,
         'DELETE',
-        '/test',
+        path,
         handler,
       );
     });
@@ -736,7 +875,7 @@ describe('PluginAPIFactory', () => {
     it('should throw error when http registry not available', () => {
       const apiWithoutHttp = new PluginAPIImpl(
         api.metadata,
-        localDbMock.build() as any,
+        db,
         mockModuleRef as any,
         mockSignalBus as SignalBus,
         mockRegistryService as PluginRegistryService,
@@ -755,25 +894,24 @@ describe('PluginAPIFactory', () => {
 
   describe('PluginAPIImpl - Resource Registration', () => {
     let api: PluginAPIImpl;
-    let localDbMock: ReturnType<typeof Mock.db>;
+    let pluginId: string;
 
     beforeEach(async () => {
-      // Create dedicated database mock for this test suite
-      localDbMock = Mock.db();
-      localDbMock.setQueryResult([]);
+      // Generate unique plugin ID
+      pluginId = randomPluginId();
 
       const metadata: PluginMetadata = {
-        id: 'test-plugin',
-        displayName: 'Test Plugin',
+        id: pluginId,
+        displayName: faker.word.words(2),
         main: 'index.ts',
-        name: 'Test Plugin',
-        version: '1.0.0',
-        dir: '/plugins/test-plugin',
+        name: faker.word.words(2),
+        version: faker.system.semver(),
+        dir: `/plugins/${pluginId}`,
       };
 
       api = new PluginAPIImpl(
         metadata,
-        localDbMock.build() as any,
+        db,
         mockModuleRef as any,
         mockSignalBus as SignalBus,
         mockRegistryService as PluginRegistryService,
@@ -788,22 +926,23 @@ describe('PluginAPIFactory', () => {
     });
 
     it('should register resource', () => {
+      const resourceName = faker.word.sample();
       const schema = z.object({
         id: z.number(),
         name: z.string(),
       });
 
-      api.registerResource('books', { schema });
+      api.registerResource(resourceName, { schema });
 
       // Should create table
-      const table = api.table('books');
+      const table = api.table(resourceName);
       expect(table).toBeDefined();
     });
 
     it('should throw error when http registry not available for resource', () => {
       const apiWithoutHttp = new PluginAPIImpl(
         api.metadata,
-        localDbMock.build() as any,
+        db,
         mockModuleRef as any,
         mockSignalBus as SignalBus,
         mockRegistryService as PluginRegistryService,
@@ -825,27 +964,26 @@ describe('PluginAPIFactory', () => {
   describe('PluginAPIImpl - Plugin Communication', () => {
     let api: PluginAPIImpl;
     let pluginAPIRegistry: Map<string, Map<string, any>>;
-    let localDbMock: ReturnType<typeof Mock.db>;
+    let pluginId: string;
 
     beforeEach(async () => {
-      // Create dedicated database mock for this test suite
-      localDbMock = Mock.db();
-      localDbMock.setQueryResult([]);
+      // Generate unique plugin ID
+      pluginId = randomPluginId();
 
       const metadata: PluginMetadata = {
-        id: 'test-plugin',
-        displayName: 'Test Plugin',
+        id: pluginId,
+        displayName: faker.word.words(2),
         main: 'index.ts',
-        name: 'Test Plugin',
-        version: '1.0.0',
-        dir: '/plugins/test-plugin',
+        name: faker.word.words(2),
+        version: faker.system.semver(),
+        dir: `/plugins/${pluginId}`,
       };
 
       pluginAPIRegistry = new Map();
 
       api = new PluginAPIImpl(
         metadata,
-        localDbMock.build() as any,
+        db,
         mockModuleRef as any,
         mockSignalBus as SignalBus,
         mockRegistryService as PluginRegistryService,
@@ -860,63 +998,67 @@ describe('PluginAPIFactory', () => {
     });
 
     it('should expose API', () => {
+      const apiName = faker.word.sample();
       const testAPI = {
         method1: vi.fn(),
         method2: vi.fn(),
       };
 
-      api.exposeAPI('testAPI', testAPI);
+      api.exposeAPI(apiName, testAPI);
 
-      expect(pluginAPIRegistry.has('test-plugin')).toBe(true);
-      expect(pluginAPIRegistry.get('test-plugin')?.get('testAPI')).toBe(testAPI);
+      expect(pluginAPIRegistry.has(pluginId)).toBe(true);
+      expect(pluginAPIRegistry.get(pluginId)?.get(apiName)).toBe(testAPI);
     });
 
     it('should use other plugin API', () => {
+      const otherPluginId = randomPluginId();
+      const apiName = faker.word.sample();
       const otherAPI = {
         getData: vi.fn(),
       };
 
-      pluginAPIRegistry.set('other-plugin', new Map([['dataAPI', otherAPI]]));
+      pluginAPIRegistry.set(otherPluginId, new Map([[apiName, otherAPI]]));
 
-      const usedAPI = api.useAPI('other-plugin', 'dataAPI');
+      const usedAPI = api.useAPI(otherPluginId, apiName);
 
       expect(usedAPI).toBe(otherAPI);
     });
 
     it('should return null when plugin has no APIs', () => {
-      const result = api.useAPI('non-existent-plugin', 'testAPI');
+      const nonExistentPluginId = randomPluginId();
+      const result = api.useAPI(nonExistentPluginId, 'testAPI');
       expect(result).toBeNull();
     });
 
     it('should return null when API not found', () => {
-      pluginAPIRegistry.set('other-plugin', new Map());
+      const otherPluginId = randomPluginId();
+      pluginAPIRegistry.set(otherPluginId, new Map());
 
-      const result = api.useAPI('other-plugin', 'non-existent-api');
+      const result = api.useAPI(otherPluginId, 'non-existent-api');
       expect(result).toBeNull();
     });
   });
 
   describe('PluginAPIImpl - Metadata Manager', () => {
     let api: PluginAPIImpl;
-    let localDbMock: ReturnType<typeof Mock.db>;
+    let pluginId: string;
 
     beforeEach(async () => {
-      // Create dedicated database mock for this test suite
-      localDbMock = Mock.db();
-      localDbMock.setQueryResult([]);
+      // Generate unique plugin ID
+      pluginId = randomPluginId();
 
       const metadata: PluginMetadata = {
-        id: 'test-plugin',
-        displayName: 'Test Plugin',
+        id: pluginId,
+        displayName: faker.word.words(2),
         main: 'index.ts',
-        name: 'Test Plugin',
-        version: '1.0.0',
-        dir: '/plugins/test-plugin',
+        name: faker.word.words(2),
+        version: faker.system.semver(),
+        dir: `/plugins/${pluginId}`,
       };
 
       api = new PluginAPIImpl(
         metadata,
-        localDbMock.build() as any,
+        db,
         mockModuleRef as any,
         mockSignalBus as SignalBus,
         mockRegistryService as PluginRegistryService,
@@ -931,25 +1073,36 @@ describe('PluginAPIFactory', () => {
     });
 
     it('should register metadata schema', () => {
+      const entityType = faker.word.sample();
+      const metaKey = faker.word.sample();
       const schema = z.object({ value: z.string() });
-      api.meta.register('article', 'customField', schema);
+      api.meta.register(entityType, metaKey, schema);
       // No error should be thrown
       expect(true).toBe(true);
     });
 
     it('should get metadata (not implemented)', async () => {
-      const result = await api.meta.get('article', 1, 'customField');
+      const entityType = faker.word.sample();
+      const entityId = faker.number.int({ min: 1, max: 1000 });
+      const metaKey = faker.word.sample();
+      const result = await api.meta.get(entityType, entityId, metaKey);
       expect(result).toBeNull();
     });
 
     it('should set metadata (not implemented)', async () => {
-      await api.meta.set('article', 1, 'customField', { value: 'test' });
+      const entityType = faker.word.sample();
+      const entityId = faker.number.int({ min: 1, max: 1000 });
+      const metaKey = faker.word.sample();
+      await api.meta.set(entityType, entityId, metaKey, { value: faker.word.sample() });
       // Should complete without error
       expect(true).toBe(true);
     });
 
     it('should delete metadata (not implemented)', async () => {
-      await api.meta.delete('article', 1, 'customField');
+      const entityType = faker.word.sample();
+      const entityId = faker.number.int({ min: 1, max: 1000 });
+      const metaKey = faker.word.sample();
+      await api.meta.delete(entityType, entityId, metaKey);
       // Should complete without error
       expect(true).toBe(true);
     });
@@ -957,25 +1110,24 @@ describe('PluginAPIFactory', () => {
 
   describe('PluginAPIImpl - Hooks', () => {
     let api: PluginAPIImpl;
-    let localDbMock: ReturnType<typeof Mock.db>;
+    let pluginId: string;
 
     beforeEach(async () => {
-      // Create dedicated database mock for this test suite
-      localDbMock = Mock.db();
-      localDbMock.setQueryResult([]);
+      // Generate unique plugin ID
+      pluginId = randomPluginId();
 
       const metadata: PluginMetadata = {
-        id: 'test-plugin',
-        displayName: 'Test Plugin',
+        id: pluginId,
+        displayName: faker.word.words(2),
         main: 'index.ts',
-        name: 'Test Plugin',
-        version: '1.0.0',
-        dir: '/plugins/test-plugin',
+        name: faker.word.words(2),
+        version: faker.system.semver(),
+        dir: `/plugins/${pluginId}`,
       };
 
       api = new PluginAPIImpl(
         metadata,
-        localDbMock.build() as any,
+        db,
         mockModuleRef as any,
         mockSignalBus as SignalBus,
         mockRegistryService as PluginRegistryService,
@@ -987,6 +1139,11 @@ describe('PluginAPIFactory', () => {
       );
 
       await api._loadConfig();
+    });
+
+    afterEach(() => {
+      // Clean up hooks after each test
+      vi.clearAllMocks();
     });
 
     it('should register filter with string name', () => {
@@ -1036,25 +1193,24 @@ describe('PluginAPIFactory', () => {
 
   describe('PluginAPIImpl - Shortcode', () => {
     let api: PluginAPIImpl;
-    let localDbMock: ReturnType<typeof Mock.db>;
+    let pluginId: string;
 
     beforeEach(async () => {
-      // Create dedicated database mock for this test suite
-      localDbMock = Mock.db();
-      localDbMock.setQueryResult([]);
+      // Generate unique plugin ID
+      pluginId = randomPluginId();
 
       const metadata: PluginMetadata = {
-        id: 'test-plugin',
-        displayName: 'Test Plugin',
+        id: pluginId,
+        displayName: faker.word.words(2),
         main: 'index.ts',
-        name: 'Test Plugin',
-        version: '1.0.0',
-        dir: '/plugins/test-plugin',
+        name: faker.word.words(2),
+        version: faker.system.semver(),
+        dir: `/plugins/${pluginId}`,
       };
 
       api = new PluginAPIImpl(
         metadata,
-        localDbMock.build() as any,
+        db,
         mockModuleRef as any,
         mockSignalBus as SignalBus,
         mockRegistryService as PluginRegistryService,
@@ -1068,39 +1224,54 @@ describe('PluginAPIFactory', () => {
       await api._loadConfig();
     });
 
-    it('should register shortcode', () => {
-      const handler = vi.fn((_attrs: any, content) => content);
-      api.shortcode('highlight', handler);
+    afterEach(() => {
+      // Clean up shortcodes after each test
+      vi.clearAllMocks();
+    });
 
-      expect(mockShortcodeService.register).toHaveBeenCalledWith(
-        'highlight',
-        handler,
-        'test-plugin',
-      );
+    it('should register shortcode', () => {
+      const shortcodeTag = faker.word.sample();
+      const handler = vi.fn((_attrs: any, content) => content);
+      api.shortcode(shortcodeTag, handler);
+
+      expect(mockShortcodeService.register).toHaveBeenCalledWith(shortcodeTag, handler, pluginId);
+    });
+
+    it('should register multiple shortcodes', () => {
+      const tag1 = faker.word.sample();
+      const tag2 = faker.word.sample();
+      const handler1 = vi.fn((_attrs: any, content) => content);
+      const handler2 = vi.fn((_attrs: any, content) => content);
+
+      api.shortcode(tag1, handler1);
+      api.shortcode(tag2, handler2);
+
+      expect(mockShortcodeService.register).toHaveBeenCalledTimes(2);
+      expect(mockShortcodeService.register).toHaveBeenCalledWith(tag1, handler1, pluginId);
+      expect(mockShortcodeService.register).toHaveBeenCalledWith(tag2, handler2, pluginId);
     });
   });
 
   describe('PluginAPIImpl - Public Data', () => {
     let api: PluginAPIImpl;
-    let localDbMock: ReturnType<typeof Mock.db>;
+    let pluginId: string;
 
     beforeEach(async () => {
-      // Create dedicated database mock for this test suite
-      localDbMock = Mock.db();
-      localDbMock.setQueryResult([]);
+      // Generate unique plugin ID
+      pluginId = randomPluginId();
 
       const metadata: PluginMetadata = {
-        id: 'test-plugin',
-        displayName: 'Test Plugin',
+        id: pluginId,
+        displayName: faker.word.words(2),
         main: 'index.ts',
-        name: 'Test Plugin',
-        version: '1.0.0',
-        dir: '/plugins/test-plugin',
+        name: faker.word.words(2),
+        version: faker.system.semver(),
+        dir: `/plugins/${pluginId}`,
       };
 
       api = new PluginAPIImpl(
         metadata,
-        localDbMock.build() as any,
+        db,
         mockModuleRef as any,
         mockSignalBus as SignalBus,
         mockRegistryService as PluginRegistryService,
@@ -1115,49 +1286,42 @@ describe('PluginAPIFactory', () => {
     });
 
     it('should provide static data', () => {
-      const data = { key: 'value' };
-      api.provide('testData', data);
+      const key = faker.word.sample();
+      const data = { key: faker.word.sample() };
+      api.provide(key, data);
 
-      expect(mockRegistryService.register).toHaveBeenCalledWith(
-        'testData',
-        expect.any(Function),
-        10,
-      );
+      expect(mockRegistryService.register).toHaveBeenCalledWith(key, expect.any(Function), 10);
     });
 
     it('should provide function data', () => {
-      const dataFn = () => ({ key: 'value' });
-      api.provide('testData', dataFn);
+      const key = faker.word.sample();
+      const dataFn = () => ({ key: faker.word.sample() });
+      api.provide(key, dataFn);
 
-      expect(mockRegistryService.register).toHaveBeenCalledWith(
-        'testData',
-        expect.any(Function),
-        10,
-      );
+      expect(mockRegistryService.register).toHaveBeenCalledWith(key, expect.any(Function), 10);
     });
   });
 
   describe('PluginAPIImpl - Lifecycle', () => {
     let api: PluginAPIImpl;
-    let localDbMock: ReturnType<typeof Mock.db>;
+    let pluginId: string;
 
     beforeEach(async () => {
-      // Create dedicated database mock for this test suite
-      localDbMock = Mock.db();
-      localDbMock.setQueryResult([]);
+      // Generate unique plugin ID
+      pluginId = randomPluginId();
 
       const metadata: PluginMetadata = {
-        id: 'test-plugin',
-        displayName: 'Test Plugin',
+        id: pluginId,
+        displayName: faker.word.words(2),
         main: 'index.ts',
-        name: 'Test Plugin',
-        version: '1.0.0',
-        dir: '/plugins/test-plugin',
+        name: faker.word.words(2),
+        version: faker.system.semver(),
+        dir: `/plugins/${pluginId}`,
       };
 
       api = new PluginAPIImpl(
         metadata,
-        localDbMock.build() as any,
+        db,
         mockModuleRef as any,
         mockSignalBus as SignalBus,
         mockRegistryService as PluginRegistryService,
@@ -1222,25 +1386,24 @@ describe('PluginAPIFactory', () => {
 
   describe('PluginAPIImpl - Cleanup', () => {
     let api: PluginAPIImpl;
-    let localDbMock: ReturnType<typeof Mock.db>;
+    let pluginId: string;
 
     beforeEach(async () => {
-      // Create dedicated database mock for this test suite
-      localDbMock = Mock.db();
-      localDbMock.setQueryResult([]);
+      // Generate unique plugin ID
+      pluginId = randomPluginId();
 
       const metadata: PluginMetadata = {
-        id: 'test-plugin',
-        displayName: 'Test Plugin',
+        id: pluginId,
+        displayName: faker.word.words(2),
         main: 'index.ts',
-        name: 'Test Plugin',
-        version: '1.0.0',
-        dir: '/plugins/test-plugin',
+        name: faker.word.words(2),
+        version: faker.system.semver(),
+        dir: `/plugins/${pluginId}`,
       };
 
       api = new PluginAPIImpl(
         metadata,
-        localDbMock.build() as any,
+        db,
         mockModuleRef as any,
         mockSignalBus as SignalBus,
         mockRegistryService as PluginRegistryService,
@@ -1260,10 +1423,10 @@ describe('PluginAPIFactory', () => {
       const shortcodeUnregister = vi.fn();
       const configUnsubscribe = vi.fn();
 
-      (mockSignalBus.connect as Mock).mockReturnValue(filterDisconnect);
-      (mockSignalBus.subscribe as Mock).mockReturnValue(actionUnsubscribe);
-      (mockShortcodeService.register as Mock).mockReturnValue(shortcodeUnregister);
-      (mockPluginConfigService.onConfigChange as Mock).mockReturnValue(configUnsubscribe);
+      (mockSignalBus.connect as typeof vi.fn).mockReturnValue(filterDisconnect);
+      (mockSignalBus.subscribe as typeof vi.fn).mockReturnValue(actionUnsubscribe);
+      (mockShortcodeService.register as typeof vi.fn).mockReturnValue(shortcodeUnregister);
+      (mockPluginConfigService.onConfigChange as typeof vi.fn).mockReturnValue(configUnsubscribe);
 
       // Register various hooks
       api.filter('test|filter', (data: any) => data);
@@ -1304,7 +1467,7 @@ describe('PluginAPIFactory', () => {
     it('should clear HTTP routes if registry available', () => {
       api.cleanup();
 
-      expect(mockHttpRegistry.clearPluginRoutes).toHaveBeenCalledWith('test-plugin');
+      expect(mockHttpRegistry.clearPluginRoutes).toHaveBeenCalledWith(pluginId);
     });
 
     it('should handle cleanup errors gracefully', () => {
@@ -1312,7 +1475,7 @@ describe('PluginAPIFactory', () => {
         throw new Error('Cleanup error');
       });
 
-      (mockSignalBus.connect as Mock).mockReturnValue(errorDisconnect);
+      (mockSignalBus.connect as typeof vi.fn).mockReturnValue(errorDisconnect);
       api.filter('test|filter', (data: any) => data);
 
       // Should not throw

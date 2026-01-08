@@ -78,7 +78,6 @@ describe('WebhookService - Execution & Retry', () => {
     it('should execute webhook successfully', async () => {
       const webhook = {
         id: 1,
-        name: 'Test Webhook',
         url: 'https://example.com/webhook',
         events: ['article|afterCreate'],
         secret: null,
@@ -118,7 +117,6 @@ describe('WebhookService - Execution & Retry', () => {
     it('should retry on failure', async () => {
       const webhook = {
         id: 1,
-        name: 'Test Webhook',
         url: 'https://example.com/webhook',
         events: ['article|afterCreate'],
         secret: null,
@@ -170,7 +168,6 @@ describe('WebhookService - Execution & Retry', () => {
     it('should handle timeout error', async () => {
       const webhook = {
         id: 1,
-        name: 'Test Webhook',
         url: 'https://example.com/webhook',
         events: ['article|afterCreate'],
         secret: null,
@@ -207,7 +204,6 @@ describe('WebhookService - Execution & Retry', () => {
     it('should handle non-2xx response', async () => {
       const webhook = {
         id: 1,
-        name: 'Test Webhook',
         url: 'https://example.com/webhook',
         events: ['article|afterCreate'],
         secret: null,
@@ -255,7 +251,6 @@ describe('WebhookService - Execution & Retry', () => {
     it('should log webhook execution', async () => {
       const webhook = {
         id: 1,
-        name: 'Test Webhook',
         url: 'https://example.com/webhook',
         events: ['article|afterCreate'],
         secret: null,

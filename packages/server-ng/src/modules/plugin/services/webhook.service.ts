@@ -402,11 +402,30 @@ export class WebhookService {
 
     const totalCount = totalResult.count;
 
+    
     return {
-      data: results.map((log) => ({
-        ...log,
-        payload: JSON.parse(log.payload) as Record<string, unknown>,
-      })),
+      data: results.map((log) => {
+        let parsedPayload: Record<string, unknown>;
+
+        // Check if payload is already an object (parsed by Drizzle's mode: 'json')
+        if (typeof log.payload === 'object' && log.payload !== null) {
+          // Already parsed by Drizzle
+          parsedPayload = log.payload;
+        } else {
+          // Try to parse as JSON string
+          try {
+            parsedPayload = JSON.parse(log.payload) as Record<string, unknown>;
+          } catch (error) {
+            this.logger.error('JSON.parse error in getLogs:', error);
+            parsedPayload = log.payload; // Return raw payload if parsing fails
+          }
+        }
+
+        return {
+          ...log,
+          payload: parsedPayload,
+        };
+      }),
       pagination: {
         page,
         limit,

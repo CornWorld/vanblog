@@ -20,11 +20,14 @@ describe('WebhookController', () => {
     url: 'https://example.com/webhook',
     events: ['article|afterCreate'],
     active: true,
-    secret: 'secret',
-    retries: 3,
-    timeout: 5000,
-    createdAt: new Date(),
-    updatedAt: new Date(),
+    secret: '',
+    retryCount: 3,
+    timeout: 30000,
+    lastTriggered: '',
+    lastStatus: '',
+    lastError: '',
+    createdAt: '2025-01-05T00:00:00Z',
+    updatedAt: '2025-01-05T00:00:00Z',
   } as any;
 
   beforeEach(() => {
@@ -52,8 +55,22 @@ describe('WebhookController', () => {
   });
 
   describe('create', () => {
-    it.skip('should create a webhook', async () => {
-      // Skipped due to Zod schema parsing complexity
+    it('should create a webhook', async () => {
+      const createDto: any = {
+        name: 'Test Webhook',
+        url: 'https://example.com/webhook',
+        events: ['article|afterCreate'],
+        active: true,
+        retryCount: 3,
+        timeout: 30000,
+      };
+
+      mockWebhookService.create.mockResolvedValue(mockWebhook);
+
+      const result = await controller.create(createDto);
+
+      expect(result).toEqual(mockWebhook);
+      expect(mockWebhookService.create).toHaveBeenCalled();
     });
 
     it('should validate webhook data before creating', async () => {
@@ -64,12 +81,52 @@ describe('WebhookController', () => {
   });
 
   describe('findAll', () => {
-    it.skip('should return paginated webhooks', async () => {
-      // Skipped due to Zod schema parsing complexity
+    it('should return paginated webhooks', async () => {
+      const mockResult = {
+        pagination: { total: 2, page: 1, limit: 10 },
+        data: [mockWebhook],
+      };
+
+      mockWebhookService.findAll.mockResolvedValue(mockResult);
+
+      const result = await controller.findAll({ page: 1, limit: 10 } as any);
+
+      expect(result).toEqual({
+        data: [mockWebhook],
+        total: 2,
+        page: 1,
+        limit: 10,
+      });
+      expect(mockWebhookService.findAll).toHaveBeenCalledWith({ page: 1, limit: 10 });
     });
 
-    it.skip('should apply filter parameters', async () => {
-      // Skipped due to Zod schema parsing complexity
+    it('should apply filter parameters', async () => {
+      const mockResult = {
+        pagination: { total: 1, page: 1, limit: 10 },
+        data: [mockWebhook],
+      };
+
+      mockWebhookService.findAll.mockResolvedValue(mockResult);
+
+      const result = await controller.findAll({
+        page: 1,
+        limit: 10,
+        active: true,
+        event: 'article|afterCreate',
+      } as any);
+
+      expect(result).toEqual({
+        data: [mockWebhook],
+        total: 1,
+        page: 1,
+        limit: 10,
+      });
+      expect(mockWebhookService.findAll).toHaveBeenCalledWith({
+        page: 1,
+        limit: 10,
+        active: true,
+        event: 'article|afterCreate',
+      });
     });
 
     it('should default to page 1 and limit 10', async () => {
@@ -220,8 +277,13 @@ describe('WebhookController', () => {
   });
 
   describe('findOne', () => {
-    it.skip('should return a webhook by id', async () => {
-      // Skipped due to Zod schema parsing complexity
+    it('should return a webhook by id', async () => {
+      mockWebhookService.findOne.mockResolvedValue(mockWebhook);
+
+      const result = await controller.findOne(1);
+
+      expect(result).toEqual(mockWebhook);
+      expect(mockWebhookService.findOne).toHaveBeenCalledWith(1);
     });
 
     it('should throw NotFoundException if webhook not found', async () => {
@@ -232,8 +294,20 @@ describe('WebhookController', () => {
   });
 
   describe('update', () => {
-    it.skip('should update a webhook', async () => {
-      // Skipped due to Zod schema parsing complexity
+    it('should update a webhook', async () => {
+      const updateDto = {
+        // name: 'Updated Webhook',
+        url: 'https://example.com/updated',
+        active: false,
+      } as any;
+
+      const updatedWebhook = { ...mockWebhook, ...updateDto };
+      mockWebhookService.update.mockResolvedValue(updatedWebhook);
+
+      const result = await controller.update(1, updateDto);
+
+      expect(result).toEqual(updatedWebhook);
+      expect(mockWebhookService.update).toHaveBeenCalledWith(1, updateDto);
     });
 
     it('should throw NotFoundException if webhook not found', async () => {

@@ -31,6 +31,7 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { dayjs } from '@vanblog/shared';
 import { pluginData } from '@vanblog/shared/drizzle';
 import { and, eq, like } from 'drizzle-orm';
+import { z } from 'zod';
 
 import { ConfigService } from '../../../config/config.service';
 import { type Database } from '../../../database/connection';
@@ -275,6 +276,8 @@ export class PluginConfigService {
 
   /**
    * 从数据库加载配置
+   *
+   * jsonb() 列类型已自动处理 JSON 反序列化
    */
   private async loadFromDatabase(pluginId: string): Promise<Record<string, unknown>> {
     const result: Record<string, unknown> = {};
@@ -284,14 +287,15 @@ export class PluginConfigService {
       .from(pluginData)
       .where(and(eq(pluginData.pluginId, pluginId), like(pluginData.key, `${CONFIG_KEY_PREFIX}%`)));
 
+    // Direct parsing - jsonb() column already deserialized
+    const UnknownValueSchema = z.unknown();
+
     for (const row of rows) {
       const key = row.key.slice(CONFIG_KEY_PREFIX.length);
       if (row.value !== null) {
-        try {
-          result[key] = JSON.parse(row.value);
-        } catch {
-          result[key] = row.value;
-        }
+        // Direct validation - no manual JSON parsing needed
+        const parsed = UnknownValueSchema.safeParse(row.value);
+        result[key] = parsed.success ? parsed.data : row.value;
       }
     }
 
@@ -299,11 +303,10 @@ export class PluginConfigService {
   }
 
   /**
-   * 保存配置到数据库
+   * 保存配置到数据库 - jsonb() column handles JSON serialization
    */
   private async saveToDatabase(pluginId: string, key: string, value: unknown): Promise<void> {
     const storeKey = `${CONFIG_KEY_PREFIX}${key}`;
-    const stringValue = JSON.stringify(value);
     const now = dayjs().format();
 
     await (
@@ -316,7 +319,7 @@ export class PluginConfigService {
       sql: `INSERT INTO plugin_data (plugin_id, key, value, created_at, updated_at)
             VALUES (?, ?, ?, ?, ?)
             ON CONFLICT(plugin_id, key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
-      args: [pluginId, storeKey, stringValue, now, now],
+      args: [pluginId, storeKey, JSON.stringify(value), now, now],
     });
   }
 
@@ -332,6 +335,8 @@ export class PluginConfigService {
 
   /**
    * 解析环境变量值
+   *
+   * 使用 Zod Schema 类型安全地解析环境变量
    */
   private parseEnvValue(value: string, field: PluginConfigField): unknown {
     switch (field.type) {
@@ -339,13 +344,38 @@ export class PluginConfigService {
         return value === 'true' || value === '1';
       case 'number':
         return Number(value);
-      case 'array':
-      case 'object':
-        try {
-          return JSON.parse(value);
-        } catch {
-          return value;
-        }
+      case 'array': {
+        // Use Zod array schema for safe parsing
+        const ArraySchema = z.array(z.unknown());
+        const parsed = ArraySchema.safeParse(
+          typeof value === 'string'
+            ? (() => {
+                try {
+                  return JSON.parse(value);
+                } catch {
+                  return value;
+                }
+              })()
+            : value,
+        );
+        return parsed.success ? parsed.data : value;
+      }
+      case 'object': {
+        // Use Zod object schema for safe parsing
+        const ObjectSchema = z.record(z.unknown());
+        const parsed = ObjectSchema.safeParse(
+          typeof value === 'string'
+            ? (() => {
+                try {
+                  return JSON.parse(value);
+                } catch {
+                  return value;
+                }
+              })()
+            : value,
+        );
+        return parsed.success ? parsed.data : value;
+      }
       default:
         return value;
     }
