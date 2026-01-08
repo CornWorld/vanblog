@@ -3,6 +3,9 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { Test, type TestingModule } from '@nestjs/testing';
 import dayjs from 'dayjs';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { Mock } from '@test/mock';
 
 import { UserType } from '../user/dto/create-user.dto';
 import { UserService } from '../user/user.service';
@@ -10,10 +13,24 @@ import { UserService } from '../user/user.service';
 import { TokenBlacklistService } from './token-blacklist.service';
 import { TokenService } from './token.service';
 
+// Mock bcrypt to avoid real hashing
+vi.mock('bcrypt', () => ({
+  hash: vi.fn().mockResolvedValue('hashed-password'),
+  compare: vi.fn().mockResolvedValue(true),
+}));
+
+// Helper functions for random data generation
+const randomInt = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min;
+const randomString = (length: number) =>
+  Array.from({ length }, () => Math.random().toString(36)[2]).join('');
+const randomUsername = () => `user_${randomString(8)}`;
+const randomToken = (length = 32) => randomString(length);
+
 describe('TokenService', () => {
   let service: TokenService;
   let mockJwtSign: ReturnType<typeof vi.fn>;
   let mockJwtVerify: ReturnType<typeof vi.fn>;
+  let mockJwtDecode: ReturnType<typeof vi.fn>;
   let mockUserServiceFindOne: ReturnType<typeof vi.fn>;
   let mockConfigServiceGet: ReturnType<typeof vi.fn>;
   let mockTokenBlacklistService: {
@@ -21,15 +38,10 @@ describe('TokenService', () => {
     isTokenRevoked: ReturnType<typeof vi.fn>;
   };
 
-  const mockUser = {
-    id: 1,
-    username: 'testuser',
-    type: UserType.AUTHOR,
-  } as const;
-
   beforeEach(async () => {
     mockJwtSign = vi.fn();
     mockJwtVerify = vi.fn();
+    mockJwtDecode = vi.fn();
     mockUserServiceFindOne = vi.fn();
     mockConfigServiceGet = vi.fn((_: string, def: any) => def);
     mockTokenBlacklistService = {
@@ -45,6 +57,7 @@ describe('TokenService', () => {
           useValue: {
             sign: mockJwtSign,
             verify: mockJwtVerify,
+            decode: mockJwtDecode,
           },
         },
         {
@@ -79,12 +92,19 @@ describe('TokenService', () => {
 
   describe('generateTokenPair', () => {
     it('should generate access and refresh tokens for user', () => {
-      const accessToken = 'access-token';
-      const refreshToken = 'refresh-token';
+      // Use faker for random data generation
+      const user = Mock.user({
+        id: randomInt(1, 10000),
+        username: randomUsername(),
+        type: UserType.AUTHOR,
+      });
+
+      const accessToken = randomToken();
+      const refreshToken = randomToken();
 
       mockJwtSign.mockReturnValueOnce(accessToken).mockReturnValueOnce(refreshToken);
 
-      const result = service.generateTokenPair(mockUser as any);
+      const result = service.generateTokenPair(user as any);
 
       expect(result).toEqual({ accessToken, refreshToken });
 
@@ -92,18 +112,18 @@ describe('TokenService', () => {
       expect(mockJwtSign).toHaveBeenNthCalledWith(
         1,
         {
-          sub: mockUser.id,
-          username: mockUser.username,
-          type: mockUser.type,
+          sub: user.id,
+          username: user.username,
+          type: user.type,
         },
         { expiresIn: '15m' },
       );
       expect(mockJwtSign).toHaveBeenNthCalledWith(
         2,
         {
-          sub: mockUser.id,
-          username: mockUser.username,
-          type: mockUser.type,
+          sub: user.id,
+          username: user.username,
+          type: user.type,
           tokenType: 'refresh',
         },
         { expiresIn: '7d' },
@@ -113,7 +133,7 @@ describe('TokenService', () => {
 
   describe('generateAnonymousAccessToken', () => {
     it('should generate anonymous access token with default expires', () => {
-      const anonymousToken = 'anonymous-token';
+      const anonymousToken = randomToken();
       mockJwtSign.mockReturnValue(anonymousToken);
 
       const result = service.generateAnonymousAccessToken();
@@ -131,16 +151,17 @@ describe('TokenService', () => {
     });
 
     it('should support custom expires', () => {
-      const token = 'anon-token-1h';
+      const token = randomToken();
+      const customUsername = randomUsername();
       mockJwtSign.mockReturnValue(token);
 
-      const result = service.generateAnonymousAccessToken('guest', '1h');
+      const result = service.generateAnonymousAccessToken(customUsername, '1h');
 
       expect(result).toBe(token);
       expect(mockJwtSign).toHaveBeenCalledWith(
         {
           sub: 'anonymous',
-          username: 'guest',
+          username: customUsername,
           type: UserType.VIEWER,
           isAnonymous: true,
         },
@@ -151,33 +172,39 @@ describe('TokenService', () => {
 
   describe('verifyAccessToken', () => {
     it('should return virtual user for anonymous payload', async () => {
-      const token = 'anonymous-token';
-      mockJwtVerify.mockReturnValue({ sub: 'anonymous', username: 'anon', isAnonymous: true });
+      const token = randomToken();
+      const anonUsername = randomUsername();
+      mockJwtVerify.mockReturnValue({ sub: 'anonymous', username: anonUsername, isAnonymous: true });
 
       const result = await service.verifyAccessToken(token);
 
-      expect(result).toMatchObject({ id: 0, username: 'anon', type: UserType.VIEWER });
+      expect(result).toMatchObject({ id: 0, username: anonUsername, type: UserType.VIEWER });
       expect(mockJwtVerify).toHaveBeenCalledWith(token);
     });
 
     it('should return real user for valid token', async () => {
-      const token = 'user-token';
-      mockJwtVerify.mockReturnValue({
-        sub: mockUser.id,
-        username: mockUser.username,
-        type: mockUser.type,
+      const user = Mock.user({
+        id: randomInt(1, 10000),
+        username: randomUsername(),
+        type: UserType.AUTHOR,
       });
-      mockUserServiceFindOne.mockResolvedValue({ ...mockUser });
+      const token = randomToken();
+      mockJwtVerify.mockReturnValue({
+        sub: user.id,
+        username: user.username,
+        type: user.type,
+      });
+      mockUserServiceFindOne.mockResolvedValue({ ...user });
 
       const result = await service.verifyAccessToken(token);
 
-      expect(result).toEqual(mockUser);
+      expect(result).toEqual(user);
       expect(mockJwtVerify).toHaveBeenCalledWith(token);
-      expect(mockUserServiceFindOne).toHaveBeenCalledWith(mockUser.id);
+      expect(mockUserServiceFindOne).toHaveBeenCalledWith(user.id);
     });
 
     it('should throw UnauthorizedException for invalid token', async () => {
-      const token = 'invalid-token';
+      const token = randomToken();
       mockJwtVerify.mockImplementation(() => {
         throw new Error('bad');
       });
@@ -189,53 +216,67 @@ describe('TokenService', () => {
 
   describe('verifyRefreshToken', () => {
     it('should verify refresh token and return user', async () => {
-      const user = { ...mockUser };
+      const user = Mock.user({
+        id: randomInt(1, 10000),
+        username: randomUsername(),
+        type: UserType.AUTHOR,
+      });
+      const accessToken = randomToken();
+      const refreshToken = randomToken();
+
+      mockJwtSign.mockReturnValueOnce(accessToken).mockReturnValueOnce(refreshToken);
       const generatedTokens = service.generateTokenPair(user as any);
-      const token = generatedTokens.refreshToken;
 
       mockJwtVerify.mockReturnValue({
-        sub: mockUser.id,
-        username: mockUser.username,
-        type: mockUser.type,
+        sub: user.id,
+        username: user.username,
+        type: user.type,
         tokenType: 'refresh',
       });
       mockUserServiceFindOne.mockResolvedValue(user);
 
-      const result = await service.verifyRefreshToken(token);
+      const result = await service.verifyRefreshToken(generatedTokens.refreshToken);
 
       expect(result).toEqual(user);
-      expect(mockJwtVerify).toHaveBeenCalledWith(token);
-      expect(mockUserServiceFindOne).toHaveBeenCalledWith(mockUser.id);
+      expect(mockJwtVerify).toHaveBeenCalledWith(generatedTokens.refreshToken);
+      expect(mockUserServiceFindOne).toHaveBeenCalledWith(user.id);
     });
 
     it('should not call verify and throw for unknown refresh token', async () => {
-      const token = 'unknown-refresh-token';
+      const token = randomToken();
       await expect(service.verifyRefreshToken(token)).rejects.toThrow(UnauthorizedException);
       expect(mockJwtVerify).not.toHaveBeenCalled();
     });
 
     it('should throw for wrong token type', async () => {
-      const user = { ...mockUser };
+      const user = Mock.user({
+        id: randomInt(1, 10000),
+        username: randomUsername(),
+        type: UserType.AUTHOR,
+      });
+      const accessToken = randomToken();
+      const refreshToken = randomToken();
+
+      mockJwtSign.mockReturnValueOnce(accessToken).mockReturnValueOnce(refreshToken);
       const generatedTokens = service.generateTokenPair(user as any);
-      const token = generatedTokens.refreshToken;
 
       mockJwtVerify.mockReturnValue({
-        sub: mockUser.id,
-        username: mockUser.username,
-        type: mockUser.type,
+        sub: user.id,
+        username: user.username,
+        type: user.type,
         tokenType: 'access', // Wrong type - should be 'refresh'
       });
 
-      await expect(service.verifyRefreshToken(token)).rejects.toThrow(UnauthorizedException);
-      expect(mockJwtVerify).toHaveBeenCalledWith(token);
+      await expect(service.verifyRefreshToken(generatedTokens.refreshToken)).rejects.toThrow(
+        UnauthorizedException,
+      );
+      expect(mockJwtVerify).toHaveBeenCalledWith(generatedTokens.refreshToken);
     });
 
     it('should expire and reject expired refresh token', async () => {
       // Create a token but let it expire
-      const accessToken = 'access-token';
+      const accessToken = randomToken();
       mockJwtSign.mockReturnValueOnce(accessToken);
-
-      // Manually set an expired refresh token to test expiration
 
       // Create JWT with expiration in the past
       const expiredToken =
@@ -253,44 +294,52 @@ describe('TokenService', () => {
 
   describe('refreshTokenPair', () => {
     it('should refresh token pair successfully', async () => {
-      const user = { ...mockUser };
-      const generatedTokens = service.generateTokenPair(user as any);
-      const { refreshToken } = generatedTokens;
+      const user = Mock.user({
+        id: randomInt(1, 10000),
+        username: randomUsername(),
+        type: UserType.AUTHOR,
+      });
+      const oldAccessToken = randomToken();
+      const oldRefreshToken = randomToken();
 
-      // Reset mocks to clear previous calls
-      vi.clearAllMocks();
+      // Generate initial token pair
+      mockJwtSign.mockReturnValueOnce(oldAccessToken).mockReturnValueOnce(oldRefreshToken);
+      const initialTokens = service.generateTokenPair(user as any);
 
-      const newAccessToken = 'new-access-token';
-      const newRefreshToken = 'new-refresh-token';
+      // Setup mocks for token refresh (don't clear to preserve token state)
+      const newAccessToken = randomToken();
+      const newRefreshToken = randomToken();
 
       mockJwtVerify.mockReturnValue({
-        sub: mockUser.id,
-        username: mockUser.username,
-        type: mockUser.type,
+        sub: user.id,
+        username: user.username,
+        type: user.type,
         tokenType: 'refresh',
       });
       mockUserServiceFindOne.mockResolvedValue(user);
       mockJwtSign.mockReturnValueOnce(newAccessToken).mockReturnValueOnce(newRefreshToken);
 
-      const result = await service.refreshTokenPair(refreshToken);
+      const result = await service.refreshTokenPair(initialTokens.refreshToken);
 
+      // Verify new token pair is returned
       expect(result).toEqual({ accessToken: newAccessToken, refreshToken: newRefreshToken });
-      expect(mockJwtVerify).toHaveBeenCalledWith(refreshToken);
-      expect(mockUserServiceFindOne).toHaveBeenCalledWith(mockUser.id);
-      expect(mockJwtSign).toHaveBeenCalledTimes(2);
-      expect(service.isTokenRevoked(refreshToken)).toBe(true);
+      expect(mockJwtVerify).toHaveBeenCalledWith(initialTokens.refreshToken);
+      expect(mockUserServiceFindOne).toHaveBeenCalledWith(user.id);
+
+      // Verify the old refresh token was revoked (critical assertion)
+      expect(service.isTokenRevoked(initialTokens.refreshToken)).toBe(true);
     });
 
     it('should throw UnauthorizedException for invalid refresh token', async () => {
-      const invalid = 'invalid-refresh-token';
-      await expect(service.refreshTokenPair(invalid)).rejects.toThrow(UnauthorizedException);
+      const invalidToken = randomToken();
+      await expect(service.refreshTokenPair(invalidToken)).rejects.toThrow(UnauthorizedException);
       expect(mockJwtVerify).not.toHaveBeenCalled();
     });
   });
 
   describe('revokeToken', () => {
     it('should add token to revoked tokens set', async () => {
-      const token = 'token-to-revoke';
+      const token = randomToken();
       await service.revokeToken(token);
       expect(service.isTokenRevoked(token)).toBe(true);
     });
@@ -298,20 +347,22 @@ describe('TokenService', () => {
 
   describe('revokeAllUserTokens', () => {
     it('should revoke all user tokens of the given user', () => {
-      const user1 = { id: 1, username: 'user1', type: UserType.AUTHOR } as any;
-      const user2 = { id: 2, username: 'user2', type: UserType.AUTHOR } as any;
+      const userId1 = randomInt(1000, 2000);
+      const userId2 = randomInt(2001, 3000);
+      const user1 = Mock.user({ id: userId1 });
+      const user2 = Mock.user({ id: userId2 });
 
       // Mock JWT sign for consistent token generation
       let signCallCount = 0;
       mockJwtSign.mockImplementation(() => {
-        return `token-${String(signCallCount++)}`;
+        return randomToken() + String(signCallCount++);
       });
 
       // Generate tokens for user 1
-      const t1 = service.generateTokenPair(user1).refreshToken;
-      const t2 = service.generateTokenPair(user1).refreshToken;
+      const t1 = service.generateTokenPair(user1 as any).refreshToken;
+      const t2 = service.generateTokenPair(user1 as any).refreshToken;
       // Generate token for user 2
-      const t3 = service.generateTokenPair(user2).refreshToken;
+      const t3 = service.generateTokenPair(user2 as any).refreshToken;
 
       // Verify tokens are not revoked before
       expect(service.isTokenRevoked(t1)).toBe(false);
@@ -319,7 +370,7 @@ describe('TokenService', () => {
       expect(service.isTokenRevoked(t3)).toBe(false);
 
       // Revoke all tokens for user 1
-      service.revokeAllUserTokens(1);
+      service.revokeAllUserTokens(userId1);
 
       // Verify user 1 tokens are revoked
       expect(service.isTokenRevoked(t1)).toBe(true);
@@ -331,11 +382,16 @@ describe('TokenService', () => {
 
   describe('cleanupExpiredTokens', () => {
     it('should clean up expired tokens from in-memory store', async () => {
-      const user = { id: 1, username: 'testuser', type: UserType.AUTHOR } as any;
+      const user = Mock.user({
+        id: randomInt(1, 10000),
+        username: randomUsername(),
+      });
 
       // Generate token pair (creates active refresh token)
-      mockJwtSign.mockReturnValueOnce('access').mockReturnValueOnce('active-rt');
-      const tokens = service.generateTokenPair(user);
+      const accessToken = randomToken();
+      const refreshToken = randomToken();
+      mockJwtSign.mockReturnValueOnce(accessToken).mockReturnValueOnce(refreshToken);
+      const tokens = service.generateTokenPair(user as any);
 
       // Mock JWT verify to simulate expired token
       mockJwtVerify.mockImplementation(() => {
@@ -354,31 +410,32 @@ describe('TokenService', () => {
 
   describe('getUserActiveTokenCount', () => {
     it('should return active token count for user', () => {
-      const user = { id: 11, username: 'user11', type: UserType.AUTHOR } as any;
+      const userId = randomInt(1, 10000);
+      const user = Mock.user({ id: userId });
 
       // Generate multiple tokens for same user
       mockJwtSign
-        .mockReturnValueOnce('access1')
-        .mockReturnValueOnce('refresh1')
-        .mockReturnValueOnce('access2')
-        .mockReturnValueOnce('refresh2');
+        .mockReturnValueOnce(randomToken())
+        .mockReturnValueOnce(randomToken())
+        .mockReturnValueOnce(randomToken())
+        .mockReturnValueOnce(randomToken());
 
-      service.generateTokenPair(user);
-      service.generateTokenPair(user);
+      service.generateTokenPair(user as any);
+      service.generateTokenPair(user as any);
 
       // Both tokens should be active
-      const count = service.getUserActiveTokenCount(11);
+      const count = service.getUserActiveTokenCount(userId);
       expect(count).toBe(2);
     });
   });
 
   describe('isTokenRevoked', () => {
     it('should return false for non-revoked token', () => {
-      expect(service.isTokenRevoked('valid-token')).toBe(false);
+      expect(service.isTokenRevoked(randomToken())).toBe(false);
     });
 
     it('should return true for revoked token', async () => {
-      const token = 'revoked-token';
+      const token = randomToken();
       await service.revokeToken(token);
       expect(service.isTokenRevoked(token)).toBe(true);
     });
@@ -386,9 +443,10 @@ describe('TokenService', () => {
 
   describe('revokeAllTokens', () => {
     it('should revoke all tokens in the system', () => {
-      const t1 = 'token-1';
-      const t2 = 'token-2';
-      const t3 = 'token-3';
+      const t1 = randomToken();
+      const t2 = randomToken();
+      const t3 = randomToken();
+      // Accessing private field for testing purposes - testing internal state management
       (service as any).refreshTokens.set(t1, {
         token: t1,
         expiresAt: dayjs().add(1, 'day'),
@@ -419,9 +477,10 @@ describe('TokenService', () => {
 
   describe('getTokenStats', () => {
     it('should return correct token statistics', () => {
-      const t1 = 'token-1';
-      const t2 = 'token-2';
-      const t3 = 'token-3';
+      const t1 = randomToken();
+      const t2 = randomToken();
+      const t3 = randomToken();
+      // Accessing private field for testing purposes - testing statistics calculation
       (service as any).refreshTokens.set(t1, {
         token: t1,
         expiresAt: dayjs().add(1, 'day'),
@@ -449,8 +508,8 @@ describe('TokenService', () => {
     });
 
     it('should count revoked tokens correctly', async () => {
-      await service.revokeToken('revoked-1');
-      await service.revokeToken('revoked-2');
+      await service.revokeToken(randomToken());
+      await service.revokeToken(randomToken());
 
       const stats = service.getTokenStats();
 
@@ -466,11 +525,15 @@ describe('TokenService', () => {
         return def;
       });
 
-      const accessToken = 'access-token-30m';
-      const refreshToken = 'refresh-token-14d';
+      const user = Mock.user({
+        id: randomInt(1, 10000),
+        username: randomUsername(),
+      });
+      const accessToken = randomToken();
+      const refreshToken = randomToken();
       mockJwtSign.mockReturnValueOnce(accessToken).mockReturnValueOnce(refreshToken);
 
-      const result = service.generateTokenPair(mockUser as any);
+      const result = service.generateTokenPair(user as any);
 
       expect(result).toEqual({ accessToken, refreshToken });
       expect(mockJwtSign).toHaveBeenNthCalledWith(1, expect.any(Object), { expiresIn: '30m' });
@@ -483,14 +546,18 @@ describe('TokenService', () => {
         return def;
       });
 
-      const accessToken = 'access-token';
-      const refreshToken = 'refresh-token';
+      const user = Mock.user({
+        id: randomInt(1, 10000),
+        username: randomUsername(),
+      });
+      const accessToken = randomToken();
+      const refreshToken = randomToken();
       mockJwtSign.mockReturnValueOnce(accessToken).mockReturnValueOnce(refreshToken);
 
-      const result = service.generateTokenPair(mockUser as any);
+      const result = service.generateTokenPair(user as any);
 
       expect(result).toEqual({ accessToken, refreshToken });
-      // Should fallback to 7 days when invalid
+      // Should fallback to 7 days when invalid - accessing private field for verification
       const storedToken = (service as any).refreshTokens.get(refreshToken);
       expect(storedToken).toBeDefined();
       expect(storedToken.expiresAt.isAfter(dayjs().add(6, 'day'))).toBe(true);
@@ -499,7 +566,8 @@ describe('TokenService', () => {
 
   describe('verifyAccessToken - revoked tokens', () => {
     it('should reject token in memory blacklist', async () => {
-      const token = 'revoked-in-memory';
+      const token = randomToken();
+      // Accessing private field for testing purposes - testing blacklist functionality
       (service as any).revokedTokens.add(token);
 
       await expect(service.verifyAccessToken(token)).rejects.toThrow(UnauthorizedException);
@@ -507,7 +575,7 @@ describe('TokenService', () => {
     });
 
     it('should reject token in database blacklist', async () => {
-      const token = 'revoked-in-db';
+      const token = randomToken();
       mockTokenBlacklistService.isTokenRevoked.mockResolvedValueOnce(true);
 
       await expect(service.verifyAccessToken(token)).rejects.toThrow(UnauthorizedException);
@@ -519,7 +587,8 @@ describe('TokenService', () => {
 
   describe('verifyRefreshToken - revoked tokens', () => {
     it('should reject token in memory blacklist', async () => {
-      const token = 'revoked-refresh';
+      const token = randomToken();
+      // Accessing private field for testing purposes - testing blacklist functionality
       (service as any).revokedTokens.add(token);
 
       await expect(service.verifyRefreshToken(token)).rejects.toThrow(UnauthorizedException);
@@ -531,11 +600,16 @@ describe('TokenService', () => {
 
   describe('verifyRefreshToken - JWT errors', () => {
     it('should handle JWT verification errors', async () => {
-      const token = 'malformed-refresh-token';
+      const token = randomToken();
+      const user = Mock.user({
+        id: randomInt(1, 10000),
+        username: randomUsername(),
+      });
+      // Accessing private field for testing purposes - setting up token state
       (service as any).refreshTokens.set(token, {
         token,
         expiresAt: dayjs().add(7, 'day'),
-        userId: mockUser.id,
+        userId: user.id,
         type: 'refresh',
       });
       mockJwtVerify.mockImplementation(() => {
@@ -551,17 +625,16 @@ describe('TokenService', () => {
 
   describe('revokeToken - database integration', () => {
     it('should add valid token to database blacklist', async () => {
-      const token = 'valid-jwt-token';
+      const token = randomToken();
+      const userId = randomInt(1, 10000);
       const mockPayload = {
-        sub: 1,
-        username: 'testuser',
+        sub: userId,
+        username: randomUsername(),
         type: UserType.AUTHOR,
         exp: Math.floor(Date.now() / 1000) + 3600, // 1 hour from now
       };
 
-      // Mock JwtService.decode to return a valid payload
-      const mockJwtDecode = vi.fn().mockReturnValue(mockPayload);
-      (service as any).jwtService.decode = mockJwtDecode;
+      mockJwtDecode.mockReturnValue(mockPayload);
 
       await service.revokeToken(token);
 
@@ -570,15 +643,14 @@ describe('TokenService', () => {
         token,
         'access',
         expect.any(Date),
-        1,
+        userId,
         'Manual revocation',
       );
     });
 
     it('should handle decode errors gracefully', async () => {
-      const token = 'invalid-token';
-      const mockJwtDecode = vi.fn().mockReturnValue(null);
-      (service as any).jwtService.decode = mockJwtDecode;
+      const token = randomToken();
+      mockJwtDecode.mockReturnValue(null);
 
       await service.revokeToken(token);
 
@@ -589,11 +661,10 @@ describe('TokenService', () => {
     });
 
     it('should handle decode exceptions', async () => {
-      const token = 'malformed-token';
-      const mockJwtDecode = vi.fn().mockImplementation(() => {
+      const token = randomToken();
+      mockJwtDecode.mockImplementation(() => {
         throw new Error('Decode failed');
       });
-      (service as any).jwtService.decode = mockJwtDecode;
 
       await service.revokeToken(token);
 
@@ -603,12 +674,11 @@ describe('TokenService', () => {
     });
 
     it('should handle payload without exp field', async () => {
-      const token = 'token-without-exp';
-      const mockJwtDecode = vi.fn().mockReturnValue({
+      const token = randomToken();
+      mockJwtDecode.mockReturnValue({
         sub: 1,
         username: 'testuser',
       });
-      (service as any).jwtService.decode = mockJwtDecode;
 
       await service.revokeToken(token);
 
@@ -617,13 +687,12 @@ describe('TokenService', () => {
     });
 
     it('should handle payload with invalid exp type', async () => {
-      const token = 'token-invalid-exp';
-      const mockJwtDecode = vi.fn().mockReturnValue({
+      const token = randomToken();
+      mockJwtDecode.mockReturnValue({
         sub: 1,
         username: 'testuser',
         exp: 'invalid',
       });
-      (service as any).jwtService.decode = mockJwtDecode;
 
       await service.revokeToken(token);
 
@@ -632,13 +701,12 @@ describe('TokenService', () => {
     });
 
     it('should handle payload with zero or negative exp', async () => {
-      const token = 'token-zero-exp';
-      const mockJwtDecode = vi.fn().mockReturnValue({
+      const token = randomToken();
+      mockJwtDecode.mockReturnValue({
         sub: 1,
         username: 'testuser',
         exp: 0,
       });
-      (service as any).jwtService.decode = mockJwtDecode;
 
       await service.revokeToken(token);
 
@@ -647,7 +715,8 @@ describe('TokenService', () => {
     });
 
     it('should delete refresh token from map when revoking', async () => {
-      const token = 'refresh-to-delete';
+      const token = randomToken();
+      // Accessing private field for testing purposes - testing token cleanup
       (service as any).refreshTokens.set(token, {
         token,
         expiresAt: dayjs().add(1, 'day'),
@@ -663,17 +732,16 @@ describe('TokenService', () => {
     });
 
     it('should handle token with non-numeric sub (anonymous token)', async () => {
-      const token = 'anonymous-revoke-token';
+      const token = randomToken();
       const mockPayload = {
         sub: 'anonymous',
-        username: 'guest',
+        username: randomUsername(),
         type: UserType.VIEWER,
         exp: Math.floor(Date.now() / 1000) + 3600,
         isAnonymous: true,
       };
 
-      const mockJwtDecode = vi.fn().mockReturnValue(mockPayload);
-      (service as any).jwtService.decode = mockJwtDecode;
+      mockJwtDecode.mockReturnValue(mockPayload);
 
       await service.revokeToken(token);
 
@@ -690,15 +758,15 @@ describe('TokenService', () => {
 
   describe('cleanupExpiredTokens - revoked tokens cleanup', () => {
     it('should clean up expired revoked tokens older than 24 hours', () => {
-      const expiredToken = 'expired-revoked-token';
+      const expiredToken = randomToken();
       const expiredPayload = {
         sub: 1,
         username: 'test',
         exp: Math.floor((Date.now() - 25 * 60 * 60 * 1000) / 1000), // 25 hours ago
       };
 
-      const mockJwtDecode = vi.fn().mockReturnValue(expiredPayload);
-      (service as any).jwtService.decode = mockJwtDecode;
+      mockJwtDecode.mockReturnValue(expiredPayload);
+      // Accessing private field for testing purposes - setting up revoked token
       (service as any).revokedTokens.add(expiredToken);
 
       service.cleanupExpiredTokens();
@@ -707,15 +775,15 @@ describe('TokenService', () => {
     });
 
     it('should keep recently revoked tokens within 24 hours', () => {
-      const recentToken = 'recent-revoked-token';
+      const recentToken = randomToken();
       const recentPayload = {
         sub: 1,
         username: 'test',
         exp: Math.floor((Date.now() - 1 * 60 * 60 * 1000) / 1000), // 1 hour ago
       };
 
-      const mockJwtDecode = vi.fn().mockReturnValue(recentPayload);
-      (service as any).jwtService.decode = mockJwtDecode;
+      mockJwtDecode.mockReturnValue(recentPayload);
+      // Accessing private field for testing purposes - setting up revoked token
       (service as any).revokedTokens.add(recentToken);
 
       service.cleanupExpiredTokens();
@@ -724,11 +792,11 @@ describe('TokenService', () => {
     });
 
     it('should clean up tokens that cannot be decoded', () => {
-      const malformedToken = 'malformed-token';
-      const mockJwtDecode = vi.fn().mockImplementation(() => {
+      const malformedToken = randomToken();
+      mockJwtDecode.mockImplementation(() => {
         throw new Error('Decode error');
       });
-      (service as any).jwtService.decode = mockJwtDecode;
+      // Accessing private field for testing purposes - setting up revoked token
       (service as any).revokedTokens.add(malformedToken);
 
       service.cleanupExpiredTokens();
@@ -737,9 +805,9 @@ describe('TokenService', () => {
     });
 
     it('should not clean up tokens with null payload', () => {
-      const nullPayloadToken = 'null-payload-token';
-      const mockJwtDecode = vi.fn().mockReturnValue(null);
-      (service as any).jwtService.decode = mockJwtDecode;
+      const nullPayloadToken = randomToken();
+      mockJwtDecode.mockReturnValue(null);
+      // Accessing private field for testing purposes - setting up revoked token
       (service as any).revokedTokens.add(nullPayloadToken);
 
       service.cleanupExpiredTokens();
@@ -749,9 +817,9 @@ describe('TokenService', () => {
     });
 
     it('should not clean up tokens with non-object payload', () => {
-      const stringPayloadToken = 'string-payload-token';
-      const mockJwtDecode = vi.fn().mockReturnValue('not-an-object');
-      (service as any).jwtService.decode = mockJwtDecode;
+      const stringPayloadToken = randomToken();
+      mockJwtDecode.mockReturnValue('not-an-object');
+      // Accessing private field for testing purposes - setting up revoked token
       (service as any).revokedTokens.add(stringPayloadToken);
 
       service.cleanupExpiredTokens();

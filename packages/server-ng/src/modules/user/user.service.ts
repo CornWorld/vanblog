@@ -37,7 +37,10 @@ export class UserService {
       return undefined;
     }
     if (Array.isArray(input)) {
-      const arr = input.filter((v): v is string => typeof v === 'string');
+      const arr = input
+        .filter((v): v is string => typeof v === 'string')
+        .map((s) => s.trim())
+        .filter((s) => s.length > 0);
       return arr.length > 0 ? arr : null;
     }
     if (typeof input === 'string') {

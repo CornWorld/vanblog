@@ -194,29 +194,9 @@ export class AuthController {
    *
    * 查询系统登录日志，支持按用户名和登录状态过滤。仅管理员可访问。
    *
-   * @param req 包含用户信息的请求对象
-   * @param query 查询参数，包含用户名和成功状态过滤条件
-   * @returns 登录日志列表
+   * Note: Login logs endpoints are now handled by LoginLogTsRestController
+   * using ts-rest for better type safety and validation.
    */
-  @Get('logs')
-  @Perm({ roles: UserType.ADMIN })
-  @ApiOperation({ summary: 'Get login logs' })
-  @ApiResponse({ status: 200, description: 'Login logs retrieved successfully' })
-  @ApiQuery({ name: 'username', required: false })
-  @ApiQuery({ name: 'success', required: false, type: Boolean })
-  async getLoginLogs(
-    @Request() req: RequestWithUser,
-    @Query() rawQuery: unknown,
-  ): Promise<LoginLogResponseDto[]> {
-    const parsed = LoginLogQuerySchema.safeParse(rawQuery);
-    if (!parsed.success) {
-      throw new BadRequestException({ message: 'Validation failed', issues: parsed.error.issues });
-    }
-    if (req.user.type !== UserType.ADMIN) {
-      throw new HttpException('Access denied', HttpStatus.FORBIDDEN);
-    }
-    return this.loginLogService.getLogs(parsed.data);
-  }
 
   /**
    * 获取 CSRF 令牌

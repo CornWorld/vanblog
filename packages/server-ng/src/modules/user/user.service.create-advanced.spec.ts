@@ -6,6 +6,10 @@
  * - 创建时的 Hook 复杂场景（beforeCreate/afterCreate）
  * - Hook 错误处理与数据修改
  *
+ * 迁移模式：
+ * - 使用真实数据库 + withTestTransaction 自动回滚
+ * - 保留外部服务 Mock（HookService）
+ *
  * 关联文件：
  * - user.service.spec.ts - 核心 CRUD 操作
  * - user.service.update-password.spec.ts - 密码处理
@@ -14,38 +18,62 @@
  */
 
 import { Test, type TestingModule } from '@nestjs/testing';
-import * as bcrypt from 'bcrypt';
-import { vi } from 'vitest';
+import { vi, describe, beforeAll, afterAll, beforeEach, it, expect } from 'vitest';
+import { users } from '@vanblog/shared/drizzle';
+import { eq } from 'drizzle-orm';
 
-import { createMockUser, Mock, DatabaseMockBuilder } from '@test/mock';
+import { Mock } from '@test/mock';
+import { withTestTransaction } from '@test/utils/db-transaction-helper';
+import { setupWorkerDatabase, cleanupWorkerDatabase, getWorkerIdFromEnv } from '@test/utils/db-worker-setup';
+
 import { DATABASE_CONNECTION } from '../../database';
 import { HookService } from '../plugin/services/hook.service';
 
 import { UserService } from './user.service';
 
 import type { CreateUserDto } from './dto/create-user.dto';
-
-vi.mock('bcrypt');
-const mockedBcrypt = vi.mocked(bcrypt);
+import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 
 describe('UserService - Create Advanced', () => {
+  let db: LibSQLDatabase;
+  let dbPath: string;
   let service: UserService;
-  let databaseMock: InstanceType<typeof DatabaseMockBuilder>;
+  let module: TestingModule;
   let mockHookService: ReturnType<typeof Mock.hook>;
 
-  beforeEach(async () => {
-    // 使用Mock工具类创建数据库Mock
-    databaseMock = Mock.db();
+  beforeAll(async () => {
+    // Setup test database for this test file
+    const workerId = getWorkerIdFromEnv();
+    const setup = await setupWorkerDatabase(workerId);
+    db = setup.db;
+    dbPath = setup.dbPath;
 
-    // 创建Hook服务Mock
+    // Create users table
+    await db.run(`
+      CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT NOT NULL UNIQUE,
+        password TEXT NOT NULL,
+        nickname TEXT,
+        email TEXT UNIQUE,
+        avatar TEXT,
+        type TEXT NOT NULL DEFAULT 'guest',
+        permissions TEXT,
+        created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now') * 1000),
+        updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now') * 1000)
+      );
+    `);
+
+    // Create Hook service mock
     mockHookService = Mock.hook();
 
-    const module: TestingModule = await Test.createTestingModule({
+    // Create test module with real database and mocked services
+    module = await Test.createTestingModule({
       providers: [
         UserService,
         {
           provide: DATABASE_CONNECTION,
-          useValue: databaseMock.db,
+          useValue: db,
         },
         {
           provide: HookService,
@@ -57,127 +85,218 @@ describe('UserService - Create Advanced', () => {
     service = module.get<UserService>(UserService);
   });
 
-  afterEach(() => {
+  afterAll(async () => {
+    await cleanupWorkerDatabase(dbPath);
+  });
+
+  beforeEach(() => {
     vi.clearAllMocks();
-    databaseMock.reset();
+    // Reset hook mocks to default implementations
+    mockHookService.applyFilters = Mock.hook().applyFilters;
+    mockHookService.doAction = Mock.hook().doAction;
   });
 
   describe('Concurrency and Race Conditions', () => {
     it('should handle concurrent username existence checks', async () => {
-      const createUserDto1: CreateUserDto = {
-        username: 'concurrentuser',
-        password: 'password123',
-        type: 'admin',
-      };
+      await withTestTransaction(db, async (tx) => {
+        // Inject transaction database into service
+        (service as any).db = tx;
 
-      mockedBcrypt.hash.mockResolvedValue('hashedPassword' as never);
+        const createUserDto: CreateUserDto = {
+          username: 'concurrentuser',
+          password: 'password123',
+          type: 'admin',
+        };
 
-      // First call finds no user, second call also finds no user (simulating race condition)
-      databaseMock.setQueryResult([]);
+        // First creation should succeed
+        const result1 = await service.create(createUserDto);
+        expect(result1.username).toBe('concurrentuser');
 
-      const createdDbUser = createMockUser({
-        username: 'concurrentuser',
-        type: 'admin',
-        password: 'hashedPassword',
+        // Verify user was created in database
+        const [savedUser] = await tx.select().from(users).where(eq(users.username, 'concurrentuser'));
+        expect(savedUser).toBeDefined();
+        expect(savedUser.username).toBe('concurrentuser');
+        expect(savedUser.type).toBe('admin');
       });
 
-      databaseMock.setInsertResult([createdDbUser]);
+      // Verify rollback happened - database should be clean
+      const allUsers = await db.select().from(users);
+      expect(allUsers).toHaveLength(0);
+    });
 
-      // Both calls should complete without throwing ConflictException
-      // (Database would handle the uniqueness constraint in real scenario)
-      const result1 = await service.create(createUserDto1);
-      expect(result1.username).toBe('concurrentuser');
+    it('should throw ConflictException for duplicate username', async () => {
+      await withTestTransaction(db, async (tx) => {
+        // Inject transaction database into service
+        (service as any).db = tx;
+
+        const createUserDto: CreateUserDto = {
+          username: 'duplicateuser',
+          password: 'password123',
+          type: 'admin',
+        };
+
+        // First creation should succeed
+        const result1 = await service.create(createUserDto);
+        expect(result1.username).toBe('duplicateuser');
+
+        // Second creation with same username should fail
+        await expect(service.create(createUserDto)).rejects.toThrow('Username already exists');
+      });
+
+      // Verify rollback happened - database should be clean
+      const allUsers = await db.select().from(users);
+      expect(allUsers).toHaveLength(0);
     });
   });
 
   describe('Hook Integration - beforeCreate', () => {
     it('should trigger beforeCreate and afterCreate hooks', async () => {
-      const createUserDto: CreateUserDto = {
-        username: 'testuser',
-        password: 'password123',
-        type: 'admin',
-      };
+      await withTestTransaction(db, async (tx) => {
+        // Inject transaction database into service
+        (service as any).db = tx;
 
-      mockedBcrypt.hash.mockResolvedValue('hashedPassword' as never);
-
-      const createdDbUser = createMockUser({
-        username: createUserDto.username,
-        type: createUserDto.type,
-        password: 'hashedPassword',
-      });
-
-      databaseMock.setQueryResult([]);
-      databaseMock.setInsertResult([createdDbUser]);
-
-      await service.create(createUserDto);
-
-      expect(mockHookService.applyFilters).toHaveBeenCalledWith(
-        'user|beforeCreate',
-        createUserDto,
-        { action: 'create' },
-      );
-      expect(mockHookService.doAction).toHaveBeenCalledWith(
-        'user|afterCreate',
-        expect.any(Object),
-        expect.objectContaining({
-          id: expect.any(Number),
+        const createUserDto: CreateUserDto = {
           username: 'testuser',
-        }),
-      );
+          password: 'password123',
+          type: 'admin',
+        };
+
+        const result = await service.create(createUserDto);
+
+        // Verify hooks were called
+        expect(mockHookService.applyFilters).toHaveBeenCalledWith(
+          'user|beforeCreate',
+          createUserDto,
+          { action: 'create' },
+        );
+        expect(mockHookService.doAction).toHaveBeenCalledWith(
+          'user|afterCreate',
+          expect.any(Object),
+          expect.objectContaining({
+            id: expect.any(Number),
+            username: 'testuser',
+          }),
+        );
+
+        // Verify user was created in database
+        const [savedUser] = await tx.select().from(users).where(eq(users.username, 'testuser'));
+        expect(savedUser).toBeDefined();
+        expect(savedUser.username).toBe('testuser');
+        expect(savedUser.type).toBe('admin');
+      });
     });
 
     it('should continue even if beforeCreate hook throws error', async () => {
-      const createUserDto: CreateUserDto = {
-        username: 'testuser',
-        password: 'password123',
-        type: 'admin',
-      };
+      await withTestTransaction(db, async (tx) => {
+        // Inject transaction database into service
+        (service as any).db = tx;
 
-      mockHookService.applyFilters = vi.fn().mockRejectedValue(new Error('Hook error'));
-      mockedBcrypt.hash.mockResolvedValue('hashedPassword' as never);
+        const createUserDto: CreateUserDto = {
+          username: 'testuser',
+          password: 'password123',
+          type: 'admin',
+        };
 
-      const createdDbUser = createMockUser({
-        username: createUserDto.username,
-        type: createUserDto.type,
-        password: 'hashedPassword',
+        // Mock hook to throw error
+        mockHookService.applyFilters = vi.fn().mockRejectedValue(new Error('Hook error'));
+
+        // Creation should still succeed
+        const result = await service.create(createUserDto);
+
+        expect(result.username).toBe('testuser');
+
+        // Verify user was still created in database
+        const [savedUser] = await tx.select().from(users).where(eq(users.username, 'testuser'));
+        expect(savedUser).toBeDefined();
+        expect(savedUser.username).toBe('testuser');
       });
-
-      databaseMock.setQueryResult([]);
-      databaseMock.setInsertResult([createdDbUser]);
-
-      const result = await service.create(createUserDto);
-
-      expect(result.username).toBe('testuser');
     });
 
     it('should allow beforeCreate hook to modify user data', async () => {
-      const createUserDto: CreateUserDto = {
-        username: 'testuser',
-        password: 'password123',
-        type: 'admin',
-      };
+      await withTestTransaction(db, async (tx) => {
+        // Inject transaction database into service
+        (service as any).db = tx;
 
-      const modifiedDto = {
-        ...createUserDto,
-        nickname: 'Modified by hook',
-      };
+        const createUserDto: CreateUserDto = {
+          username: 'testuser',
+          password: 'password123',
+          type: 'admin',
+        };
 
-      mockHookService.applyFilters = vi.fn().mockResolvedValue(modifiedDto);
-      mockedBcrypt.hash.mockResolvedValue('hashedPassword' as never);
+        const modifiedDto = {
+          ...createUserDto,
+          nickname: 'Modified by hook',
+        };
 
-      const createdDbUser = createMockUser({
-        username: modifiedDto.username,
-        type: modifiedDto.type,
-        password: 'hashedPassword',
-        nickname: modifiedDto.nickname,
+        // Mock hook to modify data
+        mockHookService.applyFilters = vi.fn().mockResolvedValue(modifiedDto);
+
+        const result = await service.create(createUserDto);
+
+        // Verify modified data was used
+        expect(result.nickname).toBe('Modified by hook');
+
+        // Verify user was created with modified data in database
+        const [savedUser] = await tx.select().from(users).where(eq(users.username, 'testuser'));
+        expect(savedUser).toBeDefined();
+        expect(savedUser.nickname).toBe('Modified by hook');
       });
+    });
 
-      databaseMock.setQueryResult([]);
-      databaseMock.setInsertResult([createdDbUser]);
+    it('should propagate afterCreate hook errors', async () => {
+      await withTestTransaction(db, async (tx) => {
+        // Inject transaction database into service
+        (service as any).db = tx;
 
-      const result = await service.create(createUserDto);
+        const createUserDto: CreateUserDto = {
+          username: 'testuser',
+          password: 'password123',
+          type: 'admin',
+        };
 
-      expect(result.nickname).toBe('Modified by hook');
+        // Mock afterCreate hook to throw error
+        mockHookService.doAction = vi.fn().mockRejectedValue(new Error('After hook error'));
+
+        // Creation should fail with hook error
+        await expect(service.create(createUserDto)).rejects.toThrow('After hook error');
+
+        // Verify user was still created in database (transaction would have committed before hook)
+        const [savedUser] = await tx.select().from(users).where(eq(users.username, 'testuser'));
+        expect(savedUser).toBeDefined();
+        expect(savedUser.username).toBe('testuser');
+      });
+    });
+
+    it('should call hooks with correct context', async () => {
+      await withTestTransaction(db, async (tx) => {
+        // Inject transaction database into service
+        (service as any).db = tx;
+
+        const createUserDto: CreateUserDto = {
+          username: 'contextuser',
+          password: 'password123',
+          type: 'guest',
+        };
+
+        await service.create(createUserDto);
+
+        // Verify beforeCreate was called with action context
+        expect(mockHookService.applyFilters).toHaveBeenCalledWith(
+          'user|beforeCreate',
+          createUserDto,
+          { action: 'create' },
+        );
+
+        // Verify afterCreate was called with created user
+        const afterCreateCalls = mockHookService.doAction.mock.calls;
+        const userAfterCreateCall = afterCreateCalls.find((call) => call[0] === 'user|afterCreate');
+
+        expect(userAfterCreateCall).toBeDefined();
+        expect(userAfterCreateCall![2]).toMatchObject({
+          username: 'contextuser',
+          type: 'guest',
+        });
+      });
     });
   });
 });

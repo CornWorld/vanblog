@@ -15,6 +15,7 @@ describe('JwtStrategy', () => {
   let strategy: JwtStrategy;
   let userService: UserService;
 
+  // ✅ 优化：使用新的扁平化 Mock API
   const mockUser = Mock.user({
     id: 1,
     username: 'testuser',
@@ -28,6 +29,7 @@ describe('JwtStrategy', () => {
     findOne: vi.fn(),
   };
 
+  // ✅ 优化：使用新的扁平化 Mock API
   const mockConfigService = Mock.config({
     JWT_SECRET: 'test-secret',
   }) as any;

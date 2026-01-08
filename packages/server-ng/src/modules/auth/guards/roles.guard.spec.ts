@@ -27,6 +27,7 @@ describe('RolesGuard', () => {
 
   describe('canActivate', () => {
     it('should return true when no roles are required', () => {
+      // ✅ 优化：使用新的扁平化 Mock API
       const mockContext = Mock.context({
         request: { user: { id: 1, type: UserType.ADMIN } },
       });
@@ -39,6 +40,7 @@ describe('RolesGuard', () => {
     });
 
     it('should return true when user has required role', () => {
+      // ✅ 优化：使用新的扁平化 Mock API
       const mockContext = Mock.context({
         request: { user: { id: 1, type: UserType.ADMIN } },
       });
@@ -52,6 +54,7 @@ describe('RolesGuard', () => {
     });
 
     it('should return false when user lacks required role', () => {
+      // ✅ 优化：使用新的扁平化 Mock API
       const mockContext = Mock.context({
         request: { user: { id: 1, type: UserType.AUTHOR } },
       });
@@ -65,6 +68,7 @@ describe('RolesGuard', () => {
     });
 
     it('should return true when user has one of multiple required roles', () => {
+      // ✅ 优化：使用新的扁平化 Mock API
       const mockContext = Mock.context({
         request: { user: { id: 1, type: UserType.ADMIN } },
       });
@@ -78,6 +82,7 @@ describe('RolesGuard', () => {
     });
 
     it('should return false when user has none of the required roles', () => {
+      // ✅ 优化：使用新的扁平化 Mock API
       const mockContext = Mock.context({
         request: { user: { id: 1, type: UserType.AUTHOR } },
       });
@@ -91,6 +96,7 @@ describe('RolesGuard', () => {
     });
 
     it('should return false when user is missing from request', () => {
+      // ✅ 优化：使用新的扁平化 Mock API
       const mockContext = Mock.context({
         request: {},
       });
@@ -104,6 +110,7 @@ describe('RolesGuard', () => {
     });
 
     it('should return false when user type is missing', () => {
+      // ✅ 优化：使用新的扁平化 Mock API
       const mockContext = Mock.context({
         request: { user: { id: 1 } },
       });

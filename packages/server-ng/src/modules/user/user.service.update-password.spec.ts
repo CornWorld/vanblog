@@ -6,6 +6,11 @@
  * - 密码变更后的 Hook 触发（afterPasswordChange）
  * - 密码哈希验证
  *
+ * 迁移说明：
+ * - 使用真实数据库 + withTestTransaction 进行测试
+ * - 保留 bcrypt Mock（外部依赖）
+ * - 保留 HookService Mock
+ *
  * 关联文件：
  * - user.service.spec.ts - 核心 CRUD 操作
  * - user.service.create-advanced.spec.ts - 高级创建场景
@@ -14,13 +19,17 @@
  */
 
 import { Test, type TestingModule } from '@nestjs/testing';
-// import { users } from '@vanblog/shared/drizzle';
 import * as bcrypt from 'bcrypt';
 import { vi } from 'vitest';
+import { eq } from 'drizzle-orm';
 
-import { createMockUser, Mock, DatabaseMockBuilder } from '@test/mock';
+import { Mock } from '@test/mock';
+import { Given } from '@test/given';
+import { withTestTransaction } from '@test/utils/db-transaction-helper';
+import { db } from '@test/setup.unit';
 import { DATABASE_CONNECTION } from '../../database';
 import { HookService } from '../plugin/services/hook.service';
+import { users } from '@vanblog/shared/drizzle';
 
 import { UserService } from './user.service';
 
@@ -29,13 +38,9 @@ const mockedBcrypt = vi.mocked(bcrypt);
 
 describe('UserService - Update Password', () => {
   let service: UserService;
-  let databaseMock: InstanceType<typeof DatabaseMockBuilder>;
   let mockHookService: ReturnType<typeof Mock.hook>;
 
-  beforeEach(async () => {
-    // 使用Mock工具类创建数据库Mock
-    databaseMock = Mock.db();
-
+  beforeAll(async () => {
     // 创建Hook服务Mock
     mockHookService = Mock.hook();
 
@@ -44,7 +49,7 @@ describe('UserService - Update Password', () => {
         UserService,
         {
           provide: DATABASE_CONNECTION,
-          useValue: databaseMock.db,
+          useValue: db,
         },
         {
           provide: HookService,
@@ -58,81 +63,114 @@ describe('UserService - Update Password', () => {
 
   afterEach(() => {
     vi.clearAllMocks();
-    databaseMock.reset();
   });
 
   describe('Password Hashing', () => {
     it('should hash password when updating password', async () => {
-      const updateData = {
-        password: 'newpassword123',
-      };
+      await withTestTransaction(db, async (tx) => {
+        // 注入事务数据库
+        service['db'] = tx;
 
-      mockedBcrypt.hash.mockResolvedValue('newHashedPassword' as never);
+        // 创建测试用户
+        const user = await Given.user({
+          username: 'testuser',
+          password: 'oldHashedPassword',
+          type: 'admin',
+        });
 
-      const updatedDbUser = createMockUser({
-        nickname: null,
-        email: null,
-        permissions: null,
-        password: 'newHashedPassword',
-      });
+        const updateData = {
+          password: 'newpassword123',
+        };
 
-      databaseMock.setUpdateResult([updatedDbUser]);
+        mockedBcrypt.hash.mockResolvedValue('newHashedPassword' as never);
 
-      await service.update(1, updateData);
+        await service.update(user.id, updateData);
 
-      expect(mockedBcrypt.hash).toHaveBeenCalledWith('newpassword123', 10);
-      expect(mockHookService.doAction).toHaveBeenCalledWith('user|afterPasswordChange', {
-        userId: 1,
-        username: 'testuser',
+        // 验证 bcrypt.hash 被调用
+        expect(mockedBcrypt.hash).toHaveBeenCalledWith('newpassword123', 10);
+
+        // 验证数据库持久化
+        const [saved] = await tx.select().from(users).where(eq(users.id, user.id));
+        expect(saved.password).toBe('newHashedPassword');
+
+        // 验证 Hook 触发
+        expect(mockHookService.doAction).toHaveBeenCalledWith('user|afterPasswordChange', {
+          userId: user.id,
+          username: 'testuser',
+        });
       });
     });
   });
 
   describe('afterPasswordChange Hook', () => {
     it('should trigger afterPasswordChange hook when password changed', async () => {
-      const updateData = {
-        password: 'newpassword123',
-        nickname: 'Updated',
-      };
+      await withTestTransaction(db, async (tx) => {
+        // 注入事务数据库
+        service['db'] = tx;
 
-      mockedBcrypt.hash.mockResolvedValue('newHashedPassword' as never);
+        // 创建测试用户
+        const user = await Given.user({
+          username: 'testuser',
+          password: 'oldHashedPassword',
+          nickname: 'Old Nickname',
+          type: 'admin',
+        });
 
-      const updatedDbUser = createMockUser({
-        nickname: 'Updated',
-        email: null,
-        permissions: null,
-        password: 'newHashedPassword',
-      });
+        const updateData = {
+          password: 'newpassword123',
+          nickname: 'Updated',
+        };
 
-      databaseMock.setUpdateResult([updatedDbUser]);
+        mockedBcrypt.hash.mockResolvedValue('newHashedPassword' as never);
 
-      await service.update(1, updateData);
+        await service.update(user.id, updateData);
 
-      expect(mockHookService.doAction).toHaveBeenCalledWith('user|afterPasswordChange', {
-        userId: 1,
-        username: 'testuser',
+        // 验证数据库更新
+        const [saved] = await tx.select().from(users).where(eq(users.id, user.id));
+        expect(saved.nickname).toBe('Updated');
+        expect(saved.password).toBe('newHashedPassword');
+
+        // 验证 Hook 触发
+        expect(mockHookService.doAction).toHaveBeenCalledWith('user|afterPasswordChange', {
+          userId: user.id,
+          username: 'testuser',
+        });
       });
     });
 
     it('should not trigger afterPasswordChange hook when password not changed', async () => {
-      const updateData = {
-        nickname: 'Updated',
-      };
+      await withTestTransaction(db, async (tx) => {
+        // 注入事务数据库
+        service['db'] = tx;
 
-      const updatedDbUser = createMockUser({
-        nickname: 'Updated',
-        email: null,
-        permissions: null,
+        // 创建测试用户
+        const [user] = await tx
+          .insert(users)
+          .values({
+            username: 'testuser',
+            password: 'hashedPassword',
+            nickname: 'Old Nickname',
+            type: 'admin',
+          })
+          .returning();
+
+        const updateData = {
+          nickname: 'Updated',
+        };
+
+        await service.update(user.id, updateData);
+
+        // 验证数据库更新
+        const [saved] = await tx.select().from(users).where(eq(users.id, user.id));
+        expect(saved.nickname).toBe('Updated');
+        expect(saved.password).toBe('hashedPassword'); // 密码未改变
+
+        // 验证 Hook 未触发
+        expect(mockHookService.doAction).not.toHaveBeenCalledWith(
+          'user|afterPasswordChange',
+          expect.any(Object),
+        );
       });
-
-      databaseMock.setUpdateResult([updatedDbUser]);
-
-      await service.update(1, updateData);
-
-      expect(mockHookService.doAction).not.toHaveBeenCalledWith(
-        'user|afterPasswordChange',
-        expect.any(Object),
-      );
     });
   });
 });
