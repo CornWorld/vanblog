@@ -12,9 +12,14 @@
  */
 
 import { Test, type TestingModule } from '@nestjs/testing';
-import { vi, describe, beforeEach, it, expect } from 'vitest';
+import { categories, articles, articleTags, tags } from '@vanblog/shared/drizzle';
+import { eq } from 'drizzle-orm';
+import { describe, beforeEach, it, expect, vi } from 'vitest';
 
+import { db } from '@test/setup.unit';
+import { withTestTransaction } from '@test/utils/db-transaction-helper';
 import { Mock } from '@test/mock';
+import { Given } from '@test/given';
 
 import { ConfigService } from '../../config/config.service';
 import { DATABASE_CONNECTION } from '../../database';
@@ -26,206 +31,146 @@ import { CategoryService } from './category.service';
 
 describe('CategoryService - Associations', () => {
   let service: CategoryService;
-  let mockDb: any;
-  let mockHookService: Partial<HookService>;
+  let mockHookService: ReturnType<typeof Mock.hook>;
+  let mockStatisticsService: any;
+  let mockQueryOptimizer: any;
+  let mockConfigService: any;
+
+  // 辅助函数：创建使用事务数据库的服务实例
+  const createServiceWithTx = (tx: any) => {
+    return new CategoryService(
+      tx,
+      mockStatisticsService,
+      mockQueryOptimizer,
+      mockHookService,
+      mockConfigService,
+    );
+  };
 
   beforeEach(async () => {
-    // Setup mock database with chaining support
-    // Each select() call creates a new chain to avoid interference
-    const createMockChain = () => {
-      const chain: any = {
-        select: vi.fn().mockReturnThis(),
-        from: vi.fn().mockReturnThis(),
-        where: vi.fn().mockReturnThis(),
-        limit: vi.fn().mockReturnThis(),
-        insert: vi.fn().mockReturnThis(),
-        values: vi.fn().mockReturnThis(),
-        returning: vi.fn().mockReturnThis(),
-        update: vi.fn().mockReturnThis(),
-        set: vi.fn().mockReturnThis(),
-        delete: vi.fn().mockReturnThis(),
-        leftJoin: vi.fn().mockReturnThis(),
-        groupBy: vi.fn().mockReturnThis(),
-        orderBy: vi.fn().mockReturnThis(),
-        offset: vi.fn().mockReturnThis(),
-      };
-      return chain;
-    };
-
-    mockDb = {
-      select: vi.fn().mockImplementation(() => createMockChain()),
-      from: vi.fn().mockReturnThis(),
-      where: vi.fn().mockReturnThis(),
-      limit: vi.fn().mockReturnThis(),
-      insert: vi.fn().mockReturnThis(),
-      values: vi.fn().mockReturnThis(),
-      returning: vi.fn().mockReturnThis(),
-      update: vi.fn().mockReturnThis(),
-      set: vi.fn().mockReturnThis(),
-      delete: vi.fn().mockReturnThis(),
-      leftJoin: vi.fn().mockReturnThis(),
-      groupBy: vi.fn().mockReturnThis(),
-      orderBy: vi.fn().mockReturnThis(),
-      offset: vi.fn().mockReturnThis(),
-    };
-
+    // 创建 Mock 服务
     mockHookService = Mock.hook();
-
-    const module: TestingModule = await Test.createTestingModule({
-      imports: [],
-      providers: [
-        CategoryService,
-        {
-          provide: DATABASE_CONNECTION,
-          useValue: mockDb,
-        },
-        {
-          provide: StatisticsService,
-          useValue: {
-            getOverallStatistics: vi.fn().mockResolvedValue({
-              totalCategories: 0,
-              totalTags: 0,
-              totalArticles: 0,
-              publishedArticles: 0,
-              privateArticles: 0,
-              hiddenArticles: 0,
-              totalViews: 0,
-              categories: [],
-              tags: [],
-            }),
-          },
-        },
-        {
-          provide: QueryOptimizerService,
-          useValue: {
-            withPerformanceMonitoring: vi.fn().mockImplementation((_name, fn) => fn()),
-            batchCountArticlesByTags: vi.fn().mockResolvedValue(new Map()),
-            batchCountArticlesByCategories: vi.fn().mockResolvedValue(new Map()),
-            buildOptimizedSearchQuery: vi.fn().mockReturnValue([]),
-            logSlowQuery: vi.fn(),
-          },
-        },
-        {
-          provide: HookService,
-          useValue: mockHookService,
-        },
-        {
-          provide: ConfigService,
-          useValue: Mock.config({ 'jwt.secret': 'test-secret-key' }),
-        },
-      ],
-    }).compile();
-
-    service = module.get<CategoryService>(CategoryService);
+    mockStatisticsService = {
+      getOverallStatistics: vi.fn().mockResolvedValue({
+        totalCategories: 0,
+        totalTags: 0,
+        totalArticles: 0,
+        publishedArticles: 0,
+        privateArticles: 0,
+        hiddenArticles: 0,
+        totalViews: 0,
+        categories: [],
+        tags: [],
+      }),
+    };
+    mockQueryOptimizer = {
+      withPerformanceMonitoring: vi.fn().mockImplementation((_name, fn) => fn()),
+      batchCountArticlesByTags: vi.fn().mockResolvedValue(new Map()),
+      batchCountArticlesByCategories: vi.fn().mockResolvedValue(new Map()),
+      buildOptimizedSearchQuery: vi.fn().mockReturnValue([]),
+      logSlowQuery: vi.fn(),
+    };
+    mockConfigService = Mock.config({ 'jwt.secret': 'test-secret-key' });
   });
 
   describe('getCategoriesWithTags', () => {
     it('should return categories with their tags', async () => {
-      const mockCategories = [
-        {
-          id: 1,
-          name: 'Category1',
-          slug: undefined,
-          description: null,
-          private: false,
-          password: null,
-        },
-        {
-          id: 2,
-          name: 'Category2',
-          slug: undefined,
-          description: null,
-          private: false,
-          password: null,
-        },
-      ];
+      await withTestTransaction(db, async (tx) => {
+        const txService = createServiceWithTx(tx);
 
-      // Query 1: Get all categories
-      mockDb.from.mockResolvedValueOnce(mockCategories);
+        // Given: 创建测试数据
+        const category1 = await Given.category(tx, { name: 'Category1' });
+        const category2 = await Given.category(tx, { name: 'Category2' });
 
-      // Query 2: Get articles (id, category)
-      const mockArticles = [
-        { id: 1, category: 'Category1' },
-        { id: 2, category: 'Category1' },
-        { id: 3, category: 'Category2' },
-      ];
-      mockDb.from.mockResolvedValueOnce(mockArticles);
+        const tag1 = await Given.tag(tx, { name: 'tag1' });
+        const tag2 = await Given.tag(tx, { name: 'tag2' });
+        const tag3 = await Given.tag(tx, { name: 'tag3' });
+        const tag4 = await Given.tag(tx, { name: 'tag4' });
 
-      // Query 3: Get article tags (articleId, tagName)
-      const mockArticleTags = [
-        { articleId: 1, tagName: 'tag1' },
-        { articleId: 1, tagName: 'tag2' },
-        { articleId: 2, tagName: 'tag2' },
-        { articleId: 2, tagName: 'tag3' },
-        { articleId: 3, tagName: 'tag4' },
-      ];
-      mockDb.where.mockResolvedValueOnce(mockArticleTags);
+        // 创建文章并关联标签
+        const article1 = await Given.article(tx, {
+          categoryId: category1.id,
+        });
+        const article2 = await Given.article(tx, {
+          categoryId: category1.id,
+        });
+        const article3 = await Given.article(tx, {
+          categoryId: category2.id,
+        });
 
-      const result = await service.getCategoriesWithTags();
+        // 关联标签到文章
+        await tx.insert(articleTags).values([
+          { articleId: article1.id, tagName: tag1.name, createdAt: new Date().toISOString() },
+          { articleId: article1.id, tagName: tag2.name, createdAt: new Date().toISOString() },
+          { articleId: article2.id, tagName: tag2.name, createdAt: new Date().toISOString() },
+          { articleId: article2.id, tagName: tag3.name, createdAt: new Date().toISOString() },
+          { articleId: article3.id, tagName: tag4.name, createdAt: new Date().toISOString() },
+        ]);
 
-      expect(result).toHaveLength(2);
-      expect(result[0].category.name).toBe('Category1');
-      expect(result[0].tags).toHaveLength(3); // tag1, tag2, tag3
-      expect(result[1].category.name).toBe('Category2');
-      expect(result[1].tags).toHaveLength(1); // tag4
+        // When: 调用 getCategoriesWithTags
+        const result = await txService.getCategoriesWithTags();
+
+        // Then: 验证结果（使用 find 因为数据库可能有其他分类）
+        const category1Result = result.find((c) => c.category.name === 'Category1');
+        expect(category1Result).toBeDefined();
+        expect(category1Result!.tags).toHaveLength(3); // tag1, tag2, tag3
+        expect(category1Result!.tags.map((t) => t.name)).toContain('tag1');
+        expect(category1Result!.tags.map((t) => t.name)).toContain('tag2');
+        expect(category1Result!.tags.map((t) => t.name)).toContain('tag3');
+
+        const category2Result = result.find((c) => c.category.name === 'Category2');
+        expect(category2Result).toBeDefined();
+        expect(category2Result!.tags).toHaveLength(1); // tag4
+        expect(category2Result!.tags[0].name).toBe('tag4');
+      });
     });
 
     it('should handle categories with no articles', async () => {
-      const mockCategories = [
-        {
-          id: 1,
-          name: 'EmptyCategory',
-          slug: null,
-          description: null,
-          private: false,
-          password: null,
-        },
-      ];
+      await withTestTransaction(db, async (tx) => {
+        const txService = createServiceWithTx(tx);
 
-      // Query 1: Get all categories
-      mockDb.from.mockResolvedValueOnce(mockCategories);
+        // Given: 创建一个没有文章的分类
+        const emptyCategory = await Given.category(tx, { name: 'EmptyCategory' });
 
-      // Query 2: Get articles (none)
-      const mockArticles: any[] = [];
-      mockDb.from.mockResolvedValueOnce(mockArticles);
+        // When: 调用 getCategoriesWithTags
+        const result = await txService.getCategoriesWithTags();
 
-      const result = await service.getCategoriesWithTags();
-
-      expect(result).toHaveLength(1);
-      expect(result[0].category.name).toBe('EmptyCategory');
-      expect(result[0].tags).toHaveLength(0);
+        // Then: 验证结果（使用 find 因为数据库可能有其他分类）
+        const emptyCategoryResult = result.find((c) => c.category.name === 'EmptyCategory');
+        expect(emptyCategoryResult).toBeDefined();
+        expect(emptyCategoryResult!.tags).toHaveLength(0);
+      });
     });
 
     it('should handle articles with null tags', async () => {
-      const mockCategories = [
-        {
-          id: 1,
-          name: 'Category1',
-          slug: null,
-          description: null,
-          private: false,
-          password: null,
-        },
-      ];
+      await withTestTransaction(db, async (tx) => {
+        const txService = createServiceWithTx(tx);
 
-      // Query 1: Get all categories
-      mockDb.from.mockResolvedValueOnce(mockCategories);
+        // Given: 创建分类和文章
+        const category1 = await Given.category(tx, { name: 'Category1' });
+        const tag1 = await Given.tag(tx, { name: 'tag1' });
 
-      // Query 2: Get articles
-      const mockArticles = [
-        { id: 1, category: 'Category1' },
-        { id: 2, category: 'Category1' },
-      ];
-      mockDb.from.mockResolvedValueOnce(mockArticles);
+        const article1 = await Given.article(tx, {
+          categoryId: category1.id,
+        });
+        const article2 = await Given.article(tx, {
+          categoryId: category1.id,
+        });
 
-      // Query 3: Get article tags (only article 2 has tags)
-      const mockArticleTags = [{ articleId: 2, tagName: 'tag1' }];
-      mockDb.where.mockResolvedValueOnce(mockArticleTags);
+        // 只有 article2 有关联的标签
+        await tx.insert(articleTags).values([
+          { articleId: article2.id, tagName: tag1.name, createdAt: new Date().toISOString() },
+        ]);
 
-      const result = await service.getCategoriesWithTags();
+        // When: 调用 getCategoriesWithTags
+        const result = await txService.getCategoriesWithTags();
 
-      expect(result[0].tags).toHaveLength(1);
-      expect(result[0].tags[0].name).toBe('tag1');
+        // Then: 验证结果（使用 find 因为数据库可能有其他分类）
+        const category1Result = result.find((c) => c.category.name === 'Category1');
+        expect(category1Result).toBeDefined();
+        expect(category1Result!.tags).toHaveLength(1);
+        expect(category1Result!.tags[0].name).toBe('tag1');
+      });
     });
   });
 });
