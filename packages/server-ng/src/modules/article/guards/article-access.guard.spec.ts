@@ -162,7 +162,7 @@ describe('ArticleAccessGuard', () => {
         isAnonymous: true,
       };
 
-      const token = jwt.sign(payload, 'test-secret');
+      const token = jwt.sign(payload, 'test-secret') as string;
 
       const { context, request } = createMockExecutionContext({
         params: { id: '1' },
@@ -194,7 +194,7 @@ describe('ArticleAccessGuard', () => {
         isAnonymous: true,
       };
 
-      const token = jwt.sign(payload, 'test-secret');
+      const token = jwt.sign(payload, 'test-secret') as string;
 
       const { context } = createMockExecutionContext({
         params: { id: '1' },
@@ -224,7 +224,7 @@ describe('ArticleAccessGuard', () => {
         isAnonymous: false,
       };
 
-      const token = jwt.sign(payload, 'test-secret');
+      const token = jwt.sign(payload, 'test-secret') as string;
 
       const { context } = createMockExecutionContext({
         params: { id: '1' },
@@ -255,7 +255,7 @@ describe('ArticleAccessGuard', () => {
         isAnonymous: false,
       };
 
-      const token = jwt.sign(payload, 'test-secret');
+      const token = jwt.sign(payload, 'test-secret') as string;
 
       const { context, request } = createMockExecutionContext({
         params: { id: '1' },
