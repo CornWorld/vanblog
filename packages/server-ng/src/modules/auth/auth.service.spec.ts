@@ -24,7 +24,7 @@ describe('AuthService', () => {
   let service: AuthService;
   let mockUserService: any;
   let mockTokenService: any;
-  let mockHookService: Partial<HookService>;
+  let mockHookService: HookService;
 
   const mockUser = new User({
     id: 1,
@@ -55,14 +55,14 @@ describe('AuthService', () => {
       generateAnonymousAccessToken: vi.fn() as any,
     } as any;
 
-    mockHookService = Mock.hook();
+    mockHookService = Mock.hook() as any;
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AuthService,
         { provide: UserService, useValue: mockUserService },
         { provide: TokenService, useValue: mockTokenService },
-        { provide: HookService, useValue: mockHookService },
+        { provide: HookService, useValue: mockHookService as any },
       ],
     }).compile();
 

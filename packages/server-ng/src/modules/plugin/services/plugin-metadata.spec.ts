@@ -16,14 +16,6 @@ const mockDb = {
   },
 };
 
-const mockPluginMetadata = {
-  pluginId: 'test-plugin',
-  entityType: 'article',
-  entityId: 1,
-  metaKey: 'reading-time',
-  metaValue: null,
-};
-
 // Mock drizzle-orm functions
 vi.mock('drizzle-orm', () => ({
   eq: vi.fn((...args) => ({ eq: args })),
@@ -31,9 +23,19 @@ vi.mock('drizzle-orm', () => ({
 }));
 
 // Mock @vanblog/shared/drizzle
-vi.mock('@vanblog/shared/drizzle', () => ({
-  pluginMetadata: mockPluginMetadata,
-}));
+vi.mock('@vanblog/shared/drizzle', () => {
+  const mockTable = {
+    pluginId: { name: 'pluginId' },
+    entityType: { name: 'entityType' },
+    entityId: { name: 'entityId' },
+    metaKey: { name: 'metaKey' },
+    metaValue: { name: 'metaValue' },
+  };
+  return {
+    default: mockTable,
+    pluginMetadata: mockTable,
+  };
+});
 
 // Mock @vanblog/shared dayjs
 vi.mock('@vanblog/shared', () => ({
@@ -80,7 +82,6 @@ describe('MetadataManager', () => {
 
       async get<T>(entityType: string, entityId: number, metaKey: string): Promise<T | null> {
         try {
-          // @ts-expect-error - pluginMetadata table not yet implemented in @vanblog/shared/drizzle
           const { pluginMetadata } = await import('@vanblog/shared/drizzle');
           const { eq, and } = await import('drizzle-orm');
 
@@ -158,7 +159,6 @@ describe('MetadataManager', () => {
 
       async delete(entityType: string, entityId: number, metaKey: string): Promise<void> {
         try {
-          // @ts-expect-error - pluginMetadata table not yet implemented in @vanblog/shared/drizzle
           const { pluginMetadata } = await import('@vanblog/shared/drizzle');
           const { eq, and } = await import('drizzle-orm');
 

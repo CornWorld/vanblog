@@ -23,7 +23,7 @@ import type { Server } from 'http';
  */
 describe('Cache Invalidation Workflow (e2e)', () => {
   let app: INestApplication;
-  let db: LibSQLDatabase;
+  let db: LibSQLDatabase<Record<string, unknown>>;
   let httpServer: Server;
   let authToken: string;
 
@@ -43,7 +43,7 @@ describe('Cache Invalidation Workflow (e2e)', () => {
 
     await app.init();
     httpServer = app.getHttpServer() as Server;
-    db = app.get<LibSQLDatabase>(DATABASE_CONNECTION);
+    db = app.get<LibSQLDatabase<Record<string, unknown>>>(DATABASE_CONNECTION);
 
     // Setup test user
     await createUser(app);

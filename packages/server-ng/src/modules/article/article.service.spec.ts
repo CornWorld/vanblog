@@ -1,14 +1,14 @@
 import { NotFoundException } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, beforeEach, it, expect, vi, afterEach } from 'vitest';
-import { eq, and } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import * as bcrypt from 'bcrypt';
 
-import { Mock } from '@test/mock';
+import { Mock, type MockedHookService } from '@test/mock';
 import { withTestTransaction } from '@test/utils/db-transaction-helper';
 import { db } from '@test/setup.unit';
 import { Given } from '@test/given';
-import { articles, categories, tags, users } from '@vanblog/shared/drizzle';
+import { articles } from '@vanblog/shared/drizzle';
 import { ConfigService } from '../../config/config.service';
 import { DATABASE_CONNECTION } from '../../database';
 import { QueryOptimizerService } from '../../shared/services/query-optimizer.service';
@@ -18,20 +18,20 @@ import { ArticleService } from './article.service';
 
 import type { ArticleSearchDto } from './dto/article.dto';
 
-// 辅助函数：创建测试用户（自动使用当前事务上下文）
+// Test helper to create a user in the current transaction context
 async function createTestUser(userId: number = 1) {
-  await Given.user({
+  await Given.user(db as any, {
     id: userId,
-    username: `testuser${userId}`,
-    name: `Test User ${userId}`,
-    email: `testuser${userId}@example.com`,
+    username: `testuser${String(userId)}`,
+    name: `Test User ${String(userId)}`,
+    email: `testuser${String(userId)}@example.com`,
     type: 'admin',
   });
 }
 
 describe('ArticleService', () => {
   let service: ArticleService;
-  let mockHookService: Partial<HookService>;
+  let mockHookService: MockedHookService;
   let mockQueryOptimizer: Partial<QueryOptimizerService>;
   let mockConfigService: Partial<ConfigService>;
 
@@ -56,7 +56,7 @@ describe('ArticleService', () => {
         },
         {
           provide: HookService,
-          useValue: mockHookService,
+          useValue: mockHookService as any,
         },
         {
           provide: ConfigService,
@@ -75,17 +75,16 @@ describe('ArticleService', () => {
   describe('findAll', () => {
     it('should return articles with pagination', async () => {
       await withTestTransaction(db, async (tx) => {
-        // 注入事务数据库
-        service['db'] = tx;
+        (service as any)['db'] = tx as any;
 
         // 先创建测试用户
         await createTestUser(1);
 
         // 创建测试数据
-        const article = await Given.article({
-          id: 1,
-          title: 'Test Article',
-        });
+        // const _article = await Given.article(db as any, {
+        //   id: 1,
+        //   title: 'Test Article',
+        // });
 
         const result = await service.findAll({
           page: 1,
@@ -105,10 +104,10 @@ describe('ArticleService', () => {
   describe('search', () => {
     it('should search articles by query', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx as any;
 
         // 创建测试数据
-        await Given.article({
+        await Given.article(db as any, {
           id: 1,
           title: 'search term',
         });
@@ -129,7 +128,7 @@ describe('ArticleService', () => {
 
     it('should search only in title when titleOnly is true', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx as any;
 
         const searchDto: ArticleSearchDto = {
           keyword: 'test',
@@ -148,14 +147,14 @@ describe('ArticleService', () => {
 
     it('should filter by category and tags', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx as any;
 
         // 先创建测试用户和分类
         await createTestUser(1);
-        await Given.category({ name: 'tech', slug: 'tech' });
+        await Given.category(db as any, { name: 'tech', slug: 'tech' });
 
         // 创建带分类和标签的文章
-        await Given.article({
+        await Given.article(db as any, {
           id: 1,
           category: 'tech',
           tags: ['javascript', 'node'],
@@ -181,12 +180,12 @@ describe('ArticleService', () => {
   describe('findOne', () => {
     it('should return a single article', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx as any;
 
         // 创建测试数据
-        const article = await Given.article({
-          id: 1,
-        });
+        // const _article = await Given.article(db as any, {
+        //   id: 1,
+        // });
 
         const result = await service.findOne(1);
 
@@ -197,7 +196,7 @@ describe('ArticleService', () => {
 
     it('should throw NotFoundException when article not found', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx as any;
 
         await expect(service.findOne(999)).rejects.toThrow(NotFoundException);
       });
@@ -207,7 +206,7 @@ describe('ArticleService', () => {
   describe('create', () => {
     it('should create a new article', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx as any;
 
         // 先创建测试用户
         await createTestUser(1);
@@ -241,7 +240,7 @@ describe('ArticleService', () => {
 
     it('should hash password on create when provided', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx as any;
 
         const createDto = Mock.articleDto({
           title: 'With Password',
@@ -266,15 +265,15 @@ describe('ArticleService', () => {
   describe('update', () => {
     it('should update an existing article', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx as any;
 
         // 创建现有文章
-        const existing = await Given.article({
-          id: 1,
-          title: 'Existing Article',
-          content: 'Existing content',
-          tags: ['existing'],
-        });
+        // const _existing = await Given.article(db as any, {
+        //   id: 1,
+        //   title: 'Existing Article',
+        //   content: 'Existing content',
+        //   tags: ['existing'],
+        // });
 
         const updateDto = {
           title: 'Updated Article',
@@ -295,12 +294,12 @@ describe('ArticleService', () => {
 
     it('should hash password on update when provided', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx as any;
 
         // 创建现有文章
-        const existing = await Given.article({
-          id: 3,
-        });
+        // const _existing = await Given.article(db as any, {
+        //   id: 3,
+        // });
 
         await service.update(3, { password: 'plain-update' } as unknown as Parameters<
           typeof service.update
@@ -316,7 +315,7 @@ describe('ArticleService', () => {
 
     it('should throw NotFoundException when article not found', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx as any;
 
         await expect(
           service.update(999, { title: 'Test', content: 'Test content', tags: [] }),
@@ -328,12 +327,12 @@ describe('ArticleService', () => {
   describe('remove', () => {
     it('should delete an article', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx as any;
 
         // 创建测试数据
-        const article = await Given.article({
-          id: 1,
-        });
+        // const _article = await Given.article(db as any, {
+        //   id: 1,
+        // });
 
         await expect(service.remove(1)).resolves.not.toThrow();
 
@@ -345,7 +344,7 @@ describe('ArticleService', () => {
 
     it('should throw NotFoundException when article not found', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx as any;
 
         await expect(service.remove(999)).rejects.toThrow(NotFoundException);
       });
@@ -355,21 +354,21 @@ describe('ArticleService', () => {
   describe('exportArticles', () => {
     it('should export all articles', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx as any;
 
         // 先创建测试用户和分类
         await createTestUser(1);
-        await Given.category({ name: 'tech', slug: 'tech' });
+        await Given.category(db as any, { name: 'tech', slug: 'tech' });
 
         // 创建测试数据
-        await Given.article({
+        await Given.article(db as any, {
           id: 1,
           title: 'Article 1',
           content: 'Content 1',
           tags: ['tag1'],
           viewer: 100,
         });
-        await Given.article({
+        await Given.article(db as any, {
           id: 2,
           title: 'Article 2',
           content: 'Content 2',
@@ -396,11 +395,11 @@ describe('ArticleService', () => {
   describe('importArticles', () => {
     it('should import multiple articles sequentially', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx as any;
 
         // 先创建测试用户和分类
         await createTestUser(1);
-        await Given.category({
+        await Given.category(db as any, {
           name: 'imported',
           slug: 'imported',
         });
@@ -437,7 +436,7 @@ describe('ArticleService', () => {
 
     it('should handle empty array import', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx as any;
 
         await service.importArticles([]);
 
@@ -450,7 +449,7 @@ describe('ArticleService', () => {
 
     it('should import single article correctly', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx as any;
 
         const singleArticle = [
           Mock.articleDto({
@@ -477,17 +476,17 @@ describe('ArticleService', () => {
 
     it('should handle large batch import (25 articles)', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx as any;
 
         // 先创建测试用户
         await createTestUser(1);
 
         const largeArticles = Array.from({ length: 25 }, (_, i) =>
           Mock.articleDto({
-            title: `Article ${i + 1}`,
-            content: `Content ${i + 1}`,
+            title: `Article ${String(i + 1)}`,
+            content: `Content ${String(i + 1)}`,
             author: 'testuser1',
-            tags: JSON.stringify([`tag${i + 1}`]),
+            tags: JSON.stringify([`tag${String(i + 1)}`]),
           }),
         );
 
@@ -507,7 +506,7 @@ describe('ArticleService', () => {
 
     it('should handle import failure and stop processing', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx as any;
 
         // 先创建测试用户
         await createTestUser(1);
@@ -522,7 +521,8 @@ describe('ArticleService', () => {
 
         // Mock service.create 方法来模拟第二篇文章失败
         // 不要 mock tx.insert，因为这会破坏 Drizzle 的方法链
-        const createSpy = vi.spyOn(service, 'create')
+        const createSpy = vi
+          .spyOn(service, 'create')
           .mockResolvedValueOnce(firstArticle) // 第一次调用返回已创建的文章
           .mockRejectedValueOnce(new Error('Database error')); // 第二次调用失败
 
@@ -553,7 +553,7 @@ describe('ArticleService', () => {
 
     it('should process articles with mixed tags (some with, some without)', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx as any;
 
         const articlesToImport = [
           Mock.articleDto({
@@ -604,7 +604,7 @@ describe('ArticleService', () => {
 
     it('should verify sequential processing (not batched)', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx as any;
 
         const articlesToImport = [
           Mock.articleDto({ title: 'Article 1', content: 'Content 1', tags: JSON.stringify([]) }),
@@ -642,11 +642,11 @@ describe('ArticleService', () => {
   describe('findByCategory', () => {
     it('should return articles by category with pagination', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx as any;
 
         // 先创建测试用户和分类
         await createTestUser(1);
-        await Given.category({ name: 'tech', slug: 'tech' });
+        await Given.category(db as any, { name: 'tech', slug: 'tech' });
 
         // 创建测试数据 - 批量创建2篇tech分类文章
         await Given.articles(2, { category: 'tech' });
@@ -662,11 +662,11 @@ describe('ArticleService', () => {
 
     it('should support custom pagination parameters', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx as any;
 
         // 先创建测试用户和分类
         await createTestUser(1);
-        await Given.category({ name: 'tech', slug: 'tech' });
+        await Given.category(db as any, { name: 'tech', slug: 'tech' });
 
         // 创建 15 篇文章
         await Given.articles(15, { category: 'tech' });
@@ -685,10 +685,10 @@ describe('ArticleService', () => {
   describe('findOneByPathname', () => {
     it('should return article by pathname', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx as any;
 
         // 创建测试数据
-        await Given.article({ id: 1, pathname: 'test-article' });
+        await Given.article(db as any, { id: 1, pathname: 'test-article' });
 
         const result = await service.findOneByPathname('test-article');
 
@@ -699,7 +699,7 @@ describe('ArticleService', () => {
 
     it('should throw NotFoundException when article with pathname not found', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx as any;
 
         await expect(service.findOneByPathname('non-existent')).rejects.toThrow(NotFoundException);
       });
@@ -709,9 +709,9 @@ describe('ArticleService', () => {
   describe('isPrivateById', () => {
     it('should return true for private article', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx as any;
 
-        await Given.article({ id: 1, private: true });
+        await Given.article(db as any, { id: 1, private: true });
 
         const result = await service.isPrivateById(1);
 
@@ -721,9 +721,9 @@ describe('ArticleService', () => {
 
     it('should return false for public article', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx as any;
 
-        await Given.article({ id: 1, private: false });
+        await Given.article(db as any, { id: 1, private: false });
 
         const result = await service.isPrivateById(1);
 
@@ -733,7 +733,7 @@ describe('ArticleService', () => {
 
     it('should return null when article not found', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx as any;
 
         const result = await service.isPrivateById(999);
 
@@ -745,9 +745,9 @@ describe('ArticleService', () => {
   describe('isPrivateByPathname', () => {
     it('should return true for private article by pathname', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx as any;
 
-        await Given.article({ id: 1, pathname: 'private-article', private: true });
+        await Given.article(db as any, { id: 1, pathname: 'private-article', private: true });
 
         const result = await service.isPrivateByPathname('private-article');
 
@@ -757,9 +757,9 @@ describe('ArticleService', () => {
 
     it('should return false for public article by pathname', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx as any;
 
-        await Given.article({ id: 1, pathname: 'public-article', private: false });
+        await Given.article(db as any, { id: 1, pathname: 'public-article', private: false });
 
         const result = await service.isPrivateByPathname('public-article');
 
@@ -769,7 +769,7 @@ describe('ArticleService', () => {
 
     it('should return null when article not found by pathname', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx as any;
 
         const result = await service.isPrivateByPathname('non-existent');
 
@@ -781,9 +781,9 @@ describe('ArticleService', () => {
   describe('verifyPassword', () => {
     it('should return success for public article without password', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx as any;
 
-        await Given.article({
+        await Given.article(db as any, {
           id: 1,
           private: false,
           password: null,
@@ -798,10 +798,10 @@ describe('ArticleService', () => {
 
     it('should return failure for incorrect password', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx as any;
 
         const hashedPassword = await bcrypt.hash('correct-password', 10);
-        await Given.article({
+        await Given.article(db as any, {
           id: 1,
           private: true,
           password: hashedPassword,
@@ -818,9 +818,9 @@ describe('ArticleService', () => {
   describe('verifyPasswordByPathname', () => {
     it('should return success for public article by pathname', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx as any;
 
-        await Given.article({
+        await Given.article(db as any, {
           id: 1,
           pathname: 'public-article',
           private: false,
@@ -838,25 +838,25 @@ describe('ArticleService', () => {
   describe('getArticlesGroupedByCategory', () => {
     it('should return articles grouped by category', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx as any;
 
         // 先创建测试用户和分类
         await createTestUser(1);
-        await Given.category({ name: 'Tech', slug: 'tech' });
-        await Given.category({ name: 'Lifestyle', slug: 'lifestyle' });
+        await Given.category(db as any, { name: 'Tech', slug: 'tech' });
+        await Given.category(db as any, { name: 'Lifestyle', slug: 'lifestyle' });
 
         // 创建测试数据
-        await Given.article({
+        await Given.article(db as any, {
           id: 1,
           title: 'Article 1',
           category: 'Tech',
         });
-        await Given.article({
+        await Given.article(db as any, {
           id: 2,
           title: 'Article 2',
           category: 'Tech',
         });
-        await Given.article({
+        await Given.article(db as any, {
           id: 3,
           title: 'Article 3',
           category: 'Lifestyle',
@@ -873,9 +873,9 @@ describe('ArticleService', () => {
 
     it('should group articles without category as Uncategorized', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx as any;
 
-        await Given.article({
+        await Given.article(db as any, {
           id: 1,
           title: 'No Category',
           category: null,
@@ -890,7 +890,7 @@ describe('ArticleService', () => {
 
     it('should exclude private and hidden articles', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx as any;
 
         const result = await service.getArticlesGroupedByCategory();
 
@@ -902,15 +902,15 @@ describe('ArticleService', () => {
   describe('getArticlesGroupedByTag', () => {
     it('should return articles grouped by tag', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx as any;
 
         // 创建测试数据
-        await Given.article({
+        await Given.article(db as any, {
           id: 1,
           title: 'Article 1',
           tags: ['javascript', 'nodejs'],
         });
-        await Given.article({
+        await Given.article(db as any, {
           id: 2,
           title: 'Article 2',
           tags: ['javascript'],
@@ -927,9 +927,9 @@ describe('ArticleService', () => {
 
     it('should group articles without tags as Untagged', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx as any;
 
-        await Given.article({
+        await Given.article(db as any, {
           id: 1,
           title: 'No Tags',
           tags: [],

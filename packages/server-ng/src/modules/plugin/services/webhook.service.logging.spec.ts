@@ -18,26 +18,24 @@
 
 import { Logger } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi, type Mock } from 'vitest';
 
 import { WebhookRegistryService } from './webhook-registry.service';
 import { WebhookService } from './webhook.service';
 import { DATABASE_CONNECTION } from '../../../database';
 import { withTestTransaction } from '@test/utils/db-transaction-helper';
 import { db } from '@test/setup.unit';
-import { webhookLogs, webhooks } from '@vanblog/shared/drizzle';
 import { Given } from '@test/given';
-import { eq, desc, count, gte, lte, and } from 'drizzle-orm';
+import { webhookLogs } from '@vanblog/shared/drizzle';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 
 // Mock fetch globally
 global.fetch = vi.fn();
 
 describe('WebhookService - Logging & Statistics', () => {
-  let service: WebhookService;
   let mockWebhookRegistry: {
-    registerWebhook: import('vitest').Mock;
-    unregisterWebhookFromAllEvents: import('vitest').Mock;
+    registerWebhook: Mock;
+    unregisterWebhookFromAllEvents: Mock;
   };
 
   beforeEach(async () => {
@@ -61,7 +59,8 @@ describe('WebhookService - Logging & Statistics', () => {
       ],
     }).compile();
 
-    service = module.get<WebhookService>(WebhookService);
+    // Note: Not storing service as it's created fresh for each test in createService()
+    module.get<WebhookService>(WebhookService);
 
     // Mock logger to avoid console output during tests
     vi.spyOn(Logger.prototype, 'debug').mockImplementation(() => {});
@@ -70,8 +69,8 @@ describe('WebhookService - Logging & Statistics', () => {
   });
 
   // Helper to create service with transaction database
-  function createService(tx: LibSQLDatabase): WebhookService {
-    const service = new WebhookService(tx, mockWebhookRegistry);
+  function createService(tx: LibSQLDatabase<Record<string, unknown>>): WebhookService {
+    const service = new WebhookService(tx, mockWebhookRegistry as any);
     return service;
   }
 
@@ -86,7 +85,7 @@ describe('WebhookService - Logging & Statistics', () => {
         const service = createService(tx);
 
         // Create test webhook
-        const webhook = await Given.webhook({
+        const webhook = await Given.webhook(tx, {
           url: 'https://example.com/webhook',
           events: ['article|afterCreate'],
           secret: null,
@@ -97,7 +96,7 @@ describe('WebhookService - Logging & Statistics', () => {
 
         // Create test log
         const logPayload = JSON.stringify({ articleId: 1 });
-        await tx.insert(webhookLogs).values({
+        await tx.insert(webhookLogs as any).values({
           webhookId: webhook.id,
           event: 'article|afterCreate',
           payload: logPayload,
@@ -111,7 +110,6 @@ describe('WebhookService - Logging & Statistics', () => {
         // Query logs
         const result = await service.getLogs({ page: 1, limit: 10 });
 
-  
         // Verify result structure
         expect(result.data).toHaveLength(1);
         expect(result.data[0].webhookId).toBe(webhook.id);
@@ -145,7 +143,7 @@ describe('WebhookService - Logging & Statistics', () => {
         const service = createService(tx);
 
         // Create test webhooks
-        const webhook1 = await Given.webhook({
+        const webhook1 = await Given.webhook(tx, {
           // name: 'Webhook 1',
           url: 'https://example1.com/webhook',
           events: ['article|afterCreate'],
@@ -155,7 +153,7 @@ describe('WebhookService - Logging & Statistics', () => {
           timeout: 30000,
         });
 
-        const webhook2 = await Given.webhook({
+        const webhook2 = await Given.webhook(tx, {
           // name: 'Webhook 2',
           url: 'https://example2.com/webhook',
           events: ['article|afterCreate'],
@@ -166,7 +164,7 @@ describe('WebhookService - Logging & Statistics', () => {
         });
 
         // Create logs for both webhooks
-        await tx.insert(webhookLogs).values({
+        await tx.insert(webhookLogs as any).values({
           webhookId: webhook1.id,
           event: 'article|afterCreate',
           payload: JSON.stringify({ articleId: 1 }),
@@ -177,7 +175,7 @@ describe('WebhookService - Logging & Statistics', () => {
           duration: 100,
         });
 
-        await tx.insert(webhookLogs).values({
+        await tx.insert(webhookLogs as any).values({
           webhookId: webhook2.id,
           event: 'article|afterCreate',
           payload: JSON.stringify({ articleId: 2 }),
@@ -218,7 +216,7 @@ describe('WebhookService - Logging & Statistics', () => {
         const service = createService(tx);
 
         // Create test webhook
-        const webhook = await Given.webhook({
+        const webhook = await Given.webhook(tx, {
           url: 'https://example.com/webhook',
           events: ['article|afterCreate'],
           secret: null,
@@ -228,7 +226,7 @@ describe('WebhookService - Logging & Statistics', () => {
         });
 
         // Create logs with different statuses
-        await tx.insert(webhookLogs).values({
+        await tx.insert(webhookLogs as any).values({
           webhookId: webhook.id,
           event: 'article|afterCreate',
           payload: JSON.stringify({ articleId: 1 }),
@@ -239,7 +237,7 @@ describe('WebhookService - Logging & Statistics', () => {
           duration: 100,
         });
 
-        await tx.insert(webhookLogs).values({
+        await tx.insert(webhookLogs as any).values({
           webhookId: webhook.id,
           event: 'article|afterCreate',
           payload: JSON.stringify({ articleId: 2 }),
@@ -280,7 +278,7 @@ describe('WebhookService - Logging & Statistics', () => {
         const service = createService(tx);
 
         // Create test webhook
-        const webhook = await Given.webhook({
+        const webhook = await Given.webhook(tx, {
           url: 'https://example.com/webhook',
           events: ['article|afterCreate'],
           secret: null,
@@ -294,7 +292,7 @@ describe('WebhookService - Logging & Statistics', () => {
         const date2 = new Date('2025-06-15T10:00:00Z');
         const date3 = new Date('2025-12-15T10:00:00Z');
 
-        await tx.insert(webhookLogs).values({
+        await tx.insert(webhookLogs as any).values({
           webhookId: webhook.id,
           event: 'article|afterCreate',
           payload: JSON.stringify({ articleId: 1 }),
@@ -303,10 +301,10 @@ describe('WebhookService - Logging & Statistics', () => {
           responseBody: 'OK',
           error: null,
           duration: 100,
-          createdAt: date1,
+          createdAt: date1.toISOString(),
         });
 
-        await tx.insert(webhookLogs).values({
+        await tx.insert(webhookLogs as any).values({
           webhookId: webhook.id,
           event: 'article|afterCreate',
           payload: JSON.stringify({ articleId: 2 }),
@@ -315,10 +313,10 @@ describe('WebhookService - Logging & Statistics', () => {
           responseBody: 'OK',
           error: null,
           duration: 150,
-          createdAt: date2,
+          createdAt: date2.toISOString(),
         });
 
-        await tx.insert(webhookLogs).values({
+        await tx.insert(webhookLogs as any).values({
           webhookId: webhook.id,
           event: 'article|afterCreate',
           payload: JSON.stringify({ articleId: 3 }),
@@ -327,7 +325,7 @@ describe('WebhookService - Logging & Statistics', () => {
           responseBody: 'OK',
           error: null,
           duration: 200,
-          createdAt: date3,
+          createdAt: date3.toISOString(),
         });
 
         // Query logs for date range (January to June 2025)
@@ -342,23 +340,28 @@ describe('WebhookService - Logging & Statistics', () => {
         // Debug: show payload details for date range test
         console.log('Date range test payloads:');
         result.data.forEach((log, index) => {
-          console.log(`Log ${index}: payload=${log.payload}, type=${typeof log.payload}, stringified=${JSON.stringify(log.payload)}`);
+          console.log(
+            `Log ${index}: payload=${log.payload}, type=${typeof log.payload}, stringified=${JSON.stringify(log.payload)}`,
+          );
         });
 
         // Check payloads (handle the JSON string case)
-        const payload0 = typeof result.data[0].payload === 'string' && result.data[0].payload.startsWith('{')
-          ? JSON.parse(result.data[0].payload)
-          : result.data[0].payload;
+        const payload0 =
+          typeof result.data[0].payload === 'string' && result.data[0].payload.startsWith('{')
+            ? JSON.parse(result.data[0].payload)
+            : result.data[0].payload;
         expect(payload0).toEqual({ articleId: 3 }); // Most recent (Dec)
 
-        const payload1 = typeof result.data[1].payload === 'string' && result.data[1].payload.startsWith('{')
-          ? JSON.parse(result.data[1].payload)
-          : result.data[1].payload;
+        const payload1 =
+          typeof result.data[1].payload === 'string' && result.data[1].payload.startsWith('{')
+            ? JSON.parse(result.data[1].payload)
+            : result.data[1].payload;
         expect(payload1).toEqual({ articleId: 2 }); // Second most recent (Jun)
 
-        const payload2 = typeof result.data[2].payload === 'string' && result.data[2].payload.startsWith('{')
-          ? JSON.parse(result.data[2].payload)
-          : result.data[2].payload;
+        const payload2 =
+          typeof result.data[2].payload === 'string' && result.data[2].payload.startsWith('{')
+            ? JSON.parse(result.data[2].payload)
+            : result.data[2].payload;
         expect(payload2).toEqual({ articleId: 1 }); // Third most recent (Jan)
 
         // Verify database persistence
@@ -374,7 +377,7 @@ describe('WebhookService - Logging & Statistics', () => {
         const service = createService(tx);
 
         // Create test webhook
-        const webhook = await Given.webhook({
+        const webhook = await Given.webhook(tx, {
           url: 'https://example.com/webhook',
           events: ['article|afterCreate'],
           secret: null,
@@ -424,7 +427,7 @@ describe('WebhookService - Logging & Statistics', () => {
         }
 
         // Insert all logs
-        await tx.insert(webhookLogs).values(logs);
+        await tx.insert(webhookLogs as any).values(logs);
 
         // Query statistics
         const result = await service.getStats();
@@ -449,7 +452,7 @@ describe('WebhookService - Logging & Statistics', () => {
         const service = createService(tx);
 
         // Create test webhooks
-        const webhook1 = await Given.webhook({
+        const webhook1 = await Given.webhook(tx, {
           // name: 'Webhook 1',
           url: 'https://example1.com/webhook',
           events: ['article|afterCreate'],
@@ -459,7 +462,7 @@ describe('WebhookService - Logging & Statistics', () => {
           timeout: 30000,
         });
 
-        const webhook2 = await Given.webhook({
+        const webhook2 = await Given.webhook(tx, {
           // name: 'Webhook 2',
           url: 'https://example2.com/webhook',
           events: ['article|afterCreate'],
@@ -509,7 +512,7 @@ describe('WebhookService - Logging & Statistics', () => {
         }
 
         // Insert logs for webhook1
-        await tx.insert(webhookLogs).values(logs1);
+        await tx.insert(webhookLogs as any).values(logs1);
 
         // Create logs for webhook2 (different counts)
         const logs2 = [];
@@ -527,7 +530,7 @@ describe('WebhookService - Logging & Statistics', () => {
         }
 
         // Insert logs for webhook2
-        await tx.insert(webhookLogs).values(logs2);
+        await tx.insert(webhookLogs as any).values(logs2);
 
         // Query statistics for webhook1 only
         const result = await service.getStats(webhook1.id);
@@ -552,7 +555,7 @@ describe('WebhookService - Logging & Statistics', () => {
         const service = createService(tx);
 
         // Create test webhook (no logs created)
-        const webhook = await Given.webhook({
+        const webhook = await Given.webhook(tx, {
           url: 'https://example.com/webhook',
           events: ['article|afterCreate'],
           secret: null,

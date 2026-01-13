@@ -26,7 +26,7 @@ describe('MetaController', () => {
       controllers: [MetaController],
       providers: [
         { provide: BootstrapService, useValue: mockBootstrapService },
-        { provide: HookService, useValue: mockHookService },
+        { provide: HookService, useValue: mockHookService as any },
         { provide: SettingCoreService, useValue: mockSettingCoreService },
       ],
     }).compile();

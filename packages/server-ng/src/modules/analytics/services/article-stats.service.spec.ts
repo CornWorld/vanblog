@@ -13,7 +13,7 @@ import { AnalyticsType } from '../entities/analytics.entity';
 import { ArticleStatsService } from './article-stats.service';
 
 describe('ArticleStatsService', () => {
-  let service: ArticleStatsService;
+  // Service is not used, tests are for setup only
 
   beforeAll(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -26,7 +26,7 @@ describe('ArticleStatsService', () => {
       ],
     }).compile();
 
-    service = module.get<ArticleStatsService>(ArticleStatsService);
+    module.get<ArticleStatsService>(ArticleStatsService);
   });
 
   describe('recordArticleView', () => {
@@ -49,9 +49,7 @@ describe('ArticleStatsService', () => {
         const userAgent = 'Mozilla/5.0';
 
         // 注入事务数据库
-        const txService = new ArticleStatsService(
-          tx as unknown as typeof DATABASE_CONNECTION,
-        );
+        const txService = new ArticleStatsService(tx as any);
 
         await txService.recordArticleView(article.id, ip, userAgent);
 
@@ -96,9 +94,7 @@ describe('ArticleStatsService', () => {
 
         const ip = '127.0.0.1';
 
-        const txService = new ArticleStatsService(
-          tx as unknown as typeof DATABASE_CONNECTION,
-        );
+        const txService = new ArticleStatsService(tx as any);
 
         await txService.recordArticleView(article.id, ip);
 
@@ -127,13 +123,9 @@ describe('ArticleStatsService', () => {
 
         const ip = '192.168.1.2';
 
-        const txService = new ArticleStatsService(
-          tx as unknown as typeof DATABASE_CONNECTION,
-        );
+        const txService = new ArticleStatsService(tx as any);
 
-        await expect(
-          txService.recordArticleView(article.id, ip),
-        ).resolves.not.toThrow();
+        await expect(txService.recordArticleView(article.id, ip)).resolves.not.toThrow();
 
         const analyticsRecords = await tx
           .select()
@@ -157,13 +149,9 @@ describe('ArticleStatsService', () => {
           })
           .returning();
 
-        const txService = new ArticleStatsService(
-          tx as unknown as typeof DATABASE_CONNECTION,
-        );
+        const txService = new ArticleStatsService(tx as any);
 
-        await expect(
-          txService.recordArticleView(article.id, null as any),
-        ).resolves.not.toThrow();
+        await expect(txService.recordArticleView(article.id, null as any)).resolves.not.toThrow();
 
         const analyticsRecords = await tx
           .select()
@@ -189,9 +177,7 @@ describe('ArticleStatsService', () => {
 
         const ip = '192.168.1.1';
 
-        const txService = new ArticleStatsService(
-          tx as unknown as typeof DATABASE_CONNECTION,
-        );
+        const txService = new ArticleStatsService(tx as any);
 
         await expect(
           txService.recordArticleView(article.id, ip, null as any),
@@ -207,9 +193,7 @@ describe('ArticleStatsService', () => {
 
     it('should not record view for non-existent article', async () => {
       await withTestTransaction(db, async (tx) => {
-        const txService = new ArticleStatsService(
-          tx as unknown as typeof DATABASE_CONNECTION,
-        );
+        const txService = new ArticleStatsService(tx as any);
 
         await txService.recordArticleView(999, '192.168.1.1');
 
@@ -238,9 +222,7 @@ describe('ArticleStatsService', () => {
 
         const ip = '192.168.1.1';
 
-        const txService = new ArticleStatsService(
-          tx as unknown as typeof DATABASE_CONNECTION,
-        );
+        const txService = new ArticleStatsService(tx as any);
 
         await txService.recordArticleView(article.id, ip);
 
@@ -273,9 +255,7 @@ describe('ArticleStatsService', () => {
         const ip = '192.168.1.1';
         const userAgent = 'Mozilla/5.0';
 
-        const txService = new ArticleStatsService(
-          tx as unknown as typeof DATABASE_CONNECTION,
-        );
+        const txService = new ArticleStatsService(tx as any);
 
         await txService.recordArticleViewByPathname(pathname, ip, userAgent);
 
@@ -303,9 +283,7 @@ describe('ArticleStatsService', () => {
 
     it('should not record view for non-existent pathname', async () => {
       await withTestTransaction(db, async (tx) => {
-        const txService = new ArticleStatsService(
-          tx as unknown as typeof DATABASE_CONNECTION,
-        );
+        const txService = new ArticleStatsService(tx as any);
 
         await txService.recordArticleViewByPathname('non-existent', '192.168.1.1');
 
@@ -348,115 +326,122 @@ describe('ArticleStatsService', () => {
           .returning();
 
         // 创建分析记录（5 次浏览，4 个独立 IP）
-        await Given.analytics({
+        await Given.analytics(db as any, {
           type: AnalyticsType.PAGEVIEW,
-          path: `/article/${article1.pathname}`,
+          path: `/article/${String(article1.pathname)}`,
           ip: '192.168.1.1',
           data: { articleId: article1.id },
         });
-        await Given.analytics({
+        await Given.analytics(db as any, {
           type: AnalyticsType.PAGEVIEW,
-          path: `/article/${article1.pathname}`,
+          path: `/article/${String(article1.pathname)}`,
           ip: '192.168.1.2',
           data: { articleId: article1.id },
         });
-        await Given.analytics({
+        await Given.analytics(db as any, {
           type: AnalyticsType.PAGEVIEW,
-          path: `/article/${article1.pathname}`,
+          path: `/article/${String(article1.pathname)}`,
           ip: '192.168.1.3',
           data: { articleId: article1.id },
         });
-        await Given.analytics({
+        await Given.analytics(db as any, {
           type: AnalyticsType.PAGEVIEW,
-          path: `/article/${article1.pathname}`,
+          path: `/article/${String(article1.pathname)}`,
           ip: '192.168.1.4',
           data: { articleId: article1.id },
         });
-        await Given.analytics({
+        await Given.analytics(db as any, {
           type: AnalyticsType.PAGEVIEW,
-          path: `/article/${article1.pathname}`,
+          path: `/article/${String(article1.pathname)}`,
           ip: '192.168.1.1',
           data: { articleId: article1.id },
         });
 
         // 为第一篇文章添加阅读时长记录（EVENT 类型）
-        await Given.analytics({
+        await Given.analytics(db as any, {
           type: AnalyticsType.EVENT,
-          path: `/article/${article1.pathname}`,
+          path: `/article/${String(article1.pathname)}`,
           ip: '192.168.1.1',
           data: { event: 'reading_time', articleId: article1.id, duration: 300 },
         });
-        await Given.analytics({
+        await Given.analytics(db as any, {
           type: AnalyticsType.EVENT,
-          path: `/article/${article1.pathname}`,
+          path: `/article/${String(article1.pathname)}`,
           ip: '192.168.1.2',
           data: { event: 'reading_time', articleId: article1.id, duration: 300 },
         });
-        await Given.analytics({
+        await Given.analytics(db as any, {
           type: AnalyticsType.EVENT,
-          path: `/article/${article1.pathname}`,
+          path: `/article/${String(article1.pathname)}`,
           ip: '192.168.1.3',
           data: { event: 'reading_time', articleId: article1.id, duration: 300 },
         });
-        await Given.analytics({
+        await Given.analytics(db as any, {
           type: AnalyticsType.EVENT,
-          path: `/article/${article1.pathname}`,
+          path: `/article/${String(article1.pathname)}`,
           ip: '192.168.1.4',
           data: { event: 'reading_time', articleId: article1.id, duration: 300 },
         });
 
         // 为第二篇文章创建记录（3 次浏览，2 个独立 IP）
-        await Given.analytics({
+        await Given.analytics(db as any, {
           type: AnalyticsType.PAGEVIEW,
-          path: `/article/${article2.pathname}`,
+          path: `/article/${String(article2.pathname)}`,
           ip: '192.168.1.1',
           data: { articleId: article2.id },
         });
-        await Given.analytics({
+        await Given.analytics(db as any, {
           type: AnalyticsType.PAGEVIEW,
-          path: `/article/${article2.pathname}`,
+          path: `/article/${String(article2.pathname)}`,
           ip: '192.168.1.1',
           data: { articleId: article2.id },
         });
-        await Given.analytics({
+        await Given.analytics(db as any, {
           type: AnalyticsType.PAGEVIEW,
-          path: `/article/${article2.pathname}`,
+          path: `/article/${String(article2.pathname)}`,
           ip: '192.168.1.3',
           data: { articleId: article2.id },
         });
 
         // 为第二篇文章添加阅读时长记录（EVENT 类型）
-        await Given.analytics({
+        await Given.analytics(db as any, {
           type: AnalyticsType.EVENT,
-          path: `/article/${article2.pathname}`,
+          path: `/article/${String(article2.pathname)}`,
           ip: '192.168.1.1',
           data: { event: 'reading_time', articleId: article2.id, duration: 200 },
         });
-        await Given.analytics({
+        await Given.analytics(db as any, {
           type: AnalyticsType.EVENT,
-          path: `/article/${article2.pathname}`,
+          path: `/article/${String(article2.pathname)}`,
           ip: '192.168.1.2',
           data: { event: 'reading_time', articleId: article2.id, duration: 200 },
         });
 
-        const txService = new ArticleStatsService(
-          tx as unknown as typeof DATABASE_CONNECTION,
-        );
+        const txService = new ArticleStatsService(tx as any);
 
         const result = await txService.getTopArticles(10);
 
         expect(result).toHaveLength(2);
         // 第一篇文章浏览次数更多
+
         expect(result[0]!.articleId).toBe(1);
+
         expect(result[0]!.title).toBe('Article 1');
+
         expect(result[0]!.views).toBe(5);
+
         expect(result[0]!.uniqueVisitors).toBe(4);
+
         expect(result[0]!.avgReadTime).toBe(300);
 
         expect(result[1]!.articleId).toBe(2);
+
         expect(result[1]!.title).toBe('Article 2');
+
         expect(result[1]!.views).toBe(3);
+
         expect(result[1]!.uniqueVisitors).toBe(2);
+
         expect(result[1]!.avgReadTime).toBe(200);
       });
     });
@@ -475,16 +460,14 @@ describe('ArticleStatsService', () => {
           })
           .returning();
 
-        await Given.analytics({
+        await Given.analytics(db as any, {
           type: AnalyticsType.PAGEVIEW,
-          path: `/article/${article.pathname}`,
+          path: `/article/${String(article.pathname)}`,
           ip: '192.168.1.1',
           data: { articleId: article.id },
         });
 
-        const txService = new ArticleStatsService(
-          tx as unknown as typeof DATABASE_CONNECTION,
-        );
+        const txService = new ArticleStatsService(tx as any);
 
         const result = await txService.getTopArticles();
 
@@ -507,16 +490,14 @@ describe('ArticleStatsService', () => {
           .returning();
 
         // 插入负数的 duration
-        await Given.analytics({
+        await Given.analytics(db as any, {
           type: AnalyticsType.PAGEVIEW,
-          path: `/article/${article.pathname}`,
+          path: `/article/${String(article.pathname)}`,
           ip: '192.168.1.1',
           data: { articleId: article.id },
         });
 
-        const txService = new ArticleStatsService(
-          tx as unknown as typeof DATABASE_CONNECTION,
-        );
+        const txService = new ArticleStatsService(tx as any);
 
         const result = await txService.getTopArticles();
 
@@ -540,17 +521,15 @@ describe('ArticleStatsService', () => {
             })
             .returning();
 
-          await Given.analytics({
+          await Given.analytics(db as any, {
             type: AnalyticsType.PAGEVIEW,
-            path: `/article/${article.pathname}`,
+            path: `/article/${String(article.pathname)}`,
             ip: '192.168.1.1',
             data: { articleId: article.id },
           });
         }
 
-        const txService = new ArticleStatsService(
-          tx as unknown as typeof DATABASE_CONNECTION,
-        );
+        const txService = new ArticleStatsService(tx as any);
 
         const result = await txService.getTopArticles(5);
 
@@ -560,9 +539,7 @@ describe('ArticleStatsService', () => {
 
     it('should return empty array when no articles found', async () => {
       await withTestTransaction(db, async (tx) => {
-        const txService = new ArticleStatsService(
-          tx as unknown as typeof DATABASE_CONNECTION,
-        );
+        const txService = new ArticleStatsService(tx as any);
 
         const result = await txService.getTopArticles();
 
@@ -588,48 +565,46 @@ describe('ArticleStatsService', () => {
           .returning();
 
         // 插入 3 次浏览记录，3 个独立 IP
-        await Given.analytics({
+        await Given.analytics(db as any, {
           type: AnalyticsType.PAGEVIEW,
-          path: `/article/${article.pathname}`,
+          path: `/article/${String(article.pathname)}`,
           ip: '192.168.1.1',
           data: { articleId: article.id },
         });
-        await Given.analytics({
+        await Given.analytics(db as any, {
           type: AnalyticsType.PAGEVIEW,
-          path: `/article/${article.pathname}`,
+          path: `/article/${String(article.pathname)}`,
           ip: '192.168.1.2',
           data: { articleId: article.id },
         });
-        await Given.analytics({
+        await Given.analytics(db as any, {
           type: AnalyticsType.PAGEVIEW,
-          path: `/article/${article.pathname}`,
+          path: `/article/${String(article.pathname)}`,
           ip: '192.168.1.3',
           data: { articleId: article.id },
         });
 
         // 插入阅读时长记录（EVENT 类型）
-        await Given.analytics({
+        await Given.analytics(db as any, {
           type: AnalyticsType.EVENT,
-          path: `/article/${article.pathname}`,
+          path: `/article/${String(article.pathname)}`,
           ip: '192.168.1.1',
           data: { event: 'reading_time', articleId: article.id, duration: 300 },
         });
-        await Given.analytics({
+        await Given.analytics(db as any, {
           type: AnalyticsType.EVENT,
-          path: `/article/${article.pathname}`,
+          path: `/article/${String(article.pathname)}`,
           ip: '192.168.1.2',
           data: { event: 'reading_time', articleId: article.id, duration: 300 },
         });
-        await Given.analytics({
+        await Given.analytics(db as any, {
           type: AnalyticsType.EVENT,
-          path: `/article/${article.pathname}`,
+          path: `/article/${String(article.pathname)}`,
           ip: '192.168.1.3',
           data: { event: 'reading_time', articleId: article.id, duration: 300 },
         });
 
-        const txService = new ArticleStatsService(
-          tx as unknown as typeof DATABASE_CONNECTION,
-        );
+        const txService = new ArticleStatsService(tx as any);
 
         const result = await txService.getArticleStats(articleId);
 
@@ -645,9 +620,7 @@ describe('ArticleStatsService', () => {
 
     it('should return null when article not found', async () => {
       await withTestTransaction(db, async (tx) => {
-        const txService = new ArticleStatsService(
-          tx as unknown as typeof DATABASE_CONNECTION,
-        );
+        const txService = new ArticleStatsService(tx as any);
 
         const result = await txService.getArticleStats(999);
 
@@ -669,9 +642,9 @@ describe('ArticleStatsService', () => {
           })
           .returning();
 
-        await Given.analytics({
+        await Given.analytics(db as any, {
           type: AnalyticsType.PAGEVIEW,
-          path: `/article/${article.pathname}`,
+          path: `/article/${String(article.pathname)}`,
           ip: '192.168.1.1',
           data: {
             articleId: article.id,
@@ -679,9 +652,7 @@ describe('ArticleStatsService', () => {
           },
         });
 
-        const txService = new ArticleStatsService(
-          tx as unknown as typeof DATABASE_CONNECTION,
-        );
+        const txService = new ArticleStatsService(tx as any);
 
         const result = await txService.getArticleStats(article.id);
 
@@ -703,16 +674,14 @@ describe('ArticleStatsService', () => {
           })
           .returning();
 
-        await Given.analytics({
+        await Given.analytics(db as any, {
           type: AnalyticsType.PAGEVIEW,
-          path: `/article/${article.pathname}`,
+          path: `/article/${String(article.pathname)}`,
           ip: '192.168.1.1',
           data: { articleId: article.id },
         });
 
-        const txService = new ArticleStatsService(
-          tx as unknown as typeof DATABASE_CONNECTION,
-        );
+        const txService = new ArticleStatsService(tx as any);
 
         const result = await txService.getArticleStats(article.id);
 
@@ -728,9 +697,7 @@ describe('ArticleStatsService', () => {
         const duration = 300;
         const ip = '192.168.1.1';
 
-        const txService = new ArticleStatsService(
-          tx as unknown as typeof DATABASE_CONNECTION,
-        );
+        const txService = new ArticleStatsService(tx as any);
 
         await txService.recordReadingTime(articleId, duration, ip);
 
@@ -762,9 +729,7 @@ describe('ArticleStatsService', () => {
         const duration = 0;
         const ip = '127.0.0.1';
 
-        const txService = new ArticleStatsService(
-          tx as unknown as typeof DATABASE_CONNECTION,
-        );
+        const txService = new ArticleStatsService(tx as any);
 
         await txService.recordReadingTime(articleId, duration, ip);
 
@@ -791,9 +756,7 @@ describe('ArticleStatsService', () => {
         const largeDuration = 999999;
         const ip = '127.0.0.1';
 
-        const txService = new ArticleStatsService(
-          tx as unknown as typeof DATABASE_CONNECTION,
-        );
+        const txService = new ArticleStatsService(tx as any);
 
         await txService.recordReadingTime(articleId, largeDuration, ip);
 
@@ -822,7 +785,7 @@ describe('ArticleStatsService', () => {
         const ip = '10.0.0.1';
         const userAgent = 'Test Browser';
 
-        const [article] = await tx
+        const [_article] = await tx
           .insert(articles)
           .values({
             id: articleId,
@@ -834,9 +797,7 @@ describe('ArticleStatsService', () => {
           })
           .returning();
 
-        const txService = new ArticleStatsService(
-          tx as unknown as typeof DATABASE_CONNECTION,
-        );
+        const txService = new ArticleStatsService(tx as any);
 
         await txService.recordArticleView(articleId, ip, userAgent);
 
@@ -847,10 +808,7 @@ describe('ArticleStatsService', () => {
           .where(eq(analytics.type, AnalyticsType.PAGEVIEW));
         expect(analyticsRecord).toBeDefined();
 
-        const [updatedArticle] = await tx
-          .select()
-          .from(articles)
-          .where(eq(articles.id, articleId));
+        const [updatedArticle] = await tx.select().from(articles).where(eq(articles.id, articleId));
         expect(updatedArticle.viewer).toBe(1);
       });
     });
@@ -869,15 +827,13 @@ describe('ArticleStatsService', () => {
           })
           .returning();
 
-        const txService = new ArticleStatsService(
-          tx as unknown as typeof DATABASE_CONNECTION,
-        );
+        const txService = new ArticleStatsService(tx as any);
 
         // 模拟 10 次浏览，来自 3 个不同 IP
         const ips = ['192.168.1.1', '192.168.1.2', '192.168.1.3'];
         for (let i = 0; i < 10; i++) {
-          const ip = ips[i % 3];
-          await txService.recordArticleView(article.id, ip, `UserAgent ${i}`);
+          const ip = ips[i % 3]!;
+          await txService.recordArticleView(article.id, ip, `UserAgent ${String(i)}`);
         }
 
         // 记录一些阅读时长
@@ -889,10 +845,14 @@ describe('ArticleStatsService', () => {
         const stats = await txService.getArticleStats(article.id);
 
         expect(stats).toBeDefined();
+
         expect(stats!.views).toBe(10);
+
         expect(stats!.uniqueVisitors).toBe(3);
         // 平均阅读时长应该接近 (120 + 180 + 150) / 3 = 150
+
         expect(stats!.avgReadTime).toBeGreaterThan(140);
+
         expect(stats!.avgReadTime).toBeLessThan(160);
       });
     });
@@ -923,9 +883,7 @@ describe('ArticleStatsService', () => {
           })
           .returning();
 
-        const txService = new ArticleStatsService(
-          tx as unknown as typeof DATABASE_CONNECTION,
-        );
+        const txService = new ArticleStatsService(tx as any);
 
         // 并发浏览两篇文章
         await Promise.all([
@@ -940,8 +898,11 @@ describe('ArticleStatsService', () => {
         const stats2 = await txService.getArticleStats(article2.id);
 
         expect(stats1!.views).toBe(2);
+
         expect(stats2!.views).toBe(2);
+
         expect(stats1!.uniqueVisitors).toBe(2);
+
         expect(stats2!.uniqueVisitors).toBe(2);
       });
     });

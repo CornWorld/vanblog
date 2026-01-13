@@ -30,7 +30,7 @@ import { CategoryService } from './category.service';
 
 describe('CategoryService - Articles Query', () => {
   let service: CategoryService;
-  let mockHookService: Partial<HookService>;
+  let mockHookService: HookService;
 
   let mockDb: {
     select: ReturnType<typeof vi.fn>;
@@ -68,7 +68,7 @@ describe('CategoryService - Articles Query', () => {
       offset: vi.fn().mockReturnThis(),
     };
 
-    mockHookService = Mock.hook();
+    mockHookService = Mock.hook() as any;
 
     const module: TestingModule = await Test.createTestingModule({
       imports: [],
@@ -106,7 +106,7 @@ describe('CategoryService - Articles Query', () => {
         },
         {
           provide: HookService,
-          useValue: mockHookService,
+          useValue: mockHookService as any,
         },
         {
           provide: ConfigService,

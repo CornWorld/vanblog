@@ -2,13 +2,12 @@ import { ConfigService } from '@nestjs/config';
 import { Logger } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { eq, and } from 'drizzle-orm';
 
 import { Mock } from '@test/mock';
 import { withTestTransaction } from '@test/utils/db-transaction-helper';
 import { db } from '@test/setup.unit';
 import { Given } from '@test/given';
-import { articles, categories, tags } from '@vanblog/shared/drizzle';
+import { articles, categories } from '@vanblog/shared/drizzle';
 
 import { DATABASE_CONNECTION } from '../../database';
 import { MarkdownService } from '../../shared/services/markdown.service';
@@ -23,23 +22,16 @@ vi.mock('fs/promises');
 // Now import fs after the mock is set up
 import * as fs from 'fs/promises';
 
-// Helper function to setup fs mocks
-const setupFsMocks = () => {
-  vi.mocked(fs.mkdir).mockResolvedValue(undefined);
-  vi.mocked(fs.writeFile).mockResolvedValue(undefined);
-  vi.mocked(fs.access).mockRejectedValue(new Error('Directory does not exist'));
-};
-
 // Helper function to create a test category
 const createTestCategory = async (tx: any, categoryName: string) => {
-  await Given.category({ name: categoryName });
+  await Given.category(tx, { name: categoryName });
 };
 
 // Helper function to create a test article
 const createTestArticle = async (tx: any, overrides: any = {}) => {
   // Generate unique pathname based on title or timestamp
-  const title = overrides.title || 'Test Article';
-  const uniqueSuffix = Date.now() + Math.random().toString(36).substring(7);
+  // const _title = overrides.title || 'Test Article';
+  const uniqueSuffix = String(Date.now()) + Math.random().toString(36).substring(7);
 
   return await tx
     .insert(articles)
@@ -169,7 +161,7 @@ describe('RssService', () => {
     it('should generate RSS feed successfully with all formats', async () => {
       await withTestTransaction(db, async (tx) => {
         // Inject test database
-        service['db'] = tx;
+        Object.defineProperty(service, 'db', { value: tx, writable: true, configurable: true });
 
         // Reset fs mocks before test
         vi.mocked(fs.mkdir).mockResolvedValue(undefined);
@@ -201,7 +193,7 @@ describe('RssService', () => {
             top: 0,
             createdAt: new Date('2024-01-01T00:00:00Z').toISOString(),
             updatedAt: new Date('2024-01-02T00:00:00Z').toISOString(),
-          })
+          } as any)
           .returning();
 
         const [article2] = await tx
@@ -217,7 +209,7 @@ describe('RssService', () => {
             top: 0,
             createdAt: new Date('2024-01-05T00:00:00Z').toISOString(),
             updatedAt: new Date('2024-01-06T00:00:00Z').toISOString(),
-          })
+          } as any)
           .returning();
 
         // Verify articles were created
@@ -286,7 +278,7 @@ describe('RssService', () => {
 
     it('should handle private articles correctly', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        Object.defineProperty(service, 'db', { value: tx, writable: true, configurable: true });
 
         // Reset fs mocks
         vi.mocked(fs.mkdir).mockResolvedValue(undefined);
@@ -306,7 +298,7 @@ describe('RssService', () => {
             top: 0,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
-          })
+          } as any)
           .returning();
 
         // Private article should NOT be included in RSS (service filters it out)
@@ -322,7 +314,7 @@ describe('RssService', () => {
             top: 0,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
-          })
+          } as any)
           .returning();
 
         await service.generateRssFeedFn();
@@ -336,7 +328,7 @@ describe('RssService', () => {
 
     it('should create RSS directory if it does not exist', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        Object.defineProperty(service, 'db', { value: tx, writable: true, configurable: true });
 
         // Reset fs mocks
         vi.mocked(fs.mkdir).mockResolvedValue(undefined);
@@ -355,7 +347,7 @@ describe('RssService', () => {
 
     it('should handle existing RSS directory', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        Object.defineProperty(service, 'db', { value: tx, writable: true, configurable: true });
 
         // Reset fs mocks
         vi.mocked(fs.mkdir).mockResolvedValue(undefined);
@@ -371,7 +363,7 @@ describe('RssService', () => {
 
     it('should use correct site configuration', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        Object.defineProperty(service, 'db', { value: tx, writable: true, configurable: true });
         await service.generateRssFeedFn();
 
         // Verify all config reads were made
@@ -387,7 +379,7 @@ describe('RssService', () => {
 
     it('should handle waline config for author email', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        Object.defineProperty(service, 'db', { value: tx, writable: true, configurable: true });
         settingCoreService.getConfig.mockImplementation((key: string, defaultValue?: any) => {
           if (key === 'waline') {
             return Promise.resolve({ authorEmail: 'waline@example.com' });
@@ -444,7 +436,7 @@ describe('RssService', () => {
 
     it('should handle file system errors gracefully', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        Object.defineProperty(service, 'db', { value: tx, writable: true, configurable: true });
 
         // Reset fs mocks and make writeFile fail
         vi.mocked(fs.mkdir).mockResolvedValue(undefined);
@@ -463,7 +455,7 @@ describe('RssService', () => {
 
     it('should handle hook errors gracefully', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        Object.defineProperty(service, 'db', { value: tx, writable: true, configurable: true });
         hookService.doAction.mockRejectedValue(new Error('Hook failed'));
 
         const logSpy = vi.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
@@ -482,7 +474,7 @@ describe('RssService', () => {
 
     it('should use correct URLs for articles', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        Object.defineProperty(service, 'db', { value: tx, writable: true, configurable: true });
 
         // Reset fs mocks to ensure they're called
         vi.mocked(fs.mkdir).mockResolvedValue(undefined);
@@ -510,7 +502,7 @@ describe('RssService', () => {
 
     it('should format JSON feed dates correctly', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        Object.defineProperty(service, 'db', { value: tx, writable: true, configurable: true });
 
         // Reset fs mocks to ensure they're called
         vi.mocked(fs.mkdir).mockResolvedValue(undefined);
@@ -543,7 +535,7 @@ describe('RssService', () => {
 
     it('should handle empty article list', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        Object.defineProperty(service, 'db', { value: tx, writable: true, configurable: true });
 
         // Reset fs mocks to ensure they're called
         vi.mocked(fs.mkdir).mockResolvedValue(undefined);
@@ -560,7 +552,7 @@ describe('RssService', () => {
 
     it('should use default values for missing site info', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        Object.defineProperty(service, 'db', { value: tx, writable: true, configurable: true });
 
         // Reset fs mocks to ensure they're called
         vi.mocked(fs.mkdir).mockResolvedValue(undefined);
@@ -582,7 +574,7 @@ describe('RssService', () => {
 
     it('should add log message with info parameter', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        Object.defineProperty(service, 'db', { value: tx, writable: true, configurable: true });
         const logSpy = vi.spyOn(Logger.prototype, 'log').mockImplementation(() => {});
 
         await service.generateRssFeedFn('Custom trigger info');
@@ -595,7 +587,7 @@ describe('RssService', () => {
 
     it('should log success message on completion', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        Object.defineProperty(service, 'db', { value: tx, writable: true, configurable: true });
         const logSpy = vi.spyOn(Logger.prototype, 'log').mockImplementation(() => {});
 
         await service.generateRssFeedFn();
@@ -698,7 +690,7 @@ describe('RssService', () => {
 
     it('should include all required feed metadata', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        Object.defineProperty(service, 'db', { value: tx, writable: true, configurable: true });
 
         await service.generateRssFeedFn();
 
@@ -720,7 +712,7 @@ describe('RssService', () => {
 
     it('should include article categories in feed', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        Object.defineProperty(service, 'db', { value: tx, writable: true, configurable: true });
 
         // Reset fs mocks to ensure they're called
         vi.mocked(fs.mkdir).mockResolvedValue(undefined);
@@ -761,7 +753,7 @@ describe('RssService', () => {
 
     it('should include proper feed links', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        Object.defineProperty(service, 'db', { value: tx, writable: true, configurable: true });
 
         // Reset fs mocks to ensure they're called
         vi.mocked(fs.mkdir).mockResolvedValue(undefined);
@@ -787,7 +779,7 @@ describe('RssService', () => {
   describe('JSON Feed schema validation', () => {
     it('should handle JSON Feed schema validation failure', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        Object.defineProperty(service, 'db', { value: tx, writable: true, configurable: true });
 
         // Reset fs mocks to ensure they're called
         vi.mocked(fs.mkdir).mockResolvedValue(undefined);
@@ -832,7 +824,7 @@ describe('RssService', () => {
 
     it('should handle JSON Feed post-process exception', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        Object.defineProperty(service, 'db', { value: tx, writable: true, configurable: true });
 
         // Reset fs mocks to ensure they're called
         vi.mocked(fs.mkdir).mockResolvedValue(undefined);
@@ -865,7 +857,7 @@ describe('RssService', () => {
 
     it('should successfully validate and format valid JSON Feed dates', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        Object.defineProperty(service, 'db', { value: tx, writable: true, configurable: true });
 
         // Reset fs mocks to ensure they're called
         vi.mocked(fs.mkdir).mockResolvedValue(undefined);
@@ -911,7 +903,7 @@ describe('RssService', () => {
 
     it('should prioritize favicon over other logos for favicon field', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        Object.defineProperty(service, 'db', { value: tx, writable: true, configurable: true });
 
         settingCoreService.getConfig.mockImplementation((key: string, defaultValue?: any) => {
           const configs: Record<string, any> = {
@@ -936,7 +928,7 @@ describe('RssService', () => {
 
     it('should use siteLogo as favicon fallback when favicon is empty', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        Object.defineProperty(service, 'db', { value: tx, writable: true, configurable: true });
 
         // Reset fs mocks to ensure they're called
         vi.mocked(fs.mkdir).mockResolvedValue(undefined);
@@ -965,7 +957,7 @@ describe('RssService', () => {
 
     it('should use authorLogo as favicon fallback when favicon and siteLogo are empty', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        Object.defineProperty(service, 'db', { value: tx, writable: true, configurable: true });
 
         // Reset fs mocks to ensure they're called
         vi.mocked(fs.mkdir).mockResolvedValue(undefined);
@@ -994,7 +986,7 @@ describe('RssService', () => {
 
     it('should use default logo.svg when all logo fields are empty', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        Object.defineProperty(service, 'db', { value: tx, writable: true, configurable: true });
 
         // Reset fs mocks to ensure they're called
         vi.mocked(fs.mkdir).mockResolvedValue(undefined);
@@ -1023,7 +1015,7 @@ describe('RssService', () => {
 
     it('should prioritize siteLogo for image field', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        Object.defineProperty(service, 'db', { value: tx, writable: true, configurable: true });
 
         // Reset fs mocks to ensure they're called
         vi.mocked(fs.mkdir).mockResolvedValue(undefined);
@@ -1052,7 +1044,7 @@ describe('RssService', () => {
 
     it('should use authorLogo for image field when siteLogo is empty', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        Object.defineProperty(service, 'db', { value: tx, writable: true, configurable: true });
 
         // Reset fs mocks to ensure they're called
         vi.mocked(fs.mkdir).mockResolvedValue(undefined);
@@ -1081,7 +1073,7 @@ describe('RssService', () => {
 
     it('should use favicon for image field when siteLogo and authorLogo are empty', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        Object.defineProperty(service, 'db', { value: tx, writable: true, configurable: true });
 
         // Reset fs mocks to ensure they're called
         vi.mocked(fs.mkdir).mockResolvedValue(undefined);
@@ -1112,7 +1104,7 @@ describe('RssService', () => {
   describe('Email configuration edge cases', () => {
     it('should use process.env.EMAIL when available', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        Object.defineProperty(service, 'db', { value: tx, writable: true, configurable: true });
 
         // Reset fs mocks to ensure they're called
         vi.mocked(fs.mkdir).mockResolvedValue(undefined);
@@ -1137,7 +1129,7 @@ describe('RssService', () => {
 
     it('should use waline authorEmail when main authorEmail is empty string', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        Object.defineProperty(service, 'db', { value: tx, writable: true, configurable: true });
 
         // Reset fs mocks to ensure they're called
         vi.mocked(fs.mkdir).mockResolvedValue(undefined);
@@ -1167,7 +1159,7 @@ describe('RssService', () => {
 
     it('should not use waline authorEmail when main authorEmail has value', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        Object.defineProperty(service, 'db', { value: tx, writable: true, configurable: true });
 
         // Reset fs mocks to ensure they're called
         vi.mocked(fs.mkdir).mockResolvedValue(undefined);
@@ -1198,7 +1190,7 @@ describe('RssService', () => {
   describe('Feed format generation', () => {
     it('should generate valid RSS 2.0 XML format', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        Object.defineProperty(service, 'db', { value: tx, writable: true, configurable: true });
 
         // Reset fs mocks to ensure they're called
         vi.mocked(fs.mkdir).mockResolvedValue(undefined);
@@ -1226,7 +1218,7 @@ describe('RssService', () => {
 
     it('should generate valid Atom 1.0 XML format', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        Object.defineProperty(service, 'db', { value: tx, writable: true, configurable: true });
 
         // Reset fs mocks to ensure they're called
         vi.mocked(fs.mkdir).mockResolvedValue(undefined);
@@ -1259,7 +1251,7 @@ describe('RssService', () => {
 
     it('should generate valid JSON Feed format', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        Object.defineProperty(service, 'db', { value: tx, writable: true, configurable: true });
 
         // Reset fs mocks to ensure they're called
         vi.mocked(fs.mkdir).mockResolvedValue(undefined);
@@ -1296,15 +1288,14 @@ describe('RssService', () => {
   describe('Article content rendering', () => {
     beforeEach(() => {
       // Reset fs mocks before each test in this section
-      // Reset fs mocks to ensure they're called
-        vi.mocked(fs.mkdir).mockResolvedValue(undefined);
-        vi.mocked(fs.writeFile).mockResolvedValue(undefined);
-        vi.mocked(fs.access).mockRejectedValue(new Error('Directory does not exist'));
+      vi.mocked(fs.mkdir).mockResolvedValue(undefined);
+      vi.mocked(fs.writeFile).mockResolvedValue(undefined);
+      vi.mocked(fs.access).mockRejectedValue(new Error('Directory does not exist'));
     });
 
     it('should render markdown content for all articles including private', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        Object.defineProperty(service, 'db', { value: tx, writable: true, configurable: true });
 
         // Reset fs mocks to ensure they're called
         vi.mocked(fs.mkdir).mockResolvedValue(undefined);
@@ -1338,7 +1329,7 @@ describe('RssService', () => {
 
     it('should include stylesheet links in RSS HTML content', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        Object.defineProperty(service, 'db', { value: tx, writable: true, configurable: true });
 
         // Reset fs mocks to ensure they're called
         vi.mocked(fs.mkdir).mockResolvedValue(undefined);
@@ -1369,7 +1360,7 @@ describe('RssService', () => {
 
     it('should generate proper article URLs with pathname', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        Object.defineProperty(service, 'db', { value: tx, writable: true, configurable: true });
 
         // Reset fs mocks to ensure they're called
         vi.mocked(fs.mkdir).mockResolvedValue(undefined);
@@ -1405,7 +1396,7 @@ describe('RssService', () => {
 
     it('should handle articles with tags', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        Object.defineProperty(service, 'db', { value: tx, writable: true, configurable: true });
 
         // Reset fs mocks to ensure they're called
         vi.mocked(fs.mkdir).mockResolvedValue(undefined);
@@ -1442,7 +1433,7 @@ describe('RssService', () => {
 
     it('should render private article with encrypted message', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        Object.defineProperty(service, 'db', { value: tx, writable: true, configurable: true });
 
         // Create a private article - it will be filtered at DB level
         await createTestArticle(tx, {

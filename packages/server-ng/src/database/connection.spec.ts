@@ -13,7 +13,7 @@ import { createDatabaseConnection } from './connection';
 
 describe('Database Connection', () => {
   let mockLogger: LoggerService;
-  const testDbPath = join('/tmp/claude', `test-connection-${Date.now()}.db`);
+  const testDbPath = join('/tmp/claude', `test-connection-${String(Date.now())}.db`);
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -81,7 +81,7 @@ describe('Database Connection', () => {
     });
 
     it('should create connection with custom local URL', async () => {
-      const customDbPath = join('/tmp/claude', `test-custom-${Date.now()}.db`);
+      const customDbPath = join('/tmp/claude', `test-custom-${String(Date.now())}.db`);
       const config: DatabaseConfig = {
         driver: 'local',
         url: `file:${customDbPath}`,
@@ -162,7 +162,7 @@ describe('Database Connection', () => {
 
   describe('D1 Driver', () => {
     it('should create connection with D1 config and custom URL', async () => {
-      const d1DbPath = join('/tmp/claude', `test-d1-${Date.now()}.db`);
+      const d1DbPath = join('/tmp/claude', `test-d1-${String(Date.now())}.db`);
       const config: DatabaseConfig = {
         driver: 'd1',
         url: `file:${d1DbPath}`,
@@ -200,7 +200,7 @@ describe('Database Connection', () => {
     });
 
     it('should enable foreign key constraints for D1 database', async () => {
-      const d1DbPath = join('/tmp/claude', `test-d1-fk-${Date.now()}.db`);
+      const d1DbPath = join('/tmp/claude', `test-d1-fk-${String(Date.now())}.db`);
       const config: DatabaseConfig = {
         driver: 'd1',
         url: `file:${d1DbPath}`,
@@ -242,8 +242,16 @@ describe('Database Connection', () => {
         'Initializing database with driver: local',
         'Database',
       );
-      expect(mockLogger.log).toHaveBeenNthCalledWith(2, 'Database connection established', 'Database');
-      expect(mockLogger.log).toHaveBeenNthCalledWith(3, 'Foreign key constraints enabled', 'Database');
+      expect(mockLogger.log).toHaveBeenNthCalledWith(
+        2,
+        'Database connection established',
+        'Database',
+      );
+      expect(mockLogger.log).toHaveBeenNthCalledWith(
+        3,
+        'Foreign key constraints enabled',
+        'Database',
+      );
     });
 
     it('should use Database context for all log messages', async () => {

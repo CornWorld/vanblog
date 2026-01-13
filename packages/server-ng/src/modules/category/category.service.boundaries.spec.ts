@@ -34,11 +34,35 @@ import { CategoryService } from './category.service';
 
 describe('CategoryService - Boundary Conditions', () => {
   let service: CategoryService;
-  let mockHookService: ReturnType<typeof Mock.hook>;
+  let mockHookService: HookService;
+  let mockStatisticsService: any;
+  let mockQueryOptimizer: any;
+  let mockConfigService: any;
 
   beforeEach(async () => {
     // 创建 Hook 服务 Mock
-    mockHookService = Mock.hook();
+    mockHookService = Mock.hook() as any;
+    mockStatisticsService = {
+      getOverallStatistics: vi.fn().mockResolvedValue({
+        totalCategories: 0,
+        totalTags: 0,
+        totalArticles: 0,
+        publishedArticles: 0,
+        privateArticles: 0,
+        hiddenArticles: 0,
+        totalViews: 0,
+        categories: [],
+        tags: [],
+      }),
+    };
+    mockQueryOptimizer = {
+      withPerformanceMonitoring: vi.fn().mockImplementation((_name, fn) => fn()),
+      batchCountArticlesByTags: vi.fn().mockResolvedValue(new Map()),
+      batchCountArticlesByCategories: vi.fn().mockResolvedValue(new Map()),
+      buildOptimizedSearchQuery: vi.fn().mockReturnValue([]),
+      logSlowQuery: vi.fn(),
+    };
+    mockConfigService = Mock.config({ 'jwt.secret': 'test-secret-key' });
 
     const module: TestingModule = await Test.createTestingModule({
       imports: [],
@@ -50,37 +74,19 @@ describe('CategoryService - Boundary Conditions', () => {
         },
         {
           provide: StatisticsService,
-          useValue: {
-            getOverallStatistics: vi.fn().mockResolvedValue({
-              totalCategories: 0,
-              totalTags: 0,
-              totalArticles: 0,
-              publishedArticles: 0,
-              privateArticles: 0,
-              hiddenArticles: 0,
-              totalViews: 0,
-              categories: [],
-              tags: [],
-            }),
-          },
+          useValue: mockStatisticsService,
         },
         {
           provide: QueryOptimizerService,
-          useValue: {
-            withPerformanceMonitoring: vi.fn().mockImplementation((_name, fn) => fn()),
-            batchCountArticlesByTags: vi.fn().mockResolvedValue(new Map()),
-            batchCountArticlesByCategories: vi.fn().mockResolvedValue(new Map()),
-            buildOptimizedSearchQuery: vi.fn().mockReturnValue([]),
-            logSlowQuery: vi.fn(),
-          },
+          useValue: mockQueryOptimizer,
         },
         {
           provide: HookService,
-          useValue: mockHookService,
+          useValue: mockHookService as any,
         },
         {
           provide: ConfigService,
-          useValue: Mock.config({ 'jwt.secret': 'test-secret-key' }),
+          useValue: mockConfigService,
         },
       ],
     }).compile();
@@ -88,12 +94,22 @@ describe('CategoryService - Boundary Conditions', () => {
     service = module.get<CategoryService>(CategoryService);
   });
 
+  // Helper function to create service with transaction db
+  // @ts-expect-error TS2345 - Partial HookService is acceptable for testing
+  const _createServiceWithTx = (tx: any) => {
+    return new CategoryService(
+      tx as any,
+      mockStatisticsService,
+      mockQueryOptimizer,
+      mockHookService,
+      mockConfigService,
+    );
+  };
+
   describe('Empty and Null Values', () => {
     it('should handle empty string category name', async () => {
       await withTestTransaction(db, async (tx) => {
-        // 注入事务数据库
-        service['db'] = tx;
-
+        // Note: tx parameter is used by Given.* functions below
         const createDto = {
           name: '', // Empty string
           slug: 'test-slug',
@@ -112,9 +128,7 @@ describe('CategoryService - Boundary Conditions', () => {
     });
 
     it('should reject null category name', async () => {
-      await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
-
+      await withTestTransaction(db, async (_tx) => {
         const createDto = {
           name: null as any, // null
           slug: 'test-slug',
@@ -126,9 +140,7 @@ describe('CategoryService - Boundary Conditions', () => {
     });
 
     it('should reject undefined category name', async () => {
-      await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
-
+      await withTestTransaction(db, async (_tx) => {
         const createDto = {
           name: undefined as any, // undefined
           slug: 'test-slug',
@@ -141,8 +153,6 @@ describe('CategoryService - Boundary Conditions', () => {
 
     it('should accept empty string slug', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
-
         const createDto = {
           name: 'Test Category',
           slug: '', // Empty string
@@ -162,8 +172,6 @@ describe('CategoryService - Boundary Conditions', () => {
 
     it('should handle null description', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
-
         const createDto = {
           name: 'Test Category',
           slug: 'test-slug',
@@ -185,8 +193,6 @@ describe('CategoryService - Boundary Conditions', () => {
   describe('Very Long Strings', () => {
     it('should handle category name exceeding 1000 characters', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
-
         const longName = 'a'.repeat(1001);
         const createDto = {
           name: longName,
@@ -207,8 +213,6 @@ describe('CategoryService - Boundary Conditions', () => {
 
     it('should handle category slug exceeding 1000 characters', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
-
         const longSlug = 'a'.repeat(1001);
         const createDto = {
           name: 'Test',
@@ -229,8 +233,6 @@ describe('CategoryService - Boundary Conditions', () => {
 
     it('should handle category description exceeding 5000 characters', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
-
         const longDesc = 'Lorem ipsum dolor sit amet. '.repeat(200);
         const createDto = {
           name: 'Test',
@@ -251,8 +253,6 @@ describe('CategoryService - Boundary Conditions', () => {
   describe('Special Characters', () => {
     it('should handle category with SQL injection attempt in name', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
-
         const sqlInjectionAttempt = "'; DROP TABLE categories; --";
         const createDto = {
           name: sqlInjectionAttempt,
@@ -272,8 +272,6 @@ describe('CategoryService - Boundary Conditions', () => {
 
     it('should handle category with special characters', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
-
         const specialCharsName = '测试 Category <>&"\'';
         const createDto = {
           name: specialCharsName,
@@ -293,8 +291,6 @@ describe('CategoryService - Boundary Conditions', () => {
 
     it('should handle category name with only whitespace', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
-
         const whitespaceOnly = '   \t\n  ';
         const createDto = {
           name: whitespaceOnly,
@@ -313,10 +309,8 @@ describe('CategoryService - Boundary Conditions', () => {
 
     it('should handle update with name containing emoji', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
-
         // 先创建分类
-        const created = await Given.category({
+        const created = await Given.category(db as any, {
           name: 'Original',
           slug: 'original',
         });
@@ -341,8 +335,6 @@ describe('CategoryService - Boundary Conditions', () => {
   describe('Private Categories', () => {
     it('should handle private category with very long password', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
-
         const longPassword = 'p'.repeat(1000);
         const createDto = {
           name: 'Private Category',
@@ -365,8 +357,6 @@ describe('CategoryService - Boundary Conditions', () => {
 
     it('should handle private category with empty password', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
-
         const createDto = {
           name: 'Private Category Empty',
           private: true,
@@ -388,9 +378,7 @@ describe('CategoryService - Boundary Conditions', () => {
     });
 
     it('should verify password correctly for private category', async () => {
-      await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
-
+      await withTestTransaction(db, async (_tx) => {
         const password = 'correct-password';
         const createDto = {
           name: 'Private Category',
@@ -413,9 +401,7 @@ describe('CategoryService - Boundary Conditions', () => {
     });
 
     it('should allow access to non-private category without password', async () => {
-      await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
-
+      await withTestTransaction(db, async (_tx) => {
         const createDto = {
           name: 'Public Category',
           private: false,
@@ -434,8 +420,6 @@ describe('CategoryService - Boundary Conditions', () => {
   describe('Database Constraints', () => {
     it('should enforce category name uniqueness at database level', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
-
         const categoryName = 'UniqueCategory';
 
         // 创建第一个分类
@@ -462,13 +446,11 @@ describe('CategoryService - Boundary Conditions', () => {
 
     it('should handle concurrent category operations', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
-
         // 并发创建多个分类
         const createPromises = Array.from({ length: 10 }, (_, i) =>
           service.create({
-            name: `ConcurrentCategory${i}`,
-            slug: `concurrent-category-${i}`,
+            name: `ConcurrentCategory${String(i)}`,
+            slug: `concurrent-category-${String(i)}`,
           }),
         );
 
@@ -486,8 +468,6 @@ describe('CategoryService - Boundary Conditions', () => {
   describe('Edge Cases with Real Data', () => {
     it('should handle category with null and empty slug correctly', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
-
         // 创建 slug 为 null 的分类
         const [category1] = await tx
           .insert(categories)
@@ -517,8 +497,6 @@ describe('CategoryService - Boundary Conditions', () => {
 
     it('should handle updating category from private to public', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
-
         // 创建私有分类
         const [created] = await tx
           .insert(categories)
@@ -546,8 +524,6 @@ describe('CategoryService - Boundary Conditions', () => {
 
     it('should handle category with all optional fields null', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
-
         const createDto = {
           name: 'Minimal Category',
           slug: null as any,

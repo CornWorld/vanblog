@@ -12,9 +12,9 @@ describe('SitemapController', () => {
   let sitemapService: SitemapService;
 
   beforeEach(async () => {
-// ✅ 优化：使用新的扁平化 Mock API
+    // ✅ 优化：使用新的扁平化 Mock API
     const mockSitemapService = Mock.sitemap();
-// ✅ 优化：使用新的扁平化 Mock API
+    // ✅ 优化：使用新的扁平化 Mock API
     const mockConfigService = Mock.config();
 
     const module: TestingModule = await Test.createTestingModule({

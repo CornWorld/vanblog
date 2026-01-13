@@ -1,5 +1,5 @@
 import { Test, type TestingModule } from '@nestjs/testing';
-import { NotFoundException, Logger } from '@nestjs/common';
+import { NotFoundException } from '@nestjs/common';
 import { describe, it, beforeEach, afterEach, expect, vi } from 'vitest';
 import { eq } from 'drizzle-orm';
 
@@ -16,6 +16,12 @@ import type { PermissionRegistration } from './permission.service';
 
 describe('PermissionService', () => {
   let service: PermissionService;
+
+  // Helper function to create service instances with transaction database
+  // Uses 'any' type to avoid TypeScript strictness with transaction type mismatches
+  const createServiceWithTx = (tx: any) => {
+    return new PermissionService(tx);
+  };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -191,7 +197,7 @@ describe('PermissionService', () => {
     it('should register a new permission node', async () => {
       await withTestTransaction(db, async (tx) => {
         // Inject transaction database
-        const testService = new PermissionService(tx);
+        const testService = createServiceWithTx(tx);
 
         await testService.registerPermission({
           name: 'article:read',
@@ -212,7 +218,7 @@ describe('PermissionService', () => {
 
     it('should not register existing permission node', async () => {
       await withTestTransaction(db, async (tx) => {
-        const testService = new PermissionService(tx);
+        const testService = createServiceWithTx(tx);
 
         // First registration
         await testService.registerPermission({
@@ -239,7 +245,7 @@ describe('PermissionService', () => {
 
     it('should cache registered permissions', async () => {
       await withTestTransaction(db, async (tx) => {
-        const testService = new PermissionService(tx);
+        const testService = createServiceWithTx(tx);
 
         await testService.registerPermission({
           name: 'article:read',
@@ -253,7 +259,7 @@ describe('PermissionService', () => {
 
     it('should handle registration errors gracefully', async () => {
       await withTestTransaction(db, async (tx) => {
-        const testService = new PermissionService(tx);
+        const testService = createServiceWithTx(tx);
 
         // Mock invalid permission node (missing required field)
         await expect(
@@ -291,7 +297,7 @@ describe('PermissionService', () => {
 
     it('should resolve role permissions', async () => {
       await withTestTransaction(db, async (tx) => {
-        const testService = new PermissionService(tx);
+        const testService = createServiceWithTx(tx);
         testService.register({
           module: 'article',
           permissions: ['read', 'write'],
@@ -305,7 +311,7 @@ describe('PermissionService', () => {
         });
 
         // Create permission group for admin
-        await Given.permissionGroup({
+        await Given.permissionGroup(tx, {
           name: 'admin',
           description: 'Admin role',
           permissions: ['article:read', 'article:write', 'user:read'],
@@ -321,7 +327,7 @@ describe('PermissionService', () => {
 
     it('should handle disabled permissions', async () => {
       await withTestTransaction(db, async (tx) => {
-        const testService = new PermissionService(tx);
+        const testService = createServiceWithTx(tx);
         testService.register({
           module: 'article',
           permissions: ['read', 'write'],
@@ -335,7 +341,7 @@ describe('PermissionService', () => {
         });
 
         // Create permission group for admin
-        await Given.permissionGroup({
+        await Given.permissionGroup(tx, {
           name: 'admin',
           description: 'Admin role',
           permissions: ['article:read', 'article:write', 'user:read'],
@@ -352,7 +358,7 @@ describe('PermissionService', () => {
 
     it('should handle disabled role permissions', async () => {
       await withTestTransaction(db, async (tx) => {
-        const testService = new PermissionService(tx);
+        const testService = createServiceWithTx(tx);
         testService.register({
           module: 'article',
           permissions: ['read', 'write'],
@@ -362,7 +368,7 @@ describe('PermissionService', () => {
         });
 
         // Create permission group for admin
-        await Given.permissionGroup({
+        await Given.permissionGroup(tx, {
           name: 'admin',
           description: 'Admin role',
           permissions: ['article:read', 'article:write', 'user:read'],
@@ -378,7 +384,7 @@ describe('PermissionService', () => {
 
     it('should handle mixed permissions and roles', async () => {
       await withTestTransaction(db, async (tx) => {
-        const testService = new PermissionService(tx);
+        const testService = createServiceWithTx(tx);
         testService.register({
           module: 'article',
           permissions: ['read', 'write'],
@@ -392,7 +398,7 @@ describe('PermissionService', () => {
         });
 
         // Create permission group for admin
-        await Given.permissionGroup({
+        await Given.permissionGroup(tx, {
           name: 'admin',
           description: 'Admin role',
           permissions: ['article:read', 'article:write', 'user:read'],
@@ -590,7 +596,7 @@ describe('PermissionService', () => {
 
     it('should properly invalidate permission cache on role update', async () => {
       await withTestTransaction(db, async (tx) => {
-        const testService = new PermissionService(tx);
+        const testService = createServiceWithTx(tx);
         testService['rolePermissionsCache'].set('admin', [
           'article:read',
           'article:write',
@@ -598,7 +604,7 @@ describe('PermissionService', () => {
         ]);
 
         // Create permission group for admin
-        const group = await Given.permissionGroup({
+        const group = await Given.permissionGroup(tx, {
           name: 'admin',
           description: 'Admin group',
           permissions: ['article:read', 'article:write', 'article:delete'],
@@ -620,7 +626,7 @@ describe('PermissionService', () => {
     describe('createPermissionNode', () => {
       it('should create a permission node', async () => {
         await withTestTransaction(db, async (tx) => {
-          const testService = new PermissionService(tx);
+          const testService = createServiceWithTx(tx);
 
           const createDto = {
             name: 'article:read',
@@ -648,7 +654,7 @@ describe('PermissionService', () => {
 
       it('should handle date conversion', async () => {
         await withTestTransaction(db, async (tx) => {
-          const testService = new PermissionService(tx);
+          const testService = createServiceWithTx(tx);
 
           const result = await testService.createPermissionNode({
             name: 'article:read',
@@ -665,7 +671,7 @@ describe('PermissionService', () => {
     describe('findAllPermissionNodes', () => {
       it('should find all permission nodes with pagination', async () => {
         await withTestTransaction(db, async (tx) => {
-          const testService = new PermissionService(tx);
+          const testService = createServiceWithTx(tx);
 
           // Create test data
           await tx.insert(permissionNodes).values([
@@ -694,7 +700,7 @@ describe('PermissionService', () => {
 
       it('should filter by module', async () => {
         await withTestTransaction(db, async (tx) => {
-          const testService = new PermissionService(tx);
+          const testService = createServiceWithTx(tx);
 
           // Create test data
           await tx.insert(permissionNodes).values([
@@ -722,7 +728,7 @@ describe('PermissionService', () => {
 
       it('should filter by isActive status', async () => {
         await withTestTransaction(db, async (tx) => {
-          const testService = new PermissionService(tx);
+          const testService = createServiceWithTx(tx);
 
           // Create test data
           await tx.insert(permissionNodes).values([
@@ -750,13 +756,13 @@ describe('PermissionService', () => {
 
       it('should handle pagination correctly', async () => {
         await withTestTransaction(db, async (tx) => {
-          const testService = new PermissionService(tx);
+          const testService = createServiceWithTx(tx);
 
           // Create test data
           await tx.insert(permissionNodes).values(
             Array.from({ length: 25 }, (_, i) => ({
-              name: `permission:${i}`,
-              description: `Permission ${i}`,
+              name: `permission:${String(i)}`,
+              description: `Permission ${String(i)}`,
               module: 'test',
               isActive: true,
             })),
@@ -782,7 +788,7 @@ describe('PermissionService', () => {
     describe('findPermissionNodeById', () => {
       it('should return a permission node by id', async () => {
         await withTestTransaction(db, async (tx) => {
-          const testService = new PermissionService(tx);
+          const testService = createServiceWithTx(tx);
 
           const [created] = await tx
             .insert(permissionNodes)
@@ -803,7 +809,7 @@ describe('PermissionService', () => {
 
       it('should throw NotFoundException when node not found', async () => {
         await withTestTransaction(db, async (tx) => {
-          const testService = new PermissionService(tx);
+          const testService = createServiceWithTx(tx);
 
           await expect(testService.findPermissionNodeById(999)).rejects.toThrow(NotFoundException);
         });
@@ -813,7 +819,7 @@ describe('PermissionService', () => {
     describe('updatePermissionNode', () => {
       it('should update a permission node', async () => {
         await withTestTransaction(db, async (tx) => {
-          const testService = new PermissionService(tx);
+          const testService = createServiceWithTx(tx);
 
           const [created] = await tx
             .insert(permissionNodes)
@@ -841,9 +847,11 @@ describe('PermissionService', () => {
 
       it('should throw NotFoundException when node not found', async () => {
         await withTestTransaction(db, async (tx) => {
-          const testService = new PermissionService(tx);
+          const testService = createServiceWithTx(tx);
 
-          await expect(testService.updatePermissionNode(999, {})).rejects.toThrow(NotFoundException);
+          await expect(testService.updatePermissionNode(999, {})).rejects.toThrow(
+            NotFoundException,
+          );
         });
       });
     });
@@ -851,7 +859,7 @@ describe('PermissionService', () => {
     describe('removePermissionNode', () => {
       it('should remove a permission node', async () => {
         await withTestTransaction(db, async (tx) => {
-          const testService = new PermissionService(tx);
+          const testService = createServiceWithTx(tx);
 
           const [created] = await tx
             .insert(permissionNodes)
@@ -876,7 +884,7 @@ describe('PermissionService', () => {
 
       it('should throw NotFoundException when node not found', async () => {
         await withTestTransaction(db, async (tx) => {
-          const testService = new PermissionService(tx);
+          const testService = createServiceWithTx(tx);
 
           await expect(testService.removePermissionNode(999)).rejects.toThrow(NotFoundException);
         });
@@ -888,7 +896,7 @@ describe('PermissionService', () => {
     describe('createPermissionGroup', () => {
       it('should create a permission group', async () => {
         await withTestTransaction(db, async (tx) => {
-          const testService = new PermissionService(tx);
+          const testService = createServiceWithTx(tx);
 
           const createDto = {
             name: 'admin',
@@ -915,7 +923,7 @@ describe('PermissionService', () => {
 
       it('should invalidate role permissions cache after creation', async () => {
         await withTestTransaction(db, async (tx) => {
-          const testService = new PermissionService(tx);
+          const testService = createServiceWithTx(tx);
           testService['rolePermissionsCache'].set('admin', ['old:permission']);
 
           await testService.createPermissionGroup({
@@ -933,17 +941,17 @@ describe('PermissionService', () => {
     describe('findAllPermissionGroups', () => {
       it('should return all permission groups', async () => {
         await withTestTransaction(db, async (tx) => {
-          const testService = new PermissionService(tx);
+          const testService = createServiceWithTx(tx);
 
           // Create test data
-          await Given.permissionGroup({
+          await Given.permissionGroup(tx, {
             name: 'admin',
             description: 'Administrator',
             permissions: ['article:read', 'article:write'],
             isActive: true,
           });
 
-          await Given.permissionGroup({
+          await Given.permissionGroup(tx, {
             name: 'viewer',
             description: 'Viewer',
             permissions: ['article:read'],
@@ -958,17 +966,17 @@ describe('PermissionService', () => {
 
       it('should filter by isActive status', async () => {
         await withTestTransaction(db, async (tx) => {
-          const testService = new PermissionService(tx);
+          const testService = createServiceWithTx(tx);
 
           // Create test data
-          await Given.permissionGroup({
+          await Given.permissionGroup(tx, {
             name: 'admin',
             description: 'Administrator',
             permissions: ['article:read'],
             isActive: true,
           });
 
-          await Given.permissionGroup({
+          await Given.permissionGroup(tx, {
             name: 'inactive',
             description: 'Inactive group',
             permissions: [],
@@ -990,9 +998,9 @@ describe('PermissionService', () => {
     describe('findPermissionGroupById', () => {
       it('should return a permission group by id', async () => {
         await withTestTransaction(db, async (tx) => {
-          const testService = new PermissionService(tx);
+          const testService = createServiceWithTx(tx);
 
-          const created = await Given.permissionGroup({
+          const created = await Given.permissionGroup(tx, {
             name: 'admin',
             description: 'Administrator',
             permissions: ['article:read', 'article:write'],
@@ -1008,7 +1016,7 @@ describe('PermissionService', () => {
 
       it('should throw NotFoundException when group not found', async () => {
         await withTestTransaction(db, async (tx) => {
-          const testService = new PermissionService(tx);
+          const testService = createServiceWithTx(tx);
 
           await expect(testService.findPermissionGroupById(999)).rejects.toThrow(NotFoundException);
         });
@@ -1018,9 +1026,9 @@ describe('PermissionService', () => {
     describe('updatePermissionGroup', () => {
       it('should update a permission group', async () => {
         await withTestTransaction(db, async (tx) => {
-          const testService = new PermissionService(tx);
+          const testService = createServiceWithTx(tx);
 
-          const created = await Given.permissionGroup({
+          const created = await Given.permissionGroup(tx, {
             name: 'admin',
             description: 'Administrator',
             permissions: ['article:read'],
@@ -1043,10 +1051,10 @@ describe('PermissionService', () => {
 
       it('should invalidate cache after update', async () => {
         await withTestTransaction(db, async (tx) => {
-          const testService = new PermissionService(tx);
+          const testService = createServiceWithTx(tx);
           testService['rolePermissionsCache'].set('admin', ['old:permission']);
 
-          const created = await Given.permissionGroup({
+          const created = await Given.permissionGroup(tx, {
             name: 'admin',
             description: 'Administrator',
             permissions: ['article:read'],
@@ -1061,9 +1069,11 @@ describe('PermissionService', () => {
 
       it('should throw NotFoundException when group not found', async () => {
         await withTestTransaction(db, async (tx) => {
-          const testService = new PermissionService(tx);
+          const testService = createServiceWithTx(tx);
 
-          await expect(testService.updatePermissionGroup(999, {})).rejects.toThrow(NotFoundException);
+          await expect(testService.updatePermissionGroup(999, {})).rejects.toThrow(
+            NotFoundException,
+          );
         });
       });
     });
@@ -1071,9 +1081,9 @@ describe('PermissionService', () => {
     describe('removePermissionGroup', () => {
       it('should remove a permission group', async () => {
         await withTestTransaction(db, async (tx) => {
-          const testService = new PermissionService(tx);
+          const testService = createServiceWithTx(tx);
 
-          const created = await Given.permissionGroup({
+          const created = await Given.permissionGroup(tx, {
             name: 'admin',
             description: 'Administrator',
             permissions: ['article:read'],
@@ -1093,10 +1103,10 @@ describe('PermissionService', () => {
 
       it('should invalidate cache after deletion', async () => {
         await withTestTransaction(db, async (tx) => {
-          const testService = new PermissionService(tx);
+          const testService = createServiceWithTx(tx);
           testService['rolePermissionsCache'].set('admin', ['old:permission']);
 
-          const created = await Given.permissionGroup({
+          const created = await Given.permissionGroup(tx, {
             name: 'admin',
             description: 'Administrator',
             permissions: ['article:read'],
@@ -1111,7 +1121,7 @@ describe('PermissionService', () => {
 
       it('should throw NotFoundException when group not found', async () => {
         await withTestTransaction(db, async (tx) => {
-          const testService = new PermissionService(tx);
+          const testService = createServiceWithTx(tx);
 
           await expect(testService.removePermissionGroup(999)).rejects.toThrow(NotFoundException);
         });
@@ -1122,7 +1132,7 @@ describe('PermissionService', () => {
   describe('initializePermissions', () => {
     it('should initialize all permissions and groups', async () => {
       await withTestTransaction(db, async (tx) => {
-        const testService = new PermissionService(tx);
+        const testService = createServiceWithTx(tx);
         testService.register({ module: 'article', permissions: ['read', 'write'] });
 
         await testService.initializePermissions();
@@ -1252,7 +1262,7 @@ describe('PermissionService', () => {
   describe('Permission Inheritance', () => {
     it('should inherit permissions from predefined roles', async () => {
       await withTestTransaction(db, async (tx) => {
-        const testService = new PermissionService(tx);
+        const testService = createServiceWithTx(tx);
         testService.register({
           module: 'article',
           permissions: ['read', 'write', 'delete'],
@@ -1264,21 +1274,21 @@ describe('PermissionService', () => {
         });
 
         // Create permission groups
-        await Given.permissionGroup({
+        await Given.permissionGroup(tx, {
           name: 'admin',
           description: 'Admin',
           permissions: ['article:read', 'article:write', 'article:delete'],
           isActive: true,
         });
 
-        await Given.permissionGroup({
+        await Given.permissionGroup(tx, {
           name: 'author',
           description: 'Author',
           permissions: ['article:read', 'article:write'],
           isActive: true,
         });
 
-        await Given.permissionGroup({
+        await Given.permissionGroup(tx, {
           name: 'viewer',
           description: 'Viewer',
           permissions: ['article:read'],
@@ -1307,7 +1317,7 @@ describe('PermissionService', () => {
 
     it('should handle permission overrides correctly', async () => {
       await withTestTransaction(db, async (tx) => {
-        const testService = new PermissionService(tx);
+        const testService = createServiceWithTx(tx);
         testService.register({
           module: 'article',
           permissions: ['read', 'write', 'delete'],
@@ -1318,14 +1328,14 @@ describe('PermissionService', () => {
         });
 
         // Create permission groups
-        await Given.permissionGroup({
+        await Given.permissionGroup(tx, {
           name: 'admin',
           description: 'Admin',
           permissions: ['article:read', 'article:write', 'article:delete'],
           isActive: true,
         });
 
-        await Given.permissionGroup({
+        await Given.permissionGroup(tx, {
           name: 'viewer',
           description: 'Viewer',
           permissions: ['article:read'],
@@ -1333,10 +1343,7 @@ describe('PermissionService', () => {
         });
 
         // Grant admin, then revoke write permission
-        const perms = await testService.resolveUserPermissions([
-          'role:admin',
-          'no:article:write',
-        ]);
+        const perms = await testService.resolveUserPermissions(['role:admin', 'no:article:write']);
 
         expect(perms).toContain('article:read');
         expect(perms).toContain('article:delete');
@@ -1365,10 +1372,7 @@ describe('PermissionService', () => {
         'article:publish',
       ]);
 
-      const result = await service.hasPermissions(
-        ['editor'],
-        ['article:read', 'article:write'],
-      );
+      const result = await service.hasPermissions(['editor'], ['article:read', 'article:write']);
 
       expect(result).toBe(true);
     });
@@ -1376,10 +1380,7 @@ describe('PermissionService', () => {
     it('should fail when any permission is missing', async () => {
       vi.spyOn(service, 'resolveUserPermissions').mockResolvedValue(['article:read']);
 
-      const result = await service.hasPermissions(
-        ['author'],
-        ['article:read', 'article:delete'],
-      );
+      const result = await service.hasPermissions(['author'], ['article:read', 'article:delete']);
 
       expect(result).toBe(false);
     });
@@ -1392,10 +1393,7 @@ describe('PermissionService', () => {
         'article:publish',
       ]);
 
-      const result = await service.hasPermissions(
-        ['admin'],
-        ['article:delete', 'article:publish'],
-      );
+      const result = await service.hasPermissions(['admin'], ['article:delete', 'article:publish']);
 
       expect(result).toBe(true);
     });

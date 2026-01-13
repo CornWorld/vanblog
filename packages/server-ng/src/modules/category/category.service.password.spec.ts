@@ -65,7 +65,7 @@ describe('CategoryService - Password Management', () => {
         },
         {
           provide: HookService,
-          useValue: mockHookService,
+          useValue: mockHookService as any,
         },
         {
           provide: ConfigService,
@@ -85,7 +85,7 @@ describe('CategoryService - Password Management', () => {
     it('should hash password when provided', async () => {
       await withTestTransaction(db, async (tx) => {
         // 注入事务数据库
-        service['db'] = tx;
+        (service as any)['db'] = tx;
 
         const createDto = {
           name: 'Private Category',
@@ -132,7 +132,7 @@ describe('CategoryService - Password Management', () => {
 
     it('should create category without password', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx;
 
         const createDto = {
           name: 'Public Category',
@@ -158,7 +158,7 @@ describe('CategoryService - Password Management', () => {
 
     it('should apply beforeCreate filter hook', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx;
 
         const createDto = {
           name: 'Test Category',
@@ -199,7 +199,7 @@ describe('CategoryService - Password Management', () => {
   describe('update - Password Handling', () => {
     it('should hash password when provided', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx;
 
         // 先创建一个分类
         const [category] = await tx
@@ -251,7 +251,7 @@ describe('CategoryService - Password Management', () => {
 
     it('should update category without changing password', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx;
 
         // 创建带密码的分类
         const [category] = await tx
@@ -282,7 +282,7 @@ describe('CategoryService - Password Management', () => {
 
     it('should apply beforeUpdate filter hook', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx;
 
         // 创建分类
         const [category] = await tx
@@ -334,7 +334,7 @@ describe('CategoryService - Password Management', () => {
   describe('verifyPassword', () => {
     it('should return success for non-private category', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx;
 
         // 创建非私密分类
         const [category] = await tx
@@ -357,7 +357,7 @@ describe('CategoryService - Password Management', () => {
 
     it('should return success for private category with correct password', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx;
 
         // 创建私密分类
         const hashedPassword = '$2b$10$abcdefghijk123456789';
@@ -384,7 +384,7 @@ describe('CategoryService - Password Management', () => {
 
     it('should return failure for private category with incorrect password', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx;
 
         // 创建私密分类
         const hashedPassword = '$2b$10$abcdefghijk123456789';
@@ -412,7 +412,7 @@ describe('CategoryService - Password Management', () => {
 
     it('should throw NotFoundException when category not found', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx;
 
         await expect(service.verifyPassword(999, 'password')).rejects.toThrow(NotFoundException);
       });
@@ -420,7 +420,7 @@ describe('CategoryService - Password Management', () => {
 
     it('should generate valid JWT token on successful verification', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx;
 
         // 创建私密分类
         const hashedPassword = '$2b$10$abcdefghijk123456789';
@@ -444,7 +444,7 @@ describe('CategoryService - Password Management', () => {
         expect(typeof result.token).toBe('string');
 
         // 验证 token 格式（JWT 应该是 3 部分用点分隔）
-        const parts = result.token.split('.');
+        const parts = result.token!.split('.');
         expect(parts).toHaveLength(3);
       });
     });

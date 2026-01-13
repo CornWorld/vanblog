@@ -1,6 +1,3 @@
-import * as fs from 'fs/promises';
-import * as path from 'path';
-
 import { describe, it, beforeEach, expect, vi } from 'vitest';
 
 import { DatabaseMockBuilder, Mock } from '@test/mock';
@@ -25,13 +22,13 @@ vi.mock('fs/promises', async () => {
 });
 
 vi.mock('zlib', () => ({
-  gzip: vi.fn((data: any, callback: any) => callback(null, Buffer.from('compressed-data'))),
-  gunzip: vi.fn((data: any, callback: any) => callback(null, Buffer.from('{}'))),
+  gzip: vi.fn((_data: any, callback: any) => callback(null, Buffer.from('compressed-data'))),
+  gunzip: vi.fn((_data: any, callback: any) => callback(null, Buffer.from('{}'))),
   gzipSync: vi.fn(() => Buffer.from('compressed-data')),
   gunzipSync: vi.fn(() => Buffer.from('{}')),
   default: {
-    gzip: vi.fn((data: any, callback: any) => callback(null, Buffer.from('compressed-data'))),
-    gunzip: vi.fn((data: any, callback: any) => callback(null, Buffer.from('{}'))),
+    gzip: vi.fn((_data: any, callback: any) => callback(null, Buffer.from('compressed-data'))),
+    gunzip: vi.fn((_data: any, callback: any) => callback(null, Buffer.from('{}'))),
     gzipSync: vi.fn(() => Buffer.from('compressed-data')),
     gunzipSync: vi.fn(() => Buffer.from('{}')),
   },
@@ -59,16 +56,19 @@ describe('BackupService', () => {
     vi.mocked(mockFs.mkdir).mockResolvedValue(undefined);
     vi.mocked(mockFs.writeFile).mockResolvedValue(undefined);
     vi.mocked(mockFs.readdir).mockResolvedValue([]);
-    vi.mocked(mockFs.stat).mockResolvedValue({ size: 1024, mtime: new Date('2023-01-01T00:00:00Z') });
+    vi.mocked(mockFs.stat).mockResolvedValue({
+      size: 1024,
+      mtime: new Date('2023-01-01T00:00:00Z'),
+    });
     vi.mocked(mockFs.readFile).mockResolvedValue(Buffer.from('{}'));
     vi.mocked(mockFs.unlink).mockResolvedValue(undefined);
     vi.mocked(mockFs.access).mockResolvedValue(undefined);
 
     // Setup zlib mocks
-    vi.mocked(mockZlib.gzip).mockImplementation((data: any, callback: any) =>
+    vi.mocked(mockZlib.gzip).mockImplementation((_data: any, callback: any) =>
       callback(null, Buffer.from('compressed-data')),
     );
-    vi.mocked(mockZlib.gunzip).mockImplementation((data: any, callback: any) =>
+    vi.mocked(mockZlib.gunzip).mockImplementation((_data: any, callback: any) =>
       callback(null, Buffer.from('{}')),
     );
 
@@ -135,7 +135,9 @@ describe('BackupService', () => {
         includeLogs: false,
       };
 
-      await expect(service.createBackup(createBackupDto)).rejects.toThrow('Failed to create backup');
+      await expect(service.createBackup(createBackupDto)).rejects.toThrow(
+        'Failed to create backup',
+      );
       expect(mockLogger.error).toHaveBeenCalled();
     });
   });
@@ -144,7 +146,10 @@ describe('BackupService', () => {
     it('should return paginated backup list', async () => {
       const mockFiles = ['backup1.vbak', 'backup2.vbak', 'other.txt'];
       vi.mocked(mockFs.readdir).mockResolvedValueOnce(mockFiles as any);
-      vi.mocked(mockFs.stat).mockResolvedValue({ size: 2048, mtime: new Date('2023-01-01T00:00:00Z') } as any);
+      vi.mocked(mockFs.stat).mockResolvedValue({
+        size: 2048,
+        mtime: new Date('2023-01-01T00:00:00Z'),
+      } as any);
 
       // Mock gunzip to return decompressed content
       const mockBackupContent = JSON.stringify({
@@ -163,7 +168,7 @@ describe('BackupService', () => {
       });
 
       const mockZlib = await import('zlib');
-      vi.mocked(mockZlib.gunzip).mockImplementation((data: any, callback: any) => {
+      vi.mocked(mockZlib.gunzip).mockImplementation((_data: any, callback: any) => {
         callback(null, Buffer.from(mockBackupContent));
       });
 
@@ -191,16 +196,19 @@ describe('BackupService', () => {
     it('should filter backups by search term', async () => {
       const mockFiles = ['important-backup.vbak', 'test-backup.vbak'];
       vi.mocked(mockFs.readdir).mockResolvedValueOnce(mockFiles as any);
-      vi.mocked(mockFs.stat).mockResolvedValue({ size: 1024, mtime: new Date('2023-01-01T00:00:00Z') } as any);
+      vi.mocked(mockFs.stat).mockResolvedValue({
+        size: 1024,
+        mtime: new Date('2023-01-01T00:00:00Z'),
+      } as any);
 
       // Mock gunzip to return different content for each file
       let callCount = 0;
       const mockZlib = await import('zlib');
-      vi.mocked(mockZlib.gunzip).mockImplementation((data: any, callback: any) => {
+      vi.mocked(mockZlib.gunzip).mockImplementation((_data: any, callback: any) => {
         callCount++;
         const mockBackupContent = JSON.stringify({
           metadata: {
-            id: `test-id-${callCount}`,
+            id: `test-id-${String(callCount)}`,
             name: callCount === 1 ? 'important-backup' : 'test-backup',
             version: '1.0.0',
             createdAt: '2023-01-01T00:00:00.000Z',
@@ -231,12 +239,15 @@ describe('BackupService', () => {
     it('should handle encrypted backup metadata', async () => {
       const mockFiles = ['encrypted.vbak'];
       vi.mocked(mockFs.readdir).mockResolvedValueOnce(mockFiles as any);
-      vi.mocked(mockFs.stat).mockResolvedValue({ size: 1024, mtime: new Date('2023-01-01T00:00:00Z') } as any);
+      vi.mocked(mockFs.stat).mockResolvedValue({
+        size: 1024,
+        mtime: new Date('2023-01-01T00:00:00Z'),
+      } as any);
 
       // Mock gunzip to return non-JSON content (simulating encrypted data)
       const encryptedContent = 'encrypted-data-that-is-not-json';
       const mockZlib = await import('zlib');
-      vi.mocked(mockZlib.gunzip).mockImplementation((data: any, callback: any) => {
+      vi.mocked(mockZlib.gunzip).mockImplementation((_data: any, callback: any) => {
         callback(null, Buffer.from(encryptedContent));
       });
 
@@ -269,7 +280,9 @@ describe('BackupService', () => {
       (error as any).code = 'ENOENT';
       vi.mocked(mockFs.access).mockRejectedValueOnce(error);
 
-      await expect(service.deleteBackup('non-existent.vbak')).rejects.toThrow('Backup file not found');
+      await expect(service.deleteBackup('non-existent.vbak')).rejects.toThrow(
+        'Backup file not found',
+      );
     });
   });
 
@@ -328,7 +341,9 @@ describe('BackupService', () => {
     });
 
     it('should throw NotFoundException for non-existent task', () => {
-      expect(() => service.getRestoreProgress('non-existent-task')).toThrow('Restore task not found');
+      expect(() => service.getRestoreProgress('non-existent-task')).toThrow(
+        'Restore task not found',
+      );
     });
   });
 });

@@ -54,7 +54,7 @@ describe('BootstrapService', () => {
         { provide: CommentService, useValue: mockCommentService },
         { provide: TagService, useValue: mockTagService },
         { provide: CategoryService, useValue: mockCategoryService },
-        { provide: HookService, useValue: mockHookService },
+        { provide: HookService, useValue: mockHookService as any },
         { provide: PluginRegistryService, useValue: mockPluginRegistryService },
         { provide: PluginDataValidator, useValue: mockPluginDataValidator },
       ],

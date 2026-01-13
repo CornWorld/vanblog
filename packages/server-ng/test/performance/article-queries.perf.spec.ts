@@ -1,10 +1,10 @@
-import { describe, it, beforeEach, afterEach, expect } from 'vitest';
+import { describe, it, beforeEach, expect } from 'vitest';
 import { Logger } from '@nestjs/common';
 
 import { withTestTransaction } from '../utils/db-transaction-helper';
 import { db } from '../setup.unit';
-import { eq, and, gte } from 'drizzle-orm';
-import { Mock } from '../mock';
+import { eq, and, gte, desc } from 'drizzle-orm';
+import { users, categories, articles, tags } from '@vanblog/shared/drizzle';
 
 /**
  * Article Query Performance Tests
@@ -35,24 +35,33 @@ describe('Article Query Performance (article-queries.perf.spec.ts)', () => {
   it('should lookup single article in < 50ms', async () => {
     await withTestTransaction(db, async (tx) => {
       // Create test data
-      const [user] = await tx.insert($User).values({
-        username: 'test-author',
-        password: 'hashed',
-        type: 'author',
-      }).returning();
+      const [user] = await tx
+        .insert(users)
+        .values({
+          username: 'test-author',
+          password: 'hashed',
+          type: 'author',
+        })
+        .returning();
 
-      const [category] = await tx.insert($Category).values({
-        name: 'Test Category',
-        slug: 'test-category',
-      }).returning();
+      const [category] = await tx
+        .insert(categories)
+        .values({
+          name: 'Test Category',
+          slug: 'test-category',
+        })
+        .returning();
 
-      const [article] = await tx.insert($Article).values({
-        title: 'Test Article',
-        content: 'Test content',
-        authorId: user.id,
-        categoryId: category.id,
-        published: true,
-      }).returning();
+      const [article] = await tx
+        .insert(articles)
+        .values({
+          title: 'Test Article',
+          content: 'Test content',
+          author: user.username,
+          category: category.name,
+          private: false,
+        })
+        .returning();
 
       const measurements: number[] = [];
 
@@ -61,8 +70,7 @@ describe('Article Query Performance (article-queries.perf.spec.ts)', () => {
         const start = performance.now();
 
         // Real database query
-        const [result] = await tx.select().from($Article)
-          .where(eq($Article.id, article.id));
+        const [_result] = await tx.select().from(articles).where(eq(articles.id, article.id));
 
         const end = performance.now();
         measurements.push(end - start);
@@ -94,28 +102,37 @@ describe('Article Query Performance (article-queries.perf.spec.ts)', () => {
       const measurements: number[] = [];
 
       // Create test data
-      const [user] = await tx.insert($User).values({
-        username: 'test-author',
-        password: 'hashed',
-        type: 'author',
-      }).returning();
+      const [user] = await tx
+        .insert(users)
+        .values({
+          username: 'test-author',
+          password: 'hashed',
+          type: 'author',
+        })
+        .returning();
 
-      const [category] = await tx.insert($Category).values({
-        name: 'Test Category',
-        slug: 'test-category',
-      }).returning();
+      const [category] = await tx
+        .insert(categories)
+        .values({
+          name: 'Test Category',
+          slug: 'test-category',
+        })
+        .returning();
 
       // Create multiple articles
-      const articles = await tx.insert($Article).values(
-        Array.from({ length: totalArticles }, (_, i) => ({
-          title: `Test Article ${i}`,
-          content: `Test content ${i}`,
-          authorId: user.id,
-          categoryId: category.id,
-          published: true,
-          createdAt: new Date(`2024-01-${String(i + 1).padStart(2, '0')}`),
-        }))
-      ).returning();
+      await tx
+        .insert(articles)
+        .values(
+          Array.from({ length: totalArticles }, (_, i) => ({
+            title: `Test Article ${String(i)}`,
+            content: `Test content ${String(i)}`,
+            author: user.username,
+            category: category.name,
+            private: false,
+            createdAt: new Date(`2024-01-${String(i + 1).padStart(2, '0')}`).toISOString(),
+          })),
+        )
+        .returning();
 
       // Simulate paginating through pages
       const pageCount = 10;
@@ -123,10 +140,11 @@ describe('Article Query Performance (article-queries.perf.spec.ts)', () => {
         const start = performance.now();
 
         // Real database query with pagination
-        const pageResults = await tx.select()
-          .from($Article)
-          .where(eq($Article.published, true))
-          .orderBy($Article.createdAt, 'desc')
+        await tx
+          .select()
+          .from(articles)
+          .where(eq(articles.private, false))
+          .orderBy(desc(articles.createdAt))
           .limit(pageSize)
           .offset(page * pageSize);
 
@@ -158,27 +176,33 @@ describe('Article Query Performance (article-queries.perf.spec.ts)', () => {
       const measurements: number[] = [];
 
       // Create test data
-      const [user] = await tx.insert($User).values({
-        username: 'test-author',
-        password: 'hashed',
-        type: 'author',
-      }).returning();
+      const [user] = await tx
+        .insert(users)
+        .values({
+          username: 'test-author',
+          password: 'hashed',
+          type: 'author',
+        })
+        .returning();
 
-      const [category] = await tx.insert($Category).values({
-        name: 'Test Category',
-        slug: 'test-category',
-      }).returning();
+      const [category] = await tx
+        .insert(categories)
+        .values({
+          name: 'Test Category',
+          slug: 'test-category',
+        })
+        .returning();
 
       // Create test articles
-      await tx.insert($Article).values(
+      await tx.insert(articles).values(
         Array.from({ length: 50 }, (_, i) => ({
-          title: `Test Article ${i}`,
-          content: `Test content ${i}`,
-          authorId: user.id,
-          categoryId: category.id,
-          published: true,
-          createdAt: new Date(`2024-01-${String(i + 1).padStart(2, '0')}`),
-        }))
+          title: `Test Article ${String(i)}`,
+          content: `Test content ${String(i)}`,
+          author: user.username,
+          category: category.name,
+          private: false,
+          createdAt: new Date(`2024-01-${String(i + 1).padStart(2, '0')}`).toISOString(),
+        })),
       );
 
       // Run filter benchmark 10 times
@@ -186,14 +210,17 @@ describe('Article Query Performance (article-queries.perf.spec.ts)', () => {
         const start = performance.now();
 
         // Real complex filter query
-        const results = await tx.select()
-          .from($Article)
-          .where(and(
-            eq($Article.published, true),
-            eq($Article.categoryId, category.id),
-            gte($Article.createdAt, new Date('2024-01-01'))
-          ))
-          .orderBy($Article.createdAt, 'desc');
+        await tx
+          .select()
+          .from(articles)
+          .where(
+            and(
+              eq(articles.private, false),
+              eq(articles.category, category.name),
+              gte(articles.createdAt, new Date('2024-01-01').toISOString()),
+            ),
+          )
+          .orderBy(desc(articles.createdAt));
 
         const end = performance.now();
         measurements.push(end - start);
@@ -222,26 +249,32 @@ describe('Article Query Performance (article-queries.perf.spec.ts)', () => {
     // This test runs in a transaction, but we'll test concurrency separately
     await withTestTransaction(db, async (tx) => {
       // Create test data
-      const [user] = await tx.insert($User).values({
-        username: 'test-author',
-        password: 'hashed',
-        type: 'author',
-      }).returning();
+      const [user] = await tx
+        .insert(users)
+        .values({
+          username: 'test-author',
+          password: 'hashed',
+          type: 'author',
+        })
+        .returning();
 
-      const [category] = await tx.insert($Category).values({
-        name: 'Test Category',
-        slug: 'test-category',
-      }).returning();
+      const [category] = await tx
+        .insert(categories)
+        .values({
+          name: 'Test Category',
+          slug: 'test-category',
+        })
+        .returning();
 
       // Create multiple articles
-      await tx.insert($Article).values(
+      await tx.insert(articles).values(
         Array.from({ length: 20 }, (_, i) => ({
-          title: `Test Article ${i}`,
-          content: `Test content ${i}`,
-          authorId: user.id,
-          categoryId: category.id,
-          published: true,
-        }))
+          title: `Test Article ${String(i)}`,
+          content: `Test content ${String(i)}`,
+          author: user.username,
+          category: category.name,
+          private: false,
+        })),
       );
 
       const batches = [];
@@ -253,12 +286,7 @@ describe('Article Query Performance (article-queries.perf.spec.ts)', () => {
 
         const concurrentQueries = Array(batchSize)
           .fill(null)
-          .map(() =>
-            tx.select()
-              .from($Article)
-              .where(eq($Article.published, true))
-              .limit(1)
-          );
+          .map(() => tx.select().from(articles).where(eq(articles.private, false)).limit(1));
 
         await Promise.all(concurrentQueries);
 
@@ -303,43 +331,52 @@ describe('Article Query Performance (article-queries.perf.spec.ts)', () => {
       const measurements: number[] = [];
 
       // Create user and category
-      const [user] = await tx.insert($User).values({
-        username: 'test-author',
-        password: 'hashed',
-        type: 'author',
-      }).returning();
+      const [user] = await tx
+        .insert(users)
+        .values({
+          username: 'test-author',
+          password: 'hashed',
+          type: 'author',
+        })
+        .returning();
 
-      const [category] = await tx.insert($Category).values({
-        name: 'Test Category',
-        slug: 'test-category',
-      }).returning();
+      const [category] = await tx
+        .insert(categories)
+        .values({
+          name: 'Test Category',
+          slug: 'test-category',
+        })
+        .returning();
 
       // Create many tags
-      const tags = await tx.insert($Tag).values(
-        Array.from({ length: 20 }, (_, i) => ({
-          name: `tag-${String(i)}`,
-          count: 1,
-        }))
-      ).returning();
+      await tx
+        .insert(tags)
+        .values(
+          Array.from({ length: 20 }, (_, i) => ({
+            name: `tag-${String(i)}`,
+            count: 1,
+          })),
+        )
+        .returning();
 
       // Create article with tags
-      const [article] = await tx.insert($Article).values({
-        title: 'Article with many tags',
-        content: 'Test content',
-        authorId: user.id,
-        categoryId: category.id,
-        published: true,
-      }).returning();
+      const [article] = await tx
+        .insert(articles)
+        .values({
+          title: 'Article with many tags',
+          content: 'Test content',
+          author: user.username,
+          category: category.name,
+          private: false,
+        })
+        .returning();
 
       // Run query benchmark 10 times
       for (let i = 0; i < 10; i++) {
         const start = performance.now();
 
         // Real query - simplified since we don't have article-tag join in this schema
-        const results = await tx.select()
-          .from($Article)
-          .where(eq($Article.id, article.id))
-          .limit(1);
+        await tx.select().from(articles).where(eq(articles.id, article.id)).limit(1);
 
         const end = performance.now();
         measurements.push(end - start);
@@ -366,24 +403,33 @@ describe('Article Query Performance (article-queries.perf.spec.ts)', () => {
   it('should maintain stable memory usage over repeated queries', async () => {
     await withTestTransaction(db, async (tx) => {
       // Create test data
-      const [user] = await tx.insert($User).values({
-        username: 'test-author',
-        password: 'hashed',
-        type: 'author',
-      }).returning();
+      const [user] = await tx
+        .insert(users)
+        .values({
+          username: 'test-author',
+          password: 'hashed',
+          type: 'author',
+        })
+        .returning();
 
-      const [category] = await tx.insert($Category).values({
-        name: 'Test Category',
-        slug: 'test-category',
-      }).returning();
+      const [category] = await tx
+        .insert(categories)
+        .values({
+          name: 'Test Category',
+          slug: 'test-category',
+        })
+        .returning();
 
-      const [article] = await tx.insert($Article).values({
-        title: 'Test Article',
-        content: 'Test content',
-        authorId: user.id,
-        categoryId: category.id,
-        published: true,
-      }).returning();
+      const [article] = await tx
+        .insert(articles)
+        .values({
+          title: 'Test Article',
+          content: 'Test content',
+          author: user.username,
+          category: category.name,
+          private: false,
+        })
+        .returning();
 
       // Capture initial memory
       if (global.gc) {
@@ -393,9 +439,7 @@ describe('Article Query Performance (article-queries.perf.spec.ts)', () => {
 
       // Run 1000 queries
       for (let i = 0; i < 1000; i++) {
-        void tx.select()
-          .from($Article)
-          .where(eq($Article.id, article.id));
+        void tx.select().from(articles).where(eq(articles.id, article.id));
       }
 
       // Force garbage collection if available

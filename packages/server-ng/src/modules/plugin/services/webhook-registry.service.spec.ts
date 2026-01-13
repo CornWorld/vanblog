@@ -7,7 +7,7 @@ import type { WebhookService } from './webhook.service';
 
 describe('WebhookRegistryService', () => {
   let service: WebhookRegistryService;
-  let hookService: ReturnType<typeof Mock.hook>;
+  let hookService: any;
   let webhookService: Partial<WebhookService>;
 
   beforeEach(() => {

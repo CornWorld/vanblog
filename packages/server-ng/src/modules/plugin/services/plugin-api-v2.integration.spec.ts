@@ -484,9 +484,7 @@ describe('Plugin API v2.0 Integration Tests', () => {
       const api = await pluginAPIFactory.createAPI(packageJson, '/test/path');
 
       // Set should not throw with valid data
-      await expect(
-        api.meta.set('article', 1, 'test', 'value'),
-      ).resolves.not.toThrow();
+      await expect(api.meta.set('article', 1, 'test', 'value')).resolves.not.toThrow();
     });
 
     it('should handle service injection errors', async () => {

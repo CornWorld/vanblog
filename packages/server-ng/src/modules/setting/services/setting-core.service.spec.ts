@@ -77,7 +77,7 @@ describe('SettingCoreService', () => {
         },
         {
           provide: HookService,
-          useValue: mockHookService,
+          useValue: mockHookService as any,
         },
         {
           provide: SettingRegistryService,

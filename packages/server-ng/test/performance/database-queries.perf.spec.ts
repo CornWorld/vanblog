@@ -1,10 +1,15 @@
-import { describe, it, beforeEach, afterEach, expect } from 'vitest';
+import { describe, it, beforeEach, expect } from 'vitest';
 import { Logger } from '@nestjs/common';
+import {
+  users as $User,
+  categories as $Category,
+  articles as $Article,
+} from '@vanblog/shared/drizzle';
+import { eq } from 'drizzle-orm';
 
 import { withTestTransaction } from '../utils/db-transaction-helper';
 import { db } from '../setup.unit';
-import { $Article, $Tag, $Category, $User } from '@vanblog/shared/drizzle';
-import { eq, and, gte, ilike, inArray } from 'drizzle-orm';
+import { Mock } from '../mock';
 
 /**
  * Database Query Optimization Performance Tests
@@ -42,16 +47,22 @@ describe('Database Query Optimization (database-queries.perf.spec.ts)', () => {
       const measurements: number[] = [];
 
       // Create user and category first
-      const [user] = await tx.insert($User).values({
-        username: 'test-author',
-        password: 'hashed',
-        type: 'author',
-      }).returning();
+      const [user] = await tx
+        .insert($User)
+        .values({
+          username: 'test-author',
+          password: 'hashed',
+          type: 'author',
+        })
+        .returning();
 
-      const [category] = await tx.insert($Category).values({
-        name: 'Test Category',
-        slug: 'test-category',
-      }).returning();
+      const [category] = await tx
+        .insert($Category)
+        .values({
+          name: 'Test Category',
+          slug: 'test-category',
+        })
+        .returning();
 
       // Insert in batches
       for (let batch = 0; batch < articleCount / batchSize; batch++) {
@@ -61,11 +72,11 @@ describe('Database Query Optimization (database-queries.perf.spec.ts)', () => {
         const batchArticles = Array.from({ length: batchSize }, (_, i) => ({
           title: `Article ${String(batch * batchSize + i)}`,
           content: `Content for article ${String(batch * batchSize + i)}`,
-          authorId: user.id,
-          categoryId: category.id,
-          published: true,
-          createdAt: new Date(),
-          updatedAt: new Date(),
+          author: user.username,
+          category: category.name,
+          private: false,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
         }));
 
         // Real insert operation
@@ -104,26 +115,32 @@ describe('Database Query Optimization (database-queries.perf.spec.ts)', () => {
       const measurements: number[] = [];
 
       // Create test data
-      const [user] = await tx.insert($User).values({
-        username: 'test-author',
-        password: 'hashed',
-        type: 'author',
-      }).returning();
+      const [user] = await tx
+        .insert($User)
+        .values({
+          username: 'test-author',
+          password: 'hashed',
+          type: 'author',
+        })
+        .returning();
 
-      const [category] = await tx.insert($Category).values({
-        name: 'Test Category',
-        slug: 'test-category',
-      }).returning();
+      const [category] = await tx
+        .insert($Category)
+        .values({
+          name: 'Test Category',
+          slug: 'test-category',
+        })
+        .returning();
 
       // Create articles
       await tx.insert($Article).values(
         Array.from({ length: 20 }, (_, i) => ({
-          title: `Article ${i}`,
-          content: `Content ${i}`,
-          authorId: user.id,
-          categoryId: category.id,
-          published: true,
-        }))
+          title: `Article ${String(i)}`,
+          content: `Content ${String(i)}`,
+          author: user.username,
+          category: category.name,
+          private: false,
+        })),
       );
 
       // Run JOIN benchmark 10 times
@@ -131,15 +148,15 @@ describe('Database Query Optimization (database-queries.perf.spec.ts)', () => {
         const start = performance.now();
 
         // Real JOIN query
-        const results = await tx
+        await tx
           .select({
             id: $Article.id,
             title: $Article.title,
             categoryName: $Category.name,
           })
           .from($Article)
-          .leftJoin($Category, eq($Article.categoryId, $Category.id))
-          .where(eq($Article.published, true));
+          .leftJoin($Category, eq($Article.category, $Category.id))
+          .where(eq($Article.private, true));
 
         const end = performance.now();
         measurements.push(end - start);
@@ -173,26 +190,32 @@ describe('Database Query Optimization (database-queries.perf.spec.ts)', () => {
       const measurements: number[] = [];
 
       // Create test data
-      const [user] = await tx.insert($User).values({
-        username: 'test-author',
-        password: 'hashed',
-        type: 'author',
-      }).returning();
+      const [user] = await tx
+        .insert($User)
+        .values({
+          username: 'test-author',
+          password: 'hashed',
+          type: 'author',
+        })
+        .returning();
 
-      const [category] = await tx.insert($Category).values({
-        name: 'Test Category',
-        slug: 'test-category',
-      }).returning();
+      const [category] = await tx
+        .insert($Category)
+        .values({
+          name: 'Test Category',
+          slug: 'test-category',
+        })
+        .returning();
 
       // Create articles
       await tx.insert($Article).values(
         Array.from({ length: 50 }, (_, i) => ({
-          title: `Article ${i}`,
-          content: `Content ${i}`,
-          authorId: user.id,
-          categoryId: category.id,
-          published: true,
-        }))
+          title: `Article ${String(i)}`,
+          content: `Content ${String(i)}`,
+          author: user.username,
+          category: category.name,
+          private: false,
+        })),
       );
 
       // Run aggregation benchmark 10 times
@@ -200,12 +223,13 @@ describe('Database Query Optimization (database-queries.perf.spec.ts)', () => {
         const start = performance.now();
 
         // Real aggregation query
-        const result = await tx.select({
-          count: $Article.id,
-        })
+        await tx
+          .select({
+            count: $Article.id,
+          })
           .from($Article)
-          .where(eq($Article.published, true))
-          .groupBy($Article.categoryId);
+          .where(eq($Article.private, true))
+          .groupBy($Article.category);
 
         const end = performance.now();
         measurements.push(end - start);
@@ -238,6 +262,7 @@ describe('Database Query Optimization (database-queries.perf.spec.ts)', () => {
   it('should perform full-text search on 10000 articles with acceptable latency', async () => {
     const measurements: number[] = [];
     const searchTerms = ['typescript', 'nestjs', 'performance', 'database', 'cache'];
+    const databaseMock = Mock.db();
 
     // Create mock search results
     const mockSearchResults = Mock.articles(20);
@@ -297,6 +322,7 @@ describe('Database Query Optimization (database-queries.perf.spec.ts)', () => {
   it('should cascade delete 1000 records efficiently', async () => {
     const measurements: number[] = [];
     const recordsToDelete = 1000;
+    const databaseMock = Mock.db();
 
     // Mock delete operation with cascade
     databaseMock.db.delete.mockReturnValue({
@@ -351,6 +377,7 @@ describe('Database Query Optimization (database-queries.perf.spec.ts)', () => {
   it('should demonstrate index efficiency with indexed vs non-indexed queries', async () => {
     const mockArticles = Mock.articles(100);
     const measurements = { indexed: [] as number[], nonIndexed: [] as number[] };
+    const databaseMock = Mock.db();
 
     // Mock indexed query (fast - should be instant)
     databaseMock.db.select.mockReturnValueOnce({

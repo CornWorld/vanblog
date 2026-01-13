@@ -174,7 +174,11 @@ describe('TokenService', () => {
     it('should return virtual user for anonymous payload', async () => {
       const token = randomToken();
       const anonUsername = randomUsername();
-      mockJwtVerify.mockReturnValue({ sub: 'anonymous', username: anonUsername, isAnonymous: true });
+      mockJwtVerify.mockReturnValue({
+        sub: 'anonymous',
+        username: anonUsername,
+        isAnonymous: true,
+      });
 
       const result = await service.verifyAccessToken(token);
 

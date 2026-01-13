@@ -1,13 +1,12 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import { pluginData } from '@vanblog/shared/drizzle';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 
 import { ConfigService } from '../../../config/config.service';
 import { DATABASE_CONNECTION, type Database } from '../../../database';
 import { Mock } from '@test/mock';
 import { withTestTransaction } from '@test/utils/db-transaction-helper';
-import { Given } from '@test/given';
 
 import {
   PluginContextFactory,
@@ -93,7 +92,7 @@ describe('PluginContext Services', () => {
         await tx.insert(pluginData).values({
           pluginId: 'test-plugin',
           key: 'test-key',
-          value: JSON.stringify(testData) as unknown,
+          value: JSON.stringify(testData),
         });
 
         // Create storage service with transaction database
@@ -106,11 +105,12 @@ describe('PluginContext Services', () => {
         expect(result).toEqual(testData);
 
         // Verify database persistence
-        const [savedData] = await tx
+        const [savedData] = await (tx
           .select()
           .from(pluginData)
-          .where(eq(pluginData.pluginId, 'test-plugin'))
-          .where(eq(pluginData.key, 'test-key'));
+          .where(
+            and(eq(pluginData.pluginId, 'test-plugin'), eq(pluginData.key, 'test-key')),
+          ) as any);
 
         expect(savedData).toBeDefined();
         // NOTE: In test environment, fromDriver() may not be called
@@ -145,8 +145,7 @@ describe('PluginContext Services', () => {
         const [savedData] = await tx
           .select()
           .from(pluginData)
-          .where(eq(pluginData.pluginId, 'test-plugin'))
-          .where(eq(pluginData.key, 'test-key'));
+          .where(and(eq(pluginData.pluginId, 'test-plugin'), eq(pluginData.key, 'test-key')));
 
         expect(savedData).toBeDefined();
         expect(savedData.pluginId).toBe('test-plugin');
@@ -166,7 +165,7 @@ describe('PluginContext Services', () => {
         await tx.insert(pluginData).values({
           pluginId: 'test-plugin',
           key: 'test-key',
-          value: JSON.stringify({ test: 'value' }) as unknown,
+          value: JSON.stringify({ test: 'value' }),
         });
 
         const storage = new PluginDataStorageService(tx as unknown as Database, 'test-plugin');
@@ -177,9 +176,10 @@ describe('PluginContext Services', () => {
         expect(result).toBe(true);
 
         // Verify deletion
-        const [deletedData] = await tx.select().from(pluginData)
-          .where(eq(pluginData.pluginId, 'test-plugin'))
-          .where(eq(pluginData.key, 'test-key'));
+        const [deletedData] = await tx
+          .select()
+          .from(pluginData)
+          .where(and(eq(pluginData.pluginId, 'test-plugin'), eq(pluginData.key, 'test-key')));
 
         expect(deletedData).toBeUndefined();
       });

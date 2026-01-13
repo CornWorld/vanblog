@@ -13,7 +13,6 @@ import { NotFoundException } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { tags } from '@vanblog/shared/drizzle';
 import { eq } from 'drizzle-orm';
-import { faker } from '@faker-js/faker';
 import { describe, beforeEach, it, expect, vi } from 'vitest';
 
 import { db } from '@test/setup.unit';
@@ -45,13 +44,13 @@ describe('TagService - Boundary Conditions', () => {
         },
         {
           provide: HookService,
-          useValue: mockHookService,
+          useValue: mockHookService as any,
         },
         {
           provide: QueryOptimizerService,
           useValue: {
             batchCountArticlesByTags: vi.fn().mockResolvedValue({}),
-            withPerformanceMonitoring: vi.fn().mockImplementation(async (_name, fn) => fn()),
+            withPerformanceMonitoring: vi.fn((_name, fn) => fn()),
           },
         },
         {
@@ -80,7 +79,7 @@ describe('TagService - Boundary Conditions', () => {
     it('should accept empty string tag name (database allows it)', async () => {
       await withTestTransaction(db, async (tx) => {
         // 注入事务数据库
-        service['db'] = tx;
+        (service as any)['db'] = tx;
 
         const createDto = {
           name: '', // Empty string - database allows this
@@ -101,7 +100,7 @@ describe('TagService - Boundary Conditions', () => {
 
     it('should reject null tag name', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx;
 
         const createDto = {
           name: null as any, // null
@@ -114,7 +113,7 @@ describe('TagService - Boundary Conditions', () => {
 
     it('should reject undefined tag name', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx;
 
         const createDto = {
           name: undefined as any, // undefined
@@ -127,7 +126,7 @@ describe('TagService - Boundary Conditions', () => {
 
     it('should accept empty string slug', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx;
 
         const createDto = {
           name: 'Test Tag',
@@ -149,7 +148,7 @@ describe('TagService - Boundary Conditions', () => {
   describe('Very Long Strings', () => {
     it('should handle tag name exceeding 1000 characters', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx;
 
         const longName = 'a'.repeat(1001);
         const createDto = {
@@ -170,7 +169,7 @@ describe('TagService - Boundary Conditions', () => {
 
     it('should handle tag slug exceeding 1000 characters', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx;
 
         const longSlug = 'a'.repeat(1001);
         const createDto = {
@@ -193,7 +192,7 @@ describe('TagService - Boundary Conditions', () => {
   describe('Special Characters', () => {
     it('should safely handle SQL injection attempt in name', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx;
 
         const sqlInjectionAttempt = "'; DROP TABLE tags; --";
         const createDto = {
@@ -214,7 +213,7 @@ describe('TagService - Boundary Conditions', () => {
 
     it('should handle tag with special characters', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx;
 
         const specialCharsName = '测试 Tag <>&"\'';
         const createDto = {
@@ -235,7 +234,7 @@ describe('TagService - Boundary Conditions', () => {
 
     it('should handle tag name with only whitespace', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx;
 
         const whitespaceOnly = '   \t\n  ';
         const createDto = {
@@ -255,7 +254,7 @@ describe('TagService - Boundary Conditions', () => {
 
     it('should handle update with name containing emoji', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx;
 
         // 先在事务中创建标签
         const mock = Mock.tag();
@@ -288,7 +287,7 @@ describe('TagService - Boundary Conditions', () => {
   describe('Duplicate Tags and Edge Cases', () => {
     it('should handle findOrCreateTags with very long tag names', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx;
 
         const longTagName = 'a'.repeat(1001);
 
@@ -306,10 +305,10 @@ describe('TagService - Boundary Conditions', () => {
 
     it('should handle findOrCreateTags with duplicate names', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx;
 
         // 先创建一个标签
-        await Given.tag({
+        await Given.tag(db as any, {
           name: 'DuplicateTag',
           slug: 'duplicate-tag',
         });
@@ -328,7 +327,7 @@ describe('TagService - Boundary Conditions', () => {
 
     it('should handle tags with case-sensitive names (with unique slug constraint)', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx;
 
         // 注意：数据库中 slug 字段有唯一约束
         // findOrCreateTags 会将 name 转换为小写作为 slug
@@ -354,10 +353,10 @@ describe('TagService - Boundary Conditions', () => {
 
     it('should handle findOrCreateTags with existing tags', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx;
 
         // 先创建标签
-        await Given.tag({
+        await Given.tag(db as any, {
           name: 'ExistingTag',
           slug: 'existing-tag',
         });
@@ -378,7 +377,7 @@ describe('TagService - Boundary Conditions', () => {
   describe('Error Handling', () => {
     it('should throw NotFoundException for non-existent ID in findOne', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx;
 
         await expect(service.findOne(999)).rejects.toThrow(NotFoundException);
         await expect(service.findOne(999)).rejects.toThrow('Tag with ID 999 not found');
@@ -387,11 +386,9 @@ describe('TagService - Boundary Conditions', () => {
 
     it('should throw NotFoundException for non-existent ID in update', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx;
 
-        await expect(service.update(999, { name: 'Updated' })).rejects.toThrow(
-          NotFoundException,
-        );
+        await expect(service.update(999, { name: 'Updated' })).rejects.toThrow(NotFoundException);
         await expect(service.update(999, { name: 'Updated' })).rejects.toThrow(
           'Tag with ID 999 not found',
         );
@@ -400,7 +397,7 @@ describe('TagService - Boundary Conditions', () => {
 
     it('should throw NotFoundException for non-existent ID in remove', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx;
 
         await expect(service.remove(999)).rejects.toThrow(NotFoundException);
         await expect(service.remove(999)).rejects.toThrow('Tag with ID 999 not found');
@@ -409,7 +406,7 @@ describe('TagService - Boundary Conditions', () => {
 
     it('should return null for non-existent tag name in findByName', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx;
 
         const result = await service.findByName('NonExistentTag');
 
@@ -421,7 +418,7 @@ describe('TagService - Boundary Conditions', () => {
   describe('Database Constraints', () => {
     it('should enforce tag name uniqueness implicitly', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx;
 
         // 创建第一个标签
         await service.create({
@@ -443,7 +440,7 @@ describe('TagService - Boundary Conditions', () => {
 
     it('should handle bulk tag creation with findOrCreateTags', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx;
 
         const tagNames = ['Tag1', 'Tag2', 'Tag3', 'Tag4', 'Tag5'];
 
@@ -464,16 +461,16 @@ describe('TagService - Boundary Conditions', () => {
   describe('Edge Cases with Real Data', () => {
     it('should handle tag with null and empty slug correctly', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx;
 
         // 创建 slug 为 null 的标签
-        const tag1 = await Given.tag({
+        const tag1 = await Given.tag(db as any, {
           name: 'TagWithNullSlug',
           slug: null,
         });
 
         // 创建 slug 为空字符串的标签
-        const tag2 = await Given.tag({
+        const tag2 = await Given.tag(db as any, {
           name: 'TagWithEmptySlug',
           slug: '',
         });
@@ -489,13 +486,13 @@ describe('TagService - Boundary Conditions', () => {
 
     it('should handle concurrent tag operations', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx;
 
         // 并发创建多个标签
         const createPromises = Array.from({ length: 10 }, (_, i) =>
           service.create({
-            name: `ConcurrentTag${i}`,
-            slug: `concurrent-tag-${i}`,
+            name: `ConcurrentTag${String(i)}`,
+            slug: `concurrent-tag-${String(i)}`,
           }),
         );
 
@@ -511,7 +508,7 @@ describe('TagService - Boundary Conditions', () => {
 
     it('should handle tag creation with maximum allowed fields', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx;
 
         const maxLength = 10000;
         const longName = 'a'.repeat(maxLength);

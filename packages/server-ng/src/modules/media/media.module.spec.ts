@@ -24,7 +24,6 @@ import { LoggerService } from '../../core/logger/logger.service';
 import { SettingRegistryService } from '../setting/services/setting-registry.service';
 import { SettingCoreService } from '../setting/services/setting-core.service';
 import { HookService } from '../plugin/services/hook.service';
-import { withTestTransaction } from '@test/utils/db-transaction-helper';
 import { db } from '@test/setup.unit';
 
 import { MediaController } from './media.controller';

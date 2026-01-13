@@ -19,7 +19,11 @@ import { sql } from 'drizzle-orm';
 import { tags, articles } from '@vanblog/shared/drizzle';
 import { DATABASE_CONNECTION } from '../../database';
 import { withTestTransaction } from '@test/utils/db-transaction-helper';
-import { setupWorkerDatabase, cleanupWorkerDatabase, getWorkerIdFromEnv } from '@test/utils/db-worker-setup';
+import {
+  setupWorkerDatabase,
+  cleanupWorkerDatabase,
+  getWorkerIdFromEnv,
+} from '@test/utils/db-worker-setup';
 import { Given } from '@test/given';
 
 import { TagService } from './tag.service';
@@ -30,15 +34,14 @@ import { StatisticsService } from '../../shared/services/statistics.service';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 
 describe('TagService - Complex Queries', () => {
-  let db: LibSQLDatabase;
+  let db: LibSQLDatabase<Record<string, unknown>>;
   let dbPath: string;
-  let service: TagService;
   let module: TestingModule;
 
   beforeAll(async () => {
     // Setup test database
     const workerId = getWorkerIdFromEnv();
-    const setup = await setupWorkerDatabase(workerId);
+    const setup = setupWorkerDatabase(workerId);
     db = setup.db;
     dbPath = setup.dbPath;
 
@@ -89,7 +92,7 @@ describe('TagService - Complex Queries', () => {
         {
           provide: HookService,
           useValue: {
-            applyFilters: vi.fn().mockImplementation(async (_hook, data) => data),
+            applyFilters: vi.fn().mockImplementation((_hook, data) => Promise.resolve(data)),
             doAction: vi.fn().mockResolvedValue(undefined),
           },
         },
@@ -102,18 +105,16 @@ describe('TagService - Complex Queries', () => {
         {
           provide: QueryOptimizerService,
           useValue: {
-            withPerformanceMonitoring: vi.fn((_, fn) => fn()),
+            withPerformanceMonitoring: vi.fn((_, fn) => Promise.resolve(fn())),
             batchCountArticlesByTags: vi.fn(() => ({})),
           },
         },
       ],
     }).compile();
-
-    service = module.get<TagService>(TagService);
   });
 
-  afterAll(async () => {
-    await cleanupWorkerDatabase(dbPath);
+  afterAll(() => {
+    cleanupWorkerDatabase(dbPath);
   });
 
   beforeEach(async () => {
@@ -126,10 +127,10 @@ describe('TagService - Complex Queries', () => {
     it('should return articles for a tag by name', async () => {
       await withTestTransaction(db, async (tx) => {
         // Create tag
-        const tag = await Given.tag({ name: 'Technology', slug: 'tech' });
+        await Given.tag(db as any, { name: 'Technology', slug: 'tech' });
 
         // Create article with tag
-        await Given.article({
+        await Given.article(db as any, {
           title: 'Article 1',
           content: 'Content 1',
           pathname: '/article-1',
@@ -187,10 +188,10 @@ describe('TagService - Complex Queries', () => {
     it('should return articles for a tag', async () => {
       await withTestTransaction(db, async (tx) => {
         // Create tag
-        const tag = await Given.tag({ name: 'Technology', slug: 'tech' });
+        const tag = await Given.tag(db as any, { name: 'Technology', slug: 'tech' });
 
         // Create article with tag
-        await Given.article({
+        await Given.article(db as any, {
           title: 'Article 1',
           content: 'Content 1',
           pathname: '/article-1',
@@ -227,7 +228,7 @@ describe('TagService - Complex Queries', () => {
     it('should handle pagination correctly', async () => {
       await withTestTransaction(db, async (tx) => {
         // Create tag
-        const tag = await Given.tag({
+        const tag = await Given.tag(db as any, {
           name: 'Technology',
           slug: 'tech',
         });
@@ -267,13 +268,13 @@ describe('TagService - Complex Queries', () => {
       await withTestTransaction(db, async (tx) => {
         // Create tag
         // Create tag
-        const tag = await Given.tag({
+        const tag = await Given.tag(db as any, {
           name: 'Technology',
           slug: 'tech',
         });
 
         // Create hidden article using Given
-        await Given.article({
+        await Given.article(db as any, {
           title: 'Hidden Article',
           content: 'Content 1',
           tags: ['Technology'],

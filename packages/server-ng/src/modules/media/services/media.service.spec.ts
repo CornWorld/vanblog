@@ -34,14 +34,14 @@ const mockSharp = sharp as any;
 describe('MediaService', () => {
   let service: MediaService;
   let mockDb: DatabaseMockBuilder;
-  let mockHookService: Partial<HookService>;
+  let mockHookService: HookService;
   let mockStorageFactoryService: Partial<StorageFactoryService>;
   let mockStorageService: any;
   let mockLogger: Partial<LoggerService>;
 
   beforeEach(async () => {
     mockDb = new DatabaseMockBuilder();
-    mockHookService = createHookServiceMock();
+    mockHookService = createHookServiceMock() as any;
     mockStorageService = createStorageServiceMock();
     mockStorageFactoryService = createStorageFactoryServiceMock(
       mockStorageService,
@@ -63,7 +63,7 @@ describe('MediaService', () => {
         },
         {
           provide: HookService,
-          useValue: mockHookService,
+          useValue: mockHookService as any,
         },
         {
           provide: LoggerService,

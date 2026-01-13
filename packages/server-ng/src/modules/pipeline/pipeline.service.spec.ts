@@ -25,7 +25,7 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { pipelines } from '@vanblog/shared/drizzle';
-import { eq, desc } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { describe, beforeEach, it, expect, vi, afterEach } from 'vitest';
 
 import { db } from '@test/setup.unit';
@@ -83,12 +83,11 @@ describe('PipelineService', () => {
     await db.run(`DROP TABLE IF EXISTS "pipelines"`);
   });
   let service: PipelineService;
-  let moduleRef: TestingModule | null;
 
   beforeEach(async () => {
     // Import mocked modules
     const fs = await import('fs');
-    const childProcess = await import('child_process');
+    // const _childProcess = await import('child_process');
 
     // Reset all mocks
     vi.clearAllMocks();
@@ -111,13 +110,11 @@ describe('PipelineService', () => {
       ],
     }).compile();
 
-    moduleRef = module;
     service = module.get<PipelineService>(PipelineService);
   });
 
   afterEach(() => {
     vi.clearAllMocks();
-    moduleRef = null;
   });
 
   it('should be defined', () => {
@@ -128,17 +125,17 @@ describe('PipelineService', () => {
     it('should return all non-deleted pipelines', async () => {
       await withTestTransaction(db, async (tx) => {
         // 注入事务数据库
-        service['db'] = tx;
+        (service as any)['db'] = tx as any;
 
         // 创建测试数据
-        const [pipeline1] = await tx
+        const [_pipeline1] = await tx
           .insert(pipelines)
           .values(
             Mock.pipeline({
               id: 1,
               name: 'Pipeline 1',
               eventName: 'article|afterCreate',
-            }),
+            }) as any,
           )
           .returning();
 
@@ -150,7 +147,7 @@ describe('PipelineService', () => {
               name: 'Pipeline 2',
               eventName: 'article|afterUpdate',
               enabled: false,
-            }),
+            }) as any,
           )
           .returning();
 
@@ -163,7 +160,7 @@ describe('PipelineService', () => {
               name: 'Deleted Pipeline',
               eventName: 'article|afterDelete',
               deleted: true,
-            }),
+            }) as any,
           )
           .returning();
 
@@ -178,7 +175,7 @@ describe('PipelineService', () => {
 
     it('should return empty list when no pipelines exist', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx as any;
 
         const result = await service.findAll();
 
@@ -189,7 +186,7 @@ describe('PipelineService', () => {
 
     it('should order pipelines by createdAt desc', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx as any;
 
         // 创建多个流水线
         await tx
@@ -199,7 +196,7 @@ describe('PipelineService', () => {
               id: 1,
               name: 'First Pipeline',
               createdAt: '2024-01-01T00:00:00.000Z',
-            }),
+            }) as any,
           )
           .returning();
 
@@ -210,7 +207,7 @@ describe('PipelineService', () => {
               id: 2,
               name: 'Second Pipeline',
               createdAt: '2024-01-02T00:00:00.000Z',
-            }),
+            }) as any,
           )
           .returning();
 
@@ -226,11 +223,11 @@ describe('PipelineService', () => {
   describe('findOne', () => {
     it('should return pipeline by id', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx as any;
 
         const [created] = await tx
           .insert(pipelines)
-          .values(Mock.pipeline({ id: 1, name: 'Test Pipeline' }))
+          .values(Mock.pipeline({ id: 1, name: 'Test Pipeline' }) as any)
           .returning();
 
         const result = await service.findOne(created.id);
@@ -243,7 +240,7 @@ describe('PipelineService', () => {
 
     it('should throw NotFoundException when pipeline not found', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx as any;
 
         await expect(service.findOne(999)).rejects.toThrow(NotFoundException);
         await expect(service.findOne(999)).rejects.toThrow('Pipeline with ID 999 not found');
@@ -252,11 +249,11 @@ describe('PipelineService', () => {
 
     it('should not return deleted pipelines', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx as any;
 
         const [deleted] = await tx
           .insert(pipelines)
-          .values(Mock.pipeline({ id: 1, name: 'Deleted Pipeline', deleted: true }))
+          .values(Mock.pipeline({ id: 1, name: 'Deleted Pipeline', deleted: true }) as any)
           .returning();
 
         await expect(service.findOne(deleted.id)).rejects.toThrow(NotFoundException);
@@ -267,7 +264,7 @@ describe('PipelineService', () => {
   describe('findByEventName', () => {
     it('should return enabled pipelines for event', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx as any;
 
         await tx
           .insert(pipelines)
@@ -277,7 +274,7 @@ describe('PipelineService', () => {
               name: 'Pipeline 1',
               eventName: 'article|afterCreate',
               enabled: true,
-            }),
+            }) as any,
           )
           .returning();
 
@@ -289,7 +286,7 @@ describe('PipelineService', () => {
               name: 'Pipeline 2',
               eventName: 'article|afterCreate',
               enabled: false, // 禁用的流水线不应被返回
-            }),
+            }) as any,
           )
           .returning();
 
@@ -303,7 +300,7 @@ describe('PipelineService', () => {
 
     it('should return empty array when no pipelines match event', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx as any;
 
         const result = await service.findByEventName('non-existent-event');
 
@@ -313,7 +310,7 @@ describe('PipelineService', () => {
 
     it('should not return deleted pipelines', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx as any;
 
         await tx
           .insert(pipelines)
@@ -324,7 +321,7 @@ describe('PipelineService', () => {
               eventName: 'article|afterCreate',
               enabled: true,
               deleted: true, // 已删除
-            }),
+            }) as any,
           )
           .returning();
 
@@ -340,7 +337,7 @@ describe('PipelineService', () => {
       const fs = await import('fs');
 
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx as any;
         vi.mocked(fs.writeFileSync).mockReturnValue(undefined);
 
         const createDto = {
@@ -374,7 +371,7 @@ describe('PipelineService', () => {
       const fs = await import('fs');
 
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx as any;
         vi.mocked(fs.writeFileSync).mockReturnValue(undefined);
 
         const createDto = {
@@ -395,7 +392,7 @@ describe('PipelineService', () => {
 
     it('should throw error when event name is invalid', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx as any;
 
         const createDto = {
           name: 'Invalid Event',
@@ -412,7 +409,7 @@ describe('PipelineService', () => {
 
     it('should throw error when event name is whitespace only', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx as any;
 
         const createDto = {
           name: 'Whitespace Event',
@@ -432,7 +429,7 @@ describe('PipelineService', () => {
       const fs = await import('fs');
 
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx as any;
         vi.mocked(fs.writeFileSync).mockReturnValue(undefined);
 
         // 创建现有流水线
@@ -443,7 +440,7 @@ describe('PipelineService', () => {
               id: 1,
               name: 'Original Name',
               script: 'original script',
-            }),
+            }) as any,
           )
           .returning();
 
@@ -466,7 +463,7 @@ describe('PipelineService', () => {
 
     it('should throw NotFoundException when pipeline not found', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx as any;
 
         await expect(service.update(999, { name: 'Test' })).rejects.toThrow(NotFoundException);
       });
@@ -474,11 +471,11 @@ describe('PipelineService', () => {
 
     it('should validate event name when provided in update', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx as any;
 
         const [existing] = await tx
           .insert(pipelines)
-          .values(Mock.pipeline({ id: 1, eventName: 'article|afterCreate' }))
+          .values(Mock.pipeline({ id: 1, eventName: 'article|afterCreate' }) as any)
           .returning();
 
         const updateDto = {
@@ -491,7 +488,7 @@ describe('PipelineService', () => {
 
     it('should update updatedAt timestamp', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx as any;
 
         const [existing] = await tx
           .insert(pipelines)
@@ -499,7 +496,7 @@ describe('PipelineService', () => {
             Mock.pipeline({
               id: 1,
               updatedAt: '2024-01-01T00:00:00.000Z',
-            }),
+            }) as any,
           )
           .returning();
 
@@ -519,12 +516,12 @@ describe('PipelineService', () => {
       const fs = await import('fs');
 
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx as any;
         vi.mocked(fs.rmSync).mockReturnValue(undefined);
 
         const [existing] = await tx
           .insert(pipelines)
-          .values(Mock.pipeline({ id: 1, name: 'To Delete', deleted: false }))
+          .values(Mock.pipeline({ id: 1, name: 'To Delete', deleted: false }) as any)
           .returning();
 
         await service.remove(existing.id);
@@ -540,7 +537,7 @@ describe('PipelineService', () => {
 
     it('should throw NotFoundException when pipeline not found', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx as any;
 
         await expect(service.remove(999)).rejects.toThrow(NotFoundException);
       });
@@ -550,13 +547,13 @@ describe('PipelineService', () => {
       const fs = await import('fs');
 
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx as any;
         vi.mocked(fs.existsSync).mockReturnValue(true);
         vi.mocked(fs.rmSync).mockReturnValue(undefined);
 
         const [existing] = await tx
           .insert(pipelines)
-          .values(Mock.pipeline({ id: 1 }))
+          .values(Mock.pipeline({ id: 1 }) as any)
           .returning();
 
         await service.remove(existing.id);
@@ -596,11 +593,11 @@ describe('PipelineService', () => {
   describe('triggerById', () => {
     it('should throw BadRequestException when pipeline is disabled', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx as any;
 
         const [disabled] = await tx
           .insert(pipelines)
-          .values(Mock.pipeline({ id: 1, name: 'Disabled Pipeline', enabled: false }))
+          .values(Mock.pipeline({ id: 1, name: 'Disabled Pipeline', enabled: false }) as any)
           .returning();
 
         await expect(service.triggerById(disabled.id, {})).rejects.toThrow(BadRequestException);
@@ -614,11 +611,11 @@ describe('PipelineService', () => {
       const childProcess = await import('child_process');
 
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx as any;
 
         const [enabled] = await tx
           .insert(pipelines)
-          .values(Mock.pipeline({ id: 1, name: 'Enabled Pipeline', enabled: true }))
+          .values(Mock.pipeline({ id: 1, name: 'Enabled Pipeline', enabled: true }) as any)
           .returning();
 
         // Mock fork to simulate successful child process execution
@@ -627,15 +624,13 @@ describe('PipelineService', () => {
           on: vi.fn((event: string, handler: (...args: unknown[]) => void) => {
             // Simulate successful message from child process
             if (event === 'message') {
-              setTimeout(
-                () =>
-                  handler({
-                    status: 'success',
-                    output: { test: 'result' },
-                    logs: ['test log'],
-                  }),
-                10,
-              );
+              setTimeout(() => {
+                handler({
+                  status: 'success',
+                  output: { test: 'result' },
+                  logs: ['test log'],
+                });
+              }, 10);
             }
           }),
           kill: vi.fn(),
@@ -660,7 +655,7 @@ describe('PipelineService', () => {
 
     it('should return empty array when no pipelines match event', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx as any;
 
         const results = await service.dispatchEvent('non-existent-event', { test: 'data' });
 
@@ -672,7 +667,7 @@ describe('PipelineService', () => {
       const childProcess = await import('child_process');
 
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx as any;
 
         // 创建多个流水线
         await tx
@@ -683,7 +678,7 @@ describe('PipelineService', () => {
               name: 'Pipeline 1',
               eventName: 'test|event',
               enabled: true,
-            }),
+            }) as any,
           )
           .returning();
 
@@ -695,7 +690,7 @@ describe('PipelineService', () => {
               name: 'Pipeline 2',
               eventName: 'test|event',
               enabled: true,
-            }),
+            }) as any,
           )
           .returning();
 
@@ -705,15 +700,13 @@ describe('PipelineService', () => {
           on: vi.fn((event, handler) => {
             if (event === 'message') {
               // Simulate successful execution
-              setTimeout(
-                () =>
-                  handler({
-                    status: 'success',
-                    output: { test: 'result' },
-                    logs: ['test log'],
-                  } as any),
-                0,
-              );
+              setTimeout(() => {
+                handler({
+                  status: 'success',
+                  output: { test: 'result' },
+                  logs: ['test log'],
+                } as any);
+              }, 0);
             }
           }),
           kill: vi.fn(),
@@ -733,7 +726,7 @@ describe('PipelineService', () => {
       // 由于每个测试都在独立事务中执行，前面的测试不应影响这个测试
 
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx as any;
 
         // 验证数据库是空的（事务隔离）
         const pipelinesBefore = await tx.select().from(pipelines);

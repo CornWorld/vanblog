@@ -19,7 +19,7 @@
 
 import { Logger } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi, type Mock } from 'vitest';
 
 import { DATABASE_CONNECTION } from '../../../database';
 import { createDatabaseMock } from '@test/mock';
@@ -33,8 +33,8 @@ describe('WebhookService - Execution & Retry', () => {
   let service: WebhookService;
   let mockDb: ReturnType<typeof createDatabaseMock>;
   let mockWebhookRegistry: {
-    registerWebhook: import('vitest').Mock;
-    unregisterWebhookFromAllEvents: import('vitest').Mock;
+    registerWebhook: Mock;
+    unregisterWebhookFromAllEvents: Mock;
   };
 
   beforeEach(async () => {
@@ -86,7 +86,7 @@ describe('WebhookService - Execution & Retry', () => {
         timeout: 5000,
       };
 
-      (global.fetch as import('vitest').Mock).mockResolvedValue({
+      (global.fetch as unknown as Mock).mockResolvedValue({
         ok: true,
         status: 200,
         text: vi.fn().mockResolvedValue('Success'),
@@ -126,7 +126,7 @@ describe('WebhookService - Execution & Retry', () => {
       };
 
       // First two attempts fail, third succeeds
-      (global.fetch as import('vitest').Mock)
+      (global.fetch as unknown as Mock)
         .mockRejectedValueOnce(new Error('Network error'))
         .mockRejectedValueOnce(new Error('Network error'))
         .mockResolvedValueOnce({
@@ -178,7 +178,7 @@ describe('WebhookService - Execution & Retry', () => {
 
       const abortError = new Error('Timeout');
       abortError.name = 'AbortError';
-      (global.fetch as import('vitest').Mock).mockRejectedValue(abortError);
+      (global.fetch as unknown as Mock).mockRejectedValue(abortError);
 
       // Setup update mock
       (mockDb.update as any).mockReturnValue({
@@ -212,7 +212,7 @@ describe('WebhookService - Execution & Retry', () => {
         timeout: 5000,
       };
 
-      (global.fetch as import('vitest').Mock).mockResolvedValue({
+      (global.fetch as unknown as Mock).mockResolvedValue({
         ok: false,
         status: 500,
         text: vi.fn().mockResolvedValue('Internal Server Error'),
@@ -259,7 +259,7 @@ describe('WebhookService - Execution & Retry', () => {
         timeout: 5000,
       };
 
-      (global.fetch as import('vitest').Mock).mockResolvedValue({
+      (global.fetch as unknown as Mock).mockResolvedValue({
         ok: true,
         status: 200,
         text: vi.fn().mockResolvedValue('Success'),

@@ -15,7 +15,7 @@ import type { Server } from 'http';
 
 describe('CustomPageController (e2e)', () => {
   let app: INestApplication;
-  let db: LibSQLDatabase;
+  let db: LibSQLDatabase<Record<string, unknown>>;
 
   beforeAll(async () => {
     const appModule = AppModule.forRoot();
@@ -38,7 +38,7 @@ describe('CustomPageController (e2e)', () => {
     await app.init();
 
     // Get database connection for test data setup
-    db = app.get<LibSQLDatabase>(DATABASE_CONNECTION);
+    db = app.get<LibSQLDatabase<Record<string, unknown>>>(DATABASE_CONNECTION);
 
     // Create admin user
     await createUser(app);

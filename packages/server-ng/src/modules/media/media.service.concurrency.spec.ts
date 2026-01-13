@@ -1,5 +1,3 @@
-import { promises as fsPromises } from 'fs';
-
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import { withTestTransaction } from '@test/utils/db-transaction-helper';
@@ -51,7 +49,7 @@ describe('MediaService - Concurrency Safety', () => {
   let service: MediaService;
   let mockStorageService: Partial<StorageService>;
   let mockStorageFactoryService: Partial<StorageFactoryService>;
-  let mockHookService: Partial<HookService>;
+  let mockHookService: HookService;
   let mockLogger: Partial<LoggerService>;
 
   // 创建 Mock 文件（保留旧工具函数）
@@ -87,9 +85,9 @@ describe('MediaService - Concurrency Safety', () => {
     };
 
     mockHookService = {
-      applyFilters: vi.fn().mockImplementation(async (_hook, data) => data),
+      applyFilters: vi.fn().mockImplementation((_hook, data) => Promise.resolve(data)),
       doAction: vi.fn().mockResolvedValue(undefined),
-    };
+    } as any;
 
     mockLogger = {
       log: vi.fn(),
@@ -191,7 +189,7 @@ describe('MediaService - Concurrency Safety', () => {
   describe('Batch Operation Safety', () => {
     it('should handle concurrent batch deletions safely', async () => {
       await withTestTransaction(db, async (tx) => {
-        service.db = tx;
+        (service as any)['db'] = tx as any;
 
         // 创建 5 个测试文件
         const fileIds: number[] = [];
@@ -234,7 +232,7 @@ describe('MediaService - Concurrency Safety', () => {
 
     it('should prevent deletion of more than 100 files at once', async () => {
       await withTestTransaction(db, async (tx) => {
-        service.db = tx;
+        (service as any)['db'] = tx as any;
 
         const tooManyIds = Array.from({ length: 101 }, (_, i) => i + 1);
 
@@ -265,10 +263,7 @@ describe('MediaService - Concurrency Safety', () => {
       expect(result.size).toBe(50 * 1024 * 1024);
 
       // 验证数据库记录
-      const [savedFile] = await db
-        .select()
-        .from(staticFiles)
-        .where(eq(staticFiles.id, result.id));
+      const [savedFile] = await db.select().from(staticFiles).where(eq(staticFiles.id, result.id));
       expect(savedFile).toBeDefined();
       expect(savedFile?.size).toBe(50 * 1024 * 1024);
 
@@ -365,10 +360,7 @@ describe('MediaService - Concurrency Safety', () => {
       expect(uniqueIds.size).toBe(3);
 
       // 验证数据库记录
-      const allFiles = await db
-        .select()
-        .from(staticFiles)
-        .where(inArray(staticFiles.id, ids));
+      const allFiles = await db.select().from(staticFiles).where(inArray(staticFiles.id, ids));
       expect(allFiles).toHaveLength(3);
 
       // 清理测试数据

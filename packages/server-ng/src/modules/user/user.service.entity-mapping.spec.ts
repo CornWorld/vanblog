@@ -45,7 +45,7 @@ import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 vi.mock('bcrypt');
 
 describe('UserService - Entity Mapping', () => {
-  let db: LibSQLDatabase;
+  let db: LibSQLDatabase<Record<string, unknown>>;
   let dbPath: string;
   let mockHookService: ReturnType<typeof vi.fn>;
   let baseModule: TestingModule;
@@ -53,15 +53,16 @@ describe('UserService - Entity Mapping', () => {
   beforeAll(async () => {
     // Setup test database for this test file
     const workerId = getWorkerIdFromEnv();
-    const setup = await setupWorkerDatabase(workerId);
+
+    const setup = setupWorkerDatabase(workerId);
     db = setup.db;
     dbPath = setup.dbPath;
 
     // 创建 Hook 服务 Mock
     mockHookService = {
-      applyFilters: vi.fn().mockImplementation(async (_name, data) => data),
+      applyFilters: vi.fn().mockImplementation((_name: any, data: any) => data),
       doAction: vi.fn().mockResolvedValue(undefined),
-    };
+    } as any;
 
     baseModule = await Test.createTestingModule({
       providers: [
@@ -72,14 +73,14 @@ describe('UserService - Entity Mapping', () => {
         },
         {
           provide: HookService,
-          useValue: mockHookService,
+          useValue: mockHookService as any,
         },
       ],
     }).compile();
   });
 
-  afterAll(async () => {
-    await cleanupWorkerDatabase(dbPath);
+  afterAll(() => {
+    cleanupWorkerDatabase(dbPath);
   });
 
   beforeEach(async () => {
@@ -95,7 +96,7 @@ describe('UserService - Entity Mapping', () => {
   const createServiceWithTx = (tx: typeof db): UserService => {
     const service = baseModule.get(UserService);
     // Override the database connection with transaction
-    (service as any).db = tx;
+    (service as any)['db'] = tx as any;
     return service;
   };
 
@@ -104,7 +105,7 @@ describe('UserService - Entity Mapping', () => {
       await withTestTransaction(db, async (tx) => {
         // 创建测试用户（包含密码）
         const password = faker.internet.password();
-        const dbUser = await Given.user({
+        const dbUser = await Given.user(db as any, {
           username: faker.internet.username(),
           password,
           nickname: faker.person.fullName(),
@@ -135,7 +136,7 @@ describe('UserService - Entity Mapping', () => {
         // 创建测试用户
         const username = faker.internet.username();
         const password = faker.internet.password();
-        await Given.user({
+        await Given.user(db as any, {
           username,
           password,
           nickname: faker.person.fullName(),
@@ -165,7 +166,7 @@ describe('UserService - Entity Mapping', () => {
             password: faker.internet.password(),
             nickname: faker.person.fullName(),
             email: faker.internet.email(),
-            type: 'guest',
+            type: 'viewer',
             permissions: null,
           })
           .returning();
@@ -187,7 +188,7 @@ describe('UserService - Entity Mapping', () => {
             password: faker.internet.password(),
             nickname: faker.person.fullName(),
             email: faker.internet.email(),
-            type: 'guest',
+            type: 'viewer',
             permissions: [],
           })
           .returning();
@@ -234,16 +235,18 @@ describe('UserService - Entity Mapping', () => {
             password,
             nickname: faker.person.fullName(),
             email: faker.internet.email(),
-            type: 'guest',
+            type: 'viewer',
             permissions: ['read', 'write'],
           })
           .returning();
 
         // 直接更新数据库，插入包含非字符串元素的权限
-        await tx.run(
-          `UPDATE users SET permissions = ? WHERE id = ?`,
-          [JSON.stringify(['read', 123, null, 'write', undefined]), user.id],
-        );
+        await tx
+          .update(users)
+          .set({
+            permissions: JSON.parse(JSON.stringify(['read', 123, null, 'write', undefined])) as any,
+          })
+          .where(eq(users.id, user.id));
 
         // 通过用户名查询
         const service = createServiceWithTx(tx);
@@ -267,7 +270,7 @@ describe('UserService - Entity Mapping', () => {
             nickname: null,
             email: null,
             avatar: null,
-            type: 'guest',
+            type: 'viewer',
             permissions: null,
           })
           .returning();
@@ -335,7 +338,7 @@ describe('UserService - Entity Mapping', () => {
             password: faker.internet.password(),
             nickname: null, // 测试 null 字段
             email: null,
-            type: 'guest',
+            type: 'viewer',
             permissions: [],
           })
           .returning();
@@ -374,7 +377,7 @@ describe('UserService - Entity Mapping', () => {
         expect(result2).toMatchObject({
           nickname: undefined,
           email: undefined,
-          type: 'guest',
+          type: 'viewer',
           permissions: undefined,
         });
 

@@ -28,7 +28,7 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, expect, beforeEach, afterEach, vi, type Mock } from 'vitest';
 import { eq } from 'drizzle-orm';
 
-import { DATABASE_CONNECTION, type Database } from '../../../database';
+import { DATABASE_CONNECTION } from '../../../database';
 import { withTestTransaction } from '@test/utils/db-transaction-helper';
 import { db } from '@test/setup.unit';
 import { Given } from '@test/given';
@@ -43,7 +43,12 @@ global.fetch = vi.fn();
 const randomInt = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min;
 const randomUrl = () => `https://example${randomInt(1, 999)}.com/webhook`;
 const randomEvent = () => {
-  const events = ['article|afterCreate', 'article|afterUpdate', 'draft|afterPublish', 'comment|afterCreate'];
+  const events = [
+    'article|afterCreate',
+    'article|afterUpdate',
+    'draft|afterPublish',
+    'comment|afterCreate',
+  ];
   return events[randomInt(0, events.length - 1)];
 };
 
@@ -92,7 +97,7 @@ describe('WebhookService', () => {
     it('should create a webhook with active registration and verify in database', async () => {
       await withTestTransaction(db, async (tx) => {
         // Inject transaction DB into service
-        service['db'] = tx;
+        (service as any)['db'] = tx;
 
         const createDto = {
           name: `Webhook-${randomInt(1000, 9999)}`,
@@ -118,7 +123,10 @@ describe('WebhookService', () => {
         expect(result.timeout).toBe(createDto.timeout);
 
         // Verify webhook was registered
-        expect(mockWebhookRegistry.registerWebhook).toHaveBeenCalledWith(result.id, createDto.events);
+        expect(mockWebhookRegistry.registerWebhook).toHaveBeenCalledWith(
+          result.id,
+          createDto.events,
+        );
 
         // ORM direct query verification (read-write separation)
         const [saved] = await tx.select().from(webhooks).where(eq(webhooks.id, result.id));
@@ -132,7 +140,7 @@ describe('WebhookService', () => {
 
     it('should create webhook without registration if inactive', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx;
 
         const createDto = {
           name: `Inactive-${randomInt(1000, 9999)}`,
@@ -156,7 +164,7 @@ describe('WebhookService', () => {
 
     it('should handle database errors gracefully', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx;
 
         // This test verifies that the service can handle database errors
         // without crashing - the database constraints will handle validation
@@ -182,10 +190,10 @@ describe('WebhookService', () => {
   describe('findAll', () => {
     it('should return paginated webhooks', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx;
 
         // Create test webhooks
-        await Given.webhook({
+        await Given.webhook(db as any, {
           name: `Webhook ${randomInt(1, 10)}`,
           url: randomUrl(),
           events: [randomEvent()],
@@ -194,7 +202,7 @@ describe('WebhookService', () => {
           timeout: 30000,
         });
 
-        await Given.webhook({
+        await Given.webhook(db as any, {
           name: `Webhook ${randomInt(11, 20)}`,
           url: randomUrl(),
           events: [randomEvent()],
@@ -212,17 +220,17 @@ describe('WebhookService', () => {
           total: 2,
           totalPages: 1,
         });
-        expect(result.data[0].events).toBeDefined();
-        expect(Array.isArray(result.data[0].events)).toBe(true);
+        expect((result.data as any[])[0].events).toBeDefined();
+        expect(Array.isArray((result.data as any[])[0].events)).toBe(true);
       });
     });
 
     it('should filter by active status', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx;
 
         // Create active and inactive webhooks
-        await Given.webhook({
+        await Given.webhook(db as any, {
           // name: 'Active Webhook',
           url: randomUrl(),
           events: [randomEvent()],
@@ -231,7 +239,7 @@ describe('WebhookService', () => {
           timeout: 30000,
         });
 
-        await Given.webhook({
+        await Given.webhook(db as any, {
           // name: 'Inactive Webhook',
           url: randomUrl(),
           events: [randomEvent()],
@@ -242,17 +250,17 @@ describe('WebhookService', () => {
 
         const result = await service.findAll({ active: true });
 
-        expect(result.data.every((w: any) => w.active === true)).toBe(true);
+        expect((result.data as any[]).every((w: any) => w.active === true)).toBe(true);
       });
     });
 
     it('should filter by event', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx;
 
         const event = 'article|afterCreate';
 
-        await Given.webhook({
+        await Given.webhook(db as any, {
           // name: 'Article Webhook',
           url: randomUrl(),
           events: [event],
@@ -261,7 +269,7 @@ describe('WebhookService', () => {
           timeout: 30000,
         });
 
-        await Given.webhook({
+        await Given.webhook(db as any, {
           // name: 'Draft Webhook',
           url: randomUrl(),
           events: ['draft|afterPublish'],
@@ -272,8 +280,8 @@ describe('WebhookService', () => {
 
         const result = await service.findAll({ event });
 
-        expect(result.data.length).toBeGreaterThan(0);
-        expect(result.data.every((w: any) => w.events.includes(event))).toBe(true);
+        expect((result.data as any[]).length).toBeGreaterThan(0);
+        expect((result.data as any[]).every((w: any) => w.events.includes(event))).toBe(true);
       });
     });
   });
@@ -281,9 +289,9 @@ describe('WebhookService', () => {
   describe('findOne', () => {
     it('should return a webhook by id and verify database state', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx;
 
-        const webhook = await Given.webhook({
+        const webhook = await Given.webhook(db as any, {
           name: `Webhook-${randomInt(1, 100)}`,
           url: randomUrl(),
           events: [randomEvent()],
@@ -310,7 +318,7 @@ describe('WebhookService', () => {
 
     it('should return null if webhook not found', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx;
 
         const result = await service.findOne(999999);
 
@@ -320,9 +328,9 @@ describe('WebhookService', () => {
 
     it('should not register inactive webhook', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx;
 
-        const webhook = await Given.webhook({
+        const webhook = await Given.webhook(db as any, {
           name: `Inactive-${randomInt(1, 100)}`,
           url: randomUrl(),
           events: [randomEvent()],
@@ -342,9 +350,9 @@ describe('WebhookService', () => {
   describe('update', () => {
     it('should update a webhook and verify in database', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx;
 
-        const webhook = await Given.webhook({
+        const webhook = await Given.webhook(db as any, {
           name: 'Original Name',
           url: randomUrl(),
           events: [randomEvent()],
@@ -375,7 +383,7 @@ describe('WebhookService', () => {
 
     it('should return null if webhook not found', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx;
 
         const result = await service.update(999999, { name: 'Not Found' });
 
@@ -387,9 +395,9 @@ describe('WebhookService', () => {
   describe('remove', () => {
     it('should delete a webhook and verify removal from database', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx;
 
-        const webhook = await Given.webhook({
+        const webhook = await Given.webhook(db as any, {
           name: `Webhook-${randomInt(1, 100)}`,
           url: randomUrl(),
           events: [randomEvent()],
@@ -412,10 +420,10 @@ describe('WebhookService', () => {
   describe('trigger', () => {
     it('should trigger webhooks for an event and log execution', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx;
 
         // Create webhooks
-        await Given.webhook({
+        await Given.webhook(db as any, {
           name: `Webhook ${randomInt(1, 10)}`,
           url: randomUrl(),
           events: ['article|afterCreate', 'article|afterUpdate'],
@@ -425,7 +433,7 @@ describe('WebhookService', () => {
           timeout: 5000,
         });
 
-        await Given.webhook({
+        await Given.webhook(db as any, {
           name: `Webhook ${randomInt(11, 20)}`,
           url: randomUrl(),
           events: ['article|afterCreate'],
@@ -454,9 +462,9 @@ describe('WebhookService', () => {
 
     it('should only trigger webhooks subscribed to the event', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx;
 
-        await Given.webhook({
+        await Given.webhook(db as any, {
           // name: 'Webhook 1',
           url: randomUrl(),
           events: ['article|afterCreate'],
@@ -465,7 +473,7 @@ describe('WebhookService', () => {
           timeout: 5000,
         });
 
-        await Given.webhook({
+        await Given.webhook(db as any, {
           // name: 'Webhook 2',
           url: randomUrl(),
           events: ['draft|afterPublish'],
@@ -489,9 +497,9 @@ describe('WebhookService', () => {
 
     it('should handle webhook execution failure', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx;
 
-        await Given.webhook({
+        await Given.webhook(db as any, {
           // name: 'Failing Webhook',
           url: randomUrl(),
           events: ['article|afterCreate'],
@@ -518,9 +526,9 @@ describe('WebhookService', () => {
 
     it('should handle webhook timeout error', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx;
 
-        await Given.webhook({
+        await Given.webhook(db as any, {
           // name: 'Timeout Webhook',
           url: randomUrl(),
           events: ['article|afterCreate'],
@@ -547,7 +555,7 @@ describe('WebhookService', () => {
   describe('triggerForEvent', () => {
     it('should call trigger method', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx;
 
         const triggerSpy = vi.spyOn(service, 'trigger').mockResolvedValue();
 
@@ -563,9 +571,9 @@ describe('WebhookService', () => {
   describe('test', () => {
     it('should execute a test webhook successfully', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx;
 
-        const webhook = await Given.webhook({
+        const webhook = await Given.webhook(db as any, {
           url: randomUrl(),
           events: [randomEvent()],
           secret: null,
@@ -593,7 +601,7 @@ describe('WebhookService', () => {
 
     it('should throw error if webhook not found', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx;
 
         await expect(
           service.test(999999, {
@@ -606,9 +614,9 @@ describe('WebhookService', () => {
 
     it('should handle test webhook execution failure (HTTP 4xx)', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx;
 
-        const webhook = await Given.webhook({
+        const webhook = await Given.webhook(db as any, {
           url: randomUrl(),
           events: [randomEvent()],
           secret: null,
@@ -638,9 +646,9 @@ describe('WebhookService', () => {
 
     it('should handle test webhook network error', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx;
 
-        const webhook = await Given.webhook({
+        const webhook = await Given.webhook(db as any, {
           url: randomUrl(),
           events: [randomEvent()],
           secret: null,
@@ -665,9 +673,9 @@ describe('WebhookService', () => {
 
     it('should handle test webhook retry exhaustion', async () => {
       await withTestTransaction(db, async (tx) => {
-        service['db'] = tx;
+        (service as any)['db'] = tx;
 
-        const webhook = await Given.webhook({
+        const webhook = await Given.webhook(db as any, {
           url: randomUrl(),
           events: [randomEvent()],
           secret: null,

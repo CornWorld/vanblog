@@ -18,7 +18,6 @@
  * @group media-transactions
  */
 
-import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, beforeEach, it, expect, vi } from 'vitest';
 
 import { Mock } from '@test/mock';
@@ -26,12 +25,11 @@ import { db } from '@test/setup.unit';
 import { staticFiles } from '@vanblog/shared/drizzle';
 import { eq, sql } from 'drizzle-orm';
 
-import { DATABASE_CONNECTION } from '../../database';
-import { LoggerService } from '../../core/logger/logger.service';
-import { HookService } from '../plugin/services/hook.service';
+import type { LoggerService } from '../../core/logger/logger.service';
+import type { HookService } from '../plugin/services/hook.service';
 import { type StorageService, type UploadResult } from './interfaces/storage.interface';
 import { MediaService } from './services/media.service';
-import { StorageFactoryService } from './services/storage-factory.service';
+import type { StorageFactoryService } from './services/storage-factory.service';
 
 vi.mock('sharp', () => ({
   default: vi.fn(() => ({
@@ -43,13 +41,13 @@ describe('MediaService - Transaction Atomicity', () => {
   // Note: These tests use withTestTransaction for isolation.
   // While they could run in parallel, SQLite's locking will serialize them automatically.
   // Each test runs in its own transaction that gets rolled back, ensuring clean state.
-  let mediaService: MediaService;
+  // let _mediaService: MediaService;
   let mockStorageService: StorageService;
   let mockStorageFactory: StorageFactoryService;
   let mockHookService: HookService;
   let mockLogger: LoggerService;
 
-  beforeEach(async () => {
+  beforeEach(() => {
     // Mock storage service
     mockStorageService = {
       upload: vi.fn(),
@@ -64,34 +62,10 @@ describe('MediaService - Transaction Atomicity', () => {
     } as unknown as StorageFactoryService;
 
     // Mock hook service
-    mockHookService = Mock.hook();
+    mockHookService = Mock.hook() as any;
 
     // Mock logger service
     mockLogger = Mock.logger();
-
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        MediaService,
-        {
-          provide: DATABASE_CONNECTION,
-          useValue: db,
-        },
-        {
-          provide: StorageFactoryService,
-          useValue: mockStorageFactory,
-        },
-        {
-          provide: HookService,
-          useValue: mockHookService,
-        },
-        {
-          provide: LoggerService,
-          useValue: mockLogger,
-        },
-      ],
-    }).compile();
-
-    mediaService = module.get<MediaService>(MediaService);
   });
 
   /**
@@ -109,17 +83,26 @@ describe('MediaService - Transaction Atomicity', () => {
    */
   const cleanupTestData = async () => {
     // 使用 setTimeout 延迟清理，避免数据库锁定
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise((resolve) => setTimeout(resolve, 100));
 
     try {
       // 删除所有测试记录，避免累积
-      await db.delete(staticFiles).where(sql`filename LIKE 'test-%' OR filename LIKE 'file%d%.jpg' OR filename LIKE 'uploads/%'`);
-      await new Promise(resolve => setTimeout(resolve, 50));
+      await db
+        .delete(staticFiles)
+        .where(
+          sql`filename LIKE 'test-%' OR filename LIKE 'file%d%.jpg' OR filename LIKE 'uploads/%'`,
+        );
+      await new Promise((resolve) => setTimeout(resolve, 50));
 
       // 验证清理结果（可选）
-      const remaining = await db.select().from(staticFiles).where(sql`filename LIKE 'test-%' OR filename LIKE 'file%d%.jpg' OR filename LIKE 'uploads/%'`);
+      const remaining = await db
+        .select()
+        .from(staticFiles)
+        .where(
+          sql`filename LIKE 'test-%' OR filename LIKE 'file%d%.jpg' OR filename LIKE 'uploads/%'`,
+        );
       if (remaining.length > 0) {
-        console.warn(`Warning: Still have ${remaining.length} test records remaining`);
+        console.warn(`Warning: Still have ${String(remaining.length)} test records remaining`);
       }
     } catch (error) {
       // 忽略清理时的错误（可能是数据库锁定）
@@ -161,7 +144,9 @@ describe('MediaService - Transaction Atomicity', () => {
       mockStorageService.upload = vi.fn().mockRejectedValue(uploadError);
 
       // Act & Assert
-      await expect(service.uploadFile(file, 'test-category')).rejects.toThrow('Storage upload failed');
+      await expect(service.uploadFile(file, 'test-category')).rejects.toThrow(
+        'Storage upload failed',
+      );
 
       // 验证存储上传被调用
       expect(mockStorageService.upload).toHaveBeenCalledWith(file, 'test-category');
@@ -209,7 +194,7 @@ describe('MediaService - Transaction Atomicity', () => {
     });
 
     it('should rollback transaction on database insert failure', async () => {
-      const service = createService();
+      // const _service = createService();
       const file = createTestFile();
 
       // Mock 存储服务成功
@@ -222,8 +207,7 @@ describe('MediaService - Transaction Atomicity', () => {
       mockStorageService.upload = vi.fn().mockResolvedValue(uploadResult);
 
       // 通过注入一个会抛出错误的数据库连接来模拟失败
-      const failingDb = {
-        ...db,
+      const failingDb = Object.assign(Object.create(Object.getPrototypeOf(db)), db, {
         transaction: vi.fn().mockImplementation((callback) => {
           return db.transaction(async (tx) => {
             // 模拟在 insert 操作时失败
@@ -247,18 +231,20 @@ describe('MediaService - Transaction Atomicity', () => {
             }
           });
         }),
-      };
+      });
 
       // 创建一个使用失败数据库的服务
       const failingService = new MediaService(
         failingDb as any,
         mockStorageFactory,
-        mockHookService,
+        mockHookService as any,
         mockLogger,
       );
 
       // Act & Assert
-      await expect(failingService.uploadFile(file, 'test-category')).rejects.toThrow('Database insert failed');
+      await expect(failingService.uploadFile(file, 'test-category')).rejects.toThrow(
+        'Database insert failed',
+      );
 
       // 验证存储上传已发生
       expect(mockStorageService.upload).toHaveBeenCalled();
@@ -277,7 +263,9 @@ describe('MediaService - Transaction Atomicity', () => {
 
       try {
         // Act & Assert
-        await expect(service.uploadFile(file, 'test-category')).rejects.toThrow('Transaction creation failed');
+        await expect(service.uploadFile(file, 'test-category')).rejects.toThrow(
+          'Transaction creation failed',
+        );
       } finally {
         // 恢复原始方法
         (db as any).transaction = originalTransaction;
@@ -303,7 +291,8 @@ describe('MediaService - Transaction Atomicity', () => {
         mimeType: 'image/jpeg',
       };
 
-      mockStorageService.upload = vi.fn()
+      mockStorageService.upload = vi
+        .fn()
         .mockResolvedValueOnce(uploadResult1)
         .mockResolvedValueOnce(uploadResult2);
 
@@ -313,8 +302,7 @@ describe('MediaService - Transaction Atomicity', () => {
       expect(result1.filename).toBe('uploads/file1.jpg');
 
       // 模拟第二次上传时的数据库唯一性约束冲突
-      const failingDb = {
-        ...db,
+      const failingDb = Object.assign(Object.create(Object.getPrototypeOf(db)), db, {
         transaction: vi.fn().mockImplementation((callback) => {
           return db.transaction(async (tx) => {
             // 模拟在 insert 操作时失败
@@ -325,7 +313,9 @@ describe('MediaService - Transaction Atomicity', () => {
                   values: vi.fn().mockReturnValue({
                     returning: vi.fn().mockImplementationOnce(() => {
                       // 模拟唯一性约束错误
-                      const error = new Error('UNIQUE constraint failed: staticFiles.filename');
+                      const error = new Error(
+                        'UNIQUE constraint failed: staticFiles.filename',
+                      ) as any;
                       error.code = 'SQLITE_CONSTRAINT';
                       throw error;
                     }),
@@ -343,19 +333,21 @@ describe('MediaService - Transaction Atomicity', () => {
             }
           });
         }),
-      };
+      });
 
       // 创建一个使用失败数据库的服务
       const failingService = new MediaService(
         failingDb as any,
         mockStorageFactory,
-        mockHookService,
+        mockHookService as any,
         mockLogger,
       );
 
       try {
         // 第二次上传应该失败（数据库中的唯一性约束）
-        await expect(failingService.uploadFile(file2, 'cat2')).rejects.toThrow('UNIQUE constraint failed');
+        await expect(failingService.uploadFile(file2, 'cat2')).rejects.toThrow(
+          'UNIQUE constraint failed',
+        );
       } finally {
         // 清理 mock
         vi.restoreAllMocks();
@@ -363,7 +355,7 @@ describe('MediaService - Transaction Atomicity', () => {
 
       // 验证只有一条记录（第一次上传的）
       const records = await db.select().from(staticFiles);
-      const file1Records = records.filter(r => r.filename === 'uploads/file1.jpg');
+      const file1Records = records.filter((r) => r.filename === 'uploads/file1.jpg');
       expect(file1Records).toHaveLength(1);
     });
   });
@@ -375,7 +367,7 @@ describe('MediaService - Transaction Atomicity', () => {
     });
 
     it('should clean up storage on database failure', async () => {
-      const service = createService();
+      // const _service = createService();
       const file = createTestFile();
       const uploadResult: UploadResult = {
         filename: 'uploads/test.jpg',
@@ -388,8 +380,7 @@ describe('MediaService - Transaction Atomicity', () => {
       mockStorageService.delete = vi.fn().mockResolvedValue(true);
 
       // 通过注入一个会抛出错误的数据库连接来模拟失败
-      const failingDb = {
-        ...db,
+      const failingDb = Object.assign(Object.create(Object.getPrototypeOf(db)), db, {
         transaction: vi.fn().mockImplementation((callback) => {
           return db.transaction(async (tx) => {
             // 模拟在 insert 操作时失败
@@ -413,18 +404,20 @@ describe('MediaService - Transaction Atomicity', () => {
             }
           });
         }),
-      };
+      });
 
       // 创建一个使用失败数据库的服务
       const failingService = new MediaService(
         failingDb as any,
         mockStorageFactory,
-        mockHookService,
+        mockHookService as any,
         mockLogger,
       );
 
       // Act & Assert
-      await expect(failingService.uploadFile(file, 'test-category')).rejects.toThrow('Database operation failed');
+      await expect(failingService.uploadFile(file, 'test-category')).rejects.toThrow(
+        'Database operation failed',
+      );
 
       // 验证存储上传已发生
       expect(mockStorageService.upload).toHaveBeenCalledTimes(1);
@@ -434,7 +427,7 @@ describe('MediaService - Transaction Atomicity', () => {
     });
 
     it('should handle cleanup failure gracefully', async () => {
-      const service = createService();
+      // const _service = createService();
       const file = createTestFile();
       const uploadResult: UploadResult = {
         filename: 'uploads/test.jpg',
@@ -450,8 +443,7 @@ describe('MediaService - Transaction Atomicity', () => {
       mockStorageService.delete = vi.fn().mockRejectedValue(cleanupError);
 
       // 通过注入一个会抛出错误的数据库连接来模拟失败
-      const failingDb = {
-        ...db,
+      const failingDb = Object.assign(Object.create(Object.getPrototypeOf(db)), db, {
         transaction: vi.fn().mockImplementation((callback) => {
           return db.transaction(async (tx) => {
             // 模拟在 insert 操作时失败
@@ -475,18 +467,20 @@ describe('MediaService - Transaction Atomicity', () => {
             }
           });
         }),
-      };
+      });
 
       // 创建一个使用失败数据库的服务
       const failingService = new MediaService(
         failingDb as any,
         mockStorageFactory,
-        mockHookService,
+        mockHookService as any,
         mockLogger,
       );
 
       // Act & Assert - 应该抛出原始数据库错误，而不是清理错误
-      await expect(failingService.uploadFile(file, 'test-category')).rejects.toThrow('Database failed');
+      await expect(failingService.uploadFile(file, 'test-category')).rejects.toThrow(
+        'Database failed',
+      );
 
       // 验证两个操作都被尝试了
       expect(mockStorageService.upload).toHaveBeenCalled();
@@ -536,7 +530,8 @@ describe('MediaService - Transaction Atomicity', () => {
         mimeType: 'image/jpeg',
       };
 
-      mockStorageService.upload = vi.fn()
+      mockStorageService.upload = vi
+        .fn()
         .mockResolvedValueOnce(uploadResult1)
         .mockResolvedValueOnce(uploadResult2);
 
@@ -570,7 +565,8 @@ describe('MediaService - Transaction Atomicity', () => {
       };
 
       // Mock 第一个成功，第二个失败
-      mockStorageService.upload = vi.fn()
+      mockStorageService.upload = vi
+        .fn()
         .mockResolvedValueOnce(uploadResult1)
         .mockRejectedValueOnce(new Error('Second upload failed'));
 
@@ -579,7 +575,7 @@ describe('MediaService - Transaction Atomicity', () => {
       expect(result1).toBeDefined();
 
       // 添加延迟确保第一个操作完成
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
       // 第二个上传失败
       await expect(service.uploadFile(file2, 'cat2')).rejects.toThrow('Second upload failed');
@@ -622,10 +618,7 @@ describe('MediaService - Transaction Atomicity', () => {
       expect(allRecords.some((r) => r.filename === 'uploads/nested-file.jpg')).toBe(true);
 
       // 验证记录确实被插入了
-      const [saved] = await db
-        .select()
-        .from(staticFiles)
-        .where(eq(staticFiles.id, result.id));
+      const [saved] = await db.select().from(staticFiles).where(eq(staticFiles.id, result.id));
       expect(saved).toBeDefined();
       expect(saved.filename).toBe('uploads/nested-file.jpg');
     });
@@ -719,12 +712,28 @@ describe('MediaService - Transaction Atomicity', () => {
       ];
 
       const uploadResults: UploadResult[] = [
-        { filename: 'uploads/seq-file1.jpg', url: 'https://example.com/seq-file1.jpg', size: 1024, mimeType: 'image/jpeg' },
-        { filename: 'uploads/seq-file2.jpg', url: 'https://example.com/seq-file2.jpg', size: 2048, mimeType: 'image/jpeg' },
-        { filename: 'uploads/seq-file3.jpg', url: 'https://example.com/seq-file3.jpg', size: 3072, mimeType: 'image/jpeg' },
+        {
+          filename: 'uploads/seq-file1.jpg',
+          url: 'https://example.com/seq-file1.jpg',
+          size: 1024,
+          mimeType: 'image/jpeg',
+        },
+        {
+          filename: 'uploads/seq-file2.jpg',
+          url: 'https://example.com/seq-file2.jpg',
+          size: 2048,
+          mimeType: 'image/jpeg',
+        },
+        {
+          filename: 'uploads/seq-file3.jpg',
+          url: 'https://example.com/seq-file3.jpg',
+          size: 3072,
+          mimeType: 'image/jpeg',
+        },
       ];
 
-      mockStorageService.upload = vi.fn()
+      mockStorageService.upload = vi
+        .fn()
         .mockResolvedValueOnce(uploadResults[0])
         .mockResolvedValueOnce(uploadResults[1])
         .mockResolvedValueOnce(uploadResults[2]);

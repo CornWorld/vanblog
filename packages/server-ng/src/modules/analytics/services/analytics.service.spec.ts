@@ -15,10 +15,9 @@
  * @see /docs/TEST_MIGRATION_GUIDE.md
  */
 import { Test, type TestingModule } from '@nestjs/testing';
-import { dayjs } from '@vanblog/shared';
 import { analytics } from '@vanblog/shared/drizzle';
-import { eq, and, gte, lte, sql, desc } from 'drizzle-orm';
 import { describe, it, expect, beforeAll, vi } from 'vitest';
+import dayjs from 'dayjs';
 
 import { withTestTransaction } from '@test/utils/db-transaction-helper';
 import { db } from '@test/setup.unit';
@@ -65,7 +64,7 @@ describe('AnalyticsService', () => {
     it('should record analytics with all fields', async () => {
       await withTestTransaction(db, async (tx) => {
         // 注入事务数据库
-        const testService = new AnalyticsService(tx, mockCacheService as any);
+        const testService = new AnalyticsService(tx as any, mockCacheService as any);
 
         const dto: RecordAnalyticsDto = {
           type: AnalyticsType.PAGEVIEW,
@@ -94,7 +93,7 @@ describe('AnalyticsService', () => {
 
     it('should record analytics without optional fields', async () => {
       await withTestTransaction(db, async (tx) => {
-        const testService = new AnalyticsService(tx, mockCacheService as any);
+        const testService = new AnalyticsService(tx as any, mockCacheService as any);
 
         const dto: RecordAnalyticsDto = {
           type: AnalyticsType.EVENT,
@@ -116,7 +115,7 @@ describe('AnalyticsService', () => {
 
     it('should handle null data field', async () => {
       await withTestTransaction(db, async (tx) => {
-        const testService = new AnalyticsService(tx, mockCacheService as any);
+        const testService = new AnalyticsService(tx as any, mockCacheService as any);
 
         const dto: RecordAnalyticsDto = {
           type: AnalyticsType.PAGEVIEW,
@@ -133,7 +132,7 @@ describe('AnalyticsService', () => {
 
     it('should stringify complex data objects', async () => {
       await withTestTransaction(db, async (tx) => {
-        const testService = new AnalyticsService(tx, mockCacheService as any);
+        const testService = new AnalyticsService(tx as any, mockCacheService as any);
 
         const complexData = {
           articleId: 456,
@@ -161,7 +160,7 @@ describe('AnalyticsService', () => {
     it('should verify data isolation between transactions', async () => {
       // 第一个事务插入数据
       await withTestTransaction(db, async (tx) => {
-        const testService = new AnalyticsService(tx, mockCacheService as any);
+        const testService = new AnalyticsService(tx as any, mockCacheService as any);
 
         await testService.recordAnalytics({
           type: AnalyticsType.PAGEVIEW,
@@ -368,25 +367,28 @@ describe('AnalyticsService', () => {
   describe('getDeviceStats', () => {
     it('should aggregate device statistics from user agents', async () => {
       await withTestTransaction(db, async (tx) => {
-        const testService = new AnalyticsService(tx, mockCacheService as any);
+        const testService = new AnalyticsService(tx as any, mockCacheService as any);
 
         // 插入测试数据
-        await Given.analytics({
+        await Given.analytics(db as any, {
           type: AnalyticsType.PAGEVIEW,
           path: '/test',
-          userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+          userAgent:
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
           ip: '192.168.1.1',
         });
-        await Given.analytics({
+        await Given.analytics(db as any, {
           type: AnalyticsType.PAGEVIEW,
           path: '/test',
-          userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 14_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0 Mobile/15E148 Safari/604.1',
+          userAgent:
+            'Mozilla/5.0 (iPhone; CPU iPhone OS 14_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0 Mobile/15E148 Safari/604.1',
           ip: '192.168.1.2',
         });
-        await Given.analytics({
+        await Given.analytics(db as any, {
           type: AnalyticsType.PAGEVIEW,
           path: '/test',
-          userAgent: 'Mozilla/5.0 (iPad; CPU OS 14_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0 Mobile/15E148 Safari/604.1',
+          userAgent:
+            'Mozilla/5.0 (iPad; CPU OS 14_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0 Mobile/15E148 Safari/604.1',
           ip: '192.168.1.3',
         });
 
@@ -406,15 +408,15 @@ describe('AnalyticsService', () => {
 
     it('should handle empty user agents', async () => {
       await withTestTransaction(db, async (tx) => {
-        const testService = new AnalyticsService(tx, mockCacheService as any);
+        const testService = new AnalyticsService(tx as any, mockCacheService as any);
 
-        await Given.analytics({
+        await Given.analytics(db as any, {
           type: AnalyticsType.PAGEVIEW,
           path: '/test',
           userAgent: '',
           ip: '192.168.1.1',
         });
-        await Given.analytics({
+        await Given.analytics(db as any, {
           type: AnalyticsType.PAGEVIEW,
           path: '/test',
           userAgent: null,
@@ -429,9 +431,9 @@ describe('AnalyticsService', () => {
 
     it('should categorize unknown devices as desktop', async () => {
       await withTestTransaction(db, async (tx) => {
-        const testService = new AnalyticsService(tx, mockCacheService as any);
+        const testService = new AnalyticsService(tx as any, mockCacheService as any);
 
-        await Given.analytics({
+        await Given.analytics(db as any, {
           type: AnalyticsType.PAGEVIEW,
           path: '/test',
           userAgent: 'Unknown User Agent String',
@@ -446,18 +448,20 @@ describe('AnalyticsService', () => {
 
     it('should correctly identify mobile devices', async () => {
       await withTestTransaction(db, async (tx) => {
-        const testService = new AnalyticsService(tx, mockCacheService as any);
+        const testService = new AnalyticsService(tx as any, mockCacheService as any);
 
-        await Given.analytics({
+        await Given.analytics(db as any, {
           type: AnalyticsType.PAGEVIEW,
           path: '/test',
-          userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 14_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0 Mobile/15E148 Safari/604.1',
+          userAgent:
+            'Mozilla/5.0 (iPhone; CPU iPhone OS 14_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0 Mobile/15E148 Safari/604.1',
           ip: '192.168.1.1',
         });
-        await Given.analytics({
+        await Given.analytics(db as any, {
           type: AnalyticsType.PAGEVIEW,
           path: '/test',
-          userAgent: 'Mozilla/5.0 (Linux; Android 10; SM-G981B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.162 Mobile Safari/537.36',
+          userAgent:
+            'Mozilla/5.0 (Linux; Android 10; SM-G981B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.162 Mobile Safari/537.36',
           ip: '192.168.1.2',
         });
 
@@ -474,10 +478,10 @@ describe('AnalyticsService', () => {
   describe('getBrowserStats', () => {
     it('should aggregate browser statistics and limit to top 10', async () => {
       await withTestTransaction(db, async (tx) => {
-        const testService = new AnalyticsService(tx, mockCacheService as any);
+        const testService = new AnalyticsService(tx as any, mockCacheService as any);
 
         // 插入 15 个不同浏览器的记录
-        await Given.analyticsList(15, {
+        await Given.analyticsList(db as any, 15, {
           type: AnalyticsType.PAGEVIEW,
           path: '/test',
         });
@@ -498,9 +502,9 @@ describe('AnalyticsService', () => {
 
     it('should handle unknown browsers', async () => {
       await withTestTransaction(db, async (tx) => {
-        const testService = new AnalyticsService(tx, mockCacheService as any);
+        const testService = new AnalyticsService(tx as any, mockCacheService as any);
 
-        await Given.analytics({
+        await Given.analytics(db as any, {
           type: AnalyticsType.PAGEVIEW,
           path: '/test',
           userAgent: 'Unknown Agent',
@@ -515,12 +519,13 @@ describe('AnalyticsService', () => {
 
     it('should correctly identify Chrome browser', async () => {
       await withTestTransaction(db, async (tx) => {
-        const testService = new AnalyticsService(tx, mockCacheService as any);
+        const testService = new AnalyticsService(tx as any, mockCacheService as any);
 
-        await Given.analytics({
+        await Given.analytics(db as any, {
           type: AnalyticsType.PAGEVIEW,
           path: '/test',
-          userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+          userAgent:
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
           ip: '192.168.1.1',
         });
 
@@ -534,9 +539,9 @@ describe('AnalyticsService', () => {
   describe('exportAnalyticsData', () => {
     it('should export all analytics data without filters', async () => {
       await withTestTransaction(db, async (tx) => {
-        const testService = new AnalyticsService(tx, mockCacheService as any);
+        const testService = new AnalyticsService(tx as any, mockCacheService as any);
 
-        await Given.analytics({
+        await Given.analytics(db as any, {
           type: AnalyticsType.PAGEVIEW,
           path: '/test',
           referrer: null,
@@ -562,14 +567,14 @@ describe('AnalyticsService', () => {
 
     it('should filter by type', async () => {
       await withTestTransaction(db, async (tx) => {
-        const testService = new AnalyticsService(tx, mockCacheService as any);
+        const testService = new AnalyticsService(tx as any, mockCacheService as any);
 
-        await Given.analytics({
+        await Given.analytics(db as any, {
           type: AnalyticsType.PAGEVIEW,
           path: '/test1',
           ip: '192.168.1.1',
         });
-        await Given.analytics({
+        await Given.analytics(db as any, {
           type: AnalyticsType.EVENT,
           path: '/test2',
           ip: '192.168.1.2',
@@ -582,13 +587,13 @@ describe('AnalyticsService', () => {
         const result = await testService.exportAnalyticsData(query);
 
         expect(result).toHaveLength(1);
-        expect(result[0].type).toBe(AnalyticsType.EVENT);
+        expect((result[0] as any).type).toBe(AnalyticsType.EVENT);
       });
     });
 
     it('should filter by date range', async () => {
       await withTestTransaction(db, async (tx) => {
-        const testService = new AnalyticsService(tx, mockCacheService as any);
+        const testService = new AnalyticsService(tx as any, mockCacheService as any);
 
         // 在事务中直接创建数据
         await tx.insert(analytics).values([
@@ -614,20 +619,20 @@ describe('AnalyticsService', () => {
         const result = await testService.exportAnalyticsData(query);
 
         expect(result).toHaveLength(1);
-        expect(result[0].path).toBe('/test1');
+        expect((result[0] as any).path).toBe('/test1');
       });
     });
 
     it('should filter by path', async () => {
       await withTestTransaction(db, async (tx) => {
-        const testService = new AnalyticsService(tx, mockCacheService as any);
+        const testService = new AnalyticsService(tx as any, mockCacheService as any);
 
-        await Given.analytics({
+        await Given.analytics(db as any, {
           type: AnalyticsType.PAGEVIEW,
           path: '/specific-page',
           ip: '192.168.1.1',
         });
-        await Given.analytics({
+        await Given.analytics(db as any, {
           type: AnalyticsType.PAGEVIEW,
           path: '/other-page',
           ip: '192.168.1.2',
@@ -640,25 +645,23 @@ describe('AnalyticsService', () => {
         const result = await testService.exportAnalyticsData(query);
 
         expect(result).toHaveLength(1);
-        expect(result[0].path).toBe('/specific-page');
+        expect((result[0] as any).path).toBe('/specific-page');
       });
     });
 
     it('should handle invalid JSON in data field', async () => {
-      await withTestTransaction(db, async (tx) => {
-        const testService = new AnalyticsService(tx, mockCacheService as any);
-
-        // 跳过此测试，因为 Drizzle 的 json 模式会在查询时抛出异常
-        // 无法插入无效 JSON 到使用 { mode: 'json' } 的字段
-        // 这个测试用例需要在没有 Drizzle JSON 模式的情况下才能工作
+      await withTestTransaction(db, async (_tx) => {
+        // Skip this test because Drizzle's json mode will throw an exception when querying
+        // Cannot insert invalid JSON into fields using { mode: 'json' }
+        // This test case needs to work without Drizzle JSON mode
       });
     });
 
     it('should handle empty data field', async () => {
       await withTestTransaction(db, async (tx) => {
-        const testService = new AnalyticsService(tx, mockCacheService as any);
+        const testService = new AnalyticsService(tx as any, mockCacheService as any);
 
-        await Given.analytics({
+        await Given.analytics(db as any, {
           type: AnalyticsType.PAGEVIEW,
           path: '/test',
           ip: '192.168.1.1',
@@ -672,11 +675,11 @@ describe('AnalyticsService', () => {
 
     it('should format createdAt as ISO string', async () => {
       await withTestTransaction(db, async (tx) => {
-        const testService = new AnalyticsService(tx, mockCacheService as any);
+        const testService = new AnalyticsService(tx as any, mockCacheService as any);
 
-        const testDate = new Date('2024-01-15T10:30:00Z');
+        // const _testDate = new Date('2024-01-15T10:30:00Z');
 
-        await Given.analytics({
+        await Given.analytics(db as any, {
           type: AnalyticsType.PAGEVIEW,
           path: '/test',
           ip: '192.168.1.1',
@@ -690,19 +693,19 @@ describe('AnalyticsService', () => {
 
     it('should verify export with combined filters', async () => {
       await withTestTransaction(db, async (tx) => {
-        const testService = new AnalyticsService(tx, mockCacheService as any);
+        const testService = new AnalyticsService(tx as any, mockCacheService as any);
 
-        await Given.analytics({
+        await Given.analytics(db as any, {
           type: AnalyticsType.PAGEVIEW,
           path: '/filtered-page',
           ip: '192.168.1.1',
         });
-        await Given.analytics({
+        await Given.analytics(db as any, {
           type: AnalyticsType.EVENT,
           path: '/filtered-page',
           ip: '192.168.1.2',
         });
-        await Given.analytics({
+        await Given.analytics(db as any, {
           type: AnalyticsType.PAGEVIEW,
           path: '/other-page',
           ip: '192.168.1.3',
@@ -716,8 +719,8 @@ describe('AnalyticsService', () => {
         const result = await testService.exportAnalyticsData(query);
 
         expect(result).toHaveLength(1);
-        expect(result[0].type).toBe(AnalyticsType.PAGEVIEW);
-        expect(result[0].path).toBe('/filtered-page');
+        expect((result[0] as any).type).toBe(AnalyticsType.PAGEVIEW);
+        expect((result[0] as any).path).toBe('/filtered-page');
       });
     });
   });
@@ -755,7 +758,7 @@ describe('AnalyticsService', () => {
       const _startTime = Date.now();
 
       await withTestTransaction(db, async (tx) => {
-        const testService = new AnalyticsService(tx, mockCacheService as any);
+        const testService = new AnalyticsService(tx as any, mockCacheService as any);
 
         // Simulate processing 10 analytics records
         for (let i = 0; i < 10; i++) {
@@ -783,7 +786,7 @@ describe('AnalyticsService', () => {
       // Baseline: process 10 records
       let baselineTime = Date.now();
       await withTestTransaction(db, async (tx) => {
-        const testService = new AnalyticsService(tx, mockCacheService as any);
+        const testService = new AnalyticsService(tx as any, mockCacheService as any);
         for (let i = 0; i < 10; i++) {
           await testService.recordAnalytics({
             type: AnalyticsType.PAGEVIEW,
@@ -796,7 +799,7 @@ describe('AnalyticsService', () => {
       // Test: process 100 records (10x more)
       let testTime = Date.now();
       await withTestTransaction(db, async (tx) => {
-        const testService = new AnalyticsService(tx, mockCacheService as any);
+        const testService = new AnalyticsService(tx as any, mockCacheService as any);
         for (let i = 0; i < 100; i++) {
           await testService.recordAnalytics({
             type: AnalyticsType.PAGEVIEW,
@@ -819,7 +822,7 @@ describe('AnalyticsService', () => {
       // Test with 100 records
       const _start100 = Date.now();
       await withTestTransaction(db, async (tx) => {
-        const testService = new AnalyticsService(tx, mockCacheService as any);
+        const testService = new AnalyticsService(tx as any, mockCacheService as any);
         for (let i = 0; i < 100; i++) {
           await testService.recordAnalytics({
             type: AnalyticsType.PAGEVIEW,
@@ -832,7 +835,7 @@ describe('AnalyticsService', () => {
       // Test with 1000 records (10x more)
       const _start1000 = Date.now();
       await withTestTransaction(db, async (tx) => {
-        const testService = new AnalyticsService(tx, mockCacheService as any);
+        const testService = new AnalyticsService(tx as any, mockCacheService as any);
         for (let i = 0; i < 1000; i++) {
           await testService.recordAnalytics({
             type: AnalyticsType.PAGEVIEW,
@@ -885,9 +888,9 @@ describe('AnalyticsService', () => {
 
       // Baseline: 5 device records
       await withTestTransaction(db, async (tx) => {
-        const testService = new AnalyticsService(tx, mockCacheService as any);
+        const testService = new AnalyticsService(tx as any, mockCacheService as any);
 
-        await Given.analyticsList(5, {
+        await Given.analyticsList(db as any, 5, {
           type: AnalyticsType.PAGEVIEW,
           path: '/test',
           userAgent: 'Mozilla/5.0 (Device)',
@@ -898,7 +901,7 @@ describe('AnalyticsService', () => {
         const _elapsed5 = Date.now() - _time5;
 
         // Scale test: 50 device records (10x more)
-        await Given.analyticsList(50, {
+        await Given.analyticsList(db as any, 50, {
           type: AnalyticsType.PAGEVIEW,
           path: '/test',
           userAgent: 'Mozilla/5.0 (Device)',

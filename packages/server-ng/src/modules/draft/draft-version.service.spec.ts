@@ -23,7 +23,6 @@ import { NotFoundException } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, beforeEach, it, expect } from 'vitest';
 
-import { Mock } from '@test/mock';
 import { withTestTransaction } from '@test/utils/db-transaction-helper';
 import { db } from '@test/setup.unit';
 import { draftVersions, drafts } from '@vanblog/shared/drizzle';
@@ -34,8 +33,6 @@ import { DATABASE_CONNECTION } from '../../database';
 import { DraftVersionService } from './draft-version.service';
 
 describe('DraftVersionService', () => {
-  let service: DraftVersionService;
-
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -47,7 +44,8 @@ describe('DraftVersionService', () => {
       ],
     }).compile();
 
-    service = module.get<DraftVersionService>(DraftVersionService);
+    // Module is created but service instances are created per-test via createServiceWithTx
+    void module;
   });
 
   // 辅助函数：创建使用事务数据库的服务实例
@@ -61,7 +59,7 @@ describe('DraftVersionService', () => {
         const txService = createServiceWithTx(tx);
 
         // 创建测试草稿
-        const draft = await Given.draft({
+        const draft = await Given.draft(db as any, {
           title: 'Test Draft',
           content: 'Test content',
           tags: ['test'],
@@ -96,7 +94,7 @@ describe('DraftVersionService', () => {
         const txService = createServiceWithTx(tx);
 
         // 创建草稿
-        const draft = await Given.draft({
+        const draft = await Given.draft(db as any, {
           title: 'Test Draft',
           content: 'Content',
           author: 'admin',
@@ -140,14 +138,14 @@ describe('DraftVersionService', () => {
         const txService = createServiceWithTx(tx);
 
         // 创建草稿
-        const draft = await Given.draft({
+        const draft = await Given.draft(db as any, {
           title: 'Test Draft',
           content: 'Content',
           author: 'admin',
         });
 
         // 创建多个版本
-        await Given.draftVersion({
+        await Given.draftVersion(db as any, {
           draftId: draft.id,
           version: 1,
           title: 'Version 1',
@@ -156,7 +154,7 @@ describe('DraftVersionService', () => {
           author: 'admin',
         });
 
-        await Given.draftVersion({
+        await Given.draftVersion(db as any, {
           draftId: draft.id,
           version: 2,
           title: 'Version 2',
@@ -165,7 +163,7 @@ describe('DraftVersionService', () => {
           author: 'admin',
         });
 
-        await Given.draftVersion({
+        await Given.draftVersion(db as any, {
           draftId: draft.id,
           version: 3,
           title: 'Version 3',
@@ -190,7 +188,7 @@ describe('DraftVersionService', () => {
         const txService = createServiceWithTx(tx);
 
         // 创建草稿但不创建版本
-        const draft = await Given.draft({
+        const draft = await Given.draft(db as any, {
           title: 'Test Draft',
           content: 'Content',
           author: 'admin',
@@ -210,14 +208,14 @@ describe('DraftVersionService', () => {
         const txService = createServiceWithTx(tx);
 
         // 创建草稿
-        const draft = await Given.draft({
+        const draft = await Given.draft(db as any, {
           title: 'Test Draft',
           content: 'Content',
           author: 'admin',
         });
 
         // 创建版本
-        await Given.draftVersion({
+        await Given.draftVersion(db as any, {
           draftId: draft.id,
           version: 1,
           title: 'Version 1',
@@ -249,14 +247,14 @@ describe('DraftVersionService', () => {
         const txService = createServiceWithTx(tx);
 
         // 创建草稿
-        const draft = await Given.draft({
+        const draft = await Given.draft(db as any, {
           title: 'Test Draft',
           content: 'Content',
           author: 'admin',
         });
 
         // 创建多个版本
-        await Given.draftVersion({
+        await Given.draftVersion(db as any, {
           draftId: draft.id,
           version: 1,
           title: 'Version 1',
@@ -264,7 +262,7 @@ describe('DraftVersionService', () => {
           author: 'admin',
         });
 
-        await Given.draftVersion({
+        await Given.draftVersion(db as any, {
           draftId: draft.id,
           version: 2,
           title: 'Version 2',
@@ -291,7 +289,7 @@ describe('DraftVersionService', () => {
         const txService = createServiceWithTx(tx);
 
         // 创建草稿
-        const draft = await Given.draft({
+        const draft = await Given.draft(db as any, {
           title: 'Current Title',
           content: 'Current content',
           tags: ['current'],
@@ -299,7 +297,7 @@ describe('DraftVersionService', () => {
         });
 
         // 创建历史版本
-        await Given.draftVersion({
+        await Given.draftVersion(db as any, {
           draftId: draft.id,
           version: 1,
           title: 'Old Version',
@@ -312,10 +310,7 @@ describe('DraftVersionService', () => {
         await txService.restoreVersion(draft.id, 1);
 
         // 验证草稿已更新
-        const [restoredDraft] = await tx
-          .select()
-          .from(drafts)
-          .where(eq(drafts.id, draft.id));
+        const [restoredDraft] = await tx.select().from(drafts).where(eq(drafts.id, draft.id));
         expect(restoredDraft.title).toBe('Old Version');
         expect(restoredDraft.content).toBe('Old content');
         expect(restoredDraft.tags).toEqual(['old']);
@@ -327,14 +322,14 @@ describe('DraftVersionService', () => {
         const txService = createServiceWithTx(tx);
 
         // 创建草稿
-        const draft = await Given.draft({
+        const draft = await Given.draft(db as any, {
           title: 'Current',
           content: 'Content',
           author: 'admin',
         });
 
         // 创建历史版本
-        await Given.draftVersion({
+        await Given.draftVersion(db as any, {
           draftId: draft.id,
           version: 1,
           title: 'Old Version',
@@ -349,10 +344,7 @@ describe('DraftVersionService', () => {
         await txService.restoreVersion(draft.id, 1);
 
         // 验证 updatedAt 已更新（由于 dayjs 格式化，应该有变化）
-        const [restoredDraft] = await tx
-          .select()
-          .from(drafts)
-          .where(eq(drafts.id, draft.id));
+        const [restoredDraft] = await tx.select().from(drafts).where(eq(drafts.id, draft.id));
 
         // 验证恢复后的内容
         expect(restoredDraft.title).toBe('Old Version');
@@ -380,14 +372,14 @@ describe('DraftVersionService', () => {
         const txService = createServiceWithTx(tx);
 
         // 创建草稿
-        const draft = await Given.draft({
+        const draft = await Given.draft(db as any, {
           title: 'Test Draft',
           content: 'Content',
           author: 'admin',
         });
 
         // 创建版本
-        await Given.draftVersion({
+        await Given.draftVersion(db as any, {
           draftId: draft.id,
           version: 1,
           title: 'Version 1',
@@ -420,14 +412,14 @@ describe('DraftVersionService', () => {
         const txService = createServiceWithTx(tx);
 
         // 创建草稿
-        const draft = await Given.draft({
+        const draft = await Given.draft(db as any, {
           title: 'Test Draft',
           content: 'Content',
           author: 'admin',
         });
 
         // 创建多个版本
-        await Given.draftVersion({
+        await Given.draftVersion(db as any, {
           draftId: draft.id,
           version: 1,
           title: 'Version 1',
@@ -435,7 +427,7 @@ describe('DraftVersionService', () => {
           author: 'admin',
         });
 
-        await Given.draftVersion({
+        await Given.draftVersion(db as any, {
           draftId: draft.id,
           version: 2,
           title: 'Version 2',
@@ -463,14 +455,14 @@ describe('DraftVersionService', () => {
         const txService = createServiceWithTx(tx);
 
         // 创建草稿
-        const draft = await Given.draft({
+        const draft = await Given.draft(db as any, {
           title: 'Test Draft',
           content: 'Content',
           author: 'admin',
         });
 
         // 创建多个版本
-        await Given.draftVersion({
+        await Given.draftVersion(db as any, {
           draftId: draft.id,
           version: 1,
           title: 'Version 1',
@@ -478,7 +470,7 @@ describe('DraftVersionService', () => {
           author: 'admin',
         });
 
-        await Given.draftVersion({
+        await Given.draftVersion(db as any, {
           draftId: draft.id,
           version: 2,
           title: 'Version 2',
@@ -486,7 +478,7 @@ describe('DraftVersionService', () => {
           author: 'admin',
         });
 
-        await Given.draftVersion({
+        await Given.draftVersion(db as any, {
           draftId: draft.id,
           version: 3,
           title: 'Version 3',
@@ -511,20 +503,20 @@ describe('DraftVersionService', () => {
         const txService = createServiceWithTx(tx);
 
         // 创建两个草稿
-        const draft1 = await Given.draft({
+        const draft1 = await Given.draft(db as any, {
           title: 'Draft 1',
           content: 'Content 1',
           author: 'admin',
         });
 
-        const draft2 = await Given.draft({
+        const draft2 = await Given.draft(db as any, {
           title: 'Draft 2',
           content: 'Content 2',
           author: 'admin',
         });
 
         // 为两个草稿分别创建版本
-        await Given.draftVersion({
+        await Given.draftVersion(db as any, {
           draftId: draft1.id,
           version: 1,
           title: 'Draft1 Version 1',
@@ -532,7 +524,7 @@ describe('DraftVersionService', () => {
           author: 'admin',
         });
 
-        await Given.draftVersion({
+        await Given.draftVersion(db as any, {
           draftId: draft2.id,
           version: 1,
           title: 'Draft2 Version 1',
@@ -564,7 +556,7 @@ describe('DraftVersionService', () => {
         const txService = createServiceWithTx(tx);
 
         // 创建草稿但不创建版本
-        const draft = await Given.draft({
+        const draft = await Given.draft(db as any, {
           title: 'Test Draft',
           content: 'Content',
           author: 'admin',

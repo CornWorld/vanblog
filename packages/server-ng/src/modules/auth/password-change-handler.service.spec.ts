@@ -25,7 +25,7 @@ describe('PasswordChangeHandlerService', () => {
         PasswordChangeHandlerService,
         {
           provide: HookService,
-          useValue: mockHookService,
+          useValue: mockHookService as any,
         },
         {
           provide: TokenService,

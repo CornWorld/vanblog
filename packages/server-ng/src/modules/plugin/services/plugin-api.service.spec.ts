@@ -32,9 +32,9 @@ import { faker } from '@faker-js/faker';
 import { z } from 'zod';
 
 import { DATABASE_CONNECTION } from '../../../database';
-import { withTestTransaction } from '@test/utils/db-transaction-helper';
+import { withTestTransaction as _withTestTransaction } from '@test/utils/db-transaction-helper';
 import { db } from '@test/setup.unit';
-import { pluginData } from '@vanblog/shared/drizzle';
+import { pluginData as _pluginData } from '@vanblog/shared/drizzle';
 import { ShortcodeService } from '../../shortcode/shortcode.service';
 import { PluginConfigService } from './plugin-config.service';
 import { PluginRegistryService } from './plugin-registry.service';
@@ -226,7 +226,7 @@ describe('PluginAPIFactory', () => {
 
       api = new PluginAPIImpl(
         metadata,
-        db,
+        db as any,
         mockModuleRef as any,
         mockSignalBus as SignalBus,
         mockRegistryService as PluginRegistryService,
@@ -291,7 +291,7 @@ describe('PluginAPIFactory', () => {
 
       api = new PluginAPIImpl(
         metadata,
-        db,
+        db as any,
         mockModuleRef as any,
         mockSignalBus as SignalBus,
         mockRegistryService as PluginRegistryService,
@@ -302,7 +302,7 @@ describe('PluginAPIFactory', () => {
         mockServiceRegistry,
       );
 
-      (mockPluginConfigService.getConfig as typeof vi.fn).mockResolvedValue({
+      (mockPluginConfigService.getConfig as any).mockResolvedValue({
         enabled: true,
         count: configValue,
       });
@@ -348,7 +348,7 @@ describe('PluginAPIFactory', () => {
 
       const newApi = new PluginAPIImpl(
         metadata,
-        db,
+        db as any,
         mockModuleRef as any,
         mockSignalBus as SignalBus,
         mockRegistryService as PluginRegistryService,
@@ -384,7 +384,7 @@ describe('PluginAPIFactory', () => {
 
       api = new PluginAPIImpl(
         metadata,
-        db,
+        db as any,
         mockModuleRef as any,
         mockSignalBus as SignalBus,
         mockRegistryService as PluginRegistryService,
@@ -470,7 +470,7 @@ describe('PluginAPIFactory', () => {
 
       const api1 = new PluginAPIImpl(
         metadata1,
-        db,
+        db as any,
         mockModuleRef as any,
         mockSignalBus as SignalBus,
         mockRegistryService as PluginRegistryService,
@@ -483,7 +483,7 @@ describe('PluginAPIFactory', () => {
 
       const api2 = new PluginAPIImpl(
         metadata2,
-        db,
+        db as any,
         mockModuleRef as any,
         mockSignalBus as SignalBus,
         mockRegistryService as PluginRegistryService,
@@ -535,7 +535,7 @@ describe('PluginAPIFactory', () => {
 
       api = new PluginAPIImpl(
         metadata,
-        db,
+        db as any,
         mockModuleRef as any,
         mockSignalBus as SignalBus,
         mockRegistryService as PluginRegistryService,
@@ -579,9 +579,7 @@ describe('PluginAPIFactory', () => {
 
     it('should throw error when accessing table without schema', () => {
       const tableName = faker.word.sample();
-      expect(() => api.table(tableName)).toThrow(
-        new RegExp(`插件表 '${tableName}' 不存在`),
-      );
+      expect(() => api.table(tableName)).toThrow(new RegExp(`插件表 '${tableName}' 不存在`));
     });
 
     it('should cache plugin tables', () => {
@@ -616,7 +614,7 @@ describe('PluginAPIFactory', () => {
 
       api = new PluginAPIImpl(
         metadata,
-        db,
+        db as any,
         mockModuleRef as any,
         mockSignalBus as SignalBus,
         mockRegistryService as PluginRegistryService,
@@ -639,7 +637,7 @@ describe('PluginAPIFactory', () => {
 
       const apiWithMock = new PluginAPIImpl(
         api.metadata,
-        db,
+        db as any,
         mockModuleRefWithGet as any,
         mockSignalBus as SignalBus,
         mockRegistryService as PluginRegistryService,
@@ -659,7 +657,7 @@ describe('PluginAPIFactory', () => {
       class TestService {}
       const mockService = new TestService();
       const otherPluginId = randomPluginId();
-      (mockServiceRegistry.getService as typeof vi.fn).mockReturnValue(mockService);
+      vi.mocked(mockServiceRegistry.getService).mockReturnValue(mockService);
 
       const service = api.inject(TestService, otherPluginId);
       expect(service).toBe(mockService);
@@ -669,7 +667,7 @@ describe('PluginAPIFactory', () => {
     it('should throw error when cross-plugin service not found', () => {
       class TestService {}
       const otherPluginId = randomPluginId();
-      (mockServiceRegistry.getService as typeof vi.fn).mockReturnValue(null);
+      vi.mocked(mockServiceRegistry.getService).mockReturnValue(null);
 
       expect(() => api.inject(TestService, otherPluginId)).toThrow(/无法注入服务/);
     });
@@ -682,7 +680,7 @@ describe('PluginAPIFactory', () => {
     it('should throw error when service registry not available', () => {
       const apiWithoutRegistry = new PluginAPIImpl(
         api.metadata,
-        db,
+        db as any,
         mockModuleRef as any,
         mockSignalBus as SignalBus,
         mockRegistryService as PluginRegistryService,
@@ -706,7 +704,7 @@ describe('PluginAPIFactory', () => {
 
       const apiWithMock = new PluginAPIImpl(
         api.metadata,
-        db,
+        db as any,
         mockModuleRefWithGet as any,
         mockSignalBus as SignalBus,
         mockRegistryService as PluginRegistryService,
@@ -743,7 +741,7 @@ describe('PluginAPIFactory', () => {
     it('should throw error when providing service without registry', () => {
       const apiWithoutRegistry = new PluginAPIImpl(
         api.metadata,
-        db,
+        db as any,
         mockModuleRef as any,
         mockSignalBus as SignalBus,
         mockRegistryService as PluginRegistryService,
@@ -780,7 +778,7 @@ describe('PluginAPIFactory', () => {
 
       api = new PluginAPIImpl(
         metadata,
-        db,
+        db as any,
         mockModuleRef as any,
         mockSignalBus as SignalBus,
         mockRegistryService as PluginRegistryService,
@@ -800,11 +798,7 @@ describe('PluginAPIFactory', () => {
 
       api.http.contract(contract, handlers);
 
-      expect(mockHttpRegistry.registerContract).toHaveBeenCalledWith(
-        pluginId,
-        contract,
-        handlers,
-      );
+      expect(mockHttpRegistry.registerContract).toHaveBeenCalledWith(pluginId, contract, handlers);
     });
 
     it('should register GET route', () => {
@@ -875,7 +869,7 @@ describe('PluginAPIFactory', () => {
     it('should throw error when http registry not available', () => {
       const apiWithoutHttp = new PluginAPIImpl(
         api.metadata,
-        db,
+        db as any,
         mockModuleRef as any,
         mockSignalBus as SignalBus,
         mockRegistryService as PluginRegistryService,
@@ -911,7 +905,7 @@ describe('PluginAPIFactory', () => {
 
       api = new PluginAPIImpl(
         metadata,
-        db,
+        db as any,
         mockModuleRef as any,
         mockSignalBus as SignalBus,
         mockRegistryService as PluginRegistryService,
@@ -942,7 +936,7 @@ describe('PluginAPIFactory', () => {
     it('should throw error when http registry not available for resource', () => {
       const apiWithoutHttp = new PluginAPIImpl(
         api.metadata,
-        db,
+        db as any,
         mockModuleRef as any,
         mockSignalBus as SignalBus,
         mockRegistryService as PluginRegistryService,
@@ -983,7 +977,7 @@ describe('PluginAPIFactory', () => {
 
       api = new PluginAPIImpl(
         metadata,
-        db,
+        db as any,
         mockModuleRef as any,
         mockSignalBus as SignalBus,
         mockRegistryService as PluginRegistryService,
@@ -1058,7 +1052,7 @@ describe('PluginAPIFactory', () => {
 
       api = new PluginAPIImpl(
         metadata,
-        db,
+        db as any,
         mockModuleRef as any,
         mockSignalBus as SignalBus,
         mockRegistryService as PluginRegistryService,
@@ -1073,7 +1067,12 @@ describe('PluginAPIFactory', () => {
     });
 
     it('should register metadata schema', () => {
-      const entityType = faker.word.sample();
+      const entityType = faker.helpers.arrayElement([
+        'article',
+        'user',
+        'category',
+        'tag',
+      ] as const);
       const metaKey = faker.word.sample();
       const schema = z.object({ value: z.string() });
       api.meta.register(entityType, metaKey, schema);
@@ -1082,7 +1081,12 @@ describe('PluginAPIFactory', () => {
     });
 
     it('should get metadata (not implemented)', async () => {
-      const entityType = faker.word.sample();
+      const entityType = faker.helpers.arrayElement([
+        'article',
+        'user',
+        'category',
+        'tag',
+      ] as const);
       const entityId = faker.number.int({ min: 1, max: 1000 });
       const metaKey = faker.word.sample();
       const result = await api.meta.get(entityType, entityId, metaKey);
@@ -1090,7 +1094,12 @@ describe('PluginAPIFactory', () => {
     });
 
     it('should set metadata (not implemented)', async () => {
-      const entityType = faker.word.sample();
+      const entityType = faker.helpers.arrayElement([
+        'article',
+        'user',
+        'category',
+        'tag',
+      ] as const);
       const entityId = faker.number.int({ min: 1, max: 1000 });
       const metaKey = faker.word.sample();
       await api.meta.set(entityType, entityId, metaKey, { value: faker.word.sample() });
@@ -1099,7 +1108,12 @@ describe('PluginAPIFactory', () => {
     });
 
     it('should delete metadata (not implemented)', async () => {
-      const entityType = faker.word.sample();
+      const entityType = faker.helpers.arrayElement([
+        'article',
+        'user',
+        'category',
+        'tag',
+      ] as const);
       const entityId = faker.number.int({ min: 1, max: 1000 });
       const metaKey = faker.word.sample();
       await api.meta.delete(entityType, entityId, metaKey);
@@ -1127,7 +1141,7 @@ describe('PluginAPIFactory', () => {
 
       api = new PluginAPIImpl(
         metadata,
-        db,
+        db as any,
         mockModuleRef as any,
         mockSignalBus as SignalBus,
         mockRegistryService as PluginRegistryService,
@@ -1210,7 +1224,7 @@ describe('PluginAPIFactory', () => {
 
       api = new PluginAPIImpl(
         metadata,
-        db,
+        db as any,
         mockModuleRef as any,
         mockSignalBus as SignalBus,
         mockRegistryService as PluginRegistryService,
@@ -1271,7 +1285,7 @@ describe('PluginAPIFactory', () => {
 
       api = new PluginAPIImpl(
         metadata,
-        db,
+        db as any,
         mockModuleRef as any,
         mockSignalBus as SignalBus,
         mockRegistryService as PluginRegistryService,
@@ -1321,7 +1335,7 @@ describe('PluginAPIFactory', () => {
 
       api = new PluginAPIImpl(
         metadata,
-        db,
+        db as any,
         mockModuleRef as any,
         mockSignalBus as SignalBus,
         mockRegistryService as PluginRegistryService,
@@ -1403,7 +1417,7 @@ describe('PluginAPIFactory', () => {
 
       api = new PluginAPIImpl(
         metadata,
-        db,
+        db as any,
         mockModuleRef as any,
         mockSignalBus as SignalBus,
         mockRegistryService as PluginRegistryService,
@@ -1423,10 +1437,10 @@ describe('PluginAPIFactory', () => {
       const shortcodeUnregister = vi.fn();
       const configUnsubscribe = vi.fn();
 
-      (mockSignalBus.connect as typeof vi.fn).mockReturnValue(filterDisconnect);
-      (mockSignalBus.subscribe as typeof vi.fn).mockReturnValue(actionUnsubscribe);
-      (mockShortcodeService.register as typeof vi.fn).mockReturnValue(shortcodeUnregister);
-      (mockPluginConfigService.onConfigChange as typeof vi.fn).mockReturnValue(configUnsubscribe);
+      (vi.mocked(mockSignalBus.connect) as any).mockReturnValue(filterDisconnect);
+      (vi.mocked(mockSignalBus.subscribe) as any).mockReturnValue(actionUnsubscribe);
+      (vi.mocked(mockShortcodeService.register) as any).mockReturnValue(shortcodeUnregister);
+      (vi.mocked(mockPluginConfigService.onConfigChange) as any).mockReturnValue(configUnsubscribe);
 
       // Register various hooks
       api.filter('test|filter', (data: any) => data);
@@ -1475,7 +1489,7 @@ describe('PluginAPIFactory', () => {
         throw new Error('Cleanup error');
       });
 
-      (mockSignalBus.connect as typeof vi.fn).mockReturnValue(errorDisconnect);
+      (vi.mocked(mockSignalBus.connect) as any).mockReturnValue(errorDisconnect);
       api.filter('test|filter', (data: any) => data);
 
       // Should not throw

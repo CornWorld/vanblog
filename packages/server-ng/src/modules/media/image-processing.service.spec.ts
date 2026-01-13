@@ -57,12 +57,12 @@ const createMockSharp = (): MockSharpInstance => {
 
 // Shared mock instance that all sharp() calls will return
 let mockSharp: MockSharpInstance;
-let mockSharpCallCount = 0;
+let _mockSharpCallCount = 0;
 
 vi.mock('sharp', () => ({
   default: vi.fn(() => {
     // Increment call counter
-    mockSharpCallCount++;
+    _mockSharpCallCount++;
 
     // Return the shared mock instance
     // All calls to sharp() return the same instance, which allows test configuration

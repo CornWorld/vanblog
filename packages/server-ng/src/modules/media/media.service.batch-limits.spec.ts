@@ -35,7 +35,7 @@ describe('MediaService - Batch Operation Limits', () => {
       providers: [
         MediaService,
         { provide: StorageFactoryService, useValue: mockStorageFactory },
-        { provide: HookService, useValue: mockHookService },
+        { provide: HookService, useValue: mockHookService as any },
         { provide: LoggerService, useValue: mockLogger },
         { provide: DATABASE_CONNECTION, useValue: mockDb },
       ],

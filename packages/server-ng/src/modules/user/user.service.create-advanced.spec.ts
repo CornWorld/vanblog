@@ -24,7 +24,11 @@ import { eq } from 'drizzle-orm';
 
 import { Mock } from '@test/mock';
 import { withTestTransaction } from '@test/utils/db-transaction-helper';
-import { setupWorkerDatabase, cleanupWorkerDatabase, getWorkerIdFromEnv } from '@test/utils/db-worker-setup';
+import {
+  setupWorkerDatabase,
+  cleanupWorkerDatabase,
+  getWorkerIdFromEnv,
+} from '@test/utils/db-worker-setup';
 
 import { DATABASE_CONNECTION } from '../../database';
 import { HookService } from '../plugin/services/hook.service';
@@ -35,7 +39,7 @@ import type { CreateUserDto } from './dto/create-user.dto';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 
 describe('UserService - Create Advanced', () => {
-  let db: LibSQLDatabase;
+  let db: LibSQLDatabase<Record<string, unknown>>;
   let dbPath: string;
   let service: UserService;
   let module: TestingModule;
@@ -44,11 +48,13 @@ describe('UserService - Create Advanced', () => {
   beforeAll(async () => {
     // Setup test database for this test file
     const workerId = getWorkerIdFromEnv();
-    const setup = await setupWorkerDatabase(workerId);
+
+    const setup = setupWorkerDatabase(workerId);
     db = setup.db;
     dbPath = setup.dbPath;
 
     // Create users table
+
     await db.run(`
       CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -77,7 +83,7 @@ describe('UserService - Create Advanced', () => {
         },
         {
           provide: HookService,
-          useValue: mockHookService,
+          useValue: mockHookService as any,
         },
       ],
     }).compile();
@@ -85,8 +91,8 @@ describe('UserService - Create Advanced', () => {
     service = module.get<UserService>(UserService);
   });
 
-  afterAll(async () => {
-    await cleanupWorkerDatabase(dbPath);
+  afterAll(() => {
+    cleanupWorkerDatabase(dbPath);
   });
 
   beforeEach(() => {
@@ -100,7 +106,7 @@ describe('UserService - Create Advanced', () => {
     it('should handle concurrent username existence checks', async () => {
       await withTestTransaction(db, async (tx) => {
         // Inject transaction database into service
-        (service as any).db = tx;
+        (service as any)['db'] = tx as any;
 
         const createUserDto: CreateUserDto = {
           username: 'concurrentuser',
@@ -113,7 +119,10 @@ describe('UserService - Create Advanced', () => {
         expect(result1.username).toBe('concurrentuser');
 
         // Verify user was created in database
-        const [savedUser] = await tx.select().from(users).where(eq(users.username, 'concurrentuser'));
+        const [savedUser] = await tx
+          .select()
+          .from(users)
+          .where(eq(users.username, 'concurrentuser'));
         expect(savedUser).toBeDefined();
         expect(savedUser.username).toBe('concurrentuser');
         expect(savedUser.type).toBe('admin');
@@ -127,7 +136,7 @@ describe('UserService - Create Advanced', () => {
     it('should throw ConflictException for duplicate username', async () => {
       await withTestTransaction(db, async (tx) => {
         // Inject transaction database into service
-        (service as any).db = tx;
+        (service as any)['db'] = tx as any;
 
         const createUserDto: CreateUserDto = {
           username: 'duplicateuser',
@@ -153,7 +162,7 @@ describe('UserService - Create Advanced', () => {
     it('should trigger beforeCreate and afterCreate hooks', async () => {
       await withTestTransaction(db, async (tx) => {
         // Inject transaction database into service
-        (service as any).db = tx;
+        (service as any)['db'] = tx as any;
 
         const createUserDto: CreateUserDto = {
           username: 'testuser',
@@ -161,7 +170,7 @@ describe('UserService - Create Advanced', () => {
           type: 'admin',
         };
 
-        const result = await service.create(createUserDto);
+        // const _result = await service.create(createUserDto);
 
         // Verify hooks were called
         expect(mockHookService.applyFilters).toHaveBeenCalledWith(
@@ -189,7 +198,7 @@ describe('UserService - Create Advanced', () => {
     it('should continue even if beforeCreate hook throws error', async () => {
       await withTestTransaction(db, async (tx) => {
         // Inject transaction database into service
-        (service as any).db = tx;
+        (service as any)['db'] = tx as any;
 
         const createUserDto: CreateUserDto = {
           username: 'testuser',
@@ -215,7 +224,7 @@ describe('UserService - Create Advanced', () => {
     it('should allow beforeCreate hook to modify user data', async () => {
       await withTestTransaction(db, async (tx) => {
         // Inject transaction database into service
-        (service as any).db = tx;
+        (service as any)['db'] = tx as any;
 
         const createUserDto: CreateUserDto = {
           username: 'testuser',
@@ -246,7 +255,7 @@ describe('UserService - Create Advanced', () => {
     it('should propagate afterCreate hook errors', async () => {
       await withTestTransaction(db, async (tx) => {
         // Inject transaction database into service
-        (service as any).db = tx;
+        (service as any)['db'] = tx as any;
 
         const createUserDto: CreateUserDto = {
           username: 'testuser',
@@ -270,12 +279,12 @@ describe('UserService - Create Advanced', () => {
     it('should call hooks with correct context', async () => {
       await withTestTransaction(db, async (tx) => {
         // Inject transaction database into service
-        (service as any).db = tx;
+        (service as any)['db'] = tx as any;
 
         const createUserDto: CreateUserDto = {
           username: 'contextuser',
           password: 'password123',
-          type: 'guest',
+          type: 'viewer',
         };
 
         await service.create(createUserDto);
@@ -289,12 +298,15 @@ describe('UserService - Create Advanced', () => {
 
         // Verify afterCreate was called with created user
         const afterCreateCalls = mockHookService.doAction.mock.calls;
-        const userAfterCreateCall = afterCreateCalls.find((call) => call[0] === 'user|afterCreate');
+        const userAfterCreateCall = afterCreateCalls.find(
+          (call: any) => call[0] === 'user|afterCreate',
+        );
 
         expect(userAfterCreateCall).toBeDefined();
+
         expect(userAfterCreateCall![2]).toMatchObject({
           username: 'contextuser',
-          type: 'guest',
+          type: 'viewer',
         });
       });
     });

@@ -22,9 +22,8 @@
 
 import { NotFoundException } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
-import { drafts, articles, tags, categories } from '@vanblog/shared/drizzle';
+import { drafts, articles } from '@vanblog/shared/drizzle';
 import { eq } from 'drizzle-orm';
-import { faker } from '@faker-js/faker';
 import * as bcrypt from 'bcrypt';
 import { vi, describe, beforeEach, it, expect, afterEach } from 'vitest';
 
@@ -44,7 +43,6 @@ import { DraftService } from './draft.service';
 import { DraftVersionService } from './draft-version.service';
 
 describe('DraftService', () => {
-  let service: DraftService;
   let mockHookService: ReturnType<typeof Mock.hook>;
   let mockDraftVersionService: ReturnType<typeof Mock.draftVersionService>;
 
@@ -68,12 +66,13 @@ describe('DraftService', () => {
         },
         {
           provide: HookService,
-          useValue: mockHookService,
+          useValue: mockHookService as any,
         },
       ],
     }).compile();
 
-    service = module.get<DraftService>(DraftService);
+    // Module is created but service instances are created per-test using createServiceWithTx
+    void module;
   });
 
   afterEach(() => {
@@ -82,7 +81,7 @@ describe('DraftService', () => {
 
   // 辅助函数：创建使用事务数据库的服务实例
   const createServiceWithTx = (tx: any) => {
-    return new DraftService(tx, mockDraftVersionService, mockHookService);
+    return new DraftService(tx, mockDraftVersionService, mockHookService as any);
   };
 
   describe('findAll', () => {
@@ -91,13 +90,13 @@ describe('DraftService', () => {
         const txService = createServiceWithTx(tx);
 
         // 创建测试数据
-        await Given.draft({
+        await Given.draft(db as any, {
           title: 'Draft 1',
           content: 'Content 1',
           author: 'admin',
           tags: ['tag1'],
         });
-        await Given.draft({
+        await Given.draft(db as any, {
           title: 'Draft 2',
           content: 'Content 2',
           author: 'admin',
@@ -140,7 +139,7 @@ describe('DraftService', () => {
       await withTestTransaction(db, async (tx) => {
         const txService = createServiceWithTx(tx);
 
-        const inserted = await Given.draft({
+        const inserted = await Given.draft(db as any, {
           title: 'Test Draft',
           content: 'Content',
           author: 'admin',
@@ -272,7 +271,7 @@ describe('DraftService', () => {
       await withTestTransaction(db, async (tx) => {
         const txService = createServiceWithTx(tx);
 
-        const inserted = await Given.draft({
+        const inserted = await Given.draft(db as any, {
           title: 'Original Title',
           content: 'Original content',
           author: 'admin',
@@ -304,9 +303,9 @@ describe('DraftService', () => {
         // Mock version creation to succeed
         mockDraftVersionService.createVersion = vi.fn().mockResolvedValue({});
 
-        await expect(
-          txService.update(999, { title: 'Test', tags: [] }),
-        ).rejects.toThrow(NotFoundException);
+        await expect(txService.update(999, { title: 'Test', tags: [] })).rejects.toThrow(
+          NotFoundException,
+        );
       });
     });
 
@@ -314,7 +313,7 @@ describe('DraftService', () => {
       await withTestTransaction(db, async (tx) => {
         const txService = createServiceWithTx(tx);
 
-        const inserted = await Given.draft({
+        const inserted = await Given.draft(db as any, {
           title: 'Original Title',
           content: 'Content',
           author: 'admin',
@@ -348,7 +347,7 @@ describe('DraftService', () => {
       await withTestTransaction(db, async (tx) => {
         const txService = createServiceWithTx(tx);
 
-        const inserted = await Given.draft({
+        const inserted = await Given.draft(db as any, {
           title: 'Original Title',
           content: 'Content',
           author: 'admin',
@@ -372,7 +371,7 @@ describe('DraftService', () => {
       await withTestTransaction(db, async (tx) => {
         const txService = createServiceWithTx(tx);
 
-        const inserted = await Given.draft({
+        const inserted = await Given.draft(db as any, {
           title: 'To Delete',
           content: 'Content',
           author: 'admin',
@@ -399,7 +398,7 @@ describe('DraftService', () => {
       await withTestTransaction(db, async (tx) => {
         const txService = createServiceWithTx(tx);
 
-        const inserted = await Given.draft({
+        const inserted = await Given.draft(db as any, {
           title: 'Test',
           content: 'Content',
           author: 'admin',
@@ -425,7 +424,7 @@ describe('DraftService', () => {
       await withTestTransaction(db, async (tx) => {
         const txService = createServiceWithTx(tx);
 
-        const inserted = await Given.draft({
+        const inserted = await Given.draft(db as any, {
           title: 'Test',
           content: 'Content',
           author: 'admin',
@@ -445,12 +444,12 @@ describe('DraftService', () => {
         const txService = createServiceWithTx(tx);
 
         // 先创建 category（外键约束）
-        await Given.category({
+        await Given.category(db as any, {
           name: 'test-category',
           slug: 'test-category',
         });
 
-        const draft = await Given.draft({
+        const draft = await Given.draft(db as any, {
           title: 'Draft to Publish',
           content: 'Content to publish',
           author: 'admin',
@@ -475,7 +474,10 @@ describe('DraftService', () => {
         expect(result.private).toBe(false);
 
         // 验证文章已创建
-        const [article] = await tx.select().from(articles).where(eq(articles.title, 'Draft to Publish'));
+        const [article] = await tx
+          .select()
+          .from(articles)
+          .where(eq(articles.title, 'Draft to Publish'));
         expect(article).toBeDefined();
 
         // 验证草稿已删除
@@ -489,15 +491,15 @@ describe('DraftService', () => {
         const txService = createServiceWithTx(tx);
 
         // 先创建 category（外键约束）
-        await Given.category({
+        await Given.category(db as any, {
           name: 'test-category',
           slug: 'test-category',
         });
 
-        const hashedPassword = faker.string.alphanumeric(60);
+        const hashedPassword = 'a'.repeat(60); // Simulated hash instead of faker
         mockedBcrypt.hash.mockResolvedValue(hashedPassword as never);
 
-        const draft = await Given.draft({
+        const draft = await Given.draft(db as any, {
           title: 'Secret Draft',
           content: 'Top secret content',
           author: 'admin',
@@ -519,7 +521,10 @@ describe('DraftService', () => {
         expect(result.top).toBe(1);
 
         // 验证密码已加密（从数据库读取，避免实体转换问题）
-        const [article] = await tx.select().from(articles).where(eq(articles.title, 'Secret Draft'));
+        const [article] = await tx
+          .select()
+          .from(articles)
+          .where(eq(articles.title, 'Secret Draft'));
         expect(article).toBeDefined();
         expect(article.private).toBe(true); // Drizzle 将 SQLite 的 0/1 转换为 boolean
         expect(typeof article.password).toBe('string');
@@ -536,7 +541,7 @@ describe('DraftService', () => {
 
         // This test is hard to implement with real DB since operations succeed
         // Just verify the error handling exists by testing happy path
-        const draft = await Given.draft({
+        const draft = await Given.draft(db as any, {
           title: 'Will Succeed',
           content: 'Content',
           author: 'admin',
@@ -560,12 +565,12 @@ describe('DraftService', () => {
         const txService = createServiceWithTx(tx);
 
         // 先创建 category（外键约束）
-        await Given.category({
+        await Given.category(db as any, {
           name: 'tech',
           slug: 'tech',
         });
 
-        const draft = await Given.draft({
+        const draft = await Given.draft(db as any, {
           title: 'Publish Test',
           content: 'Content',
           author: 'admin',
@@ -594,7 +599,7 @@ describe('DraftService', () => {
       await withTestTransaction(db, async (tx) => {
         const txService = createServiceWithTx(tx);
 
-        const draft = await Given.draft({
+        const draft = await Given.draft(db as any, {
           title: 'No Tags',
           content: 'Content',
           author: 'admin',
@@ -618,7 +623,7 @@ describe('DraftService', () => {
       await withTestTransaction(db, async (tx) => {
         const txService = createServiceWithTx(tx);
 
-        const inserted = await Given.draft({
+        const inserted = await Given.draft(db as any, {
           title: 'Original',
           content: 'Original content',
           author: 'admin',
@@ -643,7 +648,7 @@ describe('DraftService', () => {
       await withTestTransaction(db, async (tx) => {
         const txService = createServiceWithTx(tx);
 
-        const inserted = await Given.draft({
+        const inserted = await Given.draft(db as any, {
           title: 'Original',
           content: 'Content',
           author: 'admin',
@@ -663,9 +668,9 @@ describe('DraftService', () => {
       await withTestTransaction(db, async (tx) => {
         const txService = createServiceWithTx(tx);
 
-        await expect(
-          txService.autoSave(999, { title: 'Test', tags: null }),
-        ).rejects.toThrow(NotFoundException);
+        await expect(txService.autoSave(999, { title: 'Test', tags: null })).rejects.toThrow(
+          NotFoundException,
+        );
       });
     });
 
@@ -673,7 +678,7 @@ describe('DraftService', () => {
       await withTestTransaction(db, async (tx) => {
         const txService = createServiceWithTx(tx);
 
-        const inserted = await Given.draft({
+        const inserted = await Given.draft(db as any, {
           title: 'Original',
           content: 'Content',
           author: 'admin',
@@ -736,13 +741,13 @@ describe('DraftService', () => {
       await withTestTransaction(db, async (tx) => {
         const txService = createServiceWithTx(tx);
 
-        await Given.draft({
+        await Given.draft(db as any, {
           title: 'Keyword Test',
           content: 'Content with keyword',
           author: 'admin',
           tags: null,
         });
-        await Given.draft({
+        await Given.draft(db as any, {
           title: 'Unrelated',
           content: 'No match here',
           author: 'admin',
@@ -758,7 +763,7 @@ describe('DraftService', () => {
         });
 
         expect(result.items).toHaveLength(1);
-        expect(result.items[0].title).toBe('Keyword Test');
+        expect((result.items[0] as any).title).toBe('Keyword Test');
         expect(result.total).toBe(1);
       });
     });
@@ -767,14 +772,14 @@ describe('DraftService', () => {
       await withTestTransaction(db, async (tx) => {
         const txService = createServiceWithTx(tx);
 
-        await Given.draft({
+        await Given.draft(db as any, {
           title: 'First',
           content: 'Content 1',
           author: 'admin',
           tags: null,
           createdAt: new Date('2024-01-01'),
         });
-        await Given.draft({
+        await Given.draft(db as any, {
           title: 'Second',
           content: 'Content 2',
           author: 'admin',
@@ -790,8 +795,8 @@ describe('DraftService', () => {
         });
 
         expect(result.items).toHaveLength(2);
-        expect(result.items[0].title).toBe('First');
-        expect(result.items[1].title).toBe('Second');
+        expect((result.items[0] as any).title).toBe('First');
+        expect((result.items[1] as any).title).toBe('Second');
       });
     });
 
@@ -799,13 +804,13 @@ describe('DraftService', () => {
       await withTestTransaction(db, async (tx) => {
         const txService = createServiceWithTx(tx);
 
-        await Given.draft({
+        await Given.draft(db as any, {
           title: 'Zebra',
           content: 'Content',
           author: 'admin',
           tags: null,
         });
-        await Given.draft({
+        await Given.draft(db as any, {
           title: 'Alpha',
           content: 'Content',
           author: 'admin',
@@ -820,8 +825,8 @@ describe('DraftService', () => {
         });
 
         expect(result.items).toHaveLength(2);
-        expect(result.items[0].title).toBe('Alpha');
-        expect(result.items[1].title).toBe('Zebra');
+        expect((result.items[0] as any).title).toBe('Alpha');
+        expect((result.items[1] as any).title).toBe('Zebra');
       });
     });
 
@@ -848,7 +853,7 @@ describe('DraftService', () => {
       await withTestTransaction(db, async (tx) => {
         const txService = createServiceWithTx(tx);
 
-        const inserted = await Given.draft({
+        const inserted = await Given.draft(db as any, {
           title: 'Original',
           content: 'Content',
           author: 'admin',
@@ -869,7 +874,7 @@ describe('DraftService', () => {
       await withTestTransaction(db, async (tx) => {
         const txService = createServiceWithTx(tx);
 
-        const inserted = await Given.draft({
+        const inserted = await Given.draft(db as any, {
           title: 'Original',
           content: 'Content',
           author: 'admin',
@@ -889,7 +894,7 @@ describe('DraftService', () => {
       await withTestTransaction(db, async (tx) => {
         const txService = createServiceWithTx(tx);
 
-        const inserted = await Given.draft({
+        const inserted = await Given.draft(db as any, {
           title: 'Original',
           content: 'Content',
           author: 'admin',

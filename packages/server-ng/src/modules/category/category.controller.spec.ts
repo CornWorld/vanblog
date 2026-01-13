@@ -1,6 +1,6 @@
 import { NotFoundException } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
-import { vi, describe, beforeEach, it, expect } from 'vitest';
+import { describe, beforeEach, it, expect } from 'vitest';
 
 import { Mock } from '@test/mock';
 
@@ -33,7 +33,7 @@ describe('CategoryController', () => {
 
   describe('getCategories', () => {
     it('should return all categories with article counts', async () => {
-// ✅ 优化：使用新的扁平化 Mock API
+      // ✅ 优化：使用新的扁平化 Mock API
       const mockCategories = Mock.categories(3, { articleCount: 5 });
       const paginatedResult = Mock.paginated(mockCategories, mockCategories.length);
 
@@ -435,7 +435,7 @@ describe('CategoryController', () => {
         name: categoryName,
       });
 
-// ✅ 优化：使用新的扁平化 Mock API
+      // ✅ 优化：使用新的扁平化 Mock API
       const mockArticles = Mock.articles(2, {
         category: categoryName,
         tags: ['tag1', 'tag2'],

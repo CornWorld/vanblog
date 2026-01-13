@@ -53,7 +53,7 @@ describe('UserService - Update Password', () => {
         },
         {
           provide: HookService,
-          useValue: mockHookService,
+          useValue: mockHookService as any,
         },
       ],
     }).compile();
@@ -69,10 +69,10 @@ describe('UserService - Update Password', () => {
     it('should hash password when updating password', async () => {
       await withTestTransaction(db, async (tx) => {
         // 注入事务数据库
-        service['db'] = tx;
+        (service as any)['db'] = tx;
 
         // 创建测试用户
-        const user = await Given.user({
+        const user = await Given.user(db as any, {
           username: 'testuser',
           password: 'oldHashedPassword',
           type: 'admin',
@@ -106,10 +106,10 @@ describe('UserService - Update Password', () => {
     it('should trigger afterPasswordChange hook when password changed', async () => {
       await withTestTransaction(db, async (tx) => {
         // 注入事务数据库
-        service['db'] = tx;
+        (service as any)['db'] = tx;
 
         // 创建测试用户
-        const user = await Given.user({
+        const user = await Given.user(db as any, {
           username: 'testuser',
           password: 'oldHashedPassword',
           nickname: 'Old Nickname',
@@ -141,7 +141,7 @@ describe('UserService - Update Password', () => {
     it('should not trigger afterPasswordChange hook when password not changed', async () => {
       await withTestTransaction(db, async (tx) => {
         // 注入事务数据库
-        service['db'] = tx;
+        (service as any)['db'] = tx;
 
         // 创建测试用户
         const [user] = await tx

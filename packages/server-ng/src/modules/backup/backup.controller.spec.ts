@@ -1,5 +1,3 @@
-import * as fs from 'fs';
-
 import { StreamableFile } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, beforeEach, expect, vi } from 'vitest';

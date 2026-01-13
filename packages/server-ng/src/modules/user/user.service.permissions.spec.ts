@@ -45,14 +45,14 @@ const generateTestUsername = (): string => `test_${faker.string.alphanumeric(8)}
 
 describe('UserService - Permissions (真实数据库)', () => {
   let service: UserService;
-  let mockHookService: Partial<HookService>;
+  let mockHookService: HookService;
 
   beforeEach(async () => {
     // 创建 Hook 服务 Mock
     mockHookService = {
-      applyFilters: vi.fn().mockImplementation(async (_hook, data) => data),
+      applyFilters: vi.fn().mockImplementation((_hook, data) => Promise.resolve(data)),
       doAction: vi.fn().mockResolvedValue(undefined),
-    };
+    } as any;
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -63,7 +63,7 @@ describe('UserService - Permissions (真实数据库)', () => {
         },
         {
           provide: HookService,
-          useValue: mockHookService,
+          useValue: mockHookService as any,
         },
       ],
     }).compile();
@@ -79,7 +79,7 @@ describe('UserService - Permissions (真实数据库)', () => {
     it('should handle permissions as array', async () => {
       await withTestTransaction(db, async (tx) => {
         // 注入事务数据库
-        service['db'] = tx;
+        (service as any)['db'] = tx;
 
         const createUserDto: CreateUserDto = {
           username: generateTestUsername(),
@@ -102,7 +102,7 @@ describe('UserService - Permissions (真实数据库)', () => {
     it('should handle permissions as comma-separated string with whitespace', async () => {
       await withTestTransaction(db, async (tx) => {
         // 注入事务数据库
-        service['db'] = tx;
+        (service as any)['db'] = tx;
 
         const createUserDto: CreateUserDto = {
           username: generateTestUsername(),
@@ -125,7 +125,7 @@ describe('UserService - Permissions (真实数据库)', () => {
     it('should handle empty permissions array as null/undefined', async () => {
       await withTestTransaction(db, async (tx) => {
         // 注入事务数据库
-        service['db'] = tx;
+        (service as any)['db'] = tx;
 
         const createUserDto: CreateUserDto = {
           username: generateTestUsername(),
@@ -148,7 +148,7 @@ describe('UserService - Permissions (真实数据库)', () => {
     it('should handle empty string permissions as null/undefined', async () => {
       await withTestTransaction(db, async (tx) => {
         // 注入事务数据库
-        service['db'] = tx;
+        (service as any)['db'] = tx;
 
         const createUserDto: CreateUserDto = {
           username: generateTestUsername(),
@@ -171,13 +171,13 @@ describe('UserService - Permissions (真实数据库)', () => {
     it('should handle null permissions as null/undefined', async () => {
       await withTestTransaction(db, async (tx) => {
         // 注入事务数据库
-        service['db'] = tx;
+        (service as any)['db'] = tx;
 
         const createUserDto: CreateUserDto = {
           username: generateTestUsername(),
           password: 'password123',
           type: 'editor' as const,
-          permissions: null,
+          permissions: undefined,
         };
 
         const result = await service.create(createUserDto);
@@ -194,7 +194,7 @@ describe('UserService - Permissions (真实数据库)', () => {
     it('should handle undefined permissions as undefined', async () => {
       await withTestTransaction(db, async (tx) => {
         // 注入事务数据库
-        service['db'] = tx;
+        (service as any)['db'] = tx;
 
         const createUserDto: CreateUserDto = {
           username: generateTestUsername(),
@@ -219,7 +219,7 @@ describe('UserService - Permissions (真实数据库)', () => {
     it('should update permissions as array', async () => {
       await withTestTransaction(db, async (tx) => {
         // 注入事务数据库
-        service['db'] = tx;
+        (service as any)['db'] = tx;
 
         // 先创建用户
         const created = await service.create({
@@ -247,7 +247,7 @@ describe('UserService - Permissions (真实数据库)', () => {
     it('should update permissions as comma-separated string', async () => {
       await withTestTransaction(db, async (tx) => {
         // 注入事务数据库
-        service['db'] = tx;
+        (service as any)['db'] = tx;
 
         // 先创建用户
         const created = await service.create({
@@ -258,7 +258,7 @@ describe('UserService - Permissions (真实数据库)', () => {
 
         // 更新权限（字符串格式）
         const updateData: Partial<UpdateUserDto> = {
-          permissions: 'read, write, delete',
+          permissions: 'read, write, delete' as any,
         };
 
         const result = await service.update(created.id, updateData);
@@ -275,7 +275,7 @@ describe('UserService - Permissions (真实数据库)', () => {
     it('should clear permissions when updating to empty array', async () => {
       await withTestTransaction(db, async (tx) => {
         // 注入事务数据库
-        service['db'] = tx;
+        (service as any)['db'] = tx;
 
         // 先创建带权限的用户
         const created = await service.create({
@@ -304,7 +304,7 @@ describe('UserService - Permissions (真实数据库)', () => {
     it('should not modify permissions when updating other fields', async () => {
       await withTestTransaction(db, async (tx) => {
         // 注入事务数据库
-        service['db'] = tx;
+        (service as any)['db'] = tx;
 
         // 先创建带权限的用户
         const created = await service.create({
@@ -337,7 +337,7 @@ describe('UserService - Permissions (真实数据库)', () => {
     it('should normalize array permissions correctly', async () => {
       await withTestTransaction(db, async (tx) => {
         // 注入事务数据库
-        service['db'] = tx;
+        (service as any)['db'] = tx;
 
         const createUserDto: CreateUserDto = {
           username: generateTestUsername(),
@@ -359,7 +359,7 @@ describe('UserService - Permissions (真实数据库)', () => {
     it('should normalize string permissions with trimming', async () => {
       await withTestTransaction(db, async (tx) => {
         // 注入事务数据库
-        service['db'] = tx;
+        (service as any)['db'] = tx;
 
         const createUserDto: CreateUserDto = {
           username: generateTestUsername(),
@@ -381,7 +381,7 @@ describe('UserService - Permissions (真实数据库)', () => {
     it('should handle permissions with only commas as null', async () => {
       await withTestTransaction(db, async (tx) => {
         // 注入事务数据库
-        service['db'] = tx;
+        (service as any)['db'] = tx;
 
         const createUserDto: CreateUserDto = {
           username: generateTestUsername(),
@@ -403,7 +403,7 @@ describe('UserService - Permissions (真实数据库)', () => {
     it('should handle array with empty strings', async () => {
       await withTestTransaction(db, async (tx) => {
         // 注入事务数据库
-        service['db'] = tx;
+        (service as any)['db'] = tx;
 
         const createUserDto: CreateUserDto = {
           username: generateTestUsername(),
@@ -426,7 +426,7 @@ describe('UserService - Permissions (真实数据库)', () => {
     it('should handle array with whitespace-only strings', async () => {
       await withTestTransaction(db, async (tx) => {
         // 注入事务数据库
-        service['db'] = tx;
+        (service as any)['db'] = tx;
 
         const createUserDto: CreateUserDto = {
           username: generateTestUsername(),
@@ -449,7 +449,7 @@ describe('UserService - Permissions (真实数据库)', () => {
     it('should handle array with non-string elements (filtered out)', async () => {
       await withTestTransaction(db, async (tx) => {
         // 注入事务数据库
-        service['db'] = tx;
+        (service as any)['db'] = tx;
 
         // 注意：TypeScript 会在编译时检查，但运行时可能接收非字符串元素
         const createUserDto: CreateUserDto = {
@@ -473,7 +473,7 @@ describe('UserService - Permissions (真实数据库)', () => {
     it('should handle mixed whitespace in comma-separated string', async () => {
       await withTestTransaction(db, async (tx) => {
         // 注入事务数据库
-        service['db'] = tx;
+        (service as any)['db'] = tx;
 
         const createUserDto: CreateUserDto = {
           username: generateTestUsername(),
@@ -496,7 +496,7 @@ describe('UserService - Permissions (真实数据库)', () => {
     it('should preserve original permissions when updating with undefined', async () => {
       await withTestTransaction(db, async (tx) => {
         // 注入事务数据库
-        service['db'] = tx;
+        (service as any)['db'] = tx;
 
         // 先创建带权限的用户
         const created = await service.create({
@@ -526,7 +526,7 @@ describe('UserService - Permissions (真实数据库)', () => {
     it('should handle permissions with special characters', async () => {
       await withTestTransaction(db, async (tx) => {
         // 注入事务数据库
-        service['db'] = tx;
+        (service as any)['db'] = tx;
 
         const createUserDto: CreateUserDto = {
           username: generateTestUsername(),
@@ -538,7 +538,11 @@ describe('UserService - Permissions (真实数据库)', () => {
         const result = await service.create(createUserDto);
 
         // 特殊字符应该被保留
-        expect(result.permissions).toEqual(['article:read', 'article:write:admin', 'user:delete:*']);
+        expect(result.permissions).toEqual([
+          'article:read',
+          'article:write:admin',
+          'user:delete:*',
+        ]);
 
         // 验证数据库持久化
         const [saved] = await tx.select().from(users).where(eq(users.id, result.id));
@@ -551,14 +555,15 @@ describe('UserService - Permissions (真实数据库)', () => {
     it('should apply beforeCreate hook and preserve normalized permissions', async () => {
       await withTestTransaction(db, async (tx) => {
         // 注入事务数据库
-        service['db'] = tx;
+        (service as any)['db'] = tx;
 
         // Mock 钩子修改用户数据
-        (mockHookService.applyFilters as any).mockImplementation(async (_hook, data) => {
-          return {
+
+        (mockHookService.applyFilters as any).mockImplementation((_hook: any, data: any) => {
+          return Promise.resolve({
             ...data,
             nickname: 'Hooked Nickname',
-          };
+          });
         });
 
         const createUserDto: CreateUserDto = {
@@ -576,16 +581,20 @@ describe('UserService - Permissions (真实数据库)', () => {
         expect(result.permissions).toEqual(['read', 'write']);
 
         // 验证钩子被调用
-        expect(mockHookService.applyFilters).toHaveBeenCalledWith('user|beforeCreate', createUserDto, {
-          action: 'create',
-        });
+        expect(mockHookService.applyFilters).toHaveBeenCalledWith(
+          'user|beforeCreate',
+          createUserDto,
+          {
+            action: 'create',
+          },
+        );
       });
     });
 
     it('should trigger afterCreate hook with normalized permissions', async () => {
       await withTestTransaction(db, async (tx) => {
         // 注入事务数据库
-        service['db'] = tx;
+        (service as any)['db'] = tx;
 
         const createUserDto: CreateUserDto = {
           username: generateTestUsername(),
@@ -611,7 +620,7 @@ describe('UserService - Permissions (真实数据库)', () => {
     it('should apply beforeUpdate hook and preserve normalized permissions', async () => {
       await withTestTransaction(db, async (tx) => {
         // 注入事务数据库
-        service['db'] = tx;
+        (service as any)['db'] = tx;
 
         // 先创建用户
         const created = await service.create({
@@ -621,7 +630,7 @@ describe('UserService - Permissions (真实数据库)', () => {
         });
 
         // Mock 钩子修改更新数据
-        (mockHookService.applyFilters as any).mockImplementation(async (_hook, data) => {
+        (mockHookService.applyFilters as any).mockImplementation((_hook: any, data: any) => {
           return {
             ...data,
             nickname: 'Hooked Nickname',
@@ -629,7 +638,7 @@ describe('UserService - Permissions (真实数据库)', () => {
         });
 
         const updateData: Partial<UpdateUserDto> = {
-          permissions: 'read, write, delete',
+          permissions: 'read, write, delete' as any,
         };
 
         const result = await service.update(created.id, updateData);
@@ -650,7 +659,7 @@ describe('UserService - Permissions (真实数据库)', () => {
     it('should trigger afterUpdate hook with updated permissions', async () => {
       await withTestTransaction(db, async (tx) => {
         // 注入事务数据库
-        service['db'] = tx;
+        (service as any)['db'] = tx;
 
         const created = await service.create({
           username: generateTestUsername(),
@@ -687,7 +696,7 @@ describe('UserService - Permissions (真实数据库)', () => {
 
       await withTestTransaction(db, async (tx) => {
         // 注入事务数据库
-        service['db'] = tx;
+        (service as any)['db'] = tx;
 
         await service.create({
           username: generateTestUsername(),
@@ -709,7 +718,7 @@ describe('UserService - Permissions (真实数据库)', () => {
     it.skip('should rollback permission update on test failure', async () => {
       await withTestTransaction(db, async (tx) => {
         // 注入事务数据库
-        service['db'] = tx;
+        (service as any)['db'] = tx;
 
         // 先创建用户
         const created = await service.create({
