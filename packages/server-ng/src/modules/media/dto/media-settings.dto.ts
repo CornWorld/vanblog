@@ -53,10 +53,10 @@ export type MediaProcessingOverride = z.infer<typeof MediaProcessingOverrideSche
 // Helper schema to parse JSON strings (for multipart form data)
 export const MediaProcessingOverrideFromString = z
   .union([z.string(), z.unknown()])
-  .transform((val) => {
+  .transform((val): unknown => {
     if (typeof val === 'string') {
       try {
-        return JSON.parse(val);
+        return JSON.parse(val) as unknown;
       } catch {
         return null;
       }

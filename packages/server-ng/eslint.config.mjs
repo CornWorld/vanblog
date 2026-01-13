@@ -142,6 +142,14 @@ export default defineConfig([
       '@typescript-eslint/strict-boolean-expressions': 'off',
     },
   },
+  {
+    files: ['scripts/**/*.ts'],
+    rules: {
+      '@typescript-eslint/explicit-function-return-type': 'off',
+      'no-console': 'off',
+      'no-restricted-imports': 'off',
+    },
+  },
 
   // Test files
   {
@@ -159,6 +167,7 @@ export default defineConfig([
       '@typescript-eslint/no-unnecessary-type-assertion': 'off', // Type guards for testing
       '@typescript-eslint/explicit-function-return-type': 'off', // Implicit returns in test helpers
       '@typescript-eslint/no-unnecessary-condition': 'off', // Conditional tests
+      '@typescript-eslint/no-non-null-assertion': 'off', // Non-null assertions are safe in tests
 
       // Import and style relaxation
       'no-console': 'off',

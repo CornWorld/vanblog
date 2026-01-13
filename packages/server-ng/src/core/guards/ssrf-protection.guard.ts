@@ -2,6 +2,8 @@ import { CanActivate, ExecutionContext, Injectable, Logger } from '@nestjs/commo
 
 import { validateWebhookUrl } from '../../shared/utils/url-validator.util';
 
+import type { Request } from 'express';
+
 /**
  * SSRF 防护守卫
  *
@@ -20,11 +22,11 @@ export class SSRFProtectionGuard implements CanActivate {
   private readonly logger = new Logger(SSRFProtectionGuard.name);
 
   canActivate(context: ExecutionContext): boolean {
-    const request = context.switchToHttp().getRequest();
-    const body = request.body || {};
+    const request = context.switchToHttp().getRequest<Request>();
+    const body = (request.body as Record<string, unknown> | undefined) ?? {};
 
     // 从请求体中提取 URL（支持多种可能的字段名）
-    const url = body.url || body.webhookUrl || body.targetUrl;
+    const url = (body.url ?? body.webhookUrl ?? body.targetUrl) as string | undefined;
 
     // 如果没有 URL，放行（可能不是需要验证的请求）
     if (!url || typeof url !== 'string') {
@@ -37,12 +39,12 @@ export class SSRFProtectionGuard implements CanActivate {
     if (!validationResult.valid) {
       // 记录安全事件
       this.logger.warn(
-        `Blocked SSRF attempt - URL: ${url}, Reason: ${validationResult.reason} - ${validationResult.error}`,
+        `Blocked SSRF attempt - URL: ${url}, Reason: ${validationResult.reason ?? 'unknown'} - ${validationResult.error ?? 'unknown'}`,
       );
 
       // 抛出异常，阻止请求
       throw new Error(
-        `Webhook URL validation failed: ${validationResult.error}. This URL has been blocked for security reasons.`,
+        `Webhook URL validation failed: ${validationResult.error ?? 'unknown'}. This URL has been blocked for security reasons.`,
       );
     }
 

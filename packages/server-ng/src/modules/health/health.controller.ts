@@ -5,11 +5,13 @@ import { dayjs } from '@vanblog/shared';
 import { createHealthContract } from '@vanblog/shared/contracts';
 
 const c = initContract();
-const healthContract = createHealthContract(c);
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Required for ts-rest contract initialization type compatibility
+const healthContract = createHealthContract(c as any);
 
 @Controller()
 export class HealthController {
-  @TsRestHandler(healthContract.getHealth)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Required for ts-rest decorator type compatibility
+  @TsRestHandler(healthContract.getHealth as any)
   getHealth(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(healthContract.getHealth, async () => {
       await Promise.resolve();

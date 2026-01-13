@@ -183,7 +183,9 @@ export class ImageProcessingQueueService implements OnModuleInit, OnModuleDestro
       }
 
       const parsed = ImageProcessingOptionsSchema.safeParse(configValue);
-      const processingConfig: ImageProcessingOptions = parsed.success ? parsed.data : defaultConfig;
+      const processingConfig: ImageProcessingOptions = parsed.success
+        ? (parsed.data as ImageProcessingOptions)
+        : defaultConfig;
 
       const result = await this.imageProcessingService.compressImage(
         originalBuffer,
@@ -262,7 +264,7 @@ export class ImageProcessingQueueService implements OnModuleInit, OnModuleDestro
       fileId: task.fileId,
       status: task.status,
       priority: task.priority,
-      processingConfig: parsed.success ? parsed.data : null,
+      processingConfig: parsed.success ? (parsed.data as ImageProcessingOptions) : null,
       originalBuffer: task.originalBuffer,
       processedBuffer: task.processedBuffer,
       errorMessage: task.errorMessage,

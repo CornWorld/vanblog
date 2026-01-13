@@ -177,11 +177,13 @@ export type ShortcodeHandler = (
  *
  * 这是一个泛型类型，实际类型由 Drizzle 提供
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type Database = any; // TODO: 使用实际的 Drizzle 类型
 
 /**
  * Drizzle 表类型
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type DrizzleTable = any; // TODO: 使用实际的 Drizzle 类型
 
 // ============================================================
@@ -191,6 +193,7 @@ export type DrizzleTable = any; // TODO: 使用实际的 Drizzle 类型
 /**
  * HTTP 请求处理器
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type RequestHandler = (req: any, res: any) => void | Promise<void>;
 
 /**
@@ -204,8 +207,10 @@ export interface RequestContext {
     username: string;
   };
   /** 路径参数 */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   params: Record<string, any>;
   /** 查询参数 */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   query: Record<string, any>;
   /** 请求体 */
   body: unknown;
@@ -518,6 +523,7 @@ export interface PluginAPI {
    * const books = await api.db.select().from(bookTable);
    * ```
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   table(name: string, schema?: z.ZodObject<any>): DrizzleTable;
 
   /**
@@ -648,6 +654,7 @@ export interface PluginAPI {
    * api.exposeAPI('book', BookAPI);
    * ```
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   exposeAPI<T extends Record<string, any>>(apiName: string, api: T): void;
 
   /**

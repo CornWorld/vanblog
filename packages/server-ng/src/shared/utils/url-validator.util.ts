@@ -35,7 +35,15 @@ export const BLOCKED_IP_RANGES = [
  *
  * 包含所有不应被 webhook 使用的危险协议。
  */
-const BLOCKED_PROTOCOLS = ['file:', 'ftp:', 'javascript:', 'data:', 'mailto:', 'ws:', 'wss:'] as const;
+const BLOCKED_PROTOCOLS = [
+  'file:',
+  'ftp:',
+  'javascript:',
+  'data:',
+  'mailto:',
+  'ws:',
+  'wss:',
+] as const;
 
 /**
  * IP 地址范围接口
@@ -90,7 +98,9 @@ function ipv6ToBigInt(ip: string): bigint {
   if (emptyIndex !== -1) {
     const missing = 8 - parts.length;
     const newParts = [...parts];
-    newParts.splice(emptyIndex, 1, ...Array(missing + 1).fill('0'));
+
+    const filledParts = Array<string>(missing + 1).fill('0');
+    newParts.splice(emptyIndex, 1, ...filledParts);
     return ipv6ToBigInt(newParts.join(':'));
   }
 
@@ -113,10 +123,16 @@ function ipv6ToBigInt(ip: string): bigint {
  * @returns IP 范围对象
  */
 function parseCIDR(cidr: string): IPRange {
-  const [ipStr, prefixStr] = cidr.split('/');
-  const prefixLength = Number.parseInt(prefixStr ?? '', 10);
+  const parts = cidr.split('/');
+  if (parts.length !== 2) {
+    throw new Error(`Invalid CIDR: ${cidr}`);
+  }
 
-  if (ipStr === undefined || prefixStr === undefined) {
+  const [ipStr, prefixStr] = parts;
+
+  const prefixLength = Number.parseInt(prefixStr, 10);
+
+  if (!ipStr) {
     throw new Error(`Invalid CIDR: ${cidr}`);
   }
 
@@ -135,7 +151,7 @@ function parseCIDR(cidr: string): IPRange {
       prefixLength === 0
         ? 0n
         : (0xffffffffffffffffffffffffffffffffn << BigInt(128 - prefixLength)) &
-            0xffffffffffffffffffffffffffffffffn;
+          0xffffffffffffffffffffffffffffffffn;
     const start = ip & mask;
     const end = start | (~mask & 0xffffffffffffffffffffffffffffffffn);
 
@@ -250,7 +266,7 @@ export function validateWebhookUrl(urlString: string): WebhookUrlValidationResul
     let url: URL;
     try {
       url = new URL(urlString);
-    } catch (error) {
+    } catch {
       return {
         valid: false,
         error: 'Invalid URL format',

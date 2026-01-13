@@ -20,8 +20,8 @@ import {
 } from '@vanblog/shared/drizzle';
 import { z } from 'zod';
 
-import { Perm } from '../../auth/permissions.decorator';
 import { SSRFProtectionGuard } from '../../../core/guards/ssrf-protection.guard';
+import { Perm } from '../../auth/permissions.decorator';
 import { WebhookDto } from '../dto/webhook.dto';
 import { WebhookRegistryService } from '../services/webhook-registry.service';
 import { WebhookService } from '../services/webhook.service';

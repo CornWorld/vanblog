@@ -331,7 +331,7 @@ export class DraftService {
 
     // 更新标签关联表
     if (finalTags !== undefined) {
-      await this.updateDraftTags(id, finalTags ?? []);
+      await this.updateDraftTags(id, finalTags);
     }
 
     // 从关联表加载最新标签
@@ -386,7 +386,7 @@ export class DraftService {
     // First, get the draft
     const draft = await this.findOne(id);
     // Filter out null/undefined values from tags array
-    const draftTags = Array.isArray(draft.tags) ? draft.tags.filter((tag) => tag != null) : [];
+    const draftTags = Array.isArray(draft.tags) ? draft.tags.filter((tag) => tag) : [];
 
     // Auto-create tags if they don't exist
     if (draftTags.length > 0) {

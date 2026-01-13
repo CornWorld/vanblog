@@ -160,7 +160,7 @@ export class CommentService implements OnModuleInit, OnModuleDestroy, BeforeAppl
             typeof config.otherConfig === 'string'
               ? (() => {
                   try {
-                    return JSON.parse(config.otherConfig);
+                    return JSON.parse(config.otherConfig) as Record<string, unknown>;
                   } catch {
                     return {};
                   }

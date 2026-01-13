@@ -357,7 +357,25 @@ export class WebhookService {
     status?: 'success' | 'failed' | 'timeout';
     startDate?: string;
     endDate?: string;
-  }): Promise<Record<string, unknown>> {
+  }): Promise<{
+    data: Array<{
+      id: number;
+      webhookId: number;
+      event: string;
+      payload: Record<string, unknown> | string;
+      status: string;
+      responseCode: number | null;
+      errorMessage: string | null;
+      executionTime: number | null;
+      createdAt: string;
+    }>;
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+    };
+  }> {
     const { page = 1, limit = 10, webhookId, event, status, startDate, endDate } = query;
     const offset = (page - 1) * limit;
 
@@ -402,7 +420,6 @@ export class WebhookService {
 
     const totalCount = totalResult.count;
 
-    
     return {
       data: results.map((log) => {
         let parsedPayload: Record<string, unknown>;
@@ -414,18 +431,36 @@ export class WebhookService {
         } else {
           // Try to parse as JSON string
           try {
-            parsedPayload = JSON.parse(log.payload) as Record<string, unknown>;
+            parsedPayload = JSON.parse(log.payload);
           } catch (error) {
             this.logger.error('JSON.parse error in getLogs:', error);
-            parsedPayload = log.payload; // Return raw payload if parsing fails
+            // Return empty object if parsing fails
+            parsedPayload = {} as Record<string, unknown>;
           }
         }
 
         return {
-          ...log,
+          id: log.id,
+          webhookId: log.webhookId,
+          event: log.event,
           payload: parsedPayload,
+          status: log.status,
+          responseCode: log.responseCode,
+          errorMessage: log.error,
+          executionTime: log.duration,
+          createdAt: log.createdAt.toISOString(),
         };
-      }),
+      }) as Array<{
+        id: number;
+        webhookId: number;
+        event: string;
+        payload: Record<string, unknown> | string;
+        status: string;
+        responseCode: number | null;
+        errorMessage: string | null;
+        executionTime: number | null;
+        createdAt: string;
+      }>,
       pagination: {
         page,
         limit,

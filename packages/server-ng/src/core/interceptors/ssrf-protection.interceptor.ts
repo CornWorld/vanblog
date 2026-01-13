@@ -1,14 +1,9 @@
-import {
-  Injectable,
-  NestInterceptor,
-  ExecutionContext,
-  CallHandler,
-  Logger,
-} from '@nestjs/common';
-import { Observable } from 'rxjs';
-import { throwError } from 'rxjs';
+import { Injectable, NestInterceptor, ExecutionContext, CallHandler, Logger } from '@nestjs/common';
+import { Observable, throwError } from 'rxjs';
 
 import { validateWebhookUrl } from '../../shared/utils/url-validator.util';
+
+import type { Request } from 'express';
 
 /**
  * SSRF 防护拦截器
@@ -27,8 +22,14 @@ export class SSRFProtectionInterceptor implements NestInterceptor {
   private readonly logger = new Logger(SSRFProtectionInterceptor.name);
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
-    const request = context.switchToHttp().getRequest();
-    const { url, webhookId, event } = request.body || {};
+    const request = context.switchToHttp().getRequest<Request>();
+    const body = (request.body as Record<string, unknown> | undefined) ?? {};
+    const url = body.url as string | undefined;
+    const webhookId =
+      typeof body.webhookId === 'string' || typeof body.webhookId === 'number'
+        ? String(body.webhookId)
+        : 'unknown';
+    const event = body.event as string | undefined;
 
     // 如果有 URL，则进行 SSRF 验证
     if (url && typeof url === 'string') {
@@ -37,14 +38,14 @@ export class SSRFProtectionInterceptor implements NestInterceptor {
       if (!validationResult.valid) {
         // 记录安全事件
         this.logger.warn(
-          `Blocked SSRF attempt - Webhook ID: ${webhookId || 'unknown'}, URL: ${url}, Event: ${event || 'unknown'}, Reason: ${validationResult.reason} - ${validationResult.error}`,
+          `Blocked SSRF attempt - Webhook ID: ${webhookId}, URL: ${url}, Event: ${event ?? 'unknown'}, Reason: ${validationResult.reason ?? 'unknown'} - ${validationResult.error ?? 'unknown'}`,
         );
 
         // 返回错误响应
         return throwError(
           () =>
             new Error(
-              `Webhook URL validation failed: ${validationResult.error}. This URL has been blocked for security reasons.`,
+              `Webhook URL validation failed: ${validationResult.error ?? 'unknown'}. This URL has been blocked for security reasons.`,
             ),
         );
       }

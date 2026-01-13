@@ -115,14 +115,18 @@ export class ArticleStatsService {
         : [];
 
     // 合并结果
-    const readingTimeMap = new Map(readingTimeStats.map((stat) => [stat.articleId, stat.avgReadTime]));
+    const readingTimeMap = new Map(
+      readingTimeStats.map((stat) => [stat.articleId, stat.avgReadTime]),
+    );
 
     return pageViewStats.map((row) => ({
       articleId: row.articleId,
       title: row.title && row.title.length > 0 ? row.title : 'Untitled',
       views: row.views,
       uniqueVisitors: row.uniqueVisitors,
-      avgReadTime: (readingTimeMap.get(row.articleId) ?? 0) > 0 ? readingTimeMap.get(row.articleId)! : 0,
+      avgReadTime:
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        (readingTimeMap.get(row.articleId) ?? 0) > 0 ? readingTimeMap.get(row.articleId)! : 0,
     }));
   }
 
@@ -152,7 +156,7 @@ export class ArticleStatsService {
       .where(and(eq(analytics.type, AnalyticsType.PAGEVIEW), sql`${articleIdExpr} = ${articleId}`));
 
     // count(*) without group by always returns one row
-    const views = pageViewResult[0].views;
+    const [{ views }] = pageViewResult;
     if (views === 0) {
       // No views found, return null
       return null;
@@ -179,7 +183,8 @@ export class ArticleStatsService {
 
     return {
       articleId,
-      title: articleInfo[0].title && articleInfo[0].title.length > 0 ? articleInfo[0].title : 'Untitled',
+      title:
+        articleInfo[0].title && articleInfo[0].title.length > 0 ? articleInfo[0].title : 'Untitled',
       views,
       uniqueVisitors: pageViewResult[0].uniqueVisitors,
       avgReadTime: avgReadTime > 0 ? avgReadTime : 0,

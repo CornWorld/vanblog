@@ -7,7 +7,8 @@ import { LoginLogQueryDto } from './dto/login-log.dto';
 import { LoginLogService } from './login-log.service';
 
 const c = initContract();
-const loginLogContract = createLoginLogContract(c);
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Required for ts-rest contract initialization type compatibility
+const loginLogContract = createLoginLogContract(c as any);
 
 @Controller()
 export class LoginLogTsRestController {

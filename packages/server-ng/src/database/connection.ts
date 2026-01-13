@@ -10,7 +10,7 @@ import type { LoggerService } from '../core/logger/logger.service';
  * 数据库连接类型定义
  * 基于 LibSQL（SQLite 的现代分支），支持本地和远程连接
  */
-export type Database = LibSQLDatabase;
+export type Database = LibSQLDatabase<Record<string, unknown>>;
 
 /**
  * 创建数据库连接

@@ -1,4 +1,3 @@
-import { c } from '@vanblog/shared';
 import { z } from 'zod';
 
 export const ListStaticFilesSchema = z.object({

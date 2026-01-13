@@ -1,6 +1,11 @@
 import { Injectable, NotFoundException, Inject } from '@nestjs/common';
 import { dayjs } from '@vanblog/shared';
-import { draftVersions, drafts, selectDraftVersionSchema } from '@vanblog/shared/drizzle';
+import {
+  draftVersions,
+  drafts,
+  draftTags,
+  selectDraftVersionSchema,
+} from '@vanblog/shared/drizzle';
 import { eq, and, desc, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
@@ -29,6 +34,13 @@ export class DraftVersionService {
 
     const [currentDraft] = currentDraftResults;
 
+    // Get tags from draft_tags junction table
+    const draftTagsResults = await this.db
+      .select({ tagName: draftTags.tagName })
+      .from(draftTags)
+      .where(eq(draftTags.draftId, draftId));
+    const tags = draftTagsResults.map((t) => t.tagName);
+
     // Get the next version number
     const maxVersionResult = await this.db
       .select({ maxVersion: sql<number>`coalesce(max(${draftVersions.version}), 0)` })
@@ -46,7 +58,7 @@ export class DraftVersionService {
         title: currentDraft.title,
         content: currentDraft.content,
         pathname: currentDraft.pathname,
-        tags: currentDraft.tags,
+        tags,
         category: currentDraft.category,
         author: currentDraft.author,
       })

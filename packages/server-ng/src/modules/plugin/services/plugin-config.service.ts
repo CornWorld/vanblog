@@ -362,7 +362,7 @@ export class PluginConfigService {
       }
       case 'object': {
         // Use Zod object schema for safe parsing
-        const ObjectSchema = z.record(z.unknown());
+        const ObjectSchema = z.record(z.string(), z.unknown());
         const parsed = ObjectSchema.safeParse(
           typeof value === 'string'
             ? (() => {

@@ -7,21 +7,17 @@ import {
   HttpStatus,
   Get,
   Query,
-  HttpException,
   Body,
-  BadRequestException,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiQuery, ApiBody } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
 import { ThrottlerGuard } from '@nestjs/throttler';
 import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
 import { contract } from '@vanblog/shared';
 import { Request as ExpressRequest } from 'express';
 
-import { UserType } from '../user/dto/create-user.dto';
 import { User } from '../user/entities/user.entity';
 
 import { AuthService } from './auth.service';
-import { LoginLogResponseDto, LoginLogQuerySchema } from './dto/login-log.dto';
 import { LocalAuthGuard } from './guards/local-auth.guard';
 import { LoginLogService } from './login-log.service';
 import { Perm } from './permissions.decorator';

@@ -59,24 +59,22 @@ export class PluginDataStorageService implements PluginDataStorage {
   async set(key: string, value: unknown): Promise<void> {
     const now = dayjs().format();
 
-    // WORKAROUND: Drizzle doesn't call toDriver() for jsonb() in UPSERT context
-    // We need to manually stringify the value
-    // See: https://github.com/drizzle-team/drizzle-orm/issues/xxxxx
-    const serializedValue = JSON.stringify(value);
+    // Serialize value to string since SQLite jsonb() has issues with direct object binding
+    const serializedValue = typeof value === 'string' ? value : JSON.stringify(value);
 
     await this.db
       .insert(pluginData)
       .values({
         pluginId: this.pluginId,
         key,
-        value: serializedValue as unknown,
+        value: serializedValue,
         createdAt: now,
         updatedAt: now,
       })
       .onConflictDoUpdate({
         target: [pluginData.pluginId, pluginData.key],
         set: {
-          value: serializedValue as unknown,
+          value: serializedValue,
           updatedAt: now,
         },
       });

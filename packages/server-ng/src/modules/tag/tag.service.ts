@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, Inject } from '@nestjs/common';
 import { dayjs } from '@vanblog/shared';
 import { tags, articles, articleTags } from '@vanblog/shared/drizzle';
-import { eq, sql, like, and, desc, inArray } from 'drizzle-orm';
+import { eq, sql, and, desc, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 
 import { DATABASE_CONNECTION, type Database } from '../../database';
@@ -274,7 +274,12 @@ export class TagService {
             count: sql<number>`count(*)`,
           })
           .from(articles)
-          .where(inArray(articles.id, articleIdsWithTag.map((a) => a.articleId)))
+          .where(
+            inArray(
+              articles.id,
+              articleIdsWithTag.map((a) => a.articleId),
+            ),
+          )
           .groupBy(articles.category);
 
         return {
@@ -339,7 +344,10 @@ export class TagService {
 
     // 构建查询条件
     const whereClause = and(
-      inArray(articles.id, articleIdsWithTag.map((a) => a.articleId)),
+      inArray(
+        articles.id,
+        articleIdsWithTag.map((a) => a.articleId),
+      ),
       includeHidden ? undefined : eq(articles.hidden, false),
     );
 

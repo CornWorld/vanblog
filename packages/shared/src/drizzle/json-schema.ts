@@ -37,9 +37,6 @@ export function jsonSchemaOptional<T extends z.ZodTypeAny>(schema: T) {
 /**
  * @deprecated Use jsonb() column type with schema.catch() instead
  */
-export function jsonSchemaWithDefault<T extends z.ZodTypeAny>(
-  schema: T,
-  defaultValue: z.infer<T>,
-) {
+export function jsonSchemaWithDefault<T extends z.ZodTypeAny>(schema: T, defaultValue: z.infer<T>) {
   return schema.catch(defaultValue);
 }

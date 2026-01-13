@@ -224,7 +224,7 @@ export class ImageProcessingService {
 
           const watermarkBuffer = Buffer.from(svgText);
 
-          return pipeline
+          return await pipeline
             .composite([
               {
                 input: watermarkBuffer,
@@ -266,7 +266,7 @@ export class ImageProcessingService {
 
           const watermarkFinal = await processedWatermark.toBuffer();
 
-          return pipeline
+          return await pipeline
             .composite([
               {
                 input: watermarkFinal,
