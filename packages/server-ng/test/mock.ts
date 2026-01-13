@@ -1,6 +1,6 @@
 import { dayjs } from '@vanblog/shared';
 import { Test } from '@nestjs/testing';
-import { vi } from 'vitest';
+import { vi, type Mock as VitestMock } from 'vitest';
 
 import { DATABASE_CONNECTION } from '../src/database';
 import { StorageProvider } from '../src/modules/media/dto/storage-config.dto';
@@ -753,23 +753,36 @@ export function createReflectorMock(): any {
 }
 
 /**
- * 创建HookService Mock
+ * Mocked HookService type - all methods are Vitest mocks with .mock property
+ * Use `as any` when providing to NestJS: `{ provide: HookService, useValue: mockHookService as any }`
  */
-export function createHookServiceMock(): Partial<HookService> {
+export type MockedHookService = {
+  [K in keyof HookService]: HookService[K] extends (...args: any[]) => any
+    ? VitestMock
+    : HookService[K];
+};
+
+/**
+ * 创建HookService Mock
+ * Returns a properly typed mock with Vitest's .mock properties accessible
+ */
+export function createHookServiceMock(): MockedHookService {
   return {
     addAction: vi.fn(),
     addFilter: vi.fn(),
     removeAction: vi.fn(),
     removeFilter: vi.fn(),
     doAction: vi.fn().mockResolvedValue(undefined),
-    applyFilters: vi.fn().mockImplementation(async (_, data) => Promise.resolve(data)),
+    applyFilters: vi
+      .fn()
+      .mockImplementation(async (_: string, data: unknown) => Promise.resolve(data)),
     hasAction: vi.fn().mockReturnValue(false),
     hasFilter: vi.fn().mockReturnValue(false),
     getActionCount: vi.fn().mockReturnValue(0),
     getFilterCount: vi.fn().mockReturnValue(0),
     getAllActionHooks: vi.fn().mockReturnValue([]),
     getAllFilterHooks: vi.fn().mockReturnValue([]),
-  };
+  } as MockedHookService;
 }
 
 /**

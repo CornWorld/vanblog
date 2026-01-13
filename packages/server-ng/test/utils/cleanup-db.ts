@@ -28,15 +28,6 @@ import * as schema from '@vanblog/shared/drizzle';
  * });
  */
 export async function cleanupDatabase(db: LibSQLDatabase<typeof schema>): Promise<void> {
-  // Get all table names from schema
-  const tables = Object.keys(schema).filter(
-    (key) =>
-      // Only include tables (exclude enums, relations, etc.)
-      key in db &&
-      typeof (db as any)[key] === 'object' &&
-      (db as any)[key].hasOwnProperty('drizzle'),
-  );
-
   // Delete all rows from each table
   // Order matters: delete from child tables first
   const deleteOrder = [

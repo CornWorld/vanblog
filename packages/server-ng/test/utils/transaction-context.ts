@@ -29,7 +29,7 @@ import type { LibSQLDatabase } from 'drizzle-orm/libsql';
  * AsyncLocalStorage for storing the current transaction context.
  * Each async call stack gets its own isolated context.
  */
-const transactionContext = new AsyncLocalStorage<LibSQLDatabase>();
+const transactionContext = new AsyncLocalStorage<LibSQLDatabase<Record<string, unknown>>>();
 
 /**
  * Get the current transaction from AsyncLocalStorage context.
@@ -49,14 +49,14 @@ const transactionContext = new AsyncLocalStorage<LibSQLDatabase>();
  *   console.log('No active transaction');
  * }
  */
-export function useTransaction(): LibSQLDatabase | undefined {
+export function useTransaction(): LibSQLDatabase<Record<string, unknown>> | undefined {
   return transactionContext.getStore();
 }
 
 /**
  * @deprecated Use useTransaction() instead. This alias is provided for backwards compatibility.
  */
-export function getCurrentTransaction(): LibSQLDatabase | undefined {
+export function getCurrentTransaction(): LibSQLDatabase<Record<string, unknown>> | undefined {
   return useTransaction();
 }
 
@@ -78,7 +78,7 @@ export function getCurrentTransaction(): LibSQLDatabase | undefined {
  * });
  */
 export async function withTransactionContext<T>(
-  tx: LibSQLDatabase,
+  tx: LibSQLDatabase<Record<string, unknown>>,
   callback: () => Promise<T>,
 ): Promise<T> {
   return transactionContext.run(tx, callback);

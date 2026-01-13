@@ -2,7 +2,7 @@
 // This file is automatically loaded before tests run
 
 import { execSync } from 'child_process';
-import { mkdirSync, existsSync, unlinkSync, writeFileSync, openSync, closeSync } from 'fs';
+import { mkdirSync, existsSync, unlinkSync, writeFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -13,7 +13,7 @@ const packageDir = dirname(testDir); // server-ng package directory
 
 import { createClient } from '@libsql/client';
 import * as schema from '@vanblog/shared/drizzle';
-import { drizzle } from 'drizzle-orm/libsql';
+import { drizzle, type LibSQLDatabase } from 'drizzle-orm/libsql';
 import { vi } from 'vitest';
 
 // Set up test-specific database configuration
@@ -29,7 +29,6 @@ const testPluginRunnerDir = join(process.cwd(), 'test-data', 'pluginRunner');
 const testStaticDir = join(process.cwd(), 'test-data', 'static');
 
 // Lock and ready sentinel files to coordinate multi-worker initialization
-const dbInitLockFile = join(testDbDir, `db.init.lock.${workerId}`);
 const dbReadyFile = join(testDbDir, `db.ready.${workerId}`);
 
 // Ensure test data directories exist
@@ -70,30 +69,9 @@ process.env.STATIC_PATH = testStaticDir;
   throw new Error('Unexpected network call in tests');
 });
 
-async function waitForDbReady(timeoutMs = 120_000, intervalMs = 100): Promise<void> {
-  const start = Date.now();
-  for (;;) {
-    if (existsSync(dbReadyFile)) return;
-    if (Date.now() - start > timeoutMs) {
-      throw new Error('Timed out waiting for test database to be initialized');
-    }
-    await new Promise((r) => setTimeout(r, intervalMs));
-  }
-}
-
-function tryAcquireInitLock(): boolean {
-  try {
-    const fd = openSync(dbInitLockFile, 'wx');
-    closeSync(fd);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 // Initialize test database using drizzle-kit push
 // Each worker initializes its own database independently (no coordination needed)
-export async function setupTestDatabase(): Promise<ReturnType<typeof drizzle>> {
+export async function setupTestDatabase(): Promise<LibSQLDatabase<Record<string, unknown>>> {
   console.log(`[Worker ${workerId}] setupTestDatabase() START`);
   try {
     // Check if this worker's database is already initialized
@@ -119,10 +97,18 @@ export async function setupTestDatabase(): Promise<ReturnType<typeof drizzle>> {
           env: { ...process.env, DATABASE_URL: `file:${testDbPath}` },
         });
       } catch (execError: any) {
-        console.error(`[Worker ${workerId}] drizzle-kit push failed with code ${execError.status}`);
-        console.error(`[Worker ${workerId}] stdout: ${execError.stdout?.toString() || 'none'}`);
-        console.error(`[Worker ${workerId}] stderr: ${execError.stderr?.toString() || 'none'}`);
-        throw new Error(`drizzle-kit push failed: ${execError.message}`);
+        console.error(
+          `[Worker ${workerId}] drizzle-kit push failed with code ${String(execError.status)}`,
+        );
+
+        console.error(
+          `[Worker ${workerId}] stdout: ${String(execError.stdout?.toString()) || 'none'}`,
+        );
+
+        console.error(
+          `[Worker ${workerId}] stderr: ${String(execError.stderr?.toString()) || 'none'}`,
+        );
+        throw new Error(`drizzle-kit push failed: ${String(execError.message)}`);
       }
 
       console.log(`[Worker ${workerId}] Database initialization complete`);
@@ -141,7 +127,7 @@ export async function setupTestDatabase(): Promise<ReturnType<typeof drizzle>> {
   console.log(`[Worker ${workerId}] Creating database client...`);
   // Create and return database client with WAL mode for better concurrency
   const client = createClient({ url: `file:${testDbPath}` });
-  const db = drizzle(client, { schema });
+  const db = drizzle(client, { schema }) as LibSQLDatabase<Record<string, unknown>>;
 
   // Enable WAL mode for better concurrency support
   // WAL mode allows multiple concurrent readers and one writer
@@ -166,3 +152,14 @@ const db = await setupTestDatabase();
 // Drizzle stores the original client in the $client property
 export { db };
 export const dbClient = (db as any).$client;
+
+// Validate that dbClient is properly initialized
+if (!dbClient || typeof dbClient.execute !== 'function') {
+  throw new Error(
+    `[Worker ${workerId}] dbClient initialization failed! ` +
+      `dbClient is ${dbClient === undefined ? 'undefined' : typeof dbClient}. ` +
+      `This usually indicates a Drizzle initialization problem.`,
+  );
+}
+
+console.log(`[Worker ${workerId}] dbClient successfully exported and validated`);

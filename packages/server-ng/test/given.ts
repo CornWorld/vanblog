@@ -30,9 +30,9 @@ import {
 } from '@vanblog/shared/drizzle';
 import { eq } from 'drizzle-orm';
 import { Mock } from './mock';
-import { withTestTransaction } from './utils/db-transaction-helper';
-import { useTransaction } from './utils/transaction-context';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
+
+type TestDatabase = LibSQLDatabase<Record<string, unknown>>;
 
 /**
  * ID 生成器 - 为测试数据生成唯一 ID
@@ -41,7 +41,7 @@ import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 function generateUniqueId(prefix: string = ''): number {
   const timestamp = Date.now();
   const random = Math.floor(Math.random() * 10000);
-  return parseInt(`${prefix}${timestamp}${random}`.slice(-10)); // 保留最后10位作为 ID
+  return parseInt(`${prefix}${String(timestamp)}${String(random)}`.slice(-10)); // 保留最后10位作为 ID
 }
 
 export class Given {
@@ -50,48 +50,46 @@ export class Given {
    *
    * 自动处理外键依赖（User、Category），无需手动创建关联数据。
    * 支持自定义字段覆盖，所有未指定字段使用 Mock 默认值。
-   * 在测试事务中执行，测试结束后自动回滚。
    *
-   * **NEW**: 自动使用当前事务上下文（如果存在），无需手动传递 tx 参数！
+   * **UPDATED**: 接受 db/tx 作为第一个参数，支持 afterEach cleanup 测试策略
    *
+   * @param dbOrTx - 数据库或事务实例（可选，默认使用 db）
    * @param overrides - 要覆盖的字段（Partial<Article>），可选
    * @returns 创建的文章对象（包含数据库生成的字段）
    *
    * @example
-   * // 使用默认值创建文章
-   * const article = await Given.article();
+   * // 使用默认值创建文章（直接提交到 db）
+   * const article = await Given.article(db);
    *
    * @example
-   * // 在测试事务中使用（自动共享事务）
+   * // 在测试事务中使用
    * await withTestTransaction(db, async (tx) => {
    *   const service = new ArticleService(tx);
-   *
-   *   // 自动使用 tx，无需传参！
-   *   const article = await Given.article({ title: 'Test' });
-   *
+   *   const article = await Given.article(tx, { title: 'Test' });
    *   const result = await service.findOne(article.id);
    *   expect(result).toBeDefined(); // ✅ 数据可见
    * });
    *
    * @example
-   * // 自定义标题和分类（自动创建 category）
-   * const article = await Given.article({
-   *   title: 'My Test Article',
-   *   category: 'Technology'
+   * // 使用 afterEach cleanup 策略（推荐用于复杂查询）
+   * afterEach(async () => { await cleanupTestData(db); });
+   * it('test', async () => {
+   *   const article = await Given.article(db, {
+   *     title: 'My Test Article',
+   *     category: 'Technology'
    * });
    *
    * 自动处理功能：
    * - User 依赖：如果指定的 author 不存在，自动创建用户
    * - Category 依赖：如果指定的 category 不存在，自动创建分类
-   * - 事务管理：自动使用当前事务或创建新事务
    * - 字段格式：tags 自动转为 JSON 字符串（Drizzle mode: 'json' 自动处理）
    * - 错误处理：捕获并抛出详细的错误信息
    */
-  static async article(overrides: Partial<any> = {}): Promise<any> {
-    // ✨ 自动获取当前事务上下文
-    const currentTx = useTransaction();
-
-    const executeInsert = async (tx: LibSQLDatabase) => {
+  static async article(
+    dbOrTx: TestDatabase = db as TestDatabase,
+    overrides: Partial<any> = {},
+  ): Promise<any> {
+    const executeInsert = async (tx: TestDatabase) => {
       try {
         // 自动创建依赖的 user
         const authorId = String(overrides.author || '1');
@@ -102,7 +100,7 @@ export class Given {
           .get();
 
         if (!existingUser) {
-          await tx.insert(users).values({
+          await (tx as any).insert(users).values({
             id: Number(authorId),
             username: `user${authorId}`,
             name: `User ${authorId}`,
@@ -125,7 +123,7 @@ export class Given {
             .get();
 
           if (!existingCategory) {
-            await tx.insert(categories).values({
+            await (tx as any).insert(categories).values({
               name: String(categoryName),
               slug: String(categoryName).toLowerCase(),
               createdAt: new Date().toISOString(),
@@ -158,7 +156,9 @@ export class Given {
         // 生成唯一 ID 和 pathname 以避免 PRIMARY KEY 和 UNIQUE 约束冲突
         const uniqueId = restOverrides.id !== undefined ? restOverrides.id : generateUniqueId('1');
         const uniquePathname =
-          restOverrides.pathname !== undefined ? restOverrides.pathname : `/article-${uniqueId}`;
+          restOverrides.pathname !== undefined
+            ? restOverrides.pathname
+            : `/article-${String(uniqueId)}`;
 
         // 先应用 overrides,然后确保 id 和 pathname 是唯一的
         // NOTE: tags 字段不再写入 articles 表（已迁移到 article_tags 关联表）
@@ -172,7 +172,7 @@ export class Given {
           author: authorId, // 使用已验证存在的 author
         };
 
-        const [article] = await tx.insert(articles).values(articleData).returning();
+        const [article] = await (tx as any).insert(articles).values(articleData).returning();
 
         // 插入标签关联到 article_tags 表
         if (tagsValue.length > 0) {
@@ -180,7 +180,7 @@ export class Given {
           for (const tagName of tagsValue) {
             const existingTag = await tx.select().from(tags).where(eq(tags.name, tagName)).get();
             if (!existingTag) {
-              await tx.insert(tags).values({
+              await (tx as any).insert(tags).values({
                 name: tagName,
                 slug: tagName.toLowerCase().replace(/\s+/g, '-'),
                 createdAt: new Date().toISOString(),
@@ -189,10 +189,10 @@ export class Given {
           }
 
           // 插入文章-标签关联
-          await tx.insert(articleTags).values(
+          await (tx as any).insert(articleTags).values(
             tagsValue.map((tagName) => ({
               articleId: article.id,
-              tagName: tagName,
+              tagName,
               createdAt: new Date().toISOString(),
             })),
           );
@@ -206,30 +206,25 @@ export class Given {
       }
     };
 
-    // 如果在事务上下文中，直接使用；否则创建新事务
-    if (currentTx) {
-      return executeInsert(currentTx);
-    } else {
-      return withTestTransaction(db, executeInsert);
-    }
+    return executeInsert(dbOrTx);
   }
 
   /**
    * 创建用户测试数据
    *
    * 使用 Mock 生成默认用户数据，支持字段覆盖。
-   * 在测试事务中执行，测试结束后自动回滚。
    *
+   * @param dbOrTx - 数据库或事务实例（可选，默认使用 db）
    * @param overrides - 要覆盖的字段（Partial<User>），可选
    * @returns 创建的用户对象（包含数据库生成的字段）
    *
    * @example
    * // 使用默认值创建用户
-   * const user = await Given.user();
+   * const user = await Given.user(db);
    *
    * @example
    * // 创建管理员用户
-   * const admin = await Given.user({
+   * const admin = await Given.user(db, {
    *   username: 'admin',
    *   name: 'Administrator',
    *   type: 'admin'
@@ -237,23 +232,23 @@ export class Given {
    *
    * @example
    * // 创建访客用户
-   * const guest = await Given.user({
+   * const guest = await Given.user(db, {
    *   username: 'guest',
    *   type: 'guest',
    *   email: 'guest@example.com'
    * });
    *
    * 自动处理功能：
-   * - 事务管理：在测试事务中执行，测试结束自动回滚
    * - 字段默认值：未指定的字段使用 Mock 生成的合理默认值
    * - 时间戳：自动生成 createdAt 和 updatedAt
    */
-  static async user(overrides: Partial<any> = {}): Promise<any> {
-    const currentTx = useTransaction();
-
-    const executeInsert = async (tx: LibSQLDatabase) => {
+  static async user(
+    dbOrTx: TestDatabase = db as TestDatabase,
+    overrides: Partial<any> = {},
+  ): Promise<any> {
+    const executeInsert = async (tx: TestDatabase) => {
       const mock = Mock.user();
-      const [user] = await tx
+      const [user] = await (tx as any)
         .insert(users)
         .values({
           id: mock.id,
@@ -270,53 +265,53 @@ export class Given {
       return user;
     };
 
-    return currentTx ? executeInsert(currentTx) : withTestTransaction(db, executeInsert);
+    return executeInsert(dbOrTx);
   }
 
   /**
    * 创建分类测试数据
    *
    * 使用 Mock 生成默认分类数据，支持字段覆盖。
-   * 在测试事务中执行，测试结束后自动回滚。
    *
+   * @param dbOrTx - 数据库或事务实例（可选，默认使用 db）
    * @param overrides - 要覆盖的字段（Partial<Category>），可选
    * @returns 创建的分类对象（包含数据库生成的字段）
    *
    * @example
    * // 使用默认值创建分类
-   * const category = await Given.category();
+   * const category = await Given.category(db);
    *
    * @example
    * // 创建技术分类
-   * const techCategory = await Given.category({
+   * const techCategory = await Given.category(db, {
    *   name: 'Technology',
    *   slug: 'tech'
    * });
    *
    * @example
    * // 创建生活分类
-   * const lifeCategory = await Given.category({
+   * const lifeCategory = await Given.category(db, {
    *   name: 'Life',
    *   slug: 'life'
    * });
    *
    * 自动处理功能：
-   * - 事务管理：在测试事务中执行，测试结束自动回滚
    * - 字段默认值：未指定的字段使用 Mock 生成的合理默认值
    * - 时间戳：自动生成 createdAt 和 updatedAt
    * - 唯一性：自动生成唯一 name 避免 UNIQUE 约束冲突
    */
-  static async category(overrides: Partial<any> = {}): Promise<any> {
-    const currentTx = useTransaction();
-
-    const executeInsert = async (tx: LibSQLDatabase) => {
+  static async category(
+    dbOrTx: TestDatabase = db as TestDatabase,
+    overrides: Partial<any> = {},
+  ): Promise<any> {
+    const executeInsert = async (tx: TestDatabase) => {
       const mock = Mock.category();
 
       // 生成唯一的 category name 和 id 以避免 UNIQUE 约束冲突
       const uniqueSuffix = Math.random().toString(36).substring(7);
-      const uniqueName = overrides.name || `${mock.name}-${uniqueSuffix}`;
+      const uniqueName = overrides.name || `${String(mock.name)}-${uniqueSuffix}`;
       const uniqueId = overrides.id !== undefined ? overrides.id : generateUniqueId('3');
-      const uniqueSlug = overrides.slug || `${mock.slug}-${uniqueSuffix}`;
+      const uniqueSlug = overrides.slug || `${String(mock.slug)}-${uniqueSuffix}`;
 
       // 先应用 overrides,然后确保 id、name 和 slug 是唯一的
       const categoryData = {
@@ -327,11 +322,11 @@ export class Given {
         slug: uniqueSlug, // 最后设置 slug,确保唯一性
       };
 
-      const [category] = await tx.insert(categories).values(categoryData).returning();
+      const [category] = await (tx as any).insert(categories).values(categoryData).returning();
       return category;
     };
 
-    return currentTx ? executeInsert(currentTx) : withTestTransaction(db, executeInsert);
+    return executeInsert(dbOrTx);
   }
 
   /**
@@ -379,10 +374,29 @@ export class Given {
    * - ID 递增：文章 ID 从 1 开始递增（1, 2, 3, ...）
    * - 字段覆盖：overrides 参数应用于所有文章
    */
-  static async articles(count: number, overrides: Partial<any> = {}): Promise<any[]> {
-    const currentTx = useTransaction();
+  static async articles(
+    dbOrTx: TestDatabase | number = db as TestDatabase,
+    countOrOverrides?: number | Partial<any>,
+    maybeOverrides?: Partial<any>,
+  ): Promise<any[]> {
+    // 处理重载：articles(count) 或 articles(dbOrTx, count) 或 articles(dbOrTx, count, overrides)
+    let actualDb: TestDatabase;
+    let count: number;
+    let overrides: Partial<any>;
 
-    const executeInsert = async (tx: LibSQLDatabase) => {
+    if (typeof dbOrTx === 'number') {
+      // articles(count, overrides?)
+      actualDb = db as TestDatabase;
+      count = dbOrTx;
+      overrides = (countOrOverrides as Partial<any>) || {};
+    } else {
+      // articles(dbOrTx, count, overrides?)
+      actualDb = dbOrTx as TestDatabase;
+      count = (countOrOverrides as number) || 10;
+      overrides = maybeOverrides || {};
+    }
+
+    const executeInsert = async (tx: TestDatabase) => {
       // 确保依赖的用户存在（只查询一次）
       const authorId = String(overrides.author || 1);
       const existingUser = await tx
@@ -391,7 +405,7 @@ export class Given {
         .where(eq(users.id, Number(authorId)))
         .get();
       if (!existingUser) {
-        await tx.insert(users).values({
+        await (tx as any).insert(users).values({
           id: Number(authorId),
           username: `user${authorId}`,
           name: `User ${authorId}`,
@@ -411,7 +425,7 @@ export class Given {
           .where(eq(categories.name, overrides.category))
           .get();
         if (!existingCategory) {
-          await tx.insert(categories).values({
+          await (tx as any).insert(categories).values({
             name: overrides.category,
             slug: overrides.category.toLowerCase(),
             createdAt: new Date().toISOString(),
@@ -443,12 +457,12 @@ export class Given {
       });
 
       // 批量插入（一次性提交所有文章）
-      const insertedArticles = await tx.insert(articles).values(articlesData).returning();
+      const insertedArticles = await (tx as any).insert(articles).values(articlesData).returning();
 
       return insertedArticles;
     };
 
-    return currentTx ? executeInsert(currentTx) : withTestTransaction(db, executeInsert);
+    return executeInsert(actualDb);
   }
 
   /**
@@ -478,22 +492,22 @@ export class Given {
    * });
    *
    * 自动处理功能：
-   * - 事务管理：在测试事务中执行，测试结束自动回滚
    * - 字段默认值：未指定的字段使用 Mock 生成的合理默认值
    * - 时间戳：自动生成 createdAt 和 updatedAt
    */
-  static async tag(overrides: Partial<any> = {}): Promise<any> {
-    const currentTx = useTransaction();
-
-    const executeInsert = async (tx: LibSQLDatabase) => {
+  static async tag(
+    dbOrTx: TestDatabase = db as TestDatabase,
+    overrides: Partial<any> = {},
+  ): Promise<any> {
+    const executeInsert = async (tx: TestDatabase) => {
       const mock = Mock.tag();
 
       // 生成唯一的 tag name, slug 和 id 以避免 UNIQUE 约束冲突
       const uniqueSuffix = Math.random().toString(36).substring(7);
       const uniqueName =
-        overrides.name !== undefined ? overrides.name : `${mock.name}-${uniqueSuffix}`;
+        overrides.name !== undefined ? overrides.name : `${String(mock.name)}-${uniqueSuffix}`;
       const uniqueSlug =
-        overrides.slug !== undefined ? overrides.slug : `${mock.slug}-${uniqueSuffix}`;
+        overrides.slug !== undefined ? overrides.slug : `${String(mock.slug)}-${uniqueSuffix}`;
       const uniqueId = overrides.id !== undefined ? overrides.id : generateUniqueId('4');
 
       // 先应用 overrides,然后确保 id, name 和 slug 是唯一的
@@ -505,11 +519,11 @@ export class Given {
         slug: uniqueSlug, // 最后设置 slug,确保唯一性
       };
 
-      const [tag] = await tx.insert(tags).values(tagData).returning();
+      const [tag] = await (tx as any).insert(tags).values(tagData).returning();
       return tag;
     };
 
-    return currentTx ? executeInsert(currentTx) : withTestTransaction(db, executeInsert);
+    return executeInsert(dbOrTx);
   }
 
   /**
@@ -532,8 +546,11 @@ export class Given {
    *   name: 'Super Administrator'
    * });
    */
-  static async adminUser(overrides: Partial<any> = {}): Promise<any> {
-    return Given.user({
+  static async adminUser(
+    dbOrTx: TestDatabase = db as TestDatabase,
+    overrides: Partial<any> = {},
+  ): Promise<any> {
+    return Given.user(dbOrTx, {
       type: 'admin',
       ...overrides,
     });
@@ -558,8 +575,11 @@ export class Given {
    *   title: 'My Public Post'
    * });
    */
-  static async publicArticle(overrides: Partial<any> = {}): Promise<any> {
-    return Given.article({
+  static async publicArticle(
+    dbOrTx: TestDatabase = db as TestDatabase,
+    overrides: Partial<any> = {},
+  ): Promise<any> {
+    return Given.article(dbOrTx, {
       private: false,
       hidden: false,
       ...overrides,
@@ -586,8 +606,11 @@ export class Given {
    *   password: 'mySecret123'
    * });
    */
-  static async privateArticle(overrides: Partial<any> = {}): Promise<any> {
-    return Given.article({
+  static async privateArticle(
+    dbOrTx: TestDatabase = db as TestDatabase,
+    overrides: Partial<any> = {},
+  ): Promise<any> {
+    return Given.article(dbOrTx, {
       private: true,
       password: 'secret123',
       ...overrides,
@@ -613,8 +636,11 @@ export class Given {
    *   title: 'Published Post'
    * });
    */
-  static async publishedArticle(overrides: Partial<any> = {}): Promise<any> {
-    return Given.article({
+  static async publishedArticle(
+    dbOrTx: TestDatabase = db as TestDatabase,
+    overrides: Partial<any> = {},
+  ): Promise<any> {
+    return Given.article(dbOrTx, {
       hidden: false,
       ...overrides,
     });
@@ -662,10 +688,11 @@ export class Given {
    * - 时间戳：自动生成 createdAt 和 updatedAt
    * - 版本号：自动设置默认版本号（version: 1）
    */
-  static async draft(overrides: Partial<any> = {}): Promise<any> {
-    const currentTx = useTransaction();
-
-    const executeInsert = async (tx: LibSQLDatabase) => {
+  static async draft(
+    dbOrTx: TestDatabase = db as TestDatabase,
+    overrides: Partial<any> = {},
+  ): Promise<any> {
+    const executeInsert = async (tx: TestDatabase) => {
       // 创建 Mock 数据
       const mock = Mock.draft();
 
@@ -690,7 +717,7 @@ export class Given {
       // 生成唯一 ID 和 pathname 以避免 PRIMARY KEY 和 UNIQUE 约束冲突
       const uniqueId = overrides.id !== undefined ? overrides.id : generateUniqueId('2');
       const uniquePathname =
-        overrides.pathname !== undefined ? overrides.pathname : `/draft-${uniqueId}`;
+        overrides.pathname !== undefined ? overrides.pathname : `/draft-${String(uniqueId)}`;
 
       // 先应用 overrides,然后确保 id 和 pathname 是唯一的
       // NOTE: tags 字段不再写入 drafts 表（已迁移到 draft_tags 关联表）
@@ -703,7 +730,7 @@ export class Given {
       };
 
       // 插入草稿
-      const [draft] = await tx.insert(drafts).values(draftData).returning();
+      const [draft] = await (tx as any).insert(drafts).values(draftData).returning();
 
       // 插入标签关联到 draft_tags 表
       if (tagsValue.length > 0) {
@@ -715,7 +742,7 @@ export class Given {
           for (const tagName of validTagNames) {
             const existingTag = await tx.select().from(tags).where(eq(tags.name, tagName)).get();
             if (!existingTag) {
-              await tx.insert(tags).values({
+              await (tx as any).insert(tags).values({
                 name: tagName,
                 slug: tagName.toLowerCase().replace(/\s+/g, '-'),
                 createdAt: new Date().toISOString(),
@@ -724,10 +751,10 @@ export class Given {
           }
 
           // 插入草稿-标签关联
-          await tx.insert(draftTags).values(
+          await (tx as any).insert(draftTags).values(
             validTagNames.map((tagName) => ({
               draftId: draft.id,
-              tagName: tagName,
+              tagName,
               createdAt: new Date().toISOString(),
             })),
           );
@@ -737,7 +764,7 @@ export class Given {
       return draft;
     };
 
-    return currentTx ? executeInsert(currentTx) : withTestTransaction(db, executeInsert);
+    return executeInsert(dbOrTx);
   }
 
   /**
@@ -783,12 +810,13 @@ export class Given {
    * - 字段默认值：未指定的字段使用 Mock 生成的合理默认值
    * - 时间戳：自动生成 createdAt
    */
-  static async media(overrides: Partial<any> = {}): Promise<any> {
-    const currentTx = useTransaction();
-
-    const executeInsert = async (tx: LibSQLDatabase) => {
+  static async media(
+    dbOrTx: TestDatabase = db as TestDatabase,
+    overrides: Partial<any> = {},
+  ): Promise<any> {
+    const executeInsert = async (tx: TestDatabase) => {
       const mock = Mock.mediaFile();
-      const [media] = await tx
+      const [media] = await (tx as any)
         .insert(staticFiles)
         .values({
           id: mock.id,
@@ -807,7 +835,7 @@ export class Given {
       return media;
     };
 
-    return currentTx ? executeInsert(currentTx) : withTestTransaction(db, executeInsert);
+    return executeInsert(dbOrTx);
   }
 
   /**
@@ -852,10 +880,11 @@ export class Given {
    * - 事务管理：依赖数据在测试事务中创建，测试结束自动回滚
    * - 数据返回：返回评论对象用于测试，不写入本地数据库（评论由 Waline 管理）
    */
-  static async comment(overrides: Partial<any> = {}): Promise<any> {
-    const currentTx = useTransaction();
-
-    const executeInsert = async (tx: LibSQLDatabase) => {
+  static async comment(
+    dbOrTx: TestDatabase = db as TestDatabase,
+    overrides: Partial<any> = {},
+  ): Promise<any> {
+    const executeInsert = async (tx: TestDatabase) => {
       // 自动创建依赖的 article
       const articleId = overrides.articleId !== undefined ? overrides.articleId : 1;
 
@@ -875,7 +904,7 @@ export class Given {
           .get();
 
         if (!existingUser) {
-          await tx.insert(users).values({
+          await (tx as any).insert(users).values({
             id: Number(authorId),
             username: `user${String(authorId)}`,
             name: `User ${String(authorId)}`,
@@ -888,7 +917,7 @@ export class Given {
         }
 
         // 创建文章
-        await tx.insert(articles).values({
+        await (tx as any).insert(articles).values({
           id: Number(articleId),
           title: `Article ${String(articleId)}`,
           content: `Content for article ${String(articleId)}`,
@@ -921,7 +950,7 @@ export class Given {
       };
     };
 
-    return currentTx ? executeInsert(currentTx) : withTestTransaction(db, executeInsert);
+    return executeInsert(dbOrTx);
   }
 
   /**
@@ -930,12 +959,13 @@ export class Given {
    * @param overrides - 要覆盖的字段
    * @returns 创建的分析数据对象
    */
-  static async analytics(overrides: Partial<any> = {}): Promise<any> {
-    const currentTx = useTransaction();
-
-    const executeInsert = async (tx: LibSQLDatabase) => {
+  static async analytics(
+    dbOrTx: TestDatabase = db as TestDatabase,
+    overrides: Partial<any> = {},
+  ): Promise<any> {
+    const executeInsert = async (tx: TestDatabase) => {
       const mock = Mock.analyticsData();
-      const [record] = await tx
+      const [record] = await (tx as any)
         .insert(analytics)
         .values({
           type: overrides.type || mock.type,
@@ -950,7 +980,7 @@ export class Given {
       return record;
     };
 
-    return currentTx ? executeInsert(currentTx) : withTestTransaction(db, executeInsert);
+    return executeInsert(dbOrTx);
   }
 
   /**
@@ -960,12 +990,16 @@ export class Given {
    * @param overrides - 要覆盖的字段
    * @returns 创建的分析数据数组
    */
-  static async analyticsList(count: number, overrides: Partial<any> = {}): Promise<any[]> {
+  static async analyticsList(
+    dbOrTx: TestDatabase = db as TestDatabase,
+    count: number,
+    overrides: Partial<any> = {},
+  ): Promise<any[]> {
     const results = [];
     for (let i = 0; i < count; i++) {
-      const item = await Given.analytics({
+      const item = await Given.analytics(dbOrTx, {
         ...overrides,
-        ip: overrides.ip || `192.168.1.${i}`,
+        ip: overrides.ip || `192.168.1.${String(i)}`,
       });
       results.push(item);
     }
@@ -978,10 +1012,11 @@ export class Given {
    * @param overrides - 要覆盖的字段
    * @returns 创建的Webhook对象
    */
-  static async webhook(overrides: Partial<any> = {}): Promise<any> {
-    const currentTx = useTransaction();
-
-    const executeInsert = async (tx: LibSQLDatabase) => {
+  static async webhook(
+    dbOrTx: TestDatabase = db as TestDatabase,
+    overrides: Partial<any> = {},
+  ): Promise<any> {
+    const executeInsert = async (tx: TestDatabase) => {
       const mock = Mock.webhook();
 
       // 生成唯一的 webhook name 和 id 以避免 UNIQUE 约束冲突
@@ -997,11 +1032,11 @@ export class Given {
         name: uniqueName, // 最后设置 name,确保唯一性
       };
 
-      const [webhook] = await tx.insert(webhooks).values(webhookData).returning();
+      const [webhook] = await (tx as any).insert(webhooks).values(webhookData).returning();
       return webhook;
     };
 
-    return currentTx ? executeInsert(currentTx) : withTestTransaction(db, executeInsert);
+    return executeInsert(dbOrTx);
   }
 
   /**
@@ -1010,10 +1045,11 @@ export class Given {
    * @param overrides - 要覆盖的字段
    * @returns 创建的权限组对象
    */
-  static async permissionGroup(overrides: Partial<any> = {}): Promise<any> {
-    const currentTx = useTransaction();
-
-    const executeInsert = async (tx: LibSQLDatabase) => {
+  static async permissionGroup(
+    dbOrTx: TestDatabase = db as TestDatabase,
+    overrides: Partial<any> = {},
+  ): Promise<any> {
+    const executeInsert = async (tx: TestDatabase) => {
       const mock = Mock.permissionGroup();
 
       // 生成唯一的 permission group name 以避免 UNIQUE 约束冲突
@@ -1032,11 +1068,11 @@ export class Given {
         name: uniqueName, // 最后设置 name,确保唯一性
       };
 
-      const [group] = await tx.insert(permissionGroups).values(groupData).returning();
+      const [group] = await (tx as any).insert(permissionGroups).values(groupData).returning();
       return group; // 返回单个对象（Drizzle returning() 返回数组，需要解构）
     };
 
-    return currentTx ? executeInsert(currentTx) : withTestTransaction(db, executeInsert);
+    return executeInsert(dbOrTx);
   }
 
   /**
@@ -1045,12 +1081,13 @@ export class Given {
    * @param overrides - 要覆盖的字段
    * @returns 创建的草稿版本对象
    */
-  static async draftVersion(overrides: Partial<any> = {}): Promise<any> {
-    const currentTx = useTransaction();
-
-    const executeInsert = async (tx: LibSQLDatabase) => {
+  static async draftVersion(
+    dbOrTx: TestDatabase = db as TestDatabase,
+    overrides: Partial<any> = {},
+  ): Promise<any> {
+    const executeInsert = async (tx: TestDatabase) => {
       const mock = Mock.draftVersion();
-      const [draftVersion] = await tx
+      const [draftVersion] = await (tx as any)
         .insert(draftVersions)
         .values({
           draftId: overrides.draftId || mock.draftId,
@@ -1063,6 +1100,6 @@ export class Given {
       return draftVersion;
     };
 
-    return currentTx ? executeInsert(currentTx) : withTestTransaction(db, executeInsert);
+    return executeInsert(dbOrTx);
   }
 }

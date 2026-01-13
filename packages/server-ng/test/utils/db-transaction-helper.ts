@@ -8,6 +8,38 @@
  * automatic transaction context propagation. Any code executed within the
  * callback (including nested Given helpers) can access the transaction
  * via getCurrentTransaction() without explicit parameter passing.
+ *
+ * ⚠️ IMPORTANT - TEST DATA CLEANUP REQUIRED ⚠️
+ *
+ * **Investigation Result** (2026-01-09): Transaction rollback functionality
+ * works correctly in LibSQL + Drizzle ORM. Previous diagnosis was incorrect.
+ *
+ * **Real Issue**: Test data pollution due to incomplete cleanup
+ * - Transaction rollback works perfectly (verified by standalone tests)
+ * - Test failures were caused by:
+ *   1. Residual data from previous test runs (UNIQUE constraint violations)
+ *   2. Fixed test data names causing conflicts ('TxTestTag1')
+ *   3. Missing cleanup after test execution
+ *
+ * **Evidence**:
+ * ```typescript
+ * // Standalone test (outside Vitest) - ALL PASS:
+ * // 1. Pure SQL BEGIN/ROLLBACK: ✅ WORKS
+ * // 2. Drizzle + Manual BEGIN/ROLLBACK: ✅ WORKS
+ * // 3. Drizzle Native db.transaction(): ✅ WORKS
+ * ```
+ *
+ * **Solution**: Implement proper test cleanup
+ * - Use `afterEach(() => cleanupTestData(db))` in test files
+ * - Ensure all test data uses unique identifiers
+ * - Avoid fixed test data names
+ *
+ * **See Also**:
+ * - Investigation report: /tmp/claude-report/transaction-investigation-final-conclusion.md
+ * - Cleanup implementation: test/utils/cleanup-helper.ts (pending)
+ *
+ * @since 2026-01-09 - Initial implementation
+ * @updated 2026-01-09 - Corrected documentation after investigation
  */
 
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
@@ -52,14 +84,16 @@ let inTransaction = false;
  * });
  */
 export async function withTestTransaction<T>(
-  db: LibSQLDatabase,
-  callback: (tx: LibSQLDatabase) => Promise<T>,
+  db: LibSQLDatabase<Record<string, unknown>>,
+  callback: (tx: LibSQLDatabase<Record<string, unknown>>) => Promise<T>,
 ): Promise<T> {
   // Use the exported dbClient which is the raw LibSQL client
   const client = dbClient as any;
 
   if (!client || typeof client.execute !== 'function') {
-    throw new Error('Database client not found or invalid. Expected a client with execute() method');
+    throw new Error(
+      'Database client not found or invalid. Expected a client with execute() method',
+    );
   }
 
   // Check if we're already in a transaction
@@ -88,7 +122,7 @@ export async function withTestTransaction<T>(
     if (!isNested) {
       try {
         await client.execute('ROLLBACK');
-      } catch (rollbackError) {
+      } catch (_rollbackError) {
         // Ignore rollback errors
       }
       inTransaction = false;
