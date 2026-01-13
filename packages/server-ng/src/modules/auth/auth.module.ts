@@ -9,7 +9,6 @@ import { UserModule } from '../user/user.module';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { PermissionsGuard } from './guards/permissions.guard';
-import { LoginLogTsRestController } from './login-log.controller';
 import { LoginLogService } from './login-log.service';
 import { PasswordChangeHandlerService } from './password-change-handler.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
@@ -35,17 +34,17 @@ import type { StringValue } from 'ms';
       inject: [ConfigService],
     }),
   ],
-  controllers: [AuthController, LoginLogTsRestController],
+  controllers: [AuthController],
   providers: [
     AuthService,
     LocalStrategy,
     JwtStrategy,
-    LoginLogService,
     TokenService,
     TokenBlacklistService,
     PasswordChangeHandlerService,
     PermissionsGuard,
+    LoginLogService,
   ],
-  exports: [AuthService, LoginLogService, TokenService],
+  exports: [AuthService, TokenService],
 })
 export class AuthModule {}
