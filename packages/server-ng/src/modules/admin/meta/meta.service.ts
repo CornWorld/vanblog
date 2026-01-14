@@ -91,16 +91,17 @@ export class MetaService {
     // Trigger update if needed, but don't await
     void this.checkUpdate();
 
-    const latestVersion = this.latestVersionInfo?.version ?? this.currentVersion;
-    const hasUpdate = this.latestVersionInfo
-      ? semverGt(this.latestVersionInfo.version, this.currentVersion)
+    const { latestVersionInfo } = this;
+    const latestVersion = latestVersionInfo?.version ?? this.currentVersion;
+    const hasUpdate = latestVersionInfo
+      ? semverGt(latestVersionInfo.version, this.currentVersion)
       : false;
 
     return {
       version: this.currentVersion,
       latestVersion,
       hasUpdate,
-      updateInfo: this.latestVersionInfo ?? undefined,
+      updateInfo: latestVersionInfo ?? undefined,
     };
   }
 }

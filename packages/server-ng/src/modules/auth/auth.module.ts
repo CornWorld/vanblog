@@ -28,6 +28,7 @@ import type { StringValue } from 'ms';
       useFactory: (configService: ConfigService): JwtModuleOptions => ({
         secret: configService.get<string>('JWT_SECRET') ?? 'default-secret-change-me',
         signOptions: {
+          // Type assertion needed: ConfigService returns string, but JwtModule expects StringValue
           expiresIn: (configService.get<string>('JWT_EXPIRES_IN') ?? '7d') as StringValue,
         },
       }),

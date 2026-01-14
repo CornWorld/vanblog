@@ -51,6 +51,8 @@ export class TokenService {
     const expiresIn = this.configService.get<string>('JWT_EXPIRES_IN', '15m');
     const refreshExpiresIn = this.configService.get<string>('JWT_REFRESH_EXPIRES_IN', '7d');
 
+    // Type assertion needed: ConfigService returns string, but JwtService.sign expects StringValue
+    // This is safe because ConfigService guarantees string value with default
     const accessToken = this.jwtService.sign(payload, {
       expiresIn: expiresIn as StringValue,
     });
@@ -60,6 +62,7 @@ export class TokenService {
       tokenType: 'refresh',
     };
 
+    // Type assertion needed: same as above
     const refreshToken = this.jwtService.sign(refreshPayload, {
       expiresIn: refreshExpiresIn as StringValue,
     });
@@ -96,6 +99,7 @@ export class TokenService {
     const expiresIn =
       customExpiresIn ?? this.configService.get<string>('JWT_GUEST_EXPIRES_IN', '12h');
 
+    // Type assertion needed: same reason as generateTokenPair
     return this.jwtService.sign(payload, {
       expiresIn: expiresIn as StringValue,
     });

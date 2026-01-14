@@ -1,5 +1,6 @@
 import { NotFoundException } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
+import { JwtService } from '@nestjs/jwt';
 import { describe, beforeEach, it, expect, vi, afterEach } from 'vitest';
 import { eq } from 'drizzle-orm';
 import * as bcrypt from 'bcrypt';
@@ -19,14 +20,17 @@ import { ArticleService } from './article.service';
 import type { ArticleSearchDto } from './dto/article.dto';
 
 // Test helper to create a user in the current transaction context
-async function createTestUser(userId: number = 1) {
-  await Given.user(db as any, {
-    id: userId,
-    username: `testuser${String(userId)}`,
-    name: `Test User ${String(userId)}`,
-    email: `testuser${String(userId)}@example.com`,
+async function createTestUser(tx: any, userId?: number) {
+  // Use unique ID based on timestamp if not provided
+  const uniqueId = userId ?? Date.now() + Math.floor(Math.random() * 1000);
+  await Given.user(tx, {
+    id: uniqueId,
+    username: `testuser${String(uniqueId)}`,
+    name: `Test User ${String(uniqueId)}`,
+    email: `testuser${String(uniqueId)}@example.com`,
     type: 'admin',
   });
+  return uniqueId;
 }
 
 describe('ArticleService', () => {
@@ -34,6 +38,7 @@ describe('ArticleService', () => {
   let mockHookService: MockedHookService;
   let mockQueryOptimizer: Partial<QueryOptimizerService>;
   let mockConfigService: Partial<ConfigService>;
+  let mockJwtService: any;
 
   beforeEach(async () => {
     // ✅ 优化：使用新的扁平化 Mock API
@@ -42,6 +47,8 @@ describe('ArticleService', () => {
     mockQueryOptimizer = Mock.queryOptimizer();
     // ✅ 优化：使用新的扁平化 Mock API
     mockConfigService = Mock.config();
+    // ✅ 添加 JwtService mock
+    mockJwtService = Mock.jwt();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -62,6 +69,10 @@ describe('ArticleService', () => {
           provide: ConfigService,
           useValue: mockConfigService,
         },
+        {
+          provide: JwtService,
+          useValue: mockJwtService,
+        },
       ],
     }).compile();
 
@@ -78,13 +89,14 @@ describe('ArticleService', () => {
         (service as any)['db'] = tx as any;
 
         // 先创建测试用户
-        await createTestUser(1);
+        const userId = await createTestUser(tx);
 
         // 创建测试数据
-        // const _article = await Given.article(db as any, {
-        //   id: 1,
-        //   title: 'Test Article',
-        // });
+        await Given.article(tx as any, {
+          id: 1,
+          title: 'Test Article',
+          author: userId,
+        });
 
         const result = await service.findAll({
           page: 1,
@@ -150,7 +162,7 @@ describe('ArticleService', () => {
         (service as any)['db'] = tx as any;
 
         // 先创建测试用户和分类
-        await createTestUser(1);
+        await createTestUser(tx);
         await Given.category(db as any, { name: 'tech', slug: 'tech' });
 
         // 创建带分类和标签的文章
@@ -182,10 +194,14 @@ describe('ArticleService', () => {
       await withTestTransaction(db, async (tx) => {
         (service as any)['db'] = tx as any;
 
+        const userId = await createTestUser(tx);
+
         // 创建测试数据
-        // const _article = await Given.article(db as any, {
-        //   id: 1,
-        // });
+        await Given.article(tx as any, {
+          id: 1,
+          title: 'Test Article',
+          author: userId,
+        });
 
         const result = await service.findOne(1);
 
@@ -209,7 +225,7 @@ describe('ArticleService', () => {
         (service as any)['db'] = tx as any;
 
         // 先创建测试用户
-        await createTestUser(1);
+        await createTestUser(tx);
 
         const createDto = {
           title: 'New Article',
@@ -267,13 +283,16 @@ describe('ArticleService', () => {
       await withTestTransaction(db, async (tx) => {
         (service as any)['db'] = tx as any;
 
+        const userId = await createTestUser(tx);
+
         // 创建现有文章
-        // const _existing = await Given.article(db as any, {
-        //   id: 1,
-        //   title: 'Existing Article',
-        //   content: 'Existing content',
-        //   tags: ['existing'],
-        // });
+        await Given.article(tx as any, {
+          id: 1,
+          title: 'Existing Article',
+          content: 'Existing content',
+          tags: ['existing'],
+          author: userId,
+        });
 
         const updateDto = {
           title: 'Updated Article',
@@ -296,10 +315,13 @@ describe('ArticleService', () => {
       await withTestTransaction(db, async (tx) => {
         (service as any)['db'] = tx as any;
 
+        const userId = await createTestUser(tx);
+
         // 创建现有文章
-        // const _existing = await Given.article(db as any, {
-        //   id: 3,
-        // });
+        await Given.article(tx as any, {
+          id: 3,
+          author: userId,
+        });
 
         await service.update(3, { password: 'plain-update' } as unknown as Parameters<
           typeof service.update
@@ -329,10 +351,13 @@ describe('ArticleService', () => {
       await withTestTransaction(db, async (tx) => {
         (service as any)['db'] = tx as any;
 
+        const userId = await createTestUser(tx);
+
         // 创建测试数据
-        // const _article = await Given.article(db as any, {
-        //   id: 1,
-        // });
+        await Given.article(tx as any, {
+          id: 1,
+          author: userId,
+        });
 
         await expect(service.remove(1)).resolves.not.toThrow();
 
@@ -357,7 +382,7 @@ describe('ArticleService', () => {
         (service as any)['db'] = tx as any;
 
         // 先创建测试用户和分类
-        await createTestUser(1);
+        await createTestUser(tx);
         await Given.category(db as any, { name: 'tech', slug: 'tech' });
 
         // 创建测试数据
@@ -398,7 +423,7 @@ describe('ArticleService', () => {
         (service as any)['db'] = tx as any;
 
         // 先创建测试用户和分类
-        await createTestUser(1);
+        await createTestUser(tx);
         await Given.category(db as any, {
           name: 'imported',
           slug: 'imported',
@@ -479,7 +504,7 @@ describe('ArticleService', () => {
         (service as any)['db'] = tx as any;
 
         // 先创建测试用户
-        await createTestUser(1);
+        await createTestUser(tx);
 
         const largeArticles = Array.from({ length: 25 }, (_, i) =>
           Mock.articleDto({
@@ -509,7 +534,7 @@ describe('ArticleService', () => {
         (service as any)['db'] = tx as any;
 
         // 先创建测试用户
-        await createTestUser(1);
+        await createTestUser(tx);
 
         // 先手动创建第一篇文章（用于后续验证）
         const firstArticle = await service.create({
@@ -645,7 +670,7 @@ describe('ArticleService', () => {
         (service as any)['db'] = tx as any;
 
         // 先创建测试用户和分类
-        await createTestUser(1);
+        await createTestUser(tx);
         await Given.category(db as any, { name: 'tech', slug: 'tech' });
 
         // 创建测试数据 - 批量创建2篇tech分类文章
@@ -665,7 +690,7 @@ describe('ArticleService', () => {
         (service as any)['db'] = tx as any;
 
         // 先创建测试用户和分类
-        await createTestUser(1);
+        await createTestUser(tx);
         await Given.category(db as any, { name: 'tech', slug: 'tech' });
 
         // 创建 15 篇文章
@@ -841,7 +866,7 @@ describe('ArticleService', () => {
         (service as any)['db'] = tx as any;
 
         // 先创建测试用户和分类
-        await createTestUser(1);
+        await createTestUser(tx);
         await Given.category(db as any, { name: 'Tech', slug: 'tech' });
         await Given.category(db as any, { name: 'Lifestyle', slug: 'lifestyle' });
 
