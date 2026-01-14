@@ -442,7 +442,7 @@ export class ArticleService {
 
     const token = jwt.sign(tokenPayload, this.configService.jwt.secret, {
       expiresIn: '24h',
-    });
+    }) as string;
 
     return {
       success: true,

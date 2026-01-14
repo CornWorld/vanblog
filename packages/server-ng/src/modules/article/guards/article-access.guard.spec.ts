@@ -289,7 +289,7 @@ describe('ArticleAccessGuard', () => {
         isAnonymous: true,
       };
 
-      const token = jwt.sign(payload, 'test-secret', { expiresIn: '-1h' });
+      const token = jwt.sign(payload, 'test-secret', { expiresIn: '-1h' }) as string;
 
       const { context } = createMockExecutionContext({
         params: { id: '1' },
@@ -321,7 +321,7 @@ describe('ArticleAccessGuard', () => {
         exp: 0,
       };
 
-      const token = jwt.sign(payload, 'test-secret', { noTimestamp: true });
+      const token = jwt.sign(payload, 'test-secret', { noTimestamp: true }) as string;
 
       const { context } = createMockExecutionContext({
         params: { id: '1' },
