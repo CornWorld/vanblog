@@ -1,12 +1,11 @@
 import { Injectable, NotFoundException, Inject, Logger } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import { dayjs } from '@vanblog/shared';
 import { articles, tags, articleTags } from '@vanblog/shared/drizzle';
 import * as bcrypt from 'bcrypt';
 import { eq, and, or, like, desc, asc, sql, inArray } from 'drizzle-orm';
-import * as jwt from 'jsonwebtoken';
 import { z } from 'zod';
 
-import { ConfigService } from '../../config/config.service';
 import { DATABASE_CONNECTION, type Database } from '../../database';
 import { QueryOptimizerService } from '../../shared/services/query-optimizer.service';
 import { HookService } from '../plugin/services/hook.service';
@@ -31,7 +30,7 @@ export class ArticleService {
     private readonly db: Database,
     private readonly queryOptimizer: QueryOptimizerService,
     private readonly hookService: HookService,
-    private readonly configService: ConfigService,
+    private readonly jwtService: JwtService,
   ) {}
 
   /**
@@ -440,9 +439,9 @@ export class ArticleService {
       iat: Math.floor(Date.now() / 1000),
     };
 
-    const token = jwt.sign(tokenPayload, this.configService.jwt.secret, {
+    const token = this.jwtService.sign(tokenPayload, {
       expiresIn: '24h',
-    }) as string;
+    });
 
     return {
       success: true,

@@ -102,12 +102,13 @@ describe('CategoryService', () => {
 
   // 辅助函数：创建使用事务数据库的服务实例
   const createServiceWithTx = (tx: any) => {
+    const mockJwtService = Mock.jwt();
     return new CategoryService(
       tx,
       mockStatisticsService,
       mockQueryOptimizer,
       mockHookService as any,
-      mockConfigService,
+      mockJwtService,
     );
   };
 

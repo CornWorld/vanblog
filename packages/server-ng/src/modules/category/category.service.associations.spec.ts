@@ -30,7 +30,6 @@ describe('CategoryService - Associations', () => {
   let mockHookService: ReturnType<typeof Mock.hook>;
   let mockStatisticsService: any;
   let mockQueryOptimizer: any;
-  let mockConfigService: any;
 
   beforeEach(() => {
     // 创建 Mock 服务
@@ -55,7 +54,7 @@ describe('CategoryService - Associations', () => {
       buildOptimizedSearchQuery: vi.fn().mockReturnValue([]),
       logSlowQuery: vi.fn(),
     };
-    mockConfigService = Mock.config({ 'jwt.secret': 'test-secret-key' });
+    const mockJwtService = Mock.jwt();
 
     // 创建服务实例（使用 db 而不是 transaction）
     service = new CategoryService(
@@ -63,7 +62,7 @@ describe('CategoryService - Associations', () => {
       mockStatisticsService,
       mockQueryOptimizer,
       mockHookService as any,
-      mockConfigService,
+      mockJwtService,
     );
   });
 

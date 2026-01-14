@@ -3,7 +3,7 @@ import * as path from 'path';
 
 import { Injectable, Logger } from '@nestjs/common';
 import axios from 'axios';
-import * as semver from 'semver';
+import { gt as semverGt } from 'semver';
 
 /**
  * 管理端元数据服务
@@ -93,7 +93,7 @@ export class MetaService {
 
     const latestVersion = this.latestVersionInfo?.version ?? this.currentVersion;
     const hasUpdate = this.latestVersionInfo
-      ? (semver.gt(this.latestVersionInfo.version, this.currentVersion) as boolean)
+      ? semverGt(this.latestVersionInfo.version, this.currentVersion)
       : false;
 
     return {

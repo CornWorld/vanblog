@@ -753,6 +753,18 @@ export function createReflectorMock(): any {
 }
 
 /**
+ * 创建 JwtService Mock
+ * Returns a mock JwtService with sign and verify methods
+ */
+export function createJwtServiceMock(): any {
+  return {
+    sign: vi.fn().mockReturnValue('mock-jwt-token'),
+    verify: vi.fn().mockReturnValue({ sub: 1, username: 'test' }),
+    decode: vi.fn().mockReturnValue({ sub: 1, username: 'test' }),
+  };
+}
+
+/**
  * Mocked HookService type - all methods are Vitest mocks with .mock property
  * Use `as any` when providing to NestJS: `{ provide: HookService, useValue: mockHookService as any }`
  */
@@ -2396,6 +2408,8 @@ export const Mock = {
   moduleRef: createModuleRefMock,
   /** Create Reflector mock */
   reflector: createReflectorMock,
+  /** Create JwtService mock */
+  jwt: createJwtServiceMock,
 
   // ========== Core Service Mocks ==========
   /** Create ConfigService mock */

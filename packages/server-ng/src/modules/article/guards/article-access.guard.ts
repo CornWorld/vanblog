@@ -1,9 +1,8 @@
 import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import { JwtService } from '@nestjs/jwt';
 import { Request } from 'express';
-import * as jwt from 'jsonwebtoken';
 
-import { ConfigService } from '../../../config/config.service';
 import { ArticleService } from '../article.service';
 import { ARTICLE_ACCESS_KEY } from '../decorators/article-access.decorator';
 import { SKIP_ARTICLE_ACCESS_KEY } from '../decorators/skip-article-access.decorator';
@@ -51,7 +50,7 @@ export class ArticleAccessGuard implements CanActivate {
   constructor(
     private readonly reflector: Reflector,
     private readonly articleService: ArticleService,
-    private readonly configService: ConfigService,
+    private readonly jwtService: JwtService,
   ) {}
 
   /**
@@ -111,7 +110,7 @@ export class ArticleAccessGuard implements CanActivate {
     }
 
     try {
-      const payload = jwt.verify(token, this.configService.jwt.secret) as ArticleAccessPayload;
+      const payload = this.jwtService.verify<ArticleAccessPayload>(token);
 
       // 验证令牌类型
       if (payload.type !== 'article-access') {

@@ -1,11 +1,10 @@
 import { Injectable, NotFoundException, Inject } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import { dayjs } from '@vanblog/shared';
 import { categories, articles, articleTags } from '@vanblog/shared/drizzle';
 import * as bcrypt from 'bcrypt';
 import { and, eq, sql, desc, inArray } from 'drizzle-orm';
-import * as jwt from 'jsonwebtoken';
 
-import { ConfigService } from '../../config/config.service';
 import { DATABASE_CONNECTION, type Database } from '../../database';
 import { OverallStatisticsDto } from '../../shared/dto/statistics.dto';
 import { QueryOptimizerService } from '../../shared/services/query-optimizer.service';
@@ -31,7 +30,7 @@ export class CategoryService {
     private readonly statisticsService: StatisticsService,
     private readonly queryOptimizer: QueryOptimizerService,
     private readonly hookService: HookService,
-    private readonly configService: ConfigService,
+    private readonly jwtService: JwtService,
   ) {}
 
   async findAll(): Promise<CategoryListResponseDto> {
@@ -249,9 +248,8 @@ export class CategoryService {
     }
 
     // Generate access token for the category
-    const token = jwt.sign(
+    const token = this.jwtService.sign(
       { categoryId: category.id, categoryName: category.name },
-      this.configService.jwt.secret,
       { expiresIn: '24h' },
     );
 

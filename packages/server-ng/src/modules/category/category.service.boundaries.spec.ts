@@ -97,12 +97,13 @@ describe('CategoryService - Boundary Conditions', () => {
   // Helper function to create service with transaction db
   // @ts-expect-error TS2345 - Partial HookService is acceptable for testing
   const _createServiceWithTx = (tx: any) => {
+    const mockJwtService = Mock.jwt();
     return new CategoryService(
       tx as any,
       mockStatisticsService,
       mockQueryOptimizer,
       mockHookService,
-      mockConfigService,
+      mockJwtService,
     );
   };
 

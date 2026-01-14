@@ -45,6 +45,6 @@ import type { StringValue } from 'ms';
     PermissionsGuard,
     LoginLogService,
   ],
-  exports: [AuthService, TokenService],
+  exports: [AuthService, TokenService, JwtModule],
 })
 export class AuthModule {}

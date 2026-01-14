@@ -351,7 +351,7 @@ describe('ArticleAccessGuard', () => {
         isAnonymous: true,
       };
 
-      const token = jwt.sign(payload, 'wrong-secret');
+      const token = jwt.sign(payload, 'wrong-secret') as string;
 
       const { context } = createMockExecutionContext({
         params: { id: '1' },

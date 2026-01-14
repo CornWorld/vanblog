@@ -1,7 +1,8 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 
 import { DatabaseModule } from '../../database';
 import { AnalyticsModule } from '../analytics/analytics.module';
+import { AuthModule } from '../auth/auth.module';
 import { PermissionModule } from '../permission/permission.module';
 import { PluginModule } from '../plugin/plugin.module';
 
@@ -14,6 +15,7 @@ import { ArticleAccessGuard } from './guards/article-access.guard';
     DatabaseModule,
     AnalyticsModule,
     PluginModule,
+    forwardRef(() => AuthModule),
     PermissionModule.forFeature([
       'article:create',
       'article:read',
