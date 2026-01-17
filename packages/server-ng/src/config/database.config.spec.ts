@@ -56,8 +56,8 @@ describe('database.config', () => {
 
     it('should use both custom URL and filePath', () => {
       process.env.DATABASE_DRIVER = 'local';
-      const testUrl = process.env.DATABASE_URL || 'file:./test.db';
-      const testFilePath = process.env.DATABASE_FILE_PATH || './test.db';
+      const testUrl = process.env.DATABASE_URL;
+      const testFilePath = process.env.DATABASE_FILE_PATH;
 
       const config = databaseConfig();
 
@@ -182,8 +182,8 @@ describe('database.config', () => {
   describe('driver-specific field exclusivity', () => {
     it('should only include local-specific fields for local driver', () => {
       process.env.DATABASE_DRIVER = 'local';
-      const testUrl = process.env.DATABASE_URL || 'file:./test.db';
-      const testFilePath = process.env.DATABASE_FILE_PATH || './test.db';
+      const testUrl = process.env.DATABASE_URL;
+      const testFilePath = process.env.DATABASE_FILE_PATH;
       // 设置其他驱动的环境变量,不应该被包含
       process.env.DATABASE_AUTH_TOKEN = 'should-not-appear';
       process.env.CLOUDFLARE_ACCOUNT_ID = 'should-not-appear';

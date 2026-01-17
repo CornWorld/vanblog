@@ -207,7 +207,7 @@ describe('ConfigValidationService', () => {
           isProduction: false,
           isDevelopment: true,
         },
-        database: { driver: 'local', url: process.env.DATABASE_URL || 'file:./test.db' },
+        database: { driver: 'local', url: process.env.DATABASE_URL },
         jwt: {
           secret: 'test-secret',
           expiresIn: '1h',
@@ -241,7 +241,7 @@ describe('ConfigValidationService', () => {
           isProduction: 'invalid' as any, // Should be boolean
           isDevelopment: 'invalid' as any,
         },
-        database: { driver: 'local', url: process.env.DATABASE_URL || 'file:./test.db' },
+        database: { driver: 'local', url: process.env.DATABASE_URL },
         jwt: {
           secret: 'test-secret',
           expiresIn: '1h',

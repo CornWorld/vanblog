@@ -831,7 +831,7 @@ export function createConfigServiceMock(
       port: 0,
       username: '',
       password: '',
-      database: process.env.DATABASE_URL || 'file:./test.db',
+      database: process.env.DATABASE_URL,
       synchronize: false,
       logging: false,
     },
