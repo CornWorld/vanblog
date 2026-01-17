@@ -108,4 +108,4 @@ function MyApp({ Component, pageProps }: AppPropsWithPageViewData) {
   );
 }
 
-export default appWithTranslation(MyApp);
+export default appWithTranslation(MyApp) as typeof MyApp;
