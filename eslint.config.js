@@ -68,7 +68,7 @@ export default defineConfig([
 
   // React (admin + website)
   {
-    files: ['packages/admin/**/*.{ts,tsx}', 'packages/website/**/*.{ts,tsx}'],
+    files: ['packages/admin/**/*.{ts,tsx,js,jsx}', 'packages/website/**/*.{ts,tsx}'],
     plugins: {
       react: reactPlugin,
       'react-hooks': reactHooksPlugin,
