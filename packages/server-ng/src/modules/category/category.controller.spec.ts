@@ -3,6 +3,7 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, beforeEach, it, expect } from 'vitest';
 
 import { Mock } from '@test/mock';
+import { createMockCategory } from '@test/fixtures/test-data';
 
 import { CategoryController } from './category.controller';
 import { CategoryService } from './category.service';
@@ -231,14 +232,13 @@ describe('CategoryController', () => {
         description: 'Updated description',
       };
 
-      const existingCategory = Mock.category({
-        id: 1,
+      const existingCategory = createMockCategory({
         name: 'Old Category',
         slug: categoryName,
       });
 
-      const updatedCategory = Mock.category({
-        id: 1,
+      const updatedCategory = createMockCategory({
+        id: existingCategory.id,
         name: updateDto.name,
         description: updateDto.description,
       });
@@ -250,7 +250,7 @@ describe('CategoryController', () => {
       const result = await handler({ params: { name: categoryName }, body: updateDto });
 
       expect(categoryService.findByName).toHaveBeenCalledWith(categoryName);
-      expect(categoryService.update).toHaveBeenCalledWith(1, updateDto);
+      expect(categoryService.update).toHaveBeenCalledWith(existingCategory.id, updateDto);
       expect(result.status).toBe(200);
       expect(result.body.name).toBe(updateDto.name);
       expect(result.body.description).toBe(updateDto.description);
@@ -278,14 +278,13 @@ describe('CategoryController', () => {
         name: 'New Name Only',
       };
 
-      const existingCategory = Mock.category({
-        id: 1,
+      const existingCategory = createMockCategory({
         name: 'Old Name',
         slug: 'old-name',
         description: 'Keep this description',
       });
 
-      const updatedCategory = Mock.category({
+      const updatedCategory = createMockCategory({
         ...existingCategory,
         name: updateDto.name,
       });
@@ -299,7 +298,7 @@ describe('CategoryController', () => {
       expect(result.status).toBe(200);
       expect(result.body.name).toBe('New Name Only');
       expect(result.body.description).toBe('Keep this description');
-      expect(categoryService.update).toHaveBeenCalledWith(1, updateDto);
+      expect(categoryService.update).toHaveBeenCalledWith(existingCategory.id, updateDto);
     });
 
     it('should update description to null (converted to undefined)', async () => {
@@ -359,8 +358,7 @@ describe('CategoryController', () => {
   describe('deleteCategory', () => {
     it('should delete a category successfully', async () => {
       const categoryName = 'category-to-delete';
-      const existingCategory = Mock.category({
-        id: 1,
+      const existingCategory = createMockCategory({
         name: 'Category to Delete',
         slug: categoryName,
       });
@@ -372,7 +370,7 @@ describe('CategoryController', () => {
       const result = await handler({ params: { name: categoryName } });
 
       expect(categoryService.findByName).toHaveBeenCalledWith(categoryName);
-      expect(categoryService.remove).toHaveBeenCalledWith(1);
+      expect(categoryService.remove).toHaveBeenCalledWith(existingCategory.id);
       expect(result.status).toBe(200);
       expect(result.body.success).toBe(true);
     });
@@ -392,8 +390,7 @@ describe('CategoryController', () => {
 
     it('should delete category with special characters in name', async () => {
       const categoryName = 'cpp-java';
-      const existingCategory = Mock.category({
-        id: 1,
+      const existingCategory = createMockCategory({
         name: 'C++ & Java',
         slug: categoryName,
       });
@@ -405,13 +402,12 @@ describe('CategoryController', () => {
       const result = await handler({ params: { name: categoryName } });
 
       expect(categoryService.findByName).toHaveBeenCalledWith(categoryName);
-      expect(categoryService.remove).toHaveBeenCalledWith(1);
+      expect(categoryService.remove).toHaveBeenCalledWith(existingCategory.id);
       expect(result.body.success).toBe(true);
     });
 
     it('should verify remove is called exactly once', async () => {
-      const existingCategory = Mock.category({
-        id: 5,
+      const existingCategory = createMockCategory({
         name: 'Test Category',
         slug: 'test-category',
       });
@@ -423,15 +419,14 @@ describe('CategoryController', () => {
       await handler({ params: { name: 'test-category' } });
 
       expect(categoryService.remove).toHaveBeenCalledTimes(1);
-      expect(categoryService.remove).toHaveBeenCalledWith(5);
+      expect(categoryService.remove).toHaveBeenCalledWith(existingCategory.id);
     });
   });
 
   describe('getArticlesByCategory', () => {
     it('should return articles in a category', async () => {
       const categoryName = 'Technology';
-      const existingCategory = Mock.category({
-        id: 1,
+      const existingCategory = createMockCategory({
         name: categoryName,
       });
 
@@ -450,7 +445,7 @@ describe('CategoryController', () => {
       const result = await handler({ params: { name: categoryName } });
 
       expect(categoryService.findByName).toHaveBeenCalledWith(categoryName);
-      expect(categoryService.getArticlesByCategoryId).toHaveBeenCalledWith(1, {
+      expect(categoryService.getArticlesByCategoryId).toHaveBeenCalledWith(existingCategory.id, {
         page: 1,
         pageSize: 1000,
         sortBy: 'createdAt',

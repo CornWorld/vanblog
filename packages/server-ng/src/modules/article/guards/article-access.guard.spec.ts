@@ -1,11 +1,13 @@
 import type { ExecutionContext } from '@nestjs/common';
 import { UnauthorizedException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import { JwtService } from '@nestjs/jwt';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, beforeEach, it, expect, vi } from 'vitest';
 import * as jwt from 'jsonwebtoken';
 
 import { Mock } from '@test/mock';
+import { createMockArticle } from '@test/fixtures/test-data';
 
 import { ConfigService } from '../../../config/config.service';
 import { ArticleService } from '../article.service';
@@ -19,6 +21,7 @@ describe('ArticleAccessGuard', () => {
   let reflector: Reflector;
   let articleService: Partial<ArticleService>;
   let configService: Partial<ConfigService>;
+  let jwtService: Partial<JwtService>;
 
   beforeEach(async () => {
     // 使用 MockUtils 创建服务 Mock
@@ -29,12 +32,19 @@ describe('ArticleAccessGuard', () => {
 
     configService = Mock.config();
 
+    // Mock JwtService
+    jwtService = {
+      verify: vi.fn(),
+      sign: vi.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ArticleAccessGuard,
         Reflector,
         { provide: ArticleService, useValue: articleService },
         { provide: ConfigService, useValue: configService },
+        { provide: JwtService, useValue: jwtService },
       ],
     }).compile();
 
@@ -88,11 +98,12 @@ describe('ArticleAccessGuard', () => {
 
       (articleService.isPrivateById as any).mockResolvedValue(false);
 
-      const { context } = createMockExecutionContext({ params: { id: '1' } });
+      const mockArticle = createMockArticle();
+      const { context } = createMockExecutionContext({ params: { id: String(mockArticle.id) } });
       const result = await guard.canActivate(context);
 
       expect(result).toBe(true);
-      expect(articleService.isPrivateById).toHaveBeenCalledWith(1);
+      expect(articleService.isPrivateById).toHaveBeenCalledWith(mockArticle.id);
     });
 
     it('should allow access for public article by pathname', async () => {
@@ -120,7 +131,9 @@ describe('ArticleAccessGuard', () => {
 
       (articleService.isPrivateById as any).mockResolvedValue(null);
 
-      const { context } = createMockExecutionContext({ params: { id: '999' } });
+      const { context } = createMockExecutionContext({
+        params: { id: String(createMockArticle().id) },
+      });
       const result = await guard.canActivate(context);
 
       expect(result).toBe(true);
@@ -136,7 +149,7 @@ describe('ArticleAccessGuard', () => {
       (articleService.isPrivateById as any).mockResolvedValue(true);
 
       const { context } = createMockExecutionContext({
-        params: { id: '1' },
+        params: { id: String(createMockArticle().id) },
         headers: {},
       });
 
@@ -164,8 +177,11 @@ describe('ArticleAccessGuard', () => {
 
       const token = jwt.sign(payload, 'test-secret') as string;
 
+      // Mock jwtService.verify to return the payload
+      (jwtService.verify as any).mockReturnValue(payload);
+
       const { context, request } = createMockExecutionContext({
-        params: { id: '1' },
+        params: { id: String(createMockArticle().id) },
         headers: {
           authorization: `Bearer ${token}`,
         },
@@ -197,7 +213,7 @@ describe('ArticleAccessGuard', () => {
       const token = jwt.sign(payload, 'test-secret') as string;
 
       const { context } = createMockExecutionContext({
-        params: { id: '1' },
+        params: { id: String(createMockArticle().id) },
         headers: {
           authorization: `Bearer ${token}`,
         },
@@ -227,7 +243,7 @@ describe('ArticleAccessGuard', () => {
       const token = jwt.sign(payload, 'test-secret') as string;
 
       const { context } = createMockExecutionContext({
-        params: { id: '1' },
+        params: { id: String(createMockArticle().id) },
         headers: {
           authorization: `Bearer ${token}`,
         },
@@ -257,8 +273,11 @@ describe('ArticleAccessGuard', () => {
 
       const token = jwt.sign(payload, 'test-secret') as string;
 
+      // Mock jwtService.verify to return the payload
+      (jwtService.verify as any).mockReturnValue(payload);
+
       const { context, request } = createMockExecutionContext({
-        params: { id: '1' },
+        params: { id: String(createMockArticle().id) },
         headers: {
           authorization: `Bearer ${token}`,
         },
@@ -292,7 +311,7 @@ describe('ArticleAccessGuard', () => {
       const token = jwt.sign(payload, 'test-secret', { expiresIn: '-1h' }) as string;
 
       const { context } = createMockExecutionContext({
-        params: { id: '1' },
+        params: { id: String(createMockArticle().id) },
         headers: {
           authorization: `Bearer ${token}`,
         },
@@ -324,7 +343,7 @@ describe('ArticleAccessGuard', () => {
       const token = jwt.sign(payload, 'test-secret', { noTimestamp: true }) as string;
 
       const { context } = createMockExecutionContext({
-        params: { id: '1' },
+        params: { id: String(createMockArticle().id) },
         headers: {
           authorization: `Bearer ${token}`,
         },
@@ -354,7 +373,7 @@ describe('ArticleAccessGuard', () => {
       const token = jwt.sign(payload, 'wrong-secret') as string;
 
       const { context } = createMockExecutionContext({
-        params: { id: '1' },
+        params: { id: String(createMockArticle().id) },
         headers: {
           authorization: `Bearer ${token}`,
         },

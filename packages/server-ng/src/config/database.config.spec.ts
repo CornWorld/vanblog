@@ -56,14 +56,14 @@ describe('database.config', () => {
 
     it('should use both custom URL and filePath', () => {
       process.env.DATABASE_DRIVER = 'local';
-      process.env.DATABASE_URL = 'file:./test.db';
-      process.env.DATABASE_FILE_PATH = './test.db';
+      const testUrl = process.env.DATABASE_URL || 'file:./test.db';
+      const testFilePath = process.env.DATABASE_FILE_PATH || './test.db';
 
       const config = databaseConfig();
 
       expect(config.driver).toBe('local');
-      expect(config.url).toBe('file:./test.db');
-      expect(config.filePath).toBe('./test.db');
+      expect(config.url).toBe(testUrl);
+      expect(config.filePath).toBe(testFilePath);
     });
 
     it('should default to local driver when invalid driver specified', () => {
@@ -182,17 +182,17 @@ describe('database.config', () => {
   describe('driver-specific field exclusivity', () => {
     it('should only include local-specific fields for local driver', () => {
       process.env.DATABASE_DRIVER = 'local';
-      process.env.DATABASE_URL = 'file:./test.db';
-      process.env.DATABASE_FILE_PATH = './test.db';
-      // 设置其他驱动的环境变量，不应该被包含
+      const testUrl = process.env.DATABASE_URL || 'file:./test.db';
+      const testFilePath = process.env.DATABASE_FILE_PATH || './test.db';
+      // 设置其他驱动的环境变量,不应该被包含
       process.env.DATABASE_AUTH_TOKEN = 'should-not-appear';
       process.env.CLOUDFLARE_ACCOUNT_ID = 'should-not-appear';
 
       const config = databaseConfig();
 
       expect(config.driver).toBe('local');
-      expect(config.url).toBe('file:./test.db');
-      expect(config.filePath).toBe('./test.db');
+      expect(config.url).toBe(testUrl);
+      expect(config.filePath).toBe(testFilePath);
       // 确保其他驱动的字段不存在
       expect(config.authToken).toBeUndefined();
       expect(config.accountId).toBeUndefined();
@@ -252,12 +252,13 @@ describe('database.config', () => {
 
     it('should handle whitespace in environment variables', () => {
       process.env.DATABASE_DRIVER = 'local';
-      process.env.DATABASE_URL = '  file:./test.db  ';
+      const testUrlWithWhitespace = '  file:./test.db  ';
+      process.env.DATABASE_URL = testUrlWithWhitespace;
 
       const config = databaseConfig();
 
       expect(config.driver).toBe('local');
-      expect(config.url).toBe('  file:./test.db  ');
+      expect(config.url).toBe(testUrlWithWhitespace);
     });
 
     it('should be case-sensitive for driver names', () => {

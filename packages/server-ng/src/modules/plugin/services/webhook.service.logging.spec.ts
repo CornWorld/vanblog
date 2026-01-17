@@ -105,6 +105,7 @@ describe('WebhookService - Logging & Statistics', () => {
           responseBody: 'OK',
           error: null,
           duration: 150,
+          createdAt: new Date(),
         });
 
         // Query logs
@@ -173,6 +174,7 @@ describe('WebhookService - Logging & Statistics', () => {
           responseBody: 'OK',
           error: null,
           duration: 100,
+          createdAt: new Date(),
         });
 
         await tx.insert(webhookLogs as any).values({
@@ -184,6 +186,7 @@ describe('WebhookService - Logging & Statistics', () => {
           responseBody: 'OK',
           error: null,
           duration: 150,
+          createdAt: new Date(),
         });
 
         // Query logs for webhook1 only
@@ -235,6 +238,7 @@ describe('WebhookService - Logging & Statistics', () => {
           responseBody: 'OK',
           error: null,
           duration: 100,
+          createdAt: new Date(),
         });
 
         await tx.insert(webhookLogs as any).values({
@@ -246,6 +250,7 @@ describe('WebhookService - Logging & Statistics', () => {
           responseBody: 'Internal Server Error',
           error: 'Server error',
           duration: 200,
+          createdAt: new Date(),
         });
 
         // Query logs with success status only

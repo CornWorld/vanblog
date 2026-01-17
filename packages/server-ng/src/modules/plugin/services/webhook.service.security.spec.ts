@@ -120,9 +120,10 @@ describe('WebhookService - Security', () => {
         });
 
         // Execute webhook
-        // await (service as any).executeWebhook(webhook, 'article|afterCreate', {
-        //   articleId: 1,
-        // });
+        const service = createService(tx as any);
+        await (service as any).executeWebhook(webhook, 'article|afterCreate', {
+          articleId: 1,
+        });
 
         // Verify fetch was called
         expect(global.fetch).toHaveBeenCalled();

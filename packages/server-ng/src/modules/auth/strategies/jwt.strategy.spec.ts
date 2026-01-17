@@ -5,6 +5,7 @@ import { dayjs } from '@vanblog/shared';
 import { describe, it, beforeEach, expect, vi } from 'vitest';
 
 import { Mock } from '@test/mock';
+import { createMockUser } from '@test/fixtures/test-data';
 import { UserType } from '../../user/dto/create-user.dto';
 import { User } from '../../user/entities/user.entity';
 import { UserService } from '../../user/user.service';
@@ -16,8 +17,7 @@ describe('JwtStrategy', () => {
   let userService: UserService;
 
   // ✅ 优化：使用新的扁平化 Mock API
-  const mockUser = Mock.user({
-    id: 1,
+  const mockUser = createMockUser({
     username: 'testuser',
     type: UserType.ADMIN,
     permissions: ['user:read', 'user:write'],
@@ -118,7 +118,7 @@ describe('JwtStrategy', () => {
 
     it('should return user when valid user ID is provided', async () => {
       const payload: JwtPayload = {
-        sub: 1,
+        sub: mockUser.id,
         username: 'testuser',
         type: UserType.ADMIN,
       };
@@ -128,7 +128,7 @@ describe('JwtStrategy', () => {
       const result = await strategy.validate(payload);
 
       expect(result).toBe(mockUser);
-      expect(userService.findOne).toHaveBeenCalledWith(1);
+      expect(userService.findOne).toHaveBeenCalledWith(mockUser.id);
     });
 
     it('should throw UnauthorizedException when user is not found', async () => {
@@ -149,7 +149,7 @@ describe('JwtStrategy', () => {
 
     it('should throw UnauthorizedException when userService throws error', async () => {
       const payload: JwtPayload = {
-        sub: 1,
+        sub: mockUser.id,
         username: 'testuser',
         type: UserType.ADMIN,
       };
@@ -160,7 +160,7 @@ describe('JwtStrategy', () => {
         new UnauthorizedException('Invalid token'),
       );
 
-      expect(userService.findOne).toHaveBeenCalledWith(1);
+      expect(userService.findOne).toHaveBeenCalledWith(mockUser.id);
     });
 
     // Edge case tests for sub field

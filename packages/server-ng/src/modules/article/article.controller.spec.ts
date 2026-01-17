@@ -2,6 +2,7 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, beforeEach, afterEach, expect, vi } from 'vitest';
 
 import { Mock } from '@test/mock';
+import { createMockArticle } from '@test/fixtures/test-data';
 
 import { ArticleStatsService } from '../analytics/services/article-stats.service';
 
@@ -190,7 +191,7 @@ describe('ArticleController', () => {
 
       const result = await controller.findOne(1);
 
-      expect(mockArticleService.findOne).toHaveBeenCalledWith(1);
+      expect(mockArticleService.findOne).toHaveBeenCalledWith(mockArticle.id);
       expect(result).toEqual(mockArticle);
     });
   });
@@ -633,23 +634,24 @@ describe('ArticleController', () => {
 
   describe('updateArticleRest (ts-rest)', () => {
     it('should update article with array tags', async () => {
+      const mockArticleData = createMockArticle();
       const updateDto = {
         title: 'Updated',
         tags: ['tag1', 'tag2'],
       };
       const mockArticle = new Article(
         Mock.article({
-          id: 1,
+          id: mockArticleData.id,
           title: 'Updated',
         }),
       );
       mockArticleService.update.mockResolvedValue(mockArticle);
 
       const handler = controller.updateArticleRest();
-      await handler({ params: { id: '1' }, body: updateDto });
+      await handler({ params: { id: String(mockArticleData.id) }, body: updateDto });
 
       expect(mockArticleService.update).toHaveBeenCalledWith(
-        1,
+        mockArticleData.id,
         expect.objectContaining({
           title: 'Updated',
           tags: JSON.stringify(['tag1', 'tag2']),
@@ -658,18 +660,19 @@ describe('ArticleController', () => {
     });
 
     it('should update article with string tags', async () => {
+      const mockArticleData = createMockArticle();
       const updateDto = {
         title: 'Updated',
         tags: '["tag1","tag2"]',
       };
-      const mockArticle = new Article(Mock.article({ id: 1 }));
+      const mockArticle = new Article(createMockArticle({ id: mockArticleData.id }));
       mockArticleService.update.mockResolvedValue(mockArticle);
 
       const handler = controller.updateArticleRest();
-      await handler({ params: { id: '1' }, body: updateDto });
+      await handler({ params: { id: String(mockArticleData.id) }, body: updateDto });
 
       expect(mockArticleService.update).toHaveBeenCalledWith(
-        1,
+        mockArticleData.id,
         expect.objectContaining({
           tags: '["tag1","tag2"]',
         }),
@@ -677,17 +680,18 @@ describe('ArticleController', () => {
     });
 
     it('should update article without tags', async () => {
+      const mockArticleData = createMockArticle();
       const updateDto = {
         title: 'Updated',
       };
-      const mockArticle = new Article(Mock.article({ id: 1 }));
+      const mockArticle = new Article(createMockArticle({ id: mockArticleData.id }));
       mockArticleService.update.mockResolvedValue(mockArticle);
 
       const handler = controller.updateArticleRest();
-      await handler({ params: { id: '1' }, body: updateDto });
+      await handler({ params: { id: String(mockArticleData.id) }, body: updateDto });
 
       expect(mockArticleService.update).toHaveBeenCalledWith(
-        1,
+        mockArticleData.id,
         expect.objectContaining({
           title: 'Updated',
         }),
@@ -696,9 +700,10 @@ describe('ArticleController', () => {
     });
 
     it('should map response correctly', async () => {
+      const mockArticleData = createMockArticle();
       const mockArticle = new Article(
         Mock.article({
-          id: 1,
+          id: mockArticleData.id,
           top: 0,
           viewer: 100,
           private: true,
@@ -708,7 +713,10 @@ describe('ArticleController', () => {
       mockArticleService.update.mockResolvedValue(mockArticle);
 
       const handler = controller.updateArticleRest();
-      const result = await handler({ params: { id: '1' }, body: { title: 'Updated' } });
+      const result = await handler({
+        params: { id: String(mockArticleData.id) },
+        body: { title: 'Updated' },
+      });
 
       expect(result.status).toBe(200);
       expect(result.body.isTop).toBe(false);
@@ -720,23 +728,25 @@ describe('ArticleController', () => {
 
   describe('deleteArticleRest (ts-rest)', () => {
     it('should delete article and return success', async () => {
+      const mockArticle = createMockArticle();
       mockArticleService.remove.mockResolvedValue(undefined);
 
       const handler = controller.deleteArticleRest();
-      const result = await handler({ params: { id: '1' } });
+      const result = await handler({ params: { id: String(mockArticle.id) } });
 
       expect(result.status).toBe(200);
       expect(result.body.success).toBe(true);
-      expect(mockArticleService.remove).toHaveBeenCalledWith(1);
+      expect(mockArticleService.remove).toHaveBeenCalledWith(mockArticle.id);
     });
 
     it('should convert string id to number', async () => {
+      const mockArticle = createMockArticle();
       mockArticleService.remove.mockResolvedValue(undefined);
 
       const handler = controller.deleteArticleRest();
-      await handler({ params: { id: '123' } });
+      await handler({ params: { id: String(mockArticle.id) } });
 
-      expect(mockArticleService.remove).toHaveBeenCalledWith(123);
+      expect(mockArticleService.remove).toHaveBeenCalledWith(mockArticle.id);
     });
   });
 
@@ -756,7 +766,7 @@ describe('ArticleController', () => {
       mockArticleService.findOne.mockResolvedValue(mockArticle);
 
       const handler = controller.getAdminArticleRest();
-      const result = await handler({ params: { id: '1' } });
+      const result = await handler({ params: { id: String(mockArticle.id) } });
 
       expect(result.status).toBe(200);
       expect(result.body.id).toBe(1);
@@ -764,7 +774,7 @@ describe('ArticleController', () => {
       expect(result.body.category).toBe('Tech');
       expect(result.body.isTop).toBe(true);
       expect(result.body.views).toBe(50);
-      expect(mockArticleService.findOne).toHaveBeenCalledWith(1);
+      expect(mockArticleService.findOne).toHaveBeenCalledWith(mockArticle.id);
     });
 
     it('should map all fields correctly', async () => {
@@ -781,7 +791,7 @@ describe('ArticleController', () => {
       mockArticleService.findOne.mockResolvedValue(mockArticle);
 
       const handler = controller.getAdminArticleRest();
-      const result = await handler({ params: { id: '1' } });
+      const result = await handler({ params: { id: String(mockArticle.id) } });
 
       expect(result.body.isTop).toBe(false);
       expect(result.body.views).toBeUndefined();

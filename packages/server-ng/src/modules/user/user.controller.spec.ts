@@ -811,9 +811,9 @@ describe('UserController', () => {
       mockUserService.remove.mockResolvedValue(undefined);
 
       const handler = controller.deleteCollaborator() as unknown as (ctx: any) => Promise<any>;
-      const result = await handler({ params: { id: '3' } });
+      const result = await handler({ params: { id: String(mockUser.id) } });
 
-      expect(service.remove).toHaveBeenCalledWith(3);
+      expect(service.remove).toHaveBeenCalledWith(mockUser.id);
       expect(result.status).toBe(200);
       expect(result.body).toEqual({ success: true });
     });
@@ -822,9 +822,9 @@ describe('UserController', () => {
       mockUserService.remove.mockResolvedValue(undefined);
 
       const handler = controller.deleteCollaborator() as unknown as (ctx: any) => Promise<any>;
-      const result = await handler({ params: { id: '10' } });
+      const result = await handler({ params: { id: String(mockUser.id) } });
 
-      expect(service.remove).toHaveBeenCalledWith(10);
+      expect(service.remove).toHaveBeenCalledWith(mockUser.id);
       expect(result.status).toBe(200);
     });
   });

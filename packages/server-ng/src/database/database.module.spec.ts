@@ -32,7 +32,7 @@ describe('DatabaseModule', () => {
     mockConfigService = createConfigServiceMock({
       database: {
         driver: 'local',
-        url: 'file:./test.db',
+        url: process.env.DATABASE_URL || 'file:./test.db',
       },
     });
 

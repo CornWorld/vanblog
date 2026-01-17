@@ -14,6 +14,7 @@
  * @group boundaries
  */
 
+import { JwtService } from '@nestjs/jwt';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { categories } from '@vanblog/shared/drizzle';
 import { eq } from 'drizzle-orm';
@@ -87,6 +88,10 @@ describe('CategoryService - Boundary Conditions', () => {
         {
           provide: ConfigService,
           useValue: mockConfigService,
+        },
+        {
+          provide: JwtService,
+          useValue: Mock.jwt(),
         },
       ],
     }).compile();

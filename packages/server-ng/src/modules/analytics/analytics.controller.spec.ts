@@ -2,6 +2,7 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, beforeEach, afterEach, expect, vi } from 'vitest';
 
 import { Mock } from '@test/mock';
+import { createMockArticle } from '@test/fixtures/test-data';
 import { AnalyticsController } from './analytics.controller';
 import { AnalyticsService } from './services/analytics.service';
 import { ArticleStatsService } from './services/article-stats.service';
@@ -556,7 +557,7 @@ describe('AnalyticsController', () => {
       mockPublicAnalyticsService.getPublicArticleStats.mockResolvedValue(articleStats);
 
       const handler = controller.getArticleViewer();
-      const result = await handler({ params: { id: '123' } });
+      const result = await handler({ params: { id: String(createMockArticle().id) } });
 
       expect(result).toEqual({
         status: 200,
@@ -574,7 +575,7 @@ describe('AnalyticsController', () => {
       mockPublicAnalyticsService.getPublicArticleStats.mockResolvedValue(null);
 
       const handler = controller.getArticleViewer();
-      const result = await handler({ params: { id: '999' } });
+      const result = await handler({ params: { id: String(createMockArticle().id) } });
 
       expect(result).toEqual({
         status: 200,
@@ -937,7 +938,7 @@ describe('AnalyticsController', () => {
       mockPublicAnalyticsService.getPublicArticleStats.mockResolvedValue(articleStats);
 
       const handler = controller.getArticleViewer();
-      const result = await handler({ params: { id: '123' } });
+      const result = await handler({ params: { id: String(createMockArticle().id) } });
 
       expect(result).toEqual({
         status: 200,
@@ -955,7 +956,7 @@ describe('AnalyticsController', () => {
       mockPublicAnalyticsService.getPublicArticleStats.mockResolvedValue(null);
 
       const handler = controller.getArticleViewer();
-      const result = await handler({ params: { id: '999' } });
+      const result = await handler({ params: { id: String(createMockArticle().id) } });
 
       expect(result).toEqual({
         status: 200,

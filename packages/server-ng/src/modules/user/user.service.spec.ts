@@ -81,6 +81,7 @@ describe('UserService', () => {
       mockedBcrypt.hash.mockResolvedValue(hashedPassword as never);
 
       const createdDbUser = createMockUser({
+        id: 1,
         username: createUserDto.username,
         password: hashedPassword,
         nickname: createUserDto.nickname,
@@ -213,6 +214,7 @@ describe('UserService', () => {
   describe('findOne', () => {
     it('should return a user by id', async () => {
       const dbUser = createMockUser({
+        id: 1,
         username: 'testuser',
         email: 'test@example.com',
         nickname: 'Test User',
@@ -244,6 +246,7 @@ describe('UserService', () => {
   describe('findByUsername', () => {
     it('should return a user by username', async () => {
       const dbUser = createMockUser({
+        id: 1,
         username: 'testuser',
         email: 'test@example.com',
         nickname: 'Test User',
@@ -282,6 +285,7 @@ describe('UserService', () => {
       };
 
       const updatedDbUser = createMockUser({
+        id: 1,
         username: 'testuser',
         nickname: 'Updated User',
         email: 'updated@example.com',
@@ -364,6 +368,8 @@ describe('UserService', () => {
       };
 
       const updatedDbUser = createMockUser({
+        id: 1,
+        username: 'testuser',
         nickname: 'Updated',
         email: null,
         permissions: null,
@@ -568,6 +574,7 @@ describe('UserService', () => {
   describe('findByUsernameWithPassword', () => {
     it('should return user with password when found', async () => {
       const dbUser = createMockUser({
+        id: 1,
         username: 'testuser',
         email: 'test@example.com',
         nickname: 'Test User',

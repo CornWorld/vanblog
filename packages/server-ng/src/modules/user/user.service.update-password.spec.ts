@@ -72,7 +72,7 @@ describe('UserService - Update Password', () => {
         (service as any)['db'] = tx;
 
         // 创建测试用户
-        const user = await Given.user(db as any, {
+        const user = await Given.user(tx as any, {
           username: 'testuser',
           password: 'oldHashedPassword',
           type: 'admin',
@@ -109,7 +109,7 @@ describe('UserService - Update Password', () => {
         (service as any)['db'] = tx;
 
         // 创建测试用户
-        const user = await Given.user(db as any, {
+        const user = await Given.user(tx as any, {
           username: 'testuser',
           password: 'oldHashedPassword',
           nickname: 'Old Nickname',

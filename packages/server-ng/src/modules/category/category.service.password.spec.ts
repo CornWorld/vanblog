@@ -17,6 +17,7 @@
  */
 
 import { NotFoundException } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { categories } from '@vanblog/shared/drizzle';
 import { eq } from 'drizzle-orm';
@@ -70,6 +71,10 @@ describe('CategoryService - Password Management', () => {
         {
           provide: ConfigService,
           useValue: Mock.config({ 'jwt.secret': 'test-secret-key' }),
+        },
+        {
+          provide: JwtService,
+          useValue: Mock.jwt(),
         },
       ],
     }).compile();
@@ -420,8 +425,6 @@ describe('CategoryService - Password Management', () => {
 
     it('should generate valid JWT token on successful verification', async () => {
       await withTestTransaction(db, async (tx) => {
-        (service as any)['db'] = tx;
-
         // 创建私密分类
         const hashedPassword = '$2b$10$abcdefghijk123456789';
         const [category] = await tx
@@ -437,7 +440,22 @@ describe('CategoryService - Password Management', () => {
         // Mock bcrypt.compare 返回 true
         mockedBcrypt.compare.mockResolvedValue(true as never);
 
-        const result = await service.verifyPassword(category.id, 'correct-password');
+        // 创建一个返回真实 JWT 格式的 mock jwtService
+        const mockJwtService = Mock.jwt();
+        (mockJwtService.sign as any).mockReturnValue(
+          'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjYXRlZ29yeUlkIjoxfQ.signature',
+        );
+
+        // 创建使用 mock jwtService 的服务
+        const serviceWithMockJwt = new CategoryService(
+          tx,
+          Mock.statistics(),
+          Mock.queryOptimizer(),
+          mockHookService as any,
+          mockJwtService,
+        );
+
+        const result = await serviceWithMockJwt.verifyPassword(category.id, 'correct-password');
 
         expect(result.success).toBe(true);
         expect(result.token).toBeDefined();

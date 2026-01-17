@@ -15,6 +15,7 @@
  */
 
 import { NotFoundException } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { vi, describe, beforeEach, it, expect } from 'vitest';
 
@@ -111,6 +112,10 @@ describe('CategoryService - Articles Query', () => {
         {
           provide: ConfigService,
           useValue: Mock.config(),
+        },
+        {
+          provide: JwtService,
+          useValue: Mock.jwt(),
         },
       ],
     }).compile();

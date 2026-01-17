@@ -20,12 +20,12 @@
  */
 
 import { NotFoundException } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { categories } from '@vanblog/shared/drizzle';
 import { eq } from 'drizzle-orm';
 import { vi, describe, beforeEach, it, expect, afterEach } from 'vitest';
 import * as bcrypt from 'bcrypt';
-import * as jwt from 'jsonwebtoken';
 
 import { Mock } from '@test/mock';
 import { Given } from '@test/given';
@@ -58,6 +58,7 @@ describe('CategoryService', () => {
   let mockStatisticsService: ReturnType<typeof Mock.statistics>;
   let mockQueryOptimizer: ReturnType<typeof Mock.queryOptimizer>;
   let mockConfigService: ReturnType<typeof Mock.config>;
+  let mockJwtService: Partial<JwtService>;
 
   beforeEach(async () => {
     // Mock 外部服务（保留）
@@ -65,6 +66,12 @@ describe('CategoryService', () => {
     mockStatisticsService = Mock.statistics();
     mockQueryOptimizer = Mock.queryOptimizer();
     mockConfigService = Mock.config({ 'jwt.secret': 'test-secret-key' });
+
+    // Mock JwtService
+    mockJwtService = {
+      sign: vi.fn(),
+      verify: vi.fn(),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       imports: [],
@@ -89,6 +96,10 @@ describe('CategoryService', () => {
         {
           provide: ConfigService,
           useValue: mockConfigService,
+        },
+        {
+          provide: JwtService,
+          useValue: mockJwtService,
         },
       ],
     }).compile();
@@ -587,7 +598,7 @@ describe('CategoryService', () => {
 
     it('should validate password for private category', async () => {
       await withTestTransaction(db, async (tx) => {
-        const txService = createServiceWithTx(tx);
+        createServiceWithTx(tx);
 
         // 创建私有分类（密码已在 create 中哈希）
         const category = await Given.category(db as any, {
@@ -599,10 +610,21 @@ describe('CategoryService', () => {
 
         // Mock bcrypt.compare 返回 true
         vi.mocked(bcrypt.compare).mockResolvedValue(true as never);
-        // Mock jwt.sign 返回 token
-        vi.mocked(jwt.sign).mockReturnValue('mock-jwt-token' as never);
 
-        const result = await txService.verifyPassword(category.id, 'correct-password');
+        // Mock jwtService.sign 返回 token
+        const mockJwtService = Mock.jwt();
+        (mockJwtService.sign as any).mockReturnValue('mock-jwt-token');
+
+        // 创建使用 mock jwtService 的服务
+        const serviceWithMockJwt = new CategoryService(
+          tx,
+          mockStatisticsService,
+          mockQueryOptimizer,
+          mockHookService as any,
+          mockJwtService,
+        );
+
+        const result = await serviceWithMockJwt.verifyPassword(category.id, 'correct-password');
 
         // 验证返回了 token（密码正确时）
         expect(result.success).toBe(true);
@@ -610,10 +632,9 @@ describe('CategoryService', () => {
 
         // 验证调用了 bcrypt.compare
         expect(bcrypt.compare).toHaveBeenCalledWith('correct-password', category.password);
-        // 验证调用了 jwt.sign
-        expect(jwt.sign).toHaveBeenCalledWith(
+        // 验证调用了 jwtService.sign
+        expect(mockJwtService.sign).toHaveBeenCalledWith(
           { categoryId: category.id, categoryName: category.name },
-          'test-secret-key',
           { expiresIn: '24h' },
         );
       });

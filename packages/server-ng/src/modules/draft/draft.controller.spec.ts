@@ -3,6 +3,7 @@ import { describe, it, beforeEach, afterEach, expect, vi } from 'vitest';
 import { dayjs } from '@vanblog/shared';
 
 import { Mock } from '@test/mock';
+import { createMockDraft } from '@test/fixtures/test-data';
 import { DraftVersionService } from './draft-version.service';
 import { DraftController } from './draft.controller';
 import { DraftService } from './draft.service';
@@ -615,31 +616,20 @@ describe('DraftController', () => {
 
   describe('updateDraft (ts-rest)', () => {
     it('should update draft with partial fields', async () => {
+      const mockDraft = createMockDraft({ title: 'Original Title' });
       const updateDto = {
         title: 'Updated Title',
       };
-      // ✅ 优化：使用新的扁平化 Mock API
-      const mockDraft = {
-        id: 1,
-        title: 'Updated Title',
-        content: 'Original content',
-        category: null,
-        tags: null,
-        pathname: null,
-        author: 'admin',
-        version: 2,
-        createdAt: dayjs().format(),
-        updatedAt: dayjs().format(),
-      };
-      mockDraftService.update.mockResolvedValue(mockDraft);
+      const updatedDraft = { ...mockDraft, ...updateDto, version: 2 };
+      mockDraftService.update.mockResolvedValue(updatedDraft);
 
       const handler = controller.updateDraft();
-      const result = await handler({ params: { id: '1' }, body: updateDto });
+      const result = await handler({ params: { id: String(mockDraft.id) }, body: updateDto });
 
       expect(result.status).toBe(200);
       expect(result.body.title).toBe('Updated Title');
       expect(mockDraftService.update).toHaveBeenCalledWith(
-        1,
+        mockDraft.id,
         expect.objectContaining({
           title: 'Updated Title',
         }),
@@ -647,51 +637,35 @@ describe('DraftController', () => {
     });
 
     it('should update multiple fields', async () => {
+      const mockDraft = createMockDraft();
       const updateDto = {
         title: 'Updated',
         content: 'Updated content',
         category: 'tech',
         tags: ['updated'],
       };
-      // ✅ 优化：使用新的扁平化 Mock API
-      const mockDraft = {
-        id: 1,
-        ...updateDto,
-        pathname: null,
-        author: 'admin',
-        version: 2,
-        createdAt: dayjs().format(),
-        updatedAt: dayjs().format(),
-      };
-      mockDraftService.update.mockResolvedValue(mockDraft);
+      const updatedDraft = { ...mockDraft, ...updateDto, version: 2 };
+      mockDraftService.update.mockResolvedValue(updatedDraft);
 
       const handler = controller.updateDraft();
-      await handler({ params: { id: '1' }, body: updateDto });
+      await handler({ params: { id: String(mockDraft.id) }, body: updateDto });
 
-      expect(mockDraftService.update).toHaveBeenCalledWith(1, expect.objectContaining(updateDto));
+      expect(mockDraftService.update).toHaveBeenCalledWith(
+        mockDraft.id,
+        expect.objectContaining(updateDto),
+      );
     });
 
     it('should handle undefined fields correctly', async () => {
+      const mockDraft = createMockDraft({ title: 'Original', content: 'Original' });
       const updateDto = {
         title: 'Updated',
       };
-      // ✅ 优化：使用新的扁平化 Mock API
-      const mockDraft = {
-        id: 1,
-        title: 'Updated',
-        content: 'Original',
-        category: null,
-        tags: null,
-        pathname: null,
-        author: 'admin',
-        version: 2,
-        createdAt: dayjs().format(),
-        updatedAt: dayjs().format(),
-      };
-      mockDraftService.update.mockResolvedValue(mockDraft);
+      const updatedDraft = { ...mockDraft, title: 'Updated', version: 2 };
+      mockDraftService.update.mockResolvedValue(updatedDraft);
 
       const handler = controller.updateDraft();
-      await handler({ params: { id: '1' }, body: updateDto });
+      await handler({ params: { id: String(mockDraft.id) }, body: updateDto });
 
       const [[, updateData]] = mockDraftService.update.mock.calls;
       expect(updateData).toHaveProperty('title', 'Updated');
@@ -700,96 +674,72 @@ describe('DraftController', () => {
     });
 
     it('should convert string id to number', async () => {
-      // ✅ 优化：使用新的扁平化 Mock API
-      const mockDraft = {
-        id: 123,
-        title: 'Test',
-        content: 'Content',
-        category: null,
-        tags: null,
-        pathname: null,
-        author: 'admin',
-        version: 1,
-        createdAt: dayjs().format(),
-        updatedAt: dayjs().format(),
-      };
+      const mockDraft = createMockDraft();
       mockDraftService.update.mockResolvedValue(mockDraft);
 
       const handler = controller.updateDraft();
-      await handler({ params: { id: '123' }, body: { title: 'Test' } });
+      await handler({ params: { id: String(mockDraft.id) }, body: { title: 'Test' } });
 
-      expect(mockDraftService.update).toHaveBeenCalledWith(123, expect.any(Object));
+      expect(mockDraftService.update).toHaveBeenCalledWith(mockDraft.id, expect.any(Object));
     });
   });
 
   describe('deleteDraft (ts-rest)', () => {
     it('should delete draft and return success', async () => {
+      const mockDraft = createMockDraft();
       mockDraftService.remove.mockResolvedValue(undefined);
 
       const handler = controller.deleteDraft();
-      const result = await handler({ params: { id: '1' } });
+      const result = await handler({ params: { id: String(mockDraft.id) } });
 
       expect(result.status).toBe(200);
       expect(result.body.success).toBe(true);
-      expect(mockDraftService.remove).toHaveBeenCalledWith(1);
+      expect(mockDraftService.remove).toHaveBeenCalledWith(mockDraft.id);
     });
 
     it('should convert string id to number', async () => {
+      const mockDraft = createMockDraft();
       mockDraftService.remove.mockResolvedValue(undefined);
 
       const handler = controller.deleteDraft();
-      await handler({ params: { id: '456' } });
+      await handler({ params: { id: String(mockDraft.id) } });
 
-      expect(mockDraftService.remove).toHaveBeenCalledWith(456);
+      expect(mockDraftService.remove).toHaveBeenCalledWith(mockDraft.id);
     });
   });
 
   describe('getDraft (ts-rest)', () => {
     it('should return single draft', async () => {
-      // ✅ 优化：使用新的扁平化 Mock API
-      const mockDraft = {
-        id: 1,
+      const mockDraft = createMockDraft({
         title: 'Test Draft',
         content: 'Test content',
         category: 'tech',
         tags: ['test'],
-        pathname: null,
-        author: 'admin',
-        version: 1,
-        createdAt: dayjs().format(),
-        updatedAt: dayjs().format(),
-      };
+      });
       mockDraftService.findOne.mockResolvedValue(mockDraft);
 
       const handler = controller.getDraft();
-      const result = await handler({ params: { id: '1' } });
+      const result = await handler({ params: { id: String(mockDraft.id) } });
 
       expect(result.status).toBe(200);
-      expect(result.body.id).toBe(1);
+      expect(result.body.id).toBe(mockDraft.id);
       expect(result.body.title).toBe('Test Draft');
       expect(result.body.category).toBe('tech');
       expect(result.body.tags).toEqual(['test']);
-      expect(mockDraftService.findOne).toHaveBeenCalledWith(1);
+      expect(mockDraftService.findOne).toHaveBeenCalledWith(mockDraft.id);
     });
 
     it('should handle null category and tags', async () => {
-      // ✅ 优化：使用新的扁平化 Mock API
-      const mockDraft = {
-        id: 1,
+      const mockDraft = createMockDraft({
         title: 'Test Draft',
         content: 'Test content',
         category: null,
         tags: null,
-        pathname: null,
-        author: 'admin',
-        version: 1,
-        createdAt: dayjs().format(),
-        updatedAt: dayjs().format(),
-      };
+      });
       mockDraftService.findOne.mockResolvedValue(mockDraft);
 
       const handler = controller.getDraft();
-      const result = await handler({ params: { id: '1' } });
+      const result = await handler({ params: { id: String(mockDraft.id) } });
 
       expect(result.body.category).toBeUndefined();
       expect(result.body.tags).toBeUndefined();
@@ -798,7 +748,10 @@ describe('DraftController', () => {
 
   describe('publishDraft (ts-rest)', () => {
     it('should publish draft and return article', async () => {
-      // ✅ 优化：使用新的扁平化 Mock API
+      const mockDraft = createMockDraft({
+        title: 'Published Article',
+        content: 'Published content',
+      });
       const mockArticle = new Article({
         id: 99,
         title: 'Published Article',
@@ -818,7 +771,7 @@ describe('DraftController', () => {
       mockDraftService.publish.mockResolvedValue(mockArticle);
 
       const handler = controller.publishDraft();
-      const result = await handler({ params: { id: '1' } });
+      const result = await handler({ params: { id: String(mockDraft.id) } });
 
       expect(result.status).toBe(200);
       expect(result.body.id).toBe(99);
@@ -827,7 +780,7 @@ describe('DraftController', () => {
       expect(result.body.isHot).toBe(false);
       expect(result.body.likes).toBe(0);
       expect(result.body.private).toBe(false);
-      expect(mockDraftService.publish).toHaveBeenCalledWith(1, {
+      expect(mockDraftService.publish).toHaveBeenCalledWith(mockDraft.id, {
         isPublished: true,
         isTop: false,
         password: null,
@@ -836,7 +789,7 @@ describe('DraftController', () => {
     });
 
     it('should map article fields correctly', async () => {
-      // ✅ 优化：使用新的扁平化 Mock API
+      const mockDraft = createMockDraft();
       const mockArticle = new Article({
         id: 1,
         title: 'Test',
@@ -856,7 +809,7 @@ describe('DraftController', () => {
       mockDraftService.publish.mockResolvedValue(mockArticle);
 
       const handler = controller.publishDraft();
-      const result = await handler({ params: { id: '1' } });
+      const result = await handler({ params: { id: String(mockDraft.id) } });
 
       expect(result.body.isTop).toBe(true);
       expect(result.body.views).toBe(100);
@@ -867,7 +820,7 @@ describe('DraftController', () => {
     });
 
     it('should handle null viewer and top', async () => {
-      // ✅ 优化：使用新的扁平化 Mock API
+      const mockDraft = createMockDraft();
       const mockArticle = new Article({
         id: 1,
         title: 'Test',
@@ -887,15 +840,15 @@ describe('DraftController', () => {
       mockDraftService.publish.mockResolvedValue(mockArticle);
 
       const handler = controller.publishDraft();
-      const result = await handler({ params: { id: '1' } });
+      const result = await handler({ params: { id: String(mockDraft.id) } });
 
       expect(result.body.isTop).toBe(false);
       expect(result.body.views).toBeUndefined();
     });
 
     it('should format pubTime correctly', async () => {
+      const mockDraft = createMockDraft();
       const updatedAt = '2024-01-01T10:00:00Z';
-      // ✅ 优化：使用新的扁平化 Mock API
       const mockArticle = new Article({
         id: 1,
         title: 'Test',
@@ -915,7 +868,7 @@ describe('DraftController', () => {
       mockDraftService.publish.mockResolvedValue(mockArticle);
 
       const handler = controller.publishDraft();
-      const result = await handler({ params: { id: '1' } });
+      const result = await handler({ params: { id: String(mockDraft.id) } });
 
       expect(result.body.pubTime).toBe(dayjs(updatedAt).format());
     });
@@ -960,23 +913,15 @@ describe('DraftController', () => {
     });
 
     it('should handle drafts with empty tags array', async () => {
-      // ✅ 优化：使用新的扁平化 Mock API
-      const mockDraft = {
-        id: 1,
+      const mockDraft = createMockDraft({
         title: 'Test',
         content: 'Content',
-        category: null,
         tags: [],
-        pathname: null,
-        author: 'admin',
-        version: 1,
-        createdAt: dayjs().format(),
-        updatedAt: dayjs().format(),
-      };
+      });
       mockDraftService.findOne.mockResolvedValue(mockDraft);
 
       const handler = controller.getDraft();
-      const result = await handler({ params: { id: '1' } });
+      const result = await handler({ params: { id: String(mockDraft.id) } });
 
       expect(result.body.tags).toEqual([]);
     });

@@ -42,8 +42,8 @@ describe('ConfigValidationService', () => {
         },
         database: {
           driver: 'local',
-          url: 'file:./test.db',
-          filePath: './test.db',
+          url: process.env.DATABASE_URL || 'file:./test.db',
+          filePath: process.env.DATABASE_FILE_PATH || './test.db',
         },
         jwt: {
           secret: 'test-secret-key-with-sufficient-length',
@@ -151,8 +151,8 @@ describe('ConfigValidationService', () => {
         },
         database: {
           driver: 'local',
-          url: 'file:./test.db',
-          filePath: './test.db',
+          url: process.env.DATABASE_URL || 'file:./test.db',
+          filePath: process.env.DATABASE_FILE_PATH || './test.db',
         },
         jwt: {
           secret: 'your-secret-key-that-is-long-enough-for-validation', // Default value that should trigger error
@@ -207,7 +207,7 @@ describe('ConfigValidationService', () => {
           isProduction: false,
           isDevelopment: true,
         },
-        database: { driver: 'local', url: 'file:./test.db' },
+        database: { driver: 'local', url: process.env.DATABASE_URL || 'file:./test.db' },
         jwt: {
           secret: 'test-secret',
           expiresIn: '1h',
@@ -241,7 +241,7 @@ describe('ConfigValidationService', () => {
           isProduction: 'invalid' as any, // Should be boolean
           isDevelopment: 'invalid' as any,
         },
-        database: { driver: 'local', url: 'file:./test.db' },
+        database: { driver: 'local', url: process.env.DATABASE_URL || 'file:./test.db' },
         jwt: {
           secret: 'test-secret',
           expiresIn: '1h',
