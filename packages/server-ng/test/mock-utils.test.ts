@@ -84,15 +84,15 @@ describe('MockUtils', () => {
 
   describe('TestDataFactory', () => {
     it('should create user test data', () => {
-      const user = Mock.user({ name: 'Custom User' });
+      const user = Mock.user({ id: 1, nickname: 'Custom User', email: 'test@example.com' });
 
       expect(user.id).toBe(1);
-      expect(user.name).toBe('Custom User');
+      expect(user.nickname).toBe('Custom User');
       expect(user.email).toBe('test@example.com');
     });
 
     it('should create article test data', () => {
-      const article = Mock.article({ title: 'Custom Title' });
+      const article = Mock.article({ id: 1, title: 'Custom Title' });
 
       expect(article.id).toBe(1);
       expect(article.title).toBe('Custom Title');
@@ -100,7 +100,7 @@ describe('MockUtils', () => {
     });
 
     it('should create media file test data', () => {
-      const mediaFile = Mock.mediaFile({ filename: 'custom.jpg' });
+      const mediaFile = Mock.mediaFile({ id: 1, filename: 'custom.jpg' });
 
       expect(mediaFile.id).toBe(1);
       expect(mediaFile.filename).toBe('custom.jpg');

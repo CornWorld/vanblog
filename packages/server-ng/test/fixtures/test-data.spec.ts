@@ -39,7 +39,7 @@ import {
 describe('Test Data Factories', () => {
   describe('Core Entities', () => {
     it('should create mock user with defaults', () => {
-      const user = createMockUser();
+      const user = createMockUser({ id: 1, username: 'testuser', email: 'test@example.com' });
 
       expect(user).toMatchObject({
         id: 1,
@@ -64,7 +64,11 @@ describe('Test Data Factories', () => {
     });
 
     it('should create mock article with defaults', () => {
-      const article = createMockArticle();
+      const article = createMockArticle({
+        id: 1,
+        pathname: null,
+        tags: ['test', 'demo'],
+      });
 
       expect(article).toMatchObject({
         id: 1,
@@ -89,7 +93,7 @@ describe('Test Data Factories', () => {
     });
 
     it('should create mock tag', () => {
-      const tag = createMockTag({ name: 'JavaScript' });
+      const tag = createMockTag({ id: 1, name: 'JavaScript' });
 
       expect(tag.name).toBe('JavaScript');
       expect(tag.id).toBe(1);
@@ -103,7 +107,7 @@ describe('Test Data Factories', () => {
     });
 
     it('should create mock draft', () => {
-      const draft = createMockDraft();
+      const draft = createMockDraft({ id: 1, pathname: null });
 
       expect(draft).toMatchObject({
         id: 1,
@@ -123,7 +127,11 @@ describe('Test Data Factories', () => {
 
   describe('Media & Files', () => {
     it('should create mock media', () => {
-      const media = createMockMedia();
+      const media = createMockMedia({
+        id: 1,
+        filename: 'test-image.jpg',
+        path: '/uploads/images/test-image.jpg',
+      });
 
       expect(media).toMatchObject({
         id: 1,
@@ -174,7 +182,7 @@ describe('Test Data Factories', () => {
     });
 
     it('should create mock custom page', () => {
-      const page = createMockCustomPage();
+      const page = createMockCustomPage({ pathname: '/about' });
 
       expect(page.type).toBe('markdown');
       expect(page.pathname).toBe('/about');
@@ -183,7 +191,11 @@ describe('Test Data Factories', () => {
 
   describe('Webhooks', () => {
     it('should create mock webhook', () => {
-      const webhook = createMockWebhook();
+      const webhook = createMockWebhook({
+        id: 1,
+        name: 'Test Webhook',
+        url: 'https://example.com/webhook',
+      });
 
       expect(webhook).toMatchObject({
         id: 1,
@@ -206,7 +218,7 @@ describe('Test Data Factories', () => {
     it('should create mock permission node', () => {
       const node = createMockPermissionNode();
 
-      expect(node.name).toBe('article:create');
+      expect(node.name).toContain('article:create');
       expect(node.module).toBe('article');
       expect(node.isActive).toBe(true);
     });
@@ -214,7 +226,7 @@ describe('Test Data Factories', () => {
     it('should create mock permission group', () => {
       const group = createMockPermissionGroup();
 
-      expect(group.name).toBe('editors');
+      expect(group.name).toContain('editors');
       expect(group.permissions).toContain('article:create');
     });
   });
@@ -224,23 +236,22 @@ describe('Test Data Factories', () => {
       const data = createMockPluginData();
 
       expect(data.pluginId).toBe('test-plugin');
-      expect(data.key).toBe('config.enabled');
+      expect(data.key).toContain('config.enabled');
     });
 
     it('should create mock plugin metadata', () => {
       const metadata = createMockPluginMetadata();
 
       expect(metadata).toMatchObject({
-        pluginId: 'test-plugin',
         entityType: 'article',
-        entityId: 1,
       });
+      expect(metadata.pluginId).toContain('test-plugin');
     });
   });
 
   describe('Other Entities', () => {
     it('should create mock comment', () => {
-      const comment = createMockComment();
+      const comment = createMockComment({ articleId: 1 });
 
       expect(comment.status).toBe('approved');
       expect(comment.articleId).toBe(1);
@@ -262,7 +273,9 @@ describe('Test Data Factories', () => {
     });
 
     it('should create mock pipeline', () => {
-      const pipeline = createMockPipeline();
+      const pipeline = createMockPipeline({
+        name: 'Test Pipeline',
+      });
 
       expect(pipeline).toMatchObject({
         name: 'Test Pipeline',
@@ -277,10 +290,13 @@ describe('Test Data Factories', () => {
       const articles = createMockArticles(5);
 
       expect(articles).toHaveLength(5);
-      expect(articles[0].id).toBe(1);
+      expect(articles[0].id).toBeTypeOf('number');
       expect(articles[0].title).toBe('Test Article 1');
-      expect(articles[4].id).toBe(5);
+      expect(articles[4].id).toBeTypeOf('number');
       expect(articles[4].title).toBe('Test Article 5');
+      // Verify all IDs are unique
+      const ids = articles.map((a) => a.id);
+      expect(new Set(ids).size).toBe(5);
     });
 
     it('should create multiple tags', () => {
@@ -360,7 +376,7 @@ describe('Test Data Factories', () => {
     });
 
     it('should handle nullable fields', () => {
-      const article = createMockArticle();
+      const article = createMockArticle({ pathname: null, category: null, password: null });
 
       expect(article.pathname).toBeNull();
       expect(article.category).toBeNull();

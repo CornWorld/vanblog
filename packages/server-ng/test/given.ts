@@ -251,7 +251,7 @@ export class Given {
       const [user] = await (tx as any)
         .insert(users)
         .values({
-          id: mock.id,
+          id: overrides.id || generateUniqueId('1'), // 使用唯一 ID 而非固定 mock.id
           username: overrides.username || mock.username,
           name: overrides.name || mock.name,
           email: overrides.email || mock.email,
@@ -305,21 +305,22 @@ export class Given {
     overrides: Partial<any> = {},
   ): Promise<any> {
     const executeInsert = async (tx: TestDatabase) => {
-      const mock = Mock.category();
+      const mock = Mock.category(overrides);
 
-      // 生成唯一的 category name 和 id 以避免 UNIQUE 约束冲突
+      // 生成唯一的 category name、slug 和 id 以避免 UNIQUE 约束冲突
       const uniqueSuffix = Math.random().toString(36).substring(7);
       const uniqueName = overrides.name || `${String(mock.name)}-${uniqueSuffix}`;
       const uniqueId = overrides.id !== undefined ? overrides.id : generateUniqueId('3');
       const uniqueSlug = overrides.slug || `${String(mock.slug)}-${uniqueSuffix}`;
 
-      // 先应用 overrides,然后确保 id、name 和 slug 是唯一的
+      // 构建数据对象，确保 id、name 和 slug 是唯一的
       const categoryData = {
         ...mock,
-        ...overrides,
-        id: uniqueId, // 最后设置 id,确保唯一性
-        name: uniqueName, // 最后设置 name,确保唯一性
-        slug: uniqueSlug, // 最后设置 slug,确保唯一性
+        id: uniqueId, // 使用唯一 ID
+        name: uniqueName, // 使用唯一 name
+        slug: uniqueSlug, // 使用唯一 slug
+        createdAt: mock.createdAt,
+        updatedAt: mock.updatedAt,
       };
 
       const [category] = await (tx as any).insert(categories).values(categoryData).returning();
@@ -500,7 +501,7 @@ export class Given {
     overrides: Partial<any> = {},
   ): Promise<any> {
     const executeInsert = async (tx: TestDatabase) => {
-      const mock = Mock.tag();
+      const mock = Mock.tag(overrides);
 
       // 生成唯一的 tag name, slug 和 id 以避免 UNIQUE 约束冲突
       const uniqueSuffix = Math.random().toString(36).substring(7);
@@ -510,13 +511,13 @@ export class Given {
         overrides.slug !== undefined ? overrides.slug : `${String(mock.slug)}-${uniqueSuffix}`;
       const uniqueId = overrides.id !== undefined ? overrides.id : generateUniqueId('4');
 
-      // 先应用 overrides,然后确保 id, name 和 slug 是唯一的
+      // 构建数据对象，确保 id, name 和 slug 是唯一的
       const tagData = {
         ...mock,
-        ...overrides,
-        id: uniqueId, // 最后设置 id,确保唯一性
-        name: uniqueName, // 最后设置 name,确保唯一性
-        slug: uniqueSlug, // 最后设置 slug,确保唯一性
+        id: uniqueId, // 使用唯一 ID
+        name: uniqueName, // 使用唯一 name
+        slug: uniqueSlug, // 使用唯一 slug
+        createdAt: mock.createdAt,
       };
 
       const [tag] = await (tx as any).insert(tags).values(tagData).returning();

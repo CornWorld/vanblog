@@ -17,6 +17,23 @@
 
 import { dayjs } from '@vanblog/shared';
 
+/**
+ * ID 生成器 - 为测试数据生成唯一 ID
+ * 使用时间戳 + 随机数确保唯一性
+ */
+function generateUniqueId(prefix: string = ''): number {
+  const timestamp = Date.now();
+  const random = Math.floor(Math.random() * 10000);
+  return parseInt(`${prefix}${String(timestamp)}${String(random)}`.slice(-10)); // 保留最后10位作为 ID
+}
+
+/**
+ * 生成唯一字符串后缀（用于 UNIQUE 字段）
+ */
+function generateUniqueSuffix(): string {
+  return `${String(Date.now())}-${String(Math.floor(Math.random() * 10000))}`;
+}
+
 // ============ User Entity ============
 
 export interface MockUser {
@@ -32,19 +49,21 @@ export interface MockUser {
   updatedAt: string;
 }
 
-export const createMockUser = (overrides: Partial<MockUser> = {}): MockUser => ({
-  id: 1,
-  username: 'testuser',
-  password: '$2b$10$hashedpassword', // Bcrypt hashed password
-  nickname: 'Test User',
-  email: 'test@example.com',
-  avatar: null,
-  type: 'admin',
-  permissions: null,
-  createdAt: dayjs('2024-01-01').format(),
-  updatedAt: dayjs('2024-01-01').format(),
-  ...overrides,
-});
+export const createMockUser = (overrides: Partial<MockUser> = {}): MockUser => {
+  const suffix = generateUniqueSuffix();
+  return {
+    id: overrides.id ?? generateUniqueId('1'),
+    username: overrides.username ?? `testuser-${suffix}`,
+    password: overrides.password ?? '$2b$10$hashedpassword', // Bcrypt hashed password
+    nickname: overrides.nickname !== undefined ? overrides.nickname : 'Test User',
+    email: overrides.email ?? `test-${suffix}@example.com`,
+    avatar: overrides.avatar !== undefined ? overrides.avatar : null,
+    type: overrides.type ?? 'admin',
+    permissions: overrides.permissions !== undefined ? overrides.permissions : null,
+    createdAt: overrides.createdAt ?? dayjs('2024-01-01').format(),
+    updatedAt: overrides.updatedAt ?? dayjs('2024-01-01').format(),
+  };
+};
 
 // ============ Article Entity ============
 
@@ -65,23 +84,26 @@ export interface MockArticle {
   updatedAt: string;
 }
 
-export const createMockArticle = (overrides: Partial<MockArticle> = {}): MockArticle => ({
-  id: 1,
-  title: 'Test Article',
-  content: 'This is a test article content with **markdown** support.',
-  pathname: null,
-  tags: ['test', 'demo'],
-  category: null,
-  author: 'admin',
-  top: 0,
-  hidden: false,
-  private: false,
-  password: null,
-  viewer: 0,
-  createdAt: dayjs('2024-01-01').format(),
-  updatedAt: dayjs('2024-01-01').format(),
-  ...overrides,
-});
+export const createMockArticle = (overrides: Partial<MockArticle> = {}): MockArticle => {
+  const uniqueId = overrides.id ?? generateUniqueId('1');
+  const suffix = generateUniqueSuffix();
+  return {
+    id: uniqueId,
+    title: overrides.title ?? 'Test Article',
+    content: overrides.content ?? 'This is a test article content with **markdown** support.',
+    pathname: overrides.pathname !== undefined ? overrides.pathname : `/article-${suffix}`,
+    tags: overrides.tags !== undefined ? overrides.tags : ['test', 'demo'],
+    category: overrides.category !== undefined ? overrides.category : null,
+    author: overrides.author ?? 'admin',
+    top: overrides.top ?? 0,
+    hidden: overrides.hidden ?? false,
+    private: overrides.private ?? false,
+    password: overrides.password !== undefined ? overrides.password : null,
+    viewer: overrides.viewer ?? 0,
+    createdAt: overrides.createdAt ?? dayjs('2024-01-01').format(),
+    updatedAt: overrides.updatedAt ?? dayjs('2024-01-01').format(),
+  };
+};
 
 // ============ Tag Entity ============
 
@@ -92,13 +114,15 @@ export interface MockTag {
   createdAt: string;
 }
 
-export const createMockTag = (overrides: Partial<MockTag> = {}): MockTag => ({
-  id: 1,
-  name: 'Test Tag',
-  slug: 'test-tag',
-  createdAt: dayjs('2024-01-01').format(),
-  ...overrides,
-});
+export const createMockTag = (overrides: Partial<MockTag> = {}): MockTag => {
+  const suffix = generateUniqueSuffix();
+  return {
+    id: overrides.id ?? generateUniqueId('4'),
+    name: overrides.name ?? `Test Tag ${suffix}`,
+    slug: overrides.slug ?? `test-tag-${suffix}`,
+    createdAt: overrides.createdAt ?? dayjs('2024-01-01').format(),
+  };
+};
 
 // ============ Category Entity ============
 
@@ -113,17 +137,20 @@ export interface MockCategory {
   updatedAt: string;
 }
 
-export const createMockCategory = (overrides: Partial<MockCategory> = {}): MockCategory => ({
-  id: 1,
-  name: 'Test Category',
-  slug: 'test-category',
-  description: 'This is a test category',
-  private: false,
-  password: null,
-  createdAt: dayjs('2024-01-01').format(),
-  updatedAt: dayjs('2024-01-01').format(),
-  ...overrides,
-});
+export const createMockCategory = (overrides: Partial<MockCategory> = {}): MockCategory => {
+  const suffix = generateUniqueSuffix();
+  return {
+    id: overrides.id ?? generateUniqueId('3'),
+    name: overrides.name ?? `Test Category ${suffix}`,
+    slug: overrides.slug ?? `test-category-${suffix}`,
+    description:
+      overrides.description !== undefined ? overrides.description : 'This is a test category',
+    private: overrides.private ?? false,
+    password: overrides.password !== undefined ? overrides.password : null,
+    createdAt: overrides.createdAt ?? dayjs('2024-01-01').format(),
+    updatedAt: overrides.updatedAt ?? dayjs('2024-01-01').format(),
+  };
+};
 
 // ============ Draft Entity ============
 
@@ -140,19 +167,22 @@ export interface MockDraft {
   updatedAt: string;
 }
 
-export const createMockDraft = (overrides: Partial<MockDraft> = {}): MockDraft => ({
-  id: 1,
-  title: 'Test Draft',
-  content: 'This is a draft article content.',
-  pathname: null,
-  tags: ['draft', 'wip'],
-  category: null,
-  author: 'admin',
-  version: 1,
-  createdAt: dayjs('2024-01-01').format(),
-  updatedAt: dayjs('2024-01-01').format(),
-  ...overrides,
-});
+export const createMockDraft = (overrides: Partial<MockDraft> = {}): MockDraft => {
+  const uniqueId = overrides.id ?? generateUniqueId('2');
+  const suffix = generateUniqueSuffix();
+  return {
+    id: uniqueId,
+    title: overrides.title ?? 'Test Draft',
+    content: overrides.content ?? 'This is a draft article content.',
+    pathname: overrides.pathname !== undefined ? overrides.pathname : `/draft-${suffix}`,
+    tags: overrides.tags !== undefined ? overrides.tags : ['draft', 'wip'],
+    category: overrides.category !== undefined ? overrides.category : null,
+    author: overrides.author ?? 'admin',
+    version: overrides.version ?? 1,
+    createdAt: overrides.createdAt ?? dayjs('2024-01-01').format(),
+    updatedAt: overrides.updatedAt ?? dayjs('2024-01-01').format(),
+  };
+};
 
 // ============ Draft Version Entity ============
 
@@ -171,19 +201,21 @@ export interface MockDraftVersion {
 
 export const createMockDraftVersion = (
   overrides: Partial<MockDraftVersion> = {},
-): MockDraftVersion => ({
-  id: 1,
-  draftId: 1,
-  version: 1,
-  title: 'Test Draft Version',
-  content: 'Version 1 content',
-  pathname: null,
-  tags: ['draft'],
-  category: null,
-  author: 'admin',
-  createdAt: dayjs('2024-01-01').format(),
-  ...overrides,
-});
+): MockDraftVersion => {
+  const suffix = generateUniqueSuffix();
+  return {
+    id: overrides.id ?? generateUniqueId('5'),
+    draftId: overrides.draftId ?? generateUniqueId('2'),
+    version: overrides.version ?? 1,
+    title: overrides.title ?? 'Test Draft Version',
+    content: overrides.content ?? 'Version 1 content',
+    pathname: overrides.pathname !== undefined ? overrides.pathname : `/draft-version-${suffix}`,
+    tags: overrides.tags !== undefined ? overrides.tags : ['draft'],
+    category: overrides.category !== undefined ? overrides.category : null,
+    author: overrides.author ?? 'admin',
+    createdAt: overrides.createdAt ?? dayjs('2024-01-01').format(),
+  };
+};
 
 // ============ Media (Static Files) Entity ============
 
@@ -200,19 +232,21 @@ export interface MockMedia {
   createdAt: string;
 }
 
-export const createMockMedia = (overrides: Partial<MockMedia> = {}): MockMedia => ({
-  id: 1,
-  filename: 'test-image.jpg',
-  path: '/uploads/images/test-image.jpg',
-  size: 102400, // 100 KB
-  mimeType: 'image/jpeg',
-  width: 1920,
-  height: 1080,
-  hash: 'abc123def456',
-  provider: 'local',
-  createdAt: dayjs('2024-01-01').format(),
-  ...overrides,
-});
+export const createMockMedia = (overrides: Partial<MockMedia> = {}): MockMedia => {
+  const suffix = generateUniqueSuffix();
+  return {
+    id: overrides.id ?? generateUniqueId('6'),
+    filename: overrides.filename ?? `test-image-${suffix}.jpg`,
+    path: overrides.path ?? `/uploads/images/test-image-${suffix}.jpg`,
+    size: overrides.size ?? 102400,
+    mimeType: overrides.mimeType !== undefined ? overrides.mimeType : 'image/jpeg',
+    width: overrides.width !== undefined ? overrides.width : 1920,
+    height: overrides.height !== undefined ? overrides.height : 1080,
+    hash: overrides.hash !== undefined ? overrides.hash : `hash-${suffix}`,
+    provider: overrides.provider ?? 'local',
+    createdAt: overrides.createdAt ?? dayjs('2024-01-01').format(),
+  };
+};
 
 // ============ Webhook Entity ============
 
@@ -232,22 +266,24 @@ export interface MockWebhook {
   updatedAt: string;
 }
 
-export const createMockWebhook = (overrides: Partial<MockWebhook> = {}): MockWebhook => ({
-  id: 1,
-  name: 'Test Webhook',
-  url: 'https://example.com/webhook',
-  events: ['article|afterCreate', 'article|afterUpdate'],
-  secret: 'webhook-secret-key',
-  active: true,
-  retryCount: 3,
-  timeout: 30000,
-  lastTriggered: null,
-  lastStatus: null,
-  lastError: null,
-  createdAt: dayjs('2024-01-01').format(),
-  updatedAt: dayjs('2024-01-01').format(),
-  ...overrides,
-});
+export const createMockWebhook = (overrides: Partial<MockWebhook> = {}): MockWebhook => {
+  const suffix = generateUniqueSuffix();
+  return {
+    id: overrides.id ?? generateUniqueId('7'),
+    name: overrides.name ?? `webhook-${suffix}`,
+    url: overrides.url ?? `https://example.com/webhook-${suffix}`,
+    events: overrides.events ?? ['article|afterCreate', 'article|afterUpdate'],
+    secret: overrides.secret !== undefined ? overrides.secret : `secret-${suffix}`,
+    active: overrides.active ?? true,
+    retryCount: overrides.retryCount ?? 3,
+    timeout: overrides.timeout ?? 30000,
+    lastTriggered: overrides.lastTriggered !== undefined ? overrides.lastTriggered : null,
+    lastStatus: overrides.lastStatus !== undefined ? overrides.lastStatus : null,
+    lastError: overrides.lastError !== undefined ? overrides.lastError : null,
+    createdAt: overrides.createdAt ?? dayjs('2024-01-01').format(),
+    updatedAt: overrides.updatedAt ?? dayjs('2024-01-01').format(),
+  };
+};
 
 // ============ Webhook Log Entity ============
 
@@ -264,19 +300,21 @@ export interface MockWebhookLog {
   createdAt: string;
 }
 
-export const createMockWebhookLog = (overrides: Partial<MockWebhookLog> = {}): MockWebhookLog => ({
-  id: 1,
-  webhookId: 1,
-  event: 'article|afterCreate',
-  payload: { articleId: 1, title: 'Test' },
-  status: 'success',
-  responseCode: 200,
-  responseBody: '{"success":true}',
-  error: null,
-  duration: 150,
-  createdAt: dayjs('2024-01-01').format(),
-  ...overrides,
-});
+export const createMockWebhookLog = (overrides: Partial<MockWebhookLog> = {}): MockWebhookLog => {
+  return {
+    id: overrides.id ?? generateUniqueId('8'),
+    webhookId: overrides.webhookId ?? generateUniqueId('7'),
+    event: overrides.event ?? 'article|afterCreate',
+    payload: overrides.payload ?? { articleId: generateUniqueId('1'), title: 'Test' },
+    status: overrides.status ?? 'success',
+    responseCode: overrides.responseCode !== undefined ? overrides.responseCode : 200,
+    responseBody:
+      overrides.responseBody !== undefined ? overrides.responseBody : '{"success":true}',
+    error: overrides.error !== undefined ? overrides.error : null,
+    duration: overrides.duration !== undefined ? overrides.duration : 150,
+    createdAt: overrides.createdAt ?? dayjs('2024-01-01').format(),
+  };
+};
 
 // ============ Analytics Entity ============
 
@@ -291,17 +329,21 @@ export interface MockAnalytics {
   createdAt: string;
 }
 
-export const createMockAnalytics = (overrides: Partial<MockAnalytics> = {}): MockAnalytics => ({
-  id: 1,
-  type: 'page_view',
-  path: '/article/test-article',
-  referrer: 'https://google.com',
-  userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-  ip: '192.168.1.1',
-  data: { duration: 30 },
-  createdAt: dayjs('2024-01-01').format(),
-  ...overrides,
-});
+export const createMockAnalytics = (overrides: Partial<MockAnalytics> = {}): MockAnalytics => {
+  return {
+    id: overrides.id ?? generateUniqueId('9'),
+    type: overrides.type ?? 'page_view',
+    path: overrides.path !== undefined ? overrides.path : '/article/test-article',
+    referrer: overrides.referrer !== undefined ? overrides.referrer : 'https://google.com',
+    userAgent:
+      overrides.userAgent !== undefined
+        ? overrides.userAgent
+        : 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+    ip: overrides.ip !== undefined ? overrides.ip : '192.168.1.1',
+    data: overrides.data ?? { duration: 30 },
+    createdAt: overrides.createdAt ?? dayjs('2024-01-01').format(),
+  };
+};
 
 // ============ Setting (Site Meta) Entity ============
 
@@ -313,14 +355,16 @@ export interface MockSetting {
   updatedAt: string;
 }
 
-export const createMockSetting = (overrides: Partial<MockSetting> = {}): MockSetting => ({
-  id: 1,
-  key: 'site.title',
-  value: 'Test Blog',
-  createdAt: dayjs('2024-01-01').format(),
-  updatedAt: dayjs('2024-01-01').format(),
-  ...overrides,
-});
+export const createMockSetting = (overrides: Partial<MockSetting> = {}): MockSetting => {
+  const suffix = generateUniqueSuffix();
+  return {
+    id: overrides.id ?? generateUniqueId('10'),
+    key: overrides.key ?? `site.setting-${suffix}`,
+    value: overrides.value ?? 'Test Blog',
+    createdAt: overrides.createdAt ?? dayjs('2024-01-01').format(),
+    updatedAt: overrides.updatedAt ?? dayjs('2024-01-01').format(),
+  };
+};
 
 // ============ Comment Entity (for Waline integration) ============
 
@@ -336,18 +380,20 @@ export interface MockComment {
   updatedAt: string;
 }
 
-export const createMockComment = (overrides: Partial<MockComment> = {}): MockComment => ({
-  id: 1,
-  articleId: 1,
-  parentId: null,
-  author: 'Commenter',
-  email: 'commenter@example.com',
-  content: 'This is a test comment.',
-  status: 'approved',
-  createdAt: dayjs('2024-01-01').format(),
-  updatedAt: dayjs('2024-01-01').format(),
-  ...overrides,
-});
+export const createMockComment = (overrides: Partial<MockComment> = {}): MockComment => {
+  const suffix = generateUniqueSuffix();
+  return {
+    id: overrides.id ?? generateUniqueId('11'),
+    articleId: overrides.articleId ?? generateUniqueId('1'),
+    parentId: overrides.parentId !== undefined ? overrides.parentId : null,
+    author: overrides.author ?? 'Commenter',
+    email: overrides.email ?? `commenter-${suffix}@example.com`,
+    content: overrides.content ?? 'This is a test comment.',
+    status: overrides.status ?? 'approved',
+    createdAt: overrides.createdAt ?? dayjs('2024-01-01').format(),
+    updatedAt: overrides.updatedAt ?? dayjs('2024-01-01').format(),
+  };
+};
 
 // ============ Login Log Entity ============
 
@@ -361,16 +407,18 @@ export interface MockLoginLog {
   createdAt: string;
 }
 
-export const createMockLoginLog = (overrides: Partial<MockLoginLog> = {}): MockLoginLog => ({
-  id: 1,
-  username: 'testuser',
-  ip: '192.168.1.1',
-  userAgent: 'Mozilla/5.0',
-  success: true,
-  message: null,
-  createdAt: dayjs('2024-01-01').format(),
-  ...overrides,
-});
+export const createMockLoginLog = (overrides: Partial<MockLoginLog> = {}): MockLoginLog => {
+  const suffix = generateUniqueSuffix();
+  return {
+    id: overrides.id ?? generateUniqueId('12'),
+    username: overrides.username ?? `testuser-${suffix}`,
+    ip: overrides.ip !== undefined ? overrides.ip : '192.168.1.1',
+    userAgent: overrides.userAgent !== undefined ? overrides.userAgent : 'Mozilla/5.0',
+    success: overrides.success ?? true,
+    message: overrides.message !== undefined ? overrides.message : null,
+    createdAt: overrides.createdAt ?? dayjs('2024-01-01').format(),
+  };
+};
 
 // ============ Custom Page Entity ============
 
@@ -384,16 +432,18 @@ export interface MockCustomPage {
   updatedAt: string;
 }
 
-export const createMockCustomPage = (overrides: Partial<MockCustomPage> = {}): MockCustomPage => ({
-  id: 1,
-  title: 'About Page',
-  pathname: '/about',
-  content: '# About\n\nThis is the about page.',
-  type: 'markdown',
-  createdAt: dayjs('2024-01-01').format(),
-  updatedAt: dayjs('2024-01-01').format(),
-  ...overrides,
-});
+export const createMockCustomPage = (overrides: Partial<MockCustomPage> = {}): MockCustomPage => {
+  const suffix = generateUniqueSuffix();
+  return {
+    id: overrides.id ?? generateUniqueId('13'),
+    title: overrides.title ?? 'About Page',
+    pathname: overrides.pathname ?? `/page-${suffix}`,
+    content: overrides.content ?? '# About\n\nThis is the about page.',
+    type: overrides.type ?? 'markdown',
+    createdAt: overrides.createdAt ?? dayjs('2024-01-01').format(),
+    updatedAt: overrides.updatedAt ?? dayjs('2024-01-01').format(),
+  };
+};
 
 // ============ Permission Node Entity ============
 
@@ -409,16 +459,19 @@ export interface MockPermissionNode {
 
 export const createMockPermissionNode = (
   overrides: Partial<MockPermissionNode> = {},
-): MockPermissionNode => ({
-  id: 1,
-  name: 'article:create',
-  description: 'Create new articles',
-  module: 'article',
-  isActive: true,
-  createdAt: dayjs('2024-01-01').format(),
-  updatedAt: dayjs('2024-01-01').format(),
-  ...overrides,
-});
+): MockPermissionNode => {
+  const suffix = generateUniqueSuffix();
+  return {
+    id: overrides.id ?? generateUniqueId('4'),
+    name: overrides.name ?? `article:create-${suffix}`,
+    description:
+      overrides.description !== undefined ? overrides.description : 'Create new articles',
+    module: overrides.module ?? 'article',
+    isActive: overrides.isActive ?? true,
+    createdAt: overrides.createdAt ?? dayjs('2024-01-01').format(),
+    updatedAt: overrides.updatedAt ?? dayjs('2024-01-01').format(),
+  };
+};
 
 // ============ Permission Group Entity ============
 
@@ -434,16 +487,21 @@ export interface MockPermissionGroup {
 
 export const createMockPermissionGroup = (
   overrides: Partial<MockPermissionGroup> = {},
-): MockPermissionGroup => ({
-  id: 1,
-  name: 'editors',
-  description: 'Editor group',
-  permissions: ['article:create', 'article:update'],
-  isActive: true,
-  createdAt: dayjs('2024-01-01').format(),
-  updatedAt: dayjs('2024-01-01').format(),
-  ...overrides,
-});
+): MockPermissionGroup => {
+  const suffix = generateUniqueSuffix();
+  return {
+    id: overrides.id ?? generateUniqueId('5'),
+    name: overrides.name ?? `editors-${suffix}`,
+    description: overrides.description !== undefined ? overrides.description : 'Editor group',
+    permissions:
+      overrides.permissions !== undefined
+        ? overrides.permissions
+        : ['article:create', 'article:update'],
+    isActive: overrides.isActive ?? true,
+    createdAt: overrides.createdAt ?? dayjs('2024-01-01').format(),
+    updatedAt: overrides.updatedAt ?? dayjs('2024-01-01').format(),
+  };
+};
 
 // ============ Plugin Data Entity ============
 
@@ -456,15 +514,17 @@ export interface MockPluginData {
   updatedAt: string;
 }
 
-export const createMockPluginData = (overrides: Partial<MockPluginData> = {}): MockPluginData => ({
-  id: 1,
-  pluginId: 'test-plugin',
-  key: 'config.enabled',
-  value: 'true',
-  createdAt: dayjs('2024-01-01').format(),
-  updatedAt: dayjs('2024-01-01').format(),
-  ...overrides,
-});
+export const createMockPluginData = (overrides: Partial<MockPluginData> = {}): MockPluginData => {
+  const suffix = generateUniqueSuffix();
+  return {
+    id: overrides.id ?? generateUniqueId('6'),
+    pluginId: overrides.pluginId ?? 'test-plugin',
+    key: overrides.key ?? `config.enabled-${suffix}`,
+    value: overrides.value !== undefined ? overrides.value : 'true',
+    createdAt: overrides.createdAt ?? dayjs('2024-01-01').format(),
+    updatedAt: overrides.updatedAt ?? dayjs('2024-01-01').format(),
+  };
+};
 
 // ============ Plugin Metadata Entity ============
 
@@ -481,17 +541,19 @@ export interface MockPluginMetadata {
 
 export const createMockPluginMetadata = (
   overrides: Partial<MockPluginMetadata> = {},
-): MockPluginMetadata => ({
-  id: 1,
-  pluginId: 'test-plugin',
-  entityType: 'article',
-  entityId: 1,
-  metaKey: 'processed',
-  metaValue: true,
-  createdAt: dayjs('2024-01-01').format(),
-  updatedAt: dayjs('2024-01-01').format(),
-  ...overrides,
-});
+): MockPluginMetadata => {
+  const suffix = generateUniqueSuffix();
+  return {
+    id: overrides.id ?? generateUniqueId('7'),
+    pluginId: overrides.pluginId ?? `test-plugin-${suffix}`,
+    entityType: overrides.entityType ?? 'article',
+    entityId: overrides.entityId ?? generateUniqueId('8'),
+    metaKey: overrides.metaKey ?? 'processed',
+    metaValue: overrides.metaValue !== undefined ? overrides.metaValue : true,
+    createdAt: overrides.createdAt ?? dayjs('2024-01-01').format(),
+    updatedAt: overrides.updatedAt ?? dayjs('2024-01-01').format(),
+  };
+};
 
 // ============ Image Processing Queue Entity ============
 
@@ -514,23 +576,24 @@ export interface MockImageProcessingQueue {
 
 export const createMockImageProcessingQueue = (
   overrides: Partial<MockImageProcessingQueue> = {},
-): MockImageProcessingQueue => ({
-  id: 1,
-  fileId: 1,
-  status: 'pending',
-  priority: 0,
-  processingConfig: { width: 800, height: 600 },
-  originalBuffer: null,
-  processedBuffer: null,
-  errorMessage: null,
-  attempts: 0,
-  maxAttempts: 3,
-  createdAt: dayjs('2024-01-01').format(),
-  updatedAt: dayjs('2024-01-01').format(),
-  startedAt: null,
-  completedAt: null,
-  ...overrides,
-});
+): MockImageProcessingQueue => {
+  return {
+    id: overrides.id ?? generateUniqueId('4'),
+    fileId: overrides.fileId ?? generateUniqueId('6'),
+    status: overrides.status ?? 'pending',
+    priority: overrides.priority ?? 0,
+    processingConfig: overrides.processingConfig ?? { width: 800, height: 600 },
+    originalBuffer: overrides.originalBuffer !== undefined ? overrides.originalBuffer : null,
+    processedBuffer: overrides.processedBuffer !== undefined ? overrides.processedBuffer : null,
+    errorMessage: overrides.errorMessage !== undefined ? overrides.errorMessage : null,
+    attempts: overrides.attempts ?? 0,
+    maxAttempts: overrides.maxAttempts ?? 3,
+    createdAt: overrides.createdAt ?? dayjs('2024-01-01').format(),
+    updatedAt: overrides.updatedAt ?? dayjs('2024-01-01').format(),
+    startedAt: overrides.startedAt !== undefined ? overrides.startedAt : null,
+    completedAt: overrides.completedAt !== undefined ? overrides.completedAt : null,
+  };
+};
 
 // ============ Token Blacklist Entity ============
 
@@ -546,16 +609,18 @@ export interface MockTokenBlacklist {
 
 export const createMockTokenBlacklist = (
   overrides: Partial<MockTokenBlacklist> = {},
-): MockTokenBlacklist => ({
-  id: 1,
-  tokenHash: 'abc123hash',
-  tokenType: 'access',
-  userId: 1,
-  reason: 'User logout',
-  expiresAt: dayjs('2024-12-31').format(),
-  createdAt: dayjs('2024-01-01').format(),
-  ...overrides,
-});
+): MockTokenBlacklist => {
+  const suffix = generateUniqueSuffix();
+  return {
+    id: overrides.id ?? generateUniqueId('5'),
+    tokenHash: overrides.tokenHash ?? `hash-${suffix}`,
+    tokenType: overrides.tokenType ?? 'access',
+    userId: overrides.userId !== undefined ? overrides.userId : 1,
+    reason: overrides.reason !== undefined ? overrides.reason : null,
+    expiresAt: overrides.expiresAt ?? dayjs('2024-12-31').format(),
+    createdAt: overrides.createdAt ?? dayjs('2024-01-01').format(),
+  };
+};
 
 // ============ Pipeline Entity ============
 
@@ -576,23 +641,25 @@ export interface MockPipeline {
   updatedAt: string;
 }
 
-export const createMockPipeline = (overrides: Partial<MockPipeline> = {}): MockPipeline => ({
-  id: 1,
-  name: 'Test Pipeline',
-  description: 'A test pipeline',
-  enabled: true,
-  eventName: 'article|afterCreate',
-  script: 'console.log("Hello");',
-  deps: [],
-  status: 'idle',
-  lastRun: null,
-  lastStatus: null,
-  lastError: null,
-  deleted: false,
-  createdAt: dayjs('2024-01-01').format(),
-  updatedAt: dayjs('2024-01-01').format(),
-  ...overrides,
-});
+export const createMockPipeline = (overrides: Partial<MockPipeline> = {}): MockPipeline => {
+  const suffix = generateUniqueSuffix();
+  return {
+    id: overrides.id ?? generateUniqueId('6'),
+    name: overrides.name ?? `pipeline-${suffix}`,
+    description: overrides.description !== undefined ? overrides.description : null,
+    enabled: overrides.enabled ?? true,
+    eventName: overrides.eventName ?? 'article|afterCreate',
+    script: overrides.script ?? 'console.log("Hello");',
+    deps: overrides.deps ?? [],
+    status: overrides.status ?? 'idle',
+    lastRun: overrides.lastRun !== undefined ? overrides.lastRun : null,
+    lastStatus: overrides.lastStatus !== undefined ? overrides.lastStatus : null,
+    lastError: overrides.lastError !== undefined ? overrides.lastError : null,
+    deleted: overrides.deleted ?? false,
+    createdAt: overrides.createdAt ?? dayjs('2024-01-01').format(),
+    updatedAt: overrides.updatedAt ?? dayjs('2024-01-01').format(),
+  };
+};
 
 // ============ Helper Functions ============
 
@@ -605,7 +672,8 @@ export const createMockArticles = (
 ): MockArticle[] => {
   return Array.from({ length: count }, (_, index) =>
     createMockArticle({
-      id: index + 1,
+      id:
+        overrides.id !== undefined ? overrides.id + index : generateUniqueId(`1-${String(index)}`),
       title: `Test Article ${String(index + 1)}`,
       ...overrides,
     }),
@@ -618,7 +686,8 @@ export const createMockArticles = (
 export const createMockTags = (count: number, overrides: Partial<MockTag> = {}): MockTag[] => {
   return Array.from({ length: count }, (_, index) =>
     createMockTag({
-      id: index + 1,
+      id:
+        overrides.id !== undefined ? overrides.id + index : generateUniqueId(`4-${String(index)}`),
       name: `Tag ${String(index + 1)}`,
       slug: `tag-${String(index + 1)}`,
       ...overrides,
@@ -635,7 +704,8 @@ export const createMockCategories = (
 ): MockCategory[] => {
   return Array.from({ length: count }, (_, index) =>
     createMockCategory({
-      id: index + 1,
+      id:
+        overrides.id !== undefined ? overrides.id + index : generateUniqueId(`3-${String(index)}`),
       name: `Category ${String(index + 1)}`,
       slug: `category-${String(index + 1)}`,
       ...overrides,
@@ -649,7 +719,8 @@ export const createMockCategories = (
 export const createMockUsers = (count: number, overrides: Partial<MockUser> = {}): MockUser[] => {
   return Array.from({ length: count }, (_, index) =>
     createMockUser({
-      id: index + 1,
+      id:
+        overrides.id !== undefined ? overrides.id + index : generateUniqueId(`1-${String(index)}`),
       username: `user${String(index + 1)}`,
       email: `user${String(index + 1)}@example.com`,
       ...overrides,
@@ -666,7 +737,8 @@ export const createMockMediaFiles = (
 ): MockMedia[] => {
   return Array.from({ length: count }, (_, index) =>
     createMockMedia({
-      id: index + 1,
+      id:
+        overrides.id !== undefined ? overrides.id + index : generateUniqueId(`6-${String(index)}`),
       filename: `image-${String(index + 1)}.jpg`,
       path: `/uploads/images/image-${String(index + 1)}.jpg`,
       ...overrides,

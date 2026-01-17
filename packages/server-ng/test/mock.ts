@@ -32,6 +32,16 @@ import type { StorageFactoryService } from '../src/modules/media/services/storag
 import { HookService } from '../src/modules/plugin/services/hook.service';
 
 /**
+ * ID 生成器 - 为测试数据生成唯一 ID
+ * 使用时间戳 + 随机数确保唯一性
+ */
+function generateUniqueId(prefix: string = ''): number {
+  const timestamp = Date.now();
+  const random = Math.floor(Math.random() * 10000);
+  return parseInt(`${prefix}${String(timestamp)}${String(random)}`.slice(-10));
+}
+
+/**
  * 类型安全的数据库查询链 Mock 接口
  * 定义完整的 Drizzle ORM 链式调用签名
  */
@@ -821,7 +831,7 @@ export function createConfigServiceMock(
       port: 0,
       username: '',
       password: '',
-      database: ':memory:',
+      database: process.env.DATABASE_URL || 'file:./test.db',
       synchronize: false,
       logging: false,
     },
@@ -1396,7 +1406,7 @@ export function createArticleStats(
   overrides: Partial<Record<string, unknown>> = {},
 ): Record<string, unknown> {
   return {
-    articleId: 1,
+    articleId: overrides.articleId ?? generateUniqueId('1'),
     title: 'Test Article',
     views: 100,
     uniqueVisitors: 50,
@@ -1452,16 +1462,20 @@ export const ServiceMockBuilder = {
  * 创建用户测试数据
  */
 export function createUser(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  const timestamp = Date.now();
+  const random = Math.floor(Math.random() * 10000);
+  const uniqueId = parseInt(`1${String(timestamp)}${String(random)}`.slice(-10));
+  const suffix = `${String(timestamp)}-${String(random)}`;
+
   return {
-    id: 1,
-    username: 'testuser',
-    nickname: 'Test User',
-    email: 'test@example.com',
-    type: 'admin',
-    password: 'hashed-password', // Add password field (NOT NULL constraint)
-    createdAt: dayjs().format(),
-    updatedAt: dayjs().format(),
-    ...overrides,
+    id: overrides.id ?? uniqueId,
+    username: overrides.username ?? `testuser-${suffix}`,
+    nickname: overrides.nickname ?? 'Test User',
+    email: overrides.email ?? `test-${suffix}@example.com`,
+    type: overrides.type ?? 'admin',
+    password: overrides.password ?? 'hashed-password',
+    createdAt: overrides.createdAt ?? dayjs().format(),
+    updatedAt: overrides.updatedAt ?? dayjs().format(),
   };
 }
 
@@ -1469,22 +1483,26 @@ export function createUser(overrides: Record<string, unknown> = {}): Record<stri
  * 创建文章测试数据
  */
 export function createArticle(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  const timestamp = Date.now();
+  const random = Math.floor(Math.random() * 10000);
+  const uniqueId = parseInt(`1${String(timestamp)}${String(random)}`.slice(-10));
+  const suffix = `${String(timestamp)}-${String(random)}`;
+
   return {
-    id: 1,
-    title: 'Test Article',
-    content: 'Test content',
-    tags: JSON.stringify(['test']),
-    author: 'admin',
-    top: 0,
-    hidden: false,
-    private: false,
-    viewer: 10,
-    pathname: null,
-    category: null,
-    password: null,
-    createdAt: dayjs().format(),
-    updatedAt: dayjs().format(),
-    ...overrides,
+    id: overrides.id ?? uniqueId,
+    title: overrides.title ?? 'Test Article',
+    content: overrides.content ?? 'Test content',
+    tags: overrides.tags ?? JSON.stringify(['test']),
+    author: overrides.author ?? 'admin',
+    top: overrides.top !== undefined ? overrides.top : 0,
+    hidden: overrides.hidden ?? false,
+    private: overrides.private ?? false,
+    viewer: overrides.viewer !== undefined ? overrides.viewer : 10,
+    pathname: overrides.pathname !== undefined ? overrides.pathname : `/article-${suffix}`,
+    category: overrides.category !== undefined ? overrides.category : null,
+    password: overrides.password !== undefined ? overrides.password : null,
+    createdAt: overrides.createdAt ?? dayjs().format(),
+    updatedAt: overrides.updatedAt ?? dayjs().format(),
   };
 }
 
@@ -1495,13 +1513,17 @@ export function createArticles(
   count: number,
   overrides: Record<string, unknown> = {},
 ): Record<string, unknown>[] {
-  return Array.from({ length: count }, (_, index) =>
-    createArticle({
-      id: index + 1,
+  return Array.from({ length: count }, (_, index) => {
+    const timestamp = Date.now();
+    const random = Math.floor(Math.random() * 10000);
+    const uniqueId = parseInt(`1${String(timestamp)}${String(random)}${String(index)}`.slice(-10));
+
+    return createArticle({
+      id: overrides.id !== undefined ? (overrides.id as number) + index : uniqueId,
       title: `Test Article ${String(index + 1)}`,
       ...overrides,
-    }),
-  );
+    });
+  });
 }
 
 /**
@@ -1525,13 +1547,17 @@ export function createArticleDto(overrides: Record<string, unknown> = {}): Recor
  * 创建标签测试数据
  */
 export function createTag(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  const timestamp = Date.now();
+  const random = Math.floor(Math.random() * 10000);
+  const uniqueId = parseInt(`4${String(timestamp)}${String(random)}`.slice(-10));
+  const suffix = `${String(timestamp)}-${String(random)}`;
+
   return {
-    id: 1,
-    name: 'Test Tag',
-    slug: 'test-tag',
-    createdAt: dayjs().format(),
-    updatedAt: dayjs().format(),
-    ...overrides,
+    id: overrides.id ?? uniqueId,
+    name: overrides.name ?? `Test Tag ${suffix}`,
+    slug: overrides.slug ?? `test-tag-${suffix}`,
+    createdAt: overrides.createdAt ?? dayjs().format(),
+    updatedAt: overrides.updatedAt ?? dayjs().format(),
   };
 }
 
@@ -1542,30 +1568,39 @@ export function createTags(
   count: number,
   overrides: Record<string, unknown> = {},
 ): Record<string, unknown>[] {
-  return Array.from({ length: count }, (_, index) =>
-    createTag({
-      id: index + 1,
+  return Array.from({ length: count }, (_, index) => {
+    const timestamp = Date.now();
+    const random = Math.floor(Math.random() * 10000);
+    const uniqueId = parseInt(`4${String(timestamp)}${String(random)}${String(index)}`.slice(-10));
+
+    return createTag({
+      id: overrides.id !== undefined ? (overrides.id as number) + index : uniqueId,
       name: `Tag ${String(index + 1)}`,
       slug: `tag-${String(index + 1)}`,
       ...overrides,
-    }),
-  );
+    });
+  });
 }
 
 /**
  * 创建分类测试数据
  */
 export function createCategory(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  const timestamp = Date.now();
+  const random = Math.floor(Math.random() * 10000);
+  const uniqueId = parseInt(`3${String(timestamp)}${String(random)}`.slice(-10));
+  const suffix = `${String(timestamp)}-${String(random)}`;
+
   return {
-    id: 1,
-    name: 'Test Category',
-    slug: undefined,
-    description: 'Test category description',
-    private: false,
-    password: null,
-    createdAt: dayjs().format(),
-    updatedAt: dayjs().format(),
-    articleCount: 0,
+    id: overrides.id ?? uniqueId,
+    name: overrides.name ?? `Test Category ${suffix}`,
+    slug: overrides.slug !== undefined ? overrides.slug : undefined,
+    description: overrides.description ?? 'Test category description',
+    private: overrides.private ?? false,
+    password: overrides.password !== undefined ? overrides.password : null,
+    createdAt: overrides.createdAt ?? dayjs().format(),
+    updatedAt: overrides.updatedAt ?? dayjs().format(),
+    articleCount: overrides.articleCount ?? 0,
     ...overrides,
   };
 }
@@ -1577,29 +1612,38 @@ export function createCategories(
   count: number,
   overrides: Record<string, unknown> = {},
 ): Record<string, unknown>[] {
-  return Array.from({ length: count }, (_, index) =>
-    createCategory({
-      id: index + 1,
+  return Array.from({ length: count }, (_, index) => {
+    const timestamp = Date.now();
+    const random = Math.floor(Math.random() * 10000);
+    const uniqueId = parseInt(`3${String(timestamp)}${String(random)}${String(index)}`.slice(-10));
+
+    return createCategory({
+      id: overrides.id !== undefined ? (overrides.id as number) + index : uniqueId,
       name: `Test Category ${String(index + 1)}`,
       ...overrides,
-    }),
-  );
+    });
+  });
 }
 
 /**
  * 创建评论测试数据
  */
 export function createComment(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  const timestamp = Date.now();
+  const random = Math.floor(Math.random() * 10000);
+  const uniqueId = parseInt(`11${String(timestamp)}${String(random)}`.slice(-10));
+  const suffix = `${String(timestamp)}-${String(random)}`;
+
   return {
-    id: 1,
-    articleId: 1,
-    parentId: null,
-    author: 'Commenter',
-    email: 'commenter@example.com',
-    content: 'This is a test comment.',
-    status: 'approved',
-    createdAt: dayjs().format(),
-    updatedAt: dayjs().format(),
+    id: overrides.id ?? uniqueId,
+    articleId: overrides.articleId ?? generateUniqueId('1'),
+    parentId: overrides.parentId !== undefined ? overrides.parentId : null,
+    author: overrides.author ?? 'Commenter',
+    email: overrides.email ?? `commenter-${suffix}@example.com`,
+    content: overrides.content ?? 'This is a test comment.',
+    status: overrides.status ?? 'approved',
+    createdAt: overrides.createdAt ?? dayjs().format(),
+    updatedAt: overrides.updatedAt ?? dayjs().format(),
     ...overrides,
   };
 }
@@ -1608,17 +1652,22 @@ export function createComment(overrides: Record<string, unknown> = {}): Record<s
  * 创建媒体文件测试数据
  */
 export function createMediaFile(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  const timestamp = Date.now();
+  const random = Math.floor(Math.random() * 10000);
+  const uniqueId = parseInt(`6${String(timestamp)}${String(random)}`.slice(-10));
+  const suffix = `${String(timestamp)}-${String(random)}`;
+
   return {
-    id: 1,
-    filename: 'test.jpg',
-    path: '/uploads/images/test.jpg',
-    size: 1024,
-    mimetype: 'image/jpeg',
-    width: 1920,
-    height: 1080,
-    hash: 'testhash',
-    provider: 'local',
-    createdAt: dayjs().format(),
+    id: overrides.id ?? uniqueId,
+    filename: overrides.filename ?? `test-${suffix}.jpg`,
+    path: overrides.path ?? `/uploads/images/test-${suffix}.jpg`,
+    size: overrides.size ?? 1024,
+    mimetype: overrides.mimetype ?? 'image/jpeg',
+    width: overrides.width ?? 1920,
+    height: overrides.height ?? 1080,
+    hash: overrides.hash ?? 'testhash',
+    provider: overrides.provider ?? 'local',
+    createdAt: overrides.createdAt ?? dayjs().format(),
     ...overrides,
   };
 }
@@ -1630,14 +1679,18 @@ export function createMediaFiles(
   count: number,
   overrides: Record<string, unknown> = {},
 ): Record<string, unknown>[] {
-  return Array.from({ length: count }, (_, index) =>
-    createMediaFile({
-      id: index + 1,
+  return Array.from({ length: count }, (_, index) => {
+    const timestamp = Date.now();
+    const random = Math.floor(Math.random() * 10000);
+    const uniqueId = parseInt(`6${String(timestamp)}${String(random)}${String(index)}`.slice(-10));
+
+    return createMediaFile({
+      id: overrides.id !== undefined ? (overrides.id as number) + index : uniqueId,
       filename: `test${String(index + 1)}.jpg`,
       path: `/uploads/images/test${String(index + 1)}.jpg`,
       ...overrides,
-    }),
-  );
+    });
+  });
 }
 
 /**
@@ -1701,17 +1754,22 @@ export function createHealthStatus(
  * 创建Draft测试数据
  */
 export function createDraft(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  const timestamp = Date.now();
+  const random = Math.floor(Math.random() * 10000);
+  const uniqueId = parseInt(`2${String(timestamp)}${String(random)}`.slice(-10));
+  const suffix = `${String(timestamp)}-${String(random)}`;
+
   return {
-    id: 1,
-    title: 'Test Draft',
-    content: 'Test content',
-    tags: ['test'],
-    author: 'admin',
-    pathname: null,
-    category: null,
-    version: 1,
-    createdAt: dayjs().format(),
-    updatedAt: dayjs().format(),
+    id: overrides.id ?? uniqueId,
+    title: overrides.title ?? 'Test Draft',
+    content: overrides.content ?? 'Test content',
+    tags: overrides.tags ?? ['test'],
+    author: overrides.author ?? 'admin',
+    pathname: overrides.pathname !== undefined ? overrides.pathname : `/draft-${suffix}`,
+    category: overrides.category !== undefined ? overrides.category : null,
+    version: overrides.version ?? 1,
+    createdAt: overrides.createdAt ?? dayjs().format(),
+    updatedAt: overrides.updatedAt ?? dayjs().format(),
     ...overrides,
   };
 }
@@ -1723,13 +1781,17 @@ export function createDrafts(
   count: number,
   overrides: Record<string, unknown> = {},
 ): Record<string, unknown>[] {
-  return Array.from({ length: count }, (_, index) =>
-    createDraft({
-      id: index + 1,
+  return Array.from({ length: count }, (_, index) => {
+    const timestamp = Date.now();
+    const random = Math.floor(Math.random() * 10000);
+    const uniqueId = parseInt(`2${String(timestamp)}${String(random)}${String(index)}`.slice(-10));
+
+    return createDraft({
+      id: overrides.id !== undefined ? (overrides.id as number) + index : uniqueId,
       title: `Draft ${String(index + 1)}`,
       ...overrides,
-    }),
-  );
+    });
+  });
 }
 
 /**
@@ -1738,17 +1800,22 @@ export function createDrafts(
 export function createDraftVersion(
   overrides: Record<string, unknown> = {},
 ): Record<string, unknown> {
+  const timestamp = Date.now();
+  const random = Math.floor(Math.random() * 10000);
+  const uniqueId = parseInt(`5${String(timestamp)}${String(random)}`.slice(-10));
+  const suffix = `${String(timestamp)}-${String(random)}`;
+
   return {
-    id: 1,
-    draftId: 1,
-    version: 1,
-    title: 'Test Draft',
-    content: 'Test content',
-    tags: ['test'],
-    author: 'admin',
-    pathname: null,
-    category: null,
-    createdAt: dayjs().format(),
+    id: overrides.id ?? uniqueId,
+    draftId: overrides.draftId ?? generateUniqueId('2'),
+    version: overrides.version ?? 1,
+    title: overrides.title ?? 'Test Draft',
+    content: overrides.content ?? 'Test content',
+    tags: overrides.tags ?? ['test'],
+    author: overrides.author ?? 'admin',
+    pathname: overrides.pathname !== undefined ? overrides.pathname : `/draft-version-${suffix}`,
+    category: overrides.category !== undefined ? overrides.category : null,
+    createdAt: overrides.createdAt ?? dayjs().format(),
     ...overrides,
   };
 }
@@ -1760,14 +1827,18 @@ export function createDraftVersions(
   count: number,
   overrides: Record<string, unknown> = {},
 ): Record<string, unknown>[] {
-  return Array.from({ length: count }, (_, index) =>
-    createDraftVersion({
-      id: index + 1,
+  return Array.from({ length: count }, (_, index) => {
+    const timestamp = Date.now();
+    const random = Math.floor(Math.random() * 10000);
+    const uniqueId = parseInt(`5${String(timestamp)}${String(random)}${String(index)}`.slice(-10));
+
+    return createDraftVersion({
+      id: overrides.id !== undefined ? (overrides.id as number) + index : uniqueId,
       version: index + 1,
       title: `Version ${String(index + 1)}`,
       ...overrides,
-    }),
-  );
+    });
+  });
 }
 
 export const TestDataFactory = {
@@ -2253,20 +2324,25 @@ export function createSitemapServiceMock(overrides: Record<string, unknown> = {}
  * 创建Pipeline测试数据
  */
 export function createPipeline(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  const timestamp = Date.now();
+  const random = Math.floor(Math.random() * 10000);
+  const uniqueId = parseInt(`6${String(timestamp)}${String(random)}`.slice(-10));
+  const suffix = `${String(timestamp)}-${String(random)}`;
+
   return {
-    id: 1,
-    name: 'Test Pipeline',
-    eventName: 'article|afterCreate',
-    script: 'console.log("test")',
-    enabled: true,
-    deleted: false,
-    status: 'idle',
-    lastRun: null,
-    lastStatus: null,
-    lastError: null,
-    deps: [],
-    createdAt: dayjs().format(),
-    updatedAt: dayjs().format(),
+    id: overrides.id ?? uniqueId,
+    name: overrides.name ?? `Test Pipeline ${suffix}`,
+    eventName: overrides.eventName ?? 'article|afterCreate',
+    script: overrides.script ?? 'console.log("test")',
+    enabled: overrides.enabled ?? true,
+    deleted: overrides.deleted ?? false,
+    status: overrides.status ?? 'idle',
+    lastRun: overrides.lastRun !== undefined ? overrides.lastRun : null,
+    lastStatus: overrides.lastStatus !== undefined ? overrides.lastStatus : null,
+    lastError: overrides.lastError !== undefined ? overrides.lastError : null,
+    deps: overrides.deps ?? [],
+    createdAt: overrides.createdAt ?? dayjs().format(),
+    updatedAt: overrides.updatedAt ?? dayjs().format(),
     ...overrides,
   };
 }
@@ -2278,15 +2354,19 @@ export function createPipelines(
   count: number,
   overrides: Record<string, unknown> = {},
 ): Record<string, unknown>[] {
-  return Array.from({ length: count }, (_, index) =>
-    createPipeline({
-      id: index + 1,
+  return Array.from({ length: count }, (_, index) => {
+    const timestamp = Date.now();
+    const random = Math.floor(Math.random() * 10000);
+    const uniqueId = parseInt(`6${String(timestamp)}${String(random)}${String(index)}`.slice(-10));
+
+    return createPipeline({
+      id: overrides.id !== undefined ? (overrides.id as number) + index : uniqueId,
       name: `Pipeline ${String(index + 1)}`,
       eventName: index % 2 === 0 ? 'article|afterCreate' : 'article|afterUpdate',
       script: `console.log("pipeline ${String(index + 1)}")`,
       ...overrides,
-    }),
-  );
+    });
+  });
 }
 
 /**
