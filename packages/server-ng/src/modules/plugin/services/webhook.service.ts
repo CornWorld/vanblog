@@ -2,7 +2,7 @@ import { createHmac } from 'crypto';
 
 import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import { insertWebhookSchema, updateWebhookSchema } from '@vanblog/shared/drizzle';
-import { eq, and, desc, gte, lte, count, like } from 'drizzle-orm';
+import { eq, and, desc, count, like, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
 import { DATABASE_CONNECTION, type Database } from '../../../database';
@@ -394,13 +394,15 @@ export class WebhookService {
     }
 
     if (startDate) {
-      const sd = new Date(startDate);
-      whereConditions.push(gte(webhookLogs.createdAt, sd));
+      // Use raw SQL for text-based date comparison (ISO 8601 strings are lexicographically comparable)
+      const sd = new Date(startDate).toISOString();
+      whereConditions.push(sql`${webhookLogs.createdAt} >= ${sd}`);
     }
 
     if (endDate) {
-      const ed = new Date(endDate);
-      whereConditions.push(lte(webhookLogs.createdAt, ed));
+      // Use raw SQL for text-based date comparison (ISO 8601 strings are lexicographically comparable)
+      const ed = new Date(endDate).toISOString();
+      whereConditions.push(sql`${webhookLogs.createdAt} <= ${ed}`);
     }
 
     const whereClause = whereConditions.length > 0 ? and(...whereConditions) : undefined;
@@ -448,7 +450,7 @@ export class WebhookService {
           responseCode: log.responseCode,
           errorMessage: log.error,
           executionTime: log.duration,
-          createdAt: log.createdAt.toISOString(),
+          createdAt: log.createdAt instanceof Date ? log.createdAt.toISOString() : log.createdAt,
         };
       }) as Array<{
         id: number;
