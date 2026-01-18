@@ -2,7 +2,7 @@ import { createHmac } from 'crypto';
 
 import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import { insertWebhookSchema, updateWebhookSchema } from '@vanblog/shared/drizzle';
-import { toIsoTzString } from '@vanblog/shared/runtime';
+import { toIsoTzString, dayjs } from '@vanblog/shared/runtime';
 import { eq, and, desc, count, like, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
@@ -395,14 +395,14 @@ export class WebhookService {
     }
 
     if (startDate) {
-      // Use raw SQL for text-based date comparison (ISO 8601 strings are lexicographically comparable)
-      const sd = toIsoTzString(startDate);
+      // Convert startDate to Unix timestamp (seconds)
+      const sd = dayjs(startDate).unix();
       whereConditions.push(sql`${webhookLogs.createdAt} >= ${sd}`);
     }
 
     if (endDate) {
-      // Use raw SQL for text-based date comparison (ISO 8601 strings are lexicographically comparable)
-      const ed = toIsoTzString(endDate);
+      // Convert endDate to Unix timestamp (seconds), end of day
+      const ed = dayjs(endDate).endOf('day').unix();
       whereConditions.push(sql`${webhookLogs.createdAt} <= ${ed}`);
     }
 
@@ -442,6 +442,9 @@ export class WebhookService {
           }
         }
 
+        // Convert createdAt (Unix timestamp in seconds) to ISO string
+        const createdAtStr = dayjs.unix(log.createdAt as number).toISOString();
+
         return {
           id: log.id,
           webhookId: log.webhookId,
@@ -451,8 +454,7 @@ export class WebhookService {
           responseCode: log.responseCode,
           errorMessage: log.error,
           executionTime: log.duration,
-          createdAt:
-            typeof log.createdAt === 'string' ? log.createdAt : log.createdAt.toISOString(),
+          createdAt: createdAtStr,
         };
       }),
       pagination: {

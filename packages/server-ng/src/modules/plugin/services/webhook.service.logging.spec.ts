@@ -26,7 +26,7 @@ import { DATABASE_CONNECTION } from '../../../database';
 import { withTestTransaction } from '@test/utils/db-transaction-helper';
 import { db } from '@test/setup.unit';
 import { Given } from '@test/given';
-import { webhookLogs } from '@vanblog/shared/drizzle';
+import { webhookLogs } from '../entities/webhook.schema';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 
 // Mock fetch globally
@@ -306,7 +306,7 @@ describe('WebhookService - Logging & Statistics', () => {
           responseBody: 'OK',
           error: null,
           duration: 100,
-          createdAt: date1.toISOString(),
+          createdAt: date1,
         });
 
         await tx.insert(webhookLogs as any).values({
@@ -318,7 +318,7 @@ describe('WebhookService - Logging & Statistics', () => {
           responseBody: 'OK',
           error: null,
           duration: 150,
-          createdAt: date2.toISOString(),
+          createdAt: date2,
         });
 
         await tx.insert(webhookLogs as any).values({
@@ -330,7 +330,7 @@ describe('WebhookService - Logging & Statistics', () => {
           responseBody: 'OK',
           error: null,
           duration: 200,
-          createdAt: date3.toISOString(),
+          createdAt: date3,
         });
 
         // Query logs for date range (January to June 2025)
