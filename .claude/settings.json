@@ -1,7 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "permissions": {
-    "defaultMode": "acceptEdits",
     "allow": [
       "Bash(ls -:*)",
       "Bash(ls)",
@@ -56,7 +55,11 @@
       "WebFetch(domain:registry.cn-beijing.aliyuncs.com)",
       "WebFetch(domain:waline.js.org)"
     ],
-    "deny": ["Bash(rm -rf /)", "Bash(rm -rf ~)", "Bash(sudo :*)"],
+    "deny": [
+      "Bash(rm -rf /)",
+      "Bash(rm -rf ~)",
+      "Bash(sudo :*)"
+    ],
     "ask": [
       "Bash(rm :*)",
       "Bash(rmdir :*)",
@@ -88,6 +91,10 @@
       "Bash(curl :*)",
       "Bash(wget :*)",
       "Bash(ssh :*)"
-    ]
+    ],
+    "defaultMode": "acceptEdits"
+  },
+  "enabledPlugins": {
+    "code-review@claude-plugins-official": true
   }
 }
