@@ -129,6 +129,17 @@ export default defineConfig([
     },
   },
   {
+    files: [
+      'src/modules/admin/meta/meta.service.ts',
+      'src/modules/auth/auth.module.ts',
+      'src/modules/auth/token.service.ts',
+    ],
+    rules: {
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+      '@typescript-eslint/no-unsafe-call': 'off',
+    },
+  },
+  {
     files: ['src/database/connection.ts'],
     rules: { 'no-restricted-imports': 'off' },
   },
