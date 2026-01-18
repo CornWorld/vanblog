@@ -9,9 +9,7 @@ import type {
   CustomPage,
 } from '../types/api';
 import type { Article } from '../types/article';
-import type {
-  PageViewDataContract,
-} from '../types/contracts';
+import type { PageViewDataContract } from '../types/contracts';
 import { normalizeAnalyticsOverview, normalizeArticleStats } from '../types/contracts';
 
 /**
