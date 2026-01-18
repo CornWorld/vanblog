@@ -76,6 +76,8 @@ export default defineConfig([
     languageOptions: {
       parserOptions: { ecmaFeatures: { jsx: true } },
       globals: {
+        ...globals.browser,
+        ...globals.node,
         ANT_DESIGN_PRO_ONLY_DO_NOT_USE_IN_YOUR_PRODUCTION: 'readonly',
         page: 'readonly',
         REACT_APP_ENV: 'readonly',
@@ -87,6 +89,14 @@ export default defineConfig([
       'react/react-in-jsx-scope': 'off',
       'react-hooks/rules-of-hooks': 'error',
       'react-hooks/exhaustive-deps': 'warn',
+      'no-unused-vars': [
+        'error',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_',
+        },
+      ],
     },
   },
 
@@ -104,6 +114,16 @@ export default defineConfig([
     files: ['**/*.js', '**/*.cjs', '**/*.mjs'],
     languageOptions: { globals: { ...globals.browser, ...globals.node } },
     plugins: { prettier: prettierPlugin },
-    rules: { 'prettier/prettier': 'error' },
+    rules: {
+      'prettier/prettier': 'error',
+      'no-unused-vars': [
+        'error',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_',
+        },
+      ],
+    },
   },
 ]);
