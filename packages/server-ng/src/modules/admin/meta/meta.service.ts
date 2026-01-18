@@ -96,7 +96,7 @@ export class MetaService {
 
     let hasUpdate = false;
     if (latestVersionInfo) {
-      hasUpdate = semverGt(latestVersionInfo.version, this.currentVersion);
+      hasUpdate = semverGt(latestVersionInfo.version, this.currentVersion) as unknown as boolean;
     }
 
     return {
