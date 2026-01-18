@@ -93,9 +93,11 @@ export class MetaService {
 
     const { latestVersionInfo } = this;
     const latestVersion = latestVersionInfo?.version ?? this.currentVersion;
-    const hasUpdate = latestVersionInfo
-      ? semverGt(latestVersionInfo.version, this.currentVersion)
-      : false;
+
+    let hasUpdate = false;
+    if (latestVersionInfo) {
+      hasUpdate = semverGt(latestVersionInfo.version, this.currentVersion);
+    }
 
     return {
       version: this.currentVersion,

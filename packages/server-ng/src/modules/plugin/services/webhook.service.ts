@@ -451,7 +451,7 @@ export class WebhookService {
           responseCode: log.responseCode,
           errorMessage: log.error,
           executionTime: log.duration,
-          createdAt: log.createdAt,
+          createdAt: log.createdAt.toISOString(),
         };
       }) as Array<{
         id: number;

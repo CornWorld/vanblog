@@ -25,13 +25,16 @@ import type { StringValue } from 'ms';
     DatabaseModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
-      useFactory: (configService: ConfigService): JwtModuleOptions => ({
-        secret: configService.get<string>('JWT_SECRET') ?? 'default-secret-change-me',
-        signOptions: {
-          // Type assertion needed: ConfigService returns string, but JwtModule expects StringValue
-          expiresIn: (configService.get<string>('JWT_EXPIRES_IN') ?? '7d') as StringValue,
-        },
-      }),
+      useFactory: (configService: ConfigService): JwtModuleOptions => {
+        const secret = configService.get<string>('JWT_SECRET') ?? 'default-secret-change-me';
+        const expiresIn = configService.get<string>('JWT_EXPIRES_IN') ?? '7d';
+        return {
+          secret,
+          signOptions: {
+            expiresIn: expiresIn as StringValue,
+          },
+        };
+      },
       inject: [ConfigService],
     }),
   ],
