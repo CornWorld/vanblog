@@ -204,7 +204,7 @@ describe('UserService', () => {
         username: 'user2',
         email: 'user2@example.com',
         nickname: 'User 2',
-        type: 'collaborator',
+        type: 'editor',
         permissions: ['read'],
       });
       expect(result[1].password).toBeUndefined();

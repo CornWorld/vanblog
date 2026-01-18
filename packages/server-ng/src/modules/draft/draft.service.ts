@@ -330,7 +330,7 @@ export class DraftService {
     const [updatedDraft] = result;
 
     // 更新标签关联表
-    if (finalTags !== undefined) {
+    if (finalTags != null) {
       await this.updateDraftTags(id, finalTags);
     }
 

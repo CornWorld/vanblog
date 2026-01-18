@@ -2,6 +2,7 @@ import { createHmac } from 'crypto';
 
 import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import { insertWebhookSchema, updateWebhookSchema } from '@vanblog/shared/drizzle';
+import { toIsoTzString } from '@vanblog/shared/runtime';
 import { eq, and, desc, count, like, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
@@ -395,13 +396,13 @@ export class WebhookService {
 
     if (startDate) {
       // Use raw SQL for text-based date comparison (ISO 8601 strings are lexicographically comparable)
-      const sd = new Date(startDate).toISOString();
+      const sd = toIsoTzString(startDate);
       whereConditions.push(sql`${webhookLogs.createdAt} >= ${sd}`);
     }
 
     if (endDate) {
       // Use raw SQL for text-based date comparison (ISO 8601 strings are lexicographically comparable)
-      const ed = new Date(endDate).toISOString();
+      const ed = toIsoTzString(endDate);
       whereConditions.push(sql`${webhookLogs.createdAt} <= ${ed}`);
     }
 
@@ -450,7 +451,7 @@ export class WebhookService {
           responseCode: log.responseCode,
           errorMessage: log.error,
           executionTime: log.duration,
-          createdAt: log.createdAt instanceof Date ? log.createdAt.toISOString() : log.createdAt,
+          createdAt: log.createdAt,
         };
       }) as Array<{
         id: number;
