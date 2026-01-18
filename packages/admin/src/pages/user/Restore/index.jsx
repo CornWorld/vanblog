@@ -1,4 +1,3 @@
-import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { restore } from '@/services/van-blog/api';
 import { encryptPwd } from '@/services/van-blog/encryptPwd';

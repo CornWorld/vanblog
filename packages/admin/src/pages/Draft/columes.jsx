@@ -1,4 +1,3 @@
-import React from 'react';
 import ColumnsToolBar from '@/components/ColumnsToolBar';
 import PublishDraftModal from '@/components/PublishDraftModal';
 import UpdateModal from '@/components/UpdateModal';

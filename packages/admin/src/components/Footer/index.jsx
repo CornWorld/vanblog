@@ -1,4 +1,3 @@
-import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useEffect, useRef, useMemo } from 'react';
 import { useModel } from '@/router';

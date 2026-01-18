@@ -1,7 +1,6 @@
 import { getLog } from '@/services/van-blog/api';
 import { useNum } from '@/services/van-blog/useNum';
 import { ProTable } from '@ant-design/pro-components';
-import React from 'react';
 import { useTranslation } from 'react-i18next';
 
 export default function () {

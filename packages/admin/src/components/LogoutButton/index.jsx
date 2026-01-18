@@ -1,4 +1,3 @@
-import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { logout } from '@/services/van-blog/api';
 import { Modal, message } from 'antd';

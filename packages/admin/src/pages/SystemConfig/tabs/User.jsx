@@ -1,4 +1,3 @@
-import React from 'react';
 import { useTranslation } from 'react-i18next';
 import CollaboratorModal, { getPermissionLabel } from '@/components/CollaboratorModal';
 import Tags from '@/components/Tags';

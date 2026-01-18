@@ -1,4 +1,3 @@
-import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { checkJsonString } from '@/services/van-blog/checkJson';
 import { ModalForm, ProFormTextArea } from '@ant-design/pro-form';

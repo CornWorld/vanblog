@@ -1,4 +1,3 @@
-import React from 'react';
 import i18next from 'i18next';
 import { Button, message, notification } from 'antd';
 import defaultSettings from '../config/defaultSettings';

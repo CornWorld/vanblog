@@ -1,4 +1,3 @@
-import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useTab } from '@/services/van-blog/useTab';
 import { PageContainer } from '@ant-design/pro-layout';

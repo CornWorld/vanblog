@@ -1,4 +1,3 @@
-import React from 'react';
 import { useTranslation } from 'react-i18next';
 import CodeEditor from '@/components/CodeEditor';
 import { getCustomCode, updateCustomCode } from '@/services/van-blog/api';

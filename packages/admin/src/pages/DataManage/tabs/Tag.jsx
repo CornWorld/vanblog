@@ -1,4 +1,3 @@
-import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { deleteTag, getTags, updateTag } from '@/services/van-blog/api';
 import { ModalForm, ProFormText, ProTable } from '@ant-design/pro-components';

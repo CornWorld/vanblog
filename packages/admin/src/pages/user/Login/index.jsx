@@ -1,4 +1,3 @@
-import React from 'react';
 import { useTranslation } from 'react-i18next';
 import Footer from '@/components/Footer';
 import { login } from '@/services/van-blog/api';

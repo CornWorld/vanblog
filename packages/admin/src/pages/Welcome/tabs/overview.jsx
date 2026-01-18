@@ -1,4 +1,3 @@
-import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Area } from '@ant-design/plots';
 import { ProCard, StatisticCard } from '@ant-design/pro-components';

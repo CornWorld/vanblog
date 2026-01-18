@@ -1,4 +1,3 @@
-import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { deleteSocial, getSocial, getSocialTypes, updateSocial } from '@/services/van-blog/api';
 import { EditableProTable } from '@ant-design/pro-components';

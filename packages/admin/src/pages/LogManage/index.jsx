@@ -1,4 +1,3 @@
-import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { PageContainer } from '@ant-design/pro-components';
 import { Tabs } from 'antd';
