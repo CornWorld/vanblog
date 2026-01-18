@@ -451,19 +451,10 @@ export class WebhookService {
           responseCode: log.responseCode,
           errorMessage: log.error,
           executionTime: log.duration,
-          createdAt: log.createdAt.toISOString(),
+          createdAt:
+            typeof log.createdAt === 'string' ? log.createdAt : log.createdAt.toISOString(),
         };
-      }) as Array<{
-        id: number;
-        webhookId: number;
-        event: string;
-        payload: Record<string, unknown> | string;
-        status: string;
-        responseCode: number | null;
-        errorMessage: string | null;
-        executionTime: number | null;
-        createdAt: string;
-      }>,
+      }),
       pagination: {
         page,
         limit,
