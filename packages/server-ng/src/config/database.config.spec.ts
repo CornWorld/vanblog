@@ -252,13 +252,14 @@ describe('database.config', () => {
 
     it('should handle whitespace in environment variables', () => {
       process.env.DATABASE_DRIVER = 'local';
-      const testUrlWithWhitespace = '  file:./test.db  ';
-      process.env.DATABASE_URL = testUrlWithWhitespace;
+      // Test that whitespace is preserved in URL values (not a default path)
+      const urlWithWhitespace = '  file:./test.db  ';
+      process.env.DATABASE_URL = urlWithWhitespace;
 
       const config = databaseConfig();
 
       expect(config.driver).toBe('local');
-      expect(config.url).toBe(testUrlWithWhitespace);
+      expect(config.url).toBe(urlWithWhitespace);
     });
 
     it('should be case-sensitive for driver names', () => {
