@@ -52,7 +52,7 @@ export class TokenService {
     const refreshExpiresIn = this.configService.get<string>('JWT_REFRESH_EXPIRES_IN', '7d');
 
     const accessToken = this.jwtService.sign(payload, {
-      expiresIn: expiresIn as StringValue,
+      expiresIn: expiresIn as unknown as StringValue,
     });
 
     const refreshPayload: JwtPayload & { tokenType: string } = {
@@ -61,7 +61,7 @@ export class TokenService {
     };
 
     const refreshToken = this.jwtService.sign(refreshPayload, {
-      expiresIn: refreshExpiresIn as StringValue,
+      expiresIn: refreshExpiresIn as unknown as StringValue,
     });
 
     // 存储刷新令牌信息
@@ -97,7 +97,7 @@ export class TokenService {
       customExpiresIn ?? this.configService.get<string>('JWT_GUEST_EXPIRES_IN', '12h');
 
     return this.jwtService.sign(payload, {
-      expiresIn: expiresIn as StringValue,
+      expiresIn: expiresIn as unknown as StringValue,
     });
   }
 

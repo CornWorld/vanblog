@@ -31,7 +31,7 @@ import type { StringValue } from 'ms';
         return {
           secret,
           signOptions: {
-            expiresIn: expiresIn as StringValue,
+            expiresIn: expiresIn as unknown as StringValue,
           },
         };
       },
