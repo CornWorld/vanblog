@@ -16,8 +16,6 @@ import { LocalStrategy } from './strategies/local.strategy';
 import { TokenBlacklistService } from './token-blacklist.service';
 import { TokenService } from './token.service';
 
-import type { StringValue } from 'ms';
-
 @Module({
   imports: [
     forwardRef(() => UserModule),
@@ -31,7 +29,7 @@ import type { StringValue } from 'ms';
         return {
           secret,
           signOptions: {
-            expiresIn: expiresIn as unknown as StringValue,
+            expiresIn,
           },
         };
       },
