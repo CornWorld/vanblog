@@ -306,7 +306,7 @@ describe('WebhookService - Logging & Statistics', () => {
           responseBody: 'OK',
           error: null,
           duration: 100,
-          createdAt: date1,
+          createdAt: date1.toISOString(),
         });
 
         await tx.insert(webhookLogs as any).values({
@@ -318,7 +318,7 @@ describe('WebhookService - Logging & Statistics', () => {
           responseBody: 'OK',
           error: null,
           duration: 150,
-          createdAt: date2,
+          createdAt: date2.toISOString(),
         });
 
         await tx.insert(webhookLogs as any).values({
@@ -330,7 +330,7 @@ describe('WebhookService - Logging & Statistics', () => {
           responseBody: 'OK',
           error: null,
           duration: 200,
-          createdAt: date3,
+          createdAt: date3.toISOString(),
         });
 
         // Query logs for date range (January to June 2025)

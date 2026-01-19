@@ -1,6 +1,6 @@
-import { sql } from 'drizzle-orm';
 import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core';
 import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
+import { nowIsoTz } from '@vanblog/shared/runtime';
 
 import type { z } from 'zod';
 
@@ -13,15 +13,15 @@ export const webhooks = sqliteTable('webhooks', {
   active: integer('active', { mode: 'boolean' }).notNull().default(true),
   retryCount: integer('retry_count').notNull().default(3),
   timeout: integer('timeout').notNull().default(30000), // 30 seconds
-  lastTriggered: integer('last_triggered', { mode: 'timestamp' }),
+  lastTriggered: text('last_triggered'), // ISO 8601 string
   lastStatus: text('last_status'), // 'success', 'failed', 'timeout'
   lastError: text('last_error'),
-  createdAt: integer('created_at', { mode: 'timestamp' })
+  createdAt: text('created_at')
     .notNull()
-    .default(sql`(unixepoch())`),
-  updatedAt: integer('updated_at', { mode: 'timestamp' })
+    .$defaultFn(() => nowIsoTz()),
+  updatedAt: text('updated_at')
     .notNull()
-    .default(sql`(unixepoch())`),
+    .$defaultFn(() => nowIsoTz()),
 });
 
 export const webhookLogs = sqliteTable('webhook_logs', {
@@ -36,9 +36,9 @@ export const webhookLogs = sqliteTable('webhook_logs', {
   responseBody: text('response_body'),
   error: text('error'),
   duration: integer('duration'), // milliseconds
-  createdAt: integer('created_at', { mode: 'timestamp' })
+  createdAt: text('created_at')
     .notNull()
-    .default(sql`(unixepoch())`),
+    .$defaultFn(() => nowIsoTz()),
 });
 
 // Zod schemas

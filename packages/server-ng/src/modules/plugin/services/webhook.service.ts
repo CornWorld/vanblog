@@ -2,7 +2,7 @@ import { createHmac } from 'crypto';
 
 import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import { insertWebhookSchema, updateWebhookSchema } from '@vanblog/shared/drizzle';
-import { toIsoTzString, dayjs } from '@vanblog/shared/runtime';
+import { dayjs } from '@vanblog/shared/runtime';
 import { eq, and, desc, count, like, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
@@ -151,7 +151,7 @@ export class WebhookService {
       .update(webhooks)
       .set({
         ...updateData,
-        updatedAt: new Date(),
+        updatedAt: dayjs().toISOString(),
       })
       .where(eq(webhooks.id, id))
       .returning();
@@ -316,10 +316,10 @@ export class WebhookService {
     await this.db
       .update(webhooks)
       .set({
-        lastTriggered: new Date(),
+        lastTriggered: dayjs().toISOString(),
         lastStatus: status,
         lastError: success ? null : lastError,
-        updatedAt: new Date(),
+        updatedAt: dayjs().toISOString(),
       })
       .where(eq(webhooks.id, webhook.id));
 
@@ -395,14 +395,12 @@ export class WebhookService {
     }
 
     if (startDate) {
-      // Convert startDate to Unix timestamp (seconds)
-      const sd = dayjs(startDate).unix();
+      const sd = dayjs(startDate).startOf('day').toISOString();
       whereConditions.push(sql`${webhookLogs.createdAt} >= ${sd}`);
     }
 
     if (endDate) {
-      // Convert endDate to Unix timestamp (seconds), end of day
-      const ed = dayjs(endDate).endOf('day').unix();
+      const ed = dayjs(endDate).endOf('day').toISOString();
       whereConditions.push(sql`${webhookLogs.createdAt} <= ${ed}`);
     }
 
@@ -442,9 +440,6 @@ export class WebhookService {
           }
         }
 
-        // Convert createdAt (Unix timestamp in seconds) to ISO string
-        const createdAtStr = dayjs.unix(log.createdAt as number).toISOString();
-
         return {
           id: log.id,
           webhookId: log.webhookId,
@@ -454,7 +449,7 @@ export class WebhookService {
           responseCode: log.responseCode,
           errorMessage: log.error,
           executionTime: log.duration,
-          createdAt: createdAtStr,
+          createdAt: log.createdAt,
         };
       }),
       pagination: {
