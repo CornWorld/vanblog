@@ -7,6 +7,145 @@ import { DATABASE_CONNECTION } from '../src/database';
 import type { INestApplication } from '@nestjs/common';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import type { Server } from 'http';
+import type { TestingModule } from '@nestjs/testing';
+import { Test } from '@nestjs/testing';
+import { ValidationPipe, VersioningType } from '@nestjs/common';
+import { AppModule } from '../src/app.module';
+import { ConfigService } from '../src/config';
+
+/**
+ * 扩展 supertest 支持认证
+ *
+ * 添加 .auth(token) 方法用于自动设置 Authorization 头
+ *
+ * @example
+ * await request(httpServer)
+ *   .post('/api/v2/articles')
+ *   .auth(authToken)
+ *   .send({ title: 'Test' })
+ *   .expect(201);
+ */
+declare module 'supertest' {
+  interface Test {
+    /**
+     * 设置 Bearer Token 认证
+     * @param token - JWT token
+     */
+    auth(token: string): this;
+  }
+}
+
+// 实现 .auth() 方法
+request.Test.prototype.auth = function (token: string) {
+  return this.set('Authorization', `Bearer ${token}`);
+};
+
+/**
+ * 测试 ID 生成器
+ *
+ * 使用简单的递增计数器为测试生成唯一 ID，避免使用 Date.now() 导致的时间戳混淆。
+ * 这是所有测试工具的统一 ID 生成器，确保跨文件的 ID 唯一性。
+ *
+ * @example
+ * const id1 = generateTestId(); // 1
+ * const id2 = generateTestId(); // 2
+ * const id3 = generateTestId(); // 3
+ */
+let testIdCounter = 1;
+export function generateTestId(): number {
+  return testIdCounter++;
+}
+
+/**
+ * 重置测试 ID 计数器
+ *
+ * 在每个测试套件的 beforeEach 中调用，确保 ID 可预测。
+ *
+ * @example
+ * // 在测试文件中
+ * import { resetTestIdCounter } from './test-utils';
+ *
+ * beforeEach(() => {
+ *   resetTestIdCounter();
+ * });
+ */
+export function resetTestIdCounter(): void {
+  testIdCounter = 1;
+}
+
+/**
+ * 测试应用配置选项
+ */
+export interface TestAppOptions {
+  /**
+   * 是否启用完整配置（ValidationPipe、API 前缀、版本控制）
+   * @default true
+   */
+  fullConfig?: boolean;
+
+  /**
+   * 是否覆盖 providers（用于 mock 服务）
+   * @default []
+   */
+  overrideProviders?: Array<{ provide: any; useValue: any }>;
+}
+
+/**
+ * 创建测试应用实例
+ *
+ * 统一的 E2E 测试应用工厂函数，消除重复的初始化代码。
+ *
+ * @param options - 配置选项
+ * @returns NestJS 应用实例
+ *
+ * @example
+ * // 使用完整配置（默认）
+ * const app = await createTestApp();
+ *
+ * @example
+ * // 使用简化配置
+ * const app = await createTestApp({ fullConfig: false });
+ *
+ * @example
+ * // 覆盖 providers
+ * const app = await createTestApp({
+ *   overrideProviders: [
+ *     { provide: MyService, useValue: mockService }
+ *   ]
+ * });
+ */
+export async function createTestApp(options: TestAppOptions = {}): Promise<INestApplication> {
+  const { fullConfig = true, overrideProviders = [] } = options;
+
+  const appModule = AppModule.forRoot();
+  let moduleBuilder = Test.createTestingModule({
+    imports: [appModule],
+  });
+
+  // 应用 provider 覆盖
+  for (const override of overrideProviders) {
+    moduleBuilder = moduleBuilder.overrideProvider(override.provide).useValue(override.useValue);
+  }
+
+  const moduleFixture: TestingModule = await moduleBuilder.compile();
+  const app = moduleFixture.createNestApplication();
+
+  if (fullConfig) {
+    // 完整配置：模拟生产环境
+    app.useGlobalPipes(new ValidationPipe({ transform: true }));
+
+    const configService = app.get(ConfigService);
+    const appConfig = configService.app;
+    app.setGlobalPrefix(appConfig.apiPrefix);
+    app.enableVersioning({
+      type: VersioningType.URI,
+      defaultVersion: '2',
+    });
+  }
+
+  await app.init();
+  return app;
+}
 
 interface LoginResponse {
   token: string;
@@ -82,6 +221,60 @@ export async function createAuthToken(
 
   const body = response.body as LoginResponse;
   return body.token;
+}
+
+/**
+ * 自定义断言辅助函数
+ */
+export const assertions = {
+  /**
+   * 断言响应成功（200-299）
+   */
+  expectSuccess(status: number) {
+    expect(status).toBeGreaterThanOrEqual(200);
+    expect(status).toBeLessThan(300);
+  },
+
+  /**
+   * 断言未授权（401 或 403）
+   */
+  expectUnauthorized(status: number) {
+    expect([401, 403]).toContain(status);
+  },
+
+  /**
+   * 断言包含必要字段
+   */
+  expectHasFields<T extends Record<string, any>>(obj: T, fields: (keyof T)[]) {
+    fields.forEach((field) => {
+      expect(obj).toHaveProperty(field);
+      expect(obj[field]).toBeDefined();
+    });
+  },
+
+  /**
+   * 断言分页响应格式
+   */
+  expectPaginatedResponse(response: any) {
+    expect(response).toHaveProperty('data');
+    expect(Array.isArray(response.data)).toBeTruthy();
+    // 可选的分页元数据
+    if (response.total !== undefined) {
+      expect(typeof response.total).toBe('number');
+    }
+  },
+};
+
+/**
+ * 数据清理辅助函数
+ */
+export async function cleanupTables(
+  db: LibSQLDatabase,
+  tables: Array<any>,
+): Promise<void> {
+  for (const table of tables) {
+    await db.delete(table).execute();
+  }
 }
 
 export async function cleanupDatabase(app: INestApplication): Promise<void> {
