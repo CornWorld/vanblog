@@ -9,6 +9,7 @@ import { Mock, type MockedHookService } from '@test/mock';
 import { withTestTransaction } from '@test/utils/db-transaction-helper';
 import { db } from '@test/setup.unit';
 import { Given } from '@test/given';
+import { generateTestId } from '@test/test-utils';
 import { articles } from '@vanblog/shared/drizzle';
 import { ConfigService } from '../../config/config.service';
 import { DATABASE_CONNECTION } from '../../database';
@@ -21,8 +22,8 @@ import type { ArticleSearchDto } from './dto/article.dto';
 
 // Test helper to create a user in the current transaction context
 async function createTestUser(tx: any, userId?: number) {
-  // Use unique ID based on timestamp if not provided
-  const uniqueId = userId ?? Date.now() + Math.floor(Math.random() * 1000);
+  // Use unique ID from generator if not provided
+  const uniqueId = userId ?? generateTestId();
   await Given.user(tx, {
     id: uniqueId,
     username: `testuser${String(uniqueId)}`,

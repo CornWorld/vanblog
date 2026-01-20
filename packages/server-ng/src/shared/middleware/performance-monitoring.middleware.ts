@@ -1,4 +1,5 @@
 import { Injectable, NestMiddleware, Logger } from '@nestjs/common';
+import { nowIsoTz, dayjs } from '@vanblog/shared/runtime';
 
 import type { Request, Response, NextFunction } from 'express';
 
@@ -12,7 +13,8 @@ interface RequestMetrics {
   path: string;
   statusCode: number;
   duration: number;
-  timestamp: Date;
+  /** ISO 8601 timestamp string */
+  timestamp: string;
   memoryUsage: NodeJS.MemoryUsage;
   ip: string;
   userAgent: string;
@@ -61,14 +63,14 @@ export class PerformanceMonitoringMiddleware implements NestMiddleware {
     { totalDuration: number; count: number; errors: number }
   >();
   private static readonly memorySnapshots: number[] = [];
-  private static startTime = Date.now();
+  private static startTime = nowIsoTz();
 
   // 配置项
   private static readonly MAX_METRICS_HISTORY = 1000; // 最多保存1000条请求记录
   private static readonly MAX_MEMORY_SNAPSHOTS = 100; // 最多保存100个内存快照
   private static readonly MEMORY_SNAPSHOT_INTERVAL = 30000; // 30秒记录一次内存快照
 
-  private static lastMemorySnapshot = 0;
+  private static lastMemorySnapshot = nowIsoTz();
 
   /**
    * 中间件处理函数
@@ -81,7 +83,7 @@ export class PerformanceMonitoringMiddleware implements NestMiddleware {
    * @param next 下一个中间件函数
    */
   use(req: Request, res: Response, next: NextFunction): void {
-    const startTime = Date.now();
+    const startTimeStr = nowIsoTz();
     const { method, originalUrl } = req;
 
     // 记录内存快照（定期）
@@ -93,7 +95,7 @@ export class PerformanceMonitoringMiddleware implements NestMiddleware {
     }
 
     res.on('finish', () => {
-      const duration = Date.now() - startTime;
+      const duration = dayjs().diff(dayjs(startTimeStr), 'millisecond');
       const { statusCode } = res;
       const requestIp = req.ip ?? 'unknown';
 
@@ -102,7 +104,7 @@ export class PerformanceMonitoringMiddleware implements NestMiddleware {
 
       // 收集性能指标
       const metrics: RequestMetrics = {
-        timestamp: new Date(startTime),
+        timestamp: startTimeStr,
         method,
         path: originalUrl,
         statusCode,
@@ -139,11 +141,10 @@ export class PerformanceMonitoringMiddleware implements NestMiddleware {
    * 采用固定间隔采样，避免过度频繁的内存检查。
    */
   private recordMemorySnapshot(): void {
-    const now = Date.now();
-    if (
-      now - PerformanceMonitoringMiddleware.lastMemorySnapshot >
-      PerformanceMonitoringMiddleware.MEMORY_SNAPSHOT_INTERVAL
-    ) {
+    const now = nowIsoTz();
+    const diff = dayjs(now).diff(dayjs(PerformanceMonitoringMiddleware.lastMemorySnapshot), 'millisecond');
+
+    if (diff > PerformanceMonitoringMiddleware.MEMORY_SNAPSHOT_INTERVAL) {
       const memoryUsage = process.memoryUsage();
       PerformanceMonitoringMiddleware.memorySnapshots.push(memoryUsage.heapUsed);
 
@@ -204,8 +205,8 @@ export class PerformanceMonitoringMiddleware implements NestMiddleware {
    * @returns 性能统计数据
    */
   static getPerformanceStats(): PerformanceStats {
-    const now = Date.now();
-    const uptimeSeconds = (now - this.startTime) / 1000;
+    const now = nowIsoTz();
+    const uptimeSeconds = dayjs(now).diff(dayjs(this.startTime), 'second');
 
     const totalRequests = this.requestMetrics.length;
     const totalDuration = this.requestMetrics.reduce((sum, m) => sum + m.duration, 0);
@@ -286,8 +287,8 @@ export class PerformanceMonitoringMiddleware implements NestMiddleware {
     this.requestMetrics.length = 0;
     this.endpointStats.clear();
     this.memorySnapshots.length = 0;
-    this.startTime = Date.now();
-    this.lastMemorySnapshot = 0;
+    this.startTime = nowIsoTz();
+    this.lastMemorySnapshot = nowIsoTz();
   }
 
   /**

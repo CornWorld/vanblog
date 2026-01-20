@@ -7,6 +7,7 @@ import { Mock } from '@test/mock';
 import { withTestTransaction } from '@test/utils/db-transaction-helper';
 import { db } from '@test/setup.unit';
 import { Given } from '@test/given';
+import { generateTestId } from '@test/test-utils';
 import { articles, categories } from '@vanblog/shared/drizzle';
 
 import { DATABASE_CONNECTION } from '../../database';
@@ -29,9 +30,9 @@ const createTestCategory = async (tx: any, categoryName: string) => {
 
 // Helper function to create a test article
 const createTestArticle = async (tx: any, overrides: any = {}) => {
-  // Generate unique pathname based on title or timestamp
-  // const _title = overrides.title || 'Test Article';
-  const uniqueSuffix = String(Date.now()) + Math.random().toString(36).substring(7);
+  // Generate unique pathname using test ID generator
+  const uniqueId = generateTestId();
+  const uniqueSuffix = String(uniqueId) + Math.random().toString(36).substring(7);
 
   return await tx
     .insert(articles)

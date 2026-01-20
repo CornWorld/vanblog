@@ -2,6 +2,8 @@ import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { unlinkSync, existsSync } from 'fs';
 import { join } from 'path';
 
+import { generateTestId } from '@test/test-utils';
+
 import type { DatabaseConfig } from '../config/database.config';
 import type { LoggerService } from '../core/logger/logger.service';
 
@@ -13,7 +15,7 @@ import { createDatabaseConnection } from './connection';
 
 describe('Database Connection', () => {
   let mockLogger: LoggerService;
-  const testDbPath = join('/tmp/claude', `test-connection-${String(Date.now())}.db`);
+  const testDbPath = join('/tmp/claude', `test-connection-${String(generateTestId())}.db`);
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -81,7 +83,7 @@ describe('Database Connection', () => {
     });
 
     it('should create connection with custom local URL', async () => {
-      const customDbPath = join('/tmp/claude', `test-custom-${String(Date.now())}.db`);
+      const customDbPath = join('/tmp/claude', `test-custom-${String(generateTestId())}.db`);
       const config: DatabaseConfig = {
         driver: 'local',
         url: `file:${customDbPath}`,
@@ -162,7 +164,7 @@ describe('Database Connection', () => {
 
   describe('D1 Driver', () => {
     it('should create connection with D1 config and custom URL', async () => {
-      const d1DbPath = join('/tmp/claude', `test-d1-${String(Date.now())}.db`);
+      const d1DbPath = join('/tmp/claude', `test-d1-${String(generateTestId())}.db`);
       const config: DatabaseConfig = {
         driver: 'd1',
         url: `file:${d1DbPath}`,
@@ -200,7 +202,7 @@ describe('Database Connection', () => {
     });
 
     it('should enable foreign key constraints for D1 database', async () => {
-      const d1DbPath = join('/tmp/claude', `test-d1-fk-${String(Date.now())}.db`);
+      const d1DbPath = join('/tmp/claude', `test-d1-fk-${String(generateTestId())}.db`);
       const config: DatabaseConfig = {
         driver: 'd1',
         url: `file:${d1DbPath}`,

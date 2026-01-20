@@ -350,7 +350,7 @@ describe('Cache Performance (cache.perf.spec.ts)', () => {
       `Concurrent R/W - Reads: ${String(reads.length)}, Writes: ${String(writes.length)}, Avg read: ${avgReadTime.toFixed(3)}ms, Avg write: ${avgWriteTime.toFixed(3)}ms, Cache size: ${String(cache.size)}`,
     );
 
-    expect(deadlockDetected).toBe(false);
+    expect(deadlockDetected).toBeFalsy();
     expect(reads.length + writes.length).toBe(operationCount);
   });
 

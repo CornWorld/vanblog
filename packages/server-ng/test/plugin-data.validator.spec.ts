@@ -11,7 +11,7 @@ describe('PluginDataValidator', () => {
   it('validates with schema: pass', () => {
     const schema = z.object({ a: z.string() });
     const res = validator.validatePluginData('plugin-x', { a: 'ok' }, schema);
-    expect(res.valid).toBe(true);
+    expect(res.valid).toBeTruthy();
     const norm = validator.normalizeProviderResult('plugin-x', { schema, data: { a: 'ok' } });
     expect(norm).toEqual({ a: 'ok' });
   });
@@ -19,7 +19,7 @@ describe('PluginDataValidator', () => {
   it('validates with schema: fail -> dropped', () => {
     const schema = z.object({ a: z.string() });
     const res = validator.validatePluginData('plugin-x', { a: 1 }, schema);
-    expect(res.valid).toBe(false);
+    expect(res.valid).toBeFalsy();
     expect(res.errors?.length).toBeGreaterThan(0);
     const norm = validator.normalizeProviderResult('plugin-x', { schema, data: { a: 1 } });
     expect(norm).toBeUndefined();

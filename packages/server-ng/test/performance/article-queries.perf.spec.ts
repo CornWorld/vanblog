@@ -318,7 +318,7 @@ describe('Article Query Performance (article-queries.perf.spec.ts)', () => {
       );
 
       // Performance should not degrade significantly
-      expect(degradationDetected).toBe(false);
+      expect(degradationDetected).toBeFalsy();
     });
   });
 

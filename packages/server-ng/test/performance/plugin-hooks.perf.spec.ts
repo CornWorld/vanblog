@@ -294,7 +294,7 @@ describe('Plugin Hook System Performance (plugin-hooks.perf.spec.ts)', () => {
       measurements.push(end - start);
 
       expect(result.dbData).toBeDefined();
-      expect(result.processed).toBe(true);
+      expect(result.processed).toBeTruthy();
     }
 
     const mean = measurements.reduce((a, b) => a + b, 0) / measurements.length;
