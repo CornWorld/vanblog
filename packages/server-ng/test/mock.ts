@@ -31,14 +31,15 @@ import type {
 import type { StorageFactoryService } from '../src/modules/media/services/storage-factory.service';
 import { HookService } from '../src/modules/plugin/services/hook.service';
 
+import { generateTestId } from './test-utils';
+
 /**
  * ID 生成器 - 为测试数据生成唯一 ID
- * 使用时间戳 + 随机数确保唯一性
+ * 使用共享的 generateTestId() 确保跨文件的 ID 唯一性
  */
 function generateUniqueId(prefix: string = ''): number {
-  const timestamp = Date.now();
-  const random = Math.floor(Math.random() * 10000);
-  return parseInt(`${prefix}${String(timestamp)}${String(random)}`.slice(-10));
+  const id = generateTestId();
+  return parseInt(`${prefix}${String(id)}`.slice(-10));
 }
 
 /**
@@ -1462,10 +1463,9 @@ export const ServiceMockBuilder = {
  * 创建用户测试数据
  */
 export function createUser(overrides: Record<string, unknown> = {}): Record<string, unknown> {
-  const timestamp = Date.now();
-  const random = Math.floor(Math.random() * 10000);
-  const uniqueId = parseInt(`1${String(timestamp)}${String(random)}`.slice(-10));
-  const suffix = `${String(timestamp)}-${String(random)}`;
+  const id = generateTestId();
+  const uniqueId = parseInt(`1${String(id)}`.slice(-10));
+  const suffix = `${String(id)}`;
 
   return {
     id: overrides.id ?? uniqueId,
@@ -1483,10 +1483,9 @@ export function createUser(overrides: Record<string, unknown> = {}): Record<stri
  * 创建文章测试数据
  */
 export function createArticle(overrides: Record<string, unknown> = {}): Record<string, unknown> {
-  const timestamp = Date.now();
-  const random = Math.floor(Math.random() * 10000);
-  const uniqueId = parseInt(`1${String(timestamp)}${String(random)}`.slice(-10));
-  const suffix = `${String(timestamp)}-${String(random)}`;
+  const id = generateTestId();
+  const uniqueId = parseInt(`1${String(id)}`.slice(-10));
+  const suffix = `${String(id)}`;
 
   return {
     id: overrides.id ?? uniqueId,
@@ -1514,9 +1513,8 @@ export function createArticles(
   overrides: Record<string, unknown> = {},
 ): Record<string, unknown>[] {
   return Array.from({ length: count }, (_, index) => {
-    const timestamp = Date.now();
-    const random = Math.floor(Math.random() * 10000);
-    const uniqueId = parseInt(`1${String(timestamp)}${String(random)}${String(index)}`.slice(-10));
+    const id = generateTestId();
+    const uniqueId = parseInt(`1${String(id)}${String(index)}`.slice(-10));
 
     return createArticle({
       id: overrides.id !== undefined ? (overrides.id as number) + index : uniqueId,
@@ -1547,10 +1545,9 @@ export function createArticleDto(overrides: Record<string, unknown> = {}): Recor
  * 创建标签测试数据
  */
 export function createTag(overrides: Record<string, unknown> = {}): Record<string, unknown> {
-  const timestamp = Date.now();
-  const random = Math.floor(Math.random() * 10000);
-  const uniqueId = parseInt(`4${String(timestamp)}${String(random)}`.slice(-10));
-  const suffix = `${String(timestamp)}-${String(random)}`;
+  const id = generateTestId();
+  const uniqueId = parseInt(`4${String(id)}`.slice(-10));
+  const suffix = `${String(id)}`;
 
   return {
     id: overrides.id ?? uniqueId,
@@ -1569,9 +1566,8 @@ export function createTags(
   overrides: Record<string, unknown> = {},
 ): Record<string, unknown>[] {
   return Array.from({ length: count }, (_, index) => {
-    const timestamp = Date.now();
-    const random = Math.floor(Math.random() * 10000);
-    const uniqueId = parseInt(`4${String(timestamp)}${String(random)}${String(index)}`.slice(-10));
+    const id = generateTestId();
+    const uniqueId = parseInt(`4${String(id)}${String(index)}`.slice(-10));
 
     return createTag({
       id: overrides.id !== undefined ? (overrides.id as number) + index : uniqueId,
@@ -1586,10 +1582,9 @@ export function createTags(
  * 创建分类测试数据
  */
 export function createCategory(overrides: Record<string, unknown> = {}): Record<string, unknown> {
-  const timestamp = Date.now();
-  const random = Math.floor(Math.random() * 10000);
-  const uniqueId = parseInt(`3${String(timestamp)}${String(random)}`.slice(-10));
-  const suffix = `${String(timestamp)}-${String(random)}`;
+  const id = generateTestId();
+  const uniqueId = parseInt(`3${String(id)}`.slice(-10));
+  const suffix = `${String(id)}`;
 
   return {
     id: overrides.id ?? uniqueId,
@@ -1613,9 +1608,8 @@ export function createCategories(
   overrides: Record<string, unknown> = {},
 ): Record<string, unknown>[] {
   return Array.from({ length: count }, (_, index) => {
-    const timestamp = Date.now();
-    const random = Math.floor(Math.random() * 10000);
-    const uniqueId = parseInt(`3${String(timestamp)}${String(random)}${String(index)}`.slice(-10));
+    const id = generateTestId();
+    const uniqueId = parseInt(`3${String(id)}${String(index)}`.slice(-10));
 
     return createCategory({
       id: overrides.id !== undefined ? (overrides.id as number) + index : uniqueId,
@@ -1629,10 +1623,9 @@ export function createCategories(
  * 创建评论测试数据
  */
 export function createComment(overrides: Record<string, unknown> = {}): Record<string, unknown> {
-  const timestamp = Date.now();
-  const random = Math.floor(Math.random() * 10000);
-  const uniqueId = parseInt(`11${String(timestamp)}${String(random)}`.slice(-10));
-  const suffix = `${String(timestamp)}-${String(random)}`;
+  const id = generateTestId();
+  const uniqueId = parseInt(`11${String(id)}`.slice(-10));
+  const suffix = `${String(id)}`;
 
   return {
     id: overrides.id ?? uniqueId,
@@ -1652,10 +1645,9 @@ export function createComment(overrides: Record<string, unknown> = {}): Record<s
  * 创建媒体文件测试数据
  */
 export function createMediaFile(overrides: Record<string, unknown> = {}): Record<string, unknown> {
-  const timestamp = Date.now();
-  const random = Math.floor(Math.random() * 10000);
-  const uniqueId = parseInt(`6${String(timestamp)}${String(random)}`.slice(-10));
-  const suffix = `${String(timestamp)}-${String(random)}`;
+  const id = generateTestId();
+  const uniqueId = parseInt(`6${String(id)}`.slice(-10));
+  const suffix = `${String(id)}`;
 
   return {
     id: overrides.id ?? uniqueId,
@@ -1680,9 +1672,8 @@ export function createMediaFiles(
   overrides: Record<string, unknown> = {},
 ): Record<string, unknown>[] {
   return Array.from({ length: count }, (_, index) => {
-    const timestamp = Date.now();
-    const random = Math.floor(Math.random() * 10000);
-    const uniqueId = parseInt(`6${String(timestamp)}${String(random)}${String(index)}`.slice(-10));
+    const id = generateTestId();
+    const uniqueId = parseInt(`6${String(id)}${String(index)}`.slice(-10));
 
     return createMediaFile({
       id: overrides.id !== undefined ? (overrides.id as number) + index : uniqueId,
@@ -1754,10 +1745,9 @@ export function createHealthStatus(
  * 创建Draft测试数据
  */
 export function createDraft(overrides: Record<string, unknown> = {}): Record<string, unknown> {
-  const timestamp = Date.now();
-  const random = Math.floor(Math.random() * 10000);
-  const uniqueId = parseInt(`2${String(timestamp)}${String(random)}`.slice(-10));
-  const suffix = `${String(timestamp)}-${String(random)}`;
+  const id = generateTestId();
+  const uniqueId = parseInt(`2${String(id)}`.slice(-10));
+  const suffix = `${String(id)}`;
 
   return {
     id: overrides.id ?? uniqueId,
@@ -1782,9 +1772,8 @@ export function createDrafts(
   overrides: Record<string, unknown> = {},
 ): Record<string, unknown>[] {
   return Array.from({ length: count }, (_, index) => {
-    const timestamp = Date.now();
-    const random = Math.floor(Math.random() * 10000);
-    const uniqueId = parseInt(`2${String(timestamp)}${String(random)}${String(index)}`.slice(-10));
+    const id = generateTestId();
+    const uniqueId = parseInt(`2${String(id)}${String(index)}`.slice(-10));
 
     return createDraft({
       id: overrides.id !== undefined ? (overrides.id as number) + index : uniqueId,
@@ -1800,10 +1789,9 @@ export function createDrafts(
 export function createDraftVersion(
   overrides: Record<string, unknown> = {},
 ): Record<string, unknown> {
-  const timestamp = Date.now();
-  const random = Math.floor(Math.random() * 10000);
-  const uniqueId = parseInt(`5${String(timestamp)}${String(random)}`.slice(-10));
-  const suffix = `${String(timestamp)}-${String(random)}`;
+  const id = generateTestId();
+  const uniqueId = parseInt(`5${String(id)}`.slice(-10));
+  const suffix = `${String(id)}`;
 
   return {
     id: overrides.id ?? uniqueId,
@@ -1828,9 +1816,8 @@ export function createDraftVersions(
   overrides: Record<string, unknown> = {},
 ): Record<string, unknown>[] {
   return Array.from({ length: count }, (_, index) => {
-    const timestamp = Date.now();
-    const random = Math.floor(Math.random() * 10000);
-    const uniqueId = parseInt(`5${String(timestamp)}${String(random)}${String(index)}`.slice(-10));
+    const id = generateTestId();
+    const uniqueId = parseInt(`5${String(id)}${String(index)}`.slice(-10));
 
     return createDraftVersion({
       id: overrides.id !== undefined ? (overrides.id as number) + index : uniqueId,
@@ -2324,10 +2311,9 @@ export function createSitemapServiceMock(overrides: Record<string, unknown> = {}
  * 创建Pipeline测试数据
  */
 export function createPipeline(overrides: Record<string, unknown> = {}): Record<string, unknown> {
-  const timestamp = Date.now();
-  const random = Math.floor(Math.random() * 10000);
-  const uniqueId = parseInt(`6${String(timestamp)}${String(random)}`.slice(-10));
-  const suffix = `${String(timestamp)}-${String(random)}`;
+  const id = generateTestId();
+  const uniqueId = parseInt(`6${String(id)}`.slice(-10));
+  const suffix = `${String(id)}`;
 
   return {
     id: overrides.id ?? uniqueId,
@@ -2355,9 +2341,8 @@ export function createPipelines(
   overrides: Record<string, unknown> = {},
 ): Record<string, unknown>[] {
   return Array.from({ length: count }, (_, index) => {
-    const timestamp = Date.now();
-    const random = Math.floor(Math.random() * 10000);
-    const uniqueId = parseInt(`6${String(timestamp)}${String(random)}${String(index)}`.slice(-10));
+    const id = generateTestId();
+    const uniqueId = parseInt(`6${String(id)}${String(index)}`.slice(-10));
 
     return createPipeline({
       id: overrides.id !== undefined ? (overrides.id as number) + index : uniqueId,
