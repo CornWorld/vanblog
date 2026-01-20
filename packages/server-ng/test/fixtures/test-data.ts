@@ -671,10 +671,10 @@ export const createMockArticles = (
   count: number,
   overrides: Partial<MockArticle> = {},
 ): MockArticle[] => {
+  const baseId = overrides.id ?? generateUniqueId('1');
   return Array.from({ length: count }, (_, index) =>
     createMockArticle({
-      id:
-        overrides.id !== undefined ? overrides.id + index : generateUniqueId(`1-${String(index)}`),
+      id: baseId + index,
       title: `Test Article ${String(index + 1)}`,
       ...overrides,
     }),
@@ -685,10 +685,10 @@ export const createMockArticles = (
  * Create multiple mock tags with incremental IDs
  */
 export const createMockTags = (count: number, overrides: Partial<MockTag> = {}): MockTag[] => {
+  const baseId = overrides.id ?? generateUniqueId('4');
   return Array.from({ length: count }, (_, index) =>
     createMockTag({
-      id:
-        overrides.id !== undefined ? overrides.id + index : generateUniqueId(`4-${String(index)}`),
+      id: baseId + index,
       name: `Tag ${String(index + 1)}`,
       slug: `tag-${String(index + 1)}`,
       ...overrides,
@@ -703,10 +703,10 @@ export const createMockCategories = (
   count: number,
   overrides: Partial<MockCategory> = {},
 ): MockCategory[] => {
+  const baseId = overrides.id ?? generateUniqueId('3');
   return Array.from({ length: count }, (_, index) =>
     createMockCategory({
-      id:
-        overrides.id !== undefined ? overrides.id + index : generateUniqueId(`3-${String(index)}`),
+      id: baseId + index,
       name: `Category ${String(index + 1)}`,
       slug: `category-${String(index + 1)}`,
       ...overrides,
@@ -718,10 +718,10 @@ export const createMockCategories = (
  * Create multiple mock users with incremental IDs
  */
 export const createMockUsers = (count: number, overrides: Partial<MockUser> = {}): MockUser[] => {
+  const baseId = overrides.id ?? generateUniqueId('1');
   return Array.from({ length: count }, (_, index) =>
     createMockUser({
-      id:
-        overrides.id !== undefined ? overrides.id + index : generateUniqueId(`1-${String(index)}`),
+      id: baseId + index,
       username: `user${String(index + 1)}`,
       email: `user${String(index + 1)}@example.com`,
       ...overrides,
@@ -736,10 +736,10 @@ export const createMockMediaFiles = (
   count: number,
   overrides: Partial<MockMedia> = {},
 ): MockMedia[] => {
+  const baseId = overrides.id ?? generateUniqueId('6');
   return Array.from({ length: count }, (_, index) =>
     createMockMedia({
-      id:
-        overrides.id !== undefined ? overrides.id + index : generateUniqueId(`6-${String(index)}`),
+      id: baseId + index,
       filename: `image-${String(index + 1)}.jpg`,
       path: `/uploads/images/image-${String(index + 1)}.jpg`,
       ...overrides,

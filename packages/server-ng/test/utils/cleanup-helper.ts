@@ -48,26 +48,29 @@ const TEST_ID_START = 900000;
  * 2. Child tables (depend on parent tables)
  * 3. Parent tables (depended upon by others)
  *
+ * **Note**: In test environment, we delete ALL records (not just >= TEST_ID_START)
+ * to ensure complete cleanup between tests.
+ *
  * @param db - The database instance
  */
 export async function cleanupTestData(db: LibSQLDatabase<Record<string, unknown>>): Promise<void> {
   // Delete in reverse dependency order to avoid foreign key constraint violations
 
   // 1. Junction tables (no dependencies)
-  await db.delete(articleTags).where(gte(articleTags.articleId, TEST_ID_START));
-  await db.delete(draftTags).where(gte(draftTags.draftId, TEST_ID_START));
+  await db.delete(articleTags);
+  await db.delete(draftTags);
 
   // 2. Child tables (depend on articles/drafts)
-  await db.delete(draftVersions).where(gte(draftVersions.draftId, TEST_ID_START));
+  await db.delete(draftVersions);
 
   // 3. Main entity tables
-  await db.delete(articles).where(gte(articles.id, TEST_ID_START));
-  await db.delete(drafts).where(gte(drafts.id, TEST_ID_START));
-  await db.delete(tags).where(gte(tags.id, TEST_ID_START));
-  await db.delete(categories).where(gte(categories.id, TEST_ID_START));
+  await db.delete(articles);
+  await db.delete(drafts);
+  await db.delete(tags);
+  await db.delete(categories);
 
   // 4. Log tables (no dependencies)
-  await db.delete(loginLogs).where(gte(loginLogs.id, TEST_ID_START));
+  await db.delete(loginLogs);
 }
 
 /**
