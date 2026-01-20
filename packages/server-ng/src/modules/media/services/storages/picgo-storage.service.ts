@@ -9,6 +9,18 @@ import { StorageService, UploadResult } from '../../interfaces/storage.interface
 
 import type { PicGoPluginLogEntry } from '../../dto/picgo-plugin.dto';
 
+/**
+ * PicGo 存储服务 - 基于 PicGo 的图床上传
+ *
+ * @note Special case: Uses Unix timestamps (Date.now()) for in-memory logs
+ * @reason Performance optimization for ephemeral data:
+ *   - In-memory circular buffer (not persisted to database)
+ *   - Short-lived data (200 entries max)
+ *   - Used for debugging/monitoring only
+ *   - Numeric timestamps reduce memory overhead
+ *   - Consistent with temporary file naming (line 71-74)
+ */
+
 @Injectable()
 export class PicgoStorageService implements StorageService {
   private readonly picgo: PicGo;
