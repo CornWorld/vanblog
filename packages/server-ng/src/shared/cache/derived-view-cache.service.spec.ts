@@ -1,5 +1,6 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, expect, vi, beforeEach, afterAll } from 'vitest';
+import { nowIsoTz, dayjs } from '@vanblog/shared/runtime';
 
 import { CacheService } from './cache.service';
 import { DerivedViewCacheService, type CachedResult } from './derived-view-cache.service';
@@ -65,13 +66,13 @@ describe('DerivedViewCacheService', () => {
     const cached = (await cache.get<CachedResult>(key)) as CachedResult;
     expect(cached).toBeTruthy();
     expect(cached.data).toEqual({ value: 42 });
-    expect(typeof cached.meta.timestamp).toBe('number');
+    expect(typeof cached.meta.timestamp).toBe('string');
     expect(cached.meta.regenerating).toBe(false);
   });
 
   it('should return fresh cached data when within ttl', async () => {
     const key = 'test:fresh';
-    const now = Date.now();
+    const now = nowIsoTz();
     const cached: CachedResult = {
       data: { value: 'fresh' },
       meta: { timestamp: now, regenerating: false },
@@ -88,7 +89,7 @@ describe('DerivedViewCacheService', () => {
   it('should return stale data and trigger async regeneration under SWR window', async () => {
     const key = 'test:swr';
     const ttl = 1;
-    const past = Date.now() - (ttl + 1) * 1000; // 刚过期
+    const past = dayjs().subtract(ttl + 1, 'second').toISOString(); // 刚过期
 
     const cached: CachedResult = {
       data: { value: 'stale' },
@@ -115,7 +116,7 @@ describe('DerivedViewCacheService', () => {
     const updated = (await cache.get<CachedResult>(key)) as CachedResult;
     expect(updated.data).toEqual({ value: 'fresh' });
     expect(updated.meta.regenerating).toBe(false);
-    expect(typeof updated.meta.timestamp).toBe('number');
+    expect(typeof updated.meta.timestamp).toBe('string');
   });
 
   describe('SWR Window Boundary Tests (Precise Timing)', () => {
@@ -132,7 +133,7 @@ describe('DerivedViewCacheService', () => {
       const key = 'test:exact-ttl';
       const ttl = 1; // 1 second
       const swrTolerance = 60; // 60 seconds
-      const createdAt = Date.now(); // Current fake time
+      const createdAt = nowIsoTz(); // Current fake time as ISO string
 
       const cached: CachedResult = {
         data: { value: 'stale' },
@@ -141,7 +142,7 @@ describe('DerivedViewCacheService', () => {
       await cache.set(key, cached);
 
       // Jump to exactly TTL seconds later
-      vi.setSystemTime(createdAt + ttl * 1000);
+      vi.advanceTimersByTime(ttl * 1000);
 
       const generator = vi.fn().mockResolvedValue({ value: 'fresh-at-ttl' });
 
@@ -166,7 +167,7 @@ describe('DerivedViewCacheService', () => {
       const key = 'test:swr-quarter';
       const ttl = 1; // 1 second
       const swrTolerance = 40; // 40 seconds
-      const createdAt = Date.now();
+      const createdAt = nowIsoTz();
 
       const cached: CachedResult = {
         data: { value: 'stale-quarter' },
@@ -175,8 +176,7 @@ describe('DerivedViewCacheService', () => {
       await cache.set(key, cached);
 
       // Jump to TTL + 0.25 * swrTolerance
-      const timeAtQuarter = createdAt + ttl * 1000 + 0.25 * swrTolerance * 1000;
-      vi.setSystemTime(timeAtQuarter);
+      vi.advanceTimersByTime(ttl * 1000 + 0.25 * swrTolerance * 1000);
 
       const generator = vi.fn().mockResolvedValue({ value: 'fresh-quarter' });
 
@@ -204,7 +204,7 @@ describe('DerivedViewCacheService', () => {
       const key = 'test:swr-middle';
       const ttl = 2; // 2 seconds
       const swrTolerance = 60; // 60 seconds
-      const createdAt = Date.now();
+      const createdAt = nowIsoTz();
 
       const cached: CachedResult = {
         data: { value: 'stale-middle' },
@@ -213,8 +213,7 @@ describe('DerivedViewCacheService', () => {
       await cache.set(key, cached);
 
       // Jump to TTL + 0.5 * swrTolerance
-      const timeAtMiddle = createdAt + ttl * 1000 + 0.5 * swrTolerance * 1000;
-      vi.setSystemTime(timeAtMiddle);
+      vi.advanceTimersByTime(ttl * 1000 + 0.5 * swrTolerance * 1000);
 
       const generator = vi.fn().mockResolvedValue({ value: 'fresh-middle' });
 
@@ -241,7 +240,7 @@ describe('DerivedViewCacheService', () => {
       const key = 'test:swr-late';
       const ttl = 1;
       const swrTolerance = 80; // 80 seconds
-      const createdAt = Date.now();
+      const createdAt = nowIsoTz();
 
       const cached: CachedResult = {
         data: { value: 'stale-late' },
@@ -250,8 +249,7 @@ describe('DerivedViewCacheService', () => {
       await cache.set(key, cached);
 
       // Jump to TTL + 0.75 * swrTolerance
-      const timeAtLate = createdAt + ttl * 1000 + 0.75 * swrTolerance * 1000;
-      vi.setSystemTime(timeAtLate);
+      vi.advanceTimersByTime(ttl * 1000 + 0.75 * swrTolerance * 1000);
 
       const generator = vi.fn().mockResolvedValue({ value: 'fresh-late' });
 
@@ -278,7 +276,7 @@ describe('DerivedViewCacheService', () => {
       const key = 'test:swr-boundary';
       const ttl = 1; // 1 second
       const swrTolerance = 30; // 30 seconds
-      const createdAt = Date.now();
+      const createdAt = nowIsoTz();
 
       const cached: CachedResult = {
         data: { value: 'very-stale' },
@@ -287,8 +285,7 @@ describe('DerivedViewCacheService', () => {
       await cache.set(key, cached);
 
       // Jump to PAST the TTL + swrTolerance boundary (outside SWR window)
-      const timeOutsideBoundary = createdAt + (ttl + swrTolerance) * 1000 + 1;
-      vi.setSystemTime(timeOutsideBoundary);
+      vi.advanceTimersByTime((ttl + swrTolerance) * 1000 + 1);
 
       const generator = vi.fn().mockResolvedValue({ value: 'fresh-boundary' });
 
@@ -327,7 +324,7 @@ describe('DerivedViewCacheService', () => {
         vi.clearAllMocks();
 
         const key = `test:swr-intervals-${String(i)}`;
-        const createdAt = Date.now();
+        const createdAt = nowIsoTz();
 
         const cached: CachedResult = {
           data: { value: `stale-${String(i)}` }, // Use index instead of offset to match
@@ -336,8 +333,7 @@ describe('DerivedViewCacheService', () => {
         await cache.set(key, cached);
 
         // Jump to offset within SWR window
-        const timeAtOffset = createdAt + ttl * 1000 + testPoint.offset * swrTolerance * 1000;
-        vi.setSystemTime(timeAtOffset);
+        vi.advanceTimersByTime(ttl * 1000 + testPoint.offset * swrTolerance * 1000);
 
         const generator = vi.fn().mockResolvedValue({ value: `fresh-${String(i)}` });
 
@@ -362,7 +358,7 @@ describe('DerivedViewCacheService', () => {
       const key = 'test:swr-math';
       const ttl = 2; // 2 seconds
       const swrTolerance = 30; // 30 seconds
-      const createdAt = Date.now();
+      const createdAt = nowIsoTz();
 
       const cached: CachedResult = {
         data: { value: 'test-math' },
@@ -372,7 +368,7 @@ describe('DerivedViewCacheService', () => {
 
       // Jump to middle of SWR window
       const elapsedInSwr = 0.5 * swrTolerance * 1000; // 50% through SWR
-      vi.setSystemTime(createdAt + ttl * 1000 + elapsedInSwr);
+      vi.advanceTimersByTime(ttl * 1000 + elapsedInSwr);
 
       const generator = vi.fn().mockResolvedValue({ value: 'fresh-math' });
 
@@ -382,15 +378,14 @@ describe('DerivedViewCacheService', () => {
       expect((result as any).value).toBe('test-math');
 
       // Verify math:
-      // age = now - timestamp = (createdAt + ttl*1000 + elapsedInSwr) - createdAt
-      //     = ttl*1000 + elapsedInSwr
-      // Should be: ttl*1000 <= age < (ttl + swrTolerance)*1000
-      const age = createdAt + ttl * 1000 + elapsedInSwr - createdAt;
-      const minAge = ttl * 1000;
-      const maxAge = (ttl + swrTolerance) * 1000;
+      // age = now - timestamp = elapsed time in milliseconds converted to seconds
+      // Should be: ttl <= age < (ttl + swrTolerance)
+      const ageInSeconds = (ttl * 1000 + elapsedInSwr) / 1000;
+      const minAge = ttl;
+      const maxAge = ttl + swrTolerance;
 
-      expect(age).toBeGreaterThanOrEqual(minAge - 100); // Small tolerance for timing
-      expect(age).toBeLessThan(maxAge);
+      expect(ageInSeconds).toBeGreaterThanOrEqual(minAge - 0.1); // Small tolerance for timing
+      expect(ageInSeconds).toBeLessThan(maxAge);
 
       vi.useRealTimers();
     });
@@ -400,7 +395,7 @@ describe('DerivedViewCacheService', () => {
     const key = 'test:sync';
     const ttl = 1;
     const swrTolerance = 1;
-    const past = Date.now() - (ttl + swrTolerance + 1) * 1000; // 远超 SWR 容忍
+    const past = dayjs().subtract((ttl + swrTolerance + 1) * 1000, 'millisecond').toISOString(); // 远超 SWR 容忍
 
     const cached: CachedResult = {
       data: { value: 'very-stale' },
@@ -421,7 +416,7 @@ describe('DerivedViewCacheService', () => {
   it('should regenerate synchronously when SWR disabled', async () => {
     const key = 'test:no-swr';
     const ttl = 1;
-    const past = Date.now() - (ttl + 1) * 1000; // 过期
+    const past = dayjs().subtract((ttl + 1) * 1000, 'millisecond').toISOString(); // 过期
 
     const cached: CachedResult = {
       data: { value: 'stale' },
@@ -462,7 +457,7 @@ describe('DerivedViewCacheService', () => {
     const key = 'test:regenerating';
     const cached: CachedResult = {
       data: { value: 'data' },
-      meta: { timestamp: Date.now(), regenerating: true },
+      meta: { timestamp: nowIsoTz(), regenerating: true },
     };
     await cache.set(key, cached);
 
@@ -475,7 +470,7 @@ describe('DerivedViewCacheService', () => {
     const key = 'test:not-regenerating';
     const cached: CachedResult = {
       data: { value: 'data' },
-      meta: { timestamp: Date.now(), regenerating: false },
+      meta: { timestamp: nowIsoTz(), regenerating: false },
     };
     await cache.set(key, cached);
 
@@ -499,7 +494,7 @@ describe('DerivedViewCacheService', () => {
     const key = 'test:async-error';
     const ttl = 1;
     const swrTolerance = 60;
-    const past = Date.now() - (ttl + 1) * 1000;
+    const past = dayjs().subtract((ttl + 1) * 1000, 'millisecond').toISOString();
 
     const cached: CachedResult = {
       data: { value: 'stale' },
@@ -542,7 +537,7 @@ describe('DerivedViewCacheService', () => {
     const key = 'test:duplicate-regen';
     const ttl = 1;
     const swrTolerance = 60;
-    const past = Date.now() - (ttl + 1) * 1000;
+    const past = dayjs().subtract((ttl + 1) * 1000, 'millisecond').toISOString();
 
     const cached: CachedResult = {
       data: { value: 'stale' },
@@ -581,7 +576,7 @@ describe('DerivedViewCacheService', () => {
       const key = 'test:lock-atomic';
       const ttl = 1;
       const swrTolerance = 60;
-      const past = Date.now() - (ttl + 1) * 1000;
+      const past = dayjs().subtract((ttl + 1) * 1000, 'millisecond').toISOString();
 
       const cached: CachedResult = {
         data: { value: 'stale' },
@@ -630,7 +625,7 @@ describe('DerivedViewCacheService', () => {
       const key = 'test:concurrent-miss-lock';
       const ttl = 1;
       const swrTolerance = 10;
-      const past = Date.now() - (ttl + swrTolerance + 1) * 1000; // Far outside SWR window
+      const past = dayjs().subtract((ttl + swrTolerance + 1) * 1000, 'millisecond').toISOString(); // Far outside SWR window
 
       const cached: CachedResult = {
         data: { value: 'very-stale' },
@@ -670,7 +665,7 @@ describe('DerivedViewCacheService', () => {
       const key = 'test:regen-flag';
       const ttl = 1;
       const swrTolerance = 60;
-      const past = Date.now() - (ttl + 1) * 1000;
+      const past = dayjs().subtract((ttl + 1) * 1000, 'millisecond').toISOString();
 
       const cached: CachedResult = {
         data: { value: 'stale' },

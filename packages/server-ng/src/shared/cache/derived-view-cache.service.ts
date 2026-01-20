@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { nowIsoTz, dayjs } from '@vanblog/shared/runtime';
 
 import { CacheService } from './cache.service';
 
@@ -26,8 +27,8 @@ export interface DerivedViewConfig {
 }
 
 export interface CacheMetadata {
-  /** 数据生成时间戳 */
-  timestamp: number;
+  /** ISO 8601 timestamp string */
+  timestamp: string;
   /** 是否正在重新生成 */
   regenerating: boolean;
 }
@@ -59,8 +60,8 @@ export class DerivedViewCacheService {
     }
 
     const { data, meta } = cached;
-    const now = Date.now();
-    const age = (now - meta.timestamp) / 1000; // 秒
+    const now = nowIsoTz();
+    const age = dayjs(now).diff(dayjs(meta.timestamp), 'second');
 
     // 数据新鲜，直接返回
     if (age <= ttl) {
@@ -91,7 +92,7 @@ export class DerivedViewCacheService {
       const result: CachedResult = {
         data,
         meta: {
-          timestamp: Date.now(),
+          timestamp: nowIsoTz(),
           regenerating: false,
         },
       };

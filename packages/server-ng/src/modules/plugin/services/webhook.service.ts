@@ -2,7 +2,7 @@ import { createHmac } from 'crypto';
 
 import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import { insertWebhookSchema, updateWebhookSchema } from '@vanblog/shared/drizzle';
-import { dayjs } from '@vanblog/shared/runtime';
+import { nowIsoTz } from '@vanblog/shared/runtime';
 import { eq, and, desc, count, like, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
@@ -16,8 +16,15 @@ export interface Webhook extends Omit<WebhookEntity, 'events'> {
   events: string[];
 }
 
+/**
+ * Webhook payload sent to external endpoints
+ *
+ * @note Special case: Uses Unix timestamp (number) instead of ISO string
+ * @reason External webhook endpoints expect numeric timestamp for compatibility
+ */
 export interface WebhookPayload {
   event: string;
+  /** Unix timestamp in milliseconds */
   timestamp: number;
   data: Record<string, unknown>;
   source: string;
@@ -151,7 +158,7 @@ export class WebhookService {
       .update(webhooks)
       .set({
         ...updateData,
-        updatedAt: dayjs().toISOString(),
+        updatedAt: nowIsoTz(),
       })
       .where(eq(webhooks.id, id))
       .returning();
