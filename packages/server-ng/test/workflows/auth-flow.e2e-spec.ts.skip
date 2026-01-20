@@ -5,12 +5,7 @@ import request from 'supertest';
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 
 import { DATABASE_CONNECTION } from '../../src/database';
-import {
-  cleanupDatabase,
-  createTestApp,
-  createTestApiHelper,
-  assertions,
-} from '../test-utils';
+import { cleanupDatabase, createTestApp } from '../test-utils';
 
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import type { Server } from 'http';
@@ -29,7 +24,6 @@ describe('Authentication Flow Integration (e2e)', () => {
   let app: INestApplication;
   let db: LibSQLDatabase;
   let httpServer: Server;
-  let api: ReturnType<typeof createTestApiHelper>;
 
   const testUser = {
     username: 'authtest',
@@ -112,15 +106,13 @@ describe('Authentication Flow Integration (e2e)', () => {
     });
 
     it('should reject access without token', async () => {
-      const res = await request(httpServer)
-        .post('/api/v2/articles')
-        .send({
-          title: 'Test Article',
-          content: 'Test content',
-          author: 'Test',
-          pathname: 'test',
-          tags: [],
-        });
+      const res = await request(httpServer).post('/api/v2/articles').send({
+        title: 'Test Article',
+        content: 'Test content',
+        author: 'Test',
+        pathname: 'test',
+        tags: [],
+      });
 
       expect([401, 403]).toContain(res.status);
     });
@@ -396,13 +388,9 @@ describe('Authentication Flow Integration (e2e)', () => {
       expect(access2.status).toBe(200);
 
       // Swapping tokens should still work for reading
-      const swapped1 = await request(httpServer)
-        .get('/api/v2/articles')
-        .auth(String(token2));
+      const swapped1 = await request(httpServer).get('/api/v2/articles').auth(String(token2));
 
-      const swapped2 = await request(httpServer)
-        .get('/api/v2/articles')
-        .auth(String(token1));
+      const swapped2 = await request(httpServer).get('/api/v2/articles').auth(String(token1));
 
       // Both should either work or be protected
       expect([200, 401, 403]).toContain(swapped1.status);

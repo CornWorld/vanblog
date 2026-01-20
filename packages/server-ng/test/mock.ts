@@ -1465,7 +1465,7 @@ export const ServiceMockBuilder = {
 export function createUser(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   const id = generateTestId();
   const uniqueId = parseInt(`1${String(id)}`.slice(-10));
-  const suffix = `${String(id)}`;
+  const suffix = String(id);
 
   return {
     id: overrides.id ?? uniqueId,
@@ -1485,7 +1485,7 @@ export function createUser(overrides: Record<string, unknown> = {}): Record<stri
 export function createArticle(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   const id = generateTestId();
   const uniqueId = parseInt(`1${String(id)}`.slice(-10));
-  const suffix = `${String(id)}`;
+  const suffix = String(id);
 
   return {
     id: overrides.id ?? uniqueId,
@@ -1547,7 +1547,7 @@ export function createArticleDto(overrides: Record<string, unknown> = {}): Recor
 export function createTag(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   const id = generateTestId();
   const uniqueId = parseInt(`4${String(id)}`.slice(-10));
-  const suffix = `${String(id)}`;
+  const suffix = String(id);
 
   return {
     id: overrides.id ?? uniqueId,
@@ -1584,7 +1584,7 @@ export function createTags(
 export function createCategory(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   const id = generateTestId();
   const uniqueId = parseInt(`3${String(id)}`.slice(-10));
-  const suffix = `${String(id)}`;
+  const suffix = String(id);
 
   return {
     id: overrides.id ?? uniqueId,
@@ -1625,7 +1625,7 @@ export function createCategories(
 export function createComment(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   const id = generateTestId();
   const uniqueId = parseInt(`11${String(id)}`.slice(-10));
-  const suffix = `${String(id)}`;
+  const suffix = String(id);
 
   return {
     id: overrides.id ?? uniqueId,
@@ -1647,7 +1647,7 @@ export function createComment(overrides: Record<string, unknown> = {}): Record<s
 export function createMediaFile(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   const id = generateTestId();
   const uniqueId = parseInt(`6${String(id)}`.slice(-10));
-  const suffix = `${String(id)}`;
+  const suffix = String(id);
 
   return {
     id: overrides.id ?? uniqueId,
@@ -1747,7 +1747,7 @@ export function createHealthStatus(
 export function createDraft(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   const id = generateTestId();
   const uniqueId = parseInt(`2${String(id)}`.slice(-10));
-  const suffix = `${String(id)}`;
+  const suffix = String(id);
 
   return {
     id: overrides.id ?? uniqueId,
@@ -1791,7 +1791,7 @@ export function createDraftVersion(
 ): Record<string, unknown> {
   const id = generateTestId();
   const uniqueId = parseInt(`5${String(id)}`.slice(-10));
-  const suffix = `${String(id)}`;
+  const suffix = String(id);
 
   return {
     id: overrides.id ?? uniqueId,
@@ -2313,7 +2313,7 @@ export function createSitemapServiceMock(overrides: Record<string, unknown> = {}
 export function createPipeline(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   const id = generateTestId();
   const uniqueId = parseInt(`6${String(id)}`.slice(-10));
-  const suffix = `${String(id)}`;
+  const suffix = String(id);
 
   return {
     id: overrides.id ?? uniqueId,

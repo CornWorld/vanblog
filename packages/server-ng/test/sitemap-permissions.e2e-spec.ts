@@ -63,18 +63,12 @@ describe('SitemapController - permissions (e2e)', () => {
     });
 
     it('should return 403 with sitemap:read only (missing sitemap:generate)', async () => {
-      await request(httpServer)
-        .post('/api/v2/sitemap/generate')
-        .auth(readerToken)
-        .expect(403);
+      await request(httpServer).post('/api/v2/sitemap/generate').auth(readerToken).expect(403);
     });
 
     it('should allow with sitemap:generate', async () => {
       // Explicitly expect 200 OK since controller uses @HttpCode(200)
-      await request(httpServer)
-        .post('/api/v2/sitemap/generate')
-        .auth(generatorToken)
-        .expect(200);
+      await request(httpServer).post('/api/v2/sitemap/generate').auth(generatorToken).expect(200);
     });
   });
 

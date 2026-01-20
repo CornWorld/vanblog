@@ -120,49 +120,31 @@ describe('Permissions Decorators (e2e)', () => {
     });
 
     it('200 with permtest:read', async () => {
-      await request(httpServer)
-        .get('/api/v2/perm-test/a')
-        .auth(tokenReader)
-        .expect(200);
+      await request(httpServer).get('/api/v2/perm-test/a').auth(tokenReader).expect(200);
     });
 
     it('403 with write only', async () => {
-      await request(httpServer)
-        .get('/api/v2/perm-test/a')
-        .auth(tokenWriter)
-        .expect(403);
+      await request(httpServer).get('/api/v2/perm-test/a').auth(tokenWriter).expect(403);
     });
   });
 
   describe('GET /api/v2/perm-test/b - @Permission("permtest:read","permtest:write")', () => {
     it('403 with read only', async () => {
-      await request(httpServer)
-        .get('/api/v2/perm-test/b')
-        .auth(tokenReader)
-        .expect(403);
+      await request(httpServer).get('/api/v2/perm-test/b').auth(tokenReader).expect(403);
     });
 
     it('200 with read+write', async () => {
-      await request(httpServer)
-        .get('/api/v2/perm-test/b')
-        .auth(tokenRW)
-        .expect(200);
+      await request(httpServer).get('/api/v2/perm-test/b').auth(tokenRW).expect(200);
     });
   });
 
   describe('GET /api/v2/perm-test/c - @Perm("permtest", ["write"])', () => {
     it('200 with write', async () => {
-      await request(httpServer)
-        .get('/api/v2/perm-test/c')
-        .auth(tokenWriter)
-        .expect(200);
+      await request(httpServer).get('/api/v2/perm-test/c').auth(tokenWriter).expect(200);
     });
 
     it('403 with read only', async () => {
-      await request(httpServer)
-        .get('/api/v2/perm-test/c')
-        .auth(tokenReader)
-        .expect(403);
+      await request(httpServer).get('/api/v2/perm-test/c').auth(tokenReader).expect(403);
     });
   });
 });

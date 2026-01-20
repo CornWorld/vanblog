@@ -142,7 +142,10 @@ export class PerformanceMonitoringMiddleware implements NestMiddleware {
    */
   private recordMemorySnapshot(): void {
     const now = nowIsoTz();
-    const diff = dayjs(now).diff(dayjs(PerformanceMonitoringMiddleware.lastMemorySnapshot), 'millisecond');
+    const diff = dayjs(now).diff(
+      dayjs(PerformanceMonitoringMiddleware.lastMemorySnapshot),
+      'millisecond',
+    );
 
     if (diff > PerformanceMonitoringMiddleware.MEMORY_SNAPSHOT_INTERVAL) {
       const memoryUsage = process.memoryUsage();

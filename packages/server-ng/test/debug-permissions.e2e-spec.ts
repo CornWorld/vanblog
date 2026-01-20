@@ -1,4 +1,3 @@
-import { AppModule } from '../src/app.module';
 import { PermissionCollectionService } from '../src/modules/permission/permission-collection.service';
 import { PermissionService } from '../src/modules/permission/permission.service';
 

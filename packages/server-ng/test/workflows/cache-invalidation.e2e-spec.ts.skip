@@ -9,7 +9,6 @@ import {
   createAuthToken,
   createUser,
   createTestApp,
-  createTestApiHelper,
 } from '../test-utils';
 
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';

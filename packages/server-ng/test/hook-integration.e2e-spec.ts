@@ -1,4 +1,3 @@
-import { type TestingModule } from '@nestjs/testing';
 import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest';
 
 import { ArticleService } from '../src/modules/article/article.service';

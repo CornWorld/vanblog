@@ -89,7 +89,9 @@ describe('DerivedViewCacheService', () => {
   it('should return stale data and trigger async regeneration under SWR window', async () => {
     const key = 'test:swr';
     const ttl = 1;
-    const past = dayjs().subtract(ttl + 1, 'second').toISOString(); // 刚过期
+    const past = dayjs()
+      .subtract(ttl + 1, 'second')
+      .toISOString(); // 刚过期
 
     const cached: CachedResult = {
       data: { value: 'stale' },
@@ -395,7 +397,9 @@ describe('DerivedViewCacheService', () => {
     const key = 'test:sync';
     const ttl = 1;
     const swrTolerance = 1;
-    const past = dayjs().subtract((ttl + swrTolerance + 1) * 1000, 'millisecond').toISOString(); // 远超 SWR 容忍
+    const past = dayjs()
+      .subtract((ttl + swrTolerance + 1) * 1000, 'millisecond')
+      .toISOString(); // 远超 SWR 容忍
 
     const cached: CachedResult = {
       data: { value: 'very-stale' },
@@ -416,7 +420,9 @@ describe('DerivedViewCacheService', () => {
   it('should regenerate synchronously when SWR disabled', async () => {
     const key = 'test:no-swr';
     const ttl = 1;
-    const past = dayjs().subtract((ttl + 1) * 1000, 'millisecond').toISOString(); // 过期
+    const past = dayjs()
+      .subtract((ttl + 1) * 1000, 'millisecond')
+      .toISOString(); // 过期
 
     const cached: CachedResult = {
       data: { value: 'stale' },
@@ -494,7 +500,9 @@ describe('DerivedViewCacheService', () => {
     const key = 'test:async-error';
     const ttl = 1;
     const swrTolerance = 60;
-    const past = dayjs().subtract((ttl + 1) * 1000, 'millisecond').toISOString();
+    const past = dayjs()
+      .subtract((ttl + 1) * 1000, 'millisecond')
+      .toISOString();
 
     const cached: CachedResult = {
       data: { value: 'stale' },
@@ -537,7 +545,9 @@ describe('DerivedViewCacheService', () => {
     const key = 'test:duplicate-regen';
     const ttl = 1;
     const swrTolerance = 60;
-    const past = dayjs().subtract((ttl + 1) * 1000, 'millisecond').toISOString();
+    const past = dayjs()
+      .subtract((ttl + 1) * 1000, 'millisecond')
+      .toISOString();
 
     const cached: CachedResult = {
       data: { value: 'stale' },
@@ -576,7 +586,9 @@ describe('DerivedViewCacheService', () => {
       const key = 'test:lock-atomic';
       const ttl = 1;
       const swrTolerance = 60;
-      const past = dayjs().subtract((ttl + 1) * 1000, 'millisecond').toISOString();
+      const past = dayjs()
+        .subtract((ttl + 1) * 1000, 'millisecond')
+        .toISOString();
 
       const cached: CachedResult = {
         data: { value: 'stale' },
@@ -625,7 +637,9 @@ describe('DerivedViewCacheService', () => {
       const key = 'test:concurrent-miss-lock';
       const ttl = 1;
       const swrTolerance = 10;
-      const past = dayjs().subtract((ttl + swrTolerance + 1) * 1000, 'millisecond').toISOString(); // Far outside SWR window
+      const past = dayjs()
+        .subtract((ttl + swrTolerance + 1) * 1000, 'millisecond')
+        .toISOString(); // Far outside SWR window
 
       const cached: CachedResult = {
         data: { value: 'very-stale' },
@@ -665,7 +679,9 @@ describe('DerivedViewCacheService', () => {
       const key = 'test:regen-flag';
       const ttl = 1;
       const swrTolerance = 60;
-      const past = dayjs().subtract((ttl + 1) * 1000, 'millisecond').toISOString();
+      const past = dayjs()
+        .subtract((ttl + 1) * 1000, 'millisecond')
+        .toISOString();
 
       const cached: CachedResult = {
         data: { value: 'stale' },

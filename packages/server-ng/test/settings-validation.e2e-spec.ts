@@ -22,7 +22,6 @@ describe('SettingsController Validation (e2e)', () => {
     await createUser(app);
     token = await createAuthToken(app);
   });
-  });
 
   afterAll(async () => {
     await cleanupDatabase(app);

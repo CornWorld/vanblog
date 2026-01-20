@@ -97,10 +97,7 @@ describe('SitemapController - generate & XML (e2e)', () => {
     });
 
     // Re-generate
-    await request(httpServer)
-      .post('/api/v2/sitemap/generate')
-      .auth(generatorToken)
-      .expect(200);
+    await request(httpServer).post('/api/v2/sitemap/generate').auth(generatorToken).expect(200);
 
     // Validate XML contains the extra URL
     const xmlPath = getSitemapXmlPath();

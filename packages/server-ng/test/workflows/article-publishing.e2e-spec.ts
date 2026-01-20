@@ -164,9 +164,7 @@ describe('Article Publishing Workflow (e2e)', () => {
       expect(retrieved.title).toBe('Secret Article');
 
       // Verify unpublished article is not in public listing
-      const publicListRes = await request(httpServer)
-        .get('/api/v2/articles')
-        .expect(200);
+      const publicListRes = await request(httpServer).get('/api/v2/articles').expect(200);
 
       const publicList = publicListRes.body;
       const publicArticles = publicList.data || [];

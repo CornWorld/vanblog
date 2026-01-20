@@ -230,7 +230,7 @@ export const assertions = {
   /**
    * 断言响应成功（200-299）
    */
-  expectSuccess(status: number) {
+  expectSuccess(status: number): void {
     expect(status).toBeGreaterThanOrEqual(200);
     expect(status).toBeLessThan(300);
   },
@@ -238,16 +238,16 @@ export const assertions = {
   /**
    * 断言未授权（401 或 403）
    */
-  expectUnauthorized(status: number) {
+  expectUnauthorized(status: number): void {
     expect([401, 403]).toContain(status);
   },
 
   /**
    * 断言包含必要字段
    */
-  expectHasFields<T extends Record<string, any>>(obj: T, fields: (keyof T)[]) {
+  expectHasFields<T extends Record<string, unknown>>(obj: T, fields: Array<keyof T>): void {
     fields.forEach((field) => {
-      expect(obj).toHaveProperty(field);
+      expect(obj).toHaveProperty(String(field));
       expect(obj[field]).toBeDefined();
     });
   },
@@ -255,7 +255,7 @@ export const assertions = {
   /**
    * 断言分页响应格式
    */
-  expectPaginatedResponse(response: any) {
+  expectPaginatedResponse(response: { data?: unknown; total?: unknown }): void {
     expect(response).toHaveProperty('data');
     expect(Array.isArray(response.data)).toBeTruthy();
     // 可选的分页元数据
@@ -268,10 +268,7 @@ export const assertions = {
 /**
  * 数据清理辅助函数
  */
-export async function cleanupTables(
-  db: LibSQLDatabase,
-  tables: Array<any>,
-): Promise<void> {
+export async function cleanupTables(db: LibSQLDatabase, tables: Array<any>): Promise<void> {
   for (const table of tables) {
     await db.delete(table).execute();
   }

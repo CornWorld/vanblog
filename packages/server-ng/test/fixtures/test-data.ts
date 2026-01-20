@@ -32,7 +32,7 @@ function generateUniqueId(prefix: string = ''): number {
  * 生成唯一字符串后缀（用于 UNIQUE 字段）
  */
 function generateUniqueSuffix(): string {
-  return `${String(generateTestId())}`;
+  return String(generateTestId());
 }
 
 // ============ User Entity ============

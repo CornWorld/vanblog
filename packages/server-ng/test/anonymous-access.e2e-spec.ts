@@ -62,9 +62,6 @@ describe('Anonymous visitor token (e2e)', () => {
   });
 
   it('POST /api/v2/sitemap/generate should be forbidden (403) with anonymous token (missing sitemap:generate)', async () => {
-    await request(httpServer)
-      .post('/api/v2/sitemap/generate')
-      .auth(anonymousToken)
-      .expect(403);
+    await request(httpServer).post('/api/v2/sitemap/generate').auth(anonymousToken).expect(403);
   });
 });
