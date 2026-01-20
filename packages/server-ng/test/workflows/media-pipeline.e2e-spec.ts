@@ -1,13 +1,10 @@
-import { type INestApplication, ValidationPipe, VersioningType } from '@nestjs/common';
-import { Test, type TestingModule } from '@nestjs/testing';
+import { type INestApplication } from '@nestjs/common';
 import { staticFiles as mediaTable } from '@vanblog/shared/drizzle';
 import request from 'supertest';
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 
-import { AppModule } from '../../src/app.module';
-import { ConfigService } from '../../src/config';
 import { DATABASE_CONNECTION } from '../../src/database';
-import { cleanupDatabase, createAuthToken, createUser } from '../test-utils';
+import { cleanupDatabase, createAuthToken, createUser, createTestApp } from '../test-utils';
 
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import type { Server } from 'http';
@@ -29,20 +26,7 @@ describe('Media Upload Pipeline (e2e)', () => {
   let authToken: string;
 
   beforeAll(async () => {
-    const appModule = AppModule.forRoot();
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [appModule],
-    }).compile();
-
-    app = moduleFixture.createNestApplication();
-    app.useGlobalPipes(new ValidationPipe({ transform: true }));
-
-    const configService = app.get(ConfigService);
-    const appConfig = configService.app;
-    app.setGlobalPrefix(appConfig.apiPrefix);
-    app.enableVersioning({ type: VersioningType.URI, defaultVersion: '2' });
-
-    await app.init();
+    app = await createTestApp();
     httpServer = app.getHttpServer() as Server;
     db = app.get<LibSQLDatabase<Record<string, unknown>>>(DATABASE_CONNECTION);
 
@@ -83,7 +67,7 @@ describe('Media Upload Pipeline (e2e)', () => {
 
       const res = await request(httpServer)
         .post('/api/v2/admin/media/upload')
-        .set('Authorization', `Bearer ${authToken}`)
+        .auth(authToken)
         .attach('file', imageBuffer, 'test-image.png');
 
       expect([200, 201]).toContain(res.status);
@@ -97,7 +81,7 @@ describe('Media Upload Pipeline (e2e)', () => {
       // Verify media record was created
       const mediaRes = await request(httpServer)
         .get('/api/v2/admin/media')
-        .set('Authorization', `Bearer ${authToken}`)
+        .auth(authToken)
         .expect(200);
 
       expect(mediaRes.body.items.some((m: any) => m.filename === filename)).toBe(true);
@@ -114,17 +98,17 @@ describe('Media Upload Pipeline (e2e)', () => {
       // SQLite cannot handle concurrent write transactions on the same connection
       const res1 = await request(httpServer)
         .post('/api/v2/admin/media/upload')
-        .set('Authorization', `Bearer ${authToken}`)
+        .auth(authToken)
         .attach('file', imageBuffer1, 'batch-image-1.png');
 
       const res2 = await request(httpServer)
         .post('/api/v2/admin/media/upload')
-        .set('Authorization', `Bearer ${authToken}`)
+        .auth(authToken)
         .attach('file', imageBuffer2, 'batch-image-2.png');
 
       const res3 = await request(httpServer)
         .post('/api/v2/admin/media/upload')
-        .set('Authorization', `Bearer ${authToken}`)
+        .auth(authToken)
         .attach('file', imageBuffer3, 'batch-image-3.png');
 
       // All uploads should succeed
@@ -135,7 +119,7 @@ describe('Media Upload Pipeline (e2e)', () => {
       // Verify all files were saved to database
       const listRes = await request(httpServer)
         .get('/api/v2/admin/media')
-        .set('Authorization', `Bearer ${authToken}`)
+        .auth(authToken)
         .expect(200);
 
       const filenames = listRes.body.items.map((m: any) => m.filename);
@@ -156,7 +140,7 @@ describe('Media Upload Pipeline (e2e)', () => {
       for (let i = 0; i < uploadCount; i++) {
         const res = await request(httpServer)
           .post('/api/v2/admin/media/upload')
-          .set('Authorization', `Bearer ${authToken}`)
+          .auth(authToken)
           .attach('file', imageBuffer, `concurrent-${String(i)}.png`);
         results.push(res);
       }
@@ -169,7 +153,7 @@ describe('Media Upload Pipeline (e2e)', () => {
       // Verify all uploads were recorded
       const listRes = await request(httpServer)
         .get('/api/v2/admin/media')
-        .set('Authorization', `Bearer ${authToken}`)
+        .auth(authToken)
         .expect(200);
 
       const concurrentFiles = listRes.body.items.filter((m: any) =>
@@ -185,7 +169,7 @@ describe('Media Upload Pipeline (e2e)', () => {
 
       const res = await request(httpServer)
         .post('/api/v2/admin/media/upload')
-        .set('Authorization', `Bearer ${authToken}`)
+        .auth(authToken)
         .attach('file', imageBuffer, 'metadata-test.png');
 
       expect([200, 201]).toContain(res.status);
@@ -195,7 +179,7 @@ describe('Media Upload Pipeline (e2e)', () => {
       // Get media details
       const detailRes = await request(httpServer)
         .get(`/api/v2/admin/media/${String(id)}`)
-        .set('Authorization', `Bearer ${authToken}`);
+        .auth(authToken);
 
       if (detailRes.status === 200) {
         expect(detailRes.body.filename).toBeDefined();
@@ -217,7 +201,7 @@ describe('Media Upload Pipeline (e2e)', () => {
       // Upload image
       const uploadRes = await request(httpServer)
         .post('/api/v2/admin/media/upload')
-        .set('Authorization', `Bearer ${authToken}`)
+        .auth(authToken)
         .attach('file', imageBuffer, 'delete-test.png');
 
       expect([200, 201]).toContain(uploadRes.status);
@@ -227,14 +211,14 @@ describe('Media Upload Pipeline (e2e)', () => {
       // Delete media
       const deleteRes = await request(httpServer)
         .delete(`/api/v2/admin/media/${String(id)}`)
-        .set('Authorization', `Bearer ${authToken}`);
+        .auth(authToken);
 
       expect([200, 204]).toContain(deleteRes.status);
 
       // Verify deletion
       const listRes = await request(httpServer)
         .get('/api/v2/admin/media')
-        .set('Authorization', `Bearer ${authToken}`)
+        .auth(authToken)
         .expect(200);
 
       expect(listRes.body.items.some((m: any) => m.id === id)).toBe(false);
@@ -248,14 +232,14 @@ describe('Media Upload Pipeline (e2e)', () => {
       // Upload multiple images
       const upload1 = await request(httpServer)
         .post('/api/v2/admin/media/upload')
-        .set('Authorization', `Bearer ${authToken}`)
+        .auth(authToken)
         .attach('file', imageBuffer, 'batch-delete-1.png');
 
       expect([200, 201]).toContain(upload1.status);
 
       const upload2 = await request(httpServer)
         .post('/api/v2/admin/media/upload')
-        .set('Authorization', `Bearer ${authToken}`)
+        .auth(authToken)
         .attach('file', imageBuffer, 'batch-delete-2.png');
 
       expect([200, 201]).toContain(upload2.status);
@@ -266,7 +250,7 @@ describe('Media Upload Pipeline (e2e)', () => {
       // Batch delete
       const deleteRes = await request(httpServer)
         .post('/api/v2/admin/media/batch-delete')
-        .set('Authorization', `Bearer ${authToken}`)
+        .auth(authToken)
         .send({ ids: [id1, id2] });
 
       expect([200, 204]).toContain(deleteRes.status);
@@ -278,7 +262,7 @@ describe('Media Upload Pipeline (e2e)', () => {
       // Verify deletion
       const listRes = await request(httpServer)
         .get('/api/v2/admin/media')
-        .set('Authorization', `Bearer ${authToken}`)
+        .auth(authToken)
         .expect(200);
 
       expect(listRes.body.items.some((m: any) => m.id === id1 || m.id === id2)).toBe(false);
@@ -293,7 +277,7 @@ describe('Media Upload Pipeline (e2e)', () => {
       for (let i = 0; i < 3; i++) {
         const uploadRes = await request(httpServer)
           .post('/api/v2/admin/media/upload')
-          .set('Authorization', `Bearer ${authToken}`)
+          .auth(authToken)
           .attach('file', imageBuffer, `paginate-${String(i)}.png`);
 
         expect([200, 201]).toContain(uploadRes.status);
@@ -303,7 +287,7 @@ describe('Media Upload Pipeline (e2e)', () => {
       const page1Res = await request(httpServer)
         .get('/api/v2/admin/media')
         .query({ page: 1, limit: 2 })
-        .set('Authorization', `Bearer ${authToken}`)
+        .auth(authToken)
         .expect(200);
 
       expect(page1Res.body.items).toBeDefined();

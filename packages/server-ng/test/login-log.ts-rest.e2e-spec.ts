@@ -1,11 +1,8 @@
-import { VersioningType, type INestApplication } from '@nestjs/common';
-import { Test, type TestingModule } from '@nestjs/testing';
+import { type INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { describe, beforeAll, afterAll, it, expect } from 'vitest';
 
-import { AppModule } from './../src/app.module';
-import { ConfigService } from './../src/config';
-import { cleanupDatabase } from './test-utils';
+import { cleanupDatabase, createTestApp } from './test-utils';
 
 import type { Server } from 'http';
 
@@ -22,20 +19,7 @@ describe('LoginLog Ts-Rest (e2e)', () => {
   let app: INestApplication;
 
   beforeAll(async () => {
-    const appModule = AppModule.forRoot();
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [appModule],
-    }).compile();
-
-    app = moduleFixture.createNestApplication();
-
-    // Configure app like main.ts
-    const configService = app.get(ConfigService);
-    const appConfig = configService.app;
-    app.setGlobalPrefix(appConfig.apiPrefix);
-    app.enableVersioning({ type: VersioningType.URI, defaultVersion: '2' });
-
-    await app.init();
+    app = await createTestApp();
   });
 
   afterAll(async () => {

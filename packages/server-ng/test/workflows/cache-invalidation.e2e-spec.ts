@@ -1,13 +1,16 @@
-import { type INestApplication, ValidationPipe, VersioningType } from '@nestjs/common';
-import { Test, type TestingModule } from '@nestjs/testing';
+import { type INestApplication } from '@nestjs/common';
 import { articles, categories } from '@vanblog/shared/drizzle';
 import request from 'supertest';
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 
-import { AppModule } from '../../src/app.module';
-import { ConfigService } from '../../src/config';
 import { DATABASE_CONNECTION } from '../../src/database';
-import { cleanupDatabase, createAuthToken, createUser } from '../test-utils';
+import {
+  cleanupDatabase,
+  createAuthToken,
+  createUser,
+  createTestApp,
+  createTestApiHelper,
+} from '../test-utils';
 
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import type { Server } from 'http';
@@ -26,28 +29,17 @@ describe('Cache Invalidation Workflow (e2e)', () => {
   let db: LibSQLDatabase<Record<string, unknown>>;
   let httpServer: Server;
   let authToken: string;
+  let api: ReturnType<typeof createTestApiHelper>;
 
   beforeAll(async () => {
-    const appModule = AppModule.forRoot();
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [appModule],
-    }).compile();
-
-    app = moduleFixture.createNestApplication();
-    app.useGlobalPipes(new ValidationPipe({ transform: true }));
-
-    const configService = app.get(ConfigService);
-    const appConfig = configService.app;
-    app.setGlobalPrefix(appConfig.apiPrefix);
-    app.enableVersioning({ type: VersioningType.URI, defaultVersion: '2' });
-
-    await app.init();
+    app = await createTestApp();
     httpServer = app.getHttpServer() as Server;
     db = app.get<LibSQLDatabase<Record<string, unknown>>>(DATABASE_CONNECTION);
 
     // Setup test user
     await createUser(app);
     authToken = await createAuthToken(app);
+    api = createTestApiHelper(httpServer, authToken);
   });
 
   afterAll(async () => {
@@ -64,14 +56,13 @@ describe('Cache Invalidation Workflow (e2e)', () => {
   describe('Bootstrap cache invalidation', () => {
     it('should refresh bootstrap cache when siteInfo settings change', async () => {
       // Get initial bootstrap
-      const initialRes = await request(httpServer).get('/api/v2/public/bootstrap').expect(200);
-
+      const initialRes = await api.getBootstrap();
       expect(initialRes.body).toHaveProperty('data');
 
       // Update site settings (if endpoint is available)
       const updateRes = await request(httpServer)
         .put('/api/v2/admin/settings')
-        .set('Authorization', `Bearer ${authToken}`)
+        .auth(authToken)
         .send({
           key: 'siteInfo.title',
           value: 'New Site Title',
@@ -80,8 +71,7 @@ describe('Cache Invalidation Workflow (e2e)', () => {
 
       if (updateRes.status === 200) {
         // Get bootstrap again - cache should be invalidated
-        const refreshedRes = await request(httpServer).get('/api/v2/public/bootstrap').expect(200);
-
+        const refreshedRes = await api.getBootstrap();
         expect(refreshedRes.body).toHaveProperty('data');
 
         // Title might be updated if settings affect bootstrap
@@ -93,13 +83,11 @@ describe('Cache Invalidation Workflow (e2e)', () => {
 
     it('should cache bootstrap response for performance', async () => {
       // First request
-      const res1 = await request(httpServer).get('/api/v2/public/bootstrap').expect(200);
-
+      const res1 = await api.getBootstrap();
       expect(res1.body).toHaveProperty('data');
 
       // Second request (should be cached)
-      const res2 = await request(httpServer).get('/api/v2/public/bootstrap').expect(200);
-
+      const res2 = await api.getBootstrap();
       expect(res2.body).toHaveProperty('data');
       expect(JSON.stringify(res1.body)).toBe(JSON.stringify(res2.body));
     });
@@ -115,7 +103,7 @@ describe('Cache Invalidation Workflow (e2e)', () => {
       // Create a new article
       await request(httpServer)
         .post('/api/v2/articles')
-        .set('Authorization', `Bearer ${authToken}`)
+        .auth(authToken)
         .send({
           title: 'Cache Test Article',
           content: 'Testing cache invalidation',
@@ -138,7 +126,7 @@ describe('Cache Invalidation Workflow (e2e)', () => {
       // Create an article
       const createRes = await request(httpServer)
         .post('/api/v2/articles')
-        .set('Authorization', `Bearer ${authToken}`)
+        .auth(authToken)
         .send({
           title: 'Original Title',
           content: 'Original content',
@@ -160,7 +148,7 @@ describe('Cache Invalidation Workflow (e2e)', () => {
       // Update article
       await request(httpServer)
         .put(`/api/v2/articles/${articleIdStr}`)
-        .set('Authorization', `Bearer ${authToken}`)
+        .auth(authToken)
         .send({
           title: 'Updated Title',
           content: 'Updated content',
@@ -179,7 +167,7 @@ describe('Cache Invalidation Workflow (e2e)', () => {
       // Create articles
       const res1 = await request(httpServer)
         .post('/api/v2/articles')
-        .set('Authorization', `Bearer ${authToken}`)
+        .auth(authToken)
         .send({
           title: 'Delete Test 1',
           content: 'Testing deletion',
@@ -191,7 +179,7 @@ describe('Cache Invalidation Workflow (e2e)', () => {
 
       await request(httpServer)
         .post('/api/v2/articles')
-        .set('Authorization', `Bearer ${authToken}`)
+        .auth(authToken)
         .send({
           title: 'Delete Test 2',
           content: 'Testing deletion',
@@ -209,7 +197,7 @@ describe('Cache Invalidation Workflow (e2e)', () => {
       const articleId1 = String(res1.body.id);
       await request(httpServer)
         .delete(`/api/v2/articles/${articleId1}`)
-        .set('Authorization', `Bearer ${authToken}`)
+        .auth(authToken)
         .expect([200, 204]);
 
       // Get list again - should have fewer items
@@ -226,7 +214,7 @@ describe('Cache Invalidation Workflow (e2e)', () => {
       // Create a category
       const createRes = await request(httpServer)
         .post('/api/v2/categories')
-        .set('Authorization', `Bearer ${authToken}`)
+        .auth(authToken)
         .send({
           name: 'Original Category',
           slug: 'original-category',
@@ -240,7 +228,7 @@ describe('Cache Invalidation Workflow (e2e)', () => {
       const categoryIdStr = String(categoryId);
       const beforeRes = await request(httpServer)
         .get(`/api/v2/categories/${categoryIdStr}`)
-        .set('Authorization', `Bearer ${authToken}`)
+        .auth(authToken)
         .expect(200);
 
       expect(beforeRes.body.name).toBe('Original Category');
@@ -248,7 +236,7 @@ describe('Cache Invalidation Workflow (e2e)', () => {
       // Update category
       const updateRes = await request(httpServer)
         .put(`/api/v2/categories/${categoryIdStr}`)
-        .set('Authorization', `Bearer ${authToken}`)
+        .auth(authToken)
         .send({
           name: 'Updated Category',
           slug: 'updated-category',
@@ -261,7 +249,7 @@ describe('Cache Invalidation Workflow (e2e)', () => {
       // Get category again - cache should be invalidated
       const afterRes = await request(httpServer)
         .get(`/api/v2/categories/${categoryIdStr}`)
-        .set('Authorization', `Bearer ${authToken}`)
+        .auth(authToken)
         .expect(200);
 
       expect(afterRes.body.name).toBe('Updated Category');
@@ -273,7 +261,7 @@ describe('Cache Invalidation Workflow (e2e)', () => {
       // Create a category
       const catRes = await request(httpServer)
         .post('/api/v2/categories')
-        .set('Authorization', `Bearer ${authToken}`)
+        .auth(authToken)
         .send({
           name: 'Tech',
           slug: 'tech',
@@ -293,7 +281,7 @@ describe('Cache Invalidation Workflow (e2e)', () => {
       // Create article in this category
       await request(httpServer)
         .post('/api/v2/articles')
-        .set('Authorization', `Bearer ${authToken}`)
+        .auth(authToken)
         .send({
           title: 'Tech Article',
           content: 'Tech content',
@@ -325,7 +313,7 @@ describe('Cache Invalidation Workflow (e2e)', () => {
       // Create article with python tag
       await request(httpServer)
         .post('/api/v2/articles')
-        .set('Authorization', `Bearer ${authToken}`)
+        .auth(authToken)
         .send({
           title: 'Python Tutorial',
           content: 'Python content',
@@ -352,7 +340,7 @@ describe('Cache Invalidation Workflow (e2e)', () => {
       // Create initial article
       const createRes = await request(httpServer)
         .post('/api/v2/articles')
-        .set('Authorization', `Bearer ${authToken}`)
+        .auth(authToken)
         .send({
           title: 'Concurrent Cache Test',
           content: 'Initial content',
@@ -369,7 +357,7 @@ describe('Cache Invalidation Workflow (e2e)', () => {
 
       const updateReq = request(httpServer)
         .put(`/api/v2/articles/${articleIdStr}`)
-        .set('Authorization', `Bearer ${authToken}`)
+        .auth(authToken)
         .send({
           title: 'Updated Title',
           content: 'Updated content',
@@ -397,7 +385,7 @@ describe('Cache Invalidation Workflow (e2e)', () => {
       // Get initial analytics (if available)
       const initialRes = await request(httpServer)
         .get('/api/v2/analytics')
-        .set('Authorization', `Bearer ${authToken}`)
+        .auth(authToken)
         .expect([200, 404]);
 
       if (initialRes.status === 200) {
@@ -407,7 +395,7 @@ describe('Cache Invalidation Workflow (e2e)', () => {
       // Create article
       await request(httpServer)
         .post('/api/v2/articles')
-        .set('Authorization', `Bearer ${authToken}`)
+        .auth(authToken)
         .send({
           title: 'Analytics Test Article',
           content: 'Analytics content',
@@ -419,7 +407,7 @@ describe('Cache Invalidation Workflow (e2e)', () => {
       // Get analytics again - cache should be refreshed
       const updatedRes = await request(httpServer)
         .get('/api/v2/analytics')
-        .set('Authorization', `Bearer ${authToken}`)
+        .auth(authToken)
         .expect([200, 404]);
 
       if (updatedRes.status === 200) {

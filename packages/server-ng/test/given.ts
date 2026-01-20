@@ -32,16 +32,17 @@ import { eq } from 'drizzle-orm';
 import { Mock } from './mock';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 
+import { generateTestId } from './test-utils';
+
 type TestDatabase = LibSQLDatabase<Record<string, unknown>>;
 
 /**
  * ID 生成器 - 为测试数据生成唯一 ID
- * 使用时间戳 + 随机数确保唯一性
+ * 使用共享的 generateTestId() 确保跨文件的 ID 唯一性
  */
 function generateUniqueId(prefix: string = ''): number {
-  const timestamp = Date.now();
-  const random = Math.floor(Math.random() * 10000);
-  return parseInt(`${prefix}${String(timestamp)}${String(random)}`.slice(-10)); // 保留最后10位作为 ID
+  const id = generateTestId();
+  return parseInt(`${prefix}${String(id)}`.slice(-10)); // 保留最后10位作为 ID
 }
 
 export class Given {

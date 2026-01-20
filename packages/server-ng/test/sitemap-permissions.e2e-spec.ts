@@ -1,16 +1,13 @@
-import { type INestApplication, ValidationPipe, VersioningType } from '@nestjs/common';
-import { Test, type TestingModule } from '@nestjs/testing';
+import { type INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-
-import { AppModule } from '../src/app.module';
-import { ConfigService } from '../src/config';
 
 import {
   createUser,
   createUserWithPermissions,
   createAuthToken,
   cleanupDatabase,
+  createTestApp,
 } from './test-utils';
 
 import type { Server } from 'http';
@@ -26,20 +23,7 @@ describe('SitemapController - permissions (e2e)', () => {
   let generatorToken: string; // has sitemap:generate + sitemap:read
 
   beforeAll(async () => {
-    const appModule = AppModule.forRoot();
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [appModule],
-    }).compile();
-
-    app = moduleFixture.createNestApplication();
-    app.useGlobalPipes(new ValidationPipe({ transform: true }));
-
-    const configService = app.get(ConfigService);
-    const appConfig = configService.app;
-    app.setGlobalPrefix(appConfig.apiPrefix);
-    app.enableVersioning({ type: VersioningType.URI, defaultVersion: '2' });
-
-    await app.init();
+    app = await createTestApp();
     httpServer = app.getHttpServer() as Server;
 
     // Seed an admin for potential future use (keeps parity with other suites)
@@ -81,7 +65,7 @@ describe('SitemapController - permissions (e2e)', () => {
     it('should return 403 with sitemap:read only (missing sitemap:generate)', async () => {
       await request(httpServer)
         .post('/api/v2/sitemap/generate')
-        .set('Authorization', `Bearer ${readerToken}`)
+        .auth(readerToken)
         .expect(403);
     });
 
@@ -89,7 +73,7 @@ describe('SitemapController - permissions (e2e)', () => {
       // Explicitly expect 200 OK since controller uses @HttpCode(200)
       await request(httpServer)
         .post('/api/v2/sitemap/generate')
-        .set('Authorization', `Bearer ${generatorToken}`)
+        .auth(generatorToken)
         .expect(200);
     });
   });
@@ -102,7 +86,7 @@ describe('SitemapController - permissions (e2e)', () => {
     it('should allow with sitemap:read', async () => {
       const res = await request(httpServer)
         .get('/api/v2/sitemap/status')
-        .set('Authorization', `Bearer ${readerToken}`)
+        .auth(readerToken)
         .expect(200);
 
       expect(res.body).toHaveProperty('enabled');
@@ -118,7 +102,7 @@ describe('SitemapController - permissions (e2e)', () => {
     it('should allow with sitemap:read', async () => {
       const res = await request(httpServer)
         .get('/api/v2/sitemap/urls')
-        .set('Authorization', `Bearer ${readerToken}`)
+        .auth(readerToken)
         .expect(200);
 
       expect(res.body).toHaveProperty('urls');

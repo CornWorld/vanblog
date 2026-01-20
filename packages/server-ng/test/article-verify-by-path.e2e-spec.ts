@@ -1,12 +1,8 @@
-import { type INestApplication, ValidationPipe, VersioningType } from '@nestjs/common';
-import { Test, type TestingModule } from '@nestjs/testing';
+import { type INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 
-import { AppModule } from '../src/app.module';
-import { ConfigService } from '../src/config';
-
-import { cleanupDatabase, createAuthToken, createUser } from './test-utils';
+import { cleanupDatabase, createAuthToken, createUser, createTestApp } from './test-utils';
 
 import type { Server } from 'http';
 
@@ -19,20 +15,7 @@ describe('ArticleController - verify by pathname (e2e)', () => {
   let authToken: string;
 
   beforeAll(async () => {
-    const appModule = AppModule.forRoot();
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [appModule],
-    }).compile();
-
-    app = moduleFixture.createNestApplication();
-    app.useGlobalPipes(new ValidationPipe({ transform: true }));
-
-    const configService = app.get(ConfigService);
-    const appConfig = configService.app;
-    app.setGlobalPrefix(appConfig.apiPrefix);
-    app.enableVersioning({ type: VersioningType.URI, defaultVersion: '2' });
-
-    await app.init();
+    app = await createTestApp();
     httpServer = app.getHttpServer() as Server;
 
     await createUser(app);
@@ -41,7 +24,7 @@ describe('ArticleController - verify by pathname (e2e)', () => {
     // Create a private article with pathname and password via admin API
     const createRes = await request(httpServer)
       .post('/api/v2/articles')
-      .set('Authorization', `Bearer ${authToken}`)
+      .auth(authToken)
       .send({
         title: 'Private Path Article',
         content: 'Secret Content',
@@ -77,7 +60,7 @@ describe('ArticleController - verify by pathname (e2e)', () => {
 
     const getRes = await request(httpServer)
       .get('/api/v2/articles/by-path/private-path-article')
-      .set('Authorization', `Bearer ${token}`)
+      .auth(token)
       .expect(200);
 
     expect(getRes.body).toHaveProperty('title', 'Private Path Article');

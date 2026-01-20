@@ -1,15 +1,12 @@
-import { type INestApplication, ValidationPipe, VersioningType } from '@nestjs/common';
-import { Test, type TestingModule } from '@nestjs/testing';
+import { type INestApplication } from '@nestjs/common';
 import { users } from '@vanblog/shared/drizzle';
 import { eq } from 'drizzle-orm';
 import request from 'supertest';
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 
-import { AppModule } from '../src/app.module';
-import { ConfigService } from '../src/config';
 import { DATABASE_CONNECTION } from '../src/database';
 
-import { cleanupDatabase } from './test-utils';
+import { cleanupDatabase, createTestApp } from './test-utils';
 
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import type { Server } from 'http';
@@ -23,21 +20,7 @@ describe('InitController (e2e) - CMS Initialization Flow', () => {
   } as const;
 
   beforeAll(async () => {
-    const appModule = AppModule.forRoot();
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [appModule],
-    }).compile();
-
-    app = moduleFixture.createNestApplication();
-    app.useGlobalPipes(new ValidationPipe({ transform: true }));
-
-    // Mirror main.ts settings
-    const configService = app.get(ConfigService);
-    const appConfig = configService.app;
-    app.setGlobalPrefix(appConfig.apiPrefix);
-    app.enableVersioning({ type: VersioningType.URI, defaultVersion: '2' });
-
-    await app.init();
+    app = await createTestApp();
   });
 
   afterAll(async () => {

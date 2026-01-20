@@ -1,13 +1,10 @@
-import { type INestApplication, ValidationPipe, VersioningType } from '@nestjs/common';
-import { Test, type TestingModule } from '@nestjs/testing';
+import { type INestApplication } from '@nestjs/common';
 import { articles, drafts, tags, categories } from '@vanblog/shared/drizzle';
 import request from 'supertest';
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 
-import { AppModule } from '../../src/app.module';
-import { ConfigService } from '../../src/config';
 import { DATABASE_CONNECTION } from '../../src/database';
-import { cleanupDatabase, createAuthToken, createUser } from '../test-utils';
+import { cleanupDatabase, createAuthToken, createUser, createTestApp } from '../test-utils';
 
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import type { Server } from 'http';
@@ -29,20 +26,7 @@ describe('Article Publishing Workflow (e2e)', () => {
   let authToken: string;
 
   beforeAll(async () => {
-    const appModule = AppModule.forRoot();
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [appModule],
-    }).compile();
-
-    app = moduleFixture.createNestApplication();
-    app.useGlobalPipes(new ValidationPipe({ transform: true }));
-
-    const configService = app.get(ConfigService);
-    const appConfig = configService.app;
-    app.setGlobalPrefix(appConfig.apiPrefix);
-    app.enableVersioning({ type: VersioningType.URI, defaultVersion: '2' });
-
-    await app.init();
+    app = await createTestApp();
     httpServer = app.getHttpServer() as Server;
     db = app.get<LibSQLDatabase<Record<string, unknown>>>(DATABASE_CONNECTION);
 
@@ -69,12 +53,13 @@ describe('Article Publishing Workflow (e2e)', () => {
       // Step 1: Create article
       const createRes = await request(httpServer)
         .post('/api/v2/articles')
-        .set('Authorization', `Bearer ${authToken}`)
+        .auth(authToken)
         .send({
           title: 'My First Article',
           content: 'This is the initial content',
           author: 'Test Author',
           pathname: 'my-first-article',
+          tags: [],
         })
         .expect(201);
 
@@ -85,7 +70,7 @@ describe('Article Publishing Workflow (e2e)', () => {
       // Step 2: Edit article
       const editRes = await request(httpServer)
         .put(`/api/v2/articles/${String(articleId)}`)
-        .set('Authorization', `Bearer ${authToken}`)
+        .auth(authToken)
         .send({
           title: 'My First Article - Updated',
           content: 'This is the updated content with more details',
@@ -114,10 +99,10 @@ describe('Article Publishing Workflow (e2e)', () => {
 
   describe('Article with tags and categories', () => {
     it('should preserve tag and category relationships', async () => {
-      // Create article with tags (categories might not be directly exposed)
+      // Create article with tags
       const createRes = await request(httpServer)
         .post('/api/v2/articles')
-        .set('Authorization', `Bearer ${authToken}`)
+        .auth(authToken)
         .send({
           title: 'Advanced TypeScript Patterns',
           content: '# Advanced TypeScript\n\nSome content here',
@@ -127,16 +112,18 @@ describe('Article Publishing Workflow (e2e)', () => {
         })
         .expect(201);
 
-      const articleId = createRes.body.id;
+      const article = createRes.body;
 
       // Verify article has correct tags
-      const articleRes = await request(httpServer)
-        .get(`/api/v2/articles/${String(articleId)}`)
+      const retrievedRes = await request(httpServer)
+        .get(`/api/v2/articles/${String(article.id)}`)
         .expect(200);
 
-      expect(articleRes.body.tags).toContain('typescript');
-      expect(articleRes.body.tags).toContain('advanced');
-      expect(articleRes.body.tags).toContain('programming');
+      const retrieved = retrievedRes.body;
+
+      expect(retrieved.tags).toContain('typescript');
+      expect(retrieved.tags).toContain('advanced');
+      expect(retrieved.tags).toContain('programming');
 
       // Verify grouped by tag works
       const groupedRes = await request(httpServer)
@@ -145,7 +132,7 @@ describe('Article Publishing Workflow (e2e)', () => {
 
       const groupedData = groupedRes.body.data || {};
       if (groupedData.typescript && Array.isArray(groupedData.typescript)) {
-        expect(groupedData.typescript.some((a: any) => a.id === articleId)).toBe(true);
+        expect(groupedData.typescript.some((a: any) => a.id === article.id)).toBeTruthy();
       }
     });
   });
@@ -155,33 +142,38 @@ describe('Article Publishing Workflow (e2e)', () => {
       // Create unpublished article
       const createRes = await request(httpServer)
         .post('/api/v2/articles')
-        .set('Authorization', `Bearer ${authToken}`)
+        .auth(authToken)
         .send({
           title: 'Secret Article',
           content: 'This is a secret article',
           author: 'Secret Writer',
           pathname: 'secret-article',
           published: false, // private
+          tags: [],
         })
         .expect(201);
 
-      const articleId = createRes.body.id;
+      const article = createRes.body;
 
       // Verify article exists
-      const articleRes = await request(httpServer)
-        .get(`/api/v2/articles/${String(articleId)}`)
+      const retrievedRes = await request(httpServer)
+        .get(`/api/v2/articles/${String(article.id)}`)
         .expect(200);
 
-      expect(articleRes.body.title).toBe('Secret Article');
+      const retrieved = retrievedRes.body;
+      expect(retrieved.title).toBe('Secret Article');
 
       // Verify unpublished article is not in public listing
-      const publicListRes = await request(httpServer).get('/api/v2/articles').expect(200);
+      const publicListRes = await request(httpServer)
+        .get('/api/v2/articles')
+        .expect(200);
 
-      const publicArticles = publicListRes.body.data || [];
+      const publicList = publicListRes.body;
+      const publicArticles = publicList.data || [];
+
       // Unpublished article might still appear for authenticated users but should be marked
-      if (publicArticles.some((a: any) => a.id === articleId)) {
-        // If it appears, check that it's not published or is filtered differently
-        const found = publicArticles.find((a: any) => a.id === articleId);
+      if (publicArticles.some((a: any) => a.id === article.id)) {
+        const found = publicArticles.find((a: any) => a.id === article.id);
         expect(found).toBeDefined();
       }
     });
@@ -192,12 +184,13 @@ describe('Article Publishing Workflow (e2e)', () => {
       // Create initial article
       const createRes = await request(httpServer)
         .post('/api/v2/articles')
-        .set('Authorization', `Bearer ${authToken}`)
+        .auth(authToken)
         .send({
           title: 'Concurrent Test Article',
           content: 'Initial content',
           author: 'Tester',
           pathname: 'concurrent-test',
+          tags: [],
         })
         .expect(201);
 
@@ -206,7 +199,7 @@ describe('Article Publishing Workflow (e2e)', () => {
       // Simulate concurrent edits
       const edit1 = request(httpServer)
         .put(`/api/v2/articles/${String(articleId)}`)
-        .set('Authorization', `Bearer ${authToken}`)
+        .auth(authToken)
         .send({
           title: 'Updated Title A',
           content: 'Updated content A',
@@ -214,7 +207,7 @@ describe('Article Publishing Workflow (e2e)', () => {
 
       const edit2 = request(httpServer)
         .put(`/api/v2/articles/${String(articleId)}`)
-        .set('Authorization', `Bearer ${authToken}`)
+        .auth(authToken)
         .send({
           title: 'Updated Title B',
           content: 'Updated content B',
@@ -242,7 +235,7 @@ describe('Article Publishing Workflow (e2e)', () => {
       // Create article with content containing image paths
       const createRes = await request(httpServer)
         .post('/api/v2/articles')
-        .set('Authorization', `Bearer ${authToken}`)
+        .auth(authToken)
         .send({
           title: 'Article with Images',
           content: `
@@ -256,6 +249,7 @@ Some text here.
           `,
           author: 'Image Tester',
           pathname: 'article-with-images',
+          tags: [],
         })
         .expect(201);
 

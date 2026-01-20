@@ -1,8 +1,8 @@
-import { Test } from '@nestjs/testing';
-
 import { AppModule } from '../src/app.module';
 import { PermissionCollectionService } from '../src/modules/permission/permission-collection.service';
 import { PermissionService } from '../src/modules/permission/permission.service';
+
+import { createTestApp } from './test-utils';
 
 import type { INestApplication } from '@nestjs/common';
 
@@ -12,16 +12,9 @@ describe('Debug Permissions Initialization', () => {
   let collectionService: PermissionCollectionService;
 
   beforeAll(async () => {
-    const appModule = await AppModule.forRoot();
-    const moduleFixture = await Test.createTestingModule({
-      imports: [appModule],
-    }).compile();
-
-    app = moduleFixture.createNestApplication();
-    permissionService = moduleFixture.get(PermissionService);
-    collectionService = moduleFixture.get(PermissionCollectionService);
-
-    await app.init();
+    app = await createTestApp();
+    permissionService = app.get(PermissionService);
+    collectionService = app.get(PermissionCollectionService);
   });
 
   afterAll(async () => {

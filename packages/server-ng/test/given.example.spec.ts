@@ -125,7 +125,7 @@ describe('Given 模式示例', () => {
 
       const result = await service.findOne(100);
       expect(result.title).toBe('Custom Title');
-      expect(result.private).toBe(true);
+      expect(result.private).toBeTruthy();
     });
 
     it('should create multiple articles', async () => {

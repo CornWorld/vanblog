@@ -1,8 +1,8 @@
-import { Test } from '@nestjs/testing';
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { AppModule } from '../src/app.module';
 import { PermissionService } from '../src/modules/permission/permission.service';
+
+import { createTestApp } from './test-utils';
 
 import type { INestApplication } from '@nestjs/common';
 
@@ -11,15 +11,8 @@ describe('Anonymous Permission Chain (e2e)', () => {
   let permissionService: PermissionService;
 
   beforeEach(async () => {
-    const appModule = await AppModule.forRoot();
-    const moduleFixture = await Test.createTestingModule({
-      imports: [appModule],
-    }).compile();
-
-    app = moduleFixture.createNestApplication();
-    await app.init();
-
-    permissionService = moduleFixture.get<PermissionService>(PermissionService);
+    app = await createTestApp();
+    permissionService = app.get<PermissionService>(PermissionService);
 
     // 给权限系统一些时间完成初始化
     await new Promise((resolve) => setTimeout(resolve, 500));

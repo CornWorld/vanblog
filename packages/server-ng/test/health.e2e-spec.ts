@@ -1,10 +1,7 @@
-import { Test, type TestingModule } from '@nestjs/testing';
 import request from 'supertest';
 import { describe, beforeAll, afterAll, it, expect } from 'vitest';
 
-import { AppModule } from '../src/app.module';
-
-import { cleanupDatabase } from './test-utils';
+import { cleanupDatabase, createTestApp } from './test-utils';
 
 import type { INestApplication } from '@nestjs/common';
 import type { Server } from 'http';
@@ -13,14 +10,7 @@ describe('HealthController (e2e)', () => {
   let app: INestApplication;
 
   beforeAll(async () => {
-    const appModule = AppModule.forRoot();
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [appModule],
-    }).compile();
-
-    app = moduleFixture.createNestApplication();
-    app.setGlobalPrefix('api');
-    await app.init();
+    app = await createTestApp();
   });
 
   afterAll(async () => {

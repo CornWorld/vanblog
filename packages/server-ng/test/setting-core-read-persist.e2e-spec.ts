@@ -1,13 +1,11 @@
-import { Test, type TestingModule } from '@nestjs/testing';
 import { siteMeta } from '@vanblog/shared/drizzle';
 import { eq } from 'drizzle-orm';
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 
-import { AppModule } from '../src/app.module';
 import { DATABASE_CONNECTION, type Database } from '../src/database';
 import { SettingCoreService } from '../src/modules/setting/services/setting-core.service';
 
-import { cleanupDatabase } from './test-utils';
+import { cleanupDatabase, createTestApp } from './test-utils';
 
 import type { INestApplication } from '@nestjs/common';
 
@@ -17,16 +15,9 @@ describe('SettingCoreService read-path default persistence (e2e)', () => {
   let db: Database;
 
   beforeAll(async () => {
-    const appModule = AppModule.forRoot();
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [appModule],
-    }).compile();
-
-    app = moduleFixture.createNestApplication();
-    core = moduleFixture.get<SettingCoreService>(SettingCoreService);
-    db = moduleFixture.get<Database>(DATABASE_CONNECTION);
-
-    await app.init();
+    app = await createTestApp();
+    core = app.get<SettingCoreService>(SettingCoreService);
+    db = app.get<Database>(DATABASE_CONNECTION);
   });
 
   afterAll(async () => {

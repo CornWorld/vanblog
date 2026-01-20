@@ -1,18 +1,21 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 
-import { type INestApplication, ValidationPipe, VersioningType } from '@nestjs/common';
-import { Test, type TestingModule } from '@nestjs/testing';
+import { type INestApplication } from '@nestjs/common';
 import { siteMeta } from '@vanblog/shared/drizzle';
 import { eq } from 'drizzle-orm';
 import request from 'supertest';
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 
-import { AppModule } from '../src/app.module';
 import { ConfigService as AppConfigService } from '../src/config';
 import { DATABASE_CONNECTION, type Database } from '../src/database';
 
-import { createUserWithPermissions, createAuthToken, cleanupDatabase } from './test-utils';
+import {
+  createUserWithPermissions,
+  createAuthToken,
+  cleanupDatabase,
+  createTestApp,
+} from './test-utils';
 
 import type { Server } from 'http';
 
@@ -33,19 +36,7 @@ describe('SitemapController - generate & XML (e2e)', () => {
   };
 
   beforeAll(async () => {
-    const appModule = AppModule.forRoot();
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [appModule],
-    }).compile();
-
-    app = moduleFixture.createNestApplication();
-    app.useGlobalPipes(new ValidationPipe({ transform: true }));
-
-    const configService = app.get(AppConfigService);
-    const appConfig = configService.app;
-    app.setGlobalPrefix(appConfig.apiPrefix);
-    app.enableVersioning({ type: VersioningType.URI, defaultVersion: '2' });
-    await app.init();
+    app = await createTestApp();
     httpServer = app.getHttpServer() as Server;
 
     // DB handle for inserting settings
@@ -81,7 +72,7 @@ describe('SitemapController - generate & XML (e2e)', () => {
     // Trigger generation
     const res = await request(httpServer)
       .post('/api/v2/sitemap/generate')
-      .set('Authorization', `Bearer ${generatorToken}`)
+      .auth(generatorToken)
       .expect(200);
 
     expect(res.body).toHaveProperty('message');
@@ -108,7 +99,7 @@ describe('SitemapController - generate & XML (e2e)', () => {
     // Re-generate
     await request(httpServer)
       .post('/api/v2/sitemap/generate')
-      .set('Authorization', `Bearer ${generatorToken}`)
+      .auth(generatorToken)
       .expect(200);
 
     // Validate XML contains the extra URL

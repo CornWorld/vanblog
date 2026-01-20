@@ -1,10 +1,7 @@
-import { type INestApplication, VersioningType } from '@nestjs/common';
-import { Test, type TestingModule } from '@nestjs/testing';
+import { type INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 
-import { AppModule } from '../src/app.module';
-import { ConfigService } from '../src/config';
 import { PicgoStorageService } from '../src/modules/media/services/storages/picgo-storage.service';
 
 import {
@@ -12,7 +9,10 @@ import {
   createUserWithPermissions,
   createAuthToken,
   cleanupDatabase,
+  createTestApp,
 } from './test-utils';
+
+import { nowIsoTz } from '@vanblog/shared/runtime';
 
 import type { Server } from 'http';
 
@@ -26,7 +26,7 @@ const mockPicgoStorageService = {
     return Promise.resolve();
   },
   getPluginLogs: () => ({
-    logs: [{ timestamp: Date.now(), level: 'info', message: 'boot' }],
+    logs: [{ timestamp: nowIsoTz(), level: 'info', message: 'boot' }],
     total: 1,
   }),
 };
@@ -38,23 +38,9 @@ describe('PicgoPluginsController (e2e)', () => {
   let tokenEditor: string;
 
   beforeAll(async () => {
-    const rootModule = await AppModule.forRoot();
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [rootModule],
-    })
-      .overrideProvider(PicgoStorageService)
-      .useValue(mockPicgoStorageService)
-      .compile();
-
-    const configService = moduleFixture.get<ConfigService>(ConfigService);
-
-    app = moduleFixture.createNestApplication();
-
-    const appConfig = configService.app;
-    app.setGlobalPrefix(appConfig.apiPrefix);
-    app.enableVersioning({ type: VersioningType.URI, defaultVersion: '2' });
-
-    await app.init();
+    app = await createTestApp({
+      overrideProviders: [{ provide: PicgoStorageService, useValue: mockPicgoStorageService }],
+    });
     httpServer = app.getHttpServer() as Server;
 
     // baseline admin（拥有 all 权限）
@@ -107,7 +93,7 @@ describe('PicgoPluginsController (e2e)', () => {
     it('200 with setting:read', async () => {
       const res = await request(httpServer)
         .get('/api/v2/admin/media/picgo/plugins')
-        .set('Authorization', `Bearer ${tokenReader}`)
+        .auth(tokenReader)
         .expect(200);
 
       expect(res.body).toEqual(
@@ -127,7 +113,7 @@ describe('PicgoPluginsController (e2e)', () => {
     it('200 with setting:read', async () => {
       const res = await request(httpServer)
         .get('/api/v2/admin/media/picgo/plugins/logs')
-        .set('Authorization', `Bearer ${tokenReader}`)
+        .auth(tokenReader)
         .expect(200);
 
       expect(res.body).toEqual(
@@ -149,7 +135,7 @@ describe('PicgoPluginsController (e2e)', () => {
       // 使用 editor token（仅有 update 权限）应返回 403
       await request(httpServer)
         .get('/api/v2/admin/media/picgo/plugins/logs')
-        .set('Authorization', `Bearer ${tokenEditor}`)
+        .auth(tokenEditor)
         .expect(403);
     });
   });
@@ -158,7 +144,7 @@ describe('PicgoPluginsController (e2e)', () => {
     it('403 when only setting:read', async () => {
       await request(httpServer)
         .post('/api/v2/admin/media/picgo/plugins/install')
-        .set('Authorization', `Bearer ${tokenReader}`)
+        .auth(tokenReader)
         .send({ plugins: ['test-plugin'] })
         .expect(403);
     });
@@ -168,13 +154,13 @@ describe('PicgoPluginsController (e2e)', () => {
       // This results in 500 Internal Server Error instead of 400 Bad Request
       await request(httpServer)
         .post('/api/v2/admin/media/picgo/plugins/install')
-        .set('Authorization', `Bearer ${tokenEditor}`)
+        .auth(tokenEditor)
         .send({}) // missing plugins
         .expect(500);
 
       await request(httpServer)
         .post('/api/v2/admin/media/picgo/plugins/install')
-        .set('Authorization', `Bearer ${tokenEditor}`)
+        .auth(tokenEditor)
         .send({ plugins: 'not-an-array' })
         .expect(500);
     });
@@ -184,7 +170,7 @@ describe('PicgoPluginsController (e2e)', () => {
 
       const res = await request(httpServer)
         .post('/api/v2/admin/media/picgo/plugins/install')
-        .set('Authorization', `Bearer ${tokenEditor}`)
+        .auth(tokenEditor)
         .send(validData)
         .expect(200);
 
@@ -202,7 +188,7 @@ describe('PicgoPluginsController (e2e)', () => {
 
       const res = await request(httpServer)
         .post('/api/v2/admin/media/picgo/plugins/install')
-        .set('Authorization', `Bearer ${tokenEditor}`)
+        .auth(tokenEditor)
         .send(failingData)
         .expect(200);
 
@@ -220,7 +206,7 @@ describe('PicgoPluginsController (e2e)', () => {
     it('403 when only setting:read', async () => {
       await request(httpServer)
         .post('/api/v2/admin/media/picgo/plugins/uninstall')
-        .set('Authorization', `Bearer ${tokenReader}`)
+        .auth(tokenReader)
         .send({ plugins: ['test-plugin'] })
         .expect(403);
     });
@@ -229,7 +215,7 @@ describe('PicgoPluginsController (e2e)', () => {
       // Note: ZodError from .parse() is not caught and converted to 400 by exception filter
       await request(httpServer)
         .post('/api/v2/admin/media/picgo/plugins/uninstall')
-        .set('Authorization', `Bearer ${tokenEditor}`)
+        .auth(tokenEditor)
         .send({}) // missing plugins
         .expect(500);
     });
@@ -239,7 +225,7 @@ describe('PicgoPluginsController (e2e)', () => {
 
       const res = await request(httpServer)
         .post('/api/v2/admin/media/picgo/plugins/uninstall')
-        .set('Authorization', `Bearer ${tokenEditor}`)
+        .auth(tokenEditor)
         .send(data)
         .expect(200);
 

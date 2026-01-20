@@ -1,11 +1,8 @@
-import { type INestApplication, ValidationPipe, VersioningType } from '@nestjs/common';
-import { Test, type TestingModule } from '@nestjs/testing';
+import { type INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 
-import { AppModule } from '../../src/app.module';
-import { ConfigService } from '../../src/config';
-import { cleanupDatabase, createAuthToken, createUser } from '../test-utils';
+import { cleanupDatabase, createAuthToken, createUser, createTestApp } from '../test-utils';
 
 import type { Server } from 'http';
 
@@ -25,20 +22,7 @@ describe('Plugin Lifecycle Integration (e2e)', () => {
   let authToken: string;
 
   beforeAll(async () => {
-    const appModule = AppModule.forRoot();
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [appModule],
-    }).compile();
-
-    app = moduleFixture.createNestApplication();
-    app.useGlobalPipes(new ValidationPipe({ transform: true }));
-
-    const configService = app.get(ConfigService);
-    const appConfig = configService.app;
-    app.setGlobalPrefix(appConfig.apiPrefix);
-    app.enableVersioning({ type: VersioningType.URI, defaultVersion: '2' });
-
-    await app.init();
+    app = await createTestApp();
     httpServer = app.getHttpServer() as Server;
 
     // Setup test user
@@ -60,7 +44,7 @@ describe('Plugin Lifecycle Integration (e2e)', () => {
       // Get plugin list - verifies plugin system is functional
       const res = await request(httpServer)
         .get('/api/v2/admin/plugins')
-        .set('Authorization', `Bearer ${authToken}`)
+        .auth(authToken)
         .expect([200, 404]); // 404 if endpoint not exposed, 200 if it is
 
       if (res.status === 200) {
@@ -82,7 +66,7 @@ describe('Plugin Lifecycle Integration (e2e)', () => {
       // This test verifies that article creation hooks are properly triggered
       const createRes = await request(httpServer)
         .post('/api/v2/articles')
-        .set('Authorization', `Bearer ${authToken}`)
+        .auth(authToken)
         .send({
           title: 'Hook Test Article',
           content: 'Testing hook execution',
@@ -108,7 +92,7 @@ describe('Plugin Lifecycle Integration (e2e)', () => {
       // Create an article and verify data is not corrupted by hooks
       const createRes = await request(httpServer)
         .post('/api/v2/articles')
-        .set('Authorization', `Bearer ${authToken}`)
+        .auth(authToken)
         .send({
           title: 'Data Integrity Test',
           content: 'Original content with special characters: <>&"\'',
@@ -137,7 +121,7 @@ describe('Plugin Lifecycle Integration (e2e)', () => {
       // Create articles to trigger multiple plugins' hooks
       const res1 = await request(httpServer)
         .post('/api/v2/articles')
-        .set('Authorization', `Bearer ${authToken}`)
+        .auth(authToken)
         .send({
           title: 'Isolation Test 1',
           content: 'Testing plugin isolation',
@@ -150,7 +134,7 @@ describe('Plugin Lifecycle Integration (e2e)', () => {
 
       const res2 = await request(httpServer)
         .post('/api/v2/articles')
-        .set('Authorization', `Bearer ${authToken}`)
+        .auth(authToken)
         .send({
           title: 'Isolation Test 2',
           content: 'Another isolation test',
@@ -211,7 +195,7 @@ describe('Plugin Lifecycle Integration (e2e)', () => {
       // Update a setting
       const updateRes = await request(httpServer)
         .put('/api/v2/admin/settings')
-        .set('Authorization', `Bearer ${authToken}`)
+        .auth(authToken)
         .send({
           key: 'siteInfo.title',
           value: 'Updated Site Title',
@@ -234,7 +218,7 @@ describe('Plugin Lifecycle Integration (e2e)', () => {
       // Create an article
       const createRes = await request(httpServer)
         .post('/api/v2/articles')
-        .set('Authorization', `Bearer ${authToken}`)
+        .auth(authToken)
         .send({
           title: 'Update Hook Test',
           content: 'Original content',
@@ -249,7 +233,7 @@ describe('Plugin Lifecycle Integration (e2e)', () => {
       const articleIdStr = String(articleId);
       const updateRes = await request(httpServer)
         .put(`/api/v2/articles/${articleIdStr}`)
-        .set('Authorization', `Bearer ${authToken}`)
+        .auth(authToken)
         .send({
           title: 'Updated Article Title',
           content: 'Updated content after hook processing',
@@ -272,7 +256,7 @@ describe('Plugin Lifecycle Integration (e2e)', () => {
       // Create an article
       const createRes = await request(httpServer)
         .post('/api/v2/articles')
-        .set('Authorization', `Bearer ${authToken}`)
+        .auth(authToken)
         .send({
           title: 'Deletion Hook Test',
           content: 'This article will be deleted',
@@ -286,7 +270,7 @@ describe('Plugin Lifecycle Integration (e2e)', () => {
       // Delete the article
       await request(httpServer)
         .delete(`/api/v2/articles/${String(articleId)}`)
-        .set('Authorization', `Bearer ${authToken}`)
+        .auth(authToken)
         .expect([200, 204]);
 
       // Verify it's deleted
@@ -303,7 +287,7 @@ describe('Plugin Lifecycle Integration (e2e)', () => {
       // Create a category
       const createRes = await request(httpServer)
         .post('/api/v2/categories')
-        .set('Authorization', `Bearer ${authToken}`)
+        .auth(authToken)
         .send({
           name: 'Hook Test Category',
           slug: 'hook-test-category',
@@ -317,7 +301,7 @@ describe('Plugin Lifecycle Integration (e2e)', () => {
       // Update the category
       const updateRes = await request(httpServer)
         .put(`/api/v2/categories/${String(createRes.body.id)}`)
-        .set('Authorization', `Bearer ${authToken}`)
+        .auth(authToken)
         .send({
           name: 'Updated Hook Test Category',
           slug: 'updated-hook-test-category',
@@ -333,7 +317,7 @@ describe('Plugin Lifecycle Integration (e2e)', () => {
       // Create an article first
       await request(httpServer)
         .post('/api/v2/articles')
-        .set('Authorization', `Bearer ${authToken}`)
+        .auth(authToken)
         .send({
           title: 'RSS Test Article',
           content: 'This article should appear in RSS feed',

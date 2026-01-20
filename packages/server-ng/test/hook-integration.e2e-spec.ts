@@ -1,13 +1,12 @@
-import { Test, type TestingModule } from '@nestjs/testing';
+import { type TestingModule } from '@nestjs/testing';
 import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest';
 
-import { AppModule } from '../src/app.module';
 import { ArticleService } from '../src/modules/article/article.service';
 import { CommentService } from '../src/modules/comment/comment.service';
 import { DraftService } from '../src/modules/draft/draft.service';
 import { HookService } from '../src/modules/plugin/services/hook.service';
 
-import { cleanupDatabase } from './test-utils';
+import { cleanupDatabase, createTestApp } from './test-utils';
 
 import type { INestApplication } from '@nestjs/common';
 
@@ -19,18 +18,13 @@ describe('Hook Integration (e2e)', () => {
   let commentService: CommentService;
 
   beforeAll(async () => {
-    const appModule = AppModule.forRoot();
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [appModule],
-    }).compile();
+    app = await createTestApp();
 
-    app = moduleFixture.createNestApplication();
-    hookService = moduleFixture.get<HookService>(HookService);
-    articleService = moduleFixture.get<ArticleService>(ArticleService);
-    draftService = moduleFixture.get<DraftService>(DraftService);
-    commentService = moduleFixture.get<CommentService>(CommentService);
-
-    await app.init();
+    // Get services from the app
+    hookService = app.get<HookService>(HookService);
+    articleService = app.get<ArticleService>(ArticleService);
+    draftService = app.get<DraftService>(DraftService);
+    commentService = app.get<CommentService>(CommentService);
   });
 
   afterAll(async () => {

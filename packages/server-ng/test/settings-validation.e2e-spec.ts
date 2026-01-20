@@ -1,12 +1,8 @@
-import { type INestApplication, ValidationPipe, VersioningType } from '@nestjs/common';
-import { Test, type TestingModule } from '@nestjs/testing';
+import { type INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 
-import { AppModule } from '../src/app.module';
-import { ConfigService } from '../src/config';
-
-import { createUser, createAuthToken, cleanupDatabase } from './test-utils';
+import { createUser, createAuthToken, cleanupDatabase, createTestApp } from './test-utils';
 
 import type { Server } from 'http';
 
@@ -19,25 +15,13 @@ describe('SettingsController Validation (e2e)', () => {
   let token: string;
 
   beforeAll(async () => {
-    const appModule = AppModule.forRoot();
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [appModule],
-    }).compile();
-
-    app = moduleFixture.createNestApplication();
-    app.useGlobalPipes(new ValidationPipe({ transform: true }));
-
-    const configService = app.get(ConfigService);
-    const appConfig = configService.app;
-    app.setGlobalPrefix(appConfig.apiPrefix);
-    app.enableVersioning({ type: VersioningType.URI, defaultVersion: '2' });
-
-    await app.init();
+    app = await createTestApp();
     httpServer = app.getHttpServer() as Server;
 
     // Create admin user and login to get token
     await createUser(app);
     token = await createAuthToken(app);
+  });
   });
 
   afterAll(async () => {
@@ -55,7 +39,7 @@ describe('SettingsController Validation (e2e)', () => {
 
     const res = await request(httpServer)
       .patch('/api/v2/admin/settings/site-info')
-      .set('Authorization', `Bearer ${token}`)
+      .auth(token)
       .send(invalidBody)
       .expect(400);
 
@@ -78,7 +62,7 @@ describe('SettingsController Validation (e2e)', () => {
 
     const res = await request(httpServer)
       .patch('/api/v2/admin/settings/navigation')
-      .set('Authorization', `Bearer ${token}`)
+      .auth(token)
       .send(invalidBody)
       .expect(400);
 

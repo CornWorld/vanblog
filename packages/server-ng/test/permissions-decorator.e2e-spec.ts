@@ -122,14 +122,14 @@ describe('Permissions Decorators (e2e)', () => {
     it('200 with permtest:read', async () => {
       await request(httpServer)
         .get('/api/v2/perm-test/a')
-        .set('Authorization', `Bearer ${tokenReader}`)
+        .auth(tokenReader)
         .expect(200);
     });
 
     it('403 with write only', async () => {
       await request(httpServer)
         .get('/api/v2/perm-test/a')
-        .set('Authorization', `Bearer ${tokenWriter}`)
+        .auth(tokenWriter)
         .expect(403);
     });
   });
@@ -138,14 +138,14 @@ describe('Permissions Decorators (e2e)', () => {
     it('403 with read only', async () => {
       await request(httpServer)
         .get('/api/v2/perm-test/b')
-        .set('Authorization', `Bearer ${tokenReader}`)
+        .auth(tokenReader)
         .expect(403);
     });
 
     it('200 with read+write', async () => {
       await request(httpServer)
         .get('/api/v2/perm-test/b')
-        .set('Authorization', `Bearer ${tokenRW}`)
+        .auth(tokenRW)
         .expect(200);
     });
   });
@@ -154,14 +154,14 @@ describe('Permissions Decorators (e2e)', () => {
     it('200 with write', async () => {
       await request(httpServer)
         .get('/api/v2/perm-test/c')
-        .set('Authorization', `Bearer ${tokenWriter}`)
+        .auth(tokenWriter)
         .expect(200);
     });
 
     it('403 with read only', async () => {
       await request(httpServer)
         .get('/api/v2/perm-test/c')
-        .set('Authorization', `Bearer ${tokenReader}`)
+        .auth(tokenReader)
         .expect(403);
     });
   });

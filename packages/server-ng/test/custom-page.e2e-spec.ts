@@ -1,14 +1,11 @@
-import { type INestApplication, ValidationPipe, VersioningType } from '@nestjs/common';
-import { Test, type TestingModule } from '@nestjs/testing';
+import { type INestApplication } from '@nestjs/common';
 import { customPages } from '@vanblog/shared/drizzle';
 import request from 'supertest';
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 
-import { AppModule } from '../src/app.module';
-import { ConfigService } from '../src/config';
 import { DATABASE_CONNECTION } from '../src/database';
 
-import { createUser, cleanupDatabase } from './test-utils';
+import { createUser, cleanupDatabase, createTestApp } from './test-utils';
 
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import type { Server } from 'http';
@@ -18,24 +15,7 @@ describe('CustomPageController (e2e)', () => {
   let db: LibSQLDatabase<Record<string, unknown>>;
 
   beforeAll(async () => {
-    const appModule = AppModule.forRoot();
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [appModule],
-    }).compile();
-
-    app = moduleFixture.createNestApplication();
-    app.useGlobalPipes(new ValidationPipe({ transform: true }));
-
-    // Configure app like in main.ts
-    const configService = app.get(ConfigService);
-    const appConfig = configService.app;
-    app.setGlobalPrefix(appConfig.apiPrefix);
-    app.enableVersioning({
-      type: VersioningType.URI,
-      defaultVersion: '2',
-    });
-
-    await app.init();
+    app = await createTestApp();
 
     // Get database connection for test data setup
     db = app.get<LibSQLDatabase<Record<string, unknown>>>(DATABASE_CONNECTION);

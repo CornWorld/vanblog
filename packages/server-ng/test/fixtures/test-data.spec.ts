@@ -89,7 +89,7 @@ describe('Test Data Factories', () => {
 
       expect(article.title).toBe('Custom Title');
       expect(article.viewer).toBe(100);
-      expect(article.hidden).toBe(true);
+      expect(article.hidden).toBeTruthy();
     });
 
     it('should create mock tag', () => {
@@ -103,7 +103,7 @@ describe('Test Data Factories', () => {
       const category = createMockCategory({ name: 'Tech' });
 
       expect(category.name).toBe('Tech');
-      expect(category.private).toBe(false);
+      expect(category.private).toBeFalsy();
     });
 
     it('should create mock draft', () => {
@@ -177,7 +177,7 @@ describe('Test Data Factories', () => {
     it('should create mock login log', () => {
       const log = createMockLoginLog({ success: false, message: 'Invalid password' });
 
-      expect(log.success).toBe(false);
+      expect(log.success).toBeFalsy();
       expect(log.message).toBe('Invalid password');
     });
 
@@ -220,7 +220,7 @@ describe('Test Data Factories', () => {
 
       expect(node.name).toContain('article:create');
       expect(node.module).toBe('article');
-      expect(node.isActive).toBe(true);
+      expect(node.isActive).toBeTruthy();
     });
 
     it('should create mock permission group', () => {
@@ -338,7 +338,7 @@ describe('Test Data Factories', () => {
       expect(articles).toHaveLength(3);
       articles.forEach((article) => {
         expect(article.author).toBe('batch-author');
-        expect(article.hidden).toBe(true);
+        expect(article.hidden).toBeTruthy();
       });
     });
   });

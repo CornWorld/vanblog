@@ -1,16 +1,13 @@
-import { type INestApplication, ValidationPipe, VersioningType } from '@nestjs/common';
-import { Test, type TestingModule } from '@nestjs/testing';
+import { type INestApplication } from '@nestjs/common';
 import { dayjs } from '@vanblog/shared';
 import { analytics } from '@vanblog/shared/drizzle';
 import request from 'supertest';
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 
-import { AppModule } from '../src/app.module';
-import { ConfigService } from '../src/config';
 import { DATABASE_CONNECTION } from '../src/database';
 import { AnalyticsType } from '../src/modules/analytics/entities/analytics.entity';
 
-import { createUser, cleanupDatabase, createAuthToken } from './test-utils';
+import { createUser, cleanupDatabase, createAuthToken, createTestApp } from './test-utils';
 
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import type { Server } from 'http';
@@ -20,24 +17,7 @@ describe('AnalyticsController (e2e)', () => {
   let authToken: string;
 
   beforeAll(async () => {
-    const appModule = AppModule.forRoot();
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [appModule],
-    }).compile();
-
-    app = moduleFixture.createNestApplication();
-    app.useGlobalPipes(new ValidationPipe({ transform: true }));
-
-    // Configure app like in main.ts
-    const configService = app.get(ConfigService);
-    const appConfig = configService.app;
-    app.setGlobalPrefix(appConfig.apiPrefix);
-    app.enableVersioning({
-      type: VersioningType.URI,
-      defaultVersion: '2',
-    });
-
-    await app.init();
+    app = await createTestApp();
 
     // Create admin user and get auth token
     await createUser(app);
@@ -131,7 +111,7 @@ describe('AnalyticsController (e2e)', () => {
     it('should return analytics overview with auth', async () => {
       const response = await request(app.getHttpServer() as Server)
         .get('/api/v2/admin/analytics/overview')
-        .set('Authorization', `Bearer ${authToken}`)
+        .auth(authToken)
         .expect(200);
 
       expect(response.body).toHaveProperty('todayPageviews');
@@ -166,7 +146,7 @@ describe('AnalyticsController (e2e)', () => {
 
       const response = await request(app.getHttpServer() as Server)
         .get('/api/v2/admin/analytics/page-rankings')
-        .set('Authorization', `Bearer ${authToken}`)
+        .auth(authToken)
         .query({ limit: 5 })
         .expect(200);
 
@@ -183,7 +163,7 @@ describe('AnalyticsController (e2e)', () => {
     it('should return referrer statistics', async () => {
       const response = await request(app.getHttpServer() as Server)
         .get('/api/v2/admin/analytics/referrers')
-        .set('Authorization', `Bearer ${authToken}`)
+        .auth(authToken)
         .expect(200);
 
       expect(response.body).toBeInstanceOf(Array);
@@ -194,7 +174,7 @@ describe('AnalyticsController (e2e)', () => {
     it('should return chart data', async () => {
       const response = await request(app.getHttpServer() as Server)
         .get('/api/v2/admin/analytics/chart')
-        .set('Authorization', `Bearer ${authToken}`)
+        .auth(authToken)
         .query({ days: 7 })
         .expect(200);
 
@@ -214,7 +194,7 @@ describe('AnalyticsController (e2e)', () => {
     it('should return device statistics', async () => {
       const response = await request(app.getHttpServer() as Server)
         .get('/api/v2/admin/analytics/devices')
-        .set('Authorization', `Bearer ${authToken}`)
+        .auth(authToken)
         .expect(200);
 
       expect(response.body).toBeInstanceOf(Array);
@@ -225,7 +205,7 @@ describe('AnalyticsController (e2e)', () => {
     it('should return browser statistics', async () => {
       const response = await request(app.getHttpServer() as Server)
         .get('/api/v2/admin/analytics/browsers')
-        .set('Authorization', `Bearer ${authToken}`)
+        .auth(authToken)
         .expect(200);
 
       expect(response.body).toBeInstanceOf(Array);
@@ -236,7 +216,7 @@ describe('AnalyticsController (e2e)', () => {
     it('should return top articles', async () => {
       const response = await request(app.getHttpServer() as Server)
         .get('/api/v2/admin/analytics/articles/top')
-        .set('Authorization', `Bearer ${authToken}`)
+        .auth(authToken)
         .query({ limit: 10 })
         .expect(200);
 
@@ -248,7 +228,7 @@ describe('AnalyticsController (e2e)', () => {
     it('should export analytics data', async () => {
       const response = await request(app.getHttpServer() as Server)
         .get('/api/v2/admin/analytics/export')
-        .set('Authorization', `Bearer ${authToken}`)
+        .auth(authToken)
         .query({
           startDate: dayjs().subtract(7, 'day').format(),
           endDate: dayjs().format(),
@@ -263,7 +243,7 @@ describe('AnalyticsController (e2e)', () => {
     it('should return ETag header on cached analytics endpoints', async () => {
       const { headers } = await request(app.getHttpServer() as Server)
         .get('/api/v2/admin/analytics/overview')
-        .set('Authorization', `Bearer ${authToken}`)
+        .auth(authToken)
         .expect(200);
 
       expect(headers).toHaveProperty('etag');
@@ -274,7 +254,7 @@ describe('AnalyticsController (e2e)', () => {
       // First request to get ETag
       const first = await request(app.getHttpServer() as Server)
         .get('/api/v2/admin/analytics/overview')
-        .set('Authorization', `Bearer ${authToken}`)
+        .auth(authToken)
         .expect(200);
 
       const { etag } = first.headers;
@@ -283,7 +263,7 @@ describe('AnalyticsController (e2e)', () => {
       // Second request with If-None-Match
       await request(app.getHttpServer() as Server)
         .get('/api/v2/admin/analytics/overview')
-        .set('Authorization', `Bearer ${authToken}`)
+        .auth(authToken)
         .set('If-None-Match', etag)
         .expect(304);
     });
@@ -318,13 +298,13 @@ describe('AnalyticsController (e2e)', () => {
 
       const first = await request(app.getHttpServer() as Server)
         .get('/api/v2/admin/analytics/chart')
-        .set('Authorization', `Bearer ${authToken}`)
+        .auth(authToken)
         .query({ days: 7 })
         .expect(200);
 
       const second = await request(app.getHttpServer() as Server)
         .get('/api/v2/admin/analytics/chart')
-        .set('Authorization', `Bearer ${authToken}`)
+        .auth(authToken)
         .query({ days: 14 })
         .expect(200);
 
@@ -337,7 +317,7 @@ describe('AnalyticsController (e2e)', () => {
     it('should return fresh data when cache is invalidated', async () => {
       const res1 = await request(app.getHttpServer() as Server)
         .get('/api/v2/admin/analytics/chart')
-        .set('Authorization', `Bearer ${authToken}`)
+        .auth(authToken)
         .query({ days: 7 })
         .expect(200);
 
@@ -349,7 +329,7 @@ describe('AnalyticsController (e2e)', () => {
 
       const res2 = await request(app.getHttpServer() as Server)
         .get('/api/v2/admin/analytics/chart')
-        .set('Authorization', `Bearer ${authToken}`)
+        .auth(authToken)
         .query({ days: 7 })
         .expect(200);
 

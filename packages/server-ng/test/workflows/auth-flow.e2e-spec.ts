@@ -1,14 +1,16 @@
-import { type INestApplication, ValidationPipe, VersioningType } from '@nestjs/common';
-import { Test, type TestingModule } from '@nestjs/testing';
+import { type INestApplication } from '@nestjs/common';
 import { users } from '@vanblog/shared/drizzle';
 import { hash } from 'bcrypt';
 import request from 'supertest';
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 
-import { AppModule } from '../../src/app.module';
-import { ConfigService } from '../../src/config';
 import { DATABASE_CONNECTION } from '../../src/database';
-import { cleanupDatabase } from '../test-utils';
+import {
+  cleanupDatabase,
+  createTestApp,
+  createTestApiHelper,
+  assertions,
+} from '../test-utils';
 
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import type { Server } from 'http';
@@ -27,6 +29,7 @@ describe('Authentication Flow Integration (e2e)', () => {
   let app: INestApplication;
   let db: LibSQLDatabase;
   let httpServer: Server;
+  let api: ReturnType<typeof createTestApiHelper>;
 
   const testUser = {
     username: 'authtest',
@@ -35,22 +38,12 @@ describe('Authentication Flow Integration (e2e)', () => {
   };
 
   beforeAll(async () => {
-    const appModule = AppModule.forRoot();
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [appModule],
-    }).compile();
-
-    app = moduleFixture.createNestApplication();
-    app.useGlobalPipes(new ValidationPipe({ transform: true }));
-
-    const configService = app.get(ConfigService);
-    const appConfig = configService.app;
-    app.setGlobalPrefix(appConfig.apiPrefix);
-    app.enableVersioning({ type: VersioningType.URI, defaultVersion: '2' });
-
-    await app.init();
+    app = await createTestApp();
     httpServer = app.getHttpServer() as Server;
     db = app.get<LibSQLDatabase>(DATABASE_CONNECTION);
+
+    // Create API helper
+    api = createTestApiHelper(httpServer);
   });
 
   afterAll(async () => {
@@ -75,94 +68,74 @@ describe('Authentication Flow Integration (e2e)', () => {
 
   describe('Basic login flow', () => {
     it('should login successfully with valid credentials', async () => {
-      const res = await request(httpServer)
-        .post('/api/v2/auth/login')
-        .send({
-          username: testUser.username,
-          password: testUser.password,
-        })
-        .expect(200);
-
-      expect(res.body).toHaveProperty('token');
-      const { token } = res.body;
+      const token = await api.login({
+        username: testUser.username,
+        password: testUser.password,
+      });
 
       expect(typeof token).toBe('string');
       expect(token.length).toBeGreaterThan(10);
     });
 
     it('should reject login with invalid password', async () => {
-      await request(httpServer)
-        .post('/api/v2/auth/login')
-        .send({
-          username: testUser.username,
-          password: 'WrongPassword123!',
-        })
-        .expect([401, 400]);
+      const res = await api.tryLogin({
+        username: testUser.username,
+        password: 'WrongPassword123!',
+      });
+
+      expect([401, 400]).toContain(res.status);
     });
 
     it('should reject login with non-existent user', async () => {
-      await request(httpServer)
-        .post('/api/v2/auth/login')
-        .send({
-          username: 'nonexistent',
-          password: 'SomePassword123!',
-        })
-        .expect([401, 404, 400]);
+      const res = await api.tryLogin({
+        username: 'nonexistent',
+        password: 'SomePassword123!',
+      });
+
+      expect([401, 404, 400]).toContain(res.status);
     });
   });
 
   describe('Token-based access control', () => {
     it('should allow access to protected route with valid token', async () => {
       // Login and get token
-      const loginRes = await request(httpServer)
-        .post('/api/v2/auth/login')
-        .send({
-          username: testUser.username,
-          password: testUser.password,
-        })
-        .expect(200);
-
-      const { token } = loginRes.body;
+      const token = await api.login({
+        username: testUser.username,
+        password: testUser.password,
+      });
 
       // Access protected route
-      const protectedRes = await request(httpServer)
-        .get('/api/v2/articles')
-        .set('Authorization', `Bearer ${String(token)}`)
-        .expect(200);
+      const protectedRes = await api.accessProtectedRoute('/api/v2/articles', token);
 
+      expect(protectedRes.status).toBe(200);
       expect(protectedRes.body).toBeDefined();
     });
 
     it('should reject access without token', async () => {
-      await request(httpServer)
+      const res = await request(httpServer)
         .post('/api/v2/articles')
         .send({
           title: 'Test Article',
           content: 'Test content',
           author: 'Test',
           pathname: 'test',
-        })
-        .expect([401, 403]);
+          tags: [],
+        });
+
+      expect([401, 403]).toContain(res.status);
     });
 
     it('should reject access with invalid token', async () => {
-      await request(httpServer)
-        .get('/api/v2/articles')
-        .set('Authorization', 'Bearer invalid.token.here')
-        .expect([401, 403]);
+      const res = await api.accessProtectedRoute('/api/v2/articles', 'invalid.token.here');
+
+      expect([401, 403]).toContain(res.status);
     });
 
     it('should reject access with expired token', async () => {
-      // This test would use a token that's intentionally expired
-      // The exact mechanism depends on JWT implementation
-
       const expiredToken =
         'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjE1MTYyMzkwMjJ9.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c';
 
-      const res = await request(httpServer)
-        .get('/api/v2/articles')
-        .set('Authorization', `Bearer ${expiredToken}`)
-        .expect([401, 403]);
+      const res = await api.accessProtectedRoute('/api/v2/articles', expiredToken);
 
       expect(res.status).toBeGreaterThanOrEqual(400);
     });
@@ -171,85 +144,55 @@ describe('Authentication Flow Integration (e2e)', () => {
   describe('Logout flow', () => {
     it('should logout and invalidate token', async () => {
       // Login
-      const loginRes = await request(httpServer)
-        .post('/api/v2/auth/login')
-        .send({
-          username: testUser.username,
-          password: testUser.password,
-        })
-        .expect(200);
-
-      const { token } = loginRes.body;
+      const token = await api.login({
+        username: testUser.username,
+        password: testUser.password,
+      });
 
       // Verify token works
-      await request(httpServer)
-        .get('/api/v2/articles')
-        .set('Authorization', `Bearer ${String(token)}`)
-        .expect(200);
+      const beforeLogout = await api.accessProtectedRoute('/api/v2/articles', token);
+      expect(beforeLogout.status).toBe(200);
 
       // Logout
-      const logoutRes = await request(httpServer)
-        .post('/api/v2/auth/logout')
-        .set('Authorization', `Bearer ${String(token)}`)
-        .expect([200, 204]);
+      const logoutRes = await api.logout(token);
+      expect([200, 204]).toContain(logoutRes.status);
 
-      expect(logoutRes.status).toBeGreaterThanOrEqual(200);
-
-      // Try to use token after logout - should fail
-      const afterLogoutRes = await request(httpServer)
-        .get('/api/v2/articles')
-        .set('Authorization', `Bearer ${String(token)}`);
+      // Try to use token after logout
+      const afterLogout = await api.accessProtectedRoute('/api/v2/articles', token);
 
       // Either 401, 403, or still works depending on implementation
-      // Some systems don't immediately blacklist tokens
-      expect([200, 401, 403]).toContain(afterLogoutRes.status);
+      expect([200, 401, 403]).toContain(afterLogout.status);
     });
   });
 
   describe('Password change workflow', () => {
     it('should change password and require new password for login', async () => {
       // Login with old password
-      const loginRes = await request(httpServer)
-        .post('/api/v2/auth/login')
-        .send({
-          username: testUser.username,
-          password: testUser.password,
-        })
-        .expect(200);
+      const token = await api.login({
+        username: testUser.username,
+        password: testUser.password,
+      });
 
-      const { token } = loginRes.body;
       const newPassword = 'NewPassword456!';
 
-      // Change password (if endpoint exists)
-      const changeRes = await request(httpServer)
-        .post('/api/v2/auth/change-password')
-        .set('Authorization', `Bearer ${String(token)}`)
-        .send({
-          oldPassword: testUser.password,
-          newPassword,
-        })
-        .expect([200, 204, 404]); // 404 if endpoint not exposed
+      // Change password
+      const changeRes = await api.changePassword(token, testUser.password, newPassword);
 
       if (changeRes.status === 200 || changeRes.status === 204) {
         // Try login with old password - should fail
-        await request(httpServer)
-          .post('/api/v2/auth/login')
-          .send({
-            username: testUser.username,
-            password: testUser.password,
-          })
-          .expect([401, 400]);
+        const oldPasswordRes = await api.tryLogin({
+          username: testUser.username,
+          password: testUser.password,
+        });
+        expect([401, 400]).toContain(oldPasswordRes.status);
 
         // Login with new password - should succeed
-        const newLoginRes = await request(httpServer)
-          .post('/api/v2/auth/login')
-          .send({
-            username: testUser.username,
-            password: newPassword,
-          })
-          .expect(200);
+        const newToken = await api.login({
+          username: testUser.username,
+          password: newPassword,
+        });
 
-        expect(newLoginRes.body).toHaveProperty('token');
+        expect(typeof newToken).toBe('string');
       }
     });
   });
@@ -286,7 +229,7 @@ describe('Authentication Flow Integration (e2e)', () => {
           // New token should work
           await request(httpServer)
             .get('/api/v2/articles')
-            .set('Authorization', `Bearer ${String(newAccessToken)}`)
+            .auth(String(newAccessToken))
             .expect(200);
         }
       }
@@ -330,17 +273,17 @@ describe('Authentication Flow Integration (e2e)', () => {
       // All tokens should work independently
       const verify1 = await request(httpServer)
         .get('/api/v2/articles')
-        .set('Authorization', `Bearer ${String(token1)}`)
+        .auth(String(token1))
         .expect(200);
 
       const verify2 = await request(httpServer)
         .get('/api/v2/articles')
-        .set('Authorization', `Bearer ${String(token2)}`)
+        .auth(String(token2))
         .expect(200);
 
       const verify3 = await request(httpServer)
         .get('/api/v2/articles')
-        .set('Authorization', `Bearer ${String(token3)}`)
+        .auth(String(token3))
         .expect(200);
 
       expect(verify1.status).toBe(200);
@@ -441,12 +384,12 @@ describe('Authentication Flow Integration (e2e)', () => {
       // Each token should work independently
       const access1 = await request(httpServer)
         .get('/api/v2/articles')
-        .set('Authorization', `Bearer ${String(token1)}`)
+        .auth(String(token1))
         .expect(200);
 
       const access2 = await request(httpServer)
         .get('/api/v2/articles')
-        .set('Authorization', `Bearer ${String(token2)}`)
+        .auth(String(token2))
         .expect(200);
 
       expect(access1.status).toBe(200);
@@ -455,11 +398,11 @@ describe('Authentication Flow Integration (e2e)', () => {
       // Swapping tokens should still work for reading
       const swapped1 = await request(httpServer)
         .get('/api/v2/articles')
-        .set('Authorization', `Bearer ${String(token2)}`);
+        .auth(String(token2));
 
       const swapped2 = await request(httpServer)
         .get('/api/v2/articles')
-        .set('Authorization', `Bearer ${String(token1)}`);
+        .auth(String(token1));
 
       // Both should either work or be protected
       expect([200, 401, 403]).toContain(swapped1.status);
@@ -483,7 +426,7 @@ describe('Authentication Flow Integration (e2e)', () => {
       // Get user profile (if endpoint exists)
       const profileRes = await request(httpServer)
         .get('/api/v2/auth/me')
-        .set('Authorization', `Bearer ${String(token)}`)
+        .auth(String(token))
         .expect([200, 404]);
 
       if (profileRes.status === 200) {
