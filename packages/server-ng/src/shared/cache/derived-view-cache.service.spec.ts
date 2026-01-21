@@ -273,21 +273,17 @@ describe('DerivedViewCacheService', () => {
     });
 
     it('should trigger synchronous regeneration at TTL + 1.0 * swrTolerance (SWR boundary)', async () => {
-      vi.useFakeTimers();
-
       const key = 'test:swr-boundary';
       const ttl = 1; // 1 second
       const swrTolerance = 30; // 30 seconds
-      const createdAt = nowIsoTz();
 
+      // Create cached data that is just outside SWR window
+      const past = dayjs().subtract(ttl + swrTolerance + 1, 'second').toISOString();
       const cached: CachedResult = {
         data: { value: 'very-stale' },
-        meta: { timestamp: createdAt, regenerating: false },
+        meta: { timestamp: past, regenerating: false },
       };
       await cache.set(key, cached);
-
-      // Jump to PAST the TTL + swrTolerance boundary (outside SWR window)
-      vi.advanceTimersByTime((ttl + swrTolerance) * 1000 + 1);
 
       const generator = vi.fn().mockResolvedValue({ value: 'fresh-boundary' });
 
@@ -300,10 +296,8 @@ describe('DerivedViewCacheService', () => {
       });
 
       // Outside the SWR window (beyond TTL + swrTolerance), should be synchronous regeneration
-      // Result should be fresh, not stale
       expect((result as any).value).toBe('fresh-boundary');
-
-      vi.useRealTimers();
+      expect(generator).toHaveBeenCalledTimes(1);
     });
 
     it('should provide stale-while-revalidate at various intermediate points', async () => {
@@ -421,7 +415,7 @@ describe('DerivedViewCacheService', () => {
     const key = 'test:no-swr';
     const ttl = 1;
     const past = dayjs()
-      .subtract((ttl + 1) * 1000, 'millisecond')
+      .subtract(ttl + 1, 'second')
       .toISOString(); // 过期
 
     const cached: CachedResult = {
@@ -435,6 +429,7 @@ describe('DerivedViewCacheService', () => {
     const result = await service.getDerivedView({ key, generator, ttl, swr: false });
 
     expect(result as any).toEqual({ value: 'fresh' });
+    expect(generator).toHaveBeenCalledTimes(1);
   });
 
   it('should invalidate cache', async () => {
@@ -581,13 +576,11 @@ describe('DerivedViewCacheService', () => {
 
   describe('Concurrent Regeneration Lock', () => {
     it('should use atomic test-and-set for regeneration lock', async () => {
-      vi.useFakeTimers();
-
       const key = 'test:lock-atomic';
       const ttl = 1;
       const swrTolerance = 60;
       const past = dayjs()
-        .subtract((ttl + 1) * 1000, 'millisecond')
+        .subtract(ttl + 1, 'second')
         .toISOString();
 
       const cached: CachedResult = {
@@ -617,9 +610,8 @@ describe('DerivedViewCacheService', () => {
         expect((result as any).value).toBe('stale');
       });
 
-      // Advance fake timers to let async regeneration complete
-      vi.advanceTimersByTime(100);
-      await vi.runAllTimersAsync();
+      // Wait for async regeneration to complete
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
       // Generator should be called minimally (lock prevents duplicate calls)
       expect(generator.mock.calls.length).toBeLessThanOrEqual(2);
@@ -627,18 +619,14 @@ describe('DerivedViewCacheService', () => {
       // Final value should be updated
       const final = await cache.get<CachedResult>(key);
       expect((final as any)?.data.value).toBe('fresh');
-
-      vi.useRealTimers();
     });
 
     it('should handle multiple concurrent requests outside SWR window', async () => {
-      vi.useFakeTimers();
-
       const key = 'test:concurrent-miss-lock';
       const ttl = 1;
       const swrTolerance = 10;
       const past = dayjs()
-        .subtract((ttl + swrTolerance + 1) * 1000, 'millisecond')
+        .subtract(ttl + swrTolerance + 1, 'second')
         .toISOString(); // Far outside SWR window
 
       const cached: CachedResult = {
@@ -650,7 +638,6 @@ describe('DerivedViewCacheService', () => {
       let generatorCallCount = 0;
       const generator = vi.fn().mockImplementation(() => {
         generatorCallCount++;
-        // No real setTimeout - use fake timer version that completes immediately
         return { value: `fresh-${String(generatorCallCount)}` };
       });
 
@@ -669,8 +656,6 @@ describe('DerivedViewCacheService', () => {
       // Final cache state should be updated
       const final = await cache.get<CachedResult>(key);
       expect((final as any)?.data).toBeDefined();
-
-      vi.useRealTimers();
     });
 
     it('should handle regenerating flag correctly during concurrent access', async () => {
