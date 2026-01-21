@@ -108,11 +108,11 @@ export class DerivedViewCacheService {
   /**
    * 异步重新生成数据 (SWR)
    */
-  private async regenerateAsync(
+  private regenerateAsync(
     key: string,
     generator: () => Promise<unknown>,
     ttl: number,
-  ): Promise<void> {
+  ): void {
     // 防止重复触发重新生成
     if (this.regeneratingKeys.has(key)) {
       return;
@@ -120,22 +120,24 @@ export class DerivedViewCacheService {
 
     this.regeneratingKeys.add(key);
 
-    try {
-      // 标记正在重新生成
-      const cached = await this.getCachedResult(key);
+    // 立即标记正在重新生成（同步）
+    this.getCachedResult(key).then((cached) => {
       if (cached) {
         cached.meta.regenerating = true;
-        await this.cacheService.set(key, cached, ttl + 60);
+        return this.cacheService.set(key, cached, ttl + 60);
       }
+    }).catch(() => {
+      // Ignore errors during cache update
+    });
 
-      // 异步生成新数据
-      void this.generateAndCache(key, generator, ttl).finally(() => {
+    // 异步生成新数据
+    this.generateAndCache(key, generator, ttl)
+      .finally(() => {
         this.regeneratingKeys.delete(key);
+      })
+      .catch((error) => {
+        this.logger.error(`Async regeneration failed for key ${key}:`, error);
       });
-    } catch (error) {
-      this.regeneratingKeys.delete(key);
-      this.logger.error(`Failed to start async regeneration for key ${key}:`, error as Error);
-    }
   }
 
   /**
