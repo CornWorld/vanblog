@@ -15,6 +15,7 @@ import { createClient } from '@libsql/client';
 import * as schema from '@vanblog/shared/drizzle';
 import { drizzle, type LibSQLDatabase } from 'drizzle-orm/libsql';
 import { vi } from 'vitest';
+import { cleanupTestData } from './utils/cleanup-helper';
 
 // Set up test-specific database configuration
 // Use a separate database file for each worker to avoid conflicts
@@ -76,7 +77,12 @@ export async function setupTestDatabase(): Promise<LibSQLDatabase<Record<string,
   try {
     // Check if this worker's database is already initialized
     if (existsSync(dbReadyFile)) {
-      console.log(`[Worker ${workerId}] Database already initialized, reusing existing database`);
+      console.log(`[Worker ${workerId}] Database already initialized, cleaning up old data`);
+      // Clean up old test data before reusing the database
+      const tempClient = createClient({ url: `file:${testDbPath}` });
+      const tempDb = drizzle(tempClient, { schema });
+      await cleanupTestData(tempDb);
+      tempClient.close();
     } else {
       // Initialize this worker's database
       console.log(`[Worker ${workerId}] Initializing test database at ${testDbPath}`);

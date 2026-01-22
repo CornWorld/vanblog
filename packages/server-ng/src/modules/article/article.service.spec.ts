@@ -1,13 +1,14 @@
 import { NotFoundException } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { JwtService } from '@nestjs/jwt';
-import { describe, beforeEach, it, expect, vi, afterEach } from 'vitest';
+import { describe, beforeAll, beforeEach, it, expect, vi, afterEach, afterAll } from 'vitest';
 import { eq } from 'drizzle-orm';
 import * as bcrypt from 'bcrypt';
 
 import { Mock, type MockedHookService } from '@test/mock';
 import { withTestTransaction } from '@test/utils/db-transaction-helper';
 import { db } from '@test/setup.unit';
+import { cleanupTestData } from '@test/utils/cleanup-helper';
 import { Given } from '@test/given';
 import { generateTestId } from '@test/test-utils';
 import { articles } from '@vanblog/shared/drizzle';
@@ -40,6 +41,11 @@ describe('ArticleService', () => {
   let mockQueryOptimizer: Partial<QueryOptimizerService>;
   let mockConfigService: Partial<ConfigService>;
   let mockJwtService: any;
+
+  beforeAll(async () => {
+    // Clean up any residual test data before running tests
+    await cleanupTestData(db);
+  });
 
   beforeEach(async () => {
     // ✅ 优化：使用新的扁平化 Mock API
@@ -82,6 +88,11 @@ describe('ArticleService', () => {
 
   afterEach(() => {
     vi.clearAllMocks();
+  });
+
+  afterAll(async () => {
+    // Clean up all test data after all tests complete
+    await cleanupTestData(db);
   });
 
   describe('findAll', () => {

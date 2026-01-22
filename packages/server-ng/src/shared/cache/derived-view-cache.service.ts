@@ -75,7 +75,7 @@ export class DerivedViewCacheService {
     }
 
     // SWR 模式：返回旧数据，异步重新生成
-    void this.regenerateAsync(key, generator, ttl);
+    this.regenerateAsync(key, generator, ttl);
     return data;
   }
 
@@ -108,11 +108,7 @@ export class DerivedViewCacheService {
   /**
    * 异步重新生成数据 (SWR)
    */
-  private regenerateAsync(
-    key: string,
-    generator: () => Promise<unknown>,
-    ttl: number,
-  ): void {
+  private regenerateAsync(key: string, generator: () => Promise<unknown>, ttl: number): void {
     // 防止重复触发重新生成
     if (this.regeneratingKeys.has(key)) {
       return;
@@ -121,22 +117,24 @@ export class DerivedViewCacheService {
     this.regeneratingKeys.add(key);
 
     // 立即标记正在重新生成（同步）
-    this.getCachedResult(key).then((cached) => {
-      if (cached) {
-        cached.meta.regenerating = true;
-        return this.cacheService.set(key, cached, ttl + 60);
-      }
-    }).catch(() => {
-      // Ignore errors during cache update
-    });
+    this.getCachedResult(key)
+      .then((cached) => {
+        if (cached) {
+          cached.meta.regenerating = true;
+          return this.cacheService.set(key, cached, ttl + 60);
+        }
+      })
+      .catch(() => {
+        // Ignore errors during cache update
+      });
 
     // 异步生成新数据
     this.generateAndCache(key, generator, ttl)
       .finally(() => {
         this.regeneratingKeys.delete(key);
       })
-      .catch((error) => {
-        this.logger.error(`Async regeneration failed for key ${key}:`, error);
+      .catch((error: unknown) => {
+        this.logger.error(`Async regeneration failed for key ${key}:`, error as Error);
       });
   }
 
