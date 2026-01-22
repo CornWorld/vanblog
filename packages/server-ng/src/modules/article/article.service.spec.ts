@@ -131,7 +131,7 @@ describe('ArticleService', () => {
         (service as any)['db'] = tx as any;
 
         // 创建测试数据
-        await Given.article(db as any, {
+        await Given.article(tx as any, {
           id: 1,
           title: 'search term',
         });
@@ -178,7 +178,7 @@ describe('ArticleService', () => {
         await Given.category(db as any, { name: 'tech', slug: 'tech' });
 
         // 创建带分类和标签的文章
-        await Given.article(db as any, {
+        await Given.article(tx as any, {
           id: 1,
           category: 'tech',
           tags: ['javascript', 'node'],
@@ -398,14 +398,14 @@ describe('ArticleService', () => {
         await Given.category(db as any, { name: 'tech', slug: 'tech' });
 
         // 创建测试数据
-        await Given.article(db as any, {
+        await Given.article(tx as any, {
           id: 1,
           title: 'Article 1',
           content: 'Content 1',
           tags: ['tag1'],
           viewer: 100,
         });
-        await Given.article(db as any, {
+        await Given.article(tx as any, {
           id: 2,
           title: 'Article 2',
           content: 'Content 2',
@@ -725,7 +725,7 @@ describe('ArticleService', () => {
         (service as any)['db'] = tx as any;
 
         // 创建测试数据
-        await Given.article(db as any, { id: 1, pathname: 'test-article' });
+        await Given.article(tx as any, { id: 1, pathname: 'test-article' });
 
         const result = await service.findOneByPathname('test-article');
 
@@ -748,7 +748,7 @@ describe('ArticleService', () => {
       await withTestTransaction(db, async (tx) => {
         (service as any)['db'] = tx as any;
 
-        await Given.article(db as any, { id: 1, private: true });
+        await Given.article(tx as any, { id: 1, private: true });
 
         const result = await service.isPrivateById(1);
 
@@ -760,7 +760,7 @@ describe('ArticleService', () => {
       await withTestTransaction(db, async (tx) => {
         (service as any)['db'] = tx as any;
 
-        await Given.article(db as any, { id: 1, private: false });
+        await Given.article(tx as any, { id: 1, private: false });
 
         const result = await service.isPrivateById(1);
 
@@ -784,7 +784,7 @@ describe('ArticleService', () => {
       await withTestTransaction(db, async (tx) => {
         (service as any)['db'] = tx as any;
 
-        await Given.article(db as any, { id: 1, pathname: 'private-article', private: true });
+        await Given.article(tx as any, { id: 1, pathname: 'private-article', private: true });
 
         const result = await service.isPrivateByPathname('private-article');
 
@@ -796,7 +796,7 @@ describe('ArticleService', () => {
       await withTestTransaction(db, async (tx) => {
         (service as any)['db'] = tx as any;
 
-        await Given.article(db as any, { id: 1, pathname: 'public-article', private: false });
+        await Given.article(tx as any, { id: 1, pathname: 'public-article', private: false });
 
         const result = await service.isPrivateByPathname('public-article');
 
@@ -820,7 +820,7 @@ describe('ArticleService', () => {
       await withTestTransaction(db, async (tx) => {
         (service as any)['db'] = tx as any;
 
-        await Given.article(db as any, {
+        await Given.article(tx as any, {
           id: 1,
           private: false,
           password: null,
@@ -838,7 +838,7 @@ describe('ArticleService', () => {
         (service as any)['db'] = tx as any;
 
         const hashedPassword = await bcrypt.hash('correct-password', 10);
-        await Given.article(db as any, {
+        await Given.article(tx as any, {
           id: 1,
           private: true,
           password: hashedPassword,
@@ -857,7 +857,7 @@ describe('ArticleService', () => {
       await withTestTransaction(db, async (tx) => {
         (service as any)['db'] = tx as any;
 
-        await Given.article(db as any, {
+        await Given.article(tx as any, {
           id: 1,
           pathname: 'public-article',
           private: false,
@@ -883,17 +883,17 @@ describe('ArticleService', () => {
         await Given.category(db as any, { name: 'Lifestyle', slug: 'lifestyle' });
 
         // 创建测试数据
-        await Given.article(db as any, {
+        await Given.article(tx as any, {
           id: 1,
           title: 'Article 1',
           category: 'Tech',
         });
-        await Given.article(db as any, {
+        await Given.article(tx as any, {
           id: 2,
           title: 'Article 2',
           category: 'Tech',
         });
-        await Given.article(db as any, {
+        await Given.article(tx as any, {
           id: 3,
           title: 'Article 3',
           category: 'Lifestyle',
@@ -912,7 +912,7 @@ describe('ArticleService', () => {
       await withTestTransaction(db, async (tx) => {
         (service as any)['db'] = tx as any;
 
-        await Given.article(db as any, {
+        await Given.article(tx as any, {
           id: 1,
           title: 'No Category',
           category: null,
@@ -942,12 +942,12 @@ describe('ArticleService', () => {
         (service as any)['db'] = tx as any;
 
         // 创建测试数据
-        await Given.article(db as any, {
+        await Given.article(tx as any, {
           id: 1,
           title: 'Article 1',
           tags: ['javascript', 'nodejs'],
         });
-        await Given.article(db as any, {
+        await Given.article(tx as any, {
           id: 2,
           title: 'Article 2',
           tags: ['javascript'],
@@ -966,7 +966,7 @@ describe('ArticleService', () => {
       await withTestTransaction(db, async (tx) => {
         (service as any)['db'] = tx as any;
 
-        await Given.article(db as any, {
+        await Given.article(tx as any, {
           id: 1,
           title: 'No Tags',
           tags: [],

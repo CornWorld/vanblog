@@ -123,6 +123,7 @@ export class DerivedViewCacheService {
           cached.meta.regenerating = true;
           return this.cacheService.set(key, cached, ttl + 60);
         }
+        return Promise.resolve();
       })
       .catch(() => {
         // Ignore errors during cache update
