@@ -23,28 +23,28 @@ export const createCategoryContract = (c: ReturnType<typeof initContract>) =>
   c.router({
     getCategories: {
       method: 'GET',
-      path: '/v2/categories',
+      path: '/categories',
       query: z.object({ detail: z.string().optional() }).optional(),
       responses: { 200: CategoryListResponse },
       summary: 'Get all categories',
     },
     getCategoryById: {
       method: 'GET',
-      path: '/v2/categories/:id',
+      path: '/categories/:id',
       pathParams: z.object({ id: z.string() }),
       responses: { 200: Category },
       summary: 'Get category by ID',
     },
     createCategory: {
       method: 'POST',
-      path: '/v2/categories',
+      path: '/categories',
       body: CategoryReq,
       responses: { 201: Category },
       summary: 'Create category',
     },
     updateCategory: {
       method: 'PUT',
-      path: '/v2/categories/:id',
+      path: '/categories/:id',
       pathParams: z.object({ id: z.string() }),
       body: CategoryPatch,
       responses: { 200: Category },
@@ -52,14 +52,14 @@ export const createCategoryContract = (c: ReturnType<typeof initContract>) =>
     },
     deleteCategory: {
       method: 'DELETE',
-      path: '/v2/categories/:id',
+      path: '/categories/:id',
       pathParams: z.object({ id: z.string() }),
       responses: { 200: DeleteResponse },
       summary: 'Delete category',
     },
     getArticlesByCategory: {
       method: 'GET',
-      path: '/v2/categories/:id/articles',
+      path: '/categories/:id/articles',
       pathParams: z.object({ id: z.string() }),
       query: PaginationQuery,
       responses: { 200: ArticleList },
@@ -67,7 +67,7 @@ export const createCategoryContract = (c: ReturnType<typeof initContract>) =>
     },
     getArticlesByCategoryName: {
       method: 'GET',
-      path: '/v2/categories/name/:name/articles',
+      path: '/categories/name/:name/articles',
       pathParams: z.object({ name: z.string() }),
       query: PaginationQuery,
       responses: { 200: ArticleList },

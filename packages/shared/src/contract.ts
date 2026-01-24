@@ -165,7 +165,7 @@ export const contract = c.router({
   // Category
   getCategories: {
     method: 'GET',
-    path: '/v2/categories',
+    path: '/categories',
     query: z.object({ detail: z.string().optional() }),
     responses: {
       200: z.array(CategorySchema),
@@ -174,7 +174,7 @@ export const contract = c.router({
   },
   createCategory: {
     method: 'POST',
-    path: '/v2/categories',
+    path: '/categories',
     body: CreateCategorySchema,
     responses: {
       201: CategorySchema,
@@ -183,7 +183,7 @@ export const contract = c.router({
   },
   updateCategory: {
     method: 'PUT',
-    path: '/v2/categories/:name',
+    path: '/categories/:name',
     pathParams: z.object({ name: z.string() }),
     body: UpdateCategorySchema,
     responses: {
@@ -193,7 +193,7 @@ export const contract = c.router({
   },
   deleteCategory: {
     method: 'DELETE',
-    path: '/v2/categories/:name',
+    path: '/categories/:name',
     pathParams: z.object({ name: z.string() }),
     responses: {
       200: z.object({ success: z.boolean() }),
@@ -202,7 +202,7 @@ export const contract = c.router({
   },
   getArticlesByCategory: {
     method: 'GET',
-    path: '/v2/categories/:name/articles',
+    path: '/categories/:name/articles',
     pathParams: z.object({ name: z.string() }),
     responses: {
       200: z.array(ArticleSchema),
@@ -793,7 +793,11 @@ export const contract = c.router({
     path: '/analytics/public/overview',
     responses: {
       200: z.object({
+        todayPageviews: z.number(),
+        yesterdayPageviews: z.number(),
         totalPageviews: z.number(),
+        todayVisitors: z.number(),
+        yesterdayVisitors: z.number(),
         totalVisitors: z.number(),
       }),
     },
