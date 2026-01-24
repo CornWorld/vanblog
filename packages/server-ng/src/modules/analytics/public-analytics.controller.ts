@@ -34,7 +34,6 @@ export class PublicAnalyticsController {
    */
   @Get('overview')
   @Throttle({ default: { limit: 30, ttl: 60000 } }) // 每分钟最多30次请求
-  @DerivedView({ key: 'public-analytics-overview', ttl: 300, swr: true })
   @ApiOperation({ summary: '获取公开统计概览' })
   @ApiResponse({
     status: 200,

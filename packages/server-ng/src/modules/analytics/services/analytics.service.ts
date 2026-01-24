@@ -56,6 +56,7 @@ export class AnalyticsService {
 
   async getOverview(): Promise<AnalyticsOverviewDto> {
     const data = await this.cacheService.getOverview();
+
     return {
       todayPageviews: data.todayViews,
       yesterdayPageviews: data.yesterdayViews,
