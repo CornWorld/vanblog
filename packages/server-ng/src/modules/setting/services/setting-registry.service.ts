@@ -107,12 +107,12 @@ export class SettingRegistryService {
       .insert(siteMeta)
       .values({
         key,
-        value: json,
+        value: value, // Drizzle automatically serializes jsonb fields
       })
       .onConflictDoUpdate({
         target: siteMeta.key,
         set: {
-          value: json,
+          value: value, // Drizzle automatically serializes jsonb fields
           updatedAt: sql`CURRENT_TIMESTAMP`,
         },
       });
