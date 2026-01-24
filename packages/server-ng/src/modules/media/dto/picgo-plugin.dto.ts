@@ -32,13 +32,13 @@ export const PicGoPluginOperationResponseSchema = z.object({
 /**
  * PicGo 插件日志条目
  *
- * @note Special case: timestamp uses Unix timestamp (number) instead of ISO string
+ * @note Uses ISO 8601 timestamps with timezone
  * @reason In-memory circular buffer for debugging, not persisted to database
  * @see PicgoStorageService - in-memory logs with 200 entries max
  */
 export const PicGoPluginLogEntrySchema = z.object({
-  /** Unix timestamp in milliseconds */
-  timestamp: z.number().int(),
+  /** ISO 8601 timestamp with timezone */
+  timestamp: z.string(),
   level: z.enum(['info', 'warn', 'error']),
   message: z.string(),
 });
