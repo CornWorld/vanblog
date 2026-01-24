@@ -33,6 +33,8 @@ import { ArticleStatsService, ArticleStats } from './services/article-stats.serv
 import { EchartsFormatterService, EchartsOption } from './services/echarts-formatter.service';
 import { PublicAnalyticsService } from './services/public-analytics.service';
 import { ThirdPartyAnalyticsService } from './services/third-party-analytics.service';
+import { AnalyticsCacheService } from '../../shared/cache/analytics-cache.service';
+import { DerivedViewCacheService } from '../../shared/cache/derived-view-cache.service';
 
 import type { Request } from 'express';
 
@@ -51,6 +53,8 @@ export class AnalyticsController {
     private readonly publicAnalyticsService: PublicAnalyticsService,
     private readonly thirdPartyAnalyticsService: ThirdPartyAnalyticsService,
     private readonly echartsFormatterService: EchartsFormatterService,
+    private readonly analyticsCacheService: AnalyticsCacheService,
+    private readonly derivedViewCacheService: DerivedViewCacheService,
   ) {}
 
   /**
@@ -104,6 +108,10 @@ export class AnalyticsController {
     };
 
     await this.analyticsService.recordAnalytics(recordDto);
+
+    // Invalidate analytics cache to ensure fresh data
+    await this.analyticsCacheService.cache.clear();
+    await this.derivedViewCacheService.cacheService.clear();
 
     // Send to third-party analytics services
     if (input.type === 'pageview' && input.path) {
@@ -489,7 +497,11 @@ export class AnalyticsController {
       return {
         status: 200,
         body: {
+          todayPageviews: overview.todayPageviews,
+          yesterdayPageviews: overview.yesterdayPageviews,
           totalPageviews: overview.totalPageviews,
+          todayVisitors: overview.todayVisitors,
+          yesterdayVisitors: overview.yesterdayVisitors,
           totalVisitors: overview.totalVisitors,
         },
       };

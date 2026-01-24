@@ -155,7 +155,7 @@ export class AnalyticsCacheService {
   }
 
   /**
-   * 计算概览数据 - 单次查询获取所有统计
+   * 计算概览数据 - 使用多个简单查询确保正确性
    */
   private async calculateOverview(): Promise<OverviewData> {
     const today = new Date();
@@ -163,40 +163,42 @@ export class AnalyticsCacheService {
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
 
-    // 使用单个查询获取所有统计数据
     const todayStr = dayjs(today).format('YYYY-MM-DD');
     const yesterdayStr = dayjs(yesterday).format('YYYY-MM-DD');
 
-    const results = await this.db
+    // 分别查询各个统计值，使用更简单的SQL确保兼容性
+    const [totalResult] = await this.db
       .select({
         totalViews: sql<number>`count(*)`,
         totalUniqueVisitors: sql<number>`count(distinct ${analytics.ip})`,
-        todayViews: sql<number>`count(case when date(${analytics.createdAt}) = ${todayStr} then 1 end)`,
-        todayUniqueVisitors: sql<number>`count(distinct case when date(${analytics.createdAt}) = ${todayStr} then ${analytics.ip} end)`,
-        yesterdayViews: sql<number>`count(case when date(${analytics.createdAt}) = ${yesterdayStr} then 1 end)`,
-        yesterdayUniqueVisitors: sql<number>`count(distinct case when date(${analytics.createdAt}) = ${yesterdayStr} then ${analytics.ip} end)`,
       })
       .from(analytics);
 
-    // SQL aggregation queries always return at least one row (even if table is empty)
-    const [
-      result = {
-        totalViews: 0,
-        totalUniqueVisitors: 0,
-        todayViews: 0,
-        todayUniqueVisitors: 0,
-        yesterdayViews: 0,
-        yesterdayUniqueVisitors: 0,
-      },
-    ] = results;
+    const todayCondition = sql`date(${analytics.createdAt}) = ${todayStr}`;
+    const [todayResult] = await this.db
+      .select({
+        todayViews: sql<number>`count(*)`,
+        todayUniqueVisitors: sql<number>`count(distinct ${analytics.ip})`,
+      })
+      .from(analytics)
+      .where(todayCondition);
+
+    const yesterdayCondition = sql`date(${analytics.createdAt}) = ${yesterdayStr}`;
+    const [yesterdayResult] = await this.db
+      .select({
+        yesterdayViews: sql<number>`count(*)`,
+        yesterdayUniqueVisitors: sql<number>`count(distinct ${analytics.ip})`,
+      })
+      .from(analytics)
+      .where(yesterdayCondition);
 
     return {
-      totalViews: result.totalViews,
-      totalUniqueVisitors: result.totalUniqueVisitors,
-      todayViews: result.todayViews,
-      todayUniqueVisitors: result.todayUniqueVisitors,
-      yesterdayViews: result.yesterdayViews,
-      yesterdayUniqueVisitors: result.yesterdayUniqueVisitors,
+      totalViews: totalResult.totalViews,
+      totalUniqueVisitors: totalResult.totalUniqueVisitors,
+      todayViews: todayResult.todayViews,
+      todayUniqueVisitors: todayResult.todayUniqueVisitors,
+      yesterdayViews: yesterdayResult.yesterdayViews,
+      yesterdayUniqueVisitors: yesterdayResult.yesterdayUniqueVisitors,
     };
   }
 

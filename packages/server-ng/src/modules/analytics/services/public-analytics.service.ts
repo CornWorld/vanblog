@@ -33,7 +33,8 @@ export class PublicAnalyticsService {
   async getPublicOverview(): Promise<PublicAnalyticsOverviewDto> {
     const overview = await this.analyticsService.getOverview();
 
-    return {
+    // Return plain object to avoid serialization issues
+    const dto = {
       todayPageviews: overview.todayPageviews,
       yesterdayPageviews: overview.yesterdayPageviews,
       totalPageviews: overview.totalPageviews,
@@ -41,6 +42,8 @@ export class PublicAnalyticsService {
       yesterdayVisitors: overview.yesterdayVisitors,
       totalVisitors: overview.totalVisitors,
     };
+
+    return dto;
   }
 
   /**
@@ -59,13 +62,14 @@ export class PublicAnalyticsService {
       return null;
     }
 
+    // Return plain object to match overview behavior
     return {
       articleId: stats.articleId,
       title: stats.title,
       views: stats.views,
       uniqueVisitors: stats.uniqueVisitors,
       avgReadTime: stats.avgReadTime,
-    };
+    } as PublicArticleStatsDto;
   }
 
   /**
