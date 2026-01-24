@@ -93,7 +93,7 @@ describe('InitController (e2e) - CMS Initialization Flow', () => {
     expect(rows.length).toBe(1);
     const row = rows[0] as any;
     expect(row.type).toBe('admin');
-    // permissions is stored as JSON string
-    expect(row.permissions).toBe(JSON.stringify(['role:admin']));
+    // permissions is stored as jsonb, automatically deserialized by Drizzle
+    expect(row.permissions).toEqual(['role:admin']);
   });
 });

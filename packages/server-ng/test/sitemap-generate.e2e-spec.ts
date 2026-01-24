@@ -93,7 +93,7 @@ describe('SitemapController - generate & XML (e2e)', () => {
     await db.delete(siteMeta).where(eq(siteMeta.key, 'sitemapExtraStaticPaths'));
     await db.insert(siteMeta).values({
       key: 'sitemapExtraStaticPaths',
-      value: JSON.stringify(['/extra-e2e']),
+      value: ['/extra-e2e'], // Drizzle automatically serializes jsonb fields
     });
 
     // Re-generate

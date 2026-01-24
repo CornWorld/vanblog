@@ -32,6 +32,7 @@ describe('ArticleController - verify by pathname (e2e)', () => {
         pathname: 'private-path-article',
         password: 's3cr3t',
         private: true,
+        tags: [],
       })
       .expect(201);
 

@@ -1,5 +1,6 @@
 import { type INestApplication } from '@nestjs/common';
 import { articles, tags } from '@vanblog/shared/drizzle';
+import { sql } from 'drizzle-orm';
 import request from 'supertest';
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 
@@ -62,19 +63,6 @@ describe('TagController (e2e) - dirty JSON regression', () => {
         updatedAt: '2024-01-01T00:00:00.000Z',
       },
       {
-        title: 'Dirty JSON Article',
-        content: 'Content',
-        author: 'tester',
-        pathname: 'dirty-json',
-        category: null,
-        // 故意写入非法 JSON，确保 SQL 使用 json_valid(...) 保护
-        tags: ['JavaScript'],
-        hidden: false,
-        private: false,
-        createdAt: '2024-01-02T00:00:00.000Z',
-        updatedAt: '2024-01-02T00:00:00.000Z',
-      },
-      {
         title: 'Hidden JS Article',
         content: 'Content',
         author: 'tester',
@@ -99,6 +87,12 @@ describe('TagController (e2e) - dirty JSON regression', () => {
         updatedAt: '2024-01-04T00:00:00.000Z',
       },
     ]);
+
+    // Insert dirty JSON article using raw SQL (invalid JSON in tags field)
+    await db.run(
+      sql`INSERT INTO articles (title, content, author, pathname, category, tags, hidden, private, created_at, updated_at)
+          VALUES ('Dirty JSON Article', 'Content', 'tester', 'dirty-json', NULL, '["JavaScript"invalid', 0, 0, '2024-01-02T00:00:00.000Z', '2024-01-02T00:00:00.000Z')`,
+    );
   });
 
   it('GET /api/v2/tags should not fail with invalid JSON in articles.tags and counts should ignore invalid/hidden rows', async () => {

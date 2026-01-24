@@ -9,7 +9,7 @@ describe('CSRF Protection (e2e)', () => {
   let app: INestApplication;
 
   beforeAll(async () => {
-    app = await createTestApp({ fullConfig: false });
+    app = await createTestApp({ fullConfig: true });
   });
 
   afterAll(async () => {

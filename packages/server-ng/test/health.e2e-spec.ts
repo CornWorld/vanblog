@@ -18,10 +18,10 @@ describe('HealthController (e2e)', () => {
     await app.close();
   });
 
-  it('/api/health (GET)', () => {
+  it('/api/v2/health (GET)', () => {
     const httpServer = app.getHttpServer() as Server;
     return request(httpServer)
-      .get('/api/health')
+      .get('/api/v2/health')
       .expect(200)
       .expect((res: request.Response) => {
         const body = res.body as {

@@ -46,12 +46,11 @@ describe('SettingRegistryService Concurrency & Edge (e2e)', () => {
 
     const [final] = rows;
     expect(final.key).toBe(key);
-    expect(final.value).toBeTypeOf('string');
+    expect(final.value).toBeTypeOf('object');
 
     if (final.value == null) throw new Error('value should not be null');
-    // Type assert value as string before JSON.parse
-    const valueStr = typeof final.value === 'string' ? final.value : JSON.stringify(final.value);
-    const parsed = JSON.parse(valueStr) as { n: number };
+    // Drizzle automatically deserializes jsonb fields
+    const parsed = final.value as { n: number };
     expect(parsed).toHaveProperty('n');
     expect(typeof parsed.n === 'number').toBe(true);
   }, 15000);

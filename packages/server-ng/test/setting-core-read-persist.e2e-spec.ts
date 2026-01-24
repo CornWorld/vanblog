@@ -41,13 +41,11 @@ describe('SettingCoreService read-path default persistence (e2e)', () => {
 
     const [row] = rows;
     expect(row.key).toBe(key);
-    expect(row.value).toBeTypeOf('string');
+    expect(row.value).toBeTypeOf('object');
     if (row.value == null) throw new Error('value should not be null');
 
-    // Type assert value as string before JSON.parse
-    const valueStr = typeof row.value === 'string' ? row.value : JSON.stringify(row.value);
-    const parsed = JSON.parse(valueStr) as typeof def;
-    expect(parsed).toMatchObject(def);
+    // Drizzle automatically deserializes jsonb fields
+    expect(row.value).toMatchObject(def);
   }, 15000);
 
   it('should not overwrite stored value on subsequent reads with a different default', async () => {
@@ -66,12 +64,10 @@ describe('SettingCoreService read-path default persistence (e2e)', () => {
     expect(rows).toHaveLength(1);
 
     const [row] = rows;
-    expect(row.value).toBeTypeOf('string');
+    expect(row.value).toBeTypeOf('object');
     if (row.value == null) throw new Error('value should not be null');
-    // Type assert value as string before JSON.parse
-    const valueStr = typeof row.value === 'string' ? row.value : JSON.stringify(row.value);
-    const parsed = JSON.parse(valueStr) as typeof first;
-    expect(parsed.n).toBe(1);
+    // Drizzle automatically deserializes jsonb fields
+    expect(row.value).toEqual({ n: 1 });
   }, 15000);
 
   it('should persist one of the defaults when two concurrent first reads supply different defaults', async () => {
@@ -94,11 +90,10 @@ describe('SettingCoreService read-path default persistence (e2e)', () => {
     expect(rows).toHaveLength(1);
 
     const [row] = rows;
-    expect(row.value).toBeTypeOf('string');
+    expect(row.value).toBeTypeOf('object');
     if (row.value == null) throw new Error('value should not be null');
-    // Type assert value as string before JSON.parse
-    const valueStr = typeof row.value === 'string' ? row.value : JSON.stringify(row.value);
-    const parsed = JSON.parse(valueStr) as { v: string; n: number };
+    // Drizzle automatically deserializes jsonb fields
+    const parsed = row.value as { v: string; n: number };
 
     // Persisted value must be either defA or defB
     expect([

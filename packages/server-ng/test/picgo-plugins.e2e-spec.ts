@@ -124,7 +124,7 @@ describe('PicgoPluginsController (e2e)', () => {
       );
       expect(res.body.logs[0]).toEqual(
         expect.objectContaining({
-          timestamp: expect.any(Number),
+          timestamp: expect.any(String),
           level: expect.any(String),
           message: expect.any(String),
         }),

@@ -48,7 +48,9 @@ describe('Plugin Lifecycle Integration (e2e)', () => {
         .expect([200, 404]); // 404 if endpoint not exposed, 200 if it is
 
       if (res.status === 200) {
-        expect(Array.isArray(res.body.data || res.body)).toBe(true);
+        // Response format is { plugins: [], total: 0 } or { data: [] } depending on implementation
+        const plugins = res.body.plugins || res.body.data || res.body;
+        expect(Array.isArray(plugins)).toBe(true);
       }
     });
 
@@ -72,6 +74,7 @@ describe('Plugin Lifecycle Integration (e2e)', () => {
           content: 'Testing hook execution',
           author: 'Hook Tester',
           pathname: 'hook-test',
+          tags: [],
         })
         .expect(201);
 
@@ -127,6 +130,7 @@ describe('Plugin Lifecycle Integration (e2e)', () => {
           content: 'Testing plugin isolation',
           author: 'Plugin Tester',
           pathname: 'isolation-test-1',
+          tags: [],
         })
         .expect(201);
 
@@ -140,6 +144,7 @@ describe('Plugin Lifecycle Integration (e2e)', () => {
           content: 'Another isolation test',
           author: 'Plugin Tester',
           pathname: 'isolation-test-2',
+          tags: [],
         })
         .expect(201);
 
@@ -224,6 +229,7 @@ describe('Plugin Lifecycle Integration (e2e)', () => {
           content: 'Original content',
           author: 'Update Tester',
           pathname: 'update-hook-test',
+          tags: [],
         })
         .expect(201);
 
@@ -262,6 +268,7 @@ describe('Plugin Lifecycle Integration (e2e)', () => {
           content: 'This article will be deleted',
           author: 'Deletion Tester',
           pathname: 'deletion-hook-test',
+          tags: [],
         })
         .expect(201);
 
@@ -324,6 +331,7 @@ describe('Plugin Lifecycle Integration (e2e)', () => {
           author: 'RSS Tester',
           pathname: 'rss-test-article',
           published: true,
+          tags: [],
         })
         .expect(201);
 
