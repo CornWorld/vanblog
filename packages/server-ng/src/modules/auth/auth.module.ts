@@ -7,6 +7,8 @@ import { DatabaseModule } from '../../database';
 import { UserModule } from '../user/user.module';
 
 import { AuthController } from './auth.controller';
+import { CsrfController } from './csrf.controller';
+import { LoginLogController } from './login-log.controller';
 import { AuthService } from './auth.service';
 import { PermissionsGuard } from './guards/permissions.guard';
 import { LoginLogService } from './login-log.service';
@@ -36,7 +38,7 @@ import { TokenService } from './token.service';
       inject: [ConfigService],
     }),
   ],
-  controllers: [AuthController],
+  controllers: [AuthController, CsrfController, LoginLogController],
   providers: [
     AuthService,
     LocalStrategy,
