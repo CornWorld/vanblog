@@ -430,4 +430,18 @@ export class CategoryService {
       totalPages,
     };
   }
+
+  async getArticlesByCategoryName(
+    name: string,
+    query: ArticleQueryDto,
+  ): Promise<ArticleListResponseDto> {
+    // 首先根据名称查找分类
+    const category = await this.findByName(name);
+    if (!category) {
+      throw new NotFoundException(`Category ${name} not found`);
+    }
+
+    // 使用现有的 getArticlesByCategoryId 方法
+    return this.getArticlesByCategoryId(category.id, query);
+  }
 }
