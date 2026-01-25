@@ -58,6 +58,6 @@ export class CompressionMiddleware implements NestMiddleware {
    * @param next 下一个中间件函数
    */
   use(req: Request, res: Response, next: NextFunction): void {
-    this.compressionHandler(req, res, next);
+    void this.compressionHandler(req, res, next);
   }
 }

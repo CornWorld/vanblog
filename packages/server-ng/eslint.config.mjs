@@ -45,6 +45,7 @@ export default defineConfig([
         varsIgnorePattern: '^_',
         caughtErrorsIgnorePattern: '^_',
       }],
+      '@typescript-eslint/no-useless-default-assignment': 'off', // Zod schema inference issue
 
       // Additional strict rules (not in preset)
       '@typescript-eslint/explicit-function-return-type': ['error', {
