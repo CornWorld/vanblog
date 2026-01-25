@@ -58,12 +58,12 @@ describe('PicgoPluginsController', () => {
     it('should return plugin logs from storage service', () => {
       const mockLogs = [
         {
-          timestamp: 1640995200000, // 2022-01-01T00:00:00.000Z
+          timestamp: '2022-01-01T00:00:00.000Z',
           level: 'info',
           message: 'Plugin installed',
         },
         {
-          timestamp: 1640995260000, // 2022-01-01T00:01:00.000Z
+          timestamp: '2022-01-01T00:01:00.000Z',
           level: 'error',
           message: 'Installation failed',
         },
@@ -99,10 +99,10 @@ describe('PicgoPluginsController', () => {
 
     it('should handle logs with various log levels', () => {
       const mockLogs = [
-        { timestamp: 1640995200000, level: 'info', message: 'Debug msg' }, // 2022-01-01T00:00:00.000Z
-        { timestamp: 1640995260000, level: 'info', message: 'Info msg' }, // 2022-01-01T00:01:00.000Z
-        { timestamp: 1640995320000, level: 'warn', message: 'Warn msg' }, // 2022-01-01T00:02:00.000Z
-        { timestamp: 1640995380000, level: 'error', message: 'Error msg' }, // 2022-01-01T00:03:00.000Z
+        { timestamp: '2022-01-01T00:00:00.000Z', level: 'info', message: 'Debug msg' },
+        { timestamp: '2022-01-01T00:01:00.000Z', level: 'info', message: 'Info msg' },
+        { timestamp: '2022-01-01T00:02:00.000Z', level: 'warn', message: 'Warn msg' },
+        { timestamp: '2022-01-01T00:03:00.000Z', level: 'error', message: 'Error msg' },
       ];
 
       mockPicgoStorage.getPluginLogs.mockReturnValue({

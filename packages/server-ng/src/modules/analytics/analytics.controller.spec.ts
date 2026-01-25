@@ -9,6 +9,8 @@ import { ArticleStatsService } from './services/article-stats.service';
 import { EchartsFormatterService } from './services/echarts-formatter.service';
 import { PublicAnalyticsService } from './services/public-analytics.service';
 import { ThirdPartyAnalyticsService } from './services/third-party-analytics.service';
+import { AnalyticsCacheService } from '../../shared/cache/analytics-cache.service';
+import { DerivedViewCacheService } from '../../shared/cache/derived-view-cache.service';
 
 describe('AnalyticsController', () => {
   let controller: AnalyticsController;
@@ -17,6 +19,8 @@ describe('AnalyticsController', () => {
   let mockThirdPartyAnalyticsService: any;
   let mockPublicAnalyticsService: any;
   let mockEchartsFormatterService: any;
+  let mockAnalyticsCacheService: any;
+  let mockDerivedViewCacheService: any;
 
   beforeEach(async () => {
     // 使用 MockUtils 创建所有 Mock
@@ -27,6 +31,12 @@ describe('AnalyticsController', () => {
     };
     mockPublicAnalyticsService = Mock.publicAnalytics();
     mockEchartsFormatterService = Mock.echartsFormatter();
+    mockAnalyticsCacheService = {
+      clear: vi.fn(),
+    };
+    mockDerivedViewCacheService = {
+      clear: vi.fn(),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [AnalyticsController],
@@ -36,6 +46,8 @@ describe('AnalyticsController', () => {
         { provide: PublicAnalyticsService, useValue: mockPublicAnalyticsService },
         { provide: ThirdPartyAnalyticsService, useValue: mockThirdPartyAnalyticsService },
         { provide: EchartsFormatterService, useValue: mockEchartsFormatterService },
+        { provide: AnalyticsCacheService, useValue: mockAnalyticsCacheService },
+        { provide: DerivedViewCacheService, useValue: mockDerivedViewCacheService },
       ],
     }).compile();
 
@@ -258,6 +270,8 @@ describe('AnalyticsController', () => {
         totalVisitors: 500,
         todayPageviews: 50,
         todayVisitors: 25,
+        yesterdayPageviews: 30,
+        yesterdayVisitors: 15,
       } as any;
       mockAnalyticsService.getOverview.mockResolvedValue(overview);
 
@@ -531,6 +545,8 @@ describe('AnalyticsController', () => {
         totalVisitors: 500,
         todayPageviews: 50,
         todayVisitors: 25,
+        yesterdayPageviews: 30,
+        yesterdayVisitors: 15,
       } as any;
       mockPublicAnalyticsService.getPublicOverview.mockResolvedValue(overview);
 
@@ -542,6 +558,10 @@ describe('AnalyticsController', () => {
         body: {
           totalPageviews: 1000,
           totalVisitors: 500,
+          todayPageviews: 50,
+          todayVisitors: 25,
+          yesterdayPageviews: 30,
+          yesterdayVisitors: 15,
         },
       });
     });
@@ -631,6 +651,8 @@ describe('AnalyticsController', () => {
         totalVisitors: 500,
         todayPageviews: 50,
         todayVisitors: 25,
+        yesterdayPageviews: 30,
+        yesterdayVisitors: 15,
       } as any;
       mockAnalyticsService.getOverview.mockResolvedValue(overview);
 
@@ -912,6 +934,8 @@ describe('AnalyticsController', () => {
         totalVisitors: 500,
         todayPageviews: 50,
         todayVisitors: 25,
+        yesterdayPageviews: 30,
+        yesterdayVisitors: 15,
       } as any;
       mockPublicAnalyticsService.getPublicOverview.mockResolvedValue(overview);
 
@@ -923,6 +947,10 @@ describe('AnalyticsController', () => {
         body: {
           totalPageviews: 1000,
           totalVisitors: 500,
+          todayPageviews: 50,
+          todayVisitors: 25,
+          yesterdayPageviews: 30,
+          yesterdayVisitors: 15,
         },
       });
     });
@@ -1012,6 +1040,8 @@ describe('AnalyticsController', () => {
         totalVisitors: 500,
         todayPageviews: 50,
         todayVisitors: 25,
+        yesterdayPageviews: 30,
+        yesterdayVisitors: 15,
       } as any;
       mockAnalyticsService.getOverview.mockResolvedValue(overview);
 

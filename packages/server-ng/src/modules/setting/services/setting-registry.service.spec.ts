@@ -128,7 +128,7 @@ describe('SettingRegistryService', () => {
       expect(mockDatabase.insert).toHaveBeenCalled();
       expect(mockInsertChain.values).toHaveBeenCalledWith({
         key: testKey,
-        value: JSON.stringify(defaultValue),
+        value: defaultValue,
       });
       expect(mockInsertChain.onConflictDoUpdate).toHaveBeenCalled();
     });
@@ -151,7 +151,7 @@ describe('SettingRegistryService', () => {
       expect(mockDatabase.insert).toHaveBeenCalled();
       expect(mockInsertChain.values).toHaveBeenCalledWith({
         key: testKey,
-        value: JSON.stringify(testValue),
+        value: testValue, // Drizzle auto-serializes jsonb
       });
       expect(mockInsertChain.onConflictDoUpdate).toHaveBeenCalled();
       // No need to select/update explicitly under upsert strategy
@@ -171,7 +171,7 @@ describe('SettingRegistryService', () => {
       expect(mockDatabase.insert).toHaveBeenCalled();
       expect(mockInsertChain.values).toHaveBeenCalledWith({
         key: testKey,
-        value: JSON.stringify(testValue),
+        value: testValue, // Drizzle auto-serializes jsonb
       });
       expect(mockInsertChain.onConflictDoUpdate).toHaveBeenCalled();
       expect(mockDatabase.select).not.toHaveBeenCalled();

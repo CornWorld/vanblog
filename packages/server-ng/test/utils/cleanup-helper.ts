@@ -31,6 +31,7 @@ import {
   draftTags,
   draftVersions,
   loginLogs,
+  users,
 } from '@vanblog/shared/drizzle';
 
 /**
@@ -63,13 +64,16 @@ export async function cleanupTestData(db: LibSQLDatabase<Record<string, unknown>
   // 2. Child tables (depend on articles/drafts)
   await db.delete(draftVersions);
 
-  // 3. Main entity tables
+  // 3. Main entity tables (articles reference users)
   await db.delete(articles);
   await db.delete(drafts);
   await db.delete(tags);
   await db.delete(categories);
 
-  // 4. Log tables (no dependencies)
+  // 4. User table (articles that reference users must be deleted first)
+  await db.delete(users);
+
+  // 5. Log tables (no dependencies)
   await db.delete(loginLogs);
 }
 
