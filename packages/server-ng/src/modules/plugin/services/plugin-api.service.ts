@@ -62,6 +62,7 @@ import type { z } from 'zod';
  * 修改 value 时自动持久化到数据库
  */
 class RefImpl<T> implements Ref<T> {
+  private readonly logger = new Logger(RefImpl.name);
   private _value: T;
 
   constructor(
@@ -80,8 +81,11 @@ class RefImpl<T> implements Ref<T> {
   set value(newValue: T) {
     this._value = newValue;
     // 异步保存，不阻塞
-    this.save().catch(() => {
-      // 忽略保存错误，可以考虑添加日志
+    this.save().catch((error) => {
+      this.logger.error(
+        `Failed to save plugin data for key '${this.key}' in plugin '${this.pluginId}':`,
+        error instanceof Error ? error : new Error(String(error)),
+      );
     });
   }
 
