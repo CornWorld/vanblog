@@ -107,6 +107,7 @@ jobs:
       - name: Publish JUnit test results (Checks)
         uses: EnricoMi/publish-unit-test-result-action@v2
         if: ${{ !cancelled() }}
+        continue-on-error: true
         with:
           files: |
             packages/server-ng/junit-report.unit.xml
@@ -116,3 +117,4 @@ jobs:
           fail_on: test failures
           action_fail: false
           action_fail_on_inconclusive: false
+          ignore_runners: true
