@@ -1,4 +1,5 @@
 import { initContract } from '@ts-rest/core';
+import { User as UserSchema, Tag as TagSchema } from './runtime/schema.js';
 import {
   SiteInfoSchema,
   UpdateSiteInfoSchema,
@@ -35,7 +36,6 @@ import {
   CaddyLogSchema,
   CaddyConfigSchema,
   LoginSchema,
-  UserSchema,
   UpdateUserSchema,
   CreateCollaboratorSchema,
   UpdateCollaboratorSchema,
@@ -44,7 +44,6 @@ import {
   CategorySchema,
   CreateCategorySchema,
   UpdateCategorySchema,
-  TagSchema,
   CreateTagSchema,
   UpdateTagSchema,
   ArticleSchema,

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { dataCodec, dateStr } from './date-codecs.js';
-import { User as UserType } from './runtime/schema.js';
+import { Tag as TagSchema } from './runtime/schema.js';
 
 export const c = {
   id: z.number().int().positive('ID must be a positive integer').describe('Unique identifier'),
@@ -328,9 +328,8 @@ export const LoginSchema = z.object({
   password: z.string(),
 });
 
-// Re-export User schema from runtime to ensure type consistency
-export const UserSchema = UserType;
-export type User = z.infer<typeof UserSchema>;
+// Note: UserSchema and User type are exported from runtime/schema.ts
+// to avoid duplicate exports with contract.ts
 
 export const UpdateUserSchema = z.object({
   nickname: z.string().optional(),
@@ -387,15 +386,8 @@ export const UpdateCategorySchema = z.object({
   password: z.string().optional(),
 });
 
-export const TagSchema = z.object({
-  id: z.number(),
-  name: z.string(),
-  count: z.number().optional(),
-  createdAt: dateStr,
-  updatedAt: dateStr.optional(),
-});
-
-export type Tag = z.infer<typeof TagSchema>;
+// Note: TagSchema and Tag type are exported from runtime/schema.ts
+// to avoid duplicate exports with contract.ts
 
 export const CreateTagSchema = z.object({
   name: z.string(),

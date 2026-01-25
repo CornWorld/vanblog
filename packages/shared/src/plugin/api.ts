@@ -89,9 +89,12 @@
 
 import type { z } from 'zod';
 import type { AppRoute, AppRouter, ServerInferRequest, ServerInferResponses } from '@ts-rest/core';
-import type { Type } from '@nestjs/common';
 import type { SyncSignal, AsyncSignal } from '../signals/types.js';
 import type { PluginMetadata } from './manifest.js';
+
+// Conditional type import for @nestjs/common (only available in server-ng)
+// This allows shared package to build without @nestjs/common as a dependency
+type Type<T> = T & { __nestjs_type_marker__: never };
 
 // ============================================================
 // 基础类型定义
