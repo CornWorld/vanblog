@@ -385,8 +385,8 @@ describe('PipelineService', () => {
         const result = await service.create(createDto);
 
         expect(result.script).toContain('// Async task');
-        expect(result.script).toContain('console.log');
-        expect(result.script).toContain('Pipeline executed with input:');
+        expect(result.script).toContain('// Access input data via');
+        expect(result.script).toContain('// Note:');
       });
     });
 
@@ -778,6 +778,231 @@ describe('PipelineService', () => {
 
       // 验证 mkdirSync 被调用
       expect(fs.mkdirSync).toHaveBeenCalledWith(expect.any(String), { recursive: true });
+    });
+  });
+
+  describe('Security validation', () => {
+    describe('validateScriptContent', () => {
+      it('should reject scripts with eval()', async () => {
+        await withTestTransaction(db, async (tx) => {
+          (service as any)['db'] = tx as any;
+
+          await expect(
+            service.create({
+              name: 'Eval Script',
+              eventName: 'test|event',
+              script: 'eval("malicious code")',
+              enabled: true,
+              deps: [],
+            }),
+          ).rejects.toThrow(BadRequestException);
+        });
+      });
+
+      it('should reject scripts with new Function()', async () => {
+        await withTestTransaction(db, async (tx) => {
+          (service as any)['db'] = tx as any;
+
+          await expect(
+            service.create({
+              name: 'Function Script',
+              eventName: 'test|event',
+              script: 'new Function("return 1")',
+              enabled: true,
+              deps: [],
+            }),
+          ).rejects.toThrow(BadRequestException);
+        });
+      });
+
+      it('should reject scripts with require("fs")', async () => {
+        await withTestTransaction(db, async (tx) => {
+          (service as any)['db'] = tx as any;
+
+          await expect(
+            service.create({
+              name: 'FS Script',
+              eventName: 'test|event',
+              script: 'require("fs")',
+              enabled: true,
+              deps: [],
+            }),
+          ).rejects.toThrow(BadRequestException);
+        });
+      });
+
+      it('should reject scripts with require("child_process")', async () => {
+        await withTestTransaction(db, async (tx) => {
+          (service as any)['db'] = tx as any;
+
+          await expect(
+            service.create({
+              name: 'Child Process Script',
+              eventName: 'test|event',
+              script: 'require("child_process")',
+              enabled: true,
+              deps: [],
+            }),
+          ).rejects.toThrow(BadRequestException);
+        });
+      });
+
+      it('should reject scripts with process.exit()', async () => {
+        await withTestTransaction(db, async (tx) => {
+          (service as any)['db'] = tx as any;
+
+          await expect(
+            service.create({
+              name: 'Exit Script',
+              eventName: 'test|event',
+              script: 'process.exit(1)',
+              enabled: true,
+              deps: [],
+            }),
+          ).rejects.toThrow(BadRequestException);
+        });
+      });
+
+      it('should reject scripts with __dirname', async () => {
+        await withTestTransaction(db, async (tx) => {
+          (service as any)['db'] = tx as any;
+
+          await expect(
+            service.create({
+              name: 'Dirname Script',
+              eventName: 'test|event',
+              script: 'const path = __dirname',
+              enabled: true,
+              deps: [],
+            }),
+          ).rejects.toThrow(BadRequestException);
+        });
+      });
+
+      it('should accept safe scripts', async () => {
+        const fs = await import('fs');
+
+        await withTestTransaction(db, async (tx) => {
+          (service as any)['db'] = tx as any;
+          vi.mocked(fs.writeFileSync).mockReturnValue(undefined);
+
+          const result = await service.create({
+            name: 'Safe Script',
+            eventName: 'test|event',
+            script: `
+              input.title = input.title + " (processed)";
+              input.count = (input.count || 0) + 1;
+            `,
+            enabled: true,
+            deps: [],
+          });
+
+          expect(result).toBeDefined();
+          expect(result.script).toContain('input.title');
+        });
+      });
+    });
+
+    describe('validateInputData', () => {
+      it('should accept valid object input', async () => {
+        const fs = await import('fs');
+
+        await withTestTransaction(db, async (tx) => {
+          (service as any)['db'] = tx as any;
+          vi.mocked(fs.writeFileSync).mockReturnValue(undefined);
+
+          const [pipeline] = await tx
+            .insert(pipelines)
+            .values(Mock.pipeline({ id: 1, enabled: true }) as any)
+            .returning();
+
+          // Mock executeScript to avoid actual execution
+          vi.spyOn(service as any, 'executeScript').mockResolvedValue({
+            status: 'success',
+            output: { test: 'data' },
+            logs: [],
+          });
+
+          await expect(
+            service.triggerById(pipeline.id, { title: 'Test', count: 5 }),
+          ).resolves.toBeDefined();
+        });
+      });
+
+      it('should accept array input', async () => {
+        const fs = await import('fs');
+
+        await withTestTransaction(db, async (tx) => {
+          (service as any)['db'] = tx as any;
+          vi.mocked(fs.writeFileSync).mockReturnValue(undefined);
+
+          const [pipeline] = await tx
+            .insert(pipelines)
+            .values(Mock.pipeline({ id: 1, enabled: true }) as any)
+            .returning();
+
+          vi.spyOn(service as any, 'executeScript').mockResolvedValue({
+            status: 'success',
+            output: { test: 'data' },
+            logs: [],
+          });
+
+          await expect(service.triggerById(pipeline.id, [1, 2, 3])).resolves.toBeDefined();
+        });
+      });
+
+      it('should accept null/undefined input', async () => {
+        const fs = await import('fs');
+
+        await withTestTransaction(db, async (tx) => {
+          (service as any)['db'] = tx as any;
+          vi.mocked(fs.writeFileSync).mockReturnValue(undefined);
+
+          const [pipeline] = await tx
+            .insert(pipelines)
+            .values(Mock.pipeline({ id: 1, enabled: true }) as any)
+            .returning();
+
+          vi.spyOn(service as any, 'executeScript').mockResolvedValue({
+            status: 'success',
+            output: {},
+            logs: [],
+          });
+
+          await expect(service.triggerById(pipeline.id, null)).resolves.toBeDefined();
+          await expect(service.triggerById(pipeline.id, undefined)).resolves.toBeDefined();
+        });
+      });
+
+      it('should reject primitive string input', async () => {
+        await withTestTransaction(db, async (tx) => {
+          (service as any)['db'] = tx as any;
+
+          const [pipeline] = await tx
+            .insert(pipelines)
+            .values(Mock.pipeline({ id: 1, enabled: true }) as any)
+            .returning();
+
+          await expect(service.triggerById(pipeline.id, 'invalid')).rejects.toThrow(
+            BadRequestException,
+          );
+        });
+      });
+
+      it('should reject primitive number input', async () => {
+        await withTestTransaction(db, async (tx) => {
+          (service as any)['db'] = tx as any;
+
+          const [pipeline] = await tx
+            .insert(pipelines)
+            .values(Mock.pipeline({ id: 1, enabled: true }) as any)
+            .returning();
+
+          await expect(service.triggerById(pipeline.id, 12345)).rejects.toThrow(
+            BadRequestException,
+          );
+        });
+      });
     });
   });
 });

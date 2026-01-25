@@ -1,0 +1,563 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<testsuites name="vitest tests" tests="145" failures="0" errors="0" time="17.005058711">
+    <testsuite name="test/analytics.e2e-spec.ts" timestamp="2026-01-25T09:24:01.512Z" hostname="runnervmymu0l" tests="19" failures="0" errors="0" skipped="0" time="0.63130815">
+        <testcase classname="test/analytics.e2e-spec.ts" name="AnalyticsController (e2e) &gt; POST /api/v2/analytics/record &gt; should record pageview analytics" time="0.009590415">
+        </testcase>
+        <testcase classname="test/analytics.e2e-spec.ts" name="AnalyticsController (e2e) &gt; POST /api/v2/analytics/record &gt; should record event analytics with data" time="0.00449487">
+        </testcase>
+        <testcase classname="test/analytics.e2e-spec.ts" name="AnalyticsController (e2e) &gt; POST /api/v2/analytics/record &gt; should reject invalid analytics type with 500 (ZodError)" time="0.006136891">
+            <system-out>
+2026-01-25 09:22:44 [31m[31merror[31m[39m: [PerformanceInterceptor] POST /api/v2/analytics/record 500 1ms [::ffff:127.0.0.1] - ERROR: [
+  {
+    &quot;code&quot;: &quot;custom&quot;,
+    &quot;path&quot;: [
+      &quot;type&quot;
+    ],
+    &quot;message&quot;: &quot;分析类型必须是 pageview、event 或 api_call&quot;
+  }
+]
+ZodError: [
+  {
+    &quot;code&quot;: &quot;custom&quot;,
+    &quot;path&quot;: [
+      &quot;type&quot;
+    ],
+    &quot;message&quot;: &quot;分析类型必须是 pageview、event 或 api_call&quot;
+  }
+]
+    at AnalyticsController.recordAnalytics (/home/runner/work/vanblog/vanblog/packages/server-ng/src/modules/analytics/analytics.controller.ts:89:41)
+    at /home/runner/work/vanblog/vanblog/node_modules/.pnpm/@nestjs+core@11.0.16_@nestjs+common@11.0.16_class-transformer@0.5.1_class-validator@0.1_a8918efb710a5790ab922bd8c20f72aa/node_modules/@nestjs/core/router/router-execution-context.js:38:29
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+
+            </system-out>
+        </testcase>
+        <testcase classname="test/analytics.e2e-spec.ts" name="AnalyticsController (e2e) &gt; POST /api/v2/article/:id/view &gt; should record article view" time="0.004368685">
+        </testcase>
+        <testcase classname="test/analytics.e2e-spec.ts" name="AnalyticsController (e2e) &gt; POST /api/v2/article/:id/view &gt; should reject invalid article ID" time="0.004322891">
+            <system-out>
+2026-01-25 09:22:44 [31m[31merror[31m[39m: [PerformanceInterceptor] POST /api/v2/article/invalid/view 500 1ms [::ffff:127.0.0.1] - ERROR: Validation failed (numeric string is expected)
+BadRequestException: Validation failed (numeric string is expected)
+    at ParseIntPipe.exceptionFactory (/home/runner/work/vanblog/vanblog/node_modules/.pnpm/@nestjs+common@11.0.16_class-transformer@0.5.1_class-validator@0.14.1_file-type@16.5.4_reflect-metadata@0.2.2_rxjs@7.8.2/node_modules/@nestjs/common/pipes/parse-int.pipe.js:24:27)
+    at ParseIntPipe.transform (/home/runner/work/vanblog/vanblog/node_modules/.pnpm/@nestjs+common@11.0.16_class-transformer@0.5.1_class-validator@0.14.1_file-type@16.5.4_reflect-metadata@0.2.2_rxjs@7.8.2/node_modules/@nestjs/common/pipes/parse-int.pipe.js:38:24)
+    at /home/runner/work/vanblog/vanblog/node_modules/.pnpm/@nestjs+core@11.0.16_@nestjs+common@11.0.16_class-transformer@0.5.1_class-validator@0.1_a8918efb710a5790ab922bd8c20f72aa/node_modules/@nestjs/core/pipes/pipes-consumer.js:16:33
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at resolveParamValue (/home/runner/work/vanblog/vanblog/node_modules/.pnpm/@nestjs+core@11.0.16_@nestjs+common@11.0.16_class-transformer@0.5.1_class-validator@0.1_a8918efb710a5790ab922bd8c20f72aa/node_modules/@nestjs/core/router/router-execution-context.js:148:23)
+    at async Promise.all (index 2)
+    at pipesFn (/home/runner/work/vanblog/vanblog/node_modules/.pnpm/@nestjs+core@11.0.16_@nestjs+common@11.0.16_class-transformer@0.5.1_class-validator@0.1_a8918efb710a5790ab922bd8c20f72aa/node_modules/@nestjs/core/router/router-execution-context.js:151:13)
+    at /home/runner/work/vanblog/vanblog/node_modules/.pnpm/@nestjs+core@11.0.16_@nestjs+common@11.0.16_class-transformer@0.5.1_class-validator@0.1_a8918efb710a5790ab922bd8c20f72aa/node_modules/@nestjs/core/router/router-execution-context.js:37:30
+
+            </system-out>
+        </testcase>
+        <testcase classname="test/analytics.e2e-spec.ts" name="AnalyticsController (e2e) &gt; POST /api/v2/article/:id/reading-time &gt; should record reading time" time="0.003481327">
+        </testcase>
+        <testcase classname="test/analytics.e2e-spec.ts" name="AnalyticsController (e2e) &gt; GET /api/v2/admin/analytics/overview &gt; should require authentication" time="0.002769896">
+        </testcase>
+        <testcase classname="test/analytics.e2e-spec.ts" name="AnalyticsController (e2e) &gt; GET /api/v2/admin/analytics/overview &gt; should return analytics overview with auth" time="0.007483231">
+        </testcase>
+        <testcase classname="test/analytics.e2e-spec.ts" name="AnalyticsController (e2e) &gt; GET /api/v2/admin/analytics/page-rankings &gt; should return page rankings" time="0.010170053">
+        </testcase>
+        <testcase classname="test/analytics.e2e-spec.ts" name="AnalyticsController (e2e) &gt; GET /api/v2/admin/analytics/referrers &gt; should return referrer statistics" time="0.003813514">
+        </testcase>
+        <testcase classname="test/analytics.e2e-spec.ts" name="AnalyticsController (e2e) &gt; GET /api/v2/admin/analytics/chart &gt; should return chart data" time="0.004041969">
+        </testcase>
+        <testcase classname="test/analytics.e2e-spec.ts" name="AnalyticsController (e2e) &gt; GET /api/v2/admin/analytics/devices &gt; should return device statistics" time="0.010994483">
+        </testcase>
+        <testcase classname="test/analytics.e2e-spec.ts" name="AnalyticsController (e2e) &gt; GET /api/v2/admin/analytics/browsers &gt; should return browser statistics" time="0.006605381">
+        </testcase>
+        <testcase classname="test/analytics.e2e-spec.ts" name="AnalyticsController (e2e) &gt; GET /api/v2/admin/analytics/articles/top &gt; should return top articles" time="0.003576093">
+        </testcase>
+        <testcase classname="test/analytics.e2e-spec.ts" name="AnalyticsController (e2e) &gt; GET /api/v2/admin/analytics/export &gt; should export analytics data" time="0.004151011">
+        </testcase>
+        <testcase classname="test/analytics.e2e-spec.ts" name="AnalyticsController (e2e) &gt; ETag &amp; DerivedView caching &gt; should return ETag header on cached analytics endpoints" time="0.004390926">
+        </testcase>
+        <testcase classname="test/analytics.e2e-spec.ts" name="AnalyticsController (e2e) &gt; ETag &amp; DerivedView caching &gt; should return 304 when If-None-Match matches ETag" time="0.005093441">
+        </testcase>
+        <testcase classname="test/analytics.e2e-spec.ts" name="AnalyticsController (e2e) &gt; ETag &amp; DerivedView caching &gt; should cache analytics data with different query parameters" time="0.01014782">
+        </testcase>
+        <testcase classname="test/analytics.e2e-spec.ts" name="AnalyticsController (e2e) &gt; ETag &amp; DerivedView caching &gt; should return fresh data when cache is invalidated" time="0.015967542">
+        </testcase>
+    </testsuite>
+    <testsuite name="test/anonymous-access.e2e-spec.ts" timestamp="2026-01-25T09:24:01.517Z" hostname="runnervmymu0l" tests="4" failures="0" errors="0" skipped="0" time="0.460276605">
+        <testcase classname="test/anonymous-access.e2e-spec.ts" name="Anonymous visitor token (e2e) &gt; POST /api/v2/auth/anonymous should issue an anonymous access token" time="0.019036904">
+        </testcase>
+        <testcase classname="test/anonymous-access.e2e-spec.ts" name="Anonymous visitor token (e2e) &gt; GET /api/v2/sitemap/status should be accessible with anonymous token (viewer role -&gt; sitemap:read)" time="0.01096573">
+        </testcase>
+        <testcase classname="test/anonymous-access.e2e-spec.ts" name="Anonymous visitor token (e2e) &gt; GET /api/v2/sitemap/urls should be accessible with anonymous token (viewer role -&gt; sitemap:read)" time="0.007855342">
+        </testcase>
+        <testcase classname="test/anonymous-access.e2e-spec.ts" name="Anonymous visitor token (e2e) &gt; POST /api/v2/sitemap/generate should be forbidden (403) with anonymous token (missing sitemap:generate)" time="0.003764062">
+        </testcase>
+    </testsuite>
+    <testsuite name="test/app.e2e-spec.ts" timestamp="2026-01-25T09:24:01.518Z" hostname="runnervmymu0l" tests="1" failures="0" errors="0" skipped="0" time="0.289407895">
+        <testcase classname="test/app.e2e-spec.ts" name="AppController (e2e) &gt; / (GET)" time="0.025090869">
+        </testcase>
+    </testsuite>
+    <testsuite name="test/article-by-path.e2e-spec.ts" timestamp="2026-01-25T09:24:01.518Z" hostname="runnervmymu0l" tests="2" failures="0" errors="0" skipped="0" time="0.546026724">
+        <testcase classname="test/article-by-path.e2e-spec.ts" name="ArticleController - by-path (e2e) &gt; GET /api/v2/articles/by-path/:pathname should return the article" time="0.00559844">
+        </testcase>
+        <testcase classname="test/article-by-path.e2e-spec.ts" name="ArticleController - by-path (e2e) &gt; GET /api/v2/articles/by-path/:pathname should 404 for non-existing" time="0.005980911">
+            <system-out>
+2026-01-25 09:23:44 [31m[31merror[31m[39m: [PerformanceInterceptor] GET /api/v2/articles/by-path/not-exist-slug 500 0ms [::ffff:127.0.0.1] - ERROR: Article with pathname not-exist-slug not found
+NotFoundException: Article with pathname not-exist-slug not found
+    at ArticleService.findOneByPathname (/home/runner/work/vanblog/vanblog/packages/server-ng/src/modules/article/article.service.ts:518:13)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+
+            </system-out>
+        </testcase>
+    </testsuite>
+    <testsuite name="test/article-verify-by-path.e2e-spec.ts" timestamp="2026-01-25T09:24:01.519Z" hostname="runnervmymu0l" tests="2" failures="0" errors="0" skipped="0" time="0.690723363">
+        <testcase classname="test/article-verify-by-path.e2e-spec.ts" name="ArticleController - verify by pathname (e2e) &gt; should deny access to private article by pathname without token" time="0.004618579">
+        </testcase>
+        <testcase classname="test/article-verify-by-path.e2e-spec.ts" name="ArticleController - verify by pathname (e2e) &gt; should verify password by pathname and then access article with token" time="0.072838237">
+        </testcase>
+    </testsuite>
+    <testsuite name="test/bootstrap-extensions.e2e-spec.ts" timestamp="2026-01-25T09:24:01.519Z" hostname="runnervmymu0l" tests="3" failures="0" errors="0" skipped="0" time="0.462494921">
+        <testcase classname="test/bootstrap-extensions.e2e-spec.ts" name="BootstrapController - extensions field (e2e) &gt; GET /api/v2/public/bootstrap should include extensions field" time="0.029544423">
+        </testcase>
+        <testcase classname="test/bootstrap-extensions.e2e-spec.ts" name="BootstrapController - extensions field (e2e) &gt; extensions field should contain plugin data when plugins are registered" time="0.010380022">
+        </testcase>
+        <testcase classname="test/bootstrap-extensions.e2e-spec.ts" name="BootstrapController - extensions field (e2e) &gt; should handle plugin data transformation via hooks" time="0.00647637">
+        </testcase>
+    </testsuite>
+    <testsuite name="test/bootstrap.e2e-spec.ts" timestamp="2026-01-25T09:24:01.520Z" hostname="runnervmymu0l" tests="1" failures="0" errors="0" skipped="0" time="0.438955598">
+        <testcase classname="test/bootstrap.e2e-spec.ts" name="BootstrapController (e2e) &gt; GET /api/v2/public/bootstrap should return 200 and expected structure" time="0.032387004">
+        </testcase>
+    </testsuite>
+    <testsuite name="test/csrf.e2e-spec.ts" timestamp="2026-01-25T09:24:01.521Z" hostname="runnervmymu0l" tests="1" failures="0" errors="0" skipped="0" time="0.38497958">
+        <testcase classname="test/csrf.e2e-spec.ts" name="CSRF Protection (e2e) &gt; should get CSRF token from endpoint" time="0.024488982">
+        </testcase>
+    </testsuite>
+    <testsuite name="test/custom-page.e2e-spec.ts" timestamp="2026-01-25T09:24:01.521Z" hostname="runnervmymu0l" tests="6" failures="0" errors="0" skipped="0" time="0.455369779">
+        <testcase classname="test/custom-page.e2e-spec.ts" name="CustomPageController (e2e) &gt; GET /api/v2/public/customPage/all &gt; should return empty array when no custom pages exist" time="0.020144461">
+        </testcase>
+        <testcase classname="test/custom-page.e2e-spec.ts" name="CustomPageController (e2e) &gt; GET /api/v2/public/customPage/all &gt; should return all custom pages" time="0.00608334">
+        </testcase>
+        <testcase classname="test/custom-page.e2e-spec.ts" name="CustomPageController (e2e) &gt; GET /api/v2/public/customPage &gt; should require path parameter" time="0.005992412">
+            <system-out>
+2026-01-25 09:23:07 [31m[31merror[31m[39m: [PerformanceInterceptor] GET /api/v2/public/customPage 500 1ms [::ffff:127.0.0.1] - ERROR: Path parameter is required
+NotFoundException: Path parameter is required
+    at CustomPageController.getCustomPage (/home/runner/work/vanblog/vanblog/packages/server-ng/src/modules/public/custom-page.controller.ts:39:13)
+    at /home/runner/work/vanblog/vanblog/node_modules/.pnpm/@nestjs+core@11.0.16_@nestjs+common@11.0.16_class-transformer@0.5.1_class-validator@0.1_a8918efb710a5790ab922bd8c20f72aa/node_modules/@nestjs/core/router/router-execution-context.js:38:29
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+
+            </system-out>
+        </testcase>
+        <testcase classname="test/custom-page.e2e-spec.ts" name="CustomPageController (e2e) &gt; GET /api/v2/public/customPage &gt; should return 404 for non-existent custom page" time="0.006152729">
+            <system-out>
+2026-01-25 09:23:07 [31m[31merror[31m[39m: [PerformanceInterceptor] GET /api/v2/public/customPage?path=%2Fnon-existent 500 1ms [::ffff:127.0.0.1] - ERROR: Custom page not found for path: /non-existent
+NotFoundException: Custom page not found for path: /non-existent
+    at CustomPageController.getCustomPage (/home/runner/work/vanblog/vanblog/packages/server-ng/src/modules/public/custom-page.controller.ts:44:13)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+
+            </system-out>
+        </testcase>
+        <testcase classname="test/custom-page.e2e-spec.ts" name="CustomPageController (e2e) &gt; GET /api/v2/public/customPage &gt; should return markdown custom page with rendered HTML" time="0.007738786">
+        </testcase>
+        <testcase classname="test/custom-page.e2e-spec.ts" name="CustomPageController (e2e) &gt; GET /api/v2/public/customPage &gt; should return HTML custom page as-is" time="0.003832409">
+        </testcase>
+    </testsuite>
+    <testsuite name="test/debug-permissions.e2e-spec.ts" timestamp="2026-01-25T09:24:01.522Z" hostname="runnervmymu0l" tests="1" failures="0" errors="0" skipped="0" time="1.361437962">
+        <testcase classname="test/debug-permissions.e2e-spec.ts" name="Debug Permissions Initialization &gt; should have viewer role with sitemap:read permissions" time="1.006388653">
+        </testcase>
+    </testsuite>
+    <testsuite name="test/debug-simple.e2e-spec.ts" timestamp="2026-01-25T09:24:01.523Z" hostname="runnervmymu0l" tests="1" failures="0" errors="0" skipped="0" time="0.812944607">
+        <testcase classname="test/debug-simple.e2e-spec.ts" name="Anonymous Permission Chain (e2e) &gt; should validate anonymous permission chain" time="0.811757511">
+            <system-out>
+2026-01-25 09:23:52 [32m[32minfo[32m[39m: [Database] Initializing database with driver: local
+2026-01-25 09:23:52 [32m[32minfo[32m[39m: [Database] Database connection established
+
+2026-01-25 09:23:52 [32m[32minfo[32m[39m: [Database] Foreign key constraints enabled
+
+2026-01-25 09:23:52 [32m[32minfo[32m[39m: LoaderService initialized
+2026-01-25 09:23:52 [32m[32minfo[32m[39m: LoaderService initialized
+
+2026-01-25 09:23:53 [32m[32minfo[32m[39m: LoaderService: plugin modules are loaded via PluginModule.forRoot, skip internal scanning
+
+2026-01-25 09:23:53 [32m[32minfo[32m[39m: LoaderService: plugin modules are loaded via PluginModule.forRoot, skip internal scanning
+
+匿名用户原始权限: [ [32m&apos;role:viewer&apos;[39m ]
+解析后权限: [
+  [32m&apos;user:read&apos;[39m,     [32m&apos;analytics:read&apos;[39m,
+  [32m&apos;setting:read&apos;[39m,  [32m&apos;plugin:read&apos;[39m,
+  [32m&apos;webhook:read&apos;[39m,  [32m&apos;article:read&apos;[39m,
+  [32m&apos;category:read&apos;[39m, [32m&apos;tag:read&apos;[39m,
+  [32m&apos;draft:read&apos;[39m,    [32m&apos;media:read&apos;[39m,
+  [32m&apos;rss:read&apos;[39m,      [32m&apos;sitemap:read&apos;[39m,
+  [32m&apos;backup:read&apos;[39m
+]
+包含 sitemap:read: [33mtrue[39m
+
+hasPermissions 结果: [33mtrue[39m
+
+            </system-out>
+        </testcase>
+    </testsuite>
+    <testsuite name="test/health.e2e-spec.ts" timestamp="2026-01-25T09:24:01.523Z" hostname="runnervmymu0l" tests="1" failures="0" errors="0" skipped="0" time="0.352544559">
+        <testcase classname="test/health.e2e-spec.ts" name="HealthController (e2e) &gt; /api/v2/health (GET)" time="0.025047672">
+        </testcase>
+    </testsuite>
+    <testsuite name="test/hook-integration.e2e-spec.ts" timestamp="2026-01-25T09:24:01.524Z" hostname="runnervmymu0l" tests="12" failures="0" errors="0" skipped="0" time="0.461091026">
+        <testcase classname="test/hook-integration.e2e-spec.ts" name="Hook Integration (e2e) &gt; Article Hook Integration &gt; should trigger article|beforeCreate filter hook" time="0.013511561">
+        </testcase>
+        <testcase classname="test/hook-integration.e2e-spec.ts" name="Hook Integration (e2e) &gt; Article Hook Integration &gt; should trigger article|afterCreate action hook" time="0.007011295">
+        </testcase>
+        <testcase classname="test/hook-integration.e2e-spec.ts" name="Hook Integration (e2e) &gt; Article Hook Integration &gt; should trigger article|beforeUpdate filter hook" time="0.011081988">
+        </testcase>
+        <testcase classname="test/hook-integration.e2e-spec.ts" name="Hook Integration (e2e) &gt; Article Hook Integration &gt; should trigger article|beforeDelete and article|afterDelete hooks" time="0.00816626">
+        </testcase>
+        <testcase classname="test/hook-integration.e2e-spec.ts" name="Hook Integration (e2e) &gt; Draft Hook Integration &gt; should trigger draft|beforeCreate filter hook" time="0.007190438">
+        </testcase>
+        <testcase classname="test/hook-integration.e2e-spec.ts" name="Hook Integration (e2e) &gt; Draft Hook Integration &gt; should trigger draft|afterCreate action hook" time="0.006112025">
+        </testcase>
+        <testcase classname="test/hook-integration.e2e-spec.ts" name="Hook Integration (e2e) &gt; Draft Hook Integration &gt; should trigger draft|beforeUpdate filter hook" time="0.010180573">
+        </testcase>
+        <testcase classname="test/hook-integration.e2e-spec.ts" name="Hook Integration (e2e) &gt; Draft Hook Integration &gt; should trigger draft|beforeDelete and draft|afterDelete hooks" time="0.009133608">
+        </testcase>
+        <testcase classname="test/hook-integration.e2e-spec.ts" name="Hook Integration (e2e) &gt; Hook Service Management &gt; should allow adding and removing hooks" time="0.005203188">
+        </testcase>
+        <testcase classname="test/hook-integration.e2e-spec.ts" name="Hook Integration (e2e) &gt; Hook Service Management &gt; should handle multiple hooks for the same event" time="0.009831057">
+        </testcase>
+        <testcase classname="test/hook-integration.e2e-spec.ts" name="Hook Integration (e2e) &gt; Comment Hook Integration &gt; should trigger comment|beforeUpdate filter hook" time="0.009350518">
+        </testcase>
+        <testcase classname="test/hook-integration.e2e-spec.ts" name="Hook Integration (e2e) &gt; Comment Hook Integration &gt; should trigger comment|afterUpdate action hook" time="0.006660343">
+        </testcase>
+    </testsuite>
+    <testsuite name="test/init.e2e-spec.ts" timestamp="2026-01-25T09:24:01.526Z" hostname="runnervmymu0l" tests="4" failures="0" errors="0" skipped="0" time="0.542055009">
+        <testcase classname="test/init.e2e-spec.ts" name="InitController (e2e) - CMS Initialization Flow &gt; POST /api/v2/public/init initializes CMS and creates an admin user" time="0.10974581">
+        </testcase>
+        <testcase classname="test/init.e2e-spec.ts" name="InitController (e2e) - CMS Initialization Flow &gt; allows the created admin to login via /api/v2/auth/login" time="0.071962019">
+        </testcase>
+        <testcase classname="test/init.e2e-spec.ts" name="InitController (e2e) - CMS Initialization Flow &gt; repeated initialization returns 409 Conflict" time="0.006447247">
+            <system-out>
+2026-01-25 09:23:21 [31m[31merror[31m[39m: [PerformanceInterceptor] POST /api/v2/public/init 500 1ms [::ffff:127.0.0.1] - ERROR: CMS is already initialized
+ConflictException: CMS is already initialized
+    at InitService.initializeCms (/home/runner/work/vanblog/vanblog/packages/server-ng/src/modules/public/init.service.ts:23:13)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at InitController.init (/home/runner/work/vanblog/vanblog/packages/server-ng/src/modules/public/init.controller.ts:18:18)
+
+            </system-out>
+        </testcase>
+        <testcase classname="test/init.e2e-spec.ts" name="InitController (e2e) - CMS Initialization Flow &gt; DB asserts: admin user has type=admin and permissions [&quot;role:admin&quot;]" time="0.001076409">
+        </testcase>
+    </testsuite>
+    <testsuite name="test/login-log.ts-rest.e2e-spec.ts" timestamp="2026-01-25T09:24:01.527Z" hostname="runnervmymu0l" tests="3" failures="0" errors="0" skipped="0" time="0.406973329">
+        <testcase classname="test/login-log.ts-rest.e2e-spec.ts" name="LoginLog Ts-Rest (e2e) &gt; GET /api/v2/auth/logs should return 200 and array" time="0.021373555">
+        </testcase>
+        <testcase classname="test/login-log.ts-rest.e2e-spec.ts" name="LoginLog Ts-Rest (e2e) &gt; GET /api/v2/auth/logs/failed-attempts/by-username returns count" time="0.009049702">
+        </testcase>
+        <testcase classname="test/login-log.ts-rest.e2e-spec.ts" name="LoginLog Ts-Rest (e2e) &gt; GET /api/v2/auth/logs/failed-attempts/by-ip returns count" time="0.004650168">
+        </testcase>
+    </testsuite>
+    <testsuite name="test/options.e2e-spec.ts" timestamp="2026-01-25T09:24:01.528Z" hostname="runnervmymu0l" tests="10" failures="0" errors="0" skipped="0" time="0.54565296">
+        <testcase classname="test/options.e2e-spec.ts" name="OptionsController (e2e) &gt; GET /api/v2/public/options should return 200 with empty include" time="0.029092444">
+        </testcase>
+        <testcase classname="test/options.e2e-spec.ts" name="OptionsController (e2e) &gt; GET /api/v2/public/options?include=articles should return articles" time="0.013057356">
+        </testcase>
+        <testcase classname="test/options.e2e-spec.ts" name="OptionsController (e2e) &gt; GET /api/v2/public/options?include=categories,tags should return categories and tags" time="0.010361217">
+        </testcase>
+        <testcase classname="test/options.e2e-spec.ts" name="OptionsController (e2e) &gt; GET /api/v2/public/options?include=siteMeta should return site metadata" time="0.008934527">
+        </testcase>
+        <testcase classname="test/options.e2e-spec.ts" name="OptionsController (e2e) &gt; GET /api/v2/public/options?include=navigation,friendLinks should return navigation and friend links" time="0.01034147">
+        </testcase>
+        <testcase classname="test/options.e2e-spec.ts" name="OptionsController (e2e) &gt; Cache key should respect query params (different results for different include)" time="0.014800704">
+        </testcase>
+        <testcase classname="test/options.e2e-spec.ts" name="OptionsController (e2e) &gt; Should handle invalid include values gracefully" time="0.007263102">
+        </testcase>
+        <testcase classname="test/options.e2e-spec.ts" name="OptionsController (e2e) &gt; Include order should be ignored (categories,tags == tags,categories)" time="0.013175676">
+        </testcase>
+        <testcase classname="test/options.e2e-spec.ts" name="OptionsController (e2e) &gt; Duplicate include values should be de-duplicated" time="0.006768794">
+        </testcase>
+        <testcase classname="test/options.e2e-spec.ts" name="OptionsController (e2e) &gt; GET /api/v2/public/options?include=tags should not crash with dirty JSON in articles.tags" time="0.00609909">
+        </testcase>
+    </testsuite>
+    <testsuite name="test/permissions-decorator.e2e-spec.ts" timestamp="2026-01-25T09:24:01.529Z" hostname="runnervmymu0l" tests="7" failures="0" errors="0" skipped="0" time="0.765268685">
+        <testcase classname="test/permissions-decorator.e2e-spec.ts" name="Permissions Decorators (e2e) &gt; GET /api/v2/perm-test/a - @Permission(&quot;permtest&quot;, [&quot;read&quot;]) &gt; 401 without auth" time="0.010114519">
+        </testcase>
+        <testcase classname="test/permissions-decorator.e2e-spec.ts" name="Permissions Decorators (e2e) &gt; GET /api/v2/perm-test/a - @Permission(&quot;permtest&quot;, [&quot;read&quot;]) &gt; 200 with permtest:read" time="0.00871002">
+        </testcase>
+        <testcase classname="test/permissions-decorator.e2e-spec.ts" name="Permissions Decorators (e2e) &gt; GET /api/v2/perm-test/a - @Permission(&quot;permtest&quot;, [&quot;read&quot;]) &gt; 403 with write only" time="0.004033162">
+        </testcase>
+        <testcase classname="test/permissions-decorator.e2e-spec.ts" name="Permissions Decorators (e2e) &gt; GET /api/v2/perm-test/b - @Permission(&quot;permtest:read&quot;,&quot;permtest:write&quot;) &gt; 403 with read only" time="0.004209659">
+        </testcase>
+        <testcase classname="test/permissions-decorator.e2e-spec.ts" name="Permissions Decorators (e2e) &gt; GET /api/v2/perm-test/b - @Permission(&quot;permtest:read&quot;,&quot;permtest:write&quot;) &gt; 200 with read+write" time="0.003928608">
+        </testcase>
+        <testcase classname="test/permissions-decorator.e2e-spec.ts" name="Permissions Decorators (e2e) &gt; GET /api/v2/perm-test/c - @Perm(&quot;permtest&quot;, [&quot;write&quot;]) &gt; 200 with write" time="0.005186334">
+        </testcase>
+        <testcase classname="test/permissions-decorator.e2e-spec.ts" name="Permissions Decorators (e2e) &gt; GET /api/v2/perm-test/c - @Perm(&quot;permtest&quot;, [&quot;write&quot;]) &gt; 403 with read only" time="0.003707968">
+        </testcase>
+    </testsuite>
+    <testsuite name="test/picgo-plugins.e2e-spec.ts" timestamp="2026-01-25T09:24:01.531Z" hostname="runnervmymu0l" tests="13" failures="0" errors="0" skipped="0" time="0.822871234">
+        <testcase classname="test/picgo-plugins.e2e-spec.ts" name="PicgoPluginsController (e2e) &gt; GET /api/v2/admin/media/picgo/plugins &gt; 401 when no auth" time="0.005930958">
+        </testcase>
+        <testcase classname="test/picgo-plugins.e2e-spec.ts" name="PicgoPluginsController (e2e) &gt; GET /api/v2/admin/media/picgo/plugins &gt; 403 when no setting:read permission" time="0.003736792">
+        </testcase>
+        <testcase classname="test/picgo-plugins.e2e-spec.ts" name="PicgoPluginsController (e2e) &gt; GET /api/v2/admin/media/picgo/plugins &gt; 200 with setting:read" time="0.005708114">
+        </testcase>
+        <testcase classname="test/picgo-plugins.e2e-spec.ts" name="PicgoPluginsController (e2e) &gt; GET /api/v2/admin/media/picgo/plugins/logs &gt; 401 when no auth" time="0.002606131">
+        </testcase>
+        <testcase classname="test/picgo-plugins.e2e-spec.ts" name="PicgoPluginsController (e2e) &gt; GET /api/v2/admin/media/picgo/plugins/logs &gt; 200 with setting:read" time="0.003873045">
+        </testcase>
+        <testcase classname="test/picgo-plugins.e2e-spec.ts" name="PicgoPluginsController (e2e) &gt; GET /api/v2/admin/media/picgo/plugins/logs &gt; 403 when only setting:update (no read)" time="0.004142826">
+        </testcase>
+        <testcase classname="test/picgo-plugins.e2e-spec.ts" name="PicgoPluginsController (e2e) &gt; POST /api/v2/admin/media/picgo/plugins/install &gt; 403 when only setting:read" time="0.003142868">
+        </testcase>
+        <testcase classname="test/picgo-plugins.e2e-spec.ts" name="PicgoPluginsController (e2e) &gt; POST /api/v2/admin/media/picgo/plugins/install &gt; 500 with invalid Zod validation (ZodError not converted to 400 yet)" time="0.0090118">
+            <system-out>
+2026-01-25 09:22:56 [31m[31merror[31m[39m: [PerformanceInterceptor] POST /api/v2/admin/media/picgo/plugins/install 500 2ms [::ffff:127.0.0.1] - ERROR: [
+  {
+    &quot;expected&quot;: &quot;array&quot;,
+    &quot;code&quot;: &quot;invalid_type&quot;,
+    &quot;path&quot;: [
+      &quot;plugins&quot;
+    ],
+    &quot;message&quot;: &quot;Invalid input: expected array, received undefined&quot;
+  }
+]
+ZodError: [
+  {
+    &quot;expected&quot;: &quot;array&quot;,
+    &quot;code&quot;: &quot;invalid_type&quot;,
+    &quot;path&quot;: [
+      &quot;plugins&quot;
+    ],
+    &quot;message&quot;: &quot;Invalid input: expected array, received undefined&quot;
+  }
+]
+    at PicgoPluginsController.install (/home/runner/work/vanblog/vanblog/packages/server-ng/src/modules/media/controllers/picgo-plugins.controller.ts:48:43)
+    at /home/runner/work/vanblog/vanblog/node_modules/.pnpm/@nestjs+core@11.0.16_@nestjs+common@11.0.16_class-transformer@0.5.1_class-validator@0.1_a8918efb710a5790ab922bd8c20f72aa/node_modules/@nestjs/core/router/router-execution-context.js:38:29
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+
+2026-01-25 09:22:56 [31m[31merror[31m[39m: [PerformanceInterceptor] POST /api/v2/admin/media/picgo/plugins/install 500 0ms [::ffff:127.0.0.1] - ERROR: [
+  {
+    &quot;expected&quot;: &quot;array&quot;,
+    &quot;code&quot;: &quot;invalid_type&quot;,
+    &quot;path&quot;: [
+      &quot;plugins&quot;
+    ],
+    &quot;message&quot;: &quot;Invalid input: expected array, received string&quot;
+  }
+]
+ZodError: [
+  {
+    &quot;expected&quot;: &quot;array&quot;,
+    &quot;code&quot;: &quot;invalid_type&quot;,
+    &quot;path&quot;: [
+      &quot;plugins&quot;
+    ],
+    &quot;message&quot;: &quot;Invalid input: expected array, received string&quot;
+  }
+]
+    at PicgoPluginsController.install (/home/runner/work/vanblog/vanblog/packages/server-ng/src/modules/media/controllers/picgo-plugins.controller.ts:48:43)
+    at /home/runner/work/vanblog/vanblog/node_modules/.pnpm/@nestjs+core@11.0.16_@nestjs+common@11.0.16_class-transformer@0.5.1_class-validator@0.1_a8918efb710a5790ab922bd8c20f72aa/node_modules/@nestjs/core/router/router-execution-context.js:38:29
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+
+            </system-out>
+        </testcase>
+        <testcase classname="test/picgo-plugins.e2e-spec.ts" name="PicgoPluginsController (e2e) &gt; POST /api/v2/admin/media/picgo/plugins/install &gt; 200 with setting:update and valid plugins" time="0.004181838">
+        </testcase>
+        <testcase classname="test/picgo-plugins.e2e-spec.ts" name="PicgoPluginsController (e2e) &gt; POST /api/v2/admin/media/picgo/plugins/install &gt; 200 but failure response when plugin installation fails" time="0.003470066">
+        </testcase>
+        <testcase classname="test/picgo-plugins.e2e-spec.ts" name="PicgoPluginsController (e2e) &gt; POST /api/v2/admin/media/picgo/plugins/uninstall &gt; 403 when only setting:read" time="0.003091373">
+        </testcase>
+        <testcase classname="test/picgo-plugins.e2e-spec.ts" name="PicgoPluginsController (e2e) &gt; POST /api/v2/admin/media/picgo/plugins/uninstall &gt; 500 with invalid Zod validation (ZodError not converted to 400 yet)" time="0.004052569">
+            <system-out>
+2026-01-25 09:22:56 [31m[31merror[31m[39m: [PerformanceInterceptor] POST /api/v2/admin/media/picgo/plugins/uninstall 500 0ms [::ffff:127.0.0.1] - ERROR: [
+  {
+    &quot;expected&quot;: &quot;array&quot;,
+    &quot;code&quot;: &quot;invalid_type&quot;,
+    &quot;path&quot;: [
+      &quot;plugins&quot;
+    ],
+    &quot;message&quot;: &quot;Invalid input: expected array, received undefined&quot;
+  }
+]
+ZodError: [
+  {
+    &quot;expected&quot;: &quot;array&quot;,
+    &quot;code&quot;: &quot;invalid_type&quot;,
+    &quot;path&quot;: [
+      &quot;plugins&quot;
+    ],
+    &quot;message&quot;: &quot;Invalid input: expected array, received undefined&quot;
+  }
+]
+    at PicgoPluginsController.uninstall (/home/runner/work/vanblog/vanblog/packages/server-ng/src/modules/media/controllers/picgo-plugins.controller.ts:73:45)
+    at /home/runner/work/vanblog/vanblog/node_modules/.pnpm/@nestjs+core@11.0.16_@nestjs+common@11.0.16_class-transformer@0.5.1_class-validator@0.1_a8918efb710a5790ab922bd8c20f72aa/node_modules/@nestjs/core/router/router-execution-context.js:38:29
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+
+            </system-out>
+        </testcase>
+        <testcase classname="test/picgo-plugins.e2e-spec.ts" name="PicgoPluginsController (e2e) &gt; POST /api/v2/admin/media/picgo/plugins/uninstall &gt; 200 but always returns failure due to PicGo limitation" time="0.002799281">
+        </testcase>
+    </testsuite>
+    <testsuite name="test/public-analytics.e2e-spec.ts" timestamp="2026-01-25T09:24:01.533Z" hostname="runnervmymu0l" tests="3" failures="0" errors="0" skipped="0" time="0.693249903">
+        <testcase classname="test/public-analytics.e2e-spec.ts" name="PublicAnalyticsController (e2e) &gt; GET /api/v2/analytics/public/overview should return overview with basic fields" time="0.006487511">
+        </testcase>
+        <testcase classname="test/public-analytics.e2e-spec.ts" name="PublicAnalyticsController (e2e) &gt; GET /api/v2/analytics/public/article/:id should return sanitized stats for the article" time="0.105572721">
+        </testcase>
+        <testcase classname="test/public-analytics.e2e-spec.ts" name="PublicAnalyticsController (e2e) &gt; GET /api/v2/analytics/public/page-rankings should return sanitized paths and counts" time="0.003549904">
+        </testcase>
+    </testsuite>
+    <testsuite name="test/setting-core-read-persist.e2e-spec.ts" timestamp="2026-01-25T09:24:01.534Z" hostname="runnervmymu0l" tests="4" failures="0" errors="0" skipped="0" time="0.38251039">
+        <testcase classname="test/setting-core-read-persist.e2e-spec.ts" name="SettingCoreService read-path default persistence (e2e) &gt; should persist default on first read and return it" time="0.009966714">
+        </testcase>
+        <testcase classname="test/setting-core-read-persist.e2e-spec.ts" name="SettingCoreService read-path default persistence (e2e) &gt; should not overwrite stored value on subsequent reads with a different default" time="0.006265178">
+        </testcase>
+        <testcase classname="test/setting-core-read-persist.e2e-spec.ts" name="SettingCoreService read-path default persistence (e2e) &gt; should persist one of the defaults when two concurrent first reads supply different defaults" time="0.007255898">
+        </testcase>
+        <testcase classname="test/setting-core-read-persist.e2e-spec.ts" name="SettingCoreService read-path default persistence (e2e) &gt; should throw when default exceeds MAX_JSON_LENGTH during first read persistence" time="0.007415685">
+        </testcase>
+    </testsuite>
+    <testsuite name="test/setting-registry-concurrency.e2e-spec.ts" timestamp="2026-01-25T09:24:01.534Z" hostname="runnervmymu0l" tests="2" failures="0" errors="0" skipped="0" time="0.425472211">
+        <testcase classname="test/setting-registry-concurrency.e2e-spec.ts" name="SettingRegistryService Concurrency &amp; Edge (e2e) &gt; should upsert concurrently into a single row for the same key" time="0.040440565">
+        </testcase>
+        <testcase classname="test/setting-registry-concurrency.e2e-spec.ts" name="SettingRegistryService Concurrency &amp; Edge (e2e) &gt; should reject oversized payloads with BadRequestException" time="0.008108501">
+        </testcase>
+    </testsuite>
+    <testsuite name="test/settings-validation.e2e-spec.ts" timestamp="2026-01-25T09:24:01.535Z" hostname="runnervmymu0l" tests="2" failures="0" errors="0" skipped="0" time="0.549293441">
+        <testcase classname="test/settings-validation.e2e-spec.ts" name="SettingsController Validation (e2e) &gt; PATCH /api/v2/admin/settings/site-info should return 400 on invalid payload" time="0.012761066">
+            <system-out>
+2026-01-25 09:23:41 [31m[31merror[31m[39m: [PerformanceInterceptor] PATCH /api/v2/admin/settings/site-info 500 2ms [::ffff:127.0.0.1] - ERROR: Validation failed
+BadRequestException: Validation failed
+    at SettingCoreController.updateSiteInfo (/home/runner/work/vanblog/vanblog/packages/server-ng/src/modules/setting/setting-core.controller.ts:63:13)
+    at /home/runner/work/vanblog/vanblog/node_modules/.pnpm/@nestjs+core@11.0.16_@nestjs+common@11.0.16_class-transformer@0.5.1_class-validator@0.1_a8918efb710a5790ab922bd8c20f72aa/node_modules/@nestjs/core/router/router-execution-context.js:38:29
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+
+            </system-out>
+        </testcase>
+        <testcase classname="test/settings-validation.e2e-spec.ts" name="SettingsController Validation (e2e) &gt; PATCH /api/v2/admin/settings/navigation should return 400 on invalid items" time="0.010365966">
+            <system-out>
+2026-01-25 09:23:41 [31m[31merror[31m[39m: [PerformanceInterceptor] PATCH /api/v2/admin/settings/navigation 500 2ms [::ffff:127.0.0.1] - ERROR: Validation failed
+BadRequestException: Validation failed
+    at SettingCoreController.updateNavigation (/home/runner/work/vanblog/vanblog/packages/server-ng/src/modules/setting/setting-core.controller.ts:238:13)
+    at /home/runner/work/vanblog/vanblog/node_modules/.pnpm/@nestjs+core@11.0.16_@nestjs+common@11.0.16_class-transformer@0.5.1_class-validator@0.1_a8918efb710a5790ab922bd8c20f72aa/node_modules/@nestjs/core/router/router-execution-context.js:38:29
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+
+            </system-out>
+        </testcase>
+    </testsuite>
+    <testsuite name="test/sitemap-generate.e2e-spec.ts" timestamp="2026-01-25T09:24:01.536Z" hostname="runnervmymu0l" tests="2" failures="0" errors="0" skipped="0" time="0.551788188">
+        <testcase classname="test/sitemap-generate.e2e-spec.ts" name="SitemapController - generate &amp; XML (e2e) &gt; POST /api/v2/sitemap/generate should create sitemap.xml with basic URLs" time="0.017729024">
+        </testcase>
+        <testcase classname="test/sitemap-generate.e2e-spec.ts" name="SitemapController - generate &amp; XML (e2e) &gt; should respect settings.sitemapExtraStaticPaths and include extra URLs" time="0.009195672">
+        </testcase>
+    </testsuite>
+    <testsuite name="test/sitemap-permissions.e2e-spec.ts" timestamp="2026-01-25T09:24:01.536Z" hostname="runnervmymu0l" tests="7" failures="0" errors="0" skipped="0" time="0.74657689">
+        <testcase classname="test/sitemap-permissions.e2e-spec.ts" name="SitemapController - permissions (e2e) &gt; POST /api/v2/sitemap/generate &gt; should return 401 without auth" time="0.007942163">
+        </testcase>
+        <testcase classname="test/sitemap-permissions.e2e-spec.ts" name="SitemapController - permissions (e2e) &gt; POST /api/v2/sitemap/generate &gt; should return 403 with sitemap:read only (missing sitemap:generate)" time="0.006875732">
+        </testcase>
+        <testcase classname="test/sitemap-permissions.e2e-spec.ts" name="SitemapController - permissions (e2e) &gt; POST /api/v2/sitemap/generate &gt; should allow with sitemap:generate" time="0.011254026">
+        </testcase>
+        <testcase classname="test/sitemap-permissions.e2e-spec.ts" name="SitemapController - permissions (e2e) &gt; GET /api/v2/sitemap/status &gt; should require auth" time="0.003062378">
+        </testcase>
+        <testcase classname="test/sitemap-permissions.e2e-spec.ts" name="SitemapController - permissions (e2e) &gt; GET /api/v2/sitemap/status &gt; should allow with sitemap:read" time="0.004522371">
+        </testcase>
+        <testcase classname="test/sitemap-permissions.e2e-spec.ts" name="SitemapController - permissions (e2e) &gt; GET /api/v2/sitemap/urls &gt; should require auth" time="0.002611862">
+        </testcase>
+        <testcase classname="test/sitemap-permissions.e2e-spec.ts" name="SitemapController - permissions (e2e) &gt; GET /api/v2/sitemap/urls &gt; should allow with sitemap:read" time="0.00642721">
+        </testcase>
+    </testsuite>
+    <testsuite name="test/tags.e2e-spec.ts" timestamp="2026-01-25T09:24:01.537Z" hostname="runnervmymu0l" tests="1" failures="0" errors="0" skipped="0" time="0.473399193">
+        <testcase classname="test/tags.e2e-spec.ts" name="TagController (e2e) - dirty JSON regression &gt; GET /api/v2/tags should not fail with invalid JSON in articles.tags and counts should ignore invalid/hidden rows" time="0.022706872">
+        </testcase>
+    </testsuite>
+    <testsuite name="test/timeline.e2e-spec.ts" timestamp="2026-01-25T09:24:01.538Z" hostname="runnervmymu0l" tests="3" failures="0" errors="0" skipped="0" time="0.478310765">
+        <testcase classname="test/timeline.e2e-spec.ts" name="TimelineController (e2e) &gt; GET /api/v2/public/timeline should group by year and exclude hidden/private by default" time="0.031989874">
+        </testcase>
+        <testcase classname="test/timeline.e2e-spec.ts" name="TimelineController (e2e) &gt; GET /api/v2/public/timeline?includeHidden=true should include hidden but still exclude private" time="0.010629486">
+        </testcase>
+        <testcase classname="test/timeline.e2e-spec.ts" name="TimelineController (e2e) &gt; Cache key should respect query params (different results for different includeHidden)" time="0.013133807">
+        </testcase>
+    </testsuite>
+    <testsuite name="test/v1-deprecation.e2e-spec.ts" timestamp="2026-01-25T09:24:01.538Z" hostname="runnervmymu0l" tests="6" failures="0" errors="0" skipped="0" time="0.31367178">
+        <testcase classname="test/v1-deprecation.e2e-spec.ts" name="V1 API Deprecation (e2e) &gt; should return 410 Gone for v1 public endpoints" time="0.020511503">
+            <system-out>
+2026-01-25 09:23:27 [33m[33mwarn[33m[39m: [V1DeprecationMiddleware] Deprecated V1 API access attempt: GET /api/v1/public/getByOption from ::ffff:127.0.0.1
+
+            </system-out>
+        </testcase>
+        <testcase classname="test/v1-deprecation.e2e-spec.ts" name="V1 API Deprecation (e2e) &gt; should return 410 Gone for v1 auth endpoints" time="0.018334509">
+            <system-out>
+2026-01-25 09:23:27 [33m[33mwarn[33m[39m: [V1DeprecationMiddleware] Deprecated V1 API access attempt: POST /api/v1/auth/login from ::ffff:127.0.0.1
+
+            </system-out>
+        </testcase>
+        <testcase classname="test/v1-deprecation.e2e-spec.ts" name="V1 API Deprecation (e2e) &gt; should provide specific migration guidance for searchArticle" time="0.005229244">
+            <system-out>
+2026-01-25 09:23:27 [33m[33mwarn[33m[39m: [V1DeprecationMiddleware] Deprecated V1 API access attempt: GET /api/v1/public/searchArticle?keyword=test from ::ffff:127.0.0.1
+
+            </system-out>
+        </testcase>
+        <testcase classname="test/v1-deprecation.e2e-spec.ts" name="V1 API Deprecation (e2e) &gt; should provide specific migration guidance for timeline" time="0.00873778">
+            <system-out>
+2026-01-25 09:23:27 [33m[33mwarn[33m[39m: [V1DeprecationMiddleware] Deprecated V1 API access attempt: GET /api/v1/public/getTimeLineInfo from ::ffff:127.0.0.1
+
+            </system-out>
+        </testcase>
+        <testcase classname="test/v1-deprecation.e2e-spec.ts" name="V1 API Deprecation (e2e) &gt; should allow v2 endpoints to work normally" time="0.006904205">
+        </testcase>
+        <testcase classname="test/v1-deprecation.e2e-spec.ts" name="V1 API Deprecation (e2e) &gt; should allow non-api paths to work normally" time="0.003965417">
+        </testcase>
+    </testsuite>
+    <testsuite name="test/workflows/article-publishing.e2e-spec.ts" timestamp="2026-01-25T09:24:01.540Z" hostname="runnervmymu0l" tests="5" failures="0" errors="0" skipped="0" time="0.622903408">
+        <testcase classname="test/workflows/article-publishing.e2e-spec.ts" name="Article Publishing Workflow (e2e) &gt; Basic publish workflow: Create → Edit → Verify &gt; should complete full article creation and modification cycle" time="0.032425125">
+        </testcase>
+        <testcase classname="test/workflows/article-publishing.e2e-spec.ts" name="Article Publishing Workflow (e2e) &gt; Article with tags and categories &gt; should preserve tag and category relationships" time="0.018653902">
+        </testcase>
+        <testcase classname="test/workflows/article-publishing.e2e-spec.ts" name="Article Publishing Workflow (e2e) &gt; Private article with password protection &gt; should create unpublished article and verify access control" time="0.015064565">
+        </testcase>
+        <testcase classname="test/workflows/article-publishing.e2e-spec.ts" name="Article Publishing Workflow (e2e) &gt; Concurrent article edits safety &gt; should handle concurrent edits without data loss" time="0.019385372">
+        </testcase>
+        <testcase classname="test/workflows/article-publishing.e2e-spec.ts" name="Article Publishing Workflow (e2e) &gt; Article with media references &gt; should preserve media references in article content" time="0.010834955">
+        </testcase>
+    </testsuite>
+    <testsuite name="test/workflows/media-pipeline.e2e-spec.ts" timestamp="2026-01-25T09:24:01.541Z" hostname="runnervmymu0l" tests="7" failures="0" errors="0" skipped="0" time="0.686976723">
+        <testcase classname="test/workflows/media-pipeline.e2e-spec.ts" name="Media Upload Pipeline (e2e) &gt; Single image upload and processing &gt; should upload image and verify processing" time="0.033624813">
+        </testcase>
+        <testcase classname="test/workflows/media-pipeline.e2e-spec.ts" name="Media Upload Pipeline (e2e) &gt; Batch upload &gt; should handle multiple uploads in sequence" time="0.025933425">
+        </testcase>
+        <testcase classname="test/workflows/media-pipeline.e2e-spec.ts" name="Media Upload Pipeline (e2e) &gt; Concurrent upload isolation &gt; should maintain data consistency with sequential uploads" time="0.040111573">
+        </testcase>
+        <testcase classname="test/workflows/media-pipeline.e2e-spec.ts" name="Media Upload Pipeline (e2e) &gt; Media metadata &gt; should preserve metadata during upload" time="0.009483236">
+        </testcase>
+        <testcase classname="test/workflows/media-pipeline.e2e-spec.ts" name="Media Upload Pipeline (e2e) &gt; Media deletion &gt; should delete media and verify removal" time="0.015703073">
+        </testcase>
+        <testcase classname="test/workflows/media-pipeline.e2e-spec.ts" name="Media Upload Pipeline (e2e) &gt; Batch media operations &gt; should handle batch deletion of multiple media files" time="0.019656896">
+        </testcase>
+        <testcase classname="test/workflows/media-pipeline.e2e-spec.ts" name="Media Upload Pipeline (e2e) &gt; Media list and pagination &gt; should list media with pagination" time="0.021149989">
+        </testcase>
+    </testsuite>
+    <testsuite name="test/workflows/plugin-lifecycle.e2e-spec.ts" timestamp="2026-01-25T09:24:01.542Z" hostname="runnervmymu0l" tests="12" failures="0" errors="0" skipped="0" time="0.650523833">
+        <testcase classname="test/workflows/plugin-lifecycle.e2e-spec.ts" name="Plugin Lifecycle Integration (e2e) &gt; Plugin initialization and hook system &gt; should verify plugins are loaded on startup" time="0.010769417">
+        </testcase>
+        <testcase classname="test/workflows/plugin-lifecycle.e2e-spec.ts" name="Plugin Lifecycle Integration (e2e) &gt; Plugin initialization and hook system &gt; should provide plugin metadata endpoint" time="0.009221912">
+        </testcase>
+        <testcase classname="test/workflows/plugin-lifecycle.e2e-spec.ts" name="Plugin Lifecycle Integration (e2e) &gt; Plugin hook execution &gt; should trigger hooks when articles are created" time="0.012901799">
+        </testcase>
+        <testcase classname="test/workflows/plugin-lifecycle.e2e-spec.ts" name="Plugin Lifecycle Integration (e2e) &gt; Plugin hook execution &gt; should maintain data integrity with filter hooks" time="0.014578984">
+        </testcase>
+        <testcase classname="test/workflows/plugin-lifecycle.e2e-spec.ts" name="Plugin Lifecycle Integration (e2e) &gt; Multiple plugin isolation &gt; should verify plugin isolation - one plugin error does not affect others" time="0.012171721">
+        </testcase>
+        <testcase classname="test/workflows/plugin-lifecycle.e2e-spec.ts" name="Plugin Lifecycle Integration (e2e) &gt; Bootstrap data with plugins &gt; should include plugin-provided data in bootstrap response" time="0.008548661">
+        </testcase>
+        <testcase classname="test/workflows/plugin-lifecycle.e2e-spec.ts" name="Plugin Lifecycle Integration (e2e) &gt; Plugin configuration &gt; should read and apply plugin configuration" time="0.005003505">
+        </testcase>
+        <testcase classname="test/workflows/plugin-lifecycle.e2e-spec.ts" name="Plugin Lifecycle Integration (e2e) &gt; Settings integration with plugins &gt; should trigger plugin hooks when settings are updated" time="0.010119069">
+        </testcase>
+        <testcase classname="test/workflows/plugin-lifecycle.e2e-spec.ts" name="Plugin Lifecycle Integration (e2e) &gt; Article update hooks &gt; should trigger hooks on article updates" time="0.013474272">
+        </testcase>
+        <testcase classname="test/workflows/plugin-lifecycle.e2e-spec.ts" name="Plugin Lifecycle Integration (e2e) &gt; Article deletion hooks &gt; should trigger hooks when articles are deleted" time="0.017014138">
+            <system-out>
+2026-01-25 09:22:41 [31m[31merror[31m[39m: [PerformanceInterceptor] GET /api/v2/articles/6 500 1ms [::ffff:127.0.0.1] - ERROR: Article with ID 6 not found
+NotFoundException: Article with ID 6 not found
+    at ArticleService.findOne (/home/runner/work/vanblog/vanblog/packages/server-ng/src/modules/article/article.service.ts:487:13)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+
+            </system-out>
+        </testcase>
+        <testcase classname="test/workflows/plugin-lifecycle.e2e-spec.ts" name="Plugin Lifecycle Integration (e2e) &gt; Category creation with hooks &gt; should trigger hooks when categories are created/updated" time="0.00967311">
+        </testcase>
+        <testcase classname="test/workflows/plugin-lifecycle.e2e-spec.ts" name="Plugin Lifecycle Integration (e2e) &gt; RSS feed generation with hooks &gt; should generate RSS feed (verifies RSS plugin hooks)" time="0.006366257">
+        </testcase>
+    </testsuite>
+</testsuites>
