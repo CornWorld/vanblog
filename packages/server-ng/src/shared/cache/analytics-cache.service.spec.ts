@@ -5,7 +5,6 @@ import { dayjs } from '@vanblog/shared';
 import { DATABASE_CONNECTION } from '../../database';
 import { CacheService } from './cache.service';
 import { AnalyticsCacheService } from './analytics-cache.service';
-import { Mock } from '@test/mock';
 
 describe('AnalyticsCacheService', () => {
   let service: AnalyticsCacheService;
@@ -85,9 +84,9 @@ describe('AnalyticsCacheService', () => {
           // Second and third queries - have where clause
           return {
             from: vi.fn().mockReturnValue({
-              where: vi.fn().mockResolvedValue(
-                callCount === 2 ? [mockTodayResult] : [mockYesterdayResult],
-              ),
+              where: vi
+                .fn()
+                .mockResolvedValue(callCount === 2 ? [mockTodayResult] : [mockYesterdayResult]),
             }),
           };
         }
@@ -262,9 +261,9 @@ describe('AnalyticsCacheService', () => {
           // Second and third queries - have where clause
           return {
             from: vi.fn().mockReturnValue({
-              where: vi.fn().mockResolvedValue(
-                callCount === 2 ? [mockTodayResult] : [mockYesterdayResult],
-              ),
+              where: vi
+                .fn()
+                .mockResolvedValue(callCount === 2 ? [mockTodayResult] : [mockYesterdayResult]),
             }),
           };
         }
@@ -465,9 +464,9 @@ describe('AnalyticsCacheService', () => {
           // Second and third queries - have where clause
           return {
             from: vi.fn().mockReturnValue({
-              where: vi.fn().mockResolvedValue(
-                callCount === 2 ? [mockTodayResult] : [mockYesterdayResult],
-              ),
+              where: vi
+                .fn()
+                .mockResolvedValue(callCount === 2 ? [mockTodayResult] : [mockYesterdayResult]),
             }),
           };
         }
