@@ -92,9 +92,10 @@ import type { AppRoute, AppRouter, ServerInferRequest, ServerInferResponses } fr
 import type { SyncSignal, AsyncSignal } from '../signals/types.js';
 import type { PluginMetadata } from './manifest.js';
 
-// Conditional type import for @nestjs/common (only available in server-ng)
-// This allows shared package to build without @nestjs/common as a dependency
-type Type<T> = T & { __nestjs_type_marker__: never };
+// Type alias for NestJS's Type - use a function signature for compatibility
+// This avoids requiring @nestjs/common as a dependency in shared package
+// In server-ng, this will be compatible with NestJS's Type<T> from @nestjs/common
+export type Type<T> = new (...args: any[]) => T;
 
 // ============================================================
 // 基础类型定义

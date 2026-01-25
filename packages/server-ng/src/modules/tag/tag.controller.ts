@@ -222,9 +222,9 @@ export class TagController {
         body: {
           id: created.id,
           name: created.name,
+          slug: created.slug ?? null,
           count: undefined,
           createdAt: created.createdAt,
-          updatedAt: created.updatedAt ?? undefined,
         },
       };
     });
@@ -243,9 +243,9 @@ export class TagController {
         body: {
           id: result.id,
           name: result.name,
+          slug: result.slug ?? null,
           count: undefined,
           createdAt: result.createdAt,
-          updatedAt: result.updatedAt ?? undefined,
         },
       };
     });
