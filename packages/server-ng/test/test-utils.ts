@@ -127,7 +127,7 @@ export async function createTestApp(options: TestAppOptions = {}): Promise<INest
   const appModuleResult = await AppModule.forRoot();
 
   // 创建新的 imports 数组，移除 ScheduleModule，添加 TestReflectorModule
-  const filteredImports = appModuleResult.imports.filter(
+  const filteredImports = (appModuleResult.imports ?? []).filter(
     (m: any) => m?.module?.name !== 'ScheduleModule',
   );
 
