@@ -1,4 +1,11 @@
-import { Controller, Get, Query, ParseBooleanPipe, DefaultValuePipe, ParseIntPipe } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Query,
+  ParseBoolPipe,
+  DefaultValuePipe,
+  ParseIntPipe,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
 
 import { LoginLogService } from './login-log.service';
@@ -26,10 +33,10 @@ export class LoginLogController {
   @ApiQuery({ name: 'endDate', required: false, type: String })
   async getLogs(
     @Query('username') username?: string,
-    @Query('success', new DefaultValuePipe(undefined), ParseBooleanPipe) success?: boolean,
+    @Query('success', new DefaultValuePipe(undefined), ParseBoolPipe) success?: boolean,
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
-  ) {
+  ): Promise<unknown> {
     return this.loginLogService.getLogs({
       username,
       success,
@@ -55,7 +62,7 @@ export class LoginLogController {
   async getFailedAttemptsByUsername(
     @Query('username') username: string,
     @Query('cutoffMinutes', new DefaultValuePipe(30), ParseIntPipe) cutoffMinutes: number,
-  ) {
+  ): Promise<{ count: number }> {
     const count = await this.loginLogService.getRecentFailedAttempts(username, cutoffMinutes);
     return { count };
   }
@@ -77,7 +84,7 @@ export class LoginLogController {
   async getFailedAttemptsByIp(
     @Query('ip') ip: string,
     @Query('cutoffMinutes', new DefaultValuePipe(30), ParseIntPipe) cutoffMinutes: number,
-  ) {
+  ): Promise<{ count: number }> {
     const count = await this.loginLogService.getRecentFailedAttemptsByIp(ip, cutoffMinutes);
     return { count };
   }

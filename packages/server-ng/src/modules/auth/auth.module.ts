@@ -7,10 +7,10 @@ import { DatabaseModule } from '../../database';
 import { UserModule } from '../user/user.module';
 
 import { AuthController } from './auth.controller';
-import { CsrfController } from './csrf.controller';
-import { LoginLogController } from './login-log.controller';
 import { AuthService } from './auth.service';
+import { CsrfController } from './csrf.controller';
 import { PermissionsGuard } from './guards/permissions.guard';
+import { LoginLogController } from './login-log.controller';
 import { LoginLogService } from './login-log.service';
 import { PasswordChangeHandlerService } from './password-change-handler.service';
 import { JwtStrategy } from './strategies/jwt.strategy';

@@ -12,15 +12,19 @@ import {
 } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
-import { contract, type Category as SharedCategory } from '@vanblog/shared';
+import { contract } from '@vanblog/shared';
 import { z } from 'zod';
 
 import { ArticleListResponseSchema, ArticleQuerySchema } from '../article/dto/article.dto';
 import { Permission } from '../auth/permissions.decorator';
 
-import { CategoryListResponseSchema, CreateCategorySchema, UpdateCategorySchema } from './dto/category.dto';
-import { Category } from './entities/category.entity';
 import { CategoryService } from './category.service';
+import {
+  CategoryListResponseSchema,
+  CreateCategorySchema,
+  UpdateCategorySchema,
+} from './dto/category.dto';
+import { Category } from './entities/category.entity';
 
 /**
  * 分类管理控制器
@@ -158,22 +162,23 @@ export class CategoryController {
   }
 
   @TsRestHandler(contract.getCategories)
-  getCategories(): unknown {
+  getCategories(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.getCategories, async () => {
       const result = await this.categoryService.findAll();
-      const body: SharedCategory[] = result.items.map((item) => ({
+      const body = result.items.map((item) => ({
         id: item.id,
         name: item.name,
         count: item.articleCount,
+        description: item.description ?? undefined,
         createdAt: item.createdAt,
-        updatedAt: item.updatedAt ?? undefined,
+        updatedAt: item.updatedAt,
       }));
       return { status: 200, body };
     });
   }
 
   @TsRestHandler(contract.createCategory)
-  createCategory(): unknown {
+  createCategory(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.createCategory, async ({ body }) => {
       const result = await this.categoryService.create({
         ...body,
@@ -187,7 +192,7 @@ export class CategoryController {
   }
 
   @TsRestHandler(contract.updateCategory)
-  updateCategory(): unknown {
+  updateCategory(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.updateCategory, async ({ params, body }) => {
       const category = await this.categoryService.findByName(params.name);
       if (!category) {
@@ -202,7 +207,7 @@ export class CategoryController {
   }
 
   @TsRestHandler(contract.deleteCategory)
-  deleteCategory(): unknown {
+  deleteCategory(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.deleteCategory, async ({ params }) => {
       const category = await this.categoryService.findByName(params.name);
       if (!category) {
@@ -214,7 +219,7 @@ export class CategoryController {
   }
 
   @TsRestHandler(contract.getArticlesByCategory)
-  getArticlesByCategory(): unknown {
+  getArticlesByCategory(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.getArticlesByCategory, async ({ params }) => {
       const category = await this.categoryService.findByName(params.name);
       if (!category) {

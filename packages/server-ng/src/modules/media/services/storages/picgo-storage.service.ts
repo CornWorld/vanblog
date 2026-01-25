@@ -3,9 +3,8 @@ import { promises as fsPromises } from 'fs';
 import { join } from 'path';
 
 import { Injectable, Logger } from '@nestjs/common';
-import { PicGo } from 'picgo';
-
 import { nowIsoTz } from '@vanblog/shared/runtime';
+import { PicGo } from 'picgo';
 
 import { StorageService, UploadResult } from '../../interfaces/storage.interface';
 
