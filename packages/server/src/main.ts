@@ -146,6 +146,8 @@ async function bootstrap() {
     console.log('swagger 地址: http://<domain>/swagger');
     // console.log('项目主页: https://vanblog.mereith.com');
     console.log('开源地址: https://github.com/CornWorld/vanblog');
-  }, 3000);
+  }, 1000);
 }
+
+console.log('正在启动');
 bootstrap();
