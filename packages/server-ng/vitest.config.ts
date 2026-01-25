@@ -41,6 +41,7 @@ export default defineConfig({
       reportsDirectory: './coverage',
       include: ['src/**/*.ts'],
       exclude: ['src/**/*.spec.ts', 'src/**/*.e2e-spec.ts', 'src/**/__mocks__/**', '**/*.d.ts'],
+      cleanOnRerun: true,
     },
     // 性能优化：针对 16GB 内存 + 10 核心 Apple Silicon 优化
     // 可用内存: 4.65 GB - 安全余量 0.5 GB = 4.15 GB 可用于测试
