@@ -113,3 +113,6 @@ jobs:
             packages/server-ng/junit-report.e2e.xml
           check_name: server-ng Test Results
           comment_mode: off
+          fail_on: test failures
+          action_fail: false
+          action_fail_on_inconclusive: false
