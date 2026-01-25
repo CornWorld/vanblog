@@ -1,5 +1,5 @@
 import { Module, DynamicModule, NestModule, MiddlewareConsumer, type Type } from '@nestjs/common';
-import { APP_INTERCEPTOR } from '@nestjs/core';
+import { APP_INTERCEPTOR, Reflector } from '@nestjs/core';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerModule } from '@nestjs/throttler';
 
@@ -89,6 +89,7 @@ export class AppModule implements NestModule {
       controllers: [AppController],
       providers: [
         AppService,
+        Reflector,
         {
           provide: APP_INTERCEPTOR,
           useClass: PerformanceInterceptor,

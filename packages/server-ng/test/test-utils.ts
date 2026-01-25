@@ -117,9 +117,10 @@ export interface TestAppOptions {
 export async function createTestApp(options: TestAppOptions = {}): Promise<INestApplication> {
   const { fullConfig = true, overrideProviders = [] } = options;
 
-  const appModule = AppModule.forRoot();
+  // Need to get the actual module value from forRoot()
+  const appModuleResult = await AppModule.forRoot();
   let moduleBuilder = Test.createTestingModule({
-    imports: [appModule],
+    imports: [appModuleResult],
   });
 
   // 应用 provider 覆盖

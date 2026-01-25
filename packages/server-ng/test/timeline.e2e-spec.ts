@@ -30,8 +30,10 @@ describe('TimelineController (e2e)', () => {
   });
 
   afterAll(async () => {
-    await cleanupDatabase(app);
-    await app.close();
+    if (app) {
+      await cleanupDatabase(app);
+      await app.close();
+    }
   });
 
   beforeEach(async () => {
