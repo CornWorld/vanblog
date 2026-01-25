@@ -9,7 +9,8 @@ import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import type { Server } from 'http';
 import type { TestingModule } from '@nestjs/testing';
 import { Test } from '@nestjs/testing';
-import { ValidationPipe, VersioningType } from '@nestjs/common';
+import { ValidationPipe, VersioningType, Module } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
 import { AppModule } from '../src/app.module';
 import { ConfigService } from '../src/config';
 
@@ -82,18 +83,13 @@ export interface TestAppOptions {
    * @default true
    */
   fullConfig?: boolean;
-
-  /**
-   * 是否覆盖 providers（用于 mock 服务）
-   * @default []
-   */
-  overrideProviders?: Array<{ provide: any; useValue: any }>;
 }
 
 /**
  * 创建测试应用实例
  *
  * 统一的 E2E 测试应用工厂函数，消除重复的初始化代码。
+ * 修改 AppModule.forRoot() 的返回值，移除 ScheduleModule 以避免 Reflector 依赖问题。
  *
  * @param options - 配置选项
  * @returns NestJS 应用实例
@@ -105,30 +101,42 @@ export interface TestAppOptions {
  * @example
  * // 使用简化配置
  * const app = await createTestApp({ fullConfig: false });
- *
- * @example
- * // 覆盖 providers
- * const app = await createTestApp({
- *   overrideProviders: [
- *     { provide: MyService, useValue: mockService }
- *   ]
- * });
  */
 export async function createTestApp(options: TestAppOptions = {}): Promise<INestApplication> {
-  const { fullConfig = true, overrideProviders = [] } = options;
+  const { fullConfig = true } = options;
 
-  // Need to get the actual module value from forRoot()
+  // 创建一个简单的模块替代 ScheduleModule，提供 Reflector 但不包含调度功能
+  @Module({
+    providers: [
+      {
+        provide: Reflector,
+        useValue: new Reflector(),
+      },
+    ],
+    exports: [Reflector],
+  })
+  class TestReflectorModule {}
+
+  // 获取 AppModule.forRoot() 的结果，并移除 ScheduleModule
   const appModuleResult = await AppModule.forRoot();
-  let moduleBuilder = Test.createTestingModule({
-    imports: [appModuleResult],
-  });
 
-  // 应用 provider 覆盖
-  for (const override of overrideProviders) {
-    moduleBuilder = moduleBuilder.overrideProvider(override.provide).useValue(override.useValue);
-  }
+  // 创建新的 imports 数组，移除 ScheduleModule，添加 TestReflectorModule
+  const filteredImports = appModuleResult.imports.filter(
+    (m: any) => m?.module?.name !== 'ScheduleModule',
+  );
 
-  const moduleFixture: TestingModule = await moduleBuilder.compile();
+  // 构建修改后的模块配置
+  const testModuleConfig = {
+    module: appModuleResult.module,
+    imports: [...filteredImports, TestReflectorModule],
+    controllers: appModuleResult.controllers,
+    providers: appModuleResult.providers,
+  };
+
+  const moduleFixture: TestingModule = await Test.createTestingModule({
+    imports: [testModuleConfig],
+  }).compile();
+
   const app = moduleFixture.createNestApplication();
 
   if (fullConfig) {

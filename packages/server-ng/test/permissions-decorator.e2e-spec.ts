@@ -1,4 +1,5 @@
 import { Controller, Get, Module, INestApplication, VersioningType } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
 import { ApiTags } from '@nestjs/swagger';
 import { Test, type TestingModule } from '@nestjs/testing';
 import request from 'supertest';
@@ -61,9 +62,36 @@ describe('Permissions Decorators (e2e)', () => {
   let tokenRW: string;
 
   beforeAll(async () => {
-    const appModule = AppModule.forRoot();
+    // 创建测试模块，过滤掉 ScheduleModule 以避免 Reflector 依赖问题
+    // 使用与 test-utils.ts 相同的模式
+    @Module({
+      providers: [
+        {
+          provide: Reflector,
+          useValue: new Reflector(),
+        },
+      ],
+      exports: [Reflector],
+    })
+    class TestReflectorModule {}
+
+    const appModuleResult = await AppModule.forRoot();
+
+    // 创建新的 imports 数组，移除 ScheduleModule，添加 TestReflectorModule 和 PermTestModule
+    const filteredImports = appModuleResult.imports.filter(
+      (m: any) => m?.module?.name !== 'ScheduleModule',
+    );
+
+    // 构建修改后的模块配置
+    const testModuleConfig = {
+      module: appModuleResult.module,
+      imports: [...filteredImports, TestReflectorModule, PermTestModule],
+      controllers: appModuleResult.controllers,
+      providers: appModuleResult.providers,
+    };
+
     const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [appModule, PermTestModule],
+      imports: [testModuleConfig],
     }).compile();
 
     app = moduleFixture.createNestApplication();
