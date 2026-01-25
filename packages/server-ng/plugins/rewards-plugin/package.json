@@ -1,0 +1,19 @@
+{
+  "name": "rewards-plugin",
+  "version": "1.0.0",
+  "description": "为安装完成后展示打赏引导的演示插件",
+  "main": "index.ts",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "echo \"No tests for this plugin\" && exit 0"
+  },
+  "keywords": [
+    "vanblog",
+    "plugin",
+    "reward",
+    "bootstrap"
+  ],
+  "author": "VanBlog",
+  "license": "MIT"
+}

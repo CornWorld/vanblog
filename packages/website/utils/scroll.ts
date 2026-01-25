@@ -1,6 +1,6 @@
 import 'client-only';
 
-type EasingOptions = "linear" | "ease-in" | "ease-out" | "ease-in-out";
+type EasingOptions = 'linear' | 'ease-in' | 'ease-out' | 'ease-in-out';
 
 export interface ScrollToCustomOptions extends ScrollToOptions {
   duration?: number;
@@ -9,13 +9,10 @@ export interface ScrollToCustomOptions extends ScrollToOptions {
 
 export const DEFAULT_DURATION = 300;
 
-export async function scrollTo(
-  el: Element | Window,
-  options: ScrollToCustomOptions = {}
-) {
+export async function scrollTo(el: Element | Window, options: ScrollToCustomOptions = {}) {
   if (!(el instanceof Element) && !(el instanceof Window)) {
     throw new Error(
-      `element passed to scrollTo() must be either the window or a DOM element, you passed ${el}!`
+      `element passed to scrollTo() must be either the window or a DOM element, you passed ${el}!`,
     );
   }
 
@@ -28,7 +25,7 @@ export async function scrollTo(
     startTime: number,
     duration: number | undefined = DEFAULT_DURATION,
     easeFunc: EasingFunction,
-    callback: Function
+    callback: ((value?: unknown) => void) | undefined,
   ) => {
     window.requestAnimationFrame(() => {
       const currentTime = Date.now();
@@ -54,12 +51,12 @@ export async function scrollTo(
   return new Promise((resolve) => {
     scroll(
       currentScrollPosition,
-      typeof options.top === "number" ? options.top : currentScrollPosition,
+      typeof options.top === 'number' ? options.top : currentScrollPosition,
       scrollProperty,
       Date.now(),
       options.duration,
       getEasing(options.easing),
-      resolve
+      resolve,
     );
   });
 }
@@ -67,7 +64,7 @@ export async function scrollTo(
 export function scrollIntoView(
   element: HTMLElement,
   scroller?: Element | ScrollIntoViewOptions,
-  options?: ScrollIntoViewOptions
+  options?: ScrollIntoViewOptions,
 ) {
   validateElement(element);
   if (scroller && !(scroller instanceof Element)) {
@@ -86,8 +83,7 @@ export function scrollIntoView(
     // using pageYOffset for cross-browser compatibility
     currentContainerScrollYPos = window.pageYOffset;
     // must add containers scroll y position to ensure an absolute value that does not change
-    elementScrollYPos =
-      element.getBoundingClientRect().top + currentContainerScrollYPos;
+    elementScrollYPos = element.getBoundingClientRect().top + currentContainerScrollYPos;
   }
 
   return scrollTo(scroller as Element, {
@@ -100,58 +96,52 @@ export function scrollIntoView(
 
 function validateElement(element?: HTMLElement) {
   if (element === undefined) {
-    const errorMsg = "The element passed to scrollIntoView() was undefined.";
+    const errorMsg = 'The element passed to scrollIntoView() was undefined.';
     throw new Error(errorMsg);
   }
   if (!(element instanceof HTMLElement)) {
     throw new Error(
-      `The element passed to scrollIntoView() must be a valid element. You passed ${element}.`
+      `The element passed to scrollIntoView() must be a valid element. You passed ${element}.`,
     );
   }
 }
 
 function getScrollPropertyByElement(
-  el: Element | Window
-): "scrollY" | "scrollX" | "scrollTop" | "scrollLeft" {
-  const props: any = {
+  el: Element | Window,
+): 'scrollY' | 'scrollX' | 'scrollTop' | 'scrollLeft' {
+  const props: Record<string, Record<string, string>> = {
     window: {
-      y: "scrollY",
-      x: "scrollX",
+      y: 'scrollY',
+      x: 'scrollX',
     },
     element: {
-      y: "scrollTop",
-      x: "scrollLeft",
+      y: 'scrollTop',
+      x: 'scrollLeft',
     },
   };
-  const axis = "y";
+  const axis = 'y';
   if (el instanceof Window) {
-    return props.window[axis];
+    return props.window[axis] as 'scrollY' | 'scrollX' | 'scrollTop' | 'scrollLeft';
   } else {
-    return props.element[axis];
+    return props.element[axis] as 'scrollY' | 'scrollX' | 'scrollTop' | 'scrollLeft';
   }
 }
 
-function sanitizeScrollOptions(
-  options: ScrollToCustomOptions = {}
-): ScrollToCustomOptions {
-  if (options.behavior === "smooth") {
-    options.easing = "ease-in-out";
+function sanitizeScrollOptions(options: ScrollToCustomOptions = {}): ScrollToCustomOptions {
+  if (options.behavior === 'smooth') {
+    options.easing = 'ease-in-out';
     options.duration = DEFAULT_DURATION;
   }
-  if (options.behavior === "auto") {
+  if (options.behavior === 'auto') {
     options.duration = 0;
-    options.easing = "linear";
+    options.easing = 'linear';
   }
   return options;
 }
 
 function getScrollPosition(el: Element | Window): number {
   const document = utils.getDocument();
-  if (
-    el === document.body ||
-    el === document.documentElement ||
-    el instanceof Window
-  ) {
+  if (el === document.body || el === document.documentElement || el instanceof Window) {
     return document.body.scrollTop || document.documentElement.scrollTop;
   } else {
     return el.scrollTop;
@@ -160,11 +150,7 @@ function getScrollPosition(el: Element | Window): number {
 
 function setScrollPosition(el: Element | Window, value: number) {
   const document = utils.getDocument();
-  if (
-    el === document.body ||
-    el === document.documentElement ||
-    el instanceof Window
-  ) {
+  if (el === document.body || el === document.documentElement || el instanceof Window) {
     document.body.scrollTop = value;
     document.documentElement.scrollTop = value;
   } else {
@@ -179,37 +165,36 @@ export const utils = {
   },
 };
 
-// eslint-disable-next-line no-unused-vars
 type EasingFunction = (t: number) => number;
 
 interface EasingFunctions {
   linear: EasingFunction;
-  "ease-in": EasingFunction;
-  "ease-out": EasingFunction;
-  "ease-in-out": EasingFunction;
+  'ease-in': EasingFunction;
+  'ease-out': EasingFunction;
+  'ease-in-out': EasingFunction;
 }
 export const easingMap: EasingFunctions = {
   linear(t: number) {
     return t;
   },
-  "ease-in"(t: number) {
+  'ease-in'(t: number) {
     return t * t;
   },
-  "ease-out"(t: number) {
+  'ease-out'(t: number) {
     return t * (2 - t);
   },
-  "ease-in-out"(t: number) {
+  'ease-in-out'(t: number) {
     return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
   },
 };
 
 const getEasing = (easing?: EasingOptions): EasingFunction => {
-  const defaultEasing = "linear";
+  const defaultEasing = 'linear';
   const easeFunc = easingMap[easing || defaultEasing];
   if (!easeFunc) {
-    const options = Object.keys(easingMap).join(",");
+    const options = Object.keys(easingMap).join(',');
     throw new Error(
-      `Scroll error: scroller does not support an easing option of "${easing}". Supported options are ${options}`
+      `Scroll error: scroller does not support an easing option of "${easing}". Supported options are ${options}`,
     );
   }
   return easeFunc;

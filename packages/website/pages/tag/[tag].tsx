@@ -1,9 +1,9 @@
 import { getPublicMeta } from '../../api/getAllData';
-import AuthorCard, { AuthorCardProps } from '../../components/AuthorCard';
+import AuthorCard, { type AuthorCardProps } from '../../components/AuthorCard';
 import Layout from '../../components/Layout';
 import TimeLineItem from '../../components/TimeLineItem';
-import { Article } from '../../types/article';
-import { LayoutProps } from '../../utils/getLayoutProps';
+import type { Article } from '../../types/article';
+import type { LayoutProps } from '../../utils/getLayoutProps';
 import { getTagPagesProps } from '../../utils/getPageProps';
 import { revalidate } from '../../utils/loadConfig';
 import Custom404 from '../404';

@@ -1,4 +1,3 @@
-import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { exportAll } from '@/services/van-blog/api';
 import { Alert, Button, Card, message, Modal, Space, Spin, Upload } from 'antd';
@@ -35,9 +34,6 @@ export default function () {
             }}
             onChange={(info) => {
               setLoading(true);
-              if (info.file.status !== 'uploading') {
-                // console.log(info.file, info.fileList);
-              }
               if (info.file.status === 'done') {
                 if (location.hostname == 'blog-demo.mereith.com') {
                   Modal.info({

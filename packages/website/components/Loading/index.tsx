@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import type { ReactNode } from 'react';
 
 export default function Loading(props: { children: ReactNode; loading: boolean }) {
   if (props.loading) {

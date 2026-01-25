@@ -1,4 +1,4 @@
-import React from "react";
+import React from 'react';
 
 export interface GlobalState {
   viewer: number;
@@ -13,5 +13,5 @@ export const GlobalContext = React.createContext<{
     viewer: 0,
     visited: 0,
   },
-  setState: (newState: GlobalState) => {},
+  setState: () => {},
 });

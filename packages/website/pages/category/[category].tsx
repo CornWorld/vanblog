@@ -1,12 +1,13 @@
 import { getPublicMeta } from '../../api/getAllData';
-import AuthorCard, { AuthorCardProps } from '../../components/AuthorCard';
+import AuthorCard, { type AuthorCardProps } from '../../components/AuthorCard';
 import Layout from '../../components/Layout';
 import TimeLineItem from '../../components/TimeLineItem';
-import { Article } from '../../types/article';
-import { LayoutProps } from '../../utils/getLayoutProps';
+import type { Article } from '../../types/article';
+import type { LayoutProps } from '../../utils/getLayoutProps';
 import { getCategoryPagesProps } from '../../utils/getPageProps';
 import { revalidate } from '../../utils/loadConfig';
 import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
+import { normalizePublicMeta } from '../../types/contracts';
 export interface CategoryPagesProps {
   layoutProps: LayoutProps;
   authorCardProps: AuthorCardProps;
@@ -53,10 +54,11 @@ const CategoryPages = (props: CategoryPagesProps) => {
 
 export default CategoryPages;
 export async function getStaticPaths() {
-  const data = await getPublicMeta();
+  const rawData = await getPublicMeta();
+  const data = normalizePublicMeta(rawData);
 
-  // Handle case where meta or categories might be undefined
-  const categories = data?.meta?.categories || [];
+  // Use normalized data - no defensive programming needed
+  const { categories } = data.meta;
   const paths = categories.map((category) => ({
     params: {
       category: category,

@@ -1,9 +1,7 @@
-import React from 'react';
-import { TFunction } from 'i18next';
 import data from '@emoji-mart/data';
 import i18n from '@emoji-mart/data/i18n/zh.json';
 import Picker from '@emoji-mart/react';
-import { BytemdPlugin } from 'bytemd';
+import type { BytemdPlugin } from 'bytemd';
 import { createRoot } from 'react-dom/client';
 import { icons } from '../icons';
 
@@ -30,21 +28,7 @@ interface EditorElement extends HTMLElement {
   getBoundingClientRect(): DOMRect;
 }
 
-interface EmojiPluginOptions {
-  t?: TFunction;
-}
-
-export const emoji = (options?: EmojiPluginOptions): BytemdPlugin => {
-  // Get the translation function from options or import from i18next
-  const { t } = options || {};
-
-  // Use the provided t function or get a default one
-  const getTranslation = (key: string) => {
-    if (t) return t(key);
-    // Fallback to default label if no translation function provided
-    return key.split('.').pop() || key;
-  };
-
+export const emoji = (): BytemdPlugin => {
   return {
     editorEffect: (ctx) => {
       const el = (
@@ -104,7 +88,7 @@ export const emoji = (options?: EmojiPluginOptions): BytemdPlugin => {
     },
     actions: [
       {
-        title: getTranslation('editor.emoji.title'),
+        title: 'Emoji',
         icon: icons.emoji,
         handler: {
           type: 'action',

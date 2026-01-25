@@ -1,4 +1,4 @@
-import { BytemdPlugin } from 'bytemd';
+import type { BytemdPlugin } from 'bytemd';
 import { visit } from 'unist-util-visit';
 import copy from 'copy-to-clipboard';
 import toast from 'react-hot-toast';
@@ -7,8 +7,8 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { coldarkDark } from 'react-syntax-highlighter/dist/cjs/styles/prism';
 import clsx from 'clsx';
 
-// FIXME: Addd Types
-const codeBlockPlugin = () => (tree) => {
+// TODO: Add proper TypeScript types
+const codeBlockPlugin = () => (tree: any) => {
   visit(tree, (node) => {
     if (node.type === 'element' && node.tagName === 'pre') {
       const oldChildren = JSON.parse(JSON.stringify(node.children));
@@ -77,13 +77,15 @@ const codeBlockPlugin = () => (tree) => {
   });
 };
 
-const onClickCopyCode = (e: PointerEvent) => {
+const onClickCopyCode = (e: Event) => {
   const copyBtn = e.target as HTMLElement;
   const code = copyBtn.parentElement?.parentElement?.querySelector('code')?.innerText;
-  copy(code);
-  toast.success('复制成功', {
-    className: 'toast',
-  });
+  if (code) {
+    copy(code);
+    toast.success('复制成功', {
+      className: 'toast',
+    });
+  }
 };
 
 export function customCodeBlock(): BytemdPlugin {
@@ -93,8 +95,10 @@ export function customCodeBlock(): BytemdPlugin {
       markdownBody.querySelectorAll('.code-block-wrapper').forEach((codeBlock) => {
         const copyBtn = codeBlock.querySelector('.code-copy-btn');
         //remove first
-        copyBtn.removeEventListener('click', onClickCopyCode);
-        copyBtn.addEventListener('click', onClickCopyCode);
+        if (copyBtn) {
+          copyBtn.removeEventListener('click', onClickCopyCode);
+          copyBtn.addEventListener('click', onClickCopyCode);
+        }
       });
     },
   };

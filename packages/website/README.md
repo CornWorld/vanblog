@@ -18,6 +18,7 @@ yarn dev
 - `NEXT_PUBLIC_VANBLOG_SERVER_URL`: 前端/浏览器访问后端的地址，如果不设置则使用 `VAN_BLOG_SERVER_URL`
 
 当部署在不同环境中时，可能需要设置这两个变量为不同的值，例如:
+
 - 服务端可能使用内部网络地址访问后端: `VAN_BLOG_SERVER_URL=http://internal-api:3000`
 - 浏览器需要使用可公开访问的地址: `NEXT_PUBLIC_VANBLOG_SERVER_URL=https://api.example.com`
 

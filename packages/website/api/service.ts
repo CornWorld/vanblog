@@ -1,31 +1,37 @@
 import { apiClient } from './client';
-import {
+import { tsRestClient } from './ts-rest-client';
+import dayjs from 'dayjs';
+import type {
   ArticleResponse,
   ArticleDetail,
   PublicMetaProp,
   CustomPageList,
   CustomPage,
 } from '../types/api';
-import { Article } from '../types/article';
-import { PageViewData } from './types';
+import type { Article } from '../types/article';
+import type { PageViewDataContract } from '../types/contracts';
+import { normalizeAnalyticsOverview, normalizeArticleStats } from '../types/contracts';
 
 /**
  * Comprehensive API service for VanBlog public API
  * Based on the following endpoints:
- * - GET /api/public/article
- * - GET /api/public/article/{id}
- * - POST /api/public/article/{id}
- * - GET /api/public/article/viewer/{id}
- * - GET /api/public/search
- * - GET /api/public/timeline
- * - GET /api/public/category
- * - GET /api/public/tag
- * - GET /api/public/tag/{name}
- * - GET /api/public/meta
- * - GET /api/public/viewer
- * - POST /api/public/viewer
- * - GET /api/public/customPage/all
- * - GET /api/public/customPage
+ * API 服务类
+ *
+ * 提供对 VanBlog API 的访问，包括以下端点：
+ * - GET /api/v2/articles
+ * - GET /api/v2/articles/{id}
+ * - POST /api/v2/articles/{id}
+ * - GET /api/v2/articles/viewer/{id}
+ * - GET /api/v2/public/search
+ * - GET /api/v2/public/timeline
+ * - GET /api/v2/public/category
+ * - GET /api/v2/public/tag
+ * - GET /api/v2/public/tag/{name}
+ * - GET /api/v2/public/meta
+ * - GET /api/v2/public/viewer
+ * - POST /api/v2/public/viewer
+ * - GET /api/v2/public/customPage/all
+ * - GET /api/v2/public/customPage
  */
 export class ApiService {
   private static instance: ApiService;
@@ -39,12 +45,53 @@ export class ApiService {
     return ApiService.instance;
   }
 
+  private mapArticle(item: { [key: string]: unknown } | null | undefined): Article {
+    if (!item) return null as unknown as Article;
+    const tags =
+      (item as { tags?: Array<{ name: string }> }).tags?.map((t: { name: string }) => t.name) || [];
+    const views = (item as { views?: number }).views ?? 0;
+    const isTop = (item as { isTop?: boolean }).isTop ?? false;
+    const isPrivate = (item as { private?: boolean }).private ?? false;
+    const author = (item as { author?: string }).author ?? 'Admin';
+    const createdRaw = (item as { createdAt?: string | number | Date }).createdAt;
+    const updatedRaw = (item as { updatedAt?: string | number | Date }).updatedAt;
+    const createdAt =
+      createdRaw != null
+        ? dayjs(createdRaw as string | number | Date).toISOString()
+        : dayjs().toISOString();
+    const updatedAt =
+      updatedRaw != null
+        ? dayjs(updatedRaw as string | number | Date).toISOString()
+        : dayjs().toISOString();
+    return {
+      ...(item as Record<string, unknown>),
+      tags,
+      viewer: views,
+      top: isTop ? 1 : 0,
+      hidden: isPrivate,
+      author,
+      createdAt,
+      updatedAt,
+    } as unknown as Article;
+  }
+
   // Cache Management
   clearCache(): void {
     apiClient.clearCache();
   }
 
-  invalidateCache(endpoint: string, params?: Record<string, unknown>): void {
+  invalidateCache(
+    endpoint: string,
+    params?: Record<
+      string,
+      | string
+      | number
+      | boolean
+      | null
+      | undefined
+      | Array<string | number | boolean | null | undefined>
+    >,
+  ): void {
     apiClient.invalidateCache(endpoint, params);
   }
 
@@ -61,48 +108,40 @@ export class ApiService {
     } = {},
   ): Promise<ArticleResponse> {
     try {
-      const response = await apiClient.get<{
-        statusCode: number;
-        data: { articles: Article[]; total: number };
-      }>('/api/public/article', options, 'getArticles');
+      const { body, status } = await tsRestClient.getPublicArticles({
+        query: {
+          page: options.page,
+          pageSize: options.pageSize,
+          category: options.category,
+          tag: options.tag,
+        },
+      });
 
-      // Validate response structure
-      if (!response) {
-        console.error('[ApiService] getArticles response is null or undefined');
-        throw new Error('Invalid response from API');
-      }
-
-      if (!response.data) {
-        console.error('[ApiService] getArticles response missing data:', response);
-        throw new Error('Invalid response data structure');
-      }
-
-      // Check if response has nested articles structure
-      if (response.data.articles) {
+      if (status === 200) {
         console.log(
           `[ApiService] getArticles successfully retrieved ${
-            Array.isArray(response.data.articles) ? response.data.articles.length : 'unknown'
+            Array.isArray(body.items) ? body.items.length : 'unknown'
           } articles`,
         );
 
-        // Transform to expected ArticleResponse format
-        const result: ArticleResponse = {
-          data: response.data.articles,
-          total: response.data.total,
-          page: options.page || 1,
-          pageSize: options.pageSize || 10,
+        return {
+          data: body.items.map((item) => this.mapArticle(item)),
+          total: body.total,
+          page: body.page,
+          pageSize: body.pageSize,
         };
-        return result;
       }
 
-      // If response doesn't have the nested structure, assume it's already
-      // in the correct format (but this should not happen)
-      console.warn('[ApiService] Response does not have expected structure with articles property');
-      return response.data as unknown as ArticleResponse;
+      console.warn('[ApiService] Response does not have expected v2 structure:', body);
+      return {
+        data: [],
+        total: 0,
+        page: options.page || 1,
+        pageSize: options.pageSize || 10,
+      };
     } catch (error) {
       console.error('[ApiService] getArticles error:', error);
 
-      // Return empty result instead of throwing to prevent component errors
       return {
         data: [],
         total: 0,
@@ -115,58 +154,41 @@ export class ApiService {
   async getArticleByIdOrPathname(idOrPathname: string | number): Promise<ArticleDetail> {
     try {
       console.log(`[ApiService] Fetching article with ID or pathname: ${idOrPathname}`);
-      const response = await apiClient.get<{
-        statusCode: number;
-        data: { article: ArticleDetail; pre?: ArticleDetail | null; next?: ArticleDetail | null };
-      }>(`/api/public/article/${idOrPathname}`, {}, 'getArticleByIdOrPathname');
+      const { body, status } = await tsRestClient.getPublicArticle({
+        params: { idOrPathname: String(idOrPathname) },
+      });
 
-      if (!response) {
-        console.error(`[ApiService] Article response is null or undefined for ID ${idOrPathname}`);
-        throw new Error('Empty response from API');
-      }
+      if (status === 200) {
+        const result = {
+          ...this.mapArticle(body.article),
+          prev: body.pre ? this.mapArticle(body.pre) : undefined,
+          next: body.next ? this.mapArticle(body.next) : undefined,
+        };
 
-      if (!response.data) {
-        console.error(`[ApiService] Article data is missing for ID ${idOrPathname}`, response);
-        throw new Error('Missing article data in response');
-      }
-
-      // The actual article is inside response.data.article
-      const articleData = response.data.article;
-
-      if (!articleData) {
-        console.error(
-          `[ApiService] Article object is missing in response data for ID ${idOrPathname}`,
-          response.data,
+        console.log(
+          `[ApiService] Successfully fetched article "${result.title}" (ID: ${result.id})`,
         );
-        throw new Error('Missing article object in response data');
+        return result as ArticleDetail;
       }
 
-      // Add prev/next data to the article if available
-      const result = {
-        ...articleData,
-        prev: response.data.pre,
-        next: response.data.next,
-      };
-
-      // Log some basic info about the article
-      console.log(`[ApiService] Successfully fetched article "${result.title}" (ID: ${result.id})`);
-
-      return result;
+      throw new Error('Failed to fetch article');
     } catch (error) {
       console.error(`[ApiService] Error fetching article with ID ${idOrPathname}:`, error);
 
-      // Return a default "error" article that the UI can handle gracefully
       return {
-        id: '0',
+        id: 0,
         title: 'Error Loading Article',
         content: 'There was an error loading this article. Please try again later.',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+        createdAt: dayjs().toISOString(),
+        updatedAt: dayjs().toISOString(),
         category: '',
         tags: [],
         private: false,
+        author: 'System',
         top: 0,
-        date: new Date().toISOString(),
+        hidden: false,
+        viewer: 0,
+        date: dayjs().toISOString(),
         hide: false,
         secret: false,
       };
@@ -177,116 +199,193 @@ export class ApiService {
     idOrPathname: string | number,
     password: string,
   ): Promise<ArticleDetail> {
-    const response = await apiClient.post<{ statusCode: number; data: ArticleDetail }>(
-      `/api/public/article/${idOrPathname}`,
-      { password },
-      'getEncryptedArticle',
-    );
-    return response.data;
+    let articleId = String(idOrPathname);
+
+    if (isNaN(Number(idOrPathname))) {
+      const article = await this.getArticleByIdOrPathname(idOrPathname);
+      articleId = article.id.toString();
+    }
+
+    const { body, status } = await tsRestClient.getEncryptedArticle({
+      params: { id: articleId },
+      body: { password },
+    });
+
+    if (status === 200) {
+      const item = body as unknown as {
+        tags?: Array<{ name: string }>;
+        views?: number;
+        isTop?: boolean;
+        private?: boolean;
+        author?: string;
+        createdAt: unknown;
+        updatedAt: unknown;
+      } & Record<string, unknown>;
+      return {
+        ...item,
+        tags: item.tags?.map((t: { name: string }) => t.name) || [],
+        viewer: item.views || 0,
+        top: item.isTop ? 1 : 0,
+        hidden: item.private || false,
+        author: item.author || 'Admin',
+        createdAt: dayjs(item.createdAt as string | number | Date).toISOString(),
+        updatedAt: dayjs(item.updatedAt as string | number | Date).toISOString(),
+      } as ArticleDetail;
+    }
+    throw new Error('Failed to verify password');
   }
 
-  async getArticleViewer(id: number | string): Promise<PageViewData> {
-    const response = await apiClient.get<{ statusCode: number; data: PageViewData }>(
-      `/api/public/article/viewer/${id}`,
-      undefined,
-      'getArticleViewer',
-    );
-    return response.data;
+  async getArticleViewer(idOrPathname: string | number): Promise<PageViewDataContract> {
+    const { body, status } = await tsRestClient.getArticleViewer({
+      params: { id: String(idOrPathname) },
+    });
+
+    if (status === 200 && body) {
+      const stats = normalizeArticleStats(body);
+      return {
+        viewer: stats.views,
+        visited: stats.uniqueVisitors,
+      };
+    }
+    return { viewer: 0, visited: 0 };
   }
 
   // Timeline, Categories and Tags
   async getTimeline(): Promise<Record<string, Article[]>> {
-    const response = await apiClient.get<{ statusCode: number; data: Record<string, Article[]> }>(
-      '/api/public/timeline',
-      {},
-      'getTimeline',
-    );
-    return response.data;
+    const { body, status } = await tsRestClient.getPublicTimeline();
+    if (status === 200) {
+      const result: Record<string, Article[]> = {};
+      for (const [key, items] of Object.entries(body)) {
+        result[key] = items.map((item) => this.mapArticle(item));
+      }
+      return result;
+    }
+    return {};
   }
 
   async getCategories(): Promise<Record<string, Article[]>> {
-    const response = await apiClient.get<{ statusCode: number; data: Record<string, Article[]> }>(
-      '/api/public/category',
-      {},
-      'getCategories',
-    );
-    return response.data;
+    const { body, status } = await tsRestClient.getPublicCategories();
+    if (status === 200) {
+      const result: Record<string, Article[]> = {};
+      for (const [key, items] of Object.entries(body)) {
+        result[key] = items.map((item) => this.mapArticle(item));
+      }
+      return result;
+    }
+    return {};
   }
 
   async getTags(): Promise<Record<string, Article[]>> {
-    const response = await apiClient.get<{ statusCode: number; data: Record<string, Article[]> }>(
-      '/api/public/tag',
-      {},
-      'getTags',
-    );
-    return response.data;
+    const { body, status } = await tsRestClient.getPublicTags();
+    if (status === 200) {
+      const result: Record<string, Article[]> = {};
+      for (const [key, items] of Object.entries(body)) {
+        result[key] = items.map((item) => this.mapArticle(item));
+      }
+      return result;
+    }
+    return {};
   }
 
   async getArticlesByTag(tag: string): Promise<Article[]> {
-    const response = await apiClient.get<{ statusCode: number; data: Article[] }>(
-      `/api/public/tag/${tag}`,
-      {},
-      'getArticlesByTag',
-    );
-    return response.data;
+    const groupedArticles = await this.getTags();
+    return groupedArticles[tag] || [];
   }
 
   // Search
   async searchArticles(keyword: string): Promise<ArticleResponse> {
-    const response = await apiClient.get<{ statusCode: number; data: ArticleResponse }>(
-      '/api/public/search',
-      { value: keyword },
-      'searchArticles',
-    );
-    return response.data;
+    const { body, status } = await tsRestClient.searchPublicArticles({
+      query: { keyword },
+    });
+
+    if (status === 200) {
+      return {
+        data: body.items.map((item) => this.mapArticle(item)),
+        total: body.total,
+        page: body.page,
+        pageSize: body.pageSize,
+      };
+    }
+    return { data: [], total: 0, page: 1, pageSize: 10 };
   }
 
   // Meta
   async getMeta(): Promise<PublicMetaProp> {
-    const response = await apiClient.get<{ statusCode: number; data: PublicMetaProp }>(
-      '/api/public/meta',
-      {},
-      'getMeta',
-    );
-    return response.data;
+    const { body, status } = await tsRestClient.getPublicMeta();
+    if (status === 200) {
+      return body;
+    }
+    throw new Error('Failed to get meta');
   }
 
   // Page Views
-  async getPageView(): Promise<PageViewData> {
-    const response = await apiClient.get<{ statusCode: number; data: PageViewData }>(
-      '/api/public/viewer',
-      undefined,
-      'getPageView',
-    );
-    return response.data;
+  async getPageView(): Promise<PageViewDataContract> {
+    const { body, status } = await tsRestClient.getPublicViewer();
+    if (status === 200) {
+      const overview = normalizeAnalyticsOverview(body);
+      return {
+        visited: overview.totalPageviews,
+        viewer: overview.totalVisitors,
+      };
+    }
+    return { visited: 0, viewer: 0 };
   }
 
-  async updatePageView(options: { isNew: boolean; isNewByPath: boolean }): Promise<PageViewData> {
-    const response = await apiClient.post<{ statusCode: number; data: PageViewData }>(
-      '/api/public/viewer',
-      options,
-      'updatePageView',
-    );
-    return response.data;
+  async updatePageView(options: {
+    isNew: boolean;
+    isNewByPath: boolean;
+    articleId?: number;
+  }): Promise<PageViewDataContract> {
+    try {
+      const path = typeof window !== 'undefined' ? window.location.pathname : undefined;
+      const referrer = typeof document !== 'undefined' ? document.referrer || undefined : undefined;
+      const userAgent = typeof navigator !== 'undefined' ? navigator.userAgent : undefined;
+
+      await tsRestClient.recordPublicViewer({
+        body: {
+          type: 'pageview',
+          path,
+          referrer,
+          userAgent,
+          data: { articleId: options.articleId ?? 0 },
+        },
+      });
+    } catch (e) {
+      if (process.env.NODE_ENV !== 'production') {
+        console.warn(
+          '[ApiService] updatePageView analytics/record failed, will fallback to overview',
+          e,
+        );
+      }
+    }
+
+    return this.getPageView();
   }
 
   // Custom Pages
   async getAllCustomPages(): Promise<CustomPageList[]> {
-    const response = await apiClient.get<{ statusCode: number; data: CustomPageList[] }>(
-      '/api/public/customPage/all',
-      {},
-      'getAllCustomPages',
-    );
-    return response.data;
+    const { body, status } = await tsRestClient.getPublicCustomPages();
+    if (status === 200) {
+      return body.map((item) => ({
+        path: item.path || '',
+        name: item.name || '',
+      }));
+    }
+    return [];
   }
 
   async getCustomPage(path: string): Promise<CustomPage> {
-    const response = await apiClient.get<{ statusCode: number; data: CustomPage }>(
-      '/api/public/customPage',
-      { path },
-      'getCustomPage',
-    );
-    return response.data;
+    const { body, status } = await tsRestClient.getPublicCustomPage({
+      query: { path },
+    });
+    if (status === 200) {
+      return {
+        path: body.path || '',
+        name: body.name || '',
+        html: body.html || '',
+      };
+    }
+    throw new Error('Failed to get custom page');
   }
 }
 

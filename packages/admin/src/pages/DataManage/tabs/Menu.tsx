@@ -1,7 +1,7 @@
-import React from 'react';
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useTranslation } from 'react-i18next';
 import { getMenu, updateMenu } from '@/services/van-blog/api';
-import { ActionType, ProColumns, EditableProTable } from '@ant-design/pro-components';
+import { EditableProTable, type ActionType, type ProColumns } from '@ant-design/pro-components';
 import { message, Modal, Spin } from 'antd';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Key } from 'react';
@@ -44,7 +44,7 @@ export default function MenuTab() {
     setLoading(true);
     try {
       const { data } = await getMenu();
-      const menuData = data?.data || [];
+      const menuData = (data as any)?.data || [];
       setDataSource(menuData);
       const expendKs = menuData
         .filter((e: MenuItem) => Boolean(e.children))

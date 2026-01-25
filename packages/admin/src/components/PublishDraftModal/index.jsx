@@ -1,4 +1,3 @@
-import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { publishDraft } from '@/services/van-blog/api';
 import { ModalForm, ProFormSelect, ProFormText } from '@ant-design/pro-components';

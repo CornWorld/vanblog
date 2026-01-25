@@ -1,4 +1,4 @@
-import React from 'react';
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useTranslation } from 'react-i18next';
 import { ModalForm, ProFormSelect, ProFormText } from '@ant-design/pro-components';
 import { Alert, Modal } from 'antd';
@@ -12,9 +12,9 @@ export default ({
 }: {
   onFinish: () => void;
   // FIXME: Add types
-  trigger: unknown;
+  trigger: any;
   // FIXME: Add types
-  initialValues?: unknown;
+  initialValues?: any;
 }) => {
   const { t } = useTranslation();
 

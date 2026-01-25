@@ -12,6 +12,7 @@ import TocMobile from '../TocMobile';
 import { hasToc } from '../../utils/hasToc';
 import Markdown from '../Markdown';
 import { useTranslation } from 'next-i18next';
+import { normalizePayment } from '../../types/contracts';
 
 const getTarget = (newTab: boolean) => {
   return newTab ? '_blank' : '_self';
@@ -142,21 +143,18 @@ export default function (props: {
         )}
         {showDonate && props.pay && (
           <Reward
-            aliPay={props.pay[0] || ''}
-            weChatPay={props.pay[1] || ''}
-            aliPayDark={props.payDark?.[0] || ''}
-            weChatPayDark={props.payDark?.[1] || ''}
-            author={props.author}
+            {...normalizePayment(props.pay, props.payDark)}
+            author={props.author || ''}
             id={props.id}
           ></Reward>
         )}
         {props.type == 'article' && !lock && !props?.hideCopyRight && (
           <CopyRight
             customCopyRight={props.customCopyRight}
-            author={props.author}
+            author={props.author || ''}
             id={props.id}
             showDonate={showDonate}
-            copyrightAggreement={props.copyrightAggreement}
+            copyrightAggreement={props.copyrightAggreement || ''}
           ></CopyRight>
         )}
 

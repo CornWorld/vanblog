@@ -1,0 +1,33 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "outDir": "./dist",
+    "baseUrl": ".",
+    "paths": {
+      "@test/*": ["./test/*"]
+    },
+    "types": ["node", "vitest/globals", "express", "multer"],
+    // Disable verbatimModuleSyntax for NestJS DI compatibility
+    "verbatimModuleSyntax": false,
+    // Exclude spec files from declaration generation
+    "declarationMap": false
+  },
+  "include": [
+    "src/**/*",
+    "src/**/*.spec.ts",
+    "test/**/*",
+    "test/**/*.spec.ts",
+    "test/**/*.e2e-spec.ts",
+    "plugins/**/*",
+    "plugins/**/*.spec.ts",
+    "src/types/**/*.d.ts",
+    "drizzle.config.ts",
+    "vitest.config.ts",
+    "vitest.config.e2e.ts",
+    "vitest.config.perf.ts",
+    "vite-env.d.ts",
+    "scripts/**/*.ts"
+  ],
+  "exclude": ["node_modules", "dist"]
+}

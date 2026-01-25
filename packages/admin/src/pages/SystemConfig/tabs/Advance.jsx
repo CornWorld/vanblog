@@ -1,4 +1,3 @@
-import React from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   activeISR,
@@ -30,7 +29,7 @@ export default function () {
               const { data } = await getLoginConfig();
               return data || { enableMaxLoginRetry: false };
             } catch (err) {
-              console.log(err);
+              console.error('Failed to fetch login config:', err);
               return { enableMaxLoginRetry: false };
             }
           }}
@@ -94,7 +93,7 @@ export default function () {
               const { data } = await getISRConfig();
               return data;
             } catch (err) {
-              console.log(err);
+              console.error('Failed to fetch ISR config:', err);
               return {};
             }
           }}
@@ -146,7 +145,7 @@ export default function () {
               await activeISR();
               message.success(t('advance.isr_manual.message.success'));
             } catch (error) {
-              console.error('ISR activation error:', error);
+              console.error('ISR activation failed:', error);
               message.error(t('advance.isr_manual.message.error'));
             }
             setIsrLoading(false);

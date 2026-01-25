@@ -1,4 +1,3 @@
-import React from 'react';
 import i18next from 'i18next';
 import { isMac, isMobileByScreenSize } from '@/services/van-blog/ua';
 import { useMemo } from 'react';

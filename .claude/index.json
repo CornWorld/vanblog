@@ -1,0 +1,615 @@
+{
+  "metadata": {
+    "timestamp": "2025-12-22T05:03:08.000Z",
+    "version": "1.3.0",
+    "project": "VanBlog",
+    "description": "VanBlog 是一个现代化的个人博客系统，包含管理后台、公开网站和 API 服务器",
+    "repository": "https://github.com/CornWorld/vanblog",
+    "previousScan": "2025-12-20T01:50:03+08:00",
+    "scanType": "Logger 重构进度监控 + 架构完整性验证"
+  },
+  "rootDocumentation": {
+    "path": "CLAUDE.md",
+    "lastUpdated": "2025-12-20T01:05:54+08:00",
+    "sections": [
+      "项目愿景",
+      "架构总览",
+      "模块结构图",
+      "模块索引",
+      "运行与开发",
+      "测试策略",
+      "编码规范",
+      "Shared Package 使用指引",
+      "插件系统使用指引",
+      "AI 使用指引",
+      "变更记录"
+    ]
+  },
+  "modules": [
+    {
+      "name": "server-ng",
+      "path": "packages/server-ng",
+      "documentationPath": "packages/server-ng/CLAUDE.md",
+      "status": "active",
+      "language": "TypeScript",
+      "framework": "NestJS 11",
+      "description": "NestJS API 服务器 (Drizzle ORM, ts-rest)",
+      "version": "0.54.0-corn.6",
+      "entryPoint": "src/main.ts",
+      "port": 3050,
+      "nodeVersion": ">=22",
+      "pnpmVersion": ">=10",
+      "dependencies": {
+        "internal": ["@vanblog/shared"],
+        "key_external": [
+          "@nestjs/core@^11.0.16",
+          "@ts-rest/nest@3.53.0-rc.1",
+          "drizzle-orm@^0.44.4",
+          "@libsql/client@^0.15.10"
+        ]
+      },
+      "features": [
+        "JWT 认证与授权",
+        "文章、草稿、分类、标签管理",
+        "媒体文件上传与处理",
+        "访客统计与分析",
+        "RSS/Sitemap 生成",
+        "插件系统（8 个内置插件 + 函数式 Plugin API）",
+        "数据库备份与恢复",
+        "Shortcode 系统（插件可注册短代码）"
+      ],
+      "apiEndpoints": {
+        "swagger": "/api/docs",
+        "healthCheck": "/api/v2/health",
+        "metrics": "/api/v2/metrics"
+      },
+      "newInThisScan": {
+        "loggerRefactoring": {
+          "status": "in_progress",
+          "description": "Console → Logger 迁移进行中",
+          "totalOccurrences": 648,
+          "filesWithLoggerOrConsole": 176,
+          "estimatedProgress": "~15%（基于模块化日志系统已建立）"
+        }
+      },
+      "plugins": [
+        {
+          "name": "rss-plugin",
+          "description": "RSS 订阅扩展（RSS 2.0, Atom 1.0, JSON Feed）",
+          "endpoints": ["/rss/feed.xml", "/rss/feed.json", "/rss/atom.xml"],
+          "hooks": [
+            "article|afterCreate",
+            "article|afterUpdate",
+            "article|afterDelete",
+            "setting|afterUpdate"
+          ],
+          "readme": "packages/server-ng/plugins/rss-plugin/README.md"
+        },
+        {
+          "name": "rewards-plugin",
+          "description": "打赏功能管理",
+          "features": ["CRUD API", "Bootstrap 集成", "配置与存储合并去重"]
+        },
+        {
+          "name": "email-notification-plugin",
+          "description": "邮件通知插件",
+          "events": [
+            "article|afterCreate",
+            "article|afterUpdate",
+            "comment|afterUpdate",
+            "draft|afterPublish"
+          ]
+        },
+        {
+          "name": "cat-plugin",
+          "description": "示例插件（在文章内容添加'喵'）",
+          "hooks": ["article|beforeCreate", "article|beforeUpdate"]
+        },
+        {
+          "name": "beian-plugin",
+          "description": "备案信息管理",
+          "hooks": [
+            "bootstrap|beforeGenerate",
+            "bootstrap|transformResponse",
+            "bootstrap|afterGenerate"
+          ]
+        },
+        {
+          "name": "social-links-plugin",
+          "description": "社交链接管理",
+          "features": ["CRUD API", "Zod Schema 验证", "插件注册表集成"]
+        },
+        {
+          "name": "book-manager-plugin",
+          "description": "书籍管理插件",
+          "status": "active",
+          "features": ["书籍 CRUD", "阅读状态管理", "Bootstrap 数据暴露"],
+          "readme": "packages/server-ng/plugins/book-manager-plugin/README.md"
+        },
+        {
+          "name": "read-time-plugin",
+          "description": "阅读时间统计插件",
+          "status": "active",
+          "features": ["自动计算阅读时间", "Filter Hook (article|beforeCreate/Update)"],
+          "readme": "packages/server-ng/plugins/read-time-plugin/README.md"
+        }
+      ],
+      "testing": {
+        "framework": "Vitest",
+        "coverage": "80%",
+        "unitTestFiles": 93,
+        "e2eTestFiles": 27,
+        "totalTestFiles": 120,
+        "testTools": [
+          "MockUtils（数据库/服务 Mock 工具类）",
+          "test-utils（E2E 辅助函数）",
+          "vitest-fixtures（测试夹具）"
+        ],
+        "e2eTests": true
+      },
+      "subModules": [
+        {
+          "name": "AuthModule",
+          "path": "src/modules/auth",
+          "description": "JWT 认证、本地策略、Token 黑名单",
+          "testFiles": 6
+        },
+        {
+          "name": "ArticleModule",
+          "path": "src/modules/article",
+          "description": "文章 CRUD、搜索、批量操作",
+          "testFiles": 1
+        },
+        {
+          "name": "MediaModule",
+          "path": "src/modules/media",
+          "description": "文件上传、图片处理、存储管理",
+          "testFiles": 5
+        },
+        {
+          "name": "PluginModule",
+          "path": "src/modules/plugin",
+          "description": "插件加载、钩子系统、函数式 API",
+          "testFiles": 4,
+          "newServices": [
+            "plugin-api.service.ts (Plugin API 适配器)",
+            "plugin-config.service.ts (配置管理)",
+            "plugin-http-registry.service.ts (HTTP 路由注册)",
+            "plugin-service-registry.service.ts (服务注册)",
+            "signal.service.ts (响应式信号系统)"
+          ]
+        },
+        {
+          "name": "AnalyticsModule",
+          "path": "src/modules/analytics",
+          "description": "访客统计、ECharts 格式化、第三方集成",
+          "testFiles": 4
+        },
+        {
+          "name": "ShortcodeModule",
+          "path": "src/modules/shortcode",
+          "description": "Shortcode 解析与渲染",
+          "testFiles": 1,
+          "features": ["解析 [shortcode] 语法", "插件注册 Shortcode", "递归渲染"]
+        },
+        {
+          "name": "CategoryModule",
+          "path": "src/modules/category"
+        },
+        {
+          "name": "TagModule",
+          "path": "src/modules/tag"
+        },
+        {
+          "name": "DraftModule",
+          "path": "src/modules/draft"
+        },
+        {
+          "name": "SettingModule",
+          "path": "src/modules/setting"
+        },
+        {
+          "name": "PublicModule",
+          "path": "src/modules/public"
+        },
+        {
+          "name": "UserModule",
+          "path": "src/modules/user"
+        },
+        {
+          "name": "BackupModule",
+          "path": "src/modules/backup"
+        },
+        {
+          "name": "RssModule",
+          "path": "src/modules/rss"
+        },
+        {
+          "name": "SitemapModule",
+          "path": "src/modules/sitemap"
+        },
+        {
+          "name": "HealthModule",
+          "path": "src/modules/health"
+        },
+        {
+          "name": "MetricsModule",
+          "path": "src/modules/metrics"
+        },
+        {
+          "name": "PermissionModule",
+          "path": "src/modules/permission"
+        },
+        {
+          "name": "AdminModule",
+          "path": "src/modules/admin"
+        },
+        {
+          "name": "DemoModule",
+          "path": "src/modules/demo"
+        }
+      ],
+      "coverage": {
+        "scannedFiles": 580,
+        "criticalPaths": [
+          "src/main.ts",
+          "src/app.module.ts",
+          "src/modules/（21 个功能模块）",
+          "src/core/（filters, interceptors, guards, middlewares）",
+          "src/shared/（services, utils, cache）",
+          "plugins/（8 个内置插件）",
+          "test/（测试工具与 E2E 测试）",
+          "docs/PLUGIN_DEVELOPMENT.md",
+          "docs/PLUGIN_MIGRATION_COMPLEX.md",
+          "docs/SHORTCODE_GUIDE.md"
+        ],
+        "gaps": []
+      }
+    },
+    {
+      "name": "admin",
+      "path": "packages/admin",
+      "documentationPath": "packages/admin/CLAUDE.md",
+      "status": "active",
+      "language": "TypeScript",
+      "framework": "React 19 + Vite 6",
+      "description": "React 19 + Vite + Ant Design 管理后台",
+      "version": "0.54.0-corn.6",
+      "entryPoint": "src/main.jsx",
+      "port": 3002,
+      "nodeVersion": "^18.0.0 || >= 20.0.0",
+      "dependencies": {
+        "internal": ["@vanblog/shared"],
+        "key_external": [
+          "react@^19.0.0",
+          "antd@^5.24.6",
+          "@ant-design/pro-components@^2.8.7",
+          "@ts-rest/core@3.53.0-rc.1",
+          "bytemd@1.22.0"
+        ]
+      },
+      "features": [
+        "文章与草稿管理",
+        "媒体库管理",
+        "分类与标签管理",
+        "系统设置",
+        "数据统计与分析",
+        "Markdown 编辑器（Bytemd + Toast UI）",
+        "国际化支持",
+        "插件管理页面"
+      ],
+      "newInThisScan": {
+        "loggerMigration": {
+          "file": "src/components/Footer/index.jsx",
+          "status": "completed",
+          "description": "已迁移到 createLogger 模式"
+        },
+        "pluginManagement": {
+          "file": "src/pages/SystemConfig/tabs/Plugin.tsx",
+          "features": ["插件列表展示", "配置编辑", "启用/禁用插件"]
+        },
+        "hooks": {
+          "file": "src/hooks/",
+          "examples": ["usePluginData (获取插件公共数据)"]
+        }
+      },
+      "routing": {
+        "basePath": "/admin",
+        "proxyTarget": "http://localhost:3050"
+      },
+      "testing": {
+        "framework": "Vitest + Playwright",
+        "coverage": "N/A",
+        "componentTests": true,
+        "e2eTests": true
+      },
+      "coverage": {
+        "scannedFiles": 200,
+        "criticalPaths": [
+          "src/main.jsx",
+          "src/pages/",
+          "src/components/",
+          "src/layouts/",
+          "src/hooks/",
+          "src/utils/logger.ts"
+        ],
+        "gaps": []
+      }
+    },
+    {
+      "name": "website",
+      "path": "packages/website",
+      "documentationPath": "packages/website/CLAUDE.md",
+      "status": "active",
+      "language": "TypeScript",
+      "framework": "Next.js 15",
+      "description": "Next.js 15 公开博客（SSG/ISR）",
+      "version": "0.54.0-corn.6",
+      "entryPoint": "pages/_app.tsx",
+      "port": 3001,
+      "dependencies": {
+        "internal": ["@vanblog/shared"],
+        "key_external": [
+          "next@^15.2.1",
+          "react@^19.0.0",
+          "@ts-rest/core@3.53.0-rc.1",
+          "tailwindcss@^3.3.0",
+          "bytemd@^1.22.0",
+          "@waline/client@^3.5.5"
+        ]
+      },
+      "features": [
+        "博客首页（文章列表）",
+        "文章详情页",
+        "分类与标签页",
+        "时间线页",
+        "RSS 订阅",
+        "Waline 评论系统",
+        "SEO 优化",
+        "ISR 增量静态再生成"
+      ],
+      "renderModes": {
+        "SSG": ["about", "timeline", "404"],
+        "ISR": ["index", "post/[id]", "tag", "tag/[tag]"]
+      },
+      "testing": {
+        "framework": "Vitest",
+        "coverage": "N/A",
+        "testFiles": "少量"
+      },
+      "coverage": {
+        "scannedFiles": 150,
+        "criticalPaths": ["pages/", "components/", "utils/", "utils/logger.ts"],
+        "gaps": []
+      }
+    },
+    {
+      "name": "shared",
+      "path": "packages/shared",
+      "documentationPath": "packages/shared/CLAUDE.md",
+      "status": "active",
+      "language": "TypeScript",
+      "framework": "Vite 6",
+      "description": "类型契约、Schema、工具（单一数据源）",
+      "version": "0.0.1",
+      "entryPoint": "src/index.ts",
+      "dependencies": {
+        "internal": [],
+        "key_external": [
+          "@ts-rest/core@3.53.0-rc.1",
+          "zod@^4.1.13",
+          "drizzle-orm@^0.44.4",
+          "drizzle-zod@^0.8.2"
+        ]
+      },
+      "exports": {
+        ".": "contracts + schemas",
+        "./type": "纯类型（0 字节 JS）",
+        "./runtime": "Zod schemas + Drizzle 表",
+        "./contracts": "ts-rest 契约",
+        "./drizzle": "Drizzle 工具 + Schema",
+        "./signals": "响应式信号系统",
+        "./plugin": "Plugin API 接口"
+      },
+      "features": [
+        "Drizzle ORM 表定义",
+        "Zod Schema 定义",
+        "ts-rest 契约定义",
+        "纯类型导出",
+        "通用工具函数",
+        "Plugin API 类型",
+        "响应式信号"
+      ],
+      "contracts": [
+        "authContract",
+        "articleContract",
+        "draftContract",
+        "categoryContract",
+        "tagContract",
+        "mediaContract",
+        "settingContract",
+        "backupContract",
+        "pluginsContract"
+      ],
+      "testing": {
+        "framework": "N/A",
+        "coverage": "N/A"
+      },
+      "coverage": {
+        "scannedFiles": 47,
+        "criticalPaths": [
+          "src/contract.ts",
+          "src/contracts/",
+          "src/drizzle/",
+          "src/runtime/",
+          "src/type/",
+          "src/plugin/",
+          "src/signals/"
+        ],
+        "gaps": []
+      }
+    },
+    {
+      "name": "server",
+      "path": "packages/server",
+      "documentationPath": "packages/server/CLAUDE.md",
+      "status": "deprecated",
+      "language": "TypeScript",
+      "framework": "NestJS + Mongoose",
+      "description": "遗留 NestJS + Mongoose 服务器（已废弃）",
+      "entryPoint": "src/main.ts",
+      "dependencies": {
+        "internal": [],
+        "key_external": ["@nestjs/core@^11.0.16", "mongoose@^8.13.2", "mongodb@^6.15.0"]
+      },
+      "deprecationReason": "替换为 server-ng（Drizzle ORM + ts-rest）",
+      "coverage": {
+        "scannedFiles": 0,
+        "criticalPaths": [],
+        "gaps": ["已废弃，不再扫描"]
+      }
+    },
+    {
+      "name": "cli",
+      "path": "packages/cli",
+      "documentationPath": "packages/cli/CLAUDE.md",
+      "status": "maintenance",
+      "language": "JavaScript",
+      "framework": "Node.js",
+      "description": "命令行工具集",
+      "entryPoint": "resetHttps.js",
+      "dependencies": {
+        "internal": [],
+        "key_external": ["mongodb@^6.14.2"]
+      },
+      "commands": [
+        {
+          "name": "resetHttps",
+          "file": "resetHttps.js",
+          "description": "重置 MongoDB 中的 HTTPS 设置",
+          "usage": "node resetHttps.js",
+          "target": "遗留 MongoDB 版本"
+        }
+      ],
+      "features": ["HTTPS 设置重置", "数据库连接测试（5 秒超时）", "交互式命令行界面"],
+      "coverage": {
+        "scannedFiles": 5,
+        "criticalPaths": ["resetHttps.js", "package.json", "README.md"],
+        "gaps": []
+      }
+    },
+    {
+      "name": "waline",
+      "path": "packages/waline",
+      "documentationPath": "packages/waline/CLAUDE.md",
+      "status": "maintenance",
+      "language": "JavaScript",
+      "framework": "@waline/vercel",
+      "description": "评论系统",
+      "entryPoint": "index.js",
+      "port": 8360,
+      "dependencies": {
+        "internal": [],
+        "key_external": ["@waline/vercel@1.32.3"]
+      },
+      "features": [
+        "评论服务 API",
+        "多种后端存储（SQLite/MySQL/PostgreSQL/MongoDB）",
+        "邮件通知（SMTP）",
+        "多语言支持",
+        "Markdown 评论",
+        "表情包与图片上传",
+        "访客统计",
+        "管理后台（/ui）"
+      ],
+      "configuration": {
+        "database": ["sqlite", "mysql", "pgsql", "mongodb", "vercel", "leancloud"],
+        "smtp": ["Gmail", "QQ", "163", "custom"],
+        "security": ["JWT", "Akismet", "reCAPTCHA"],
+        "storage": ["七牛云", "腾讯云 COS"]
+      },
+      "deployment": {
+        "docker": true,
+        "vercel": true,
+        "standalone": true
+      },
+      "coverage": {
+        "scannedFiles": 4,
+        "criticalPaths": ["index.js", "package.json", "CLAUDE.md"],
+        "gaps": []
+      }
+    }
+  ],
+  "statistics": {
+    "totalModules": 7,
+    "activeModules": 4,
+    "deprecatedModules": 1,
+    "maintenanceModules": 2,
+    "totalScannedFiles": 986,
+    "totalCriticalPaths": 40,
+    "estimatedTotalFiles": 1200,
+    "coveragePercentage": 82.2,
+    "newInThisScan": {
+      "loggerRefactoring": {
+        "status": "in_progress",
+        "progress": "~15%",
+        "completedFiles": ["admin/src/components/Footer/index.jsx"],
+        "totalOccurrences": 648,
+        "affectedFiles": 176
+      },
+      "versionUnified": "0.54.0-corn.6 (server-ng, admin, website)"
+    }
+  },
+  "recommendations": {
+    "nextSteps": [
+      "继续 Logger 迁移：优先处理 admin 和 website 核心页面",
+      "为 Shortcode 系统添加更多内置示例",
+      "完善插件脚手架工具的交互式体验",
+      "为响应式信号系统添加使用示例",
+      "优化插件管理页面的用户体验"
+    ],
+    "gaps": [],
+    "priorityAreas": [
+      "Logger 迁移完成度提升至 50%（重点：admin pages/ 目录）",
+      "插件系统测试覆盖率提升",
+      "Shortcode 文档完善",
+      "Plugin API 最佳实践示例"
+    ],
+    "completed": [
+      "server-ng: 插件系统函数式 API 文档",
+      "server-ng: Shortcode 模块集成",
+      "server-ng: Shortcode 系统指南文档",
+      "server-ng: 8 个内置插件",
+      "server-ng: 所有插件迁移至函数式 API",
+      "server-ng: 测试文件命名标准化",
+      "server-ng: ESLint 配置添加",
+      "admin: 插件管理页面",
+      "admin: Footer 组件 Logger 迁移",
+      "shared: Plugin API 接口 + 响应式信号"
+    ]
+  },
+  "ignoredPatterns": [
+    "node_modules/**",
+    ".git/**",
+    ".github/**",
+    "dist/**",
+    "build/**",
+    ".next/**",
+    "__pycache__/**",
+    "coverage/**",
+    "*.lock",
+    "*.log",
+    "*.bin",
+    "*.pdf",
+    "*.png",
+    "*.jpg",
+    "*.jpeg",
+    "*.gif",
+    "*.mp4",
+    "*.zip",
+    "*.tar",
+    "*.gz"
+  ],
+  "truncated": false,
+  "completionReason": "Logger 重构进度监控完成：已识别 648 个 Logger/console 使用点，admin Footer 组件已完成迁移，整体进度约 15%"
+}

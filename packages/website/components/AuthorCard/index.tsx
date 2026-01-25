@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { useContext, useEffect, useMemo } from 'react';
 import Headroom from 'headroom.js';
-import { SocialItem } from '../../api/getAllData';
+import type { SocialItem } from '../../api/getAllData';
 import SocialCard from '../SocialCard';
 import { ThemeContext } from '../../utils/themeContext';
 import ImageBox from '../ImageBox';

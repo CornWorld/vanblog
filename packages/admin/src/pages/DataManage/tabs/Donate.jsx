@@ -1,4 +1,3 @@
-import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { deleteDonate, getDonate, updateDonate } from '@/services/van-blog/api';
 import { EditableProTable } from '@ant-design/pro-components';

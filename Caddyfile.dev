@@ -6,7 +6,7 @@
 :80 {
 	# Log configuration for admin routes in dev mode
 	log {
-		output file /var/log/caddy-admin-dev.log
+		output stdout
 		format console
 		level DEBUG
 	}
@@ -14,38 +14,38 @@
 	# Handle admin routes
 	@adminRoutes path /admin*
 	handle @adminRoutes {
-		reverse_proxy {$VAN_BLOG_ADMIN_URL}
+		reverse_proxy 127.0.0.1:3002
 	}
 
 	# Handle admin static files (but don't serve them in dev mode)
 	@adminStatic path /admin/*.js /admin/*.css /admin/*.png /admin/*.jpg /admin/*.svg /admin/*.json /admin/*chunk*.js /admin/*.async.js /admin/p__*.js
 	handle @adminStatic {
-		reverse_proxy {$VAN_BLOG_ADMIN_URL}
+		reverse_proxy 127.0.0.1:3002
 	}
 
 	# Handle direct Waline endpoints
 	@comment path /comment* /token* /oauth* /user* /ui* /db*
 	handle @comment {
-		reverse_proxy {$VAN_BLOG_WALINE_URL}
+		reverse_proxy 127.0.0.1:8360
 	}
 
 	# Handle Waline endpoints with /api/ prefix
 	@apiWaline path /api/comment* /api/user* /api/token* /api/oauth* /api/ui* /api/db* /api/article*
 	handle @apiWaline {
-		reverse_proxy {$VAN_BLOG_WALINE_URL}
+		reverse_proxy 127.0.0.1:8360
 	}
 
-	# Handle regular API endpoints
-	@api path /api/*
+	# Handle regular API endpoints (support /api and /api/*) — dev server-ng runs on 3050
+	@api path /api*
 	handle @api {
-		reverse_proxy {$VAN_BLOG_SERVER_URL}
+		reverse_proxy 127.0.0.1:3050
 	}
 
 	# Static assets, RSS feeds, etc.
 	@favicon path /favicon*
 	handle @favicon {
 		uri replace /favicon /static/img/favicon
-		reverse_proxy {$VAN_BLOG_SERVER_URL}
+		reverse_proxy 127.0.0.1:3050
 	}
 
 	@feeds path /feed.json /feed.xml /atom.xml /sitemap.xml
@@ -54,21 +54,21 @@
 		uri replace /feed.xml /rss/feed.xml
 		uri replace /atom.xml /rss/atom.xml
 		uri replace /sitemap.xml /sitemap/sitemap.xml
-		reverse_proxy {$VAN_BLOG_SERVER_URL}
+		reverse_proxy 127.0.0.1:3050
 	}
 
 	@static path /static/* /custom/* /c/* /rss/* /swagger*
 	handle @static {
-		reverse_proxy {$VAN_BLOG_SERVER_URL}
+		reverse_proxy 127.0.0.1:3050
 	}
 
 	# Default handler for website
 	handle {
-		reverse_proxy {$VAN_BLOG_WEBSITE_URL}
+		reverse_proxy 127.0.0.1:3003
 	}
 
 	encode gzip zstd
 	log {
-		output file /var/log/caddy.log
+		output stdout
 	}
 }

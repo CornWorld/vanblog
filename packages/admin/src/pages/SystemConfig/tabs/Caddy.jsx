@@ -1,4 +1,3 @@
-import React from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   clearCaddyLog,
@@ -42,7 +41,7 @@ export default function () {
       message.success(t('caddy.update.success'));
       return true;
     } catch (error) {
-      console.error('Failed to update HTTPS config:', error);
+      console.error('Failed to update HTTPS config', error);
       message.error(t('caddy.update.error'));
       return false;
     } finally {
@@ -117,7 +116,7 @@ export default function () {
               setCurData(res);
               return res;
             } catch (error) {
-              console.error('Failed to get HTTPS config:', error);
+              console.error('Failed to get HTTPS config', error);
               setLoading(false);
               message.error('Failed to get HTTPS configuration');
               return {
@@ -181,7 +180,7 @@ export default function () {
                               });
                             }
                           } catch (error) {
-                            console.error('Failed to get Caddy config:', error);
+                            console.error('Failed to get Caddy config', error);
                             message.error(t('caddy.error.config'));
                           } finally {
                             setLoading(false);
@@ -213,7 +212,7 @@ export default function () {
                               });
                             }
                           } catch (error) {
-                            console.error('Failed to get Caddy log:', error);
+                            console.error('Failed to get Caddy log', error);
                             message.error(t('caddy.error.log'));
                           } finally {
                             setLoading(false);
@@ -230,7 +229,7 @@ export default function () {
                             await clearCaddyLog();
                             message.success(t('caddy.clear.success'));
                           } catch (error) {
-                            console.error('Failed to clear Caddy log:', error);
+                            console.error('Failed to clear Caddy log', error);
                             message.error(t('caddy.error.clear'));
                           } finally {
                             setLoading(false);

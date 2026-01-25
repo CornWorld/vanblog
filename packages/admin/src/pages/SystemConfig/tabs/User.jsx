@@ -1,4 +1,3 @@
-import React from 'react';
 import { useTranslation } from 'react-i18next';
 import CollaboratorModal, { getPermissionLabel } from '@/components/CollaboratorModal';
 import Tags from '@/components/Tags';
@@ -90,7 +89,7 @@ export default function () {
               history.push('/');
               message.success(t('user.message.update.success'));
             } catch (error) {
-              console.error('Failed to update user:', error);
+              console.error('Failed to update user', error);
               message.error('Failed to update user information');
             }
           }}
@@ -183,7 +182,7 @@ export default function () {
                 total: data.length,
               };
             } catch (error) {
-              console.error('Failed to get collaborators:', error);
+              console.error('Failed to get collaborators', error);
               message.error('Failed to load collaborators');
               return {
                 data: [],

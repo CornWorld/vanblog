@@ -1,0 +1,59 @@
+name: server-ng-lint-typecheck
+
+on:
+  push:
+    paths:
+      - 'packages/server-ng/**'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - '.github/workflows/server-ng-lint-typecheck.yml'
+      - '.github/matchers/**'
+  pull_request:
+    paths:
+      - 'packages/server-ng/**'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - '.github/workflows/server-ng-lint-typecheck.yml'
+      - '.github/matchers/**'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: server-ng-lint-typecheck-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint_typecheck:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Register ESLint compact matcher
+        run: echo "::add-matcher::.github/matchers/eslint-compact.json"
+
+      - name: Register tsc matcher
+        run: echo "::add-matcher::.github/matchers/tsc.json"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm i --frozen-lockfile
+
+      - name: Build shared package
+        run: pnpm --filter @vanblog/shared build
+
+      - name: Lint (ESLint)
+        run: pnpm -C packages/server-ng run lint
+
+      - name: Type check (tsc --noEmit)
+        run: pnpm -C packages/server-ng exec tsc --noEmit -p tsconfig.json

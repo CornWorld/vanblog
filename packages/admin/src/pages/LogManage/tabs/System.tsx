@@ -1,4 +1,4 @@
-import React from 'react';
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useTranslation } from 'react-i18next';
 import { getLog } from '@/services/van-blog/api';
 import { Button, Card, Space, Spin } from 'antd';
@@ -9,7 +9,7 @@ export default function () {
   const { t } = useTranslation();
   const [content, setContent] = useState('');
   const [loading, setLoading] = useState(true);
-  const timerRef = useRef<NodeJS.Timeout>(null);
+  const timerRef = useRef<any>(null);
   const domRef = useRef<HTMLPreElement>(null);
 
   const fetchLog = async () => {
@@ -18,7 +18,7 @@ export default function () {
       const logString = data.data.reverse().join('\n');
       setContent(logString);
     } catch (err) {
-      console.error(err);
+      console.error('Failed to fetch system logs:', err);
     }
   };
   useEffect(() => {

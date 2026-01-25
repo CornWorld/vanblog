@@ -1,8 +1,8 @@
-import i18next, { TFunction } from 'i18next';
+import i18next, { type TFunction } from 'i18next';
 import { copyImgLink, getImgLink } from '@/pages/ImageManage/components/tools';
 import { message as antMessage } from 'antd';
 import type { MessageInstance } from 'antd/es/message/interface';
-import { BytemdPlugin } from 'bytemd';
+import type { BytemdPlugin } from 'bytemd';
 import { icons } from '../icons';
 
 // Define types for bytemd context
@@ -77,7 +77,7 @@ export const uploadImg = async (file: File, options?: { t?: TFunction; message?:
     }
 
     // For non-SVG files, proceed with normal upload
-    const res = await fetch('/api/admin/img/upload?withWaterMark=true', {
+    const res = await fetch('/api/v2/admin/media/upload?withWaterMark=true', {
       method: 'POST',
       body: formData,
       headers: {

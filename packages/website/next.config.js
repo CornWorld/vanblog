@@ -1,13 +1,12 @@
 /** @type {import('next').NextConfig} */
-const bundleAnalyzer = require('@next/bundle-analyzer');
-const i18nConfig = require('./next-i18next.config.js');
+import bundleAnalyzer from '@next/bundle-analyzer';
+import i18nConfig from './next-i18next.config.js';
 
 const withBundleAnalyzer = bundleAnalyzer({
   enabled: process.env.ANALYZE === 'true',
 });
 
 const isDev = process.env.NODE_ENV == 'development';
-const isBrowser = typeof window !== 'undefined';
 
 // Extract rewrite rules into a function that can be used in both dev and production
 const getRewriteRules = () => {
@@ -25,10 +24,8 @@ const getRewriteRules = () => {
     process.env.NEXT_PUBLIC_VANBLOG_SERVER_URL || '(not set, will use VAN_BLOG_SERVER_URL)',
   );
 
-  // Use client URL for API proxy if available, otherwise fall back to server URL
-  const apiBaseUrl =
-    (isBrowser ? process.env.NEXT_PUBLIC_VANBLOG_SERVER_URL : process.env.VAN_BLOG_SERVER_URL) ||
-    'http://127.0.0.1:3000';
+  // Use server URL for API proxy (this runs on server-side)
+  const apiBaseUrl = process.env.VAN_BLOG_SERVER_URL || 'http://127.0.0.1:3000';
   const walineBaseUrl = process.env.VAN_BLOG_WALINE_URL || 'http://127.0.0.1:8360';
 
   return [
@@ -111,4 +108,4 @@ const config = withBundleAnalyzer({
   i18n: i18nConfig.i18n,
 });
 
-module.exports = config;
+export default config;

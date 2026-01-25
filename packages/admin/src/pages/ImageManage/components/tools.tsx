@@ -1,5 +1,5 @@
 import { message } from 'antd';
-import { StaticItem } from '../types';
+import type { StaticItem } from '../types';
 
 interface MetaDictionary {
   [key: string]: string;

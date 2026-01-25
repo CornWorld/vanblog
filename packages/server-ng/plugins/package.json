@@ -1,0 +1,12 @@
+{
+  "name": "vanblog-plugins",
+  "version": "1.0.0",
+  "description": "VanBlog plugins directory",
+  "private": true,
+  "type": "module",
+  "dependencies": {},
+  "devDependencies": {},
+  "engines": {
+    "node": ">=22"
+  }
+}

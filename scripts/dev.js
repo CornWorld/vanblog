@@ -1,7 +1,7 @@
 // 本地开发
 
-const { spawn } = require('child_process');
-const path = require('path');
+import { spawn } from 'child_process';
+import path from 'path';
 class Service {
   constructor(tasks) {
     this.tasks = tasks;
@@ -37,7 +37,7 @@ class Service {
     });
   }
   async stop() {
-    for (const [k, ctx] of Object.entries(this.ctx)) {
+    for (const [, ctx] of Object.entries(this.ctx)) {
       ctx.unref();
       process.kill(-ctx.pid, 'SIGINT');
     }

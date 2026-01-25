@@ -8,4 +8,4 @@ const config = {
   ns: ['translations'],
 };
 
-module.exports = config;
+export default config;

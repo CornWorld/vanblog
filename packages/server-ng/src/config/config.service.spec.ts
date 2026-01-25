@@ -1,0 +1,128 @@
+import type { ConfigService as NestConfigService } from '@nestjs/config';
+import { ConfigModule as NestConfigModule } from '@nestjs/config';
+import type { TestingModule } from '@nestjs/testing';
+import { Test } from '@nestjs/testing';
+
+import { ConfigService } from './config.service';
+import databaseConfig from './database.config';
+
+describe('ConfigService', () => {
+  let service: ConfigService;
+
+  beforeEach(async () => {
+    const _testingModule: TestingModule = await Test.createTestingModule({
+      imports: [
+        NestConfigModule.forRoot({
+          isGlobal: false,
+          ignoreEnvFile: true,
+          ignoreEnvVars: true,
+          load: [
+            () => ({
+              PORT: 3000,
+              NODE_ENV: 'test',
+              API_PREFIX: 'api',
+              API_VERSION: 'v2',
+              LOCALE: 'zh-cn',
+              DATABASE_DRIVER: 'local',
+              DATABASE_URL: 'file:./test/vanblog.db',
+              JWT_SECRET: 'test-secret',
+              JWT_REFRESH_SECRET: 'test-refresh-secret',
+              CORS_ORIGIN: 'http://localhost:3000',
+              CORS_CREDENTIALS: true,
+              UPLOAD_MAX_FILE_SIZE: 10485760,
+              UPLOAD_DESTINATION: './test-uploads',
+              STATIC_PATH: '/test/static',
+              LOG_LEVEL: 'debug',
+              LOG_DIR: '/test/logs',
+              WALINE_DB: 'waline-test',
+              DEMO_MODE: false,
+              CODE_RUNNER_PATH: '/test/codeRunner',
+              PLUGIN_RUNNER_PATH: '/test/pluginRunner',
+            }),
+            databaseConfig,
+          ],
+        }),
+      ],
+      providers: [ConfigService],
+    }).compile();
+
+    service = _testingModule.get<ConfigService>(ConfigService);
+  });
+
+  it('should be defined', () => {
+    expect(service).toBeDefined();
+  });
+
+  describe('app config', () => {
+    it('should return app configuration', () => {
+      const appConfig = service.app;
+      expect(appConfig).toBeDefined();
+      expect(appConfig.port).toBe(3000);
+      expect(appConfig.nodeEnv).toBe('test');
+      expect(appConfig.apiPrefix).toBe('api');
+      expect(appConfig.apiVersion).toBe('v2');
+      expect(appConfig.locale).toBe('zh-cn');
+      expect(appConfig.isDevelopment).toBe(false);
+      expect(appConfig.isProduction).toBe(false);
+    });
+  });
+
+  describe('database config', () => {
+    it('should return database configuration', () => {
+      const dbConfig = service.database;
+      expect(dbConfig).toBeDefined();
+      expect(dbConfig.driver).toBe('local');
+      expect(dbConfig.url).toMatch(/^file:.*\.db$/);
+    });
+  });
+
+  describe('jwt config', () => {
+    it('should return JWT configuration', () => {
+      const jwtConfig = service.jwt;
+      expect(jwtConfig).toBeDefined();
+      expect(jwtConfig.secret).toBe('test-secret');
+      expect(jwtConfig.expiresIn).toBe('7d');
+      expect(jwtConfig.refreshSecret).toBe('test-refresh-secret');
+      expect(jwtConfig.refreshExpiresIn).toBe('30d');
+    });
+  });
+
+  describe('cors config', () => {
+    it('should return CORS configuration', () => {
+      const corsConfig = service.cors;
+      expect(corsConfig).toBeDefined();
+      expect(corsConfig.origin).toBe('http://localhost:3000');
+      expect(corsConfig.credentials).toBe(true);
+    });
+
+    it('should parse multiple origins', () => {
+      const mockConfigService: NestConfigService = {
+        get: <T = unknown>(key: string, defaultValue?: T): T => {
+          const config: Record<string, string> = {
+            CORS_ORIGIN: 'http://localhost:3000,http://localhost:3001',
+          };
+          return (config[key] ?? defaultValue) as T;
+        },
+      } as NestConfigService;
+      const configService = new ConfigService(mockConfigService);
+      const corsConfig = configService.cors;
+      expect(corsConfig.origin).toEqual(['http://localhost:3000', 'http://localhost:3001']);
+    });
+  });
+
+  describe('all config', () => {
+    it('should return all configurations', () => {
+      const allConfig = service.all;
+      expect(allConfig).toBeDefined();
+      expect(allConfig.app).toBeDefined();
+      expect(allConfig.database).toBeDefined();
+      expect(allConfig.jwt).toBeDefined();
+      expect(allConfig.cors).toBeDefined();
+      expect(allConfig.upload).toBeDefined();
+      expect(allConfig.static).toBeDefined();
+      expect(allConfig.log).toBeDefined();
+      expect(allConfig.waline).toBeDefined();
+      expect(allConfig.runtime).toBeDefined();
+    });
+  });
+});

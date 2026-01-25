@@ -1,7 +1,8 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Dropdown, Space } from 'antd';
 import { useMemo } from 'react';
 
-export default function (props: { nodes: unknown[]; outs: unknown[] }) {
+export default function (props: { nodes: any[]; outs: any[] }) {
   const items = useMemo(
     () =>
       props.nodes.map((val, index) => ({

@@ -1,4 +1,4 @@
-import React from 'react';
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useTranslation } from 'react-i18next';
 import { getWalineConfig, updateWalineConfig } from '@/services/van-blog/api';
 import {
@@ -37,16 +37,19 @@ export default function WalineForm() {
         request={async () => {
           try {
             const { data } = await getWalineConfig();
-            setEnableEmail(data?.['smtp.enabled'] || false);
-            if (!data) {
+            const config = data as any;
+            setEnableEmail(config?.['smtp.enabled'] || false);
+            if (!config) {
               return {
                 'smtp.enabled': false,
                 forceLoginComment: false,
               };
             }
-            return { ...data };
-          } catch (err) {
-            console.error('Failed to fetch Waline config:', err);
+            return {
+              ...config,
+            } as any;
+          } catch (error) {
+            console.error('Failed to fetch Waline config:', error);
             return {
               'smtp.enabled': false,
               forceLoginComment: false,

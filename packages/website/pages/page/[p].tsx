@@ -1,31 +1,40 @@
 import Head from 'next/head';
 import { getPublicMeta } from '../../api/getAllData';
-import AuthorCard, { AuthorCardProps } from '../../components/AuthorCard';
+import AuthorCard, { type AuthorCardProps } from '../../components/AuthorCard';
 import Layout from '../../components/Layout';
 import PageNav from '../../components/PageNav';
 import PostCard from '../../components/PostCard';
 import Waline from '../../components/WaLine';
-import { Article } from '../../types/article';
+import type { Article } from '../../types/article';
 import { getArticlePath } from '../../utils/getArticlePath';
-import { LayoutProps } from '../../utils/getLayoutProps';
+import type { LayoutProps } from '../../utils/getLayoutProps';
 import { getPagePagesProps } from '../../utils/getPageProps';
 import { getArticlesKeyWord } from '../../utils/keywords';
 import { revalidate } from '../../utils/loadConfig';
 import Custom404 from '../404';
 import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
+import { normalizeArticles } from '../../types/contracts';
+
 export interface PagePagesProps {
   layoutProps: LayoutProps;
   authorCardProps: AuthorCardProps;
   currPage: number;
   articles: Article[];
 }
-const PagePages = (props: PagePagesProps) => {
-  // Add safety check for articles array
-  const articles = props.articles || [];
 
-  if (!articles || articles.length === 0) {
+const PagePages = (props: PagePagesProps) => {
+  const normalizedArticles = normalizeArticles(props.articles);
+
+  // Convert to Article[] for compatibility with existing functions
+  const articlesForKeywords: Article[] = normalizedArticles.map((article) => ({
+    ...article,
+    tags: [...article.tags],
+  }));
+
+  if (normalizedArticles.length === 0) {
     return <Custom404 name="页码" />;
   }
+
   return (
     <Layout
       option={props.layoutProps}
@@ -33,10 +42,10 @@ const PagePages = (props: PagePagesProps) => {
       sideBar={<AuthorCard option={props.authorCardProps}></AuthorCard>}
     >
       <Head>
-        <meta name="keywords" content={getArticlesKeyWord(articles).join(',')}></meta>
+        <meta name="keywords" content={getArticlesKeyWord(articlesForKeywords).join(',')}></meta>
       </Head>
       <div className="space-y-2 md:space-y-4">
-        {articles.map((article) => (
+        {normalizedArticles.map((article) => (
           <PostCard
             showEditButton={props.layoutProps.showEditButton === 'true'}
             setContent={() => {}}
@@ -45,13 +54,13 @@ const PagePages = (props: PagePagesProps) => {
             openArticleLinksInNewWindow={props.layoutProps.openArticleLinksInNewWindow == 'true'}
             customCopyRight={null}
             top={typeof article.top === 'number' ? article.top : article.top ? 1 : 0}
-            id={getArticlePath(article)}
+            id={getArticlePath({ ...article, tags: [...article.tags] })}
             key={article.id}
             title={article.title}
             updatedAt={new Date(article.updatedAt)}
             createdAt={new Date(article.createdAt)}
             catelog={article.category}
-            content={article.content || ''}
+            content={article.content}
             type={'overview'}
             enableComment={props.layoutProps.enableComment}
             private={article.private}

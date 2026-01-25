@@ -1,0 +1,21 @@
+{
+  "name": "email-notification-plugin",
+  "version": "1.0.0",
+  "description": "邮件通知插件：在文章发布、评论等事件时发送邮件通知",
+  "main": "index.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "nodemailer": "^6.9.0",
+    "@types/nodemailer": "^6.4.0"
+  },
+  "keywords": [
+    "vanblog",
+    "plugin",
+    "email",
+    "notification"
+  ],
+  "author": "VanBlog",
+  "license": "MIT"
+}

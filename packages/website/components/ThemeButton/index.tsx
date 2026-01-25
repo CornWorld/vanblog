@@ -1,6 +1,7 @@
 import { useContext, useEffect, useLayoutEffect, useRef } from 'react';
 import { applyTheme, getTheme, initTheme } from '../../utils/theme';
-import { RealThemeType, ThemeContext } from '../../utils/themeContext';
+import type { RealThemeType } from '../../utils/themeContext';
+import { ThemeContext } from '../../utils/themeContext';
 import { useTranslation } from 'next-i18next';
 import { LightIcon, DarkIcon, AutoIcon } from './icons';
 

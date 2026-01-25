@@ -1,4 +1,4 @@
-import { BytemdPlugin } from 'bytemd';
+import type { BytemdPlugin } from 'bytemd';
 import { visit } from 'unist-util-visit';
 import type { Node } from 'unist';
 

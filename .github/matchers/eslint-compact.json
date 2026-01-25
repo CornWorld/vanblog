@@ -1,0 +1,17 @@
+{
+  "problemMatcher": [
+    {
+      "owner": "eslint-compact",
+      "pattern": [
+        {
+          "regexp": "^(.+):(\\d+):(\\d+):\\s(?:error|warning)\\s(.+?)(?:\\s\\(([-\\w/]+)\\))?$",
+          "file": 1,
+          "line": 2,
+          "column": 3,
+          "message": 4,
+          "code": 5
+        }
+      ]
+    }
+  ]
+}

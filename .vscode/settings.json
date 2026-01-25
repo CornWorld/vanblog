@@ -11,7 +11,7 @@
     "editor.defaultFormatter": "esbenp.prettier-vscode"
   },
   "[typescript]": {
-    "editor.defaultFormatter": "vscode.typescript-language-features"
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
   },
   "[json]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode"
@@ -30,6 +30,32 @@
   "files.eol": "\n",
   "typescript.tsdk": "node_modules/typescript/lib",
   "[typescriptreact]": {
-    "editor.defaultFormatter": "vscode.typescript-language-features"
-  }
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "vitest.disableWorkspaceWarning": true,
+  "auto-run-command.rules": [
+    {
+      "event": "onFileRename",
+      "command": "typescript.restartTsServer",
+      "isLanguage": "typescript"
+    },
+    {
+      "event": "onFileDelete",
+      "command": "typescript.restartTsServer",
+      "isLanguage": "typescript"
+    }
+  ],
+  // JSON Schema 配置：为配置文件提供智能提示和校验
+  "json.schemas": [
+    {
+      "fileMatch": [
+        "**/config/default.json",
+        "**/config/development.json",
+        "**/config/production.json",
+        "**/config/test.json",
+        "**/packages/server-ng/config.json"
+      ],
+      "url": "./packages/server-ng/config.schema.json"
+    }
+  ]
 }

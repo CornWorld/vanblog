@@ -1,4 +1,3 @@
-import React from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   createCategory,
@@ -130,13 +129,12 @@ export default function () {
                   await deleteCategory(record.name);
                   message.success(t('category.modal.delete.success'));
                 } catch (error) {
-                  console.error('Error deleting category:', error);
+                  console.error('Failed to delete category:', error);
                   message.error(t('category.modal.delete.error') || '删除分类失败');
                 }
                 action?.reload();
               },
             });
-            // action?.startEditable?.(record.id);
           }}
         >
           {t('category.action.delete')}

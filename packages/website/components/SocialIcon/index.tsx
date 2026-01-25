@@ -1,44 +1,43 @@
-import { useContext, useMemo, useState } from "react";
-import { SocialItem } from "../../api/getAllData";
-import { getIcon } from "../../utils/getIcon";
-import { Popover, ArrowContainer } from "react-tiny-popover";
-import { capitalize } from "../../utils/capitalize";
-import { ThemeContext } from "../../utils/themeContext";
-import ImageBox from "../ImageBox";
+import { useContext, useMemo, useState } from 'react';
+import type { SocialItem } from '../../api/getAllData';
+import { getIcon } from '../../utils/getIcon';
+import { Popover, ArrowContainer } from 'react-tiny-popover';
+import { capitalize } from '../../utils/capitalize';
+import { ThemeContext } from '../../utils/themeContext';
+import ImageBox from '../ImageBox';
 
 export default function (props: { item: SocialItem }) {
   const { theme } = useContext(ThemeContext);
 
   const weChatUrl = useMemo(() => {
-    if (props.item.type == "wechat") {
-      if (theme.includes("dark") && props.item.dark && props.item.dark != "") {
+    if (props.item.type == 'wechat') {
+      if (theme.includes('dark') && props.item.dark && props.item.dark != '') {
         return props.item.dark;
       }
       return props.item.value;
     }
-    return "";
+    return '';
   }, [theme, props]);
   const arrowColor = useMemo(() => {
-    if (theme.includes("dark")) {
-      return "#1b1c1f";
+    if (theme.includes('dark')) {
+      return '#1b1c1f';
     } else {
-      return "white";
+      return 'white';
     }
   }, [theme]);
   // 链接、二维码、邮箱 三个类别
   const [show, setShow] = useState(false);
   const iconSize = 20;
-  const qrCode = ["wechat"];
-  const iconStyle = { marginLeft: "12px" };
-  const iconClass =
-    "fill-gray-500 dark:text-dark dark:group-hover:text-dark-r transition-all ";
-  if (props.item.type == "email") {
+  const qrCode = ['wechat'];
+  const iconStyle = { marginLeft: '12px' };
+  const iconClass = 'fill-gray-500 dark:text-dark dark:group-hover:text-dark-r transition-all ';
+  if (props.item.type == 'email') {
     return (
       <a
         style={{
-          display: "inline-flex",
-          width: "100%",
-          justifyContent: "start",
+          display: 'inline-flex',
+          width: '100%',
+          justifyContent: 'start',
         }}
         href={`mailto:${props.item.value}`}
       >
@@ -55,11 +54,19 @@ export default function (props: { item: SocialItem }) {
         onClickOutside={() => {
           setShow(false);
         }}
-        positions={["top", "left"]}
-        content={({ position, childRect, popoverRect }) => {
+        positions={['top', 'left']}
+        content={({
+          position,
+          childRect,
+          popoverRect,
+        }: {
+          position: any;
+          childRect: DOMRect;
+          popoverRect: DOMRect;
+        }) => {
           return (
             <ArrowContainer // if you'd like an arrow, you can import the ArrowContainer!
-              position={position}
+              position={position as any}
               childRect={childRect}
               popoverRect={popoverRect}
               arrowColor={arrowColor}
@@ -77,7 +84,7 @@ export default function (props: { item: SocialItem }) {
                   src={weChatUrl}
                   width={200}
                   height={280}
-                  className={""}
+                  className={''}
                   lazyLoad={true}
                 />
               </div>
@@ -86,11 +93,11 @@ export default function (props: { item: SocialItem }) {
         }}
       >
         <a
-          target={"_blank"}
+          target={'_blank'}
           style={{
-            display: "inline-flex",
-            width: "100%",
-            justifyContent: "start",
+            display: 'inline-flex',
+            width: '100%',
+            justifyContent: 'start',
           }}
           onClick={() => {
             setShow(!show);
@@ -99,30 +106,40 @@ export default function (props: { item: SocialItem }) {
           <span style={iconStyle} className={iconClass}>
             {getIcon(props.item.type, iconSize)}
           </span>
-          <span className="inline-flex items-center ml-1">
-            {capitalize(props.item.type)}
-          </span>
+          <span className="inline-flex items-center ml-1">{capitalize(props.item.type)}</span>
         </a>
       </Popover>
     );
   } else {
-    return (
+    const href = (props.item.value || '').trim();
+    return href ? (
       <a
         style={{
-          display: "inline-flex",
-          width: "100%",
-          justifyContent: "start",
+          display: 'inline-flex',
+          width: '100%',
+          justifyContent: 'start',
         }}
-        href={props.item.value}
+        href={href}
         target="_blank"
       >
         <span style={iconStyle} className={iconClass}>
           {getIcon(props.item.type, iconSize)}
         </span>
-        <span className="inline-flex items-center ml-1">
-          {capitalize(props.item.type)}
-        </span>
+        <span className="inline-flex items-center ml-1">{capitalize(props.item.type)}</span>
       </a>
+    ) : (
+      <span
+        style={{
+          display: 'inline-flex',
+          width: '100%',
+          justifyContent: 'start',
+        }}
+      >
+        <span style={iconStyle} className={iconClass}>
+          {getIcon(props.item.type, iconSize)}
+        </span>
+        <span className="inline-flex items-center ml-1">{capitalize(props.item.type)}</span>
+      </span>
     );
   }
 }

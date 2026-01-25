@@ -1,4 +1,3 @@
-import React from 'react';
 import { ModalForm, ProFormSelect, ProFormSwitch, ProFormText } from '@ant-design/pro-form';
 import { getPipelineConfig, createPipeline, updatePipelineById } from '@/services/van-blog/api';
 import { useEffect, useState } from 'react';
@@ -65,7 +64,7 @@ export default function PipelineModal({
     <ModalForm
       trigger={trigger}
       onFinish={async (vals) => {
-        console.log(vals);
+        console.log('Pipeline form submission:', vals);
         if (!check(vals as PipelineData)) {
           message.error('请填写完整信息后提交！');
           return false;
@@ -76,10 +75,13 @@ export default function PipelineModal({
             onFinish(vals as PipelineData);
             return true;
           } else {
-            await updatePipelineById(initialValues!.id, vals);
-            message.success('提交成功！');
-            onFinish(vals as PipelineData);
-            return true;
+            if (initialValues?.id) {
+              await updatePipelineById(initialValues.id, vals);
+              message.success('提交成功！');
+              onFinish(vals as PipelineData);
+              return true;
+            }
+            return false;
           }
         }
       }}

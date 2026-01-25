@@ -1,13 +1,13 @@
 import dayjs from 'dayjs';
 import { useMemo } from 'react';
-import { DonateItem } from '../api/getAllData';
-import AuthorCard, { AuthorCardProps } from '../components/AuthorCard';
+import type { DonateItem } from '../api/getAllData';
+import AuthorCard, { type AuthorCardProps } from '../components/AuthorCard';
 import Layout from '../components/Layout';
 import PostCard from '../components/PostCard';
-import { LayoutProps } from '../utils/getLayoutProps';
+import type { LayoutProps } from '../utils/getLayoutProps';
 import { getAboutPageProps } from '../utils/getPageProps';
 import { revalidate } from '../utils/loadConfig';
-import { PageViewData } from '../api/pageView';
+import type { PageViewData } from '../api/pageView';
 import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
 import { useTranslation } from 'next-i18next';
 
@@ -26,7 +26,7 @@ export interface AboutPageProps {
   showDonateInAbout: 'true' | 'false';
   pageViewData: PageViewData;
 }
-const getDonateTableMarkdown = (donates: DonateItem[], t) => {
+const getDonateTableMarkdown = (donates: DonateItem[], t: any) => {
   let content = `
 ## ${t('donate.info')}
 
@@ -86,7 +86,7 @@ const AboutPage = (props: AboutPageProps) => {
 };
 
 export default AboutPage;
-export async function getStaticProps({ locale }) {
+export async function getStaticProps({ locale }: { locale: string }) {
   const result = {
     props: {
       ...(await getAboutPageProps()),

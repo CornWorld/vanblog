@@ -1,5 +1,5 @@
 import 'client-only';
-import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
+import React, { createContext, type ReactNode, useContext, useEffect, useState } from 'react';
 import { PhotoProvider } from 'react-photo-view';
 import { throttle } from 'lodash-es';
 

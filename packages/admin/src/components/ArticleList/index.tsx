@@ -1,4 +1,4 @@
-import React from 'react';
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import i18next from 'i18next';
 import { getRecentTimeDes } from '@/services/van-blog/tool';
 import './index.css';
@@ -8,15 +8,15 @@ export default ({
   showViewerNum,
   showRecentViewTime,
 }: {
-  // FIXME: Add Article type
-  articles: unknown[];
+  // TODO: Add Article type from @vanblog/shared/type
+  articles: any[];
   showViewerNum: boolean;
   showRecentViewTime: boolean;
 }) => (
   <div>
     {articles.map(({ id, title, viewer = 0, lastVisitedTime }) => (
       <a
-        // FIXME: uaa is not a good name
+        // TODO: Rename 'uaa' class to more semantic name
         className="article-list-item uaa"
         key={id}
         href={`/post/${id}`}

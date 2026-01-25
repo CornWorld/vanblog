@@ -7,7 +7,7 @@ import mediumZoom from '@bytemd/plugin-medium-zoom';
 import mermaid from '@bytemd/plugin-mermaid';
 import { Editor } from '@bytemd/react';
 import { Spin } from 'antd';
-import React, { useCallback, useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 
 // 导入基础ByteMD样式
 import 'bytemd/dist/index.css';
@@ -141,11 +141,11 @@ export default function EditorComponent(props: {
       mediumZoom(),
       mermaid(),
       imgUploadPlugin(setLoading, { t }),
-      emoji({ t }),
+      emoji(),
       insertMore({ t }),
       rawHTML(),
       historyIcon({ t }),
-      Heading({ t }),
+      Heading(),
       customCodeBlock(),
       LinkTarget(),
     ];

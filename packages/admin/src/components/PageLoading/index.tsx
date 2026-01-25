@@ -1,4 +1,3 @@
-import React from 'react';
 import { Spin } from 'antd';
 
 const PageLoading: React.FC = () => (

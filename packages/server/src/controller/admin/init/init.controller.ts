@@ -50,7 +50,7 @@ export class InitController {
       data: { hasInit },
     };
   }
-  
+
   @Post('/init/upload')
   @UseInterceptors(FileInterceptor('file'))
   async uploadImg(@UploadedFile() file: any, @Query('favicon') favicon: string) {

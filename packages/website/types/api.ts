@@ -1,5 +1,5 @@
-import { Article } from './article';
-import { HeadTag } from '../utils/getLayoutProps';
+import type { Article } from './article';
+import type { HeadTag } from '../utils/getLayoutProps';
 
 export interface SortOrder {
   field: string;
@@ -119,6 +119,29 @@ export interface CustomPage extends CustomPageList {
   html: string;
 }
 
+// Server-ng v2 API 统一响应格式
+export interface ApiV2Response<T = unknown> {
+  statusCode: number;
+  data: T;
+  message?: string;
+  error?: string;
+  meta?: {
+    timestamp: string;
+    path: string;
+    version: string;
+  };
+}
+
+// 分页数据格式
+export interface PaginatedData<T> {
+  items: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+// 兼容旧格式的文章响应
 export interface ArticleResponse {
   data: Article[];
   total: number;
@@ -126,9 +149,26 @@ export interface ArticleResponse {
   pageSize: number;
 }
 
+// 新的v2格式文章响应
+export type ArticleV2Response = ApiV2Response<PaginatedData<Article>>;
+
 export interface ArticleDetail extends Article {
   content: string;
   toc?: string;
-  next?: { id: string; title: string; pathname?: string };
-  prev?: { id: string; title: string; pathname?: string };
+  next?: { id: number; title: string; pathname?: string };
+  prev?: { id: number; title: string; pathname?: string };
 }
+
+// ============================================================================
+// CSRF Token Response Contract
+// ============================================================================
+
+export interface CsrfTokenResponse {
+  csrfToken: string;
+}
+
+export interface CsrfTokenWrappedResponse {
+  data: CsrfTokenResponse;
+}
+
+export type CsrfResponse = CsrfTokenResponse | CsrfTokenWrappedResponse;

@@ -1,4 +1,3 @@
-import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { ProCard, StatisticCard } from '@ant-design/pro-components';
 import { Spin } from 'antd';

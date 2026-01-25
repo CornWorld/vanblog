@@ -1,6 +1,6 @@
 import Link from 'next/link';
-import { MouseEventHandler, useMemo, useState } from 'react';
-import { MenuItem } from '../../api/getAllData';
+import { type MouseEventHandler, useMemo, useState } from 'react';
+import type { MenuItem } from '../../api/getAllData';
 
 function LinkItemAtom(props: {
   item: MenuItem;

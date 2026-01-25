@@ -1,4 +1,58 @@
 #!/usr/bin/env sh
-. "$(dirname -- "$0")/_/husky.sh"
+set -e
 
-pnpm nano-staged
+# Always run at repository root (do NOT rely on git here)
+SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)"
+REPO_ROOT="$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd -P)"
+export REPO_ROOT
+cd "$REPO_ROOT" || exit 1
+
+# Sanitize PATH to avoid git-core shadowing real git
+OLD_PATH="$PATH"
+# remove any git/libexec/git-core entries
+PATH=$(printf %s "$OLD_PATH" | awk -v RS=: -v ORS=: '$0 !~ /git\/libexec\/git-core/ {print}' | sed 's/:$//')
+# Prefer common git locations first
+PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
+export PATH
+# Avoid exec-path interference
+unset GIT_EXEC_PATH
+
+# Ensure git env is explicit for tools that rely on it
+export GIT_DIR="$REPO_ROOT/.git"
+export GIT_WORK_TREE="$REPO_ROOT"
+export GIT_INDEX_FILE="$REPO_ROOT/.git/index"
+export GIT_PAGER=cat
+export GIT_TERMINAL_PROMPT=0
+# Help git repo discovery in restricted environments
+export GIT_DISCOVERY_ACROSS_FILESYSTEM=1
+unset GIT_CEILING_DIRECTORIES
+
+# Ensure current repository is marked safe to avoid 'dubious ownership' issues
+if ! git config --global --get-all safe.directory | grep -qx -- "$REPO_ROOT"; then
+  git config --global --add safe.directory "$REPO_ROOT" || true
+fi
+printf 'husky debug: git safe.directory => %s\n' "$(git config --global --get-all safe.directory | tr '\n' ',' | sed 's/,$//')" || true
+
+# Debug info
+printf 'husky debug: PWD=%s\n' "$(pwd)" || true
+printf 'husky debug: REPO_ROOT=%s\n' "$REPO_ROOT" || true
+printf 'husky debug: GIT_DIR=%s\n' "$GIT_DIR" || true
+printf 'husky debug: GIT_WORK_TREE=%s\n' "$GIT_WORK_TREE" || true
+printf 'husky debug: GIT_INDEX_FILE=%s\n' "$GIT_INDEX_FILE" || true
+printf 'husky debug: git --git-dir => %s\n' "$(git rev-parse --git-dir 2>/dev/null || echo ERR)" || true
+printf 'husky debug: show-toplevel => %s\n' "$(git rev-parse --show-toplevel 2>/dev/null || echo ERR)" || true
+# Print key env vars to debug differences under git
+(env | grep -E '^(GIT|PNPM|NPM|INIT_CWD|PATH|REPO_ROOT)=' | sort || true) | sed 's/^/husky env: /'
+ls -la "$REPO_ROOT/.git" >/dev/null 2>&1 || echo 'husky debug: cannot access .git'
+# Print git binary and version actually used
+printf 'husky debug: which git => %s\n' "$(command -v git || echo ERR)"
+(git --version || true) | sed 's/^/husky debug: /'
+
+# Probe nano-staged git paths resolution (disable git tracing for clean output)
+GIT_TRACE= GIT_TRACE_SETUP= GIT_CURL_VERBOSE= GIT_TRACE_PACKET= GIT_TRACE_PERFORMANCE= \
+node -e "import('./node_modules/nano-staged/lib/git.js').then(async m=>{const g=m.createGit('$REPO_ROOT'); const p=await g.getGitPaths(); console.log('husky ns-probe:', JSON.stringify(p));})"
+
+# Run nano-staged exactly once via pnpm, with explicit cwd and sanitized git env
+GIT_TRACE= GIT_TRACE_SETUP= GIT_CURL_VERBOSE= GIT_TRACE_PACKET= GIT_TRACE_PERFORMANCE= \
+PNPM_HOME= PNPM_GLOBAL_BIN= \
+pnpm exec nano-staged --cwd "$REPO_ROOT"

@@ -31,7 +31,7 @@ const resolveAutoTheme = (): 'light' | 'dark' => {
 };
 
 // 将 Ant Design 主题映射
-export const mapAntdTheme = (theme: ThemeType, effectiveTheme: 'light' | 'dark') => {
+export const mapAntdTheme = (effectiveTheme: 'light' | 'dark') => {
   return effectiveTheme === 'dark' ? 'realDark' : 'light';
 };
 

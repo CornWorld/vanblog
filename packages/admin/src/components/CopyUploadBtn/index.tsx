@@ -28,7 +28,7 @@ export default function (props: CopyUploadBtnProps) {
 
     formData.append('file', fileObj);
 
-    return fetch('/api/admin/img/upload?withWaterMark=true', {
+    return fetch('/api/v2/admin/media/upload?withWaterMark=true', {
       method: 'POST',
       headers: {
         token: localStorage.getItem('token') || 'null',

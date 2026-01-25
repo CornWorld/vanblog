@@ -1,4 +1,4 @@
-import React from 'react';
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import CodeEditor from '@/components/CodeEditor';
 import UploadBtn from '@/components/UploadBtn';
 import {
@@ -13,15 +13,14 @@ import {
 } from '@/services/van-blog/api';
 import { DownOutlined } from '@ant-design/icons';
 import { PageContainer } from '@ant-design/pro-layout';
-import { Button, Dropdown, Menu, message, Modal, Space, Spin, Tag, Tree } from 'antd';
+import { Button, Dropdown, message, Modal, Space, Spin, Tag, Tree } from 'antd';
 import type { DataNode } from 'antd/es/tree';
-import type { Key } from 'react';
+import type { Key, ReactNode } from 'react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { history } from '@/router';
 import PipelineModal from '../Pipeline/components/PipelineModal';
 import RunCodeModal from '../Pipeline/components/RunCodeModal';
 import './index.less';
-import type { ReactNode } from 'react';
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
 const { DirectoryTree } = Tree;
 
@@ -132,7 +131,7 @@ export default function CodePage() {
     setEditorLoading(true);
     try {
       const { data } = await getCustomPageFileDataByPath(path, node.key);
-      setValue(data);
+      setValue(data as string);
     } catch (error) {
       console.error('Failed to fetch file data:', error);
       message.error('获取文件数据失败！');
@@ -284,17 +283,19 @@ export default function CodePage() {
         }
         setEditorLoading(true);
         const { data } = await getPipelineById(id);
-        if (data) {
-          setCurrObj(data);
-          setValue(data?.script || '');
+        const pipelineData = data as any;
+        if (pipelineData) {
+          setCurrObj(pipelineData);
+          setValue(pipelineData?.script || '');
         }
         setEditorLoading(false);
       } else {
         setEditorLoading(true);
         const { data } = await getCustomPageByPath(path);
-        if (data) {
-          setCurrObj(data);
-          setValue(data?.html || '');
+        const pageData = data as any;
+        if (pageData) {
+          setCurrObj(pageData);
+          setValue(pageData?.html || '');
         }
         setEditorLoading(false);
       }
@@ -304,92 +305,88 @@ export default function CodePage() {
     }
   }, [path, id, type, isFolder]);
 
-  const actionMenu = (
-    <Menu
-      items={[
-        {
-          key: 'saveBtn',
-          label: '保存',
-          onClick: handleSave,
-        },
-        ...(type == 'pipeline'
-          ? [
-              {
-                key: 'runPipeline',
-                label: <RunCodeModal pipeline={currObj} trigger={<a>调试脚本</a>} />,
-              },
-              {
-                key: 'editPipelineInfo',
-                label: (
-                  <PipelineModal
-                    mode="edit"
-                    trigger={<a>编辑信息</a>}
-                    onFinish={() => {
-                      fetchData();
-                    }}
-                    initialValues={currObj}
-                  />
-                ),
-              },
-            ]
-          : []),
-        ...(isFolder
-          ? [
-              {
-                key: 'uploadFile',
-                label: (
-                  <UploadBtn
-                    setLoading={setUploadLoading}
-                    folder={true}
-                    muti={true}
-                    customUpload={true}
-                    text="上传文件夹"
-                    onFinish={() => {
-                      fetchData();
-                    }}
-                    url={`/api/admin/customPage/upload?path=${path}`}
-                    accept="*"
-                    loading={uploadLoading}
-                    plainText={true}
-                  />
-                ),
-              },
-              {
-                key: 'uploadFolder',
-                label: (
-                  <UploadBtn
-                    basePath={pathPrefix}
-                    customUpload={true}
-                    plainText={true}
-                    setLoading={setUploadLoading}
-                    folder={false}
-                    muti={false}
-                    text="上传文件"
-                    onFinish={() => {
-                      fetchData();
-                    }}
-                    url={`/api/admin/customPage/upload?path=${path}`}
-                    accept="*"
-                    loading={uploadLoading}
-                  />
-                ),
-              },
-            ]
-          : []),
-        ...(type == 'file'
-          ? [
-              {
-                key: 'view',
-                label: '查看',
-                onClick: () => {
-                  window.open(`/c${path}`);
-                },
-              },
-            ]
-          : []),
-      ]}
-    ></Menu>
-  );
+  const actionMenuItems = [
+    {
+      key: 'saveBtn',
+      label: '保存',
+      onClick: handleSave,
+    },
+    ...(type == 'pipeline'
+      ? [
+          {
+            key: 'runPipeline',
+            label: <RunCodeModal pipeline={currObj as any} trigger={<a>调试脚本</a>} />,
+          },
+          {
+            key: 'editPipelineInfo',
+            label: (
+              <PipelineModal
+                mode="edit"
+                trigger={<a>编辑信息</a>}
+                onFinish={() => {
+                  fetchData();
+                }}
+                initialValues={currObj as any}
+              />
+            ),
+          },
+        ]
+      : []),
+    ...(isFolder
+      ? [
+          {
+            key: 'uploadFile',
+            label: (
+              <UploadBtn
+                setLoading={setUploadLoading}
+                folder={true}
+                muti={true}
+                customUpload={true}
+                text="上传文件夹"
+                onFinish={() => {
+                  fetchData();
+                }}
+                url={`/api/admin/customPage/upload?path=${path}`}
+                accept="*"
+                loading={uploadLoading}
+                plainText={true}
+              />
+            ),
+          },
+          {
+            key: 'uploadFolder',
+            label: (
+              <UploadBtn
+                basePath={pathPrefix}
+                customUpload={true}
+                plainText={true}
+                setLoading={setUploadLoading}
+                folder={false}
+                muti={false}
+                text="上传文件"
+                onFinish={() => {
+                  fetchData();
+                }}
+                url={`/api/admin/customPage/upload?path=${path}`}
+                accept="*"
+                loading={uploadLoading}
+              />
+            ),
+          },
+        ]
+      : []),
+    ...(type == 'file'
+      ? [
+          {
+            key: 'view',
+            label: '查看',
+            onClick: () => {
+              window.open(`/c${path}`);
+            },
+          },
+        ]
+      : []),
+  ];
   useEffect(() => {
     fetchData();
   }, [fetchData]);
@@ -421,7 +418,7 @@ export default function CodePage() {
           </Space>
         ),
         extra: [
-          <Dropdown key="moreAction" menu={{ items: actionMenu }} trigger={['click']}>
+          <Dropdown key="moreAction" menu={{ items: actionMenuItems }} trigger={['click']}>
             <Button size="middle" type="primary">
               操作
               <DownOutlined />

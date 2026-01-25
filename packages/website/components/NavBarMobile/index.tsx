@@ -1,7 +1,7 @@
 import { slide as BurgerMenu } from 'react-burger-menu';
 import Link from 'next/link';
-import { useCallback, ReactNode } from 'react';
-import { MenuItem } from '../../api/getAllData';
+import { useCallback, type ReactNode } from 'react';
+import type { MenuItem } from '../../api/getAllData';
 import { useTranslation } from 'next-i18next';
 
 interface NavBarMobileProps {

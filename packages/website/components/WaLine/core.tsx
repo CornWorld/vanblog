@@ -2,7 +2,7 @@ import 'client-only';
 
 import '@waline/client/style';
 import React, { useEffect, useRef } from 'react';
-import { init, WalineInstance, WalineInitOptions } from '@waline/client';
+import { init, type WalineInstance, type WalineInitOptions } from '@waline/client';
 
 // Get Waline server URL from environment variable or config
 export const getWalineServerUrl = (): string => {

@@ -60,11 +60,11 @@ export default defineConfig({
       .use(MonacoWebpackPlugin, [
         { languages: ['css', 'json', 'html', 'javascript', 'typescript'] },
       ]);
-    
+
     // 禁用任何 esbuild 相关的 loader 或插件
     memo.plugins.delete('esbuild-loader');
     memo.plugins.delete('esbuild-plugin');
-    
+
     // 解决 noEmitOnErrors 和 emitOnErrors 冲突
     if (memo.optimization.get('noEmitOnErrors')) {
       memo.optimization.delete('noEmitOnErrors');

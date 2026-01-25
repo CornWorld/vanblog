@@ -33,7 +33,7 @@ export class AuthController {
     private readonly cacheProvider: CacheProvider,
     private readonly initProvider: InitProvider,
     private readonly pipelineProvider: PipelineProvider,
-  ) { }
+  ) {}
 
   @UseGuards(LoginGuard, AuthGuard('local'))
   @Post('/login')

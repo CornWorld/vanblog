@@ -23,20 +23,20 @@ The API layer follows a service-oriented architecture with the following compone
 
 The API layer interacts with the following public endpoints:
 
-- `GET /api/public/article` - Get articles with pagination and filtering
-- `GET /api/public/article/{id}` - Get a specific article by ID
-- `POST /api/public/article/{id}` - Get an encrypted article with password
-- `GET /api/public/article/viewer/{id}` - Get viewer statistics for an article
-- `GET /api/public/search` - Search articles
-- `GET /api/public/timeline` - Get articles organized by timeline
-- `GET /api/public/category` - Get articles organized by category
-- `GET /api/public/tag` - Get articles organized by tag
-- `GET /api/public/tag/{name}` - Get articles for a specific tag
-- `GET /api/public/meta` - Get site metadata
-- `GET /api/public/viewer` - Get site viewer statistics
-- `POST /api/public/viewer` - Update site viewer statistics
-- `GET /api/public/customPage/all` - Get all custom pages
-- `GET /api/public/customPage` - Get a specific custom page
+- `GET /api/v2/articles` - Get articles with pagination and filtering
+- `GET /api/v2/articles/{id}` - Get a specific article by ID
+- `POST /api/v2/articles/{id}` - Get an encrypted article with password
+- `GET /api/v2/articles/viewer/{id}` - Get viewer statistics for an article
+- `GET /api/v2/public/search` - Search articles
+- `GET /api/v2/public/timeline` - Get articles organized by timeline
+- `GET /api/v2/public/category` - Get articles organized by category
+- `GET /api/v2/public/tag` - Get articles organized by tag
+- `GET /api/v2/public/tag/{name}` - Get articles for a specific tag
+- `GET /api/v2/public/meta` - Get site metadata
+- `GET /api/v2/public/viewer` - Get site viewer statistics
+- `POST /api/v2/public/viewer` - Update site viewer statistics
+- `GET /api/v2/public/customPage/all` - Get all custom pages
+- `GET /api/v2/public/customPage` - Get a specific custom page
 
 ## Usage Examples
 
@@ -54,7 +54,11 @@ const article = await apiService.getArticleByIdOrPathname(123);
 const pageview = await apiService.updatePageView({ isNew: true, isNewByPath: true });
 
 // Using the domain-specific wrappers (for backward compatibility)
-import { getArticlesByOption, getArticleByIdOrPathname, getArticlesBySearch } from './api/getArticles';
+import {
+  getArticlesByOption,
+  getArticleByIdOrPathname,
+  getArticlesBySearch,
+} from './api/getArticles';
 import { updatePageview } from './api/pageview';
 
 // Get articles
@@ -89,4 +93,4 @@ When adding new API endpoints:
 
 1. Add the endpoint to the ApiService class in `service.ts`
 2. Add any required types to `types.ts`
-3. Update this README with the new endpoint 
+3. Update this README with the new endpoint

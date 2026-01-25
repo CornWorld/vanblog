@@ -1,6 +1,7 @@
 {
   "private": true,
   "name": "@vanblog/theme-default",
+  "type": "module",
   "scripts": {
     "anlysis": "pnpm next build",
     "build": "npx cross-env NODE_ENV=production pnpm next build",
@@ -14,6 +15,8 @@
     "@bytemd/plugin-math-ssr": "^1.22.0",
     "@bytemd/plugin-mermaid": "^1.22.0",
     "@bytemd/react": "^1.22.0",
+    "@ts-rest/core": "3.53.0-rc.1",
+    "@vanblog/shared": "workspace:*",
     "@next/bundle-analyzer": "^15.2.1",
     "@waline/client": "^3.5.5",
     "bytemd": "^1.22.0",
@@ -58,7 +61,6 @@
     "@types/hast": "^3.0.4",
     "@types/headroom.js": "^0.12.4",
     "@types/markdown-navbar": "^1.4.4",
-    "@types/node": "22.13.10",
     "@types/react": "19.0.10",
     "@types/react-burger-menu": "^2.8.7",
     "@types/react-copy-to-clipboard": "^5.0.7",
@@ -67,12 +69,10 @@
     "@types/react-scroll": "^1.8.10",
     "@types/react-syntax-highlighter": "^15.5.13",
     "autoprefixer": "^10.4.14",
-    "cross-env": "^7.0.3",
     "postcss": "^8.4.31",
     "tailwindcss": "^3.3.0",
-    "typescript": "5.8.2",
     "unified": "^11.0.5",
-    "vitest": "3.0.8"
+    "vitest": "^4.0.14"
   },
   "version": "0.54.0-corn.6"
 }

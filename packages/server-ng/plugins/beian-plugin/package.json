@@ -1,0 +1,34 @@
+{
+  "name": "beian-plugin",
+  "version": "1.0.0",
+  "description": "Manage ICP beian (filing) information",
+  "main": "index.ts",
+  "type": "module",
+  "private": true,
+  "keywords": ["vanblog", "plugin", "beian", "icp"],
+  "author": "VanBlog",
+  "license": "MIT",
+  "vanblog": {
+    "displayName": "Beian Plugin",
+    "config": {
+      "enabled": {
+        "type": "boolean",
+        "default": true,
+        "title": "启用插件",
+        "description": "是否启用备案信息插件"
+      },
+      "icp": {
+        "type": "string",
+        "default": "",
+        "title": "ICP 备案号",
+        "description": "网站 ICP 备案号（如：京ICP备12345678号）"
+      },
+      "policeIcp": {
+        "type": "string",
+        "default": "",
+        "title": "公安备案号",
+        "description": "网站公安备案号（如：京公网安备11010502012345号）"
+      }
+    }
+  }
+}

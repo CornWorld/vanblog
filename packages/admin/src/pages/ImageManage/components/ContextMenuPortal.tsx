@@ -1,4 +1,3 @@
-import React from 'react';
 import { Menu, Item, useContextMenu } from 'react-contexify';
 import {
   InfoCircleOutlined,

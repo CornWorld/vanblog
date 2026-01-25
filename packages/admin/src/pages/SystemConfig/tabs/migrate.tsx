@@ -1,4 +1,3 @@
-import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { createArticle, createDraft } from '@/services/van-blog/api';
 import { parseMarkdownFile } from '@/services/van-blog/parseMarkdownFile';
@@ -11,6 +10,7 @@ interface BatchImportProps {
 }
 
 const BatchImport = (props: BatchImportProps) => {
+  const { t } = useTranslation();
   return (
     <Upload
       showUploadList={false}
@@ -46,7 +46,7 @@ export default function MigrateTab() {
         }
       }
     } catch (error) {
-      console.error('Error importing file:', error);
+      console.error('Failed to import file:', error);
       message.error('导入失败，请检查文件格式');
     }
     setLoading(false);

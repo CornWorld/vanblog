@@ -1,8 +1,8 @@
-import Script from "next/script";
+import Script from 'next/script';
 export default function (props: { id: string }) {
   return (
     <>
-      {props.id != "" && (
+      {props.id != '' && (
         <>
           <Script
             strategy="afterInteractive"

@@ -1,6 +1,7 @@
 packages:
   - docs
   - packages/*
+  - packages/server-ng/plugins/*
 onlyBuiltDependencies:
   - '@nestjs/core'
   - '@parcel/watcher'

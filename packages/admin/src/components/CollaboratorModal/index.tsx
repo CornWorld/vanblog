@@ -2,7 +2,6 @@ import { createCollaborator, updateCollaborator } from '@/services/van-blog/api'
 import i18next from 'i18next';
 import { encryptPwd } from '@/services/van-blog/encryptPwd';
 import { ModalForm, ProFormSelect, ProFormText } from '@ant-design/pro-components';
-import React from 'react';
 
 // TODO: Extract this
 const PERMISSION_OPTIONS = [

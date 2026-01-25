@@ -32,40 +32,40 @@ export const AppProvider = ({ children }) => {
   const fetchInitData = useCallback(
     async (option) => {
       try {
-        console.log('[DEBUG] Fetching init data with options:', { option });
+        console.log('Fetching init data with options:', { option });
         const msg = await fetchAllMeta(option);
-        console.log('[DEBUG] Init data response status:', msg.statusCode);
+        console.log('Init data response status:', msg.statusCode);
 
         // 如果需要初始化并且不在初始化页面，就重定向到初始化页面
         if (msg.statusCode === 233) {
-          console.log('[DEBUG] App needs initialization');
+          console.log('App needs initialization');
           if (location.pathname !== initPath) {
-            console.log('[DEBUG] Redirecting to /init');
+            console.log('Redirecting to /init');
             navigate(initPath, { replace: true });
           } else {
-            console.log('[DEBUG] Already on init page, not redirecting');
+            console.log('Already on init page, not redirecting');
           }
           return msg.data || {};
         } else if (location.pathname === initPath && msg.statusCode === 200) {
-          console.log('[DEBUG] On init page but app is initialized, redirecting to home');
+          console.log('On init page but app is initialized, redirecting to home');
           navigate('/', { replace: true });
         }
 
         if (msg.statusCode === 200 && msg.data) {
-          console.log('[DEBUG] Init data successfully fetched');
+          console.log('Init data successfully fetched');
           return msg.data;
         } else {
-          console.warn('[DEBUG] Failed to fetch init data:', msg);
+          console.warn('Failed to fetch init data:', msg);
           return {};
         }
       } catch (error) {
-        console.error('[DEBUG] Error fetching init data:', error);
+        console.error('Error fetching init data:', error);
 
         // 如果状态码是 233，表示需要初始化
         if (error.response?.status === 233 || error.data?.statusCode === 233) {
-          console.log('[DEBUG] System needs initialization');
+          console.log('System needs initialization');
           if (location.pathname !== initPath) {
-            console.log('[DEBUG] Redirecting to init page');
+            console.log('Redirecting to init page');
             navigate(initPath, { replace: true });
           }
           return {};
@@ -73,7 +73,7 @@ export const AppProvider = ({ children }) => {
 
         // In development mode, provide default data instead of redirecting to login
         if (needMock) {
-          console.warn('[DEBUG] Using mock data for development');
+          console.warn('Using mock data for development');
           return {
             latestVersion: '0.0.0-dev',
             updatedAt: new Date().toISOString(),
@@ -88,10 +88,10 @@ export const AppProvider = ({ children }) => {
           location.pathname.includes(loginPath) || location.pathname.includes(initPath);
 
         if (!isOnAuthPage) {
-          console.log('[DEBUG] Not on auth page, redirecting to login');
+          console.log('Not on auth page, redirecting to login');
           navigate(loginPath, { replace: true });
         } else {
-          console.log('[DEBUG] Already on auth page, not redirecting');
+          console.log('Already on auth page, not redirecting');
         }
 
         return {};
@@ -112,7 +112,7 @@ export const AppProvider = ({ children }) => {
       const { data } = await fetchLatestVersionInfo();
 
       if (data && data.version && data.version !== currentVersion) {
-        console.log('[DEBUG] New version available:', data.version);
+        console.log('New version available:', data.version);
 
         Modal.info({
           title: '版本更新',
@@ -149,7 +149,7 @@ export const AppProvider = ({ children }) => {
         });
       }
     } catch (error) {
-      console.error('[DEBUG] Error checking version update:', error);
+      console.error('Error checking version update:', error);
     }
   };
 
@@ -186,7 +186,7 @@ export const AppProvider = ({ children }) => {
         document.documentElement.style.setProperty('--vh', `${window.innerHeight * 0.01}px`);
         document.documentElement.style.setProperty('--window-height', `${window.innerHeight}px`);
       } catch (error) {
-        console.error('[DEBUG] Error setting viewport height variables:', error);
+        console.error('Error setting viewport height variables:', error);
       }
     };
 

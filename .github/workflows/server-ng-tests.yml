@@ -1,0 +1,115 @@
+name: server-ng-tests
+
+on:
+  push:
+    paths:
+      - 'packages/server-ng/**'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - '.github/workflows/server-ng-tests.yml'
+      - '.github/matchers/**'
+  pull_request:
+    paths:
+      - 'packages/server-ng/**'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - '.github/workflows/server-ng-tests.yml'
+      - '.github/matchers/**'
+
+permissions:
+  contents: read
+  checks: write
+
+concurrency:
+  group: server-ng-tests-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DEFAULT_BRANCH: main
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Register ESLint compact matcher
+        run: echo "::add-matcher::.github/matchers/eslint-compact.json"
+
+      - name: Register tsc matcher
+        run: echo "::add-matcher::.github/matchers/tsc.json"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm i --frozen-lockfile
+
+      - name: Build shared package
+        run: pnpm --filter @vanblog/shared build
+
+      - name: Unit tests
+        run: pnpm -C packages/server-ng run test
+
+      - name: E2E tests
+        run: pnpm -C packages/server-ng run test:e2e
+
+      - name: Coverage report
+        run: pnpm -C packages/server-ng run test:cov
+
+      - name: Coverage summary and soft threshold
+        run: >-
+          node -e "const fs=require('fs');const p='packages/server-ng/coverage/coverage-summary.json'; if(!fs.existsSync(p)){console.log('::warning::No coverage summary found at '+p);process.exit(0);} 
+          const sum=JSON.parse(fs.readFileSync(p,'utf8')).total;const min=80; 
+          const m=k=>sum[k]?.pct??0;const lines=m('lines'),fns=m('functions'),br=m('branches'),stmts=m('statements'); 
+          const md=['### server-ng Coverage Summary','',`- Threshold: ${min}%`,`- Lines: ${lines}%`,`- Functions: ${fns}%`,`- Branches: ${br}%`,`- Statements: ${stmts}%`].join('\n'); 
+          try{fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY||'/dev/null',md+'\n');}catch(e){} 
+          if(lines<min||fns<min||br<min||stmts<min){console.log(`::warning::Coverage below threshold ${min}% (lines=${lines} fns=${fns} br=${br} stmts=${stmts})`);}else{console.log(`Coverage OK >= ${min}% (lines=${lines} fns=${fns} br=${br} stmts=${stmts})`);}" 
+
+
+      - name: Coverage hard threshold (default branch and PRs only)
+        if: ${{ github.ref == format('refs/heads/{0}', env.DEFAULT_BRANCH) || (github.event_name == 'pull_request' && github.base_ref == env.DEFAULT_BRANCH) }}
+        run: >-
+          node -e "const fs=require('fs');const p='packages/server-ng/coverage/coverage-summary.json'; 
+          if(!fs.existsSync(p)){console.log('::error::No coverage summary found at '+p);process.exit(1);} 
+          const sum=JSON.parse(fs.readFileSync(p,'utf8')).total;const min=80; 
+          const m=k=>sum[k]?.pct??0;const lines=m('lines'),fns=m('functions'),br=m('branches'),stmts=m('statements'); 
+          if(lines<min||fns<min||br<min||stmts<min){console.log(`::error::Coverage below threshold ${min}% (lines=${lines} fns=${fns} br=${br} stmts=${stmts})`);process.exit(1);} 
+          console.log(`Coverage OK >= ${min}% (lines=${lines} fns=${fns} br=${br} stmts=${stmts})`);"
+
+
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: server-ng-coverage
+          path: packages/server-ng/coverage
+
+      - name: Upload JUnit test reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: server-ng-junit-reports
+          path: |
+            packages/server-ng/junit-report.unit.xml
+            packages/server-ng/junit-report.e2e.xml
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Publish JUnit test results (Checks)
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        if: ${{ !cancelled() }}
+        with:
+          files: |
+            packages/server-ng/junit-report.unit.xml
+            packages/server-ng/junit-report.e2e.xml
+          check_name: server-ng Test Results
+          comment_mode: off

@@ -1,7 +1,7 @@
-import React from 'react';
 import i18next from 'i18next';
 import { Button, message, notification } from 'antd';
 import defaultSettings from '../config/defaultSettings';
+
 const { pwa } = defaultSettings;
 const isHttps = document.location.protocol === 'https:';
 
@@ -18,7 +18,7 @@ const clearCache = () => {
           caches.delete(key);
         });
       })
-      .catch((e) => console.log(e));
+      .catch((e) => console.error('Failed to clear caches:', e));
   }
 }; // if pwa is true
 

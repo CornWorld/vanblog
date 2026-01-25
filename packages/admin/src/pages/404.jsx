@@ -1,5 +1,4 @@
 import { Button, Result } from 'antd';
-import React from 'react';
 import { useTranslation } from 'react-i18next';
 
 export default () => {

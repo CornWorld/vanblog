@@ -1,6 +1,11 @@
 import { config, isBuildTime, isDevelopment } from '../utils/loadConfig';
+import type { CsrfResponse } from '../types/api';
 
 const isBrowser = typeof window !== 'undefined';
+
+// Typed helpers for query parameters
+type QueryParamPrimitive = string | number | boolean | null | undefined;
+type QueryParams = Record<string, QueryParamPrimitive | QueryParamPrimitive[]>;
 
 export class ApiError extends Error {
   constructor(
@@ -8,8 +13,8 @@ export class ApiError extends Error {
     public status?: number,
     public endpoint?: string,
     public context?: string,
-    public details?: any,
-    public stack?: string
+    public details?: unknown,
+    public stack?: string,
   ) {
     super(message);
     this.name = 'ApiError';
@@ -28,67 +33,96 @@ export class ApiError extends Error {
       endpoint: this.endpoint,
       context: this.context,
       details: this.details,
-      stack: this.stack
+      stack: this.stack,
     };
   }
 }
 
 export class ApiClient {
   private baseUrl: string;
-  private cache: Map<string, { data: any; timestamp: number }>;
+  private cache: Map<string, { data: unknown; timestamp: number }>;
   private readonly cacheDuration: number;
+  private csrfToken?: string;
 
-  constructor(baseUrl?: string, cacheDuration = 5 * 60 * 1000) { // 5 minutes default cache
+  constructor(baseUrl?: string, cacheDuration = 5 * 60 * 1000) {
+    // 5 minutes default cache
     this.baseUrl = baseUrl || config.baseUrl;
-    
+
+    // Enforce same-origin baseUrl in browser to ensure cookies/CSRF work via Next.js proxy
+    if (isBrowser) {
+      this.baseUrl = 'window.location.origin';
+    }
+
     // Validate that baseUrl is properly set
     if (!this.baseUrl) {
       console.warn('[ApiClient] No baseUrl provided. Setting default fallback URL.');
       this.baseUrl = 'http://127.0.0.1:3000';
     } else if (this.baseUrl !== 'window.location.origin' && !this.isValidUrlString(this.baseUrl)) {
-      console.warn(`[ApiClient] Invalid baseUrl format: "${this.baseUrl}". Setting default fallback URL.`);
+      console.warn(
+        `[ApiClient] Invalid baseUrl format: "${this.baseUrl}". Setting default fallback URL.`,
+      );
       this.baseUrl = 'http://127.0.0.1:3000';
     }
-    
+
     this.cache = new Map();
     this.cacheDuration = cacheDuration;
-    
+
     // Log configuration in development mode
     if (isDevelopment) {
       console.log(`[ApiClient] Initialized with baseUrl: ${this.baseUrl}`);
       this.validateEnvironmentVariables();
     }
   }
-  
+
   private validateEnvironmentVariables() {
     const serverUrl = typeof process !== 'undefined' ? process.env.VAN_BLOG_SERVER_URL : undefined;
-    const clientUrl = typeof process !== 'undefined' ? process.env.NEXT_PUBLIC_VANBLOG_SERVER_URL : undefined;
-    
+    const clientUrl =
+      typeof process !== 'undefined' ? process.env.NEXT_PUBLIC_VANBLOG_SERVER_URL : undefined;
+
     if (isDevelopment) {
       console.log('[ApiClient] Environment check:');
       console.log(`- VAN_BLOG_SERVER_URL: ${serverUrl || 'not set'}`);
       console.log(`- NEXT_PUBLIC_VANBLOG_SERVER_URL: ${clientUrl || 'not set'}`);
     }
-    
+
     // Check if we're in the browser and using the right URL
     if (isBrowser) {
       if (serverUrl && !clientUrl) {
-        console.warn(`[ApiClient] Warning: Running in browser but only VAN_BLOG_SERVER_URL is set. This might cause issues as browser code cannot directly access non-NEXT_PUBLIC_ variables.`);
+        console.warn(
+          `[ApiClient] Warning: Running in browser but only VAN_BLOG_SERVER_URL is set. This might cause issues as browser code cannot directly access non-NEXT_PUBLIC_ variables.`,
+        );
       }
-      
+
       if (clientUrl && this.baseUrl !== clientUrl) {
-        console.warn(`[ApiClient] Warning: Current baseUrl (${this.baseUrl}) doesn't match NEXT_PUBLIC_VANBLOG_SERVER_URL (${clientUrl})`);
+        console.warn(
+          `[ApiClient] Warning: Current baseUrl (${this.baseUrl}) doesn't match NEXT_PUBLIC_VANBLOG_SERVER_URL (${clientUrl})`,
+        );
       }
     } else {
       // Server-side
       if (serverUrl && this.baseUrl !== serverUrl) {
-        console.warn(`[ApiClient] Warning: Current baseUrl (${this.baseUrl}) doesn't match VAN_BLOG_SERVER_URL (${serverUrl})`);
+        console.warn(
+          `[ApiClient] Warning: Current baseUrl (${this.baseUrl}) doesn't match VAN_BLOG_SERVER_URL (${serverUrl})`,
+        );
       }
     }
   }
 
-  private getCacheKey(endpoint: string, params?: Record<string, any>): string {
-    const queryString = params ? new URLSearchParams(params as any).toString() : '';
+  private getCacheKey(endpoint: string, params?: QueryParams): string {
+    const queryParams = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value === undefined || value === null) return;
+        if (Array.isArray(value)) {
+          for (const v of value) {
+            queryParams.append(key, String(v));
+          }
+        } else {
+          queryParams.append(key, String(value));
+        }
+      });
+    }
+    const queryString = queryParams.toString();
     return `${endpoint}:${queryString}`;
   }
 
@@ -100,56 +134,59 @@ export class ApiClient {
     endpoint: string,
     options: RequestInit = {},
     retries = 3,
-    context = ''
+    context = '',
   ): Promise<T> {
     if (isBuildTime) {
       return {} as T;
     }
-    
+
     let url: URL;
-    if (this.baseUrl === "window.location.origin") {
+    if (this.baseUrl === 'window.location.origin') {
       if (isBrowser) {
         // Browser: Use actual window.location.origin
         url = new URL(endpoint, window.location.origin);
       } else {
         // Server: We need a valid base URL - use an absolute URL or default
-        const serverUrl = typeof process !== 'undefined' ? 
-          (process.env.VAN_BLOG_SERVER_URL || 'http://127.0.0.1:3000') : 
-          'http://127.0.0.1:3000';
+        const serverUrl =
+          typeof process !== 'undefined'
+            ? process.env.VAN_BLOG_SERVER_URL || 'http://127.0.0.1:3000'
+            : 'http://127.0.0.1:3000';
         url = new URL(endpoint, serverUrl);
       }
     } else {
       // Normal case: baseUrl is a valid URL string
       url = new URL(endpoint, this.baseUrl);
     }
-    
+
     if (isDevelopment) {
       console.log(`[ApiClient] Fetching ${url} (${context})`);
     }
 
-    let lastError: Error | null = null;
+    let lastError: unknown = null;
 
     for (let i = 0; i < retries; i++) {
       try {
         // Add timeout to prevent hanging requests
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-        
+
         const response = await fetch(url, {
           ...options,
           headers: {
             'Content-Type': 'application/json',
             ...options.headers,
           },
+          // Always include credentials so cookies (for CSRF) are sent
+          credentials: 'include',
           signal: controller.signal,
         });
-        
+
         clearTimeout(timeoutId);
 
         if (!response.ok) {
           const errorText = await response.text().catch(() => 'No error details available');
-          let errorData = {};
-          
+          let errorData: unknown = {};
+
           try {
             if (errorText && errorText.trim().startsWith('{')) {
               errorData = JSON.parse(errorText);
@@ -157,13 +194,21 @@ export class ApiClient {
           } catch (parseError) {
             console.error(`[ApiClient] Error parsing error response: ${parseError}`);
           }
-          
+
+          const detailMessage =
+            typeof errorData === 'object' &&
+            errorData !== null &&
+            'message' in errorData &&
+            typeof (errorData as { message?: unknown }).message === 'string'
+              ? (errorData as { message: string }).message
+              : errorText;
+
           throw new ApiError(
-            `HTTP error! url: ${url}, status: ${response.status}, ${(errorData as any).message || errorText}`,
+            `HTTP error! url: ${url}, status: ${response.status}, ${detailMessage}`,
             response.status,
             endpoint,
             context,
-            errorData
+            errorData,
           );
         }
 
@@ -183,44 +228,57 @@ export class ApiClient {
               response.status,
               endpoint,
               context,
-              { parseError }
+              { parseError },
             );
           }
         }
 
         const data = await response.json();
+
+        // Handle server-ng v2 API response format: {statusCode: number, data: T}
+        // If the response has statusCode and data properties, it's a v2 API response
+        if (data && typeof data === 'object' && 'statusCode' in data && 'data' in data) {
+          // For v2 API, return the complete response object so service layer can extract data
+          return data as T;
+        }
+
+        // For v1 API or other formats, return data directly
         return data as T;
-      } catch (error: any) {
+      } catch (error: unknown) {
         lastError = error;
         if (isDevelopment) {
           console.error(`[ApiClient] Fetch attempt ${i + 1}/${retries} failed:`, error);
         }
-        
+
         if (i < retries - 1) {
           const delay = 1000 * (i + 1);
           if (isDevelopment) {
             console.log(`[ApiClient] Retrying in ${delay}ms...`);
           }
-          await new Promise(resolve => setTimeout(resolve, delay));
+          await new Promise((resolve) => setTimeout(resolve, delay));
         }
       }
     }
 
     // Provide helpful error message for connection issues
-    if (isDevelopment && 
-        lastError && 
-        (lastError.message === 'Failed to fetch' || lastError.name === 'AbortError')) {
-      const serverUrl = typeof process !== 'undefined' ? process.env.VAN_BLOG_SERVER_URL : undefined;
-      const clientUrl = typeof process !== 'undefined' ? process.env.NEXT_PUBLIC_VANBLOG_SERVER_URL : undefined;
-      
+    if (
+      isDevelopment &&
+      lastError instanceof Error &&
+      (lastError.message === 'Failed to fetch' || lastError.name === 'AbortError')
+    ) {
+      const serverUrl =
+        typeof process !== 'undefined' ? process.env.VAN_BLOG_SERVER_URL : undefined;
+      const clientUrl =
+        typeof process !== 'undefined' ? process.env.NEXT_PUBLIC_VANBLOG_SERVER_URL : undefined;
+
       console.error(`
         [ApiClient] Connection Error: Unable to connect to ${this.baseUrl}
-        
+
         This could be due to:
         1. The API server is not running
         2. The API server is running on a different URL than configured
         3. CORS is not properly configured
-        
+
         Check your environment variables:
         - VAN_BLOG_SERVER_URL: ${serverUrl || 'not set'}
         - NEXT_PUBLIC_VANBLOG_SERVER_URL: ${clientUrl || 'not set'}
@@ -230,21 +288,30 @@ export class ApiClient {
 
     if (lastError instanceof ApiError) {
       throw lastError;
-    } else if (lastError) {
+    } else if (lastError instanceof Error) {
       throw new ApiError(
         lastError.message || 'Unknown error occurred',
         undefined,
         endpoint,
         context,
-        { originalError: lastError.toString() }
+        { originalError: String(lastError) },
       );
+    } else if (lastError) {
+      throw new ApiError('Unknown error occurred', undefined, endpoint, context, {
+        originalError: String(lastError),
+      });
     }
 
     // This should never happen, but TypeScript requires a return value
     throw new ApiError('Maximum retries exceeded', undefined, endpoint, context);
   }
 
-  async get<T>(endpoint: string, params?: Record<string, any>, context = ''): Promise<T> {
+  async get<T>(
+    endpoint: string,
+    params?: QueryParams,
+    context = '',
+    headers?: Record<string, string>,
+  ): Promise<T> {
     const cacheKey = this.getCacheKey(endpoint, params);
     const cachedItem = this.cache.get(cacheKey);
 
@@ -257,29 +324,45 @@ export class ApiClient {
       const queryParams = new URLSearchParams();
       Object.entries(params).forEach(([key, value]) => {
         if (value !== undefined && value !== null) {
-          queryParams.append(key, String(value));
+          if (Array.isArray(value)) {
+            for (const v of value) {
+              queryParams.append(key, String(v));
+            }
+          } else {
+            queryParams.append(key, String(value));
+          }
         }
       });
-      
+
       const queryString = queryParams.toString();
       if (queryString) {
         url = `${endpoint}?${queryString}`;
       }
     }
 
-    const data = await this.fetchWithRetry<T>(url, { method: 'GET' }, 3, context);
-    
+    const options: RequestInit = { method: 'GET', headers };
+    const data = await this.fetchWithRetry<T>(url, options, 3, context);
+
     // Cache the result
     this.cache.set(cacheKey, { data, timestamp: Date.now() });
-    
     return data;
   }
 
-  async post<T>(endpoint: string, body: any, context = ''): Promise<T> {
+  async post<T>(
+    endpoint: string,
+    body: unknown,
+    context = '',
+    headers?: Record<string, string>,
+  ): Promise<T> {
+    // Ensure CSRF token is present for POST requests to API endpoints
+    await this.ensureCsrfToken();
+
     const options: RequestInit = {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        ...(headers || {}),
+        ...(this.csrfToken ? { 'x-csrf-token': this.csrfToken } : {}),
       },
       body: JSON.stringify(body),
     };
@@ -287,11 +370,41 @@ export class ApiClient {
     return this.fetchWithRetry<T>(endpoint, options, 3, context);
   }
 
+  private async ensureCsrfToken(): Promise<void> {
+    // Skip during build time or if already set
+    if (isBuildTime || this.csrfToken) return;
+
+    try {
+      const res = await this.fetchWithRetry<{ statusCode?: number; csrfToken?: string }>(
+        '/api/v2/auth/csrf-token',
+        { method: 'GET' },
+        1,
+        'getCsrfToken',
+      );
+
+      // Support both plain and wrapped responses
+      if (res && typeof res === 'object') {
+        const csrfRes = res as CsrfResponse;
+        const token =
+          'csrfToken' in csrfRes ? csrfRes.csrfToken : 'data' in csrfRes && csrfRes.data?.csrfToken;
+
+        if (typeof token === 'string' && token.length > 0) {
+          this.csrfToken = token;
+        }
+      }
+    } catch (e) {
+      // Log but do not throw; subsequent POST may fail and surface error appropriately
+      if (isDevelopment) {
+        console.warn('[ApiClient] Failed to fetch CSRF token:', e);
+      }
+    }
+  }
+
   clearCache(): void {
     this.cache.clear();
   }
 
-  invalidateCache(endpoint: string, params?: Record<string, any>): void {
+  invalidateCache(endpoint: string, params?: QueryParams): void {
     const cacheKey = this.getCacheKey(endpoint, params);
     this.cache.delete(cacheKey);
   }
@@ -300,7 +413,7 @@ export class ApiClient {
     try {
       new URL(url);
       return true;
-    } catch (e) {
+    } catch {
       return false;
     }
   }

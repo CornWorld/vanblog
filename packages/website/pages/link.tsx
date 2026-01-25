@@ -1,14 +1,14 @@
 import { useState, useEffect, useMemo } from 'react';
-import { LinkItem } from '../api/getAllData';
-import AuthorCard, { AuthorCardProps } from '../components/AuthorCard';
+import type { LinkItem } from '../api/getAllData';
+import AuthorCard, { type AuthorCardProps } from '../components/AuthorCard';
 import Layout from '../components/Layout';
 import LinkCard from '../components/LinkCard';
 import Markdown from '../components/Markdown';
 import WaLine from '../components/WaLine';
-import { LayoutProps } from '../utils/getLayoutProps';
+import type { LayoutProps } from '../utils/getLayoutProps';
 import { getLinkPageProps } from '../utils/getPageProps';
 import { revalidate } from '../utils/loadConfig';
-import { PageViewData } from '../api/pageView';
+import type { PageViewData } from '../api/pageView';
 import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
 import { useTranslation } from 'next-i18next';
 
@@ -26,7 +26,7 @@ const LinkPage = (props: LinkPageProps) => {
     setUrl(window.location.origin);
   }, [setUrl]);
   const logo = useMemo(() => {
-    let logo = props.layoutProps.logo;
+    let { logo } = props.layoutProps;
     if (props.layoutProps.logo == '') {
       logo = props.authorCardProps.logo || '';
     }
@@ -85,7 +85,7 @@ const LinkPage = (props: LinkPageProps) => {
 };
 
 export default LinkPage;
-export async function getStaticProps({ locale }) {
+export async function getStaticProps({ locale }: { locale: string }) {
   const result = {
     props: {
       ...(await getLinkPageProps()),

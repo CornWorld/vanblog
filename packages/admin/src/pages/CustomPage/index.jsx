@@ -1,4 +1,3 @@
-import React from 'react';
 import { useTranslation } from 'react-i18next';
 import CustomPageModal from '@/components/CustomPageModal';
 import { deleteCustomPageByPath, getCustomPages } from '@/services/van-blog/api';

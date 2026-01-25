@@ -1,36 +1,36 @@
-export const washArticlesByKey = (
-  rawArticles: any[],
-  getValueFn: (val: any) => any,
-  isKeyArray: boolean
-) => {
-  const articles = {} as any;
+import type { Article } from '../types/article';
 
-  const dates = Array.from(
+export type WashArticleKey = keyof Pick<Article, 'createdAt' | 'updatedAt' | 'category' | 'tags'>;
+
+export type WashArticlesResult = Record<string, Article[]>;
+
+export const washArticlesByKey = <K extends WashArticleKey>(
+  rawArticles: Article[],
+  getValueFn: (val: Article) => Article[K] | Article[K][],
+  isKeyArray: boolean,
+): WashArticlesResult => {
+  const articles: WashArticlesResult = {};
+
+  const values = Array.from(
     new Set(
       isKeyArray
-        ? rawArticles.flatMap((a) => getValueFn(a))
-        : rawArticles.map((a) => getValueFn(a))
-    )
+        ? rawArticles.flatMap((a) => getValueFn(a) as Article[K][])
+        : rawArticles.map((a) => getValueFn(a) as Article[K]),
+    ),
   );
 
-  for (const date of dates) {
+  for (const value of values) {
     const curArticles = rawArticles
       .filter((each) =>
-        isKeyArray ? getValueFn(each).includes(date) : getValueFn(each) == date
+        isKeyArray
+          ? (getValueFn(each) as Article[K][]).includes(value as Article[K])
+          : (getValueFn(each) as Article[K]) == value,
       )
-      .map((each) => ({
-        title: each.title,
-        id: each.id,
-        createdAt: each.createdAt,
-        updatedAt: each.updatedAt,
-      }))
       .sort(
-        (prev, next) =>
-          new Date(next.createdAt).getTime() -
-          new Date(prev.createdAt).getTime()
+        (prev, next) => new Date(next.createdAt).getTime() - new Date(prev.createdAt).getTime(),
       );
 
-    articles[String(date)] = curArticles;
+    articles[String(value)] = curArticles;
   }
 
   return articles;

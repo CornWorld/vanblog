@@ -1,0 +1,43 @@
+export class Draft {
+  id!: number;
+  title!: string;
+  content!: string;
+  pathname!: string | null;
+  tags!: string[];
+  categories!: string[];
+  category!: string | null;
+  author!: string;
+  version!: number;
+  userId!: number;
+  wordCount!: number;
+  readTime!: number;
+  summary?: string;
+  cover?: string;
+  createdAt!: string;
+  updatedAt!: string;
+
+  constructor(partial: Partial<Draft>) {
+    Object.assign(this, partial);
+  }
+}
+
+export class DraftVersion {
+  id!: number;
+  draftId!: number;
+  version!: number;
+  title!: string;
+  content!: string;
+  pathname!: string | null;
+  tags!: string[];
+  categories!: string[];
+  category!: string | null;
+  author!: string;
+  summary?: string;
+  cover?: string;
+  createdAt!: string;
+  comment?: string;
+
+  constructor(partial: Partial<DraftVersion>) {
+    Object.assign(this, partial);
+  }
+}

@@ -1,6 +1,5 @@
-import React from 'react';
 import { Pagination } from 'antd';
-import { PaginationProps } from '../types';
+import type { PaginationProps } from '../types';
 
 export const PaginationComponent: React.FC<PaginationProps> = ({
   total,

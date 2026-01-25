@@ -1,0 +1,74 @@
+# compiled output
+/dist
+/node_modules
+
+# Logs
+logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS
+.DS_Store
+
+# Tests
+/coverage
+/.nyc_output
+
+# IDEs and editors
+/.idea
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+
+# IDE - VSCode
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# JSON 配置文件（保留示例文件）
+config/development.json
+config/test.json
+config/local.json
+config/*.local.json
+# 注意：config/default.json 和 config/production.json 作为模板提交
+
+# JSON Schema 文件（自动生成）
+config.v*.schema.json
+# 注意：config.schema.json (latest) 提交到版本控制
+
+# Database
+/data
+/test-data
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+
+# Drizzle
+/drizzle/meta
+/drizzle/*.sql
+
+# Test reports (Vitest JUnit)
+/junit-report*.xml
+/test-results/
+/vitest-output-*.json
+cookies.txt
+
+*.pid
+
+uploads/
+/tsconfig.tsbuildinfo
+.cache/

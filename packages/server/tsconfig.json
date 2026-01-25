@@ -1,25 +1,22 @@
 {
+  "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "module": "CommonJS",
-    "esModuleInterop": true,
-    "declaration": true,
-    "removeComments": true,
-    "emitDecoratorMetadata": true,
-    "experimentalDecorators": true,
-    "allowSyntheticDefaultImports": true,
-    "target": "es2017",
-    "sourceMap": true,
+    "composite": true,
     "outDir": "./dist",
     "baseUrl": "./",
-    // "rootDir": "./src",
-    "incremental": true,
-    "skipLibCheck": true,
+    // Legacy server uses CommonJS
+    "module": "CommonJS",
+    "moduleResolution": "node",
+    // Disable verbatimModuleSyntax for CommonJS
+    "verbatimModuleSyntax": false,
+    // Relax strict checks for legacy code
     "strictNullChecks": false,
     "noImplicitAny": false,
     "strictBindCallApply": false,
-    "forceConsistentCasingInFileNames": true,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "noImplicitReturns": false,
     "noFallthroughCasesInSwitch": false,
-    "composite": true,
     "paths": {
       "mongoose": ["./node_modules/mongoose"]
     }

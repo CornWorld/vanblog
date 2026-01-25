@@ -1,6 +1,6 @@
 export const encodeQuerystring = (s: string) => {
   if (!s) {
-    return "";
+    return '';
   }
-  return s.replace(/#/g, "%23").replace(/\//g, "%2F");
+  return s.replace(/#/g, '%23').replace(/\//g, '%2F');
 };

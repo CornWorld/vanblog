@@ -1,4 +1,4 @@
-import React from 'react';
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useTranslation } from 'react-i18next';
 import SiteInfoForm from '@/components/SiteInfoForm';
 import { getSiteInfo, updateSiteInfo } from '@/services/van-blog/api';
@@ -39,18 +39,18 @@ export default function () {
             const { data } = await getSiteInfo();
             return data;
           } catch (error) {
-            console.error('Failed to get site info:', error);
+            console.error('Failed to get site info', error);
             message.error('Failed to load site information');
             return {};
           }
         }}
         syncToInitialValues={true}
-        onFinish={async (data) => {
+        onFinish={async (data: any) => {
           let ok = true;
           try {
             new URL(data.baseUrl);
           } catch (error) {
-            console.error('Invalid base URL:', error);
+            console.debug('Invalid base URL', error);
             ok = false;
           }
           if (!data.baseUrl) {
@@ -76,7 +76,7 @@ export default function () {
             await updateSiteInfo(data);
             message.success(t('site_info.message.update_success'));
           } catch (error) {
-            console.error('Failed to update site info:', error);
+            console.error('Failed to update site info', error);
             message.error('Failed to update site information');
           }
         }}

@@ -18,9 +18,7 @@ export async function getNetIp(req: any) {
       const tmp = ipNumArray[0] + '.' + ipNumArray[1];
       if (
         tmp === '192.168' ||
-        (ipNumArray[0] === '172' &&
-          ipNumArray[1] >= 16 &&
-          ipNumArray[1] <= 32) ||
+        (ipNumArray[0] === '172' && ipNumArray[1] >= 16 && ipNumArray[1] <= 32) ||
         tmp === '10.7' ||
         tmp === '127.0'
       ) {

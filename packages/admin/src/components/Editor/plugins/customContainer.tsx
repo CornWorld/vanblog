@@ -1,7 +1,7 @@
-import { BytemdPlugin } from 'bytemd';
+import type { BytemdPlugin } from 'bytemd';
 import remarkDirective from 'remark-directive';
 import { visit } from 'unist-util-visit';
-import i18next, { TFunction } from 'i18next';
+import i18next, { type TFunction } from 'i18next';
 import { icons } from '../icons';
 
 const getContainerActions = () => [

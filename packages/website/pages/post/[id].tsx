@@ -4,9 +4,10 @@ import { getArticlesByOption } from '../../api/getArticles';
 import Layout from '../../components/Layout';
 import PostCard from '../../components/PostCard';
 import Toc from '../../components/Toc';
-import { Article } from '../../types/article';
+import { type Article } from '../../types/article';
+import { normalizeArticle } from '../../types/contracts';
 import { getArticlePath } from '../../utils/getArticlePath';
-import { LayoutProps } from '../../utils/getLayoutProps';
+import { type LayoutProps } from '../../utils/getLayoutProps';
 import { getPostPagesProps } from '../../utils/getPageProps';
 import { hasToc } from '../../utils/hasToc';
 import { getArticlesKeyWord } from '../../utils/keywords';
@@ -123,19 +124,8 @@ const PostPages = (props: PostPagesProps) => {
   const path = getArticlePath(props.article);
   const showToc = hasToc(content);
 
-  // Create a safe reference to the article with default values
-  const article = {
-    title: props.article.title || '',
-    content: props.article.content || '',
-    updatedAt: props.article.updatedAt || new Date().toISOString(),
-    createdAt: props.article.createdAt || new Date().toISOString(),
-    category: props.article.category || '',
-    private: props.article.private || false,
-    top: props.article.top,
-    copyright: props.article.copyright,
-    tags: props.article.tags || [],
-    ...props.article,
-  };
+  // Use normalizeArticle to eliminate defensive programming
+  const article = normalizeArticle(props.article);
 
   return (
     <Layout
@@ -172,7 +162,7 @@ const PostPages = (props: PostPagesProps) => {
         payDark={props.payDark}
         private={article.private}
         author={props.author}
-        tags={article.tags}
+        tags={[...article.tags]}
         pre={props.pre}
         next={props.next}
         enableComment={props.layoutProps.enableComment}

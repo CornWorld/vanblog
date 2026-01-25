@@ -1,15 +1,13 @@
 {
   "extends": "./tsconfig.base.json",
-
+  "compilerOptions": {
+    "noEmit": true
+  },
   "references": [
-    {
-      "path": "./packages/admin"
-    },
-    {
-      "path": "./packages/website"
-    },
-    {
-      "path": "./packages/server"
-    }
+    { "path": "./packages/shared" },
+    { "path": "./packages/server-ng" },
+    { "path": "./packages/admin" },
+    { "path": "./packages/website" },
+    { "path": "./packages/server" }
   ]
 }

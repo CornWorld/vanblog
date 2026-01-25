@@ -1,6 +1,5 @@
-import React from 'react';
 import { Card, Col, Row, Image } from 'antd';
-import { ImageGridProps } from '../types';
+import type { ImageGridProps } from '../types';
 import { getImgLink } from './tools';
 
 export const ImageGrid: React.FC<ImageGridProps> = ({ data, responsive, displayMenu }) => {

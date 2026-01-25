@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { PageContainer } from '@ant-design/pro-components';
@@ -12,7 +13,7 @@ import { ImageGrid } from './components/ImageGrid';
 import { PaginationComponent } from './components/Pagination';
 import { ActionButtons } from './components/ActionButtons';
 import { ContextMenuPortal } from './components/ContextMenuPortal';
-import { StaticItem } from './types';
+import type { StaticItem } from './types';
 import 'react-contexify/dist/ReactContexify.css';
 import './index.less';
 
@@ -76,7 +77,7 @@ const ImageManager: React.FC = () => {
         setTotal(0);
       }
     } catch (error) {
-      console.error('Failed to fetch images:', error);
+      console.error('Failed to fetch images', error);
       message.error(t('image.error.get'));
       setData([]);
     } finally {
@@ -97,7 +98,7 @@ const ImageManager: React.FC = () => {
         case 'info':
           Modal.info({
             title: t('image.modal.info.title'),
-            content: <ObjTable obj={mergeMetaInfo(clickItem)} />,
+            content: <ObjTable obj={mergeMetaInfo(clickItem) as any} />,
           });
           break;
         case 'copy':
@@ -126,7 +127,7 @@ const ImageManager: React.FC = () => {
                 );
                 fetchData();
               } catch (error) {
-                console.error('Failed to delete image:', error);
+                console.error('Failed to delete image', error);
                 setLoading(false);
                 message.error(t('image.message.delete.error'));
               }
@@ -182,7 +183,7 @@ const ImageManager: React.FC = () => {
   );
 
   // Display menu method
-  const displayMenu = useCallback((e: React.MouseEvent, item: StaticItem) => {
+  const displayMenu = useCallback((_e: React.MouseEvent, item: StaticItem) => {
     setClickItem(item);
     // The show function is handled by the ContextMenuPortal component
   }, []);

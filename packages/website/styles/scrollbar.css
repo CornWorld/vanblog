@@ -2,7 +2,7 @@
 ::-webkit-scrollbar {
   width: 12px;
 }
-#toc-container::-webkit-scrollbar{
+#toc-container::-webkit-scrollbar {
   width: 10px;
 }
 .dark #toc-container::-webkit-scrollbar-thumb {

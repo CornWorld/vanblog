@@ -1,4 +1,4 @@
-import { Article } from '../../types/article';
+import type { Article } from '../../types/article';
 import { useState } from 'react';
 import ArticleList from '../ArticleList';
 import { useTranslation } from 'next-i18next';

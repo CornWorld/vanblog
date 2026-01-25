@@ -1,4 +1,3 @@
-import React from 'react';
 import { useTranslation } from 'react-i18next';
 import StaticForm from '@/components/StaticForm';
 import WatchMarkForm from '@/components/WaterMarkForm';

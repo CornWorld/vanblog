@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { throttle } from 'lodash-es';
-import { getEl, NavItem } from './tools';
+import { getEl, type NavItem } from './tools';
 import { scrollTo } from '../../utils/scroll';
 import { useTranslation } from 'next-i18next';
 
