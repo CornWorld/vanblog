@@ -449,14 +449,4 @@ export class SettingCoreController {
       return { status: 200, body: data };
     });
   }
-
-  // Plugin-managed endpoints removed:
-  // - Socials → social-links-plugin
-  // - Waline → waline-plugin (TODO)
-  // - ISR → infrastructure-plugin (TODO)
-  // - Login → auth settings (TODO)
-  // - HTTPS → infrastructure-plugin (TODO)
-  // - Static → storage-plugin (TODO)
-  // - Rewards → rewards-plugin
-  // - Caddy → infrastructure-plugin (TODO)
 }
