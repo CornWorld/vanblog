@@ -648,9 +648,9 @@ describe('TagController', () => {
         body: {
           id: 1,
           name: 'React',
+          slug: 'react',
           count: undefined,
           createdAt: '2024-01-01T00:00:00Z',
-          updatedAt: '2024-01-02T00:00:00Z',
         },
       });
     });
@@ -714,9 +714,9 @@ describe('TagController', () => {
         body: {
           id: 1,
           name: 'JavaScript 2024',
+          slug: 'javascript',
           count: undefined,
           createdAt: '2024-01-01T00:00:00Z',
-          updatedAt: '2024-01-15T00:00:00Z',
         },
       });
     });
