@@ -155,6 +155,13 @@ export class AnalyticsCacheService {
   }
 
   /**
+   * 清除所有分析数据缓存
+   */
+  async clear(): Promise<void> {
+    await this.cache.clear();
+  }
+
+  /**
    * 计算概览数据 - 使用多个简单查询确保正确性
    */
   private async calculateOverview(): Promise<OverviewData> {

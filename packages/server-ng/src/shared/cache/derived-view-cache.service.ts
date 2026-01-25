@@ -154,6 +154,13 @@ export class DerivedViewCacheService {
   }
 
   /**
+   * 清除所有派生视图缓存
+   */
+  async clear(): Promise<void> {
+    await this.cacheService.clear();
+  }
+
+  /**
    * 检查数据是否正在重新生成
    */
   async isRegenerating(key: string): Promise<boolean> {

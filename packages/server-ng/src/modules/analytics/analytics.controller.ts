@@ -15,6 +15,8 @@ import { Throttle } from '@nestjs/throttler';
 import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
 import { contract } from '@vanblog/shared';
 
+import { AnalyticsCacheService } from '../../shared/cache/analytics-cache.service';
+import { DerivedViewCacheService } from '../../shared/cache/derived-view-cache.service';
 import { DerivedView } from '../../shared/decorators/derived-view.decorator';
 import { Perm } from '../auth/permissions.decorator';
 
@@ -33,8 +35,6 @@ import { ArticleStatsService, ArticleStats } from './services/article-stats.serv
 import { EchartsFormatterService, EchartsOption } from './services/echarts-formatter.service';
 import { PublicAnalyticsService } from './services/public-analytics.service';
 import { ThirdPartyAnalyticsService } from './services/third-party-analytics.service';
-import { AnalyticsCacheService } from '../../shared/cache/analytics-cache.service';
-import { DerivedViewCacheService } from '../../shared/cache/derived-view-cache.service';
 
 import type { Request } from 'express';
 
@@ -110,8 +110,8 @@ export class AnalyticsController {
     await this.analyticsService.recordAnalytics(recordDto);
 
     // Invalidate analytics cache to ensure fresh data
-    await this.analyticsCacheService.cache.clear();
-    await this.derivedViewCacheService.cacheService.clear();
+    await this.analyticsCacheService.clear();
+    await this.derivedViewCacheService.clear();
 
     // Send to third-party analytics services
     if (input.type === 'pageview' && input.path) {
