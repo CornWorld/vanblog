@@ -70,6 +70,9 @@ import { z } from 'zod';
 
 const c = initContract();
 
+// Re-export commonly used types from runtime schema
+export type { Category, Tag, Article, User } from './runtime/schema.js';
+
 export const contract = c.router({
   // Auth
   login: {

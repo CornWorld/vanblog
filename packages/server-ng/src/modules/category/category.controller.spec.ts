@@ -46,7 +46,7 @@ describe('CategoryController', () => {
       expect(categoryService.findAll).toHaveBeenCalledTimes(1);
       expect(result.status).toBe(200);
       expect(result.body).toHaveLength(3);
-      expect(result.body[0]).toHaveProperty('articleCount');
+      expect(result.body[0]).toHaveProperty('count');
     });
 
     it('should convert null description to undefined', async () => {

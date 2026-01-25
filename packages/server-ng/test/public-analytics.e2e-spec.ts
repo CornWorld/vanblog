@@ -1,5 +1,6 @@
 import request from 'supertest';
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import type { INestApplication } from '@nestjs/common';
 
 import { cleanupDatabase, createTestApp, createUser, createAuthToken } from './test-utils';
 
