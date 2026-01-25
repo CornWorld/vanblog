@@ -83,6 +83,12 @@ export interface TestAppOptions {
    * @default true
    */
   fullConfig?: boolean;
+
+  /**
+   * 是否覆盖 providers（用于 mock 服务）
+   * @default []
+   */
+  overrideProviders?: Array<{ provide: any; useValue: any }>;
 }
 
 /**
@@ -103,7 +109,7 @@ export interface TestAppOptions {
  * const app = await createTestApp({ fullConfig: false });
  */
 export async function createTestApp(options: TestAppOptions = {}): Promise<INestApplication> {
-  const { fullConfig = true } = options;
+  const { fullConfig = true, overrideProviders = [] } = options;
 
   // 创建一个简单的模块替代 ScheduleModule，提供 Reflector 但不包含调度功能
   @Module({
@@ -133,9 +139,17 @@ export async function createTestApp(options: TestAppOptions = {}): Promise<INest
     providers: appModuleResult.providers,
   };
 
-  const moduleFixture: TestingModule = await Test.createTestingModule({
+  // 创建 testing module 并应用 provider overrides
+  let moduleBuilder = Test.createTestingModule({
     imports: [testModuleConfig],
-  }).compile();
+  });
+
+  // 应用 provider 覆盖
+  for (const override of overrideProviders) {
+    moduleBuilder = moduleBuilder.overrideProvider(override.provide).useValue(override.useValue);
+  }
+
+  const moduleFixture: TestingModule = await moduleBuilder.compile();
 
   const app = moduleFixture.createNestApplication();
 
