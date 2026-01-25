@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { dataCodec, dateStr } from './date-codecs.js';
+import { User as UserType } from './runtime/schema.js';
 
 export const c = {
   id: z.number().int().positive('ID must be a positive integer').describe('Unique identifier'),
@@ -327,17 +328,8 @@ export const LoginSchema = z.object({
   password: z.string(),
 });
 
-export const UserSchema = z.object({
-  id: z.number(),
-  username: z.string(),
-  nickname: z.string().optional(),
-  avatar: z.string().optional(),
-  email: z.string().optional(),
-  permissions: z.array(z.string()),
-  createdAt: dateStr,
-  updatedAt: dateStr,
-});
-
+// Re-export User schema from runtime to ensure type consistency
+export const UserSchema = UserType;
 export type User = z.infer<typeof UserSchema>;
 
 export const UpdateUserSchema = z.object({

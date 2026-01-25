@@ -28,9 +28,10 @@ function toContractUser(user: User): ContractUser {
   return {
     id: user.id,
     username: user.username,
-    nickname: user.nickname,
-    avatar: user.avatar,
-    email: user.email,
+    type: user.type,
+    nickname: user.nickname ?? undefined,
+    avatar: user.avatar ?? undefined,
+    email: user.email ?? undefined,
     permissions: user.permissions ?? [],
     createdAt: user.createdAt,
     updatedAt: user.updatedAt,

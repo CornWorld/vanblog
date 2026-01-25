@@ -105,7 +105,9 @@ const pathnameSchema = z
  * Database SELECT schema for users table.
  * JSON fields (permissions) are automatically handled by Drizzle mode: 'json'.
  */
-export const $User = createSelectSchema(users);
+export const $User = createSelectSchema(users).extend({
+  permissions: z.array(z.string()).nullable(),
+});
 
 /**
  * $UserIns - 数据库插入（INSERT）
@@ -116,6 +118,7 @@ export const $UserIns = createInsertSchema(users, {
   username: z.string().min(3, '用户名至少3个字符').max(20, '用户名最多20个字符'),
   password,
   email: emailSchema.optional(),
+  permissions: z.array(z.string()).nullable().optional(),
 });
 
 /**
@@ -127,14 +130,22 @@ export const $UserUpd = createUpdateSchema(users, {
   username: z.string().min(3).max(20).optional(),
   password: password.optional(),
   email: emailSchema.optional(),
+  permissions: z.array(z.string()).nullable().optional(),
 });
 
 /**
  * User - API 响应（去除敏感字段）
  *
  * API response schema - excludes password field for security.
+ * Nullable fields (nickname, avatar, email) are converted to optional for API compatibility.
+ * Permissions field is guaranteed to be an array (null converted to []).
  */
-export const User = $User.omit({ password: true });
+export const User = $User.omit({ password: true }).extend({
+  nickname: z.string().optional(),
+  avatar: z.string().optional(),
+  email: z.string().optional(),
+  permissions: z.array(z.string()).default([]),
+});
 
 /**
  * UserReq - API 创建请求
