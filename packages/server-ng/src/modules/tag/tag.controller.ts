@@ -205,9 +205,9 @@ export class TagController {
       const body: SharedTag[] = result.items.map((item) => ({
         id: item.id,
         name: item.name,
+        slug: item.slug ?? null,
         count: item.articleCount,
         createdAt: item.createdAt,
-        updatedAt: undefined,
       }));
       return { status: 200, body };
     });
