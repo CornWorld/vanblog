@@ -157,27 +157,6 @@ export class TagController {
   }
 
   /**
-   * 根据标签名称获取文章列表
-   *
-   * 根据标签名称查询该标签下的所有文章，支持分页和筛选。
-   *
-   * @param name 标签名称
-   * @param query 查询参数
-   * @returns 文章列表响应数据
-   */
-  @Get('name/:name/articles')
-  @ApiOperation({ summary: 'Get articles by tag name' })
-  @ApiResponse({ status: 200, description: 'Return articles by tag name' })
-  @ApiResponse({ status: 404, description: 'Tag not found' })
-  async getArticlesByTagName(
-    @Param('name') name: string,
-    @Query() raw: unknown,
-  ): Promise<z.infer<typeof ArticleListResponseSchema>> {
-    const query = ArticleQuerySchema.parse(raw);
-    return this.tagService.getArticlesByTagName(name, query);
-  }
-
-  /**
    * 根据标签 ID 获取文章列表
    *
    * 根据标签 ID 查询该标签下的所有文章，支持分页和筛选。
@@ -199,6 +178,7 @@ export class TagController {
   }
 
   @TsRestHandler(contract.getTags)
+  @Permission('tag', ['read'])
   getTags(): unknown {
     return tsRestHandler(contract.getTags, async () => {
       const result = await this.tagService.findAll();
@@ -214,6 +194,7 @@ export class TagController {
   }
 
   @TsRestHandler(contract.createTag)
+  @Permission('tag', ['create'])
   createTag(): unknown {
     return tsRestHandler(contract.createTag, async ({ body }) => {
       const created = await this.tagService.create(body);
@@ -231,6 +212,7 @@ export class TagController {
   }
 
   @TsRestHandler(contract.updateTag)
+  @Permission('tag', ['update'])
   updateTag(): unknown {
     return tsRestHandler(contract.updateTag, async ({ params, body }) => {
       const tag = await this.tagService.findByName(params.name);
@@ -252,6 +234,7 @@ export class TagController {
   }
 
   @TsRestHandler(contract.deleteTag)
+  @Permission('tag', ['delete'])
   deleteTag(): unknown {
     return tsRestHandler(contract.deleteTag, async ({ params }) => {
       const tag = await this.tagService.findByName(params.name);

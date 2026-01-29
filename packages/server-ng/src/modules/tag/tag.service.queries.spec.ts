@@ -9,21 +9,16 @@
  * - tag.service.associations.spec.ts - Association queries
  * - tag.service.boundaries.spec.ts - Boundary conditions
  *
- * Migration: Mock.db() → withTestTransaction (2026-01-05)
+ * Migration: setupWorkerDatabase → global db (2026-01-29)
  */
 import { Test, type TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
-import { describe, beforeAll, afterAll, beforeEach, it, expect, vi } from 'vitest';
-import { sql } from 'drizzle-orm';
+import { describe, beforeEach, it, expect, vi } from 'vitest';
 
-import { tags, articles } from '@vanblog/shared/drizzle';
+import { tags } from '@vanblog/shared/drizzle';
 import { DATABASE_CONNECTION } from '../../database';
+import { db } from '@test/setup.unit';
 import { withTestTransaction } from '@test/utils/db-transaction-helper';
-import {
-  setupWorkerDatabase,
-  cleanupWorkerDatabase,
-  getWorkerIdFromEnv,
-} from '@test/utils/db-worker-setup';
 import { Given } from '@test/given';
 
 import { TagService } from './tag.service';
@@ -31,58 +26,12 @@ import { HookService } from '../plugin/services/hook.service';
 import { QueryOptimizerService } from '../../shared/services/query-optimizer.service';
 import { StatisticsService } from '../../shared/services/statistics.service';
 
-import type { LibSQLDatabase } from 'drizzle-orm/libsql';
-
 describe('TagService - Complex Queries', () => {
-  let db: LibSQLDatabase<Record<string, unknown>>;
-  let dbPath: string;
-  let module: TestingModule;
+  let baseModule: TestingModule;
 
-  beforeAll(async () => {
-    // Setup test database
-    const workerId = getWorkerIdFromEnv();
-    const setup = setupWorkerDatabase(workerId);
-    db = setup.db;
-    dbPath = setup.dbPath;
-
-    // Disable foreign key constraints for testing
-    await db.run('PRAGMA foreign_keys = OFF;');
-
-    // Drop existing tables from migrations to recreate without foreign keys
-    await db.run('DROP TABLE IF EXISTS articles');
-    await db.run('DROP TABLE IF EXISTS tags');
-
-    // Create tables
-    await db.run(sql`
-      CREATE TABLE IF NOT EXISTS tags (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL UNIQUE,
-        slug TEXT UNIQUE,
-        created_at TEXT NOT NULL DEFAULT (strftime('%s', 'now') * 1000)
-      );
-    `);
-
-    await db.run(sql`
-      CREATE TABLE IF NOT EXISTS articles (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        title TEXT NOT NULL,
-        content TEXT NOT NULL,
-        pathname TEXT UNIQUE,
-        tags TEXT,
-        category TEXT,
-        author TEXT NOT NULL,
-        top INTEGER DEFAULT 0,
-        hidden INTEGER DEFAULT 0,
-        private INTEGER DEFAULT 0,
-        password TEXT,
-        viewer INTEGER DEFAULT 0,
-        created_at TEXT NOT NULL DEFAULT (strftime('%s', 'now') * 1000),
-        updated_at TEXT NOT NULL DEFAULT (strftime('%s', 'now') * 1000)
-      );
-    `);
-
+  beforeEach(async () => {
     // Create test module with mocked external services
-    module = await Test.createTestingModule({
+    baseModule = await Test.createTestingModule({
       providers: [
         TagService,
         {
@@ -113,85 +62,24 @@ describe('TagService - Complex Queries', () => {
     }).compile();
   });
 
-  afterAll(() => {
-    cleanupWorkerDatabase(dbPath);
-  });
-
-  beforeEach(async () => {
-    // Clean tables before each test
-    await db.delete(articles);
-    await db.delete(tags);
-  });
-
-  describe('getArticlesByTagName', () => {
-    it('should return articles for a tag by name', async () => {
-      await withTestTransaction(db, async (tx) => {
-        // Create tag
-        await Given.tag(db as any, { name: 'Technology', slug: 'tech' });
-
-        // Create article with tag
-        await Given.article(db as any, {
-          title: 'Article 1',
-          content: 'Content 1',
-          pathname: '/article-1',
-          tags: ['Technology', 'Programming'],
-          category: 'Tech',
-        });
-
-        // Create service with transaction database
-        const txService = new TagService(
-          tx,
-          module.get(StatisticsService),
-          module.get(QueryOptimizerService),
-          module.get(HookService),
-        );
-
-        // Execute query
-        const result = await txService.getArticlesByTagName('Technology', {
-          page: 1,
-          pageSize: 10,
-          sortBy: 'createdAt',
-          sortOrder: 'desc',
-        });
-
-        // Verify results
-        expect(result.items).toHaveLength(1);
-        expect(result.total).toBe(1);
-        expect(result.items[0].title).toBe('Article 1');
-        expect(result.items[0].tags).toContain('Technology');
-      });
-    });
-
-    it('should throw NotFoundException when tag name not found', async () => {
-      await withTestTransaction(db, async (tx) => {
-        // Don't create any tag - query should fail
-        const txService = new TagService(
-          tx,
-          module.get(StatisticsService),
-          module.get(QueryOptimizerService),
-          module.get(HookService),
-        );
-
-        await expect(
-          txService.getArticlesByTagName('NonExistent', {
-            page: 1,
-            pageSize: 10,
-            sortBy: 'createdAt',
-            sortOrder: 'desc',
-          }),
-        ).rejects.toThrow(NotFoundException);
-      });
-    });
-  });
+  // Helper function to create service with transaction database
+  const createServiceWithTx = (tx: typeof db): TagService => {
+    return new TagService(
+      tx,
+      baseModule.get(StatisticsService),
+      baseModule.get(QueryOptimizerService),
+      baseModule.get(HookService),
+    );
+  };
 
   describe('getArticlesByTagId', () => {
     it('should return articles for a tag', async () => {
       await withTestTransaction(db, async (tx) => {
         // Create tag
-        const tag = await Given.tag(db as any, { name: 'Technology', slug: 'tech' });
+        const tag = await Given.tag(tx as any, { name: 'Technology', slug: 'tech' });
 
         // Create article with tag
-        await Given.article(db as any, {
+        await Given.article(tx as any, {
           title: 'Article 1',
           content: 'Content 1',
           pathname: '/article-1',
@@ -200,12 +88,7 @@ describe('TagService - Complex Queries', () => {
         });
 
         // Create service with transaction database
-        const txService = new TagService(
-          tx,
-          module.get(StatisticsService),
-          module.get(QueryOptimizerService),
-          module.get(HookService),
-        );
+        const txService = createServiceWithTx(tx);
 
         // Execute query
         const result = await txService.getArticlesByTagId(tag.id, {
@@ -228,24 +111,24 @@ describe('TagService - Complex Queries', () => {
     it('should handle pagination correctly', async () => {
       await withTestTransaction(db, async (tx) => {
         // Create tag
-        const tag = await Given.tag(db as any, {
+        const tag = await Given.tag(tx as any, {
           name: 'Technology',
           slug: 'tech',
         });
 
         // Create 25 articles with this tag using Given
-        await Given.articles(25, {
-          category: 'Tech',
-          tags: ['Technology'],
-        });
+        for (let i = 0; i < 25; i++) {
+          await Given.article(tx as any, {
+            title: `Article ${i}`,
+            content: `Content ${i}`,
+            pathname: `/article-${i}`,
+            category: 'Tech',
+            tags: ['Technology'],
+          });
+        }
 
         // Create service with transaction database
-        const txService = new TagService(
-          tx,
-          module.get(StatisticsService),
-          module.get(QueryOptimizerService),
-          module.get(HookService),
-        );
+        const txService = createServiceWithTx(tx);
 
         // Query page 2 (items 11-20)
         const result = await txService.getArticlesByTagId(tag.id, {
@@ -267,14 +150,13 @@ describe('TagService - Complex Queries', () => {
     it('should handle includeHidden parameter', async () => {
       await withTestTransaction(db, async (tx) => {
         // Create tag
-        // Create tag
-        const tag = await Given.tag(db as any, {
+        const tag = await Given.tag(tx as any, {
           name: 'Technology',
           slug: 'tech',
         });
 
         // Create hidden article using Given
-        await Given.article(db as any, {
+        await Given.article(tx as any, {
           title: 'Hidden Article',
           content: 'Content 1',
           tags: ['Technology'],
@@ -283,12 +165,7 @@ describe('TagService - Complex Queries', () => {
         });
 
         // Create service with transaction database
-        const txService = new TagService(
-          tx,
-          module.get(StatisticsService),
-          module.get(QueryOptimizerService),
-          module.get(HookService),
-        );
+        const txService = createServiceWithTx(tx);
 
         // Query with includeHidden=true
         const result = await txService.getArticlesByTagId(tag.id, {
@@ -309,12 +186,7 @@ describe('TagService - Complex Queries', () => {
     it('should throw NotFoundException when tag not found', async () => {
       await withTestTransaction(db, async (tx) => {
         // Don't create any tag - query should fail
-        const txService = new TagService(
-          tx,
-          module.get(StatisticsService),
-          module.get(QueryOptimizerService),
-          module.get(HookService),
-        );
+        const txService = createServiceWithTx(tx);
 
         await expect(
           txService.getArticlesByTagId(999, {
@@ -339,12 +211,7 @@ describe('TagService - Complex Queries', () => {
           .returning();
 
         // Create service with transaction database
-        const txService = new TagService(
-          tx,
-          module.get(StatisticsService),
-          module.get(QueryOptimizerService),
-          module.get(HookService),
-        );
+        const txService = createServiceWithTx(tx);
 
         // Query articles - should return empty result
         const result = await txService.getArticlesByTagId(tag.id, {

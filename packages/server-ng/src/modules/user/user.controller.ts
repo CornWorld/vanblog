@@ -8,23 +8,30 @@ import {
   Delete,
   Request,
   BadRequestException,
+  ConflictException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { initContract } from '@ts-rest/core';
 import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
-import { contract, type User as ContractUser } from '@vanblog/shared';
+import { type User } from '@vanblog/shared';
+import { createUserContract, type User as ContractUser } from '@vanblog/shared/contracts';
 
 import { Perm } from '../auth/permissions.decorator';
 
-import { CreateUserSchema, UserType } from './dto/create-user.dto';
+import { UserType } from './dto/create-user.dto';
 import { UpdateUserSchema } from './dto/update-user.dto';
-import { User } from './entities/user.entity';
+import { User as UserEntity } from './entities/user.entity';
 import { UserService } from './user.service';
 
+// Initialize contract
+const c = initContract();
+const userContract = createUserContract(c);
+
 interface RequestWithUser {
-  user: User;
+  user: UserEntity;
 }
 
-function toContractUser(user: User): ContractUser {
+function toContractUser(user: UserEntity): ContractUser {
   return {
     id: user.id,
     username: user.username,
@@ -53,24 +60,30 @@ export class UserController {
   constructor(private readonly userService: UserService) {}
 
   /**
-   * 创建新用户
+   * 创建用户
    *
-   * 根据提供的用户信息创建新用户账户。需要管理员权限。
+   * 在系统中创建新的用户账户。
    *
    * @param createUserDto 用户创建数据传输对象
    * @returns 创建成功的用户信息
-   * @throws {BadRequestException} 当用户名已存在或数据验证失败时
+   * @throws {BadRequestException} 当数据验证失败时
    */
   @Post()
   @Perm('user', ['create'])
   @ApiOperation({ summary: '创建用户' })
   @ApiResponse({ status: 201, description: '用户创建成功' })
-  async create(@Body() rawBody: unknown): Promise<User> {
-    const parsed = CreateUserSchema.safeParse(rawBody);
-    if (!parsed.success) {
-      throw new BadRequestException({ message: 'Validation failed', issues: parsed.error.issues });
-    }
-    return this.userService.create(parsed.data);
+  async create(
+    @Body()
+    createUserDto: {
+      username: string;
+      password: string;
+      nickname?: string;
+      email?: string;
+      type: UserType;
+      permissions?: string[];
+    },
+  ): Promise<User> {
+    return this.userService.create(createUserDto);
   }
 
   /**
@@ -89,25 +102,6 @@ export class UserController {
   }
 
   /**
-   * 获取协作者列表
-   *
-   * 查询系统中所有具有协作者权限的用户列表。
-   *
-   * @returns 协作者用户列表
-   */
-  @Get('collaborators')
-  @Perm('user', ['read'])
-  @ApiOperation({ summary: '获取协作者列表' })
-  @ApiResponse({
-    status: 200,
-    description: '返回协作者列表',
-    type: [User],
-  })
-  async getCollaborators(): Promise<User[]> {
-    return this.userService.getCollaborators();
-  }
-
-  /**
    * 根据 ID 获取用户
    *
    * 根据用户 ID 查询单个用户的详细信息。
@@ -123,8 +117,9 @@ export class UserController {
   @ApiResponse({ status: 200, description: '用户获取成功' })
   @ApiResponse({ status: 404, description: '用户未找到' })
   async findOne(@Param('id') id: string): Promise<User> {
-    const numId = Number(id);
-    if (Number.isNaN(numId)) {
+    const trimmed = id.trim();
+    const numId = parseInt(trimmed, 10);
+    if (trimmed === '' || Number.isNaN(numId)) {
       throw new BadRequestException('Invalid user id');
     }
     return this.userService.findOne(numId);
@@ -147,7 +142,7 @@ export class UserController {
   @ApiResponse({ status: 200, description: '用户更新成功' })
   @ApiResponse({ status: 404, description: '用户未找到' })
   async update(@Param('id') id: string, @Body() rawBody: unknown): Promise<User> {
-    const numId = Number(id);
+    const numId = parseInt(id, 10);
     if (Number.isNaN(numId)) {
       throw new BadRequestException('Invalid user id');
     }
@@ -156,6 +151,31 @@ export class UserController {
       throw new BadRequestException({ message: 'Validation failed', issues: parsed.error.issues });
     }
     return this.userService.update(numId, parsed.data);
+  }
+
+  /**
+   * 删除用户
+   *
+   * 根据用户 ID 删除指定用户。删除前会检查用户是否可以被删除。
+   *
+   * @param id 用户 ID
+   * @returns 删除操作结果消息
+   * @throws {BadRequestException} 当用户 ID 格式无效或用户不能被删除时
+   * @throws {NotFoundException} 当用户不存在时
+   */
+  @Delete(':id')
+  @Perm('user', ['delete'])
+  @ApiOperation({ summary: '删除用户' })
+  @ApiResponse({ status: 200, description: '用户删除成功' })
+  @ApiResponse({ status: 404, description: '用户未找到' })
+  async remove(@Param('id') id: string): Promise<{ message: string }> {
+    const trimmed = id.trim();
+    const numId = parseInt(trimmed, 10);
+    if (trimmed === '' || Number.isNaN(numId)) {
+      throw new BadRequestException('Invalid user id');
+    }
+    await this.userService.remove(numId);
+    return { message: '用户删除成功' };
   }
 
   /**
@@ -175,87 +195,98 @@ export class UserController {
   }
 
   /**
-   * 删除用户
+   * 获取协作者列表
    *
-   * 根据用户 ID 删除指定用户。删除前会检查用户是否可以被删除。
+   * 获取系统中所有非管理员用户（协作者）列表。
    *
-   * @param id 用户 ID
-   * @returns 删除操作结果消息
-   * @throws {BadRequestException} 当用户 ID 格式无效或用户不能被删除时
-   * @throws {NotFoundException} 当用户不存在时
+   * @returns 协作者列表
    */
-  @Delete(':id')
-  @Perm('user', ['delete'])
-  @ApiOperation({ summary: '删除用户' })
-  @ApiResponse({ status: 200, description: '用户删除成功' })
-  @ApiResponse({ status: 404, description: '用户未找到' })
-  async remove(@Param('id') id: string): Promise<{ message: string }> {
-    const numId = Number(id);
-    if (Number.isNaN(numId)) {
-      throw new BadRequestException('Invalid user id');
-    }
-    await this.userService.remove(numId);
-    return { message: '用户删除成功' };
+  @Get('collaborators')
+  @Perm('user', ['read'])
+  @ApiOperation({ summary: '获取协作者列表' })
+  @ApiResponse({ status: 200, description: '协作者列表获取成功' })
+  async getCollaborators(): Promise<User[]> {
+    return this.userService.getCollaborators();
   }
 
-  @TsRestHandler(contract.updateProfile)
-  updateProfile(@Request() req: Request): unknown {
-    type AuthRequest = Request & { user?: { id: number } };
-    return tsRestHandler(contract.updateProfile, async ({ body }) => {
-      const authUser = (req as AuthRequest).user;
-      if (!authUser) {
-        return { status: 401, body: { message: 'Unauthorized' } as unknown as never };
-      }
+  // Note: updateProfile was removed as it conflicted with updateCollaborator
+  // Both used @TsRestHandler(userContract.update), causing duplicate route registration
+  // Users should use the update() method with their user ID instead
 
-      const updatedUser = await this.userService.update(authUser.id, {
-        nickname: body.nickname,
-        email: body.email,
-        password: body.password,
-        avatar: body.avatar,
-      });
-
-      return { status: 200, body: toContractUser(updatedUser) };
-    });
-  }
-
-  @TsRestHandler(contract.getCollaborators)
+  @TsRestHandler(userContract.collaborators)
+  @Perm('user', ['read'])
   getCollaborators_tsrest(): unknown {
-    return tsRestHandler(contract.getCollaborators, async () => {
+    return tsRestHandler(userContract.collaborators, async () => {
       const collaborators = await this.userService.getCollaborators();
       return { status: 200, body: collaborators.map(toContractUser) };
     });
   }
 
-  @TsRestHandler(contract.createCollaborator)
+  @TsRestHandler(userContract.create)
+  @Perm('user', ['create'])
   createCollaborator(): unknown {
-    return tsRestHandler(contract.createCollaborator, async ({ body }) => {
-      const newUser = await this.userService.create({
-        username: body.name,
-        password: body.password,
-        nickname: body.nickname,
-        type: UserType.EDITOR,
-        permissions: body.permissions,
-      });
-      return { status: 201, body: toContractUser(newUser) };
+    return tsRestHandler(userContract.create, async ({ body }) => {
+      // Validate required fields
+      if (!body.username || !body.password) {
+        throw new BadRequestException('Username and password are required');
+      }
+
+      try {
+        const newUser = await this.userService.create({
+          username: body.username,
+          password: body.password,
+          nickname: body.nickname,
+          email: body.email,
+          type: body.type || UserType.EDITOR,
+          permissions: body.permissions,
+        });
+        return { status: 201, body: toContractUser(newUser) };
+      } catch (error) {
+        if (error instanceof ConflictException) {
+          throw new BadRequestException(error.message);
+        }
+        throw error;
+      }
     });
   }
 
-  @TsRestHandler(contract.updateCollaborator)
+  @TsRestHandler(userContract.update)
+  @Perm('user', ['update'])
   updateCollaborator(): unknown {
-    return tsRestHandler(contract.updateCollaborator, async ({ body }) => {
-      const updatedUser = await this.userService.update(body.id, {
+    return tsRestHandler(userContract.update, async ({ params, body }) => {
+      if (!params.id) {
+        throw new BadRequestException('User ID is required');
+      }
+      const trimmed = params.id.trim();
+      const userId = parseInt(trimmed, 10);
+      if (trimmed === '' || Number.isNaN(userId)) {
+        throw new BadRequestException('Invalid user ID');
+      }
+
+      const updateData = {
         password: body.password,
         nickname: body.nickname,
         permissions: body.permissions,
-      });
+      };
+
+      const updatedUser = await this.userService.update(userId, updateData);
       return { status: 200, body: toContractUser(updatedUser) };
     });
   }
 
-  @TsRestHandler(contract.deleteCollaborator)
+  @TsRestHandler(userContract.delete)
+  @Perm('user', ['delete'])
   deleteCollaborator(): unknown {
-    return tsRestHandler(contract.deleteCollaborator, async ({ params }) => {
-      await this.userService.remove(Number(params.id));
+    return tsRestHandler(userContract.delete, async ({ params }) => {
+      if (!params.id) {
+        throw new BadRequestException('User ID is required');
+      }
+      const trimmed = params.id.trim();
+      const id = parseInt(trimmed, 10);
+      if (trimmed === '' || Number.isNaN(id)) {
+        throw new BadRequestException('Invalid user ID');
+      }
+      await this.userService.remove(id);
       return { status: 200, body: { success: true } };
     });
   }

@@ -1,30 +1,18 @@
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  NotFoundException,
-  Param,
-  Post,
-  Put,
-  ParseIntPipe,
-  Query,
-} from '@nestjs/common';
+import { Controller, Get, Param, ParseIntPipe, Query } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { initContract } from '@ts-rest/core';
 import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
-import { contract } from '@vanblog/shared';
+import { createCategoryContract } from '@vanblog/shared/contracts';
 import { z } from 'zod';
 
 import { ArticleListResponseSchema, ArticleQuerySchema } from '../article/dto/article.dto';
 import { Permission } from '../auth/permissions.decorator';
 
 import { CategoryService } from './category.service';
-import {
-  CategoryListResponseSchema,
-  CreateCategorySchema,
-  UpdateCategorySchema,
-} from './dto/category.dto';
 import { Category } from './entities/category.entity';
+
+const c = initContract();
+const categoryContract = createCategoryContract(c);
 
 /**
  * 分类管理控制器
@@ -36,20 +24,6 @@ import { Category } from './entities/category.entity';
 @Controller({ path: 'categories', version: '2' })
 export class CategoryController {
   constructor(private readonly categoryService: CategoryService) {}
-
-  /**
-   * 获取所有分类
-   *
-   * 查询系统中的所有分类列表，包含分类的基本信息和使用统计。
-   *
-   * @returns 分类列表响应数据
-   */
-  @Get()
-  @ApiOperation({ summary: 'Get all categories' })
-  @ApiResponse({ status: 200, description: 'Return all categories' })
-  async findAll(): Promise<z.infer<typeof CategoryListResponseSchema>> {
-    return this.categoryService.findAll();
-  }
 
   /**
    * 根据 ID 获取分类
@@ -68,58 +42,6 @@ export class CategoryController {
   }
 
   /**
-   * 创建新分类
-   *
-   * 创建一个新的分类，用于文章分类和组织。
-   *
-   * @param createCategoryDto 分类创建数据
-   * @returns 创建的分类信息
-   */
-  @Post()
-  @Permission('category', ['create'])
-  @ApiOperation({ summary: 'Create a new category' })
-  @ApiResponse({ status: 201, description: 'Create new category' })
-  async create(@Body() raw: unknown): Promise<Category> {
-    const dto = CreateCategorySchema.parse(raw);
-    return this.categoryService.create(dto);
-  }
-
-  /**
-   * 更新分类
-   *
-   * 根据分类 ID 更新分类的信息，如名称、描述等。
-   *
-   * @param id 分类 ID
-   * @param updateCategoryDto 分类更新数据
-   * @returns 更新后的分类信息
-   */
-  @Put(':id')
-  @Permission('category', ['update'])
-  @ApiOperation({ summary: 'Update a category' })
-  @ApiResponse({ status: 200, description: 'Update existing category' })
-  @ApiResponse({ status: 404, description: 'Category not found' })
-  async update(@Param('id', ParseIntPipe) id: number, @Body() raw: unknown): Promise<Category> {
-    const dto = UpdateCategorySchema.parse(raw);
-    return this.categoryService.update(id, dto);
-  }
-
-  /**
-   * 删除分类
-   *
-   * 根据分类 ID 删除指定分类。删除前会检查分类是否被文章使用。
-   *
-   * @param id 分类 ID
-   */
-  @Delete(':id')
-  @Permission('category', ['delete'])
-  @ApiOperation({ summary: 'Delete a category' })
-  @ApiResponse({ status: 200, description: 'Category deleted successfully' })
-  @ApiResponse({ status: 404, description: 'Category not found' })
-  async remove(@Param('id', ParseIntPipe) id: number): Promise<void> {
-    return this.categoryService.remove(id);
-  }
-
-  /**
    * 根据分类名称获取文章列表
    *
    * 根据分类名称查询该分类下的所有文章，支持分页和筛选。
@@ -129,9 +51,9 @@ export class CategoryController {
    * @returns 文章列表响应数据
    */
   @Get('name/:name/articles')
+  @Permission('category', ['read'])
   @ApiOperation({ summary: 'Get articles by category name' })
   @ApiResponse({ status: 200, description: 'Return articles by category name' })
-  @ApiResponse({ status: 404, description: 'Category not found' })
   async getArticlesByCategoryName(
     @Param('name') name: string,
     @Query() raw: unknown,
@@ -150,9 +72,9 @@ export class CategoryController {
    * @returns 文章列表响应数据
    */
   @Get(':id/articles')
+  @Permission('category', ['read'])
   @ApiOperation({ summary: 'Get articles by category ID' })
   @ApiResponse({ status: 200, description: 'Return articles by category ID' })
-  @ApiResponse({ status: 404, description: 'Category not found' })
   async getArticlesByCategoryId(
     @Param('id', ParseIntPipe) id: number,
     @Query() raw: unknown,
@@ -161,9 +83,10 @@ export class CategoryController {
     return this.categoryService.getArticlesByCategoryId(id, query);
   }
 
-  @TsRestHandler(contract.getCategories)
+  @TsRestHandler(categoryContract.getCategories)
+  @Permission('category', ['read'])
   getCategories(): ReturnType<typeof tsRestHandler> {
-    return tsRestHandler(contract.getCategories, async () => {
+    return tsRestHandler(categoryContract.getCategories, async () => {
       const result = await this.categoryService.findAll();
       const body = result.items.map((item) => ({
         id: item.id,
@@ -177,9 +100,20 @@ export class CategoryController {
     });
   }
 
-  @TsRestHandler(contract.createCategory)
+  @TsRestHandler(categoryContract.getCategoryById)
+  @Permission('category', ['read'])
+  getCategoryById(): ReturnType<typeof tsRestHandler> {
+    return tsRestHandler(categoryContract.getCategoryById, async ({ params }) => {
+      const id = parseInt(params.id, 10);
+      const result = await this.categoryService.findOne(id);
+      return { status: 200, body: result };
+    });
+  }
+
+  @TsRestHandler(categoryContract.createCategory)
+  @Permission('category', ['create'])
   createCategory(): ReturnType<typeof tsRestHandler> {
-    return tsRestHandler(contract.createCategory, async ({ body }) => {
+    return tsRestHandler(categoryContract.createCategory, async ({ body }) => {
       const result = await this.categoryService.create({
         ...body,
         name: body.name,
@@ -191,14 +125,12 @@ export class CategoryController {
     });
   }
 
-  @TsRestHandler(contract.updateCategory)
+  @TsRestHandler(categoryContract.updateCategory)
+  @Permission('category', ['update'])
   updateCategory(): ReturnType<typeof tsRestHandler> {
-    return tsRestHandler(contract.updateCategory, async ({ params, body }) => {
-      const category = await this.categoryService.findByName(params.name);
-      if (!category) {
-        throw new NotFoundException(`Category ${params.name} not found`);
-      }
-      const result = await this.categoryService.update(category.id, body);
+    return tsRestHandler(categoryContract.updateCategory, async ({ params, body }) => {
+      const id = parseInt(params.id, 10);
+      const result = await this.categoryService.update(id, body);
       return {
         status: 200,
         body: { ...result, description: result.description ?? undefined },
@@ -206,26 +138,22 @@ export class CategoryController {
     });
   }
 
-  @TsRestHandler(contract.deleteCategory)
+  @TsRestHandler(categoryContract.deleteCategory)
+  @Permission('category', ['delete'])
   deleteCategory(): ReturnType<typeof tsRestHandler> {
-    return tsRestHandler(contract.deleteCategory, async ({ params }) => {
-      const category = await this.categoryService.findByName(params.name);
-      if (!category) {
-        throw new NotFoundException(`Category ${params.name} not found`);
-      }
-      await this.categoryService.remove(category.id);
+    return tsRestHandler(categoryContract.deleteCategory, async ({ params }) => {
+      const id = parseInt(params.id, 10);
+      await this.categoryService.remove(id);
       return { status: 200, body: { success: true } };
     });
   }
 
-  @TsRestHandler(contract.getArticlesByCategory)
+  @TsRestHandler(categoryContract.getArticlesByCategory)
+  @Permission('category', ['read'])
   getArticlesByCategory(): ReturnType<typeof tsRestHandler> {
-    return tsRestHandler(contract.getArticlesByCategory, async ({ params }) => {
-      const category = await this.categoryService.findByName(params.name);
-      if (!category) {
-        throw new NotFoundException(`Category ${params.name} not found`);
-      }
-      const result = await this.categoryService.getArticlesByCategoryId(category.id, {
+    return tsRestHandler(categoryContract.getArticlesByCategory, async ({ params }) => {
+      const id = parseInt(params.id, 10);
+      const result = await this.categoryService.getArticlesByCategoryId(id, {
         page: 1,
         pageSize: 1000,
         sortBy: 'createdAt',
@@ -242,7 +170,7 @@ export class CategoryController {
           content: t.content,
           summary: undefined,
           cover: undefined,
-          category,
+          category: category ?? undefined,
           tags: undefined,
           views,
           likes: 0,
@@ -251,12 +179,51 @@ export class CategoryController {
           pubTime: t.updatedAt,
           createdAt: t.createdAt,
           updatedAt: t.updatedAt,
-          private: t.private ?? false,
+          private: password !== undefined,
           password,
           toc: undefined,
         };
       });
-      return { status: 200, body: items };
+      return { status: 200, body: { ...result, items } };
+    });
+  }
+
+  @TsRestHandler(categoryContract.getArticlesByCategoryName)
+  @Permission('category', ['read'])
+  getArticlesByCategoryName(): ReturnType<typeof tsRestHandler> {
+    return tsRestHandler(categoryContract.getArticlesByCategoryName, async ({ params }) => {
+      const result = await this.categoryService.getArticlesByCategoryName(params.name, {
+        page: 1,
+        pageSize: 1000,
+        sortBy: 'createdAt',
+        sortOrder: 'desc',
+      });
+      const items = result.items.map((t) => {
+        const views = t.viewer ?? 0;
+        const top = t.top ?? 0;
+        const password = typeof t.password === 'string' ? t.password : undefined;
+        const category = typeof t.category === 'string' ? t.category : undefined;
+        return {
+          id: t.id,
+          title: t.title,
+          content: t.content,
+          summary: undefined,
+          cover: undefined,
+          category: category ?? undefined,
+          tags: undefined,
+          views,
+          likes: 0,
+          isTop: top > 0,
+          isHot: false,
+          pubTime: t.updatedAt,
+          createdAt: t.createdAt,
+          updatedAt: t.updatedAt,
+          private: password !== undefined,
+          password,
+          toc: undefined,
+        };
+      });
+      return { status: 200, body: { ...result, items } };
     });
   }
 }
