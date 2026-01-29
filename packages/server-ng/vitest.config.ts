@@ -25,9 +25,7 @@ export default defineConfig({
       '**/given.example.spec.ts', // Example file
       '**/test-verify.spec.ts', // Verification file
       '**/transaction-rollback.spec.ts', // Transaction test file
-      '**/tag.service.queries.spec.ts', // Uses non-existent db-worker-setup
-      '**/user.service.create-advanced.spec.ts', // Uses non-existent db-worker-setup
-      '**/user.service.entity-mapping.spec.ts', // Uses non-existent db-worker-setup
+      // Note: db-worker-setup utilities now exist, removed exclusions
     ],
     // 启用测试报告（JUnit，用于 CI Artifact）
     reporters: ['default', 'junit'],
