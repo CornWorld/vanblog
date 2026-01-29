@@ -6,6 +6,7 @@ import { BootstrapService } from './bootstrap.service';
 
 const mockBootstrapService = {
   getPublicBootstrap: vi.fn(),
+  getVersionInfo: vi.fn(),
 };
 
 describe('BootstrapController (Public)', () => {
@@ -36,6 +37,16 @@ describe('BootstrapController (Public)', () => {
     const result = await controller.getBootstrap();
 
     expect(mockBootstrapService.getPublicBootstrap).toHaveBeenCalled();
+    expect(result).toEqual({ statusCode: 200, data });
+  });
+
+  it('getVersionInfo should wrap service data into {statusCode,data}', () => {
+    const data = { version: 'dev', latestVersion: 'v1.0.0', hasUpdate: false } as any;
+    mockBootstrapService.getVersionInfo.mockReturnValue(data);
+
+    const result = controller.getVersionInfo();
+
+    expect(mockBootstrapService.getVersionInfo).toHaveBeenCalled();
     expect(result).toEqual({ statusCode: 200, data });
   });
 });

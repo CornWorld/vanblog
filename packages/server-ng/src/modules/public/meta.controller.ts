@@ -2,8 +2,7 @@ import { Controller, Get } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
-import { dayjs } from '@vanblog/shared';
-import { metaContract } from '@vanblog/shared/contracts';
+import { dayjs, contract } from '@vanblog/shared';
 import { z } from 'zod';
 
 import { DerivedView } from '../../shared/decorators/derived-view.decorator';
@@ -92,9 +91,9 @@ export class MetaController {
     private readonly settingCoreService: SettingCoreService,
   ) {}
 
-  @TsRestHandler(metaContract.getPublicMeta)
+  @TsRestHandler(contract.getPublicMeta)
   getPublicMeta(): unknown {
-    return tsRestHandler(metaContract.getPublicMeta, async () => {
+    return tsRestHandler(contract.getPublicMeta, async () => {
       await Promise.resolve();
       return { status: 200 as const, body: { buildTime: dayjs().format() } };
     });
