@@ -381,6 +381,7 @@ export class ArticleController {
   }
 
   @TsRestHandler(contract.getAdminArticles)
+  @Permission('article', ['read'])
   getAdminArticles(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.getAdminArticles, async ({ query }) => {
       const result = await this.articleService.findAll({
@@ -421,6 +422,7 @@ export class ArticleController {
   }
 
   @TsRestHandler(contract.createArticle)
+  @Permission('article', ['create'])
   createArticleRest(@Req() req: ExpressRequestType): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.createArticle, async ({ body }) => {
       const username = this.getUsernameFromRequest(req);
@@ -456,6 +458,7 @@ export class ArticleController {
   }
 
   @TsRestHandler(contract.updateArticle)
+  @Permission('article', ['update'])
   updateArticleRest(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.updateArticle, async ({ params, body }) => {
       const id = Number(params.id);
@@ -498,6 +501,7 @@ export class ArticleController {
   }
 
   @TsRestHandler(contract.deleteArticle)
+  @Permission('article', ['delete'])
   deleteArticleRest(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.deleteArticle, async ({ params }) => {
       const id = Number(params.id);
@@ -507,6 +511,7 @@ export class ArticleController {
   }
 
   @TsRestHandler(contract.getAdminArticle)
+  @Permission('article', ['read'])
   getAdminArticleRest(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.getAdminArticle, async ({ params }) => {
       const id = Number(params.id);

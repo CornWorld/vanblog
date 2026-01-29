@@ -53,6 +53,7 @@ export class PluginHttpController {
    * @param res - Express Response
    */
   @All(':pluginId/*')
+  @UseGuards(JwtAuthGuard)
   async handlePluginRoute(
     @Param('pluginId') pluginId: string,
     @Req() req: Request,

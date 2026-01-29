@@ -562,6 +562,7 @@ export class AnalyticsController {
   }
 
   @TsRestHandler(contract.getAnalyticsOverview)
+  @Perm('analytics', ['read'])
   getAnalyticsOverview(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.getAnalyticsOverview, async () => {
       const overview = await this.analyticsService.getOverview();

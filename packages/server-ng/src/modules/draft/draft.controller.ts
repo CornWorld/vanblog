@@ -4,6 +4,7 @@ import { contract, dayjs } from '@vanblog/shared';
 import { z } from 'zod';
 
 import { Article } from '../article/entities/article.entity';
+import { Perm } from '../auth/permissions.decorator';
 
 import { DraftVersionService } from './draft-version.service';
 import { DraftService } from './draft.service';
@@ -28,6 +29,7 @@ export class DraftController {
   ) {}
 
   @TsRestHandler(contract.getDrafts)
+  @Perm('draft', ['read'])
   getDrafts(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.getDrafts, async ({ query }) => {
       const result = await this.draftService.findAll({
@@ -58,6 +60,7 @@ export class DraftController {
   }
 
   @TsRestHandler(contract.createDraft)
+  @Perm('draft', ['create'])
   createDraft(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.createDraft, async ({ body }) => {
       const result = await this.draftService.create({
@@ -85,6 +88,7 @@ export class DraftController {
   }
 
   @TsRestHandler(contract.updateDraft)
+  @Perm('draft', ['update'])
   updateDraft(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.updateDraft, async ({ params, body }) => {
       const updateData: Record<string, unknown> = {};
@@ -114,6 +118,7 @@ export class DraftController {
   }
 
   @TsRestHandler(contract.deleteDraft)
+  @Perm('draft', ['delete'])
   deleteDraft(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.deleteDraft, async ({ params }) => {
       await this.draftService.remove(Number(params.id));
@@ -122,6 +127,7 @@ export class DraftController {
   }
 
   @TsRestHandler(contract.getDraft)
+  @Perm('draft', ['read'])
   getDraft(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.getDraft, async ({ params }) => {
       const result = await this.draftService.findOne(Number(params.id));
@@ -142,6 +148,7 @@ export class DraftController {
   }
 
   @TsRestHandler(contract.publishDraft)
+  @Perm('draft', ['publish'])
   publishDraft(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.publishDraft, async ({ params }) => {
       const result = await this.draftService.publish(Number(params.id), {

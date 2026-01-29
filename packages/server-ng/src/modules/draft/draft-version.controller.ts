@@ -2,6 +2,8 @@ import { Controller } from '@nestjs/common';
 import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
 import { draftVersionContract } from '@vanblog/shared/contracts';
 
+import { Perm } from '../auth/permissions.decorator';
+
 import { DraftVersionService } from './draft-version.service';
 
 import type { DraftVersion } from '@vanblog/shared/runtime';
@@ -27,6 +29,7 @@ export class DraftVersionTsRestController {
   }
 
   @TsRestHandler(draftVersionContract.listVersions)
+  @Perm('draft', ['read'])
   listVersions(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(draftVersionContract.listVersions, async ({ params, query }) => {
       try {
@@ -46,6 +49,7 @@ export class DraftVersionTsRestController {
   }
 
   @TsRestHandler(draftVersionContract.getVersion)
+  @Perm('draft', ['read'])
   getVersion(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(draftVersionContract.getVersion, async ({ params }) => {
       try {
@@ -74,6 +78,7 @@ export class DraftVersionTsRestController {
   }
 
   @TsRestHandler(draftVersionContract.createVersion)
+  @Perm('draft', ['create'])
   createVersion(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(draftVersionContract.createVersion, async ({ params }) => {
       try {
@@ -101,6 +106,7 @@ export class DraftVersionTsRestController {
   }
 
   @TsRestHandler(draftVersionContract.deleteVersion)
+  @Perm('draft', ['delete'])
   deleteVersion(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(draftVersionContract.deleteVersion, async ({ params }) => {
       try {
