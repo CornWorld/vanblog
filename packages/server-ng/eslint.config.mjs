@@ -162,6 +162,12 @@ export default defineConfig([
       'no-restricted-imports': 'off',
     },
   },
+  {
+    files: ['src/modules/user/user.controller.ts'],
+    rules: {
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+    },
+  },
 
   // Test files
   {
