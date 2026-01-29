@@ -302,20 +302,6 @@ export class TagService {
     return results;
   }
 
-  async getArticlesByTagName(
-    name: string,
-    query: z.infer<typeof ArticleQuerySchema>,
-  ): Promise<z.infer<typeof ArticleListResponseSchema>> {
-    // 首先根据名称查找标签
-    const tag = await this.findByName(name);
-    if (!tag) {
-      throw new NotFoundException(`Tag with name "${name}" not found`);
-    }
-
-    // 使用现有的 getArticlesByTagId 方法
-    return this.getArticlesByTagId(tag.id, query);
-  }
-
   async getArticlesByTagId(
     id: number,
     query: z.infer<typeof ArticleQuerySchema>,
