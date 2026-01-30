@@ -1,0 +1,8 @@
+{"file": ".trellis/workflow.md", "reason": "Project workflow and conventions"}
+{"file": "packages/server-ng/test/test-utils.ts", "reason": "Reusable test utilities for setup/teardown"}
+{"file": "packages/server-ng/vitest.config.e2e.ts", "reason": "Existing E2E config for parallel test execution"}
+{"file": "packages/server-ng/test/workflows/article-publishing.e2e-spec.ts", "reason": "Reference workflow test pattern for new tests"}
+{"file": "packages/shared/src/contract.ts", "reason": "Root contract with all API endpoints"}
+{"file": "packages/admin/src/services/client.ts", "reason": "Admin ts-rest client (baseUrl: /api/v2)"}
+{"file": "packages/website/api/ts-rest-client.ts", "reason": "Website ts-rest client (baseUrl: /api)"}
+{"file": ".trellis/spec/backend/api-guidelines.md", "reason": "API contract standards reference"}
