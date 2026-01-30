@@ -1,6 +1,5 @@
-import { Injectable, Logger, Inject, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, Inject, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Cron } from '@nestjs/schedule';
 import { dayjs } from '@vanblog/shared';
 import {
   articles,
@@ -26,11 +25,17 @@ export interface DemoSnapshot {
   customPages: unknown[];
 }
 
+/**
+ * Demo Service - 提供演示模式下的数据快照和恢复功能
+ *
+ * 注意：使用 setInterval 替代 @Cron 装饰器，避免 ScheduleModule 的 Reflector 依赖问题
+ */
 @Injectable()
-export class DemoService implements OnModuleInit {
+export class DemoService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(DemoService.name);
   private demoSnapshot: DemoSnapshot | null = null;
   private readonly isDemoMode: boolean;
+  private restoreInterval: NodeJS.Timeout | null = null;
 
   constructor(
     @Inject(DATABASE_CONNECTION) private readonly db: Database,
@@ -39,23 +44,40 @@ export class DemoService implements OnModuleInit {
     this.isDemoMode = this.configService.get<boolean>('DEMO_MODE', false);
   }
 
-  // Scheduled restoration every 6 hours in demo mode
-  @Cron('0 */6 * * *')
-  async scheduledRestore(): Promise<void> {
-    if (this.isDemoMode) {
-      this.logger.log('Performing scheduled demo data restoration...');
-      await this.restoreFromSnapshot();
-    }
-  }
-
+  /**
+   * 模块初始化时设置定时恢复任务（每 6 小时）
+   */
   async onModuleInit(): Promise<void> {
     if (this.isDemoMode && process.env.NODE_ENV !== 'test') {
       this.logger.log('Demo mode enabled, creating initial snapshot...');
       await this.createSnapshot();
 
+      // 设置每 6 小时执行一次恢复任务
+      const sixHoursMs = 6 * 60 * 60 * 1000;
+      this.restoreInterval = setInterval(() => {
+        void (async () => {
+          this.logger.log('Performing scheduled demo data restoration...');
+          await this.restoreFromSnapshot();
+        })();
+      }, sixHoursMs);
+
+      this.logger.log(
+        `Scheduled demo data restoration every 6 hours (interval: ${String(sixHoursMs)}ms)`,
+      );
       this.logger.log('Demo mode initialized successfully');
     } else if (this.isDemoMode && process.env.NODE_ENV === 'test') {
       this.logger.log('Demo mode enabled in test environment, skipping initial snapshot');
+    }
+  }
+
+  /**
+   * 模块销毁时清理定时器
+   */
+  onModuleDestroy(): void {
+    if (this.restoreInterval) {
+      clearInterval(this.restoreInterval);
+      this.restoreInterval = null;
+      this.logger.log('Demo service cleanup: cleared restoration interval');
     }
   }
 
@@ -167,12 +189,9 @@ export class DemoService implements OnModuleInit {
     }
   }
 
-  getSnapshotInfo(): {
-    hasSnapshot: boolean;
-    timestamp?: number;
-    articlesCount?: number;
-    draftsCount?: number;
-  } {
+  getSnapshotInfo():
+    | { hasSnapshot: false }
+    | { hasSnapshot: true; timestamp: number; articlesCount: number; draftsCount: number } {
     if (!this.demoSnapshot) {
       return { hasSnapshot: false };
     }

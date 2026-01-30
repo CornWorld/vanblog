@@ -303,8 +303,11 @@ describe('DemoService', () => {
     });
   });
 
-  describe('scheduledRestore', () => {
-    it('should restore data when demo mode is enabled', async () => {
+  describe('onModuleInit', () => {
+    it('should create snapshot when demo mode is enabled in non-test environment', async () => {
+      const originalNodeEnv = process.env.NODE_ENV;
+      process.env.NODE_ENV = 'development';
+
       const configMock = {
         get: vi.fn().mockReturnValue(true),
       };
@@ -315,19 +318,20 @@ describe('DemoService', () => {
         configMock as any,
       );
 
-      await newService.createSnapshot();
+      const createSnapshotSpy = vi.spyOn(newService, 'createSnapshot');
+      await newService.onModuleInit();
 
-      vi.clearAllMocks();
-      dbMockForTest.setDeleteResult(0);
+      expect(createSnapshotSpy).toHaveBeenCalled();
 
-      await newService.scheduledRestore();
-
-      expect(dbMockForTest.db.delete).toHaveBeenCalled();
+      process.env.NODE_ENV = originalNodeEnv;
     });
 
-    it('should do nothing when demo mode is disabled', async () => {
+    it('should skip snapshot in test environment', async () => {
+      const originalNodeEnv = process.env.NODE_ENV;
+      process.env.NODE_ENV = 'test';
+
       const configMock = {
-        get: vi.fn().mockReturnValue(false),
+        get: vi.fn().mockReturnValue(true),
       };
       const dbMockForTest = new DatabaseMockBuilder();
       const newService = new DemoService(
@@ -335,9 +339,36 @@ describe('DemoService', () => {
         configMock as any,
       );
 
-      await newService.scheduledRestore();
+      const createSnapshotSpy = vi.spyOn(newService, 'createSnapshot');
+      await newService.onModuleInit();
 
-      expect(dbMockForTest.db.delete).not.toHaveBeenCalled();
+      expect(createSnapshotSpy).not.toHaveBeenCalled();
+
+      process.env.NODE_ENV = originalNodeEnv;
+    });
+  });
+
+  describe('onModuleDestroy', () => {
+    it('should clear interval when exists', () => {
+      const configMock = {
+        get: vi.fn().mockReturnValue(true),
+      };
+      const dbMockForTest = new DatabaseMockBuilder();
+      const newService = new DemoService(
+        dbMockForTest.build() as unknown as Database,
+        configMock as any,
+      );
+
+      // Manually set an interval
+      newService['restoreInterval'] = setInterval(() => {
+        // no-op
+      }, 1000);
+
+      const clearIntervalSpy = vi.spyOn(global, 'clearInterval');
+      newService.onModuleDestroy();
+
+      expect(clearIntervalSpy).toHaveBeenCalled();
+      expect(newService['restoreInterval']).toBeNull();
     });
   });
 

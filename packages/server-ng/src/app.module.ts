@@ -1,6 +1,5 @@
 import { Module, DynamicModule, NestModule, MiddlewareConsumer, type Type } from '@nestjs/common';
-import { APP_INTERCEPTOR, Reflector } from '@nestjs/core';
-import { ScheduleModule } from '@nestjs/schedule';
+import { APP_INTERCEPTOR } from '@nestjs/core';
 import { ThrottlerModule } from '@nestjs/throttler';
 
 import { AppController } from './app.controller';
@@ -45,7 +44,6 @@ export class AppModule implements NestModule {
       module: AppModule,
       imports: [
         ConfigModule,
-        ScheduleModule.forRoot(),
         ThrottlerModule.forRoot([
           {
             name: 'short',
@@ -89,7 +87,6 @@ export class AppModule implements NestModule {
       controllers: [AppController],
       providers: [
         AppService,
-        Reflector,
         {
           provide: APP_INTERCEPTOR,
           useClass: PerformanceInterceptor,

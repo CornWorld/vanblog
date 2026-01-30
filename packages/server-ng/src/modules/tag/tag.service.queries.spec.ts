@@ -119,9 +119,9 @@ describe('TagService - Complex Queries', () => {
         // Create 25 articles with this tag using Given
         for (let i = 0; i < 25; i++) {
           await Given.article(tx as any, {
-            title: `Article ${i}`,
-            content: `Content ${i}`,
-            pathname: `/article-${i}`,
+            title: `Article ${String(i)}`,
+            content: `Content ${String(i)}`,
+            pathname: `/article-${String(i)}`,
             category: 'Tech',
             tags: ['Technology'],
           });
