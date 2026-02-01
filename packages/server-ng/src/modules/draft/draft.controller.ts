@@ -1,5 +1,5 @@
-import { Controller } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Delete, Get, Param, Post, Put, Query } from '@nestjs/common';
+import { ApiOperation, ApiTags, ApiResponse } from '@nestjs/swagger';
 import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
 import { contract, dayjs } from '@vanblog/shared';
 import { z } from 'zod';
@@ -29,6 +29,49 @@ export class DraftController {
     private readonly draftService: DraftService,
     private readonly draftVersionService: DraftVersionService,
   ) {}
+
+  @Get()
+  @Perm('draft', ['read'])
+  @ApiOperation({ summary: 'Get all drafts' })
+  @ApiResponse({ status: 200, description: 'Return all drafts' })
+  async findAll(@Query() raw: unknown): Promise<z.infer<typeof DraftListResponseSchema>> {
+    const query = DraftQuerySchema.parse(raw);
+    return this.draftService.findAll(query);
+  }
+
+  @Get(':id')
+  @Perm('draft', ['read'])
+  @ApiOperation({ summary: 'Get draft by ID' })
+  @ApiResponse({ status: 200, description: 'Return draft' })
+  async findOne(@Param('id') id: string): Promise<z.infer<typeof DraftSchema>> {
+    return this.draftService.findOne(Number(id));
+  }
+
+  @Post()
+  @Perm('draft', ['create'])
+  @ApiOperation({ summary: 'Create draft' })
+  @ApiResponse({ status: 201, description: 'Draft created' })
+  async create(@Body() raw: unknown): Promise<z.infer<typeof DraftSchema>> {
+    const dto = CreateDraftSchema.parse(raw);
+    return this.draftService.create(dto);
+  }
+
+  @Put(':id')
+  @Perm('draft', ['update'])
+  @ApiOperation({ summary: 'Update draft' })
+  @ApiResponse({ status: 200, description: 'Draft updated' })
+  async update(@Param('id') id: string, @Body() raw: unknown): Promise<z.infer<typeof DraftSchema>> {
+    const dto = UpdateDraftSchema.parse(raw);
+    return this.draftService.update(Number(id), dto);
+  }
+
+  @Delete(':id')
+  @Perm('draft', ['delete'])
+  @ApiOperation({ summary: 'Delete draft' })
+  @ApiResponse({ status: 200, description: 'Draft deleted' })
+  async remove(@Param('id') id: string): Promise<void> {
+    return this.draftService.remove(Number(id));
+  }
 
   @TsRestHandler(contract.getDrafts)
   @Perm('draft', ['read'])
@@ -63,7 +106,7 @@ export class DraftController {
 
   @TsRestHandler(contract.createDraft)
   @Perm('draft', ['create'])
-  createDraft(): ReturnType<typeof tsRestHandler> {
+  createDraft_tsrest(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.createDraft, async ({ body }) => {
       const result = await this.draftService.create({
         title: body.title,
@@ -91,7 +134,7 @@ export class DraftController {
 
   @TsRestHandler(contract.updateDraft)
   @Perm('draft', ['update'])
-  updateDraft(): ReturnType<typeof tsRestHandler> {
+  updateDraft_tsrest(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.updateDraft, async ({ params, body }) => {
       const updateData: Record<string, unknown> = {};
       if (body.title !== undefined) updateData.title = body.title;
@@ -121,7 +164,7 @@ export class DraftController {
 
   @TsRestHandler(contract.deleteDraft)
   @Perm('draft', ['delete'])
-  deleteDraft(): ReturnType<typeof tsRestHandler> {
+  deleteDraft_tsrest(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.deleteDraft, async ({ params }) => {
       await this.draftService.remove(Number(params.id));
       return { status: 200, body: { success: true } };
@@ -130,7 +173,7 @@ export class DraftController {
 
   @TsRestHandler(contract.getDraft)
   @Perm('draft', ['read'])
-  getDraft(): ReturnType<typeof tsRestHandler> {
+  getDraft_tsrest(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.getDraft, async ({ params }) => {
       const result = await this.draftService.findOne(Number(params.id));
 
@@ -151,7 +194,7 @@ export class DraftController {
 
   @TsRestHandler(contract.publishDraft)
   @Perm('draft', ['publish'])
-  publishDraft(): ReturnType<typeof tsRestHandler> {
+  publishDraft_tsrest(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.publishDraft, async ({ params }) => {
       const result = await this.draftService.publish(Number(params.id), {
         isPublished: true,
@@ -181,29 +224,6 @@ export class DraftController {
         },
       };
     });
-  }
-
-  async findAll(raw: unknown): Promise<z.infer<typeof DraftListResponseSchema>> {
-    const query = DraftQuerySchema.parse(raw);
-    return this.draftService.findAll(query);
-  }
-
-  async findOne(id: number): Promise<z.infer<typeof DraftSchema>> {
-    return this.draftService.findOne(id);
-  }
-
-  async create(raw: unknown): Promise<z.infer<typeof DraftSchema>> {
-    const dto = CreateDraftSchema.parse(raw);
-    return this.draftService.create(dto);
-  }
-
-  async update(id: number, raw: unknown): Promise<z.infer<typeof DraftSchema>> {
-    const dto = UpdateDraftSchema.parse(raw);
-    return this.draftService.update(id, dto);
-  }
-
-  async remove(id: number): Promise<void> {
-    return this.draftService.remove(id);
   }
 
   async publish(id: number, raw: unknown): Promise<Article> {

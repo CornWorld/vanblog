@@ -5,10 +5,7 @@ import { contract } from '@vanblog/shared';
 const originalFetch = window.fetch;
 
 // Custom fetch wrapper that adds Authorization Bearer header
-const authFetch = async (
-  url: RequestInfo | URL,
-  options: RequestInit = {},
-): Promise<Response> => {
+const authFetch = async (url: RequestInfo | URL, options: RequestInit = {}): Promise<Response> => {
   const token = localStorage.getItem('token');
   const authOptions: RequestInit = {
     ...options,

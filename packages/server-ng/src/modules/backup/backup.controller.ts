@@ -238,6 +238,23 @@ export class BackupController {
     return this.backupService.getRestoreProgress(taskId);
   }
 
+  /**
+   * 导出数据库备份
+   *
+   * 生成并导出当前数据库的备份文件。
+   *
+   * @returns 备份文件buffer
+   */
+  @Get('export')
+  @Perm('backup', ['read'])
+  @ApiOperation({ summary: 'Export database backup' })
+  @ApiResponse({ status: 200, description: 'Backup exported successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Insufficient permissions' })
+  async exportBackup() {
+    return this.backupService.exportBackup();
+  }
+
   // ts-rest handlers for contract compatibility
 
   @TsRestHandler(contract.importBackup)

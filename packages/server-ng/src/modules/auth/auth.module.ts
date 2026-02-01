@@ -4,6 +4,7 @@ import { JwtModule, type JwtModuleOptions } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 
 import { DatabaseModule } from '../../database';
+import { PermissionModule } from '../permission/permission.module';
 import { UserModule } from '../user/user.module';
 
 import { ApiTokenController } from './api-token.controller';
@@ -25,6 +26,12 @@ import { TokenService } from './token.service';
     forwardRef(() => UserModule),
     PassportModule,
     DatabaseModule,
+    PermissionModule.forFeature([
+      'user:read',
+      'user:create',
+      'user:update',
+      'user:delete',
+    ]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService): JwtModuleOptions => {

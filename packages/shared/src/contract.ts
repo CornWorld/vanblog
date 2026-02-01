@@ -113,7 +113,7 @@ export const contract = c.router({
   },
   getCollaborators: {
     method: 'GET',
-    path: '/v2/users/collaborators',
+    path: '/v2/admin/users',
     responses: {
       200: z.array(UserSchema),
     },
@@ -121,7 +121,7 @@ export const contract = c.router({
   },
   createCollaborator: {
     method: 'POST',
-    path: '/v2/users/collaborators',
+    path: '/v2/admin/users',
     body: CreateCollaboratorSchema,
     responses: {
       201: UserSchema,
@@ -130,7 +130,7 @@ export const contract = c.router({
   },
   updateCollaborator: {
     method: 'PUT',
-    path: '/v2/users/collaborators',
+    path: '/v2/admin/users',
     body: UpdateCollaboratorSchema,
     responses: {
       200: UserSchema,
@@ -139,7 +139,7 @@ export const contract = c.router({
   },
   deleteCollaborator: {
     method: 'DELETE',
-    path: '/v2/users/collaborators/:id',
+    path: '/v2/admin/users/:id',
     pathParams: z.object({ id: z.string() }),
     responses: {
       200: z.object({ success: z.boolean() }),
@@ -404,7 +404,7 @@ export const contract = c.router({
   // Media
   getMedia: {
     method: 'GET',
-    path: '/v2/media',
+    path: '/v2/admin/media',
     query: z.object({
       page: z.coerce.number().optional(),
       pageSize: z.coerce.number().optional(),
@@ -421,7 +421,7 @@ export const contract = c.router({
   },
   deleteMedia: {
     method: 'DELETE',
-    path: '/v2/media/:sign',
+    path: '/v2/admin/media/:sign',
     pathParams: z.object({ sign: z.string() }),
     responses: {
       200: z.object({ success: z.boolean() }),
@@ -430,7 +430,7 @@ export const contract = c.router({
   },
   batchDeleteMedia: {
     method: 'POST',
-    path: '/v2/media/batch-delete',
+    path: '/v2/admin/media/batch-delete',
     body: z.object({}),
     responses: {
       200: z.object({ success: z.boolean() }),
@@ -439,7 +439,7 @@ export const contract = c.router({
   },
   scanMedia: {
     method: 'POST',
-    path: '/v2/media/scan-articles',
+    path: '/v2/admin/media/scan-articles',
     body: z.object({}),
     responses: {
       200: z.object({ success: z.boolean() }),
@@ -448,7 +448,7 @@ export const contract = c.router({
   },
   exportMedia: {
     method: 'GET',
-    path: '/v2/media/export/all',
+    path: '/v2/admin/media/export/all',
     responses: {
       200: z.any(), // Blob/File
     },

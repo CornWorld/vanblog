@@ -59,6 +59,7 @@ interface CollaboratorModalProps {
 }
 
 function CollaboratorModal({ onFinish, id, trigger, initialValues }: CollaboratorModalProps) {
+  return (
   <ModalForm
     title={id ? i18next.t('collaborator.modal.edit') : i18next.t('collaborator.modal.new')}
     trigger={trigger}
@@ -134,7 +135,7 @@ function CollaboratorModal({ onFinish, id, trigger, initialValues }: Collaborato
       }}
     />
   </ModalForm>
-);
+  );
 }
 
 export default CollaboratorModal;

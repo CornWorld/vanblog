@@ -1,5 +1,5 @@
-import { Controller } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Delete, Get, Param, Post, Put } from '@nestjs/common';
+import { ApiOperation, ApiTags, ApiResponse } from '@nestjs/swagger';
 import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
 import { contract } from '@vanblog/shared';
 
@@ -18,12 +18,62 @@ import { PipelineService } from './pipeline.service';
 export class PipelineController {
   constructor(private readonly pipelineService: PipelineService) {}
 
+  @Get()
+  @Permission('pipeline', ['read'])
+  @ApiOperation({ summary: 'Get all pipelines' })
+  @ApiResponse({ status: 200, description: 'Return all pipelines' })
+  async findAll() {
+    const result = await this.pipelineService.findAll();
+    return result.items;
+  }
+
+  @Get('config')
+  @Permission('pipeline', ['read'])
+  @ApiOperation({ summary: 'Get pipeline configuration' })
+  @ApiResponse({ status: 200, description: 'Return pipeline config' })
+  async getConfig() {
+    return this.pipelineService.getConfig();
+  }
+
+  @Get(':id')
+  @Permission('pipeline', ['read'])
+  @ApiOperation({ summary: 'Get pipeline by ID' })
+  @ApiResponse({ status: 200, description: 'Return pipeline' })
+  async findOne(@Param('id') id: string) {
+    return this.pipelineService.findOne(Number(id));
+  }
+
+  @Post()
+  @Permission('pipeline', ['create'])
+  @ApiOperation({ summary: 'Create pipeline' })
+  @ApiResponse({ status: 201, description: 'Pipeline created' })
+  async create(@Body() body: unknown) {
+    return this.pipelineService.create(body);
+  }
+
+  @Put(':id')
+  @Permission('pipeline', ['update'])
+  @ApiOperation({ summary: 'Update pipeline' })
+  @ApiResponse({ status: 200, description: 'Pipeline updated' })
+  async update(@Param('id') id: string, @Body() body: unknown) {
+    return this.pipelineService.update(Number(id), body);
+  }
+
+  @Delete(':id')
+  @Permission('pipeline', ['delete'])
+  @ApiOperation({ summary: 'Delete pipeline' })
+  @ApiResponse({ status: 200, description: 'Pipeline deleted' })
+  async remove(@Param('id') id: string) {
+    await this.pipelineService.remove(Number(id));
+    return { success: true };
+  }
+
   /**
    * Get all pipelines
    */
   @TsRestHandler(contract.getPipelines)
   @Permission('pipeline', ['read'])
-  getPipelines(): ReturnType<typeof tsRestHandler> {
+  getPipelines_tsrest(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.getPipelines, async () => {
       const result = await this.pipelineService.findAll();
       return { status: 200, body: result.items };
@@ -35,7 +85,7 @@ export class PipelineController {
    */
   @TsRestHandler(contract.getPipelineConfig)
   @Permission('pipeline', ['read'])
-  getPipelineConfig(): ReturnType<typeof tsRestHandler> {
+  getPipelineConfig_tsrest(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.getPipelineConfig, () => {
       const config = this.pipelineService.getConfig();
       return { status: 200, body: config };
@@ -47,7 +97,7 @@ export class PipelineController {
    */
   @TsRestHandler(contract.getPipeline)
   @Permission('pipeline', ['read'])
-  getPipeline(): ReturnType<typeof tsRestHandler> {
+  getPipeline_tsrest(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.getPipeline, async ({ params }) => {
       const pipeline = await this.pipelineService.findOne(Number(params.id));
       return { status: 200, body: pipeline };
@@ -59,7 +109,7 @@ export class PipelineController {
    */
   @TsRestHandler(contract.createPipeline)
   @Permission('pipeline', ['create'])
-  createPipeline(): ReturnType<typeof tsRestHandler> {
+  createPipeline_tsrest(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.createPipeline, async ({ body }) => {
       const pipeline = await this.pipelineService.create(body);
       return { status: 201, body: pipeline };
@@ -71,7 +121,7 @@ export class PipelineController {
    */
   @TsRestHandler(contract.updatePipeline)
   @Permission('pipeline', ['update'])
-  updatePipeline(): ReturnType<typeof tsRestHandler> {
+  updatePipeline_tsrest(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.updatePipeline, async ({ params, body }) => {
       const pipeline = await this.pipelineService.update(Number(params.id), body);
       return { status: 200, body: pipeline };
@@ -83,7 +133,7 @@ export class PipelineController {
    */
   @TsRestHandler(contract.deletePipeline)
   @Permission('pipeline', ['delete'])
-  deletePipeline(): ReturnType<typeof tsRestHandler> {
+  deletePipeline_tsrest(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.deletePipeline, async ({ params }) => {
       await this.pipelineService.remove(Number(params.id));
       return { status: 200, body: { success: true } };
@@ -95,7 +145,7 @@ export class PipelineController {
    */
   @TsRestHandler(contract.triggerPipeline)
   @Permission('pipeline', ['execute'])
-  triggerPipeline(): ReturnType<typeof tsRestHandler> {
+  triggerPipeline_tsrest(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.triggerPipeline, async ({ params, body }) => {
       const result = await this.pipelineService.triggerById(Number(params.id), body);
       return { status: 200, body: result };
