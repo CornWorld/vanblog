@@ -1,4 +1,5 @@
 import { Controller } from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
 import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
 import { contract, dayjs } from '@vanblog/shared';
 import { z } from 'zod';
@@ -21,7 +22,8 @@ import {
 
 type DraftItem = z.infer<typeof DraftSchema>;
 
-@Controller()
+@ApiTags('Drafts')
+@Controller({ path: 'drafts', version: '2' })
 export class DraftController {
   constructor(
     private readonly draftService: DraftService,

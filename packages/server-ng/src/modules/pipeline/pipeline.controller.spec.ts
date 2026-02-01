@@ -53,32 +53,35 @@ describe('PipelineController', () => {
     expect(controller).toBeDefined();
   });
 
-  describe('findAll', () => {
+  describe('getPipelines', () => {
     it('should return all pipelines', async () => {
-      const result = await controller.findAll();
+      const handler = controller.getPipelines();
+      const result = await handler({} as never);
 
-      expect(result.items).toBeDefined();
-      expect(result.total).toBeDefined();
+      expect(result).toEqual({ status: 200, body: [expect.any(Object)] });
       expect(mockService.findAll).toHaveBeenCalled();
     });
   });
 
-  describe('getConfig', () => {
+  describe('getPipelineConfig', () => {
     it('should return pipeline configuration', () => {
-      const result = controller.getConfig();
+      const handler = controller.getPipelineConfig();
+      const result = handler({} as never);
 
-      expect(result.events).toBeDefined();
-      expect(Array.isArray(result.events)).toBe(true);
-      expect(result.events.length).toBeGreaterThan(0);
+      expect(result).toEqual({
+        status: 200,
+        body: { events: ['article|afterCreate', 'article|afterUpdate'] },
+      });
       expect(mockService.getConfig).toHaveBeenCalled();
     });
   });
 
-  describe('findOne', () => {
+  describe('getPipeline', () => {
     it('should return a single pipeline by id', async () => {
-      const result = await controller.findOne(1);
+      const handler = controller.getPipeline();
+      const result = await handler({ params: { id: '1' } } as never);
 
-      expect(result).toBeDefined();
+      expect(result).toEqual({ status: 200, body: expect.any(Object) });
       expect(mockService.findOne).toHaveBeenCalledWith(1);
     });
 
@@ -87,11 +90,14 @@ describe('PipelineController', () => {
         new NotFoundException('Pipeline with ID 999 not found'),
       );
 
-      await expect(controller.findOne(999)).rejects.toThrow(NotFoundException);
+      const handler = controller.getPipeline();
+      await expect(handler({ params: { id: '999' } } as never)).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
-  describe('create', () => {
+  describe('createPipeline', () => {
     it('should create a new pipeline', async () => {
       const createDto = {
         name: 'New Pipeline',
@@ -101,9 +107,10 @@ describe('PipelineController', () => {
         deps: [],
       };
 
-      const result = await controller.create(createDto);
+      const handler = controller.createPipeline();
+      const result = await handler({ body: createDto } as never);
 
-      expect(result).toBeDefined();
+      expect(result).toEqual({ status: 201, body: expect.any(Object) });
       expect(mockService.create).toHaveBeenCalledWith(createDto);
     });
 
@@ -120,11 +127,14 @@ describe('PipelineController', () => {
         new BadRequestException('Event name is required'),
       );
 
-      await expect(controller.create(createDto)).rejects.toThrow(BadRequestException);
+      const handler = controller.createPipeline();
+      await expect(handler({ body: createDto } as never)).rejects.toThrow(
+        BadRequestException,
+      );
     });
   });
 
-  describe('update', () => {
+  describe('updatePipeline', () => {
     it('should update an existing pipeline', async () => {
       const updateDto = {
         name: 'Updated Pipeline',
@@ -138,9 +148,10 @@ describe('PipelineController', () => {
 
       vi.mocked(mockService.update as any).mockResolvedValueOnce(updatedPipeline);
 
-      const result = await controller.update(1, updateDto);
+      const handler = controller.updatePipeline();
+      const result = await handler({ params: { id: '1' }, body: updateDto } as never);
 
-      expect(result.name).toBe('Updated Pipeline');
+      expect(result.body.name).toBe('Updated Pipeline');
       expect(mockService.update).toHaveBeenCalledWith(1, updateDto);
     });
 
@@ -149,15 +160,19 @@ describe('PipelineController', () => {
         new NotFoundException('Pipeline with ID 999 not found'),
       );
 
-      await expect(controller.update(999, { name: 'Test' })).rejects.toThrow(NotFoundException);
+      const handler = controller.updatePipeline();
+      await expect(
+        handler({ params: { id: '999' }, body: { name: 'Test' } } as never),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 
-  describe('remove', () => {
+  describe('deletePipeline', () => {
     it('should delete a pipeline', async () => {
-      const result = await controller.remove(1);
+      const handler = controller.deletePipeline();
+      const result = await handler({ params: { id: '1' } } as never);
 
-      expect(result).toEqual({ success: true });
+      expect(result).toEqual({ status: 200, body: { success: true } });
       expect(mockService.remove).toHaveBeenCalledWith(1);
     });
 
@@ -166,55 +181,58 @@ describe('PipelineController', () => {
         new NotFoundException('Pipeline with ID 999 not found'),
       );
 
-      await expect(controller.remove(999)).rejects.toThrow(NotFoundException);
+      const handler = controller.deletePipeline();
+      await expect(handler({ params: { id: '999' } } as never)).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
-  describe('trigger', () => {
+  describe('triggerPipeline', () => {
     it('should trigger a pipeline', async () => {
-      const triggerDto = {
-        input: { title: 'Test Article' },
-      };
+      const triggerDto = { title: 'Test Article' };
 
-      const result = await controller.trigger(1, triggerDto);
+      const handler = controller.triggerPipeline();
+      const result = await handler({ params: { id: '1' }, body: triggerDto } as never);
 
-      expect(result).toBeDefined();
-      expect(mockService.triggerById).toHaveBeenCalledWith(1, triggerDto.input);
+      expect(result).toEqual({ status: 200, body: expect.any(Object) });
+      expect(mockService.triggerById).toHaveBeenCalledWith(1, triggerDto);
     });
 
     it('should throw BadRequestException when pipeline is disabled', async () => {
-      const triggerDto = {
-        input: { title: 'Test' },
-      };
+      const triggerDto = { title: 'Test' };
 
       vi.mocked(mockService.triggerById as any).mockRejectedValueOnce(
         new BadRequestException('Pipeline 1 is disabled'),
       );
 
-      await expect(controller.trigger(1, triggerDto)).rejects.toThrow(BadRequestException);
+      const handler = controller.triggerPipeline();
+      await expect(
+        handler({ params: { id: '1' }, body: triggerDto } as never),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('should throw NotFoundException when pipeline not found', async () => {
-      const triggerDto = {
-        input: {},
-      };
+      const triggerDto = {};
 
       vi.mocked(mockService.triggerById as any).mockRejectedValueOnce(
         new NotFoundException('Pipeline with ID 999 not found'),
       );
 
-      await expect(controller.trigger(999, triggerDto)).rejects.toThrow(NotFoundException);
+      const handler = controller.triggerPipeline();
+      await expect(
+        handler({ params: { id: '999' }, body: triggerDto } as never),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('should handle empty input', async () => {
-      const triggerDto = {
-        input: undefined,
-      };
+      const triggerDto = undefined;
 
-      const result = await controller.trigger(1, triggerDto);
+      const handler = controller.triggerPipeline();
+      const result = await handler({ params: { id: '1' }, body: triggerDto } as never);
 
-      expect(result).toBeDefined();
-      expect(mockService.triggerById).toHaveBeenCalledWith(1, undefined);
+      expect(result).toEqual({ status: 200, body: expect.any(Object) });
+      expect(mockService.triggerById).toHaveBeenCalledWith(1, triggerDto);
     });
   });
 });

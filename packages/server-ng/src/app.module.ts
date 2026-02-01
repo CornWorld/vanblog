@@ -21,6 +21,7 @@ import { HealthModule } from './modules/health/health.module';
 import { MediaModule } from './modules/media/media.module';
 import { MetricsModule } from './modules/metrics/metrics.module';
 import { PermissionModule } from './modules/permission/permission.module';
+import { PipelineModule } from './modules/pipeline/pipeline.module';
 import { PluginModule } from './modules/plugin/plugin.module';
 import { PublicModule } from './modules/public/public.module';
 import { RssModule } from './modules/rss/rss.module';
@@ -80,6 +81,7 @@ export class AppModule implements NestModule {
         SitemapModule,
         BackupModule,
         AdminModule,
+        PipelineModule,
 
         DemoModule,
         pluginModule,
