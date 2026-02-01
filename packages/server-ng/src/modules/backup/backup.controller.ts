@@ -13,8 +13,12 @@ import {
   HttpStatus,
   StreamableFile,
   Res,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
+import { contract } from '@vanblog/shared';
 import { z } from 'zod';
 
 import { Perm } from '../auth/permissions.decorator';
@@ -232,5 +236,42 @@ export class BackupController {
   @ApiResponse({ status: 403, description: 'Insufficient permissions' })
   getRestoreProgress(@Param('taskId') taskId: string): z.infer<typeof RestoreProgressSchema> {
     return this.backupService.getRestoreProgress(taskId);
+  }
+
+  // ts-rest handlers for contract compatibility
+
+  @TsRestHandler(contract.importBackup)
+  @Perm('backup', ['restore'])
+  @UseInterceptors(FileInterceptor('file'))
+  importBackup_tsrest(): ReturnType<typeof tsRestHandler> {
+    return tsRestHandler(contract.importBackup, async ({ rawRequest }) => {
+      const req = rawRequest as { file?: Express.Multer.File };
+      if (!req.file) {
+        throw new Error('No file uploaded');
+      }
+      await this.backupService.importBackup(req.file);
+      return { status: 201, body: { success: true } };
+    });
+  }
+
+  @TsRestHandler(contract.exportBackup)
+  @Perm('backup', ['read'])
+  exportBackup_tsrest(): ReturnType<typeof tsRestHandler> {
+    return tsRestHandler(contract.exportBackup, async () => {
+      const buffer = await this.backupService.exportBackup();
+      return {
+        status: 200,
+        body: buffer as unknown as { toString: () => string },
+      } as { status: 200; body: unknown };
+    });
+  }
+
+  @TsRestHandler(contract.restoreBackup)
+  @Perm('backup', ['restore'])
+  restoreBackup_tsrest(): ReturnType<typeof tsRestHandler> {
+    return tsRestHandler(contract.restoreBackup, async ({ body }) => {
+      await this.backupService.restoreFromBackup(body);
+      return { status: 200, body: { success: true } };
+    });
   }
 }

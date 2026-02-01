@@ -6,6 +6,8 @@ import { PassportModule } from '@nestjs/passport';
 import { DatabaseModule } from '../../database';
 import { UserModule } from '../user/user.module';
 
+import { ApiTokenController } from './api-token.controller';
+import { ApiTokenService } from './api-token.service';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { CsrfController } from './csrf.controller';
@@ -38,7 +40,7 @@ import { TokenService } from './token.service';
       inject: [ConfigService],
     }),
   ],
-  controllers: [AuthController, CsrfController, LoginLogController],
+  controllers: [AuthController, CsrfController, LoginLogController, ApiTokenController],
   providers: [
     AuthService,
     LocalStrategy,
@@ -48,6 +50,7 @@ import { TokenService } from './token.service';
     PasswordChangeHandlerService,
     PermissionsGuard,
     LoginLogService,
+    ApiTokenService,
   ],
   exports: [AuthService, TokenService, JwtModule],
 })

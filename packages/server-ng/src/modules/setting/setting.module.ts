@@ -3,17 +3,18 @@ import { Module } from '@nestjs/common';
 import { DatabaseModule } from '../../database';
 import { PermissionModule } from '../permission/permission.module';
 
-import { SettingCoreService } from './services/setting-core.service';
-import { SettingRegistryService } from './services/setting-registry.service';
+import { CaddyController } from './caddy.controller';
 import { SettingCoreController } from './setting-core.controller';
 import { SettingRegistryController } from './setting-registry.controller';
+import { SettingCoreService } from './services/setting-core.service';
+import { SettingRegistryService } from './services/setting-registry.service';
 
 @Module({
   imports: [
     DatabaseModule,
     PermissionModule.forFeature(['setting:read', 'setting:update', 'setting:manage']),
   ],
-  controllers: [SettingCoreController, SettingRegistryController],
+  controllers: [SettingCoreController, SettingRegistryController, CaddyController],
   providers: [SettingCoreService, SettingRegistryService],
   exports: [SettingCoreService, SettingRegistryService],
 })

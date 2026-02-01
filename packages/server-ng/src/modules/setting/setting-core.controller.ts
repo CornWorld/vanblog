@@ -2,6 +2,7 @@ import { Controller } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { initContract } from '@ts-rest/core';
 import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
+import { contract } from '@vanblog/shared';
 import { createSettingContract } from '@vanblog/shared/contracts';
 
 import { Permission } from '../auth/permissions.decorator';
@@ -179,6 +180,178 @@ export class SettingCoreController {
     return tsRestHandler(settingContract.updateAbout, async ({ body }) => {
       const data = await this.settingCoreService.updateAboutInfo(body);
       return { status: 200, body: data };
+    });
+  }
+
+  // Social Settings
+  @TsRestHandler(contract.getSocials)
+  @Permission('setting', ['read'])
+  getSocials_tsrest(): ReturnType<typeof tsRestHandler> {
+    return tsRestHandler(contract.getSocials, async () => {
+      const data = await this.settingCoreService.getSocials();
+      return { status: 200, body: data };
+    });
+  }
+
+  @TsRestHandler(contract.updateSocial)
+  @Permission('setting', ['update'])
+  updateSocial_tsrest(): ReturnType<typeof tsRestHandler> {
+    return tsRestHandler(contract.updateSocial, async ({ body }) => {
+      const data = await this.settingCoreService.updateSocial(body);
+      return { status: 200, body: data };
+    });
+  }
+
+  @TsRestHandler(contract.deleteSocial)
+  @Permission('setting', ['update'])
+  deleteSocial_tsrest(): ReturnType<typeof tsRestHandler> {
+    return tsRestHandler(contract.deleteSocial, async ({ params }) => {
+      const { type } = params;
+      const data = await this.settingCoreService.deleteSocial(type);
+      return { status: 200, body: data };
+    });
+  }
+
+  @TsRestHandler(contract.getSocialTypes)
+  @Permission('setting', ['read'])
+  getSocialTypes_tsrest(): ReturnType<typeof tsRestHandler> {
+    return tsRestHandler(contract.getSocialTypes, () => {
+      const data = this.settingCoreService.getSocialTypes();
+      return { status: 200, body: data };
+    });
+  }
+
+  // Waline Settings
+  @TsRestHandler(contract.getWalineSetting)
+  @Permission('setting', ['read'])
+  getWalineSetting_tsrest(): ReturnType<typeof tsRestHandler> {
+    return tsRestHandler(contract.getWalineSetting, async () => {
+      const data = await this.settingCoreService.getWalineSetting();
+      return { status: 200, body: data };
+    });
+  }
+
+  @TsRestHandler(contract.updateWalineSetting)
+  @Permission('setting', ['update'])
+  updateWalineSetting_tsrest(): ReturnType<typeof tsRestHandler> {
+    return tsRestHandler(contract.updateWalineSetting, async ({ body }) => {
+      const data = await this.settingCoreService.updateWalineSetting(body);
+      return { status: 200, body: data };
+    });
+  }
+
+  // ISR Settings
+  @TsRestHandler(contract.getISRSetting)
+  @Permission('setting', ['read'])
+  getISRSetting_tsrest(): ReturnType<typeof tsRestHandler> {
+    return tsRestHandler(contract.getISRSetting, async () => {
+      const data = await this.settingCoreService.getISRSetting();
+      return { status: 200, body: data };
+    });
+  }
+
+  @TsRestHandler(contract.updateISRSetting)
+  @Permission('setting', ['update'])
+  updateISRSetting_tsrest(): ReturnType<typeof tsRestHandler> {
+    return tsRestHandler(contract.updateISRSetting, async ({ body }) => {
+      const data = await this.settingCoreService.updateISRSetting(body);
+      return { status: 200, body: data };
+    });
+  }
+
+  // Login Settings
+  @TsRestHandler(contract.getLoginSetting)
+  @Permission('setting', ['read'])
+  getLoginSetting_tsrest(): ReturnType<typeof tsRestHandler> {
+    return tsRestHandler(contract.getLoginSetting, async () => {
+      const data = await this.settingCoreService.getLoginSetting();
+      return { status: 200, body: data };
+    });
+  }
+
+  @TsRestHandler(contract.updateLoginSetting)
+  @Permission('setting', ['update'])
+  updateLoginSetting_tsrest(): ReturnType<typeof tsRestHandler> {
+    return tsRestHandler(contract.updateLoginSetting, async ({ body }) => {
+      const data = await this.settingCoreService.updateLoginSetting(body);
+      return { status: 200, body: data };
+    });
+  }
+
+  // HTTPS Settings
+  @TsRestHandler(contract.getHttpsSetting)
+  @Permission('setting', ['read'])
+  getHttpsSetting_tsrest(): ReturnType<typeof tsRestHandler> {
+    return tsRestHandler(contract.getHttpsSetting, async () => {
+      const data = await this.settingCoreService.getHttpsSetting();
+      return { status: 200, body: data };
+    });
+  }
+
+  @TsRestHandler(contract.updateHttpsSetting)
+  @Permission('setting', ['update'])
+  updateHttpsSetting_tsrest(): ReturnType<typeof tsRestHandler> {
+    return tsRestHandler(contract.updateHttpsSetting, async ({ body }) => {
+      const data = await this.settingCoreService.updateHttpsSetting(body);
+      return { status: 200, body: data };
+    });
+  }
+
+  // Static (Media) Settings
+  @TsRestHandler(contract.getStaticSetting)
+  @Permission('setting', ['read'])
+  getStaticSetting_tsrest(): ReturnType<typeof tsRestHandler> {
+    return tsRestHandler(contract.getStaticSetting, async () => {
+      const data = await this.settingCoreService.getStaticSetting();
+      return { status: 200, body: data };
+    });
+  }
+
+  @TsRestHandler(contract.updateStaticSetting)
+  @Permission('setting', ['update'])
+  updateStaticSetting_tsrest(): ReturnType<typeof tsRestHandler> {
+    return tsRestHandler(contract.updateStaticSetting, async ({ body }) => {
+      const data = await this.settingCoreService.updateStaticSetting(body);
+      return { status: 200, body: data };
+    });
+  }
+
+  // Rewards (Donations) Settings
+  @TsRestHandler(contract.getRewards)
+  @Permission('setting', ['read'])
+  getRewards_tsrest(): ReturnType<typeof tsRestHandler> {
+    return tsRestHandler(contract.getRewards, async () => {
+      const data = await this.settingCoreService.getRewards();
+      return { status: 200, body: data };
+    });
+  }
+
+  @TsRestHandler(contract.createReward)
+  @Permission('setting', ['update'])
+  createReward_tsrest(): ReturnType<typeof tsRestHandler> {
+    return tsRestHandler(contract.createReward, async ({ body }) => {
+      const data = await this.settingCoreService.createReward(body);
+      return { status: 201, body: data };
+    });
+  }
+
+  @TsRestHandler(contract.updateReward)
+  @Permission('setting', ['update'])
+  updateReward_tsrest(): ReturnType<typeof tsRestHandler> {
+    return tsRestHandler(contract.updateReward, async ({ params, body }) => {
+      const { name } = params;
+      const data = await this.settingCoreService.updateReward(name, body);
+      return { status: 200, body: data };
+    });
+  }
+
+  @TsRestHandler(contract.deleteReward)
+  @Permission('setting', ['update'])
+  deleteReward_tsrest(): ReturnType<typeof tsRestHandler> {
+    return tsRestHandler(contract.deleteReward, async ({ params }) => {
+      const { name } = params;
+      await this.settingCoreService.deleteReward(name);
+      return { status: 200, body: { success: true } };
     });
   }
 }

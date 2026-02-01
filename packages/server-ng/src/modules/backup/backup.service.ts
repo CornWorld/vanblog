@@ -11,7 +11,6 @@ import {
   InternalServerErrorException,
   Inject,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { dayjs } from '@vanblog/shared';
 import {
   users,
@@ -604,5 +603,43 @@ export class BackupService {
     decrypted += decipher.final('utf8');
 
     return decrypted;
+  }
+
+  // Additional methods for ts-rest contract compatibility
+
+  async importBackup(file: Express.Multer.File): Promise<void> {
+    const filepath = path.join(this.backupDir, file.originalname);
+    await fs.writeFile(filepath, file.buffer);
+
+    this.logger.log(`Backup file imported: ${file.originalname}`);
+  }
+
+  async exportBackup(): Promise<Buffer> {
+    // Create a backup with default settings
+    const dto: z.infer<typeof CreateBackupSchema> = {
+      name: `export-${dayjs().format().replace(/[:.]/g, '-')}`,
+      includeMedia: false,
+      includeAnalytics: false,
+      includeLogs: false,
+    };
+
+    const backupInfo = await this.createBackup(dto);
+    const filepath = path.join(this.backupDir, backupInfo.filename);
+    const compressed = await fs.readFile(filepath);
+
+    // Clean up the temporary backup file
+    await fs.unlink(filepath);
+
+    return compressed;
+  }
+
+  async restoreFromBackup(body: unknown): Promise<void> {
+    const dto = RestoreBackupSchema.parse(body);
+    // For restore from contract, we expect body to contain filename or backup data
+    if ('filename' in dto && typeof dto.filename === 'string') {
+      await this.restoreBackup(dto.filename, dto);
+    } else {
+      throw new BadRequestException('Invalid restore request');
+    }
   }
 }

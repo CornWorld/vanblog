@@ -1,5 +1,7 @@
 import { Body, Controller, Delete, Get, Post, Put } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
+import { contract } from '@vanblog/shared';
 
 import { Perm } from '../auth/permissions.decorator';
 
@@ -7,6 +9,14 @@ import { Perm } from '../auth/permissions.decorator';
 @Controller({ path: 'admin', version: '2' })
 export class CompatibilityController {
   // ISR Stubs
+  @TsRestHandler(contract.triggerISR)
+  @Perm({ authOnly: true, roles: ['admin'] })
+  triggerISR_tsrest(): ReturnType<typeof tsRestHandler> {
+    return tsRestHandler(contract.triggerISR, async () => {
+      return { status: 200, body: { success: true } };
+    });
+  }
+
   @Post('isr/trigger')
   @Perm({ authOnly: true, roles: ['admin'] })
   @ApiOperation({ summary: 'Trigger ISR (Stub)' })

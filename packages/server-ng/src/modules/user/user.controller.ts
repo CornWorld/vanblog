@@ -13,7 +13,7 @@ import {
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { initContract } from '@ts-rest/core';
 import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
-import { type User } from '@vanblog/shared';
+import { contract, type User } from '@vanblog/shared';
 import { createUserContract, type User as ContractUser } from '@vanblog/shared/contracts';
 
 import { Perm } from '../auth/permissions.decorator';
@@ -192,6 +192,32 @@ export class UserController {
   @ApiResponse({ status: 200, description: '用户信息获取成功' })
   getProfile(@Request() req: RequestWithUser): User {
     return req.user;
+  }
+
+  /**
+   * Update user profile (ts-rest endpoint)
+   * Updates the current user's profile information
+   */
+  @TsRestHandler(contract.updateProfile)
+  @Perm('user', ['update'])
+  updateProfile_tsrest(): ReturnType<typeof tsRestHandler> {
+    return tsRestHandler(contract.updateProfile, async ({ body, request }) => {
+      const req = request as { user?: UserEntity };
+      if (!req.user) {
+        throw new BadRequestException('User not authenticated');
+      }
+
+      const updateData = {
+        nickname: body.nickname,
+        avatar: body.avatar,
+        email: body.email,
+        password: body.password,
+        oldPassword: body.oldPassword,
+      };
+
+      const updatedUser = await this.userService.update(req.user.id, updateData);
+      return { status: 200, body: updatedUser };
+    });
   }
 
   /**
