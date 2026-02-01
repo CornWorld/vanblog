@@ -1,6 +1,5 @@
 import { createCollaborator, updateCollaborator } from '@/services/van-blog/api';
 import i18next from 'i18next';
-import { encryptPwd } from '@/services/van-blog/encryptPwd';
 import { ModalForm, ProFormSelect, ProFormText } from '@ant-design/pro-components';
 
 // TODO: Extract this
@@ -59,7 +58,7 @@ interface CollaboratorModalProps {
   };
 }
 
-export default ({ onFinish, id, trigger, initialValues }: CollaboratorModalProps) => (
+function CollaboratorModal({ onFinish, id, trigger, initialValues }: CollaboratorModalProps) {
   <ModalForm
     title={id ? i18next.t('collaborator.modal.edit') : i18next.t('collaborator.modal.new')}
     trigger={trigger}
@@ -72,12 +71,12 @@ export default ({ onFinish, id, trigger, initialValues }: CollaboratorModalProps
         await updateCollaborator({
           id,
           ...values,
-          password: encryptPwd(values.name, values.password),
+          password: values.password,
         });
       } else {
         await createCollaborator({
           ...values,
-          password: encryptPwd(values.name, values.password),
+          password: values.password,
         });
       }
 
@@ -136,3 +135,6 @@ export default ({ onFinish, id, trigger, initialValues }: CollaboratorModalProps
     />
   </ModalForm>
 );
+}
+
+export default CollaboratorModal;

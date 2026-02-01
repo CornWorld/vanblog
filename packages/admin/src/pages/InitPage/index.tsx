@@ -12,7 +12,6 @@ import { useEffect, useRef } from 'react';
 import { resetRedirectCycle } from '@/utils/auth';
 import { fetchAllMeta } from '@/services/van-blog/api';
 import './index.less';
-import { encryptPwd } from '@/services/van-blog/encryptPwd';
 
 interface ApiError {
   response?: {
@@ -119,7 +118,7 @@ const InitPage = () => {
       const requestBody = {
         user: {
           username: values.name,
-          password: encryptPwd(values.name, values.password),
+          password: values.password,
           nickname: values.name, // Using name as nickname if not provided
         },
         siteInfo: {

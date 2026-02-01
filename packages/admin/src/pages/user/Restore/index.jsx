@@ -1,12 +1,11 @@
 import { useTranslation } from 'react-i18next';
 import { restore } from '@/services/van-blog/api';
-import { encryptPwd } from '@/services/van-blog/encryptPwd';
 import ProCard from '@ant-design/pro-card';
 import ProForm, { ProFormText } from '@ant-design/pro-form';
 import { Alert, message } from 'antd';
 import { history } from '@/router';
 
-export default function () {
+function RestorePage() {
   const { t } = useTranslation();
   return (
     <div
@@ -32,10 +31,7 @@ export default function () {
         />
         <ProForm
           onFinish={async (values) => {
-            await restore({
-              ...values,
-              password: encryptPwd(values.name, values.password),
-            });
+            await restore(values);
             message.success(t('restore.success'));
             history.push('/user/login');
           }}
@@ -48,3 +44,5 @@ export default function () {
     </div>
   );
 }
+
+export default RestorePage;

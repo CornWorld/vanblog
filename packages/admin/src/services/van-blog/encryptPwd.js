@@ -13,6 +13,11 @@ import { sha256 } from 'js-sha256';
  * @returns {string} 加密后的密码
  */
 export function encryptPwd(username, password) {
+  // Validate inputs
+  if (!username || !password) {
+    throw new Error('Username and password are required for encryption');
+  }
+
   // 确保用户名小写处理
   username = username.toLowerCase();
 

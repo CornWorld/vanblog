@@ -14,11 +14,11 @@ import { pipelineService } from './pipeline';
 import { tokenService } from './token';
 import { customPageService } from './custom-page';
 import { backupService } from './backup';
-import { encryptPwd } from './encryptPwd';
 
 export async function fetchAllMeta() {
-  const { body } = await metaService.getPublicMeta();
-  return { data: body };
+  const response = await metaService.getPublicMeta();
+  // Response body is { statusCode, data }, return it directly
+  return response.body;
 }
 
 export async function fetchLatestVersionInfo() {
@@ -187,14 +187,27 @@ export async function exportAllImgs() {
 }
 
 export async function login(body: any, options?: any) {
-  const { body: result } = await authService.login({
+  // Extract username from either field (form uses 'username', API expects 'name')
+  const username = body.username || body.name;
+
+  // Validate required fields
+  if (!username) {
+    throw new Error('Username is required');
+  }
+  if (!body.password) {
+    throw new Error('Password is required');
+  }
+
+  // NOTE: server-ng uses bcrypt directly, no need for SHA256 pre-hashing
+  // The old server (packages/server) used a custom SHA256+salt scheme
+  // Return full ts-rest response { status, body } for proper handling
+  return await authService.login({
     body: {
-      name: body.name,
-      password: encryptPwd(body.name, body.password),
+      name: username,
+      password: body.password, // Send plaintext password for bcrypt comparison
     },
     ...options,
   });
-  return result;
 }
 
 export async function logout(options?: any) {
