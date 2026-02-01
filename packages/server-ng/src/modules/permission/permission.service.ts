@@ -634,11 +634,16 @@ export class PermissionService {
         });
       } else {
         // 更新现有权限组的权限列表
-        this.logger.log(`更新现有权限组: ${roleName}`);
-        await this.db
-          .update(permissionGroups)
-          .set({ permissions })
-          .where(eq(permissionGroups.name, roleName));
+        // 只有当内存中的权限非空时才更新，避免用空数组覆盖已有权限
+        if (permissions.length > 0) {
+          this.logger.log(`更新现有权限组: ${roleName}`);
+          await this.db
+            .update(permissionGroups)
+            .set({ permissions })
+            .where(eq(permissionGroups.name, roleName));
+        } else {
+          this.logger.log(`跳过更新权限组 ${roleName}（内存中权限为空，保留数据库中的值）`);
+        }
       }
     }
 

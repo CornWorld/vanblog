@@ -1,4 +1,4 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, UseGuards, Req } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
@@ -8,6 +8,7 @@ import { z } from 'zod';
 import { DerivedView } from '../../shared/decorators/derived-view.decorator';
 import { HookService } from '../plugin/services/hook.service';
 import { SettingCoreService } from '../setting/services/setting-core.service';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 type NavigationPublic = {
   name: string;
@@ -90,6 +91,43 @@ export class MetaController {
     private readonly hookService: HookService,
     private readonly settingCoreService: SettingCoreService,
   ) {}
+
+  @Get('admin')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: '获取管理员元数据（含用户信息）' })
+  @ApiResponse({ status: 200, description: '管理员元数据获取成功' })
+  async getAdminMeta(@Req() req: any): Promise<{
+    statusCode: number;
+    data: {
+      version: string;
+      user?: {
+        id: number;
+        username: string;
+        name: string;
+        type: string;
+      };
+    };
+  }> {
+    const boot = await this.bootstrapService.getPublicBootstrap();
+
+    // Extract user from JWT token (attached by JwtAuthGuard)
+    const user = (req as any).user;
+
+    return {
+      statusCode: 200,
+      data: {
+        version: boot.version,
+        ...(user && {
+          user: {
+            id: user.id,
+            username: user.username,
+            name: user.username, // Frontend expects 'name' field
+            type: user.type,
+          },
+        }),
+      },
+    };
+  }
 
   @TsRestHandler(contract.getPublicMeta)
   getPublicMeta(): unknown {

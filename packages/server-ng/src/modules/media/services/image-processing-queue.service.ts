@@ -65,7 +65,9 @@ export class ImageProcessingQueueService implements OnModuleInit, OnModuleDestro
   ) {}
 
   onModuleInit(): void {
-    this.startQueueProcessor();
+    // TODO: Fix column name mismatch between 'processingConfig' and 'processing_config'
+    // Temporarily disable queue processor
+    // this.startQueueProcessor();
   }
 
   onModuleDestroy(): void {

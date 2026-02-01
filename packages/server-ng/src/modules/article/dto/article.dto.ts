@@ -9,13 +9,21 @@ import { z } from 'zod';
 // 基础文章 Schema - 使用 drizzle-zod 生成的 schema
 export const ArticleSchema = selectArticleSchema;
 
-// 创建文章 Schema - 使用 drizzle-zod 生成的 schema
-export const CreateArticleSchema = insertArticleSchema.omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-  viewer: true,
-});
+// 创建文章 Schema - 使用 drizzle-zod 生成的 schema，并添加默认值支持
+export const CreateArticleSchema = insertArticleSchema
+  .omit({
+    id: true,
+    createdAt: true,
+    updatedAt: true,
+    viewer: true,
+  })
+  .partial({
+    // 允许以下字段为可选，服务层将提供默认值
+    content: true,
+    tags: true,
+    author: true,
+    // 其他字段保持原有行为
+  });
 
 // 更新文章 Schema - 使用 drizzle-zod 生成的 schema
 export const UpdateArticleSchema = updateArticleSchema.omit({

@@ -235,7 +235,18 @@ export class AuthController {
         return { status: 401, body: { message: 'Invalid credentials' } };
       }
       const result = this.authService.login(user);
-      return { status: 200, body: { token: result.access_token } };
+      // Return token and user info for frontend compatibility
+      return {
+        status: 200,
+        body: {
+          token: result.access_token,
+          user: {
+            id: user.id,
+            username: user.username,
+            type: user.type,
+          },
+        },
+      };
     });
   }
 
