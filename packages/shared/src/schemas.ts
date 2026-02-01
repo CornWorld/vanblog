@@ -19,14 +19,14 @@ export const c = {
     .min(0, 'Must be a non-negative integer')
     .describe('Non-negative integer value'),
 
-  page: z
+  page: z.coerce
     .number()
     .int()
     .min(1, 'Page must be at least 1')
     .describe('Page number for pagination')
     .default(1),
 
-  pageSize: z
+  pageSize: z.coerce
     .number()
     .int()
     .min(1, 'Page size must be at least 1')

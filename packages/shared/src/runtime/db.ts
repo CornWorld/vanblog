@@ -479,7 +479,7 @@ export const imageProcessingQueue = sqliteTable('image_processing_queue', {
     .notNull()
     .default('pending'),
   priority: integer('priority').notNull().default(0),
-  processingConfig: jsonb(),
+  processingConfig: jsonb('processing_config'),
   originalBuffer: text('original_buffer'),
   processedBuffer: text('processed_buffer'),
   errorMessage: text('error_message'),

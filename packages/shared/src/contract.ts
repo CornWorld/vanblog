@@ -76,16 +76,25 @@ export const contract = c.router({
   // Auth
   login: {
     method: 'POST',
-    path: '/auth/login',
+    path: '/v2/auth/login',
     body: LoginSchema,
     responses: {
-      200: z.object({ token: z.string() }),
+      200: z.object({
+        token: z.string(),
+        user: z
+          .object({
+            id: z.number(),
+            username: z.string(),
+            type: z.string(),
+          })
+          .optional(),
+      }),
     },
     summary: 'Login',
   },
   logout: {
     method: 'POST',
-    path: '/auth/logout',
+    path: '/v2/auth/logout',
     body: z.object({}),
     responses: {
       200: z.object({ success: z.boolean() }),
@@ -167,8 +176,7 @@ export const contract = c.router({
   // Category
   getCategories: {
     method: 'GET',
-    path: '/categories',
-    query: z.object({ detail: z.string().optional() }),
+    path: '/v2/categories',
     responses: {
       200: z.array(CategorySchema),
     },
@@ -176,7 +184,7 @@ export const contract = c.router({
   },
   createCategory: {
     method: 'POST',
-    path: '/categories',
+    path: '/v2/categories',
     body: CreateCategorySchema,
     responses: {
       201: CategorySchema,
@@ -185,7 +193,7 @@ export const contract = c.router({
   },
   updateCategory: {
     method: 'PUT',
-    path: '/categories/:name',
+    path: '/v2/categories/:name',
     pathParams: z.object({ name: z.string() }),
     body: UpdateCategorySchema,
     responses: {
@@ -195,7 +203,7 @@ export const contract = c.router({
   },
   deleteCategory: {
     method: 'DELETE',
-    path: '/categories/:name',
+    path: '/v2/categories/:name',
     pathParams: z.object({ name: z.string() }),
     responses: {
       200: z.object({ success: z.boolean() }),
@@ -204,7 +212,7 @@ export const contract = c.router({
   },
   getArticlesByCategory: {
     method: 'GET',
-    path: '/categories/:name/articles',
+    path: '/v2/categories/:name/articles',
     pathParams: z.object({ name: z.string() }),
     responses: {
       200: z.array(ArticleSchema),
@@ -767,11 +775,24 @@ export const contract = c.router({
   },
   getPublicMeta: {
     method: 'GET',
-    path: '/public/bootstrap',
+    path: '/v2/public/admin',
     responses: {
-      200: z.any(), // PublicMetaProp
+      200: z.object({
+        statusCode: z.number(),
+        data: z.object({
+          version: z.string(),
+          user: z
+            .object({
+              id: z.number(),
+              username: z.string(),
+              name: z.string(),
+              type: z.string(),
+            })
+            .optional(),
+        }),
+      }),
     },
-    summary: 'Get public meta',
+    summary: 'Get public meta (with user)',
   },
   getPublicCustomPages: {
     method: 'GET',
