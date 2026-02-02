@@ -173,7 +173,7 @@ export class TagController {
     @Param('id', ParseIntPipe) id: number,
     @Query() raw: unknown,
   ): Promise<z.infer<typeof ArticleListResponseSchema>> {
-    const query = ArticleQuerySchema.parse(raw);
+    const query = ArticleQuerySchema.parse(raw ?? {});
     return this.tagService.getArticlesByTagId(id, query);
   }
 

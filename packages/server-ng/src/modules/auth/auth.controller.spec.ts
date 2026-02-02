@@ -318,7 +318,14 @@ describe('AuthController', () => {
 
       expect(result).toEqual({
         status: 200,
-        body: { token: 'access.token' },
+        body: {
+          token: 'access.token',
+          user: {
+            id: 1,
+            type: 'admin',
+            username: 'testuser',
+          },
+        },
       });
       expect(authService.validateUser).toHaveBeenCalledWith('testuser', 'password');
     });

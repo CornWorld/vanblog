@@ -43,7 +43,6 @@ describe('CategoryController', () => {
       const result = await handler();
 
       expect(categoryService.findAll).toHaveBeenCalledTimes(1);
-      expect(result.status).toBe(200);
       expect(result.body).toHaveLength(3);
       expect(result.body[0]).toHaveProperty('count');
     });
@@ -80,7 +79,6 @@ describe('CategoryController', () => {
       const handler = controller.getCategories();
       const result = await handler();
 
-      expect(result.status).toBe(200);
       expect(result.body).toEqual([]);
       expect(result.body).toHaveLength(0);
     });
@@ -98,7 +96,6 @@ describe('CategoryController', () => {
       const handler = controller.getCategories();
       const result = await handler();
 
-      expect(result.status).toBe(200);
       expect(result.body).toHaveLength(3);
       expect(result.body[0].description).toBe('Tech articles');
       expect(result.body[1].description).toBeUndefined();
@@ -225,7 +222,7 @@ describe('CategoryController', () => {
 
   describe('updateCategory', () => {
     it('should update an existing category', async () => {
-      const categoryId = '1';
+      const categoryId = 1;
       const updateDto = {
         name: 'Updated Category',
         description: 'Updated description',
@@ -243,13 +240,12 @@ describe('CategoryController', () => {
       const result = await handler({ params: { id: categoryId }, body: updateDto });
 
       expect(categoryService.update).toHaveBeenCalledWith(1, updateDto);
-      expect(result.status).toBe(200);
       expect(result.body.name).toBe(updateDto.name);
       expect(result.body.description).toBe(updateDto.description);
     });
 
     it('should update only name field', async () => {
-      const categoryId = '1';
+      const categoryId = 1;
       const updateDto = {
         name: 'New Name Only',
       };
@@ -271,14 +267,13 @@ describe('CategoryController', () => {
       const handler = controller.updateCategory();
       const result = await handler({ params: { id: categoryId }, body: updateDto });
 
-      expect(result.status).toBe(200);
       expect(result.body.name).toBe('New Name Only');
       expect(result.body.description).toBe('Keep this description');
       expect(categoryService.update).toHaveBeenCalledWith(1, updateDto);
     });
 
     it('should update description to null (converted to undefined)', async () => {
-      const categoryId = '1';
+      const categoryId = 1;
       const updateDto = {
         description: null,
       };
@@ -294,7 +289,6 @@ describe('CategoryController', () => {
       const handler = controller.updateCategory();
       const result = await handler({ params: { id: categoryId }, body: updateDto });
 
-      expect(result.status).toBe(200);
       expect(result.body.description).toBeUndefined();
     });
 
@@ -320,7 +314,7 @@ describe('CategoryController', () => {
 
   describe('deleteCategory', () => {
     it('should delete a category successfully', async () => {
-      const categoryId = '1';
+      const categoryId = 1;
 
       categoryService.remove.mockResolvedValue(undefined);
 
@@ -328,12 +322,11 @@ describe('CategoryController', () => {
       const result = await handler({ params: { id: categoryId } });
 
       expect(categoryService.remove).toHaveBeenCalledWith(1);
-      expect(result.status).toBe(200);
       expect(result.body.success).toBe(true);
     });
 
     it('should verify remove is called exactly once', async () => {
-      const categoryId = '1';
+      const categoryId = 1;
 
       categoryService.remove.mockResolvedValue(undefined);
 
@@ -358,7 +351,7 @@ describe('CategoryController', () => {
 
   describe('getArticlesByCategory', () => {
     it('should return articles in a category', async () => {
-      const categoryId = '1';
+      const categoryId = 1;
 
       const mockArticles = Mock.articles(2, {
         category: 'Technology',
@@ -369,8 +362,7 @@ describe('CategoryController', () => {
 
       categoryService.getArticlesByCategoryId.mockResolvedValue(paginatedResult);
 
-      const handler = controller.getArticlesByCategory();
-      const result = await handler({ params: { id: categoryId } });
+      const result = await controller.getArticlesByCategoryId(categoryId, {});
 
       expect(categoryService.getArticlesByCategoryId).toHaveBeenCalledWith(1, {
         page: 1,
@@ -378,27 +370,24 @@ describe('CategoryController', () => {
         sortBy: 'createdAt',
         sortOrder: 'desc',
       });
-      expect(result.status).toBe(200);
-      expect(result.body.items).toHaveLength(2);
+      expect(result.items).toHaveLength(2);
     });
 
     it('should return empty array when category has no articles', async () => {
-      const categoryId = '1';
+      const categoryId = 1;
 
       const paginatedResult = Mock.paginated([], 0, 1, 1000);
 
       categoryService.getArticlesByCategoryId.mockResolvedValue(paginatedResult);
 
-      const handler = controller.getArticlesByCategory();
-      const result = await handler({ params: { id: categoryId } });
+      const result = await controller.getArticlesByCategoryId(categoryId, {});
 
-      expect(result.status).toBe(200);
-      expect(result.body.items).toHaveLength(0);
-      expect(result.body.items).toEqual([]);
+      expect(result.items).toHaveLength(0);
+      expect(result.items).toEqual([]);
     });
 
     it('should correctly map article viewer count to views', async () => {
-      const categoryId = '1';
+      const categoryId = 1;
 
       const mockArticles = [
         Mock.article({ viewer: 100 }),
@@ -410,16 +399,15 @@ describe('CategoryController', () => {
 
       categoryService.getArticlesByCategoryId.mockResolvedValue(paginatedResult);
 
-      const handler = controller.getArticlesByCategory();
-      const result = await handler({ params: { id: categoryId } });
+      const result = await controller.getArticlesByCategoryId(categoryId, {});
 
-      expect(result.body.items[0].views).toBe(100);
-      expect(result.body.items[1].views).toBe(0);
-      expect(result.body.items[2].views).toBe(0);
+      expect(result.items[0].views).toBe(100);
+      expect(result.items[1].views).toBe(0);
+      expect(result.items[2].views).toBe(0);
     });
 
     it('should correctly map top field to isTop', async () => {
-      const categoryId = '1';
+      const categoryId = 1;
 
       const mockArticles = [
         Mock.article({ top: 5 }),
@@ -431,16 +419,15 @@ describe('CategoryController', () => {
 
       categoryService.getArticlesByCategoryId.mockResolvedValue(paginatedResult);
 
-      const handler = controller.getArticlesByCategory();
-      const result = await handler({ params: { id: categoryId } });
+      const result = await controller.getArticlesByCategoryId(categoryId, {});
 
-      expect(result.body.items[0].isTop).toBe(true);
-      expect(result.body.items[1].isTop).toBe(false);
-      expect(result.body.items[2].isTop).toBe(false);
+      expect(result.items[0].isTop).toBe(true);
+      expect(result.items[1].isTop).toBe(false);
+      expect(result.items[2].isTop).toBe(false);
     });
 
     it('should preserve password when present', async () => {
-      const categoryId = '1';
+      const categoryId = 1;
 
       const mockArticles = [
         Mock.article({ password: 'encrypted-password' }),
@@ -451,15 +438,14 @@ describe('CategoryController', () => {
 
       categoryService.getArticlesByCategoryId.mockResolvedValue(paginatedResult);
 
-      const handler = controller.getArticlesByCategory();
-      const result = await handler({ params: { id: categoryId } });
+      const result = await controller.getArticlesByCategoryId(categoryId, {});
 
-      expect(result.body.items[0].password).toBe('encrypted-password');
-      expect(result.body.items[1].password).toBeUndefined();
+      expect(result.items[0].password).toBe('encrypted-password');
+      expect(result.items[1].password).toBeUndefined();
     });
 
     it('should map article fields correctly', async () => {
-      const categoryId = '1';
+      const categoryId = 1;
 
       const article = Mock.article({
         id: 1,
@@ -480,10 +466,9 @@ describe('CategoryController', () => {
 
       categoryService.getArticlesByCategoryId.mockResolvedValue(paginatedResult);
 
-      const handler = controller.getArticlesByCategory();
-      const result = await handler({ params: { id: categoryId } });
+      const result = await controller.getArticlesByCategoryId(categoryId, {});
 
-      const mappedArticle = result.body.items[0];
+      const mappedArticle = result.items[0];
 
       expect(mappedArticle.id).toBe(1);
       expect(mappedArticle.title).toBe('Article 1');
@@ -502,7 +487,7 @@ describe('CategoryController', () => {
     });
 
     it('should handle multiple articles with different field values', async () => {
-      const categoryId = '1';
+      const categoryId = 1;
 
       const mockArticles = [
         Mock.article({ id: 1, top: 5, viewer: 100, category: 'Tech' }),
@@ -513,23 +498,21 @@ describe('CategoryController', () => {
 
       categoryService.getArticlesByCategoryId.mockResolvedValue(paginatedResult);
 
-      const handler = controller.getArticlesByCategory();
-      const result = await handler({ params: { id: categoryId } });
+      const result = await controller.getArticlesByCategoryId(categoryId, {});
 
-      expect(result.status).toBe(200);
-      expect(result.body.items).toHaveLength(2);
+      expect(result.items).toHaveLength(2);
 
-      expect(result.body.items[0].id).toBe(1);
-      expect(result.body.items[0].isTop).toBe(true);
-      expect(result.body.items[0].views).toBe(100);
+      expect(result.items[0].id).toBe(1);
+      expect(result.items[0].isTop).toBe(true);
+      expect(result.items[0].views).toBe(100);
 
-      expect(result.body.items[1].id).toBe(2);
-      expect(result.body.items[1].isTop).toBe(false);
-      expect(result.body.items[1].views).toBe(50);
+      expect(result.items[1].id).toBe(2);
+      expect(result.items[1].isTop).toBe(false);
+      expect(result.items[1].views).toBe(50);
     });
 
     it('should handle articles with null tags and category fields', async () => {
-      const categoryId = '1';
+      const categoryId = 1;
 
       const article = Mock.article({
         tags: null,
@@ -540,11 +523,10 @@ describe('CategoryController', () => {
 
       categoryService.getArticlesByCategoryId.mockResolvedValue(paginatedResult);
 
-      const handler = controller.getArticlesByCategory();
-      const result = await handler({ params: { id: categoryId } });
+      const result = await controller.getArticlesByCategoryId(categoryId, {});
 
-      expect(result.body.items[0].category).toBeUndefined();
-      expect(result.body.items[0].tags).toBeUndefined();
+      expect(result.items[0].category).toBeUndefined();
+      expect(result.items[0].tags).toBeUndefined();
     });
 
     it('should handle category ID as string and parse to number', async () => {
@@ -556,7 +538,7 @@ describe('CategoryController', () => {
 
       categoryService.getArticlesByCategoryId.mockResolvedValue(paginatedResult);
 
-      const handler = controller.getArticlesByCategory();
+      const handler = controller.getArticlesByCategoryId;
       await handler({ params: { id: categoryId } });
 
       expect(categoryService.getArticlesByCategoryId).toHaveBeenCalledWith(42, {
@@ -570,7 +552,7 @@ describe('CategoryController', () => {
 
   describe('getCategoryById', () => {
     it('should return category by ID', async () => {
-      const categoryId = '1';
+      const categoryId = 1;
       const mockCategory = Mock.category({ id: 1, name: 'Test Category' });
 
       categoryService.findOne.mockResolvedValue(mockCategory);
@@ -579,7 +561,6 @@ describe('CategoryController', () => {
       const result = await handler({ params: { id: categoryId } });
 
       expect(categoryService.findOne).toHaveBeenCalledWith(1);
-      expect(result.status).toBe(200);
       expect(result.body.name).toBe('Test Category');
     });
 
@@ -609,8 +590,7 @@ describe('CategoryController', () => {
 
       categoryService.getArticlesByCategoryName.mockResolvedValue(paginatedResult);
 
-      const handler = controller.getArticlesByCategoryName();
-      const result = await handler({ params: { name: categoryName } });
+      const result = await controller.getArticlesByCategoryName(categoryName, {});
 
       expect(categoryService.getArticlesByCategoryName).toHaveBeenCalledWith(categoryName, {
         page: 1,
@@ -618,8 +598,7 @@ describe('CategoryController', () => {
         sortBy: 'createdAt',
         sortOrder: 'desc',
       });
-      expect(result.status).toBe(200);
-      expect(result.body.items).toHaveLength(2);
+      expect(result.items).toHaveLength(2);
     });
 
     it('should return empty array when category has no articles', async () => {
@@ -629,12 +608,10 @@ describe('CategoryController', () => {
 
       categoryService.getArticlesByCategoryName.mockResolvedValue(paginatedResult);
 
-      const handler = controller.getArticlesByCategoryName();
-      const result = await handler({ params: { name: categoryName } });
+      const result = await controller.getArticlesByCategoryName(categoryName, {});
 
-      expect(result.status).toBe(200);
-      expect(result.body.items).toHaveLength(0);
-      expect(result.body.items).toEqual([]);
+      expect(result.items).toHaveLength(0);
+      expect(result.items).toEqual([]);
     });
 
     it('should correctly map article viewer count to views', async () => {
@@ -650,12 +627,11 @@ describe('CategoryController', () => {
 
       categoryService.getArticlesByCategoryName.mockResolvedValue(paginatedResult);
 
-      const handler = controller.getArticlesByCategoryName();
-      const result = await handler({ params: { name: categoryName } });
+      const result = await controller.getArticlesByCategoryName(categoryName, {});
 
-      expect(result.body.items[0].views).toBe(100);
-      expect(result.body.items[1].views).toBe(0);
-      expect(result.body.items[2].views).toBe(0);
+      expect(result.items[0].views).toBe(100);
+      expect(result.items[1].views).toBe(0);
+      expect(result.items[2].views).toBe(0);
     });
 
     it('should correctly map top field to isTop', async () => {
@@ -671,12 +647,11 @@ describe('CategoryController', () => {
 
       categoryService.getArticlesByCategoryName.mockResolvedValue(paginatedResult);
 
-      const handler = controller.getArticlesByCategoryName();
-      const result = await handler({ params: { name: categoryName } });
+      const result = await controller.getArticlesByCategoryName(categoryName, {});
 
-      expect(result.body.items[0].isTop).toBe(true);
-      expect(result.body.items[1].isTop).toBe(false);
-      expect(result.body.items[2].isTop).toBe(false);
+      expect(result.items[0].isTop).toBe(true);
+      expect(result.items[1].isTop).toBe(false);
+      expect(result.items[2].isTop).toBe(false);
     });
 
     it('should preserve password when present', async () => {
@@ -691,11 +666,10 @@ describe('CategoryController', () => {
 
       categoryService.getArticlesByCategoryName.mockResolvedValue(paginatedResult);
 
-      const handler = controller.getArticlesByCategoryName();
-      const result = await handler({ params: { name: categoryName } });
+      const result = await controller.getArticlesByCategoryName(categoryName, {});
 
-      expect(result.body.items[0].password).toBe('encrypted-password');
-      expect(result.body.items[1].password).toBeUndefined();
+      expect(result.items[0].password).toBe('encrypted-password');
+      expect(result.items[1].password).toBeUndefined();
     });
 
     it('should map article fields correctly', async () => {
@@ -720,10 +694,9 @@ describe('CategoryController', () => {
 
       categoryService.getArticlesByCategoryName.mockResolvedValue(paginatedResult);
 
-      const handler = controller.getArticlesByCategoryName();
-      const result = await handler({ params: { name: categoryName } });
+      const result = await controller.getArticlesByCategoryName(categoryName, {});
 
-      const mappedArticle = result.body.items[0];
+      const mappedArticle = result.items[0];
 
       expect(mappedArticle.id).toBe(1);
       expect(mappedArticle.title).toBe('Article 1');

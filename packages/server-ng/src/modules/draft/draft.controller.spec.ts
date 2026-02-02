@@ -540,7 +540,7 @@ describe('DraftController', () => {
       };
       mockDraftService.create.mockResolvedValue(mockDraft);
 
-      const handler = controller.createDraft();
+      const handler = controller.createDraft_tsrest();
       const result = await handler({ body: createDto });
 
       expect(result.status).toBe(201);
@@ -576,7 +576,7 @@ describe('DraftController', () => {
       };
       mockDraftService.create.mockResolvedValue(mockDraft);
 
-      const handler = controller.createDraft();
+      const handler = controller.createDraft_tsrest();
       const result = await handler({ body: createDto });
 
       expect(result.status).toBe(201);
@@ -606,7 +606,7 @@ describe('DraftController', () => {
       };
       mockDraftService.create.mockResolvedValue(mockDraft);
 
-      const handler = controller.createDraft();
+      const handler = controller.createDraft_tsrest();
       const result = await handler({ body: { title: 'Test', content: 'Content' } });
 
       expect(result.body.category).toBeUndefined();
@@ -623,7 +623,7 @@ describe('DraftController', () => {
       const updatedDraft = { ...mockDraft, ...updateDto, version: 2 };
       mockDraftService.update.mockResolvedValue(updatedDraft);
 
-      const handler = controller.updateDraft();
+      const handler = controller.updateDraft_tsrest();
       const result = await handler({ params: { id: String(mockDraft.id) }, body: updateDto });
 
       expect(result.status).toBe(200);
@@ -647,7 +647,7 @@ describe('DraftController', () => {
       const updatedDraft = { ...mockDraft, ...updateDto, version: 2 };
       mockDraftService.update.mockResolvedValue(updatedDraft);
 
-      const handler = controller.updateDraft();
+      const handler = controller.updateDraft_tsrest();
       await handler({ params: { id: String(mockDraft.id) }, body: updateDto });
 
       expect(mockDraftService.update).toHaveBeenCalledWith(
@@ -664,7 +664,7 @@ describe('DraftController', () => {
       const updatedDraft = { ...mockDraft, title: 'Updated', version: 2 };
       mockDraftService.update.mockResolvedValue(updatedDraft);
 
-      const handler = controller.updateDraft();
+      const handler = controller.updateDraft_tsrest();
       await handler({ params: { id: String(mockDraft.id) }, body: updateDto });
 
       const [[, updateData]] = mockDraftService.update.mock.calls;
@@ -677,7 +677,7 @@ describe('DraftController', () => {
       const mockDraft = createMockDraft();
       mockDraftService.update.mockResolvedValue(mockDraft);
 
-      const handler = controller.updateDraft();
+      const handler = controller.updateDraft_tsrest();
       await handler({ params: { id: String(mockDraft.id) }, body: { title: 'Test' } });
 
       expect(mockDraftService.update).toHaveBeenCalledWith(mockDraft.id, expect.any(Object));
@@ -689,7 +689,7 @@ describe('DraftController', () => {
       const mockDraft = createMockDraft();
       mockDraftService.remove.mockResolvedValue(undefined);
 
-      const handler = controller.deleteDraft();
+      const handler = controller.deleteDraft_tsrest();
       const result = await handler({ params: { id: String(mockDraft.id) } });
 
       expect(result.status).toBe(200);
@@ -701,7 +701,7 @@ describe('DraftController', () => {
       const mockDraft = createMockDraft();
       mockDraftService.remove.mockResolvedValue(undefined);
 
-      const handler = controller.deleteDraft();
+      const handler = controller.deleteDraft_tsrest();
       await handler({ params: { id: String(mockDraft.id) } });
 
       expect(mockDraftService.remove).toHaveBeenCalledWith(mockDraft.id);
@@ -718,7 +718,7 @@ describe('DraftController', () => {
       });
       mockDraftService.findOne.mockResolvedValue(mockDraft);
 
-      const handler = controller.getDraft();
+      const handler = controller.getDraft_tsrest();
       const result = await handler({ params: { id: String(mockDraft.id) } });
 
       expect(result.status).toBe(200);
@@ -738,7 +738,7 @@ describe('DraftController', () => {
       });
       mockDraftService.findOne.mockResolvedValue(mockDraft);
 
-      const handler = controller.getDraft();
+      const handler = controller.getDraft_tsrest();
       const result = await handler({ params: { id: String(mockDraft.id) } });
 
       expect(result.body.category).toBeUndefined();
@@ -770,7 +770,7 @@ describe('DraftController', () => {
       });
       mockDraftService.publish.mockResolvedValue(mockArticle);
 
-      const handler = controller.publishDraft();
+      const handler = controller.publishDraft_tsrest();
       const result = await handler({ params: { id: String(mockDraft.id) } });
 
       expect(result.status).toBe(200);
@@ -808,7 +808,7 @@ describe('DraftController', () => {
       });
       mockDraftService.publish.mockResolvedValue(mockArticle);
 
-      const handler = controller.publishDraft();
+      const handler = controller.publishDraft_tsrest();
       const result = await handler({ params: { id: String(mockDraft.id) } });
 
       expect(result.body.isTop).toBe(true);
@@ -839,7 +839,7 @@ describe('DraftController', () => {
       });
       mockDraftService.publish.mockResolvedValue(mockArticle);
 
-      const handler = controller.publishDraft();
+      const handler = controller.publishDraft_tsrest();
       const result = await handler({ params: { id: String(mockDraft.id) } });
 
       expect(result.body.isTop).toBe(false);
@@ -867,7 +867,7 @@ describe('DraftController', () => {
       });
       mockDraftService.publish.mockResolvedValue(mockArticle);
 
-      const handler = controller.publishDraft();
+      const handler = controller.publishDraft_tsrest();
       const result = await handler({ params: { id: String(mockDraft.id) } });
 
       expect(result.body.pubTime).toBe(dayjs(updatedAt).format());
@@ -920,7 +920,7 @@ describe('DraftController', () => {
       });
       mockDraftService.findOne.mockResolvedValue(mockDraft);
 
-      const handler = controller.getDraft();
+      const handler = controller.getDraft_tsrest();
       const result = await handler({ params: { id: String(mockDraft.id) } });
 
       expect(result.body.tags).toEqual([]);

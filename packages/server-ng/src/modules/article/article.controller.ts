@@ -72,7 +72,7 @@ export class ArticleController {
   @ApiOperation({ summary: 'Get all articles' })
   @ApiResponse({ status: 200, description: 'Return all articles' })
   async findAll(@Query() raw: unknown): Promise<z.infer<typeof ArticleListResponseSchema>> {
-    const query = ArticleQuerySchema.parse(raw);
+    const query = ArticleQuerySchema.parse(raw ?? {});
     return this.articleService.findAll(query);
   }
 

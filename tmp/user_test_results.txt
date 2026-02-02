@@ -1,0 +1,39 @@
+User Controller Test Results
+============================
+
+Test Status: FAILED
+
+Summary:
+- Test Files: 1 failed (1)
+- Tests: no tests
+- Duration: 4.53s
+- Exit Code: 1
+
+Error Details:
+- Failed File: src/modules/user/user.controller.spec.ts
+- Error Type: ReferenceError
+- Error Message: Get is not defined
+- Error Location:
+  - src/modules/user/user.controller.ts:205:1
+  - src/modules/user/user.module.ts:6:1
+  - src/modules/auth/auth.module.ts:7:1
+
+Error Stack Trace:
+ReferenceError: Get is not defined
+    at src/modules/user/user.controller.ts:205:1
+        203|       const updateData  = {
+        204|         password: body.password,
+      > 205|         nickname: body.nickname,
+        206|         permissions: body.permissions,
+        207|       };
+
+Test Analysis:
+- The test file failed to run any tests (0 tests)
+- The error indicates a missing import or declaration for 'Get'
+- This is likely a missing import from @nestjs/common
+- The compilation error prevented any tests from executing
+
+Recommendation:
+- Check if 'Get' decorator is properly imported in user.controller.ts
+- Verify all necessary NestJS decorators are imported
+- Fix the compilation error to allow tests to run

@@ -87,7 +87,7 @@ export class CategoryController {
     @Param('name') name: string,
     @Query() raw: unknown,
   ): Promise<z.infer<typeof ArticleListResponseSchema>> {
-    const query = ArticleQuerySchema.parse(raw);
+    const query = ArticleQuerySchema.parse(raw ?? {});
     return this.categoryService.getArticlesByCategoryName(name, query);
   }
 
@@ -107,7 +107,7 @@ export class CategoryController {
     @Param('id', ParseIntPipe) id: number,
     @Query() raw: unknown,
   ): Promise<z.infer<typeof ArticleListResponseSchema>> {
-    const query = ArticleQuerySchema.parse(raw);
+    const query = ArticleQuerySchema.parse(raw ?? {});
     return this.categoryService.getArticlesByCategoryId(id, query);
   }
 

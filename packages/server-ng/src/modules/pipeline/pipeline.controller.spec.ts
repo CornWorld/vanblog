@@ -55,7 +55,7 @@ describe('PipelineController', () => {
 
   describe('getPipelines', () => {
     it('should return all pipelines', async () => {
-      const handler = controller.getPipelines();
+      const handler = controller.getPipelines_tsrest();
       const result = await handler({} as never);
 
       expect(result).toEqual({ status: 200, body: [expect.any(Object)] });
@@ -65,7 +65,7 @@ describe('PipelineController', () => {
 
   describe('getPipelineConfig', () => {
     it('should return pipeline configuration', () => {
-      const handler = controller.getPipelineConfig();
+      const handler = controller.getPipelineConfig_tsrest();
       const result = handler({} as never);
 
       expect(result).toEqual({
@@ -78,7 +78,7 @@ describe('PipelineController', () => {
 
   describe('getPipeline', () => {
     it('should return a single pipeline by id', async () => {
-      const handler = controller.getPipeline();
+      const handler = controller.getPipeline_tsrest();
       const result = await handler({ params: { id: '1' } } as never);
 
       expect(result).toEqual({ status: 200, body: expect.any(Object) });
@@ -90,10 +90,8 @@ describe('PipelineController', () => {
         new NotFoundException('Pipeline with ID 999 not found'),
       );
 
-      const handler = controller.getPipeline();
-      await expect(handler({ params: { id: '999' } } as never)).rejects.toThrow(
-        NotFoundException,
-      );
+      const handler = controller.getPipeline_tsrest();
+      await expect(handler({ params: { id: '999' } } as never)).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -107,7 +105,7 @@ describe('PipelineController', () => {
         deps: [],
       };
 
-      const handler = controller.createPipeline();
+      const handler = controller.createPipeline_tsrest();
       const result = await handler({ body: createDto } as never);
 
       expect(result).toEqual({ status: 201, body: expect.any(Object) });
@@ -127,10 +125,8 @@ describe('PipelineController', () => {
         new BadRequestException('Event name is required'),
       );
 
-      const handler = controller.createPipeline();
-      await expect(handler({ body: createDto } as never)).rejects.toThrow(
-        BadRequestException,
-      );
+      const handler = controller.createPipeline_tsrest();
+      await expect(handler({ body: createDto } as never)).rejects.toThrow(BadRequestException);
     });
   });
 
@@ -148,7 +144,7 @@ describe('PipelineController', () => {
 
       vi.mocked(mockService.update as any).mockResolvedValueOnce(updatedPipeline);
 
-      const handler = controller.updatePipeline();
+      const handler = controller.updatePipeline_tsrest();
       const result = await handler({ params: { id: '1' }, body: updateDto } as never);
 
       expect(result.body.name).toBe('Updated Pipeline');
@@ -160,7 +156,7 @@ describe('PipelineController', () => {
         new NotFoundException('Pipeline with ID 999 not found'),
       );
 
-      const handler = controller.updatePipeline();
+      const handler = controller.updatePipeline_tsrest();
       await expect(
         handler({ params: { id: '999' }, body: { name: 'Test' } } as never),
       ).rejects.toThrow(NotFoundException);
@@ -169,7 +165,7 @@ describe('PipelineController', () => {
 
   describe('deletePipeline', () => {
     it('should delete a pipeline', async () => {
-      const handler = controller.deletePipeline();
+      const handler = controller.deletePipeline_tsrest();
       const result = await handler({ params: { id: '1' } } as never);
 
       expect(result).toEqual({ status: 200, body: { success: true } });
@@ -181,10 +177,8 @@ describe('PipelineController', () => {
         new NotFoundException('Pipeline with ID 999 not found'),
       );
 
-      const handler = controller.deletePipeline();
-      await expect(handler({ params: { id: '999' } } as never)).rejects.toThrow(
-        NotFoundException,
-      );
+      const handler = controller.deletePipeline_tsrest();
+      await expect(handler({ params: { id: '999' } } as never)).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -192,7 +186,7 @@ describe('PipelineController', () => {
     it('should trigger a pipeline', async () => {
       const triggerDto = { title: 'Test Article' };
 
-      const handler = controller.triggerPipeline();
+      const handler = controller.triggerPipeline_tsrest();
       const result = await handler({ params: { id: '1' }, body: triggerDto } as never);
 
       expect(result).toEqual({ status: 200, body: expect.any(Object) });
@@ -206,10 +200,10 @@ describe('PipelineController', () => {
         new BadRequestException('Pipeline 1 is disabled'),
       );
 
-      const handler = controller.triggerPipeline();
-      await expect(
-        handler({ params: { id: '1' }, body: triggerDto } as never),
-      ).rejects.toThrow(BadRequestException);
+      const handler = controller.triggerPipeline_tsrest();
+      await expect(handler({ params: { id: '1' }, body: triggerDto } as never)).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('should throw NotFoundException when pipeline not found', async () => {
@@ -219,16 +213,16 @@ describe('PipelineController', () => {
         new NotFoundException('Pipeline with ID 999 not found'),
       );
 
-      const handler = controller.triggerPipeline();
-      await expect(
-        handler({ params: { id: '999' }, body: triggerDto } as never),
-      ).rejects.toThrow(NotFoundException);
+      const handler = controller.triggerPipeline_tsrest();
+      await expect(handler({ params: { id: '999' }, body: triggerDto } as never)).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should handle empty input', async () => {
       const triggerDto = undefined;
 
-      const handler = controller.triggerPipeline();
+      const handler = controller.triggerPipeline_tsrest();
       const result = await handler({ params: { id: '1' }, body: triggerDto } as never);
 
       expect(result).toEqual({ status: 200, body: expect.any(Object) });
