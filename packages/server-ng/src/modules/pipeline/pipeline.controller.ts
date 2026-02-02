@@ -73,6 +73,7 @@ export class PipelineController {
    */
   @TsRestHandler(contract.getPipelines)
   @Permission('pipeline', ['read'])
+  @Get()
   getPipelines_tsrest(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.getPipelines, async () => {
       const result = await this.pipelineService.findAll();
@@ -85,6 +86,7 @@ export class PipelineController {
    */
   @TsRestHandler(contract.getPipelineConfig)
   @Permission('pipeline', ['read'])
+  @Get()
   getPipelineConfig_tsrest(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.getPipelineConfig, () => {
       const config = this.pipelineService.getConfig();
@@ -97,6 +99,7 @@ export class PipelineController {
    */
   @TsRestHandler(contract.getPipeline)
   @Permission('pipeline', ['read'])
+  @Get()
   getPipeline_tsrest(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.getPipeline, async ({ params }) => {
       const pipeline = await this.pipelineService.findOne(Number(params.id));
@@ -109,6 +112,7 @@ export class PipelineController {
    */
   @TsRestHandler(contract.createPipeline)
   @Permission('pipeline', ['create'])
+  @Post()
   createPipeline_tsrest(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.createPipeline, async ({ body }) => {
       const pipeline = await this.pipelineService.create(body);
@@ -121,6 +125,7 @@ export class PipelineController {
    */
   @TsRestHandler(contract.updatePipeline)
   @Permission('pipeline', ['update'])
+  @Put()
   updatePipeline_tsrest(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.updatePipeline, async ({ params, body }) => {
       const pipeline = await this.pipelineService.update(Number(params.id), body);
@@ -133,6 +138,7 @@ export class PipelineController {
    */
   @TsRestHandler(contract.deletePipeline)
   @Permission('pipeline', ['delete'])
+  @Delete()
   deletePipeline_tsrest(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.deletePipeline, async ({ params }) => {
       await this.pipelineService.remove(Number(params.id));
@@ -145,6 +151,7 @@ export class PipelineController {
    */
   @TsRestHandler(contract.triggerPipeline)
   @Permission('pipeline', ['execute'])
+  @Post()
   triggerPipeline_tsrest(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.triggerPipeline, async ({ params, body }) => {
       const result = await this.pipelineService.triggerById(Number(params.id), body);

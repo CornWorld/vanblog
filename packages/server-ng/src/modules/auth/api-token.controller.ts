@@ -38,6 +38,7 @@ export class ApiTokenController {
 
   @TsRestHandler(contract.getTokens)
   @Permission('user', ['read'])
+  @Get()
   getTokens_tsrest(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.getTokens, async () => {
       const tokens = await this.apiTokenService.getAllTokens();
@@ -47,6 +48,7 @@ export class ApiTokenController {
 
   @TsRestHandler(contract.createToken)
   @Permission('user', ['create'])
+  @Post()
   createToken_tsrest(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.createToken, async ({ body }) => {
       const token = await this.apiTokenService.createToken(body.name);
@@ -56,6 +58,7 @@ export class ApiTokenController {
 
   @TsRestHandler(contract.deleteToken)
   @Permission('user', ['delete'])
+  @Delete()
   deleteToken_tsrest(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.deleteToken, async ({ params }) => {
       const { id } = params;

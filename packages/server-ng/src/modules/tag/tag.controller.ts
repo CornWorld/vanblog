@@ -179,6 +179,7 @@ export class TagController {
 
   @TsRestHandler(contract.getTags)
   @Permission('tag', ['read'])
+  @Get()
   getTags(): unknown {
     return tsRestHandler(contract.getTags, async () => {
       const result = await this.tagService.findAll();
@@ -195,6 +196,7 @@ export class TagController {
 
   @TsRestHandler(contract.createTag)
   @Permission('tag', ['create'])
+  @Post()
   createTag(): unknown {
     return tsRestHandler(contract.createTag, async ({ body }) => {
       const created = await this.tagService.create(body);
@@ -213,6 +215,7 @@ export class TagController {
 
   @TsRestHandler(contract.updateTag)
   @Permission('tag', ['update'])
+  @Put()
   updateTag(): unknown {
     return tsRestHandler(contract.updateTag, async ({ params, body }) => {
       const tag = await this.tagService.findByName(params.name);
@@ -235,6 +238,7 @@ export class TagController {
 
   @TsRestHandler(contract.deleteTag)
   @Permission('tag', ['delete'])
+  @Delete()
   deleteTag(): unknown {
     return tsRestHandler(contract.deleteTag, async ({ params }) => {
       const tag = await this.tagService.findByName(params.name);

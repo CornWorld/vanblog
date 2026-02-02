@@ -491,6 +491,7 @@ export class AnalyticsController {
   }
 
   @TsRestHandler(contract.getPublicViewer)
+  @Get()
   getPublicViewer(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.getPublicViewer, async () => {
       const overview = await this.publicAnalyticsService.getPublicOverview();
@@ -509,6 +510,7 @@ export class AnalyticsController {
   }
 
   @TsRestHandler(contract.getArticleViewer)
+  @Get()
   getArticleViewer(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.getArticleViewer, async ({ params }) => {
       const idNum = Number(params.id);
@@ -530,6 +532,7 @@ export class AnalyticsController {
   }
 
   @TsRestHandler(contract.recordPublicViewer)
+  @Post()
   recordPublicViewer(@Req() req: Request): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.recordPublicViewer, async ({ body, headers }) => {
       const { type, path, referrer, userAgent: userAgentInBody } = body;
@@ -563,6 +566,7 @@ export class AnalyticsController {
 
   @TsRestHandler(contract.getAnalyticsOverview)
   @Perm('analytics', ['read'])
+  @Get()
   getAnalyticsOverview(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.getAnalyticsOverview, async () => {
       const overview = await this.analyticsService.getOverview();

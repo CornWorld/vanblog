@@ -11,6 +11,7 @@ export class CompatibilityController {
   // ISR Stubs
   @TsRestHandler(contract.triggerISR)
   @Perm({ authOnly: true, roles: ['admin'] })
+  @Post()
   triggerISR_tsrest(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.triggerISR, async () => {
       return { status: 200, body: { success: true } };

@@ -1,7 +1,7 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 
-import { Controller, InternalServerErrorException } from '@nestjs/common';
+import { Controller, Get, Post, InternalServerErrorException } from '@nestjs/common';
 import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
 import { dayjs } from '@vanblog/shared';
 import { rssContract } from '@vanblog/shared/contracts';
@@ -20,6 +20,7 @@ export class RssController {
 
   @TsRestHandler(rssContract.generateRss)
   @Perm('rss', ['generate'])
+  @Post()
   generateRss(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(rssContract.generateRss, async () => {
       try {
@@ -33,6 +34,7 @@ export class RssController {
 
   @TsRestHandler(rssContract.getRssStatus)
   @Perm('rss', ['read'])
+  @Get()
   getRssStatus(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(rssContract.getRssStatus, async () => {
       try {

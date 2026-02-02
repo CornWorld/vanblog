@@ -216,6 +216,7 @@ export class CategoryController {
 
   @TsRestHandler(contract.getCategories)
   @Permission('category', ['read'])
+  @Get()
   getCategories(): unknown {
     return tsRestHandler(contract.getCategories, async () => {
       const result = await this.categoryService.findAll();
@@ -233,6 +234,7 @@ export class CategoryController {
 
   @TsRestHandler(contract.createCategory)
   @Permission('category', ['create'])
+  @Post()
   createCategory(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.createCategory, async ({ body }) => {
       const result = await this.categoryService.create({
@@ -248,6 +250,7 @@ export class CategoryController {
 
   @TsRestHandler(contract.updateCategory)
   @Permission('category', ['update'])
+  @Put()
   updateCategory(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.updateCategory, async ({ params, body }) => {
       const result = await this.categoryService.updateByName(params.name, body);
@@ -260,6 +263,7 @@ export class CategoryController {
 
   @TsRestHandler(contract.deleteCategory)
   @Permission('category', ['delete'])
+  @Delete()
   deleteCategory(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.deleteCategory, async ({ params }) => {
       await this.categoryService.removeByName(params.name);
@@ -269,6 +273,7 @@ export class CategoryController {
 
   @TsRestHandler(contract.getArticlesByCategory)
   @Permission('category', ['read'])
+  @Get()
   getArticlesByCategory(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.getArticlesByCategory, async ({ params }) => {
       const result = await this.categoryService.getArticlesByCategoryName(params.name, {

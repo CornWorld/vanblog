@@ -227,6 +227,7 @@ export class AuthController {
   }
 
   @TsRestHandler(contract.login)
+  @Post()
   login_tsrest(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.login, async ({ body }) => {
       const { name, password } = body;
@@ -251,6 +252,7 @@ export class AuthController {
   }
 
   @TsRestHandler(contract.logout)
+  @Post()
   logout_tsrest(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.logout, async ({ headers }) => {
       const authHeader = headers.authorization;

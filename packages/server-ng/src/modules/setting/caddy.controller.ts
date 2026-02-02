@@ -1,4 +1,4 @@
-import { Controller } from '@nestjs/common';
+import { Controller, Get, Post } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
 import { contract } from '@vanblog/shared';
@@ -14,6 +14,7 @@ export class CaddyController {
 
   @TsRestHandler(contract.getCaddyLog)
   @Permission('setting', ['read'])
+  @Get()
   getCaddyLog_tsrest(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.getCaddyLog, () => {
       const data = this.settingCoreService.getCaddyLog();
@@ -23,6 +24,7 @@ export class CaddyController {
 
   @TsRestHandler(contract.clearCaddyLog)
   @Permission('setting', ['update'])
+  @Post()
   clearCaddyLog_tsrest(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.clearCaddyLog, () => {
       this.settingCoreService.clearCaddyLog();
@@ -32,6 +34,7 @@ export class CaddyController {
 
   @TsRestHandler(contract.getCaddyConfig)
   @Permission('setting', ['read'])
+  @Get()
   getCaddyConfig_tsrest(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.getCaddyConfig, async () => {
       const data = await this.settingCoreService.getCaddyConfig();

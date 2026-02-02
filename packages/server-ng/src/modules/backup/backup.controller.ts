@@ -259,6 +259,7 @@ export class BackupController {
 
   @TsRestHandler(contract.importBackup)
   @Perm('backup', ['restore'])
+  @Post()
   @UseInterceptors(FileInterceptor('file'))
   importBackup_tsrest(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.importBackup, async ({ rawRequest }) => {
@@ -273,6 +274,7 @@ export class BackupController {
 
   @TsRestHandler(contract.exportBackup)
   @Perm('backup', ['read'])
+  @Get()
   exportBackup_tsrest(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.exportBackup, async () => {
       const buffer = await this.backupService.exportBackup();
@@ -285,6 +287,7 @@ export class BackupController {
 
   @TsRestHandler(contract.restoreBackup)
   @Perm('backup', ['restore'])
+  @Post()
   restoreBackup_tsrest(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.restoreBackup, async ({ body }) => {
       await this.backupService.restoreFromBackup(body);

@@ -130,6 +130,7 @@ export class MetaController {
   }
 
   @TsRestHandler(contract.getPublicMeta)
+  @Get()
   getPublicMeta(): unknown {
     return tsRestHandler(contract.getPublicMeta, async () => {
       await Promise.resolve();

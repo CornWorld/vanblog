@@ -1,4 +1,4 @@
-import { Controller } from '@nestjs/common';
+import { Controller, Get, Post, Delete } from '@nestjs/common';
 import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
 import { draftVersionContract } from '@vanblog/shared/contracts';
 
@@ -30,6 +30,7 @@ export class DraftVersionTsRestController {
 
   @TsRestHandler(draftVersionContract.listVersions)
   @Perm('draft', ['read'])
+  @Get()
   listVersions(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(draftVersionContract.listVersions, async ({ params, query }) => {
       try {
@@ -50,6 +51,7 @@ export class DraftVersionTsRestController {
 
   @TsRestHandler(draftVersionContract.getVersion)
   @Perm('draft', ['read'])
+  @Get()
   getVersion(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(draftVersionContract.getVersion, async ({ params }) => {
       try {
@@ -79,6 +81,7 @@ export class DraftVersionTsRestController {
 
   @TsRestHandler(draftVersionContract.createVersion)
   @Perm('draft', ['create'])
+  @Post()
   createVersion(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(draftVersionContract.createVersion, async ({ params }) => {
       try {
@@ -107,6 +110,7 @@ export class DraftVersionTsRestController {
 
   @TsRestHandler(draftVersionContract.deleteVersion)
   @Perm('draft', ['delete'])
+  @Delete()
   deleteVersion(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(draftVersionContract.deleteVersion, async ({ params }) => {
       try {

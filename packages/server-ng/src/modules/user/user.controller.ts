@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Put,
   Body,
   Patch,
   Param,
@@ -200,6 +201,7 @@ export class UserController {
    */
   @TsRestHandler(contract.updateProfile)
   @Perm('user', ['update'])
+  @Patch()
   updateProfile_tsrest(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.updateProfile, async ({ body, request }) => {
       const req = request as { user?: UserEntity };
@@ -241,6 +243,7 @@ export class UserController {
 
   @TsRestHandler(userContract.collaborators)
   @Perm('user', ['read'])
+  @Get()
   getCollaborators_tsrest(): unknown {
     return tsRestHandler(userContract.collaborators, async () => {
       const collaborators = await this.userService.getCollaborators();
@@ -250,6 +253,7 @@ export class UserController {
 
   @TsRestHandler(userContract.create)
   @Perm('user', ['create'])
+  @Post()
   createCollaborator(): unknown {
     return tsRestHandler(userContract.create, async ({ body }) => {
       // Validate required fields
@@ -278,6 +282,7 @@ export class UserController {
 
   @TsRestHandler(userContract.update)
   @Perm('user', ['update'])
+  @Put()
   updateCollaborator(): unknown {
     return tsRestHandler(userContract.update, async ({ params, body }) => {
       if (!params.id) {
@@ -302,6 +307,7 @@ export class UserController {
 
   @TsRestHandler(userContract.delete)
   @Perm('user', ['delete'])
+  @Delete()
   deleteCollaborator(): unknown {
     return tsRestHandler(userContract.delete, async ({ params }) => {
       if (!params.id) {

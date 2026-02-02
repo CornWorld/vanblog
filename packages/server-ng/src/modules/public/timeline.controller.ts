@@ -1,4 +1,4 @@
-import { Controller } from '@nestjs/common';
+import { Controller, Get } from '@nestjs/common';
 import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
 import { timelineContract } from '@vanblog/shared/contracts';
 
@@ -13,6 +13,7 @@ export class TimelineController {
 
   @TsRestHandler(timelineContract.getTimeline)
   @DerivedView({ key: 'timeline', ttl: 180, swr: true })
+  @Get()
   getTimelineHandler(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(timelineContract.getTimeline, async ({ query }) => {
       const includeHidden = (query?.includeHidden ?? 'false') === 'true';
