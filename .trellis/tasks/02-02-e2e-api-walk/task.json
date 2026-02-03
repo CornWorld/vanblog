@@ -3,7 +3,7 @@
   "name": "e2e-api-walk",
   "title": "Walk all server-ng APIs via admin DOM operations",
   "description": "",
-  "status": "planning",
+  "status": "review",
   "dev_type": null,
   "scope": null,
   "priority": "P2",
@@ -14,7 +14,7 @@
   "branch": "task/e2e-api-walk",
   "base_branch": "refactor/baseline",
   "worktree_path": "/Users/corn/Code/trellis-worktrees/task/e2e-api-walk",
-  "current_phase": 3,
+  "current_phase": 4,
   "next_action": [
     {
       "phase": 1,
@@ -34,7 +34,7 @@
     }
   ],
   "commit": null,
-  "pr_url": null,
+  "pr_url": "Warning: 2 uncommitted changes\nhttps://github.com/CornWorld/vanblog/pull/16",
   "subtasks": [],
   "relatedFiles": [],
   "notes": ""
