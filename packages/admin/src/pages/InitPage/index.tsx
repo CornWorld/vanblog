@@ -116,7 +116,7 @@ const InitPage = () => {
     try {
       // Prepare the request body according to the required format
       const requestBody = {
-        user: {
+        admin: {
           username: values.name,
           password: values.password,
           nickname: values.name, // Using name as nickname if not provided
