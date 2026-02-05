@@ -18,6 +18,7 @@ import { CategoryModule } from './modules/category/category.module';
 import { DemoModule } from './modules/demo/demo.module';
 import { DraftModule } from './modules/draft/draft.module';
 import { HealthModule } from './modules/health/health.module';
+import { IsrModule } from './modules/isr/isr.module';
 import { MediaModule } from './modules/media/media.module';
 import { MetricsModule } from './modules/metrics/metrics.module';
 import { PermissionModule } from './modules/permission/permission.module';
@@ -66,6 +67,7 @@ export class AppModule implements NestModule {
         LoggerModule,
         PermissionModule.forRoot(),
         HealthModule,
+        IsrModule,
         UserModule,
         AuthModule,
         ArticleModule,

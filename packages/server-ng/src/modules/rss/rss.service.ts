@@ -2,7 +2,6 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 
 import { Injectable, Logger, Inject } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { dayjs } from '@vanblog/shared';
 import { articles } from '@vanblog/shared/drizzle';
 import { eq, and, desc } from 'drizzle-orm';
@@ -10,6 +9,7 @@ import { Feed } from 'feed';
 import { z } from 'zod';
 
 import { DATABASE_CONNECTION, type Database } from '../../database';
+import { ConfigService } from '../../config/config.service';
 import { MarkdownService } from '../../shared/services/markdown.service';
 import { HookService } from '../plugin/services/hook.service';
 import { SettingCoreService, type SiteInfo } from '../setting/services/setting-core.service';
@@ -197,7 +197,7 @@ export class RssService {
       }
 
       // 写入 RSS 文件
-      const staticPath = this.configService.get<string>('STATIC_PATH') ?? './static';
+      const staticPath = this.configService.static.path;
       const rssPath = path.join(staticPath, 'rss');
 
       try {
