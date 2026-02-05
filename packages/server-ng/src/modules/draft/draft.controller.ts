@@ -1,7 +1,7 @@
 import { Body, Controller, Delete, Get, Param, Post, Put, Query } from '@nestjs/common';
 import { ApiOperation, ApiTags, ApiResponse } from '@nestjs/swagger';
 import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
-import { contract, dayjs } from '@vanblog/shared';
+import { contract } from '@vanblog/shared';
 import { z } from 'zod';
 
 import { Article } from '../article/entities/article.entity';
@@ -60,7 +60,10 @@ export class DraftController {
   @Perm('draft', ['update'])
   @ApiOperation({ summary: 'Update draft' })
   @ApiResponse({ status: 200, description: 'Draft updated' })
-  async update(@Param('id') id: string, @Body() raw: unknown): Promise<z.infer<typeof DraftSchema>> {
+  async update(
+    @Param('id') id: string,
+    @Body() raw: unknown,
+  ): Promise<z.infer<typeof DraftSchema>> {
     const dto = UpdateDraftSchema.parse(raw);
     return this.draftService.update(Number(id), dto);
   }
@@ -197,39 +200,34 @@ export class DraftController {
     });
   }
 
-  @TsRestHandler(contract.publishDraft)
   @Perm('draft', ['publish'])
-  @Post()
-  publishDraft_tsrest(): ReturnType<typeof tsRestHandler> {
-    return tsRestHandler(contract.publishDraft, async ({ params }) => {
-      const result = await this.draftService.publish(Number(params.id), {
-        isPublished: true,
-        isTop: false,
-        password: null,
-        allowComment: true,
-      });
-
-      return {
-        status: 200,
-        body: {
-          id: result.id,
-          title: result.title,
-          content: result.content,
-          category: result.category ?? undefined,
-          tags: undefined, // Article tags are complex objects, not available from draft publish
-          views: result.viewer ?? undefined,
-          likes: 0,
-          isTop: (result.top ?? 0) > 0,
-          isHot: false,
-          pubTime: dayjs(result.updatedAt).format(),
-          createdAt: result.createdAt,
-          updatedAt: result.updatedAt,
-          private: result.private ?? false,
-          password: result.password ?? undefined,
-          toc: undefined,
-        },
-      };
+  @Post(':id/publish')
+  @ApiOperation({ summary: 'Publish draft to article' })
+  @ApiResponse({ status: 200, description: 'Draft published successfully' })
+  async publishDraft_tsrest(@Param('id') id: string): Promise<{
+    id: number;
+    title: string;
+    content: string;
+    category?: string;
+    views?: number;
+    createdAt: string;
+    updatedAt: string;
+  }> {
+    const result = await this.publish(Number(id), {
+      isPublished: true,
+      isTop: false,
+      password: null,
+      allowComment: true,
     });
+    return {
+      id: result.id,
+      title: result.title,
+      content: result.content,
+      category: result.category ?? undefined,
+      views: result.viewer ?? undefined,
+      createdAt: result.createdAt,
+      updatedAt: result.updatedAt,
+    };
   }
 
   async publish(id: number, raw: unknown): Promise<Article> {

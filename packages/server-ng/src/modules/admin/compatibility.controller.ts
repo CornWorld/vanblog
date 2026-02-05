@@ -18,6 +18,11 @@ export class CompatibilityController {
     });
   }
 
+  /**
+   * Trigger ISR rebuild
+   * Note: This path is /api/v2/admin/isr/trigger due to controller path
+   * The ts-rest handler handles /api/v2/isr/trigger separately
+   */
   @Post('isr/trigger')
   @Perm({ authOnly: true, roles: ['admin'] })
   @ApiOperation({ summary: 'Trigger ISR (Stub)' })

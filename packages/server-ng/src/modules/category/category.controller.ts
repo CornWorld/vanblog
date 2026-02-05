@@ -80,10 +80,30 @@ export class CategoryController {
    * @param query 查询参数
    * @returns 文章列表响应数据
    */
-  @Get('name/:name/articles')
+  @Get(':name/articles')
   @ApiOperation({ summary: 'Get articles by category name' })
   @ApiResponse({ status: 200, description: 'Return articles by category name' })
-  async getArticlesByCategoryName(
+  async getArticlesByCategoryNameDirect(
+    @Param('name') name: string,
+    @Query() raw: unknown,
+  ): Promise<z.infer<typeof ArticleListResponseSchema>> {
+    const query = ArticleQuerySchema.parse(raw ?? {});
+    return this.categoryService.getArticlesByCategoryName(name, query);
+  }
+
+  /**
+   * 根据分类名称获取文章列表 (旧路由，兼容性保留)
+   *
+   * 根据分类名称查询该分类下的所有文章，支持分页和筛选。
+   *
+   * @param name 分类名称
+   * @param query 查询参数
+   * @returns 文章列表响应数据
+   */
+  @Get('name/:name/articles')
+  @ApiOperation({ summary: 'Get articles by category name (legacy path)' })
+  @ApiResponse({ status: 200, description: 'Return articles by category name' })
+  async getArticlesByCategoryNameLegacy(
     @Param('name') name: string,
     @Query() raw: unknown,
   ): Promise<z.infer<typeof ArticleListResponseSchema>> {

@@ -28,9 +28,30 @@ import { PermissionService } from './permission.service';
 
 @ApiTags('Permissions')
 @Controller({ path: 'permissions', version: '2' })
-@Perm({ roles: [UserType.ADMIN] })
 export class PermissionController {
   constructor(private readonly permissionService: PermissionService) {}
+
+  @Get('debug')
+  @ApiOperation({ summary: 'Debug permission resolution' })
+  @ApiResponse({ status: 200, description: 'Debug info' })
+  async debugPermissions() {
+    const userPermissions = ['role:admin'];
+    const resolved = await this.permissionService.resolveUserPermissions(userPermissions);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const known = (this.permissionService as any).getKnownPermissionsSet();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const modulePerms = (this.permissionService as any).modulePermissions;
+    return {
+      userPermissions,
+      resolvedPermissions: resolved,
+      knownPermissionsCount: known.size,
+      modulePermissions: Array.from(modulePerms.entries()),
+      rolePermissions: {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        admin: await (this.permissionService as any).getRolePermissions('admin'),
+      },
+    };
+  }
 
   @Post('nodes')
   @Perm({ roles: [UserType.ADMIN] })

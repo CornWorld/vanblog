@@ -96,6 +96,7 @@ export class MetaController {
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: '获取管理员元数据（含用户信息）' })
   @ApiResponse({ status: 200, description: '管理员元数据获取成功' })
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async getAdminMeta(@Req() req: any): Promise<{
     statusCode: number;
     data: {
@@ -111,6 +112,7 @@ export class MetaController {
     const boot = await this.bootstrapService.getPublicBootstrap();
 
     // Extract user from JWT token (attached by JwtAuthGuard)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const user = (req as any).user;
 
     return {
@@ -136,6 +138,26 @@ export class MetaController {
       await Promise.resolve();
       return { status: 200 as const, body: { buildTime: dayjs().format() } };
     });
+  }
+
+  /**
+   * Get version info (standard NestJS route for contract.getVersion)
+   */
+  @Get('version')
+  @ApiOperation({ summary: 'Get version info' })
+  @ApiResponse({ status: 200, description: 'Version information' })
+  async getVersionInfo(): Promise<{
+    version: string;
+    buildTime: string;
+    nodeVersion: string;
+    platform: string;
+  }> {
+    return {
+      version: process.env.npm_package_version ?? '0.54.0-corn.6',
+      buildTime: dayjs().format(),
+      nodeVersion: process.version,
+      platform: process.platform,
+    };
   }
 
   @Get('meta')

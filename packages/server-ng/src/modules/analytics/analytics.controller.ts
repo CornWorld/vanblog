@@ -564,6 +564,38 @@ export class AnalyticsController {
     });
   }
 
+  /**
+   * Get analytics overview (standard NestJS route)
+   *
+   * Admin endpoint for analytics overview data.
+   */
+  @Get('analytics/overview')
+  @Perm('analytics', ['read'])
+  @ApiOperation({ summary: 'Get analytics overview' })
+  @ApiResponse({ status: 200, description: 'Analytics overview data' })
+  async getAnalyticsOverviewStd(@Query('tab') _tab?: string): Promise<AnalyticsOverviewDto> {
+    return this.analyticsService.getOverview();
+  }
+
+  /**
+   * Get analytics logs (standard NestJS route)
+   *
+   * Admin endpoint for analytics logs with pagination.
+   */
+  @Get('analytics/logs')
+  @Perm('analytics', ['read'])
+  @ApiOperation({ summary: 'Get analytics logs' })
+  @ApiResponse({ status: 200, description: 'Analytics logs' })
+  async getAnalyticsLogs(
+    @Query('event') event: string,
+    @Query('page') page: string,
+    @Query('pageSize') pageSize: string,
+  ): Promise<{ items: unknown[]; total: number }> {
+    const pageNum = Number(page) || 1;
+    const sizeNum = Number(pageSize) || 10;
+    return this.analyticsService.getAnalyticsLogs(event, pageNum, sizeNum);
+  }
+
   @TsRestHandler(contract.getAnalyticsOverview)
   @Perm('analytics', ['read'])
   @Get()
