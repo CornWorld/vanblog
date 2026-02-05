@@ -16,11 +16,7 @@
     "NODE_ENV": {
       "default": "development",
       "type": "string",
-      "enum": [
-        "development",
-        "production",
-        "test"
-      ]
+      "enum": ["development", "production", "test"]
     },
     "API_PREFIX": {
       "default": "api",
@@ -33,11 +29,7 @@
     "DATABASE_DRIVER": {
       "default": "local",
       "type": "string",
-      "enum": [
-        "local",
-        "turso",
-        "d1"
-      ]
+      "enum": ["local", "turso", "d1"]
     },
     "DATABASE_URL": {
       "default": "file:./data/vanblog.db",
@@ -103,19 +95,13 @@
       "type": "string"
     },
     "STATIC_PATH": {
-      "default": "/app/static",
+      "default": "./data/static",
       "type": "string"
     },
     "LOG_LEVEL": {
       "default": "info",
       "type": "string",
-      "enum": [
-        "error",
-        "warn",
-        "info",
-        "debug",
-        "verbose"
-      ]
+      "enum": ["error", "warn", "info", "debug", "verbose"]
     },
     "LOG_DIR": {
       "default": "/var/log/vanblog",

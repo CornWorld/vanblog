@@ -92,7 +92,7 @@ export class ConfigService {
   /** 静态文件配置 */
   get static(): StaticConfig {
     return {
-      path: this.configService.get<string>('STATIC_PATH', '/app/static'),
+      path: this.configService.get<string>('STATIC_PATH', './data/static'),
     };
   }
 
