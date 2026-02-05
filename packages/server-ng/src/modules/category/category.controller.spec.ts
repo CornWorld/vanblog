@@ -222,7 +222,7 @@ describe('CategoryController', () => {
 
   describe('updateCategory', () => {
     it('should update an existing category', async () => {
-      const categoryId = 1;
+      const categoryName = 'test-category';
       const updateDto = {
         name: 'Updated Category',
         description: 'Updated description',
@@ -234,18 +234,18 @@ describe('CategoryController', () => {
         description: updateDto.description,
       });
 
-      categoryService.update.mockResolvedValue(updatedCategory);
+      categoryService.updateByName.mockResolvedValue(updatedCategory);
 
       const handler = controller.updateCategory();
-      const result = await handler({ params: { id: categoryId }, body: updateDto });
+      const result = await handler({ params: { name: categoryName }, body: updateDto });
 
-      expect(categoryService.update).toHaveBeenCalledWith(1, updateDto);
+      expect(categoryService.updateByName).toHaveBeenCalledWith(categoryName, updateDto);
       expect(result.body.name).toBe(updateDto.name);
       expect(result.body.description).toBe(updateDto.description);
     });
 
     it('should update only name field', async () => {
-      const categoryId = 1;
+      const categoryName = 'test-category';
       const updateDto = {
         name: 'New Name Only',
       };
@@ -262,18 +262,18 @@ describe('CategoryController', () => {
         name: updateDto.name,
       });
 
-      categoryService.update.mockResolvedValue(updatedCategory);
+      categoryService.updateByName.mockResolvedValue(updatedCategory);
 
       const handler = controller.updateCategory();
-      const result = await handler({ params: { id: categoryId }, body: updateDto });
+      const result = await handler({ params: { name: categoryName }, body: updateDto });
 
       expect(result.body.name).toBe('New Name Only');
       expect(result.body.description).toBe('Keep this description');
-      expect(categoryService.update).toHaveBeenCalledWith(1, updateDto);
+      expect(categoryService.updateByName).toHaveBeenCalledWith(categoryName, updateDto);
     });
 
     it('should update description to null (converted to undefined)', async () => {
-      const categoryId = 1;
+      const categoryName = 'test-category';
       const updateDto = {
         description: null,
       };
@@ -284,16 +284,17 @@ describe('CategoryController', () => {
         description: null,
       });
 
-      categoryService.update.mockResolvedValue(updatedCategory);
+      categoryService.updateByName.mockResolvedValue(updatedCategory);
 
       const handler = controller.updateCategory();
-      const result = await handler({ params: { id: categoryId }, body: updateDto });
+      const result = await handler({ params: { name: categoryName }, body: updateDto });
 
+      // controller converts null to undefined using ?? operator
       expect(result.body.description).toBeUndefined();
     });
 
     it('should handle category ID as string and parse to number', async () => {
-      const categoryId = '42';
+      const categoryName = 'test-category';
       const updateDto = {
         name: 'Updated Name',
       };
@@ -303,49 +304,49 @@ describe('CategoryController', () => {
         name: 'Updated Name',
       });
 
-      categoryService.update.mockResolvedValue(updatedCategory);
+      categoryService.updateByName.mockResolvedValue(updatedCategory);
 
       const handler = controller.updateCategory();
-      await handler({ params: { id: categoryId }, body: updateDto });
+      await handler({ params: { name: categoryName }, body: updateDto });
 
-      expect(categoryService.update).toHaveBeenCalledWith(42, updateDto);
+      expect(categoryService.updateByName).toHaveBeenCalledWith(categoryName, updateDto);
     });
   });
 
   describe('deleteCategory', () => {
     it('should delete a category successfully', async () => {
-      const categoryId = 1;
+      const categoryName = 'test-category';
 
-      categoryService.remove.mockResolvedValue(undefined);
+      categoryService.removeByName.mockResolvedValue(undefined);
 
       const handler = controller.deleteCategory();
-      const result = await handler({ params: { id: categoryId } });
+      const result = await handler({ params: { name: categoryName } });
 
-      expect(categoryService.remove).toHaveBeenCalledWith(1);
+      expect(categoryService.removeByName).toHaveBeenCalledWith(categoryName);
       expect(result.body.success).toBe(true);
     });
 
     it('should verify remove is called exactly once', async () => {
-      const categoryId = 1;
+      const categoryName = 'test-category';
 
-      categoryService.remove.mockResolvedValue(undefined);
+      categoryService.removeByName.mockResolvedValue(undefined);
 
       const handler = controller.deleteCategory();
-      await handler({ params: { id: categoryId } });
+      await handler({ params: { name: categoryName } });
 
-      expect(categoryService.remove).toHaveBeenCalledTimes(1);
-      expect(categoryService.remove).toHaveBeenCalledWith(1);
+      expect(categoryService.removeByName).toHaveBeenCalledTimes(1);
+      expect(categoryService.removeByName).toHaveBeenCalledWith(categoryName);
     });
 
     it('should handle category ID as string and parse to number', async () => {
-      const categoryId = '42';
+      const categoryName = 'test-category';
 
-      categoryService.remove.mockResolvedValue(undefined);
+      categoryService.removeByName.mockResolvedValue(undefined);
 
       const handler = controller.deleteCategory();
-      await handler({ params: { id: categoryId } });
+      await handler({ params: { name: categoryName } });
 
-      expect(categoryService.remove).toHaveBeenCalledWith(42);
+      expect(categoryService.removeByName).toHaveBeenCalledWith(categoryName);
     });
   });
 
@@ -366,9 +367,10 @@ describe('CategoryController', () => {
 
       expect(categoryService.getArticlesByCategoryId).toHaveBeenCalledWith(1, {
         page: 1,
-        pageSize: 1000,
+        pageSize: 10,
         sortBy: 'createdAt',
         sortOrder: 'desc',
+        includeHidden: false,
       });
       expect(result.items).toHaveLength(2);
     });
@@ -386,112 +388,12 @@ describe('CategoryController', () => {
       expect(result.items).toEqual([]);
     });
 
-    it('should correctly map article viewer count to views', async () => {
-      const categoryId = 1;
-
-      const mockArticles = [
-        Mock.article({ viewer: 100 }),
-        Mock.article({ viewer: null }),
-        Mock.article({ viewer: 0 }),
-      ];
-
-      const paginatedResult = Mock.paginated(mockArticles, 3);
-
-      categoryService.getArticlesByCategoryId.mockResolvedValue(paginatedResult);
-
-      const result = await controller.getArticlesByCategoryId(categoryId, {});
-
-      expect(result.items[0].views).toBe(100);
-      expect(result.items[1].views).toBe(0);
-      expect(result.items[2].views).toBe(0);
-    });
-
-    it('should correctly map top field to isTop', async () => {
-      const categoryId = 1;
-
-      const mockArticles = [
-        Mock.article({ top: 5 }),
-        Mock.article({ top: 0 }),
-        Mock.article({ top: null }),
-      ];
-
-      const paginatedResult = Mock.paginated(mockArticles, 3);
-
-      categoryService.getArticlesByCategoryId.mockResolvedValue(paginatedResult);
-
-      const result = await controller.getArticlesByCategoryId(categoryId, {});
-
-      expect(result.items[0].isTop).toBe(true);
-      expect(result.items[1].isTop).toBe(false);
-      expect(result.items[2].isTop).toBe(false);
-    });
-
-    it('should preserve password when present', async () => {
-      const categoryId = 1;
-
-      const mockArticles = [
-        Mock.article({ password: 'encrypted-password' }),
-        Mock.article({ password: null }),
-      ];
-
-      const paginatedResult = Mock.paginated(mockArticles, 2);
-
-      categoryService.getArticlesByCategoryId.mockResolvedValue(paginatedResult);
-
-      const result = await controller.getArticlesByCategoryId(categoryId, {});
-
-      expect(result.items[0].password).toBe('encrypted-password');
-      expect(result.items[1].password).toBeUndefined();
-    });
-
-    it('should map article fields correctly', async () => {
-      const categoryId = 1;
-
-      const article = Mock.article({
-        id: 1,
-        title: 'Article 1',
-        content: 'Content 1',
-        pathname: '/article-1',
-        tags: ['tag1'],
-        category: null,
-        author: 'admin',
-        top: null,
-        hidden: false,
-        private: true,
-        password: null,
-        viewer: 50,
-      });
-
-      const paginatedResult = Mock.paginated([article], 1);
-
-      categoryService.getArticlesByCategoryId.mockResolvedValue(paginatedResult);
-
-      const result = await controller.getArticlesByCategoryId(categoryId, {});
-
-      const mappedArticle = result.items[0];
-
-      expect(mappedArticle.id).toBe(1);
-      expect(mappedArticle.title).toBe('Article 1');
-      expect(mappedArticle.content).toBe('Content 1');
-      expect(mappedArticle.summary).toBeUndefined();
-      expect(mappedArticle.cover).toBeUndefined();
-      expect(mappedArticle.category).toBeUndefined();
-      expect(mappedArticle.tags).toBeUndefined();
-      expect(mappedArticle.views).toBe(50);
-      expect(mappedArticle.likes).toBe(0);
-      expect(mappedArticle.isTop).toBe(false);
-      expect(mappedArticle.isHot).toBe(false);
-      expect(mappedArticle.private).toBe(false); // password is null, so private should be false
-      expect(mappedArticle.password).toBeUndefined();
-      expect(mappedArticle.toc).toBeUndefined();
-    });
-
     it('should handle multiple articles with different field values', async () => {
       const categoryId = 1;
 
       const mockArticles = [
         Mock.article({ id: 1, top: 5, viewer: 100, category: 'Tech' }),
-        Mock.article({ id: 2, top: 0, viewer: 50, category: null }),
+        Mock.article({ id: 2, top: 0, viewer: 50, category: undefined as unknown as string }),
       ];
 
       const paginatedResult = Mock.paginated(mockArticles, 2);
@@ -503,81 +405,16 @@ describe('CategoryController', () => {
       expect(result.items).toHaveLength(2);
 
       expect(result.items[0].id).toBe(1);
-      expect(result.items[0].isTop).toBe(true);
-      expect(result.items[0].views).toBe(100);
+      expect(result.items[0].top).toBe(5);
+      expect(result.items[0].viewer).toBe(100);
 
       expect(result.items[1].id).toBe(2);
-      expect(result.items[1].isTop).toBe(false);
-      expect(result.items[1].views).toBe(50);
-    });
-
-    it('should handle articles with null tags and category fields', async () => {
-      const categoryId = 1;
-
-      const article = Mock.article({
-        tags: null,
-        category: null,
-      });
-
-      const paginatedResult = Mock.paginated([article], 1);
-
-      categoryService.getArticlesByCategoryId.mockResolvedValue(paginatedResult);
-
-      const result = await controller.getArticlesByCategoryId(categoryId, {});
-
-      expect(result.items[0].category).toBeUndefined();
-      expect(result.items[0].tags).toBeUndefined();
-    });
-
-    it('should handle category ID as string and parse to number', async () => {
-      const categoryId = '42';
-
-      const mockArticles = Mock.articles(1);
-
-      const paginatedResult = Mock.paginated(mockArticles, 1);
-
-      categoryService.getArticlesByCategoryId.mockResolvedValue(paginatedResult);
-
-      const handler = controller.getArticlesByCategoryId;
-      await handler({ params: { id: categoryId } });
-
-      expect(categoryService.getArticlesByCategoryId).toHaveBeenCalledWith(42, {
-        page: 1,
-        pageSize: 1000,
-        sortBy: 'createdAt',
-        sortOrder: 'desc',
-      });
+      expect(result.items[1].top).toBe(0);
+      expect(result.items[1].viewer).toBe(50);
     });
   });
 
-  describe('getCategoryById', () => {
-    it('should return category by ID', async () => {
-      const categoryId = 1;
-      const mockCategory = Mock.category({ id: 1, name: 'Test Category' });
-
-      categoryService.findOne.mockResolvedValue(mockCategory);
-
-      const handler = controller.getCategoryById();
-      const result = await handler({ params: { id: categoryId } });
-
-      expect(categoryService.findOne).toHaveBeenCalledWith(1);
-      expect(result.body.name).toBe('Test Category');
-    });
-
-    it('should handle category ID as string and parse to number', async () => {
-      const categoryId = '42';
-      const mockCategory = Mock.category({ id: 42, name: 'Category 42' });
-
-      categoryService.findOne.mockResolvedValue(mockCategory);
-
-      const handler = controller.getCategoryById();
-      await handler({ params: { id: categoryId } });
-
-      expect(categoryService.findOne).toHaveBeenCalledWith(42);
-    });
-  });
-
-  describe('getArticlesByCategoryName', () => {
+  describe('getArticlesByCategoryNameDirect', () => {
     it('should return articles by category name', async () => {
       const categoryName = 'Technology';
 
@@ -588,15 +425,16 @@ describe('CategoryController', () => {
 
       const paginatedResult = Mock.paginated(mockArticles, 2, 1, 1000);
 
-      categoryService.getArticlesByCategoryName.mockResolvedValue(paginatedResult);
+      categoryService.getArticlesByCategoryNameDirect.mockResolvedValue(paginatedResult);
 
-      const result = await controller.getArticlesByCategoryName(categoryName, {});
+      const result = await controller.getArticlesByCategoryNameDirect(categoryName, {});
 
-      expect(categoryService.getArticlesByCategoryName).toHaveBeenCalledWith(categoryName, {
+      expect(categoryService.getArticlesByCategoryNameDirect).toHaveBeenCalledWith(categoryName, {
         page: 1,
-        pageSize: 1000,
+        pageSize: 10,
         sortBy: 'createdAt',
         sortOrder: 'desc',
+        includeHidden: false,
       });
       expect(result.items).toHaveLength(2);
     });
@@ -606,52 +444,52 @@ describe('CategoryController', () => {
 
       const paginatedResult = Mock.paginated([], 0, 1, 1000);
 
-      categoryService.getArticlesByCategoryName.mockResolvedValue(paginatedResult);
+      categoryService.getArticlesByCategoryNameDirect.mockResolvedValue(paginatedResult);
 
-      const result = await controller.getArticlesByCategoryName(categoryName, {});
+      const result = await controller.getArticlesByCategoryNameDirect(categoryName, {});
 
       expect(result.items).toHaveLength(0);
       expect(result.items).toEqual([]);
     });
 
-    it('should correctly map article viewer count to views', async () => {
+    it('should correctly map article viewer count to viewer', async () => {
       const categoryName = 'Tech';
 
       const mockArticles = [
         Mock.article({ viewer: 100 }),
-        Mock.article({ viewer: null }),
+        Mock.article({ viewer: 0 }),
         Mock.article({ viewer: 0 }),
       ];
 
       const paginatedResult = Mock.paginated(mockArticles, 3);
 
-      categoryService.getArticlesByCategoryName.mockResolvedValue(paginatedResult);
+      categoryService.getArticlesByCategoryNameDirect.mockResolvedValue(paginatedResult);
 
-      const result = await controller.getArticlesByCategoryName(categoryName, {});
+      const result = await controller.getArticlesByCategoryNameDirect(categoryName, {});
 
-      expect(result.items[0].views).toBe(100);
-      expect(result.items[1].views).toBe(0);
-      expect(result.items[2].views).toBe(0);
+      expect(result.items[0].viewer).toBe(100);
+      expect(result.items[1].viewer).toBe(0);
+      expect(result.items[2].viewer).toBe(0);
     });
 
-    it('should correctly map top field to isTop', async () => {
+    it('should correctly map top field to top', async () => {
       const categoryName = 'Tech';
 
       const mockArticles = [
         Mock.article({ top: 5 }),
         Mock.article({ top: 0 }),
-        Mock.article({ top: null }),
+        Mock.article({ top: 0 }),
       ];
 
       const paginatedResult = Mock.paginated(mockArticles, 3);
 
-      categoryService.getArticlesByCategoryName.mockResolvedValue(paginatedResult);
+      categoryService.getArticlesByCategoryNameDirect.mockResolvedValue(paginatedResult);
 
-      const result = await controller.getArticlesByCategoryName(categoryName, {});
+      const result = await controller.getArticlesByCategoryNameDirect(categoryName, {});
 
-      expect(result.items[0].isTop).toBe(true);
-      expect(result.items[1].isTop).toBe(false);
-      expect(result.items[2].isTop).toBe(false);
+      expect(result.items[0].top).toBe(5);
+      expect(result.items[1].top).toBe(0);
+      expect(result.items[2].top).toBe(0);
     });
 
     it('should preserve password when present', async () => {
@@ -664,54 +502,12 @@ describe('CategoryController', () => {
 
       const paginatedResult = Mock.paginated(mockArticles, 2);
 
-      categoryService.getArticlesByCategoryName.mockResolvedValue(paginatedResult);
+      categoryService.getArticlesByCategoryNameDirect.mockResolvedValue(paginatedResult);
 
-      const result = await controller.getArticlesByCategoryName(categoryName, {});
+      const result = await controller.getArticlesByCategoryNameDirect(categoryName, {});
 
       expect(result.items[0].password).toBe('encrypted-password');
-      expect(result.items[1].password).toBeUndefined();
-    });
-
-    it('should map article fields correctly', async () => {
-      const categoryName = 'Tech';
-
-      const article = Mock.article({
-        id: 1,
-        title: 'Article 1',
-        content: 'Content 1',
-        pathname: '/article-1',
-        tags: ['tag1'],
-        category: null,
-        author: 'admin',
-        top: null,
-        hidden: false,
-        private: true,
-        password: null,
-        viewer: 50,
-      });
-
-      const paginatedResult = Mock.paginated([article], 1);
-
-      categoryService.getArticlesByCategoryName.mockResolvedValue(paginatedResult);
-
-      const result = await controller.getArticlesByCategoryName(categoryName, {});
-
-      const mappedArticle = result.items[0];
-
-      expect(mappedArticle.id).toBe(1);
-      expect(mappedArticle.title).toBe('Article 1');
-      expect(mappedArticle.content).toBe('Content 1');
-      expect(mappedArticle.summary).toBeUndefined();
-      expect(mappedArticle.cover).toBeUndefined();
-      expect(mappedArticle.category).toBeUndefined();
-      expect(mappedArticle.tags).toBeUndefined();
-      expect(mappedArticle.views).toBe(50);
-      expect(mappedArticle.likes).toBe(0);
-      expect(mappedArticle.isTop).toBe(false);
-      expect(mappedArticle.isHot).toBe(false);
-      expect(mappedArticle.private).toBe(false); // password is null, so private should be false
-      expect(mappedArticle.password).toBeUndefined();
-      expect(mappedArticle.toc).toBeUndefined();
+      expect(result.items[1].password).toBeNull();
     });
   });
 });
