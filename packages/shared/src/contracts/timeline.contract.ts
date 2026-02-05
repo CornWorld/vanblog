@@ -7,7 +7,7 @@ export const createTimelineContract = (c: ReturnType<typeof initContract>) =>
   c.router({
     getTimeline: {
       method: 'GET',
-      path: '/public/timeline',
+      path: '/v2/public/timeline',
       query: z
         .object({
           includeHidden: z.enum(['true', 'false']).optional(),
