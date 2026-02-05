@@ -38,8 +38,11 @@ export async function init(): Promise<INestApplication> {
   const logger = app.get(LoggerService);
   app.useLogger(logger);
 
-  // Set global prefix first
-  app.setGlobalPrefix(appConfig.apiPrefix);
+  // Set global prefix for all API routes
+  // Note: public routes should also use /api prefix for consistency with frontend
+  app.setGlobalPrefix(appConfig.apiPrefix, {
+    exclude: ['/rss/(.*)', '/sitemap.xml'], // Exclude RSS and sitemap (public XML feeds)
+  });
 
   // Enable API versioning
   app.enableVersioning({
