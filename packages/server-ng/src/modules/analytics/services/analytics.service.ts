@@ -214,4 +214,47 @@ export class AnalyticsService {
       };
     });
   }
+
+  async getAnalyticsLogs(
+    eventType: string,
+    page: number,
+    pageSize: number,
+  ): Promise<{ items: unknown[]; total: number }> {
+    const offset = (page - 1) * pageSize;
+
+    const whereClause =
+      eventType && eventType !== 'all' ? eq(analytics.type, eventType) : undefined;
+
+    // Get total count
+    const totalResult = await this.db
+      .select({ count: sql<number>`count(*)` })
+      .from(analytics)
+      .where(whereClause);
+
+    const total = totalResult[0]?.count ?? 0;
+
+    // Get paginated data
+    const items = await this.db
+      .select()
+      .from(analytics)
+      .where(whereClause)
+      .orderBy(desc(analytics.createdAt))
+      .limit(pageSize)
+      .offset(offset);
+
+    const formattedItems = items.map((row) => {
+      const createdAtStr = toDatejs(row.createdAt as Date | string).format('YYYY-MM-DDTHH:mm:ssZ');
+      const parsed = this.parseData(row.data);
+      return {
+        ...row,
+        createdAt: createdAtStr,
+        data: parsed,
+      };
+    });
+
+    return {
+      items: formattedItems,
+      total,
+    };
+  }
 }
