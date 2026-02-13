@@ -1,14 +1,16 @@
-import { Controller, Get, UseGuards, Req } from '@nestjs/common';
+import { Controller, Get, UseGuards, Request } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
 import { dayjs, contract } from '@vanblog/shared';
+import { Request as ExpressRequest } from 'express';
 import { z } from 'zod';
 
 import { DerivedView } from '../../shared/decorators/derived-view.decorator';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { HookService } from '../plugin/services/hook.service';
 import { SettingCoreService } from '../setting/services/setting-core.service';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { User } from '../user/entities/user.entity';
 
 type NavigationPublic = {
   name: string;
@@ -83,6 +85,10 @@ const PublicMetaSchema = z.object({
 
 type PublicMetaProp = z.infer<typeof PublicMetaSchema>;
 
+interface RequestWithUser extends ExpressRequest {
+  user: User;
+}
+
 @ApiTags('Public')
 @Controller({ path: 'public', version: '2' })
 export class MetaController {
@@ -96,8 +102,7 @@ export class MetaController {
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: '获取管理员元数据（含用户信息）' })
   @ApiResponse({ status: 200, description: '管理员元数据获取成功' })
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  async getAdminMeta(@Req() req: any): Promise<{
+  async getAdminMeta(@Request() req: RequestWithUser): Promise<{
     statusCode: number;
     data: {
       version: string;
@@ -112,21 +117,19 @@ export class MetaController {
     const boot = await this.bootstrapService.getPublicBootstrap();
 
     // Extract user from JWT token (attached by JwtAuthGuard)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const user = (req as any).user;
+
+    const { user } = req;
 
     return {
       statusCode: 200,
       data: {
         version: boot.version,
-        ...(user && {
-          user: {
-            id: user.id,
-            username: user.username,
-            name: user.username, // Frontend expects 'name' field
-            type: user.type,
-          },
-        }),
+        user: {
+          id: user.id,
+          username: user.username,
+          name: user.username,
+          type: user.type,
+        },
       },
     };
   }
@@ -152,6 +155,7 @@ export class MetaController {
     nodeVersion: string;
     platform: string;
   }> {
+    await Promise.resolve();
     return {
       version: process.env.npm_package_version ?? '0.54.0-corn.6',
       buildTime: dayjs().format(),

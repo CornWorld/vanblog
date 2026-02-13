@@ -2,6 +2,7 @@ import { Body, Controller, Delete, Get, Param, Post, Put, Query } from '@nestjs/
 import { ApiOperation, ApiTags, ApiResponse } from '@nestjs/swagger';
 import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
 import { contract } from '@vanblog/shared';
+import dayjs from 'dayjs';
 import { z } from 'zod';
 
 import { Article } from '../article/entities/article.entity';
@@ -10,12 +11,12 @@ import { Perm } from '../auth/permissions.decorator';
 import { DraftVersionService } from './draft-version.service';
 import { DraftService } from './draft.service';
 import {
-  DraftSchema,
+  CreateDraftSchema,
   DraftListResponseSchema,
   DraftQuerySchema,
-  DraftVersionSchema,
+  DraftSchema,
   DraftVersionListResponseSchema,
-  CreateDraftSchema,
+  DraftVersionSchema,
   UpdateDraftSchema,
   PublishDraftSchema,
 } from './dto/draft.dto';
@@ -200,34 +201,38 @@ export class DraftController {
     });
   }
 
+  @TsRestHandler(contract.publishDraft)
   @Perm('draft', ['publish'])
   @Post(':id/publish')
   @ApiOperation({ summary: 'Publish draft to article' })
   @ApiResponse({ status: 200, description: 'Draft published successfully' })
-  async publishDraft_tsrest(@Param('id') id: string): Promise<{
-    id: number;
-    title: string;
-    content: string;
-    category?: string;
-    views?: number;
-    createdAt: string;
-    updatedAt: string;
-  }> {
-    const result = await this.publish(Number(id), {
-      isPublished: true,
-      isTop: false,
-      password: null,
-      allowComment: true,
+  publishDraft_tsrest(): ReturnType<typeof tsRestHandler> {
+    return tsRestHandler(contract.publishDraft, async ({ params }) => {
+      const result = await this.publish(Number(params.id), {
+        isPublished: true,
+        isTop: false,
+        password: null,
+        allowComment: true,
+      });
+      return {
+        status: 200,
+        body: {
+          id: result.id,
+          title: result.title,
+          content: result.content,
+          category: result.category ?? undefined,
+          views: result.viewer ?? undefined,
+          createdAt: result.createdAt,
+          updatedAt: result.updatedAt,
+          pubTime: dayjs(result.updatedAt).format(),
+          isTop: !!result.top,
+          isHot: false, // Article entity doesn't have hot field
+          likes: 0, // Article entity doesn't have likes field
+          private: result.private ?? false,
+          password: result.password ?? undefined,
+        },
+      };
     });
-    return {
-      id: result.id,
-      title: result.title,
-      content: result.content,
-      category: result.category ?? undefined,
-      views: result.viewer ?? undefined,
-      createdAt: result.createdAt,
-      updatedAt: result.updatedAt,
-    };
   }
 
   async publish(id: number, raw: unknown): Promise<Article> {

@@ -1,265 +1,216 @@
-import { Body, Controller, Get, Param, Post, Put, Delete } from '@nestjs/common';
-import { ApiTags, ApiOperation } from '@nestjs/swagger';
+import { Controller, Get, Post, Patch, Delete } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
+import { contract } from '@vanblog/shared';
 
 import { Permission } from '../auth/permissions.decorator';
 
 import { SettingCoreService } from './services/setting-core.service';
 
 @ApiTags('Settings')
-@Controller()
+@Controller({ path: 'settings', version: '2' })
 export class SettingCoreController {
   constructor(private readonly settingCoreService: SettingCoreService) {}
 
   // Site Info
+  @TsRestHandler(contract.getSiteInfo)
   @Permission('setting', ['read'])
-  @Get('settings/site-info')
+  @Get('site-info')
   @ApiOperation({ summary: 'Get site information' })
-  async getSiteInfo() {
-    return await this.settingCoreService.getSiteInfo();
+  @ApiResponse({ status: 200, description: 'Site info retrieved' })
+  getSiteInfo_tsrest(): ReturnType<typeof tsRestHandler> {
+    return tsRestHandler(contract.getSiteInfo, async () => {
+      const data = await this.settingCoreService.getSiteInfo();
+      return { status: 200, body: data };
+    });
   }
 
+  @TsRestHandler(contract.updateSiteInfo)
   @Permission('setting', ['update'])
-  @Put('settings/site-info')
+  @Patch('site-info')
   @ApiOperation({ summary: 'Update site information' })
-  async updateSiteInfo(@Body() body: unknown) {
-    return await this.settingCoreService.updateSiteInfo(body);
+  @ApiResponse({ status: 200, description: 'Site info updated' })
+  updateSiteInfo_tsrest(): ReturnType<typeof tsRestHandler> {
+    return tsRestHandler(contract.updateSiteInfo, async ({ body }) => {
+      const data = await this.settingCoreService.updateSiteInfo(body);
+      return { status: 200, body: data };
+    });
   }
 
   // Layout
+  @TsRestHandler(contract.getLayoutSettings)
   @Permission('setting', ['read'])
-  @Get('settings/layout')
+  @Get('layout')
   @ApiOperation({ summary: 'Get layout settings' })
-  async getLayoutSettings() {
-    return await this.settingCoreService.getLayoutSettings();
+  @ApiResponse({ status: 200, description: 'Layout settings retrieved' })
+  getLayoutSettings_tsrest(): ReturnType<typeof tsRestHandler> {
+    return tsRestHandler(contract.getLayoutSettings, async () => {
+      const data = await this.settingCoreService.getLayoutSettings();
+      return { status: 200, body: data };
+    });
   }
 
+  @TsRestHandler(contract.updateLayoutSettings)
   @Permission('setting', ['update'])
-  @Put('settings/layout')
+  @Patch('layout')
   @ApiOperation({ summary: 'Update layout settings' })
-  async updateLayoutSettings(@Body() body: unknown) {
-    return await this.settingCoreService.updateLayoutSettings(body);
+  @ApiResponse({ status: 200, description: 'Layout settings updated' })
+  updateLayoutSettings_tsrest(): ReturnType<typeof tsRestHandler> {
+    return tsRestHandler(contract.updateLayoutSettings, async ({ body }) => {
+      const data = await this.settingCoreService.updateLayoutSettings(body);
+      return { status: 200, body: data };
+    });
   }
 
   // Theme
+  @TsRestHandler(contract.getThemeSettings)
   @Permission('setting', ['read'])
-  @Get('settings/theme')
+  @Get('theme')
   @ApiOperation({ summary: 'Get theme settings' })
-  async getThemeSettings() {
-    return await this.settingCoreService.getThemeSettings();
+  @ApiResponse({ status: 200, description: 'Theme settings retrieved' })
+  getThemeSettings_tsrest(): ReturnType<typeof tsRestHandler> {
+    return tsRestHandler(contract.getThemeSettings, async () => {
+      const data = await this.settingCoreService.getThemeSettings();
+      return { status: 200, body: data };
+    });
   }
 
+  @TsRestHandler(contract.updateThemeSettings)
   @Permission('setting', ['update'])
-  @Put('settings/theme')
+  @Patch('theme')
   @ApiOperation({ summary: 'Update theme settings' })
-  async updateThemeSettings(@Body() body: unknown) {
-    return await this.settingCoreService.updateThemeSettings(body);
+  @ApiResponse({ status: 200, description: 'Theme settings updated' })
+  updateThemeSettings_tsrest(): ReturnType<typeof tsRestHandler> {
+    return tsRestHandler(contract.updateThemeSettings, async ({ body }) => {
+      const data = await this.settingCoreService.updateThemeSettings(body);
+      return { status: 200, body: data };
+    });
   }
 
   // Friend Links
+  @TsRestHandler(contract.getFriendLinks)
   @Permission('setting', ['read'])
-  @Get('settings/friend-links')
+  @Get('friend-links')
   @ApiOperation({ summary: 'Get friend links' })
-  async getFriendLinks() {
-    return await this.settingCoreService.getFriendLinks();
+  @ApiResponse({ status: 200, description: 'Friend links retrieved' })
+  getFriendLinks_tsrest(): ReturnType<typeof tsRestHandler> {
+    return tsRestHandler(contract.getFriendLinks, async () => {
+      const data = await this.settingCoreService.getFriendLinks();
+      return { status: 200, body: data };
+    });
   }
 
+  @TsRestHandler(contract.createFriendLink)
   @Permission('setting', ['update'])
-  @Post('settings/friend-links')
+  @Post('friend-links')
   @ApiOperation({ summary: 'Create friend link' })
-  async createFriendLink(@Body() body: unknown) {
-    return await this.settingCoreService.createFriendLink(body);
+  @ApiResponse({ status: 201, description: 'Friend link created' })
+  createFriendLink_tsrest(): ReturnType<typeof tsRestHandler> {
+    return tsRestHandler(contract.createFriendLink, async ({ body }) => {
+      const data = await this.settingCoreService.createFriendLink(body);
+      return { status: 201, body: data };
+    });
   }
 
+  @TsRestHandler(contract.updateFriendLink)
   @Permission('setting', ['update'])
-  @Put('settings/friend-links/:index')
+  @Patch('friend-links/:index')
   @ApiOperation({ summary: 'Update friend link' })
-  async updateFriendLink(@Param('index') index: string, @Body() body: unknown) {
-    return await this.settingCoreService.updateFriendLink(Number(index), body);
+  @ApiResponse({ status: 200, description: 'Friend link updated' })
+  updateFriendLink_tsrest(): ReturnType<typeof tsRestHandler> {
+    return tsRestHandler(contract.updateFriendLink, async ({ params, body }) => {
+      const data = await this.settingCoreService.updateFriendLink(params.index, body);
+      return { status: 200, body: data };
+    });
   }
 
+  @TsRestHandler(contract.deleteFriendLink)
   @Permission('setting', ['update'])
-  @Delete('settings/friend-links/:index')
+  @Delete('friend-links/:index')
   @ApiOperation({ summary: 'Delete friend link' })
-  async deleteFriendLink(@Param('index') index: string) {
-    return await this.settingCoreService.deleteFriendLink(Number(index));
+  @ApiResponse({ status: 200, description: 'Friend link deleted' })
+  deleteFriendLink_tsrest(): ReturnType<typeof tsRestHandler> {
+    return tsRestHandler(contract.deleteFriendLink, async ({ params }) => {
+      const data = await this.settingCoreService.deleteFriendLink(params.index);
+      return { status: 200, body: data };
+    });
   }
 
   // Navigation
+  @TsRestHandler(contract.getNavigation)
   @Permission('setting', ['read'])
-  @Get('settings/navigation')
+  @Get('navigation')
   @ApiOperation({ summary: 'Get navigation menu' })
-  async getNavigation() {
-    return await this.settingCoreService.getNavigation();
+  @ApiResponse({ status: 200, description: 'Navigation menu retrieved' })
+  getNavigation_tsrest(): ReturnType<typeof tsRestHandler> {
+    return tsRestHandler(contract.getNavigation, async () => {
+      const data = await this.settingCoreService.getNavigation();
+      return { status: 200, body: data };
+    });
   }
 
+  @TsRestHandler(contract.updateNavigation)
   @Permission('setting', ['update'])
-  @Put('settings/navigation')
+  @Patch('navigation')
   @ApiOperation({ summary: 'Update navigation menu' })
-  async updateNavigation(@Body() body: unknown) {
-    return await this.settingCoreService.updateNavigation(body);
+  @ApiResponse({ status: 200, description: 'Navigation menu updated' })
+  updateNavigation_tsrest(): ReturnType<typeof tsRestHandler> {
+    return tsRestHandler(contract.updateNavigation, async ({ body }) => {
+      // Extract items from the body and map NavigationItem to Navigation
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const items = (body as any).items || [];
+      const data = await this.settingCoreService.updateNavigation(items);
+      return { status: 200, body: data };
+    });
   }
 
   // Custom Code
+  @TsRestHandler(contract.getCustomCode)
   @Permission('setting', ['read'])
-  @Get('settings/custom-code')
-  @ApiOperation({ summary: 'Get custom code' })
-  async getCustomCode() {
-    return await this.settingCoreService.getCustomCode();
+  @Get('custom-code')
+  @ApiOperation({ summary: 'Get custom code settings' })
+  @ApiResponse({ status: 200, description: 'Custom code settings retrieved' })
+  getCustomCode_tsrest(): ReturnType<typeof tsRestHandler> {
+    return tsRestHandler(contract.getCustomCode, async () => {
+      const data = await this.settingCoreService.getCustomCode();
+      return { status: 200, body: data };
+    });
   }
 
+  @TsRestHandler(contract.updateCustomCode)
   @Permission('setting', ['update'])
-  @Put('settings/custom-code')
-  @ApiOperation({ summary: 'Update custom code' })
-  async updateCustomCode(@Body() body: unknown) {
-    return await this.settingCoreService.updateCustomCode(body);
+  @Patch('custom-code')
+  @ApiOperation({ summary: 'Update custom code settings' })
+  @ApiResponse({ status: 200, description: 'Custom code settings updated' })
+  updateCustomCode_tsrest(): ReturnType<typeof tsRestHandler> {
+    return tsRestHandler(contract.updateCustomCode, async ({ body }) => {
+      const data = await this.settingCoreService.updateCustomCode(body);
+      return { status: 200, body: data };
+    });
   }
 
   // About
+  @TsRestHandler(contract.getAboutInfo)
   @Permission('setting', ['read'])
-  @Get('settings/about')
-  @ApiOperation({ summary: 'Get about information' })
-  async getAboutInfo() {
-    return await this.settingCoreService.getAboutInfo();
+  @Get('about')
+  @ApiOperation({ summary: 'Get about page content' })
+  @ApiResponse({ status: 200, description: 'About content retrieved' })
+  getAbout_tsrest(): ReturnType<typeof tsRestHandler> {
+    return tsRestHandler(contract.getAboutInfo, async () => {
+      const data = await this.settingCoreService.getAboutInfo();
+      return { status: 200, body: data };
+    });
   }
 
+  @TsRestHandler(contract.updateAboutInfo)
   @Permission('setting', ['update'])
-  @Put('settings/about')
-  @ApiOperation({ summary: 'Update about information' })
-  async updateAboutInfo(@Body() body: unknown) {
-    return await this.settingCoreService.updateAboutInfo(body);
-  }
-
-  // Social
-  @Permission('setting', ['read'])
-  @Get('settings/social')
-  @ApiOperation({ summary: 'Get social links' })
-  async getSocials() {
-    return await this.settingCoreService.getSocials();
-  }
-
-  @Permission('setting', ['update'])
-  @Put('settings/social')
-  @ApiOperation({ summary: 'Update social link' })
-  async updateSocial(@Body() body: unknown) {
-    return await this.settingCoreService.updateSocial(body);
-  }
-
-  @Permission('setting', ['update'])
-  @Delete('settings/social/:type')
-  @ApiOperation({ summary: 'Delete social link' })
-  async deleteSocial(@Param('type') type: string) {
-    return await this.settingCoreService.deleteSocial(type);
-  }
-
-  @Permission('setting', ['read'])
-  @Get('settings/social/types')
-  @ApiOperation({ summary: 'Get available social types' })
-  async getSocialTypes() {
-    return this.settingCoreService.getSocialTypes();
-  }
-
-  // Waline
-  @Permission('setting', ['read'])
-  @Get('settings/waline')
-  @ApiOperation({ summary: 'Get Waline settings' })
-  async getWalineSetting() {
-    return await this.settingCoreService.getWalineSetting();
-  }
-
-  @Permission('setting', ['update'])
-  @Put('settings/waline')
-  @ApiOperation({ summary: 'Update Waline settings' })
-  async updateWalineSetting(@Body() body: unknown) {
-    return await this.settingCoreService.updateWalineSetting(body);
-  }
-
-  // ISR
-  @Permission('setting', ['read'])
-  @Get('settings/isr')
-  @ApiOperation({ summary: 'Get ISR settings' })
-  async getISRSetting() {
-    return await this.settingCoreService.getISRSetting();
-  }
-
-  @Permission('setting', ['update'])
-  @Put('settings/isr')
-  @ApiOperation({ summary: 'Update ISR settings' })
-  async updateISRSetting(@Body() body: unknown) {
-    return await this.settingCoreService.updateISRSetting(body);
-  }
-
-  // Login
-  @Permission('setting', ['read'])
-  @Get('settings/login')
-  @ApiOperation({ summary: 'Get login settings' })
-  async getLoginSetting() {
-    return await this.settingCoreService.getLoginSetting();
-  }
-
-  @Permission('setting', ['update'])
-  @Put('settings/login')
-  @ApiOperation({ summary: 'Update login settings' })
-  async updateLoginSetting(@Body() body: unknown) {
-    return await this.settingCoreService.updateLoginSetting(body);
-  }
-
-  // HTTPS
-  @Permission('setting', ['read'])
-  @Get('settings/https')
-  @ApiOperation({ summary: 'Get HTTPS settings' })
-  async getHttpsSetting() {
-    return await this.settingCoreService.getHttpsSetting();
-  }
-
-  @Permission('setting', ['update'])
-  @Put('settings/https')
-  @ApiOperation({ summary: 'Update HTTPS settings' })
-  async updateHttpsSetting(@Body() body: unknown) {
-    return await this.settingCoreService.updateHttpsSetting(body);
-  }
-
-  // Static (Media)
-  @Permission('setting', ['read'])
-  @Get('settings/static')
-  @ApiOperation({ summary: 'Get static settings' })
-  async getStaticSetting() {
-    return await this.settingCoreService.getStaticSetting();
-  }
-
-  @Permission('setting', ['update'])
-  @Put('settings/static')
-  @ApiOperation({ summary: 'Update static settings' })
-  async updateStaticSetting(@Body() body: unknown) {
-    return await this.settingCoreService.updateStaticSetting(body);
-  }
-
-  // Rewards (Donations)
-  @Permission('setting', ['read'])
-  @Get('settings/donations')
-  @ApiOperation({ summary: 'Get donations' })
-  async getRewards() {
-    return await this.settingCoreService.getRewards();
-  }
-
-  @Permission('setting', ['update'])
-  @Post('settings/donations')
-  @ApiOperation({ summary: 'Create donation' })
-  async createReward(@Body() body: unknown) {
-    return await this.settingCoreService.createReward(body);
-  }
-
-  @Permission('setting', ['update'])
-  @Put('settings/donations/:name')
-  @ApiOperation({ summary: 'Update donation' })
-  async updateReward(@Param('name') name: string, @Body() body: unknown) {
-    return await this.settingCoreService.updateReward(name, body);
-  }
-
-  @Permission('setting', ['update'])
-  @Delete('settings/donations/:name')
-  @ApiOperation({ summary: 'Delete donation' })
-  async deleteReward(@Param('name') name: string) {
-    await this.settingCoreService.deleteReward(name);
-    return { success: true };
+  @Patch('about')
+  @ApiOperation({ summary: 'Update about page content' })
+  @ApiResponse({ status: 200, description: 'About content updated' })
+  updateAbout_tsrest(): ReturnType<typeof tsRestHandler> {
+    return tsRestHandler(contract.updateAboutInfo, async ({ body }) => {
+      const data = await this.settingCoreService.updateAboutInfo(body);
+      return { status: 200, body: data };
+    });
   }
 }
