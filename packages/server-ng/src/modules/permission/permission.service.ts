@@ -39,7 +39,7 @@ type PermissionGroupSelect = typeof permissionGroups.$inferSelect;
 export class PermissionService {
   private readonly logger = new Logger(PermissionService.name);
   private readonly registeredPermissions = new Map<string, PermissionNodeType>();
-  private readonly modulePermissions = new Map<string, string[]>();
+  public readonly modulePermissions = new Map<string, string[]>();
   private readonly predefinedRoles = new Map<string, string[]>();
   private readonly moduleContext = new Map<string, string[]>();
   // 缓存：已知权限集合（当 register 调整模块权限后失效）
@@ -263,7 +263,7 @@ export class PermissionService {
   /**
    * 计算已知权限集合（来自各模块注册的完整权限名）
    */
-  private getKnownPermissionsSet(): Set<string> {
+  public getKnownPermissionsSet(): Set<string> {
     if (this.cachedKnownPermissions) return this.cachedKnownPermissions;
     const set = new Set<string>();
     for (const perms of this.modulePermissions.values()) {
@@ -565,7 +565,7 @@ export class PermissionService {
     this.rolePermissionsCache.clear();
   }
 
-  private async getRolePermissions(roleName: string): Promise<string[]> {
+  public async getRolePermissions(roleName: string): Promise<string[]> {
     // 命中缓存直接返回
     const cached = this.rolePermissionsCache.get(roleName);
     if (cached) return cached;

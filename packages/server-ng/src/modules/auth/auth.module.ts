@@ -26,12 +26,7 @@ import { TokenService } from './token.service';
     forwardRef(() => UserModule),
     PassportModule,
     DatabaseModule,
-    PermissionModule.forFeature([
-      'user:read',
-      'user:create',
-      'user:update',
-      'user:delete',
-    ]),
+    PermissionModule.forFeature(['user:read', 'user:create', 'user:update', 'user:delete']),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService): JwtModuleOptions => {
@@ -56,8 +51,8 @@ import { TokenService } from './token.service';
     TokenBlacklistService,
     PasswordChangeHandlerService,
     PermissionsGuard,
-    LoginLogService,
     ApiTokenService,
+    LoginLogService,
   ],
   exports: [AuthService, TokenService, JwtModule],
 })

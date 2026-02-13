@@ -5,7 +5,7 @@ import { contract } from '@vanblog/shared';
 
 import { Permission } from '../auth/permissions.decorator';
 
-import { SettingCoreService } from './services/setting-core.service';
+import { SettingCoreService, type Navigation } from './services/setting-core.service';
 
 @ApiTags('Settings')
 @Controller({ path: 'settings', version: '2' })
@@ -157,8 +157,7 @@ export class SettingCoreController {
   updateNavigation_tsrest(): ReturnType<typeof tsRestHandler> {
     return tsRestHandler(contract.updateNavigation, async ({ body }) => {
       // Extract items from the body and map NavigationItem to Navigation
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const items = (body as any).items || [];
+      const items = (body as { items?: Navigation[] }).items ?? [];
       const data = await this.settingCoreService.updateNavigation(items);
       return { status: 200, body: data };
     });

@@ -26,11 +26,11 @@ export class AppController {
   @Get('meta/version')
   @ApiOperation({ summary: 'Get version info' })
   @ApiResponse({ status: 200, description: 'Version information' })
-  async getVersion(): Promise<{
+  getVersion(): {
     version: string;
     latestVersion: string;
     needUpdate: boolean;
-  }> {
+  } {
     return {
       version: process.env.npm_package_version ?? '0.54.0-corn.6',
       latestVersion: process.env.npm_package_version ?? '0.54.0-corn.6',
@@ -41,7 +41,7 @@ export class AppController {
   @TsRestHandler(contract.getVersion)
   @Get()
   getVersionHandler(): ReturnType<typeof tsRestHandler> {
-    return tsRestHandler(contract.getVersion, async () => {
+    return tsRestHandler(contract.getVersion, () => {
       const version = process.env.npm_package_version ?? '0.54.0-corn.6';
       return {
         status: 200,

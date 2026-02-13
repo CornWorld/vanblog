@@ -17,8 +17,8 @@ import { z } from 'zod';
 import { ArticleListResponseSchema, ArticleQuerySchema } from '../article/dto/article.dto';
 import { Permission } from '../auth/permissions.decorator';
 
-import { CreateCategorySchema, UpdateCategorySchema } from './dto/category.dto';
 import { CategoryService } from './category.service';
+import { CreateCategorySchema, UpdateCategorySchema } from './dto/category.dto';
 import { Category } from './entities/category.entity';
 
 /**
@@ -40,7 +40,7 @@ export class CategoryController {
    */
   @Get('health')
   @ApiOperation({ summary: 'Health check' })
-  async health(): Promise<{ status: string }> {
+  health(): { status: string } {
     return { status: 'ok' };
   }
 
@@ -49,7 +49,7 @@ export class CategoryController {
    */
   @Get()
   @ApiOperation({ summary: 'Get all categories' })
-  async getAllCategories() {
+  async getAllCategories(): Promise<string[]> {
     const result = await this.categoryService.findAll();
     // Return just category names as strings for frontend compatibility
     return result.items.map((item) => item.name);

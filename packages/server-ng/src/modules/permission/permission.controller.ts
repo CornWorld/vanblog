@@ -34,22 +34,23 @@ export class PermissionController {
   @Get('debug')
   @ApiOperation({ summary: 'Debug permission resolution' })
   @ApiResponse({ status: 200, description: 'Debug info' })
-  async debugPermissions() {
+  async debugPermissions(): Promise<unknown> {
     const userPermissions = ['role:admin'];
     const resolved = await this.permissionService.resolveUserPermissions(userPermissions);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const known = (this.permissionService as any).getKnownPermissionsSet();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const modulePerms = (this.permissionService as any).modulePermissions;
+
+    // Use proper typing for permission service methods
+    const known = this.permissionService.getKnownPermissionsSet();
+    const modulePerms = this.permissionService.modulePermissions;
+    const rolePermissions = {
+      admin: await this.permissionService.getRolePermissions('admin'),
+    };
+
     return {
       userPermissions,
       resolvedPermissions: resolved,
       knownPermissionsCount: known.size,
       modulePermissions: Array.from(modulePerms.entries()),
-      rolePermissions: {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        admin: await (this.permissionService as any).getRolePermissions('admin'),
-      },
+      rolePermissions,
     };
   }
 

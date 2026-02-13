@@ -22,7 +22,7 @@ export class PipelineController {
   @Permission('pipeline', ['read'])
   @ApiOperation({ summary: 'Get all pipelines' })
   @ApiResponse({ status: 200, description: 'Return all pipelines' })
-  async findAll() {
+  async findAll(): Promise<unknown> {
     const result = await this.pipelineService.findAll();
     return result.items;
   }
@@ -31,7 +31,7 @@ export class PipelineController {
   @Permission('pipeline', ['read'])
   @ApiOperation({ summary: 'Get pipeline configuration' })
   @ApiResponse({ status: 200, description: 'Return pipeline config' })
-  async getConfig() {
+  getConfig(): unknown {
     return this.pipelineService.getConfig();
   }
 
@@ -39,7 +39,7 @@ export class PipelineController {
   @Permission('pipeline', ['read'])
   @ApiOperation({ summary: 'Get pipeline by ID' })
   @ApiResponse({ status: 200, description: 'Return pipeline' })
-  async findOne(@Param('id') id: string) {
+  async findOne(@Param('id') id: string): Promise<unknown> {
     return this.pipelineService.findOne(Number(id));
   }
 
@@ -47,7 +47,7 @@ export class PipelineController {
   @Permission('pipeline', ['create'])
   @ApiOperation({ summary: 'Create pipeline' })
   @ApiResponse({ status: 201, description: 'Pipeline created' })
-  async create(@Body() body: unknown) {
+  async create(@Body() body: unknown): Promise<unknown> {
     return this.pipelineService.create(body);
   }
 
@@ -55,7 +55,7 @@ export class PipelineController {
   @Permission('pipeline', ['update'])
   @ApiOperation({ summary: 'Update pipeline' })
   @ApiResponse({ status: 200, description: 'Pipeline updated' })
-  async update(@Param('id') id: string, @Body() body: unknown) {
+  async update(@Param('id') id: string, @Body() body: unknown): Promise<unknown> {
     return this.pipelineService.update(Number(id), body);
   }
 
@@ -63,7 +63,7 @@ export class PipelineController {
   @Permission('pipeline', ['delete'])
   @ApiOperation({ summary: 'Delete pipeline' })
   @ApiResponse({ status: 200, description: 'Pipeline deleted' })
-  async remove(@Param('id') id: string) {
+  async remove(@Param('id') id: string): Promise<{ success: boolean }> {
     await this.pipelineService.remove(Number(id));
     return { success: true };
   }

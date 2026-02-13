@@ -1,15 +1,14 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 
-import { Injectable, Logger, Inject } from '@nestjs/common';
-import { dayjs } from '@vanblog/shared';
-import { articles } from '@vanblog/shared/drizzle';
+import { Inject, Injectable, Logger } from '@nestjs/common';
+import { dayjs, articles } from '@vanblog/shared';
 import { eq, and, desc } from 'drizzle-orm';
 import { Feed } from 'feed';
 import { z } from 'zod';
 
-import { DATABASE_CONNECTION, type Database } from '../../database';
 import { ConfigService } from '../../config/config.service';
+import { DATABASE_CONNECTION, type Database } from '../../database';
 import { MarkdownService } from '../../shared/services/markdown.service';
 import { HookService } from '../plugin/services/hook.service';
 import { SettingCoreService, type SiteInfo } from '../setting/services/setting-core.service';
@@ -57,12 +56,38 @@ export class RssService {
         return;
       }
 
+      // Type assertion for article results
+      type ArticleResult = {
+        id: number;
+        title: string;
+        content: string;
+        category: string | null;
+        pathname: string | null;
+        private: boolean | null;
+        createdAt: Date;
+        updatedAt: string;
+      };
+
       // 获取所有公开文章
-      const articleResults = await this.db
+      const articleResults = (await this.db
         .select()
         .from(articles)
-        .where(and(eq(articles.hidden, false), eq(articles.private, false)))
-        .orderBy(desc(articles.createdAt));
+
+        .where(and(eq(articles.hidden, false as const), eq(articles.private, false as const)))
+
+        .orderBy(desc(articles.createdAt))) as ArticleResult[];
+
+      // Type assertion for article results
+      type ArticleResult = {
+        id: number;
+        title: string;
+        content: string;
+        category: string | null;
+        pathname: string | null;
+        private: boolean | null;
+        createdAt: Date;
+        updatedAt: string;
+      };
 
       // 读取站点配置
       const [
@@ -153,9 +178,10 @@ export class RssService {
       // 添加文章到 RSS
       for (const article of articleResults) {
         const url = `${siteUrl}post/${String(article.pathname ?? article.id)}`;
+        const categoryName = article.category ?? 'Uncategorized';
         const category = {
-          name: article.category ?? 'Uncategorized',
-          domain: `${siteUrl}/category/${article.category ?? 'uncategorized'}`,
+          name: categoryName,
+          domain: `${siteUrl}/category/${categoryName.toLowerCase()}`,
         };
 
         const content = article.private ? '此文章已加密' : article.content;

@@ -251,7 +251,7 @@ export class BackupController {
   @ApiResponse({ status: 200, description: 'Backup exported successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Insufficient permissions' })
-  async exportBackup() {
+  async exportBackup(): Promise<unknown> {
     return this.backupService.exportBackup();
   }
 
