@@ -29,11 +29,11 @@ describe('TimelineController (Public)', () => {
     expect(controller).toBeDefined();
   });
 
-  it('getTimeline should pass includeHidden flag and wrap result', async () => {
+  it('getTimelineStd should pass includeHidden flag and wrap result', async () => {
     const data = { years: [] } as any;
     mockTimelineService.getTimeline.mockResolvedValue(data);
 
-    const result = await controller.getTimeline({ includeHidden: true } as any);
+    const result = await controller.getTimelineStd('true');
 
     expect(mockTimelineService.getTimeline).toHaveBeenCalledWith(true);
     expect(result).toEqual({ statusCode: 200, data });

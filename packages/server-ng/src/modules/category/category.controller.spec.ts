@@ -1,7 +1,7 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, beforeEach, it, expect } from 'vitest';
 
-import { Mock } from '@test/mock';
+import { Mock, createPaginatedResult } from '@test/mock';
 import { createMockCategory } from '@test/fixtures/test-data';
 
 import { CategoryController } from './category.controller';
@@ -35,7 +35,7 @@ describe('CategoryController', () => {
     it('should return all categories with article counts', async () => {
       // ✅ 优化：使用新的扁平化 Mock API
       const mockCategories = Mock.categories(3, { articleCount: 5 });
-      const paginatedResult = Mock.paginated(mockCategories, mockCategories.length);
+      const paginatedResult = createPaginatedResult(mockCategories, mockCategories.length);
 
       categoryService.findAll.mockResolvedValue(paginatedResult);
 
@@ -49,7 +49,7 @@ describe('CategoryController', () => {
 
     it('should convert null description to undefined', async () => {
       const category = Mock.category({ description: null });
-      const paginatedResult = Mock.paginated([category], 1);
+      const paginatedResult = createPaginatedResult([category], 1);
 
       categoryService.findAll.mockResolvedValue(paginatedResult);
 
@@ -61,7 +61,7 @@ describe('CategoryController', () => {
 
     it('should preserve non-null description', async () => {
       const category = Mock.category({ description: 'Tech articles' });
-      const paginatedResult = Mock.paginated([category], 1);
+      const paginatedResult = createPaginatedResult([category], 1);
 
       categoryService.findAll.mockResolvedValue(paginatedResult);
 
@@ -72,7 +72,7 @@ describe('CategoryController', () => {
     });
 
     it('should return empty array when no categories exist', async () => {
-      const paginatedResult = Mock.paginated([], 0);
+      const paginatedResult = createPaginatedResult([], 0);
 
       categoryService.findAll.mockResolvedValue(paginatedResult);
 
@@ -89,7 +89,7 @@ describe('CategoryController', () => {
         Mock.category({ name: 'Lifestyle', description: null }),
         Mock.category({ name: 'Travel', description: 'Travel stories' }),
       ];
-      const paginatedResult = Mock.paginated(categories, 3);
+      const paginatedResult = createPaginatedResult(categories, 3);
 
       categoryService.findAll.mockResolvedValue(paginatedResult);
 
@@ -359,7 +359,7 @@ describe('CategoryController', () => {
         tags: ['tag1', 'tag2'],
       });
 
-      const paginatedResult = Mock.paginated(mockArticles, 2, 1, 1000);
+      const paginatedResult = createPaginatedResult(mockArticles, 2, 1, 1000);
 
       categoryService.getArticlesByCategoryId.mockResolvedValue(paginatedResult);
 
@@ -378,7 +378,7 @@ describe('CategoryController', () => {
     it('should return empty array when category has no articles', async () => {
       const categoryId = 1;
 
-      const paginatedResult = Mock.paginated([], 0, 1, 1000);
+      const paginatedResult = createPaginatedResult([], 0, 1, 1000);
 
       categoryService.getArticlesByCategoryId.mockResolvedValue(paginatedResult);
 
@@ -396,7 +396,7 @@ describe('CategoryController', () => {
         Mock.article({ id: 2, top: 0, viewer: 50, category: undefined as unknown as string }),
       ];
 
-      const paginatedResult = Mock.paginated(mockArticles, 2);
+      const paginatedResult = createPaginatedResult(mockArticles, 2);
 
       categoryService.getArticlesByCategoryId.mockResolvedValue(paginatedResult);
 
@@ -423,13 +423,14 @@ describe('CategoryController', () => {
         tags: ['tag1', 'tag2'],
       });
 
-      const paginatedResult = Mock.paginated(mockArticles, 2, 1, 1000);
+      // Directly use createPaginatedResult instead of createPaginatedResult
+      const paginatedResult = createPaginatedResult(mockArticles, 2, 1, 1000);
 
-      categoryService.getArticlesByCategoryNameDirect.mockResolvedValue(paginatedResult);
+      categoryService.getArticlesByCategoryName.mockResolvedValue(paginatedResult);
 
       const result = await controller.getArticlesByCategoryNameDirect(categoryName, {});
 
-      expect(categoryService.getArticlesByCategoryNameDirect).toHaveBeenCalledWith(categoryName, {
+      expect(categoryService.getArticlesByCategoryName).toHaveBeenCalledWith(categoryName, {
         page: 1,
         pageSize: 10,
         sortBy: 'createdAt',
@@ -442,9 +443,9 @@ describe('CategoryController', () => {
     it('should return empty array when category has no articles', async () => {
       const categoryName = 'Empty';
 
-      const paginatedResult = Mock.paginated([], 0, 1, 1000);
+      const paginatedResult = createPaginatedResult([], 0, 1, 1000);
 
-      categoryService.getArticlesByCategoryNameDirect.mockResolvedValue(paginatedResult);
+      categoryService.getArticlesByCategoryName.mockResolvedValue(paginatedResult);
 
       const result = await controller.getArticlesByCategoryNameDirect(categoryName, {});
 
@@ -461,9 +462,9 @@ describe('CategoryController', () => {
         Mock.article({ viewer: 0 }),
       ];
 
-      const paginatedResult = Mock.paginated(mockArticles, 3);
+      const paginatedResult = createPaginatedResult(mockArticles, 3);
 
-      categoryService.getArticlesByCategoryNameDirect.mockResolvedValue(paginatedResult);
+      categoryService.getArticlesByCategoryName.mockResolvedValue(paginatedResult);
 
       const result = await controller.getArticlesByCategoryNameDirect(categoryName, {});
 
@@ -481,9 +482,9 @@ describe('CategoryController', () => {
         Mock.article({ top: 0 }),
       ];
 
-      const paginatedResult = Mock.paginated(mockArticles, 3);
+      const paginatedResult = createPaginatedResult(mockArticles, 3);
 
-      categoryService.getArticlesByCategoryNameDirect.mockResolvedValue(paginatedResult);
+      categoryService.getArticlesByCategoryName.mockResolvedValue(paginatedResult);
 
       const result = await controller.getArticlesByCategoryNameDirect(categoryName, {});
 
@@ -500,9 +501,9 @@ describe('CategoryController', () => {
         Mock.article({ password: null }),
       ];
 
-      const paginatedResult = Mock.paginated(mockArticles, 2);
+      const paginatedResult = createPaginatedResult(mockArticles, 2);
 
-      categoryService.getArticlesByCategoryNameDirect.mockResolvedValue(paginatedResult);
+      categoryService.getArticlesByCategoryName.mockResolvedValue(paginatedResult);
 
       const result = await controller.getArticlesByCategoryNameDirect(categoryName, {});
 

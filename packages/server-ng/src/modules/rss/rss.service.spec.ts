@@ -1,4 +1,3 @@
-import { ConfigService } from '@nestjs/config';
 import { Logger } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
@@ -11,6 +10,7 @@ import { generateTestId } from '@test/test-utils';
 import { articles, categories } from '@vanblog/shared/drizzle';
 
 import { DATABASE_CONNECTION } from '../../database';
+import { ConfigService } from '../../config/config.service';
 import { MarkdownService } from '../../shared/services/markdown.service';
 import { HookService } from '../plugin/services/hook.service';
 import { SettingCoreService } from '../setting/services/setting-core.service';

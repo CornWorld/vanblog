@@ -69,7 +69,10 @@ describe('InitController (e2e) - CMS Initialization Flow', () => {
   it('allows the created admin to login via /api/v2/auth/login', async () => {
     const res = await request(app.getHttpServer() as Server)
       .post('/api/v2/auth/login')
-      .send({ username: adminCreds.username, password: adminCreds.password })
+      .send({
+        name: adminCreds.username, // 后端期望 'name' 字段，前端会从 username 转换
+        password: adminCreds.password,
+      })
       .expect(200);
 
     const loginBody = res.body as { token?: string; access_token?: string };

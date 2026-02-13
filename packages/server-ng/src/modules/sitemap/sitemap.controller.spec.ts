@@ -43,14 +43,16 @@ describe('SitemapController', () => {
     expect(controller).toBeDefined();
   });
 
-  describe('generateSitemap', () => {
+  describe('generateSitemap_tsrest', () => {
     it('should generate sitemap successfully', async () => {
       vi.mocked(sitemapService.generateSitemapFn).mockResolvedValue();
 
-      const result = await controller.generateSitemap();
+      const handler = controller.generateSitemap_tsrest();
+      const result = await handler({ params: {}, query: {}, body: {} });
 
       expect(sitemapService.generateSitemapFn).toHaveBeenCalledWith('手动触发');
-      expect(result).toEqual({
+      expect(result.status).toBe(200);
+      expect(result.body).toEqual({
         message: '站点地图生成成功',
       });
     });
@@ -59,31 +61,38 @@ describe('SitemapController', () => {
       const error = new Error('Generation failed');
       vi.spyOn(sitemapService, 'generateSitemapFn').mockRejectedValue(error);
 
-      await expect(controller.generateSitemap()).rejects.toThrow('Generation failed');
+      const handler = controller.generateSitemap_tsrest();
+      await expect(handler({ params: {}, query: {}, body: {} })).rejects.toThrow(
+        'Generation failed',
+      );
       expect(sitemapService.generateSitemapFn).toHaveBeenCalledWith('手动触发');
     });
   });
 
-  describe('getSitemapStatus', () => {
-    it('should return sitemap status', () => {
-      const result = controller.getSitemapStatus();
+  describe('getSitemapStatus_tsrest', () => {
+    it('should return sitemap status', async () => {
+      const handler = controller.getSitemapStatus_tsrest();
+      const result = await handler({ params: {}, query: {} });
 
-      expect(result).toEqual({
+      expect(result.status).toBe(200);
+      expect(result.body).toEqual({
         enabled: true,
         sitemapUrl: expect.stringContaining('/sitemap/sitemap.xml'),
       });
     });
   });
 
-  describe('getSitemapUrls', () => {
+  describe('getSitemapUrls_tsrest', () => {
     it('should return sitemap URLs', async () => {
       const mockUrls = ['/', '/post/test', '/category/tech'];
       vi.spyOn(sitemapService, 'getSiteUrls').mockResolvedValue(mockUrls);
 
-      const result = await controller.getSitemapUrls();
+      const handler = controller.getSitemapUrls_tsrest();
+      const result = await handler({ params: {}, query: {} });
 
       expect(sitemapService.getSiteUrls).toHaveBeenCalled();
-      expect(result).toEqual({
+      expect(result.status).toBe(200);
+      expect(result.body).toEqual({
         urls: mockUrls,
       });
     });
@@ -92,7 +101,8 @@ describe('SitemapController', () => {
       const error = new Error('Service error');
       vi.spyOn(sitemapService, 'getSiteUrls').mockRejectedValue(error);
 
-      await expect(controller.getSitemapUrls()).rejects.toThrow('Service error');
+      const handler = controller.getSitemapUrls_tsrest();
+      await expect(handler({ params: {}, query: {} })).rejects.toThrow('Service error');
       expect(sitemapService.getSiteUrls).toHaveBeenCalled();
     });
   });

@@ -237,9 +237,15 @@ export async function createAuthToken(
     password: 'TestPassword123!',
   },
 ): Promise<string> {
+  // Convert username to name for backend compatibility (LocalStrategy expects 'name')
+  const loginCredentials = {
+    name: credentials.username,
+    password: credentials.password,
+  };
+
   const response = await request(app.getHttpServer() as Server)
     .post('/api/v2/auth/login')
-    .send(credentials)
+    .send(loginCredentials)
     .expect(200);
 
   const body = response.body as LoginResponse;

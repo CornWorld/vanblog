@@ -61,7 +61,7 @@ describe('SettingCoreController', () => {
   describe('ts-rest handlers', () => {
     describe('getSiteInfo', () => {
       it('should return ts-rest handler function', () => {
-        const handler = controller.getSiteInfo();
+        const handler = controller.getSiteInfo_tsrest();
         expect(handler).toBeDefined();
         expect(typeof handler).toBe('function');
       });
@@ -75,7 +75,7 @@ describe('SettingCoreController', () => {
         };
         mockSettingCoreService.getSiteInfo.mockResolvedValue(mockSiteInfo);
 
-        const handler = controller.getSiteInfo();
+        const handler = controller.getSiteInfo_tsrest();
         const response = await handler({} as any);
 
         expect(response).toEqual({ status: 200, body: mockSiteInfo });
@@ -85,7 +85,7 @@ describe('SettingCoreController', () => {
 
     describe('updateSiteInfo', () => {
       it('should return ts-rest handler function', () => {
-        const handler = controller.updateSiteInfo();
+        const handler = controller.updateSiteInfo_tsrest();
         expect(handler).toBeDefined();
         expect(typeof handler).toBe('function');
       });
@@ -99,7 +99,7 @@ describe('SettingCoreController', () => {
         };
         mockSettingCoreService.updateSiteInfo.mockResolvedValue(updatedSiteInfo);
 
-        const handler = controller.updateSiteInfo();
+        const handler = controller.updateSiteInfo_tsrest();
         const response = await handler({
           body: {
             title: 'Updated Blog',
@@ -121,7 +121,7 @@ describe('SettingCoreController', () => {
 
     describe('getLayoutSettings', () => {
       it('should return ts-rest handler function', () => {
-        const handler = controller.getLayoutSettings();
+        const handler = controller.getLayoutSettings_tsrest();
         expect(handler).toBeDefined();
       });
 
@@ -137,7 +137,7 @@ describe('SettingCoreController', () => {
         };
         mockSettingCoreService.getLayoutSettings.mockResolvedValue(mockLayout);
 
-        const handler = controller.getLayoutSettings();
+        const handler = controller.getLayoutSettings_tsrest();
         const response = await handler({} as any);
 
         expect(response).toEqual({ status: 200, body: mockLayout });
@@ -157,7 +157,7 @@ describe('SettingCoreController', () => {
         };
         mockSettingCoreService.updateLayoutSettings.mockResolvedValue(updatedLayout);
 
-        const handler = controller.updateLayoutSettings();
+        const handler = controller.updateLayoutSettings_tsrest();
         const response = await handler({ body: updatedLayout } as any);
 
         expect(response).toEqual({ status: 200, body: updatedLayout });
@@ -173,7 +173,7 @@ describe('SettingCoreController', () => {
         };
         mockSettingCoreService.getThemeSettings.mockResolvedValue(mockTheme);
 
-        const handler = controller.getThemeSettings();
+        const handler = controller.getThemeSettings_tsrest();
         const response = await handler({} as any);
 
         expect(response).toEqual({ status: 200, body: mockTheme });
@@ -188,7 +188,7 @@ describe('SettingCoreController', () => {
         };
         mockSettingCoreService.updateThemeSettings.mockResolvedValue(updatedTheme);
 
-        const handler = controller.updateThemeSettings();
+        const handler = controller.updateThemeSettings_tsrest();
         const response = await handler({
           body: { primaryColor: '#ff0000', darkMode: false },
         } as any);
@@ -215,7 +215,7 @@ describe('SettingCoreController', () => {
         ];
         mockSettingCoreService.getFriendLinks.mockResolvedValue(mockLinks);
 
-        const handler = controller.getFriendLinks();
+        const handler = controller.getFriendLinks_tsrest();
         const response = await handler({} as any);
 
         expect(response).toEqual({ status: 200, body: mockLinks });
@@ -235,7 +235,7 @@ describe('SettingCoreController', () => {
         };
         mockSettingCoreService.createFriendLink.mockResolvedValue(newLink);
 
-        const handler = controller.createFriendLink();
+        const handler = controller.createFriendLink_tsrest();
         const response = await handler({
           body: {
             name: 'New Friend',
@@ -267,7 +267,7 @@ describe('SettingCoreController', () => {
         };
         mockSettingCoreService.updateFriendLink.mockResolvedValue(updated);
 
-        const handler = controller.updateFriendLink();
+        const handler = controller.updateFriendLink_tsrest();
         const response = await handler({
           params: { index: 0 },
           body: { name: 'Updated', url: 'https://updated.com', description: 'Updated desc' },
@@ -287,7 +287,7 @@ describe('SettingCoreController', () => {
         const remaining: FriendLink[] = [];
         mockSettingCoreService.deleteFriendLink.mockResolvedValue(remaining);
 
-        const handler = controller.deleteFriendLink();
+        const handler = controller.deleteFriendLink_tsrest();
         const response = await handler({ params: { index: 0 } } as any);
 
         expect(response).toEqual({ status: 200, body: remaining });
@@ -303,7 +303,7 @@ describe('SettingCoreController', () => {
         ];
         mockSettingCoreService.getNavigation.mockResolvedValue(mockNav);
 
-        const handler = controller.getNavigation();
+        const handler = controller.getNavigation_tsrest();
         const response = await handler({} as any);
 
         expect(response).toEqual({ status: 200, body: mockNav });
@@ -317,7 +317,7 @@ describe('SettingCoreController', () => {
         ];
         mockSettingCoreService.updateNavigation.mockResolvedValue(updated);
 
-        const handler = controller.updateNavigation();
+        const handler = controller.updateNavigation_tsrest();
         const response = await handler({
           body: {
             items: [{ name: 'Home', path: '/', external: false }],
@@ -336,7 +336,7 @@ describe('SettingCoreController', () => {
         ];
         mockSettingCoreService.updateNavigation.mockResolvedValue(updated);
 
-        const handler = controller.updateNavigation();
+        const handler = controller.updateNavigation_tsrest();
         await handler({
           body: {
             items: [{ name: 'External', path: 'https://example.com', external: true }],
@@ -371,7 +371,7 @@ describe('SettingCoreController', () => {
         ];
         mockSettingCoreService.updateNavigation.mockResolvedValue(updated);
 
-        const handler = controller.updateNavigation();
+        const handler = controller.updateNavigation_tsrest();
         await handler({
           body: {
             items: [
@@ -397,7 +397,7 @@ describe('SettingCoreController', () => {
         ];
         mockSettingCoreService.updateNavigation.mockResolvedValue(updated);
 
-        const handler = controller.updateNavigation();
+        const handler = controller.updateNavigation_tsrest();
         await handler({
           body: {
             items: [{ name: 'Home', path: '/', external: false }],
@@ -421,7 +421,7 @@ describe('SettingCoreController', () => {
         ];
         mockSettingCoreService.updateNavigation.mockResolvedValue(updated);
 
-        const handler = controller.updateNavigation();
+        const handler = controller.updateNavigation_tsrest();
         await handler({
           body: {
             items: [{ name: 'Home', path: '/', icon: 'home-icon', external: false }],
@@ -437,7 +437,7 @@ describe('SettingCoreController', () => {
         const updated: Navigation[] = [];
         mockSettingCoreService.updateNavigation.mockResolvedValue(updated);
 
-        const handler = controller.updateNavigation();
+        const handler = controller.updateNavigation_tsrest();
         await handler({
           body: { items: [] },
         } as any);
@@ -455,7 +455,7 @@ describe('SettingCoreController', () => {
         };
         mockSettingCoreService.getCustomCode.mockResolvedValue(mockCode);
 
-        const handler = controller.getCustomCode();
+        const handler = controller.getCustomCode_tsrest();
         const response = await handler({} as any);
 
         expect(response).toEqual({ status: 200, body: mockCode });
@@ -471,7 +471,7 @@ describe('SettingCoreController', () => {
         };
         mockSettingCoreService.updateCustomCode.mockResolvedValue(updated);
 
-        const handler = controller.updateCustomCode();
+        const handler = controller.updateCustomCode_tsrest();
         const response = await handler({ body: updated } as any);
 
         expect(response).toEqual({ status: 200, body: updated });
@@ -487,7 +487,7 @@ describe('SettingCoreController', () => {
         };
         mockSettingCoreService.getAboutInfo.mockResolvedValue(mockAbout);
 
-        const handler = controller.getAboutInfo();
+        const handler = controller.getAbout_tsrest();
         const response = await handler({} as any);
 
         expect(response).toEqual({ status: 200, body: mockAbout });
@@ -502,7 +502,7 @@ describe('SettingCoreController', () => {
         };
         mockSettingCoreService.updateAboutInfo.mockResolvedValue(updated);
 
-        const handler = controller.updateAboutInfo();
+        const handler = controller.updateAbout_tsrest();
         const response = await handler({ body: { content: 'Updated about' } } as any);
 
         expect(response).toEqual({ status: 200, body: updated });

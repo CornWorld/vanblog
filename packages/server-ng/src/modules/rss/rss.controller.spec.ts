@@ -70,7 +70,7 @@ describe('RssController', () => {
     it('should generate RSS feed successfully', async () => {
       rssService.generateRssFeedFn.mockResolvedValue(undefined);
 
-      const handler = controller.generateRss();
+      const handler = controller.generateRss_tsrest();
       const result = await handler({ params: {}, query: {}, body: {} });
 
       expect(result.status).toBe(201);
@@ -81,7 +81,7 @@ describe('RssController', () => {
     it('should handle RSS generation errors', async () => {
       rssService.generateRssFeedFn.mockRejectedValue(new Error('Generation failed'));
 
-      const handler = controller.generateRss();
+      const handler = controller.generateRss_tsrest();
 
       await expect(handler({ params: {}, query: {}, body: {} })).rejects.toThrow(
         InternalServerErrorException,
@@ -90,7 +90,7 @@ describe('RssController', () => {
     });
 
     it('should call service with correct info string', async () => {
-      const handler = controller.generateRss();
+      const handler = controller.generateRss_tsrest();
       await handler({ params: {}, query: {}, body: {} });
 
       expect(rssService.generateRssFeedFn).toHaveBeenCalledTimes(1);
@@ -100,7 +100,7 @@ describe('RssController', () => {
     it('should handle service errors gracefully', async () => {
       rssService.generateRssFeedFn.mockRejectedValue(new Error('Service error'));
 
-      const handler = controller.generateRss();
+      const handler = controller.generateRss_tsrest();
 
       await expect(handler({ params: {}, query: {}, body: {} })).rejects.toThrow(
         InternalServerErrorException,
@@ -111,7 +111,7 @@ describe('RssController', () => {
 
   describe('getRssStatus', () => {
     it('should return RSS status with all feed URLs', async () => {
-      const handler = controller.getRssStatus();
+      const handler = controller.getRssStatus_tsrest();
       const result = await handler({ params: {}, query: {} });
 
       expect(result.status).toBe(200);
@@ -132,7 +132,7 @@ describe('RssController', () => {
         return null;
       });
 
-      const handler = controller.getRssStatus();
+      const handler = controller.getRssStatus_tsrest();
       const result = await handler({ params: {}, query: {} });
 
       expect(result.body.feedUrls.xml).toBe('https://test-blog.com/rss/feed.xml');
@@ -146,7 +146,7 @@ describe('RssController', () => {
         return null;
       });
 
-      const handler = controller.getRssStatus();
+      const handler = controller.getRssStatus_tsrest();
       const result = await handler({ params: {}, query: {} });
 
       expect(result.body.feedUrls.xml).toBe('https://test-blog.com/rss/feed.xml');
@@ -159,7 +159,7 @@ describe('RssController', () => {
         mtime: new Date('2024-01-15T12:00:00Z'),
       } as any);
 
-      const handler = controller.getRssStatus();
+      const handler = controller.getRssStatus_tsrest();
       const result = await handler({ params: {}, query: {} });
 
       expect(result.body.lastGenerated).toBeDefined();
@@ -169,7 +169,7 @@ describe('RssController', () => {
     it('should handle missing RSS files gracefully', async () => {
       vi.mocked(fs.stat).mockRejectedValue(new Error('File not found'));
 
-      const handler = controller.getRssStatus();
+      const handler = controller.getRssStatus_tsrest();
       const result = await handler({ params: {}, query: {} });
 
       expect(result.status).toBe(200);
@@ -190,7 +190,7 @@ describe('RssController', () => {
         return Promise.resolve({ mtime } as any);
       });
 
-      const handler = controller.getRssStatus();
+      const handler = controller.getRssStatus_tsrest();
       const result = await handler({ params: {}, query: {} });
 
       expect(result.body.lastGenerated).toBe(dayjs('2024-01-15T12:00:00Z').format());
@@ -206,7 +206,7 @@ describe('RssController', () => {
         return Promise.reject(new Error('File not found'));
       });
 
-      const handler = controller.getRssStatus();
+      const handler = controller.getRssStatus_tsrest();
       const result = await handler({ params: {}, query: {} });
 
       expect(result.status).toBe(200);
@@ -216,7 +216,7 @@ describe('RssController', () => {
     it('should handle all file stats errors', async () => {
       vi.mocked(fs.stat).mockRejectedValue(new Error('File system error'));
 
-      const handler = controller.getRssStatus();
+      const handler = controller.getRssStatus_tsrest();
       const result = await handler({ params: {}, query: {} });
 
       expect(result.status).toBe(200);
@@ -226,7 +226,7 @@ describe('RssController', () => {
     it('should use correct static path from config', async () => {
       configService.static.path = '/custom/static/path';
 
-      const handler = controller.getRssStatus();
+      const handler = controller.getRssStatus_tsrest();
       await handler({ params: {}, query: {} });
 
       // Verify fs.stat was called with correct path
@@ -234,7 +234,7 @@ describe('RssController', () => {
     });
 
     it('should return enabled status as true', async () => {
-      const handler = controller.getRssStatus();
+      const handler = controller.getRssStatus_tsrest();
       const result = await handler({ params: {}, query: {} });
 
       expect(result.body.enabled).toBe(true);
@@ -245,7 +245,7 @@ describe('RssController', () => {
         throw new Error('Config error');
       });
 
-      const handler = controller.getRssStatus();
+      const handler = controller.getRssStatus_tsrest();
 
       await expect(handler({ params: {}, query: {} })).rejects.toThrow(
         InternalServerErrorException,
@@ -259,7 +259,7 @@ describe('RssController', () => {
         mtime: new Date('2024-01-15T12:00:00Z'),
       } as any);
 
-      const handler = controller.getRssStatus();
+      const handler = controller.getRssStatus_tsrest();
       await handler({ params: {}, query: {} });
 
       // Should check all three feed files
@@ -272,7 +272,7 @@ describe('RssController', () => {
         mtime: testDate,
       } as any);
 
-      const handler = controller.getRssStatus();
+      const handler = controller.getRssStatus_tsrest();
       const result = await handler({ params: {}, query: {} });
 
       const expected = dayjs(testDate).format();
@@ -282,7 +282,7 @@ describe('RssController', () => {
     it('should handle default BASE_URL if not configured', async () => {
       configService.get.mockImplementation(() => 'http://localhost:3000');
 
-      const handler = controller.getRssStatus();
+      const handler = controller.getRssStatus_tsrest();
       const result = await handler({ params: {}, query: {} });
 
       expect(result.body.feedUrls.xml).toBe('http://localhost:3000/rss/feed.xml');
@@ -292,13 +292,13 @@ describe('RssController', () => {
   describe('Integration scenarios', () => {
     it('should handle successful generation followed by status check', async () => {
       // Generate RSS
-      const generateHandler = controller.generateRss();
+      const generateHandler = controller.generateRss_tsrest();
       const generateResult = await generateHandler({ params: {}, query: {}, body: {} });
 
       expect(generateResult.status).toBe(201);
 
       // Check status
-      const statusHandler = controller.getRssStatus();
+      const statusHandler = controller.getRssStatus_tsrest();
       const statusResult = await statusHandler({ params: {}, query: {} });
 
       expect(statusResult.status).toBe(200);
@@ -308,12 +308,12 @@ describe('RssController', () => {
     it('should report correct status after generation failure', async () => {
       // Attempt to generate RSS (fails)
       rssService.generateRssFeedFn.mockRejectedValue(new Error('Generation failed'));
-      const generateHandler = controller.generateRss();
+      const generateHandler = controller.generateRss_tsrest();
 
       await expect(generateHandler({ params: {}, query: {}, body: {} })).rejects.toThrow();
 
       // Status check should still work
-      const statusHandler = controller.getRssStatus();
+      const statusHandler = controller.getRssStatus_tsrest();
       const statusResult = await statusHandler({ params: {}, query: {} });
 
       expect(statusResult.status).toBe(200);
@@ -324,7 +324,7 @@ describe('RssController', () => {
     it('should handle null config service response', async () => {
       configService.get.mockReturnValue(null);
 
-      const handler = controller.getRssStatus();
+      const handler = controller.getRssStatus_tsrest();
       const result = await handler({ params: {}, query: {} });
 
       // Should use default values
@@ -334,7 +334,7 @@ describe('RssController', () => {
     it('should handle undefined static path', async () => {
       configService.static = { path: undefined };
 
-      const handler = controller.getRssStatus();
+      const handler = controller.getRssStatus_tsrest();
 
       // Should throw InternalServerErrorException when path is undefined
       await expect(handler({ params: {}, query: {} })).rejects.toThrow(
@@ -345,7 +345,7 @@ describe('RssController', () => {
     it('should handle service throwing non-Error objects', async () => {
       rssService.generateRssFeedFn.mockRejectedValue('String error');
 
-      const handler = controller.generateRss();
+      const handler = controller.generateRss_tsrest();
 
       await expect(handler({ params: {}, query: {}, body: {} })).rejects.toThrow(
         InternalServerErrorException,
