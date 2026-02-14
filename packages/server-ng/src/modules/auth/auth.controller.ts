@@ -11,8 +11,6 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
 import { ThrottlerGuard } from '@nestjs/throttler';
-import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
-import { contract } from '@vanblog/shared';
 import { Request as ExpressRequest } from 'express';
 
 import { User } from '../user/entities/user.entity';
@@ -224,44 +222,5 @@ export class AuthController {
     expiresAt: string;
   } {
     return this.authService.generateAnonymousToken(expiresIn);
-  }
-
-  @TsRestHandler(contract.login)
-  @Post()
-  login_tsrest(): ReturnType<typeof tsRestHandler> {
-    return tsRestHandler(contract.login, async ({ body }) => {
-      const { name, password } = body;
-      const user = await this.authService.validateUser(name, password);
-      if (!user) {
-        return { status: 401, body: { message: 'Invalid credentials' } };
-      }
-      const result = this.authService.login(user);
-      // Return token and user info for frontend compatibility
-      return {
-        status: 200,
-        body: {
-          token: result.access_token,
-          user: {
-            id: user.id,
-            username: user.username,
-            type: user.type,
-          },
-        },
-      };
-    });
-  }
-
-  @TsRestHandler(contract.logout)
-  @Post()
-  logout_tsrest(): ReturnType<typeof tsRestHandler> {
-    return tsRestHandler(contract.logout, async ({ headers }) => {
-      const authHeader = headers.authorization;
-      const token = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : null;
-
-      if (token) {
-        await this.authService.revokeToken(token);
-      }
-      return { status: 200, body: { success: true } };
-    });
   }
 }

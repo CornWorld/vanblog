@@ -8,12 +8,9 @@ import {
   ParseIntPipe,
   Headers,
   Ip,
-  Req,
 } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
-import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
-import { contract } from '@vanblog/shared';
 
 import { AnalyticsCacheService } from '../../shared/cache/analytics-cache.service';
 import { DerivedViewCacheService } from '../../shared/cache/derived-view-cache.service';
@@ -35,8 +32,6 @@ import { ArticleStatsService, ArticleStats } from './services/article-stats.serv
 import { EchartsFormatterService, EchartsOption } from './services/echarts-formatter.service';
 import { PublicAnalyticsService } from './services/public-analytics.service';
 import { ThirdPartyAnalyticsService } from './services/third-party-analytics.service';
-
-import type { Request } from 'express';
 
 /**
  * 分析数据控制器
@@ -490,78 +485,59 @@ export class AnalyticsController {
     return this.echartsFormatterService.formatPageRankingsChart(data);
   }
 
-  @TsRestHandler(contract.getPublicViewer)
-  @Get()
-  getPublicViewer(): ReturnType<typeof tsRestHandler> {
-    return tsRestHandler(contract.getPublicViewer, async () => {
-      const overview = await this.publicAnalyticsService.getPublicOverview();
-      return {
-        status: 200,
-        body: {
-          todayPageviews: overview.todayPageviews,
-          yesterdayPageviews: overview.yesterdayPageviews,
-          totalPageviews: overview.totalPageviews,
-          todayVisitors: overview.todayVisitors,
-          yesterdayVisitors: overview.yesterdayVisitors,
-          totalVisitors: overview.totalVisitors,
-        },
-      };
-    });
+  /**
+   * Get public analytics overview
+   *
+   * Public endpoint returning basic analytics data (pageviews, visitors).
+   */
+  @Get('analytics/viewers/public')
+  @ApiOperation({ summary: 'Get public viewer stats' })
+  @ApiResponse({ status: 200, description: 'Public viewer stats' })
+  async getPublicViewer(): Promise<{
+    todayPageviews: number;
+    yesterdayPageviews: number;
+    totalPageviews: number;
+    todayVisitors: number;
+    yesterdayVisitors: number;
+    totalVisitors: number;
+  }> {
+    const overview = await this.publicAnalyticsService.getPublicOverview();
+    return {
+      todayPageviews: overview.todayPageviews,
+      yesterdayPageviews: overview.yesterdayPageviews,
+      totalPageviews: overview.totalPageviews,
+      todayVisitors: overview.todayVisitors,
+      yesterdayVisitors: overview.yesterdayVisitors,
+      totalVisitors: overview.totalVisitors,
+    };
   }
 
-  @TsRestHandler(contract.getArticleViewer)
-  @Get()
-  getArticleViewer(): ReturnType<typeof tsRestHandler> {
-    return tsRestHandler(contract.getArticleViewer, async ({ params }) => {
-      const idNum = Number(params.id);
-      const data = await this.publicAnalyticsService.getPublicArticleStats(idNum);
-      if (!data) {
-        return { status: 200, body: null };
-      }
-      return {
-        status: 200,
-        body: {
-          articleId: data.articleId,
-          title: data.title,
-          views: data.views,
-          uniqueVisitors: data.uniqueVisitors,
-          avgReadTime: data.avgReadTime,
-        },
-      };
-    });
-  }
-
-  @TsRestHandler(contract.recordPublicViewer)
-  @Post()
-  recordPublicViewer(@Req() req: Request): ReturnType<typeof tsRestHandler> {
-    return tsRestHandler(contract.recordPublicViewer, async ({ body, headers }) => {
-      const { type, path, referrer, userAgent: userAgentInBody } = body;
-      const pathValue = path ?? null;
-      const referrerValue = referrer ?? null;
-      const userAgentValue = userAgentInBody ?? null;
-      const dataValue: unknown = body.data;
-      const ip = req.ip ?? null;
-      const headerUa = headers['user-agent'] ?? null;
-      const userAgent = userAgentValue ?? headerUa;
-
-      await this.analyticsService.recordAnalytics({
-        type,
-        path: pathValue,
-        referrer: referrerValue,
-        userAgent,
-        ip,
-        data: dataValue,
-      });
-
-      if (type === 'pageview' && typeof pathValue === 'string') {
-        await this.thirdPartyAnalyticsService.trackPageview(
-          pathValue,
-          ip ?? undefined,
-          userAgent ?? undefined,
-        );
-      }
-      return { status: 201, body: undefined };
-    });
+  /**
+   * Get article viewer stats
+   *
+   * Public endpoint returning viewer stats for a specific article.
+   */
+  @Get('analytics/viewers/article/:id')
+  @ApiOperation({ summary: 'Get article viewer stats' })
+  @ApiResponse({ status: 200, description: 'Article viewer stats' })
+  async getArticleViewer(@Param('id', ParseIntPipe) id: number): Promise<{
+    articleId: number;
+    title: string;
+    views: number;
+    uniqueVisitors: number;
+    avgReadTime: number;
+  } | null> {
+    const data = await this.publicAnalyticsService.getPublicArticleStats(id);
+    if (!data) {
+      return null;
+    }
+    return {
+      articleId: data.articleId,
+      title: data.title,
+      views: data.views,
+      uniqueVisitors: data.uniqueVisitors,
+      avgReadTime: data.avgReadTime,
+    };
   }
 
   /**
@@ -594,23 +570,5 @@ export class AnalyticsController {
     const pageNum = Number(page) || 1;
     const sizeNum = Number(pageSize) || 10;
     return this.analyticsService.getAnalyticsLogs(event, pageNum, sizeNum);
-  }
-
-  @TsRestHandler(contract.getAnalyticsOverview)
-  @Perm('analytics', ['read'])
-  @Get()
-  getAnalyticsOverview(): ReturnType<typeof tsRestHandler> {
-    return tsRestHandler(contract.getAnalyticsOverview, async () => {
-      const overview = await this.analyticsService.getOverview();
-      return {
-        status: 200,
-        body: {
-          totalPageviews: overview.totalPageviews,
-          totalVisitors: overview.totalVisitors,
-          todayPageviews: overview.todayPageviews,
-          todayVisitors: overview.todayVisitors,
-        },
-      };
-    });
   }
 }

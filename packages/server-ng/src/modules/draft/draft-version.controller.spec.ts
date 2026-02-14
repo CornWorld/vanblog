@@ -62,13 +62,11 @@ describe('DraftVersionTsRestController', () => {
 
       mockDraftVersionService.getVersions.mockResolvedValue(mockVersions);
 
-      const handler = controller.listVersions();
-      const result = await handler({ params: { id: String(mockDraft.id) }, query: {} });
+      const result = await controller.listVersions(mockDraft.id);
 
-      expect(result.status).toBe(200);
-      expect(result.body.items).toHaveLength(2);
-      expect(result.body.total).toBe(2);
-      expect(result.body.page).toBe(1);
+      expect(result.items).toHaveLength(2);
+      expect(result.total).toBe(2);
+      expect(result.page).toBe(1);
       expect(mockDraftVersionService.getVersions).toHaveBeenCalledWith(mockDraft.id);
     });
 
@@ -76,29 +74,22 @@ describe('DraftVersionTsRestController', () => {
       const mockDraft = createMockDraft();
       mockDraftVersionService.getVersions.mockResolvedValue([]);
 
-      const handler = controller.listVersions();
-      const result = await handler({
-        params: { id: String(mockDraft.id) },
-        query: { page: 2, pageSize: 5 },
-      });
+      const result = await controller.listVersions(mockDraft.id, 2, 5);
 
-      expect(result.status).toBe(200);
-      expect(result.body.page).toBe(2);
-      expect(result.body.pageSize).toBe(5);
+      expect(result.page).toBe(2);
+      expect(result.pageSize).toBe(5);
     });
 
     it('should handle service errors gracefully', async () => {
       mockDraftVersionService.getVersions.mockRejectedValue(new Error('Service error'));
 
-      const handler = controller.listVersions();
-      const result = await handler({ params: { id: String(createMockDraft().id) }, query: {} });
+      const result = await controller.listVersions(createMockDraft().id);
 
       // Should return default empty response, not throw
-      expect(result.status).toBe(200);
-      expect(result.body.items).toEqual([]);
-      expect(result.body.total).toBe(0);
-      expect(result.body.page).toBe(1);
-      expect(result.body.pageSize).toBe(0);
+      expect(result.items).toEqual([]);
+      expect(result.total).toBe(0);
+      expect(result.page).toBe(1);
+      expect(result.pageSize).toBe(0);
     });
   });
 
@@ -120,27 +111,21 @@ describe('DraftVersionTsRestController', () => {
 
       mockDraftVersionService.getVersion.mockResolvedValue(mockVersion);
 
-      const handler = controller.getVersion();
-      const result = await handler({ params: { id: String(mockDraft.id), versionId: '2' } });
+      const result = await controller.getVersion(mockDraft.id, 2);
 
-      expect(result.status).toBe(200);
-      expect(result.body.version).toBe(2);
-      expect(result.body.title).toBe('Version 2');
+      expect(result.version).toBe(2);
+      expect(result.title).toBe('Version 2');
       expect(mockDraftVersionService.getVersion).toHaveBeenCalledWith(mockDraft.id, 2);
     });
 
     it('should handle service errors gracefully', async () => {
       mockDraftVersionService.getVersion.mockRejectedValue(new Error('Version not found'));
 
-      const handler = controller.getVersion();
-      const result = await handler({
-        params: { id: String(createMockDraft().id), versionId: '999' },
-      });
+      const result = await controller.getVersion(createMockDraft().id, 999);
 
       // Should return default empty response, not throw
-      expect(result.status).toBe(200);
-      expect(result.body.id).toBe(0);
-      expect(result.body.version).toBe(0);
+      expect(result.id).toBe(0);
+      expect(result.version).toBe(0);
     });
   });
 
@@ -162,24 +147,20 @@ describe('DraftVersionTsRestController', () => {
 
       mockDraftVersionService.createVersion.mockResolvedValue(mockNewVersion);
 
-      const handler = controller.createVersion();
-      const result = await handler({ params: { id: String(mockDraft.id) } });
+      const result = await controller.createVersion(mockDraft.id);
 
-      expect(result.status).toBe(201);
-      expect(result.body.version).toBe(3);
+      expect(result.version).toBe(3);
       expect(mockDraftVersionService.createVersion).toHaveBeenCalledWith(mockDraft.id);
     });
 
     it('should handle service errors gracefully', async () => {
       mockDraftVersionService.createVersion.mockRejectedValue(new Error('Creation failed'));
 
-      const handler = controller.createVersion();
-      const result = await handler({ params: { id: String(createMockDraft().id) } });
+      const result = await controller.createVersion(createMockDraft().id);
 
       // Should return default empty response, not throw
-      expect(result.status).toBe(201);
-      expect(result.body.id).toBe(0);
-      expect(result.body.version).toBe(0);
+      expect(result.id).toBe(0);
+      expect(result.version).toBe(0);
     });
   });
 
@@ -188,11 +169,9 @@ describe('DraftVersionTsRestController', () => {
       const mockDraft = createMockDraft();
       mockDraftVersionService.deleteVersion.mockResolvedValue(undefined);
 
-      const handler = controller.deleteVersion();
-      const result = await handler({ params: { id: String(mockDraft.id), versionId: '2' } });
+      const result = await controller.deleteVersion(mockDraft.id, 2);
 
-      expect(result.status).toBe(200);
-      expect(result.body.success).toBe(true);
+      expect(result.success).toBe(true);
       expect(mockDraftVersionService.deleteVersion).toHaveBeenCalledWith(mockDraft.id, 2);
     });
 
@@ -200,11 +179,9 @@ describe('DraftVersionTsRestController', () => {
       const mockDraft = createMockDraft();
       mockDraftVersionService.deleteVersion.mockRejectedValue(new Error('Deletion failed'));
 
-      const handler = controller.deleteVersion();
-      const result = await handler({ params: { id: String(mockDraft.id), versionId: '2' } });
+      const result = await controller.deleteVersion(mockDraft.id, 2);
 
-      expect(result.status).toBe(200);
-      expect(result.body.success).toBe(false);
+      expect(result.success).toBe(false);
     });
   });
 

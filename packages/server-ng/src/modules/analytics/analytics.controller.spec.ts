@@ -2,7 +2,6 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import { describe, it, beforeEach, afterEach, expect, vi } from 'vitest';
 
 import { Mock } from '@test/mock';
-import { createMockArticle } from '@test/fixtures/test-data';
 import { AnalyticsController } from './analytics.controller';
 import { AnalyticsService } from './services/analytics.service';
 import { ArticleStatsService } from './services/article-stats.service';
@@ -538,7 +537,7 @@ describe('AnalyticsController', () => {
     });
   });
 
-  describe('TsRest handlers', () => {
+  describe('Standard NestJS public viewer handlers', () => {
     it('getPublicViewer should return public overview data', async () => {
       const overview = {
         totalPageviews: 1000,
@@ -550,19 +549,15 @@ describe('AnalyticsController', () => {
       } as any;
       mockPublicAnalyticsService.getPublicOverview.mockResolvedValue(overview);
 
-      const handler = controller.getPublicViewer();
-      const result = await handler();
+      const result = await controller.getPublicViewer();
 
       expect(result).toEqual({
-        status: 200,
-        body: {
-          totalPageviews: 1000,
-          totalVisitors: 500,
-          todayPageviews: 50,
-          todayVisitors: 25,
-          yesterdayPageviews: 30,
-          yesterdayVisitors: 15,
-        },
+        todayPageviews: 50,
+        yesterdayPageviews: 30,
+        totalPageviews: 1000,
+        todayVisitors: 25,
+        yesterdayVisitors: 15,
+        totalVisitors: 500,
       });
     });
 
@@ -576,76 +571,26 @@ describe('AnalyticsController', () => {
       } as any;
       mockPublicAnalyticsService.getPublicArticleStats.mockResolvedValue(articleStats);
 
-      const handler = controller.getArticleViewer();
-      const result = await handler({ params: { id: String(createMockArticle().id) } });
+      const result = await controller.getArticleViewer(123);
 
       expect(result).toEqual({
-        status: 200,
-        body: {
-          articleId: 123,
-          title: 'Test Article',
-          views: 100,
-          uniqueVisitors: 50,
-          avgReadTime: 120,
-        },
+        articleId: 123,
+        title: 'Test Article',
+        views: 100,
+        uniqueVisitors: 50,
+        avgReadTime: 120,
       });
     });
 
     it('getArticleViewer should return null when article not found', async () => {
       mockPublicAnalyticsService.getPublicArticleStats.mockResolvedValue(null);
 
-      const handler = controller.getArticleViewer();
-      const result = await handler({ params: { id: String(createMockArticle().id) } });
+      const result = await controller.getArticleViewer(999);
 
-      expect(result).toEqual({
-        status: 200,
-        body: null,
-      });
+      expect(result).toBeNull();
     });
 
-    it('recordPublicViewer should record analytics and track pageview', async () => {
-      const req = { ip: '192.168.1.1' } as any;
-      const body = {
-        type: 'pageview',
-        path: '/article/1',
-        referrer: 'google.com',
-        userAgent: 'Mozilla/5.0',
-        data: { articleId: 1 },
-      };
-
-      const handler = controller.recordPublicViewer(req);
-      const result = await handler({ body, headers: { 'user-agent': 'Safari' } });
-
-      expect(mockAnalyticsService.recordAnalytics).toHaveBeenCalledWith({
-        type: 'pageview',
-        path: '/article/1',
-        referrer: 'google.com',
-        userAgent: 'Mozilla/5.0',
-        ip: '192.168.1.1',
-        data: { articleId: 1 },
-      });
-      expect(mockThirdPartyAnalyticsService.trackPageview).toHaveBeenCalledWith(
-        '/article/1',
-        '192.168.1.1',
-        'Mozilla/5.0',
-      );
-      expect(result).toEqual({ status: 201, body: undefined });
-    });
-
-    it('recordPublicViewer should not track pageview for non-pageview events', async () => {
-      const req = { ip: '192.168.1.1' } as any;
-      const body = {
-        type: 'event',
-        data: { target: 'button' },
-      };
-
-      const handler = controller.recordPublicViewer(req);
-      await handler({ body, headers: {} });
-
-      expect(mockThirdPartyAnalyticsService.trackPageview).not.toHaveBeenCalled();
-    });
-
-    it('getAnalyticsOverview should return analytics overview', async () => {
+    it('getAnalyticsOverviewStd should return analytics overview', async () => {
       const overview = {
         totalPageviews: 1000,
         totalVisitors: 500,
@@ -656,18 +601,9 @@ describe('AnalyticsController', () => {
       } as any;
       mockAnalyticsService.getOverview.mockResolvedValue(overview);
 
-      const handler = controller.getAnalyticsOverview();
-      const result = await handler();
+      const result = await controller.getAnalyticsOverviewStd();
 
-      expect(result).toEqual({
-        status: 200,
-        body: {
-          totalPageviews: 1000,
-          totalVisitors: 500,
-          todayPageviews: 50,
-          todayVisitors: 25,
-        },
-      });
+      expect(result).toEqual(overview);
     });
   });
 
@@ -927,7 +863,7 @@ describe('AnalyticsController', () => {
     });
   });
 
-  describe('TsRest handlers', () => {
+  describe('Standard NestJS public viewer handlers', () => {
     it('getPublicViewer should return public overview data', async () => {
       const overview = {
         totalPageviews: 1000,
@@ -939,19 +875,15 @@ describe('AnalyticsController', () => {
       } as any;
       mockPublicAnalyticsService.getPublicOverview.mockResolvedValue(overview);
 
-      const handler = controller.getPublicViewer();
-      const result = await handler();
+      const result = await controller.getPublicViewer();
 
       expect(result).toEqual({
-        status: 200,
-        body: {
-          totalPageviews: 1000,
-          totalVisitors: 500,
-          todayPageviews: 50,
-          todayVisitors: 25,
-          yesterdayPageviews: 30,
-          yesterdayVisitors: 15,
-        },
+        todayPageviews: 50,
+        yesterdayPageviews: 30,
+        totalPageviews: 1000,
+        todayVisitors: 25,
+        yesterdayVisitors: 15,
+        totalVisitors: 500,
       });
     });
 
@@ -965,76 +897,26 @@ describe('AnalyticsController', () => {
       } as any;
       mockPublicAnalyticsService.getPublicArticleStats.mockResolvedValue(articleStats);
 
-      const handler = controller.getArticleViewer();
-      const result = await handler({ params: { id: String(createMockArticle().id) } });
+      const result = await controller.getArticleViewer(123);
 
       expect(result).toEqual({
-        status: 200,
-        body: {
-          articleId: 123,
-          title: 'Test Article',
-          views: 100,
-          uniqueVisitors: 50,
-          avgReadTime: 120,
-        },
+        articleId: 123,
+        title: 'Test Article',
+        views: 100,
+        uniqueVisitors: 50,
+        avgReadTime: 120,
       });
     });
 
     it('getArticleViewer should return null when article not found', async () => {
       mockPublicAnalyticsService.getPublicArticleStats.mockResolvedValue(null);
 
-      const handler = controller.getArticleViewer();
-      const result = await handler({ params: { id: String(createMockArticle().id) } });
+      const result = await controller.getArticleViewer(999);
 
-      expect(result).toEqual({
-        status: 200,
-        body: null,
-      });
+      expect(result).toBeNull();
     });
 
-    it('recordPublicViewer should record analytics and track pageview', async () => {
-      const req = { ip: '192.168.1.1' } as any;
-      const body = {
-        type: 'pageview',
-        path: '/article/1',
-        referrer: 'google.com',
-        userAgent: 'Mozilla/5.0',
-        data: { articleId: 1 },
-      };
-
-      const handler = controller.recordPublicViewer(req);
-      const result = await handler({ body, headers: { 'user-agent': 'Safari' } });
-
-      expect(mockAnalyticsService.recordAnalytics).toHaveBeenCalledWith({
-        type: 'pageview',
-        path: '/article/1',
-        referrer: 'google.com',
-        userAgent: 'Mozilla/5.0',
-        ip: '192.168.1.1',
-        data: { articleId: 1 },
-      });
-      expect(mockThirdPartyAnalyticsService.trackPageview).toHaveBeenCalledWith(
-        '/article/1',
-        '192.168.1.1',
-        'Mozilla/5.0',
-      );
-      expect(result).toEqual({ status: 201, body: undefined });
-    });
-
-    it('recordPublicViewer should not track pageview for non-pageview events', async () => {
-      const req = { ip: '192.168.1.1' } as any;
-      const body = {
-        type: 'event',
-        data: { target: 'button' },
-      };
-
-      const handler = controller.recordPublicViewer(req);
-      await handler({ body, headers: {} });
-
-      expect(mockThirdPartyAnalyticsService.trackPageview).not.toHaveBeenCalled();
-    });
-
-    it('getAnalyticsOverview should return analytics overview', async () => {
+    it('getAnalyticsOverviewStd should return analytics overview', async () => {
       const overview = {
         totalPageviews: 1000,
         totalVisitors: 500,
@@ -1045,18 +927,9 @@ describe('AnalyticsController', () => {
       } as any;
       mockAnalyticsService.getOverview.mockResolvedValue(overview);
 
-      const handler = controller.getAnalyticsOverview();
-      const result = await handler();
+      const result = await controller.getAnalyticsOverviewStd();
 
-      expect(result).toEqual({
-        status: 200,
-        body: {
-          totalPageviews: 1000,
-          totalVisitors: 500,
-          todayPageviews: 50,
-          todayVisitors: 25,
-        },
-      });
+      expect(result).toEqual(overview);
     });
   });
 });

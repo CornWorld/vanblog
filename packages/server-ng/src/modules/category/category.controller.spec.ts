@@ -31,44 +31,17 @@ describe('CategoryController', () => {
     expect(controller).toBeDefined();
   });
 
-  describe('getCategories', () => {
-    it('should return all categories with article counts', async () => {
-      // ✅ 优化：使用新的扁平化 Mock API
+  describe('getAllCategories', () => {
+    it('should return all category names', async () => {
       const mockCategories = Mock.categories(3, { articleCount: 5 });
       const paginatedResult = createPaginatedResult(mockCategories, mockCategories.length);
 
       categoryService.findAll.mockResolvedValue(paginatedResult);
 
-      const handler = controller.getCategories();
-      const result = await handler();
+      const result = await controller.getAllCategories();
 
       expect(categoryService.findAll).toHaveBeenCalledTimes(1);
-      expect(result.body).toHaveLength(3);
-      expect(result.body[0]).toHaveProperty('count');
-    });
-
-    it('should convert null description to undefined', async () => {
-      const category = Mock.category({ description: null });
-      const paginatedResult = createPaginatedResult([category], 1);
-
-      categoryService.findAll.mockResolvedValue(paginatedResult);
-
-      const handler = controller.getCategories();
-      const result = await handler();
-
-      expect(result.body[0].description).toBeUndefined();
-    });
-
-    it('should preserve non-null description', async () => {
-      const category = Mock.category({ description: 'Tech articles' });
-      const paginatedResult = createPaginatedResult([category], 1);
-
-      categoryService.findAll.mockResolvedValue(paginatedResult);
-
-      const handler = controller.getCategories();
-      const result = await handler();
-
-      expect(result.body[0].description).toBe('Tech articles');
+      expect(result).toHaveLength(3);
     });
 
     it('should return empty array when no categories exist', async () => {
@@ -76,34 +49,14 @@ describe('CategoryController', () => {
 
       categoryService.findAll.mockResolvedValue(paginatedResult);
 
-      const handler = controller.getCategories();
-      const result = await handler();
+      const result = await controller.getAllCategories();
 
-      expect(result.body).toEqual([]);
-      expect(result.body).toHaveLength(0);
-    });
-
-    it('should handle mixed description values in multiple categories', async () => {
-      const categories = [
-        Mock.category({ name: 'Tech', description: 'Tech articles' }),
-        Mock.category({ name: 'Lifestyle', description: null }),
-        Mock.category({ name: 'Travel', description: 'Travel stories' }),
-      ];
-      const paginatedResult = createPaginatedResult(categories, 3);
-
-      categoryService.findAll.mockResolvedValue(paginatedResult);
-
-      const handler = controller.getCategories();
-      const result = await handler();
-
-      expect(result.body).toHaveLength(3);
-      expect(result.body[0].description).toBe('Tech articles');
-      expect(result.body[1].description).toBeUndefined();
-      expect(result.body[2].description).toBe('Travel stories');
+      expect(result).toEqual([]);
+      expect(result).toHaveLength(0);
     });
   });
 
-  describe('createCategory', () => {
+  describe('create', () => {
     it('should create a new category successfully', async () => {
       const createDto = {
         name: 'New Category',
@@ -120,16 +73,11 @@ describe('CategoryController', () => {
 
       categoryService.create.mockResolvedValue(createdCategory);
 
-      const handler = controller.createCategory();
-      const result = await handler({ body: createDto });
+      const result = await controller.create(createDto);
 
-      expect(categoryService.create).toHaveBeenCalledWith({
-        ...createDto,
-        name: createDto.name,
-      });
-      expect(result.status).toBe(201);
-      expect(result.body.name).toBe(createDto.name);
-      expect(result.body.description).toBe(createDto.description);
+      expect(categoryService.create).toHaveBeenCalledWith(createDto);
+      expect(result.name).toBe(createDto.name);
+      expect(result.description).toBe(createDto.description);
     });
 
     it('should create category with null description converted to undefined', async () => {
@@ -146,10 +94,9 @@ describe('CategoryController', () => {
 
       categoryService.create.mockResolvedValue(createdCategory);
 
-      const handler = controller.createCategory();
-      const result = await handler({ body: createDto });
+      const result = await controller.create(createDto);
 
-      expect(result.body.description).toBeUndefined();
+      expect(result.description).toBeUndefined();
     });
 
     it('should create category with empty string description', async () => {
@@ -167,11 +114,9 @@ describe('CategoryController', () => {
 
       categoryService.create.mockResolvedValue(createdCategory);
 
-      const handler = controller.createCategory();
-      const result = await handler({ body: createDto });
+      const result = await controller.create(createDto);
 
-      expect(result.status).toBe(201);
-      expect(result.body.description).toBe('');
+      expect(result.description).toBe('');
     });
 
     it('should handle category creation with special characters in name', async () => {
@@ -189,38 +134,14 @@ describe('CategoryController', () => {
 
       categoryService.create.mockResolvedValue(createdCategory);
 
-      const handler = controller.createCategory();
-      const result = await handler({ body: createDto });
+      const result = await controller.create(createDto);
 
-      expect(result.status).toBe(201);
-      expect(result.body.name).toBe('Tech & Design');
+      expect(result.name).toBe('Tech & Design');
       expect(categoryService.create).toHaveBeenCalledWith(createDto);
-    });
-
-    it('should pass name field explicitly to service', async () => {
-      const createDto = {
-        name: 'Explicit Name',
-        slug: 'explicit-name',
-      };
-
-      const createdCategory = Mock.category({
-        name: createDto.name,
-        slug: createDto.slug,
-      });
-
-      categoryService.create.mockResolvedValue(createdCategory);
-
-      const handler = controller.createCategory();
-      await handler({ body: createDto });
-
-      expect(categoryService.create).toHaveBeenCalledWith({
-        ...createDto,
-        name: createDto.name,
-      });
     });
   });
 
-  describe('updateCategory', () => {
+  describe('updateByName', () => {
     it('should update an existing category', async () => {
       const categoryName = 'test-category';
       const updateDto = {
@@ -236,12 +157,11 @@ describe('CategoryController', () => {
 
       categoryService.updateByName.mockResolvedValue(updatedCategory);
 
-      const handler = controller.updateCategory();
-      const result = await handler({ params: { name: categoryName }, body: updateDto });
+      const result = await controller.updateByName(categoryName, updateDto);
 
       expect(categoryService.updateByName).toHaveBeenCalledWith(categoryName, updateDto);
-      expect(result.body.name).toBe(updateDto.name);
-      expect(result.body.description).toBe(updateDto.description);
+      expect(result.name).toBe(updateDto.name);
+      expect(result.description).toBe(updateDto.description);
     });
 
     it('should update only name field', async () => {
@@ -264,11 +184,10 @@ describe('CategoryController', () => {
 
       categoryService.updateByName.mockResolvedValue(updatedCategory);
 
-      const handler = controller.updateCategory();
-      const result = await handler({ params: { name: categoryName }, body: updateDto });
+      const result = await controller.updateByName(categoryName, updateDto);
 
-      expect(result.body.name).toBe('New Name Only');
-      expect(result.body.description).toBe('Keep this description');
+      expect(result.name).toBe('New Name Only');
+      expect(result.description).toBe('Keep this description');
       expect(categoryService.updateByName).toHaveBeenCalledWith(categoryName, updateDto);
     });
 
@@ -286,44 +205,23 @@ describe('CategoryController', () => {
 
       categoryService.updateByName.mockResolvedValue(updatedCategory);
 
-      const handler = controller.updateCategory();
-      const result = await handler({ params: { name: categoryName }, body: updateDto });
+      const result = await controller.updateByName(categoryName, updateDto);
 
       // controller converts null to undefined using ?? operator
-      expect(result.body.description).toBeUndefined();
-    });
-
-    it('should handle category ID as string and parse to number', async () => {
-      const categoryName = 'test-category';
-      const updateDto = {
-        name: 'Updated Name',
-      };
-
-      const updatedCategory = Mock.category({
-        id: 42,
-        name: 'Updated Name',
-      });
-
-      categoryService.updateByName.mockResolvedValue(updatedCategory);
-
-      const handler = controller.updateCategory();
-      await handler({ params: { name: categoryName }, body: updateDto });
-
-      expect(categoryService.updateByName).toHaveBeenCalledWith(categoryName, updateDto);
+      expect(result.description).toBeUndefined();
     });
   });
 
-  describe('deleteCategory', () => {
+  describe('deleteByName', () => {
     it('should delete a category successfully', async () => {
       const categoryName = 'test-category';
 
       categoryService.removeByName.mockResolvedValue(undefined);
 
-      const handler = controller.deleteCategory();
-      const result = await handler({ params: { name: categoryName } });
+      const result = await controller.deleteByName(categoryName);
 
       expect(categoryService.removeByName).toHaveBeenCalledWith(categoryName);
-      expect(result.body.success).toBe(true);
+      expect(result.success).toBe(true);
     });
 
     it('should verify remove is called exactly once', async () => {
@@ -331,21 +229,9 @@ describe('CategoryController', () => {
 
       categoryService.removeByName.mockResolvedValue(undefined);
 
-      const handler = controller.deleteCategory();
-      await handler({ params: { name: categoryName } });
+      await controller.deleteByName(categoryName);
 
       expect(categoryService.removeByName).toHaveBeenCalledTimes(1);
-      expect(categoryService.removeByName).toHaveBeenCalledWith(categoryName);
-    });
-
-    it('should handle category ID as string and parse to number', async () => {
-      const categoryName = 'test-category';
-
-      categoryService.removeByName.mockResolvedValue(undefined);
-
-      const handler = controller.deleteCategory();
-      await handler({ params: { name: categoryName } });
-
       expect(categoryService.removeByName).toHaveBeenCalledWith(categoryName);
     });
   });

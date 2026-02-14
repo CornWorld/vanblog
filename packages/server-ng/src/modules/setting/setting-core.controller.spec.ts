@@ -57,458 +57,382 @@ describe('SettingCoreController', () => {
     expect(controller).toBeDefined();
   });
 
-  // ts-rest handlers tests
-  describe('ts-rest handlers', () => {
-    describe('getSiteInfo', () => {
-      it('should return ts-rest handler function', () => {
-        const handler = controller.getSiteInfo_tsrest();
-        expect(handler).toBeDefined();
-        expect(typeof handler).toBe('function');
+  describe('getSiteInfo', () => {
+    it('should call service and return site info', async () => {
+      const mockSiteInfo: SiteInfo = {
+        title: 'Test Blog',
+        description: 'Test Description',
+        keywords: ['test'],
+        author: 'Test Author',
+      };
+      mockSettingCoreService.getSiteInfo.mockResolvedValue(mockSiteInfo);
+
+      const result = await controller.getSiteInfo();
+
+      expect(result).toEqual(mockSiteInfo);
+      expect(mockSettingCoreService.getSiteInfo).toHaveBeenCalled();
+    });
+  });
+
+  describe('updateSiteInfo', () => {
+    it('should call service with body and return updated site info', async () => {
+      const updatedSiteInfo: SiteInfo = {
+        title: 'Updated Blog',
+        description: 'Updated Description',
+        keywords: ['test'],
+        author: 'Test Author',
+      };
+      mockSettingCoreService.updateSiteInfo.mockResolvedValue(updatedSiteInfo);
+
+      const body = {
+        title: 'Updated Blog',
+        description: 'Updated Description',
+        keywords: ['test'],
+        author: 'Test Author',
+      };
+      const result = await controller.updateSiteInfo(body);
+
+      expect(result).toEqual(updatedSiteInfo);
+      expect(mockSettingCoreService.updateSiteInfo).toHaveBeenCalledWith(body);
+    });
+  });
+
+  describe('getLayoutSettings', () => {
+    it('should call service and return layout settings', async () => {
+      const mockLayout: SiteLayout = {
+        showRecentPosts: true,
+        recentPostsCount: 5,
+        showCategories: true,
+        showTags: true,
+        showArchive: true,
+        showAbout: true,
+        showSearch: true,
+      };
+      mockSettingCoreService.getLayoutSettings.mockResolvedValue(mockLayout);
+
+      const result = await controller.getLayoutSettings();
+
+      expect(result).toEqual(mockLayout);
+    });
+  });
+
+  describe('updateLayoutSettings', () => {
+    it('should call service with body and return updated layout', async () => {
+      const updatedLayout: SiteLayout = {
+        showRecentPosts: false,
+        recentPostsCount: 3,
+        showCategories: false,
+        showTags: true,
+        showArchive: true,
+        showAbout: true,
+        showSearch: true,
+      };
+      mockSettingCoreService.updateLayoutSettings.mockResolvedValue(updatedLayout);
+
+      const result = await controller.updateLayoutSettings(updatedLayout);
+
+      expect(result).toEqual(updatedLayout);
+      expect(mockSettingCoreService.updateLayoutSettings).toHaveBeenCalledWith(updatedLayout);
+    });
+  });
+
+  describe('getThemeSettings', () => {
+    it('should call service and return theme settings', async () => {
+      const mockTheme: SiteTheme = {
+        primaryColor: '#007bff',
+        darkMode: false,
+      };
+      mockSettingCoreService.getThemeSettings.mockResolvedValue(mockTheme);
+
+      const result = await controller.getThemeSettings();
+
+      expect(result).toEqual(mockTheme);
+    });
+  });
+
+  describe('updateThemeSettings', () => {
+    it('should call service with body and return updated theme', async () => {
+      const updatedTheme: SiteTheme = {
+        primaryColor: '#ff0000',
+        darkMode: false,
+      };
+      mockSettingCoreService.updateThemeSettings.mockResolvedValue(updatedTheme);
+
+      const result = await controller.updateThemeSettings({
+        primaryColor: '#ff0000',
+        darkMode: false,
       });
 
-      it('should call service and return formatted response', async () => {
-        const mockSiteInfo: SiteInfo = {
-          title: 'Test Blog',
-          description: 'Test Description',
-          keywords: ['test'],
-          author: 'Test Author',
-        };
-        mockSettingCoreService.getSiteInfo.mockResolvedValue(mockSiteInfo);
-
-        const handler = controller.getSiteInfo_tsrest();
-        const response = await handler({} as any);
-
-        expect(response).toEqual({ status: 200, body: mockSiteInfo });
-        expect(mockSettingCoreService.getSiteInfo).toHaveBeenCalled();
+      expect(result).toEqual(updatedTheme);
+      expect(mockSettingCoreService.updateThemeSettings).toHaveBeenCalledWith({
+        primaryColor: '#ff0000',
+        darkMode: false,
       });
     });
+  });
 
-    describe('updateSiteInfo', () => {
-      it('should return ts-rest handler function', () => {
-        const handler = controller.updateSiteInfo_tsrest();
-        expect(handler).toBeDefined();
-        expect(typeof handler).toBe('function');
-      });
-
-      it('should call service with body and return formatted response', async () => {
-        const updatedSiteInfo: SiteInfo = {
-          title: 'Updated Blog',
-          description: 'Updated Description',
-          keywords: ['test'],
-          author: 'Test Author',
-        };
-        mockSettingCoreService.updateSiteInfo.mockResolvedValue(updatedSiteInfo);
-
-        const handler = controller.updateSiteInfo_tsrest();
-        const response = await handler({
-          body: {
-            title: 'Updated Blog',
-            description: 'Updated Description',
-            keywords: ['test'],
-            author: 'Test Author',
-          },
-        } as any);
-
-        expect(response).toEqual({ status: 200, body: updatedSiteInfo });
-        expect(mockSettingCoreService.updateSiteInfo).toHaveBeenCalledWith({
-          title: 'Updated Blog',
-          description: 'Updated Description',
-          keywords: ['test'],
-          author: 'Test Author',
-        });
-      });
-    });
-
-    describe('getLayoutSettings', () => {
-      it('should return ts-rest handler function', () => {
-        const handler = controller.getLayoutSettings_tsrest();
-        expect(handler).toBeDefined();
-      });
-
-      it('should call service and return formatted response', async () => {
-        const mockLayout: SiteLayout = {
-          showRecentPosts: true,
-          recentPostsCount: 5,
-          showCategories: true,
-          showTags: true,
-          showArchive: true,
-          showAbout: true,
-          showSearch: true,
-        };
-        mockSettingCoreService.getLayoutSettings.mockResolvedValue(mockLayout);
-
-        const handler = controller.getLayoutSettings_tsrest();
-        const response = await handler({} as any);
-
-        expect(response).toEqual({ status: 200, body: mockLayout });
-      });
-    });
-
-    describe('updateLayoutSettings', () => {
-      it('should call service with body and return formatted response', async () => {
-        const updatedLayout: SiteLayout = {
-          showRecentPosts: false,
-          recentPostsCount: 3,
-          showCategories: false,
-          showTags: true,
-          showArchive: true,
-          showAbout: true,
-          showSearch: true,
-        };
-        mockSettingCoreService.updateLayoutSettings.mockResolvedValue(updatedLayout);
-
-        const handler = controller.updateLayoutSettings_tsrest();
-        const response = await handler({ body: updatedLayout } as any);
-
-        expect(response).toEqual({ status: 200, body: updatedLayout });
-        expect(mockSettingCoreService.updateLayoutSettings).toHaveBeenCalledWith(updatedLayout);
-      });
-    });
-
-    describe('getThemeSettings', () => {
-      it('should call service and return formatted response', async () => {
-        const mockTheme: SiteTheme = {
-          primaryColor: '#007bff',
-          darkMode: false,
-        };
-        mockSettingCoreService.getThemeSettings.mockResolvedValue(mockTheme);
-
-        const handler = controller.getThemeSettings_tsrest();
-        const response = await handler({} as any);
-
-        expect(response).toEqual({ status: 200, body: mockTheme });
-      });
-    });
-
-    describe('updateThemeSettings', () => {
-      it('should call service with body and return formatted response', async () => {
-        const updatedTheme: SiteTheme = {
-          primaryColor: '#ff0000',
-          darkMode: false,
-        };
-        mockSettingCoreService.updateThemeSettings.mockResolvedValue(updatedTheme);
-
-        const handler = controller.updateThemeSettings_tsrest();
-        const response = await handler({
-          body: { primaryColor: '#ff0000', darkMode: false },
-        } as any);
-
-        expect(response).toEqual({ status: 200, body: updatedTheme });
-        expect(mockSettingCoreService.updateThemeSettings).toHaveBeenCalledWith({
-          primaryColor: '#ff0000',
-          darkMode: false,
-        });
-      });
-    });
-
-    describe('getFriendLinks', () => {
-      it('should call service and return formatted response', async () => {
-        const mockLinks: FriendLink[] = [
-          {
-            id: 1,
-            name: 'Friend',
-            url: 'https://friend.com',
-            description: 'Desc',
-            createTime: '2024-01-01T00:00:00Z',
-            updateTime: '2024-01-01T00:00:00Z',
-          },
-        ];
-        mockSettingCoreService.getFriendLinks.mockResolvedValue(mockLinks);
-
-        const handler = controller.getFriendLinks_tsrest();
-        const response = await handler({} as any);
-
-        expect(response).toEqual({ status: 200, body: mockLinks });
-      });
-    });
-
-    describe('createFriendLink', () => {
-      it('should call service with body and return 201', async () => {
-        const newLink: FriendLink = {
+  describe('getFriendLinks', () => {
+    it('should call service and return friend links', async () => {
+      const mockLinks: FriendLink[] = [
+        {
           id: 1,
-          name: 'New Friend',
-          url: 'https://newfriend.com',
-          description: 'New description',
+          name: 'Friend',
+          url: 'https://friend.com',
+          description: 'Desc',
           createTime: '2024-01-01T00:00:00Z',
           updateTime: '2024-01-01T00:00:00Z',
-          avatar: 'https://avatar.com',
-        };
-        mockSettingCoreService.createFriendLink.mockResolvedValue(newLink);
+        },
+      ];
+      mockSettingCoreService.getFriendLinks.mockResolvedValue(mockLinks);
 
-        const handler = controller.createFriendLink_tsrest();
-        const response = await handler({
-          body: {
-            name: 'New Friend',
-            url: 'https://newfriend.com',
-            description: 'New description',
-            avatar: 'https://avatar.com',
-          },
-        } as any);
+      const result = await controller.getFriendLinks();
 
-        expect(response).toEqual({ status: 201, body: newLink });
-        expect(mockSettingCoreService.createFriendLink).toHaveBeenCalledWith({
-          name: 'New Friend',
-          url: 'https://newfriend.com',
-          description: 'New description',
-          avatar: 'https://avatar.com',
-        });
+      expect(result).toEqual(mockLinks);
+    });
+  });
+
+  describe('createFriendLink', () => {
+    it('should call service with body and return created link', async () => {
+      const newLink: FriendLink = {
+        id: 1,
+        name: 'New Friend',
+        url: 'https://newfriend.com',
+        description: 'New description',
+        createTime: '2024-01-01T00:00:00Z',
+        updateTime: '2024-01-01T00:00:00Z',
+        avatar: 'https://avatar.com',
+      };
+      mockSettingCoreService.createFriendLink.mockResolvedValue(newLink);
+
+      const body = {
+        name: 'New Friend',
+        url: 'https://newfriend.com',
+        description: 'New description',
+        avatar: 'https://avatar.com',
+      };
+      const result = await controller.createFriendLink(body);
+
+      expect(result).toEqual(newLink);
+      expect(mockSettingCoreService.createFriendLink).toHaveBeenCalledWith(body);
+    });
+  });
+
+  describe('updateFriendLink', () => {
+    it('should call service with index and body', async () => {
+      const updated: FriendLink = {
+        id: 1,
+        name: 'Updated',
+        url: 'https://updated.com',
+        description: 'Updated desc',
+        createTime: '2024-01-01T00:00:00Z',
+        updateTime: '2024-01-02T00:00:00Z',
+      };
+      mockSettingCoreService.updateFriendLink.mockResolvedValue(updated);
+
+      const body = { name: 'Updated', url: 'https://updated.com', description: 'Updated desc' };
+      const result = await controller.updateFriendLink(0, body);
+
+      expect(result).toEqual(updated);
+      expect(mockSettingCoreService.updateFriendLink).toHaveBeenCalledWith(0, body);
+    });
+  });
+
+  describe('deleteFriendLink', () => {
+    it('should call service with index from params', async () => {
+      const remaining: FriendLink[] = [];
+      mockSettingCoreService.deleteFriendLink.mockResolvedValue(remaining);
+
+      const result = await controller.deleteFriendLink(0);
+
+      expect(result).toEqual(remaining);
+      expect(mockSettingCoreService.deleteFriendLink).toHaveBeenCalledWith(0);
+    });
+  });
+
+  describe('getNavigation', () => {
+    it('should call service and return navigation', async () => {
+      const mockNav: Navigation[] = [
+        { name: 'Home', path: '/', external: false },
+        { name: 'About', path: '/about', external: false },
+      ];
+      mockSettingCoreService.getNavigation.mockResolvedValue(mockNav);
+
+      const result = await controller.getNavigation();
+
+      expect(result).toEqual(mockNav);
+    });
+  });
+
+  describe('updateNavigation', () => {
+    it('should extract items from body and call service', async () => {
+      const updated: Navigation[] = [
+        { name: 'Home', path: '/', icon: undefined, external: false, children: undefined },
+      ];
+      mockSettingCoreService.updateNavigation.mockResolvedValue(updated);
+
+      const result = await controller.updateNavigation({
+        items: [{ name: 'Home', path: '/', external: false }],
       });
+
+      expect(result).toEqual(updated);
+      expect(mockSettingCoreService.updateNavigation).toHaveBeenCalledWith([
+        { name: 'Home', path: '/', external: false },
+      ]);
     });
 
-    describe('updateFriendLink', () => {
-      it('should call service with index and body', async () => {
-        const updated: FriendLink = {
-          id: 1,
-          name: 'Updated',
-          url: 'https://updated.com',
-          description: 'Updated desc',
-          createTime: '2024-01-01T00:00:00Z',
-          updateTime: '2024-01-02T00:00:00Z',
-        };
-        mockSettingCoreService.updateFriendLink.mockResolvedValue(updated);
+    it('should handle external links correctly', async () => {
+      const updated: Navigation[] = [
+        { name: 'External', path: 'https://example.com', external: true },
+      ];
+      mockSettingCoreService.updateNavigation.mockResolvedValue(updated);
 
-        const handler = controller.updateFriendLink_tsrest();
-        const response = await handler({
-          params: { index: 0 },
-          body: { name: 'Updated', url: 'https://updated.com', description: 'Updated desc' },
-        } as any);
-
-        expect(response).toEqual({ status: 200, body: updated });
-        expect(mockSettingCoreService.updateFriendLink).toHaveBeenCalledWith(0, {
-          name: 'Updated',
-          url: 'https://updated.com',
-          description: 'Updated desc',
-        });
+      await controller.updateNavigation({
+        items: [{ name: 'External', path: 'https://example.com', external: true }],
       });
+
+      expect(mockSettingCoreService.updateNavigation).toHaveBeenCalledWith([
+        { name: 'External', path: 'https://example.com', external: true },
+      ]);
     });
 
-    describe('deleteFriendLink', () => {
-      it('should call service with index from params', async () => {
-        const remaining: FriendLink[] = [];
-        mockSettingCoreService.deleteFriendLink.mockResolvedValue(remaining);
+    it('should map nested children recursively', async () => {
+      const updated: Navigation[] = [
+        {
+          name: 'Root',
+          path: '/',
+          external: false,
+          children: [
+            {
+              name: 'Child',
+              path: '/child',
+              external: false,
+            },
+          ],
+        },
+      ];
+      mockSettingCoreService.updateNavigation.mockResolvedValue(updated);
 
-        const handler = controller.deleteFriendLink_tsrest();
-        const response = await handler({ params: { index: 0 } } as any);
-
-        expect(response).toEqual({ status: 200, body: remaining });
-        expect(mockSettingCoreService.deleteFriendLink).toHaveBeenCalledWith(0);
-      });
-    });
-
-    describe('getNavigation', () => {
-      it('should call service and return formatted response', async () => {
-        const mockNav: Navigation[] = [
-          { name: 'Home', path: '/', external: false },
-          { name: 'About', path: '/about', external: false },
-        ];
-        mockSettingCoreService.getNavigation.mockResolvedValue(mockNav);
-
-        const handler = controller.getNavigation_tsrest();
-        const response = await handler({} as any);
-
-        expect(response).toEqual({ status: 200, body: mockNav });
-      });
-    });
-
-    describe('updateNavigation', () => {
-      it('should map NavigationItem to Navigation and call service', async () => {
-        const updated: Navigation[] = [
-          { name: 'Home', path: '/', icon: undefined, external: false, children: undefined },
-        ];
-        mockSettingCoreService.updateNavigation.mockResolvedValue(updated);
-
-        const handler = controller.updateNavigation_tsrest();
-        const response = await handler({
-          body: {
-            items: [{ name: 'Home', path: '/', external: false }],
-          },
-        } as any);
-
-        expect(response).toEqual({ status: 200, body: updated });
-        expect(mockSettingCoreService.updateNavigation).toHaveBeenCalledWith([
-          { name: 'Home', path: '/', icon: undefined, external: false, children: undefined },
-        ]);
-      });
-
-      it('should handle external links correctly', async () => {
-        const updated: Navigation[] = [
-          { name: 'External', path: 'https://example.com', external: true },
-        ];
-        mockSettingCoreService.updateNavigation.mockResolvedValue(updated);
-
-        const handler = controller.updateNavigation_tsrest();
-        await handler({
-          body: {
-            items: [{ name: 'External', path: 'https://example.com', external: true }],
-          },
-        } as any);
-
-        expect(mockSettingCoreService.updateNavigation).toHaveBeenCalledWith([
-          {
-            name: 'External',
-            path: 'https://example.com',
-            icon: undefined,
-            external: true,
-            children: undefined,
-          },
-        ]);
-      });
-
-      it('should map nested children recursively', async () => {
-        const updated: Navigation[] = [
+      await controller.updateNavigation({
+        items: [
           {
             name: 'Root',
             path: '/',
             external: false,
-            children: [
-              {
-                name: 'Child',
-                path: '/child',
-                external: false,
-              },
-            ],
+            children: [{ name: 'Child', path: '/child', external: false }],
           },
-        ];
-        mockSettingCoreService.updateNavigation.mockResolvedValue(updated);
-
-        const handler = controller.updateNavigation_tsrest();
-        await handler({
-          body: {
-            items: [
-              {
-                name: 'Root',
-                path: '/',
-                external: false,
-                children: [{ name: 'Child', path: '/child', external: false }],
-              },
-            ],
-          },
-        } as any);
-
-        expect(mockSettingCoreService.updateNavigation).toHaveBeenCalled();
-        const [[callArg]] = mockSettingCoreService.updateNavigation.mock.calls;
-        expect(callArg[0].children).toBeDefined();
-        expect(callArg[0].children[0].name).toBe('Child');
+        ],
       });
 
-      it('should handle navigation items without children', async () => {
-        const updated: Navigation[] = [
-          { name: 'Home', path: '/', icon: undefined, external: false, children: undefined },
-        ];
-        mockSettingCoreService.updateNavigation.mockResolvedValue(updated);
-
-        const handler = controller.updateNavigation_tsrest();
-        await handler({
-          body: {
-            items: [{ name: 'Home', path: '/', external: false }],
-          },
-        } as any);
-
-        expect(mockSettingCoreService.updateNavigation).toHaveBeenCalledWith([
-          { name: 'Home', path: '/', icon: undefined, external: false, children: undefined },
-        ]);
-      });
-
-      it('should handle navigation items with icon', async () => {
-        const updated: Navigation[] = [
-          {
-            name: 'Home',
-            path: '/',
-            icon: 'home-icon',
-            external: false,
-            children: undefined,
-          },
-        ];
-        mockSettingCoreService.updateNavigation.mockResolvedValue(updated);
-
-        const handler = controller.updateNavigation_tsrest();
-        await handler({
-          body: {
-            items: [{ name: 'Home', path: '/', icon: 'home-icon', external: false }],
-          },
-        } as any);
-
-        expect(mockSettingCoreService.updateNavigation).toHaveBeenCalledWith([
-          { name: 'Home', path: '/', icon: 'home-icon', external: false, children: undefined },
-        ]);
-      });
-
-      it('should handle empty navigation items array', async () => {
-        const updated: Navigation[] = [];
-        mockSettingCoreService.updateNavigation.mockResolvedValue(updated);
-
-        const handler = controller.updateNavigation_tsrest();
-        await handler({
-          body: { items: [] },
-        } as any);
-
-        expect(mockSettingCoreService.updateNavigation).toHaveBeenCalledWith([]);
-      });
+      expect(mockSettingCoreService.updateNavigation).toHaveBeenCalled();
+      const [[items]] = mockSettingCoreService.updateNavigation.mock.calls;
+      expect(items[0].children).toBeDefined();
+      expect(items[0].children[0].name).toBe('Child');
     });
 
-    describe('getCustomCode', () => {
-      it('should call service and return formatted response', async () => {
-        const mockCode: CustomCode = {
-          head: '<meta>',
-          script: '<script>',
-          html: '<div>',
-        };
-        mockSettingCoreService.getCustomCode.mockResolvedValue(mockCode);
+    it('should handle navigation items without children', async () => {
+      const updated: Navigation[] = [
+        { name: 'Home', path: '/', icon: undefined, external: false, children: undefined },
+      ];
+      mockSettingCoreService.updateNavigation.mockResolvedValue(updated);
 
-        const handler = controller.getCustomCode_tsrest();
-        const response = await handler({} as any);
-
-        expect(response).toEqual({ status: 200, body: mockCode });
+      await controller.updateNavigation({
+        items: [{ name: 'Home', path: '/', external: false }],
       });
+
+      expect(mockSettingCoreService.updateNavigation).toHaveBeenCalledWith([
+        { name: 'Home', path: '/', external: false },
+      ]);
     });
 
-    describe('updateCustomCode', () => {
-      it('should call service with body and return formatted response', async () => {
-        const updated: CustomCode = {
-          head: '<meta name="updated">',
-          script: '<script>updated</script>',
-          html: '<div>updated</div>',
-        };
-        mockSettingCoreService.updateCustomCode.mockResolvedValue(updated);
+    it('should handle navigation items with icon', async () => {
+      const updated: Navigation[] = [
+        {
+          name: 'Home',
+          path: '/',
+          icon: 'home-icon',
+          external: false,
+          children: undefined,
+        },
+      ];
+      mockSettingCoreService.updateNavigation.mockResolvedValue(updated);
 
-        const handler = controller.updateCustomCode_tsrest();
-        const response = await handler({ body: updated } as any);
-
-        expect(response).toEqual({ status: 200, body: updated });
-        expect(mockSettingCoreService.updateCustomCode).toHaveBeenCalledWith(updated);
+      await controller.updateNavigation({
+        items: [{ name: 'Home', path: '/', icon: 'home-icon', external: false }],
       });
+
+      expect(mockSettingCoreService.updateNavigation).toHaveBeenCalledWith([
+        { name: 'Home', path: '/', icon: 'home-icon', external: false },
+      ]);
     });
 
-    describe('getAboutInfo', () => {
-      it('should call service and return formatted response', async () => {
-        const mockAbout: AboutInfo = {
-          content: 'About me',
-          updatedAt: dayjs().format(),
-        };
-        mockSettingCoreService.getAboutInfo.mockResolvedValue(mockAbout);
+    it('should handle empty navigation items array', async () => {
+      const updated: Navigation[] = [];
+      mockSettingCoreService.updateNavigation.mockResolvedValue(updated);
 
-        const handler = controller.getAbout_tsrest();
-        const response = await handler({} as any);
+      await controller.updateNavigation({ items: [] });
 
-        expect(response).toEqual({ status: 200, body: mockAbout });
-      });
+      expect(mockSettingCoreService.updateNavigation).toHaveBeenCalledWith([]);
     });
+  });
 
-    describe('updateAboutInfo', () => {
-      it('should call service with body and return formatted response', async () => {
-        const updated: AboutInfo = {
-          content: 'Updated about',
-          updatedAt: dayjs().format(),
-        };
-        mockSettingCoreService.updateAboutInfo.mockResolvedValue(updated);
+  describe('getCustomCode', () => {
+    it('should call service and return custom code', async () => {
+      const mockCode: CustomCode = {
+        head: '<meta>',
+        script: '<script>',
+        html: '<div>',
+      };
+      mockSettingCoreService.getCustomCode.mockResolvedValue(mockCode);
 
-        const handler = controller.updateAbout_tsrest();
-        const response = await handler({ body: { content: 'Updated about' } } as any);
+      const result = await controller.getCustomCode();
 
-        expect(response).toEqual({ status: 200, body: updated });
-        expect(mockSettingCoreService.updateAboutInfo).toHaveBeenCalledWith({
-          content: 'Updated about',
-        });
+      expect(result).toEqual(mockCode);
+    });
+  });
+
+  describe('updateCustomCode', () => {
+    it('should call service with body and return updated custom code', async () => {
+      const updated: CustomCode = {
+        head: '<meta name="updated">',
+        script: '<script>updated</script>',
+        html: '<div>updated</div>',
+      };
+      mockSettingCoreService.updateCustomCode.mockResolvedValue(updated);
+
+      const result = await controller.updateCustomCode(updated);
+
+      expect(result).toEqual(updated);
+      expect(mockSettingCoreService.updateCustomCode).toHaveBeenCalledWith(updated);
+    });
+  });
+
+  describe('getAbout', () => {
+    it('should call service and return about info', async () => {
+      const mockAbout: AboutInfo = {
+        content: 'About me',
+        updatedAt: dayjs().format(),
+      };
+      mockSettingCoreService.getAboutInfo.mockResolvedValue(mockAbout);
+
+      const result = await controller.getAbout();
+
+      expect(result).toEqual(mockAbout);
+    });
+  });
+
+  describe('updateAbout', () => {
+    it('should call service with body and return updated about info', async () => {
+      const updated: AboutInfo = {
+        content: 'Updated about',
+        updatedAt: dayjs().format(),
+      };
+      mockSettingCoreService.updateAboutInfo.mockResolvedValue(updated);
+
+      const result = await controller.updateAbout({ content: 'Updated about' });
+
+      expect(result).toEqual(updated);
+      expect(mockSettingCoreService.updateAboutInfo).toHaveBeenCalledWith({
+        content: 'Updated about',
       });
     });
   });

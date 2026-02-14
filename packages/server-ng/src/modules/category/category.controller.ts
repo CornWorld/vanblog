@@ -10,8 +10,6 @@ import {
   Query,
 } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
-import { contract } from '@vanblog/shared';
 import { z } from 'zod';
 
 import { ArticleListResponseSchema, ArticleQuerySchema } from '../article/dto/article.dto';
@@ -26,9 +24,6 @@ import { Category } from './entities/category.entity';
  *
  * 提供分类的完整 CRUD 操作，包括创建、查询、更新、删除分类。
  * 支持分类统计信息和分类与文章的关联查询功能。
- *
- * NOTE: Uses main contract.ts for ts-rest handlers, not createCategoryContract factory.
- * The main contract uses :name params for update/delete while categoryContract uses :id.
  */
 @ApiTags('Categories')
 @Controller({ path: 'categories', version: '2' })
@@ -232,102 +227,5 @@ export class CategoryController {
   async delete(@Param('id', ParseIntPipe) id: number): Promise<{ success: boolean }> {
     await this.categoryService.remove(id);
     return { success: true };
-  }
-
-  @TsRestHandler(contract.getCategories)
-  @Permission('category', ['read'])
-  @Get()
-  getCategories(): unknown {
-    return tsRestHandler(contract.getCategories, async () => {
-      const result = await this.categoryService.findAll();
-      const body = result.items.map((item) => ({
-        id: item.id,
-        name: item.name,
-        count: item.articleCount,
-        description: item.description ?? undefined,
-        createdAt: item.createdAt,
-        updatedAt: item.updatedAt,
-      }));
-      return { status: 200, body };
-    });
-  }
-
-  @TsRestHandler(contract.createCategory)
-  @Permission('category', ['create'])
-  @Post()
-  createCategory(): ReturnType<typeof tsRestHandler> {
-    return tsRestHandler(contract.createCategory, async ({ body }) => {
-      const result = await this.categoryService.create({
-        ...body,
-        name: body.name,
-      });
-      return {
-        status: 201,
-        body: { ...result, description: result.description ?? undefined },
-      };
-    });
-  }
-
-  @TsRestHandler(contract.updateCategory)
-  @Permission('category', ['update'])
-  @Put()
-  updateCategory(): ReturnType<typeof tsRestHandler> {
-    return tsRestHandler(contract.updateCategory, async ({ params, body }) => {
-      const result = await this.categoryService.updateByName(params.name, body);
-      return {
-        status: 200,
-        body: { ...result, description: result.description ?? undefined },
-      };
-    });
-  }
-
-  @TsRestHandler(contract.deleteCategory)
-  @Permission('category', ['delete'])
-  @Delete()
-  deleteCategory(): ReturnType<typeof tsRestHandler> {
-    return tsRestHandler(contract.deleteCategory, async ({ params }) => {
-      await this.categoryService.removeByName(params.name);
-      return { status: 200, body: { success: true } };
-    });
-  }
-
-  @TsRestHandler(contract.getArticlesByCategory)
-  @Permission('category', ['read'])
-  @Get()
-  getArticlesByCategory(): ReturnType<typeof tsRestHandler> {
-    return tsRestHandler(contract.getArticlesByCategory, async ({ params }) => {
-      const result = await this.categoryService.getArticlesByCategoryName(params.name, {
-        page: 1,
-        pageSize: 1000,
-        sortBy: 'createdAt',
-        sortOrder: 'desc',
-      });
-      const items = result.items.map((t) => {
-        const views = t.viewer ?? 0;
-        const top = t.top ?? 0;
-        const password = typeof t.password === 'string' ? t.password : undefined;
-        const category = typeof t.category === 'string' ? t.category : undefined;
-        return {
-          id: t.id,
-          title: t.title,
-          content: t.content,
-          summary: undefined,
-          cover: undefined,
-          category: category ?? undefined,
-          tags: undefined,
-          views,
-          likes: 0,
-          isTop: top > 0,
-          isHot: false,
-          pubTime: t.updatedAt,
-          createdAt: t.createdAt,
-          updatedAt: t.updatedAt,
-          private: password !== undefined,
-          password,
-          toc: undefined,
-        };
-      });
-      return { status: 200, body: items };
-    });
   }
 }

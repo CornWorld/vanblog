@@ -2,20 +2,15 @@ import {
   Controller,
   Get,
   Post,
-  Put,
   Body,
   Patch,
   Param,
   Delete,
   Request,
   BadRequestException,
-  ConflictException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
-import { initContract } from '@ts-rest/core';
-import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
-import { contract, type User } from '@vanblog/shared';
-import { createUserContract, type User as ContractUser } from '@vanblog/shared/contracts';
+import { type User } from '@vanblog/shared';
 
 import { Perm } from '../auth/permissions.decorator';
 
@@ -24,26 +19,8 @@ import { UpdateUserSchema } from './dto/update-user.dto';
 import { User as UserEntity } from './entities/user.entity';
 import { UserService } from './user.service';
 
-// Initialize contract
-const c = initContract();
-const userContract = createUserContract(c);
-
 interface RequestWithUser {
   user: UserEntity;
-}
-
-function toContractUser(user: UserEntity): ContractUser {
-  return {
-    id: user.id,
-    username: user.username,
-    type: user.type,
-    nickname: user.nickname ?? undefined,
-    avatar: user.avatar ?? undefined,
-    email: user.email ?? undefined,
-    permissions: user.permissions ?? [],
-    createdAt: user.createdAt,
-    updatedAt: user.updatedAt,
-  };
 }
 
 /**
@@ -196,33 +173,6 @@ export class UserController {
   }
 
   /**
-   * Update user profile (ts-rest endpoint)
-   * Updates the current user's profile information
-   */
-  @TsRestHandler(contract.updateProfile)
-  @Perm('user', ['update'])
-  @Patch()
-  updateProfile_tsrest(): ReturnType<typeof tsRestHandler> {
-    return tsRestHandler(contract.updateProfile, async ({ body, request }) => {
-      const req = request as { user?: UserEntity };
-      if (!req.user) {
-        throw new BadRequestException('User not authenticated');
-      }
-
-      const updateData = {
-        nickname: body.nickname,
-        avatar: body.avatar,
-        email: body.email,
-        password: body.password,
-        oldPassword: body.oldPassword,
-      };
-
-      const updatedUser = await this.userService.update(req.user.id, updateData);
-      return { status: 200, body: updatedUser };
-    });
-  }
-
-  /**
    * 获取协作者列表
    *
    * 获取系统中所有非管理员用户（协作者）列表。
@@ -235,91 +185,5 @@ export class UserController {
   @ApiResponse({ status: 200, description: '协作者列表获取成功' })
   async getCollaborators(): Promise<User[]> {
     return this.userService.getCollaborators();
-  }
-
-  // Note: updateProfile was removed as it conflicted with updateCollaborator
-  // Both used @TsRestHandler(userContract.update), causing duplicate route registration
-  // Users should use the update() method with their user ID instead
-
-  @TsRestHandler(userContract.collaborators)
-  @Perm('user', ['read'])
-  @Get()
-  getCollaborators_tsrest(): unknown {
-    return tsRestHandler(userContract.collaborators, async () => {
-      const collaborators = await this.userService.getCollaborators();
-      return { status: 200, body: collaborators.map(toContractUser) };
-    });
-  }
-
-  @TsRestHandler(userContract.create)
-  @Perm('user', ['create'])
-  @Post()
-  createCollaborator(): unknown {
-    return tsRestHandler(userContract.create, async ({ body }) => {
-      // Validate required fields
-      if (!body.username || !body.password) {
-        throw new BadRequestException('Username and password are required');
-      }
-
-      try {
-        const newUser = await this.userService.create({
-          username: body.username,
-          password: body.password,
-          nickname: body.nickname,
-          email: body.email,
-          type: body.type || UserType.EDITOR,
-          permissions: body.permissions,
-        });
-        return { status: 201, body: toContractUser(newUser) };
-      } catch (error) {
-        if (error instanceof ConflictException) {
-          throw new BadRequestException(error.message);
-        }
-        throw error;
-      }
-    });
-  }
-
-  @TsRestHandler(userContract.update)
-  @Perm('user', ['update'])
-  @Put()
-  updateCollaborator(): unknown {
-    return tsRestHandler(userContract.update, async ({ params, body }) => {
-      if (!params.id) {
-        throw new BadRequestException('User ID is required');
-      }
-      const trimmed = params.id.trim();
-      const userId = parseInt(trimmed, 10);
-      if (trimmed === '' || Number.isNaN(userId)) {
-        throw new BadRequestException('Invalid user ID');
-      }
-
-      const updateData = {
-        password: body.password,
-        nickname: body.nickname,
-        permissions: body.permissions,
-      };
-
-      const updatedUser = await this.userService.update(userId, updateData);
-      return { status: 200, body: toContractUser(updatedUser) };
-    });
-  }
-
-  @TsRestHandler(userContract.delete)
-  @Perm('user', ['delete'])
-  @Delete()
-  deleteCollaborator(): unknown {
-    return tsRestHandler(userContract.delete, async ({ params }) => {
-      if (!params.id) {
-        throw new BadRequestException('User ID is required');
-      }
-      const trimmed = params.id.trim();
-      const id = parseInt(trimmed, 10);
-      if (trimmed === '' || Number.isNaN(id)) {
-        throw new BadRequestException('Invalid user ID');
-      }
-      await this.userService.remove(id);
-      return { status: 200, body: { success: true } };
-    });
   }
 }

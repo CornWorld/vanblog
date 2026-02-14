@@ -6,7 +6,7 @@ import { describe, it, beforeEach, afterEach, expect, vi } from 'vitest';
 import { Mock } from '@test/mock';
 import { PermissionService } from '../permission/permission.service';
 
-import { UserType, type CreateUserDto } from './dto/create-user.dto';
+import { UserType } from './dto/create-user.dto';
 import { User } from './entities/user.entity';
 import { UserController } from './user.controller';
 import { UserService } from './user.service';
@@ -62,55 +62,23 @@ describe('UserController', () => {
     expect(controller).toBeDefined();
   });
 
-  describe('createCollaborator (ts-rest handler)', () => {
+  describe('create', () => {
     it('should create a new user with valid data', async () => {
-      const createUserDto: CreateUserDto = {
-        username: 'testuser',
-        password: 'TestPassword123!',
-        nickname: 'Test User',
-        email: 'test@example.com',
-        type: 'admin',
-        permissions: ['user:read', 'user:write'],
-      } as unknown as CreateUserDto;
-
-      mockUserService.create.mockResolvedValue(mockUser);
-
-      const handler = controller.createCollaborator() as unknown as (ctx: any) => Promise<any>;
-      const result = await handler({ body: createUserDto });
-
-      expect(mockUserService.create).toHaveBeenCalledWith({
+      const createUserDto = {
         username: 'testuser',
         password: 'TestPassword123!',
         nickname: 'Test User',
         email: 'test@example.com',
         type: UserType.ADMIN,
         permissions: ['user:read', 'user:write'],
-      });
-      expect(result.status).toBe(201);
-      // toContractUser removes password field
-      expect(result.body).toHaveProperty('username', 'testuser');
-      expect(result.body).not.toHaveProperty('password');
-    });
-
-    it('should throw BadRequestException for invalid data', async () => {
-      const invalidDto = {
-        username: '',
-        password: 'short',
       };
 
-      const handler = controller.createCollaborator() as unknown as (ctx: any) => Promise<any>;
+      mockUserService.create.mockResolvedValue(mockUser);
 
-      await expect(handler({ body: invalidDto })).rejects.toThrow(BadRequestException);
-    });
+      const result = await controller.create(createUserDto);
 
-    it('should throw BadRequestException for missing required fields', async () => {
-      const invalidDto = {
-        username: 'testuser',
-      };
-
-      const handler = controller.createCollaborator() as unknown as (ctx: any) => Promise<any>;
-
-      await expect(handler({ body: invalidDto })).rejects.toThrow(BadRequestException);
+      expect(mockUserService.create).toHaveBeenCalledWith(createUserDto);
+      expect(result).toEqual(mockUser);
     });
   });
 
@@ -541,196 +509,6 @@ describe('UserController', () => {
       // parseInt('1.5', 10) = 1, truncates decimals
       expect(mockUserService.remove).toHaveBeenCalledWith(1);
       expect(result).toEqual({ message: '用户删除成功' });
-    });
-  });
-
-  describe('getCollaborators_tsrest (ts-rest handler)', () => {
-    it('should return collaborators list', async () => {
-      const mockCollaborators = [
-        new User({
-          id: 2,
-          username: 'editor1',
-          nickname: 'Editor One',
-          type: UserType.EDITOR,
-          permissions: ['article:create'],
-          createdAt: dayjs().format(),
-          updatedAt: dayjs().format(),
-        }),
-        new User({
-          id: 3,
-          username: 'editor2',
-          nickname: 'Editor Two',
-          type: UserType.EDITOR,
-          permissions: [],
-          createdAt: dayjs().format(),
-          updatedAt: dayjs().format(),
-        }),
-      ];
-
-      mockUserService.getCollaborators.mockResolvedValue(mockCollaborators);
-
-      const handler = controller.getCollaborators_tsrest() as unknown as () => Promise<any>;
-      const result = await handler();
-
-      expect(service.getCollaborators).toHaveBeenCalled();
-      expect(result.status).toBe(200);
-      expect(result.body).toHaveLength(2);
-      expect(result.body[0].username).toBe('editor1');
-      expect(result.body[1].username).toBe('editor2');
-    });
-
-    it('should return empty array when no collaborators', async () => {
-      mockUserService.getCollaborators.mockResolvedValue([]);
-
-      const handler = controller.getCollaborators_tsrest() as unknown as () => Promise<any>;
-      const result = await handler();
-
-      expect(result.status).toBe(200);
-      expect(result.body).toEqual([]);
-    });
-  });
-
-  describe('createCollaborator (ts-rest handler)', () => {
-    it('should create a new collaborator', async () => {
-      const createDto = {
-        username: 'neweditor',
-        password: 'password123',
-        nickname: 'New Editor',
-        permissions: ['article:create', 'article:read'],
-      };
-
-      const mockNewUser = new User({
-        id: 4,
-        username: 'neweditor',
-        nickname: 'New Editor',
-        type: UserType.EDITOR,
-        permissions: ['article:create', 'article:read'],
-        createdAt: dayjs().format(),
-        updatedAt: dayjs().format(),
-      });
-
-      mockUserService.create.mockResolvedValue(mockNewUser);
-
-      const handler = controller.createCollaborator() as unknown as (ctx: any) => Promise<any>;
-      const result = await handler({ body: createDto });
-
-      expect(service.create).toHaveBeenCalledWith({
-        username: 'neweditor',
-        password: 'password123',
-        nickname: 'New Editor',
-        type: UserType.EDITOR,
-        permissions: ['article:create', 'article:read'],
-      });
-      expect(result.status).toBe(201);
-      expect(result.body.username).toBe('neweditor');
-      expect(result.body.permissions).toEqual(['article:create', 'article:read']);
-    });
-
-    it('should create collaborator without permissions', async () => {
-      const createDto = {
-        username: 'viewer',
-        password: 'password123',
-        nickname: 'Viewer',
-        permissions: [],
-      };
-
-      const mockNewUser = new User({
-        id: 5,
-        username: 'viewer',
-        nickname: 'Viewer',
-        type: UserType.EDITOR,
-        permissions: [],
-        createdAt: dayjs().format(),
-        updatedAt: dayjs().format(),
-      });
-
-      mockUserService.create.mockResolvedValue(mockNewUser);
-
-      const handler = controller.createCollaborator() as unknown as (ctx: any) => Promise<any>;
-      const result = await handler({ body: createDto });
-
-      expect(result.status).toBe(201);
-      expect(result.body.permissions).toEqual([]);
-    });
-  });
-
-  describe('updateCollaborator (ts-rest handler)', () => {
-    it('should update an existing collaborator', async () => {
-      const updateDto = {
-        password: 'newPassword123',
-        nickname: 'Updated Editor',
-        permissions: ['article:create', 'article:update', 'article:delete'],
-      };
-
-      const mockUpdatedUser = new User({
-        id: 2,
-        username: 'editor1',
-        nickname: 'Updated Editor',
-        type: UserType.EDITOR,
-        permissions: ['article:create', 'article:update', 'article:delete'],
-        createdAt: dayjs().format(),
-        updatedAt: dayjs().format(),
-      });
-
-      mockUserService.update.mockResolvedValue(mockUpdatedUser);
-
-      const handler = controller.updateCollaborator() as unknown as (ctx: any) => Promise<any>;
-      const result = await handler({ params: { id: '2' }, body: updateDto });
-
-      expect(mockUserService.update).toHaveBeenCalledWith(2, {
-        password: 'newPassword123',
-        nickname: 'Updated Editor',
-        permissions: ['article:create', 'article:update', 'article:delete'],
-      });
-      expect(result.status).toBe(200);
-      expect(result.body.nickname).toBe('Updated Editor');
-    });
-
-    it('should update collaborator nickname only', async () => {
-      const updateDto = {
-        nickname: 'Just Nickname',
-        permissions: [],
-      };
-
-      const mockUpdatedUser = new User({
-        id: 2,
-        username: 'editor1',
-        nickname: 'Just Nickname',
-        type: UserType.EDITOR,
-        permissions: [],
-        createdAt: dayjs().format(),
-        updatedAt: dayjs().format(),
-      });
-
-      mockUserService.update.mockResolvedValue(mockUpdatedUser);
-
-      const handler = controller.updateCollaborator() as unknown as (ctx: any) => Promise<any>;
-      const result = await handler({ params: { id: '2' }, body: updateDto });
-
-      expect(result.body.nickname).toBe('Just Nickname');
-    });
-  });
-
-  describe('deleteCollaborator (ts-rest handler)', () => {
-    it('should delete a collaborator by ID', async () => {
-      mockUserService.remove.mockResolvedValue(undefined);
-
-      const handler = controller.deleteCollaborator() as unknown as (ctx: any) => Promise<any>;
-      const result = await handler({ params: { id: String(mockUser.id) } });
-
-      expect(service.remove).toHaveBeenCalledWith(mockUser.id);
-      expect(result.status).toBe(200);
-      expect(result.body).toEqual({ success: true });
-    });
-
-    it('should handle deletion with string ID', async () => {
-      mockUserService.remove.mockResolvedValue(undefined);
-
-      const handler = controller.deleteCollaborator() as unknown as (ctx: any) => Promise<any>;
-      const result = await handler({ params: { id: String(mockUser.id) } });
-
-      expect(service.remove).toHaveBeenCalledWith(mockUser.id);
-      expect(result.status).toBe(200);
     });
   });
 

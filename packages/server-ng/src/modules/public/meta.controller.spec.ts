@@ -157,7 +157,9 @@ describe('MetaController', () => {
         // Arrange
         mockBootstrapService.getPublicBootstrap.mockResolvedValue(mockBootstrapData);
         mockSettingCoreService.getAboutInfo.mockResolvedValue(mockAboutInfo);
-        mockHookService.applyFilters.mockImplementation(async (_hook, data) => await data);
+        mockHookService.applyFilters.mockImplementation(
+          async (_hook: string, data: any) => await data,
+        );
 
         // Act
         const result = await controller.getMeta();
@@ -236,7 +238,9 @@ describe('MetaController', () => {
         // Arrange
         mockBootstrapService.getPublicBootstrap.mockResolvedValue(mockBootstrapData);
         mockSettingCoreService.getAboutInfo.mockResolvedValue(mockAboutInfo);
-        mockHookService.applyFilters.mockImplementation(async (_hook, data) => await data);
+        mockHookService.applyFilters.mockImplementation(
+          async (_hook: string, data: any) => await data,
+        );
 
         // Act
         const result = await controller.getMeta();
@@ -258,7 +262,9 @@ describe('MetaController', () => {
         // Arrange
         mockBootstrapService.getPublicBootstrap.mockResolvedValue(mockBootstrapData);
         mockSettingCoreService.getAboutInfo.mockResolvedValue(mockAboutInfo);
-        mockHookService.applyFilters.mockImplementation(async (_hook, data) => await data);
+        mockHookService.applyFilters.mockImplementation(
+          async (_hook: string, data: any) => await data,
+        );
 
         // Act
         const result = await controller.getMeta();
@@ -289,15 +295,17 @@ describe('MetaController', () => {
         // Arrange
         mockBootstrapService.getPublicBootstrap.mockResolvedValue(mockBootstrapData);
         mockSettingCoreService.getAboutInfo.mockResolvedValue(mockAboutInfo);
-        mockHookService.applyFilters.mockImplementation(async (_hook, data) => await data);
+        mockHookService.applyFilters.mockImplementation(
+          async (_hook: string, data: any) => await data,
+        );
 
         // Act
         const result = await controller.getMeta();
 
         // Assert
         expect(result.data.meta.extensions).toEqual(mockBootstrapData.extensions);
-        expect(result.data.meta.extensions.rewards).toHaveLength(2);
-        expect(result.data.meta.extensions.rewards[0].name).toBe('Buy Me a Coffee');
+        expect(result.data.meta.extensions.rewards as any[]).toHaveLength(2);
+        expect((result.data.meta.extensions.rewards as any[])[0].name).toBe('Buy Me a Coffee');
       });
 
       it('should handle empty arrays gracefully', async () => {
@@ -312,7 +320,9 @@ describe('MetaController', () => {
 
         mockBootstrapService.getPublicBootstrap.mockResolvedValue(emptyBootstrapData);
         mockSettingCoreService.getAboutInfo.mockResolvedValue(mockAboutInfo);
-        mockHookService.applyFilters.mockImplementation(async (_hook, data) => await data);
+        mockHookService.applyFilters.mockImplementation(
+          async (_hook: string, data: any) => await data,
+        );
 
         // Act
         const result = await controller.getMeta();
@@ -359,7 +369,9 @@ describe('MetaController', () => {
 
         mockBootstrapService.getPublicBootstrap.mockResolvedValue(errorBootstrap);
         mockSettingCoreService.getAboutInfo.mockResolvedValue(mockAboutInfo);
-        mockHookService.applyFilters.mockImplementation(async (_hook, data) => await data);
+        mockHookService.applyFilters.mockImplementation(
+          async (_hook: string, data: any) => await data,
+        );
 
         // Act
         const result = await controller.getMeta();
@@ -377,7 +389,9 @@ describe('MetaController', () => {
         mockSettingCoreService.getAboutInfo.mockRejectedValue(
           new Error('Failed to get about info'),
         );
-        mockHookService.applyFilters.mockImplementation(async (_hook, data) => await data);
+        mockHookService.applyFilters.mockImplementation(
+          async (_hook: string, data: any) => await data,
+        );
 
         // Act & Assert
         // Controller does NOT catch errors from getAboutInfo, it propagates
@@ -406,7 +420,9 @@ describe('MetaController', () => {
 
         mockBootstrapService.getPublicBootstrap.mockResolvedValue(bootstrapWithMissingPath);
         mockSettingCoreService.getAboutInfo.mockResolvedValue(mockAboutInfo);
-        mockHookService.applyFilters.mockImplementation(async (_hook, data) => await data);
+        mockHookService.applyFilters.mockImplementation(
+          async (_hook: string, data: any) => await data,
+        );
 
         // Act
         const result = await controller.getMeta();
@@ -449,7 +465,9 @@ describe('MetaController', () => {
 
         mockBootstrapService.getPublicBootstrap.mockResolvedValue(bootstrapWithCircular);
         mockSettingCoreService.getAboutInfo.mockResolvedValue(mockAboutInfo);
-        mockHookService.applyFilters.mockImplementation(async (_hook, data) => await data);
+        mockHookService.applyFilters.mockImplementation(
+          async (_hook: string, data: any) => await data,
+        );
 
         // Act
         const result = await controller.getMeta();
@@ -475,7 +493,9 @@ describe('MetaController', () => {
 
         mockBootstrapService.getPublicBootstrap.mockResolvedValue(bootstrapWithMinimalLinks);
         mockSettingCoreService.getAboutInfo.mockResolvedValue(mockAboutInfo);
-        mockHookService.applyFilters.mockImplementation(async (_hook, data) => await data);
+        mockHookService.applyFilters.mockImplementation(
+          async (_hook: string, data: any) => await data,
+        );
 
         // Act
         const result = await controller.getMeta();
@@ -499,7 +519,7 @@ describe('MetaController', () => {
         mockSettingCoreService.getAboutInfo.mockResolvedValue(mockAboutInfo);
 
         const mockFilterImplementation = vi.fn().mockImplementation(
-          async (_hook, data) =>
+          async (_hook: string, data: any) =>
             await {
               ...data,
               meta: {
@@ -522,7 +542,7 @@ describe('MetaController', () => {
           { action: 'public' },
         );
 
-        expect(result.data.meta.customField).toBe('modified by filter');
+        expect((result.data.meta as any).customField).toBe('modified by filter');
       });
 
       it('should preserve data integrity after filter transformation', async () => {
@@ -531,7 +551,7 @@ describe('MetaController', () => {
         mockSettingCoreService.getAboutInfo.mockResolvedValue(mockAboutInfo);
 
         // The filter receives the full parsed data structure and can modify it
-        mockHookService.applyFilters.mockImplementation((_hook, data) => {
+        mockHookService.applyFilters.mockImplementation((_hook: string, data: any) => {
           // Modify version in the full data structure
           return { ...data, version: 'modified-version' };
         });
@@ -552,7 +572,9 @@ describe('MetaController', () => {
         // Arrange
         mockBootstrapService.getPublicBootstrap.mockResolvedValue(mockBootstrapData);
         mockSettingCoreService.getAboutInfo.mockResolvedValue(mockAboutInfo);
-        mockHookService.applyFilters.mockImplementation(async (_hook, data) => await data);
+        mockHookService.applyFilters.mockImplementation(
+          async (_hook: string, data: any) => await data,
+        );
 
         // Act - Execute multiple concurrent requests
         const requests = Array.from({ length: 5 }, () => controller.getMeta());
@@ -578,7 +600,9 @@ describe('MetaController', () => {
         const startTime = Date.now();
         mockBootstrapService.getPublicBootstrap.mockResolvedValue(mockBootstrapData);
         mockSettingCoreService.getAboutInfo.mockResolvedValue(mockAboutInfo);
-        mockHookService.applyFilters.mockImplementation(async (_hook, data) => await data);
+        mockHookService.applyFilters.mockImplementation(
+          async (_hook: string, data: any) => await data,
+        );
 
         // Act
         const result = await controller.getMeta();
@@ -596,7 +620,9 @@ describe('MetaController', () => {
         // Arrange
         mockBootstrapService.getPublicBootstrap.mockResolvedValue(mockBootstrapData);
         mockSettingCoreService.getAboutInfo.mockResolvedValue(mockAboutInfo);
-        mockHookService.applyFilters.mockImplementation(async (_hook, data) => await data);
+        mockHookService.applyFilters.mockImplementation(
+          async (_hook: string, data: any) => await data,
+        );
 
         // Act
         const result = await controller.getMeta();
@@ -629,7 +655,9 @@ describe('MetaController', () => {
         // Arrange
         mockBootstrapService.getPublicBootstrap.mockResolvedValue(mockBootstrapData);
         mockSettingCoreService.getAboutInfo.mockResolvedValue(mockAboutInfo);
-        mockHookService.applyFilters.mockImplementation(async (_hook, data) => await data);
+        mockHookService.applyFilters.mockImplementation(
+          async (_hook: string, data: any) => await data,
+        );
 
         // Act
         const result = await controller.getMeta();

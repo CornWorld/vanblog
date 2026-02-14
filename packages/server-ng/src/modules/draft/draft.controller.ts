@@ -1,8 +1,15 @@
-import { Body, Controller, Delete, Get, Param, Post, Put, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  ParseIntPipe,
+  Post,
+  Put,
+  Query,
+} from '@nestjs/common';
 import { ApiOperation, ApiTags, ApiResponse } from '@nestjs/swagger';
-import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
-import { contract } from '@vanblog/shared';
-import dayjs from 'dayjs';
 import { z } from 'zod';
 
 import { Article } from '../article/entities/article.entity';
@@ -20,8 +27,6 @@ import {
   UpdateDraftSchema,
   PublishDraftSchema,
 } from './dto/draft.dto';
-
-type DraftItem = z.infer<typeof DraftSchema>;
 
 @ApiTags('Drafts')
 @Controller({ path: 'drafts', version: '2' })
@@ -77,161 +82,16 @@ export class DraftController {
     return this.draftService.remove(Number(id));
   }
 
-  @TsRestHandler(contract.getDrafts)
-  @Perm('draft', ['read'])
-  @Get()
-  getDrafts(): ReturnType<typeof tsRestHandler> {
-    return tsRestHandler(contract.getDrafts, async ({ query }) => {
-      const result = await this.draftService.findAll({
-        page: query.page ?? 1,
-        pageSize: query.pageSize ?? 10,
-        category: query.category,
-        tag: query.tag,
-        sortBy: 'updatedAt',
-        sortOrder: 'desc',
-      });
-
-      return {
-        status: 200,
-        body: {
-          ...result,
-          items: (result.items as DraftItem[]).map((item) => ({
-            id: item.id,
-            title: item.title,
-            content: item.content,
-            category: item.category ?? undefined,
-            tags: item.tags ?? undefined,
-            createdAt: item.createdAt,
-            updatedAt: item.updatedAt,
-          })),
-        },
-      };
-    });
-  }
-
-  @TsRestHandler(contract.createDraft)
-  @Perm('draft', ['create'])
-  @Post()
-  createDraft_tsrest(): ReturnType<typeof tsRestHandler> {
-    return tsRestHandler(contract.createDraft, async ({ body }) => {
-      const result = await this.draftService.create({
-        title: body.title,
-        content: body.content,
-        category: body.category ?? null,
-        tags: body.tags ?? null,
-        pathname: null,
-        author: 'admin',
-      });
-
-      return {
-        status: 201,
-        body: {
-          id: result.id,
-          title: result.title,
-          content: result.content,
-          category: result.category ?? undefined,
-          tags: result.tags ?? undefined,
-          createdAt: result.createdAt,
-          updatedAt: result.updatedAt,
-        },
-      };
-    });
-  }
-
-  @TsRestHandler(contract.updateDraft)
-  @Perm('draft', ['update'])
-  @Put()
-  updateDraft_tsrest(): ReturnType<typeof tsRestHandler> {
-    return tsRestHandler(contract.updateDraft, async ({ params, body }) => {
-      const updateData: Record<string, unknown> = {};
-      if (body.title !== undefined) updateData.title = body.title;
-      if (body.content !== undefined) updateData.content = body.content;
-      if (body.category !== undefined) updateData.category = body.category;
-      if (body.tags !== undefined) updateData.tags = body.tags;
-
-      const result = await this.draftService.update(
-        Number(params.id),
-        updateData as z.infer<typeof UpdateDraftSchema>,
-      );
-
-      return {
-        status: 200,
-        body: {
-          id: result.id,
-          title: result.title,
-          content: result.content,
-          category: result.category ?? undefined,
-          tags: result.tags ?? undefined,
-          createdAt: result.createdAt,
-          updatedAt: result.updatedAt,
-        },
-      };
-    });
-  }
-
-  @TsRestHandler(contract.deleteDraft)
-  @Perm('draft', ['delete'])
-  @Delete()
-  deleteDraft_tsrest(): ReturnType<typeof tsRestHandler> {
-    return tsRestHandler(contract.deleteDraft, async ({ params }) => {
-      await this.draftService.remove(Number(params.id));
-      return { status: 200, body: { success: true } };
-    });
-  }
-
-  @TsRestHandler(contract.getDraft)
-  @Perm('draft', ['read'])
-  @Get()
-  getDraft_tsrest(): ReturnType<typeof tsRestHandler> {
-    return tsRestHandler(contract.getDraft, async ({ params }) => {
-      const result = await this.draftService.findOne(Number(params.id));
-
-      return {
-        status: 200,
-        body: {
-          id: result.id,
-          title: result.title,
-          content: result.content,
-          category: result.category ?? undefined,
-          tags: result.tags ?? undefined,
-          createdAt: result.createdAt,
-          updatedAt: result.updatedAt,
-        },
-      };
-    });
-  }
-
-  @TsRestHandler(contract.publishDraft)
-  @Perm('draft', ['publish'])
   @Post(':id/publish')
+  @Perm('draft', ['update'])
   @ApiOperation({ summary: 'Publish draft to article' })
   @ApiResponse({ status: 200, description: 'Draft published successfully' })
-  publishDraft_tsrest(): ReturnType<typeof tsRestHandler> {
-    return tsRestHandler(contract.publishDraft, async ({ params }) => {
-      const result = await this.publish(Number(params.id), {
-        isPublished: true,
-        isTop: false,
-        password: null,
-        allowComment: true,
-      });
-      return {
-        status: 200,
-        body: {
-          id: result.id,
-          title: result.title,
-          content: result.content,
-          category: result.category ?? undefined,
-          views: result.viewer ?? undefined,
-          createdAt: result.createdAt,
-          updatedAt: result.updatedAt,
-          pubTime: dayjs(result.updatedAt).format(),
-          isTop: !!result.top,
-          isHot: false, // Article entity doesn't have hot field
-          likes: 0, // Article entity doesn't have likes field
-          private: result.private ?? false,
-          password: result.password ?? undefined,
-        },
-      };
+  async publishDraft(@Param('id', ParseIntPipe) id: number): Promise<Article> {
+    return this.publish(id, {
+      isPublished: true,
+      isTop: false,
+      password: null,
+      allowComment: true,
     });
   }
 

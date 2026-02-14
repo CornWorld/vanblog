@@ -1,23 +1,11 @@
 import { Body, Controller, Delete, Get, Post, Put } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
-import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
-import { contract } from '@vanblog/shared';
 
 import { Perm } from '../auth/permissions.decorator';
 
 @ApiTags('Admin Compatibility')
 @Controller({ path: 'admin', version: '2' })
 export class CompatibilityController {
-  // ISR Stubs
-  @TsRestHandler(contract.triggerISR)
-  @Perm({ authOnly: true, roles: ['admin'] })
-  @Post()
-  triggerISR_tsrest(): ReturnType<typeof tsRestHandler> {
-    return tsRestHandler(contract.triggerISR, () => {
-      return { status: 200, body: { success: true } };
-    });
-  }
-
   /**
    * Trigger ISR rebuild
    * Note: This path is /api/v2/admin/isr/trigger due to controller path

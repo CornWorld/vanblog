@@ -14,11 +14,10 @@ import {
   StreamableFile,
   Res,
   UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
-import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
-import { contract } from '@vanblog/shared';
 import { z } from 'zod';
 
 import { Perm } from '../auth/permissions.decorator';
@@ -255,43 +254,19 @@ export class BackupController {
     return this.backupService.exportBackup();
   }
 
-  // ts-rest handlers for contract compatibility
-
-  @TsRestHandler(contract.importBackup)
-  @Perm('backup', ['restore'])
-  @Post()
+  /**
+   * Import backup file
+   *
+   * Upload and import a backup file to restore the database.
+   */
+  @Post('import')
+  @Perm('backup', ['create'])
   @UseInterceptors(FileInterceptor('file'))
-  importBackup_tsrest(): ReturnType<typeof tsRestHandler> {
-    return tsRestHandler(contract.importBackup, async ({ rawRequest }) => {
-      const req = rawRequest as { file?: Express.Multer.File };
-      if (!req.file) {
-        throw new Error('No file uploaded');
-      }
-      await this.backupService.importBackup(req.file);
-      return { status: 201, body: { success: true } };
-    });
-  }
-
-  @TsRestHandler(contract.exportBackup)
-  @Perm('backup', ['read'])
-  @Get()
-  exportBackup_tsrest(): ReturnType<typeof tsRestHandler> {
-    return tsRestHandler(contract.exportBackup, async () => {
-      const buffer = await this.backupService.exportBackup();
-      return {
-        status: 200,
-        body: buffer as unknown as { toString: () => string },
-      } as { status: 200; body: unknown };
-    });
-  }
-
-  @TsRestHandler(contract.restoreBackup)
-  @Perm('backup', ['restore'])
-  @Post()
-  restoreBackup_tsrest(): ReturnType<typeof tsRestHandler> {
-    return tsRestHandler(contract.restoreBackup, async ({ body }) => {
-      await this.backupService.restoreFromBackup(body);
-      return { status: 200, body: { success: true } };
-    });
+  @ApiOperation({ summary: 'Import backup file' })
+  @ApiResponse({ status: 201, description: 'Backup imported successfully' })
+  @ApiResponse({ status: 400, description: 'No file uploaded' })
+  async importBackup(@UploadedFile() file: Express.Multer.File): Promise<{ success: boolean }> {
+    await this.backupService.importBackup(file);
+    return { success: true };
   }
 }

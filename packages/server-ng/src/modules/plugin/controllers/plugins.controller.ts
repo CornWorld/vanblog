@@ -99,6 +99,21 @@ export class PluginsController {
     };
   }
 
+  @Get('failed')
+  @Perm('plugin', ['read'])
+  @ApiOperation({ summary: 'Get failed plugins' })
+  @ApiResponse({
+    status: 200,
+    description: 'List of failed plugin names',
+    schema: {
+      type: 'array',
+      items: { type: 'string' },
+    },
+  })
+  getFailedPlugins(): string[] {
+    return Array.from(this.loaderService.getFailedPlugins());
+  }
+
   @Get(':name')
   @Perm('plugin', ['read'])
   @ApiOperation({ summary: 'Get plugin details by name' })
@@ -197,21 +212,6 @@ export class PluginsController {
         message: `Plugin '${pluginName}' not found or failed to unload`,
       };
     }
-  }
-
-  @Get('failed')
-  @Perm('plugin', ['read'])
-  @ApiOperation({ summary: 'Get failed plugins' })
-  @ApiResponse({
-    status: 200,
-    description: 'List of failed plugin names',
-    schema: {
-      type: 'array',
-      items: { type: 'string' },
-    },
-  })
-  getFailedPlugins(): string[] {
-    return Array.from(this.loaderService.getFailedPlugins());
   }
 
   // ========== 配置管理 API ==========
