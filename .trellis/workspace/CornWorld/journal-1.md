@@ -535,3 +535,66 @@ are required alongside for HTTP access.
 ### Next Steps
 
 - None - task complete
+
+## Session 11: E2E API walk: handler refactor, test fixes, ESLint zero-error
+
+**Date**: 2026-02-13
+**Task**: E2E API walk: handler refactor, test fixes, ESLint zero-error
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+## Summary
+
+Continued E2E API walk task. Refactored controller handlers to use ts-rest wrappers, fixed all failing E2E tests (29 passed / 8 skipped / 0 failed), and eliminated all ESLint errors from 76+ down to 0.
+
+## Changes
+
+| Category            | Description                                                                      |
+| ------------------- | -------------------------------------------------------------------------------- |
+| Controller Refactor | Added ts-rest contract handlers to rss, sitemap, setting-core, draft controllers |
+| Route Fixes         | Fixed sitemap contract paths from absolute to relative for NestJS versioning     |
+| Meta Controller     | Replaced `any`-typed request with proper `RequestWithUser` interface             |
+| Test Updates        | Aligned 8 spec files with new handler signatures and response formats            |
+| ESLint Cleanup      | Added return types to 11 methods, fixed import order, removed unnecessary async  |
+| Type Safety         | Added Drizzle query type assertions in rss.service.ts, imported Navigation type  |
+
+## Key Files
+
+- `src/modules/rss/rss.controller.ts` - Added 5 ts-rest contract handlers
+- `src/modules/setting/setting-core.controller.ts` - Restructured with ts-rest wrappers
+- `src/modules/sitemap/sitemap.controller.ts` - Fixed contract path configuration
+- `src/modules/draft/draft.controller.ts` - Wrapped publishDraft in ts-rest handler
+- `src/modules/public/meta.controller.ts` - Proper typed Request interface
+- `src/modules/rss/rss.service.ts` - Type-safe Drizzle query with ArticleResult type
+- `src/modules/auth/auth.module.ts` - Fixed import order
+- `src/modules/permission/permission.service.ts` - Made 3 methods public for type safety
+
+## Metrics
+
+- **E2E Tests**: 29 passed, 8 skipped, 0 failed
+- **ESLint Errors**: 76+ → 0
+- **Files Changed**: 24 files across 3 commits
+
+### Git Commits
+
+| Hash       | Message       |
+| ---------- | ------------- |
+| `3f9d699a` | (see git log) |
+| `522b2c80` | (see git log) |
+| `43696c7b` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
