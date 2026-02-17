@@ -251,17 +251,17 @@ describe('TagController', () => {
 
   describe('update()', () => {
     describe('Happy Path', () => {
-      it('should update an existing tag with both fields', async () => {
+      it('should update an existing tag by name with both fields', async () => {
         const updateDto = createUpdateTagDto();
         const mockUpdatedTag = createMockTag({
           ...updateDto,
           updatedAt: '2024-01-15T00:00:00Z',
         });
-        mockTagService.update.mockResolvedValue(mockUpdatedTag);
+        mockTagService.updateByName.mockResolvedValue(mockUpdatedTag);
 
-        const result = await controller.update(1, updateDto);
+        const result = await controller.update('JavaScript', updateDto);
 
-        expect(mockTagService.update).toHaveBeenCalledWith(1, updateDto);
+        expect(mockTagService.updateByName).toHaveBeenCalledWith('JavaScript', updateDto);
         expect(result).toEqual(mockUpdatedTag);
         expect(result.name).toBe('JavaScript 2024');
         expect(result.slug).toBe('javascript-2024');
@@ -275,11 +275,11 @@ describe('TagController', () => {
           slug: 'typescript',
           updatedAt: '2024-01-15T00:00:00Z',
         });
-        mockTagService.update.mockResolvedValue(mockUpdatedTag);
+        mockTagService.updateByName.mockResolvedValue(mockUpdatedTag);
 
-        const result = await controller.update(2, updateDto);
+        const result = await controller.update('TypeScript', updateDto);
 
-        expect(mockTagService.update).toHaveBeenCalledWith(2, updateDto);
+        expect(mockTagService.updateByName).toHaveBeenCalledWith('TypeScript', updateDto);
         expect(result.name).toBe('TypeScript Updated');
         expect(result.slug).toBe('typescript'); // Slug should remain unchanged
       });
@@ -288,43 +288,49 @@ describe('TagController', () => {
     describe('Error Handling', () => {
       it('should throw NotFoundException when updating non-existent tag', async () => {
         const updateDto = createUpdateTagDto();
-        mockTagService.update.mockRejectedValue(new NotFoundException('Tag with ID 999 not found'));
+        mockTagService.updateByName.mockRejectedValue(
+          new NotFoundException('Tag with name "NonExistent" not found'),
+        );
 
-        await expect(controller.update(999, updateDto)).rejects.toThrow(NotFoundException);
+        await expect(controller.update('NonExistent', updateDto)).rejects.toThrow(
+          NotFoundException,
+        );
       });
 
       it('should handle validation errors in update DTO', async () => {
         const invalidDto = { name: '' };
 
-        await expect(controller.update(1, invalidDto)).rejects.toThrow();
+        await expect(controller.update('JavaScript', invalidDto)).rejects.toThrow();
       });
     });
   });
 
   describe('remove()', () => {
     describe('Happy Path', () => {
-      it('should delete a tag successfully', async () => {
-        mockTagService.remove.mockResolvedValue(undefined);
+      it('should delete a tag by name successfully', async () => {
+        mockTagService.removeByName.mockResolvedValue(undefined);
 
-        await controller.remove(1);
+        await controller.remove('JavaScript');
 
-        expect(mockTagService.remove).toHaveBeenCalledWith(1);
+        expect(mockTagService.removeByName).toHaveBeenCalledWith('JavaScript');
       });
     });
 
     describe('Error Handling', () => {
       it('should throw NotFoundException when deleting non-existent tag', async () => {
-        mockTagService.remove.mockRejectedValue(new NotFoundException('Tag with ID 999 not found'));
+        mockTagService.removeByName.mockRejectedValue(
+          new NotFoundException('Tag with name "NonExistent" not found'),
+        );
 
-        await expect(controller.remove(999)).rejects.toThrow(NotFoundException);
+        await expect(controller.remove('NonExistent')).rejects.toThrow(NotFoundException);
       });
 
       it('should handle cascade deletion errors', async () => {
-        mockTagService.remove.mockRejectedValue(
+        mockTagService.removeByName.mockRejectedValue(
           new Error('Cannot delete tag with associated articles'),
         );
 
-        await expect(controller.remove(1)).rejects.toThrow(
+        await expect(controller.remove('JavaScript')).rejects.toThrow(
           'Cannot delete tag with associated articles',
         );
       });

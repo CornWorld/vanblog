@@ -6,7 +6,6 @@ import { AnalyticsController } from './analytics.controller';
 import { AnalyticsService } from './services/analytics.service';
 import { ArticleStatsService } from './services/article-stats.service';
 import { EchartsFormatterService } from './services/echarts-formatter.service';
-import { PublicAnalyticsService } from './services/public-analytics.service';
 import { ThirdPartyAnalyticsService } from './services/third-party-analytics.service';
 import { AnalyticsCacheService } from '../../shared/cache/analytics-cache.service';
 import { DerivedViewCacheService } from '../../shared/cache/derived-view-cache.service';
@@ -16,7 +15,6 @@ describe('AnalyticsController', () => {
   let mockAnalyticsService: any;
   let mockArticleStatsService: any;
   let mockThirdPartyAnalyticsService: any;
-  let mockPublicAnalyticsService: any;
   let mockEchartsFormatterService: any;
   let mockAnalyticsCacheService: any;
   let mockDerivedViewCacheService: any;
@@ -28,7 +26,6 @@ describe('AnalyticsController', () => {
     mockThirdPartyAnalyticsService = {
       trackPageview: vi.fn(),
     };
-    mockPublicAnalyticsService = Mock.publicAnalytics();
     mockEchartsFormatterService = Mock.echartsFormatter();
     mockAnalyticsCacheService = {
       clear: vi.fn(),
@@ -42,7 +39,6 @@ describe('AnalyticsController', () => {
       providers: [
         { provide: AnalyticsService, useValue: mockAnalyticsService },
         { provide: ArticleStatsService, useValue: mockArticleStatsService },
-        { provide: PublicAnalyticsService, useValue: mockPublicAnalyticsService },
         { provide: ThirdPartyAnalyticsService, useValue: mockThirdPartyAnalyticsService },
         { provide: EchartsFormatterService, useValue: mockEchartsFormatterService },
         { provide: AnalyticsCacheService, useValue: mockAnalyticsCacheService },
@@ -537,59 +533,7 @@ describe('AnalyticsController', () => {
     });
   });
 
-  describe('Standard NestJS public viewer handlers', () => {
-    it('getPublicViewer should return public overview data', async () => {
-      const overview = {
-        totalPageviews: 1000,
-        totalVisitors: 500,
-        todayPageviews: 50,
-        todayVisitors: 25,
-        yesterdayPageviews: 30,
-        yesterdayVisitors: 15,
-      } as any;
-      mockPublicAnalyticsService.getPublicOverview.mockResolvedValue(overview);
-
-      const result = await controller.getPublicViewer();
-
-      expect(result).toEqual({
-        todayPageviews: 50,
-        yesterdayPageviews: 30,
-        totalPageviews: 1000,
-        todayVisitors: 25,
-        yesterdayVisitors: 15,
-        totalVisitors: 500,
-      });
-    });
-
-    it('getArticleViewer should return article stats', async () => {
-      const articleStats = {
-        articleId: 123,
-        title: 'Test Article',
-        views: 100,
-        uniqueVisitors: 50,
-        avgReadTime: 120,
-      } as any;
-      mockPublicAnalyticsService.getPublicArticleStats.mockResolvedValue(articleStats);
-
-      const result = await controller.getArticleViewer(123);
-
-      expect(result).toEqual({
-        articleId: 123,
-        title: 'Test Article',
-        views: 100,
-        uniqueVisitors: 50,
-        avgReadTime: 120,
-      });
-    });
-
-    it('getArticleViewer should return null when article not found', async () => {
-      mockPublicAnalyticsService.getPublicArticleStats.mockResolvedValue(null);
-
-      const result = await controller.getArticleViewer(999);
-
-      expect(result).toBeNull();
-    });
-
+  describe('Standard NestJS admin handlers', () => {
     it('getAnalyticsOverviewStd should return analytics overview', async () => {
       const overview = {
         totalPageviews: 1000,
@@ -863,59 +807,7 @@ describe('AnalyticsController', () => {
     });
   });
 
-  describe('Standard NestJS public viewer handlers', () => {
-    it('getPublicViewer should return public overview data', async () => {
-      const overview = {
-        totalPageviews: 1000,
-        totalVisitors: 500,
-        todayPageviews: 50,
-        todayVisitors: 25,
-        yesterdayPageviews: 30,
-        yesterdayVisitors: 15,
-      } as any;
-      mockPublicAnalyticsService.getPublicOverview.mockResolvedValue(overview);
-
-      const result = await controller.getPublicViewer();
-
-      expect(result).toEqual({
-        todayPageviews: 50,
-        yesterdayPageviews: 30,
-        totalPageviews: 1000,
-        todayVisitors: 25,
-        yesterdayVisitors: 15,
-        totalVisitors: 500,
-      });
-    });
-
-    it('getArticleViewer should return article stats', async () => {
-      const articleStats = {
-        articleId: 123,
-        title: 'Test Article',
-        views: 100,
-        uniqueVisitors: 50,
-        avgReadTime: 120,
-      } as any;
-      mockPublicAnalyticsService.getPublicArticleStats.mockResolvedValue(articleStats);
-
-      const result = await controller.getArticleViewer(123);
-
-      expect(result).toEqual({
-        articleId: 123,
-        title: 'Test Article',
-        views: 100,
-        uniqueVisitors: 50,
-        avgReadTime: 120,
-      });
-    });
-
-    it('getArticleViewer should return null when article not found', async () => {
-      mockPublicAnalyticsService.getPublicArticleStats.mockResolvedValue(null);
-
-      const result = await controller.getArticleViewer(999);
-
-      expect(result).toBeNull();
-    });
-
+  describe('Standard NestJS admin handlers (duplicate block)', () => {
     it('getAnalyticsOverviewStd should return analytics overview', async () => {
       const overview = {
         totalPageviews: 1000,

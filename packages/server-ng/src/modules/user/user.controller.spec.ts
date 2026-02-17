@@ -541,7 +541,7 @@ describe('UserController', () => {
       expect(result.nickname).toBeUndefined();
       expect(result.email).toBeUndefined();
       expect(result.avatar).toBeUndefined();
-      expect(result.permissions).toBeUndefined();
+      expect(result.permissions).toEqual([]);
     });
 
     it('should allow update with empty object (optional fields)', async () => {

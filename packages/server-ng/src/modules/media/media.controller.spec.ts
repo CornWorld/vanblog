@@ -395,11 +395,11 @@ describe('MediaController', () => {
   });
 
   describe('deleteFile', () => {
-    it('should delete file by id', async () => {
+    it('should delete file by sign (string id)', async () => {
       const mockResponse = { success: true, message: 'File deleted' };
       mockMediaService.deleteFile.mockResolvedValue(mockResponse);
 
-      const result = await controller.deleteFile(1);
+      const result = await controller.deleteFile('1');
 
       expect(mockMediaService.deleteFile).toHaveBeenCalledWith(1);
       expect(result).toEqual(mockResponse);
