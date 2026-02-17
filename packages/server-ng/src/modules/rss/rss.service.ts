@@ -2,7 +2,8 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import { dayjs, articles } from '@vanblog/shared';
+import { dayjs } from '@vanblog/shared';
+import { articles } from '@vanblog/shared/drizzle';
 import { eq, and, desc } from 'drizzle-orm';
 import { Feed } from 'feed';
 import { z } from 'zod';
@@ -76,18 +77,6 @@ export class RssService {
         .where(and(eq(articles.hidden, false as const), eq(articles.private, false as const)))
 
         .orderBy(desc(articles.createdAt))) as ArticleResult[];
-
-      // Type assertion for article results
-      type ArticleResult = {
-        id: number;
-        title: string;
-        content: string;
-        category: string | null;
-        pathname: string | null;
-        private: boolean | null;
-        createdAt: Date;
-        updatedAt: string;
-      };
 
       // 读取站点配置
       const [
@@ -279,7 +268,11 @@ export class RssService {
       this.logger.log('RSS 订阅生成完成');
     } catch (err) {
       this.logger.error('生成订阅源失败！');
-      this.logger.error(JSON.stringify(err, null, 2));
+      this.logger.error(
+        err instanceof Error
+          ? `${err.message}\n${String(err.stack)}`
+          : JSON.stringify(err, null, 2),
+      );
     }
   }
 
