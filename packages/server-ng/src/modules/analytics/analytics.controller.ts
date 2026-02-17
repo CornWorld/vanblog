@@ -30,7 +30,6 @@ import { RecordAnalyticsSchema } from './dto/record-analytics.dto';
 import { AnalyticsService } from './services/analytics.service';
 import { ArticleStatsService, ArticleStats } from './services/article-stats.service';
 import { EchartsFormatterService, EchartsOption } from './services/echarts-formatter.service';
-import { PublicAnalyticsService } from './services/public-analytics.service';
 import { ThirdPartyAnalyticsService } from './services/third-party-analytics.service';
 
 /**
@@ -45,7 +44,6 @@ export class AnalyticsController {
   constructor(
     private readonly analyticsService: AnalyticsService,
     private readonly articleStatsService: ArticleStatsService,
-    private readonly publicAnalyticsService: PublicAnalyticsService,
     private readonly thirdPartyAnalyticsService: ThirdPartyAnalyticsService,
     private readonly echartsFormatterService: EchartsFormatterService,
     private readonly analyticsCacheService: AnalyticsCacheService,
@@ -483,61 +481,6 @@ export class AnalyticsController {
   async getEchartsPageRankings(@Query('limit') limit?: number): Promise<EchartsOption> {
     const data = await this.analyticsService.getPageRankings(limit);
     return this.echartsFormatterService.formatPageRankingsChart(data);
-  }
-
-  /**
-   * Get public analytics overview
-   *
-   * Public endpoint returning basic analytics data (pageviews, visitors).
-   */
-  @Get('analytics/viewers/public')
-  @ApiOperation({ summary: 'Get public viewer stats' })
-  @ApiResponse({ status: 200, description: 'Public viewer stats' })
-  async getPublicViewer(): Promise<{
-    todayPageviews: number;
-    yesterdayPageviews: number;
-    totalPageviews: number;
-    todayVisitors: number;
-    yesterdayVisitors: number;
-    totalVisitors: number;
-  }> {
-    const overview = await this.publicAnalyticsService.getPublicOverview();
-    return {
-      todayPageviews: overview.todayPageviews,
-      yesterdayPageviews: overview.yesterdayPageviews,
-      totalPageviews: overview.totalPageviews,
-      todayVisitors: overview.todayVisitors,
-      yesterdayVisitors: overview.yesterdayVisitors,
-      totalVisitors: overview.totalVisitors,
-    };
-  }
-
-  /**
-   * Get article viewer stats
-   *
-   * Public endpoint returning viewer stats for a specific article.
-   */
-  @Get('analytics/viewers/article/:id')
-  @ApiOperation({ summary: 'Get article viewer stats' })
-  @ApiResponse({ status: 200, description: 'Article viewer stats' })
-  async getArticleViewer(@Param('id', ParseIntPipe) id: number): Promise<{
-    articleId: number;
-    title: string;
-    views: number;
-    uniqueVisitors: number;
-    avgReadTime: number;
-  } | null> {
-    const data = await this.publicAnalyticsService.getPublicArticleStats(id);
-    if (!data) {
-      return null;
-    }
-    return {
-      articleId: data.articleId,
-      title: data.title,
-      views: data.views,
-      uniqueVisitors: data.uniqueVisitors,
-      avgReadTime: data.avgReadTime,
-    };
   }
 
   /**

@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post, Put } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 
 import { Permission } from '../auth/permissions.decorator';
@@ -7,13 +7,25 @@ import {
   SettingCoreService,
   type AboutInfo,
   type CustomCode,
+  type HttpsSetting,
+  type ISRSetting,
+  type LoginSetting,
   type Navigation,
   type SiteInfo,
   type SiteLayout,
   type SiteTheme,
+  type SocialTypeInfo,
+  type StaticSetting,
+  type WalineSetting,
 } from './services/setting-core.service';
 
-import type { CreateFriendLink, FriendLink } from '@vanblog/shared';
+import type {
+  CreateFriendLink,
+  FriendLink,
+  RewardItem,
+  SocialItem,
+  SocialType,
+} from '@vanblog/shared';
 
 @ApiTags('Settings')
 @Controller({ path: 'settings', version: '2' })
@@ -30,7 +42,7 @@ export class SettingCoreController {
   }
 
   @Permission('setting', ['update'])
-  @Patch('site-info')
+  @Put('site-info')
   @ApiOperation({ summary: 'Update site information' })
   @ApiResponse({ status: 200, description: 'Site info updated' })
   async updateSiteInfo(@Body() body: Partial<SiteInfo>): Promise<SiteInfo> {
@@ -47,7 +59,7 @@ export class SettingCoreController {
   }
 
   @Permission('setting', ['update'])
-  @Patch('layout')
+  @Put('layout')
   @ApiOperation({ summary: 'Update layout settings' })
   @ApiResponse({ status: 200, description: 'Layout settings updated' })
   async updateLayoutSettings(@Body() body: Partial<SiteLayout>): Promise<SiteLayout> {
@@ -64,7 +76,7 @@ export class SettingCoreController {
   }
 
   @Permission('setting', ['update'])
-  @Patch('theme')
+  @Put('theme')
   @ApiOperation({ summary: 'Update theme settings' })
   @ApiResponse({ status: 200, description: 'Theme settings updated' })
   async updateThemeSettings(@Body() body: Partial<SiteTheme>): Promise<SiteTheme> {
@@ -89,7 +101,7 @@ export class SettingCoreController {
   }
 
   @Permission('setting', ['update'])
-  @Patch('friend-links/:index')
+  @Put('friend-links/:index')
   @ApiOperation({ summary: 'Update friend link' })
   @ApiResponse({ status: 200, description: 'Friend link updated' })
   async updateFriendLink(
@@ -117,7 +129,7 @@ export class SettingCoreController {
   }
 
   @Permission('setting', ['update'])
-  @Patch('navigation')
+  @Put('navigation')
   @ApiOperation({ summary: 'Update navigation menu' })
   @ApiResponse({ status: 200, description: 'Navigation menu updated' })
   async updateNavigation(@Body() body: { items?: Navigation[] }): Promise<Navigation[]> {
@@ -136,7 +148,7 @@ export class SettingCoreController {
   }
 
   @Permission('setting', ['update'])
-  @Patch('custom-code')
+  @Put('custom-code')
   @ApiOperation({ summary: 'Update custom code settings' })
   @ApiResponse({ status: 200, description: 'Custom code settings updated' })
   async updateCustomCode(@Body() body: Partial<CustomCode>): Promise<CustomCode> {
@@ -153,10 +165,164 @@ export class SettingCoreController {
   }
 
   @Permission('setting', ['update'])
-  @Patch('about')
+  @Put('about')
   @ApiOperation({ summary: 'Update about page content' })
   @ApiResponse({ status: 200, description: 'About content updated' })
   async updateAbout(@Body() body: Partial<AboutInfo>): Promise<AboutInfo> {
     return this.settingCoreService.updateAboutInfo(body);
+  }
+
+  // Social
+  @Permission('setting', ['read'])
+  @Get('social')
+  @ApiOperation({ summary: 'Get social links' })
+  @ApiResponse({ status: 200, description: 'Social links retrieved' })
+  async getSocials(): Promise<SocialItem[]> {
+    return this.settingCoreService.getSocials();
+  }
+
+  @Permission('setting', ['read'])
+  @Get('social/types')
+  @ApiOperation({ summary: 'Get available social types' })
+  @ApiResponse({ status: 200, description: 'Social types retrieved' })
+  getSocialTypes(): SocialTypeInfo[] {
+    return this.settingCoreService.getSocialTypes();
+  }
+
+  @Permission('setting', ['update'])
+  @Put('social')
+  @ApiOperation({ summary: 'Update social link' })
+  @ApiResponse({ status: 200, description: 'Social link updated' })
+  async updateSocial(@Body() body: { type: SocialType; value: string }): Promise<SocialItem[]> {
+    return this.settingCoreService.updateSocial(body);
+  }
+
+  @Permission('setting', ['update'])
+  @Delete('social/:type')
+  @ApiOperation({ summary: 'Delete social link' })
+  @ApiResponse({ status: 200, description: 'Social link deleted' })
+  async deleteSocial(@Param('type') type: SocialType): Promise<SocialItem[]> {
+    return this.settingCoreService.deleteSocial(type);
+  }
+
+  // Waline
+  @Permission('setting', ['read'])
+  @Get('waline')
+  @ApiOperation({ summary: 'Get Waline settings' })
+  @ApiResponse({ status: 200, description: 'Waline settings retrieved' })
+  async getWalineSetting(): Promise<WalineSetting> {
+    return this.settingCoreService.getWalineSetting();
+  }
+
+  @Permission('setting', ['update'])
+  @Put('waline')
+  @ApiOperation({ summary: 'Update Waline settings' })
+  @ApiResponse({ status: 200, description: 'Waline settings updated' })
+  async updateWalineSetting(@Body() body: Partial<WalineSetting>): Promise<WalineSetting> {
+    return this.settingCoreService.updateWalineSetting(body);
+  }
+
+  // ISR
+  @Permission('setting', ['read'])
+  @Get('isr')
+  @ApiOperation({ summary: 'Get ISR settings' })
+  @ApiResponse({ status: 200, description: 'ISR settings retrieved' })
+  async getISRSetting(): Promise<ISRSetting> {
+    return this.settingCoreService.getISRSetting();
+  }
+
+  @Permission('setting', ['update'])
+  @Put('isr')
+  @ApiOperation({ summary: 'Update ISR settings' })
+  @ApiResponse({ status: 200, description: 'ISR settings updated' })
+  async updateISRSetting(@Body() body: Partial<ISRSetting>): Promise<ISRSetting> {
+    return this.settingCoreService.updateISRSetting(body);
+  }
+
+  // Login
+  @Permission('setting', ['read'])
+  @Get('login')
+  @ApiOperation({ summary: 'Get login settings' })
+  @ApiResponse({ status: 200, description: 'Login settings retrieved' })
+  async getLoginSetting(): Promise<LoginSetting> {
+    return this.settingCoreService.getLoginSetting();
+  }
+
+  @Permission('setting', ['update'])
+  @Put('login')
+  @ApiOperation({ summary: 'Update login settings' })
+  @ApiResponse({ status: 200, description: 'Login settings updated' })
+  async updateLoginSetting(@Body() body: Partial<LoginSetting>): Promise<LoginSetting> {
+    return this.settingCoreService.updateLoginSetting(body);
+  }
+
+  // HTTPS
+  @Permission('setting', ['read'])
+  @Get('https')
+  @ApiOperation({ summary: 'Get HTTPS settings' })
+  @ApiResponse({ status: 200, description: 'HTTPS settings retrieved' })
+  async getHttpsSetting(): Promise<HttpsSetting> {
+    return this.settingCoreService.getHttpsSetting();
+  }
+
+  @Permission('setting', ['update'])
+  @Put('https')
+  @ApiOperation({ summary: 'Update HTTPS settings' })
+  @ApiResponse({ status: 200, description: 'HTTPS settings updated' })
+  async updateHttpsSetting(@Body() body: HttpsSetting): Promise<HttpsSetting> {
+    return this.settingCoreService.updateHttpsSetting(body);
+  }
+
+  // Static
+  @Permission('setting', ['read'])
+  @Get('static')
+  @ApiOperation({ summary: 'Get static storage settings' })
+  @ApiResponse({ status: 200, description: 'Static settings retrieved' })
+  async getStaticSetting(): Promise<StaticSetting> {
+    return this.settingCoreService.getStaticSetting();
+  }
+
+  @Permission('setting', ['update'])
+  @Put('static')
+  @ApiOperation({ summary: 'Update static storage settings' })
+  @ApiResponse({ status: 200, description: 'Static settings updated' })
+  async updateStaticSetting(@Body() body: StaticSetting): Promise<StaticSetting> {
+    return this.settingCoreService.updateStaticSetting(body);
+  }
+
+  // Donations / Rewards
+  @Permission('setting', ['read'])
+  @Get('donations')
+  @ApiOperation({ summary: 'Get reward/donation settings' })
+  @ApiResponse({ status: 200, description: 'Rewards retrieved' })
+  async getRewards(): Promise<RewardItem[]> {
+    return this.settingCoreService.getRewards();
+  }
+
+  @Permission('setting', ['update'])
+  @Post('donations')
+  @ApiOperation({ summary: 'Create reward/donation entry' })
+  @ApiResponse({ status: 201, description: 'Reward created' })
+  async createReward(@Body() body: { name: string; value: string }): Promise<RewardItem> {
+    return this.settingCoreService.createReward(body);
+  }
+
+  @Permission('setting', ['update'])
+  @Put('donations/:name')
+  @ApiOperation({ summary: 'Update reward/donation entry' })
+  @ApiResponse({ status: 200, description: 'Reward updated' })
+  async updateReward(
+    @Param('name') name: string,
+    @Body() body: { name: string; value: string },
+  ): Promise<RewardItem> {
+    return this.settingCoreService.updateReward(name, body);
+  }
+
+  @Permission('setting', ['update'])
+  @Delete('donations/:name')
+  @ApiOperation({ summary: 'Delete reward/donation entry' })
+  @ApiResponse({ status: 200, description: 'Reward deleted' })
+  async deleteReward(@Param('name') name: string): Promise<boolean> {
+    return this.settingCoreService.deleteReward(name);
   }
 }

@@ -156,7 +156,7 @@ export class CategoryController {
    * @param updateCategoryDto 分类更新数据
    * @returns 更新后的分类信息
    */
-  @Put('name/:name')
+  @Put(':name')
   @Permission('category', ['update'])
   @ApiOperation({ summary: 'Update category by name' })
   @ApiResponse({ status: 200, description: 'Category updated' })
@@ -201,7 +201,7 @@ export class CategoryController {
    * @param name 分类名称
    * @returns 删除成功响应
    */
-  @Delete('name/:name')
+  @Delete(':name')
   @Permission('category', ['delete'])
   @ApiOperation({ summary: 'Delete category by name' })
   @ApiResponse({ status: 200, description: 'Category deleted' })

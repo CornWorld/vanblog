@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Put,
   Body,
   Patch,
   Param,
@@ -21,6 +22,14 @@ import { UserService } from './user.service';
 
 interface RequestWithUser {
   user: UserEntity;
+}
+
+/** Ensure permissions is always a string[] (never undefined) to satisfy ts-rest contract */
+function normalizeUser<T extends { permissions?: string[] }>(
+  user: T,
+): T & { permissions: string[] } {
+  (user as T & { permissions: string[] }).permissions = user.permissions ?? [];
+  return user as T & { permissions: string[] };
 }
 
 /**
@@ -61,7 +70,7 @@ export class UserController {
       permissions?: string[];
     },
   ): Promise<User> {
-    return this.userService.create(createUserDto);
+    return normalizeUser(await this.userService.create(createUserDto));
   }
 
   /**
@@ -76,7 +85,7 @@ export class UserController {
   @ApiOperation({ summary: '获取用户列表' })
   @ApiResponse({ status: 200, description: '用户列表获取成功' })
   async findAll(): Promise<User[]> {
-    return this.userService.findAll();
+    return (await this.userService.findAll()).map(normalizeUser);
   }
 
   /**
@@ -100,7 +109,7 @@ export class UserController {
     if (trimmed === '' || Number.isNaN(numId)) {
       throw new BadRequestException('Invalid user id');
     }
-    return this.userService.findOne(numId);
+    return normalizeUser(await this.userService.findOne(numId));
   }
 
   /**
@@ -128,7 +137,39 @@ export class UserController {
     if (!parsed.success) {
       throw new BadRequestException({ message: 'Validation failed', issues: parsed.error.issues });
     }
-    return this.userService.update(numId, parsed.data);
+    return normalizeUser(await this.userService.update(numId, parsed.data));
+  }
+
+  /**
+   * 更新协作者（PUT，body 中含 id）
+   *
+   * 通过 PUT 方法更新用户信息，id 从请求体中提取。
+   * 与 ts-rest 契约 `PUT /v2/admin/users` (updateCollaborator) 匹配。
+   *
+   * @param rawBody 包含 id 和更新字段的请求体
+   * @returns 更新后的用户信息
+   * @throws {BadRequestException} 当 id 缺失或数据验证失败时
+   * @throws {NotFoundException} 当用户不存在时
+   */
+  @Put()
+  @Perm('user', ['update'])
+  @ApiOperation({ summary: '更新协作者（body 含 id）' })
+  @ApiResponse({ status: 200, description: '用户更新成功' })
+  @ApiResponse({ status: 404, description: '用户未找到' })
+  async updateCollaborator(@Body() rawBody: unknown): Promise<User> {
+    if (typeof rawBody !== 'object' || rawBody === null || !('id' in rawBody)) {
+      throw new BadRequestException('Missing required field: id');
+    }
+    const { id, ...rest } = rawBody as Record<string, unknown>;
+    const numId = typeof id === 'number' ? id : parseInt(String(id), 10);
+    if (Number.isNaN(numId)) {
+      throw new BadRequestException('Invalid user id');
+    }
+    const parsed = UpdateUserSchema.safeParse(rest);
+    if (!parsed.success) {
+      throw new BadRequestException({ message: 'Validation failed', issues: parsed.error.issues });
+    }
+    return normalizeUser(await this.userService.update(numId, parsed.data));
   }
 
   /**
@@ -168,8 +209,8 @@ export class UserController {
   @Perm('user', ['read'])
   @ApiOperation({ summary: '获取当前用户信息' })
   @ApiResponse({ status: 200, description: '用户信息获取成功' })
-  getProfile(@Request() req: RequestWithUser): User {
-    return req.user;
+  getProfile(@Request() req: RequestWithUser): User & { permissions: string[] } {
+    return normalizeUser(req.user as unknown as User);
   }
 
   /**
@@ -184,6 +225,6 @@ export class UserController {
   @ApiOperation({ summary: '获取协作者列表' })
   @ApiResponse({ status: 200, description: '协作者列表获取成功' })
   async getCollaborators(): Promise<User[]> {
-    return this.userService.getCollaborators();
+    return (await this.userService.getCollaborators()).map(normalizeUser);
   }
 }

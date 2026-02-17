@@ -6,7 +6,7 @@ import { Permission } from '../auth/permissions.decorator';
 import { SettingCoreService } from './services/setting-core.service';
 
 @ApiTags('Caddy')
-@Controller({ path: 'admin/caddy', version: '2' })
+@Controller({ path: 'caddy', version: '2' })
 export class CaddyController {
   constructor(private readonly settingCoreService: SettingCoreService) {}
 

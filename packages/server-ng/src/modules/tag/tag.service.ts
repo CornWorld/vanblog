@@ -188,6 +188,22 @@ export class TagService {
     });
   }
 
+  async updateByName(name: string, updateTagDto: z.infer<typeof UpdateTagSchema>): Promise<Tag> {
+    const tag = await this.findByName(name);
+    if (!tag) {
+      throw new NotFoundException(`Tag with name "${name}" not found`);
+    }
+    return this.update(tag.id, updateTagDto);
+  }
+
+  async removeByName(name: string): Promise<void> {
+    const tag = await this.findByName(name);
+    if (!tag) {
+      throw new NotFoundException(`Tag with name "${name}" not found`);
+    }
+    await this.remove(tag.id);
+  }
+
   /**
    * 查找或创建标签
    *

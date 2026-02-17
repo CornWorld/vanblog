@@ -81,36 +81,36 @@ export class TagController {
   /**
    * 更新标签
    *
-   * 根据标签 ID 更新标签的信息，如名称、描述等。
+   * 根据标签名称更新标签的信息，如名称、描述等。
    *
-   * @param id 标签 ID
+   * @param name 标签名称
    * @param updateTagDto 标签更新数据
    * @returns 更新后的标签信息
    */
-  @Put(':id')
+  @Put(':name')
   @Permission('tag', ['update'])
-  @ApiOperation({ summary: 'Update a tag' })
+  @ApiOperation({ summary: 'Update a tag by name' })
   @ApiResponse({ status: 200, description: 'Update existing tag' })
   @ApiResponse({ status: 404, description: 'Tag not found' })
-  async update(@Param('id', ParseIntPipe) id: number, @Body() raw: unknown): Promise<Tag> {
+  async update(@Param('name') name: string, @Body() raw: unknown): Promise<Tag> {
     const dto = UpdateTagSchema.parse(raw);
-    return this.tagService.update(id, dto);
+    return this.tagService.updateByName(name, dto);
   }
 
   /**
    * 删除标签
    *
-   * 根据标签 ID 删除指定标签。删除前会检查标签是否被文章使用。
+   * 根据标签名称删除指定标签。删除前会检查标签是否被文章使用。
    *
-   * @param id 标签 ID
+   * @param name 标签名称
    */
-  @Delete(':id')
+  @Delete(':name')
   @Permission('tag', ['delete'])
-  @ApiOperation({ summary: 'Delete a tag' })
+  @ApiOperation({ summary: 'Delete a tag by name' })
   @ApiResponse({ status: 200, description: 'Tag deleted successfully' })
   @ApiResponse({ status: 404, description: 'Tag not found' })
-  async remove(@Param('id', ParseIntPipe) id: number): Promise<void> {
-    return this.tagService.remove(id);
+  async remove(@Param('name') name: string): Promise<void> {
+    return this.tagService.removeByName(name);
   }
 
   /**
