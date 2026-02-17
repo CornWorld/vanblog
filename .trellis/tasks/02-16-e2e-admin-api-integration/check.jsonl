@@ -1,0 +1,14 @@
+{"file": ".claude/commands/trellis/finish-work.md", "reason": "Finish work checklist"}
+{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "跨层数据流校验参考"}
+{"file": ".claude/commands/trellis/check-backend.md", "reason": "Backend check spec"}
+{"file": ".claude/commands/trellis/check-frontend.md", "reason": "Frontend check spec"}
+{"file": "packages/shared/src/contract.ts", "reason": "验证所有契约路径与 server-ng 控制器路由的一致性"}
+{"file": "packages/admin/src/services/van-blog/api.ts", "reason": "验证所有 API 调用函数的请求参数和响应数据格式"}
+{"file": "packages/server-ng/src/modules/article/article.controller.ts", "reason": "验证文章 CRUD 路由与契约匹配"}
+{"file": "packages/server-ng/src/modules/draft/draft.controller.ts", "reason": "验证草稿 CRUD 路由与契约匹配"}
+{"file": "packages/server-ng/src/modules/pipeline/pipeline.controller.ts", "reason": "验证 Pipeline CRUD 路由与契约匹配"}
+{"file": "packages/server-ng/src/modules/auth/auth.controller.ts", "reason": "验证认证路由与契约匹配"}
+{"file": "packages/server-ng/src/modules/auth/api-token.controller.ts", "reason": "验证 Token CRUD 路由与契约匹配"}
+{"file": "packages/server-ng/src/modules/backup/backup.controller.ts", "reason": "验证备份路由与契约匹配"}
+{"file": "packages/server-ng/src/modules/analytics/analytics.controller.ts", "reason": "验证分析路由与契约匹配"}
+{"file": "packages/server-ng/src/modules/setting/custom-pages.controller.ts", "reason": "验证自定义页面 CRUD 路由与契约匹配"}

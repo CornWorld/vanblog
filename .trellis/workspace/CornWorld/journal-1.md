@@ -598,3 +598,74 @@ Continued E2E API walk task. Refactored controller handlers to use ts-rest wrapp
 ### Next Steps
 
 - None - task complete
+
+## Session 12: E2E API Walk: ts-rest route fix, PermissionService ESM fix, cleanup
+
+**Date**: 2026-02-15
+**Task**: E2E API Walk: ts-rest route fix, PermissionService ESM fix, cleanup
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+## Summary
+
+Completed the E2E API walk task. Fixed 4 critical integration issues, verified 30/30 API endpoints, cleaned up temporary files, and committed all changes in 5 atomic commits.
+
+## Issues Fixed
+
+| #   | Issue                                               | Root Cause                                                            | Fix                                                        |
+| --- | --------------------------------------------------- | --------------------------------------------------------------------- | ---------------------------------------------------------- |
+| 1   | Settings API 404                                    | `@TsRestHandler` doubled route paths with controller prefix           | Removed ts-rest handlers, use standard NestJS decorators   |
+| 2   | Plugin API 403                                      | Static route `@Get('failed')` after `@Get(':name')`                   | Reordered static routes before parameterized routes        |
+| 3   | ts-rest route doubling (20 controllers, 59 methods) | Same as #1, systemic across codebase                                  | Batch fix: delete duplicates or convert to standard NestJS |
+| 4   | PermissionService 403 on all protected endpoints    | Vite ESM multi-instance: DI and guard got different service instances | Store state in `globalThis` via `Symbol.for` keys          |
+
+## Commits
+
+| Commit     | Type     | Files | Description                                         |
+| ---------- | -------- | ----- | --------------------------------------------------- |
+| `0038fb67` | refactor | 33    | Remove ts-rest route doubling from all controllers  |
+| `399f7535` | fix      | 3     | Use globalThis for PermissionService (Vite ESM fix) |
+| `496075d7` | docs     | 2     | Document E2E API walk findings in workspace journal |
+| `fdebf078` | feat     | 3     | Add ISR module and CustomPages admin controller     |
+| `cebdf0c6` | docs     | 7     | Add E2E API walk task artifacts                     |
+
+## Key Files
+
+- `packages/server-ng/src/modules/permission/permission.service.ts` — globalThis state fix
+- `packages/server-ng/src/modules/permission/permission-collection.service.ts` — same pattern
+- 20 controllers across `packages/server-ng/src/modules/` — ts-rest removal
+- 11 spec files — test updates for new method signatures
+- `.trellis/tasks/02-02-e2e-api-walk/E2E_API_WALK_ISSUES.md` — full report
+
+## Stats
+
+- **API endpoints verified**: 30/30 PASS
+- **Unit tests**: 86/86 PASS (permission service)
+- **Net code change**: -2677 lines (removed dead ts-rest code)
+- **Temporary files cleaned**: 5 items deleted
+
+### Git Commits
+
+| Hash       | Message       |
+| ---------- | ------------- |
+| `0038fb67` | (see git log) |
+| `399f7535` | (see git log) |
+| `496075d7` | (see git log) |
+| `fdebf078` | (see git log) |
+| `cebdf0c6` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

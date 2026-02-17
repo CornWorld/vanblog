@@ -1,0 +1,17 @@
+{"file": ".trellis/workflow.md", "reason": "Project workflow and conventions"}
+{"file": ".trellis/spec/frontend/type-safety.md", "reason": "前端类型安全规范"}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "前端组件开发规范"}
+{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "跨层数据流思维指南"}
+{"file": ".trellis/spec/backend/type-system.md", "reason": "后端类型系统规范"}
+{"file": ".trellis/spec/backend/api-guidelines.md", "reason": "API 契约优先开发规范"}
+{"file": ".trellis/spec/frontend/index.md", "reason": "Frontend development guide"}
+{"file": "packages/shared/src/contract.ts", "reason": "根契约定义文件，需要修正所有路由路径以匹配 server-ng 实际控制器路由"}
+{"file": "packages/server-ng/src/modules/setting/setting-core.controller.ts", "reason": "缺少 social/waline/isr/login/https/static/donations 路由，且更新方法用 PATCH 而契约用 PUT"}
+{"file": "packages/server-ng/src/modules/category/category.controller.ts", "reason": "PUT/DELETE 路由路径含多余 name/ 前缀，与契约不匹配"}
+{"file": "packages/server-ng/src/modules/tag/tag.controller.ts", "reason": "PUT/DELETE 使用 :id(number)，但契约定义为 :name(string)"}
+{"file": "packages/server-ng/src/modules/user/user.controller.ts", "reason": "更新方法用 PATCH 而契约用 PUT，且契约无 :id 路径参数"}
+{"file": "packages/server-ng/src/modules/media/media.controller.ts", "reason": "删除路由参数名 :id(number)，契约为 :sign(string)"}
+{"file": "packages/server-ng/src/modules/setting/caddy.controller.ts", "reason": "路由路径 admin/caddy 与契约 caddy 不匹配"}
+{"file": "packages/server-ng/src/modules/admin/compatibility.controller.ts", "reason": "部分设置 stub 路由在 admin/ 前缀下，与契约路径不匹配"}
+{"file": "packages/admin/src/services/van-blog/api.ts", "reason": "所有 API 调用聚合层，需验证请求/响应格式转换"}
+{"file": "packages/admin/src/services/client.ts", "reason": "ts-rest 客户端配置，影响所有请求"}
