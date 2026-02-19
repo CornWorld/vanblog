@@ -172,6 +172,21 @@ export class BackupController {
   }
 
   /**
+   * Restore backup (admin frontend compatible endpoint)
+   *
+   * This endpoint matches the root contract path `/v2/backup/restore` used by the admin frontend.
+   * Must be registered before the parameterized `:filename/restore` route to avoid route conflicts.
+   */
+  @Post('restore')
+  @HttpCode(HttpStatus.OK)
+  @Perm('backup', ['restore'])
+  @ApiOperation({ summary: 'Restore backup (admin frontend compatible)' })
+  @ApiResponse({ status: 200, description: 'Restore successful' })
+  restoreBackupFromBody(@Body() raw: unknown): Promise<{ success: boolean }> {
+    return this.backupService.restoreFromBackup(raw).then(() => ({ success: true }));
+  }
+
+  /**
    * 从备份文件恢复数据库
    *
    * 使用指定的备份文件恢复数据库。恢复操作是异步的，

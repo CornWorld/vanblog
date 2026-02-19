@@ -117,18 +117,18 @@ export class AuthController {
   @ApiBody({ schema: { type: 'object', properties: { token: { type: 'string' } } } })
   async logout(
     @Request() req: RequestWithUser,
-    @Body() body: { token?: string; refresh_token?: string },
+    @Body() body?: { token?: string; refresh_token?: string },
   ): Promise<{ message: string }> {
     // Extract token from Authorization header if not provided in body
     const authHeader = req.headers.authorization;
     const token =
-      body.token ?? (authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : null);
+      body?.token ?? (authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : null);
 
     if (token) {
       await this.authService.revokeToken(token);
     }
 
-    if (body.refresh_token) {
+    if (body?.refresh_token) {
       await this.authService.revokeToken(body.refresh_token);
     }
 

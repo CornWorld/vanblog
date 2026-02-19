@@ -62,7 +62,7 @@ export class UserController {
   async create(
     @Body()
     createUserDto: {
-      username: string;
+      name: string;
       password: string;
       nickname?: string;
       email?: string;
@@ -70,7 +70,10 @@ export class UserController {
       permissions?: string[];
     },
   ): Promise<User> {
-    return normalizeUser(await this.userService.create(createUserDto));
+    // Root contract uses "name" field (CreateCollaboratorSchema),
+    // but UserService expects "username" — map here at the controller boundary.
+    const { name, ...rest } = createUserDto;
+    return normalizeUser(await this.userService.create({ username: name, ...rest }));
   }
 
   /**
@@ -226,5 +229,33 @@ export class UserController {
   @ApiResponse({ status: 200, description: '协作者列表获取成功' })
   async getCollaborators(): Promise<User[]> {
     return (await this.userService.getCollaborators()).map(normalizeUser);
+  }
+}
+
+/**
+ * 用户个人资料控制器
+ *
+ * 允许已认证用户更新自己的个人资料（昵称、头像、邮箱、密码等）。
+ * 路径 /v2/users/profile 与 root contract 对齐。
+ */
+@ApiTags('Users')
+@Controller({ path: 'users', version: '2' })
+export class UserProfileController {
+  constructor(private readonly userService: UserService) {}
+
+  @Put('profile')
+  @Perm('user', ['read'])
+  @ApiOperation({ summary: '更新当前用户资料' })
+  @ApiResponse({ status: 200, description: '用户资料更新成功' })
+  async updateProfile(@Request() req: RequestWithUser, @Body() rawBody: unknown): Promise<User> {
+    const parsed = UpdateUserSchema.safeParse(rawBody);
+    if (!parsed.success) {
+      throw new BadRequestException({
+        message: 'Validation failed',
+        issues: parsed.error.issues,
+      });
+    }
+    const userId = (req.user as unknown as User).id;
+    return normalizeUser(await this.userService.update(userId, parsed.data));
   }
 }

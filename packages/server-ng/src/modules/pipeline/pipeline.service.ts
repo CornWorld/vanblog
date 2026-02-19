@@ -540,6 +540,11 @@ export class PipelineService {
     const scriptToSave = `
 'use strict';
 
+// Save IPC references before restricting globals
+const __ipcOn = process.on.bind(process);
+const __ipcSend = process.send.bind(process);
+const __ipcExit = process.exit.bind(process);
+
 // Security: Restrict global access
 const restrictedGlobals = ['eval', 'Function', 'process', 'require', 'module', '__dirname', '__filename'];
 restrictedGlobals.forEach(name => {
@@ -575,7 +580,7 @@ console.log = (...args) => {
 };
 
 // Process message handler with timeout protection
-process.on('message', async (msg) => {
+__ipcOn('message', async (msg) => {
   // Validate input is an object
   if (msg && typeof msg === 'object') {
     input = msg;
@@ -586,14 +591,14 @@ process.on('message', async (msg) => {
     ${script}
 
     // Send success response
-    process.send({
+    __ipcSend({
       status: 'success',
       output: input,
       logs,
     });
   } catch(err) {
     // Send error response
-    process.send({
+    __ipcSend({
       status: 'error',
       output: null,
       logs: [...logs, err.message || String(err)],

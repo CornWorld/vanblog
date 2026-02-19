@@ -1,4 +1,4 @@
-import { Controller, Get, Query, NotFoundException } from '@nestjs/common';
+import { Controller, Get, Query, NotFoundException, VERSION_NEUTRAL } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 
@@ -14,7 +14,7 @@ interface CustomPage extends CustomPageList {
 }
 
 @ApiTags('Public Custom Pages')
-@Controller({ path: 'public', version: '2' })
+@Controller({ path: 'public', version: VERSION_NEUTRAL })
 export class CustomPageController {
   constructor(private readonly customPageService: CustomPageService) {}
 

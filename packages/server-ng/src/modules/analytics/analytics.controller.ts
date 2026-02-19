@@ -8,6 +8,7 @@ import {
   ParseIntPipe,
   Headers,
   Ip,
+  VERSION_NEUTRAL,
 } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
@@ -513,5 +514,88 @@ export class AnalyticsController {
     const pageNum = Number(page) || 1;
     const sizeNum = Number(pageSize) || 10;
     return this.analyticsService.getAnalyticsLogs(event, pageNum, sizeNum);
+  }
+}
+
+/**
+ * 公共分析数据记录控制器 (VERSION_NEUTRAL)
+ *
+ * 提供无版本前缀的公共端点，与 root contract 路径对齐。
+ * 路由: /api/analytics/record, /api/article/:id/view, /api/article/:id/reading-time
+ */
+@ApiTags('Analytics (Public)')
+@Controller({ version: VERSION_NEUTRAL })
+export class PublicAnalyticsRecordController {
+  constructor(
+    private readonly analyticsService: AnalyticsService,
+    private readonly articleStatsService: ArticleStatsService,
+    private readonly thirdPartyAnalyticsService: ThirdPartyAnalyticsService,
+    private readonly analyticsCacheService: AnalyticsCacheService,
+    private readonly derivedViewCacheService: DerivedViewCacheService,
+  ) {}
+
+  @Post('analytics/record')
+  @Throttle({ default: { limit: 10, ttl: 10000 } })
+  @ApiOperation({ summary: '记录分析数据 (public)' })
+  @ApiResponse({ status: 201, description: '记录成功' })
+  async recordAnalytics(
+    @Body() raw: unknown,
+    @Ip() ip?: string,
+    @Headers('user-agent') userAgent?: string,
+  ): Promise<void> {
+    const input = RecordAnalyticsSchema.parse(raw) as {
+      type: string;
+      path?: string | null;
+      referrer?: string | null;
+      userAgent?: string | null;
+      ip?: string | null;
+      data?: unknown;
+    };
+
+    const userAgentVal = input.userAgent ?? userAgent ?? null;
+    const ipVal = input.ip ?? ip ?? null;
+
+    const recordDto = {
+      type: input.type,
+      path: input.path ?? null,
+      referrer: input.referrer ?? null,
+      userAgent: userAgentVal,
+      ip: ipVal,
+      data: input.data,
+    };
+
+    await this.analyticsService.recordAnalytics(recordDto);
+    await this.analyticsCacheService.clear();
+    await this.derivedViewCacheService.clear();
+
+    if (input.type === 'pageview' && input.path) {
+      const ipArg: string | undefined = ipVal ?? undefined;
+      const uaArg: string | undefined = userAgentVal ?? undefined;
+      await this.thirdPartyAnalyticsService.trackPageview(input.path, ipArg, uaArg);
+    }
+  }
+
+  @Post('article/:id/view')
+  @Throttle({ default: { limit: 5, ttl: 10000 } })
+  @ApiOperation({ summary: '记录文章浏览 (public)' })
+  @ApiResponse({ status: 201, description: '记录成功' })
+  async recordArticleView(
+    @Param('id', ParseIntPipe) articleId: number,
+    @Ip() ip: string,
+    @Headers('user-agent') userAgent?: string,
+  ): Promise<void> {
+    await this.articleStatsService.recordArticleView(articleId, ip, userAgent);
+  }
+
+  @Post('article/:id/reading-time')
+  @Throttle({ default: { limit: 20, ttl: 60000 } })
+  @ApiOperation({ summary: '记录文章阅读时间 (public)' })
+  @ApiResponse({ status: 201, description: '记录成功' })
+  async recordReadingTime(
+    @Param('id', ParseIntPipe) articleId: number,
+    @Body('duration') duration: number,
+    @Ip() ip: string,
+  ): Promise<void> {
+    await this.articleStatsService.recordReadingTime(articleId, duration, ip);
   }
 }

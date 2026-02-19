@@ -1,4 +1,4 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, Query, VERSION_NEUTRAL } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 
 import { DerivedView } from '../../shared/decorators/derived-view.decorator';
@@ -7,7 +7,7 @@ import { TimelineResponseDto } from './dto/timeline.dto';
 import { TimelineService } from './timeline.service';
 
 @ApiTags('Public')
-@Controller({ path: 'public' })
+@Controller({ path: 'public', version: VERSION_NEUTRAL })
 export class TimelineController {
   constructor(private readonly timelineService: TimelineService) {}
 

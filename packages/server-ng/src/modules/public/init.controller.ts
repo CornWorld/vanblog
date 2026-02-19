@@ -1,4 +1,4 @@
-import { Body, Controller, Post, HttpCode } from '@nestjs/common';
+import { Body, Controller, Post, HttpCode, VERSION_NEUTRAL } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 
@@ -6,7 +6,7 @@ import { InitCmsRequestSchema, type InitCmsResponseDto } from './dto/init.dto';
 import { InitService } from './init.service';
 
 @ApiTags('Public')
-@Controller({ path: 'public', version: '2' })
+@Controller({ path: 'public', version: VERSION_NEUTRAL })
 export class InitController {
   constructor(private readonly initService: InitService) {}
 
