@@ -1260,6 +1260,9 @@ export function createBackupServiceMock(): any {
     deleteBackup: vi.fn(),
     restoreBackup: vi.fn(),
     getRestoreProgress: vi.fn(),
+    restoreFromBackup: vi.fn(),
+    exportBackup: vi.fn(),
+    importBackup: vi.fn(),
   };
 }
 
