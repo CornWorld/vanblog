@@ -19,7 +19,7 @@ export default defineConfig([
   eslint.configs.recommended,
 
   {
-    ignores: ['dist/**', 'node_modules/**', 'coverage/**', 'test-data/**'],
+    ignores: ['dist/**', 'node_modules/**', 'coverage/**', 'test-data/**', 'data/**'],
   },
 
   // TypeScript with strictTypeChecked preset
