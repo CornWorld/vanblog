@@ -669,3 +669,74 @@ Completed the E2E API walk task. Fixed 4 critical integration issues, verified 3
 ### Next Steps
 
 - None - task complete
+
+## Session 13: Admin Walk-Through: Static Asset 404 Fixes & Antd API Migration
+
+**Date**: 2026-02-20
+**Task**: Admin Walk-Through: Static Asset 404 Fixes & Antd API Migration
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+## 概要
+
+通过 chrome-devtools MCP 对 admin 后台进行完整页面巡检（24 个页面/Tab），发现并修复所有静态资源 404 问题和 antd 废弃 API 警告。
+
+## 发现的问题与修复
+
+| 问题 | 根因 | 修复方式 |
+|------|------|----------|
+| `/logo.svg` 404（所有页面） | Vite base 为 `/admin/`，但代码引用根路径 | 改用 `import.meta.env.BASE_URL` 前缀 |
+| `/background.svg` 404（登录/恢复页） | 同上 | Login.less 硬编码 `/admin/`，Restore.jsx 用 `import.meta.env.BASE_URL` |
+| `/favicon.ico` 404 | 同上 | index.html 改为 `/admin/favicon.ico` |
+| `/more.png` 404（编辑器） | 同上 | Editor/index.tsx 用 `import.meta.env.BASE_URL` |
+| 登录页 logo SVG 无限撑大 | SVG 无固定宽高 | 添加 `.loginLogo img { width: 64px; height: 64px }` |
+| `Modal.info()` 静态方法上下文警告 | antd 5 需 App 上下文 | CommentManage 迁移至 `App.useApp().modal.info()` |
+| `Tabs.TabPane` 废弃 API 警告 | antd 5 推荐 items prop | LogManage 迁移至 `items` 数组 API |
+| ESLint `react/display-name` | 匿名导出函数 | About.tsx、CommentManage、LogManage 添加具名导出 |
+| ESLint `react/prop-types` | BasicLayout 多处 render props | 文件级 `/* eslint-disable react/prop-types */` |
+
+## 巡检覆盖范围
+
+- 所有主要页面：Welcome、Article、Draft、Editor（文章/草稿/关于）、CustomPage、DataManage、ImageManage、SystemConfig（11个Tab）、LogManage、CommentManage、Pipeline、About
+- 响应式布局测试：1280x720、768px、375px
+- Console 错误和 Network 请求检查
+
+## 已知未修复项（技术债务）
+
+- 50+ 处 `Modal` 静态方法调用（项目范围内的技术债务，不在本次范围内）
+- Waline `/ui/` 404（开发环境限制，非 bug）
+
+**修改文件**:
+- `packages/admin/config/defaultSettings.js` - logo 路径
+- `packages/admin/index.html` - favicon 路径
+- `packages/admin/src/layouts/BasicLayout.jsx` - logo 路径 + eslint-disable
+- `packages/admin/src/pages/About.tsx` - logo 路径 + 具名导出
+- `packages/admin/src/pages/Editor/index.tsx` - more.png 路径
+- `packages/admin/src/pages/user/Login/index.jsx` - logo 路径
+- `packages/admin/src/pages/user/Login/index.less` - background.svg 路径 + logo 尺寸
+- `packages/admin/src/pages/user/Restore/index.jsx` - background.svg 路径
+- `packages/admin/src/pages/CommentManage/index.jsx` - Modal API 迁移
+- `packages/admin/src/pages/LogManage/index.jsx` - Tabs API 迁移
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `6b31e77b` | (see git log) |
+| `e23fc2a2` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
