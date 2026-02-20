@@ -1,12 +1,13 @@
 import { useTranslation } from 'react-i18next';
 import { PageContainer } from '@ant-design/pro-layout';
-import { Button, Modal, Space, Spin } from 'antd';
+import { App, Button, Space, Spin } from 'antd';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { history, useModel } from '@/router';
 import TipTitle from '../../components/TipTitle';
 
-export default function () {
+export default function CommentManagePage() {
   const { t } = useTranslation();
+  const { modal } = App.useApp();
   const { initialState } = useModel('@@initialState');
   const [loading, setLoading] = useState(true);
   const { current } = useRef({ hasInit: false });
@@ -19,7 +20,7 @@ export default function () {
   }, [initialState]);
 
   const showTips = useCallback(() => {
-    Modal.info({
+    modal.info({
       title: t('comment.modal.title'),
       content: (
         <div>
@@ -45,7 +46,7 @@ export default function () {
         </div>
       ),
     });
-  }, [t]);
+  }, [t, modal]);
 
   useEffect(() => {
     if (!current.hasInit) {

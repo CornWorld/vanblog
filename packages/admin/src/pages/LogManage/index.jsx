@@ -5,24 +5,18 @@ import Login from './tabs/Login.jsx';
 import Pipeline from './tabs/Pipeline.jsx';
 import System from './tabs/System.tsx';
 
-export default () => {
+export default function LogManagePage() {
   const { t } = useTranslation();
+
+  const items = [
+    { key: '1', label: t('log.tabs.login'), children: <Login /> },
+    { key: '2', label: t('log.tabs.pipeline'), children: <Pipeline /> },
+    { key: '3', label: t('log.tabs.system'), children: <System /> },
+  ];
 
   return (
     <PageContainer title={t('log.page.title')}>
-      {' '}
-      {/* TODO */}
-      <Tabs defaultActiveKey="1">
-        <Tabs.TabPane tab={t('log.tabs.login')} key="1">
-          <Login />
-        </Tabs.TabPane>
-        <Tabs.TabPane tab={t('log.tabs.pipeline')} key="2">
-          <Pipeline />
-        </Tabs.TabPane>
-        <Tabs.TabPane tab={t('log.tabs.system')} key="3">
-          <System />
-        </Tabs.TabPane>
-      </Tabs>
+      <Tabs defaultActiveKey="1" items={items} />
     </PageContainer>
   );
-};
+}
