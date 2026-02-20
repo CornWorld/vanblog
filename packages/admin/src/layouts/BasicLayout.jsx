@@ -1,3 +1,4 @@
+/* eslint-disable react/prop-types */
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   HomeOutlined,
@@ -145,7 +146,7 @@ const BasicLayout = () => {
         route={{ routes }}
         location={location}
         title={settings.title || 'VanBlog'}
-        logo={'/logo.svg'}
+        logo={`${import.meta.env.BASE_URL}logo.svg`}
         headerRender={false}
         menuHeaderRender={(logoDom, titleDom, props) => (
           <LogoTitle

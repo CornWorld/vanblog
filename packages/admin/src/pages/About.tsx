@@ -8,7 +8,7 @@ interface InitialState {
   version?: string;
 }
 
-export default function () {
+export default function AboutPage() {
   const { t } = useTranslation();
   const { initialState } = useModel() as { initialState: InitialState | undefined };
 
@@ -31,7 +31,11 @@ export default function () {
           <div>
             <div style={{ marginBottom: 12 }}>
               <a href="https://vanblog.mereith.com/" rel="noopener noreferrer" target={'_blank'}>
-                <Image width={64} src="/logo.svg" preview={false}></Image>
+                <Image
+                  width={64}
+                  src={`${import.meta.env.BASE_URL}logo.svg`}
+                  preview={false}
+                ></Image>
               </a>
             </div>
             <p>{t('about.system_name')}</p>

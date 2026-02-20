@@ -151,7 +151,7 @@ const Login = () => {
       <div className="content">
         <div className="loginForm">
           <div className="loginLogo">
-            <img alt="logo" src="/logo.svg" />
+            <img alt="logo" src={`${import.meta.env.BASE_URL}logo.svg`} />
           </div>
           <h2>{t('login.title')}</h2>
           <p className="subtitle">{t('login.subtitle')}</p>
@@ -200,13 +200,7 @@ const Login = () => {
             </div>
 
             <Form.Item>
-              <Button
-                type="primary"
-                htmlType="submit"
-                size="large"
-                loading={loading}
-                block
-              >
+              <Button type="primary" htmlType="submit" size="large" loading={loading} block>
                 {t('login.submit')}
               </Button>
             </Form.Item>

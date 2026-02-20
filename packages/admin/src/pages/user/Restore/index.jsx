@@ -12,7 +12,7 @@ function RestorePage() {
       style={{
         height: '100%',
         display: 'flex',
-        backgroundImage: `url('/background.svg')`,
+        backgroundImage: `url('${import.meta.env.BASE_URL}background.svg')`,
         backgroundRepeat: 'no-repeat',
         backgroundSize: '100%',
         backgroundColor: '#f0f2f5',

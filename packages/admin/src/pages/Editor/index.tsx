@@ -288,7 +288,7 @@ function EditorContent() {
               {t('editor.modal.more.missing.docs')}
             </a>
           </p>
-          <img src="/more.png" alt="more" width={200}></img>
+          <img src={`${import.meta.env.BASE_URL}more.png`} alt="more" width={200}></img>
         </div>
       ),
       onOk: saveFn,
