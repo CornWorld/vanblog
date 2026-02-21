@@ -19,6 +19,72 @@ import {
   type PipelineExecutionResult,
 } from './dto/pipeline.dto';
 
+export interface PipelineEventConfig {
+  eventName: string;
+  eventNameChinese: string;
+  eventDescription: string;
+  passive: boolean;
+}
+
+const PIPELINE_EVENTS: PipelineEventConfig[] = [
+  {
+    eventName: 'article|beforeCreate',
+    eventNameChinese: '创建文章之前',
+    eventDescription:
+      '创建文章之前，在此修改文章数据并返回会改变实际保存到数据库的值',
+    passive: false,
+  },
+  {
+    eventName: 'article|afterCreate',
+    eventNameChinese: '创建文章之后',
+    eventDescription: '创建文章之后',
+    passive: true,
+  },
+  {
+    eventName: 'article|beforeUpdate',
+    eventNameChinese: '更新文章之前',
+    eventDescription:
+      '更新文章之前，具体涉及到：保存文章、更新文章信息，在此修改文章数据并返回会改变实际保存到数据库的值',
+    passive: false,
+  },
+  {
+    eventName: 'article|afterUpdate',
+    eventNameChinese: '更新文章之后',
+    eventDescription: '更新文章之后，具体涉及到：保存文章、更新文章信息',
+    passive: true,
+  },
+  {
+    eventName: 'article|afterDelete',
+    eventNameChinese: '删除文章',
+    eventDescription: '删除文章之后',
+    passive: true,
+  },
+  {
+    eventName: 'draft|afterPublish',
+    eventNameChinese: '发布草稿',
+    eventDescription: '草稿发布为文章之后',
+    passive: true,
+  },
+  {
+    eventName: 'user|afterCreate',
+    eventNameChinese: '创建用户',
+    eventDescription: '创建用户之后',
+    passive: true,
+  },
+  {
+    eventName: 'user|afterUpdate',
+    eventNameChinese: '更新用户',
+    eventDescription: '更新用户信息之后',
+    passive: true,
+  },
+  {
+    eventName: 'setting|afterUpdate',
+    eventNameChinese: '更新站点信息',
+    eventDescription: '更新站点设置之后',
+    passive: true,
+  },
+];
+
 /**
  * Pipeline Service
  *
@@ -271,23 +337,10 @@ export class PipelineService {
   }
 
   /**
-   * Get pipeline config (available event names)
+   * Get pipeline config (available event names with metadata)
    */
-  getConfig(): { events: string[] } {
-    // Get available event names from hook service or return default list
-    const defaultEvents = [
-      'article|beforeCreate',
-      'article|afterCreate',
-      'article|beforeUpdate',
-      'article|afterUpdate',
-      'article|afterDelete',
-      'draft|afterPublish',
-      'user|afterCreate',
-      'user|afterUpdate',
-      'setting|afterUpdate',
-    ];
-
-    return { events: defaultEvents };
+  getConfig(): PipelineEventConfig[] {
+    return PIPELINE_EVENTS;
   }
 
   /**
