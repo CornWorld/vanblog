@@ -3,10 +3,9 @@ import { z } from 'zod';
 export interface NavItemType {
   id?: number;
   name: string;
-  url: string;
+  path: string;
   icon?: string;
-  target: '_self' | '_blank';
-  order: number;
+  external?: boolean;
   children?: NavItemType[];
 }
 
@@ -14,10 +13,9 @@ export const NavigationItemSchema: z.ZodType<NavItemType> = z.lazy(() =>
   z.object({
     id: z.number().optional(),
     name: z.string().min(1, '导航名称不能为空'),
-    url: z.string().min(1, '导航链接不能为空'),
+    path: z.string().min(1, '导航链接不能为空'),
     icon: z.string().optional(),
-    target: z.enum(['_self', '_blank']).default('_self'),
-    order: z.number().default(0),
+    external: z.boolean().optional(),
     children: z.array(NavigationItemSchema).optional(),
   }),
 );

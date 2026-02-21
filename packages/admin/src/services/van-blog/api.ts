@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import type { Navigation } from '@vanblog/shared';
 import { settingService } from './setting';
 import { authService } from './auth';
 import { userService } from './user';
@@ -78,11 +79,11 @@ export async function updateAbout(body: any) {
 
 export async function getMenu() {
   const { body } = await settingService.getNavigation();
-  return { data: body };
+  return body;
 }
 
-export async function updateMenu(body: any) {
-  const { body: result } = await settingService.updateNavigation({ body });
+export async function updateMenu(items: Navigation[]) {
+  const { body: result } = await settingService.updateNavigation({ body: { items } });
   return result;
 }
 
