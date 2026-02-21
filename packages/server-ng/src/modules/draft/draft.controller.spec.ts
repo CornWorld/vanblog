@@ -540,8 +540,8 @@ describe('DraftController', () => {
         controller.create({ title: 'Test', content: 'Content', author: 'admin', tags: null }),
       ).resolves.toBeDefined();
 
-      // Invalid DTO - missing required fields
-      await expect(controller.create({ title: 'Test' })).rejects.toThrow();
+      // Invalid DTO - missing required field (title)
+      await expect(controller.create({} as any)).rejects.toThrow();
     });
 
     it('should validate update draft DTO', async () => {

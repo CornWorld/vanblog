@@ -314,7 +314,16 @@ export async function getAllCollaborators() {
 
 export async function getAllCategories() {
   const { body } = await categoryService.getCategories();
-  return { data: body };
+  // body is { items: CategoryWithCount[], total: number }
+  // Extract name strings for backward-compatible dropdown selectors
+  const items = Array.isArray(body) ? body : (body?.items ?? []);
+  return { data: items.map((c: any) => c.name ?? c) };
+}
+
+export async function getAllCategoriesFull() {
+  const { body } = await categoryService.getCategories();
+  const items = Array.isArray(body) ? body : (body?.items ?? []);
+  return { data: items };
 }
 
 export async function getArticlesByCategory(name: any) {

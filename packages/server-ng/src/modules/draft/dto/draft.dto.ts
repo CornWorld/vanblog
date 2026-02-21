@@ -20,6 +20,7 @@ export const CreateDraftSchema = insertDraftSchema
   })
   .partial({
     // 允许以下字段为可选，服务层将提供默认值
+    content: true,
     tags: true,
     author: true,
   });

@@ -44,10 +44,9 @@ export class CategoryController {
    */
   @Get()
   @ApiOperation({ summary: 'Get all categories' })
-  async getAllCategories(): Promise<string[]> {
+  async getAllCategories() {
     const result = await this.categoryService.findAll();
-    // Return just category names as strings for frontend compatibility
-    return result.items.map((item) => item.name);
+    return result;
   }
 
   /**

@@ -32,7 +32,7 @@ describe('CategoryController', () => {
   });
 
   describe('getAllCategories', () => {
-    it('should return all category names', async () => {
+    it('should return all categories with count', async () => {
       const mockCategories = Mock.categories(3, { articleCount: 5 });
       const paginatedResult = createPaginatedResult(mockCategories, mockCategories.length);
 
@@ -41,18 +41,19 @@ describe('CategoryController', () => {
       const result = await controller.getAllCategories();
 
       expect(categoryService.findAll).toHaveBeenCalledTimes(1);
-      expect(result).toHaveLength(3);
+      expect(result.items).toHaveLength(3);
+      expect(result.total).toBe(3);
     });
 
-    it('should return empty array when no categories exist', async () => {
+    it('should return empty result when no categories exist', async () => {
       const paginatedResult = createPaginatedResult([], 0);
 
       categoryService.findAll.mockResolvedValue(paginatedResult);
 
       const result = await controller.getAllCategories();
 
-      expect(result).toEqual([]);
-      expect(result).toHaveLength(0);
+      expect(result.items).toEqual([]);
+      expect(result.total).toBe(0);
     });
   });
 
