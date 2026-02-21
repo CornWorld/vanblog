@@ -373,7 +373,7 @@ export async function deleteCategory(name: any) {
 
 export async function getAllTags() {
   const { body } = await tagService.getTags();
-  return { data: body };
+  return { data: (body as any).items ?? body };
 }
 
 export async function getArticlesByTag(name: any) {
@@ -640,7 +640,7 @@ export async function getDonate() {
 
 export async function getTags() {
   const { body } = await tagService.getTags();
-  return { data: body };
+  return { data: (body as any).items ?? body };
 }
 
 export async function getAllCollaboratorsList() {

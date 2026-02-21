@@ -77,8 +77,8 @@ export const getColumns = ({ t }) => [
     request: async () => {
       const { data: tags } = await getTags();
       const data = tags.map((each) => ({
-        label: each,
-        value: each,
+        label: each.name,
+        value: each.name,
       }));
       return data;
     },

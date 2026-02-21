@@ -17,8 +17,8 @@ export default function () {
       request: async () => {
         const { data: tags } = await getTags();
         const data = tags.map((each) => ({
-          label: each,
-          value: each,
+          label: each.name,
+          value: each.name,
         }));
         return data;
       },
@@ -93,8 +93,8 @@ export default function () {
   const fetchData = async () => {
     const { data: res } = await getTags();
     return res.map((item) => ({
-      key: item,
-      name: item,
+      key: item.name,
+      name: item.name,
     }));
   };
 

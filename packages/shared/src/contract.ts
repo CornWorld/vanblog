@@ -224,7 +224,10 @@ export const contract = c.router({
     method: 'GET',
     path: '/v2/tags',
     responses: {
-      200: z.array(TagSchema),
+      200: z.object({
+        items: z.array(TagSchema),
+        total: z.number(),
+      }),
     },
     summary: 'Get all tags',
   },

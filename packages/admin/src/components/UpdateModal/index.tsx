@@ -15,7 +15,7 @@ interface UpdateModalProps {
 }
 
 interface TagsResponse {
-  data?: string[];
+  data?: { name: string }[];
 }
 
 interface CategoriesResponse {
@@ -103,7 +103,7 @@ export default function (props: UpdateModalProps) {
         }}
         request={async () => {
           const msg = (await getTags()) as TagsResponse;
-          return msg?.data?.map((item: string) => ({ label: item, value: item })) || [];
+          return msg?.data?.map((item) => ({ label: item.name, value: item.name })) || [];
         }}
       />
       <ProFormSelect
