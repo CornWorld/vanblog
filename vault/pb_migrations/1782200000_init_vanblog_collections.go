@@ -67,6 +67,8 @@ func createTags(db core.App) error {
 	col.Fields.Add(&core.TextField{Name: "slug"})
 	col.Fields.Add(&core.TextField{Name: "description"})
 	col.Fields.Add(&core.TextField{Name: "oldName"})
+	col.Fields.Add(&core.AutodateField{Name: "created", OnCreate: true});
+	col.Fields.Add(&core.AutodateField{Name: "updated", OnUpdate: true});
 	col.ListRule = strPtr("")
 	col.ViewRule = strPtr("")
 	return db.Save(col)
@@ -80,6 +82,8 @@ func createCategories(db core.App) error {
 	col.Fields.Add(&core.TextField{Name: "password"})
 	col.Fields.Add(&core.JSONField{Name: "meta"})
 	col.Fields.Add(&core.NumberField{Name: "oldId"})
+	col.Fields.Add(&core.AutodateField{Name: "created", OnCreate: true});
+	col.Fields.Add(&core.AutodateField{Name: "updated", OnUpdate: true});
 	col.ListRule = strPtr("")
 	col.ViewRule = strPtr("")
 	return db.Save(col)
@@ -108,6 +112,8 @@ func createUsers(db core.App) error {
 		"CREATE UNIQUE INDEX `idx_users_username` ON `users` (`username`)",
 	}
 	col.PasswordAuth.IdentityFields = []string{"email", "username"}
+	col.Fields.Add(&core.AutodateField{Name: "created", OnCreate: true});
+	col.Fields.Add(&core.AutodateField{Name: "updated", OnUpdate: true});
 	col.ListRule = strPtr(`@request.auth.id != "" && (@request.auth.role = "admin" || @request.auth.id = id)`)
 	col.ViewRule = strPtr(`@request.auth.id != "" && (@request.auth.role = "admin" || @request.auth.id = id)`)
 	col.CreateRule = strPtr(`@request.auth.role = "admin"`)
@@ -146,6 +152,8 @@ func createPosts(db core.App) error {
 	col.Fields.Add(&core.NumberField{Name: "visitedCount"})
 	col.Fields.Add(&core.DateField{Name: "lastVisitedAt"})
 	col.Fields.Add(&core.BoolField{Name: "deleted"})
+	col.Fields.Add(&core.AutodateField{Name: "created", OnCreate: true});
+	col.Fields.Add(&core.AutodateField{Name: "updated", OnUpdate: true});
 	col.ListRule = strPtr(`status = "published" && private = false || @request.auth.id != ""`)
 	col.ViewRule = strPtr(`status = "published" && private = false || @request.auth.id != ""`)
 	col.CreateRule = strPtr(`@request.auth.id != "" && (@request.auth.role = "admin" || @request.auth.permissions ?~ "article:")`)
@@ -169,6 +177,8 @@ func createRevisions(db core.App) error {
 	col.Fields.Add(&core.TextField{Name: "diff"})
 	col.Fields.Add(&core.RelationField{Name: "authoredBy", CollectionId: usersCol.Id, MaxSelect: 1})
 	col.Fields.Add(&core.TextField{Name: "reason"})
+	col.Fields.Add(&core.AutodateField{Name: "created", OnCreate: true});
+	col.Fields.Add(&core.AutodateField{Name: "updated", OnUpdate: true});
 	col.ListRule = strPtr(`@request.auth.id != ""`)
 	col.ViewRule = strPtr(`@request.auth.id != ""`)
 	col.DeleteRule = strPtr(`@request.auth.role = "admin"`)
@@ -185,6 +195,8 @@ func createMedia(db core.App) error {
 	col.Fields.Add(&core.JSONField{Name: "meta"})
 	col.Fields.Add(&core.TextField{Name: "externalUrl"})
 	col.Fields.Add(&core.TextField{Name: "oldId"})
+	col.Fields.Add(&core.AutodateField{Name: "created", OnCreate: true});
+	col.Fields.Add(&core.AutodateField{Name: "updated", OnUpdate: true});
 	col.ListRule = strPtr(`staticType = "img" || @request.auth.id != ""`)
 	col.ViewRule = strPtr(`staticType = "img" || @request.auth.id != ""`)
 	col.CreateRule = strPtr(`@request.auth.id != ""`)
@@ -286,6 +298,8 @@ func createSite(db core.App) error {
 	col.Fields.Add(&core.JSONField{Name: "syncConfig"})  // branch/schedule/sshKey
 
 	// Rule: public read, auth write
+	col.Fields.Add(&core.AutodateField{Name: "created", OnCreate: true});
+	col.Fields.Add(&core.AutodateField{Name: "updated", OnUpdate: true});
 	col.ListRule = strPtr("")
 	col.ViewRule = strPtr("")
 	col.CreateRule = strPtr(`@request.auth.role = "admin"`) // 站点配置仅 admin
@@ -306,6 +320,8 @@ func createVisits(db core.App) error {
 	col.Fields.Add(&core.NumberField{Name: "uniques"})
 	col.Fields.Add(&core.RelationField{Name: "post", CollectionId: postsCol.Id, MaxSelect: 1})
 	col.Fields.Add(&core.DateField{Name: "lastVisitedAt"})
+	col.Fields.Add(&core.AutodateField{Name: "created", OnCreate: true});
+	col.Fields.Add(&core.AutodateField{Name: "updated", OnUpdate: true});
 	col.ListRule = strPtr(`@request.auth.id != ""`)
 	col.ViewRule = strPtr(`@request.auth.id != ""`)
 	col.UpdateRule = strPtr(`@request.auth.id != ""`)
@@ -326,6 +342,8 @@ func createAudits(db core.App) error {
 	col.Fields.Add(&core.JSONField{Name: "detail"})
 	col.Fields.Add(&core.TextField{Name: "ip"})
 	col.Fields.Add(&core.TextField{Name: "userAgent"})
+	col.Fields.Add(&core.AutodateField{Name: "created", OnCreate: true});
+	col.Fields.Add(&core.AutodateField{Name: "updated", OnUpdate: true});
 	col.ListRule = strPtr(`@request.auth.role = "admin"`)
 	col.ViewRule = strPtr(`@request.auth.role = "admin"`)
 	col.DeleteRule = strPtr(`@request.auth.role = "admin"`)
@@ -343,6 +361,8 @@ func createTokens(db core.App) error {
 	col.Fields.Add(&core.RelationField{Name: "user", CollectionId: usersCol.Id, MaxSelect: 1, Required: true})
 	col.Fields.Add(&core.DateField{Name: "expiresAt"})
 	col.Fields.Add(&core.BoolField{Name: "disabled"})
+	col.Fields.Add(&core.AutodateField{Name: "created", OnCreate: true});
+	col.Fields.Add(&core.AutodateField{Name: "updated", OnUpdate: true});
 	col.ListRule = strPtr(`@request.auth.role = "admin"`)
 	col.ViewRule = strPtr(`@request.auth.role = "admin"`)
 	col.CreateRule = strPtr(`@request.auth.role = "admin"`)
