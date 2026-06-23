@@ -5,6 +5,9 @@ import (
 
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/core"
+
+	// Register vanblog schema migrations (runs on first boot)
+	_ "github.com/cornworld/vanblog/pb_migrations"
 )
 
 func main() {
