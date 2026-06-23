@@ -36,10 +36,23 @@ type Client struct {
 // NewClient creates a Caddy admin API client.
 // baseURL should include the scheme and port, e.g. "http://127.0.0.1:2019".
 func NewClient(baseURL string) *Client {
+	// Use a custom Transport with disabled HTTP/2 and keepalive.
+	// Caddy admin endpoint serves HTTP/1.1 only, and some container runtimes
+	// (OrbStack/Docker Desktop on macOS) have TCP keepalive compatibility issues
+	// that cause connection resets on response.
+	transport := &http.Transport{
+		ForceAttemptHTTP2:   false,
+		DisableKeepAlives:   true,
+		DisableCompression:  true,
+		MaxIdleConns:        1,
+		IdleConnTimeout:     30 * time.Second,
+		TLSHandshakeTimeout: 10 * time.Second,
+	}
 	return &Client{
 		baseURL: strings.TrimRight(baseURL, "/"),
 		http: &http.Client{
-			Timeout: 10 * time.Second,
+			Timeout:   10 * time.Second,
+			Transport: transport,
 		},
 	}
 }
@@ -162,16 +175,19 @@ func (c *Client) SetHTTPRedirect(serverName string, enable bool) error {
 // --- Route management (based on @id) ---
 
 // AddRoute appends a route to the specified server's route list.
-// Uses Caddy's "..." literal path segment to append.
-//
-// POST /config/apps/http/servers/{serverName}/routes/...
+// Caddy's "..." append doesn't work for nested arrays, so we
+// read the current routes, append, and PATCH the whole array back.
 func (c *Client) AddRoute(serverName string, route Route) error {
-	path := fmt.Sprintf("apps/http/servers/%s/routes/...", serverName)
-	body, err := json.Marshal(route)
+	path := fmt.Sprintf("apps/http/servers/%s/routes", serverName)
+	// Read existing routes
+	existing, err := c.GetRoutes(serverName)
 	if err != nil {
-		return fmt.Errorf("caddyadmin: failed to marshal route: %w", err)
+		return fmt.Errorf("caddyadmin: AddRoute: failed to read existing routes: %w", err)
 	}
-	return c.postRaw("/config/"+path, body, nil)
+	// Append new route
+	updated := append(existing, route)
+	// Write back
+	return c.PatchConfigPath(path, updated)
 }
 
 // RemoveRoute removes a route by its @id.
