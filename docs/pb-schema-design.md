@@ -144,10 +144,17 @@ img:delete, all
 | `oldName`     | text                   | 迁移映射(原 tags 数组中的字符串) |
 
 **查询**:
+**查询**(已验证,pb 0.39 Go SDK + REST API):
 
-- 文章的标签:`expand=tags`
-- 某标签下的文章:`/api/collections/posts/records?filter=tags='TAG_ID'`
-- 标签云:聚合查询(back-relation `posts_via_tags`)
+- 文章的标签:`GET /api/collections/posts/records?expand=tags`
+- 某标签下的文章:`filter=tags~'TAG_ID'`(`~` 在 Go SDK 和 REST API 都有效)
+- `?=` (any-equal) 仅 REST API 有效,Go SDK 不工作(待确认是否为 pb bug)
+- `tags:length > 0` 可用于查有标签的文章
+- 标签云:聚合查询(back-relation `posts_via_tags`,用于 expand 排序)
+
+> **验证来源**:`scripts/verify_relation.go`(in-process Bootstrap 测试),pb 0.39.4
+>
+> **Back-relation**:`posts_via_tags` 用于从 tags collection 反查关联的 posts(expand/sort),直接 filter 查 posts 用 `tags~'TAG_ID'`
 
 ---
 
