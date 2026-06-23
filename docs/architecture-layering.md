@@ -171,7 +171,7 @@ vault/
 | ------------------ | ------------------------------- | -------- | -------------------------------------------------------------------------- |
 | `article`          | article.provider.ts(980)        | ~120     | pb `filter`/`sort` 覆盖查询;增量=字数统计+时间线聚合+搜索                  |
 | `media`            | static.provider.ts(560)         | ~100     | pb FileField + thumbs 内置;增量=MD5 去重+上传 pipeline(水印/WebP 已移前端) |
-| `migration`        | backup.controller.ts(137)       | ~150     | `encoding/json` + `dao` 事务(大 JSON 在 Go 里无压力)                       |
+| `migration`        | backup.controller.ts(137)       | ~150     | `encoding/json` + `app.RunInTransaction` 事务(大 JSON 在 Go 里无压力)                       |
 | `caddy`            | caddy.provider.ts(136)          | ~80      | `net/http` + `net/url`(SSRF)                                               |
 | `revisions`        | —(新增)                         | ~80      | `github.com/sergi/go-diff`(快照+diff+恢复)                                 |
 | `visits`           | visit+viewer.provider.ts(241)   | ~80      | SQL `UPDATE SET count = count + 1` + 日聚合                                |
@@ -235,7 +235,7 @@ func BindCaddy(vm *goja.Runtime, app *pocketbase.PocketBase) {
 
 ```javascript
 // pb_hooks/user_custom.pb.js(用户写的)
-onRecordAfterUpdate((e) => {
+onRecordUpdateRequest((e) => {
   const post = e.record;
   // 调用 Go SDK 的能力(不是自己干重活)
   vanblog.caddy.addRoute({
@@ -270,7 +270,7 @@ onRecordAfterUpdate((e) => {
 
 ```javascript
 // 示例 1: 文章发布后发 webhook
-onRecordAfterUpdate((e) => {
+onRecordUpdateRequest((e) => {
   if (e.record.get("status") !== "published") return;
   vanblog.http.send({
     method: "POST",
@@ -280,7 +280,7 @@ onRecordAfterUpdate((e) => {
 }, "posts");
 
 // 示例 2: 特定分类的文章自动加水印标记
-onRecordBeforeCreate((e) => {
+onRecordCreateRequest((e) => {
   if (e.record.get("category") === "photography") {
     e.record.set("tags", [...e.record.get("tags"), "watermark-required"]);
   }
@@ -366,10 +366,10 @@ declare const vanblog: {
 
 | 功能               | Go SDK                            | JSVM 扩展点                           | 用户能否覆盖            |
 | ------------------ | --------------------------------- | ------------------------------------- | ----------------------- |
-| 文章 CRUD          | pb 自动 API                       | `onRecordBeforeCreate("posts")` 等    | ✅ 用户可加校验         |
+| 文章 CRUD          | pb 自动 API                       | `onRecordCreateRequest("posts")` 等    | ✅ 用户可加校验         |
 | 文章查询(复杂)     | `article.Search()`                | 不暴露                                | ❌(Go 统一)             |
 | 草稿发布事务       | `article.Publish()`               | 不暴露                                | ❌                      |
-| 图片上传           | pb FileField + `media.SaveFile()` | `onRecordAfterCreate("media")`        | ✅ 用户可加后处理       |
+| 图片上传           | pb FileField + `media.SaveFile()` | `onRecordCreateRequest("media")`        | ✅ 用户可加后处理       |
 | 图片查重           | `media.Dedup()`                   | 不暴露                                | ❌                      |
 | S3 存储            | `media.S3Driver`                  | 不暴露                                | ❌                      |
 | 迁移工具           | `migration.Import()`              | 不暴露(用户通过 Admin UI 触发)        | ❌                      |
@@ -474,7 +474,7 @@ routerAdd(
     const result = vanblog.migration.import(json);
     return c.json(200, result);
   },
-  $apis.requireAdminAuth()
+  $apis.requireAuth()
 );
 ```
 
@@ -517,7 +517,7 @@ routerAdd(
 | 之前(schema-design §4)              | 现在(本文档)                                     |
 | ----------------------------------- | ------------------------------------------------ |
 | 全部功能用 pb_hooks 实现            | 核心用 Go SDK,扩展用 JSVM                        |
-| `OnRecordBeforeUpdate` 写 revisions | Go hook 写 revisions(JSVM 可覆盖)                |
+| `OnRecordUpdateRequest` 写 revisions | Go hook 写 revisions(JSVM 可覆盖)                |
 | `routerAdd` 实现迁移端点            | Go 实现迁移,JSVM 只是入口                        |
 | `$http.send` 调 Caddy               | Go `net/http` 调 Caddy,JSVM 调 `vanblog.caddy.*` |
 | `$os.writeFile` 写 md_output        | Go `os.WriteFile` 写 md_output                   |

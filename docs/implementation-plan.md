@@ -259,7 +259,7 @@ vanblog.caddy.getRoutes();
 
 ```go
 // Snapshot 在 posts 更新前,把旧版本写入 revisions 表
-// 作为 OnRecordBeforeUpdate("posts") hook 的实现
+// 作为 OnRecordUpdateRequest("posts") hook 的实现
 func Snapshot(app *pocketbase.PocketBase, oldRecord *core.Record) error
 ```
 
@@ -275,7 +275,7 @@ func ComputeDiff(old, new string) string
 
 ```go
 // Restore 把某个 revision 的 snapshot 写回 posts
-// 会再次触发 OnRecordBeforeUpdate → 产生新 revision(reason="restore")
+// 会再次触发 OnRecordUpdateRequest → 产生新 revision(reason="restore")
 // 学习 git:revert 也是一次 commit
 func Restore(app *pocketbase.PocketBase, revisionId string) error
 ```
@@ -284,7 +284,7 @@ func Restore(app *pocketbase.PocketBase, revisionId string) error
 
 ```javascript
 // 用户自定义:某些文章不记录历史
-onRecordBeforeUpdate((e) => {
+onRecordUpdateRequest((e) => {
   if (e.record.get("category") === "ephemeral") {
     e.skipRevision = true; // 跳过快照(如果暴露此标志)
   }
@@ -493,7 +493,7 @@ func ScanArticleImages(app *pocketbase.PocketBase, postId string) error
 
 ```javascript
 // 上传后的自定义处理(如额外生成 favicon size)
-onRecordAfterCreate((e) => {
+onRecordCreateRequest((e) => {
   if (e.record.get("staticType") === "favicon") {
     vanblog.media.generateThumb(e.record.id, "32x32");
   }

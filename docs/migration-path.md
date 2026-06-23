@@ -93,7 +93,7 @@
 
 - 前端(Astro admin UI):文件上传组件,调用 pb custom route
 - 后端(pb_hooks JSVM):custom route 接收 JSON,逐表转换写入
-- 大库优化:超过 1000 篇文章时前端显示进度条,后端分批 `dao.runInTransaction()`
+- 大库优化:超过 1000 篇文章时前端显示进度条,后端分批 `app.RunInTransaction()`
 
 ---
 
@@ -389,7 +389,7 @@ posts: {
 
 - **默认开启**(`site.revisions.enabled = true`)
 - 不迁移(老 Vanblog 无此功能)
-- 由 `OnRecordBeforeUpdate("posts")` hook 自动写入
+- 由 `OnRecordUpdateRequest("posts")` hook 自动写入
 - 保留策略:`site.revisions.retention`(默认 50 版/篇,LRU 清理)
 
 ### 8.2 Markdown 外部输出(`md_output`)
@@ -435,7 +435,7 @@ posts: {
 
 迁移失败时:
 
-1. **事务回滚**:pb_hooks 用 `dao.runInTransaction()`,任一表失败则全部回滚
+1. **事务回滚**:Go 层用 `app.RunInTransaction(func(txApp core.App) error {...})`,任一表失败则全部回滚
 2. **保留原 JSON**:用户原 `temp.json` 不修改,可重试
 3. **清空库重试**:Admin UI 提供"清空所有数据"按钮(危险操作,二次确认)
 4. **原项目不动**:迁移是只读原 JSON,原 Vanblog 实例完全不受影响

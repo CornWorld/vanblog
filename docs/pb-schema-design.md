@@ -65,7 +65,11 @@
 | —             | pb 内置 `password`            | `password` + `salt` | pb 自动加盐           |
 | —             | pb 内置 `created` / `updated` | `createdAt`         | autodate              |
 
-**权限枚举**(来自 `access/access.ts`):
+> **⚠️ 实施注意**: users 是 Auth Collection,需用 `core.NewAuthCollection("users")` 创建。
+> 默认 identity 是 email,我们用 username 登录,必须配 `PasswordAuth.IdentityFields = ["username"]`,
+> 否则用户只能用 email 登录。
+
+**权限枚举**(select options,来自 `access/access.ts`):
 
 ```
 article:create, article:delete, article:update,
@@ -74,8 +78,9 @@ img:delete, all
 ```
 
 **Rule**:
+**Rule**:
 
-- List/View: `@request.auth.id != ""`
+- List/View: `@request.auth.id != "" && (@request.auth.role = "admin" || @request.auth.id = id)` — 管理员或自己
 - Create/Update/Delete: `@request.auth.role = "admin"`
 
 ---
@@ -113,7 +118,7 @@ img:delete, all
 **Rule**:
 
 - List/View: `status = "published" && private = false` || `@request.auth.id != ""`
-- Create/Update/Delete: `@request.auth.id != "" && (@request.auth.role = "admin" || @request.auth.permissions ?~ "article:.*")`
+- Create/Update/Delete: `@request.auth.id != "" && (@request.auth.role = "admin" || @request.auth.permissions ?~ "article:")`
 
 ---
 
@@ -175,13 +180,13 @@ img:delete, all
 
 **机制**:
 
-- `OnRecordBeforeUpdate("posts")` hook:把**旧版本**写入 `revisions`
+- `OnRecordUpdateRequest("posts")` hook:在 `e.Next()` **之前**把**旧版本**写入 `revisions`(HTTP 级别 hook,API 请求触发)
 - 后台 UI 列出历史,点击"恢复"即将 snapshot 写回 posts
 - 保留策略:`site.revisions.retention`(默认 50 版/篇,LRU 清理)
 
 **循环触发处理(学习 git)**:
 
-- 恢复操作走正常 update 流程,**会再次触发 OnRecordBeforeUpdate**,产生新 revision(`reason="restore"`)
+- 恢复操作走正常 update 流程,**会再次触发 OnRecordUpdateRequest**,产生新 revision(`reason="restore"`)
 - 不绕过 hook,不特殊处理 —— 语义清晰,与 git revert 产生新 commit 一致
 - 前端按 `reason` 字段折叠显示 restore 记录,避免历史列表噪音
 
@@ -330,7 +335,7 @@ img:delete, all
 
 **Hook**:
 
-- `OnRecordAfterCreate("visits")`:如果是文章级记录,同步累加 `posts.viewCount`
+- `OnRecordCreateRequest("visits")`:如果是文章级记录,同步累加 `posts.viewCount`
 - 定时任务:每天结束生成全站聚合行(`path = ""`)
 
 **Rule**:
@@ -402,13 +407,18 @@ img:delete, all
 
 > Pipeline 已完全砍掉。此处只列**系统必要钩子**,不是用户可配置的"流水线"。
 
-| 钩子                                   | 用途                                                |
-| -------------------------------------- | --------------------------------------------------- |
-| `OnRecordBeforeUpdate("posts")`        | 写入 `revisions` 表(旧版本快照)                     |
-| `OnRecordAfterUpdate("posts")`         | 可选:触发 `site.output` markdown 导出               |
-| `OnRecordAfterCreate("visits")`        | 累加 `posts.viewCount`                              |
-| `OnRecordAfterAuthRecordAuth("users")` | 写入 `audits` 表(action='auth.login')               |
-| 定时(cron)                             | 每日生成 `visits` 全站聚合行 + `site.sync` git push |
+| 钩子(pb 0.39 验证)                                 | 用途                                                |
+| -------------------------------------------------- | --------------------------------------------------- |
+| `OnRecordUpdateRequest("posts")` before `e.Next()` | 写入 `revisions` 表(旧版本快照)                     |
+| `OnRecordUpdateRequest("posts")` after `e.Next()`  | 可选:触发 `site.output` markdown 导出               |
+| `OnRecordCreateRequest("visits")` after `e.Next()` | 累加 `posts.viewCount`                              |
+| `OnRecordAuthRequest("users")`                     | 写入 `audits` 表(action='auth.login')               |
+| `cronAdd`(JSVM) / 定时任务(Go)                     | 每日生成 `visits` 全站聚合行 + `site.sync` git push |
+
+> **注意**: `app.Save()` 触发的是 model-level hooks (`OnRecordCreate` / `OnRecordUpdate`),
+> 不是 HTTP-level hooks (`OnRecordCreateRequest` / `OnRecordUpdateRequest`)。
+> revisions 快照必须在 HTTP-level 写(能拿到 API 请求上下文 + before/after 区分)。
+> model-level hooks 适合不依赖请求的内部逻辑(如 visits 计数由 Go 层 Save 触发)。
 
 ---
 
