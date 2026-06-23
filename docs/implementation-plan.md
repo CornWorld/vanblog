@@ -3,6 +3,7 @@
 > **依据**:[`architecture-layering.md`](./architecture-layering.md) + [原项目源码](file:///Users/corn/Code/vanblog-upstream/packages/server/src/)
 >
 > 逐模块产出实施计划,每个模块包含:
+>
 > - pb 原生覆盖(不需要我们写)
 > - Go 增量(具体函数签名 + 行数估计)
 > - JSVM 扩展点(暴露什么给用户)
@@ -14,72 +15,149 @@
 ## 模块 0:`pb_migrations/` — Schema 初始化
 
 ### pb 原生覆盖
+
 无 —— 必须手写 migration 创建 collections。
 
 ### Go 增量(~200 行)
 
 **文件**:`pb_migrations/001_init_collections.go`(~150 行)
+
 - 创建 10 个 collections(含字段 + 索引 + Rule)
 - 来源:[`pb-schema-design.md`](./pb-schema-design.md) §2 的定义
 
 **文件**:`pb_migrations/002_default_site.go`(~50 行)
+
 - 插入 `site` 表 id=1 的默认行(空 nav/links/socials/rewards + 默认 theme=default + revisions.enabled=true + output/sync 关闭)
 
 ### JSVM 扩展点
+
 无 —— migration 在启动时自动执行。
 
 ### 实现步骤
+
 1. 用 pb Admin UI 手动创建 collections → 导出为 Go migration 代码
 2. 调整 Rule 表达式(从 schema-design.md 复制)
 3. 编写 002_default_site.go(硬编码默认 JSON)
 4. 测试:从空数据库启动,验证 collections + site 行创建正确
 
 ### Done 当
+
 - [ ] `go test ./pb_migrations/...` 通过
 - [ ] 全新 SQLite 启动后,Admin UI 可见 10 个 collections
 - [ ] `site` 表有且仅有 1 行,默认值正确
 
 ---
 
-## 模块 1:`internal/caddy/` — Caddy 集成
+## 模块 1:`internal/caddy/` + `utils/caddyadmin/` — Caddy 集成
 
 ### pb 原生覆盖
+
 无 —— pb 不涉及反代 / TLS / 路由。
 
-### Go 增量(~350 行,比原项目多)
+### 分层:`utils/caddyadmin/`(通用工具)+ `internal/caddy/`(vanblog 业务)
 
-> **为什么比原项目 136 行多**:原项目只管 TLS 配置(subjects/redirect),路由是 Caddyfile 写死的。我们新增了 `site.routing` DSL → caddy config 的**翻译 + SSRF 校验 + 持久化**,这是原项目没有的能力(见 [`routing-strategy.md`](./routing-strategy.md))。
+**关键设计**:Caddy admin API 客户端是通用 HTTP 工具,与 vanblog 业务无关,独立成 `utils/caddyadmin/` 包。vanblog 的 `internal/caddy/` 调用它,加上业务层逻辑(路由翻译 / SSRF / 模板)。
 
-### 文件拆分
+```
+vault/
+  utils/
+    caddyadmin/              # ★ 通用 Caddy admin API HTTP 客户端(与 vanblog 无关)
+      client.go             # GET/POST/PATCH/DELETE /config/...
+      types.go              # CaddyRoute / CaddyConfig / TLSPolicy 等 JSON 结构
+      errors.go             # Caddy API 错误类型
+      client_test.go        # 独立单元测试(mock HTTP server)
+  internal/
+    caddy/                   # ★ vanblog 业务层(调用 utils/caddyadmin)
+      ssrf.go               # SSRF 白名单(vanblog 特有)
+      translator.go         # site.routing DSL → caddy route(vanblog 特有)
+      template.go           # prod/dev Caddyfile 模板(vanblog 特有)
+      ask.go                # on-demand TLS ask 端点(vanblog 特有)
+      bootstrap.go          # 启动时同步 site.routing(vanblog 特有)
+```
 
-#### `internal/caddy/client.go`(~80 行)
+### `utils/caddyadmin/`(~150 行,通用工具)
 
-Caddy admin API 的 HTTP 客户端封装。
+#### `utils/caddyadmin/client.go`(~100 行)
+
+纯 HTTP 客户端,对应 Caddy admin API 的 REST 接口。
 
 ```go
+package caddyadmin
+
 type Client struct {
-    baseURL    string  // "http://127.0.0.1:2019"
+    baseURL    string           // "http://127.0.0.1:2019"
     httpClient *http.Client
 }
 
 func NewClient(baseURL string) *Client
 
-// 原项目 caddy.provider.ts 的能力
-func (c *Client) GetConfig() (json.RawMessage, error)
-func (c *Client) SetRedirect(enable bool) error           // POST/DELETE listener_wrappers
-func (c *Client) UpdateSubjects(domains []string) error   // PATCH tls/automation/policies/0/subjects
-func (c *Client) UpdateCerts(domains []string) error      // PATCH tls/certificates/automate
-func (c *Client) GetLog() (string, error)                 // 读 /var/log/caddy.log
+// --- Config 全局 ---
+func (c *Client) GetConfig() (json.RawMessage, error)              // GET /config
+func (c *Client) LoadConfig(config json.RawMessage) error          // POST /load(原子替换)
+func (c *Client) GetConfigPath(path string) (json.RawMessage, error) // GET /config/{path}
+func (c *Client) PatchConfigPath(path string, value interface{}) error // PATCH /config/{path}
+func (c *Client) DeleteConfigPath(path string) error               // DELETE /config/{path}
 
-// 新增:路由管理(基于 @id)
-func (c *Client) AddRoute(route CaddyRoute) error         // POST routes/...
-func (c *Client) RemoveRoute(id string) error             // DELETE /id/{id}
-func (c *Client) GetRoutes() ([]CaddyRoute, error)        // GET routes
+// --- TLS 管理 ---
+func (c *Client) GetTLSSubjects() ([]string, error)                // GET .../tls/automation/policies/subjects
+func (c *Client) UpdateTLSSubjects(domains []string) error         // PATCH .../tls/automation/policies/0/subjects
+func (c *Client) GetAutocertDomains() ([]string, error)            // GET .../tls/certificates/automate
+func (c *Client) UpdateAutocertDomains(domains []string) error     // PATCH .../tls/certificates/automate
+
+// --- HTTP server ---
+func (c *Client) SetHTTPRedirect(enable bool) error                // POST/DELETE listener_wrappers
+
+// --- 路由管理(基于 @id)---
+func (c *Client) AddRoute(route Route) error                       // POST .../routes/...
+func (c *Client) RemoveRoute(id string) error                      // DELETE /id/{id}
+func (c *Client) GetRoutes() ([]Route, error)                      // GET .../routes
 ```
+
+#### `utils/caddyadmin/types.go`(~40 行)
+
+Caddy JSON config 的 Go 结构体(只定义我们用到的部分)。
+
+```go
+type Route struct {
+    ID    string `json:"@id,omitempty"`
+    Match []MatchRule `json:"match,omitempty"`
+    Handle []Handler `json:"handle,omitempty"`
+}
+
+type MatchRule struct {
+    Path []string `json:"path,omitempty"`
+    Host []string `json:"host,omitempty"`
+}
+
+type Handler struct {
+    Handler   string `json:"handler"`  // reverse_proxy / static_response / rewrite / etc
+    // reverse_proxy fields
+    Upstreams []Upstream `json:"upstreams,omitempty"`
+    // static_response fields
+    StatusCode int `json:"status_code,omitempty"`
+    Headers    map[string][]string `json:"headers,omitempty"`
+}
+
+type Upstream struct {
+    Dial string `json:"dial"`
+}
+```
+
+#### `utils/caddyadmin/errors.go`(~10 行)
+
+```go
+type APIError struct {
+    StatusCode int
+    Body       string
+}
+func (e *APIError) Error() string
+```
+
+### `internal/caddy/`(~200 行,vanblog 业务层)
 
 #### `internal/caddy/ssrf.go`(~60 行)
 
-SSRF 白名单校验(用户配置的 proxy target 必须通过)。
+SSRF 白名单校验(vanblog 特有,通用包不管)。
 
 ```go
 var DefaultAllowlist = []string{
@@ -89,96 +167,82 @@ var DefaultAllowlist = []string{
 }
 
 // ValidateTarget 校验用户配置的 proxy target 是否安全
-// 禁止:云元数据 IP(169.254.169.254)、公网 IP(不在白名单)、link-local
 func ValidateTarget(rawURL string, allowlist []string) error
 ```
 
-#### `internal/caddy/translator.go`(~100 行)
+#### `internal/caddy/translator.go`(~80 行)
 
-`site.routing` DSL → Caddy JSON route 翻译。
+`site.routing` DSL → `caddyadmin.Route` 翻译(vanblog 特有)。
 
 ```go
 type UserRule struct {
     ID       string `json:"id"`
     Type     string `json:"type"`     // proxy/redirect/rewrite/block
     From     string `json:"from"`     // glob: /api/internal/*
-    To       string `json:"to"`       // URL or path
-    Code     int    `json:"code"`     // redirect code
+    To       string `json:"to"`
+    Code     int    `json:"code"`
     Headers  map[string]string `json:"headers"`
 }
 
-// Translate 把用户规则翻译为 Caddy route JSON
-func Translate(rule UserRule) (CaddyRoute, error)
+// Translate 把用户规则翻译为 Caddy route
+func Translate(rule UserRule) (caddyadmin.Route, error)
 
-// TranslateAll 批量翻译 + 冲突检测(保留路径检查)
-func TranslateAll(rules []UserRule, reservedPaths []string) ([]CaddyRoute, error)
+// TranslateAll 批量翻译 + 保留路径冲突检测
+func TranslateAll(rules []UserRule, reservedPaths []string) ([]caddyadmin.Route, error)
 ```
 
-**保留路径**:`/api/* /static/* /admin/* /favicon* /feed.* /sitemap.xml /atom.xml /rss/*`
-
-#### `internal/caddy/template.go`(~60 行)
-
-Caddyfile 模板渲染(prod / dev 两份)。
+#### `internal/caddy/template.go`(~30 行)
 
 ```go
-// RenderProdCaddyfile 渲染 prod Caddyfile(SSG,file_server 兜底)
 func RenderProdCaddyfile(opts TemplateOpts) string
-
-// RenderDevCaddyfile 渲染 dev Caddyfile(reverse_proxy 到 Astro dev server)
 func RenderDevCaddyfile(opts TemplateOpts) string
-
-type TemplateOpts struct {
-    Email          string
-    LogLevel       string // warn by default
-    AskEndpoint    string // http://127.0.0.1:8090/api/hooks/caddy/ask
-    AdminBind      string // 127.0.0.1:2019
-}
 ```
 
-#### `internal/caddy/ask.go`(~30 行)
-
-`/api/hooks/caddy/ask` 端点逻辑(从 site.allowedDomains 查询)。
+#### `internal/caddy/ask.go`(~15 行)
 
 ```go
-// AskHandler 处理 Caddy on-demand TLS 的 ask 请求
-// 返回 200 = 允许签发证书,403 = 拒绝
-func AskHandler(site models.Site, domain string) bool
+func AskHandler(allowedDomains []string, domain string) bool
 ```
 
-#### `internal/caddy/bootstrap.go`(~20 行)
-
-启动时同步逻辑:读 site.routing → 翻译 → 应用到 caddy。
+#### `internal/caddy/bootstrap.go`(~15 行)
 
 ```go
-// SyncRoutes 在 pb 启动时调用,把 site.routing 同步到 Caddy
-func SyncRoutes(client *Client, rules []UserRule) error
+func SyncRoutes(client *caddyadmin.Client, rules []UserRule) error
 ```
 
 ### JSVM 扩展点
 
 ```javascript
-// 用户在 pb_hooks/ 里调用
-vanblog.caddy.addRoute({ id: "my-proxy", type: "proxy", from: "/my/*", to: "http://localhost:3000" })
-vanblog.caddy.removeRoute("my-proxy")
-vanblog.caddy.getRoutes()
+vanblog.caddy.addRoute({
+  id: "my-proxy",
+  type: "proxy",
+  from: "/my/*",
+  to: "http://localhost:3000",
+});
+vanblog.caddy.removeRoute("my-proxy");
+vanblog.caddy.getRoutes();
 ```
 
 ### 依赖
-- 无外部 Go 库(纯 net/http + net/url + encoding/json)
+
+- `utils/caddyadmin`:无外部依赖(纯 net/http + encoding/json)
+- `internal/caddy`:依赖 `utils/caddyadmin`
 
 ### 实现步骤
-1. `client.go`:对照原项目 caddy.provider.ts 实现 6 个方法
-2. `ssrf.go`:实现白名单 + 云元数据防护
-3. `translator.go`:DSL → Caddy JSON 翻译 + 保留路径校验
-4. `template.go`:prod/dev Caddyfile 模板(字符串拼接,对照 https-strategy.md §3)
-5. `ask.go`:查询 site.allowedDomains
-6. `bootstrap.go`:启动时同步 site.routing
-7. 写 JSVM 绑定 `internal/hooks/bind_caddy.go`
+
+1. `utils/caddyadmin/client.go`:实现通用 HTTP 客户端(对照 Caddy admin API 文档)
+2. `utils/caddyadmin/client_test.go`:用 `httptest.NewServer` mock Caddy,测试所有方法
+3. `internal/caddy/ssrf.go`:白名单 + 云元数据防护
+4. `internal/caddy/translator.go`:DSL 翻译 + 保留路径校验
+5. `internal/caddy/template.go`:prod/dev Caddyfile 模板
+6. `internal/caddy/ask.go` + `bootstrap.go`:端点 + 启动同步
 
 ### Done 当
-- [ ] 单元测试:ssrf 校验拒绝 169.254.169.254 / 公网 IP
-- [ ] 单元测试:translator 正确翻译 proxy/redirect/rewrite/block
-- [ ] 单元测试:translator 拒绝保留路径冲突
+
+- [ ] `utils/caddyadmin` 单元测试全通过(mock HTTP)
+- [ ] `internal/caddy` SSRF 校验拒绝 169.254.169.254 / 公网 IP
+- [ ] translator 正确翻译 proxy/redirect/rewrite/block
+- [ ] translator 拒绝保留路径冲突
 - [ ] 集成测试:启动 Caddy → bootstrap 同步 → 路由生效
 
 ---
@@ -186,6 +250,7 @@ vanblog.caddy.getRoutes()
 ## 模块 2:`internal/revisions/` — 文章历史版本
 
 ### pb 原生覆盖
+
 无 —— pb 没有 record 历史版本功能。
 
 ### Go 增量(~100 行)
@@ -216,19 +281,22 @@ func Restore(app *pocketbase.PocketBase, revisionId string) error
 ```
 
 ### JSVM 扩展点
+
 ```javascript
 // 用户自定义:某些文章不记录历史
 onRecordBeforeUpdate((e) => {
-    if (e.record.get("category") === "ephemeral") {
-        e.skipRevision = true  // 跳过快照(如果暴露此标志)
-    }
-}, "posts")
+  if (e.record.get("category") === "ephemeral") {
+    e.skipRevision = true; // 跳过快照(如果暴露此标志)
+  }
+}, "posts");
 ```
 
 ### 依赖
+
 - `github.com/sergi/go-diff`(diff 计算)
 
 ### Done 当
+
 - [ ] 更新 posts → revisions 表自动写入旧版本
 - [ ] 恢复操作 → 产生 reason="restore" 的新 revision
 - [ ] 前端能列出历史 + 一键恢复
@@ -238,6 +306,7 @@ onRecordBeforeUpdate((e) => {
 ## 模块 3:`internal/migration/` — 迁移工具
 
 ### pb 原生覆盖
+
 无 —— 这是 Vanblog 特有的 JSON 格式转换。
 
 ### Go 增量(~250 行)
@@ -308,18 +377,21 @@ func BuildMigrationArchive(data LegacyBackup) *Post
 ```
 
 ### JSVM 扩展点
+
 ```javascript
 // 只是入口,不做逻辑
 routerAdd("POST", "/api/migrate/import", (c) => {
-    const result = vanblog.migration.import(c.request.body)
-    return c.json(200, result)
-})
+  const result = vanblog.migration.import(c.request.body);
+  return c.json(200, result);
+});
 ```
 
 ### 依赖
+
 - 无外部库(标准库 encoding/json)
 
 ### Done 当
+
 - [ ] 原项目导出的 temp.json 能成功导入
 - [ ] 导入后文章数 = articles.length + drafts.length
 - [ ] 不兼容数据出现在迁移档案 post 里
@@ -330,6 +402,7 @@ routerAdd("POST", "/api/migrate/import", (c) => {
 ## 模块 4:`internal/article/` — 文章业务逻辑
 
 ### pb 原生覆盖
+
 ~80% —— CRUD / 分页 / 过滤 / 排序 = pb 自动 API。
 
 ### Go 增量(~120 行)
@@ -377,13 +450,15 @@ func Publish(app *pocketbase.PocketBase, draftId string) error
 ```
 
 ### JSVM 扩展点
+
 ```javascript
-vanblog.article.getTimeline()
-vanblog.article.search("关键词", { limit: 10 })
-vanblog.article.publish("DRAFT_ID")
+vanblog.article.getTimeline();
+vanblog.article.search("关键词", { limit: 10 });
+vanblog.article.publish("DRAFT_ID");
 ```
 
 ### Done 当
+
 - [ ] 时间线聚合正确(按年-月)
 - [ ] 搜索能命中 title / content / tags
 - [ ] 草稿发布后 status 变为 published
@@ -393,6 +468,7 @@ vanblog.article.publish("DRAFT_ID")
 ## 模块 5:`internal/media/` — 图床
 
 ### pb 原生覆盖
+
 ~90% —— FileField 覆盖上传 / 存储(本地+S3)/ thumbs / MIME 校验 / 大小限制。
 
 ### Go 增量(~80 行)
@@ -414,16 +490,18 @@ func ScanArticleImages(app *pocketbase.PocketBase, postId string) error
 ```
 
 ### JSVM 扩展点
+
 ```javascript
 // 上传后的自定义处理(如额外生成 favicon size)
 onRecordAfterCreate((e) => {
-    if (e.record.get("staticType") === "favicon") {
-        vanblog.media.generateThumb(e.record.id, "32x32")
-    }
-}, "media")
+  if (e.record.get("staticType") === "favicon") {
+    vanblog.media.generateThumb(e.record.id, "32x32");
+  }
+}, "media");
 ```
 
 ### Done 当
+
 - [ ] 上传相同文件 → 返回已有记录(MD5 查重)
 - [ ] S3 存储后端可配(pb Settings → Storage)
 
@@ -432,6 +510,7 @@ onRecordAfterCreate((e) => {
 ## 模块 6:`internal/visits/` — 访问计数
 
 ### pb 原生覆盖
+
 ~50% —— visits 表的 CRUD 是自动的,但计数聚合需要手写。
 
 ### Go 增量(~80 行)
@@ -462,11 +541,13 @@ func GetDailySummary(app *pocketbase.PocketBase, date string) (DailySummary, err
 ```
 
 ### JSVM 扩展点
+
 ```javascript
-vanblog.visits.getDailySummary("2024-01-01")
+vanblog.visits.getDailySummary("2024-01-01");
 ```
 
 ### Done 当
+
 - [ ] 前台访问 → visits 表写入 + posts.viewCount 递增
 - [ ] 每日 cron 生成全站聚合行
 
@@ -475,6 +556,7 @@ vanblog.visits.getDailySummary("2024-01-01")
 ## 模块 7:`internal/markdown/` — Markdown 渲染
 
 ### pb 原生覆盖
+
 无 —— pb 不做 markdown 渲染。
 
 ### Go 增量(~80 行)
@@ -491,16 +573,19 @@ func RenderExcerpt(md string) (string, error)
 ```
 
 **Go 库**:
+
 - `github.com/yuin/goldmark` — 核心
 - `github.com/yuin/goldmark-highlighting` — 代码高亮
 - 自定义 katex 扩展(或前端 KaTeX auto-render)
 
 ### JSVM 扩展点
+
 ```javascript
-const html = vanblog.markdown.render("**hello**")
+const html = vanblog.markdown.render("**hello**");
 ```
 
 ### Done 当
+
 - [ ] GFM 表格 / 任务列表 / 代码高亮正确渲染
 - [ ] `<!-- more -->` 分割摘要
 
@@ -509,6 +594,7 @@ const html = vanblog.markdown.render("**hello**")
 ## 模块 8:`internal/rss/` + `internal/sitemap/` — Feed 生成
 
 ### pb 原生覆盖
+
 无。
 
 ### Go 增量(~150 行)
@@ -539,10 +625,12 @@ func GenerateSitemap(app *pocketbase.PocketBase, siteURL string) ([]byte, error)
 ```
 
 ### 实现细节
+
 - 作为 pb 自定义路由暴露(`/feed.xml` / `/atom.xml` / `/sitemap.xml`)
 - 或写入静态文件(配合 `site.output`)
 
 ### Done 当
+
 - [ ] RSS reader(Feedly / NetNewsWire)能订阅
 - [ ] Google Search Console 能提交 sitemap
 
@@ -590,6 +678,7 @@ func BindMarkdown(vm *goja.Runtime)
 ```
 
 ### Done 当
+
 - [ ] JSVM 里 `vanblog.article.search("test")` 能调用 Go 实现
 - [ ] TypeScript 声明文件 `pb_hooks/lib/vanblog.js` 与实际绑定一致
 
@@ -623,19 +712,20 @@ Phase 4: JSVM 扩展点 + 示例
 
 ## 总计 Go 代码量(修正后)
 
-| 模块 | 行数 | 累计 |
-|---|---|---|
-| pb_migrations | ~200 | 200 |
-| caddy | ~350 | 550 |
-| revisions | ~100 | 650 |
-| migration | ~250 | 900 |
-| article | ~120 | 1020 |
-| media | ~80 | 1100 |
-| visits | ~80 | 1180 |
-| markdown | ~80 | 1260 |
-| rss + sitemap | ~150 | 1410 |
-| hooks 绑定 | ~150 | 1560 |
-| main.go | ~30 | 1590 |
-| **总计** | **~1590** | |
+| 模块             | 行数      | 累计 |
+| ---------------- | --------- | ---- |
+| pb_migrations    | ~200      | 200  |
+| utils/caddyadmin | ~150      | 350  |
+| internal/caddy   | ~200      | 550  |
+| revisions        | ~100      | 650  |
+| migration        | ~250      | 900  |
+| article          | ~120      | 1020 |
+| media            | ~80       | 1100 |
+| visits           | ~80       | 1180 |
+| markdown         | ~80       | 1260 |
+| rss + sitemap    | ~150      | 1410 |
+| hooks 绑定       | ~150      | 1560 |
+| main.go          | ~30       | 1590 |
+| **总计**         | **~1590** |      |
 
 > 比之前估算的 ~940 行多,主要因为 caddy 模块从 80 → 350(新增路由翻译 + SSRF + 模板渲染,原项目没有)和 migration 工具(150 → 250,含归档)。
