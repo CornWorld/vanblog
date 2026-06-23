@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 
+	"github.com/cornworld/vanblog/internal/hooks"
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/core"
 
@@ -13,15 +14,12 @@ import (
 func main() {
 	app := pocketbase.New()
 
-	// Register vanblog-specific hooks and custom routes here as we build them.
-	// For now this is a vanilla PocketBase with vanblog's schema migrations.
+	// Register vanblog hooks, custom routes, and Caddy sync.
+	// This wires all Go SDK modules into PocketBase's event system.
+	hooks.Register(app)
+
+	// The OnServe placeholder is kept for any future inline registrations.
 	app.OnServe().BindFunc(func(se *core.ServeEvent) error {
-		// vanblog hooks will be registered here:
-		// - caddy admin API integration
-		// - caddy/ask endpoint
-		// - revisions snapshot on posts update
-		// - migration import endpoint
-		// - etc.
 		return se.Next()
 	})
 
