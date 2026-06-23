@@ -43,7 +43,7 @@ func init() {
 		return insertDefaultSite(db)
 	}, func(db core.App) error {
 		names := []string{"tokens", "audits", "visits", "site", "media",
-			"revisions", "posts", "users", "categories", "tags"}
+			"revisions", "posts", "categories", "tags"}
 		for _, name := range names {
 			col, err := db.FindCollectionByNameOrId(name)
 			if err != nil {
@@ -58,6 +58,8 @@ func init() {
 }
 
 func strPtr(s string) *string { return &s }
+
+// --- Collections ---
 
 func createTags(db core.App) error {
 	col := core.NewCollection(core.CollectionTypeBase, "tags")
@@ -85,10 +87,8 @@ func createCategories(db core.App) error {
 
 func createUsers(db core.App) error {
 	// pb 0.39 creates a default empty 'users' collection on bootstrap.
-	// We need to update it in place rather than create a new one.
 	col, err := db.FindCollectionByNameOrId("users")
 	if err != nil {
-		// If it doesn't exist for some reason, create it
 		col = core.NewCollection(core.CollectionTypeAuth, "users")
 	}
 	col.Fields.Add(&core.TextField{Name: "username", Required: true})
@@ -195,23 +195,105 @@ func createMedia(db core.App) error {
 
 func createSite(db core.App) error {
 	col := core.NewCollection(core.CollectionTypeBase, "site")
-	col.Fields.Add(&core.JSONField{Name: "info"})
+
+	// --- 标量配置（原 info JSON 拆为独立列，Admin UI 可直接编辑）---
+
+	// 站点基本信息
+	col.Fields.Add(&core.TextField{Name: "siteName"})
+	col.Fields.Add(&core.TextField{Name: "siteDesc"})
+	col.Fields.Add(&core.TextField{Name: "author"})
+	col.Fields.Add(&core.TextField{Name: "authorDesc"})
+	col.Fields.Add(&core.TextField{Name: "authorLogo"})
+	col.Fields.Add(&core.TextField{Name: "authorLogoDark"})
+	col.Fields.Add(&core.TextField{Name: "siteLogo"})
+	col.Fields.Add(&core.TextField{Name: "siteLogoDark"})
+	col.Fields.Add(&core.TextField{Name: "baseUrl"})
+	col.Fields.Add(&core.DateField{Name: "since"})
+	col.Fields.Add(&core.TextField{Name: "copyrightAggreement"})
+
+	// 备案
+	col.Fields.Add(&core.TextField{Name: "beianNumber"})
+	col.Fields.Add(&core.TextField{Name: "beianUrl"})
+	col.Fields.Add(&core.TextField{Name: "gaBeianNumber"})
+	col.Fields.Add(&core.TextField{Name: "gaBeianUrl"})
+	col.Fields.Add(&core.TextField{Name: "gaBeianLogoUrl"})
+
+	// 支付
+	col.Fields.Add(&core.TextField{Name: "payAliPay"})
+	col.Fields.Add(&core.TextField{Name: "payWechat"})
+	col.Fields.Add(&core.TextField{Name: "payAliPayDark"})
+	col.Fields.Add(&core.TextField{Name: "payWechatDark"})
+
+	// 主题
 	col.Fields.Add(&core.SelectField{Name: "theme", Values: []string{"default", "minimal", "magazine", "custom"}})
+	col.Fields.Add(&core.SelectField{Name: "defaultTheme", Values: []string{"auto", "light", "dark"}})
+
+	// 评论
 	col.Fields.Add(&core.SelectField{Name: "commentsProvider", Values: []string{"disabled", "waline", "giscus", "artalk", "external"}})
-	col.Fields.Add(&core.JSONField{Name: "commentsConfig"})
+	col.Fields.Add(&core.JSONField{Name: "commentsConfig"}) // provider 特有配置(giscus repo/waline url 等)
+
+	// 统计
 	col.Fields.Add(&core.TextField{Name: "analyticsScript"})
-	col.Fields.Add(&core.JSONField{Name: "nav"})
-	col.Fields.Add(&core.JSONField{Name: "links"})
-	col.Fields.Add(&core.JSONField{Name: "socials"})
-	col.Fields.Add(&core.JSONField{Name: "rewards"})
-	col.Fields.Add(&core.JSONField{Name: "about"})
-	col.Fields.Add(&core.JSONField{Name: "customize"})
-	col.Fields.Add(&core.JSONField{Name: "imageConfig"})
-	col.Fields.Add(&core.JSONField{Name: "routing"})
-	col.Fields.Add(&core.JSONField{Name: "allowedDomains"})
-	col.Fields.Add(&core.JSONField{Name: "revisions"})
-	col.Fields.Add(&core.JSONField{Name: "output"})
-	col.Fields.Add(&core.JSONField{Name: "sync"})
+
+	// 关于页面(原 about JSON 拆开)
+	col.Fields.Add(&core.TextField{Name: "aboutContent"})
+	col.Fields.Add(&core.DateField{Name: "aboutUpdatedAt"})
+
+	// 自定义注入(原 customize JSON 拆开)
+	col.Fields.Add(&core.TextField{Name: "customHead"})
+	col.Fields.Add(&core.TextField{Name: "customCss"})
+	col.Fields.Add(&core.TextField{Name: "customHtml"})
+	col.Fields.Add(&core.TextField{Name: "customScript"})
+
+	// 图片处理(原 imageConfig JSON 拆开)
+	col.Fields.Add(&core.BoolField{Name: "enableWatermark"})
+	col.Fields.Add(&core.TextField{Name: "watermarkText"})
+	col.Fields.Add(&core.BoolField{Name: "enableWebp"})
+
+	// Caddy / HTTPS
+	col.Fields.Add(&core.JSONField{Name: "routing"})          // 动态路由规则数组
+	col.Fields.Add(&core.JSONField{Name: "allowedDomains"})   // on-demand TLS 白名单
+	col.Fields.Add(&core.BoolField{Name: "httpsRedirect"})
+	col.Fields.Add(&core.TextField{Name: "caddyLogLevel"})
+
+	// 版本控制设置(原 revisions JSON 拆开)
+	col.Fields.Add(&core.BoolField{Name: "revisionsEnabled"})
+	col.Fields.Add(&core.NumberField{Name: "revisionsRetention"})
+
+	// 显示开关(原 siteInfo 的各种 bool 拆开)
+	col.Fields.Add(&core.BoolField{Name: "showAdminButton"})
+	col.Fields.Add(&core.BoolField{Name: "showSubMenu"})
+	col.Fields.Add(&core.NumberField{Name: "subMenuOffset"})
+	col.Fields.Add(&core.SelectField{Name: "headerLeftContent", Values: []string{"siteLogo", "siteName"}})
+	col.Fields.Add(&core.BoolField{Name: "showDonateInfo"})
+	col.Fields.Add(&core.BoolField{Name: "showFriends"})
+	col.Fields.Add(&core.BoolField{Name: "showCopyRight"})
+	col.Fields.Add(&core.BoolField{Name: "showDonateButton"})
+	col.Fields.Add(&core.BoolField{Name: "showDonateInAbout"})
+	col.Fields.Add(&core.BoolField{Name: "allowOpenHiddenPostByUrl"})
+	col.Fields.Add(&core.BoolField{Name: "showRSS"})
+	col.Fields.Add(&core.BoolField{Name: "openArticleLinksInNewWindow"})
+	col.Fields.Add(&core.BoolField{Name: "showExpirationReminder"})
+	col.Fields.Add(&core.BoolField{Name: "showEditButton"})
+
+	// --- JSON 数组配置（动态条目，JSON 比独立表更好用）---
+
+	col.Fields.Add(&core.JSONField{Name: "nav"})      // 导航菜单 [{name, value, level}]
+	col.Fields.Add(&core.JSONField{Name: "links"})    // 友链 [{name, url, desc, logo}]
+	col.Fields.Add(&core.JSONField{Name: "socials"})  // 社交 [{type, value}]
+	col.Fields.Add(&core.JSONField{Name: "rewards"})  // 打赏 [{name, value}]
+
+	// --- md_output / git sync（配置对象，JSON 合理）---
+
+	col.Fields.Add(&core.BoolField{Name: "outputEnabled"})
+	col.Fields.Add(&core.TextField{Name: "outputDest"})
+	col.Fields.Add(&core.JSONField{Name: "outputConfig"})  // format/naming/include/trigger
+
+	col.Fields.Add(&core.BoolField{Name: "syncEnabled"})
+	col.Fields.Add(&core.TextField{Name: "syncRemote"})
+	col.Fields.Add(&core.JSONField{Name: "syncConfig"})  // branch/schedule/sshKey
+
+	// Rule: public read, auth write
 	col.ListRule = strPtr("")
 	col.ViewRule = strPtr("")
 	col.CreateRule = strPtr(`@request.auth.id != ""`)
@@ -283,21 +365,36 @@ func insertDefaultSite(db core.App) error {
 		return err
 	}
 	record := core.NewRecord(col)
+
+	// 标量字段默认值
+	record.Set("siteName", "")
 	record.Set("theme", "default")
+	record.Set("defaultTheme", "auto")
 	record.Set("commentsProvider", "disabled")
-	record.Set("analyticsScript", "")
-	record.Set("info", json.RawMessage(`{}`))
+	record.Set("enableWatermark", false)
+	record.Set("enableWebp", true)
+	record.Set("httpsRedirect", true)
+	record.Set("caddyLogLevel", "warn")
+	record.Set("revisionsEnabled", true)
+	record.Set("revisionsRetention", 50)
+	record.Set("showAdminButton", true)
+	record.Set("showFriends", true)
+	record.Set("showCopyRight", true)
+	record.Set("showRSS", true)
+	record.Set("outputEnabled", false)
+	record.Set("outputDest", "/var/lib/md_output")
+	record.Set("syncEnabled", false)
+
+	// JSON 数组默认值
 	record.Set("nav", json.RawMessage(`[]`))
 	record.Set("links", json.RawMessage(`[]`))
 	record.Set("socials", json.RawMessage(`[]`))
 	record.Set("rewards", json.RawMessage(`[]`))
-	record.Set("about", json.RawMessage(`{"content":"","updatedAt":""}`))
-	record.Set("customize", json.RawMessage(`{"head":"","css":"","html":"","script":""}`))
-	record.Set("imageConfig", json.RawMessage(`{"enableWatermark":false,"waterMarkText":"","enableWebp":true}`))
 	record.Set("routing", json.RawMessage(`[]`))
 	record.Set("allowedDomains", json.RawMessage(`[]`))
-	record.Set("revisions", json.RawMessage(`{"enabled":true,"retention":50}`))
-	record.Set("output", json.RawMessage(`{"enabled":false}`))
-	record.Set("sync", json.RawMessage(`{"enabled":false}`))
+	record.Set("outputConfig", json.RawMessage(`{"format":"markdown","trigger":"onUpdate"}`))
+	record.Set("syncConfig", json.RawMessage(`{"branch":"main","schedule":"0 */6 * * *"}`))
+	record.Set("commentsConfig", json.RawMessage(`{}`))
+
 	return db.Save(record)
 }
