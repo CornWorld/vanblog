@@ -154,7 +154,7 @@ http:// {
 ```javascript
 routerAdd("GET", "/api/hooks/caddy/ask", (c) => {
   const domain = c.queryParam("domain");
-  const site = $app.dao().findRecordById("site", "1");
+  const site = $app.findFirstRecordByFilter("site", "1=1");
   const allowed = site.get("allowedDomains") || [];
 
   // 空列表 = 允许所有(原项目默认行为,首次启动场景)

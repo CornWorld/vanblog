@@ -412,36 +412,36 @@ func Import(jsonData string, opts Options) Result {
         return Result{Error: err}
     }
 
-    return dao.RunInTransaction(func(tx dbx.Tx) error {
+    return app.RunInTransaction(func(txApp core.App) error {
         // 1. articles + drafts → posts(合并,oldId 偏移)
         for _, article := range data.Articles {
             post := mapArticleToPost(article, "published")
-            dao.SaveRecord(tx, "posts", post)
+            txApp.Save(post)
         }
         for _, draft := range data.Drafts {
             post := mapDraftToPost(draft, "draft")
-            dao.SaveRecord(tx, "posts", post)
+            txApp.Save(post)
         }
 
         // 2. tags(去重 + relation)
         tags := extractTags(data.Articles, data.Drafts)
         for _, tag := range tags {
-            dao.SaveRecord(tx, "tags", tag)
+            txApp.Save(tag)
         }
 
         // 3. meta → site(单行 JSON)
         site := mapMetaToSite(data.Meta)
-        dao.SaveRecord(tx, "site", site)
+        txApp.Save(site)
 
         // 4. static → media(不下载文件,只存元数据)
         for _, s := range data.Static {
             media := mapStaticToMedia(s)
-            dao.SaveRecord(tx, "media", media)
+            txApp.Save(media)
         }
 
         // 5. 不兼容数据 → 迁移档案 post
         archive := buildMigrationArchive(data)
-        dao.SaveRecord(tx, "posts", archive)
+        txApp.Save(archive)
 
         return nil
     })

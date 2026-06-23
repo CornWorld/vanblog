@@ -357,7 +357,7 @@ type Result struct {
 func Import(app *pocketbase.PocketBase, jsonData []byte) (Result, error)
 // 内部:
 // 1. json.Unmarshal → LegacyBackup
-// 2. dao.RunInTransaction:
+// 2. app.RunInTransaction:
 //    - articles + drafts → posts(合并,oldId 偏移)
 //    - tags 去重 → tags 表 + posts.tags relation
 //    - meta → site(单行 JSON)
