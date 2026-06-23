@@ -202,11 +202,14 @@ func createSite(db core.App) error {
 	col.Fields.Add(&core.TextField{Name: "siteName"})
 	col.Fields.Add(&core.TextField{Name: "siteDesc"})
 	col.Fields.Add(&core.TextField{Name: "author"})
-	col.Fields.Add(&core.TextField{Name: "authorDesc"})
+	col.Fields.Add(&core.TextField{Name: "authDesc"})
 	col.Fields.Add(&core.TextField{Name: "authorLogo"})
 	col.Fields.Add(&core.TextField{Name: "authorLogoDark"})
 	col.Fields.Add(&core.TextField{Name: "siteLogo"})
 	col.Fields.Add(&core.TextField{Name: "siteLogoDark"})
+	col.Fields.Add(&core.TextField{Name: "favicon"})
+	col.Fields.Add(&core.TextField{Name: "gaAnalysisId"})
+	col.Fields.Add(&core.TextField{Name: "baiduAnalysisId"})
 	col.Fields.Add(&core.TextField{Name: "baseUrl"})
 	col.Fields.Add(&core.DateField{Name: "since"})
 	col.Fields.Add(&core.TextField{Name: "copyrightAggreement"})
@@ -246,7 +249,7 @@ func createSite(db core.App) error {
 	col.Fields.Add(&core.TextField{Name: "customScript"})
 
 	// 图片处理(原 imageConfig JSON 拆开)
-	col.Fields.Add(&core.BoolField{Name: "enableWatermark"})
+	col.Fields.Add(&core.BoolField{Name: "enableWaterMark"})
 	col.Fields.Add(&core.TextField{Name: "watermarkText"})
 	col.Fields.Add(&core.BoolField{Name: "enableWebp"})
 
@@ -261,20 +264,9 @@ func createSite(db core.App) error {
 	col.Fields.Add(&core.NumberField{Name: "revisionsRetention"})
 
 	// 显示开关(原 siteInfo 的各种 bool 拆开)
-	col.Fields.Add(&core.BoolField{Name: "showAdminButton"})
-	col.Fields.Add(&core.BoolField{Name: "showSubMenu"})
-	col.Fields.Add(&core.NumberField{Name: "subMenuOffset"})
-	col.Fields.Add(&core.SelectField{Name: "headerLeftContent", Values: []string{"siteLogo", "siteName"}})
-	col.Fields.Add(&core.BoolField{Name: "showDonateInfo"})
-	col.Fields.Add(&core.BoolField{Name: "showFriends"})
-	col.Fields.Add(&core.BoolField{Name: "showCopyRight"})
-	col.Fields.Add(&core.BoolField{Name: "showDonateButton"})
-	col.Fields.Add(&core.BoolField{Name: "showDonateInAbout"})
-	col.Fields.Add(&core.BoolField{Name: "allowOpenHiddenPostByUrl"})
-	col.Fields.Add(&core.BoolField{Name: "showRSS"})
-	col.Fields.Add(&core.BoolField{Name: "openArticleLinksInNewWindow"})
-	col.Fields.Add(&core.BoolField{Name: "showExpirationReminder"})
-	col.Fields.Add(&core.BoolField{Name: "showEditButton"})
+	// 显示开关合并为 JSON(site 单行表,拆列无索引收益)
+	col.Fields.Add(&core.JSONField{Name: "displayOptions"})
+	// 默认值: {showAdminButton:true, showSubMenu:false, subMenuOffset:0, ...}
 
 	// --- JSON 数组配置（动态条目，JSON 比独立表更好用）---
 
@@ -296,8 +288,8 @@ func createSite(db core.App) error {
 	// Rule: public read, auth write
 	col.ListRule = strPtr("")
 	col.ViewRule = strPtr("")
-	col.CreateRule = strPtr(`@request.auth.id != ""`)
-	col.UpdateRule = strPtr(`@request.auth.id != ""`)
+	col.CreateRule = strPtr(`@request.auth.role = "admin"`) // 站点配置仅 admin
+	col.UpdateRule = strPtr(`@request.auth.role = "admin"`) // 站点配置仅 admin
 	col.DeleteRule = strPtr(`@request.auth.role = "admin"`)
 	return db.Save(col)
 }
@@ -371,16 +363,13 @@ func insertDefaultSite(db core.App) error {
 	record.Set("theme", "default")
 	record.Set("defaultTheme", "auto")
 	record.Set("commentsProvider", "disabled")
-	record.Set("enableWatermark", false)
+	record.Set("enableWaterMark", false)
 	record.Set("enableWebp", true)
 	record.Set("httpsRedirect", true)
 	record.Set("caddyLogLevel", "warn")
 	record.Set("revisionsEnabled", true)
 	record.Set("revisionsRetention", 50)
-	record.Set("showAdminButton", true)
-	record.Set("showFriends", true)
-	record.Set("showCopyRight", true)
-	record.Set("showRSS", true)
+	record.Set("displayOptions", json.RawMessage(`{"showAdminButton":true,"showSubMenu":false,"subMenuOffset":0,"headerLeftContent":"siteLogo","showDonateInfo":false,"showFriends":true,"showCopyRight":true,"showDonateButton":false,"showDonateInAbout":false,"allowOpenHiddenPostByUrl":false,"showRSS":true,"openArticleLinksInNewWindow":false,"showExpirationReminder":true,"showEditButton":false}`))
 	record.Set("outputEnabled", false)
 	record.Set("outputDest", "/var/lib/md_output")
 	record.Set("syncEnabled", false)
