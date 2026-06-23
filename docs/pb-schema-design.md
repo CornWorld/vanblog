@@ -78,7 +78,6 @@ img:delete, all
 ```
 
 **Rule**:
-**Rule**:
 
 - List/View: `@request.auth.id != "" && (@request.auth.role = "admin" || @request.auth.id = id)` — 管理员或自己
 - Create/Update/Delete: `@request.auth.role = "admin"`
@@ -243,7 +242,7 @@ img:delete, all
 | `customize`        | json                                           | `Setting.layout`                            | `{ head, css, html, script }`                           |
 | `imageConfig`      | json                                           | `Setting.static` 部分                       | `{ enableWatermark, watermarkText, enableWebp }`        |
 | `routing`          | json                                           | —                                           | 新增:自定义路由/反代规则                                |
-| `allowedDomains`   | json                                           | `Setting.https`                             | Caddy on-demand TLS 白名单(dev 镜像)                    |
+| `allowedDomains`   | json                                           | `Setting.https`                             | Caddy on-demand TLS 白名单(prod/dev 镜像)                    |
 | `revisions`        | json                                           | —                                           | 新增:应用内历史配置 `{ enabled, retention }`            |
 | `output`           | json                                           | —                                           | 新增:markdown 导出配置 `{ enabled, format, dest, ... }` |
 | `sync`             | json                                           | —                                           | 新增:外部 git 同步 `{ enabled, remote, schedule, ... }` |

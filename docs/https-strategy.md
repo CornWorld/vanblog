@@ -152,17 +152,17 @@ http:// {
 > 替代原项目 NestJS 的 `/api/admin/caddy/ask`。
 
 ```javascript
-routerAdd("GET", "/api/hooks/caddy/ask", (c) => {
-  const domain = c.queryParam("domain");
+routerAdd("GET", "/api/hooks/caddy/ask", (e) => {
+  const domain = e.request.url.query().get("domain");
   const site = $app.findFirstRecordByFilter("site", "1=1");
   const allowed = site.get("allowedDomains") || [];
 
   // 空列表 = 允许所有(原项目默认行为,首次启动场景)
-  if (allowed.length === 0) return c.json(200, {});
+  if (allowed.length === 0) return e.json(200, {});
 
   // 非空 = 白名单校验
-  if (allowed.includes(domain)) return c.json(200, {});
-  return c.json(403, { error: "domain not allowed" });
+  if (allowed.includes(domain)) return e.json(200, {});
+  return e.json(403, { error: "domain not allowed" });
 });
 ```
 
@@ -172,7 +172,7 @@ routerAdd("GET", "/api/hooks/caddy/ask", (c) => {
 
 ```
 1. 容器启动 → entrypoint.sh(见 deployment-strategy.md §2)
-2. Caddy 启动(用上述 Caddyfile 模板)
+2. Caddy 启动(用 Caddyfile 模板)
 3. pb 启动
 4. pb_hooks 启动钩子:
    a. 读取 site.routing + site.allowedDomains
@@ -217,7 +217,7 @@ routerAdd("GET", "/api/hooks/caddy/ask", (c) => {
 
 ## 9. 待决细节
 
-1. **pb_hooks 调用 caddy admin api**:JSVM 是否支持 `$http` 内置或需 Go extend(待验证)
+1. **pb_hooks 调用 caddy admin api**:已决策 — Go extend 实现(见 [`architecture-layering.md`](./architecture-layering.md) §9),JSVM 通过 `vanblog.caddy.*` 调用
 2. **TLS 证书持久化**:Caddy 证书缓存路径需挂载到 volume,避免容器重启重新签发
 3. **HTTP_ONLY 模式的实现**:prod/dev entrypoint 如何根据 `HTTP_ONLY=true` 跳过 Caddy 启动
 4. **Astro dev server 的 TLS**:dev 镜像里 Astro dev server 默认 HTTP,Caddy 终止 TLS 后转发 —— 符合预期(prod 无此问题,纯静态文件)

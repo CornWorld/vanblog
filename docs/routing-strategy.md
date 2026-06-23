@@ -293,12 +293,12 @@ POST /config/apps/http/servers/srv0/routes/...
 
 | 事件                       | 记录到                                           |
 | -------------------------- | ------------------------------------------------ |
-| 用户添加/修改/删除路由规则 | `logins` 表(扩展为 `audits`)+ 现有 `logins` 改名 |
+| 用户添加/修改/删除路由规则 | `audits` 表(action="routing.add" 等) |
 | 校验失败(SSRF / 路径冲突)  | `audits` 表,带详细错误                           |
 | caddy admin api 调用结果   | `audits` 表,带响应码                             |
 | Caddy 启动/重载            | pb 启动日志                                      |
 
-**Audit schema**(替代 v2 schema 中的 `logins` 表):
+**Audit schema**(单一审计表,登录是 action="auth.login" 子集):
 
 ```
 audits: {
@@ -313,7 +313,7 @@ audits: {
 }
 ```
 
-`logins` 改为 `audits` 的一个 `action = "auth.login"` 子集(单一表查询更简单)。
+`audits` 表的 `action = "auth.login"` 子集(单一表查询更简单)。
 
 ---
 
