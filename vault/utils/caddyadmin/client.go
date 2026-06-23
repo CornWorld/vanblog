@@ -36,31 +36,12 @@ type Client struct {
 // NewClient creates a Caddy admin API client.
 // baseURL should include the scheme and port, e.g. "http://127.0.0.1:2019".
 func NewClient(baseURL string) *Client {
-	// OrbStack (macOS Docker runtime) has a known bug where localhost port
-	// forwarding drops connections after a few requests (orbstack/orbstack#1493,
-	// #2110). The symptom is "connection reset by peer" or EOF on HTTP response.
-	//
-	// Workarounds applied here:
-	//   1. DisableKeepAlives: each request uses a new TCP connection, avoiding
-	//      the stale connection pool that triggers the bug.
-	//   2. DisableCompression: prevents Accept-Encoding: gzip header that some
-	//      Caddy versions handle poorly on admin endpoint.
-	//   3. ForceAttemptHTTP2=false: Caddy admin serves HTTP/1.1 only.
-	//
-	// For production (container-to-container, no OrbStack), these settings are
-	// harmless but slightly less efficient. The tradeoff is acceptable for an
-	// admin API client that makes infrequent calls.
-	//
-	// Refs:
-	//   https://github.com/orbstack/orbstack/issues/1493
-	//   https://github.com/orbstack/orbstack/issues/2110
+	// Caddy admin endpoint serves HTTP/1.1 only (no HTTP/2).
+	// We also disable compression since Caddy admin doesn't benefit from it
+	// and some versions handle gzip poorly on the admin port.
 	transport := &http.Transport{
-		ForceAttemptHTTP2:   false,
-		DisableKeepAlives:   true,
-		DisableCompression:  true,
-		MaxIdleConns:        1,
-		IdleConnTimeout:     30 * time.Second,
-		TLSHandshakeTimeout: 10 * time.Second,
+		ForceAttemptHTTP2:  false,
+		DisableCompression: true,
 	}
 	return &Client{
 		baseURL: strings.TrimRight(baseURL, "/"),

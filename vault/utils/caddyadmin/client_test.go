@@ -3,21 +3,60 @@ package caddyadmin
 import (
 	"encoding/json"
 	"os"
+	"os/exec"
+	"strings"
 	"testing"
 	"time"
 )
 
-// Integration tests against a real Caddy admin API.
-// Start a test Caddy with: docker run --rm -d -p 2019:2019 caddy:2-alpine
+// Integration tests against a real Caddy admin API (in Docker).
+//
+// Setup:
+//
+//	docker run --rm -d --name caddy-dev \
+//	  -v /tmp/caddy-dev/caddy.json:/tmp/caddy.json \
+//	  caddy:2-alpine caddy run --config /tmp/caddy.json --resume=false
 //
 // Run with: CADDY_TEST=1 go test -v ./utils/caddyadmin/
+//
+// Note: We use the container IP directly (not localhost port mapping or
+// orb.local) because OrbStack has bugs with both:
+//   - Port mapping: connection reset on keepalive (orbstack/orbstack#1493)
+//   - orb.local: fake-IP NAT doesn't forward non-standard ports like 2019
+//
+// The test auto-detects the container IP via CADDY_HOST env or falls back
+// to querying Docker.
 
 func testClient(t *testing.T) *Client {
 	t.Helper()
 	if os.Getenv("CADDY_TEST") == "" {
 		t.Skip("set CADDY_TEST=1 to run integration tests")
 	}
-	return NewClient("http://127.0.0.1:2019")
+
+	// Allow override via env, otherwise auto-detect container IP
+	host := os.Getenv("CADDY_HOST")
+	if host == "" {
+		host = detectCaddyContainerIP(t)
+	}
+	return NewClient("http://" + host + ":2019")
+}
+
+// detectCaddyContainerIP queries Docker for the caddy-dev container's IP.
+func detectCaddyContainerIP(t *testing.T) string {
+	t.Helper()
+	// Try docker inspect
+	cmd := exec.Command("docker", "inspect", "caddy-dev",
+		"--format", "{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}")
+	output, err := cmd.Output()
+	if err != nil {
+		t.Fatalf("CADDY_HOST not set and failed to detect container IP: %v", err)
+	}
+	ip := strings.TrimSpace(string(output))
+	if ip == "" {
+		t.Fatal("CADDY_HOST not set and container IP is empty")
+	}
+	t.Logf("detected caddy-dev container IP: %s", ip)
+	return ip
 }
 
 // resetConfig replaces the Caddy config with a minimal empty config.
