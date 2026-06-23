@@ -3,6 +3,7 @@
 > **依据**:[原项目 provider 代码统计](file:///Users/corn/Code/vanblog-upstream/packages/server/src/provider/)(5012 行 / 27 模块 / 131 端点)+ 用户反馈"运算代码不应在 JSVM"
 >
 > **核心原则**:
+>
 > - **Go 层承担所有重运算 / 复杂业务 / 基础设施**(编译进二进制,性能 + 类型安全)
 > - **JSVM 只做用户侧扩展点**(小钩子,学习成本低,热更新)
 > - **Go 封装 SDK,JSVM 调用 SDK**(不是 JSVM 直接干重活)
@@ -20,11 +21,13 @@
 关键词:**custom**(用户自定义),不是 **core**(核心业务)。
 
 JSVM 适合的场景:
+
 - 用户想在文章发布后发个 webhook 通知
 - 用户想给某类文章加自定义校验
 - 用户想记录自定义审计事件
 
 JSVM **不适合**的场景:
+
 - 复杂查询构建(article.provider.ts 980 行)
 - 图片处理(static.provider.ts 318 行)
 - 迁移工具(大 JSON 解析 + 批量事务)
@@ -32,17 +35,17 @@ JSVM **不适合**的场景:
 
 ### Go extend 的优势
 
-| 维度 | Go extend | JSVM (goja) |
-|---|---|---|
-| 性能 | 原生 | 解释执行,慢 10-100x |
-| 并发 | goroutine | 单线程 VM 池 |
-| 类型安全 | 编译时 | 运行时 |
-| 生态 | 完整 Go 生态 | 无 Node.js 内置模块 |
-| 调试 | dlv / IDE | console.log only |
-| Promise / async | 原生 | ❌ 无 |
-| 模块系统 | go modules | CommonJS 限制 |
-| 部署 | 编译进二进制 | `.pb.js` 文件 |
-| 热更新 | 需重编译 | ✅ 改文件即生效 |
+| 维度            | Go extend    | JSVM (goja)         |
+| --------------- | ------------ | ------------------- |
+| 性能            | 原生         | 解释执行,慢 10-100x |
+| 并发            | goroutine    | 单线程 VM 池        |
+| 类型安全        | 编译时       | 运行时              |
+| 生态            | 完整 Go 生态 | 无 Node.js 内置模块 |
+| 调试            | dlv / IDE    | console.log only    |
+| Promise / async | 原生         | ❌ 无               |
+| 模块系统        | go modules   | CommonJS 限制       |
+| 部署            | 编译进二进制 | `.pb.js` 文件       |
+| 热更新          | 需重编译     | ✅ 改文件即生效     |
 
 **结论**:核心业务用 Go(性能 + 可维护性),用户扩展用 JSVM(灵活性 + 热更新)。
 
@@ -56,11 +59,11 @@ JSVM **不适合**的场景:
 
 **按复杂度分档**:
 
-| 档位 | 模块 | 总行数 | 特征 |
-|---|---|---|---|
-| **重** | article(980), static(560), auth(238), meta(268), pipeline(265), setting(258), draft(236), isr(208), website(143), waline(155) | ~3300 | 复杂查询 / 事务 / 外部进程 / 数据处理 |
-| **中** | log(206), user(145), rss(132), category(129), viewer(126), visit(115), analysis(110), caddy(136), sitemap(98), token(88), access(54), init(171) | ~1450 | CRUD + 业务规则 |
-| **轻** | tag(94), markdown(47), customPage(31), cache(12), swagger(7) | ~190 | 纯包装 |
+| 档位   | 模块                                                                                                                                            | 总行数 | 特征                                  |
+| ------ | ----------------------------------------------------------------------------------------------------------------------------------------------- | ------ | ------------------------------------- |
+| **重** | article(980), static(560), auth(238), meta(268), pipeline(265), setting(258), draft(236), isr(208), website(143), waline(155)                   | ~3300  | 复杂查询 / 事务 / 外部进程 / 数据处理 |
+| **中** | log(206), user(145), rss(132), category(129), viewer(126), visit(115), analysis(110), caddy(136), sitemap(98), token(88), access(54), init(171) | ~1450  | CRUD + 业务规则                       |
+| **轻** | tag(94), markdown(47), customPage(31), cache(12), swagger(7)                                                                                    | ~190   | 纯包装                                |
 
 **Controller 层:131 个端点,26 个 controller**
 
@@ -164,22 +167,34 @@ vault/
 
 ### 4.2 Go SDK 模块职责
 
-| 模块 | 对应原项目 | 行数估计 | 关键 Go 库 |
-|---|---|---|---|
-| `article` | article.provider.ts(980) | ~500 | `dao` + `dbx` 查询构建 |
-| `media` | static.provider.ts(560) | ~300 | pb FileField + `aws-sdk-go-v2`(S3) |
-| `migration` | backup.controller.ts(137) | ~400 | `encoding/json` + `dao` 事务 |
-| `caddy` | caddy.provider.ts(136) | ~200 | `net/http` + `net/url`(SSRF) |
-| `revisions` | —(新增) | ~150 | `github.com/sergi/go-diff` |
-| `visits` | visit+viewer.provider.ts(241) | ~100 | SQL `UPDATE SET count = count + 1` |
-| `markdown` | markdown.provider.ts(47) | ~100 | `github.com/yuin/goldmark` |
-| `process` | waline+website.provider.ts(298) | ~150 | `os/exec` + `context` |
-| `rss` | rss.provider.ts(132) | ~100 | 标准库 `encoding/xml` |
-| `sitemap` | sitemap.provider.ts(98) | ~80 | 标准库 `encoding/xml` |
-| `hooks`(JSVM 绑定) | —(新增) | ~300 | goja 绑定注册 |
-| **总计** | | **~2400** | |
+| 模块               | 对应原项目                      | 增量估计 | 关键 Go 库                                                                 |
+| ------------------ | ------------------------------- | -------- | -------------------------------------------------------------------------- |
+| `article`          | article.provider.ts(980)        | ~120     | pb `filter`/`sort` 覆盖查询;增量=字数统计+时间线聚合+搜索                  |
+| `media`            | static.provider.ts(560)         | ~100     | pb FileField + thumbs 内置;增量=MD5 去重+上传 pipeline(水印/WebP 已移前端) |
+| `migration`        | backup.controller.ts(137)       | ~150     | `encoding/json` + `dao` 事务(大 JSON 在 Go 里无压力)                       |
+| `caddy`            | caddy.provider.ts(136)          | ~80      | `net/http` + `net/url`(SSRF)                                               |
+| `revisions`        | —(新增)                         | ~80      | `github.com/sergi/go-diff`(快照+diff+恢复)                                 |
+| `visits`           | visit+viewer.provider.ts(241)   | ~80      | SQL `UPDATE SET count = count + 1` + 日聚合                                |
+| `markdown`         | markdown.provider.ts(47)        | ~30      | `github.com/yuin/goldmark` + katex 扩展                                    |
+| `process`          | waline+website.provider.ts(298) | ~0(裁剪) | 子进程托管改为外部容器                                                     |
+| `rss`              | rss.provider.ts(132)            | ~100     | 标准库 `encoding/xml`                                                      |
+| `sitemap`          | sitemap.provider.ts(98)         | ~50      | 标准库 `encoding/xml`                                                      |
+| `hooks`(JSVM 绑定) | —(新增)                         | ~150     | goja 绑定注册                                                              |
+| **总计**           |                                 | **~940** | **(pb 覆盖 + 裁剪 ~3200 行不计)**                                          |
 
-**对比原项目**:原 NestJS 5012 行 → Go ~2400 行(Go 表达力更强 + pb 内置了大量 CRUD 不需要手写)。
+**对比原项目**:原 NestJS 5012 行 → Go 真实增量 **~600-1000 行**(pb 原生覆盖 ~2400 行 CRUD/auth/权限,裁剪 ~800 行 picgo/waline 托管/ISR/pipeline)。
+
+> **修正**(用户反馈):之前估算 ~2400 行是把 NestJS 模板代码直接搬到 Go,没扣除 pb 原生能力。真实增量细分:
+>
+> - 业务计算(article 字数/时间线/搜索 + draft 发布事务 + visit/viewer 聚合 + tag/category):~460 行
+> - 外部集成(Caddy admin API + RSS + sitemap):~230 行
+> - 工具/迁移(markdown 渲染 + seed + 图片上传 pipeline + 迁移工具):~250 行
+>
+> **三个"虚假工作量"**:
+>
+> 1. `setting.provider.ts`(259 行)13 个一样的 get/set —— pb 一条 record
+> 2. `article.provider.ts`(980 行)700+ 行是 Mongoose 查询构建 —— pb URL 参数
+> 3. auth 体系(238 行)JWT+guards —— pb authInPb + `@request.auth` 一行
 
 ### 4.3 JSVM 绑定层(hooks/ 包)
 
@@ -217,17 +232,18 @@ func BindCaddy(vm *goja.Runtime, app *pocketbase.PocketBase) {
 ```
 
 **JSVM 侧调用**:
+
 ```javascript
 // pb_hooks/user_custom.pb.js(用户写的)
 onRecordAfterUpdate((e) => {
-    const post = e.record
-    // 调用 Go SDK 的能力(不是自己干重活)
-    vanblog.caddy.addRoute({
-        type: "redirect",
-        from: "/old/" + post.get("pathname"),
-        to: "/" + post.get("pathname"),
-    })
-}, "posts")
+  const post = e.record;
+  // 调用 Go SDK 的能力(不是自己干重活)
+  vanblog.caddy.addRoute({
+    type: "redirect",
+    from: "/old/" + post.get("pathname"),
+    to: "/" + post.get("pathname"),
+  });
+}, "posts");
 ```
 
 ---
@@ -239,10 +255,12 @@ onRecordAfterUpdate((e) => {
 **JSVM 是"用户自定义扩展",不是"核心业务"**。
 
 我们提供的 `pb_hooks/` 里:
+
 - `example_hooks.pb.js` — 官方示例(给用户学习的,~5 个小钩子)
 - `lib/vanblog.js` — Go SDK 的 TypeScript 声明(d.ts 风格,用于 IDE 补全)
 
 **不提供的**(核心业务在 Go 里):
+
 - 迁移工具实现(Go)
 - Caddy 集成实现(Go)
 - 路由翻译实现(Go)
@@ -253,30 +271,30 @@ onRecordAfterUpdate((e) => {
 ```javascript
 // 示例 1: 文章发布后发 webhook
 onRecordAfterUpdate((e) => {
-    if (e.record.get("status") !== "published") return
-    vanblog.http.send({
-        method: "POST",
-        url: "https://hooks.slack.com/...",
-        body: JSON.stringify({ text: "新文章发布: " + e.record.get("title") })
-    })
-}, "posts")
+  if (e.record.get("status") !== "published") return;
+  vanblog.http.send({
+    method: "POST",
+    url: "https://hooks.slack.com/...",
+    body: JSON.stringify({ text: "新文章发布: " + e.record.get("title") }),
+  });
+}, "posts");
 
 // 示例 2: 特定分类的文章自动加水印标记
 onRecordBeforeCreate((e) => {
-    if (e.record.get("category") === "photography") {
-        e.record.set("tags", [...e.record.get("tags"), "watermark-required"])
-    }
-}, "posts")
+  if (e.record.get("category") === "photography") {
+    e.record.set("tags", [...e.record.get("tags"), "watermark-required"]);
+  }
+}, "posts");
 
 // 示例 3: 每日统计推送到外部(用 Go SDK 的 visits 聚合)
 cronAdd("daily-stats", "0 8 * * *", () => {
-    const stats = vanblog.visits.getDailySummary()
-    vanblog.http.send({
-        method: "POST",
-        url: "https://api.umami.is/api/send",
-        body: JSON.stringify(stats)
-    })
-})
+  const stats = vanblog.visits.getDailySummary();
+  vanblog.http.send({
+    method: "POST",
+    url: "https://api.umami.is/api/send",
+    body: JSON.stringify(stats),
+  });
+});
 ```
 
 **特征**:每个钩子 < 20 行,调 Go SDK,不做复杂逻辑。
@@ -288,75 +306,92 @@ cronAdd("daily-stats", "0 8 * * *", () => {
 // Go 层通过 goja.Set("vanblog", ...) 注册实际实现
 
 declare const vanblog: {
-    // HTTP 客户端(封装好的,带超时)
-    http: {
-        send(opts: { method: string, url: string, headers?: object, body?: string }): { statusCode: number, body: string }
-    }
+  // HTTP 客户端(封装好的,带超时)
+  http: {
+    send(opts: {
+      method: string;
+      url: string;
+      headers?: object;
+      body?: string;
+    }): { statusCode: number; body: string };
+  };
 
-    // Caddy 路由管理(SSRF 校验在 Go 层)
-    caddy: {
-        addRoute(rule: { id: string, type: string, from: string, to: string }): void
-        removeRoute(id: string): void
-        getRoutes(): Array<{ id: string, type: string, from: string, to: string }>
-    }
+  // Caddy 路由管理(SSRF 校验在 Go 层)
+  caddy: {
+    addRoute(rule: {
+      id: string;
+      type: string;
+      from: string;
+      to: string;
+    }): void;
+    removeRoute(id: string): void;
+    getRoutes(): Array<{ id: string; type: string; from: string; to: string }>;
+  };
 
-    // 文章操作(复杂查询在 Go 层)
-    article: {
-        publish(draftId: string): void
-        search(query: string, opts?: { limit?: number }): Array<{ id: string, title: string }>
-        getWordCount(postId: string): number
-    }
+  // 文章操作(复杂查询在 Go 层)
+  article: {
+    publish(draftId: string): void;
+    search(
+      query: string,
+      opts?: { limit?: number }
+    ): Array<{ id: string; title: string }>;
+    getWordCount(postId: string): number;
+  };
 
-    // 访问统计(原子操作在 Go 层)
-    visits: {
-        increment(path: string): void
-        getDailySummary(date?: string): { views: number, uniques: number }
-    }
+  // 访问统计(原子操作在 Go 层)
+  visits: {
+    increment(path: string): void;
+    getDailySummary(date?: string): { views: number; uniques: number };
+  };
 
-    // 迁移(Go 层处理大 JSON + 事务)
-    migration: {
-        import(jsonData: string, opts?: { dryRun?: boolean }): { success: number, failed: number, errors: string[] }
-    }
+  // 迁移(Go 层处理大 JSON + 事务)
+  migration: {
+    import(
+      jsonData: string,
+      opts?: { dryRun?: boolean }
+    ): { success: number; failed: number; errors: string[] };
+  };
 
-    // 工具
-    util: {
-        slugify(text: string): string
-        markdownToHtml(md: string): string
-    }
-}
+  // 工具
+  util: {
+    slugify(text: string): string;
+    markdownToHtml(md: string): string;
+  };
+};
 ```
 
 ---
 
 ## 6. Go vs JSVM 的功能分配表
 
-| 功能 | Go SDK | JSVM 扩展点 | 用户能否覆盖 |
-|---|---|---|---|
-| 文章 CRUD | pb 自动 API | `onRecordBeforeCreate("posts")` 等 | ✅ 用户可加校验 |
-| 文章查询(复杂) | `article.Search()` | 不暴露 | ❌(Go 统一) |
-| 草稿发布事务 | `article.Publish()` | 不暴露 | ❌ |
-| 图片上传 | pb FileField + `media.SaveFile()` | `onRecordAfterCreate("media")` | ✅ 用户可加后处理 |
-| 图片查重 | `media.Dedup()` | 不暴露 | ❌ |
-| S3 存储 | `media.S3Driver` | 不暴露 | ❌ |
-| 迁移工具 | `migration.Import()` | 不暴露(用户通过 Admin UI 触发) | ❌ |
-| 不兼容数据归档 | `migration.Archive()` | 不暴露 | ❌ |
-| Caddy 路由 | `caddy.AddRoute()` + SSRF 校验 | `vanblog.caddy.addRoute()` | ✅ 用户可在钩子里加路由 |
-| Caddy HTTPS | `caddy.OnDemandTLS()` | 不暴露 | ❌ |
-| revisions 快照 | `revisions.Snapshot()` | 不暴露 | ❌ |
-| revisions diff | `revisions.Diff()`(go-diff) | 不暴露 | ❌ |
-| revisions 恢复 | `revisions.Restore()` | 不暴露 | ❌ |
-| visits 计数 | `visits.Increment()`(原子) | 不暴露 | ❌ |
-| visits 聚合 | `visits.AggregateDaily()`(cron) | 不暴露 | ❌ |
-| Markdown 渲染 | `markdown.Render()`(goldmark) | 不暴露 | ❌ |
-| RSS 生成 | `rss.Generate()` | 不暴露 | ❌ |
-| Sitemap 生成 | `sitemap.Generate()` | 不暴露 | ❌ |
-| 子进程管理(waline) | `process.Supervisor` | 不暴露 | ❌ |
-| git sync | `process.GitSync()`(cron) | 不暴露 | ❌ |
-| 审计日志 | `audits.Log()`(Go hook) | `vanblog.audits.log()` | ✅ 用户可记自定义事件 |
-| 自定义定时任务 | — | `cronAdd("id", "...", () => { ... })` | ✅ |
-| 自定义 API 端点 | — | `routerAdd("GET", "/my-api", ...)` | ✅ |
+| 功能               | Go SDK                            | JSVM 扩展点                           | 用户能否覆盖            |
+| ------------------ | --------------------------------- | ------------------------------------- | ----------------------- |
+| 文章 CRUD          | pb 自动 API                       | `onRecordBeforeCreate("posts")` 等    | ✅ 用户可加校验         |
+| 文章查询(复杂)     | `article.Search()`                | 不暴露                                | ❌(Go 统一)             |
+| 草稿发布事务       | `article.Publish()`               | 不暴露                                | ❌                      |
+| 图片上传           | pb FileField + `media.SaveFile()` | `onRecordAfterCreate("media")`        | ✅ 用户可加后处理       |
+| 图片查重           | `media.Dedup()`                   | 不暴露                                | ❌                      |
+| S3 存储            | `media.S3Driver`                  | 不暴露                                | ❌                      |
+| 迁移工具           | `migration.Import()`              | 不暴露(用户通过 Admin UI 触发)        | ❌                      |
+| 不兼容数据归档     | `migration.Archive()`             | 不暴露                                | ❌                      |
+| Caddy 路由         | `caddy.AddRoute()` + SSRF 校验    | `vanblog.caddy.addRoute()`            | ✅ 用户可在钩子里加路由 |
+| Caddy HTTPS        | `caddy.OnDemandTLS()`             | 不暴露                                | ❌                      |
+| revisions 快照     | `revisions.Snapshot()`            | 不暴露                                | ❌                      |
+| revisions diff     | `revisions.Diff()`(go-diff)       | 不暴露                                | ❌                      |
+| revisions 恢复     | `revisions.Restore()`             | 不暴露                                | ❌                      |
+| visits 计数        | `visits.Increment()`(原子)        | 不暴露                                | ❌                      |
+| visits 聚合        | `visits.AggregateDaily()`(cron)   | 不暴露                                | ❌                      |
+| Markdown 渲染      | `markdown.Render()`(goldmark)     | 不暴露                                | ❌                      |
+| RSS 生成           | `rss.Generate()`                  | 不暴露                                | ❌                      |
+| Sitemap 生成       | `sitemap.Generate()`              | 不暴露                                | ❌                      |
+| 子进程管理(waline) | `process.Supervisor`              | 不暴露                                | ❌                      |
+| git sync           | `process.GitSync()`(cron)         | 不暴露                                | ❌                      |
+| 审计日志           | `audits.Log()`(Go hook)           | `vanblog.audits.log()`                | ✅ 用户可记自定义事件   |
+| 自定义定时任务     | —                                 | `cronAdd("id", "...", () => { ... })` | ✅                      |
+| 自定义 API 端点    | —                                 | `routerAdd("GET", "/my-api", ...)`    | ✅                      |
 
 **总结**:
+
 - Go SDK 承担 **~20 个核心功能**(重运算)
 - JSVM 提供 **~6 个扩展点**(用户自定义)
 - 用户通过 `vanblog.*` 调用 Go SDK 能力
@@ -414,6 +449,7 @@ func Import(jsonData string, opts Options) Result {
 ```
 
 **暴露给 JSVM / Admin UI**:
+
 ```go
 // internal/hooks/bind_migration.go
 vm.Set("vanblog.migration.import", func(jsonStr string) map[string]interface{} {
@@ -427,13 +463,19 @@ vm.Set("vanblog.migration.import", func(jsonStr string) map[string]interface{} {
 ```
 
 **JSVM 触发**(只是入口,不做逻辑):
+
 ```javascript
 // pb_hooks/migration.pb.js(我们的,不是用户的)
-routerAdd("POST", "/api/migrate/import", (c) => {
-    const json = c.request.body  // pb 自动处理 body
-    const result = vanblog.migration.import(json)
-    return c.json(200, result)
-}, $apis.requireAdminAuth())
+routerAdd(
+  "POST",
+  "/api/migrate/import",
+  (c) => {
+    const json = c.request.body; // pb 自动处理 body
+    const result = vanblog.migration.import(json);
+    return c.json(200, result);
+  },
+  $apis.requireAdminAuth()
+);
 ```
 
 ---
@@ -442,29 +484,29 @@ routerAdd("POST", "/api/migrate/import", (c) => {
 
 ### v0.1 MVP(Go SDK 核心)
 
-| 模块 | 优先级 | 理由 |
-|---|---|---|
-| `pb_migrations/001_init_collections.go` | P0 | 创建 10 个 collections |
-| `pb_migrations/002_default_site.go` | P0 | 插入 site 默认行 |
-| `article` 查询构建 | P0 | 前台需要列表/搜索 |
-| `media` local 驱动 | P0 | 图床上传 |
-| `markdown` 渲染 | P0 | 前台显示 |
-| `caddy` 客户端 + SSRF | P1 | HTTPS + 路由 |
-| `revisions` 快照 | P1 | 编辑历史 |
-| `migration` 导入 | P1 | 老用户迁移 |
-| `rss` + `sitemap` | P2 | SEO |
-| `visits` 计数 | P2 | 统计 |
-| `process` 管理(waline) | P3 | 评论外挂 |
-| `media` S3 驱动 | P3 | 云存储 |
+| 模块                                    | 优先级 | 理由                   |
+| --------------------------------------- | ------ | ---------------------- |
+| `pb_migrations/001_init_collections.go` | P0     | 创建 10 个 collections |
+| `pb_migrations/002_default_site.go`     | P0     | 插入 site 默认行       |
+| `article` 查询构建                      | P0     | 前台需要列表/搜索      |
+| `media` local 驱动                      | P0     | 图床上传               |
+| `markdown` 渲染                         | P0     | 前台显示               |
+| `caddy` 客户端 + SSRF                   | P1     | HTTPS + 路由           |
+| `revisions` 快照                        | P1     | 编辑历史               |
+| `migration` 导入                        | P1     | 老用户迁移             |
+| `rss` + `sitemap`                       | P2     | SEO                    |
+| `visits` 计数                           | P2     | 统计                   |
+| `process` 管理(waline)                  | P3     | 评论外挂               |
+| `media` S3 驱动                         | P3     | 云存储                 |
 
 ### JSVM 扩展(随 Go SDK 一起)
 
-| 文件 | 优先级 | 内容 |
-|---|---|---|
-| `pb_hooks/lib/vanblog.js` | P0 | d.ts 声明 |
-| `pb_hooks/example_hooks.pb.js` | P1 | 3-5 个示例 |
-| `pb_hooks/migration.pb.js` | P1 | 迁移入口(调 Go) |
-| `pb_hooks/caddy.pb.js` | P1 | caddy/ask 端点(调 Go) |
+| 文件                           | 优先级 | 内容                  |
+| ------------------------------ | ------ | --------------------- |
+| `pb_hooks/lib/vanblog.js`      | P0     | d.ts 声明             |
+| `pb_hooks/example_hooks.pb.js` | P1     | 3-5 个示例            |
+| `pb_hooks/migration.pb.js`     | P1     | 迁移入口(调 Go)       |
+| `pb_hooks/caddy.pb.js`         | P1     | caddy/ask 端点(调 Go) |
 
 ---
 
@@ -472,12 +514,12 @@ routerAdd("POST", "/api/migrate/import", (c) => {
 
 本文件是 **Go vs JSVM 分层的最终决策**,修正了之前 schema-design.md §4 "pb_hooks 事件映射"的定位:
 
-| 之前(schema-design §4) | 现在(本文档) |
-|---|---|
-| 全部功能用 pb_hooks 实现 | 核心用 Go SDK,扩展用 JSVM |
-| `OnRecordBeforeUpdate` 写 revisions | Go hook 写 revisions(JSVM 可覆盖) |
-| `routerAdd` 实现迁移端点 | Go 实现迁移,JSVM 只是入口 |
-| `$http.send` 调 Caddy | Go `net/http` 调 Caddy,JSVM 调 `vanblog.caddy.*` |
-| `$os.writeFile` 写 md_output | Go `os.WriteFile` 写 md_output |
+| 之前(schema-design §4)              | 现在(本文档)                                     |
+| ----------------------------------- | ------------------------------------------------ |
+| 全部功能用 pb_hooks 实现            | 核心用 Go SDK,扩展用 JSVM                        |
+| `OnRecordBeforeUpdate` 写 revisions | Go hook 写 revisions(JSVM 可覆盖)                |
+| `routerAdd` 实现迁移端点            | Go 实现迁移,JSVM 只是入口                        |
+| `$http.send` 调 Caddy               | Go `net/http` 调 Caddy,JSVM 调 `vanblog.caddy.*` |
+| `$os.writeFile` 写 md_output        | Go `os.WriteFile` 写 md_output                   |
 
 **修正原因**:用户反馈"运算代码不应在 JSVM",且 pb 官方 JSVM 定位是"用户自定义扩展"不是"核心业务"。
