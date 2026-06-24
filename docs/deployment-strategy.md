@@ -1,13 +1,58 @@
 # 部署策略
 
-> **依据**:用户反馈 + [原项目 `scripts/vanblog.sh`](file:///Users/corn/Code/vanblog-upstream/scripts/vanblog.sh) + [原项目 `Dockerfile`](file:///Users/corn/Code/vanblog-upstream/Dockerfile)
+> **依据**:用户反馈 + [原项目 `scripts/vanblog.sh`](file:///Users/corn/Code/vanblog-upstream/scripts/vanblog.sh) + [原项目 `Dockerfile`](file:///Users/corn/Code/vanblog-upstream/Dockerfile) + [Astro 官方文档](https://docs.astro.build/en/guides/on-demand-rendering/)
 >
-> **核心决策**:
+> **核心决策(v2)**:
+>
 > - **双镜像**(prod / dev),一个 Dockerfile 多阶段构建
+> - **prod 带 Node**(运行 Astro SSR server),但不带 npm/pnpm/源码
+> - **前台走 Astro Hybrid 模式**(`output: 'static'` + 逐页 `prerender`):静态页 SSG + 文章页 SSR + `Astro.cache` 缓存
+> - **缓存失效**:pb hook → 调 Astro `/api/revalidate` → `Astro.cache.invalidate()` → 无需重新 build
 > - **vanblog.sh 继承原项目形态**(curl 一键脚本 + 交互式菜单),管 docker-compose.yml
 > - **Admin UI 不碰 host**(信任域隔离),未来 v2 考虑本地 agent + 中央 Web 控制台
 >
 > **关联文档**:[`https-strategy.md`](./https-strategy.md) / [`routing-strategy.md`](./routing-strategy.md)
+
+---
+
+## 0. 渲染策略(v2 修订)
+
+> **v1 决策**:prod 纯 SSG,无 Node。文章内容用 CSR fetch。
+> **v1 问题**:博客的核心价值是 SEO。CSR 返回空壳 HTML,搜索引擎无法收录文章。
+> **v2 决策**:Hybrid 模式,prod 带 Node 跑 Astro SSR。
+
+### 0.1 Astro Hybrid 模式
+
+Astro `output: 'static'`(默认)+ Node adapter = **逐页控制渲染策略**:
+
+| 页面                 | `prerender` | 渲染方式                    | 缓存                        |
+| -------------------- | ----------- | --------------------------- | --------------------------- |
+| 首页 `/`             | `true`      | SSG(build 时编译)           | 永久静态                    |
+| 关于 `/about`        | `true`      | SSG                         | 永久静态                    |
+| 文章 `/posts/[slug]` | `false`     | SSR(运行时 fetch pb + 渲染) | `Astro.cache`(maxAge + swr) |
+| 归档 `/archive`      | `false`     | SSR                         | `Astro.cache`               |
+| 后台 `/admin/*`      | `false`     | SSR/CSR                     | 无缓存                      |
+| `/api/revalidate`    | `false`     | API 端点                    | —                           |
+
+### 0.2 文章发布 → 缓存失效流程
+
+```
+1. 用户在 Admin 发布/更新文章
+2. pb Go hook (OnRecordAfterUpdateSuccess "posts")
+   → HTTP POST http://127.0.0.1:4321/api/revalidate { tags: ["posts"] }
+3. Astro.cache.invalidate({ tags: ["posts"] })
+4. 下一个访客请求 /posts/[slug]
+   → 缓存 miss → SSR 重新渲染(从 pb 拿最新数据)
+   → 写入新缓存 → 返回完整 HTML
+```
+
+**不需要重新 build。不需要 cron。** 文章发布后缓存立即失效,下次访问自动刷新。
+
+### 0.3 为什么 prod 仍然需要 Node
+
+Astro 的 SSR 页面(`prerender = false`)在运行时需要一个 Node 进程执行 `fetch()` + 渲染组件。编译产物是 `dist/server/entry.mjs`,用 `node ./dist/server/entry.mjs` 启动。
+
+prod 镜像包含 `node` 二进制 + 编译产物,但**不含 npm/pnpm/Astro 源码**。攻击面比 v1 大一个 node 进程,但远小于带完整开发环境的 dev 镜像。
 
 ---
 
@@ -16,30 +61,34 @@
 ### 1.1 为什么双镜像(不是单镜像 + 运行时模式)
 
 **安全考量(决定性因素)**:
+
 - 博客系统是面向公网的服务,攻击面真实存在
 - 单镜像(即使 prod 模式不启动 Node)仍包含 `node` / `npm` / `pnpm` / Astro 源码
 - 容器被攻破后,攻击者可 `docker exec` 进去手动启动 Node / 安装恶意包
 - 双镜像的 prod 镜像只有 `caddy + pb + 编译产物`,最小化攻击面
 
 **镜像扫描**(Trivy / Snyk / GHCR 自带):
+
 - 单镜像会报 Node 相关 CVE,即使用户不启动 Node
 - 双镜像的 prod 镜像 CVE 数量大幅减少
 
 ### 1.2 prod vs dev 的差异
 
-| 维度 | prod | dev |
-|---|---|---|
-| Caddy(HTTPS + 路由) | ✅ 内嵌 | ✅ 内嵌 |
-| pb 二进制 | ✅ | ✅ |
-| Astro 编译产物(`/app/dist`) | ✅ | ✅ |
-| Node runtime | ❌ | ✅ |
-| npm / pnpm | ❌ | ✅ |
-| Astro 源码(`/app/src`) | ❌ | ✅ |
-| MCP / Skill | ❌ | ✅ |
-| 镜像体积 | ~80MB | ~150MB |
-| VANBLOG_MODE 环境变量 | `prod` | `dev` |
+| 维度                        | prod                                | dev                     |
+| --------------------------- | ----------------------------------- | ----------------------- |
+| Caddy(HTTPS + 路由)         | ✅ 内嵌                             | ✅ 内嵌                 |
+| pb 二进制                   | ✅                                  | ✅                      |
+| Astro 编译产物(`/app/dist`) | ✅                                  | ✅                      |
+| Node runtime                | ✅(跑 SSR server)                   | ✅                      |
+| npm / pnpm                  | ❌                                  | ✅                      |
+| Astro 源码(`/app/src`)      | ❌                                  | ✅                      |
+| MCP / Skill                 | ❌                                  | ✅                      |
+| Astro 运行模式              | `node ./dist/server/entry.mjs`(SSR) | `astro dev`(HMR 热重载) |
+| Astro.cache                 | ✅(生效)                            | ❌(dev 下禁用)          |
+| 镜像体积                    | ~120MB                              | ~200MB                  |
+| VANBLOG_MODE 环境变量       | `prod`                              | `dev`                   |
 
-**功能完全对齐**(都有 Caddy + 路由 + on-demand TLS),差异只在"是否支持二次开发"。
+**功能完全对齐**(都有 Caddy + pb + Node + 路由 + on-demand TLS),差异只在"是否支持源码热重载"。
 
 ### 1.3 一个 Dockerfile,两个 target
 
@@ -78,6 +127,7 @@ ENV VANBLOG_MODE=dev
 ```
 
 **构建命令**:
+
 ```bash
 docker build --target prod -t ghcr.io/cornworld/vanblog:prod .
 docker build --target dev  -t ghcr.io/cornworld/vanblog:dev .
@@ -86,6 +136,7 @@ docker build --target dev  -t ghcr.io/cornworld/vanblog:dev .
 ### 1.4 CI/CD 流水线
 
 **一次构建,两个 tag**:
+
 ```yaml
 # .github/workflows/release.yml
 jobs:
@@ -123,6 +174,7 @@ exec pocketbase serve \
 ```
 
 **特点**:
+
 - pb 只绑 `127.0.0.1:8090`,不对外(由 Caddy 反代)
 - 无 Node 进程
 - 无 dev server
@@ -148,6 +200,7 @@ exec pnpm dev --host 127.0.0.1 --port 4321
 ```
 
 **特点**:
+
 - 额外启动 Astro dev server(监听 127.0.0.1:4321)
 - 用户挂载 `/app/src` 可改源码,热重载
 - Caddy 兜底反代到 4321
@@ -159,14 +212,15 @@ exec pnpm dev --host 127.0.0.1 --port 4321
 ### 3.1 定位与信任域
 
 **关键边界**(用户明确指出):
+
 - `vanblog.sh` 运行在 **host 上**,有 docker/socket 权限
 - Admin UI 运行在**容器内**,无权碰 host
 - **Admin UI 永远不能直接 `docker-compose up`**
 
-| 工具 | 运行位置 | 能力 | 信任域 |
-|---|---|---|---|
-| vanblog.sh | host(root) | docker-compose / 镜像 / 数据卷 / 备份 | host 运维层 |
-| Admin UI | 容器内(pb_hooks) | 只能管 pb 数据 / Caddy admin API(127.0.0.1) | 应用层 |
+| 工具       | 运行位置         | 能力                                        | 信任域      |
+| ---------- | ---------------- | ------------------------------------------- | ----------- |
+| vanblog.sh | host(root)       | docker-compose / 镜像 / 数据卷 / 备份       | host 运维层 |
+| Admin UI   | 容器内(pb_hooks) | 只能管 pb 数据 / Caddy admin API(127.0.0.1) | 应用层      |
 
 ### 3.2 继承原项目的形态
 
@@ -197,15 +251,15 @@ $ curl -L https://vanblog.example.com/vanblog.sh -o vanblog.sh && chmod +x vanbl
 
 ### 3.3 与原项目 vanblog.sh 的差异
 
-| 功能 | 原项目 | 新版 |
-|---|---|---|
-| 安装 | 下载 docker-compose-template.yml + sed 替换 | 同,但支持选 prod/dev |
-| 镜像源 | 中国 IP 自动切换阿里云 | 继承,可选 GHCR / 阿里云 |
-| 数据目录 | `/var/vanblog/data` | 继承 |
-| 备份 | `tar czvf ./data` | 继承(增:可选 `pb_data` + `site.sync` git push) |
-| 模式切换 | ❌ 不存在 | ✅ 新增,改 compose 的 image + environment |
-| HTTPS 重置 | `docker-compose exec vanblog node /app/cli/resetHttps.js` | `docker-compose exec vanblog pocketbase admin hook resetHttps` |
-| Dockerfile 管理 | ❌ | ❌(仍只管 compose,不管 Dockerfile) |
+| 功能            | 原项目                                                    | 新版                                                           |
+| --------------- | --------------------------------------------------------- | -------------------------------------------------------------- |
+| 安装            | 下载 docker-compose-template.yml + sed 替换               | 同,但支持选 prod/dev                                           |
+| 镜像源          | 中国 IP 自动切换阿里云                                    | 继承,可选 GHCR / 阿里云                                        |
+| 数据目录        | `/var/vanblog/data`                                       | 继承                                                           |
+| 备份            | `tar czvf ./data`                                         | 继承(增:可选 `pb_data` + `site.sync` git push)                 |
+| 模式切换        | ❌ 不存在                                                 | ✅ 新增,改 compose 的 image + environment                      |
+| HTTPS 重置      | `docker-compose exec vanblog node /app/cli/resetHttps.js` | `docker-compose exec vanblog pocketbase admin hook resetHttps` |
+| Dockerfile 管理 | ❌                                                        | ❌(仍只管 compose,不管 Dockerfile)                             |
 
 ### 3.4 安装流程(交互式)
 
@@ -256,13 +310,13 @@ switch_mode() {
     new_mode="prod"
     echo "切换到标准版(将移除 Node 运行时)"
   fi
-  
+
   read -p "确认切换? [y/N]: " confirm
   [ "$confirm" != "y" ] && exit 0
-  
+
   sed -i "s|image:.*|image: $new_image|g" /var/vanblog/docker-compose.yml
   sed -i "s|VANBLOG_MODE=.*|VANBLOG_MODE=$new_mode|g" /var/vanblog/docker-compose.yml
-  
+
   cd /var/vanblog
   docker-compose pull
   docker-compose down
@@ -307,6 +361,7 @@ volumes:
 ```
 
 **设计原则**:
+
 - 用户**不直接编辑** Dockerfile
 - 用户**可以编辑** docker-compose.yml(加 Waline、改端口、加卷)
 - `vanblog.sh config` 命令重新生成此文件(保留用户手动改动?待决,倾向:提示冲突让用户选)
@@ -382,18 +437,19 @@ volumes:
 ```
 
 **升级前自动备份**:
+
 ```bash
 update() {
   # 1. 备份当前数据
   backup    # tar czvf ./pb_data
-  
+
   # 2. 拉新镜像
   docker-compose pull
-  
+
   # 3. 重启
   docker-compose down
   docker-compose up -d
-  
+
   # 4. 验证健康
   sleep 5
   curl -sf http://localhost:8090/api/health || echo "⚠️ 健康检查失败"
@@ -403,6 +459,7 @@ update() {
 ### 6.2 模式升级(prod → dev)
 
 用户开始用 prod,后来想二次开发:
+
 ```bash
 ./vanblog.sh switch-mode dev
 ```
@@ -410,6 +467,7 @@ update() {
 ### 6.3 数据迁移(原 Vanblog 用户)
 
 见 [`migration-path.md`](./migration-path.md):
+
 1. 原后台导出 `temp.json`
 2. 用 vanblog.sh 安装新 vanblog
 3. 新后台 → 迁移 → 上传 JSON
@@ -418,15 +476,15 @@ update() {
 
 ## 7. 安全模型汇总
 
-| 层 | 组件 | 权限 | 防护 |
-|---|---|---|---|
-| host | vanblog.sh | root(管 docker) | 必须 root 运行,用户自己负责 |
-| 容器 | entrypoint.sh | root(容器内) | Docker capability 最小化(待细化为 `--cap-drop ALL --cap-add NET_BIND_SERVICE`) |
-| 容器 | Caddy | 非 root(user caddy) | admin API 只绑 127.0.0.1:2019 |
-| 容器 | pb | 非 root(user pb) | 只绑 127.0.0.1:8090,由 Caddy 反代 |
-| 容器 | Astro dev server(dev 模式) | 非 root | 只绑 127.0.0.1:4321 |
-| 应用 | Admin UI | pb auth | 基于 pb Rule,无 host 访问 |
-| 应用 | 路由配置 | pb auth + vanblog 中间层 | SSRF 白名单 + audit(见 routing-strategy.md) |
+| 层   | 组件                       | 权限                     | 防护                                                                           |
+| ---- | -------------------------- | ------------------------ | ------------------------------------------------------------------------------ |
+| host | vanblog.sh                 | root(管 docker)          | 必须 root 运行,用户自己负责                                                    |
+| 容器 | entrypoint.sh              | root(容器内)             | Docker capability 最小化(待细化为 `--cap-drop ALL --cap-add NET_BIND_SERVICE`) |
+| 容器 | Caddy                      | 非 root(user caddy)      | admin API 只绑 127.0.0.1:2019                                                  |
+| 容器 | pb                         | 非 root(user pb)         | 只绑 127.0.0.1:8090,由 Caddy 反代                                              |
+| 容器 | Astro dev server(dev 模式) | 非 root                  | 只绑 127.0.0.1:4321                                                            |
+| 应用 | Admin UI                   | pb auth                  | 基于 pb Rule,无 host 访问                                                      |
+| 应用 | 路由配置                   | pb auth + vanblog 中间层 | SSRF 白名单 + audit(见 routing-strategy.md)                                    |
 
 **信任域隔离**:Admin UI 被攻破 ≠ host 被攻破。攻击者拿到 pb admin token 也无法 `docker-compose down` 或访问 host 文件系统。
 
