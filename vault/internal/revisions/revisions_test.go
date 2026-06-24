@@ -172,10 +172,18 @@ func TestRestore(t *testing.T) {
 		t.Fatalf("expected 2 revisions after restore, got %d", len(allRevs))
 	}
 
-	// Find the restore revision (newest, reason="restore")
-	restoreRev := allRevs[0] // newest first
-	if restoreRev.GetString("reason") != string(ReasonRestore) {
-		t.Errorf("newest revision reason = %q, want %q", restoreRev.GetString("reason"), ReasonRestore)
+	// Find the restore revision by reason (don't rely on sort order —
+	// pb created field is second-precision, so two revisions created
+	// in the same second have unstable sort order)
+	var restoreRev *core.Record
+	for _, r := range allRevs {
+		if r.GetString("reason") == string(ReasonRestore) {
+			restoreRev = r
+			break
+		}
+	}
+	if restoreRev == nil {
+		t.Fatal("expected a revision with reason='restore'")
 	}
 	snap, _ := ExtractSnapshot(restoreRev)
 	if snap.Title != "v2" {
