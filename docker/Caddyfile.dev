@@ -17,6 +17,7 @@
   }
 }
 
+# ---- Main HTTPS site (port 443) ----
 https:// {
   tls {
     on_demand
@@ -44,6 +45,36 @@ https:// {
   reverse_proxy 127.0.0.1:4321
 }
 
+# ---- HTTP redirect (port 80) ----
 http:// {
   redir https://{host}{uri} permanent
+}
+
+# ---- Management port (port 8080, plain HTTP fallback) ----
+# Purpose: emergency access when TLS is broken or misconfigured.
+# Only exposes API + admin page, NOT the public frontend.
+# Not EXPOSED by default — user must `-p 8080:8080` to use.
+:8080 {
+  # pb API (Astro admin page calls these)
+  handle /api/* {
+    reverse_proxy 127.0.0.1:8090
+  }
+
+  # Astro admin dev server
+  handle /admin/* {
+    reverse_proxy 127.0.0.1:4321
+  }
+
+  # pb Admin UI (for superuser operations)
+  handle /_/* {
+    reverse_proxy 127.0.0.1:8090
+  }
+
+  # static files (images, admin assets)
+  handle_path /static/* {
+    reverse_proxy 127.0.0.1:8090
+  }
+
+  # everything else: 403 (this is NOT a public port)
+  respond 403
 }

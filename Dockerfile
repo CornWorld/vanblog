@@ -58,7 +58,10 @@ RUN chmod +x /entrypoint.sh
 RUN mkdir -p /pb_data /data/caddy /var/log
 
 ENV VANBLOG_MODE=prod
-EXPOSE 80 443
+# 80  = HTTP → redirect to HTTPS
+# 443 = HTTPS (main site)
+# 8080 = management port (HTTP fallback, not exposed by default)
+EXPOSE 80 443 8080
 
 # Persist pb_data + caddy certs across container restarts
 VOLUME ["/pb_data", "/data/caddy"]
@@ -85,6 +88,6 @@ RUN chmod +x /entrypoint.sh
 WORKDIR /
 
 ENV VANBLOG_MODE=dev
-EXPOSE 80 443 4321
+EXPOSE 80 443 4321 8080
 
 ENTRYPOINT ["/entrypoint.sh"]

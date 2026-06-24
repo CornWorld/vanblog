@@ -130,6 +130,15 @@ func Register(app core.App) {
 			return e.JSON(200, results)
 		})
 
+		// TLS status — shows Caddy reachability, allowed domains, issued certificates
+		se.Router.GET("/api/vanblog/tls/status", func(e *core.RequestEvent) error {
+			status, err := caddy.GetTLSStatus(app, "http://127.0.0.1:2019")
+			if err != nil {
+				return e.JSON(500, err.Error())
+			}
+			return e.JSON(200, status)
+		})
+
 		return se.Next()
 	})
 
