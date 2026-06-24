@@ -97,7 +97,7 @@ func Register(app core.App) {
 			}
 			posts, err := app.FindRecordsByFilter("posts", "status='published' && deleted=false", "-created", 20, 0)
 			if err != nil {
-				return e.JSON(500, "query failed")
+				return e.String(500, "query failed")
 			}
 			items := make([]rss.FeedItem, len(posts))
 			for i, p := range posts {
@@ -114,9 +114,10 @@ func Register(app core.App) {
 			}
 			data, err := rss.GenerateRSS(rss.Feed{Title: siteName, Link: baseURL, Description: siteName, Items: items})
 			if err != nil {
-				return e.JSON(500, "rss failed")
+				return e.String(500, "rss failed")
 			}
-			return e.JSON(200, string(data))
+			e.Set("Content-Type", "application/rss+xml; charset=utf-8")
+			return e.String(200, string(data))
 		})
 
 		// Sitemap
@@ -137,9 +138,10 @@ func Register(app core.App) {
 			}
 			data, err := sitemap.GenerateSitemap(baseURL, urls)
 			if err != nil {
-				return e.JSON(500, "sitemap failed")
+				return e.String(500, "sitemap failed")
 			}
-			return e.JSON(200, string(data))
+			e.Set("Content-Type", "application/xml; charset=utf-8")
+			return e.String(200, string(data))
 		})
 
 		// Timeline
