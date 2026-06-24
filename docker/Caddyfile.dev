@@ -4,6 +4,13 @@
   on_demand_tls {
     ask http://127.0.0.1:8090/api/hooks/caddy/ask
   }
+
+  # Persist TLS certificates + ACME state to /data/caddy
+  # (mount /data as a volume to survive container restarts)
+  storage file_system {
+    root /data/caddy
+  }
+
   log {
     output file /var/log/caddy.log
     level info

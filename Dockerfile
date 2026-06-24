@@ -53,10 +53,15 @@ COPY docker/entrypoint.prod.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 # Create data directories
-RUN mkdir -p /pb_data /var/log
+# /pb_data = PocketBase database + uploads
+# /data/caddy = Caddy TLS certificates + ACME state (persist across restarts)
+RUN mkdir -p /pb_data /data/caddy /var/log
 
 ENV VANBLOG_MODE=prod
 EXPOSE 80 443
+
+# Persist pb_data + caddy certs across container restarts
+VOLUME ["/pb_data", "/data/caddy"]
 
 ENTRYPOINT ["/entrypoint.sh"]
 

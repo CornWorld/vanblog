@@ -12,9 +12,19 @@ docker build --target prod -t vanblog:prod .
 docker run -d \
   -p 80:80 -p 443:443 \
   -v $(pwd)/pb_data:/pb_data \
+  -v $(pwd)/caddy_data:/data/caddy \
   -e VANBLOG_EMAIL=you@example.com \
   vanblog:prod
 ```
+
+### Volumes
+
+| Mount point | Purpose | Required |
+|---|---|---|
+| `/pb_data` | PocketBase database (SQLite) + uploaded files | **Yes** |
+| `/data/caddy` | Caddy TLS certificates + ACME state | Recommended |
+
+**Without `/data/caddy`**: the container will re-request TLS certificates from Let's Encrypt on every restart. This works but risks hitting Let's Encrypt rate limits (5 duplicate certs/week).
 
 ## Development
 
@@ -26,6 +36,7 @@ docker build --target dev -t vanblog:dev .
 docker run -d \
   -p 80:80 -p 443:443 -p 4321:4321 \
   -v $(pwd)/pb_data:/pb_data \
+  -v $(pwd)/caddy_data:/data/caddy \
   -v $(pwd)/app/src:/app/src/src \
   -v $(pwd)/pb_hooks:/pb_hooks \
   -e VANBLOG_EMAIL=you@example.com \
