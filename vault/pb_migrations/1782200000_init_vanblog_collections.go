@@ -189,7 +189,7 @@ func createMedia(db core.App) error {
 	col := core.NewCollection(core.CollectionTypeBase, "media")
 	col.Fields.Add(&core.FileField{Name: "file", MaxSelect: 1})
 	col.Fields.Add(&core.SelectField{Name: "staticType", Values: []string{"img", "favicon", "attachment"}})
-	col.Fields.Add(&core.SelectField{Name: "storageType", Values: []string{"local", "s3"}})
+	col.Fields.Add(&core.SelectField{Name: "storageType", Values: []string{"local", "s3", "external"}})
 	col.Fields.Add(&core.TextField{Name: "fileType"})
 	col.Fields.Add(&core.TextField{Name: "sign"})
 	col.Fields.Add(&core.JSONField{Name: "meta"})
