@@ -1,9 +1,9 @@
 package caddy
 
 import (
+	"strings"
 	"testing"
 
-	"github.com/cornworld/vanblog/utils/caddyadmin"
 )
 
 func TestValidateTarget_Loopback(t *testing.T) {
@@ -263,7 +263,7 @@ func TestRenderProdCaddyfile(t *testing.T) {
 		"redir https://{host}{uri}",
 	}
 	for _, s := range contains {
-		if !stringContains(output, s) {
+		if !strings.Contains(output, s) {
 			t.Errorf("prod Caddyfile missing %q", s)
 		}
 	}
@@ -280,54 +280,32 @@ func TestRenderDevCaddyfile(t *testing.T) {
 		"dev@test.com",
 	}
 	for _, s := range contains {
-		if !stringContains(output, s) {
+		if !strings.Contains(output, s) {
 			t.Errorf("dev Caddyfile missing %q", s)
 		}
 	}
 
 	// Dev should NOT have file_server as fallback
-	if stringContains(output, "root * /app/dist\n\ttry_files") {
+	if strings.Contains(output, "root * /app/dist\n\ttry_files") {
 		t.Error("dev Caddyfile should not have file_server fallback (that's prod)")
 	}
 }
 
 func TestRenderJSONConfig(t *testing.T) {
 	output := RenderJSONConfig("0.0.0.0:2019", []string{"*"})
-	if !stringContains(output, `"listen": "0.0.0.0:2019"`) {
+	if !strings.Contains(output, `"listen": "0.0.0.0:2019"`) {
 		t.Errorf("JSON config missing listen: %s", output)
 	}
-	if !stringContains(output, `"origins": ["*"]`) {
+	if !strings.Contains(output, `"origins": ["*"]`) {
 		t.Errorf("JSON config missing origins: %s", output)
 	}
 }
 
 func TestRenderJSONConfig_Defaults(t *testing.T) {
 	output := RenderJSONConfig("", nil)
-	if !stringContains(output, "0.0.0.0:2019") {
+	if !strings.Contains(output, "0.0.0.0:2019") {
 		t.Errorf("default bind missing: %s", output)
 	}
 }
 
-// stringContains is a simple helper to avoid importing strings in test.
-func stringContains(haystack, needle string) bool {
-	return len(haystack) >= len(needle) && indexOf(haystack, needle) >= 0
-}
 
-func indexOf(haystack, needle string) int {
-	for i := 0; i <= len(haystack)-len(needle); i++ {
-		match := true
-		for j := 0; j < len(needle); j++ {
-			if haystack[i+j] != needle[j] {
-				match = false
-				break
-			}
-		}
-		if match {
-			return i
-		}
-	}
-	return -1
-}
-
-// Ensure caddyadmin types compile
-var _ caddyadmin.Route = caddyadmin.Route{}

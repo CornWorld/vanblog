@@ -186,42 +186,51 @@ func TestRestore(t *testing.T) {
 func TestShouldSnapshot(t *testing.T) {
 	app := setupApp(t)
 
-	post := createTestPost(t, app, "title", "content", "published")
+	// Create two records to simulate old vs new
+	col, _ := app.FindCollectionByNameOrId("posts")
 
-	// Read old values
-	oldTitle := post.GetString("title")
-	oldContent := post.GetString("content")
+	oldRec := core.NewRecord(col)
+	oldRec.Set("title", "original")
+	oldRec.Set("content", "original body")
+	oldRec.Set("status", "published")
+	oldRec.Set("viewCount", 10)
+
+	// Same content → no snapshot
+	newRec := core.NewRecord(col)
+	newRec.Set("title", "original")
+	newRec.Set("content", "original body")
+	newRec.Set("status", "published")
+	newRec.Set("viewCount", 999) // only viewCount changed
+	if ShouldSnapshot(oldRec, newRec) {
+		t.Error("should NOT snapshot when only viewCount changed")
+	}
 
 	// Title changed → snapshot
-	post.Set("title", "new title")
-	if !shouldSnapshotFields(oldTitle, oldContent, "published",
-		post.GetString("title"), post.GetString("content"), post.GetString("status")) {
+	newRec2 := core.NewRecord(col)
+	newRec2.Set("title", "changed")
+	newRec2.Set("content", "original body")
+	newRec2.Set("status", "published")
+	if !ShouldSnapshot(oldRec, newRec2) {
 		t.Error("should snapshot when title changed")
 	}
 
-	// Reset
-	post.Set("title", oldTitle)
-	post.Set("content", oldContent)
-
-	// Only viewCount changed → no snapshot
-	post.Set("viewCount", 999)
-	if shouldSnapshotFields(oldTitle, oldContent, "published",
-		post.GetString("title"), post.GetString("content"), post.GetString("status")) {
-		t.Error("should not snapshot when only viewCount changed")
-	}
-
 	// Content changed → snapshot
-	post.Set("content", "new content")
-	if !shouldSnapshotFields(oldTitle, oldContent, "published",
-		post.GetString("title"), post.GetString("content"), post.GetString("status")) {
+	newRec3 := core.NewRecord(col)
+	newRec3.Set("title", "original")
+	newRec3.Set("content", "changed body")
+	newRec3.Set("status", "published")
+	if !ShouldSnapshot(oldRec, newRec3) {
 		t.Error("should snapshot when content changed")
 	}
-}
 
-// shouldSnapshotFields is a helper that compares meaningful fields directly,
-// avoiding the Record copy issue in tests.
-func shouldSnapshotFields(oldTitle, oldContent, oldStatus, newTitle, newContent, newStatus string) bool {
-	return oldTitle != newTitle || oldContent != newContent || oldStatus != newStatus
+	// Status changed → snapshot
+	newRec4 := core.NewRecord(col)
+	newRec4.Set("title", "original")
+	newRec4.Set("content", "original body")
+	newRec4.Set("status", "draft")
+	if !ShouldSnapshot(oldRec, newRec4) {
+		t.Error("should snapshot when status changed")
+	}
 }
 
 func TestCleanup(t *testing.T) {
