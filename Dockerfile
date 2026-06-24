@@ -11,7 +11,7 @@
 #
 
 # --- Stage 1: Build Go binary (PocketBase + vanblog SDK) ---
-FROM golang:1.23-alpine AS go-build
+FROM golang:alpine AS go-build
 WORKDIR /build
 COPY vault/go.mod vault/go.sum ./
 RUN go mod download
@@ -42,6 +42,9 @@ COPY --from=go-build /pocketbase /usr/local/bin/vanblog
 # Copy Astro static build
 COPY --from=astro-build /app/dist /app/dist
 
+# Copy pb_hooks (JSVM hooks: system.pb.js, examples.pb.js)
+COPY vault/pb_hooks /pb_hooks
+
 # Copy Caddyfile templates
 COPY docker/Caddyfile.prod /etc/caddy/Caddyfile
 
@@ -50,7 +53,7 @@ COPY docker/entrypoint.prod.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 # Create data directories
-RUN mkdir -p /pb_data /pb_hooks /var/log
+RUN mkdir -p /pb_data /var/log
 
 ENV VANBLOG_MODE=prod
 EXPOSE 80 443
