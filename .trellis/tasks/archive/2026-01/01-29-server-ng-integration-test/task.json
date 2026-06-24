@@ -1,0 +1,41 @@
+{
+  "id": "server-ng-integration-test",
+  "name": "server-ng-integration-test",
+  "title": "Test server-ng integration with admin/website frontends after server migration. Need to verify API contracts work correctly, frontend can communicate with backend, and end-to-end user workflows function properly.",
+  "description": "",
+  "status": "in_progress",
+  "dev_type": "fullstack",
+  "scope": "e2e",
+  "priority": "P2",
+  "creator": "CornWorld",
+  "assignee": "CornWorld",
+  "createdAt": "2026-01-29",
+  "completedAt": null,
+  "branch": "feature/server-ng-integration-test",
+  "base_branch": "refactor/baseline",
+  "worktree_path": "/Users/corn/Code/trellis-worktrees/feature/server-ng-integration-test",
+  "current_phase": 0,
+  "next_action": [
+    {
+      "phase": 1,
+      "action": "implement"
+    },
+    {
+      "phase": 2,
+      "action": "check"
+    },
+    {
+      "phase": 3,
+      "action": "finish"
+    },
+    {
+      "phase": 4,
+      "action": "create-pr"
+    }
+  ],
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "relatedFiles": [],
+  "notes": ""
+}

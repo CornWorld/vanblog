@@ -3,7 +3,6 @@ import {
   Controller,
   Delete,
   Get,
-  NotFoundException,
   Param,
   Post,
   Put,
@@ -11,8 +10,6 @@ import {
   Query,
 } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
-import { contract, type Tag as SharedTag } from '@vanblog/shared';
 import { z } from 'zod';
 
 import { OverallStatisticsDto } from '../../shared/dto/statistics.dto';
@@ -84,36 +81,36 @@ export class TagController {
   /**
    * 更新标签
    *
-   * 根据标签 ID 更新标签的信息，如名称、描述等。
+   * 根据标签名称更新标签的信息，如名称、描述等。
    *
-   * @param id 标签 ID
+   * @param name 标签名称
    * @param updateTagDto 标签更新数据
    * @returns 更新后的标签信息
    */
-  @Put(':id')
+  @Put(':name')
   @Permission('tag', ['update'])
-  @ApiOperation({ summary: 'Update a tag' })
+  @ApiOperation({ summary: 'Update a tag by name' })
   @ApiResponse({ status: 200, description: 'Update existing tag' })
   @ApiResponse({ status: 404, description: 'Tag not found' })
-  async update(@Param('id', ParseIntPipe) id: number, @Body() raw: unknown): Promise<Tag> {
+  async update(@Param('name') name: string, @Body() raw: unknown): Promise<Tag> {
     const dto = UpdateTagSchema.parse(raw);
-    return this.tagService.update(id, dto);
+    return this.tagService.updateByName(name, dto);
   }
 
   /**
    * 删除标签
    *
-   * 根据标签 ID 删除指定标签。删除前会检查标签是否被文章使用。
+   * 根据标签名称删除指定标签。删除前会检查标签是否被文章使用。
    *
-   * @param id 标签 ID
+   * @param name 标签名称
    */
-  @Delete(':id')
+  @Delete(':name')
   @Permission('tag', ['delete'])
-  @ApiOperation({ summary: 'Delete a tag' })
+  @ApiOperation({ summary: 'Delete a tag by name' })
   @ApiResponse({ status: 200, description: 'Tag deleted successfully' })
   @ApiResponse({ status: 404, description: 'Tag not found' })
-  async remove(@Param('id', ParseIntPipe) id: number): Promise<void> {
-    return this.tagService.remove(id);
+  async remove(@Param('name') name: string): Promise<void> {
+    return this.tagService.removeByName(name);
   }
 
   /**
@@ -157,27 +154,6 @@ export class TagController {
   }
 
   /**
-   * 根据标签名称获取文章列表
-   *
-   * 根据标签名称查询该标签下的所有文章，支持分页和筛选。
-   *
-   * @param name 标签名称
-   * @param query 查询参数
-   * @returns 文章列表响应数据
-   */
-  @Get('name/:name/articles')
-  @ApiOperation({ summary: 'Get articles by tag name' })
-  @ApiResponse({ status: 200, description: 'Return articles by tag name' })
-  @ApiResponse({ status: 404, description: 'Tag not found' })
-  async getArticlesByTagName(
-    @Param('name') name: string,
-    @Query() raw: unknown,
-  ): Promise<z.infer<typeof ArticleListResponseSchema>> {
-    const query = ArticleQuerySchema.parse(raw);
-    return this.tagService.getArticlesByTagName(name, query);
-  }
-
-  /**
    * 根据标签 ID 获取文章列表
    *
    * 根据标签 ID 查询该标签下的所有文章，支持分页和筛选。
@@ -194,72 +170,7 @@ export class TagController {
     @Param('id', ParseIntPipe) id: number,
     @Query() raw: unknown,
   ): Promise<z.infer<typeof ArticleListResponseSchema>> {
-    const query = ArticleQuerySchema.parse(raw);
+    const query = ArticleQuerySchema.parse(raw ?? {});
     return this.tagService.getArticlesByTagId(id, query);
-  }
-
-  @TsRestHandler(contract.getTags)
-  getTags(): unknown {
-    return tsRestHandler(contract.getTags, async () => {
-      const result = await this.tagService.findAll();
-      const body: SharedTag[] = result.items.map((item) => ({
-        id: item.id,
-        name: item.name,
-        slug: item.slug ?? null,
-        count: item.articleCount,
-        createdAt: item.createdAt,
-      }));
-      return { status: 200, body };
-    });
-  }
-
-  @TsRestHandler(contract.createTag)
-  createTag(): unknown {
-    return tsRestHandler(contract.createTag, async ({ body }) => {
-      const created = await this.tagService.create(body);
-      return {
-        status: 201,
-        body: {
-          id: created.id,
-          name: created.name,
-          slug: created.slug ?? null,
-          count: undefined,
-          createdAt: created.createdAt,
-        },
-      };
-    });
-  }
-
-  @TsRestHandler(contract.updateTag)
-  updateTag(): unknown {
-    return tsRestHandler(contract.updateTag, async ({ params, body }) => {
-      const tag = await this.tagService.findByName(params.name);
-      if (!tag) {
-        throw new NotFoundException(`Tag ${params.name} not found`);
-      }
-      const result = await this.tagService.update(tag.id, body);
-      return {
-        status: 200,
-        body: {
-          id: result.id,
-          name: result.name,
-          slug: result.slug ?? null,
-          count: undefined,
-          createdAt: result.createdAt,
-        },
-      };
-    });
-  }
-
-  @TsRestHandler(contract.deleteTag)
-  deleteTag(): unknown {
-    return tsRestHandler(contract.deleteTag, async ({ params }) => {
-      const tag = await this.tagService.findByName(params.name);
-      if (!tag) {
-        throw new NotFoundException(`Tag ${params.name} not found`);
-      }
-      await this.tagService.remove(tag.id);
-      return { status: 200, body: { success: true } };
-    });
   }
 }

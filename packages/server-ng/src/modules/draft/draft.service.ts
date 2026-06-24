@@ -217,11 +217,11 @@ export class DraftService {
       author: string;
     } = {
       title: rest.title,
-      content: rest.content,
+      content: rest.content ?? '',
       pathname: null, // pathname not available in CreateDraftDto
       tags: tagNames.length > 0 ? tagNames : null, // 保留用于钩子
-      category: null, // Use first category from categories array if available
-      author: 'admin', // Default author since not in CreateDraftDto
+      category: rest.category ?? null,
+      author: rest.author ?? 'admin',
     };
 
     // 触发创建前的插件钩子

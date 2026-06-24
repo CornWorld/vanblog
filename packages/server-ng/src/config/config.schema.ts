@@ -45,7 +45,7 @@ export const configSchema = z.object({
   UPLOAD_DESTINATION: z.string().default('./uploads'),
 
   // ============ 静态文件配置 ============
-  STATIC_PATH: z.string().default('/app/static'),
+  STATIC_PATH: z.string().default('./data/static'),
 
   // ============ 日志配置 ============
   LOG_LEVEL: z.enum(['error', 'warn', 'info', 'debug', 'verbose']).default('info'),

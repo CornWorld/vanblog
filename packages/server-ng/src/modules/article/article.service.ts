@@ -575,10 +575,11 @@ export class ArticleService {
 
     let newArticleData = {
       title: articleData.title,
-      content: articleData.content,
+      // Provide default empty content for initial article creation
+      content: articleData.content ?? '',
       pathname: articleData.pathname ?? undefined,
       category: articleData.category ?? undefined,
-      author: articleData.author !== '' ? articleData.author : 'admin',
+      author: articleData.author && articleData.author !== '' ? articleData.author : 'admin',
       top: articleData.top ?? undefined,
       hidden: articleData.hidden ?? undefined,
       private: articleData.private ?? undefined,

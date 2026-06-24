@@ -4,8 +4,11 @@ import { JwtModule, type JwtModuleOptions } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 
 import { DatabaseModule } from '../../database';
+import { PermissionModule } from '../permission/permission.module';
 import { UserModule } from '../user/user.module';
 
+import { ApiTokenController } from './api-token.controller';
+import { ApiTokenService } from './api-token.service';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { CsrfController } from './csrf.controller';
@@ -23,6 +26,7 @@ import { TokenService } from './token.service';
     forwardRef(() => UserModule),
     PassportModule,
     DatabaseModule,
+    PermissionModule.forFeature(['user:read', 'user:create', 'user:update', 'user:delete']),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService): JwtModuleOptions => {
@@ -38,7 +42,7 @@ import { TokenService } from './token.service';
       inject: [ConfigService],
     }),
   ],
-  controllers: [AuthController, CsrfController, LoginLogController],
+  controllers: [AuthController, CsrfController, LoginLogController, ApiTokenController],
   providers: [
     AuthService,
     LocalStrategy,
@@ -47,6 +51,7 @@ import { TokenService } from './token.service';
     TokenBlacklistService,
     PasswordChangeHandlerService,
     PermissionsGuard,
+    ApiTokenService,
     LoginLogService,
   ],
   exports: [AuthService, TokenService, JwtModule],

@@ -9,6 +9,8 @@ import tseslint from 'typescript-eslint';
 import globals from 'globals';
 import prettierConfig from 'eslint-config-prettier';
 import prettierPlugin from 'eslint-plugin-prettier';
+import reactPlugin from 'eslint-plugin-react';
+import reactHooksPlugin from 'eslint-plugin-react-hooks';
 import { dirname } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -64,9 +66,13 @@ export default defineConfig([
     },
   },
 
-  // React (admin + website) - lazy load plugins
+  // React (admin + website)
   {
     files: ['packages/admin/**/*.{ts,tsx,js,jsx}', 'packages/website/**/*.{ts,tsx}'],
+    plugins: {
+      react: reactPlugin,
+      'react-hooks': reactHooksPlugin,
+    },
     languageOptions: {
       parserOptions: { ecmaFeatures: { jsx: true } },
       globals: {
@@ -79,6 +85,8 @@ export default defineConfig([
     },
     settings: { react: { version: 'detect' } },
     rules: {
+      ...reactPlugin.configs.recommended.rules,
+      ...reactHooksPlugin.configs.recommended.rules,
       'react/jsx-uses-react': 'off',
       'react/react-in-jsx-scope': 'off',
       'react-hooks/rules-of-hooks': 'error',

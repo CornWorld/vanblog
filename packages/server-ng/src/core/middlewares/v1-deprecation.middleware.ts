@@ -83,8 +83,6 @@ export class V1DeprecationMiddleware implements NestMiddleware {
       getArticleByIdOrPathname:
         'Use: GET /api/v2/articles/{id} or implement pathname support in V2',
       getArticleWithPassword: 'Use: POST /api/v2/articles/{id}/verify-password',
-      getArticlesByTagName:
-        'Use: GET /api/v2/tags to find tag ID, then GET /api/v2/tags/{id}/articles',
       getArticlesByCategory:
         'Use: GET /api/v2/categories to find category ID, then GET /api/v2/categories/{id}/articles',
       getArticlesByTag: 'Use: GET /api/v2/tags/{id}/articles',

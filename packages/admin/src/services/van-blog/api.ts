@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import type { Navigation } from '@vanblog/shared';
 import { settingService } from './setting';
 import { authService } from './auth';
 import { userService } from './user';
@@ -14,11 +15,11 @@ import { pipelineService } from './pipeline';
 import { tokenService } from './token';
 import { customPageService } from './custom-page';
 import { backupService } from './backup';
-import { encryptPwd } from './encryptPwd';
 
 export async function fetchAllMeta() {
-  const { body } = await metaService.getPublicMeta();
-  return { data: body };
+  const response = await metaService.getPublicMeta();
+  // Response body is { statusCode, data }, return it directly
+  return response.body;
 }
 
 export async function fetchLatestVersionInfo() {
@@ -78,11 +79,11 @@ export async function updateAbout(body: any) {
 
 export async function getMenu() {
   const { body } = await settingService.getNavigation();
-  return { data: body };
+  return body;
 }
 
-export async function updateMenu(body: any) {
-  const { body: result } = await settingService.updateNavigation({ body });
+export async function updateMenu(items: Navigation[]) {
+  const { body: result } = await settingService.updateNavigation({ body: { items } });
   return result;
 }
 
@@ -187,14 +188,27 @@ export async function exportAllImgs() {
 }
 
 export async function login(body: any, options?: any) {
-  const { body: result } = await authService.login({
+  // Extract username from either field (form uses 'username', API expects 'name')
+  const username = body.username || body.name;
+
+  // Validate required fields
+  if (!username) {
+    throw new Error('Username is required');
+  }
+  if (!body.password) {
+    throw new Error('Password is required');
+  }
+
+  // NOTE: server-ng uses bcrypt directly, no need for SHA256 pre-hashing
+  // The old server (packages/server) used a custom SHA256+salt scheme
+  // Return full ts-rest response { status, body } for proper handling
+  return await authService.login({
     body: {
-      name: body.name,
-      password: encryptPwd(body.name, body.password),
+      name: username,
+      password: body.password, // Send plaintext password for bcrypt comparison
     },
     ...options,
   });
-  return result;
 }
 
 export async function logout(options?: any) {
@@ -301,7 +315,16 @@ export async function getAllCollaborators() {
 
 export async function getAllCategories() {
   const { body } = await categoryService.getCategories();
-  return { data: body };
+  // body is { items: CategoryWithCount[], total: number }
+  // Extract name strings for backward-compatible dropdown selectors
+  const items = Array.isArray(body) ? body : (body?.items ?? []);
+  return { data: items.map((c: any) => c.name ?? c) };
+}
+
+export async function getAllCategoriesFull() {
+  const { body } = await categoryService.getCategories();
+  const items = Array.isArray(body) ? body : (body?.items ?? []);
+  return { data: items };
 }
 
 export async function getArticlesByCategory(name: any) {
@@ -350,7 +373,7 @@ export async function deleteCategory(name: any) {
 
 export async function getAllTags() {
   const { body } = await tagService.getTags();
-  return { data: body };
+  return { data: (body as any).items ?? body };
 }
 
 export async function getArticlesByTag(name: any) {
@@ -617,7 +640,7 @@ export async function getDonate() {
 
 export async function getTags() {
   const { body } = await tagService.getTags();
-  return { data: body };
+  return { data: (body as any).items ?? body };
 }
 
 export async function getAllCollaboratorsList() {

@@ -19,7 +19,7 @@ export default defineConfig([
   eslint.configs.recommended,
 
   {
-    ignores: ['dist/**', 'node_modules/**', 'coverage/**', 'test-data/**'],
+    ignores: ['dist/**', 'node_modules/**', 'coverage/**', 'test-data/**', 'data/**'],
   },
 
   // TypeScript with strictTypeChecked preset
@@ -160,6 +160,12 @@ export default defineConfig([
       '@typescript-eslint/explicit-function-return-type': 'off',
       'no-console': 'off',
       'no-restricted-imports': 'off',
+    },
+  },
+  {
+    files: ['src/modules/user/user.controller.ts'],
+    rules: {
+      '@typescript-eslint/no-unsafe-assignment': 'off',
     },
   },
 

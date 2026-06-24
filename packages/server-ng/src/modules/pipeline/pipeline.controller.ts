@@ -1,17 +1,8 @@
-import { Controller, Get, Post, Put, Delete, Param, Body, ParseIntPipe } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
-import { z } from 'zod';
+import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post, Put } from '@nestjs/common';
+import { ApiOperation, ApiTags, ApiResponse } from '@nestjs/swagger';
 
 import { Permission } from '../auth/permissions.decorator';
 
-import {
-  CreatePipelineSchema,
-  UpdatePipelineSchema,
-  TriggerPipelineSchema,
-  PipelineListResponseSchema,
-  PipelineSchema,
-  PipelineExecutionResultSchema,
-} from './dto/pipeline.dto';
 import { PipelineService } from './pipeline.service';
 
 /**
@@ -25,95 +16,64 @@ import { PipelineService } from './pipeline.service';
 export class PipelineController {
   constructor(private readonly pipelineService: PipelineService) {}
 
-  /**
-   * Get all pipelines
-   */
   @Get()
-  @Permission('pipeline:read')
+  @Permission('pipeline', ['read'])
   @ApiOperation({ summary: 'Get all pipelines' })
   @ApiResponse({ status: 200, description: 'Return all pipelines' })
-  async findAll(): Promise<z.infer<typeof PipelineListResponseSchema>> {
-    return this.pipelineService.findAll();
+  async findAll(): Promise<unknown> {
+    const result = await this.pipelineService.findAll();
+    return result.items;
   }
 
-  /**
-   * Get pipeline configuration (available events)
-   */
   @Get('config')
-  @Permission('pipeline:read')
+  @Permission('pipeline', ['read'])
   @ApiOperation({ summary: 'Get pipeline configuration' })
   @ApiResponse({ status: 200, description: 'Return pipeline config' })
-  getConfig(): { events: string[] } {
+  getConfig(): unknown {
     return this.pipelineService.getConfig();
   }
 
-  /**
-   * Get a pipeline by ID
-   */
   @Get(':id')
-  @Permission('pipeline:read')
+  @Permission('pipeline', ['read'])
   @ApiOperation({ summary: 'Get pipeline by ID' })
   @ApiResponse({ status: 200, description: 'Return pipeline' })
-  @ApiResponse({ status: 404, description: 'Pipeline not found' })
-  async findOne(@Param('id', ParseIntPipe) id: number): Promise<z.infer<typeof PipelineSchema>> {
-    return this.pipelineService.findOne(id);
+  async findOne(@Param('id') id: string): Promise<unknown> {
+    return this.pipelineService.findOne(Number(id));
   }
 
-  /**
-   * Create a new pipeline
-   */
   @Post()
-  @Permission('pipeline:create')
-  @ApiOperation({ summary: 'Create a new pipeline' })
+  @Permission('pipeline', ['create'])
+  @ApiOperation({ summary: 'Create pipeline' })
   @ApiResponse({ status: 201, description: 'Pipeline created' })
-  @ApiResponse({ status: 400, description: 'Invalid input' })
-  async create(
-    @Body() createDto: z.infer<typeof CreatePipelineSchema>,
-  ): Promise<z.infer<typeof PipelineSchema>> {
-    return this.pipelineService.create(createDto);
+  async create(@Body() body: unknown): Promise<unknown> {
+    return this.pipelineService.create(body);
   }
 
-  /**
-   * Update a pipeline
-   */
   @Put(':id')
-  @Permission('pipeline:update')
-  @ApiOperation({ summary: 'Update a pipeline' })
+  @Permission('pipeline', ['update'])
+  @ApiOperation({ summary: 'Update pipeline' })
   @ApiResponse({ status: 200, description: 'Pipeline updated' })
-  @ApiResponse({ status: 404, description: 'Pipeline not found' })
-  async update(
-    @Param('id', ParseIntPipe) id: number,
-    @Body() updateDto: z.infer<typeof UpdatePipelineSchema>,
-  ): Promise<z.infer<typeof PipelineSchema>> {
-    return this.pipelineService.update(id, updateDto);
+  async update(@Param('id') id: string, @Body() body: unknown): Promise<unknown> {
+    return this.pipelineService.update(Number(id), body);
   }
 
-  /**
-   * Delete a pipeline
-   */
   @Delete(':id')
-  @Permission('pipeline:delete')
-  @ApiOperation({ summary: 'Delete a pipeline' })
+  @Permission('pipeline', ['delete'])
+  @ApiOperation({ summary: 'Delete pipeline' })
   @ApiResponse({ status: 200, description: 'Pipeline deleted' })
-  @ApiResponse({ status: 404, description: 'Pipeline not found' })
-  async remove(@Param('id', ParseIntPipe) id: number): Promise<{ success: boolean }> {
-    await this.pipelineService.remove(id);
+  async remove(@Param('id') id: string): Promise<{ success: boolean }> {
+    await this.pipelineService.remove(Number(id));
     return { success: true };
   }
 
-  /**
-   * Trigger a pipeline
-   */
   @Post(':id/trigger')
-  @Permission('pipeline:execute')
+  @Permission('pipeline', ['execute'])
   @ApiOperation({ summary: 'Trigger a pipeline' })
-  @ApiResponse({ status: 200, description: 'Pipeline executed' })
-  @ApiResponse({ status: 404, description: 'Pipeline not found' })
-  @ApiResponse({ status: 400, description: 'Pipeline is disabled' })
-  async trigger(
+  @ApiResponse({ status: 200, description: 'Pipeline triggered' })
+  async triggerPipeline(
     @Param('id', ParseIntPipe) id: number,
-    @Body() triggerDto: z.infer<typeof TriggerPipelineSchema>,
-  ): Promise<z.infer<typeof PipelineExecutionResultSchema>> {
-    return this.pipelineService.triggerById(id, triggerDto.input);
+    @Body() body: unknown,
+  ): Promise<unknown> {
+    return this.pipelineService.triggerById(id, body);
   }
 }

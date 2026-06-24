@@ -4,7 +4,7 @@ import { EditableProTable } from '@ant-design/pro-components';
 import { Modal, Spin } from 'antd';
 import { useRef, useState } from 'react';
 
-export default function () {
+export default function LinkTab() {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [editableKeys, setEditableRowKeys] = useState([]);
@@ -36,7 +36,7 @@ export default function () {
     },
     {
       title: t('link.column.desc'),
-      dataIndex: 'desc',
+      dataIndex: 'description',
       formItemProps: () => {
         return {
           rules: [{ required: true, message: t('link.message.required') }],
@@ -45,7 +45,7 @@ export default function () {
     },
     {
       title: t('link.column.logo'),
-      dataIndex: 'logo',
+      dataIndex: 'avatar',
       formItemProps: () => {
         return {
           rules: [{ required: true, message: t('link.message.required') }],
@@ -56,7 +56,7 @@ export default function () {
       title: t('link.column.updatedAt'),
       valueType: 'date',
       editable: false,
-      dataIndex: 'updatedAt',
+      dataIndex: 'updateTime',
       formItemProps: () => {
         return {
           rules: [{ required: true, message: t('link.message.required') }],
@@ -129,8 +129,8 @@ export default function () {
               const toSaveObj = {
                 name: data.name,
                 url: data.url,
-                logo: data.logo,
-                desc: data.desc,
+                avatar: data.avatar,
+                description: data.description,
               };
               if (typeof rowKey === 'number' && rowKey < 1000000) {
                 await updateLink(rowKey, toSaveObj);

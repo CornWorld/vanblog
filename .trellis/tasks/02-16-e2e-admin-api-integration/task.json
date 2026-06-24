@@ -1,0 +1,41 @@
+{
+  "id": "e2e-admin-api-integration",
+  "name": "e2e-admin-api-integration",
+  "title": "继续验证 admin 和 server-ng 的集成。上一轮(02-02-e2e-api-walk)已通过直接 HTTP 请求验证了 30 个 GET 端点全部 200。本轮需要通过 admin 前端 DOM 操作（浏览器自动化或手动操作流程）来 walk 所有 server-ng API，包括 CRUD 操作（创建文章/草稿/分类/标签/用户/Pipeline 等、更新、删除），验证 admin 前端能正确调用 server-ng 后端的所有 API 端点，修复所有发现的异常。重点关注：1) admin 前端使用的 API client 路径是否与 server-ng 实际路由匹配 2) 请求/响应数据格式是否兼容 3) 错误处理是否正常",
+  "description": "",
+  "status": "in_progress",
+  "dev_type": "fullstack",
+  "scope": "e2e",
+  "priority": "P2",
+  "creator": "CornWorld",
+  "assignee": "CornWorld",
+  "createdAt": "2026-02-16",
+  "completedAt": null,
+  "branch": "feature/e2e-admin-api-integration",
+  "base_branch": "refactor/baseline",
+  "worktree_path": "/Users/corn/Code/trellis-worktrees/feature/e2e-admin-api-integration",
+  "current_phase": 0,
+  "next_action": [
+    {
+      "phase": 1,
+      "action": "implement"
+    },
+    {
+      "phase": 2,
+      "action": "check"
+    },
+    {
+      "phase": 3,
+      "action": "finish"
+    },
+    {
+      "phase": 4,
+      "action": "create-pr"
+    }
+  ],
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "relatedFiles": [],
+  "notes": ""
+}

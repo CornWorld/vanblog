@@ -11,12 +11,19 @@ import { z } from 'zod';
 export const DraftSchema = selectDraftSchema;
 
 // 创建草稿 Schema - 使用 drizzle-zod 生成的 schema
-export const CreateDraftSchema = insertDraftSchema.omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-  version: true,
-});
+export const CreateDraftSchema = insertDraftSchema
+  .omit({
+    id: true,
+    createdAt: true,
+    updatedAt: true,
+    version: true,
+  })
+  .partial({
+    // 允许以下字段为可选，服务层将提供默认值
+    content: true,
+    tags: true,
+    author: true,
+  });
 
 // 更新草稿 Schema - 使用 drizzle-zod 生成的 schema
 export const UpdateDraftSchema = updateDraftSchema.omit({

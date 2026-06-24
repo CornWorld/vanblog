@@ -32,6 +32,7 @@ import {
 } from '@vanblog/shared/drizzle';
 import { z } from 'zod';
 
+import { ConfigService } from '../../config/config.service';
 import { LoggerService } from '../../core/logger/logger.service';
 import { DATABASE_CONNECTION, type Database } from '../../database';
 
@@ -77,6 +78,7 @@ export class BackupService {
   constructor(
     @Inject(DATABASE_CONNECTION) private readonly db: Database,
     private readonly logger: LoggerService,
+    private readonly configService: ConfigService,
   ) {
     void this.ensureBackupDir();
   }
@@ -568,7 +570,9 @@ export class BackupService {
 
   private encrypt(data: string, password: string): string {
     const algorithm = 'aes-256-cbc';
-    const key = crypto.scryptSync(password, 'salt', 32);
+    // 使用配置的 JWT_SECRET 作为 salt，确保加密密钥的强度
+    const secret = this.configService.get<string>('JWT_SECRET', 'default-backup-salt-change-this');
+    const key = crypto.scryptSync(password, secret, 32);
     const iv = crypto.randomBytes(16);
     const cipher = crypto.createCipheriv(algorithm, key, iv);
 
@@ -583,7 +587,9 @@ export class BackupService {
 
   private decrypt(encryptedData: string, password: string): string {
     const algorithm = 'aes-256-cbc';
-    const key = crypto.scryptSync(password, 'salt', 32);
+    // 使用配置的 JWT_SECRET 作为 salt，确保加密密钥的强度
+    const secret = this.configService.get<string>('JWT_SECRET', 'default-backup-salt-change-this');
+    const key = crypto.scryptSync(password, secret, 32);
 
     const parsed = JSON.parse(encryptedData) as {
       encrypted: string;
@@ -597,5 +603,43 @@ export class BackupService {
     decrypted += decipher.final('utf8');
 
     return decrypted;
+  }
+
+  // Additional methods for ts-rest contract compatibility
+
+  async importBackup(file: Express.Multer.File): Promise<void> {
+    const filepath = path.join(this.backupDir, file.originalname);
+    await fs.writeFile(filepath, file.buffer);
+
+    this.logger.log(`Backup file imported: ${file.originalname}`);
+  }
+
+  async exportBackup(): Promise<Buffer> {
+    // Create a backup with default settings
+    const dto: z.infer<typeof CreateBackupSchema> = {
+      name: `export-${dayjs().format().replace(/[:.]/g, '-')}`,
+      includeMedia: false,
+      includeAnalytics: false,
+      includeLogs: false,
+    };
+
+    const backupInfo = await this.createBackup(dto);
+    const filepath = path.join(this.backupDir, backupInfo.filename);
+    const compressed = await fs.readFile(filepath);
+
+    // Clean up the temporary backup file
+    await fs.unlink(filepath);
+
+    return compressed;
+  }
+
+  async restoreFromBackup(body: unknown): Promise<void> {
+    const dto = RestoreBackupSchema.parse(body);
+    // For restore from contract, we expect body to contain filename or backup data
+    if ('filename' in dto && typeof dto.filename === 'string') {
+      await this.restoreBackup(dto.filename, dto);
+    } else {
+      throw new BadRequestException('Invalid restore request');
+    }
   }
 }

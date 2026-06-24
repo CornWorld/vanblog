@@ -10,7 +10,7 @@ import { permissionNodes, permissionGroups } from '@vanblog/shared/drizzle';
 
 import { DATABASE_CONNECTION } from '../../database';
 
-import { PermissionService } from './permission.service';
+import { PermissionService, clearGlobalPermissionState } from './permission.service';
 
 import type { PermissionRegistration } from './permission.service';
 
@@ -39,6 +39,7 @@ describe('PermissionService', () => {
 
   afterEach(() => {
     vi.clearAllMocks();
+    clearGlobalPermissionState();
   });
 
   describe('Constructor and Initialization', () => {
@@ -472,6 +473,111 @@ describe('PermissionService', () => {
       const result = await service.hasPermissions(['article:read'], []);
 
       expect(result).toBe(true);
+    });
+  });
+
+  describe('hasPermissions - role:admin integration (no mock)', () => {
+    // These tests verify the full permission resolution path without mocking
+    // resolveUserPermissions, ensuring role:admin properly resolves to its
+    // constituent permissions through the DB-backed permission group system.
+
+    it('should resolve role:admin and grant registered module permissions', async () => {
+      await withTestTransaction(db, async (tx) => {
+        const testService = createServiceWithTx(tx);
+
+        // Register modules with permissions and admin role
+        testService.register({
+          module: 'plugin',
+          permissions: ['read', 'disable', 'configure'],
+          roles: { admin: ['read', 'disable', 'configure'] },
+        });
+        testService.register({
+          module: 'setting',
+          permissions: ['read', 'update'],
+          roles: { admin: ['read', 'update'] },
+        });
+
+        // Initialize DB groups (simulates onApplicationBootstrap)
+        // This creates the 'admin' group in the DB with all registered permissions
+        await testService.initializePermissions();
+
+        // Test: role:admin should resolve to include plugin:read
+        const result = await testService.hasPermissions(['role:admin'], ['plugin:read']);
+        expect(result).toBe(true);
+      });
+    });
+
+    it('should resolve role:admin and grant setting:read permission', async () => {
+      await withTestTransaction(db, async (tx) => {
+        const testService = createServiceWithTx(tx);
+
+        testService.register({
+          module: 'setting',
+          permissions: ['read', 'update', 'manage'],
+          roles: { admin: ['read', 'update', 'manage'] },
+        });
+
+        await testService.initializePermissions();
+
+        const result = await testService.hasPermissions(['role:admin'], ['setting:read']);
+        expect(result).toBe(true);
+      });
+    });
+
+    it('should reject unregistered permissions even for role:admin', async () => {
+      await withTestTransaction(db, async (tx) => {
+        const testService = createServiceWithTx(tx);
+
+        testService.register({
+          module: 'plugin',
+          permissions: ['read'],
+          roles: { admin: ['read'] },
+        });
+
+        await testService.initializePermissions();
+
+        // plugin:read should work since it is registered
+        const pluginResult = await testService.hasPermissions(['role:admin'], ['plugin:read']);
+        expect(pluginResult).toBe(true);
+
+        // nonexistent:action should fail since it is not a registered module permission
+        const unknownResult = await testService.hasPermissions(
+          ['role:admin'],
+          ['nonexistent:action'],
+        );
+        expect(unknownResult).toBe(false);
+      });
+    });
+
+    it('should resolve role:admin with multiple modules registered', async () => {
+      await withTestTransaction(db, async (tx) => {
+        const testService = createServiceWithTx(tx);
+
+        testService.register({
+          module: 'plugin',
+          permissions: ['read', 'disable', 'configure', 'install', 'uninstall', 'enable'],
+          roles: { admin: ['read', 'disable', 'configure', 'install', 'uninstall', 'enable'] },
+        });
+        testService.register({
+          module: 'setting',
+          permissions: ['read', 'update', 'manage'],
+          roles: { admin: ['read', 'update', 'manage'] },
+        });
+        testService.register({
+          module: 'article',
+          permissions: ['create', 'read', 'update', 'delete', 'publish'],
+          roles: { admin: ['create', 'read', 'update', 'delete', 'publish'] },
+        });
+
+        await testService.initializePermissions();
+
+        // Admin should have all permissions across all modules
+        const result = await testService.hasPermissions(
+          ['role:admin'],
+          ['plugin:read', 'setting:read', 'article:create'],
+        );
+        expect(result).toBe(true);
+      });
     });
   });
 

@@ -39,7 +39,7 @@ export const createRssContract = (c: ReturnType<typeof initContract>) =>
     },
     getRssJson: {
       method: 'GET',
-      path: '/public/rss/json',
+      path: '/v2/rss/json',
       responses: {
         200: z.object({ items: z.array(RssItemSchema) }),
       },
@@ -47,7 +47,7 @@ export const createRssContract = (c: ReturnType<typeof initContract>) =>
     },
     getRssXml: {
       method: 'GET',
-      path: '/public/rss/xml',
+      path: '/v2/rss/xml',
       responses: {
         200: z.string(),
       },
@@ -55,7 +55,7 @@ export const createRssContract = (c: ReturnType<typeof initContract>) =>
     },
     getRssAtom: {
       method: 'GET',
-      path: '/public/rss/atom',
+      path: '/v2/rss/atom',
       responses: {
         200: z.string(),
       },

@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useTranslation } from 'react-i18next';
 import { getMenu, updateMenu } from '@/services/van-blog/api';
 import { EditableProTable, type ActionType, type ProColumns } from '@ant-design/pro-components';
@@ -9,8 +8,9 @@ import type { Key } from 'react';
 interface MenuItem {
   id: string | number;
   name?: string;
-  value: string;
-  level: number;
+  path: string;
+  icon?: string;
+  external?: boolean;
   children?: MenuItem[];
 }
 
@@ -32,6 +32,25 @@ const loopDataSourceFilter = (data: MenuItem[], id: React.Key | undefined): Menu
     .filter(Boolean) as MenuItem[];
 };
 
+/** Strip transient fields (id) before sending to backend */
+const toNavigation = (
+  items: MenuItem[],
+): Array<{
+  name: string;
+  path: string;
+  icon?: string;
+  external?: boolean;
+  children?: unknown[];
+}> => {
+  return items.map(({ name, path, icon, external, children }) => ({
+    name: name ?? '',
+    path,
+    ...(icon ? { icon } : {}),
+    ...(external ? { external } : {}),
+    ...(children && children.length > 0 ? { children: toNavigation(children) } : {}),
+  }));
+};
+
 export default function MenuTab() {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
@@ -43,8 +62,13 @@ export default function MenuTab() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const { data } = await getMenu();
-      const menuData = (data as any)?.data || [];
+      const data = await getMenu();
+      const menuData = (Array.isArray(data) ? data : []).map(
+        (item: Record<string, unknown>, index: number) => ({
+          id: index,
+          ...item,
+        }),
+      ) as MenuItem[];
       setDataSource(menuData);
       const expendKs = menuData
         .filter((e: MenuItem) => Boolean(e.children))
@@ -61,7 +85,7 @@ export default function MenuTab() {
   const update = useCallback(
     async (vals: MenuItem[]) => {
       try {
-        await updateMenu({ data: vals });
+        await updateMenu(toNavigation(vals));
         fetchData();
       } catch (error) {
         console.error('Failed to update menu:', error);
@@ -98,7 +122,7 @@ export default function MenuTab() {
     },
     {
       title: t('menu.column.url'),
-      dataIndex: 'value',
+      dataIndex: 'path',
       tooltip: t('menu.column.url.tooltip'),
       formItemProps: () => ({
         rules: [{ required: true, message: t('menu.message.required') }],
@@ -118,21 +142,15 @@ export default function MenuTab() {
         >
           {t('menu.action.edit')}
         </a>,
-        record.level === 0 ? (
+        !record.children || record.children.length === 0 ? (
           <a
             key="addChild"
             onClick={() => {
-              if (record.level >= 1) {
-                message.warning(t('menu.message.max_level'));
-                return;
-              }
-
               const children = record?.children || [];
               const newId = getNewId();
               children.push({
                 id: newId,
-                level: record.level + 1,
-                value: '',
+                path: '',
               });
 
               const newData = dataSource.map((d) => {
@@ -191,7 +209,7 @@ export default function MenuTab() {
         }}
         recordCreatorProps={{
           position: 'bottom',
-          record: () => ({ id: getNewId(), level: 0, value: '' }),
+          record: () => ({ id: getNewId(), path: '' }),
         }}
         loading={false}
         columns={columns}
@@ -200,9 +218,28 @@ export default function MenuTab() {
         editable={{
           type: 'multiple',
           editableKeys,
-          onSave: async () => {
+          onSave: async (rowKey, record) => {
             try {
-              await update(dataSource);
+              // Merge the saved row into the current dataSource.
+              // For new rows (not yet in dataSource), append them.
+              let found = false;
+              const mergeRow = (items: MenuItem[]): MenuItem[] =>
+                items.map((item) => {
+                  if (item.id === rowKey) {
+                    found = true;
+                    return { ...item, ...record } as MenuItem;
+                  }
+                  if (item.children) {
+                    return { ...item, children: mergeRow(item.children) };
+                  }
+                  return item;
+                });
+              let merged = mergeRow(dataSource);
+              if (!found) {
+                merged = [...merged, { ...record, id: rowKey } as MenuItem];
+              }
+              setDataSource(merged);
+              await update(merged);
             } catch (error) {
               console.error('Failed to save menu changes:', error);
             }

@@ -8,12 +8,10 @@ import {
   ParseIntPipe,
   Headers,
   Ip,
-  Req,
+  VERSION_NEUTRAL,
 } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
-import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
-import { contract } from '@vanblog/shared';
 
 import { AnalyticsCacheService } from '../../shared/cache/analytics-cache.service';
 import { DerivedViewCacheService } from '../../shared/cache/derived-view-cache.service';
@@ -33,10 +31,7 @@ import { RecordAnalyticsSchema } from './dto/record-analytics.dto';
 import { AnalyticsService } from './services/analytics.service';
 import { ArticleStatsService, ArticleStats } from './services/article-stats.service';
 import { EchartsFormatterService, EchartsOption } from './services/echarts-formatter.service';
-import { PublicAnalyticsService } from './services/public-analytics.service';
 import { ThirdPartyAnalyticsService } from './services/third-party-analytics.service';
-
-import type { Request } from 'express';
 
 /**
  * 分析数据控制器
@@ -50,7 +45,6 @@ export class AnalyticsController {
   constructor(
     private readonly analyticsService: AnalyticsService,
     private readonly articleStatsService: ArticleStatsService,
-    private readonly publicAnalyticsService: PublicAnalyticsService,
     private readonly thirdPartyAnalyticsService: ThirdPartyAnalyticsService,
     private readonly echartsFormatterService: EchartsFormatterService,
     private readonly analyticsCacheService: AnalyticsCacheService,
@@ -490,90 +484,118 @@ export class AnalyticsController {
     return this.echartsFormatterService.formatPageRankingsChart(data);
   }
 
-  @TsRestHandler(contract.getPublicViewer)
-  getPublicViewer(): ReturnType<typeof tsRestHandler> {
-    return tsRestHandler(contract.getPublicViewer, async () => {
-      const overview = await this.publicAnalyticsService.getPublicOverview();
-      return {
-        status: 200,
-        body: {
-          todayPageviews: overview.todayPageviews,
-          yesterdayPageviews: overview.yesterdayPageviews,
-          totalPageviews: overview.totalPageviews,
-          todayVisitors: overview.todayVisitors,
-          yesterdayVisitors: overview.yesterdayVisitors,
-          totalVisitors: overview.totalVisitors,
-        },
-      };
-    });
+  /**
+   * Get analytics overview (standard NestJS route)
+   *
+   * Admin endpoint for analytics overview data.
+   */
+  @Get('analytics/overview')
+  @Perm('analytics', ['read'])
+  @ApiOperation({ summary: 'Get analytics overview' })
+  @ApiResponse({ status: 200, description: 'Analytics overview data' })
+  async getAnalyticsOverviewStd(@Query('tab') _tab?: string): Promise<AnalyticsOverviewDto> {
+    return this.analyticsService.getOverview();
   }
 
-  @TsRestHandler(contract.getArticleViewer)
-  getArticleViewer(): ReturnType<typeof tsRestHandler> {
-    return tsRestHandler(contract.getArticleViewer, async ({ params }) => {
-      const idNum = Number(params.id);
-      const data = await this.publicAnalyticsService.getPublicArticleStats(idNum);
-      if (!data) {
-        return { status: 200, body: null };
-      }
-      return {
-        status: 200,
-        body: {
-          articleId: data.articleId,
-          title: data.title,
-          views: data.views,
-          uniqueVisitors: data.uniqueVisitors,
-          avgReadTime: data.avgReadTime,
-        },
-      };
-    });
+  /**
+   * Get analytics logs (standard NestJS route)
+   *
+   * Admin endpoint for analytics logs with pagination.
+   */
+  @Get('analytics/logs')
+  @Perm('analytics', ['read'])
+  @ApiOperation({ summary: 'Get analytics logs' })
+  @ApiResponse({ status: 200, description: 'Analytics logs' })
+  async getAnalyticsLogs(
+    @Query('event') event: string,
+    @Query('page') page: string,
+    @Query('pageSize') pageSize: string,
+  ): Promise<{ items: unknown[]; total: number }> {
+    const pageNum = Number(page) || 1;
+    const sizeNum = Number(pageSize) || 10;
+    return this.analyticsService.getAnalyticsLogs(event, pageNum, sizeNum);
+  }
+}
+
+/**
+ * 公共分析数据记录控制器 (VERSION_NEUTRAL)
+ *
+ * 提供无版本前缀的公共端点，与 root contract 路径对齐。
+ * 路由: /api/analytics/record, /api/article/:id/view, /api/article/:id/reading-time
+ */
+@ApiTags('Analytics (Public)')
+@Controller({ version: VERSION_NEUTRAL })
+export class PublicAnalyticsRecordController {
+  constructor(
+    private readonly analyticsService: AnalyticsService,
+    private readonly articleStatsService: ArticleStatsService,
+    private readonly thirdPartyAnalyticsService: ThirdPartyAnalyticsService,
+    private readonly analyticsCacheService: AnalyticsCacheService,
+    private readonly derivedViewCacheService: DerivedViewCacheService,
+  ) {}
+
+  @Post('analytics/record')
+  @Throttle({ default: { limit: 10, ttl: 10000 } })
+  @ApiOperation({ summary: '记录分析数据 (public)' })
+  @ApiResponse({ status: 201, description: '记录成功' })
+  async recordAnalytics(
+    @Body() raw: unknown,
+    @Ip() ip?: string,
+    @Headers('user-agent') userAgent?: string,
+  ): Promise<void> {
+    const input = RecordAnalyticsSchema.parse(raw) as {
+      type: string;
+      path?: string | null;
+      referrer?: string | null;
+      userAgent?: string | null;
+      ip?: string | null;
+      data?: unknown;
+    };
+
+    const userAgentVal = input.userAgent ?? userAgent ?? null;
+    const ipVal = input.ip ?? ip ?? null;
+
+    const recordDto = {
+      type: input.type,
+      path: input.path ?? null,
+      referrer: input.referrer ?? null,
+      userAgent: userAgentVal,
+      ip: ipVal,
+      data: input.data,
+    };
+
+    await this.analyticsService.recordAnalytics(recordDto);
+    await this.analyticsCacheService.clear();
+    await this.derivedViewCacheService.clear();
+
+    if (input.type === 'pageview' && input.path) {
+      const ipArg: string | undefined = ipVal ?? undefined;
+      const uaArg: string | undefined = userAgentVal ?? undefined;
+      await this.thirdPartyAnalyticsService.trackPageview(input.path, ipArg, uaArg);
+    }
   }
 
-  @TsRestHandler(contract.recordPublicViewer)
-  recordPublicViewer(@Req() req: Request): ReturnType<typeof tsRestHandler> {
-    return tsRestHandler(contract.recordPublicViewer, async ({ body, headers }) => {
-      const { type, path, referrer, userAgent: userAgentInBody } = body;
-      const pathValue = path ?? null;
-      const referrerValue = referrer ?? null;
-      const userAgentValue = userAgentInBody ?? null;
-      const dataValue: unknown = body.data;
-      const ip = req.ip ?? null;
-      const headerUa = headers['user-agent'] ?? null;
-      const userAgent = userAgentValue ?? headerUa;
-
-      await this.analyticsService.recordAnalytics({
-        type,
-        path: pathValue,
-        referrer: referrerValue,
-        userAgent,
-        ip,
-        data: dataValue,
-      });
-
-      if (type === 'pageview' && typeof pathValue === 'string') {
-        await this.thirdPartyAnalyticsService.trackPageview(
-          pathValue,
-          ip ?? undefined,
-          userAgent ?? undefined,
-        );
-      }
-      return { status: 201, body: undefined };
-    });
+  @Post('article/:id/view')
+  @Throttle({ default: { limit: 5, ttl: 10000 } })
+  @ApiOperation({ summary: '记录文章浏览 (public)' })
+  @ApiResponse({ status: 201, description: '记录成功' })
+  async recordArticleView(
+    @Param('id', ParseIntPipe) articleId: number,
+    @Ip() ip: string,
+    @Headers('user-agent') userAgent?: string,
+  ): Promise<void> {
+    await this.articleStatsService.recordArticleView(articleId, ip, userAgent);
   }
 
-  @TsRestHandler(contract.getAnalyticsOverview)
-  getAnalyticsOverview(): ReturnType<typeof tsRestHandler> {
-    return tsRestHandler(contract.getAnalyticsOverview, async () => {
-      const overview = await this.analyticsService.getOverview();
-      return {
-        status: 200,
-        body: {
-          totalPageviews: overview.totalPageviews,
-          totalVisitors: overview.totalVisitors,
-          todayPageviews: overview.todayPageviews,
-          todayVisitors: overview.todayVisitors,
-        },
-      };
-    });
+  @Post('article/:id/reading-time')
+  @Throttle({ default: { limit: 20, ttl: 60000 } })
+  @ApiOperation({ summary: '记录文章阅读时间 (public)' })
+  @ApiResponse({ status: 201, description: '记录成功' })
+  async recordReadingTime(
+    @Param('id', ParseIntPipe) articleId: number,
+    @Body('duration') duration: number,
+    @Ip() ip: string,
+  ): Promise<void> {
+    await this.articleStatsService.recordReadingTime(articleId, duration, ip);
   }
 }

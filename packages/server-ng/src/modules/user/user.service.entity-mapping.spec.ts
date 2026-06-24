@@ -12,52 +12,29 @@
  * - user.service.create-advanced.spec.ts - 高级创建场景
  * - user.service.update-password.spec.ts - 密码处理
  * - user.service.permissions.spec.ts - 权限管理
- *
- * 迁移说明：
- * - 从 Mock.db() 迁移到真实数据库 + withTestTransaction 模式
- * - 使用真实数据库创建用户数据
- * - 验证返回值的字段映射
- * - 测试敏感字段过滤 (password, token)
- * - 保留外部服务 Mock (HookService)
  */
 
 import { Test, type TestingModule } from '@nestjs/testing';
 import { eq } from 'drizzle-orm';
 import { users } from '@vanblog/shared/drizzle';
 import { faker } from '@faker-js/faker';
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
+import { db } from '@test/setup.unit';
 import { Given } from '@test/given';
-
-import {
-  setupWorkerDatabase,
-  cleanupWorkerDatabase,
-  getWorkerIdFromEnv,
-} from '../../../test/utils/db-worker-setup';
-import { withTestTransaction } from '../../../test/utils/db-transaction-helper';
+import { withTestTransaction } from '@test/utils/db-transaction-helper';
 import { DATABASE_CONNECTION } from '../../database';
 
 import { UserService } from './user.service';
 import { HookService } from '../plugin/services/hook.service';
 
-import type { LibSQLDatabase } from 'drizzle-orm/libsql';
-
 vi.mock('bcrypt');
 
 describe('UserService - Entity Mapping', () => {
-  let db: LibSQLDatabase<Record<string, unknown>>;
-  let dbPath: string;
-  let mockHookService: ReturnType<typeof vi.fn>;
   let baseModule: TestingModule;
+  let mockHookService: ReturnType<typeof vi.fn>;
 
-  beforeAll(async () => {
-    // Setup test database for this test file
-    const workerId = getWorkerIdFromEnv();
-
-    const setup = setupWorkerDatabase(workerId);
-    db = setup.db;
-    dbPath = setup.dbPath;
-
+  beforeEach(async () => {
     // 创建 Hook 服务 Mock
     mockHookService = {
       applyFilters: vi.fn().mockImplementation((_name: any, data: any) => data),
@@ -77,15 +54,6 @@ describe('UserService - Entity Mapping', () => {
         },
       ],
     }).compile();
-  });
-
-  afterAll(() => {
-    cleanupWorkerDatabase(dbPath);
-  });
-
-  beforeEach(async () => {
-    // Clean users table before each test
-    await db.delete(users);
   });
 
   afterEach(() => {

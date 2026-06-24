@@ -1,6 +1,5 @@
 import { Module, DynamicModule, NestModule, MiddlewareConsumer, type Type } from '@nestjs/common';
-import { APP_INTERCEPTOR, Reflector } from '@nestjs/core';
-import { ScheduleModule } from '@nestjs/schedule';
+import { APP_INTERCEPTOR } from '@nestjs/core';
 import { ThrottlerModule } from '@nestjs/throttler';
 
 import { AppController } from './app.controller';
@@ -19,9 +18,11 @@ import { CategoryModule } from './modules/category/category.module';
 import { DemoModule } from './modules/demo/demo.module';
 import { DraftModule } from './modules/draft/draft.module';
 import { HealthModule } from './modules/health/health.module';
+import { IsrModule } from './modules/isr/isr.module';
 import { MediaModule } from './modules/media/media.module';
 import { MetricsModule } from './modules/metrics/metrics.module';
 import { PermissionModule } from './modules/permission/permission.module';
+import { PipelineModule } from './modules/pipeline/pipeline.module';
 import { PluginModule } from './modules/plugin/plugin.module';
 import { PublicModule } from './modules/public/public.module';
 import { RssModule } from './modules/rss/rss.module';
@@ -45,7 +46,6 @@ export class AppModule implements NestModule {
       module: AppModule,
       imports: [
         ConfigModule,
-        ScheduleModule.forRoot(),
         ThrottlerModule.forRoot([
           {
             name: 'short',
@@ -67,6 +67,7 @@ export class AppModule implements NestModule {
         LoggerModule,
         PermissionModule.forRoot(),
         HealthModule,
+        IsrModule,
         UserModule,
         AuthModule,
         ArticleModule,
@@ -82,6 +83,7 @@ export class AppModule implements NestModule {
         SitemapModule,
         BackupModule,
         AdminModule,
+        PipelineModule,
 
         DemoModule,
         pluginModule,
@@ -89,7 +91,6 @@ export class AppModule implements NestModule {
       controllers: [AppController],
       providers: [
         AppService,
-        Reflector,
         {
           provide: APP_INTERCEPTOR,
           useClass: PerformanceInterceptor,

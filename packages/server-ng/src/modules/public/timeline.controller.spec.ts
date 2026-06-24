@@ -29,46 +29,33 @@ describe('TimelineController (Public)', () => {
     expect(controller).toBeDefined();
   });
 
-  it('getTimeline should pass includeHidden flag and wrap result', async () => {
+  it('getTimelineStd should pass includeHidden flag and wrap result', async () => {
     const data = { years: [] } as any;
     mockTimelineService.getTimeline.mockResolvedValue(data);
 
-    const result = await controller.getTimeline({ includeHidden: true } as any);
+    const result = await controller.getTimelineStd('true');
 
     expect(mockTimelineService.getTimeline).toHaveBeenCalledWith(true);
     expect(result).toEqual({ statusCode: 200, data });
   });
 
-  it('getTimelineHandler should parse includeHidden from query string', async () => {
+  it('getTimelineStd should default includeHidden to false when undefined', async () => {
     const mockData = { '2024': [] };
     mockTimelineService.getTimeline.mockResolvedValue(mockData);
 
-    const handler = controller.getTimelineHandler();
-    const result = await handler({ query: { includeHidden: 'true' } });
-
-    expect(mockTimelineService.getTimeline).toHaveBeenCalledWith(true);
-    expect(result).toEqual({ status: 200, body: mockData });
-  });
-
-  it('getTimelineHandler should default includeHidden to false when query is undefined', async () => {
-    const mockData = { '2024': [] };
-    mockTimelineService.getTimeline.mockResolvedValue(mockData);
-
-    const handler = controller.getTimelineHandler();
-    const result = await handler({ query: undefined });
+    const result = await controller.getTimelineStd(undefined);
 
     expect(mockTimelineService.getTimeline).toHaveBeenCalledWith(false);
-    expect(result).toEqual({ status: 200, body: mockData });
+    expect(result).toEqual({ statusCode: 200, data: mockData });
   });
 
-  it('getTimelineHandler should treat non-"true" values as false', async () => {
+  it('getTimelineStd should treat non-"true" values as false', async () => {
     const mockData = { '2024': [] };
     mockTimelineService.getTimeline.mockResolvedValue(mockData);
 
-    const handler = controller.getTimelineHandler();
-    const result = await handler({ query: { includeHidden: 'false' } });
+    const result = await controller.getTimelineStd('false');
 
     expect(mockTimelineService.getTimeline).toHaveBeenCalledWith(false);
-    expect(result).toEqual({ status: 200, body: mockData });
+    expect(result).toEqual({ statusCode: 200, data: mockData });
   });
 });

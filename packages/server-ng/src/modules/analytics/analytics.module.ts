@@ -5,7 +5,7 @@ import { AnalyticsCacheService } from '../../shared/cache/analytics-cache.servic
 import { CacheModule } from '../../shared/cache/cache.module';
 import { PermissionModule } from '../permission/permission.module';
 
-import { AnalyticsController } from './analytics.controller';
+import { AnalyticsController, PublicAnalyticsRecordController } from './analytics.controller';
 import { PublicAnalyticsController } from './public-analytics.controller';
 import { AnalyticsService } from './services/analytics.service';
 import { ArticleStatsService } from './services/article-stats.service';
@@ -19,7 +19,7 @@ import { ThirdPartyAnalyticsService } from './services/third-party-analytics.ser
     CacheModule,
     PermissionModule.forFeature(['analytics:read', 'analytics:export']),
   ],
-  controllers: [AnalyticsController, PublicAnalyticsController],
+  controllers: [AnalyticsController, PublicAnalyticsController, PublicAnalyticsRecordController],
   providers: [
     AnalyticsService,
     AnalyticsCacheService,

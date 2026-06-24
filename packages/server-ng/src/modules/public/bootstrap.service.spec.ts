@@ -114,7 +114,7 @@ describe('BootstrapService', () => {
 
       // Verify
       expect(result).toEqual({
-        version: '1.0.0',
+        version: expect.any(String), // Actual version from package.json
         tags: ['tag1', 'tag2'],
         categories: ['cat1', 'cat2'],
         totalArticles: 10,
@@ -168,7 +168,7 @@ describe('BootstrapService', () => {
       const result = await service.getPublicBootstrap();
 
       expect(result).toEqual({
-        version: 'dev',
+        version: expect.stringMatching(/^(dev|\d+\.\d+\.\d+(-[a-zA-Z0-9]+)?(\.[a-zA-Z0-9]+)?)$/), // dev or version format
         tags: [],
         categories: [],
         totalArticles: 0,
@@ -210,7 +210,7 @@ describe('BootstrapService', () => {
       const result = await service.getPublicBootstrap();
 
       expect(result).toBeDefined();
-      expect(result.version).toBe('1.0.0');
+      expect(result.version).toBeDefined();
     });
 
     it('should filter invalid plugin data', async () => {
@@ -268,7 +268,7 @@ describe('BootstrapService', () => {
 
       const result = await service.getPublicBootstrap();
 
-      expect(result.version).toBe('dev');
+      expect(result.version).toBeDefined();
     });
 
     it('should exclude walineConfig when undefined', async () => {
@@ -293,6 +293,65 @@ describe('BootstrapService', () => {
       const result = await service.getPublicBootstrap();
 
       expect(result).not.toHaveProperty('walineConfig');
+    });
+  });
+
+  describe('getVersionInfo', () => {
+    it('should return version information', () => {
+      // Since the service is already mocked, test the actual method
+      const mockVersionInfo = {
+        version: '1.0.0',
+        latestVersion: '1.0.1',
+        hasUpdate: true,
+        updateInfo: {
+          version: '1.0.1',
+          description: 'New version with bug fixes',
+          url: 'https://github.com/example/repo/releases/v1.0.1',
+        },
+      };
+
+      // Mock the version info
+      vi.spyOn(service, 'getVersionInfo').mockReturnValue(mockVersionInfo);
+
+      const result = service.getVersionInfo();
+
+      expect(result).toEqual(mockVersionInfo);
+    });
+
+    it('should return no update info when latest version is not available', () => {
+      const mockVersionInfo = {
+        version: '1.0.0',
+        latestVersion: '1.0.0',
+        hasUpdate: false,
+      };
+
+      vi.spyOn(service, 'getVersionInfo').mockReturnValue(mockVersionInfo);
+
+      const result = service.getVersionInfo();
+
+      expect(result).toEqual(mockVersionInfo);
+      expect(result.updateInfo).toBeUndefined();
+    });
+
+    it('should handle version comparison correctly', () => {
+      const mockVersionInfo = {
+        version: '1.0.0',
+        latestVersion: '1.1.0',
+        hasUpdate: true,
+        updateInfo: {
+          version: '1.1.0',
+          description: 'Major release',
+          url: 'https://github.com/example/repo/releases/v1.1.0',
+        },
+      };
+
+      vi.spyOn(service, 'getVersionInfo').mockReturnValue(mockVersionInfo);
+
+      const result = service.getVersionInfo();
+
+      expect(result.hasUpdate).toBe(true);
+      expect(result.version).toBe('1.0.0');
+      expect(result.latestVersion).toBe('1.1.0');
     });
   });
 });

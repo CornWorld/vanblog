@@ -5,7 +5,7 @@
  *
  * Related tests:
  * - tag.service.associations.spec.ts - Association queries (findOrCreateTags, getTagsWithCategories)
- * - tag.service.queries.spec.ts - Complex article queries (getArticlesByTagName, getArticlesByTagId)
+ * - tag.service.queries.spec.ts - Complex article queries (getArticlesByTagId)
  * - tag.service.boundaries.spec.ts - Boundary conditions and edge cases
  */
 import { NotFoundException } from '@nestjs/common';

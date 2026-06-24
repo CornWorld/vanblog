@@ -89,7 +89,7 @@ export default function (props) {
           placeholder={t('import_draft.field.tags.placeholder')}
           request={async () => {
             const msg = await getTags();
-            return msg?.data?.map((item) => ({ label: item, value: item })) || [];
+            return msg?.data?.map((item) => ({ label: item.name, value: item.name })) || [];
           }}
         />
         <ProFormSelect

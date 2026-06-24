@@ -12,7 +12,15 @@ import { PERMISSIONS } from './permission.module';
 import { PermissionService } from './permission.service';
 
 // 全局贡献寄存器，避免在模块装配阶段直接依赖服务实例
-const GLOBAL_PERMISSION_CONTRIBUTIONS = new Set<string>();
+// 使用 Symbol.for + globalThis 确保跨 Vite ESM 模块实例共享同一个 Set。
+// 在 Vite 的 HMR/ESM 模式下，同一文件可能被加载为多个模块实例，
+// 导致 module-level const 出现多份拷贝。Symbol.for 保证全局唯一键。
+const PERM_CONTRIBUTIONS_KEY = Symbol.for('vanblog:permission-contributions');
+const _g = globalThis as Record<symbol, unknown>;
+if (!(_g[PERM_CONTRIBUTIONS_KEY] instanceof Set)) {
+  _g[PERM_CONTRIBUTIONS_KEY] = new Set<string>();
+}
+const GLOBAL_PERMISSION_CONTRIBUTIONS = _g[PERM_CONTRIBUTIONS_KEY] as Set<string>;
 export function contributePermissions(perms: string[]): void {
   for (const p of perms) GLOBAL_PERMISSION_CONTRIBUTIONS.add(p);
 }

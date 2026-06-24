@@ -1,6 +1,15 @@
-import { Controller } from '@nestjs/common';
-import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
-import { draftVersionContract } from '@vanblog/shared/contracts';
+import {
+  Controller,
+  Get,
+  Post,
+  Delete,
+  Param,
+  Query,
+  ParseIntPipe,
+  HttpCode,
+} from '@nestjs/common';
+
+import { Perm } from '../auth/permissions.decorator';
 
 import { DraftVersionService } from './draft-version.service';
 
@@ -26,91 +35,86 @@ export class DraftVersionTsRestController {
     };
   }
 
-  @TsRestHandler(draftVersionContract.listVersions)
-  listVersions(): ReturnType<typeof tsRestHandler> {
-    return tsRestHandler(draftVersionContract.listVersions, async ({ params, query }) => {
-      try {
-        const draftId = Number(params.id);
-        const itemsRaw = await this.draftVersionService.getVersions(draftId);
-        const items = Array.isArray(itemsRaw) ? itemsRaw.map((v) => this.mapToDraftVersion(v)) : [];
+  @Perm('draft', ['read'])
+  @Get('drafts/:id/versions')
+  async listVersions(
+    @Param('id', ParseIntPipe) id: number,
+    @Query('page') page?: number,
+    @Query('pageSize') pageSize?: number,
+  ): Promise<{ items: DraftVersion[]; total: number; page: number; pageSize: number }> {
+    try {
+      const itemsRaw = await this.draftVersionService.getVersions(id);
+      const items = Array.isArray(itemsRaw) ? itemsRaw.map((v) => this.mapToDraftVersion(v)) : [];
 
-        const page = query?.page ?? 1;
-        const pageSize = query?.pageSize ?? items.length;
-        const total = items.length;
+      const effectivePage = page ?? 1;
+      const effectivePageSize = pageSize ?? items.length;
+      const total = items.length;
 
-        return { status: 200, body: { items, total, page, pageSize } };
-      } catch (_err) {
-        return { status: 200, body: { items: [], total: 0, page: 1, pageSize: 0 } };
-      }
-    });
+      return { items, total, page: effectivePage, pageSize: effectivePageSize };
+    } catch (_err) {
+      return { items: [], total: 0, page: 1, pageSize: 0 };
+    }
   }
 
-  @TsRestHandler(draftVersionContract.getVersion)
-  getVersion(): ReturnType<typeof tsRestHandler> {
-    return tsRestHandler(draftVersionContract.getVersion, async ({ params }) => {
-      try {
-        const draftId = Number(params.id);
-        const versionId = Number(params.versionId);
-        const v = await this.draftVersionService.getVersion(draftId, versionId);
-        return { status: 200, body: this.mapToDraftVersion(v) };
-      } catch (_err) {
-        return {
-          status: 200,
-          body: {
-            id: 0,
-            draftId: 0,
-            version: 0,
-            title: '',
-            content: '',
-            pathname: null,
-            tags: null,
-            category: null,
-            author: '',
-            createdAt: new Date().toISOString(),
-          },
-        };
-      }
-    });
+  @Perm('draft', ['read'])
+  @Get('drafts/:id/versions/:versionId')
+  async getVersion(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('versionId', ParseIntPipe) versionId: number,
+  ): Promise<DraftVersion> {
+    try {
+      const v = await this.draftVersionService.getVersion(id, versionId);
+      return this.mapToDraftVersion(v);
+    } catch (_err) {
+      return {
+        id: 0,
+        draftId: 0,
+        version: 0,
+        title: '',
+        content: '',
+        pathname: null,
+        tags: null,
+        category: null,
+        author: '',
+        createdAt: new Date().toISOString(),
+      };
+    }
   }
 
-  @TsRestHandler(draftVersionContract.createVersion)
-  createVersion(): ReturnType<typeof tsRestHandler> {
-    return tsRestHandler(draftVersionContract.createVersion, async ({ params }) => {
-      try {
-        const draftId = Number(params.id);
-        const v = await this.draftVersionService.createVersion(draftId);
-        return { status: 201, body: this.mapToDraftVersion(v) };
-      } catch (_err) {
-        return {
-          status: 201,
-          body: {
-            id: 0,
-            draftId: 0,
-            version: 0,
-            title: '',
-            content: '',
-            pathname: null,
-            tags: null,
-            category: null,
-            author: '',
-            createdAt: new Date().toISOString(),
-          },
-        };
-      }
-    });
+  @Perm('draft', ['create'])
+  @Post('drafts/:id/versions')
+  @HttpCode(201)
+  async createVersion(@Param('id', ParseIntPipe) id: number): Promise<DraftVersion> {
+    try {
+      const v = await this.draftVersionService.createVersion(id);
+      return this.mapToDraftVersion(v);
+    } catch (_err) {
+      return {
+        id: 0,
+        draftId: 0,
+        version: 0,
+        title: '',
+        content: '',
+        pathname: null,
+        tags: null,
+        category: null,
+        author: '',
+        createdAt: new Date().toISOString(),
+      };
+    }
   }
 
-  @TsRestHandler(draftVersionContract.deleteVersion)
-  deleteVersion(): ReturnType<typeof tsRestHandler> {
-    return tsRestHandler(draftVersionContract.deleteVersion, async ({ params }) => {
-      try {
-        const draftId = Number(params.id);
-        const versionId = Number(params.versionId);
-        await this.draftVersionService.deleteVersion(draftId, versionId);
-        return { status: 200, body: { success: true } };
-      } catch (_err) {
-        return { status: 200, body: { success: false } };
-      }
-    });
+  @Perm('draft', ['delete'])
+  @Delete('drafts/:id/versions/:versionId')
+  async deleteVersion(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('versionId', ParseIntPipe) versionId: number,
+  ): Promise<{ success: boolean }> {
+    try {
+      await this.draftVersionService.deleteVersion(id, versionId);
+      return { success: true };
+    } catch (_err) {
+      return { success: false };
+    }
   }
 }

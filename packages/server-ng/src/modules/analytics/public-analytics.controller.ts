@@ -1,4 +1,4 @@
-import { Controller, Get, Param, ParseIntPipe, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param, ParseIntPipe, UseGuards, VERSION_NEUTRAL } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 
@@ -19,7 +19,7 @@ import { PublicAnalyticsService } from './services/public-analytics.service';
  * 确保数据安全和系统性能。
  */
 @ApiTags('Public Analytics')
-@Controller({ path: 'analytics/public', version: '2' })
+@Controller({ path: 'analytics/public', version: VERSION_NEUTRAL })
 @UseGuards(ThrottlerGuard)
 export class PublicAnalyticsController {
   constructor(private readonly publicAnalyticsService: PublicAnalyticsService) {}

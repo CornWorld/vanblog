@@ -6,7 +6,11 @@ import { Perm } from '../auth/permissions.decorator';
 @ApiTags('Admin Compatibility')
 @Controller({ path: 'admin', version: '2' })
 export class CompatibilityController {
-  // ISR Stubs
+  /**
+   * Trigger ISR rebuild
+   * Note: This path is /api/v2/admin/isr/trigger due to controller path
+   * The ts-rest handler handles /api/v2/isr/trigger separately
+   */
   @Post('isr/trigger')
   @Perm({ authOnly: true, roles: ['admin'] })
   @ApiOperation({ summary: 'Trigger ISR (Stub)' })

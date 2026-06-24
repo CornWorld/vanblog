@@ -11,8 +11,6 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
 import { ThrottlerGuard } from '@nestjs/throttler';
-import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
-import { contract } from '@vanblog/shared';
 import { Request as ExpressRequest } from 'express';
 
 import { User } from '../user/entities/user.entity';
@@ -119,18 +117,18 @@ export class AuthController {
   @ApiBody({ schema: { type: 'object', properties: { token: { type: 'string' } } } })
   async logout(
     @Request() req: RequestWithUser,
-    @Body() body: { token?: string; refresh_token?: string },
+    @Body() body?: { token?: string; refresh_token?: string },
   ): Promise<{ message: string }> {
     // Extract token from Authorization header if not provided in body
     const authHeader = req.headers.authorization;
     const token =
-      body.token ?? (authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : null);
+      body?.token ?? (authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : null);
 
     if (token) {
       await this.authService.revokeToken(token);
     }
 
-    if (body.refresh_token) {
+    if (body?.refresh_token) {
       await this.authService.revokeToken(body.refresh_token);
     }
 
@@ -224,31 +222,5 @@ export class AuthController {
     expiresAt: string;
   } {
     return this.authService.generateAnonymousToken(expiresIn);
-  }
-
-  @TsRestHandler(contract.login)
-  login_tsrest(): ReturnType<typeof tsRestHandler> {
-    return tsRestHandler(contract.login, async ({ body }) => {
-      const { name, password } = body;
-      const user = await this.authService.validateUser(name, password);
-      if (!user) {
-        return { status: 401, body: { message: 'Invalid credentials' } };
-      }
-      const result = this.authService.login(user);
-      return { status: 200, body: { token: result.access_token } };
-    });
-  }
-
-  @TsRestHandler(contract.logout)
-  logout_tsrest(): ReturnType<typeof tsRestHandler> {
-    return tsRestHandler(contract.logout, async ({ headers }) => {
-      const authHeader = headers.authorization;
-      const token = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : null;
-
-      if (token) {
-        await this.authService.revokeToken(token);
-      }
-      return { status: 200, body: { success: true } };
-    });
   }
 }

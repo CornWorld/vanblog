@@ -444,4 +444,20 @@ export class CategoryService {
     // 使用现有的 getArticlesByCategoryId 方法
     return this.getArticlesByCategoryId(category.id, query);
   }
+
+  async updateByName(name: string, updateCategoryDto: UpdateCategoryDto): Promise<CategoryDto> {
+    const category = await this.findByName(name);
+    if (!category) {
+      throw new NotFoundException(`Category ${name} not found`);
+    }
+    return this.update(category.id, updateCategoryDto);
+  }
+
+  async removeByName(name: string): Promise<void> {
+    const category = await this.findByName(name);
+    if (!category) {
+      throw new NotFoundException(`Category ${name} not found`);
+    }
+    await this.remove(category.id);
+  }
 }

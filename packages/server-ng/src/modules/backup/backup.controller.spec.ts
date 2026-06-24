@@ -309,6 +309,50 @@ describe('BackupController', () => {
     });
   });
 
+  describe('restoreBackupFromBody', () => {
+    it('should delegate to backupService.restoreFromBackup', async () => {
+      mockBackupService.restoreFromBackup.mockResolvedValue(undefined);
+
+      const result = await controller.restoreBackupFromBody({ filename: 'test.vbak' });
+
+      expect(mockBackupService.restoreFromBackup).toHaveBeenCalledWith({ filename: 'test.vbak' });
+      expect(result).toEqual({ success: true });
+    });
+
+    it('should propagate service errors', async () => {
+      mockBackupService.restoreFromBackup.mockRejectedValue(new Error('Invalid restore request'));
+
+      await expect(controller.restoreBackupFromBody({})).rejects.toThrow('Invalid restore request');
+    });
+  });
+
+  describe('exportBackup', () => {
+    it('should delegate to backupService.exportBackup', async () => {
+      const mockBuffer = Buffer.from('backup-data');
+      mockBackupService.exportBackup.mockResolvedValue(mockBuffer);
+
+      const result = await controller.exportBackup();
+
+      expect(mockBackupService.exportBackup).toHaveBeenCalled();
+      expect(result).toBe(mockBuffer);
+    });
+  });
+
+  describe('importBackup', () => {
+    it('should delegate to backupService.importBackup', async () => {
+      const mockFile = {
+        buffer: Buffer.from('data'),
+        originalname: 'backup.vbak',
+      } as Express.Multer.File;
+      mockBackupService.importBackup.mockResolvedValue(undefined);
+
+      const result = await controller.importBackup(mockFile);
+
+      expect(mockBackupService.importBackup).toHaveBeenCalledWith(mockFile);
+      expect(result).toEqual({ success: true });
+    });
+  });
+
   describe('getRestoreProgress', () => {
     it('should return restore progress', () => {
       const taskId = 'task-123';

@@ -22,6 +22,8 @@ import type {
 
 @Injectable()
 export class PluginDataStorageService implements PluginDataStorage {
+  private readonly logger = new Logger(PluginDataStorageService.name);
+
   constructor(
     @Inject(DATABASE_CONNECTION) private readonly db: Database,
     private readonly pluginId: string,
@@ -51,7 +53,11 @@ export class PluginDataStorageService implements PluginDataStorage {
       }
 
       return value as T;
-    } catch (_error) {
+    } catch (error) {
+      this.logger.error(
+        `Failed to get plugin data for key '${key}' in plugin '${this.pluginId}':`,
+        error instanceof Error ? error : new Error(String(error)),
+      );
       return null;
     }
   }

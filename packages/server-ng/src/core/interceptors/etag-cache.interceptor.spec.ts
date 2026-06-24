@@ -55,7 +55,7 @@ describe('ETagCacheInterceptor', () => {
     expect(result).toEqual(body);
     // Should set ETag and Cache-Control
     expect(setHeader).toHaveBeenCalledWith('ETag', expect.stringMatching(/^"[a-f0-9]{32}"$/));
-    expect(setHeader).toHaveBeenCalledWith('Cache-Control', 'public, max-age=60, must-revalidate');
+    expect(setHeader).toHaveBeenCalledWith('Cache-Control', 'no-cache');
     expect(status).not.toHaveBeenCalledWith(304);
   });
 
@@ -79,7 +79,7 @@ describe('ETagCacheInterceptor', () => {
 
     // Should set headers and then set status 304, returning null body
     expect(setHeader).toHaveBeenCalledWith('ETag', etag);
-    expect(setHeader).toHaveBeenCalledWith('Cache-Control', 'public, max-age=60, must-revalidate');
+    expect(setHeader).toHaveBeenCalledWith('Cache-Control', 'no-cache');
     expect(status).toHaveBeenCalledWith(304);
     expect(result).toBeNull();
   });

@@ -5,8 +5,12 @@ import {
   ParseBoolPipe,
   DefaultValuePipe,
   ParseIntPipe,
+  UseGuards,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
+
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { Perm } from '../auth/permissions.decorator';
 
 import { LoginLogService } from './login-log.service';
 
@@ -14,13 +18,16 @@ import { LoginLogService } from './login-log.service';
  * Login Log Controller
  *
  * Provides endpoints for retrieving and managing login logs.
+ * All endpoints require authentication.
  */
 @ApiTags('auth')
 @Controller({ path: 'auth', version: '2' })
+@UseGuards(JwtAuthGuard)
 export class LoginLogController {
   constructor(private readonly loginLogService: LoginLogService) {}
 
   @Get('logs')
+  @Perm('auth', ['read'])
   @ApiOperation({ summary: 'Get login logs' })
   @ApiResponse({
     status: 200,
@@ -46,6 +53,7 @@ export class LoginLogController {
   }
 
   @Get('logs/failed-attempts/by-username')
+  @Perm('auth', ['read'])
   @ApiOperation({ summary: 'Get failed login attempts by username' })
   @ApiResponse({
     status: 200,
@@ -68,6 +76,7 @@ export class LoginLogController {
   }
 
   @Get('logs/failed-attempts/by-ip')
+  @Perm('auth', ['read'])
   @ApiOperation({ summary: 'Get failed login attempts by IP' })
   @ApiResponse({
     status: 200,

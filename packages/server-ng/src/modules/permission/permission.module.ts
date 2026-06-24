@@ -29,27 +29,21 @@ export class PermissionModule {
   /**
    * 在功能模块 (Feature Module) 中调用。
    * 负责接收该模块的权限列表，并将其作为 provider 注册。
-   * 同时通过工厂 provider 主动将权限贡献给全局的 PermissionCollectionService，避免多 provider 注入时序问题。
+   * 同时直接将权限贡献给全局的 PermissionCollectionService。
    * @param permissions - 该功能模块提供的一组权限字符串。
    */
   static forFeature(permissions: string[]): DynamicModule {
+    // 直接贡献权限到全局寄存器，避免依赖注入时序问题
+    contributePermissions(permissions);
+
     const permissionsProvider: Provider = {
       provide: PERMISSIONS,
       useValue: permissions,
     };
 
-    const contributeProvider: Provider = {
-      provide: 'PERMISSION_CONTRIBUTION',
-      useFactory: (perms: string[]) => {
-        contributePermissions(perms);
-        return true;
-      },
-      inject: [PERMISSIONS],
-    };
-
     return {
       module: PermissionModule,
-      providers: [permissionsProvider, contributeProvider],
+      providers: [permissionsProvider],
       exports: [permissionsProvider],
     };
   }

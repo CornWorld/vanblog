@@ -1,4 +1,4 @@
-import { Controller, Get, Post, HttpCode } from '@nestjs/common';
+import { Controller, Get, Post, HttpCode, Query } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 
 import { ConfigService } from '../../config/config.service';
@@ -14,9 +14,9 @@ export class SitemapController {
     private readonly configService: ConfigService,
   ) {}
 
+  @Perm('sitemap', ['generate'])
   @Post('generate')
   @HttpCode(200)
-  @Perm('sitemap', ['generate'])
   @ApiOperation({ summary: 'Generate sitemap' })
   @ApiResponse({ status: 200, description: '站点地图生成成功' })
   async generateSitemap(): Promise<{ message: string }> {
@@ -24,15 +24,11 @@ export class SitemapController {
     return { message: '站点地图生成成功' };
   }
 
-  @Get('status')
   @Perm('sitemap', ['read'])
+  @Get('status')
   @ApiOperation({ summary: 'Get sitemap generation status' })
   @ApiResponse({ status: 200, description: '获取状态成功' })
-  getSitemapStatus(): {
-    enabled: boolean;
-    lastGenerated?: string;
-    sitemapUrl: string;
-  } {
+  getSitemapStatus(): { enabled: boolean; sitemapUrl: string } {
     const baseUrl = this.configService.get<string>('BASE_URL', 'http://localhost:3000');
     const siteUrl = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
 
@@ -42,11 +38,14 @@ export class SitemapController {
     };
   }
 
-  @Get('urls')
   @Perm('sitemap', ['read'])
+  @Get('urls')
   @ApiOperation({ summary: 'Get sitemap URLs' })
   @ApiResponse({ status: 200, description: '获取 URL 列表成功' })
-  async getSitemapUrls(): Promise<{ urls: string[] }> {
+  async getSitemapUrls(
+    @Query('page') _page?: number,
+    @Query('pageSize') _pageSize?: number,
+  ): Promise<{ urls: string[] }> {
     const urls = await this.sitemapService.getSiteUrls();
     return { urls };
   }

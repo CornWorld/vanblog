@@ -13,7 +13,10 @@ import {
   HttpStatus,
   StreamableFile,
   Res,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { z } from 'zod';
 
@@ -169,6 +172,21 @@ export class BackupController {
   }
 
   /**
+   * Restore backup (admin frontend compatible endpoint)
+   *
+   * This endpoint matches the root contract path `/v2/backup/restore` used by the admin frontend.
+   * Must be registered before the parameterized `:filename/restore` route to avoid route conflicts.
+   */
+  @Post('restore')
+  @HttpCode(HttpStatus.OK)
+  @Perm('backup', ['restore'])
+  @ApiOperation({ summary: 'Restore backup (admin frontend compatible)' })
+  @ApiResponse({ status: 200, description: 'Restore successful' })
+  restoreBackupFromBody(@Body() raw: unknown): Promise<{ success: boolean }> {
+    return this.backupService.restoreFromBackup(raw).then(() => ({ success: true }));
+  }
+
+  /**
    * 从备份文件恢复数据库
    *
    * 使用指定的备份文件恢复数据库。恢复操作是异步的，
@@ -232,5 +250,38 @@ export class BackupController {
   @ApiResponse({ status: 403, description: 'Insufficient permissions' })
   getRestoreProgress(@Param('taskId') taskId: string): z.infer<typeof RestoreProgressSchema> {
     return this.backupService.getRestoreProgress(taskId);
+  }
+
+  /**
+   * 导出数据库备份
+   *
+   * 生成并导出当前数据库的备份文件。
+   *
+   * @returns 备份文件buffer
+   */
+  @Get('export')
+  @Perm('backup', ['read'])
+  @ApiOperation({ summary: 'Export database backup' })
+  @ApiResponse({ status: 200, description: 'Backup exported successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Insufficient permissions' })
+  async exportBackup(): Promise<unknown> {
+    return this.backupService.exportBackup();
+  }
+
+  /**
+   * Import backup file
+   *
+   * Upload and import a backup file to restore the database.
+   */
+  @Post('import')
+  @Perm('backup', ['create'])
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiOperation({ summary: 'Import backup file' })
+  @ApiResponse({ status: 201, description: 'Backup imported successfully' })
+  @ApiResponse({ status: 400, description: 'No file uploaded' })
+  async importBackup(@UploadedFile() file: Express.Multer.File): Promise<{ success: boolean }> {
+    await this.backupService.importBackup(file);
+    return { success: true };
   }
 }

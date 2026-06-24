@@ -6,7 +6,7 @@ import { AuthModule } from '../auth/auth.module';
 import { PermissionModule } from '../permission/permission.module';
 import { PluginModule } from '../plugin/plugin.module';
 
-import { ArticleController } from './article.controller';
+import { ArticleController, PublicArticleController } from './article.controller';
 import { ArticleService } from './article.service';
 import { ArticleAccessGuard } from './guards/article-access.guard';
 
@@ -24,7 +24,7 @@ import { ArticleAccessGuard } from './guards/article-access.guard';
       'article:publish',
     ]),
   ],
-  controllers: [ArticleController],
+  controllers: [ArticleController, PublicArticleController],
   providers: [ArticleService, ArticleAccessGuard],
   exports: [ArticleService],
 })

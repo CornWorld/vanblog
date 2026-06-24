@@ -87,14 +87,6 @@ export const createTagContract = (c: ReturnType<typeof initContract>) =>
       responses: { 200: z.array(TagWithCategories) },
       summary: 'Get tags with categories',
     },
-    getArticlesByTagName: {
-      method: 'GET',
-      path: '/v2/tags/name/:name/articles',
-      pathParams: z.object({ name: z.string() }),
-      query: PaginationQuery,
-      responses: { 200: ArticleList },
-      summary: 'Get articles by tag name',
-    },
     getArticlesByTagId: {
       method: 'GET',
       path: '/v2/tags/:id/articles',

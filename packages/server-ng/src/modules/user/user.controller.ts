@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Put,
   Body,
   Patch,
   Param,
@@ -10,32 +11,25 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
-import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
-import { contract, type User as ContractUser } from '@vanblog/shared';
+import { type User } from '@vanblog/shared';
 
 import { Perm } from '../auth/permissions.decorator';
 
-import { CreateUserSchema, UserType } from './dto/create-user.dto';
+import { UserType } from './dto/create-user.dto';
 import { UpdateUserSchema } from './dto/update-user.dto';
-import { User } from './entities/user.entity';
+import { User as UserEntity } from './entities/user.entity';
 import { UserService } from './user.service';
 
 interface RequestWithUser {
-  user: User;
+  user: UserEntity;
 }
 
-function toContractUser(user: User): ContractUser {
-  return {
-    id: user.id,
-    username: user.username,
-    type: user.type,
-    nickname: user.nickname ?? undefined,
-    avatar: user.avatar ?? undefined,
-    email: user.email ?? undefined,
-    permissions: user.permissions ?? [],
-    createdAt: user.createdAt,
-    updatedAt: user.updatedAt,
-  };
+/** Ensure permissions is always a string[] (never undefined) to satisfy ts-rest contract */
+function normalizeUser<T extends { permissions?: string[] }>(
+  user: T,
+): T & { permissions: string[] } {
+  (user as T & { permissions: string[] }).permissions = user.permissions ?? [];
+  return user as T & { permissions: string[] };
 }
 
 /**
@@ -53,24 +47,33 @@ export class UserController {
   constructor(private readonly userService: UserService) {}
 
   /**
-   * 创建新用户
+   * 创建用户
    *
-   * 根据提供的用户信息创建新用户账户。需要管理员权限。
+   * 在系统中创建新的用户账户。
    *
    * @param createUserDto 用户创建数据传输对象
    * @returns 创建成功的用户信息
-   * @throws {BadRequestException} 当用户名已存在或数据验证失败时
+   * @throws {BadRequestException} 当数据验证失败时
    */
   @Post()
   @Perm('user', ['create'])
   @ApiOperation({ summary: '创建用户' })
   @ApiResponse({ status: 201, description: '用户创建成功' })
-  async create(@Body() rawBody: unknown): Promise<User> {
-    const parsed = CreateUserSchema.safeParse(rawBody);
-    if (!parsed.success) {
-      throw new BadRequestException({ message: 'Validation failed', issues: parsed.error.issues });
-    }
-    return this.userService.create(parsed.data);
+  async create(
+    @Body()
+    createUserDto: {
+      name: string;
+      password: string;
+      nickname?: string;
+      email?: string;
+      type: UserType;
+      permissions?: string[];
+    },
+  ): Promise<User> {
+    // Root contract uses "name" field (CreateCollaboratorSchema),
+    // but UserService expects "username" — map here at the controller boundary.
+    const { name, ...rest } = createUserDto;
+    return normalizeUser(await this.userService.create({ username: name, ...rest }));
   }
 
   /**
@@ -85,26 +88,7 @@ export class UserController {
   @ApiOperation({ summary: '获取用户列表' })
   @ApiResponse({ status: 200, description: '用户列表获取成功' })
   async findAll(): Promise<User[]> {
-    return this.userService.findAll();
-  }
-
-  /**
-   * 获取协作者列表
-   *
-   * 查询系统中所有具有协作者权限的用户列表。
-   *
-   * @returns 协作者用户列表
-   */
-  @Get('collaborators')
-  @Perm('user', ['read'])
-  @ApiOperation({ summary: '获取协作者列表' })
-  @ApiResponse({
-    status: 200,
-    description: '返回协作者列表',
-    type: [User],
-  })
-  async getCollaborators(): Promise<User[]> {
-    return this.userService.getCollaborators();
+    return (await this.userService.findAll()).map(normalizeUser);
   }
 
   /**
@@ -123,11 +107,12 @@ export class UserController {
   @ApiResponse({ status: 200, description: '用户获取成功' })
   @ApiResponse({ status: 404, description: '用户未找到' })
   async findOne(@Param('id') id: string): Promise<User> {
-    const numId = Number(id);
-    if (Number.isNaN(numId)) {
+    const trimmed = id.trim();
+    const numId = parseInt(trimmed, 10);
+    if (trimmed === '' || Number.isNaN(numId)) {
       throw new BadRequestException('Invalid user id');
     }
-    return this.userService.findOne(numId);
+    return normalizeUser(await this.userService.findOne(numId));
   }
 
   /**
@@ -147,7 +132,7 @@ export class UserController {
   @ApiResponse({ status: 200, description: '用户更新成功' })
   @ApiResponse({ status: 404, description: '用户未找到' })
   async update(@Param('id') id: string, @Body() rawBody: unknown): Promise<User> {
-    const numId = Number(id);
+    const numId = parseInt(id, 10);
     if (Number.isNaN(numId)) {
       throw new BadRequestException('Invalid user id');
     }
@@ -155,23 +140,39 @@ export class UserController {
     if (!parsed.success) {
       throw new BadRequestException({ message: 'Validation failed', issues: parsed.error.issues });
     }
-    return this.userService.update(numId, parsed.data);
+    return normalizeUser(await this.userService.update(numId, parsed.data));
   }
 
   /**
-   * 获取当前用户信息
+   * 更新协作者（PUT，body 中含 id）
    *
-   * 获取当前认证用户的详细信息，基于 JWT 令牌中的用户身份。
+   * 通过 PUT 方法更新用户信息，id 从请求体中提取。
+   * 与 ts-rest 契约 `PUT /v2/admin/users` (updateCollaborator) 匹配。
    *
-   * @param req 包含用户信息的请求对象
-   * @returns 当前用户信息
+   * @param rawBody 包含 id 和更新字段的请求体
+   * @returns 更新后的用户信息
+   * @throws {BadRequestException} 当 id 缺失或数据验证失败时
+   * @throws {NotFoundException} 当用户不存在时
    */
-  @Get('profile/me')
-  @Perm('user', ['read'])
-  @ApiOperation({ summary: '获取当前用户信息' })
-  @ApiResponse({ status: 200, description: '用户信息获取成功' })
-  getProfile(@Request() req: RequestWithUser): User {
-    return req.user;
+  @Put()
+  @Perm('user', ['update'])
+  @ApiOperation({ summary: '更新协作者（body 含 id）' })
+  @ApiResponse({ status: 200, description: '用户更新成功' })
+  @ApiResponse({ status: 404, description: '用户未找到' })
+  async updateCollaborator(@Body() rawBody: unknown): Promise<User> {
+    if (typeof rawBody !== 'object' || rawBody === null || !('id' in rawBody)) {
+      throw new BadRequestException('Missing required field: id');
+    }
+    const { id, ...rest } = rawBody as Record<string, unknown>;
+    const numId = typeof id === 'number' ? id : parseInt(String(id), 10);
+    if (Number.isNaN(numId)) {
+      throw new BadRequestException('Invalid user id');
+    }
+    const parsed = UpdateUserSchema.safeParse(rest);
+    if (!parsed.success) {
+      throw new BadRequestException({ message: 'Validation failed', issues: parsed.error.issues });
+    }
+    return normalizeUser(await this.userService.update(numId, parsed.data));
   }
 
   /**
@@ -190,73 +191,71 @@ export class UserController {
   @ApiResponse({ status: 200, description: '用户删除成功' })
   @ApiResponse({ status: 404, description: '用户未找到' })
   async remove(@Param('id') id: string): Promise<{ message: string }> {
-    const numId = Number(id);
-    if (Number.isNaN(numId)) {
+    const trimmed = id.trim();
+    const numId = parseInt(trimmed, 10);
+    if (trimmed === '' || Number.isNaN(numId)) {
       throw new BadRequestException('Invalid user id');
     }
     await this.userService.remove(numId);
     return { message: '用户删除成功' };
   }
 
-  @TsRestHandler(contract.updateProfile)
-  updateProfile(@Request() req: Request): unknown {
-    type AuthRequest = Request & { user?: { id: number } };
-    return tsRestHandler(contract.updateProfile, async ({ body }) => {
-      const authUser = (req as AuthRequest).user;
-      if (!authUser) {
-        return { status: 401, body: { message: 'Unauthorized' } as unknown as never };
-      }
+  /**
+   * 获取当前用户信息
+   *
+   * 获取当前认证用户的详细信息，基于 JWT 令牌中的用户身份。
+   *
+   * @param req 包含用户信息的请求对象
+   * @returns 当前用户信息
+   */
+  @Get('profile/me')
+  @Perm('user', ['read'])
+  @ApiOperation({ summary: '获取当前用户信息' })
+  @ApiResponse({ status: 200, description: '用户信息获取成功' })
+  getProfile(@Request() req: RequestWithUser): User & { permissions: string[] } {
+    return normalizeUser(req.user as unknown as User);
+  }
 
-      const updatedUser = await this.userService.update(authUser.id, {
-        nickname: body.nickname,
-        email: body.email,
-        password: body.password,
-        avatar: body.avatar,
+  /**
+   * 获取协作者列表
+   *
+   * 获取系统中所有非管理员用户（协作者）列表。
+   *
+   * @returns 协作者列表
+   */
+  @Get('collaborators')
+  @Perm('user', ['read'])
+  @ApiOperation({ summary: '获取协作者列表' })
+  @ApiResponse({ status: 200, description: '协作者列表获取成功' })
+  async getCollaborators(): Promise<User[]> {
+    return (await this.userService.getCollaborators()).map(normalizeUser);
+  }
+}
+
+/**
+ * 用户个人资料控制器
+ *
+ * 允许已认证用户更新自己的个人资料（昵称、头像、邮箱、密码等）。
+ * 路径 /v2/users/profile 与 root contract 对齐。
+ */
+@ApiTags('Users')
+@Controller({ path: 'users', version: '2' })
+export class UserProfileController {
+  constructor(private readonly userService: UserService) {}
+
+  @Put('profile')
+  @Perm('user', ['read'])
+  @ApiOperation({ summary: '更新当前用户资料' })
+  @ApiResponse({ status: 200, description: '用户资料更新成功' })
+  async updateProfile(@Request() req: RequestWithUser, @Body() rawBody: unknown): Promise<User> {
+    const parsed = UpdateUserSchema.safeParse(rawBody);
+    if (!parsed.success) {
+      throw new BadRequestException({
+        message: 'Validation failed',
+        issues: parsed.error.issues,
       });
-
-      return { status: 200, body: toContractUser(updatedUser) };
-    });
-  }
-
-  @TsRestHandler(contract.getCollaborators)
-  getCollaborators_tsrest(): unknown {
-    return tsRestHandler(contract.getCollaborators, async () => {
-      const collaborators = await this.userService.getCollaborators();
-      return { status: 200, body: collaborators.map(toContractUser) };
-    });
-  }
-
-  @TsRestHandler(contract.createCollaborator)
-  createCollaborator(): unknown {
-    return tsRestHandler(contract.createCollaborator, async ({ body }) => {
-      const newUser = await this.userService.create({
-        username: body.name,
-        password: body.password,
-        nickname: body.nickname,
-        type: UserType.EDITOR,
-        permissions: body.permissions,
-      });
-      return { status: 201, body: toContractUser(newUser) };
-    });
-  }
-
-  @TsRestHandler(contract.updateCollaborator)
-  updateCollaborator(): unknown {
-    return tsRestHandler(contract.updateCollaborator, async ({ body }) => {
-      const updatedUser = await this.userService.update(body.id, {
-        password: body.password,
-        nickname: body.nickname,
-        permissions: body.permissions,
-      });
-      return { status: 200, body: toContractUser(updatedUser) };
-    });
-  }
-
-  @TsRestHandler(contract.deleteCollaborator)
-  deleteCollaborator(): unknown {
-    return tsRestHandler(contract.deleteCollaborator, async ({ params }) => {
-      await this.userService.remove(Number(params.id));
-      return { status: 200, body: { success: true } };
-    });
+    }
+    const userId = (req.user as unknown as User).id;
+    return normalizeUser(await this.userService.update(userId, parsed.data));
   }
 }

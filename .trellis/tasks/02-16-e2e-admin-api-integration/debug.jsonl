@@ -1,0 +1,8 @@
+{"file": ".trellis/spec/backend/api-guidelines.md", "reason": "API 规范参考（调试时对照）"}
+{"file": ".claude/commands/trellis/check-backend.md", "reason": "Backend check spec"}
+{"file": ".claude/commands/trellis/check-frontend.md", "reason": "Frontend check spec"}
+{"file": "packages/admin/vite.config.ts", "reason": "Vite 代理配置，调试 API 请求转发"}
+{"file": "packages/admin/playwright.config.js", "reason": "Playwright 配置，可用于浏览器自动化测试"}
+{"file": ".trellis/tasks/02-02-e2e-api-walk/E2E_API_WALK_ISSUES.md", "reason": "上一轮发现的问题参考"}
+{"file": ".trellis/tasks/02-02-e2e-api-walk/E2E_API_WALK_REPORT.md", "reason": "上一轮测试报告参考"}
+{"file": "packages/server-ng/src/modules/setting/services/setting-core.service.ts", "reason": "设置服务已实现 social/waline/ISR/login 等方法，但控制器未暴露"}

@@ -1,12 +1,14 @@
-import { Controller, Get, Header } from '@nestjs/common';
+import { Controller, Get, Header, UseGuards } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 
 import { PerformanceInterceptor } from '../../core/interceptors/performance.interceptor';
 import { PerformanceMonitoringMiddleware } from '../../shared/middleware/performance-monitoring.middleware';
 import { ErrorRateMonitoringService } from '../../shared/services/error-rate-monitoring.service';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @ApiTags('Metrics')
 @Controller({ path: 'metrics', version: '2' })
+@UseGuards(JwtAuthGuard)
 export class MetricsController {
   constructor(private readonly errorRateMonitoringService: ErrorRateMonitoringService) {}
 

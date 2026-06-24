@@ -1,5 +1,10 @@
-import { Injectable } from '@nestjs/common';
+import * as fs from 'fs';
+import * as path from 'path';
+
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import axios from 'axios';
+import { gt as semverGt } from 'semver';
 
 import { StatisticsService } from '../../shared/services/statistics.service';
 import { CategoryService } from '../category/category.service';
@@ -14,6 +19,16 @@ import type { PublicBootstrapResponseDto } from './bootstrap.dto';
 
 @Injectable()
 export class BootstrapService {
+  private readonly logger = new Logger(BootstrapService.name);
+  private currentVersion = 'dev';
+  private latestVersionInfo: {
+    version: string;
+    description: string;
+    url: string;
+  } | null = null;
+  private lastCheckTime = 0;
+  private readonly CHECK_INTERVAL = 1000 * 60 * 60; // 1 hour
+
   constructor(
     private readonly configService: ConfigService,
     private readonly statisticsService: StatisticsService,
@@ -24,7 +39,90 @@ export class BootstrapService {
     private readonly hookService: HookService,
     private readonly pluginRegistryService: PluginRegistryService,
     private readonly pluginDataValidator: PluginDataValidator,
-  ) {}
+  ) {
+    this.initVersion();
+  }
+
+  private initVersion(): void {
+    try {
+      const pkgPath = path.join(process.cwd(), 'package.json');
+      if (fs.existsSync(pkgPath)) {
+        const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8')) as {
+          version?: string;
+        };
+        this.currentVersion = pkg.version ?? 'dev';
+      } else {
+        this.currentVersion = process.env.npm_package_version ?? 'dev';
+      }
+    } catch (error) {
+      this.logger.warn('Failed to read package.json', error);
+      this.currentVersion = process.env.npm_package_version ?? 'dev';
+    }
+
+    // Initial check in background
+    void this.checkUpdate();
+  }
+
+  private async checkUpdate(): Promise<void> {
+    if (Date.now() - this.lastCheckTime < this.CHECK_INTERVAL && this.latestVersionInfo) {
+      return;
+    }
+
+    // Update timestamp to prevent concurrent checks flooding
+    this.lastCheckTime = Date.now();
+
+    try {
+      const { data } = await axios.get<{
+        tag_name: string;
+        body: string;
+        html_url: string;
+      }>('https://api.github.com/repos/Mereithhh/vanblog/releases/latest', {
+        timeout: 5000,
+      });
+
+      this.latestVersionInfo = {
+        version: data.tag_name,
+        description: data.body,
+        url: data.html_url,
+      };
+      this.logger.log(`Updated latest version info: ${data.tag_name}`);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.warn(`Failed to check update: ${message}`);
+    }
+  }
+
+  /**
+   * Get version information (admin-compatible format)
+   */
+  getVersionInfo(): {
+    version: string;
+    latestVersion: string;
+    hasUpdate: boolean;
+    updateInfo?: {
+      version: string;
+      description: string;
+      url: string;
+    };
+  } {
+    // Trigger update if needed, but don't await
+    void this.checkUpdate();
+
+    const { latestVersionInfo } = this;
+    const latestVersion = latestVersionInfo?.version ?? this.currentVersion;
+
+    let hasUpdate = false;
+    if (latestVersionInfo) {
+      hasUpdate = semverGt(latestVersionInfo.version, this.currentVersion) as unknown as boolean;
+    }
+
+    return {
+      version: this.currentVersion,
+      latestVersion,
+      hasUpdate,
+      updateInfo: latestVersionInfo ?? undefined,
+    };
+  }
 
   async getPublicBootstrap(): Promise<PublicBootstrapResponseDto> {
     // 插件钩子：生成前
@@ -71,7 +169,7 @@ export class BootstrapService {
     }
 
     const response: PublicBootstrapResponseDto = {
-      version: this.getVersion(),
+      version: this.currentVersion,
       tags: tags.status === 'fulfilled' ? tags.value : [],
       totalArticles: overall.status === 'fulfilled' ? overall.value.publishedArticles : 0,
       totalWordCount: totalWordCount.status === 'fulfilled' ? totalWordCount.value : 0,
@@ -112,10 +210,6 @@ export class BootstrapService {
   private async getAllCategories(): Promise<string[]> {
     const categoryResponse = await this.categoryService.findAll();
     return categoryResponse.items.map((category) => category.name);
-  }
-
-  private getVersion(): string {
-    return this.configService.get<string>('APP_VERSION') ?? 'dev';
   }
 
   private async getWalineConfig(): Promise<{ serverURL?: string } | undefined> {

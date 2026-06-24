@@ -271,18 +271,21 @@ export class MediaController {
   /**
    * 删除单个文件
    *
-   * 根据文件 ID 删除指定文件，同时清理存储空间。
+   * 根据文件标识删除指定文件，同时清理存储空间。
+   * sign 参数为字符串类型（通常为数字 ID 的字符串形式），与 ts-rest 契约匹配。
    *
-   * @param id 文件 ID
+   * @param sign 文件标识（字符串形式的 ID）
    * @returns 删除操作结果
    */
-  @Delete(':id')
+  @Delete(':sign')
   @Perm('media', ['delete'])
   @ApiOperation({ summary: '删除单个文件' })
   @ApiResponse({ status: 200, description: '删除成功' })
-  async deleteFile(
-    @Param('id', ParseIntPipe) id: number,
-  ): Promise<{ success: boolean; message: string }> {
+  async deleteFile(@Param('sign') sign: string): Promise<{ success: boolean; message: string }> {
+    const id = parseInt(sign, 10);
+    if (Number.isNaN(id)) {
+      throw new BadRequestException('Invalid file identifier');
+    }
     return this.mediaService.deleteFile(id);
   }
 

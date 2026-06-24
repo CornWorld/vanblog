@@ -9,13 +9,21 @@ import { z } from 'zod';
 // 基础文章 Schema - 使用 drizzle-zod 生成的 schema
 export const ArticleSchema = selectArticleSchema;
 
-// 创建文章 Schema - 使用 drizzle-zod 生成的 schema
-export const CreateArticleSchema = insertArticleSchema.omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-  viewer: true,
-});
+// 创建文章 Schema - 使用 drizzle-zod 生成的 schema，并添加默认值支持
+export const CreateArticleSchema = insertArticleSchema
+  .omit({
+    id: true,
+    createdAt: true,
+    updatedAt: true,
+    viewer: true,
+  })
+  .partial({
+    // 允许以下字段为可选，服务层将提供默认值
+    content: true,
+    tags: true,
+    author: true,
+    // 其他字段保持原有行为
+  });
 
 // 更新文章 Schema - 使用 drizzle-zod 生成的 schema
 export const UpdateArticleSchema = updateArticleSchema.omit({
@@ -50,20 +58,32 @@ export const ArticleListResponseSchema = z.object({
 });
 
 // 文章搜索 Schema
-export const ArticleSearchSchema = z.object({
-  keyword: z.string().min(1, '搜索关键词不能为空'),
-  page: c.page,
-  pageSize: c.pageSize,
-  query: z.string().optional(),
-  titleOnly: z.boolean().optional(),
-  contentOnly: z.boolean().optional(),
-  category: z.string().optional(),
-  tags: z.array(z.string()).optional(),
-  includeHidden: z.boolean().optional(),
-  includePrivate: z.boolean().optional(),
-  sortBy: z.string().optional(),
-  sortOrder: z.string().optional(),
-});
+// Accepts both `keyword` and `link` (contract alias used by admin frontend)
+export const ArticleSearchSchema = z
+  .object({
+    keyword: z.string().min(1, '搜索关键词不能为空').optional(),
+    link: z.string().optional(),
+    page: c.page,
+    pageSize: c.pageSize,
+    query: z.string().optional(),
+    titleOnly: z.boolean().optional(),
+    contentOnly: z.boolean().optional(),
+    category: z.string().optional(),
+    tags: z.array(z.string()).optional(),
+    includeHidden: z.boolean().optional(),
+    includePrivate: z.boolean().optional(),
+    sortBy: z.string().optional(),
+    sortOrder: z.string().optional(),
+  })
+  .transform((data) => ({
+    ...data,
+    // Map `link` to `keyword` for backward compatibility with admin contract
+    keyword: data.keyword ?? data.link ?? '',
+  }))
+  .refine((data) => data.keyword.length > 0, {
+    message: '搜索关键词不能为空',
+    path: ['keyword'],
+  });
 
 // 文章搜索结果 Schema
 export const ArticleSearchResultSchema = z.object({

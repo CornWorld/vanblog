@@ -1007,6 +1007,10 @@ export function createUserServiceMock(): any {
     update: vi.fn(),
     remove: vi.fn(),
     getCollaborators: vi.fn(),
+    // 缺失的方法
+    getAdminUser: vi.fn(),
+    findByUsername: vi.fn(),
+    findByUsernameWithPassword: vi.fn(),
   };
 }
 
@@ -1188,8 +1192,11 @@ export function createCategoryServiceMock(overrides: Record<string, unknown> = {
     findByName: vi.fn(),
     create: vi.fn(),
     update: vi.fn(),
+    updateByName: vi.fn(),
     remove: vi.fn(),
+    removeByName: vi.fn(),
     getArticlesByCategoryId: vi.fn(),
+    getArticlesByCategoryName: vi.fn(),
     verifyPassword: vi.fn(),
     getStatistics: vi.fn(),
     getCategoriesWithTags: vi.fn(),
@@ -1207,10 +1214,11 @@ export function createTagServiceMock(overrides: Record<string, unknown> = {}): a
     findByName: vi.fn(),
     create: vi.fn(),
     update: vi.fn(),
+    updateByName: vi.fn(),
     remove: vi.fn(),
+    removeByName: vi.fn(),
     getStatistics: vi.fn(),
     getTagsWithCategories: vi.fn(),
-    getArticlesByTagName: vi.fn(),
     getArticlesByTagId: vi.fn(),
     findOrCreateTags: vi.fn(),
     ...overrides,
@@ -1252,6 +1260,9 @@ export function createBackupServiceMock(): any {
     deleteBackup: vi.fn(),
     restoreBackup: vi.fn(),
     getRestoreProgress: vi.fn(),
+    restoreFromBackup: vi.fn(),
+    exportBackup: vi.fn(),
+    importBackup: vi.fn(),
   };
 }
 
@@ -2230,6 +2241,49 @@ export function createDemoServiceMock(overrides: Record<string, unknown> = {}): 
 }
 
 /**
+ * 创建MetaService Mock
+ */
+export function createMetaServiceMock(overrides: Record<string, unknown> = {}): any {
+  return {
+    getVersionInfo: vi.fn().mockReturnValue({
+      version: '1.0.0',
+      latestVersion: '1.0.0',
+      hasUpdate: false,
+      updateInfo: undefined,
+    }),
+    ...overrides,
+  };
+}
+
+/**
+ * 创建BootstrapService Mock
+ */
+export function createBootstrapServiceMock(overrides: Record<string, unknown> = {}): any {
+  return {
+    getPublicBootstrap: vi.fn().mockResolvedValue({
+      version: '1.0.0',
+      tags: ['technology', 'web'],
+      totalArticles: 5,
+      totalWordCount: 2547,
+      siteInfo: {
+        title: 'Test Blog',
+        description: 'Test Description',
+        author: 'Test Author',
+        keywords: ['test'],
+      },
+      friendLinks: [],
+      categories: [],
+      navigation: [],
+      extensions: {},
+      walineConfig: undefined,
+    }),
+    getCurrentVersion: vi.fn().mockReturnValue('1.0.0'),
+    checkUpdate: vi.fn(),
+    ...overrides,
+  };
+}
+
+/**
  * 创建StorageConfigService Mock
  */
 export function createStorageConfigServiceMock(
@@ -2515,6 +2569,10 @@ export const Mock = {
   sitemap: createSitemapServiceMock,
   /** Create CommentService mock */
   commentService: createCommentServiceMock,
+  /** Create MetaService mock */
+  meta: createMetaServiceMock,
+  /** Create BootstrapService mock */
+  bootstrapService: createBootstrapServiceMock,
 
   // ========== Setting Service Mocks ==========
   /** Create SettingCoreService mock */

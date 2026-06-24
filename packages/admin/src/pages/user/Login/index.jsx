@@ -1,18 +1,18 @@
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import Footer from '@/components/Footer';
 import { login } from '@/services/van-blog/api';
 import { LockOutlined, UserOutlined } from '@ant-design/icons';
-import { LoginForm, ProFormCheckbox, ProFormText } from '@ant-design/pro-form';
-import { message } from 'antd';
+import { Button, Checkbox, Form, Input, message } from 'antd';
 import { history, useModel } from '@/router';
 import { setAccessToken, resetRedirectCycle } from '@/utils/auth';
 import './index.less';
-import { useEffect } from 'react';
 
 const Login = () => {
   const { t } = useTranslation();
-  const type = 'account';
   const { initialState, setInitialState } = useModel();
+  const [form] = Form.useForm();
+  const [loading, setLoading] = useState(false);
 
   // 页面加载时重置重定向循环检测和清理可能过期的token
   useEffect(() => {
@@ -22,7 +22,6 @@ const Login = () => {
     resetRedirectCycle();
 
     // 清除可能存在的过期token
-    // 注意：仅在处于redirect循环时清除token，避免正常登录流程被干扰
     const count = parseInt(sessionStorage.getItem('vanblog_redirect_count') || '0', 10);
     if (count >= 2) {
       console.log(t('login.debug.redirect_cycle'));
@@ -39,30 +38,32 @@ const Login = () => {
     // 再次重置重定向循环检测
     resetRedirectCycle();
 
+    setLoading(true);
+
     try {
-      // 显示加载消息
-      message.loading(t('login.logging_in'), 0.5);
       // 发送登录请求
-      const msg = await login(
+      const response = await login(
         {
           username: values.username,
           password: values.password,
         },
         { skipErrorHandler: true },
-      ); // 跳过默认错误处理
+      );
 
-      // 处理成功响应
-      if (msg.statusCode === 200 && msg.data?.token) {
+      // ts-rest client returns { status, body } format
+      if (response.status === 200 && response.body?.token) {
         // 显示成功消息
         message.success(t('login.success'));
 
         // 获取用户信息和令牌
-        const token = msg.data.token;
-        const user = msg.data.user
+        const token = response.body.token;
+        const apiUser = response.body.user;
+
+        const user = apiUser
           ? {
-              name: msg.data.user.name,
-              id: msg.data.user.id,
-              type: msg.data.user.type,
+              name: apiUser.username,
+              id: apiUser.id,
+              type: apiUser.type,
             }
           : null;
 
@@ -99,12 +100,10 @@ const Login = () => {
           }
         } catch (metaError) {
           console.error(t('login.debug.meta_error'), metaError);
-          // 继续处理，即使获取元数据失败
         }
 
         // 处理重定向
         console.log(t('login.debug.handling_redirect'));
-        // 检查history对象
         if (!history) {
           console.error(t('login.debug.no_history'));
           window.location.href = '/admin/';
@@ -112,7 +111,6 @@ const Login = () => {
         }
 
         try {
-          // 获取查询参数中的重定向URL
           const { query } = history.location;
           const { redirect } = query || {};
           const targetPath = redirect || '/';
@@ -121,22 +119,18 @@ const Login = () => {
           history.push(targetPath);
         } catch (navError) {
           console.error(t('login.debug.nav_error'), navError);
-          // 如果路由跳转失败，使用直接URL导航
           window.location.href = '/admin/';
         }
 
         return;
-      } else if (msg.statusCode === 401 || msg.response?.status === 401) {
-        // 处理认证失败
+      } else if (response.status === 401) {
         console.log(t('login.debug.failed_401'));
-        message.error(msg.message || t('login.username_password_error'));
+        message.error(t('login.username_password_error'));
       } else {
-        // 处理其他错误
-        console.log(t('login.debug.failed_status') + (msg.statusCode || msg.response?.status));
-        message.error(msg.message || t('login.failed'));
+        console.log(t('login.debug.failed_status') + response.status);
+        message.error(response.body?.message || t('login.failed'));
       }
     } catch (error) {
-      // 处理请求异常
       console.error(t('login.debug.error'), error);
 
       if (error.response?.status === 401) {
@@ -147,83 +141,71 @@ const Login = () => {
       } else {
         message.error(t('login.network_error'));
       }
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <div className="container">
       <div className="content">
-        <LoginForm
-          className="loginForm"
-          logo={<img alt="logo" src="/logo.svg" />}
-          title={t('login.title')}
-          subTitle={t('login.subtitle')}
-          initialValues={{
-            autoLogin: true,
-          }}
-          onFinish={async (values) => {
-            try {
-              await handleSubmit({
-                username: values.username,
-                password: values.password,
-              });
-            } catch (error) {
-              console.error(t('login.debug.form_error'), error);
-              message.error(t('login.form_error'));
-            }
-          }}
-        >
-          {type === 'account' && (
-            <>
-              <ProFormText
-                name="username"
-                fieldProps={{
-                  size: 'large',
-                  prefix: <UserOutlined className={'prefixIcon'} />,
-                }}
-                placeholder={t('login.username_placeholder')}
-                rules={[
-                  {
-                    required: true,
-                    message: t('login.username_required'),
-                  },
-                ]}
-              />
-              <ProFormText.Password
-                name="password"
-                fieldProps={{
-                  size: 'large',
-                  prefix: <LockOutlined className={'prefixIcon'} />,
-                }}
-                placeholder={t('login.password_placeholder')}
-                rules={[
-                  {
-                    required: true,
-                    message: t('login.password_required'),
-                  },
-                ]}
-              />
-            </>
-          )}
-          <div
-            style={{
-              marginBottom: 24,
-              display: 'flex',
-              justifyContent: 'space-between',
-            }}
-          >
-            <ProFormCheckbox noStyle name="autoLogin">
-              {t('login.remember')}
-            </ProFormCheckbox>
-            <a
-              onClick={() => {
-                history.push('/user/restore');
-              }}
-            >
-              {t('login.forgot_password')}
-            </a>
+        <div className="loginForm">
+          <div className="loginLogo">
+            <img alt="logo" src={`${import.meta.env.BASE_URL}logo.svg`} />
           </div>
-        </LoginForm>
+          <h2>{t('login.title')}</h2>
+          <p className="subtitle">{t('login.subtitle')}</p>
+
+          <Form
+            form={form}
+            name="login"
+            initialValues={{ autoLogin: true }}
+            onFinish={handleSubmit}
+            autoComplete="off"
+          >
+            <Form.Item
+              name="username"
+              rules={[{ required: true, message: t('login.username_required') }]}
+            >
+              <Input
+                size="large"
+                prefix={<UserOutlined className={'prefixIcon'} />}
+                placeholder={t('login.username_placeholder')}
+              />
+            </Form.Item>
+
+            <Form.Item
+              name="password"
+              rules={[{ required: true, message: t('login.password_required') }]}
+            >
+              <Input.Password
+                size="large"
+                prefix={<LockOutlined className={'prefixIcon'} />}
+                placeholder={t('login.password_placeholder')}
+              />
+            </Form.Item>
+
+            <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between' }}>
+              <Form.Item name="autoLogin" valuePropName="checked" noStyle>
+                <Checkbox>{t('login.remember')}</Checkbox>
+              </Form.Item>
+              <a
+                onClick={(e) => {
+                  e.preventDefault();
+                  history.push('/user/restore');
+                }}
+              >
+                {t('login.forgot_password')}
+              </a>
+            </div>
+
+            <Form.Item>
+              <Button type="primary" htmlType="submit" size="large" loading={loading} block>
+                {t('login.submit')}
+              </Button>
+            </Form.Item>
+          </Form>
+        </div>
       </div>
       <Footer />
     </div>

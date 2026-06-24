@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 import {
   createCategory,
   deleteCategory,
-  getAllCategories,
+  getAllCategoriesFull,
   updateCategory,
 } from '@/services/van-blog/api';
 import { encodeQuerystring } from '@/services/van-blog/encode';
@@ -11,16 +11,14 @@ import { ModalForm, ProFormSelect, ProFormText, ProTable } from '@ant-design/pro
 import { Button, message, Modal } from 'antd';
 import { useRef } from 'react';
 
-export default function () {
+export default function CategoryTab() {
   const { t } = useTranslation();
   const fetchData = async () => {
-    const { data: res } = await getAllCategories(true);
-    return Array.isArray(res)
-      ? res.map((item) => ({
-          key: item.id,
-          ...item,
-        }))
-      : [];
+    const { data: items } = await getAllCategoriesFull();
+    return items.map((item) => ({
+      key: item.id,
+      ...item,
+    }));
   };
   const actionRef = useRef();
 

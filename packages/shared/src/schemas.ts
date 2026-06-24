@@ -19,14 +19,14 @@ export const c = {
     .min(0, 'Must be a non-negative integer')
     .describe('Non-negative integer value'),
 
-  page: z
+  page: z.coerce
     .number()
     .int()
     .min(1, 'Page must be at least 1')
     .describe('Page number for pagination')
     .default(1),
 
-  pageSize: z
+  pageSize: z.coerce
     .number()
     .int()
     .min(1, 'Page size must be at least 1')
@@ -133,34 +133,6 @@ export const UpdateFriendLinkSchema = CreateFriendLinkSchema;
 
 export type UpdateFriendLink = z.infer<typeof UpdateFriendLinkSchema>;
 
-export type NavigationItem = {
-  id?: number;
-  name: string;
-  url: string;
-  icon?: string;
-  target: '_self' | '_blank';
-  order: number;
-  children?: NavigationItem[];
-};
-
-export const NavigationItemSchema: z.ZodType<NavigationItem> = z.lazy(() =>
-  z.object({
-    id: z.number().optional(),
-    name: z.string().min(1, '导航名称不能为空'),
-    url: z.string().min(1, '导航链接不能为空'),
-    icon: z.string().optional(),
-    target: z.enum(['_self', '_blank']).default('_self'),
-    order: z.number().default(0),
-    children: z.array(NavigationItemSchema).optional(),
-  }),
-) as unknown as z.ZodType<NavigationItem>;
-
-export const UpdateNavigationSchema = z.object({
-  items: z.array(NavigationItemSchema),
-});
-
-export type UpdateNavigation = z.infer<typeof UpdateNavigationSchema>;
-
 export type Navigation = {
   name: string;
   path: string;
@@ -178,6 +150,12 @@ export const NavigationSchema: z.ZodType<Navigation> = z.lazy(() =>
     children: z.array(NavigationSchema).optional(),
   }),
 ) as unknown as z.ZodType<Navigation>;
+
+export const UpdateNavigationSchema = z.object({
+  items: z.array(NavigationSchema),
+});
+
+export type UpdateNavigation = z.infer<typeof UpdateNavigationSchema>;
 
 export const CustomCodeSchema = z.object({
   css: z.string().optional(),

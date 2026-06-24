@@ -2,13 +2,12 @@ import { useTranslation } from 'react-i18next';
 import CollaboratorModal, { getPermissionLabel } from '@/components/CollaboratorModal';
 import Tags from '@/components/Tags';
 import { deleteCollaborator, getAllCollaborators, updateUser } from '@/services/van-blog/api';
-import { encryptPwd } from '@/services/van-blog/encryptPwd';
 import { ProForm, ProFormText, ProTable } from '@ant-design/pro-components';
 import { Button, Card, message, Modal, Space } from 'antd';
 import { useRef } from 'react';
 import { history, useModel } from '@/router';
 
-export default function () {
+function UserTab() {
   const { t } = useTranslation();
   const { initialState, setInitialState } = useModel('@@initialState');
   const actionRef = useRef();
@@ -82,7 +81,7 @@ export default function () {
             try {
               await updateUser({
                 name: data.name,
-                password: encryptPwd(data.name, data.password),
+                password: data.password,
               });
               window.localStorage.removeItem('token');
               setInitialState((s) => ({ ...s, user: undefined }));
@@ -196,3 +195,5 @@ export default function () {
     </>
   );
 }
+
+export default UserTab;

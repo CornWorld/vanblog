@@ -21,18 +21,37 @@ vi.mock('fs/promises', async () => {
   };
 });
 
-vi.mock('zlib', () => ({
-  gzip: vi.fn((_data: any, callback: any) => callback(null, Buffer.from('compressed-data'))),
-  gunzip: vi.fn((_data: any, callback: any) => callback(null, Buffer.from('{}'))),
-  gzipSync: vi.fn(() => Buffer.from('compressed-data')),
-  gunzipSync: vi.fn(() => Buffer.from('{}')),
-  default: {
-    gzip: vi.fn((_data: any, callback: any) => callback(null, Buffer.from('compressed-data'))),
-    gunzip: vi.fn((_data: any, callback: any) => callback(null, Buffer.from('{}'))),
+vi.mock('zlib', () => {
+  const mockGzip = vi.fn((_data: any, callback: any) => {
+    // Support both callback and promise-based API
+    if (callback) {
+      callback(null, Buffer.from('compressed-data'));
+    } else {
+      // Return a promise when called without callback (promise API)
+      return Promise.resolve(Buffer.from('compressed-data'));
+    }
+  });
+  const mockGunzip = vi.fn((_data: any, callback: any) => {
+    if (callback) {
+      callback(null, Buffer.from('{}'));
+    } else {
+      return Promise.resolve(Buffer.from('{}'));
+    }
+  });
+
+  return {
+    gzip: mockGzip,
+    gunzip: mockGunzip,
     gzipSync: vi.fn(() => Buffer.from('compressed-data')),
     gunzipSync: vi.fn(() => Buffer.from('{}')),
-  },
-}));
+    default: {
+      gzip: mockGzip,
+      gunzip: mockGunzip,
+      gzipSync: vi.fn(() => Buffer.from('compressed-data')),
+      gunzipSync: vi.fn(() => Buffer.from('{}')),
+    },
+  };
+});
 
 describe('BackupService', () => {
   let service: BackupService;
@@ -64,16 +83,28 @@ describe('BackupService', () => {
     vi.mocked(mockFs.unlink).mockResolvedValue(undefined);
     vi.mocked(mockFs.access).mockResolvedValue(undefined);
 
-    // Setup zlib mocks
-    vi.mocked(mockZlib.gzip).mockImplementation((_data: any, callback: any) =>
-      callback(null, Buffer.from('compressed-data')),
-    );
-    vi.mocked(mockZlib.gunzip).mockImplementation((_data: any, callback: any) =>
-      callback(null, Buffer.from('{}')),
-    );
+    // Setup zlib mocks - support both callback and promise API
+    vi.mocked(mockZlib.gzip).mockImplementation((_data: any, callback?: any) => {
+      if (callback) {
+        callback(null, Buffer.from('compressed-data'));
+      }
+      return Promise.resolve(Buffer.from('compressed-data'));
+    });
+    vi.mocked(mockZlib.gunzip).mockImplementation((_data: any, callback?: any) => {
+      if (callback) {
+        callback(null, Buffer.from('{}'));
+      }
+      return Promise.resolve(Buffer.from('{}'));
+    });
 
     // Create service instance
-    service = new BackupService(mockDb.db as any, mockLogger as any);
+    const mockConfigService = {
+      get: vi.fn((key: string, defaultValue?: any) => {
+        if (key === 'JWT_SECRET') return 'test-secret-key-for-encryption';
+        return defaultValue;
+      }),
+    };
+    service = new BackupService(mockDb.db as any, mockLogger as any, mockConfigService as any);
   });
 
   it('should be defined', () => {
@@ -168,8 +199,11 @@ describe('BackupService', () => {
       });
 
       const mockZlib = await import('zlib');
-      vi.mocked(mockZlib.gunzip).mockImplementation((_data: any, callback: any) => {
-        callback(null, Buffer.from(mockBackupContent));
+      vi.mocked(mockZlib.gunzip).mockImplementation((_data: any, callback?: any) => {
+        if (callback) {
+          callback(null, Buffer.from(mockBackupContent));
+        }
+        return Promise.resolve(Buffer.from(mockBackupContent));
       });
 
       vi.mocked(mockFs.readFile).mockResolvedValue(Buffer.from('compressed-data'));
@@ -204,7 +238,7 @@ describe('BackupService', () => {
       // Mock gunzip to return different content for each file
       let callCount = 0;
       const mockZlib = await import('zlib');
-      vi.mocked(mockZlib.gunzip).mockImplementation((_data: any, callback: any) => {
+      vi.mocked(mockZlib.gunzip).mockImplementation((_data: any, callback?: any) => {
         callCount++;
         const mockBackupContent = JSON.stringify({
           metadata: {
@@ -219,7 +253,10 @@ describe('BackupService', () => {
             tables: {},
           },
         });
-        callback(null, Buffer.from(mockBackupContent));
+        if (callback) {
+          callback(null, Buffer.from(mockBackupContent));
+        }
+        return Promise.resolve(Buffer.from(mockBackupContent));
       });
 
       vi.mocked(mockFs.readFile).mockResolvedValue(Buffer.from('compressed-data'));
@@ -247,8 +284,11 @@ describe('BackupService', () => {
       // Mock gunzip to return non-JSON content (simulating encrypted data)
       const encryptedContent = 'encrypted-data-that-is-not-json';
       const mockZlib = await import('zlib');
-      vi.mocked(mockZlib.gunzip).mockImplementation((_data: any, callback: any) => {
-        callback(null, Buffer.from(encryptedContent));
+      vi.mocked(mockZlib.gunzip).mockImplementation((_data: any, callback?: any) => {
+        if (callback) {
+          callback(null, Buffer.from(encryptedContent));
+        }
+        return Promise.resolve(Buffer.from(encryptedContent));
       });
 
       vi.mocked(mockFs.readFile).mockResolvedValue(Buffer.from('encrypted-compressed-data'));

@@ -26,14 +26,24 @@ export default defineConfig(({ mode }) => {
       port: 3002,
       proxy: {
         // 代理 API 请求到 server-ng
+        // 使用环境变量，支持端口自动检测
         '/api': {
-          target: 'http://localhost:3050',
+          target: process.env.VANBLOG_API_URL || 'http://localhost:3050',
           changeOrigin: true,
           secure: false,
+          // 代理错误时重试其他常用端口
+          configure: (proxy, _options) => {
+            proxy.on('error', (_err, _req, _res) => {
+              console.log('[Proxy] API proxy error, trying alternative ports...');
+            });
+            proxy.on('proxyReq', (proxyReq, req, _res) => {
+              console.log(`[Proxy] ${req.method} ${req.url} -> ${proxyReq.path}`);
+            });
+          },
         },
         // 代理静态资源请求到 server-ng
         '/static': {
-          target: 'http://localhost:3050',
+          target: process.env.VANBLOG_API_URL || 'http://localhost:3050',
           changeOrigin: true,
           secure: false,
         },

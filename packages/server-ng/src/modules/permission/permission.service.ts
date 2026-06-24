@@ -35,13 +35,41 @@ export interface ModulePermissionInfo {
 // 强类型：权限组表的选择行类型
 type PermissionGroupSelect = typeof permissionGroups.$inferSelect;
 
+// 使用 globalThis + Symbol.for 确保 Vite ESM 多实例下共享权限状态。
+// Vite dev 模式可能将同一文件加载为多个 ESM 模块实例，
+// 导致 NestJS DI 中看到的 PermissionService 与 guard 注入的是不同实例。
+const _g = globalThis as Record<symbol, unknown>;
+const PERM_MODULE_KEY = Symbol.for('vanblog:permission-module-permissions');
+const PERM_ROLES_KEY = Symbol.for('vanblog:permission-predefined-roles');
+const PERM_CONTEXT_KEY = Symbol.for('vanblog:permission-module-context');
+const PERM_REGISTERED_KEY = Symbol.for('vanblog:permission-registered-nodes');
+
+if (!(_g[PERM_MODULE_KEY] instanceof Map)) _g[PERM_MODULE_KEY] = new Map<string, string[]>();
+if (!(_g[PERM_ROLES_KEY] instanceof Map)) _g[PERM_ROLES_KEY] = new Map<string, string[]>();
+if (!(_g[PERM_CONTEXT_KEY] instanceof Map)) _g[PERM_CONTEXT_KEY] = new Map<string, string[]>();
+if (!(_g[PERM_REGISTERED_KEY] instanceof Map))
+  _g[PERM_REGISTERED_KEY] = new Map<string, PermissionNodeType>();
+
+/**
+ * 清理全局权限状态。仅用于测试中 beforeEach/afterEach 的隔离。
+ */
+export function clearGlobalPermissionState(): void {
+  (_g[PERM_MODULE_KEY] as Map<string, string[]>).clear();
+  (_g[PERM_ROLES_KEY] as Map<string, string[]>).clear();
+  (_g[PERM_CONTEXT_KEY] as Map<string, string[]>).clear();
+  (_g[PERM_REGISTERED_KEY] as Map<string, PermissionNodeType>).clear();
+}
+
 @Injectable()
 export class PermissionService {
   private readonly logger = new Logger(PermissionService.name);
-  private readonly registeredPermissions = new Map<string, PermissionNodeType>();
-  private readonly modulePermissions = new Map<string, string[]>();
-  private readonly predefinedRoles = new Map<string, string[]>();
-  private readonly moduleContext = new Map<string, string[]>();
+  private readonly registeredPermissions = _g[PERM_REGISTERED_KEY] as Map<
+    string,
+    PermissionNodeType
+  >;
+  public readonly modulePermissions = _g[PERM_MODULE_KEY] as Map<string, string[]>;
+  private readonly predefinedRoles = _g[PERM_ROLES_KEY] as Map<string, string[]>;
+  private readonly moduleContext = _g[PERM_CONTEXT_KEY] as Map<string, string[]>;
   // 缓存：已知权限集合（当 register 调整模块权限后失效）
   private cachedKnownPermissions: Set<string> | null = null;
   // 缓存：角色展开后的权限列表（当权限组或注册的预定义角色发生变化时失效）
@@ -263,7 +291,7 @@ export class PermissionService {
   /**
    * 计算已知权限集合（来自各模块注册的完整权限名）
    */
-  private getKnownPermissionsSet(): Set<string> {
+  public getKnownPermissionsSet(): Set<string> {
     if (this.cachedKnownPermissions) return this.cachedKnownPermissions;
     const set = new Set<string>();
     for (const perms of this.modulePermissions.values()) {
@@ -565,7 +593,7 @@ export class PermissionService {
     this.rolePermissionsCache.clear();
   }
 
-  private async getRolePermissions(roleName: string): Promise<string[]> {
+  public async getRolePermissions(roleName: string): Promise<string[]> {
     // 命中缓存直接返回
     const cached = this.rolePermissionsCache.get(roleName);
     if (cached) return cached;
@@ -634,11 +662,16 @@ export class PermissionService {
         });
       } else {
         // 更新现有权限组的权限列表
-        this.logger.log(`更新现有权限组: ${roleName}`);
-        await this.db
-          .update(permissionGroups)
-          .set({ permissions })
-          .where(eq(permissionGroups.name, roleName));
+        // 只有当内存中的权限非空时才更新，避免用空数组覆盖已有权限
+        if (permissions.length > 0) {
+          this.logger.log(`更新现有权限组: ${roleName}`);
+          await this.db
+            .update(permissionGroups)
+            .set({ permissions })
+            .where(eq(permissionGroups.name, roleName));
+        } else {
+          this.logger.log(`跳过更新权限组 ${roleName}（内存中权限为空，保留数据库中的值）`);
+        }
       }
     }
 

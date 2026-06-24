@@ -28,9 +28,31 @@ import { PermissionService } from './permission.service';
 
 @ApiTags('Permissions')
 @Controller({ path: 'permissions', version: '2' })
-@Perm({ roles: [UserType.ADMIN] })
 export class PermissionController {
   constructor(private readonly permissionService: PermissionService) {}
+
+  @Get('debug')
+  @ApiOperation({ summary: 'Debug permission resolution' })
+  @ApiResponse({ status: 200, description: 'Debug info' })
+  async debugPermissions(): Promise<unknown> {
+    const userPermissions = ['role:admin'];
+    const resolved = await this.permissionService.resolveUserPermissions(userPermissions);
+
+    // Use proper typing for permission service methods
+    const known = this.permissionService.getKnownPermissionsSet();
+    const modulePerms = this.permissionService.modulePermissions;
+    const rolePermissions = {
+      admin: await this.permissionService.getRolePermissions('admin'),
+    };
+
+    return {
+      userPermissions,
+      resolvedPermissions: resolved,
+      knownPermissionsCount: known.size,
+      modulePermissions: Array.from(modulePerms.entries()),
+      rolePermissions,
+    };
+  }
 
   @Post('nodes')
   @Perm({ roles: [UserType.ADMIN] })

@@ -1,14 +1,16 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, UseGuards, Request } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
-import { dayjs } from '@vanblog/shared';
-import { metaContract } from '@vanblog/shared/contracts';
+import { dayjs, contract } from '@vanblog/shared';
+import { Request as ExpressRequest } from 'express';
 import { z } from 'zod';
 
 import { DerivedView } from '../../shared/decorators/derived-view.decorator';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { HookService } from '../plugin/services/hook.service';
 import { SettingCoreService } from '../setting/services/setting-core.service';
+import { User } from '../user/entities/user.entity';
 
 type NavigationPublic = {
   name: string;
@@ -83,6 +85,10 @@ const PublicMetaSchema = z.object({
 
 type PublicMetaProp = z.infer<typeof PublicMetaSchema>;
 
+interface RequestWithUser extends ExpressRequest {
+  user: User;
+}
+
 @ApiTags('Public')
 @Controller({ path: 'public', version: '2' })
 export class MetaController {
@@ -92,12 +98,70 @@ export class MetaController {
     private readonly settingCoreService: SettingCoreService,
   ) {}
 
-  @TsRestHandler(metaContract.getPublicMeta)
+  @Get('admin')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: '获取管理员元数据（含用户信息）' })
+  @ApiResponse({ status: 200, description: '管理员元数据获取成功' })
+  async getAdminMeta(@Request() req: RequestWithUser): Promise<{
+    statusCode: number;
+    data: {
+      version: string;
+      user?: {
+        id: number;
+        username: string;
+        name: string;
+        type: string;
+      };
+    };
+  }> {
+    const boot = await this.bootstrapService.getPublicBootstrap();
+
+    // Extract user from JWT token (attached by JwtAuthGuard)
+
+    const { user } = req;
+
+    return {
+      statusCode: 200,
+      data: {
+        version: boot.version,
+        user: {
+          id: user.id,
+          username: user.username,
+          name: user.username,
+          type: user.type,
+        },
+      },
+    };
+  }
+
+  @TsRestHandler(contract.getPublicMeta)
+  @Get()
   getPublicMeta(): unknown {
-    return tsRestHandler(metaContract.getPublicMeta, async () => {
+    return tsRestHandler(contract.getPublicMeta, async () => {
       await Promise.resolve();
       return { status: 200 as const, body: { buildTime: dayjs().format() } };
     });
+  }
+
+  /**
+   * Get version info (standard NestJS route for contract.getVersion)
+   */
+  @Get('version')
+  @ApiOperation({ summary: 'Get version info' })
+  @ApiResponse({ status: 200, description: 'Version information' })
+  async getVersionInfo(): Promise<{
+    version: string;
+    buildTime: string;
+    nodeVersion: string;
+    platform: string;
+  }> {
+    await Promise.resolve();
+    return {
+      version: process.env.npm_package_version ?? '0.54.0-corn.6',
+      buildTime: dayjs().format(),
+      nodeVersion: process.version,
+      platform: process.platform,
+    };
   }
 
   @Get('meta')

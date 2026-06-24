@@ -30,7 +30,7 @@ export class ETagCacheInterceptor implements NestInterceptor {
         // 生成内容的 ETag
         const etag = this.generateETag(data);
         response.setHeader('ETag', etag);
-        response.setHeader('Cache-Control', 'public, max-age=60, must-revalidate');
+        response.setHeader('Cache-Control', 'no-cache');
 
         // 检查客户端的 If-None-Match 头
         const clientETag = request.headers['if-none-match'];

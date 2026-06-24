@@ -1,5 +1,4 @@
-import { Injectable, Logger, Inject } from '@nestjs/common';
-import { Cron, CronExpression } from '@nestjs/schedule';
+import { Injectable, Logger, Inject, OnModuleInit } from '@nestjs/common';
 import { dayjs } from '@vanblog/shared';
 import { analytics } from '@vanblog/shared/drizzle';
 import { sql, desc } from 'drizzle-orm';
@@ -43,10 +42,13 @@ interface ChartData {
  * 1. 统计数据异步计算，避免实时查询
  * 2. 定时任务更新缓存，消除用户等待
  * 3. 简单的缓存键设计，易于管理
+ *
+ * 注意：使用 setInterval 替代 @Cron 装饰器，避免 ScheduleModule 的 Reflector 依赖问题
  */
 @Injectable()
-export class AnalyticsCacheService {
+export class AnalyticsCacheService implements OnModuleInit {
   private readonly logger = new Logger(AnalyticsCacheService.name);
+  private readonly intervals: NodeJS.Timeout[] = [];
 
   constructor(
     @Inject(DATABASE_CONNECTION)
@@ -55,10 +57,81 @@ export class AnalyticsCacheService {
   ) {}
 
   /**
+   * 模块初始化时启动定时任务
+   */
+  async onModuleInit(): Promise<void> {
+    this.logger.log('Starting analytics cache update schedulers');
+
+    // 每 5 分钟更新概览数据
+    this.scheduleTask(() => this.updateOverviewCache(), 5 * 60 * 1000, 'overview');
+
+    // 每 10 分钟更新页面排名
+    this.scheduleTask(() => this.updatePageRankingsCache(), 10 * 60 * 1000, 'page-rankings');
+
+    // 每 5 分钟更新引用来源统计
+    this.scheduleTask(() => this.updateReferrerStatsCache(), 5 * 60 * 1000, 'referrer-stats');
+
+    // 每小时更新图表数据
+    this.scheduleTask(() => this.updateChartDataCache(), 60 * 60 * 1000, 'chart-data');
+
+    // 立即执行一次更新，确保缓存有数据
+    await this.initializeCache();
+  }
+
+  /**
+   * 模块销毁时清理定时器
+   */
+  onModuleDestroy(): void {
+    this.logger.log('Stopping analytics cache update schedulers');
+    this.intervals.forEach((interval) => {
+      clearInterval(interval);
+    });
+    this.intervals.length = 0;
+  }
+
+  /**
+   * 调度定时任务
+   */
+  private scheduleTask(task: () => Promise<void>, intervalMs: number, name: string): void {
+    // 立即执行一次
+    task().catch((err: unknown) => {
+      this.logger.error(`Failed to execute initial task: ${name}`, String(err));
+    });
+
+    // 设置定时任务
+    const intervalId = setInterval(() => {
+      void (async () => {
+        try {
+          await task();
+        } catch (err: unknown) {
+          const errorMessage = err instanceof Error ? err.message : String(err);
+          this.logger.error(`Failed to execute scheduled task: ${name}`, errorMessage);
+        }
+      })();
+    }, intervalMs);
+
+    this.intervals.push(intervalId);
+    this.logger.log(`Scheduled task "${name}" to run every ${String(intervalMs / 1000)}s`);
+  }
+
+  /**
+   * 初始化缓存 - 立即执行所有更新任务
+   */
+  private async initializeCache(): Promise<void> {
+    this.logger.log('Initializing analytics cache...');
+    await Promise.all([
+      this.updateOverviewCache(),
+      this.updatePageRankingsCache(),
+      this.updateReferrerStatsCache(),
+      this.updateChartDataCache(),
+    ]);
+    this.logger.log('Analytics cache initialized');
+  }
+
+  /**
    * 每 5 分钟更新概览数据
    */
-  @Cron(CronExpression.EVERY_5_MINUTES)
-  async updateOverviewCache(): Promise<void> {
+  private async updateOverviewCache(): Promise<void> {
     try {
       const overview = await this.calculateOverview();
       await this.cache.set('analytics:overview', overview, 300); // 5 分钟缓存
@@ -73,8 +146,7 @@ export class AnalyticsCacheService {
   /**
    * 每 10 分钟更新页面排名
    */
-  @Cron(CronExpression.EVERY_10_MINUTES)
-  async updatePageRankingsCache(): Promise<void> {
+  private async updatePageRankingsCache(): Promise<void> {
     try {
       const rankings = await this.calculatePageRankings();
       await this.cache.set('analytics:page-rankings', rankings, 600); // 10 分钟缓存
@@ -89,8 +161,7 @@ export class AnalyticsCacheService {
   /**
    * 每 15 分钟更新引用来源统计
    */
-  @Cron(CronExpression.EVERY_5_MINUTES) // 使用可用的常量
-  async updateReferrerStatsCache(): Promise<void> {
+  private async updateReferrerStatsCache(): Promise<void> {
     try {
       const stats = await this.calculateReferrerStats();
       await this.cache.set('analytics:referrer-stats', stats, 900); // 15 分钟缓存
@@ -98,15 +169,14 @@ export class AnalyticsCacheService {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       const errorStack = error instanceof Error ? error.stack : undefined;
-      this.logger.error('Failed to update referrer stats cache', errorStack ?? errorMessage);
+      this.logger.error('Failed to update referrer stats', errorStack ?? errorMessage);
     }
   }
 
   /**
    * 每小时更新图表数据
    */
-  @Cron(CronExpression.EVERY_HOUR)
-  async updateChartDataCache(): Promise<void> {
+  private async updateChartDataCache(): Promise<void> {
     try {
       const chartData = await this.calculateChartData();
       await this.cache.set('analytics:chart-data', chartData, 3600); // 1 小时缓存
@@ -114,7 +184,7 @@ export class AnalyticsCacheService {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       const errorStack = error instanceof Error ? error.stack : undefined;
-      this.logger.error('Failed to update chart data cache', errorStack ?? errorMessage);
+      this.logger.error('Failed to update chart data', errorStack ?? errorMessage);
     }
   }
 
