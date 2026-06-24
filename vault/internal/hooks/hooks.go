@@ -56,7 +56,8 @@ func Register(app core.App) {
 	app.OnServe().BindFunc(func(se *core.ServeEvent) error {
 		// Migration import
 		se.Router.POST("/api/vanblog/migrate/import", func(e *core.RequestEvent) error {
-			body, err := io.ReadAll(e.Request.Body)
+			// Limit body to 100MB to prevent OOM on large legacy backups
+			body, err := io.ReadAll(io.LimitReader(e.Request.Body, 100*1024*1024))
 			if err != nil {
 				return e.BadRequestError("Failed to read body", "")
 			}

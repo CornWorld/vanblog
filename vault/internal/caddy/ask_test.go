@@ -15,7 +15,7 @@ func TestAskHandler(t *testing.T) {
 		{"exact match blocked", []string{"blog.example.com"}, "evil.com", false},
 		{"multiple domains match", []string{"a.com", "b.com", "c.com"}, "b.com", true},
 		{"multiple domains no match", []string{"a.com", "b.com"}, "z.com", false},
-		{"case sensitive", []string{"Blog.com"}, "blog.com", false},
+		{"case insensitive match", []string{"Blog.com"}, "blog.com", true},
 	}
 
 	for _, tc := range tests {

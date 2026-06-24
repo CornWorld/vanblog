@@ -12,6 +12,8 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/pocketbase/dbx"
+
 	"github.com/pocketbase/pocketbase/core"
 )
 
@@ -188,10 +190,11 @@ func (m *Manager) Cleanup(postID string, maxKeep int) error {
 
 	records, err := m.app.FindRecordsByFilter(
 		"revisions",
-		"target='"+postID+"'",
+		"target={:pid}",
 		"",
 		0,
 		0,
+		dbx.Params{"pid": postID},
 	)
 	if err != nil {
 		return fmt.Errorf("revisions: cleanup query failed: %w", err)
