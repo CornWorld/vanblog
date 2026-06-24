@@ -19,12 +19,32 @@ docker run -d \
 
 ### Volumes
 
-| Mount point | Purpose | Required |
-|---|---|---|
-| `/pb_data` | PocketBase database (SQLite) + uploaded files | **Yes** |
-| `/data/caddy` | Caddy TLS certificates + ACME state | Recommended |
+| Mount point   | Purpose                                       | Required    |
+| ------------- | --------------------------------------------- | ----------- |
+| `/pb_data`    | PocketBase database (SQLite) + uploaded files | **Yes**     |
+| `/data/caddy` | Caddy TLS certificates + ACME state           | Recommended |
 
-**Without `/data/caddy`**: the container will re-request TLS certificates from Let's Encrypt on every restart. This works but risks hitting Let's Encrypt rate limits (5 duplicate certs/week).
+### Ports
+
+| Port   | Protocol | Purpose                                                       | Expose by default |
+| ------ | -------- | ------------------------------------------------------------- | ----------------- |
+| `443`  | HTTPS    | Main site (on-demand TLS)                                     | Yes               |
+| `80`   | HTTP     | Redirect to HTTPS                                             | Yes               |
+| `8080` | HTTP     | **Management fallback** (emergency access when TLS is broken) | No                |
+
+**Management port (8080)**: Only exposes `/api/*`, `/admin/*`, and `/_/*` (pb Admin UI). The public frontend is NOT served. Use this when you're locked out due to TLS misconfiguration:
+
+```bash
+# Restart with management port mapped
+docker run -d -p 80:80 -p 443:443 -p 8080:8080 \
+  -v $(pwd)/pb_data:/pb_data \
+  -v $(pwd)/caddy_data:/data/caddy \
+  vanblog:prod
+
+# Access admin via HTTP (bypasses TLS)
+# http://YOUR_IP:8080/admin/    (Astro admin page)
+# http://YOUR_IP:8080/_/        (pb Admin UI)
+```
 
 ## Development
 
