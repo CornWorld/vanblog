@@ -399,19 +399,21 @@ func TestCaddyAskRouteLogic(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got := caddy.AskHandler(allowed, tc.domain)
+			got := caddy.AskHandler(allowed, tc.domain, true) // post-setup: hasAdmin=true
 			if got != tc.want {
-				t.Errorf("AskHandler(%q) = %v, want %v", tc.domain, got, tc.want)
+				t.Errorf("AskHandler(%q) post-setup = %v, want %v", tc.domain, got, tc.want)
 			}
 		})
 	}
 
-	// Empty allow-list → allow everything (original Vanblog behavior).
-	if !caddy.AskHandler(nil, "anything.example") {
-		t.Error("AskHandler with nil allow-list should return true (allow all)")
+	// Setup window (no admin) → allow all
+	if !caddy.AskHandler(nil, "anything.example", false) {
+		t.Error("AskHandler setup window (no admin) should allow all")
 	}
-	if !caddy.AskHandler([]string{}, "anything.example") {
-		t.Error("AskHandler with empty allow-list should return true (allow all)")
+
+	// Post-setup with empty allowlist → deny all (safety)
+	if caddy.AskHandler(nil, "anything.example", true) {
+		t.Error("AskHandler post-setup with empty allowlist should deny")
 	}
 }
 

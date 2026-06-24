@@ -69,13 +69,22 @@ func Register(app core.App) {
 		})
 
 		// Caddy on-demand TLS ask
+		// Caddy calls this before issuing a certificate for a new domain.
+		// Logic: if no superuser exists → allow all (setup window);
+		//        if superuser exists → strict whitelist from site.allowedDomains.
 		se.Router.GET("/api/hooks/caddy/ask", func(e *core.RequestEvent) error {
 			domain := e.Request.URL.Query().Get("domain")
 			info, err := site.GetInfo(app)
 			if err != nil {
-				return e.JSON(200, map[string]bool{"allowed": true})
+				// Can't read site config — fail open during setup, fail closed after
+				hasAdmin, _ := hasSuperuser(app)
+				if !hasAdmin {
+					return e.JSON(200, map[string]bool{"allowed": true})
+				}
+				return e.JSON(403, map[string]bool{"allowed": false})
 			}
-			return e.JSON(200, map[string]bool{"allowed": caddy.AskHandler(info.AllowedDomains, domain)})
+			hasAdmin, _ := hasSuperuser(app)
+			return e.JSON(200, map[string]bool{"allowed": caddy.AskHandler(info.AllowedDomains, domain, hasAdmin)})
 		})
 
 		// RSS feed
@@ -150,4 +159,16 @@ func Register(app core.App) {
 		go caddy.BootstrapSync(app, "srv0", "http://127.0.0.1:2019")
 		return nil
 	})
+}
+
+// hasSuperuser checks whether at least one superuser/admin user exists.
+// Used by the TLS ask endpoint to distinguish setup window from post-setup.
+// During setup (no admin), TLS is open; after setup, TLS is strict.
+func hasSuperuser(app core.App) (bool, error) {
+	// pb 0.39 stores superusers in _superusers collection
+	records, err := app.FindRecordsByFilter("_superusers", "", "", 1, 0)
+	if err != nil {
+		return false, err
+	}
+	return len(records) > 0, nil
 }
