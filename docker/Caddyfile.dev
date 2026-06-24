@@ -1,0 +1,42 @@
+{
+  admin 127.0.0.1:2019
+  email {$VANBLOG_EMAIL:admin@example.com}
+  on_demand_tls {
+    ask http://127.0.0.1:8090/api/hooks/caddy/ask
+  }
+  log {
+    output file /var/log/caddy.log
+    level info
+  }
+}
+
+https:// {
+  tls {
+    on_demand
+  }
+  encode zstd gzip
+
+  # vanblog API
+  handle /api/* {
+    reverse_proxy 127.0.0.1:8090
+  }
+
+  # static files
+  handle_path /static/* {
+    reverse_proxy 127.0.0.1:8090
+  }
+
+  # admin UI (proxied to Astro dev server)
+  handle /admin/* {
+    reverse_proxy 127.0.0.1:4321
+  }
+
+  # user-defined routes (managed via admin API)
+
+  # fallback: Astro dev server
+  reverse_proxy 127.0.0.1:4321
+}
+
+http:// {
+  redir https://{host}{uri} permanent
+}
