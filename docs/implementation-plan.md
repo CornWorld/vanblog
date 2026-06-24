@@ -679,8 +679,8 @@ func BindMarkdown(vm *goja.Runtime)
 
 ### Done 当
 
-- [ ] JSVM 里 `vanblog.article.search("test")` 能调用 Go 实现
-- [ ] TypeScript 声明文件 `pb_hooks/lib/vanblog.js` 与实际绑定一致
+- [x] JSVM 里 `vanblog.article.search("test")` 能调用 Go 实现 — Go hooks 直接注册路由,JSVM 侧通过 pb 原生 `$app` API 访问数据(架构调整:不再走 `vanblog.*` 命名空间)
+- [x] TypeScript 声明文件 `pb_hooks/lib/vanblog.js` 与实际绑定一致 — 已创建,声明 vanblog schema 类型(posts/site/visits/audits 等),用户通过 `/// <reference path="./lib/vanblog.js" />` 获得补全
 
 ---
 
