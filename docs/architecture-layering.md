@@ -171,7 +171,7 @@ vault/
 | ------------------ | ------------------------------- | -------- | -------------------------------------------------------------------------- |
 | `article`          | article.provider.ts(980)        | ~120     | pb `filter`/`sort` 覆盖查询;增量=字数统计+时间线聚合+搜索                  |
 | `media`            | static.provider.ts(560)         | ~100     | pb FileField + thumbs 内置;增量=MD5 去重+上传 pipeline(水印/WebP 已移前端) |
-| `migration`        | backup.controller.ts(137)       | ~150     | `encoding/json` + `app.RunInTransaction` 事务(大 JSON 在 Go 里无压力)                       |
+| `migration`        | backup.controller.ts(137)       | ~150     | `encoding/json` + `app.RunInTransaction` 事务(大 JSON 在 Go 里无压力)      |
 | `caddy`            | caddy.provider.ts(136)          | ~80      | `net/http` + `net/url`(SSRF)                                               |
 | `revisions`        | —(新增)                         | ~80      | `github.com/sergi/go-diff`(快照+diff+恢复)                                 |
 | `visits`           | visit+viewer.provider.ts(241)   | ~80      | SQL `UPDATE SET count = count + 1` + 日聚合                                |
@@ -366,10 +366,10 @@ declare const vanblog: {
 
 | 功能               | Go SDK                            | JSVM 扩展点                           | 用户能否覆盖            |
 | ------------------ | --------------------------------- | ------------------------------------- | ----------------------- |
-| 文章 CRUD          | pb 自动 API                       | `onRecordCreateRequest("posts")` 等    | ✅ 用户可加校验         |
+| 文章 CRUD          | pb 自动 API                       | `onRecordCreateRequest("posts")` 等   | ✅ 用户可加校验         |
 | 文章查询(复杂)     | `article.Search()`                | 不暴露                                | ❌(Go 统一)             |
 | 草稿发布事务       | `article.Publish()`               | 不暴露                                | ❌                      |
-| 图片上传           | pb FileField + `media.SaveFile()` | `onRecordCreateRequest("media")`        | ✅ 用户可加后处理       |
+| 图片上传           | pb FileField + `media.SaveFile()` | `onRecordCreateRequest("media")`      | ✅ 用户可加后处理       |
 | 图片查重           | `media.Dedup()`                   | 不暴露                                | ❌                      |
 | S3 存储            | `media.S3Driver`                  | 不暴露                                | ❌                      |
 | 迁移工具           | `migration.Import()`              | 不暴露(用户通过 Admin UI 触发)        | ❌                      |
@@ -501,12 +501,13 @@ routerAdd(
 
 ### JSVM 扩展(随 Go SDK 一起)
 
-| 文件                           | 优先级 | 内容                  |
-| ------------------------------ | ------ | --------------------- |
-| `pb_hooks/lib/vanblog.js`      | P0     | d.ts 声明             |
-| `pb_hooks/example_hooks.pb.js` | P1     | 3-5 个示例            |
-| `pb_hooks/migration.pb.js`     | P1     | 迁移入口(调 Go)       |
-| `pb_hooks/caddy.pb.js`         | P1     | caddy/ask 端点(调 Go) |
+| 文件                           | 优先级 | 状态      | 说明                                            |
+| ------------------------------ | ------ | --------- | ----------------------------------------------- |
+| `pb_hooks/lib/vanblog.js`      | P0     | ✅ 完成   | TypeScript 声明(vanblog schema 类型)            |
+| `pb_hooks/examples.pb.js`      | P1     | ✅ 完成   | 3-5 个示例                                      |
+| `pb_hooks/system.pb.js`        | P1     | ✅ 完成   | 审计日志 + visits 聚合 cron                     |
+| ~~`pb_hooks/migration.pb.js`~~ | P1     | ❌ 不需要 | Go hooks 直接注册 `/api/vanblog/migrate/import` |
+| ~~`pb_hooks/caddy.pb.js`~~     | P1     | ❌ 不需要 | Go hooks 直接注册 `/api/hooks/caddy/ask`        |
 
 ---
 
@@ -514,12 +515,12 @@ routerAdd(
 
 本文件是 **Go vs JSVM 分层的最终决策**,修正了之前 schema-design.md §4 "pb_hooks 事件映射"的定位:
 
-| 之前(schema-design §4)              | 现在(本文档)                                     |
-| ----------------------------------- | ------------------------------------------------ |
-| 全部功能用 pb_hooks 实现            | 核心用 Go SDK,扩展用 JSVM                        |
+| 之前(schema-design §4)               | 现在(本文档)                                     |
+| ------------------------------------ | ------------------------------------------------ |
+| 全部功能用 pb_hooks 实现             | 核心用 Go SDK,扩展用 JSVM                        |
 | `OnRecordUpdateRequest` 写 revisions | Go hook 写 revisions(JSVM 可覆盖)                |
-| `routerAdd` 实现迁移端点            | Go 实现迁移,JSVM 只是入口                        |
-| `$http.send` 调 Caddy               | Go `net/http` 调 Caddy,JSVM 调 `vanblog.caddy.*` |
-| `$os.writeFile` 写 md_output        | Go `os.WriteFile` 写 md_output                   |
+| `routerAdd` 实现迁移端点             | Go 实现迁移,JSVM 只是入口                        |
+| `$http.send` 调 Caddy                | Go `net/http` 调 Caddy,JSVM 调 `vanblog.caddy.*` |
+| `$os.writeFile` 写 md_output         | Go `os.WriteFile` 写 md_output                   |
 
 **修正原因**:用户反馈"运算代码不应在 JSVM",且 pb 官方 JSVM 定位是"用户自定义扩展"不是"核心业务"。

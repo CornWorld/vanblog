@@ -218,6 +218,6 @@ routerAdd("GET", "/api/hooks/caddy/ask", (e) => {
 ## 9. 待决细节
 
 1. **pb_hooks 调用 caddy admin api**:已决策 — Go extend 实现(见 [`architecture-layering.md`](./architecture-layering.md) §9),JSVM 通过 `vanblog.caddy.*` 调用
-2. **TLS 证书持久化**:Caddy 证书缓存路径需挂载到 volume,避免容器重启重新签发
+2. ~~**TLS 证书持久化**~~ **已完成**:Caddyfile 配置 `storage file_system { root /data/caddy }`,Dockerfile 声明 `VOLUME ["/data/caddy"]`,用户挂载 `-v caddy_data:/data/caddy` 即可持久化证书
 3. **HTTP_ONLY 模式的实现**:prod/dev entrypoint 如何根据 `HTTP_ONLY=true` 跳过 Caddy 启动
 4. **Astro dev server 的 TLS**:dev 镜像里 Astro dev server 默认 HTTP,Caddy 终止 TLS 后转发 —— 符合预期(prod 无此问题,纯静态文件)
