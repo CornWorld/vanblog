@@ -60,13 +60,13 @@ func (m *Manager) Increment(path string, postID string) error {
 
 	// Increment post's viewCount
 	if postID != "" {
-		m.incrementPostView(postID)
+		m.IncrementPostView(postID)
 	}
 
 	return nil
 }
 
-func (m *Manager) incrementPostView(postID string) {
+func (m *Manager) IncrementPostView(postID string) {
 	post, err := m.app.FindRecordById("posts", postID)
 	if err != nil {
 		return
