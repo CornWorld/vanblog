@@ -3,7 +3,6 @@
 package hooks
 
 import (
-	"encoding/json"
 	"io"
 	"log"
 
@@ -14,7 +13,6 @@ import (
 	"github.com/cornworld/vanblog/internal/rss"
 	"github.com/cornworld/vanblog/internal/sitemap"
 	"github.com/cornworld/vanblog/internal/visits"
-	"github.com/cornworld/vanblog/utils/caddyadmin"
 	"github.com/pocketbase/pocketbase/core"
 )
 
@@ -74,15 +72,7 @@ func Register(app core.App) {
 				return e.JSON(200, map[string]bool{"allowed": true})
 			}
 			allowed := site.GetStringSlice("allowedDomains")
-			if len(allowed) == 0 {
-				return e.JSON(200, map[string]bool{"allowed": true})
-			}
-			for _, d := range allowed {
-				if d == domain {
-					return e.JSON(200, map[string]bool{"allowed": true})
-				}
-			}
-			return e.JSON(403, map[string]bool{"allowed": false})
+			return e.JSON(200, map[string]bool{"allowed": caddy.AskHandler(allowed, domain)})
 		})
 
 		// RSS feed
@@ -174,38 +164,7 @@ func Register(app core.App) {
 		if err := e.Next(); err != nil {
 			return err
 		}
-		go syncCaddyRoutes(app)
+		go caddy.BootstrapSync(app, "srv0", "http://127.0.0.1:2019")
 		return nil
 	})
-}
-
-// syncCaddyRoutes reads site.routing and applies to Caddy admin API.
-func syncCaddyRoutes(app core.App) {
-	site, err := app.FindFirstRecordByFilter("site", "")
-	if err != nil || site == nil {
-		return
-	}
-	routingStr := site.GetString("routing")
-	if routingStr == "" || routingStr == "[]" {
-		return
-	}
-	var rules []caddy.UserRule
-	if err := json.Unmarshal([]byte(routingStr), &rules); err != nil {
-		log.Printf("[vanblog] failed to parse routing: %v", err)
-		return
-	}
-	if len(rules) == 0 {
-		return
-	}
-	routes, err := caddy.TranslateAll(rules, nil)
-	if err != nil {
-		log.Printf("[vanblog] routing translation failed: %v", err)
-		return
-	}
-	client := caddyadmin.NewClient("http://127.0.0.1:2019")
-	for _, route := range routes {
-		if err := client.AddRoute("srv0", route); err != nil {
-			log.Printf("[vanblog] caddy route %s failed: %v", route.ID, err)
-		}
-	}
 }
