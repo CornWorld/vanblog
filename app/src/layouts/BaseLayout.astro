@@ -9,7 +9,10 @@ interface Props {
   path?: string; // e.g. "/posts/xxx"
 }
 
-const { title, description, site, post, path } = Astro.props;
+const { title, description, site: siteProp, post, path } = Astro.props;
+
+// Fall back to site config from middleware (preloaded from pb)
+const site = siteProp || Astro.locals.site;
 
 const siteName = site?.siteName || 'Vanblog';
 const siteDesc = description || site?.siteDesc || '';
