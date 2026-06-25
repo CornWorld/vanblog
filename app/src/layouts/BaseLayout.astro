@@ -12,8 +12,8 @@ interface Props {
 
 const { title, description, site: siteProp, post, path } = Astro.props;
 
-// Fall back to site config from middleware (preloaded from pb)
-const site = siteProp || Astro.locals.site;
+// Fall back to site config from middleware (lazy-loaded from pb)
+const site = siteProp || await Astro.locals.getSite();
 
 const siteName = site?.siteName || 'Vanblog';
 const siteDesc = description || site?.siteDesc || '';

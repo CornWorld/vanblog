@@ -6,101 +6,60 @@ import ByteMdEditor from '../../../components/ByteMdEditor.astro';
 import type { Post } from '@vanblog/sdk';
 
 const { id } = Astro.params;
+const isNew = !id || id === 'new';
 
-let post: Post | null = null;
-let mode = 'new';
-
-if (id) {
-  mode = 'edit';
+let post: Partial<Post> = {};
+if (!isNew) {
   try {
-    const pb = Astro.locals.pb;
-    post = await pb.collection('posts').getOne<Post>(id);
+    post = await Astro.locals.pb.collection('posts').getOne<Post>(id);
   } catch {
     return Astro.redirect('/404');
   }
 }
 ---
-<BaseLayout title={mode === 'edit' ? '编辑文章' : '新建文章'}>
-  <h1>{mode === 'edit' ? '编辑文章' : '新建文章'}</h1>
+<BaseLayout title={isNew ? '新建文章' : '编辑文章'}>
+  <h1>{isNew ? '新建文章' : '编辑文章'}</h1>
+  <div style="margin-bottom: 1rem; display: flex; gap: 1rem; flex-wrap: wrap; align-items: end;">
+    <label>标题 <input type="text" id="f-title" value={post.title || ''} required style="width: 300px; padding: 0.3rem;" /></label>
+    <label>路径 <input type="text" id="f-path" value={post.pathname || ''} placeholder="/my-post" style="width: 200px; padding: 0.3rem;" /></label>
+    <label>状态
+      <select id="f-status">
+        <option value="draft" selected={post.status !== 'published' && post.status !== 'hidden'}>草稿</option>
+        <option value="published" selected={post.status === 'published'}>已发布</option>
+        <option value="hidden" selected={post.status === 'hidden'}>隐藏</option>
+      </select>
+    </label>
+  </div>
 
-  <form id="post-form">
-    <div style="margin-bottom: 1rem;">
-      <label>
-        标题:
-        <input
-          type="text"
-          id="post-title"
-          name="title"
-          value={post?.title || ''}
-          required
-          style="width: 100%; padding: 0.5rem; font-size: 1rem;"
-        />
-      </label>
-    </div>
+  <ByteMdEditor initialContent={post.content || ''} />
 
-    <div style="margin-bottom: 1rem;">
-      <label>
-        路径:
-        <input
-          type="text"
-          id="post-pathname"
-          name="pathname"
-          value={post?.pathname || ''}
-          style="width: 100%; padding: 0.5rem;"
-          placeholder="/my-post"
-        />
-      </label>
-    </div>
-
-    <div style="margin-bottom: 1rem; display: flex; gap: 1rem;">
-      <label>
-        状态:
-        <select id="post-status" name="status">
-          <option value="draft" selected={post?.status === 'draft' || !post}>草稿</option>
-          <option value="published" selected={post?.status === 'published'}>已发布</option>
-          <option value="hidden" selected={post?.status === 'hidden'}>隐藏</option>
-        </select>
-      </label>
-    </div>
-  </form>
-
-  <ByteMdEditor initialContent={post?.content || ''} postId={post?.id} />
-
-  <div style="margin-top: 1rem; display: flex; gap: 1rem;">
-    <button id="save-btn" type="button">保存</button>
-    <button id="save-publish-btn" type="button">保存并发布</button>
+  <div style="margin-top: 0.5rem; display: flex; gap: 1rem;">
+    <button id="btn-save" type="button">保存</button>
+    <button id="btn-publish" type="button">保存并发布</button>
     <a href="/admin">取消</a>
   </div>
 
-  <script define:vars={{ postId: post?.id || null }}>
-    async function save(publish = false) {
-      const title = document.getElementById('post-title').value;
-      const pathname = document.getElementById('post-pathname').value;
-      const status = publish ? 'published' : document.getElementById('post-status').value;
-      const content = document.getElementById('post-content').value;
+  <script define:vars={{ postId: isNew ? null : id }}>
+    const save = async (publish) => {
+      const pb = window.__pb;
+      if (!pb) return alert('未登录');
 
-      const pb = window.__pb || null;
-      if (!pb) {
-        alert('未登录');
-        return;
-      }
-
-      const data = { title, content, status, pathname, deleted: false };
+      const data = {
+        title: document.getElementById('f-title').value,
+        pathname: document.getElementById('f-path').value,
+        content: document.getElementById('post-content').value,
+        status: publish ? 'published' : document.getElementById('f-status').value,
+        deleted: false,
+      };
 
       try {
-        if (postId) {
-          await pb.collection('posts').update(postId, data);
-        } else {
-          await pb.collection('posts').create(data);
-        }
-        alert('保存成功');
-        window.location.href = '/admin';
-      } catch (e) {
-        alert('保存失败: ' + e.message);
-      }
-    }
+        if (postId) await pb.collection('posts').update(postId, data);
+        else await pb.collection('posts').create(data);
+        location.href = '/admin';
+      } catch (e) { alert('保存失败: ' + e.message); }
+    };
 
-    document.getElementById('save-btn').addEventListener('click', () => save(false));
-    document.getElementById('save-publish-btn').addEventListener('click', () => save(true));
+    document.getElementById('btn-save').onclick = () => save(false);
+    document.getElementById('btn-publish').onclick = () => save(true);
   </script>
 </BaseLayout>
