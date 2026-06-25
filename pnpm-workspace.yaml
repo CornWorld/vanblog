@@ -1,3 +1,7 @@
 packages:
   - 'sdk'
   - 'app'
+
+onlyBuiltDependencies:
+  - esbuild
+  - sharp

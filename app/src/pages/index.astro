@@ -4,8 +4,6 @@ export const prerender = false;
 import BaseLayout from '../layouts/BaseLayout.astro';
 import type { Post } from '@vanblog/sdk';
 
-Astro.cache.set({ maxAge: 300, swr: 60, tags: ['posts', 'home'] });
-
 let posts: Post[] = [];
 
 try {
@@ -15,7 +13,9 @@ try {
     sort: '-created',
   });
   posts = result.items;
-} catch {}
+} catch (e) {
+  console.error('[index] Failed to load posts:', e);
+}
 ---
 <BaseLayout title="首页">
   {posts.length === 0 ? (

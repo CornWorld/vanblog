@@ -4,8 +4,6 @@ export const prerender = false;
 import BaseLayout from '../layouts/BaseLayout.astro';
 import type { Post } from '@vanblog/sdk';
 
-Astro.cache.set({ maxAge: 600, swr: 300, tags: ['posts', 'archive'] });
-
 let posts: Post[] = [];
 
 try {
@@ -15,7 +13,9 @@ try {
     sort: '-created',
   });
   posts = result;
-} catch {}
+} catch (e) {
+  console.error('[archive] Failed to load posts:', e);
+}
 
 // Group by year
 const byYear: Record<number, Post[]> = {};

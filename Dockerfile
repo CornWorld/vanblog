@@ -19,7 +19,7 @@ COPY vault/ ./
 RUN CGO_ENABLED=0 go build -o /pocketbase -ldflags="-s -w" .
 
 # --- Stage 2: Build Astro frontend + SDK ---
-FROM node:20-alpine AS astro-build
+FROM node:22-alpine AS astro-build
 RUN corepack enable pnpm
 WORKDIR /build
 
@@ -28,10 +28,10 @@ COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY sdk/ ./sdk/
 COPY app/package.json app/astro.config.mjs app/tsconfig.json ./app/
 COPY app/src/ ./app/src/
-COPY app/public/ ./app/public/ 2>/dev/null || true
+RUN mkdir -p ./app/public
 
 # Install deps (monorepo)
-RUN pnpm install --frozen-lockfile
+RUN pnpm install --no-frozen-lockfile
 
 # Build SDK first
 RUN pnpm --filter sdk build
