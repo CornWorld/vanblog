@@ -19,6 +19,8 @@
     "@bytemd/plugin-math-ssr": "^1.22.0",
     "@bytemd/plugin-frontmatter": "^1.22.0",
     "@bytemd/plugin-medium-zoom": "^1.22.0",
-    "@bytemd/plugin-mermaid": "^1.22.0"
+    "@bytemd/plugin-mermaid": "^1.22.0",
+    "highlight.js": "^11.0.0",
+    "katex": "^0.16.0"
   }
 }

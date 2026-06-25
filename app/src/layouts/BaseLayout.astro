@@ -1,5 +1,6 @@
 ---
 import type { SiteConfig, Post } from '@vanblog/sdk';
+import PbInit from '../components/PbInit.astro';
 
 interface Props {
   title: string;
@@ -96,6 +97,7 @@ const websiteSchema = {
     )}
   </head>
   <body>
+    <PbInit />
     <header>
       <a href="/">{siteName}</a>
       <nav>
