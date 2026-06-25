@@ -37,7 +37,7 @@ function renderMarkdown(md: string): string {
 const htmlContent = renderMarkdown(post.content || '');
 const created = new Date(post.created).toLocaleDateString('zh-CN');
 ---
-<BaseLayout title={post.title} description={post.content?.slice(0, 160)}>
+<BaseLayout title={post.title} post={post} path={`/posts/${id}`}>
   <article>
     <h1>{post.title}</h1>
     <p><small>发表于 {created}</small></p>
