@@ -1,0 +1,32 @@
+{
+  "name": "@vanblog/sdk",
+  "version": "0.1.0",
+  "description": "Vanblog SDK — PocketBase JS SDK with vanblog service namespaces",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./server": {
+      "import": "./dist/server.js",
+      "types": "./dist/server.d.ts"
+    },
+    "./browser": {
+      "import": "./dist/browser.js",
+      "types": "./dist/browser.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "dependencies": {
+    "pocketbase": "^0.26.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0"
+  }
+}

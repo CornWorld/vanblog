@@ -1,2 +1,18 @@
 # Snow AI 工作区
 /refs/
+
+# Dependencies
+node_modules/
+
+# Build output
+sdk/dist/
+app/dist/
+
+# pb data (local dev)
+pb_data/
+
+# Caddy data (local dev)
+caddy_data/
+
+# IDE
+.DS_Store
