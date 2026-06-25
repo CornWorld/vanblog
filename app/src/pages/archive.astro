@@ -1,0 +1,49 @@
+---
+export const prerender = false;
+
+import BaseLayout from '../layouts/BaseLayout.astro';
+import type { Post } from '@vanblog/sdk';
+
+Astro.cache.set({ maxAge: 600, swr: 300, tags: ['posts', 'archive'] });
+
+let posts: Post[] = [];
+
+try {
+  const pb = Astro.locals.pb;
+  const result = await pb.collection('posts').getFullList<Post>({
+    filter: 'status = "published" && deleted = false',
+    sort: '-created',
+  });
+  posts = result;
+} catch {}
+
+// Group by year
+const byYear: Record<number, Post[]> = {};
+for (const post of posts) {
+  const year = new Date(post.created).getFullYear();
+  if (!byYear[year]) byYear[year] = [];
+  byYear[year].push(post);
+}
+const years = Object.keys(byYear).map(Number).sort((a, b) => b - a);
+---
+<BaseLayout title="归档">
+  <h1>归档</h1>
+  {years.length === 0 ? (
+    <p>暂无文章。</p>
+  ) : (
+    years.map(year => (
+      <section>
+        <h2>{year}</h2>
+        <ul>
+          {byYear[year].map(post => (
+            <li>
+              <small>{new Date(post.created).toLocaleDateString('zh-CN')}</small>
+              {' '}
+              <a href={`/posts/${post.id}`}>{post.title}</a>
+            </li>
+          ))}
+        </ul>
+      </section>
+    ))
+  )}
+</BaseLayout>

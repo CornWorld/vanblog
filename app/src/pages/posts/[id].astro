@@ -1,0 +1,48 @@
+---
+export const prerender = false;
+
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import type { Post } from '@vanblog/sdk';
+
+const { id } = Astro.params;
+if (!id) return Astro.redirect('/404');
+
+let post: Post | null = null;
+
+try {
+  const pb = Astro.locals.pb;
+  post = await pb.collection('posts').getOne<Post>(id);
+} catch {
+  return Astro.redirect('/404');
+}
+
+if (post.status === 'draft' || post.deleted) {
+  return Astro.redirect('/404');
+}
+
+// Simple markdown to HTML (will be replaced with proper rendering later)
+function renderMarkdown(md: string): string {
+  return md
+    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+    .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+    .replace(/^# (.+)$/gm, '<h1>$1</h1>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*\*/g, '<em>$1</em>')
+    .replace(/`(.+?)`/g, '<code>$1</code>')
+    .replace(/\n\n/g, '</p><p>')
+    .replace(/^(?!<)/gm, '<p>$&')
+    .replace(/(?!>)$/gm, '$&</p>');
+}
+
+const htmlContent = renderMarkdown(post.content || '');
+const created = new Date(post.created).toLocaleDateString('zh-CN');
+---
+<BaseLayout title={post.title} description={post.content?.slice(0, 160)}>
+  <article>
+    <h1>{post.title}</h1>
+    <p><small>发表于 {created}</small></p>
+    <div set:html={htmlContent} />
+  </article>
+  <hr />
+  <p><a href="/">← 返回首页</a></p>
+</BaseLayout>

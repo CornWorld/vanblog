@@ -1,0 +1,40 @@
+---
+import type { Post, SiteConfig } from '@vanblog/sdk';
+
+interface Props {
+  title: string;
+  description?: string;
+  site?: Partial<SiteConfig>;
+}
+
+const { title, description, site } = Astro.props;
+
+const siteName = site?.siteName || 'Vanblog';
+const siteDesc = description || site?.siteDesc || '';
+---
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width" />
+    <title>{title} - {siteName}</title>
+    {siteDesc && <meta name="description" content={siteDesc} />}
+  </head>
+  <body>
+    <header>
+      <a href="/">{siteName}</a>
+      <nav>
+        <a href="/">首页</a>
+        <a href="/archive">归档</a>
+        <a href="/admin">管理</a>
+      </nav>
+    </header>
+    <main>
+      <slot />
+    </main>
+    <footer>
+      <hr />
+      <p>Powered by Vanblog</p>
+    </footer>
+  </body>
+</html>

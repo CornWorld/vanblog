@@ -1,19 +1,34 @@
 ---
-// Vanblog homepage — minimal placeholder
-// Will be replaced with actual blog frontend
-const title = 'Vanblog';
----
+export const prerender = false;
 
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width" />
-    <title>{title}</title>
-  </head>
-  <body>
-    <h1>{title}</h1>
-    <p>Frontend not yet implemented. PocketBase API available at <code>/api/</code></p>
-    <p>Admin dashboard at <code>/_/</code></p>
-  </body>
-</html>
+import BaseLayout from '../layouts/BaseLayout.astro';
+import type { Post } from '@vanblog/sdk';
+
+Astro.cache.set({ maxAge: 300, swr: 60, tags: ['posts', 'home'] });
+
+let posts: Post[] = [];
+
+try {
+  const pb = Astro.locals.pb;
+  const result = await pb.collection('posts').getList<Post>(1, 20, {
+    filter: 'status = "published" && deleted = false',
+    sort: '-created',
+  });
+  posts = result.items;
+} catch {}
+---
+<BaseLayout title="首页">
+  {posts.length === 0 ? (
+    <p>暂无文章。</p>
+  ) : (
+    <ul>
+      {posts.map((post) => (
+        <li>
+          <a href={`/posts/${post.id}`}>{post.title}</a>
+          <br />
+          <small>{new Date(post.created).toLocaleDateString('zh-CN')}</small>
+        </li>
+      ))}
+    </ul>
+  )}
+</BaseLayout>
