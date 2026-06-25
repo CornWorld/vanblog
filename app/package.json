@@ -21,6 +21,8 @@
     "@bytemd/plugin-medium-zoom": "^1.22.0",
     "@bytemd/plugin-mermaid": "^1.22.0",
     "highlight.js": "^11.0.0",
-    "katex": "^0.16.0"
+    "katex": "^0.16.0",
+    "remark-directive": "^3.0.0",
+    "unist-util-visit": "^5.0.0"
   }
 }
