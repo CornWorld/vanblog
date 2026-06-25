@@ -48,7 +48,46 @@ Astro `output: 'static'`(默认)+ Node adapter = **逐页控制渲染策略**:
 
 **不需要重新 build。不需要 cron。** 文章发布后缓存立即失效,下次访问自动刷新。
 
-### 0.3 为什么 prod 仍然需要 Node
+### 0.3 Content Layer + Live Collection(数据集成)
+
+Astro 5 的 **Live Collection**(`src/live.config.ts`)是 pb 和 Astro 的正确桥梁:
+
+```
+pb API (SQLite)  ←→  Astro Live Collection  ←→  SSR 页面
+     ↑                      ↑                       ↑
+  数据存储              运行时 fetch + 渲染        访客看到的 HTML
+```
+
+**工作方式:**
+
+1. **自定义 Loader** 运行时从 `http://127.0.0.1:8090/api/collections/posts/records` fetch 数据
+2. **Astro 原生 Markdown 渲染**(`renderMarkdown()`)处理 `posts.content` —— GFM/代码高亮/katex,不需要 Go 的 goldmark
+3. **cacheHint.tags** 自动对接 `Astro.cache` —— 文章页标记 `tags: ['posts', 'post-{id}']`
+4. **Zod schema** 校验 pb 返回的数据结构 —— 类型安全
+5. **缓存失效** —— pb hook 调 `/api/revalidate { tags: ['posts'] }` → 全部文章缓存失效
+
+**关键代码结构:**
+
+```
+app/src/
+  live.config.ts          # 定义 pb-backed Live Collections
+  content/
+    config.ts             # (可选)build-time collections(如主题配置)
+  pages/
+    index.astro           # prerender=true (SSG 首页)
+    posts/[slug].astro    # prerender=false (SSR,用 getEntry('posts', slug))
+    admin/                # prerender=false (SSR 后台)
+  lib/
+    pb.ts                 # pb SDK client 封装
+```
+
+**影响:**
+
+- Go `internal/markdown/render.go` 可废弃(SSR 页面用 Astro 原生渲染)
+- Go `internal/rss` / `internal/sitemap` 仍保留(API 端点,不走 Astro)
+- 前端开发者可以完全在 Astro 生态内工作,不需要了解 Go
+
+### 0.4 为什么 prod 仍然需要 Node
 
 Astro 的 SSR 页面(`prerender = false`)在运行时需要一个 Node 进程执行 `fetch()` + 渲染组件。编译产物是 `dist/server/entry.mjs`,用 `node ./dist/server/entry.mjs` 启动。
 
