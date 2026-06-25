@@ -18,34 +18,44 @@ RUN go mod download
 COPY vault/ ./
 RUN CGO_ENABLED=0 go build -o /pocketbase -ldflags="-s -w" .
 
-# --- Stage 2: Build Astro frontend ---
+# --- Stage 2: Build Astro frontend + SDK ---
 FROM node:20-alpine AS astro-build
-WORKDIR /app
-COPY app/package.json app/pnpm-lock.yaml* app/package-lock.json* ./
-RUN corepack enable && \
-    (pnpm install --frozen-lockfile 2>/dev/null || \
-     npm ci 2>/dev/null || \
-     npm install)
-COPY app/ ./
-RUN (pnpm build 2>/dev/null || npm run build)
-# Output: /app/dist/
+RUN corepack enable pnpm
+WORKDIR /build
 
-# --- Stage 3: PROD image (minimal, no Node runtime) ---
+# Copy workspace root + sdk + app
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY sdk/ ./sdk/
+COPY app/package.json app/astro.config.mjs app/tsconfig.json ./app/
+COPY app/src/ ./app/src/
+COPY app/public/ ./app/public/ 2>/dev/null || true
+
+# Install deps (monorepo)
+RUN pnpm install --frozen-lockfile
+
+# Build SDK first
+RUN pnpm --filter sdk build
+
+# Build Astro
+RUN pnpm --filter vanblog-app build
+# Output: /build/app/dist/
+
+# --- Stage 3: PROD image (Caddy + pb + Node SSR) ---
 FROM alpine:3.19 AS prod
 
-# Install Caddy + ca-certificates (for Let's Encrypt)
-RUN apk add --no-cache caddy ca-certificates tzdata
+# Install Caddy + Node.js (for Astro SSR) + ca-certificates
+RUN apk add --no-cache caddy nodejs ca-certificates tzdata
 
 # Copy Go binary
 COPY --from=go-build /pocketbase /usr/local/bin/vanblog
 
-# Copy Astro static build
-COPY --from=astro-build /app/dist /app/dist
+# Copy Astro build output (SSR server + static client)
+COPY --from=astro-build /build/app/dist /app/dist
 
 # Copy pb_hooks (JSVM hooks: system.pb.js, examples.pb.js)
 COPY vault/pb_hooks /pb_hooks
 
-# Copy Caddyfile templates
+# Copy Caddyfile
 COPY docker/Caddyfile.prod /etc/caddy/Caddyfile
 
 # Copy entrypoint
@@ -53,39 +63,37 @@ COPY docker/entrypoint.prod.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 # Create data directories
-# /pb_data = PocketBase database + uploads
-# /data/caddy = Caddy TLS certificates + ACME state (persist across restarts)
 RUN mkdir -p /pb_data /data/caddy /var/log
 
 ENV VANBLOG_MODE=prod
 # 80  = HTTP → redirect to HTTPS
 # 443 = HTTPS (main site)
-# 8080 = management port (HTTP fallback, not exposed by default)
+# 8080 = management port (HTTP fallback)
 EXPOSE 80 443 8080
 
-# Persist pb_data + caddy certs across container restarts
 VOLUME ["/pb_data", "/data/caddy"]
 
 ENTRYPOINT ["/entrypoint.sh"]
 
-# --- Stage 4: DEV image (extends prod + Node runtime + source) ---
+# --- Stage 4: DEV image (extends prod + full Node toolchain + source) ---
 FROM prod AS dev
 
-RUN apk add --no-cache nodejs npm git
+RUN apk add --no-cache npm git
 
-# Copy Astro source for dev server
-COPY --from=astro-build /app /app/src
-COPY app/package.json app/pnpm-lock.yaml* /app/src/
+# Copy Astro + SDK source for dev server
+COPY --from=astro-build /build/sdk /sdk
+COPY --from=astro-build /build/app /app/src
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml /
+COPY sdk/ /sdk/
+COPY app/ /app/src/
 
-WORKDIR /app/src
-RUN npm install 2>/dev/null || true
+WORKDIR /
+RUN pnpm install --frozen-lockfile || npm install || true
 
 # Copy dev Caddyfile + entrypoint
 COPY docker/Caddyfile.dev /etc/caddy/Caddyfile
 COPY docker/entrypoint.dev.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
-
-WORKDIR /
 
 ENV VANBLOG_MODE=dev
 EXPOSE 80 443 4321 8080
