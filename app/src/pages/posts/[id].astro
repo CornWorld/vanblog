@@ -36,6 +36,9 @@ function renderMarkdown(md: string): string {
 
 const htmlContent = renderMarkdown(post.content || '');
 const created = new Date(post.created).toLocaleDateString('zh-CN');
+
+// TODO: Enable when Astro 6.0+ (memoryCache) is available
+// Astro.cache.set({ maxAge: 600, swr: 300, tags: [`post-${id}`, 'posts'] });
 ---
 <BaseLayout title={post.title} post={post} path={`/posts/${id}`}>
   <article>

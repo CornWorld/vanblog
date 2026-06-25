@@ -17,6 +17,9 @@ try {
   console.error('[archive] Failed to load posts:', e);
 }
 
+// TODO: Enable when Astro 6.0+ (memoryCache) is available
+// Astro.cache.set({ maxAge: 600, swr: 300, tags: ['posts', 'archive'] });
+
 // Group by year
 const byYear: Record<number, Post[]> = {};
 for (const post of posts) {
@@ -26,7 +29,7 @@ for (const post of posts) {
 }
 const years = Object.keys(byYear).map(Number).sort((a, b) => b - a);
 ---
-<BaseLayout title="归档">
+<BaseLayout title="归档" path="/archive">
   <h1>归档</h1>
   {years.length === 0 ? (
     <p>暂无文章。</p>
