@@ -1,0 +1,67 @@
+---
+// ByteMD Editor component for Astro
+// Uses vanilla bytemd (Svelte-compiled to JS, no React/Vue needed)
+import 'bytemd/dist/index.css'
+import 'highlight.js/styles/github.css'
+
+interface Props {
+  initialContent?: string
+  postId?: string
+}
+const { initialContent = '', postId } = Astro.props
+---
+<div
+  id="bytemd-editor"
+  data-initial={initialContent}
+  data-post-id={postId || ''}
+  style="height: calc(100vh - 200px);"
+></div>
+
+<!-- Hidden input for form submission / save -->
+<input type="hidden" id="post-content" name="content" value={initialContent} />
+
+<script>
+  import { Editor } from 'bytemd'
+  import gfm from '@bytemd/plugin-gfm'
+  import highlight from '@bytemd/plugin-highlight-ssr'
+  import math from '@bytemd/plugin-math-ssr'
+  import frontmatter from '@bytemd/plugin-frontmatter'
+  import mediumZoom from '@bytemd/plugin-medium-zoom'
+  import mermaid from '@bytemd/plugin-mermaid'
+  import 'katex/dist/katex.css'
+
+  const mount = document.getElementById('bytemd-editor')
+  const hiddenInput = document.getElementById('post-content') as HTMLInputElement | null
+
+  if (mount) {
+    const plugins = [
+      gfm(),
+      highlight(),
+      math(),
+      frontmatter(),
+      mediumZoom(),
+      mermaid(),
+    ]
+
+    const editor = new Editor({
+      target: mount,
+      props: {
+        value: mount.dataset.initial || '',
+        plugins,
+        mode: 'split',
+        placeholder: '开始写作...',
+      },
+    })
+
+    editor.$on('change', (e: CustomEvent<{ value: string }>) => {
+      const newValue = e.detail.value
+      editor.$set({ value: newValue })
+      if (hiddenInput) {
+        hiddenInput.value = newValue
+      }
+    })
+
+    // Expose editor instance globally for save button / external access
+    ;(window as any).__bytemdEditor = editor
+  }
+</script>
