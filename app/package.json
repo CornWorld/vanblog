@@ -5,9 +5,13 @@
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
-    "preview": "astro preview"
+    "preview": "astro preview",
+    "start": "node ./dist/server/entry.mjs"
   },
   "dependencies": {
-    "astro": "^5.0.0"
+    "@vanblog/sdk": "workspace:*",
+    "astro": "^5.0.0",
+    "@astrojs/node": "^9.0.0",
+    "@astrojs/mdx": "^4.0.0"
   }
 }

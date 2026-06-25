@@ -1,0 +1,15 @@
+{
+  "name": "vanblog",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "pnpm --filter app dev",
+    "build": "pnpm --filter app build",
+    "build:sdk": "pnpm --filter sdk build",
+    "build:all": "pnpm --filter sdk build && pnpm --filter app build",
+    "preview": "pnpm --filter app preview"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
