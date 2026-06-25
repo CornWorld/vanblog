@@ -2,12 +2,13 @@
   "name": "vanblog",
   "private": true,
   "type": "module",
+  "packageManager": "pnpm@10.28.0",
   "scripts": {
-    "dev": "pnpm --filter app dev",
-    "build": "pnpm --filter app build",
+    "dev": "pnpm --filter vanblog-app dev",
+    "build": "pnpm --filter vanblog-app build",
     "build:sdk": "pnpm --filter sdk build",
-    "build:all": "pnpm --filter sdk build && pnpm --filter app build",
-    "preview": "pnpm --filter app preview"
+    "build:all": "pnpm --filter sdk build && pnpm --filter vanblog-app build",
+    "preview": "pnpm --filter vanblog-app preview"
   },
   "engines": {
     "node": ">=18"
