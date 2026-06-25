@@ -1,0 +1,39 @@
+# Vanblog — docker-compose 一键部署
+#
+# 用法:
+#   curl -L https://vanblog.example.com/docker-compose.yml -o docker-compose.yml
+#   # 编辑 VANBLOG_EMAIL
+#   docker compose up -d
+#
+# 访问:
+#   https://your-domain/         — 前台
+#   https://your-domain/admin/   — Astro 管理后台
+#   https://your-domain/_/       — pb Admin UI
+#
+# 紧急回退(TLS 故障时):
+#   取消注释 ports 8080,重启容器
+#   http://your-ip:8080/admin/
+
+services:
+  vanblog:
+    image: ghcr.io/cornworld/vanblog:prod
+    # 本地构建: build: { context: ., target: prod }
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      # 紧急管理端口(默认不开,需要时取消注释):
+      # - "8080:8080"
+    volumes:
+      - pb_data:/pb_data
+      - caddy_data:/data/caddy
+    environment:
+      - VANBLOG_EMAIL=${VANBLOG_EMAIL:-admin@example.com}
+      - VANBLOG_CADDY_LOG_LEVEL=${VANBLOG_CADDY_LOG_LEVEL:-warn}
+      # pb 内部地址(容器内 127.0.0.1,不需要改):
+      # - ASTRO_URL=http://127.0.0.1:4321
+      # - PB_URL=http://127.0.0.1:8090
+
+volumes:
+  pb_data:
+  caddy_data:
