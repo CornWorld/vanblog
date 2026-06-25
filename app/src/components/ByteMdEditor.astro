@@ -1,6 +1,7 @@
 ---
 // ByteMD Editor component for Astro
 // Uses vanilla bytemd (Svelte-compiled to JS, no React/Vue needed)
+// Custom plugins are inlined (Astro <script> can't resolve relative .ts/.js)
 import 'bytemd/dist/index.css'
 import 'highlight.js/styles/github.css'
 
@@ -17,31 +18,229 @@ const { initialContent = '', postId } = Astro.props
   style="height: calc(100vh - 200px);"
 ></div>
 
-<!-- Hidden input for form submission / save -->
 <input type="hidden" id="post-content" name="content" value={initialContent} />
 
 <script>
-  import { Editor } from 'bytemd'
-  import gfm from '@bytemd/plugin-gfm'
-  import highlight from '@bytemd/plugin-highlight-ssr'
-  import math from '@bytemd/plugin-math-ssr'
-  import frontmatter from '@bytemd/plugin-frontmatter'
-  import mediumZoom from '@bytemd/plugin-medium-zoom'
-  import mermaid from '@bytemd/plugin-mermaid'
-  import 'katex/dist/katex.css'
+  import { Editor } from 'bytemd';
+  import gfm from '@bytemd/plugin-gfm';
+  import highlight from '@bytemd/plugin-highlight-ssr';
+  import math from '@bytemd/plugin-math-ssr';
+  import frontmatter from '@bytemd/plugin-frontmatter';
+  import mediumZoom from '@bytemd/plugin-medium-zoom';
+  import mermaid from '@bytemd/plugin-mermaid';
+  import { visit } from 'unist-util-visit';
+  import remarkDirective from 'remark-directive';
+  import 'katex/dist/katex.css';
 
-  const mount = document.getElementById('bytemd-editor')
-  const hiddenInput = document.getElementById('post-content') as HTMLInputElement | null
+  // ---- Custom plugin: insertMore ----
+  function insertMore() {
+    return {
+      actions: [{
+        title: '插入 more 标记',
+        icon: '<svg fill="currentColor" viewBox="0 0 1024 1024" width="16" height="16"><path d="M227 414c-52 0-95 42-95 95s43 95 95 95 95-42 95-95-42-95-95-95z"/><path d="M511 414c-52 0-95 42-95 95s43 95 95 95 95-42 95-95-42-95-95-95z"/><path d="M795 414c-52 0-95 42-95 95s43 95 95 95 95-42 95-95-42-95-95-95z"/></svg>',
+        handler: {
+          type: 'action',
+          click(ctx) {
+            const pos = ctx.appendBlock('<!-- more -->\n');
+            ctx.editor.setSelection(ctx.codemirror.Pos(pos.line, 0), ctx.codemirror.Pos(pos.line, 13));
+            ctx.editor.focus();
+          },
+        },
+      }],
+    };
+  }
+
+  // ---- Custom plugin: heading (data-id for TOC anchors) ----
+  function headingPlugin() {
+    const headings = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'];
+    const plugin = () => (tree) => {
+      visit(tree, (node) => {
+        if (node.type === 'element' && headings.includes(node.tagName)) {
+          const title = node.children?.[0]?.value;
+          if (title) node.properties['data-id'] = title;
+        }
+      });
+    };
+    return { rehype: (p) => p.use(plugin) };
+  }
+
+  // ---- Custom plugin: linkTarget (target=_blank) ----
+  function linkTargetPlugin() {
+    const plugin = () => (tree) => {
+      visit(tree, (node) => {
+        if (node.type === 'element' && node.tagName === 'a') {
+          node.properties.target = '_blank';
+          node.properties.rel = 'noopener noreferrer';
+        }
+      });
+    };
+    return { rehype: (p) => p.use(plugin) };
+  }
+
+  // ---- Custom plugin: customContainer (:::tip / :::warning etc) ----
+  function customContainerPlugin() {
+    const TITLES = { note: '注', info: '相关信息', warning: '注意', danger: '警告', tip: '提示' };
+    const ACTIONS = [
+      { title: 'info', code: ':::info{title="相关信息"}\n相关信息\n:::' },
+      { title: 'note', code: ':::note{title="注"}\n注\n:::' },
+      { title: 'warning', code: ':::warning{title="注意"}\n注意\n:::' },
+      { title: 'danger', code: ':::danger{title="警告"}\n警告\n:::' },
+      { title: 'tip', code: ':::tip{title="提示"}\n提示\n:::' },
+    ];
+    const remarkPlugin = () => (tree) => {
+      visit(tree, (node) => {
+        if (node.type === 'containerDirective') {
+          const { attributes, name: tagName } = node;
+          const data = (node.data = node.data || {});
+          const title = attributes?.title || TITLES[tagName];
+          data.hName = 'div';
+          data.hProperties = { class: 'custom-container ' + tagName, type: title };
+          node.children = [
+            { type: 'paragraph', data: { hProperties: { class: 'custom-container-title ' + tagName } },
+              children: [{ type: 'text', value: title }] },
+            ...node.children,
+          ];
+        }
+      });
+    };
+    return {
+      remark: (p) => p.use(remarkDirective).use(remarkPlugin),
+      actions: [{
+        title: '自定义高亮块',
+        icon: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 1024 1024"><path d="M157 966a99 99 0 01-99-99V668a99 99 0 0199-99h709a99 99 0 0199 99v199a99 99 0 01-99 99H157zm-14-298v199a14 14 0 0014 14h709a14 14 0 0014-14V668a14 14 0 00-14-14H157a14 14 0 00-14 14zm14-213a99 99 0 01-99-99V157a99 99 0 0199-99h709a99 99 0 0199 99v199a99 99 0 01-99 99H157zM143 157v199a14 14 0 0014 14h709a14 14 0 0014-14V157a14 14 0 00-14-14H157a14 14 0 00-14 14z"/></svg>',
+        cheatsheet: ':::info{title="标题"}',
+        handler: {
+          type: 'dropdown',
+          actions: ACTIONS.map(({ title, code }) => ({
+            title,
+            handler: {
+              type: 'action',
+              click: ({ editor, appendBlock, codemirror }) => {
+                const { line } = appendBlock(code);
+                editor.setSelection(codemirror.Pos(line + 1, 0), codemirror.Pos(line + 1));
+                editor.focus();
+              },
+            },
+          })),
+        },
+      }],
+    };
+  }
+
+  // ---- Custom plugin: imgUpload (clipboard → pb media) ----
+  function imgUploadPlugin(getPbClient) {
+    const uploadImage = async (file) => {
+      const pb = getPbClient();
+      if (!pb) return null;
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('staticType', 'img');
+        formData.append('storageType', 'local');
+        const record = await pb.collection('media').create(formData);
+        return pb.files.getRecordUrl(record, record.file);
+      } catch (e) {
+        console.error('[imgUpload] Upload failed:', e);
+        return null;
+      }
+    };
+    return {
+      actions: [{
+        title: '剪切板图片上传',
+        icon: '<svg viewBox="0 0 1024 1024" width="16" height="16" fill="currentColor"><path d="M768 128h-50A128 128 0 00597 43H427a128 128 0 00-121 85H256a128 128 0 00-128 128v597a128 128 0 00128 128h512a128 128 0 00128-128V256a128 128 0 00-128-128zM427 128h170a43 43 0 010 85H427a43 43 0 010-85zm384 725a43 43 0 01-43 43H256a43 43 0 01-43-43V256a43 43 0 0143-43h50A128 128 0 00427 299h170a128 128 0 00121-86h50a43 43 0 0143 43v597z"/></svg>',
+        handler: {
+          type: 'action',
+          async click(ctx) {
+            try {
+              const items = await navigator.clipboard.read();
+              for (const item of items) {
+                for (const type of item.types) {
+                  if (type.startsWith('image/')) {
+                    const blob = await item.getType(type);
+                    const file = new File([blob], 'clipboard-' + Date.now() + '.png', { type });
+                    const url = await uploadImage(file);
+                    if (url) {
+                      const pos = ctx.appendBlock('![' + file.name + '](' + url + ')');
+                      ctx.editor.setSelection(pos, ctx.codemirror.Pos(pos.line));
+                      ctx.editor.focus();
+                    }
+                  }
+                }
+              }
+            } catch { alert('剪切板没有图片或权限被拒绝'); }
+          },
+        },
+      }],
+    };
+  }
+
+  // ---- Custom plugin: codeBlock (copy button + language tag) ----
+  function codeBlockPlugin() {
+    const plugin = () => (tree) => {
+      visit(tree, (node) => {
+        if (node.type === 'element' && node.tagName === 'pre') {
+          const children = JSON.parse(JSON.stringify(node.children));
+          const codeEl = children.find((c) => c.tagName === 'code');
+          if (!codeEl) return;
+          let language = '';
+          if (codeEl.properties?.className) {
+            for (const cls of codeEl.properties.className) {
+              if (typeof cls === 'string' && cls.startsWith('language-')) {
+                language = cls.replace('language-', ''); break;
+              }
+            }
+          }
+          if (language === 'mermaid') return;
+          const copyBtn = { type: 'element', tagName: 'div', properties: { class: 'code-copy-btn' }, children: [] };
+          const langTag = { type: 'element', tagName: 'span',
+            properties: { class: 'language-tag', style: 'margin-right: 4px;' },
+            children: [{ type: 'text', value: language }] };
+          const header = { type: 'element', tagName: 'div',
+            properties: { class: 'header-right', style: 'display:flex;justify-content:flex-end;color:#6f7177;padding:4px 8px;' },
+            children: [langTag, copyBtn] };
+          const wrapper = { type: 'element', tagName: 'div',
+            properties: { class: 'code-block-wrapper' }, children: [header, ...children] };
+          node.children = [wrapper];
+        }
+      });
+    };
+    function handleCopyClick(e) {
+      const btn = e.target;
+      const code = btn.closest('.code-block-wrapper')?.querySelector('code')?.textContent;
+      if (code) {
+        navigator.clipboard.writeText(code).then(() => {
+          btn.textContent = '已复制';
+          setTimeout(() => { btn.textContent = '复制'; }, 2000);
+        });
+      }
+    }
+    return {
+      rehype: (p) => p.use(plugin),
+      viewerEffect: ({ markdownBody }) => {
+        markdownBody.querySelectorAll('.code-block-wrapper').forEach((block) => {
+          const btn = block.querySelector('.code-copy-btn');
+          if (btn) {
+            btn.textContent = '复制';
+            btn.setAttribute('style', 'cursor:pointer;font-size:12px;');
+            btn.removeEventListener('click', handleCopyClick);
+            btn.addEventListener('click', handleCopyClick);
+          }
+        });
+      },
+    };
+  }
+
+  // ---- Mount editor ----
+  const mount = document.getElementById('bytemd-editor');
+  const hiddenInput = document.getElementById('post-content');
 
   if (mount) {
     const plugins = [
-      gfm(),
-      highlight(),
-      math(),
-      frontmatter(),
-      mediumZoom(),
-      mermaid(),
-    ]
+      gfm(), highlight(), math(), frontmatter(), mediumZoom(), mermaid(),
+      insertMore(), headingPlugin(), linkTargetPlugin(),
+      customContainerPlugin(), imgUploadPlugin(() => window.__pb),
+      codeBlockPlugin(),
+    ];
 
     const editor = new Editor({
       target: mount,
@@ -51,17 +250,13 @@ const { initialContent = '', postId } = Astro.props
         mode: 'split',
         placeholder: '开始写作...',
       },
-    })
+    });
 
-    editor.$on('change', (e: CustomEvent<{ value: string }>) => {
-      const newValue = e.detail.value
-      editor.$set({ value: newValue })
-      if (hiddenInput) {
-        hiddenInput.value = newValue
-      }
-    })
+    editor.$on('change', (e) => {
+      editor.$set({ value: e.detail.value });
+      if (hiddenInput) hiddenInput.value = e.detail.value;
+    });
 
-    // Expose editor instance globally for save button / external access
-    ;(window as any).__bytemdEditor = editor
+    window.__bytemdEditor = editor;
   }
 </script>
