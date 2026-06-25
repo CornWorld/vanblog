@@ -6,12 +6,17 @@
 package hooks
 
 import (
+	"bytes"
+	"encoding/json"
 	"io"
 	"log"
+	"net/http"
+	"os"
 
 	"github.com/cornworld/vanblog/internal/article"
 	"github.com/cornworld/vanblog/internal/caddy"
 	"github.com/cornworld/vanblog/internal/feed"
+	"github.com/cornworld/vanblog/internal/media"
 	"github.com/cornworld/vanblog/internal/migration"
 	"github.com/cornworld/vanblog/internal/revisions"
 	"github.com/cornworld/vanblog/internal/site"
@@ -24,6 +29,7 @@ func Register(app core.App) {
 	revMgr := revisions.New(app)
 	articleMgr := article.New(app)
 	visitMgr := visits.New(app)
+	mediaMgr := media.New(app)
 	imp := migration.New(app)
 
 	// --- Event hooks ---
@@ -48,6 +54,45 @@ func Register(app core.App) {
 		if postID != "" {
 			visitMgr.IncrementPostView(postID)
 		}
+		return nil
+	})
+
+	// Media dedup: after file upload, compute MD5 sign and check for duplicates
+	app.OnRecordAfterCreateSuccess("media").BindFunc(func(e *core.RecordEvent) error {
+		record := e.Record
+		filename := record.GetString("file")
+		if filename == "" {
+			return nil // skip external URL records
+		}
+		content, err := mediaMgr.ReadFileContent(record)
+		if err != nil {
+			log.Printf("[vanblog] media dedup: failed to read file: %v", err)
+			return nil
+		}
+		sign := media.ComputeSign(content)
+		record.Set("sign", sign)
+		app.Save(record)
+
+		existing, err := mediaMgr.CheckDuplicate(content)
+		if err != nil || existing == nil || existing.Id == record.Id {
+			return nil
+		}
+		log.Printf("[vanblog] media dedup: duplicate of %s, deleting %s", existing.Id, record.Id)
+		app.Delete(record)
+		return nil
+	})
+
+	// Astro cache invalidation: when posts change, notify Astro SSR server
+	app.OnRecordAfterCreateSuccess("posts").BindFunc(func(e *core.RecordEvent) error {
+		go revalidateAstroCache([]string{"posts"})
+		return nil
+	})
+	app.OnRecordAfterUpdateSuccess("posts").BindFunc(func(e *core.RecordEvent) error {
+		go revalidateAstroCache([]string{"posts"})
+		return nil
+	})
+	app.OnRecordAfterDeleteSuccess("posts").BindFunc(func(e *core.RecordEvent) error {
+		go revalidateAstroCache([]string{"posts"})
 		return nil
 	})
 
@@ -163,12 +208,33 @@ func Register(app core.App) {
 
 // hasSuperuser checks whether at least one superuser/admin user exists.
 // Used by the TLS ask endpoint to distinguish setup window from post-setup.
-// During setup (no admin), TLS is open; after setup, TLS is strict.
 func hasSuperuser(app core.App) (bool, error) {
-	// pb 0.39 stores superusers in _superusers collection
 	records, err := app.FindRecordsByFilter("_superusers", "", "", 1, 0)
 	if err != nil {
 		return false, err
 	}
 	return len(records) > 0, nil
+}
+
+// revalidateAstroCache notifies the Astro SSR server to invalidate cached pages.
+// Called asynchronously when posts are created/updated/deleted.
+func revalidateAstroCache(tags []string) {
+	astroURL := os.Getenv("ASTRO_URL")
+	if astroURL == "" {
+		astroURL = "http://127.0.0.1:4321"
+	}
+
+	body, _ := json.Marshal(map[string][]string{"tags": tags})
+	resp, err := http.Post(astroURL+"/api/revalidate", "application/json", bytes.NewReader(body))
+	if err != nil {
+		log.Printf("[vanblog] revalidate: failed to reach Astro at %s: %v", astroURL, err)
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		log.Printf("[vanblog] revalidate: Astro returned %d", resp.StatusCode)
+	} else {
+		log.Printf("[vanblog] revalidate: cache invalidated for tags %v", tags)
+	}
 }

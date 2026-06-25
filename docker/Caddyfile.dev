@@ -5,8 +5,6 @@
     ask http://127.0.0.1:8090/api/hooks/caddy/ask
   }
 
-  # Persist TLS certificates + ACME state to /data/caddy
-  # (mount /data as a volume to survive container restarts)
   storage file_system {
     root /data/caddy
   }
@@ -24,24 +22,22 @@ https:// {
   }
   encode zstd gzip
 
-  # vanblog API
+  # pb API (REST + Admin UI)
   handle /api/* {
     reverse_proxy 127.0.0.1:8090
   }
 
-  # static files
-  handle_path /static/* {
+  # pb built-in Admin UI
+  handle /_/* {
     reverse_proxy 127.0.0.1:8090
   }
 
-  # admin UI (proxied to Astro dev server)
-  handle /admin/* {
-    reverse_proxy 127.0.0.1:4321
+  # pb static files (uploads, images)
+  handle_path /api/files/* {
+    reverse_proxy 127.0.0.1:8090
   }
 
-  # user-defined routes (managed via admin API)
-
-  # fallback: Astro dev server
+  # Everything else: Astro dev server (HMR + SSR)
   reverse_proxy 127.0.0.1:4321
 }
 
@@ -51,30 +47,18 @@ http:// {
 }
 
 # ---- Management port (port 8080, plain HTTP fallback) ----
-# Purpose: emergency access when TLS is broken or misconfigured.
-# Only exposes API + admin page, NOT the public frontend.
-# Not EXPOSED by default — user must `-p 8080:8080` to use.
 :8080 {
-  # pb API (Astro admin page calls these)
   handle /api/* {
     reverse_proxy 127.0.0.1:8090
   }
 
-  # Astro admin dev server
-  handle /admin/* {
-    reverse_proxy 127.0.0.1:4321
-  }
-
-  # pb Admin UI (for superuser operations)
   handle /_/* {
     reverse_proxy 127.0.0.1:8090
   }
 
-  # static files (images, admin assets)
-  handle_path /static/* {
+  handle_path /api/files/* {
     reverse_proxy 127.0.0.1:8090
   }
 
-  # everything else: 403 (this is NOT a public port)
-  respond 403
+  reverse_proxy 127.0.0.1:4321
 }
