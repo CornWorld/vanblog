@@ -1,24 +1,96 @@
 ---
-import type { Post, SiteConfig } from '@vanblog/sdk';
+import type { SiteConfig, Post } from '@vanblog/sdk';
 
 interface Props {
   title: string;
   description?: string;
   site?: Partial<SiteConfig>;
+  post?: Post;
+  path?: string; // e.g. "/posts/xxx"
 }
 
-const { title, description, site } = Astro.props;
+const { title, description, site, post, path } = Astro.props;
 
 const siteName = site?.siteName || 'Vanblog';
 const siteDesc = description || site?.siteDesc || '';
+const baseUrl = site?.baseUrl || '';
+
+// Canonical URL
+const canonicalURL = baseUrl && path ? `${baseUrl.replace(/\/$/, '')}${path}` : undefined;
+
+// Article excerpt for description (strip markdown, truncate)
+function excerpt(md: string | undefined, max = 160): string {
+  if (!md) return siteDesc;
+  const text = md
+    .replace(/^#+\s+/gm, '')
+    .replace(/[*_`~\[\]()!#>-]/g, '')
+    .replace(/\n+/g, ' ')
+    .trim();
+  return text.length > max ? text.slice(0, max) + '...' : text;
+}
+
+const desc = post ? excerpt(post.content) : siteDesc;
+
+// JSON-LD structured data for articles
+const articleSchema = post ? {
+  '@context': 'https://schema.org',
+  '@type': 'Article',
+  headline: post.title,
+  datePublished: post.created,
+  dateModified: post.updated,
+  author: site?.author ? { '@type': 'Person', name: site.author } : undefined,
+  publisher: {
+    '@type': 'Organization',
+    name: siteName,
+  },
+  description: desc,
+  mainEntityOfPage: canonicalURL ? { '@type': 'WebPage', '@id': canonicalURL } : undefined,
+} : undefined;
+
+// JSON-LD for website
+const websiteSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'WebSite',
+  name: siteName,
+  description: siteDesc,
+  url: baseUrl || undefined,
+};
 ---
 <!doctype html>
 <html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width" />
+
+    <!-- Core SEO -->
     <title>{title} - {siteName}</title>
-    {siteDesc && <meta name="description" content={siteDesc} />}
+    <meta name="description" content={desc} />
+    {canonicalURL && <link rel="canonical" href={canonicalURL} />}
+
+    <!-- OpenGraph (Facebook / WeChat / others) -->
+    <meta property="og:title" content={post?.title || title} />
+    <meta property="og:description" content={desc} />
+    <meta property="og:site_name" content={siteName} />
+    <meta property="og:type" content={post ? 'article' : 'website'} />
+    {canonicalURL && <meta property="og:url" content={canonicalURL} />}
+    {post && <meta property="article:published_time" content={post.created} />}
+    {post && <meta property="article:modified_time" content={post.updated} />}
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content={post?.title || title} />
+    <meta name="twitter:description" content={desc} />
+
+    <!-- RSS auto-discovery -->
+    <link rel="alternate" type="application/rss+xml" title={`${siteName} RSS`} href="/api/feed.xml" />
+    <link rel="alternate" type="application/atom+xml" title={`${siteName} Atom`} href="/api/atom.xml" />
+
+    <!-- Structured Data (JSON-LD) -->
+    {post ? (
+      <script type="application/ld+json" set:html={JSON.stringify(articleSchema)} />
+    ) : (
+      <script type="application/ld+json" set:html={JSON.stringify(websiteSchema)} />
+    )}
   </head>
   <body>
     <header>
