@@ -15,9 +15,6 @@ try {
 } catch (e) {
   console.error('[admin] Failed to load posts:', e);
 }
-
-// Expose pb client for client-side scripts
-const pbClient = Astro.locals.pb;
 ---
 <BaseLayout title="管理">
   <h1>文章管理</h1>
@@ -52,9 +49,3 @@ const pbClient = Astro.locals.pb;
     </table>
   )}
 </BaseLayout>
-
-<script define:vars={{ pbToken: pbClient?.authStore?.token || '' }}>
-  // Make pb client available to editor pages
-  // The token will be used to create a browser-side pb client
-  window.__pbToken = pbToken;
-</script>

@@ -43,6 +43,12 @@ importers:
       bytemd:
         specifier: ^1.22.0
         version: 1.22.0
+      highlight.js:
+        specifier: ^11.0.0
+        version: 11.8.0
+      katex:
+        specifier: ^0.16.0
+        version: 0.16.47
 
   sdk:
     dependencies:

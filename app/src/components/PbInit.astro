@@ -1,0 +1,10 @@
+---
+// Client-side pb initializer — loaded on every page via BaseLayout
+// Creates a browser pb client and exposes it as window.__pb for admin scripts
+---
+<script>
+  import { createBrowserClient } from '@vanblog/sdk/browser';
+
+  const pb = createBrowserClient();
+  window.__pb = pb;
+</script>
