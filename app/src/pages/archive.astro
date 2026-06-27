@@ -17,8 +17,11 @@ try {
   console.error('[archive] Failed to load posts:', e);
 }
 
-// TODO: Enable when Astro 6.0+ (memoryCache) is available
-// Astro.cache.set({ maxAge: 600, swr: 300, tags: ['posts', 'archive'] });
+// Cache this page for 10 min, serve stale for 5 min while revalidating.
+// Tagged 'posts' so pb hooks can purge it on post changes.
+if (Astro.cache.enabled) {
+  Astro.cache.set({ maxAge: 600, swr: 300, tags: ['posts', 'archive'] });
+}
 
 // Group by year
 const byYear: Record<number, Post[]> = {};

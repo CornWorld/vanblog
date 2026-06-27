@@ -1,23 +1,25 @@
-import { defineConfig } from 'astro/config';
+import { defineConfig, memoryCache } from 'astro/config';
 import node from '@astrojs/node';
 import mdx from '@astrojs/mdx';
 
-// Astro cache provider toggle
-// Astro 6.0+ will export memoryCache from 'astro/config'.
-// When upgrading to Astro 6, uncomment the cache config below.
-//
-// import { memoryCache } from 'astro/config';
-
-const enableAstroCache = false; // TODO: set to true after upgrading to Astro 6.0+
-
 export default defineConfig({
-  output: 'static',
+  output: 'server',
   adapter: node({
     mode: 'standalone',
   }),
-  // cache: enableAstroCache ? {
-  //   provider: memoryCache(),
-  // } : undefined,
+  experimental: {
+    cache: {
+      provider: memoryCache(),
+    },
+    routeRules: {
+      '/posts/[id]': { maxAge: 300, swr: 60, tags: ['posts'] },
+      '/': { maxAge: 300, swr: 60, tags: ['posts', 'home'] },
+      '/archive': { maxAge: 600, swr: 120, tags: ['posts'] },
+      '/api/feed.xml': { maxAge: 1800, tags: ['posts', 'feed'] },
+      '/api/atom.xml': { maxAge: 1800, tags: ['posts', 'feed'] },
+      '/api/sitemap.xml': { maxAge: 3600, tags: ['posts', 'feed'] },
+    },
+  },
   server: {
     host: '127.0.0.1',
     port: 4321,

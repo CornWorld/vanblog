@@ -10,6 +10,9 @@ if (!isAuthenticated(Astro)) {
   return Astro.redirect('/_/');
 }
 
+// Admin pages are personalized — opt out of route cache entirely.
+Astro.cache.set(false);
+
 const { id } = Astro.params;
 const isNew = !id || id === 'new';
 
