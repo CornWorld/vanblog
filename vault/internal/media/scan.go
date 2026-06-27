@@ -123,8 +123,8 @@ func (m *Manager) ReadFileContent(record *core.Record) ([]byte, error) {
 		return nil, fmt.Errorf("media: no file attached to record")
 	}
 
-	// pb stores files as <recordID>/<filename>
-	path := record.Id + "/" + filename
+	// pb stores files as <collectionId>/<recordId>/<filename> (see Record.BaseFilesPath)
+	path := record.BaseFilesPath() + "/" + filename
 	r, err := fsys.GetReader(path)
 	if err != nil {
 		return nil, fmt.Errorf("media: failed to read file %q: %w", path, err)

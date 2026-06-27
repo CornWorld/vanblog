@@ -1,12 +1,14 @@
 package media
 
 import (
+	"bytes"
 	"os"
 	"testing"
 
 	_ "github.com/cornworld/vanblog/pb_migrations"
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/core"
+	"github.com/pocketbase/pocketbase/tools/filesystem"
 )
 
 func setupApp(t *testing.T) core.App {
@@ -116,5 +118,43 @@ func TestCreateRecord(t *testing.T) {
 	}
 	if loaded.GetString("staticType") != "favicon" {
 		t.Errorf("staticType = %q", loaded.GetString("staticType"))
+	}
+}
+
+// TestReadFileContent_AfterUpload verifies that ReadFileContent can locate a file
+// after a real pb file upload (path = BaseFilesPath + filename).
+// Regression test: previously used record.Id + "/" + filename, missing the
+// collectionId level → every dedup read failed.
+func TestReadFileContent_AfterUpload(t *testing.T) {
+	app := setupApp(t)
+	mgr := New(app)
+
+	col, err := app.FindCollectionByNameOrId("media")
+	if err != nil {
+		t.Fatalf("find collection: %v", err)
+	}
+
+	// PNG file (media collection restricts to image/* MIME types)
+	content := []byte("\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\rIDATx\x9cc\xfc\xcf\xc0\x00\x00\x00\x03\x00\x01\x5d\xcc\xdb\xda\x00\x00\x00\x00IEND\xaeB`\x82")
+	file, err := filesystem.NewFileFromBytes(content, "test.png")
+	if err != nil {
+		t.Fatalf("NewFileFromBytes: %v", err)
+	}
+	file.Name = "test.png"
+
+	record := core.NewRecord(col)
+	record.Set("staticType", "img")
+	record.Set("storageType", "local")
+	record.Set("file", []*filesystem.File{file})
+	if err := app.Save(record); err != nil {
+		t.Fatalf("save: %v", err)
+	}
+
+	got, err := mgr.ReadFileContent(record)
+	if err != nil {
+		t.Fatalf("ReadFileContent: %v", err)
+	}
+	if !bytes.Equal(got, content) {
+		t.Errorf("ReadFileContent returned %q, want %q", got, content)
 	}
 }

@@ -22,6 +22,7 @@ import (
 	"github.com/cornworld/vanblog/internal/revisions"
 	"github.com/cornworld/vanblog/internal/site"
 	"github.com/cornworld/vanblog/internal/visits"
+	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
 )
 
@@ -165,8 +166,7 @@ func Register(app core.App) {
 			if err != nil {
 				return e.String(500, "rss failed")
 			}
-			e.Set("Content-Type", "application/rss+xml; charset=utf-8")
-			return e.String(200, string(data))
+			return e.Blob(200, "application/rss+xml; charset=utf-8", data)
 		})
 
 		// Atom feed
@@ -175,8 +175,7 @@ func Register(app core.App) {
 			if err != nil {
 				return e.String(500, "atom failed")
 			}
-			e.Set("Content-Type", "application/atom+xml; charset=utf-8")
-			return e.String(200, string(data))
+			return e.Blob(200, "application/atom+xml; charset=utf-8", data)
 		})
 
 		// Sitemap
@@ -185,8 +184,7 @@ func Register(app core.App) {
 			if err != nil {
 				return e.String(500, "sitemap failed")
 			}
-			e.Set("Content-Type", "application/xml; charset=utf-8")
-			return e.String(200, string(data))
+			return e.Blob(200, "application/xml; charset=utf-8", data)
 		})
 
 		// Timeline
@@ -233,10 +231,17 @@ func Register(app core.App) {
 	})
 }
 
-// hasSuperuser checks whether at least one superuser/admin user exists.
+// hasSuperuser checks whether at least one real superuser/admin user exists.
+// PocketBase's pbinstall auto-creates a `__pbinstaller@example.com` placeholder
+// superuser that's deleted once a real superuser registers, so we exclude it.
 // Used by the TLS ask endpoint to distinguish setup window from post-setup.
 func hasSuperuser(app core.App) (bool, error) {
-	records, err := app.FindRecordsByFilter("_superusers", "", "", 1, 0)
+	records, err := app.FindRecordsByFilter(
+		"_superusers",
+		"email != {:installer}",
+		"", 1, 0,
+		dbx.Params{"installer": core.DefaultInstallerEmail},
+	)
 	if err != nil {
 		return false, err
 	}

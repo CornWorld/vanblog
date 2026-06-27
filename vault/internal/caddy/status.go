@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/cornworld/vanblog/utils/caddyadmin"
+	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
 )
 
@@ -63,9 +64,16 @@ func GetTLSStatus(app core.App, caddyAdminURL string) (*TLSStatus, error) {
 	}
 
 	// 2. Check setup state — AllowAll is only true during setup window
-	// (no superuser). Post-setup, empty list means deny all.
+	// (no real superuser yet). PocketBase's pbinstall auto-creates a
+	// `__pbinstaller@example.com` placeholder superuser that's auto-deleted
+	// once a real superuser registers, so we must exclude it from the count.
 	// On query error, fail closed (assume setup is complete) for security.
-	hasAdmin, err := app.FindRecordsByFilter("_superusers", "", "", 1, 0)
+	hasAdmin, err := app.FindRecordsByFilter(
+		"_superusers",
+		"email != {:installer}",
+		"", 1, 0,
+		dbx.Params{"installer": core.DefaultInstallerEmail},
+	)
 	if err != nil {
 		status.SetupComplete = true
 	} else {
