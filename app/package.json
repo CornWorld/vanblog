@@ -9,22 +9,23 @@
     "start": "node ./dist/server/entry.mjs"
   },
   "dependencies": {
-    "@vanblog/sdk": "workspace:*",
-    "astro": "^5.0.0",
-    "@astrojs/node": "^9.0.0",
     "@astrojs/mdx": "^4.0.0",
-    "bytemd": "^1.22.0",
+    "@astrojs/node": "^9.0.0",
+    "@bytemd/plugin-frontmatter": "^1.22.0",
     "@bytemd/plugin-gfm": "^1.22.0",
     "@bytemd/plugin-highlight-ssr": "^1.22.0",
     "@bytemd/plugin-math-ssr": "^1.22.0",
-    "@bytemd/plugin-frontmatter": "^1.22.0",
     "@bytemd/plugin-medium-zoom": "^1.22.0",
     "@bytemd/plugin-mermaid": "^1.22.0",
+    "@vanblog/sdk": "workspace:*",
+    "astro": "^5.0.0",
+    "bytemd": "^1.22.0",
     "highlight.js": "^11.0.0",
+    "isomorphic-dompurify": "^3.18.0",
     "katex": "^0.16.0",
-    "remark-directive": "^3.0.0",
-    "unist-util-visit": "^5.0.0",
     "marked": "^18.0.0",
-    "marked-highlight": "^2.2.0"
+    "marked-highlight": "^2.2.0",
+    "remark-directive": "^3.0.0",
+    "unist-util-visit": "^5.0.0"
   }
 }
