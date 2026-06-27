@@ -1,5 +1,6 @@
 ---
 import type { SiteConfig, Post } from '@vanblog/sdk';
+import DOMPurify from 'isomorphic-dompurify';
 import PbInit from '../components/PbInit.astro';
 
 interface Props {
@@ -22,10 +23,13 @@ const baseUrl = site?.baseUrl || '';
 // Canonical URL
 const canonicalURL = baseUrl && path ? `${baseUrl.replace(/\/$/, '')}${path}` : undefined;
 
-// Article excerpt for description (strip markdown, truncate)
+// Article excerpt for description (strip markdown + HTML, truncate).
+// DOMPurify strips tags but keeps text content; we then strip leftover markdown
+// punctuation. Must produce plain text — feeds into <meta content={desc}>.
 function excerpt(md: string | undefined, max = 160): string {
   if (!md) return siteDesc;
-  const text = md
+  const stripped = DOMPurify.sanitize(md, { ALLOWED_TAGS: [], ALLOWED_ATTR: [] });
+  const text = stripped
     .replace(/^#+\s+/gm, '')
     .replace(/[*_`~\[\]()!#>-]/g, '')
     .replace(/\n+/g, ' ')
