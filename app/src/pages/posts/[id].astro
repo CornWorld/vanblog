@@ -42,6 +42,12 @@ const htmlContent = DOMPurify.sanitize(rawHtml, {
   // ALLOWED_TAGS omitted — isomorphic-dompurify uses built-in defaults (strips <script>, <iframe>, etc.)
 });
 const created = new Date(post.created).toLocaleDateString('zh-CN');
+
+// Cache for 5 min, stale-while-revalidate 1 min.
+// Tagged with 'posts' and 'post:<id>' so pb hooks can purge on edit.
+if (Astro.cache.enabled) {
+  Astro.cache.set({ maxAge: 300, swr: 60, tags: ['posts', `post:${id}`] });
+}
 ---
 <BaseLayout title={post.title} post={post} path={`/posts/${id}`}>
   <article>

@@ -17,8 +17,11 @@ try {
   console.error('[index] Failed to load posts:', e);
 }
 
-// TODO: Enable when Astro 6.0+ (memoryCache) is available
-// Astro.cache.set({ maxAge: 300, swr: 60, tags: ['posts', 'home'] });
+// Cache this page for 5 min, serve stale while revalidating.
+// Tagged 'posts' so pb hooks can purge it on post changes.
+if (Astro.cache.enabled) {
+  Astro.cache.set({ maxAge: 300, swr: 60, tags: ['posts', 'home'] });
+}
 ---
 <BaseLayout title="首页" path="/">
   {posts.length === 0 ? (

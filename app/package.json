@@ -9,8 +9,8 @@
     "start": "node ./dist/server/entry.mjs"
   },
   "dependencies": {
-    "@astrojs/mdx": "^4.0.0",
-    "@astrojs/node": "^9.0.0",
+    "@astrojs/mdx": "^5.0.0",
+    "@astrojs/node": "^10.0.0",
     "@bytemd/plugin-frontmatter": "^1.22.0",
     "@bytemd/plugin-gfm": "^1.22.0",
     "@bytemd/plugin-highlight-ssr": "^1.22.0",
@@ -18,7 +18,7 @@
     "@bytemd/plugin-medium-zoom": "^1.22.0",
     "@bytemd/plugin-mermaid": "^1.22.0",
     "@vanblog/sdk": "workspace:*",
-    "astro": "^5.0.0",
+    "astro": "^6.0.0",
     "bytemd": "^1.22.0",
     "highlight.js": "^11.0.0",
     "isomorphic-dompurify": "^3.18.0",
