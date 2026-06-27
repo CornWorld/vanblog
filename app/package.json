@@ -6,7 +6,8 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "start": "node ./dist/server/entry.mjs"
+    "start": "node ./dist/server/entry.mjs",
+    "test:e2e:cache": "node --test test/cache-e2e.test.mjs"
   },
   "dependencies": {
     "@astrojs/mdx": "^5.0.0",
