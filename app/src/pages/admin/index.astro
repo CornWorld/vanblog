@@ -2,7 +2,12 @@
 export const prerender = false;
 
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import { isAuthenticated } from '../../middleware';
 import type { Post } from '@vanblog/sdk';
+
+if (!isAuthenticated(Astro)) {
+  return Astro.redirect('/_/');
+}
 
 let posts: Post[] = [];
 
