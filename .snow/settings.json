@@ -6,7 +6,7 @@
   "planMode": true,
   "vulnerabilityHuntingMode": false,
   "toolSearchEnabled": false,
-  "hybridCompressEnabled": false,
+  "hybridCompressEnabled": true,
   "teamMode": false,
   "ultraTodoEnabled": false
 }
