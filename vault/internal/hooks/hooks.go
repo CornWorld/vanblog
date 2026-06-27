@@ -12,6 +12,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/cornworld/vanblog/internal/article"
 	"github.com/cornworld/vanblog/internal/caddy"
@@ -71,24 +72,46 @@ func Register(app core.App) {
 		}
 		sign := media.ComputeSign(content)
 		record.Set("sign", sign)
-		app.Save(record)
-
-		existing, err := mediaMgr.CheckDuplicate(content)
-		if err != nil || existing == nil || existing.Id == record.Id {
+		if err := app.Save(record); err != nil {
+			log.Printf("[vanblog] media dedup: failed to save sign: %v", err)
 			return nil
 		}
-		log.Printf("[vanblog] media dedup: duplicate of %s, deleting %s", existing.Id, record.Id)
-		app.Delete(record)
+
+		existing, err := mediaMgr.CheckDuplicate(content)
+		if err != nil {
+			log.Printf("[vanblog] media dedup: query failed: %v", err)
+			return nil
+		}
+		if existing == nil || existing.Id == record.Id {
+			return nil
+		}
+		// Deterministic winner: only delete if current record has a "larger" Id.
+		// This prevents the race where two concurrent uploads of identical content
+		// both find each other as "existing" and delete both copies.
+		if existing.Id < record.Id {
+			log.Printf("[vanblog] media dedup: duplicate of %s, deleting %s", existing.Id, record.Id)
+			app.Delete(record)
+		}
 		return nil
 	})
 
-	// Astro cache invalidation: when posts change, notify Astro SSR server
+	// Astro cache invalidation + article image scan: when posts change
 	app.OnRecordAfterCreateSuccess("posts").BindFunc(func(e *core.RecordEvent) error {
 		go revalidateAstroCache([]string{"posts"})
+		go func() {
+			if err := mediaMgr.ScanArticleImages(e.Record.Id); err != nil {
+				log.Printf("[vanblog] media scan: failed for post %s: %v", e.Record.Id, err)
+			}
+		}()
 		return nil
 	})
 	app.OnRecordAfterUpdateSuccess("posts").BindFunc(func(e *core.RecordEvent) error {
 		go revalidateAstroCache([]string{"posts"})
+		go func() {
+			if err := mediaMgr.ScanArticleImages(e.Record.Id); err != nil {
+				log.Printf("[vanblog] media scan: failed for post %s: %v", e.Record.Id, err)
+			}
+		}()
 		return nil
 	})
 	app.OnRecordAfterDeleteSuccess("posts").BindFunc(func(e *core.RecordEvent) error {
@@ -122,7 +145,11 @@ func Register(app core.App) {
 			info, err := site.GetInfo(app)
 			if err != nil {
 				// Can't read site config — fail open during setup, fail closed after
-				hasAdmin, _ := hasSuperuser(app)
+				hasAdmin, qErr := hasSuperuser(app)
+				if qErr != nil {
+					// DB error — fail closed for security
+					return e.JSON(403, map[string]bool{"allowed": false})
+				}
 				if !hasAdmin {
 					return e.JSON(200, map[string]bool{"allowed": true})
 				}
@@ -225,7 +252,8 @@ func revalidateAstroCache(tags []string) {
 	}
 
 	body, _ := json.Marshal(map[string][]string{"tags": tags})
-	resp, err := http.Post(astroURL+"/api/revalidate", "application/json", bytes.NewReader(body))
+	client := &http.Client{Timeout: 5 * time.Second}
+	resp, err := client.Post(astroURL+"/api/revalidate", "application/json", bytes.NewReader(body))
 	if err != nil {
 		log.Printf("[vanblog] revalidate: failed to reach Astro at %s: %v", astroURL, err)
 		return

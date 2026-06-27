@@ -1,9 +1,7 @@
 package caddy
 
 import (
-	"encoding/json"
 	"fmt"
-	"net/http"
 	"time"
 
 	"github.com/cornworld/vanblog/utils/caddyadmin"
@@ -17,11 +15,17 @@ type TLSStatus struct {
 	CaddyReachable bool `json:"caddyReachable"`
 
 	// AllowedDomains is the current site.allowedDomains whitelist.
-	// Empty means "allow all" (on-demand TLS will issue for any domain).
+	// Empty means "allow all" during setup, "deny all" post-setup.
 	AllowedDomains []string `json:"allowedDomains"`
 
-	// AllowAll is true when AllowedDomains is empty (the default behavior).
+	// AllowAll is true when the ask endpoint will allow any domain.
+	// This is true only during the setup window (no superuser yet).
+	// Post-setup with empty AllowedDomains, AllowAll is false (deny all).
 	AllowAll bool `json:"allowAll"`
+
+	// SetupComplete is true when at least one superuser exists.
+	// When false, the system is in setup mode and allows all domains.
+	SetupComplete bool `json:"setupComplete"`
 
 	// Certificates lists domains for which Caddy has obtained TLS certificates.
 	// Each entry has the domain and whether it's in the allowedDomains whitelist.
@@ -55,9 +59,19 @@ func GetTLSStatus(app core.App, caddyAdminURL string) (*TLSStatus, error) {
 	site, err := app.FindFirstRecordByFilter("site", "")
 	if err == nil && site != nil {
 		status.AllowedDomains = site.GetStringSlice("allowedDomains")
-		status.AllowAll = len(status.AllowedDomains) == 0
 		status.HttpsRedirect = site.GetBool("httpsRedirect")
 	}
+
+	// 2. Check setup state — AllowAll is only true during setup window
+	// (no superuser). Post-setup, empty list means deny all.
+	// On query error, fail closed (assume setup is complete) for security.
+	hasAdmin, err := app.FindRecordsByFilter("_superusers", "", "", 1, 0)
+	if err != nil {
+		status.SetupComplete = true
+	} else {
+		status.SetupComplete = len(hasAdmin) > 0
+	}
+	status.AllowAll = !status.SetupComplete
 
 	// 2. Query Caddy admin API
 	client := caddyadmin.NewClient(caddyAdminURL)
@@ -103,26 +117,6 @@ func CheckCaddyHealth(caddyAdminURL string) error {
 	return err
 }
 
-// formatJSON is a helper for pretty-printing status in debug logs.
-func formatJSON(v interface{}) string {
-	b, _ := json.MarshalIndent(v, "", "  ")
-	return string(b)
-}
-
-// QueryCaddyCertificates is a lower-level helper that returns raw certificate
-// data from Caddy. Exposed for potential debugging endpoints.
-func QueryCaddyCertificates(caddyAdminURL string) ([]string, error) {
-	client := caddyadmin.NewClient(caddyAdminURL)
-	return client.GetAutocertDomains()
-}
-
-// ReachableHosts returns the list of domains that Caddy is actively serving.
-// This queries the Caddy admin API for configured server addresses + TLS subjects.
-func ReachableHosts(caddyAdminURL string) ([]string, error) {
-	client := caddyadmin.NewClient(caddyAdminURL)
-	return client.GetTLSSubjects()
-}
-
 // WaitForCaddy polls the Caddy admin API until it responds or timeout.
 // Used during bootstrap to avoid race conditions.
 func WaitForCaddy(caddyAdminURL string, timeout time.Duration) error {
@@ -138,9 +132,3 @@ func WaitForCaddy(caddyAdminURL string, timeout time.Duration) error {
 
 	return fmt.Errorf("caddy admin API not reachable after %v", timeout)
 }
-
-// Ensure unused vars don't trigger lint errors in minimal builds
-var (
-	_ = http.StatusOK
-	_ = formatJSON
-)

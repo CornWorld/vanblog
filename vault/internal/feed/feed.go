@@ -114,10 +114,12 @@ func GenerateSitemap(app core.App) ([]byte, error) {
 	return sitemap.GenerateSitemap(baseURL, urls)
 }
 
-// excerpt returns a plain-text summary of content (first 200 chars).
+// excerpt returns a plain-text summary of content (first 200 runes).
+// Uses rune slicing to avoid splitting multi-byte UTF-8 sequences (e.g. Chinese).
 func excerpt(content string) string {
-	if len(content) <= 200 {
+	r := []rune(content)
+	if len(r) <= 200 {
 		return content
 	}
-	return content[:200] + "..."
+	return string(r[:200]) + "..."
 }

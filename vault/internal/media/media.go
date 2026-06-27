@@ -3,6 +3,8 @@ package media
 
 import (
 	"crypto/md5"
+	"database/sql"
+	"errors"
 	"fmt"
 
 	"github.com/pocketbase/pocketbase/core"
@@ -31,7 +33,11 @@ func (m *Manager) CheckDuplicate(fileContent []byte) (*core.Record, error) {
 		map[string]any{"sign": sign},
 	)
 	if err != nil {
-		return nil, nil // not found = not duplicate
+		// Distinguish "no matching record" from real DB errors (e.g. db locked)
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil // not found = not duplicate
+		}
+		return nil, fmt.Errorf("media: query failed: %w", err)
 	}
 	return record, nil
 }
