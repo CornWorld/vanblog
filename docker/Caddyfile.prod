@@ -22,18 +22,13 @@ https:// {
   }
   encode zstd gzip
 
-  # pb API (REST + Admin UI)
+  # pb API (REST + files + Admin UI) — /api/* covers /api/files/* too
   handle /api/* {
     reverse_proxy 127.0.0.1:8090
   }
 
   # pb built-in Admin UI
   handle /_/* {
-    reverse_proxy 127.0.0.1:8090
-  }
-
-  # pb static files (uploads, images)
-  handle_path /api/files/* {
     reverse_proxy 127.0.0.1:8090
   }
 
@@ -53,10 +48,6 @@ http:// {
   }
 
   handle /_/* {
-    reverse_proxy 127.0.0.1:8090
-  }
-
-  handle_path /api/files/* {
     reverse_proxy 127.0.0.1:8090
   }
 

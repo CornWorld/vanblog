@@ -1,10 +1,13 @@
 package media
 
 import (
+	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"regexp"
+	"strings"
 
 	"github.com/pocketbase/pocketbase/core"
 )
@@ -49,16 +52,23 @@ func (m *Manager) ScanArticleImages(postID string) error {
 			"externalUrl={:url}",
 			map[string]any{"url": url},
 		)
-		if err == nil && existing != nil {
+		if err != nil && !errors.Is(err, sql.ErrNoRows) {
+			return fmt.Errorf("media: scan query failed for url %q: %w", url, err)
+		}
+		if existing != nil {
 			continue // already tracked
 		}
 
 		// Create a media record for the external image
+		meta, _ := json.Marshal(map[string]string{
+			"source": "article_scan",
+			"post":   postID,
+		})
 		record := core.NewRecord(col)
 		record.Set("staticType", "img")
 		record.Set("storageType", "external")
 		record.Set("externalUrl", url)
-		record.Set("meta", json.RawMessage(`{"source": "article_scan", "post": "`+postID+`"}`))
+		record.Set("meta", json.RawMessage(meta))
 		if err := m.app.Save(record); err != nil {
 			// Log but continue — partial scan is better than none
 			continue
@@ -85,15 +95,18 @@ func extractImgSrcs(html string) []string {
 	return urls
 }
 
+// internalURLPattern matches pb-served file URLs (api/files or static).
+var internalURLPattern = regexp.MustCompile(`^https?://[^/]+/(api/files|static)/`)
+
 // isInternalURL checks if a URL points to the vanblog instance itself
 // (relative path or localhost).
 func isInternalURL(url string) bool {
 	// Relative URLs (starts with / or ./ )
-	if len(url) > 0 && (url[0] == '/' || url[:2] == "./") {
+	if strings.HasPrefix(url, "/") || strings.HasPrefix(url, "./") {
 		return true
 	}
 	// pb-served files
-	return regexp.MustCompile(`^https?://[^/]+/(api/files|static)/`).MatchString(url)
+	return internalURLPattern.MatchString(url)
 }
 
 // ReadFileContent reads the file content from a media record's FileField.
