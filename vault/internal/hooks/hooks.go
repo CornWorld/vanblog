@@ -86,10 +86,19 @@ func Register(app core.App) {
 		if existing == nil || existing.Id == record.Id {
 			return nil
 		}
-		// Deterministic winner: only delete if current record has a "larger" Id.
-		// This prevents the race where two concurrent uploads of identical content
-		// both find each other as "existing" and delete both copies.
-		if existing.Id < record.Id {
+		// Deterministic winner: keep the older record (smaller created time).
+		//
+		// We used to compare record.Id lexicographically, but pb Ids are
+		// random — adjacent uploads have ~50% chance of inverted Id order,
+		// which caused the duplicate to survive half the time. `created`
+		// is set by AutodateField and is monotonic per-write, so it's a
+		// reliable tiebreaker. On a tie (sub-millisecond writes), fall
+		// back to lexicographic Id so both contenders agree on the winner.
+		existingCreated := existing.GetDateTime("created").Time()
+		recordCreated := record.GetDateTime("created").Time()
+		keepExisting := existingCreated.Before(recordCreated) ||
+			(existingCreated.Equal(recordCreated) && existing.Id < record.Id)
+		if keepExisting {
 			log.Printf("[vanblog] media dedup: duplicate of %s, deleting %s", existing.Id, record.Id)
 			app.Delete(record)
 		}
