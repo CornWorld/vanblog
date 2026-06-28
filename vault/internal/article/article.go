@@ -4,6 +4,7 @@ package article
 
 import (
 	"fmt"
+	"net/http"
 
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
@@ -14,9 +15,60 @@ type Manager struct {
 	app core.App
 }
 
-// New creates an article Manager.
+// New creates an article Manager and registers its pb hook subscriptions.
+//
+// Hooks:
+//   - OnRecordAfterCreateSuccess/UpdateSuccess/DeleteSuccess("posts"):
+//     invalidate Astro SSR cache so readers see the change immediately.
+//   - OnServe: register /api/vanblog/timeline and /api/vanblog/search.
 func New(app core.App) *Manager {
-	return &Manager{app: app}
+	m := &Manager{app: app}
+	m.handlePostsCacheInvalidation(app)
+	app.OnServe().BindFunc(func(se *core.ServeEvent) error {
+		se.Router.GET("/api/vanblog/timeline", m.handleTimelineEndpoint)
+		se.Router.GET("/api/vanblog/search", m.handleSearchEndpoint)
+		return se.Next()
+	})
+	return m
+}
+
+// handlePostsCacheInvalidation wires Astro cache revalidation to posts CRUD.
+// Each handler runs in a goroutine so the request isn't blocked on Astro's
+// response.
+func (m *Manager) handlePostsCacheInvalidation(app core.App) {
+	invalidate := func() { go revalidateAstroCache([]string{"posts"}) }
+	app.OnRecordAfterCreateSuccess("posts").BindFunc(func(e *core.RecordEvent) error {
+		invalidate()
+		return nil
+	})
+	app.OnRecordAfterUpdateSuccess("posts").BindFunc(func(e *core.RecordEvent) error {
+		invalidate()
+		return nil
+	})
+	app.OnRecordAfterDeleteSuccess("posts").BindFunc(func(e *core.RecordEvent) error {
+		invalidate()
+		return nil
+	})
+}
+
+func (m *Manager) handleTimelineEndpoint(e *core.RequestEvent) error {
+	timeline, err := m.GetTimeline()
+	if err != nil {
+		return e.JSON(http.StatusInternalServerError, err.Error())
+	}
+	return e.JSON(http.StatusOK, timeline)
+}
+
+func (m *Manager) handleSearchEndpoint(e *core.RequestEvent) error {
+	q := e.Request.URL.Query().Get("q")
+	if q == "" {
+		return e.JSON(http.StatusBadRequest, "missing param 'q'")
+	}
+	results, err := m.Search(q, 20)
+	if err != nil {
+		return e.JSON(http.StatusInternalServerError, err.Error())
+	}
+	return e.JSON(http.StatusOK, results)
 }
 
 // TimelineEntry represents articles grouped by year and month.
