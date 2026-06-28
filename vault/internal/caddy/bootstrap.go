@@ -60,7 +60,7 @@ func BootstrapSync(app core.App, caddyAdminURL string) error {
 
 	for attempt := 0; attempt <= len(bootstrapBackoffs); attempt++ {
 		if attempt > 0 {
-			log.Printf("[vanblog] caddy bootstrap: retry %d/%d after %v",
+			log.Printf("[caddy] bootstrap: retry %d/%d after %v",
 				attempt, len(bootstrapBackoffs), bootstrapBackoffs[attempt-1])
 			time.Sleep(bootstrapBackoffs[attempt-1])
 		}
@@ -111,14 +111,14 @@ func BootstrapSync(app core.App, caddyAdminURL string) error {
 				totalRoutes += len(srv.Routes)
 			}
 		}
-		log.Printf("[vanblog] caddy bootstrap: full config loaded (%d routes across all servers, attempt %d)",
+		log.Printf("[caddy] bootstrap: full config loaded (%d routes across all servers, attempt %d)",
 			totalRoutes, attempt+1)
 
 		if err := setCaddyLastError(app, ""); err != nil {
 			// Non-fatal: the config was applied; failing to clear the
 			// status field only means the UI may briefly show a stale
 			// error.
-			log.Printf("[vanblog] caddy bootstrap: warning: failed to clear caddyLastError: %v", err)
+			log.Printf("[caddy] bootstrap: warning: failed to clear caddyLastError: %v", err)
 		}
 		return nil
 	}
@@ -128,9 +128,9 @@ func BootstrapSync(app core.App, caddyAdminURL string) error {
 	persistedErr := fmt.Errorf("caddy bootstrap failed after %d retries: %w",
 		len(bootstrapBackoffs), lastErr)
 	if err := setCaddyLastError(app, lastErr.Error()); err != nil {
-		log.Printf("[vanblog] caddy bootstrap: warning: failed to persist caddyLastError: %v", err)
+		log.Printf("[caddy] bootstrap: warning: failed to persist caddyLastError: %v", err)
 	}
-	log.Printf("[vanblog] caddy bootstrap FAILED: %v", persistedErr)
+	log.Printf("[caddy] bootstrap FAILED: %v", persistedErr)
 	return persistedErr
 }
 
@@ -176,7 +176,7 @@ func loadBootstrapInputs(app core.App) (BuildOpts, []UserRule) {
 			// Keep going with empty user rules — the system + fallback
 			// routes still produce a working site, just without the user's
 			// custom routes. Log so the operator notices.
-			log.Printf("[vanblog] site.routing parse failed (continuing with system routes only): %v", err)
+			log.Printf("[caddy] site.routing parse failed (continuing with system routes only): %v", err)
 			userRules = nil
 		}
 	}
