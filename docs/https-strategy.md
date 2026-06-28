@@ -50,100 +50,38 @@ https:// {
 
 ---
 
-## 3. Caddyfile 模板
+## 3. Caddy 配置:单一真相源(范式 X)
 
-### 3.1 设计原则
+> 详见 [`.snow/plan/caddy-single-source.md`](../.snow/plan/caddy-single-source.md) 完整设计。
 
-**prod 和 dev 的 Caddyfile 不同**,因为渲染策略不同:
+vanblog **不再使用 Caddyfile 作为运行时配置**。Caddy 配置分两层:
 
-- **prod**:**纯 SSG**(Astro 预编译静态产物),Caddy 直接 `file_server`,无 Node 常驻
-- **dev**:Astro dev server(`127.0.0.1:4321`),Caddy `reverse_proxy` 到它
+### 3.1 Bootstrap 配置(维护模式)
 
-**重建触发**:
+`docker/bootstrap.json` 是一份静态最小 JSON,由 Dockerfile COPY 进容器。Caddy 启动时加载它,进入维护模式:
 
-- prod 镜像无 Node,无法在容器内重建 —— 用户在 dev 镜像或 CI 中 build 后重新部署
-- pb_hooks JSVM(Go 内嵌 JS 解释器)**不能调用外部命令**,只能写数据库 / 调 HTTP API
-- 未来的"自动重建"路径:pb hook → webhook → 外部 CI → 重新 build → 滚动部署(v1 不实现)
+- `:443` 返回 `503 Service Unavailable` + `Retry-After: 30` + 中文维护页
+- `:80` 永久重定向到 `:443`
+- `:8080` 管理端口反代到 pb / Astro(保证 admin UI 在故障时仍可达)
+- `admin.origins = ["127.0.0.1"]`(零信任,绝不用 `["*"]`)
 
-### 3.2 prod Caddyfile
+### 3.2 完整运行时配置(pb OnBootstrap 注入)
 
-```caddyfile
-{
-  on_demand_tls {
-    ask http://127.0.0.1:8090/api/hooks/caddy/ask
-  }
-  admin 127.0.0.1:2019
-  email {$VANBLOG_EMAIL}
-  log {
-    output file /var/log/caddy.log
-    level {$VANBLOG_CADDY_LOG_LEVEL:warn}    # 默认 warn,可配
-  }
-}
+pb 启动后,`OnBootstrap` 钩子**同步**调用 `caddy.BootstrapSync(app, "http://127.0.0.1:2019")`:
 
-https:// {
-  tls { on_demand }
-  encode zstd gzip
+1. 读 `site.routing`(用户规则)+ `site.allowedDomains` + `VANBLOG_EMAIL` env
+2. 合并系统缓存规则(`SystemCacheRules`)
+3. `BuildFullConfig(opts, rules)` 翻译为 `caddyadmin.Config` struct
+4. `ValidateConfig`(dry-run)→ `LoadConfig`(原子替换 bootstrap 配置)
+5. 失败重试 5 次,指数退避(1s/2s/4s/8s/16s);全部失败时持久化到 `site.caddyLastError`,容器不崩,管理端口仍可达
 
-  handle /api/* {
-    reverse_proxy 127.0.0.1:8090
-  }
-  handle_path /static/* {
-    reverse_proxy 127.0.0.1:8090
-  }
+### 3.3 dev / prod 差异
 
-  # 用户自定义路由(vanblog 中间层 PATCH 注入,见 routing-strategy.md)
+dev 和 prod 的唯一差异是 `AstroTarget`(`127.0.0.1:4321` 都一样,但 prod 是 Astro SSR standalone,dev 是 Astro dev server HMR)。由 `BuildOpts` 控制,不再有两份 Caddyfile。
 
-  # 兜底:前台(纯静态文件)
-  root * /app/dist
-  try_files {path} /index.html
-  file_server
-}
+### 3.4 Legacy 回滚通道
 
-http:// {
-  redir https://{host}{uri} permanent
-}
-```
-
-### 3.3 dev Caddyfile
-
-```caddyfile
-{
-  on_demand_tls {
-    ask http://127.0.0.1:8090/api/hooks/caddy/ask
-  }
-  admin 127.0.0.1:2019
-  email {$VANBLOG_EMAIL}
-}
-
-https:// {
-  tls { on_demand }
-  encode zstd gzip
-
-  handle /api/* {
-    reverse_proxy 127.0.0.1:8090
-  }
-  handle_path /static/* {
-    reverse_proxy 127.0.0.1:8090
-  }
-
-  # 用户自定义路由(同 prod)
-
-  # 兜底:前台(Astro dev server)
-  reverse_proxy 127.0.0.1:4321
-}
-
-http:// {
-  redir https://{host}{uri} permanent
-}
-```
-
-### 3.4 与原项目 CaddyfileTemplate 的差异
-
-- 去掉 Waline 反代(Waline 独立容器,用户通过 `site.routing` 配置)
-- 去掉 `/c/* /custom/*`(CustomPage 已砍,见 [`feature-decision-matrix.md`](./feature-decision-matrix.md) #4)
-- admin endpoint 从 `0.0.0.0:2019` 改为 `127.0.0.1:2019`(只接受 vanblog 中间层调用)
-- prod 兜底从 `reverse_proxy :3001`(NestJS)改为 `file_server`(Astro SSG 产物)
-- Caddy 日志级别可配(`VANBLOG_CADDY_LOG_LEVEL`,默认 warn)
+运维设置 `VANBLOG_CADDY_MODE=legacy` env 可回退到旧的 Caddyfile 模式(用 `docker/Caddyfile.legacy.{prod,dev}`)。这是回滚通道,不建议长期使用。
 
 ---
 
@@ -172,12 +110,13 @@ routerAdd("GET", "/api/hooks/caddy/ask", (e) => {
 
 ```
 1. 容器启动 → entrypoint.sh(见 deployment-strategy.md §2)
-2. Caddy 启动(用 Caddyfile 模板)
+2. Caddy 启动(用 docker/bootstrap.json,维护模式)
 3. pb 启动
-4. pb_hooks 启动钩子:
-   a. 读取 site.routing + site.allowedDomains
-   b. 调用 caddy admin api 应用路由配置(见 routing-strategy.md §5)
-5. 用户访问 → Caddy(HTTPS + 路由)→ pb / Astro 产物 / 用户后端
+4. pb OnBootstrap 钩子(同步):
+   a. 读取 site.routing + site.allowedDomains + VANBLOG_EMAIL
+   b. BuildFullConfig → ValidateConfig → LoadConfig(替换维护配置)
+   c. 失败重试 5 次(指数退避)
+5. 用户访问 → Caddy(HTTPS + 完整路由)→ pb / Astro / 用户后端
 ```
 
 ---
@@ -207,17 +146,16 @@ routerAdd("GET", "/api/hooks/caddy/ask", (e) => {
 
 | 原项目配置                 | 重构后归属                                                                            |
 | -------------------------- | ------------------------------------------------------------------------------------- |
-| `Setting.https.redirect`   | Caddyfile `redir https://{host}{uri} permanent`(固定)                                 |
+| `Setting.https.redirect`   | `srv_http` 静态 301 路由(由 `BuildFullConfig` 生成)                                   |
 | `Setting.https.domains[]`  | `site.allowedDomains` JSON 字段(pb_hooks 查询)                                        |
 | Caddy Admin API 操作       | pb_hooks 封装 + vanblog 中间层校验(见 [`routing-strategy.md`](./routing-strategy.md)) |
 | `caddy.provider.ts` 整文件 | pb_hooks 重写                                                                         |
-| `CaddyfileTemplate`        | `docker/Caddyfile.prod` + `docker/Caddyfile.dev`(详见 §3)                             |
+| `CaddyfileTemplate`        | `docker/bootstrap.json` + `BuildFullConfig`(详见 §3)                                  |
 
 ---
 
 ## 9. 待决细节
 
 1. **pb_hooks 调用 caddy admin api**:已决策 — Go extend 实现(见 [`architecture-layering.md`](./architecture-layering.md) §9),JSVM 通过 `vanblog.caddy.*` 调用
-2. ~~**TLS 证书持久化**~~ **已完成**:Caddyfile 配置 `storage file_system { root /data/caddy }`,Dockerfile 声明 `VOLUME ["/data/caddy"]`,用户挂载 `-v caddy_data:/data/caddy` 即可持久化证书
-3. **HTTP_ONLY 模式的实现**:prod/dev entrypoint 如何根据 `HTTP_ONLY=true` 跳过 Caddy 启动
-4. **Astro dev server 的 TLS**:dev 镜像里 Astro dev server 默认 HTTP,Caddy 终止 TLS 后转发 —— 符合预期(prod 无此问题,纯静态文件)
+2. ~~**TLS 证书持久化**~~ **已完成**:bootstrap.json 配置 `storage.file_system.root = /data/caddy`,Dockerfile 声明 `VOLUME ["/data/caddy"]`,用户挂载 `-v caddy_data:/data/caddy` 即可持久化证书
+3. **Astro dev server 的 TLS**:dev 镜像里 Astro dev server 默认 HTTP,Caddy 终止 TLS 后转发 —— 符合预期(prod 无此问题,Astro SSR standalone 由 Caddy 直接反代)
