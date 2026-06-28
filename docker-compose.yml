@@ -1,9 +1,14 @@
 # Vanblog — docker-compose 一键部署
 #
-# 用法:
-#   curl -L https://vanblog.example.com/docker-compose.yml -o docker-compose.yml
-#   # 编辑 VANBLOG_EMAIL
-#   docker compose up -d
+# 两条路径,任选其一:
+#
+# 1. 一键脚本(推荐新手):
+#      curl -L https://raw.githubusercontent.com/cornworld/vanblog/main/vanblog.sh | bash
+#    脚本会自动生成 docker-compose.yml 并启动。
+#
+# 2. 手动编辑本文件:
+#      1) 修改下面 VANBLOG_EMAIL 为你的邮箱
+#      2) docker compose up -d
 #
 # 访问:
 #   https://your-domain/         — 前台
@@ -15,9 +20,9 @@
 # (用你的 Traefik / NPM / Cloudflare Tunnel / 反代 Caddy 终止 TLS 后转给它)
 # 反代必须传递 X-Forwarded-Proto: https,否则 canonical URL 会错。
 #
-# 紧急回退(TLS 故障时):
-#   取消注释 ports 8080,重启容器
-#   http://your-ip:8080/admin/
+# --- 紧急回退(TLS 故障时)---
+# 取消注释 ports 8080,重启容器,通过 http://your-ip:8080/admin/ 修复配置
+# 或运行: ./vanblog.sh maintenance
 
 services:
   vanblog:
