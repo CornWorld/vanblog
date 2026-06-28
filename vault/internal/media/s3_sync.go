@@ -41,7 +41,7 @@ func readSiteS3(app core.App) (S3ConfigUser, error) {
 }
 
 // s3Equal reports whether the user config matches what's already in pb settings.
-// Used to make SyncS3ToSettings idempotent — skip the DB write when nothing changed.
+// Used to make ApplyS3BackendToSettings idempotent — skip the DB write when nothing changed.
 func s3Equal(a S3ConfigUser, b core.S3Config) bool {
 	return a.Enabled == b.Enabled &&
 		a.Bucket == b.Bucket &&
@@ -52,14 +52,15 @@ func s3Equal(a S3ConfigUser, b core.S3Config) bool {
 		a.ForcePathStyle == b.ForcePathStyle
 }
 
-// SyncS3ToSettings reads site.s3Config and pushes it into PocketBase's app
-// settings when the value has changed. PocketBase's BaseApp.NewFilesystem
+// ApplyS3BackendToSettings reads site.s3Config and pushes it into PocketBase's
+// app settings when the value has changed. PocketBase's BaseApp.NewFilesystem
 // auto-routes FileField uploads to S3 when settings.S3.Enabled is true, so
-// this is the only hook needed for S3 support.
+// this is the only place needed for S3 support.
 //
 // Idempotent: returns nil without writing when settings already match site.
-// Safe to call from OnBootstrap (startup) and OnRecordAfterUpdateSuccess("site").
-func SyncS3ToSettings(app core.App) error {
+// Called from startup (via caddy Service OnServe) and from the site-update
+// hook (via Manager.reapplyS3Backend).
+func ApplyS3BackendToSettings(app core.App) error {
 	userCfg, err := readSiteS3(app)
 	if err != nil {
 		return fmt.Errorf("media: read site.s3Config: %w", err)
