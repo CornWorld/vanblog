@@ -10,6 +10,7 @@ package revisions
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"sort"
 
 	"github.com/pocketbase/dbx"
@@ -41,9 +42,28 @@ type Manager struct {
 	app core.App
 }
 
-// New creates a revision Manager.
+// New creates a revision Manager and registers its pb hook subscriptions.
+//
+// Hook: OnRecordUpdateRequest("posts") — fires before any post update HTTP
+// request. We snapshot the *current* (pre-update) state so it's preserved
+// as an immutable revision before the new state overwrites it.
 func New(app core.App) *Manager {
-	return &Manager{app: app}
+	m := &Manager{app: app}
+	app.OnRecordUpdateRequest("posts").BindFunc(m.snapshotBeforePostUpdate)
+	return m
+}
+
+// snapshotBeforePostUpdate captures the current post state as a revision
+// before an HTTP update applies the new state. Failures are logged but
+// non-fatal — a missing revision is better than a blocked post save.
+func (m *Manager) snapshotBeforePostUpdate(e *core.RecordRequestEvent) error {
+	oldRecord, err := m.app.FindRecordById("posts", e.Record.Id)
+	if err == nil && oldRecord != nil {
+		if err := m.CaptureBeforeUpdate(oldRecord, ReasonAutoSave, ""); err != nil {
+			log.Printf("[revisions] capture failed for %s: %v", e.Record.Id, err)
+		}
+	}
+	return e.Next()
 }
 
 // CaptureBeforeUpdate takes a snapshot of the current (pre-update) post state
