@@ -159,6 +159,7 @@ migratecmd.MustRegister(app, app.RootCmd, migratecmd.Config{...})
 
 **修复**:测试中创建 post 时必须显式 `post.Set("deleted", false)`。生产代码里 migration 应设置默认值。
 
+
 ---
 
 ## 7. 未完成项与风险
@@ -166,7 +167,7 @@ migratecmd.MustRegister(app, app.RootCmd, migratecmd.Config{...})
 | 项目 | 状态 | 风险 |
 |---|---|---|
 | Astro 前端 | 仅占位页面 | 产品不可用,需要实现主题 |
-| media S3 驱动 | 未实现 | 云存储用户无法使用 |
+| ~~media S3 驱动~~ | 已实现 + 端到端测试覆盖(2026-06-28) | 通过 site.s3Config JSON 字段同步到 pb settings(`SyncS3ToSettings`),pb `BaseApp.NewFilesystem()` 自动切 S3。secret 明文存 SQLite,用户需自管卷加密。集成测试(`vault/internal/media/s3_integration_test.go` + `vault/internal/hooks/s3_integration_test.go`)覆盖:同步、上传、`/api/files/...` 下载路由、`?thumb=` 缩略图生成、dedup hook —— 6 个测试,通过 MinIO dev-service 跑。**已知限制**:见 §6.3 |
 | Waline 集成 | 仅文档 | 评论系统不可用 |
 | ARM 多架构 | 未验证 | 树莓派/ARM 服务器不可用 |
 | HTTP_ONLY 模式 | 未实现 | 外置反代用户需自行处理 |

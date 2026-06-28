@@ -404,6 +404,7 @@ func insertDefaultSite(db core.App) error {
 	record.Set("outputConfig", json.RawMessage(`{"format":"markdown","trigger":"onUpdate"}`))
 	record.Set("syncConfig", json.RawMessage(`{"branch":"main","schedule":"0 */6 * * *"}`))
 	record.Set("commentsConfig", json.RawMessage(`{}`))
+	record.Set("s3Config", json.RawMessage(`{"enabled":false}`))
 
 	return db.Save(record)
 }

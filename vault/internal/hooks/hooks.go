@@ -235,6 +235,24 @@ func Register(app core.App) {
 		} else {
 			log.Printf("[vanblog] caddy bootstrap: full config applied")
 		}
+
+		// Push site.s3Config into pb settings so NewFilesystem routes
+		// uploads to S3 on the very first request. Safe to call every
+		// startup — it's a no-op when nothing changed.
+		if err := media.SyncS3ToSettings(app); err != nil {
+			log.Printf("[vanblog] S3 sync on bootstrap failed: %v", err)
+		}
+		return nil
+	})
+
+	// Live S3 sync: when admin edits site.s3Config, push to pb settings
+	// immediately so new uploads take the new backend without a restart.
+	app.OnRecordAfterUpdateSuccess("site").BindFunc(func(e *core.RecordEvent) error {
+		go func() {
+			if err := media.SyncS3ToSettings(app); err != nil {
+				log.Printf("[vanblog] S3 sync on site update failed: %v", err)
+			}
+		}()
 		return nil
 	})
 }
