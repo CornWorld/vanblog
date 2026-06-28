@@ -3,6 +3,8 @@ package media
 import (
 	"encoding/json"
 	"testing"
+
+	"github.com/pocketbase/pocketbase/core"
 )
 
 func TestApplyS3BackendToSettings_DisabledByDefault(t *testing.T) {
@@ -28,7 +30,7 @@ func TestApplyS3BackendToSettings_AppliesEnabledConfig(t *testing.T) {
 	if err != nil || site == nil {
 		t.Fatalf("find site: %v", err)
 	}
-	cfg := S3ConfigUser{
+	cfg := core.S3Config{
 		Enabled:        true,
 		Bucket:         "vanblog-test",
 		Region:         "us-east-1",
@@ -77,7 +79,7 @@ func TestApplyS3BackendToSettings_RejectsIncomplete(t *testing.T) {
 	if err != nil || site == nil {
 		t.Fatalf("find site: %v", err)
 	}
-	cfg := S3ConfigUser{Enabled: true, Bucket: "", Region: "", Endpoint: "", AccessKey: "", Secret: ""}
+	cfg := core.S3Config{Enabled: true, Bucket: "", Region: "", Endpoint: "", AccessKey: "", Secret: ""}
 	raw, _ := json.Marshal(cfg)
 	site.Set("s3Config", json.RawMessage(raw))
 	if err := app.Save(site); err != nil {
@@ -94,7 +96,7 @@ func TestApplyS3BackendToSettings_ToggleOff(t *testing.T) {
 
 	// Turn on.
 	site, _ := app.FindFirstRecordByFilter("site", "")
-	onCfg := S3ConfigUser{Enabled: true, Bucket: "b", Region: "r", Endpoint: "https://e", AccessKey: "a", Secret: "s"}
+	onCfg := core.S3Config{Enabled: true, Bucket: "b", Region: "r", Endpoint: "https://e", AccessKey: "a", Secret: "s"}
 	raw, _ := json.Marshal(onCfg)
 	site.Set("s3Config", json.RawMessage(raw))
 	app.Save(site)
