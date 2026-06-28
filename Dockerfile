@@ -28,7 +28,7 @@ COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY sdk/ ./sdk/
 COPY app/package.json app/astro.config.mjs app/tsconfig.json ./app/
 COPY app/src/ ./app/src/
-RUN mkdir -p ./app/public
+COPY app/public/ ./app/public/
 
 # Install deps (monorepo)
 RUN pnpm install --no-frozen-lockfile
@@ -41,7 +41,7 @@ RUN pnpm --filter vanblog-app build
 # Output: /build/app/dist/
 
 # --- Stage 3: PROD image (Caddy + pb + Node SSR) ---
-FROM alpine:3.19 AS prod
+FROM alpine:3.21 AS prod
 
 # Install Caddy + Node.js (for Astro SSR) + ca-certificates
 RUN apk add --no-cache caddy nodejs ca-certificates tzdata
@@ -49,14 +49,20 @@ RUN apk add --no-cache caddy nodejs ca-certificates tzdata
 # Copy Go binary
 COPY --from=go-build /pocketbase /usr/local/bin/vanblog
 
-# Copy Astro build output (SSR server + static client)
-COPY --from=astro-build /build/app/dist /app/dist
+# Copy the whole astro-build workspace so the pnpm symlink layout (app/node_modules/<pkg>
+# → ../../node_modules/.pnpm/...) resolves correctly at the same depth.
+# Astro Node SSR externalizes deps (isomorphic-dompurify, etc.) — keep node_modules.
+COPY --from=astro-build /build /build
+# Symlink so entrypoint's `cd /app/dist` works without changing the script.
+RUN ln -s /build/app /app
 
 # Copy pb_hooks (JSVM hooks: system.pb.js, examples.pb.js)
 COPY vault/pb_hooks /pb_hooks
 
-# Copy Caddyfile
-COPY docker/Caddyfile.prod /etc/caddy/Caddyfile
+# Copy bootstrap.json (minimal maintenance-mode config for Caddy startup)
+# and the legacy Caddyfile as a fallback for VANBLOG_CADDY_MODE=legacy.
+COPY docker/bootstrap.json /etc/caddy/bootstrap.json
+COPY docker/Caddyfile.legacy.prod /etc/caddy/Caddyfile.legacy
 
 # Copy entrypoint
 COPY docker/entrypoint.prod.sh /entrypoint.sh
@@ -90,8 +96,9 @@ COPY app/ /app/src/
 WORKDIR /
 RUN pnpm install --frozen-lockfile || npm install || true
 
-# Copy dev Caddyfile + entrypoint
-COPY docker/Caddyfile.dev /etc/caddy/Caddyfile
+# Copy dev entrypoint (bootstrap.json was already COPYed in the prod stage;
+# Caddyfile.legacy.dev is copied as a fallback for VANBLOG_CADDY_MODE=legacy)
+COPY docker/Caddyfile.legacy.dev /etc/caddy/Caddyfile.legacy.dev
 COPY docker/entrypoint.dev.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 

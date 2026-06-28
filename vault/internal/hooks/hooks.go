@@ -221,12 +221,20 @@ func Register(app core.App) {
 		return se.Next()
 	})
 
-	// --- Caddy bootstrap on startup ---
+	// --- Caddy bootstrap on startup (sync) ---
+	// Phase 3: synchronous LoadConfig so that by the time pb accepts external
+	// requests, Caddy already has the full route table. A failure does NOT
+	// fatal the process — the bootstrap maintenance config stays in place and
+	// the management port (:8080) remains reachable so operators can recover.
 	app.OnBootstrap().BindFunc(func(e *core.BootstrapEvent) error {
 		if err := e.Next(); err != nil {
 			return err
 		}
-		go caddy.BootstrapSync(app, "srv0", "http://127.0.0.1:2019")
+		if err := caddy.BootstrapSync(app, "http://127.0.0.1:2019"); err != nil {
+			log.Printf("[vanblog] caddy bootstrap failed, staying in maintenance mode: %v", err)
+		} else {
+			log.Printf("[vanblog] caddy bootstrap: full config applied")
+		}
 		return nil
 	})
 }
