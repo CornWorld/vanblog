@@ -404,8 +404,12 @@ func insertDefaultSite(db core.App) error {
 	record.Set("outputConfig", json.RawMessage(`{"format":"markdown","trigger":"onUpdate"}`))
 	record.Set("syncConfig", json.RawMessage(`{"branch":"main","schedule":"0 */6 * * *"}`))
 	record.Set("commentsConfig", json.RawMessage(`{}`))
-	record.Set("s3Config", json.RawMessage(`{"enabled":false}`))
-	record.Set("mediaConfig", json.RawMessage(`{"enabled":true,"targetFormat":"webp","quality":84}`))
+
+	// s3Config / mediaConfig defaults are set by their own add_xxx_config
+	// migrations (1782400000 / 1782500000), which add the field AND
+	// backfill the default. Setting them here is a no-op since the
+	// collection schema at this migration step doesn't have those fields
+	// yet — record.Set silently drops them.
 
 	return db.Save(record)
 }
