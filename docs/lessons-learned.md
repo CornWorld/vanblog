@@ -171,3 +171,4 @@ migratecmd.MustRegister(app, app.RootCmd, migratecmd.Config{...})
 | ARM 多架构 | 未验证 | 树莓派/ARM 服务器不可用 |
 | HTTP_ONLY 模式 | 未实现 | 外置反代用户需自行处理 |
 | Caddy admin api 调用方式 | Go 已实现 | routing-strategy.md §9 原计划用 JSVM $http,实际用 Go extend |
+| ~~Go markdown 包~~ | 已删除(2026-06-28) | 原本基于 goldmark 的 `internal/markdown` 是死代码,前端 `posts/[id].astro` 改用 marked + DOMPurify 后 Go 端零调用方。删除后 vault 测试全过,go.mod 同步去掉 goldmark 依赖 |
