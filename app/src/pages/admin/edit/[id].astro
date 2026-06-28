@@ -24,6 +24,13 @@ if (!isNew) {
     return Astro.redirect('/404');
   }
 }
+
+// Pass site.mediaConfig to the editor so its client-side normalization
+// (BMP/TIFF → WebP/AVIF) matches what the user configured. Without this,
+// the editor falls back to the package default (webp/84), which silently
+// diverges from a user who set targetFormat=avif via Admin UI.
+const site = await Astro.locals.getSite();
+const mediaConfig = site?.mediaConfig;
 ---
 <BaseLayout title={isNew ? '新建文章' : '编辑文章'}>
   <h1>{isNew ? '新建文章' : '编辑文章'}</h1>
@@ -39,7 +46,7 @@ if (!isNew) {
     </label>
   </div>
 
-  <ByteMdEditor initialContent={post.content || ''} />
+  <ByteMdEditor initialContent={post.content || ''} mediaConfig={mediaConfig} />
 
   <div style="margin-top: 0.5rem; display: flex; gap: 1rem;">
     <button id="btn-save" type="button">保存</button>

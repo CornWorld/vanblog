@@ -159,6 +159,38 @@ migratecmd.MustRegister(app, app.RootCmd, migratecmd.Config{...})
 
 **修复**:测试中创建 post 时必须显式 `post.Set("deleted", false)`。生产代码里 migration 应设置默认值。
 
+### 6.3 FileField 缩略图与 imageContentTypes 不一致
+
+**坑**:`1782300000_media_filefield_config.go` 接受 9 种 MIME(`image/jpeg/png/gif/webp/svg+xml/bmp/tiff/x-icon/avif`),但 pb 的缩略图生成(`apis/file.go:22`)只覆盖 5 种:`png/jpg/jpeg/gif/webp`。
+
+**根因**:pb 的 thumb 生成走 Go 标准库 `image/*`,原生不支持 BMP/TIFF/AVIF;SVG 是矢量图,resize 无意义。pb 上游已有 issue tracker 没有讨论扩展 `imageContentTypes` —— 这是设计意图,不是 bug。
+
+**症状**:用户上传 BMP / TIFF / SVG / AVIF 后,虽然文件正常存储,但 `?thumb=300x0` 等缩略图请求会**静默 fallback 到原图**(`apis/file.go:181-193` 的 `Fallback to original` 路径)。不会报错,但读者加载文章时拿不到缩略图,带宽浪费。
+
+**决策**:对齐 `feature-decision-matrix.md #11` 的预想 —— **pb 后端契约不变**(继续接受 9 种 MIME、能生成 thumb 就生成、不能就 fallback 原图),**前端做上传前归一化**,且归一化策略由用户在 site 配置项控制:
+
+`site.mediaConfig = { enabled, targetFormat, quality }`(`1782500000_add_site_media_config.go`):
+
+- `enabled=false` 或 `targetFormat='preserve'` — 全部直传,BMP/TIFF/SVG/AVIF 在编辑器右下角状态条提示「此格式不会生成缩略图」
+- `targetFormat='webp'`(默认) — BMP/TIFF/AVIF 走 `@jsquash/webp` 编码(~80KB wasm,动态 import)
+- `targetFormat='avif'` — BMP/TIFF/AVIF 走 `@jsquash/avif` 编码(~8MB wasm,编码耗时 ~5-10x WebP)
+- `quality` 1-100,默认 84(两个 encoder 都接受 0-100 quality 参数,无需手动映射 cqLevel)
+
+**SVG 例外**:无论 targetFormat,SVG 始终直传(矢量图 resize 无意义,wasm 解码也帮不上)。
+
+**AVIF 直传通道**:`1782500001_media_filefield_add_avif.go` 给 FileField 加了 `image/avif` MIME,这样 preserve 模式用户能直传 AVIF(不被 pb 拒收)。pb 不会生成 thumb,但 fallback 行为与 BMP/SVG 一致。
+
+**构建坑(关键)**:@jsquash/avif 内含多线程 worker(`avif_enc_mt.js`),Vite 默认 `worker.format='iife'` 无法打包 ESM-only 的 worker → 构建报 `Invalid value "iife" for option "worker.format"`。`app/astro.config.mjs` 必须显式配 `worker.format='es'` + `optimizeDeps.exclude` 排除 `@jsquash/*`。详见 [jSquash#37](https://github.com/jamsinclair/jSquash/issues/37)。
+
+**实现位置**:
+- `app/src/lib/media/normalizeImage.ts` — 归一化逻辑(配置驱动)
+- `app/src/components/ByteMdEditor.astro::uploadImages` — 集成点 + 状态条
+- `app/src/pages/admin/edit/[id].astro` — 从 `Astro.locals.getSite()` 拿 mediaConfig 透传给编辑器
+
+**验证覆盖**:
+- `vault/internal/media/s3_integration_test.go::TestS3Integration_Thumbnail` — PNG 路径 thumb 端到端生成 + 写回 S3
+- `vault/internal/media/s3_integration_test.go::TestS3Integration_UnsupportedThumbFormats` — **锁定后端契约**:BMP/AVIF/SVG 上传成功但 thumb 静默 fallback 原图,不写 thumb 对象。前端归一化是上层产品决策,这层契约不应破坏。
+- 浏览器侧(BMP/TIFF → WebP/AVIF 转换)无自动化测试,依赖人工 smoke。
 
 ---
 
@@ -170,6 +202,7 @@ migratecmd.MustRegister(app, app.RootCmd, migratecmd.Config{...})
 | ~~media S3 驱动~~ | 已实现 + 端到端测试覆盖(2026-06-28) | 通过 site.s3Config JSON 字段同步到 pb settings(`SyncS3ToSettings`),pb `BaseApp.NewFilesystem()` 自动切 S3。secret 明文存 SQLite,用户需自管卷加密。集成测试(`vault/internal/media/s3_integration_test.go` + `vault/internal/hooks/s3_integration_test.go`)覆盖:同步、上传、`/api/files/...` 下载路由、`?thumb=` 缩略图生成、dedup hook —— 6 个测试,通过 MinIO dev-service 跑。**已知限制**:见 §6.3 |
 | Waline 集成 | 仅文档 | 评论系统不可用 |
 | ARM 多架构 | 未验证 | 树莓派/ARM 服务器不可用 |
-| HTTP_ONLY 模式 | 未实现 | 外置反代用户需自行处理 |
+| ~~HTTP_ONLY 模式~~ | 已实现(2026-06-28) | `VANBLOG_HTTP_ONLY=1` 让 Caddy 只听 :80、不配 TLS app,外置反代终止 TLS。需外置反代传 `X-Forwarded-Proto: https`,否则 canonical URL 错。详见 `docs/https-strategy.md §7` |
+| ~~外置控制脚本~~ | 已实现(2026-06-28) | 仓库根 `vanblog.sh`,11 项菜单(install/config/start/stop/restart/update/log/backup/restore/maintenance/uninstall)。模板 compose 内嵌脚本,模板更新需重新分发脚本 |
 | Caddy admin api 调用方式 | Go 已实现 | routing-strategy.md §9 原计划用 JSVM $http,实际用 Go extend |
 | ~~Go markdown 包~~ | 已删除(2026-06-28) | 原本基于 goldmark 的 `internal/markdown` 是死代码,前端 `posts/[id].astro` 改用 marked + DOMPurify 后 Go 端零调用方。删除后 vault 测试全过,go.mod 同步去掉 goldmark 依赖 |

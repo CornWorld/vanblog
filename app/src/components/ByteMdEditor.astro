@@ -1,12 +1,15 @@
 ---
 import 'bytemd/dist/index.css'
 import 'highlight.js/styles/github.css'
+import type { MediaConfig } from '../lib/media/normalizeImage';
 
-interface Props { initialContent?: string; postId?: string }
-const { initialContent = '', postId } = Astro.props
+interface Props { initialContent?: string; postId?: string; mediaConfig?: MediaConfig }
+const { initialContent = '', postId, mediaConfig } = Astro.props
 ---
 <div id="bytemd-editor" data-initial={initialContent} style="height: calc(100vh - 200px);"></div>
 <input type="hidden" id="post-content" value={initialContent} />
+<div id="upload-status" aria-live="polite" style="position: fixed; bottom: 1rem; right: 1rem; max-width: 360px; font-size: 13px; color: #555; background: rgba(255,255,255,0.95); border: 1px solid #ddd; border-radius: 6px; padding: 8px 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: none; z-index: 100;"></div>
+{mediaConfig && <script type="application/json" id="media-config">{JSON.stringify(mediaConfig)}</script>}
 
 <script>
   import { Editor } from 'bytemd';
@@ -19,7 +22,48 @@ const { initialContent = '', postId } = Astro.props
   import { visit } from 'unist-util-visit';
   import remarkDirective from 'remark-directive';
   import { emoji } from '../lib/bytemd-plugins/emoji';
+  import { normalizeImage, type MediaConfig } from '../lib/media/normalizeImage';
   import 'katex/dist/katex.css';
+
+  // Read site.mediaConfig injected server-side via #media-config JSON tag.
+  // Falls back to the package default ({enabled:true, targetFormat:'webp',
+  // quality:84}) when the tag is absent (e.g. site record not yet loaded).
+  function readMediaConfig(): MediaConfig | undefined {
+    const tag = document.getElementById('media-config');
+    if (!tag?.textContent) return undefined;
+    try {
+      return JSON.parse(tag.textContent);
+    } catch {
+      console.warn('[editor] malformed #media-config, using normalizeImage defaults');
+      return undefined;
+    }
+  }
+  const MEDIA_CONFIG = readMediaConfig();
+
+  // Quick check whether a file will trigger wasm conversion (used to
+  // pre-show the "正在转换…" status before normalizeImage awaits).
+  // Reflects the same source-type set as normalizeImage.SOURCE_NEEDS_REENCODE.
+  const NEEDS_NORMALIZATION = (f) => {
+    const cfg = MEDIA_CONFIG;
+    const enabled = !cfg || cfg.enabled;
+    const preserve = enabled && cfg?.targetFormat === 'preserve';
+    if (!enabled || preserve) return false; // no wasm path active
+    return ['image/bmp', 'image/x-ms-bmp', 'image/tiff', 'image/avif'].includes(f.type) ||
+      /\.(bmp|tif|tiff|avif)$/i.test(f.name);
+  };
+
+  // Status bar helper — non-modal inline notification at the bottom-right.
+  // Used for "正在转换 X…" / "X 不会生成缩略图" / similar transient notes.
+  // Auto-hides after `ttl` ms (default 3s); pass 0 to keep until replaced.
+  let statusTimer = null;
+  function showStatus(msg, ttl = 3000) {
+    const el = document.getElementById('upload-status');
+    if (!el) return;
+    el.textContent = msg;
+    el.style.display = 'block';
+    if (statusTimer) clearTimeout(statusTimer);
+    if (ttl > 0) statusTimer = setTimeout(() => { el.style.display = 'none'; }, ttl);
+  }
 
   // rehype: 标题加 data-id + 链接加 target=_blank (一次遍历)
   const rehypeEnhance = () => (tree) => visit(tree, (n) => {
@@ -64,12 +108,26 @@ const { initialContent = '', postId } = Astro.props
 
   // 图片上传到 pb media (拖拽/粘贴通用)
   // 失败时跳过该文件；全部失败时 alert 提示
+  // 上传前对 BMP/TIFF 走 wasm 转 WebP，SVG 直接放行 + 状态条提示
   async function uploadImages(files) {
     const pb = window.__pb;
     if (!pb) return [];
 
+    // Normalize each file (BMP/TIFF → WebP via wasm, SVG passes through).
+    // Sequential so the status bar reads naturally; upload phase is the
+    // slow part and that's still parallel below.
+    const normalized = [];
+    const notes = [];
+    for (const f of files) {
+      if (NEEDS_NORMALIZATION(f)) showStatus(`正在转换 ${f.name} …`);
+      const { file: out, note } = await normalizeImage(f, MEDIA_CONFIG);
+      normalized.push(out);
+      if (note) notes.push(`${f.name}: ${note}`);
+    }
+    if (notes.length) showStatus(notes.join('\n'), 6000);
+
     const results = await Promise.all(
-      files.map(async (file) => {
+      normalized.map(async (file, i) => {
         try {
           const fd = new FormData();
           fd.append('file', file);
@@ -78,7 +136,7 @@ const { initialContent = '', postId } = Astro.props
           const rec = await pb.collection('media').create(fd);
           // Relative URL — works in both SSR and CSR via Caddy /api/files proxy
           const url = `/api/files/media/${rec.id}/${rec.file}`;
-          return { url, alt: file.name, title: file.name };
+          return { url, alt: files[i].name, title: files[i].name };
         } catch (e) {
           console.error('[editor] image upload failed:', e);
           return null;

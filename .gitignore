@@ -6,9 +6,13 @@
 
 # Astro 生成的本地缓存类型与设置
 app/.astro/
+.astro/
 
 # Dependencies
 node_modules/
+
+# Lock files — pnpm 项目，npm 残留物不进版本控制
+package-lock.json
 
 # Build output
 sdk/dist/
