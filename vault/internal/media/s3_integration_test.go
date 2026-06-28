@@ -80,7 +80,7 @@ func TestS3Integration_SyncThenUpload(t *testing.T) {
 	if err != nil || site == nil {
 		t.Fatalf("find site: %v", err)
 	}
-	cfg := S3ConfigUser{
+	cfg := core.S3Config{
 		Enabled:        true,
 		Bucket:         bucket,
 		Region:         "us-east-1", // MinIO ignores but requires non-empty
@@ -140,7 +140,7 @@ func TestS3Integration_SyncThenUpload(t *testing.T) {
 	}
 
 	// --- Step 6: toggle off → falls back to local ---
-	site.Set("s3Config", mustJSONRaw(S3ConfigUser{Enabled: false}))
+	site.Set("s3Config", mustJSONRaw(core.S3Config{Enabled: false}))
 	if err := app.Save(site); err != nil {
 		t.Fatalf("save site (disabled): %v", err)
 	}
@@ -177,7 +177,7 @@ func TestS3Integration_BadEndpoint(t *testing.T) {
 	}
 
 	site, _ := app.FindFirstRecordByFilter("site", "")
-	cfg := S3ConfigUser{
+	cfg := core.S3Config{
 		Enabled:        true,
 		Bucket:         "vanblog-nonexistent",
 		Region:         "us-east-1",
@@ -253,7 +253,7 @@ func TestS3Integration_FileDownloadRoute(t *testing.T) {
 
 	// Configure S3 and sync.
 	site, _ := app.FindFirstRecordByFilter("site", "")
-	cfg := S3ConfigUser{
+	cfg := core.S3Config{
 		Enabled:        true,
 		Bucket:         bucket,
 		Region:         "us-east-1",
@@ -341,7 +341,7 @@ func TestS3Integration_FileDownloadRoute(t *testing.T) {
 }
 
 // mustJSONRaw is a tiny helper used by the integration tests to wrap a
-// S3ConfigUser as a json.RawMessage acceptable by record.Set.
+// core.S3Config as a json.RawMessage acceptable by record.Set.
 func mustJSONRaw(v interface{}) []byte {
 	b, err := json.Marshal(v)
 	if err != nil {
@@ -369,7 +369,7 @@ func TestS3Integration_Thumbnail(t *testing.T) {
 	}
 
 	site, _ := app.FindFirstRecordByFilter("site", "")
-	cfg := S3ConfigUser{
+	cfg := core.S3Config{
 		Enabled: true, Bucket: bucket, Region: "us-east-1",
 		Endpoint: endpoint, AccessKey: accessKey, Secret: secretKey,
 		ForcePathStyle: true,
@@ -512,7 +512,7 @@ func TestS3Integration_UnsupportedThumbFormats(t *testing.T) {
 			}
 
 			site, _ := app.FindFirstRecordByFilter("site", "")
-			cfg := S3ConfigUser{
+			cfg := core.S3Config{
 				Enabled: true, Bucket: bucket, Region: "us-east-1",
 				Endpoint: endpoint, AccessKey: accessKey, Secret: secretKey,
 				ForcePathStyle: true,
@@ -627,7 +627,7 @@ func TestS3Integration_DedupComponentsAgainstS3(t *testing.T) {
 	}
 
 	site, _ := app.FindFirstRecordByFilter("site", "")
-	cfg := S3ConfigUser{
+	cfg := core.S3Config{
 		Enabled: true, Bucket: bucket, Region: "us-east-1",
 		Endpoint: endpoint, AccessKey: accessKey, Secret: secretKey,
 		ForcePathStyle: true,
