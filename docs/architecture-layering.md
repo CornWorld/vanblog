@@ -147,7 +147,7 @@ vault/
       generator.go               # RSS/Atom 生成
     sitemap/
       generator.go               # Sitemap 生成
-    hooks/                       # ★ JSVM 绑定层(把 Go SDK 暴露给 JSVM)
+    hooks/                       # JSVM 绑定层(把 Go SDK 暴露给 JSVM)
       bind_article.go
       bind_media.go
       bind_migration.go
@@ -243,6 +243,101 @@ onRecordUpdateRequest((e) => {
   });
 }, "posts");
 ```
+
+### 4.4 Manager 自挂 pb hook 模式（启动架构）
+
+**装配点 = pb 的 hook 系统本身**，不再额外加 vanblog 自己的 Register/Bootstrap 层。
+
+每个 manager 在 `New(app)` 时自挂所需的 hook（事件订阅、HTTP 路由、启动初始化）。main.go 只是构造清单 + `pb.Start()`：
+
+```go
+// vault/main.go
+func main() {
+    app := pocketbase.New()
+    jsvm.MustRegister(app, jsvm.Config{...})
+    migratecmd.MustRegister(app, app.RootCmd, migratecmd.Config{...})
+
+    // 每个 manager 自挂 pb hook。顺序只影响同事件 Bind 顺序，
+    // 无跨 manager 依赖。
+    _ = revisions.New(app)
+    _ = visits.New(app)
+    _ = media.New(app)
+    _ = article.New(app)
+    migration.RegisterRoutes(app)
+    _ = feed.New(app)
+    _ = caddy.New(app)
+
+    app.Start()
+}
+```
+
+三种典型模式（来自实际代码）：
+
+**事件 hook**（`internal/revisions/revisions.go`）：
+
+```go
+func New(app core.App) *Manager {
+    m := &Manager{app: app}
+    app.OnRecordUpdateRequest("posts").BindFunc(m.snapshotBeforePostUpdate)
+    return m
+}
+func (m *Manager) snapshotBeforePostUpdate(e *core.RecordRequestEvent) error {
+    // 业务逻辑
+    return e.Next()
+}
+```
+
+**HTTP 路由**（`internal/feed/routes.go`）：
+
+```go
+func New(app core.App) *Service {
+    s := &Service{app: app}
+    app.OnServe().BindFunc(func(se *core.ServeEvent) error {
+        se.Router.GET("/api/feed.xml", s.serveRSS)
+        se.Router.GET("/api/atom.xml", s.serveAtom)
+        se.Router.GET("/api/sitemap.xml", s.serveSitemap)
+        return se.Next()
+    })
+    return s
+}
+```
+
+**启动初始化 + 路由 + 事件**（`internal/caddy/caddy.go`）：
+
+```go
+func New(app core.App) *Service {
+    s := &Service{app: app, caddyAdminURL: DefaultCaddyAdminURL}
+    app.OnServe().BindFunc(func(se *core.ServeEvent) error {
+        se.Router.GET("/api/hooks/caddy/ask", s.handleAskEndpoint)
+        se.Router.GET("/api/vanblog/tls/status", s.handleTLSStatusEndpoint)
+        if os.Getenv("VANBLOG_SKIP_CADDY_SYNC") == "1" {
+            log.Printf("[caddy] VANBLOG_SKIP_CADDY_SYNC=1: skipping config push")
+        } else if err := s.pushConfigToAdminAPI(); err != nil {
+            log.Printf("[caddy] config push failed: %v", err)
+        }
+        return se.Next()
+    })
+    return s
+}
+```
+
+**为什么不用其他方案**：
+
+| 方案 | 否决原因 |
+|------|----------|
+| `wire` / `fx` DI 框架 | pb 自己 own 生命周期（Bootstrap → Migrate → Serve），DI 框架跟它打架。痛点是「副作用时序」不是「对象图装配」。 |
+| runtime 包（Mode 枚举 + Bootstrap 函数） | 又一层抽象，命名空洞（`Bootstrap` / `Sync` 看不出业务意义）。 |
+| 阶段接口（PhasePreServe / PhaseOnServe） | 本质还是主程序在做事，只是改写法。 |
+| 命名约定 + 强制接口 | 「又臭又长」—— 一个文件 8 行 register 函数堆叠。 |
+
+**自挂 hook 的关键性质**：
+
+1. **顺序无关**：manager 之间通过 pb 事件解耦，无跨 manager 调用。
+2. **dev/prod 自然涌现**：dev 模式不需要 Mode 枚举，caddy manager 自己读 env 决定是否 `pushConfigToAdminAPI`。
+3. **失败可恢复**：`pushConfigToAdminAPI` 失败不崩 pb —— 维护配置留在 Caddy，pb 的 :8080 管理口仍可达。
+4. **测试用同一路径**：测试里 `Manager.New(app)` 即触发完整 hook 绑定，不需要单独的 setup helper。
+
+详见 `vault/internal/{caddy,media,article,feed,migration,revisions,visits}/` 各包入口。
 
 ---
 
