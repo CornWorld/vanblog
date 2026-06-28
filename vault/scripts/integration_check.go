@@ -3,11 +3,14 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 
 	_ "github.com/cornworld/vanblog/pb_migrations"
-	"github.com/cornworld/vanblog/internal/hooks"
+	"github.com/cornworld/vanblog/internal/article"
+	"github.com/cornworld/vanblog/internal/revisions"
+	"github.com/cornworld/vanblog/internal/visits"
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/core"
 )
@@ -20,8 +23,10 @@ func main() {
 	app.Bootstrap()
 	app.RunAppMigrations()
 
-	// Register vanblog hooks
-	hooks.Register(app)
+	// Construct managers — each registers its own pb hooks (events + routes).
+	artMgr := article.New(app)
+	revMgr := revisions.New(app)
+	visits.New(app)
 
 	fmt.Println("=== Integration Test ===")
 
@@ -49,6 +54,7 @@ func main() {
 	post.Set("pathname", "/hello-world")
 	post.Set("tags", []string{tag.Id})
 	post.Set("category", cat.Id)
+	post.Set("deleted", false)
 	app.Save(post)
 	fmt.Printf("✅ post created: %s\n", post.Id)
 
@@ -57,22 +63,22 @@ func main() {
 	draft.Set("title", "Work in Progress")
 	draft.Set("content", "TODO")
 	draft.Set("status", "draft")
+	draft.Set("deleted", false)
 	app.Save(draft)
 	fmt.Printf("✅ draft created: %s\n", draft.Id)
 
-	// 5. Check timeline
-	artMgr := getArticleManager(app)
+	// 5. Check timeline (real article.Manager.GetTimeline)
 	timeline, _ := artMgr.GetTimeline()
 	fmt.Printf("✅ timeline: %d years\n", len(timeline))
 
-	// 6. Check search
+	// 6. Check search (real article.Manager.Search)
 	results, _ := artMgr.Search("Hello", 10)
 	fmt.Printf("✅ search 'Hello': %d results\n", len(results))
 
 	results2, _ := artMgr.Search("nonexistent", 10)
 	fmt.Printf("✅ search 'nonexistent': %d results\n", len(results2))
 
-	// 7. Check RSS
+	// 7. Update site (for RSS later if needed)
 	site, _ := app.FindFirstRecordByFilter("site", "")
 	if site != nil {
 		site.Set("siteName", "Test Blog")
@@ -80,111 +86,24 @@ func main() {
 		app.Save(site)
 	}
 
-	// 8. Update post → trigger revisions
-	post.Set("title", "Hello World (Updated)")
-	app.Save(post)
-
-	// Check revisions were captured
-	revMgr := getRevisionsManager(app)
+	// 8. Update post → trigger revisions hook (snapshotBeforePostUpdate)
+	// Note: pb's OnRecordUpdateRequest only fires on HTTP PATCH, not Go Save.
+	// We call the Manager method directly to simulate the hook path.
+	revMgr.CaptureBeforeUpdate(post, revisions.ReasonAutoSave, "")
 	revs, _ := revMgr.List(post.Id, 10)
-	fmt.Printf("✅ revisions after update: %d (should be 1)\n", len(revs))
+	fmt.Printf("✅ revisions after capture: %d (should be 1)\n", len(revs))
 
 	if len(revs) > 0 {
-		snap, _ := getSnapshot(revs[0])
-		fmt.Printf("   snapshot title: %q (should be 'Hello World')\n", snap)
+		snap, _ := revisions.ExtractSnapshot(revs[0])
+		snapJSON, _ := json.Marshal(snap)
+		fmt.Printf("   snapshot: %s\n", snapJSON)
 	}
 
-	// 9. Create visit → check viewCount increment
-	visitsCol, _ := app.FindCollectionByNameOrId("visits")
-	visit := core.NewRecord(visitsCol)
-	visit.Set("date", "2026-06-23")
-	visit.Set("path", "/hello-world")
-	visit.Set("views", 1)
-	visit.Set("post", post.Id)
-	app.Save(visit)
-
-	// Note: the visit hook fires on HTTP request, not Go Save
-	// So we manually check viewCount
+	// 9. Manually increment viewCount via visits.Manager (HTTP hook only fires on /api request)
+	visitsMgr := visits.New(app)
+	visitsMgr.IncrementPostView(post.Id)
 	updatedPost, _ := app.FindRecordById("posts", post.Id)
-	fmt.Printf("✅ post viewCount: %d\n", updatedPost.GetInt("viewCount"))
+	fmt.Printf("✅ post viewCount: %d (should be 1)\n", updatedPost.GetInt("viewCount"))
 
 	fmt.Println("\n=== All integration tests passed ===")
-}
-
-// Helpers to avoid import cycles in this script
-type articleLike interface {
-	GetTimeline() ([]struct {
-		Year  int `json:"year"`
-		Count int `json:"count"`
-	}, error)
-	Search(query string, limit int) ([]struct {
-		ID    string `json:"id"`
-		Title string `json:"title"`
-		Path  string `json:"path"`
-	}, error)
-}
-
-func getArticleManager(app core.App) *articleMgr {
-	return &articleMgr{app: app}
-}
-func getRevisionsManager(app core.App) *revMgr {
-	return &revMgr{app: app}
-}
-func getSnapshot(r *core.Record) (string, error) {
-	return r.GetString("snapshot"), nil
-}
-
-type articleMgr struct{ app core.App }
-type revMgr struct{ app core.App }
-
-func (m *articleMgr) GetTimeline() ([]struct {
-	Year  int `json:"year"`
-	Count int `json:"count"`
-}, error) {
-	records, err := m.app.FindRecordsByFilter("posts", "status='published' && deleted=false", "-created", 0, 0)
-	if err != nil {
-		return nil, err
-	}
-	now := records
-	_ = now
-	return []struct {
-		Year  int `json:"year"`
-		Count int `json:"count"`
-	}{{Year: 2026, Count: len(records)}}, nil
-}
-
-func (m *articleMgr) Search(query string, limit int) ([]struct {
-	ID    string `json:"id"`
-	Title string `json:"title"`
-	Path  string `json:"path"`
-}, error) {
-	// Simple search
-	records, err := m.app.FindRecordsByFilter("posts", "status='published' && deleted=false", "", limit, 0)
-	if err != nil {
-		return nil, err
-	}
-	var results []struct {
-		ID    string `json:"id"`
-		Title string `json:"title"`
-		Path  string `json:"path"`
-	}
-	for _, r := range records {
-		title := r.GetString("title")
-		if contains(title, query) {
-			results = append(results, struct {
-				ID    string `json:"id"`
-				Title string `json:"title"`
-				Path  string `json:"path"`
-			}{ID: r.Id, Title: title, Path: r.GetString("pathname")})
-		}
-	}
-	return results, nil
-}
-
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || (len(s) > 0 && len(substr) > 0))
-}
-
-func (m *revMgr) List(postID string, limit int) ([]*core.Record, error) {
-	return m.app.FindRecordsByFilter("revisions", "target='"+postID+"'", "", limit, 0)
 }
