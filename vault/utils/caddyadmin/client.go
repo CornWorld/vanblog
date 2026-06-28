@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -27,7 +28,6 @@ func (e *APIError) Error() string {
 //
 //	c := caddyadmin.NewClient("http://127.0.0.1:2019")
 //	cfg, _ := c.GetConfig()
-//	c.AddRoute(caddyadmin.Route{ID: "my-proxy", ...})
 type Client struct {
 	baseURL string
 	http    *http.Client
@@ -62,9 +62,63 @@ func (c *Client) GetConfig() (json.RawMessage, error) {
 
 // LoadConfig replaces the entire Caddy configuration atomically.
 // POST /load
+//
 // The new config replaces the old in one swap; Caddy validates before applying.
+//
+// Caddy restarts its admin HTTP endpoint as part of applying a new config,
+// which races with the HTTP response for the /load request itself. The first
+// attempt therefore frequently surfaces as an EOF / connection-reset-by-peer
+// or a transient 5xx even though the config was accepted. To hide this from
+// callers, LoadConfig retries up to 3 times with a 500ms delay between
+// attempts, tolerating those transient errors. A non-retryable error (e.g.
+// 400 Bad Request from an invalid config) is returned immediately.
 func (c *Client) LoadConfig(config json.RawMessage) error {
-	return c.postRaw("/load", config, nil)
+	var lastErr error
+	for i := 0; i < 3; i++ {
+		err := c.postRaw("/load", config, nil)
+		if err == nil {
+			return nil
+		}
+		lastErr = err
+		if !isRetryableLoadError(err) {
+			return err
+		}
+		time.Sleep(500 * time.Millisecond)
+	}
+	return fmt.Errorf("caddyadmin: LoadConfig failed after 3 retries: %w", lastErr)
+}
+
+// ValidateConfig runs Caddy's dry-run validation on the config without
+// applying it. POST /load?validate_only=true.
+//
+// Useful for sanity-checking a generated config (e.g. from BuildFullConfig)
+// before committing it via LoadConfig. A nil error means Caddy accepted the
+// config as well-formed.
+func (c *Client) ValidateConfig(config json.RawMessage) error {
+	return c.postRaw("/load?validate_only=true", config, nil)
+}
+
+// isRetryableLoadError reports whether err looks like the kind of transient
+// failure Caddy produces while restarting its admin endpoint during /load:
+//   - EOF / connection reset by peer / broken pipe (socket torn down mid-response)
+//   - 5xx from the admin API (admin not yet back up)
+//
+// 4xx errors (bad config) and everything else are NOT retryable.
+func isRetryableLoadError(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := err.Error()
+	if strings.Contains(msg, "EOF") ||
+		strings.Contains(msg, "connection reset") ||
+		strings.Contains(msg, "broken pipe") {
+		return true
+	}
+	var apiErr *APIError
+	if errors.As(err, &apiErr) {
+		return apiErr.StatusCode >= 500
+	}
+	return false
 }
 
 // GetConfigPath returns a specific subtree of the Caddy configuration.
@@ -75,140 +129,10 @@ func (c *Client) GetConfigPath(path string) (json.RawMessage, error) {
 	return c.getRaw("/config/" + strings.TrimLeft(path, "/"))
 }
 
-// PatchConfigPath updates a specific subtree of the Caddy configuration.
-// PATCH /config/{path}
-//
-// The value is JSON-encoded and sent as the request body.
-// Caddy applies the patch atomically.
-func (c *Client) PatchConfigPath(path string, value any) error {
-	body, err := json.Marshal(value)
-	if err != nil {
-		return fmt.Errorf("caddyadmin: failed to marshal patch value: %w", err)
-	}
-	return c.patchRaw("/config/"+strings.TrimLeft(path, "/"), body)
-}
+// --- HTTP server status inspection ---
 
-// PutConfigPath replaces a specific subtree of the Caddy configuration.
-// PUT /config/{path}
-func (c *Client) PutConfigPath(path string, value any) error {
-	body, err := json.Marshal(value)
-	if err != nil {
-		return fmt.Errorf("caddyadmin: failed to marshal put value: %w", err)
-	}
-	return c.putRaw("/config/"+strings.TrimLeft(path, "/"), body)
-}
-
-// DeleteConfigPath deletes a specific subtree of the Caddy configuration.
-// DELETE /config/{path}
-func (c *Client) DeleteConfigPath(path string) error {
-	return c.deleteRaw("/config/" + strings.TrimLeft(path, "/"))
-}
-
-// --- TLS management ---
-
-// GetTLSSubjects returns the current TLS automation policy subjects.
-// Equivalent to: GET /config/apps/tls/automation/policies/0/subjects
-func (c *Client) GetTLSSubjects() ([]string, error) {
-	raw, err := c.GetConfigPath("apps/tls/automation/policies/0/subjects")
-	if err != nil {
-		return nil, err
-	}
-	if len(raw) == 0 || string(raw) == "null" {
-		return nil, nil
-	}
-	var subjects []string
-	if err := json.Unmarshal(raw, &subjects); err != nil {
-		return nil, fmt.Errorf("caddyadmin: failed to decode TLS subjects: %w", err)
-	}
-	return subjects, nil
-}
-
-// UpdateTLSSubjects sets the TLS automation policy subjects (domain whitelist for on-demand TLS).
-// PATCH /config/apps/tls/automation/policies/0/subjects
-func (c *Client) UpdateTLSSubjects(domains []string) error {
-	return c.PatchConfigPath("apps/tls/automation/policies/0/subjects", domains)
-}
-
-// GetAutocertDomains returns the list of domains with automatic certificate management.
-// GET /config/apps/tls/certificates/automate
-func (c *Client) GetAutocertDomains() ([]string, error) {
-	raw, err := c.GetConfigPath("apps/tls/certificates/automate")
-	if err != nil {
-		return nil, err
-	}
-	if len(raw) == 0 || string(raw) == "null" {
-		return nil, nil
-	}
-	var domains []string
-	if err := json.Unmarshal(raw, &domains); err != nil {
-		return nil, fmt.Errorf("caddyadmin: failed to decode autocert domains: %w", err)
-	}
-	return domains, nil
-}
-
-// UpdateAutocertDomains sets the list of domains for automatic certificate management.
-// PATCH /config/apps/tls/certificates/automate
-func (c *Client) UpdateAutocertDomains(domains []string) error {
-	return c.PatchConfigPath("apps/tls/certificates/automate", domains)
-}
-
-// --- HTTP server ---
-
-// SetHTTPRedirect enables or disables automatic HTTP→HTTPS redirect.
-// When enabled, Caddy wraps the HTTPS server's listener with http_redirect.
-//
-// POST/DELETE /config/apps/http/servers/{serverName}/listener_wrappers
-func (c *Client) SetHTTPRedirect(serverName string, enable bool) error {
-	path := fmt.Sprintf("apps/http/servers/%s/listener_wrappers", serverName)
-	if enable {
-		wrappers := []map[string]string{{"wrapper": "http_redirect"}}
-		return c.postRaw("/config/"+path, mustJSON(wrappers), nil)
-	}
-	return c.deleteRaw("/config/" + path)
-}
-
-// --- Route management (based on @id) ---
-
-// AddRoute appends a route to the specified server's route list.
-// Caddy's "..." append doesn't work for nested arrays, so we
-// read the current routes, append, and PATCH the whole array back.
-func (c *Client) AddRoute(serverName string, route Route) error {
-	path := fmt.Sprintf("apps/http/servers/%s/routes", serverName)
-	// Read existing routes
-	existing, err := c.GetRoutes(serverName)
-	if err != nil {
-		return fmt.Errorf("caddyadmin: AddRoute: failed to read existing routes: %w", err)
-	}
-	// Append new route
-	updated := append(existing, route)
-	// Write back
-	return c.PatchConfigPath(path, updated)
-}
-
-// RemoveRoute removes a route by its @id.
-// DELETE /id/{id}
-func (c *Client) RemoveRoute(id string) error {
-	return c.deleteRaw("/id/" + id)
-}
-
-// GetRoute returns a route by its @id.
-// GET /id/{id}
-func (c *Client) GetRoute(id string) (*Route, error) {
-	raw, err := c.getRaw("/id/" + id)
-	if err != nil {
-		return nil, err
-	}
-	if len(raw) == 0 || string(raw) == "null" {
-		return nil, nil
-	}
-	var route Route
-	if err := json.Unmarshal(raw, &route); err != nil {
-		return nil, fmt.Errorf("caddyadmin: failed to decode route: %w", err)
-	}
-	return &route, nil
-}
-
-// GetRoutes returns all routes for the specified server.
+// GetRoutes returns all routes for the specified server. Read-only status
+// inspection used by GetTLSStatus to detect "still in maintenance mode".
 // GET /config/apps/http/servers/{serverName}/routes
 func (c *Client) GetRoutes(serverName string) ([]Route, error) {
 	path := fmt.Sprintf("apps/http/servers/%s/routes", serverName)
@@ -224,6 +148,24 @@ func (c *Client) GetRoutes(serverName string) ([]Route, error) {
 		return nil, fmt.Errorf("caddyadmin: failed to decode routes: %w", err)
 	}
 	return routes, nil
+}
+
+// GetAutocertDomains returns the list of domains with automatic certificate
+// management. Used by GetTLSStatus to show which domains currently have certs.
+// GET /config/apps/tls/certificates/automate
+func (c *Client) GetAutocertDomains() ([]string, error) {
+	raw, err := c.GetConfigPath("apps/tls/certificates/automate")
+	if err != nil {
+		return nil, err
+	}
+	if len(raw) == 0 || string(raw) == "null" {
+		return nil, nil
+	}
+	var domains []string
+	if err := json.Unmarshal(raw, &domains); err != nil {
+		return nil, fmt.Errorf("caddyadmin: failed to decode autocert domains: %w", err)
+	}
+	return domains, nil
 }
 
 // --- Low-level HTTP helpers ---
@@ -246,33 +188,6 @@ func (c *Client) postRaw(path string, body []byte, out any) error {
 	if out != nil {
 		return json.NewDecoder(resp.Body).Decode(out)
 	}
-	return nil
-}
-
-func (c *Client) patchRaw(path string, body []byte) error {
-	resp, err := c.do(http.MethodPatch, path, bytes.NewReader(body))
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-	return nil
-}
-
-func (c *Client) putRaw(path string, body []byte) error {
-	resp, err := c.do(http.MethodPut, path, bytes.NewReader(body))
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-	return nil
-}
-
-func (c *Client) deleteRaw(path string) error {
-	resp, err := c.do(http.MethodDelete, path, nil)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
 	return nil
 }
 
@@ -299,9 +214,4 @@ func (c *Client) do(method, path string, body io.Reader) (*http.Response, error)
 		return nil, &APIError{StatusCode: resp.StatusCode, Body: string(errBody)}
 	}
 	return resp, nil
-}
-
-func mustJSON(v any) []byte {
-	b, _ := json.Marshal(v)
-	return b
 }

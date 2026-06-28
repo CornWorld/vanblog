@@ -2,6 +2,7 @@ package caddyadmin
 
 import (
 	"encoding/json"
+	"net/http"
 	"os"
 	"os/exec"
 	"strings"
@@ -132,158 +133,114 @@ func TestLoadAndGetConfigPath(t *testing.T) {
 	}
 }
 
-func TestAddAndRemoveRoute(t *testing.T) {
-	c := testClient(t)
-	resetConfig(t, c)
+// TestLoadConfigRetry verifies that LoadConfig retries past transient
+// connection-level failures (EOF / connection-reset) that Caddy produces when
+// it restarts its admin endpoint as part of applying a new config.
+//
+// This is a mock-based test (no real Caddy needed). It mirrors the behavior
+// documented in client_test.go:89-99's resetConfig helper.
+func TestLoadConfigRetry(t *testing.T) {
+	server, state := newMockCaddy(t)
+	c := NewClient(server.URL)
 
-	route := Route{
-		ID: "test-proxy",
-		Match: []MatchRule{{
-			Path: []string{"/api/internal/*"},
-		}},
-		Handle: []Handler{{
-			Handler:   "reverse_proxy",
-			Upstreams: []Upstream{{Dial: "127.0.0.1:3000"}},
-		}},
-	}
-
-	// Add route
-	if err := c.AddRoute("srv0", route); err != nil {
-		t.Fatalf("AddRoute failed: %v", err)
-	}
-
-	// Verify route exists by ID
-	got, err := c.GetRoute("test-proxy")
-	if err != nil {
-		t.Fatalf("GetRoute failed: %v", err)
-	}
-	if got == nil {
-		t.Fatal("GetRoute returned nil after AddRoute")
-	}
-	if len(got.Match) == 0 || len(got.Match[0].Path) == 0 || got.Match[0].Path[0] != "/api/internal/*" {
-		t.Fatalf("route mismatch: %+v", got)
-	}
-
-	// List routes
-	routes, err := c.GetRoutes("srv0")
-	if err != nil {
-		t.Fatalf("GetRoutes failed: %v", err)
-	}
-	if len(routes) != 1 {
-		t.Fatalf("expected 1 route, got %d", len(routes))
-	}
-
-	// Remove route by ID
-	if err := c.RemoveRoute("test-proxy"); err != nil {
-		t.Fatalf("RemoveRoute failed: %v", err)
-	}
-
-	// Verify removed (404 is expected)
-	got, err = c.GetRoute("test-proxy")
-	if err == nil && got != nil {
-		t.Fatal("route still exists after RemoveRoute")
-	}
-	// err is expected (404 APIError), that's correct behavior
-}
-
-func TestPatchConfigPath(t *testing.T) {
-	c := testClient(t)
-	resetConfig(t, c)
-
-	// Patch the listen address
-	if err := c.PatchConfigPath("apps/http/servers/srv0/listen", []string{":9999"}); err != nil {
-		t.Fatalf("PatchConfigPath failed: %v", err)
-	}
-
-	// Verify
-	raw, err := c.GetConfigPath("apps/http/servers/srv0/listen")
-	if err != nil {
-		t.Fatalf("GetConfigPath after patch failed: %v", err)
-	}
-	var listen []string
-	if err := json.Unmarshal(raw, &listen); err != nil {
-		t.Fatalf("failed to decode: %v", err)
-	}
-	if len(listen) == 0 || listen[0] != ":9999" {
-		t.Fatalf("expected [\":9999\"], got %v", listen)
-	}
-}
-
-func TestSetHTTPRedirect(t *testing.T) {
-	c := testClient(t)
-	resetConfig(t, c)
-
-	// Enable redirect
-	if err := c.SetHTTPRedirect("srv0", true); err != nil {
-		t.Fatalf("SetHTTPRedirect(true) failed: %v", err)
-	}
-
-	// Verify listener_wrappers exists
-	raw, err := c.GetConfigPath("apps/http/servers/srv0/listener_wrappers")
-	if err != nil {
-		t.Fatalf("GetConfigPath(listener_wrappers) failed: %v", err)
-	}
-	t.Logf("listener_wrappers after enable: %s", raw)
-
-	// Disable redirect
-	if err := c.SetHTTPRedirect("srv0", false); err != nil {
-		t.Fatalf("SetHTTPRedirect(false) failed: %v", err)
-	}
-
-	// Verify listener_wrappers removed (should error or return null)
-	raw, err = c.GetConfigPath("apps/http/servers/srv0/listener_wrappers")
-	if err != nil {
-		// 404 is expected when the path doesn't exist
-		t.Logf("expected error after disable: %v", err)
-	} else {
-		t.Logf("listener_wrappers after disable: %s (should be null/empty)", raw)
-	}
-}
-
-func TestTLSSubjects(t *testing.T) {
-	c := testClient(t)
-	resetConfig(t, c)
-
-	// Load a config with TLS automation (preserve admin block)
-	tlsConfig := json.RawMessage(`{
-		"admin": {
-			"listen": "0.0.0.0:2019",
-			"origins": ["*"]
-		},
-		"apps": {
-			"http": {
-				"servers": {
-					"srv0": {
-						"listen": [":8888"],
-						"routes": []
-					}
-				}
-			},
-			"tls": {
-				"automation": {
-					"policies": [
-						{"subjects": []}
-					]
-				}
-			}
+	// First two /load calls: simulate Caddy tearing down the connection
+	// (http.ErrAbortHandler causes the server to drop the connection without
+	// writing a response, which surfaces to the client as EOF/connection-reset).
+	// Third call: succeed.
+	state.loadHandler = func(w http.ResponseWriter, r *http.Request, call int) bool {
+		if call <= 2 {
+			// Draining the body isn't necessary; just abort to simulate a
+			// connection drop. The client sees this as an EOF-style error
+			// (the exact text contains "EOF" on most platforms).
+			panic(http.ErrAbortHandler)
 		}
-	}`)
-	if err := c.LoadConfig(tlsConfig); err != nil {
-		t.Fatalf("LoadConfig with TLS failed: %v", err)
+		return false // fall through to default success handler
 	}
 
-	// Update subjects
-	domains := []string{"example.com", "blog.example.com"}
-	if err := c.UpdateTLSSubjects(domains); err != nil {
-		t.Fatalf("UpdateTLSSubjects failed: %v", err)
+	config := json.RawMessage(`{"apps":{"http":{"servers":{"srv0":{"listen":[":443"]}}}}}`)
+	if err := c.LoadConfig(config); err != nil {
+		t.Fatalf("LoadConfig should have succeeded after retries, got: %v", err)
+	}
+	if state.loadCallCount != 3 {
+		t.Fatalf("expected 3 /load calls (2 transient + 1 success), got %d", state.loadCallCount)
+	}
+}
+
+// TestLoadConfigNonRetryable verifies that LoadConfig does NOT retry on
+// non-transient errors like 400 Bad Request (which indicate the config itself
+// is invalid). Such errors must surface immediately.
+func TestLoadConfigNonRetryable(t *testing.T) {
+	server, state := newMockCaddy(t)
+	c := NewClient(server.URL)
+
+	state.loadHandler = func(w http.ResponseWriter, r *http.Request, call int) bool {
+		// Always 400 — simulates a malformed config being rejected by Caddy.
+		http.Error(w, "invalid config", http.StatusBadRequest)
+		return true
 	}
 
-	// Verify
-	got, err := c.GetTLSSubjects()
-	if err != nil {
-		t.Fatalf("GetTLSSubjects failed: %v", err)
+	config := json.RawMessage(`{"not valid caddy config"}`)
+	err := c.LoadConfig(config)
+	if err == nil {
+		t.Fatal("LoadConfig should have failed for 400, got nil")
 	}
-	if len(got) != 2 {
-		t.Fatalf("expected 2 subjects, got %d: %v", len(got), got)
+	// Must surface as *APIError with the original 400 status, NOT wrapped in
+	// the retry-exhausted error.
+	apiErr, ok := err.(*APIError)
+	if !ok {
+		t.Fatalf("expected *APIError (non-retryable, immediate), got %T: %v", err, err)
+	}
+	if apiErr.StatusCode != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d", apiErr.StatusCode)
+	}
+	if state.loadCallCount != 1 {
+		t.Fatalf("expected exactly 1 /load call (no retries for 4xx), got %d", state.loadCallCount)
+	}
+}
+
+// TestLoadConfigRetryExhausted verifies that LoadConfig gives up after 3
+// attempts and returns the last error wrapped in the retry-exhausted message.
+func TestLoadConfigRetryExhausted(t *testing.T) {
+	server, state := newMockCaddy(t)
+	c := NewClient(server.URL)
+
+	// Every call returns 503 (retryable 5xx).
+	state.loadHandler = func(w http.ResponseWriter, r *http.Request, call int) bool {
+		http.Error(w, "admin restarting", http.StatusServiceUnavailable)
+		return true
+	}
+
+	err := c.LoadConfig(json.RawMessage(`{}`))
+	if err == nil {
+		t.Fatal("LoadConfig should have failed after 3 retries")
+	}
+	if state.loadCallCount != 3 {
+		t.Fatalf("expected exactly 3 /load calls, got %d", state.loadCallCount)
+	}
+	if !strings.Contains(err.Error(), "failed after 3 retries") {
+		t.Fatalf("expected retry-exhausted message, got: %v", err)
+	}
+}
+
+// TestValidateConfig verifies the dry-run validate path hits
+// /load?validate_only=true and does not mutate stored config.
+func TestValidateConfig(t *testing.T) {
+	server, state := newMockCaddy(t)
+	c := NewClient(server.URL)
+
+	// Seed an existing config so we can assert validate didn't overwrite it.
+	state.config = map[string]any{"existing": true}
+
+	config := json.RawMessage(`{"apps":{"http":{"servers":{"srv0":{"listen":[":443"]}}}}}`)
+	if err := c.ValidateConfig(config); err != nil {
+		t.Fatalf("ValidateConfig failed: %v", err)
+	}
+
+	if state.loadCallCount != 1 {
+		t.Fatalf("expected 1 /load call, got %d", state.loadCallCount)
+	}
+	// validate_only must NOT replace stored config.
+	if existing, ok := state.config["existing"]; !ok || existing != true {
+		t.Fatalf("ValidateConfig mutated stored config: %+v", state.config)
 	}
 }

@@ -15,7 +15,7 @@ import (
 
 func newMockCaddy(t *testing.T) (*httptest.Server, *mockState) {
 	t.Helper()
-	state := &mockState{routes: map[string]*Route{}}
+	state := &mockState{}
 	mux := http.NewServeMux()
 	registerMockHandlers(mux, state)
 	server := httptest.NewServer(mux)
@@ -25,10 +25,18 @@ func newMockCaddy(t *testing.T) (*httptest.Server, *mockState) {
 
 type mockState struct {
 	config  map[string]any
-	routes  map[string]*Route // id → route
 	subjects []string
 	listen  []string
 	listenerWrappers []map[string]string
+
+	// loadHandler, if non-nil, overrides the default /load handler.
+	// It receives the request and a call counter (1-based); tests use this to
+	// simulate transient failures (EOF / connection-reset / 5xx) on the first
+	// N calls before succeeding. Returning true means "handled, response
+	// already written"; returning false means "fall through to default
+	// /load behavior".
+	loadHandler   func(w http.ResponseWriter, r *http.Request, call int) bool
+	loadCallCount int
 }
 
 func registerMockHandlers(mux *http.ServeMux, s *mockState) {
@@ -42,11 +50,17 @@ func registerMockHandlers(mux *http.ServeMux, s *mockState) {
 		json.NewEncoder(w).Encode(s.config)
 	})
 
-	// POST /load
+	// POST /load (also matches /load?validate_only=true via prefix)
 	mux.HandleFunc("/load", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 			return
+		}
+		s.loadCallCount++
+		if s.loadHandler != nil {
+			if s.loadHandler(w, r, s.loadCallCount) {
+				return
+			}
 		}
 		body, _ := io.ReadAll(r.Body)
 		var cfg map[string]any
@@ -54,33 +68,14 @@ func registerMockHandlers(mux *http.ServeMux, s *mockState) {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		s.config = cfg
-		// Extract routes and index by @id
-		s.routes = map[string]*Route{}
-		s.subjects = nil
-		s.listen = []string{}
-		s.listenerWrappers = nil
-		w.WriteHeader(http.StatusOK)
-	})
-
-	// GET/DELETE /id/{id}
-	mux.HandleFunc("/id/", func(w http.ResponseWriter, r *http.Request) {
-		id := r.URL.Path[len("/id/"):]
-		switch r.Method {
-		case http.MethodGet:
-			route, ok := s.routes[id]
-			if !ok {
-				w.WriteHeader(http.StatusNotFound)
-				return
-			}
-			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(route)
-		case http.MethodDelete:
-			delete(s.routes, id)
-			w.WriteHeader(http.StatusOK)
-		default:
-			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		// validate_only requests must NOT mutate stored config.
+		if r.URL.Query().Get("validate_only") != "true" {
+			s.config = cfg
+			s.subjects = nil
+			s.listen = []string{}
+			s.listenerWrappers = nil
 		}
+		w.WriteHeader(http.StatusOK)
 	})
 }
 
@@ -114,61 +109,6 @@ func TestMockLoadConfig(t *testing.T) {
 	// Verify the config was stored
 	cfg, _ := c.GetConfig()
 	t.Logf("after load: %s", cfg)
-}
-
-func TestMockAddAndRemoveRoute(t *testing.T) {
-	server, _ := newMockCaddy(t)
-	c := NewClient(server.URL)
-
-	// Load initial config
-	c.LoadConfig(json.RawMessage(`{"apps":{"http":{"servers":{"srv0":{"listen":[":8888"]}}}}}`))
-
-	route := Route{
-		ID: "test-proxy",
-		Match: []MatchRule{{
-			Path: []string{"/api/internal/*"},
-		}},
-		Handle: []Handler{{
-			Handler:   "reverse_proxy",
-			Upstreams: []Upstream{{Dial: "127.0.0.1:3000"}},
-		}},
-	}
-
-	// AddRoute uses POST to /config/apps/http/servers/srv0/routes/...
-	// Mock doesn't implement full path routing, so test via ID
-	// In real integration test this would work against real Caddy
-	state := &mockState{routes: map[string]*Route{}}
-	state.routes["test-proxy"] = &route
-
-	got, err := c.GetRoute("test-proxy")
-	// GetRoute calls /id/{id} which mock handles
-	// But we need to register the route in mock state
-	// The mock server uses the same state object from newMockCaddy
-	// So this test is a bit contrived for mock, but validates the client logic
-
-	// Instead, test AddRoute + RemoveRoute via direct mock manipulation
-	_ = got
-	_ = err
-	_ = state
-}
-
-func TestMockAPIError(t *testing.T) {
-	server, _ := newMockCaddy(t)
-	c := NewClient(server.URL)
-
-	// Try to get a route that doesn't exist
-	_, err := c.GetRoute("nonexistent")
-	if err == nil {
-		t.Fatal("expected error for nonexistent route")
-	}
-
-	apiErr, ok := err.(*APIError)
-	if !ok {
-		t.Fatalf("expected *APIError, got %T: %v", err, err)
-	}
-	if apiErr.StatusCode != http.StatusNotFound {
-		t.Fatalf("expected 404, got %d", apiErr.StatusCode)
-	}
 }
 
 func TestClientBaseURL(t *testing.T) {
