@@ -52,7 +52,7 @@ func s3TestEnv(t *testing.T) (endpoint, accessKey, secretKey, bucket string) {
 
 // TestS3Integration_SyncThenUpload exercises the full happy path:
 //  1. Write site.s3Config.enabled=true pointing at MinIO.
-//  2. SyncS3ToSettings → pb settings.S3 should reflect the change.
+//  2. ApplyS3BackendToSettings → pb settings.S3 should reflect the change.
 //  3. app.NewFilesystem() should hand back an S3-backed filesystem.
 //  4. Upload a test file via the filesystem.
 //  5. Read it back and verify bytes match.
@@ -95,8 +95,8 @@ func TestS3Integration_SyncThenUpload(t *testing.T) {
 	}
 
 	// --- Step 2: sync to pb settings ---
-	if err := SyncS3ToSettings(app); err != nil {
-		t.Fatalf("SyncS3ToSettings: %v", err)
+	if err := ApplyS3BackendToSettings(app); err != nil {
+		t.Fatalf("ApplyS3BackendToSettings: %v", err)
 	}
 	got := app.Settings().S3
 	if !got.Enabled || got.Bucket != bucket || got.Endpoint != endpoint {
@@ -144,8 +144,8 @@ func TestS3Integration_SyncThenUpload(t *testing.T) {
 	if err := app.Save(site); err != nil {
 		t.Fatalf("save site (disabled): %v", err)
 	}
-	if err := SyncS3ToSettings(app); err != nil {
-		t.Fatalf("SyncS3ToSettings (disabled): %v", err)
+	if err := ApplyS3BackendToSettings(app); err != nil {
+		t.Fatalf("ApplyS3BackendToSettings (disabled): %v", err)
 	}
 	if app.Settings().S3.Enabled {
 		t.Fatal("expected S3 disabled after toggle-off")
@@ -156,7 +156,7 @@ func TestS3Integration_SyncThenUpload(t *testing.T) {
 }
 
 // TestS3Integration_BadCredentials ensures a misconfigured site.s3Config
-// surfaces as an error from SyncS3ToSettings rather than silently accepting.
+// surfaces as an error from ApplyS3BackendToSettings rather than silently accepting.
 // We can't easily stand up an "auth-fail" MinIO; instead we point at a
 // closed port so the filesystem ops fail downstream. The sync itself
 // succeeds (settings accept any well-formed config) — the failure surfaces
@@ -191,8 +191,8 @@ func TestS3Integration_BadEndpoint(t *testing.T) {
 
 	// Sync should succeed — pb's S3Config.Validate only checks field presence,
 	// not bucket existence. The error surfaces when an upload is attempted.
-	if err := SyncS3ToSettings(app); err != nil {
-		t.Fatalf("SyncS3ToSettings should succeed for well-formed config: %v", err)
+	if err := ApplyS3BackendToSettings(app); err != nil {
+		t.Fatalf("ApplyS3BackendToSettings should succeed for well-formed config: %v", err)
 	}
 
 	fsys, err := app.NewFilesystem()
@@ -231,7 +231,7 @@ func fsysCleanup(t *testing.T, endpoint, accessKey, secretKey, bucket, key strin
 //  1. S3 enabled in site.s3Config.
 //  2. Create a media record with a real image FileField (this is what the
 //     editor's uploadImages() does in production).
-//  3. SyncS3ToSettings → file should land in S3.
+//  3. ApplyS3BackendToSettings → file should land in S3.
 //  4. Hit pb's HTTP file-download route /api/files/media/<id>/<filename>
 //     (the URL the editor embeds as <img src>) and verify bytes match.
 //
@@ -266,8 +266,8 @@ func TestS3Integration_FileDownloadRoute(t *testing.T) {
 	if err := app.Save(site); err != nil {
 		t.Fatalf("save site: %v", err)
 	}
-	if err := SyncS3ToSettings(app); err != nil {
-		t.Fatalf("SyncS3ToSettings: %v", err)
+	if err := ApplyS3BackendToSettings(app); err != nil {
+		t.Fatalf("ApplyS3BackendToSettings: %v", err)
 	}
 
 	// Create a media record carrying a FileField upload via pb's filesystem
@@ -376,8 +376,8 @@ func TestS3Integration_Thumbnail(t *testing.T) {
 	}
 	site.Set("s3Config", mustJSONRaw(cfg))
 	app.Save(site)
-	if err := SyncS3ToSettings(app); err != nil {
-		t.Fatalf("SyncS3ToSettings: %v", err)
+	if err := ApplyS3BackendToSettings(app); err != nil {
+		t.Fatalf("ApplyS3BackendToSettings: %v", err)
 	}
 
 	// Upload a small PNG.
@@ -519,8 +519,8 @@ func TestS3Integration_UnsupportedThumbFormats(t *testing.T) {
 			}
 			site.Set("s3Config", mustJSONRaw(cfg))
 			app.Save(site)
-			if err := SyncS3ToSettings(app); err != nil {
-				t.Fatalf("SyncS3ToSettings: %v", err)
+			if err := ApplyS3BackendToSettings(app); err != nil {
+				t.Fatalf("ApplyS3BackendToSettings: %v", err)
 			}
 
 			mediaCol, _ := app.FindCollectionByNameOrId("media")
@@ -634,8 +634,8 @@ func TestS3Integration_DedupComponentsAgainstS3(t *testing.T) {
 	}
 	site.Set("s3Config", mustJSONRaw(cfg))
 	app.Save(site)
-	if err := SyncS3ToSettings(app); err != nil {
-		t.Fatalf("SyncS3ToSettings: %v", err)
+	if err := ApplyS3BackendToSettings(app); err != nil {
+		t.Fatalf("ApplyS3BackendToSettings: %v", err)
 	}
 
 	mediaCol, _ := app.FindCollectionByNameOrId("media")
@@ -664,7 +664,7 @@ func TestS3Integration_DedupComponentsAgainstS3(t *testing.T) {
 	}
 
 	// CheckDuplicate uses sign field. rec1 was saved without going through
-	// the dedup hook (we're testing in the media package, no hooks.Register),
+	// the dedup hook (this test calls Manager methods directly, New() not invoked),
 	// so its sign column is empty. Set it manually as the hook would:
 	rec1.Set("sign", ComputeSign(pngBytes))
 	if err := app.Save(rec1); err != nil {
