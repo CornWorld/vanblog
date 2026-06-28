@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log"
 
 	"github.com/pocketbase/pocketbase/core"
 )
@@ -15,9 +16,93 @@ type Manager struct {
 	app core.App
 }
 
-// New creates a media Manager.
+// New creates a media Manager and registers its pb hook subscriptions.
+//
+// Hooks:
+//   - OnRecordAfterCreateSuccess("media"): compute MD5 sign, dedup against
+//     existing records, delete the newer copy if a duplicate is found.
+//   - OnRecordAfterUpdateSuccess("site"): re-apply S3 backend to pb settings
+//     so new uploads take the new config without a restart.
+//   - OnRecordAfterCreateSuccess("posts") + OnRecordAfterUpdateSuccess("posts"):
+//     scan post HTML for <img src> referencing media files and link them.
 func New(app core.App) *Manager {
-	return &Manager{app: app}
+	m := &Manager{app: app}
+	app.OnRecordAfterCreateSuccess("media").BindFunc(m.dedupeOnUpload)
+	app.OnRecordAfterUpdateSuccess("site").BindFunc(func(e *core.RecordEvent) error {
+		go m.reapplyS3Backend()
+		return e.Next()
+	})
+	app.OnRecordAfterCreateSuccess("posts").BindFunc(m.scanPostImages)
+	app.OnRecordAfterUpdateSuccess("posts").BindFunc(m.scanPostImages)
+	return m
+}
+
+// dedupeOnUpload runs after a media record is created. Computes MD5 sign of
+// the uploaded file, persists it, then queries for an older record with the
+// same sign. If found, the newer record (the one just uploaded) is deleted.
+//
+// Failures are logged but non-fatal — a missing dedup pass is preferable to
+// blocking an upload.
+func (m *Manager) dedupeOnUpload(e *core.RecordEvent) error {
+	record := e.Record
+	if record.GetString("file") == "" {
+		return nil // skip external URL records
+	}
+	content, err := m.ReadFileContent(record)
+	if err != nil {
+		log.Printf("[media] dedup: failed to read file: %v", err)
+		return nil
+	}
+	sign := ComputeSign(content)
+	record.Set("sign", sign)
+	if err := m.app.Save(record); err != nil {
+		log.Printf("[media] dedup: failed to save sign: %v", err)
+		return nil
+	}
+
+	existing, err := m.CheckDuplicate(content)
+	if err != nil {
+		log.Printf("[media] dedup: query failed: %v", err)
+		return nil
+	}
+	if existing == nil || existing.Id == record.Id {
+		return nil
+	}
+
+	// Deterministic winner: keep the older record (smaller created time).
+	// pb Ids are random — adjacent uploads have ~50% chance of inverted Id
+	// order, which caused the duplicate to survive half the time. `created`
+	// is set by AutodateField and is monotonic per-write, so it's a reliable
+	// tiebreaker. On a tie (sub-millisecond writes), fall back to
+	// lexicographic Id so both contenders agree on the winner.
+	existingCreated := existing.GetDateTime("created").Time()
+	recordCreated := record.GetDateTime("created").Time()
+	keepExisting := existingCreated.Before(recordCreated) ||
+		(existingCreated.Equal(recordCreated) && existing.Id < record.Id)
+	if keepExisting {
+		log.Printf("[media] dedup: duplicate of %s, deleting %s", existing.Id, record.Id)
+		m.app.Delete(record)
+	}
+	return nil
+}
+
+// scanPostImages links <img src> in post HTML to media records.
+// Async so the post save response isn't blocked on the scan.
+func (m *Manager) scanPostImages(e *core.RecordEvent) error {
+	go func() {
+		if err := m.ScanArticleImages(e.Record.Id); err != nil {
+			log.Printf("[media] scan: failed for post %s: %v", e.Record.Id, err)
+		}
+	}()
+	return nil
+}
+
+// reapplyS3Backend pushes site.s3Config into pb settings on site update,
+// so config changes take effect on the next upload without a restart.
+func (m *Manager) reapplyS3Backend() {
+	if err := ApplyS3BackendToSettings(m.app); err != nil {
+		log.Printf("[media] reapply S3 backend failed: %v", err)
+	}
 }
 
 // CheckDuplicate looks up an existing media record by MD5 hash of file content.
