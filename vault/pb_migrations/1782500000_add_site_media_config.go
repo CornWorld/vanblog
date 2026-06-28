@@ -43,8 +43,13 @@ func init() {
 		// Backfill the default value on the existing single site record so
 		// the editor sees a well-formed blob on first run after upgrade.
 		// New installs get the default from insertDefaultSite.
+		//
+		// Why we check both "" and "null": pb's JSONField, when the column
+		// is SQL NULL, returns the literal string "null" from GetString
+		// (JSON null serialized as text). Either means "not yet set".
 		if rec, err := db.FindFirstRecordByFilter("site", ""); err == nil && rec != nil {
-			if rec.GetString("mediaConfig") == "" {
+			cur := rec.GetString("mediaConfig")
+			if cur == "" || cur == "null" {
 				rec.Set("mediaConfig", json.RawMessage(`{"enabled":true,"targetFormat":"webp","quality":84}`))
 				if err := db.Save(rec); err != nil {
 					return err
