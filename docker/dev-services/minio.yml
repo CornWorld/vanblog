@@ -1,0 +1,54 @@
+# MinIO dev service for S3 integration testing.
+#
+# Usage:
+#   docker compose -f docker/dev-services/minio.yml up -d
+#   # Console: http://localhost:9001  (root / minioadmin)
+#   # S3 API:  http://localhost:9000
+#
+# Create the bucket once:
+#   docker run --rm --network host --entrypoint sh minio/mc -c \
+#     "mc alias set local http://localhost:9000 minioadmin minioadmin && mc mb local/vanblog-test"
+#
+# Run the integration test:
+#   VANBLOG_S3TEST_ENDPOINT=http://localhost:9000 \
+#   VANBLOG_S3TEST_ACCESS_KEY=minioadmin \
+#   VANBLOG_S3TEST_SECRET_KEY=minioadmin \
+#   VANBLOG_S3TEST_BUCKET=vanblog-test \
+#   go test -tags=integration ./internal/media/ -run TestS3Integration -v
+
+services:
+  minio:
+    image: minio/minio:latest
+    container_name: vanblog-minio
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # One-shot bucket creator — runs after MinIO is healthy, then exits.
+  # Auto-creates the bucket so you can run the integration test immediately
+  # after `docker compose up -d` without manual mc steps.
+  createbucket:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 minioadmin minioadmin &&
+      mc mb --ignore-existing local/vanblog-test &&
+      mc anonymous set download local/vanblog-test || true
+      "
+
+volumes:
+  minio_data:
