@@ -38,6 +38,13 @@ type BuildOpts struct {
 	// slice means "fully on-demand" — any domain the ask endpoint approves
 	// gets a certificate. This matches vanblog's setup-window behavior.
 	AllowedDomains []string `json:"-"`
+
+	// HTTPOnly, when true, produces a TLS-less config: a single server
+	// listening on :80 hosts the same route table (system API → cache →
+	// user rules → Astro fallback) and there is no apps.tls subtree, no
+	// HTTP→HTTPS redirect, no on-demand TLS. Intended for operators who
+	// terminate TLS at an external reverse proxy.
+	HTTPOnly bool `json:"-"`
 }
 
 // Defaults fills zero-value fields with sensible defaults.
@@ -102,6 +109,10 @@ const (
 	srvHTTPS = "srv_https" // :443
 	srvHTTP  = "srv_http"  // :80 redirect
 	srvMgmt  = "srv_mgmt"
+	// srvPlain is the single :80 server used in HTTPOnly mode, replacing
+	// both srv_https and srv_http. Same name in docker/bootstrap-http-only.json
+	// so status detection works uniformly.
+	srvPlain = "srv_plain" // :80 (HTTPOnly mode)
 
 	// Stable @id values for system-managed routes. Users can override via
 	// site.routing using the same IDs (Caddy @id semantics).
@@ -139,6 +150,10 @@ const (
 // explicitly via srv1 takes precedence and is what we want.
 func BuildBootstrapConfig(opts BuildOpts) caddyadmin.Config {
 	opts.Defaults()
+
+	if opts.HTTPOnly {
+		return buildBootstrapHTTPOnly(opts)
+	}
 
 	return caddyadmin.Config{
 		Admin: &caddyadmin.AdminConfig{
@@ -241,6 +256,10 @@ func BuildBootstrapConfig(opts BuildOpts) caddyadmin.Config {
 // output only contains dials inside DefaultAllowlist.
 func BuildFullConfig(opts BuildOpts, userRules []UserRule) (caddyadmin.Config, error) {
 	opts.Defaults()
+
+	if opts.HTTPOnly {
+		return buildFullHTTPOnly(opts, userRules)
+	}
 
 	// Translate system cache rules + user rules together. TranslateAll
 	// enforces reserved-path and SSRF validation on every rule; a failure
@@ -407,4 +426,145 @@ func buildTLSApp(email string, allowedDomains []string) *caddyadmin.TLSApp {
 			},
 		},
 	}
+}
+
+// --- HTTPOnly-mode builders -----------------------------------------------
+
+// buildPlainServers constructs the server map for HTTPOnly mode:
+//   - srvPlain: single :80 server hosting all routes (no TLS)
+//   - srvMgmt:  the usual :8080 management fallback (still useful for
+//               operators who expose it via an extra published port)
+//
+// No srv_https, no srv_http redirect — those exist only for the HTTPS
+// terminating path.
+func buildPlainServers(opts BuildOpts, plainRoutes []caddyadmin.Route) map[string]*caddyadmin.Server {
+	return map[string]*caddyadmin.Server{
+		srvPlain: {
+			Listen: []string{":80"},
+			Routes: plainRoutes,
+		},
+		srvMgmt: buildManagementServerRoutes(opts.AstroTarget),
+	}
+}
+
+// buildBootstrapHTTPOnly mirrors BuildBootstrapConfig but for HTTPOnly mode:
+// maintenance 503 page on :80, no TLS app, no HTTP→HTTPS redirect.
+func buildBootstrapHTTPOnly(opts BuildOpts) caddyadmin.Config {
+	maintenanceRoute := caddyadmin.Route{
+		ID: maintenanceRouteID,
+		Match: []caddyadmin.MatchRule{{
+			Path: []string{"/*"},
+		}},
+		Handle: []caddyadmin.Handler{{
+			Handler:    "static_response",
+			StatusCode: 503,
+			Headers: &caddyadmin.HeaderPolicy{
+				Response: &caddyadmin.HeaderOps{
+					Set: map[string][]string{
+						"Retry-After":  {"30"},
+						"Content-Type": {"text/html; charset=utf-8"},
+					},
+				},
+			},
+			Body: maintenanceHTML,
+		}},
+	}
+
+	return caddyadmin.Config{
+		Admin: &caddyadmin.AdminConfig{
+			Listen:  adminListen,
+			Origins: []string{adminOrigins},
+		},
+		Logs: &caddyadmin.LogsConfig{
+			Logs: map[string]caddyadmin.LogEntry{
+				"default": {
+					Writer: &caddyadmin.LogWriter{
+						Output:   logWriterOutput,
+						Filename: logFilename,
+					},
+					Level: opts.LogLevel,
+				},
+			},
+		},
+		Storage: &caddyadmin.Storage{
+			Module: storageModule,
+			Root:   storageRoot,
+		},
+		Apps: &caddyadmin.Apps{
+			HTTP: &caddyadmin.HTTPApp{
+				Servers: buildPlainServers(opts, []caddyadmin.Route{maintenanceRoute}),
+			},
+			// TLS intentionally omitted — external proxy terminates HTTPS.
+		},
+	}
+}
+
+// buildFullHTTPOnly mirrors BuildFullConfig but for HTTPOnly mode: full
+// route table on :80, no TLS app. Route order on srvPlain is identical to
+// the HTTPS path's srv_https ordering so user-facing behavior is unchanged.
+func buildFullHTTPOnly(opts BuildOpts, userRules []UserRule) (caddyadmin.Config, error) {
+	combined := append(SystemCacheRules(), userRules...)
+	rules, err := TranslateAll(combined, nil)
+	if err != nil {
+		return caddyadmin.Config{}, err
+	}
+
+	httpsRoutes := make([]caddyadmin.Route, 0, 2+len(rules)+1)
+	httpsRoutes = append(httpsRoutes,
+		caddyadmin.Route{
+			ID: systemAPIRouteID,
+			Match: []caddyadmin.MatchRule{{
+				Path: []string{"/api/*"},
+			}},
+			Handle: []caddyadmin.Handler{{
+				Handler:   "reverse_proxy",
+				Upstreams: []caddyadmin.Upstream{{Dial: pbAPIHost}},
+			}},
+		},
+		caddyadmin.Route{
+			ID: systemAdminRouteID,
+			Match: []caddyadmin.MatchRule{{
+				Path: []string{"/_/*"},
+			}},
+			Handle: []caddyadmin.Handler{{
+				Handler:   "reverse_proxy",
+				Upstreams: []caddyadmin.Upstream{{Dial: pbAPIHost}},
+			}},
+		},
+	)
+	httpsRoutes = append(httpsRoutes, rules...)
+	httpsRoutes = append(httpsRoutes, caddyadmin.Route{
+		ID: systemFallbackID,
+		Handle: []caddyadmin.Handler{{
+			Handler:   "reverse_proxy",
+			Upstreams: []caddyadmin.Upstream{{Dial: opts.AstroTarget}},
+		}},
+	})
+
+	return caddyadmin.Config{
+		Admin: &caddyadmin.AdminConfig{
+			Listen:  adminListen,
+			Origins: []string{adminOrigins},
+		},
+		Logs: &caddyadmin.LogsConfig{
+			Logs: map[string]caddyadmin.LogEntry{
+				"default": {
+					Writer: &caddyadmin.LogWriter{
+						Output:   logWriterOutput,
+						Filename: logFilename,
+					},
+					Level: opts.LogLevel,
+				},
+			},
+		},
+		Storage: &caddyadmin.Storage{
+			Module: storageModule,
+			Root:   storageRoot,
+		},
+		Apps: &caddyadmin.Apps{
+			HTTP: &caddyadmin.HTTPApp{
+				Servers: buildPlainServers(opts, httpsRoutes),
+			},
+		},
+	}, nil
 }

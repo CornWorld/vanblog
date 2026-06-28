@@ -149,6 +149,14 @@ func loadBootstrapInputs(app core.App) (BuildOpts, []UserRule) {
 	// default at TLS issuance time, with a startup warning).
 	opts.Email = os.Getenv("VANBLOG_EMAIL")
 
+	// VANBLOG_HTTP_ONLY=1 disables the embedded TLS stack: Caddy keeps
+	// running as the routing layer but listens only on :80, with no
+	// apps.tls subtree. Operators are expected to terminate TLS at an
+	// external reverse proxy (Traefik / NPM / Cloudflare Tunnel / etc.)
+	// and forward plain HTTP to this container.
+	opts.HTTPOnly = os.Getenv("VANBLOG_HTTP_ONLY") == "1" ||
+		os.Getenv("VANBLOG_HTTP_ONLY") == "true"
+
 	site, err := app.FindFirstRecordByFilter("site", "")
 	if err != nil || site == nil {
 		// Fresh install: no site record yet. System rules still apply.

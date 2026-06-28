@@ -16,6 +16,16 @@ PB_DATA="${VANBLOG_DATA_DIR:-/pb_data}"
 # --- VANBLOG_CADDY_MODE: legacy (Caddyfile) or json (default, bootstrap + admin API) ---
 CADDY_MODE="${VANBLOG_CADDY_MODE:-json}"
 
+# --- VANBLOG_HTTP_ONLY: pick the TLS-less bootstrap config when set ---
+# Operators terminate TLS at an external reverse proxy and forward plain
+# HTTP to this container. Caddy still runs (for routing + SSRF safety) but
+# listens only on :80.
+BOOTSTRAP_JSON="/etc/caddy/bootstrap.json"
+if [ "${VANBLOG_HTTP_ONLY}" = "1" ] || [ "${VANBLOG_HTTP_ONLY}" = "true" ]; then
+  echo "[vanblog] HTTP_ONLY mode: external proxy terminates TLS"
+  BOOTSTRAP_JSON="/etc/caddy/bootstrap-http-only.json"
+fi
+
 # --- VANBLOG_EMAIL validation ---
 if [ "${VANBLOG_EMAIL}" = "admin@example.com" ] || [ -z "${VANBLOG_EMAIL}" ]; then
   echo "[vanblog] WARNING: VANBLOG_EMAIL is not set (using default admin@example.com)."
@@ -89,8 +99,8 @@ fi
 echo "[vanblog] JSON caddy mode: bootstrap then admin API"
 
 # 1. Start Caddy with bootstrap.json (background, NOT exec)
-echo "[vanblog] starting Caddy with bootstrap config..."
-caddy run --config /etc/caddy/bootstrap.json &
+echo "[vanblog] starting Caddy with bootstrap config ($BOOTSTRAP_JSON)..."
+caddy run --config "$BOOTSTRAP_JSON" &
 CADDY_PID=$!
 
 # 2. Wait for Caddy admin API to be reachable

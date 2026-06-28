@@ -132,13 +132,36 @@ routerAdd("GET", "/api/hooks/caddy/ask", (e) => {
 
 ---
 
-## 7. 外置反代场景(用户自备)
+## 7. 外置反代场景(HTTP_ONLY 模式)
 
-已有反代基础设施的用户(K8s / Traefik / Cloudflare Tunnel 等):
+已有反代基础设施的用户(K8s / Traefik / Cloudflare Tunnel / Nginx Proxy Manager 等):
 
-- vanblog 容器通过环境变量 `HTTP_ONLY=true` 禁用内嵌 Caddy,只暴露 HTTP `:8080`
-- 文档提供三种反代的配置片段:`docs/deploy/caddy.md` / `docs/deploy/traefik.md` / `docs/deploy/npm.md`
-- 由用户自管的反代承担 TLS 终止 + 路由
+- 容器设 `VANBLOG_HTTP_ONLY=1`,内嵌 Caddy **保留作路由层**但只监听 `:80`,完全不配 TLS app。
+- 用户的外置反代承担 TLS 终止,将明文 HTTP 转发到容器 `:80`。**必须传递 `X-Forwarded-Proto: https`**(否则 Astro 生成的 canonical URL 会错为 `http://`)。
+- `:8080` 管理端口仍然保留(HTTP 回退通道),不强制暴露。
+- Caddy admin API(`/api/hooks/caddy/ask`、`/api/vanblog/tls/status`)在 HTTP_ONLY 模式下自动降级返回(`onDemandTLS=false`、`certificates=[]`),不会因查不到 TLS 端点而 500。
+
+**实现位置**:
+- Go 端:`vault/internal/caddy/config_builder.go` 的 `BuildOpts.HTTPOnly`,触发 `buildBootstrapHTTPOnly` / `buildFullHTTPOnly`,生成 `srv_plain`(:80)替代 `srv_https`+`srv_http`。
+- bootstrap JSON:`docker/bootstrap-http-only.json`(由 entrypoint 按 env 选择)。
+- env 读取:`vault/internal/caddy/bootstrap.go::loadBootstrapInputs` + `status.go::httpOnlyMode`。
+
+**最小外置 Caddy 配置示例**:
+```caddyfile
+{$DOMAIN} {
+    reverse_proxy vanblog:80
+    # Caddy 自动处理 TLS,X-Forwarded-Proto 由 reverse_proxy 自动加
+}
+```
+
+**Traefik labels 示例**(docker-compose):
+```yaml
+labels:
+  - traefik.http.routers.vanblog.rule=Host(`example.com`)
+  - traefik.http.routers.vanblog.tls=true
+  - traefik.http.routers.vanblog.tls.certresolver=letsencrypt
+  - traefik.http.services.vanblog.loadbalancer.server.port=80
+```
 
 ---
 

@@ -1,0 +1,81 @@
+{
+  "admin": {
+    "listen": "127.0.0.1:2019",
+    "origins": ["127.0.0.1:2019", "localhost:2019", "127.0.0.1", "localhost"]
+  },
+  "logging": {
+    "logs": {
+      "default": {
+        "writer": {
+          "output": "file",
+          "filename": "/var/log/caddy.log"
+        },
+        "level": "WARN"
+      }
+    }
+  },
+  "storage": {
+    "module": "file_system",
+    "root": "/data/caddy"
+  },
+  "apps": {
+    "http": {
+      "servers": {
+        "srv_plain": {
+          "listen": [":80"],
+          "routes": [
+            {
+              "@id": "vanblog-bootstrap-maintenance",
+              "match": [{"path": ["/*"]}],
+              "handle": [
+                {
+                  "handler": "static_response",
+                  "status_code": 503,
+                  "headers": {
+                    "Retry-After": ["30"],
+                    "Content-Type": ["text/html; charset=utf-8"]
+                  },
+                  "body": "<!doctype html><html><head><meta charset=\"utf-8\"><title>VanBlog 启动中</title></head><body><h1>VanBlog 正在启动,请稍候…</h1><p>页面将在几秒后自动刷新。</p></body></html>"
+                }
+              ]
+            }
+          ]
+        },
+        "srv_mgmt": {
+          "listen": [":8080"],
+          "routes": [
+            {
+              "@id": "vanblog-bootstrap-mgmt-api",
+              "match": [{"path": ["/api/*"]}],
+              "handle": [
+                {
+                  "handler": "reverse_proxy",
+                  "upstreams": [{"dial": "127.0.0.1:8090"}]
+                }
+              ]
+            },
+            {
+              "@id": "vanblog-bootstrap-mgmt-pb",
+              "match": [{"path": ["/_/*"]}],
+              "handle": [
+                {
+                  "handler": "reverse_proxy",
+                  "upstreams": [{"dial": "127.0.0.1:8090"}]
+                }
+              ]
+            },
+            {
+              "@id": "vanblog-bootstrap-mgmt-fallback",
+              "handle": [
+                {
+                  "handler": "reverse_proxy",
+                  "upstreams": [{"dial": "127.0.0.1:4321"}]
+                }
+              ]
+            }
+          ]
+        }
+      }
+    }
+  }
+}
