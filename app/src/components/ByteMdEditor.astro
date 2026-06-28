@@ -18,6 +18,7 @@ const { initialContent = '', postId } = Astro.props
   import mermaid from '@bytemd/plugin-mermaid';
   import { visit } from 'unist-util-visit';
   import remarkDirective from 'remark-directive';
+  import { emoji } from '../lib/bytemd-plugins/emoji';
   import 'katex/dist/katex.css';
 
   // rehype: 标题加 data-id + 链接加 target=_blank (一次遍历)
@@ -158,6 +159,7 @@ const { initialContent = '', postId } = Astro.props
   if (mount) {
     const plugins = [
       gfm(), highlight(), math(), frontmatter(), mediumZoom(), mermaid(),
+      emoji(),
       { rehype: (p) => p.use(rehypeEnhance) },
       { rehype: (p) => p.use(rehypeCodeBlock), viewerEffect: ({ markdownBody }) => bindCopyBtns(markdownBody) },
       { remark: (p) => p.use(remarkDirective).use(remarkContainer) },
@@ -183,3 +185,26 @@ const { initialContent = '', postId } = Astro.props
     window.__bytemdEditor = editor;
   }
 </script>
+
+<style is:global>
+  .vb-emoji-container {
+    position: absolute;
+    top: 100%;
+    z-index: 100;
+    margin-top: 4px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    border-radius: 6px;
+    overflow: hidden;
+    background: var(--bytemd-background, #fff);
+  }
+  .vb-emoji-container.vb-emoji-hidden {
+    display: none;
+  }
+  .vb-emoji-container emoji-picker {
+    width: 352px;
+    max-width: 90vw;
+  }
+  .vb-emoji-button-active {
+    background: var(--bytemd-color, #f5f5f5);
+  }
+</style>

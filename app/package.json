@@ -21,6 +21,7 @@
     "@vanblog/sdk": "workspace:*",
     "astro": "^6.0.0",
     "bytemd": "^1.22.0",
+    "emoji-picker-element": "^1.29.1",
     "highlight.js": "^11.0.0",
     "isomorphic-dompurify": "^3.18.0",
     "katex": "^0.16.0",

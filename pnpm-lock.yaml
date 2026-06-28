@@ -43,6 +43,9 @@ importers:
       bytemd:
         specifier: ^1.22.0
         version: 1.22.0
+      emoji-picker-element:
+        specifier: ^1.29.1
+        version: 1.29.1
       highlight.js:
         specifier: ^11.0.0
         version: 11.8.0
@@ -1182,6 +1185,9 @@ packages:
 
   elkjs@0.9.3:
     resolution: {integrity: sha512-f/ZeWvW/BCXbhGEf1Ujp29EASo/lk1FDnETgNKwJrsVvGZhUWCZyg3xLJjAsxfOmt8KjswHmI5EwCQcPMpOYhQ==}
+
+  emoji-picker-element@1.29.1:
+    resolution: {integrity: sha512-TOiHzu9Dqib3x4MwcAi3wi3RdyT4SoeB4b15AvH1ks4SBwTl7DeebhZ0d3x6dNi4XfNU7IGRZ7NBQllj0RqwrQ==}
 
   encodeurl@2.0.0:
     resolution: {integrity: sha512-Q0n9HRi4m6JuGIV1eFlmvJB7ZEVxu93IrMyiMsGC0lrMJMWzRgx6WGquyfQgZVb31vhGgXnfmPNNXmxnOkRBrg==}
@@ -3620,6 +3626,8 @@ snapshots:
   ee-first@1.1.1: {}
 
   elkjs@0.9.3: {}
+
+  emoji-picker-element@1.29.1: {}
 
   encodeurl@2.0.0: {}
 

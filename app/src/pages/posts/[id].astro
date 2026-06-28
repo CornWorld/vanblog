@@ -8,6 +8,7 @@ import { markedHighlight } from 'marked-highlight';
 import hljs from 'highlight.js';
 import 'highlight.js/styles/github.css';
 import DOMPurify from 'isomorphic-dompurify';
+import { normalizeMathDelimiters } from '../../lib/markdown/normalizeMathDelimiters';
 
 const { id } = Astro.params;
 if (!id) return Astro.redirect('/404');
@@ -34,8 +35,10 @@ const marked = new Marked(
   })
 );
 
-// marked with syntax highlighting (sync), then sanitize to prevent XSS
-const rawHtml = marked.parse(post.content || '', { async: false }) as string;
+// marked with syntax highlighting (sync), then sanitize to prevent XSS.
+// normalizeMathDelimiters rewrites \(...\) / \[...\] (Word/Notion paste) to $...$ / $$...$$
+// before marked so the math plugin can render them.
+const rawHtml = marked.parse(normalizeMathDelimiters(post.content || ''), { async: false }) as string;
 const htmlContent = DOMPurify.sanitize(rawHtml, {
   // Allow syntax highlighting classes and common markdown attributes
   ALLOWED_ATTR: ['class', 'href', 'title', 'src', 'alt', 'id', 'name', 'target', 'rel', 'data-language', 'data-id'],
