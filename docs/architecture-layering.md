@@ -90,7 +90,7 @@ JSVM **不适合**的场景:
 │  │  - caddy: admin API 客户端 / SSRF 校验 / 路由翻译   │ │
 │  │  - revisions: 快照 / diff(go-diff)                 │ │
 │  │  - visits: 原子计数 / 聚合                          │ │
-│  │  - markdown: goldmark 渲染(含 katex / mermaid)    │ │
+│  │  - markdown 渲染由前端 Astro(marked + DOMPurify)处理,Go 端无 markdown 包 │ │
 │  │  - process: 子进程管理(waline / git sync)         │ │
 │  │  - rss/sitemap: 生成器                              │ │
 │  └──────────────────────┬──────────────────────────────┘ │
@@ -133,7 +133,7 @@ vault/
       client.go                  # Caddy admin API 客户端(net/http)
       ssrf.go                    # SSRF 白名单校验
       translator.go              # site.routing DSL → caddy JSON
-      template.go                # Caddyfile 模板渲染
+      config_builder.go          # BuildBootstrapConfig / BuildFullConfig(struct-based)
     revisions/
       snapshot.go                # 快照写入
       diff.go                    # go-diff 集成
@@ -141,8 +141,6 @@ vault/
     visits/
       counter.go                 # 原子计数(SQL UPDATE)
       aggregate.go               # 每日聚合
-    markdown/
-      render.go                  # goldmark + katex + mermaid
     process/
       supervisor.go              # 子进程管理(waline / git)
     rss/
@@ -167,20 +165,20 @@ vault/
 
 ### 4.2 Go SDK 模块职责
 
-| 模块               | 对应原项目                      | 增量估计 | 关键 Go 库                                                                 |
-| ------------------ | ------------------------------- | -------- | -------------------------------------------------------------------------- |
-| `article`          | article.provider.ts(980)        | ~120     | pb `filter`/`sort` 覆盖查询;增量=字数统计+时间线聚合+搜索                  |
-| `media`            | static.provider.ts(560)         | ~100     | pb FileField + thumbs 内置;增量=MD5 去重+上传 pipeline(水印/WebP 已移前端) |
-| `migration`        | backup.controller.ts(137)       | ~150     | `encoding/json` + `app.RunInTransaction` 事务(大 JSON 在 Go 里无压力)      |
-| `caddy`            | caddy.provider.ts(136)          | ~80      | `net/http` + `net/url`(SSRF)                                               |
-| `revisions`        | —(新增)                         | ~80      | `github.com/sergi/go-diff`(快照+diff+恢复)                                 |
-| `visits`           | visit+viewer.provider.ts(241)   | ~80      | SQL `UPDATE SET count = count + 1` + 日聚合                                |
-| `markdown`         | markdown.provider.ts(47)        | ~30      | `github.com/yuin/goldmark` + katex 扩展                                    |
-| `process`          | waline+website.provider.ts(298) | ~0(裁剪) | 子进程托管改为外部容器                                                     |
-| `rss`              | rss.provider.ts(132)            | ~100     | 标准库 `encoding/xml`                                                      |
-| `sitemap`          | sitemap.provider.ts(98)         | ~50      | 标准库 `encoding/xml`                                                      |
-| `hooks`(JSVM 绑定) | —(新增)                         | ~150     | goja 绑定注册                                                              |
-| **总计**           |                                 | **~940** | **(pb 覆盖 + 裁剪 ~3200 行不计)**                                          |
+| 模块               | 对应原项目                      | 增量估计   | 关键 Go 库                                                                 |
+| ------------------ | ------------------------------- | ---------- | -------------------------------------------------------------------------- |
+| `article`          | article.provider.ts(980)        | ~120       | pb `filter`/`sort` 覆盖查询;增量=字数统计+时间线聚合+搜索                  |
+| `media`            | static.provider.ts(560)         | ~100       | pb FileField + thumbs 内置;增量=MD5 去重+上传 pipeline(水印/WebP 已移前端) |
+| `migration`        | backup.controller.ts(137)       | ~150       | `encoding/json` + `app.RunInTransaction` 事务(大 JSON 在 Go 里无压力)      |
+| `caddy`            | caddy.provider.ts(136)          | ~80        | `net/http` + `net/url`(SSRF)                                               |
+| `revisions`        | —(新增)                         | ~80        | `github.com/sergi/go-diff`(快照+diff+恢复)                                 |
+| `visits`           | visit+viewer.provider.ts(241)   | ~80        | SQL `UPDATE SET count = count + 1` + 日聚合                                |
+| `markdown`         | markdown.provider.ts(47)        | ~~已废弃~~ | 前端 marked + DOMPurify 替代,Go 端无 markdown 包                           |
+| `process`          | waline+website.provider.ts(298) | ~0(裁剪)   | 子进程托管改为外部容器                                                     |
+| `rss`              | rss.provider.ts(132)            | ~100       | 标准库 `encoding/xml`                                                      |
+| `sitemap`          | sitemap.provider.ts(98)         | ~50        | 标准库 `encoding/xml`                                                      |
+| `hooks`(JSVM 绑定) | —(新增)                         | ~150       | goja 绑定注册                                                              |
+| **总计**           |                                 | **~940**   | **(pb 覆盖 + 裁剪 ~3200 行不计)**                                          |
 
 **对比原项目**:原 NestJS 5012 行 → Go 真实增量 **~600-1000 行**(pb 原生覆盖 ~2400 行 CRUD/auth/权限,裁剪 ~800 行 picgo/waline 托管/ISR/pipeline)。
 
@@ -381,7 +379,7 @@ declare const vanblog: {
 | revisions 恢复     | `revisions.Restore()`             | 不暴露                                | ❌                      |
 | visits 计数        | `visits.Increment()`(原子)        | 不暴露                                | ❌                      |
 | visits 聚合        | `visits.AggregateDaily()`(cron)   | 不暴露                                | ❌                      |
-| Markdown 渲染      | `markdown.Render()`(goldmark)     | 不暴露                                | ❌                      |
+| Markdown 渲染      | ~~`markdown.Render()`~~(已废弃)   | 前端 marked + DOMPurify               | ❌(前端处理)            |
 | RSS 生成           | `rss.Generate()`                  | 不暴露                                | ❌                      |
 | Sitemap 生成       | `sitemap.Generate()`              | 不暴露                                | ❌                      |
 | 子进程管理(waline) | `process.Supervisor`              | 不暴露                                | ❌                      |

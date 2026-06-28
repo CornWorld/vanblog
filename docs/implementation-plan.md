@@ -63,14 +63,14 @@ vault/
   utils/
     caddyadmin/              # ★ 通用 Caddy admin API HTTP 客户端(与 vanblog 无关)
       client.go             # GET/POST/PATCH/DELETE /config/...
-      types.go              # CaddyRoute / CaddyConfig / TLSPolicy 等 JSON 结构
+      types.go              # Config root / AdminConfig / Apps / HTTPApp / Server / TLSApp / Route / Handler 等 JSON struct
       errors.go             # Caddy API 错误类型
       client_test.go        # 独立单元测试(mock HTTP server)
   internal/
     caddy/                   # ★ vanblog 业务层(调用 utils/caddyadmin)
       ssrf.go               # SSRF 白名单(vanblog 特有)
       translator.go         # site.routing DSL → caddy route(vanblog 特有)
-      template.go           # prod/dev Caddyfile 模板(vanblog 特有)
+      config_builder.go     # BuildBootstrapConfig / BuildFullConfig(范式 X)
       ask.go                # on-demand TLS ask 端点(vanblog 特有)
       bootstrap.go          # 启动时同步 site.routing(vanblog 特有)
 ```
@@ -191,11 +191,19 @@ func Translate(rule UserRule) (caddyadmin.Route, error)
 func TranslateAll(rules []UserRule, reservedPaths []string) ([]caddyadmin.Route, error)
 ```
 
-#### `internal/caddy/template.go`(~30 行)
+#### `internal/caddy/config_builder.go`(~400 行)
 
 ```go
-func RenderProdCaddyfile(opts TemplateOpts) string
-func RenderDevCaddyfile(opts TemplateOpts) string
+type BuildOpts struct {
+    Variant    string   // "prod" / "dev"
+    AstroTarget string  // 默认 "127.0.0.1:4321"
+    Email      string   // VANBLOG_EMAIL
+    LogLevel   string   // "WARN" / "INFO"(大写)
+    AllowedDomains []string
+}
+
+func BuildBootstrapConfig(opts BuildOpts) caddyadmin.Config
+func BuildFullConfig(opts BuildOpts, rules []UserRule) (caddyadmin.Config, error)
 ```
 
 #### `internal/caddy/ask.go`(~15 行)
@@ -234,7 +242,7 @@ vanblog.caddy.getRoutes();
 2. `utils/caddyadmin/client_test.go`:用 `httptest.NewServer` mock Caddy,测试所有方法
 3. `internal/caddy/ssrf.go`:白名单 + 云元数据防护
 4. `internal/caddy/translator.go`:DSL 翻译 + 保留路径校验
-5. `internal/caddy/template.go`:prod/dev Caddyfile 模板
+5. `internal/caddy/config_builder.go`:bootstrap + full Config builder
 6. `internal/caddy/ask.go` + `bootstrap.go`:端点 + 启动同步
 
 ### Done 当
@@ -554,6 +562,8 @@ vanblog.visits.getDailySummary("2024-01-01");
 ---
 
 ## 模块 7:`internal/markdown/` — Markdown 渲染
+
+> **状态**:已废弃(2026-06-28 移除)。前端 `app/src/pages/posts/[id].astro` 用 marked + DOMPurify 在 SSR 端渲染,Go 端 markdown 包是死代码,已删除。详见 [`architecture-layering.md`](./architecture-layering.md) §0.3 和 [`deployment-strategy.md`](./deployment-strategy.md) §0.3。
 
 ### pb 原生覆盖
 
