@@ -10,6 +10,11 @@
 #   https://your-domain/admin/   — Astro 管理后台
 #   https://your-domain/_/       — pb Admin UI
 #
+# --- HTTP_ONLY 模式(外置反代用户)---
+# 把下面的 VANBLOG_HTTP_ONLY=1 取消注释,然后只发布 :80 端口
+# (用你的 Traefik / NPM / Cloudflare Tunnel / 反代 Caddy 终止 TLS 后转给它)
+# 反代必须传递 X-Forwarded-Proto: https,否则 canonical URL 会错。
+#
 # 紧急回退(TLS 故障时):
 #   取消注释 ports 8080,重启容器
 #   http://your-ip:8080/admin/
@@ -30,6 +35,8 @@ services:
     environment:
       - VANBLOG_EMAIL=${VANBLOG_EMAIL:-admin@example.com}
       - VANBLOG_CADDY_LOG_LEVEL=${VANBLOG_CADDY_LOG_LEVEL:-warn}
+      # HTTP_ONLY 模式:外置反代终止 TLS(取消注释即生效):
+      # - VANBLOG_HTTP_ONLY=1
       # pb 内部地址(容器内 127.0.0.1,不需要改):
       # - ASTRO_URL=http://127.0.0.1:4321
       # - PB_URL=http://127.0.0.1:8090

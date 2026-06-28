@@ -62,6 +62,7 @@ COPY vault/pb_hooks /pb_hooks
 # Copy bootstrap.json (minimal maintenance-mode config for Caddy startup)
 # and the legacy Caddyfile as a fallback for VANBLOG_CADDY_MODE=legacy.
 COPY docker/bootstrap.json /etc/caddy/bootstrap.json
+COPY docker/bootstrap-http-only.json /etc/caddy/bootstrap-http-only.json
 COPY docker/Caddyfile.legacy.prod /etc/caddy/Caddyfile.legacy
 
 # Copy entrypoint

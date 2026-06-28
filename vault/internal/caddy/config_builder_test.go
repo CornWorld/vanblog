@@ -355,3 +355,97 @@ func handlerName(r caddyadmin.Route) string {
 	}
 	return r.Handle[0].Handler
 }
+
+// --- HTTPOnly-mode tests ---
+
+func TestBuildBootstrapConfig_HTTPOnly_NoTLS(t *testing.T) {
+	cfg := BuildBootstrapConfig(BuildOpts{HTTPOnly: true})
+
+	if cfg.Apps.TLS != nil {
+		t.Errorf("HTTPOnly bootstrap must not include apps.tls, got %+v", cfg.Apps.TLS)
+	}
+	if _, ok := cfg.Apps.HTTP.Servers[srvPlain]; !ok {
+		t.Errorf("HTTPOnly bootstrap should define srv_plain, got servers=%v", serverNames(cfg.Apps.HTTP))
+	}
+	if _, ok := cfg.Apps.HTTP.Servers[srvHTTPS]; ok {
+		t.Error("HTTPOnly bootstrap must not define srv_https")
+	}
+	if _, ok := cfg.Apps.HTTP.Servers[srvHTTP]; ok {
+		t.Error("HTTPOnly bootstrap must not define srv_http redirect")
+	}
+
+	plain := cfg.Apps.HTTP.Servers[srvPlain]
+	if len(plain.Listen) != 1 || plain.Listen[0] != ":80" {
+		t.Errorf("srv_plain should listen on :80, got %v", plain.Listen)
+	}
+	if len(plain.Routes) != 1 || plain.Routes[0].ID != maintenanceRouteID {
+		t.Errorf("srv_plain should host the maintenance route, got %+v", plain.Routes)
+	}
+}
+
+func TestBuildFullConfig_HTTPOnly_NoTLS(t *testing.T) {
+	cfg, err := BuildFullConfig(BuildOpts{HTTPOnly: true}, nil)
+	if err != nil {
+		t.Fatalf("BuildFullConfig HTTPOnly: %v", err)
+	}
+
+	if cfg.Apps.TLS != nil {
+		t.Errorf("HTTPOnly full config must not include apps.tls, got %+v", cfg.Apps.TLS)
+	}
+
+	plain := cfg.Apps.HTTP.Servers[srvPlain]
+	if plain == nil {
+		t.Fatalf("srv_plain missing")
+	}
+	if len(plain.Listen) != 1 || plain.Listen[0] != ":80" {
+		t.Errorf("srv_plain :80 listen wrong: %v", plain.Listen)
+	}
+
+	// Route order must mirror the HTTPS path:
+	//   system API → system admin → system cache rules → (user rules — none here) → Astro fallback
+	wantHead := []string{systemAPIRouteID, systemAdminRouteID}
+	if len(plain.Routes) < len(wantHead)+1 {
+		t.Fatalf("srv_plain route count too small: got %d (%+v)", len(plain.Routes), plain.Routes)
+	}
+	for i, want := range wantHead {
+		if plain.Routes[i].ID != want {
+			t.Errorf("route[%d].ID: want %q, got %q", i, want, plain.Routes[i].ID)
+		}
+	}
+	if plain.Routes[len(plain.Routes)-1].ID != systemFallbackID {
+		t.Errorf("last route should be %q, got %q", systemFallbackID, plain.Routes[len(plain.Routes)-1].ID)
+	}
+
+	// User rules land between system cache rules and Astro fallback.
+	cfg2, _ := BuildFullConfig(BuildOpts{HTTPOnly: true}, []UserRule{{
+		ID: "test-user", Type: "redirect", From: "/old/*", To: "/new/",
+	}})
+	plain2 := cfg2.Apps.HTTP.Servers[srvPlain]
+	ids := routeIDs(plain2.Routes)
+	found := false
+	for i, id := range ids {
+		if id == "test-user" && i < len(ids)-1 && ids[i+1] == systemFallbackID {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("user rule should sit immediately before fallback, got order: %v", ids)
+	}
+}
+
+func routeIDs(routes []caddyadmin.Route) []string {
+	out := make([]string, 0, len(routes))
+	for _, r := range routes {
+		out = append(out, r.ID)
+	}
+	return out
+}
+
+func serverNames(h *caddyadmin.HTTPApp) []string {
+	out := make([]string, 0, len(h.Servers))
+	for k := range h.Servers {
+		out = append(out, k)
+	}
+	return out
+}

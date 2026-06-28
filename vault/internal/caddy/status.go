@@ -2,12 +2,22 @@ package caddy
 
 import (
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/cornworld/vanblog/utils/caddyadmin"
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
 )
+
+// httpOnlyMode reports whether the container was started with
+// VANBLOG_HTTP_ONLY=1. When true, GetTLSStatus returns a degraded snapshot
+// because the embedded Caddy has no TLS app and no certificates to report.
+// Operators are expected to terminate TLS at an external reverse proxy.
+func httpOnlyMode() bool {
+	v := os.Getenv("VANBLOG_HTTP_ONLY")
+	return v == "1" || v == "true"
+}
 
 // TLSStatus represents the current TLS configuration and certificate state.
 // Returned by /api/vanblog/tls/status for the admin UI to display.
@@ -62,6 +72,49 @@ type CertInfo struct {
 
 // GetTLSStatus queries Caddy admin API + site config to produce a TLS status snapshot.
 func GetTLSStatus(app core.App, caddyAdminURL string) (*TLSStatus, error) {
+	// HTTP_ONLY mode: embedded Caddy has no TLS app, no on-demand issuance,
+	// no certs. Return a minimal snapshot so the admin UI can still show a
+	// coherent "TLS handled externally" state instead of 500'ing on missing
+	// Caddy TLS endpoints.
+	if httpOnlyMode() {
+		status := &TLSStatus{
+			OnDemandTLS:   false,
+			HttpsRedirect: false,
+			ManagementPort: 8080,
+		}
+		// We still want to surface setup state and bootstrap status (so the
+		// UI can warn if the site is on the maintenance 503 page). The rest
+		// stays zero-value.
+		hasAdmin, err := app.FindRecordsByFilter(
+			"_superusers",
+			"email != {:installer}",
+			"", 1, 0,
+			dbx.Params{"installer": core.DefaultInstallerEmail},
+		)
+		if err == nil {
+			status.SetupComplete = len(hasAdmin) > 0
+		} else {
+			status.SetupComplete = true // fail closed
+		}
+		status.AllowAll = !status.SetupComplete
+
+		// Bootstrap detection: look for the maintenance route on srv_plain
+		// (the HTTPOnly equivalent of srv_https).
+		client := caddyadmin.NewClient(caddyAdminURL)
+		if _, err := client.GetConfig(); err == nil {
+			status.CaddyReachable = true
+			if routes, rErr := client.GetRoutes(srvPlain); rErr == nil {
+				for _, r := range routes {
+					if r.ID == maintenanceRouteID {
+						status.BootstrapMode = true
+						break
+					}
+				}
+			}
+		}
+		return status, nil
+	}
+
 	status := &TLSStatus{
 		OnDemandTLS:    true,
 		HttpsRedirect:  true, // fixed in Caddyfile
