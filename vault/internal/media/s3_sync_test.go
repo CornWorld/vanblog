@@ -5,14 +5,14 @@ import (
 	"testing"
 )
 
-func TestSyncS3ToSettings_DisabledByDefault(t *testing.T) {
+func TestApplyS3BackendToSettings_DisabledByDefault(t *testing.T) {
 	app := setupApp(t)
 
 	// Fresh install: site.s3Config = {"enabled":false} (set by migration).
 	// Sync should be a no-op (settings already match default zero value).
 	before := app.Settings().S3
-	if err := SyncS3ToSettings(app); err != nil {
-		t.Fatalf("SyncS3ToSettings: %v", err)
+	if err := ApplyS3BackendToSettings(app); err != nil {
+		t.Fatalf("ApplyS3BackendToSettings: %v", err)
 	}
 	after := app.Settings().S3
 	if before.Enabled != after.Enabled || before.Enabled {
@@ -20,7 +20,7 @@ func TestSyncS3ToSettings_DisabledByDefault(t *testing.T) {
 	}
 }
 
-func TestSyncS3ToSettings_AppliesEnabledConfig(t *testing.T) {
+func TestApplyS3BackendToSettings_AppliesEnabledConfig(t *testing.T) {
 	app := setupApp(t)
 
 	// Write a complete S3 config to site.s3Config (simulating admin UI save).
@@ -43,8 +43,8 @@ func TestSyncS3ToSettings_AppliesEnabledConfig(t *testing.T) {
 		t.Fatalf("save site: %v", err)
 	}
 
-	if err := SyncS3ToSettings(app); err != nil {
-		t.Fatalf("SyncS3ToSettings: %v", err)
+	if err := ApplyS3BackendToSettings(app); err != nil {
+		t.Fatalf("ApplyS3BackendToSettings: %v", err)
 	}
 
 	got := app.Settings().S3
@@ -53,26 +53,26 @@ func TestSyncS3ToSettings_AppliesEnabledConfig(t *testing.T) {
 	}
 }
 
-func TestSyncS3ToSettings_Idempotent(t *testing.T) {
+func TestApplyS3BackendToSettings_Idempotent(t *testing.T) {
 	app := setupApp(t)
 
 	// Apply once.
-	if err := SyncS3ToSettings(app); err != nil {
+	if err := ApplyS3BackendToSettings(app); err != nil {
 		t.Fatalf("first sync: %v", err)
 	}
 
 	// Calling again with same config should be a no-op (no error, no change).
 	// We can't directly assert "no DB write" but a clean return is the contract.
-	if err := SyncS3ToSettings(app); err != nil {
+	if err := ApplyS3BackendToSettings(app); err != nil {
 		t.Fatalf("second sync should be no-op: %v", err)
 	}
 }
 
-func TestSyncS3ToSettings_RejectsIncomplete(t *testing.T) {
+func TestApplyS3BackendToSettings_RejectsIncomplete(t *testing.T) {
 	app := setupApp(t)
 
 	// Enabled=true but missing required fields → pb's S3Config.Validate
-	// should reject, and SyncS3ToSettings should surface that error.
+	// should reject, and ApplyS3BackendToSettings should surface that error.
 	site, err := app.FindFirstRecordByFilter("site", "")
 	if err != nil || site == nil {
 		t.Fatalf("find site: %v", err)
@@ -84,12 +84,12 @@ func TestSyncS3ToSettings_RejectsIncomplete(t *testing.T) {
 		t.Fatalf("save site: %v", err)
 	}
 
-	if err := SyncS3ToSettings(app); err == nil {
+	if err := ApplyS3BackendToSettings(app); err == nil {
 		t.Error("expected validation error for incomplete S3 config, got nil")
 	}
 }
 
-func TestSyncS3ToSettings_ToggleOff(t *testing.T) {
+func TestApplyS3BackendToSettings_ToggleOff(t *testing.T) {
 	app := setupApp(t)
 
 	// Turn on.
@@ -98,7 +98,7 @@ func TestSyncS3ToSettings_ToggleOff(t *testing.T) {
 	raw, _ := json.Marshal(onCfg)
 	site.Set("s3Config", json.RawMessage(raw))
 	app.Save(site)
-	if err := SyncS3ToSettings(app); err != nil {
+	if err := ApplyS3BackendToSettings(app); err != nil {
 		t.Fatalf("enable: %v", err)
 	}
 	if !app.Settings().S3.Enabled {
@@ -108,7 +108,7 @@ func TestSyncS3ToSettings_ToggleOff(t *testing.T) {
 	// Turn off.
 	site.Set("s3Config", json.RawMessage(`{"enabled":false}`))
 	app.Save(site)
-	if err := SyncS3ToSettings(app); err != nil {
+	if err := ApplyS3BackendToSettings(app); err != nil {
 		t.Fatalf("disable: %v", err)
 	}
 	if app.Settings().S3.Enabled {
