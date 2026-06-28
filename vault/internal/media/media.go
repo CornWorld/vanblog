@@ -19,14 +19,23 @@ type Manager struct {
 // New creates a media Manager and registers its pb hook subscriptions.
 //
 // Hooks:
+//   - OnServe: push site.s3Config into pb settings so a fresh deploy with a
+//     pre-populated config (backup restore, image upgrade) routes uploads to
+//     S3 without requiring an admin to re-save the site record.
 //   - OnRecordAfterCreateSuccess("media"): compute MD5 sign, dedup against
 //     existing records, delete the newer copy if a duplicate is found.
-//   - OnRecordAfterUpdateSuccess("site"): re-apply S3 backend to pb settings
-//     so new uploads take the new config without a restart.
+//   - OnRecordAfterUpdateSuccess("site"): re-apply S3 backend so config edits
+//     take effect on the next upload without a restart.
 //   - OnRecordAfterCreateSuccess("posts") + OnRecordAfterUpdateSuccess("posts"):
 //     scan post HTML for <img src> referencing media files and link them.
 func New(app core.App) *Manager {
 	m := &Manager{app: app}
+	app.OnServe().BindFunc(func(se *core.ServeEvent) error {
+		if err := ApplyS3BackendToSettings(app); err != nil {
+			log.Printf("[media] startup S3 sync failed: %v", err)
+		}
+		return se.Next()
+	})
 	app.OnRecordAfterCreateSuccess("media").BindFunc(m.dedupeOnUpload)
 	app.OnRecordAfterUpdateSuccess("site").BindFunc(func(e *core.RecordEvent) error {
 		go m.reapplyS3Backend()
