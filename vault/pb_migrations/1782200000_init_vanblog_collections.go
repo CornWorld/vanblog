@@ -2,7 +2,6 @@ package migrations
 
 import (
 	"encoding/json"
-	"log"
 
 	"github.com/pocketbase/pocketbase/core"
 	m "github.com/pocketbase/pocketbase/migrations"
@@ -37,22 +36,10 @@ func init() {
 		if err := createAudits(db); err != nil {
 			return err
 		}
-		if err := createTokens(db); err != nil {
-			return err
-		}
 		return insertDefaultSite(db)
 	}, func(db core.App) error {
-		names := []string{"tokens", "audits", "visits", "site", "media",
-			"revisions", "posts", "categories", "tags"}
-		for _, name := range names {
-			col, err := db.FindCollectionByNameOrId(name)
-			if err != nil {
-				continue
-			}
-			if err := db.Delete(col); err != nil {
-				log.Printf("failed to delete collection %s: %v", name, err)
-			}
-		}
+		// Init migration is not rolled back. If the schema needs to change,
+		// add a new migration on top — never rewrite history.
 		return nil
 	})
 }
@@ -67,8 +54,8 @@ func createTags(db core.App) error {
 	col.Fields.Add(&core.TextField{Name: "slug"})
 	col.Fields.Add(&core.TextField{Name: "description"})
 	col.Fields.Add(&core.TextField{Name: "oldName"})
-	col.Fields.Add(&core.AutodateField{Name: "created", OnCreate: true});
-	col.Fields.Add(&core.AutodateField{Name: "updated", OnUpdate: true});
+	col.Fields.Add(&core.AutodateField{Name: "created", OnCreate: true})
+	col.Fields.Add(&core.AutodateField{Name: "updated", OnUpdate: true})
 	col.ListRule = strPtr("")
 	col.ViewRule = strPtr("")
 	return db.Save(col)
@@ -82,8 +69,8 @@ func createCategories(db core.App) error {
 	col.Fields.Add(&core.TextField{Name: "password"})
 	col.Fields.Add(&core.JSONField{Name: "meta"})
 	col.Fields.Add(&core.NumberField{Name: "oldId"})
-	col.Fields.Add(&core.AutodateField{Name: "created", OnCreate: true});
-	col.Fields.Add(&core.AutodateField{Name: "updated", OnUpdate: true});
+	col.Fields.Add(&core.AutodateField{Name: "created", OnCreate: true})
+	col.Fields.Add(&core.AutodateField{Name: "updated", OnUpdate: true})
 	col.ListRule = strPtr("")
 	col.ViewRule = strPtr("")
 	return db.Save(col)
@@ -112,8 +99,8 @@ func createUsers(db core.App) error {
 		"CREATE UNIQUE INDEX `idx_users_username` ON `users` (`username`)",
 	}
 	col.PasswordAuth.IdentityFields = []string{"email", "username"}
-	col.Fields.Add(&core.AutodateField{Name: "created", OnCreate: true});
-	col.Fields.Add(&core.AutodateField{Name: "updated", OnUpdate: true});
+	col.Fields.Add(&core.AutodateField{Name: "created", OnCreate: true})
+	col.Fields.Add(&core.AutodateField{Name: "updated", OnUpdate: true})
 	col.ListRule = strPtr(`@request.auth.id != "" && (@request.auth.role = "admin" || @request.auth.id = id)`)
 	col.ViewRule = strPtr(`@request.auth.id != "" && (@request.auth.role = "admin" || @request.auth.id = id)`)
 	col.CreateRule = strPtr(`@request.auth.role = "admin"`)
@@ -152,8 +139,8 @@ func createPosts(db core.App) error {
 	col.Fields.Add(&core.NumberField{Name: "visitedCount"})
 	col.Fields.Add(&core.DateField{Name: "lastVisitedAt"})
 	col.Fields.Add(&core.BoolField{Name: "deleted"})
-	col.Fields.Add(&core.AutodateField{Name: "created", OnCreate: true});
-	col.Fields.Add(&core.AutodateField{Name: "updated", OnUpdate: true});
+	col.Fields.Add(&core.AutodateField{Name: "created", OnCreate: true})
+	col.Fields.Add(&core.AutodateField{Name: "updated", OnUpdate: true})
 	col.ListRule = strPtr(`status = "published" && private = false || @request.auth.id != ""`)
 	col.ViewRule = strPtr(`status = "published" && private = false || @request.auth.id != ""`)
 	col.CreateRule = strPtr(`@request.auth.id != "" && (@request.auth.role = "admin" || @request.auth.permissions ?~ "article:")`)
@@ -173,12 +160,14 @@ func createRevisions(db core.App) error {
 	}
 	col := core.NewCollection(core.CollectionTypeBase, "revisions")
 	col.Fields.Add(&core.RelationField{Name: "target", CollectionId: postsCol.Id, MaxSelect: 1, Required: true})
+	// snapshot holds the full pre-update state (title/content/status JSON).
+	// No diff field: the Astro diff renderer can derive deltas on demand
+	// from adjacent snapshots, so storing both was redundant.
 	col.Fields.Add(&core.JSONField{Name: "snapshot"})
-	col.Fields.Add(&core.TextField{Name: "diff"})
 	col.Fields.Add(&core.RelationField{Name: "authoredBy", CollectionId: usersCol.Id, MaxSelect: 1})
 	col.Fields.Add(&core.TextField{Name: "reason"})
-	col.Fields.Add(&core.AutodateField{Name: "created", OnCreate: true});
-	col.Fields.Add(&core.AutodateField{Name: "updated", OnUpdate: true});
+	col.Fields.Add(&core.AutodateField{Name: "created", OnCreate: true})
+	col.Fields.Add(&core.AutodateField{Name: "updated", OnUpdate: true})
 	col.ListRule = strPtr(`@request.auth.id != ""`)
 	col.ViewRule = strPtr(`@request.auth.id != ""`)
 	col.DeleteRule = strPtr(`@request.auth.role = "admin"`)
@@ -187,16 +176,39 @@ func createRevisions(db core.App) error {
 
 func createMedia(db core.App) error {
 	col := core.NewCollection(core.CollectionTypeBase, "media")
-	col.Fields.Add(&core.FileField{Name: "file", MaxSelect: 1})
+	col.Fields.Add(&core.FileField{
+		Name:      "file",
+		MaxSelect: 1,
+		MaxSize:   50 << 20, // 50MB
+		MimeTypes: []string{
+			"image/jpeg",
+			"image/png",
+			"image/gif",
+			"image/webp",
+			"image/svg+xml",
+			"image/bmp",
+			"image/tiff",
+			"image/x-icon",
+			"image/avif",
+			// Non-image types (favicon/attachment use same field)
+			"application/octet-stream",
+		},
+		Thumbs: []string{
+			"300x0",  // thumbnail width=300 (height auto)
+			"800x0",  // medium width=800
+			"1200x0", // large width=1200
+		},
+		Required: false, // externalUrl images don't have local files
+	})
 	col.Fields.Add(&core.SelectField{Name: "staticType", Values: []string{"img", "favicon", "attachment"}})
 	col.Fields.Add(&core.SelectField{Name: "storageType", Values: []string{"local", "s3", "external"}})
 	col.Fields.Add(&core.TextField{Name: "fileType"})
 	col.Fields.Add(&core.TextField{Name: "sign"})
 	col.Fields.Add(&core.JSONField{Name: "meta"})
 	col.Fields.Add(&core.TextField{Name: "externalUrl"})
-	col.Fields.Add(&core.TextField{Name: "oldId"})
-	col.Fields.Add(&core.AutodateField{Name: "created", OnCreate: true});
-	col.Fields.Add(&core.AutodateField{Name: "updated", OnUpdate: true});
+	col.Fields.Add(&core.NumberField{Name: "oldId"})
+	col.Fields.Add(&core.AutodateField{Name: "created", OnCreate: true})
+	col.Fields.Add(&core.AutodateField{Name: "updated", OnUpdate: true})
 	col.ListRule = strPtr(`staticType = "img" || @request.auth.id != ""`)
 	col.ViewRule = strPtr(`staticType = "img" || @request.auth.id != ""`)
 	col.CreateRule = strPtr(`@request.auth.id != ""`)
@@ -263,47 +275,55 @@ func createSite(db core.App) error {
 	// 图片处理(原 imageConfig JSON 拆开)
 	col.Fields.Add(&core.BoolField{Name: "enableWaterMark"})
 	col.Fields.Add(&core.TextField{Name: "watermarkText"})
-	col.Fields.Add(&core.BoolField{Name: "enableWebp"})
+	// mediaConfig (JSON) 取代了原 enableWebp 单 bool —— 控制客户端
+	// 图片归一化（targetFormat/quality）。ApplyS3BackendToSettings 等下游
+	// 都从 mediaConfig 读，不再看 enableWebp。
+	col.Fields.Add(&core.JSONField{Name: "mediaConfig"})
 
 	// Caddy / HTTPS
-	col.Fields.Add(&core.JSONField{Name: "routing"})          // 动态路由规则数组
-	col.Fields.Add(&core.JSONField{Name: "allowedDomains"})   // on-demand TLS 白名单
+	col.Fields.Add(&core.JSONField{Name: "routing"})        // 动态路由规则数组
+	col.Fields.Add(&core.JSONField{Name: "allowedDomains"}) // on-demand TLS 白名单
 	col.Fields.Add(&core.BoolField{Name: "httpsRedirect"})
 	col.Fields.Add(&core.TextField{Name: "caddyLogLevel"})
+	// caddyLastError 由 caddy.Service.pushConfigToAdminAPI 写入，
+	// admin UI 通过 TLSStatus.BootstrapError 显示，方便排查"为什么卡在 503 维护页"。
+	col.Fields.Add(&core.TextField{Name: "caddyLastError"})
 
 	// 版本控制设置(原 revisions JSON 拆开)
 	col.Fields.Add(&core.BoolField{Name: "revisionsEnabled"})
 	col.Fields.Add(&core.NumberField{Name: "revisionsRetention"})
 
-	// 显示开关(原 siteInfo 的各种 bool 拆开)
 	// 显示开关合并为 JSON(site 单行表,拆列无索引收益)
 	col.Fields.Add(&core.JSONField{Name: "displayOptions"})
-	// 默认值: {showAdminButton:true, showSubMenu:false, subMenuOffset:0, ...}
 
 	// --- JSON 数组配置（动态条目，JSON 比独立表更好用）---
 
-	col.Fields.Add(&core.JSONField{Name: "nav"})      // 导航菜单 [{name, value, level}]
-	col.Fields.Add(&core.JSONField{Name: "links"})    // 友链 [{name, url, desc, logo}]
-	col.Fields.Add(&core.JSONField{Name: "socials"})  // 社交 [{type, value}]
-	col.Fields.Add(&core.JSONField{Name: "rewards"})  // 打赏 [{name, value}]
+	col.Fields.Add(&core.JSONField{Name: "nav"})     // 导航菜单 [{name, value, level}]
+	col.Fields.Add(&core.JSONField{Name: "links"})   // 友链 [{name, url, desc, logo}]
+	col.Fields.Add(&core.JSONField{Name: "socials"}) // 社交 [{type, value}]
+	col.Fields.Add(&core.JSONField{Name: "rewards"}) // 打赏 [{name, value}]
 
 	// --- md_output / git sync（配置对象，JSON 合理）---
 
 	col.Fields.Add(&core.BoolField{Name: "outputEnabled"})
 	col.Fields.Add(&core.TextField{Name: "outputDest"})
-	col.Fields.Add(&core.JSONField{Name: "outputConfig"})  // format/naming/include/trigger
+	col.Fields.Add(&core.JSONField{Name: "outputConfig"}) // format/naming/include/trigger
 
 	col.Fields.Add(&core.BoolField{Name: "syncEnabled"})
 	col.Fields.Add(&core.TextField{Name: "syncRemote"})
-	col.Fields.Add(&core.JSONField{Name: "syncConfig"})  // branch/schedule/sshKey
+	col.Fields.Add(&core.JSONField{Name: "syncConfig"}) // branch/schedule/sshKey
+
+	// --- S3 后端配置（ApplyS3BackendToSettings 消费此 blob 推到 pb settings）---
+	// Secret 明文存 SQLite；需要 at-rest 加密的用户应加密 pb_data 卷。
+	col.Fields.Add(&core.JSONField{Name: "s3Config"})
 
 	// Rule: public read, auth write
-	col.Fields.Add(&core.AutodateField{Name: "created", OnCreate: true});
-	col.Fields.Add(&core.AutodateField{Name: "updated", OnUpdate: true});
+	col.Fields.Add(&core.AutodateField{Name: "created", OnCreate: true})
+	col.Fields.Add(&core.AutodateField{Name: "updated", OnUpdate: true})
 	col.ListRule = strPtr("")
 	col.ViewRule = strPtr("")
-	col.CreateRule = strPtr(`@request.auth.role = "admin"`) // 站点配置仅 admin
-	col.UpdateRule = strPtr(`@request.auth.role = "admin"`) // 站点配置仅 admin
+	col.CreateRule = strPtr(`@request.auth.role = "admin"`)
+	col.UpdateRule = strPtr(`@request.auth.role = "admin"`)
 	col.DeleteRule = strPtr(`@request.auth.role = "admin"`)
 	return db.Save(col)
 }
@@ -320,8 +340,8 @@ func createVisits(db core.App) error {
 	col.Fields.Add(&core.NumberField{Name: "uniques"})
 	col.Fields.Add(&core.RelationField{Name: "post", CollectionId: postsCol.Id, MaxSelect: 1})
 	col.Fields.Add(&core.DateField{Name: "lastVisitedAt"})
-	col.Fields.Add(&core.AutodateField{Name: "created", OnCreate: true});
-	col.Fields.Add(&core.AutodateField{Name: "updated", OnUpdate: true});
+	col.Fields.Add(&core.AutodateField{Name: "created", OnCreate: true})
+	col.Fields.Add(&core.AutodateField{Name: "updated", OnUpdate: true})
 	col.ListRule = strPtr(`@request.auth.id != ""`)
 	col.ViewRule = strPtr(`@request.auth.id != ""`)
 	col.UpdateRule = strPtr(`@request.auth.id != ""`)
@@ -342,31 +362,10 @@ func createAudits(db core.App) error {
 	col.Fields.Add(&core.JSONField{Name: "detail"})
 	col.Fields.Add(&core.TextField{Name: "ip"})
 	col.Fields.Add(&core.TextField{Name: "userAgent"})
-	col.Fields.Add(&core.AutodateField{Name: "created", OnCreate: true});
-	col.Fields.Add(&core.AutodateField{Name: "updated", OnUpdate: true});
+	col.Fields.Add(&core.AutodateField{Name: "created", OnCreate: true})
+	col.Fields.Add(&core.AutodateField{Name: "updated", OnUpdate: true})
 	col.ListRule = strPtr(`@request.auth.role = "admin"`)
 	col.ViewRule = strPtr(`@request.auth.role = "admin"`)
-	col.DeleteRule = strPtr(`@request.auth.role = "admin"`)
-	return db.Save(col)
-}
-
-func createTokens(db core.App) error {
-	usersCol, err := db.FindCollectionByNameOrId("users")
-	if err != nil {
-		return err
-	}
-	col := core.NewCollection(core.CollectionTypeBase, "tokens")
-	col.Fields.Add(&core.TextField{Name: "name"})
-	col.Fields.Add(&core.TextField{Name: "tokenHash", Required: true})
-	col.Fields.Add(&core.RelationField{Name: "user", CollectionId: usersCol.Id, MaxSelect: 1, Required: true})
-	col.Fields.Add(&core.DateField{Name: "expiresAt"})
-	col.Fields.Add(&core.BoolField{Name: "disabled"})
-	col.Fields.Add(&core.AutodateField{Name: "created", OnCreate: true});
-	col.Fields.Add(&core.AutodateField{Name: "updated", OnUpdate: true});
-	col.ListRule = strPtr(`@request.auth.role = "admin"`)
-	col.ViewRule = strPtr(`@request.auth.role = "admin"`)
-	col.CreateRule = strPtr(`@request.auth.role = "admin"`)
-	col.UpdateRule = strPtr(`@request.auth.role = "admin"`)
 	col.DeleteRule = strPtr(`@request.auth.role = "admin"`)
 	return db.Save(col)
 }
@@ -384,7 +383,6 @@ func insertDefaultSite(db core.App) error {
 	record.Set("defaultTheme", "auto")
 	record.Set("commentsProvider", "disabled")
 	record.Set("enableWaterMark", false)
-	record.Set("enableWebp", true)
 	record.Set("httpsRedirect", true)
 	record.Set("caddyLogLevel", "warn")
 	record.Set("revisionsEnabled", true)
@@ -394,7 +392,7 @@ func insertDefaultSite(db core.App) error {
 	record.Set("outputDest", "/var/lib/md_output")
 	record.Set("syncEnabled", false)
 
-	// JSON 数组默认值
+	// JSON 字段默认值
 	record.Set("nav", json.RawMessage(`[]`))
 	record.Set("links", json.RawMessage(`[]`))
 	record.Set("socials", json.RawMessage(`[]`))
@@ -404,12 +402,10 @@ func insertDefaultSite(db core.App) error {
 	record.Set("outputConfig", json.RawMessage(`{"format":"markdown","trigger":"onUpdate"}`))
 	record.Set("syncConfig", json.RawMessage(`{"branch":"main","schedule":"0 */6 * * *"}`))
 	record.Set("commentsConfig", json.RawMessage(`{}`))
-
-	// s3Config / mediaConfig defaults are set by their own add_xxx_config
-	// migrations (1782400000 / 1782500000), which add the field AND
-	// backfill the default. Setting them here is a no-op since the
-	// collection schema at this migration step doesn't have those fields
-	// yet — record.Set silently drops them.
+	// mediaConfig: 客户端 WebP 归一化默认开启（quality 84，原 enableWebp=true 的等价）
+	record.Set("mediaConfig", json.RawMessage(`{"enabled":true,"targetFormat":"webp","quality":84}`))
+	// s3Config: 默认禁用（启用后 ApplyS3BackendToSettings 才会推到 pb settings）
+	record.Set("s3Config", json.RawMessage(`{"enabled":false}`))
 
 	return db.Save(record)
 }
