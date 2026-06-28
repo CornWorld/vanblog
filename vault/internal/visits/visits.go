@@ -14,9 +14,29 @@ type Manager struct {
 	app core.App
 }
 
-// New creates a visits Manager.
+// New creates a visits Manager and registers its pb hook subscriptions.
+//
+// Hook: OnRecordCreateRequest("visits") — when a visit record is created
+// via the HTTP API, also bump the linked post's viewCount atomically.
+// (Internal Increment() already does this; this hook covers the rare path
+// where a client POSTs a visits record directly.)
 func New(app core.App) *Manager {
-	return &Manager{app: app}
+	m := &Manager{app: app}
+	app.OnRecordCreateRequest("visits").BindFunc(m.bumpPostViewOnVisitCreate)
+	return m
+}
+
+// bumpPostViewOnVisitCreate runs after the visit record is created by an
+// HTTP request; reads the linked post id and increments its viewCount.
+func (m *Manager) bumpPostViewOnVisitCreate(e *core.RecordRequestEvent) error {
+	if err := e.Next(); err != nil {
+		return err
+	}
+	postID := e.Record.GetString("post")
+	if postID != "" {
+		m.IncrementPostView(postID)
+	}
+	return nil
 }
 
 // Increment records a page view for a given path.
