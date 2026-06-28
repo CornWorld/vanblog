@@ -122,6 +122,21 @@ export interface SiteConfig {
   customHtml: string;
   customScript: string;
   enableWaterMark: boolean;
+  /**
+   * Client-side image normalization config. Read by ByteMdEditor via the
+   * site record API; consumed by app/src/lib/media/normalizeImage.ts.
+   *
+   * - enabled=false OR targetFormat='preserve': uploads pass through
+   *   unchanged. pb silently falls back to original for BMP/TIFF/SVG/AVIF.
+   * - targetFormat='webp'/'avif': rasterize via createImageBitmap,
+   *   re-encode via @jsquash. SVG bypasses regardless.
+   * - quality: 1-100, applies to webp/avif encoding only.
+   */
+  mediaConfig?: {
+    enabled: boolean;
+    targetFormat: 'webp' | 'avif' | 'preserve';
+    quality: number;
+  };
   watermarkText: string;
   enableWebp: boolean;
   routing: RouteRule[];
