@@ -170,7 +170,16 @@ export interface RewardItem {
 
 export interface RouteRule {
   id: string;
-  type: 'proxy' | 'redirect' | 'rewrite' | 'block';
+  /**
+   * - proxy: reverse_proxy to `to` (full URL)
+   * - redirect: HTTP redirect to `to` (status `code`, default 301)
+   * - rewrite: internal URI rewrite to `to` (absolute path)
+   * - block: respond 403
+   * - cache: stamp response `headers` (e.g. Cache-Control) on the matched
+   *   path. Non-terminal — the reverse_proxy fallback in Caddyfile still
+   *   serves the body, so this only adds cache semantics.
+   */
+  type: 'proxy' | 'redirect' | 'rewrite' | 'block' | 'cache';
   from: string;
   to: string;
   code?: number;

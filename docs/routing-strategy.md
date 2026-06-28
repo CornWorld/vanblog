@@ -107,13 +107,25 @@ reverse_proxy 127.0.0.1:3001                            # 前台兜底
 
 ### 3.2 支持的 `type`
 
-| type       | 说明              | 对应 Caddy 指令 |
-| ---------- | ----------------- | --------------- |
-| `proxy`    | 反向代理          | `reverse_proxy` |
-| `redirect` | 重定向(3xx)       | `redir`         |
-| `rewrite`  | URL 重写(内部)    | `rewrite`       |
-| `block`    | 拒绝访问(403/404) | `respond 403`   |
-| `header`   | 修改响应头        | `header`        |
+| type       | 说明              | 对应 Caddy 指令    |
+| ---------- | ----------------- | ------------------ |
+| `proxy`    | 反向代理          | `reverse_proxy`    |
+| `redirect` | 重定向(3xx)       | `redir`            |
+| `rewrite`  | URL 重写(内部)    | `rewrite`          |
+| `block`    | 拒绝访问(403/404) | `respond 403`      |
+| `cache`    | 在响应上盖缓存头  | `headers` (非终止) |
+| `header`   | 修改响应头        | `header`           |
+
+> **`cache` 类型说明**:实现为 Caddy `headers` handler,**非终止**(non-terminal)。
+> 盖完 `Cache-Control` 等响应头后,路由继续匹配下一条(由 Caddyfile 中的
+> Astro `reverse_proxy` fallback 实际产生响应体)。这样我们能在不重写既有路由
+> 的前提下叠加缓存语义。示例:`{ "id": "cache-static", "type": "cache",
+"from": "/emoji-data.json", "headers": { "Cache-Control":
+"public, max-age=31536000, immutable" } }`。
+
+vanblog 在启动时通过 `caddy.SystemCacheRules()` 注入若干系统级 `cache` 规则
+(如 `vanblog-emoji-cache` 标记 `/emoji-data.json` 为 immutable)。用户在
+`site.routing` 里写同 `id` 的规则即可覆盖,或写新 `from` 路径追加缓存规则。
 
 **不支持**(安全考虑):
 
@@ -248,18 +260,19 @@ POST /config/apps/http/servers/srv0/routes/...
 1. **权威源是 `site.routing`(数据库)**,不是 caddy 内存状态
 2. **启动流程**:vanblog 启动 → 读 `site.routing` → 翻译为完整路由集合 → `POST /load` 全量替换 caddy config
 3. **运行时变更**:用户改 `site.routing` → 中间层校验 → 增量 PATCH/DELETE 单条路由(by `@id`)→ 写入 audit log
-4. **Caddyfile 模板**:dev 镜像的 Caddyfile 只包含**启动时必须的静态路由**(tls、admin、核心反代),动态部分全部走 admin api
+4. **Bootstrap 配置**:`docker/bootstrap.json` 只包含维护模式 + admin + tls + 核心反代,完整路由由 pb OnBootstrap 通过 admin api 全量 `LoadConfig` 注入
 
 ### 5.2 启动顺序
 
 ```
-1. Caddy 启动(用最小 Caddyfile,只配 admin + tls)
+1. Caddy 启动(用 docker/bootstrap.json,维护模式)
 2. pb 启动
-3. pb_hooks 启动钩子:
-   a. GET /config/apps/http/servers/srv0/routes  (读取现有路由)
-   b. 对比 site.routing,计算 diff
-   c. PATCH 增量应用 diff
-4. 用户访问 → Caddy 路由 → vanblog / 用户后端
+3. pb OnBootstrap 钩子(同步):
+   a. 读 site.routing + site.allowedDomains + VANBLOG_EMAIL
+   b. BuildFullConfig → TranslateAll(SSRF 校验 + 保留路径校验)
+   c. ValidateConfig(dry-run)
+   d. LoadConfig(全量替换,内层 3×500ms 重试,外层 5 次指数退避)
+4. 用户访问 → Caddy(完整路由)→ vanblog / 用户后端
 ```
 
 ---
@@ -278,12 +291,12 @@ POST /config/apps/http/servers/srv0/routes/...
 
 ## 7. 迁移影响
 
-| 原项目配置                                         | 重构后                                       |
-| -------------------------------------------------- | -------------------------------------------- |
-| CaddyfileTemplate 的 `/c/* /custom/* /api/comment` | dev 镜像 Caddyfile 模板自动处理,不需用户配置 |
-| 用户想加自定义反代(原项目不支持)                   | `site.routing` JSON 配置,后台 UI 操作        |
-| `caddy.provider.ts` 的所有方法                     | pb_hooks 重写,加上校验层                     |
-| Caddy admin api 裸暴露(原项目风险)                 | ✂️ 不再对外,只接受 vanblog 中间层调用        |
+| 原项目配置                                         | 重构后                                                      |
+| -------------------------------------------------- | ----------------------------------------------------------- |
+| CaddyfileTemplate 的 `/c/* /custom/* /api/comment` | `SystemCacheRules` + `BuildFullConfig` 注入,不需用户配置    |
+| 用户想加自定义反代(原项目不支持)                   | `site.routing` JSON 配置,后台 UI 操作                       |
+| `caddy.provider.ts` 的所有方法                     | Go `internal/caddy` 包实现,JSVM 通过 `vanblog.caddy.*` 调用 |
+| Caddy admin api 裸暴露(原项目风险)                 | ✂️ 不再对外,只接受 vanblog 中间层调用                       |
 
 ---
 
@@ -291,12 +304,12 @@ POST /config/apps/http/servers/srv0/routes/...
 
 **所有路由变更必须留痕**(对比原项目的缺陷):
 
-| 事件                       | 记录到                                           |
-| -------------------------- | ------------------------------------------------ |
+| 事件                       | 记录到                               |
+| -------------------------- | ------------------------------------ |
 | 用户添加/修改/删除路由规则 | `audits` 表(action="routing.add" 等) |
-| 校验失败(SSRF / 路径冲突)  | `audits` 表,带详细错误                           |
-| caddy admin api 调用结果   | `audits` 表,带响应码                             |
-| Caddy 启动/重载            | pb 启动日志                                      |
+| 校验失败(SSRF / 路径冲突)  | `audits` 表,带详细错误               |
+| caddy admin api 调用结果   | `audits` 表,带响应码                 |
+| Caddy 启动/重载            | pb 启动日志                          |
 
 **Audit schema**(单一审计表,登录是 action="auth.login" 子集):
 

@@ -15,7 +15,7 @@ type UserRule struct {
 	// stable route management (add/remove without array position).
 	ID string `json:"id"`
 
-	// Type is the route type: proxy, redirect, rewrite, block.
+	// Type is the route type: proxy, redirect, rewrite, block, cache.
 	Type string `json:"type"`
 
 	// From is the URL path pattern to match. Supports glob: /api/*, /static/*
@@ -60,8 +60,10 @@ func Translate(rule UserRule) (caddyadmin.Route, error) {
 		return translateRewrite(rule)
 	case "block":
 		return translateBlock(rule)
+	case "cache":
+		return translateCache(rule)
 	default:
-		return caddyadmin.Route{}, fmt.Errorf("caddy: unknown route type %q (must be proxy/redirect/rewrite/block)", rule.Type)
+		return caddyadmin.Route{}, fmt.Errorf("caddy: unknown route type %q (must be proxy/redirect/rewrite/block/cache)", rule.Type)
 	}
 }
 
@@ -121,8 +123,8 @@ func translateProxy(rule UserRule) (caddyadmin.Route, error) {
 	}
 
 	return caddyadmin.Route{
-		ID:    rule.ID,
-		Match: []caddyadmin.MatchRule{{Path: []string{rule.From}}},
+		ID:     rule.ID,
+		Match:  []caddyadmin.MatchRule{{Path: []string{rule.From}}},
 		Handle: []caddyadmin.Handler{handler},
 	}, nil
 }
@@ -138,6 +140,10 @@ func translateRedirect(rule UserRule) (caddyadmin.Route, error) {
 		Handle: []caddyadmin.Handler{{
 			Handler:    "static_response",
 			StatusCode: code,
+			// static_response handler uses the same HeaderPolicy shape as
+			// other handlers in Caddy's native config (response.set), producing
+			// the nested {"response":{"set":{...}}} JSON structure expected by
+			// docker/bootstrap.json.
 			Headers: &caddyadmin.HeaderPolicy{
 				Response: &caddyadmin.HeaderOps{
 					Set: map[string][]string{"Location": {rule.To}},
