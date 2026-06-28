@@ -1,6 +1,12 @@
 # Snow AI 工作区
 /refs/
 
+# Snow AI 本地产出（代码笔记 / 快照）
+.snow/notebook/
+
+# Astro 生成的本地缓存类型与设置
+app/.astro/
+
 # Dependencies
 node_modules/
 
