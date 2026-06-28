@@ -26,7 +26,7 @@ func init() {
 		// "forcePathStyle":bool}
 		//
 		// JSON (not a relation or scalar columns) because the whole blob
-		// is consumed atomically by SyncS3ToSettings — partial edits are
+		// is consumed atomically by ApplyS3BackendToSettings — partial edits are
 		// not meaningful. Secret is stored plaintext in SQLite; operators
 		// who need at-rest encryption should encrypt the pb_data volume.
 		col.Fields.Add(&core.JSONField{Name: "s3Config"})
@@ -36,10 +36,15 @@ func init() {
 		}
 
 		// Backfill the default value on the existing single site record so
-		// SyncS3ToSettings sees a well-formed blob on the first run after
+		// ApplyS3BackendToSettings sees a well-formed blob on the first run after
 		// upgrade. New installs get the default from insertDefaultSite.
+		//
+		// Why we check both "" and "null": pb's JSONField returns the
+		// literal string "null" from GetString when the column is SQL NULL
+		// (JSON null serialized as text). Either means "not yet set".
 		if rec, err := db.FindFirstRecordByFilter("site", ""); err == nil && rec != nil {
-			if rec.GetString("s3Config") == "" {
+			cur := rec.GetString("s3Config")
+			if cur == "" || cur == "null" {
 				rec.Set("s3Config", json.RawMessage(`{"enabled":false}`))
 				if err := db.Save(rec); err != nil {
 					return err
