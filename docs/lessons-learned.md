@@ -127,6 +127,26 @@ migratecmd.MustRegister(app, app.RootCmd, migratecmd.Config{...})
 
 正确做法:Go hook 保留核心逻辑,通过配置项(如 `site.revisionsEnabled`)或 pb Rule 表达式让用户控制行为。
 
+#### 5.1.1 Manager 自挂 hook（启动架构决策）
+
+**背景**：V4 smoke 暴露了时机问题 —— BootstrapSync 卡死（Caddy admin 不存在）、site 表 NULL、S3 sync 报 "no rows"。诊断后发现根因是 `vault/internal/hooks/hooks.go` 集中了 5 类关注点（数据一致性 hook / 业务事件 hook / HTTP 路由 / 启动初始化 / 配置同步），所有逻辑通过 `Register(app)` 单点塞给 pb，导致启动顺序不可见。
+
+**决策**：删除 `hooks/` 包，每个 manager 在 `New(app)` 时自挂所需的 pb hook（事件订阅、HTTP 路由、启动初始化）。main.go 是构造清单 + `pb.Start()`。
+
+**否决的方案**：
+- `wire` / `fx` DI 框架 —— pb 自己 own 生命周期（Bootstrap → Migrate → Serve），DI 框架跟它打架；痛点是「副作用时序」不是「对象图装配」
+- runtime Mode 枚举（DEV/PROD）—— 又一层抽象，命名空洞（`Bootstrap` / `Sync` 看不出业务意义）
+- 阶段接口（PhasePreServe / PhaseOnServe）—— 本质还是主程序在做事
+- 命名约定 + 强制接口 —— 用户反馈「又臭又长」
+
+**关键收获**：
+1. pb 的 hook 系统已经是装配点，不需要 vanblog 再加一层抽象。
+2. dev/prod 模式靠 `os.Getenv` 在 caddy manager 内部短路 `pushConfigToAdminAPI`，不需要 Mode 枚举。
+3. `OnServe` 内跑启动初始化是安全时机 —— 此时 migration 已完成、site 表存在、`ApplyS3BackendToSettings` 不会报 "no rows"。`OnBootstrap` 只跑系统 migration，**不**会跑用户 migration。
+4. 命名要具体动词（`pushConfigToAdminAPI` / `dedupeOnUpload` / `ApplyS3BackendToSettings`），不要抽象分类词（`Bootstrap` / `Sync` / `Register`）。
+
+详见 `architecture-layering.md` §4.4。
+
 ### 5.2 不直连 pb 绕过 Caddy
 
 **原则**:所有外部流量必须经过 Caddy 路由层。
@@ -199,7 +219,7 @@ migratecmd.MustRegister(app, app.RootCmd, migratecmd.Config{...})
 | 项目 | 状态 | 风险 |
 |---|---|---|
 | Astro 前端 | 仅占位页面 | 产品不可用,需要实现主题 |
-| ~~media S3 驱动~~ | 已实现 + 端到端测试覆盖(2026-06-28) | 通过 site.s3Config JSON 字段同步到 pb settings(`SyncS3ToSettings`),pb `BaseApp.NewFilesystem()` 自动切 S3。secret 明文存 SQLite,用户需自管卷加密。集成测试(`vault/internal/media/s3_integration_test.go` + `vault/internal/hooks/s3_integration_test.go`)覆盖:同步、上传、`/api/files/...` 下载路由、`?thumb=` 缩略图生成、dedup hook —— 6 个测试,通过 MinIO dev-service 跑。**已知限制**:见 §6.3 |
+| ~~media S3 驱动~~ | 已实现 + 端到端测试覆盖(2026-06-28) | 通过 site.s3Config JSON 字段同步到 pb settings(`ApplyS3BackendToSettings`),pb `BaseApp.NewFilesystem()` 自动切 S3。secret 明文存 SQLite,用户需自管卷加密。集成测试(`vault/internal/media/s3_integration_test.go`,含 dedup 端到端用例 `TestS3Integration_DedupComponentsAgainstS3`)覆盖:同步、上传、`/api/files/...` 下载路由、`?thumb=` 缩略图生成、dedup hook —— 通过 MinIO dev-service 跑。**已知限制**:见 §6.3 |
 | Waline 集成 | 仅文档 | 评论系统不可用 |
 | ARM 多架构 | 未验证 | 树莓派/ARM 服务器不可用 |
 | ~~HTTP_ONLY 模式~~ | 已实现(2026-06-28) | `VANBLOG_HTTP_ONLY=1` 让 Caddy 只听 :80、不配 TLS app,外置反代终止 TLS。需外置反代传 `X-Forwarded-Proto: https`,否则 canonical URL 错。详见 `docs/https-strategy.md §7` |
