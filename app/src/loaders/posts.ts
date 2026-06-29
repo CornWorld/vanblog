@@ -1,6 +1,7 @@
 import type { LiveLoader } from 'astro/loaders';
 import { createVanblogClient, type Post } from '@vanblog/sdk';
 import { renderMarkdown } from '../lib/markdown/renderer';
+import { normalizeMathDelimiters } from '../lib/markdown/normalizeMathDelimiters';
 
 const PB_URL = 'http://127.0.0.1:8090';
 
@@ -32,7 +33,8 @@ export function postLoader(): LiveLoader<Post, PostEntryFilter, PostCollectionFi
           return undefined;
         }
 
-        const { code: html } = await renderMarkdown(post.content || '');
+        const content = normalizeMathDelimiters(post.content || '');
+        const { code: html } = await renderMarkdown(content);
 
         return {
           id: post.id,
@@ -69,7 +71,8 @@ export function postLoader(): LiveLoader<Post, PostEntryFilter, PostCollectionFi
 
         const entries = await Promise.all(
           result.items.map(async (post) => {
-            const { code: html } = await renderMarkdown(post.content || '');
+            const content = normalizeMathDelimiters(post.content || '');
+        const { code: html } = await renderMarkdown(content);
             return {
               id: post.id,
               data: post,
