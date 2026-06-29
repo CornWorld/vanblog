@@ -5,10 +5,28 @@ package article
 import (
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
 )
+
+// canManagePosts returns true if the request's auth record is admin or has
+// the article:update permission (or "all"). Returns false for anonymous.
+func canManagePosts(auth *core.Record) bool {
+	if auth == nil {
+		return false
+	}
+	if auth.GetString("role") == "admin" {
+		return true
+	}
+	for _, p := range auth.GetStringSlice("permissions") {
+		if p == "article:update" || p == "all" {
+			return true
+		}
+	}
+	return false
+}
 
 // Manager handles article operations.
 type Manager struct {
@@ -27,6 +45,8 @@ func New(app core.App) *Manager {
 	app.OnServe().BindFunc(func(se *core.ServeEvent) error {
 		se.Router.GET("/api/vanblog/timeline", m.handleTimelineEndpoint)
 		se.Router.GET("/api/vanblog/search", m.handleSearchEndpoint)
+		se.Router.GET("/api/vanblog/posts/trash", m.handleTrashEndpoint)
+		se.Router.POST("/api/vanblog/posts/{id}/restore", m.handleRestoreEndpoint)
 		return se.Next()
 	})
 	return m
@@ -73,15 +93,15 @@ func (m *Manager) handleSearchEndpoint(e *core.RequestEvent) error {
 
 // TimelineEntry represents articles grouped by year and month.
 type TimelineEntry struct {
-	Year    int            `json:"year"`
-	Count   int            `json:"count"`
-	Months  []MonthSummary `json:"months"`
+	Year   int            `json:"year"`
+	Count  int            `json:"count"`
+	Months []MonthSummary `json:"months"`
 }
 
 // MonthSummary represents articles in a single month.
 type MonthSummary struct {
-	Month  int    `json:"month"`
-	Count  int    `json:"count"`
+	Month  int           `json:"month"`
+	Count  int           `json:"count"`
 	Titles []PostSummary `json:"titles"`
 }
 
@@ -278,4 +298,93 @@ func (m *Manager) GetByCategory(categoryID string, limit int, offset int) ([]*co
 		return nil, fmt.Errorf("article: category query failed: %w", err)
 	}
 	return records, nil
+}
+
+// ListTrash returns soft-deleted posts (deleted=true), newest update first.
+func (m *Manager) ListTrash(limit, offset int) ([]*core.Record, error) {
+	if limit <= 0 {
+		limit = 20
+	}
+	if limit > 100 {
+		limit = 100
+	}
+
+	records, err := m.app.FindRecordsByFilter(
+		"posts",
+		"deleted=true",
+		"-updated",
+		limit, offset,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("article: trash query failed: %w", err)
+	}
+	return records, nil
+}
+
+// Restore clears the soft-delete flag on a post. Returns an error if the
+// post is not currently deleted so the UI can show a meaningful message.
+func (m *Manager) Restore(postID string) error {
+	post, err := m.app.FindRecordById("posts", postID)
+	if err != nil {
+		return fmt.Errorf("article: post not found: %w", err)
+	}
+	if !post.GetBool("deleted") {
+		return fmt.Errorf("article: post %s is not deleted", postID)
+	}
+	post.Set("deleted", false)
+	return m.app.Save(post)
+}
+
+// trashEntry is a lightweight representation of a soft-deleted post.
+type trashEntry struct {
+	ID      string `json:"id"`
+	Title   string `json:"title"`
+	Status  string `json:"status"`
+	Updated string `json:"updated"`
+}
+
+func (m *Manager) handleTrashEndpoint(e *core.RequestEvent) error {
+	if !canManagePosts(e.Auth) {
+		return e.ForbiddenError("admin or article:update required", "")
+	}
+
+	records, err := m.ListTrash(100, 0)
+	if err != nil {
+		return e.JSON(http.StatusInternalServerError, err.Error())
+	}
+
+	out := make([]trashEntry, 0, len(records))
+	for _, r := range records {
+		out = append(out, trashEntry{
+			ID:      r.Id,
+			Title:   r.GetString("title"),
+			Status:  r.GetString("status"),
+			Updated: r.GetDateTime("updated").Time().Format("2006-01-02T15:04:05Z07:00"),
+		})
+	}
+	return e.JSON(http.StatusOK, out)
+}
+
+func (m *Manager) handleRestoreEndpoint(e *core.RequestEvent) error {
+	if !canManagePosts(e.Auth) {
+		return e.ForbiddenError("admin or article:update required", "")
+	}
+
+	id := e.Request.PathValue("id")
+	if id == "" {
+		return e.BadRequestError("missing path parameter {id}", "")
+	}
+
+	if err := m.Restore(id); err != nil {
+		// "is not deleted" is a client-side mistake → 400; anything else → 500.
+		if strings.Contains(err.Error(), "is not deleted") {
+			return e.BadRequestError(err.Error(), "")
+		}
+		return e.JSON(http.StatusInternalServerError, err.Error())
+	}
+
+	// Mirror handlePostsCacheInvalidation: invalidate Astro cache async.
+	go revalidateAstroCache([]string{"posts"})
+
+	return e.JSON(http.StatusOK, map[string]any{"ok": true, "id": id})
 }
