@@ -1,0 +1,36 @@
+---
+export const prerender = false;
+
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import type { Tag } from '@vanblog/sdk';
+
+let tags: Tag[] = [];
+
+try {
+  const pb = Astro.locals.pb;
+  tags = await pb.collection('tags').getFullList<Tag>({ sort: 'name' });
+} catch (e) {
+  console.error('[tags] Failed to load tags:', e);
+}
+
+if (Astro.cache.enabled) {
+  Astro.cache.set({ maxAge: 600, swr: 120, tags: ['posts', 'tags'] });
+}
+---
+<BaseLayout title="标签" path="/tags">
+  <h1>标签</h1>
+  {tags.length === 0 ? (
+    <p>暂无标签。</p>
+  ) : (
+    <ul style="list-style:none;padding:0;display:flex;flex-wrap:wrap;gap:0.5rem">
+      {tags.map(t => (
+        <li>
+          <a href={`/tags/${t.id}`}
+             style="display:inline-block;padding:0.25rem 0.75rem;border:1px solid #ddd;border-radius:9999px;text-decoration:none">
+            #{t.name}
+          </a>
+        </li>
+      ))}
+    </ul>
+  )}
+</BaseLayout>

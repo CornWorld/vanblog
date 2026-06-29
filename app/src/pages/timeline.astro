@@ -1,0 +1,47 @@
+---
+export const prerender = false;
+
+import BaseLayout from '../layouts/BaseLayout.astro';
+import type { TimelineEntry } from '@vanblog/sdk';
+
+let entries: TimelineEntry[] = [];
+
+try {
+  const pb = Astro.locals.pb;
+  entries = await (pb as any).vanblog.timeline.list();
+} catch (e) {
+  console.error('[timeline] Failed to load:', e);
+}
+
+if (Astro.cache.enabled) {
+  Astro.cache.set({ maxAge: 600, swr: 120, tags: ['posts', 'timeline'] });
+}
+---
+<BaseLayout title="时间轴" path="/timeline">
+  <h1>时间轴</h1>
+  {entries.length === 0 ? (
+    <p>暂无数据。</p>
+  ) : (
+    <div style="display:flex;flex-direction:column;gap:1rem">
+      {entries.map(year => (
+        <section>
+          <h2 style="margin:0">{year.year} <small style="color:#999">({year.count})</small></h2>
+          <div style="display:flex;flex-direction:column;gap:0.75rem;border-left:2px solid #eee;padding-left:1rem;margin-top:0.5rem">
+            {year.months.map(m => (
+              <div>
+                <h3 style="margin:0 0 0.25rem 0">{year.year}.{m.month} <small style="color:#999">({m.count})</small></h3>
+                <ul style="list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:0.25rem">
+                  {m.titles.map(t => (
+                    <li>
+                      <a href={`/posts/${t.id}`}>{t.title}</a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </section>
+      ))}
+    </div>
+  )}
+</BaseLayout>
