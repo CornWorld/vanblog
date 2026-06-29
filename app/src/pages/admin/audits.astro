@@ -1,0 +1,62 @@
+---
+export const prerender = false;
+
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { requireAdmin } from '../../middleware';
+
+if (!requireAdmin(Astro)) return Astro.redirect('/_/');
+Astro.cache.set(false);
+
+let audits: any[] = [];
+try {
+  audits = await Astro.locals.pb.collection('audits').getList(1, 100, {
+    sort: '-created',
+    expand: 'actor',
+  }).then(r => r.items);
+} catch (e) {
+  console.error('[admin/audits] load:', e);
+}
+
+function expandName(a: any): string {
+  const u = a?.expand?.actor;
+  return u?.username || u?.email || a?.actor || '-';
+}
+---
+<BaseLayout title="审计日志">
+  <h1>审计日志</h1>
+  <p><a href="/admin">← 返回</a></p>
+
+  {audits.length === 0 ? (
+    <p>暂无审计记录。</p>
+  ) : (
+    <table style="width:100%;border-collapse:collapse;font-size:13px">
+      <thead>
+        <tr style="text-align:left;border-bottom:1px solid #ccc">
+          <th>时间</th><th>用户</th><th>动作</th><th>目标</th><th>结果</th><th>IP</th><th>详情</th>
+        </tr>
+      </thead>
+      <tbody>
+        {audits.map(a => (
+          <tr style="border-bottom:1px solid #eee;vertical-align:top">
+            <td><small>{new Date(a.created).toLocaleString('zh-CN')}</small></td>
+            <td>{expandName(a)}</td>
+            <td>{a.action}</td>
+            <td style="word-break:break-all">{a.target}</td>
+            <td>{a.result === 'failure' ? (
+              <span style="color:#c0392b">失败</span>
+            ) : <span style="color:#27ae60">成功</span>}</td>
+            <td><small>{a.ip || '-'}</small></td>
+            <td>
+              {a.detail && (
+                <details>
+                  <summary style="cursor:pointer">查看</summary>
+                  <pre style="white-space:pre-wrap;font-size:11px;background:#f7f7f7;padding:0.25rem">{JSON.stringify(a.detail, null, 2)}</pre>
+                </details>
+              )}
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  )}
+</BaseLayout>

@@ -1,0 +1,121 @@
+---
+export const prerender = false;
+
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { requireAdmin } from '../../middleware';
+import type { SiteConfig } from '@vanblog/sdk';
+
+if (!requireAdmin(Astro)) return Astro.redirect('/_/');
+Astro.cache.set(false);
+
+let site: Partial<SiteConfig> | null = null;
+try {
+  const res = await Astro.locals.pb.collection('site').getList(1, 1);
+  site = res.items[0] as any;
+} catch (e) {
+  console.error('[admin/site] load:', e);
+}
+
+const id = (site as any)?.id;
+const f = (k: keyof SiteConfig) => (site as any)?.[k] ?? '';
+const boolOr = (k: keyof SiteConfig, def = false) => {
+  const v = (site as any)?.[k];
+  return v === undefined ? def : !!v;
+};
+---
+<BaseLayout title="站点配置">
+  <h1>站点配置</h1>
+  <p><a href="/admin">← 返回</a></p>
+
+  {!site ? (
+    <p>未找到 site 记录（请确认数据库已初始化）。</p>
+  ) : (
+    <form id="site-form" style="display:flex;flex-direction:column;gap:1rem;max-width:720px">
+      <fieldset style="display:grid;grid-template-columns:160px 1fr;gap:0.5rem;align-items:center;border:1px solid #ddd;padding:1rem">
+        <legend>基本信息</legend>
+        <label>站点名</label><input name="siteName" value={f('siteName')} style="padding:0.3rem" />
+        <label>站点描述</label><input name="siteDesc" value={f('siteDesc')} style="padding:0.3rem" />
+        <label>作者</label><input name="author" value={f('author')} style="padding:0.3rem" />
+        <label>BaseURL</label><input name="baseUrl" value={f('baseUrl')} placeholder="https://example.com" style="padding:0.3rem" />
+        <label>Favicon URL</label><input name="favicon" value={f('favicon')} style="padding:0.3rem" />
+        <label>版权</label><input name="copyrightAggreement" value={f('copyrightAggreement')} style="padding:0.3rem" />
+      </fieldset>
+
+      <fieldset style="display:grid;grid-template-columns:160px 1fr;gap:0.5rem;align-items:center;border:1px solid #ddd;padding:1rem">
+        <legend>主题与评论</legend>
+        <label>主题</label>
+        <select name="theme">
+          {['default', 'minimal', 'magazine', 'custom'].map(t => (
+            <option value={t} selected={f('theme') === t}>{t}</option>
+          ))}
+        </select>
+        <label>默认主题</label>
+        <select name="defaultTheme">
+          {['auto', 'light', 'dark'].map(t => (
+            <option value={t} selected={f('defaultTheme') === t}>{t}</option>
+          ))}
+        </select>
+        <label>评论 provider</label>
+        <select name="commentsProvider">
+          {['disabled', 'waline', 'giscus', 'artalk', 'external'].map(t => (
+            <option value={t} selected={f('commentsProvider') === t}>{t}</option>
+          ))}
+        </select>
+      </fieldset>
+
+      <fieldset style="display:flex;flex-direction:column;gap:0.5rem;border:1px solid #ddd;padding:1rem">
+        <legend>关于页 / 自定义注入</legend>
+        <label>关于页内容（Markdown）</label>
+        <textarea name="aboutContent" rows="6" style="padding:0.3rem;font-family:monospace">{f('aboutContent')}</textarea>
+        <label>customHead（HTML，raw 注入 &lt;head&gt;）</label>
+        <textarea name="customHead" rows="3" style="padding:0.3rem;font-family:monospace">{f('customHead')}</textarea>
+        <label>customScript（JS）</label>
+        <textarea name="customScript" rows="3" style="padding:0.3rem;font-family:monospace">{f('customScript')}</textarea>
+      </fieldset>
+
+      <fieldset style="display:grid;grid-template-columns:160px 1fr;gap:0.5rem;align-items:center;border:1px solid #ddd;padding:1rem">
+        <legend>修订</legend>
+        <label>启用修订</label>
+        <label><input type="checkbox" name="revisionsEnabled" checked={boolOr('revisionsEnabled', true)} /> 启用</label>
+        <label>保留数量</label>
+        <input type="number" name="revisionsRetention" value={(site as any)?.revisionsRetention ?? 50} style="padding:0.3rem;width:120px" />
+      </fieldset>
+
+      <div style="display:flex;gap:1rem;align-items:center">
+        <button type="submit">保存</button>
+        <small style="color:#999">仅保存上方字段；JSON 数组（nav/links/socials 等）请用 API 编辑</small>
+      </div>
+    </form>
+  )}
+
+  <script define:vars={{ siteId: id }}>
+    const pb = window.__pb;
+    if (siteId) {
+      document.getElementById('site-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const fd = new FormData(e.target);
+        const data = {
+          siteName: fd.get('siteName'),
+          siteDesc: fd.get('siteDesc'),
+          author: fd.get('author'),
+          baseUrl: fd.get('baseUrl'),
+          favicon: fd.get('favicon'),
+          copyrightAggreement: fd.get('copyrightAggreement'),
+          theme: fd.get('theme'),
+          defaultTheme: fd.get('defaultTheme'),
+          commentsProvider: fd.get('commentsProvider'),
+          aboutContent: fd.get('aboutContent'),
+          customHead: fd.get('customHead'),
+          customScript: fd.get('customScript'),
+          revisionsEnabled: fd.get('revisionsEnabled') === 'on',
+          revisionsRetention: Number(fd.get('revisionsRetention') || 50),
+          aboutUpdatedAt: new Date().toISOString().slice(0, 10),
+        };
+        try {
+          await pb.collection('site').update(siteId, data);
+          alert('已保存');
+        } catch (err) { alert('保存失败: ' + err.message); }
+      });
+    }
+  </script>
+</BaseLayout>

@@ -1,0 +1,65 @@
+---
+export const prerender = false;
+
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import { isAuthenticated } from '../../../middleware';
+import type { Revision, Post } from '@vanblog/sdk';
+
+if (!isAuthenticated(Astro)) {
+  return Astro.redirect('/_/');
+}
+
+Astro.cache.set(false);
+
+const { postId } = Astro.params;
+if (!postId) return Astro.redirect('/404');
+
+let post: Post;
+let revs: Revision[] = [];
+
+const pb = Astro.locals.pb;
+try {
+  post = await pb.collection('posts').getOne<Post>(postId);
+} catch {
+  return Astro.redirect('/404');
+}
+
+try {
+  revs = await pb.collection('revisions').getFullList<Revision>({
+    filter: `target = "${postId}"`,
+    sort: '-created',
+  });
+} catch (e) {
+  console.error('[revisions] Failed to load:', e);
+}
+---
+<BaseLayout title={`修订历史 - ${post.title}`}>
+  <h1>修订历史</h1>
+  <p><a href="/admin">← 返回管理</a> ｜ <a href={`/admin/edit/${postId}`}>编辑</a></p>
+  <p><strong>文章：</strong>{post.title}</p>
+  <hr />
+
+  {revs.length === 0 ? (
+    <p>暂无修订记录。</p>
+  ) : (
+    <ul style="list-style:none;padding:0;display:flex;flex-direction:column;gap:0.75rem">
+      {revs.map(r => (
+        <li style="border:1px solid #eee;padding:0.75rem">
+          <div style="display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap">
+            <strong>{r.reason || '(无原因)'}</strong>
+            <small style="color:#999">{new Date(r.created).toLocaleString('zh-CN')}</small>
+          </div>
+          <div style="font-size:13px;color:#555;margin-top:0.25rem">
+            by {r.authoredBy || '-'}
+          </div>
+          {r.snapshot && (
+            <details style="margin-top:0.5rem">
+              <summary style="cursor:pointer">快照</summary>
+              <pre style="white-space:pre-wrap;font-size:12px;background:#f7f7f7;padding:0.5rem">{JSON.stringify(r.snapshot, null, 2)}</pre>
+            </details>
+          )}
+        </li>
+      ))}
+    </ul>
+  )}
+</BaseLayout>

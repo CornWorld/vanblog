@@ -1,0 +1,89 @@
+---
+export const prerender = false;
+
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { isAuthenticated, getAuthUser } from '../../middleware';
+import type { Tag } from '@vanblog/sdk';
+
+if (!isAuthenticated(Astro)) return Astro.redirect('/_/');
+Astro.cache.set(false);
+const user = getAuthUser(Astro);
+
+let tags: Tag[] = [];
+try {
+  tags = await Astro.locals.pb.collection('tags').getFullList<Tag>({ sort: 'name' });
+} catch (e) {
+  console.error('[admin/tags] load:', e);
+}
+---
+<BaseLayout title="标签管理">
+  <h1>标签管理</h1>
+  <p><a href="/admin">← 返回</a></p>
+
+  <form id="new-tag" style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem">
+    <input name="name" placeholder="标签名" required style="padding:0.3rem;flex:1;min-width:160px" />
+    <input name="slug" placeholder="slug（可空）" style="padding:0.3rem;width:160px" />
+    <input name="description" placeholder="描述（可空）" style="padding:0.3rem;width:240px" />
+    <button type="submit">+ 新建</button>
+  </form>
+
+  <table style="width:100%;border-collapse:collapse">
+    <thead>
+      <tr style="text-align:left;border-bottom:1px solid #ccc">
+        <th>名称</th><th>slug</th><th>描述</th><th>操作</th>
+      </tr>
+    </thead>
+    <tbody>
+      {tags.map(t => (
+        <tr data-id={t.id} style="border-bottom:1px solid #eee">
+          <td><input class="f-name" value={t.name} style="width:100%" /></td>
+          <td><input class="f-slug" value={t.slug || ''} style="width:100%" /></td>
+          <td><input class="f-desc" value={t.description || ''} style="width:100%" /></td>
+          <td style="display:flex;gap:0.5rem">
+            <button class="btn-save">保存</button>
+            <button class="btn-del" style="color:#c0392b">删除</button>
+          </td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+  {tags.length === 0 && <p>暂无标签。</p>}
+
+  <script>
+    const pb = window.__pb;
+
+    document.getElementById('new-tag').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      try {
+        await pb.collection('tags').create({
+          name: fd.get('name'),
+          slug: fd.get('slug') || undefined,
+          description: fd.get('description') || undefined,
+        });
+        location.reload();
+      } catch (err) { alert('新建失败: ' + err.message); }
+    });
+
+    document.querySelectorAll('tr[data-id]').forEach((tr) => {
+      const id = tr.dataset.id;
+      tr.querySelector('.btn-save').onclick = async () => {
+        try {
+          await pb.collection('tags').update(id, {
+            name: tr.querySelector('.f-name').value,
+            slug: tr.querySelector('.f-slug').value,
+            description: tr.querySelector('.f-desc').value,
+          });
+          alert('已保存');
+        } catch (err) { alert('保存失败: ' + err.message); }
+      };
+      tr.querySelector('.btn-del').onclick = async () => {
+        if (!confirm('确定删除该标签？')) return;
+        try {
+          await pb.collection('tags').delete(id);
+          tr.remove();
+        } catch (err) { alert('删除失败: ' + err.message); }
+      };
+    });
+  </script>
+</BaseLayout>

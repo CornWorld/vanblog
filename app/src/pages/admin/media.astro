@@ -1,0 +1,50 @@
+---
+export const prerender = false;
+
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { isAuthenticated } from '../../middleware';
+import type { Media } from '@vanblog/sdk';
+
+if (!isAuthenticated(Astro)) {
+  return Astro.redirect('/_/');
+}
+
+Astro.cache.set(false);
+
+let media: Media[] = [];
+
+try {
+  const pb = Astro.locals.pb;
+  media = await pb.collection('media').getFullList<Media>({ sort: '-created' });
+} catch (e) {
+  console.error('[admin/media] Failed to load:', e);
+}
+---
+<BaseLayout title="媒体管理">
+  <h1>媒体管理</h1>
+  <p><a href="/admin">← 返回管理</a></p>
+
+  {media.length === 0 ? (
+    <p>暂无媒体文件。</p>
+  ) : (
+    <div style="display:flex;flex-wrap:wrap;gap:1rem">
+      {media.map(m => (
+        <figure style="margin:0;width:160px;border:1px solid #eee;padding:0.5rem">
+          {m.staticType === 'img' && (
+            <img
+              src={`/api/files/media/${m.id}/${m.file}`}
+              alt={m.file}
+              loading="lazy"
+              style="width:100%;height:120px;object-fit:cover;display:block"
+            />
+          )}
+          <figcaption style="font-size:12px;margin-top:0.25rem;word-break:break-all">
+            {m.file}
+            <br />
+            <small style="color:#999">[{m.storageType}/{m.fileType}]</small>
+          </figcaption>
+        </figure>
+      ))}
+    </div>
+  )}
+</BaseLayout>

@@ -1,0 +1,96 @@
+---
+export const prerender = false;
+
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { isAuthenticated } from '../../middleware';
+import type { Category } from '@vanblog/sdk';
+
+if (!isAuthenticated(Astro)) return Astro.redirect('/_/');
+Astro.cache.set(false);
+
+let cats: Category[] = [];
+try {
+  cats = await Astro.locals.pb.collection('categories').getFullList<Category>({ sort: 'name' });
+} catch (e) {
+  console.error('[admin/cats] load:', e);
+}
+---
+<BaseLayout title="分类管理">
+  <h1>分类管理</h1>
+  <p><a href="/admin">← 返回</a></p>
+
+  <form id="new-cat" style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem">
+    <input name="name" placeholder="分类名" required style="padding:0.3rem;flex:1;min-width:160px" />
+    <select name="type">
+      <option value="category">分类</option>
+      <option value="column">专栏</option>
+    </select>
+    <label><input type="checkbox" name="private" /> 私有</label>
+    <button type="submit">+ 新建</button>
+  </form>
+
+  <table style="width:100%;border-collapse:collapse">
+    <thead>
+      <tr style="text-align:left;border-bottom:1px solid #ccc">
+        <th>名称</th><th>类型</th><th>私有</th><th>操作</th>
+      </tr>
+    </thead>
+    <tbody>
+      {cats.map(c => (
+        <tr data-id={c.id} style="border-bottom:1px solid #eee">
+          <td><input class="f-name" value={c.name} style="width:100%" /></td>
+          <td>
+            <select class="f-type">
+              <option value="category" selected={c.type === 'category'}>分类</option>
+              <option value="column" selected={c.type === 'column'}>专栏</option>
+            </select>
+          </td>
+          <td><input type="checkbox" class="f-private" checked={!!c.private} /></td>
+          <td style="display:flex;gap:0.5rem">
+            <button class="btn-save">保存</button>
+            <button class="btn-del" style="color:#c0392b">删除</button>
+          </td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+  {cats.length === 0 && <p>暂无分类。</p>}
+
+  <script>
+    const pb = window.__pb;
+
+    document.getElementById('new-cat').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      try {
+        await pb.collection('categories').create({
+          name: fd.get('name'),
+          type: fd.get('type'),
+          private: fd.get('private') === 'on',
+        });
+        location.reload();
+      } catch (err) { alert('新建失败: ' + err.message); }
+    });
+
+    document.querySelectorAll('tr[data-id]').forEach((tr) => {
+      const id = tr.dataset.id;
+      tr.querySelector('.btn-save').onclick = async () => {
+        try {
+          await pb.collection('categories').update(id, {
+            name: tr.querySelector('.f-name').value,
+            type: tr.querySelector('.f-type').value,
+            private: tr.querySelector('.f-private').checked,
+          });
+          alert('已保存');
+        } catch (err) { alert('保存失败: ' + err.message); }
+      };
+      tr.querySelector('.btn-del').onclick = async () => {
+        if (!confirm('确定删除该分类？')) return;
+        try {
+          await pb.collection('categories').delete(id);
+          tr.remove();
+        } catch (err) { alert('删除失败: ' + err.message); }
+      };
+    });
+  </script>
+</BaseLayout>
