@@ -52,9 +52,10 @@ try {
   <script>
     const pb = window.__pb;
 
-    document.getElementById('new-tag').addEventListener('submit', async (e) => {
+    document.getElementById('new-tag')!.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const fd = new FormData(e.target);
+      if (!pb) return;
+      const fd = new FormData(e.target as HTMLFormElement);
       try {
         await pb.collection('tags').create({
           name: fd.get('name'),
@@ -62,27 +63,28 @@ try {
           description: fd.get('description') || undefined,
         });
         location.reload();
-      } catch (err) { alert('新建失败: ' + err.message); }
+      } catch (err) { alert('新建失败: ' + (err as Error).message); }
     });
 
-    document.querySelectorAll('tr[data-id]').forEach((tr) => {
-      const id = tr.dataset.id;
-      tr.querySelector('.btn-save').onclick = async () => {
+    document.querySelectorAll<HTMLElement>('tr[data-id]').forEach((tr) => {
+      const id = tr.dataset.id!;
+      if (!pb) return;
+      tr.querySelector<HTMLElement>('.btn-save')!.onclick = async () => {
         try {
           await pb.collection('tags').update(id, {
-            name: tr.querySelector('.f-name').value,
-            slug: tr.querySelector('.f-slug').value,
-            description: tr.querySelector('.f-desc').value,
+            name: (tr.querySelector('.f-name') as HTMLInputElement).value,
+            slug: (tr.querySelector('.f-slug') as HTMLInputElement).value,
+            description: (tr.querySelector('.f-desc') as HTMLInputElement).value,
           });
           alert('已保存');
-        } catch (err) { alert('保存失败: ' + err.message); }
+        } catch (err) { alert('保存失败: ' + (err as Error).message); }
       };
-      tr.querySelector('.btn-del').onclick = async () => {
+      tr.querySelector<HTMLElement>('.btn-del')!.onclick = async () => {
         if (!confirm('确定删除该标签？')) return;
         try {
           await pb.collection('tags').delete(id);
           tr.remove();
-        } catch (err) { alert('删除失败: ' + err.message); }
+        } catch (err) { alert('删除失败: ' + (err as Error).message); }
       };
     });
   </script>

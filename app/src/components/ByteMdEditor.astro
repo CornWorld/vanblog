@@ -11,7 +11,7 @@ const { initialContent = '', postId, mediaConfig } = Astro.props
 <div id="upload-status" aria-live="polite" style="position: fixed; bottom: 1rem; right: 1rem; max-width: 360px; font-size: 13px; color: #555; background: rgba(255,255,255,0.95); border: 1px solid #ddd; border-radius: 6px; padding: 8px 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: none; z-index: 100;"></div>
 {mediaConfig && <script type="application/json" id="media-config">{JSON.stringify(mediaConfig)}</script>}
 
-<script lang="ts">
+<script>
   import { Editor } from 'bytemd';
   import gfm from '@bytemd/plugin-gfm';
   import highlight from '@bytemd/plugin-highlight-ssr';
@@ -159,7 +159,7 @@ const { initialContent = '', postId, mediaConfig } = Astro.props
 
   // 复制按钮事件绑定
   function bindCopyBtns(markdownBody: HTMLElement) {
-    markdownBody.querySelectorAll('.code-copy-btn').forEach((btn: HTMLElement) => {
+    markdownBody.querySelectorAll<HTMLElement>('.code-copy-btn').forEach((btn) => {
       btn.onclick = () => {
         const code = btn.closest('.code-block-wrapper')?.querySelector('code')?.textContent;
         if (!code) return;
@@ -182,7 +182,7 @@ const { initialContent = '', postId, mediaConfig } = Astro.props
       { rehype: (p: any) => p.use(rehypeEnhance) },
       { rehype: (p: any) => p.use(rehypeCodeBlock), viewerEffect: ({ markdownBody }: any) => bindCopyBtns(markdownBody) },
       { remark: (p: any) => p.use(remarkDirective).use(remarkContainer) },
-      { actions: [moreAction, imgAction(() => window.__pb), containerAction] },
+      { actions: [moreAction, imgAction(() => { if (!window.__pb) throw new Error('pb not initialized'); return window.__pb; }), containerAction] },
     ];
 
     // ByteMD's Svelte types omit the constructor parameter — cast at boundary.
