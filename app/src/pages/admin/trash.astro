@@ -1,0 +1,100 @@
+---
+export const prerender = false;
+
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { isAuthenticated, getAuthUser, hasPermission } from '../../middleware';
+import type { Post } from '@vanblog/sdk';
+
+if (!isAuthenticated(Astro)) return Astro.redirect('/_/');
+Astro.cache.set(false);
+
+const user = getAuthUser(Astro);
+const isAdmin = user?.role === 'admin';
+const canEditPost = !!hasPermission(Astro, 'article:create') || !!hasPermission(Astro, 'article:update');
+
+// Gate the whole page; mirrors the backend canManagePosts check.
+if (!canEditPost) return Astro.redirect('/admin');
+
+let trash: Post[] = [];
+try {
+  // Soft-deleted only; backend route also enforces auth, this is the SSR fetch.
+  trash = await Astro.locals.pb.collection('posts').getFullList<Post>({
+    filter: 'deleted = true',
+    sort: '-updated',
+  });
+} catch (e) {
+  console.error('[admin/trash] load:', e);
+}
+---
+
+<BaseLayout title="回收站">
+  <h1>回收站</h1>
+  <p><a href="/admin">← 返回</a></p>
+
+  {trash.length === 0 ? (
+    <p>回收站为空。</p>
+  ) : (
+    <table style="width:100%;border-collapse:collapse">
+      <thead>
+        <tr style="text-align:left;border-bottom:1px solid #ccc">
+          <th>标题</th><th>状态</th><th>删除时间</th><th>操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        {trash.map(post => (
+          <tr data-id={post.id} style="border-bottom:1px solid #eee">
+            <td>{post.title}</td>
+            <td>{post.status}</td>
+            <td>{new Date(post.updated).toLocaleString('zh-CN')}</td>
+            <td style="display:flex;gap:0.5rem;flex-wrap:wrap">
+              <button class="btn-restore">恢复</button>
+              {isAdmin && (
+                <button class="btn-purge" style="color:#c0392b">彻底删除</button>
+              )}
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  )}
+
+  <script define:vars={{}}>
+    document.querySelectorAll('tr[data-id]').forEach((tr) => {
+      const id = tr.dataset.id;
+      const pb = (window as any).__pb;
+
+      tr.querySelector('.btn-restore').addEventListener('click', async () => {
+        if (!id || !confirm('恢复该文章？（deleted=false）')) return;
+        if (!pb) return alert('未登录');
+        try {
+          const res = await fetch(`/api/vanblog/posts/${id}/restore`, {
+            method: 'POST',
+            credentials: 'include',
+          });
+          if (!res.ok) {
+            const txt = await res.text();
+            return alert('恢复失败: ' + txt);
+          }
+          location.reload();
+        } catch (err) {
+          alert('恢复失败: ' + err.message);
+        }
+      });
+
+      const purgeBtn = tr.querySelector('.btn-purge');
+      if (purgeBtn) {
+        purgeBtn.addEventListener('click', async () => {
+          if (!id) return;
+          if (!confirm('彻底删除？该操作不可撤销（pb delete）。')) return;
+          if (!pb) return alert('未登录');
+          try {
+            await pb.collection('posts').delete(id);
+            location.reload();
+          } catch (err) {
+            alert('删除失败: ' + err.message);
+          }
+        });
+      }
+    });
+  </script>
+</BaseLayout>
