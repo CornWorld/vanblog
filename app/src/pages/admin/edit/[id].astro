@@ -2,15 +2,17 @@
 export const prerender = false;
 
 import BaseLayout from '../../../layouts/BaseLayout.astro';
-import { isAuthenticated } from '../../../middleware';
+import { isAuthenticated, getAuthUser, hasPermission } from '../../../middleware';
 import ByteMdEditor from '../../../components/ByteMdEditor.astro';
-import type { Post } from '@vanblog/sdk';
+import type { Post, Tag, Category } from '@vanblog/sdk';
 
-if (!isAuthenticated(Astro)) {
-  return Astro.redirect('/_/');
-}
+const user = getAuthUser(Astro);
+if (!user) return Astro.redirect('/_/');
 
-// Admin pages are personalized — opt out of route cache entirely.
+const isEditingExisting = !!Astro.url.pathname.match(/\/admin\/edit\/[^/]+$/);
+const canCreate = hasPermission(Astro, 'article:create') || hasPermission(Astro, 'article:update');
+if (!canCreate) return Astro.redirect('/admin');
+
 Astro.cache.set(false);
 
 const { id } = Astro.params;
@@ -25,47 +27,121 @@ if (!isNew) {
   }
 }
 
-// Pass site.mediaConfig to the editor so its client-side normalization
-// (BMP/TIFF → WebP/AVIF) matches what the user configured. Without this,
-// the editor falls back to the package default (webp/84), which silently
-// diverges from a user who set targetFormat=avif via Admin UI.
+let tags: Tag[] = [];
+let cats: Category[] = [];
+try {
+  const pb = Astro.locals.pb;
+  [tags, cats] = await Promise.all([
+    pb.collection('tags').getFullList<Tag>({ sort: 'name' }),
+    pb.collection('categories').getFullList<Category>({ sort: 'name' }),
+  ]);
+} catch (e) {
+  console.error('[edit] Failed to load tags/cats:', e);
+}
+
 const site = await Astro.locals.getSite();
 const mediaConfig = site?.mediaConfig;
+
+const currentTagIds: string[] = Array.isArray((post as any).tags) ? (post as any).tags : [];
+const currentCatId: string = (post as any).category || '';
+const currentAuthorId: string = (post as any).author || user.id;
 ---
 <BaseLayout title={isNew ? '新建文章' : '编辑文章'}>
   <h1>{isNew ? '新建文章' : '编辑文章'}</h1>
-  <div style="margin-bottom: 1rem; display: flex; gap: 1rem; flex-wrap: wrap; align-items: end;">
-    <label>标题 <input type="text" id="f-title" value={post.title || ''} required style="width: 300px; padding: 0.3rem;" /></label>
-    <label>路径 <input type="text" id="f-path" value={post.pathname || ''} placeholder="/my-post" style="width: 200px; padding: 0.3rem;" /></label>
-    <label>状态
+
+  <div style="display:flex;flex-wrap:wrap;gap:1rem;margin-bottom:1rem;align-items:flex-end">
+    <label style="display:flex;flex-direction:column">
+      标题
+      <input type="text" id="f-title" value={post.title || ''} required style="width:320px;padding:0.3rem" />
+    </label>
+    <label style="display:flex;flex-direction:column">
+      路径
+      <input type="text" id="f-path" value={post.pathname || ''} placeholder="/my-post" style="width:200px;padding:0.3rem" />
+    </label>
+    <label style="display:flex;flex-direction:column">
+      状态
       <select id="f-status">
         <option value="draft" selected={post.status !== 'published' && post.status !== 'hidden'}>草稿</option>
         <option value="published" selected={post.status === 'published'}>已发布</option>
         <option value="hidden" selected={post.status === 'hidden'}>隐藏</option>
       </select>
     </label>
+    <label style="display:flex;flex-direction:column">
+      置顶
+      <input type="number" id="f-top" value={post.top ?? 0} min="0" style="width:80px;padding:0.3rem" />
+    </label>
   </div>
+
+  <div style="display:flex;flex-wrap:wrap;gap:1rem;margin-bottom:1rem;align-items:flex-end">
+    <label style="display:flex;flex-direction:column">
+      分类
+      <select id="f-category" style="min-width:180px">
+        <option value="">（无）</option>
+        {cats.map(c => (
+          <option value={c.id} selected={currentCatId === c.id}>{c.name}</option>
+        ))}
+      </select>
+    </label>
+    <label style="display:flex;flex-direction:column" id="lbl-tags">
+      标签
+      <select id="f-tags" multiple size="4" style="min-width:280px">
+        {tags.map(t => (
+          <option value={t.id} selected={currentTagIds.includes(t.id)}>#{t.name}</option>
+        ))}
+      </select>
+      <small style="color:#999">Ctrl/Cmd 多选</small>
+    </label>
+    <label style="display:flex;flex-direction:column">
+      版权
+      <input type="text" id="f-copyright" value={post.copyright || ''} style="width:240px;padding:0.3rem" />
+    </label>
+  </div>
+
+  <details style="margin-bottom:1rem">
+    <summary style="cursor:pointer">高级（私有文章 / 密码）</summary>
+    <div style="display:flex;gap:1rem;flex-wrap:wrap;padding:0.5rem 0">
+      <label><input type="checkbox" id="f-private" checked={!!post.private} /> 私有</label>
+      <label style="display:flex;flex-direction:column">
+        密码（空则无）
+        <input type="text" id="f-password" value={post.password || ''} style="width:200px;padding:0.3rem" />
+      </label>
+    </div>
+  </details>
 
   <ByteMdEditor initialContent={post.content || ''} mediaConfig={mediaConfig} />
 
-  <div style="margin-top: 0.5rem; display: flex; gap: 1rem;">
+  <div style="margin-top:0.5rem;display:flex;gap:1rem">
     <button id="btn-save" type="button">保存</button>
     <button id="btn-publish" type="button">保存并发布</button>
     <a href="/admin">取消</a>
   </div>
 
-  <script define:vars={{ postId: isNew ? null : id }}>
+  <script define:vars={{
+    postId: isNew ? null : id,
+    authorId: currentAuthorId,
+  }}>
     const save = async (publish) => {
       const pb = window.__pb;
       if (!pb) return alert('未登录');
 
+      const tagIds = Array.from(document.getElementById('f-tags').selectedOptions).map(o => o.value);
+
       const data = {
-        title: document.getElementById('f-title').value,
-        pathname: document.getElementById('f-path').value,
+        title: document.getElementById('f-title').value.trim(),
+        pathname: document.getElementById('f-path').value.trim(),
         content: document.getElementById('post-content').value,
         status: publish ? 'published' : document.getElementById('f-status').value,
+        top: Number(document.getElementById('f-top').value || 0),
+        category: document.getElementById('f-category').value || null,
+        tags: tagIds,
+        copyright: document.getElementById('f-copyright').value,
+        private: document.getElementById('f-private').checked,
+        password: document.getElementById('f-password').value,
+        author: authorId,
         deleted: false,
       };
+
+      if (!data.title) return alert('标题不能为空');
 
       try {
         if (postId) await pb.collection('posts').update(postId, data);

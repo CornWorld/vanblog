@@ -2,20 +2,30 @@
 export const prerender = false;
 
 import BaseLayout from '../../layouts/BaseLayout.astro';
-import { isAuthenticated } from '../../middleware';
+import { isAuthenticated, getAuthUser, hasPermission } from '../../middleware';
 import type { Post } from '@vanblog/sdk';
 
 if (!isAuthenticated(Astro)) {
   return Astro.redirect('/_/');
 }
 
-// Admin pages are personalized — opt out of route cache entirely.
 Astro.cache.set(false);
+
+const user = getAuthUser(Astro);
+const isAdmin = user?.role === 'admin';
+const canEditPost = !!hasPermission(Astro, 'article:create') || !!hasPermission(Astro, 'article:update');
+const canDeletePost = !!hasPermission(Astro, 'article:delete');
 
 let posts: Post[] = [];
 
 try {
   const pb = Astro.locals.pb;
+  // The posts collection ListRule (1782300001_posts_rules_and_unique_pathname.go)
+  // filters `deleted=false` at the API layer for non-admins. Admins bypass this
+  // rule, so they will see soft-deleted posts here too — that's acceptable:
+  // admins use /admin/trash for focused recovery/purge, but seeing deleted
+  // rows inline doesn't hurt (and they can still edit them). The Rule is the
+  // single source of truth for collaborator/anonymous access.
   const result = await pb.collection('posts').getList<Post>(1, 50, {
     sort: '-updated',
   });
@@ -23,17 +33,36 @@ try {
 } catch (e) {
   console.error('[admin] Failed to load posts:', e);
 }
+
+function checked(v: boolean) { return v ? '✓' : '·'; }
 ---
 <BaseLayout title="管理">
   <h1>文章管理</h1>
-  <p><a href="/admin/new">+ 新建文章</a></p>
+
+  <nav style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:1rem">
+    {canEditPost && <a href="/admin/new">+ 新建文章</a>}
+    <a href="/admin/tags">标签</a>
+    <a href="/admin/categories">分类</a>
+    <a href="/admin/media">媒体</a>
+    {canEditPost && <a href="/admin/trash">回收站</a>}
+    {isAdmin && <a href="/admin/users">用户</a>}
+    {isAdmin && <a href="/admin/site">站点</a>}
+    {isAdmin && <a href="/admin/audits">审计</a>}
+  </nav>
+
+  <p style="font-size:13px;color:#666">
+    当前用户：<strong>{user?.username}</strong> [{user?.role}]
+    {user?.permissions && user.permissions.length > 0 && (
+      <span> · 权限: {user.permissions.join(', ')}</span>
+    )}
+  </p>
 
   {posts.length === 0 ? (
-    <p>暂无文章。<a href="/admin/new">创建第一篇</a></p>
+    <p>暂无文章。{canEditPost && <a href="/admin/new">创建第一篇</a>}</p>
   ) : (
-    <table style="width: 100%; border-collapse: collapse;">
+    <table style="width:100%;border-collapse:collapse">
       <thead>
-        <tr style="text-align: left; border-bottom: 1px solid #ccc;">
+        <tr style="text-align:left;border-bottom:1px solid #ccc">
           <th>标题</th>
           <th>状态</th>
           <th>更新时间</th>
@@ -41,19 +70,41 @@ try {
         </tr>
       </thead>
       <tbody>
-        {posts.map((post) => (
-          <tr style="border-bottom: 1px solid #eee;">
+        {posts.map(post => (
+          <tr style="border-bottom:1px solid #eee">
             <td>{post.title}</td>
             <td>{post.status}</td>
             <td>{new Date(post.updated).toLocaleString('zh-CN')}</td>
-            <td>
-              <a href={`/admin/edit/${post.id}`}>编辑</a>
-              {' | '}
+            <td style="display:flex;gap:0.5rem;flex-wrap:wrap">
+              {canEditPost && <a href={`/admin/edit/${post.id}`}>编辑</a>}
+              <a href={`/admin/revisions/${post.id}`}>修订</a>
               <a href={`/posts/${post.id}`} target="_blank">查看</a>
+              {canDeletePost && (
+                <a href={`#del-${post.id}`} data-del={post.id} style="color:#c0392b">删除</a>
+              )}
             </td>
           </tr>
         ))}
       </tbody>
     </table>
   )}
+
+  <script define:vars={{}}>
+    document.querySelectorAll('a[data-del]').forEach((a) => {
+      a.addEventListener('click', async (e) => {
+        e.preventDefault();
+        const id = (a as HTMLElement).dataset.del;
+        if (!id || !confirm('确定删除该文章？（软删除：deleted=true）')) return;
+        const pb = (window as any).__pb;
+        if (!pb) return alert('未登录');
+        try {
+          // soft-delete: mark deleted=true so it stays in revisions/audits
+          await pb.collection('posts').update(id, { deleted: true });
+          location.reload();
+        } catch (err) {
+          alert('删除失败: ' + err.message);
+        }
+      });
+    });
+  </script>
 </BaseLayout>

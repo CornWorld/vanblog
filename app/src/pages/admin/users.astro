@@ -1,0 +1,130 @@
+---
+export const prerender = false;
+
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { requireAdmin } from '../../middleware';
+
+if (!requireAdmin(Astro)) return Astro.redirect('/_/');
+Astro.cache.set(false);
+
+const ALL_PERMS = [
+  'article:create', 'article:delete', 'article:update',
+  'draft:publish', 'draft:create', 'draft:delete', 'draft:update',
+  'img:delete', 'all',
+];
+
+let users: any[] = [];
+try {
+  users = await Astro.locals.pb.collection('users').getFullList({ sort: 'username' });
+} catch (e) {
+  console.error('[admin/users] load:', e);
+}
+---
+<BaseLayout title="用户管理">
+  <h1>用户管理</h1>
+  <p><a href="/admin">← 返回</a></p>
+
+  <form id="new-user" style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem">
+    <input name="username" placeholder="用户名" required style="padding:0.3rem" />
+    <input name="email" type="email" placeholder="邮箱（登录用）" required style="padding:0.3rem;flex:1;min-width:200px" />
+    <input name="password" type="password" placeholder="初始密码" required style="padding:0.3rem;width:160px" />
+    <input name="nickname" placeholder="昵称（可空）" style="padding:0.3rem" />
+    <select name="role">
+      <option value="collaborator">协作者</option>
+      <option value="admin">管理员</option>
+    </select>
+    <button type="submit">+ 新建</button>
+  </form>
+
+  <table style="width:100%;border-collapse:collapse">
+    <thead>
+      <tr style="text-align:left;border-bottom:1px solid #ccc">
+        <th>用户名</th><th>昵称</th><th>邮箱</th><th>角色</th><th>权限</th><th>操作</th>
+      </tr>
+    </thead>
+    <tbody>
+      {users.map((u: any) => (
+        <tr data-id={u.id} data-role={u.role} style="border-bottom:1px solid #eee">
+          <td>{u.username}</td>
+          <td><input class="f-nickname" value={u.nickname || ''} style="width:100%" /></td>
+          <td><small>{u.email}</small></td>
+          <td>
+            <select class="f-role">
+              <option value="collaborator" selected={u.role === 'collaborator'}>协作者</option>
+              <option value="admin" selected={u.role === 'admin'}>管理员</option>
+            </select>
+          </td>
+          <td>
+            <details>
+              <summary style="cursor:pointer">{(u.permissions || []).length || 0} 项</summary>
+              <fieldset style="display:grid;grid-template-columns:repeat(2,minmax(140px,1fr));gap:0.25rem;border:none">
+                {ALL_PERMS.map(p => (
+                  <label>
+                    <input type="checkbox" class="f-perm" value={p} checked={(u.permissions || []).includes(p)} />
+                    {p}
+                  </label>
+                ))}
+              </fieldset>
+            </details>
+          </td>
+          <td style="display:flex;gap:0.5rem">
+            <button class="btn-save">保存</button>
+            <button class="btn-reset" title="发送重置密码邮件 / 或在此设置新密码">改密码</button>
+            <button class="btn-del" style="color:#c0392b">删除</button>
+          </td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+
+  <script define:vars={{ ALL_PERMS }}>
+    const pb = window.__pb;
+
+    document.getElementById('new-user').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      try {
+        await pb.collection('users').create({
+          username: fd.get('username'),
+          email: fd.get('email'),
+          password: fd.get('password'),
+          passwordConfirm: fd.get('password'),
+          nickname: fd.get('nickname') || undefined,
+          role: fd.get('role'),
+          permissions: [],
+        });
+        location.reload();
+      } catch (err) { alert('新建失败: ' + err.message); }
+    });
+
+    document.querySelectorAll('tr[data-id]').forEach((tr) => {
+      const id = tr.dataset.id;
+      tr.querySelector('.btn-save').onclick = async () => {
+        const perms = Array.from(tr.querySelectorAll('.f-perm:checked')).map((c) => c.value);
+        try {
+          await pb.collection('users').update(id, {
+            nickname: tr.querySelector('.f-nickname').value,
+            role: tr.querySelector('.f-role').value,
+            permissions: perms,
+          });
+          alert('已保存');
+        } catch (err) { alert('保存失败: ' + err.message); }
+      };
+      tr.querySelector('.btn-reset').onclick = async () => {
+        const pw = prompt('输入新密码（留空取消）');
+        if (!pw) return;
+        try {
+          await pb.collection('users').update(id, { password: pw, passwordConfirm: pw });
+          alert('已重置');
+        } catch (err) { alert('重置失败: ' + err.message); }
+      };
+      tr.querySelector('.btn-del').onclick = async () => {
+        if (!confirm('确定删除该用户？')) return;
+        try {
+          await pb.collection('users').delete(id);
+          tr.remove();
+        } catch (err) { alert('删除失败: ' + err.message); }
+      };
+    });
+  </script>
+</BaseLayout>
