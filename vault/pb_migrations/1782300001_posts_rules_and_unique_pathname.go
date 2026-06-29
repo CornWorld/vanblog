@@ -27,9 +27,10 @@ func init() {
 		//
 		// The admin leg intentionally has no deleted filter: /admin/trash uses
 		// pb.collection('posts').getFullList({filter:'deleted=true'}) and relies
-		// on the admin role to bypass the deleted=false check. /admin/index adds
-		// its own filter:'deleted=false' client-side so admins don't see
-		// soft-deleted posts in the main list.
+		// on the admin role to bypass the deleted=false check. /admin/index
+		// trusts the Rule as the single source of truth — admins will see
+		// soft-deleted posts in the main list too, which is acceptable because
+		// /admin/trash is the dedicated recovery view.
 		//
 		// NOTE: this is an API-layer safety net. Application code in article.go /
 		// feed.go / visits.go already filters explicitly, so this is defense in
