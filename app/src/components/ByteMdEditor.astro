@@ -11,7 +11,7 @@ const { initialContent = '', postId, mediaConfig } = Astro.props
 <div id="upload-status" aria-live="polite" style="position: fixed; bottom: 1rem; right: 1rem; max-width: 360px; font-size: 13px; color: #555; background: rgba(255,255,255,0.95); border: 1px solid #ddd; border-radius: 6px; padding: 8px 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: none; z-index: 100;"></div>
 {mediaConfig && <script type="application/json" id="media-config">{JSON.stringify(mediaConfig)}</script>}
 
-<script>
+<script lang="ts">
   import { Editor } from 'bytemd';
   import gfm from '@bytemd/plugin-gfm';
   import highlight from '@bytemd/plugin-highlight-ssr';

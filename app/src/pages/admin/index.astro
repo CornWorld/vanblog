@@ -93,9 +93,9 @@ function checked(v: boolean) { return v ? '✓' : '·'; }
     document.querySelectorAll('a[data-del]').forEach((a) => {
       a.addEventListener('click', async (e) => {
         e.preventDefault();
-        const id = (a as HTMLElement).dataset.del;
+        const id = a.dataset.del;
         if (!id || !confirm('确定删除该文章？（软删除：deleted=true）')) return;
-        const pb = (window as any).__pb;
+        const pb = window.__pb;
         if (!pb) return alert('未登录');
         try {
           // soft-delete: mark deleted=true so it stays in revisions/audits
