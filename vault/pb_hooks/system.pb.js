@@ -1,63 +1,110 @@
 /// <reference path="./types.d.ts" />
+/// <reference path="./lib/vanblog.d.ts" />
 
 // ============================================================================
-// Vanblog System Hooks (JSVM)
+// Vanblog System Hooks (JSVM, PocketBase 0.39 API)
 // ============================================================================
-// These hooks provide "soft" business logic that benefits from hot-reload
-// and user customization. Performance-critical hooks (revisions, visits
-// counting, RSS/sitemap generation) are in Go's internal/hooks package.
+// All audit logic (recordAudit + per-collection helpers) lives in
+// ./pb_hooks/lib/vanblog-audit.js and is require()'d inside each callback.
+// require's module cache is shared across all jsvm VMs (loader + executors),
+// which is the only way for hook callbacks — re-compiled by jsvm inside
+// executor VMs — to reach helpers defined elsewhere.
 //
-// Users can modify these files without recompiling the Go binary.
-// Files in pb_hooks/ are auto-reloaded on change (UNIX).
+// pb 0.39 hook surface used:
+//   - onRecordAfterCreateSuccess / onRecordAfterUpdateSuccess /
+//     onRecordAfterDeleteSuccess  — Go-layer success hooks fired by
+//                                  app.Save / app.Delete. RecordEvent has
+//                                  record but no request.
+//   - onRecordCreateRequest / onRecordUpdateRequest / onRecordDeleteRequest
+//                                  — HTTP API path before-save hooks.
+//                                  RecordRequestEvent has auth/IP/UA.
+//                                  Production admin UI hits these.
 // ============================================================================
 
-// --- 1. Audits: log auth events ---
-// Records login/logout to the audits table for security tracking.
-onRecordAuthRequest((e) => {
-    try {
-        const collection = $app.findCollectionByNameOrId("audits");
-        const record = new Record(collection);
-        record.set("actor", e.record.id);
-        record.set("action", "auth.login");
-        record.set("target", e.record.email || e.record.username);
-        record.set("result", "success");
-        record.set("ip", e.realIP());
-        record.set("userAgent", e.request.header("User-Agent") || "");
-        $app.save(record);
-    } catch (err) {
-        console.log("[vanblog] audit log failed:", err);
-    }
-}, "users");
+const M = "./pb_hooks/lib/vanblog-audit.js";
 
-// --- 2. Audits: log post deletion ---
-// Records when articles are deleted for accountability.
-onRecordDeleteRequest((e) => {
-    try {
-        const collection = $app.findCollectionByNameOrId("audits");
-        const record = new Record(collection);
-        record.set("action", "post.delete");
-        record.set("target", e.record.id + ":" + e.record.get("title"));
-        record.set("result", "success");
-        record.set("detail", JSON.stringify({
-            title: e.record.get("title"),
-            status: e.record.get("status"),
-            pathname: e.record.get("pathname"),
-        }));
-        $app.save(record);
-    } catch (err) {
-        console.log("[vanblog] delete audit failed:", err);
-    }
-}, "posts");
+// ----------------------------------------------------------------------------
+// Auth
+// ----------------------------------------------------------------------------
 
-// --- 3. Daily visits aggregation (cron) ---
-// Runs at midnight to create the site-wide aggregate row (path="")
-// for the previous day's visits.
+onRecordAuthRequest((e) => require("./pb_hooks/lib/vanblog-audit.js").authLogin(e), "users");
+
+// ----------------------------------------------------------------------------
+// Posts
+// ----------------------------------------------------------------------------
+
+onRecordCreateRequest((e) => require("./pb_hooks/lib/vanblog-audit.js").postAction("post.create", e), "posts");
+onRecordUpdateRequest((e) => require("./pb_hooks/lib/vanblog-audit.js").postAction("post.update", e), "posts");
+onRecordDeleteRequest((e) => require("./pb_hooks/lib/vanblog-audit.js").postAction("post.delete", e), "posts");
+
+onRecordAfterCreateSuccess((e) => require("./pb_hooks/lib/vanblog-audit.js").postAction("post.create", e), "posts");
+onRecordAfterUpdateSuccess((e) => require("./pb_hooks/lib/vanblog-audit.js").postAction("post.update", e), "posts");
+onRecordAfterDeleteSuccess((e) => require("./pb_hooks/lib/vanblog-audit.js").postAction("post.delete", e), "posts");
+
+// ----------------------------------------------------------------------------
+// Tags
+// ----------------------------------------------------------------------------
+
+onRecordCreateRequest((e) => require("./pb_hooks/lib/vanblog-audit.js").tagAction("tag.create", e), "tags");
+onRecordUpdateRequest((e) => require("./pb_hooks/lib/vanblog-audit.js").tagAction("tag.update", e), "tags");
+onRecordDeleteRequest((e) => require("./pb_hooks/lib/vanblog-audit.js").tagAction("tag.delete", e), "tags");
+
+onRecordAfterCreateSuccess((e) => require("./pb_hooks/lib/vanblog-audit.js").tagAction("tag.create", e), "tags");
+onRecordAfterUpdateSuccess((e) => require("./pb_hooks/lib/vanblog-audit.js").tagAction("tag.update", e), "tags");
+onRecordAfterDeleteSuccess((e) => require("./pb_hooks/lib/vanblog-audit.js").tagAction("tag.delete", e), "tags");
+
+// ----------------------------------------------------------------------------
+// Categories
+// ----------------------------------------------------------------------------
+
+onRecordCreateRequest((e) => require("./pb_hooks/lib/vanblog-audit.js").categoryAction("category.create", e), "categories");
+onRecordUpdateRequest((e) => require("./pb_hooks/lib/vanblog-audit.js").categoryAction("category.update", e), "categories");
+onRecordDeleteRequest((e) => require("./pb_hooks/lib/vanblog-audit.js").categoryAction("category.delete", e), "categories");
+
+onRecordAfterCreateSuccess((e) => require("./pb_hooks/lib/vanblog-audit.js").categoryAction("category.create", e), "categories");
+onRecordAfterUpdateSuccess((e) => require("./pb_hooks/lib/vanblog-audit.js").categoryAction("category.update", e), "categories");
+onRecordAfterDeleteSuccess((e) => require("./pb_hooks/lib/vanblog-audit.js").categoryAction("category.delete", e), "categories");
+
+// ----------------------------------------------------------------------------
+// Media
+// ----------------------------------------------------------------------------
+
+onRecordCreateRequest((e) => require("./pb_hooks/lib/vanblog-audit.js").mediaAction("media.create", e), "media");
+onRecordUpdateRequest((e) => require("./pb_hooks/lib/vanblog-audit.js").mediaAction("media.update", e), "media");
+onRecordDeleteRequest((e) => require("./pb_hooks/lib/vanblog-audit.js").mediaAction("media.delete", e), "media");
+
+onRecordAfterCreateSuccess((e) => require("./pb_hooks/lib/vanblog-audit.js").mediaAction("media.create", e), "media");
+onRecordAfterUpdateSuccess((e) => require("./pb_hooks/lib/vanblog-audit.js").mediaAction("media.update", e), "media");
+onRecordAfterDeleteSuccess((e) => require("./pb_hooks/lib/vanblog-audit.js").mediaAction("media.delete", e), "media");
+
+// ----------------------------------------------------------------------------
+// Users
+// ----------------------------------------------------------------------------
+
+onRecordCreateRequest((e) => require("./pb_hooks/lib/vanblog-audit.js").userAction("user.create", e), "users");
+onRecordUpdateRequest((e) => require("./pb_hooks/lib/vanblog-audit.js").userAction("user.update", e, true), "users");
+onRecordDeleteRequest((e) => require("./pb_hooks/lib/vanblog-audit.js").userAction("user.delete", e), "users");
+
+onRecordAfterCreateSuccess((e) => require("./pb_hooks/lib/vanblog-audit.js").userAction("user.create", e), "users");
+onRecordAfterUpdateSuccess((e) => require("./pb_hooks/lib/vanblog-audit.js").userAction("user.update", e, true), "users");
+onRecordAfterDeleteSuccess((e) => require("./pb_hooks/lib/vanblog-audit.js").userAction("user.delete", e), "users");
+
+// ----------------------------------------------------------------------------
+// Site
+// ----------------------------------------------------------------------------
+
+onRecordUpdateRequest((e) => require("./pb_hooks/lib/vanblog-audit.js").siteAction(e), "site");
+onRecordAfterUpdateSuccess((e) => require("./pb_hooks/lib/vanblog-audit.js").siteAction(e), "site");
+
+// ----------------------------------------------------------------------------
+// Daily visits aggregation (cron)
+// ----------------------------------------------------------------------------
+
 cronAdd("visits-daily-aggregate", "0 0 * * *", () => {
     const yesterday = new Date(Date.now() - 86400000)
         .toISOString().split("T")[0];
 
     try {
-        // Sum all per-path visits for yesterday
         const records = $app.findRecordsByFilter(
             "visits",
             "date = {:date} && path != ''",
@@ -71,7 +118,6 @@ cronAdd("visits-daily-aggregate", "0 0 * * *", () => {
             totalUniques += r.getInt("uniques");
         }
 
-        // Find or create aggregate row
         let aggregate = null;
         try {
             aggregate = $app.findFirstRecordByFilter(
