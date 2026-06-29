@@ -1,0 +1,41 @@
+---
+export const prerender = false;
+
+import BaseLayout from '../layouts/BaseLayout.astro';
+import type { SearchResult } from '@vanblog/sdk';
+
+const q = (Astro.url.searchParams.get('q') || '').trim();
+let results: SearchResult[] = [];
+
+if (q) {
+  try {
+    const pb = Astro.locals.pb;
+    results = await (pb as any).vanblog.search.query(q, { limit: 30 });
+  } catch (e) {
+    console.error('[search] Failed:', e);
+  }
+}
+---
+<BaseLayout title="搜索" path="/search">
+  <h1>搜索</h1>
+  <form method="get" action="/search" style="display:flex;gap:0.5rem;flex-wrap:wrap">
+    <input type="text" name="q" value={q} placeholder="输入关键词…" required
+           style="flex:1;min-width:200px;padding:0.4rem 0.6rem" />
+    <button type="submit">搜索</button>
+  </form>
+
+  {q && (
+    <p style="margin-top:1rem">关键词 “{q}” 共 {results.length} 条结果。</p>
+  )}
+
+  {results.length > 0 && (
+    <ul style="list-style:none;padding:0;display:flex;flex-direction:column;gap:0.5rem;margin-top:1rem">
+      {results.map(r => (
+        <li>
+          <a href={`/posts/${r.id}`}>{r.title}</a>
+          {r.path && <small style="margin-left:0.5rem;color:#999">{r.path}</small>}
+        </li>
+      ))}
+    </ul>
+  )}
+</BaseLayout>

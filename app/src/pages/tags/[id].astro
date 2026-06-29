@@ -1,0 +1,51 @@
+---
+export const prerender = false;
+
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import type { Tag, Post } from '@vanblog/sdk';
+
+const { id } = Astro.params;
+if (!id) return Astro.redirect('/404');
+
+let tag: Tag;
+let posts: Post[] = [];
+
+const pb = Astro.locals.pb;
+try {
+  tag = await pb.collection('tags').getOne<Tag>(id);
+} catch {
+  return Astro.redirect('/404');
+}
+
+try {
+  const result = await pb.collection('posts').getList<Post>(1, 100, {
+    filter: `tags ?= "${tag.name}" && status = "published" && deleted = false`,
+    sort: '-created',
+  });
+  posts = result.items;
+} catch (e) {
+  console.error('[tag] Failed to load posts:', e);
+}
+
+if (Astro.cache.enabled) {
+  Astro.cache.set({ maxAge: 300, swr: 60, tags: ['posts', `tag:${id}`] });
+}
+---
+<BaseLayout title={`#${tag.name}`} path={`/tags/${id}`}>
+  <h1>#{tag.name}</h1>
+  {tag.description && <p>{tag.description}</p>}
+  <a href="/tags">← 所有标签</a>
+  <hr />
+  {posts.length === 0 ? (
+    <p>该标签下暂无文章。</p>
+  ) : (
+    <ul style="list-style:none;padding:0;display:flex;flex-direction:column;gap:0.5rem">
+      {posts.map(p => (
+        <li>
+          <a href={`/posts/${p.id}`}>{p.title}</a>
+          <small style="margin-left:0.5rem">{new Date(p.created).toLocaleDateString('zh-CN')}</small>
+        </li>
+      ))}
+    </ul>
+  )}
+</BaseLayout>

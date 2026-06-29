@@ -1,0 +1,35 @@
+---
+export const prerender = false;
+
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import type { Category } from '@vanblog/sdk';
+
+let cats: Category[] = [];
+
+try {
+  const pb = Astro.locals.pb;
+  cats = await pb.collection('categories').getFullList<Category>({ sort: 'name' });
+} catch (e) {
+  console.error('[categories] Failed to load:', e);
+}
+
+if (Astro.cache.enabled) {
+  Astro.cache.set({ maxAge: 600, swr: 120, tags: ['posts', 'categories'] });
+}
+---
+<BaseLayout title="分类" path="/categories">
+  <h1>分类</h1>
+  {cats.length === 0 ? (
+    <p>暂无分类。</p>
+  ) : (
+    <ul style="list-style:none;padding:0;display:flex;flex-direction:column;gap:0.5rem">
+      {cats.map(c => (
+        <li style="display:flex;align-items:center;gap:0.5rem">
+          <a href={`/categories/${c.id}`}>{c.name}</a>
+          <small style="color:#999">[{c.type}]</small>
+          {c.private && <small style="color:#c0392b">私有</small>}
+        </li>
+      ))}
+    </ul>
+  )}
+</BaseLayout>
