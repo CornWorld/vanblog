@@ -6,12 +6,12 @@
 //
 // 此文件提供 IDE 补全(TypeScript 姿态),不是运行时代码。
 // pb 0.39 的 jsvm 插件会自动生成 pb_hooks/types.d.ts,声明了所有 pb 原生
-// API($app, Record, Collection, onRecordAfterCreateRequest, cronAdd 等)。
+// API($app, Record, Collection, onRecordAfterCreateSuccess, cronAdd 等)。
 //
 // 本文件补充声明 vanblog 特有的全局变量和辅助类型。
 //
 // 用法:在你的 .pb.js 文件顶部添加:
-//   /// <reference path="./lib/vanblog.js" />
+//   /// <reference path="./lib/vanblog.d.ts" />
 //
 
 // ---------------------------------------------------------------------------
@@ -34,7 +34,7 @@ declare const $app: import("../types").App;
 
 /**
  * posts 表记录的常用字段。
- * 用于 onRecordAfterCreateRequest / onRecordAfterUpdateRequest 回调中
+ * 用于 onRecordAfterCreateSuccess / onRecordAfterUpdateSuccess 等回调中
  * 通过 e.record.get("fieldName") 访问。
  */
 interface VanblogPost {
