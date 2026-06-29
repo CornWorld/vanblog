@@ -30,6 +30,10 @@
   },
   "devDependencies": {
     "@types/hast": "^3.0.4",
-    "@types/mdast": "^4.0.4"
+    "@types/mdast": "^4.0.4",
+    "@typescript-eslint/parser": "^8.62.0",
+    "astro-eslint-parser": "^2.1.0",
+    "eslint-plugin-astro": "^2.1.1",
+    "typescript": "^5.9.3"
   }
 }

@@ -61,7 +61,7 @@ try {
   <script define:vars={{}}>
     document.querySelectorAll('tr[data-id]').forEach((tr) => {
       const id = tr.dataset.id;
-      const pb = (window as any).__pb;
+      const pb = window.__pb;
 
       tr.querySelector('.btn-restore').addEventListener('click', async () => {
         if (!id || !confirm('恢复该文章？（deleted=false）')) return;
