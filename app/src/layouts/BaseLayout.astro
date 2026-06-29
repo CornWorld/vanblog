@@ -1,6 +1,5 @@
 ---
 import type { SiteConfig, Post } from '@vanblog/sdk';
-import DOMPurify from 'isomorphic-dompurify';
 import PbInit from '../components/PbInit.astro';
 
 interface Props {
@@ -28,7 +27,8 @@ const canonicalURL = baseUrl && path ? `${baseUrl.replace(/\/$/, '')}${path}` : 
 // punctuation. Must produce plain text — feeds into <meta content={desc}>.
 function excerpt(md: string | undefined, max = 160): string {
   if (!md) return siteDesc;
-  const stripped = DOMPurify.sanitize(md, { ALLOWED_TAGS: [], ALLOWED_ATTR: [] });
+  // Strip HTML tags (functionally equivalent for meta-text extraction)
+  const stripped = md.replace(/<[^>]*>/g, '');
   const text = stripped
     .replace(/^#+\s+/gm, '')
     .replace(/[*_`~\[\]()!#>-]/g, '')
