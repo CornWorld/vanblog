@@ -38,4 +38,166 @@ if (Astro.cache.enabled) {
   </article>
   <hr />
   <p><a href="/">← 返回首页</a></p>
-</BaseLayout>
+<script>
+  // ── Mermaid: render + export toolbar ──
+  import mermaid from 'mermaid';
+
+  const isDark = () => document.documentElement.classList.contains('dark');
+  mermaid.initialize({ startOnLoad: false, theme: isDark() ? 'dark' : 'default' });
+
+  const mermaidCodes = document.querySelectorAll('code.language-mermaid');
+  if (mermaidCodes.length > 0) {
+    mermaidCodes.forEach((code) => {
+      const wrapper = document.createElement('pre');
+      wrapper.className = 'mermaid';
+      wrapper.textContent = code.textContent;
+      code.parentElement?.replaceWith(wrapper);
+    });
+    await mermaid.run();
+
+    // Attach export toolbar to each rendered mermaid SVG
+    const SVG_NS = 'http://www.w3.org/2000/svg';
+    const XLINK_NS = 'http://www.w3.org/1999/xlink';
+    const LIGHT_BG = '#ffffff', DARK_BG = '#0f172a';
+
+    function isTransparent(color) {
+      return !color || color === 'transparent' || color.startsWith('rgba(0, 0, 0, 0)');
+    }
+    function resolveBg(el) {
+      let cur = el.parentElement;
+      while (cur) {
+        const bg = getComputedStyle(cur).backgroundColor;
+        if (!isTransparent(bg)) return bg;
+        cur = cur.parentElement;
+      }
+      return isDark() ? DARK_BG : LIGHT_BG;
+    }
+    function getSvgDim(svg) {
+      const vb = svg.viewBox?.baseVal;
+      if (vb && vb.width > 0 && vb.height > 0) return { w: vb.width, h: vb.height };
+      const r = svg.getBoundingClientRect();
+      if (r.width > 0 && r.height > 0) return { w: r.width, h: r.height };
+      return { w: 1200, h: 800 };
+    }
+    function serializeSvg(svg, bg) {
+      const clone = svg.cloneNode(true);
+      const { w, h } = getSvgDim(clone);
+      clone.setAttribute('xmlns', SVG_NS);
+      clone.setAttribute('xmlns:xlink', XLINK_NS);
+      clone.setAttribute('viewBox', `0 0 ${w} ${h}`);
+      clone.setAttribute('width', String(w));
+      clone.setAttribute('height', String(h));
+      const style = [clone.getAttribute('style'), `background:${bg}`, 'max-width:none'].filter(Boolean).join(';');
+      clone.setAttribute('style', style);
+      return { w, h, markup: `<?xml version="1.0" encoding="UTF-8"?>\n${new XMLSerializer().serializeToString(clone)}` };
+    }
+    function downloadFile(name, href) {
+      const a = document.createElement('a');
+      a.download = name; a.href = href;
+      document.body.appendChild(a); a.click(); a.remove();
+    }
+    function downloadSvg(container) {
+      const svg = container.querySelector('svg');
+      if (!svg) return;
+      const { markup } = serializeSvg(svg, resolveBg(container));
+      const url = URL.createObjectURL(new Blob([markup], { type: 'image/svg+xml;charset=utf-8' }));
+      downloadFile(`diagram-${Date.now()}.svg`, url);
+      setTimeout(() => URL.revokeObjectURL(url), 0);
+    }
+    async function downloadPng(container) {
+      const svg = container.querySelector('svg');
+      if (!svg) return;
+      const bg = resolveBg(container);
+      const { w, h, markup } = serializeSvg(svg, bg);
+      const dataUrl = await new Promise((ok, no) => {
+        const r = new FileReader();
+        r.onload = () => ok(String(r.result));
+        r.onerror = () => no(new Error('read failed'));
+        r.readAsDataURL(new Blob([markup], { type: 'image/svg+xml;charset=utf-8' }));
+      });
+      const scale = 2;
+      const c = document.createElement('canvas');
+      c.width = Math.round(w * scale); c.height = Math.round(h * scale);
+      const ctx = c.getContext('2d');
+      if (!ctx) return;
+      const img = await new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = no; i.src = dataUrl; });
+      ctx.fillStyle = bg; ctx.fillRect(0, 0, c.width, c.height);
+      ctx.drawImage(img, 0, 0, c.width, c.height);
+      downloadFile(`diagram-${Date.now()}.png`, c.toDataURL('image/png'));
+    }
+    function toolBtn(label, icon, onClick) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.title = label; b.setAttribute('aria-label', label);
+      b.innerHTML = icon;
+      b.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); onClick().catch(console.error); });
+      return b;
+    }
+    const pngIcon = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="12" height="10" rx="2"/><circle cx="5.5" cy="6.2" r="1"/><path d="M4.5 11l2.2-2.3 1.8 1.8 1.6-1.6 1.4 2.1"/></svg>';
+    const svgIcon = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="4" cy="4" r="1.5"/><circle cx="12" cy="4" r="1.5"/><circle cx="8" cy="12" r="1.5"/><path d="M5.5 4h5"/><path d="M4.9 5.3l2.2 4.2"/><path d="M11.1 5.3l-2.2 4.2"/></svg>';
+    document.querySelectorAll('.mermaid').forEach((el) => {
+      if (!el.querySelector('svg') || el.querySelector('.vb-mermaid-toolbar')) return;
+      const tb = document.createElement('div');
+      tb.className = 'vb-mermaid-toolbar';
+      tb.setAttribute('role', 'group');
+      tb.setAttribute('aria-label', '导出工具');
+      tb.style.cssText = 'display:flex;gap:4px;position:absolute;top:4px;right:4px;z-index:10;opacity:0;transition:opacity .2s';
+      tb.appendChild(toolBtn('导出 PNG', pngIcon, () => downloadPng(el)));
+      tb.appendChild(toolBtn('导出 SVG', svgIcon, () => { downloadSvg(el); return Promise.resolve(); }));
+      el.style.position = 'relative';
+      el.appendChild(tb);
+      el.addEventListener('mouseenter', () => tb.style.opacity = '1');
+      el.addEventListener('mouseleave', () => tb.style.opacity = '0');
+    });
+  }
+
+  // ── Code block enhancements: wrap toggle + collapse ──
+  const MAX_LINES = 15;
+  document.querySelectorAll('.code-block-wrapper').forEach((wrapper) => {
+    const code = wrapper.querySelector('code');
+    const header = wrapper.querySelector('.code-header');
+    if (!code || !header) return;
+
+    // --- wrap toggle ---
+    const wrapBtn = document.createElement('span');
+    wrapBtn.className = 'code-wrap-btn';
+    wrapBtn.textContent = '换行';
+    wrapBtn.style.cssText = 'cursor:pointer;margin-left:8px;font-size:12px;color:#6f7177';
+    wrapBtn.addEventListener('click', () => {
+      const enabled = code.classList.toggle('code-wrap-enabled');
+      wrapBtn.textContent = enabled ? '不换行' : '换行';
+    });
+    header.appendChild(wrapBtn);
+
+    // --- collapse long blocks ---
+    const lines = (code.textContent || '').trim().split('\n');
+    const nonEmpty = lines.filter((l) => l.trim());
+    if (lines.length > MAX_LINES || nonEmpty.length > MAX_LINES - 3) {
+      code.classList.add('code-collapsed');
+      const toggleBtn = document.createElement('span');
+      toggleBtn.className = 'code-toggle-btn';
+      toggleBtn.textContent = '展开';
+      toggleBtn.style.cssText = 'cursor:pointer;margin-left:8px;font-size:12px;color:#6f7177';
+      toggleBtn.addEventListener('click', () => {
+        const collapsed = code.classList.toggle('code-collapsed');
+        toggleBtn.textContent = collapsed ? '展开' : '收起';
+      });
+      header.appendChild(toggleBtn);
+    }
+  });
+</script>
+
+<style>
+  /* Code block enhancements */
+  .code-collapsed { max-height: 22em; overflow: hidden; }
+  .code-wrap-enabled { white-space: pre-wrap !important; word-break: break-all; }
+  /* Mermaid toolbar buttons */
+  .vb-mermaid-toolbar button {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 28px; height: 28px; padding: 4px;
+    border: 1px solid #ddd; border-radius: 4px;
+    background: rgba(255,255,255,0.9); color: #555; cursor: pointer;
+  }
+  .vb-mermaid-toolbar button:hover { background: #f0f0f0; color: #333; }
+  .vb-mermaid-toolbar button svg { width: 14px; height: 14px; }
+</style>
