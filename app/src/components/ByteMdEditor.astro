@@ -19,10 +19,12 @@ const { initialContent = '', postId, mediaConfig } = Astro.props
   import frontmatter from '@bytemd/plugin-frontmatter';
   import mediumZoom from '@bytemd/plugin-medium-zoom';
   import mermaid from '@bytemd/plugin-mermaid';
-  import { visit } from 'unist-util-visit';
   import remarkDirective from 'remark-directive';
   import { emoji } from '../lib/bytemd-plugins/emoji';
   import { normalizeImage, type MediaConfig } from '../lib/media/normalizeImage';
+  import { rehypeEnhance } from '../lib/markdown/plugins/rehype-enhance';
+  import { rehypeCodeBlock } from '../lib/markdown/plugins/rehype-code-block';
+  import { remarkContainer } from '../lib/markdown/plugins/remark-container';
   import 'katex/dist/katex.css';
 
   // Read site.mediaConfig injected server-side via #media-config JSON tag.
@@ -43,7 +45,7 @@ const { initialContent = '', postId, mediaConfig } = Astro.props
   // Quick check whether a file will trigger wasm conversion (used to
   // pre-show the "正在转换…" status before normalizeImage awaits).
   // Reflects the same source-type set as normalizeImage.SOURCE_NEEDS_REENCODE.
-  const NEEDS_NORMALIZATION = (f) => {
+  const NEEDS_NORMALIZATION = (f: File) => {
     const cfg = MEDIA_CONFIG;
     const enabled = !cfg || cfg.enabled;
     const preserve = enabled && cfg?.targetFormat === 'preserve';
@@ -55,8 +57,8 @@ const { initialContent = '', postId, mediaConfig } = Astro.props
   // Status bar helper — non-modal inline notification at the bottom-right.
   // Used for "正在转换 X…" / "X 不会生成缩略图" / similar transient notes.
   // Auto-hides after `ttl` ms (default 3s); pass 0 to keep until replaced.
-  let statusTimer = null;
-  function showStatus(msg, ttl = 3000) {
+  let statusTimer: ReturnType<typeof setTimeout> | null = null;
+  function showStatus(msg: string, ttl = 3000) {
     const el = document.getElementById('upload-status');
     if (!el) return;
     el.textContent = msg;
@@ -65,51 +67,10 @@ const { initialContent = '', postId, mediaConfig } = Astro.props
     if (ttl > 0) statusTimer = setTimeout(() => { el.style.display = 'none'; }, ttl);
   }
 
-  // rehype: 标题加 data-id + 链接加 target=_blank (一次遍历)
-  const rehypeEnhance = () => (tree) => visit(tree, (n) => {
-    if (n.type !== 'element') return;
-    if (/^h[1-6]$/.test(n.tagName) && n.children?.[0]?.value)
-      n.properties['data-id'] = n.children[0].value;
-    if (n.tagName === 'a') { n.properties.target = '_blank'; n.properties.rel = 'noopener noreferrer'; }
-  });
-
-  // rehype: 代码块加复制按钮
-  const rehypeCodeBlock = () => (tree) => visit(tree, (n) => {
-    if (n.type !== 'element' || n.tagName !== 'pre') return;
-    const code = n.children?.find((c) => c.tagName === 'code');
-    if (!code) return;
-    const lang = (code.properties?.className || []).find((c) => c?.startsWith?.('language-'))?.replace('language-', '') || '';
-    if (lang === 'mermaid') return;
-    n.properties.class = 'code-block-wrapper';
-    n.children = [{
-      type: 'element', tagName: 'div',
-      properties: { class: 'code-header', style: 'display:flex;justify-content:flex-end;padding:2px 8px;font-size:12px;color:#6f7177' },
-      children: [
-        { type: 'element', tagName: 'span', properties: {}, children: [{ type: 'text', value: lang }] },
-        { type: 'element', tagName: 'span', properties: { class: 'code-copy-btn', style: 'cursor:pointer;margin-left:8px' }, children: [{ type: 'text', value: '复制' }] },
-      ],
-    }, ...n.children];
-  });
-
-  // remark: :::tip / :::warning 自定义容器
-  const remarkContainer = () => (tree) => visit(tree, (n) => {
-    if (n.type !== 'containerDirective') return;
-    const titles = { note: '注', info: '相关信息', warning: '注意', danger: '警告', tip: '提示' };
-    const title = n.attributes?.title || titles[n.name] || n.name;
-    n.data = n.data || {};
-    n.data.hName = 'div';
-    n.data.hProperties = { class: 'custom-container ' + n.name };
-    n.children.unshift({
-      type: 'paragraph',
-      data: { hProperties: { class: 'custom-container-title' } },
-      children: [{ type: 'text', value: title }],
-    });
-  });
-
   // 图片上传到 pb media (拖拽/粘贴通用)
   // 失败时跳过该文件；全部失败时 alert 提示
   // 上传前对 BMP/TIFF 走 wasm 转 WebP，SVG 直接放行 + 状态条提示
-  async function uploadImages(files) {
+  async function uploadImages(files: File[]) {
     const pb = window.__pb;
     if (!pb) return [];
 
@@ -154,18 +115,18 @@ const { initialContent = '', postId, mediaConfig } = Astro.props
   const moreAction = {
     title: '插入 more',
     icon: '<svg fill="currentColor" viewBox="0 0 1024 1024" width="16" height="16"><circle cx="227" cy="509" r="95"/><circle cx="511" cy="509" r="95"/><circle cx="795" cy="509" r="95"/></svg>',
-    handler: { type: 'action', click(ctx) {
+    handler: { type: 'action', click(ctx: { appendBlock: (text: string) => void; editor: { focus: () => void } }) {
       ctx.appendBlock('<!-- more -->\n');
       ctx.editor.focus();
     }},
   };
 
   // action: 剪切板图片上传
-  function imgAction(getPb) {
+  function imgAction(getPb: () => import('@vanblog/sdk').VanblogClient) {
     return {
       title: '图片上传',
       icon: '<svg viewBox="0 0 1024 1024" width="16" height="16" fill="currentColor"><path d="M864 260H704l-32-56a48 48 0 00-42-24H406a48 48 0 00-42 24l-32 56H160a48 48 0 00-48 48v448a48 48 0 0048 48h704a48 48 0 0048-48V308a48 48 0 00-48-48zM512 680a144 144 0 110-288 144 144 0 010 288z"/></svg>',
-      handler: { type: 'action', async click(ctx) {
+      handler: { type: 'action', async click(ctx: { appendBlock: (text: string) => void; editor: { focus: () => void } }) {
         try {
           const items = await navigator.clipboard.read();
           for (const item of items)
@@ -189,16 +150,16 @@ const { initialContent = '', postId, mediaConfig } = Astro.props
     title: '高亮块',
     icon: '<svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><rect x="1" y="1" width="14" height="6" rx="1" fill="none" stroke="currentColor"/><rect x="1" y="9" width="14" height="6" rx="1" fill="none" stroke="currentColor"/></svg>',
     handler: { type: 'dropdown', actions: [
-      { title: 'tip', handler: { type: 'action', click: (ctx) => { ctx.appendBlock(':::tip\n提示内容\n:::\n'); ctx.editor.focus(); }}},
-      { title: 'warning', handler: { type: 'action', click: (ctx) => { ctx.appendBlock(':::warning\n注意内容\n:::\n'); ctx.editor.focus(); }}},
-      { title: 'info', handler: { type: 'action', click: (ctx) => { ctx.appendBlock(':::info\n相关信息\n:::\n'); ctx.editor.focus(); }}},
-      { title: 'danger', handler: { type: 'action', click: (ctx) => { ctx.appendBlock(':::danger\n警告内容\n:::\n'); ctx.editor.focus(); }}},
+      { title: 'tip', handler: { type: 'action', click: (ctx: { appendBlock: (text: string) => void; editor: { focus: () => void } }) => { ctx.appendBlock(':::tip\n提示内容\n:::\n'); ctx.editor.focus(); }}},
+      { title: 'warning', handler: { type: 'action', click: (ctx: { appendBlock: (text: string) => void; editor: { focus: () => void } }) => { ctx.appendBlock(':::warning\n注意内容\n:::\n'); ctx.editor.focus(); }}},
+      { title: 'info', handler: { type: 'action', click: (ctx: { appendBlock: (text: string) => void; editor: { focus: () => void } }) => { ctx.appendBlock(':::info\n相关信息\n:::\n'); ctx.editor.focus(); }}},
+      { title: 'danger', handler: { type: 'action', click: (ctx: { appendBlock: (text: string) => void; editor: { focus: () => void } }) => { ctx.appendBlock(':::danger\n警告内容\n:::\n'); ctx.editor.focus(); }}},
     ]},
   };
 
   // 复制按钮事件绑定
-  function bindCopyBtns(markdownBody) {
-    markdownBody.querySelectorAll('.code-copy-btn').forEach((btn) => {
+  function bindCopyBtns(markdownBody: HTMLElement) {
+    markdownBody.querySelectorAll('.code-copy-btn').forEach((btn: HTMLElement) => {
       btn.onclick = () => {
         const code = btn.closest('.code-block-wrapper')?.querySelector('code')?.textContent;
         if (!code) return;
@@ -212,19 +173,20 @@ const { initialContent = '', postId, mediaConfig } = Astro.props
 
   // ---- Mount ----
   const mount = document.getElementById('bytemd-editor');
-  const hiddenInput = document.getElementById('post-content');
+  const hiddenInput = document.getElementById('post-content') as HTMLInputElement | null;
 
   if (mount) {
     const plugins = [
       gfm(), highlight(), math(), frontmatter(), mediumZoom(), mermaid(),
       emoji(),
-      { rehype: (p) => p.use(rehypeEnhance) },
-      { rehype: (p) => p.use(rehypeCodeBlock), viewerEffect: ({ markdownBody }) => bindCopyBtns(markdownBody) },
-      { remark: (p) => p.use(remarkDirective).use(remarkContainer) },
+      { rehype: (p: any) => p.use(rehypeEnhance) },
+      { rehype: (p: any) => p.use(rehypeCodeBlock), viewerEffect: ({ markdownBody }: any) => bindCopyBtns(markdownBody) },
+      { remark: (p: any) => p.use(remarkDirective).use(remarkContainer) },
       { actions: [moreAction, imgAction(() => window.__pb), containerAction] },
     ];
 
-    const editor = new Editor({
+    // ByteMD's Svelte types omit the constructor parameter — cast at boundary.
+    const editor = new (Editor as any)({
       target: mount,
       props: {
         value: mount.dataset.initial || '',
@@ -235,7 +197,7 @@ const { initialContent = '', postId, mediaConfig } = Astro.props
       },
     });
 
-    editor.$on('change', (e) => {
+    editor.$on('change', (e: { detail: { value: string } }) => {
       editor.$set({ value: e.detail.value });
       if (hiddenInput) hiddenInput.value = e.detail.value;
     });
