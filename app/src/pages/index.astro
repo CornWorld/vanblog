@@ -2,39 +2,96 @@
 export const prerender = false;
 
 import BaseLayout from '../layouts/BaseLayout.astro';
+import ErrorState from '../components/ErrorState.astro';
 import type { Post } from '@vanblog/sdk';
 
+const perPage = 10;
+const page = Math.max(1, parseInt(Astro.url.searchParams.get('page') || '1') || 1);
+
 let posts: Post[] = [];
+let totalPages = 1;
+let totalItems = 0;
+let error = false;
 
 try {
   const pb = Astro.locals.pb;
-  const result = await pb.collection('posts').getList<Post>(1, 20, {
+  const result = await pb.collection('posts').getList<Post>(page, perPage, {
     filter: 'status = "published" && deleted = false',
     sort: '-created',
+    expand: 'category,tags',
   });
   posts = result.items;
+  totalPages = result.totalPages;
+  totalItems = result.totalItems;
 } catch (e) {
   console.error('[index] Failed to load posts:', e);
+  error = true;
 }
 
-// Cache this page for 5 min, serve stale while revalidating.
-// Tagged 'posts' so pb hooks can purge it on post changes.
-if (Astro.cache.enabled) {
-  Astro.cache.set({ maxAge: 300, swr: 60, tags: ['posts', 'home'] });
+function excerpt(md: string | undefined, max = 150): string {
+  if (!md) return '';
+  const text = md
+    .replace(/<[^>]*>/g, '')
+    .replace(/[#*_`~\[\]()!>-]/g, '')
+    .replace(/\n+/g, ' ')
+    .trim();
+  return text.length > max ? text.slice(0, max) + '...' : text;
 }
 ---
 <BaseLayout title="首页" path="/">
-  {posts.length === 0 ? (
-    <p>暂无文章。</p>
-  ) : (
-    <ul>
-      {posts.map((post) => (
-        <li>
-          <a href={`/posts/${post.id}`}>{post.title}</a>
-          <br />
-          <small>{new Date(post.created).toLocaleDateString('zh-CN')}</small>
-        </li>
-      ))}
-    </ul>
+  {
+    error ? (
+      <ErrorState />
+    ) : posts.length === 0 ? (
+      <p class="py-12 text-center text-[var(--color-text-muted)]">暂无文章。</p>
+    ) : (
+      <div class="space-y-6">
+        {posts.map((post) => (
+          <article class="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-6 transition-shadow hover:shadow-md dark:border-[var(--color-border-dark)] dark:bg-[var(--color-surface-dark)]">
+            <h2 class="text-xl mb-2">
+              <a href={`/posts/${post.id}`} class="text-[var(--color-text)] hover:text-[var(--color-accent)] no-underline">
+                {post.title}
+              </a>
+            </h2>
+            <div class="flex items-center gap-3 text-sm text-[var(--color-text-muted)] mb-3">
+              <time datetime={post.created}>{new Date(post.created).toLocaleDateString('zh-CN')}</time>
+              {post.expand?.category && (
+                <a href={`/categories/${post.category}`} class="text-[var(--color-accent)]">
+                  {post.expand.category.name}
+                </a>
+              )}
+            </div>
+            {post.content && (
+              <p class="text-[var(--color-text-muted)] text-sm leading-relaxed">
+                {excerpt(post.content)}
+              </p>
+            )}
+            <div class="mt-3">
+              <a href={`/posts/${post.id}`} class="text-sm text-[var(--color-accent)] hover:underline">
+                阅读全文 →
+              </a>
+            </div>
+          </article>
+        ))}
+      </div>
+    )
+  }
+
+  {!error && totalPages > 1 && (
+    <nav class="flex justify-center gap-4 mt-10 pt-6 border-t border-[var(--color-border)]">
+      {page > 1 ? (
+        <a href={`/?page=${page - 1}`} class="inline-flex items-center px-4 py-2 rounded-lg font-medium text-sm bg-[var(--color-accent)] text-white hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed">← 上一页</a>
+      ) : (
+        <span class="inline-flex items-center px-4 py-2 rounded-lg font-medium text-sm bg-[var(--color-accent)] text-white hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed opacity-50 cursor-not-allowed">← 上一页</span>
+      )}
+      <span class="flex items-center text-sm text-[var(--color-text-muted)]">
+        第 {page} / {totalPages} 页
+      </span>
+      {page < totalPages ? (
+        <a href={`/?page=${page + 1}`} class="inline-flex items-center px-4 py-2 rounded-lg font-medium text-sm bg-[var(--color-accent)] text-white hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed">下一页 →</a>
+      ) : (
+        <span class="inline-flex items-center px-4 py-2 rounded-lg font-medium text-sm bg-[var(--color-accent)] text-white hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed opacity-50 cursor-not-allowed">下一页 →</span>
+      )}
+    </nav>
   )}
 </BaseLayout>

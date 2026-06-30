@@ -20,28 +20,28 @@ try {
   <h1>标签管理</h1>
   <p><a href="/admin">← 返回</a></p>
 
-  <form id="new-tag" style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem">
-    <input name="name" placeholder="标签名" required style="padding:0.3rem;flex:1;min-width:160px" />
-    <input name="slug" placeholder="slug（可空）" style="padding:0.3rem;width:160px" />
-    <input name="description" placeholder="描述（可空）" style="padding:0.3rem;width:240px" />
+  <form id="new-tag" class="flex gap-2 flex-wrap mb-4">
+    <input name="name" placeholder="标签名" required class="px-1.5 py-0.5 flex-1 min-w-[160px]" />
+    <input name="slug" placeholder="slug（可空）" class="px-1.5 py-0.5 w-40" />
+    <input name="description" placeholder="描述（可空）" class="px-1.5 py-0.5 w-60" />
     <button type="submit">+ 新建</button>
   </form>
 
-  <table style="width:100%;border-collapse:collapse">
+  <table class="w-full border-collapse">
     <thead>
-      <tr style="text-align:left;border-bottom:1px solid #ccc">
+      <tr class="text-left border-b border-[var(--color-border)]">
         <th>名称</th><th>slug</th><th>描述</th><th>操作</th>
       </tr>
     </thead>
     <tbody>
       {tags.map(t => (
-        <tr data-id={t.id} style="border-bottom:1px solid #eee">
-          <td><input class="f-name" value={t.name} style="width:100%" /></td>
-          <td><input class="f-slug" value={t.slug || ''} style="width:100%" /></td>
-          <td><input class="f-desc" value={t.description || ''} style="width:100%" /></td>
-          <td style="display:flex;gap:0.5rem">
+        <tr data-id={t.id} class="border-b border-[var(--color-border)]">
+          <td><input class="f-name" value={t.name} class="w-full" /></td>
+          <td><input class="f-slug" value={t.slug || ''} class="w-full" /></td>
+          <td><input class="f-desc" value={t.description || ''} class="w-full" /></td>
+          <td class="flex gap-2">
             <button class="btn-save">保存</button>
-            <button class="btn-del" style="color:#c0392b">删除</button>
+            <button class="btn-del" class="text-red-600">删除</button>
           </td>
         </tr>
       ))}

@@ -1,6 +1,7 @@
 import { defineConfig, memoryCache } from 'astro/config';
 import node from '@astrojs/node';
 import mdx from '@astrojs/mdx';
+import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
   output: 'server',
@@ -25,19 +26,13 @@ export default defineConfig({
     port: 4321,
   },
   vite: {
+    plugins: [tailwindcss()],
     ssr: {
       noExternal: ['@vanblog/sdk'],
     },
-    // @jsquash/avif ships a multi-threaded worker module (avif_enc_mt.js)
-    // that uses ESM imports internally. Vite's default worker.format='iife'
-    // can't represent static imports → build fails with
-    // "Invalid value 'iife' for option 'worker.format'". Forcing 'es'
-    // resolves it. See https://github.com/jamsinclair/jSquash/issues/37.
     worker: {
       format: 'es',
     },
-    // Same root cause: keep jSquash packages out of Vite's pre-bundler so
-    // their internal worker wiring survives intact.
     optimizeDeps: {
       exclude: ['@jsquash/avif', '@jsquash/jpeg', '@jsquash/png', '@jsquash/webp'],
     },

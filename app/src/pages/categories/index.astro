@@ -2,32 +2,44 @@
 export const prerender = false;
 
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import ErrorState from '../../components/ErrorState.astro';
 import type { Category } from '@vanblog/sdk';
 
 let cats: Category[] = [];
+let error = false;
 
 try {
   const pb = Astro.locals.pb;
   cats = await pb.collection('categories').getFullList<Category>({ sort: 'name' });
 } catch (e) {
   console.error('[categories] Failed to load:', e);
-}
-
-if (Astro.cache.enabled) {
-  Astro.cache.set({ maxAge: 600, swr: 120, tags: ['posts', 'categories'] });
+  error = true;
 }
 ---
 <BaseLayout title="分类" path="/categories">
-  <h1>分类</h1>
-  {cats.length === 0 ? (
-    <p>暂无分类。</p>
-  ) : (
-    <ul style="list-style:none;padding:0;display:flex;flex-direction:column;gap:0.5rem">
+  <h1 class="mb-6">分类</h1>
+
+  {error && <ErrorState />}
+
+  {!error && cats.length === 0 && (
+    <p class="py-12 text-center text-[var(--color-text-muted)]">暂无分类。</p>
+  )}
+
+  {!error && cats.length > 0 && (
+    <ul class="grid grid-cols-1 sm:grid-cols-2 gap-3">
       {cats.map(c => (
-        <li style="display:flex;align-items:center;gap:0.5rem">
-          <a href={`/categories/${c.id}`}>{c.name}</a>
-          <small style="color:#999">[{c.type}]</small>
-          {c.private && <small style="color:#c0392b">私有</small>}
+        <li>
+          <a href={`/categories/${c.id}`} class="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-6 transition-shadow hover:shadow-md dark:border-[var(--color-border-dark)] dark:bg-[var(--color-surface-dark)] flex items-center gap-3 no-underline hover:border-[var(--color-accent)]">
+            <span class="font-medium text-[var(--color-text)]">{c.name}</span>
+            <span class="text-xs px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-[var(--color-text-muted)]">
+              {c.type}
+            </span>
+            {c.private && (
+              <span class="text-xs px-2 py-0.5 rounded bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400">
+                私有
+              </span>
+            )}
+          </a>
         </li>
       ))}
     </ul>

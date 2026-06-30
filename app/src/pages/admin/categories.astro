@@ -19,8 +19,8 @@ try {
   <h1>分类管理</h1>
   <p><a href="/admin">← 返回</a></p>
 
-  <form id="new-cat" style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem">
-    <input name="name" placeholder="分类名" required style="padding:0.3rem;flex:1;min-width:160px" />
+  <form id="new-cat" class="flex gap-2 flex-wrap mb-4">
+    <input name="name" placeholder="分类名" required class="px-1.5 py-0.5 flex-1 min-w-[160px]" />
     <select name="type">
       <option value="category">分类</option>
       <option value="column">专栏</option>
@@ -29,16 +29,16 @@ try {
     <button type="submit">+ 新建</button>
   </form>
 
-  <table style="width:100%;border-collapse:collapse">
+  <table class="w-full border-collapse">
     <thead>
-      <tr style="text-align:left;border-bottom:1px solid #ccc">
+      <tr class="text-left border-b border-[var(--color-border)]">
         <th>名称</th><th>类型</th><th>私有</th><th>操作</th>
       </tr>
     </thead>
     <tbody>
       {cats.map(c => (
-        <tr data-id={c.id} style="border-bottom:1px solid #eee">
-          <td><input class="f-name" value={c.name} style="width:100%" /></td>
+        <tr data-id={c.id} class="border-b border-[var(--color-border)]">
+          <td><input class="f-name" value={c.name} class="w-full" /></td>
           <td>
             <select class="f-type">
               <option value="category" selected={c.type === 'category'}>分类</option>
@@ -46,9 +46,9 @@ try {
             </select>
           </td>
           <td><input type="checkbox" class="f-private" checked={!!c.private} /></td>
-          <td style="display:flex;gap:0.5rem">
+          <td class="flex gap-2">
             <button class="btn-save">保存</button>
-            <button class="btn-del" style="color:#c0392b">删除</button>
+            <button class="btn-del" class="text-red-600">删除</button>
           </td>
         </tr>
       ))}

@@ -1,0 +1,114 @@
+@import 'tailwindcss';
+
+/* ── Dark mode: class-based (.dark on <html>) ── */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ── Design tokens ── */
+@theme {
+  --color-bg: #fafafa;
+  --color-bg-dark: #0f172a;
+  --color-surface: #ffffff;
+  --color-surface-dark: #1e293b;
+  --color-text: #1e293b;
+  --color-text-dark: #e2e8f0;
+  --color-text-muted: #64748b;
+  --color-text-muted-dark: #94a3b8;
+  --color-border: #e2e8f0;
+  --color-border-dark: #334155;
+  --color-accent: #2563eb;
+  --color-accent-dark: #60a5fa;
+}
+
+/* ── Base layer ── */
+@layer base {
+  html {
+    @apply bg-[var(--color-bg)] text-[var(--color-text)] antialiased;
+    font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+  }
+
+  html.dark {
+    @apply bg-[var(--color-bg-dark)] text-[var(--color-text-dark)];
+  }
+
+  body {
+    @apply min-h-screen leading-relaxed;
+  }
+
+  a {
+    @apply text-[var(--color-accent)] no-underline hover:underline;
+  }
+
+  html.dark a {
+    @apply text-[var(--color-accent-dark)];
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-bold leading-tight;
+  }
+
+  h1 { @apply text-3xl mb-6; }
+  h2 { @apply text-2xl mb-4 mt-8; }
+  h3 { @apply text-xl mb-3 mt-6; }
+
+  /* ── Article content (rendered markdown) ── */
+  article {
+    @apply max-w-none;
+  }
+
+  article p {
+    @apply mb-4 leading-relaxed;
+  }
+
+  article pre {
+    @apply rounded-lg overflow-x-auto my-4 p-4 text-sm;
+  }
+
+  article code {
+    @apply text-sm;
+  }
+
+  article :not(pre) > code {
+    @apply rounded px-1.5 py-0.5 bg-gray-100 text-rose-600;
+  }
+
+  html.dark article :not(pre) > code {
+    @apply bg-gray-800 text-rose-400;
+  }
+
+  article blockquote {
+    @apply border-l-4 border-[var(--color-accent)] pl-4 my-4 italic text-[var(--color-text-muted)];
+  }
+
+  html.dark article blockquote {
+    @apply border-[var(--color-accent-dark)] text-[var(--color-text-muted-dark)];
+  }
+
+  article table {
+    @apply w-full border-collapse my-4;
+  }
+
+  article th, article td {
+    @apply border border-[var(--color-border)] px-3 py-2 text-left;
+  }
+
+  html.dark article th, html.dark article td {
+    @apply border-[var(--color-border-dark)];
+  }
+
+  article th {
+    @apply bg-gray-50 font-semibold;
+  }
+
+  html.dark article th {
+    @apply bg-gray-800;
+  }
+
+  article img {
+    @apply max-w-full h-auto rounded;
+  }
+}
+
+/* ── Utility components ── */
+@utility container-page {
+  @apply max-w-3xl mx-auto px-4 sm:px-6;
+}

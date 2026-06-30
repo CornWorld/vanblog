@@ -39,7 +39,7 @@ function checked(v: boolean) { return v ? '✓' : '·'; }
 <BaseLayout title="管理">
   <h1>文章管理</h1>
 
-  <nav style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:1rem">
+  <nav class="flex gap-4 flex-wrap mb-4">
     {canEditPost && <a href="/admin/new">+ 新建文章</a>}
     <a href="/admin/tags">标签</a>
     <a href="/admin/categories">分类</a>
@@ -50,7 +50,7 @@ function checked(v: boolean) { return v ? '✓' : '·'; }
     {isAdmin && <a href="/admin/audits">审计</a>}
   </nav>
 
-  <p style="font-size:13px;color:#666">
+  <p class="text-xs text-[var(--color-text-muted)]">
     当前用户：<strong>{user?.username}</strong> [{user?.role}]
     {user?.permissions && user.permissions.length > 0 && (
       <span> · 权限: {user.permissions.join(', ')}</span>
@@ -60,9 +60,9 @@ function checked(v: boolean) { return v ? '✓' : '·'; }
   {posts.length === 0 ? (
     <p>暂无文章。{canEditPost && <a href="/admin/new">创建第一篇</a>}</p>
   ) : (
-    <table style="width:100%;border-collapse:collapse">
+    <table class="w-full border-collapse">
       <thead>
-        <tr style="text-align:left;border-bottom:1px solid #ccc">
+        <tr class="text-left border-b border-[var(--color-border)]">
           <th>标题</th>
           <th>状态</th>
           <th>更新时间</th>
@@ -71,16 +71,16 @@ function checked(v: boolean) { return v ? '✓' : '·'; }
       </thead>
       <tbody>
         {posts.map(post => (
-          <tr style="border-bottom:1px solid #eee">
+          <tr class="border-b border-[var(--color-border)]">
             <td>{post.title}</td>
             <td>{post.status}</td>
             <td>{new Date(post.updated).toLocaleString('zh-CN')}</td>
-            <td style="display:flex;gap:0.5rem;flex-wrap:wrap">
+            <td class="flex gap-2 flex-wrap">
               {canEditPost && <a href={`/admin/edit/${post.id}`}>编辑</a>}
               <a href={`/admin/revisions/${post.id}`}>修订</a>
               <a href={`/posts/${post.id}`} target="_blank">查看</a>
               {canDeletePost && (
-                <a href={`#del-${post.id}`} data-del={post.id} style="color:#c0392b">删除</a>
+                <a href={`#del-${post.id}`} data-del={post.id} class="text-red-600">删除</a>
               )}
             </td>
           </tr>

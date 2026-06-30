@@ -2,40 +2,67 @@
 export const prerender = false;
 
 import BaseLayout from '../layouts/BaseLayout.astro';
+import ErrorState from '../components/ErrorState.astro';
 import type { SearchResult } from '@vanblog/sdk';
 
 const q = (Astro.url.searchParams.get('q') || '').trim();
 let results: SearchResult[] = [];
+let error = false;
+let searched = false;
 
 if (q) {
+  searched = true;
   try {
     const pb = Astro.locals.pb;
     results = await (pb as any).vanblog.search.query(q, { limit: 30 });
   } catch (e) {
     console.error('[search] Failed:', e);
+    error = true;
   }
 }
 ---
 <BaseLayout title="搜索" path="/search">
-  <h1>搜索</h1>
-  <form method="get" action="/search" style="display:flex;gap:0.5rem;flex-wrap:wrap">
-    <input type="text" name="q" value={q} placeholder="输入关键词…" required
-           style="flex:1;min-width:200px;padding:0.4rem 0.6rem" />
-    <button type="submit">搜索</button>
+  <h1 class="mb-6">搜索</h1>
+
+  <form method="get" action="/search" class="flex gap-3 mb-8">
+    <input
+      type="text"
+      name="q"
+      value={q}
+      placeholder="输入关键词…"
+      required
+      class="flex-1 min-w-0 px-4 py-2 rounded-lg border border-[var(--color-border)]
+             bg-[var(--color-surface)] text-[var(--color-text)]
+             focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]
+             dark:bg-[var(--color-surface-dark)] dark:border-[var(--color-border-dark)]"
+    />
+    <button type="submit" class="inline-flex items-center px-4 py-2 rounded-lg font-medium text-sm bg-[var(--color-accent)] text-white hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed">搜索</button>
   </form>
 
-  {q && (
-    <p style="margin-top:1rem">关键词 “{q}” 共 {results.length} 条结果。</p>
+  {error && <ErrorState />}
+
+  {!error && searched && (
+    <p class="mb-4 text-[var(--color-text-muted)]">
+      关键词 "<strong class="text-[var(--color-text)]">{q}</strong>" 共 {results.length} 条结果。
+    </p>
   )}
 
-  {results.length > 0 && (
-    <ul style="list-style:none;padding:0;display:flex;flex-direction:column;gap:0.5rem;margin-top:1rem">
+  {!error && results.length > 0 && (
+    <ul class="space-y-3">
       {results.map(r => (
-        <li>
-          <a href={`/posts/${r.id}`}>{r.title}</a>
-          {r.path && <small style="margin-left:0.5rem;color:#999">{r.path}</small>}
+        <li class="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-6 transition-shadow hover:shadow-md dark:border-[var(--color-border-dark)] dark:bg-[var(--color-surface-dark)]">
+          <a href={`/posts/${r.id}`} class="font-medium text-[var(--color-text)] hover:text-[var(--color-accent)] no-underline">
+            {r.title}
+          </a>
+          {r.path && (
+            <span class="ml-2 text-sm text-[var(--color-text-muted)]">{r.path}</span>
+          )}
         </li>
       ))}
     </ul>
+  )}
+
+  {!error && searched && results.length === 0 && (
+    <p class="py-12 text-center text-[var(--color-text-muted)]">未找到匹配的文章。</p>
   )}
 </BaseLayout>

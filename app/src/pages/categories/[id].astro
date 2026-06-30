@@ -2,6 +2,7 @@
 export const prerender = false;
 
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import ErrorState from '../../components/ErrorState.astro';
 import type { Category, Post } from '@vanblog/sdk';
 
 const { id } = Astro.params;
@@ -9,6 +10,7 @@ if (!id) return Astro.redirect('/404');
 
 let cat: Category;
 let posts: Post[] = [];
+let error = false;
 
 const pb = Astro.locals.pb;
 try {
@@ -25,24 +27,33 @@ try {
   posts = result.items;
 } catch (e) {
   console.error('[category] Failed to load posts:', e);
-}
-
-if (Astro.cache.enabled) {
-  Astro.cache.set({ maxAge: 300, swr: 60, tags: ['posts', `category:${id}`] });
+  error = true;
 }
 ---
 <BaseLayout title={cat.name} path={`/categories/${id}`}>
-  <h1>{cat.name} <small style="color:#999">[{cat.type}]</small></h1>
-  <a href="/categories">← 所有分类</a>
-  <hr />
-  {posts.length === 0 ? (
-    <p>该分类下暂无文章。</p>
-  ) : (
-    <ul style="list-style:none;padding:0;display:flex;flex-direction:column;gap:0.5rem">
+  <a href="/categories" class="text-sm text-[var(--color-text-muted)] hover:text-[var(--color-accent)] mb-4 inline-block">
+    ← 所有分类
+  </a>
+  <h1 class="mb-2">
+    {cat.name}
+    <span class="text-sm font-normal text-[var(--color-text-muted)] ml-2">[{cat.type}]</span>
+  </h1>
+
+  {error && <ErrorState />}
+
+  {!error && posts.length === 0 && (
+    <p class="py-12 text-center text-[var(--color-text-muted)]">该分类下暂无文章。</p>
+  )}
+
+  {!error && posts.length > 0 && (
+    <ul class="space-y-2 mt-6">
       {posts.map(p => (
-        <li>
-          <a href={`/posts/${p.id}`}>{p.title}</a>
-          <small style="margin-left:0.5rem">{new Date(p.created).toLocaleDateString('zh-CN')}</small>
+        <li class="flex items-baseline gap-3">
+          <time class="text-sm text-[var(--color-text-muted)] whitespace-nowrap tabular-nums"
+                datetime={p.created}>
+            {new Date(p.created).toLocaleDateString('zh-CN')}
+          </time>
+          <a href={`/posts/${p.id}`} class="hover:text-[var(--color-accent)]">{p.title}</a>
         </li>
       ))}
     </ul>

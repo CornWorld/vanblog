@@ -2,6 +2,7 @@
 export const prerender = false;
 
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import ErrorState from '../../components/ErrorState.astro';
 import type { Tag, Post } from '@vanblog/sdk';
 
 const { id } = Astro.params;
@@ -9,6 +10,7 @@ if (!id) return Astro.redirect('/404');
 
 let tag: Tag;
 let posts: Post[] = [];
+let error = false;
 
 const pb = Astro.locals.pb;
 try {
@@ -25,25 +27,33 @@ try {
   posts = result.items;
 } catch (e) {
   console.error('[tag] Failed to load posts:', e);
-}
-
-if (Astro.cache.enabled) {
-  Astro.cache.set({ maxAge: 300, swr: 60, tags: ['posts', `tag:${id}`] });
+  error = true;
 }
 ---
 <BaseLayout title={`#${tag.name}`} path={`/tags/${id}`}>
-  <h1>#{tag.name}</h1>
-  {tag.description && <p>{tag.description}</p>}
-  <a href="/tags">← 所有标签</a>
-  <hr />
-  {posts.length === 0 ? (
-    <p>该标签下暂无文章。</p>
-  ) : (
-    <ul style="list-style:none;padding:0;display:flex;flex-direction:column;gap:0.5rem">
+  <a href="/tags" class="text-sm text-[var(--color-text-muted)] hover:text-[var(--color-accent)] mb-4 inline-block">
+    ← 所有标签
+  </a>
+  <h1 class="mb-2">#{tag.name}</h1>
+  {tag.description && (
+    <p class="text-[var(--color-text-muted)] mb-6">{tag.description}</p>
+  )}
+
+  {error && <ErrorState />}
+
+  {!error && posts.length === 0 && (
+    <p class="py-12 text-center text-[var(--color-text-muted)]">该标签下暂无文章。</p>
+  )}
+
+  {!error && posts.length > 0 && (
+    <ul class="space-y-2 mt-6">
       {posts.map(p => (
-        <li>
-          <a href={`/posts/${p.id}`}>{p.title}</a>
-          <small style="margin-left:0.5rem">{new Date(p.created).toLocaleDateString('zh-CN')}</small>
+        <li class="flex items-baseline gap-3">
+          <time class="text-sm text-[var(--color-text-muted)] whitespace-nowrap tabular-nums"
+                datetime={p.created}>
+            {new Date(p.created).toLocaleDateString('zh-CN')}
+          </time>
+          <a href={`/posts/${p.id}`} class="hover:text-[var(--color-accent)]">{p.title}</a>
         </li>
       ))}
     </ul>

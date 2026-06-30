@@ -64,11 +64,24 @@ const websiteSchema = {
   url: baseUrl || undefined,
 };
 ---
+---
+import '../styles/global.css';
+---
 <!doctype html>
 <html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width" />
+
+    <!-- Prevent FOUC: set dark class before paint -->
+    <script is:inline>
+      (() => {
+        const t = localStorage.getItem('vanblog-theme');
+        if (t === 'dark' || (!t && matchMedia('(prefers-color-scheme: dark)').matches)) {
+          document.documentElement.classList.add('dark');
+        }
+      })();
+    </script>
 
     <!-- Core SEO -->
     <title>{title} - {siteName}</title>
@@ -100,26 +113,51 @@ const websiteSchema = {
       <script type="application/ld+json" set:html={JSON.stringify(websiteSchema)} />
     )}
   </head>
-  <body>
+  <body class="min-h-screen flex flex-col">
     <PbInit />
-    <header style="display:flex;justify-content:space-between;align-items:center;gap:1rem;padding:0.5rem 1rem;border-bottom:1px solid #eee;flex-wrap:wrap">
-      <a href="/">{siteName}</a>
-      <nav style="display:flex;gap:1rem;flex-wrap:wrap">
-        <a href="/">首页</a>
-        <a href="/archive">归档</a>
-        <a href="/timeline">时间轴</a>
-        <a href="/tags">标签</a>
-        <a href="/categories">分类</a>
-        <a href="/search">搜索</a>
-        <a href="/admin">管理</a>
-      </nav>
+    <header class="sticky top-0 z-10 border-b border-[var(--color-border)] bg-[var(--color-bg)]/95 backdrop-blur-sm">
+      <div class="container-page flex items-center justify-between h-14 gap-4">
+        <a href="/" class="font-bold text-lg text-[var(--color-text)] no-underline hover:opacity-80">
+          {siteName}
+        </a>
+        <nav class="flex items-center gap-1 sm:gap-2 text-sm">
+          <a href="/" class="px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">首页</a>
+          <a href="/archive" class="px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">归档</a>
+          <a href="/timeline" class="px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">时间轴</a>
+          <a href="/tags" class="px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors hidden sm:inline">标签</a>
+          <a href="/categories" class="px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors hidden sm:inline">分类</a>
+          <a href="/search" class="px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">搜索</a>
+          <a href="/admin" class="px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">管理</a>
+          <button id="theme-toggle" class="ml-1 px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-lg" aria-label="切换主题" title="切换深色/浅色主题">
+            <span class="dark:hidden">🌙</span>
+            <span class="hidden dark:inline">☀️</span>
+          </button>
+        </nav>
+      </div>
     </header>
-    <main>
+    <main class="flex-1 container-page py-8">
       <slot />
     </main>
-    <footer>
-      <hr />
-      <p>Powered by Vanblog</p>
+    <footer class="border-t border-[var(--color-border)] py-8 text-sm text-[var(--color-text-muted)]">
+      <div class="container-page flex flex-col sm:flex-row justify-between gap-4">
+        <p>&copy; {new Date().getFullYear()} {siteName}. Powered by <a href="https://github.com/cornworld/vanblog" class="underline">Vanblog</a>.</p>
+        <p class="flex gap-4">
+          <a href="/api/feed.xml" class="hover:text-[var(--color-text)]">RSS</a>
+          <a href="/api/atom.xml" class="hover:text-[var(--color-text)]">Atom</a>
+          <a href="/api/sitemap.xml" class="hover:text-[var(--color-text)]">Sitemap</a>
+        </p>
+      </div>
     </footer>
+
+    <!-- Theme toggle logic -->
+    <script>
+      const btn = document.getElementById('theme-toggle');
+      const html = document.documentElement;
+      btn?.addEventListener('click', () => {
+        html.classList.toggle('dark');
+        const isDark = html.classList.contains('dark');
+        localStorage.setItem('vanblog-theme', isDark ? 'dark' : 'light');
+      });
+    </script>
   </body>
 </html>
