@@ -6,6 +6,14 @@ import type {
   MigrationResult,
 } from './types';
 
+// PocketBase js-sdk's send() parses non-JSON responses into objects.
+// For feed/sitemap (XML) endpoints we use raw fetch to get the text.
+async function fetchText(pb: PocketBase, path: string): Promise<string> {
+  const res = await fetch(pb.buildUrl(path));
+  if (!res.ok) throw new Error(`${path} returned ${res.status}`);
+  return res.text();
+}
+
 // Vanblog built-in services, same level as pb's collection(), files(), etc.
 export interface VanblogServices {
   feed: {
@@ -39,9 +47,9 @@ export type VanblogClient = PocketBase & {
 export function createVanblogServices(pb: PocketBase): VanblogServices {
   return {
     feed: {
-      rss: () => pb.send('/api/feed.xml', { method: 'GET' }) as Promise<string>,
-      atom: () => pb.send('/api/atom.xml', { method: 'GET' }) as Promise<string>,
-      sitemap: () => pb.send('/api/sitemap.xml', { method: 'GET' }) as Promise<string>,
+      rss: () => fetchText(pb, '/api/feed.xml'),
+      atom: () => fetchText(pb, '/api/atom.xml'),
+      sitemap: () => fetchText(pb, '/api/sitemap.xml'),
     },
     timeline: {
       list: () => pb.send('/api/vanblog/timeline', { method: 'GET' }) as Promise<TimelineEntry[]>,
