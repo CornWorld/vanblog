@@ -11,7 +11,7 @@
 > - **vanblog.sh 继承原项目形态**(curl 一键脚本 + 交互式菜单),管 docker-compose.yml
 > - **Admin UI 不碰 host**(信任域隔离),未来 v2 考虑本地 agent + 中央 Web 控制台
 >
-> **关联文档**:[`https-strategy.md`](./https-strategy.md) / [`routing-strategy.md`](./routing-strategy.md)
+> **关联文档**:[`routing-strategy.md`](./routing-strategy.md)
 
 ---
 
@@ -269,7 +269,7 @@ exec pnpm dev --host 127.0.0.1 --port 4321
 $ curl -L https://vanblog.example.com/vanblog.sh -o vanblog.sh && chmod +x vanblog.sh && ./vanblog.sh
 
     VanBlog 管理脚本 v1.0.0
-    --- https://github.com/cornworld/vanblog ---
+    --- https://github.com/CornWorld/vanblog ---
     1.  安装 VanBlog
     2.  修改配置
     3.  启动服务
@@ -504,8 +504,6 @@ update() {
 ```
 
 ### 6.3 数据迁移(原 Vanblog 用户)
-
-见 [`migration-path.md`](./migration-path.md):
 
 1. 原后台导出 `temp.json`
 2. 用 vanblog.sh 安装新 vanblog

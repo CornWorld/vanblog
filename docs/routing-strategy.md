@@ -285,7 +285,7 @@ POST /config/apps/http/servers/srv0/routes/...
 | **dev**      | ✅ 完整支持 | 同 prod + 支持外挂 Astro                                  |
 | **外置反代** | 用户自管    | vanblog 输出 Caddyfile / Traefik labels / Nginx conf 片段 |
 
-**prod 与 dev 都内嵌 Caddy 且功能对齐** —— 理由见 [`deployment-strategy.md`](./deployment-strategy.md) §1 和 [`https-strategy.md`](./https-strategy.md) §2。
+**prod 与 dev 都内嵌 Caddy 且功能对齐** —— 理由见 [`deployment-strategy.md`](./deployment-strategy.md) §1。
 
 ---
 
@@ -332,7 +332,7 @@ audits: {
 
 ## 9. 待决细节
 
-1. **中间层实现**:pb_hooks JSVM 调用 caddy admin api 需要 `$http` 内置(待验证);若不行,用 Go extend
+1. ~~**中间层实现**:pb_hooks JSVM 调用 caddy admin api 需要 `$http` 内置(待验证);若不行,用 Go extend~~ — **已决:Go extend 实现**(`internal/caddy/` 直接调 caddy admin api,不走 pb_hooks JSVM)
 2. **UI 预览**:后台路由配置 UI 应提供"试一下"按钮,校验通过才允许保存
 3. **路由优先级**:用户路由 vs vanblog 保留路由的优先级(Caddy 是按顺序匹配,用户路由放在 vanblog 路由之后)
 4. **Traefik labels 输出**:外置反代用户若用 Traefik,vanblog 生成对应 labels

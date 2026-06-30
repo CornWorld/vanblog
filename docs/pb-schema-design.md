@@ -1,6 +1,6 @@
 # PocketBase Schema 设计 v2
 
-> **依据**:[`feature-decision-matrix.md`](./feature-decision-matrix.md) + [`decision-revisions-v2.md`](./decision-revisions-v2.md) 11 项修订 + [原项目 `packages/server/src/scheme/`](file:///Users/corn/Code/vanblog-upstream/packages/server/src/scheme) 真实字段
+> **依据**:原项目 [`packages/server/src/scheme/`](file:///Users/corn/Code/vanblog-upstream/packages/server/src/scheme) 真实字段
 >
 > **目标**:用 PocketBase 0.20+ 的 collection / field 类型原生表达 Vanblog 数据模型,**保证原 Vanblog 用户数据可无损迁移**。
 >
@@ -167,7 +167,7 @@ img:delete, all
 
 > **决策依据**:pb 官方 [discussion #4006](https://github.com/pocketbase/pocketbase/discussions/4006) 推荐 WordPress 式 status='revision' 模式。
 >
-> **与外部 git 同步的区别**:这是应用内功能(UI 一键撤销),不是内容分发。详见 [`migration-path.md`](./migration-path.md) §6。
+> **与外部 git 同步的区别**:这是应用内功能(UI 一键撤销),不是内容分发。
 
 | 字段         | pb 类型                              | 说明                                               |
 | ------------ | ------------------------------------ | -------------------------------------------------- |
@@ -424,6 +424,6 @@ img:delete, all
 ## 5. 待决细节
 
 1. **pb FileField 存储后端**:prod 镜像默认 local,dev 镜像可选 S3
-2. **加密文章密码**:明文迁移,Admin UI 不展示(见 [迁移文档](./migration-path.md) §6.1)
+2. **加密文章密码**:明文迁移,Admin UI 不展示
 3. **media.file 的 thumbs**:pb 原生支持,水印/WebP 移到前端 WASM
 4. **`revisions` 的 diff 生成**:可选 Go 库(`github.com/sergi/go-diff`)在 hook 中生成
