@@ -26,3 +26,5 @@ caddy_data/
 
 # IDE
 .DS_Store
+
+.reasonix/

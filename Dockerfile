@@ -24,7 +24,7 @@ RUN corepack enable pnpm
 WORKDIR /build
 
 # Copy workspace root + sdk + app
-COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
 COPY sdk/ ./sdk/
 COPY app/package.json app/astro.config.mjs app/tsconfig.json ./app/
 COPY app/src/ ./app/src/
