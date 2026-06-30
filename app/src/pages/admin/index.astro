@@ -20,12 +20,11 @@ let posts: Post[] = [];
 
 try {
   const pb = Astro.locals.pb;
-  // The posts collection ListRule (1782300001_posts_rules_and_unique_pathname.go)
-  // filters `deleted=false` at the API layer for non-admins. Admins bypass this
-  // rule, so they will see soft-deleted posts here too — that's acceptable:
-  // admins use /admin/trash for focused recovery/purge, but seeing deleted
-  // rows inline doesn't hurt (and they can still edit them). The Rule is the
-  // single source of truth for collaborator/anonymous access.
+  // The posts ListRule (1782300001 + 1782300002) filters `deleted=false` at
+  // the API layer for everyone — including admins. Soft-deleted rows are
+  // reachable only via /admin/trash (GET /api/vanblog/posts/trash, gated by
+  // Go-side canManagePosts). This list shows active posts: drafts/hidden are
+  // visible to any authenticated user, deleted rows are intentionally absent.
   const result = await pb.collection('posts').getList<Post>(1, 50, {
     sort: '-updated',
   });
