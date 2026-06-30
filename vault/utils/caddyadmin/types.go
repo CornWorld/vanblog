@@ -102,7 +102,7 @@ type HeaderOps struct {
 }
 
 // ============================================================
-// Full Caddy config root structs (Phase 1 of caddy-single-source plan)
+// Full Caddy config root structs
 // ============================================================
 //
 // These structs allow expressing the *entire* Caddy config JSON (the document

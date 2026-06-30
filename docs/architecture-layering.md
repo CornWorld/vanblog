@@ -316,6 +316,21 @@ func New(app core.App) *Service {
 | `migration` | `POST /api/vanblog/migrate/import` | `handleImport` |
 | `migration` | `GET /api/vanblog/migrate/status` | `handleStatus` |
 
+**Caddy Manager 的配置推送流程**（`internal/caddy/bootstrap.go::pushConfigToAdminAPI`）：
+
+1. 读 `site.routing` + `site.allowedDomains` + `site.caddyLogLevel` from DB
+2. 组装 `BuildOpts` + 合并规则列表
+3. `BuildFullConfig` → 翻译 + SSRF 校验所有规则，任一失败则整体 abort
+4. `WaitForCaddy`（最多 30s）—— entrypoint 并行启动 Caddy
+5. `ValidateConfig`（dry-run）—— 不应用就先抓配置错误
+6. `LoadConfig`（Phase 1 已加 admin-endpoint restart 重试）
+
+任一步失败 → 整个 pipeline 重试，**最多 5 次指数退避**（1s/2s/4s/8s/16s）。
+
+> 设计意图：site.routing 可能在 pb 启动**期间**被运维改写，下一次重试能捡到修正后的规则而成功。
+
+总失败时：把最后一次 error 持久化到 `site.caddyLastError`（admin UI 据此显示"为什么站点在维护页"），并把 error 返回给 `hooks.go` —— 后者只记录日志，**不崩 pb**。管理口 `:8080` 始终可达，运维可恢复。
+
 **自挂 hook 的关键性质**：
 
 1. **顺序无关**：manager 之间通过 pb 事件解耦，无跨 manager 调用。

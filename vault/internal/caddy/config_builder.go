@@ -2,8 +2,6 @@ package caddy
 
 // config_builder.go assembles caddyadmin.Config structs for the bootstrap
 // (maintenance mode) and full runtime configurations.
-//
-// See .snow/plan/caddy-single-source.md for the design rationale.
 
 import (
 	"strings"
@@ -132,7 +130,7 @@ const (
 
 // BuildBootstrapConfig generates the maintenance-mode config Caddy boots with.
 //
-// Semantics (see .snow/plan/caddy-single-source.md §2.2):
+// Semantics:
 //   - admin.listen = "127.0.0.1:2019", origins = ["127.0.0.1"] (zero-trust)
 //   - storage.file_system.root = "/data/caddy"
 //   - tls.automation: on-demand with ask endpoint + single ACME issuer

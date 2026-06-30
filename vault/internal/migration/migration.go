@@ -415,7 +415,7 @@ func (imp *Importer) createArchive(txApp core.App, backup *LegacyBackup) error {
 
 ## 不兼容数据(归档在 JSON 中)
 
-- Pipeline 脚本: 已裁剪(详见 feature-decision-matrix.md #8)
+- Pipeline 脚本: 已裁剪(新架构无对应概念)
 - picgo 配置: 已裁剪(改用 pb S3 provider)
 - Caddy 配置: 已裁剪(新架构自动处理)
 - Waline SMTP: 已裁剪(独立容器配置)
