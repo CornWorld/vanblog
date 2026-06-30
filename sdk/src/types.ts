@@ -224,6 +224,13 @@ export interface SearchResult {
   path: string;
 }
 
+export interface TrashEntry {
+  id: string;
+  title: string;
+  status: string;
+  updated: string; // RFC3339
+}
+
 export interface TLSStatus {
   caddyReachable: boolean;
   allowedDomains: string[];
