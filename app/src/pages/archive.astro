@@ -2,25 +2,21 @@
 export const prerender = false;
 
 import BaseLayout from '../layouts/BaseLayout.astro';
+import ErrorState from '../components/ErrorState.astro';
 import type { Post } from '@vanblog/sdk';
 
 let posts: Post[] = [];
+let error = false;
 
 try {
   const pb = Astro.locals.pb;
-  const result = await pb.collection('posts').getFullList<Post>({
+  posts = await pb.collection('posts').getFullList<Post>({
     filter: 'status = "published" && deleted = false',
     sort: '-created',
   });
-  posts = result;
 } catch (e) {
   console.error('[archive] Failed to load posts:', e);
-}
-
-// Cache this page for 10 min, serve stale for 5 min while revalidating.
-// Tagged 'posts' so pb hooks can purge it on post changes.
-if (Astro.cache.enabled) {
-  Astro.cache.set({ maxAge: 600, swr: 300, tags: ['posts', 'archive'] });
+  error = true;
 }
 
 // Group by year
@@ -33,23 +29,31 @@ for (const post of posts) {
 const years = Object.keys(byYear).map(Number).sort((a, b) => b - a);
 ---
 <BaseLayout title="归档" path="/archive">
-  <h1>归档</h1>
-  {years.length === 0 ? (
-    <p>暂无文章。</p>
-  ) : (
-    years.map(year => (
-      <section>
-        <h2>{year}</h2>
-        <ul>
-          {byYear[year].map(post => (
-            <li>
-              <small>{new Date(post.created).toLocaleDateString('zh-CN')}</small>
-              {' '}
-              <a href={`/posts/${post.id}`}>{post.title}</a>
-            </li>
-          ))}
-        </ul>
-      </section>
-    ))
-  )}
+  <h1 class="mb-8">归档</h1>
+  {
+    error ? (
+      <ErrorState />
+    ) : years.length === 0 ? (
+      <p class="py-12 text-center text-[var(--color-text-muted)]">暂无文章。</p>
+    ) : (
+      <div class="space-y-8">
+        {years.map(year => (
+          <section>
+            <h2 class="text-2xl mb-4 pb-2 border-b border-[var(--color-border)]">{year}</h2>
+            <ul class="space-y-2">
+              {byYear[year].map(post => (
+                <li class="flex items-baseline gap-3">
+                  <time class="text-sm text-[var(--color-text-muted)] whitespace-nowrap tabular-nums"
+                        datetime={post.created}>
+                    {new Date(post.created).toLocaleDateString('zh-CN')}
+                  </time>
+                  <a href={`/posts/${post.id}`} class="hover:text-[var(--color-accent)]">{post.title}</a>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ))}
+      </div>
+    )
+  }
 </BaseLayout>

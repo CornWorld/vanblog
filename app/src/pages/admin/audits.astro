@@ -29,28 +29,28 @@ function expandName(a: any): string {
   {audits.length === 0 ? (
     <p>暂无审计记录。</p>
   ) : (
-    <table style="width:100%;border-collapse:collapse;font-size:13px">
+    <table class="w-full border-collapse text-xs">
       <thead>
-        <tr style="text-align:left;border-bottom:1px solid #ccc">
+        <tr class="text-left border-b border-[var(--color-border)]">
           <th>时间</th><th>用户</th><th>动作</th><th>目标</th><th>结果</th><th>IP</th><th>详情</th>
         </tr>
       </thead>
       <tbody>
         {audits.map(a => (
-          <tr style="border-bottom:1px solid #eee;vertical-align:top">
+          <tr class="border-b border-[var(--color-border)] align-top">
             <td><small>{new Date(a.created).toLocaleString('zh-CN')}</small></td>
             <td>{expandName(a)}</td>
             <td>{a.action}</td>
-            <td style="word-break:break-all">{a.target}</td>
+            <td class="break-all">{a.target}</td>
             <td>{a.result === 'failure' ? (
-              <span style="color:#c0392b">失败</span>
-            ) : <span style="color:#27ae60">成功</span>}</td>
+              <span class="text-red-600">失败</span>
+            ) : <span class="text-green-600">成功</span>}</td>
             <td><small>{a.ip || '-'}</small></td>
             <td>
               {a.detail && (
                 <details>
-                  <summary style="cursor:pointer">查看</summary>
-                  <pre style="white-space:pre-wrap;font-size:11px;background:#f7f7f7;padding:0.25rem">{JSON.stringify(a.detail, null, 2)}</pre>
+                  <summary class="cursor-pointer">查看</summary>
+                  <pre class="whitespace-pre-wrap text-[11px] bg-gray-50 p-1">{JSON.stringify(a.detail, null, 2)}</pre>
                 </details>
               )}
             </td>

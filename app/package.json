@@ -20,12 +20,14 @@
     "@bytemd/plugin-medium-zoom": "^1.22.0",
     "@bytemd/plugin-mermaid": "^1.22.0",
     "@jsquash/avif": "^2.1.1",
+    "@tailwindcss/vite": "^4.3.2",
     "@vanblog/sdk": "workspace:*",
     "astro": "^6.0.0",
     "bytemd": "^1.22.0",
     "emoji-picker-element": "^1.29.1",
     "katex": "^0.16.0",
     "remark-directive": "^3.0.0",
+    "tailwindcss": "^4.3.2",
     "unist-util-visit": "^5.0.0"
   },
   "devDependencies": {

@@ -24,11 +24,11 @@ try {
   <h1>用户管理</h1>
   <p><a href="/admin">← 返回</a></p>
 
-  <form id="new-user" style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem">
-    <input name="username" placeholder="用户名" required style="padding:0.3rem" />
-    <input name="email" type="email" placeholder="邮箱（登录用）" required style="padding:0.3rem;flex:1;min-width:200px" />
-    <input name="password" type="password" placeholder="初始密码" required style="padding:0.3rem;width:160px" />
-    <input name="nickname" placeholder="昵称（可空）" style="padding:0.3rem" />
+  <form id="new-user" class="flex gap-2 flex-wrap mb-4">
+    <input name="username" placeholder="用户名" required class="px-1.5 py-0.5" />
+    <input name="email" type="email" placeholder="邮箱（登录用）" required class="px-1.5 py-0.5 flex-1 min-w-[200px]" />
+    <input name="password" type="password" placeholder="初始密码" required class="px-1.5 py-0.5 w-40" />
+    <input name="nickname" placeholder="昵称（可空）" class="px-1.5 py-0.5" />
     <select name="role">
       <option value="collaborator">协作者</option>
       <option value="admin">管理员</option>
@@ -36,17 +36,17 @@ try {
     <button type="submit">+ 新建</button>
   </form>
 
-  <table style="width:100%;border-collapse:collapse">
+  <table class="w-full border-collapse">
     <thead>
-      <tr style="text-align:left;border-bottom:1px solid #ccc">
+      <tr class="text-left border-b border-[var(--color-border)]">
         <th>用户名</th><th>昵称</th><th>邮箱</th><th>角色</th><th>权限</th><th>操作</th>
       </tr>
     </thead>
     <tbody>
       {users.map((u: any) => (
-        <tr data-id={u.id} data-role={u.role} style="border-bottom:1px solid #eee">
+        <tr data-id={u.id} data-role={u.role} class="border-b border-[var(--color-border)]">
           <td>{u.username}</td>
-          <td><input class="f-nickname" value={u.nickname || ''} style="width:100%" /></td>
+          <td><input class="f-nickname" value={u.nickname || ''} class="w-full" /></td>
           <td><small>{u.email}</small></td>
           <td>
             <select class="f-role">
@@ -56,8 +56,8 @@ try {
           </td>
           <td>
             <details>
-              <summary style="cursor:pointer">{(u.permissions || []).length || 0} 项</summary>
-              <fieldset style="display:grid;grid-template-columns:repeat(2,minmax(140px,1fr));gap:0.25rem;border:none">
+              <summary class="cursor-pointer">{(u.permissions || []).length || 0} 项</summary>
+              <fieldset class="grid grid-cols-2 gap-1">
                 {ALL_PERMS.map(p => (
                   <label>
                     <input type="checkbox" class="f-perm" value={p} checked={(u.permissions || []).includes(p)} />
@@ -67,10 +67,10 @@ try {
               </fieldset>
             </details>
           </td>
-          <td style="display:flex;gap:0.5rem">
+          <td class="flex gap-2">
             <button class="btn-save">保存</button>
             <button class="btn-reset" title="发送重置密码邮件 / 或在此设置新密码">改密码</button>
-            <button class="btn-del" style="color:#c0392b">删除</button>
+            <button class="btn-del" class="text-red-600">删除</button>
           </td>
         </tr>
       ))}

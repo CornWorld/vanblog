@@ -2,35 +2,36 @@
 export const prerender = false;
 
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import ErrorState from '../../components/ErrorState.astro';
 import type { Tag } from '@vanblog/sdk';
 
 let tags: Tag[] = [];
+let error = false;
 
 try {
   const pb = Astro.locals.pb;
   tags = await pb.collection('tags').getFullList<Tag>({ sort: 'name' });
 } catch (e) {
   console.error('[tags] Failed to load tags:', e);
-}
-
-if (Astro.cache.enabled) {
-  Astro.cache.set({ maxAge: 600, swr: 120, tags: ['posts', 'tags'] });
+  error = true;
 }
 ---
 <BaseLayout title="标签" path="/tags">
-  <h1>标签</h1>
-  {tags.length === 0 ? (
-    <p>暂无标签。</p>
-  ) : (
-    <ul style="list-style:none;padding:0;display:flex;flex-wrap:wrap;gap:0.5rem">
+  <h1 class="mb-6">标签</h1>
+
+  {error && <ErrorState />}
+
+  {!error && tags.length === 0 && (
+    <p class="py-12 text-center text-[var(--color-text-muted)]">暂无标签。</p>
+  )}
+
+  {!error && tags.length > 0 && (
+    <div class="flex flex-wrap gap-2">
       {tags.map(t => (
-        <li>
-          <a href={`/tags/${t.id}`}
-             style="display:inline-block;padding:0.25rem 0.75rem;border:1px solid #ddd;border-radius:9999px;text-decoration:none">
-            #{t.name}
-          </a>
-        </li>
+        <a href={`/tags/${t.id}`} class="inline-block px-3 py-1 rounded-full text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 no-underline">
+          #{t.name}
+        </a>
       ))}
-    </ul>
+    </div>
   )}
 </BaseLayout>

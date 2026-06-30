@@ -2,38 +2,48 @@
 export const prerender = false;
 
 import BaseLayout from '../layouts/BaseLayout.astro';
+import ErrorState from '../components/ErrorState.astro';
 import type { TimelineEntry } from '@vanblog/sdk';
 
 let entries: TimelineEntry[] = [];
+let error = false;
 
 try {
   const pb = Astro.locals.pb;
   entries = await (pb as any).vanblog.timeline.list();
 } catch (e) {
   console.error('[timeline] Failed to load:', e);
-}
-
-if (Astro.cache.enabled) {
-  Astro.cache.set({ maxAge: 600, swr: 120, tags: ['posts', 'timeline'] });
+  error = true;
 }
 ---
 <BaseLayout title="时间轴" path="/timeline">
-  <h1>时间轴</h1>
-  {entries.length === 0 ? (
-    <p>暂无数据。</p>
-  ) : (
-    <div style="display:flex;flex-direction:column;gap:1rem">
+  <h1 class="mb-8">时间轴</h1>
+
+  {error && <ErrorState />}
+
+  {!error && entries.length === 0 && (
+    <p class="py-12 text-center text-[var(--color-text-muted)]">暂无数据。</p>
+  )}
+
+  {!error && entries.length > 0 && (
+    <div class="space-y-8">
       {entries.map(year => (
         <section>
-          <h2 style="margin:0">{year.year} <small style="color:#999">({year.count})</small></h2>
-          <div style="display:flex;flex-direction:column;gap:0.75rem;border-left:2px solid #eee;padding-left:1rem;margin-top:0.5rem">
+          <h2 class="text-2xl mb-1">
+            {year.year}
+            <small class="text-[var(--color-text-muted)] font-normal ml-2">({year.count})</small>
+          </h2>
+          <div class="border-l-2 border-[var(--color-border)] dark:border-[var(--color-border-dark)] pl-6 ml-1 space-y-4">
             {year.months.map(m => (
               <div>
-                <h3 style="margin:0 0 0.25rem 0">{year.year}.{m.month} <small style="color:#999">({m.count})</small></h3>
-                <ul style="list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:0.25rem">
+                <h3 class="text-sm text-[var(--color-text-muted)] mb-2">
+                  {year.year}.{String(m.month).padStart(2, '0')}
+                  <span class="ml-1">({m.count})</span>
+                </h3>
+                <ul class="space-y-1">
                   {m.titles.map(t => (
                     <li>
-                      <a href={`/posts/${t.id}`}>{t.title}</a>
+                      <a href={`/posts/${t.id}`} class="hover:text-[var(--color-accent)]">{t.title}</a>
                     </li>
                   ))}
                 </ul>

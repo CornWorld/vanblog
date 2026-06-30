@@ -42,20 +42,20 @@ try {
   {revs.length === 0 ? (
     <p>暂无修订记录。</p>
   ) : (
-    <ul style="list-style:none;padding:0;display:flex;flex-direction:column;gap:0.75rem">
+    <ul class="list-none p-0 flex flex-col gap-3">
       {revs.map(r => (
-        <li style="border:1px solid #eee;padding:0.75rem">
-          <div style="display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap">
+        <li class="border border-[var(--color-border)] p-3">
+          <div class="flex justify-between gap-4 flex-wrap">
             <strong>{r.reason || '(无原因)'}</strong>
-            <small style="color:#999">{new Date(r.created).toLocaleString('zh-CN')}</small>
+            <small class="text-[var(--color-text-muted)]">{new Date(r.created).toLocaleString('zh-CN')}</small>
           </div>
-          <div style="font-size:13px;color:#555;margin-top:0.25rem">
+          <div class="text-xs text-[var(--color-text-muted)] mt-1">
             by {r.authoredBy || '-'}
           </div>
           {r.snapshot && (
-            <details style="margin-top:0.5rem">
-              <summary style="cursor:pointer">快照</summary>
-              <pre style="white-space:pre-wrap;font-size:12px;background:#f7f7f7;padding:0.5rem">{JSON.stringify(r.snapshot, null, 2)}</pre>
+            <details class="mt-2">
+              <summary class="cursor-pointer">快照</summary>
+              <pre class="whitespace-pre-wrap text-xs bg-gray-50 p-2">{JSON.stringify(r.snapshot, null, 2)}</pre>
             </details>
           )}
         </li>

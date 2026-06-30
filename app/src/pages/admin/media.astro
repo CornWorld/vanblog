@@ -27,21 +27,21 @@ try {
   {media.length === 0 ? (
     <p>暂无媒体文件。</p>
   ) : (
-    <div style="display:flex;flex-wrap:wrap;gap:1rem">
+    <div class="flex flex-wrap gap-4">
       {media.map(m => (
-        <figure style="margin:0;width:160px;border:1px solid #eee;padding:0.5rem">
+        <figure class="m-0 w-40 border border-[var(--color-border)] p-2">
           {m.staticType === 'img' && (
             <img
               src={`/api/files/media/${m.id}/${m.file}`}
               alt={m.file}
               loading="lazy"
-              style="width:100%;height:120px;object-fit:cover;display:block"
+              class="w-full h-[120px] object-cover block"
             />
           )}
-          <figcaption style="font-size:12px;margin-top:0.25rem;word-break:break-all">
+          <figcaption class="text-xs mt-1 break-all">
             {m.file}
             <br />
-            <small style="color:#999">[{m.storageType}/{m.fileType}]</small>
+            <small class="text-[var(--color-text-muted)]">[{m.storageType}/{m.fileType}]</small>
           </figcaption>
         </figure>
       ))}

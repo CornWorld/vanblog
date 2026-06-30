@@ -34,22 +34,22 @@ try {
   {trash.length === 0 ? (
     <p>回收站为空。</p>
   ) : (
-    <table style="width:100%;border-collapse:collapse">
+    <table class="w-full border-collapse">
       <thead>
-        <tr style="text-align:left;border-bottom:1px solid #ccc">
+        <tr class="text-left border-b border-[var(--color-border)]">
           <th>标题</th><th>状态</th><th>删除时间</th><th>操作</th>
         </tr>
       </thead>
       <tbody>
         {trash.map(post => (
-          <tr data-id={post.id} style="border-bottom:1px solid #eee">
+          <tr data-id={post.id} class="border-b border-[var(--color-border)]">
             <td>{post.title}</td>
             <td>{post.status}</td>
             <td>{new Date(post.updated).toLocaleString('zh-CN')}</td>
-            <td style="display:flex;gap:0.5rem;flex-wrap:wrap">
+            <td class="flex gap-2 flex-wrap">
               <button class="btn-restore">恢复</button>
               {isAdmin && (
-                <button class="btn-purge" style="color:#c0392b">彻底删除</button>
+                <button class="btn-purge" class="text-red-600">彻底删除</button>
               )}
             </td>
           </tr>

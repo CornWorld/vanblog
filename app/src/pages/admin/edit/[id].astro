@@ -49,16 +49,16 @@ const currentAuthorId: string = (post as any).author || user.id;
 <BaseLayout title={isNew ? '新建文章' : '编辑文章'}>
   <h1>{isNew ? '新建文章' : '编辑文章'}</h1>
 
-  <div style="display:flex;flex-wrap:wrap;gap:1rem;margin-bottom:1rem;align-items:flex-end">
-    <label style="display:flex;flex-direction:column">
+  <div class="flex flex-wrap gap-4 mb-4 items-end">
+    <label class="flex flex-col">
       标题
-      <input type="text" id="f-title" value={post.title || ''} required style="width:320px;padding:0.3rem" />
+      <input type="text" id="f-title" value={post.title || ''} required class="w-80 px-1.5 py-0.5" />
     </label>
-    <label style="display:flex;flex-direction:column">
+    <label class="flex flex-col">
       路径
-      <input type="text" id="f-path" value={post.pathname || ''} placeholder="/my-post" style="width:200px;padding:0.3rem" />
+      <input type="text" id="f-path" value={post.pathname || ''} placeholder="/my-post" class="w-48 px-1.5 py-0.5" />
     </label>
-    <label style="display:flex;flex-direction:column">
+    <label class="flex flex-col">
       状态
       <select id="f-status">
         <option value="draft" selected={post.status !== 'published' && post.status !== 'hidden'}>草稿</option>
@@ -66,51 +66,51 @@ const currentAuthorId: string = (post as any).author || user.id;
         <option value="hidden" selected={post.status === 'hidden'}>隐藏</option>
       </select>
     </label>
-    <label style="display:flex;flex-direction:column">
+    <label class="flex flex-col">
       置顶
-      <input type="number" id="f-top" value={post.top ?? 0} min="0" style="width:80px;padding:0.3rem" />
+      <input type="number" id="f-top" value={post.top ?? 0} min="0" class="w-20 px-1.5 py-0.5" />
     </label>
   </div>
 
-  <div style="display:flex;flex-wrap:wrap;gap:1rem;margin-bottom:1rem;align-items:flex-end">
-    <label style="display:flex;flex-direction:column">
+  <div class="flex flex-wrap gap-4 mb-4 items-end">
+    <label class="flex flex-col">
       分类
-      <select id="f-category" style="min-width:180px">
+      <select id="f-category" class="min-w-[180px]">
         <option value="">（无）</option>
         {cats.map(c => (
           <option value={c.id} selected={currentCatId === c.id}>{c.name}</option>
         ))}
       </select>
     </label>
-    <label style="display:flex;flex-direction:column" id="lbl-tags">
+    <label class="flex flex-col" id="lbl-tags">
       标签
-      <select id="f-tags" multiple size="4" style="min-width:280px">
+      <select id="f-tags" multiple size="4" class="min-w-[280px]">
         {tags.map(t => (
           <option value={t.id} selected={currentTagIds.includes(t.id)}>#{t.name}</option>
         ))}
       </select>
-      <small style="color:#999">Ctrl/Cmd 多选</small>
+      <small class="text-[var(--color-text-muted)]">Ctrl/Cmd 多选</small>
     </label>
-    <label style="display:flex;flex-direction:column">
+    <label class="flex flex-col">
       版权
-      <input type="text" id="f-copyright" value={post.copyright || ''} style="width:240px;padding:0.3rem" />
+      <input type="text" id="f-copyright" value={post.copyright || ''} class="w-60 px-1.5 py-0.5" />
     </label>
   </div>
 
-  <details style="margin-bottom:1rem">
-    <summary style="cursor:pointer">高级（私有文章 / 密码）</summary>
-    <div style="display:flex;gap:1rem;flex-wrap:wrap;padding:0.5rem 0">
+  <details class="mb-4">
+    <summary class="cursor-pointer">高级（私有文章 / 密码）</summary>
+    <div class="flex gap-4 flex-wrap py-2">
       <label><input type="checkbox" id="f-private" checked={!!post.private} /> 私有</label>
-      <label style="display:flex;flex-direction:column">
+      <label class="flex flex-col">
         密码（空则无）
-        <input type="text" id="f-password" value={post.password || ''} style="width:200px;padding:0.3rem" />
+        <input type="text" id="f-password" value={post.password || ''} class="w-48 px-1.5 py-0.5" />
       </label>
     </div>
   </details>
 
   <ByteMdEditor initialContent={post.content || ''} mediaConfig={mediaConfig} />
 
-  <div style="margin-top:0.5rem;display:flex;gap:1rem">
+  <div class="mt-2 flex gap-4">
     <button id="btn-save" type="button">保存</button>
     <button id="btn-publish" type="button">保存并发布</button>
     <a href="/admin">取消</a>

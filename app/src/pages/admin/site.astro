@@ -30,18 +30,18 @@ const boolOr = (k: keyof SiteConfig, def = false) => {
   {!site ? (
     <p>未找到 site 记录（请确认数据库已初始化）。</p>
   ) : (
-    <form id="site-form" style="display:flex;flex-direction:column;gap:1rem;max-width:720px">
-      <fieldset style="display:grid;grid-template-columns:160px 1fr;gap:0.5rem;align-items:center;border:1px solid #ddd;padding:1rem">
+    <form id="site-form" class="flex flex-col gap-4 max-w-3xl">
+      <fieldset class="grid grid-cols-[160px_1fr] gap-2 items-center border border-[var(--color-border)] p-4">
         <legend>基本信息</legend>
-        <label>站点名</label><input name="siteName" value={f('siteName')} style="padding:0.3rem" />
-        <label>站点描述</label><input name="siteDesc" value={f('siteDesc')} style="padding:0.3rem" />
-        <label>作者</label><input name="author" value={f('author')} style="padding:0.3rem" />
-        <label>BaseURL</label><input name="baseUrl" value={f('baseUrl')} placeholder="https://example.com" style="padding:0.3rem" />
-        <label>Favicon URL</label><input name="favicon" value={f('favicon')} style="padding:0.3rem" />
-        <label>版权</label><input name="copyrightAggreement" value={f('copyrightAggreement')} style="padding:0.3rem" />
+        <label>站点名</label><input name="siteName" value={f('siteName')} class="px-1.5 py-0.5" />
+        <label>站点描述</label><input name="siteDesc" value={f('siteDesc')} class="px-1.5 py-0.5" />
+        <label>作者</label><input name="author" value={f('author')} class="px-1.5 py-0.5" />
+        <label>BaseURL</label><input name="baseUrl" value={f('baseUrl')} placeholder="https://example.com" class="px-1.5 py-0.5" />
+        <label>Favicon URL</label><input name="favicon" value={f('favicon')} class="px-1.5 py-0.5" />
+        <label>版权</label><input name="copyrightAggreement" value={f('copyrightAggreement')} class="px-1.5 py-0.5" />
       </fieldset>
 
-      <fieldset style="display:grid;grid-template-columns:160px 1fr;gap:0.5rem;align-items:center;border:1px solid #ddd;padding:1rem">
+      <fieldset class="grid grid-cols-[160px_1fr] gap-2 items-center border border-[var(--color-border)] p-4">
         <legend>主题与评论</legend>
         <label>主题</label>
         <select name="theme">
@@ -63,27 +63,27 @@ const boolOr = (k: keyof SiteConfig, def = false) => {
         </select>
       </fieldset>
 
-      <fieldset style="display:flex;flex-direction:column;gap:0.5rem;border:1px solid #ddd;padding:1rem">
+      <fieldset class="flex flex-col gap-2 border border-[var(--color-border)] p-4">
         <legend>关于页 / 自定义注入</legend>
         <label>关于页内容（Markdown）</label>
-        <textarea name="aboutContent" rows="6" style="padding:0.3rem;font-family:monospace">{f('aboutContent')}</textarea>
+        <textarea name="aboutContent" rows="6" class="px-1.5 py-0.5 font-mono">{f('aboutContent')}</textarea>
         <label>customHead（HTML，raw 注入 &lt;head&gt;）</label>
-        <textarea name="customHead" rows="3" style="padding:0.3rem;font-family:monospace">{f('customHead')}</textarea>
+        <textarea name="customHead" rows="3" class="px-1.5 py-0.5 font-mono">{f('customHead')}</textarea>
         <label>customScript（JS）</label>
-        <textarea name="customScript" rows="3" style="padding:0.3rem;font-family:monospace">{f('customScript')}</textarea>
+        <textarea name="customScript" rows="3" class="px-1.5 py-0.5 font-mono">{f('customScript')}</textarea>
       </fieldset>
 
-      <fieldset style="display:grid;grid-template-columns:160px 1fr;gap:0.5rem;align-items:center;border:1px solid #ddd;padding:1rem">
+      <fieldset class="grid grid-cols-[160px_1fr] gap-2 items-center border border-[var(--color-border)] p-4">
         <legend>修订</legend>
         <label>启用修订</label>
         <label><input type="checkbox" name="revisionsEnabled" checked={boolOr('revisionsEnabled', true)} /> 启用</label>
         <label>保留数量</label>
-        <input type="number" name="revisionsRetention" value={(site as any)?.revisionsRetention ?? 50} style="padding:0.3rem;width:120px" />
+        <input type="number" name="revisionsRetention" value={(site as any)?.revisionsRetention ?? 50} class="px-1.5 py-0.5 w-[120px]" />
       </fieldset>
 
-      <div style="display:flex;gap:1rem;align-items:center">
+      <div class="flex gap-4 items-center">
         <button type="submit">保存</button>
-        <small style="color:#999">仅保存上方字段；JSON 数组（nav/links/socials 等）请用 API 编辑</small>
+        <small class="text-[var(--color-text-muted)]">仅保存上方字段；JSON 数组（nav/links/socials 等）请用 API 编辑</small>
       </div>
     </form>
   )}
