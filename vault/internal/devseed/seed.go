@@ -70,6 +70,161 @@ func Seed(app core.App, postCount int) error {
 		}
 	}
 
+	// ── Feature showcase: hard-coded post exercising all rendering features ──
+	showcaseTitle := "📐 Feature Showcase — Markdown 全功能测试"
+	showcaseContent := trim(`
+## 代码高亮
+
+Go 示例：
+
+` + "```go" + `
+func main() {
+    ch := make(chan int, 10)
+    for i := 0; i < 10; i++ {
+        go func(n int) { ch <- n * n }(i)
+    }
+    fmt.Println(<-ch)
+}
+` + "```" + `
+
+TypeScript 示例：
+
+` + "```typescript" + `
+interface Post {
+  title: string;
+  tags: string[];
+  created: Date;
+}
+
+const posts: Post[] = await pb.collection('posts').getFullList({
+  filter: 'status = "published" && deleted = false',
+  sort: '-created',
+});
+` + "```" + `
+
+Bash 示例：
+
+` + "```bash" + `
+docker run --rm -p 80:80 -p 443:443 \\
+  -v $(pwd)/pb_data:/pb_data \\
+  -v $(pwd)/caddy_data:/data/caddy \\
+  ghcr.io/cornworld/vanblog:prod
+` + "```" + `
+
+## KaTeX 数学公式
+
+内联公式：$E = mc^2$，行内 $f(x) = \int_{-\infty}^\infty \hat f(\xi) e^{2\pi i \xi x} d\xi$。
+
+块级公式：
+
+$$
+\begin{bmatrix}
+a & b \\
+c & d
+\end{bmatrix}
+\begin{bmatrix}
+x \\
+y
+\end{bmatrix}
+=
+\begin{bmatrix}
+ax + by \\
+cx + dy
+\end{bmatrix}
+$$
+
+概率密度函数：$P(X \leq x) = \frac{1}{\sigma\sqrt{2\pi}} \int_{-\infty}^x e^{-\frac{(t-\mu)^2}{2\sigma^2}} dt$
+
+## Mermaid 图表
+
+流程图：
+
+` + "```mermaid" + `
+graph LR
+    A[浏览器] --> B[Caddy :443]
+    B --> C{Astro SSR}
+    C -->|/posts/*| D[renderMarkdown]
+    C -->|/admin/*| E[ByteMD Editor]
+    D --> F[PocketBase API]
+    E --> F
+    F --> G[(SQLite)]
+` + "```" + `
+
+时序图：
+
+` + "```mermaid" + `
+sequenceDiagram
+    actor U as 用户
+    participant A as Astro
+    participant P as PocketBase
+    U->>A: GET /posts/xxx
+    A->>P: getOne('posts', id)
+    P-->>A: { title, content, ... }
+    A->>A: renderMarkdown(content)
+    A-->>U: HTML
+` + "```" + `
+
+## GFM 扩展
+
+任务列表：
+
+- [x] Go 后端 PocketBase 集成
+- [x] Astro Hybrid SSR 渲染
+- [x] ByteMD 编辑器
+- [ ] Waline 评论系统
+- [ ] ARM 多架构支持
+
+~~删除线~~ 和 **加粗** 以及 *斜体* 和 ` + "`" + `行内代码` + "`" + `。
+
+## 表格
+
+| 特性 | 状态 | 备注 |
+|------|------|------|
+| Markdown 渲染 | ✅ | Shiki 双主题 |
+| 数学公式 | ✅ | KaTeX |
+| 图表 | ✅ | Mermaid |
+| 代码高亮 | ✅ | Shiki |
+| RSS/Atom | ✅ | ` + "`/api/feed.xml`" + ` |
+| Sitemap | ✅ | ` + "`/api/sitemap.xml`" + ` |
+| 暗色模式 | ✅ | ` + "`.dark`" + ` class |
+
+## 自定义容器
+
+:::tip
+这是一个提示框。PocketBase 单文件部署，SQLite 无需额外配置。
+:::
+
+:::warning
+生产环境务必配置 **Caddy TLS** 和 **VANBLOG_EMAIL** 环境变量。
+:::
+
+:::info
+Astro 6 支持 Hybrid 渲染模式，逐页控制 SSG/SSR。
+:::
+
+:::danger
+不要直接暴露 PocketBase 的 8090 端口到公网！
+:::
+
+## 摘要分割测试
+
+这一行**之前**的内容会出现在首页摘要中。摘要约 150 字，超出部分用 ` + "`...`" + ` 截断。
+
+<!-- more -->
+
+这一行之后的内容只在文章详情页显示。
+`)
+
+	// First category, second category, any tags
+	scat := catList[0]
+	stagIDs := lookups(tagIDs, []string{tagList[0], tagList[1], tagList[2]})
+	if len(catList) > 1 {
+		scat = catList[1]
+	}
+	if _, err := ensurePost(app, showcaseTitle, showcaseContent, catIDs[scat], stagIDs); err != nil {
+		return fmt.Errorf("showcase post: %w", err)
+	}
+
 	return nil
 }
 
@@ -251,4 +406,8 @@ func dedup(items []string) []string {
 		}
 	}
 	return out
+}
+
+func trim(s string) string {
+	return strings.TrimSpace(s)
 }
