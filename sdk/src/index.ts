@@ -9,7 +9,7 @@ export type { VanblogClient, VanblogServices } from './services';
 export type {
   Post, Tag, Category, Media, Revision, Visit, SiteConfig,
   NavItem, LinkItem, SocialItem, RewardItem, RouteRule,
-  TimelineEntry, SearchResult, TLSStatus, MigrationResult,
+  TimelineEntry, SearchResult, TLSStatus, MigrationResult, TrashEntry,
 } from './types';
 
 // Service factory (for advanced usage)

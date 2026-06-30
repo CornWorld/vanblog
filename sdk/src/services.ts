@@ -4,6 +4,8 @@ import type {
   SearchResult,
   TLSStatus,
   MigrationResult,
+  TrashEntry,
+  SiteConfig,
 } from './types';
 
 // PocketBase js-sdk's send() parses non-JSON responses into objects.
@@ -32,6 +34,17 @@ export interface VanblogServices {
   };
   migrate: {
     import(data: unknown): Promise<MigrationResult>;
+  };
+  posts: {
+    trash(): Promise<TrashEntry[]>;
+    restore(id: string): Promise<void>;
+  };
+  site: {
+    get(): Promise<SiteConfig | null>;
+    update(id: string, patch: Partial<SiteConfig>): Promise<SiteConfig>;
+  };
+  media: {
+    delete(id: string): Promise<void>;
   };
 }
 
@@ -70,6 +83,26 @@ export function createVanblogServices(pb: PocketBase): VanblogServices {
           method: 'POST',
           body: data,
         }) as Promise<MigrationResult>,
+    },
+    posts: {
+      trash: () =>
+        pb.send('/api/vanblog/posts/trash', { method: 'GET' }) as Promise<TrashEntry[]>,
+      restore: (id: string) =>
+        pb.send(`/api/vanblog/posts/${id}/restore`, {
+          method: 'POST',
+        }) as Promise<void>,
+    },
+    site: {
+      get: async (): Promise<SiteConfig | null> => {
+        const res = await pb.collection('site').getList<SiteConfig>(1, 1);
+        return res.items[0] ?? null;
+      },
+      update: (id: string, patch: Partial<SiteConfig>) =>
+        pb.collection('site').update<SiteConfig>(id, patch),
+    },
+    media: {
+      delete: (id: string) =>
+        pb.send(`/api/vanblog/media/${id}`, { method: 'DELETE' }) as Promise<void>,
     },
   };
 }
