@@ -6,12 +6,22 @@
 #   docker build --target prod -t vanblog:prod .
 #   docker build --target dev  -t vanblog:dev .
 #
+#   # With mirror (China):
+#   docker build --target dev --build-arg GOPROXY=https://goproxy.cn,direct \
+#                --build-arg NPM_MIRROR=https://registry.npmmirror.com -t vanblog:dev .
+#
 # Run:
 #   docker run -p 80:80 -p 443:443 -v $(pwd)/pb_data:/pb_data vanblog:prod
+#
+# Layer notes:
+#   - ARGs declared per-stage so cache-reuse is maximized.
+#   - GOPROXY/NPM_MIRROR only invalidate the download layer, not earlier COPY steps.
 #
 
 # --- Stage 1: Build Go binary (PocketBase + vanblog SDK) ---
 FROM golang:alpine AS go-build
+ARG GOPROXY
+ENV GOPROXY=${GOPROXY}
 WORKDIR /build
 COPY vault/go.mod vault/go.sum ./
 RUN go mod download
@@ -20,6 +30,7 @@ RUN CGO_ENABLED=0 go build -o /pocketbase -ldflags="-s -w" .
 
 # --- Stage 2: Build Astro frontend + SDK ---
 FROM node:22-alpine AS astro-build
+ARG NPM_MIRROR
 RUN corepack enable pnpm
 WORKDIR /build
 
@@ -31,7 +42,10 @@ COPY app/src/ ./app/src/
 COPY app/public/ ./app/public/
 
 # Install deps (monorepo)
-RUN pnpm install --no-frozen-lockfile
+RUN if [ -n "$NPM_MIRROR" ]; then \
+      pnpm config set registry "$NPM_MIRROR"; \
+    fi && \
+    pnpm install --no-frozen-lockfile
 
 # Build SDK first
 RUN pnpm --filter sdk build
@@ -85,7 +99,7 @@ ENTRYPOINT ["/entrypoint.sh"]
 # --- Stage 4: DEV image (extends prod + full Node toolchain + source) ---
 FROM prod AS dev
 
-RUN apk add --no-cache npm git
+RUN apk add --no-cache npm git && npm install -g pnpm@latest-10
 
 # Copy Astro + SDK source for dev server
 COPY --from=astro-build /build/sdk /sdk
