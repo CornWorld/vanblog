@@ -1,0 +1,12 @@
+node_modules
+.pnpm-store
+pb_data
+caddy_data
+.git
+.reasonix
+.snow
+app/dist
+sdk/dist
+app/.astro
+.astro
+.DS_Store
