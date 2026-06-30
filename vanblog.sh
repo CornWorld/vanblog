@@ -2,7 +2,7 @@
 
 #========================================================
 #   Vanblog 一键管理脚本 (gum enhanced)
-#   Github: https://github.com/cornworld/vanblog
+#   Github: https://github.com/CornWorld/vanblog
 #   适用系统: CentOS 7+ / Debian 8+ / Ubuntu 16+ / Alpine
 #
 #   依赖:
