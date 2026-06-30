@@ -1,15 +1,18 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/plugins/jsvm"
 	"github.com/pocketbase/pocketbase/plugins/migratecmd"
+	"github.com/spf13/cobra"
 
 	"github.com/cornworld/vanblog/internal/article"
 	"github.com/cornworld/vanblog/internal/caddy"
+	"github.com/cornworld/vanblog/internal/devseed"
 	"github.com/cornworld/vanblog/internal/feed"
 	"github.com/cornworld/vanblog/internal/media"
 	"github.com/cornworld/vanblog/internal/migration"
@@ -77,6 +80,22 @@ func main() {
 	migration.RegisterRoutes(app)
 	_ = feed.New(app)
 	_ = caddy.New(app)
+
+	// seed subcommand: populate dev database with sample data
+	seedCmd := &cobra.Command{
+		Use:   "seed",
+		Short: "Populate database with sample data for development",
+		Run: func(cmd *cobra.Command, args []string) {
+			count, _ := cmd.Flags().GetInt("count")
+			if err := devseed.Seed(app, count); err != nil {
+				fmt.Fprintf(os.Stderr, "seed: %v\n", err)
+				os.Exit(1)
+			}
+			fmt.Println("seed: done")
+		},
+	}
+	seedCmd.Flags().Int("count", 3, "number of posts to seed")
+	app.RootCmd.AddCommand(seedCmd)
 
 	if err := app.Start(); err != nil {
 		log.Fatal(err)
