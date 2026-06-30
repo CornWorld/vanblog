@@ -86,11 +86,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
     if (cachedSite && Date.now() - siteFetchTime < SITE_CACHE_TTL)
       return cachedSite;
     try {
-      const res = await fetch(
-        "http://127.0.0.1:8090/api/collections/site/records?perPage=1"
-      );
-      const data = await res.json();
-      cachedSite = data.items?.[0] || null;
+      cachedSite = await client.vanblog.site.get();
       siteFetchTime = Date.now();
     } catch {}
     return cachedSite;

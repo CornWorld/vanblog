@@ -2,7 +2,7 @@
 export const prerender = false;
 
 import BaseLayout from '../../layouts/BaseLayout.astro';
-import { isAuthenticated } from '../../middleware';
+import { isAuthenticated, hasPermission } from '../../middleware';
 import type { Media } from '@vanblog/sdk';
 
 if (!isAuthenticated(Astro)) {
@@ -10,6 +10,9 @@ if (!isAuthenticated(Astro)) {
 }
 
 Astro.cache.set(false);
+
+// Mirror Go-side canManageMedia: admin or article:delete holder.
+const canDelete = !!hasPermission(Astro, 'article:delete');
 
 let media: Media[] = [];
 
@@ -43,8 +46,35 @@ try {
             <br />
             <small class="text-[var(--color-text-muted)]">[{m.storageType}/{m.fileType}]</small>
           </figcaption>
+          {canDelete && (
+            <button
+              type="button"
+              class="btn-delete text-red-600 text-xs mt-1"
+              data-id={m.id}
+              data-name={m.file}
+            >删除</button>
+          )}
         </figure>
       ))}
     </div>
   )}
+
+  <script define:vars={{}}>
+    document.querySelectorAll('button.btn-delete[data-id]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const id = btn.dataset.id;
+        const name = btn.dataset.name;
+        const pb = window.__pb;
+        if (!id) return;
+        if (!confirm(`确认删除媒体文件 ${name}？该操作不可撤销。`)) return;
+        if (!pb) return alert('未登录');
+        try {
+          await pb.vanblog.media.delete(id);
+          btn.closest('figure')?.remove();
+        } catch (err) {
+          alert('删除失败: ' + err.message);
+        }
+      });
+    });
+  </script>
 </BaseLayout>

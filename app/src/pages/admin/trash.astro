@@ -3,7 +3,7 @@ export const prerender = false;
 
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import { isAuthenticated, getAuthUser, hasPermission } from '../../middleware';
-import type { Post } from '@vanblog/sdk';
+import type { TrashEntry } from '@vanblog/sdk';
 
 if (!isAuthenticated(Astro)) return Astro.redirect('/_/');
 Astro.cache.set(false);
@@ -15,13 +15,12 @@ const canEditPost = !!hasPermission(Astro, 'article:create') || !!hasPermission(
 // Gate the whole page; mirrors the backend canManagePosts check.
 if (!canEditPost) return Astro.redirect('/admin');
 
-let trash: Post[] = [];
+let trash: TrashEntry[] = [];
 try {
-  // Soft-deleted only; backend route also enforces auth, this is the SSR fetch.
-  trash = await Astro.locals.pb.collection('posts').getFullList<Post>({
-    filter: 'deleted = true',
-    sort: '-updated',
-  });
+  // Auth enforced by Go route (canManagePosts). Do NOT query pb.collection
+  // directly — that path depends on the posts ListRule, which we plan to
+  // tighten; the trash endpoint is the stable contract for admin UI.
+  trash = await Astro.locals.pb.vanblog.posts.trash();
 } catch (e) {
   console.error('[admin/trash] load:', e);
 }
@@ -67,14 +66,7 @@ try {
         if (!id || !confirm('恢复该文章？（deleted=false）')) return;
         if (!pb) return alert('未登录');
         try {
-          const res = await fetch(`/api/vanblog/posts/${id}/restore`, {
-            method: 'POST',
-            credentials: 'include',
-          });
-          if (!res.ok) {
-            const txt = await res.text();
-            return alert('恢复失败: ' + txt);
-          }
+          await pb.vanblog.posts.restore(id);
           location.reload();
         } catch (err) {
           alert('恢复失败: ' + err.message);
