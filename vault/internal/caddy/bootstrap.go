@@ -2,24 +2,8 @@ package caddy
 
 // bootstrap.go contains the startup wiring that pushes the full Caddy config
 // (built from site.routing + system rules) into a running Caddy via its admin
-// API.
-//
-// Flow (Phase 4; see .snow/plan/caddy-single-source.md §4):
-//  1. Read site.routing + site.allowedDomains + site.caddyLogLevel from the DB.
-//  2. Build a BuildOpts + merged rule list.
-//  3. BuildFullConfig → translate + SSRF-validate all rules. Abort on error.
-//  4. WaitForCaddy (up to 30s) — entrypoint starts Caddy in parallel.
-//  5. ValidateConfig (dry-run) — catch config errors without applying.
-//  6. LoadConfig (Phase 1 already adds retry for admin-endpoint restart).
-//
-// If any step fails we retry the WHOLE pipeline up to 5 times with exponential
-// backoff (1s/2s/4s/8s/16s). Rationale: site.routing may be edited by an
-// operator *while* pb is booting, and a subsequent attempt can pick up the
-// fixed rules and succeed. On total failure we persist the last error to
-// site.caddyLastError so the admin UI can surface a clear "why is my site on
-// the maintenance page" message, and we return the error to the caller
-// (hooks.go) which logs it but does NOT crash pb — the management port
-// (:8080) remains reachable so operators can recover.
+// API. The 6-step pipeline and retry policy are documented in
+// docs/architecture-layering.md §4.4 (Caddy Manager).
 
 import (
 	"encoding/json"
