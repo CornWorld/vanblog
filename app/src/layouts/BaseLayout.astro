@@ -1,4 +1,5 @@
 ---
+import '../styles/global.css';
 import type { SiteConfig, Post } from '@vanblog/sdk';
 import PbInit from '../components/PbInit.astro';
 
@@ -63,9 +64,6 @@ const websiteSchema = {
   description: siteDesc,
   url: baseUrl || undefined,
 };
----
----
-import '../styles/global.css';
 ---
 <!doctype html>
 <html lang="zh-CN">
