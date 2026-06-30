@@ -35,6 +35,7 @@ export default defineConfig({
     },
     optimizeDeps: {
       exclude: ['@jsquash/avif', '@jsquash/jpeg', '@jsquash/png', '@jsquash/webp'],
+      include: ['mermaid'],
     },
   },
   integrations: [mdx()],
