@@ -27,7 +27,9 @@
     "emoji-picker-element": "^1.29.1",
     "katex": "^0.16.0",
     "mermaid": "^11.16.0",
+    "rehype-katex": "^7.0.1",
     "remark-directive": "^3.0.0",
+    "remark-math": "^6.0.0",
     "tailwindcss": "^4.3.2",
     "unist-util-visit": "^5.0.0"
   },
