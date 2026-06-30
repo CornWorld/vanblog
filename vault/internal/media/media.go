@@ -34,6 +34,7 @@ func New(app core.App) *Manager {
 		if err := ApplyS3BackendToSettings(app); err != nil {
 			log.Printf("[media] startup S3 sync failed: %v", err)
 		}
+		se.Router.DELETE("/api/vanblog/media/{id}", m.handleDelete)
 		return se.Next()
 	})
 	app.OnRecordAfterCreateSuccess("media").BindFunc(m.dedupeOnUpload)
