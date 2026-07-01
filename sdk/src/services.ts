@@ -38,12 +38,22 @@ export interface VanblogServices {
   posts: {
     trash(): Promise<TrashEntry[]>;
     restore(id: string): Promise<void>;
+    purge(id: string): Promise<void>;
   };
   site: {
     get(): Promise<SiteConfig | null>;
     update(id: string, patch: Partial<SiteConfig>): Promise<SiteConfig>;
   };
   media: {
+    delete(id: string): Promise<void>;
+  };
+  categories: {
+    delete(id: string): Promise<void>;
+  };
+  tags: {
+    delete(id: string): Promise<void>;
+  };
+  users: {
     delete(id: string): Promise<void>;
   };
 }
@@ -91,6 +101,10 @@ export function createVanblogServices(pb: PocketBase): VanblogServices {
         pb.send(`/api/vanblog/posts/${id}/restore`, {
           method: 'POST',
         }) as Promise<void>,
+      purge: (id: string) =>
+        pb.send(`/api/vanblog/posts/${id}/purge`, {
+          method: 'POST',
+        }) as Promise<void>,
     },
     site: {
       get: async (): Promise<SiteConfig | null> => {
@@ -103,6 +117,18 @@ export function createVanblogServices(pb: PocketBase): VanblogServices {
     media: {
       delete: (id: string) =>
         pb.send(`/api/vanblog/media/${id}`, { method: 'DELETE' }) as Promise<void>,
+    },
+    categories: {
+      delete: (id: string) =>
+        pb.send(`/api/vanblog/categories/${id}`, { method: 'DELETE' }) as Promise<void>,
+    },
+    tags: {
+      delete: (id: string) =>
+        pb.send(`/api/vanblog/tags/${id}`, { method: 'DELETE' }) as Promise<void>,
+    },
+    users: {
+      delete: (id: string) =>
+        pb.send(`/api/vanblog/users/${id}`, { method: 'DELETE' }) as Promise<void>,
     },
   };
 }

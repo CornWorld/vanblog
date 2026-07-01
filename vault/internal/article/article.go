@@ -28,6 +28,25 @@ func canManagePosts(auth *core.Record) bool {
 	return false
 }
 
+// canDeletePosts gates *physical* deletion (purge): admin or article:delete.
+// Tighter than canManagePosts because purge is irreversible — restoring a
+// soft-deleted post is a normal editor action, but permanently removing one
+// is a destructive operation that warrants its own permission bit.
+func canDeletePosts(auth *core.Record) bool {
+	if auth == nil {
+		return false
+	}
+	if auth.GetString("role") == "admin" {
+		return true
+	}
+	for _, p := range auth.GetStringSlice("permissions") {
+		if p == "article:delete" || p == "all" {
+			return true
+		}
+	}
+	return false
+}
+
 // Manager handles article operations.
 type Manager struct {
 	app core.App
@@ -47,6 +66,7 @@ func New(app core.App) *Manager {
 		se.Router.GET("/api/vanblog/search", m.handleSearchEndpoint)
 		se.Router.GET("/api/vanblog/posts/trash", m.handleTrashEndpoint)
 		se.Router.POST("/api/vanblog/posts/{id}/restore", m.handleRestoreEndpoint)
+		se.Router.POST("/api/vanblog/posts/{id}/purge", m.handlePurgeEndpoint)
 		return se.Next()
 	})
 	return m
@@ -384,6 +404,51 @@ func (m *Manager) handleRestoreEndpoint(e *core.RequestEvent) error {
 	}
 
 	// Mirror handlePostsCacheInvalidation: invalidate Astro cache async.
+	go revalidateAstroCache([]string{"posts"})
+
+	return e.JSON(http.StatusOK, map[string]any{"ok": true, "id": id})
+}
+
+// Purge permanently removes a post record. Unlike Restore, this is
+// irreversible — the post and all its revisions are gone. Gated by
+// canDeletePosts (admin or article:delete) rather than canManagePosts
+// because of the destructive nature.
+func (m *Manager) Purge(postID string) error {
+	post, err := m.app.FindRecordById("posts", postID)
+	if err != nil {
+		return fmt.Errorf("article: post not found: %w", err)
+	}
+	if !post.GetBool("deleted") {
+		// Force callers through /admin/trash → purge to avoid accidentally
+		// hard-deleting an active post. They must soft-delete first.
+		return fmt.Errorf("article: post %s is not deleted; soft-delete first", postID)
+	}
+	if err := m.app.Delete(post); err != nil {
+		return fmt.Errorf("article: purge failed: %w", err)
+	}
+	return nil
+}
+
+func (m *Manager) handlePurgeEndpoint(e *core.RequestEvent) error {
+	if !canDeletePosts(e.Auth) {
+		return e.ForbiddenError("admin or article:delete required", "")
+	}
+
+	id := e.Request.PathValue("id")
+	if id == "" {
+		return e.BadRequestError("missing path parameter {id}", "")
+	}
+
+	if err := m.Purge(id); err != nil {
+		if strings.Contains(err.Error(), "is not deleted") {
+			return e.BadRequestError(err.Error(), "")
+		}
+		if strings.Contains(err.Error(), "not found") {
+			return e.NotFoundError(err.Error(), "")
+		}
+		return e.JSON(http.StatusInternalServerError, err.Error())
+	}
+
 	go revalidateAstroCache([]string{"posts"})
 
 	return e.JSON(http.StatusOK, map[string]any{"ok": true, "id": id})
