@@ -48,8 +48,8 @@ Vanblog 原作者 Mereithhh 因个人原因已经不再维护 Vanblog, 但 Vanbl
 ### 目标核心功能
 #### 高客制化 / AI 集成能力
 提供 dev 和 prod 两种 Docker image, 并且支持外挂 Astro 前端.
-- prod: 不包括 golang / node runtime, 只包含编译后的二进制文件和前端静态资源. 开箱即用, 适合不折腾的用户/新手用户, 提供 CMS 所有功能, 但不提供二次开发能力.
-- dev: 不包含 golang runtime, 但有 node runtime, 包含前端源码和编译脚本. Astro 部分一直以 Dev Server 模式运行, 并且提供 MCP(提供 db 连接信息 / 特定 secret 来访问 pb api 等等) / Skill.
+- prod: 不包括 golang env, 只包含编译后的二进制文件和 SSR 前端静态资源. 开箱即用, 适合不折腾的用户/新手用户, 提供 CMS 所有功能, 但不提供二次开发能力.
+- dev: 包含 golang runtime, 有 node runtime, 包含前端源码和编译脚本. Astro 部分一直以 Dev Server 模式运行, 并且提供 MCP(提供 db 连接信息 / 特定 secret 来访问 pb api 等等) / Skill.
 - 前端外挂: 通过 dev 容器内的构建脚本, 输出如 prod 版一样的静态资源, 并且允许用户重新切换为 prod 模式并挂载自定义的资源(相当于保存操作?)
 
 问题: 如何平衡 docker compose file 的修改能力? 外置脚本还是其他更明智的办法? MCP 具体要提供哪些 tool, 如何平衡安全性? 是否要提供能力方便用户进行 docker image 的构建和分发? 

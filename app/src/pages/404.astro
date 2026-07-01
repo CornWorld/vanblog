@@ -1,7 +1,13 @@
 ---
-export const prerender = true;
+export const prerender = false;
 
 import BaseLayout from '../layouts/BaseLayout.astro';
+
+// Server-render so we can return a real 404 status code. The previous
+// prerender=true produced HTTP 200 with a 404 body — fine for humans but
+// wrong for crawlers, WAFs, and any client checking res.ok.
+Astro.response.status = 404;
+Astro.response.headers.set('Cache-Control', 'no-store');
 ---
 <BaseLayout title="404 - 页面不存在">
   <div class="py-16 text-center">
