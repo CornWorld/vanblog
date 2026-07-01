@@ -82,7 +82,7 @@ try {
       tr.querySelector<HTMLElement>('.btn-del')!.onclick = async () => {
         if (!confirm('确定删除该标签？')) return;
         try {
-          await pb.collection('tags').delete(id);
+          await pb.vanblog.tags.delete(id);
           tr.remove();
         } catch (err) { alert('删除失败: ' + (err as Error).message); }
       };

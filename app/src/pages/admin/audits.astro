@@ -2,19 +2,30 @@
 export const prerender = false;
 
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import ErrorNotice from '../../components/ErrorNotice.astro';
 import { requireAdmin } from '../../middleware';
 
-if (!requireAdmin(Astro)) return Astro.redirect('/_/');
+// Not logged in → login page. Logged in but not admin → inline 403.
+// The previous behavior redirected both cases to /_, which told legitimate
+// non-admin users nothing about why they couldn't see the page.
+if (!Astro.locals.pb.authStore.isValid) {
+  return Astro.redirect('/_/');
+}
 Astro.cache.set(false);
 
+const denied = !requireAdmin(Astro);
+if (denied) Astro.response.status = 403;
+
 let audits: any[] = [];
-try {
-  audits = await Astro.locals.pb.collection('audits').getList(1, 100, {
-    sort: '-created',
-    expand: 'actor',
-  }).then(r => r.items);
-} catch (e) {
-  console.error('[admin/audits] load:', e);
+if (!denied) {
+  try {
+    audits = await Astro.locals.pb.collection('audits').getList(1, 100, {
+      sort: '-created',
+      expand: 'actor',
+    }).then(r => r.items);
+  } catch (e) {
+    console.error('[admin/audits] load:', e);
+  }
 }
 
 function expandName(a: any): string {
@@ -26,7 +37,9 @@ function expandName(a: any): string {
   <h1>审计日志</h1>
   <p><a href="/admin">← 返回</a></p>
 
-  {audits.length === 0 ? (
+  {denied ? (
+    <ErrorNotice code="403" title="无权限访问" message="审计日志仅管理员可见。" />
+  ) : audits.length === 0 ? (
     <p>暂无审计记录。</p>
   ) : (
     <table class="w-full border-collapse text-xs">

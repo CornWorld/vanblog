@@ -2,10 +2,16 @@
 export const prerender = false;
 
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import ErrorNotice from '../../components/ErrorNotice.astro';
 import { requireAdmin } from '../../middleware';
 
-if (!requireAdmin(Astro)) return Astro.redirect('/_/');
+if (!Astro.locals.pb.authStore.isValid) {
+  return Astro.redirect('/_/');
+}
 Astro.cache.set(false);
+
+const denied = !requireAdmin(Astro);
+if (denied) Astro.response.status = 403;
 
 const ALL_PERMS = [
   'article:create', 'article:delete', 'article:update',
@@ -14,17 +20,22 @@ const ALL_PERMS = [
 ];
 
 let users: any[] = [];
-try {
-  users = await Astro.locals.pb.collection('users').getFullList({ sort: 'username' });
-} catch (e) {
-  console.error('[admin/users] load:', e);
+if (!denied) {
+  try {
+    users = await Astro.locals.pb.collection('users').getFullList({ sort: 'username' });
+  } catch (e) {
+    console.error('[admin/users] load:', e);
+  }
 }
 ---
 <BaseLayout title="用户管理">
   <h1>用户管理</h1>
   <p><a href="/admin">← 返回</a></p>
 
-  <form id="new-user" class="flex gap-2 flex-wrap mb-4">
+  {denied ? (
+    <ErrorNotice code="403" title="无权限访问" message="用户管理仅管理员可见。" />
+  ) : (
+    <form id="new-user" class="flex gap-2 flex-wrap mb-4">
     <input name="username" placeholder="用户名" required class="px-1.5 py-0.5" />
     <input name="email" type="email" placeholder="邮箱（登录用）" required class="px-1.5 py-0.5 flex-1 min-w-[200px]" />
     <input name="password" type="password" placeholder="初始密码" required class="px-1.5 py-0.5 w-40" />
@@ -121,10 +132,11 @@ try {
       tr.querySelector('.btn-del').onclick = async () => {
         if (!confirm('确定删除该用户？')) return;
         try {
-          await pb.collection('users').delete(id);
+          await pb.vanblog.users.delete(id);
           tr.remove();
         } catch (err) { alert('删除失败: ' + err.message); }
       };
     });
   </script>
+  )}
 </BaseLayout>

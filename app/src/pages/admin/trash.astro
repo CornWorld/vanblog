@@ -2,6 +2,7 @@
 export const prerender = false;
 
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import ErrorNotice from '../../components/ErrorNotice.astro';
 import { isAuthenticated, getAuthUser, hasPermission } from '../../middleware';
 import type { TrashEntry } from '@vanblog/sdk';
 
@@ -10,19 +11,24 @@ Astro.cache.set(false);
 
 const user = getAuthUser(Astro);
 const isAdmin = user?.role === 'admin';
+const canDeletePost = !!hasPermission(Astro, 'article:delete') || isAdmin;
 const canEditPost = !!hasPermission(Astro, 'article:create') || !!hasPermission(Astro, 'article:update');
 
-// Gate the whole page; mirrors the backend canManagePosts check.
-if (!canEditPost) return Astro.redirect('/admin');
+// Inline 403 instead of silent redirect to /admin — tells editors without
+// article:create/update why they can't see the trash page.
+const denied = !canEditPost;
+if (denied) Astro.response.status = 403;
 
 let trash: TrashEntry[] = [];
-try {
-  // Auth enforced by Go route (canManagePosts). Do NOT query pb.collection
-  // directly — that path depends on the posts ListRule, which we plan to
-  // tighten; the trash endpoint is the stable contract for admin UI.
-  trash = await Astro.locals.pb.vanblog.posts.trash();
-} catch (e) {
-  console.error('[admin/trash] load:', e);
+if (!denied) {
+  try {
+    // Auth enforced by Go route (canManagePosts). Do NOT query pb.collection
+    // directly — that path depends on the posts ListRule, which was tightened
+    // in 1782300002; the trash endpoint is the stable contract for admin UI.
+    trash = await Astro.locals.pb.vanblog.posts.trash();
+  } catch (e) {
+    console.error('[admin/trash] load:', e);
+  }
 }
 ---
 
@@ -30,7 +36,9 @@ try {
   <h1>回收站</h1>
   <p><a href="/admin">← 返回</a></p>
 
-  {trash.length === 0 ? (
+  {denied ? (
+    <ErrorNotice code="403" title="无权限访问" message="回收站需要 article:create 或 article:update 权限。" />
+  ) : trash.length === 0 ? (
     <p>回收站为空。</p>
   ) : (
     <table class="w-full border-collapse">
@@ -47,7 +55,7 @@ try {
             <td>{new Date(post.updated).toLocaleString('zh-CN')}</td>
             <td class="flex gap-2 flex-wrap">
               <button class="btn-restore">恢复</button>
-              {isAdmin && (
+              {canDeletePost && (
                 <button class="btn-purge" class="text-red-600">彻底删除</button>
               )}
             </td>
@@ -77,10 +85,10 @@ try {
       if (purgeBtn) {
         purgeBtn.addEventListener('click', async () => {
           if (!id) return;
-          if (!confirm('彻底删除？该操作不可撤销（pb delete）。')) return;
+          if (!confirm('彻底删除？该操作不可撤销。')) return;
           if (!pb) return alert('未登录');
           try {
-            await pb.collection('posts').delete(id);
+            await pb.vanblog.posts.purge(id);
             location.reload();
           } catch (err) {
             alert('删除失败: ' + err.message);

@@ -2,18 +2,26 @@
 export const prerender = false;
 
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import ErrorNotice from '../../components/ErrorNotice.astro';
 import { requireAdmin } from '../../middleware';
 import type { SiteConfig } from '@vanblog/sdk';
 
-if (!requireAdmin(Astro)) return Astro.redirect('/_/');
+if (!Astro.locals.pb.authStore.isValid) {
+  return Astro.redirect('/_/');
+}
 Astro.cache.set(false);
 
+const denied = !requireAdmin(Astro);
+if (denied) Astro.response.status = 403;
+
 let site: Partial<SiteConfig> | null = null;
-try {
-  const res = await Astro.locals.pb.collection('site').getList(1, 1);
-  site = res.items[0] as any;
-} catch (e) {
-  console.error('[admin/site] load:', e);
+if (!denied) {
+  try {
+    const res = await Astro.locals.pb.collection('site').getList(1, 1);
+    site = res.items[0] as any;
+  } catch (e) {
+    console.error('[admin/site] load:', e);
+  }
 }
 
 const id = (site as any)?.id;
@@ -27,7 +35,9 @@ const boolOr = (k: keyof SiteConfig, def = false) => {
   <h1>站点配置</h1>
   <p><a href="/admin">← 返回</a></p>
 
-  {!site ? (
+  {denied ? (
+    <ErrorNotice code="403" title="无权限访问" message="站点配置仅管理员可编辑。" />
+  ) : !site ? (
     <p>未找到 site 记录（请确认数据库已初始化）。</p>
   ) : (
     <form id="site-form" class="flex flex-col gap-4 max-w-3xl">

@@ -1,0 +1,36 @@
+---
+// Inline error notice used by all admin pages when access is denied or a
+// resource is missing. Embeds inside BaseLayout so the surrounding chrome
+// (nav, site name) stays consistent — the user sees "you can't see this"
+// rather than being silently redirected to /admin with no explanation.
+//
+// Use cases:
+//   - Logged-in user without the required permission (403)
+//   - Resource not found / inaccessible (404)
+//   - Partial visibility (e.g. revisions on someone else's post)
+//
+// For the "not logged in at all" case, keep using redirect('/_/') — the
+// login page is the right destination there, not an inline notice.
+
+interface Props {
+  /** Short HTTP-like code shown as a large heading. Optional. */
+  code?: string;
+  /** One-line title, e.g. "无权限访问". */
+  title: string;
+  /** Optional longer explanation. */
+  message?: string;
+}
+
+const { code, title, message } = Astro.props;
+---
+
+<div class="py-12 text-center">
+  {code && (
+    <div class="text-5xl font-bold text-[var(--color-text-muted)] mb-3">{code}</div>
+  )}
+  <h1 class="text-xl font-semibold mb-2">{title}</h1>
+  {message && (
+    <p class="text-sm text-[var(--color-text-muted)] mb-6 max-w-prose mx-auto">{message}</p>
+  )}
+  <a href="/admin" class="inline-flex items-center px-4 py-2 rounded-lg font-medium text-sm bg-[var(--color-accent)] text-white hover:opacity-90 transition-opacity">返回管理</a>
+</div>

@@ -2,6 +2,7 @@
 export const prerender = false;
 
 import BaseLayout from '../../../layouts/BaseLayout.astro';
+import ErrorNotice from '../../../components/ErrorNotice.astro';
 import { isAuthenticated, getAuthUser, hasPermission } from '../../../middleware';
 import ByteMdEditor from '../../../components/ByteMdEditor.astro';
 import type { Post, Tag, Category } from '@vanblog/sdk';
@@ -9,34 +10,43 @@ import type { Post, Tag, Category } from '@vanblog/sdk';
 const user = getAuthUser(Astro);
 if (!user) return Astro.redirect('/_/');
 
-const isEditingExisting = !!Astro.url.pathname.match(/\/admin\/edit\/[^/]+$/);
-const canCreate = hasPermission(Astro, 'article:create') || hasPermission(Astro, 'article:update');
-if (!canCreate) return Astro.redirect('/admin');
-
 Astro.cache.set(false);
+
+const isEditingExisting = !!Astro.url.pathname.match(/\/admin\/edit\/[^/]+$/);
+const canEdit = hasPermission(Astro, 'article:create') || hasPermission(Astro, 'article:update');
+// Inline 403 instead of silent redirect to /admin — same UX rationale as
+// the other admin pages.
+const denied = !canEdit;
+if (denied) Astro.response.status = 403;
 
 const { id } = Astro.params;
 const isNew = !id || id === 'new';
 
 let post: Partial<Post> = {};
-if (!isNew) {
+let notFound = false;
+if (!denied && !isNew) {
   try {
     post = await Astro.locals.pb.collection('posts').getOne<Post>(id);
   } catch {
-    return Astro.redirect('/404');
+    // Inline 404 instead of redirect to /404 — keeps editor chrome visible
+    // so the user can navigate back without losing context.
+    notFound = true;
+    Astro.response.status = 404;
   }
 }
 
 let tags: Tag[] = [];
 let cats: Category[] = [];
-try {
-  const pb = Astro.locals.pb;
-  [tags, cats] = await Promise.all([
-    pb.collection('tags').getFullList<Tag>({ sort: 'name' }),
-    pb.collection('categories').getFullList<Category>({ sort: 'name' }),
-  ]);
-} catch (e) {
-  console.error('[edit] Failed to load tags/cats:', e);
+if (!denied && !notFound) {
+  try {
+    const pb = Astro.locals.pb;
+    [tags, cats] = await Promise.all([
+      pb.collection('tags').getFullList<Tag>({ sort: 'name' }),
+      pb.collection('categories').getFullList<Category>({ sort: 'name' }),
+    ]);
+  } catch (e) {
+    console.error('[edit] Failed to load tags/cats:', e);
+  }
 }
 
 const site = await Astro.locals.getSite();
@@ -49,7 +59,12 @@ const currentAuthorId: string = (post as any).author || user.id;
 <BaseLayout title={isNew ? '新建文章' : '编辑文章'}>
   <h1>{isNew ? '新建文章' : '编辑文章'}</h1>
 
-  <div class="flex flex-wrap gap-4 mb-4 items-end">
+  {denied ? (
+    <ErrorNotice code="403" title="无权限访问" message="编辑文章需要 article:create 或 article:update 权限。" />
+  ) : notFound ? (
+    <ErrorNotice code="404" title="文章不存在" message="该文章可能已被删除，或你没有访问权限。" />
+  ) : (
+    <div class="flex flex-wrap gap-4 mb-4 items-end">
     <label class="flex flex-col">
       标题
       <input type="text" id="f-title" value={post.title || ''} required class="w-80 px-1.5 py-0.5" />
@@ -153,4 +168,5 @@ const currentAuthorId: string = (post as any).author || user.id;
     document.getElementById('btn-save').onclick = () => save(false);
     document.getElementById('btn-publish').onclick = () => save(true);
   </script>
+  )}
 </BaseLayout>

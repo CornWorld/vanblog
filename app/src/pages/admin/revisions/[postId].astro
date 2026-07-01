@@ -2,7 +2,8 @@
 export const prerender = false;
 
 import BaseLayout from '../../../layouts/BaseLayout.astro';
-import { isAuthenticated } from '../../../middleware';
+import ErrorNotice from '../../../components/ErrorNotice.astro';
+import { isAuthenticated, getAuthUser } from '../../../middleware';
 import type { Revision, Post } from '@vanblog/sdk';
 
 if (!isAuthenticated(Astro)) {
@@ -12,34 +13,64 @@ if (!isAuthenticated(Astro)) {
 Astro.cache.set(false);
 
 const { postId } = Astro.params;
-if (!postId) return Astro.redirect('/404');
+// Inline 404 instead of redirect to /404 — preserves nav chrome.
+const notFound = !postId;
+if (notFound) Astro.response.status = 404;
 
-let post: Post;
+const user = getAuthUser(Astro);
+const isAdmin = user?.role === 'admin';
+
+let post: Post | null = null;
 let revs: Revision[] = [];
+let denied = false;
 
 const pb = Astro.locals.pb;
-try {
-  post = await pb.collection('posts').getOne<Post>(postId);
-} catch {
-  return Astro.redirect('/404');
+
+if (!notFound) {
+  try {
+    post = await pb.collection('posts').getOne<Post>(postId);
+  } catch {
+    // post missing OR blocked by posts ViewRule. Render inline 404.
+    denied = true;
+    Astro.response.status = 404;
+  }
 }
 
-try {
-  revs = await pb.collection('revisions').getFullList<Revision>({
-    filter: `target = "${postId}"`,
-    sort: '-created',
-  });
-} catch (e) {
-  console.error('[revisions] Failed to load:', e);
+if (!notFound && !denied) {
+  try {
+    revs = await pb.collection('revisions').getFullList<Revision>({
+      filter: `target = "${postId}"`,
+      sort: '-created',
+    });
+  } catch (e) {
+    console.error('[revisions] Failed to load:', e);
+  }
+
+  // revisions ListRule (1782300004) returns empty for non-admin reading
+  // someone else's post. Distinguish "no history" from "no access":
+  // collaborators reading their own post legitimately see empty too, so we
+  // only mark denied=true when the post's author isn't the current user.
+  if (!isAdmin && post && (post as any).author !== user?.id && revs.length === 0) {
+    denied = true;
+    Astro.response.status = 403;
+  }
 }
 ---
-<BaseLayout title={`修订历史 - ${post.title}`}>
+<BaseLayout title={notFound ? '修订历史 - 不存在' : denied ? '修订历史 - 无权限' : `修订历史 - ${post?.title || ''}`}>
   <h1>修订历史</h1>
-  <p><a href="/admin">← 返回管理</a> ｜ <a href={`/admin/edit/${postId}`}>编辑</a></p>
-  <p><strong>文章：</strong>{post.title}</p>
-  <hr />
+  <p><a href="/admin">← 返回管理</a>{!notFound && !denied && ` ｜ `}<a href={`/admin/edit/${postId}`}>编辑</a></p>
+  {!notFound && !denied && (
+    <>
+      <p><strong>文章：</strong>{post?.title}</p>
+      <hr />
+    </>
+  )}
 
-  {revs.length === 0 ? (
+  {notFound ? (
+    <ErrorNotice code="404" title="文章不存在" message="该文章可能已被彻底删除，或链接有误。" />
+  ) : denied ? (
+    <ErrorNotice code="403" title="无权限查看历史" message="仅作者或管理员可查看该文章的修订历史。" />
+  ) : revs.length === 0 ? (
     <p>暂无修订记录。</p>
   ) : (
     <ul class="list-none p-0 flex flex-col gap-3">
