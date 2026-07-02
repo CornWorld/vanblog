@@ -43,6 +43,7 @@ func NewWithURL(app core.App, caddyAdminURL string) *Service {
 	app.OnServe().BindFunc(func(se *core.ServeEvent) error {
 		se.Router.GET("/api/hooks/caddy/ask", s.handleAskEndpoint)
 		se.Router.GET("/api/vanblog/tls/status", s.handleTLSStatusEndpoint)
+		s.registerAdminRoutes(se)
 
 		if os.Getenv("VANBLOG_SKIP_CADDY_SYNC") == "1" {
 			log.Printf("[caddy] VANBLOG_SKIP_CADDY_SYNC=1: skipping config push (dev/smoke mode)")
