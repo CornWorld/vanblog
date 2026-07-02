@@ -7,7 +7,7 @@ import { requireAdmin } from '../../middleware';
 import type { SiteConfig } from '@vanblog/sdk';
 
 if (!Astro.locals.pb.authStore.isValid) {
-  return Astro.redirect('/_/');
+  return Astro.redirect('/login');
 }
 Astro.cache.set(false);
 
@@ -15,25 +15,47 @@ const denied = !requireAdmin(Astro);
 if (denied) Astro.response.status = 403;
 
 let site: Partial<SiteConfig> | null = null;
+let tlsStatus: any = null;
 if (!denied) {
   try {
-    const res = await Astro.locals.pb.collection('site').getList(1, 1);
-    site = res.items[0] as any;
+    const res = await Astro.locals.pb.collection('site').getList<SiteConfig>(1, 1);
+    site = res.items[0] ?? null;
   } catch (e) {
     console.error('[admin/site] load:', e);
   }
+  // Pull caddy/TLS status separately — a failure here shouldn't block the
+  // site form (e.g. caddy admin api is down), so we surface it inline.
+  try {
+    tlsStatus = await Astro.locals.pb.vanblog.tls.status();
+  } catch (e) {
+    console.error('[admin/site] tls status:', e);
+  }
 }
 
-const id = (site as any)?.id;
-const f = (k: keyof SiteConfig) => (site as any)?.[k] ?? '';
-const boolOr = (k: keyof SiteConfig, def = false) => {
-  const v = (site as any)?.[k];
-  return v === undefined ? def : !!v;
+// Banner-worthy states: maintenance mode or unreachable caddy.
+const tlsWarning =
+  tlsStatus && !tlsStatus.caddyReachable
+    ? 'Caddy admin API 不可达，路由配置可能未生效。'
+    : tlsStatus && tlsStatus.bootstrapMode
+    ? `站点处于维护模式（bootstrap 配置生效中）${tlsStatus.bootstrapError ? '：' + tlsStatus.bootstrapError : ''}`
+    : '';
+
+const id = site?.id;
+const f = (k: keyof SiteConfig): string => site?.[k]?.toString() ?? '';
+const boolOr = (k: keyof SiteConfig, def = false): boolean => {
+  const v = site?.[k];
+  return v === undefined || v === null ? def : !!v;
 };
 ---
 <BaseLayout title="站点配置">
   <h1>站点配置</h1>
   <p><a href="/admin">← 返回</a></p>
+
+  {tlsWarning && (
+    <p class="text-sm bg-yellow-100 dark:bg-yellow-900 text-yellow-900 dark:text-yellow-100 border border-yellow-300 dark:border-yellow-700 rounded px-3 py-2 mb-3">
+      ⚠ {tlsWarning}
+    </p>
+  )}
 
   {denied ? (
     <ErrorNotice code="403" title="无权限访问" message="站点配置仅管理员可编辑。" />
@@ -88,7 +110,7 @@ const boolOr = (k: keyof SiteConfig, def = false) => {
         <label>启用修订</label>
         <label><input type="checkbox" name="revisionsEnabled" checked={boolOr('revisionsEnabled', true)} /> 启用</label>
         <label>保留数量</label>
-        <input type="number" name="revisionsRetention" value={(site as any)?.revisionsRetention ?? 50} class="px-1.5 py-0.5 w-[120px]" />
+        <input type="number" name="revisionsRetention" value={site?.revisionsRetention ?? 50} class="px-1.5 py-0.5 w-[120px]" />
       </fieldset>
 
       <div class="flex gap-4 items-center">

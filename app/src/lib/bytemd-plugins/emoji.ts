@@ -99,8 +99,7 @@ export function emoji(): BytemdPlugin {
       editor.setSelection(lastSelection.anchor, lastSelection.head);
     }
     editor.focus();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (editor as any).replaceSelection?.(glyph) ?? (editor as any).replaceRange?.(glyph, editor.getCursor());
+    editor.replaceSelection(glyph);
     lastSelection = editor.listSelections()?.[0] || null;
     closePanel();
   };

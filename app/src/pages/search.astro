@@ -14,7 +14,7 @@ if (q) {
   searched = true;
   try {
     const pb = Astro.locals.pb;
-    results = await (pb as any).vanblog.search.query(q, { limit: 30 });
+    results = await pb.vanblog.search.query(q, { limit: 30 });
   } catch (e) {
     console.error('[search] Failed:', e);
     error = true;

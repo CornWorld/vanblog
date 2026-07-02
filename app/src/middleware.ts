@@ -21,6 +21,15 @@ export interface AuthUser {
   permissions: string[];
 }
 
+/** PocketBase user record fields accessed by getAuthUser. */
+interface PbUserRecord {
+  id: string;
+  username: string;
+  nickname?: string;
+  role: string;
+  permissions?: string[];
+}
+
 /**
  * Return the current logged-in user's role-relevant fields, or null.
  * Reads from the pb authStore record (populated after loadFromCookie).
@@ -30,7 +39,7 @@ export function getAuthUser(context: {
 }): AuthUser | null {
   const pb = context.locals.pb;
   if (!pb.authStore.isValid) return null;
-  const rec = pb.authStore.record as any;
+  const rec = pb.authStore.record as PbUserRecord | null;
   if (!rec) return null;
   return {
     id: rec.id,

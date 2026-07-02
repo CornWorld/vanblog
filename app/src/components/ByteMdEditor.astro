@@ -2,8 +2,8 @@
 import 'bytemd/dist/index.css'
 import type { MediaConfig } from '../lib/media/normalizeImage';
 
-interface Props { initialContent?: string; postId?: string; mediaConfig?: MediaConfig }
-const { initialContent = '', postId, mediaConfig } = Astro.props
+interface Props { initialContent?: string; mediaConfig?: MediaConfig }
+const { initialContent = '', mediaConfig } = Astro.props
 ---
 <div id="bytemd-editor" data-initial={initialContent} style="height: calc(100vh - 200px);"></div>
 <input type="hidden" id="post-content" value={initialContent} />
@@ -121,7 +121,7 @@ const { initialContent = '', postId, mediaConfig } = Astro.props
   };
 
   // action: 剪切板图片上传
-  function imgAction(getPb: () => import('@vanblog/sdk').VanblogClient) {
+  function imgAction() {
     return {
       title: '图片上传',
       icon: '<svg viewBox="0 0 1024 1024" width="16" height="16" fill="currentColor"><path d="M864 260H704l-32-56a48 48 0 00-42-24H406a48 48 0 00-42 24l-32 56H160a48 48 0 00-48 48v448a48 48 0 0048 48h704a48 48 0 0048-48V308a48 48 0 00-48-48zM512 680a144 144 0 110-288 144 144 0 010 288z"/></svg>',
@@ -181,7 +181,7 @@ const { initialContent = '', postId, mediaConfig } = Astro.props
       { rehype: (p: any) => p.use(rehypeEnhance) },
       { rehype: (p: any) => p.use(rehypeCodeBlock), viewerEffect: ({ markdownBody }: any) => bindCopyBtns(markdownBody) },
       { remark: (p: any) => p.use(remarkDirective).use(remarkContainer) },
-      { actions: [moreAction, imgAction(() => { if (!window.__pb) throw new Error('pb not initialized'); return window.__pb; }), containerAction] },
+      { actions: [moreAction, imgAction(), containerAction] },
     ];
 
     // ByteMD's Svelte types omit the constructor parameter — cast at boundary.

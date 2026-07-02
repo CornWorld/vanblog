@@ -30,8 +30,8 @@ export function remarkContainer() {
         node.name ||
         "";
       node.data = node.data || {};
-      (node.data as any).hName = "div";
-      (node.data as any).hProperties = {
+      node.data.hName = "div";
+      node.data.hProperties = {
         class: "custom-container " + (node.name || ""),
       };
       (node.children ??= [] as unknown[]).unshift({

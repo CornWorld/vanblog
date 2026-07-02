@@ -6,7 +6,7 @@ import ErrorNotice from '../../components/ErrorNotice.astro';
 import { requireAdmin } from '../../middleware';
 
 if (!Astro.locals.pb.authStore.isValid) {
-  return Astro.redirect('/_/');
+  return Astro.redirect('/login');
 }
 Astro.cache.set(false);
 
@@ -88,12 +88,12 @@ if (!denied) {
     </tbody>
   </table>
 
-  <script define:vars={{ ALL_PERMS }}>
-    const pb = window.__pb;
+  <script>
+    const pb = window.__pb!;
 
-    document.getElementById('new-user').addEventListener('submit', async (e) => {
+    document.getElementById('new-user')!.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const fd = new FormData(e.target);
+      const fd = new FormData(e.currentTarget as HTMLFormElement);
       try {
         await pb.collection('users').create({
           username: fd.get('username'),
@@ -105,36 +105,36 @@ if (!denied) {
           permissions: [],
         });
         location.reload();
-      } catch (err) { alert('新建失败: ' + err.message); }
+      } catch (err) { alert('新建失败: ' + (err as Error).message); }
     });
 
-    document.querySelectorAll('tr[data-id]').forEach((tr) => {
-      const id = tr.dataset.id;
-      tr.querySelector('.btn-save').onclick = async () => {
-        const perms = Array.from(tr.querySelectorAll('.f-perm:checked')).map((c) => c.value);
+    document.querySelectorAll<HTMLElement>('tr[data-id]').forEach((tr) => {
+      const id = tr.dataset.id!;
+      tr.querySelector<HTMLElement>('.btn-save')!.onclick = async () => {
+        const perms = Array.from(tr.querySelectorAll<HTMLInputElement>('.f-perm:checked')).map((c) => c.value);
         try {
           await pb.collection('users').update(id, {
-            nickname: tr.querySelector('.f-nickname').value,
-            role: tr.querySelector('.f-role').value,
+            nickname: tr.querySelector<HTMLInputElement>('.f-nickname')!.value,
+            role: tr.querySelector<HTMLSelectElement>('.f-role')!.value,
             permissions: perms,
           });
           alert('已保存');
-        } catch (err) { alert('保存失败: ' + err.message); }
+        } catch (err) { alert('保存失败: ' + (err as Error).message); }
       };
-      tr.querySelector('.btn-reset').onclick = async () => {
+      tr.querySelector<HTMLElement>('.btn-reset')!.onclick = async () => {
         const pw = prompt('输入新密码（留空取消）');
         if (!pw) return;
         try {
           await pb.collection('users').update(id, { password: pw, passwordConfirm: pw });
           alert('已重置');
-        } catch (err) { alert('重置失败: ' + err.message); }
+        } catch (err) { alert('重置失败: ' + (err as Error).message); }
       };
-      tr.querySelector('.btn-del').onclick = async () => {
+      tr.querySelector<HTMLElement>('.btn-del')!.onclick = async () => {
         if (!confirm('确定删除该用户？')) return;
         try {
           await pb.vanblog.users.delete(id);
           tr.remove();
-        } catch (err) { alert('删除失败: ' + err.message); }
+        } catch (err) { alert('删除失败: ' + (err as Error).message); }
       };
     });
   </script>

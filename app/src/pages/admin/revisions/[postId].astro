@@ -7,7 +7,7 @@ import { isAuthenticated, getAuthUser } from '../../../middleware';
 import type { Revision, Post } from '@vanblog/sdk';
 
 if (!isAuthenticated(Astro)) {
-  return Astro.redirect('/_/');
+  return Astro.redirect('/login');
 }
 
 Astro.cache.set(false);
@@ -50,7 +50,7 @@ if (!notFound && !denied) {
   // someone else's post. Distinguish "no history" from "no access":
   // collaborators reading their own post legitimately see empty too, so we
   // only mark denied=true when the post's author isn't the current user.
-  if (!isAdmin && post && (post as any).author !== user?.id && revs.length === 0) {
+  if (!isAdmin && post && post.author !== user?.id && revs.length === 0) {
     denied = true;
     Astro.response.status = 403;
   }

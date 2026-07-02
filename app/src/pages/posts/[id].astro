@@ -2,26 +2,59 @@
 export const prerender = false;
 
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import ErrorNotice from '../../components/ErrorNotice.astro';
 import { getLiveEntry } from 'astro:content';
+import { isAuthenticated } from '../../middleware';
+import { renderMarkdown } from '../../lib/markdown/renderer';
+import { normalizeMathDelimiters } from '../../lib/markdown/normalizeMathDelimiters';
+import type { Post } from '@vanblog/sdk';
 
 const { id } = Astro.params;
 if (!id) return Astro.redirect('/404');
 
-const { entry: post, error } = await getLiveEntry('posts', { id });
-if (error || !post) return Astro.redirect('/404');
+// Anonymous path first: live loader applies posts ViewRule, which excludes
+// private/draft/deleted. On miss, fall back to the authenticated client —
+// logged-in users (admin or author) can preview their own private/draft work.
+const { entry: post } = await getLiveEntry('posts', { id });
 
-const created = new Date(post.data.created).toLocaleDateString('zh-CN');
+let data: Post | null = post?.data || null;
+let html: string | null = post?.rendered?.html || null;
+
+if (!data) {
+  // Anonymous visitor hitting a private/draft post → send to login so they
+  // can come back as the author/admin. Returning a bare 404 here would
+  // confuse authors who just toggled "private" in the editor.
+  if (!isAuthenticated(Astro)) {
+    const back = encodeURIComponent(`/posts/${id}`);
+    return Astro.redirect(`/login?back=${back}`);
+  }
+  try {
+    const pb = Astro.locals.pb;
+    const raw = await pb.collection('posts').getOne<Post>(id);
+    const content = normalizeMathDelimiters(raw.content || '');
+    html = (await renderMarkdown(content)).code;
+    data = raw;
+  } catch {
+    // Not found OR blocked by ViewRule even when authenticated.
+    Astro.response.status = 404;
+  }
+}
 ---
 
-<BaseLayout title={post.data.title} post={post.data} path={`/posts/${id}`}>
-  <article>
-    <h1>{post.data.title}</h1>
-    <p><small>发表于 {created}</small></p>
-    <!-- Live collection: HTML already rendered by the loader via createMarkdownProcessor.
-         For build-time (SSG), replace with: import { render } from 'astro:content';
-         const { Content } = await render(post); <Content /> -->
-    <div set:html={post.rendered!.html} />
-  </article>
+<BaseLayout title={data?.title || '文章不存在'} post={data || undefined} path={`/posts/${id}`}>
+  {data && html !== null ? (
+    <article>
+      <h1>{data.title}</h1>
+      <p><small>
+        发表于 {new Date(data.created).toLocaleDateString('zh-CN')}
+        {data.private && <span class="ml-2 text-[var(--color-text-muted)]">· 私有</span>}
+        {data.status !== 'published' && <span class="ml-2 text-[var(--color-text-muted)]">· {data.status}</span>}
+      </small></p>
+      <div set:html={html} />
+    </article>
+  ) : (
+    <ErrorNotice code="404" title="文章不存在" message="该文章可能已被删除、未发布，或你没有访问权限。" />
+  )}
   <hr />
   <p><a href="/">← 返回首页</a></p>
 </BaseLayout>

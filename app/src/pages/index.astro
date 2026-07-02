@@ -10,8 +10,7 @@ const page = Math.max(1, parseInt(Astro.url.searchParams.get('page') || '1') || 
 
 let posts: Post[] = [];
 let totalPages = 1;
-let totalItems = 0;
-let error = false;
+let loadError = false;
 
 try {
   const pb = Astro.locals.pb;
@@ -22,17 +21,16 @@ try {
   });
   posts = result.items;
   totalPages = result.totalPages;
-  totalItems = result.totalItems;
 } catch (e) {
   console.error('[index] Failed to load posts:', e);
-  error = true;
+  loadError = true;
 }
 
 function excerpt(md: string | undefined, max = 150): string {
   if (!md) return '';
   const text = md
     .replace(/<[^>]*>/g, '')
-    .replace(/[#*_`~\[\]()!>-]/g, '')
+    .replace(/[#*_`~[\]()!>-]/g, '')
     .replace(/\n+/g, ' ')
     .trim();
   return text.length > max ? text.slice(0, max) + '...' : text;
@@ -40,7 +38,7 @@ function excerpt(md: string | undefined, max = 150): string {
 ---
 <BaseLayout title="首页" path="/">
   {
-    error ? (
+    loadError ? (
       <ErrorState />
     ) : posts.length === 0 ? (
       <p class="py-12 text-center text-[var(--color-text-muted)]">暂无文章。</p>
@@ -77,7 +75,7 @@ function excerpt(md: string | undefined, max = 150): string {
     )
   }
 
-  {!error && totalPages > 1 && (
+  {!loadError && totalPages > 1 && (
     <nav class="flex justify-center gap-4 mt-10 pt-6 border-t border-[var(--color-border)]">
       {page > 1 ? (
         <a href={`/?page=${page - 1}`} class="inline-flex items-center px-4 py-2 rounded-lg font-medium text-sm bg-[var(--color-accent)] text-white hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed">← 上一页</a>

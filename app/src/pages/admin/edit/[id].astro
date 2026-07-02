@@ -3,16 +3,15 @@ export const prerender = false;
 
 import BaseLayout from '../../../layouts/BaseLayout.astro';
 import ErrorNotice from '../../../components/ErrorNotice.astro';
-import { isAuthenticated, getAuthUser, hasPermission } from '../../../middleware';
+import { getAuthUser, hasPermission } from '../../../middleware';
 import ByteMdEditor from '../../../components/ByteMdEditor.astro';
 import type { Post, Tag, Category } from '@vanblog/sdk';
 
 const user = getAuthUser(Astro);
-if (!user) return Astro.redirect('/_/');
+if (!user) return Astro.redirect('/login');
 
 Astro.cache.set(false);
 
-const isEditingExisting = !!Astro.url.pathname.match(/\/admin\/edit\/[^/]+$/);
 const canEdit = hasPermission(Astro, 'article:create') || hasPermission(Astro, 'article:update');
 // Inline 403 instead of silent redirect to /admin — same UX rationale as
 // the other admin pages.
@@ -52,9 +51,9 @@ if (!denied && !notFound) {
 const site = await Astro.locals.getSite();
 const mediaConfig = site?.mediaConfig;
 
-const currentTagIds: string[] = Array.isArray((post as any).tags) ? (post as any).tags : [];
-const currentCatId: string = (post as any).category || '';
-const currentAuthorId: string = (post as any).author || user.id;
+const currentTagIds: string[] = Array.isArray(post.tags) ? post.tags : [];
+const currentCatId: string = post.category || '';
+const currentAuthorId: string = post.author || user.id;
 ---
 <BaseLayout title={isNew ? '新建文章' : '编辑文章'}>
   <h1>{isNew ? '新建文章' : '编辑文章'}</h1>

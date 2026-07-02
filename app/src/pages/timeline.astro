@@ -10,7 +10,7 @@ let error = false;
 
 try {
   const pb = Astro.locals.pb;
-  entries = await (pb as any).vanblog.timeline.list();
+  entries = await pb.vanblog.timeline.list();
 } catch (e) {
   console.error('[timeline] Failed to load:', e);
   error = true;
