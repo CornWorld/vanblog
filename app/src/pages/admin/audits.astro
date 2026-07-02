@@ -9,23 +9,48 @@ import { requireAdmin } from '../../middleware';
 // The previous behavior redirected both cases to /_, which told legitimate
 // non-admin users nothing about why they couldn't see the page.
 if (!Astro.locals.pb.authStore.isValid) {
-  return Astro.redirect('/_/');
+  return Astro.redirect('/login');
 }
 Astro.cache.set(false);
 
 const denied = !requireAdmin(Astro);
 if (denied) Astro.response.status = 403;
 
+const PER_PAGE = 50;
+const page = Math.max(1, parseInt(Astro.url.searchParams.get('page') || '1', 10) || 1);
+const action = (Astro.url.searchParams.get('action') || '').trim();
+const result = Astro.url.searchParams.get('result') || '';
+
+const parts: string[] = [];
+if (action) parts.push(`action ~ "${action.replace(/"/g, '\\"')}"`);
+if (result === 'success') parts.push(`result = "success"`);
+if (result === 'failure') parts.push(`result = "failure"`);
+const filter = parts.join(' && ');
+
 let audits: any[] = [];
+let totalAudits = 0;
+let totalPages = 1;
 if (!denied) {
   try {
-    audits = await Astro.locals.pb.collection('audits').getList(1, 100, {
+    const r = await Astro.locals.pb.collection('audits').getList(page, PER_PAGE, {
       sort: '-created',
       expand: 'actor',
-    }).then(r => r.items);
+      filter: filter || undefined,
+    });
+    audits = r.items;
+    totalAudits = r.totalItems;
+    totalPages = r.totalPages;
   } catch (e) {
     console.error('[admin/audits] load:', e);
   }
+}
+
+function pageHref(n: number): string {
+  const params = new URLSearchParams();
+  if (action) params.set('action', action);
+  if (result) params.set('result', result);
+  params.set('page', String(n));
+  return `/admin/audits?${params.toString()}`;
 }
 
 function expandName(a: any): string {
@@ -39,37 +64,63 @@ function expandName(a: any): string {
 
   {denied ? (
     <ErrorNotice code="403" title="无权限访问" message="审计日志仅管理员可见。" />
-  ) : audits.length === 0 ? (
-    <p>暂无审计记录。</p>
   ) : (
-    <table class="w-full border-collapse text-xs">
-      <thead>
-        <tr class="text-left border-b border-[var(--color-border)]">
-          <th>时间</th><th>用户</th><th>动作</th><th>目标</th><th>结果</th><th>IP</th><th>详情</th>
-        </tr>
-      </thead>
-      <tbody>
-        {audits.map(a => (
-          <tr class="border-b border-[var(--color-border)] align-top">
-            <td><small>{new Date(a.created).toLocaleString('zh-CN')}</small></td>
-            <td>{expandName(a)}</td>
-            <td>{a.action}</td>
-            <td class="break-all">{a.target}</td>
-            <td>{a.result === 'failure' ? (
-              <span class="text-red-600">失败</span>
-            ) : <span class="text-green-600">成功</span>}</td>
-            <td><small>{a.ip || '-'}</small></td>
-            <td>
-              {a.detail && (
-                <details>
-                  <summary class="cursor-pointer">查看</summary>
-                  <pre class="whitespace-pre-wrap text-[11px] bg-gray-50 p-1">{JSON.stringify(a.detail, null, 2)}</pre>
-                </details>
-              )}
-            </td>
+    <>
+    <form method="get" class="flex gap-2 flex-wrap items-center my-3 text-sm">
+      <input name="action" value={action} placeholder="动作关键字 (如 auth.login)" class="px-1.5 py-0.5 w-56" />
+      <select name="result" class="px-1.5 py-0.5">
+        <option value="" selected={!result}>全部结果</option>
+        <option value="success" selected={result === 'success'}>成功</option>
+        <option value="failure" selected={result === 'failure'}>失败</option>
+      </select>
+      <button type="submit">筛选</button>
+      {(action || result) && <a href="/admin/audits" class="text-[var(--color-text-muted)]">清除</a>}
+    </form>
+
+    {audits.length === 0 ? (
+      <p>{(action || result) ? '没有匹配的记录。' : '暂无审计记录。'}</p>
+    ) : (
+      <table class="w-full border-collapse text-xs">
+        <thead>
+          <tr class="text-left border-b border-[var(--color-border)]">
+            <th>时间</th><th>用户</th><th>动作</th><th>目标</th><th>结果</th><th>IP</th><th>详情</th>
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {audits.map(a => (
+            <tr class="border-b border-[var(--color-border)] align-top">
+              <td><small>{new Date(a.created).toLocaleString('zh-CN')}</small></td>
+              <td>{expandName(a)}</td>
+              <td>{a.action}</td>
+              <td class="break-all">{a.target}</td>
+              <td>{a.result === 'failure' ? (
+                <span class="text-red-600">失败</span>
+              ) : <span class="text-green-600">成功</span>}</td>
+              <td><small>{a.ip || '-'}</small></td>
+              <td>
+                {a.detail && (
+                  <details>
+                    <summary class="cursor-pointer">查看</summary>
+                    <pre class="whitespace-pre-wrap text-[11px] bg-gray-50 p-1">{JSON.stringify(a.detail, null, 2)}</pre>
+                  </details>
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    )}
+
+    <p class="text-xs text-[var(--color-text-muted)] mt-2">
+      共 {totalAudits} 条 · 第 {page}/{totalPages} 页
+    </p>
+
+    {totalPages > 1 && (
+      <nav class="flex gap-2 mt-2 text-sm" aria-label="分页">
+        {page > 1 && <a href={pageHref(page - 1)} class="px-2 py-0.5 border rounded">上一页</a>}
+        {page < totalPages && <a href={pageHref(page + 1)} class="px-2 py-0.5 border rounded">下一页</a>}
+      </nav>
+    )}
+    </>
   )}
 </BaseLayout>

@@ -2,12 +2,11 @@
 export const prerender = false;
 
 import BaseLayout from '../../layouts/BaseLayout.astro';
-import { isAuthenticated, getAuthUser } from '../../middleware';
+import { isAuthenticated } from '../../middleware';
 import type { Tag } from '@vanblog/sdk';
 
-if (!isAuthenticated(Astro)) return Astro.redirect('/_/');
+if (!isAuthenticated(Astro)) return Astro.redirect('/login');
 Astro.cache.set(false);
-const user = getAuthUser(Astro);
 
 let tags: Tag[] = [];
 try {

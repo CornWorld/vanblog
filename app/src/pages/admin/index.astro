@@ -6,7 +6,7 @@ import { isAuthenticated, getAuthUser, hasPermission } from '../../middleware';
 import type { Post } from '@vanblog/sdk';
 
 if (!isAuthenticated(Astro)) {
-  return Astro.redirect('/_/');
+  return Astro.redirect('/login');
 }
 
 Astro.cache.set(false);
@@ -16,7 +16,21 @@ const isAdmin = user?.role === 'admin';
 const canEditPost = !!hasPermission(Astro, 'article:create') || !!hasPermission(Astro, 'article:update');
 const canDeletePost = !!hasPermission(Astro, 'article:delete');
 
+const PER_PAGE = 20;
+const page = Math.max(1, parseInt(Astro.url.searchParams.get('page') || '1', 10) || 1);
+const q = (Astro.url.searchParams.get('q') || '').trim();
+const status = Astro.url.searchParams.get('status') || '';
+
+// pb filter: title ~ q AND status == X (when provided). Empty filter means
+// "all active posts" — deleted rows are excluded by the ListRule already.
+const parts: string[] = [];
+if (q) parts.push(`title ~ "${q.replace(/"/g, '\\"')}"`);
+if (status) parts.push(`status = "${status}"`);
+const filter = parts.join(' && ');
+
 let posts: Post[] = [];
+let totalPosts = 0;
+let totalPages = 1;
 
 try {
   const pb = Astro.locals.pb;
@@ -25,15 +39,25 @@ try {
   // reachable only via /admin/trash (GET /api/vanblog/posts/trash, gated by
   // Go-side canManagePosts). This list shows active posts: drafts/hidden are
   // visible to any authenticated user, deleted rows are intentionally absent.
-  const result = await pb.collection('posts').getList<Post>(1, 50, {
+  const result = await pb.collection('posts').getList<Post>(page, PER_PAGE, {
     sort: '-updated',
+    filter: filter || undefined,
   });
   posts = result.items;
+  totalPosts = result.totalItems;
+  totalPages = result.totalPages;
 } catch (e) {
   console.error('[admin] Failed to load posts:', e);
 }
 
-function checked(v: boolean) { return v ? '✓' : '·'; }
+// Build a pagination link preserving current filters.
+function pageHref(n: number): string {
+  const params = new URLSearchParams();
+  if (q) params.set('q', q);
+  if (status) params.set('status', status);
+  params.set('page', String(n));
+  return `/admin?${params.toString()}`;
+}
 ---
 <BaseLayout title="管理">
   <h1>文章管理</h1>
@@ -46,6 +70,7 @@ function checked(v: boolean) { return v ? '✓' : '·'; }
     {canEditPost && <a href="/admin/trash">回收站</a>}
     {isAdmin && <a href="/admin/users">用户</a>}
     {isAdmin && <a href="/admin/site">站点</a>}
+    {isAdmin && <a href="/admin/routing">路由</a>}
     {isAdmin && <a href="/admin/audits">审计</a>}
   </nav>
 
@@ -56,9 +81,22 @@ function checked(v: boolean) { return v ? '✓' : '·'; }
     )}
   </p>
 
+  <form method="get" class="flex gap-2 flex-wrap items-center my-3 text-sm">
+    <input name="q" value={q} placeholder="标题关键字" class="px-1.5 py-0.5 w-48" />
+    <select name="status" class="px-1.5 py-0.5">
+      <option value="" selected={!status}>全部状态</option>
+      <option value="draft" selected={status === 'draft'}>draft</option>
+      <option value="published" selected={status === 'published'}>published</option>
+      <option value="hidden" selected={status === 'hidden'}>hidden</option>
+    </select>
+    <button type="submit">筛选</button>
+    {(q || status) && <a href="/admin" class="text-[var(--color-text-muted)]">清除</a>}
+  </form>
+
   {posts.length === 0 ? (
-    <p>暂无文章。{canEditPost && <a href="/admin/new">创建第一篇</a>}</p>
+    <p>{(q || status) ? '没有匹配的文章。' : '暂无文章。'}{canEditPost && !(q || status) && <a href="/admin/new">创建第一篇</a>}</p>
   ) : (
+    <>
     <table class="w-full border-collapse">
       <thead>
         <tr class="text-left border-b border-[var(--color-border)]">
@@ -86,6 +124,18 @@ function checked(v: boolean) { return v ? '✓' : '·'; }
         ))}
       </tbody>
     </table>
+
+    <p class="text-xs text-[var(--color-text-muted)] mt-2">
+      共 {totalPosts} 篇 · 第 {page}/{totalPages} 页
+    </p>
+
+    {totalPages > 1 && (
+      <nav class="flex gap-2 mt-2 text-sm" aria-label="分页">
+        {page > 1 && <a href={pageHref(page - 1)} class="px-2 py-0.5 border rounded">上一页</a>}
+        {page < totalPages && <a href={pageHref(page + 1)} class="px-2 py-0.5 border rounded">下一页</a>}
+      </nav>
+    )}
+    </>
   )}
 
   <script define:vars={{}}>

@@ -5,7 +5,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 import { isAuthenticated } from '../../middleware';
 import type { Category } from '@vanblog/sdk';
 
-if (!isAuthenticated(Astro)) return Astro.redirect('/_/');
+if (!isAuthenticated(Astro)) return Astro.redirect('/login');
 Astro.cache.set(false);
 
 let cats: Category[] = [];

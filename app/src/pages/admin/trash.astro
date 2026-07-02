@@ -6,7 +6,7 @@ import ErrorNotice from '../../components/ErrorNotice.astro';
 import { isAuthenticated, getAuthUser, hasPermission } from '../../middleware';
 import type { TrashEntry } from '@vanblog/sdk';
 
-if (!isAuthenticated(Astro)) return Astro.redirect('/_/');
+if (!isAuthenticated(Astro)) return Astro.redirect('/login');
 Astro.cache.set(false);
 
 const user = getAuthUser(Astro);
