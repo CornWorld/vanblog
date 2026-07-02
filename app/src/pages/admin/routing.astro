@@ -1,0 +1,210 @@
+---
+export const prerender = false;
+
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import ErrorNotice from '../../components/ErrorNotice.astro';
+import { isAuthenticated, requireAdmin } from '../../middleware';
+import type { RouteRule } from '@vanblog/sdk';
+
+if (!isAuthenticated(Astro)) return Astro.redirect('/login');
+Astro.cache.set(false);
+
+const denied = !requireAdmin(Astro);
+if (denied) Astro.response.status = 403;
+
+let rules: RouteRule[] = [];
+let allowlist: string[] = [];
+let loadError = '';
+if (!denied) {
+  try {
+    const r = await Astro.locals.pb.vanblog.routing.list();
+    rules = r.rules || [];
+    allowlist = r.allowlist || [];
+  } catch (e) {
+    loadError = (e as Error).message;
+  }
+}
+
+const TYPE_OPTIONS = ['proxy', 'redirect', 'rewrite', 'block', 'cache'];
+---
+
+<BaseLayout title="路由配置">
+  <h1>路由配置</h1>
+  <p><a href="/admin">← 返回</a></p>
+
+  {denied ? (
+    <ErrorNotice code="403" title="无权限访问" message="路由配置仅管理员可编辑。" />
+  ) : (
+    <>
+    {loadError && (
+      <p class="text-red-600 text-sm mb-2">加载失败：{loadError}</p>
+    )}
+
+    <p class="text-xs text-[var(--color-text-muted)] mb-3">
+      用户路由在 vanblog 保留路径（/api/*、/static/*、/admin/*、feed/sitemap 等）之后匹配，不会覆盖内部接口。
+      proxy 类目标的 host 必须命中私有网段或下方 allowlist，否则保存会被拒绝。
+    </p>
+
+    <table class="w-full border-collapse text-sm">
+      <thead>
+        <tr class="text-left border-b border-[var(--color-border)]">
+          <th class="w-32">ID</th>
+          <th class="w-24">类型</th>
+          <th class="w-56">From (路径)</th>
+          <th class="w-56">To (目标)</th>
+          <th class="w-20">Code</th>
+          <th>Headers</th>
+          <th class="w-24">操作</th>
+        </tr>
+      </thead>
+      <tbody id="rules-body">
+        {rules.map((r, i) => (
+          <tr class="border-b border-[var(--color-border)] align-top" data-row={i}>
+            <td><input class="f-id w-full px-1 py-0.5 font-mono text-xs" value={r.id} /></td>
+            <td>
+              <select class="f-type px-1 py-0.5">
+                {TYPE_OPTIONS.map(t => <option value={t} selected={r.type === t}>{t}</option>)}
+              </select>
+            </td>
+            <td><input class="f-from w-full px-1 py-0.5 font-mono text-xs" value={r.from} placeholder="/docs/*" /></td>
+            <td><input class="f-to w-full px-1 py-0.5 font-mono text-xs" value={r.to} placeholder="http://localhost:3000/*" /></td>
+            <td><input class="f-code w-full px-1 py-0.5" type="number" value={r.code || ''} placeholder="301" /></td>
+            <td><input class="f-headers w-full px-1 py-0.5 font-mono text-xs" value={r.headers ? JSON.stringify(r.headers) : ''} placeholder='{"X-Key":"v"}' /></td>
+            <td class="flex gap-2">
+              <button type="button" class="btn-test text-xs">试一下</button>
+              <button type="button" class="btn-del text-red-600 text-xs">删除</button>
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+
+    <div class="flex gap-2 mt-3">
+      <button type="button" id="btn-add" class="px-2 py-0.5 border rounded">+ 添加规则</button>
+      <button type="button" id="btn-save" class="px-3 py-0.5 bg-[var(--color-accent)] text-white rounded">保存</button>
+      <button type="button" id="btn-apply" class="px-3 py-0.5 border rounded">立即应用</button>
+      <span id="save-status" class="text-xs text-[var(--color-text-muted)] self-center"></span>
+    </div>
+
+    <details class="mt-6">
+      <summary class="cursor-pointer text-sm">SSRF allowlist（高级）</summary>
+      <p class="text-xs text-[var(--color-text-muted)] mt-1 mb-2">
+        默认只允许 proxy 指向私有网段（127.0.0.1 / 10.x / 172.16-31.x / 192.168.x）。如需代理到外部主机，把 host 加入下方列表（每行一个，支持 <code>*.example.com</code> 通配）。
+      </p>
+      <textarea id="allowlist" rows="4" class="w-full font-mono text-xs px-2 py-1 border rounded" placeholder={'my-service.internal\n*.orb.local'}>{allowlist.join('\n')}</textarea>
+    </details>
+    </>
+  )}
+
+  <script define:vars={{ TYPE_OPTIONS }}>
+    const pb = window.__pb;
+    const tbody = document.getElementById('rules-body');
+    const status = document.getElementById('save-status');
+    const allowlistEl = document.getElementById('allowlist');
+
+    function newRow() {
+      const tr = document.createElement('tr');
+      tr.className = 'border-b border-[var(--color-border)] align-top';
+      tr.innerHTML = `
+        <td><input class="f-id w-full px-1 py-0.5 font-mono text-xs" placeholder="rule-id" /></td>
+        <td><select class="f-type px-1 py-0.5">${TYPE_OPTIONS.map(t => `<option value="${t}">${t}</option>`).join('')}</select></td>
+        <td><input class="f-from w-full px-1 py-0.5 font-mono text-xs" placeholder="/docs/*" /></td>
+        <td><input class="f-to w-full px-1 py-0.5 font-mono text-xs" placeholder="http://localhost:3000/*" /></td>
+        <td><input class="f-code w-full px-1 py-0.5" type="number" placeholder="301" /></td>
+        <td><input class="f-headers w-full px-1 py-0.5 font-mono text-xs" placeholder='{"X-Key":"v"}' /></td>
+        <td class="flex gap-2">
+          <button type="button" class="btn-test text-xs">试一下</button>
+          <button type="button" class="btn-del text-red-600 text-xs">删除</button>
+        </td>
+      `;
+      bindRow(tr);
+      tbody.appendChild(tr);
+    }
+
+    function readRow(tr) {
+      const headersRaw = tr.querySelector('.f-headers').value.trim();
+      let headers = undefined;
+      if (headersRaw) {
+        try { headers = JSON.parse(headersRaw); }
+        catch { throw new Error('Headers 不是合法 JSON：' + headersRaw); }
+      }
+      return {
+        id: tr.querySelector('.f-id').value.trim(),
+        type: tr.querySelector('.f-type').value,
+        from: tr.querySelector('.f-from').value.trim(),
+        to: tr.querySelector('.f-to').value.trim(),
+        code: Number(tr.querySelector('.f-code').value) || undefined,
+        headers,
+      };
+    }
+
+    function getAllowlist() {
+      return allowlistEl.value.split('\n').map(s => s.trim()).filter(Boolean);
+    }
+
+    function bindRow(tr) {
+      tr.querySelector('.btn-del').addEventListener('click', () => tr.remove());
+      tr.querySelector('.btn-test').addEventListener('click', async () => {
+        let rule;
+        try { rule = readRow(tr); } catch (e) { alert(e.message); return; }
+        status.textContent = '校验中…';
+        try {
+          const r = await pb.vanblog.routing.validate(rule, getAllowlist());
+          if (r.ok) {
+            status.textContent = `✓ ${rule.id || '(新规则)'} 校验通过`;
+          } else {
+            status.textContent = `✗ ${rule.id || '(新规则)'}：${r.error || '未知错误'}`;
+          }
+        } catch (e) {
+          status.textContent = '校验请求失败：' + e.message;
+        }
+      });
+    }
+
+    document.querySelectorAll('#rules-body tr').forEach(bindRow);
+
+    document.getElementById('btn-add').addEventListener('click', newRow);
+
+    document.getElementById('btn-save').addEventListener('click', async () => {
+      if (!pb) return alert('未登录');
+      const rules = [];
+      try {
+        for (const tr of document.querySelectorAll('#rules-body tr')) {
+          rules.push(readRow(tr));
+        }
+      } catch (e) {
+        alert(e.message);
+        return;
+      }
+      status.textContent = '保存中…';
+      try {
+        const r = await pb.vanblog.routing.replace(rules, getAllowlist());
+        status.textContent = r.restart_needed
+          ? '已保存，重启 vanblog 后生效（或点"立即应用"）'
+          : '已保存';
+      } catch (e) {
+        status.textContent = '保存失败：' + e.message;
+        alert('保存失败：' + e.message);
+      }
+    });
+
+    document.getElementById('btn-apply').addEventListener('click', async () => {
+      if (!pb) return alert('未登录');
+      status.textContent = '应用中（最长可能 30s）…';
+      try {
+        const r = await pb.vanblog.routing.apply();
+        if (r.applied) {
+          status.textContent = '✓ 已应用到运行中的 Caddy';
+        } else if (r.error) {
+          status.textContent = '✗ 应用失败：' + r.error;
+          alert('应用失败：' + r.error);
+        } else {
+          status.textContent = '未应用：' + JSON.stringify(r);
+        }
+      } catch (e) {
+        status.textContent = '应用请求失败：' + e.message;
+        alert('应用请求失败：' + e.message);
+      }
+    });
+  </script>
+</BaseLayout>
