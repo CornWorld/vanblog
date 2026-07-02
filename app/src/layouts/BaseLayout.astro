@@ -16,6 +16,11 @@ const { title, description, site: siteProp, post, path } = Astro.props;
 // Fall back to site config from middleware (lazy-loaded from pb)
 const site = siteProp || await Astro.locals.getSite();
 
+// Auth state for nav: show logout only when there's a session. About link
+// is conditional on the admin having written any aboutContent.
+const isLoggedIn = Astro.locals.pb.authStore.isValid;
+const hasAbout = !!(site?.aboutContent && site.aboutContent.trim());
+
 const siteName = site?.siteName || 'Vanblog';
 const siteDesc = description || site?.siteDesc || '';
 const baseUrl = site?.baseUrl || '';
@@ -32,7 +37,7 @@ function excerpt(md: string | undefined, max = 160): string {
   const stripped = md.replace(/<[^>]*>/g, '');
   const text = stripped
     .replace(/^#+\s+/gm, '')
-    .replace(/[*_`~\[\]()!#>-]/g, '')
+    .replace(/[*_`~[\]()!#>-]/g, '')
     .replace(/\n+/g, ' ')
     .trim();
   return text.length > max ? text.slice(0, max) + '...' : text;
@@ -125,7 +130,17 @@ const websiteSchema = {
           <a href="/tags" class="px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors hidden sm:inline">标签</a>
           <a href="/categories" class="px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors hidden sm:inline">分类</a>
           <a href="/search" class="px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">搜索</a>
-          <a href="/admin" class="px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">管理</a>
+          {hasAbout && (
+            <a href="/about" class="px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors hidden sm:inline">关于</a>
+          )}
+          {isLoggedIn ? (
+            <a href="/admin" class="px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">管理</a>
+          ) : (
+            <a href="/login" class="px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">登录</a>
+          )}
+          {isLoggedIn && (
+            <button id="logout-btn" type="button" class="px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" aria-label="退出登录" title="退出登录">退出</button>
+          )}
           <button id="theme-toggle" class="ml-1 px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-lg" aria-label="切换主题" title="切换深色/浅色主题">
             <span class="dark:hidden">🌙</span>
             <span class="hidden dark:inline">☀️</span>
@@ -147,7 +162,7 @@ const websiteSchema = {
       </div>
     </footer>
 
-    <!-- Theme toggle logic -->
+    <!-- Theme toggle + logout logic -->
     <script>
       const btn = document.getElementById('theme-toggle');
       const html = document.documentElement;
@@ -155,6 +170,18 @@ const websiteSchema = {
         html.classList.toggle('dark');
         const isDark = html.classList.contains('dark');
         localStorage.setItem('vanblog-theme', isDark ? 'dark' : 'light');
+      });
+
+      const logoutBtn = document.getElementById('logout-btn');
+      logoutBtn?.addEventListener('click', async () => {
+        const pb = window.__pb;
+        if (pb) {
+          pb.authStore.clear();
+          // Force the cookie to expire — middleware only re-exports when
+          // isValid, so we must clear it client-side too.
+          document.cookie = 'pb_auth=; Path=/; Max-Age=0; SameSite=Lax';
+        }
+        location.href = '/';
       });
     </script>
   </body>
