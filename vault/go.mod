@@ -3,13 +3,14 @@ module github.com/cornworld/vanblog
 go 1.26.4
 
 require (
+	github.com/brianvoe/gofakeit/v7 v7.15.0
 	github.com/pocketbase/dbx v1.12.0
 	github.com/pocketbase/pocketbase v0.39.4
+	github.com/spf13/cobra v1.10.2
 )
 
 require (
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 // indirect
-	github.com/brianvoe/gofakeit/v7 v7.15.0 // indirect
 	github.com/disintegration/imaging v1.6.2 // indirect
 	github.com/dlclark/regexp2/v2 v2.2.1 // indirect
 	github.com/domodwyer/mailyak/v3 v3.6.2 // indirect
@@ -32,7 +33,6 @@ require (
 	github.com/ncruces/go-strftime v1.0.0 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/spf13/cast v1.10.0 // indirect
-	github.com/spf13/cobra v1.10.2 // indirect
 	github.com/spf13/pflag v1.0.10 // indirect
 	golang.org/x/crypto v0.52.0 // indirect
 	golang.org/x/image v0.41.0 // indirect

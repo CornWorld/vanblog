@@ -20,6 +20,11 @@ export interface Post {
   deleted: boolean;
   created: string;
   updated: string;
+  /** PocketBase expand — populated when querying with `expand: 'category,tags,...'` */
+  expand?: {
+    category?: Category;
+    tags?: Tag[];
+  };
 }
 
 export interface Tag {

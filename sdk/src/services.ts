@@ -6,6 +6,7 @@ import type {
   MigrationResult,
   TrashEntry,
   SiteConfig,
+  RouteRule,
 } from './types';
 
 // PocketBase js-sdk's send() parses non-JSON responses into objects.
@@ -55,6 +56,12 @@ export interface VanblogServices {
   };
   users: {
     delete(id: string): Promise<void>;
+  };
+  routing: {
+    list(): Promise<{ rules: RouteRule[]; allowlist: string[] }>;
+    replace(rules: RouteRule[], allowlist: string[]): Promise<{ applied: boolean; restart_needed: boolean }>;
+    validate(rule: RouteRule, allowlist?: string[]): Promise<{ ok: boolean; error?: string }>;
+    apply(): Promise<{ applied: boolean; restart_needed: boolean; error?: string }>;
   };
 }
 
@@ -129,6 +136,27 @@ export function createVanblogServices(pb: PocketBase): VanblogServices {
     users: {
       delete: (id: string) =>
         pb.send(`/api/vanblog/users/${id}`, { method: 'DELETE' }) as Promise<void>,
+    },
+    routing: {
+      list: () =>
+        pb.send('/api/vanblog/routing/rules', { method: 'GET' }) as Promise<{
+          rules: RouteRule[];
+          allowlist: string[];
+        }>,
+      replace: (rules, allowlist) =>
+        pb.send('/api/vanblog/routing/rules', {
+          method: 'PUT',
+          body: { rules, allowlist },
+        }) as Promise<{ applied: boolean; restart_needed: boolean }>,
+      validate: (rule, allowlist = []) =>
+        pb.send('/api/vanblog/routing/validate', {
+          method: 'POST',
+          body: { rule, allowlist },
+        }) as Promise<{ ok: boolean; error?: string }>,
+      apply: () =>
+        pb.send('/api/vanblog/routing/apply', {
+          method: 'POST',
+        }) as Promise<{ applied: boolean; restart_needed: boolean; error?: string }>,
     },
   };
 }
