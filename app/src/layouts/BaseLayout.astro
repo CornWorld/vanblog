@@ -1,7 +1,11 @@
 ---
 import '../styles/global.css';
+// KaTeX CSS — required to hide the MathML aria-hidden output that rehype-katex
+// generates alongside the visual HTML. Without this, both versions render and
+// the article displays duplicated math. Loaded globally (not just in editor)
+// because post content is rendered server-side via markdown pipeline.
+import 'katex/dist/katex.css';
 import type { SiteConfig, Post } from '@vanblog/sdk';
-import PbInit from '../components/PbInit.astro';
 
 interface Props {
   title: string;
@@ -117,31 +121,30 @@ const websiteSchema = {
     )}
   </head>
   <body class="min-h-screen flex flex-col">
-    <PbInit />
-    <header class="sticky top-0 z-10 border-b border-[var(--color-border)] bg-[var(--color-bg)]/95 backdrop-blur-sm">
+    <header class="sticky top-0 z-10 border-b border-[var(--color-border)] bg-[var(--color-surface)] dark:bg-[var(--color-surface-dark)] backdrop-blur-sm">
       <div class="container-page flex items-center justify-between h-14 gap-4">
-        <a href="/" class="font-bold text-lg text-[var(--color-text)] no-underline hover:opacity-80">
+        <a href="/" class="font-bold text-lg text-[var(--color-text)] dark:text-[var(--color-text-dark)] no-underline hover:opacity-80">
           {siteName}
         </a>
-        <nav class="flex items-center gap-1 sm:gap-2 text-sm">
-          <a href="/" class="px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">首页</a>
-          <a href="/archive" class="px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">归档</a>
-          <a href="/timeline" class="px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">时间轴</a>
-          <a href="/tags" class="px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors hidden sm:inline">标签</a>
-          <a href="/categories" class="px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors hidden sm:inline">分类</a>
-          <a href="/search" class="px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">搜索</a>
+        <nav class="flex items-center gap-1 sm:gap-2 text-sm text-[var(--color-text)] dark:text-[var(--color-text-dark)]">
+          <a href="/" class="px-2 py-1 rounded hover:bg-[var(--color-border)] dark:hover:bg-[var(--color-border-dark)] transition-colors no-underline text-inherit">首页</a>
+          <a href="/archive" class="px-2 py-1 rounded hover:bg-[var(--color-border)] dark:hover:bg-[var(--color-border-dark)] transition-colors no-underline text-inherit">归档</a>
+          <a href="/timeline" class="px-2 py-1 rounded hover:bg-[var(--color-border)] dark:hover:bg-[var(--color-border-dark)] transition-colors no-underline text-inherit">时间轴</a>
+          <a href="/tags" class="px-2 py-1 rounded hover:bg-[var(--color-border)] dark:hover:bg-[var(--color-border-dark)] transition-colors no-underline text-inherit hidden sm:inline">标签</a>
+          <a href="/categories" class="px-2 py-1 rounded hover:bg-[var(--color-border)] dark:hover:bg-[var(--color-border-dark)] transition-colors no-underline text-inherit hidden sm:inline">分类</a>
+          <a href="/search" class="px-2 py-1 rounded hover:bg-[var(--color-border)] dark:hover:bg-[var(--color-border-dark)] transition-colors no-underline text-inherit">搜索</a>
           {hasAbout && (
-            <a href="/about" class="px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors hidden sm:inline">关于</a>
+            <a href="/about" class="px-2 py-1 rounded hover:bg-[var(--color-border)] dark:hover:bg-[var(--color-border-dark)] transition-colors no-underline text-inherit hidden sm:inline">关于</a>
           )}
           {isLoggedIn ? (
-            <a href="/admin" class="px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">管理</a>
+            <a href="/admin" class="px-2 py-1 rounded hover:bg-[var(--color-border)] dark:hover:bg-[var(--color-border-dark)] transition-colors no-underline text-inherit">管理</a>
           ) : (
-            <a href="/login" class="px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">登录</a>
+            <a href="/login" class="px-2 py-1 rounded hover:bg-[var(--color-border)] dark:hover:bg-[var(--color-border-dark)] transition-colors no-underline text-inherit">登录</a>
           )}
           {isLoggedIn && (
-            <button id="logout-btn" type="button" class="px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" aria-label="退出登录" title="退出登录">退出</button>
+            <button id="logout-btn" type="button" class="px-2 py-1 rounded hover:bg-[var(--color-border)] dark:hover:bg-[var(--color-border-dark)] transition-colors text-inherit" aria-label="退出登录" title="退出登录">退出</button>
           )}
-          <button id="theme-toggle" class="ml-1 px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-lg" aria-label="切换主题" title="切换深色/浅色主题">
+          <button id="theme-toggle" class="ml-1 px-2 py-1 rounded hover:bg-[var(--color-border)] dark:hover:bg-[var(--color-border-dark)] transition-colors text-lg" aria-label="切换主题" title="切换深色/浅色主题">
             <span class="dark:hidden">🌙</span>
             <span class="hidden dark:inline">☀️</span>
           </button>
@@ -173,14 +176,15 @@ const websiteSchema = {
       });
 
       const logoutBtn = document.getElementById('logout-btn');
-      logoutBtn?.addEventListener('click', async () => {
-        const pb = window.__pb;
-        if (pb) {
-          pb.authStore.clear();
-          // Force the cookie to expire — middleware only re-exports when
-          // isValid, so we must clear it client-side too.
-          document.cookie = 'pb_auth=; Path=/; Max-Age=0; SameSite=Lax';
-        }
+      logoutBtn?.addEventListener('click', () => {
+        // Cookie is the single source of truth (see middleware.ts). Clearing
+        // it is all that's needed — the next request's middleware sees no
+        // cookie, leaves authStore empty, and SSR renders the logged-out view.
+        // We also wipe localStorage so any in-flight client SDK calls don't
+        // reuse a stale token before the redirect lands.
+        document.cookie = 'pb_auth=; Path=/; Max-Age=0; SameSite=Lax';
+        try { localStorage.removeItem('pocketbase_auth'); } catch (_) {}
+        try { window.__pb?.authStore.clear(); } catch (_) {}
         location.href = '/';
       });
     </script>

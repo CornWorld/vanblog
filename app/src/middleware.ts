@@ -90,6 +90,52 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
   context.locals.pb = client;
 
+  const url = new URL(context.request.url);
+
+  // Refresh auth token server-side on every authenticated request. This is
+  // the official PocketBase SSR pattern (loadFromCookie → authRefresh → next
+  // → exportToCookie): it keeps the token alive before expiry and ensures
+  // the cookie written back in the response always carries a fresh token.
+  // Failure here means the token is invalid/expired — clear the store so
+  // getAuthUser() returns null and the page can redirect to /login.
+  if (client.authStore.isValid) {
+    try {
+      await client.collection("users").authRefresh();
+    } catch {
+      client.authStore.clear();
+    }
+  }
+
+  // Bootstrap mode routing: when no admin exists yet, push the operator
+  // to /setup instead of /login (which can't possibly work — there's no
+  // account to log into). The check is best-effort: if the status call
+  // fails we fall through to the normal auth flow rather than locking
+  // the operator out.
+  //
+  // We only redirect unauthenticated traffic. An already-logged-in user
+  // hitting /admin during bootstrap (e.g. after creating the first admin
+  // but before their cookie refreshed) should not be bounced.
+  if (!client.authStore.isValid && (url.pathname.startsWith("/admin") || url.pathname === "/login")) {
+    try {
+      const s = await client.vanblog.setup.status();
+      if (s.bootstrap) {
+        // Preserve the original destination as ?back= so /setup can
+        // route there after success.
+        const back = encodeURIComponent(url.pathname + url.search);
+        return context.redirect(`/setup?back=${back}`);
+      }
+    } catch {
+      // setup status unreachable — fall through to normal auth.
+    }
+  }
+
+  // All /admin/* routes require authentication — enforced here so
+  // individual pages don't need to repeat the check.
+  if (url.pathname.startsWith("/admin") && !client.authStore.isValid) {
+    const back = encodeURIComponent(url.pathname + url.search);
+    return context.redirect(`/login?back=${back}`);
+  }
+
   // Lazy site config — only fetched when a page actually calls getSite()
   context.locals.getSite = async () => {
     if (cachedSite && Date.now() - siteFetchTime < SITE_CACHE_TTL)
@@ -103,9 +149,24 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
   const response = await next();
 
+  // Re-export auth cookie on every response so the token stays fresh.
+  // Critical: must override PocketBase SDK defaults (secure=true, sameSite=strict,
+  // httpOnly=true) — those defaults are silently dropped by browsers when the
+  // site is served over plain HTTP (e.g. the dev container or any non-TLS
+  // deploy). Symptoms of breakage: cookie never sets after login, or appears
+  // "stuck" because the browser keeps using the last cookie it managed to
+  // accept. Match PbInit.astro's client-side options.
   try {
-    if (client.authStore.isValid)
-      response.headers.append("set-cookie", client.authStore.exportToCookie());
+    if (client.authStore.isValid) {
+      response.headers.append(
+        "set-cookie",
+        client.authStore.exportToCookie({
+          secure: url.protocol === "https:",
+          sameSite: "lax",
+          httpOnly: false,
+        })
+      );
+    }
   } catch {}
 
   return response;

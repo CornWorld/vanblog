@@ -2,6 +2,7 @@
 export const prerender = false;
 
 import BaseLayout from '../layouts/BaseLayout.astro';
+import PbInit from '../components/PbInit.astro';
 import { isAuthenticated } from '../middleware';
 
 // Already-logged-in users have no business on /login — bounce to /admin
@@ -13,12 +14,13 @@ Astro.cache.set(false);
 ---
 
 <BaseLayout title="登录">
+  <PbInit />
   <h1>登录</h1>
 
   <form id="login-form" class="flex flex-col gap-2 max-w-sm">
     <label class="flex flex-col">
-      邮箱
-      <input name="email" type="email" required autocomplete="username" class="px-1.5 py-0.5" />
+      邮箱 / 用户名
+      <input name="email" type="text" required autocomplete="username email" class="px-1.5 py-0.5" />
     </label>
     <label class="flex flex-col">
       密码
@@ -45,10 +47,20 @@ Astro.cache.set(false);
       }
       try {
         await pb.collection('users').authWithPassword(fd.get('email'), fd.get('password'));
+        // Cookie is the single source of truth for the SSR middleware.
+        // PbInit no longer syncs the cookie via onChange (that was the
+        // anti-pattern that caused state drift), so we write it explicitly
+        // here on login. Options must match middleware.ts's exportToCookie
+        // call so the browser actually accepts the cookie over HTTP.
+        document.cookie = pb.authStore.exportToCookie({
+          secure: window.location.protocol === 'https:',
+          sameSite: 'lax',
+          httpOnly: false,
+        });
         const back = fd.get('back');
         location.href = back || '/admin';
       } catch (err) {
-        errEl.textContent = '登录失败：' + (err?.message || '邮箱或密码错误');
+        errEl.textContent = '登录失败：' + (err?.message || '用户名/邮箱或密码错误');
         errEl.classList.remove('hidden');
       }
     });
