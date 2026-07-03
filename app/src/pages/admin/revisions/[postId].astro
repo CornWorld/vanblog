@@ -3,8 +3,8 @@ export const prerender = false;
 
 import AdminLayout from '../../../layouts/AdminLayout.astro';
 import ErrorNotice from '../../../components/ErrorNotice.astro';
-import { getAuthUser } from '../../../middleware';
-import { formatPbDate } from '../../../lib/dates';
+import { getAuthUser } from '@vanblog/sdk';
+import { formatPbDate } from '@vanblog/sdk';
 import type { Revision, Post } from '@vanblog/sdk';
 
 
@@ -15,7 +15,7 @@ const { postId } = Astro.params;
 const notFound = !postId;
 if (notFound) Astro.response.status = 404;
 
-const user = getAuthUser(Astro);
+const user = getAuthUser(Astro.locals.pb);
 const isAdmin = user?.role === 'admin';
 
 let post: Post | null = null;

@@ -2,13 +2,13 @@
 export const prerender = false;
 
 import AdminLayout from '../../layouts/AdminLayout.astro';
-import { hasPermission } from '../../middleware';
+import { hasPermission } from '@vanblog/sdk';
 import type { Media } from '@vanblog/sdk';
 
 Astro.cache.set(false);
 
 // Mirror Go-side canManageMedia: admin or article:delete holder.
-const canDelete = !!hasPermission(Astro, 'article:delete');
+const canDelete = !!hasPermission(Astro.locals.pb, 'article:delete');
 
 const PER_PAGE = 24;
 const page = Math.max(1, parseInt(Astro.url.searchParams.get('page') || '1', 10) || 1);

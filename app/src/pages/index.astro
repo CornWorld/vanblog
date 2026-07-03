@@ -3,6 +3,7 @@ export const prerender = false;
 
 import BaseLayout from '../layouts/BaseLayout.astro';
 import ErrorState from '../components/ErrorState.astro';
+import { stripMarkdown, formatPbDateOnly } from '@vanblog/sdk';
 import type { Post } from '@vanblog/sdk';
 
 const perPage = 10;
@@ -13,10 +14,7 @@ let totalPages = 1;
 let loadError = false;
 
 try {
-  const pb = Astro.locals.pb;
-  const result = await pb.collection('posts').getList<Post>(page, perPage, {
-    filter: 'status = "published" && deleted = false',
-    sort: '-created',
+  const result = await Astro.locals.pb.vanblog.posts.listPublished(page, perPage, {
     expand: 'category,tags',
   });
   posts = result.items;
@@ -24,16 +22,6 @@ try {
 } catch (e) {
   console.error('[index] Failed to load posts:', e);
   loadError = true;
-}
-
-function excerpt(md: string | undefined, max = 150): string {
-  if (!md) return '';
-  const text = md
-    .replace(/<[^>]*>/g, '')
-    .replace(/[#*_`~[\]()!>-]/g, '')
-    .replace(/\n+/g, ' ')
-    .trim();
-  return text.length > max ? text.slice(0, max) + '...' : text;
 }
 ---
 <BaseLayout title="首页" path="/">
@@ -52,7 +40,7 @@ function excerpt(md: string | undefined, max = 150): string {
               </a>
             </h2>
             <div class="flex items-center gap-3 text-sm text-[var(--color-text-muted)] mb-3">
-              <time datetime={post.created}>{new Date(post.created).toLocaleDateString('zh-CN')}</time>
+              <time datetime={post.created}>{formatPbDateOnly(post.created)}</time>
               {post.expand?.category && (
                 <a href={`/categories/${post.category}`} class="text-[var(--color-accent)]">
                   {post.expand.category.name}
@@ -61,7 +49,7 @@ function excerpt(md: string | undefined, max = 150): string {
             </div>
             {post.content && (
               <p class="text-[var(--color-text-muted)] text-sm leading-relaxed">
-                {excerpt(post.content)}
+                {stripMarkdown(post.content, 150)}
               </p>
             )}
             <div class="mt-3">

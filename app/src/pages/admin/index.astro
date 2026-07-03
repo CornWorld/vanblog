@@ -2,16 +2,16 @@
 export const prerender = false;
 
 import AdminLayout from '../../layouts/AdminLayout.astro';
-import { getAuthUser, hasPermission } from '../../middleware';
-import { formatPbDate } from '../../lib/dates';
+import { getAuthUser, hasPermission } from '@vanblog/sdk';
+import { formatPbDate } from '@vanblog/sdk';
 import type { Post } from '@vanblog/sdk';
 
 Astro.cache.set(false);
 
-const user = getAuthUser(Astro);
+const user = getAuthUser(Astro.locals.pb);
 const isAdmin = user?.role === 'admin';
-const canEditPost = !!hasPermission(Astro, 'article:create') || !!hasPermission(Astro, 'article:update');
-const canDeletePost = !!hasPermission(Astro, 'article:delete');
+const canEditPost = !!hasPermission(Astro.locals.pb, 'article:create') || !!hasPermission(Astro.locals.pb, 'article:update');
+const canDeletePost = !!hasPermission(Astro.locals.pb, 'article:delete');
 
 const PER_PAGE = 20;
 const page = Math.max(1, parseInt(Astro.url.searchParams.get('page') || '1', 10) || 1);

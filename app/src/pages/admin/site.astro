@@ -3,13 +3,13 @@ export const prerender = false;
 
 import AdminLayout from '../../layouts/AdminLayout.astro';
 import ErrorNotice from '../../components/ErrorNotice.astro';
-import { requireAdmin } from '../../middleware';
+import { requireAdmin } from '@vanblog/sdk';
 import type { SiteConfig } from '@vanblog/sdk';
 
 
 Astro.cache.set(false);
 
-const denied = !requireAdmin(Astro);
+const denied = !requireAdmin(Astro.locals.pb);
 if (denied) Astro.response.status = 403;
 
 let site: Partial<SiteConfig> | null = null;

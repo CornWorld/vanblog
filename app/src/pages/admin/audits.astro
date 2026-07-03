@@ -3,8 +3,8 @@ export const prerender = false;
 
 import AdminLayout from '../../layouts/AdminLayout.astro';
 import ErrorNotice from '../../components/ErrorNotice.astro';
-import { requireAdmin } from '../../middleware';
-import { formatPbDate } from '../../lib/dates';
+import { requireAdmin } from '@vanblog/sdk';
+import { formatPbDate } from '@vanblog/sdk';
 
 // Not logged in → login page. Logged in but not admin → inline 403.
 // The previous behavior redirected both cases to /_, which told legitimate
@@ -12,7 +12,7 @@ import { formatPbDate } from '../../lib/dates';
 
 Astro.cache.set(false);
 
-const denied = !requireAdmin(Astro);
+const denied = !requireAdmin(Astro.locals.pb);
 if (denied) Astro.response.status = 403;
 
 const PER_PAGE = 50;

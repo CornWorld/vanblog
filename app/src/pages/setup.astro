@@ -2,7 +2,6 @@
 export const prerender = false;
 
 import BaseLayout from '../layouts/BaseLayout.astro';
-import PbInit from '../components/PbInit.astro';
 import { createVanblogClient } from '@vanblog/sdk';
 
 Astro.cache.set(false);
@@ -29,7 +28,10 @@ if (alreadySetup) {
 ---
 
 <BaseLayout title="初始设置">
-  <PbInit />
+  <script>
+    import { initBrowserPb } from '@vanblog/sdk/browser';
+    initBrowserPb();
+  </script>
   <h1>初始设置</h1>
 
   <div class="bg-yellow-50 dark:bg-yellow-950 border border-yellow-300 dark:border-yellow-700 text-yellow-900 dark:text-yellow-100 rounded px-4 py-3 mb-4 text-sm max-w-xl">

@@ -3,12 +3,12 @@ export const prerender = false;
 
 import AdminLayout from '../../layouts/AdminLayout.astro';
 import ErrorNotice from '../../components/ErrorNotice.astro';
-import { requireAdmin, getAuthUser } from '../../middleware';
+import { requireAdmin, getAuthUser } from '@vanblog/sdk';
 
 
 Astro.cache.set(false);
 
-const denied = !requireAdmin(Astro);
+const denied = !requireAdmin(Astro.locals.pb);
 if (denied) Astro.response.status = 403;
 
 const ALL_PERMS = [
@@ -29,7 +29,7 @@ if (!denied) {
 // Last-admin guard: demoting or deleting the only remaining admin locks
 // everyone out of admin UI. Compute admin count for client-side guard and
 // also pass current user id so self-demotion is at least visible.
-const currentUserId = getAuthUser(Astro)?.id;
+const currentUserId = getAuthUser(Astro.locals.pb)?.id;
 const adminCount = users.filter((u) => u.role === 'admin').length;
 ---
 <AdminLayout title="用户管理">

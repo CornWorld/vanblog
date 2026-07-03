@@ -2,19 +2,21 @@
 export const prerender = false;
 
 import BaseLayout from '../layouts/BaseLayout.astro';
-import PbInit from '../components/PbInit.astro';
-import { isAuthenticated } from '../middleware';
+import { isAuthenticated } from '@vanblog/sdk';
 
 // Already-logged-in users have no business on /login — bounce to /admin
 // (or to ?back= if they were sent here from a private post redirect).
 const back = Astro.url.searchParams.get('back');
-if (isAuthenticated(Astro)) return Astro.redirect(back || '/admin');
+if (isAuthenticated(Astro.locals.pb)) return Astro.redirect(back || '/admin');
 
 Astro.cache.set(false);
 ---
 
 <BaseLayout title="登录">
-  <PbInit />
+  <script>
+    import { initBrowserPb } from '@vanblog/sdk/browser';
+    initBrowserPb();
+  </script>
   <h1>登录</h1>
 
   <form id="login-form" class="flex flex-col gap-2 max-w-sm">
@@ -31,14 +33,16 @@ Astro.cache.set(false);
     <p id="login-error" class="text-red-600 text-sm hidden"></p>
   </form>
 
-  <script define:vars={{}}>
-    const form = document.getElementById('login-form');
-    const errEl = document.getElementById('login-error');
+  <script>
+    import { AUTH_COOKIE_OPTIONS } from '@vanblog/sdk';
+
+    const form = document.getElementById('login-form')!;
+    const errEl = document.getElementById('login-error')!;
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       errEl.classList.add('hidden');
-      const fd = new FormData(form);
+      const fd = new FormData(form as HTMLFormElement);
       const pb = window.__pb;
       if (!pb) {
         errEl.textContent = '客户端未初始化，请刷新';
@@ -46,20 +50,16 @@ Astro.cache.set(false);
         return;
       }
       try {
-        await pb.collection('users').authWithPassword(fd.get('email'), fd.get('password'));
+        await pb.collection('users').authWithPassword(fd.get('email') as string, fd.get('password') as string);
         // Cookie is the single source of truth for the SSR middleware.
-        // PbInit no longer syncs the cookie via onChange (that was the
-        // anti-pattern that caused state drift), so we write it explicitly
-        // here on login. Options must match middleware.ts's exportToCookie
-        // call so the browser actually accepts the cookie over HTTP.
+        // Must match middleware options so the browser accepts the cookie over HTTP.
         document.cookie = pb.authStore.exportToCookie({
+          ...AUTH_COOKIE_OPTIONS,
           secure: window.location.protocol === 'https:',
-          sameSite: 'lax',
-          httpOnly: false,
         });
-        const back = fd.get('back');
+        const back = fd.get('back') as string;
         location.href = back || '/admin';
-      } catch (err) {
+      } catch (err: any) {
         errEl.textContent = '登录失败：' + (err?.message || '用户名/邮箱或密码错误');
         errEl.classList.remove('hidden');
       }

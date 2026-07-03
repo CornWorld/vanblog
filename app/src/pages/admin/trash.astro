@@ -3,16 +3,16 @@ export const prerender = false;
 
 import AdminLayout from '../../layouts/AdminLayout.astro';
 import ErrorNotice from '../../components/ErrorNotice.astro';
-import { formatPbDate } from '../../lib/dates';
-import { getAuthUser, hasPermission } from '../../middleware';
+import { formatPbDate } from '@vanblog/sdk';
+import { getAuthUser, hasPermission } from '@vanblog/sdk';
 import type { TrashEntry } from '@vanblog/sdk';
 
 Astro.cache.set(false);
 
-const user = getAuthUser(Astro);
+const user = getAuthUser(Astro.locals.pb);
 const isAdmin = user?.role === 'admin';
-const canDeletePost = !!hasPermission(Astro, 'article:delete') || isAdmin;
-const canEditPost = !!hasPermission(Astro, 'article:create') || !!hasPermission(Astro, 'article:update');
+const canDeletePost = !!hasPermission(Astro.locals.pb, 'article:delete') || isAdmin;
+const canEditPost = !!hasPermission(Astro.locals.pb, 'article:create') || !!hasPermission(Astro.locals.pb, 'article:update');
 
 // Inline 403 instead of silent redirect to /admin — tells editors without
 // article:create/update why they can't see the trash page.

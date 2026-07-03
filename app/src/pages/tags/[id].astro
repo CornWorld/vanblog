@@ -3,6 +3,7 @@ export const prerender = false;
 
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import ErrorState from '../../components/ErrorState.astro';
+import { formatPbDateOnly } from '@vanblog/sdk';
 import type { Tag, Post } from '@vanblog/sdk';
 
 const { id } = Astro.params;
@@ -20,8 +21,8 @@ try {
 }
 
 try {
-  const result = await pb.collection('posts').getList<Post>(1, 100, {
-    filter: `tags ?= "${tag.name}" && status = "published" && deleted = false`,
+  const result = await pb.vanblog.posts.listPublished(1, 100, {
+    tag: tag.name,
     sort: '-created',
   });
   posts = result.items;
@@ -51,7 +52,7 @@ try {
         <li class="flex items-baseline gap-3">
           <time class="text-sm text-[var(--color-text-muted)] whitespace-nowrap tabular-nums"
                 datetime={p.created}>
-            {new Date(p.created).toLocaleDateString('zh-CN')}
+            {formatPbDateOnly(p.created)}
           </time>
           <a href={`/posts/${p.id}`} class="hover:text-[var(--color-accent)]">{p.title}</a>
         </li>

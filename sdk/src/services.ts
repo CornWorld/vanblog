@@ -1,5 +1,6 @@
 import type PocketBase from 'pocketbase';
 import type {
+  Post,
   TimelineEntry,
   SearchResult,
   TLSStatus,
@@ -15,6 +16,17 @@ async function fetchText(pb: PocketBase, path: string): Promise<string> {
   const res = await fetch(pb.buildUrl(path));
   if (!res.ok) throw new Error(`${path} returned ${res.status}`);
   return res.text();
+}
+
+/** Strip markdown and HTML from content, truncating to max characters. */
+export function stripMarkdown(md: string | undefined, max = 160): string {
+  if (!md) return '';
+  const text = md
+    .replace(/<[^>]*>/g, '')
+    .replace(/[#*_`~[\]()!>-]/g, '')
+    .replace(/\n+/g, ' ')
+    .trim();
+  return text.length > max ? text.slice(0, max) + '...' : text;
 }
 
 // Vanblog built-in services, same level as pb's collection(), files(), etc.
@@ -49,6 +61,14 @@ export interface VanblogServices {
     import(data: unknown): Promise<MigrationResult>;
   };
   posts: {
+    /** Public listing: published, non-deleted posts with pagination. */
+    listPublished(page: number, perPage: number, opts?: {
+      category?: string;
+      tag?: string;
+      sort?: string;
+      expand?: string;
+      fields?: string;
+    }): Promise<{ items: Post[]; totalItems: number; totalPages: number }>;
     trash(): Promise<TrashEntry[]>;
     restore(id: string): Promise<void>;
     purge(id: string): Promise<void>;
@@ -164,6 +184,17 @@ export function createVanblogServices(pb: PocketBase): VanblogServices {
         }) as Promise<MigrationResult>,
     },
     posts: {
+      listPublished: (page, perPage, opts) => {
+        let filter = 'status = "published" && deleted = false';
+        if (opts?.category) filter += ` && category = "${opts.category}"`;
+        if (opts?.tag) filter += ` && tags ?= "${opts.tag}"`;
+        return pb.collection('posts').getList<Post>(page, perPage, {
+          filter,
+          sort: opts?.sort || '-created',
+          expand: opts?.expand,
+          fields: opts?.fields,
+        });
+      },
       trash: () =>
         pb.send('/api/vanblog/posts/trash', { method: 'GET' }) as Promise<TrashEntry[]>,
       restore: (id: string) =>

@@ -3,15 +3,15 @@ export const prerender = false;
 
 import AdminLayout from '../../../layouts/AdminLayout.astro';
 import ErrorNotice from '../../../components/ErrorNotice.astro';
-import { getAuthUser, hasPermission } from '../../../middleware';
+import { getAuthUser, hasPermission } from '@vanblog/sdk';
 import ByteMdEditor from '../../../components/ByteMdEditor.astro';
 import type { Post, Tag, Category } from '@vanblog/sdk';
 
-const user = getAuthUser(Astro)!;
+const user = getAuthUser(Astro.locals.pb)!;
 
 Astro.cache.set(false);
 
-const canEdit = hasPermission(Astro, 'article:create') || hasPermission(Astro, 'article:update');
+const canEdit = hasPermission(Astro.locals.pb, 'article:create') || hasPermission(Astro.locals.pb, 'article:update');
 // Inline 403 instead of silent redirect to /admin — same UX rationale as
 // the other admin pages.
 const denied = !canEdit;

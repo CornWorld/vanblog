@@ -4,7 +4,7 @@ export const prerender = false;
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import ErrorNotice from '../../components/ErrorNotice.astro';
 import { getLiveEntry } from 'astro:content';
-import { isAuthenticated } from '../../middleware';
+import { isAuthenticated, formatPbDateOnly } from '@vanblog/sdk';
 import { renderMarkdown } from '../../lib/markdown/renderer';
 import { normalizeMathDelimiters } from '../../lib/markdown/normalizeMathDelimiters';
 import type { Post } from '@vanblog/sdk';
@@ -24,7 +24,7 @@ if (!data) {
   // Anonymous visitor hitting a private/draft post → send to login so they
   // can come back as the author/admin. Returning a bare 404 here would
   // confuse authors who just toggled "private" in the editor.
-  if (!isAuthenticated(Astro)) {
+  if (!isAuthenticated(Astro.locals.pb)) {
     const back = encodeURIComponent(`/posts/${id}`);
     return Astro.redirect(`/login?back=${back}`);
   }
@@ -46,7 +46,7 @@ if (!data) {
     <article>
       <h1>{data.title}</h1>
       <p><small>
-        发表于 {new Date(data.created).toLocaleDateString('zh-CN')}
+        发表于 {formatPbDateOnly(data.created)}
         {data.private && <span class="ml-2 text-[var(--color-text-muted)]">· 私有</span>}
         {data.status !== 'published' && <span class="ml-2 text-[var(--color-text-muted)]">· {data.status}</span>}
       </small></p>
