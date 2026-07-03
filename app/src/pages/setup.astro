@@ -1,0 +1,115 @@
+---
+export const prerender = false;
+
+import BaseLayout from '../layouts/BaseLayout.astro';
+import PbInit from '../components/PbInit.astro';
+import { createVanblogClient } from '@vanblog/sdk';
+
+Astro.cache.set(false);
+
+// Pass through ?back= so we can route there after a successful setup.
+const back = Astro.url.searchParams.get('back') || '/admin';
+
+// SSR-side check: if an admin already exists, /setup is closed.
+// We don't strictly require this (the API would refuse), but rendering
+// a "this page is closed" message is better UX than letting the operator
+// fill the form and get a 409 on submit.
+let alreadySetup = false;
+try {
+  const probe = createVanblogClient({ url: 'http://127.0.0.1:8090' });
+  const status = await probe.vanblog.setup.status();
+  alreadySetup = !status.bootstrap;
+} catch {
+  // If the status call fails (pb down, fresh install with no DB yet),
+  // show the form anyway — let the operator try.
+}
+if (alreadySetup) {
+  return Astro.redirect('/login');
+}
+---
+
+<BaseLayout title="初始设置">
+  <PbInit />
+  <h1>初始设置</h1>
+
+  <div class="bg-yellow-50 dark:bg-yellow-950 border border-yellow-300 dark:border-yellow-700 text-yellow-900 dark:text-yellow-100 rounded px-4 py-3 mb-4 text-sm max-w-xl">
+    <p class="font-semibold mb-1">首次启动：尚未创建管理员账户。</p>
+    <p>填写下方表单创建第一个管理员。在此之前，<code>/admin</code> 无法登录，所有后台功能不可用。</p>
+    <p class="mt-2 text-xs opacity-80">提示：完成此步骤后，本页面将自动关闭。后续管理员需要由已登录的管理员在「用户管理」中创建。</p>
+  </div>
+
+  <form id="setup-form" class="flex flex-col gap-2 max-w-sm">
+    <label class="flex flex-col">
+      用户名
+      <input name="username" type="text" required autocomplete="username" minlength="2"
+             class="px-1.5 py-0.5" placeholder="admin" />
+    </label>
+    <label class="flex flex-col">
+      邮箱
+      <input name="email" type="email" required autocomplete="email"
+             class="px-1.5 py-0.5" placeholder="admin@example.com" />
+    </label>
+    <label class="flex flex-col">
+      密码（至少 8 位）
+      <input name="password" type="password" required autocomplete="new-password" minlength="8"
+             class="px-1.5 py-0.5" />
+    </label>
+    <label class="flex flex-col">
+      确认密码
+      <input name="passwordConfirm" type="password" required autocomplete="new-password" minlength="8"
+             class="px-1.5 py-0.5" />
+    </label>
+    <input type="hidden" name="back" value={back} />
+    <button type="submit" class="self-start px-3 py-1">创建管理员</button>
+    <p id="setup-error" class="text-red-600 text-sm hidden"></p>
+    <p id="setup-status" class="text-[var(--color-text-muted)] text-sm"></p>
+  </form>
+
+  <script define:vars={{ back }}>
+    const form = document.getElementById('setup-form');
+    const errEl = document.getElementById('setup-error');
+    const statusEl = document.getElementById('setup-status');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      errEl.classList.add('hidden');
+      statusEl.textContent = '创建中…';
+
+      const fd = new FormData(form);
+      const pb = window.__pb;
+      if (!pb) {
+        errEl.textContent = '客户端未初始化，请刷新';
+        errEl.classList.remove('hidden');
+        statusEl.textContent = '';
+        return;
+      }
+
+      try {
+        const r = await pb.vanblog.setup.complete({
+          username: fd.get('username'),
+          email: fd.get('email'),
+          password: fd.get('password'),
+          passwordConfirm: fd.get('passwordConfirm'),
+        });
+        if (r.ok) {
+          statusEl.textContent = '✓ 管理员创建成功，正在跳转登录…';
+          // We don't auto-login here because the setup endpoint doesn't
+          // return a token (it's the bootstrap authority). The operator
+          // logs in normally — by then the user exists.
+          location.href = '/login?back=' + encodeURIComponent(back);
+        } else {
+          // The setup endpoint returns 200 with ok=false only on certain
+          // paths; most errors come back via the catch branch below.
+          throw new Error(r.error || '未知错误');
+        }
+      } catch (err) {
+        // 4xx (validation) and 409 (already exists) both land here.
+        // pb SDK throws on non-2xx with the server's error body.
+        const msg = err?.response?.message || err?.message || '请求失败';
+        errEl.textContent = '创建失败：' + msg;
+        errEl.classList.remove('hidden');
+        statusEl.textContent = '';
+      }
+    });
+  </script>
+</BaseLayout>
