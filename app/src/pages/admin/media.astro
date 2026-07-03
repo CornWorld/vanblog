@@ -1,13 +1,9 @@
 ---
 export const prerender = false;
 
-import BaseLayout from '../../layouts/BaseLayout.astro';
-import { isAuthenticated, hasPermission } from '../../middleware';
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import { hasPermission } from '../../middleware';
 import type { Media } from '@vanblog/sdk';
-
-if (!isAuthenticated(Astro)) {
-  return Astro.redirect('/login');
-}
 
 Astro.cache.set(false);
 
@@ -34,7 +30,7 @@ function pageHref(n: number): string {
   return `/admin/media?page=${n}`;
 }
 ---
-<BaseLayout title="媒体管理">
+<AdminLayout title="媒体管理">
   <h1>媒体管理</h1>
   <p><a href="/admin">← 返回管理</a></p>
 
@@ -179,4 +175,4 @@ function pageHref(n: number): string {
     // Bind existing rows (initial render).
     document.querySelectorAll('#media-grid figure').forEach(bindRow);
   </script>
-</BaseLayout>
+</AdminLayout>

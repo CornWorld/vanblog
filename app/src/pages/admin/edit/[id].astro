@@ -1,14 +1,13 @@
 ---
 export const prerender = false;
 
-import BaseLayout from '../../../layouts/BaseLayout.astro';
+import AdminLayout from '../../../layouts/AdminLayout.astro';
 import ErrorNotice from '../../../components/ErrorNotice.astro';
 import { getAuthUser, hasPermission } from '../../../middleware';
 import ByteMdEditor from '../../../components/ByteMdEditor.astro';
 import type { Post, Tag, Category } from '@vanblog/sdk';
 
-const user = getAuthUser(Astro);
-if (!user) return Astro.redirect('/login');
+const user = getAuthUser(Astro)!;
 
 Astro.cache.set(false);
 
@@ -55,7 +54,7 @@ const currentTagIds: string[] = Array.isArray(post.tags) ? post.tags : [];
 const currentCatId: string = post.category || '';
 const currentAuthorId: string = post.author || user.id;
 ---
-<BaseLayout title={isNew ? '新建文章' : '编辑文章'}>
+<AdminLayout title={isNew ? '新建文章' : '编辑文章'}>
   <h1>{isNew ? '新建文章' : '编辑文章'}</h1>
 
   {denied ? (
@@ -168,4 +167,4 @@ const currentAuthorId: string = post.author || user.id;
     document.getElementById('btn-publish').onclick = () => save(true);
   </script>
   )}
-</BaseLayout>
+</AdminLayout>

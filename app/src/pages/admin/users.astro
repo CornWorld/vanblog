@@ -1,13 +1,11 @@
 ---
 export const prerender = false;
 
-import BaseLayout from '../../layouts/BaseLayout.astro';
+import AdminLayout from '../../layouts/AdminLayout.astro';
 import ErrorNotice from '../../components/ErrorNotice.astro';
-import { requireAdmin } from '../../middleware';
+import { requireAdmin, getAuthUser } from '../../middleware';
 
-if (!Astro.locals.pb.authStore.isValid) {
-  return Astro.redirect('/login');
-}
+
 Astro.cache.set(false);
 
 const denied = !requireAdmin(Astro);
@@ -27,8 +25,14 @@ if (!denied) {
     console.error('[admin/users] load:', e);
   }
 }
+
+// Last-admin guard: demoting or deleting the only remaining admin locks
+// everyone out of admin UI. Compute admin count for client-side guard and
+// also pass current user id so self-demotion is at least visible.
+const currentUserId = getAuthUser(Astro)?.id;
+const adminCount = users.filter((u) => u.role === 'admin').length;
 ---
-<BaseLayout title="用户管理">
+<AdminLayout title="用户管理">
   <h1>用户管理</h1>
   <p><a href="/admin">← 返回</a></p>
 
@@ -88,7 +92,7 @@ if (!denied) {
     </tbody>
   </table>
 
-  <script>
+  <script define:vars={{ currentUserId, adminCount }}>
     const pb = window.__pb!;
 
     document.getElementById('new-user')!.addEventListener('submit', async (e) => {
@@ -108,9 +112,23 @@ if (!denied) {
       } catch (err) { alert('新建失败: ' + (err as Error).message); }
     });
 
+    // Demoting the last admin locks all admin routes (UpdateRule
+    // @request.auth.role = "admin"). Block before the request — pb returns
+    // 404 on the next save, which looks like a mystery bug.
+    function isLastAdminDowngrade(tr) {
+      const roleSel = tr.querySelector<HTMLSelectElement>('.f-role')!;
+      const wasAdmin = tr.dataset.role === 'admin';
+      const willAdmin = roleSel.value === 'admin';
+      return wasAdmin && !willAdmin && adminCount <= 1;
+    }
+
     document.querySelectorAll<HTMLElement>('tr[data-id]').forEach((tr) => {
       const id = tr.dataset.id!;
       tr.querySelector<HTMLElement>('.btn-save')!.onclick = async () => {
+        if (isLastAdminDowngrade(tr)) {
+          alert('无法降级：这是系统里唯一的管理员。请先把另一个用户提升为管理员。');
+          return;
+        }
         const perms = Array.from(tr.querySelectorAll<HTMLInputElement>('.f-perm:checked')).map((c) => c.value);
         try {
           await pb.collection('users').update(id, {
@@ -130,6 +148,10 @@ if (!denied) {
         } catch (err) { alert('重置失败: ' + (err as Error).message); }
       };
       tr.querySelector<HTMLElement>('.btn-del')!.onclick = async () => {
+        if (tr.dataset.role === 'admin' && adminCount <= 1) {
+          alert('无法删除：这是系统里唯一的管理员。');
+          return;
+        }
         if (!confirm('确定删除该用户？')) return;
         try {
           await pb.vanblog.users.delete(id);
@@ -139,4 +161,4 @@ if (!denied) {
     });
   </script>
   )}
-</BaseLayout>
+</AdminLayout>

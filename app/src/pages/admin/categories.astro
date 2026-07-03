@@ -1,11 +1,9 @@
 ---
 export const prerender = false;
 
-import BaseLayout from '../../layouts/BaseLayout.astro';
-import { isAuthenticated } from '../../middleware';
+import AdminLayout from '../../layouts/AdminLayout.astro';
 import type { Category } from '@vanblog/sdk';
 
-if (!isAuthenticated(Astro)) return Astro.redirect('/login');
 Astro.cache.set(false);
 
 let cats: Category[] = [];
@@ -15,7 +13,7 @@ try {
   console.error('[admin/cats] load:', e);
 }
 ---
-<BaseLayout title="分类管理">
+<AdminLayout title="分类管理">
   <h1>分类管理</h1>
   <p><a href="/admin">← 返回</a></p>
 
@@ -95,4 +93,4 @@ try {
       };
     });
   </script>
-</BaseLayout>
+</AdminLayout>

@@ -1,16 +1,15 @@
 ---
 export const prerender = false;
 
-import BaseLayout from '../../layouts/BaseLayout.astro';
+import AdminLayout from '../../layouts/AdminLayout.astro';
 import ErrorNotice from '../../components/ErrorNotice.astro';
 import { requireAdmin } from '../../middleware';
+import { formatPbDate } from '../../lib/dates';
 
 // Not logged in → login page. Logged in but not admin → inline 403.
 // The previous behavior redirected both cases to /_, which told legitimate
 // non-admin users nothing about why they couldn't see the page.
-if (!Astro.locals.pb.authStore.isValid) {
-  return Astro.redirect('/login');
-}
+
 Astro.cache.set(false);
 
 const denied = !requireAdmin(Astro);
@@ -58,7 +57,7 @@ function expandName(a: any): string {
   return u?.username || u?.email || a?.actor || '-';
 }
 ---
-<BaseLayout title="审计日志">
+<AdminLayout title="审计日志">
   <h1>审计日志</h1>
   <p><a href="/admin">← 返回</a></p>
 
@@ -89,7 +88,7 @@ function expandName(a: any): string {
         <tbody>
           {audits.map(a => (
             <tr class="border-b border-[var(--color-border)] align-top">
-              <td><small>{new Date(a.created).toLocaleString('zh-CN')}</small></td>
+              <td><small>{formatPbDate(a.created)}</small></td>
               <td>{expandName(a)}</td>
               <td>{a.action}</td>
               <td class="break-all">{a.target}</td>
@@ -123,4 +122,4 @@ function expandName(a: any): string {
     )}
     </>
   )}
-</BaseLayout>
+</AdminLayout>

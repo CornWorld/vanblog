@@ -1,14 +1,12 @@
 ---
 export const prerender = false;
 
-import BaseLayout from '../../layouts/BaseLayout.astro';
+import AdminLayout from '../../layouts/AdminLayout.astro';
 import ErrorNotice from '../../components/ErrorNotice.astro';
 import { requireAdmin } from '../../middleware';
 import type { SiteConfig } from '@vanblog/sdk';
 
-if (!Astro.locals.pb.authStore.isValid) {
-  return Astro.redirect('/login');
-}
+
 Astro.cache.set(false);
 
 const denied = !requireAdmin(Astro);
@@ -47,7 +45,7 @@ const boolOr = (k: keyof SiteConfig, def = false): boolean => {
   return v === undefined || v === null ? def : !!v;
 };
 ---
-<BaseLayout title="站点配置">
+<AdminLayout title="站点配置">
   <h1>站点配置</h1>
   <p><a href="/admin">← 返回</a></p>
 
@@ -150,4 +148,4 @@ const boolOr = (k: keyof SiteConfig, def = false): boolean => {
       });
     }
   </script>
-</BaseLayout>
+</AdminLayout>

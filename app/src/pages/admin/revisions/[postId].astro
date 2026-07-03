@@ -1,14 +1,12 @@
 ---
 export const prerender = false;
 
-import BaseLayout from '../../../layouts/BaseLayout.astro';
+import AdminLayout from '../../../layouts/AdminLayout.astro';
 import ErrorNotice from '../../../components/ErrorNotice.astro';
-import { isAuthenticated, getAuthUser } from '../../../middleware';
+import { getAuthUser } from '../../../middleware';
+import { formatPbDate } from '../../../lib/dates';
 import type { Revision, Post } from '@vanblog/sdk';
 
-if (!isAuthenticated(Astro)) {
-  return Astro.redirect('/login');
-}
 
 Astro.cache.set(false);
 
@@ -56,7 +54,7 @@ if (!notFound && !denied) {
   }
 }
 ---
-<BaseLayout title={notFound ? '修订历史 - 不存在' : denied ? '修订历史 - 无权限' : `修订历史 - ${post?.title || ''}`}>
+<AdminLayout title={notFound ? '修订历史 - 不存在' : denied ? '修订历史 - 无权限' : `修订历史 - ${post?.title || ''}`}>
   <h1>修订历史</h1>
   <p><a href="/admin">← 返回管理</a>{!notFound && !denied && ` ｜ `}<a href={`/admin/edit/${postId}`}>编辑</a></p>
   {!notFound && !denied && (
@@ -78,7 +76,7 @@ if (!notFound && !denied) {
         <li class="border border-[var(--color-border)] p-3">
           <div class="flex justify-between gap-4 flex-wrap">
             <strong>{r.reason || '(无原因)'}</strong>
-            <small class="text-[var(--color-text-muted)]">{new Date(r.created).toLocaleString('zh-CN')}</small>
+            <small class="text-[var(--color-text-muted)]">{formatPbDate(r.created)}</small>
           </div>
           <div class="text-xs text-[var(--color-text-muted)] mt-1">
             by {r.authoredBy || '-'}
@@ -93,4 +91,4 @@ if (!notFound && !denied) {
       ))}
     </ul>
   )}
-</BaseLayout>
+</AdminLayout>

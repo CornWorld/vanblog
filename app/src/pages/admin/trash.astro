@@ -1,12 +1,12 @@
 ---
 export const prerender = false;
 
-import BaseLayout from '../../layouts/BaseLayout.astro';
+import AdminLayout from '../../layouts/AdminLayout.astro';
 import ErrorNotice from '../../components/ErrorNotice.astro';
-import { isAuthenticated, getAuthUser, hasPermission } from '../../middleware';
+import { formatPbDate } from '../../lib/dates';
+import { getAuthUser, hasPermission } from '../../middleware';
 import type { TrashEntry } from '@vanblog/sdk';
 
-if (!isAuthenticated(Astro)) return Astro.redirect('/login');
 Astro.cache.set(false);
 
 const user = getAuthUser(Astro);
@@ -32,7 +32,7 @@ if (!denied) {
 }
 ---
 
-<BaseLayout title="回收站">
+<AdminLayout title="回收站">
   <h1>回收站</h1>
   <p><a href="/admin">← 返回</a></p>
 
@@ -52,7 +52,7 @@ if (!denied) {
           <tr data-id={post.id} class="border-b border-[var(--color-border)]">
             <td>{post.title}</td>
             <td>{post.status}</td>
-            <td>{new Date(post.updated).toLocaleString('zh-CN')}</td>
+            <td>{formatPbDate(post.updated)}</td>
             <td class="flex gap-2 flex-wrap">
               <button class="btn-restore">恢复</button>
               {canDeletePost && (
@@ -97,4 +97,4 @@ if (!denied) {
       }
     });
   </script>
-</BaseLayout>
+</AdminLayout>

@@ -1,0 +1,15 @@
+---
+// Admin layout: extends BaseLayout and loads the PocketBase browser SDK
+// so admin page scripts can call pb.collection(...).authWithPassword etc.
+import BaseLayout from './BaseLayout.astro';
+import PbInit from '../components/PbInit.astro';
+
+interface Props {
+  title: string;
+  [key: string]: any;
+}
+---
+<BaseLayout {...Astro.props}>
+  <PbInit />
+  <slot />
+</BaseLayout>
