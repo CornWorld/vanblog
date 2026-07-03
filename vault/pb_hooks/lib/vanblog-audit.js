@@ -10,7 +10,7 @@ function recordAudit(args) {
     try {
         const collection = $app.findCollectionByNameOrId("audits");
         const record = new Record(collection);
-        record.set("actor", args.actor || "");
+        if (args.actor) record.set("actor", args.actor);
         record.set("action", args.action || "unknown");
         record.set("target", args.target || "");
         record.set("result", args.result || "success");

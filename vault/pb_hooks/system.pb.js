@@ -6,36 +6,19 @@
 // ============================================================================
 // All audit logic (recordAudit + per-collection helpers) lives in
 // ./pb_hooks/lib/vanblog-audit.js and is require()'d inside each callback.
-// require's module cache is shared across all jsvm VMs (loader + executors),
-// which is the only way for hook callbacks — re-compiled by jsvm inside
-// executor VMs — to reach helpers defined elsewhere.
 //
-// pb 0.39 hook surface used:
-//   - onRecordAfterCreateSuccess / onRecordAfterUpdateSuccess /
-//     onRecordAfterDeleteSuccess  — Go-layer success hooks fired by
-//                                  app.Save / app.Delete. RecordEvent has
-//                                  record but no request.
-//   - onRecordCreateRequest / onRecordUpdateRequest / onRecordDeleteRequest
-//                                  — HTTP API path before-save hooks.
-//                                  RecordRequestEvent has auth/IP/UA.
-//                                  Production admin UI hits these.
+// In PocketBase 0.39, onRecord*Request hooks are interceptors that BLOCK
+// the operation unless the callback explicitly returns/next's through.
+// Because our audit helpers don't chain through, we ONLY use the
+// After*Success observer hooks. These fire after the record is saved,
+// so actor/IP/UA information is not available (RecordEvent has no request).
+// For now, audit entries will have empty actor/ip/ua — acceptable for
+// a personal CMS.
 // ============================================================================
-
-const M = "./pb_hooks/lib/vanblog-audit.js";
-
-// ----------------------------------------------------------------------------
-// Auth
-// ----------------------------------------------------------------------------
-
-onRecordAuthRequest((e) => require("./pb_hooks/lib/vanblog-audit.js").authLogin(e), "users");
 
 // ----------------------------------------------------------------------------
 // Posts
 // ----------------------------------------------------------------------------
-
-onRecordCreateRequest((e) => require("./pb_hooks/lib/vanblog-audit.js").postAction("post.create", e), "posts");
-onRecordUpdateRequest((e) => require("./pb_hooks/lib/vanblog-audit.js").postAction("post.update", e), "posts");
-onRecordDeleteRequest((e) => require("./pb_hooks/lib/vanblog-audit.js").postAction("post.delete", e), "posts");
 
 onRecordAfterCreateSuccess((e) => require("./pb_hooks/lib/vanblog-audit.js").postAction("post.create", e), "posts");
 onRecordAfterUpdateSuccess((e) => require("./pb_hooks/lib/vanblog-audit.js").postAction("post.update", e), "posts");
@@ -45,10 +28,6 @@ onRecordAfterDeleteSuccess((e) => require("./pb_hooks/lib/vanblog-audit.js").pos
 // Tags
 // ----------------------------------------------------------------------------
 
-onRecordCreateRequest((e) => require("./pb_hooks/lib/vanblog-audit.js").tagAction("tag.create", e), "tags");
-onRecordUpdateRequest((e) => require("./pb_hooks/lib/vanblog-audit.js").tagAction("tag.update", e), "tags");
-onRecordDeleteRequest((e) => require("./pb_hooks/lib/vanblog-audit.js").tagAction("tag.delete", e), "tags");
-
 onRecordAfterCreateSuccess((e) => require("./pb_hooks/lib/vanblog-audit.js").tagAction("tag.create", e), "tags");
 onRecordAfterUpdateSuccess((e) => require("./pb_hooks/lib/vanblog-audit.js").tagAction("tag.update", e), "tags");
 onRecordAfterDeleteSuccess((e) => require("./pb_hooks/lib/vanblog-audit.js").tagAction("tag.delete", e), "tags");
@@ -56,10 +35,6 @@ onRecordAfterDeleteSuccess((e) => require("./pb_hooks/lib/vanblog-audit.js").tag
 // ----------------------------------------------------------------------------
 // Categories
 // ----------------------------------------------------------------------------
-
-onRecordCreateRequest((e) => require("./pb_hooks/lib/vanblog-audit.js").categoryAction("category.create", e), "categories");
-onRecordUpdateRequest((e) => require("./pb_hooks/lib/vanblog-audit.js").categoryAction("category.update", e), "categories");
-onRecordDeleteRequest((e) => require("./pb_hooks/lib/vanblog-audit.js").categoryAction("category.delete", e), "categories");
 
 onRecordAfterCreateSuccess((e) => require("./pb_hooks/lib/vanblog-audit.js").categoryAction("category.create", e), "categories");
 onRecordAfterUpdateSuccess((e) => require("./pb_hooks/lib/vanblog-audit.js").categoryAction("category.update", e), "categories");
@@ -69,10 +44,6 @@ onRecordAfterDeleteSuccess((e) => require("./pb_hooks/lib/vanblog-audit.js").cat
 // Media
 // ----------------------------------------------------------------------------
 
-onRecordCreateRequest((e) => require("./pb_hooks/lib/vanblog-audit.js").mediaAction("media.create", e), "media");
-onRecordUpdateRequest((e) => require("./pb_hooks/lib/vanblog-audit.js").mediaAction("media.update", e), "media");
-onRecordDeleteRequest((e) => require("./pb_hooks/lib/vanblog-audit.js").mediaAction("media.delete", e), "media");
-
 onRecordAfterCreateSuccess((e) => require("./pb_hooks/lib/vanblog-audit.js").mediaAction("media.create", e), "media");
 onRecordAfterUpdateSuccess((e) => require("./pb_hooks/lib/vanblog-audit.js").mediaAction("media.update", e), "media");
 onRecordAfterDeleteSuccess((e) => require("./pb_hooks/lib/vanblog-audit.js").mediaAction("media.delete", e), "media");
@@ -80,10 +51,6 @@ onRecordAfterDeleteSuccess((e) => require("./pb_hooks/lib/vanblog-audit.js").med
 // ----------------------------------------------------------------------------
 // Users
 // ----------------------------------------------------------------------------
-
-onRecordCreateRequest((e) => require("./pb_hooks/lib/vanblog-audit.js").userAction("user.create", e), "users");
-onRecordUpdateRequest((e) => require("./pb_hooks/lib/vanblog-audit.js").userAction("user.update", e, true), "users");
-onRecordDeleteRequest((e) => require("./pb_hooks/lib/vanblog-audit.js").userAction("user.delete", e), "users");
 
 onRecordAfterCreateSuccess((e) => require("./pb_hooks/lib/vanblog-audit.js").userAction("user.create", e), "users");
 onRecordAfterUpdateSuccess((e) => require("./pb_hooks/lib/vanblog-audit.js").userAction("user.update", e, true), "users");
@@ -93,7 +60,6 @@ onRecordAfterDeleteSuccess((e) => require("./pb_hooks/lib/vanblog-audit.js").use
 // Site
 // ----------------------------------------------------------------------------
 
-onRecordUpdateRequest((e) => require("./pb_hooks/lib/vanblog-audit.js").siteAction(e), "site");
 onRecordAfterUpdateSuccess((e) => require("./pb_hooks/lib/vanblog-audit.js").siteAction(e), "site");
 
 // ----------------------------------------------------------------------------
