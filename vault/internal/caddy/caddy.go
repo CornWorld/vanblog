@@ -20,10 +20,35 @@ import (
 const DefaultCaddyAdminURL = "http://127.0.0.1:2019"
 
 // Service owns the caddy-related pb hook subscriptions: the on-demand TLS
-// ask endpoint, the TLS status endpoint, and the startup config push.
+// ask endpoint, the TLS status endpoint, the startup config push, and the
+// syncWorker actor that serializes all runtime routing mutations.
 type Service struct {
 	app           core.App
 	caddyAdminURL string
+
+	// syncCh serializes every runtime site.routing mutation (applyRules,
+	// handleApply). The syncWorker goroutine reads one request at a time,
+	// so concurrent admin requests can't race on the DB-or-Caddy state.
+	// Unbuffered: senders block until the worker is ready, guaranteeing
+	// no request piles up silently.
+	syncCh chan syncRequest
+
+	// done closes the worker goroutine. nil for tests that construct a
+	// Service without calling NewWithURL (and thus never spawn a worker).
+	done chan struct{}
+}
+
+// syncRequest is the envelope the actor accepts. Exactly one of apply/resync
+// is set; reply carries the outcome back to the caller's goroutine.
+type syncRequest struct {
+	apply     *applyPayload // non-nil for "replace + push" semantics
+	resync    bool          // true for "push whatever is in DB now"
+	replyChan chan replaceResult
+}
+
+type applyPayload struct {
+	rules     []UserRule
+	allowlist []string
 }
 
 // New creates a caddy Service and registers its pb hook subscriptions.
@@ -39,7 +64,14 @@ func New(app core.App) *Service {
 
 // NewWithURL is the testable variant — tests inject a mock admin URL.
 func NewWithURL(app core.App, caddyAdminURL string) *Service {
-	s := &Service{app: app, caddyAdminURL: caddyAdminURL}
+	s := &Service{
+		app:           app,
+		caddyAdminURL: caddyAdminURL,
+		syncCh:        make(chan syncRequest),
+		done:          make(chan struct{}),
+	}
+	go s.runSyncWorker()
+
 	app.OnServe().BindFunc(func(se *core.ServeEvent) error {
 		se.Router.GET("/api/hooks/caddy/ask", s.handleAskEndpoint)
 		se.Router.GET("/api/vanblog/tls/status", s.handleTLSStatusEndpoint)
@@ -55,6 +87,67 @@ func NewWithURL(app core.App, caddyAdminURL string) *Service {
 	return s
 }
 
+// Close terminates the syncWorker goroutine. pb's lifecycle doesn't need
+// this (process exit kills the goroutine), but tests must call it to avoid
+// leaking one goroutine per test case.
+func (s *Service) Close() {
+	if s.done != nil {
+		close(s.done)
+	}
+}
+
+// runSyncWorker is the single writer. Every site.routing mutation flows
+// through here, so even if two admin requests arrive concurrently — say,
+// the user hits "save" while a previous save's BootstrapSync is still
+// retrying — they execute strictly in arrival order. No locks needed
+// because there's only one writer.
+func (s *Service) runSyncWorker() {
+	for {
+		select {
+		case <-s.done:
+			return
+		case req := <-s.syncCh:
+			var res replaceResult
+			switch {
+			case req.apply != nil:
+				res = s.applyRules(req.apply.rules, req.apply.allowlist)
+			case req.resync:
+				res = s.resyncFromDB()
+			default:
+				// Defensive — shouldn't happen; callers must set one.
+				res = replaceResult{Error: "internal: empty sync request"}
+			}
+			// replyChan is buffered(1) so a slow / panicked caller can't
+			// block the worker. Send is non-blocking; we already know the
+			// buffer fits.
+			select {
+			case req.replyChan <- res:
+			default:
+				log.Printf("[caddy] syncWorker: reply dropped (caller gone?)")
+			}
+		}
+	}
+}
+
+// submit sends a request to the worker and waits for the result. Used by
+// HTTP handlers; they're synchronous from the user's perspective (the UI
+// wants to know "did it work?" not "we queued it").
+func (s *Service) submit(req syncRequest) replaceResult {
+	req.replyChan = make(chan replaceResult, 1)
+	s.syncCh <- req
+	return <-req.replyChan
+}
+
+// resyncFromDB pushes the current site.routing to Caddy. Used by the
+// /apply endpoint. Unlike applyRules, it never writes the DB — it's the
+// "make Caddy match what's in the DB right now" primitive.
+func (s *Service) resyncFromDB() replaceResult {
+	if err := BootstrapSyncFromDB(s.app, s.caddyAdminURL); err != nil {
+		return replaceResult{Error: err.Error()}
+	}
+	return replaceResult{OK: true, Applied: true}
+}
+
 // pushConfigToAdminAPI is the startup wiring: read site.routing from DB,
 // translate to Caddy JSON, validate, then load atomically via admin API.
 // Retries with exponential backoff to tolerate brief Caddy restarts.
@@ -63,7 +156,7 @@ func NewWithURL(app core.App, caddyAdminURL string) *Service {
 // and the management port (:8080) remains reachable so operators can recover.
 // The last error is persisted to site.caddyLastError for the admin UI.
 func (s *Service) pushConfigToAdminAPI() error {
-	return BootstrapSync(s.app, s.caddyAdminURL)
+	return BootstrapSyncFromDB(s.app, s.caddyAdminURL)
 }
 
 // handleAskEndpoint answers Caddy's on-demand TLS question: "may I issue

@@ -190,7 +190,7 @@ func TestBootstrapSyncRetries(t *testing.T) {
 	// call succeeds, so BootstrapSync should return nil.
 	srv, m := newMockCaddyAdmin(t, 5)
 
-	err := BootstrapSync(app, srv.URL)
+	err := BootstrapSyncFromDB(app, srv.URL)
 	if err != nil {
 		t.Fatalf("BootstrapSync should have succeeded after retries, got: %v", err)
 	}
@@ -214,7 +214,7 @@ func TestBootstrapSyncAllFail(t *testing.T) {
 	// More failures than the inner (3) × outer (6) retries can consume.
 	srv, m := newMockCaddyAdmin(t, 1000)
 
-	err := BootstrapSync(app, srv.URL)
+	err := BootstrapSyncFromDB(app, srv.URL)
 	if err == nil {
 		t.Fatal("BootstrapSync should have failed after exhausting retries")
 	}
@@ -260,7 +260,7 @@ func TestBootstrapSyncClearsLastError(t *testing.T) {
 
 	// 0 failures → first /load succeeds.
 	srv, _ := newMockCaddyAdmin(t, 0)
-	if err := BootstrapSync(app, srv.URL); err != nil {
+	if err := BootstrapSyncFromDB(app, srv.URL); err != nil {
 		t.Fatalf("BootstrapSync: %v", err)
 	}
 

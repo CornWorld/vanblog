@@ -28,18 +28,19 @@ var bootstrapBackoffs = []time.Duration{
 	16 * time.Second,
 }
 
-// BootstrapSync reads site.routing from the database, translates it to a full
-// Caddy config, and atomically loads it via the admin API.
+// BootstrapSync pushes a specific rule set into running Caddy via the admin
+// API. The caller supplies the rules + opts snapshot — this function does
+// NOT re-read the database during retries. That's deliberate: the actor
+// (syncWorker) passes the exact rules it just persisted, so a concurrent
+// routing edit during the retry backoff window can't poison the push with
+// a half-mixed rule set.
 //
 // On failure, returns an error describing the last failure. The caller
-// (hooks.OnBootstrap) logs it but does not crash pb — the bootstrap/maintenance
-// config stays active and the management port (:8080) remains reachable. The
-// last error is also persisted to site.caddyLastError so the admin UI can show
-// it; the field is cleared on success.
-//
-// Best-effort fields (Email, LogLevel) are read from env so a fresh install
-// with no site record still produces a valid config.
-func BootstrapSync(app core.App, caddyAdminURL string) error {
+// logs it but pb stays up — the bootstrap/maintenance config stays active
+// and the management port (:8080) remains reachable. The last error is
+// also persisted to site.caddyLastError so the admin UI can show it; the
+// field is cleared on success.
+func BootstrapSync(app core.App, caddyAdminURL string, opts BuildOpts, userRules []UserRule) error {
 	var lastErr error
 
 	for attempt := 0; attempt <= len(bootstrapBackoffs); attempt++ {
@@ -49,13 +50,13 @@ func BootstrapSync(app core.App, caddyAdminURL string) error {
 			time.Sleep(bootstrapBackoffs[attempt-1])
 		}
 
-		// Re-read site data each attempt: an operator may have edited
-		// site.routing during the backoff window and the next attempt
-		// should pick up the fix.
-		opts, userRules := loadBootstrapInputs(app)
-		opts.Defaults()
+		// Apply defaults fresh on every retry — opts fields like Email /
+		// LogLevel may be empty on first call, and Defaults normalizes
+		// them. opts itself is value-typed, so re-Defaulting is safe.
+		o := opts
+		o.Defaults()
 
-		cfg, err := BuildFullConfig(opts, userRules)
+		cfg, err := BuildFullConfig(o, userRules)
 		if err != nil {
 			lastErr = fmt.Errorf("build config: %w", err)
 			continue
@@ -118,10 +119,20 @@ func BootstrapSync(app core.App, caddyAdminURL string) error {
 	return persistedErr
 }
 
+// BootstrapSyncFromDB reads site.routing + site.allowedDomains from the
+// database, then calls BootstrapSync. Used by the startup path where there's
+// no actor yet and the caller genuinely wants "the current DB state applied
+// to Caddy". Runtime admin paths (applyRules / handleApply) must NOT use
+// this — they go through the syncWorker actor with a rules snapshot.
+func BootstrapSyncFromDB(app core.App, caddyAdminURL string) error {
+	opts, userRules := loadBootstrapInputs(app)
+	return BootstrapSync(app, caddyAdminURL, opts, userRules)
+}
+
 // loadBootstrapInputs reads site.routing + site.allowedDomains and assembles
-// the BuildOpts + user rules for BootstrapSync. Any DB error is treated as
-// "fresh install" and yields empty values — a valid config can still be built
-// from system defaults.
+// the BuildOpts + user rules. Any DB error is treated as "fresh install"
+// and yields empty values — a valid config can still be built from system
+// defaults.
 func loadBootstrapInputs(app core.App) (BuildOpts, []UserRule) {
 	opts := BuildOpts{}
 	var userRules []UserRule
