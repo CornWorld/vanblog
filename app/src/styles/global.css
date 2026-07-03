@@ -3,20 +3,51 @@
 /* ── Dark mode: class-based (.dark on <html>) ── */
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* ── Design tokens ── */
+/* ── Design tokens ──
+   Two-tier system: define both light and dark values in @theme (so Tailwind
+   generates color utilities for each), then re-declare the *unprefixed*
+   semantic names in :root and html.dark. Pages reference var(--color-bg),
+   var(--color-text), etc. — the variable itself flips value under dark
+   mode, so consumers don't need `dark:var(--color-bg-dark)` everywhere.
+
+   The previous setup only declared both values in @theme and forced every
+   call site to write `text-[var(--color-text)] dark:text-[var(--color-text-dark)]`.
+   Many call sites forgot the dark half, leading to light-mode colors on a
+   dark background = "瞎眼" contrast. */
 @theme {
+  /* Light palette */
   --color-bg: #fafafa;
-  --color-bg-dark: #0f172a;
   --color-surface: #ffffff;
-  --color-surface-dark: #1e293b;
   --color-text: #1e293b;
-  --color-text-dark: #e2e8f0;
   --color-text-muted: #64748b;
-  --color-text-muted-dark: #94a3b8;
   --color-border: #e2e8f0;
-  --color-border-dark: #334155;
   --color-accent: #2563eb;
+
+  /* Dark palette — also exposed as named tokens so `bg-bg-dark` etc. work */
+  --color-bg-dark: #0f172a;
+  --color-surface-dark: #1e293b;
+  --color-text-dark: #e2e8f0;
+  --color-text-muted-dark: #94a3b8;
+  --color-border-dark: #334155;
   --color-accent-dark: #60a5fa;
+}
+
+/* Semantic aliases — flip under html.dark */
+:root {
+  --bg: var(--color-bg);
+  --surface: var(--color-surface);
+  --text: var(--color-text);
+  --text-muted: var(--color-text-muted);
+  --border: var(--color-border);
+  --accent: var(--color-accent);
+}
+html.dark {
+  --bg: var(--color-bg-dark);
+  --surface: var(--color-surface-dark);
+  --text: var(--color-text-dark);
+  --text-muted: var(--color-text-muted-dark);
+  --border: var(--color-border-dark);
+  --accent: var(--color-accent-dark);
 }
 
 /* ── Base layer ── */
@@ -111,4 +142,53 @@
 /* ── Utility components ── */
 @utility container-page {
   @apply max-w-3xl mx-auto px-4 sm:px-6;
+}
+
+/* ── Form controls ──
+   Apply a consistent border + background to all input/textarea/select so
+   they're visible in both light and dark mode. Several admin pages built
+   inline styles (font-mono text-xs px-1 py-0.5) without any border or
+   background, leaving inputs invisible — especially in dark mode where
+   the input bg is the same as the page bg. This layer catches all of
+   them without touching each page. */
+@layer base {
+  input,
+  textarea,
+  select {
+    @apply bg-white text-[var(--color-text)] border border-[var(--color-border)] rounded px-2 py-1 outline-none transition-colors;
+  }
+  input:focus,
+  textarea:focus,
+  select:focus {
+    @apply border-[var(--color-accent)] ring-1 ring-[var(--color-accent)]/30;
+  }
+  html.dark input,
+  html.dark textarea,
+  html.dark select {
+    @apply bg-slate-900/60 text-[var(--color-text-dark)] border-[var(--color-border-dark)];
+  }
+  html.dark input:focus,
+  html.dark textarea:focus,
+  html.dark select:focus {
+    @apply border-[var(--color-accent-dark)] ring-[var(--color-accent-dark)]/30;
+  }
+  /* checkbox / radio: keep native, do not paint a box around them */
+  input[type="checkbox"],
+  input[type="radio"] {
+    @apply bg-inherit border-0 rounded-none ring-0 p-0;
+    appearance: auto;
+  }
+  input[type="checkbox"]:focus,
+  input[type="radio"]:focus {
+    @apply ring-0 border-0;
+  }
+  /* file input: transparent, no double border */
+  input[type="file"] {
+    @apply bg-inherit border-0 p-0;
+  }
+  /* placeholder color in dark mode */
+  html.dark input::placeholder,
+  html.dark textarea::placeholder {
+    @apply text-slate-500;
+  }
 }
