@@ -17,7 +17,7 @@ import type { VanblogClient } from './services';
  */
 export function createBrowserClient(opts?: CreateClientOptions): VanblogClient {
   return createVanblogClient({
-    url: '/api', // Same-origin, Caddy proxies to pb
+    url: '/', // Same-origin; PocketBase SDK internally appends /api/...
     ...opts,
   });
 }

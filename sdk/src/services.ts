@@ -19,6 +19,18 @@ async function fetchText(pb: PocketBase, path: string): Promise<string> {
 
 // Vanblog built-in services, same level as pb's collection(), files(), etc.
 export interface VanblogServices {
+  // setup is the first-run bootstrap flow. status() reports whether any
+  // admin exists yet; complete() claims the first admin slot. Refuses
+  // once the system has at least one admin.
+  setup: {
+    status(): Promise<{ bootstrap: boolean }>;
+    complete(req: {
+      username: string;
+      email: string;
+      password: string;
+      passwordConfirm: string;
+    }): Promise<{ ok: boolean; adminId?: string; error?: string }>;
+  };
   feed: {
     rss(): Promise<string>;
     atom(): Promise<string>;
@@ -59,7 +71,47 @@ export interface VanblogServices {
   };
   routing: {
     list(): Promise<{ rules: RouteRule[]; allowlist: string[] }>;
-    replace(rules: RouteRule[], allowlist: string[]): Promise<{ applied: boolean; restart_needed: boolean }>;
+    // status returns the routing subsystem health: caddyLastError from site
+    // table, caddy reachability, and the count of rules pending in the DB.
+    // The admin UI uses this for the top-of-page health banner.
+    status(): Promise<{
+      caddyLastError?: string;
+      caddy_reachable: boolean;
+      pending_rules: number;
+    }>;
+    // audits returns the most recent routing-related audit entries — used
+    // for the "what changed lately" panel at the top of /admin/routing.
+    // Entries cover replace / rollback events with before/after rule IDs.
+    audits(): Promise<{
+      items: Array<{
+        created: string;
+        action: string;
+        result: 'success' | 'failure';
+        detail?: Record<string, unknown>;
+        actorName?: string;
+      }>;
+    }>;
+    // render returns the diagnostic view of what vanblog would push to
+    // Caddy right now. userRoutes = TranslateAll output of just the
+    // user's rules (small, focused); fullConfig = complete caddyadmin
+    // Config (vanblog internals + user rules + TLS, what Caddy receives).
+    // Read-only — operator/dev uses this to inspect the actual translation.
+    render(): Promise<{
+      userRoutes: Record<string, unknown>[];
+      fullConfig?: Record<string, unknown>;
+      error?: string;
+    }>;
+    // replace writes the rule set to site.routing and immediately pushes to
+    // running Caddy. On push failure, the DB is rolled back to its
+    // pre-replace value and the response carries ok=false + rolled_back=true
+    // + a non-empty error string.
+    replace(rules: RouteRule[], allowlist: string[]): Promise<{
+      ok: boolean;
+      applied: boolean;
+      restart_needed: boolean;
+      rolled_back?: boolean;
+      error?: string;
+    }>;
     validate(rule: RouteRule, allowlist?: string[]): Promise<{ ok: boolean; error?: string }>;
     apply(): Promise<{ applied: boolean; restart_needed: boolean; error?: string }>;
   };
@@ -80,6 +132,16 @@ export function createVanblogServices(pb: PocketBase): VanblogServices {
       rss: () => fetchText(pb, '/api/feed.xml'),
       atom: () => fetchText(pb, '/api/atom.xml'),
       sitemap: () => fetchText(pb, '/api/sitemap.xml'),
+    },
+    setup: {
+      status: () =>
+        pb.send('/api/vanblog/setup/status', { method: 'GET' }) as Promise<{ bootstrap: boolean }>,
+      complete: (req) =>
+        pb.send('/api/vanblog/setup/complete', { method: 'POST', body: req }) as Promise<{
+          ok: boolean;
+          adminId?: string;
+          error?: string;
+        }>,
     },
     timeline: {
       list: () => pb.send('/api/vanblog/timeline', { method: 'GET' }) as Promise<TimelineEntry[]>,
@@ -143,11 +205,39 @@ export function createVanblogServices(pb: PocketBase): VanblogServices {
           rules: RouteRule[];
           allowlist: string[];
         }>,
+      status: () =>
+        pb.send('/api/vanblog/routing/status', { method: 'GET' }) as Promise<{
+          caddyLastError?: string;
+          caddy_reachable: boolean;
+          pending_rules: number;
+        }>,
+      audits: () =>
+        pb.send('/api/vanblog/routing/audits', { method: 'GET' }) as Promise<{
+          items: Array<{
+            created: string;
+            action: string;
+            result: 'success' | 'failure';
+            detail?: Record<string, unknown>;
+            actorName?: string;
+          }>;
+        }>,
+      render: () =>
+        pb.send('/api/vanblog/routing/render', { method: 'GET' }) as Promise<{
+          userRoutes: Record<string, unknown>[];
+          fullConfig?: Record<string, unknown>;
+          error?: string;
+        }>,
       replace: (rules, allowlist) =>
         pb.send('/api/vanblog/routing/rules', {
           method: 'PUT',
           body: { rules, allowlist },
-        }) as Promise<{ applied: boolean; restart_needed: boolean }>,
+        }) as Promise<{
+          ok: boolean;
+          applied: boolean;
+          restart_needed: boolean;
+          rolled_back?: boolean;
+          error?: string;
+        }>,
       validate: (rule, allowlist = []) =>
         pb.send('/api/vanblog/routing/validate', {
           method: 'POST',
