@@ -12,6 +12,7 @@ import (
 
 	"github.com/cornworld/vanblog/internal/admin"
 	"github.com/cornworld/vanblog/internal/article"
+	"github.com/cornworld/vanblog/internal/bootstrap"
 	"github.com/cornworld/vanblog/internal/caddy"
 	"github.com/cornworld/vanblog/internal/devseed"
 	"github.com/cornworld/vanblog/internal/feed"
@@ -79,6 +80,7 @@ func main() {
 	_ = media.New(app)
 	_ = article.New(app)
 	_ = admin.New(app)
+	_ = bootstrap.New(app)
 	migration.RegisterRoutes(app)
 	_ = feed.New(app)
 	_ = caddy.New(app)
