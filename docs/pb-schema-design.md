@@ -423,7 +423,7 @@ img:delete, all
 
 ## 5. 待决细节
 
-1. **pb FileField 存储后端**:prod 镜像默认 local,dev 镜像可选 S3
+1. ~~**pb FileField 存储后端**:prod 镜像默认 local,dev 镜像可选 S3~~ — **已实现（2026-06-28）**:通过 `site.s3Config` JSON 字段同步到 pb settings，`ApplyS3BackendToSettings` 自动切 S3，集成测试覆盖（MinIO dev-service）
 2. **加密文章密码**:明文迁移,Admin UI 不展示
 3. **media.file 的 thumbs**:pb 原生支持,水印/WebP 移到前端 WASM
 4. **`revisions` 的 diff 生成**:可选 Go 库(`github.com/sergi/go-diff`)在 hook 中生成

@@ -336,4 +336,4 @@ audits: {
 2. **UI 预览**:后台路由配置 UI 应提供"试一下"按钮,校验通过才允许保存
 3. **路由优先级**:用户路由 vs vanblog 保留路由的优先级(Caddy 是按顺序匹配,用户路由放在 vanblog 路由之后)
 4. **Traefik labels 输出**:外置反代用户若用 Traefik,vanblog 生成对应 labels
-5. **Rollback**:caddy admin api 调用失败 → 应回滚 `site.routing` 状态(事务)
+5. ~~**Rollback**:caddy admin api 调用失败 → 应回滚 `site.routing` 状态(事务)~~ — **已实现**:syncWorker actor 的 `applyRules` 原子执行"写 DB → push Caddy → 失败则回滚 DB",见 `internal/caddy/caddy.go`
