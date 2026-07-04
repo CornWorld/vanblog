@@ -104,23 +104,28 @@ export function requireAdmin(pb: VanblogClient): AuthUser | null {
   return user;
 }
 
-// ── safeQuery ───────────────────────────────────────────────────────────
+// ── safe ────────────────────────────────────────────────────────────────
 
 /**
- * Wraps a pb query with try/catch + console.error logging.
- * Returns { data, error } instead of throwing, so pages can render
- * error states inline rather than exploding into the Astro error page.
+ * Wraps any async function with try/catch + console.error logging.
+ * Returns { data, error } instead of throwing, so callers can render
+ * error states inline rather than crashing.
+ *
+ * @example
+ * const { data: posts = [], error } = await safe(
+ *   () => Astro.locals.pb.vanblog.posts.listPublished(1, 10),
+ *   'index'
+ * );
  */
-export async function safeQuery<T>(
-  pb: VanblogClient,
-  fn: (pb: VanblogClient) => Promise<T>,
+export async function safe<T>(
+  fn: () => Promise<T>,
   label: string,
-): Promise<{ data: T | null; error: boolean }> {
+): Promise<{ data: T | undefined; error: boolean }> {
   try {
-    return { data: await fn(pb), error: false };
+    return { data: await fn(), error: false };
   } catch (e) {
     console.error(`[${label}]`, e);
-    return { data: null, error: true };
+    return { data: undefined, error: true };
   }
 }
 

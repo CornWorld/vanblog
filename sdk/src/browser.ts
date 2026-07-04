@@ -21,12 +21,12 @@ export function createBrowserClient(opts?: CreateClientOptions): VanblogClient {
  * @example
  * ```html
  * <script>
- *   import { initBrowserPb } from '@vanblog/sdk/browser';
- *   initBrowserPb();
+ *   import { initClient } from '@vanblog/sdk/browser';
+ *   initClient();
  * </script>
  * ```
  */
-export function initBrowserPb(): void {
+export function initClient(): void {
   const pb = createBrowserClient();
   pb.authStore.loadFromCookie(document.cookie);
   (window as any).__pb = pb;

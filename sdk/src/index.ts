@@ -21,7 +21,7 @@ export {
   getAuthUser,
   hasPermission,
   requireAdmin,
-  safeQuery,
+  safe,
   createServerClient,
   exportAuthCookie,
   type AuthUser,
@@ -32,13 +32,16 @@ export {
 export { createVanblogMiddleware } from './server';
 
 // Browser helpers
-export { createBrowserClient, initBrowserPb, logout } from './browser';
+export { createBrowserClient, initClient, logout } from './browser';
 
 // Cookie constants
 export { AUTH_COOKIE_OPTIONS } from './cookie';
 
 // Date utilities
-export { parsePbDate, formatPbDate, formatPbDateOnly } from './dates';
+export { parseDate, fmtDate, fmtDateTime, fmtRelativeTime } from './dates';
 
 // Content utilities
 export { stripMarkdown } from './services';
+
+// General utilities
+export { getPage, buildPageHref } from './utils';
