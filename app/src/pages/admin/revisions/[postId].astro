@@ -4,25 +4,23 @@ export const prerender = false;
 import AdminLayout from '../../../layouts/AdminLayout.astro';
 import ErrorNotice from '../../../components/ErrorNotice.astro';
 import { getAuthUser } from '@vanblog/sdk';
-import { formatPbDate } from '@vanblog/sdk';
+import { fmtDateTime } from '@vanblog/sdk';
 import type { Revision, Post } from '@vanblog/sdk';
 
+const pb = Astro.locals.pb;
 
-Astro.cache.set(false);
 
 const { postId } = Astro.params;
 // Inline 404 instead of redirect to /404 — preserves nav chrome.
 const notFound = !postId;
 if (notFound) Astro.response.status = 404;
 
-const user = getAuthUser(Astro.locals.pb);
+const user = getAuthUser(pb);
 const isAdmin = user?.role === 'admin';
 
 let post: Post | null = null;
 let revs: Revision[] = [];
 let denied = false;
-
-const pb = Astro.locals.pb;
 
 if (!notFound) {
   try {
@@ -76,7 +74,7 @@ if (!notFound && !denied) {
         <li class="border border-[var(--color-border)] p-3">
           <div class="flex justify-between gap-4 flex-wrap">
             <strong>{r.reason || '(无原因)'}</strong>
-            <small class="text-[var(--color-text-muted)]">{formatPbDate(r.created)}</small>
+            <small class="text-[var(--color-text-muted)]">{fmtDateTime(r.created)}</small>
           </div>
           <div class="text-xs text-[var(--color-text-muted)] mt-1">
             by {r.authoredBy || '-'}

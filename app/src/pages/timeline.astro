@@ -3,18 +3,13 @@ export const prerender = false;
 
 import BaseLayout from '../layouts/BaseLayout.astro';
 import ErrorState from '../components/ErrorState.astro';
-import type { TimelineEntry } from '@vanblog/sdk';
+import { safe } from '@vanblog/sdk';
+const pb = Astro.locals.pb;
 
-let entries: TimelineEntry[] = [];
-let error = false;
-
-try {
-  const pb = Astro.locals.pb;
-  entries = await pb.vanblog.timeline.list();
-} catch (e) {
-  console.error('[timeline] Failed to load:', e);
-  error = true;
-}
+const { data: entries = [], error } = await safe(
+  () => pb.vanblog.timeline.list(),
+  'timeline'
+);
 ---
 <BaseLayout title="时间轴" path="/timeline">
   <h1 class="mb-8">时间轴</h1>

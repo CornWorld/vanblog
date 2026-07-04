@@ -3,12 +3,12 @@ export const prerender = false;
 
 import AdminLayout from '../../layouts/AdminLayout.astro';
 import ErrorNotice from '../../components/ErrorNotice.astro';
-import { requireAdmin, getAuthUser } from '@vanblog/sdk';
+import { requireAdmin, getAuthUser, safe } from '@vanblog/sdk';
+const pb = Astro.locals.pb;
 
 
-Astro.cache.set(false);
 
-const denied = !requireAdmin(Astro.locals.pb);
+const denied = !requireAdmin(pb);
 if (denied) Astro.response.status = 403;
 
 const ALL_PERMS = [
@@ -17,20 +17,14 @@ const ALL_PERMS = [
   'img:delete', 'all',
 ];
 
-let users: any[] = [];
-if (!denied) {
-  try {
-    users = await Astro.locals.pb.collection('users').getFullList({ sort: 'username' });
-  } catch (e) {
-    console.error('[admin/users] load:', e);
-  }
-}
+const { data: users = [] } = denied ? { data: [] } : await safe(
+  () => pb.collection('users').getFullList({ sort: 'username' }),
+  'admin/users'
+);
 
-// Last-admin guard: demoting or deleting the only remaining admin locks
-// everyone out of admin UI. Compute admin count for client-side guard and
-// also pass current user id so self-demotion is at least visible.
-const currentUserId = getAuthUser(Astro.locals.pb)?.id;
-const adminCount = users.filter((u) => u.role === 'admin').length;
+// Last-admin guard
+const currentUserId = getAuthUser(pb)?.id;
+const adminCount = users.filter((u: any) => u.role === 'admin').length;
 ---
 <AdminLayout title="用户管理">
   <h1>用户管理</h1>
@@ -85,7 +79,7 @@ const adminCount = users.filter((u) => u.role === 'admin').length;
           <td class="flex gap-2">
             <button class="btn-save">保存</button>
             <button class="btn-reset" title="发送重置密码邮件 / 或在此设置新密码">改密码</button>
-            <button class="btn-del" class="text-red-600">删除</button>
+            <button class="btn-del text-red-600">删除</button>
           </td>
         </tr>
       ))}
@@ -93,11 +87,11 @@ const adminCount = users.filter((u) => u.role === 'admin').length;
   </table>
 
   <script define:vars={{ currentUserId, adminCount }}>
-    const pb = window.__pb!;
+    const pb = window.__pb;
 
-    document.getElementById('new-user')!.addEventListener('submit', async (e) => {
+    document.getElementById('new-user').addEventListener('submit', async (e) => {
       e.preventDefault();
-      const fd = new FormData(e.currentTarget as HTMLFormElement);
+      const fd = new FormData(e.currentTarget);
       try {
         await pb.collection('users').create({
           username: fd.get('username'),
@@ -109,45 +103,45 @@ const adminCount = users.filter((u) => u.role === 'admin').length;
           permissions: [],
         });
         location.reload();
-      } catch (err) { alert('新建失败: ' + (err as Error).message); }
+      } catch (err) { alert('新建失败: ' + (err).message); }
     });
 
     // Demoting the last admin locks all admin routes (UpdateRule
     // @request.auth.role = "admin"). Block before the request — pb returns
     // 404 on the next save, which looks like a mystery bug.
     function isLastAdminDowngrade(tr) {
-      const roleSel = tr.querySelector<HTMLSelectElement>('.f-role')!;
+      const roleSel = tr.querySelector('.f-role');
       const wasAdmin = tr.dataset.role === 'admin';
       const willAdmin = roleSel.value === 'admin';
       return wasAdmin && !willAdmin && adminCount <= 1;
     }
 
-    document.querySelectorAll<HTMLElement>('tr[data-id]').forEach((tr) => {
-      const id = tr.dataset.id!;
-      tr.querySelector<HTMLElement>('.btn-save')!.onclick = async () => {
+    document.querySelectorAll('tr[data-id]').forEach((tr) => {
+      const id = tr.dataset.id;
+      tr.querySelector('.btn-save').onclick = async () => {
         if (isLastAdminDowngrade(tr)) {
           alert('无法降级：这是系统里唯一的管理员。请先把另一个用户提升为管理员。');
           return;
         }
-        const perms = Array.from(tr.querySelectorAll<HTMLInputElement>('.f-perm:checked')).map((c) => c.value);
+        const perms = Array.from(tr.querySelectorAll('.f-perm:checked')).map((c) => c.value);
         try {
           await pb.collection('users').update(id, {
-            nickname: tr.querySelector<HTMLInputElement>('.f-nickname')!.value,
-            role: tr.querySelector<HTMLSelectElement>('.f-role')!.value,
+            nickname: tr.querySelector('.f-nickname').value,
+            role: tr.querySelector('.f-role').value,
             permissions: perms,
           });
           alert('已保存');
-        } catch (err) { alert('保存失败: ' + (err as Error).message); }
+        } catch (err) { alert('保存失败: ' + (err).message); }
       };
-      tr.querySelector<HTMLElement>('.btn-reset')!.onclick = async () => {
+      tr.querySelector('.btn-reset').onclick = async () => {
         const pw = prompt('输入新密码（留空取消）');
         if (!pw) return;
         try {
           await pb.collection('users').update(id, { password: pw, passwordConfirm: pw });
           alert('已重置');
-        } catch (err) { alert('重置失败: ' + (err as Error).message); }
+        } catch (err) { alert('重置失败: ' + (err).message); }
       };
-      tr.querySelector<HTMLElement>('.btn-del')!.onclick = async () => {
+      tr.querySelector('.btn-del').onclick = async () => {
         if (tr.dataset.role === 'admin' && adminCount <= 1) {
           alert('无法删除：这是系统里唯一的管理员。');
           return;
@@ -156,7 +150,7 @@ const adminCount = users.filter((u) => u.role === 'admin').length;
         try {
           await pb.vanblog.users.delete(id);
           tr.remove();
-        } catch (err) { alert('删除失败: ' + (err as Error).message); }
+        } catch (err) { alert('删除失败: ' + (err).message); }
       };
     });
   </script>

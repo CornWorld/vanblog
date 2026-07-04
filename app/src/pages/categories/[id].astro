@@ -3,33 +3,26 @@ export const prerender = false;
 
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import ErrorState from '../../components/ErrorState.astro';
-import { formatPbDateOnly } from '@vanblog/sdk';
+import { fmtDate, safe } from '@vanblog/sdk';
 import type { Category, Post } from '@vanblog/sdk';
+const pb = Astro.locals.pb;
 
 const { id } = Astro.params;
 if (!id) return Astro.redirect('/404');
 
 let cat: Category;
-let posts: Post[] = [];
-let error = false;
-
-const pb = Astro.locals.pb;
 try {
   cat = await pb.collection('categories').getOne<Category>(id);
 } catch {
   return Astro.redirect('/404');
 }
 
-try {
-  const result = await pb.vanblog.posts.listPublished(1, 100, {
-    category: cat.name,
-    sort: '-created',
-  });
-  posts = result.items;
-} catch (e) {
-  console.error('[category] Failed to load posts:', e);
-  error = true;
-}
+const { data: result } = await safe(
+  () => pb.vanblog.posts.listPublished(1, 100, { category: cat.name, sort: '-created' }),
+  'category'
+);
+const posts = result?.items ?? [];
+const error = !result;
 ---
 <BaseLayout title={cat.name} path={`/categories/${id}`}>
   <a href="/categories" class="text-sm text-[var(--color-text-muted)] hover:text-[var(--color-accent)] mb-4 inline-block">
@@ -52,7 +45,7 @@ try {
         <li class="flex items-baseline gap-3">
           <time class="text-sm text-[var(--color-text-muted)] whitespace-nowrap tabular-nums"
                 datetime={p.created}>
-            {formatPbDateOnly(p.created)}
+            {fmtDate(p.created)}
           </time>
           <a href={`/posts/${p.id}`} class="hover:text-[var(--color-accent)]">{p.title}</a>
         </li>

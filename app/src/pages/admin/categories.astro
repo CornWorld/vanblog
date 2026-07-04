@@ -2,16 +2,15 @@
 export const prerender = false;
 
 import AdminLayout from '../../layouts/AdminLayout.astro';
+import { safe } from '@vanblog/sdk';
 import type { Category } from '@vanblog/sdk';
 
-Astro.cache.set(false);
+const pb = Astro.locals.pb;
 
-let cats: Category[] = [];
-try {
-  cats = await Astro.locals.pb.collection('categories').getFullList<Category>({ sort: 'name' });
-} catch (e) {
-  console.error('[admin/cats] load:', e);
-}
+const { data: cats = [] } = await safe(
+  () => pb.collection('categories').getFullList<Category>({ sort: 'name' }),
+  'admin/cats'
+);
 ---
 <AdminLayout title="分类管理">
   <h1>分类管理</h1>
@@ -46,7 +45,7 @@ try {
           <td><input type="checkbox" class="f-private" checked={!!c.private} /></td>
           <td class="flex gap-2">
             <button class="btn-save">保存</button>
-            <button class="btn-del" class="text-red-600">删除</button>
+            <button class="btn-del text-red-600">删除</button>
           </td>
         </tr>
       ))}

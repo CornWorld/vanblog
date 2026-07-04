@@ -3,20 +3,17 @@ export const prerender = false;
 
 import AdminLayout from '../../layouts/AdminLayout.astro';
 import ErrorNotice from '../../components/ErrorNotice.astro';
-import { requireAdmin } from '@vanblog/sdk';
-import { formatPbDate } from '@vanblog/sdk';
+import { requireAdmin, safe, getPage, buildPageHref } from '@vanblog/sdk';
+import { fmtDateTime } from '@vanblog/sdk';
+const pb = Astro.locals.pb;
 
-// Not logged in → login page. Logged in but not admin → inline 403.
-// The previous behavior redirected both cases to /_, which told legitimate
-// non-admin users nothing about why they couldn't see the page.
 
-Astro.cache.set(false);
 
-const denied = !requireAdmin(Astro.locals.pb);
+const denied = !requireAdmin(pb);
 if (denied) Astro.response.status = 403;
 
 const PER_PAGE = 50;
-const page = Math.max(1, parseInt(Astro.url.searchParams.get('page') || '1', 10) || 1);
+const page = getPage(Astro.url.searchParams);
 const action = (Astro.url.searchParams.get('action') || '').trim();
 const result = Astro.url.searchParams.get('result') || '';
 
@@ -26,31 +23,17 @@ if (result === 'success') parts.push(`result = "success"`);
 if (result === 'failure') parts.push(`result = "failure"`);
 const filter = parts.join(' && ');
 
-let audits: any[] = [];
-let totalAudits = 0;
-let totalPages = 1;
-if (!denied) {
-  try {
-    const r = await Astro.locals.pb.collection('audits').getList(page, PER_PAGE, {
-      sort: '-created',
-      expand: 'actor',
-      filter: filter || undefined,
-    });
-    audits = r.items;
-    totalAudits = r.totalItems;
-    totalPages = r.totalPages;
-  } catch (e) {
-    console.error('[admin/audits] load:', e);
-  }
-}
-
-function pageHref(n: number): string {
-  const params = new URLSearchParams();
-  if (action) params.set('action', action);
-  if (result) params.set('result', result);
-  params.set('page', String(n));
-  return `/admin/audits?${params.toString()}`;
-}
+const { data: result } = denied ? { data: undefined } : await safe(
+  () => pb.collection('audits').getList(page, PER_PAGE, {
+    sort: '-created',
+    expand: 'actor',
+    filter: filter || undefined,
+  }),
+  'admin/audits'
+);
+const audits = result?.items ?? [];
+const totalAudits = result?.totalItems ?? 0;
+const totalPages = result?.totalPages ?? 1;
 
 function expandName(a: any): string {
   const u = a?.expand?.actor;
@@ -88,7 +71,7 @@ function expandName(a: any): string {
         <tbody>
           {audits.map(a => (
             <tr class="border-b border-[var(--color-border)] align-top">
-              <td><small>{formatPbDate(a.created)}</small></td>
+              <td><small>{fmtDateTime(a.created)}</small></td>
               <td>{expandName(a)}</td>
               <td>{a.action}</td>
               <td class="break-all">{a.target}</td>
@@ -116,8 +99,8 @@ function expandName(a: any): string {
 
     {totalPages > 1 && (
       <nav class="flex gap-2 mt-2 text-sm" aria-label="分页">
-        {page > 1 && <a href={pageHref(page - 1)} class="px-2 py-0.5 border rounded">上一页</a>}
-        {page < totalPages && <a href={pageHref(page + 1)} class="px-2 py-0.5 border rounded">下一页</a>}
+        {page > 1 && <a href={buildPageHref('/admin/audits', Astro.url.searchParams, page - 1)} class="px-2 py-0.5 border rounded">上一页</a>}
+        {page < totalPages && <a href={buildPageHref('/admin/audits', Astro.url.searchParams, page + 1)} class="px-2 py-0.5 border rounded">下一页</a>}
       </nav>
     )}
     </>

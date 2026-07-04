@@ -17,13 +17,13 @@ interface Props {
 }
 
 const { title, description, site: siteProp, post, path } = Astro.props;
+const pb = Astro.locals.pb;
 
 // Fall back to site config from middleware (lazy-loaded from pb)
 const site = siteProp || await Astro.locals.getSite();
 
-// Auth state for nav: show logout only when there's a session. About link
-// is conditional on the admin having written any aboutContent.
-const isLoggedIn = Astro.locals.pb.authStore.isValid;
+// Auth state for nav: show logout only when there's a session.
+const isLoggedIn = pb.authStore.isValid;
 const hasAbout = !!(site?.aboutContent && site.aboutContent.trim());
 
 const siteName = site?.siteName || 'Vanblog';

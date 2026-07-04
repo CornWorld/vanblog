@@ -3,18 +3,14 @@ export const prerender = false;
 
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import ErrorState from '../../components/ErrorState.astro';
+import { safe } from '@vanblog/sdk';
 import type { Category } from '@vanblog/sdk';
+const pb = Astro.locals.pb;
 
-let cats: Category[] = [];
-let error = false;
-
-try {
-  const pb = Astro.locals.pb;
-  cats = await pb.collection('categories').getFullList<Category>({ sort: 'name' });
-} catch (e) {
-  console.error('[categories] Failed to load:', e);
-  error = true;
-}
+const { data: cats = [], error } = await safe(
+  () => pb.collection('categories').getFullList<Category>({ sort: 'name' }),
+  'categories'
+);
 ---
 <BaseLayout title="分类" path="/categories">
   <h1 class="mb-6">分类</h1>

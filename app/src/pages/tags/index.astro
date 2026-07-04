@@ -3,18 +3,14 @@ export const prerender = false;
 
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import ErrorState from '../../components/ErrorState.astro';
+import { safe } from '@vanblog/sdk';
 import type { Tag } from '@vanblog/sdk';
+const pb = Astro.locals.pb;
 
-let tags: Tag[] = [];
-let error = false;
-
-try {
-  const pb = Astro.locals.pb;
-  tags = await pb.collection('tags').getFullList<Tag>({ sort: 'name' });
-} catch (e) {
-  console.error('[tags] Failed to load tags:', e);
-  error = true;
-}
+const { data: tags = [], error } = await safe(
+  () => pb.collection('tags').getFullList<Tag>({ sort: 'name' }),
+  'tags'
+);
 ---
 <BaseLayout title="标签" path="/tags">
   <h1 class="mb-6">标签</h1>

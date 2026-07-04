@@ -3,63 +3,45 @@ export const prerender = false;
 
 import AdminLayout from '../../layouts/AdminLayout.astro';
 import ErrorNotice from '../../components/ErrorNotice.astro';
-import { requireAdmin } from '@vanblog/sdk';
+import { requireAdmin, safe, fmtRelativeTime } from '@vanblog/sdk';
 import type { RouteRule } from '@vanblog/sdk';
 
-Astro.cache.set(false);
+const pb = Astro.locals.pb;
 
-const denied = !requireAdmin(Astro.locals.pb);
+const denied = !requireAdmin(pb);
 if (denied) Astro.response.status = 403;
 
 let rules: RouteRule[] = [];
 let allowlist: string[] = [];
 let loadError = '';
-let status: { caddyLastError?: string; caddy_reachable: boolean; pending_rules: number } | null = null;
-let auditItems: Array<{
-  created: string;
-  action: string;
-  result: 'success' | 'failure';
-  detail?: Record<string, unknown>;
-  actorName?: string;
-}> = [];
+let status: any = null;
+let auditItems: any[] = [];
 if (!denied) {
-  try {
-    const r = await Astro.locals.pb.vanblog.routing.list();
-    rules = r.rules || [];
-    allowlist = r.allowlist || [];
-  } catch (e) {
-    loadError = (e as Error).message;
+  const r = await safe(
+    () => pb.vanblog.routing.list(),
+    'admin/routing'
+  );
+  if (r.error) {
+    loadError = '加载路由配置失败';
+  } else {
+    rules = r.data?.rules || [];
+    allowlist = r.data?.allowlist || [];
   }
-  // Status is best-effort: if it 500s (e.g. site row missing on fresh
-  // install), we just skip the banner rather than blocking the page.
-  try {
-    status = await Astro.locals.pb.vanblog.routing.status();
-  } catch {
-    // ignore — banner stays hidden
-  }
-  // Recent changes panel — best-effort, hidden if it fails (fresh install
-  // with no audits row should not break the page).
-  try {
-    const a = await Astro.locals.pb.vanblog.routing.audits();
-    auditItems = a.items || [];
-  } catch {
-    // ignore — panel stays hidden
-  }
+
+  const s = await safe(
+    () => pb.vanblog.routing.status(),
+    'admin/routing/status'
+  );
+  status = s.data;
+
+  const a = await safe(
+    () => pb.vanblog.routing.audits(),
+    'admin/routing/audits'
+  );
+  auditItems = a.data?.items || [];
 }
 
 const TYPE_OPTIONS = ['proxy', 'redirect', 'rewrite', 'block', 'cache'];
-
-// Audit timestamps from pb come as "2026-07-02 06:30:00.000Z" — render as
-// local-relative for the recent-changes panel.
-function formatAuditTime(raw: string): string {
-  const d = new Date(raw.replace(' ', 'T'));
-  if (isNaN(d.getTime())) return raw;
-  const diff = Date.now() - d.getTime();
-  if (diff < 60_000) return '刚刚';
-  if (diff < 3_600_000) return `${Math.floor(diff / 60_000)} 分钟前`;
-  if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)} 小时前`;
-  return d.toLocaleString('zh-CN', { hour12: false });
-}
 ---
 
 <AdminLayout title="路由配置">
@@ -118,7 +100,7 @@ function formatAuditTime(raw: string): string {
         <ul class="mt-2 space-y-1 font-mono text-xs">
           {auditItems.map(a => (
             <li class="flex gap-2 items-baseline">
-              <span class="text-[var(--color-text-muted)] w-32 shrink-0">{formatAuditTime(a.created)}</span>
+              <span class="text-[var(--color-text-muted)] w-32 shrink-0">{fmtRelativeTime(a.created)}</span>
               <span class={`w-14 shrink-0 ${a.result === 'failure' ? 'text-red-600 dark:text-red-400' : 'text-green-700 dark:text-green-400'}`}>
                 {a.result === 'failure' ? '✗ 失败' : '✓ 成功'}
               </span>
@@ -226,321 +208,7 @@ function formatAuditTime(raw: string): string {
   )}
 
   <script define:vars={{ TYPE_OPTIONS }}>
-    const pb = window.__pb;
-    const tbody = document.getElementById('rules-body');
-    const status = document.getElementById('save-status');
-    const allowlistEl = document.getElementById('allowlist');
-
-    // refreshStatus re-fetches routing health and re-renders the banner
-    // in place. Called after save/apply so the operator sees the new
-    // state without a full page reload.
-    async function refreshStatus() {
-      let s;
-      try {
-        s = await pb.vanblog.routing.status();
-      } catch {
-        return; // network failed; leave banner as-is
-      }
-      const banner = document.getElementById('health-banner');
-      const unhealthy = s.caddyLastError || s.caddy_reachable === false;
-      if (!unhealthy) {
-        if (banner) banner.remove();
-        return;
-      }
-      const isError = !!s.caddyLastError;
-      const cls = isError
-        ? 'bg-red-50 border-red-300 text-red-800 dark:bg-red-950 dark:border-red-700 dark:text-red-200'
-        : 'bg-yellow-50 border-yellow-300 text-yellow-800 dark:bg-yellow-950 dark:border-yellow-700 dark:text-yellow-200';
-      const html = `
-        ${s.caddyLastError ? `<p><strong>上次应用失败：</strong><code class="font-mono text-xs break-all">${escapeHtml(s.caddyLastError)}</code></p>` : ''}
-        ${s.caddy_reachable === false ? '<p><strong>Caddy 不可达。</strong>路由保存后不会生效，请检查 Caddy 进程或 <code>VANBLOG_SKIP_CADDY_SYNC</code> 设置。</p>' : ''}
-        <p class="text-xs mt-1 opacity-75">DB 中有 ${s.pending_rules ?? 0} 条规则，点击「立即应用」可重试同步到 Caddy。</p>
-      `;
-      if (banner) {
-        banner.className = `mb-4 px-4 py-3 rounded border text-sm ${cls}`;
-        banner.innerHTML = html;
-      } else {
-        const newBanner = document.createElement('div');
-        newBanner.id = 'health-banner';
-        newBanner.className = `mb-4 px-4 py-3 rounded border text-sm ${cls}`;
-        newBanner.innerHTML = html;
-        // Insert above the table area (right after the <p>intro or below the
-        // loadError notice if present).
-        const firstContainer = document.querySelector('h1 + p');
-        firstContainer?.after(newBanner);
-      }
-    }
-
-    // refreshAudits re-fetches the recent-changes feed and re-renders the
-    // <details> list in place. Called after save/apply so the operator sees
-    // the new entry without a full reload.
-    async function refreshAudits() {
-      let items;
-      try {
-        items = (await pb.vanblog.routing.audits()).items || [];
-      } catch {
-        return;
-      }
-      const panel = document.getElementById('audit-panel');
-      if (!panel) return; // panel hidden on fresh install / load failure
-      const list = panel.querySelector('ul');
-      if (!list) return;
-      if (items.length === 0) {
-        panel.remove();
-        return;
-      }
-      const summary = panel.querySelector('summary');
-      if (summary) {
-        summary.textContent = `最近变更（${items.length} 条${items.length >= 10 ? '，仅显示最近 10 条' : ''}）`;
-      }
-      list.innerHTML = items.map(a => {
-        const time = formatAuditTime(a.created);
-        const okBadge = a.result === 'failure'
-          ? '<span class="w-14 shrink-0 text-red-600 dark:text-red-400">✗ 失败</span>'
-          : '<span class="w-14 shrink-0 text-green-700 dark:text-green-400">✓ 成功</span>';
-        const actor = escapeHtml(a.actorName || 'system/agent');
-        const actionLabel = a.action === 'routing.replace' ? '替换规则' : escapeHtml(a.action);
-        const rollback = a.detail?.rollback ? '<span class="text-yellow-700 dark:text-yellow-400">（已回滚）</span>' : '';
-        const before = Array.isArray(a.detail?.before) ? (a.detail.before).length : '?';
-        const after = Array.isArray(a.detail?.after) ? (a.detail.after).length : '?';
-        const delta = (typeof before === 'number' && typeof after === 'number')
-          ? `<span class="text-[var(--color-text-muted)]"> [${before} → ${after} 条]</span>`
-          : '';
-        const err = a.detail?.caddyError
-          ? `<span class="text-red-600 dark:text-red-400">：${escapeHtml(String(a.detail.caddyError))}</span>`
-          : '';
-        return `<li class="flex gap-2 items-baseline">
-          <span class="text-[var(--color-text-muted)] w-32 shrink-0">${time}</span>
-          ${okBadge}
-          <span class="w-32 shrink-0 text-[var(--color-text-muted)]">${actor}</span>
-          <span class="flex-1 break-all">${actionLabel} ${rollback} ${delta} ${err}</span>
-        </li>`;
-      }).join('');
-    }
-
-    function formatAuditTime(raw) {
-      const d = new Date(String(raw).replace(' ', 'T'));
-      if (isNaN(d.getTime())) return raw;
-      const diff = Date.now() - d.getTime();
-      if (diff < 60_000) return '刚刚';
-      if (diff < 3_600_000) return `${Math.floor(diff / 60_000)} 分钟前`;
-      if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)} 小时前`;
-      return d.toLocaleString('zh-CN', { hour12: false });
-    }
-
-    function escapeHtml(s) {
-      return String(s).replace(/[&<>"']/g, c => ({
-        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-      }[c]));
-    }
-
-    function newRow() {
-      const tr = document.createElement('tr');
-      tr.className = 'border-b border-[var(--color-border)] align-top';
-      tr.innerHTML = `
-        <td><input class="f-id w-full px-1 py-0.5 font-mono text-xs" placeholder="rule-id" /></td>
-        <td><select class="f-type px-1 py-0.5">${TYPE_OPTIONS.map(t => `<option value="${t}">${t}</option>`).join('')}</select></td>
-        <td><input class="f-from w-full px-1 py-0.5 font-mono text-xs" placeholder="/docs/*" title="路径匹配。* 单段通配（/docs/* 命中 /docs/a 但不命中 /docs/a/b）；** 跨段通配（/docs/** 命中所有子路径）" /></td>
-        <td><input class="f-to w-full px-1 py-0.5 font-mono text-xs" placeholder="按类型变化：proxy→http://host:port/* | redirect→/new-path | rewrite→/internal/*" title="目标。proxy 是完整 URL；redirect/rewrite 是站内路径。* 在 proxy 中按 Caddy 占位符语义转发源匹配段" /></td>
-        <td><input class="f-code w-full px-1 py-0.5" type="number" placeholder="301" /></td>
-        <td><textarea class="f-headers w-full px-1 py-0.5 font-mono text-xs resize-y min-h-[28px]" rows="1" placeholder='{"X-Key":"v"}' title='JSON 对象，键为 header 名，值为字符串或字符串数组。空着表示无自定义 header。'></textarea></td>
-        <td class="flex gap-2">
-          <button type="button" class="btn-test text-xs">试一下</button>
-          <button type="button" class="btn-del text-red-600 text-xs">删除</button>
-        </td>
-      `;
-      bindRow(tr);
-      tbody.appendChild(tr);
-    }
-
-    function readRow(tr) {
-      const headersRaw = tr.querySelector('.f-headers').value.trim();
-      let headers = undefined;
-      if (headersRaw) {
-        try { headers = JSON.parse(headersRaw); }
-        catch { throw new Error('Headers 不是合法 JSON：' + headersRaw); }
-      }
-      return {
-        id: tr.querySelector('.f-id').value.trim(),
-        type: tr.querySelector('.f-type').value,
-        from: tr.querySelector('.f-from').value.trim(),
-        to: tr.querySelector('.f-to').value.trim(),
-        code: Number(tr.querySelector('.f-code').value) || undefined,
-        headers,
-      };
-    }
-
-    function getAllowlist() {
-      return allowlistEl.value.split('\n').map(s => s.trim()).filter(Boolean);
-    }
-
-    function bindRow(tr) {
-      tr.querySelector('.btn-del').addEventListener('click', () => tr.remove());
-
-      // Headers textarea: live JSON validation on blur. Empty is always OK.
-      // Bad JSON: red border + title with the parse error. Good JSON: green
-      // border to confirm the value will be accepted on save. We do NOT
-      // reformat the value — keep the user's exact input so they can edit.
-      const headersEl = tr.querySelector('.f-headers');
-      headersEl?.addEventListener('blur', () => {
-        const raw = headersEl.value.trim();
-        headersEl.classList.remove('border-red-500', 'border-green-500');
-        if (!raw) return;
-        try {
-          JSON.parse(raw);
-          headersEl.classList.add('border-green-500');
-        } catch (e) {
-          headersEl.classList.add('border-red-500');
-          headersEl.title = 'Headers 不是合法 JSON：' + e.message;
-        }
-      });
-
-      tr.querySelector('.btn-test').addEventListener('click', async () => {
-        let rule;
-        try { rule = readRow(tr); } catch (e) { alert(e.message); return; }
-        status.textContent = '校验中…';
-        try {
-          const r = await pb.vanblog.routing.validate(rule, getAllowlist());
-          if (r.ok) {
-            status.textContent = `✓ ${rule.id || '(新规则)'} 校验通过`;
-          } else {
-            status.textContent = `✗ ${rule.id || '(新规则)'}：${r.error || '未知错误'}`;
-          }
-        } catch (e) {
-          status.textContent = '校验请求失败：' + e.message;
-        }
-      });
-    }
-
-    document.querySelectorAll('#rules-body tr').forEach(bindRow);
-
-    document.getElementById('btn-add').addEventListener('click', newRow);
-
-    document.getElementById('btn-save').addEventListener('click', async () => {
-      if (!pb) return alert('未登录');
-      const rules = [];
-      try {
-        for (const tr of document.querySelectorAll('#rules-body tr')) {
-          rules.push(readRow(tr));
-        }
-      } catch (e) {
-        alert(e.message);
-        return;
-      }
-      status.textContent = '保存中（最长可能 30s）…';
-      try {
-        const r = await pb.vanblog.routing.replace(rules, getAllowlist());
-        if (r.applied) {
-          status.textContent = '✓ 已保存并应用到 Caddy';
-        } else if (r.rolled_back) {
-          status.textContent = '✗ 已回滚：' + (r.error || '未知错误');
-          alert('保存失败，已恢复到之前的规则：\n' + (r.error || ''));
-        } else if (r.restart_needed) {
-          // VANBLOG_SKIP_CADDY_SYNC 模式：写库了但没 Caddy 可推。
-          status.textContent = '已保存，重启 vanblog 后生效（或点"立即应用"）';
-        } else if (r.error) {
-          status.textContent = '✗ 保存失败：' + r.error;
-          alert('保存失败：' + r.error);
-        } else {
-          status.textContent = '未应用：' + JSON.stringify(r);
-        }
-      } catch (e) {
-        // Pre-save validation (dup id / quota / SSRF / reserved path) returns
-        // 4xx, which the SDK raises. Inline both the status bar and an alert
-        // so the operator sees the failure even if they scrolled past the bar.
-        status.textContent = '✗ 保存被拒绝：' + e.message;
-        alert('保存被拒绝：\n' + e.message);
-      }
-      // Either way, the routing health may have changed (success clears
-      // caddyLastError; failure writes it). Refresh the banner.
-      refreshStatus();
-      refreshAudits();
-    });
-
-    document.getElementById('btn-apply').addEventListener('click', async () => {
-      if (!pb) return alert('未登录');
-      status.textContent = '应用中（最长可能 30s）…';
-      try {
-        const r = await pb.vanblog.routing.apply();
-        if (r.applied) {
-          status.textContent = '✓ 已应用到运行中的 Caddy';
-        } else if (r.error) {
-          status.textContent = '✗ 应用失败：' + r.error;
-          alert('应用失败：' + r.error);
-        } else {
-          status.textContent = '未应用：' + JSON.stringify(r);
-        }
-      } catch (e) {
-        status.textContent = '应用请求失败：' + e.message;
-        alert('应用请求失败：' + e.message);
-      }
-      // Refresh banner regardless of outcome.
-      refreshStatus();
-    });
-
-    // --- Caddy config preview panel ----------------------------------
-    // Lazy-loaded on first toggle. Layer radio toggles between userRoutes
-    // and fullConfig without re-fetching (data is cached from the initial
-    // load); the refresh button forces a re-fetch.
-    const renderPanel = document.getElementById('render-panel');
-    const renderOutput = document.getElementById('render-output');
-    const renderError = document.getElementById('render-error');
-    const renderStatus = document.getElementById('render-status');
-    let renderCache = null; // { userRoutes, fullConfig, error }
-    let renderFetched = false;
-
-    function renderSelectedLayer() {
-      if (!renderCache) return;
-      const layer = document.querySelector('input[name="render-layer"]:checked')?.value || 'user';
-      const data = layer === 'full' ? renderCache.fullConfig : renderCache.userRoutes;
-      if (data == null) {
-        renderOutput.textContent = layer === 'full'
-          ? '（完整 config 不可用，可能因为用户规则校验失败）'
-          : '（无规则）';
-        return;
-      }
-      renderOutput.textContent = JSON.stringify(data, null, 2);
-    }
-
-    async function loadRender(force) {
-      if (renderFetched && !force) {
-        renderSelectedLayer();
-        return;
-      }
-      renderStatus.textContent = '加载中…';
-      renderError.classList.add('hidden');
-      try {
-        const r = await pb.vanblog.routing.render();
-        renderCache = r;
-        renderFetched = true;
-        renderStatus.textContent = '';
-        if (r.error) {
-          renderError.textContent = '校验失败：' + r.error;
-          renderError.classList.remove('hidden');
-        }
-        if (!r.userRoutes || r.userRoutes.length === 0) {
-          renderOutput.textContent = '（无用户规则，或规则校验未通过）';
-        } else {
-          renderSelectedLayer();
-        }
-      } catch (e) {
-        renderStatus.textContent = '';
-        renderError.textContent = '加载失败：' + e.message;
-        renderError.classList.remove('hidden');
-      }
-    }
-
-    // First open triggers a fetch; subsequent toggles just re-render.
-    let renderFirstOpen = true;
-    renderPanel?.addEventListener('toggle', () => {
-      if (renderPanel.open && renderFirstOpen) {
-        renderFirstOpen = false;
-        loadRender(true);
-      }
-    });
-    document.getElementById('btn-render-refresh')?.addEventListener('click', () => loadRender(true));
-    document.querySelectorAll('input[name="render-layer"]').forEach(el => {
-      el.addEventListener('change', renderSelectedLayer);
-    });
+    import { initRoutingEditor } from '../../lib/routing-editor.js';
+    initRoutingEditor({ TYPE_OPTIONS });
   </script>
 </AdminLayout>

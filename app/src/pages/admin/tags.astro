@@ -2,16 +2,15 @@
 export const prerender = false;
 
 import AdminLayout from '../../layouts/AdminLayout.astro';
+import { safe } from '@vanblog/sdk';
 import type { Tag } from '@vanblog/sdk';
 
-Astro.cache.set(false);
+const pb = Astro.locals.pb;
 
-let tags: Tag[] = [];
-try {
-  tags = await Astro.locals.pb.collection('tags').getFullList<Tag>({ sort: 'name' });
-} catch (e) {
-  console.error('[admin/tags] load:', e);
-}
+const { data: tags = [] } = await safe(
+  () => pb.collection('tags').getFullList<Tag>({ sort: 'name' }),
+  'admin/tags'
+);
 ---
 <AdminLayout title="标签管理">
   <h1>标签管理</h1>
@@ -38,7 +37,7 @@ try {
           <td><input class="f-desc" value={t.description || ''} class="w-full" /></td>
           <td class="flex gap-2">
             <button class="btn-save">保存</button>
-            <button class="btn-del" class="text-red-600">删除</button>
+            <button class="btn-del text-red-600">删除</button>
           </td>
         </tr>
       ))}

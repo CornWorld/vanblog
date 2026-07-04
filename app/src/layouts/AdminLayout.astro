@@ -3,6 +3,9 @@
 // so admin page scripts can call pb.collection(...).authWithPassword etc.
 import BaseLayout from './BaseLayout.astro';
 
+// All admin pages are SSR — never cache.
+Astro.cache.set(false);
+
 interface Props {
   title: string;
   [key: string]: any;
@@ -10,8 +13,8 @@ interface Props {
 ---
 <BaseLayout {...Astro.props}>
   <script>
-    import { initBrowserPb } from '@vanblog/sdk/browser';
-    initBrowserPb();
+    import { initClient } from '@vanblog/sdk/browser';
+    initClient();
   </script>
   <slot />
 </BaseLayout>

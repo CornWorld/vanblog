@@ -2,33 +2,22 @@
 export const prerender = false;
 
 import AdminLayout from '../../layouts/AdminLayout.astro';
-import { hasPermission } from '@vanblog/sdk';
+import { hasPermission, safe, getPage, buildPageHref } from '@vanblog/sdk';
 import type { Media } from '@vanblog/sdk';
 
-Astro.cache.set(false);
-
-// Mirror Go-side canManageMedia: admin or article:delete holder.
-const canDelete = !!hasPermission(Astro.locals.pb, 'article:delete');
+const pb = Astro.locals.pb;
+const canDelete = !!hasPermission(pb, 'article:delete');
 
 const PER_PAGE = 24;
-const page = Math.max(1, parseInt(Astro.url.searchParams.get('page') || '1', 10) || 1);
-let media: Media[] = [];
-let totalMedia = 0;
-let totalPages = 1;
+const page = getPage(Astro.url.searchParams);
 
-try {
-  const pb = Astro.locals.pb;
-  const r = await pb.collection('media').getList<Media>(page, PER_PAGE, { sort: '-created' });
-  media = r.items;
-  totalMedia = r.totalItems;
-  totalPages = r.totalPages;
-} catch (e) {
-  console.error('[admin/media] Failed to load:', e);
-}
-
-function pageHref(n: number): string {
-  return `/admin/media?page=${n}`;
-}
+const { data: result } = await safe(
+  () => pb.collection('media').getList<Media>(page, PER_PAGE, { sort: '-created' }),
+  'admin/media'
+);
+const media = result?.items ?? [];
+const totalMedia = result?.totalItems ?? 0;
+const totalPages = result?.totalPages ?? 1;
 ---
 <AdminLayout title="媒体管理">
   <h1>媒体管理</h1>
@@ -81,8 +70,8 @@ function pageHref(n: number): string {
 
     {totalPages > 1 && (
       <nav class="flex gap-2 mt-2 text-sm" aria-label="分页">
-        {page > 1 && <a href={pageHref(page - 1)} class="px-2 py-0.5 border rounded">上一页</a>}
-        {page < totalPages && <a href={pageHref(page + 1)} class="px-2 py-0.5 border rounded">下一页</a>}
+        {page > 1 && <a href={buildPageHref('/admin/media', Astro.url.searchParams, page - 1)} class="px-2 py-0.5 border rounded">上一页</a>}
+        {page < totalPages && <a href={buildPageHref('/admin/media', Astro.url.searchParams, page + 1)} class="px-2 py-0.5 border rounded">下一页</a>}
       </nav>
     )}
     </>

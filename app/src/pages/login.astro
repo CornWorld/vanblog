@@ -6,16 +6,17 @@ import { isAuthenticated } from '@vanblog/sdk';
 
 // Already-logged-in users have no business on /login — bounce to /admin
 // (or to ?back= if they were sent here from a private post redirect).
+const pb = Astro.locals.pb;
 const back = Astro.url.searchParams.get('back');
-if (isAuthenticated(Astro.locals.pb)) return Astro.redirect(back || '/admin');
+if (isAuthenticated(pb)) return Astro.redirect(back || '/admin');
 
 Astro.cache.set(false);
 ---
 
 <BaseLayout title="登录">
   <script>
-    import { initBrowserPb } from '@vanblog/sdk/browser';
-    initBrowserPb();
+    import { initClient } from '@vanblog/sdk/browser';
+    initClient();
   </script>
   <h1>登录</h1>
 

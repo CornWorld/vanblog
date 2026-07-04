@@ -2,59 +2,39 @@
 export const prerender = false;
 
 import AdminLayout from '../../layouts/AdminLayout.astro';
-import { getAuthUser, hasPermission } from '@vanblog/sdk';
-import { formatPbDate } from '@vanblog/sdk';
+import { getAuthUser, hasPermission, safe, getPage, buildPageHref } from '@vanblog/sdk';
+import { fmtDateTime } from '@vanblog/sdk';
 import type { Post } from '@vanblog/sdk';
+const pb = Astro.locals.pb;
 
-Astro.cache.set(false);
 
-const user = getAuthUser(Astro.locals.pb);
+const user = getAuthUser(pb);
 const isAdmin = user?.role === 'admin';
-const canEditPost = !!hasPermission(Astro.locals.pb, 'article:create') || !!hasPermission(Astro.locals.pb, 'article:update');
-const canDeletePost = !!hasPermission(Astro.locals.pb, 'article:delete');
+const canEditPost = !!hasPermission(pb, 'article:create') || !!hasPermission(pb, 'article:update');
+const canDeletePost = !!hasPermission(pb, 'article:delete');
 
 const PER_PAGE = 20;
-const page = Math.max(1, parseInt(Astro.url.searchParams.get('page') || '1', 10) || 1);
+const page = getPage(Astro.url.searchParams);
 const q = (Astro.url.searchParams.get('q') || '').trim();
 const status = Astro.url.searchParams.get('status') || '';
 
-// pb filter: title ~ q AND status == X (when provided). Empty filter means
-// "all active posts" — deleted rows are excluded by the ListRule already.
 const parts: string[] = [];
 if (q) parts.push(`title ~ "${q.replace(/"/g, '\\"')}"`);
 if (status) parts.push(`status = "${status}"`);
 const filter = parts.join(' && ');
 
-let posts: Post[] = [];
-let totalPosts = 0;
-let totalPages = 1;
-
-try {
-  const pb = Astro.locals.pb;
-  // The posts ListRule (1782300001 + 1782300002) filters `deleted=false` at
-  // the API layer for everyone — including admins. Soft-deleted rows are
-  // reachable only via /admin/trash (GET /api/vanblog/posts/trash, gated by
-  // Go-side canManagePosts). This list shows active posts: drafts/hidden are
-  // visible to any authenticated user, deleted rows are intentionally absent.
-  const result = await pb.collection('posts').getList<Post>(page, PER_PAGE, {
+const { data: result } = await safe(
+  () => pb.collection('posts').getList<Post>(page, PER_PAGE, {
     sort: '-updated',
     filter: filter || undefined,
-  });
-  posts = result.items;
-  totalPosts = result.totalItems;
-  totalPages = result.totalPages;
-} catch (e) {
-  console.error('[admin] Failed to load posts:', e);
-}
+  }),
+  'admin'
+);
+const posts = result?.items ?? [];
+const totalPosts = result?.totalItems ?? 0;
+const totalPages = result?.totalPages ?? 1;
 
-// Build a pagination link preserving current filters.
-function pageHref(n: number): string {
-  const params = new URLSearchParams();
-  if (q) params.set('q', q);
-  if (status) params.set('status', status);
-  params.set('page', String(n));
-  return `/admin?${params.toString()}`;
-}
+
 ---
 <AdminLayout title="管理">
   <h1>文章管理</h1>
@@ -108,7 +88,7 @@ function pageHref(n: number): string {
           <tr class="border-b border-[var(--color-border)]">
             <td>{post.title}</td>
             <td>{post.status}</td>
-            <td>{formatPbDate(post.updated)}</td>
+            <td>{fmtDateTime(post.updated)}</td>
             <td class="flex gap-2 flex-wrap">
               {canEditPost && <a href={`/admin/edit/${post.id}`}>编辑</a>}
               <a href={`/admin/revisions/${post.id}`}>修订</a>
@@ -128,8 +108,8 @@ function pageHref(n: number): string {
 
     {totalPages > 1 && (
       <nav class="flex gap-2 mt-2 text-sm" aria-label="分页">
-        {page > 1 && <a href={pageHref(page - 1)} class="px-2 py-0.5 border rounded">上一页</a>}
-        {page < totalPages && <a href={pageHref(page + 1)} class="px-2 py-0.5 border rounded">下一页</a>}
+        {page > 1 && <a href={buildPageHref('/admin', Astro.url.searchParams, page - 1)} class="px-2 py-0.5 border rounded">上一页</a>}
+        {page < totalPages && <a href={buildPageHref('/admin', Astro.url.searchParams, page + 1)} class="px-2 py-0.5 border rounded">下一页</a>}
       </nav>
     )}
     </>

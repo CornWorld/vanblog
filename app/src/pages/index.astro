@@ -3,26 +3,19 @@ export const prerender = false;
 
 import BaseLayout from '../layouts/BaseLayout.astro';
 import ErrorState from '../components/ErrorState.astro';
-import { stripMarkdown, formatPbDateOnly } from '@vanblog/sdk';
+import { stripMarkdown, fmtDate, safe, getPage } from '@vanblog/sdk';
 import type { Post } from '@vanblog/sdk';
+const pb = Astro.locals.pb;
 
 const perPage = 10;
-const page = Math.max(1, parseInt(Astro.url.searchParams.get('page') || '1') || 1);
+const page = getPage(Astro.url.searchParams);
 
-let posts: Post[] = [];
-let totalPages = 1;
-let loadError = false;
-
-try {
-  const result = await Astro.locals.pb.vanblog.posts.listPublished(page, perPage, {
-    expand: 'category,tags',
-  });
-  posts = result.items;
-  totalPages = result.totalPages;
-} catch (e) {
-  console.error('[index] Failed to load posts:', e);
-  loadError = true;
-}
+const { data: result, error: loadError } = await safe(
+  () => pb.vanblog.posts.listPublished(page, perPage, { expand: 'category,tags' }),
+  'index'
+);
+const posts : Post[] = result?.items ?? [];
+const totalPages = result?.totalPages ?? 1;
 ---
 <BaseLayout title="首页" path="/">
   {
@@ -40,7 +33,7 @@ try {
               </a>
             </h2>
             <div class="flex items-center gap-3 text-sm text-[var(--color-text-muted)] mb-3">
-              <time datetime={post.created}>{formatPbDateOnly(post.created)}</time>
+              <time datetime={post.created}>{fmtDate(post.created)}</time>
               {post.expand?.category && (
                 <a href={`/categories/${post.category}`} class="text-[var(--color-accent)]">
                   {post.expand.category.name}

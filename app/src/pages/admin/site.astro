@@ -3,31 +3,29 @@ export const prerender = false;
 
 import AdminLayout from '../../layouts/AdminLayout.astro';
 import ErrorNotice from '../../components/ErrorNotice.astro';
-import { requireAdmin } from '@vanblog/sdk';
+import { requireAdmin, safe } from '@vanblog/sdk';
 import type { SiteConfig } from '@vanblog/sdk';
+const pb = Astro.locals.pb;
 
 
-Astro.cache.set(false);
 
-const denied = !requireAdmin(Astro.locals.pb);
+const denied = !requireAdmin(pb);
 if (denied) Astro.response.status = 403;
 
 let site: Partial<SiteConfig> | null = null;
 let tlsStatus: any = null;
 if (!denied) {
-  try {
-    const res = await Astro.locals.pb.collection('site').getList<SiteConfig>(1, 1);
-    site = res.items[0] ?? null;
-  } catch (e) {
-    console.error('[admin/site] load:', e);
-  }
-  // Pull caddy/TLS status separately — a failure here shouldn't block the
-  // site form (e.g. caddy admin api is down), so we surface it inline.
-  try {
-    tlsStatus = await Astro.locals.pb.vanblog.tls.status();
-  } catch (e) {
-    console.error('[admin/site] tls status:', e);
-  }
+  const r = await safe(
+    () => pb.collection('site').getList<SiteConfig>(1, 1),
+    'admin/site'
+  );
+  site = r.data?.items?.[0] ?? null;
+
+  const tls = await safe(
+    () => pb.vanblog.tls.status(),
+    'admin/site/tls'
+  );
+  tlsStatus = tls.data;
 }
 
 // Banner-worthy states: maintenance mode or unreachable caddy.
@@ -39,8 +37,8 @@ const tlsWarning =
     : '';
 
 const id = site?.id;
-const f = (k: keyof SiteConfig): string => site?.[k]?.toString() ?? '';
-const boolOr = (k: keyof SiteConfig, def = false): boolean => {
+const field = (k: keyof SiteConfig): string => site?.[k]?.toString() ?? '';
+const boolField = (k: keyof SiteConfig, def = false): boolean => {
   const v = site?.[k];
   return v === undefined || v === null ? def : !!v;
 };
@@ -63,12 +61,12 @@ const boolOr = (k: keyof SiteConfig, def = false): boolean => {
     <form id="site-form" class="flex flex-col gap-4 max-w-3xl">
       <fieldset class="grid grid-cols-[160px_1fr] gap-2 items-center border border-[var(--color-border)] p-4">
         <legend>基本信息</legend>
-        <label>站点名</label><input name="siteName" value={f('siteName')} class="px-1.5 py-0.5" />
-        <label>站点描述</label><input name="siteDesc" value={f('siteDesc')} class="px-1.5 py-0.5" />
-        <label>作者</label><input name="author" value={f('author')} class="px-1.5 py-0.5" />
-        <label>BaseURL</label><input name="baseUrl" value={f('baseUrl')} placeholder="https://example.com" class="px-1.5 py-0.5" />
-        <label>Favicon URL</label><input name="favicon" value={f('favicon')} class="px-1.5 py-0.5" />
-        <label>版权</label><input name="copyrightAggreement" value={f('copyrightAggreement')} class="px-1.5 py-0.5" />
+        <label>站点名</label><input name="siteName" value={field('siteName')} class="px-1.5 py-0.5" />
+        <label>站点描述</label><input name="siteDesc" value={field('siteDesc')} class="px-1.5 py-0.5" />
+        <label>作者</label><input name="author" value={field('author')} class="px-1.5 py-0.5" />
+        <label>BaseURL</label><input name="baseUrl" value={field('baseUrl')} placeholder="https://example.com" class="px-1.5 py-0.5" />
+        <label>Favicon URL</label><input name="favicon" value={field('favicon')} class="px-1.5 py-0.5" />
+        <label>版权</label><input name="copyrightAggreement" value={field('copyrightAggreement')} class="px-1.5 py-0.5" />
       </fieldset>
 
       <fieldset class="grid grid-cols-[160px_1fr] gap-2 items-center border border-[var(--color-border)] p-4">
@@ -76,19 +74,19 @@ const boolOr = (k: keyof SiteConfig, def = false): boolean => {
         <label>主题</label>
         <select name="theme">
           {['default', 'minimal', 'magazine', 'custom'].map(t => (
-            <option value={t} selected={f('theme') === t}>{t}</option>
+            <option value={t} selected={field('theme') === t}>{t}</option>
           ))}
         </select>
         <label>默认主题</label>
         <select name="defaultTheme">
           {['auto', 'light', 'dark'].map(t => (
-            <option value={t} selected={f('defaultTheme') === t}>{t}</option>
+            <option value={t} selected={field('defaultTheme') === t}>{t}</option>
           ))}
         </select>
         <label>评论 provider</label>
         <select name="commentsProvider">
           {['disabled', 'waline', 'giscus', 'artalk', 'external'].map(t => (
-            <option value={t} selected={f('commentsProvider') === t}>{t}</option>
+            <option value={t} selected={field('commentsProvider') === t}>{t}</option>
           ))}
         </select>
       </fieldset>
@@ -96,17 +94,17 @@ const boolOr = (k: keyof SiteConfig, def = false): boolean => {
       <fieldset class="flex flex-col gap-2 border border-[var(--color-border)] p-4">
         <legend>关于页 / 自定义注入</legend>
         <label>关于页内容（Markdown）</label>
-        <textarea name="aboutContent" rows="6" class="px-1.5 py-0.5 font-mono">{f('aboutContent')}</textarea>
+        <textarea name="aboutContent" rows="6" class="px-1.5 py-0.5 font-mono">{field('aboutContent')}</textarea>
         <label>customHead（HTML，raw 注入 &lt;head&gt;）</label>
-        <textarea name="customHead" rows="3" class="px-1.5 py-0.5 font-mono">{f('customHead')}</textarea>
+        <textarea name="customHead" rows="3" class="px-1.5 py-0.5 font-mono">{field('customHead')}</textarea>
         <label>customScript（JS）</label>
-        <textarea name="customScript" rows="3" class="px-1.5 py-0.5 font-mono">{f('customScript')}</textarea>
+        <textarea name="customScript" rows="3" class="px-1.5 py-0.5 font-mono">{field('customScript')}</textarea>
       </fieldset>
 
       <fieldset class="grid grid-cols-[160px_1fr] gap-2 items-center border border-[var(--color-border)] p-4">
         <legend>修订</legend>
         <label>启用修订</label>
-        <label><input type="checkbox" name="revisionsEnabled" checked={boolOr('revisionsEnabled', true)} /> 启用</label>
+        <label><input type="checkbox" name="revisionsEnabled" checked={boolField('revisionsEnabled', true)} /> 启用</label>
         <label>保留数量</label>
         <input type="number" name="revisionsRetention" value={site?.revisionsRetention ?? 50} class="px-1.5 py-0.5 w-[120px]" />
       </fieldset>

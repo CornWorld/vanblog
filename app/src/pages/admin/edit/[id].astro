@@ -6,12 +6,12 @@ import ErrorNotice from '../../../components/ErrorNotice.astro';
 import { getAuthUser, hasPermission } from '@vanblog/sdk';
 import ByteMdEditor from '../../../components/ByteMdEditor.astro';
 import type { Post, Tag, Category } from '@vanblog/sdk';
+const pb = Astro.locals.pb;
 
-const user = getAuthUser(Astro.locals.pb)!;
+const user = getAuthUser(pb)!;
 
-Astro.cache.set(false);
 
-const canEdit = hasPermission(Astro.locals.pb, 'article:create') || hasPermission(Astro.locals.pb, 'article:update');
+const canEdit = hasPermission(pb, 'article:create') || hasPermission(pb, 'article:update');
 // Inline 403 instead of silent redirect to /admin — same UX rationale as
 // the other admin pages.
 const denied = !canEdit;
@@ -24,7 +24,7 @@ let post: Partial<Post> = {};
 let notFound = false;
 if (!denied && !isNew) {
   try {
-    post = await Astro.locals.pb.collection('posts').getOne<Post>(id);
+    post = await pb.collection('posts').getOne<Post>(id);
   } catch {
     // Inline 404 instead of redirect to /404 — keeps editor chrome visible
     // so the user can navigate back without losing context.
@@ -37,7 +37,6 @@ let tags: Tag[] = [];
 let cats: Category[] = [];
 if (!denied && !notFound) {
   try {
-    const pb = Astro.locals.pb;
     [tags, cats] = await Promise.all([
       pb.collection('tags').getFullList<Tag>({ sort: 'name' }),
       pb.collection('categories').getFullList<Category>({ sort: 'name' }),

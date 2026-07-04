@@ -3,21 +3,16 @@ export const prerender = false;
 
 import BaseLayout from '../layouts/BaseLayout.astro';
 import ErrorState from '../components/ErrorState.astro';
-import { formatPbDateOnly } from '@vanblog/sdk';
+import { fmtDate, safe } from '@vanblog/sdk';
 import type { Post } from '@vanblog/sdk';
+const pb = Astro.locals.pb;
 
-let posts: Post[] = [];
-let error = false;
-
-try {
-  const result = await Astro.locals.pb.vanblog.posts.listPublished(1, 500, {
-    sort: '-created',
-  });
-  posts = result.items;
-} catch (e) {
-  console.error('[archive] Failed to load posts:', e);
-  error = true;
-}
+const { data: result } = await safe(
+  () => pb.vanblog.posts.listPublished(1, 500, { sort: '-created' }),
+  'archive'
+);
+const posts = result?.items ?? [];
+const error = !result;
 
 // Group by year
 const byYear: Record<number, Post[]> = {};
@@ -45,7 +40,7 @@ const years = Object.keys(byYear).map(Number).sort((a, b) => b - a);
                 <li class="flex items-baseline gap-3">
                   <time class="text-sm text-[var(--color-text-muted)] whitespace-nowrap tabular-nums"
                         datetime={post.created}>
-                    {formatPbDateOnly(post.created)}
+                    {fmtDate(post.created)}
                   </time>
                   <a href={`/posts/${post.id}`} class="hover:text-[var(--color-accent)]">{post.title}</a>
                 </li>
