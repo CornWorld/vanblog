@@ -41,7 +41,7 @@ Vanblog 原作者 Mereithhh 因个人原因已经不再维护 Vanblog, 但 Vanbl
 - vanblog # 编译后 go 二进制文件
 - data # pb data
 - hooks # 用户自定义的 pb hooks
-  - themes # 用户自定义的主题
+  - themes # 用户自定义的主题和调色盘
 - md_output # (可选) markdown 输出目录, 主要用于备份和迁移, 单向同步
 
 
