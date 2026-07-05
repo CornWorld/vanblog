@@ -1,0 +1,12 @@
+#!/bin/sh
+# VanBlog pre-commit hook
+
+set -e
+
+echo "→ go vet..."
+(cd vault && go vet ./...) || exit 1
+
+echo "→ astro check..."
+(cd app && npx astro check) || exit 1
+
+echo "✓ pre-commit OK"
