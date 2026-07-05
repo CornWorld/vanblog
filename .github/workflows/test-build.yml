@@ -66,7 +66,6 @@ jobs:
       - name: Build
         working-directory: vault
         env:
-          GOTOOLCHAIN: local
           GOPROXY: direct
           GONOSUMDB: "*"
         run: |
