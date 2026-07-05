@@ -15,15 +15,14 @@ if (denied) Astro.response.status = 403;
 const PER_PAGE = 50;
 const page = getPage(Astro.url.searchParams);
 const action = (Astro.url.searchParams.get('action') || '').trim();
-const result = Astro.url.searchParams.get('result') || '';
+const resultQ = Astro.url.searchParams.get('result') || '';
 
 const parts: string[] = [];
 if (action) parts.push(`action ~ "${action.replace(/"/g, '\\"')}"`);
-if (result === 'success') parts.push(`result = "success"`);
-if (result === 'failure') parts.push(`result = "failure"`);
+if (resultQ) parts.push(`result = "${resultQ}"`);
 const filter = parts.join(' && ');
 
-const { data: result } = denied ? { data: undefined } : await safe(
+const { data: auditList } = denied ? { data: undefined } : await safe(
   () => pb.collection('audits').getList(page, PER_PAGE, {
     sort: '-created',
     expand: 'actor',
@@ -31,9 +30,9 @@ const { data: result } = denied ? { data: undefined } : await safe(
   }),
   'admin/audits'
 );
-const audits = result?.items ?? [];
-const totalAudits = result?.totalItems ?? 0;
-const totalPages = result?.totalPages ?? 1;
+const audits = auditList?.items ?? [];
+const totalAudits = auditList?.totalItems ?? 0;
+const totalPages = auditList?.totalPages ?? 1;
 
 function expandName(a: any): string {
   const u = a?.expand?.actor;
@@ -51,16 +50,16 @@ function expandName(a: any): string {
     <form method="get" class="flex gap-2 flex-wrap items-center my-3 text-sm">
       <input name="action" value={action} placeholder="动作关键字 (如 auth.login)" class="px-1.5 py-0.5 w-56" />
       <select name="result" class="px-1.5 py-0.5">
-        <option value="" selected={!result}>全部结果</option>
-        <option value="success" selected={result === 'success'}>成功</option>
-        <option value="failure" selected={result === 'failure'}>失败</option>
+        <option value="" selected={!resultQ}>全部结果</option>
+        <option value="success" selected={resultQ === 'success'}>成功</option>
+        <option value="failure" selected={resultQ === 'failure'}>失败</option>
       </select>
       <button type="submit">筛选</button>
-      {(action || result) && <a href="/admin/audits" class="text-[var(--color-text-muted)]">清除</a>}
+      {(action || resultQ) && <a href="/admin/audits" class="text-[var(--color-text-muted)]">清除</a>}
     </form>
 
     {audits.length === 0 ? (
-      <p>{(action || result) ? '没有匹配的记录。' : '暂无审计记录。'}</p>
+      <p>{(action || resultQ) ? '没有匹配的记录。' : '暂无审计记录。'}</p>
     ) : (
       <table class="w-full border-collapse text-xs">
         <thead>
