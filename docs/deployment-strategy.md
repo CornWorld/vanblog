@@ -390,10 +390,23 @@ services:
       # dev 模式额外挂载(由 vanblog.sh 按模式添加)
       # - ./app/src:/app/src
 
-  # 可选:Waline 评论系统独立容器
-  # waline:
-  #   image: lizhengmsocal/waline:latest
-  #   ...
+  # 可选:Artalk 评论系统独立容器（Go 编写，~30MB，推荐）
+  # artalk:
+  #   image: artalk/artalk-go
+  #   restart: unless-stopped
+  #   ports:
+  #     - "8360:23366"
+  #   volumes:
+  #     - {{DATA_PATH}}/artalk:/data
+  #   environment:
+  #     - TZ=Asia/Shanghai
+  #     - ATK_LOCALE=zh-CN
+  #     - ATK_SITE_DEFAULT=VanBlog
+  #     - ATK_TRUSTED_DOMAINS=https://your-blog.com
+  # 首次启动后创建管理员：
+  #   docker exec artalk artalk admin --name admin --email you@email.com --password your_password
+  # 需要 Caddy 转发：
+  #   handle /api/comment { reverse_proxy 127.0.0.1:8360 }
 
 volumes:
   pb_data:
@@ -402,7 +415,7 @@ volumes:
 **设计原则**:
 
 - 用户**不直接编辑** Dockerfile
-- 用户**可以编辑** docker-compose.yml(加 Waline、改端口、加卷)
+- 用户**可以编辑** docker-compose.yml(加 Artalk、改端口、加卷)
 - `vanblog.sh config` 命令重新生成此文件(保留用户手动改动?待决,倾向:提示冲突让用户选)
 
 ---
@@ -505,9 +518,32 @@ update() {
 
 ### 6.3 数据迁移(原 Vanblog 用户)
 
-1. 原后台导出 `temp.json`
-2. 用 vanblog.sh 安装新 vanblog
-3. 新后台 → 迁移 → 上传 JSON
+**方式一：后台 JSON 导出（推荐）**
+
+1. 在原 Vanblog 后台「系统设置 → 备份恢复」导出 `temp.json`
+2. 部署新版 VanBlog
+3. 后台 → **迁移** → 上传 `temp.json` → 点击"开始导入"
+4. 导入完成后查看结果：文章/分类/标签/媒体数量，以及迁移档案文章
+
+**方式二：CLI 直接提取（推荐，无需旧后台运行）**
+
+1. 找到旧 VanBlog 的 MongoDB 数据目录（通常是 `/var/vanblog/mongo/db/`）
+2. 运行迁移脚本：
+   ```bash
+   OLD_DATA=/var/vanblog/mongo/db TARGET=http://vanblog:8090 ./scripts/vanblog-migrate.sh
+   ```
+   或直接使用 Go CLI：
+   ```bash
+   cd vault && go run ./cmd/migrate --mongo-uri mongodb://localhost:27017 --db vanblog
+   ```
+
+**评论迁移（Waline → Artalk）**
+
+迁移页内嵌了 Artransfer-CLI 使用指南。简要步骤：
+
+1. 下载 [Artransfer-CLI](https://github.com/ArtalkJS/Artransfer-CLI)
+2. `./artransfer waline --db=... --name=waline_db` → 得到 `.artrans` 文件
+3. Artalk 控制中心 → 迁移 → 上传 `.artrans`
 
 ---
 
@@ -529,7 +565,7 @@ update() {
 
 ## 8. 待决细节
 
-1. **docker-compose.yml 用户手动改动的保留**:`vanblog.sh config` 重生成时,是否保留用户手动加的 Waline 容器 / 卷?(倾向:解析旧文件,提示冲突)
+1. **docker-compose.yml 用户手动改动的保留**:`vanblog.sh config` 重生成时,是否保留用户手动加的 Artalk 容器 / 卷?(倾向:解析旧文件,提示冲突)
 2. **中国镜像源**:GHCR 在中国可能被墙,阿里云 / 腾讯云镜像同步策略
 3. **ARM 支持**:pb Go 二进制 + Caddy 都支持 arm64,Node 镜像也支持,验证多架构构建
 4. **capability 最小化**:`docker-compose.yml` 里加 `cap_drop: [ALL]` + `cap_add: [NET_BIND_SERVICE]` 是否影响 Caddy bind 80/443

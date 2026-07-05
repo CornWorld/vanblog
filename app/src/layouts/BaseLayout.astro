@@ -130,7 +130,7 @@ const websiteSchema = {
           {isLoggedIn && (
             <button id="logout-btn" type="button" class="px-2 py-1 rounded hover:bg-[var(--color-border)] dark:hover:bg-[var(--color-border-dark)] transition-colors text-inherit" aria-label="退出登录" title="退出登录">退出</button>
           )}
-          <button id="theme-toggle" class="ml-1 px-2 py-1 rounded hover:bg-[var(--color-border)] dark:hover:bg-[var(--color-border-dark)] transition-colors text-lg" aria-label="切换主题" title="切换深色/浅色主题">
+          <button id="darkmode-toggle" class="ml-1 px-2 py-1 rounded hover:bg-[var(--color-border)] dark:hover:bg-[var(--color-border-dark)] transition-colors text-lg" aria-label="切换深色模式" title="切换深色/浅色模式">
             <span class="dark:hidden">🌙</span>
             <span class="hidden dark:inline">☀️</span>
           </button>
@@ -151,14 +151,16 @@ const websiteSchema = {
       </div>
     </footer>
 
-    <!-- Theme toggle + logout logic -->
+    <!-- Dark mode toggle + logout logic -->
     <script>
-      const btn = document.getElementById('theme-toggle');
+      const btn = document.getElementById('darkmode-toggle');
       const html = document.documentElement;
       btn?.addEventListener('click', () => {
         html.classList.toggle('dark');
         const isDark = html.classList.contains('dark');
         localStorage.setItem('vanblog-theme', isDark ? 'dark' : 'light');
+        // Notify comment widgets (Artalk/Giscus) to sync dark mode
+        html.dispatchEvent(new CustomEvent('darkmodechange', { detail: { dark: isDark } }));
       });
 
       const logoutBtn = document.getElementById('logout-btn');

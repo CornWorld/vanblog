@@ -84,11 +84,39 @@ const boolField = (k: keyof SiteConfig, def = false): boolean => {
           ))}
         </select>
         <label>评论 provider</label>
-        <select name="commentsProvider">
-          {['disabled', 'waline', 'giscus', 'artalk', 'external'].map(t => (
+        <select name="commentsProvider" id="commentsProvider">
+          {['disabled', 'giscus', 'artalk', 'external'].map(t => (
             <option value={t} selected={field('commentsProvider') === t}>{t}</option>
           ))}
         </select>
+
+        <!-- Provider-specific config fields (shown/hidden by JS) -->
+        <div id="comments-config-artalk" class="comments-config-group col-span-2 grid grid-cols-subgrid gap-2 items-center" style="display:none">
+          <label>Artalk Server</label>
+          <input name="artalk_server" placeholder="https://comment.example.com" class="px-1.5 py-0.5" />
+          <label>Artalk Site 名</label>
+          <input name="artalk_site" placeholder="VanBlog" class="px-1.5 py-0.5" />
+        </div>
+        <div id="comments-config-giscus" class="comments-config-group col-span-2 grid grid-cols-subgrid gap-2 items-center" style="display:none">
+          <label>Repo</label>
+          <input name="giscus_repo" placeholder="user/repo" class="px-1.5 py-0.5" />
+          <label>Repo ID</label>
+          <input name="giscus_repoId" class="px-1.5 py-0.5" />
+          <label>Category</label>
+          <input name="giscus_category" placeholder="Announcements" class="px-1.5 py-0.5" />
+          <label>Category ID</label>
+          <input name="giscus_categoryId" class="px-1.5 py-0.5" />
+          <label>Theme</label>
+          <select name="giscus_theme">
+            {['preferred_color_scheme', 'light', 'dark', 'light_tritanopia', 'dark_tritanopia'].map(t => (
+              <option value={t}>{t}</option>
+            ))}
+          </select>
+        </div>
+        <div id="comments-config-external" class="comments-config-group col-span-2 grid grid-cols-subgrid gap-2" style="display:none">
+          <label>自定义脚本 / HTML</label>
+          <textarea name="external_script" rows="4" class="px-1.5 py-0.5 font-mono text-sm" placeholder="&lt;script src=&quot;...&quot;&gt;&lt;/script&gt;"></textarea>
+        </div>
       </fieldset>
 
       <fieldset class="flex flex-col gap-2 border border-[var(--color-border)] p-4">
@@ -116,12 +144,74 @@ const boolField = (k: keyof SiteConfig, def = false): boolean => {
     </form>
   )}
 
-  <script define:vars={{ siteId: id }}>
+  <script define:vars={{ siteId: id, commentsConfigJson: JSON.stringify(site?.commentsConfig || {}) }}>
     const pb = window.__pb;
     if (siteId) {
+      // ── Show/hide provider-specific config panels ──
+      const providerSelect = document.getElementById('commentsProvider');
+      const panels = {
+        artalk: document.getElementById('comments-config-artalk'),
+        giscus: document.getElementById('comments-config-giscus'),
+        external: document.getElementById('comments-config-external'),
+      };
+      function showPanel(provider) {
+        Object.values(panels).forEach((p) => { if (p) p.style.display = 'none'; });
+        const panel = panels[provider];
+        if (panel) panel.style.display = '';
+      }
+      if (providerSelect) {
+        providerSelect.addEventListener('change', () => showPanel(providerSelect.value));
+        showPanel(providerSelect.value);
+      }
+
+      // ── Pre-fill from existing commentsConfig ──
+      try {
+        const existingConfig = JSON.parse(commentsConfigJson);
+        if (existingConfig.server) {
+          const s = document.querySelector('[name="artalk_server"]'); if (s) s.value = existingConfig.server;
+          const n = document.querySelector('[name="artalk_site"]'); if (n) n.value = existingConfig.site || '';
+        }
+        if (existingConfig.repo) {
+          document.querySelector('[name="giscus_repo"]')?.setAttribute('value', existingConfig.repo);
+          document.querySelector('[name="giscus_repoId"]')?.setAttribute('value', existingConfig.repoId || '');
+          document.querySelector('[name="giscus_category"]')?.setAttribute('value', existingConfig.category || '');
+          document.querySelector('[name="giscus_categoryId"]')?.setAttribute('value', existingConfig.categoryId || '');
+          const ts = document.querySelector('[name="giscus_theme"]');
+          if (ts && existingConfig.theme) ts.value = existingConfig.theme;
+        }
+        if (existingConfig.customScript) {
+          const ta = document.querySelector('[name="external_script"]');
+          if (ta) ta.textContent = existingConfig.customScript;
+        }
+      } catch (_) {}
+
+      // ── Submit ──
       document.getElementById('site-form').addEventListener('submit', async (e) => {
         e.preventDefault();
         const fd = new FormData(e.target);
+        const provider = fd.get('commentsProvider');
+
+        // Build commentsConfig from visible fields
+        let commentsConfig = {};
+        if (provider === 'artalk') {
+          commentsConfig = {
+            server: fd.get('artalk_server') || '',
+            site: fd.get('artalk_site') || 'VanBlog',
+          };
+        } else if (provider === 'giscus') {
+          commentsConfig = {
+            repo: fd.get('giscus_repo') || '',
+            repoId: fd.get('giscus_repoId') || '',
+            category: fd.get('giscus_category') || '',
+            categoryId: fd.get('giscus_categoryId') || '',
+            theme: fd.get('giscus_theme') || 'preferred_color_scheme',
+          };
+        } else if (provider === 'external') {
+          commentsConfig = {
+            customScript: fd.get('external_script') || '',
+          };
+        }
+
         const data = {
           siteName: fd.get('siteName'),
           siteDesc: fd.get('siteDesc'),
@@ -131,7 +221,8 @@ const boolField = (k: keyof SiteConfig, def = false): boolean => {
           copyrightAggreement: fd.get('copyrightAggreement'),
           theme: fd.get('theme'),
           defaultTheme: fd.get('defaultTheme'),
-          commentsProvider: fd.get('commentsProvider'),
+          commentsProvider: provider,
+          commentsConfig: commentsConfig,
           aboutContent: fd.get('aboutContent'),
           customHead: fd.get('customHead'),
           customScript: fd.get('customScript'),

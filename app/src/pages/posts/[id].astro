@@ -3,13 +3,15 @@ export const prerender = false;
 
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import ErrorNotice from '../../components/ErrorNotice.astro';
+import Comments from '../../components/Comments.astro';
 import { getLiveEntry } from 'astro:content';
 import { isAuthenticated, fmtDate } from '@vanblog/sdk';
 import { renderMarkdown } from '../../lib/markdown/renderer';
 import { normalizeMathDelimiters } from '../../lib/markdown/normalizeMathDelimiters';
-import type { Post } from '@vanblog/sdk';
+import type { Post, SiteConfig } from '@vanblog/sdk';
 
 const pb = Astro.locals.pb;
+const site = await Astro.locals.getSite() as SiteConfig | null;
 
 const { id } = Astro.params;
 if (!id) return Astro.redirect('/404');
@@ -57,6 +59,10 @@ if (!data) {
     <ErrorNotice code="404" title="文章不存在" message="该文章可能已被删除、未发布，或你没有访问权限。" />
   )}
   <hr />
+  <Comments
+    provider={site?.commentsProvider || 'disabled'}
+    config={site?.commentsConfig || null}
+  />
   <p><a href="/">← 返回首页</a></p>
 </BaseLayout>
 
