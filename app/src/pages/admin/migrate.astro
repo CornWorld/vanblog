@@ -1,0 +1,112 @@
+---
+export const prerender = false;
+
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import { getAuthUser } from '@vanblog/sdk';
+const pb = Astro.locals.pb;
+const isAdmin = getAuthUser(pb)?.role === 'admin';
+---
+
+<AdminLayout title="数据迁移">
+  <h1>数据迁移</h1>
+  <p><a href="/admin">← 返回</a></p>
+
+  {!isAdmin ? (
+    <p>仅管理员可访问。</p>
+  ) : (
+    <div class="flex flex-col gap-6 max-w-3xl">
+      <!-- Step 1: Extract → normalize to intermediate JSON -->
+      <section class="border border-[var(--color-border)] p-4">
+        <h2 class="text-lg font-semibold mb-2">步骤 1：提取数据 → 归一化 JSON</h2>
+        <p class="text-sm text-[var(--color-text-muted)] mb-3">将旧 VanBlog 数据转换为统一的中间格式（新版 VanBlog 兼容 JSON）。选择以下任一方式：</p>
+
+        <details class="mb-3">
+          <summary class="cursor-pointer font-semibold text-sm">🖥 从 MongoDB 数据目录提取（推荐，旧站无需运行）</summary>
+          <div class="mt-2 ml-4">
+            <p class="text-sm text-[var(--color-text-muted)] mb-2">下载迁移工具：</p>
+            <pre class="overflow-x-auto bg-[var(--color-bg-secondary)] border border-[var(--color-border)] p-3 text-sm"><code># 从 GitHub Releases 下载对应平台的 migrate 二进制
+# https://github.com/CornWorld/vanblog/releases
+# 例如 Linux amd64:
+curl -sL https://github.com/CornWorld/vanblog/releases/latest/download/migrate-linux-amd64 -o migrate
+chmod +x migrate
+./migrate</code></pre>
+            <p class="text-xs text-[var(--color-text-muted)] mt-1">程序会交互式引导：检测 MongoDB → 提取数据 → 导入新版 VanBlog。</p>
+          </div>
+        </details>
+
+        <details class="mb-3">
+          <summary class="cursor-pointer font-semibold text-sm">📋 从后台 JSON 导出（旧站需可访问）</summary>
+          <div class="mt-2 ml-4">
+            <p class="text-sm text-[var(--color-text-muted)] mb-2">在旧 VanBlog 后台「系统设置 → 备份恢复」导出 temp.json，然后上传：</p>
+            <div class="flex gap-2 items-center">
+              <input type="file" id="json-file" accept=".json" class="text-sm" />
+              <button id="btn-json-import" class="px-3 py-1 border border-[var(--color-border)] rounded">上传并导入</button>
+            </div>
+            <div id="json-result"></div>
+          </div>
+        </details>
+      </section>
+
+      <!-- Step 2: Import (automatic via button above, or manual) -->
+      <section class="border border-[var(--color-border)] p-4">
+        <h2 class="text-lg font-semibold mb-2">步骤 2：导入归一化 JSON</h2>
+        <p class="text-sm text-[var(--color-text-muted)] mb-3">CLI 脚本自动完成此步骤。如果手动输出了 JSON 文件，可通过以下方式导入：</p>
+        <pre class="overflow-x-auto bg-[var(--color-bg-secondary)] border border-[var(--color-border)] p-3 text-sm"><code># 方式 A：通过后台（本页面上方上传）
+# 方式 B：通过 curl
+curl -X POST http://your-vanblog:8090/api/vanblog/migrate/import \\
+  -H 'Content-Type: application/json' \\
+  -d @temp.json</code></pre>
+        <p class="text-sm text-[var(--color-text-muted)] mt-1">导入 API 已内置数据校验和事务保护，失败自动回滚。</p>
+      </section>
+
+      <!-- Comment migration guide -->
+      <section class="border border-[var(--color-border)] p-4">
+        <h2 class="text-lg font-semibold mb-2">💬 评论数据迁移（Waline → Artalk）</h2>
+        <p class="text-sm text-[var(--color-text-muted)] mb-3">迁移脚本内含交互式 Waline → Artalk 评论迁移。运行后按提示选择数据库类型即可。</p>
+        <pre class="overflow-x-auto bg-[var(--color-bg-secondary)] border border-[var(--color-border)] p-3 text-sm"><code>./scripts/vanblog-migrate.sh
+# 脚本会询问：是否迁移评论？→ 数据库类型 → 连接信息 → 自动导出 .artrans</code></pre>
+        <p class="text-sm text-[var(--color-text-muted)] mt-1">导出后按提示将 .artrans 文件上传到 <a href="https://artalk.js.org/guide/transfer.html" target="_blank" class="underline">Artalk 控制中心 → 迁移</a>。</p>
+      </section>
+    </div>
+  )}
+
+  <script>
+    document.getElementById('btn-json-import')?.addEventListener('click', async () => {
+      const fileInput = document.getElementById('json-file') as HTMLInputElement;
+      const resultDiv = document.getElementById('json-result');
+      if (!fileInput || !resultDiv) return;
+      const file = fileInput.files?.[0];
+      if (!file) { alert('请选择文件'); return; }
+      const text = await file.text();
+      try {
+        const resp = await fetch('/api/vanblog/migrate/import', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: text,
+        });
+        const result = await resp.json();
+        if (!resp.ok) {
+          resultDiv.innerHTML = `<p class="text-red-600 mt-3">导入失败: ${result.message || resp.statusText}</p>`;
+          return;
+        }
+        resultDiv.innerHTML = `
+          <div class="mt-3 p-3 border border-green-500 rounded bg-green-50 dark:bg-green-900/20">
+            <h3 class="font-semibold">✅ 导入完成</h3>
+            <ul class="list-disc list-inside mt-1 text-sm">
+              <li>文章: ${result.posts || 0}</li>
+              <li>分类: ${result.categories || 0}</li>
+              <li>标签: ${result.tags || 0}</li>
+              <li>媒体: ${result.media || 0}</li>
+              ${result.archive ? '<li>📝 已创建迁移档案文章（包含不兼容数据说明）</li>' : ''}
+            </ul>
+            ${result.errors && result.errors.length > 0 ? `<p class="text-orange-600 text-sm mt-1">⚠ 部分数据导入异常: ${result.errors.join(', ')}</p>` : ''}
+          </div>
+        `;
+      } catch (err: any) {
+        if (resultDiv) {
+          resultDiv.innerHTML = `<p class="text-red-600 mt-3">错误: ${err.message}</p>`;
+        }
+      }
+    });
+  </script>
+</AdminLayout>

@@ -29,7 +29,7 @@ COPY vault/ ./
 RUN CGO_ENABLED=0 go build -o /pocketbase -ldflags="-s -w" .
 
 # --- Stage 2: Build Astro frontend + SDK ---
-FROM node:22-alpine AS astro-build
+FROM node:lts-alpine AS astro-build
 ARG NPM_MIRROR
 RUN corepack enable pnpm
 WORKDIR /build

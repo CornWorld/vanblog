@@ -23,6 +23,8 @@ func RegisterRoutes(app core.App) {
 			}
 			return e.JSON(http.StatusOK, result)
 		})
+
+
 		return se.Next()
 	})
 }
