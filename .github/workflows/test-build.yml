@@ -60,7 +60,7 @@ jobs:
 
       - uses: actions/setup-go@v6
         with:
-          go-version-file: vault/go.mod
+          go-version: stable
           cache-dependency-path: vault/go.sum
 
       - name: Build
