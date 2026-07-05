@@ -19,7 +19,7 @@
 #
 
 # --- Stage 1: Build Go binary (PocketBase + vanblog SDK) ---
-FROM golang:alpine AS go-build
+FROM golang:1.25-alpine AS go-build
 ARG GOPROXY
 ENV GOPROXY=${GOPROXY}
 WORKDIR /build
