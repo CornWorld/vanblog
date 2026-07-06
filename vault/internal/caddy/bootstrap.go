@@ -17,15 +17,13 @@ import (
 )
 
 // bootstrapBackoffs is the wait before each retry of BootstrapSync. The first
-// attempt is immediate (no sleep); on failure we sleep backoffs[0] (1s) before
-// attempt #2, backoffs[1] (2s) before attempt #3, etc. The total worst-case
-// wall time before giving up is sum(backoffs) = 31s.
+// attempt is immediate (no sleep); on failure we sleep backoffs[0] (500ms)
+// before attempt #2, backoffs[1] (1s) before attempt #3. Caddy starts in
+// milliseconds, so a long retry window is unnecessary — total worst-case wall
+// time is ~sum(backoffs) + 3×WaitForCaddy timeout ≈ 16.5s.
 var bootstrapBackoffs = []time.Duration{
+	500 * time.Millisecond,
 	1 * time.Second,
-	2 * time.Second,
-	4 * time.Second,
-	8 * time.Second,
-	16 * time.Second,
 }
 
 // BootstrapSync pushes a specific rule set into running Caddy via the admin
@@ -70,7 +68,7 @@ func BootstrapSync(app core.App, caddyAdminURL string, opts BuildOpts, userRules
 
 		client := caddyadmin.NewClient(caddyAdminURL)
 
-		if err := WaitForCaddy(caddyAdminURL, 30*time.Second); err != nil {
+		if err := WaitForCaddy(caddyAdminURL, 5*time.Second); err != nil {
 			lastErr = fmt.Errorf("admin API not reachable: %w", err)
 			continue
 		}

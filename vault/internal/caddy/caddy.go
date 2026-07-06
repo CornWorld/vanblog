@@ -79,8 +79,14 @@ func NewWithURL(app core.App, caddyAdminURL string) *Service {
 
 		if os.Getenv("VANBLOG_SKIP_CADDY_SYNC") == "1" {
 			log.Printf("[caddy] VANBLOG_SKIP_CADDY_SYNC=1: skipping config push (dev/smoke mode)")
-		} else if err := s.pushConfigToAdminAPI(); err != nil {
-			log.Printf("[caddy] config push failed, staying in maintenance mode: %v", err)
+		} else {
+			// Push config async — don't block OnServe while Caddy may be
+			// starting up. Retries with backoff in the background goroutine.
+			go func() {
+				if err := s.pushConfigToAdminAPI(); err != nil {
+					log.Printf("[caddy] config push failed, staying in maintenance mode: %v", err)
+				}
+			}()
 		}
 		return se.Next()
 	})
