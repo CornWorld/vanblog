@@ -36,7 +36,7 @@ migratecmd.MustRegister(app, app.RootCmd, migratecmd.Config{...})
 
 ### 1.3 Go 版本要求
 
-**问题**:`go.mod` 要求 Go 1.26.4(Darwin arm64),但 Dockerfile 用 `golang:1.23-alpine`。构建失败。
+**问题**:Dockerfile 曾使用 `golang:1.23-alpine` 基础镜像，与 `go.mod` 要求的 `go 1.26.0` 不兼容，构建失败。
 
 **修复**:Dockerfile 改为 `golang:alpine`(跟踪最新版)。
 

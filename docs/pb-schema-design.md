@@ -147,7 +147,7 @@ img:delete, all
 | `description` | text                   | 标签描述(可选)                   |
 | `oldName`     | text                   | 迁移映射(原 tags 数组中的字符串) |
 
-**查询**(pb 0.39.4 验证,见各条目标注):
+**查询**(pb 0.39.5 验证,见各条目标注):
 
 - 文章的标签:`GET /api/collections/posts/records?expand=tags`
 - **推荐**:某标签下的文章 `filter=tags~'TAG_ID'`(`~` like:Go SDK ✅ + REST API ✅)
@@ -157,8 +157,8 @@ img:delete, all
 - `tags:length > 0`:查有标签的文章 ✅
 - 标签云:back-relation `posts_via_tags`(用于 expand/sort,不用于直接 filter)
 
-> **验证来源**:`scripts/verify_relation.go`(in-process Bootstrap 测试),pb 0.39.4
->
+> **验证来源**:`scripts/verify_relation.go`(in-process Bootstrap 测试),pb 0.39.5
+
 > **Back-relation**:`posts_via_tags` 用于从 tags collection 反查关联的 posts(expand/sort),直接 filter 查 posts 用 `tags~'TAG_ID'`
 
 ---
@@ -242,7 +242,7 @@ img:delete, all
 | `customize`        | json                                           | `Setting.layout`                            | `{ head, css, html, script }`                           |
 | `imageConfig`      | json                                           | `Setting.static` 部分                       | `{ enableWatermark, watermarkText, enableWebp }`        |
 | `routing`          | json                                           | —                                           | 新增:自定义路由/反代规则                                |
-| `allowedDomains`   | json                                           | `Setting.https`                             | Caddy on-demand TLS 白名单(prod/dev 镜像)                    |
+| `allowedDomains`   | json                                           | `Setting.https`                             | Caddy on-demand TLS 白名单(prod/dev 镜像)               |
 | `revisions`        | json                                           | —                                           | 新增:应用内历史配置 `{ enabled, retention }`            |
 | `output`           | json                                           | —                                           | 新增:markdown 导出配置 `{ enabled, format, dest, ... }` |
 | `sync`             | json                                           | —                                           | 新增:外部 git 同步 `{ enabled, remote, schedule, ... }` |
