@@ -3,8 +3,10 @@
 package article
 
 import (
+	"cmp"
 	"fmt"
 	"net/http"
+	"slices"
 	"strings"
 
 	"github.com/pocketbase/dbx"
@@ -155,7 +157,6 @@ func (m *Manager) GetTimeline() ([]TimelineEntry, error) {
 
 	// Group by year → month
 	type monthKey struct{ year, month int }
-	type yearKey struct{ year int }
 
 	yearMap := map[int]map[monthKey][]PostSummary{}
 	yearOrder := []int{}
@@ -187,13 +188,9 @@ func (m *Manager) GetTimeline() ([]TimelineEntry, error) {
 			monthKeys = append(monthKeys, k)
 		}
 		// Sort months descending
-		for i := 0; i < len(monthKeys); i++ {
-			for j := i + 1; j < len(monthKeys); j++ {
-				if monthKeys[j].month > monthKeys[i].month {
-					monthKeys[i], monthKeys[j] = monthKeys[j], monthKeys[i]
-				}
-			}
-		}
+		slices.SortFunc(monthKeys, func(a, b monthKey) int {
+			return cmp.Compare(b.month, a.month)
+		})
 
 		for _, mk := range monthKeys {
 			summaries := months[mk]
