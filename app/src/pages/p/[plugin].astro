@@ -1,0 +1,29 @@
+---
+// /p/moments, /p/bookmarks, etc.
+// Fetches the plugin's HTML fragment from PB and wraps in BaseLayout.
+export const prerender = false;
+
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { fetchPluginPage } from '../../lib/plugin-loader';
+
+const { plugin } = Astro.params;
+
+if (!plugin) {
+    return Astro.redirect('/404');
+}
+
+const pluginData = await fetchPluginPage({
+    plugin,
+    type: 'public',
+    pbUrl: Astro.locals.pbUrl,
+    cookie: Astro.request.headers.get('cookie') || '',
+});
+
+if (!pluginData) {
+    return Astro.redirect('/404');
+}
+---
+
+<BaseLayout title={pluginData.title}>
+    <Fragment set:html={pluginData.html} />
+</BaseLayout>
