@@ -22,31 +22,10 @@
 // ----------------------------------------------------------------------------
 
 // ----------------------------------------------------------------------------
-// 2. Utility: query param parser (JSVM has no built-in URL parser)
+// 2. Shared utilities
 // ----------------------------------------------------------------------------
 
-function getQuery(e, name) {
-  try {
-    if (e.request && e.request.url) {
-      var rawQuery = e.request.url.rawQuery || "";
-      if (!rawQuery) return null;
-      var pairs = rawQuery.split("&");
-      for (var i = 0; i < pairs.length; i++) {
-        var eq = pairs[i].indexOf("=");
-        if (eq === -1) continue;
-        var key = decodeURIComponent(
-          pairs[i].substring(0, eq).replace(/\+/g, " ")
-        );
-        if (key === name) {
-          return decodeURIComponent(
-            pairs[i].substring(eq + 1).replace(/\+/g, " ")
-          );
-        }
-      }
-    }
-  } catch (_) {}
-  return null;
-}
+var getQuery = require("./pb_hooks/lib/vanblog-query.js");
 
 // ----------------------------------------------------------------------------
 // 3. Audit helper (same module used by system.pb.js)
@@ -73,13 +52,18 @@ routerAdd("GET", "/api/moments/list", function (e) {
     if (isNaN(page) || page < 1) page = 1;
     if (isNaN(perPage) || perPage < 1) perPage = 20;
 
+    var filter = "visible = true";
+    if (getQuery(e, "mine") === "1" && e.auth) {
+      filter = "visible = true && author = '" + e.auth.id + "'";
+    }
+
     var totalItems = $app.countRecords(
       "moments",
       $dbx.hashExp({ visible: true })
     );
     var records = $app.findRecordsByFilter(
       "moments",
-      "visible = true",
+      filter,
       "-created",
       perPage,
       (page - 1) * perPage

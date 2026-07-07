@@ -117,7 +117,6 @@ func (m *Manager) Bind() func(vm *goja.Runtime) {
 			data := map[string]any{
 				"PluginName": manifest["name"],
 				"Title":      manifest["title"],
-				"SiteName":   "Vanblog",
 			}
 
 			// Read site config

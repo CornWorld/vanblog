@@ -1,15 +1,36 @@
 <div class="bookmarks-admin max-w-2xl mx-auto">
   <h1 class="text-2xl font-bold mb-6">{{.Title}}</h1>
 
-  <form id="add-form" class="mb-8 border rounded-lg p-4 bg-white dark:bg-gray-800 space-y-3">
-    <input id="bm-title" type="text" placeholder="网站名称" required
-      class="w-full border rounded-lg p-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
-    <input id="bm-url" type="url" placeholder="https://..." required
-      class="w-full border rounded-lg p-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
-    <input id="bm-desc" type="text" placeholder="描述 (可选)"
-      class="w-full border rounded-lg p-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
-    <button type="submit"
-      class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">添加</button>
+  <form
+    id="add-form"
+    class="mb-8 border rounded-lg p-4 bg-white dark:bg-gray-800 space-y-3"
+  >
+    <input
+      id="bm-title"
+      type="text"
+      placeholder="网站名称"
+      required
+      class="w-full border rounded-lg p-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+    />
+    <input
+      id="bm-url"
+      type="url"
+      placeholder="https://..."
+      required
+      class="w-full border rounded-lg p-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+    />
+    <input
+      id="bm-desc"
+      type="text"
+      placeholder="描述 (可选)"
+      class="w-full border rounded-lg p-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+    />
+    <button
+      type="submit"
+      class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
+    >
+      添加
+    </button>
   </form>
 
   <div id="bookmarks-list" class="space-y-3">
@@ -18,59 +39,81 @@
 </div>
 
 <script type="module">
-  const API = '/api/bookmarks';
+  const API = "/api/bookmarks";
 
   function esc(s) {
-    const d = document.createElement('div');
-    d.textContent = s || '';
+    const d = document.createElement("div");
+    d.textContent = s || "";
     return d.innerHTML;
   }
 
-  document.getElementById('add-form').onsubmit = async (e) => {
+  document.getElementById("add-form").onsubmit = async (e) => {
     e.preventDefault();
-    const title = document.getElementById('bm-title').value.trim();
-    const url = document.getElementById('bm-url').value.trim();
-    if (!title || !url) return alert('请填写名称和网址');
+    const title = document.getElementById("bm-title").value.trim();
+    const url = document.getElementById("bm-url").value.trim();
+    if (!title || !url) return alert("请填写名称和网址");
     try {
-      const res = await fetch(API + '/create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, url, description: document.getElementById('bm-desc').value.trim() })
+      const res = await fetch(API + "/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title,
+          url,
+          description: document.getElementById("bm-desc").value.trim(),
+        }),
       });
-      if (!res.ok) throw new Error('添加失败');
-      ['bm-title','bm-url','bm-desc'].forEach(id => document.getElementById(id).value = '');
+      if (!res.ok) throw new Error("添加失败");
+      ["bm-title", "bm-url", "bm-desc"].forEach(
+        (id) => (document.getElementById(id).value = "")
+      );
       await loadList();
-    } catch (err) { alert(err.message); }
+    } catch (err) {
+      alert(err.message);
+    }
   };
 
   async function loadList() {
     try {
-      const res = await fetch(API + '/list');
+      const res = await fetch(API + "/list?mine=1");
       const data = await res.json();
-      const el = document.getElementById('bookmarks-list');
+      const el = document.getElementById("bookmarks-list");
       if (!data.items || data.items.length === 0) {
-        el.innerHTML = '<div class="text-center py-8 text-gray-400">暂无收藏</div>';
+        el.innerHTML =
+          '<div class="text-center py-8 text-gray-400">暂无收藏</div>';
         return;
       }
-      el.innerHTML = data.items.map(b =>
-        '<div class="border rounded-lg p-3 bg-white dark:bg-gray-800 flex justify-between items-start gap-2">'
-        + '<div class="flex-1"><div class="font-medium">' + esc(b.title) + '</div>'
-        + '<div class="text-xs text-gray-400">' + esc(b.url) + '</div></div>'
-        + '<button onclick="window.delBm(\'' + b.id + '\', this)" class="text-red-500 hover:text-red-700 text-sm shrink-0">删除</button>'
-        + '</div>'
-      ).join('');
+      el.innerHTML = data.items
+        .map(
+          (b) =>
+            '<div class="border rounded-lg p-3 bg-white dark:bg-gray-800 flex justify-between items-start gap-2">' +
+            '<div class="flex-1"><div class="font-medium">' +
+            esc(b.title) +
+            "</div>" +
+            '<div class="text-xs text-gray-400">' +
+            esc(b.url) +
+            "</div></div>" +
+            "<button onclick=\"window.delBm('" +
+            b.id +
+            '\', this)" class="text-red-500 hover:text-red-700 text-sm shrink-0">删除</button>' +
+            "</div>"
+        )
+        .join("");
     } catch (err) {
-      document.getElementById('bookmarks-list').innerHTML = '<div class="text-center py-8 text-red-500">加载失败</div>';
+      document.getElementById("bookmarks-list").innerHTML =
+        '<div class="text-center py-8 text-red-500">加载失败</div>';
     }
   }
 
   window.delBm = async (id, btn) => {
-    if (!confirm('确定删除？')) return;
+    if (!confirm("确定删除？")) return;
     btn.disabled = true;
     try {
-      await fetch(API + '/' + id, { method: 'DELETE' });
+      await fetch(API + "/" + id, { method: "DELETE" });
       await loadList();
-    } catch (err) { alert(err.message); btn.disabled = false; }
+    } catch (err) {
+      alert(err.message);
+      btn.disabled = false;
+    }
   };
 
   loadList();
