@@ -6,34 +6,51 @@
   </div>
 
   <script type="module">
-    const API = '/api/bookmarks';
+    // pb 原生 API:listRule 为公开,直接拉全部记录,expand=owner 预留作者信息
+    const API = "/api/collections/bookmarks/records";
 
     function esc(s) {
-      const d = document.createElement('div');
-      d.textContent = s || '';
+      const d = document.createElement("div");
+      d.textContent = s || "";
       return d.innerHTML;
     }
 
     async function loadBookmarks() {
       try {
-        const res = await fetch(API + '/list');
-        if (!res.ok) throw new Error('Failed');
+        const url = `${API}?page=1&perPage=100&expand=owner&sort=-created`;
+        const res = await fetch(url);
+        if (!res.ok) throw new Error("Failed");
         const data = await res.json();
-        const app = document.getElementById('bookmarks-app');
+        const app = document.getElementById("bookmarks-app");
         if (!data.items || data.items.length === 0) {
-          app.innerHTML = '<div class="text-center py-12 text-gray-400">还没有收藏，去后台添加吧~</div>';
+          app.innerHTML =
+            '<div class="text-center py-12 text-gray-400">还没有收藏，去后台添加吧~</div>';
           return;
         }
-        app.innerHTML = data.items.map(b =>
-          '<a href="' + esc(b.url) + '" target="_blank" rel="noopener"'
-          + ' class="block border rounded-lg p-4 mb-3 bg-white dark:bg-gray-800 hover:shadow-md transition-shadow no-underline">'
-          + '<div class="font-medium text-blue-600 dark:text-blue-400">' + esc(b.title) + '</div>'
-          + '<div class="text-sm text-gray-400 mt-1">' + esc(b.url) + '</div>'
-          + (b.description ? '<div class="text-sm text-gray-500 mt-1">' + esc(b.description) + '</div>' : '')
-          + '</a>'
-        ).join('');
+        app.innerHTML = data.items
+          .map(
+            (b) =>
+              '<a href="' +
+              esc(b.url) +
+              '" target="_blank" rel="noopener"' +
+              ' class="block border rounded-lg p-4 mb-3 bg-white dark:bg-gray-800 hover:shadow-md transition-shadow no-underline">' +
+              '<div class="font-medium text-blue-600 dark:text-blue-400">' +
+              esc(b.title) +
+              "</div>" +
+              '<div class="text-sm text-gray-400 mt-1">' +
+              esc(b.url) +
+              "</div>" +
+              (b.description
+                ? '<div class="text-sm text-gray-500 mt-1">' +
+                  esc(b.description) +
+                  "</div>"
+                : "") +
+              "</a>"
+          )
+          .join("");
       } catch (err) {
-        document.getElementById('bookmarks-app').innerHTML = '<div class="text-center py-12 text-red-500">加载失败</div>';
+        document.getElementById("bookmarks-app").innerHTML =
+          '<div class="text-center py-12 text-red-500">加载失败</div>';
       }
     }
 

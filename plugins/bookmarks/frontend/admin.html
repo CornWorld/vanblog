@@ -39,7 +39,10 @@
 </div>
 
 <script type="module">
-  const API = "/api/bookmarks";
+  // pb 原生 API;owner 字段由后端 onRecordBeforeCreateRequest hook 自动填充。
+  // {{.User.id}} 由 Go template 注入,用于 list 请求按 owner 过滤当前用户。
+  const API = "/api/collections/bookmarks/records";
+  const userId = "{{.User.id}}";
 
   function esc(s) {
     const d = document.createElement("div");
@@ -53,7 +56,7 @@
     const url = document.getElementById("bm-url").value.trim();
     if (!title || !url) return alert("请填写名称和网址");
     try {
-      const res = await fetch(API + "/create", {
+      const res = await fetch(API, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -62,7 +65,10 @@
           description: document.getElementById("bm-desc").value.trim(),
         }),
       });
-      if (!res.ok) throw new Error("添加失败");
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || err.error || "添加失败");
+      }
       ["bm-title", "bm-url", "bm-desc"].forEach(
         (id) => (document.getElementById(id).value = "")
       );
@@ -74,7 +80,11 @@
 
   async function loadList() {
     try {
-      const res = await fetch(API + "/list?mine=1");
+      const url =
+        `${API}?page=1&perPage=100&filter=` +
+        encodeURIComponent(`owner="${userId}"`) +
+        `&expand=owner`;
+      const res = await fetch(url);
       const data = await res.json();
       const el = document.getElementById("bookmarks-list");
       if (!data.items || data.items.length === 0) {
@@ -108,7 +118,11 @@
     if (!confirm("确定删除？")) return;
     btn.disabled = true;
     try {
-      await fetch(API + "/" + id, { method: "DELETE" });
+      const res = await fetch(`${API}/${id}`, { method: "DELETE" });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || err.error || "删除失败");
+      }
       await loadList();
     } catch (err) {
       alert(err.message);

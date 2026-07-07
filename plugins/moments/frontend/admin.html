@@ -26,7 +26,11 @@
 </div>
 
 <script type="module">
-  const API = "/api/moments";
+  // pb 原生 API;author 字段由后端 onRecordBeforeCreateRequest hook 自动填充。
+  // {{.User.id}} 由 Go template 注入(buildPageDataGo 返回 .User.id/username/nickname),
+  // 用于 list 请求按 author 过滤当前用户。
+  const API = "/api/collections/moments/records";
+  const userId = "{{.User.id}}";
   const textarea = document.getElementById("moment-content");
   const charCount = document.getElementById("char-count");
   const submitBtn = document.getElementById("submit-btn");
@@ -47,14 +51,14 @@
     if (!content) return;
     submitBtn.disabled = true;
     try {
-      const res = await fetch(API + "/create", {
+      const res = await fetch(API, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content }),
+        body: JSON.stringify({ content, visible: true }),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || "发布失败");
+        throw new Error(err.message || err.error || "发布失败");
       }
       textarea.value = "";
       charCount.textContent = "0/500";
@@ -68,7 +72,11 @@
 
   async function loadMyMoments() {
     try {
-      const res = await fetch(API + "/list?page=1&perPage=50&mine=1");
+      const url =
+        `${API}?page=1&perPage=50&filter=` +
+        encodeURIComponent(`author="${userId}"`) +
+        `&expand=author`;
+      const res = await fetch(url);
       const data = await res.json();
       if (!data.items || data.items.length === 0) {
         listEl.innerHTML =
@@ -106,8 +114,11 @@
     if (!confirm("确定删除这条说说？")) return;
     btn.disabled = true;
     try {
-      const res = await fetch(API + "/" + id, { method: "DELETE" });
-      if (!res.ok) throw new Error("删除失败");
+      const res = await fetch(`${API}/${id}`, { method: "DELETE" });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || "删除失败");
+      }
       await loadMyMoments();
     } catch (err) {
       alert(err.message);

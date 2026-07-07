@@ -169,6 +169,9 @@ declare namespace $vanblog {
   /** Register plugin nav items (called at load time) */
   function addNavItems(name: string): void;
 
+  /** Register all routes (public/admin/static) + nav for a plugin. Call once at load time. */
+  function servePlugin(name: string): void;
+
   /** Get all registered nav items */
   function getNavItems(): Array<{
     path: string;
