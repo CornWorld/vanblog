@@ -1,9 +1,9 @@
 // Flat config: lint .astro files for parse-level issues (the main thing
 // we want — catching stray template characters, unclosed braces, broken
 // JSX in frontmatter). Stylistic rules intentionally not enforced.
-import js from '@eslint/js';
-import tseslint from 'typescript-eslint';
-import astro from 'eslint-plugin-astro';
+import js from "@eslint/js";
+import tseslint from "typescript-eslint";
+import astro from "eslint-plugin-astro";
 
 export default [
   js.configs.recommended,
@@ -13,14 +13,51 @@ export default [
     rules: {
       // Astro inline scripts are vanilla JS, often use `any` for pb records
       // and DOM event targets. Don't fight the type system in this codebase.
-      '@typescript-eslint/no-explicit-any': 'off',
-      '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
+      "@typescript-eslint/no-explicit-any": "off",
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        { argsIgnorePattern: "^_" },
+      ],
       // Frontmatter consts used only in JSX are picked up as "unused" by
       // TS but consumed by the Astro compiler.
-      'no-unused-vars': 'off',
+      "no-unused-vars": "off",
     },
   },
   {
-    ignores: ['**/dist/**', '**/.astro/**', '**/node_modules/**'],
+    ignores: [
+      "**/dist/**",
+      "**/.astro/**",
+      "**/node_modules/**",
+      "**/plugins/**",
+      "**/pb_hooks/**",
+    ],
+  },
+  // PB JSVM globals — available at runtime but not at lint time
+  {
+    files: ["**/*.pb.js"],
+    languageOptions: {
+      globals: {
+        $app: "readonly",
+        $vanblog: "readonly",
+        $template: "readonly",
+        $os: "readonly",
+        $apis: "readonly",
+        $dbx: "readonly",
+        $security: "readonly",
+        $filesystem: "readonly",
+        $http: "readonly",
+        $mails: "readonly",
+        routerAdd: "readonly",
+        routerUse: "readonly",
+        onBootstrap: "readonly",
+        onServe: "readonly",
+        cronAdd: "readonly",
+        cronRemove: "readonly",
+        console: "readonly",
+        require: "readonly",
+        Record: "readonly",
+        Collection: "readonly",
+      },
+    },
   },
 ];
