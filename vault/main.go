@@ -15,6 +15,7 @@ import (
 	"github.com/cornworld/vanblog/internal/bootstrap"
 	"github.com/cornworld/vanblog/internal/caddy"
 	"github.com/cornworld/vanblog/internal/devseed"
+	"github.com/cornworld/vanblog/internal/plugins"
 	"github.com/cornworld/vanblog/internal/feed"
 	"github.com/cornworld/vanblog/internal/media"
 	"github.com/cornworld/vanblog/internal/migration"
@@ -34,6 +35,7 @@ func main() {
 		hooksPool     int
 		migrationsDir string
 		automigrate   bool
+		pluginsDir    string
 	)
 
 	app.RootCmd.PersistentFlags().StringVar(
@@ -56,14 +58,24 @@ func main() {
 		&automigrate, "automigrate", true,
 		"enable/disable auto execution of JS migrations",
 	)
+	app.RootCmd.PersistentFlags().StringVar(
+		&pluginsDir, "pluginsDir", "/plugins",
+		"the directory with the plugin packages",
+	)
 
 	app.RootCmd.ParseFlags(os.Args[1:])
+
+	if pluginsDir == "" {
+		pluginsDir = "/plugins"
+	}
+	pluginMgr := plugins.New(app, pluginsDir)
 
 	jsvm.MustRegister(app, jsvm.Config{
 		MigrationsDir: migrationsDir,
 		HooksDir:      hooksDir,
 		HooksWatch:    hooksWatch,
 		HooksPoolSize: hooksPool,
+		OnInit:        pluginMgr.Bind(),
 	})
 
 	migratecmd.MustRegister(app, app.RootCmd, migratecmd.Config{

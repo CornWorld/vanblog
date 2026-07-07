@@ -38,24 +38,24 @@ declare const $app: import("../types").App;
  * 通过 e.record.get("fieldName") 访问。
  */
 interface VanblogPost {
-    id: string;
-    title: string;
-    content: string;
-    status: "draft" | "published" | "hidden";
-    pathname: string;
-    tags: string[];        // relation IDs to tags collection
-    category: string;      // relation ID to categories collection
-    author: string;        // relation ID to users collection
-    private: boolean;
-    password: string;
-    copyright: string;
-    viewCount: number;
-    visitedCount: number;
-    deleted: boolean;
-    oldId: number;
-    top: number;
-    created: string;
-    updated: string;
+  id: string;
+  title: string;
+  content: string;
+  status: "draft" | "published" | "hidden";
+  pathname: string;
+  tags: string[]; // relation IDs to tags collection
+  category: string; // relation ID to categories collection
+  author: string; // relation ID to users collection
+  private: boolean;
+  password: string;
+  copyright: string;
+  viewCount: number;
+  visitedCount: number;
+  deleted: boolean;
+  oldId: number;
+  top: number;
+  created: string;
+  updated: string;
 }
 
 /**
@@ -65,22 +65,22 @@ interface VanblogPost {
  * const siteName = site.getString("siteName");
  */
 interface VanblogSite {
-    siteName: string;
-    siteDesc: string;
-    author: string;
-    baseUrl: string;
-    theme: "default" | "minimal" | "magazine" | "custom";
-    defaultTheme: "auto" | "light" | "dark";
-    commentsProvider: "disabled" | "waline" | "giscus" | "artalk" | "external";
-    revisionsEnabled: boolean;
-    revisionsRetention: number;
-    httpsRedirect: boolean;
-    allowedDomains: string[];
-    routing: VanblogRouteRule[];
-    nav: VanblogNavItem[];
-    links: VanblogLinkItem[];
-    socials: VanblogSocialItem[];
-    rewards: VanblogRewardItem[];
+  siteName: string;
+  siteDesc: string;
+  author: string;
+  baseUrl: string;
+  theme: "default" | "minimal" | "magazine" | "custom";
+  defaultTheme: "auto" | "light" | "dark";
+  commentsProvider: "disabled" | "waline" | "giscus" | "artalk" | "external";
+  revisionsEnabled: boolean;
+  revisionsRetention: number;
+  httpsRedirect: boolean;
+  allowedDomains: string[];
+  routing: VanblogRouteRule[];
+  nav: VanblogNavItem[];
+  links: VanblogLinkItem[];
+  socials: VanblogSocialItem[];
+  rewards: VanblogRewardItem[];
 }
 
 /**
@@ -88,58 +88,107 @@ interface VanblogSite {
  * @see VanblogSite.routing
  */
 interface VanblogRouteRule {
-    id: string;
-    type: "proxy" | "redirect" | "rewrite" | "block";
-    from: string;       // glob pattern, e.g. "/api/internal/*"
-    to: string;         // target URL (for proxy/redirect)
-    code?: number;      // HTTP status code (for redirect)
-    headers?: Record<string, string>;
+  id: string;
+  type: "proxy" | "redirect" | "rewrite" | "block";
+  from: string; // glob pattern, e.g. "/api/internal/*"
+  to: string; // target URL (for proxy/redirect)
+  code?: number; // HTTP status code (for redirect)
+  headers?: Record<string, string>;
 }
 
 interface VanblogNavItem {
-    name: string;
-    value: string;
-    level: number;
+  name: string;
+  value: string;
+  level: number;
 }
 
 interface VanblogLinkItem {
-    name: string;
-    url: string;
-    desc?: string;
-    logo?: string;
+  name: string;
+  url: string;
+  desc?: string;
+  logo?: string;
 }
 
 interface VanblogSocialItem {
-    type: "github" | "twitter" | "email" | "rss" | string;
-    value: string;
+  type: "github" | "twitter" | "email" | "rss" | string;
+  value: string;
 }
 
 interface VanblogRewardItem {
-    name: string;
-    value: string;
+  name: string;
+  value: string;
 }
 
 /**
  * visits 表的字段。
  */
 interface VanblogVisit {
-    date: string;       // "2006-01-02" format
-    path: string;       // URL path, empty = site-wide aggregate
-    views: number;
-    uniques: number;
-    post: string;       // relation ID to posts
-    lastVisitedAt: string;
+  date: string; // "2006-01-02" format
+  path: string; // URL path, empty = site-wide aggregate
+  views: number;
+  uniques: number;
+  post: string; // relation ID to posts
+  lastVisitedAt: string;
+}
+
+// ---------------------------------------------------------------------------
+// $vanblog — Go-level plugin helper library
+// Injected into JSVM by vault/internal/plugins/
+// ---------------------------------------------------------------------------
+
+declare namespace $vanblog {
+  /** Read and cache a plugin's manifest.json */
+  function readManifest(name: string): {
+    name: string;
+    version: string;
+    title: string;
+    routes: {
+      public: { path: string; title: string; template: string };
+      admin: { path: string; title: string; template: string };
+    };
+    scripts: string[];
+    styles: string[];
+  };
+
+  /** Build template data object with site config + user info */
+  function buildPageData(
+    manifest: Record<string, any>,
+    authId: string
+  ): Record<string, any>;
+
+  /** Render a plugin's Go template file */
+  function renderTemplate(
+    name: string,
+    templateRelPath: string,
+    data: Record<string, any>
+  ): string;
+
+  /** Serve static files from a plugin's frontend/ directory */
+  function serveStatic(name: string): (e: any) => void;
+
+  /** Register plugin nav items (called at load time) */
+  function addNavItems(name: string): void;
+
+  /** Get all registered nav items */
+  function getNavItems(): Array<{
+    path: string;
+    title: string;
+    position: string;
+  }>;
+
+  /** Read a file as string (convenience wrapper) */
+  function readFile(path: string): string;
 }
 
 /**
  * audits 表的字段。
  */
 interface VanblogAudit {
-    actor: string;      // relation ID to users
-    action: string;     // e.g. "auth.login", "post.delete"
-    target: string;
-    result: "success" | "failure";
-    detail: Record<string, any>;
-    ip: string;
-    userAgent: string;
+  actor: string; // relation ID to users
+  action: string; // e.g. "auth.login", "post.delete"
+  target: string;
+  result: "success" | "failure";
+  detail: Record<string, any>;
+  ip: string;
+  userAgent: string;
 }
