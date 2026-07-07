@@ -59,6 +59,10 @@ const websiteSchema = {
   description: siteDesc,
   url: baseUrl || undefined,
 };
+
+// Plugin nav items — fetched once per process lifetime via middleware cache
+const allNavItems = await Astro.locals.getNavItems();
+const pluginNavItems = allNavItems.filter((item) => item.position === 'header');
 ---
 <!doctype html>
 <html lang="zh-CN">
@@ -119,6 +123,9 @@ const websiteSchema = {
           <a href="/tags" class="px-2 py-1 rounded hover:bg-[var(--color-border)] dark:hover:bg-[var(--color-border-dark)] transition-colors no-underline text-inherit hidden sm:inline">标签</a>
           <a href="/categories" class="px-2 py-1 rounded hover:bg-[var(--color-border)] dark:hover:bg-[var(--color-border-dark)] transition-colors no-underline text-inherit hidden sm:inline">分类</a>
           <a href="/search" class="px-2 py-1 rounded hover:bg-[var(--color-border)] dark:hover:bg-[var(--color-border-dark)] transition-colors no-underline text-inherit">搜索</a>
+          {pluginNavItems.map((item) => (
+            <a href={item.path} class="px-2 py-1 rounded hover:bg-[var(--color-border)] dark:hover:bg-[var(--color-border-dark)] transition-colors no-underline text-inherit">{item.title}</a>
+          ))}
           {hasAbout && (
             <a href="/about" class="px-2 py-1 rounded hover:bg-[var(--color-border)] dark:hover:bg-[var(--color-border-dark)] transition-colors no-underline text-inherit hidden sm:inline">关于</a>
           )}

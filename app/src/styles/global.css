@@ -1,4 +1,7 @@
-@import 'tailwindcss';
+@import "tailwindcss";
+
+/* ── Plugin HTML templates — Tailwind must scan these for utility classes ── */
+@source "../../plugins/**/frontend/**/*.html";
 
 /* ── Dark mode: class-based (.dark on <html>) ── */
 @custom-variant dark (&:where(.dark, .dark *));
@@ -54,7 +57,8 @@ html.dark {
 @layer base {
   html {
     @apply bg-[var(--color-bg)] text-[var(--color-text)] antialiased;
-    font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
+      sans-serif;
   }
 
   html.dark {
@@ -73,13 +77,24 @@ html.dark {
     @apply text-[var(--color-accent-dark)];
   }
 
-  h1, h2, h3, h4, h5, h6 {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     @apply font-bold leading-tight;
   }
 
-  h1 { @apply text-3xl mb-6; }
-  h2 { @apply text-2xl mb-4 mt-8; }
-  h3 { @apply text-xl mb-3 mt-6; }
+  h1 {
+    @apply text-3xl mb-6;
+  }
+  h2 {
+    @apply text-2xl mb-4 mt-8;
+  }
+  h3 {
+    @apply text-xl mb-3 mt-6;
+  }
 
   /* ── Article content (rendered markdown) ── */
   article {
@@ -118,11 +133,13 @@ html.dark {
     @apply w-full border-collapse my-4;
   }
 
-  article th, article td {
+  article th,
+  article td {
     @apply border border-[var(--color-border)] px-3 py-2 text-left;
   }
 
-  html.dark article th, html.dark article td {
+  html.dark article th,
+  html.dark article td {
     @apply border-[var(--color-border-dark)];
   }
 
