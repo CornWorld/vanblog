@@ -1,0 +1,25 @@
+{
+  "name": "moments",
+  "version": "1.0.0",
+  "title": "说说/动态",
+  "description": "轻量级社交动态流",
+  "author": "Vanblog Community",
+  "routes": {
+    "public": {
+      "path": "/p/moments",
+      "title": "说说",
+      "template": "frontend/index.html"
+    },
+    "admin": {
+      "path": "/admin/plugins/moments",
+      "title": "说说管理",
+      "template": "frontend/admin.html"
+    }
+  },
+  "navItems": [{ "path": "/p/moments", "title": "说说", "position": "header" }],
+  "adminMenuItems": [
+    { "path": "/admin/plugins/moments", "title": "说说管理", "icon": "chat" }
+  ],
+  "scripts": [],
+  "styles": []
+}
