@@ -1,7 +1,7 @@
-import { createVanblogClient } from './client';
-import type { CreateClientOptions } from './client';
-import type { VanblogClient } from './services';
-import { AUTH_COOKIE_OPTIONS } from './cookie';
+import { createVanblogClient } from "./client";
+import type { CreateClientOptions } from "./client";
+import type { VanblogClient } from "./services";
+import { AUTH_COOKIE_OPTIONS } from "./cookie";
 
 // ── Types ──────────────────────────────────────────────────────────────
 
@@ -9,7 +9,7 @@ export interface AuthUser {
   id: string;
   username: string;
   nickname?: string;
-  role: 'admin' | 'collaborator';
+  role: "admin" | "collaborator";
   permissions: string[];
 }
 
@@ -28,7 +28,7 @@ interface PbUserRecord {
  * Loads auth state from cookie, refreshes token if valid.
  */
 export function createServerClient(
-  opts: CreateClientOptions & { cookie?: string },
+  opts: CreateClientOptions & { cookie?: string }
 ): VanblogClient {
   const client = createVanblogClient(opts);
 
@@ -53,7 +53,7 @@ export function createServerClient(
 /** Export the auth cookie string for setting on response headers. */
 export function exportAuthCookie(
   client: VanblogClient,
-  secure: boolean,
+  secure: boolean
 ): string {
   return client.authStore.exportToCookie({
     ...AUTH_COOKIE_OPTIONS,
@@ -80,7 +80,7 @@ export function getAuthUser(pb: VanblogClient): AuthUser | null {
     id: rec.id,
     username: rec.username,
     nickname: rec.nickname,
-    role: rec.role === 'admin' ? 'admin' : 'collaborator',
+    role: rec.role === "admin" ? "admin" : "collaborator",
     permissions: Array.isArray(rec.permissions) ? rec.permissions : [],
   };
 }
@@ -92,15 +92,15 @@ export function getAuthUser(pb: VanblogClient): AuthUser | null {
 export function hasPermission(pb: VanblogClient, perm: string): boolean {
   const user = getAuthUser(pb);
   if (!user) return false;
-  if (user.role === 'admin') return true;
-  if (user.permissions.includes('all')) return true;
+  if (user.role === "admin") return true;
+  if (user.permissions.includes("all")) return true;
   return user.permissions.includes(perm);
 }
 
 /** Return the auth user only if they are an admin, otherwise null. */
 export function requireAdmin(pb: VanblogClient): AuthUser | null {
   const user = getAuthUser(pb);
-  if (!user || user.role !== 'admin') return null;
+  if (!user || user.role !== "admin") return null;
   return user;
 }
 
@@ -119,7 +119,7 @@ export function requireAdmin(pb: VanblogClient): AuthUser | null {
  */
 export async function safe<T>(
   fn: () => Promise<T>,
-  label: string,
+  label: string
 ): Promise<{ data: T | undefined; error: boolean }> {
   try {
     return { data: await fn(), error: false };
@@ -127,6 +127,14 @@ export async function safe<T>(
     console.error(`[${label}]`, e);
     return { data: undefined, error: true };
   }
+}
+
+// ── Nav item type ──────────────────────────────────────────────────────
+
+export interface PluginNavItem {
+  path: string;
+  title: string;
+  position: string;
 }
 
 // ── Middleware factory ──────────────────────────────────────────────────
@@ -154,17 +162,20 @@ export interface VanblogMiddlewareOptions {
  * ```
  */
 export function createVanblogMiddleware(opts: VanblogMiddlewareOptions = {}) {
-  const pbUrl = opts.pbUrl || 'http://127.0.0.1:8090';
+  const pbUrl = opts.pbUrl || "http://127.0.0.1:8090";
 
   // Lazy site config cache (lives for the process lifetime)
   let cachedSite: any = null;
   let siteFetchTime = 0;
   const SITE_CACHE_TTL = 60_000; // 1 min
 
-  return async (context: any, next: () => Promise<Response>): Promise<Response> => {
+  return async (
+    context: any,
+    next: () => Promise<Response>
+  ): Promise<Response> => {
     const client = createVanblogClient({ url: pbUrl });
 
-    const cookie = context.request.headers.get('cookie') || '';
+    const cookie = context.request.headers.get("cookie") || "";
     if (cookie) {
       try {
         client.authStore.loadFromCookie(cookie);
@@ -172,13 +183,14 @@ export function createVanblogMiddleware(opts: VanblogMiddlewareOptions = {}) {
     }
 
     context.locals.pb = client;
+    context.locals.pbUrl = pbUrl;
 
     const url = new URL(context.request.url);
 
     // Refresh auth token server-side on every authenticated request.
     if (client.authStore.isValid) {
       try {
-        await client.collection('users').authRefresh();
+        await client.collection("users").authRefresh();
       } catch {
         client.authStore.clear();
       }
@@ -187,7 +199,7 @@ export function createVanblogMiddleware(opts: VanblogMiddlewareOptions = {}) {
     // Bootstrap mode: when no admin exists yet, push to /setup.
     if (
       !client.authStore.isValid &&
-      (url.pathname.startsWith('/admin') || url.pathname === '/login')
+      (url.pathname.startsWith("/admin") || url.pathname === "/login")
     ) {
       try {
         const s = await client.vanblog.setup.status();
@@ -201,7 +213,7 @@ export function createVanblogMiddleware(opts: VanblogMiddlewareOptions = {}) {
     }
 
     // All /admin/* routes require authentication.
-    if (url.pathname.startsWith('/admin') && !client.authStore.isValid) {
+    if (url.pathname.startsWith("/admin") && !client.authStore.isValid) {
       const back = encodeURIComponent(url.pathname + url.search);
       return context.redirect(`/login?back=${back}`);
     }
@@ -217,17 +229,34 @@ export function createVanblogMiddleware(opts: VanblogMiddlewareOptions = {}) {
       return cachedSite;
     };
 
+    // Plugin nav items — fetched once then cached forever (registered at startup).
+    let navCache: PluginNavItem[] | null = null;
+    context.locals.getNavItems = async () => {
+      if (navCache) return navCache;
+      try {
+        const res = await fetch(`${pbUrl}/_plugin/nav`);
+        if (res.ok) {
+          const data = await res.json();
+          navCache = data.items || [];
+          return navCache;
+        }
+      } catch (err) {
+        console.warn("[vanblog] nav fetch failed:", err);
+      }
+      return navCache || [];
+    };
+
     const response = await next();
 
     // Re-export auth cookie on every response so the token stays fresh.
     try {
       if (client.authStore.isValid) {
         response.headers.append(
-          'set-cookie',
+          "set-cookie",
           client.authStore.exportToCookie({
             ...AUTH_COOKIE_OPTIONS,
-            secure: url.protocol === 'https:',
-          }),
+            secure: url.protocol === "https:",
+          })
         );
       }
     } catch {}

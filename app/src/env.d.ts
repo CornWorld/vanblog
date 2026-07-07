@@ -3,7 +3,9 @@
 declare namespace App {
   interface Locals {
     pb: import("@vanblog/sdk").VanblogClient;
+    pbUrl: string;
     getSite(): Promise<Partial<import("@vanblog/sdk").SiteConfig> | null>;
+    getNavItems(): Promise<import("@vanblog/sdk").PluginNavItem[]>;
   }
 }
 
