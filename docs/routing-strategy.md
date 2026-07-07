@@ -291,12 +291,12 @@ POST /config/apps/http/servers/srv0/routes/...
 
 ## 7. 迁移影响
 
-| 原项目配置                                         | 重构后                                                      |
-| -------------------------------------------------- | ----------------------------------------------------------- |
-| CaddyfileTemplate 的 `/c/* /custom/* /api/comment` | `SystemCacheRules` + `BuildFullConfig` 注入,不需用户配置    |
-| 用户想加自定义反代(原项目不支持)                   | `site.routing` JSON 配置,后台 UI 操作                       |
-| `caddy.provider.ts` 的所有方法                     | Go `internal/caddy` 包实现,JSVM 通过 `vanblog.caddy.*` 调用 |
-| Caddy admin api 裸暴露(原项目风险)                 | ✂️ 不再对外,只接受 vanblog 中间层调用                       |
+| 原项目配置                                         | 重构后                                                                                                                  |
+| -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| CaddyfileTemplate 的 `/c/* /custom/* /api/comment` | `SystemCacheRules` + `BuildFullConfig` 注入,不需用户配置                                                                |
+| 用户想加自定义反代(原项目不支持)                   | `site.routing` JSON 配置,后台 UI 操作                                                                                   |
+| `caddy.provider.ts` 的所有方法                     | Go `internal/caddy` 包实现,通过 Go HTTP 路由 `/api/vanblog/routing/*` 暴露,SDK 走 `client.vanblog.routing.*`(不走 JSVM) |
+| Caddy admin api 裸暴露(原项目风险)                 | ✂️ 不再对外,只接受 vanblog 中间层调用                                                                                   |
 
 ---
 

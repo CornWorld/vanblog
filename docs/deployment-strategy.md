@@ -134,36 +134,46 @@ prod 镜像包含 `node` 二进制 + 编译产物,但**不含 npm/pnpm/Astro 源
 **关键**:不是两个 Dockerfile,而是**多阶段构建 + target**。维护成本等同单 Dockerfile。
 
 ```dockerfile
-# ============ Stage 1: 编译 Astro ============
-FROM node:20-alpine AS astro-build
-WORKDIR /app
-COPY app/ .
-RUN pnpm install --frozen-lockfile && pnpm build
+# ============ Stage 1: 编译 PocketBase + vanblog SDK (go-build) ============
+FROM golang:alpine AS go-build
+WORKDIR /build
+COPY vault/go.mod vault/go.sum ./
+RUN go mod download
+COPY vault/ ./
+RUN CGO_ENABLED=0 go build -o /pocketbase -ldflags="-s -w" .
 
-# ============ Stage 2: 编译 PocketBase ============
-FROM golang:1.22-alpine AS pb-build
-WORKDIR /vault
-COPY vault/ .
-RUN CGO_ENABLED=0 go build -o /pocketbase main.go
+# ============ Stage 2: 编译 Astro 前端 + SDK (astro-build) ============
+FROM node:lts-alpine AS astro-build
+RUN corepack enable pnpm
+WORKDIR /build
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
+COPY sdk/ ./sdk/
+COPY app/package.json app/astro.config.mjs app/tsconfig.json ./app/
+COPY app/src/ ./app/src/
+COPY app/public/ ./app/public/
+RUN pnpm install --no-frozen-lockfile
+RUN pnpm --filter sdk build
+RUN pnpm --filter vanblog-app build
 
-# ============ Stage 3: prod 镜像(最小化) ============
-FROM alpine:3.19 AS prod
-COPY --from=pb-build /pocketbase /usr/local/bin/
-COPY --from=astro-build /app/dist /app/dist
-RUN apk add --no-cache caddy ca-certificates tzdata
-COPY docker/Caddyfile /etc/caddy/Caddyfile
-COPY docker/entrypoint.prod.sh /entrypoint.sh
-ENV VANBLOG_MODE=prod
-EXPOSE 80 443
+# ============ Stage 3: prod 镜像(Caddy + pb + Node SSR) ============
+FROM alpine:3.21 AS prod
+RUN apk add --no-cache caddy nodejs ca-certificates tzdata
+COPY --from=go-build /pocketbase /usr/local/bin/vanblog
+COPY --from=astro-build /build /build
+RUN ln -s /build/app /app
+COPY vault/pb_hooks /pb_hooks
+# entrypoint 由 docker/entrypoint.prod.sh 提供(多进程模型,见 §2.1)
 ENTRYPOINT ["/entrypoint.sh"]
 
-# ============ Stage 4: dev 镜像(继承 prod + Node) ============
+# ============ Stage 4: dev 镜像(继承 prod + Node 工具链) ============
 FROM prod AS dev
-RUN apk add --no-cache nodejs npm git
-COPY --from=astro-build /app /app/src
+RUN apk add --no-cache npm git
+COPY --from=astro-build /build /app/src
 COPY docker/entrypoint.dev.sh /entrypoint.dev.sh
 ENV VANBLOG_MODE=dev
 ```
+
+> 注:上面的片段是骨架,完整 Dockerfile 以仓库实际文件为准。关键差异(对比早期文档的设想):base 镜像是 `golang:alpine` / `node:lts-alpine` / `alpine:3.21`(跟踪最新版,非固定小版本);Go stage 叫 `go-build`(非 `pb-build`),Astro stage 叫 `astro-build`;Astro stage 先 build sdk 再 build app;prod 入口运行 3 进程(Caddy + pb + Node SSR)。
 
 **构建命令**:
 
@@ -197,26 +207,38 @@ jobs:
 
 ### 2.1 prod entrypoint
 
+> 注:下面是真实 entrypoint 的骨架(完整版见 `docker/entrypoint.prod.sh`)。prod 模式启动**三个进程**(Caddy + PocketBase + Astro SSR Node),由 `monitor_children` 看护,任一进程崩溃即终止容器。
+
 ```bash
 #!/bin/sh
 set -e
 
-# 1. 启动 Caddy(用 Caddyfile 模板)
-caddy start --config /etc/caddy/Caddyfile --adapter caddyfile
+# 1. 启动 Caddy(用 bootstrap.json,后台)
+caddy run --config "$BOOTSTRAP_JSON" &
+CADDY_PID=$!
+wait_for "http://127.0.0.1:2019/config/" "Caddy admin API" 30 || exit 1
 
-# 2. 启动 PocketBase
-exec pocketbase serve \
-  --http=127.0.0.1:8090 \
-  --dir=/var/lib/pb_data \
-  --hooksDir=/var/lib/pb_hooks \
-  "$@"
+# 2. 启动 PocketBase(二进制名是 vanblog,非 pocketbase)
+vanblog serve --http=$PB_HTTP --dir=$PB_DATA &
+PB_PID=$!
+wait_for "http://127.0.0.1:8090/api/health" "PocketBase" 30 || exit 1
+
+# 3. 启动 Astro SSR server(Node)
+cd /app/dist
+HOST=127.0.0.1 PORT=4321 node ./server/entry.mjs &
+ASTRO_PID=$!
+wait_for "http://127.0.0.1:4321/" "Astro SSR" 30 || exit 1
+
+# 4. 看护:任一子进程崩溃则退出容器
+monitor_children  # 轮询 CADDY_PID / PB_PID / ASTRO_PID
 ```
 
 **特点**:
 
 - pb 只绑 `127.0.0.1:8090`,不对外(由 Caddy 反代)
-- 无 Node 进程
-- 无 dev server
+- **三进程模型**:Caddy(80/443) + PocketBase(8090) + Astro SSR(4321),全绑 127.0.0.1
+- 二进制名是 `vanblog`(非 `pocketbase`),数据目录默认 `/pb_data`(非 `/var/lib/pb_data`),hooks 目录默认 `/pb_hooks`(非 `/var/lib/pb_hooks`)
+- 无 dev server / 无 npm / 无源码(只有编译产物 + node runtime)
 
 ### 2.2 dev entrypoint
 

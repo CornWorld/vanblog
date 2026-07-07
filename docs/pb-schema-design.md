@@ -54,16 +54,16 @@
 
 对应原表:`User`
 
-| 字段          | pb 类型                       | 原字段              | 说明                  |
-| ------------- | ----------------------------- | ------------------- | --------------------- |
-| `username`    | text(unique, required)        | `name`              | 登录名                |
-| `nickname`    | text                          | `nickname`          | 展示名                |
-| `role`        | select(admin/collaborator)    | `type`              | 默认 `collaborator`   |
-| `permissions` | select(multiple)              | `permissions`       | 8 种权限 + `all`,见下 |
-| `oldId`       | number(unique)                | `id`                | 迁移映射              |
-| —             | pb 内置 `email`               | —                   | pb auth 必带          |
-| —             | pb 内置 `password`            | `password` + `salt` | pb 自动加盐           |
-| —             | pb 内置 `created` / `updated` | `createdAt`         | autodate              |
+| 字段          | pb 类型                       | 原字段              | 说明                                                 |
+| ------------- | ----------------------------- | ------------------- | ---------------------------------------------------- |
+| `username`    | text(unique, required)        | `name`              | 登录名                                               |
+| `nickname`    | text                          | `nickname`          | 展示名                                               |
+| `role`        | select(admin/collaborator)    | `type`              | 默认 `collaborator`                                  |
+| `permissions` | select(multiple, MaxSelect 9) | `permissions`       | 9 个 select 选项(8 种功能权限 + `all` 表示全部),见下 |
+| `oldId`       | number(unique)                | `id`                | 迁移映射                                             |
+| —             | pb 内置 `email`               | —                   | pb auth 必带                                         |
+| —             | pb 内置 `password`            | `password` + `salt` | pb 自动加盐                                          |
+| —             | pb 内置 `created` / `updated` | `createdAt`         | autodate                                             |
 
 > **⚠️ 实施注意**: users 是 Auth Collection,需用 `core.NewAuthCollection("users")` 创建。
 > 默认 identity 是 email,我们用 username 登录,必须配 `PasswordAuth.IdentityFields = ["username"]`,
@@ -173,9 +173,10 @@ img:delete, all
 | ------------ | ------------------------------------ | -------------------------------------------------- |
 | `target`     | relation(single → `posts`, required) | 哪篇文章                                           |
 | `snapshot`   | json                                 | 完整字段快照                                       |
-| `diff`       | text                                 | 与上版的 unified diff(可选,加速渲染)               |
 | `authoredBy` | relation(single → `users`)           | 操作者                                             |
 | `reason`     | text                                 | "auto-save" / "manual" / "publish" / **"restore"** |
+
+> 注:不存储 `diff` 字段 —— Astro 前端的 diff 渲染器可按需从相邻 snapshot 动态计算 delta,同时存储 diff 和 snapshot 冗余(见 `pb_migrations/1782200000_init_vanblog_collections.go` 的注释)。
 
 **机制**:
 
@@ -201,16 +202,16 @@ img:delete, all
 
 对应原表:`Static`
 
-| 字段          | pb 类型                                   | 原字段              | 说明                  |
-| ------------- | ----------------------------------------- | ------------------- | --------------------- |
-| `file`        | file(single)                              | `realPath` + `name` | pb FileField 原生管理 |
-| `staticType`  | select(img/customPage/favicon/attachment) | `staticType`        | 扩展枚举              |
-| `storageType` | select(local/s3)                          | `storageType`       | `picgo → s3`          |
-| `fileType`    | text                                      | `fileType`          | 扩展名                |
-| `sign`        | text(unique)                              | `sign`              | MD5 去重              |
-| `meta`        | json                                      | `meta`(Mixed)       | 图片宽高/尺寸         |
-| `externalUrl` | text                                      | —                   | 新增:外部 URL(迁移用) |
-| `oldId`       | text                                      | `name`              | 迁移映射              |
+| 字段          | pb 类型                        | 原字段              | 说明                                                |
+| ------------- | ------------------------------ | ------------------- | --------------------------------------------------- |
+| `file`        | file(single)                   | `realPath` + `name` | pb FileField 原生管理                               |
+| `staticType`  | select(img/favicon/attachment) | `staticType`        | 扩展枚举(customPage 已随 §0 的"砍掉 pages"决策移除) |
+| `storageType` | select(local/s3)               | `storageType`       | `picgo → s3`                                        |
+| `fileType`    | text                           | `fileType`          | 扩展名                                              |
+| `sign`        | text(unique)                   | `sign`              | MD5 去重                                            |
+| `meta`        | json                           | `meta`(Mixed)       | 图片宽高/尺寸                                       |
+| `externalUrl` | text                           | —                   | 新增:外部 URL(迁移用)                               |
+| `oldId`       | text                           | `name`              | 迁移映射                                            |
 
 **索引**:`sign` unique,保留原 `getOneBySign` 查重行为。
 

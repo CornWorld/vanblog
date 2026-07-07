@@ -89,12 +89,12 @@ migratecmd.MustRegister(app, app.RootCmd, migratecmd.Config{...})
 
 ### 3.2 镜像体积优化
 
-**结果**:prod 镜像 76MB。关键:
+**结果**:prod 镜像 ~120MB(含 Caddy + pb + Node.js SSR)。关键:
 
 - `CGO_ENABLED=0 go build -ldflags="-s -w"` (静态链接 + 去符号表)
 - Alpine base (~7MB)
-- Caddy + ca-certificates + tzdata
-- 不含 Node.js(prod 用 Astro SSG 静态产物)
+- Caddy + nodejs + ca-certificates + tzdata
+- prod 实际包含 Node.js 并运行 Astro SSR server(见 §0.4 / `deployment-strategy.md` §0.4),与早期"纯 SSG 无 Node"的设想不同
 
 ---
 

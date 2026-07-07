@@ -141,6 +141,12 @@ vault/
       site.go                     # 站点配置读取
     devseed/
       seed.go                     # 开发环境种子数据
+    admin/
+      admin.go                    # admin 专属 DELETE 路由(categories/tags/users)
+    bootstrap/
+      bootstrap.go                # 首次启动 setup 引导(status / complete)
+    plugins/
+      plugins.go                  # $vanblog JSVM helper 绑定 + 插件 manifest/静态资源 + servePlugin 一行式注册
   pb_migrations/                  # pb schema 迁移 (Go)
     1782200000_init_vanblog_collections.go
     1782300000_soft_delete_indexes.go
@@ -156,18 +162,21 @@ vault/
 
 ### 4.2 Go 业务层模块职责
 
-| 模块        | 对应原项目                     | 增量估计 | 关键 Go 库                                                        |
-| ----------- | ------------------------------ | -------- | ----------------------------------------------------------------- |
-| `article`   | article.provider.ts (980)      | ~120     | pb `filter`/`sort` 覆盖查询；增量=字数统计+时间线聚合+搜索+回收站 |
-| `media`     | static.provider.ts (560)       | ~100     | pb FileField + thumbs 内置；增量=MD5 去重+S3 驱动                 |
-| `migration` | backup.controller.ts (137)     | ~150     | `encoding/json` + `app.RunInTransaction` 事务                     |
-| `caddy`     | caddy.provider.ts (136)        | ~80      | `net/http` + `net/url` (SSRF)                                     |
-| `revisions` | — (新增)                       | ~80      | `github.com/sergi/go-diff` (快照+diff+恢复)                       |
-| `visits`    | visit+viewer.provider.ts (241) | ~80      | SQL `UPDATE SET count = count + 1` + 日聚合                       |
-| `feed`      | rss+sitemap.provider.ts (230)  | ~150     | 标准库 `encoding/xml`；RSS/Atom/Sitemap 生成 + 路由注册           |
-| `site`      | meta/setting.provider.ts (526) | ~50      | 站点配置单行读取                                                  |
-| `devseed`   | — (新增)                       | ~30      | 开发环境假数据填充                                                |
-| **总计**    |                                | **~840** | **(pb 覆盖 + 裁剪 ~4000 行不计)**                                 |
+| 模块        | 对应原项目                     | 增量估计  | 关键 Go 库                                                                                                                   |
+| ----------- | ------------------------------ | --------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `article`   | article.provider.ts (980)      | ~120      | pb `filter`/`sort` 覆盖查询；增量=字数统计+时间线聚合+搜索+回收站                                                            |
+| `media`     | static.provider.ts (560)       | ~100      | pb FileField + thumbs 内置；增量=MD5 去重+S3 驱动                                                                            |
+| `migration` | backup.controller.ts (137)     | ~150      | `encoding/json` + `app.RunInTransaction` 事务                                                                                |
+| `caddy`     | caddy.provider.ts (136)        | ~80       | `net/http` + `net/url` (SSRF)                                                                                                |
+| `revisions` | — (新增)                       | ~80       | `github.com/sergi/go-diff` (快照+diff+恢复)                                                                                  |
+| `visits`    | visit+viewer.provider.ts (241) | ~80       | SQL `UPDATE SET count = count + 1` + 日聚合                                                                                  |
+| `feed`      | rss+sitemap.provider.ts (230)  | ~150      | 标准库 `encoding/xml`；RSS/Atom/Sitemap 生成 + 路由注册                                                                      |
+| `site`      | meta/setting.provider.ts (526) | ~50       | 站点配置单行读取                                                                                                             |
+| `devseed`   | — (新增)                       | ~30       | 开发环境假数据填充                                                                                                           |
+| `plugins`   | — (新增)                       | ~150      | `$vanblog` JSVM helper 绑定、manifest 缓存、nav 聚合、模板渲染、`servePlugin` 一行式插件注册(public/admin/static 路由 + nav) |
+| `admin`     | — (新增)                       | ~40       | admin 专属 DELETE 路由(categories/tags/users)                                                                                |
+| `bootstrap` | — (新增)                       | ~80       | 首次启动 setup 引导(status / complete)                                                                                       |
+| **总计**    |                                | **~1110** | **(pb 覆盖 + 裁剪 ~4000 行不计)**                                                                                            |
 
 **对比原项目**:原 NestJS 5012 行 → Go 真实增量 **~600-1000 行**(pb 原生覆盖 ~2400 行 CRUD/auth/权限,裁剪 ~800 行 picgo/waline 托管/ISR/pipeline)。
 
@@ -191,28 +200,46 @@ Go 业务层**不通过中间绑定层暴露 JSVM API**。JSVM 钩子直接使�
 
 `pb_hooks/` 目录内容：
 
-| 文件                   | 说明                                                                        |
-| ---------------------- | --------------------------------------------------------------------------- |
-| `examples.pb.js`       | 3-5 个学习示例钩子                                                          |
-| `system.pb.js`         | 审计日志 + visits 聚合 cron                                                 |
-| `lib/vanblog.d.ts`     | pb + vanblog 类型声明 (TypeScript 姿态, IDE 补全)                           |
-| `lib/vanblog-audit.js` | 审计日志公共模块, 通过 `require()` 在 system.pb.js 和 examples.pb.js 间共享 |
+| 文件                   | 说明                                                                     |
+| ---------------------- | ------------------------------------------------------------------------ |
+| `examples.pb.js`       | 学习示例钩子,**当前全部以注释形式保留**(不执行),供用户参考复制到自己文件 |
+| `system.pb.js`         | 审计日志 + visits 聚合 cron                                              |
+| `lib/vanblog.d.ts`     | pb + vanblog 类型声明 (TypeScript 姿态, IDE 补全)                        |
+| `lib/vanblog-audit.js` | 审计日志公共模块, 通过 `require()` 在 system.pb.js 间共享                |
 
-JSVM 钩子示例 (实际代码):
+JSVM 钩子示例 (`pb_hooks/system.pb.js` 的真实片段):
 
 ```javascript
-// pb_hooks/system.pb.js
-// 文章发布后记录审计
-onRecordAfterCreateSuccess((e) => {
-  const audit = require("./lib/vanblog-audit.js");
-  audit.postAction("post.create", e);
-}, "posts");
+// 文章发布/更新/删除后记录审计(posts/tags/categories/media/users 各 3 种事件)
+onRecordAfterCreateSuccess(
+  (e) =>
+    require("./pb_hooks/lib/vanblog-audit.js").postAction("post.create", e),
+  "posts"
+);
+onRecordAfterUpdateSuccess(
+  (e) =>
+    require("./pb_hooks/lib/vanblog-audit.js").postAction("post.update", e),
+  "posts"
+);
+onRecordAfterDeleteSuccess(
+  (e) =>
+    require("./pb_hooks/lib/vanblog-audit.js").postAction("post.delete", e),
+  "posts"
+);
 
-// 每日 visits 聚合
-cronAdd("visits-aggregate", "0 2 * * *", () => {
-  // 聚合昨天的访问数据
+// 每日 visits 聚合(0 0 * * * = 每天 00:00)
+cronAdd("visits-daily-aggregate", "0 0 * * *", () => {
+  const yesterday = new Date(Date.now() - 86400000).toISOString().split("T")[0];
+  const records = $app.findRecordsByFilter(
+    "visits",
+    "date = {:date} && path != ''",
+    { date: yesterday }
+  );
+  // 累加 views/uniques,写入 path="" 的聚合行
 });
 ```
+
+> `examples.pb.js` 的 5 个示例(webhook/slug/tag 限制/daily stats/custom header)目前都被 `//` 注释掉,文件不执行任何钩子。把它们视为学习样板,复制到你自己的 `.pb.js` 并去掉注释即可启用。
 
 ### 4.4 Manager 自挂 pb hook 模式（启动架构）
 
@@ -311,12 +338,27 @@ func New(app core.App) *Service {
 | `article`   | `GET /api/vanblog/search?q=`           | `handleSearchEndpoint`    |
 | `article`   | `GET /api/vanblog/posts/trash`         | `handleTrashEndpoint`     |
 | `article`   | `POST /api/vanblog/posts/{id}/restore` | `handleRestoreEndpoint`   |
+| `article`   | `POST /api/vanblog/posts/{id}/purge`   | `handlePurgeEndpoint`     |
+| `media`     | `DELETE /api/vanblog/media/{id}`       | `handleDelete`            |
 | `caddy`     | `GET /api/hooks/caddy/ask`             | `handleAskEndpoint`       |
 | `caddy`     | `GET /api/vanblog/tls/status`          | `handleTLSStatusEndpoint` |
+| `caddy`     | `GET /api/vanblog/routing/rules`       | `handleListRules`         |
+| `caddy`     | `GET /api/vanblog/routing/status`      | `handleRoutingStatus`     |
+| `caddy`     | `GET /api/vanblog/routing/audits`      | `handleRoutingAudits`     |
+| `caddy`     | `GET /api/vanblog/routing/render`      | `handleRenderConfig`      |
+| `caddy`     | `PUT /api/vanblog/routing/rules`       | `handleReplaceRules`      |
+| `caddy`     | `POST /api/vanblog/routing/validate`   | `handleValidateRule`      |
+| `caddy`     | `POST /api/vanblog/routing/apply`      | `handleApply`             |
+| `admin`     | `DELETE /api/vanblog/categories/{id}`  | `handleDeleteCategory`    |
+| `admin`     | `DELETE /api/vanblog/tags/{id}`        | `handleDeleteTag`         |
+| `admin`     | `DELETE /api/vanblog/users/{id}`       | `handleDeleteUser`        |
+| `bootstrap` | `GET /api/vanblog/setup/status`        | `handleStatus`            |
+| `bootstrap` | `POST /api/vanblog/setup/complete`     | `handleComplete`          |
 | `migration` | `POST /api/vanblog/migrate/import`     | `handleImport`            |
-| `migration` | `GET /api/vanblog/migrate/status`      | `handleStatus`            |
 
-**Caddy Manager 的配置推送流程**（`internal/caddy/bootstrap.go::pushConfigToAdminAPI`）：
+> 注：`handleImport` 是 `migration.Manager.Import` 的 HTTP 包装（内联闭包）。
+
+**Caddy Manager 的配置推送流程**（`internal/caddy/caddy.go::pushConfigToAdminAPI`）：
 
 1. 读 `site.routing` + `site.allowedDomains` + `site.caddyLogLevel` from DB
 2. 组装 `BuildOpts` + 合并规则列表
@@ -350,7 +392,7 @@ func New(app core.App) *Service {
 
 我们提供的 `pb_hooks/` 里:
 
-- `examples.pb.js` — 官方示例 (给用户学习的,~5 个小钩子)
+- `examples.pb.js` — 官方示例 (给用户学习的,5 个钩子,**当前全部注释掉,需复制到自己文件去掉注释才能生效**)
 - `system.pb.js` — 审计日志 + visits 聚合 cron
 - `lib/vanblog.d.ts` — pb + vanblog 类型声明 (TypeScript 姿态, IDE 补全)
 - `lib/vanblog-audit.js` — 审计日志公共模块
@@ -434,8 +476,18 @@ interface VanblogSite {
 }
 ```
 
-**注意**:`vanblog.d.ts` 只声明类型接口，不声明 `vanblog.*` 全局变量 ——
-Go 层没有注册任何 `vanblog` 命名空间的 JSVM 绑定。
+**`$vanblog` JSVM 命名空间**:Go 层通过 `plugins.Manager.Bind()` 向 JSVM 注入 `$vanblog` 全局对象(见 `vault/internal/plugins/plugins.go`)，供 `pb_hooks/*.pb.js` 和插件调用。可用 helper:
+
+| Helper                                              | 用途                                                                    |
+| --------------------------------------------------- | ----------------------------------------------------------------------- |
+| **`$vanblog.servePlugin(name)`**                    | **一行注册 public/admin/static 三条路由 + nav items(新模式插件主入口)** |
+| `$vanblog.readManifest(name)`                       | 读取 `plugins/{name}/manifest.json`                                     |
+| `$vanblog.buildPageData(manifest, userId)`          | 构建页面渲染数据(站点配置 + 用户信息)                                   |
+| `$vanblog.renderTemplate(name, templatePath, data)` | 渲染 `plugins/{name}/{templatePath}` HTML 模板                          |
+| `$vanblog.serveStatic(name)`                        | 返回 `plugins/{name}/frontend/` 静态文件处理器                          |
+| `$vanblog.addNavItems(name)`                        | 将插件注册到导航菜单(servePlugin 已自动调用)                            |
+| `$vanblog.getNavItems()`                            | 读取已注册的导航项(供 `/_plugin/nav` 聚合端点)                          |
+| `$vanblog.readFile(path)`                           | 读取任意文件内容(便捷工具函数)                                          |
 
 ---
 
@@ -461,6 +513,8 @@ Go 层没有注册任何 `vanblog` 命名空间的 JSVM 绑定。
 | 审计日志         | —                                          | `vanblog-audit.js` + `system.pb.js`   | ✅ 用户可记自定义事件 |
 | 自定义定时任务   | —                                          | `cronAdd("id", "...", () => { ... })` | ✅                    |
 | 自定义 API 端点  | —                                          | `routerAdd("GET", "/my-api", ...)`    | ✅                    |
+
+> **注(新模式)**:绝大多数 CRUD 端点不需要手写——PocketBase 原生 `/api/collections/{name}/records` 自动提供 list/get/create/update/delete(含分页/过滤/排序/关联展开),权限由 collection 的 `listRule`/`createRule`/`updateRule`/`deleteRule` 控制。`routerAdd` 仅用于 webhook 转发、跨表聚合、外部 API 集成等特殊业务。插件页面路由(public/admin/static)由 `$vanblog.servePlugin(name)` 一行注册,无需手写。
 
 **总结**:
 
@@ -515,13 +569,18 @@ func (m *Manager) Import(jsonData string) (*MigrationResult, error) {
 ```go
 // internal/migration/routes.go
 func RegisterRoutes(app core.App) {
+    imp := New(app)
     app.OnServe().BindFunc(func(se *core.ServeEvent) error {
-        se.Router.POST("/api/vanblog/migrate/import", handleImport)
-        se.Router.GET("/api/vanblog/migrate/status", handleStatus)
+        se.Router.POST("/api/vanblog/migrate/import", func(e *core.RequestEvent) error {
+            // 读取 body(限 100MB) → imp.Import(body) → JSON 返回 MigrationResult
+            return e.JSON(http.StatusOK, result)
+        })
         return se.Next()
     })
 }
 ```
+
+> 仅注册 `POST /api/vanblog/migrate/import` 一个端点(无 `migrate/status`),导入进度由调用方自行跟踪。
 
 ---
 
@@ -564,14 +623,14 @@ func RegisterRoutes(app core.App) {
 
 本文件是 **架构分层的最终决策**，修正了之前 schema-design.md §4 "pb_hooks 事件映射"的定位：
 
-| 之前 (schema-design §4)              | 现在 (本文档)                            |
-| ------------------------------------ | ---------------------------------------- |
-| 全部功能用 pb_hooks 实现             | 核心用 Go 业务层，扩展用 JSVM            |
-| `OnRecordUpdateRequest` 写 revisions | Go hook 写 revisions                     |
-| `routerAdd` 实现迁移端点             | Go 直接注册路由 `/api/vanblog/migrate/*` |
-| `$http.send` 调 Caddy                | Go `net/http` 调 Caddy                   |
-| `$os.writeFile` 写 md_output         | 前端 Astro 处理 markdown 渲染            |
-| Go SDK + JSVM 绑定层                 | Go 业务层直挂 pb hook, 无中间绑定层      |
+| 之前 (schema-design §4)              | 现在 (本文档)                                                                                                                                                                                                                                    |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 全部功能用 pb_hooks 实现             | 核心用 Go 业务层，扩展用 JSVM                                                                                                                                                                                                                    |
+| `OnRecordUpdateRequest` 写 revisions | Go hook 写 revisions                                                                                                                                                                                                                             |
+| `routerAdd` 实现迁移端点             | Go 直接注册路由 `/api/vanblog/migrate/*`                                                                                                                                                                                                         |
+| `$http.send` 调 Caddy                | Go `net/http` 调 Caddy                                                                                                                                                                                                                           |
+| `$os.writeFile` 写 md_output         | 前端 Astro 处理 markdown 渲染(markdown 管道位于 `app/src/lib/markdown/config.ts`,支持 shiki 代码高亮 + remark-math/rehype-katex + 自定义 remark-container/rehype-enhance/rehype-code-block + 用户注入的 `userRemarkPlugins`/`userRehypePlugins`) |
+| Go SDK + JSVM 绑定层                 | Go 业务层直挂 pb hook, 无中间绑定层                                                                                                                                                                                                              |
 
 **修正原因**: 用户反馈"运算代码不应在 JSVM", 且 pb 官方 JSVM 定位是"用户自定义扩展"不是"核心业务"。
 实际重构中 Go 业务包直接通过 `New(app)` 注册 pb hook, 不存在 `vanblog.*` JSVM 命名空间或中间绑定层。
