@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	"github.com/dop251/goja"
@@ -173,7 +174,11 @@ func (m *Manager) Bind() func(vm *goja.Runtime) {
 				data = map[string]any{}
 			}
 
-			tplPath := filepath.Join(m.pluginsDir, name, tplRel)
+			base := filepath.Join(m.pluginsDir, name)
+			tplPath := filepath.Join(base, filepath.Clean(tplRel))
+			if !strings.HasPrefix(filepath.Clean(tplPath), filepath.Clean(base)+string(filepath.Separator)) {
+				panic(vm.NewGoError(fmt.Errorf("renderTemplate: path escapes plugin directory")))
+			}
 			html, err := m.tmplReg.LoadFiles(tplPath).Render(data)
 			if err != nil {
 				panic(vm.NewGoError(fmt.Errorf("renderTemplate: %w", err)))
@@ -231,15 +236,31 @@ func (m *Manager) Bind() func(vm *goja.Runtime) {
 		obj.Set("servePlugin", func(call goja.FunctionCall) goja.Value {
 			name := call.Argument(0).String()
 			m.mu.Lock()
-			m.registeredPlugins = append(m.registeredPlugins, name)
+			found := false
+			for _, p := range m.registeredPlugins {
+				if p == name {
+					found = true
+					break
+				}
+			}
+			if !found {
+				m.registeredPlugins = append(m.registeredPlugins, name)
+			}
 			m.mu.Unlock()
 			return goja.Undefined()
 		})
 
-		// readFile(path string) string — convenience wrapper
+		// readFile(pluginName string, relPath string) string — reads a file
+		// from the plugin's own directory subtree. Path traversal is blocked.
 		obj.Set("readFile", func(call goja.FunctionCall) goja.Value {
-			path := call.Argument(0).String()
-			data, err := os.ReadFile(path)
+			name := call.Argument(0).String()
+			relPath := call.Argument(1).String()
+			base := filepath.Join(m.pluginsDir, name)
+			absPath := filepath.Join(base, filepath.Clean(relPath))
+			if !strings.HasPrefix(filepath.Clean(absPath), filepath.Clean(base)+string(filepath.Separator)) {
+				panic(vm.NewGoError(fmt.Errorf("readFile: path escapes plugin directory")))
+			}
+			data, err := os.ReadFile(absPath)
 			if err != nil {
 				panic(vm.NewGoError(err))
 			}
@@ -282,6 +303,7 @@ func (m *Manager) ClearCache() {
 	m.mu.Lock()
 	m.cache = make(map[string]*Manifest)
 	m.navItems = nil
+	m.registeredPlugins = nil
 	m.mu.Unlock()
 }
 
@@ -341,7 +363,11 @@ func (m *Manager) buildPageDataGo(manifest *Manifest, authId string) map[string]
 // renderTemplateGo renders a plugin template relative path against the given
 // data, returning the HTML. Shared by both public and admin handlers.
 func (m *Manager) renderTemplateGo(name, tplRel string, data map[string]any) (string, error) {
-	tplPath := filepath.Join(m.pluginsDir, name, tplRel)
+	base := filepath.Join(m.pluginsDir, name)
+	tplPath := filepath.Join(base, filepath.Clean(tplRel))
+	if !strings.HasPrefix(filepath.Clean(tplPath), filepath.Clean(base)+string(filepath.Separator)) {
+		return "", fmt.Errorf("template path escapes plugin directory")
+	}
 	return m.tmplReg.LoadFiles(tplPath).Render(data)
 }
 
@@ -380,12 +406,21 @@ func (m *Manager) servePluginPublic(name string) func(*core.RequestEvent) error 
 			title = manifest.Title
 		}
 
+		scripts := manifest.Scripts
+		if scripts == nil {
+			scripts = []string{}
+		}
+		styles := manifest.Styles
+		if styles == nil {
+			styles = []string{}
+		}
+
 		return e.JSON(http.StatusOK, map[string]any{
 			"html":    html,
 			"title":   title,
 			"head":    "",
-			"scripts": manifest.Scripts,
-			"styles":  manifest.Styles,
+			"scripts": scripts,
+			"styles":  styles,
 		})
 	}
 }
@@ -416,12 +451,26 @@ func (m *Manager) servePluginAdmin(name string) func(*core.RequestEvent) error {
 			})
 		}
 
+		title := manifest.Routes.Admin.Title
+		if title == "" {
+			title = manifest.Title
+		}
+
+		scripts := manifest.Scripts
+		if scripts == nil {
+			scripts = []string{}
+		}
+		styles := manifest.Styles
+		if styles == nil {
+			styles = []string{}
+		}
+
 		return e.JSON(http.StatusOK, map[string]any{
 			"html":    html,
-			"title":   manifest.Routes.Admin.Title,
+			"title":   title,
 			"head":    "",
-			"scripts": manifest.Scripts,
-			"styles":  manifest.Styles,
+			"scripts": scripts,
+			"styles":  styles,
 		})
 	}
 }

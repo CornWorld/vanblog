@@ -15,6 +15,15 @@
       return d.innerHTML;
     }
 
+    function isSafeUrl(url) {
+      try {
+        const p = new URL(url).protocol;
+        return p === "http:" || p === "https:";
+      } catch {
+        return false;
+      }
+    }
+
     async function loadBookmarks() {
       try {
         const url = `${API}?page=1&perPage=100&expand=owner&sort=-created`;
@@ -31,8 +40,8 @@
           .map(
             (b) =>
               '<a href="' +
-              esc(b.url) +
-              '" target="_blank" rel="noopener"' +
+              (isSafeUrl(b.url) ? esc(b.url) : "#") +
+              '" target="_blank" rel="noopener noreferrer"' +
               ' class="block border rounded-lg p-4 mb-3 bg-white dark:bg-gray-800 hover:shadow-md transition-shadow no-underline">' +
               '<div class="font-medium text-blue-600 dark:text-blue-400">' +
               esc(b.title) +

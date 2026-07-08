@@ -77,6 +77,10 @@
         encodeURIComponent(`author="${userId}"`) +
         `&expand=author`;
       const res = await fetch(url);
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || err.error || "加载失败");
+      }
       const data = await res.json();
       if (!data.items || data.items.length === 0) {
         listEl.innerHTML =
@@ -97,9 +101,9 @@
             esc(m.content) +
             "</div>" +
             "</div>" +
-            "<button onclick=\"window.deleteMoment('" +
-            m.id +
-            '\', this)" class="text-red-500 hover:text-red-700 text-sm shrink-0">删除</button>' +
+            '<button data-id="' +
+            esc(m.id) +
+            '" class="del-btn text-red-500 hover:text-red-700 text-sm shrink-0">删除</button>' +
             "</div>"
           );
         })
@@ -110,21 +114,24 @@
     }
   }
 
-  window.deleteMoment = async (id, btn) => {
+  listEl.addEventListener("click", async (e) => {
+    const btn = e.target.closest(".del-btn");
+    if (!btn) return;
+    const id = btn.dataset.id;
     if (!confirm("确定删除这条说说？")) return;
     btn.disabled = true;
     try {
       const res = await fetch(`${API}/${id}`, { method: "DELETE" });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error(err.message || "删除失败");
+        throw new Error(err.message || err.error || "删除失败");
       }
       await loadMyMoments();
     } catch (err) {
       alert(err.message);
       btn.disabled = false;
     }
-  };
+  });
 
   loadMyMoments();
 </script>

@@ -85,6 +85,10 @@
         encodeURIComponent(`owner="${userId}"`) +
         `&expand=owner`;
       const res = await fetch(url);
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || err.error || "加载失败");
+      }
       const data = await res.json();
       const el = document.getElementById("bookmarks-list");
       if (!data.items || data.items.length === 0) {
@@ -102,9 +106,9 @@
             '<div class="text-xs text-gray-400">' +
             esc(b.url) +
             "</div></div>" +
-            "<button onclick=\"window.delBm('" +
-            b.id +
-            '\', this)" class="text-red-500 hover:text-red-700 text-sm shrink-0">删除</button>' +
+            '<button data-id="' +
+            esc(b.id) +
+            '" class="del-btn text-red-500 hover:text-red-700 text-sm shrink-0">删除</button>' +
             "</div>"
         )
         .join("");
@@ -114,21 +118,26 @@
     }
   }
 
-  window.delBm = async (id, btn) => {
-    if (!confirm("确定删除？")) return;
-    btn.disabled = true;
-    try {
-      const res = await fetch(`${API}/${id}`, { method: "DELETE" });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.message || err.error || "删除失败");
+  document
+    .getElementById("bookmarks-list")
+    .addEventListener("click", async (e) => {
+      const btn = e.target.closest(".del-btn");
+      if (!btn) return;
+      const id = btn.dataset.id;
+      if (!confirm("确定删除？")) return;
+      btn.disabled = true;
+      try {
+        const res = await fetch(`${API}/${id}`, { method: "DELETE" });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.message || err.error || "删除失败");
+        }
+        await loadList();
+      } catch (err) {
+        alert(err.message);
+        btn.disabled = false;
       }
-      await loadList();
-    } catch (err) {
-      alert(err.message);
-      btn.disabled = false;
-    }
-  };
+    });
 
   loadList();
 </script>
