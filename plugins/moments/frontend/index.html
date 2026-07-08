@@ -63,6 +63,7 @@
         if (data.totalPages > 1) {
           const pag = document.createElement("div");
           pag.className = "flex justify-center gap-2 mt-6";
+          let latestPage = 1;
           for (let p = 1; p <= data.totalPages; p++) {
             const btn = document.createElement("button");
             btn.textContent = p;
@@ -71,15 +72,21 @@
                 ? "px-3 py-1 rounded bg-blue-600 text-white text-sm"
                 : "px-3 py-1 rounded bg-gray-100 dark:bg-gray-700 text-sm hover:bg-gray-200 dark:hover:bg-gray-600";
             btn.onclick = async () => {
-              const d = await loadMoments(p);
-              app.innerHTML = d.items.map(renderMoment).join("");
-              app.appendChild(pag);
-              pag.querySelectorAll("button").forEach((b, i) => {
-                b.className =
-                  i + 1 === p
-                    ? "px-3 py-1 rounded bg-blue-600 text-white text-sm"
-                    : "px-3 py-1 rounded bg-gray-100 dark:bg-gray-700 text-sm hover:bg-gray-200 dark:hover:bg-gray-600";
-              });
+              latestPage = p;
+              try {
+                const d = await loadMoments(p);
+                if (latestPage !== p) return; // discard stale response
+                app.innerHTML = d.items.map(renderMoment).join("");
+                app.appendChild(pag);
+                pag.querySelectorAll("button").forEach((b, i) => {
+                  b.className =
+                    i + 1 === p
+                      ? "px-3 py-1 rounded bg-blue-600 text-white text-sm"
+                      : "px-3 py-1 rounded bg-gray-100 dark:bg-gray-700 text-sm hover:bg-gray-200 dark:hover:bg-gray-600";
+                });
+              } catch (err) {
+                // keep current view on error
+              }
             };
             pag.appendChild(btn);
           }

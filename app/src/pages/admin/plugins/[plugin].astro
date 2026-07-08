@@ -15,7 +15,7 @@ if (!plugin) {
 const pluginData = await fetchPluginPage({
     plugin,
     type: 'admin',
-    pbUrl: 'http://127.0.0.1:8090',
+    pbUrl: Astro.locals.pbUrl,
     cookie: Astro.request.headers.get('cookie') || '',
 });
 

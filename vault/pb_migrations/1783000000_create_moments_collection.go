@@ -30,12 +30,10 @@ func init() {
 		col.Fields.Add(&core.AutodateField{Name: "created", OnCreate: true})
 		col.Fields.Add(&core.AutodateField{Name: "updated", OnCreate: true, OnUpdate: true})
 
-		// Public visitors see only visible moments; authenticated users see all
-		// (so the admin "my moments" view can list drafts/hidden). Tighter per-row
-		// visibility for non-owner authed users is enforced at the handler level
-		// if needed in the future.
-		col.ListRule = strPtr(`visible = true || @request.auth.id != ""`)
-		col.ViewRule = strPtr(`visible = true || @request.auth.id != ""`)
+		// Public visitors see only visible moments. Authenticated users can see
+		// visible moments plus their own drafts/hidden moments. Admins see all.
+		col.ListRule = strPtr(`visible = true || @request.auth.id = author || @request.auth.role = "admin"`)
+		col.ViewRule = strPtr(`visible = true || @request.auth.id = author || @request.auth.role = "admin"`)
 		col.CreateRule = strPtr(`@request.auth.id != ""`)
 		col.UpdateRule = strPtr(`@request.auth.id != "" && (@request.auth.id = author || @request.auth.role = "admin")`)
 		col.DeleteRule = strPtr(`@request.auth.id != "" && (@request.auth.id = author || @request.auth.role = "admin")`)

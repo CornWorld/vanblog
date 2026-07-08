@@ -10,30 +10,39 @@
 // - audit/校验等业务用 pb 原生 hook
 // ============================================================================
 
-var audit = require("./pb_hooks/lib/vanblog-audit.js");
+const audit = require("./pb_hooks/lib/vanblog-audit.js");
 
 // 一行注册 public/admin/static 三条路由 + nav items
 $vanblog.servePlugin("moments");
 
 // 自动填充 author 字段(前端 create body 只需 { content, visible })
 onRecordBeforeCreateRequest(function (e) {
-  e.record.set("author", e.auth.id);
+  if (e.auth && e.auth.id) {
+    e.record.set("author", e.auth.id);
+  }
 }, "moments");
 
 // 业务 hook:audit(可选,删掉也能跑)
 onRecordAfterCreateSuccess(function (e) {
+  const ctx = audit.auditContext(e);
   audit.recordAudit({
-    collection: "moments",
-    recordId: e.record.id,
+    actor: ctx.actor,
     action: "moment.create",
+    target: e.record.id,
+    detail: { content: e.record.get("content") },
+    ip: ctx.ip,
+    userAgent: ctx.userAgent,
   });
 }, "moments");
 
 onRecordAfterDeleteSuccess(function (e) {
+  const ctx = audit.auditContext(e);
   audit.recordAudit({
-    collection: "moments",
-    recordId: e.record.id,
+    actor: ctx.actor,
     action: "moment.delete",
+    target: e.record.id,
+    ip: ctx.ip,
+    userAgent: ctx.userAgent,
   });
 }, "moments");
 

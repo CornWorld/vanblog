@@ -12,7 +12,9 @@ $vanblog.servePlugin("bookmarks");
 
 // 自动填充 owner 字段(前端 create body 只需 { title, url, description })
 onRecordBeforeCreateRequest(function (e) {
-  e.record.set("owner", e.auth.id);
+  if (e.auth && e.auth.id) {
+    e.record.set("owner", e.auth.id);
+  }
 }, "bookmarks");
 
 console.log("[bookmarks] Plugin loaded (declarative mode)");
