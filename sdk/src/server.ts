@@ -161,6 +161,34 @@ export interface VanblogMiddlewareOptions {
  * export const onRequest = createVanblogMiddleware();
  * ```
  */
+
+const DOWN_ERROR_HTML = `<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>服务暂时不可用 — Vanblog</title>
+<style>
+  body{font-family:system-ui,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;background:#f9fafb;color:#374151}
+  .card{text-align:center;padding:2.5rem 2rem;max-width:28rem}
+  h1{font-size:3rem;font-weight:800;margin:0 0 .5rem;color:#dc2626}
+  p{font-size:1.125rem;margin:.5rem 0}
+  .hint{font-size:.875rem;color:#6b7280;margin-top:1.5rem}
+</style></head>
+<body><div class="card">
+  <h1>503</h1>
+  <p>后端服务暂时不可用</p>
+  <p class="hint">PocketBase 未响应，请检查后端是否正常运行后刷新页面。</p>
+</div></body></html>`;
+
+function pbUnreachable(): Response {
+  return new Response(DOWN_ERROR_HTML, {
+    status: 503,
+    headers: {
+      "Content-Type": "text/html; charset=utf-8",
+      "Cache-Control": "no-store",
+    },
+  });
+}
+
 export function createVanblogMiddleware(opts: VanblogMiddlewareOptions = {}) {
   const pbUrl = opts.pbUrl || "http://127.0.0.1:8090";
 
@@ -173,6 +201,7 @@ export function createVanblogMiddleware(opts: VanblogMiddlewareOptions = {}) {
     context: any,
     next: () => Promise<Response>
   ): Promise<Response> => {
+    const url = new URL(context.request.url);
     const client = createVanblogClient({ url: pbUrl });
 
     const cookie = context.request.headers.get("cookie") || "";
@@ -185,40 +214,9 @@ export function createVanblogMiddleware(opts: VanblogMiddlewareOptions = {}) {
     context.locals.pb = client;
     context.locals.pbUrl = pbUrl;
 
-    const url = new URL(context.request.url);
-
-    // Refresh auth token server-side on every authenticated request.
-    if (client.authStore.isValid) {
-      try {
-        await client.collection("users").authRefresh();
-      } catch {
-        client.authStore.clear();
-      }
-    }
-
-    // Bootstrap mode: when no admin exists yet, push to /setup.
-    if (
-      !client.authStore.isValid &&
-      (url.pathname.startsWith("/admin") || url.pathname === "/login")
-    ) {
-      try {
-        const s = await client.vanblog.setup.status();
-        if (s.bootstrap) {
-          const back = encodeURIComponent(url.pathname + url.search);
-          return context.redirect(`/setup?back=${back}`);
-        }
-      } catch {
-        // setup status unreachable — fall through to normal auth.
-      }
-    }
-
-    // All /admin/* routes require authentication.
-    if (url.pathname.startsWith("/admin") && !client.authStore.isValid) {
-      const back = encodeURIComponent(url.pathname + url.search);
-      return context.redirect(`/login?back=${back}`);
-    }
-
-    // Lazy site config — only fetched when a page calls getSite().
+    // Set up lazy loaders before anything that might throw, so pages can
+    // always call them. Each loader swallows its own errors and returns
+    // a safe default (null / empty array).
     context.locals.getSite = async () => {
       if (cachedSite && Date.now() - siteFetchTime < SITE_CACHE_TTL)
         return cachedSite;
@@ -229,7 +227,6 @@ export function createVanblogMiddleware(opts: VanblogMiddlewareOptions = {}) {
       return cachedSite;
     };
 
-    // Plugin nav items — fetched once then cached forever (registered at startup).
     let navCache: PluginNavItem[] | null = null;
     context.locals.getNavItems = async () => {
       if (navCache) return navCache;
@@ -246,7 +243,59 @@ export function createVanblogMiddleware(opts: VanblogMiddlewareOptions = {}) {
       return navCache || [];
     };
 
-    const response = await next();
+    // Auth refresh — if PocketBase is down this throws, which means the
+    // token can't be validated. Return 503 rather than proceeding with
+    // a stale/cleared session.
+    if (client.authStore.isValid) {
+      try {
+        await client.collection("users").authRefresh();
+      } catch {
+        // If the failure is a genuine auth error (expired/invalid token),
+        // clear the store and proceed as anonymous. If PocketBase is
+        // unreachable, the bootstrap check below will catch it.
+        try {
+          client.authStore.clear();
+        } catch {}
+      }
+    }
+
+    // Bootstrap mode: when no admin exists yet, push to /setup.
+    // This also serves as the PocketBase reachability check — if the
+    // server is down, setup.status() will throw and we return 503.
+    if (
+      !client.authStore.isValid &&
+      (url.pathname.startsWith("/admin") || url.pathname === "/login")
+    ) {
+      try {
+        const s = await client.vanblog.setup.status();
+        if (s.bootstrap) {
+          const back = encodeURIComponent(url.pathname + url.search);
+          return context.redirect(`/setup?back=${back}`);
+        }
+      } catch (err) {
+        console.error("[vanblog] PocketBase unreachable at", pbUrl, err);
+        return pbUnreachable();
+      }
+    }
+
+    // All /admin/* routes require authentication.
+    if (url.pathname.startsWith("/admin") && !client.authStore.isValid) {
+      const back = encodeURIComponent(url.pathname + url.search);
+      return context.redirect(`/login?back=${back}`);
+    }
+
+    // Wrap next() so that if a page crashes due to PocketBase being down
+    // mid-render, we return a 503 instead of an Astro stack trace.
+    let response: Response;
+    try {
+      response = await next();
+    } catch (err) {
+      console.error(
+        "[vanblog] page render failed (PocketBase may be down):",
+        err
+      );
+      return pbUnreachable();
+    }
 
     // Re-export auth cookie on every response so the token stays fresh.
     try {
