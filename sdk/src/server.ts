@@ -179,6 +179,22 @@ const DOWN_ERROR_HTML = `<!doctype html>
   <p class="hint">PocketBase 未响应，请检查后端是否正常运行后刷新页面。</p>
 </div></body></html>`;
 
+// Check whether an error message looks like a network/connection failure
+// (PocketBase unreachable) vs a genuine code bug.
+function isConnectionError(msg: string): boolean {
+  const m = msg.toLowerCase();
+  return (
+    m.includes("econnrefused") ||
+    m.includes("fetch failed") ||
+    m.includes("network error") ||
+    m.includes("aborted") ||
+    m.includes("timeout") ||
+    m.includes("enotfound") ||
+    m.includes("epipe") ||
+    m.includes("socket hang up")
+  );
+}
+
 function pbUnreachable(): Response {
   return new Response(DOWN_ERROR_HTML, {
     status: 503,
@@ -284,17 +300,19 @@ export function createVanblogMiddleware(opts: VanblogMiddlewareOptions = {}) {
       return context.redirect(`/login?back=${back}`);
     }
 
-    // Wrap next() so that if a page crashes due to PocketBase being down
-    // mid-render, we return a 503 instead of an Astro stack trace.
+    // Catch connection errors during page rendering (PocketBase down mid-render)
+    // and return 503. Non-network errors (coding bugs) are re-thrown so Astro's
+    // own error handling can surface them rather than being masked as 503.
     let response: Response;
     try {
       response = await next();
-    } catch (err) {
-      console.error(
-        "[vanblog] page render failed (PocketBase may be down):",
-        err
-      );
-      return pbUnreachable();
+    } catch (err: any) {
+      const msg = String(err?.message || err);
+      if (isConnectionError(msg)) {
+        console.error("[vanblog] PocketBase unreachable during render:", msg);
+        return pbUnreachable();
+      }
+      throw err;
     }
 
     // Re-export auth cookie on every response so the token stays fresh.
