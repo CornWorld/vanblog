@@ -3,18 +3,11 @@ set -e
 
 # Dev entrypoint: PocketBase (API) + Astro dev server + Caddy (HTTPS + routing)
 #
-# Supports two modes via VANBLOG_CADDY_MODE env:
-#   - json (default): Caddy boots with bootstrap.json, then pb's OnBootstrap hook
-#                     calls LoadConfig via admin API to inject full routes.
-#                     Entrypoint is PID 1, Caddy runs in background.
-#   - legacy         : Caddyfile-based, Caddy is exec'd as PID 1 (old behavior).
-#                     Fallback escape hatch for operators.
+# Caddy boots with bootstrap.json, then pb's OnBootstrap hook calls LoadConfig
+# via admin API to inject full routes. Entrypoint is PID 1, Caddy runs in background.
 
 PB_HTTP="127.0.0.1:8090"
 PB_DATA="${VANBLOG_DATA_DIR:-/pb_data}"
-
-# --- VANBLOG_CADDY_MODE: legacy (Caddyfile) or json (default, bootstrap + admin API) ---
-CADDY_MODE="${VANBLOG_CADDY_MODE:-json}"
 
 # --- VANBLOG_HTTP_ONLY: pick the TLS-less bootstrap config when set ---
 BOOTSTRAP_JSON="/etc/caddy/bootstrap.json"
@@ -23,7 +16,7 @@ if [ "${VANBLOG_HTTP_ONLY}" = "1" ] || [ "${VANBLOG_HTTP_ONLY}" = "true" ]; then
   BOOTSTRAP_JSON="/etc/caddy/bootstrap-http-only.json"
 fi
 
-echo "[vanblog] starting in DEV mode (caddy mode: $CADDY_MODE)"
+echo "[vanblog] starting in DEV mode"
 echo "[vanblog] pb data: $PB_DATA"
 
 # --- Health check helper ---
@@ -53,40 +46,7 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM
 
-# === LEGACY MODE: Caddyfile-based, old startup sequence ===
-if [ "$CADDY_MODE" = "legacy" ]; then
-  echo "[vanblog] LEGACY caddy mode: using Caddyfile, Caddy is PID 1"
-
-  # 1. Start PocketBase (--hooksWatch for hot reload of JSVM hooks)
-  echo "[vanblog] starting PocketBase..."
-  vanblog serve --http=$PB_HTTP --dir=$PB_DATA --hooksWatch &
-  PB_PID=$!
-  wait_for "http://127.0.0.1:8090/api/health" "PocketBase" 30 || exit 1
-
-  # 2. Start Astro dev server (HMR)
-  echo "[vanblog] starting Astro dev server..."
-  cd /app/src
-  pnpm --filter vanblog-app dev -- --host 127.0.0.1 --port 4321 &
-  ASTRO_PID=$!
-  wait_for "http://127.0.0.1:4321/" "Astro SSR" 30 || exit 1
-
-  # 3. Background monitor
-  monitor_children() {
-    while true; do
-      if ! kill -0 $PB_PID 2>/dev/null; then echo "[vanblog] FATAL: PocketBase died"; exit 1; fi
-      if ! kill -0 $ASTRO_PID 2>/dev/null; then echo "[vanblog] FATAL: Astro died"; exit 1; fi
-      sleep 5
-    done
-  }
-  monitor_children &
-  MONITOR_PID=$!
-
-  echo "[vanblog] starting Caddy (legacy Caddyfile.dev)..."
-  exec caddy run --config /etc/caddy/Caddyfile.legacy.dev --adapter caddyfile
-fi
-
-# === JSON MODE (default): bootstrap + admin API ===
-echo "[vanblog] JSON caddy mode: bootstrap then admin API"
+# === Caddy: bootstrap + admin API ===
 
 # 1. Start Caddy with bootstrap.json (background, NOT exec)
 echo "[vanblog] starting Caddy with bootstrap config ($BOOTSTRAP_JSON)..."

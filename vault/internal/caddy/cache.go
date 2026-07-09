@@ -8,7 +8,7 @@ import (
 
 // CacheControl immutable response headers for long-lived static assets served
 // by the Astro SSR layer (e.g. /emoji-data.json). Caddy adds the header on the
-// way back to the client; the underlying reverse_proxy fallback in Caddyfile
+// way back to the client; the underlying reverse_proxy fallback
 // still serves the bytes.
 //
 // `headers` handler in Caddy is non-terminal: after setting the response
@@ -49,7 +49,7 @@ func SystemCacheRules() []UserRule {
 // Using reverse_proxy with our own HeaderPolicy.Response lets us apply the
 // cache header at proxy response time, which correctly replaces Astro's.
 //
-// This mirrors how Caddyfile `header` + `reverse_proxy` would behave if
+// This mirrors how a `header` handler + `reverse_proxy` would behave if
 // we wrapped them in a single `handle` block.
 func translateCache(rule UserRule) (caddyadmin.Route, error) {
 	if len(rule.Headers) == 0 {

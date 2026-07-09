@@ -7,7 +7,7 @@ import (
 )
 
 // TestConfigMarshalRoundTrip builds a Config that mirrors the semantics of
-// docker/Caddyfile.prod (admin bind / on_demand_tls / storage / three servers:
+// the legacy docker/Caddyfile.prod (admin bind / on_demand_tls / storage / three servers:
 // HTTPS / HTTP redirect / management port) and verifies:
 //  1. It marshals to valid JSON without error.
 //  2. The JSON round-trips back to an equivalent Config.

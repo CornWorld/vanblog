@@ -242,29 +242,39 @@ monitor_children  # 轮询 CADDY_PID / PB_PID / ASTRO_PID
 
 ### 2.2 dev entrypoint
 
+> 注:下面是真实 entrypoint 的骨架(完整版见 `docker/entrypoint.dev.sh`)。dev 与 prod 共用同一套 `bootstrap.json + admin API` 启动流程,差异仅在 Astro 用 dev server(支持 HMR 热重载) 和 pb 加 `--hooksWatch`。
+
 ```bash
 #!/bin/sh
 set -e
 
-# 1. 启动 Caddy(同 prod)
-caddy start --config /etc/caddy/Caddyfile --adapter caddyfile
+# 1. 启动 Caddy(用 bootstrap.json,后台) — 同 prod
+caddy run --config "$BOOTSTRAP_JSON" &
+CADDY_PID=$!
+wait_for "http://127.0.0.1:2019/config/" "Caddy admin API" 30 || exit 1
 
-# 2. 启动 PocketBase
-pocketbase serve \
-  --http=127.0.0.1:8090 \
-  --dir=/var/lib/pb_data \
-  --hooksDir=/var/lib/pb_hooks &
+# 2. 启动 PocketBase(加 --hooksWatch 热重载 JSVM hooks)
+vanblog serve --http=$PB_HTTP --dir=$PB_DATA --hooksWatch &
+PB_PID=$!
+wait_for "http://127.0.0.1:8090/api/health" "PocketBase" 30 || exit 1
 
-# 3. 启动 Astro dev server
+# 3. 启动 Astro dev server(HMR)
 cd /app/src
-exec pnpm dev --host 127.0.0.1 --port 4321
+pnpm --filter vanblog-app dev -- --host 127.0.0.1 --port 4321 &
+ASTRO_PID=$!
+wait_for "http://127.0.0.1:4321/" "Astro SSR" 30 || exit 1
+
+# 4. 看护:任一子进程崩溃则退出容器
+monitor_children  # 轮询 CADDY_PID / PB_PID / ASTRO_PID
 ```
 
 **特点**:
 
-- 额外启动 Astro dev server(监听 127.0.0.1:4321)
+- 额外启动 Astro dev server(监听 127.0.0.1:4321,支持 HMR)
+- pb 加 `--hooksWatch` 实现 JSVM hooks 热重载
 - 用户挂载 `/app/src` 可改源码,热重载
 - Caddy 兜底反代到 4321
+- 与 prod 共用 `bootstrap.json` 启动,无需 Caddyfile
 
 ---
 

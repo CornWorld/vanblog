@@ -10,9 +10,9 @@
 
 ## 1. 原项目机制回顾
 
-**CaddyfileTemplate 的两层用法**:
+**原项目 Caddyfile 模板的两层用法**:
 
-**层 1:静态路由**(启动时 Caddyfile 渲染):
+**层 1:静态路由**(启动时 Caddyfile 模板渲染):
 
 ```
 handle /api/*       { reverse_proxy 127.0.0.1:3000 }   # NestJS 后端
@@ -32,7 +32,7 @@ reverse_proxy 127.0.0.1:3001                            # 前台兜底
 
 - 用户自定义反代目标(没有 UI)
 - 配置校验(任何调 admin API 的代码都直接生效)
-- 持久化(admin API 改动重启后丢失,只能改 Caddyfile 模板)
+- 持久化(admin API 改动重启后丢失,只能改 Caddyfile 模板 — 原项目做法)
 
 ---
 
@@ -51,7 +51,7 @@ reverse_proxy 127.0.0.1:3001                            # 前台兜底
 │  - 校验(白名单 / SSRF 防护 / 路径冲突)                      │
 │  - 翻译为 caddy JSON 路由                                     │
 │  - 调用 caddy admin API(带 @id 标识)                        │
-│  - 持久化到 site.routing + Caddyfile 模板                    │
+│  - 持久化到 site.routing + bootstrap JSON 配置
 │  - audit log 写入 audits 表                                  │
 └──────────────┬───────────────────────────────────────────────┘
                │ ② 翻译后
@@ -117,7 +117,7 @@ reverse_proxy 127.0.0.1:3001                            # 前台兜底
 | `header`   | 修改响应头        | `header`           |
 
 > **`cache` 类型说明**:实现为 Caddy `headers` handler,**非终止**(non-terminal)。
-> 盖完 `Cache-Control` 等响应头后,路由继续匹配下一条(由 Caddyfile 中的
+> 盖完 `Cache-Control` 等响应头后,路由继续匹配下一条(由 JSON 配置中的
 > Astro `reverse_proxy` fallback 实际产生响应体)。这样我们能在不重写既有路由
 > 的前提下叠加缓存语义。示例:`{ "id": "cache-static", "type": "cache",
 "from": "/emoji-data.json", "headers": { "Cache-Control":
@@ -132,7 +132,7 @@ vanblog 在启动时通过 `caddy.SystemCacheRules()` 注入若干系统级 `cac
 - ❌ `file_server`(用户不能让 Caddy 任意目录列目录)
 - ❌ `execute`(不能让 Caddy 执行命令)
 - ❌ `tls`(TLS 由 vanblog 统一管理,见 HTTPS 策略)
-- ❌ 任意 `route` 指令(Caddyfile 原生语法不开放)
+- ❌ 任意 `route` 指令(不开放,安全原因)
 
 ### 3.3 `from` / `to` 路径匹配
 
@@ -279,11 +279,11 @@ POST /config/apps/http/servers/srv0/routes/...
 
 ## 6. 镜像形态与路由能力
 
-| 镜像         | 路由能力    | 说明                                                      |
-| ------------ | ----------- | --------------------------------------------------------- |
-| **prod**     | ✅ 完整支持 | 与 dev 对齐                                               |
-| **dev**      | ✅ 完整支持 | 同 prod + 支持外挂 Astro                                  |
-| **外置反代** | 用户自管    | vanblog 输出 Caddyfile / Traefik labels / Nginx conf 片段 |
+| 镜像         | 路由能力    | 说明                                                       |
+| ------------ | ----------- | ---------------------------------------------------------- |
+| **prod**     | ✅ 完整支持 | 与 dev 对齐                                                |
+| **dev**      | ✅ 完整支持 | 同 prod + 支持外挂 Astro                                   |
+| **外置反代** | 用户自管    | vanblog 输出 Caddy JSON / Traefik labels / Nginx conf 片段 |
 
 **prod 与 dev 都内嵌 Caddy 且功能对齐** —— 理由见 [`deployment-strategy.md`](./deployment-strategy.md) §1。
 
@@ -291,12 +291,12 @@ POST /config/apps/http/servers/srv0/routes/...
 
 ## 7. 迁移影响
 
-| 原项目配置                                         | 重构后                                                                                                                  |
-| -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| CaddyfileTemplate 的 `/c/* /custom/* /api/comment` | `SystemCacheRules` + `BuildFullConfig` 注入,不需用户配置                                                                |
-| 用户想加自定义反代(原项目不支持)                   | `site.routing` JSON 配置,后台 UI 操作                                                                                   |
-| `caddy.provider.ts` 的所有方法                     | Go `internal/caddy` 包实现,通过 Go HTTP 路由 `/api/vanblog/routing/*` 暴露,SDK 走 `client.vanblog.routing.*`(不走 JSVM) |
-| Caddy admin api 裸暴露(原项目风险)                 | ✂️ 不再对外,只接受 vanblog 中间层调用                                                                                   |
+| 原项目配置                                                | 重构后                                                                                                                  |
+| --------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| 原项目 CaddyfileTemplate 的 `/c/* /custom/* /api/comment` | `SystemCacheRules` + `BuildFullConfig` 注入,不需用户配置                                                                |
+| 用户想加自定义反代(原项目不支持)                          | `site.routing` JSON 配置,后台 UI 操作                                                                                   |
+| `caddy.provider.ts` 的所有方法                            | Go `internal/caddy` 包实现,通过 Go HTTP 路由 `/api/vanblog/routing/*` 暴露,SDK 走 `client.vanblog.routing.*`(不走 JSVM) |
+| Caddy admin api 裸暴露(原项目风险)                        | ✂️ 不再对外,只接受 vanblog 中间层调用                                                                                   |
 
 ---
 

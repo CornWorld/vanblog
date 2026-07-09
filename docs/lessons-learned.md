@@ -75,7 +75,7 @@ migratecmd.MustRegister(app, app.RootCmd, migratecmd.Config{...})
 
 **问题**:Caddy 默认存储在 `/root/.local/share/caddy`(容器内,不持久)。容器重启 = 重新签发所有证书。Let's Encrypt 限制:5 duplicate certs/week/basename。
 
-**修复**:Caddyfile 显式配置 `storage file_system { root /data/caddy }`,Dockerfile 声明 `VOLUME ["/data/caddy"]`。
+**修复**:Caddy JSON 配置中显式指定 `storage file_system { root /data/caddy }`,Dockerfile 声明 `VOLUME ["/data/caddy"]`。
 
 ---
 

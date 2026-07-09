@@ -2,7 +2,7 @@ package caddy
 
 // Tests for config_builder.go (BuildOpts / BuildBootstrapConfig / BuildFullConfig).
 //
-// These replaced the old TestRender* tests that asserted on Caddyfile text.
+// These replaced the old TestRender* tests that asserted on Caddyfile text (pre-JSON migration).
 // The new assertions verify the JSON structure produced by BuildBootstrapConfig
 // and BuildFullConfig, including the zero-trust security invariant that
 // admin.origins must never contain "*".

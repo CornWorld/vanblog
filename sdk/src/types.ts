@@ -4,7 +4,7 @@ export interface Post {
   id: string;
   title: string;
   content: string;
-  status: 'draft' | 'published' | 'hidden';
+  status: "draft" | "published" | "hidden";
   oldId?: number;
   tags: string[];
   category: string;
@@ -40,7 +40,7 @@ export interface Tag {
 export interface Category {
   id: string;
   name: string;
-  type: 'category' | 'column';
+  type: "category" | "column";
   private: boolean;
   password: string;
   meta: Record<string, unknown>;
@@ -52,8 +52,8 @@ export interface Category {
 export interface Media {
   id: string;
   file: string;
-  staticType: 'img' | 'favicon' | 'attachment';
-  storageType: 'local' | 's3' | 'external';
+  staticType: "img" | "favicon" | "attachment";
+  storageType: "local" | "s3" | "external";
   fileType: string;
   sign: string;
   meta: Record<string, unknown>;
@@ -115,9 +115,9 @@ export interface SiteConfig {
   payWechat: string;
   payAliPayDark: string;
   payWechatDark: string;
-  theme: 'default' | 'minimal' | 'magazine' | 'custom';
-  defaultTheme: 'auto' | 'light' | 'dark';
-  commentsProvider: 'disabled' | 'waline' | 'giscus' | 'artalk' | 'external';
+  theme: "default" | "minimal" | "magazine" | "custom";
+  defaultTheme: "auto" | "light" | "dark";
+  commentsProvider: "disabled" | "waline" | "giscus" | "artalk" | "external";
   commentsConfig: Record<string, unknown>;
   analyticsScript: string;
   aboutContent: string;
@@ -139,7 +139,7 @@ export interface SiteConfig {
    */
   mediaConfig?: {
     enabled: boolean;
-    targetFormat: 'webp' | 'avif' | 'preserve';
+    targetFormat: "webp" | "avif" | "preserve";
     quality: number;
   };
   watermarkText: string;
@@ -196,10 +196,10 @@ export interface RouteRule {
    * - rewrite: internal URI rewrite to `to` (absolute path)
    * - block: respond 403
    * - cache: stamp response `headers` (e.g. Cache-Control) on the matched
-   *   path. Non-terminal — the reverse_proxy fallback in Caddyfile still
+   *   path. Non-terminal — the reverse_proxy fallback still
    *   serves the body, so this only adds cache semantics.
    */
-  type: 'proxy' | 'redirect' | 'rewrite' | 'block' | 'cache';
+  type: "proxy" | "redirect" | "rewrite" | "block" | "cache";
   from: string;
   to: string;
   code?: number;

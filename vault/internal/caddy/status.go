@@ -117,7 +117,7 @@ func GetTLSStatus(app core.App, caddyAdminURL string) (*TLSStatus, error) {
 
 	status := &TLSStatus{
 		OnDemandTLS:    true,
-		HttpsRedirect:  true, // fixed in Caddyfile
+		HttpsRedirect: true, // fixed in bootstrap json config
 		ManagementPort: 8080,
 	}
 

@@ -74,10 +74,8 @@ RUN ln -s /build/app /app
 COPY vault/pb_hooks /pb_hooks
 
 # Copy bootstrap.json (minimal maintenance-mode config for Caddy startup)
-# and the legacy Caddyfile as a fallback for VANBLOG_CADDY_MODE=legacy.
 COPY docker/bootstrap.json /etc/caddy/bootstrap.json
 COPY docker/bootstrap-http-only.json /etc/caddy/bootstrap-http-only.json
-COPY docker/Caddyfile.legacy.prod /etc/caddy/Caddyfile.legacy
 
 # Copy entrypoint
 COPY docker/entrypoint.prod.sh /entrypoint.sh
@@ -111,9 +109,7 @@ COPY app/ /app/src/
 WORKDIR /
 RUN pnpm install --frozen-lockfile || npm install || true
 
-# Copy dev entrypoint (bootstrap.json was already COPYed in the prod stage;
-# Caddyfile.legacy.dev is copied as a fallback for VANBLOG_CADDY_MODE=legacy)
-COPY docker/Caddyfile.legacy.dev /etc/caddy/Caddyfile.legacy.dev
+# Copy dev entrypoint (bootstrap.json was already COPYed in the prod stage)
 COPY docker/entrypoint.dev.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
