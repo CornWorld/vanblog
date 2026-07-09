@@ -24,6 +24,9 @@ pb_data/
 # Caddy data (local dev)
 caddy_data/
 
+# OCR review — 含真实 API key，不进仓库
+docker/ocr-review/ocr-config.json
+
 # IDE
 .DS_Store
 

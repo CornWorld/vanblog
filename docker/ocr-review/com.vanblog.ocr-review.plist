@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Server deployment example (macOS launchd).
+  For Linux, use systemd timer or cron:
+    0 */6 * * * docker run --rm -v /path/to/repo:/workspace:rw -v /path/to/ocr-config:/root/.opencodereview:rw ocr-review:latest
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.vanblog.ocr-review</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/local/bin/docker</string>
+        <string>run</string>
+        <string>--rm</string>
+        <string>-e</string>
+        <string>GIT_REMOTE=origin</string>
+        <string>-e</string>
+        <string>GIT_BRANCH=main</string>
+        <string>-e</string>
+        <string>BASELINE_FALLBACK=HEAD~10</string>
+        <string>-v</string>
+        <string>/path/to/vanblog:/workspace:rw</string>
+        <string>-v</string>
+        <string>/path/to/ocr-config:/root/.opencodereview:rw</string>
+        <string>-v</string>
+        <string>/path/to/.ssh:/root/.ssh:ro</string>
+        <string>ocr-review:latest</string>
+    </array>
+
+    <!-- Every 6 hours -->
+    <key>StartInterval</key>
+    <integer>21600</integer>
+
+    <key>StandardOutPath</key>
+    <string>/path/to/vanblog/refs/ocr-review.log</string>
+    <key>StandardErrorPath</key>
+    <string>/path/to/vanblog/refs/ocr-review.err</string>
+
+    <key>RunAtLoad</key>
+    <false/>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/usr/local/bin:/usr/bin:/bin:/opt/homebrew/bin</string>
+    </dict>
+</dict>
+</plist>

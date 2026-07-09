@@ -1,0 +1,12 @@
+{
+    "provider": "opencode-go",
+    "custom_providers": {
+        "opencode-go": {
+            "api_key": "your-api-key-here",
+            "url": "https://opencode.ai/zen/go/v1",
+            "protocol": "openai",
+            "model": "deepseek-v4-pro"
+        }
+    },
+    "llm": {}
+}
