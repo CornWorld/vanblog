@@ -15,7 +15,7 @@ const back = Astro.url.searchParams.get('back') || '/admin';
 // fill the form and get a 409 on submit.
 let alreadySetup = false;
 try {
-  const probe = createVanblogClient({ url: 'http://127.0.0.1:8090' });
+  const probe = createVanblogClient({ url: Astro.locals.pbUrl });
   const status = await probe.vanblog.setup.status();
   alreadySetup = !status.bootstrap;
 } catch {

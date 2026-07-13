@@ -3,8 +3,6 @@ import { createVanblogClient, type PostExpand } from "@vanblog/sdk";
 import { renderMarkdown } from "../lib/markdown/renderer";
 import { normalizeMathDelimiters } from "../lib/markdown/normalizeMathDelimiters";
 
-const PB_URL = "http://127.0.0.1:8090";
-
 /** Filter type for getLiveEntry */
 export interface PostEntryFilter {
   id: string;
@@ -23,7 +21,7 @@ export function postLoader(): LiveLoader<
   PostEntryFilter,
   PostCollectionFilter
 > {
-  const client = createVanblogClient({ url: PB_URL });
+  const client = createVanblogClient();
 
   return {
     name: "vanblog-posts",

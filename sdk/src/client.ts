@@ -29,7 +29,7 @@ export interface CreateClientOptions {
 export function createVanblogClient(
   opts: CreateClientOptions = {}
 ): VanblogClient {
-  const url = opts.url ?? getDefaultURL();
+  const url = opts.url ?? getDefaultVanblogURL();
   const pb = new PocketBase(url) as VanblogClient;
 
   // Attach vanblog service namespace (like pb.collection / pb.files)
@@ -71,7 +71,7 @@ declare module "pocketbase" {
   }
 }
 
-function getDefaultURL(): string {
+export function getDefaultVanblogURL(): string {
   // Server-side: internal container address
   if (typeof window === "undefined") {
     // Node.js / SSR context

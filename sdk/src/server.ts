@@ -1,4 +1,4 @@
-import { createVanblogClient } from "./client";
+import { createVanblogClient, getDefaultVanblogURL } from "./client";
 import type { CreateClientOptions } from "./client";
 import type { VanblogClient } from "./services";
 import { AUTH_COOKIE_OPTIONS } from "./cookie";
@@ -206,7 +206,7 @@ function pbUnreachable(): Response {
 }
 
 export function createVanblogMiddleware(opts: VanblogMiddlewareOptions = {}) {
-  const pbUrl = opts.pbUrl || "http://127.0.0.1:8090";
+  const pbUrl = opts.pbUrl ?? getDefaultVanblogURL();
 
   // Lazy site config cache (lives for the process lifetime)
   let cachedSite: any = null;
