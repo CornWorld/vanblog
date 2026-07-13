@@ -22,7 +22,6 @@ import (
 	"github.com/cornworld/vanblog/internal/migration"
 	"github.com/cornworld/vanblog/internal/pack"
 	"github.com/cornworld/vanblog/internal/packcli"
-	"github.com/cornworld/vanblog/internal/plugins"
 	"github.com/cornworld/vanblog/internal/revisions"
 	"github.com/cornworld/vanblog/internal/schema"
 	"github.com/cornworld/vanblog/internal/validation"
@@ -41,7 +40,6 @@ func main() {
 	var hooksPool int
 	var migrationsDir string
 	var automigrate bool
-	var pluginsDir string
 	var builtinPacksDir string
 	var packsDir string
 	var packRuntimeDir string
@@ -50,7 +48,6 @@ func main() {
 	app.RootCmd.PersistentFlags().IntVar(&hooksPool, "hooksPool", 15, "the total prewarm goja.Runtime instances for the JS app hooks execution")
 	app.RootCmd.PersistentFlags().StringVar(&migrationsDir, "migrationsDir", "", "the directory with the user defined JS migrations")
 	app.RootCmd.PersistentFlags().BoolVar(&automigrate, "automigrate", true, "enable/disable auto execution of JS migrations")
-	app.RootCmd.PersistentFlags().StringVar(&pluginsDir, "pluginsDir", "/plugins", "the directory with the plugin packages")
 	app.RootCmd.PersistentFlags().StringVar(&builtinPacksDir, "builtinPacksDir", "/packs", "the directory with builtin Pack resources")
 	app.RootCmd.PersistentFlags().StringVar(&packsDir, "packsDir", "", "the directory with local Pack overrides")
 	app.RootCmd.PersistentFlags().StringVar(&packRuntimeDir, "packRuntimeDir", "", "private directory for staged Pack runtime resources")
@@ -63,9 +60,6 @@ func main() {
 	}
 	staging := filepath.Join(privateRuntimeDir, "pb_hooks")
 	app.OnServe().BindFunc(func(event *core.ServeEvent) error {
-		if pluginsDir == "" {
-			pluginsDir = "/plugins"
-		}
 		coreHooksDir := hooksDir
 		if coreHooksDir == "" {
 			coreHooksDir = "pb_hooks"
@@ -106,13 +100,11 @@ func main() {
 		}
 		return event.Next()
 	})
-	pluginMgr := plugins.New(app, pluginsDir)
 	jsvm.MustRegister(app, jsvm.Config{
 		MigrationsDir: migrationsDir,
 		HooksDir:      staging,
 		HooksWatch:    hooksWatch,
 		HooksPoolSize: hooksPool,
-		OnInit:        pluginMgr.Bind(),
 	})
 
 	migratecmd.MustRegister(app, app.RootCmd, migratecmd.Config{

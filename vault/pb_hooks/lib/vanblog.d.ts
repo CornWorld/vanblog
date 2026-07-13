@@ -1,18 +1,16 @@
 /// <reference path="../types.d.ts" />
 
 // ============================================================================
-// Vanblog JSVM 扩展 API 声明
+// Vanblog JSVM hook helper declarations
 // ============================================================================
 //
 // 此文件提供 IDE 补全(TypeScript 姿态),不是运行时代码。
 // pb 0.39 的 jsvm 插件会自动生成 pb_hooks/types.d.ts,声明了所有 pb 原生
 // API($app, Record, Collection, onRecordAfterCreateSuccess, cronAdd 等)。
 //
-// 本文件补充声明 vanblog 特有的全局变量和辅助类型。
-//
-// 用法:在你的 .pb.js 文件顶部添加:
-//   /// <reference path="./lib/vanblog.d.ts" />
-//
+// Legacy $vanblog plugin helpers were removed with the Moments/Bookmarks
+// fragment compatibility layer. Keep this file focused on shared Vanblog data
+// shapes used by core hooks.
 
 // ---------------------------------------------------------------------------
 // pb 原生 API(pb 0.39 自动生成,这里仅列出 vanblog hooks 常用的)
@@ -32,20 +30,16 @@ declare const $app: import("../types").App;
 // vanblog 特有的 collection 字段类型(简化版,用于 DynamicModel)
 // ---------------------------------------------------------------------------
 
-/**
- * posts 表记录的常用字段。
- * 用于 onRecordAfterCreateSuccess / onRecordAfterUpdateSuccess 等回调中
- * 通过 e.record.get("fieldName") 访问。
- */
+/** posts 表记录的常用字段。 */
 interface VanblogPost {
   id: string;
   title: string;
   content: string;
   status: "draft" | "published" | "hidden";
   pathname: string;
-  tags: string[]; // relation IDs to tags collection
-  category: string; // relation ID to categories collection
-  author: string; // relation ID to users collection
+  tags: string[];
+  category: string;
+  author: string;
   private: boolean;
   password: string;
   copyright: string;
@@ -58,12 +52,7 @@ interface VanblogPost {
   updated: string;
 }
 
-/**
- * site 表(单行)的常用字段。
- * @example
- * const site = $app.findFirstRecordByFilter("site", "");
- * const siteName = site.getString("siteName");
- */
+/** site 表(单行)的常用字段。 */
 interface VanblogSite {
   siteName: string;
   siteDesc: string;
@@ -83,16 +72,13 @@ interface VanblogSite {
   rewards: VanblogRewardItem[];
 }
 
-/**
- * site.routing 中的单条路由规则。
- * @see VanblogSite.routing
- */
+/** site.routing 中的单条路由规则。 */
 interface VanblogRouteRule {
   id: string;
   type: "proxy" | "redirect" | "rewrite" | "block";
-  from: string; // glob pattern, e.g. "/api/internal/*"
-  to: string; // target URL (for proxy/redirect)
-  code?: number; // HTTP status code (for redirect)
+  from: string;
+  to: string;
+  code?: number;
   headers?: Record<string, string>;
 }
 
@@ -119,76 +105,20 @@ interface VanblogRewardItem {
   value: string;
 }
 
-/**
- * visits 表的字段。
- */
+/** visits 表的字段。 */
 interface VanblogVisit {
-  date: string; // "2006-01-02" format
-  path: string; // URL path, empty = site-wide aggregate
+  date: string;
+  path: string;
   views: number;
   uniques: number;
-  post: string; // relation ID to posts
+  post: string;
   lastVisitedAt: string;
 }
 
-// ---------------------------------------------------------------------------
-// $vanblog — Go-level plugin helper library
-// Injected into JSVM by vault/internal/plugins/
-// ---------------------------------------------------------------------------
-
-declare namespace $vanblog {
-  /** Read and cache a plugin's manifest.json */
-  function readManifest(name: string): {
-    name: string;
-    version: string;
-    title: string;
-    routes: {
-      public: { path: string; title: string; template: string };
-      admin: { path: string; title: string; template: string };
-    };
-    scripts: string[];
-    styles: string[];
-  };
-
-  /** Build template data object with site config + user info */
-  function buildPageData(
-    manifest: Record<string, any>,
-    authId: string
-  ): Record<string, any>;
-
-  /** Render a plugin's Go template file */
-  function renderTemplate(
-    name: string,
-    templateRelPath: string,
-    data: Record<string, any>
-  ): string;
-
-  /** Serve static files from a plugin's frontend/ directory */
-  function serveStatic(name: string): (e: any) => void;
-
-  /** Register plugin nav items (called at load time) */
-  function addNavItems(name: string): void;
-
-  /** Register all routes (public/admin/static) + nav for a plugin. Call once at load time. */
-  function servePlugin(name: string): void;
-
-  /** Get all registered nav items */
-  function getNavItems(): Array<{
-    path: string;
-    title: string;
-    position: string;
-  }>;
-
-  /** Read a file as string (convenience wrapper) */
-  function readFile(path: string): string;
-}
-
-/**
- * audits 表的字段。
- */
+/** audits 表的字段。 */
 interface VanblogAudit {
-  actor: string; // relation ID to users
-  action: string; // e.g. "auth.login", "post.delete"
+  actor: string;
+  action: string;
   target: string;
   result: "success" | "failure";
   detail: Record<string, any>;

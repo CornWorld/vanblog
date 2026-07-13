@@ -35,13 +35,12 @@ export default [
   // PB JSVM globals — available at runtime but not at lint time.
   // Hook modules intentionally use PocketBase JSVM/CommonJS conventions
   // (triple-slash local d.ts references, require/module.exports, empty catch
-  // probes), so keep those rules relaxed only for pb_hooks.
+  // probes), so keep those rules relaxed only for PB hook files.
   {
-    files: ["vault/pb_hooks/**/*.js"],
+    files: ["vault/pb_hooks/**/*.js", "packs/*/hooks/**/*.pb.js"],
     languageOptions: {
       globals: {
         $app: "readonly",
-        $vanblog: "readonly",
         $template: "readonly",
         $os: "readonly",
         $apis: "readonly",

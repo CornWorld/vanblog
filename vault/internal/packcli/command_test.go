@@ -56,3 +56,14 @@ func TestAddRequiresDestinationAndCopiesPack(t *testing.T) {
 		t.Fatalf("unexpected output: %q", output.String())
 	}
 }
+
+func TestEjectIsNotACommand(t *testing.T) {
+	var output bytes.Buffer
+	err := Execute([]string{"eject"}, &output, &output)
+	if err == nil {
+		t.Fatal("expected eject to be unknown")
+	}
+	if !strings.Contains(err.Error(), "unknown command") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}

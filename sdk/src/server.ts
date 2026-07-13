@@ -243,21 +243,8 @@ export function createVanblogMiddleware(opts: VanblogMiddlewareOptions = {}) {
       return cachedSite;
     };
 
-    let navCache: PluginNavItem[] | null = null;
-    context.locals.getNavItems = async () => {
-      if (navCache) return navCache;
-      try {
-        const res = await fetch(`${pbUrl}/_plugin/nav`);
-        if (res.ok) {
-          const data = await res.json();
-          navCache = data.items || [];
-          return navCache;
-        }
-      } catch (err) {
-        console.warn("[vanblog] nav fetch failed:", err);
-      }
-      return navCache || [];
-    };
+    const navCache: PluginNavItem[] = [];
+    context.locals.getNavItems = async () => navCache;
 
     // Auth refresh — if PocketBase is down this throws, which means the
     // token can't be validated. Return 503 rather than proceeding with

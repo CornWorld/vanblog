@@ -14,7 +14,7 @@ Vanblog is already composed from three strong runtimes:
 - Astro provides blog/CMS-specialized public frontend construction and, currently, the admin frontend.
 - Caddy provides ingress, TLS, maintenance fallback and route application.
 
-The repository retains a legacy Moments plugin compatibility package, a Zod v4 model registry compiled to CJS and embedded into Go, the root `packs/` builtin source tree, fixed Astro Pack routes, and a Caddy configuration builder.
+The repository retains a Zod v4 model registry compiled to CJS and embedded into Go, the root `packs/` builtin source tree, fixed Astro Pack routes, and a Caddy configuration builder. Legacy plugin compatibility files have been removed; see `docs/plugin-to-pack-evolution.md` for the full architectural evolution history.
 
 Pack does not replace those systems or duplicate their configuration. Pack is the smallest application resource unit that those systems may independently adapt.
 
@@ -445,13 +445,12 @@ Do not implement:
 - `Dockerfile`
 - dev/prod entrypoints if hook staging requires them
 - Pack integration tests
-- existing plugin compatibility files
 
 **Actions**:
 
 1. Ensure build stages receive the same builtin/local Pack inputs.
 2. Production retains only resources needed at runtime; compiled public frontend does not depend on source files.
-3. Keep legacy moments/plugin behavior working; remove only duplicated bookmarks wiring after the new path is verified.
+3. Legacy plugin compatibility has been fully removed. Only the Pack path remains for bookmarks. See `docs/plugin-to-pack-evolution.md` for the complete evolution history.
 4. Run fresh-data CRUD, SSR, hook, validation and routing smoke tests.
 
 **Done when**:
@@ -473,7 +472,7 @@ Do not implement:
 
 ## Rollback
 
-Pack v0 does not alter bookmark data ownership or execute down migrations. If the new public composition fails, restore the legacy bookmarks fragment renderer while retaining the collection, migration history and model validation. If hook staging fails, restore the existing static hooks directory. No destructive Git or database rollback is automatic.
+Pack v0 does not alter bookmark data ownership or execute down migrations. If the new public composition fails, restore the previous hooks directory and collection state while retaining the migration history and model validation. If hook staging fails, restore the existing static hooks directory. No destructive Git or database rollback is automatic.
 
 ## Pack v0 completion summary
 
@@ -484,10 +483,10 @@ Implemented results:
 - The minimal `Pack{Name, Version, FS, Source}` kernel, builtin Bookmarks Pack source, deterministic local discovery, whole-Pack replacement, inspection, source validation and add CLI are in place.
 - Local Packs are snapshotted into an immutable in-memory `fs.FS`; symlinks, invalid paths, oversized resources and directory/name mismatches fail closed.
 - Hook staging preserves the core hook tree, namespaces Pack hooks, uses transaction-unique staging/backup paths, and runs for `serve` through PocketBase's lifecycle instead of manually parsing Cobra flags. Each process defaults to a private runtime path; `--packRuntimeDir` permits an explicit instance-owned path.
-- The builtin Bookmarks Pack is the sole owner-field hook. The legacy Bookmarks plugin retains only renderer compatibility, while the legacy Moments hook remains a regular core hook file.
+- The builtin Bookmarks Pack is the sole owner-field hook. Legacy plugin compatibility has been fully removed (see `docs/plugin-to-pack-evolution.md`); the Moments hook remains a regular core hook file.
 - Validation has a replaceable `ModelSource` boundary and retains the embedded Zod bundle as the default.
 - Astro injects the compiled `/p/bookmarks` route through a static entrypoint and `vanblog:theme`; Pack names follow the same strict grammar as Go.
-- Docker/dev inputs include the Astro integration, builtin Pack resources, generated models and legacy plugin renderer resources.
+- Docker/dev inputs include the Astro integration, builtin Pack resources and generated models.
 
 Pack v0 accepts those files as valid source, but the production runtime does not load local frontend source directly. A local Pack containing frontend source such as `pages/`, `admin/`, `astro.config.{js,mjs,ts}` or `package.json` is skipped at runtime until a dev-image builder produces a compatible artifact. This prevents a local backend replacement from being silently combined with the builtin Astro frontend while keeping source validation honest.
 

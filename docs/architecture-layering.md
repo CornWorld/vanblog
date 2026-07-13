@@ -145,8 +145,13 @@ vault/
       admin.go                    # admin 专属 DELETE 路由(categories/tags/users)
     bootstrap/
       bootstrap.go                # 首次启动 setup 引导(status / complete)
-    plugins/
-      plugins.go                  # $vanblog JSVM helper 绑定 + 插件 manifest/静态资源 + servePlugin 一行式注册
+    pack/                          # Pack kernel: list/validate/resolve/stage builtin+local Packs
+      pack.go                     # Pack{Name,Version,FS,Source} + Validate + Inspect
+      source.go                   # Source enum + Builtins() from embed.FS
+      discover.go                 # LoadLocal + DiscoverLocal + Resolve (whole-Pack replacement)
+      hooks.go                    # StageHooks (atomic core+Pack hook staging)
+      add.go                      # Add (atomic builtin→local copy)
+      v0.go                       # RuntimeLoadableV0 (runtime skip+warn for unbuilt frontend)
   pb_migrations/                  # pb schema 迁移 (Go)
     1782200000_init_vanblog_collections.go
     1782300000_soft_delete_indexes.go
@@ -162,21 +167,21 @@ vault/
 
 ### 4.2 Go 业务层模块职责
 
-| 模块        | 对应原项目                     | 增量估计  | 关键 Go 库                                                                                                                   |
-| ----------- | ------------------------------ | --------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| `article`   | article.provider.ts (980)      | ~120      | pb `filter`/`sort` 覆盖查询；增量=字数统计+时间线聚合+搜索+回收站                                                            |
-| `media`     | static.provider.ts (560)       | ~100      | pb FileField + thumbs 内置；增量=MD5 去重+S3 驱动                                                                            |
-| `migration` | backup.controller.ts (137)     | ~150      | `encoding/json` + `app.RunInTransaction` 事务                                                                                |
-| `caddy`     | caddy.provider.ts (136)        | ~80       | `net/http` + `net/url` (SSRF)                                                                                                |
-| `revisions` | — (新增)                       | ~80       | `github.com/sergi/go-diff` (快照+diff+恢复)                                                                                  |
-| `visits`    | visit+viewer.provider.ts (241) | ~80       | SQL `UPDATE SET count = count + 1` + 日聚合                                                                                  |
-| `feed`      | rss+sitemap.provider.ts (230)  | ~150      | 标准库 `encoding/xml`；RSS/Atom/Sitemap 生成 + 路由注册                                                                      |
-| `site`      | meta/setting.provider.ts (526) | ~50       | 站点配置单行读取                                                                                                             |
-| `devseed`   | — (新增)                       | ~30       | 开发环境假数据填充                                                                                                           |
-| `plugins`   | — (新增)                       | ~150      | `$vanblog` JSVM helper 绑定、manifest 缓存、nav 聚合、模板渲染、`servePlugin` 一行式插件注册(public/admin/static 路由 + nav) |
-| `admin`     | — (新增)                       | ~40       | admin 专属 DELETE 路由(categories/tags/users)                                                                                |
-| `bootstrap` | — (新增)                       | ~80       | 首次启动 setup 引导(status / complete)                                                                                       |
-| **总计**    |                                | **~1110** | **(pb 覆盖 + 裁剪 ~4000 行不计)**                                                                                            |
+| 模块        | 对应原项目                     | 增量估计  | 关键 Go 库                                                                                                          |
+| ----------- | ------------------------------ | --------- | ------------------------------------------------------------------------------------------------------------------- |
+| `article`   | article.provider.ts (980)      | ~120      | pb `filter`/`sort` 覆盖查询；增量=字数统计+时间线聚合+搜索+回收站                                                   |
+| `media`     | static.provider.ts (560)       | ~100      | pb FileField + thumbs 内置；增量=MD5 去重+S3 驱动                                                                   |
+| `migration` | backup.controller.ts (137)     | ~150      | `encoding/json` + `app.RunInTransaction` 事务                                                                       |
+| `caddy`     | caddy.provider.ts (136)        | ~80       | `net/http` + `net/url` (SSRF)                                                                                       |
+| `revisions` | — (新增)                       | ~80       | `github.com/sergi/go-diff` (快照+diff+恢复)                                                                         |
+| `visits`    | visit+viewer.provider.ts (241) | ~80       | SQL `UPDATE SET count = count + 1` + 日聚合                                                                         |
+| `feed`      | rss+sitemap.provider.ts (230)  | ~150      | 标准库 `encoding/xml`；RSS/Atom/Sitemap 生成 + 路由注册                                                             |
+| `site`      | meta/setting.provider.ts (526) | ~50       | 站点配置单行读取                                                                                                    |
+| `devseed`   | — (新增)                       | ~30       | 开发环境假数据填充                                                                                                  |
+| `pack`      | — (新增)                       | ~150      | Pack kernel: `Pack` struct、builtin/local 发现与解析、whole-Pack replacement、hook 原子暂存、`vanblog pack add` CLI |
+| `admin`     | — (新增)                       | ~40       | admin 专属 DELETE 路由(categories/tags/users)                                                                       |
+| `bootstrap` | — (新增)                       | ~80       | 首次启动 setup 引导(status / complete)                                                                              |
+| **总计**    |                                | **~1110** | **(pb 覆盖 + 裁剪 ~4000 行不计)**                                                                                   |
 
 **对比原项目**:原 NestJS 5012 行 → Go 真实增量 **~600-1000 行**(pb 原生覆盖 ~2400 行 CRUD/auth/权限,裁剪 ~800 行 picgo/waline 托管/ISR/pipeline)。
 
@@ -194,9 +199,10 @@ vault/
 
 ### 4.3 pb_hooks:JSVM 钩子
 
-Go 业务层**不通过中间绑定层暴露 JSVM API**。JSVM 钩子直接使用 pb 原生全局 API
+JSVM 钩子直接使用 pb 原生全局 API
 (`$app`、`Record`、`onRecordAfterCreateSuccess`、`cronAdd` 等)，pb 的 jsvm 插件自动
-将这些 API 注入每个 executor VM。
+将这些 API 注入每个 executor VM。扩展系统从 Plugin 演进到 Pack 的完整历史见
+[`docs/plugin-to-pack-evolution.md`](./plugin-to-pack-evolution.md)。
 
 `pb_hooks/` 目录内容：
 
@@ -476,18 +482,7 @@ interface VanblogSite {
 }
 ```
 
-**`$vanblog` JSVM 命名空间**:Go 层通过 `plugins.Manager.Bind()` 向 JSVM 注入 `$vanblog` 全局对象(见 `vault/internal/plugins/plugins.go`)，供 `pb_hooks/*.pb.js` 和插件调用。可用 helper:
-
-| Helper                                              | 用途                                                                    |
-| --------------------------------------------------- | ----------------------------------------------------------------------- |
-| **`$vanblog.servePlugin(name)`**                    | **一行注册 public/admin/static 三条路由 + nav items(新模式插件主入口)** |
-| `$vanblog.readManifest(name)`                       | 读取 `plugins/{name}/manifest.json`                                     |
-| `$vanblog.buildPageData(manifest, userId)`          | 构建页面渲染数据(站点配置 + 用户信息)                                   |
-| `$vanblog.renderTemplate(name, templatePath, data)` | 渲染 `plugins/{name}/{templatePath}` HTML 模板                          |
-| `$vanblog.serveStatic(name)`                        | 返回 `plugins/{name}/frontend/` 静态文件处理器                          |
-| `$vanblog.addNavItems(name)`                        | 将插件注册到导航菜单(servePlugin 已自动调用)                            |
-| `$vanblog.getNavItems()`                            | 读取已注册的导航项(供 `/_plugin/nav` 聚合端点)                          |
-| `$vanblog.readFile(path)`                           | 读取任意文件内容(便捷工具函数)                                          |
+> 扩展系统从 Plugin 到 Pack 的完整演进分析见 [`docs/plugin-to-pack-evolution.md`](./plugin-to-pack-evolution.md)。
 
 ---
 
@@ -514,7 +509,7 @@ interface VanblogSite {
 | 自定义定时任务   | —                                          | `cronAdd("id", "...", () => { ... })` | ✅                    |
 | 自定义 API 端点  | —                                          | `routerAdd("GET", "/my-api", ...)`    | ✅                    |
 
-> **注(新模式)**:绝大多数 CRUD 端点不需要手写——PocketBase 原生 `/api/collections/{name}/records` 自动提供 list/get/create/update/delete(含分页/过滤/排序/关联展开),权限由 collection 的 `listRule`/`createRule`/`updateRule`/`deleteRule` 控制。`routerAdd` 仅用于 webhook 转发、跨表聚合、外部 API 集成等特殊业务。插件页面路由(public/admin/static)由 `$vanblog.servePlugin(name)` 一行注册,无需手写。
+> **注**:绝大多数 CRUD 端点不需要手写——PocketBase 原生 `/api/collections/{name}/records` 自动提供 list/get/create/update/delete(含分页/过滤/排序/关联展开),权限由 collection 的 `listRule`/`createRule`/`updateRule`/`deleteRule` 控制。`routerAdd` 仅用于 webhook 转发、跨表聚合、外部 API 集成等特殊业务。Pack 页面路由由 Astro adapter 静态注入 `/p/<pack>`,无需手写。
 
 **总结**:
 

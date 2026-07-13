@@ -81,11 +81,9 @@ COPY --from=astro-build /build /build
 # Symlink so entrypoint's `cd /app/dist` works without changing the script.
 RUN ln -s /build/app /app
 
-# Copy core hooks, external builtin Pack resources, and the remaining legacy
-# Moments plugin compatibility package.
+# Copy core hooks and external builtin Pack resources.
 COPY vault/pb_hooks /pb_hooks
 COPY packs /packs
-COPY plugins /plugins
 
 # Copy bootstrap.json (minimal maintenance-mode config for Caddy startup)
 COPY docker/bootstrap.json /etc/caddy/bootstrap.json
