@@ -4,7 +4,7 @@ export const prerender = false;
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import ErrorState from '../../components/ErrorState.astro';
 import { fmtDate, safe } from '@vanblog/sdk';
-import type { Tag, Post } from '@vanblog/sdk';
+import type { Tag } from '@vanblog/sdk';
 const pb = Astro.locals.pb;
 
 const { id } = Astro.params;

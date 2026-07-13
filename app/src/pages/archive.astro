@@ -17,7 +17,7 @@ const error = !result;
 // Group by year
 const byYear: Record<number, Post[]> = {};
 for (const post of posts) {
-  const year = new Date(post.created.replace(' ', 'T')).getFullYear();
+  const year = new Date((post.created || '').replace(' ', 'T')).getFullYear();
   if (!byYear[year]) byYear[year] = [];
   byYear[year].push(post);
 }

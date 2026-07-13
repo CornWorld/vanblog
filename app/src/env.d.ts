@@ -1,10 +1,15 @@
 /// <reference path="../.astro/types.d.ts" />
 
+declare module "vanblog:theme" {
+  import type { AstroComponentFactory } from "astro/runtime/server/index.js";
+  export const Page: AstroComponentFactory;
+}
+
 declare namespace App {
   interface Locals {
     pb: import("@vanblog/sdk").VanblogClient;
     pbUrl: string;
-    getSite(): Promise<Partial<import("@vanblog/sdk").SiteConfig> | null>;
+    getSite(): Promise<Partial<import("@vanblog/sdk").Site> | null>;
     getNavItems(): Promise<import("@vanblog/sdk").PluginNavItem[]>;
   }
 }

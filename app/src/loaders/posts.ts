@@ -1,9 +1,9 @@
-import type { LiveLoader } from 'astro/loaders';
-import { createVanblogClient, type Post } from '@vanblog/sdk';
-import { renderMarkdown } from '../lib/markdown/renderer';
-import { normalizeMathDelimiters } from '../lib/markdown/normalizeMathDelimiters';
+import type { LiveLoader } from "astro/loaders";
+import { createVanblogClient, type PostExpand } from "@vanblog/sdk";
+import { renderMarkdown } from "../lib/markdown/renderer";
+import { normalizeMathDelimiters } from "../lib/markdown/normalizeMathDelimiters";
 
-const PB_URL = 'http://127.0.0.1:8090';
+const PB_URL = "http://127.0.0.1:8090";
 
 /** Filter type for getLiveEntry */
 export interface PostEntryFilter {
@@ -18,31 +18,37 @@ export interface PostCollectionFilter {
   tag?: string;
 }
 
-export function postLoader(): LiveLoader<Post, PostEntryFilter, PostCollectionFilter> {
+export function postLoader(): LiveLoader<
+  PostExpand,
+  PostEntryFilter,
+  PostCollectionFilter
+> {
   const client = createVanblogClient({ url: PB_URL });
 
   return {
-    name: 'vanblog-posts',
+    name: "vanblog-posts",
 
     async loadEntry({ filter }) {
       try {
-        const post = await client.collection('posts').getOne<Post>(filter.id);
+        const post = await client
+          .collection("posts")
+          .getOne<PostExpand>(filter.id);
 
         // Only serve published, non-deleted posts via live loader
-        if (post.status !== 'published' || post.deleted) {
+        if (post.status !== "published" || post.deleted) {
           return undefined;
         }
 
-        const content = normalizeMathDelimiters(post.content || '');
+        const content = normalizeMathDelimiters(post.content || "");
         const { code: html } = await renderMarkdown(content);
 
         return {
-          id: post.id,
+          id: post.id ?? filter.id,
           data: post,
           rendered: { html },
           cacheHint: {
-            tags: ['posts', `post:${post.id}`],
-            lastModified: new Date(post.updated),
+            tags: ["posts", `post:${post.id ?? filter.id}`],
+            lastModified: post.updated ? new Date(post.updated) : undefined,
           },
         };
       } catch {
@@ -54,7 +60,7 @@ export function postLoader(): LiveLoader<Post, PostEntryFilter, PostCollectionFi
       try {
         const page = filter?.page ?? 1;
         const perPage = filter?.perPage ?? 10;
-        const filters: string[] = ['status="published"', 'deleted=false'];
+        const filters: string[] = ['status="published"', "deleted=false"];
 
         if (filter?.category) {
           filters.push(`category.name="${filter.category}"`);
@@ -63,32 +69,34 @@ export function postLoader(): LiveLoader<Post, PostEntryFilter, PostCollectionFi
           filters.push(`tags.name="${filter.tag}"`);
         }
 
-        const result = await client.collection('posts').getList<Post>(page, perPage, {
-          filter: filters.join(' && '),
-          sort: '-created',
-          expand: 'category,tags,author',
-        });
+        const result = await client
+          .collection("posts")
+          .getList<PostExpand>(page, perPage, {
+            filter: filters.join(" && "),
+            sort: "-created",
+            expand: "category,tags,author",
+          });
 
         const entries = await Promise.all(
           result.items.map(async (post) => {
-            const content = normalizeMathDelimiters(post.content || '');
-        const { code: html } = await renderMarkdown(content);
+            const content = normalizeMathDelimiters(post.content || "");
+            const { code: html } = await renderMarkdown(content);
             return {
-              id: post.id,
+              id: post.id ?? `post-${page}-${result.items.indexOf(post)}`,
               data: post,
               rendered: { html },
               cacheHint: {
-                tags: ['posts', `post:${post.id}`],
-                lastModified: new Date(post.updated),
+                tags: ["posts", ...(post.id ? [`post:${post.id}`] : [])],
+                lastModified: post.updated ? new Date(post.updated) : undefined,
               },
             };
-          }),
+          })
         );
 
         return {
           entries,
           cacheHint: {
-            tags: ['posts'],
+            tags: ["posts"],
           },
         };
       } catch {

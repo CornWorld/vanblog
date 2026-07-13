@@ -4,7 +4,7 @@ export const prerender = false;
 import BaseLayout from '../layouts/BaseLayout.astro';
 import ErrorState from '../components/ErrorState.astro';
 import { stripMarkdown, fmtDate, safe, getPage } from '@vanblog/sdk';
-import type { Post } from '@vanblog/sdk';
+
 const pb = Astro.locals.pb;
 
 const perPage = 10;
@@ -14,7 +14,7 @@ const { data: result, error: loadError } = await safe(
   () => pb.vanblog.posts.listPublished(page, perPage, { expand: 'category,tags' }),
   'index'
 );
-const posts : Post[] = result?.items ?? [];
+const posts = result?.items ?? [];
 const totalPages = result?.totalPages ?? 1;
 ---
 <BaseLayout title="首页" path="/">
