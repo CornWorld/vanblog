@@ -1,7 +1,8 @@
 @import "tailwindcss";
 
-/* ── Plugin HTML templates — Tailwind must scan these for utility classes ── */
+/* ── Legacy plugin templates and root Pack Astro sources — Tailwind must scan these for utility classes ── */
 @source "../../plugins/**/frontend/**/*.html";
+@source "../../packs/**/*.astro";
 
 /* ── Dark mode: class-based (.dark on <html>) ── */
 @custom-variant dark (&:where(.dark, .dark *));

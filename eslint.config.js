@@ -30,6 +30,7 @@ export default [
       "**/node_modules/**",
       "**/plugins/**",
       "**/pb_hooks/**",
+      "vault/internal/validation/models.js",
     ],
   },
   // PB JSVM globals — available at runtime but not at lint time
@@ -51,6 +52,10 @@ export default [
         routerUse: "readonly",
         onBootstrap: "readonly",
         onServe: "readonly",
+        onRecordBeforeCreateRequest: "readonly",
+        onRecordAfterCreateSuccess: "readonly",
+        onRecordAfterUpdateSuccess: "readonly",
+        onRecordAfterDeleteSuccess: "readonly",
         cronAdd: "readonly",
         cronRemove: "readonly",
         console: "readonly",

@@ -18,7 +18,29 @@
 #   - GOPROXY/NPM_MIRROR only invalidate the download layer, not earlier COPY steps.
 #
 
-# --- Stage 1: Build Go binary (PocketBase + vanblog SDK) ---
+# --- Stage 1: Install shared Node workspace dependencies ---
+FROM node:lts-alpine AS workspace-deps
+ARG NPM_MIRROR
+RUN corepack enable pnpm
+WORKDIR /build
+
+# Keep dependency installation independent from application and model sources.
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
+COPY sdk/package.json ./sdk/package.json
+COPY app/package.json ./app/package.json
+RUN pnpm config set store-dir /pnpm/store && \
+    if [ -n "$NPM_MIRROR" ]; then \
+      pnpm config set registry "$NPM_MIRROR"; \
+    fi && \
+    pnpm install --frozen-lockfile
+
+# --- Stage 2: Build the generated model bundle embedded by Go ---
+FROM workspace-deps AS models-build
+COPY models.config.mjs ./
+COPY sdk/src/models/ ./sdk/src/models/
+RUN pnpm build:models
+
+# --- Stage 3: Build Go binary (PocketBase + vanblog SDK) ---
 FROM golang:alpine AS go-build
 ARG GOPROXY
 ENV GOPROXY=${GOPROXY}
@@ -26,26 +48,15 @@ WORKDIR /build
 COPY vault/go.mod vault/go.sum ./
 RUN go mod download
 COPY vault/ ./
+COPY packs/ /packs/
+COPY --from=models-build /build/vault/internal/validation/models.js ./internal/validation/models.js
 RUN CGO_ENABLED=0 go build -o /pocketbase -ldflags="-s -w" .
 
-# --- Stage 2: Build Astro frontend + SDK ---
-FROM node:lts-alpine AS astro-build
-ARG NPM_MIRROR
-RUN corepack enable pnpm
-WORKDIR /build
-
-# Copy workspace root + sdk + app
-COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
+# --- Stage 4: Build Astro frontend + SDK ---
+FROM workspace-deps AS astro-build
 COPY sdk/ ./sdk/
-COPY app/package.json app/astro.config.mjs app/tsconfig.json ./app/
-COPY app/src/ ./app/src/
-COPY app/public/ ./app/public/
-
-# Install deps (monorepo)
-RUN if [ -n "$NPM_MIRROR" ]; then \
-      pnpm config set registry "$NPM_MIRROR"; \
-    fi && \
-    pnpm install --no-frozen-lockfile
+COPY app/ ./app/
+COPY packs/ ./packs/
 
 # Build SDK first
 RUN pnpm --filter sdk build
@@ -54,7 +65,7 @@ RUN pnpm --filter sdk build
 RUN pnpm --filter vanblog-app build
 # Output: /build/app/dist/
 
-# --- Stage 3: PROD image (Caddy + pb + Node SSR) ---
+# --- Stage 5: PROD image (Caddy + pb + Node SSR) ---
 FROM alpine:3.21 AS prod
 
 # Install Caddy + Node.js (for Astro SSR) + ca-certificates
@@ -70,8 +81,11 @@ COPY --from=astro-build /build /build
 # Symlink so entrypoint's `cd /app/dist` works without changing the script.
 RUN ln -s /build/app /app
 
-# Copy pb_hooks (JSVM hooks: system.pb.js, examples.pb.js)
+# Copy core hooks, external builtin Pack resources, and the remaining legacy
+# Moments plugin compatibility package.
 COPY vault/pb_hooks /pb_hooks
+COPY packs /packs
+COPY plugins /plugins
 
 # Copy bootstrap.json (minimal maintenance-mode config for Caddy startup)
 COPY docker/bootstrap.json /etc/caddy/bootstrap.json
@@ -94,20 +108,20 @@ VOLUME ["/pb_data", "/data/caddy"]
 
 ENTRYPOINT ["/entrypoint.sh"]
 
-# --- Stage 4: DEV image (extends prod + full Node toolchain + source) ---
+# --- Stage 6: DEV image (extends prod + full Node toolchain + source) ---
 FROM prod AS dev
 
 RUN apk add --no-cache npm git && npm install -g pnpm@latest-10
 
-# Copy Astro + SDK source for dev server
-COPY --from=astro-build /build/sdk /sdk
-COPY --from=astro-build /build/app /app/src
-COPY package.json pnpm-workspace.yaml pnpm-lock.yaml /
-COPY sdk/ /sdk/
-COPY app/ /app/src/
+# Keep the dev workspace layout identical to the source workspace so Astro can
+# resolve app/integrations, root packs/, and the workspace SDK consistently.
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc /workspace/
+COPY sdk/ /workspace/sdk/
+COPY app/ /workspace/app/
+COPY packs/ /workspace/packs/
 
-WORKDIR /
-RUN pnpm install --frozen-lockfile || npm install || true
+WORKDIR /workspace
+RUN pnpm install --frozen-lockfile
 
 # Copy dev entrypoint (bootstrap.json was already COPYed in the prod stage)
 COPY docker/entrypoint.dev.sh /entrypoint.sh

@@ -6,7 +6,7 @@ import (
 )
 
 // Creates the `moments` collection for the moments plugin (说说/动态).
-// Replaces the previous runtime onBootstrap creation in plugins/moments/moments.pb.js,
+// Replaces the former legacy Moments plugin runtime collection creation,
 // which was brittle (OnBootstrap timing issues on pb 0.39.5).
 //
 // CRUD is exposed via PocketBase's auto-generated /api/collections/moments/records

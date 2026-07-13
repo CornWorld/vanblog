@@ -1,0 +1,49 @@
+---
+import { Page } from 'vanblog:theme';
+import { BookmarkSchema, type Bookmark } from '@vanblog/sdk';
+
+export const prerender = false;
+
+let bookmarks: Bookmark[] = [];
+let error: string | null = null;
+
+try {
+  const result = await Astro.locals.pb.collection('bookmarks').getList(1, 100, {
+    sort: '-created',
+  });
+  bookmarks = result.items.flatMap((item) => {
+    const parsed = BookmarkSchema.safeParse(item);
+    if (!parsed.success) return [];
+    try {
+      const url = new URL(parsed.data.url);
+      return url.protocol === 'http:' || url.protocol === 'https:' ? [parsed.data] : [];
+    } catch {
+      return [];
+    }
+  });
+} catch {
+  error = '收藏加载失败，请稍后重试。';
+}
+---
+
+<Page title="收藏" description="收藏的网页与资源">
+  <section aria-labelledby="bookmarks-title">
+    <h1 id="bookmarks-title">收藏</h1>
+    {error ? (
+      <p role="alert" class="text-[var(--text-muted)]">{error}</p>
+    ) : bookmarks.length === 0 ? (
+      <p class="text-[var(--text-muted)]">暂无收藏。</p>
+    ) : (
+      <ul class="grid gap-4 list-none p-0">
+        {bookmarks.map((bookmark) => (
+          <li class="border-b border-[var(--border)] pb-4">
+            <a href={bookmark.url} target="_blank" rel="noopener noreferrer" class="font-semibold">
+              {bookmark.title}
+            </a>
+            {bookmark.description && <p class="mt-1 text-sm text-[var(--text-muted)]">{bookmark.description}</p>}
+          </li>
+        ))}
+      </ul>
+    )}
+  </section>
+</Page>

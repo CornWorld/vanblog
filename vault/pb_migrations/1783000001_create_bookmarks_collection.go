@@ -6,13 +6,13 @@ import (
 )
 
 // Creates the `bookmarks` collection for the bookmarks plugin (网址收藏).
-// Replaces the previous runtime onBootstrap creation in plugins/bookmarks/bookmarks.pb.js.
+// Replaces the former legacy Bookmarks plugin runtime collection creation.
 //
 // CRUD is exposed via PocketBase's auto-generated /api/collections/bookmarks/records
 // endpoint; the plugin no longer ships hand-written list/create/delete routes.
 //
 // Visibility decision (2026-07-07): the previous plugin allowed anonymous
-// `listRule: "id != ''"` (public web view of all bookmarks). To preserve that
+// `listRule: "id != ”"` (public web view of all bookmarks). To preserve that
 // behavior, listRule stays empty (""). Authenticated users can always list.
 // Flip to `@request.auth.id != ""` if you want login-required listing.
 func init() {

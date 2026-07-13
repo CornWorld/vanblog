@@ -64,7 +64,7 @@ wait_for "http://127.0.0.1:8090/api/health" "PocketBase" 30 || exit 1
 
 # 4. Start Astro dev server (HMR)
 echo "[vanblog] starting Astro dev server..."
-cd /app/src
+cd /workspace
   pnpm --filter vanblog-app dev -- --host 127.0.0.1 --port 4321 &
 ASTRO_PID=$!
 wait_for "http://127.0.0.1:4321/" "Astro SSR" 30 || exit 1

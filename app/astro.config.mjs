@@ -2,6 +2,7 @@ import { defineConfig, memoryCache } from 'astro/config';
 import node from '@astrojs/node';
 import mdx from '@astrojs/mdx';
 import tailwindcss from '@tailwindcss/vite';
+import packs from './integrations/packs/index.mjs';
 
 export default defineConfig({
   output: 'server',
@@ -68,5 +69,5 @@ export default defineConfig({
       },
     },
   },
-  integrations: [mdx()],
+  integrations: [mdx(), packs()],
 });

@@ -1,8 +1,10 @@
 # Vanblog 插件开发指南
 
+> **状态说明**: 本文主要记录 legacy plugin 兼容层，适用于仍在迁移中的 Moments 等历史功能。新的扩展方向是 Pack：源码由 `vanblog pack` 与 dev 镜像管理，构建生成 VanBlog 内部 artifact，prod runtime 只验证、加载或跳过并 warning，不安装依赖、不构建源码。新功能优先参考 `docs/future-pack-architecture.md` 的 Pack source / artifact / runtime 分层。
+
 ## 概述
 
-Vanblog 插件系统允许在不修改核心源码的前提下扩展功能。插件使用 **纯前端模板 + JSVM 后端** 的架构，无需 Astro 编译、Tailwind 重建或 Go 代码重新编译。
+Vanblog legacy 插件系统允许在不修改核心源码的前提下扩展功能。插件使用 **纯前端模板 + JSVM 后端** 的架构，无需 Astro 编译、Tailwind 重建或 Go 代码重新编译。
 
 > **新模式(推荐)**:从 moments/bookmarks 插件重构起,插件作者只需写 ~20 行声明式代码。核心思路是三件事——Collection 由 Go migration 创建、CRUD 走 PocketBase 原生 API、页面路由由 `$vanblog.servePlugin(name)` 一行注册。本文档以此模式为主,老模式(手写 CRUD 路由 + 页面渲染路由)在相关章节以"已过时"标注保留,仅作历史参考。
 
@@ -15,7 +17,7 @@ Vanblog 插件系统允许在不修改核心源码的前提下扩展功能。插
 | **业务钩子** | JSVM `onRecordBeforeCreateRequest` 等             | 自动填充字段(如 author)、审计、校验等可选逻辑        |
 | **UI 层**    | `$vanblog.servePlugin(name)` + HTML 模板          | 一行注册 public/admin/static 三条路由 + nav items    |
 
-> 老模式下数据层用 `onBootstrap` 运行时建表、API 层用 `routerAdd` 手写 CRUD、UI 层手写三条 `routerAdd`。新模式的代码量约为老模式的 1/10(参考 `plugins/moments/moments.pb.js`,41 行 vs 老模式 200+ 行)。
+> 老模式下数据层用 `onBootstrap` 运行时建表、API 层用 `routerAdd` 手写 CRUD、UI 层手写三条 `routerAdd`。新模式的代码量约为老模式的 1/10。当前 Moments 的业务 hook 已收敛为 core hook `vault/pb_hooks/moments.pb.js`，`plugins/moments/` 仅保留 manifest/frontend 兼容资源。
 
 ## 插件结构
 
@@ -605,7 +607,7 @@ plugins/
 
 完整的插件示例(均为新模式):
 
-- **Moments 插件** — `plugins/moments/moments.pb.js`(41 行):`servePlugin` + `onRecordBeforeCreateRequest`(自动填 author) + 审计 hook。Collection 由 `vault/pb_migrations/1783000000_create_moments_collection.go` 创建,CRUD 走 pb 原生 API,前端见 `frontend/index.html` 和 `admin.html`。
-- **Bookmarks 插件** — `plugins/bookmarks/bookmarks.pb.js`(19 行,极简版):`servePlugin` + `onRecordBeforeCreateRequest`(自动填 owner),无审计 hook。Collection 由 `vault/pb_migrations/1783000001_create_bookmarks_collection.go` 创建。
+- **Moments 兼容插件** — core hook `vault/pb_hooks/moments.pb.js` 调用 `servePlugin` 并在创建前自动填充 author；`plugins/moments/` 仅保留 manifest 与 `frontend/index.html`、`frontend/admin.html` 兼容资源。Collection 由 `vault/pb_migrations/1783000000_create_moments_collection.go` 创建，CRUD 走 pb 原生 API。
+- **Bookmarks Pack** — `packs/bookmarks/` 是唯一源码；Go migration 创建 Collection，Pack hook 自动填充 owner，Astro 编译 `/p/bookmarks`。旧 `plugins/bookmarks` 已删除。
 
-这两个插件覆盖了新模式的所有核心要素(Go migration / pb 原生 CRUD / servePlugin / onRecord hook),可作为开发新插件的模板。
+这些示例覆盖了当前兼容层与 Pack 迁移路径的核心要素(Go migration / pb 原生 CRUD / servePlugin / onRecord hook / Astro Pack page),可作为理解现有边界的参考。
