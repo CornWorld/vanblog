@@ -6,6 +6,7 @@ import ErrorNotice from '../../../components/ErrorNotice.astro';
 import { getAuthUser, hasPermission } from '@vanblog/sdk';
 import ByteMdEditor from '../../../components/ByteMdEditor.astro';
 import type { Post, Tag, Category } from '@vanblog/sdk';
+import type { MediaConfig } from '../../../lib/media/normalizeImage';
 const pb = Astro.locals.pb;
 
 const user = getAuthUser(pb)!;
@@ -47,7 +48,7 @@ if (!denied && !notFound) {
 }
 
 const site = await Astro.locals.getSite();
-const mediaConfig = site?.mediaConfig;
+const mediaConfig: MediaConfig | undefined = site?.mediaConfig ?? undefined;
 
 const currentTagIds: string[] = Array.isArray(post.tags) ? post.tags : [];
 const currentCatId: string = post.category || '';
@@ -98,7 +99,7 @@ const currentAuthorId: string = post.author || user.id;
       标签
       <select id="f-tags" multiple size="4" class="min-w-[280px]">
         {tags.map(t => (
-          <option value={t.id} selected={currentTagIds.includes(t.id)}>#{t.name}</option>
+          <option value={t.id} selected={!!t.id && currentTagIds.includes(t.id)}>#{t.name}</option>
         ))}
       </select>
       <small class="text-[var(--color-text-muted)]">Ctrl/Cmd 多选</small>
@@ -127,11 +128,9 @@ const currentAuthorId: string = post.author || user.id;
     <button id="btn-publish" type="button">保存并发布</button>
     <a href="/admin">取消</a>
   </div>
-
-  <script define:vars={{
-    postId: isNew ? null : id,
-    authorId: currentAuthorId,
-  }}>
+<script is:inline type="application/json" id="editor-data" set:html={JSON.stringify({ postId: isNew ? null : id, authorId: currentAuthorId })} />
+<script is:inline>
+    const { postId, authorId } = JSON.parse(document.getElementById('editor-data').textContent);
     const save = async (publish) => {
       const pb = window.__pb;
       if (!pb) return alert('未登录');

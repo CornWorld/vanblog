@@ -207,8 +207,8 @@ const TYPE_OPTIONS = ['proxy', 'redirect', 'rewrite', 'block', 'cache'];
     </>
   )}
 
-  <script define:vars={{ TYPE_OPTIONS }}>
+  <script>
     import { initRoutingEditor } from '../../lib/routing-editor.js';
-    initRoutingEditor({ TYPE_OPTIONS });
+    initRoutingEditor({ TYPE_OPTIONS: ['proxy', 'redirect', 'rewrite', 'block', 'cache'] });
   </script>
 </AdminLayout>

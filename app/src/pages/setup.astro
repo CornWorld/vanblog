@@ -67,7 +67,8 @@ if (alreadySetup) {
     <p id="setup-status" class="text-[var(--color-text-muted)] text-sm"></p>
   </form>
 
-  <script define:vars={{ back }}>
+  <script is:inline data-back={back}>
+    const back = document.currentScript.dataset.back;
     const form = document.getElementById('setup-form');
     const errEl = document.getElementById('setup-error');
     const statusEl = document.getElementById('setup-status');

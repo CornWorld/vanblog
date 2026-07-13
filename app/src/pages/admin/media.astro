@@ -77,7 +77,8 @@ const totalPages = result?.totalPages ?? 1;
     </>
   )}
 
-  <script define:vars={{ canDelete }}>
+  <script is:inline data-can-delete={canDelete}>
+    const canDelete = document.currentScript.dataset.canDelete === 'true';
     const pb = window.__pb;
     const grid = document.getElementById('media-grid');
     const status = document.getElementById('upload-status');

@@ -8,10 +8,10 @@ import { getLiveEntry } from 'astro:content';
 import { isAuthenticated, fmtDate } from '@vanblog/sdk';
 import { renderMarkdown } from '../../lib/markdown/renderer';
 import { normalizeMathDelimiters } from '../../lib/markdown/normalizeMathDelimiters';
-import type { Post, SiteConfig } from '@vanblog/sdk';
+import type { Post } from '@vanblog/sdk';
 
 const pb = Astro.locals.pb;
-const site = await Astro.locals.getSite() as SiteConfig | null;
+const site = await Astro.locals.getSite();
 
 const { id } = Astro.params;
 if (!id) return Astro.redirect('/404');
@@ -29,8 +29,7 @@ if (!data) {
   // can come back as the author/admin. Returning a bare 404 here would
   // confuse authors who just toggled "private" in the editor.
   if (!isAuthenticated(pb)) {
-    const back = encodeURIComponent(`/posts/${id}`);
-    return Astro.redirect(`/login?back=${back}`);
+    return Astro.redirect(`/login?back=${encodeURIComponent(`/posts/${id}`)}`);
   }
   try {
     const raw = await pb.collection('posts').getOne<Post>(id);

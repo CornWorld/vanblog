@@ -3,7 +3,7 @@ export const prerender = false;
 
 import AdminLayout from '../../layouts/AdminLayout.astro';
 import ErrorNotice from '../../components/ErrorNotice.astro';
-import { requireAdmin, getAuthUser, safe } from '@vanblog/sdk';
+import { requireAdmin, safe } from '@vanblog/sdk';
 const pb = Astro.locals.pb;
 
 
@@ -23,7 +23,6 @@ const { data: users = [] } = denied ? { data: [] } : await safe(
 );
 
 // Last-admin guard
-const currentUserId = getAuthUser(pb)?.id;
 const adminCount = users.filter((u: any) => u.role === 'admin').length;
 ---
 <AdminLayout title="用户管理">
@@ -85,8 +84,9 @@ const adminCount = users.filter((u: any) => u.role === 'admin').length;
       ))}
     </tbody>
   </table>
-
-  <script define:vars={{ currentUserId, adminCount }}>
+<script is:inline type="application/json" id="users-data" set:html={JSON.stringify({ adminCount })} />
+  <script is:inline>
+    const { adminCount } = JSON.parse(document.getElementById('users-data').textContent);
     const pb = window.__pb;
 
     document.getElementById('new-user').addEventListener('submit', async (e) => {

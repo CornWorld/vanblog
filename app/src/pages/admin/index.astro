@@ -116,7 +116,7 @@ const totalPages = result?.totalPages ?? 1;
     </>
   )}
 
-  <script define:vars={{}}>
+  <script is:inline>
     document.querySelectorAll('a[data-del]').forEach((a) => {
       a.addEventListener('click', async (e) => {
         e.preventDefault();

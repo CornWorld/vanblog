@@ -6,12 +6,12 @@ import '../styles/global.css';
 // because post content is rendered server-side via markdown pipeline.
 import 'katex/dist/katex.css';
 import { stripMarkdown } from '@vanblog/sdk';
-import type { SiteConfig, Post } from '@vanblog/sdk';
+import type { Site, Post } from '@vanblog/sdk';
 
 interface Props {
   title: string;
   description?: string;
-  site?: Partial<SiteConfig>;
+  site?: Partial<Site>;
   post?: Post;
   path?: string; // e.g. "/posts/xxx"
 }
@@ -105,9 +105,9 @@ const pluginNavItems = allNavItems.filter((item) => item.position === 'header');
 
     <!-- Structured Data (JSON-LD) -->
     {post ? (
-      <script type="application/ld+json" set:html={JSON.stringify(articleSchema)} />
+      <script is:inline type="application/ld+json" set:html={JSON.stringify(articleSchema)} />
     ) : (
-      <script type="application/ld+json" set:html={JSON.stringify(websiteSchema)} />
+      <script is:inline type="application/ld+json" set:html={JSON.stringify(websiteSchema)} />
     )}
   </head>
   <body class="min-h-screen flex flex-col">

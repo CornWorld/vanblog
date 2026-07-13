@@ -8,7 +8,7 @@ const { initialContent = '', mediaConfig } = Astro.props
 <div id="bytemd-editor" data-initial={initialContent} style="height: calc(100vh - 200px);"></div>
 <input type="hidden" id="post-content" value={initialContent} />
 <div id="upload-status" aria-live="polite" style="position: fixed; bottom: 1rem; right: 1rem; max-width: 360px; font-size: 13px; color: #555; background: rgba(255,255,255,0.95); border: 1px solid #ddd; border-radius: 6px; padding: 8px 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: none; z-index: 100;"></div>
-{mediaConfig && <script type="application/json" id="media-config">{JSON.stringify(mediaConfig)}</script>}
+{mediaConfig && <script is:inline type="application/json" id="media-config">{JSON.stringify(mediaConfig)}</script>}
 
 <script>
   import { Editor } from 'bytemd';
