@@ -49,8 +49,8 @@ if (!data) {
       <h1>{data.title}</h1>
       <p><small>
         发表于 {fmtDate(data.created)}
-        {data.private && <span class="ml-2 text-[var(--color-text-muted)]">· 私有</span>}
-        {data.status !== 'published' && <span class="ml-2 text-[var(--color-text-muted)]">· {data.status}</span>}
+        {data.private && <span class="ml-2 text-[var(--text-muted)]">· 私有</span>}
+        {data.status !== 'published' && <span class="ml-2 text-[var(--text-muted)]">· {data.status}</span>}
       </small></p>
       <div set:html={html} />
     </article>

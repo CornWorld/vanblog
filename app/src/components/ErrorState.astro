@@ -7,14 +7,14 @@ interface Props {
 const { message = '加载失败，请稍后重试。', retryUrl } = Astro.props;
 ---
 <div class="py-12 text-center">
-  <p class="text-[var(--color-text-muted)] mb-4">{message}</p>
+  <p class="text-[var(--text-muted)] mb-4">{message}</p>
   {retryUrl && (
-    <a href={retryUrl} class="inline-flex items-center px-4 py-2 rounded-lg font-medium text-sm bg-[var(--color-accent)] text-white hover:opacity-90 transition-opacity">
+    <a href={retryUrl} class="btn-primary">
       重试
     </a>
   )}
   <button
-    class="inline-flex items-center px-4 py-2 rounded-lg font-medium text-sm bg-[var(--color-accent)] text-white hover:opacity-90 transition-opacity ml-2"
+    class="btn-primary ml-2"
     onclick="location.reload()"
   >
     刷新

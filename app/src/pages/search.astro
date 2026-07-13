@@ -22,31 +22,28 @@ const { data: results = [], error } = searched
       value={q}
       placeholder="输入关键词…"
       required
-      class="flex-1 min-w-0 px-4 py-2 rounded-lg border border-[var(--color-border)]
-             bg-[var(--color-surface)] text-[var(--color-text)]
-             focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]
-             dark:bg-[var(--color-surface-dark)] dark:border-[var(--color-border-dark)]"
+      class="flex-1 min-w-0 px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
     />
-    <button type="submit" class="inline-flex items-center px-4 py-2 rounded-lg font-medium text-sm bg-[var(--color-accent)] text-white hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed">搜索</button>
+    <button type="submit" class="btn-primary">搜索</button>
   </form>
 
   {error && <ErrorState />}
 
   {!error && searched && (
-    <p class="mb-4 text-[var(--color-text-muted)]">
-      关键词 "<strong class="text-[var(--color-text)]">{q}</strong>" 共 {results.length} 条结果。
+    <p class="mb-4 text-[var(--text-muted)]">
+      关键词 "<strong class="text-[var(--text)]">{q}</strong>" 共 {results.length} 条结果。
     </p>
   )}
 
   {!error && results.length > 0 && (
     <ul class="space-y-3">
       {results.map(r => (
-        <li class="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-6 transition-shadow hover:shadow-md dark:border-[var(--color-border-dark)] dark:bg-[var(--color-surface-dark)]">
-          <a href={`/posts/${r.id}`} class="font-medium text-[var(--color-text)] hover:text-[var(--color-accent)] no-underline">
+        <li class="card-post">
+          <a href={`/posts/${r.id}`} class="font-medium text-[var(--text)] hover:text-[var(--accent)] no-underline">
             {r.title}
           </a>
           {r.path && (
-            <span class="ml-2 text-sm text-[var(--color-text-muted)]">{r.path}</span>
+            <span class="ml-2 text-sm text-[var(--text-muted)]">{r.path}</span>
           )}
         </li>
       ))}
@@ -54,6 +51,6 @@ const { data: results = [], error } = searched
   )}
 
   {!error && searched && results.length === 0 && (
-    <p class="py-12 text-center text-[var(--color-text-muted)]">未找到匹配的文章。</p>
+    <p class="py-12 text-center text-[var(--text-muted)]">未找到匹配的文章。</p>
   )}
 </BaseLayout>

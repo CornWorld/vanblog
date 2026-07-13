@@ -33,13 +33,13 @@ const { data: trash = [] } = denied ? { data: [] } : await safe(
   ) : (
     <table class="w-full border-collapse">
       <thead>
-        <tr class="text-left border-b border-[var(--color-border)]">
+        <tr class="text-left border-b border-[var(--border)]">
           <th>标题</th><th>状态</th><th>删除时间</th><th>操作</th>
         </tr>
       </thead>
       <tbody>
         {trash.map(post => (
-          <tr data-id={post.id} class="border-b border-[var(--color-border)]">
+          <tr data-id={post.id} class="border-b border-[var(--border)]">
             <td>{post.title}</td>
             <td>{post.status}</td>
             <td>{fmtDateTime(post.updated)}</td>

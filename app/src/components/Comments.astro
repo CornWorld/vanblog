@@ -14,7 +14,7 @@ const { provider, config } = Astro.props;
 ---
 
 {provider === 'disabled' || !provider ? null : (
-  <div id="vanblog-comments" class="mt-8 pt-6 border-t border-[var(--color-border)]">
+  <div id="vanblog-comments" class="mt-8 pt-6 border-t border-[var(--border)]">
     {provider === 'waline' && (
       <>
         <link href="https://unpkg.com/@waline/client@v3/dist/waline.css" rel="stylesheet" />

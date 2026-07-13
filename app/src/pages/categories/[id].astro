@@ -25,29 +25,29 @@ const posts = result?.items ?? [];
 const error = !result;
 ---
 <BaseLayout title={cat.name} path={`/categories/${id}`}>
-  <a href="/categories" class="text-sm text-[var(--color-text-muted)] hover:text-[var(--color-accent)] mb-4 inline-block">
+  <a href="/categories" class="text-sm text-[var(--text-muted)] hover:text-[var(--accent)] mb-4 inline-block">
     ← 所有分类
   </a>
   <h1 class="mb-2">
     {cat.name}
-    <span class="text-sm font-normal text-[var(--color-text-muted)] ml-2">[{cat.type}]</span>
+    <span class="text-sm font-normal text-[var(--text-muted)] ml-2">[{cat.type}]</span>
   </h1>
 
   {error && <ErrorState />}
 
   {!error && posts.length === 0 && (
-    <p class="py-12 text-center text-[var(--color-text-muted)]">该分类下暂无文章。</p>
+    <p class="py-12 text-center text-[var(--text-muted)]">该分类下暂无文章。</p>
   )}
 
   {!error && posts.length > 0 && (
     <ul class="space-y-2 mt-6">
       {posts.map(p => (
         <li class="flex items-baseline gap-3">
-          <time class="text-sm text-[var(--color-text-muted)] whitespace-nowrap tabular-nums"
+          <time class="text-sm text-[var(--text-muted)] whitespace-nowrap tabular-nums"
                 datetime={p.created}>
             {fmtDate(p.created)}
           </time>
-          <a href={`/posts/${p.id}`} class="hover:text-[var(--color-accent)]">{p.title}</a>
+          <a href={`/posts/${p.id}`} class="hover:text-[var(--accent)]">{p.title}</a>
         </li>
       ))}
     </ul>

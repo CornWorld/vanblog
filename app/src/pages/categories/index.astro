@@ -18,16 +18,16 @@ const { data: cats = [], error } = await safe(
   {error && <ErrorState />}
 
   {!error && cats.length === 0 && (
-    <p class="py-12 text-center text-[var(--color-text-muted)]">暂无分类。</p>
+    <p class="py-12 text-center text-[var(--text-muted)]">暂无分类。</p>
   )}
 
   {!error && cats.length > 0 && (
     <ul class="grid grid-cols-1 sm:grid-cols-2 gap-3">
       {cats.map(c => (
         <li>
-          <a href={`/categories/${c.id}`} class="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-6 transition-shadow hover:shadow-md dark:border-[var(--color-border-dark)] dark:bg-[var(--color-surface-dark)] flex items-center gap-3 no-underline hover:border-[var(--color-accent)]">
-            <span class="font-medium text-[var(--color-text)]">{c.name}</span>
-            <span class="text-xs px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-[var(--color-text-muted)]">
+          <a href={`/categories/${c.id}`} class="card-post flex items-center gap-3 no-underline hover:border-[var(--accent)]">
+            <span class="font-medium text-[var(--text)]">{c.name}</span>
+            <span class="text-xs px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-[var(--text-muted)]">
               {c.type}
             </span>
             {c.private && (

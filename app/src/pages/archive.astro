@@ -29,20 +29,20 @@ const years = Object.keys(byYear).map(Number).sort((a, b) => b - a);
     error ? (
       <ErrorState />
     ) : years.length === 0 ? (
-      <p class="py-12 text-center text-[var(--color-text-muted)]">暂无文章。</p>
+      <p class="py-12 text-center text-[var(--text-muted)]">暂无文章。</p>
     ) : (
       <div class="space-y-8">
         {years.map(year => (
           <section>
-            <h2 class="text-2xl mb-4 pb-2 border-b border-[var(--color-border)]">{year}</h2>
+            <h2 class="text-2xl mb-4 pb-2 border-b border-[var(--border)]">{year}</h2>
             <ul class="space-y-2">
               {byYear[year].map(post => (
                 <li class="flex items-baseline gap-3">
-                  <time class="text-sm text-[var(--color-text-muted)] whitespace-nowrap tabular-nums"
+                  <time class="text-sm text-[var(--text-muted)] whitespace-nowrap tabular-nums"
                         datetime={post.created}>
                     {fmtDate(post.created)}
                   </time>
-                  <a href={`/posts/${post.id}`} class="hover:text-[var(--color-accent)]">{post.title}</a>
+                  <a href={`/posts/${post.id}`} class="hover:text-[var(--accent)]">{post.title}</a>
                 </li>
               ))}
             </ul>

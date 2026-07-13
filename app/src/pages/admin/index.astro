@@ -52,7 +52,7 @@ const totalPages = result?.totalPages ?? 1;
     {isAdmin && <a href="/admin/migrate">迁移</a>}
   </nav>
 
-  <p class="text-xs text-[var(--color-text-muted)]">
+  <p class="text-xs text-[var(--text-muted)]">
     当前用户：<strong>{user?.username}</strong> [{user?.role}]
     {user?.permissions && user.permissions.length > 0 && (
       <span> · 权限: {user.permissions.join(', ')}</span>
@@ -68,7 +68,7 @@ const totalPages = result?.totalPages ?? 1;
       <option value="hidden" selected={status === 'hidden'}>hidden</option>
     </select>
     <button type="submit">筛选</button>
-    {(q || status) && <a href="/admin" class="text-[var(--color-text-muted)]">清除</a>}
+    {(q || status) && <a href="/admin" class="text-[var(--text-muted)]">清除</a>}
   </form>
 
   {posts.length === 0 ? (
@@ -77,7 +77,7 @@ const totalPages = result?.totalPages ?? 1;
     <>
     <table class="w-full border-collapse">
       <thead>
-        <tr class="text-left border-b border-[var(--color-border)]">
+        <tr class="text-left border-b border-[var(--border)]">
           <th>标题</th>
           <th>状态</th>
           <th>更新时间</th>
@@ -86,7 +86,7 @@ const totalPages = result?.totalPages ?? 1;
       </thead>
       <tbody>
         {posts.map(post => (
-          <tr class="border-b border-[var(--color-border)]">
+          <tr class="border-b border-[var(--border)]">
             <td>{post.title}</td>
             <td>{post.status}</td>
             <td>{fmtDateTime(post.updated)}</td>
@@ -103,7 +103,7 @@ const totalPages = result?.totalPages ?? 1;
       </tbody>
     </table>
 
-    <p class="text-xs text-[var(--color-text-muted)] mt-2">
+    <p class="text-xs text-[var(--text-muted)] mt-2">
       共 {totalPosts} 篇 · 第 {page}/{totalPages} 页
     </p>
 

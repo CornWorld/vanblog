@@ -111,33 +111,33 @@ const pluginNavItems = allNavItems.filter((item) => item.position === 'header');
     )}
   </head>
   <body class="min-h-screen flex flex-col">
-    <header class="sticky top-0 z-10 border-b border-[var(--color-border)] bg-[var(--color-surface)] dark:bg-[var(--color-surface-dark)] backdrop-blur-sm">
+    <header class="sticky top-0 z-10 border-b border-[var(--border)] bg-[var(--surface)] backdrop-blur-sm">
       <div class="container-page flex items-center justify-between h-14 gap-4">
-        <a href="/" class="font-bold text-lg text-[var(--color-text)] dark:text-[var(--color-text-dark)] no-underline hover:opacity-80">
+        <a href="/" class="font-bold text-lg text-[var(--text)] no-underline hover:opacity-80">
           {siteName}
         </a>
-        <nav class="flex items-center gap-1 sm:gap-2 text-sm text-[var(--color-text)] dark:text-[var(--color-text-dark)]">
-          <a href="/" class="px-2 py-1 rounded hover:bg-[var(--color-border)] dark:hover:bg-[var(--color-border-dark)] transition-colors no-underline text-inherit">首页</a>
-          <a href="/archive" class="px-2 py-1 rounded hover:bg-[var(--color-border)] dark:hover:bg-[var(--color-border-dark)] transition-colors no-underline text-inherit">归档</a>
-          <a href="/timeline" class="px-2 py-1 rounded hover:bg-[var(--color-border)] dark:hover:bg-[var(--color-border-dark)] transition-colors no-underline text-inherit">时间轴</a>
-          <a href="/tags" class="px-2 py-1 rounded hover:bg-[var(--color-border)] dark:hover:bg-[var(--color-border-dark)] transition-colors no-underline text-inherit hidden sm:inline">标签</a>
-          <a href="/categories" class="px-2 py-1 rounded hover:bg-[var(--color-border)] dark:hover:bg-[var(--color-border-dark)] transition-colors no-underline text-inherit hidden sm:inline">分类</a>
-          <a href="/search" class="px-2 py-1 rounded hover:bg-[var(--color-border)] dark:hover:bg-[var(--color-border-dark)] transition-colors no-underline text-inherit">搜索</a>
+        <nav class="flex items-center gap-1 sm:gap-2 text-sm text-[var(--text)]">
+          <a href="/" class="nav-link">首页</a>
+          <a href="/archive" class="nav-link">归档</a>
+          <a href="/timeline" class="nav-link">时间轴</a>
+          <a href="/tags" class="nav-link hidden sm:inline">标签</a>
+          <a href="/categories" class="nav-link hidden sm:inline">分类</a>
+          <a href="/search" class="nav-link">搜索</a>
           {pluginNavItems.map((item) => (
-            <a href={item.path} class="px-2 py-1 rounded hover:bg-[var(--color-border)] dark:hover:bg-[var(--color-border-dark)] transition-colors no-underline text-inherit">{item.title}</a>
+            <a href={item.path} class="nav-link">{item.title}</a>
           ))}
           {hasAbout && (
-            <a href="/about" class="px-2 py-1 rounded hover:bg-[var(--color-border)] dark:hover:bg-[var(--color-border-dark)] transition-colors no-underline text-inherit hidden sm:inline">关于</a>
+            <a href="/about" class="nav-link hidden sm:inline">关于</a>
           )}
           {isLoggedIn ? (
-            <a href="/admin" class="px-2 py-1 rounded hover:bg-[var(--color-border)] dark:hover:bg-[var(--color-border-dark)] transition-colors no-underline text-inherit">管理</a>
+            <a href="/admin" class="nav-link">管理</a>
           ) : (
-            <a href="/login" class="px-2 py-1 rounded hover:bg-[var(--color-border)] dark:hover:bg-[var(--color-border-dark)] transition-colors no-underline text-inherit">登录</a>
+            <a href="/login" class="nav-link">登录</a>
           )}
           {isLoggedIn && (
-            <button id="logout-btn" type="button" class="px-2 py-1 rounded hover:bg-[var(--color-border)] dark:hover:bg-[var(--color-border-dark)] transition-colors text-inherit" aria-label="退出登录" title="退出登录">退出</button>
+            <button id="logout-btn" type="button" class="nav-link" aria-label="退出登录" title="退出登录">退出</button>
           )}
-          <button id="darkmode-toggle" class="ml-1 px-2 py-1 rounded hover:bg-[var(--color-border)] dark:hover:bg-[var(--color-border-dark)] transition-colors text-lg" aria-label="切换深色模式" title="切换深色/浅色模式">
+          <button id="darkmode-toggle" class="nav-link text-lg" aria-label="切换深色模式" title="切换深色/浅色模式">
             <span class="dark:hidden">🌙</span>
             <span class="hidden dark:inline">☀️</span>
           </button>
@@ -147,13 +147,13 @@ const pluginNavItems = allNavItems.filter((item) => item.position === 'header');
     <main class="flex-1 container-page py-8">
       <slot />
     </main>
-    <footer class="border-t border-[var(--color-border)] py-8 text-sm text-[var(--color-text-muted)]">
+    <footer class="border-t border-[var(--border)] py-8 text-sm text-[var(--text-muted)]">
       <div class="container-page flex flex-col sm:flex-row justify-between gap-4">
         <p>&copy; {new Date().getFullYear()} {siteName}. Powered by <a href="https://github.com/CornWorld/vanblog" class="underline">Vanblog</a>.</p>
         <p class="flex gap-4">
-          <a href="/api/feed.xml" class="hover:text-[var(--color-text)]">RSS</a>
-          <a href="/api/atom.xml" class="hover:text-[var(--color-text)]">Atom</a>
-          <a href="/api/sitemap.xml" class="hover:text-[var(--color-text)]">Sitemap</a>
+          <a href="/api/feed.xml" class="hover:text-[var(--text)]">RSS</a>
+          <a href="/api/atom.xml" class="hover:text-[var(--text)]">Atom</a>
+          <a href="/api/sitemap.xml" class="hover:text-[var(--text)]">Sitemap</a>
         </p>
       </div>
     </footer>

@@ -71,12 +71,12 @@ if (!notFound && !denied) {
   ) : (
     <ul class="list-none p-0 flex flex-col gap-3">
       {revs.map(r => (
-        <li class="border border-[var(--color-border)] p-3">
+        <li class="border border-[var(--border)] p-3">
           <div class="flex justify-between gap-4 flex-wrap">
             <strong>{r.reason || '(无原因)'}</strong>
-            <small class="text-[var(--color-text-muted)]">{fmtDateTime(r.created)}</small>
+            <small class="text-[var(--text-muted)]">{fmtDateTime(r.created)}</small>
           </div>
-          <div class="text-xs text-[var(--color-text-muted)] mt-1">
+          <div class="text-xs text-[var(--text-muted)] mt-1">
             by {r.authoredBy || '-'}
           </div>
           {r.snapshot && (

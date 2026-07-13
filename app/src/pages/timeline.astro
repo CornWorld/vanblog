@@ -17,7 +17,7 @@ const { data: entries = [], error } = await safe(
   {error && <ErrorState />}
 
   {!error && entries.length === 0 && (
-    <p class="py-12 text-center text-[var(--color-text-muted)]">暂无数据。</p>
+    <p class="py-12 text-center text-[var(--text-muted)]">暂无数据。</p>
   )}
 
   {!error && entries.length > 0 && (
@@ -26,19 +26,19 @@ const { data: entries = [], error } = await safe(
         <section>
           <h2 class="text-2xl mb-1">
             {year.year}
-            <small class="text-[var(--color-text-muted)] font-normal ml-2">({year.count})</small>
+            <small class="text-[var(--text-muted)] font-normal ml-2">({year.count})</small>
           </h2>
-          <div class="border-l-2 border-[var(--color-border)] dark:border-[var(--color-border-dark)] pl-6 ml-1 space-y-4">
+          <div class="border-l-2 border-[var(--border)] pl-6 ml-1 space-y-4">
             {year.months.map(m => (
               <div>
-                <h3 class="text-sm text-[var(--color-text-muted)] mb-2">
+                <h3 class="text-sm text-[var(--text-muted)] mb-2">
                   {year.year}.{String(m.month).padStart(2, '0')}
                   <span class="ml-1">({m.count})</span>
                 </h3>
                 <ul class="space-y-1">
                   {m.titles.map(t => (
                     <li>
-                      <a href={`/posts/${t.id}`} class="hover:text-[var(--color-accent)]">{t.title}</a>
+                      <a href={`/posts/${t.id}`} class="hover:text-[var(--accent)]">{t.title}</a>
                     </li>
                   ))}
                 </ul>

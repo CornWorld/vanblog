@@ -26,11 +26,11 @@ const { code, title, message } = Astro.props;
 
 <div class="py-12 text-center">
   {code && (
-    <div class="text-5xl font-bold text-[var(--color-text-muted)] mb-3">{code}</div>
+    <div class="text-5xl font-bold text-[var(--text-muted)] mb-3">{code}</div>
   )}
   <h1 class="text-xl font-semibold mb-2">{title}</h1>
   {message && (
-    <p class="text-sm text-[var(--color-text-muted)] mb-6 max-w-prose mx-auto">{message}</p>
+    <p class="text-sm text-[var(--text-muted)] mb-6 max-w-prose mx-auto">{message}</p>
   )}
-  <a href="/admin" class="inline-flex items-center px-4 py-2 rounded-lg font-medium text-sm bg-[var(--color-accent)] text-white hover:opacity-90 transition-opacity">返回管理</a>
+  <a href="/admin" class="btn-primary">返回管理</a>
 </div>

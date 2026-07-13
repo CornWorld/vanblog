@@ -59,7 +59,7 @@ const boolField = (k: keyof Site, def = false): boolean => {
     <p>未找到 site 记录（请确认数据库已初始化）。</p>
   ) : (
     <form id="site-form" class="flex flex-col gap-4 max-w-3xl">
-      <fieldset class="grid grid-cols-[160px_1fr] gap-2 items-center border border-[var(--color-border)] p-4">
+      <fieldset class="grid grid-cols-[160px_1fr] gap-2 items-center border border-[var(--border)] p-4">
         <legend>基本信息</legend>
         <label>站点名</label><input name="siteName" value={field('siteName')} class="px-1.5 py-0.5" />
         <label>站点描述</label><input name="siteDesc" value={field('siteDesc')} class="px-1.5 py-0.5" />
@@ -69,7 +69,7 @@ const boolField = (k: keyof Site, def = false): boolean => {
         <label>版权</label><input name="copyrightAggreement" value={field('copyrightAggreement')} class="px-1.5 py-0.5" />
       </fieldset>
 
-      <fieldset class="grid grid-cols-[160px_1fr] gap-2 items-center border border-[var(--color-border)] p-4">
+      <fieldset class="grid grid-cols-[160px_1fr] gap-2 items-center border border-[var(--border)] p-4">
         <legend>主题与评论</legend>
         <label>主题</label>
         <select name="theme">
@@ -123,7 +123,7 @@ const boolField = (k: keyof Site, def = false): boolean => {
         </div>
       </fieldset>
 
-      <fieldset class="flex flex-col gap-2 border border-[var(--color-border)] p-4">
+      <fieldset class="flex flex-col gap-2 border border-[var(--border)] p-4">
         <legend>关于页 / 自定义注入</legend>
         <label>关于页内容（Markdown）</label>
         <textarea name="aboutContent" rows="6" class="px-1.5 py-0.5 font-mono">{field('aboutContent')}</textarea>
@@ -133,7 +133,7 @@ const boolField = (k: keyof Site, def = false): boolean => {
         <textarea name="customScript" rows="3" class="px-1.5 py-0.5 font-mono">{field('customScript')}</textarea>
       </fieldset>
 
-      <fieldset class="grid grid-cols-[160px_1fr] gap-2 items-center border border-[var(--color-border)] p-4">
+      <fieldset class="grid grid-cols-[160px_1fr] gap-2 items-center border border-[var(--border)] p-4">
         <legend>修订</legend>
         <label>启用修订</label>
         <label><input type="checkbox" name="revisionsEnabled" checked={boolField('revisionsEnabled', true)} /> 启用</label>
@@ -143,7 +143,7 @@ const boolField = (k: keyof Site, def = false): boolean => {
 
       <div class="flex gap-4 items-center">
         <button type="submit">保存</button>
-        <small class="text-[var(--color-text-muted)]">仅保存上方字段；JSON 数组（nav/links/socials 等）请用 API 编辑</small>
+        <small class="text-[var(--text-muted)]">仅保存上方字段；JSON 数组（nav/links/socials 等）请用 API 编辑</small>
       </div>
     </form>
   )}

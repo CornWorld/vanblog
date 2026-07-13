@@ -46,13 +46,13 @@ const adminCount = users.filter((u: any) => u.role === 'admin').length;
 
   <table class="w-full border-collapse">
     <thead>
-      <tr class="text-left border-b border-[var(--color-border)]">
+      <tr class="text-left border-b border-[var(--border)]">
         <th>用户名</th><th>昵称</th><th>邮箱</th><th>角色</th><th>权限</th><th>操作</th>
       </tr>
     </thead>
     <tbody>
       {users.map((u: any) => (
-        <tr data-id={u.id} data-role={u.role} class="border-b border-[var(--color-border)]">
+        <tr data-id={u.id} data-role={u.role} class="border-b border-[var(--border)]">
           <td>{u.username}</td>
           <td><input class="f-nickname" value={u.nickname || ''} class="w-full" /></td>
           <td><small>{u.email}</small></td>

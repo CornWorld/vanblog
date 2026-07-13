@@ -25,13 +25,13 @@ const { data: tags = [] } = await safe(
 
   <table class="w-full border-collapse">
     <thead>
-      <tr class="text-left border-b border-[var(--color-border)]">
+      <tr class="text-left border-b border-[var(--border)]">
         <th>名称</th><th>slug</th><th>描述</th><th>操作</th>
       </tr>
     </thead>
     <tbody>
       {tags.map(t => (
-        <tr data-id={t.id} class="border-b border-[var(--color-border)]">
+        <tr data-id={t.id} class="border-b border-[var(--border)]">
           <td><input class="f-name" value={t.name} class="w-full" /></td>
           <td><input class="f-slug" value={t.slug || ''} class="w-full" /></td>
           <td><input class="f-desc" value={t.description || ''} class="w-full" /></td>

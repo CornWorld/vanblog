@@ -55,7 +55,7 @@ function expandName(a: any): string {
         <option value="failure" selected={resultQ === 'failure'}>失败</option>
       </select>
       <button type="submit">筛选</button>
-      {(action || resultQ) && <a href="/admin/audits" class="text-[var(--color-text-muted)]">清除</a>}
+      {(action || resultQ) && <a href="/admin/audits" class="text-[var(--text-muted)]">清除</a>}
     </form>
 
     {audits.length === 0 ? (
@@ -63,13 +63,13 @@ function expandName(a: any): string {
     ) : (
       <table class="w-full border-collapse text-xs">
         <thead>
-          <tr class="text-left border-b border-[var(--color-border)]">
+          <tr class="text-left border-b border-[var(--border)]">
             <th>时间</th><th>用户</th><th>动作</th><th>目标</th><th>结果</th><th>IP</th><th>详情</th>
           </tr>
         </thead>
         <tbody>
           {audits.map(a => (
-            <tr class="border-b border-[var(--color-border)] align-top">
+            <tr class="border-b border-[var(--border)] align-top">
               <td><small>{fmtDateTime(a.created)}</small></td>
               <td>{expandName(a)}</td>
               <td>{a.action}</td>
@@ -92,7 +92,7 @@ function expandName(a: any): string {
       </table>
     )}
 
-    <p class="text-xs text-[var(--color-text-muted)] mt-2">
+    <p class="text-xs text-[var(--text-muted)] mt-2">
       共 {totalAudits} 条 · 第 {page}/{totalPages} 页
     </p>
 
