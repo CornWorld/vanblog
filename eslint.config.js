@@ -29,13 +29,15 @@ export default [
       "**/.astro/**",
       "**/node_modules/**",
       "**/plugins/**",
-      "**/pb_hooks/**",
       "vault/internal/validation/models.js",
     ],
   },
-  // PB JSVM globals — available at runtime but not at lint time
+  // PB JSVM globals — available at runtime but not at lint time.
+  // Hook modules intentionally use PocketBase JSVM/CommonJS conventions
+  // (triple-slash local d.ts references, require/module.exports, empty catch
+  // probes), so keep those rules relaxed only for pb_hooks.
   {
-    files: ["**/*.pb.js"],
+    files: ["vault/pb_hooks/**/*.js"],
     languageOptions: {
       globals: {
         $app: "readonly",
@@ -60,9 +62,15 @@ export default [
         cronRemove: "readonly",
         console: "readonly",
         require: "readonly",
+        module: "readonly",
         Record: "readonly",
         Collection: "readonly",
       },
+    },
+    rules: {
+      "@typescript-eslint/triple-slash-reference": "off",
+      "@typescript-eslint/no-require-imports": "off",
+      "no-empty": "off",
     },
   },
 ];
