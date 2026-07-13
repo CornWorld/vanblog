@@ -3,7 +3,7 @@
 // Renders the appropriate comment widget based on site.commentsProvider.
 //
 // Props:
-//   provider: 'disabled' | 'artalk' | 'giscus' | 'external'
+//   provider: 'disabled' | 'waline' | 'artalk' | 'giscus' | 'external'
 //   config:  provider-specific configuration from site.commentsConfig
 
 export interface Props {
@@ -15,13 +15,27 @@ const { provider, config } = Astro.props;
 
 {provider === 'disabled' || !provider ? null : (
   <div id="vanblog-comments" class="mt-8 pt-6 border-t border-[var(--color-border)]">
+    {provider === 'waline' && (
+      <>
+        <link href="https://unpkg.com/@waline/client@v3/dist/waline.css" rel="stylesheet" />
+        <div id="waline-container"></div>
+        <script is:inline type="module" data-server-url={String(config?.serverURL || '')}>
+          import { init } from 'https://unpkg.com/@waline/client@v3/dist/waline.js';
+          const serverURL = document.currentScript.dataset.serverUrl;
+          init({ el: '#waline-container', serverURL, path: window.location.pathname, dark: 'html.dark' });
+        </script>
+      </>
+    )}
+
     {provider === 'artalk' && (
       <>
         <link href="https://unpkg.com/artalk/dist/Artalk.css" rel="stylesheet" />
         <div id="artalk-container"></div>
         <script is:inline src="https://unpkg.com/artalk/dist/Artalk.js"></script>
-        <script define:vars={{ server: String(config?.server || ''), site: String(config?.site || 'VanBlog') }}>
+        <script is:inline data-server={String(config?.server || '')} data-site={String(config?.site || 'VanBlog')}>
           (() => {
+            const server = document.currentScript.dataset.server;
+            const site = document.currentScript.dataset.site;
             const el = document.getElementById('artalk-container');
             if (!el || typeof Artalk === 'undefined') return;
             const getDark = () => document.documentElement.classList.contains('dark');
@@ -42,7 +56,7 @@ const { provider, config } = Astro.props;
     )}
 
     {provider === 'giscus' && (
-      <script
+      <script is:inline
         src="https://giscus.app/client.js"
         data-repo={String(config?.repo || '')}
         data-repo-id={String(config?.repoId || '')}

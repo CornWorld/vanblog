@@ -4,7 +4,7 @@ export const prerender = false;
 import AdminLayout from '../../layouts/AdminLayout.astro';
 import ErrorNotice from '../../components/ErrorNotice.astro';
 import { requireAdmin, safe } from '@vanblog/sdk';
-import type { SiteConfig } from '@vanblog/sdk';
+import type { Site } from '@vanblog/sdk';
 const pb = Astro.locals.pb;
 
 
@@ -12,11 +12,11 @@ const pb = Astro.locals.pb;
 const denied = !requireAdmin(pb);
 if (denied) Astro.response.status = 403;
 
-let site: Partial<SiteConfig> | null = null;
+let site: Partial<Site> | null = null;
 let tlsStatus: any = null;
 if (!denied) {
   const r = await safe(
-    () => pb.collection('site').getList<SiteConfig>(1, 1),
+    () => pb.collection('site').getList<Site>(1, 1),
     'admin/site'
   );
   site = r.data?.items?.[0] ?? null;
@@ -37,8 +37,8 @@ const tlsWarning =
     : '';
 
 const id = site?.id;
-const field = (k: keyof SiteConfig): string => site?.[k]?.toString() ?? '';
-const boolField = (k: keyof SiteConfig, def = false): boolean => {
+const field = (k: keyof Site): string => site?.[k]?.toString() ?? '';
+const boolField = (k: keyof Site, def = false): boolean => {
   const v = site?.[k];
   return v === undefined || v === null ? def : !!v;
 };
@@ -85,12 +85,16 @@ const boolField = (k: keyof SiteConfig, def = false): boolean => {
         </select>
         <label>评论 provider</label>
         <select name="commentsProvider" id="commentsProvider">
-          {['disabled', 'giscus', 'artalk', 'external'].map(t => (
+          {['disabled', 'waline', 'giscus', 'artalk', 'external'].map(t => (
             <option value={t} selected={field('commentsProvider') === t}>{t}</option>
           ))}
         </select>
 
         <!-- Provider-specific config fields (shown/hidden by JS) -->
+        <div id="comments-config-waline" class="comments-config-group col-span-2 grid grid-cols-subgrid gap-2 items-center" style="display:none">
+          <label>Waline Server URL</label>
+          <input name="waline_serverURL" placeholder="https://comment.example.com" class="px-1.5 py-0.5" />
+        </div>
         <div id="comments-config-artalk" class="comments-config-group col-span-2 grid grid-cols-subgrid gap-2 items-center" style="display:none">
           <label>Artalk Server</label>
           <input name="artalk_server" placeholder="https://comment.example.com" class="px-1.5 py-0.5" />
@@ -144,12 +148,15 @@ const boolField = (k: keyof SiteConfig, def = false): boolean => {
     </form>
   )}
 
-  <script define:vars={{ siteId: id, commentsConfigJson: JSON.stringify(site?.commentsConfig || {}) }}>
+  <script is:inline type="application/json" id="site-data" set:html={JSON.stringify({ siteId: id, commentsConfig: site?.commentsConfig || {} })} />
+  <script is:inline>
+    const { siteId, commentsConfig: commentsConfigJson } = JSON.parse(document.getElementById('site-data').textContent);
     const pb = window.__pb;
     if (siteId) {
       // ── Show/hide provider-specific config panels ──
       const providerSelect = document.getElementById('commentsProvider');
       const panels = {
+        waline: document.getElementById('comments-config-waline'),
         artalk: document.getElementById('comments-config-artalk'),
         giscus: document.getElementById('comments-config-giscus'),
         external: document.getElementById('comments-config-external'),
@@ -166,7 +173,10 @@ const boolField = (k: keyof SiteConfig, def = false): boolean => {
 
       // ── Pre-fill from existing commentsConfig ──
       try {
-        const existingConfig = JSON.parse(commentsConfigJson);
+        const existingConfig = commentsConfigJson;
+        if (existingConfig.serverURL) {
+          document.querySelector('[name="waline_serverURL"]')?.setAttribute('value', existingConfig.serverURL);
+        }
         if (existingConfig.server) {
           const s = document.querySelector('[name="artalk_server"]'); if (s) s.value = existingConfig.server;
           const n = document.querySelector('[name="artalk_site"]'); if (n) n.value = existingConfig.site || '';
@@ -193,7 +203,11 @@ const boolField = (k: keyof SiteConfig, def = false): boolean => {
 
         // Build commentsConfig from visible fields
         let commentsConfig = {};
-        if (provider === 'artalk') {
+        if (provider === 'waline') {
+          commentsConfig = {
+            serverURL: fd.get('waline_serverURL') || '',
+          };
+        } else if (provider === 'artalk') {
           commentsConfig = {
             server: fd.get('artalk_server') || '',
             site: fd.get('artalk_site') || 'VanBlog',

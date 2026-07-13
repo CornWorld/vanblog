@@ -228,25 +228,25 @@ img:delete, all
 
 **设计**:v1 过度归一化(5 张表),v2 回归**单表 + JSON 字段**,对齐原项目 Meta 单文档模型。永远只有一行(id=1)。
 
-| 字段               | pb 类型                                        | 原字段                                      | 说明                                                    |
-| ------------------ | ---------------------------------------------- | ------------------------------------------- | ------------------------------------------------------- |
-| `info`             | json                                           | `Meta.siteInfo` 标量字段                    | 站点基本信息                                            |
-| `theme`            | select(default/minimal/magazine/custom)        | —                                           | 主题                                                    |
-| `commentsProvider` | select(disabled/waline/giscus/artalk/external) | `siteInfo.enableComment`                    | 评论 provider                                           |
-| `commentsConfig`   | json                                           | —                                           | waline serverUrl / giscus repo 等                       |
-| `analyticsScript`  | text                                           | `siteInfo.gaAnalysisId` + `baiduAnalysisId` | 改为完整 script 注入                                    |
-| `nav`              | json                                           | `Meta.menus[]`                              | 导航菜单数组                                            |
-| `links`            | json                                           | `Meta.links[]`                              | 友链数组                                                |
-| `socials`          | json                                           | `Meta.socials[]`                            | 社交数组                                                |
-| `rewards`          | json                                           | `Meta.rewards[]`                            | 打赏数组                                                |
-| `about`            | json                                           | `Meta.about`                                | `{ content, updatedAt }`                                |
-| `customize`        | json                                           | `Setting.layout`                            | `{ head, css, html, script }`                           |
-| `imageConfig`      | json                                           | `Setting.static` 部分                       | `{ enableWatermark, watermarkText, enableWebp }`        |
-| `routing`          | json                                           | —                                           | 新增:自定义路由/反代规则                                |
-| `allowedDomains`   | json                                           | `Setting.https`                             | Caddy on-demand TLS 白名单(prod/dev 镜像)               |
-| `revisions`        | json                                           | —                                           | 新增:应用内历史配置 `{ enabled, retention }`            |
-| `output`           | json                                           | —                                           | 新增:markdown 导出配置 `{ enabled, format, dest, ... }` |
-| `sync`             | json                                           | —                                           | 新增:外部 git 同步 `{ enabled, remote, schedule, ... }` |
+| 字段               | pb 类型                                        | 原字段                                      | 说明                                                                                                                                                           |
+| ------------------ | ---------------------------------------------- | ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `info`             | json                                           | `Meta.siteInfo` 标量字段                    | 站点基本信息                                                                                                                                                   |
+| `theme`            | select(default/minimal/magazine/custom)        | —                                           | 主题                                                                                                                                                           |
+| `commentsProvider` | select(disabled/waline/giscus/artalk/external) | `siteInfo.enableComment`                    | 评论 provider                                                                                                                                                  |
+| `commentsConfig`   | json                                           | —                                           | provider-specific 配置：waline `{ serverURL }`、artalk `{ server, site }`、giscus `{ repo, repoId, category, categoryId, theme }`、external `{ customScript }` |
+| `analyticsScript`  | text                                           | `siteInfo.gaAnalysisId` + `baiduAnalysisId` | 改为完整 script 注入                                                                                                                                           |
+| `nav`              | json                                           | `Meta.menus[]`                              | 导航菜单数组                                                                                                                                                   |
+| `links`            | json                                           | `Meta.links[]`                              | 友链数组                                                                                                                                                       |
+| `socials`          | json                                           | `Meta.socials[]`                            | 社交数组                                                                                                                                                       |
+| `rewards`          | json                                           | `Meta.rewards[]`                            | 打赏数组                                                                                                                                                       |
+| `about`            | json                                           | `Meta.about`                                | `{ content, updatedAt }`                                                                                                                                       |
+| `customize`        | json                                           | `Setting.layout`                            | `{ head, css, html, script }`                                                                                                                                  |
+| `imageConfig`      | json                                           | `Setting.static` 部分                       | `{ enableWatermark, watermarkText, enableWebp }`                                                                                                               |
+| `routing`          | json                                           | —                                           | 新增:自定义路由/反代规则                                                                                                                                       |
+| `allowedDomains`   | json                                           | `Setting.https`                             | Caddy on-demand TLS 白名单(prod/dev 镜像)                                                                                                                      |
+| `revisions`        | json                                           | —                                           | 新增:应用内历史配置 `{ enabled, retention }`                                                                                                                   |
+| `output`           | json                                           | —                                           | 新增:markdown 导出配置 `{ enabled, format, dest, ... }`                                                                                                        |
+| `sync`             | json                                           | —                                           | 新增:外部 git 同步 `{ enabled, remote, schedule, ... }`                                                                                                        |
 
 **`info` JSON 结构**(来自原 `siteInfo`,消除 `'true'/'false'` 字符串):
 
