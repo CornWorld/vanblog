@@ -1,14 +1,12 @@
-import type PocketBase from 'pocketbase';
+import type PocketBase from "pocketbase";
 import type {
-  Post,
   TimelineEntry,
   SearchResult,
   TLSStatus,
   MigrationResult,
   TrashEntry,
-  SiteConfig,
-  RouteRule,
-} from './types';
+} from "./types";
+import type { Post, PostExpand, RouteRule, Site } from "./models";
 
 // PocketBase js-sdk's send() parses non-JSON responses into objects.
 // For feed/sitemap (XML) endpoints we use raw fetch to get the text.
@@ -20,13 +18,13 @@ async function fetchText(pb: PocketBase, path: string): Promise<string> {
 
 /** Strip markdown and HTML from content, truncating to max characters. */
 export function stripMarkdown(md: string | undefined, max = 160): string {
-  if (!md) return '';
+  if (!md) return "";
   const text = md
-    .replace(/<[^>]*>/g, '')
-    .replace(/[#*_`~[\]()!>-]/g, '')
-    .replace(/\n+/g, ' ')
+    .replace(/<[^>]*>/g, "")
+    .replace(/[#*_`~[\]()!>-]/g, "")
+    .replace(/\n+/g, " ")
     .trim();
-  return text.length > max ? text.slice(0, max) + '...' : text;
+  return text.length > max ? text.slice(0, max) + "..." : text;
 }
 
 // Vanblog built-in services, same level as pb's collection(), files(), etc.
@@ -61,21 +59,28 @@ export interface VanblogServices {
     import(data: unknown): Promise<MigrationResult>;
   };
   posts: {
-    /** Public listing: published, non-deleted posts with pagination. */
-    listPublished(page: number, perPage: number, opts?: {
-      category?: string;
-      tag?: string;
-      sort?: string;
-      expand?: string;
-      fields?: string;
-    }): Promise<{ items: Post[]; totalItems: number; totalPages: number }>;
+    listPublished(
+      page: number,
+      perPage: number,
+      opts?: {
+        category?: string;
+        tag?: string;
+        sort?: string;
+        expand?: string;
+        fields?: string;
+      }
+    ): Promise<{
+      items: PostExpand[];
+      totalItems: number;
+      totalPages: number;
+    }>;
     trash(): Promise<TrashEntry[]>;
     restore(id: string): Promise<void>;
     purge(id: string): Promise<void>;
   };
   site: {
-    get(): Promise<SiteConfig | null>;
-    update(id: string, patch: Partial<SiteConfig>): Promise<SiteConfig>;
+    get(): Promise<Site | null>;
+    update(id: string, patch: Partial<Site>): Promise<Site>;
   };
   media: {
     delete(id: string): Promise<void>;
@@ -106,7 +111,7 @@ export interface VanblogServices {
       items: Array<{
         created: string;
         action: string;
-        result: 'success' | 'failure';
+        result: "success" | "failure";
         detail?: Record<string, unknown>;
         actorName?: string;
       }>;
@@ -125,15 +130,25 @@ export interface VanblogServices {
     // running Caddy. On push failure, the DB is rolled back to its
     // pre-replace value and the response carries ok=false + rolled_back=true
     // + a non-empty error string.
-    replace(rules: RouteRule[], allowlist: string[]): Promise<{
+    replace(
+      rules: RouteRule[],
+      allowlist: string[]
+    ): Promise<{
       ok: boolean;
       applied: boolean;
       restart_needed: boolean;
       rolled_back?: boolean;
       error?: string;
     }>;
-    validate(rule: RouteRule, allowlist?: string[]): Promise<{ ok: boolean; error?: string }>;
-    apply(): Promise<{ applied: boolean; restart_needed: boolean; error?: string }>;
+    validate(
+      rule: RouteRule,
+      allowlist?: string[]
+    ): Promise<{ ok: boolean; error?: string }>;
+    apply(): Promise<{
+      applied: boolean;
+      restart_needed: boolean;
+      error?: string;
+    }>;
   };
 }
 
@@ -149,37 +164,48 @@ export type VanblogClient = PocketBase & {
 export function createVanblogServices(pb: PocketBase): VanblogServices {
   return {
     feed: {
-      rss: () => fetchText(pb, '/api/feed.xml'),
-      atom: () => fetchText(pb, '/api/atom.xml'),
-      sitemap: () => fetchText(pb, '/api/sitemap.xml'),
+      rss: () => fetchText(pb, "/api/feed.xml"),
+      atom: () => fetchText(pb, "/api/atom.xml"),
+      sitemap: () => fetchText(pb, "/api/sitemap.xml"),
     },
     setup: {
       status: () =>
-        pb.send('/api/vanblog/setup/status', { method: 'GET' }) as Promise<{ bootstrap: boolean }>,
+        pb.send("/api/vanblog/setup/status", { method: "GET" }) as Promise<{
+          bootstrap: boolean;
+        }>,
       complete: (req) =>
-        pb.send('/api/vanblog/setup/complete', { method: 'POST', body: req }) as Promise<{
+        pb.send("/api/vanblog/setup/complete", {
+          method: "POST",
+          body: req,
+        }) as Promise<{
           ok: boolean;
           adminId?: string;
           error?: string;
         }>,
     },
     timeline: {
-      list: () => pb.send('/api/vanblog/timeline', { method: 'GET' }) as Promise<TimelineEntry[]>,
+      list: () =>
+        pb.send("/api/vanblog/timeline", { method: "GET" }) as Promise<
+          TimelineEntry[]
+        >,
     },
     search: {
       query: (q: string, opts?: { limit?: number }) =>
-        pb.send('/api/vanblog/search', {
-          method: 'GET',
+        pb.send("/api/vanblog/search", {
+          method: "GET",
           params: { q, ...(opts?.limit ? { limit: opts.limit } : {}) },
         }) as Promise<SearchResult[]>,
     },
     tls: {
-      status: () => pb.send('/api/vanblog/tls/status', { method: 'GET' }) as Promise<TLSStatus>,
+      status: () =>
+        pb.send("/api/vanblog/tls/status", {
+          method: "GET",
+        }) as Promise<TLSStatus>,
     },
     migrate: {
       import: (data: unknown) =>
-        pb.send('/api/vanblog/migrate/import', {
-          method: 'POST',
+        pb.send("/api/vanblog/migrate/import", {
+          method: "POST",
           body: data,
         }) as Promise<MigrationResult>,
     },
@@ -188,79 +214,89 @@ export function createVanblogServices(pb: PocketBase): VanblogServices {
         let filter = 'status = "published" && deleted = false';
         if (opts?.category) filter += ` && category = "${opts.category}"`;
         if (opts?.tag) filter += ` && tags ?= "${opts.tag}"`;
-        return pb.collection('posts').getList<Post>(page, perPage, {
+        return pb.collection("posts").getList<PostExpand>(page, perPage, {
           filter,
-          sort: opts?.sort || '-created',
+          sort: opts?.sort || "-created",
           expand: opts?.expand,
           fields: opts?.fields,
         });
       },
       trash: () =>
-        pb.send('/api/vanblog/posts/trash', { method: 'GET' }) as Promise<TrashEntry[]>,
+        pb.send("/api/vanblog/posts/trash", { method: "GET" }) as Promise<
+          TrashEntry[]
+        >,
       restore: (id: string) =>
         pb.send(`/api/vanblog/posts/${id}/restore`, {
-          method: 'POST',
+          method: "POST",
         }) as Promise<void>,
       purge: (id: string) =>
         pb.send(`/api/vanblog/posts/${id}/purge`, {
-          method: 'POST',
+          method: "POST",
         }) as Promise<void>,
     },
     site: {
-      get: async (): Promise<SiteConfig | null> => {
-        const res = await pb.collection('site').getList<SiteConfig>(1, 1);
+      get: async (): Promise<Site | null> => {
+        const res = await pb.collection("site").getList<Site>(1, 1);
         return res.items[0] ?? null;
       },
-      update: (id: string, patch: Partial<SiteConfig>) =>
-        pb.collection('site').update<SiteConfig>(id, patch),
+      update: (id: string, patch: Partial<Site>) =>
+        pb.collection("site").update<Site>(id, patch),
     },
     media: {
       delete: (id: string) =>
-        pb.send(`/api/vanblog/media/${id}`, { method: 'DELETE' }) as Promise<void>,
+        pb.send(`/api/vanblog/media/${id}`, {
+          method: "DELETE",
+        }) as Promise<void>,
     },
     categories: {
       delete: (id: string) =>
-        pb.send(`/api/vanblog/categories/${id}`, { method: 'DELETE' }) as Promise<void>,
+        pb.send(`/api/vanblog/categories/${id}`, {
+          method: "DELETE",
+        }) as Promise<void>,
     },
     tags: {
       delete: (id: string) =>
-        pb.send(`/api/vanblog/tags/${id}`, { method: 'DELETE' }) as Promise<void>,
+        pb.send(`/api/vanblog/tags/${id}`, {
+          method: "DELETE",
+        }) as Promise<void>,
     },
     users: {
       delete: (id: string) =>
-        pb.send(`/api/vanblog/users/${id}`, { method: 'DELETE' }) as Promise<void>,
+        pb.send(`/api/vanblog/users/${id}`, {
+          method: "DELETE",
+        }) as Promise<void>,
     },
     routing: {
       list: () =>
-        pb.send('/api/vanblog/routing/rules', { method: 'GET' }) as Promise<{
+        pb.send("/api/vanblog/routing/rules", { method: "GET" }) as Promise<{
           rules: RouteRule[];
           allowlist: string[];
         }>,
       status: () =>
-        pb.send('/api/vanblog/routing/status', { method: 'GET' }) as Promise<{
+        pb.send("/api/vanblog/routing/status", { method: "GET" }) as Promise<{
           caddyLastError?: string;
           caddy_reachable: boolean;
           pending_rules: number;
         }>,
       audits: () =>
-        pb.send('/api/vanblog/routing/audits', { method: 'GET' }) as Promise<{
+        pb.send("/api/vanblog/routing/audits", { method: "GET" }) as Promise<{
           items: Array<{
             created: string;
             action: string;
-            result: 'success' | 'failure';
+            result: "success" | "failure";
             detail?: Record<string, unknown>;
             actorName?: string;
           }>;
         }>,
       render: () =>
-        pb.send('/api/vanblog/routing/render', { method: 'GET' }) as Promise<{
+        pb.send("/api/vanblog/routing/render", { method: "GET" }) as Promise<{
           userRoutes: Record<string, unknown>[];
           fullConfig?: Record<string, unknown>;
           error?: string;
         }>,
       replace: (rules, allowlist) =>
-        pb.send('/api/vanblog/routing/rules', {
-          method: 'PUT',
+        pb.send("/api/vanblog/routing/rules", {
+          method: "PUT",
           body: { rules, allowlist },
         }) as Promise<{
           ok: boolean;
@@ -270,14 +306,18 @@ export function createVanblogServices(pb: PocketBase): VanblogServices {
           error?: string;
         }>,
       validate: (rule, allowlist = []) =>
-        pb.send('/api/vanblog/routing/validate', {
-          method: 'POST',
+        pb.send("/api/vanblog/routing/validate", {
+          method: "POST",
           body: { rule, allowlist },
         }) as Promise<{ ok: boolean; error?: string }>,
       apply: () =>
-        pb.send('/api/vanblog/routing/apply', {
-          method: 'POST',
-        }) as Promise<{ applied: boolean; restart_needed: boolean; error?: string }>,
+        pb.send("/api/vanblog/routing/apply", {
+          method: "POST",
+        }) as Promise<{
+          applied: boolean;
+          restart_needed: boolean;
+          error?: string;
+        }>,
     },
   };
 }

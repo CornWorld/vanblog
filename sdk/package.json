@@ -3,28 +3,31 @@
   "version": "0.1.0",
   "description": "Vanblog SDK — PocketBase JS SDK with vanblog service namespaces",
   "type": "module",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
   "exports": {
     ".": {
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "import": "./src/index.ts",
+      "types": "./src/index.ts"
     },
     "./server": {
-      "import": "./dist/server.js",
-      "types": "./dist/server.d.ts"
+      "import": "./src/server.ts",
+      "types": "./src/server.ts"
     },
     "./browser": {
-      "import": "./dist/browser.js",
-      "types": "./dist/browser.d.ts"
+      "import": "./src/browser.ts",
+      "types": "./src/browser.ts"
     }
   },
   "scripts": {
-    "build": "tsc",
-    "dev": "tsc --watch"
+    "build": "echo 'SDK is built in-tree via app Vite (noExternal); no standalone build needed' && exit 0",
+    "dev": "echo 'SDK is built in-tree via app Vite (noExternal); no standalone build needed' && exit 0",
+    "test:models:types": "tsc --noEmit --strict --target ES2022 --module ESNext --moduleResolution bundler --skipLibCheck src/models/models.fixtures.ts",
+    "test:models:fixtures": "vite build --config models.fixtures.config.mjs && node .tmp/models-fixtures/models.fixtures.cjs; status=$?; rm -rf .tmp/models-fixtures; exit $status"
   },
   "dependencies": {
-    "pocketbase": "^0.26.0"
+    "pocketbase": "^0.26.0",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "typescript": "^5.7.0"

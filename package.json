@@ -6,7 +6,10 @@
   "scripts": {
     "dev": "pnpm --filter vanblog-app dev",
     "build": "pnpm --filter vanblog-app build",
-    "build:sdk": "pnpm --filter sdk build",
+    "build:sdk": "echo 'SDK built in-tree via Vite noExternal' && exit 0",
+    "test:models:types": "pnpm --filter @vanblog/sdk test:models:types",
+    "test:models:fixtures": "pnpm --filter @vanblog/sdk test:models:fixtures",
+    "build:models": "vite build --config models.config.mjs",
     "build:all": "pnpm --filter sdk build && pnpm --filter vanblog-app build",
     "preview": "pnpm --filter vanblog-app preview"
   },
@@ -21,6 +24,7 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "eslint": "^10.6.0",
-    "typescript-eslint": "^8.62.1"
+    "typescript-eslint": "^8.62.1",
+    "vite": "^7.3.6"
   }
 }

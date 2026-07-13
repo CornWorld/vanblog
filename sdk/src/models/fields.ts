@@ -1,0 +1,163 @@
+import { z } from "zod";
+
+// ── Navigation items ──────────────────────────────────────────────────
+
+export const NavItemSchema = z.object({
+  name: z.string(),
+  value: z.string(),
+  level: z.number(),
+});
+export type NavItem = z.infer<typeof NavItemSchema>;
+
+// ── Friend links ──────────────────────────────────────────────────────
+
+export const LinkItemSchema = z.object({
+  name: z.string(),
+  url: z.string(),
+  desc: z.string().optional(),
+  logo: z.string().optional(),
+});
+export type LinkItem = z.infer<typeof LinkItemSchema>;
+
+// ── Social links ──────────────────────────────────────────────────────
+
+export const SocialItemSchema = z.object({
+  type: z.string(),
+  value: z.string(),
+});
+export type SocialItem = z.infer<typeof SocialItemSchema>;
+
+// ── Reward QR codes ───────────────────────────────────────────────────
+
+export const RewardItemSchema = z.object({
+  name: z.string(),
+  value: z.string(),
+});
+export type RewardItem = z.infer<typeof RewardItemSchema>;
+
+// ── Media normalization config ────────────────────────────────────────
+
+export const MediaConfigSchema = z.object({
+  enabled: z.boolean(),
+  targetFormat: z.enum(["webp", "avif", "preserve"]),
+  quality: z.number().int().min(1).max(100),
+});
+export type MediaConfig = z.infer<typeof MediaConfigSchema>;
+
+// ── Comments provider config (discriminated union) ────────────────────
+
+export const CommentsProviderSchema = z.enum([
+  "disabled",
+  "waline",
+  "artalk",
+  "giscus",
+  "external",
+]);
+export const DisabledCommentsConfigSchema = z.object({}).strict();
+export const WalineConfigSchema = z
+  .object({ serverURL: z.string().min(1) })
+  .strict();
+export const ArtalkConfigSchema = z
+  .object({
+    server: z.string().min(1),
+    site: z.string().optional(),
+  })
+  .strict();
+export const GiscusConfigSchema = z
+  .object({
+    repo: z.string().min(1),
+    repoId: z.string().min(1),
+    category: z.string().min(1),
+    categoryId: z.string().min(1),
+    theme: z
+      .enum([
+        "preferred_color_scheme",
+        "light",
+        "dark",
+        "light_tritanopia",
+        "dark_tritanopia",
+      ])
+      .optional(),
+  })
+  .strict();
+export const ExternalConfigSchema = z
+  .object({ customScript: z.string() })
+  .strict();
+export const CommentsProviderConfigSchemas = {
+  disabled: DisabledCommentsConfigSchema,
+  waline: WalineConfigSchema,
+  artalk: ArtalkConfigSchema,
+  giscus: GiscusConfigSchema,
+  external: ExternalConfigSchema,
+} as const;
+export const CommentsConfigSchema = z.union([
+  CommentsProviderConfigSchemas.disabled,
+  CommentsProviderConfigSchemas.waline,
+  CommentsProviderConfigSchemas.artalk,
+  CommentsProviderConfigSchemas.giscus,
+  CommentsProviderConfigSchemas.external,
+]);
+export type CommentsConfig = z.infer<typeof CommentsConfigSchema>;
+
+export const DisplayOptionsSchema = z.object({
+  showAdminButton: z.boolean(),
+  showSubMenu: z.boolean(),
+  subMenuOffset: z.number(),
+  headerLeftContent: z.enum(["siteLogo", "siteName"]),
+  showDonateInfo: z.boolean(),
+  showFriends: z.boolean(),
+  showCopyRight: z.boolean(),
+  showDonateButton: z.boolean(),
+  showDonateInAbout: z.boolean(),
+  allowOpenHiddenPostByUrl: z.boolean(),
+  showRSS: z.boolean(),
+  openArticleLinksInNewWindow: z.boolean(),
+  showExpirationReminder: z.boolean(),
+  showEditButton: z.boolean(),
+});
+export const OutputConfigSchema = z.object({
+  format: z.enum(["markdown", "html"]),
+  naming: z.string().optional(),
+  include: z.array(z.string()).optional(),
+  trigger: z.enum(["onUpdate", "manual"]),
+});
+export const SyncConfigSchema = z.object({
+  branch: z.string(),
+  schedule: z.string(),
+  sshKey: z.string().optional(),
+});
+const S3OptionalFieldsSchema = z.object({
+  bucket: z.string().optional(),
+  region: z.string().optional(),
+  endpoint: z.string().optional(),
+  accessKey: z.string().optional(),
+  secret: z.string().optional(),
+  forcePathStyle: z.boolean().optional(),
+});
+export const S3ConfigSchema = z.union([
+  S3OptionalFieldsSchema.extend({ enabled: z.literal(false) }).strict(),
+  z
+    .object({
+      enabled: z.literal(true),
+      bucket: z.string().trim().min(1),
+      region: z.string().trim().min(1),
+      endpoint: z.url(),
+      accessKey: z.string().trim().min(1),
+      secret: z.string().trim().min(1),
+      forcePathStyle: z.boolean().optional(),
+    })
+    .strict(),
+]);
+
+// ── Routing rules ─────────────────────────────────────────────────────
+// Matches Go UserRule struct
+
+export const RouteRuleSchema = z.object({
+  id: z.string(),
+  type: z.enum(["proxy", "redirect", "rewrite", "block", "cache"]),
+  from: z.string(),
+  to: z.string(),
+  code: z.number().optional(),
+  headers: z.record(z.string(), z.string()).optional(),
+});
+export type RouteRule = z.infer<typeof RouteRuleSchema>;

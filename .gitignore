@@ -18,6 +18,9 @@ package-lock.json
 sdk/dist/
 app/dist/
 
+# Generated CJS bundle embedded by Go (run pnpm build:models before Go builds)
+vault/internal/validation/models.js
+
 # pb data (local dev)
 pb_data/
 
