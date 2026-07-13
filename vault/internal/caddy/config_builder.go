@@ -94,6 +94,10 @@ const (
 	logWriterOutput = "file"
 	logFilename     = "/var/log/caddy.log"
 
+	// Caddy talks to PB over the private loopback binding. This is not an
+	// externally configurable upstream: docs/lessons-learned.md §5.2 and
+	// docs/deployment-strategy.md §2.1 require external traffic to enter via
+	// Caddy, while PB itself stays on 127.0.0.1:8090.
 	askEndpoint = "http://127.0.0.1:8090/api/hooks/caddy/ask"
 
 	// Internal endpoints (trusted; bypass SSRF validation by design).
