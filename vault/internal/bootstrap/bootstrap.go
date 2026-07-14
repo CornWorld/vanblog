@@ -116,7 +116,16 @@ func CreateFirstAdmin(app core.App, req SetupReq) error {
 	rec.Set("passwordConfirm", req.PasswordConfirm)
 
 	if err := app.Save(rec); err != nil {
-		return fmt.Errorf("bootstrap: failed to save admin record: %w", err)
+		// PB 0.39 JSVM hooks (onRecordAfterCreateSuccess on "users") can fail
+		// with "Invalid module" — likely a Goja module resolution issue inside
+		// the pooled VM context. The record IS persisted to the DB despite the
+		// hook error (PB saves before firing After*Success hooks).
+		// Check if the admin was actually saved; if so, continue to
+		// createSuperuser instead of aborting.
+		if !HasAdmin(app) {
+			return fmt.Errorf("bootstrap: failed to save admin record: %w", err)
+		}
+		log.Printf("[bootstrap] warning: admin record saved but hook reported error: %v", err)
 	}
 
 	// --- _superusers (same email/password, non-fatal) ---
