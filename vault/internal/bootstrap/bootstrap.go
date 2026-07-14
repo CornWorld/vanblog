@@ -69,6 +69,11 @@ func HasAdmin(app core.App) bool {
 // The record is written with Dao directly (not the public collection
 // API), so users.createRule does not apply. This is the same authority
 // level pb uses internally for migrations.
+//
+// Alongside the users.admin record, a PB _superusers record is created
+// with the same email/password so the operator can access /_/ without a
+// separate CLI step. PB's internal hook auto-deletes the placeholder
+// __pbinstaller@example.com once this real superuser is saved.
 func CreateFirstAdmin(app core.App, req SetupReq) error {
 	if HasAdmin(app) {
 		return errors.New("bootstrap: an admin already exists; setup is closed")
@@ -92,6 +97,7 @@ func CreateFirstAdmin(app core.App, req SetupReq) error {
 		return errors.New("bootstrap: password must be at least 8 characters")
 	}
 
+	// --- users.admin ---
 	col, err := app.FindCollectionByNameOrId("users")
 	if err != nil {
 		return fmt.Errorf("bootstrap: users collection not found: %w", err)
@@ -111,6 +117,35 @@ func CreateFirstAdmin(app core.App, req SetupReq) error {
 
 	if err := app.Save(rec); err != nil {
 		return fmt.Errorf("bootstrap: failed to save admin record: %w", err)
+	}
+
+	// --- _superusers (same email/password, non-fatal) ---
+	if err := createSuperuser(app, email, req.Password); err != nil {
+		log.Printf("[bootstrap] warning: failed to create _superusers record: %v", err)
+	}
+
+	return nil
+}
+
+// createSuperuser creates a PB _superusers record with the given email and password.
+// This is intentionally non-fatal in CreateFirstAdmin — the blog admin (/admin/)
+// works regardless, and operators can fall back to `vanblog superuser upsert` CLI.
+func createSuperuser(app core.App, email, password string) error {
+	supCol, err := app.FindCollectionByNameOrId(core.CollectionNameSuperusers)
+	if err != nil {
+		return fmt.Errorf("_superusers collection not found: %w", err)
+	}
+
+	// Upsert: if a record with this email already exists, update its password.
+	sup, fErr := app.FindAuthRecordByEmail(supCol, email)
+	if fErr != nil {
+		sup = core.NewRecord(supCol)
+	}
+	sup.SetEmail(email)
+	sup.SetPassword(password)
+
+	if err := app.Save(sup); err != nil {
+		return fmt.Errorf("failed to save _superusers record: %w", err)
 	}
 	return nil
 }
