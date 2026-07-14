@@ -239,9 +239,9 @@ func recordValues(vm *goja.Runtime, record *core.Record) (*goja.Object, error) {
 }
 
 func shouldSkipCollection(collection *core.Collection) bool {
-	// Skip system collections and auth collections — auth records have
-	// hidden fields (password hash, tokenKey) that Goja cannot serialize
-	// and that Zod schemas do not cover.
+	// Skip system collections and auth collections. Auth records have
+	// hidden fields (password hash, tokenKey) and internal module
+	// validation that is incompatible with Goja-based Zod validation.
 	return collection.System || collection.IsAuth()
 }
 
