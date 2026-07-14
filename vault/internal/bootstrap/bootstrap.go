@@ -27,6 +27,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
 
@@ -146,24 +147,34 @@ func (m *Manager) handleStatus(e *core.RequestEvent) error {
 // to /login (we do not auto-login because the auth cookie machinery
 // expects a real auth-with-password call to set the token correctly).
 func (m *Manager) handleComplete(e *core.RequestEvent) error {
+	traceID, _ := e.Get("trace_id").(string)
+
 	var req SetupReq
 	if err := readJSON(e, &req); err != nil {
+		log.Printf("[trace=%s] setup/complete: bad request body: %v", traceID, err)
 		return e.JSON(http.StatusBadRequest, map[string]any{
-			"ok":    false,
-			"error": err.Error(),
+			"ok":      false,
+			"error":   "Invalid request body",
+			"traceId": traceID,
 		})
 	}
 
 	if err := CreateFirstAdmin(m.app, req); err != nil {
-		// Distinguish "already has admin" (409 conflict) from validation
-		// errors (400). The former is the security-relevant case.
+		// Log the FULL error chain to Docker logs — this is the only place
+		// where the complete detail (including wrapped inner errors from
+		// validation hooks, PocketBase Save, etc.) is available.
+		log.Printf("[trace=%s] setup/complete: CreateFirstAdmin failed: %+v", traceID, err)
+
 		status := http.StatusBadRequest
 		if strings.Contains(err.Error(), "already exists") {
 			status = http.StatusConflict
 		}
+		// Return a safe, minimal message to the client. The traceId lets
+		// operators correlate this response with the detailed log line above.
 		return e.JSON(status, map[string]any{
-			"ok":    false,
-			"error": err.Error(),
+			"ok":      false,
+			"error":   "Setup failed. See server logs for details.",
+			"traceId": traceID,
 		})
 	}
 
@@ -173,9 +184,11 @@ func (m *Manager) handleComplete(e *core.RequestEvent) error {
 		id = recs[0].Id
 	}
 
+	log.Printf("[trace=%s] setup/complete: admin created id=%s", traceID, id)
 	return e.JSON(http.StatusOK, map[string]any{
 		"ok":      true,
 		"adminId": id,
+		"traceId": traceID,
 	})
 }
 

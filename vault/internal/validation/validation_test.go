@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"testing/fstest"
 
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tests"
@@ -140,5 +141,72 @@ func TestRealSchemaInvalidPayloadIncludesFieldPath(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "title:") {
 		t.Fatalf("expected field path in validation error, got %v", err)
+	}
+}
+
+func TestPackSourceLoadsSchemaFromFS(t *testing.T) {
+	bundle := `exports.models = { custom: { safeParse: function () { return { success: true }; } } };`
+	p := PackSource{
+		FS:   fstest.MapFS{"schema.js": {Data: []byte(bundle)}},
+		Name: "test-pack",
+	}
+	data, err := p.Load()
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	prog, err := compileProgram(string(data))
+	if err != nil {
+		t.Fatalf("compile: %v", err)
+	}
+	keys, err := modelKeys(prog)
+	if err != nil {
+		t.Fatalf("loadModels: %v", err)
+	}
+	if len(keys) != 1 || keys[0] != "custom" {
+		t.Fatalf("unexpected model keys: %v", keys)
+	}
+}
+
+func TestPackSourceMissingSchemaReturnsErrNotExist(t *testing.T) {
+	p := PackSource{
+		FS:   fstest.MapFS{"pack.json": {Data: []byte(`{}`)}},
+		Name: "test-pack",
+	}
+	if _, err := p.Load(); err == nil {
+		t.Fatal("expected error for missing schema.js")
+	}
+}
+
+func TestResolveModelSourceFallsBackToEmbedded(t *testing.T) {
+	packs := []PackSource{
+		{FS: fstest.MapFS{"pack.json": {Data: []byte(`{}`)}}, Name: "no-schema"},
+	}
+	source := ResolveModelSource(packs)
+	if _, ok := source.(EmbeddedSource); !ok {
+		t.Fatalf("expected EmbeddedSource, got %T", source)
+	}
+}
+
+func TestResolveModelSourcePicksFirstPackWithSchema(t *testing.T) {
+	bundle := `exports.models = { frompack: { safeParse: function () { return { success: true }; } } };`
+	packs := []PackSource{
+		{FS: fstest.MapFS{"pack.json": {Data: []byte(`{}`)}}, Name: "no-schema"},
+		{FS: fstest.MapFS{"schema.js": {Data: []byte(bundle)}}, Name: "with-schema"},
+		{FS: fstest.MapFS{"schema.js": {Data: []byte(bundle)}}, Name: "also-with-schema"},
+	}
+	source := ResolveModelSource(packs)
+	ps, ok := source.(PackSource)
+	if !ok {
+		t.Fatalf("expected PackSource, got %T", source)
+	}
+	if ps.Name != "with-schema" {
+		t.Fatalf("expected with-schema, got %s", ps.Name)
+	}
+}
+
+func TestResolveModelSourceEmptyPacksFallsBackToEmbedded(t *testing.T) {
+	source := ResolveModelSource(nil)
+	if _, ok := source.(EmbeddedSource); !ok {
+		t.Fatalf("expected EmbeddedSource for empty packs, got %T", source)
 	}
 }

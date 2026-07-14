@@ -109,7 +109,11 @@ if (alreadySetup) {
         // 4xx (validation) and 409 (already exists) both land here.
         // pb SDK throws on non-2xx with the server's error body.
         const msg = err?.response?.message || err?.message || '请求失败';
-        errEl.textContent = '创建失败：' + msg;
+        const traceId = err?.response?.headers?.get?.('X-Trace-Id')
+          || r?.traceId || '';
+        errEl.textContent = traceId
+          ? `创建失败：${msg}（追踪号：${traceId}）`
+          : `创建失败：${msg}`;
         errEl.classList.remove('hidden');
         statusEl.textContent = '';
       }

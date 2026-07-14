@@ -184,6 +184,8 @@ A control-plane builder can later combine resolved Pack `schema.ts` files into o
 
 Pack v0 introduces the source boundary and tests fallback behavior. It does not yet execute arbitrary user TypeScript or hot-install third-party schemas.
 
+**Phase 3 status (implemented)**: `validation.PackSource` reads a pre-compiled `schema.js` CJS bundle from a Pack's `fs.FS`. `ResolveModelSource` picks the first Pack that contains `schema.js`, falling back to `EmbeddedSource` when none is found. Registration happens inside `OnServe` so the resolved Pack set is available before `OnRecordValidate` is bound. Pack authors produce `schema.js` through the dev-image builder (same Vite pipeline as `models.config.mjs`). The production runtime never compiles TypeScript from Pack source.
+
 ## PocketBase resources
 
 ### Migrations

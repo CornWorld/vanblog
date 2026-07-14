@@ -21,7 +21,7 @@ func TestStageHooksCopiesCoreTreeAndBuiltinHook(t *testing.T) {
 	for path, want := range map[string]string{
 		"core.pb.js":                       "core",
 		"lib/helper.js":                    "helper",
-		"pack--bookmarks--bookmarks.pb.js": "onRecordBeforeCreateRequest",
+		"pack--bookmarks--bookmarks.pb.js": "onRecordCreateRequest",
 	} {
 		got, err := os.ReadFile(filepath.Join(destination, filepath.FromSlash(path)))
 		if err != nil || !strings.Contains(string(got), want) {

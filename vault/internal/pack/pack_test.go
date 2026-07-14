@@ -29,7 +29,7 @@ func TestBuiltinOnly(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read builtin hook: %v", err)
 	}
-	if strings.Contains(string(hook), "$vanblog.servePlugin") || !strings.Contains(string(hook), "onRecordBeforeCreateRequest") {
+	if strings.Contains(string(hook), "$vanblog.servePlugin") || !strings.Contains(string(hook), "onRecordCreateRequest") {
 		t.Fatalf("unexpected builtin hook: %s", hook)
 	}
 }

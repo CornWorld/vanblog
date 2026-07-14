@@ -7,6 +7,8 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"io/fs"
+	"log"
 	"sort"
 	"strings"
 
@@ -31,10 +33,58 @@ func (EmbeddedSource) Load() ([]byte, error) {
 	return []byte(modelsScript), nil
 }
 
+// PackSource loads a pre-compiled schema.js CJS bundle from a Pack's filesystem.
+// The bundle must export `models` in the same format as the embedded models.js.
+// If the Pack does not contain schema.js, Load returns fs.ErrNotExist so the
+// caller can fall back to EmbeddedSource.
+type PackSource struct {
+	FS   fs.FS
+	Name string
+}
+
+func (s PackSource) Load() ([]byte, error) {
+	return fs.ReadFile(s.FS, "schema.js")
+}
+
+// ResolveModelSource returns the first Pack that contains a schema.js bundle,
+// or EmbeddedSource{} if no Pack provides one. Packs are checked in sorted
+// order (same order produced by pack.Resolve).
+func ResolveModelSource(packs []PackSource) ModelSource {
+	for _, p := range packs {
+		if _, err := fs.Stat(p.FS, "schema.js"); err == nil {
+			return p
+		}
+	}
+	return EmbeddedSource{}
+}
+
+// gojaPrelude provides missing ES builtins that the Zod bundle relies on.
+// Goja does not ship a URL constructor, so Zod v4's z.url() crashes with
+// "URL is not defined". The polyfill performs structural validation that is
+// sufficient for record validation — it is not a full WHATWG URL implementation.
+const gojaPrelude = `globalThis.exports = {};class File {};globalThis.module = {exports: globalThis.exports};
+if (typeof globalThis.URL === "undefined") {
+  globalThis.URL = function URL(input) {
+    if (typeof input !== "string") { throw new TypeError("URL input must be a string"); }
+    var s = input.trim();
+    var m = /^([a-z][a-z0-9+.-]*):\/\/([^\/\?#]*)([^\?#]*)?(\?[^#]*)?(#.*)?$/i.exec(s);
+    if (!m) { throw new TypeError("Invalid URL: " + input); }
+    this.href = s;
+    this.protocol = m[1] + ":";
+    this.host = m[2];
+    this.hostname = m[2].split(":")[0];
+    this.pathname = m[3] || "/";
+    this.search = m[4] || "";
+    this.hash = m[5] || "";
+    this.origin = m[1] + "://" + m[2];
+  };
+}
+`
+
 func compileProgram(script string) (*goja.Program, error) {
 	return goja.Compile(
 		"models.js",
-		"globalThis.exports = {};class File {};globalThis.module = {exports: globalThis.exports};\n"+script,
+		gojaPrelude+script,
 		false,
 	)
 }
@@ -189,7 +239,10 @@ func recordValues(vm *goja.Runtime, record *core.Record) (*goja.Object, error) {
 }
 
 func shouldSkipCollection(collection *core.Collection) bool {
-	return collection.System
+	// Skip system collections and auth collections — auth records have
+	// hidden fields (password hash, tokenKey) that Goja cannot serialize
+	// and that Zod schemas do not cover.
+	return collection.System || collection.IsAuth()
 }
 
 // Register attaches strict Zod validation using the embedded model bundle.
@@ -231,6 +284,12 @@ func RegisterWithSource(app core.App, source ModelSource) error {
 			return err
 		}
 		if err := validateModel(vm, models, collection.Name, values); err != nil {
+			// Log the collection name, record ID, and validation error so
+			// Docker logs always contain the full diagnostic regardless of
+			// whether the save originated from an HTTP request or internal
+			// code (migrations, JSVM hooks, repl).
+			log.Printf("validation error: collection=%s record=%s err=%v",
+				collection.Name, event.Record.Id, err)
 			return err
 		}
 		return event.Next()

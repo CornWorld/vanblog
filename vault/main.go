@@ -24,6 +24,7 @@ import (
 	"github.com/cornworld/vanblog/internal/packcli"
 	"github.com/cornworld/vanblog/internal/revisions"
 	"github.com/cornworld/vanblog/internal/schema"
+	"github.com/cornworld/vanblog/internal/traceid"
 	"github.com/cornworld/vanblog/internal/validation"
 	"github.com/cornworld/vanblog/internal/visits"
 	_ "github.com/cornworld/vanblog/pb_migrations"
@@ -59,52 +60,89 @@ func main() {
 		log.Fatalf("release private Pack runtime directory reservation: %v", err)
 	}
 	staging := filepath.Join(privateRuntimeDir, "pb_hooks")
-	app.OnServe().BindFunc(func(event *core.ServeEvent) error {
-		coreHooksDir := hooksDir
-		if coreHooksDir == "" {
-			coreHooksDir = "pb_hooks"
-			if _, err := os.Stat(coreHooksDir); err != nil {
-				coreHooksDir = "/pb_hooks"
-			}
+
+	// --- Pack resolution and hook staging (before JSVM registration) ---
+	// jsvm.MustRegister calls registerHooks() immediately, which reads HooksDir.
+	// We must resolve and stage hooks BEFORE that call so JSVM sees the files.
+	coreHooksDir := hooksDir
+	if coreHooksDir == "" {
+		coreHooksDir = "pb_hooks"
+		if _, err := os.Stat(coreHooksDir); err != nil {
+			coreHooksDir = "/pb_hooks"
 		}
-		builtins, err := pack.Builtins(os.DirFS(builtinPacksDir))
+	}
+	builtins, err := pack.Builtins(os.DirFS(builtinPacksDir))
+	if err != nil {
+		log.Fatalf("load builtin packs: %v", err)
+	}
+	var locals []pack.Pack
+	if packsDir != "" {
+		locals, err = pack.DiscoverLocal(packsDir)
 		if err != nil {
-			return err
+			log.Fatalf("load local packs: %v", err)
 		}
-		var locals []pack.Pack
-		if packsDir != "" {
-			locals, err = pack.DiscoverLocal(packsDir)
-			if err != nil {
-				return err
-			}
-		}
-		resolved, err := pack.Resolve(builtins, locals)
-		if err != nil {
-			return err
-		}
-		if err := pack.ValidateV0(resolved); err != nil {
-			return err
-		}
-		loadable, warnings, err := pack.RuntimeLoadableV0(resolved)
-		if err != nil {
-			return err
-		}
-		for _, warning := range warnings {
-			log.Printf("[vanblog] warning: pack %s skipped: %s; run vanblog pack build with the dev image", warning.Pack, warning.Reason)
-		}
-		if packRuntimeDir != "" {
-			staging = filepath.Join(packRuntimeDir, "pb_hooks")
-		}
-		if err := pack.StageHooks(coreHooksDir, loadable, staging); err != nil {
-			return err
-		}
-		return event.Next()
-	})
+	}
+	resolved, err := pack.Resolve(builtins, locals)
+	if err != nil {
+		log.Fatalf("resolve packs: %v", err)
+	}
+	if err := pack.ValidateV0(resolved); err != nil {
+		log.Fatalf("validate packs: %v", err)
+	}
+	loadable, warnings, err := pack.RuntimeLoadableV0(resolved)
+	if err != nil {
+		log.Fatalf("runtime loadability check: %v", err)
+	}
+	for _, warning := range warnings {
+		log.Printf("[vanblog] warning: pack %s skipped: %s; run vanblog pack build with the dev image", warning.Pack, warning.Reason)
+	}
+	if packRuntimeDir != "" {
+		staging = filepath.Join(packRuntimeDir, "pb_hooks")
+	}
+	if err := pack.StageHooks(coreHooksDir, loadable, staging); err != nil {
+		log.Fatalf("stage hooks: %v", err)
+	}
+
 	jsvm.MustRegister(app, jsvm.Config{
 		MigrationsDir: migrationsDir,
 		HooksDir:      staging,
 		HooksWatch:    hooksWatch,
 		HooksPoolSize: hooksPool,
+	})
+
+	// Loadable packs captured for OnServe schema resolution.
+	loadablePacks := loadable
+
+	app.OnServe().BindFunc(func(event *core.ServeEvent) error {
+		// Trace ID middleware: generates a request ID, stores it in the
+		// event data store (e.Get / e.Set), and sets the X-Trace-Id
+		// response header for client-side correlation.
+		event.Router.BindFunc(func(e *core.RequestEvent) error {
+			// Always generate server-side. We do NOT trust X-Request-ID from
+			// clients — accepting external input opens log injection and
+			// trace collision vectors for no benefit in a blog system.
+			// Reverse proxies that need their own request ID can log it
+			// independently in their access logs.
+			id := traceid.Generate()
+			e.Set("trace_id", id)
+			e.Response.Header().Set("X-Trace-Id", id)
+			return e.Next()
+		})
+
+		// Resolve schema source: prefer Pack-provided schema.js, fall back to embedded.
+		var packSources []validation.PackSource
+		for _, p := range loadablePacks {
+			packSources = append(packSources, validation.PackSource{FS: p.FS, Name: p.Name})
+		}
+		modelSource := validation.ResolveModelSource(packSources)
+		if err := validation.RegisterWithSource(app, modelSource); err != nil {
+			return err
+		}
+
+		// Disable PocketBase's default browser opening behavior.
+		event.InstallerFunc = nil
+
+		return event.Next()
 	})
 
 	migratecmd.MustRegister(app, app.RootCmd, migratecmd.Config{
@@ -116,11 +154,11 @@ func main() {
 	// Each manager registers its own pb hooks (events + routes + startup
 	// init) in its constructor. Order only affects same-event Bind order;
 	// no cross-manager dependency.
+	// jsvm.MustRegister is called inside OnServe after StageHooks.
 	_ = revisions.New(app)
 	_ = schema.New(app)
-	if err := validation.Register(app); err != nil {
-		log.Fatal(err)
-	}
+	// validation.RegisterWithSource is now called inside OnServe after Pack
+	// resolution, so it can use Pack-provided schema.js when available.
 	_ = visits.New(app)
 	_ = media.New(app)
 	_ = article.New(app)
