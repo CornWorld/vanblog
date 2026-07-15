@@ -35,6 +35,12 @@ func New(app core.App) *Manager {
 		se.Router.DELETE("/api/vanblog/categories/{id}", m.handleDeleteCategory)
 		se.Router.DELETE("/api/vanblog/tags/{id}", m.handleDeleteTag)
 		se.Router.DELETE("/api/vanblog/users/{id}", m.handleDeleteUser)
+
+		se.Router.GET("/api/vanblog/backups", m.handleListBackups)
+		se.Router.POST("/api/vanblog/backups", m.handleCreateBackup)
+		se.Router.GET("/api/vanblog/backups/{key}/download", m.handleDownloadBackup)
+		se.Router.DELETE("/api/vanblog/backups/{key}", m.handleDeleteBackup)
+		se.Router.POST("/api/vanblog/backups/{key}/restore", m.handleRestoreBackup)
 		return se.Next()
 	})
 	return m

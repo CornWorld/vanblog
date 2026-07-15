@@ -1,0 +1,198 @@
+---
+export const prerender = false;
+
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import { getAuthUser, safe, fmtDateTime } from '@vanblog/sdk';
+import type { BackupFile } from '@vanblog/sdk';
+
+const pb = Astro.locals.pb;
+const isAdmin = getAuthUser(pb)?.role === 'admin';
+const { data: backupsResult, error: listError } = isAdmin
+  ? await safe(() => pb.vanblog.backups.list(), 'admin/backups')
+  : { data: undefined, error: false };
+const backups: BackupFile[] = backupsResult ?? [];
+
+function fmtBytes(bytes: number): string {
+  if (!Number.isFinite(bytes) || bytes < 0) return '-';
+  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+  let value = bytes;
+  let unit = 0;
+  while (value >= 1024 && unit < units.length - 1) {
+    value /= 1024;
+    unit++;
+  }
+  return `${value.toFixed(unit === 0 ? 0 : 1)} ${units[unit]}`;
+}
+---
+
+<AdminLayout title="数据备份">
+  <h1>数据备份</h1>
+  <p><a href="/admin">← 返回管理</a></p>
+
+  {!isAdmin ? (
+    <p>仅管理员可访问。</p>
+  ) : (
+    <div class="flex flex-col gap-5 max-w-5xl">
+      <section class="border border-amber-500/60 bg-amber-50 dark:bg-amber-950/20 p-4 rounded">
+        <h2 class="text-lg font-semibold mb-2">使用前须知</h2>
+        <ul class="list-disc list-inside text-sm space-y-1">
+          <li>这里创建的是 PocketBase 在线数据快照，不替代 <code>vanblog.sh backup</code> 的整卷备份和异地容灾。</li>
+          <li>外部媒体 S3 bucket 不包含在此备份中，必须单独设置版本控制或异地备份。</li>
+          <li>创建和恢复建议预留至少约 2 倍 <code>pb_data</code> 的可用空间；创建期间写操作可能短暂等待。</li>
+          <li>恢复会替换当前数据并重启服务。恢复后当前登录状态可能失效。</li>
+        </ul>
+      </section>
+
+      <section class="border border-[var(--border)] p-4 rounded">
+        <div class="flex items-center gap-3 flex-wrap">
+          <button id="btn-create-backup" type="button">创建备份</button>
+          <span id="backup-status" class="text-sm text-[var(--text-muted)]" aria-live="polite"></span>
+        </div>
+      </section>
+
+      <section class="border border-[var(--border)] p-4 rounded overflow-x-auto">
+        <h2 class="text-lg font-semibold mb-3">备份列表</h2>
+        {listError ? (
+          <p class="text-red-600 dark:text-red-400">备份列表加载失败，请检查服务端日志。</p>
+        ) : backups.length === 0 ? (
+          <p id="empty-backups">暂无备份。</p>
+        ) : (
+          <table class="w-full border-collapse" id="backup-table">
+            <thead>
+              <tr class="text-left border-b border-[var(--border)]">
+                <th class="py-2 pr-4">文件</th>
+                <th class="py-2 pr-4">大小</th>
+                <th class="py-2 pr-4">创建时间</th>
+                <th class="py-2">操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              {backups.map((backup) => (
+                <tr class="border-b border-[var(--border)]" data-backup-row data-key={backup.key}>
+                  <td class="py-2 pr-4"><code class="break-all">{backup.key}</code></td>
+                  <td class="py-2 pr-4 whitespace-nowrap">{fmtBytes(backup.size)}</td>
+                  <td class="py-2 pr-4 whitespace-nowrap">{fmtDateTime(backup.modified)}</td>
+                  <td class="py-2">
+                    <div class="flex gap-2 flex-wrap">
+                      <button type="button" class="btn-download-backup" data-key={backup.key}>下载</button>
+                      <button type="button" class="btn-delete-backup text-red-600" data-key={backup.key}>删除</button>
+                      <button type="button" class="btn-restore-backup text-red-700 dark:text-red-400" data-key={backup.key}>恢复</button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </section>
+    </div>
+  )}
+
+  <script is:inline data-is-admin={isAdmin}>
+    const isAdmin = document.currentScript.dataset.isAdmin === 'true';
+    const status = document.getElementById('backup-status');
+    const allActionButtons = () => Array.from(document.querySelectorAll('#btn-create-backup, .btn-download-backup, .btn-delete-backup, .btn-restore-backup'));
+
+    function setBusy(busy, message = '') {
+      allActionButtons().forEach((button) => { button.disabled = busy; });
+      if (status) status.textContent = message;
+    }
+
+    function errorMessage(error) {
+      return error?.response?.error || error?.response?.message || error?.message || '未知错误';
+    }
+
+    document.getElementById('btn-create-backup')?.addEventListener('click', async () => {
+      const pb = window.__pb;
+      if (!isAdmin || !pb) return alert('管理员登录已失效，请重新登录');
+      setBusy(true, '正在创建备份，请勿关闭页面…');
+      try {
+        await pb.vanblog.backups.create();
+        setBusy(false, '备份创建成功，正在刷新列表…');
+        location.reload();
+      } catch (error) {
+        setBusy(false, '创建失败：' + errorMessage(error));
+      }
+    });
+
+    document.querySelectorAll('.btn-download-backup[data-key]').forEach((button) => {
+      button.addEventListener('click', async () => {
+        const key = button.dataset.key;
+        const pb = window.__pb;
+        if (!key || !pb) return alert('管理员登录已失效，请重新登录');
+        setBusy(true, '正在准备安全下载链接…');
+        try {
+          const url = await pb.vanblog.backups.downloadUrl(key);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = key;
+          document.body.append(link);
+          link.click();
+          link.remove();
+          setBusy(false, '下载已开始');
+        } catch (error) {
+          setBusy(false, '下载失败：' + errorMessage(error));
+        }
+      });
+    });
+
+    document.querySelectorAll('.btn-delete-backup[data-key]').forEach((button) => {
+      button.addEventListener('click', async () => {
+        const key = button.dataset.key;
+        if (!key || !confirm(`确认永久删除备份 ${key}？该操作不可撤销。`)) return;
+        const pb = window.__pb;
+        if (!pb) return alert('管理员登录已失效，请重新登录');
+        setBusy(true, '正在删除备份…');
+        try {
+          await pb.vanblog.backups.delete(key);
+          button.closest('[data-backup-row]')?.remove();
+          setBusy(false, '备份已删除');
+          if (!document.querySelector('[data-backup-row]')) location.reload();
+        } catch (error) {
+          setBusy(false, '删除失败：' + errorMessage(error));
+        }
+      });
+    });
+
+    document.querySelectorAll('.btn-restore-backup[data-key]').forEach((button) => {
+      button.addEventListener('click', async () => {
+        const key = button.dataset.key;
+        if (!key) return;
+        if (!confirm(`恢复 ${key} 将覆盖当前数据并重启服务。\n\n确认继续？`)) return;
+        const typed = prompt(`这是不可逆的危险操作。请输入备份文件名以确认：\n${key}`);
+        if (typed !== key) return alert('文件名不匹配，已取消恢复');
+        const pb = window.__pb;
+        if (!pb) return alert('管理员登录已失效，请重新登录');
+
+        setBusy(true, '恢复请求已提交，等待服务重启…');
+        try {
+          await pb.vanblog.backups.restore(key);
+        } catch (error) {
+          console.warn('[backups] restore request interrupted:', error);
+        }
+        await waitForRestart();
+      });
+    });
+
+    async function waitForRestart() {
+      const deadline = Date.now() + 120000;
+      let observedDown = false;
+      let healthyChecks = 0;
+      while (Date.now() < deadline) {
+        try {
+          const response = await fetch('/api/health', { cache: 'no-store' });
+          if (response.ok) healthyChecks++;
+          if (response.ok && (observedDown || healthyChecks >= 4)) {
+            if (status) status.textContent = '服务已恢复，正在重新加载…';
+            location.href = '/admin/backups';
+            return;
+          }
+        } catch (_) {
+          observedDown = true;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+      }
+      setBusy(false, '尚未确认服务恢复。请检查容器日志，然后手动刷新或重新登录。');
+    }
+  </script>
+</AdminLayout>

@@ -8,7 +8,7 @@ export type { CreateClientOptions } from "./client";
 export * from "./models";
 
 // Vanblog custom types (Go routes + JSON field shapes)
-export type { VanblogClient, VanblogServices } from "./services";
+export type { BackupFile, VanblogClient, VanblogServices } from "./services";
 export type {
   TimelineEntry,
   SearchResult,

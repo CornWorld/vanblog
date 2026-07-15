@@ -28,6 +28,12 @@ export function stripMarkdown(md: string | undefined, max = 160): string {
 }
 
 // Vanblog built-in services, same level as pb's collection(), files(), etc.
+export interface BackupFile {
+  key: string;
+  size: number;
+  modified: string;
+}
+
 export interface VanblogServices {
   // setup is the first-run bootstrap flow. status() reports whether any
   // admin exists yet; complete() claims the first admin slot. Refuses
@@ -93,6 +99,13 @@ export interface VanblogServices {
   };
   users: {
     delete(id: string): Promise<void>;
+  };
+  backups: {
+    list(): Promise<BackupFile[]>;
+    create(): Promise<{ key: string }>;
+    downloadUrl(key: string): Promise<string>;
+    delete(key: string): Promise<void>;
+    restore(key: string): Promise<{ accepted: boolean; key: string }>;
   };
   routing: {
     list(): Promise<{ rules: RouteRule[]; allowlist: string[] }>;
@@ -265,6 +278,31 @@ export function createVanblogServices(pb: PocketBase): VanblogServices {
         pb.send(`/api/vanblog/users/${id}`, {
           method: "DELETE",
         }) as Promise<void>,
+    },
+    backups: {
+      list: () =>
+        pb.send("/api/vanblog/backups", { method: "GET" }) as Promise<
+          BackupFile[]
+        >,
+      create: () =>
+        pb.send("/api/vanblog/backups", { method: "POST" }) as Promise<{
+          key: string;
+        }>,
+      downloadUrl: async (key: string) => {
+        const token = await pb.files.getToken();
+        const url = pb.buildUrl(
+          `/api/vanblog/backups/${encodeURIComponent(key)}/download`
+        );
+        return `${url}?token=${encodeURIComponent(token)}`;
+      },
+      delete: (key: string) =>
+        pb.send(`/api/vanblog/backups/${encodeURIComponent(key)}`, {
+          method: "DELETE",
+        }) as Promise<void>,
+      restore: (key: string) =>
+        pb.send(`/api/vanblog/backups/${encodeURIComponent(key)}/restore`, {
+          method: "POST",
+        }) as Promise<{ accepted: boolean; key: string }>,
     },
     routing: {
       list: () =>
