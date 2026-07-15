@@ -486,7 +486,7 @@ Implemented results:
 - The minimal `Pack{Name, Version, FS, Source}` kernel, builtin Bookmarks Pack source, deterministic local discovery, whole-Pack replacement, inspection, source validation and add CLI are in place.
 - Local Packs are snapshotted into an immutable in-memory `fs.FS`; symlinks, invalid paths, oversized resources and directory/name mismatches fail closed.
 - Hook staging preserves the core hook tree, namespaces Pack hooks, uses transaction-unique staging/backup paths, and runs for `serve` through PocketBase's lifecycle instead of manually parsing Cobra flags. Each process defaults to a private runtime path; `--packRuntimeDir` permits an explicit instance-owned path.
-- The builtin Bookmarks Pack is the sole owner-field hook. Legacy plugin compatibility has been fully removed (see `docs/plugin-to-pack-evolution.md`); the Moments hook remains a regular core hook file.
+- The builtin Bookmarks Pack is the sole owner-field hook. Legacy plugin compatibility has been fully removed (see `docs/plugin-to-pack-evolution.md`); the Moments Pack (see below) carries its own author hook at `packs/moments/hooks/moments.pb.js`.
 - Validation has a replaceable `ModelSource` boundary and retains the embedded Zod bundle as the default.
 - Astro injects the compiled `/p/bookmarks` route through a static entrypoint and `vanblog:theme`; Pack names follow the same strict grammar as Go.
 - Docker/dev inputs include the Astro integration, builtin Pack resources and generated models.
@@ -517,3 +517,21 @@ The first v1 baseline removes hard-coded `bookmarks` assumptions:
 - `virtual:vanblog/packs` exposes client-safe metadata only; entrypoint paths and other server/build details stay internal to the integration.
 - Pack navigation is owned by the Astro-side metadata path: `packs/<name>/pack.ts` -> `virtual:vanblog/packs` -> `BaseLayout.astro`. The legacy `Astro.locals.getNavItems()` / `PluginNavItem` runtime nav path is compatibility-only and should not be the source of Pack v1 public navigation.
 - Palette / color appearance remains outside Pack. It should be implemented by Astro appearance libraries and Van API site appearance settings, not by Pack hooks, migrations or route adapters.
+
+## Pack v1 validation: Moments Pack
+
+**Status**: Completed — the v1 abstraction is reusable.
+
+The Moments Pack (`packs/moments/`) is the second builtin Pack. It was created end-to-end (identity, Astro metadata, public route, JSVM hook, Pack-side schema bundle, production Docker build) **without any Pack-kernel code changes**, confirming that the v1 registry/discovery/resolver/validation stack generalises beyond the original `bookmarks` Pack.
+
+Implemented results:
+
+- `packs/moments/pack.json` — minimal identity (`name`/`version`).
+- `packs/moments/pack.ts` — Astro-side metadata (`title`, `nav`). Consumed by `virtual:vanblog/packs` → `BaseLayout.astro` without layout edits.
+- `packs/moments/pages/index.astro` — public route at `/p/moments`, auto-injected by the same integration that injects `/p/bookmarks`.
+- `packs/moments/hooks/moments.pb.js` — author auto-fill hook, migrated out of `vault/pb_hooks/moments.pb.js` (the vault file is now empty). Pack hook staging picks this up automatically.
+- `packs/moments/schema.ts` → `packs/moments/schema.js` — Pack-owned model validation artifact, built via the shared `scripts/pack-schema-build.mjs` and validated by `vault/internal/validation.PackSource` (Goja runtime + staging promotion) through the shared `vanblog pack build` CLI. The same builder and CLI serve both Packs.
+- Production Docker: `Dockerfile` astro-build stage loops over every Pack directory and runs the schema builder when `schema.ts` exists; the prod image copies the built `/build/packs/` (with `schema.js`) into `/packs/` so the Go runtime can read each Pack's schema.
+- `packs/*/schema.js` is gitignored alongside `vault/internal/validation/models.js` — both are generated CJS artifacts.
+
+Verification: same command suite as v0 (Go `test`/`build`/`vet`, Astro `test:packs`/`build`, model type/fixture tests, e2e cache, `docker buildx build --check`).

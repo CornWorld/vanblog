@@ -1,0 +1,42 @@
+---
+import { Page } from 'vanblog:theme';
+import { MomentSchema, type Moment } from '@vanblog/sdk';
+
+export const prerender = false;
+
+let moments: Moment[] = [];
+let error: string | null = null;
+
+try {
+  const result = await Astro.locals.pb.collection('moments').getList(1, 50, {
+    sort: '-created',
+  });
+  moments = result.items.flatMap((item) => {
+    const parsed = MomentSchema.safeParse(item);
+    if (!parsed.success) return [];
+    if (parsed.data.visible === false) return [];
+    return [parsed.data];
+  });
+} catch {
+  error = '动态加载失败，请稍后重试。';
+}
+---
+
+<Page title="动态" description="站点动态">
+  <section aria-labelledby="moments-title">
+    <h1 id="moments-title">动态</h1>
+    {error ? (
+      <p role="alert" class="text-[var(--text-muted)]">{error}</p>
+    ) : moments.length === 0 ? (
+      <p class="text-[var(--text-muted)]">暂无动态。</p>
+    ) : (
+      <ul class="grid gap-4 list-none p-0">
+        {moments.map((moment) => (
+          <li class="border-b border-[var(--border)] pb-4 whitespace-pre-wrap">
+            {moment.content}
+          </li>
+        ))}
+      </ul>
+    )}
+  </section>
+</Page>

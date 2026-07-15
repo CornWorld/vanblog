@@ -57,6 +57,8 @@ FROM workspace-deps AS astro-build
 COPY sdk/ ./sdk/
 COPY app/ ./app/
 COPY packs/ ./packs/
+COPY scripts/ ./scripts/
+COPY models.config.mjs ./models.config.mjs
 
 # Build SDK first
 RUN pnpm --filter sdk build
@@ -64,6 +66,14 @@ RUN pnpm --filter sdk build
 # Build Astro
 RUN pnpm --filter vanblog-app build
 # Output: /build/app/dist/
+
+# Build Pack schema artifacts (schema.ts -> schema.js) for any Pack that ships one.
+# The Go runtime reads schema.js from the Pack fs.FS to validate Pack-owned models.
+RUN for pack in packs/*/; do \
+      if [ -f "$pack/schema.ts" ]; then \
+        node scripts/pack-schema-build.mjs "$pack"; \
+      fi; \
+    done
 
 # --- Stage 5: PROD image (Caddy + pb + Node SSR) ---
 FROM alpine:3.21 AS prod
@@ -81,9 +91,10 @@ COPY --from=astro-build /build /build
 # Symlink so entrypoint's `cd /app/dist` works without changing the script.
 RUN ln -s /build/app /app
 
-# Copy core hooks and external builtin Pack resources.
+# Copy core hooks and builtin Pack resources (with schema.js artifacts built in
+# the astro-build stage — the Go runtime reads schema.js from /packs/<name>/).
 COPY vault/pb_hooks /pb_hooks
-COPY packs /packs
+COPY --from=astro-build /build/packs /packs
 
 # Copy bootstrap.json (minimal maintenance-mode config for Caddy startup)
 COPY docker/bootstrap.json /etc/caddy/bootstrap.json
