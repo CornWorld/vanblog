@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/cornworld/vanblog/internal/validation"
 )
 
 func TestListAndInspectBuiltin(t *testing.T) {
@@ -57,6 +59,50 @@ func TestAddRequiresDestinationAndCopiesPack(t *testing.T) {
 	}
 }
 
+func TestBuildNoSchemaIsNoop(t *testing.T) {
+	directory := writeTestPack(t, "plain", "1.0.0")
+	var output bytes.Buffer
+	if err := Execute([]string{"build", directory}, &output, &output); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(directory, "schema.js")); !os.IsNotExist(err) {
+		t.Fatalf("expected no schema.js, got err=%v", err)
+	}
+	if !strings.Contains(output.String(), "built artifacts") {
+		t.Fatalf("unexpected output: %q", output.String())
+	}
+}
+
+func TestBuildSchemaProducesLoadableArtifact(t *testing.T) {
+	directory := writeTestPack(t, "schema-pack", "1.0.0")
+	schema := "export const models = { custom: { safeParse: function () { return { success: true }; } } };\n"
+	if err := os.WriteFile(filepath.Join(directory, "schema.ts"), []byte(schema), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	var output bytes.Buffer
+	if err := Execute([]string{"build", directory}, &output, &output); err != nil {
+		t.Fatal(err)
+	}
+	artifact := filepath.Join(directory, "schema.js")
+	data, err := os.ReadFile(artifact)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(data), "exports.models") {
+		t.Fatalf("schema.js does not expose exports.models")
+	}
+	loaded, err := (validation.PackSource{FS: os.DirFS(directory), Name: "schema-pack"}).Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(loaded), "exports.models") {
+		t.Fatalf("loaded schema.js does not expose exports.models")
+	}
+	if err := validation.ValidateModelSource(validation.PackSource{FS: os.DirFS(directory), Name: "schema-pack"}); err != nil {
+		t.Fatalf("generated schema.js is not Goja-loadable: %v", err)
+	}
+}
+
 func TestEjectIsNotACommand(t *testing.T) {
 	var output bytes.Buffer
 	err := Execute([]string{"eject"}, &output, &output)
@@ -66,4 +112,16 @@ func TestEjectIsNotACommand(t *testing.T) {
 	if !strings.Contains(err.Error(), "unknown command") {
 		t.Fatalf("unexpected error: %v", err)
 	}
+}
+
+func writeTestPack(t *testing.T, name, version string) string {
+	t.Helper()
+	directory := filepath.Join(t.TempDir(), name)
+	if err := os.Mkdir(directory, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(directory, "pack.json"), []byte(`{"name":"`+name+`","version":"`+version+`"}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	return directory
 }

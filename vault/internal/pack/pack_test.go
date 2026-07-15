@@ -34,6 +34,36 @@ func TestBuiltinOnly(t *testing.T) {
 	}
 }
 
+func TestBuiltinsDiscoversAndSortsAllDirectChildren(t *testing.T) {
+	packs, err := Builtins(fstest.MapFS{
+		"zulu/pack.json":     {Data: []byte(`{"name":"zulu","version":"1.0.0"}`)},
+		"zulu/hooks/z.pb.js": {Data: []byte("// z")},
+		"alpha/pack.json":    {Data: []byte(`{"name":"alpha","version":"1.0.0"}`)},
+		"alpha/pages/index":  {Data: []byte("page")},
+		"ignored-file.txt":   {Data: []byte("ignored")},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := []string{packs[0].Name, packs[1].Name}
+	if want := []string{"alpha", "zulu"}; !reflect.DeepEqual(got, want) {
+		t.Fatalf("builtin order = %v, want %v", got, want)
+	}
+	for _, p := range packs {
+		if p.Source != Builtin {
+			t.Fatalf("pack %q source = %v, want builtin", p.Name, p.Source)
+		}
+	}
+}
+
+func TestBuiltinsRejectsDirectoryNameMismatch(t *testing.T) {
+	if _, err := Builtins(fstest.MapFS{
+		"bookmarks/pack.json": {Data: []byte(`{"name":"other","version":"1.0.0"}`)},
+	}); err == nil {
+		t.Fatal("expected builtin directory/name mismatch")
+	}
+}
+
 func TestDiscoverLocal(t *testing.T) {
 	root := t.TempDir()
 	writeLocalPack(t, root, "bookmarks", `{"name":"bookmarks","version":"1.2.3"}`)

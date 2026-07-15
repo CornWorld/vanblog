@@ -4,11 +4,13 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 
 	"github.com/spf13/cobra"
 
 	"github.com/cornworld/vanblog/internal/pack"
+	"github.com/cornworld/vanblog/internal/validation"
 )
 
 // Execute runs the standalone Pack command without booting PocketBase.
@@ -30,8 +32,10 @@ func NewCommand() *cobra.Command {
 		SilenceUsage:  true,
 		SilenceErrors: true,
 	}
+	var schemaBuilder string
 	root.PersistentFlags().StringVar(&builtinPacksDir, "builtinPacksDir", "../../../packs", "directory with builtin Pack resources")
 	root.PersistentFlags().StringVar(&packsDir, "packsDir", "", "directory with local Pack overrides")
+	root.PersistentFlags().StringVar(&schemaBuilder, "schemaBuilder", "scripts/pack-schema-build.mjs", "Node script that builds Pack schema.ts into schema.js")
 
 	resolve := func() ([]pack.Pack, error) {
 		builtins, err := pack.Builtins(os.DirFS(builtinPacksDir))
@@ -150,6 +154,60 @@ func NewCommand() *cobra.Command {
 	})
 
 	root.AddCommand(&cobra.Command{
+		Use:   "build <directory>",
+		Short: "Build local Pack artifacts for production runtime",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			item, err := pack.LoadLocal(args[0])
+			if err != nil {
+				return err
+			}
+			if err := pack.ValidateV0([]pack.Pack{item}); err != nil {
+				return err
+			}
+			directory, err := filepath.Abs(args[0])
+			if err != nil {
+				return err
+			}
+			if _, err := os.Stat(filepath.Join(directory, "schema.ts")); os.IsNotExist(err) {
+				fmt.Fprintf(cmd.OutOrStdout(), "built artifacts for %s\n", item.Name)
+				return nil
+			} else if err != nil {
+				return err
+			}
+			builder, err := resolveSchemaBuilderPath(schemaBuilder)
+			if err != nil {
+				return err
+			}
+			staged, err := os.CreateTemp(directory, ".schema.js-*")
+			if err != nil {
+				return fmt.Errorf("create schema staging file: %w", err)
+			}
+			stagedPath := staged.Name()
+			stagedName := filepath.Base(stagedPath)
+			if err := staged.Close(); err != nil {
+				os.Remove(stagedPath)
+				return err
+			}
+			defer os.Remove(stagedPath)
+
+			buildCmd := exec.Command("node", builder, directory, stagedPath)
+			buildCmd.Stdout = cmd.OutOrStdout()
+			buildCmd.Stderr = cmd.ErrOrStderr()
+			if err := buildCmd.Run(); err != nil {
+				return fmt.Errorf("pack schema build failed: %w", err)
+			}
+			if err := validation.ValidateModelSource(validation.PackSource{FS: os.DirFS(directory), Name: item.Name, Path: stagedName}); err != nil {
+				return fmt.Errorf("pack schema artifact is not runtime-loadable: %w", err)
+			}
+			if err := os.Rename(stagedPath, filepath.Join(directory, "schema.js")); err != nil {
+				return fmt.Errorf("promote schema artifact: %w", err)
+			}
+			fmt.Fprintf(cmd.OutOrStdout(), "built artifacts for %s\n", item.Name)
+			return nil
+		},
+	})
+
+	root.AddCommand(&cobra.Command{
 		Use:   "validate <directory>",
 		Short: "Validate one local Pack directory",
 		Args:  cobra.ExactArgs(1),
@@ -175,6 +233,30 @@ func NewCommand() *cobra.Command {
 		},
 	})
 	return root
+}
+
+func resolveSchemaBuilderPath(path string) (string, error) {
+	if filepath.IsAbs(path) {
+		if _, err := os.Stat(path); err != nil {
+			return "", err
+		}
+		return path, nil
+	}
+	cwd, err := os.Getwd()
+	if err != nil {
+		return "", err
+	}
+	for dir := cwd; ; dir = filepath.Dir(dir) {
+		candidate := filepath.Join(dir, path)
+		if _, err := os.Stat(candidate); err == nil {
+			return candidate, nil
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			break
+		}
+	}
+	return filepath.Abs(path)
 }
 
 // Main is used by the root binary's early Pack dispatch.

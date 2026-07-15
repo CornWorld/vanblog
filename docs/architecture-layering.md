@@ -219,17 +219,17 @@ JSVM 钩子示例 (`pb_hooks/system.pb.js` 的真实片段):
 // 文章发布/更新/删除后记录审计(posts/tags/categories/media/users 各 3 种事件)
 onRecordAfterCreateSuccess(
   (e) =>
-    require("./pb_hooks/lib/vanblog-audit.js").postAction("post.create", e),
+    require("./lib/vanblog-audit.js").postAction("post.create", e),
   "posts"
 );
 onRecordAfterUpdateSuccess(
   (e) =>
-    require("./pb_hooks/lib/vanblog-audit.js").postAction("post.update", e),
+    require("./lib/vanblog-audit.js").postAction("post.update", e),
   "posts"
 );
 onRecordAfterDeleteSuccess(
   (e) =>
-    require("./pb_hooks/lib/vanblog-audit.js").postAction("post.delete", e),
+    require("./lib/vanblog-audit.js").postAction("post.delete", e),
   "posts"
 );
 

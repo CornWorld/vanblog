@@ -1,7 +1,7 @@
 // Shared utility: parse query string parameters in PB JSVM.
 // The JSVM has no built-in URL/URLSearchParams, so we parse manually.
 // Usage:
-//   var getQuery = require("./pb_hooks/lib/vanblog-query.js");
+//   var getQuery = require("./lib/vanblog-query.js");
 //   var page = getQuery(e, "page");
 
 /// <reference path="./vanblog.d.ts" />

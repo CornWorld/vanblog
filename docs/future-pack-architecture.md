@@ -157,15 +157,15 @@ This follows Go's convention of defining small interfaces at the consumer and av
 
 ## Schema loading direction
 
-The current path remains a valid default:
+The built-in path remains a valid fallback:
 
 ```text
-builtin Zod models -> CJS -> go:embed -> Goja
+builtin Zod models -> CJS -> optional go:embed fallback -> Goja
 ```
 
-It is a bootstrap/default implementation, not a permanent architectural requirement.
+`go:embed models.js` is not a permanent or exclusive validator boundary. It is only the default bundled source used when no validated Pack/external model artifact is configured.
 
-The target source abstraction is:
+The source abstraction is already explicit:
 
 ```go
 type ModelSource interface {
@@ -175,16 +175,17 @@ type ModelSource interface {
 
 Resolution rules:
 
-1. Load a validated external resolved bundle when configured.
-2. Otherwise load the embedded default bundle.
-3. Compile once and validate through fresh Goja runtimes as today.
-4. Atomically retain the last known-good bundle if generating a replacement fails.
+1. Prefer a validated external or Pack-provided resolved `schema.js` bundle when configured and loadable.
+2. Otherwise load the bundled default source, currently `EmbeddedSource`.
+3. Compile the selected CJS bundle once and validate records through fresh Goja runtimes as today.
+4. Production runtime never compiles Pack TypeScript source; builders/dev images produce `schema.js` artifacts.
+5. When a future control-plane builder manages external bundles, it must atomically retain the last known-good bundle if generating a replacement fails.
 
-A control-plane builder can later combine resolved Pack `schema.ts` files into one deterministic CJS artifact under the data directory. Record validation remains on the hot path; resolving and compiling Pack sources does not.
+A control-plane builder can combine resolved Pack `schema.ts` files into one deterministic CJS artifact under the data directory or another VanBlog-managed artifact location. Record validation remains on the hot path; resolving and compiling Pack sources does not.
 
-Pack v0 introduces the source boundary and tests fallback behavior. It does not yet execute arbitrary user TypeScript or hot-install third-party schemas.
+Pack v0 introduced the source boundary and tests fallback behavior. Current implementation already includes `validation.PackSource`, which reads a pre-compiled `schema.js` CJS bundle from a Pack's `fs.FS`; `ResolveModelSource` picks the first Pack that contains `schema.js`, falling back to `EmbeddedSource` when none is found. Registration happens inside `OnServe` so the resolved Pack set is available before `OnRecordValidate` is bound.
 
-**Phase 3 status (implemented)**: `validation.PackSource` reads a pre-compiled `schema.js` CJS bundle from a Pack's `fs.FS`. `ResolveModelSource` picks the first Pack that contains `schema.js`, falling back to `EmbeddedSource` when none is found. Registration happens inside `OnServe` so the resolved Pack set is available before `OnRecordValidate` is bound. Pack authors produce `schema.js` through the dev-image builder (same Vite pipeline as `models.config.mjs`). The production runtime never compiles TypeScript from Pack source.
+Pack v1 adds the first tooling slice for schema artifacts: `vanblog pack build <directory>` validates a local Pack source and invokes the controlled Node/Vite schema builder to compile `schema.ts` into `schema.js`. This command belongs to the tool/dev-image layer; production `serve` still never installs dependencies, runs package-manager commands, or compiles Pack TypeScript source. The build path uses validate-then-promote: Node/Vite writes a staging file, the Go CLI validates `exports.models` with the same Goja loader used by runtime, and only then atomically renames it to `schema.js`. A bad artifact never replaces the last known-good artifact. This slice builds a single Pack artifact only. Multi-Pack schema merging, hash manifests, compatibility fingerprints and signed remote artifacts remain future phases.
 
 ## PocketBase resources
 
@@ -500,7 +501,19 @@ After v0 is stable, evaluate independently:
 
 1. Admin SPA and Pack admin modules.
 2. Full Astro theme Pack resolution and active-theme builds.
-3. Runtime generation/loading of resolved external Zod bundles.
+3. External Zod bundle generation and artifact lifecycle beyond the current `PackSource`/`EmbeddedSource` selection boundary.
 4. Admin-only instance contract/npm endpoint.
 5. Signed remote Pack artifacts and installation lifecycle.
 6. Pack dependency/ownership migration only when concrete use cases require it.
+
+## Pack v1 baseline direction
+
+Pack v1 continues to use the current `packs/` source tree. `pack.json` remains a minimal identity file with only `name` and `version`; presentation metadata such as title, navigation labels and routes belongs to the Astro adapter side (`pack.ts` / generated virtual modules), not to the Pack kernel.
+
+The first v1 baseline removes hard-coded `bookmarks` assumptions:
+
+- Go builtin loading scans direct children of `packs/` and validates each Pack identity deterministically.
+- Astro integration scans `packs/*/pages/index.astro` and injects `/p/<pack>` routes at build time.
+- `virtual:vanblog/packs` exposes client-safe metadata only; entrypoint paths and other server/build details stay internal to the integration.
+- Pack navigation is owned by the Astro-side metadata path: `packs/<name>/pack.ts` -> `virtual:vanblog/packs` -> `BaseLayout.astro`. The legacy `Astro.locals.getNavItems()` / `PluginNavItem` runtime nav path is compatibility-only and should not be the source of Pack v1 public navigation.
+- Palette / color appearance remains outside Pack. It should be implemented by Astro appearance libraries and Van API site appearance settings, not by Pack hooks, migrations or route adapters.

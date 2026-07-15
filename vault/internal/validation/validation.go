@@ -40,10 +40,15 @@ func (EmbeddedSource) Load() ([]byte, error) {
 type PackSource struct {
 	FS   fs.FS
 	Name string
+	Path string
 }
 
 func (s PackSource) Load() ([]byte, error) {
-	return fs.ReadFile(s.FS, "schema.js")
+	path := s.Path
+	if path == "" {
+		path = "schema.js"
+	}
+	return fs.ReadFile(s.FS, path)
 }
 
 // ResolveModelSource returns the first Pack that contains a schema.js bundle,
@@ -245,6 +250,26 @@ func shouldSkipCollection(collection *core.Collection) bool {
 	return collection.System || collection.IsAuth()
 }
 
+// ValidateModelSource verifies that a model bundle can be compiled and executed by Goja.
+func ValidateModelSource(source ModelSource) error {
+	if source == nil {
+		return errors.New("validation: model source is nil")
+	}
+	script, err := source.Load()
+	if err != nil {
+		return fmt.Errorf("validation: failed to load models bundle: %w", err)
+	}
+	if len(strings.TrimSpace(string(script))) == 0 {
+		return errors.New("validation: models bundle is empty")
+	}
+	prog, err := compileProgram(string(script))
+	if err != nil {
+		return fmt.Errorf("validation: failed to compile models bundle: %w", err)
+	}
+	_, _, err = loadModels(prog)
+	return err
+}
+
 // Register attaches strict Zod validation using the embedded model bundle.
 func Register(app core.App) error {
 	return RegisterWithSource(app, EmbeddedSource{})
@@ -284,10 +309,6 @@ func RegisterWithSource(app core.App, source ModelSource) error {
 			return err
 		}
 		if err := validateModel(vm, models, collection.Name, values); err != nil {
-			// Log the collection name, record ID, and validation error so
-			// Docker logs always contain the full diagnostic regardless of
-			// whether the save originated from an HTTP request or internal
-			// code (migrations, JSVM hooks, repl).
 			log.Printf("validation error: collection=%s record=%s err=%v",
 				collection.Name, event.Record.Id, err)
 			return err

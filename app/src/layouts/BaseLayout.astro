@@ -6,6 +6,7 @@ import '../styles/global.css';
 // because post content is rendered server-side via markdown pipeline.
 import 'katex/dist/katex.css';
 import { stripMarkdown } from '@vanblog/sdk';
+import { packs as packMetadata } from 'virtual:vanblog/packs';
 import type { Site, Post } from '@vanblog/sdk';
 
 interface Props {
@@ -60,9 +61,8 @@ const websiteSchema = {
   url: baseUrl || undefined,
 };
 
-// Plugin nav items — fetched once per process lifetime via middleware cache
-const allNavItems = await Astro.locals.getNavItems();
-const pluginNavItems = allNavItems.filter((item) => item.position === 'header');
+// Pack nav items are resolved at build time by the Astro Pack integration.
+const packNavItems = packMetadata.flatMap((pack) => pack.nav ? [pack.nav] : []);
 ---
 <!doctype html>
 <html lang="zh-CN">
@@ -123,8 +123,8 @@ const pluginNavItems = allNavItems.filter((item) => item.position === 'header');
           <a href="/tags" class="nav-link hidden sm:inline">标签</a>
           <a href="/categories" class="nav-link hidden sm:inline">分类</a>
           <a href="/search" class="nav-link">搜索</a>
-          {pluginNavItems.map((item) => (
-            <a href={item.path} class="nav-link">{item.title}</a>
+          {packNavItems.map((item) => (
+            <a href={item.href} class="nav-link">{item.label}</a>
           ))}
           {hasAbout && (
             <a href="/about" class="nav-link hidden sm:inline">关于</a>

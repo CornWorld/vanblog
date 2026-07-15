@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/fs"
+	"sort"
 )
 
 // Source identifies where a Pack's resources originated.
@@ -32,29 +33,54 @@ func Builtins(root fs.FS) ([]Pack, error) {
 	if root == nil {
 		return nil, fmt.Errorf("builtin packs filesystem is nil")
 	}
-	bookmarksFS, err := fs.Sub(root, "bookmarks")
+	entries, err := fs.ReadDir(root, ".")
 	if err != nil {
-		return nil, fmt.Errorf("open builtin bookmarks: %w", err)
+		return nil, fmt.Errorf("read builtin packs root: %w", err)
 	}
-	data, err := fs.ReadFile(bookmarksFS, "pack.json")
+	packs := make([]Pack, 0, len(entries))
+	seen := make(map[string]struct{}, len(entries))
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		packFS, err := fs.Sub(root, entry.Name())
+		if err != nil {
+			return nil, fmt.Errorf("open builtin pack %q: %w", entry.Name(), err)
+		}
+		p, err := loadBuiltin(entry.Name(), packFS)
+		if err != nil {
+			return nil, err
+		}
+		if _, exists := seen[p.Name]; exists {
+			return nil, fmt.Errorf("duplicate builtin pack %q", p.Name)
+		}
+		seen[p.Name] = struct{}{}
+		packs = append(packs, p)
+	}
+	sort.Slice(packs, func(i, j int) bool { return packs[i].Name < packs[j].Name })
+	return packs, nil
+}
+
+func loadBuiltin(directory string, packFS fs.FS) (Pack, error) {
+	data, err := fs.ReadFile(packFS, "pack.json")
 	if err != nil {
-		return nil, fmt.Errorf("read builtin bookmarks identity: %w", err)
+		return Pack{}, fmt.Errorf("read builtin pack %q identity: %w", directory, err)
 	}
 	decoder := json.NewDecoder(bytes.NewReader(data))
 	decoder.DisallowUnknownFields()
 	var identity identity
 	if err := decoder.Decode(&identity); err != nil {
-		return nil, fmt.Errorf("decode builtin bookmarks identity: %w", err)
+		return Pack{}, fmt.Errorf("decode builtin pack %q identity: %w", directory, err)
 	}
 	if err := validateIdentity(identity.Name, identity.Version); err != nil {
-		return nil, err
+		return Pack{}, err
 	}
-	p := Pack{Name: identity.Name, Version: identity.Version, FS: bookmarksFS, Source: Builtin}
-	if p.Name != "bookmarks" {
-		return nil, fmt.Errorf("builtin directory bookmarks declares name %q", p.Name)
+	p := Pack{Name: identity.Name, Version: identity.Version, FS: packFS, Source: Builtin}
+	if p.Name != directory {
+		return Pack{}, fmt.Errorf("builtin directory %q declares name %q", directory, p.Name)
 	}
 	if err := Validate(p); err != nil {
-		return nil, err
+		return Pack{}, err
 	}
-	return []Pack{p}, nil
+	return p, nil
 }

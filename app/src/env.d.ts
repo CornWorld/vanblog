@@ -5,6 +5,24 @@ declare module "vanblog:theme" {
   export const Page: AstroComponentFactory;
 }
 
+declare module "virtual:vanblog/packs" {
+  export interface PackRouteMetadata {
+    pattern: string;
+    page: string;
+  }
+
+  export interface PackMetadata {
+    name: string;
+    version: string;
+    title: string;
+    nav: { label: string; href: string } | null;
+    routes: PackRouteMetadata[];
+  }
+
+  export const packs: PackMetadata[];
+  export default packs;
+}
+
 declare namespace App {
   interface Locals {
     pb: import("@vanblog/sdk").VanblogClient;
