@@ -34,7 +34,7 @@ RUN pnpm config set store-dir /pnpm/store && \
     fi && \
     pnpm install --frozen-lockfile
 
-# --- Stage 2: Build the generated model bundle embedded by Go ---
+# --- Stage 2: Build the generated core schema runtime artifact ---
 FROM workspace-deps AS models-build
 COPY models.config.mjs ./
 COPY sdk/src/models/ ./sdk/src/models/
@@ -49,7 +49,8 @@ COPY vault/go.mod vault/go.sum ./
 RUN go mod download
 COPY vault/ ./
 COPY packs/ /packs/
-COPY --from=models-build /build/vault/internal/validation/models.js ./internal/validation/models.js
+# The Go binary consumes this artifact at runtime; it is not compiled into the binary.
+COPY --from=models-build /build/runtime/core-schema/models.js /core/models.js
 RUN CGO_ENABLED=0 go build -o /pocketbase -ldflags="-s -w" .
 
 # --- Stage 4: Build Astro frontend + SDK ---
@@ -81,8 +82,9 @@ FROM alpine:3.21 AS prod
 # Install Caddy + Node.js (for Astro SSR) + ca-certificates
 RUN apk add --no-cache caddy nodejs ca-certificates tzdata
 
-# Copy Go binary
+# Copy Go binary and the separately-built core schema artifact.
 COPY --from=go-build /pocketbase /usr/local/bin/vanblog
+COPY --from=go-build /core/models.js /core/models.js
 
 # Copy the whole astro-build workspace so the pnpm symlink layout (app/node_modules/<pkg>
 # → ../../node_modules/.pnpm/...) resolves correctly at the same depth.
