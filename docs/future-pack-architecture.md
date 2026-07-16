@@ -157,13 +157,14 @@ This follows Go's convention of defining small interfaces at the consumer and av
 
 ## Schema loading direction
 
-The built-in path remains a valid fallback:
+Core and Pack artifacts are independent runtime sources:
 
 ```text
-builtin Zod models -> CJS -> optional go:embed fallback -> Goja
+core schema source -> CJS artifact -> Goja
+Pack schema sources -> CJS artifacts -> Goja
 ```
 
-`go:embed models.js` is not a permanent or exclusive validator boundary. It is only the default bundled source used when no validated Pack/external model artifact is configured.
+The core schema is a generated CJS runtime artifact, not a Go-embedded source. Goja consumes that artifact together with validated Pack artifacts.
 
 The source abstraction is already explicit:
 
@@ -176,16 +177,16 @@ type ModelSource interface {
 Resolution rules:
 
 1. Prefer a validated external or Pack-provided resolved `schema.js` bundle when configured and loadable.
-2. Otherwise load the bundled default source, currently `EmbeddedSource`.
+2. Load the generated core schema artifact from `--coreSchemaPath`.
 3. Compile the selected CJS bundle once and validate records through fresh Goja runtimes as today.
 4. Production runtime never compiles Pack TypeScript source; builders/dev images produce `schema.js` artifacts.
 5. When a future control-plane builder manages external bundles, it must atomically retain the last known-good bundle if generating a replacement fails.
 
 A control-plane builder can combine resolved Pack `schema.ts` files into one deterministic CJS artifact under the data directory or another VanBlog-managed artifact location. Record validation remains on the hot path; resolving and compiling Pack sources does not.
 
-Pack v0 introduced the source boundary and tests fallback behavior. Current implementation already includes `validation.PackSource`, which reads a pre-compiled `schema.js` CJS bundle from a Pack's `fs.FS`; `ResolveModelSource` picks the first Pack that contains `schema.js`, falling back to `EmbeddedSource` when none is found. Registration happens inside `OnServe` so the resolved Pack set is available before `OnRecordValidate` is bound.
+Runtime uses `validation.PackSource` for pre-compiled Pack `schema.js` artifacts and `ArtifactSource` for the generated core artifact. Every loadable Pack schema is loaded in stable Pack-name order; Pack-Pack and Pack-core model name collisions are fatal. Registration happens inside `OnServe` after the resolved Pack set is available and before `OnRecordValidate` can process requests.
 
-Pack v1 adds the first tooling slice for schema artifacts: `vanblog pack build <directory>` validates a local Pack source and invokes the controlled Node/Vite schema builder to compile `schema.ts` into `schema.js`. This command belongs to the tool/dev-image layer; production `serve` still never installs dependencies, runs package-manager commands, or compiles Pack TypeScript source. The build path uses validate-then-promote: Node/Vite writes a staging file, the Go CLI validates `exports.models` with the same Goja loader used by runtime, and only then atomically renames it to `schema.js`. A bad artifact never replaces the last known-good artifact. This slice builds a single Pack artifact only. Multi-Pack schema merging, hash manifests, compatibility fingerprints and signed remote artifacts remain future phases.
+Pack v1 adds the first tooling slice for schema artifacts: `vanblog pack build <directory>` validates a local Pack source and invokes the controlled Node/Vite schema builder to compile `schema.ts` into `schema.js`. This command belongs to the tool/dev-image layer; production `serve` still never installs dependencies, runs package-manager commands, or compiles Pack TypeScript source. The build path uses validate-then-promote: Node/Vite writes a staging file, the Go CLI validates `exports.models` with the same Goja loader used by runtime, and only then atomically renames it to `schema.js`. A bad artifact never replaces the last known-good artifact. Each Pack keeps an independent artifact; runtime logically aggregates all Pack model registries without adding a production Node/Vite step. Hash manifests, compatibility fingerprints and signed remote artifacts remain future phases.
 
 ## PocketBase resources
 
@@ -501,7 +502,7 @@ After v0 is stable, evaluate independently:
 
 1. Admin SPA and Pack admin modules.
 2. Full Astro theme Pack resolution and active-theme builds.
-3. External Zod bundle generation and artifact lifecycle beyond the current `PackSource`/`EmbeddedSource` selection boundary.
+3. Remote or external artifact distribution beyond the local core-artifact and Pack-artifact build contract.
 4. Admin-only instance contract/npm endpoint.
 5. Signed remote Pack artifacts and installation lifecycle.
 6. Pack dependency/ownership migration only when concrete use cases require it.
@@ -532,6 +533,6 @@ Implemented results:
 - `packs/moments/hooks/moments.pb.js` — author auto-fill hook, migrated out of `vault/pb_hooks/moments.pb.js` (the vault file is now empty). Pack hook staging picks this up automatically.
 - `packs/moments/schema.ts` → `packs/moments/schema.js` — Pack-owned model validation artifact, built via the shared `scripts/pack-schema-build.mjs` and validated by `vault/internal/validation.PackSource` (Goja runtime + staging promotion) through the shared `vanblog pack build` CLI. The same builder and CLI serve both Packs.
 - Production Docker: `Dockerfile` astro-build stage loops over every Pack directory and runs the schema builder when `schema.ts` exists; the prod image copies the built `/build/packs/` (with `schema.js`) into `/packs/` so the Go runtime can read each Pack's schema.
-- `packs/*/schema.js` is gitignored alongside `vault/internal/validation/models.js` — both are generated CJS artifacts.
+  `packs/*/schema.js` and `runtime/core-schema/models.js` are gitignored generated CJS artifacts.
 
 Verification: same command suite as v0 (Go `test`/`build`/`vet`, Astro `test:packs`/`build`, model type/fixture tests, e2e cache, `docker buildx build --check`).
