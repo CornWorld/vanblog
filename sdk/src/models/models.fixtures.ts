@@ -54,7 +54,6 @@ const valid = {
     result: "success",
     detail: { after: ["rule-1"], custom: true },
   },
-  moments: { content: "Hello", author: id, visible: true },
   bookmarks: { title: "VanBlog", url: "https://vanblog.example", owner: id },
 } satisfies Record<keyof typeof models, unknown>;
 
@@ -71,7 +70,6 @@ const invalid = {
   site: { mediaConfig: { enabled: true, targetFormat: "webp", quality: 101 } },
   visits: { date: "2026-07-10T00:00:00Z" },
   audits: { result: "unknown" },
-  moments: { content: "", author: id },
   bookmarks: { title: "VanBlog", url: "not-a-url", owner: id },
 } satisfies Record<keyof typeof models, unknown>;
 
