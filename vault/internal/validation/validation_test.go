@@ -11,8 +11,9 @@ import (
 	"github.com/pocketbase/pocketbase/tests"
 )
 
-func TestEmbeddedModelKeys(t *testing.T) {
-	prog, err := compileProgram(modelsScript)
+func TestModelKeysFromFixture(t *testing.T) {
+	script := `exports.models = { alpha: {}, beta: {} };`
+	prog, err := compileProgram(script)
 	if err != nil {
 		t.Fatalf("compile embedded models: %v", err)
 	}
@@ -21,19 +22,7 @@ func TestEmbeddedModelKeys(t *testing.T) {
 	if err != nil {
 		t.Fatalf("load embedded models: %v", err)
 	}
-	want := []string{
-		"audits",
-		"bookmarks",
-		"categories",
-		"media",
-		"moments",
-		"posts",
-		"revisions",
-		"site",
-		"tags",
-		"users",
-		"visits",
-	}
+	want := []string{"alpha", "beta"}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("embedded exports.models keys mismatch\ngot:  %v\nwant: %v", got, want)
 	}
@@ -106,7 +95,8 @@ func TestOnlySystemCollectionsAreSkipped(t *testing.T) {
 }
 
 func TestUnknownBusinessCollectionFailsClosed(t *testing.T) {
-	prog, err := compileProgram(modelsScript)
+	script := `exports.models = { posts: { safeParse: function () { return { success: true }; } } };`
+	prog, err := compileProgram(script)
 	if err != nil {
 		t.Fatalf("compile embedded models: %v", err)
 	}
@@ -129,8 +119,9 @@ func TestMissingSafeParseFailsClosed(t *testing.T) {
 	}
 }
 
-func TestRealSchemaInvalidPayloadIncludesFieldPath(t *testing.T) {
-	prog, err := compileProgram(modelsScript)
+func TestSchemaInvalidPayloadIncludesFieldPath(t *testing.T) {
+	script := `exports.models = { posts: { safeParse: function () { return { success: false, error: { issues: [{ path: ['title'], message: 'required' }] } }; } } };`
+	prog, err := compileProgram(script)
 	if err != nil {
 		t.Fatalf("compile embedded models: %v", err)
 	}
@@ -177,13 +168,10 @@ func TestPackSourceMissingSchemaReturnsErrNotExist(t *testing.T) {
 	}
 }
 
-func TestResolveModelSourceFallsBackToEmbedded(t *testing.T) {
-	packs := []PackSource{
-		{FS: fstest.MapFS{"pack.json": {Data: []byte(`{}`)}}, Name: "no-schema"},
-	}
-	source := ResolveModelSource(packs)
-	if _, ok := source.(EmbeddedSource); !ok {
-		t.Fatalf("expected EmbeddedSource, got %T", source)
+func TestResolveModelSourceReturnsNilWithoutSchema(t *testing.T) {
+	packs := []PackSource{{FS: fstest.MapFS{"pack.json": {Data: []byte(`{}`)}}, Name: "no-schema"}}
+	if source := ResolveModelSource(packs); source != nil {
+		t.Fatalf("expected nil source, got %T", source)
 	}
 }
 
@@ -204,9 +192,68 @@ func TestResolveModelSourcePicksFirstPackWithSchema(t *testing.T) {
 	}
 }
 
-func TestResolveModelSourceEmptyPacksFallsBackToEmbedded(t *testing.T) {
-	source := ResolveModelSource(nil)
-	if _, ok := source.(EmbeddedSource); !ok {
-		t.Fatalf("expected EmbeddedSource for empty packs, got %T", source)
+func TestResolveModelSourceEmptyPacksReturnsNil(t *testing.T) {
+	if source := ResolveModelSource(nil); source != nil {
+		t.Fatalf("expected nil source, got %T", source)
+	}
+}
+
+func TestRegisterWithSourcesRequiresCoreSource(t *testing.T) {
+	app, err := tests.NewTestApp()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer app.Cleanup()
+	if err := RegisterWithSources(app, nil, nil); err == nil || !strings.Contains(err.Error(), "core model source is required") {
+		t.Fatalf("expected required core source error, got %v", err)
+	}
+}
+
+func TestRegisterWithSourcesAcceptsMultiplePackModels(t *testing.T) {
+	coreSource := &fixtureSource{script: `exports.models = { core: { safeParse: function () { return { success: true }; } } };`}
+	first := &fixtureSource{script: `exports.models = { first: { safeParse: function () { return { success: true }; } } };`}
+	second := &fixtureSource{script: `exports.models = { second: { safeParse: function () { return { success: true }; } } };`}
+	app, err := tests.NewTestApp()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer app.Cleanup()
+	if err := RegisterWithSources(app, coreSource, []NamedModelSource{
+		{Name: "z-pack", Source: second},
+		{Name: "a-pack", Source: first},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if coreSource.loads != 1 || first.loads != 1 || second.loads != 1 {
+		t.Fatalf("sources loaded core=%d first=%d second=%d", coreSource.loads, first.loads, second.loads)
+	}
+}
+
+func TestRegisterWithSourcesRejectsPackModelCollision(t *testing.T) {
+	app, err := tests.NewTestApp()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer app.Cleanup()
+	err = RegisterWithSources(app, &fixtureSource{script: `exports.models = {};`}, []NamedModelSource{
+		{Name: "a-pack", Source: &fixtureSource{script: `exports.models = { duplicate: { safeParse: function () { return { success: true }; } } };`}},
+		{Name: "b-pack", Source: &fixtureSource{script: `exports.models = { duplicate: { safeParse: function () { return { success: true }; } } };`}},
+	})
+	if err == nil || !strings.Contains(err.Error(), "declared by both Packs") {
+		t.Fatalf("expected Pack model collision, got %v", err)
+	}
+}
+
+func TestRegisterWithSourcesRejectsPackCoreCollision(t *testing.T) {
+	app, err := tests.NewTestApp()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer app.Cleanup()
+	coreSource := &fixtureSource{script: `exports.models = { shared: { safeParse: function () { return { success: false, error: { issues: [{ path: [], message: "core" }] } }; } } };`}
+	packSource := &fixtureSource{script: `exports.models = { shared: { safeParse: function () { return { success: true }; } } };`}
+	err = RegisterWithSources(app, coreSource, []NamedModelSource{{Name: "pack", Source: packSource}})
+	if err == nil || !strings.Contains(err.Error(), "declared by core and Pack") {
+		t.Fatalf("expected Pack/core collision, got %v", err)
 	}
 }

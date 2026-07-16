@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io/fs"
 	"log"
 	"os"
 	"path/filepath"
@@ -30,6 +31,20 @@ import (
 	_ "github.com/cornworld/vanblog/pb_migrations"
 )
 
+func resolveCoreSchemaSource(path string) (validation.ModelSource, error) {
+	if path == "" {
+		return nil, fmt.Errorf("core schema artifact path is required; pass --coreSchemaPath")
+	}
+	info, err := os.Stat(path)
+	if err != nil {
+		return nil, fmt.Errorf("core schema artifact %q is unavailable: %w", path, err)
+	}
+	if info.IsDir() {
+		return nil, fmt.Errorf("core schema artifact %q is a directory", path)
+	}
+	return validation.ArtifactSource{FS: os.DirFS(filepath.Dir(path)), Name: "core", Path: filepath.Base(path)}, nil
+}
+
 func main() {
 	if len(os.Args) > 1 && os.Args[1] == "pack" {
 		os.Exit(packcli.Main(os.Args[2:]))
@@ -44,6 +59,7 @@ func main() {
 	var builtinPacksDir string
 	var packsDir string
 	var packRuntimeDir string
+	var coreSchemaPath string
 	app.RootCmd.PersistentFlags().StringVar(&hooksDir, "hooksDir", "", "the directory with the JS app hooks")
 	app.RootCmd.PersistentFlags().BoolVar(&hooksWatch, "hooksWatch", true, "auto reload the app on pb_hooks file change (UNIX only)")
 	app.RootCmd.PersistentFlags().IntVar(&hooksPool, "hooksPool", 15, "the total prewarm goja.Runtime instances for the JS app hooks execution")
@@ -52,6 +68,7 @@ func main() {
 	app.RootCmd.PersistentFlags().StringVar(&builtinPacksDir, "builtinPacksDir", "/packs", "the directory with builtin Pack resources")
 	app.RootCmd.PersistentFlags().StringVar(&packsDir, "packsDir", "", "the directory with local Pack overrides")
 	app.RootCmd.PersistentFlags().StringVar(&packRuntimeDir, "packRuntimeDir", "", "private directory for staged Pack runtime resources")
+	app.RootCmd.PersistentFlags().StringVar(&coreSchemaPath, "coreSchemaPath", "runtime/core-schema/models.js", "path to the generated core schema artifact")
 	privateRuntimeDir, err := os.MkdirTemp("", "vanblog-hooks-*")
 	if err != nil {
 		log.Fatalf("reserve private Pack runtime directory: %v", err)
@@ -128,14 +145,23 @@ func main() {
 			e.Response.Header().Set("X-Trace-Id", id)
 			return e.Next()
 		})
-
-		// Resolve schema source: prefer Pack-provided schema.js, fall back to embedded.
-		var packSources []validation.PackSource
+		// Register the generated core artifact together with every Pack schema.
+		// Pack schemas are ordered by name and no longer use first-wins resolution.
+		var packSources []validation.NamedModelSource
 		for _, p := range loadablePacks {
-			packSources = append(packSources, validation.PackSource{FS: p.FS, Name: p.Name})
+			if _, err := fs.Stat(p.FS, "schema.js"); err != nil {
+				continue
+			}
+			packSources = append(packSources, validation.NamedModelSource{
+				Name:   p.Name,
+				Source: validation.PackSource{FS: p.FS, Name: p.Name},
+			})
 		}
-		modelSource := validation.ResolveModelSource(packSources)
-		if err := validation.RegisterWithSource(app, modelSource); err != nil {
+		coreSource, err := resolveCoreSchemaSource(coreSchemaPath)
+		if err != nil {
+			return err
+		}
+		if err := validation.RegisterWithSources(app, coreSource, packSources); err != nil {
 			return err
 		}
 

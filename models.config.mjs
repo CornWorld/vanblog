@@ -1,9 +1,9 @@
 import { defineConfig } from 'vite'
 
-// Bundle the schemas and Zod into the single CJS artifact embedded by Go.
+// Build the core schemas and Zod into an explicit CJS runtime artifact consumed by Go.
 export default defineConfig({
   build: {
-    outDir: 'vault/internal/validation',
+    outDir: 'runtime/core-schema',
     emptyOutDir: false,
     lib: {
       entry: 'sdk/src/models/index.ts',

@@ -1,10 +1,8 @@
 // Package validation provides Go-side Zod schema validation for PocketBase
-// records. It embeds the CJS bundle and runs it in a fresh Goja VM for each
-// record validation event.
+// records. It loads explicit CJS artifacts and runs them in fresh Goja VMs.
 package validation
 
 import (
-	_ "embed"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -18,25 +16,35 @@ import (
 	"github.com/pocketbase/pocketbase/tools/types"
 )
 
-//go:embed models.js
-var modelsScript string
-
 // ModelSource supplies one compiled JavaScript models bundle.
 type ModelSource interface {
 	Load() ([]byte, error)
 }
 
-// EmbeddedSource loads the models bundle embedded in the binary.
-type EmbeddedSource struct{}
+// NamedModelSource associates a model bundle with a stable source name.
+type NamedModelSource struct {
+	Name   string
+	Source ModelSource
+}
 
-func (EmbeddedSource) Load() ([]byte, error) {
-	return []byte(modelsScript), nil
+// ArtifactSource loads a mandatory core or external schema artifact.
+type ArtifactSource struct {
+	FS   fs.FS
+	Name string
+	Path string
+}
+
+func (s ArtifactSource) Load() ([]byte, error) {
+	path := s.Path
+	if path == "" {
+		path = "models.js"
+	}
+	return fs.ReadFile(s.FS, path)
 }
 
 // PackSource loads a pre-compiled schema.js CJS bundle from a Pack's filesystem.
-// The bundle must export `models` in the same format as the embedded models.js.
-// If the Pack does not contain schema.js, Load returns fs.ErrNotExist so the
-// caller can fall back to EmbeddedSource.
+// The bundle must export `models` in the same format as the core artifact.
+// If the Pack does not contain schema.js, Load returns fs.ErrNotExist.
 type PackSource struct {
 	FS   fs.FS
 	Name string
@@ -51,16 +59,15 @@ func (s PackSource) Load() ([]byte, error) {
 	return fs.ReadFile(s.FS, path)
 }
 
-// ResolveModelSource returns the first Pack that contains a schema.js bundle,
-// or EmbeddedSource{} if no Pack provides one. Packs are checked in sorted
-// order (same order produced by pack.Resolve).
+// ResolveModelSource is retained for single-source compatibility callers.
+// Runtime registration uses RegisterWithSources and loads every Pack schema.
 func ResolveModelSource(packs []PackSource) ModelSource {
 	for _, p := range packs {
 		if _, err := fs.Stat(p.FS, "schema.js"); err == nil {
 			return p
 		}
 	}
-	return EmbeddedSource{}
+	return nil
 }
 
 // gojaPrelude provides missing ES builtins that the Zod bundle relies on.
@@ -270,9 +277,103 @@ func ValidateModelSource(source ModelSource) error {
 	return err
 }
 
-// Register attaches strict Zod validation using the embedded model bundle.
+// Register is retained only as a compatibility shell; runtime registration requires an explicit artifact source.
 func Register(app core.App) error {
-	return RegisterWithSource(app, EmbeddedSource{})
+	return errors.New("validation: core model source is required")
+}
+
+// RegisterWithSources registers one core model source plus all Pack sources.
+// Every model name must have exactly one owner: Pack/Pack and Pack/core
+// collisions are rejected rather than resolved by precedence.
+func RegisterWithSources(app core.App, coreSource ModelSource, packs []NamedModelSource) error {
+	if coreSource == nil {
+		return errors.New("validation: core model source is required")
+	}
+	sorted := append([]NamedModelSource(nil), packs...)
+	sort.Slice(sorted, func(i, j int) bool { return sorted[i].Name < sorted[j].Name })
+
+	type compiledSource struct {
+		name    string
+		program *goja.Program
+	}
+	compiled := make([]compiledSource, 0, len(sorted)+1)
+	claimed := make(map[string]string)
+	for _, named := range sorted {
+		if named.Name == "" {
+			return errors.New("validation: Pack model source name is empty")
+		}
+		program, keys, err := compileModelSource(named.Source)
+		if err != nil {
+			return fmt.Errorf("validation: Pack %q: %w", named.Name, err)
+		}
+		for _, key := range keys {
+			if owner, ok := claimed[key]; ok {
+				return fmt.Errorf("validation: model %q is declared by both Packs %q and %q", key, owner, named.Name)
+			}
+			claimed[key] = named.Name
+		}
+		compiled = append(compiled, compiledSource{name: named.Name, program: program})
+	}
+	coreProgram, coreKeys, err := compileModelSource(coreSource)
+	if err != nil {
+		return fmt.Errorf("validation: core model source: %w", err)
+	}
+	for _, key := range coreKeys {
+		if owner, ok := claimed[key]; ok {
+			return fmt.Errorf("validation: model %q is declared by core and Pack %q", key, owner)
+		}
+	}
+	compiled = append(compiled, compiledSource{name: "core", program: coreProgram})
+
+	app.OnRecordValidate().BindFunc(func(event *core.RecordEvent) error {
+		collection := event.Record.Collection()
+		if shouldSkipCollection(collection) {
+			return event.Next()
+		}
+		for _, source := range compiled {
+			vm, models, err := loadModels(source.program)
+			if err != nil {
+				return fmt.Errorf("validation: load %s model source: %w", source.name, err)
+			}
+			model := models.Get(collection.Name)
+			if model == nil || goja.IsUndefined(model) || goja.IsNull(model) {
+				continue
+			}
+			values, err := recordValues(vm, event.Record)
+			if err != nil {
+				return err
+			}
+			if err := validateModel(vm, models, collection.Name, values); err != nil {
+				log.Printf("validation error: collection=%s record=%s source=%s err=%v", collection.Name, event.Record.Id, source.name, err)
+				return err
+			}
+			return event.Next()
+		}
+		return fmt.Errorf("validation: collection %q is missing from all model sources", collection.Name)
+	})
+	return nil
+}
+
+func compileModelSource(source ModelSource) (*goja.Program, []string, error) {
+	if source == nil {
+		return nil, nil, errors.New("model source is nil")
+	}
+	script, err := source.Load()
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to load models bundle: %w", err)
+	}
+	if len(strings.TrimSpace(string(script))) == 0 {
+		return nil, nil, errors.New("models bundle is empty")
+	}
+	program, err := compileProgram(string(script))
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to compile models bundle: %w", err)
+	}
+	keys, err := modelKeys(program)
+	if err != nil {
+		return nil, nil, err
+	}
+	return program, keys, nil
 }
 
 // RegisterWithSource loads and compiles source once for this registration.

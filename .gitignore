@@ -18,8 +18,8 @@ package-lock.json
 sdk/dist/
 app/dist/
 
-# Generated CJS bundle embedded by Go (run pnpm build:models before Go builds)
-vault/internal/validation/models.js
+# Generated core CJS runtime artifact (run pnpm build:models before Go serve/build)
+runtime/core-schema/models.js
 
 # Pack schema artifacts (run scripts/pack-schema-build.mjs <pack> before Go builds)
 packs/*/schema.js
