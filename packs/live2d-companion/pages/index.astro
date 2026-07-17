@@ -1,0 +1,153 @@
+---
+import { Page } from 'vanblog:theme';
+---
+
+<Page title="Live2D 看板娘" description="全站 Live2D 看板娘插件">
+  <article class="prose max-w-none">
+    <h1>Live2D 看板娘</h1>
+    <p>通过 VanBlog Pack Frontend Contribution 契约注入全站的 Live2D 看板娘插件。</p>
+
+    <!-- Demo section: visible to all visitors -->
+    <section id="l2d-demo">
+      <h2>功能</h2>
+      <ul>
+        <li>模型切换、换装、一言、截图</li>
+        <li>消息气泡、时段问候、控制台检测</li>
+        <li>拖拽、移动端适配、暗色模式</li>
+        <li>CDN 失败时自动降级</li>
+      </ul>
+      <p>看板娘显示在页面右下角。打开任意公开页面即可看到。</p>
+    </section>
+
+    <!-- Config section: hidden until admin detected -->
+    <section id="l2d-config" hidden>
+      <h2>看板娘配置 <span class="text-sm text-gray-500" id="config-badge"></span></h2>
+
+      <form id="l2d-config-form" class="flex flex-col gap-4 max-w-2xl">
+        <fieldset class="grid grid-cols-[160px_1fr] gap-2 items-center border border-[var(--border)] p-4">
+          <legend>CDN 设置</legend>
+          <label>Widget CDN</label>
+          <input name="widgetPath" id="cfg-widgetPath" class="px-1.5 py-0.5 text-sm" placeholder="https://fastly.jsdelivr.net/npm/live2d-widgets@1.0.1/dist/" />
+          <label>模型 API</label>
+          <input name="cdnPath" id="cfg-cdnPath" class="px-1.5 py-0.5 text-sm" placeholder="https://fastly.jsdelivr.net/gh/fghrsh/live2d_api/" />
+        </fieldset>
+
+        <fieldset class="grid grid-cols-[160px_1fr] gap-2 items-center border border-[var(--border)] p-4">
+          <legend>模型设置</legend>
+          <label>默认模型 ID</label>
+          <input name="modelId" id="cfg-modelId" type="number" class="px-1.5 py-0.5 text-sm" min="0" />
+          <label>默认材质 ID</label>
+          <input name="modelTexturesId" id="cfg-modelTexturesId" type="number" class="px-1.5 py-0.5 text-sm" min="0" />
+        </fieldset>
+
+        <fieldset class="grid grid-cols-[160px_1fr] gap-2 items-center border border-[var(--border)] p-4">
+          <legend>显示设置</legend>
+          <label>移动端隐藏阈值</label>
+          <input name="minWidth" id="cfg-minWidth" type="number" class="px-1.5 py-0.5 text-sm" min="0" placeholder="768" />
+          <span class="text-xs text-gray-500">屏幕宽度小于此值(px)时隐藏看板娘，0 表示不隐藏</span>
+        </fieldset>
+
+        <fieldset class="border border-[var(--border)] p-4">
+          <legend>工具栏按钮</legend>
+          <div id="cfg-tools" class="flex flex-wrap gap-3 text-sm">
+            <label><input type="checkbox" name="tool-hitokoto" /> 一言</label>
+            <label><input type="checkbox" name="tool-switch-model" /> 切换模型</label>
+            <label><input type="checkbox" name="tool-switch-texture" /> 换装</label>
+            <label><input type="checkbox" name="tool-photo" /> 截图</label>
+            <label><input type="checkbox" name="tool-info" /> 信息</label>
+            <label><input type="checkbox" name="tool-quit" /> 退出</label>
+          </div>
+        </fieldset>
+
+        <div class="flex gap-3">
+          <button type="submit" class="px-4 py-1.5 bg-blue-600 text-white rounded text-sm">保存配置</button>
+          <button type="button" id="l2d-config-reset" class="px-4 py-1.5 border border-gray-400 rounded text-sm">恢复默认</button>
+          <button type="button" id="l2d-config-reload" class="px-4 py-1.5 border border-gray-400 rounded text-sm">重新加载看板娘</button>
+        </div>
+        <p id="l2d-config-status" class="text-sm text-green-600" hidden></p>
+      </form>
+
+      <h3>当前配置</h3>
+      <pre id="l2d-config-preview" class="text-xs bg-gray-100 dark:bg-gray-800 p-3 rounded overflow-x-auto"><code>{}</code></pre>
+    </section>
+
+    <!-- Not-logged-in hint -->
+    <section id="l2d-login-hint" hidden>
+      <h2>管理员配置</h2>
+      <p class="text-sm text-gray-500">
+        <a href="/login" class="underline">登录</a>管理员账号后可在此配置看板娘。
+      </p>
+    </section>
+  </article>
+</Page>
+
+<script>
+  import { initClient } from '@vanblog/sdk/browser';
+  initClient();
+
+  const api = window.live2dCompanion;
+
+  const configSection = document.getElementById('l2d-config');
+  const loginHint = document.getElementById('l2d-login-hint');
+  const badge = document.getElementById('config-badge');
+  const status = document.getElementById('l2d-config-status');
+  const preview = document.getElementById('l2d-config-preview');
+
+  // Client-side admin check: PB authStore holds the user model
+  const pb = window.__pb;
+  const authModel = pb?.authStore?.model;
+  const isAdmin = authModel?.role === 'admin';
+
+  if (api && isAdmin) {
+    configSection.hidden = false;
+    loginHint.hidden = true;
+    if (badge) badge.textContent = '（管理员）';
+
+    const cfg = api.getConfig();
+    document.getElementById('cfg-widgetPath').value = cfg.widgetPath || '';
+    document.getElementById('cfg-cdnPath').value = cfg.cdnPath || '';
+    document.getElementById('cfg-modelId').value = cfg.modelId ?? 0;
+    document.getElementById('cfg-modelTexturesId').value = cfg.modelTexturesId ?? 0;
+    document.getElementById('cfg-minWidth').value = cfg.minWidth ?? 768;
+
+    const allTools = ['hitokoto', 'switch-model', 'switch-texture', 'photo', 'info', 'quit'];
+    for (const tool of allTools) {
+      const checkbox = document.querySelector(`[name="tool-${tool}"]`);
+      if (checkbox) checkbox.checked = (cfg.tools || []).includes(tool);
+    }
+
+    function updatePreview() {
+      preview.textContent = JSON.stringify(api.getConfig(), null, 2);
+    }
+    updatePreview();
+
+    document.getElementById('l2d-config-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const tools = allTools.filter(t => document.querySelector(`[name="tool-${t}"]`)?.checked);
+      const newConfig = {
+        widgetPath: document.getElementById('cfg-widgetPath').value.trim(),
+        cdnPath: document.getElementById('cfg-cdnPath').value.trim(),
+        modelId: parseInt(document.getElementById('cfg-modelId').value) || 0,
+        modelTexturesId: parseInt(document.getElementById('cfg-modelTexturesId').value) || 0,
+        minWidth: parseInt(document.getElementById('cfg-minWidth').value) || 0,
+        tools,
+      };
+      api.saveConfig(newConfig);
+      updatePreview();
+      status.hidden = false;
+      status.textContent = '配置已保存。点击"重新加载看板娘"以应用。';
+      setTimeout(() => { status.hidden = true; }, 3000);
+    });
+
+    document.getElementById('l2d-config-reset').addEventListener('click', () => {
+      api.resetConfig();
+      location.reload();
+    });
+
+    document.getElementById('l2d-config-reload').addEventListener('click', () => {
+      api.reload();
+    });
+  } else {
+    loginHint.hidden = false;
+  }
+</script>
