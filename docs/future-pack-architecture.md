@@ -132,6 +132,7 @@ All entries except `pack.json` are optional. An adapter recognizes only the reso
 - `pages/`: public page extensions compiled with the active public frontend.
 - `admin/`: admin application extension, reserved for the later admin-SPA phase.
 - `assets/`: namespaced static resources.
+- `frontend/`: optional trusted build-time public contribution resources. A Pack may declare only local `frontend/` CSS/JS files with `scope: 'public'`; the host injects them into public layouts but never accepts arbitrary HTML or admin/API scope.
 
 A full public theme may itself be an Astro project. Presence of the Astro project files is detected by the Astro adapter rather than declared through a large manifest.
 

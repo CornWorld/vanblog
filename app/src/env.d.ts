@@ -5,10 +5,27 @@ declare module "vanblog:theme" {
   export const Page: AstroComponentFactory;
 }
 
+declare module "virtual:vanblog/pack-frontend" {
+  export interface PackFrontendContribution {
+    name: string;
+    scope: "public";
+    styles: string[];
+    scripts: string[];
+  }
+  export const contributions: PackFrontendContribution[];
+  export default contributions;
+}
+
 declare module "virtual:vanblog/packs" {
   export interface PackRouteMetadata {
     pattern: string;
     page: string;
+  }
+
+  export interface PackFrontendContribution {
+    scope: "public";
+    styles: string[];
+    scripts: string[];
   }
 
   export interface PackMetadata {
@@ -17,6 +34,7 @@ declare module "virtual:vanblog/packs" {
     title: string;
     nav: { label: string; href: string } | null;
     routes: PackRouteMetadata[];
+    frontend?: PackFrontendContribution;
   }
 
   export const packs: PackMetadata[];

@@ -79,7 +79,116 @@ test('rejects invalid Pack names', () => {
 test('only accepts the controlled index page', () => {
   assert.throws(() => resolvePublicPages([{ ...bookmark, page: 'admin' }]), /Unsupported public page/);
 });
-
 test('requires a usable entrypoint', () => {
   assert.throws(() => resolvePublicPages([{ ...bookmark, entrypoint: '' }]), /Missing entrypoint/);
+});
+
+// --- Frontend Contribution tests ---
+
+function writeFrontendPack(root, name, frontend) {
+  const dir = writePack(root, name);
+  mkdirSync(join(dir, 'frontend'), { recursive: true });
+  writeFileSync(join(dir, 'frontend', 'style.css'), 'body{}');
+  writeFileSync(join(dir, 'frontend', 'script.js'), 'console.log(1)');
+  const metadata = { frontend };
+  writeFileSync(join(dir, 'pack.ts'), `export default ${JSON.stringify(metadata, null, 2)};\n`);
+  return dir;
+}
+
+test('loads valid frontend contribution', () => {
+  const root = fixtureRoot();
+  writeFrontendPack(root, 'alpha', {
+    scope: 'public',
+    styles: ['style.css'],
+    scripts: ['script.js'],
+  });
+  const [metadata] = loadPackMetadata(discoverPacks(root));
+  assert.deepEqual(metadata.frontend, {
+    scope: 'public',
+    styles: ['style.css'],
+    scripts: ['script.js'],
+  });
+});
+
+test('omits frontend when not declared', () => {
+  const root = fixtureRoot();
+  writePack(root, 'alpha');
+  const [metadata] = loadPackMetadata(discoverPacks(root));
+  assert.equal('frontend' in metadata, false);
+});
+
+test('rejects frontend with non-public scope', () => {
+  const root = fixtureRoot();
+  writeFrontendPack(root, 'alpha', {
+    scope: 'admin',
+    styles: ['style.css'],
+    scripts: ['script.js'],
+  });
+  assert.throws(() => loadPackMetadata(discoverPacks(root)), /scope must be public/);
+});
+
+test('rejects frontend contribution that is not an object', () => {
+  const root = fixtureRoot();
+  writeFrontendPack(root, 'alpha', 'not-an-object');
+  assert.throws(() => loadPackMetadata(discoverPacks(root)), /frontend contribution must be an object/);
+});
+
+test('rejects frontend with path traversal', () => {
+  const root = fixtureRoot();
+  writeFrontendPack(root, 'alpha', {
+    scope: 'public',
+    styles: ['../pack.json'],
+    scripts: [],
+  });
+  assert.throws(() => loadPackMetadata(discoverPacks(root)), /existing file under frontend/);
+});
+
+test('rejects frontend with absolute path', () => {
+  const root = fixtureRoot();
+  writeFrontendPack(root, 'alpha', {
+    scope: 'public',
+    styles: ['/etc/passwd'],
+    scripts: [],
+  });
+  assert.throws(() => loadPackMetadata(discoverPacks(root)), /invalid path/);
+});
+
+test('rejects frontend with non-existent file', () => {
+  const root = fixtureRoot();
+  writeFrontendPack(root, 'alpha', {
+    scope: 'public',
+    styles: ['missing.css'],
+    scripts: [],
+  });
+  assert.throws(() => loadPackMetadata(discoverPacks(root)), /existing file under frontend/);
+});
+
+test('rejects frontend with duplicate paths', () => {
+  const root = fixtureRoot();
+  writeFrontendPack(root, 'alpha', {
+    scope: 'public',
+    styles: ['style.css', 'style.css'],
+    scripts: [],
+  });
+  assert.throws(() => loadPackMetadata(discoverPacks(root)), /duplicate path/);
+});
+
+test('rejects frontend with empty styles and scripts', () => {
+  const root = fixtureRoot();
+  writeFrontendPack(root, 'alpha', {
+    scope: 'public',
+    styles: [],
+    scripts: [],
+  });
+  assert.throws(() => loadPackMetadata(discoverPacks(root)), /frontend contribution is empty/);
+});
+
+test('rejects frontend styles that is not an array', () => {
+  const root = fixtureRoot();
+  writeFrontendPack(root, 'alpha', {
+    scope: 'public',
+    styles: 'style.css',
+    scripts: [],
+  });
+  assert.throws(() => loadPackMetadata(discoverPacks(root)), /frontend styles must be an array/);
 });

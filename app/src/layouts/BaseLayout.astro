@@ -7,6 +7,7 @@ import '../styles/global.css';
 import 'katex/dist/katex.css';
 import { stripMarkdown } from '@vanblog/sdk';
 import { packs as packMetadata } from 'virtual:vanblog/packs';
+import { contributions as packContributions } from 'virtual:vanblog/pack-frontend';
 import type { Site, Post } from '@vanblog/sdk';
 
 interface Props {
@@ -84,6 +85,9 @@ const packNavItems = packMetadata.flatMap((pack) => pack.nav ? [pack.nav] : []);
     <title>{title} - {siteName}</title>
     <meta name="description" content={desc} />
     {canonicalURL && <link rel="canonical" href={canonicalURL} />}
+    {packContributions.filter((item) => item.scope === 'public').flatMap((item) => item.styles).map((href) => (
+      <link rel="stylesheet" href={href} data-vanblog-pack-style />
+    ))}
 
     <!-- OpenGraph (Facebook / WeChat / others) -->
     <meta property="og:title" content={post?.title || title} />
@@ -157,6 +161,10 @@ const packNavItems = packMetadata.flatMap((pack) => pack.nav ? [pack.nav] : []);
         </p>
       </div>
     </footer>
+
+    {packContributions.filter((item) => item.scope === 'public').flatMap((item) => item.scripts).map((src) => (
+      <script is:inline type="module" src={src} data-vanblog-pack-script></script>
+    ))}
 
     <!-- Dark mode toggle + logout logic -->
     <script>

@@ -1,5 +1,5 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { isAbsolute, join, normalize, relative } from 'node:path';
 
 const PACK_NAME_PATTERN = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
 const VERSION_PATTERN = /^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/;
@@ -8,7 +8,6 @@ const PUBLIC_PATH_PATTERN = /^\/p\/([a-z][a-z0-9]*(?:-[a-z0-9]+)*)$/;
 export function discoverPacks(root) {
   if (typeof root !== 'string' || root.length === 0) throw new TypeError('Pack root must be a non-empty string');
   if (!existsSync(root)) return [];
-
   return readdirSync(root, { withFileTypes: true })
     .filter((entry) => entry.isDirectory())
     .map((entry) => readPack(root, entry.name))
@@ -24,20 +23,15 @@ function readPack(root, directory) {
   return {
     ...identity,
     directory: packDir,
-    pages: existsSync(pageEntrypoint)
-      ? [{ pack: identity.name, page: 'index', entrypoint: pageEntrypoint }]
-      : [],
+    pages: existsSync(pageEntrypoint) ? [{ pack: identity.name, page: 'index', entrypoint: pageEntrypoint }] : [],
     metadataEntrypoint: existsSync(metadataEntrypoint) ? metadataEntrypoint : null,
   };
 }
 
 function readIdentity(path, directory) {
   let identity;
-  try {
-    identity = JSON.parse(readFileSync(path, 'utf8'));
-  } catch (error) {
-    throw new Error(`Failed to read Pack identity for ${directory}: ${error.message}`);
-  }
+  try { identity = JSON.parse(readFileSync(path, 'utf8')); }
+  catch (error) { throw new Error(`Failed to read Pack identity for ${directory}: ${error.message}`); }
   const keys = Object.keys(identity).sort();
   if (keys.join(',') !== 'name,version') throw new Error(`Pack ${directory} pack.json must contain only name and version`);
   if (!PACK_NAME_PATTERN.test(identity.name)) throw new Error(`Invalid Pack name: ${String(identity.name)}`);
@@ -48,7 +42,13 @@ function readIdentity(path, directory) {
 export function loadPackMetadata(packs) {
   return packs.map((pack) => {
     const metadata = pack.metadataEntrypoint ? loadMetadataFile(pack) : {};
-    return toClientMetadata(pack, metadata);
+    const frontend = resolveFrontendContribution(pack, metadata.frontend);
+    const title = typeof metadata.title === 'string' && metadata.title.length > 0 ? metadata.title : pack.name;
+    const route = `/p/${pack.name}`;
+    const nav = metadata.nav && typeof metadata.nav === 'object'
+      ? { label: typeof metadata.nav.label === 'string' && metadata.nav.label.length > 0 ? metadata.nav.label : title, href: metadata.nav.href === route ? metadata.nav.href : route }
+      : null;
+    return { name: pack.name, version: pack.version, title, nav, routes: pack.pages.map((page) => ({ pattern: `/p/${page.pack}`, page: page.page })), ...(frontend ? { frontend } : {}) };
   });
 }
 
@@ -57,49 +57,50 @@ function loadMetadataFile(pack) {
   const expression = source.replace(/^\s*export\s+default\s+/, 'return ');
   if (expression === source) throw new Error(`Pack ${pack.name} metadata must use export default`);
   const metadata = Function(`'use strict';\n${expression}`)();
-  if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) {
-    throw new Error(`Pack ${pack.name} metadata must export an object`);
-  }
+  if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) throw new Error(`Pack ${pack.name} metadata must export an object`);
   return metadata;
 }
 
-function toClientMetadata(pack, metadata) {
-  const title = typeof metadata.title === 'string' && metadata.title.length > 0 ? metadata.title : pack.name;
-  const route = `/p/${pack.name}`;
-  const nav = metadata.nav && typeof metadata.nav === 'object'
-    ? {
-        label: typeof metadata.nav.label === 'string' && metadata.nav.label.length > 0 ? metadata.nav.label : title,
-        href: metadata.nav.href === route ? metadata.nav.href : route,
-      }
-    : null;
-  return {
-    name: pack.name,
-    version: pack.version,
-    title,
-    nav,
-    routes: pack.pages.map((page) => ({ pattern: `/p/${page.pack}`, page: page.page })),
-  };
+function resolveFrontendContribution(pack, contribution) {
+  if (contribution === undefined) return null;
+  if (!contribution || typeof contribution !== 'object' || Array.isArray(contribution)) throw new Error(`Pack ${pack.name} frontend contribution must be an object`);
+  if (contribution.scope !== 'public') throw new Error(`Pack ${pack.name} frontend scope must be public`);
+  const styles = validateFrontendPaths(pack, contribution.styles, 'styles');
+  const scripts = validateFrontendPaths(pack, contribution.scripts, 'scripts');
+  if (styles.length === 0 && scripts.length === 0) throw new Error(`Pack ${pack.name} frontend contribution is empty`);
+  return { scope: 'public', styles, scripts };
+}
+
+function validateFrontendPaths(pack, values, field) {
+  if (!Array.isArray(values)) throw new Error(`Pack ${pack.name} frontend ${field} must be an array`);
+  const seen = new Set();
+  return values.map((value) => {
+    if (typeof value !== 'string' || value.length === 0 || isAbsolute(value) || value.includes('\\0')) throw new Error(`Pack ${pack.name} frontend ${field} contains an invalid path`);
+    const normalized = normalize(value);
+    const frontendRoot = join(pack.directory, 'frontend');
+    const target = join(frontendRoot, normalized);
+    if (relative(frontendRoot, target).startsWith('..') || normalized !== value || !existsSync(target)) throw new Error(`Pack ${pack.name} frontend ${field} path must be an existing file under frontend/: ${value}`);
+    if (seen.has(value)) throw new Error(`Pack ${pack.name} frontend ${field} contains duplicate path: ${value}`);
+    seen.add(value);
+    return value;
+  });
 }
 
 export function resolvePublicPages(definitions) {
   if (!Array.isArray(definitions)) throw new TypeError('Pack page definitions must be an array');
   const seenPacks = new Set();
   const seenPaths = new Set();
-
   return definitions.map((definition) => {
     if (!definition || typeof definition !== 'object') throw new TypeError('Each Pack page definition must be an object');
     const { pack, page, entrypoint } = definition;
     if (!PACK_NAME_PATTERN.test(pack)) throw new Error(`Invalid Pack name: ${String(pack)}`);
     if (page !== 'index') throw new Error(`Unsupported public page for Pack ${pack}: ${String(page)}`);
     if (typeof entrypoint !== 'string' || entrypoint.length === 0) throw new Error(`Missing entrypoint for Pack ${pack}`);
-
     const pattern = `/p/${pack}`;
     const namespaceMatch = PUBLIC_PATH_PATTERN.exec(pattern);
     if (!namespaceMatch || namespaceMatch[1] !== pack) throw new Error(`Public page must use the /p/<pack> namespace: ${pattern}`);
     if (seenPacks.has(pack) || seenPaths.has(pattern)) throw new Error(`Duplicate public Pack page: ${pattern}`);
-
-    seenPacks.add(pack);
-    seenPaths.add(pattern);
+    seenPacks.add(pack); seenPaths.add(pattern);
     return { pack, page, pattern, entrypoint };
   });
 }
