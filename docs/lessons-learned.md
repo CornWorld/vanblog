@@ -277,3 +277,47 @@ migratecmd.MustRegister(app, app.RootCmd, migratecmd.Config{...})
 | ~~外置控制脚本~~         | 已实现(2026-06-28)                  | 仓库根 `vanblog.sh`,11 项菜单(install/config/start/stop/restart/update/log/backup/restore/maintenance/uninstall)。模板 compose 内嵌脚本,模板更新需重新分发脚本                                                                                                                                                                                                                                                    |
 | Caddy admin api 调用方式 | Go 已实现                           | routing-strategy.md §9 原计划用 JSVM $http,实际用 Go extend                                                                                                                                                                                                                                                                                                                                                       |
 | ~~Go markdown 包~~       | 已删除(2026-06-28)                  | 原本基于 goldmark 的 `internal/markdown` 是死代码,前端 `posts/[id].astro` 改用 marked + DOMPurify 后 Go 端零调用方。删除后 vault 测试全过,go.mod 同步去掉 goldmark 依赖                                                                                                                                                                                                                                           |
+
+---
+
+## 8. Go 构建产物管理
+
+### 8.1 问题
+
+`go build ./cmd/gw/` 等无 `-o` 的构建命令会在当前目录生成二进制文件。反复运行后会污染工作区，且容易被 `git add -A` 不小心提交。
+
+本项目此前已在以下环节规避了此问题：
+
+| 环节               | 做法                                                                   | 状态                 |
+| ------------------ | ---------------------------------------------------------------------- | -------------------- |
+| `vault/Makefile`   | `go build -o bin/migrate ./cmd/migrate` + `make build` → `bin/vanblog` | ✅ (2026-07-20 改进) |
+| `Dockerfile`       | `go build -o /pocketbase .`                                            | ✅                   |
+| CI (`release.yml`) | `go build -o bin/migrate-$(goos)-$(goarch) ./cmd/migrate`              | ✅                   |
+| `.gitignore`       | `vault/vanblog` + `vault/bin/`                                         | ✅ (2026-07-20 补充) |
+
+### 8.2 教训
+
+1. **永远指定 `-o`** — 无论 Makefile 还是手册命令，统一使用 `go build -o bin/<name> ./cmd/<path>`。不要依赖默认行为（二进制丢当前目录）。
+2. **产物目录要进 `.gitignore`** — 即使 Makefile 写了 `-o bin/`，如果 `bin/` 没被 gitignore 保护，产物仍可能被提交。`vault/bin/` 就是一个活生生的遗漏。
+3. **`go build ./...` 只应在验证编译通过时使用**，不适合日常开发构建。日常开发用 `make` 或 `go build -o`。
+4. **Dockerfile 和 CI 必须统一用 `-o`**，不依赖 `WORKDIR` 隐含的当前目录行为——后者可读性差，也容易被目录结构调整破坏。
+
+### 8.3 推荐模式
+
+```makefile
+OUTDIR ?= bin
+
+build:
+    go build -o $(OUTDIR)/vanblog .
+
+migrate:
+    go build -o $(OUTDIR)/migrate ./cmd/migrate
+```
+
+对应 `.gitignore`：
+
+```
+# Go build artifacts
+vault/vanblog
+vault/bin/
+```

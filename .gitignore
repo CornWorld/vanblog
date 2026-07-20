@@ -24,8 +24,9 @@ runtime/core-schema/models.js
 # Pack schema artifacts (run scripts/pack-schema-build.mjs <pack> before Go builds)
 packs/*/schema.js
 
-# Go build artifact
+# Go build artifacts
 vault/vanblog
+vault/bin/
 
 # pb data (local dev)
 pb_data/
