@@ -13,6 +13,7 @@ if (isAdmin) {
     const record = await Astro.locals.pb.collection('live2d_config').getFirstListItem('1=1');
     serverConfig = record;
   } catch {
+    console.warn('[live2d-companion] config collection not found, using defaults');
     serverConfig = null;
   }
 }

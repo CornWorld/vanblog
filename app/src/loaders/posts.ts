@@ -50,6 +50,7 @@ export function postLoader(): LiveLoader<
           },
         };
       } catch {
+        console.warn("[posts] loadEntry failed");
         return undefined;
       }
     },
@@ -98,6 +99,7 @@ export function postLoader(): LiveLoader<
           },
         };
       } catch {
+        console.warn("[posts] loadCollection failed");
         return { entries: [] };
       }
     },

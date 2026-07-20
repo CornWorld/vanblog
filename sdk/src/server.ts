@@ -43,6 +43,7 @@ export function createServerClient(
         }
       }
     } catch {
+      console.warn("[vanblog] failed to refresh auth token, clearing");
       client.authStore.clear();
     }
   }
@@ -224,7 +225,9 @@ export function createVanblogMiddleware(opts: VanblogMiddlewareOptions = {}) {
     if (cookie) {
       try {
         client.authStore.loadFromCookie(cookie);
-      } catch {}
+      } catch {
+        console.warn("[vanblog] failed to load auth from cookie");
+      }
     }
 
     context.locals.pb = client;
@@ -239,7 +242,9 @@ export function createVanblogMiddleware(opts: VanblogMiddlewareOptions = {}) {
       try {
         cachedSite = await client.vanblog.site.get();
         siteFetchTime = Date.now();
-      } catch {}
+      } catch {
+        console.warn("[vanblog] getSite failed, returning cached/default");
+      }
       return cachedSite;
     };
 
@@ -253,6 +258,7 @@ export function createVanblogMiddleware(opts: VanblogMiddlewareOptions = {}) {
       try {
         await client.collection("users").authRefresh();
       } catch {
+        console.warn("[vanblog] auth refresh failed, clearing session");
         // If the failure is a genuine auth error (expired/invalid token),
         // clear the store and proceed as anonymous. If PocketBase is
         // unreachable, the bootstrap check below will catch it.
@@ -313,8 +319,9 @@ export function createVanblogMiddleware(opts: VanblogMiddlewareOptions = {}) {
           })
         );
       }
-    } catch {}
-
+    } catch {
+      console.warn("[vanblog] failed to export auth cookie");
+    }
     return response;
   };
 }

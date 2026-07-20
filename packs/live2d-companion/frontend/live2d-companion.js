@@ -36,7 +36,7 @@ function loadSsrConfig() {
   try {
     const data = JSON.parse(node.textContent || "{}");
     return data.serverConfig || null;
-  } catch {
+  } catch { console.warn("[live2d-companion] failed to parse SSR config");
     return null;
   }
 }
@@ -193,7 +193,7 @@ async function fetchConfigRecordId() {
   try {
     const record = await pb.collection(COLLECTION).getFirstListItem("1=1");
     return record.id;
-  } catch {
+  } catch { console.warn("[live2d-companion] failed to parse SSR config");
     return null;
   }
 }

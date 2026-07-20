@@ -34,15 +34,21 @@ function auditContext(e) {
   let ua = "";
   try {
     actor = (e.auth && e.auth.id) || "";
-  } catch {}
+  } catch {
+    /* expected in AfterSuccess hooks (no request context) */
+  }
   try {
     ip = e.realIP ? e.realIP() : "";
-  } catch {}
+  } catch {
+    /* expected in AfterSuccess hooks */
+  }
   try {
     if (e.request) {
       ua = (e.request.header && e.request.header("User-Agent")) || "";
     }
-  } catch {}
+  } catch {
+    /* expected in AfterSuccess hooks */
+  }
   return { actor, ip, userAgent: ua };
 }
 

@@ -17,7 +17,8 @@ try {
     if (parsed.data.visible === false) return [];
     return [parsed.data];
   });
-} catch {
+} catch (err) {
+    console.error("[moments] failed to load:", err);
   error = '动态加载失败，请稍后重试。';
 }
 ---

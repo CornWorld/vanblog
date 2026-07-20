@@ -18,10 +18,12 @@ try {
       const url = new URL(parsed.data.url);
       return url.protocol === 'http:' || url.protocol === 'https:' ? [parsed.data] : [];
     } catch {
+      console.warn('[bookmarks] invalid URL:', parsed.data.url);
       return [];
     }
   });
-} catch {
+} catch (err) {
+  console.error('[bookmarks] failed to load:', err);
   error = '收藏加载失败，请稍后重试。';
 }
 ---

@@ -25,6 +25,8 @@ module.exports = function getQuery(e, name) {
         }
       }
     }
-  } catch {}
+  } catch {
+    console.log("[vanblog] getQuery: failed to parse request URL");
+  }
   return null;
 };
