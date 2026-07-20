@@ -151,7 +151,7 @@ const boolField = (k: keyof Site, def = false): boolean => {
   <script is:inline type="application/json" id="site-data" set:html={JSON.stringify({ siteId: id, commentsConfig: site?.commentsConfig || {} })} />
   <script is:inline>
     const { siteId, commentsConfig: commentsConfigJson } = JSON.parse(document.getElementById('site-data').textContent);
-    const pb = window.__pb;
+    const pb = self.vanblog.pb;
     if (siteId) {
       // ── Show/hide provider-specific config panels ──
       const providerSelect = document.getElementById('commentsProvider');

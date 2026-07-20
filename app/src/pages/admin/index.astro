@@ -123,7 +123,7 @@ const totalPages = result?.totalPages ?? 1;
         e.preventDefault();
         const id = a.dataset.del;
         if (!id || !confirm('确定删除该文章？（软删除：deleted=true）')) return;
-        const pb = window.__pb;
+        const pb = self.vanblog.pb;
         if (!pb) return alert('未登录');
         try {
           // soft-delete: mark deleted=true so it stays in revisions/audits

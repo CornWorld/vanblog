@@ -38,7 +38,7 @@ export {
 export { createVanblogMiddleware } from "./server";
 
 // Browser helpers
-export { createBrowserClient, initClient, logout } from "./browser";
+export { createBrowserClient, getClient, initClient, logout } from "./browser";
 
 // Cookie constants
 export { AUTH_COOKIE_OPTIONS } from "./cookie";

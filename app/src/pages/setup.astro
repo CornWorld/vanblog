@@ -79,7 +79,7 @@ if (alreadySetup) {
       statusEl.textContent = '创建中…';
 
       const fd = new FormData(form);
-      const pb = window.__pb;
+      const pb = self.vanblog.pb;
       if (!pb) {
         errEl.textContent = '客户端未初始化，请刷新';
         errEl.classList.remove('hidden');

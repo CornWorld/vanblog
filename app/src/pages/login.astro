@@ -35,7 +35,7 @@ Astro.cache.set(false);
   </form>
 
   <script>
-    import { AUTH_COOKIE_OPTIONS } from '@vanblog/sdk';
+    import { getClient, AUTH_COOKIE_OPTIONS } from '@vanblog/sdk';
 
     const form = document.getElementById('login-form')!;
     const errEl = document.getElementById('login-error')!;
@@ -44,7 +44,7 @@ Astro.cache.set(false);
       e.preventDefault();
       errEl.classList.add('hidden');
       const fd = new FormData(form as HTMLFormElement);
-      const pb = window.__pb;
+      const pb = getClient();
       if (!pb) {
         errEl.textContent = '客户端未初始化，请刷新';
         errEl.classList.remove('hidden');

@@ -1,9 +1,7 @@
-/* Live2D Companion — widget, toolbar, message bubble, fallback */
+/* Live2D Companion — widget container and fallback card */
 [data-vanblog-pack="live2d-companion"] {
   --l2dc-accent: #6366f1;
-  --l2dc-accent-hover: #818cf8;
   --l2dc-surface: #ffffff;
-  --l2dc-surface-alt: #f1f5f9;
   --l2dc-text: #1e293b;
   --l2dc-muted: #64748b;
   --l2dc-border: #e2e8f0;
@@ -12,7 +10,6 @@
 
 .dark [data-vanblog-pack="live2d-companion"] {
   --l2dc-surface: #1e293b;
-  --l2dc-surface-alt: #334155;
   --l2dc-text: #e2e8f0;
   --l2dc-muted: #94a3b8;
   --l2dc-border: #475569;
@@ -34,95 +31,6 @@
 [data-vanblog-pack="live2d-companion"] #live2d {
   pointer-events: auto;
   filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.15));
-}
-
-/* ─── Tool bar ─────────────────────────────────────────────── */
-[data-vanblog-pack="live2d-companion"] .live2d-companion__toolbar {
-  display: flex;
-  gap: 4px;
-  padding: 4px 8px;
-  background: var(--l2dc-surface);
-  border: 1px solid var(--l2dc-border);
-  border-radius: var(--l2dc-radius) var(--l2dc-radius) 0 0;
-  pointer-events: auto;
-  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.06);
-}
-
-[data-vanblog-pack="live2d-companion"] .live2d-companion__tool {
-  display: grid;
-  place-items: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 6px;
-  font-size: 14px;
-  line-height: 1;
-  cursor: pointer;
-  user-select: none;
-  color: var(--l2dc-muted);
-  transition: background 0.15s ease, color 0.15s ease;
-}
-
-[data-vanblog-pack="live2d-companion"] .live2d-companion__tool:hover {
-  background: var(--l2dc-accent);
-  color: #fff;
-}
-
-[data-vanblog-pack="live2d-companion"] .live2d-companion__tool:focus-visible {
-  outline: 2px solid var(--l2dc-accent);
-  outline-offset: 2px;
-}
-
-/* ─── Message bubble ───────────────────────────────────────── */
-[data-vanblog-pack="live2d-companion"] .live2d-companion__message {
-  max-width: 250px;
-  min-height: 36px;
-  margin: 0 0 4px 0;
-  padding: 8px 14px;
-  background: var(--l2dc-surface);
-  border: 1px solid var(--l2dc-border);
-  border-radius: var(--l2dc-radius);
-  font: 13px/1.6 system-ui, sans-serif;
-  color: var(--l2dc-text);
-  text-align: center;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-  pointer-events: auto;
-  opacity: 0;
-  transform: translateY(8px);
-  transition: opacity 0.3s ease, transform 0.3s ease;
-}
-
-[data-vanblog-pack="live2d-companion"] .live2d-companion__message.is-visible {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-[data-vanblog-pack="live2d-companion"] .live2d-companion__message::after {
-  content: '';
-  position: absolute;
-  right: 28px;
-  bottom: -6px;
-  border: 6px solid transparent;
-  border-top-color: var(--l2dc-surface);
-  filter: drop-shadow(0 1px 0 var(--l2dc-border));
-}
-
-/* ─── Toggle button (shown after close) ────────────────────── */
-.live2d-companion__toggle {
-  position: fixed;
-  right: 1rem;
-  bottom: 1rem;
-  z-index: 41;
-  display: none;
-  width: 48px;
-  height: 48px;
-  place-items: center;
-  border-radius: 50%;
-  background: var(--l2dc-accent, #6366f1);
-  font-size: 24px;
-  cursor: pointer;
-  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.4);
-  pointer-events: auto;
-  user-select: none;
 }
 
 /* ─── Fallback card ────────────────────────────────────────── */
@@ -169,20 +77,11 @@
     transform: scale(0.7);
     transform-origin: bottom right;
   }
-  .live2d-companion__toggle {
-    width: 40px;
-    height: 40px;
-    font-size: 20px;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
   [data-vanblog-pack="live2d-companion"] * {
     transition: none !important;
     animation: none !important;
-  }
-  [data-vanblog-pack="live2d-companion"] .live2d-companion__message {
-    opacity: 1;
-    transform: none;
   }
 }

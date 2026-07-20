@@ -51,7 +51,7 @@ declare namespace App {
 }
 
 interface Window {
-  __pb: import("@vanblog/sdk").VanblogClient | undefined;
+  vanblog: { pb: import("@vanblog/sdk").VanblogClient };
   __bytemdEditor:
     | {
         $on(

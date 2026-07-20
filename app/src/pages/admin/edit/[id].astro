@@ -132,7 +132,7 @@ const currentAuthorId: string = post.author || user.id;
 <script is:inline>
     const { postId, authorId } = JSON.parse(document.getElementById('editor-data').textContent);
     const save = async (publish) => {
-      const pb = window.__pb;
+      const pb = self.vanblog.pb;
       if (!pb) return alert('未登录');
 
       const tagIds = Array.from(document.getElementById('f-tags').selectedOptions).map(o => o.value);

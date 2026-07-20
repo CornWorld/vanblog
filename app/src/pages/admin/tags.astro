@@ -46,7 +46,7 @@ const { data: tags = [] } = await safe(
   {tags.length === 0 && <p>暂无标签。</p>}
 
   <script>
-    const pb = window.__pb;
+    const pb = self.vanblog.pb;
 
     document.getElementById('new-tag')!.addEventListener('submit', async (e) => {
       e.preventDefault();

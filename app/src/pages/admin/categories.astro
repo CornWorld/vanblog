@@ -54,7 +54,7 @@ const { data: cats = [] } = await safe(
   {cats.length === 0 && <p>暂无分类。</p>}
 
   <script>
-    const pb = window.__pb;
+    const pb = self.vanblog.pb;
 
     document.getElementById('new-cat')!.addEventListener('submit', async (e) => {
       e.preventDefault();

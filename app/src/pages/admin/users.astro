@@ -87,7 +87,7 @@ const adminCount = users.filter((u: any) => u.role === 'admin').length;
 <script is:inline type="application/json" id="users-data" set:html={JSON.stringify({ adminCount })} />
   <script is:inline>
     const { adminCount } = JSON.parse(document.getElementById('users-data').textContent);
-    const pb = window.__pb;
+    const pb = self.vanblog.pb;
 
     document.getElementById('new-user').addEventListener('submit', async (e) => {
       e.preventDefault();

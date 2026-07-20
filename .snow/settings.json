@@ -8,5 +8,6 @@
   "toolSearchEnabled": false,
   "hybridCompressEnabled": true,
   "teamMode": false,
-  "ultraTodoEnabled": false
+  "ultraTodoEnabled": false,
+  "imageCompressEnabled": false
 }

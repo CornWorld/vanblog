@@ -25,6 +25,7 @@ const { initialContent = '', mediaConfig } = Astro.props
   import { rehypeCodeBlock } from '../lib/markdown/plugins/rehype-code-block';
   import { remarkContainer } from '../lib/markdown/plugins/remark-container';
   import 'katex/dist/katex.css';
+  import { getClient } from '@vanblog/sdk/browser';
 
   // Read site.mediaConfig injected server-side via #media-config JSON tag.
   // Falls back to the package default ({enabled:true, targetFormat:'webp',
@@ -70,7 +71,7 @@ const { initialContent = '', mediaConfig } = Astro.props
   // 失败时跳过该文件；全部失败时 alert 提示
   // 上传前对 BMP/TIFF 走 wasm 转 WebP，SVG 直接放行 + 状态条提示
   async function uploadImages(files: File[]) {
-    const pb = window.__pb;
+    const pb = getClient();
     if (!pb) return [];
 
     // Normalize each file (BMP/TIFF → WebP via wasm, SVG passes through).

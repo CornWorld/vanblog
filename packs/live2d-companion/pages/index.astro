@@ -1,8 +1,28 @@
 ---
 import { Page } from 'vanblog:theme';
+import { getAuthUser } from '@vanblog/sdk';
+
+export const prerender = false;
+
+const user = getAuthUser(Astro.locals.pb);
+const isAdmin = user?.role === 'admin';
+
+let serverConfig: Record<string, unknown> | null = null;
+if (isAdmin) {
+  try {
+    const record = await Astro.locals.pb.collection('live2d_config').getFirstListItem('1=1');
+    serverConfig = record;
+  } catch {
+    serverConfig = null;
+  }
+}
+
+const ssrData = { isAdmin, serverConfig };
 ---
 
 <Page title="Live2D 看板娘" description="全站 Live2D 看板娘插件">
+  <script type="application/json" id="l2d-ssr-data" set:html={JSON.stringify(ssrData)} />
+
   <article class="prose max-w-none">
     <h1>Live2D 看板娘</h1>
     <p>通过 VanBlog Pack Frontend Contribution 契约注入全站的 Live2D 看板娘插件。</p>
@@ -93,10 +113,9 @@ import { Page } from 'vanblog:theme';
   const status = document.getElementById('l2d-config-status');
   const preview = document.getElementById('l2d-config-preview');
 
-  // Client-side admin check: PB authStore holds the user model
-  const pb = window.__pb;
-  const authModel = pb?.authStore?.model;
-  const isAdmin = authModel?.role === 'admin';
+  const ssrRaw = document.getElementById('l2d-ssr-data')?.textContent || '{}';
+  const ssrData = JSON.parse(ssrRaw);
+  const isAdmin = ssrData.isAdmin === true;
 
   if (api && isAdmin) {
     configSection.hidden = false;
@@ -121,7 +140,7 @@ import { Page } from 'vanblog:theme';
     }
     updatePreview();
 
-    document.getElementById('l2d-config-form').addEventListener('submit', (e) => {
+    document.getElementById('l2d-config-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       const tools = allTools.filter(t => document.querySelector(`[name="tool-${t}"]`)?.checked);
       const newConfig = {
@@ -132,15 +151,23 @@ import { Page } from 'vanblog:theme';
         minWidth: parseInt(document.getElementById('cfg-minWidth').value) || 0,
         tools,
       };
-      api.saveConfig(newConfig);
-      updatePreview();
-      status.hidden = false;
-      status.textContent = '配置已保存。点击"重新加载看板娘"以应用。';
-      setTimeout(() => { status.hidden = true; }, 3000);
+      try {
+        await api.saveConfig(newConfig);
+        updatePreview();
+        status.hidden = false;
+        status.textContent = '配置已保存。点击"重新加载看板娘"以应用。';
+        setTimeout(() => { status.hidden = true; }, 3000);
+      } catch (err) {
+        console.warn('[live2d-companion] saveConfig failed', err);
+        status.hidden = false;
+        status.textContent = '保存失败，请检查后端配置 collection 是否存在。';
+        status.classList.remove('text-green-600');
+        status.classList.add('text-red-600');
+      }
     });
 
-    document.getElementById('l2d-config-reset').addEventListener('click', () => {
-      api.resetConfig();
+    document.getElementById('l2d-config-reset').addEventListener('click', async () => {
+      try { await api.resetConfig(); } catch (err) { console.warn('[live2d-companion] resetConfig failed', err); }
       location.reload();
     });
 

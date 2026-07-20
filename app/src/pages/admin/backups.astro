@@ -103,7 +103,7 @@ function fmtBytes(bytes: number): string {
     }
 
     document.getElementById('btn-create-backup')?.addEventListener('click', async () => {
-      const pb = window.__pb;
+      const pb = self.vanblog.pb;
       if (!isAdmin || !pb) return alert('管理员登录已失效，请重新登录');
       setBusy(true, '正在创建备份，请勿关闭页面…');
       try {
@@ -118,7 +118,7 @@ function fmtBytes(bytes: number): string {
     document.querySelectorAll('.btn-download-backup[data-key]').forEach((button) => {
       button.addEventListener('click', async () => {
         const key = button.dataset.key;
-        const pb = window.__pb;
+        const pb = self.vanblog.pb;
         if (!key || !pb) return alert('管理员登录已失效，请重新登录');
         setBusy(true, '正在准备安全下载链接…');
         try {
@@ -140,7 +140,7 @@ function fmtBytes(bytes: number): string {
       button.addEventListener('click', async () => {
         const key = button.dataset.key;
         if (!key || !confirm(`确认永久删除备份 ${key}？该操作不可撤销。`)) return;
-        const pb = window.__pb;
+        const pb = self.vanblog.pb;
         if (!pb) return alert('管理员登录已失效，请重新登录');
         setBusy(true, '正在删除备份…');
         try {
@@ -161,7 +161,7 @@ function fmtBytes(bytes: number): string {
         if (!confirm(`恢复 ${key} 将覆盖当前数据并重启服务。\n\n确认继续？`)) return;
         const typed = prompt(`这是不可逆的危险操作。请输入备份文件名以确认：\n${key}`);
         if (typed !== key) return alert('文件名不匹配，已取消恢复');
-        const pb = window.__pb;
+        const pb = self.vanblog.pb;
         if (!pb) return alert('管理员登录已失效，请重新登录');
 
         setBusy(true, '恢复请求已提交，等待服务重启…');
