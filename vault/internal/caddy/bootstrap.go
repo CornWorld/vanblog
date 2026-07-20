@@ -12,7 +12,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/cornworld/vanblog/utils/caddyadmin"
+	"github.com/CornWorld/caddyadmin"
 	"github.com/pocketbase/pocketbase/core"
 )
 

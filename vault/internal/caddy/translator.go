@@ -5,7 +5,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/cornworld/vanblog/utils/caddyadmin"
+	"github.com/CornWorld/caddyadmin"
 )
 
 // UserRule is the user-facing routing DSL stored in site.routing JSON field.

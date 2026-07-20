@@ -27,7 +27,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cornworld/vanblog/utils/caddyadmin"
+	"github.com/CornWorld/caddyadmin"
 	_ "github.com/cornworld/vanblog/pb_migrations"
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/core"

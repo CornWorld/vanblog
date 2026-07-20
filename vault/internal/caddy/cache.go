@@ -3,7 +3,7 @@ package caddy
 import (
 	"fmt"
 
-	"github.com/cornworld/vanblog/utils/caddyadmin"
+	"github.com/CornWorld/caddyadmin"
 )
 
 // CacheControl immutable response headers for long-lived static assets served

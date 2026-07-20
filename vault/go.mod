@@ -1,8 +1,11 @@
 module github.com/cornworld/vanblog
 
-go 1.26.0
+go 1.26.4
+
+replace github.com/CornWorld/caddyadmin => ../../caddyadmin
 
 require (
+	github.com/CornWorld/caddyadmin v0.0.0-00010101000000-000000000000
 	github.com/brianvoe/gofakeit/v7 v7.15.0
 	github.com/dop251/goja v0.0.0-20260701091749-b07b74453ea9
 	github.com/pocketbase/dbx v1.12.0

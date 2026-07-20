@@ -13,7 +13,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/cornworld/vanblog/utils/caddyadmin"
+	"github.com/CornWorld/caddyadmin"
 )
 
 func TestBuildOptsDefaults(t *testing.T) {

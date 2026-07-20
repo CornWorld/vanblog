@@ -6,7 +6,7 @@ package caddy
 import (
 	"strings"
 
-	"github.com/cornworld/vanblog/utils/caddyadmin"
+	"github.com/CornWorld/caddyadmin"
 )
 
 // BuildOpts controls how a Caddy config is generated. It is an internal
