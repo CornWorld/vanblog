@@ -124,8 +124,12 @@ vault/
       migration.go                # JSON 解析 + 分批事务 + 字段映射
       routes.go                   # 注册 /api/vanblog/migrate/* 路由
     caddy/
-      caddy.go                    # Caddy admin API 客户端 + SSRF 校验 + 路由翻译
+      caddy.go                    # Caddy 配置构建 + SSRF 校验 + 路由翻译、原子 LoadConfig
       status.go                   # TLS 状态查询
+      config_builder.go           # BuildFullConfig: typed struct → Caddy JSON
+      cache.go                    # @id 缓存 / diff
+    # Caddy admin API 客户端已独立为外部模块:
+    # github.com/CornWorld/caddyadmin — 位于 ~/Code/caddyadmin/
     revisions/
       revisions.go                # 快照写入 / diff / 恢复
     visits/
@@ -218,18 +222,15 @@ JSVM 钩子示例 (`pb_hooks/system.pb.js` 的真实片段):
 ```javascript
 // 文章发布/更新/删除后记录审计(posts/tags/categories/media/users 各 3 种事件)
 onRecordAfterCreateSuccess(
-  (e) =>
-    require("./lib/vanblog-audit.js").postAction("post.create", e),
+  (e) => require("./lib/vanblog-audit.js").postAction("post.create", e),
   "posts"
 );
 onRecordAfterUpdateSuccess(
-  (e) =>
-    require("./lib/vanblog-audit.js").postAction("post.update", e),
+  (e) => require("./lib/vanblog-audit.js").postAction("post.update", e),
   "posts"
 );
 onRecordAfterDeleteSuccess(
-  (e) =>
-    require("./lib/vanblog-audit.js").postAction("post.delete", e),
+  (e) => require("./lib/vanblog-audit.js").postAction("post.delete", e),
   "posts"
 );
 
