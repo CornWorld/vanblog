@@ -66,16 +66,19 @@ func loadBuiltin(directory string, packFS fs.FS) (Pack, error) {
 	if err != nil {
 		return Pack{}, fmt.Errorf("read builtin pack %q identity: %w", directory, err)
 	}
+	// Allow optional Astro-facing metadata fields (title, nav, frontend) so
+	// the Astro resolver can keep using pack.json as the single source of
+	// truth. Go itself only consumes name and version.
+	var meta packMetadata
 	decoder := json.NewDecoder(bytes.NewReader(data))
 	decoder.DisallowUnknownFields()
-	var identity identity
-	if err := decoder.Decode(&identity); err != nil {
+	if err := decoder.Decode(&meta); err != nil {
 		return Pack{}, fmt.Errorf("decode builtin pack %q identity: %w", directory, err)
 	}
-	if err := validateIdentity(identity.Name, identity.Version); err != nil {
+	if err := validateIdentity(meta.Name, meta.Version); err != nil {
 		return Pack{}, err
 	}
-	p := Pack{Name: identity.Name, Version: identity.Version, FS: packFS, Source: Builtin}
+	p := Pack{Name: meta.Name, Version: meta.Version, FS: packFS, Source: Builtin}
 	if p.Name != directory {
 		return Pack{}, fmt.Errorf("builtin directory %q declares name %q", directory, p.Name)
 	}

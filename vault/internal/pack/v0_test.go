@@ -74,7 +74,7 @@ func TestRuntimeLoadableV0AllowsLocalHooksAndBuiltinFrontend(t *testing.T) {
 	if len(warnings) != 0 {
 		t.Fatalf("unexpected warnings: %#v", warnings)
 	}
-	if len(loadable) != 2 {
+	if len(loadable) != 4 {
 		t.Fatalf("unexpected loadable packs: %#v", loadable)
 	}
 }

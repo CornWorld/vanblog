@@ -1,6 +1,7 @@
 package packcli
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -33,12 +34,13 @@ func NewCommand() *cobra.Command {
 		SilenceErrors: true,
 	}
 	var schemaBuilder string
-	root.PersistentFlags().StringVar(&builtinPacksDir, "builtinPacksDir", "../../../packs", "directory with builtin Pack resources")
+	root.PersistentFlags().StringVar(&builtinPacksDir, "builtinPacksDir", "packs", "directory with builtin Pack resources")
 	root.PersistentFlags().StringVar(&packsDir, "packsDir", "", "directory with local Pack overrides")
 	root.PersistentFlags().StringVar(&schemaBuilder, "schemaBuilder", "scripts/pack-schema-build.mjs", "Node script that builds Pack schema.ts into schema.js")
 
 	resolve := func() ([]pack.Pack, error) {
-		builtins, err := pack.Builtins(os.DirFS(builtinPacksDir))
+		builtinPath := resolveExistingPath(builtinPacksDir)
+		builtins, err := pack.Builtins(os.DirFS(builtinPath))
 		if err != nil {
 			return nil, err
 		}
@@ -85,6 +87,60 @@ func NewCommand() *cobra.Command {
 	})
 
 	root.AddCommand(&cobra.Command{
+		Use:   "status",
+		Short: "Show derived lifecycle status for resolved Packs",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			packs, err := resolve()
+			if err != nil {
+				return err
+			}
+			statuses, err := pack.Statuses(packs)
+			if err != nil {
+				return err
+			}
+			for _, status := range statuses {
+				artifact := "none"
+				if item, inspectErr := pack.Inspect(packs, status.Name); inspectErr == nil && pack.HasSchemaArtifact(item) {
+					artifact = "schema.js"
+				}
+				fmt.Fprintf(cmd.OutOrStdout(), "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n", status.Name, status.Version, status.Source, status.State, artifact, status.Freshness, status.SourceHash, status.Reason)
+			}
+			return nil
+		},
+	})
+
+	root.AddCommand(&cobra.Command{
+		Use:   "plan [directory]",
+		Short: "Show read-only Pack deployment preflight; does not build, migrate, backup, or activate",
+		Args:  cobra.MaximumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			var packs []pack.Pack
+			var err error
+			if len(args) == 1 {
+				item, loadErr := pack.LoadLocal(args[0])
+				if loadErr != nil {
+					return loadErr
+				}
+				packs = []pack.Pack{item}
+			} else {
+				packs, err = resolve()
+				if err != nil {
+					return err
+				}
+			}
+			plans, err := pack.Plans(packs)
+			if err != nil {
+				return err
+			}
+			for _, item := range plans {
+				fmt.Fprintf(cmd.OutOrStdout(), "%s\t%s\t%s\t%s\t%s\t%s\t%d\t%s\t%s\t%t\t%s\t%s\n", item.Name, item.Version, item.Source, item.State, item.Artifact, item.Freshness, len(item.MigrationFiles), item.MigrationTarget, item.Reason, item.BackupRequired, item.BackupStrategy, item.BackupScope)
+			}
+			return nil
+		},
+	})
+
+	root.AddCommand(&cobra.Command{
 		Use:   "inspect <name>",
 		Short: "Inspect one resolved Pack",
 		Args:  cobra.ExactArgs(1),
@@ -123,7 +179,8 @@ func NewCommand() *cobra.Command {
 		Short: "Add a builtin Pack source to the managed local Pack directory",
 		Args:  cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			builtins, err := pack.Builtins(os.DirFS(builtinPacksDir))
+			builtinPath := resolveExistingPath(builtinPacksDir)
+			builtins, err := pack.Builtins(os.DirFS(builtinPath))
 			if err != nil {
 				return err
 			}
@@ -199,8 +256,33 @@ func NewCommand() *cobra.Command {
 			if err := validation.ValidateModelSource(validation.PackSource{FS: os.DirFS(directory), Name: item.Name, Path: stagedName}); err != nil {
 				return fmt.Errorf("pack schema artifact is not runtime-loadable: %w", err)
 			}
-			if err := os.Rename(stagedPath, filepath.Join(directory, "schema.js")); err != nil {
-				return fmt.Errorf("promote schema artifact: %w", err)
+			sourceHash, err := pack.Fingerprint(item)
+			if err != nil {
+				return fmt.Errorf("fingerprint Pack source: %w", err)
+			}
+			metadata, err := json.Marshal(pack.ArtifactMetadata{SourceHash: sourceHash})
+			if err != nil {
+				return fmt.Errorf("encode schema artifact metadata: %w", err)
+			}
+			stagedMetadata, err := os.CreateTemp(directory, ".schema.js.meta.json-*")
+			if err != nil {
+				return fmt.Errorf("create schema metadata staging file: %w", err)
+			}
+			stagedMetadataPath := stagedMetadata.Name()
+			defer os.Remove(stagedMetadataPath)
+			if err := stagedMetadata.Chmod(0o644); err != nil {
+				stagedMetadata.Close()
+				return fmt.Errorf("prepare schema metadata staging file: %w", err)
+			}
+			if _, err := stagedMetadata.Write(metadata); err != nil {
+				stagedMetadata.Close()
+				return fmt.Errorf("stage schema artifact metadata: %w", err)
+			}
+			if err := stagedMetadata.Close(); err != nil {
+				return fmt.Errorf("close schema metadata staging file: %w", err)
+			}
+			if err := promoteArtifactBundle(directory, stagedPath, stagedMetadataPath); err != nil {
+				return err
 			}
 			fmt.Fprintf(cmd.OutOrStdout(), "built artifacts for %s\n", item.Name)
 			return nil
@@ -233,6 +315,70 @@ func NewCommand() *cobra.Command {
 		},
 	})
 	return root
+}
+
+func promoteArtifactBundle(directory, stagedSchema, stagedMetadata string) error {
+	artifactPath := filepath.Join(directory, "schema.js")
+	metadataPath := filepath.Join(directory, "schema.js.meta.json")
+
+	backupDir, err := os.MkdirTemp(directory, ".schema-backup-*")
+	if err != nil {
+		return fmt.Errorf("create artifact backup: %w", err)
+	}
+	defer os.RemoveAll(backupDir)
+
+	backupSchema := filepath.Join(backupDir, "schema.js")
+	backupMetadata := filepath.Join(backupDir, "schema.js.meta.json")
+	if err := os.Rename(artifactPath, backupSchema); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("backup schema artifact: %w", err)
+	}
+	if err := os.Rename(metadataPath, backupMetadata); err != nil && !os.IsNotExist(err) {
+		return rollbackArtifactBundle(artifactPath, metadataPath, backupSchema, backupMetadata, fmt.Errorf("backup schema metadata: %w", err))
+	}
+	if err := os.Rename(stagedSchema, artifactPath); err != nil {
+		return rollbackArtifactBundle(artifactPath, metadataPath, backupSchema, backupMetadata, fmt.Errorf("promote schema artifact: %w", err))
+	}
+	if err := os.Rename(stagedMetadata, metadataPath); err != nil {
+		return rollbackArtifactBundle(artifactPath, metadataPath, backupSchema, backupMetadata, fmt.Errorf("promote schema metadata: %w", err))
+	}
+	return nil
+}
+
+func rollbackArtifactBundle(artifactPath, metadataPath, backupSchema, backupMetadata string, cause error) error {
+	os.Remove(artifactPath)
+	os.Remove(metadataPath)
+	if _, err := os.Stat(backupSchema); err == nil {
+		if restoreErr := os.Rename(backupSchema, artifactPath); restoreErr != nil {
+			return fmt.Errorf("%w; restore schema artifact: %v", cause, restoreErr)
+		}
+	}
+	if _, err := os.Stat(backupMetadata); err == nil {
+		if restoreErr := os.Rename(backupMetadata, metadataPath); restoreErr != nil {
+			return fmt.Errorf("%w; restore schema metadata: %v", cause, restoreErr)
+		}
+	}
+	return cause
+}
+
+func resolveExistingPath(path string) string {
+	if filepath.IsAbs(path) {
+		return path
+	}
+	cwd, err := os.Getwd()
+	if err != nil {
+		return path
+	}
+	for dir := cwd; ; dir = filepath.Dir(dir) {
+		candidate := filepath.Join(dir, path)
+		if _, err := os.Stat(candidate); err == nil {
+			return candidate
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			break
+		}
+	}
+	return path
 }
 
 func resolveSchemaBuilderPath(path string) (string, error) {

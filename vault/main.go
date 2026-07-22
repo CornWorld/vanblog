@@ -103,6 +103,16 @@ func main() {
 	if err != nil {
 		log.Fatalf("resolve packs: %v", err)
 	}
+	// Re-run with diagnostics to surface local-override version regressions
+	// (for example, a local pack pinned to 1.0.0 overriding a builtin 2.0.0).
+	// Warnings are advisory: they never block activation.
+	_, overrideWarnings, err := pack.ResolveWithDiagnostics(builtins, locals)
+	if err != nil {
+		log.Fatalf("resolve packs (diagnostics): %v", err)
+	}
+	for _, warning := range overrideWarnings {
+		log.Printf("[vanblog] warning: pack %s local override %s is older than builtin %s; replacement proceeds but may regress behavior", warning.Pack, warning.LocalVersion, warning.BuiltinVersion)
+	}
 	if err := pack.ValidateV0(resolved); err != nil {
 		log.Fatalf("validate packs: %v", err)
 	}
@@ -112,6 +122,13 @@ func main() {
 	}
 	for _, warning := range warnings {
 		log.Printf("[vanblog] warning: pack %s skipped: %s; run vanblog pack build with the dev image", warning.Pack, warning.Reason)
+	}
+	startupLines, err := pack.StartupSummary(resolved, loadable, warnings)
+	if err != nil {
+		log.Fatalf("pack startup summary: %v", err)
+	}
+	for _, line := range startupLines {
+		log.Printf("[vanblog] %s", line)
 	}
 	if packRuntimeDir != "" {
 		staging = filepath.Join(packRuntimeDir, "pb_hooks")

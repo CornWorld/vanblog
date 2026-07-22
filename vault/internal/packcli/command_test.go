@@ -10,6 +10,26 @@ import (
 	"github.com/cornworld/vanblog/internal/validation"
 )
 
+func TestResolveExistingPathFindsRepositoryRootRelativeDirectory(t *testing.T) {
+	original, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chdir(filepath.Join(original, "..")); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chdir(original) })
+
+	resolved := resolveExistingPath("packs")
+	info, err := os.Stat(resolved)
+	if err != nil {
+		t.Fatalf("resolveExistingPath(%q): %v", "packs", err)
+	}
+	if !info.IsDir() {
+		t.Fatalf("resolved path is not a directory: %q", resolved)
+	}
+}
+
 func TestListAndInspectBuiltin(t *testing.T) {
 	for _, args := range [][]string{{"list"}, {"inspect", "bookmarks"}} {
 		var output bytes.Buffer
@@ -19,6 +39,24 @@ func TestListAndInspectBuiltin(t *testing.T) {
 		if !strings.Contains(output.String(), "bookmarks") || !strings.Contains(output.String(), "builtin") {
 			t.Fatalf("unexpected output: %q", output.String())
 		}
+	}
+}
+
+func TestStatusReportsResolvedLifecycleState(t *testing.T) {
+	var output bytes.Buffer
+	if err := Execute([]string{"status"}, &output, &output); err != nil {
+		t.Fatal(err)
+	}
+	lines := strings.Split(strings.TrimSpace(output.String()), "\n")
+	if len(lines) == 0 || !strings.Contains(output.String(), "builtin-enabled") {
+		t.Fatalf("unexpected output: %q", output.String())
+	}
+	if !strings.Contains(lines[0], "\t") {
+		t.Fatalf("expected tabular status output: %q", output.String())
+	}
+	fields := strings.Split(lines[0], "\t")
+	if len(fields) < 7 || len(fields[6]) != 64 {
+		t.Fatalf("expected SHA-256 source fingerprint in status output: %q", output.String())
 	}
 }
 
@@ -100,6 +138,89 @@ func TestBuildSchemaProducesLoadableArtifact(t *testing.T) {
 	}
 	if err := validation.ValidateModelSource(validation.PackSource{FS: os.DirFS(directory), Name: "schema-pack"}); err != nil {
 		t.Fatalf("generated schema.js is not Goja-loadable: %v", err)
+	}
+	metadata, err := os.ReadFile(filepath.Join(directory, "schema.js.meta.json"))
+	if err != nil || !strings.Contains(string(metadata), "sourceHash") {
+		t.Fatalf("expected artifact freshness metadata, data=%q err=%v", metadata, err)
+	}
+}
+
+func TestPlanCommandSupportsLocalDirectory(t *testing.T) {
+	directory := writeTestPack(t, "planned", "1.0.0")
+	if err := os.WriteFile(filepath.Join(directory, "schema.ts"), []byte("export const models = {}"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(filepath.Join(directory, "migrations"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(directory, "migrations", "001.js"), []byte("migration"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	var output bytes.Buffer
+	if err := Execute([]string{"plan", directory}, &output, &output); err != nil {
+		t.Fatal(err)
+	}
+	fields := strings.Split(strings.TrimSpace(output.String()), "\t")
+	if len(fields) < 12 || fields[0] != "planned" || fields[3] != "needs-build" || fields[6] != "1" || fields[7] != "001" || fields[9] != "true" || fields[10] != "pocketbase-create-backup-before-migration" || fields[11] == "" {
+		t.Fatalf("unexpected plan output: %q", output.String())
+	}
+}
+
+func TestPromoteArtifactBundleUpdatesArtifactAndMetadata(t *testing.T) {
+	directory := t.TempDir()
+	artifact := filepath.Join(directory, "schema.js")
+	metadata := filepath.Join(directory, "schema.js.meta.json")
+	stagedArtifact := filepath.Join(directory, ".staged-schema.js")
+	stagedMetadata := filepath.Join(directory, ".staged-schema.js.meta.json")
+	for path, data := range map[string][]byte{
+		artifact:       []byte("old schema"),
+		metadata:       []byte(`{"sourceHash":"old"}`),
+		stagedArtifact: []byte("new schema"),
+		stagedMetadata: []byte(`{"sourceHash":"new"}`),
+	} {
+		if err := os.WriteFile(path, data, 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	if err := promoteArtifactBundle(directory, stagedArtifact, stagedMetadata); err != nil {
+		t.Fatal(err)
+	}
+	for path, expected := range map[string]string{
+		artifact: "new schema", metadata: `{"sourceHash":"new"}`,
+	} {
+		data, err := os.ReadFile(path)
+		if err != nil || string(data) != expected {
+			t.Fatalf("path=%s data=%q err=%v", path, data, err)
+		}
+	}
+}
+
+func TestPromoteArtifactBundleRestoresPreviousBundleOnFailure(t *testing.T) {
+	directory := t.TempDir()
+	artifact := filepath.Join(directory, "schema.js")
+	metadata := filepath.Join(directory, "schema.js.meta.json")
+	stagedArtifact := filepath.Join(directory, ".staged-schema.js")
+	if err := os.WriteFile(artifact, []byte("old schema"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(metadata, []byte(`{"sourceHash":"old"}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(stagedArtifact, []byte("new schema"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := promoteArtifactBundle(directory, stagedArtifact, filepath.Join(directory, "missing-metadata")); err == nil {
+		t.Fatal("expected metadata promotion failure")
+	}
+	for path, expected := range map[string]string{
+		artifact: "old schema", metadata: `{"sourceHash":"old"}`,
+	} {
+		data, err := os.ReadFile(path)
+		if err != nil || string(data) != expected {
+			t.Fatalf("restored path=%s data=%q err=%v", path, data, err)
+		}
 	}
 }
 
