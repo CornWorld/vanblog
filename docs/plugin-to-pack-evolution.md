@@ -215,7 +215,7 @@ otherwise              -> use builtin bookmarks
 | 自定义 Go helper 层 ($vanblog)    | **完全移除**。Pack hook 使用 pb 原生全局 API，不需要 `$vanblog` 命名空间                                               |
 | HTML fragment 与主应用割裂        | Pack 页面是 `.astro` 文件，通过 `vanblog:theme` host 组合到主应用，共享 Layout/Tailwind/组件                           |
 | Symlink 安装                      | `vanblog pack add` 原子复制 builtin source 到 managed local 目录；严格验证（symlink 拒绝、path escape 拒绝、大小限制） |
-| manifest.json 职责过载            | `pack.json` 只有 name + version。资源约定由目录结构表达（hooks/, pages/, assets/）                                     |
+| manifest.json 职责过载            | `pack.json` 携带身份 + 可选展示元数据(title/nav/frontend)。资源约定由目录结构表达(hooks/, pages/, assets/)             |
 | 没有 Source/Artifact/Runtime 分离 | 明确三层分离。Runtime 跳过需要 build 的 local Pack 并 warning，不执行 source                                           |
 | Nav 聚合端点复杂                  | `getNavItems()` 返回空数组，`/_plugin/nav` 已删除。导航由 site config 或 Pack page 路由自然表达                        |
 
@@ -225,7 +225,7 @@ otherwise              -> use builtin bookmarks
 
 ```
 packs/bookmarks/
-├── pack.json          # {"name":"bookmarks","version":"1.0.0"}
+├── pack.json          # {"name":"bookmarks","version":"1.0.0", ...可选 title/nav/frontend}
 ├── hooks/
 │   └── bookmarks.pb.js    # onRecordBeforeCreateRequest → 自动填充 owner
 └── pages/
@@ -275,16 +275,17 @@ onRecordBeforeCreateRequest(function (e) {
 
 ### 3.5 Pack 的缺点与限制
 
-| 缺点                            | 说明                                                                                 | 缓解/未来方向                                                   |
-| ------------------------------- | ------------------------------------------------------------------------------------ | --------------------------------------------------------------- |
-| **Pack 页面需要编译**           | `.astro` 文件不能像 plugin HTML 那样改了就刷新，需要 Astro build                     | dev image 提供 HMR；生产接受"build 后部署"的模型                |
-| **Local Pack 前端需 dev image** | 含 `pages/`/`admin/`/`package.json`/`astro.config.*` 的 local Pack 在 runtime 被跳过 | 明确的 warning + `vanblog pack build` 指引；未来 builder 自动化 |
-| **Go migration 不能动态加载**   | Builtin Pack 的 Go migration 编译进二进制；Local Pack 无法提供 Go migration          | 未来支持 PocketBase JS migration                                |
-| **整体替换，不能部分覆盖**      | 想改一个 hook 必须复制整个 Pack                                                      | 这是有意的设计——保持所有权清晰                                  |
-| **路由命名空间受限**            | Pack 页面只能用 `/p/<pack>` 和 `/p/<pack>/:id`                                       | 消除了通用路由优先级语言的需求                                  |
-| **没有第三方插件市场**          | Pack v0 是 trusted/admin-controlled，不是沙箱                                        | 未来可能有 signed remote Pack artifact                          |
-| **没有 admin SPA 集成**         | Pack `admin/` 资源保留给未来阶段                                                     | Admin SPA 是独立的前瞻性工作                                    |
-| **概念开销**                    | Source/Artifact/Runtime 三层 + whole-Pack replacement + adapter ownership            | 对小项目可能 over-engineered，但对可维护性必要                  |
+| 缺点                             | 说明                                                                                            | 缓解/未来方向                                                                                                         |
+| -------------------------------- | ----------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| **Pack 页面需要编译**            | `.astro` 文件不能像 plugin HTML 那样改了就刷新，需要 Astro build                                | dev image 提供 HMR；生产接受"build 后部署"的模型                                                                      |
+| **Local Pack 前端需 dev image**  | 含 `pages/`/`admin/`/`package.json`/`astro.config.*` 的 local Pack 在 runtime 被跳过            | 明确的 warning + `vanblog pack build` 指引；启动摘要保持安全且不输出源码；未来 builder 自动化                         |
+| **Lifecycle 不是运行时插件控制** | Pack 是构建/部署期 whole unit；`status` / `plan` 只读诊断，不会驱动任何 backup/migration 执行器 | v1 撤回了 callback-based `ExecutePlan` 死代码；如需修改 collection，走 `vault/pb_migrations/` Go migration 随镜像发布 |
+| **Go migration 不能动态加载**    | Builtin Pack 的 Go migration 编译进二进制；Local Pack 无法提供 Go migration                     | 未来支持 PocketBase JS migration                                                                                      |
+| **整体替换，不能部分覆盖**       | 想改一个 hook 必须复制整个 Pack                                                                 | 这是有意的设计——保持所有权清晰                                                                                        |
+| **路由命名空间受限**             | Pack 页面只能用 `/p/<pack>` 和 `/p/<pack>/:id`                                                  | 消除了通用路由优先级语言的需求                                                                                        |
+| **没有第三方插件市场**           | Pack v0 是 trusted/admin-controlled，不是沙箱                                                   | 未来可能有 signed remote Pack artifact                                                                                |
+| **没有 admin SPA 集成**          | Pack `admin/` 资源保留给未来阶段                                                                | Admin SPA 是独立的前瞻性工作                                                                                          |
+| **概念开销**                     | Source/Artifact/Runtime 三层 + whole-Pack replacement + adapter ownership                       | 对小项目可能 over-engineered，但对可维护性必要                                                                        |
 
 ---
 
@@ -294,7 +295,7 @@ onRecordBeforeCreateRequest(function (e) {
 
 | 维度           | Plugin (Legacy)                                         | Pack (Current)                                                      |
 | -------------- | ------------------------------------------------------- | ------------------------------------------------------------------- |
-| **身份文件**   | `manifest.json`（name, title, routes, scripts, styles） | `pack.json`（name, version）                                        |
+| **身份文件**   | `manifest.json`（name, title, routes, scripts, styles） | `pack.json`（name, version + 可选 title/nav/frontend）              |
 | **数据层**     | `onBootstrap`（老）→ Go migration（新）                 | Go migration（builtin）；JS migration（未来，local）                |
 | **API 层**     | `routerAdd` 手写 CRUD（老）→ pb 原生 API（新）          | pb 原生 API                                                         |
 | **业务 hook**  | JSVM `onRecord*`                                        | JSVM `onRecord*`（相同）                                            |
@@ -317,7 +318,7 @@ onRecordBeforeCreateRequest(function (e) {
 | ---------- | ----------------------------------------------------------------------------------- | -------------------------------------------------------------- |
 | Hook       | `{name}.pb.js`：`$vanblog.servePlugin("bookmarks")` + `onRecordBeforeCreateRequest` | `hooks/bookmarks.pb.js`：`onRecordBeforeCreateRequest`（7 行） |
 | 前端       | `frontend/index.html` + `frontend/admin.html`（Go template HTML，~100 行/页）       | `pages/index.astro`（50 行，TypeScript + Astro 组件）          |
-| 身份       | `manifest.json`（~15 行，含 routes/scripts/styles）                                 | `pack.json`（3 行）                                            |
+| 身份       | `manifest.json`（~15 行，含 routes/scripts/styles）                                 | `pack.json`（~8 行，含可选 title/nav）                         |
 | Go 兼容层  | `vault/internal/plugins/plugins.go`（~150 行）                                      | 无                                                             |
 | Astro 桥接 | `app/src/pages/p/[plugin].astro` + `plugin-loader.ts`（~100 行）                    | 无（Astro adapter 静态注入）                                   |
 | **总计**   | **~380 行 + 150 行 Go**                                                             | **~60 行**                                                     |
@@ -452,7 +453,7 @@ Pack v0 是最小可验证闭环。未来独立评估的方向：
 ### 7.2 添加一个新 Pack 的步骤
 
 1. 在 `packs/` 下创建目录：`packs/{name}/`
-2. 创建 `pack.json`：`{"name":"{name}","version":"1.0.0"}`
+2. 创建 `pack.json`:`{"name":"{name}","version":"1.0.0"}`(可选追加 `title`/`nav`/`frontend`)
 3. 创建 Go migration：`vault/pb_migrations/{timestamp}_create_{name}_collection.go`
 4. 创建 Pack hook（可选）：`packs/{name}/hooks/{name}.pb.js`
 5. 创建 Pack 页面（可选）：`packs/{name}/pages/index.astro`（路由自动映射到 `/p/{name}`）

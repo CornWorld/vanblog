@@ -2,9 +2,9 @@
 
 ## Status
 
-This document describes a future architecture and its first executable slice. It is not the current runtime contract.
+This document describes the Pack architecture and its current executable slices. It is not a runtime plugin contract.
 
-The first implementation target is **Pack v0**, using `bookmarks` as the vertical proof. Later sections describe the direction for themes, the admin frontend, instance contracts, and runtime-loaded schemas; they are deliberately outside v0.
+The current implementation includes Pack v0 discovery/runtime loading, read-only lifecycle status/plan diagnostics, artifact staging and startup summaries. Later sections describe the direction for themes, the admin frontend, instance contracts, and runtime-loaded schemas; those remain separate from the current deploy executor.
 
 ## Context
 
@@ -108,6 +108,22 @@ broken builtin artifact/source -> fail closed, because builtin Packs are part of
 ```
 
 This prevents cross-layer fixes during `serve`: production can diagnose and refuse unsupported content, but the tool layer is responsible for making content loadable.
+
+### Lifecycle diagnostics and deployment preflight
+
+The current lifecycle surface is intentionally read-only and build/deploy oriented:
+
+```text
+vanblog pack status
+vanblog pack plan
+vanblog pack plan <local-pack-directory>
+```
+
+`pack status` reports the resolved Pack source, version, artifact presence, source fingerprint, freshness and derived runtime state. `pack plan` adds migration ordering, target and backup preflight information. Neither command starts PocketBase, builds source, creates a backup, runs migrations, changes the active set or restarts the service.
+
+When the production server starts, it logs a safe resolved-Pack summary containing only Pack name, version, source and derived state. A Pack skipped because its local frontend source needs a dev-image artifact receives a generic `vanblog pack build` action. Startup logs do not include source contents, resource paths, credentials or secrets.
+
+Actual activation remains a whole-Pack deployment concern: validate source, build and validate artifacts, stage/preserve the last-known-good bundle, run migration preflight, create a PocketBase backup when migrations exist, and only then deploy/restart. v1 does not expose runtime `install`, `enable`, `disable`, `upgrade` or `uninstall` controls and never performs implicit down migrations or data deletion.
 
 ## Resource conventions
 
@@ -510,14 +526,14 @@ After v0 is stable, evaluate independently:
 
 ## Pack v1 baseline direction
 
-Pack v1 continues to use the current `packs/` source tree. `pack.json` remains a minimal identity file with only `name` and `version`; presentation metadata such as title, navigation labels and routes belongs to the Astro adapter side (`pack.ts` / generated virtual modules), not to the Pack kernel.
+Pack v1 continues to use the current `packs/` source tree. `pack.json` carries the canonical identity (`name` + `version`) plus optional Astro-facing presentation metadata (`title`, `nav`, `frontend`). This removes the earlier `pack.ts` experiment: pack metadata must stay JSON so it can be consumed by both the Go pack kernel and the Astro resolver without a TypeScript evaluator in the build hot path.
 
 The first v1 baseline removes hard-coded `bookmarks` assumptions:
 
-- Go builtin loading scans direct children of `packs/` and validates each Pack identity deterministically.
+- Go builtin loading scans direct children of `packs/` and validates each Pack identity deterministically. Optional metadata fields are accepted via a strict `packMetadata` struct (`DisallowUnknownFields` still rejects typos).
 - Astro integration scans `packs/*/pages/index.astro` and injects `/p/<pack>` routes at build time.
 - `virtual:vanblog/packs` exposes client-safe metadata only; entrypoint paths and other server/build details stay internal to the integration.
-- Pack navigation is owned by the Astro-side metadata path: `packs/<name>/pack.ts` -> `virtual:vanblog/packs` -> `BaseLayout.astro`. The legacy `Astro.locals.getNavItems()` / `PluginNavItem` runtime nav path is compatibility-only and should not be the source of Pack v1 public navigation.
+- Pack navigation is owned by the `pack.json` `nav` field → `virtual:vanblog/packs` → `BaseLayout.astro` path. The legacy `Astro.locals.getNavItems()` / `PluginNavItem` runtime nav path is compatibility-only and should not be the source of Pack v1 public navigation.
 - Palette / color appearance remains outside Pack. It should be implemented by Astro appearance libraries and Van API site appearance settings, not by Pack hooks, migrations or route adapters.
 
 ## Pack v1 validation: Moments Pack
@@ -528,8 +544,7 @@ The Moments Pack (`packs/moments/`) is the second builtin Pack. It was created e
 
 Implemented results:
 
-- `packs/moments/pack.json` — minimal identity (`name`/`version`).
-- `packs/moments/pack.ts` — Astro-side metadata (`title`, `nav`). Consumed by `virtual:vanblog/packs` → `BaseLayout.astro` without layout edits.
+- `packs/moments/pack.json` — identity plus optional presentation metadata (`name`, `version`, `title`, `nav`).
 - `packs/moments/pages/index.astro` — public route at `/p/moments`, auto-injected by the same integration that injects `/p/bookmarks`.
 - `packs/moments/hooks/moments.pb.js` — author auto-fill hook, migrated out of `vault/pb_hooks/moments.pb.js` (the vault file is now empty). Pack hook staging picks this up automatically.
 - `packs/moments/schema.ts` → `packs/moments/schema.js` — Pack-owned model validation artifact, built via the shared `scripts/pack-schema-build.mjs` and validated by `vault/internal/validation.PackSource` (Goja runtime + staging promotion) through the shared `vanblog pack build` CLI. The same builder and CLI serve both Packs.

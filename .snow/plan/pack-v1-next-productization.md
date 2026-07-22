@@ -38,7 +38,7 @@
 
 - [x] 更新 architecture 文档，移除 runtime first-wins 描述。
 - [x] 添加多 source、排序、冲突和 override 测试。
-- [ ] 完成全量验证。
+- [x] 完成全量验证（含 `docker buildx build --check .`，无 warning）。
 
 ## Risks & Mitigations
 
