@@ -1,4 +1,9 @@
 {
   "name": "bookmarks",
-  "version": "1.0.0"
+  "version": "1.0.0",
+  "title": "收藏",
+  "nav": {
+    "label": "收藏",
+    "href": "/p/bookmarks"
+  }
 }

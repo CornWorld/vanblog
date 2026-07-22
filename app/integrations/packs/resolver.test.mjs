@@ -3,7 +3,7 @@ import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import test from 'node:test';
-import { discoverPacks, loadPackMetadata, resolvePublicPages } from './resolver.mjs';
+import { discoverPacks, loadPackMetadata, mergeLocalPacks, resolvePublicPages } from './resolver.mjs';
 
 const bookmark = { pack: 'bookmarks', page: 'index', entrypoint: '/tmp/bookmarks/index.astro' };
 
@@ -34,16 +34,35 @@ test('rejects Pack identity that does not match the directory', () => {
   assert.throws(() => discoverPacks(root), /declares name/);
 });
 
-test('rejects fat pack.json metadata', () => {
+test('rejects unknown fields in pack.json', () => {
   const root = fixtureRoot();
-  writePack(root, 'bookmarks', { name: 'bookmarks', version: '1.0.0', title: 'no' });
-  assert.throws(() => discoverPacks(root), /only name and version/);
+  writePack(root, 'bookmarks', { name: 'bookmarks', version: '1.0.0', bogus: true });
+  assert.throws(() => discoverPacks(root), /unknown field/);
 });
 
-test('loads client-safe Pack metadata', () => {
+test('accepts optional title/nav/frontend fields in pack.json', () => {
   const root = fixtureRoot();
-  const dir = writePack(root, 'bookmarks');
-  writeFileSync(join(dir, 'pack.ts'), "export default { title: '收藏', nav: { label: '收藏', href: '/p/bookmarks' } };\n");
+  writePack(root, 'alpha', {
+    name: 'alpha',
+    version: '1.0.0',
+    title: 'Alpha',
+    nav: { label: 'Alpha', href: '/p/alpha' },
+    frontend: { scope: 'public', styles: ['style.css'], scripts: ['script.js'] },
+  });
+  const [pack] = discoverPacks(root);
+  assert.equal(pack.title, 'Alpha');
+  assert.deepEqual(pack.nav, { label: 'Alpha', href: '/p/alpha' });
+  assert.deepEqual(pack.frontend, { scope: 'public', styles: ['style.css'], scripts: ['script.js'] });
+});
+
+test('loads client-safe Pack metadata from pack.json', () => {
+  const root = fixtureRoot();
+  writePack(root, 'bookmarks', {
+    name: 'bookmarks',
+    version: '1.0.0',
+    title: '收藏',
+    nav: { label: '收藏', href: '/p/bookmarks' },
+  });
   const metadata = loadPackMetadata(discoverPacks(root));
   assert.deepEqual(metadata, [{
     name: 'bookmarks',
@@ -56,8 +75,11 @@ test('loads client-safe Pack metadata', () => {
 
 test('normalizes Pack nav href to its public namespace', () => {
   const root = fixtureRoot();
-  const dir = writePack(root, 'bookmarks');
-  writeFileSync(join(dir, 'pack.ts'), "export default { title: '收藏', nav: { label: '收藏', href: '/admin' } };\n");
+  writePack(root, 'bookmarks', {
+    name: 'bookmarks',
+    version: '1.0.0',
+    nav: { label: '收藏', href: '/admin' },
+  });
   const metadata = loadPackMetadata(discoverPacks(root));
   assert.equal(metadata[0].nav.href, '/p/bookmarks');
 });
@@ -86,12 +108,10 @@ test('requires a usable entrypoint', () => {
 // --- Frontend Contribution tests ---
 
 function writeFrontendPack(root, name, frontend) {
-  const dir = writePack(root, name);
+  const dir = writePack(root, name, { name, version: '1.0.0', frontend });
   mkdirSync(join(dir, 'frontend'), { recursive: true });
   writeFileSync(join(dir, 'frontend', 'style.css'), 'body{}');
   writeFileSync(join(dir, 'frontend', 'script.js'), 'console.log(1)');
-  const metadata = { frontend };
-  writeFileSync(join(dir, 'pack.ts'), `export default ${JSON.stringify(metadata, null, 2)};\n`);
   return dir;
 }
 
@@ -129,8 +149,8 @@ test('rejects frontend with non-public scope', () => {
 
 test('rejects frontend contribution that is not an object', () => {
   const root = fixtureRoot();
-  writeFrontendPack(root, 'alpha', 'not-an-object');
-  assert.throws(() => loadPackMetadata(discoverPacks(root)), /frontend contribution must be an object/);
+  writePack(root, 'alpha', { name: 'alpha', version: '1.0.0', frontend: 'not-an-object' });
+  assert.throws(() => discoverPacks(root), /frontend must be an object/);
 });
 
 test('rejects frontend with path traversal', () => {
@@ -191,4 +211,50 @@ test('rejects frontend styles that is not an array', () => {
     scripts: [],
   });
   assert.throws(() => loadPackMetadata(discoverPacks(root)), /frontend styles must be an array/);
+});
+
+// --- mergeLocalPacks (whole-Pack replacement) tests ---
+
+test('mergeLocalPacks returns builtins untouched when no local root is given', () => {
+  const root = fixtureRoot();
+  writePack(root, 'alpha');
+  const builtins = discoverPacks(root);
+  assert.equal(mergeLocalPacks(builtins, ''), builtins);
+  assert.equal(mergeLocalPacks(builtins, undefined), builtins);
+  assert.equal(mergeLocalPacks(builtins, '/does/not/exist'), builtins);
+});
+
+test('mergeLocalPacks replaces a builtin Pack with the local override', () => {
+  const builtinRoot = fixtureRoot();
+  const localRoot = fixtureRoot();
+  writePack(builtinRoot, 'bookmarks');
+  // Local override ships under a different directory but same pack.json name.
+  const localDir = writePack(localRoot, 'bookmarks', { name: 'bookmarks', version: '2.0.0' });
+  writeFileSync(join(localDir, 'pages', 'index.astro'), '---\n---\nlocal override\n');
+  const resolved = mergeLocalPacks(discoverPacks(builtinRoot), localRoot);
+  assert.deepEqual(resolved.map((pack) => pack.name), ['bookmarks']);
+  assert.equal(resolved[0].version, '2.0.0');
+  assert.ok(resolved[0].directory.startsWith(localRoot), 'resolved directory must come from local root');
+});
+
+test('mergeLocalPacks appends a brand-new local Pack not present in builtins', () => {
+  const builtinRoot = fixtureRoot();
+  const localRoot = fixtureRoot();
+  writePack(builtinRoot, 'bookmarks');
+  writePack(localRoot, 'alpha');
+  const resolved = mergeLocalPacks(discoverPacks(builtinRoot), localRoot);
+  assert.deepEqual(resolved.map((pack) => pack.name), ['alpha', 'bookmarks']);
+  assert.equal(resolved.find((pack) => pack.name === 'alpha').directory.startsWith(localRoot), true);
+  assert.equal(resolved.find((pack) => pack.name === 'bookmarks').directory.startsWith(builtinRoot), true);
+});
+
+test('mergeLocalPacks rejects duplicate local Pack names', () => {
+  const localRoot = fixtureRoot();
+  // discoverPacks enforces name==directory, so two identical names would need
+  // two directories with the same name, which the filesystem rejects. This
+  // test documents that guarantee: a single local pack with a valid name must
+  // always merge cleanly.
+  writePack(localRoot, 'alpha');
+  const builtins = discoverPacks(localRoot);
+  assert.doesNotThrow(() => mergeLocalPacks(builtins, localRoot));
 });

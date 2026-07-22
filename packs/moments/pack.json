@@ -1,4 +1,9 @@
 {
   "name": "moments",
-  "version": "1.0.0"
+  "version": "1.0.0",
+  "title": "动态",
+  "nav": {
+    "label": "动态",
+    "href": "/p/moments"
+  }
 }

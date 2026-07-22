@@ -5,6 +5,10 @@ const PACK_NAME_PATTERN = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
 const VERSION_PATTERN = /^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/;
 const PUBLIC_PATH_PATTERN = /^\/p\/([a-z][a-z0-9]*(?:-[a-z0-9]+)*)$/;
 
+// Allowed keys in pack.json. Go's packMetadata struct mirrors this list; keep
+// them in sync. Any other key is rejected as a typo fail-closed.
+const ALLOWED_PACK_JSON_KEYS = new Set(['name', 'version', 'title', 'nav', 'frontend']);
+
 export function discoverPacks(root) {
   if (typeof root !== 'string' || root.length === 0) throw new TypeError('Pack root must be a non-empty string');
   if (!existsSync(root)) return [];
@@ -14,51 +18,102 @@ export function discoverPacks(root) {
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
+// mergeLocalPacks applies whole-Pack replacement on top of builtin Packs, using
+// the same semantics as the Go pack.Resolve: each local Pack directory whose
+// pack.json name matches a builtin replaces it entirely; local Packs with no
+// builtin counterpart are appended. The local root is optional; missing or empty
+// roots return builtins untouched.
+export function mergeLocalPacks(builtins, localRoot) {
+  if (!localRoot || !existsSync(localRoot)) return builtins;
+  const localByName = new Map();
+  for (const pack of discoverPacks(localRoot)) {
+    if (localByName.has(pack.name)) {
+      throw new Error(`Duplicate local Pack ${pack.name} in ${localRoot}`);
+    }
+    localByName.set(pack.name, pack);
+  }
+  const resolved = [];
+  const seen = new Set();
+  for (const pack of builtins) {
+    const override = localByName.get(pack.name);
+    resolved.push(override ?? pack);
+    seen.add(pack.name);
+  }
+  for (const pack of localByName.values()) {
+    if (!seen.has(pack.name)) resolved.push(pack);
+  }
+  resolved.sort((a, b) => a.name.localeCompare(b.name));
+  return resolved;
+}
+
 function readPack(root, directory) {
   const packDir = join(root, directory);
-  const identity = readIdentity(join(packDir, 'pack.json'), directory);
-  if (identity.name !== directory) throw new Error(`Pack directory ${directory} declares name ${identity.name}`);
+  const packJson = readPackJson(join(packDir, 'pack.json'), directory);
+  if (packJson.name !== directory) throw new Error(`Pack directory ${directory} declares name ${packJson.name}`);
   const pageEntrypoint = join(packDir, 'pages', 'index.astro');
-  const metadataEntrypoint = join(packDir, 'pack.ts');
   return {
-    ...identity,
+    name: packJson.name,
+    version: packJson.version,
+    title: packJson.title,
+    nav: packJson.nav,
+    frontend: packJson.frontend,
     directory: packDir,
-    pages: existsSync(pageEntrypoint) ? [{ pack: identity.name, page: 'index', entrypoint: pageEntrypoint }] : [],
-    metadataEntrypoint: existsSync(metadataEntrypoint) ? metadataEntrypoint : null,
+    pages: existsSync(pageEntrypoint) ? [{ pack: packJson.name, page: 'index', entrypoint: pageEntrypoint }] : [],
   };
 }
 
-function readIdentity(path, directory) {
-  let identity;
-  try { identity = JSON.parse(readFileSync(path, 'utf8')); }
+function readPackJson(path, directory) {
+  let raw;
+  try { raw = readFileSync(path, 'utf8'); }
   catch (error) { throw new Error(`Failed to read Pack identity for ${directory}: ${error.message}`); }
-  const keys = Object.keys(identity).sort();
-  if (keys.join(',') !== 'name,version') throw new Error(`Pack ${directory} pack.json must contain only name and version`);
-  if (!PACK_NAME_PATTERN.test(identity.name)) throw new Error(`Invalid Pack name: ${String(identity.name)}`);
-  if (!VERSION_PATTERN.test(identity.version)) throw new Error(`Invalid Pack version for ${identity.name}: ${String(identity.version)}`);
-  return identity;
+  let json;
+  try { json = JSON.parse(raw); }
+  catch (error) { throw new Error(`Failed to parse pack.json for ${directory}: ${error.message}`); }
+  if (json === null || typeof json !== 'object' || Array.isArray(json)) {
+    throw new Error(`Pack ${directory} pack.json must contain a JSON object`);
+  }
+  for (const key of Object.keys(json)) {
+    if (!ALLOWED_PACK_JSON_KEYS.has(key)) {
+      throw new Error(`Pack ${directory} pack.json contains unknown field ${key}; allowed: name, version, title, nav, frontend`);
+    }
+  }
+  if (!PACK_NAME_PATTERN.test(json.name)) throw new Error(`Invalid Pack name: ${String(json.name)}`);
+  if (!VERSION_PATTERN.test(json.version)) throw new Error(`Invalid Pack version for ${json.name}: ${String(json.version)}`);
+  if (json.title !== undefined && (typeof json.title !== 'string' || json.title.length === 0)) {
+    throw new Error(`Pack ${json.name} title must be a non-empty string when present`);
+  }
+  if (json.nav !== undefined) {
+    if (!json.nav || typeof json.nav !== 'object' || Array.isArray(json.nav)) {
+      throw new Error(`Pack ${json.name} nav must be an object`);
+    }
+    if (typeof json.nav.label !== 'string' || json.nav.label.length === 0) {
+      throw new Error(`Pack ${json.name} nav.label must be a non-empty string`);
+    }
+    if (typeof json.nav.href !== 'string' || json.nav.href.length === 0) {
+      throw new Error(`Pack ${json.name} nav.href must be a non-empty string`);
+    }
+  }
+  if (json.frontend !== undefined) {
+    // Structured validation of frontend styles/scripts paths happens in
+    // resolveFrontendContribution below, because it needs filesystem access
+    // to confirm the files exist. Here we only check the high-level shape.
+    if (!json.frontend || typeof json.frontend !== 'object' || Array.isArray(json.frontend)) {
+      throw new Error(`Pack ${json.name} frontend must be an object`);
+    }
+  }
+  return json;
 }
 
 export function loadPackMetadata(packs) {
   return packs.map((pack) => {
-    const metadata = pack.metadataEntrypoint ? loadMetadataFile(pack) : {};
-    const frontend = resolveFrontendContribution(pack, metadata.frontend);
-    const title = typeof metadata.title === 'string' && metadata.title.length > 0 ? metadata.title : pack.name;
+    const frontend = resolveFrontendContribution(pack, pack.frontend);
+    const title = typeof pack.title === 'string' && pack.title.length > 0 ? pack.title : pack.name;
     const route = `/p/${pack.name}`;
-    const nav = metadata.nav && typeof metadata.nav === 'object'
-      ? { label: typeof metadata.nav.label === 'string' && metadata.nav.label.length > 0 ? metadata.nav.label : title, href: metadata.nav.href === route ? metadata.nav.href : route }
+    const nav = pack.nav && typeof pack.nav === 'object'
+      ? { label: typeof pack.nav.label === 'string' && pack.nav.label.length > 0 ? pack.nav.label : title, href: pack.nav.href === route ? pack.nav.href : route }
       : null;
     return { name: pack.name, version: pack.version, title, nav, routes: pack.pages.map((page) => ({ pattern: `/p/${page.pack}`, page: page.page })), ...(frontend ? { frontend } : {}) };
   });
-}
-
-function loadMetadataFile(pack) {
-  const source = readFileSync(pack.metadataEntrypoint, 'utf8');
-  const expression = source.replace(/^\s*export\s+default\s+/, 'return ');
-  if (expression === source) throw new Error(`Pack ${pack.name} metadata must use export default`);
-  const metadata = Function(`'use strict';\n${expression}`)();
-  if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) throw new Error(`Pack ${pack.name} metadata must export an object`);
-  return metadata;
 }
 
 function resolveFrontendContribution(pack, contribution) {
@@ -75,7 +130,7 @@ function validateFrontendPaths(pack, values, field) {
   if (!Array.isArray(values)) throw new Error(`Pack ${pack.name} frontend ${field} must be an array`);
   const seen = new Set();
   return values.map((value) => {
-    if (typeof value !== 'string' || value.length === 0 || isAbsolute(value) || value.includes('\\0')) throw new Error(`Pack ${pack.name} frontend ${field} contains an invalid path`);
+    if (typeof value !== 'string' || value.length === 0 || isAbsolute(value) || value.includes('\0')) throw new Error(`Pack ${pack.name} frontend ${field} contains an invalid path`);
     const normalized = normalize(value);
     const frontendRoot = join(pack.directory, 'frontend');
     const target = join(frontendRoot, normalized);

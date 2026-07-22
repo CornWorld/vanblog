@@ -1,10 +1,19 @@
 import { fileURLToPath } from 'node:url';
-import { discoverPacks, loadPackMetadata, resolvePublicPages } from './resolver.mjs';
+import { discoverPacks, loadPackMetadata, mergeLocalPacks, resolvePublicPages } from './resolver.mjs';
 
 const appDirectory = new URL('../../', import.meta.url);
 const repositoryDirectory = new URL('../../../', import.meta.url);
 const themePage = fileURLToPath(new URL('src/layouts/PackPage.astro', appDirectory));
 const packsDirectory = fileURLToPath(new URL('packs', repositoryDirectory));
+// VANBLOG_PACKS_DIR mirrors the Go-side --packsDir flag so that local Pack
+// overrides take effect in Astro at the same time as they do in the Go runtime.
+// Without this, whole-Pack replacement would only swap hooks/schema on the Go
+// side while Astro kept serving builtin pages — a silent split-brain.
+const localPacksDirectory = process.env.VANBLOG_PACKS_DIR || '';
+
+function resolvePacks() {
+  return mergeLocalPacks(discoverPacks(packsDirectory), localPacksDirectory);
+}
 const themeVirtualId = 'vanblog:theme';
 const resolvedThemeVirtualId = `\0${themeVirtualId}`;
 const packsVirtualId = 'virtual:vanblog/packs';
@@ -61,20 +70,19 @@ export default function packsIntegration() {
     name: 'vanblog-packs',
     hooks: {
       'astro:config:setup': ({ injectRoute, updateConfig }) => {
-        const packs = discoverPacks(packsDirectory);
+        const packs = resolvePacks();
         const pages = resolvePublicPages(packs.flatMap((pack) => pack.pages));
         const metadata = loadPackMetadata(packs);
         for (const page of pages) injectRoute({ pattern: page.pattern, entrypoint: page.entrypoint });
         updateConfig({ vite: { plugins: [packVirtualPlugin(metadata, packs)] } });
       },
       'astro:server:setup': ({ server }) => {
-        const packs = discoverPacks(packsDirectory);
+        const packs = resolvePacks();
         server.watcher.add([
           themePage,
           ...packs.flatMap((pack) => [
             pack.directory,
             ...pack.pages.map((page) => page.entrypoint),
-            ...(pack.metadataEntrypoint ? [pack.metadataEntrypoint] : []),
           ]),
         ]);
       },
