@@ -36,7 +36,8 @@ function loadSsrConfig() {
   try {
     const data = JSON.parse(node.textContent || "{}");
     return data.serverConfig || null;
-  } catch { console.warn("[live2d-companion] failed to parse SSR config");
+  } catch {
+    console.warn("[live2d-companion] failed to parse SSR config");
     return null;
   }
 }
@@ -112,37 +113,45 @@ function loadWidgetScript() {
     const script = document.createElement("script");
     script.src = CONFIG.widgetPath + "autoload.js";
     script.async = true;
-    let resolved = false;
-    const timer = setTimeout(() => {
-      if (!resolved) reject(new Error("CDN timeout"));
-    }, 10000);
+
+    let settled = false;
+    const fail = (msg) => {
+      if (settled) return;
+      settled = true;
+      reject(new Error(msg));
+    };
+    const done = () => {
+      if (settled) return;
+      settled = true;
+      resolve();
+    };
+
+    // Hard timeout: reject if the script itself never loads.
+    const hardTimeout = setTimeout(() => fail("CDN timeout"), 10000);
+
+    script.onerror = () => {
+      clearTimeout(hardTimeout);
+      fail("CDN script unavailable");
+    };
 
     script.onload = () => {
-      const checkInterval = setInterval(() => {
-        const waifu = document.getElementById("waifu");
-        if (waifu) {
-          clearInterval(checkInterval);
-          clearTimeout(timer);
-          resolved = true;
-          resolve();
+      clearTimeout(hardTimeout);
+      // autoload.js injects #waifu asynchronously; poll briefly for it so
+      // moveWidgetIntoNamespace() can relocate it into our namespaced root.
+      const started = Date.now();
+      const poll = setInterval(() => {
+        if (document.getElementById("waifu")) {
+          clearInterval(poll);
+          done();
+        } else if (Date.now() - started > 8000) {
+          clearInterval(poll);
+          // Script loaded but widget never mounted. Resolve anyway — the
+          // widget may appear later; fallback UI would hide a late arrival.
+          done();
         }
       }, 200);
-      setTimeout(() => {
-        if (!resolved) {
-          clearInterval(checkInterval);
-          clearTimeout(timer);
-          resolved = true;
-          resolve();
-        }
-      }, 8000);
     };
-    script.onerror = () => {
-      clearTimeout(timer);
-      if (!resolved) {
-        resolved = true;
-        reject(new Error("CDN script unavailable"));
-      }
-    };
+
     document.head.append(script);
   });
 }
@@ -193,7 +202,8 @@ async function fetchConfigRecordId() {
   try {
     const record = await pb.collection(COLLECTION).getFirstListItem("1=1");
     return record.id;
-  } catch { console.warn("[live2d-companion] failed to parse SSR config");
+  } catch {
+    console.warn("[live2d-companion] live2d_config record not found");
     return null;
   }
 }
