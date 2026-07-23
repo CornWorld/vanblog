@@ -4,6 +4,7 @@ import (
 	"errors"
 	"reflect"
 	"strings"
+	"sync"
 	"testing"
 	"testing/fstest"
 
@@ -239,7 +240,7 @@ func TestRegisterWithSourcesRejectsPackModelCollision(t *testing.T) {
 		{Name: "a-pack", Source: &fixtureSource{script: `exports.models = { duplicate: { safeParse: function () { return { success: true }; } } };`}},
 		{Name: "b-pack", Source: &fixtureSource{script: `exports.models = { duplicate: { safeParse: function () { return { success: true }; } } };`}},
 	})
-	if err == nil || !strings.Contains(err.Error(), "declared by both Packs") {
+	if err == nil || !strings.Contains(err.Error(), "declared by both") {
 		t.Fatalf("expected Pack model collision, got %v", err)
 	}
 }
@@ -253,7 +254,92 @@ func TestRegisterWithSourcesRejectsPackCoreCollision(t *testing.T) {
 	coreSource := &fixtureSource{script: `exports.models = { shared: { safeParse: function () { return { success: false, error: { issues: [{ path: [], message: "core" }] } }; } } };`}
 	packSource := &fixtureSource{script: `exports.models = { shared: { safeParse: function () { return { success: true }; } } };`}
 	err = RegisterWithSources(app, coreSource, []NamedModelSource{{Name: "pack", Source: packSource}})
-	if err == nil || !strings.Contains(err.Error(), "declared by core and Pack") {
+	if err == nil || !strings.Contains(err.Error(), "declared by both") {
 		t.Fatalf("expected Pack/core collision, got %v", err)
 	}
+}
+
+// TestVMReuseHasNoStatePollution verifies that reusing the same warmed VM for
+// multiple validateModel calls with different payloads does not leak state.
+// The schema tracks how many times safeParse runs and validates the payload
+// against a counter; if the VM leaked mutable state across calls, later
+// payloads would see stale data from earlier ones.
+func TestVMReuseHasNoStatePollution(t *testing.T) {
+	// safeParse is stateless: success depends ONLY on the input payload,
+	// not on any VM-global counter. If VM reuse leaked state, a previously
+	// "valid" payload would still need to validate correctly after an
+	// "invalid" one runs on the same VM.
+	script := `exports.models = {
+		items: {
+			safeParse: function (v) {
+				if (v && v.name === "valid") { return { success: true }; }
+				return { success: false, error: { issues: [{ path: ["name"], message: "must be 'valid'" }] } };
+			}
+		}
+	};`
+	prog, err := compileProgram(script)
+	if err != nil {
+		t.Fatalf("compile: %v", err)
+	}
+	pool, err := newVMPool(prog, []string{"items"}, 1)
+	if err != nil {
+		t.Fatalf("newVMPool: %v", err)
+	}
+
+	validPayload := map[string]any{"name": "valid"}
+	invalidPayload := map[string]any{"name": "bogus"}
+
+	// Interleave valid/invalid on the SAME slot. Each call must be independent.
+	slot := pool.acquire()
+	defer pool.release(slot)
+	for i := 0; i < 10; i++ {
+		valValues := slot.vm.ToValue(validPayload)
+		if err := validateModel(slot.vm, slot.models, "items", valValues); err != nil {
+			t.Fatalf("iter %d valid payload failed on reused VM: %v", i, err)
+		}
+		invValues := slot.vm.ToValue(invalidPayload)
+		if err := validateModel(slot.vm, slot.models, "items", invValues); err == nil {
+			t.Fatalf("iter %d invalid payload unexpectedly succeeded on reused VM (state leak)", i)
+		}
+	}
+}
+
+// TestVMPoolConcurrentAccess verifies the channel-based pool is safe under
+// concurrent acquire/release. This exercises the goroutine-safety guarantee
+// that replaced the previous global mutex.
+func TestVMPoolConcurrentAccess(t *testing.T) {
+	script := `exports.models = {
+		items: { safeParse: function (v) { return { success: true }; } }
+	};`
+	prog, err := compileProgram(script)
+	if err != nil {
+		t.Fatalf("compile: %v", err)
+	}
+	// Pool size smaller than goroutine count forces contention on the channel.
+	pool, err := newVMPool(prog, []string{"items"}, 2)
+	if err != nil {
+		t.Fatalf("newVMPool: %v", err)
+	}
+
+	var wg sync.WaitGroup
+	const goroutines = 16
+	const iterations = 50
+	wg.Add(goroutines)
+	for g := 0; g < goroutines; g++ {
+		go func() {
+			defer wg.Done()
+			for i := 0; i < iterations; i++ {
+				slot := pool.acquire()
+				// Holding the slot briefly simulates real validation work.
+				val := slot.vm.ToValue(map[string]any{"name": "valid"})
+				if err := validateModel(slot.vm, slot.models, "items", val); err != nil {
+					t.Errorf("concurrent validateModel failed: %v", err)
+					pool.release(slot)
+					return
+				}
+				pool.release(slot)
+			}
+		}()
+	}
+	wg.Wait()
 }

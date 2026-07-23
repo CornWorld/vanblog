@@ -99,16 +99,12 @@ func main() {
 			log.Fatalf("load local packs: %v", err)
 		}
 	}
-	resolved, err := pack.Resolve(builtins, locals)
+	// Single resolution pass with diagnostics: surfaces override warnings
+	// (e.g. local pack pinned to an older version than builtin) without
+	// running the whole validate + sort + semver compare twice.
+	resolved, overrideWarnings, err := pack.ResolveWithDiagnostics(builtins, locals)
 	if err != nil {
 		log.Fatalf("resolve packs: %v", err)
-	}
-	// Re-run with diagnostics to surface local-override version regressions
-	// (for example, a local pack pinned to 1.0.0 overriding a builtin 2.0.0).
-	// Warnings are advisory: they never block activation.
-	_, overrideWarnings, err := pack.ResolveWithDiagnostics(builtins, locals)
-	if err != nil {
-		log.Fatalf("resolve packs (diagnostics): %v", err)
 	}
 	for _, warning := range overrideWarnings {
 		log.Printf("[vanblog] warning: pack %s local override %s is older than builtin %s; replacement proceeds but may regress behavior", warning.Pack, warning.LocalVersion, warning.BuiltinVersion)

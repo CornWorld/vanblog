@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io/fs"
 	"log"
+	"runtime"
 	"sort"
 	"strings"
 
@@ -282,9 +283,86 @@ func Register(app core.App) error {
 	return errors.New("validation: core model source is required")
 }
 
+// vmPoolSize controls how many pre-warmed Goja VMs each source keeps.
+// Defaults to GOMAXPROCS so concurrent record saves don't serialize.
+func vmPoolSize() int {
+	if n := runtime.GOMAXPROCS(0); n > 0 {
+		return n
+	}
+	return 4
+}
+
+// vmSlot bundles a Goja Runtime with its own models object. Goja Runtime
+// AND the objects it produces (including *goja.Object) are NOT goroutine-safe,
+// so a slot must be exclusively held by one goroutine at a time.
+type vmSlot struct {
+	vm     *goja.Runtime
+	models *goja.Object
+}
+
+// vmPool is a channel-based pool of fully independent vmSlots for one source.
+// Because each slot owns its own Runtime + models, concurrent validation runs
+// in parallel without any shared mutable state.
+type vmPool struct {
+	slots []vmSlot
+	ch    chan *vmSlot
+	// knownKeys is a read-only Go set of collection names this source
+	// declares. It backs the lock-free fast path in the hot loop so we never
+	// touch a Goja Object just to discover a miss. Safe for concurrent reads
+	// because it is never mutated after warm-up.
+	knownKeys map[string]struct{}
+}
+
+func newVMPool(prog *goja.Program, keys []string, size int) (*vmPool, error) {
+	if size < 1 {
+		size = 1
+	}
+	slots := make([]vmSlot, 0, size)
+	firstVM, firstModels, err := loadModels(prog)
+	if err != nil {
+		return nil, err
+	}
+	slots = append(slots, vmSlot{vm: firstVM, models: firstModels})
+	for i := 1; i < size; i++ {
+		vm, models, err := loadModels(prog)
+		if err != nil {
+			return nil, fmt.Errorf("validation: warm pool slot %d: %w", i, err)
+		}
+		slots = append(slots, vmSlot{vm: vm, models: models})
+	}
+	known := make(map[string]struct{}, len(keys))
+	for _, k := range keys {
+		known[k] = struct{}{}
+	}
+	p := &vmPool{
+		slots:     slots,
+		ch:        make(chan *vmSlot, size),
+		knownKeys: known,
+	}
+	for i := range slots {
+		p.ch <- &p.slots[i]
+	}
+	return p, nil
+}
+
+func (p *vmPool) acquire() *vmSlot {
+	return <-p.ch
+}
+
+func (p *vmPool) release(s *vmSlot) {
+	p.ch <- s
+}
+
+// sourcePool binds a named source to its VM pool.
+type sourcePool struct {
+	name string
+	pool *vmPool
+}
+
 // RegisterWithSources registers one core model source plus all Pack sources.
 // Every model name must have exactly one owner: Pack/Pack and Pack/core
-// collisions are rejected rather than resolved by precedence.
+// collisions are rejected. Each source warms a pool of GOMAXPROCS Goja VMs
+// so concurrent record saves run in parallel without serialization.
 func RegisterWithSources(app core.App, coreSource ModelSource, packs []NamedModelSource) error {
 	if coreSource == nil {
 		return errors.New("validation: core model source is required")
@@ -292,59 +370,66 @@ func RegisterWithSources(app core.App, coreSource ModelSource, packs []NamedMode
 	sorted := append([]NamedModelSource(nil), packs...)
 	sort.Slice(sorted, func(i, j int) bool { return sorted[i].Name < sorted[j].Name })
 
-	type compiledSource struct {
-		name    string
-		program *goja.Program
-	}
-	compiled := make([]compiledSource, 0, len(sorted)+1)
+	poolSize := vmPoolSize()
 	claimed := make(map[string]string)
+	pools := make([]*sourcePool, 0, len(sorted)+1)
+
+	warm := func(name string, source ModelSource) error {
+		program, keys, err := compileModelSource(source)
+		if err != nil {
+			return fmt.Errorf("validation: %s: %w", name, err)
+		}
+		for _, key := range keys {
+			if owner, ok := claimed[key]; ok {
+				return fmt.Errorf("validation: model %q is declared by both %q and %q", key, owner, name)
+			}
+			claimed[key] = name
+		}
+		p, err := newVMPool(program, keys, poolSize)
+		if err != nil {
+			return fmt.Errorf("validation: warm %s: %w", name, err)
+		}
+		pools = append(pools, &sourcePool{name: name, pool: p})
+		return nil
+	}
+
 	for _, named := range sorted {
 		if named.Name == "" {
 			return errors.New("validation: Pack model source name is empty")
 		}
-		program, keys, err := compileModelSource(named.Source)
-		if err != nil {
-			return fmt.Errorf("validation: Pack %q: %w", named.Name, err)
-		}
-		for _, key := range keys {
-			if owner, ok := claimed[key]; ok {
-				return fmt.Errorf("validation: model %q is declared by both Packs %q and %q", key, owner, named.Name)
-			}
-			claimed[key] = named.Name
-		}
-		compiled = append(compiled, compiledSource{name: named.Name, program: program})
-	}
-	coreProgram, coreKeys, err := compileModelSource(coreSource)
-	if err != nil {
-		return fmt.Errorf("validation: core model source: %w", err)
-	}
-	for _, key := range coreKeys {
-		if owner, ok := claimed[key]; ok {
-			return fmt.Errorf("validation: model %q is declared by core and Pack %q", key, owner)
+		if err := warm(named.Name, named.Source); err != nil {
+			return err
 		}
 	}
-	compiled = append(compiled, compiledSource{name: "core", program: coreProgram})
+	if err := warm("core", coreSource); err != nil {
+		return err
+	}
 
 	app.OnRecordValidate().BindFunc(func(event *core.RecordEvent) error {
 		collection := event.Record.Collection()
 		if shouldSkipCollection(collection) {
 			return event.Next()
 		}
-		for _, source := range compiled {
-			vm, models, err := loadModels(source.program)
-			if err != nil {
-				return fmt.Errorf("validation: load %s model source: %w", source.name, err)
-			}
-			model := models.Get(collection.Name)
-			if model == nil || goja.IsUndefined(model) || goja.IsNull(model) {
+		for _, sp := range pools {
+			// Lock-free fast path: if this source doesn't declare the
+			// collection, skip without acquiring a slot. knownKeys is a
+			// plain Go map that is never mutated after warm-up, so this
+			// concurrent read is safe.
+			if _, ok := sp.pool.knownKeys[collection.Name]; !ok {
 				continue
 			}
-			values, err := recordValues(vm, event.Record)
+			slot := sp.pool.acquire()
+			values, err := recordValues(slot.vm, event.Record)
 			if err != nil {
+				sp.pool.release(slot)
 				return err
 			}
-			if err := validateModel(vm, models, collection.Name, values); err != nil {
-				log.Printf("validation error: collection=%s record=%s source=%s err=%v", collection.Name, event.Record.Id, source.name, err)
+			err = validateModel(slot.vm, slot.models, collection.Name, values)
+			if err != nil {
+				log.Printf("validation error: collection=%s record=%s source=%s err=%v", collection.Name, event.Record.Id, sp.name, err)
+			}
+			sp.pool.release(slot)
+			if err != nil {
 				return err
 			}
 			return event.Next()
@@ -376,45 +461,13 @@ func compileModelSource(source ModelSource) (*goja.Program, []string, error) {
 	return program, keys, nil
 }
 
-// RegisterWithSource loads and compiles source once for this registration.
+// RegisterWithSource is a compatibility wrapper for single-source callers.
+// It delegates to RegisterWithSources with no Pack sources, so the single
+// source gets the same VM pool, collision checking, and warm-up as multi-source
+// registration.
 func RegisterWithSource(app core.App, source ModelSource) error {
 	if source == nil {
 		return errors.New("validation: model source is nil")
 	}
-	script, err := source.Load()
-	if err != nil {
-		return fmt.Errorf("validation: failed to load models bundle: %w", err)
-	}
-	if len(strings.TrimSpace(string(script))) == 0 {
-		return errors.New("validation: models bundle is empty")
-	}
-	prog, err := compileProgram(string(script))
-	if err != nil {
-		return fmt.Errorf("validation: failed to compile models bundle: %w", err)
-	}
-	if _, _, err := loadModels(prog); err != nil {
-		return err
-	}
-
-	app.OnRecordValidate().BindFunc(func(event *core.RecordEvent) error {
-		collection := event.Record.Collection()
-		if shouldSkipCollection(collection) {
-			return event.Next()
-		}
-		vm, models, err := loadModels(prog)
-		if err != nil {
-			return err
-		}
-		values, err := recordValues(vm, event.Record)
-		if err != nil {
-			return err
-		}
-		if err := validateModel(vm, models, collection.Name, values); err != nil {
-			log.Printf("validation error: collection=%s record=%s err=%v",
-				collection.Name, event.Record.Id, err)
-			return err
-		}
-		return event.Next()
-	})
-	return nil
+	return RegisterWithSources(app, source, nil)
 }
