@@ -213,10 +213,10 @@ func TestReadRouting_Empty(t *testing.T) {
 	if err != nil {
 		t.Fatalf("readRouting: %v", err)
 	}
-	if rules != nil && len(rules) != 0 {
+	if len(rules) != 0 {
 		t.Errorf("expected empty rules, got %+v", rules)
 	}
-	if allowlist != nil && len(allowlist) != 0 {
+	if len(allowlist) != 0 {
 		t.Errorf("expected empty allowlist, got %+v", allowlist)
 	}
 }
@@ -475,7 +475,7 @@ func TestRenderConfig_UserRulesPresent(t *testing.T) {
 	// Each route should marshal to a JSON object with match/handle keys.
 	// We don't assert exact shape — translator_test.go covers that. Just
 	// verify the round-trip produced structured data.
-	if _, ok := got.UserRules[0]["match"].(any); !ok {
+	if got.UserRules[0]["match"] == nil {
 		t.Errorf("userRoute[0] missing match key: %+v", got.UserRules[0])
 	}
 }
