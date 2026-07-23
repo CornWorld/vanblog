@@ -25,8 +25,8 @@ func TestPlansDoNotRequireRuntimeLoadability(t *testing.T) {
 	}}})
 	if err != nil {
 		t.Fatal(err)
-		if len(plans) != 1 || plans[0].State != "ready" || plans[0].BackupRequired || plans[0].BackupStrategy != "none" || plans[0].BackupScope != "" {
-			t.Fatalf("unexpected plan: %+v", plans)
-		}
+	}
+	if len(plans) != 1 || plans[0].State != "ready" || plans[0].BackupRequired || plans[0].BackupStrategy != "none" || plans[0].BackupScope != "" {
+		t.Fatalf("unexpected plan: %+v", plans)
 	}
 }
