@@ -77,6 +77,12 @@ function readPackJson(path, directory) {
       throw new Error(`Pack ${directory} pack.json contains unknown field ${key}; allowed: name, version, title, nav, frontend`);
     }
   }
+  if (json.name === undefined) {
+    throw new Error(`Pack ${directory} pack.json is missing required field "name"`);
+  }
+  if (json.version === undefined) {
+    throw new Error(`Pack ${directory} pack.json is missing required field "version"`);
+  }
   if (!PACK_NAME_PATTERN.test(json.name)) throw new Error(`Invalid Pack name: ${String(json.name)}`);
   if (!VERSION_PATTERN.test(json.version)) throw new Error(`Invalid Pack version for ${json.name}: ${String(json.version)}`);
   if (json.title !== undefined && (typeof json.title !== 'string' || json.title.length === 0)) {
