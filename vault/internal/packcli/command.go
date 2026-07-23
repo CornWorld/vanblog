@@ -317,30 +317,44 @@ func NewCommand() *cobra.Command {
 	return root
 }
 
+// promoteArtifactBundle swaps staged schema files into place using fixed
+// .bak names in the same directory. Unlike a temp-directory backup, this
+// survives process death: if the process is killed mid-promotion, the .bak
+// files remain and are restored on the next pack build invocation.
 func promoteArtifactBundle(directory, stagedSchema, stagedMetadata string) error {
 	artifactPath := filepath.Join(directory, "schema.js")
 	metadataPath := filepath.Join(directory, "schema.js.meta.json")
+	backupSchema := filepath.Join(directory, ".schema.js.bak")
+	backupMetadata := filepath.Join(directory, ".schema.js.meta.json.bak")
 
-	backupDir, err := os.MkdirTemp(directory, ".schema-backup-*")
-	if err != nil {
-		return fmt.Errorf("create artifact backup: %w", err)
+	// Crash recovery: if leftover .bak files exist from a previous killed
+	// promotion, restore them before attempting a new one.
+	if _, err := os.Stat(backupSchema); err == nil {
+		os.Rename(backupSchema, artifactPath)
 	}
-	defer os.RemoveAll(backupDir)
+	if _, err := os.Stat(backupMetadata); err == nil {
+		os.Rename(backupMetadata, metadataPath)
+	}
 
-	backupSchema := filepath.Join(backupDir, "schema.js")
-	backupMetadata := filepath.Join(backupDir, "schema.js.meta.json")
+	// Phase 1: backup existing files to .bak.
 	if err := os.Rename(artifactPath, backupSchema); err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("backup schema artifact: %w", err)
 	}
 	if err := os.Rename(metadataPath, backupMetadata); err != nil && !os.IsNotExist(err) {
 		return rollbackArtifactBundle(artifactPath, metadataPath, backupSchema, backupMetadata, fmt.Errorf("backup schema metadata: %w", err))
 	}
+
+	// Phase 2: promote staged files to final names.
 	if err := os.Rename(stagedSchema, artifactPath); err != nil {
 		return rollbackArtifactBundle(artifactPath, metadataPath, backupSchema, backupMetadata, fmt.Errorf("promote schema artifact: %w", err))
 	}
 	if err := os.Rename(stagedMetadata, metadataPath); err != nil {
 		return rollbackArtifactBundle(artifactPath, metadataPath, backupSchema, backupMetadata, fmt.Errorf("promote schema metadata: %w", err))
 	}
+
+	// Phase 3: clean up .bak files (success).
+	os.Remove(backupSchema)
+	os.Remove(backupMetadata)
 	return nil
 }
 
@@ -360,6 +374,12 @@ func rollbackArtifactBundle(artifactPath, metadataPath, backupSchema, backupMeta
 	return cause
 }
 
+// repoMarkers are files that identify the repository root. When resolving a
+// relative path by walking up from cwd, we verify the candidate's parent
+// directory contains at least one marker to avoid picking a directory from a
+// sibling or parent project in a monorepo layout.
+var repoMarkers = []string{"pnpm-workspace.yaml", "go.mod"}
+
 func resolveExistingPath(path string) string {
 	if filepath.IsAbs(path) {
 		return path
@@ -371,7 +391,12 @@ func resolveExistingPath(path string) string {
 	for dir := cwd; ; dir = filepath.Dir(dir) {
 		candidate := filepath.Join(dir, path)
 		if _, err := os.Stat(candidate); err == nil {
-			return candidate
+			// Confirm we're inside the expected repo before accepting.
+			if isRepoRoot(dir) {
+				return candidate
+			}
+			// Found a packs/ directory but no repo marker at this level;
+			// keep walking up in case a parent project is the real target.
 		}
 		parent := filepath.Dir(dir)
 		if parent == dir {
@@ -379,6 +404,17 @@ func resolveExistingPath(path string) string {
 		}
 	}
 	return path
+}
+
+// isRepoRoot returns true when dir is the repository root, identified by
+// the presence of at least one known marker file.
+func isRepoRoot(dir string) bool {
+	for _, marker := range repoMarkers {
+		if _, err := os.Stat(filepath.Join(dir, marker)); err == nil {
+			return true
+		}
+	}
+	return false
 }
 
 func resolveSchemaBuilderPath(path string) (string, error) {
