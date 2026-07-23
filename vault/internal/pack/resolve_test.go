@@ -115,6 +115,10 @@ func TestCompareSemVerCases(t *testing.T) {
 		// Mixed numeric and alphanumeric across dot-separated identifiers.
 		{"1.0.0-x.7.z.92", "1.0.0-x.7.z.9", 1},   // 92 > 9 numerically
 		{"1.0.0-x.7.z.9", "1.0.0-x.7.z.92", -1},
+		// SemVer §11: numeric identifiers with leading zeros are lexical (non-numeric).
+		// "01" is treated as alphanumeric, which has HIGHER precedence than numeric.
+		// So "01" (alphanumeric) > "1" (numeric).
+		{"1.0.0-01", "1.0.0-1", 1},
 	}
 	for _, tc := range cases {
 		got, err := compareSemVer(tc.a, tc.b)

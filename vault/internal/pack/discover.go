@@ -376,9 +376,14 @@ func comparePreRelease(a, b string) int {
 // parsePreReleaseIdentifier returns the numeric value of the identifier when
 // it is composed entirely of digits, and a numeric flag. Non-numeric
 // identifiers are returned as (0, false); the caller should use the string
-// form directly.
+// form directly. Per SemVer spec §11, numeric identifiers must not have
+// leading zeros, so "01" is treated as non-numeric (lexical comparison).
 func parsePreReleaseIdentifier(s string) (int, bool) {
 	if s == "" {
+		return 0, false
+	}
+	// SemVer §11: numeric identifiers must not have leading zeros.
+	if len(s) > 1 && s[0] == '0' {
 		return 0, false
 	}
 	for _, r := range s {
