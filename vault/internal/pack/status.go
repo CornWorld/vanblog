@@ -99,7 +99,7 @@ func Fingerprint(p Pack) (string, error) {
 		if err != nil {
 			return "", err
 		}
-		fmt.Fprintf(hash, "%s\\x00%d\\x00", path, len(data))
+		fmt.Fprintf(hash, "%s\x00%d\x00", path, len(data))
 		_, _ = hash.Write(data)
 	}
 	return hex.EncodeToString(hash.Sum(nil)), nil
