@@ -60,16 +60,9 @@ func (s PackSource) Load() ([]byte, error) {
 	return fs.ReadFile(s.FS, path)
 }
 
-// ResolveModelSource is retained for single-source compatibility callers.
-// Runtime registration uses RegisterWithSources and loads every Pack schema.
-func ResolveModelSource(packs []PackSource) ModelSource {
-	for _, p := range packs {
-		if _, err := fs.Stat(p.FS, "schema.js"); err == nil {
-			return p
-		}
-	}
-	return nil
-}
+// ResolveModelSource was the legacy first-wins Pack schema selector. It is
+// removed: runtime now uses RegisterWithSources and loads every Pack schema
+// in deterministic name order with collision detection.
 
 // gojaPrelude provides missing ES builtins that the Zod bundle relies on.
 // Goja does not ship a URL constructor, so Zod v4's z.url() crashes with
@@ -278,10 +271,9 @@ func ValidateModelSource(source ModelSource) error {
 	return err
 }
 
-// Register is retained only as a compatibility shell; runtime registration requires an explicit artifact source.
-func Register(app core.App) error {
-	return errors.New("validation: core model source is required")
-}
+// Register was the original no-source registration entry. It is removed:
+// callers must supply a core model source via RegisterWithSources (or use
+// RegisterWithSource for the single-source convenience wrapper).
 
 // vmPoolSize controls how many pre-warmed Goja VMs each source keeps.
 // Defaults to GOMAXPROCS so concurrent record saves don't serialize.

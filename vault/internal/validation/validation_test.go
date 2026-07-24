@@ -169,36 +169,6 @@ func TestPackSourceMissingSchemaReturnsErrNotExist(t *testing.T) {
 	}
 }
 
-func TestResolveModelSourceReturnsNilWithoutSchema(t *testing.T) {
-	packs := []PackSource{{FS: fstest.MapFS{"pack.json": {Data: []byte(`{}`)}}, Name: "no-schema"}}
-	if source := ResolveModelSource(packs); source != nil {
-		t.Fatalf("expected nil source, got %T", source)
-	}
-}
-
-func TestResolveModelSourcePicksFirstPackWithSchema(t *testing.T) {
-	bundle := `exports.models = { frompack: { safeParse: function () { return { success: true }; } } };`
-	packs := []PackSource{
-		{FS: fstest.MapFS{"pack.json": {Data: []byte(`{}`)}}, Name: "no-schema"},
-		{FS: fstest.MapFS{"schema.js": {Data: []byte(bundle)}}, Name: "with-schema"},
-		{FS: fstest.MapFS{"schema.js": {Data: []byte(bundle)}}, Name: "also-with-schema"},
-	}
-	source := ResolveModelSource(packs)
-	ps, ok := source.(PackSource)
-	if !ok {
-		t.Fatalf("expected PackSource, got %T", source)
-	}
-	if ps.Name != "with-schema" {
-		t.Fatalf("expected with-schema, got %s", ps.Name)
-	}
-}
-
-func TestResolveModelSourceEmptyPacksReturnsNil(t *testing.T) {
-	if source := ResolveModelSource(nil); source != nil {
-		t.Fatalf("expected nil source, got %T", source)
-	}
-}
-
 func TestRegisterWithSourcesRequiresCoreSource(t *testing.T) {
 	app, err := tests.NewTestApp()
 	if err != nil {
