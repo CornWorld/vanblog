@@ -202,14 +202,6 @@ func GetTLSStatus(app core.App, caddyAdminURL string) (*TLSStatus, error) {
 	return status, nil
 }
 
-// CheckCaddyHealth does a simple liveness check on the Caddy admin API.
-// Returns nil if Caddy is healthy, error otherwise.
-func CheckCaddyHealth(caddyAdminURL string) error {
-	client := caddyadmin.NewClient(caddyAdminURL)
-	_, err := client.GetConfig()
-	return err
-}
-
 // WaitForCaddy polls the Caddy admin API until it responds or timeout.
 // Used during bootstrap to avoid race conditions.
 func WaitForCaddy(caddyAdminURL string, timeout time.Duration) error {
