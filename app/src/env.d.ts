@@ -46,7 +46,6 @@ declare namespace App {
     pb: import("@vanblog/sdk").VanblogClient;
     pbUrl: string;
     getSite(): Promise<Partial<import("@vanblog/sdk").Site> | null>;
-    getNavItems(): Promise<import("@vanblog/sdk").PluginNavItem[]>;
   }
 }
 

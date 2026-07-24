@@ -130,14 +130,6 @@ export async function safe<T>(
   }
 }
 
-// ── Nav item type ──────────────────────────────────────────────────────
-
-export interface PluginNavItem {
-  path: string;
-  title: string;
-  position: string;
-}
-
 // ── Middleware factory ──────────────────────────────────────────────────
 
 /**
@@ -247,9 +239,6 @@ export function createVanblogMiddleware(opts: VanblogMiddlewareOptions = {}) {
       }
       return cachedSite;
     };
-
-    const navCache: PluginNavItem[] = [];
-    context.locals.getNavItems = async () => navCache;
 
     // Auth refresh — if PocketBase is down this throws, which means the
     // token can't be validated. Return 503 rather than proceeding with

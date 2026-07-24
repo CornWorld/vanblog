@@ -30,7 +30,6 @@ export {
   createServerClient,
   exportAuthCookie,
   type AuthUser,
-  type PluginNavItem,
   type VanblogMiddlewareOptions,
 } from "./server";
 
