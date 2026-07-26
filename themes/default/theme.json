@@ -1,0 +1,8 @@
+{
+  "name": "default",
+  "label": "Vanblog Default",
+  "version": "0.1.0",
+  "author": "vanblog",
+  "description": "Official default theme. Mirrors app/src/ via re-export thin shells; theme authors can fork this as a starting point.",
+  "screenshot": "./screenshot.png"
+}
