@@ -3,7 +3,7 @@ import { discoverPacks, loadPackMetadata, mergeLocalPacks, resolvePublicPages } 
 
 const appDirectory = new URL('../../', import.meta.url);
 const repositoryDirectory = new URL('../../../', import.meta.url);
-const themePage = fileURLToPath(new URL('src/layouts/PackPage.astro', appDirectory));
+const builtinThemePage = fileURLToPath(new URL('src/layouts/PackPage.astro', appDirectory));
 const packsDirectory = fileURLToPath(new URL('packs', repositoryDirectory));
 // VANBLOG_PACKS_DIR mirrors the Go-side --packsDir flag so that local Pack
 // overrides take effect in Astro at the same time as they do in the Go runtime.
@@ -21,7 +21,7 @@ const resolvedPacksVirtualId = `\0${packsVirtualId}`;
 const frontendVirtualId = 'virtual:vanblog/pack-frontend';
 const resolvedFrontendVirtualId = `\0${frontendVirtualId}`;
 
-function packVirtualPlugin(metadata, packs) {
+function packVirtualPlugin(metadata, packs, themePage) {
   const frontend = packs.flatMap((pack) => {
     const contribution = metadata.find((item) => item.name === pack.name)?.frontend;
     if (!contribution) return [];
@@ -65,7 +65,11 @@ function packVirtualPlugin(metadata, packs) {
   };
 }
 
-export default function packsIntegration() {
+export default function packsIntegration(options = {}) {
+  // Themes supply their own PackPage host via the themePage option. When
+  // unset (e.g. running inside app/ as the default builtin build), we fall
+  // back to app/src/layouts/PackPage.astro.
+  const themePage = options.themePage || builtinThemePage;
   return {
     name: 'vanblog-packs',
     hooks: {
@@ -74,7 +78,7 @@ export default function packsIntegration() {
         const pages = resolvePublicPages(packs.flatMap((pack) => pack.pages));
         const metadata = loadPackMetadata(packs);
         for (const page of pages) injectRoute({ pattern: page.pattern, entrypoint: page.entrypoint });
-        updateConfig({ vite: { plugins: [packVirtualPlugin(metadata, packs)] } });
+        updateConfig({ vite: { plugins: [packVirtualPlugin(metadata, packs, themePage)] } });
       },
       'astro:server:setup': ({ server }) => {
         const packs = resolvePacks();
