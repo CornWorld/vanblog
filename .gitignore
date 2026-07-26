@@ -17,6 +17,7 @@ package-lock.json
 # Build output
 sdk/dist/
 app/dist/
+themes/*/dist/
 
 # Generated core CJS runtime artifact (run pnpm build:models before Go serve/build)
 runtime/core-schema/models.js

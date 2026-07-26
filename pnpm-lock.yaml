@@ -135,6 +135,72 @@ importers:
         specifier: ^5.7.0
         version: 5.9.3
 
+  themes/default:
+    dependencies:
+      '@astrojs/markdown-remark':
+        specifier: ^7.2.0
+        version: 7.2.0
+      '@astrojs/mdx':
+        specifier: ^5.0.0
+        version: 5.0.6(astro@6.4.8(jiti@2.7.0)(lightningcss@1.32.0)(rollup@4.62.2)(yaml@2.9.0))
+      '@astrojs/node':
+        specifier: ^10.0.0
+        version: 10.1.4(astro@6.4.8(jiti@2.7.0)(lightningcss@1.32.0)(rollup@4.62.2)(yaml@2.9.0))
+      '@bytemd/plugin-frontmatter':
+        specifier: ^1.22.0
+        version: 1.22.0(bytemd@1.22.0)
+      '@bytemd/plugin-gfm':
+        specifier: ^1.22.0
+        version: 1.22.0(bytemd@1.22.0)
+      '@bytemd/plugin-highlight-ssr':
+        specifier: ^1.22.0
+        version: 1.22.0(bytemd@1.22.0)
+      '@bytemd/plugin-math-ssr':
+        specifier: ^1.22.0
+        version: 1.22.0(bytemd@1.22.0)
+      '@bytemd/plugin-medium-zoom':
+        specifier: ^1.22.0
+        version: 1.22.0(bytemd@1.22.0)
+      '@bytemd/plugin-mermaid':
+        specifier: ^1.22.0
+        version: 1.22.0(bytemd@1.22.0)
+      '@tailwindcss/vite':
+        specifier: ^4.3.2
+        version: 4.3.2(vite@7.3.6(jiti@2.7.0)(lightningcss@1.32.0)(yaml@2.9.0))
+      '@vanblog/sdk':
+        specifier: workspace:*
+        version: link:../../sdk
+      astro:
+        specifier: ^6.0.0
+        version: 6.4.8(jiti@2.7.0)(lightningcss@1.32.0)(rollup@4.62.2)(yaml@2.9.0)
+      bytemd:
+        specifier: ^1.22.0
+        version: 1.22.0
+      emoji-picker-element:
+        specifier: ^1.29.1
+        version: 1.29.1
+      katex:
+        specifier: ^0.16.0
+        version: 0.16.47
+      mermaid:
+        specifier: ^11.16.0
+        version: 11.16.0
+      rehype-katex:
+        specifier: ^7.0.1
+        version: 7.0.1
+      remark-directive:
+        specifier: ^3.0.0
+        version: 3.0.1
+      remark-math:
+        specifier: ^6.0.0
+        version: 6.0.0
+      tailwindcss:
+        specifier: ^4.3.2
+        version: 4.3.2
+      unist-util-visit:
+        specifier: ^5.0.0
+        version: 5.1.0
+
 packages:
 
   '@antfu/install-pkg@1.1.0':

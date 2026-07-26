@@ -1,6 +1,7 @@
 packages:
-  - 'sdk'
-  - 'app'
+  - "sdk"
+  - "app"
+  - "themes/*"
 
 onlyBuiltDependencies:
   - esbuild
