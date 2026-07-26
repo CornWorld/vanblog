@@ -1,0 +1,25 @@
+---
+export interface Props {
+  html: string;
+}
+
+const { html } = Astro.props;
+---
+<div class="post-content" set:html={html} />
+
+<script>
+  // Medium-style image zoom via medium-zoom
+  const initZoom = async () => {
+    const mediumZoom = (await import('medium-zoom')).default;
+    mediumZoom('.post-content img', {
+      background: 'var(--bg)',
+      margin: 24,
+    });
+  };
+
+  if (document.querySelector('.post-content img')) {
+    initZoom().catch(() => {
+      // Fallback: just show images as-is if medium-zoom fails
+    });
+  }
+</script>

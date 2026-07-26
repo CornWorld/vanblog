@@ -4,6 +4,10 @@ export const prerender = false;
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import ErrorNotice from '../../components/ErrorNotice.astro';
 import Comments from '../../components/Comments.astro';
+import PostViewer from '../../components/PostViewer.astro';
+import Toc from '../../components/Toc.astro';
+import CopyRight from '../../components/CopyRight.astro';
+import AuthorCard from '../../components/AuthorCard.astro';
 import { getLiveEntry } from 'astro:content';
 import { isAuthenticated, fmtDate } from '@vanblog/sdk';
 import { renderMarkdown } from '../../lib/markdown/renderer';
@@ -42,27 +46,29 @@ if (!data) {
   }
 }
 ---
-
 <BaseLayout title={data?.title || '文章不存在'} post={data || undefined} path={`/posts/${id}`}>
   {data && html !== null ? (
     <article>
       <h1>{data.title}</h1>
-      <p><small>
+      <p class="text-sm text-[var(--text-muted)] mb-6">
         发表于 {fmtDate(data.created)}
         {data.private && <span class="ml-2 text-[var(--text-muted)]">· 私有</span>}
         {data.status !== 'published' && <span class="ml-2 text-[var(--text-muted)]">· {data.status}</span>}
-      </small></p>
-      <div set:html={html} />
+      </p>
+      <PostViewer html={html} />
+      <Toc html={html} />
+      <CopyRight post={data} site={site} />
     </article>
   ) : (
     <ErrorNotice code="404" title="文章不存在" message="该文章可能已被删除、未发布，或你没有访问权限。" />
   )}
+  <AuthorCard site={site} />
   <hr />
   <Comments
     provider={site?.commentsProvider || 'disabled'}
     config={site?.commentsConfig || null}
   />
-  <p><a href="/">← 返回首页</a></p>
+  <p class="mt-4"><a href="/">← 返回首页</a></p>
 </BaseLayout>
 
 <script>

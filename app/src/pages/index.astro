@@ -3,7 +3,9 @@ export const prerender = false;
 
 import BaseLayout from '../layouts/BaseLayout.astro';
 import ErrorState from '../components/ErrorState.astro';
-import { stripMarkdown, fmtDate, safe, getPage } from '@vanblog/sdk';
+import ArticleCard from '../components/ArticleCard.astro';
+import PageNav from '../components/PageNav.astro';
+import { safe, getPage } from '@vanblog/sdk';
 
 const pb = Astro.locals.pb;
 
@@ -25,52 +27,10 @@ const totalPages = result?.totalPages ?? 1;
       <p class="py-12 text-center text-[var(--text-muted)]">暂无文章。</p>
     ) : (
       <div class="space-y-6">
-        {posts.map((post) => (
-          <article class="card-post">
-            <h2 class="text-xl mb-2">
-              <a href={`/posts/${post.id}`} class="text-[var(--text)] hover:text-[var(--accent)] no-underline">
-                {post.title}
-              </a>
-            </h2>
-            <div class="flex items-center gap-3 text-sm text-[var(--text-muted)] mb-3">
-              <time datetime={post.created}>{fmtDate(post.created)}</time>
-              {post.expand?.category && (
-                <a href={`/categories/${post.category}`} class="text-[var(--accent)]">
-                  {post.expand.category.name}
-                </a>
-              )}
-            </div>
-            {post.content && (
-              <p class="text-[var(--text-muted)] text-sm leading-relaxed">
-                {stripMarkdown(post.content, 150)}
-              </p>
-            )}
-            <div class="mt-3">
-              <a href={`/posts/${post.id}`} class="text-sm text-[var(--accent)] hover:underline">
-                阅读全文 →
-              </a>
-            </div>
-          </article>
-        ))}
+        {posts.map((post) => <ArticleCard post={post} />)}
       </div>
     )
   }
 
-  {!loadError && totalPages > 1 && (
-    <nav class="flex justify-center gap-4 mt-10 pt-6 border-t border-[var(--border)]">
-      {page > 1 ? (
-        <a href={`/?page=${page - 1}`} class="btn-primary">← 上一页</a>
-      ) : (
-        <span class="btn-primary opacity-50 cursor-not-allowed">← 上一页</span>
-      )}
-      <span class="flex items-center text-sm text-[var(--text-muted)]">
-        第 {page} / {totalPages} 页
-      </span>
-      {page < totalPages ? (
-        <a href={`/?page=${page + 1}`} class="btn-primary">下一页 →</a>
-      ) : (
-        <span class="btn-primary opacity-50 cursor-not-allowed">下一页 →</span>
-      )}
-    </nav>
-  )}
+  {!loadError && <PageNav page={page} totalPages={totalPages} />}
 </BaseLayout>

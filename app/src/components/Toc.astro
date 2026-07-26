@@ -1,0 +1,69 @@
+---
+export interface Props {
+  html: string;
+}
+
+const { html } = Astro.props;
+
+// Extract headings from HTML server-side
+const headings: { level: number; text: string; id: string }[] = [];
+const h2Re = /<h2[^>]*id="([^"]*)"[^>]*>(.*?)<\/h2>/gi;
+const h3Re = /<h3[^>]*id="([^"]*)"[^>]*>(.*?)<\/h3>/gi;
+
+let m: RegExpExecArray | null;
+while ((m = h2Re.exec(html)) !== null) {
+  headings.push({ level: 2, text: m[2].replace(/<[^>]+>/g, ''), id: m[1] });
+}
+while ((m = h3Re.exec(html)) !== null) {
+  headings.push({ level: 3, text: m[2].replace(/<[^>]+>/g, ''), id: m[1] });
+}
+---
+{headings.length > 0 && (
+  <nav class="toc hidden xl:block fixed top-24 right-[max(2rem,calc(50%-36rem))] w-56 max-h-[calc(100vh-8rem)] overflow-y-auto text-sm">
+    <h3 class="font-semibold text-[var(--text-muted)] mb-3 uppercase tracking-wider text-xs">目录</h3>
+    <ul class="space-y-1 border-l-2 border-[var(--border)] pl-3">
+      {headings.map((h) => (
+        <li class={h.level === 3 ? 'pl-4' : ''}>
+          <a
+            href={`#${h.id}`}
+            class="toc-link block py-1 text-[var(--text-muted)] hover:text-[var(--accent)] no-underline transition-colors truncate"
+            data-toc-id={h.id}
+          >
+            {h.text}
+          </a>
+        </li>
+      ))}
+    </ul>
+  </nav>
+)}
+
+<script>
+  // Scroll-spy: highlight active TOC item
+  const links = document.querySelectorAll<HTMLAnchorElement>('.toc-link');
+  if (links.length > 0) {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        let active: string | null = null;
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            active = entry.target.getAttribute('id');
+            break;
+          }
+        }
+        if (active) {
+          links.forEach((link) => {
+            const isActive = link.dataset.tocId === active;
+            link.classList.toggle('text-[var(--accent)]', isActive);
+            link.classList.toggle('font-medium', isActive);
+          });
+        }
+      },
+      { rootMargin: '-80px 0px -60% 0px' },
+    );
+
+    links.forEach((link) => {
+      const el = document.getElementById(link.dataset.tocId || '');
+      if (el) observer.observe(el);
+    });
+  }
+</script>

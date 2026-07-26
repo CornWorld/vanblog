@@ -1,0 +1,27 @@
+---
+export interface Props {
+  page: number;
+  totalPages: number;
+  baseUrl?: string;
+}
+
+const { page, totalPages, baseUrl = '' } = Astro.props;
+const qs = (p: number) => `${baseUrl}?page=${p}`;
+---
+{totalPages > 1 && (
+  <nav class="flex items-center justify-center gap-4 mt-10 pt-6 border-t border-[var(--border)]">
+    {page > 1 ? (
+      <a href={qs(page - 1)} class="btn-primary">← 上一页</a>
+    ) : (
+      <span class="btn-primary opacity-50 cursor-not-allowed">← 上一页</span>
+    )}
+    <span class="flex items-center text-sm text-[var(--text-muted)]">
+      第 {page} / {totalPages} 页
+    </span>
+    {page < totalPages ? (
+      <a href={qs(page + 1)} class="btn-primary">下一页 →</a>
+    ) : (
+      <span class="btn-primary opacity-50 cursor-not-allowed">下一页 →</span>
+    )}
+  </nav>
+)}
