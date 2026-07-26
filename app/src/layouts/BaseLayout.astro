@@ -85,6 +85,12 @@ const packNavItems = packMetadata.flatMap((pack) => pack.nav ? [pack.nav] : []);
     <title>{title} - {siteName}</title>
     <meta name="description" content={desc} />
     {canonicalURL && <link rel="canonical" href={canonicalURL} />}
+
+    <!-- Palette CSS (zero-build theme switch; see docs/agent-theme-architecture.md §4) -->
+    {site?.palette && (
+      <link rel="stylesheet" href={`/api/palette.css?v=${site.updated ?? ''}`} data-vanblog-palette />
+    )}
+
     {packContributions.filter((item) => item.scope === 'public').flatMap((item) => item.styles).map((href) => (
       <link rel="stylesheet" href={href} data-vanblog-pack-style />
     ))}
