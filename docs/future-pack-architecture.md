@@ -288,6 +288,8 @@ one active theme
 
 It does not own the admin frontend.
 
+> **Cross-reference — implemented path (Spike 3, 2026-07-26).** The v1 full-theme implementation path landed as the **alias + `builtin-overrides` model**: every theme under `themes/{name}/` is a standard Astro project that imports the main repo's builtin via the `@vanblog/builtin/*` alias, and customises builtin files by dropping same-path overrides into `src/builtin-overrides/<rel>`. A 30-line Vite plugin `resolveId` hook in `app/integrations/themes/index.mjs` is the entire mechanism — no `injectRoute`, no submodule, no Dockerfile `cp`. The contract for what themes may override and which builtin APIs are stable (L0/L1/L2 surface) is documented in [`docs/agent-theme-architecture.md`](./agent-theme-architecture.md) §5 and §5.5; the author-facing handbook is [`docs/theme-implementer-guide.md`](./theme-implementer-guide.md). The "one active theme + Pack page extensions" composition above is realised at build time by this model: the active theme is the build input, Pack page extensions consume the theme's `PackPage.astro` host through the `vanblog:theme` virtual module, and the `packs` integration accepts a `themePage` option so the theme's host takes precedence over the builtin fallback.
+
 ### Admin direction
 
 The admin surface is a control plane and does not need SEO or public SSR. The future direction is a stable SPA served independently from the active public theme:
@@ -300,6 +302,8 @@ The admin surface is a control plane and does not need SEO or public SSR. The fu
 ```
 
 Pack `admin/` resources will later compile as controlled modules into the admin SPA. They are not part of Pack v0. Until that migration, the existing Astro admin pages remain in place.
+
+> **Cross-reference — locked at the integration layer (Spike 3).** Admin locking is no longer only a direction: it is enforced today by `app/integrations/themes/index.mjs`. The `FORBIDDEN_OVERRIDE_PATTERNS` list rejects any `src/builtin-overrides/pages/admin/**` (and `pages/api/**`, `lib/**`, `loaders/**`, `live.config.*`, `middleware.*`) file at module-resolution time — dev server and prod build both fail closed with `FORBIDDEN override: ...`. Themes therefore cannot change, extend, or replace any admin route, API endpoint, or data-layer file, even though they otherwise own their `src/` tree. See [`docs/agent-theme-architecture.md`](./agent-theme-architecture.md) §6.2 for the full forbidden-path list and [`docs/theme-implementer-guide.md`](./theme-implementer-guide.md) §7 for the author-facing rule.
 
 ## Caddy boundary
 
