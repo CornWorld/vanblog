@@ -291,30 +291,11 @@ Mermaid 渲染    MutationObserver | 检测 mermaid 容器 → 渲染图表
 
 ---
 
-## 7. 裁剪映射
+## 7. 裁剪参考
 
-```
-Fork 组件                          → 本项目
-─────────────────────────────────────────────────────
-Layout + LayoutBody                → BaseLayout (合并)
-NavBar + NavBarMobile              → Nav (响应式)
-Footer                             → Footer (保留)
-BackToTop                          → BackToTop (保留)
-AuthorCard                         → AuthorCard (保留)
-Toc + TocMobile + TocMobileBar     → Toc (响应式)
-OverviewPostCard                   → ArticleCard(showExcerpt=true)
-PostCard + RichPostCard            → ArticleCard(showExcerpt=false)
-PostViewer                         → PostViewer (保留)
-PostViewerStats                    → 合并到 ArticleCard
-PageNav                            → PageNav (保留)
-CopyRight                          → CopyRight (保留)
-EmptyState + Loading               → 内联判断
+详细裁剪方案见 `docs/frontend-optimization.md`：
 
-不实现:
-  MusicPlayer       ← 全局单例 + localStorage + autoPlay 策略, 复杂度高
-  Reward            ← 打赏, 非核心
-  ImageProvider     ← 图片处理, 当前注释禁用
-  CustomLayout      ← 自定义 CSS/HTML/JS 注入, 非核心
-  Moment/Link/Nav   ← fork 特有附加页面
-  Mermaid 导出      ← 需 bytemd 生态, 复杂度高
-```
+- §2 35→13 组件映射
+- §3 29→13 依赖精简
+- §4 CSS / Utils / 架构优化
+- §5 最终规模预估
