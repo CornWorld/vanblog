@@ -59,6 +59,7 @@ interface VanblogSite {
   author: string;
   baseUrl: string;
   palette: string;
+  activeTheme: string;
   defaultTheme: "auto" | "light" | "dark";
   commentsProvider: "disabled" | "waline" | "giscus" | "artalk" | "external";
   revisionsEnabled: boolean;

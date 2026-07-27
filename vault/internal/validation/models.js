@@ -5226,6 +5226,7 @@ const SiteSchema = SystemFieldsSchema.extend({
   baseUrl: string().optional(),
   // Palette & dark mode
   palette: _string().optional(),
+  activeTheme: _string().optional(),
   defaultTheme: DefaultThemeSchema.optional(),
   customCss: string().optional(),
   customHead: string().optional(),

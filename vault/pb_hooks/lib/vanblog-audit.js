@@ -176,6 +176,7 @@ function siteAction(e) {
       siteName: e.record.get("siteName"),
       baseUrl: e.record.get("baseUrl"),
       palette: e.record.get("palette"),
+      activeTheme: e.record.get("activeTheme"),
       httpsRedirect: !!e.record.get("httpsRedirect"),
     },
     ip: ctx.ip,
