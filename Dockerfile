@@ -72,26 +72,25 @@ COPY scripts/ ./scripts/
 COPY models.config.mjs ./models.config.mjs
 COPY themes/ ./themes/
 
-# Validate the requested theme exists before paying for the install step.
-RUN if [ ! -d "themes/${VANBLOG_ACTIVE_THEME}" ]; then \
-      echo "ERROR: themes/${VANBLOG_ACTIVE_THEME}/ not found. Available:"; \
-      ls themes/ 2>/dev/null; \
-      exit 1; \
-    fi
+# Validate at least one theme directory exists.
+RUN ls themes/ > /dev/null
 
 # Build SDK first — themes import from @vanblog/sdk.
 RUN pnpm --filter sdk build
 
-# Build the active theme as the canonical Astro project for this image.
-# The theme's astro.config.mjs wires both packs() and themes() integrations,
-# and emits dist/server/entry.mjs at themes/${VANBLOG_ACTIVE_THEME}/dist/.
-RUN cd "themes/${VANBLOG_ACTIVE_THEME}" && pnpm build
+# Build ALL themes (not just the active one).
+# Each theme's astro.config.mjs reads VANBLOG_THEME_NAME to set base/assetsPrefix.
+RUN for theme in themes/*/; do \
+      name=$(basename "$theme"); \
+      if [ -f "$theme/astro.config.mjs" ]; then \
+        echo "Building theme: $name"; \
+        (cd "$theme" && VANBLOG_THEME_NAME="$name" pnpm build) || exit 1; \
+      fi; \
+    done
 
-# Record the compiled theme so the prod entrypoint can compare against
-# site.activeTheme and surface a "rebuild required" warning when operators
-# flip the field without rebuilding.
-RUN echo "${VANBLOG_ACTIVE_THEME}" > /build/.active-theme
-# Output: /build/themes/${VANBLOG_ACTIVE_THEME}/dist/
+# Record the default theme so the prod entrypoint knows which one to start.
+ARG VANBLOG_ACTIVE_THEME=default
+RUN echo "${VANBLOG_ACTIVE_THEME}" > /build/.default-theme
 
 # Build Pack schema artifacts (schema.ts -> schema.js) for any Pack that ships one.
 # The Go runtime reads schema.js from the Pack fs.FS to validate Pack-owned models.
@@ -111,15 +110,13 @@ RUN apk add --no-cache caddy nodejs ca-certificates tzdata
 COPY --from=go-build /pocketbase /usr/local/bin/vanblog
 COPY --from=go-build /core/models.js /core/models.js
 
-# Copy the whole astro-build workspace so the pnpm symlink layout (app/node_modules/<pkg>
-# → ../../node_modules/.pnpm/...) resolves correctly at the same depth.
-# Astro Node SSR externalizes deps (isomorphic-dompurify, etc.) — keep node_modules.
+# Copy the whole astro-build workspace so the pnpm symlink layout resolves.
 COPY --from=astro-build /build /build
-# Surface the compiled active theme at /app so entrypoint.prod.sh can keep
-# using `cd /app/dist`. The active theme name is recorded by the astro-build
-# stage in /build/.active-theme.
-COPY --from=astro-build /build/.active-theme /etc/vanblog/active-theme
-RUN ln -s "/build/themes/$(cat /etc/vanblog/active-theme)" /app
+
+# Copy built themes (all of them, not just active).
+# Each theme has its own dist/ with server/entry.mjs + client/ assets.
+COPY --from=astro-build /build/.default-theme /etc/vanblog/default-theme
+# No more symlink — the dispatcher (Phase B) or entrypoint reads default-theme.
 
 # Copy core hooks and builtin Pack resources (with schema.js artifacts built in
 # the astro-build stage — the Go runtime reads schema.js from /packs/<name>/).
