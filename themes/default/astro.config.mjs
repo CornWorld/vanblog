@@ -1,5 +1,6 @@
 import { defineConfig, memoryCache } from 'astro/config';
 import { fileURLToPath } from 'node:url';
+import { readFileSync } from 'node:fs';
 import node from '@astrojs/node';
 import mdx from '@astrojs/mdx';
 import tailwindcss from '@tailwindcss/vite';
@@ -10,8 +11,15 @@ const themeSrcDir = fileURLToPath(new URL('./src', import.meta.url));
 const mainAppSrcDir = fileURLToPath(new URL('../../app/src/', import.meta.url));
 const builtinPackPage = fileURLToPath(new URL('./src/layouts/PackPage.astro', import.meta.url));
 
+const themeName = process.env.VANBLOG_THEME_NAME
+  || JSON.parse(readFileSync(new URL('./theme.json', import.meta.url), 'utf8')).name;
+
 export default defineConfig({
   output: 'server',
+  base: `/themes/${themeName}/`,
+  build: {
+    assetsPrefix: `/themes/${themeName}/`,
+  },
   adapter: node({ mode: 'standalone' }),
   experimental: {
     cache: {
