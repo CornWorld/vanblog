@@ -117,6 +117,8 @@ COPY --from=astro-build /build /build
 # Each theme has its own dist/ with server/entry.mjs + client/ assets.
 COPY --from=astro-build /build/.default-theme /etc/vanblog/default-theme
 # No more symlink — the dispatcher (Phase B) or entrypoint reads default-theme.
+# Copy the theme dispatcher (ESM module, no compilation needed).
+COPY --from=astro-build /build/app/src/dispatcher/index.mjs /app/dispatcher.mjs
 
 # Copy core hooks and builtin Pack resources (with schema.js artifacts built in
 # the astro-build stage — the Go runtime reads schema.js from /packs/<name>/).
