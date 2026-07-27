@@ -71,12 +71,28 @@ const boolField = (k: keyof Site, def = false): boolean => {
 
       <fieldset class="grid grid-cols-[160px_1fr] gap-2 items-center border border-[var(--border)] p-4">
         <legend>主题与评论</legend>
-        <label>主题</label>
-        <select name="theme">
-          {['default', 'minimal', 'magazine', 'custom'].map(t => (
-            <option value={t} selected={field('theme') === t}>{t}</option>
-          ))}
+        <label>调色盘</label>
+        <select name="palette" id="palette-select" data-current={field('palette')}>
+          <option value="default">default</option>
         </select>
+        <script is:inline>
+          fetch('/api/palettes')
+            .then(r => r.json())
+            .then(data => {
+              const sel = document.getElementById('palette-select');
+              if (!sel) return;
+              const current = sel.getAttribute('data-current') || 'default';
+              sel.innerHTML = '';
+              (data.palettes || []).forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p.name;
+                opt.textContent = p.label || p.name;
+                if (p.name === current) opt.selected = true;
+                sel.appendChild(opt);
+              });
+            })
+            .catch(() => { /* keep fallback "default" */ });
+        </script>
         <label>默认主题</label>
         <select name="defaultTheme">
           {['auto', 'light', 'dark'].map(t => (
@@ -233,7 +249,7 @@ const boolField = (k: keyof Site, def = false): boolean => {
           baseUrl: fd.get('baseUrl'),
           favicon: fd.get('favicon'),
           copyrightAggreement: fd.get('copyrightAggreement'),
-          theme: fd.get('theme'),
+          palette: fd.get('palette'),
           defaultTheme: fd.get('defaultTheme'),
           commentsProvider: provider,
           commentsConfig: commentsConfig,

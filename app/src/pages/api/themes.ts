@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 export const prerender = false;
 
 // Public theme enumeration. Returns [{ name, label, version }, ...] from
-// themes/*. Used by the admin UI to populate the theme picker.
+// themes/*.
 //
 // Themes are independent Astro projects (see docs/agent-theme-architecture.md
 // §5). Each theme ships a theme.json with the metadata returned here.
@@ -35,8 +35,10 @@ function listThemes(): ThemeMeta[] {
           if (typeof raw.label === "string") meta.label = raw.label;
           if (typeof raw.version === "string") meta.version = raw.version;
           if (typeof raw.author === "string") meta.author = raw.author;
-          if (typeof raw.description === "string") meta.description = raw.description;
-          if (typeof raw.screenshot === "string") meta.screenshot = raw.screenshot;
+          if (typeof raw.description === "string")
+            meta.description = raw.description;
+          if (typeof raw.screenshot === "string")
+            meta.screenshot = raw.screenshot;
         } catch {
           // Malformed theme.json — fall through with just the directory name.
         }
@@ -49,6 +51,9 @@ function listThemes(): ThemeMeta[] {
 export const GET: APIRoute = async () => {
   return new Response(JSON.stringify({ themes: listThemes() }), {
     status: 200,
-    headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
+    headers: {
+      "Content-Type": "application/json",
+      "Cache-Control": "no-store",
+    },
   });
 };
