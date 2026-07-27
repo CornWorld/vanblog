@@ -175,7 +175,7 @@ function siteAction(e) {
     detail: {
       siteName: e.record.get("siteName"),
       baseUrl: e.record.get("baseUrl"),
-      theme: e.record.get("theme"),
+      palette: e.record.get("palette"),
       httpsRedirect: !!e.record.get("httpsRedirect"),
     },
     ip: ctx.ip,
