@@ -10,6 +10,10 @@ import { packs as packMetadata } from 'virtual:vanblog/packs';
 import { contributions as packContributions } from 'virtual:vanblog/pack-frontend';
 import type { Site, Post } from '@vanblog/sdk';
 
+import Nav from '../components/Nav.astro';
+import Footer from '../components/Footer.astro';
+import BackToTop from '../components/BackToTop.astro';
+
 interface Props {
   title: string;
   description?: string;
@@ -24,7 +28,7 @@ const pb = Astro.locals.pb;
 // Fall back to site config from middleware (lazy-loaded from pb)
 const site = siteProp || await Astro.locals.getSite();
 
-// Auth state for nav: show logout only when there's a session.
+// Auth state for nav
 const isLoggedIn = pb.authStore.isValid;
 const hasAbout = !!(site?.aboutContent && site.aboutContent.trim());
 
@@ -121,74 +125,15 @@ const packNavItems = packMetadata.flatMap((pack) => pack.nav ? [pack.nav] : []);
     )}
   </head>
   <body class="min-h-screen flex flex-col">
-    <header class="sticky top-0 z-10 border-b border-[var(--border)] bg-[var(--surface)] backdrop-blur-sm">
-      <div class="container-page flex items-center justify-between h-14 gap-4">
-        <a href="/" class="font-bold text-lg text-[var(--text)] no-underline hover:opacity-80">
-          {siteName}
-        </a>
-        <nav class="flex items-center gap-1 sm:gap-2 text-sm text-[var(--text)]">
-          <a href="/" class="nav-link">首页</a>
-          <a href="/archive" class="nav-link">归档</a>
-          <a href="/timeline" class="nav-link">时间轴</a>
-          <a href="/tags" class="nav-link hidden sm:inline">标签</a>
-          <a href="/categories" class="nav-link hidden sm:inline">分类</a>
-          <a href="/search" class="nav-link">搜索</a>
-          {packNavItems.map((item) => (
-            <a href={item.href} class="nav-link">{item.label}</a>
-          ))}
-          {hasAbout && (
-            <a href="/about" class="nav-link hidden sm:inline">关于</a>
-          )}
-          {isLoggedIn ? (
-            <a href="/admin" class="nav-link">管理</a>
-          ) : (
-            <a href="/login" class="nav-link">登录</a>
-          )}
-          {isLoggedIn && (
-            <button id="logout-btn" type="button" class="nav-link" aria-label="退出登录" title="退出登录">退出</button>
-          )}
-          <button id="darkmode-toggle" class="nav-link text-lg" aria-label="切换深色模式" title="切换深色/浅色模式">
-            <span class="dark:hidden">🌙</span>
-            <span class="hidden dark:inline">☀️</span>
-          </button>
-        </nav>
-      </div>
-    </header>
+    <Nav site={site} isLoggedIn={isLoggedIn} path={path} hasAbout={hasAbout} packNavItems={packNavItems} />
     <main class="flex-1 container-page py-8">
       <slot />
     </main>
-    <footer class="border-t border-[var(--border)] py-8 text-sm text-[var(--text-muted)]">
-      <div class="container-page flex flex-col sm:flex-row justify-between gap-4">
-        <p>&copy; {new Date().getFullYear()} {siteName}. Powered by <a href="https://github.com/CornWorld/vanblog" class="underline">Vanblog</a>.</p>
-        <p class="flex gap-4">
-          <a href="/api/feed.xml" class="hover:text-[var(--text)]">RSS</a>
-          <a href="/api/atom.xml" class="hover:text-[var(--text)]">Atom</a>
-          <a href="/api/sitemap.xml" class="hover:text-[var(--text)]">Sitemap</a>
-        </p>
-      </div>
-    </footer>
+    <Footer site={site} />
+    <BackToTop />
 
     {packContributions.filter((item) => item.scope === 'public').flatMap((item) => item.scripts).map((src) => (
       <script is:inline type="module" src={src} data-vanblog-pack-script></script>
     ))}
-
-    <!-- Dark mode toggle + logout logic -->
-    <script>
-      const btn = document.getElementById('darkmode-toggle');
-      const html = document.documentElement;
-      btn?.addEventListener('click', () => {
-        html.classList.toggle('dark');
-        const isDark = html.classList.contains('dark');
-        localStorage.setItem('vanblog-theme', isDark ? 'dark' : 'light');
-        // Notify comment widgets (Artalk/Giscus) to sync dark mode
-        html.dispatchEvent(new CustomEvent('darkmodechange', { detail: { dark: isDark } }));
-      });
-
-      const logoutBtn = document.getElementById('logout-btn');
-      logoutBtn?.addEventListener('click', async () => {
-        const { logout } = await import('@vanblog/sdk/browser');
-        logout('/');
-      });
-    </script>
   </body>
 </html>

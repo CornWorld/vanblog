@@ -4,6 +4,11 @@
 @source "../../plugins/**/frontend/**/*.html";
 @source "../../packs/**/*.astro";
 
+/* ── Tailwind v4 variant for `:not(.dark)` ──
+   Useful to override global styles that target `.dark` ancestor so they
+   don't leak into light mode. */
+@custom-variant not-dark (&:where(:not(.dark), :not(.dark) *));
+
 /* ── Dark mode: class-based (.dark on <html>) ── */
 @custom-variant dark (&:where(.dark, .dark *));
 
@@ -33,22 +38,35 @@
   --color-accent-dark: #60a5fa;
 }
 
-/* Semantic aliases — flip under html.dark.
-   Use these in pages: var(--text), var(--bg), var(--surface), etc. */
+/* ── Semantic aliases ──
+ *   Components use these and NEVER hardcode colors.
+ *   :root = light mode, html.dark = dark mode, auto-flip.
+ *   To add a runtime-overridable palette, set --color-* via palette.css.
+ */
 :root {
   --bg: var(--color-bg);
   --surface: var(--color-surface);
+  --surface-soft: var(--color-surface);
   --text: var(--color-text);
   --text-muted: var(--color-text-muted);
+  --text-soft: var(--color-text-muted);
   --border: var(--color-border);
+  --border-strong: var(--color-border);
+  --fill: var(--color-bg);
+  --hover: var(--color-border);
   --accent: var(--color-accent);
 }
 html.dark {
   --bg: var(--color-bg-dark);
   --surface: var(--color-surface-dark);
+  --surface-soft: var(--color-surface-dark);
   --text: var(--color-text-dark);
   --text-muted: var(--color-text-muted-dark);
+  --text-soft: var(--color-text-muted-dark);
   --border: var(--color-border-dark);
+  --border-strong: var(--color-border-dark);
+  --fill: var(--color-bg-dark);
+  --hover: var(--color-border-dark);
   --accent: var(--color-accent-dark);
 }
 
@@ -196,4 +214,92 @@ html.dark {
   html.dark textarea::placeholder {
     @apply text-slate-500;
   }
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   Phase 4 — Palette Material Styles
+   ════════════════════════════════════════════════════════════════════════════ */
+
+/* ── Custom containers (remark-directive / ::tip ::warning etc.) ── */
+.custom-container {
+  @apply rounded-lg border p-4 my-4;
+}
+
+/* ── Thin global scrollbar ── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* ── Code block enhancements ── */
+.code-collapsed {
+  max-height: 22em;
+  overflow: hidden;
+}
+.code-wrap-enabled {
+  white-space: pre-wrap !important;
+  word-break: break-all;
+}
+
+/* ── Mermaid toolbar buttons ── */
+.vb-mermaid-toolbar button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 4px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.9);
+  color: #555;
+  cursor: pointer;
+}
+.vb-mermaid-toolbar button:hover {
+  background: #f0f0f0;
+  color: #333;
+}
+.vb-mermaid-toolbar button svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* ── Dark mode: mermaid toolbar ── */
+html.dark .vb-mermaid-toolbar button {
+  border-color: #444;
+  background: rgba(30, 30, 50, 0.9);
+  color: #ccc;
+}
+html.dark .vb-mermaid-toolbar button:hover {
+  background: #3a3a5a;
+  color: #eee;
+}
+
+/* ── KaTeX display optimization ── */
+.katex-display {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.5rem 0;
+}
+
+/* ── Article content enhancements ── */
+article ul,
+article ol {
+  @apply my-4 pl-6 space-y-1;
+}
+article li {
+  @apply leading-relaxed;
+}
+article hr {
+  @apply my-8 border-[var(--border)];
 }

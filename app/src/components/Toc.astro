@@ -1,0 +1,210 @@
+---
+export interface Props {
+  html: string;
+}
+
+const { html } = Astro.props;
+
+// ── SSR：从 HTML 提取 h2/h3 标题 ─────────────────────────────────────────
+interface TocItem {
+  id: string;
+  tag: 'h2' | 'h3';
+  text: string;
+  level: number;
+}
+
+function extractHeadings(html: string): TocItem[] {
+  const items: TocItem[] = [];
+  const h2Re = /<h2[^>]*id="([^"]+)"[^>]*>([\s\S]*?)<\/h2>/gi;
+  const h3Re = /<h3[^>]*id="([^"]+)"[^>]*>([\s\S]*?)<\/h3>/gi;
+  let match: RegExpExecArray | null;
+
+  while ((match = h2Re.exec(html)) !== null) {
+    const text = match[2].replace(/<[^>]*>/g, '').trim();
+    if (text) {
+      items.push({ id: match[1], tag: 'h2', text, level: 1 });
+    }
+  }
+
+  while ((match = h3Re.exec(html)) !== null) {
+    const text = match[2].replace(/<[^>]*>/g, '').trim();
+    if (text) {
+      items.push({ id: match[1], tag: 'h3', text, level: 2 });
+    }
+  }
+
+  return items;
+}
+
+const headings = extractHeadings(html);
+---
+
+{headings.length > 0 && (
+  <aside class="toc-wrapper">
+    <details class="toc-details" open>
+      <summary class="toc-summary">
+        <span class="text-sm font-semibold text-[var(--text-muted)]">目录</span>
+        <span class="toc-toggle text-xs text-[var(--text-muted)]">折叠</span>
+      </summary>
+      <nav class="toc-nav mt-2">
+        <ul class="toc-list">
+          {headings.map((h) => (
+            <li class={h.level === 1 ? 'toc-item--h2' : 'toc-item--h3'}>
+              <a
+                href={`#${h.id}`}
+                class="toc-link"
+              >
+                {h.text}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </nav>
+    </details>
+  </aside>
+)}
+
+<script is:inline>
+  (() => {
+    // ── 折叠切换 ────────────────────────────────────────────────
+    const details = document.querySelector('.toc-details');
+    const toggleSpan = document.querySelector<HTMLSpanElement>('.toc-toggle');
+    if (details && toggleSpan) {
+      details.addEventListener('toggle', () => {
+        toggleSpan.textContent = details.open ? '折叠' : '展开';
+      });
+    }
+
+    // ── IntersectionObserver 高亮当前可见 heading ─────────────────
+    const links = document.querySelectorAll<HTMLAnchorElement>('.toc-link');
+    if (links.length === 0) return;
+
+    const headings: Element[] = [];
+    links.forEach((link) => {
+      const id = link.getAttribute('href')?.slice(1);
+      if (id) {
+        const el = document.getElementById(id);
+        if (el) headings.push(el);
+      }
+    });
+
+    if (headings.length === 0) return;
+
+    let activeIdx = -1;
+
+    function updateActive() {
+      // Find the last heading that is above or at the current scroll
+      let idx = -1;
+      const scrollY = window.scrollY + 100; // offset for sticky header
+      for (let i = 0; i < headings.length; i++) {
+        if (headings[i].getBoundingClientRect().top + window.scrollY <= scrollY) {
+          idx = i;
+        }
+      }
+
+      if (idx !== activeIdx) {
+        links.forEach((l) => l.classList.remove('toc-link--active'));
+        if (idx >= 0) {
+          links[idx].classList.add('toc-link--active');
+          // Scroll link into view within the sidebar
+          links[idx].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        }
+        activeIdx = idx;
+      }
+    }
+
+    window.addEventListener('scroll', updateActive, { passive: true });
+    updateActive();
+  })();
+<style>
+  .toc-wrapper {
+    position: sticky;
+    top: 5rem;
+  }
+  .toc-summary {
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    user-select: none;
+    list-style: none;
+  }
+  .toc-summary::-webkit-details-marker {
+    display: none;
+  }
+  .toc-nav {
+    max-height: 70vh;
+    overflow-y: auto;
+    scrollbar-width: thin;
+  }
+  .toc-nav::-webkit-scrollbar {
+    width: 4px;
+  }
+  .toc-nav::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 2px;
+  }
+
+  /* ── TOC list: left-border timeline ── */
+  .toc-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    position: relative;
+  }
+  .toc-list::before {
+    content: '';
+    position: absolute;
+    left: 0.75rem;
+    top: 0.375rem;
+    bottom: 0.375rem;
+    width: 1px;
+    background: var(--border);
+    border-radius: 1px;
+  }
+
+  /* ── Heading items ── */
+  .toc-item--h2,
+  .toc-item--h3 {
+    position: relative;
+    padding-left: 1.75rem;
+  }
+
+  /* ── Toc link base ── */
+  .toc-link {
+    display: block;
+    padding: 0.375rem 0.5rem;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: var(--text-muted);
+    text-decoration: none;
+    border-radius: 0.375rem;
+    border-left: 2px solid transparent;
+    transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+  }
+  .toc-link:hover {
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 8%, transparent);
+  }
+
+  /* ── h3 indent ── */
+  .toc-item--h3 {
+    padding-left: 2.5rem;
+  }
+  .toc-item--h3 .toc-link {
+    font-size: 0.8125rem;
+  }
+
+  /* ── Active state ── */
+  .toc-link--active {
+    color: var(--text);
+    font-weight: 500;
+    background: color-mix(in srgb, var(--accent) 10%, transparent);
+    border-left-color: var(--accent);
+  }
+  .toc-link--active:hover {
+    color: var(--text);
+    background: color-mix(in srgb, var(--accent) 14%, transparent);
+    border-left-color: var(--accent);
+  }
+</style>

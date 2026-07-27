@@ -1,9 +1,23 @@
+<!--
+⛔ AGENT: DO NOT EDIT THIS BLOCK
+L0 CONTRACT - 前端契约变量（见 .snow/plan/migrate-vanblog-frontend-to-theme-palette.md §模板契约清单）
+页面: 首页
+路径: @vanblog/builtin/pages/index.astro
+契约变量:
+  - posts: PostExpand[] — 文章列表
+  - totalPages: number — 总页数
+  - page: number — 当前页码
+-->
+
 ---
 export const prerender = false;
 
 import BaseLayout from '../layouts/BaseLayout.astro';
+import ArticleCard from '../components/ArticleCard.astro';
+import PageNav from '../components/PageNav.astro';
 import ErrorState from '../components/ErrorState.astro';
-import { stripMarkdown, fmtDate, safe, getPage } from '@vanblog/sdk';
+import SiteStatsSummary from '../components/SiteStatsSummary.astro';
+import { safe, getPage } from '@vanblog/sdk';
 
 const pb = Astro.locals.pb;
 
@@ -16,8 +30,27 @@ const { data: result, error: loadError } = await safe(
 );
 const posts = result?.items ?? [];
 const totalPages = result?.totalPages ?? 1;
+
+// Site stats
+const allPosts = await safe(() => pb.vanblog.posts.listPublished(1, 500), 'index-stats');
+const postCount = allPosts?.data?.totalItems ?? posts.length;
+const categories = await safe(() => pb.collection('categories').getFullList(), 'categories');
+const categoryCount = categories?.length ?? 0;
+const tags = await safe(() => pb.collection('tags').getFullList(), 'tags');
+const tagCount = tags?.length ?? 0;
+const statsPosts = allPosts?.data?.items ?? posts;
+const totalWords = statsPosts.reduce((sum: number, p: any) => sum + (p.content?.length || 0), 0);
+const statsOk = !!(allPosts?.data && categories && tags);
 ---
 <BaseLayout title="首页" path="/">
+  {statsOk && (
+    <SiteStatsSummary
+      postCount={postCount}
+      categoryCount={categoryCount}
+      tagCount={tagCount}
+      totalWords={totalWords}
+    />
+  )}
   {
     loadError ? (
       <ErrorState />
@@ -26,51 +59,13 @@ const totalPages = result?.totalPages ?? 1;
     ) : (
       <div class="space-y-6">
         {posts.map((post) => (
-          <article class="card-post">
-            <h2 class="text-xl mb-2">
-              <a href={`/posts/${post.id}`} class="text-[var(--text)] hover:text-[var(--accent)] no-underline">
-                {post.title}
-              </a>
-            </h2>
-            <div class="flex items-center gap-3 text-sm text-[var(--text-muted)] mb-3">
-              <time datetime={post.created}>{fmtDate(post.created)}</time>
-              {post.expand?.category && (
-                <a href={`/categories/${post.category}`} class="text-[var(--accent)]">
-                  {post.expand.category.name}
-                </a>
-              )}
-            </div>
-            {post.content && (
-              <p class="text-[var(--text-muted)] text-sm leading-relaxed">
-                {stripMarkdown(post.content, 150)}
-              </p>
-            )}
-            <div class="mt-3">
-              <a href={`/posts/${post.id}`} class="text-sm text-[var(--accent)] hover:underline">
-                阅读全文 →
-              </a>
-            </div>
-          </article>
+          <ArticleCard post={post} showExcerpt={true} />
         ))}
       </div>
     )
   }
 
   {!loadError && totalPages > 1 && (
-    <nav class="flex justify-center gap-4 mt-10 pt-6 border-t border-[var(--border)]">
-      {page > 1 ? (
-        <a href={`/?page=${page - 1}`} class="btn-primary">← 上一页</a>
-      ) : (
-        <span class="btn-primary opacity-50 cursor-not-allowed">← 上一页</span>
-      )}
-      <span class="flex items-center text-sm text-[var(--text-muted)]">
-        第 {page} / {totalPages} 页
-      </span>
-      {page < totalPages ? (
-        <a href={`/?page=${page + 1}`} class="btn-primary">下一页 →</a>
-      ) : (
-        <span class="btn-primary opacity-50 cursor-not-allowed">下一页 →</span>
-      )}
-    </nav>
+    <PageNav page={page} totalPages={totalPages} baseUrl="/" />
   )}
 </BaseLayout>

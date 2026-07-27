@@ -1,3 +1,12 @@
+<!--
+⛔ AGENT: DO NOT EDIT THIS BLOCK
+L0 CONTRACT - 前端契约变量（见 .snow/plan/migrate-vanblog-frontend-to-theme-palette.md §模板契约清单）
+页面: 分类索引
+路径: @vanblog/builtin/pages/categories/index.astro
+契约变量:
+  - categories: Category[] — 全部分类
+-->
+
 ---
 export const prerender = false;
 
@@ -27,7 +36,7 @@ const { data: cats = [], error } = await safe(
         <li>
           <a href={`/categories/${c.id}`} class="card-post flex items-center gap-3 no-underline hover:border-[var(--accent)]">
             <span class="font-medium text-[var(--text)]">{c.name}</span>
-            <span class="text-xs px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-[var(--text-muted)]">
+            <span class="text-xs px-2 py-0.5 rounded bg-[var(--surface)] text-[var(--text-muted)]">
               {c.type}
             </span>
             {c.private && (

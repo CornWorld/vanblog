@@ -1,0 +1,30 @@
+/* ── Default Vanblog Palette ──
+ *   浅色: slate 系  (#fafafa bg, #1e293b text)
+ *   深色: navy 系   (#0f172a bg, #e2e8f0 text)
+ *   强调色: blue    (#2563eb / #60a5fa)
+ *
+ *   此文件覆盖 @theme 中的 --color-* 值。
+ *   加载方式: site.palette="default" → /api/palette.css?v=<site.updated>
+ *   → palette.css.ts 钩子拼接 tokens.css → typography.css → components.css
+ *
+ *   CSS 变量的具体值必须与 app/src/styles/global.css 中的 @theme 一致，
+ *   否则 palette 切换回 default 时会出现闪烁。
+ */
+
+:root {
+  --color-bg: #fafafa;
+  --color-surface: #ffffff;
+  --color-text: #1e293b;
+  --color-text-muted: #64748b;
+  --color-border: #e2e8f0;
+  --color-accent: #2563eb;
+}
+
+html.dark {
+  --color-bg-dark: #0f172a;
+  --color-surface-dark: #1e293b;
+  --color-text-dark: #e2e8f0;
+  --color-text-muted-dark: #94a3b8;
+  --color-border-dark: #334155;
+  --color-accent-dark: #60a5fa;
+}

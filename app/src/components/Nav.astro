@@ -1,0 +1,142 @@
+---
+import type { Site } from '@vanblog/sdk';
+
+
+interface Props {
+  site: Site | null;
+  isLoggedIn: boolean;
+  path: string;
+  /** Pack nav items resolved by the Astro Pack integration, passed from BaseLayout. */
+  packNavItems?: { label: string; href: string }[];
+}
+
+const { site, isLoggedIn, path, packNavItems = [] } = Astro.props;
+const siteName = site?.siteName || 'Vanblog';
+const hasAbout = !!(site?.aboutContent && site.aboutContent.trim());
+---
+
+<header class="sticky top-0 z-10 border-b border-[var(--border)] bg-[var(--surface)] backdrop-blur-sm">
+  <div class="container-page flex items-center justify-between h-14 gap-4">
+    <a href="/" class="font-bold text-lg text-[var(--text)] no-underline hover:opacity-80">
+      {siteName}
+    </a>
+    <nav class="flex items-center gap-1 sm:gap-2 text-sm text-[var(--text)]">
+      <a href="/" class="nav-link">首页</a>
+      <a href="/archive" class="nav-link">归档</a>
+      <a href="/timeline" class="nav-link">时间轴</a>
+      <a href="/tags" class="nav-link hidden sm:inline">标签</a>
+      <a href="/categories" class="nav-link hidden sm:inline">分类</a>
+      <button id="search-open-btn" type="button" class="nav-link cursor-pointer">搜索</button>
+      {packNavItems.map((item) => (
+        <a href={item.href} class="nav-link">{item.label}</a>
+      ))}
+      {hasAbout && (
+        <a href="/about" class="nav-link hidden sm:inline">关于</a>
+      )}
+      {isLoggedIn ? (
+        <a href="/admin" class="nav-link">管理</a>
+      ) : (
+        <a href="/login" class="nav-link">登录</a>
+      )}
+      {isLoggedIn && (
+        <button id="logout-btn" type="button" class="nav-link" aria-label="退出登录" title="退出登录">退出</button>
+      )}
+      <button id="darkmode-toggle" class="nav-link text-lg" aria-label="切换深色模式" title="切换深色/浅色模式">
+        <span class="dark:hidden">🌙</span>
+        <span class="hidden dark:inline">☀️</span>
+      </button>
+    </nav>
+  </div>
+</header>
+
+<!-- Search dialog overlay -->
+<div id="search-dialog-overlay" class="fixed inset-0 z-50 hidden" aria-hidden="true">
+  <div class="fixed inset-0 bg-black/50" onclick="closeSearchDialog()"></div>
+  <div class="fixed top-[15%] left-1/2 -translate-x-1/2 w-full max-w-lg px-4">
+    <div class="bg-[var(--surface)] rounded-xl shadow-2xl border border-[var(--border)] p-4">
+      <form action="/search" method="get" onsubmit="closeSearchDialog()">
+        <input type="text" name="q" id="search-dialog-input" autofocus autocomplete="off"
+          placeholder="输入关键词搜索…"
+          class="w-full px-4 py-3 text-lg bg-[var(--bg)] border border-[var(--border)] rounded-lg text-[var(--text)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)]" />
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+  const nav = document.currentScript?.closest('header');
+  const html = document.documentElement;
+
+  /* ── Search dialog helpers ── */
+  function openSearchDialog() {
+    const overlay = document.getElementById('search-dialog-overlay');
+    if (!overlay) return;
+    overlay.classList.remove('hidden');
+    overlay.setAttribute('aria-hidden', 'false');
+    requestAnimationFrame(() => {
+      const input = document.getElementById('search-dialog-input');
+      input?.focus();
+      input?.select();
+    });
+  }
+  function closeSearchDialog() {
+    const overlay = document.getElementById('search-dialog-overlay');
+    if (!overlay) return;
+    overlay.classList.add('hidden');
+    overlay.setAttribute('aria-hidden', 'true');
+  }
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      const overlay = document.getElementById('search-dialog-overlay');
+      if (overlay && !overlay.classList.contains('hidden')) {
+        closeSearchDialog();
+      }
+    }
+  });
+
+  /* ── 1. Headroom: scroll to hide/show nav ── */
+  let lastScroll = 0;
+  window.addEventListener(
+    'scroll',
+    () => {
+      if (!nav) return;
+      const cur = window.scrollY;
+      if (Math.abs(cur - lastScroll) < 8) return;
+      nav.style.transform =
+        cur > lastScroll && cur > 56
+          ? 'translateY(-100%)'
+          : '';
+      lastScroll = cur;
+    },
+    { passive: true },
+  );
+
+  /* ── 2. Theme toggle ── */
+  const themeBtn = document.getElementById('darkmode-toggle');
+  themeBtn?.addEventListener('click', () => {
+    html.classList.toggle('dark');
+    const isDark = html.classList.contains('dark');
+    localStorage.setItem('vanblog-theme', isDark ? 'dark' : 'light');
+    html.dispatchEvent(new CustomEvent('darkmodechange', { detail: { dark: isDark } }));
+  });
+
+  /* ── 3. Logout ── */
+  const logoutBtn = document.getElementById('logout-btn');
+  logoutBtn?.addEventListener('click', async () => {
+    const { logout } = await import('@vanblog/sdk/browser');
+    logout('/');
+  });
+
+  /* ── 4. Ctrl+K → open search dialog ── */
+  document.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+      e.preventDefault();
+      openSearchDialog();
+    }
+  });
+  /* ── 5. Search button click ── */
+  document.getElementById('search-open-btn')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    openSearchDialog();
+  });
+</script>

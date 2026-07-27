@@ -1,9 +1,25 @@
+<!--
+⛔ AGENT: DO NOT EDIT THIS BLOCK
+L0 CONTRACT - 前端契约变量（见 .snow/plan/migrate-vanblog-frontend-to-theme-palette.md §模板契约清单）
+页面: 文章详情
+路径: @vanblog/builtin/pages/posts/[id].astro
+契约变量:
+  - post: Post | null — 文章数据
+  - html: string | null — 渲染后的 Markdown HTML
+  - id: string — 文章 ID
+  - site: Site — 站点配置
+-->
+
 ---
 export const prerender = false;
 
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import PostViewer from '../../components/PostViewer.astro';
+import Toc from '../../components/Toc.astro';
+import CopyRight from '../../components/CopyRight.astro';
 import ErrorNotice from '../../components/ErrorNotice.astro';
 import Comments from '../../components/Comments.astro';
+import Reward from '../../components/Reward.astro';
 import { getLiveEntry } from 'astro:content';
 import { isAuthenticated, fmtDate } from '@vanblog/sdk';
 import { renderMarkdown } from '../../lib/markdown/renderer';
@@ -16,6 +32,30 @@ const site = await Astro.locals.getSite();
 const { id } = Astro.params;
 if (!id) return Astro.redirect('/404');
 
+// ── POST: password verification ──
+const url = new URL(Astro.request.url);
+let passwordError = url.searchParams.get('error') === 'invalid_password';
+if (Astro.request.method === 'POST') {
+  const formData = await Astro.request.formData();
+  const password = formData.get('password')?.toString();
+  if (password) {
+    try {
+      const raw = await pb.collection('posts').getOne<Post>(id);
+      if (raw.password && raw.password === password) {
+        Astro.cookies.set(`vb-unlock-${id}`, 'true', {
+          path: `/posts/${id}`,
+          maxAge: 86400 * 7,
+          sameSite: 'lax',
+        });
+        return Astro.redirect(`/posts/${id}`);
+      }
+    } catch {
+      // Cannot fetch post (e.g. blocked by ViewRule) → fall through
+    }
+  }
+  return Astro.redirect(`/posts/${id}?error=invalid_password`);
+}
+
 // Anonymous path first: live loader applies posts ViewRule, which excludes
 // private/draft/deleted. On miss, fall back to the authenticated client —
 // logged-in users (admin or author) can preview their own private/draft work.
@@ -25,35 +65,62 @@ let data: Post | null = post?.data || null;
 let html: string | null = post?.rendered?.html || null;
 
 if (!data) {
-  // Anonymous visitor hitting a private/draft post → send to login so they
-  // can come back as the author/admin. Returning a bare 404 here would
-  // confuse authors who just toggled "private" in the editor.
-  if (!isAuthenticated(pb)) {
-    return Astro.redirect(`/login?back=${encodeURIComponent(`/posts/${id}`)}`);
+  // Password-protected: check unlock cookie before redirecting to login
+  const unlockCookie = Astro.cookies.get(`vb-unlock-${id}`);
+  if (!isAuthenticated(pb) && unlockCookie?.value === 'true') {
+    try {
+      const raw = await pb.collection('posts').getOne<Post>(id);
+      if (raw) {
+        const content = normalizeMathDelimiters(raw.content || '');
+        html = (await renderMarkdown(content)).code;
+        data = raw;
+        passwordError = false;
+      }
+    } catch {
+      // Cookie present but expired/invalid → fall through
+    }
   }
-  try {
-    const raw = await pb.collection('posts').getOne<Post>(id);
-    const content = normalizeMathDelimiters(raw.content || '');
-    html = (await renderMarkdown(content)).code;
-    data = raw;
-  } catch {
-    // Not found OR blocked by ViewRule even when authenticated.
-    Astro.response.status = 404;
+
+  if (!data) {
+    // Anonymous visitor hitting a private/draft post → send to login so they
+    // can come back as the author/admin. Returning a bare 404 here would
+    // confuse authors who just toggled "private" in the editor.
+    if (!isAuthenticated(pb)) {
+      return Astro.redirect(`/login?back=${encodeURIComponent(`/posts/${id}`)}`);
+    }
+    try {
+      const raw = await pb.collection('posts').getOne<Post>(id);
+      const content = normalizeMathDelimiters(raw.content || '');
+      html = (await renderMarkdown(content)).code;
+      data = raw;
+    } catch {
+      // Not found OR blocked by ViewRule even when authenticated.
+      Astro.response.status = 404;
+    }
   }
 }
 ---
-
 <BaseLayout title={data?.title || '文章不存在'} post={data || undefined} path={`/posts/${id}`}>
   {data && html !== null ? (
-    <article>
-      <h1>{data.title}</h1>
-      <p><small>
-        发表于 {fmtDate(data.created)}
-        {data.private && <span class="ml-2 text-[var(--text-muted)]">· 私有</span>}
-        {data.status !== 'published' && <span class="ml-2 text-[var(--text-muted)]">· {data.status}</span>}
-      </small></p>
-      <div set:html={html} />
-    </article>
+    <Fragment>
+      <article>
+        <h1>{data.title}</h1>
+        <p><small>
+          发表于 {fmtDate(data.created)}
+          {data.private && <span class="ml-2 text-[var(--text-muted)]">· 私有</span>}
+          {data.status !== 'published' && <span class="ml-2 text-[var(--text-muted)]">· {data.status}</span>}
+        </small></p>
+        <PostViewer html={html} />
+        <CopyRight site={site} post={data} />
+        <Toc html={html} />
+      </article>
+      {data && <Reward site={site} />}
+    </Fragment>
+  ) : passwordError ? (
+    <div class="my-8 p-4 rounded-lg border border-red-300 bg-red-50 dark:border-red-700 dark:bg-red-900/20">
+      <p class="text-red-700 dark:text-red-300 text-sm">🔒 密码错误，请重试。</p>
+      <p class="mt-2"><a href="/" class="text-[var(--accent)] text-sm">← 返回首页</a></p>
+    </div>
   ) : (
     <ErrorNotice code="404" title="文章不存在" message="该文章可能已被删除、未发布，或你没有访问权限。" />
   )}
@@ -214,17 +281,4 @@ if (!data) {
   });
 </script>
 
-<style>
-  /* Code block enhancements */
-  .code-collapsed { max-height: 22em; overflow: hidden; }
-  .code-wrap-enabled { white-space: pre-wrap !important; word-break: break-all; }
-  /* Mermaid toolbar buttons */
-  .vb-mermaid-toolbar button {
-    display: inline-flex; align-items: center; justify-content: center;
-    width: 28px; height: 28px; padding: 4px;
-    border: 1px solid #ddd; border-radius: 4px;
-    background: rgba(255,255,255,0.9); color: #555; cursor: pointer;
-  }
-  .vb-mermaid-toolbar button:hover { background: #f0f0f0; color: #333; }
-  .vb-mermaid-toolbar button svg { width: 14px; height: 14px; }
-</style>
+<!-- Styles moved to global.css (Phase 4) -->

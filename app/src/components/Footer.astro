@@ -1,0 +1,30 @@
+---
+import type { Site } from '@vanblog/sdk';
+
+interface Props {
+  site: Site | null;
+}
+
+const { site } = Astro.props;
+const siteName = site?.siteName || 'Vanblog';
+const beian = site?.beian;
+---
+
+<footer class="border-t border-[var(--border)] py-8 text-sm text-[var(--text-muted)]">
+  <div class="container-page flex flex-col sm:flex-row justify-between gap-4">
+    <p>
+      &copy; {new Date().getFullYear()} {siteName}.
+      Powered by <a href="https://github.com/CornWorld/vanblog" class="underline">Vanblog</a>.
+      {beian && (
+        <span class="ml-2">
+          <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer" class="underline">{beian}</a>
+        </span>
+      )}
+    </p>
+    <p class="flex gap-4">
+      <a href="/api/feed.xml" class="hover:text-[var(--text)]">RSS</a>
+      <a href="/api/atom.xml" class="hover:text-[var(--text)]">Atom</a>
+      <a href="/api/sitemap.xml" class="hover:text-[var(--text)]">Sitemap</a>
+    </p>
+  </div>
+</footer>

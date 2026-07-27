@@ -1,0 +1,31 @@
+---
+interface Props {
+  postCount: number;
+  categoryCount: number;
+  tagCount: number;
+  totalWords?: number;
+}
+
+const { postCount, categoryCount, tagCount, totalWords } = Astro.props;
+---
+
+<div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
+  <div class="card-post text-center py-3">
+    <div class="text-2xl font-bold text-[var(--text)]">{postCount}</div>
+    <div class="text-xs text-[var(--text-muted)]">文章</div>
+  </div>
+  <div class="card-post text-center py-3">
+    <div class="text-2xl font-bold text-[var(--text)]">{categoryCount}</div>
+    <div class="text-xs text-[var(--text-muted)]">分类</div>
+  </div>
+  <div class="card-post text-center py-3">
+    <div class="text-2xl font-bold text-[var(--text)]">{tagCount}</div>
+    <div class="text-xs text-[var(--text-muted)]">标签</div>
+  </div>
+  {totalWords !== undefined && (
+    <div class="card-post text-center py-3">
+      <div class="text-2xl font-bold text-[var(--text)]">{(totalWords / 10000).toFixed(1)}w</div>
+      <div class="text-xs text-[var(--text-muted)]">总字数</div>
+    </div>
+  )}
+</div>

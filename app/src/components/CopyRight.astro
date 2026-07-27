@@ -1,0 +1,41 @@
+---
+import { fmtDate } from '@vanblog/sdk';
+import type { Site, Post } from '@vanblog/sdk';
+
+export interface Props {
+  site: Site | null;
+  post?: Post;
+}
+
+const { site, post } = Astro.props;
+const hasPost = !!post;
+---
+
+{hasPost && (
+  <div class="mt-8 pt-6 border-t border-[var(--border)] text-sm text-[var(--text-muted)] space-y-1">
+    {site?.author && (
+      <p>
+        <span class="font-medium text-[var(--text)]">作者：</span>
+        {site.author}
+      </p>
+    )}
+    {post.created && (
+      <p>
+        <span class="font-medium text-[var(--text)]">发布时间：</span>
+        {fmtDate(post.created)}
+      </p>
+    )}
+    {post.updated && post.updated !== post.created && (
+      <p>
+        <span class="font-medium text-[var(--text)]">最后更新：</span>
+        {fmtDate(post.updated)}
+      </p>
+    )}
+    {site?.copyrightAggreement && (
+      <p class="mt-2 pt-2 border-t border-[var(--border)]">
+        <span class="font-medium text-[var(--text)]">版权协议：</span>
+        {site.copyrightAggreement}
+      </p>
+    )}
+  </div>
+)}

@@ -1,0 +1,31 @@
+---
+
+---
+
+<button
+  id="back-to-top"
+  type="button"
+  class="fixed bottom-8 right-8 z-20 w-10 h-10 rounded-full border border-[var(--border)] bg-[var(--surface)] text-[var(--text)] shadow-lg opacity-0 transition-opacity duration-300 hover:opacity-80 cursor-pointer"
+  aria-label="回到顶部"
+  title="回到顶部"
+>
+  ↑
+</button>
+
+<script>
+  const btn = document.getElementById('back-to-top');
+
+  window.addEventListener(
+    'scroll',
+    () => {
+      if (!btn) return;
+      btn.style.opacity = window.scrollY > 400 ? '1' : '0';
+      btn.style.pointerEvents = window.scrollY > 400 ? 'auto' : 'none';
+    },
+    { passive: true },
+  );
+
+  btn?.addEventListener('click', () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+</script>
