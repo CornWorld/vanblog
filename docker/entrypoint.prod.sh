@@ -51,8 +51,8 @@ wait_for() {
 cleanup() {
   echo "[vanblog] shutting down..."
   kill "$MONITOR_PID" 2>/dev/null || true
-  kill $PB_PID $ASTRO_PID $CADDY_PID 2>/dev/null || true
-  wait $PB_PID $ASTRO_PID $CADDY_PID 2>/dev/null || true
+  kill $PB_PID $DISPATCHER_PID $CADDY_PID 2>/dev/null || true
+  wait $PB_PID $DISPATCHER_PID $CADDY_PID 2>/dev/null || true
 }
 trap cleanup EXIT INT TERM
 
@@ -77,19 +77,22 @@ vanblog serve --http=$PB_HTTP --dir=$PB_DATA --coreSchemaPath=/core/models.js $P
 PB_PID=$!
 wait_for "http://127.0.0.1:8090/api/health" "PocketBase" 30 || exit 1
 
-# 4. Start Astro SSR server
-echo "[vanblog] starting Astro SSR server..."
-cd /app/dist
-HOST=127.0.0.1 PORT=4321 node ./server/entry.mjs &
-ASTRO_PID=$!
-wait_for "http://127.0.0.1:4321/" "Astro SSR" 30 || exit 1
+# 4. Start Theme Dispatcher (replaces direct Astro SSR)
+DEFAULT_THEME=$(cat /etc/vanblog/default-theme 2>/dev/null || echo "default")
+echo "[vanblog] starting dispatcher (default theme: ${DEFAULT_THEME})"
+VANBLOG_THEMES_DIR=/var/lib/vanblog/themes \
+VANBLOG_DEFAULT_THEME=${DEFAULT_THEME} \
+PB_URL=http://127.0.0.1:8090 \
+  node /app/dispatcher.mjs &
+DISPATCHER_PID=$!
+wait_for "http://127.0.0.1:4321/__dispatcher_health" "Dispatcher" 30 || exit 1
 
 # 5. Background monitor: if any child crashes, kill the container
 monitor_children() {
   while true; do
     if ! kill -0 $CADDY_PID 2>/dev/null; then echo "[vanblog] FATAL: Caddy died"; exit 1; fi
     if ! kill -0 $PB_PID 2>/dev/null; then echo "[vanblog] FATAL: PocketBase died"; exit 1; fi
-    if ! kill -0 $ASTRO_PID 2>/dev/null; then echo "[vanblog] FATAL: Astro died"; exit 1; fi
+    if ! kill -0 $DISPATCHER_PID 2>/dev/null; then echo "[vanblog] FATAL: Dispatcher died"; exit 1; fi
     sleep 5
   done
 }
