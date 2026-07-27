@@ -19,7 +19,6 @@ import {
 // ── Select enums ──────────────────────────────────────────────────────
 
 const DefaultThemeSchema = z.enum(["light", "dark", "auto"]);
-const ThemeSchema = z.enum(["default", "minimal", "magazine", "custom"]);
 
 // ── Site schema ───────────────────────────────────────────────────────
 
@@ -36,8 +35,8 @@ export const SiteSchema = SystemFieldsSchema.extend({
   since: IsoDateTimeSchema.optional(),
   baseUrl: z.string().optional(),
 
-  // Theme & appearance
-  theme: ThemeSchema.optional(),
+  // Palette & dark mode
+  palette: z.string().optional(),
   defaultTheme: DefaultThemeSchema.optional(),
   customCss: z.string().optional(),
   customHead: z.string().optional(),
