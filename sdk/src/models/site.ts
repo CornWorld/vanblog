@@ -37,6 +37,7 @@ export const SiteSchema = SystemFieldsSchema.extend({
 
   // Palette & dark mode
   palette: z.string().optional(),
+  activeTheme: z.string().optional(),
   defaultTheme: DefaultThemeSchema.optional(),
   customCss: z.string().optional(),
   customHead: z.string().optional(),

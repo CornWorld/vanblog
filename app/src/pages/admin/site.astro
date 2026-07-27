@@ -93,6 +93,31 @@ const boolField = (k: keyof Site, def = false): boolean => {
             })
             .catch(() => { /* keep fallback "default" */ });
         </script>
+        <label>活动主题</label>
+        <div class="col-span-2 flex flex-col gap-1">
+          <select name="activeTheme" id="active-theme-select" data-current={field('activeTheme')}>
+            <option value="default">default</option>
+          </select>
+          <small class="text-[var(--text-muted)]">切换主题需要重建 Docker 镜像</small>
+        </div>
+        <script is:inline>
+          fetch('/api/themes')
+            .then(r => r.json())
+            .then(data => {
+              const sel = document.getElementById('active-theme-select');
+              if (!sel) return;
+              const current = sel.getAttribute('data-current') || 'default';
+              sel.innerHTML = '';
+              (data.themes || []).forEach(t => {
+                const opt = document.createElement('option');
+                opt.value = t.name;
+                opt.textContent = t.label || t.name;
+                if (t.name === current) opt.selected = true;
+                sel.appendChild(opt);
+              });
+            })
+            .catch(() => {});
+        </script>
         <label>默认主题</label>
         <select name="defaultTheme">
           {['auto', 'light', 'dark'].map(t => (
@@ -250,6 +275,7 @@ const boolField = (k: keyof Site, def = false): boolean => {
           favicon: fd.get('favicon'),
           copyrightAggreement: fd.get('copyrightAggreement'),
           palette: fd.get('palette'),
+          activeTheme: fd.get('activeTheme'),
           defaultTheme: fd.get('defaultTheme'),
           commentsProvider: provider,
           commentsConfig: commentsConfig,
