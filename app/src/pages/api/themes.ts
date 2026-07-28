@@ -20,6 +20,8 @@ interface ThemeMeta {
   author?: string;
   description?: string;
   screenshot?: string;
+  recommendedPalette?: string;
+  paletteMigrationMode?: string;
 }
 
 function listThemes(): ThemeMeta[] {
@@ -39,6 +41,10 @@ function listThemes(): ThemeMeta[] {
             meta.description = raw.description;
           if (typeof raw.screenshot === "string")
             meta.screenshot = raw.screenshot;
+          if (typeof raw.recommendedPalette === "string")
+            meta.recommendedPalette = raw.recommendedPalette;
+          if (typeof raw.paletteMigrationMode === "string")
+            meta.paletteMigrationMode = raw.paletteMigrationMode;
         } catch {
           // Malformed theme.json — fall through with just the directory name.
         }

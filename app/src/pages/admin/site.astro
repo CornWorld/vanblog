@@ -70,36 +70,16 @@ const boolField = (k: keyof Site, def = false): boolean => {
       </fieldset>
 
       <fieldset class="grid grid-cols-[160px_1fr] gap-2 items-center border border-[var(--border)] p-4">
-        <legend>主题与评论</legend>
-        <label>调色盘</label>
-        <select name="palette" id="palette-select" data-current={field('palette')}>
-          <option value="default">default</option>
-        </select>
-        <script is:inline>
-          fetch('/api/palettes')
-            .then(r => r.json())
-            .then(data => {
-              const sel = document.getElementById('palette-select');
-              if (!sel) return;
-              const current = sel.getAttribute('data-current') || 'default';
-              sel.innerHTML = '';
-              (data.palettes || []).forEach(p => {
-                const opt = document.createElement('option');
-                opt.value = p.name;
-                opt.textContent = p.label || p.name;
-                if (p.name === current) opt.selected = true;
-                sel.appendChild(opt);
-              });
-            })
-            .catch(() => { /* keep fallback "default" */ });
-        </script>
+        <legend>外观</legend>
+
         <label>活动主题</label>
         <div class="col-span-2 flex flex-col gap-1">
           <select name="activeTheme" id="active-theme-select" data-current={field('activeTheme')}>
             <option value="default">default</option>
           </select>
-          <small class="text-[var(--text-muted)]">切换主题需要重建 Docker 镜像</small>
+          <small class="text-[var(--text-muted)]">切换立即生效（&lt;5s），无需重建镜像</small>
         </div>
+
         <script is:inline>
           fetch('/api/themes')
             .then(r => r.json())
@@ -115,15 +95,56 @@ const boolField = (k: keyof Site, def = false): boolean => {
                 if (t.name === current) opt.selected = true;
                 sel.appendChild(opt);
               });
-            })
-            .catch(() => {});
+            });
         </script>
-        <label>默认主题</label>
-        <select name="defaultTheme">
-          {['auto', 'light', 'dark'].map(t => (
-            <option value={t} selected={field('defaultTheme') === t}>{t}</option>
-          ))}
-        </select>
+
+        <details class="col-span-2 mt-2">
+          <summary class="cursor-pointer text-sm text-[var(--text-muted)]">高级选项</summary>
+          <div class="grid grid-cols-[160px_1fr] gap-2 items-center mt-2">
+
+            <label>调色盘</label>
+            <select name="palette" id="palette-select" data-current={field('palette')}>
+              <option value="default">default</option>
+            </select>
+            <script is:inline>
+              fetch('/api/palettes')
+                .then(r => r.json())
+                .then(data => {
+                  const sel = document.getElementById('palette-select');
+                  if (!sel) return;
+                  const current = sel.getAttribute('data-current') || 'default';
+                  sel.innerHTML = '';
+                  (data.palettes || []).forEach(p => {
+                    const opt = document.createElement('option');
+                    opt.value = p.name;
+                    opt.textContent = p.label || p.name;
+                    if (p.name === current) opt.selected = true;
+                    sel.appendChild(opt);
+                  });
+                })
+                .catch(() => { /* keep fallback "default" */ });
+            </script>
+
+            <label>默认主题模式</label>
+            <select name="defaultTheme">
+              {['auto', 'light', 'dark'].map(t => (
+                <option value={t} selected={field('defaultTheme') === t}>{t}</option>
+              ))}
+            </select>
+
+            <label>切换主题时调色盘</label>
+            <select name="paletteMigrationMode">
+              <option value="keep" selected={field('paletteMigrationMode') === 'keep'}>保持当前（默认）</option>
+              <option value="silent" selected={field('paletteMigrationMode') === 'silent'}>自动迁移到推荐值</option>
+              <option value="prompt" selected={field('paletteMigrationMode') === 'prompt'}>每次询问</option>
+            </select>
+
+          </div>
+        </details>
+      </fieldset>
+
+      <fieldset class="grid grid-cols-[160px_1fr] gap-2 items-center border border-[var(--border)] p-4">
+        <legend>评论</legend>
         <label>评论 provider</label>
         <select name="commentsProvider" id="commentsProvider">
           {['disabled', 'waline', 'giscus', 'artalk', 'external'].map(t => (
@@ -277,6 +298,7 @@ const boolField = (k: keyof Site, def = false): boolean => {
           palette: fd.get('palette'),
           activeTheme: fd.get('activeTheme'),
           defaultTheme: fd.get('defaultTheme'),
+          paletteMigrationMode: fd.get('paletteMigrationMode'),
           commentsProvider: provider,
           commentsConfig: commentsConfig,
           aboutContent: fd.get('aboutContent'),
