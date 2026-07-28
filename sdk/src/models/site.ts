@@ -19,6 +19,9 @@ import {
 // ── Select enums ──────────────────────────────────────────────────────
 
 const DefaultThemeSchema = z.enum(["light", "dark", "auto"]);
+const PaletteMigrationModeSchema = z
+  .enum(["keep", "silent", "prompt"])
+  .default("keep");
 
 // ── Site schema ───────────────────────────────────────────────────────
 
@@ -38,6 +41,7 @@ export const SiteSchema = SystemFieldsSchema.extend({
   // Palette & dark mode
   palette: z.string().optional(),
   activeTheme: z.string().optional(),
+  paletteMigrationMode: PaletteMigrationModeSchema.optional(),
   defaultTheme: DefaultThemeSchema.optional(),
   customCss: z.string().optional(),
   customHead: z.string().optional(),
