@@ -135,6 +135,10 @@ COPY --from=astro-build /build/app/src/dispatcher/index.mjs /app/dispatcher.mjs
 COPY vault/pb_hooks /pb_hooks
 COPY --from=astro-build /build/packs /packs
 
+# Copy palettes directory (used by /api/palettes and /api/palette.css endpoints
+# to enumerate and serve palette CSS at runtime).
+COPY hooks/ /build/hooks/
+
 # Copy bootstrap.json (minimal maintenance-mode config for Caddy startup)
 COPY docker/bootstrap.json /etc/caddy/bootstrap.json
 COPY docker/bootstrap-http-only.json /etc/caddy/bootstrap-http-only.json

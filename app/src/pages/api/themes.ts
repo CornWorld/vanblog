@@ -10,8 +10,23 @@ export const prerender = false;
 //
 // Themes are independent Astro projects (see docs/agent-theme-architecture.md
 // §5). Each theme ships a theme.json with the metadata returned here.
-const REPO_ROOT = fileURLToPath(new URL("../../../../", import.meta.url));
-const THEMES_ROOT = join(REPO_ROOT, "themes");
+//
+// THEMES_ROOT resolution order:
+//   1. VANBLOG_THEMES_DIR env var (set by the dispatcher in prod)
+//   2. Relative path from this compiled chunk (works in dev and local build)
+//   3. Fallback to "/var/lib/vanblog/themes" (Docker prod default)
+const THEMES_ROOT =
+  process.env.VANBLOG_THEMES_DIR ||
+  (() => {
+    try {
+      return join(
+        fileURLToPath(new URL("../../../../", import.meta.url)),
+        "themes"
+      );
+    } catch {
+      return "/var/lib/vanblog/themes";
+    }
+  })();
 
 interface ThemeMeta {
   name: string;

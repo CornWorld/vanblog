@@ -10,10 +10,30 @@ export const prerender = false;
 //
 // Palettes live outside themes so that a single palette can be shared across
 // themes — see docs/agent-theme-architecture.md §4.
-const REPO_ROOT = fileURLToPath(new URL("../../../../", import.meta.url));
-const PALETTES_ROOT = join(REPO_ROOT, "hooks", "palettes");
+//
+// PALETTES_ROOT resolution order:
+//   1. VANBLOG_PALETTES_DIR env var (if set)
+//   2. Relative path from this compiled chunk (works in dev and local build)
+//   3. Fallback to the repo root's hooks/palettes/ (Docker prod)
+const PALETTES_ROOT =
+  process.env.VANBLOG_PALETTES_DIR ||
+  (() => {
+    try {
+      return join(
+        fileURLToPath(new URL("../../../../", import.meta.url)),
+        "hooks",
+        "palettes"
+      );
+    } catch {
+      return "/build/hooks/palettes";
+    }
+  })();
 
-function listPalettes(): Array<{ name: string; label?: string; version?: string }> {
+function listPalettes(): Array<{
+  name: string;
+  label?: string;
+  version?: string;
+}> {
   if (!existsSync(PALETTES_ROOT)) return [];
   return readdirSync(PALETTES_ROOT, { withFileTypes: true })
     .filter((entry) => entry.isDirectory())
@@ -38,6 +58,9 @@ function listPalettes(): Array<{ name: string; label?: string; version?: string 
 export const GET: APIRoute = async () => {
   return new Response(JSON.stringify({ palettes: listPalettes() }), {
     status: 200,
-    headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
+    headers: {
+      "Content-Type": "application/json",
+      "Cache-Control": "no-store",
+    },
   });
 };
