@@ -20,6 +20,8 @@ import (
 	"github.com/cornworld/vanblog/internal/devseed"
 	"github.com/cornworld/vanblog/internal/feed"
 	"github.com/cornworld/vanblog/internal/media"
+	"github.com/cornworld/vanblog/internal/palette"
+	"github.com/cornworld/vanblog/internal/theme"
 	"github.com/cornworld/vanblog/internal/migration"
 	"github.com/cornworld/vanblog/internal/pack"
 	"github.com/cornworld/vanblog/internal/packcli"
@@ -205,6 +207,8 @@ func main() {
 	_ = bootstrap.New(app)
 	migration.RegisterRoutes(app)
 	_ = feed.New(app)
+	palette.New(app)
+	theme.New(app)
 	_ = caddy.New(app)
 
 	// seed subcommand: populate dev database with sample data

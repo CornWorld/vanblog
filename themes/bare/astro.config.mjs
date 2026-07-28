@@ -29,9 +29,6 @@ export default defineConfig({
       '/posts/[id]': { maxAge: 300, swr: 60, tags: ['posts'] },
       '/': { maxAge: 300, swr: 60, tags: ['posts', 'home'] },
       '/archive': { maxAge: 600, swr: 120, tags: ['posts'] },
-      '/api/feed.xml': { maxAge: 1800, tags: ['posts', 'feed'] },
-      '/api/atom.xml': { maxAge: 1800, tags: ['posts', 'feed'] },
-      '/api/sitemap.xml': { maxAge: 3600, tags: ['posts', 'feed'] },
     },
   },
   server: {
