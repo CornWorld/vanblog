@@ -44,7 +44,17 @@ RUN pnpm build:models
 FROM golang:alpine AS go-build
 ARG GOPROXY
 ENV GOPROXY=${GOPROXY}
+
+# Install git for cloning caddyadmin (replace directive target).
+RUN apk add --no-cache git
+
 WORKDIR /build
+
+# vault/go.mod has `replace github.com/CornWorld/caddyadmin => ../../caddyadmin`.
+# In Docker the build workspace is /build, so the replace target resolves to
+# /caddyadmin. Clone it there before go mod download runs.
+RUN git clone --depth=1 https://github.com/CornWorld/caddyadmin.git /caddyadmin
+
 COPY vault/go.mod vault/go.sum ./
 RUN go mod download
 COPY vault/ ./
