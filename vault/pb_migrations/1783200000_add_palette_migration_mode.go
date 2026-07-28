@@ -12,7 +12,7 @@ func init() {
 			return err
 		}
 		col.Fields.Add(&core.SelectField{
-			Name: "paletteMigrationMode",
+			Name:   "paletteMigrationMode",
 			Values: []string{"keep", "silent", "prompt"},
 		})
 		return db.Save(col)

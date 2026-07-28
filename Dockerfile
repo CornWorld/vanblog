@@ -133,8 +133,10 @@ COPY docker/bootstrap-http-only.json /etc/caddy/bootstrap-http-only.json
 COPY docker/entrypoint.prod.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
-# Create data directories
-RUN mkdir -p /pb_data /data/caddy /var/log
+# Create data directories + symlink themes to the path dispatcher expects.
+# astro-build emits /build/themes/<name>/dist/; dispatcher reads /var/lib/vanblog/themes/.
+RUN mkdir -p /pb_data /data/caddy /var/log /var/lib/vanblog && \
+    ln -s /build/themes /var/lib/vanblog/themes
 
 ENV VANBLOG_MODE=prod
 # 80  = HTTP → redirect to HTTPS
