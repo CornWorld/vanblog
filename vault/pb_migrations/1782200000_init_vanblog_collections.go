@@ -5,6 +5,7 @@ import (
 
 	"github.com/pocketbase/pocketbase/core"
 	m "github.com/pocketbase/pocketbase/migrations"
+	"github.com/pocketbase/pocketbase/tools/security"
 )
 
 func init() {
@@ -407,5 +408,12 @@ func insertDefaultSite(db core.App) error {
 	// s3Config: 默认禁用（启用后 ApplyS3BackendToSettings 才会推到 pb settings）
 	record.Set("s3Config", json.RawMessage(`{"enabled":false}`))
 
-	return db.Save(record)
+	// Use UnsafeWithoutHooks to avoid triggering JSVM audit hooks during
+	// migration — Goja's module resolver can fail with "Invalid module"
+	// inside the migration transaction's afterFunc callback.
+	// UnsafeWithoutHooks skips BeforeCreate hooks that auto-generate IDs,
+	// so we set the ID manually using the same algorithm PB uses internally.
+	unsafeApp := db.UnsafeWithoutHooks()
+	record.Set("id", security.RandomString(15))
+	return unsafeApp.Save(record)
 }

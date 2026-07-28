@@ -23,17 +23,21 @@ func init() {
 		// empty/missing values, so any pre-migration record would fail
 		// validation on the next PATCH. Set "keep" (the SDK default) for
 		// all existing records that don't have a valid value yet.
-		records, err := db.FindRecordsByFilter("site", "1=1", "", 0, 0)
+		//
+		// Use UnsafeWithoutHooks to avoid triggering JSVM hooks during
+		// migration — the Goja VM may report "Invalid module" for require()
+		// calls inside afterFunc callbacks during the migration transaction.
+		// This is a known PB 0.39 JSVM issue, not a vanblog bug.
+		unsafeApp := db.UnsafeWithoutHooks()
+		records, err := unsafeApp.FindRecordsByFilter("site", "1=1", "", 0, 0)
 		if err != nil {
-			// FindRecordsByFilter may fail if the collection is empty or
-			// the filter syntax isn't supported; skip backfill in that case.
 			return nil
 		}
 		for _, record := range records {
 			val := record.GetString("paletteMigrationMode")
 			if val == "" {
 				record.Set("paletteMigrationMode", "keep")
-				if err := db.Save(record); err != nil {
+				if err := unsafeApp.Save(record); err != nil {
 					return err
 				}
 			}
