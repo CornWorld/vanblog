@@ -30,7 +30,6 @@ const site = siteProp || await Astro.locals.getSite();
 
 // Auth state for nav
 const isLoggedIn = pb.authStore.isValid;
-const hasAbout = !!(site?.aboutContent && site.aboutContent.trim());
 
 const siteName = site?.siteName || 'Vanblog';
 const siteDesc = description || site?.siteDesc || '';
@@ -125,7 +124,7 @@ const packNavItems = packMetadata.flatMap((pack) => pack.nav ? [pack.nav] : []);
     )}
   </head>
   <body class="min-h-screen flex flex-col">
-    <Nav site={site} isLoggedIn={isLoggedIn} path={path} hasAbout={hasAbout} packNavItems={packNavItems} />
+    <Nav site={site} isLoggedIn={isLoggedIn} path={path ?? ''} packNavItems={packNavItems} />
     <main class="flex-1 container-page py-8">
       <slot />
     </main>

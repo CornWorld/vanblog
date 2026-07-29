@@ -6,17 +6,15 @@ export interface Props {
 const { html } = Astro.props;
 ---
 
-<div class="post-viewer" set:html={html} />
-
 <script is:inline>
   (() => {
-    // ── 图片点击放大（轻量 modal） ────────────────────────────────────
+    // Image click zoom (lightweight modal)
     const viewer = document.querySelector('.post-viewer');
     if (!viewer) return;
 
-    let modal: HTMLDivElement | null = null;
+    let modal = null;
 
-    function openZoom(img: HTMLImageElement) {
+    function openZoom(img) {
       if (modal) return;
       modal = document.createElement('div');
       modal.className = 'medium-zoom';
@@ -24,7 +22,7 @@ const { html } = Astro.props;
         'position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;' +
         'background:rgba(0,0,0,0.8);cursor:zoom-out;padding:2rem;';
 
-      const cloned = img.cloneNode(true) as HTMLImageElement;
+      const cloned = img.cloneNode(true);
       cloned.style.cssText = 'max-width:100%;max-height:100%;object-fit:contain;border-radius:4px;';
       modal.append(cloned);
 
@@ -42,14 +40,14 @@ const { html } = Astro.props;
       document.body.style.overflow = '';
     }
 
-    function onKeyDown(e: KeyboardEvent) {
+    function onKeyDown(e) {
       if (e.key === 'Escape') closeZoom();
     }
 
-    viewer.addEventListener('click', (e: Event) => {
-      const target = e.target as HTMLElement;
+    viewer.addEventListener('click', (e) => {
+      const target = e.target;
       if (target.tagName === 'IMG' && target.closest('.post-viewer')) {
-        openZoom(target as HTMLImageElement);
+        openZoom(target);
       }
     });
   })();

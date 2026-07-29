@@ -28,9 +28,9 @@ const error = !result;
 // Site stats
 const postCount = result?.totalItems ?? posts.length;
 const categories = await safe(() => pb.collection('categories').getFullList(), 'archive-categories');
-const categoryCount = categories?.length ?? 0;
+const categoryCount = categories.data?.length ?? 0;
 const tags = await safe(() => pb.collection('tags').getFullList(), 'archive-tags');
-const tagCount = tags?.length ?? 0;
+const tagCount = tags.data?.length ?? 0;
 const totalWords = posts.reduce((sum: number, p: any) => sum + (p.content?.length || 0), 0);
 const statsOk = !!(result && categories && tags);
 

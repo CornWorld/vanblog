@@ -2,12 +2,12 @@
 import type { Site } from '@vanblog/sdk';
 
 interface Props {
-  site: Site | null;
+  site: Partial<Site> | null;
 }
 
 const { site } = Astro.props;
 const siteName = site?.siteName || 'Vanblog';
-const beian = site?.beian;
+const beian = site?.beianNumber;
 ---
 
 <footer class="border-t border-[var(--border)] py-8 text-sm text-[var(--text-muted)]">

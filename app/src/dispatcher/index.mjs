@@ -314,7 +314,7 @@ const server = createServer(async (req, res) => {
 const inFlightRequests = new Set();
 
 // Track in-flight requests for graceful shutdown
-server.on('request', (req, res) => {
+server.on('request', (_req, res) => {
   const done = () => { inFlightRequests.delete(done); };
   inFlightRequests.add(done);
   res.on('finish', done);

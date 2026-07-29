@@ -70,7 +70,7 @@ const headings = extractHeadings(html);
     const links = document.querySelectorAll<HTMLAnchorElement>('.toc-link');
     if (links.length === 0) return;
 
-    const headings: Element[] = [];
+    const headings = [];
     links.forEach((link) => {
       const id = link.getAttribute('href')?.slice(1);
       if (id) { const el = document.getElementById(id); if (el) headings.push(el); }

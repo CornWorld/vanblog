@@ -6,28 +6,29 @@ export interface Props {
 }
 
 const { site } = Astro.props;
+const hasReward = site?.payWechat || site?.payAliPay;
 ---
 
-{site?.rewardEnabled && (
+{hasReward && (
   <div class="my-8 pt-6 border-t border-[var(--border)] text-center">
     <p class="text-sm text-[var(--text-muted)] mb-4">
-      {site.rewardTitle || '如果觉得文章对你有帮助，欢迎请我喝杯咖啡 ☕️'}
+      如果觉得文章对你有帮助，欢迎请我喝杯咖啡 ☕️
     </p>
     <div class="flex justify-center gap-6">
-      {site.wechatQR && (
+      {site?.payWechat && (
         <div class="text-center">
           <img
-            src={site.wechatQR}
+            src={site.payWechat}
             alt="微信赞赏"
             class="w-32 h-32 rounded-lg border border-[var(--border)]"
           />
           <p class="text-xs text-[var(--text-muted)] mt-1">微信</p>
         </div>
       )}
-      {site.alipayQR && (
+      {site?.payAliPay && (
         <div class="text-center">
           <img
-            src={site.alipayQR}
+            src={site.payAliPay}
             alt="支付宝赞赏"
             class="w-32 h-32 rounded-lg border border-[var(--border)]"
           />

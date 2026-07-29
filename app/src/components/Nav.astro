@@ -3,7 +3,7 @@ import type { Site } from '@vanblog/sdk';
 
 
 interface Props {
-  site: Site | null;
+  site: Partial<Site> | null;
   isLoggedIn: boolean;
   path: string;
   /** Pack nav items resolved by the Astro Pack integration, passed from BaseLayout. */
@@ -74,7 +74,7 @@ const hasAbout = !!(site?.aboutContent && site.aboutContent.trim());
     overlay.classList.remove('hidden');
     overlay.setAttribute('aria-hidden', 'false');
     requestAnimationFrame(() => {
-      const input = document.getElementById('search-dialog-input');
+      const input = document.getElementById('search-dialog-input') as HTMLInputElement | null;
       input?.focus();
       input?.select();
     });
