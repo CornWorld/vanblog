@@ -78,7 +78,7 @@ func New(app core.App) *Manager {
 // Each handler runs in a goroutine so the request isn't blocked on Astro's
 // response.
 func (m *Manager) handlePostsCacheInvalidation(app core.App) {
-	invalidate := func() { go revalidateAstroCache([]string{"posts"}) }
+	invalidate := func() { go revalidateAstroCache([]string{"posts", "feed"}) }
 	app.OnRecordAfterCreateSuccess("posts").BindFunc(func(e *core.RecordEvent) error {
 		invalidate()
 		return nil
@@ -401,11 +401,9 @@ func (m *Manager) handleRestoreEndpoint(e *core.RequestEvent) error {
 	}
 
 	// Mirror handlePostsCacheInvalidation: invalidate Astro cache async.
-	go revalidateAstroCache([]string{"posts"})
-
+	go revalidateAstroCache([]string{"posts", "feed"})
 	return e.JSON(http.StatusOK, map[string]any{"ok": true, "id": id})
 }
-
 // Purge permanently removes a post record. Unlike Restore, this is
 // irreversible — the post and all its revisions are gone. Gated by
 // canDeletePosts (admin or article:delete) rather than canManagePosts
@@ -445,8 +443,7 @@ func (m *Manager) handlePurgeEndpoint(e *core.RequestEvent) error {
 		}
 		return e.JSON(http.StatusInternalServerError, err.Error())
 	}
-
-	go revalidateAstroCache([]string{"posts"})
+	go revalidateAstroCache([]string{"posts", "feed"})
 
 	return e.JSON(http.StatusOK, map[string]any{"ok": true, "id": id})
 }

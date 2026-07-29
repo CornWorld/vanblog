@@ -35,6 +35,7 @@ func GenerateRSS(app core.App, limit int) ([]byte, error) {
 			Description: excerpt(p.GetString("content")),
 			PubDate:     p.GetDateTime("created").Time(),
 			GUID:        info.BaseURL + path,
+			Author:      info.Author,
 		}
 	}
 
@@ -72,6 +73,7 @@ func GenerateAtom(app core.App, limit int) ([]byte, error) {
 			Description: excerpt(p.GetString("content")),
 			PubDate:     p.GetDateTime("created").Time(),
 			GUID:        info.BaseURL + path,
+			Author:      info.Author,
 		}
 	}
 
@@ -86,8 +88,8 @@ func GenerateAtom(app core.App, limit int) ([]byte, error) {
 // GenerateSitemap builds a sitemap.xml from published posts + site config.
 func GenerateSitemap(app core.App) ([]byte, error) {
 	info, err := site.GetInfo(app)
-	baseURL := "http://localhost:8090"
-	if err == nil && info.BaseURL != "" {
+	baseURL := ""
+	if err == nil {
 		baseURL = info.BaseURL
 	}
 
@@ -95,8 +97,9 @@ func GenerateSitemap(app core.App) ([]byte, error) {
 		"posts", "status='published' && deleted=false", "", 0, 0,
 	)
 
-	urls := []sitemap.URL{
-		{Loc: baseURL + "/", ChangeFreq: "daily", Priority: 1.0},
+	urls := make([]sitemap.URL, 0, len(posts)+1)
+	if baseURL != "" {
+		urls = append(urls, sitemap.URL{Loc: baseURL + "/", ChangeFreq: "daily", Priority: 1.0})
 	}
 	for _, p := range posts {
 		path := p.GetString("pathname")
@@ -105,7 +108,7 @@ func GenerateSitemap(app core.App) ([]byte, error) {
 		}
 		urls = append(urls, sitemap.URL{
 			Loc:        baseURL + path,
-			LastMod:    p.GetDateTime("created").Time(),
+			LastMod:    p.GetDateTime("updated").Time(),
 			ChangeFreq: "weekly",
 			Priority:   0.8,
 		})

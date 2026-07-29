@@ -23,6 +23,7 @@ type FeedItem struct {
 	PubDate     time.Time
 	Categories  []string
 	GUID        string // Unique identifier (usually the Link)
+	Author      string // Author email or name (optional)
 }
 
 // GenerateRSS produces RSS 2.0 XML.
@@ -35,6 +36,7 @@ func GenerateRSS(feed Feed) ([]byte, error) {
 		PubDate     string   `xml:"pubDate"`
 		Categories  []string `xml:"category"`
 		GUID        string   `xml:"guid"`
+		Author      string   `xml:"author,omitempty"`
 	}
 
 	type rssChannel struct {
@@ -62,6 +64,7 @@ func GenerateRSS(feed Feed) ([]byte, error) {
 			PubDate:     pubDate,
 			Categories:  item.Categories,
 			GUID:        item.GUID,
+			Author:      item.Author,
 		}
 	}
 
@@ -98,6 +101,10 @@ func GenerateAtom(feed Feed) ([]byte, error) {
 		Term string `xml:"term,attr"`
 	}
 
+	type atomAuthor struct {
+		Name string `xml:"name"`
+	}
+
 	type atomEntry struct {
 		XMLName    xml.Name      `xml:"entry"`
 		Title      string        `xml:"title"`
@@ -106,6 +113,7 @@ func GenerateAtom(feed Feed) ([]byte, error) {
 		Updated    string        `xml:"updated"`
 		Summary    string        `xml:"summary"`
 		Categories []atomCategory `xml:"category"`
+		Author     *atomAuthor   `xml:"author,omitempty"`
 	}
 
 	type atomFeed struct {
@@ -124,6 +132,10 @@ func GenerateAtom(feed Feed) ([]byte, error) {
 		for j, c := range item.Categories {
 			cats[j] = atomCategory{Term: c}
 		}
+		var author *atomAuthor
+		if item.Author != "" {
+			author = &atomAuthor{Name: item.Author}
+		}
 		entries[i] = atomEntry{
 			Title:      item.Title,
 			Link:       atomLink{Href: item.Link},
@@ -131,6 +143,7 @@ func GenerateAtom(feed Feed) ([]byte, error) {
 			Updated:    item.PubDate.Format(time.RFC3339),
 			Summary:    item.Description,
 			Categories: cats,
+			Author:     author,
 		}
 	}
 

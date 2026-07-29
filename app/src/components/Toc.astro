@@ -5,7 +5,7 @@ export interface Props {
 
 const { html } = Astro.props;
 
-// ── SSR：从 HTML 提取 h2/h3 标题 ─────────────────────────────────────────
+// SSR: extract h2/h3 headings from rendered HTML
 interface TocItem {
   id: string;
   tag: 'h2' | 'h3';
@@ -21,16 +21,12 @@ function extractHeadings(html: string): TocItem[] {
 
   while ((match = h2Re.exec(html)) !== null) {
     const text = match[2].replace(/<[^>]*>/g, '').trim();
-    if (text) {
-      items.push({ id: match[1], tag: 'h2', text, level: 1 });
-    }
+    if (text) { items.push({ id: match[1], tag: 'h2', text, level: 1 }); }
   }
 
   while ((match = h3Re.exec(html)) !== null) {
     const text = match[2].replace(/<[^>]*>/g, '').trim();
-    if (text) {
-      items.push({ id: match[1], tag: 'h3', text, level: 2 });
-    }
+    if (text) { items.push({ id: match[1], tag: 'h3', text, level: 2 }); }
   }
 
   return items;
@@ -50,12 +46,7 @@ const headings = extractHeadings(html);
         <ul class="toc-list">
           {headings.map((h) => (
             <li class={h.level === 1 ? 'toc-item--h2' : 'toc-item--h3'}>
-              <a
-                href={`#${h.id}`}
-                class="toc-link"
-              >
-                {h.text}
-              </a>
+              <a href={`#${h.id}`} class="toc-link">{h.text}</a>
             </li>
           ))}
         </ul>
@@ -66,7 +57,7 @@ const headings = extractHeadings(html);
 
 <script is:inline>
   (() => {
-    // ── 折叠切换 ────────────────────────────────────────────────
+    // Toggle collapse/expand label
     const details = document.querySelector('.toc-details');
     const toggleSpan = document.querySelector<HTMLSpanElement>('.toc-toggle');
     if (details && toggleSpan) {
@@ -75,17 +66,14 @@ const headings = extractHeadings(html);
       });
     }
 
-    // ── IntersectionObserver 高亮当前可见 heading ─────────────────
+    // IntersectionObserver: highlight visible heading
     const links = document.querySelectorAll<HTMLAnchorElement>('.toc-link');
     if (links.length === 0) return;
 
     const headings: Element[] = [];
     links.forEach((link) => {
       const id = link.getAttribute('href')?.slice(1);
-      if (id) {
-        const el = document.getElementById(id);
-        if (el) headings.push(el);
-      }
+      if (id) { const el = document.getElementById(id); if (el) headings.push(el); }
     });
 
     if (headings.length === 0) return;
@@ -93,20 +81,15 @@ const headings = extractHeadings(html);
     let activeIdx = -1;
 
     function updateActive() {
-      // Find the last heading that is above or at the current scroll
       let idx = -1;
-      const scrollY = window.scrollY + 100; // offset for sticky header
+      const scrollY = window.scrollY + 100;
       for (let i = 0; i < headings.length; i++) {
-        if (headings[i].getBoundingClientRect().top + window.scrollY <= scrollY) {
-          idx = i;
-        }
+        if (headings[i].getBoundingClientRect().top + window.scrollY <= scrollY) { idx = i; }
       }
-
       if (idx !== activeIdx) {
         links.forEach((l) => l.classList.remove('toc-link--active'));
         if (idx >= 0) {
           links[idx].classList.add('toc-link--active');
-          // Scroll link into view within the sidebar
           links[idx].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
         }
         activeIdx = idx;
@@ -116,6 +99,8 @@ const headings = extractHeadings(html);
     window.addEventListener('scroll', updateActive, { passive: true });
     updateActive();
   })();
+</script>
+
 <style>
   .toc-wrapper {
     position: sticky;
@@ -145,7 +130,6 @@ const headings = extractHeadings(html);
     border-radius: 2px;
   }
 
-  /* ── TOC list: left-border timeline ── */
   .toc-list {
     list-style: none;
     margin: 0;
@@ -163,14 +147,12 @@ const headings = extractHeadings(html);
     border-radius: 1px;
   }
 
-  /* ── Heading items ── */
   .toc-item--h2,
   .toc-item--h3 {
     position: relative;
     padding-left: 1.75rem;
   }
 
-  /* ── Toc link base ── */
   .toc-link {
     display: block;
     padding: 0.375rem 0.5rem;
@@ -184,10 +166,9 @@ const headings = extractHeadings(html);
   }
   .toc-link:hover {
     color: var(--accent);
-    background: color-mix(in srgb, var(--accent) 8%, transparent);
+    background: oklch(from var(--accent) l c h / 0.08);
   }
 
-  /* ── h3 indent ── */
   .toc-item--h3 {
     padding-left: 2.5rem;
   }
@@ -195,16 +176,15 @@ const headings = extractHeadings(html);
     font-size: 0.8125rem;
   }
 
-  /* ── Active state ── */
   .toc-link--active {
     color: var(--text);
     font-weight: 500;
-    background: color-mix(in srgb, var(--accent) 10%, transparent);
+    background: oklch(from var(--accent) l c h / 0.10);
     border-left-color: var(--accent);
   }
   .toc-link--active:hover {
     color: var(--text);
-    background: color-mix(in srgb, var(--accent) 14%, transparent);
+    background: oklch(from var(--accent) l c h / 0.14);
     border-left-color: var(--accent);
   }
 </style>
