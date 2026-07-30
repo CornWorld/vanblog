@@ -1,5 +1,15 @@
 @import "tailwindcss";
 
+/* ── Builtin source files (app/src/) — Tailwind must scan these for utility classes.
+   When a theme builds via @vanblog/builtin aliases, app/src/ lies outside the theme
+   project root, so Tailwind's automatic content detection won't pick it up.
+   The @source directives below explicitly include app/src/ (relative to this CSS file
+   at app/src/styles/global.css). */
+@source "../components/**/*.astro";
+@source "../layouts/**/*.astro";
+@source "../pages/**/*.astro";
+@source "../lib/**/*.astro";
+
 /* ── Legacy plugin templates and root Pack Astro sources — Tailwind must scan these for utility classes ── */
 @source "../../plugins/**/frontend/**/*.html";
 @source "../../packs/**/*.astro";
