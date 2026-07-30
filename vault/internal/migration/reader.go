@@ -279,7 +279,7 @@ func getStringSlice(doc bson.M, key string) []string {
 			result = append(result, fmt.Sprintf("%v", item))
 		}
 		return result
-	case []interface{}:
+	case []any:
 		result := make([]string, 0, len(val))
 		for _, item := range val {
 			result = append(result, fmt.Sprintf("%v", item))

@@ -2,10 +2,11 @@ package pack
 
 import (
 	"bytes"
+	"cmp"
 	"encoding/json"
 	"fmt"
 	"io/fs"
-	"sort"
+	"slices"
 )
 
 // Source identifies where a Pack's resources originated.
@@ -57,7 +58,7 @@ func Builtins(root fs.FS) ([]Pack, error) {
 		seen[p.Name] = struct{}{}
 		packs = append(packs, p)
 	}
-	sort.Slice(packs, func(i, j int) bool { return packs[i].Name < packs[j].Name })
+	slices.SortFunc(packs, func(a, b Pack) int { return cmp.Compare(a.Name, b.Name) })
 	return packs, nil
 }
 

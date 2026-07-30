@@ -11,23 +11,23 @@ import (
 // as proxy targets. These cover loopback, private networks, and
 // link-local addresses commonly used in container/Docker setups.
 var DefaultAllowlist = []string{
-	"127.0.0.0/8",   // IPv4 loopback
-	"10.0.0.0/8",    // Private network Class A
-	"172.16.0.0/12", // Private network Class B (Docker bridge)
+	"127.0.0.0/8",    // IPv4 loopback
+	"10.0.0.0/8",     // Private network Class A
+	"172.16.0.0/12",  // Private network Class B (Docker bridge)
 	"192.168.0.0/16", // Private network Class C
-	"::1/128",       // IPv6 loopback
-	"fc00::/7",      // IPv6 unique local
-	"fe80::/10",     // IPv6 link-local
+	"::1/128",        // IPv6 loopback
+	"fc00::/7",       // IPv6 unique local
+	"fe80::/10",      // IPv6 link-local
 }
 
 // blockedIPs are specific IPs that must NEVER be allowed as proxy targets,
 // regardless of the allowlist. These are cloud metadata endpoints and
 // other SSRF targets.
 var blockedIPs = []string{
-	"169.254.169.254", // AWS/GCP/Azure metadata
+	"169.254.169.254",          // AWS/GCP/Azure metadata
 	"metadata.google.internal", // GCP metadata (DNS)
-	"metadata", // Azure metadata (short name)
-	"fd00:ec2::254", // AWS IPv6 metadata
+	"metadata",                 // Azure metadata (short name)
+	"fd00:ec2::254",            // AWS IPv6 metadata
 }
 
 // ValidateTarget checks if a URL is safe to use as a Caddy reverse_proxy target.

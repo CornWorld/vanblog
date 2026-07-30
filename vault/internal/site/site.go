@@ -3,6 +3,7 @@
 package site
 
 import (
+	"cmp"
 	"fmt"
 
 	"github.com/pocketbase/pocketbase/core"
@@ -10,14 +11,14 @@ import (
 
 // Info holds commonly-used site fields extracted from the single site record.
 type Info struct {
-	SiteName        string
-	BaseURL         string
-	Author          string
-	Description     string
+	SiteName         string
+	BaseURL          string
+	Author           string
+	Description      string
 	CommentsProvider string
-	AnalyticsScript string
-	Theme           string
-	AllowedDomains  []string
+	AnalyticsScript  string
+	Theme            string
+	AllowedDomains   []string
 }
 
 // Get fetches the site config record (there should be exactly one).
@@ -47,11 +48,7 @@ func GetInfo(app core.App) (*Info, error) {
 		AllowedDomains:   record.GetStringSlice("allowedDomains"),
 	}
 
-	if desc := record.GetString("siteDesc"); desc != "" {
-		info.Description = desc
-	} else {
-		info.Description = info.SiteName
-	}
+	info.Description = cmp.Or(record.GetString("siteDesc"), info.SiteName)
 
 	if info.SiteName == "" {
 		info.SiteName = "Vanblog"

@@ -17,8 +17,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/pocketbase/pocketbase/core"
 	_ "github.com/cornworld/vanblog/pb_migrations"
+	"github.com/pocketbase/pocketbase/core"
 )
 
 // withSkipCaddy toggles VANBLOG_SKIP_CADDY_SYNC for a single test. Restored

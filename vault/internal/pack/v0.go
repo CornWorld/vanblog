@@ -70,7 +70,7 @@ func firstRuntimeUnsupportedFrontendResource(p Pack) (string, bool, error) {
 		if resource == "." {
 			return nil
 		}
-		first := strings.Split(resource, "/")[0]
+		first, _, _ := strings.Cut(resource, "/")
 		isAstroConfig := first == "astro.config.js" || first == "astro.config.mjs" || first == "astro.config.ts"
 		if first == "pages" || first == "admin" || first == "package.json" || isAstroConfig {
 			return runtimeUnsupportedFrontendResource(resource)

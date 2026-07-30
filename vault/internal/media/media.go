@@ -6,7 +6,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"log"
+	"log/slog"
 
 	"github.com/pocketbase/pocketbase/core"
 )
@@ -32,7 +32,7 @@ func New(app core.App) *Manager {
 	m := &Manager{app: app}
 	app.OnServe().BindFunc(func(se *core.ServeEvent) error {
 		if err := ApplyS3BackendToSettings(app); err != nil {
-			log.Printf("[media] startup S3 sync failed: %v", err)
+			slog.Warn("[media] startup S3 sync failed", "err", err)
 		}
 		se.Router.DELETE("/api/vanblog/media/{id}", m.handleDelete)
 		return se.Next()
@@ -60,19 +60,19 @@ func (m *Manager) dedupeOnUpload(e *core.RecordEvent) error {
 	}
 	content, err := m.ReadFileContent(record)
 	if err != nil {
-		log.Printf("[media] dedup: failed to read file: %v", err)
+		slog.Warn("[media] dedup: failed to read file", "err", err)
 		return nil
 	}
 	sign := ComputeSign(content)
 	record.Set("sign", sign)
 	if err := m.app.Save(record); err != nil {
-		log.Printf("[media] dedup: failed to save sign: %v", err)
+		slog.Warn("[media] dedup: failed to save sign", "err", err)
 		return nil
 	}
 
 	existing, err := m.CheckDuplicate(content)
 	if err != nil {
-		log.Printf("[media] dedup: query failed: %v", err)
+		slog.Warn("[media] dedup: query failed", "err", err)
 		return nil
 	}
 	if existing == nil || existing.Id == record.Id {
@@ -90,7 +90,7 @@ func (m *Manager) dedupeOnUpload(e *core.RecordEvent) error {
 	keepExisting := existingCreated.Before(recordCreated) ||
 		(existingCreated.Equal(recordCreated) && existing.Id < record.Id)
 	if keepExisting {
-		log.Printf("[media] dedup: duplicate of %s, deleting %s", existing.Id, record.Id)
+		slog.Info("[media] dedup: duplicate deleted", "existing", existing.Id, "removed", record.Id)
 		m.app.Delete(record)
 	}
 	return nil
@@ -101,7 +101,7 @@ func (m *Manager) dedupeOnUpload(e *core.RecordEvent) error {
 func (m *Manager) scanPostImages(e *core.RecordEvent) error {
 	go func() {
 		if err := m.ScanArticleImages(e.Record.Id); err != nil {
-			log.Printf("[media] scan: failed for post %s: %v", e.Record.Id, err)
+			slog.Warn("[media] scan: failed for post", "post", e.Record.Id, "err", err)
 		}
 	}()
 	return nil
@@ -111,7 +111,7 @@ func (m *Manager) scanPostImages(e *core.RecordEvent) error {
 // so config changes take effect on the next upload without a restart.
 func (m *Manager) reapplyS3Backend() {
 	if err := ApplyS3BackendToSettings(m.app); err != nil {
-		log.Printf("[media] reapply S3 backend failed: %v", err)
+		slog.Warn("[media] reapply S3 backend failed", "err", err)
 	}
 }
 

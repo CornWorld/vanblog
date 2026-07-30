@@ -20,8 +20,8 @@ func init() {
 			return err
 		}
 		revRule := `@request.auth.id != "" && target.deleted = false`
-		revCol.ListRule = strPtr(revRule)
-		revCol.ViewRule = strPtr(revRule)
+		revCol.ListRule = new(revRule)
+		revCol.ViewRule = new(revRule)
 		if err := db.Save(revCol); err != nil {
 			return err
 		}
@@ -36,9 +36,9 @@ func init() {
 			return err
 		}
 		mediaWrite := `@request.auth.id != "" && (@request.auth.role = "admin" || @request.auth.permissions ?~ "article:")`
-		mediaCol.CreateRule = strPtr(mediaWrite)
-		mediaCol.UpdateRule = strPtr(mediaWrite)
-		mediaCol.DeleteRule = strPtr(mediaWrite)
+		mediaCol.CreateRule = new(mediaWrite)
+		mediaCol.UpdateRule = new(mediaWrite)
+		mediaCol.DeleteRule = new(mediaWrite)
 		if err := db.Save(mediaCol); err != nil {
 			return err
 		}
@@ -52,7 +52,7 @@ func init() {
 		if err != nil {
 			return err
 		}
-		visitsCol.UpdateRule = strPtr(`@request.auth.role = "admin"`)
+		visitsCol.UpdateRule = new(`@request.auth.role = "admin"`)
 		return db.Save(visitsCol)
 	}, func(db core.App) error {
 		// Forward-only. To revert, write a new migration restoring prior rules.

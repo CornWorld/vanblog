@@ -53,9 +53,9 @@ func TestCreateFirstAdmin_SucceedsAndExitsBootstrap(t *testing.T) {
 	app := freshApp(t)
 
 	err := CreateFirstAdmin(app, SetupReq{
-		Username:      "admin",
-		Email:         "admin@example.com",
-		Password:      "password123",
+		Username:        "admin",
+		Email:           "admin@example.com",
+		Password:        "password123",
 		PasswordConfirm: "password123",
 	})
 	if err != nil {
@@ -144,9 +144,9 @@ func TestCreateFirstAdmin_ValidationErrors(t *testing.T) {
 func TestCreateFirstAdmin_TrimsWhitespace(t *testing.T) {
 	app := freshApp(t)
 	err := CreateFirstAdmin(app, SetupReq{
-		Username:      "  admin  ",
-		Email:         "  admin@example.com  ",
-		Password:      "password123",
+		Username:        "  admin  ",
+		Email:           "  admin@example.com  ",
+		Password:        "password123",
 		PasswordConfirm: "password123",
 	})
 	if err != nil {

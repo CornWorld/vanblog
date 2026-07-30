@@ -1,11 +1,12 @@
 package theme
 
 import (
+	"cmp"
 	"encoding/json"
 	"net/http"
 	"os"
 	"path/filepath"
-	"sort"
+	"slices"
 
 	"github.com/pocketbase/pocketbase/core"
 )
@@ -80,9 +81,7 @@ func serveThemes(e *core.RequestEvent) error {
 		themes = append(themes, meta)
 	}
 
-	sort.Slice(themes, func(i, j int) bool {
-		return themes[i].Name < themes[j].Name
-	})
+	slices.SortFunc(themes, func(a, b themeMeta) int { return cmp.Compare(a.Name, b.Name) })
 
 	return e.JSON(http.StatusOK, map[string]any{"themes": themes})
 }

@@ -40,7 +40,7 @@ func TestGenerateRSS_ValidXML(t *testing.T) {
 	}
 
 	// Verify it's valid XML
-	var v interface{}
+	var v any
 	if err := xml.Unmarshal(data, &v); err != nil {
 		t.Fatalf("invalid XML: %v", err)
 	}
@@ -82,7 +82,7 @@ func TestGenerateAtom_ValidXML(t *testing.T) {
 		t.Fatalf("GenerateAtom failed: %v", err)
 	}
 
-	var v interface{}
+	var v any
 	if err := xml.Unmarshal(data, &v); err != nil {
 		t.Fatalf("invalid XML: %v", err)
 	}

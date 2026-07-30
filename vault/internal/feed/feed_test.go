@@ -31,7 +31,7 @@ func createPost(t *testing.T, app core.App, title string) {
 	r.Set("title", title)
 	r.Set("content", "body")
 	r.Set("status", "published")
-	r.Set("pathname", "/" + strings.ToLower(title))
+	r.Set("pathname", "/"+strings.ToLower(title))
 	app.Save(r)
 }
 

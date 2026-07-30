@@ -1,6 +1,7 @@
 package pack
 
 import (
+	"cmp"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -9,7 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"sort"
+	"slices"
 	"strconv"
 	"strings"
 	"testing/fstest"
@@ -123,7 +124,7 @@ func DiscoverLocal(root string) ([]Pack, error) {
 		}
 		packs = append(packs, p)
 	}
-	sort.Slice(packs, func(i, j int) bool { return packs[i].Name < packs[j].Name })
+	slices.SortFunc(packs, func(a, b Pack) int { return cmp.Compare(a.Name, b.Name) })
 	return packs, nil
 }
 
@@ -273,7 +274,7 @@ func ResolveWithDiagnostics(builtins, locals []Pack) ([]Pack, []OverrideWarning,
 	for _, p := range resolved {
 		packs = append(packs, p)
 	}
-	sort.Slice(packs, func(i, j int) bool { return packs[i].Name < packs[j].Name })
+	slices.SortFunc(packs, func(a, b Pack) int { return cmp.Compare(a.Name, b.Name) })
 	return packs, warnings, nil
 }
 
@@ -334,11 +335,8 @@ func compareSemVer(a, b string) (int, error) {
 func comparePreRelease(a, b string) int {
 	aIDs := strings.Split(a, ".")
 	bIDs := strings.Split(b, ".")
-	minLen := len(aIDs)
-	if len(bIDs) < minLen {
-		minLen = len(bIDs)
-	}
-	for i := 0; i < minLen; i++ {
+	minLen := min(len(aIDs), len(bIDs))
+	for i := range minLen {
 		ai, aIsNum := parsePreReleaseIdentifier(aIDs[i])
 		bi, bIsNum := parsePreReleaseIdentifier(bIDs[i])
 		switch {

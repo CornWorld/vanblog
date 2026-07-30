@@ -48,8 +48,8 @@ func main() {
 	// Register jsvm — this loads pb_hooks/*.pb.js and binds Go-layer
 	// OnRecord* events to JS callbacks. Without this, audits stay empty.
 	jsvm.MustRegister(app, jsvm.Config{
-		HooksDir:    hooksDir,
-		HooksWatch:  false,
+		HooksDir:      hooksDir,
+		HooksWatch:    false,
 		HooksPoolSize: 5,
 	})
 
@@ -130,11 +130,11 @@ func main() {
 	}
 
 	expected := map[string]bool{
-		"tag.create":     false,
+		"tag.create":      false,
 		"category.create": false,
-		"post.create":    false,
-		"post.update":    false,
-		"post.delete":    false,
+		"post.create":     false,
+		"post.update":     false,
+		"post.delete":     false,
 	}
 	for _, a := range audits {
 		k := a.GetString("action")

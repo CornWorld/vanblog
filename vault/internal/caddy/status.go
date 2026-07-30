@@ -78,8 +78,8 @@ func GetTLSStatus(app core.App, caddyAdminURL string) (*TLSStatus, error) {
 	// Caddy TLS endpoints.
 	if httpOnlyMode() {
 		status := &TLSStatus{
-			OnDemandTLS:   false,
-			HttpsRedirect: false,
+			OnDemandTLS:    false,
+			HttpsRedirect:  false,
 			ManagementPort: 8080,
 		}
 		// We still want to surface setup state and bootstrap status (so the
@@ -117,7 +117,7 @@ func GetTLSStatus(app core.App, caddyAdminURL string) (*TLSStatus, error) {
 
 	status := &TLSStatus{
 		OnDemandTLS:    true,
-		HttpsRedirect: true, // fixed in bootstrap json config
+		HttpsRedirect:  true, // fixed in bootstrap json config
 		ManagementPort: 8080,
 	}
 

@@ -1,11 +1,12 @@
 package palette
 
 import (
+	"cmp"
 	"encoding/json"
 	"net/http"
 	"os"
 	"path/filepath"
-	"sort"
+	"slices"
 
 	"github.com/pocketbase/pocketbase/core"
 )
@@ -57,9 +58,7 @@ func servePalettes(e *core.RequestEvent) error {
 		palettes = append(palettes, meta)
 	}
 
-	sort.Slice(palettes, func(i, j int) bool {
-		return palettes[i].Name < palettes[j].Name
-	})
+	slices.SortFunc(palettes, func(a, b paletteMeta) int { return cmp.Compare(a.Name, b.Name) })
 
 	return e.JSON(http.StatusOK, map[string]any{"palettes": palettes})
 }

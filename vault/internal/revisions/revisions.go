@@ -11,7 +11,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"sort"
+	"slices"
 
 	"github.com/pocketbase/dbx"
 
@@ -22,11 +22,11 @@ import (
 type RevisionReason string
 
 const (
-	ReasonAutoSave RevisionReason = "auto-save"  // periodic autosave
-	ReasonManual   RevisionReason = "manual"     // user clicked "save version"
-	ReasonPublish  RevisionReason = "publish"    // status changed to published
-	ReasonRestore  RevisionReason = "restore"    // restored from a previous version
-	ReasonImport   RevisionReason = "import"     // data migration
+	ReasonAutoSave RevisionReason = "auto-save" // periodic autosave
+	ReasonManual   RevisionReason = "manual"    // user clicked "save version"
+	ReasonPublish  RevisionReason = "publish"   // status changed to published
+	ReasonRestore  RevisionReason = "restore"   // restored from a previous version
+	ReasonImport   RevisionReason = "import"    // data migration
 )
 
 // Snapshot captures the complete state of a post at a point in time.
@@ -70,10 +70,10 @@ func (m *Manager) snapshotBeforePostUpdate(e *core.RecordRequestEvent) error {
 // and writes it as a revision. Call this BEFORE applying the update.
 //
 // This is the core of the git-like model:
-//   1. Read current post from DB (old state)
-//   2. Serialize to Snapshot
-//   3. Write as immutable revision record
-//   4. The caller then proceeds with the update (new state overwrites posts)
+//  1. Read current post from DB (old state)
+//  2. Serialize to Snapshot
+//  3. Write as immutable revision record
+//  4. The caller then proceeds with the update (new state overwrites posts)
 //
 // If the post has no meaningful changes (e.g. just viewCount update),
 // the caller should skip this call via ShouldSnapshot().
@@ -135,13 +135,17 @@ func (m *Manager) List(postID string, limit int) ([]*core.Record, error) {
 		return nil, fmt.Errorf("revisions: query failed: %w", err)
 	}
 	// Sort newest first: by created time, with id as tiebreaker for same-millisecond entries
-	sort.SliceStable(records, func(i, j int) bool {
-		ti := records[i].GetDateTime("created").Time()
-		tj := records[j].GetDateTime("created").Time()
-		if !ti.Equal(tj) {
-			return ti.After(tj)
+	slices.SortStableFunc(records, func(a, b *core.Record) int {
+		if t := a.GetDateTime("created").Time().Compare(b.GetDateTime("created").Time()); t != 0 {
+			return -t // descending: newer first
 		}
-		return records[i].Id > records[j].Id
+		if a.Id > b.Id {
+			return -1
+		}
+		if a.Id < b.Id {
+			return 1
+		}
+		return 0
 	})
 	return records, nil
 }
@@ -222,13 +226,17 @@ func (m *Manager) Cleanup(postID string, maxKeep int) error {
 
 	// Sort newest first, then delete everything after maxKeep
 	// Sort newest first: by created time, with id as tiebreaker for same-millisecond entries
-	sort.SliceStable(records, func(i, j int) bool {
-		ti := records[i].GetDateTime("created").Time()
-		tj := records[j].GetDateTime("created").Time()
-		if !ti.Equal(tj) {
-			return ti.After(tj)
+	slices.SortStableFunc(records, func(a, b *core.Record) int {
+		if t := a.GetDateTime("created").Time().Compare(b.GetDateTime("created").Time()); t != 0 {
+			return -t // descending: newer first
 		}
-		return records[i].Id > records[j].Id
+		if a.Id > b.Id {
+			return -1
+		}
+		if a.Id < b.Id {
+			return 1
+		}
+		return 0
 	})
 
 	if len(records) <= maxKeep {

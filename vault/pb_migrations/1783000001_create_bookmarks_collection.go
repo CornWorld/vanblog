@@ -35,11 +35,11 @@ func init() {
 		col.Fields.Add(&core.AutodateField{Name: "updated", OnCreate: true, OnUpdate: true})
 
 		// Public list (previous behavior). Set to `@request.auth.id != ""` to require auth.
-		col.ListRule = strPtr("")
-		col.ViewRule = strPtr("")
-		col.CreateRule = strPtr(`@request.auth.id != ""`)
-		col.UpdateRule = strPtr(`@request.auth.id != "" && (@request.auth.id = owner || @request.auth.role = "admin")`)
-		col.DeleteRule = strPtr(`@request.auth.id != "" && (@request.auth.id = owner || @request.auth.role = "admin")`)
+		col.ListRule = new("")
+		col.ViewRule = new("")
+		col.CreateRule = new(`@request.auth.id != ""`)
+		col.UpdateRule = new(`@request.auth.id != "" && (@request.auth.id = owner || @request.auth.role = "admin")`)
+		col.DeleteRule = new(`@request.auth.id != "" && (@request.auth.id = owner || @request.auth.role = "admin")`)
 
 		return db.Save(col)
 	}, func(db core.App) error {

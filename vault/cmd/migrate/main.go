@@ -259,8 +259,7 @@ func detectDockerMongo(ctx context.Context) string {
 		return ""
 	}
 
-	containers := strings.Split(strings.TrimSpace(string(out)), "\n")
-	for _, name := range containers {
+	for name := range strings.SplitSeq(strings.TrimSpace(string(out)), "\n") {
 		name = strings.TrimSpace(name)
 		if name == "" || !strings.Contains(strings.ToLower(name), "mongo") {
 			continue
@@ -384,7 +383,7 @@ func startTempMongo(ctx context.Context, dataDir string) (uri string, cleanup fu
 
 	// Wait for MongoDB to be ready
 	fmt.Printf("  等待 MongoDB 就绪...\n")
-	for i := 0; i < 30; i++ {
+	for range 30 {
 		select {
 		case <-ctx.Done():
 			return "", cleanup
@@ -453,12 +452,12 @@ func promptBool(text string, defaultYes bool) bool {
 // ─── Waline migration ──────────────────────────────────
 
 type WalineConfig struct {
-	DBType     string // mysql, sqlite, postgres
-	Host       string
-	Port       string
-	User       string
-	Password   string
-	Name       string
+	DBType      string // mysql, sqlite, postgres
+	Host        string
+	Port        string
+	User        string
+	Password    string
+	Name        string
 	TablePrefix string
 	FilePath    string // sqlite only
 }

@@ -28,11 +28,11 @@ func init() {
 		col.Fields.Add(&core.AutodateField{Name: "updated", OnCreate: true, OnUpdate: true})
 
 		// Only admins can read or write the global config record.
-		col.ListRule = strPtr(`@request.auth.role = "admin"`)
-		col.ViewRule = strPtr(`@request.auth.role = "admin"`)
-		col.CreateRule = strPtr(`@request.auth.role = "admin"`)
-		col.UpdateRule = strPtr(`@request.auth.role = "admin"`)
-		col.DeleteRule = strPtr(`@request.auth.role = "admin"`)
+		col.ListRule = new(`@request.auth.role = "admin"`)
+		col.ViewRule = new(`@request.auth.role = "admin"`)
+		col.CreateRule = new(`@request.auth.role = "admin"`)
+		col.UpdateRule = new(`@request.auth.role = "admin"`)
+		col.DeleteRule = new(`@request.auth.role = "admin"`)
 
 		return db.Save(col)
 	}, func(db core.App) error {

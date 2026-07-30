@@ -404,6 +404,7 @@ func (m *Manager) handleRestoreEndpoint(e *core.RequestEvent) error {
 	go revalidateAstroCache([]string{"posts", "feed"})
 	return e.JSON(http.StatusOK, map[string]any{"ok": true, "id": id})
 }
+
 // Purge permanently removes a post record. Unlike Restore, this is
 // irreversible — the post and all its revisions are gone. Gated by
 // canDeletePosts (admin or article:delete) rather than canManagePosts

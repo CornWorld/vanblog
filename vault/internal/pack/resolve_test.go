@@ -104,7 +104,7 @@ func TestCompareSemVerCases(t *testing.T) {
 		{"1.0.0-alpha", "1.0.0-beta", -1},
 		{"1.0.0+build1", "1.0.0+build2", 0}, // build metadata ignored
 		// SemVer spec §11: numeric pre-release identifiers compare numerically.
-		{"1.0.0-rc.2", "1.0.0-rc.11", -1},  // not string order ("2" > "11" is wrong under naive compare)
+		{"1.0.0-rc.2", "1.0.0-rc.11", -1}, // not string order ("2" > "11" is wrong under naive compare)
 		{"1.0.0-rc.11", "1.0.0-rc.2", 1},
 		// Numeric identifiers have lower precedence than alphanumeric.
 		{"1.0.0-1", "1.0.0-alpha", -1},
@@ -113,7 +113,7 @@ func TestCompareSemVerCases(t *testing.T) {
 		{"1.0.0-alpha", "1.0.0-alpha.1", -1},
 		{"1.0.0-alpha.1", "1.0.0-alpha", 1},
 		// Mixed numeric and alphanumeric across dot-separated identifiers.
-		{"1.0.0-x.7.z.92", "1.0.0-x.7.z.9", 1},   // 92 > 9 numerically
+		{"1.0.0-x.7.z.92", "1.0.0-x.7.z.9", 1}, // 92 > 9 numerically
 		{"1.0.0-x.7.z.9", "1.0.0-x.7.z.92", -1},
 		// SemVer §11: numeric identifiers with leading zeros are lexical (non-numeric).
 		// "01" is treated as alphanumeric, which has HIGHER precedence than numeric.

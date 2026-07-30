@@ -9,10 +9,10 @@ import (
 
 // URL represents a single URL entry in the sitemap.
 type URL struct {
-	Loc      string // Full URL
-	LastMod  time.Time
-	ChangeFreq string // always/hourly/daily/weekly/monthly/yearly/never
-	Priority  float32 // 0.0 - 1.0
+	Loc        string // Full URL
+	LastMod    time.Time
+	ChangeFreq string  // always/hourly/daily/weekly/monthly/yearly/never
+	Priority   float32 // 0.0 - 1.0
 }
 
 // GenerateSitemap produces a sitemap.xml 0.9 document.
@@ -26,8 +26,8 @@ func GenerateSitemap(baseURL string, urls []URL) ([]byte, error) {
 	}
 
 	type urlset struct {
-		XMLName xml.Name `xml:"urlset"`
-		Xmlns   string   `xml:"xmlns,attr"`
+		XMLName xml.Name     `xml:"urlset"`
+		Xmlns   string       `xml:"xmlns,attr"`
 		URLs    []sitemapURL `xml:"url"`
 	}
 

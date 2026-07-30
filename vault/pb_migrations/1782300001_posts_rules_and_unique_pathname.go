@@ -36,8 +36,8 @@ func init() {
 		// feed.go / visits.go already filters explicitly, so this is defense in
 		// depth against bypassed front-end filters.
 		newRule := `deleted = false && status = "published" && private = false || @request.auth.id != "" && deleted = false || @request.auth.role = "admin"`
-		col.ListRule = strPtr(newRule)
-		col.ViewRule = strPtr(newRule)
+		col.ListRule = new(newRule)
+		col.ViewRule = new(newRule)
 		if err := db.Save(col); err != nil {
 			return err
 		}

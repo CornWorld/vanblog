@@ -262,7 +262,7 @@ func TestVMReuseHasNoStatePollution(t *testing.T) {
 	// Interleave valid/invalid on the SAME slot. Each call must be independent.
 	slot := pool.acquire()
 	defer pool.release(slot)
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		valValues := slot.vm.ToValue(validPayload)
 		if err := validateModel(slot.vm, slot.models, "items", valValues); err != nil {
 			t.Fatalf("iter %d valid payload failed on reused VM: %v", i, err)
@@ -295,10 +295,10 @@ func TestVMPoolConcurrentAccess(t *testing.T) {
 	const goroutines = 16
 	const iterations = 50
 	wg.Add(goroutines)
-	for g := 0; g < goroutines; g++ {
+	for range goroutines {
 		go func() {
 			defer wg.Done()
-			for i := 0; i < iterations; i++ {
+			for range iterations {
 				slot := pool.acquire()
 				// Holding the slot briefly simulates real validation work.
 				val := slot.vm.ToValue(map[string]any{"name": "valid"})

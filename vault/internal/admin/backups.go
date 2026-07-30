@@ -6,7 +6,7 @@ import (
 	"log"
 	"net/http"
 	"path/filepath"
-	"sort"
+	"slices"
 	"strings"
 	"time"
 
@@ -95,7 +95,7 @@ func (m *Manager) handleListBackups(e *core.RequestEvent) error {
 		}
 		result = append(result, backupFileInfo{Key: file.Key, Size: file.Size, Modified: file.ModTime.UTC()})
 	}
-	sort.Slice(result, func(i, j int) bool { return result[i].Modified.After(result[j].Modified) })
+	slices.SortFunc(result, func(a, b backupFileInfo) int { return b.Modified.Compare(a.Modified) })
 	return e.JSON(http.StatusOK, result)
 }
 

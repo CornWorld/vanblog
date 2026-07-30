@@ -21,8 +21,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pocketbase/pocketbase/core"
 	"github.com/cornworld/vanblog/internal/site"
+	"github.com/pocketbase/pocketbase/core"
 )
 
 // MaxUserRules bounds the size of site.routing. Each user rule expands to a
@@ -290,9 +290,9 @@ func (s *Service) handleApply(e *core.RequestEvent) error {
 	// because there's no Caddy to push to.
 	if strings.EqualFold(os.Getenv("VANBLOG_SKIP_CADDY_SYNC"), "1") {
 		return e.JSON(http.StatusOK, map[string]any{
-			"applied":         false,
-			"restart_needed":  false,
-			"error":           "VANBLOG_SKIP_CADDY_SYNC=1：当前未连接 Caddy，跳过应用",
+			"applied":        false,
+			"restart_needed": false,
+			"error":          "VANBLOG_SKIP_CADDY_SYNC=1：当前未连接 Caddy，跳过应用",
 		})
 	}
 
@@ -304,14 +304,14 @@ func (s *Service) handleApply(e *core.RequestEvent) error {
 		return nil
 	}(); err != nil {
 		return e.JSON(http.StatusOK, map[string]any{
-			"applied":         false,
-			"restart_needed":  true,
-			"error":           err.Error(),
+			"applied":        false,
+			"restart_needed": true,
+			"error":          err.Error(),
 		})
 	}
 	return e.JSON(http.StatusOK, map[string]any{
-		"applied":         true,
-		"restart_needed":  false,
+		"applied":        true,
+		"restart_needed": false,
 	})
 }
 
@@ -343,6 +343,7 @@ func normalizeAllowlist(in []string) []string {
 // frontend uses it to render a top-of-page health banner:
 //   - caddyLastError non-empty → red banner "上次应用失败：<error>"
 //   - caddy_reachable=false   → yellow banner "Caddy 不可达"
+//
 // Both can be true at once (Caddy is down AND the last push failed).
 type routingStatusResult struct {
 	CaddyLastError string `json:"caddyLastError,omitempty"`
@@ -396,11 +397,11 @@ func (s *Service) routingStatus() routingStatusResult {
 // a quick "what happened lately" view, not a full audit dump. Full audit
 // history lives in the audits collection via pb's standard admin API.
 type routingAuditEntry struct {
-	Created    string                 `json:"created"`
-	Action     string                 `json:"action"`
-	Result     string                 `json:"result"`
-	Detail     map[string]any         `json:"detail"`
-	ActorName  string                 `json:"actorName,omitempty"` // resolved display name; empty = system
+	Created   string         `json:"created"`
+	Action    string         `json:"action"`
+	Result    string         `json:"result"`
+	Detail    map[string]any `json:"detail"`
+	ActorName string         `json:"actorName,omitempty"` // resolved display name; empty = system
 }
 
 // handleRoutingAudits returns the most recent routing-related audit rows
@@ -465,9 +466,9 @@ func (s *Service) handleRoutingAudits(e *core.RequestEvent) error {
 // demand (after save or as a one-off inspection) — there is no live edit
 // preview, which would require replicating TranslateAll in JS.
 type renderConfigResult struct {
-	UserRules []map[string]any `json:"userRoutes"`
-	FullConfig map[string]any `json:"fullConfig,omitempty"` // omitted if build fails (e.g. SSRF)
-	Error     string          `json:"error,omitempty"`      // populated if translation fails
+	UserRules  []map[string]any `json:"userRoutes"`
+	FullConfig map[string]any   `json:"fullConfig,omitempty"` // omitted if build fails (e.g. SSRF)
+	Error      string           `json:"error,omitempty"`      // populated if translation fails
 }
 
 // handleRenderConfig is the developer "show me the actual Caddy config" view.

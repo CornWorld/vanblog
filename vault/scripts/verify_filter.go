@@ -1,4 +1,5 @@
 //go:build ignore
+
 package main
 
 import (
@@ -41,10 +42,10 @@ func main() {
 
 	// Try different filter operators
 	filters := []string{
-		fmt.Sprintf("tags = '%s'", tagR.Id),       // exact match
-		fmt.Sprintf("tags ~ '%s'", tagR.Id),        // LIKE match
-		fmt.Sprintf("'%s' in tags", tagR.Id),       // IN operator
-		fmt.Sprintf("tags:length > 0"),              // array length
+		fmt.Sprintf("tags = '%s'", tagR.Id),  // exact match
+		fmt.Sprintf("tags ~ '%s'", tagR.Id),  // LIKE match
+		fmt.Sprintf("'%s' in tags", tagR.Id), // IN operator
+		fmt.Sprintf("tags:length > 0"),       // array length
 	}
 
 	for _, f := range filters {

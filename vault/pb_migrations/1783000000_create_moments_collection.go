@@ -32,11 +32,11 @@ func init() {
 
 		// Public visitors see only visible moments. Authenticated users can see
 		// visible moments plus their own drafts/hidden moments. Admins see all.
-		col.ListRule = strPtr(`visible = true || @request.auth.id = author || @request.auth.role = "admin"`)
-		col.ViewRule = strPtr(`visible = true || @request.auth.id = author || @request.auth.role = "admin"`)
-		col.CreateRule = strPtr(`@request.auth.id != ""`)
-		col.UpdateRule = strPtr(`@request.auth.id != "" && (@request.auth.id = author || @request.auth.role = "admin")`)
-		col.DeleteRule = strPtr(`@request.auth.id != "" && (@request.auth.id = author || @request.auth.role = "admin")`)
+		col.ListRule = new(`visible = true || @request.auth.id = author || @request.auth.role = "admin"`)
+		col.ViewRule = new(`visible = true || @request.auth.id = author || @request.auth.role = "admin"`)
+		col.CreateRule = new(`@request.auth.id != ""`)
+		col.UpdateRule = new(`@request.auth.id != "" && (@request.auth.id = author || @request.auth.role = "admin")`)
+		col.DeleteRule = new(`@request.auth.id != "" && (@request.auth.id = author || @request.auth.role = "admin")`)
 
 		return db.Save(col)
 	}, func(db core.App) error {

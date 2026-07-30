@@ -7,10 +7,10 @@ import (
 	"fmt"
 	"os"
 
-	_ "github.com/cornworld/vanblog/pb_migrations"
 	"github.com/cornworld/vanblog/internal/article"
 	"github.com/cornworld/vanblog/internal/revisions"
 	"github.com/cornworld/vanblog/internal/visits"
+	_ "github.com/cornworld/vanblog/pb_migrations"
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/core"
 )

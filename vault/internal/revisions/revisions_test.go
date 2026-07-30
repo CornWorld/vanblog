@@ -248,7 +248,7 @@ func TestCleanup(t *testing.T) {
 	post := createTestPost(t, app, "title", "content", "published")
 
 	// Create 5 revisions
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		mgr.CaptureBeforeUpdate(post, ReasonAutoSave, "")
 		post.Set("title", "v"+string(rune('0'+i+1)))
 		app.Save(post)
@@ -300,7 +300,7 @@ func TestExtractSnapshot(t *testing.T) {
 
 	// Verify raw JSON is valid
 	rawJSON := revs[0].GetString("snapshot")
-	var check map[string]interface{}
+	var check map[string]any
 	if err := json.Unmarshal([]byte(rawJSON), &check); err != nil {
 		t.Errorf("snapshot JSON invalid: %v", err)
 	}

@@ -40,11 +40,11 @@ func GenerateRSS(feed Feed) ([]byte, error) {
 	}
 
 	type rssChannel struct {
-		XMLName       xml.Name `xml:"channel"`
-		Title         string   `xml:"title"`
-		Link          string   `xml:"link"`
-		Description   string   `xml:"description"`
-		LastBuildDate string   `xml:"lastBuildDate"`
+		XMLName       xml.Name  `xml:"channel"`
+		Title         string    `xml:"title"`
+		Link          string    `xml:"link"`
+		Description   string    `xml:"description"`
+		LastBuildDate string    `xml:"lastBuildDate"`
 		Items         []rssItem `xml:"item"`
 	}
 
@@ -106,14 +106,14 @@ func GenerateAtom(feed Feed) ([]byte, error) {
 	}
 
 	type atomEntry struct {
-		XMLName    xml.Name      `xml:"entry"`
-		Title      string        `xml:"title"`
-		Link       atomLink      `xml:"link"`
-		ID         string        `xml:"id"`
-		Updated    string        `xml:"updated"`
-		Summary    string        `xml:"summary"`
+		XMLName    xml.Name       `xml:"entry"`
+		Title      string         `xml:"title"`
+		Link       atomLink       `xml:"link"`
+		ID         string         `xml:"id"`
+		Updated    string         `xml:"updated"`
+		Summary    string         `xml:"summary"`
 		Categories []atomCategory `xml:"category"`
-		Author     *atomAuthor   `xml:"author,omitempty"`
+		Author     *atomAuthor    `xml:"author,omitempty"`
 	}
 
 	type atomFeed struct {

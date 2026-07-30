@@ -28,7 +28,7 @@ func TestGenerateSitemap_ValidXML(t *testing.T) {
 		t.Fatalf("GenerateSitemap failed: %v", err)
 	}
 
-	var v interface{}
+	var v any
 	if err := xml.Unmarshal(data, &v); err != nil {
 		t.Fatalf("invalid XML: %v", err)
 	}

@@ -141,7 +141,7 @@ func BenchmarkValidationPreAllocConcurrent(b *testing.B) {
 	pools := make([]chan warmedVM, len(sources))
 	for i, src := range sources {
 		ch := make(chan warmedVM, n)
-		for j := 0; j < n; j++ {
+		for range n {
 			vm := goja.New()
 			if _, err := vm.RunProgram(src.prog); err != nil {
 				b.Fatal(err)

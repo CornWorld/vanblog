@@ -3,11 +3,13 @@
 package validation
 
 import (
+	"cmp"
 	"errors"
 	"fmt"
 	"io/fs"
 	"log"
 	"runtime"
+	"slices"
 	"sort"
 	"strings"
 
@@ -171,15 +173,15 @@ func formatIssues(vm *goja.Runtime, errValue goja.Value) string {
 	}
 
 	var messages []string
-	if items, ok := issues.Export().([]interface{}); ok {
+	if items, ok := issues.Export().([]any); ok {
 		for _, item := range items {
-			issue, ok := item.(map[string]interface{})
+			issue, ok := item.(map[string]any)
 			if !ok {
 				continue
 			}
 
 			path := "(root)"
-			if segments, ok := issue["path"].([]interface{}); ok && len(segments) > 0 {
+			if segments, ok := issue["path"].([]any); ok && len(segments) > 0 {
 				parts := make([]string, len(segments))
 				for i, segment := range segments {
 					parts[i] = fmt.Sprint(segment)
@@ -360,7 +362,7 @@ func RegisterWithSources(app core.App, coreSource ModelSource, packs []NamedMode
 		return errors.New("validation: core model source is required")
 	}
 	sorted := append([]NamedModelSource(nil), packs...)
-	sort.Slice(sorted, func(i, j int) bool { return sorted[i].Name < sorted[j].Name })
+	slices.SortFunc(sorted, func(a, b NamedModelSource) int { return cmp.Compare(a.Name, b.Name) })
 
 	poolSize := vmPoolSize()
 	claimed := make(map[string]string)

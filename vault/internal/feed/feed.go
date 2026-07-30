@@ -3,6 +3,8 @@
 package feed
 
 import (
+	"cmp"
+
 	"github.com/cornworld/vanblog/internal/rss"
 	"github.com/cornworld/vanblog/internal/site"
 	"github.com/cornworld/vanblog/internal/sitemap"
@@ -25,10 +27,7 @@ func GenerateRSS(app core.App, limit int) ([]byte, error) {
 
 	items := make([]rss.FeedItem, len(posts))
 	for i, p := range posts {
-		path := p.GetString("pathname")
-		if path == "" {
-			path = "/posts/" + p.Id
-		}
+		path := cmp.Or(p.GetString("pathname"), "/posts/"+p.Id)
 		items[i] = rss.FeedItem{
 			Title:       p.GetString("title"),
 			Link:        info.BaseURL + path,
@@ -63,10 +62,7 @@ func GenerateAtom(app core.App, limit int) ([]byte, error) {
 
 	items := make([]rss.FeedItem, len(posts))
 	for i, p := range posts {
-		path := p.GetString("pathname")
-		if path == "" {
-			path = "/posts/" + p.Id
-		}
+		path := cmp.Or(p.GetString("pathname"), "/posts/"+p.Id)
 		items[i] = rss.FeedItem{
 			Title:       p.GetString("title"),
 			Link:        info.BaseURL + path,
@@ -102,10 +98,7 @@ func GenerateSitemap(app core.App) ([]byte, error) {
 		urls = append(urls, sitemap.URL{Loc: baseURL + "/", ChangeFreq: "daily", Priority: 1.0})
 	}
 	for _, p := range posts {
-		path := p.GetString("pathname")
-		if path == "" {
-			path = "/posts/" + p.Id
-		}
+		path := cmp.Or(p.GetString("pathname"), "/posts/"+p.Id)
 		urls = append(urls, sitemap.URL{
 			Loc:        baseURL + path,
 			LastMod:    p.GetDateTime("updated").Time(),

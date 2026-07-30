@@ -1,13 +1,14 @@
 package pack
 
 import (
+	"cmp"
 	"errors"
 	"fmt"
 	"io/fs"
 	"os"
 	"path"
 	"path/filepath"
-	"sort"
+	"slices"
 	"strings"
 )
 
@@ -35,7 +36,7 @@ func StageHooks(coreDir string, packs []Pack, destination string) error {
 	}
 
 	sorted := append([]Pack(nil), packs...)
-	sort.Slice(sorted, func(i, j int) bool { return sorted[i].Name < sorted[j].Name })
+	slices.SortFunc(sorted, func(a, b Pack) int { return cmp.Compare(a.Name, b.Name) })
 	for _, p := range sorted {
 		if err := stagePackHooks(p, temp); err != nil {
 			return err

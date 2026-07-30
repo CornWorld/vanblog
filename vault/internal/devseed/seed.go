@@ -56,13 +56,13 @@ func Seed(app core.App, postCount int) error {
 	// ── Posts (via gofakeit) ──
 	catList := catNames
 	tagList := tagNames
-	for i := 0; i < postCount; i++ {
+	for i := range postCount {
 		title := gofakeit.HackerPhrase()
 		content := generatePost(gofakeit.New(uint64(time.Now().UnixNano()) + uint64(i)))
 		cat := catList[rand.Intn(len(catList))]
 		nTags := 2 + rand.Intn(4)
 		var postTags []string
-		for j := 0; j < nTags; j++ {
+		for range nTags {
 			postTags = append(postTags, tagList[rand.Intn(len(tagList))])
 		}
 		if _, err := ensurePost(app, title, content, catIDs[cat], lookups(tagIDs, dedup(postTags))); err != nil {
@@ -247,7 +247,7 @@ func generatePost(f *gofakeit.Faker) string {
 	// Table
 	b.WriteString("\n\n| " + f.HackerNoun() + " | " + f.HackerNoun() + " | " + f.HackerNoun() + " |\n")
 	b.WriteString("|------|------|------|\n")
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		b.WriteString("| " + f.HackerAbbreviation() + " | " + f.HackerAdjective() + " | " + fmt.Sprintf("%d", f.IntN(9999)) + " |\n")
 	}
 
@@ -256,7 +256,7 @@ func generatePost(f *gofakeit.Faker) string {
 
 	// Second heading + list
 	b.WriteString("\n\n## " + f.HackerPhrase() + "\n\n")
-	for i := 0; i < 4; i++ {
+	for range 4 {
 		b.WriteString("- **" + f.HackerAbbreviation() + "**: " + f.HackerPhrase() + "\n")
 	}
 

@@ -198,4 +198,3 @@ func setCaddyLastError(app core.App, msg string) error {
 	site.Set("caddyLastError", msg)
 	return app.Save(site)
 }
-

@@ -27,23 +27,23 @@ type LegacyBackup struct {
 
 // LegacyArticle is an article from the original Vanblog.
 type LegacyArticle struct {
-	ID         int      `json:"id"`
-	Title      string   `json:"title"`
-	Content    string   `json:"content"`
-	Tags       []string `json:"tags"`
-	Top        int      `json:"top"`
-	Category   string   `json:"category"`
-	Hidden     bool     `json:"hidden"`
-	Author     string   `json:"author"`
-	Pathname   string   `json:"pathname"`
-	Private    bool     `json:"private"`
-	Password   string   `json:"password"`
-	Deleted    bool     `json:"deleted"`
-	Viewer     int      `json:"viewer"`
-	Visited    int      `json:"visited"`
-	Copyright  string   `json:"copyright"`
-	CreatedAt  string   `json:"createdAt"`
-	UpdatedAt  string   `json:"updatedAt"`
+	ID        int      `json:"id"`
+	Title     string   `json:"title"`
+	Content   string   `json:"content"`
+	Tags      []string `json:"tags"`
+	Top       int      `json:"top"`
+	Category  string   `json:"category"`
+	Hidden    bool     `json:"hidden"`
+	Author    string   `json:"author"`
+	Pathname  string   `json:"pathname"`
+	Private   bool     `json:"private"`
+	Password  string   `json:"password"`
+	Deleted   bool     `json:"deleted"`
+	Viewer    int      `json:"viewer"`
+	Visited   int      `json:"visited"`
+	Copyright string   `json:"copyright"`
+	CreatedAt string   `json:"createdAt"`
+	UpdatedAt string   `json:"updatedAt"`
 }
 
 // LegacyDraft is a draft from the original Vanblog.
@@ -441,5 +441,3 @@ func (imp *Importer) createArchive(txApp core.App, backup *LegacyBackup) error {
 
 	return txApp.Save(record)
 }
-
-

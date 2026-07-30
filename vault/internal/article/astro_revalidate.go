@@ -3,7 +3,7 @@ package article
 import (
 	"bytes"
 	"encoding/json"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"time"
@@ -25,14 +25,14 @@ func revalidateAstroCache(tags []string) {
 	client := &http.Client{Timeout: 5 * time.Second}
 	resp, err := client.Post(astroURL+"/api/revalidate", "application/json", bytes.NewReader(body))
 	if err != nil {
-		log.Printf("[article] revalidate: failed to reach Astro at %s: %v", astroURL, err)
+		slog.Error("[article] revalidate: failed to reach Astro", "url", astroURL, "err", err)
 		return
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		log.Printf("[article] revalidate: Astro returned %d", resp.StatusCode)
+		slog.Warn("[article] revalidate: Astro returned non-OK", "status", resp.StatusCode)
 	} else {
-		log.Printf("[article] revalidate: cache invalidated for tags %v", tags)
+		slog.Info("[article] revalidate: cache invalidated", "tags", tags)
 	}
 }

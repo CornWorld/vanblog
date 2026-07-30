@@ -32,8 +32,8 @@ func init() {
 		// rows from the main management list. The ListRule is now defense in
 		// depth, not a load-bearing path.
 		newRule := `deleted = false && status = "published" && private = false || @request.auth.id != "" && deleted = false`
-		col.ListRule = strPtr(newRule)
-		col.ViewRule = strPtr(newRule)
+		col.ListRule = new(newRule)
+		col.ViewRule = new(newRule)
 		return db.Save(col)
 	}, func(db core.App) error {
 		// Forward-only. To revert, write a new migration restoring the admin leg.

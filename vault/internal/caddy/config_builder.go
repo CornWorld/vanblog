@@ -441,7 +441,7 @@ func buildTLSApp(email string, allowedDomains []string) *caddyadmin.TLSApp {
 // buildPlainServers constructs the server map for HTTPOnly mode:
 //   - srvPlain: single :80 server hosting all routes (no TLS)
 //   - srvMgmt:  the usual :8080 management fallback (still useful for
-//               operators who expose it via an extra published port)
+//     operators who expose it via an extra published port)
 //
 // No srv_https, no srv_http redirect — those exist only for the HTTPS
 // terminating path.

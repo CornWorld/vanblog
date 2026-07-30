@@ -34,8 +34,8 @@ func init() {
 			return err
 		}
 		revRule := `@request.auth.role = "admin" || @request.auth.id = target.author`
-		revCol.ListRule = strPtr(revRule)
-		revCol.ViewRule = strPtr(revRule)
+		revCol.ListRule = new(revRule)
+		revCol.ViewRule = new(revRule)
 		return db.Save(revCol)
 	}, func(db core.App) error {
 		// Forward-only. To revert, write a new migration restoring prior rules.

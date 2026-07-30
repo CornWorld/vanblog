@@ -3,7 +3,7 @@ package media
 import (
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"reflect"
 
 	"github.com/pocketbase/pocketbase/core"
@@ -70,7 +70,6 @@ func ApplyS3BackendToSettings(app core.App) error {
 
 	// Do not log secret. Bucket/endpoint are non-sensitive and useful for
 	// operators confirming a config change took effect.
-	log.Printf("[media] S3 settings synced: enabled=%v bucket=%s endpoint=%s",
-		userCfg.Enabled, userCfg.Bucket, userCfg.Endpoint)
+	slog.Info("[media] S3 settings synced", "enabled", userCfg.Enabled, "bucket", userCfg.Bucket, "endpoint", userCfg.Endpoint)
 	return nil
 }

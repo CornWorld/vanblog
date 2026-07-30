@@ -39,9 +39,9 @@ import (
 // server-side to catch typos (no other validation makes sense for a
 // bootstrap field).
 type SetupReq struct {
-	Username      string `json:"username"`
-	Email         string `json:"email"`
-	Password      string `json:"password"`
+	Username        string `json:"username"`
+	Email           string `json:"email"`
+	Password        string `json:"password"`
 	PasswordConfirm string `json:"passwordConfirm"`
 }
 

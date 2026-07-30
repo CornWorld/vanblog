@@ -2,6 +2,7 @@ package caddy
 
 import (
 	"fmt"
+	"maps"
 
 	"github.com/CornWorld/caddyadmin"
 )
@@ -63,9 +64,7 @@ func SystemCacheRules(version string) []UserRule {
 // multiple rules; without cloning, later rule modifications would race.
 func cloneMap(m map[string]string) map[string]string {
 	c := make(map[string]string, len(m))
-	for k, v := range m {
-		c[k] = v
-	}
+	maps.Copy(c, m)
 	return c
 }
 

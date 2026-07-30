@@ -24,10 +24,10 @@ import (
 // If the actor is working correctly, every /load completes before the next
 // one starts, so inFlight maxes out at 1 and overlapCount stays 0.
 type overlapAdmin struct {
-	inFlight       int32 // current handlers inside the critical section
-	maxInFlight    int32 // high-water mark
-	overlapCount   int32 // times a handler saw inFlight > 0 on entry
-	totalLoadCalls int32
+	inFlight       atomic.Int32 // current handlers inside the critical section
+	maxInFlight    atomic.Int32 // high-water mark
+	overlapCount   atomic.Int32 // times a handler saw inFlight > 0 on entry
+	totalLoadCalls atomic.Int32
 }
 
 func newOverlapAdmin(t *testing.T) (*httptest.Server, *overlapAdmin) {
@@ -49,24 +49,24 @@ func newOverlapAdmin(t *testing.T) (*httptest.Server, *overlapAdmin) {
 
 		// Enter critical section. Record overlap if another handler is
 		// already inside.
-		cur := atomic.AddInt32(&m.inFlight, 1)
+		cur := m.inFlight.Add(1)
 		if cur > 1 {
-			atomic.AddInt32(&m.overlapCount, 1)
+			m.overlapCount.Add(1)
 		}
 		for {
-			old := atomic.LoadInt32(&m.maxInFlight)
-			if cur <= old || atomic.CompareAndSwapInt32(&m.maxInFlight, old, cur) {
+			old := m.maxInFlight.Load()
+			if cur <= old || m.maxInFlight.CompareAndSwap(old, cur) {
 				break
 			}
 		}
-		atomic.AddInt32(&m.totalLoadCalls, 1)
+		m.totalLoadCalls.Add(1)
 
 		// Hold briefly to widen the window in which overlap could be
 		// observed if the actor were broken. 5ms is long enough to expose
 		// a bug, short enough that the test stays fast.
 		time.Sleep(5 * time.Millisecond)
 
-		atomic.AddInt32(&m.inFlight, -1)
+		m.inFlight.Add(-1)
 		w.WriteHeader(http.StatusOK)
 	})
 
@@ -100,8 +100,7 @@ func TestSyncWorker_SerializesConcurrentSubmits(t *testing.T) {
 	const N = 12
 	var wg sync.WaitGroup
 	wg.Add(N)
-	for i := 0; i < N; i++ {
-		i := i
+	for i := range N {
 		go func() {
 			defer wg.Done()
 			var res replaceResult
@@ -120,11 +119,11 @@ func TestSyncWorker_SerializesConcurrentSubmits(t *testing.T) {
 	}
 	wg.Wait()
 
-	if got := atomic.LoadInt32(&m.overlapCount); got != 0 {
+	if got := m.overlapCount.Load(); got != 0 {
 		t.Fatalf("actor did not serialize: %d overlapping /load handlers (maxInFlight=%d, total=%d)",
-			got, atomic.LoadInt32(&m.maxInFlight), atomic.LoadInt32(&m.totalLoadCalls))
+			got, m.maxInFlight.Load(), m.totalLoadCalls.Load())
 	}
-	if got := atomic.LoadInt32(&m.totalLoadCalls); got < N {
+	if got := m.totalLoadCalls.Load(); got < N {
 		t.Errorf("expected at least %d /load calls, got %d", N, got)
 	}
 }

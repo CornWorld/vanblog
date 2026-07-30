@@ -54,33 +54,33 @@ func main() {
 
 	// 5. Posts: published with multiple tags + category + author
 	post1 := createRecord(app, "posts", map[string]any{
-		"title":   "Building a Blog with PocketBase",
-		"content": "# Hello\n\nThis is my first post.\n\n<!-- more -->\n\nMore content.",
-		"status":  "published",
-		"tags":    []string{tag1.Id, tag3.Id},
+		"title":    "Building a Blog with PocketBase",
+		"content":  "# Hello\n\nThis is my first post.\n\n<!-- more -->\n\nMore content.",
+		"status":   "published",
+		"tags":     []string{tag1.Id, tag3.Id},
 		"category": cat1.Id,
-		"author":  admin.Id,
+		"author":   admin.Id,
 		"pathname": "building-blog-pocketbase",
 	})
 	check("create published post with 2 tags", post1 != nil)
 
 	// 6. Posts: draft (no tags)
 	post2 := createRecord(app, "posts", map[string]any{
-		"title":  "Draft: Learning Rust",
+		"title":   "Draft: Learning Rust",
 		"content": "Work in progress...",
-		"status": "draft",
-		"author": collab.Id,
+		"status":  "draft",
+		"author":  collab.Id,
 	})
 	check("create draft post", post2 != nil)
 
 	// 7. Posts: hidden (accessible by URL but not listed)
 	post3 := createRecord(app, "posts", map[string]any{
-		"title":   "Private Post",
-		"content": "Secret stuff",
-		"status":  "hidden",
-		"private": true,
+		"title":    "Private Post",
+		"content":  "Secret stuff",
+		"status":   "hidden",
+		"private":  true,
 		"password": "secret123",
-		"author":  admin.Id,
+		"author":   admin.Id,
 	})
 	check("create hidden+private post", post3 != nil)
 
@@ -176,21 +176,21 @@ func main() {
 
 	// 19. Audits: log an action
 	createRecord(app, "audits", map[string]any{
-		"actor":   admin.Id,
-		"action":  "post.update",
-		"target":  post1.Id,
-		"result":  "success",
-		"detail":  json.RawMessage(`{"field":"title","old":"Building...","new":"Building... (Updated)"}`),
+		"actor":  admin.Id,
+		"action": "post.update",
+		"target": post1.Id,
+		"result": "success",
+		"detail": json.RawMessage(`{"field":"title","old":"Building...","new":"Building... (Updated)"}`),
 	})
 	audits, _ := app.FindRecordsByFilter("audits", "", "-created", 0, 0)
 	check("audit log entry created", len(audits) == 1)
 
 	// 20. Token: create API token
 	createRecord(app, "tokens", map[string]any{
-		"name":     "CI/CD Token",
+		"name":      "CI/CD Token",
 		"tokenHash": "hashed_secret_here",
-		"user":     admin.Id,
-		"disabled": false,
+		"user":      admin.Id,
+		"disabled":  false,
 	})
 	tokens, _ := app.FindRecordsByFilter("tokens", "", "", 0, 0)
 	check("API token created", len(tokens) == 1)

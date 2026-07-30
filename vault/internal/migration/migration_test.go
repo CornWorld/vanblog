@@ -146,7 +146,7 @@ func TestImport_TagsRelation(t *testing.T) {
 	imp.Import(sampleBackup())
 
 	// Find the "Hello World" post and check tags
-	post, err := app.FindFirstRecordByFilter("posts", "title='Hello World'", )
+	post, err := app.FindFirstRecordByFilter("posts", "title='Hello World'")
 	if err != nil {
 		t.Fatalf("post not found: %v", err)
 	}
