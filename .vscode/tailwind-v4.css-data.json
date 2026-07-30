@@ -1,0 +1,47 @@
+{
+  "version": 1.1,
+  "atDirectives": [
+    {
+      "name": "@source",
+      "description": "Tailwind v4: explicit content source for utility class scanning",
+      "references": [
+        {
+          "name": "Tailwind v4 @source docs",
+          "url": "https://tailwindcss.com/docs/functions-and-directives#source-directive"
+        }
+      ]
+    },
+    {
+      "name": "@theme",
+      "description": "Tailwind v4: define design tokens and theme values"
+    },
+    {
+      "name": "@utility",
+      "description": "Tailwind v4: define custom utility classes"
+    },
+    {
+      "name": "@custom-variant",
+      "description": "Tailwind v4: define custom variant selectors"
+    },
+    {
+      "name": "@variant",
+      "description": "Tailwind v4: apply styles scoped to a variant"
+    },
+    {
+      "name": "@apply",
+      "description": "Tailwind v4: inline existing utility classes"
+    },
+    {
+      "name": "@reference",
+      "description": "Tailwind v4: import theme values without generating CSS"
+    },
+    {
+      "name": "@plugin",
+      "description": "Tailwind v4: register a plugin with addBase/addComponents/addUtilities"
+    },
+    {
+      "name": "@config",
+      "description": "Tailwind v4: specify a custom config file path"
+    }
+  ]
+}
