@@ -37,9 +37,11 @@ services:
     volumes:
       - pb_data:/pb_data
       - caddy_data:/data/caddy
+      - pack_data:/var/lib/vanblog/packs
     environment:
       - VANBLOG_EMAIL=${VANBLOG_EMAIL:-admin@example.com}
       - VANBLOG_CADDY_LOG_LEVEL=${VANBLOG_CADDY_LOG_LEVEL:-warn}
+      - VANBLOG_PACKS_DIR=/var/lib/vanblog/packs
       # HTTP_ONLY 模式:外置反代终止 TLS(取消注释即生效):
       # - VANBLOG_HTTP_ONLY=1
       # pb 内部地址(容器内 127.0.0.1,不需要改):
@@ -49,3 +51,4 @@ services:
 volumes:
   pb_data:
   caddy_data:
+  pack_data:
