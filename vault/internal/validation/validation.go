@@ -7,7 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"log"
+	"log/slog"
 	"runtime"
 	"slices"
 	"sort"
@@ -420,7 +420,7 @@ func RegisterWithSources(app core.App, coreSource ModelSource, packs []NamedMode
 			}
 			err = validateModel(slot.vm, slot.models, collection.Name, values)
 			if err != nil {
-				log.Printf("validation error: collection=%s record=%s source=%s err=%v", collection.Name, event.Record.Id, sp.name, err)
+				slog.Warn("validation error", "collection", collection.Name, "record", event.Record.Id, "source", sp.name, "err", err)
 			}
 			sp.pool.release(slot)
 			if err != nil {

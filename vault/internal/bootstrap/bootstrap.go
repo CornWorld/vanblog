@@ -27,7 +27,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
 	"strings"
 
@@ -125,12 +125,12 @@ func CreateFirstAdmin(app core.App, req SetupReq) error {
 		if !HasAdmin(app) {
 			return fmt.Errorf("bootstrap: failed to save admin record: %w", err)
 		}
-		log.Printf("[bootstrap] warning: admin record saved but hook reported error: %v", err)
+		slog.Warn("[bootstrap] admin record saved but hook reported error", "err", err)
 	}
 
 	// --- _superusers (same email/password, non-fatal) ---
 	if err := createSuperuser(app, email, req.Password); err != nil {
-		log.Printf("[bootstrap] warning: failed to create _superusers record: %v", err)
+		slog.Warn("[bootstrap] failed to create _superusers record", "err", err)
 	}
 
 	return nil
@@ -195,7 +195,7 @@ func (m *Manager) handleComplete(e *core.RequestEvent) error {
 
 	var req SetupReq
 	if err := readJSON(e, &req); err != nil {
-		log.Printf("[trace=%s] setup/complete: bad request body: %v", traceID, err)
+		slog.Warn("[bootstrap] setup/complete: bad request body", "trace", traceID, "err", err)
 		return e.JSON(http.StatusBadRequest, map[string]any{
 			"ok":      false,
 			"error":   "Invalid request body",
@@ -207,7 +207,7 @@ func (m *Manager) handleComplete(e *core.RequestEvent) error {
 		// Log the FULL error chain to Docker logs — this is the only place
 		// where the complete detail (including wrapped inner errors from
 		// validation hooks, PocketBase Save, etc.) is available.
-		log.Printf("[trace=%s] setup/complete: CreateFirstAdmin failed: %+v", traceID, err)
+		slog.Error("[bootstrap] setup/complete: CreateFirstAdmin failed", "trace", traceID, "err", err)
 
 		status := http.StatusBadRequest
 		if strings.Contains(err.Error(), "already exists") {
@@ -228,7 +228,7 @@ func (m *Manager) handleComplete(e *core.RequestEvent) error {
 		id = recs[0].Id
 	}
 
-	log.Printf("[trace=%s] setup/complete: admin created id=%s", traceID, id)
+	slog.Info("[bootstrap] setup/complete: admin created", "trace", traceID, "id", id)
 	return e.JSON(http.StatusOK, map[string]any{
 		"ok":      true,
 		"adminId": id,

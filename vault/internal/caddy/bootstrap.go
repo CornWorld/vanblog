@@ -8,7 +8,7 @@ package caddy
 import (
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"time"
 
@@ -43,8 +43,7 @@ func BootstrapSync(app core.App, caddyAdminURL string, opts BuildOpts, userRules
 
 	for attempt := 0; attempt <= len(bootstrapBackoffs); attempt++ {
 		if attempt > 0 {
-			log.Printf("[caddy] bootstrap: retry %d/%d after %v",
-				attempt, len(bootstrapBackoffs), bootstrapBackoffs[attempt-1])
+			slog.Warn("[caddy] bootstrap: retry", "attempt", attempt, "max", len(bootstrapBackoffs), "sleep", bootstrapBackoffs[attempt-1])
 			time.Sleep(bootstrapBackoffs[attempt-1])
 		}
 
@@ -94,14 +93,13 @@ func BootstrapSync(app core.App, caddyAdminURL string, opts BuildOpts, userRules
 				totalRoutes += len(srv.Routes)
 			}
 		}
-		log.Printf("[caddy] bootstrap: full config loaded (%d routes across all servers, attempt %d)",
-			totalRoutes, attempt+1)
+		slog.Info("[caddy] bootstrap: full config loaded", "routes", totalRoutes, "attempt", attempt+1)
 
 		if err := setCaddyLastError(app, ""); err != nil {
 			// Non-fatal: the config was applied; failing to clear the
 			// status field only means the UI may briefly show a stale
 			// error.
-			log.Printf("[caddy] bootstrap: warning: failed to clear caddyLastError: %v", err)
+			slog.Warn("[caddy] bootstrap: failed to clear caddyLastError", "err", err)
 		}
 		return nil
 	}
@@ -111,9 +109,9 @@ func BootstrapSync(app core.App, caddyAdminURL string, opts BuildOpts, userRules
 	persistedErr := fmt.Errorf("caddy bootstrap failed after %d retries: %w",
 		len(bootstrapBackoffs), lastErr)
 	if err := setCaddyLastError(app, lastErr.Error()); err != nil {
-		log.Printf("[caddy] bootstrap: warning: failed to persist caddyLastError: %v", err)
+		slog.Warn("[caddy] bootstrap: failed to persist caddyLastError", "err", err)
 	}
-	log.Printf("[caddy] bootstrap FAILED: %v", persistedErr)
+	slog.Error("[caddy] bootstrap FAILED", "err", persistedErr)
 	return persistedErr
 }
 
@@ -179,7 +177,7 @@ func loadBootstrapInputs(app core.App) (BuildOpts, []UserRule) {
 			// Keep going with empty user rules — the system + fallback
 			// routes still produce a working site, just without the user's
 			// custom routes. Log so the operator notices.
-			log.Printf("[caddy] site.routing parse failed (continuing with system routes only): %v", err)
+			slog.Warn("[caddy] site.routing parse failed, continuing with system routes only", "err", err)
 			userRules = nil
 		}
 	}

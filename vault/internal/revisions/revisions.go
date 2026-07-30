@@ -10,7 +10,7 @@ package revisions
 import (
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"slices"
 
 	"github.com/pocketbase/dbx"
@@ -60,7 +60,7 @@ func (m *Manager) snapshotBeforePostUpdate(e *core.RecordRequestEvent) error {
 	oldRecord, err := m.app.FindRecordById("posts", e.Record.Id)
 	if err == nil && oldRecord != nil {
 		if err := m.CaptureBeforeUpdate(oldRecord, ReasonAutoSave, ""); err != nil {
-			log.Printf("[revisions] capture failed for %s: %v", e.Record.Id, err)
+			slog.Warn("[revisions] capture failed", "post", e.Record.Id, "err", err)
 		}
 	}
 	return e.Next()

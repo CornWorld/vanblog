@@ -3,7 +3,7 @@ package admin
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
 	"path/filepath"
 	"slices"
@@ -77,14 +77,14 @@ func (m *Manager) handleListBackups(e *core.RequestEvent) error {
 	defer cancel()
 	fsys, err := openBackupsFilesystem(m.app, ctx)
 	if err != nil {
-		log.Printf("[backups] initialize filesystem: %v", err)
+		slog.Error("[backups] initialize filesystem", "err", err)
 		return e.InternalServerError("failed to load backup storage", nil)
 	}
 	defer fsys.Close()
 
 	files, err := fsys.List("")
 	if err != nil {
-		log.Printf("[backups] list: %v", err)
+		slog.Error("[backups] list", "err", err)
 		return e.InternalServerError("failed to list backups", nil)
 	}
 
@@ -111,7 +111,7 @@ func (m *Manager) handleCreateBackup(e *core.RequestEvent) error {
 	ctx, cancel := context.WithTimeout(e.Request.Context(), backupOperationTimeout)
 	defer cancel()
 	if err := m.app.CreateBackup(ctx, name); err != nil {
-		log.Printf("[backups] create %q: %v", name, err)
+		slog.Error("[backups] create", "name", name, "err", err)
 		if backupConflict(m.app) || strings.Contains(err.Error(), "another backup/restore") {
 			return e.JSON(http.StatusConflict, map[string]string{"error": "another backup or restore operation is already running"})
 		}
@@ -139,7 +139,7 @@ func (m *Manager) handleDownloadBackup(e *core.RequestEvent) error {
 	defer cancel()
 	fsys, err := openBackupsFilesystem(m.app, ctx)
 	if err != nil {
-		log.Printf("[backups] initialize download filesystem: %v", err)
+		slog.Error("[backups] initialize download filesystem", "err", err)
 		return e.InternalServerError("failed to load backup storage", nil)
 	}
 	defer fsys.Close()
@@ -167,7 +167,7 @@ func (m *Manager) handleDeleteBackup(e *core.RequestEvent) error {
 	defer cancel()
 	fsys, err := openBackupsFilesystem(m.app, ctx)
 	if err != nil {
-		log.Printf("[backups] initialize delete filesystem: %v", err)
+		slog.Error("[backups] initialize delete filesystem", "err", err)
 		return e.InternalServerError("failed to load backup storage", nil)
 	}
 	defer fsys.Close()
@@ -175,7 +175,7 @@ func (m *Manager) handleDeleteBackup(e *core.RequestEvent) error {
 		return e.NotFoundError("backup not found", "")
 	}
 	if err := fsys.Delete(key); err != nil {
-		log.Printf("[backups] delete %q: %v", key, err)
+		slog.Error("[backups] delete", "key", key, "err", err)
 		return e.InternalServerError("failed to delete backup", nil)
 	}
 	return e.NoContent(http.StatusNoContent)
@@ -197,7 +197,7 @@ func (m *Manager) handleRestoreBackup(e *core.RequestEvent) error {
 	fsys, err := openBackupsFilesystem(m.app, ctx)
 	if err != nil {
 		cancel()
-		log.Printf("[backups] initialize restore filesystem: %v", err)
+		slog.Error("[backups] initialize restore filesystem", "err", err)
 		return e.InternalServerError("failed to load backup storage", nil)
 	}
 	existsErr := ensureBackupExists(fsys, key)
@@ -213,7 +213,7 @@ func (m *Manager) handleRestoreBackup(e *core.RequestEvent) error {
 		ctx, cancel := context.WithTimeout(context.Background(), backupOperationTimeout)
 		defer cancel()
 		if err := m.app.RestoreBackup(ctx, key); err != nil {
-			log.Printf("[backups] restore %q failed: %v", key, err)
+			slog.Error("[backups] restore failed", "key", key, "err", err)
 		}
 	}()
 	return e.JSON(http.StatusAccepted, map[string]any{"accepted": true, "key": key})

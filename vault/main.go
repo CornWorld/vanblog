@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/fs"
 	"log"
+	"log/slog"
 	"os"
 	"path/filepath"
 
@@ -73,10 +74,12 @@ func main() {
 	app.RootCmd.PersistentFlags().StringVar(&coreSchemaPath, "coreSchemaPath", "runtime/core-schema/models.js", "path to the generated core schema artifact")
 	privateRuntimeDir, err := os.MkdirTemp("", "vanblog-hooks-*")
 	if err != nil {
-		log.Fatalf("reserve private Pack runtime directory: %v", err)
+		slog.Error("reserve private Pack runtime directory", "err", err)
+		os.Exit(1)
 	}
 	if err := os.Remove(privateRuntimeDir); err != nil {
-		log.Fatalf("release private Pack runtime directory reservation: %v", err)
+		slog.Error("release private Pack runtime directory reservation", "err", err)
+		os.Exit(1)
 	}
 	staging := filepath.Join(privateRuntimeDir, "pb_hooks")
 
@@ -92,13 +95,15 @@ func main() {
 	}
 	builtins, err := pack.Builtins(os.DirFS(builtinPacksDir))
 	if err != nil {
-		log.Fatalf("load builtin packs: %v", err)
+		slog.Error("load builtin packs", "err", err)
+		os.Exit(1)
 	}
 	var locals []pack.Pack
 	if packsDir != "" {
 		locals, err = pack.DiscoverLocal(packsDir)
 		if err != nil {
-			log.Fatalf("load local packs: %v", err)
+			slog.Error("load local packs", "err", err)
+			os.Exit(1)
 		}
 	}
 	// Single resolution pass with diagnostics: surfaces override warnings
@@ -106,33 +111,38 @@ func main() {
 	// running the whole validate + sort + semver compare twice.
 	resolved, overrideWarnings, err := pack.ResolveWithDiagnostics(builtins, locals)
 	if err != nil {
-		log.Fatalf("resolve packs: %v", err)
+		slog.Error("resolve packs", "err", err)
+		os.Exit(1)
 	}
 	for _, warning := range overrideWarnings {
-		log.Printf("[vanblog] warning: pack %s local override %s is older than builtin %s; replacement proceeds but may regress behavior", warning.Pack, warning.LocalVersion, warning.BuiltinVersion)
+		slog.Warn("[vanblog] pack local override is older than builtin", "pack", warning.Pack, "local", warning.LocalVersion, "builtin", warning.BuiltinVersion)
 	}
 	if err := pack.ValidateV0(resolved); err != nil {
-		log.Fatalf("validate packs: %v", err)
+		slog.Error("validate packs", "err", err)
+		os.Exit(1)
 	}
 	loadable, warnings, err := pack.RuntimeLoadableV0(resolved)
 	if err != nil {
-		log.Fatalf("runtime loadability check: %v", err)
+		slog.Error("runtime loadability check", "err", err)
+		os.Exit(1)
 	}
 	for _, warning := range warnings {
-		log.Printf("[vanblog] warning: pack %s skipped: %s; run vanblog pack build with the dev image", warning.Pack, warning.Reason)
+		slog.Warn("[vanblog] pack skipped, run vanblog pack build with the dev image", "pack", warning.Pack, "reason", warning.Reason)
 	}
 	startupLines, err := pack.StartupSummary(resolved, loadable, warnings)
 	if err != nil {
-		log.Fatalf("pack startup summary: %v", err)
+		slog.Error("pack startup summary", "err", err)
+		os.Exit(1)
 	}
 	for _, line := range startupLines {
-		log.Printf("[vanblog] %s", line)
+		slog.Info("[vanblog]", "line", line)
 	}
 	if packRuntimeDir != "" {
 		staging = filepath.Join(packRuntimeDir, "pb_hooks")
 	}
 	if err := pack.StageHooks(coreHooksDir, loadable, staging); err != nil {
-		log.Fatalf("stage hooks: %v", err)
+		slog.Error("stage hooks", "err", err)
+		os.Exit(1)
 	}
 
 	jsvm.MustRegister(app, jsvm.Config{
