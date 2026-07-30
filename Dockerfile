@@ -113,6 +113,8 @@ RUN for pack in packs/*/; do \
 # --- Stage 5: PROD image (Caddy + pb + Node SSR) ---
 FROM alpine:3.21 AS prod
 
+WORKDIR /app
+
 # Install Caddy + Node.js (for Astro SSR) + ca-certificates
 RUN apk add --no-cache caddy nodejs ca-certificates tzdata
 

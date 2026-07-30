@@ -186,9 +186,6 @@ func setCaddyLastError(app core.App, msg string) error {
 		return nil
 	}
 	site.Set("caddyLastError", msg)
-	// Use UnsafeWithoutHooks to bypass PocketBase JSVM hooks (Goja module
-	// cache can report "Invalid module" on pooled VM reuse). caddyLastError
-	// is a status field — no hook processing needed.
-	return app.UnsafeWithoutHooks().Save(site)
+	return app.Save(site)
 }
 

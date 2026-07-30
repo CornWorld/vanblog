@@ -22,17 +22,17 @@
 
 onRecordAfterCreateSuccess(
   (e) =>
-    require("./lib/vanblog-audit.js").postAction("post.create", e),
+    require(__hooks + "/lib/vanblog-audit.js").postAction("post.create", e),
   "posts"
 );
 onRecordAfterUpdateSuccess(
   (e) =>
-    require("./lib/vanblog-audit.js").postAction("post.update", e),
+    require(__hooks + "/lib/vanblog-audit.js").postAction("post.update", e),
   "posts"
 );
 onRecordAfterDeleteSuccess(
   (e) =>
-    require("./lib/vanblog-audit.js").postAction("post.delete", e),
+    require(__hooks + "/lib/vanblog-audit.js").postAction("post.delete", e),
   "posts"
 );
 
@@ -41,15 +41,15 @@ onRecordAfterDeleteSuccess(
 // ----------------------------------------------------------------------------
 
 onRecordAfterCreateSuccess(
-  (e) => require("./lib/vanblog-audit.js").tagAction("tag.create", e),
+  (e) => require(__hooks + "/lib/vanblog-audit.js").tagAction("tag.create", e),
   "tags"
 );
 onRecordAfterUpdateSuccess(
-  (e) => require("./lib/vanblog-audit.js").tagAction("tag.update", e),
+  (e) => require(__hooks + "/lib/vanblog-audit.js").tagAction("tag.update", e),
   "tags"
 );
 onRecordAfterDeleteSuccess(
-  (e) => require("./lib/vanblog-audit.js").tagAction("tag.delete", e),
+  (e) => require(__hooks + "/lib/vanblog-audit.js").tagAction("tag.delete", e),
   "tags"
 );
 
@@ -59,7 +59,7 @@ onRecordAfterDeleteSuccess(
 
 onRecordAfterCreateSuccess(
   (e) =>
-    require("./lib/vanblog-audit.js").categoryAction(
+    require(__hooks + "/lib/vanblog-audit.js").categoryAction(
       "category.create",
       e
     ),
@@ -67,7 +67,7 @@ onRecordAfterCreateSuccess(
 );
 onRecordAfterUpdateSuccess(
   (e) =>
-    require("./lib/vanblog-audit.js").categoryAction(
+    require(__hooks + "/lib/vanblog-audit.js").categoryAction(
       "category.update",
       e
     ),
@@ -75,7 +75,7 @@ onRecordAfterUpdateSuccess(
 );
 onRecordAfterDeleteSuccess(
   (e) =>
-    require("./lib/vanblog-audit.js").categoryAction(
+    require(__hooks + "/lib/vanblog-audit.js").categoryAction(
       "category.delete",
       e
     ),
@@ -88,17 +88,17 @@ onRecordAfterDeleteSuccess(
 
 onRecordAfterCreateSuccess(
   (e) =>
-    require("./lib/vanblog-audit.js").mediaAction("media.create", e),
+    require(__hooks + "/lib/vanblog-audit.js").mediaAction("media.create", e),
   "media"
 );
 onRecordAfterUpdateSuccess(
   (e) =>
-    require("./lib/vanblog-audit.js").mediaAction("media.update", e),
+    require(__hooks + "/lib/vanblog-audit.js").mediaAction("media.update", e),
   "media"
 );
 onRecordAfterDeleteSuccess(
   (e) =>
-    require("./lib/vanblog-audit.js").mediaAction("media.delete", e),
+    require(__hooks + "/lib/vanblog-audit.js").mediaAction("media.delete", e),
   "media"
 );
 
@@ -108,12 +108,12 @@ onRecordAfterDeleteSuccess(
 
 onRecordAfterCreateSuccess(
   (e) =>
-    require("./lib/vanblog-audit.js").userAction("user.create", e),
+    require(__hooks + "/lib/vanblog-audit.js").userAction("user.create", e),
   "users"
 );
 onRecordAfterUpdateSuccess(
   (e) =>
-    require("./lib/vanblog-audit.js").userAction(
+    require(__hooks + "/lib/vanblog-audit.js").userAction(
       "user.update",
       e,
       true
@@ -122,7 +122,7 @@ onRecordAfterUpdateSuccess(
 );
 onRecordAfterDeleteSuccess(
   (e) =>
-    require("./lib/vanblog-audit.js").userAction("user.delete", e),
+    require(__hooks + "/lib/vanblog-audit.js").userAction("user.delete", e),
   "users"
 );
 
@@ -131,7 +131,7 @@ onRecordAfterDeleteSuccess(
 // ----------------------------------------------------------------------------
 
 onRecordAfterUpdateSuccess(
-  (e) => require("./lib/vanblog-audit.js").siteAction(e),
+  (e) => require(__hooks + "/lib/vanblog-audit.js").siteAction(e),
   "site"
 );
 

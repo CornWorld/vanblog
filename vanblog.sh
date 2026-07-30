@@ -1,4 +1,5 @@
 #!/bin/bash
+set -uo pipefail
 
 #========================================================
 #   Vanblog 一键管理脚本 (gum enhanced)
@@ -7,71 +8,80 @@
 #
 #   依赖:
 #     - docker + docker compose (脚本会自动尝试安装)
-#     - gum (Charm TUI 工具,可选 — 缺失时自动 fallback 到 read 模式)
-#       安装: https://github.com/charmbracelet/gum#installation
+#     - gum (Charm TUI 工具,缺失时自动从 GitHub 下载安装)
 #========================================================
 
 VANBLOG_BASE_PATH="${VANBLOG_BASE_PATH:-/var/vanblog}"
 VANBLOG_DATA_PATH="${VANBLOG_BASE_PATH}/data"
-VANBLOG_SCRIPT_VERSION="v1.1.0"
+VANBLOG_SCRIPT_VERSION="v1.2.0"
 
 # 镜像源(根据 CN 自动切换)
-DEFAULT_IMAGE="ghcr.io/cornworld/vanblog:prod"
-CN_IMAGE="registry.cn-beijing.aliyuncs.com/cornworld/vanblog:prod"
+DEFAULT_IMAGE="${VANBLOG_IMAGE:-ghcr.io/cornworld/vanblog:prod}"
+CN_IMAGE="${VANBLOG_CN_IMAGE:-registry.cn-beijing.aliyuncs.com/cornworld/vanblog:prod}"
 
-export PATH=$PATH:/usr/local/bin
+export PATH=$PATH:/usr/local/bin:/opt/homebrew/bin
 
-# --- gum 检测与 fallback 包装 -----------------------------------------------
-# 设计: 如果 gum 可用,用 TUI 风格;否则退回到 read 模式,脚本仍可运行。
-# 这样 curl | bash 在没装 gum 的机器上不会炸,老用户也能升级到更顺手的体验。
-
-GUM_BIN=""
+# --- gum 包装（无 fallback，gum 由 ensure_gum 自动安装）---
+# 设计: 始终使用 gum 提供一致的 TUI 体验。
+# 首次运行时如果检测不到 gum，自动从 GitHub 下载安装。
 
 gum_choose() {
     # $1 = prompt; 后续参数 = 选项
     local prompt="$1"; shift
-    if [[ -n "$GUM_BIN" ]]; then
-        "$GUM_BIN" choose --header="$prompt" --selected.foreground="212" "$@"
-    else
-        echo "$prompt" >&2
-        local i=1
-        for opt in "$@"; do
-            echo "  $i) $opt" >&2
-            i=$((i + 1))
-        done
-        read -e -p "选择 [1-$#]: " num >&2
-        echo "${!num}"
-    fi
+    gum choose \
+        --header="$prompt" \
+        --header.foreground="39" \
+        --cursor="→ " \
+        --cursor.foreground="212" \
+        --selected.foreground="212" \
+        --item.foreground="250" \
+        --height=15 \
+        "$@"
 }
 
 gum_ask() {
     # $1 = prompt; $2 = default (y/n)
     local prompt="$1" default="${2:-n}"
-    if [[ -n "$GUM_BIN" ]]; then
-        if [[ "$default" = "y" ]]; then
-            "$GUM_BIN" confirm "$prompt" --default=true && return 0 || return 1
-        else
-            "$GUM_BIN" confirm "$prompt" --default=false && return 0 || return 1
-        fi
+    if [[ -t 0 ]]; then
+        gum confirm "$prompt" \
+            --prompt.foreground="212" \
+            --selected.background="212" \
+            --unselected.foreground="250" \
+            $([[ "$default" = "y" ]] && echo "--default=true" || echo "--default=false") \
+            && return 0 || return 1
     else
+        # 非交互（piped stdin）：从管道读取
         local yn
-        read -e -p "$prompt [y/N]: " yn
-        [[ "$yn" =~ ^[yY] ]]
+        IFS= read -r yn
+        case "$yn" in [yY]|[yY][eE][sS]) return 0 ;; *) return 1 ;; esac
     fi
 }
 
 gum_input() {
     # $1 = prompt; $2 = placeholder/default
     local prompt="$1" default="${2:-}"
-    if [[ -n "$GUM_BIN" ]]; then
+    if [[ -t 0 ]]; then
         if [[ -n "$default" ]]; then
-            "$GUM_BIN" input --header="$prompt" --placeholder="$default" --value="$default" --width=80
+            gum input \
+                --header="$prompt" \
+                --header.foreground="39" \
+                --prompt="▸ " \
+                --prompt.foreground="212" \
+                --placeholder="$default" \
+                --value="$default" \
+                --width=80
         else
-            "$GUM_BIN" input --header="$prompt" --width=80
+            gum input \
+                --header="$prompt" \
+                --header.foreground="39" \
+                --prompt="▸ " \
+                --prompt.foreground="212" \
+                --width=80
         fi
     else
+        # 非交互（piped stdin）：从管道读取
         local val
-        read -e -p "$prompt [$default]: " val
+        IFS= read -r val
         echo "${val:-$default}"
     fi
 }
@@ -79,35 +89,70 @@ gum_input() {
 gum_spin() {
     # $1 = spinner message; $2... = command (string passed to bash -c)
     local msg="$1"; shift
-    if [[ -n "$GUM_BIN" ]]; then
-        "$GUM_BIN" spin --spinner dot --title "$msg" -- bash -c "$*"
-    else
-        echo "[$msg]"
-        bash -c "$*"
-    fi
+    gum spin --spinner minidot --title "$msg" -- bash -c "$*"
 }
 
-gum_info()  { [[ -n "$GUM_BIN" ]] && "$GUM_BIN" style --foreground=39  "ℹ $1"  || echo "ℹ $1"; }
-gum_ok()    { [[ -n "$GUM_BIN" ]] && "$GUM_BIN" style --foreground=76  "✓ $1"  || echo "✓ $1"; }
-gum_warn()  { [[ -n "$GUM_BIN" ]] && "$GUM_BIN" style --foreground=214 "⚠ $1"  || echo "⚠ $1"; }
-gum_err()   { [[ -n "$GUM_BIN" ]] && "$GUM_BIN" style --foreground=196 "✗ $1"  || echo "✗ $1"; }
+gum_info()  { gum style --foreground=39 --bold "ℹ $1"; }
+gum_ok()    { gum style --foreground=76 --bold "✓ $1"; }
+gum_warn()  { gum style --foreground=214 --bold "⚠ $1"; }
+gum_err()   { gum style --foreground=196 --bold "✗ $1"; }
 
-detect_gum() {
-    if command -v gum >/dev/null 2>&1; then
-        GUM_BIN="$(command -v gum)"
-        return 0
+gum_section() {
+    # 带圆角边框的区域分隔标题
+    local title="$1"
+    echo ""
+    gum style \
+        --border rounded \
+        --padding "0 2" \
+        --border-foreground 212 \
+        --foreground 39 \
+        --bold \
+        "$title"
+}
+
+ensure_gum() {
+    # 确保 gum 已安装（缺失时自动用包管理器 / 下载安装）
+    command -v gum >/dev/null 2>&1 && return 0
+
+    # --- 1) 包管理器安装 ---
+    if command -v brew >/dev/null 2>&1; then
+        echo "📦 正在通过 Homebrew 安装 gum..."
+        brew install gum && echo "✓ gum 安装成功" && return 0
     fi
-    cat >&2 <<'EOF'
+    if command -v pacman >/dev/null 2>&1; then
+        echo "📦 正在通过 pacman 安装 gum..."
+        pacman -S --noconfirm gum && echo "✓ gum 安装成功" && return 0
+    fi
+    if command -v apt-get >/dev/null 2>&1 && [[ $EUID -eq 0 ]]; then
+        echo "📦 正在通过 apt 安装 gum..."
+        mkdir -p /etc/apt/keyrings
+        curl -fsSL https://repo.charm.sh/apt/gpg.key | gpg --dearmor -o /etc/apt/keyrings/charm.gpg 2>/dev/null || true
+        echo "deb [signed-by=/etc/apt/keyrings/charm.gpg] https://repo.charm.sh/apt/ * *" > /etc/apt/sources.list.d/charm.list 2>/dev/null || true
+        apt-get update -qq && apt-get install -y -qq gum && echo "✓ gum 安装成功" && return 0
+    fi
+    if command -v dnf >/dev/null 2>&1 && [[ $EUID -eq 0 ]]; then
+        echo "📦 正在通过 dnf 安装 gum..."
+        cat > /etc/yum.repos.d/charm.repo <<'REPO'
+[charm]
+name=Charm
+baseurl=https://repo.charm.sh/yum/
+enabled=1
+gpgcheck=1
+gpgkey=https://repo.charm.sh/yum/gpg.key
+REPO
+        dnf install -y gum && echo "✓ gum 安装成功" && return 0
+    fi
 
-┌──────────────────────────────────────────────────────────┐
-│ 提示:未检测到 gum,使用基础 read 模式                       │
-│ 安装 gum 获得更好体验:https://github.com/charmbracelet/gum │
-│   macOS:  brew install gum                                │
-│   Linux:  详见 https://github.com/charmbracelet/gum        │
-└──────────────────────────────────────────────────────────┘
-
-EOF
-    return 1
+    # --- 无可用包管理器 ---
+    echo "✗ 无法自动安装 gum"
+    if [[ $EUID -eq 0 ]]; then
+        echo "  当前系统未检测到 brew / pacman / apt / dnf 等包管理器"
+        echo "  请手动安装: https://github.com/charmbracelet/gum#installation"
+    else
+        echo "  非 root 用户请手动安装: brew install gum"
+        echo "  或: sudo bash $0 以 root 运行（自动使用 apt/dnf）"
+    fi
+    exit 1
 }
 
 # --- 环境探测 ---
@@ -119,10 +164,9 @@ detect_arch() {
         *) gum_err "不支持的架构: $(uname -m) (目前仅支持 amd64 / arm64)"; exit 1 ;;
     esac
 }
-
 detect_cn() {
-    if [[ -n "$CN" ]]; then
-        [[ "$CN" = "true" || "$CN" = "1" ]] && return 0 || return 1
+    if [[ -n "${CN:-}" ]]; then
+        [[ "${CN:-}" = "true" || "${CN:-}" = "1" ]] && return 0 || return 1
     fi
     if command -v curl >/dev/null 2>&1; then
         if curl -m 5 -s https://ipapi.co/json 2>/dev/null | grep -q '"China"'; then
@@ -171,6 +215,26 @@ ensure_docker_compose() {
     docker compose version >/dev/null 2>&1 || { gum_err "请手动安装 docker-compose-plugin"; exit 1; }
 }
 
+# --- 读取已有 compose 配置（用于默认值）---
+read_compose_env() {
+    local key="$1" val=""
+    local cf="${VANBLOG_BASE_PATH}/docker-compose.yml"
+    [[ -f "$cf" ]] || return 1
+
+    # 优先使用 docker compose config 做 YAML 规范化解析，
+    # 避免裸 grep 被注释行 / 多行值 / 特殊字符误判。
+    if docker compose version >/dev/null 2>&1; then
+        val=$((cd "$VANBLOG_BASE_PATH" && docker compose config 2>/dev/null) | \
+              grep -E "VANBLOG_${key}[=:]" | head -1 | \
+              sed -E 's/.*VANBLOG_'"${key}"'[=:][[:space:]]*//;
+                       s/[[:space:]]*$//; s/^"//; s/"$//')
+    fi
+    # 回退：docker compose 不存在时用裸 grep（仅匹配 `- VAR=value` 格式）
+    [[ -n "$val" ]] || val=$(grep -E "^\s*-+\s*VANBLOG_${key}=" "$cf" 2>/dev/null | head -1 | \
+                             sed -E 's/.*VANBLOG_'"${key}"'=[[:space:]]*//; s/[[:space:]]*$//')
+    echo "$val"
+}
+
 # --- compose 调用 ---
 
 dc() {
@@ -182,16 +246,16 @@ dc() {
     fi
 }
 
-# --- 生成 compose 文件 ---
-
 write_compose() {
-    local image="$1" email="$2" http_port="$3" https_port="$4" mgmt_port="$5" http_only="$6"
+    local image="$1" email="$2" http_port="$3" https_port="$4" mgmt_port="$5" http_only="$6" caddy_log_level="${7:-warn}"
 
     local mgmt_block=""
     [[ -n "$mgmt_port" ]] && mgmt_block="      - \"${mgmt_port}:8080\""
 
     local tls_env=""
     [[ "$http_only" = "true" ]] && tls_env="      - VANBLOG_HTTP_ONLY=1"
+
+    mkdir -p "${VANBLOG_DATA_PATH}/packs"
 
     cat > "${VANBLOG_BASE_PATH}/docker-compose.yml" <<EOF
 # Vanblog 一键部署配置 — 由 vanblog.sh 自动生成
@@ -207,9 +271,11 @@ ${mgmt_block}
     volumes:
       - ${VANBLOG_DATA_PATH}/pb_data:/pb_data
       - ${VANBLOG_DATA_PATH}/caddy_data:/data/caddy
+      - ${VANBLOG_DATA_PATH}/packs:/var/lib/vanblog/packs
     environment:
       - VANBLOG_EMAIL=${email}
-      - VANBLOG_CADDY_LOG_LEVEL=warn
+      - VANBLOG_CADDY_LOG_LEVEL=${caddy_log_level}
+      - VANBLOG_PACKS_DIR=/var/lib/vanblog/packs
 ${tls_env}
 
 volumes: {}
@@ -248,7 +314,7 @@ install_vanblog() {
 }
 
 config_compose() {
-    gum_info "修改配置"
+    gum_info "修改配置（留空 = 保持现有值 / 默认值）"
 
     local image
     if detect_cn; then
@@ -258,9 +324,14 @@ config_compose() {
         image="$DEFAULT_IMAGE"
     fi
 
+    local def_email def_caddy_log
+    def_email=$(read_compose_env EMAIL)
+    def_caddy_log=$(read_compose_env CADDY_LOG_LEVEL)
+
     local email
+    email=$(gum_input "邮箱(Let's Encrypt 证书提醒)" "${def_email:-}")
     while [[ -z "$email" ]]; do
-        email=$(gum_input "请输入邮箱(用于 Let's Encrypt 证书提醒)")
+        email=$(gum_input "邮箱不能为空" "${def_email:-}")
     done
 
     local http_port
@@ -283,19 +354,66 @@ config_compose() {
         mgmt_port="${mgmt_port:-8080}"
     fi
 
-    write_compose "$image" "$email" "$http_port" "$https_port" "$mgmt_port" "$http_only"
+    local caddy_log_level
+    caddy_log_level=$(gum_input "Caddy 日志级别 (debug|info|warn|error)" "${def_caddy_log:-warn}")
+    caddy_log_level="${caddy_log_level:-${def_caddy_log:-warn}}"
+
+    write_compose "$image" "$email" "$http_port" "$https_port" "$mgmt_port" "$http_only" "$caddy_log_level"
     gum_ok "配置已保存到 ${VANBLOG_BASE_PATH}/docker-compose.yml"
     gum_info "重启生效: ./vanblog.sh restart"
 }
 
 start_vanblog()   { gum_info "启动 Vanblog";   dc up -d && gum_ok "已启动"   || gum_err "启动失败"; before_show_menu; }
 stop_vanblog()    { gum_info "停止 Vanblog";   dc down && gum_ok "已停止"     || gum_err "停止失败"; before_show_menu; }
-restart_vanblog() { gum_info "重启 Vanblog";   dc restart && gum_ok "已重启" || gum_err "重启失败"; before_show_menu; }
+restart_vanblog() {
+    local override="${VANBLOG_BASE_PATH}/docker-compose.maintenance.yml"
+    if [[ -f "$override" ]]; then
+        rm -f "$override"
+        gum_info "已移除维护模式覆盖"
+    fi
+    gum_info "重启 Vanblog"
+    dc down && dc up -d && gum_ok "已重启" || gum_err "重启失败"
+    before_show_menu
+}
 
 update_vanblog() {
     gum_info "更新 Vanblog"
     dc pull && dc down && dc up -d
     [[ $? -eq 0 ]] && gum_ok "更新成功" || gum_err "更新失败,请查看日志"
+    before_show_menu
+}
+pack_cli() {
+    # 透传给容器内 vanblog pack CLI（挂载了持久化 packs 目录）
+    dc exec vanblog vanblog pack --packsDir=/var/lib/vanblog/packs "$@"
+}
+diagnose_vanblog() {
+    gum_section "诊断 Vanblog"
+    cd "$VANBLOG_BASE_PATH" || exit 1
+
+    gum_section "容器状态"
+    dc ps 2>/dev/null || echo "  容器未运行"
+
+    gum_section "资源使用"
+    local cid
+    cid=$(dc ps -q vanblog 2>/dev/null | head -1)
+    if [[ -n "$cid" ]]; then
+        docker stats --no-stream "$cid" 2>/dev/null || echo "  docker stats 不可用"
+    else
+        echo "  容器未运行"
+    fi
+
+    gum_section "磁盘占用"
+    du -sh "$VANBLOG_DATA_PATH" 2>/dev/null || echo "  数据目录不可读"
+    du -sh "${VANBLOG_DATA_PATH}/packs" 2>/dev/null || true
+
+    gum_section "最近日志（最后 20 行）"
+    dc logs --tail=20 2>/dev/null || echo "  日志不可用"
+
+    gum_section "系统信息"
+    docker info --format 'Docker: {{.ServerVersion}} | OS: {{.OperatingSystem}} | CPU: {{.NCPU}} | Memory: {{.MemTotal}}' 2>/dev/null || true
+    echo "  脚本版本: ${VANBLOG_SCRIPT_VERSION}"
+    echo "  数据目录: ${VANBLOG_DATA_PATH}"
+
     before_show_menu
 }
 
@@ -309,9 +427,9 @@ backup_vanblog() {
     local name="vanblog-backup-$(date +%Y%m%d%H%M%S).tar.gz"
     cd "$VANBLOG_BASE_PATH" || exit 1
     if dc down >/dev/null 2>&1; then
-        gum_spin "压缩数据..." "tar czf $name data"
+        gum_spin "压缩数据..." "tar czf $name data packs"
         dc up -d >/dev/null 2>&1
-        gum_ok "备份成功: ${VANBLOG_BASE_PATH}/${name}"
+        gum_ok "备份成功: ${VANBLOG_BASE_PATH}/${name}（含 pb_data、caddy_data、packs）"
     else
         gum_err "停止服务失败,备份中止"
     fi
@@ -354,16 +472,22 @@ enter_maintenance() {
     gum_info "用于 TLS 配置出错时通过 HTTP 修复 site.allowedDomains"
     gum_ask "继续?" n || return 0
 
-    cd "$VANBLOG_BASE_PATH" || exit 1
-    if ! grep -q "8080:8080" docker-compose.yml; then
-        sed -i '/- "443:443"/a\      - "8080:8080"' docker-compose.yml
-        gum_info "已添加 8080 端口映射,重启中..."
-        dc down && dc up -d
-        gum_ok "现在可通过 http://<你的IP>:8080/admin/ 修复配置"
-        gum_warn "修复后: ./vanblog.sh restart(并手动移除 8080 映射)"
-    else
-        gum_ok "8080 端口已映射,无需重复操作"
+    local override="${VANBLOG_BASE_PATH}/docker-compose.maintenance.yml"
+    if [[ -f "$override" ]]; then
+        gum_ok "已处于维护模式（8080 端口已暴露）"
+        before_show_menu
+        return
     fi
+    cat > "$override" <<'OVERRIDE'
+services:
+  vanblog:
+    ports:
+      - "8080:8080"
+OVERRIDE
+    gum_info "已生成维护覆盖文件, 重启中..."
+    dc down && dc up -d
+    gum_ok "现在可通过 http://<你的IP>:8080/admin/ 修复配置"
+    gum_warn "修复完成后运行 ./vanblog.sh restart（自动移除维护覆盖）"
     before_show_menu
 }
 
@@ -386,17 +510,34 @@ Vanblog 一键管理脚本 ${VANBLOG_SCRIPT_VERSION}
   ./vanblog.sh restore        # 从备份恢复
   ./vanblog.sh maintenance    # 进入维护模式(暴露 8080)
   ./vanblog.sh uninstall [purge]  # 卸载(purge 同时删镜像)
+  ./vanblog.sh pack list      # 列出已安装的 Pack(主题/扩展)
+  ./vanblog.sh pack status    # 查看 Pack 生命周期状态
+  ./vanblog.sh pack plan      # 部署预检(只读)
+  ./vanblog.sh pack inspect <name>  # 查看单个 Pack 详情
+  ./vanblog.sh pack add <name>      # 添加 Pack 本地覆盖
+  ./vanblog.sh diagnose     # 诊断容器状态和资源使用
 
-可选依赖:
-  gum — Charm 出品的 TUI 工具,缺失时自动 fallback 到 read 模式
-        安装: https://github.com/charmbracelet/gum#installation
+自动依赖:
+  gum — Charm 出品的 TUI 工具,缺失时自动下载安装
 
 数据目录: ${VANBLOG_DATA_PATH}
 配置文件: ${VANBLOG_BASE_PATH}/docker-compose.yml
 EOF
 }
 
+show_banner() {
+    echo ""
+    gum style \
+        --border double \
+        --padding "1 2" \
+        --border-foreground 212 \
+        --foreground 212 \
+        --bold \
+        " Vanblog 管理脚本 ${VANBLOG_SCRIPT_VERSION} "
+}
+
 show_menu() {
+    show_banner
     local choice
     choice=$(gum_choose "Vanblog ${VANBLOG_SCRIPT_VERSION} — 请选择" \
         "1. 安装 Vanblog" \
@@ -410,21 +551,25 @@ show_menu() {
         "9. 恢复数据" \
         "10. 进入维护模式" \
         "11. 卸载 Vanblog" \
+        "12. 诊断系统" \
+        "13. Pack 管理" \
         "0. 退出")
     [[ -z "$choice" || "$choice" = "0. 退出" ]] && exit 0
 
-    case "${choice:0:2}" in
-        "1.") install_vanblog ;;
-        "2.") config_compose; before_show_menu ;;
-        "3.") start_vanblog ;;
-        "4.") stop_vanblog ;;
-        "5.") restart_vanblog ;;
-        "6.") update_vanblog ;;
-        "7.") show_log ;;
-        "8.") backup_vanblog ;;
-        "9.") restore_vanblog ;;
-        "10") enter_maintenance ;;
-        "11") uninstall_vanblog ;;
+    case "$choice" in
+        "1. 安装 Vanblog")    install_vanblog ;;
+        "2. 修改配置")        config_compose; before_show_menu ;;
+        "3. 启动服务")        start_vanblog ;;
+        "4. 停止服务")        stop_vanblog ;;
+        "5. 重启服务")        restart_vanblog ;;
+        "6. 更新镜像")        update_vanblog ;;
+        "7. 查看日志")        show_log ;;
+        "8. 备份数据")        backup_vanblog ;;
+        "9. 恢复数据")        restore_vanblog ;;
+        "10. 进入维护模式")   enter_maintenance ;;
+        "11. 卸载 Vanblog")   uninstall_vanblog ;;
+        "12. 诊断系统")       diagnose_vanblog ;;
+        "13. Pack 管理")      pack_cli list; before_show_menu ;;
     esac
 }
 
@@ -434,9 +579,8 @@ before_show_menu() {
 }
 
 # --- 入口 ---
-
-if [[ $EUID -ne 0 ]]; then
-    gum_err "请使用 root 用户运行此脚本"
+if [[ $EUID -ne 0 && "${VANBLOG_SKIP_ROOT_CHECK:-}" != "1" ]]; then
+    gum_err "请使用 root 用户运行此脚本（测试环境可设 VANBLOG_SKIP_ROOT_CHECK=1）"
     exit 1
 fi
 
@@ -445,7 +589,7 @@ if ! command -v curl >/dev/null 2>&1; then
     exit 1
 fi
 
-detect_gum  # 设 GUM_BIN,缺失则 fallback
+ensure_gum  # 自动安装 gum（如果缺失）
 mkdir -p "$VANBLOG_BASE_PATH"
 
 if [[ $# -gt 0 ]]; then
@@ -461,6 +605,8 @@ if [[ $# -gt 0 ]]; then
         restore)     restore_vanblog 0 ;;
         maintenance) enter_maintenance ;;
         uninstall)   uninstall_vanblog "$2" ;;
+        pack)        shift; pack_cli "$@" ;;
+        diagnose)    diagnose_vanblog 0 ;;
         -h|--help|help) show_usage ;;
         *)           show_usage; exit 1 ;;
     esac
