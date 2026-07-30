@@ -50,7 +50,7 @@ func TestTranslate_Cache_NoHeaders(t *testing.T) {
 }
 
 func TestSystemCacheRules_AppliesInTranslateAll(t *testing.T) {
-	rules := SystemCacheRules()
+	rules := SystemCacheRules("")
 	if len(rules) == 0 {
 		t.Fatal("expected at least one system cache rule")
 	}

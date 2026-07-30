@@ -13,7 +13,8 @@ echo "done"
 echo ""
 echo "=== 2. Build dev image ==="
 cd "$(dirname "$0")/.."
-docker build --target dev -t "$IMAGE_NAME" . 2>&1 | tail -3
+docker build --target dev -t "$IMAGE_NAME" \
+  --build-arg "BUILD_VERSION=$(git describe --always --dirty --long 2>/dev/null || date -u +%Y%m%d%H%M%S)" . 2>&1 | tail -3
 
 echo ""
 echo "=== 3. Start fresh container ==="

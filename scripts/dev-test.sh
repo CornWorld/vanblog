@@ -73,7 +73,8 @@ echo ""
 echo -e "${YELLOW}--- Step 2/5: Build dev Docker image ---${NC}"
 cd "$PROJECT_ROOT"
 info "Building --target dev as $IMAGE_NAME ..."
-docker build --target dev -t "$IMAGE_NAME" .
+docker build --target dev -t "$IMAGE_NAME" \
+  --build-arg "BUILD_VERSION=$(git describe --always --dirty --long 2>/dev/null || date -u +%Y%m%d%H%M%S)" .
 ok "Image built: $IMAGE_NAME"
 
 # === Step 3: Start fresh container ===

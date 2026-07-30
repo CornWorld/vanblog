@@ -311,6 +311,17 @@ export function createVanblogMiddleware(opts: VanblogMiddlewareOptions = {}) {
     } catch {
       console.warn("[vanblog] failed to export auth cookie");
     }
+
+    // Prevent caching of dynamic HTML: browsers / CDNs / corp proxies must
+    // not serve stale page content. API responses (/api/*) and admin UI
+    // (/_/*) are already handled by their respective backends — this is a
+    // safety net for Astro's catch-all SSR route.
+    if (!response.headers.has("Cache-Control")) {
+      response.headers.set(
+        "Cache-Control",
+        "no-cache, no-store, must-revalidate"
+      );
+    }
     return response;
   };
 }

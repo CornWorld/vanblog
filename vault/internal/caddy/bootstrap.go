@@ -135,6 +135,16 @@ func loadBootstrapInputs(app core.App) (BuildOpts, []UserRule) {
 	opts := BuildOpts{}
 	var userRules []UserRule
 
+	// VANBLOG_BUILD_VERSION is injected at Docker build time (git commit +
+	// timestamp). It becomes a weak ETag on system cache rules, so re-deploying
+	// a new image invalidates browser caches for URLs whose content hash is
+	// the same as the previous build.
+	if v := os.Getenv("VANBLOG_BUILD_VERSION"); v != "" {
+		opts.Version = v
+	} else if data, err := os.ReadFile("/etc/vanblog/build-version"); err == nil {
+		opts.Version = string(data)
+	}
+
 	// VANBLOG_EMAIL is the Let's Encrypt registration email. It's the same
 	// env used by docker/entrypoint.{prod,dev}.sh, so both sides stay in
 	// sync without a DB field. Defaults() leaves it empty if unset, and

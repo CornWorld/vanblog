@@ -43,6 +43,12 @@ type BuildOpts struct {
 	// HTTP→HTTPS redirect, no on-demand TLS. Intended for operators who
 	// terminate TLS at an external reverse proxy.
 	HTTPOnly bool `json:"-"`
+
+	// Version is a build identifier (git commit + timestamp) injected at
+	// Docker build time. When non-empty, it is used as a fallback weak ETag
+	// on system cache rules so that re-deploying a new image invalidates
+	// browser caches even for URLs whose content hash hasn't changed.
+	Version string `json:"-"`
 }
 
 // Defaults fills zero-value fields with sensible defaults.
@@ -267,7 +273,7 @@ func BuildFullConfig(opts BuildOpts, userRules []UserRule) (caddyadmin.Config, e
 	// enforces reserved-path and SSRF validation on every rule; a failure
 	// means the user config is unsafe and we refuse to produce a config at
 	// all (rather than silently dropping the bad rule).
-	combined := append(SystemCacheRules(), userRules...)
+	combined := append(SystemCacheRules(opts.Version), userRules...)
 	rules, err := TranslateAll(combined, nil)
 	if err != nil {
 		return caddyadmin.Config{}, err
@@ -505,7 +511,7 @@ func buildBootstrapHTTPOnly(opts BuildOpts) caddyadmin.Config {
 // route table on :80, no TLS app. Route order on srvPlain is identical to
 // the HTTPS path's srv_https ordering so user-facing behavior is unchanged.
 func buildFullHTTPOnly(opts BuildOpts, userRules []UserRule) (caddyadmin.Config, error) {
-	combined := append(SystemCacheRules(), userRules...)
+	combined := append(SystemCacheRules(opts.Version), userRules...)
 	rules, err := TranslateAll(combined, nil)
 	if err != nil {
 		return caddyadmin.Config{}, err

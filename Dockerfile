@@ -102,6 +102,15 @@ RUN for theme in themes/*/; do \
 ARG VANBLOG_ACTIVE_THEME=default
 RUN echo "${VANBLOG_ACTIVE_THEME}" > /build/.default-theme
 
+# Record the build version (git commit + dirty flag) for cache invalidation.
+# Pass via --build-arg BUILD_VERSION=$(git describe --always --dirty --long).
+# When empty, no ETag is emitted — the file-based ETag from the dispatcher
+# still provides per-file conditional revalidation.
+ARG BUILD_VERSION=
+RUN if [ -n "${BUILD_VERSION}" ]; then \
+      printf '%s' "${BUILD_VERSION}" > /build/.build-version; \
+    fi
+
 # Build Pack schema artifacts (schema.ts -> schema.js) for any Pack that ships one.
 # The Go runtime reads schema.js from the Pack fs.FS to validate Pack-owned models.
 RUN for pack in packs/*/; do \
@@ -128,6 +137,8 @@ COPY --from=astro-build /build /build
 # Copy built themes (all of them, not just active).
 # Each theme has its own dist/ with server/entry.mjs + client/ assets.
 COPY --from=astro-build /build/.default-theme /etc/vanblog/default-theme
+# Build version file for cache invalidation (weak ETag fallback).
+COPY --from=astro-build /build/.build-version /etc/vanblog/build-version
 # No more symlink — the dispatcher (Phase B) or entrypoint reads default-theme.
 # Copy the theme dispatcher (ESM module, no compilation needed).
 COPY --from=astro-build /build/app/src/dispatcher/index.mjs /app/dispatcher.mjs
