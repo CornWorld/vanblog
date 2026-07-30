@@ -9,7 +9,7 @@ set -uo pipefail
 #     - 需要 root 权限（vanblog.sh 需要 root）
 #
 #   用法:
-#     sudo bash test/install-test.sh
+#     sudo bash scripts/install-test.sh
 #
 #   测试流程:
 #     1. 创建临时目录作为 VANBLOG_BASE_PATH
@@ -21,14 +21,8 @@ set -uo pipefail
 #     7. 清理
 #========================================================
 
-red()   { echo -e "\033[31m$1\033[0m"; }
-green() { echo -e "\033[32m$1\033[0m"; }
-blue()  { echo -e "\033[34m$1\033[0m"; }
-
-PASS=0
-FAIL=0
-assert_ok()   { PASS=$((PASS+1)); green "  ✓ $1"; }
-assert_fail() { FAIL=$((FAIL+1)); red   "  ✗ $1 (${2:-})"; }
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+source "$SCRIPT_DIR/lib/common.sh"
 
 # 交互检查点: VANBLOG_TEST_INTERACTIVE=0 可跳过
 interactive_pause() {
