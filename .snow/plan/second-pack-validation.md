@@ -1,5 +1,7 @@
 # 第二个 Pack：验证 Pack 抽象闭环
 
+## Status: ✅ Completed
+
 ## Context
 
 当前 Pack 基建（discovery → metadata → route → schema builder → Goja validation → staging promotion → runtime source）已实施完成，但工作还停留在 **uncommitted dirty state**（12 modified + 6 untracked）。你自己在批判性分析里最尖锐的结论：**当前投入是为未来投资，但只靠 bookmarks 这一个内置 Pack，根本无法证明抽象可复用。**

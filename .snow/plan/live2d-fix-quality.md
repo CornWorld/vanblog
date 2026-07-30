@@ -1,5 +1,7 @@
 # 修复 live2d-companion Pack 的代码质量问题
 
+## Status: ✅ Completed
+
 ## Context
 
 经复核，前一轮指出的 4 个"卡点"中，3 个不是 vanblog 契约缺口，而是 pack 作者代码质量问题：

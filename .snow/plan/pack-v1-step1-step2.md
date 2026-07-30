@@ -1,5 +1,7 @@
 # Pack v1 Step 1/2 基建推进
 
+## Status: ✅ Completed
+
 ## Context
 
 用户确认继续沿用当前 `packs/` 结构推进 Pack 基建，并修正之前关于 Go embedded validator 的判断：Go 侧已经有 `ModelSource` / `PackSource` 边界，`schema.js` 可从 Pack `fs.FS` 或后续外部 resolved artifact 加载，`go:embed` 只是默认 fallback，不应在文档中继续表述为永久必需路径。

@@ -1,5 +1,7 @@
 # Pack v1 Schema Builder CLI
 
+## Status: ✅ Completed
+
 ## Context
 
 Pack v1 已经完成通用 `packs/` discovery、Astro-side metadata registry、`virtual:vanblog/packs` 消费，以及 Go 侧 `PackSource` / `ResolveModelSource` 从 Pack `fs.FS` 读取预编译 `schema.js` 的能力。当前缺口是：文档约定 Pack 作者通过 dev image / builder 把 `schema.ts` 编译成 `schema.js`，但仓库还没有 `vanblog pack build` 命令或对应构建入口。

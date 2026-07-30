@@ -1,5 +1,7 @@
 # Pack v1 下一阶段：多 Pack Schema 与产品边界
 
+## Status: ✅ Completed
+
 ## Context
 
 `moments` 已证明 Pack v1 的 discovery、metadata、route、hook staging、schema builder、Goja validation、Docker production build 可以被第二个 Pack 复用，且不需要 Pack kernel 特殊处理。

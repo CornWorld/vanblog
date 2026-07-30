@@ -1,5 +1,7 @@
 # Pack 目录、Lint、旧插件与 CLI 整理
 
+## Status: ✅ Completed
+
 ## Context
 
 Pack v0 已跑通，但当前实现仍有四类工程化债务：PocketBase JSVM 全局变量在根 ESLint 配置中声明不完整；内置 Pack 被拆在 Go 内部目录与 Astro 目录两处；已迁移的 Bookmarks 仍保留 legacy plugin 资源；CLI `eject` 的命名不利于未来扩展本地/远程来源。

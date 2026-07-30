@@ -1,5 +1,7 @@
 # Spike 2 报告：custom/builtin 混合模型验证结论
 
+## Status: ✅ Completed
+
 **日期**: 2026-07-26
 **作者**: spike-driven planning session
 **Plan**: `.snow/plan/migrate-vanblog-frontend-to-theme-palette.md`

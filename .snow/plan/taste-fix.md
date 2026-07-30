@@ -1,5 +1,7 @@
 # 品味修正
 
+## Status: ✅ Completed
+
 ## Context
 评审发现的代码质量问题修复。
 

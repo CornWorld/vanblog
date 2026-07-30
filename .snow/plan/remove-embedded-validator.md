@@ -1,5 +1,7 @@
 # Remove Embedded Core Validator
 
+## Status: ✅ Completed
+
 ## Context
 
 当前 Pack runtime 已支持从 Pack artifact 加载 schema，但 `vault/internal/validation/validation.go` 仍通过 `go:embed models.js` 提供 `EmbeddedSource`，`main.go` 也把它作为 core fallback。这样只是“解耦了接口”，没有真正完成最初的 core schema artifact 化目标。

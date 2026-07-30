@@ -1,5 +1,7 @@
 # Pack Phase 3: Pack-side Schema Loading
 
+## Status: ✅ Completed
+
 ## Context
 
 Pack v0 完成了 kernel / hook staging / Astro page injection / CLI / runtime skip+warn。Schema validation 有 `ModelSource` 接口和 `EmbeddedSource` 实现，但 `main.go` 只用 embedded bundle（`go:embed models.js`），不从 Pack FS 读 schema。

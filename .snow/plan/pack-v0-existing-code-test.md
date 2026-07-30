@@ -1,5 +1,7 @@
 # Pack v0 现有代码与功能测试
 
+## Status: ✅ Completed
+
 ## Context
 
 用户希望判断 Pack 是否可以继续推进，但当前先不实现 `cms-theme-portability-analysis.md` 里的产品级主题可移植性体系，而是先测试已有 Pack v0 代码与功能，确认现状是否稳定、是否存在阻塞点。

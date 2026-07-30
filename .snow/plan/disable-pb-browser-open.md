@@ -1,5 +1,7 @@
 # 禁用 PocketBase 浏览器自动打开行为
 
+## Status: ✅ Completed
+
 ## Context
 
 PocketBase v0.39.5 在首次启动（没有自定义超管用户时）会自动打开浏览器访问安装页面。这是通过 `apis.DefaultInstallerFunc` 实现的，其调用链为：

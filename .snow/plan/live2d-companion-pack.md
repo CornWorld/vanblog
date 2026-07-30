@@ -1,5 +1,7 @@
 # Live2D Companion Demo Pack
 
+## Status: ✅ Completed
+
 ## Context
 
 新增一个只通过 `packs/` 实现的 demo Pack，展示 Pack 作为功能扩展单元的能力，而不修改 Vanblog 既有 Go、Astro integration、layout、SDK 或构建代码。

@@ -1,5 +1,7 @@
 # Plugin Cleanup — 修复最简单问题 + 安全验证
 
+## Status: ✅ Completed
+
 ## 修复 (3 项)
 
 ### Phase 1: 删除 buildPageData 死代码

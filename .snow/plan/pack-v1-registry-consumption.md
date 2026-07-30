@@ -1,5 +1,7 @@
 # Pack v1 Registry Consumption
 
+## Status: ✅ Completed
+
 ## Context
 
 上一阶段已经完成通用 `packs/` discovery、`virtual:vanblog/packs` client-safe metadata module、`packs/bookmarks/pack.ts` 和文档修正。当前 registry 还没有被前端布局消费：`BaseLayout.astro` 仍调用 `Astro.locals.getNavItems()`，而 SDK middleware 里的 `getNavItems()` 当前只返回空数组。下一步应让内置 frontend 直接消费 build-time Pack registry，把 Pack 导航从旧 plugin nav cache 迁移到 Astro-side registry。

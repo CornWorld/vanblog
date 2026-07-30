@@ -1,5 +1,7 @@
 # Frontend Contribution 宿主扩展与 Live2D Demo Pack
 
+## Status: ✅ Completed
+
 ## Context
 
 当前 Pack registry 只支持 metadata、导航和 `/p/<pack>` 页面注入，无法满足 Live2D 看板娘、全局音乐播放器、鼠标特效等真实插件需求。用户通常期望 widget 出现在所有公开博客页面的固定 viewport 位置，而不是只存在于 `/p/<pack>` 演示页。

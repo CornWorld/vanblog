@@ -1,5 +1,7 @@
 # Vanblog Pack 最小闭环实施方案
 
+## Status: ✅ Completed
+
 ## Context
 
 Vanblog 已有一套“插件”雏形：`plugins/moments` / `plugins/bookmarks` 提供 JSON Manifest、PB JSVM hooks 与 HTML fragment，`vault/internal/plugins/plugins.go` 负责运行时模板和路由，Astro 通过 `/p/[plugin]` 与 `/admin/plugins/[plugin]` 动态包装 fragment；同时 PB 官方 Go migrations、用户 JS migrations、Zod v4 models→Vite CJS→Go embed、Astro 单应用 Node SSR、Caddy JSON config builder 已各自独立存在。
