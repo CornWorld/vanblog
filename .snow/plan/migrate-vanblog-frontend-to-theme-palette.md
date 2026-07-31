@@ -1,5 +1,10 @@
 # 迁移 vanblog 前端 → Astro 标准 theme + palette 架构（Spike 3 模型）
 
+> **Status: ✅ 已执行（2026-07-31）—— 结构重构落地，概念文档见 [`docs/theme-concepts.md`](../docs/theme-concepts.md)**
+>
+> 本 plan 的**架构部分已实施完成**：`themes/base`（原 bare，minimal）与 `themes/vanblog`（原 app/src 视觉层迁出）已落地，`@vanblog/builtin/*` → `@vanblog/base/*` 改名完成，app/src 收缩为纯平台层。
+> 未完成的余量（palette 多套内置、MCP tools、admin 切换 UI）属后续独立任务，见 `docs/theme-dispatcher-design.md` 与本文档 Phase 5/6/7。
+
 > 本 plan **取代** 旧版「custom/builtin 二分 + git submodule」方案（Spike 2）。
 > 新方向（Spike 3）：**theme 是独立 Astro 项目，通过 `@vanblog/builtin/*` alias 引用主仓库 builtin，theme 的 `src/builtin-overrides/` 可选覆盖**。30 行 integration 代码，零额外机制。
 
@@ -19,11 +24,11 @@ vanblog 后端已重构到 PocketBase + Go 业务层，前端基于 Astro 5/6 �
 
 vanblog 走过三轮 spike，每一轮都基于上一轮的实测结论收敛：
 
-| Spike | 模型 | 验证结论 | 致命问题 |
-|-------|------|----------|----------|
-| **Spike 1** | 覆盖式（`hooks/themes/{n}/` 覆盖 `app/src/`） | Vite `resolveId` 劫持 `.astro` 可行；`injectRoute` + `src/pages/` 同名路由冲突 | Astro 6 禁止 `injectRoute` 与 `src/pages/` 同名（F1），修正方案要把所有 builtin page 物理移走，侵入性极大（F2） |
-| **Spike 2** | custom/builtin 二分 + git submodule | 同路径覆盖生效；alias 劫持工作；admin 禁区 fail closed；自引用 submodule 可行；Dockerfile build-arg 工作 | submodule 的 cone sparse-checkout 在 fresh clone 后**不持久化**；路径 5 层嵌套（`themes/<n>/src/builtin/app/src/...`）；integration ~150 行（resolver + plugin + scanTheme + injectRoute） |
-| **Spike 3** ✅ | theme = 独立 Astro 项目 + `@vanblog/builtin/*` alias + 可选 `builtin-overrides/` | Astro 6 接受 Vite plugin `resolveId` 劫持 `.astro`；theme 是独立 Astro 项目工作；`@vanblog/builtin/<rel>` → `app/src/<rel>` alias 工作；`src/builtin-overrides/<rel>` 优先；HMR 完全实时；**30 行 integration + 零额外机制** | （无） |
+| Spike          | 模型                                                                             | 验证结论                                                                                                                                                                                                                     | 致命问题                                                                                                                                                                                   |
+| -------------- | -------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Spike 1**    | 覆盖式（`hooks/themes/{n}/` 覆盖 `app/src/`）                                    | Vite `resolveId` 劫持 `.astro` 可行；`injectRoute` + `src/pages/` 同名路由冲突                                                                                                                                               | Astro 6 禁止 `injectRoute` 与 `src/pages/` 同名（F1），修正方案要把所有 builtin page 物理移走，侵入性极大（F2）                                                                            |
+| **Spike 2**    | custom/builtin 二分 + git submodule                                              | 同路径覆盖生效；alias 劫持工作；admin 禁区 fail closed；自引用 submodule 可行；Dockerfile build-arg 工作                                                                                                                     | submodule 的 cone sparse-checkout 在 fresh clone 后**不持久化**；路径 5 层嵌套（`themes/<n>/src/builtin/app/src/...`）；integration ~150 行（resolver + plugin + scanTheme + injectRoute） |
+| **Spike 3** ✅ | theme = 独立 Astro 项目 + `@vanblog/builtin/*` alias + 可选 `builtin-overrides/` | Astro 6 接受 Vite plugin `resolveId` 劫持 `.astro`；theme 是独立 Astro 项目工作；`@vanblog/builtin/<rel>` → `app/src/<rel>` alias 工作；`src/builtin-overrides/<rel>` 优先；HMR 完全实时；**30 行 integration + 零额外机制** | （无）                                                                                                                                                                                     |
 
 **为什么最终走 Spike 3**：
 
@@ -47,27 +52,27 @@ theme 是**独立的 Astro 项目**（标准 `src/pages/` 文件路由），通�
 
 **Spike 3 验证结论**（已实测）：
 
-| 验证项 | 结论 |
-|---|---|
-| Astro 6 接受 Vite plugin `resolveId` 劫持 `.astro` 文件 | ✅ |
-| theme 是独立 Astro 项目（`astro --root themes/<name>/`）| ✅ |
-| `@vanblog/builtin/<rel>` alias 解析到 `app/src/<rel>` | ✅ |
-| `src/builtin-overrides/<rel>` 优先级高于 builtin | ✅ |
-| HMR 实时生效（改 override 文件立即反映）| ✅ |
-| 30 行 integration 代码 + 零额外机制 | ✅ |
+| 验证项                                                   | 结论 |
+| -------------------------------------------------------- | ---- |
+| Astro 6 接受 Vite plugin `resolveId` 劫持 `.astro` 文件  | ✅   |
+| theme 是独立 Astro 项目（`astro --root themes/<name>/`） | ✅   |
+| `@vanblog/builtin/<rel>` alias 解析到 `app/src/<rel>`    | ✅   |
+| `src/builtin-overrides/<rel>` 优先级高于 builtin         | ✅   |
+| HMR 实时生效（改 override 文件立即反映）                 | ✅   |
+| 30 行 integration 代码 + 零额外机制                      | ✅   |
 
 ### Spike 2 → Spike 3 关键改进
 
-| 维度 | Spike 2（旧 plan） | Spike 3（新 plan） |
-|---|---|---|
-| integration 代码 | ~150 行（resolver + plugin + scanTheme + injectRoute）| **30 行** |
-| 机制复杂度 | injectRoute + resolveId 双机制 | **纯 resolveId** |
-| theme 目录 | `src/builtin` + `src/custom` 二分 | **Astro 标准** + 可选 `builtin-overrides` |
-| 路径嵌套 | `themes/<n>/src/builtin/app/src/...`（5 层） | **无嵌套** |
-| submodule + sparse | 必须 | **不需要** |
-| Dockerfile cp | 需要 cp 到 `app/src/` | **不需要** |
-| HMR | 部分支持（新增 custom 文件要重启）| **完全实时** |
-| 升级路径 | theme submodule update（冲突） | **theme 不持有 builtin，主仓库升级即生效** |
+| 维度               | Spike 2（旧 plan）                                     | Spike 3（新 plan）                         |
+| ------------------ | ------------------------------------------------------ | ------------------------------------------ |
+| integration 代码   | ~150 行（resolver + plugin + scanTheme + injectRoute） | **30 行**                                  |
+| 机制复杂度         | injectRoute + resolveId 双机制                         | **纯 resolveId**                           |
+| theme 目录         | `src/builtin` + `src/custom` 二分                      | **Astro 标准** + 可选 `builtin-overrides`  |
+| 路径嵌套           | `themes/<n>/src/builtin/app/src/...`（5 层）           | **无嵌套**                                 |
+| submodule + sparse | 必须                                                   | **不需要**                                 |
+| Dockerfile cp      | 需要 cp 到 `app/src/`                                  | **不需要**                                 |
+| HMR                | 部分支持（新增 custom 文件要重启）                     | **完全实时**                               |
+| 升级路径           | theme submodule update（冲突）                         | **theme 不持有 builtin，主仓库升级即生效** |
 
 ---
 
@@ -77,23 +82,23 @@ theme 是**独立的 Astro 项目**（标准 `src/pages/` 文件路由），通�
 
 `app/src/` 目录结构：`components/ env.d.ts layouts/ lib/ live.config.ts loaders/ middleware.ts pages/ styles/`
 
-| 资产 | 路径 | 完整度 | 备注 |
-|------|------|--------|------|
-| BaseLayout | `app/src/layouts/BaseLayout.astro` (189 行) | 完整 | nav/footer/dark-mode/JSON-LD/RSS OG、引用 `virtual:vanblog/packs` + `virtual:vanblog/pack-frontend`；class 直接写在 tag 上 |
-| AdminLayout | `app/src/layouts/AdminLayout.astro` (21 行) | 极简 | 仅继承 BaseLayout + `initClient()` |
-| PackPage | `app/src/layouts/PackPage.astro` (15 行) | 极简 | Pack 页面 host |
-| Public 页面 | `app/src/pages/{index,404,about,archive,timeline,search,setup,login}.astro` + `posts/[id].astro` + `categories/{[id],index}.astro` + `tags/{[id],index}.astro` = **11 页** | 功能可用但极简 | 文章页有 mermaid PNG/SVG 导出 + 代码块折叠；编辑器用 ByteMD |
-| Admin 页面 | `app/src/pages/admin/{index,audits,backups,categories,edit/[id],media,migrate,new,revisions/[postId],routing,site,tags,trash,users}.astro` = **14 页** | 功能完整但 UX 简陋 | 纯 form + table；`site.astro` 把 `theme: default\|minimal\|magazine\|custom` 当枚举字段写死 |
-| API 端点 | `app/src/pages/api/{atom.xml,feed.xml,revalidate,sitemap.xml}` | 完整 | revalidate 拒绝外部 XFF |
-| Components | `app/src/components/{ByteMdEditor,Comments,EmptyState,ErrorNotice,ErrorState,Loading}.astro` = 6 个 | 极简 | 仅 ByteMdEditor 重，其他是 placeholder |
-| Middleware | `app/src/middleware.ts` (4 行) | 完整 | `createVanblogMiddleware()` |
-| Live config | `app/src/live.config.ts` (9 行) | 完整 | posts Live Collection + loader |
-| Styles | `app/src/styles/global.css` (200 行) | 完整 | Tailwind v4 `@theme` + 语义别名（`--text/--bg/--surface/--border/--accent/--text-muted`，自动翻转 dark），4 个 `@utility`：`container-page/nav-link/btn-primary/card-post/tag-badge` |
-| Markdown lib | `app/src/lib/markdown/{config,renderer,normalizeMathDelimiters,user-plugins,plugins/}` | 完整 | Astro 原生 shiki + remark/rehype |
-| Packs integration | `app/integrations/packs/{index,resolver,resolver.test}.mjs` (260 行) | 完整 | 已实现 `discoverPacks → mergeLocalPacks → loadPackMetadata → resolvePublicPages → injectRoute` + 3 个 virtual module（`vanblog:theme`, `virtual:vanblog/packs`, `virtual:vanblog/pack-frontend`）；whole-Pack replacement 与 Go `pack.Resolve` 对齐 |
-| 3 个 builtin Pack | `packs/{bookmarks,moments,live2d-companion}/` | 完整 | Bookmarks/Moments 是 schema + hook + 公共页；live2d-companion 是纯 frontend contribution |
-| SDK | `sdk/src/{client,server,browser,services,types,cookie,dates,utils,index}.ts` + `models/` | 完整 | `pb.collection()` 透传 + `pb.vanblog.*` 服务 + 多上下文 + 类型 |
-| site collection | `vault/pb_migrations/1782200000_init_vanblog_collections.go:255` | 部分缺 | 已有 `theme: SelectField{default,minimal,magazine,custom}` 和 `defaultTheme: SelectField{auto,light,dark}`，**缺 `palette` 和 `activeTheme` 字段** |
+| 资产              | 路径                                                                                                                                                                       | 完整度             | 备注                                                                                                                                                                                                                                                |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| BaseLayout        | `app/src/layouts/BaseLayout.astro` (189 行)                                                                                                                                | 完整               | nav/footer/dark-mode/JSON-LD/RSS OG、引用 `virtual:vanblog/packs` + `virtual:vanblog/pack-frontend`；class 直接写在 tag 上                                                                                                                          |
+| AdminLayout       | `app/src/layouts/AdminLayout.astro` (21 行)                                                                                                                                | 极简               | 仅继承 BaseLayout + `initClient()`                                                                                                                                                                                                                  |
+| PackPage          | `app/src/layouts/PackPage.astro` (15 行)                                                                                                                                   | 极简               | Pack 页面 host                                                                                                                                                                                                                                      |
+| Public 页面       | `app/src/pages/{index,404,about,archive,timeline,search,setup,login}.astro` + `posts/[id].astro` + `categories/{[id],index}.astro` + `tags/{[id],index}.astro` = **11 页** | 功能可用但极简     | 文章页有 mermaid PNG/SVG 导出 + 代码块折叠；编辑器用 ByteMD                                                                                                                                                                                         |
+| Admin 页面        | `app/src/pages/admin/{index,audits,backups,categories,edit/[id],media,migrate,new,revisions/[postId],routing,site,tags,trash,users}.astro` = **14 页**                     | 功能完整但 UX 简陋 | 纯 form + table；`site.astro` 把 `theme: default\|minimal\|magazine\|custom` 当枚举字段写死                                                                                                                                                         |
+| API 端点          | `app/src/pages/api/{atom.xml,feed.xml,revalidate,sitemap.xml}`                                                                                                             | 完整               | revalidate 拒绝外部 XFF                                                                                                                                                                                                                             |
+| Components        | `app/src/components/{ByteMdEditor,Comments,EmptyState,ErrorNotice,ErrorState,Loading}.astro` = 6 个                                                                        | 极简               | 仅 ByteMdEditor 重，其他是 placeholder                                                                                                                                                                                                              |
+| Middleware        | `app/src/middleware.ts` (4 行)                                                                                                                                             | 完整               | `createVanblogMiddleware()`                                                                                                                                                                                                                         |
+| Live config       | `app/src/live.config.ts` (9 行)                                                                                                                                            | 完整               | posts Live Collection + loader                                                                                                                                                                                                                      |
+| Styles            | `app/src/styles/global.css` (200 行)                                                                                                                                       | 完整               | Tailwind v4 `@theme` + 语义别名（`--text/--bg/--surface/--border/--accent/--text-muted`，自动翻转 dark），4 个 `@utility`：`container-page/nav-link/btn-primary/card-post/tag-badge`                                                                |
+| Markdown lib      | `app/src/lib/markdown/{config,renderer,normalizeMathDelimiters,user-plugins,plugins/}`                                                                                     | 完整               | Astro 原生 shiki + remark/rehype                                                                                                                                                                                                                    |
+| Packs integration | `app/integrations/packs/{index,resolver,resolver.test}.mjs` (260 行)                                                                                                       | 完整               | 已实现 `discoverPacks → mergeLocalPacks → loadPackMetadata → resolvePublicPages → injectRoute` + 3 个 virtual module（`vanblog:theme`, `virtual:vanblog/packs`, `virtual:vanblog/pack-frontend`）；whole-Pack replacement 与 Go `pack.Resolve` 对齐 |
+| 3 个 builtin Pack | `packs/{bookmarks,moments,live2d-companion}/`                                                                                                                              | 完整               | Bookmarks/Moments 是 schema + hook + 公共页；live2d-companion 是纯 frontend contribution                                                                                                                                                            |
+| SDK               | `sdk/src/{client,server,browser,services,types,cookie,dates,utils,index}.ts` + `models/`                                                                                   | 完整               | `pb.collection()` 透传 + `pb.vanblog.*` 服务 + 多上下文 + 类型                                                                                                                                                                                      |
+| site collection   | `vault/pb_migrations/1782200000_init_vanblog_collections.go:255`                                                                                                           | 部分缺             | 已有 `theme: SelectField{default,minimal,magazine,custom}` 和 `defaultTheme: SelectField{auto,light,dark}`，**缺 `palette` 和 `activeTheme` 字段**                                                                                                  |
 
 #### 关键空缺
 
@@ -116,7 +121,7 @@ theme 是**独立的 Astro 项目**（标准 `src/pages/` 文件路由），通�
 - `Footer` → 页脚社交链接/版权
 - `ArticleList`（64 行）→ 归档/时间轴用列表项
 - `PostViewer` → 文章阅读量（pb 已有 visits 表）
-- `SiteStatsSummary`（36 行）→ 首页/归档顶部分类×文章×标签×字数
+- `SiteStatsSummary`（36 行）→ 首页/归档顶部分类 × 文章 × 标签 × 字数
 - `TimelinePage`（145 行）→ 时间轴年月折叠展开
 - `CategoryPage`/`TagPage`/`ArchiveSummaryPage` → 分类/标签/归档聚合页
 - `SearchCard` → Ctrl+K 全局搜索浮层
@@ -146,26 +151,26 @@ theme 是**独立的 Astro 项目**（标准 `src/pages/` 文件路由），通�
 
 #### admin/src/pages/ 共 20 个页面
 
-| 原页面 | 现状对应 | 参考价值 |
-|--------|---------|---------|
-| `Article/` (columns.jsx + index.jsx) | `admin/index.astro` | **高**：列设计、批量操作、状态筛选 |
-| `Editor/` (694 行) | `admin/edit/[id].astro` (169 行) | **高**：编辑器布局、保存逻辑、快捷键、文章/草稿/关于/文档/Moment 多类型编辑 |
-| `Draft/` | 与 `Article/` 合并到 posts collection（status=draft） | 中：仅做视图筛选 |
-| `CommentManage/` | 无 | 低：新版用外部 Artalk/Waline/Giscus 控制台 |
-| `CustomPage/` | 关于页直接在 `admin/site.astro` 编辑 aboutContent | 低 |
-| `DataManage/` (含 tabs) | `admin/backups.astro` + `admin/migrate.astro` | **高**：备份列表/恢复/导入流程的 UX |
-| `Document/` | 与 Article 合并 | 中 |
-| `InitPage/` | `setup.astro` | 中 |
-| `LogManage/` | `admin/audits.astro` | **高**：日志筛选/详情展开 |
-| `MindMap/` | 无 | 不要 |
-| `Moment/` | 已有 `packs/moments/` builtin Pack | 低（Pack 自己处理） |
-| `NavManage/` | 无（用 pack.json nav） | 不要 |
-| `Pipeline/` | 无 | 不要（CI/CD 移到 host vanblog.sh） |
-| `Static/` | `admin/media.astro` | **高**：媒体库网格/上传/批量 |
-| `SystemConfig/` (含 tabs) | `admin/site.astro` + `admin/routing.astro` | **高**：站点配置表单的分区设计 |
-| `Welcome/` | `admin/index.astro` 顶部 | 中 |
-| `user/` | `admin/users.astro` | **高**：用户列表/权限矩阵 |
-| `About.tsx`/`404.jsx`/`document.ejs` | 静态 | 低 |
+| 原页面                               | 现状对应                                              | 参考价值                                                                    |
+| ------------------------------------ | ----------------------------------------------------- | --------------------------------------------------------------------------- |
+| `Article/` (columns.jsx + index.jsx) | `admin/index.astro`                                   | **高**：列设计、批量操作、状态筛选                                          |
+| `Editor/` (694 行)                   | `admin/edit/[id].astro` (169 行)                      | **高**：编辑器布局、保存逻辑、快捷键、文章/草稿/关于/文档/Moment 多类型编辑 |
+| `Draft/`                             | 与 `Article/` 合并到 posts collection（status=draft） | 中：仅做视图筛选                                                            |
+| `CommentManage/`                     | 无                                                    | 低：新版用外部 Artalk/Waline/Giscus 控制台                                  |
+| `CustomPage/`                        | 关于页直接在 `admin/site.astro` 编辑 aboutContent     | 低                                                                          |
+| `DataManage/` (含 tabs)              | `admin/backups.astro` + `admin/migrate.astro`         | **高**：备份列表/恢复/导入流程的 UX                                         |
+| `Document/`                          | 与 Article 合并                                       | 中                                                                          |
+| `InitPage/`                          | `setup.astro`                                         | 中                                                                          |
+| `LogManage/`                         | `admin/audits.astro`                                  | **高**：日志筛选/详情展开                                                   |
+| `MindMap/`                           | 无                                                    | 不要                                                                        |
+| `Moment/`                            | 已有 `packs/moments/` builtin Pack                    | 低（Pack 自己处理）                                                         |
+| `NavManage/`                         | 无（用 pack.json nav）                                | 不要                                                                        |
+| `Pipeline/`                          | 无                                                    | 不要（CI/CD 移到 host vanblog.sh）                                          |
+| `Static/`                            | `admin/media.astro`                                   | **高**：媒体库网格/上传/批量                                                |
+| `SystemConfig/` (含 tabs)            | `admin/site.astro` + `admin/routing.astro`            | **高**：站点配置表单的分区设计                                              |
+| `Welcome/`                           | `admin/index.astro` 顶部                              | 中                                                                          |
+| `user/`                              | `admin/users.astro`                                   | **高**：用户列表/权限矩阵                                                   |
+| `About.tsx`/`404.jsx`/`document.ejs` | 静态                                                  | 低                                                                          |
 
 **统计**：20 个 → 必参考 8 + 中等参考 4 + 不要 4 + 已被 Pack 取代 1 + 其他 3。
 
@@ -243,11 +248,11 @@ themes/{name}/src/
 
 **决定**：定义三层 API surface，每层有不同的稳定性保证。这是升级时 agent 判断"哪些 override 需要适配"的依据。
 
-| 层级 | 内容 | 稳定性保证 | 例外 |
-|------|------|------------|------|
-| **L0 契约层** | ① frontmatter 变量名（`posts`、`post`、`site`、`pb`）<br>② SDK 函数签名（`pb.vanblog.posts.listPublished`、`stripMarkdown`、`fmtDate`、`safe`、`getPage`）<br>③ PB collection 字段名（`posts.title`、`posts.content`） | **永远稳定**。major version 之间也不破坏，破坏必须 deprecated 一个版本周期。 | 极端情况（安全修复）允许，但必须在 CHANGELOG 标 `BREAKING` |
-| **L1 组件 API 层** | builtin 组件的 props 名（`BaseLayout.title`、`PostCard.post`、`PostCard.mode`、`PackPage.title`） | **语义稳定**。可以加新 props（必须 optional + 有合理默认），不可删旧 props、不可改 prop 类型语义。 | 改名需 deprecated alias 一个版本 |
-| **L2 内部实现层** | 组件内部 DOM 结构、CSS class 名、内部 helper 函数 | **无保证**。任意变化。override 文件如果依赖 L2，升级时自负。 | — |
+| 层级               | 内容                                                                                                                                                                                                                   | 稳定性保证                                                                                         | 例外                                                       |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| **L0 契约层**      | ① frontmatter 变量名（`posts`、`post`、`site`、`pb`）<br>② SDK 函数签名（`pb.vanblog.posts.listPublished`、`stripMarkdown`、`fmtDate`、`safe`、`getPage`）<br>③ PB collection 字段名（`posts.title`、`posts.content`） | **永远稳定**。major version 之间也不破坏，破坏必须 deprecated 一个版本周期。                       | 极端情况（安全修复）允许，但必须在 CHANGELOG 标 `BREAKING` |
+| **L1 组件 API 层** | builtin 组件的 props 名（`BaseLayout.title`、`PostCard.post`、`PostCard.mode`、`PackPage.title`）                                                                                                                      | **语义稳定**。可以加新 props（必须 optional + 有合理默认），不可删旧 props、不可改 prop 类型语义。 | 改名需 deprecated alias 一个版本                           |
+| **L2 内部实现层**  | 组件内部 DOM 结构、CSS class 名、内部 helper 函数                                                                                                                                                                      | **无保证**。任意变化。override 文件如果依赖 L2，升级时自负。                                       | —                                                          |
 
 **强制力**：通过 CI lint + contract-check 脚本保证 L0/L1（详见 Phase 7 MCP tools）。
 
@@ -338,25 +343,25 @@ const posts = await fetchPosts();
 ### `app/integrations/themes/index.mjs`（基于 Spike 3 验证过的版本）
 
 ```js
-import { existsSync } from 'node:fs';
-import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { existsSync } from "node:fs";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 
-const BUILTIN_PREFIX = '@vanblog/builtin/';
+const BUILTIN_PREFIX = "@vanblog/builtin/";
 // 禁区：theme 的 builtin-overrides 不允许覆盖这些路径
 const FORBIDDEN_OVERRIDE_GLOBS = [
-  /^pages\/admin\//,        // admin 锁定（决策 7）
-  /^pages\/api\//,          // API 端点锁定
-  /^lib\//,                 // markdown 渲染等
-  /^loaders\//,             // 数据加载器
-  /^live\.config\.ts$/,     // Live Collections 配置
-  /^middleware\.ts$/,       // 中间件
+  /^pages\/admin\//, // admin 锁定（决策 7）
+  /^pages\/api\//, // API 端点锁定
+  /^lib\//, // markdown 渲染等
+  /^loaders\//, // 数据加载器
+  /^live\.config\.ts$/, // Live Collections 配置
+  /^middleware\.ts$/, // 中间件
 ];
 
 export default function themesIntegration(options) {
-  const themeSrcDir = options.themeSrcDir;       // themes/<active>/src
-  const mainAppSrcDir = options.mainAppSrcDir;   // app/src（builtin 源头）
-  const overridesDir = join(themeSrcDir, 'builtin-overrides');
+  const themeSrcDir = options.themeSrcDir; // themes/<active>/src
+  const mainAppSrcDir = options.mainAppSrcDir; // app/src（builtin 源头）
+  const overridesDir = join(themeSrcDir, "builtin-overrides");
 
   function resolveId(id) {
     if (!id.startsWith(BUILTIN_PREFIX)) return null;
@@ -369,7 +374,7 @@ export default function themesIntegration(options) {
       if (existsSync(overridePath)) {
         throw new Error(
           `[vanblog-themes] FORBIDDEN override: ${rel} is locked (admin/api/lib/loaders/middleware/live.config). ` +
-          `Theme cannot override this path.`
+            `Theme cannot override this path.`
         );
       }
     }
@@ -386,12 +391,12 @@ export default function themesIntegration(options) {
   }
 
   return {
-    name: 'vanblog-themes',
+    name: "vanblog-themes",
     hooks: {
-      'astro:config:setup': ({ updateConfig }) => {
+      "astro:config:setup": ({ updateConfig }) => {
         updateConfig({
           vite: {
-            plugins: [{ name: 'vanblog-builtin-resolver', resolveId }],
+            plugins: [{ name: "vanblog-builtin-resolver", resolveId }],
           },
         });
       },
@@ -415,15 +420,15 @@ theme 的 `astro.config.mjs` 同时引用两个 integration：
 
 ```js
 // themes/<active>/astro.config.mjs
-import { defineConfig } from 'astro/config';
-import packs from '../../app/integrations/packs/index.mjs';
-import themes from '../../app/integrations/themes/index.mjs';
+import { defineConfig } from "astro/config";
+import packs from "../../app/integrations/packs/index.mjs";
+import themes from "../../app/integrations/themes/index.mjs";
 
 export default defineConfig({
   integrations: [
     themes({
-      themeSrcDir: fileURLToPath(new URL('./src', import.meta.url)),
-      mainAppSrcDir: fileURLToPath(new URL('../../app/src', import.meta.url)),
+      themeSrcDir: fileURLToPath(new URL("./src", import.meta.url)),
+      mainAppSrcDir: fileURLToPath(new URL("../../app/src", import.meta.url)),
     }),
     packs(), // 沿用现有 packs integration（处理 /p/* + vanblog:theme virtual module）
   ],
@@ -434,8 +439,9 @@ export default defineConfig({
 
 ```js
 // packs/index.mjs 改造（Phase 2）
-const themePage = options.themePage
-  || fileURLToPath(new URL('src/layouts/PackPage.astro', appDirectory));
+const themePage =
+  options.themePage ||
+  fileURLToPath(new URL("src/layouts/PackPage.astro", appDirectory));
 ```
 
 ---
@@ -517,15 +523,15 @@ vanblog/
 
 **关键变化对比旧 plan**：
 
-| 旧 plan（Spike 2） | 新 plan（Spike 3） | 原因 |
-|---------|---------|------|
-| `hooks/themes/{name}/` | `themes/{name}/` | theme 升级为顶层公民 |
-| theme 内部 `src/builtin/` + `src/custom/` 二分 | Astro 标准 + 可选 `src/builtin-overrides/` | 删除二分认知负担 |
-| `src/builtin/` 是 git submodule | `@vanblog/builtin/*` alias 指向 `app/src/` | 不需要 submodule |
-| `themes/<n>/src/builtin/app/src/...`（5 层嵌套）| 无嵌套（alias 透明解析）| Spike 3 极简 |
-| Dockerfile cp theme 到 app/src/ | Dockerfile COPY theme 到 /build/theme/，直接 build | 不需要 cp |
-| `.vanblog/resolved/` 物理合成 | 不存在，纯 Vite alias | 更轻量，HMR 更顺 |
-| palette 走 Caddy 注入 | palette 走 Astro 端点（`/api/palette.css`） | 避免改 Caddy builder |
+| 旧 plan（Spike 2）                               | 新 plan（Spike 3）                                 | 原因                 |
+| ------------------------------------------------ | -------------------------------------------------- | -------------------- |
+| `hooks/themes/{name}/`                           | `themes/{name}/`                                   | theme 升级为顶层公民 |
+| theme 内部 `src/builtin/` + `src/custom/` 二分   | Astro 标准 + 可选 `src/builtin-overrides/`         | 删除二分认知负担     |
+| `src/builtin/` 是 git submodule                  | `@vanblog/builtin/*` alias 指向 `app/src/`         | 不需要 submodule     |
+| `themes/<n>/src/builtin/app/src/...`（5 层嵌套） | 无嵌套（alias 透明解析）                           | Spike 3 极简         |
+| Dockerfile cp theme 到 app/src/                  | Dockerfile COPY theme 到 /build/theme/，直接 build | 不需要 cp            |
+| `.vanblog/resolved/` 物理合成                    | 不存在，纯 Vite alias                              | 更轻量，HMR 更顺     |
+| palette 走 Caddy 注入                            | palette 走 Astro 端点（`/api/palette.css`）        | 避免改 Caddy builder |
 
 ---
 
@@ -586,39 +592,39 @@ RUN echo "${VANBLOG_ACTIVE_THEME}" > /etc/vanblog/active-theme
 
 ### Public 页面（被 BaseLayout 包裹，路径前缀 `pages/`）
 
-| 页面 | builtin 路径 | override 路径（如覆盖）| frontmatter 契约变量 |
-|------|------|------|---------------------|
-| 首页 | `@vanblog/builtin/pages/index.astro` | `src/builtin-overrides/pages/index.astro` 或 theme 自写 `src/pages/index.astro` | `posts: PostExpand[]`, `totalPages: number`, `page: number` |
-| 文章 | `@vanblog/builtin/pages/posts/[id].astro` | 同上 | `post: Post \| null`, `html: string \| null`, `id: string`, `site: Site` |
-| 归档 | `@vanblog/builtin/pages/archive.astro` | 同上 | `posts: Post[]`, `years: number[]` |
-| 时间轴 | `@vanblog/builtin/pages/timeline.astro` | 同上 | `entries: TimelineEntry[]` |
-| 搜索 | `@vanblog/builtin/pages/search.astro` | 同上 | `q: string`, `results: SearchResult[]` |
-| 分类索引 | `@vanblog/builtin/pages/categories/index.astro` | 同上 | `categories: Category[]` |
-| 分类详情 | `@vanblog/builtin/pages/categories/[id].astro` | 同上 | `category: Category`, `posts: PostExpand[]`, `totalPages: number`, `page: number` |
-| 标签索引 | `@vanblog/builtin/pages/tags/index.astro` | 同上 | `tags: Tag[]` |
-| 标签详情 | `@vanblog/builtin/pages/tags/[id].astro` | 同上 | `tag: Tag`, `posts: PostExpand[]`, `totalPages: number`, `page: number` |
-| 关于 | `@vanblog/builtin/pages/about.astro` | 同上 | `site: Site`, `html: string`, `updatedAt: string` |
-| 404 | `@vanblog/builtin/pages/404.astro` | 同上 | （无） |
+| 页面     | builtin 路径                                    | override 路径（如覆盖）                                                         | frontmatter 契约变量                                                              |
+| -------- | ----------------------------------------------- | ------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| 首页     | `@vanblog/builtin/pages/index.astro`            | `src/builtin-overrides/pages/index.astro` 或 theme 自写 `src/pages/index.astro` | `posts: PostExpand[]`, `totalPages: number`, `page: number`                       |
+| 文章     | `@vanblog/builtin/pages/posts/[id].astro`       | 同上                                                                            | `post: Post \| null`, `html: string \| null`, `id: string`, `site: Site`          |
+| 归档     | `@vanblog/builtin/pages/archive.astro`          | 同上                                                                            | `posts: Post[]`, `years: number[]`                                                |
+| 时间轴   | `@vanblog/builtin/pages/timeline.astro`         | 同上                                                                            | `entries: TimelineEntry[]`                                                        |
+| 搜索     | `@vanblog/builtin/pages/search.astro`           | 同上                                                                            | `q: string`, `results: SearchResult[]`                                            |
+| 分类索引 | `@vanblog/builtin/pages/categories/index.astro` | 同上                                                                            | `categories: Category[]`                                                          |
+| 分类详情 | `@vanblog/builtin/pages/categories/[id].astro`  | 同上                                                                            | `category: Category`, `posts: PostExpand[]`, `totalPages: number`, `page: number` |
+| 标签索引 | `@vanblog/builtin/pages/tags/index.astro`       | 同上                                                                            | `tags: Tag[]`                                                                     |
+| 标签详情 | `@vanblog/builtin/pages/tags/[id].astro`        | 同上                                                                            | `tag: Tag`, `posts: PostExpand[]`, `totalPages: number`, `page: number`           |
+| 关于     | `@vanblog/builtin/pages/about.astro`            | 同上                                                                            | `site: Site`, `html: string`, `updatedAt: string`                                 |
+| 404      | `@vanblog/builtin/pages/404.astro`              | 同上                                                                            | （无）                                                                            |
 
 每个 public 页面**必须** `import BaseLayout from '@vanblog/builtin/layouts/BaseLayout.astro'` 并用 `<BaseLayout ...>` 包裹。`Astro.locals.pb` 是数据访问入口。
 
 ### Admin 页面（**锁定，不允许 override 覆盖**）
 
-| 页面 | builtin 路径 | frontmatter 契约变量 |
-|------|------|---------------------|
-| 文章列表 | `@vanblog/builtin/pages/admin/index.astro` | `posts: Post[]`, `totalPosts: number`, `totalPages: number`, `page: number`, `q: string`, `status: string`, `user: AuthUser`, `isAdmin/canEditPost/canDeletePost: boolean` |
-| 编辑器 | `@vanblog/builtin/pages/admin/edit/[id].astro` | `post: Partial<Post>`, `tags: Tag[]`, `cats: Category[]`, `site: Site`, `isNew: boolean`, `notFound: boolean`, `denied: boolean` |
-| 媒体 | `@vanblog/builtin/pages/admin/media.astro` | `media: Media[]`, `totalMedia: number`, `totalPages: number`, `page: number`, `canDelete: boolean` |
-| 标签 | `@vanblog/builtin/pages/admin/tags.astro` | `tags: Tag[]` |
-| 分类 | `@vanblog/builtin/pages/admin/categories.astro` | `cats: Category[]` |
-| 回收站 | `@vanblog/builtin/pages/admin/trash.astro` | `trash: TrashEntry[]`, `canEditPost/canDeletePost: boolean` |
-| 用户 | `@vanblog/builtin/pages/admin/users.astro` | `users: User[]`, `adminCount: number` |
-| 站点 | `@vanblog/builtin/pages/admin/site.astro` | `site: Site`, `tlsStatus: TLSStatus`, `denied: boolean`, `themes: ThemeMeta[]`, `palettes: PaletteMeta[]`, `activeTheme: string`, `activePalette: string` |
-| 路由 | `@vanblog/builtin/pages/admin/routing.astro` | `rules: RouteRule[]`, `allowlist: string[]`, `status: RoutingStatus`, `auditItems: AuditItem[]` |
-| 审计 | `@vanblog/builtin/pages/admin/audits.astro` | `audits: AuditEntry[]`, `totalAudits: number`, `totalPages: number`, `page: number`, `action: string`, `resultQ: string` |
-| 备份 | `@vanblog/builtin/pages/admin/backups.astro` | `backups: BackupFile[]`, `isAdmin: boolean` |
-| 迁移 | `@vanblog/builtin/pages/admin/migrate.astro` | `isAdmin: boolean` |
-| 修订 | `@vanblog/builtin/pages/admin/revisions/[postId].astro` | `post: Post`, `revisions: Revision[]` |
+| 页面     | builtin 路径                                            | frontmatter 契约变量                                                                                                                                                       |
+| -------- | ------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 文章列表 | `@vanblog/builtin/pages/admin/index.astro`              | `posts: Post[]`, `totalPosts: number`, `totalPages: number`, `page: number`, `q: string`, `status: string`, `user: AuthUser`, `isAdmin/canEditPost/canDeletePost: boolean` |
+| 编辑器   | `@vanblog/builtin/pages/admin/edit/[id].astro`          | `post: Partial<Post>`, `tags: Tag[]`, `cats: Category[]`, `site: Site`, `isNew: boolean`, `notFound: boolean`, `denied: boolean`                                           |
+| 媒体     | `@vanblog/builtin/pages/admin/media.astro`              | `media: Media[]`, `totalMedia: number`, `totalPages: number`, `page: number`, `canDelete: boolean`                                                                         |
+| 标签     | `@vanblog/builtin/pages/admin/tags.astro`               | `tags: Tag[]`                                                                                                                                                              |
+| 分类     | `@vanblog/builtin/pages/admin/categories.astro`         | `cats: Category[]`                                                                                                                                                         |
+| 回收站   | `@vanblog/builtin/pages/admin/trash.astro`              | `trash: TrashEntry[]`, `canEditPost/canDeletePost: boolean`                                                                                                                |
+| 用户     | `@vanblog/builtin/pages/admin/users.astro`              | `users: User[]`, `adminCount: number`                                                                                                                                      |
+| 站点     | `@vanblog/builtin/pages/admin/site.astro`               | `site: Site`, `tlsStatus: TLSStatus`, `denied: boolean`, `themes: ThemeMeta[]`, `palettes: PaletteMeta[]`, `activeTheme: string`, `activePalette: string`                  |
+| 路由     | `@vanblog/builtin/pages/admin/routing.astro`            | `rules: RouteRule[]`, `allowlist: string[]`, `status: RoutingStatus`, `auditItems: AuditItem[]`                                                                            |
+| 审计     | `@vanblog/builtin/pages/admin/audits.astro`             | `audits: AuditEntry[]`, `totalAudits: number`, `totalPages: number`, `page: number`, `action: string`, `resultQ: string`                                                   |
+| 备份     | `@vanblog/builtin/pages/admin/backups.astro`            | `backups: BackupFile[]`, `isAdmin: boolean`                                                                                                                                |
+| 迁移     | `@vanblog/builtin/pages/admin/migrate.astro`            | `isAdmin: boolean`                                                                                                                                                         |
+| 修订     | `@vanblog/builtin/pages/admin/revisions/[postId].astro` | `post: Post`, `revisions: Revision[]`                                                                                                                                      |
 
 ### Pack 页面（`packs/*/pages/index.astro`）
 
@@ -690,7 +696,7 @@ RUN echo "${VANBLOG_ACTIVE_THEME}" > /etc/vanblog/active-theme
   - [ ] 建 `themes/default/`：astro.config.mjs 引用 `../../app/integrations/{packs,themes}`，package.json 依赖 @vanblog/sdk，theme.json 元数据
   - [ ] 建 `themes/default/src/pages/`：11 个 public 页面薄壳（re-export builtin）
   - [ ] 建 `themes/default/src/layouts/PackPage.astro`：最小 host
-  - [ ] 加 `api/palette.css.ts`：SSR 端点，读 site.palette → 拼接 hooks/palettes/{name}/*.css
+  - [ ] 加 `api/palette.css.ts`：SSR 端点，读 site.palette → 拼接 hooks/palettes/{name}/\*.css
   - [ ] 加 `api/themes.ts`/`api/palettes.ts`：枚举端点
   - [ ] 加 `api/revalidate.ts`：dev only 重启触发器
   - [ ] pb migration 加 site.palette + site.activeTheme 字段
@@ -763,7 +769,7 @@ RUN echo "${VANBLOG_ACTIVE_THEME}" > /etc/vanblog/active-theme
   - [ ] 手动跑过 14 个页面的核心流程（CRUD + 备份恢复 + 路由编辑 + 用户管理）
 - **Done when**：
   - 所有 14 个 admin 页 astro check 无 error
-  - 关键 CRUD 流程手动通过（创建文章→发布→编辑→修订→删除→恢复→purge；上传媒体→删除；创建用户→改权限→删除；改路由→应用→回滚）
+  - 关键 CRUD 流程手动通过（创建文章 → 发布 → 编辑 → 修订 → 删除 → 恢复 →purge；上传媒体 → 删除；创建用户 → 改权限 → 删除；改路由 → 应用 → 回滚）
   - theme/palette 切换在 dev 模式即时生效
   - 尝试在 `themes/default/src/builtin-overrides/pages/admin/` 写文件 → integration 报错（admin 锁定验证）
 
@@ -842,20 +848,20 @@ RUN echo "${VANBLOG_ACTIVE_THEME}" > /etc/vanblog/active-theme
 
 ## Risks & Mitigations
 
-| Risk | Impact | Mitigation |
-|------|--------|------------|
-| Vite `resolveId` 劫持 `.astro` 在 Astro 6 未来版本被限制 | integration 失效 | Spike 3 已验证当前可行。持续跟踪 Astro release notes；备选方案：theme build 时物理 cp `app/src/` 到 theme 的临时目录（牺牲 HMR） |
-| L0 契约注释被 agent 改掉后 build 不报错 | 数据层被破坏 | contract-check 在 astro:config:setup 阶段 fail closed，任何契约区块字节级不匹配直接抛错 |
-| L0/L1 契约的强制力不够（vanblog 维护者不小心破坏）| 升级时用户 theme 大面积崩 | Phase 7 的 `scripts/contract-diff.mjs` 进 CI，PR 删除/重命名 L0/L1 surface → CI fail |
-| theme 切换 prod 提示重建但用户忽略，导致 `site.activeTheme` 与镜像不一致 | 站点 500 | entrypoint.prod.sh 启动时校验 `site.activeTheme` 与镜像内 theme 一致，不一致警告 + 强制用镜像内 theme + admin UI 红色提示 |
-| palette 切换不生效（浏览器缓存）| 用户困惑 | palette.css 端点返回 `Cache-Control: no-cache` + BaseLayout 用 `?v={site.updated}` query |
-| `site.activeTheme` 指向已删除的 theme | 站点 500 | entrypoint 启动时检查 theme 目录存在，不存在则 silent fallback 到 default + admin 提示「theme 已缺失，已回退」 |
-| Pack 页面用 `vanblog:theme` host，theme 切换后 PackPage 缺失 | `/p/<pack>` 500 | build 时校验 active theme 必须有 `PackPage.astro`（`src/layouts/` 或 `src/builtin-overrides/layouts/`），否则 build fail（依据 `future-pack-architecture.md` §"Theme host interface"） |
-| admin 被错误开放 theme 化 | admin 不可用、lockout | integration 对 `@vanblog/builtin/pages/admin/**` 强制忽略 override；theme 在 `src/builtin-overrides/pages/admin/` 放任何文件直接 fail closed + 警告 |
-| Phase 3/4 重写期间 breaking 现有用户 | 业务中断 | 重写在 feature branch 进行；每个 phase 独立 PR，CI 必须通过所有现有测试 |
-| Tailwind v4 `@theme` + theme override 的样式隔离 | theme A 的 utility 泄漏到 theme B | 每个 theme 是独立 Astro 项目，自带 `@source` 清单，只扫描自己的 `.astro`；default theme 的 `global.css` 在 builtin 层完全自包含 |
-| MCP write_file 被恶意 agent 写入恶意 `.astro` | RCE | prod 镜像中 `dist/` 是构建产物，运行时不读 `src/`；dev 模式 agent 本身就是 host 用户可控；额外限制：write_file 拒绝包含 `<script is:inline>` 中 `eval/Function/import()` 的文件；写禁区 override 路径都被拒绝 |
-| palette CSS 拼接时 @import 顺序错误 | 样式失效 | palette.css 端点固定顺序：tokens → typography → components；不允许 palette 内部 @import 其他文件 |
+| Risk                                                                     | Impact                            | Mitigation                                                                                                                                                                                                    |
+| ------------------------------------------------------------------------ | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Vite `resolveId` 劫持 `.astro` 在 Astro 6 未来版本被限制                 | integration 失效                  | Spike 3 已验证当前可行。持续跟踪 Astro release notes；备选方案：theme build 时物理 cp `app/src/` 到 theme 的临时目录（牺牲 HMR）                                                                              |
+| L0 契约注释被 agent 改掉后 build 不报错                                  | 数据层被破坏                      | contract-check 在 astro:config:setup 阶段 fail closed，任何契约区块字节级不匹配直接抛错                                                                                                                       |
+| L0/L1 契约的强制力不够（vanblog 维护者不小心破坏）                       | 升级时用户 theme 大面积崩         | Phase 7 的 `scripts/contract-diff.mjs` 进 CI，PR 删除/重命名 L0/L1 surface → CI fail                                                                                                                          |
+| theme 切换 prod 提示重建但用户忽略，导致 `site.activeTheme` 与镜像不一致 | 站点 500                          | entrypoint.prod.sh 启动时校验 `site.activeTheme` 与镜像内 theme 一致，不一致警告 + 强制用镜像内 theme + admin UI 红色提示                                                                                     |
+| palette 切换不生效（浏览器缓存）                                         | 用户困惑                          | palette.css 端点返回 `Cache-Control: no-cache` + BaseLayout 用 `?v={site.updated}` query                                                                                                                      |
+| `site.activeTheme` 指向已删除的 theme                                    | 站点 500                          | entrypoint 启动时检查 theme 目录存在，不存在则 silent fallback 到 default + admin 提示「theme 已缺失，已回退」                                                                                                |
+| Pack 页面用 `vanblog:theme` host，theme 切换后 PackPage 缺失             | `/p/<pack>` 500                   | build 时校验 active theme 必须有 `PackPage.astro`（`src/layouts/` 或 `src/builtin-overrides/layouts/`），否则 build fail（依据 `future-pack-architecture.md` §"Theme host interface"）                        |
+| admin 被错误开放 theme 化                                                | admin 不可用、lockout             | integration 对 `@vanblog/builtin/pages/admin/**` 强制忽略 override；theme 在 `src/builtin-overrides/pages/admin/` 放任何文件直接 fail closed + 警告                                                           |
+| Phase 3/4 重写期间 breaking 现有用户                                     | 业务中断                          | 重写在 feature branch 进行；每个 phase 独立 PR，CI 必须通过所有现有测试                                                                                                                                       |
+| Tailwind v4 `@theme` + theme override 的样式隔离                         | theme A 的 utility 泄漏到 theme B | 每个 theme 是独立 Astro 项目，自带 `@source` 清单，只扫描自己的 `.astro`；default theme 的 `global.css` 在 builtin 层完全自包含                                                                               |
+| MCP write_file 被恶意 agent 写入恶意 `.astro`                            | RCE                               | prod 镜像中 `dist/` 是构建产物，运行时不读 `src/`；dev 模式 agent 本身就是 host 用户可控；额外限制：write_file 拒绝包含 `<script is:inline>` 中 `eval/Function/import()` 的文件；写禁区 override 路径都被拒绝 |
+| palette CSS 拼接时 @import 顺序错误                                      | 样式失效                          | palette.css 端点固定顺序：tokens → typography → components；不允许 palette 内部 @import 其他文件                                                                                                              |
 
 **已消除的风险**（Spike 3 相比 Spike 2）：
 

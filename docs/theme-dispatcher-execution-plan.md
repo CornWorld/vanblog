@@ -695,7 +695,7 @@ func init() {
 - `theme.json`：name=`minimal`，label=`极简风`
 - `astro.config.mjs`：复制 default 的，改 themeName
 - `src/pages/`：复制 default 的薄壳 pages
-- `src/builtin-overrides/`：加一个 `layouts/BaseLayout.astro`，只做最简单的改动（比如换 banner 颜色）
+- `src/base-overrides/`：加一个 `layouts/BaseLayout.astro`，只做最简单的改动（比如换 banner 颜色）
 
 **验收**：
 - `themes/minimal/dist/server/entry.mjs` 能 build 出来

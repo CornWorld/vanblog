@@ -147,7 +147,7 @@ export default defineConfig({
 });
 ```
 
-**vs 当前**：只多了 `base` + `assetsPrefix` 两行。其他（薄壳 pages、builtin-overrides、middleware.ts、live.config.ts）**完全不变**。
+**vs 当前**：只多了 `base` + `assetsPrefix` 两行。其他（薄壳 pages、base-overrides、middleware.ts、live.config.ts）**完全不变**。
 
 ### 3.4 静态资源路径变化
 
@@ -525,7 +525,7 @@ const MAX_LOADED_THEMES = 3;
 
 - [ ] 修 `entrypoint.prod.sh:82`：从 `/app/dist` 改为读 `/etc/vanblog/active-theme`，`cd /var/lib/vanblog/themes/${active}/dist`
 - [ ] Dockerfile 把 `themes/` 整体 COPY 到 `/var/lib/vanblog/themes/`（当前只 COPY 编译产物）
-- [ ] 删除 `themes/default/` 里硬编码开发机路径的注释（误导）
+- [x] ~~删除 `themes/default/` 里硬编码开发机路径的注释（误导）~~（该目录已被 base/vanblog 取代）
 
 ### Phase 2（Dispatcher MVP，~3-5 天）—— 热切换核心能力
 
@@ -581,19 +581,19 @@ const MAX_LOADED_THEMES = 3;
 
 ## 11. 与现有架构的兼容性
 
-| 现有组件                                 | 改动                                                                            |
-| ---------------------------------------- | ------------------------------------------------------------------------------- |
-| `themes/default/` 薄壳结构               | ✅ 不变，加 `base`/`assetsPrefix` 即可                                          |
-| `@vanblog/builtin/*` alias               | ✅ 不变                                                                         |
-| `hooks/palettes/`                        | ✅ 不变，palette.css 端点继续工作                                               |
-| `app/integrations/themes/index.mjs`      | ✅ 不变                                                                         |
-| `site.palette` / `site.activeTheme` 字段 | ✅ 不变，新增 `site.paletteMigrationMode`                                       |
-| `app/src/layouts/BaseLayout.astro`       | 🟡 移除 `<link href="/api/palette.css">` 改为 dispatcher 注入（或保留，没问题） |
-| `Dockerfile`                             | 🟡 改 COPY 目标 + 改 entrypoint cd 路径                                         |
-| `docker/entrypoint.prod.sh`              | 🟡 改启动命令（启动 dispatcher 而非 Astro 直接）                                |
-| `vault/internal/caddy/config_builder.go` | 🟡 MVP 不改，Phase 3 加 file_server 规则                                        |
-| `app/src/pages/api/themes.ts`            | ✅ 不变，继续枚举磁盘上的 theme                                                 |
-| `app/src/pages/admin/site.astro`         | 🟡 UI 改造                                                                      |
+| 现有组件                                             | 改动                                                                            |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------- |
+| `themes/vanblog/` 完整独立主题（自带页面/组件/布局） | ✅ 已是独立 Astro 项目，自带 `base`/`assetsPrefix`                              |
+| `@vanblog/base/*` alias                              | ✅ 不变                                                                         |
+| `hooks/palettes/`                                    | ✅ 不变，palette.css 端点继续工作                                               |
+| `app/integrations/themes/index.mjs`                  | ✅ 不变                                                                         |
+| `site.palette` / `site.activeTheme` 字段             | ✅ 不变，新增 `site.paletteMigrationMode`                                       |
+| `app/src/layouts/BaseLayout.astro`                   | 🟡 移除 `<link href="/api/palette.css">` 改为 dispatcher 注入（或保留，没问题） |
+| `Dockerfile`                                         | 🟡 改 COPY 目标 + 改 entrypoint cd 路径                                         |
+| `docker/entrypoint.prod.sh`                          | 🟡 改启动命令（启动 dispatcher 而非 Astro 直接）                                |
+| `vault/internal/caddy/config_builder.go`             | 🟡 MVP 不改，Phase 3 加 file_server 规则                                        |
+| `app/src/pages/api/themes.ts`                        | ✅ 不变，继续枚举磁盘上的 theme                                                 |
+| `app/src/pages/admin/site.astro`                     | 🟡 UI 改造                                                                      |
 
 **关键**：所有 🟡 改动都是**增量的**，不破坏现有 theme 作者的工作流。
 
@@ -620,7 +620,7 @@ const MAX_LOADED_THEMES = 3;
 
 当前 `app/src/pages/*.astro` 全部 `export const prerender = false`，但这**不是放弃 Astro 性能优点**——而是选择了 **SSR + experimental.cache（SWR 语义）**，等同 Next.js ISR。
 
-`themes/default/astro.config.mjs` 的配置：
+`themes/vanblog/astro.config.mjs` 的配置：
 
 ```js
 experimental: {
@@ -747,7 +747,7 @@ const memoryProvider = (config) => {
 
 ```
 dispatcher process
-├─ import('themes/default/dist/server/entry.mjs')
+├─ import('themes/vanblog/dist/server/entry.mjs')
 │    └─ 内部 import 'astro/config' → 调用 memoryCache() → LRUMap #1
 └─ import('themes/magazine/dist/server/entry.mjs')
      └─ 内部 import 'astro/config' → 调用 memoryCache() → LRUMap #2
@@ -793,15 +793,15 @@ cache 隔离问题**不是 dispatcher 的致命伤**——方案 F 可以解决�
 
 ### 14.1 验证方法
 
-1. 备份 `themes/default/astro.config.mjs`
-2. 在 `defineConfig({})` 里加 `base: '/themes/default/'`
+1. 备份 `themes/vanblog/astro.config.mjs`
+2. 在 `defineConfig({})` 里加 `base: '/themes/vanblog/'`
 3. `pnpm build`，对比 manifest 里的路由 pattern
 4. 查 Astro 源码确认机制
 5. 恢复原配置
 
 ### 14.2 实测结果
 
-加 `base: '/themes/default/'` 前后对比 manifest（`themes/default/dist/server/chunks/server_*.mjs` 里的 `_manifest`）：
+加 `base: '/themes/vanblog/'` 前后对比 manifest（`themes/vanblog/dist/server/chunks/server_*.mjs` 里的 `_manifest`）：
 
 | 路由        | 加 base 前 pattern    | 加 base 后 pattern    | 变化        |
 | ----------- | --------------------- | --------------------- | ----------- |
@@ -812,7 +812,7 @@ cache 隔离问题**不是 dispatcher 的致命伤**——方案 F 可以解决�
 | Pack 页     | `/p/moments`          | `/p/moments`          | ✅ 不变     |
 | Admin       | `/admin/audits`       | `/admin/audits`       | ✅ 不变     |
 
-manifest 里多了一个字段：`base: "/themes/default/"`——这是 Astro 运行时用来**剥前缀**和**生成资源 URL** 的依据。
+manifest 里多了一个字段：`base: "/themes/vanblog/"`——这是 Astro 运行时用来**剥前缀**和**生成资源 URL** 的依据。
 
 ### 14.3 机制解释（Astro 源码实证）
 
@@ -828,8 +828,8 @@ removeBase(pathname) {
 }
 ```
 
-- 请求 `/themes/default/posts/123` → removeBase → `/posts/123` → match `/posts/[id]` ✅
-- 请求 `/themes/default/p/bookmarks` → removeBase → `/p/bookmarks` → match Pack 路由 ✅
+- 请求 `/themes/vanblog/posts/123` → removeBase → `/posts/123` → match `/posts/[id]` ✅
+- 请求 `/themes/vanblog/p/bookmarks` → removeBase → `/p/bookmarks` → match Pack 路由 ✅
 - 请求 `/posts/123`（无前缀）→ removeBase 不剥（因为 `pathname.startsWith(base)` false）→ 仍然 match `/posts/[id]` ✅（向后兼容）
 
 **资源 URL 生成层**（`node_modules/.../astro/dist/core/app/pipeline.js:24`）：
@@ -844,8 +844,8 @@ const resolve = async (specifier) => {
 `createAssetLink` 会自动拼上 `base`：
 
 - bundlePath = `_astro/foo.ABC.js`
-- base = `/themes/default/`
-- 结果 = `/themes/default/_astro/foo.ABC.js` ✅
+- base = `/themes/vanblog/`
+- 结果 = `/themes/vanblog/_astro/foo.ABC.js` ✅
 
 **headElements**（pipeline.js:46-67）也用 `base` + `assetsPrefix` 生成 `<link>` / `<script>` 标签的 href。
 
@@ -855,7 +855,7 @@ const resolve = async (specifier) => {
 | ----------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
 | `base` 会改路由 pattern 吗？                                      | ❌ 不会。pattern 在 `injectRoute` 时固定。                                                                                          |
 | `base` 会改资源 URL 吗？                                          | ✅ 会。HTML 里的 `<script src>`、`<link href>` 都自动带 `/themes/<name>/_astro/` 前缀。                                             |
-| Pack URL `/p/bookmarks` 会变成 `/themes/default/p/bookmarks` 吗？ | ❌ 不会。**Pattern 不变**，但请求时 Astro 会从 URL 里剥掉 base 前缀后再 match。                                                     |
+| Pack URL `/p/bookmarks` 会变成 `/themes/vanblog/p/bookmarks` 吗？ | ❌ 不会。**Pattern 不变**，但请求时 Astro 会从 URL 里剥掉 base 前缀后再 match。                                                     |
 | 老 bookmark `/p/bookmarks`（无前缀）还能用吗？                    | ✅ 能。removeBase 对无前缀的 pathname 是 no-op。                                                                                    |
 | Caddy 需要特殊配置吗？                                            | 🟡 需要。Caddy 必须把 `/themes/<name>/*` 路由到 dispatcher，且 dispatcher 要把 base 前缀保留传给 Astro handler（不能 rewrite 掉）。 |
 
@@ -918,14 +918,14 @@ return theme.handler(req, res);
 ### 15.2 源码实证：build 产物里**根本没有 `astro/config`**
 
 ```bash
-$ grep -rn "from ['\"]astro/config['\"]" themes/default/dist/server/
+$ grep -rn "from ['\"]astro/config['\"]" themes/vanblog/dist/server/
 # (空输出)
 ```
 
 **Astro 在 build 时已经把 `memoryCache()` inline 编译掉了**，替换成一个独立的虚拟 module：
 
 ```
-themes/default/dist/server/chunks/_virtual_astro_cache-provider_Nr7WGImU.mjs
+themes/vanblog/dist/server/chunks/_virtual_astro_cache-provider_Nr7WGImU.mjs
                                                                        ^^^^^^^^^^
                                                                        build hash
 ```
@@ -939,7 +939,7 @@ themes/default/dist/server/chunks/_virtual_astro_cache-provider_Nr7WGImU.mjs
 ### 15.3 manifest 里的 cacheProvider 是**箭头函数**
 
 ```js
-// themes/default/dist/server/chunks/server_8bSZCGiz.mjs (manifest)
+// themes/vanblog/dist/server/chunks/server_8bSZCGiz.mjs (manifest)
 cacheProvider: () => import("./_virtual_astro_cache-provider_Nr7WGImU.mjs");
 ```
 

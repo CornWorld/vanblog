@@ -1,9 +1,9 @@
 # Vanblog Theme 作者手册
 
 > **目标读者**：想写自己 theme 的人（或写 theme 的 AI agent）。
-> **前置阅读**：[`docs/agent-theme-architecture.md`](./agent-theme-architecture.md) §1-§5（概念、PHP CMS 类比、Spike 3 模型）。
+> **前置阅读**：[`docs/theme-concepts.md`](./theme-concepts.md)（平台层 / base 主题 / vanblog 主题 的概念区分）。
 >
-> **Spike 3 模型一句话**：每个 theme 是一个**独立的 Astro 项目**，通过 `@vanblog/builtin/*` alias 引用主仓库的 builtin 文件；要改写哪个 builtin 文件，就在 `src/builtin-overrides/<rel>` 放同路径文件。
+> **Spike 3 模型一句话**：每个 theme 是一个**独立的 Astro 项目**，通过 `@vanblog/base/*` alias 引用主仓库的 base 文件；要改写哪个 base 文件，就在 `src/base-overrides/<rel>` 放同路径文件。
 
 ---
 
@@ -11,8 +11,8 @@
 
 1. [Quick Start](#1-quick-start)
 2. [Theme 项目结构](#2-theme-项目结构)
-3. [`@vanblog/builtin/*` alias 引用方式](#3-vanblogbuiltin-alias-引用方式)
-4. [覆盖 builtin（builtin-overrides）](#4-覆盖-builtinbuiltin-overrides)
+3. [`@vanblog/base/*` alias 引用方式](#3-vanblogbase-alias-引用方式)
+4. [覆盖 base（base-overrides）](#4-覆盖-basebase-overrides)
 5. [L0/L1/L2 三层 API Surface](#5-l0l1l2-三层-api-surface)
 6. [模板契约清单（frontmatter 变量）](#6-模板契约清单frontmatter-变量)
 7. [禁区列表](#7-禁区列表)
@@ -31,16 +31,16 @@ node scripts/theme-init.mjs my-theme
 # 2. 进入 theme 项目
 cd themes/my-theme
 
-# 3. 安装依赖（pnpm workspace 会自动链接主仓库的 app/ 作为 builtin 源）
+# 3. 安装依赖（pnpm workspace 会自动链接主仓库的 app/ 作为 base 源）
 pnpm install
 
 # 4. 启动 dev server（默认 http://localhost:4321）
 pnpm dev
 ```
 
-打开浏览器看到首页 = theme 已经跑起来了。此时 theme 的 `src/pages/` 里是一堆 thin shell（re-export builtin 页面），所有 import 都走 `@vanblog/builtin/*` alias 落到 `app/src/`。
+打开浏览器看到首页 = theme 已经跑起来了。`themes/base` 是官方最小模板，克隆后自带一套极简 public 页面（首页/文章/归档/时间轴/搜索/分类/标签/关于/404），页面直接通过 `@vanblog/base/*` alias 引用平台层（`app/src/`）的布局、lib、admin、api。
 
-**下一步**：改首页布局 → 编辑 `themes/my-theme/src/pages/index.astro`；覆盖 builtin BaseLayout → 新建 `themes/my-theme/src/builtin-overrides/layouts/BaseLayout.astro`。
+**下一步**：改首页布局 → 编辑 `themes/my-theme/src/pages/index.astro`；覆盖 base BaseLayout → 新建 `themes/my-theme/src/base-overrides/layouts/BaseLayout.astro`。
 
 ---
 
@@ -77,10 +77,10 @@ themes/{name}/                       ← 单个 theme 的根
     ├── layouts/
     │   └── PackPage.astro           ← REQUIRED: Pack 页面的 host
     ├── components/                  ← theme 专属组件
-    ├── middleware.ts                ← REQUIRED: 可 re-export builtin
+    ├── middleware.ts                ← REQUIRED: 可 re-export base
     ├── live.config.ts               ← REQUIRED: 可空 collections
     ├── env.d.ts
-    └── builtin-overrides/           ← ★ 覆盖 @vanblog/builtin/<rel>
+    └── base-overrides/           ← ★ 覆盖 @vanblog/base/<rel>
         ├── layouts/
         ├── components/
         ├── styles/
@@ -124,23 +124,23 @@ themes/{name}/                       ← 单个 theme 的根
 }
 ```
 
-主仓库通过 pnpm workspace 暴露 `@vanblog/sdk`；`@vanblog/builtin/*` alias 不需要写进 dependencies，由 `themes()` integration 在 Vite plugin 层解析。
+主仓库通过 pnpm workspace 暴露 `@vanblog/sdk`；`@vanblog/base/*` alias 不需要写进 dependencies，由 `themes()` integration 在 Vite plugin 层解析。
 
 ### 2.3 astro.config.mjs（最小示例）
 
 ```js
-import { defineConfig } from 'astro/config';
-import themesIntegration from '../../app/integrations/themes/index.mjs';
-import packsIntegration from '../../app/integrations/packs/index.mjs';
+import { defineConfig } from "astro/config";
+import themesIntegration from "../../app/integrations/themes/index.mjs";
+import packsIntegration from "../../app/integrations/packs/index.mjs";
 
 export default defineConfig({
   integrations: [
     themesIntegration({
-      themeSrcDir: './src',                          // 当前 theme 的 src/
-      mainAppSrcDir: '../../app/src',                // 主仓库 builtin 源头
+      themeSrcDir: "./src", // 当前 theme 的 src/
+      mainAppSrcDir: "../../app/src", // 主仓库 base 源头
     }),
     packsIntegration({
-      themePage: './src/layouts/PackPage.astro',     // 让 Pack 路由用 theme 的 host
+      themePage: "./src/layouts/PackPage.astro", // 让 Pack 路由用 theme 的 host
     }),
   ],
 });
@@ -148,82 +148,82 @@ export default defineConfig({
 
 ### 2.4 必须存在的文件
 
-| 文件 | 为什么必须 | 最小内容 |
-|------|-----------|----------|
-| `src/middleware.ts` | Astro 项目要求；builtin 页面通过 `Astro.locals.pb` 拿数据 | `export { onRequest } from '@vanblog/builtin/middleware';` |
-| `src/live.config.ts` | Astro Live Collections 注册 | `export const collections = {};`（可空） |
-| `src/layouts/PackPage.astro` | Pack 页面（`/p/<pack>`）必须有 host | 见 [§9.4](#94-packpageastro-必须提供) |
-| `src/env.d.ts` | TypeScript 引用类型 | `/// <reference path="../.astro/types.d.ts" />`（脚本生成） |
+| 文件                         | 为什么必须                                             | 最小内容                                                    |
+| ---------------------------- | ------------------------------------------------------ | ----------------------------------------------------------- |
+| `src/middleware.ts`          | Astro 项目要求；base 页面通过 `Astro.locals.pb` 拿数据 | `export { onRequest } from '@vanblog/base/middleware';`     |
+| `src/live.config.ts`         | Astro Live Collections 注册                            | `export const collections = {};`（可空）                    |
+| `src/layouts/PackPage.astro` | Pack 页面（`/p/<pack>`）必须有 host                    | 见 [§9.4](#94-packpageastro-必须提供)                       |
+| `src/env.d.ts`               | TypeScript 引用类型                                    | `/// <reference path="../.astro/types.d.ts" />`（脚本生成） |
 
 ---
 
-## 3. `@vanblog/builtin/*` alias 引用方式
+## 3. `@vanblog/base/*` alias 引用方式
 
-theme 永远用 `@vanblog/builtin/<rel>` 引用 builtin，**不要相对路径跨进 `app/src/`**。integration 的 Vite plugin 会把 alias 解析为：
+theme 永远用 `@vanblog/base/<rel>` 引用 base，**不要相对路径跨进 `app/src/`**。integration 的 Vite plugin 会把 alias 解析为：
 
-1. **优先**：`themes/<active>/src/builtin-overrides/<rel>`（如果存在）
-2. **fallback**：`app/src/<rel>`（builtin 源头）
+1. **优先**：`themes/<active>/src/base-overrides/<rel>`（如果存在）
+2. **fallback**：`app/src/<rel>`（base 源头）
 
-### 3.1 引用 builtin 组件
+### 3.1 引用 base 组件
 
 ```astro
 ---
 // themes/my-theme/src/pages/index.astro
-import BaseLayout from '@vanblog/builtin/layouts/BaseLayout.astro';
-import PostCard from '@vanblog/builtin/components/PostCard.astro';
+import BaseLayout from '@vanblog/base/layouts/BaseLayout.astro';
+import PostCard from '@vanblog/base/components/PostCard.astro';
 ---
 <BaseLayout title="首页">
   {posts.map(p => <PostCard post={p} mode="list" />)}
 </BaseLayout>
 ```
 
-### 3.2 引用 builtin 样式
+### 3.2 引用 base 样式
 
 ```astro
 ---
 // 在任意 .astro 文件顶部
-import '@vanblog/builtin/styles/global.css';
-import '@vanblog/builtin/styles/markdown.css';
+import '@vanblog/base/styles/global.css';
+import '@vanblog/base/styles/markdown.css';
 ---
 ```
 
-### 3.3 引用 builtin 工具函数（如果有）
+### 3.3 引用 base 工具函数（如果有）
 
 ```ts
 // themes/my-theme/src/components/MyCard.astro
-import { fmtDate } from '@vanblog/sdk';      // ← SDK 走 @vanblog/sdk，不是 @vanblog/builtin
-import { safe } from '@vanblog/builtin/lib/safe';  // ← 内部工具走 @vanblog/builtin/lib/...
+import { fmtDate } from "@vanblog/sdk"; // ← SDK 走 @vanblog/sdk，不是 @vanblog/base
+import { safe } from "@vanblog/base/lib/safe"; // ← 内部工具走 @vanblog/base/lib/...
 ```
 
-> **注意**：公开 API（`fmtDate`、`stripMarkdown`、`safe`、`pb.vanblog.*`）走 `@vanblog/sdk`，是 L0 契约层；`@vanblog/builtin/lib/*` 是 L2 内部层，**无稳定性保证**，升级时自负。
+> **注意**：公开 API（`fmtDate`、`stripMarkdown`、`safe`、`pb.vanblog.*`）走 `@vanblog/sdk`，是 L0 契约层；`@vanblog/base/lib/*` 是 L2 内部层，**无稳定性保证**，升级时自负。
 
 ### 3.4 alias 解析规则（重要）
 
-| 情况 | 解析结果 |
-|------|---------|
-| `import '@vanblog/builtin/layouts/BaseLayout.astro'` + 无 override | `app/src/layouts/BaseLayout.astro` |
-| `import '@vanblog/builtin/layouts/BaseLayout.astro'` + `src/builtin-overrides/layouts/BaseLayout.astro` 存在 | `src/builtin-overrides/layouts/BaseLayout.astro` |
-| `import '@vanblog/builtin/pages/admin/index.astro'` | **永远解析到 `app/src/`，禁止覆盖**（见 §7） |
-| `import '@vanblog/builtin/lib/markdown.ts'` | **永远解析到 `app/src/`，禁止覆盖** |
+| 情况                                                                                                   | 解析结果                                      |
+| ------------------------------------------------------------------------------------------------------ | --------------------------------------------- |
+| `import '@vanblog/base/layouts/BaseLayout.astro'` + 无 override                                        | `app/src/layouts/BaseLayout.astro`            |
+| `import '@vanblog/base/layouts/BaseLayout.astro'` + `src/base-overrides/layouts/BaseLayout.astro` 存在 | `src/base-overrides/layouts/BaseLayout.astro` |
+| `import '@vanblog/base/pages/admin/index.astro'`                                                       | **永远解析到 `app/src/`，禁止覆盖**（见 §7）  |
+| `import '@vanblog/base/lib/markdown.ts'`                                                               | **永远解析到 `app/src/`，禁止覆盖**           |
 
 ---
 
-## 4. 覆盖 builtin（builtin-overrides）
+## 4. 覆盖 base（base-overrides）
 
-要让某个 builtin 文件用 theme 自己的版本，在 `src/builtin-overrides/<rel>` 放同路径文件——**所有** `import '@vanblog/builtin/<rel>'` 自动指向覆盖版本。
+要让某个 base 文件用 theme 自己的版本，在 `src/base-overrides/<rel>` 放同路径文件——**所有** `import '@vanblog/base/<rel>'` 自动指向覆盖版本。
 
 ### 4.1 覆盖规则
 
-| 项 | 说明 |
-|----|------|
-| **路径必须精确匹配** | 覆盖 `app/src/layouts/BaseLayout.astro` → 放 `src/builtin-overrides/layouts/BaseLayout.astro`（相对路径不带 `app/src/` 前缀） |
-| **覆盖是全局的** | 一旦放 override，所有引用该 alias 的位置都拿到 override（包括 builtin 自己内部 import） |
-| **覆盖是 opt-in** | 只覆盖你想改的；其余 import 自动落到 builtin |
-| **覆盖会被 HMR 监听** | 改 override 文件 → 即时热更 |
+| 项                    | 说明                                                                                                                       |
+| --------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| **路径必须精确匹配**  | 覆盖 `app/src/layouts/BaseLayout.astro` → 放 `src/base-overrides/layouts/BaseLayout.astro`（相对路径不带 `app/src/` 前缀） |
+| **覆盖是全局的**      | 一旦放 override，所有引用该 alias 的位置都拿到 override（包括 base 自己内部 import）                                       |
+| **覆盖是 opt-in**     | 只覆盖你想改的；其余 import 自动落到 base                                                                                  |
+| **覆盖会被 HMR 监听** | 改 override 文件 → 即时热更                                                                                                |
 
 ### 4.2 例子 1：给 BaseLayout 加自定义 banner
 
-builtin 的 `app/src/layouts/BaseLayout.astro` 长这样（简化）：
+base 的 `app/src/layouts/BaseLayout.astro` 长这样（简化）：
 
 ```astro
 ---
@@ -235,11 +235,11 @@ const { title } = Astro.props;
 </html>
 ```
 
-theme 想在所有页面顶部加一个 banner。**新建** `themes/my-theme/src/builtin-overrides/layouts/BaseLayout.astro`：
+theme 想在所有页面顶部加一个 banner。**新建** `themes/my-theme/src/base-overrides/layouts/BaseLayout.astro`：
 
 ```astro
 ---
-import '@vanblog/builtin/styles/global.css';
+import '@vanblog/base/styles/global.css';
 const { title } = Astro.props;
 ---
 <html>
@@ -260,15 +260,15 @@ const { title } = Astro.props;
 </style>
 ```
 
-保存后所有页面顶部自动出现 banner——因为 builtin 页面都 `import BaseLayout from '@vanblog/builtin/layouts/BaseLayout.astro'`，alias 解析到这个 override 文件。
+保存后所有页面顶部自动出现 banner——因为 base 页面都 `import BaseLayout from '@vanblog/base/layouts/BaseLayout.astro'`，alias 解析到这个 override 文件。
 
 ### 4.3 例子 2：覆盖 PostCard 组件
 
-builtin 的 `app/src/components/PostCard.astro` 接受 `post` 和 `mode` props（L1 契约）。theme 想改卡片样式：
+base 的 `app/src/components/PostCard.astro` 接受 `post` 和 `mode` props（L1 契约）。theme 想改卡片样式：
 
 ```astro
 ---
-// themes/my-theme/src/builtin-overrides/components/PostCard.astro
+// themes/my-theme/src/base-overrides/components/PostCard.astro
 const { post, mode = 'list' } = Astro.props;
 ---
 <article class={`card card--${mode}`}>
@@ -293,40 +293,40 @@ const { post, mode = 'list' } = Astro.props;
 
 ### 4.4 例子 3：覆盖全局样式
 
-builtin 的 `app/src/styles/global.css` 定义了 CSS 变量。theme 想覆盖某个变量但保留其他：
+base 的 `app/src/styles/global.css` 定义了 CSS 变量。theme 想覆盖某个变量但保留其他：
 
 ```css
-/* themes/my-theme/src/builtin-overrides/styles/global.css */
-@import '@vanblog/builtin/styles/global.css';  /* ← 这样写会递归指向自己！*/
+/* themes/my-theme/src/base-overrides/styles/global.css */
+@import "@vanblog/base/styles/global.css"; /* ← 这样写会递归指向自己！*/
 
-/* 正确做法：直接复制 builtin 的 global.css 内容，然后改 */
+/* 正确做法：直接复制 base 的 global.css 内容，然后改 */
 :root {
   --color-bg: #fafafa;
   --color-text: #1a1a1a;
   --color-accent: #ff6b6b;
-  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-sans: "Inter", system-ui, sans-serif;
   --max-width: 720px;
 }
-/* ...其余 builtin 变量原样复制... */
+/* ...其余 base 变量原样复制... */
 ```
 
-> ⚠️ **覆盖 CSS 文件时不能用 `@import` 引用被覆盖的同名文件**——那会递归指向自己。要么完整复制 builtin 的 CSS 然后改，要么把覆盖拆成两个文件（覆盖 `global.css` 时只写新增变量，builtin 那份在 `app/src/styles/global.css` 不动，通过 `@vanblog/builtin/styles/base.css` 引用——如果 builtin 拆分了的话）。
+> ⚠️ **覆盖 CSS 文件时不能用 `@import` 引用被覆盖的同名文件**——那会递归指向自己。要么完整复制 base 的 CSS 然后改，要么把覆盖拆成两个文件（覆盖 `global.css` 时只写新增变量，base 那份在 `app/src/styles/global.css` 不动，通过 `@vanblog/base/styles/base.css` 引用——如果 base 拆分了的话）。
 
 ---
 
 ## 5. L0/L1/L2 三层 API Surface
 
-builtin 升级时哪些改动安全、哪些会破坏 theme？按"距 theme 作者远近"分三层：
+base 升级时哪些改动安全、哪些会破坏 theme？按"距 theme 作者远近"分三层：
 
 ### 5.1 L0 契约层（永远稳定）
 
-| 类型 | 示例 | 稳定性保证 |
-|------|------|-----------|
-| **frontmatter 变量名** | `posts`、`post`、`site`、`pb`、`totalPages`、`page` | 永远不删、不改语义；新增字段允许（必须 optional） |
-| **SDK 函数签名** | `pb.vanblog.posts.listPublished(page, perPage)`、`stripMarkdown(content, len)`、`fmtDate(ts)`、`safe(fn, key)` | 参数名/顺序/返回类型不变；新增参数必须 optional |
-| **PB collection 字段名** | `posts.title`、`posts.content`、`posts.created`、`posts.tags`、`posts.category` | 与 `vault/pb_migrations/*.go` 锁定，破坏需 major + 迁移 |
+| 类型                     | 示例                                                                                                           | 稳定性保证                                              |
+| ------------------------ | -------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| **frontmatter 变量名**   | `posts`、`post`、`site`、`pb`、`totalPages`、`page`                                                            | 永远不删、不改语义；新增字段允许（必须 optional）       |
+| **SDK 函数签名**         | `pb.vanblog.posts.listPublished(page, perPage)`、`stripMarkdown(content, len)`、`fmtDate(ts)`、`safe(fn, key)` | 参数名/顺序/返回类型不变；新增参数必须 optional         |
+| **PB collection 字段名** | `posts.title`、`posts.content`、`posts.created`、`posts.tags`、`posts.category`                                | 与 `vault/pb_migrations/*.go` 锁定，破坏需 major + 迁移 |
 
-**theme 该怎么用 L0**：放心依赖，builtin 升级不会炸。对应 PHP CMS 的 `the_title()` / `$this->title()`。
+**theme 该怎么用 L0**：放心依赖，base 升级不会炸。对应 PHP CMS 的 `the_title()` / `$this->title()`。
 
 ```astro
 ---
@@ -339,16 +339,16 @@ import { fmtDate, stripMarkdown } from '@vanblog/sdk';
 
 ### 5.2 L1 组件 API 层（语义稳定，可加不可减）
 
-| 类型 | 示例 | 稳定性保证 |
-|------|------|-----------|
-| **builtin 组件 props 名** | `BaseLayout.title`、`PostCard.post`、`PostCard.mode`、`PackPage.title` | 可加新 props（必须 optional + 合理默认）；**不可删旧 props**；不可改 prop 类型语义（`string` 不能变 `string \| undefined`） |
-| **组件 import 路径** | `@vanblog/builtin/layouts/BaseLayout.astro` | alias 路径不变；文件位置可在 `app/src/` 内部移动 |
+| 类型                   | 示例                                                                   | 稳定性保证                                                                                                                  |
+| ---------------------- | ---------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| **base 组件 props 名** | `BaseLayout.title`、`PostCard.post`、`PostCard.mode`、`PackPage.title` | 可加新 props（必须 optional + 合理默认）；**不可删旧 props**；不可改 prop 类型语义（`string` 不能变 `string \| undefined`） |
+| **组件 import 路径**   | `@vanblog/base/layouts/BaseLayout.astro`                               | alias 路径不变；文件位置可在 `app/src/` 内部移动                                                                            |
 
 **theme 该怎么用 L1**：覆盖组件时保留所有现有 props 的名字和类型；可以加新 props 但要给默认值。
 
 ```astro
 ---
-// themes/my-theme/src/builtin-overrides/components/PostCard.astro
+// themes/my-theme/src/base-overrides/components/PostCard.astro
 // ✅ 保留 L1 props：post, mode
 // ✅ 加新 props：variant（optional + 有默认值）
 const { post, mode = 'list', variant = 'default' } = Astro.props;
@@ -357,21 +357,21 @@ const { post, mode = 'list', variant = 'default' } = Astro.props;
 
 ### 5.3 L2 内部实现层（无保证，theme 自负）
 
-| 类型 | 示例 | 稳定性保证 |
-|------|------|-----------|
-| **组件内部 DOM 结构** | `<div class="post-card__inner">` 的层级 | 无保证，theme 不应依赖具体 class 名 |
-| **CSS class 名** | `.post-card`、`.btn-primary`、`.header__nav` | 无保证，升级可能改名 |
-| **内部 helper 函数** | `app/src/lib/markdown.ts` 内的私有函数 | 无保证 |
-| **组件嵌套结构** | PostCard 是否包了 `<article>`；BaseLayout 是否含 `<nav>` | 无保证 |
+| 类型                  | 示例                                                     | 稳定性保证                          |
+| --------------------- | -------------------------------------------------------- | ----------------------------------- |
+| **组件内部 DOM 结构** | `<div class="post-card__inner">` 的层级                  | 无保证，theme 不应依赖具体 class 名 |
+| **CSS class 名**      | `.post-card`、`.btn-primary`、`.header__nav`             | 无保证，升级可能改名                |
+| **内部 helper 函数**  | `app/src/lib/markdown.ts` 内的私有函数                   | 无保证                              |
+| **组件嵌套结构**      | PostCard 是否包了 `<article>`；BaseLayout 是否含 `<nav>` | 无保证                              |
 
-**theme 该怎么用 L2**：**尽量别依赖**。如果你的 override 复制了 builtin 组件源码然后改 class 名，builtin 升级时你需要跑 `upgrade_diff` MCP 工具看 diff，手动适配。
+**theme 该怎么用 L2**：**尽量别依赖**。如果你的 override 复制了 base 组件源码然后改 class 名，base 升级时你需要跑 `upgrade_diff` MCP 工具看 diff，手动适配。
 
 ```astro
 ---
 // ❌ 危险：依赖 L2 内部 class 名
-import '@vanblog/builtin/components/PostCard.astro';
+import '@vanblog/base/components/PostCard.astro';
 ---
-<!-- 假设 builtin 的 PostCard 输出 .post-card__inner，升级可能改名 -->
+<!-- 假设 base 的 PostCard 输出 .post-card__inner，升级可能改名 -->
 <div class="wrapper">
   <div class="post-card__inner">...</div>   <!-- ← 这个 class 名无保证 -->
 </div>
@@ -379,33 +379,33 @@ import '@vanblog/builtin/components/PostCard.astro';
 
 ### 5.4 升级时的破坏性判断
 
-| 你的 override 依赖的层 | builtin 升级时 | 你需要做什么 |
-|----------------------|---------------|-------------|
-| 只依赖 L0 | 不会炸 | 无需做事 |
-| 依赖 L1（覆盖 builtin 组件，保留 props） | 极少炸（除非 builtin 删了 prop，这违反 L1 契约） | 跑 `upgrade_diff` 看一眼 |
-| 依赖 L2（复制源码改 class、依赖内部 DOM 结构） | 可能炸 | 必须跑 `upgrade_diff` + 手动适配 |
+| 你的 override 依赖的层                         | base 升级时                                   | 你需要做什么                     |
+| ---------------------------------------------- | --------------------------------------------- | -------------------------------- |
+| 只依赖 L0                                      | 不会炸                                        | 无需做事                         |
+| 依赖 L1（覆盖 base 组件，保留 props）          | 极少炸（除非 base 删了 prop，这违反 L1 契约） | 跑 `upgrade_diff` 看一眼         |
+| 依赖 L2（复制源码改 class、依赖内部 DOM 结构） | 可能炸                                        | 必须跑 `upgrade_diff` + 手动适配 |
 
 ---
 
 ## 6. 模板契约清单（frontmatter 变量）
 
-每个 builtin 页面在 frontmatter 里拿到一组固定变量（L0 契约）。theme 的 `src/pages/<same-path>.astro` 必须消费这些变量——可以重组布局，不能改变量名。
+每个 base 页面在 frontmatter 里拿到一组固定变量（L0 契约）。theme 的 `src/pages/<same-path>.astro` 必须消费这些变量——可以重组布局，不能改变量名。
 
 ### 6.1 Public 页面（路径前缀 `pages/`，被 BaseLayout 包裹）
 
-| 页面路径 | frontmatter 契约变量 |
-|---------|---------------------|
-| `pages/index.astro` | `posts: PostExpand[]`, `totalPages: number`, `page: number` |
-| `pages/posts/[id].astro` | `post: Post \| null`, `html: string \| null`, `id: string`, `site: Site` |
-| `pages/archive.astro` | `posts: Post[]`, `years: number[]` |
-| `pages/timeline.astro` | `entries: TimelineEntry[]` |
-| `pages/search.astro` | `q: string`, `results: SearchResult[]` |
-| `pages/categories/index.astro` | `categories: Category[]` |
-| `pages/categories/[id].astro` | `category: Category`, `posts: PostExpand[]`, `totalPages: number`, `page: number` |
-| `pages/tags/index.astro` | `tags: Tag[]` |
-| `pages/tags/[id].astro` | `tag: Tag`, `posts: PostExpand[]`, `totalPages: number`, `page: number` |
-| `pages/about.astro` | `site: Site`, `html: string`, `updatedAt: string` |
-| `pages/404.astro` | （无） |
+| 页面路径                       | frontmatter 契约变量                                                              |
+| ------------------------------ | --------------------------------------------------------------------------------- |
+| `pages/index.astro`            | `posts: PostExpand[]`, `totalPages: number`, `page: number`                       |
+| `pages/posts/[id].astro`       | `post: Post \| null`, `html: string \| null`, `id: string`, `site: Site`          |
+| `pages/archive.astro`          | `posts: Post[]`, `years: number[]`                                                |
+| `pages/timeline.astro`         | `entries: TimelineEntry[]`                                                        |
+| `pages/search.astro`           | `q: string`, `results: SearchResult[]`                                            |
+| `pages/categories/index.astro` | `categories: Category[]`                                                          |
+| `pages/categories/[id].astro`  | `category: Category`, `posts: PostExpand[]`, `totalPages: number`, `page: number` |
+| `pages/tags/index.astro`       | `tags: Tag[]`                                                                     |
+| `pages/tags/[id].astro`        | `tag: Tag`, `posts: PostExpand[]`, `totalPages: number`, `page: number`           |
+| `pages/about.astro`            | `site: Site`, `html: string`, `updatedAt: string`                                 |
+| `pages/404.astro`              | （无）                                                                            |
 
 ### 6.2 Pack 页面（`packs/*/pages/index.astro`，不是 theme 的页面）
 
@@ -422,7 +422,7 @@ const { items } = Astro.props;
 </Page>
 ```
 
-theme 必须提供 `src/layouts/PackPage.astro`（或 `src/builtin-overrides/layouts/PackPage.astro`），详见 [§9.4](#94-packpageastro-必须提供)。
+theme 必须提供 `src/layouts/PackPage.astro`（或 `src/base-overrides/layouts/PackPage.astro`），详见 [§9.4](#94-packpageastro-必须提供)。
 
 ### 6.3 Admin 页面（`pages/admin/*`，**锁定**）
 
@@ -433,8 +433,8 @@ theme 必须提供 `src/layouts/PackPage.astro`（或 `src/builtin-overrides/lay
 ```astro
 ---
 // themes/my-theme/src/pages/index.astro
-import BaseLayout from '@vanblog/builtin/layouts/BaseLayout.astro';
-import PostCard from '@vanblog/builtin/components/PostCard.astro';
+import BaseLayout from '@vanblog/base/layouts/BaseLayout.astro';
+import PostCard from '@vanblog/base/components/PostCard.astro';
 import { fmtDate } from '@vanblog/sdk';
 
 // L0 契约变量：posts, totalPages, page
@@ -455,40 +455,41 @@ const { posts, totalPages, page } = Astro.props;
 </BaseLayout>
 ```
 
-> **frontmatter 变量从哪来**：builtin 的 `app/src/pages/index.astro` 通过 `live.config.ts` 注册的 Live Collection 在 frontmatter 注入这些变量。theme 的同名页面也会被 Astro 注入同样的变量——这是 L0 契约的运行时保证。
+> **frontmatter 变量从哪来**：base 的 `app/src/pages/index.astro` 通过 `live.config.ts` 注册的 Live Collection 在 frontmatter 注入这些变量。theme 的同名页面也会被 Astro 注入同样的变量——这是 L0 契约的运行时保证。
 
 ---
 
 ## 7. 禁区列表
 
-`themes/{name}/src/builtin-overrides/` 内**不允许**覆盖以下路径。integration 在 Vite plugin `resolveId` 钩子里校验，命中即 `throw new Error('FORBIDDEN override: ...')`，dev server 与 prod build 都会 fail closed。
+`themes/{name}/src/base-overrides/` 内**不允许**覆盖以下路径。integration 在 Vite plugin `resolveId` 钩子里校验，命中即 `throw new Error('FORBIDDEN override: ...')`，dev server 与 prod build 都会 fail closed。
 
-| 禁区路径 | 为什么锁定 |
-|---------|-----------|
-| `src/builtin-overrides/pages/admin/**` | admin 是 control plane，锁定 |
-| `src/builtin-overrides/pages/api/**` | API 端点是数据层一部分 |
-| `src/builtin-overrides/lib/**` | Markdown 渲染、图片处理、内部 helper |
-| `src/builtin-overrides/loaders/**` | Live Collection loaders 喂 builtin 页面 |
-| `src/builtin-overrides/live.config.{ts,js,mjs}` | Live Collection 注册（theme 必须自己写一份，但**不是 override**） |
-| `src/builtin-overrides/middleware.{ts,js}` | 认证 / pb client 注入（同上） |
+| 禁区路径                                     | 为什么锁定                                                        |
+| -------------------------------------------- | ----------------------------------------------------------------- |
+| `src/base-overrides/pages/admin/**`          | admin 是 control plane，锁定                                      |
+| `src/base-overrides/pages/api/**`            | API 端点是数据层一部分                                            |
+| `src/base-overrides/lib/**`                  | Markdown 渲染、图片处理、内部 helper                              |
+| `src/base-overrides/loaders/**`              | Live Collection loaders 喂 base 页面                              |
+| `src/base-overrides/live.config.{ts,js,mjs}` | Live Collection 注册（theme 必须自己写一份，但**不是 override**） |
+| `src/base-overrides/middleware.{ts,js}`      | 认证 / pb client 注入（同上）                                     |
 
 ### 7.1 theme 必须自己提供（但不是 override）
 
-以下文件 theme **必须**在 `src/` 里有一份（不在 `builtin-overrides/` 里），Astro 项目才能跑：
+以下文件 theme **必须**在 `src/` 里有一份（不在 `base-overrides/` 里），Astro 项目才能跑：
 
-| 文件 | 最小内容 | 说明 |
-|------|---------|------|
-| `src/middleware.ts` | `export { onRequest } from '@vanblog/builtin/middleware';` | re-export builtin，让 `Astro.locals.pb` 可用 |
-| `src/live.config.ts` | `export const collections = {};` | 可空；theme 想加自己的 Live Collection 在这里加 |
+| 文件                 | 最小内容                                                | 说明                                            |
+| -------------------- | ------------------------------------------------------- | ----------------------------------------------- |
+| `src/middleware.ts`  | `export { onRequest } from '@vanblog/base/middleware';` | re-export base，让 `Astro.locals.pb` 可用       |
+| `src/live.config.ts` | `export const collections = {};`                        | 可空；theme 想加自己的 Live Collection 在这里加 |
 
-这两个文件**在 theme 的 `src/` 里**，不在 `src/builtin-overrides/` 里。区别：
+这两个文件**在 theme 的 `src/` 里**，不在 `src/base-overrides/` 里。区别：
+
 - `src/middleware.ts` = Astro 项目的入口文件，theme 必须自己有
-- `src/builtin-overrides/middleware.ts` = 覆盖 builtin 的 middleware 给别人 import，**禁止**
+- `src/base-overrides/middleware.ts` = 覆盖 base 的 middleware 给别人 import，**禁止**
 
 ### 7.2 主仓库内 agent/theme 不能碰的目录
 
 ```
-app/src/             ← builtin 源头，由 vanblog 维护者管理
+app/src/             ← base 源头，由 vanblog 维护者管理
 sdk/src/             ← SDK 源码
 vault/               ← Go 后端
 vault/pb_migrations/ ← 数据库迁移（已锁定）
@@ -498,10 +499,10 @@ vault/pb_migrations/ ← 数据库迁移（已锁定）
 
 ## 8. 升级流程
 
-theme 作者 pull 主仓库后，builtin 自动更新（alias 解析到新的 `app/src/`）。**绝大多数升级不会炸 theme**，因为：
+theme 作者 pull 主仓库后，base 自动更新（alias 解析到新的 `app/src/`）。**绝大多数升级不会炸 theme**，因为：
 
 - 你的 `src/pages/*.astro` 只依赖 L0 frontmatter 变量（永远稳定）
-- 你的 `src/builtin-overrides/` 如果只覆盖 L1（保留 props），builtin 加新 props 也不影响你
+- 你的 `src/base-overrides/` 如果只覆盖 L1（保留 props），base 加新 props 也不影响你
 - 只有当你的 override 依赖 L2（复制源码改 class 名、依赖内部 DOM 结构）时，才可能炸
 
 ### 8.1 标准升级流程
@@ -513,7 +514,7 @@ git pull origin main
 
 # 2. 进 theme 目录，跑 upgrade_diff（MCP 工具，或手动 diff）
 cd themes/my-theme
-# 通过 MCP 调用 upgrade_diff，扫描 src/builtin-overrides/ 与 app/src/ 的同名文件 diff
+# 通过 MCP 调用 upgrade_diff，扫描 src/base-overrides/ 与 app/src/ 的同名文件 diff
 # 输出：哪些 override 涉及 L0/L1 破坏性变更、哪些只是 L2 视觉差异
 
 # 3. 根据 diff 报告修复（通常只需要改几个 class 名）
@@ -526,27 +527,28 @@ pnpm build
 
 ```bash
 # 列出 theme 的所有 override 文件
-find themes/my-theme/src/builtin-overrides -type f
+find themes/my-theme/src/base-overrides -type f
 
-# 对每个 override，与 builtin 源头 diff
-diff themes/my-theme/src/builtin-overrides/layouts/BaseLayout.astro \
+# 对每个 override，与 base 源头 diff
+diff themes/my-theme/src/base-overrides/layouts/BaseLayout.astro \
      app/src/layouts/BaseLayout.astro
 ```
 
 重点看：
+
 - **L0 破坏**：frontmatter 变量名变了？SDK 函数签名变了？（极少见，会写在 CHANGELOG）
-- **L1 破坏**：builtin 删了某个 prop？改了 prop 类型？（违反契约，应该报 bug）
+- **L1 破坏**：base 删了某个 prop？改了 prop 类型？（违反契约，应该报 bug）
 - **L2 差异**：DOM 结构、class 名变了？（你自己适配）
 
 ### 8.3 升级检查清单
 
-| 检查项 | 怎么做 |
-|--------|-------|
-| theme 还能 build | `pnpm build` 不报错 |
-| 首页/文章页/归档正常渲染 | dev 模式逐个点一遍 |
-| 覆盖的 BaseLayout 没破坏 builtin 页面 | 看 admin 页面（admin 也用 BaseLayout，如果你的 override 破坏了它会有视觉异常） |
-| Pack 页面（`/p/<pack>`）还能用 | 访问 `/p/bookmarks` 看 PackPage host 正常 |
-| Palette 切换不影响 theme | admin 改 `site.palette`，theme 的 CSS 变量应该跟着变 |
+| 检查项                             | 怎么做                                                                         |
+| ---------------------------------- | ------------------------------------------------------------------------------ |
+| theme 还能 build                   | `pnpm build` 不报错                                                            |
+| 首页/文章页/归档正常渲染           | dev 模式逐个点一遍                                                             |
+| 覆盖的 BaseLayout 没破坏 base 页面 | 看 admin 页面（admin 也用 BaseLayout，如果你的 override 破坏了它会有视觉异常） |
+| Pack 页面（`/p/<pack>`）还能用     | 访问 `/p/bookmarks` 看 PackPage host 正常                                      |
+| Palette 切换不影响 theme           | admin 改 `site.palette`，theme 的 CSS 变量应该跟着变                           |
 
 ---
 
@@ -560,7 +562,7 @@ diff themes/my-theme/src/builtin-overrides/layouts/BaseLayout.astro \
 node scripts/theme-init.mjs my-theme
 cd themes/my-theme
 pnpm install
-pnpm dev   # 此时所有页面都是 thin shell，re-export builtin
+pnpm dev   # 此时所有页面都是 thin shell，re-export base
 ```
 
 ### 9.2 项目结构（初始化后）
@@ -574,18 +576,18 @@ themes/my-theme/
 ├── public/
 │   └── screenshot.png
 └── src/
-    ├── pages/                    ← thin shells（re-export builtin）
-    │   ├── index.astro           ← export { default } from '@vanblog/builtin/pages/index.astro';
+    ├── pages/                    ← thin shells（re-export base）
+    │   ├── index.astro           ← export { default } from '@vanblog/base/pages/index.astro';
     │   ├── posts/[id].astro
     │   ├── ...（其余 25 个页面）
     │   └── 404.astro
     ├── layouts/
     │   └── PackPage.astro        ← REQUIRED
     ├── components/               ← 空
-    ├── middleware.ts             ← export { onRequest } from '@vanblog/builtin/middleware';
+    ├── middleware.ts             ← export { onRequest } from '@vanblog/base/middleware';
     ├── live.config.ts            ← export const collections = {};
     ├── env.d.ts
-    └── builtin-overrides/        ← 空（先不覆盖任何东西）
+    └── base-overrides/        ← 空（先不覆盖任何东西）
 ```
 
 ### 9.3 覆盖首页布局
@@ -595,7 +597,7 @@ themes/my-theme/
 ```astro
 ---
 // themes/my-theme/src/pages/index.astro
-import BaseLayout from '@vanblog/builtin/layouts/BaseLayout.astro';
+import BaseLayout from '@vanblog/base/layouts/BaseLayout.astro';
 import { fmtDate } from '@vanblog/sdk';
 import HeroBanner from '../components/HeroBanner.astro';
 
@@ -652,7 +654,7 @@ Pack 路由（`/p/<pack>`）需要一个 host 组件。最小实现：
 ```astro
 ---
 // themes/my-theme/src/layouts/PackPage.astro
-import BaseLayout from '@vanblog/builtin/layouts/BaseLayout.astro';
+import BaseLayout from '@vanblog/base/layouts/BaseLayout.astro';
 const { title } = Astro.props;
 ---
 <BaseLayout title={title}>
@@ -690,8 +692,8 @@ const site = Astro.props.site ?? { name: 'My Blog', description: '' };
 
 ```astro
 ---
-// themes/my-theme/src/builtin-overrides/layouts/BaseLayout.astro
-import '@vanblog/builtin/styles/global.css';
+// themes/my-theme/src/base-overrides/layouts/BaseLayout.astro
+import '@vanblog/base/styles/global.css';
 const { title } = Astro.props;
 ---
 <html lang="zh-CN">
@@ -762,7 +764,7 @@ ARG VANBLOG_ACTIVE_THEME=default
 
 # astro-build stage
 COPY themes/${VANBLOG_ACTIVE_THEME}/ /build/theme/
-COPY app/ /build/app/        # integration + builtin 源头
+COPY app/ /build/app/        # integration + base 源头
 WORKDIR /build/theme
 RUN pnpm install && pnpm build
 # 输出 /build/themes/<active>/dist/
@@ -775,10 +777,10 @@ RUN ln -s "/build/themes/$(cat /etc/vanblog/active-theme)" /app
 
 ### 10.3 切换主题
 
-| 模式 | 操作 | 生效方式 |
-|------|------|----------|
-| **dev** | admin 改 `site.activeTheme` → 保存 → 重启 dev server | alias 在启动时配置，重启才生效 |
-| **prod** | admin 改 `site.activeTheme` → 保存 → 重建镜像 | `docker build --build-arg VANBLOG_ACTIVE_THEME=<name> -t vanblog:prod .` |
+| 模式     | 操作                                                 | 生效方式                                                                 |
+| -------- | ---------------------------------------------------- | ------------------------------------------------------------------------ |
+| **dev**  | admin 改 `site.activeTheme` → 保存 → 重启 dev server | alias 在启动时配置，重启才生效                                           |
+| **prod** | admin 改 `site.activeTheme` → 保存 → 重建镜像        | `docker build --build-arg VANBLOG_ACTIVE_THEME=<name> -t vanblog:prod .` |
 
 prod 不能运行时切换主题，因为 Astro 是编译时生成路由——切主题等于换一个 build 产物。entrypoint.prod.sh 启动时会读 `/etc/vanblog/active-theme` 校验与 `site.activeTheme` 一致，不一致会提示用户重建镜像。
 
@@ -803,8 +805,8 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 20, cache: pnpm }
       - run: pnpm install --frozen-lockfile
-      - run: pnpm check     # astro check
-      - run: pnpm build     # 必须成功
+      - run: pnpm check # astro check
+      - run: pnpm build # 必须成功
       - uses: actions/upload-artifact@v4
         with: { name: dist, path: dist/ }
 ```
@@ -815,11 +817,11 @@ jobs:
 
 ### Q: theme 能加自己的 API 端点吗？
 
-**不能**。`src/builtin-overrides/pages/api/**` 是禁区；theme 的 `src/pages/api/` 也不被主仓库的 prod 镜像识别（主仓库只 build theme 的 public 页面）。如果需要新 API，去主仓库加，或用 PocketBase hooks（Pack 形式）。
+**不能**。`src/base-overrides/pages/api/**` 是禁区；theme 的 `src/pages/api/` 也不被主仓库的 prod 镜像识别（主仓库只 build theme 的 public 页面）。如果需要新 API，去主仓库加，或用 PocketBase hooks（Pack 形式）。
 
 ### Q: theme 能改 admin 页面吗？
 
-**不能**。admin 是 control plane，锁定。`src/builtin-overrides/pages/admin/**` 会被 integration 拒绝。
+**不能**。admin 是 control plane，锁定。`src/base-overrides/pages/admin/**` 会被 integration 拒绝。
 
 ### Q: theme 能依赖某个具体的 Pack 吗？
 
@@ -844,26 +846,32 @@ const packName = Astro.url.pathname.split('/')[2];  // '/p/bookmarks' -> 'bookma
 
 ### Q: theme 能覆盖另一个 theme 吗？
 
-**不能**。Spike 3 模型没有 child theme 继承（`theme.json.parent` 字段未实现）。每个 theme 独立覆盖 builtin，theme 之间互不可见。
+**不能**。Spike 3 模型没有 child theme 继承（`theme.json.parent` 字段未实现）。每个 theme 独立覆盖 base，theme 之间互不可见。
 
-### Q: builtin 加了新页面（比如 `pages/photos.astro`），我的 theme 会自动有吗？
+### Q: 平台层加了新页面（比如新的 admin/api 端点），我的 theme 会自动有吗？
 
-**会**，前提是你的 theme 是 thin shell 模式（`src/pages/` 是 re-export）。如果你完整重写过 `src/pages/`，新页面你需要手动加一个 thin shell：
+**会**——前提是你的 theme 对平台层页面用了 thin shell（`src/pages/...` re-export `@vanblog/base/pages/...`）。admin / api / login / setup 都是平台层页面，theme 用薄壳引用即可。
+
+**public 页面（首页/文章/归档/...）不是平台层的**，它们是主题自有的。要给站点加一个全新页面（比如 `photos`），直接在你的 theme 里写 `src/pages/photos.astro`，参考 `themes/vanblog` 的写法：
 
 ```astro
 ---
 // themes/my-theme/src/pages/photos.astro
-export { default } from '@vanblog/builtin/pages/photos.astro';
+import BaseLayout from '@vanblog/base/layouts/BaseLayout.astro';
+---
+<BaseLayout title="照片">
+  ...
+</BaseLayout>
 ```
 
-或者写你自己的完整版本。`upgrade_diff` MCP 工具会列出缺失的页面。
+`upgrade_diff` MCP 工具会列出平台层新增/变更的页面。
 
 ---
 
 ## 参考
 
-- [`docs/agent-theme-architecture.md`](./agent-theme-architecture.md) — 完整架构设计（§1-§10）
-- [`docs/future-pack-architecture.md`](./future-pack-architecture.md) — Pack 与 theme 的关系
-- `themes/default/` — 官方参考实现，可以直接读源码学习
-- `app/integrations/themes/index.mjs` — alias 解析与 FORBIDDEN 校验的实现（30 行核心）
+- [`docs/theme-concepts.md`](./theme-concepts.md) — 平台层 / base 主题 / vanblog 主题 概念模型
+- `themes/base/` — 官方最小模板（纯布局 + 简单颜色，脚手架起点）
+- `themes/vanblog/` — 官方旗舰主题（mereithhh 的 vanblog 前端迁移而来，独立视觉）
+- `app/integrations/themes/index.mjs` — alias 解析与 FORBIDDEN 校验的实现
 - `app/integrations/packs/index.mjs` — Pack 路由注入与 `vanblog:theme` 虚拟模块
