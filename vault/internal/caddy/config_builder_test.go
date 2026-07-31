@@ -202,13 +202,14 @@ func TestBuildFullConfig(t *testing.T) {
 	}
 
 	// Expected order:
-	//   [0] vanblog-system-api      /api/*       → pb (8090)
-	//   [1] vanblog-system-pb-admin /_/*         → pb (8090)
-	//   [2] vanblog-emoji-cache     /emoji-data  → Astro (4321, cache rule)
-	//   [3] test-proxy              /my/*        → user upstream (3000)
-	//   [4] vanblog-system-fallback (catch-all)  → Astro (4321)
-	if len(srvHTTPS) != 5 {
-		t.Fatalf("expected 5 routes on srv_https, got %d", len(srvHTTPS))
+	//   [0] vanblog-system-api          /api/*       → pb (8090)
+	//   [1] vanblog-system-pb-admin     /_/*         → pb (8090)
+	//   [2] vanblog-emoji-cache         /emoji-data  → Astro (4321, cache rule)
+	//   [3] vanblog-themes-assets-cache /themes/*    → Astro (4321, cache rule)
+	//   [4] test-proxy                  /my/*        → user upstream (3000)
+	//   [5] vanblog-system-fallback     (catch-all)  → Astro (4321)
+	if len(srvHTTPS) != 6 {
+		t.Fatalf("expected 6 routes on srv_https, got %d", len(srvHTTPS))
 	}
 
 	// 1. System API.
@@ -235,26 +236,37 @@ func TestBuildFullConfig(t *testing.T) {
 		t.Errorf("[2] cache should be reverse_proxy, got %s", srvHTTPS[2].Handle[0].Handler)
 	}
 
-	// 4. User rule.
-	if srvHTTPS[3].ID != "test-proxy" {
-		t.Errorf("[3] expected user rule test-proxy, got %q", srvHTTPS[3].ID)
+	// 4. Theme assets cache (/themes/*).
+	if srvHTTPS[3].ID != "vanblog-themes-assets-cache" {
+		t.Errorf("[3] expected themes-assets-cache, got %q", srvHTTPS[3].ID)
 	}
-	if matchPaths(srvHTTPS[3])[0] != "/my/*" {
+	if matchPaths(srvHTTPS[3])[0] != "/themes/*" {
 		t.Errorf("[3] path mismatch: %v", matchPaths(srvHTTPS[3]))
 	}
-	if srvHTTPS[3].Handle[0].Upstreams[0].Dial != "127.0.0.1:3000" {
-		t.Errorf("[3] user dial mismatch: %s", srvHTTPS[3].Handle[0].Upstreams[0].Dial)
+	if srvHTTPS[3].Handle[0].Upstreams[0].Dial != "127.0.0.1:4321" {
+		t.Errorf("[3] themes cache dial mismatch: %s", srvHTTPS[3].Handle[0].Upstreams[0].Dial)
 	}
 
-	// 5. Fallback (no match → catch-all).
-	if srvHTTPS[4].ID != systemFallbackID {
-		t.Errorf("[4] expected fallback id %q, got %q", systemFallbackID, srvHTTPS[4].ID)
+	// 5. User rule.
+	if srvHTTPS[4].ID != "test-proxy" {
+		t.Errorf("[4] expected user rule test-proxy, got %q", srvHTTPS[4].ID)
 	}
-	if len(srvHTTPS[4].Match) != 0 {
-		t.Errorf("[4] fallback should have no match (catch-all), got %+v", srvHTTPS[4].Match)
+	if matchPaths(srvHTTPS[4])[0] != "/my/*" {
+		t.Errorf("[4] path mismatch: %v", matchPaths(srvHTTPS[4]))
 	}
-	if srvHTTPS[4].Handle[0].Upstreams[0].Dial != "127.0.0.1:4321" {
-		t.Errorf("[4] fallback dial mismatch: %s", srvHTTPS[4].Handle[0].Upstreams[0].Dial)
+	if srvHTTPS[4].Handle[0].Upstreams[0].Dial != "127.0.0.1:3000" {
+		t.Errorf("[4] user dial mismatch: %s", srvHTTPS[4].Handle[0].Upstreams[0].Dial)
+	}
+
+	// 6. Fallback (no match → catch-all).
+	if srvHTTPS[5].ID != systemFallbackID {
+		t.Errorf("[5] expected fallback id %q, got %q", systemFallbackID, srvHTTPS[5].ID)
+	}
+	if len(srvHTTPS[5].Match) != 0 {
+		t.Errorf("[5] fallback should have no match (catch-all), got %+v", srvHTTPS[5].Match)
+	}
+	if srvHTTPS[5].Handle[0].Upstreams[0].Dial != "127.0.0.1:4321" {
+		t.Errorf("[5] fallback dial mismatch: %s", srvHTTPS[5].Handle[0].Upstreams[0].Dial)
 	}
 }
 
