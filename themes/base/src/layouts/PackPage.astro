@@ -1,0 +1,16 @@
+---
+// PackPage host: base theme re-exports the platform PackPage so that
+// packs/ pages render through the platform layout. Themes that want a custom
+// PackPage shell can replace this file or put an override at
+// src/base-overrides/layouts/PackPage.astro (which the themes integration
+// would surface via `@vanblog/base/layouts/PackPage.astro`).
+import BasePackPage from '@vanblog/base/layouts/PackPage.astro';
+
+interface Props {
+  title: string;
+  description?: string;
+}
+
+const props = Astro.props as Props;
+---
+<BasePackPage {...props} />

@@ -13,7 +13,7 @@ import { createHash } from 'node:crypto';
 
 // --- Configuration ---
 const THEMES_DIR = process.env.VANBLOG_THEMES_DIR || '/var/lib/vanblog/themes';
-const DEFAULT_THEME = process.env.VANBLOG_DEFAULT_THEME || 'default';
+const DEFAULT_THEME = process.env.VANBLOG_DEFAULT_THEME || 'vanblog';
 const PB_URL = process.env.PB_URL || 'http://127.0.0.1:8090';
 const PORT = Number(process.env.PORT || 4321);
 const HOST = process.env.HOST || '127.0.0.1';

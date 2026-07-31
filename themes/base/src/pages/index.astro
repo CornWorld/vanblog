@@ -1,0 +1,32 @@
+---
+// base 主题 · 首页: 验证后端列表能力。
+import BaseLayout from '@vanblog/base/layouts/BaseLayout.astro';
+import { getPage } from '@vanblog/sdk';
+const pb = Astro.locals.pb;
+const page = getPage(Astro.url.searchParams);
+const result = await pb.vanblog.posts.listPublished(page, 10).catch(() => null);
+const posts = result?.items ?? [];
+const totalPages = result?.totalPages ?? 1;
+---
+<BaseLayout title="首页" path="/">
+  <h1>文章列表</h1>
+  {posts.length === 0 ? (
+    <p>暂无文章。</p>
+  ) : (
+    <ul>
+      {posts.map((p) => (
+        <li>
+          <a href={`/posts/${p.id}`}>{p.title}</a>
+          <small> · {p.created}</small>
+        </li>
+      ))}
+    </ul>
+  )}
+  {totalPages > 1 && (
+    <nav>
+      {page > 1 && <a href={`/?page=${page - 1}`}>上一页</a>}
+      <span> 第 {page} / {totalPages} 页 </span>
+      {page < totalPages && <a href={`/?page=${page + 1}`}>下一页</a>}
+    </nav>
+  )}
+</BaseLayout>

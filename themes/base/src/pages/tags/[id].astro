@@ -1,0 +1,30 @@
+---
+// base 主题 · 标签详情: 该标签下的文章。
+import BaseLayout from '@vanblog/base/layouts/BaseLayout.astro';
+import type { Tag } from '@vanblog/sdk';
+const pb = Astro.locals.pb;
+const { id } = Astro.params;
+if (!id) return Astro.redirect('/404');
+let tag: Tag;
+try {
+  tag = await pb.collection('tags').getOne<Tag>(id);
+} catch {
+  return Astro.redirect('/404');
+}
+const result = await pb.vanblog.posts.listPublished(1, 100, { tag: tag.name, sort: '-created' }).catch(() => null);
+const posts = result?.items ?? [];
+---
+<BaseLayout title={`#${tag.name}`} path={`/tags/${id}`}>
+  <p><a href="/tags">← 所有标签</a></p>
+  <h1>#{tag.name}</h1>
+  {tag.description && <p>{tag.description}</p>}
+  {posts.length === 0 ? (
+    <p>该标签下暂无文章。</p>
+  ) : (
+    <ul>
+      {posts.map((p) => (
+        <li><a href={`/posts/${p.id}`}>{p.title}</a></li>
+      ))}
+    </ul>
+  )}
+</BaseLayout>

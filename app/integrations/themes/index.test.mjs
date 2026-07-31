@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, normalize } from 'node:path';
 import { tmpdir } from 'node:os';
 import test from 'node:test';
-import themesIntegration, { resolveBuiltinAlias } from './index.mjs';
+import themesIntegration, { resolveBaseAlias } from './index.mjs';
 
 const tempDirs = [];
 
@@ -37,42 +37,48 @@ function touch(root, rel) {
 function fixtureContext() {
   const themeSrc = fixtureRoot();
   const mainAppSrc = fixtureRoot();
-  const overridesDir = join(themeSrc, 'builtin-overrides');
+  const overridesDir = join(themeSrc, 'base-overrides');
   return { themeSrc, mainAppSrc, overridesDir };
 }
 
-test('returns null for ids outside the builtin alias', () => {
+test('returns null for ids outside the base alias', () => {
   const { overridesDir, mainAppSrc } = fixtureContext();
-  assert.equal(resolveBuiltinAlias('/abs/path.astro', overridesDir, mainAppSrc), null);
-  assert.equal(resolveBuiltinAlias('virtual:module', overridesDir, mainAppSrc), null);
-  assert.equal(resolveBuiltinAlias('@vanblog/other/x.astro', overridesDir, mainAppSrc), null);
-  assert.equal(resolveBuiltinAlias('@vanblog/builtin', overridesDir, mainAppSrc), null);
+  assert.equal(resolveBaseAlias('/abs/path.astro', overridesDir, mainAppSrc), null);
+  assert.equal(resolveBaseAlias('virtual:module', overridesDir, mainAppSrc), null);
+  assert.equal(resolveBaseAlias('@vanblog/other/x.astro', overridesDir, mainAppSrc), null);
+  assert.equal(resolveBaseAlias('@vanblog/base', overridesDir, mainAppSrc), null);
 });
 
 test('resolves a non-forbidden override file from the theme', () => {
   const { themeSrc, mainAppSrc, overridesDir } = fixtureContext();
-  touch(themeSrc, 'builtin-overrides/components/Header.astro');
-  const resolved = resolveBuiltinAlias('@vanblog/builtin/components/Header.astro', overridesDir, mainAppSrc);
+  touch(themeSrc, 'base-overrides/components/Header.astro');
+  const resolved = resolveBaseAlias('@vanblog/base/components/Header.astro', overridesDir, mainAppSrc);
   assert.equal(resolved, normalize(join(overridesDir, 'components', 'Header.astro')));
 });
 
-test('falls back to the builtin file when no override exists', () => {
+test('falls back to the base file when no override exists', () => {
   const { mainAppSrc, overridesDir } = fixtureContext();
   touch(mainAppSrc, 'components/Footer.astro');
-  const resolved = resolveBuiltinAlias('@vanblog/builtin/components/Footer.astro', overridesDir, mainAppSrc);
+  const resolved = resolveBaseAlias('@vanblog/base/components/Footer.astro', overridesDir, mainAppSrc);
   assert.equal(resolved, normalize(join(mainAppSrc, 'components', 'Footer.astro')));
 });
-
-test('returns null when neither override nor builtin exists', () => {
+test('returns null when neither override nor base file exists', () => {
   const { mainAppSrc, overridesDir } = fixtureContext();
-  assert.equal(resolveBuiltinAlias('@vanblog/builtin/does/not/exist.astro', overridesDir, mainAppSrc), null);
+  assert.equal(resolveBaseAlias('@vanblog/base/does/not/exist.astro', overridesDir, mainAppSrc), null);
+});
+
+test('resolves extension-less alias targets (e.g. lib/markdown/renderer → .ts)', () => {
+  const { mainAppSrc, overridesDir } = fixtureContext();
+  touch(mainAppSrc, 'lib/markdown/renderer.ts');
+  const resolved = resolveBaseAlias('@vanblog/base/lib/markdown/renderer', overridesDir, mainAppSrc);
+  assert.equal(resolved, normalize(join(mainAppSrc, 'lib', 'markdown', 'renderer.ts')));
 });
 
 test('throws when a forbidden override file exists', () => {
   const { themeSrc, mainAppSrc, overridesDir } = fixtureContext();
-  touch(themeSrc, 'builtin-overrides/pages/admin/index.astro');
+  touch(themeSrc, 'base-overrides/pages/admin/index.astro');
   assert.throws(
-    () => resolveBuiltinAlias('@vanblog/builtin/pages/admin/index.astro', overridesDir, mainAppSrc),
+    () => resolveBaseAlias('@vanblog/base/pages/admin/index.astro', overridesDir, mainAppSrc),
     /FORBIDDEN override/,
   );
 });
@@ -82,32 +88,32 @@ test('throws for forbidden override paths with case variation', () => {
   // filesystems (macOS/Windows default): importing a locked path with
   // different casing must still be rejected.
   const { themeSrc, mainAppSrc, overridesDir } = fixtureContext();
-  touch(themeSrc, 'builtin-overrides/Pages/Admin/index.astro');
+  touch(themeSrc, 'base-overrides/Pages/Admin/index.astro');
   assert.throws(
-    () => resolveBuiltinAlias('@vanblog/builtin/Pages/Admin/index.astro', overridesDir, mainAppSrc),
+    () => resolveBaseAlias('@vanblog/base/Pages/Admin/index.astro', overridesDir, mainAppSrc),
     /FORBIDDEN override/,
   );
 });
 
-test('falls back to builtin when a forbidden path has no override file', () => {
+test('falls back to base when a forbidden path has no override file', () => {
   const { mainAppSrc, overridesDir } = fixtureContext();
   touch(mainAppSrc, 'pages/api/comments.ts');
-  const resolved = resolveBuiltinAlias('@vanblog/builtin/pages/api/comments.ts', overridesDir, mainAppSrc);
+  const resolved = resolveBaseAlias('@vanblog/base/pages/api/comments.ts', overridesDir, mainAppSrc);
   assert.equal(resolved, normalize(join(mainAppSrc, 'pages', 'api', 'comments.ts')));
 });
 
 test('blocks directory traversal via .. segments', () => {
   const { themeSrc, mainAppSrc, overridesDir } = fixtureContext();
   const secret = touch(themeSrc, 'secret.astro');
-  const resolved = resolveBuiltinAlias('@vanblog/builtin/../secret.astro', overridesDir, mainAppSrc);
+  const resolved = resolveBaseAlias('@vanblog/base/../secret.astro', overridesDir, mainAppSrc);
   assert.equal(resolved, null);
   assert.notEqual(resolved, normalize(secret));
 });
 
-test('blocks traversal into the main app source via the builtin fallback', () => {
+test('blocks traversal into the main app source via the base fallback', () => {
   const { mainAppSrc, overridesDir } = fixtureContext();
   const secret = touch(mainAppSrc, 'secret.astro');
-  const resolved = resolveBuiltinAlias('@vanblog/builtin/../secret.astro', overridesDir, mainAppSrc);
+  const resolved = resolveBaseAlias('@vanblog/base/../secret.astro', overridesDir, mainAppSrc);
   assert.equal(resolved, null);
   assert.notEqual(resolved, normalize(secret));
 });
@@ -132,16 +138,16 @@ test('themesIntegration wires the resolver into a vite plugin and logs forbidden
       vitePlugin = cfg.vite.plugins[0];
     },
   });
-  assert.equal(vitePlugin.name, 'vanblog-builtin-resolver');
+  assert.equal(vitePlugin.name, 'vanblog-base-resolver');
 
   // Non-forbidden override resolves through the wired plugin.
-  touch(themeSrc, 'builtin-overrides/components/Header.astro');
-  const resolved = vitePlugin.resolveId('@vanblog/builtin/components/Header.astro');
-  assert.equal(resolved, normalize(join(themeSrc, 'builtin-overrides', 'components', 'Header.astro')));
+  touch(themeSrc, 'base-overrides/components/Header.astro');
+  const resolved = vitePlugin.resolveId('@vanblog/base/components/Header.astro');
+  assert.equal(resolved, normalize(join(themeSrc, 'base-overrides', 'components', 'Header.astro')));
 
   // Forbidden override is rejected and logged through Astro's logger.
-  touch(themeSrc, 'builtin-overrides/pages/admin/index.astro');
-  assert.throws(() => vitePlugin.resolveId('@vanblog/builtin/pages/admin/index.astro'), /FORBIDDEN override/);
+  touch(themeSrc, 'base-overrides/pages/admin/index.astro');
+  assert.throws(() => vitePlugin.resolveId('@vanblog/base/pages/admin/index.astro'), /FORBIDDEN override/);
   assert.equal(errors.length, 1);
   assert.match(errors[0], /FORBIDDEN override/);
 });

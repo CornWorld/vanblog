@@ -1,0 +1,52 @@
+<!--
+⛔ AGENT: DO NOT EDIT THIS BLOCK
+L0 CONTRACT - 前端契约变量（见 .snow/plan/migrate-vanblog-frontend-to-theme-palette.md §模板契约清单）
+页面: 分类索引
+路径: themes/vanblog/src/pages/categories/index.astro
+契约变量:
+  - categories: Category[] — 全部分类
+-->
+
+---
+export const prerender = false;
+
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import ErrorState from '../../components/ErrorState.astro';
+import { safe } from '@vanblog/sdk';
+import type { Category } from '@vanblog/sdk';
+const pb = Astro.locals.pb;
+
+const { data: cats = [], error } = await safe(
+  () => pb.collection('categories').getFullList<Category>({ sort: 'name' }),
+  'categories'
+);
+---
+<BaseLayout title="分类" path="/categories">
+  <h1 class="mb-6">分类</h1>
+
+  {error && <ErrorState />}
+
+  {!error && cats.length === 0 && (
+    <p class="py-12 text-center text-[var(--text-muted)]">暂无分类。</p>
+  )}
+
+  {!error && cats.length > 0 && (
+    <ul class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      {cats.map(c => (
+        <li>
+          <a href={`/categories/${c.id}`} class="card-post flex items-center gap-3 no-underline hover:border-[var(--accent)]">
+            <span class="font-medium text-[var(--text)]">{c.name}</span>
+            <span class="text-xs px-2 py-0.5 rounded bg-[var(--surface)] text-[var(--text-muted)]">
+              {c.type}
+            </span>
+            {c.private && (
+              <span class="text-xs px-2 py-0.5 rounded bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400">
+                私有
+              </span>
+            )}
+          </a>
+        </li>
+      ))}
+    </ul>
+  )}
+</BaseLayout>

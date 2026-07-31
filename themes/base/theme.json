@@ -1,0 +1,9 @@
+{
+  "name": "base",
+  "label": "基础主题",
+  "version": "0.1.0",
+  "author": "vanblog",
+  "description": "纯布局 + 简单颜色的 minimal 主题: 验证后端能力, 提供最基本前端能力, 作为兜底/降级主题。",
+  "recommendedPalette": "default",
+  "paletteMigrationMode": "keep"
+}

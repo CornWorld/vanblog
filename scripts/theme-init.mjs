@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Scaffold a new theme by cloning themes/default/.
+// Scaffold a new theme by cloning themes/base/.
 //
 // Usage:
 //   node scripts/theme-init.mjs <new-theme-name>
@@ -8,14 +8,14 @@
 //   - Validates <new-theme-name> against the Pack name grammar
 //     (lowercase, digits, hyphen-separated) so it can later be used in
 //     Docker build-args and URLs without escaping.
-//   - Copies themes/default → themes/<new-theme-name>.
+//   - Copies themes/base → themes/<new-theme-name>.
 //   - Rewrites the copy's theme.json to the new name/label.
 //   - Removes node_modules/ and dist/ from the copy (they will be
 //     reinstalled by the workspace).
 //   - Removes the screenshot.png reference from theme.json if absent.
 //
 // After running, you can `cd themes/<new-theme-name> && pnpm dev` to start
-// hacking. Edit src/pages/* or src/builtin-overrides/* to customise.
+// hacking. Edit src/pages/* or src/base-overrides/* to customise.
 
 import { cpSync, existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -23,7 +23,7 @@ import process from 'node:process';
 
 const NAME_RE = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
 const REPO_ROOT = resolve(new URL('..', import.meta.url).pathname);
-const DEFAULT_THEME = join(REPO_ROOT, 'themes', 'default');
+const DEFAULT_THEME = join(REPO_ROOT, 'themes', 'base');
 
 function fail(msg) {
   console.error(`theme-init: ${msg}`);
@@ -36,9 +36,9 @@ if (!NAME_RE.test(name)) fail(`invalid theme name "${name}" (must match ${NAME_R
 
 const dest = join(REPO_ROOT, 'themes', name);
 if (existsSync(dest)) fail(`themes/${name}/ already exists`);
-if (!existsSync(DEFAULT_THEME)) fail('themes/default/ missing — cannot scaffold');
+if (!existsSync(DEFAULT_THEME)) fail('themes/base/ missing — cannot scaffold');
 
-console.log(`theme-init: copying themes/default → themes/${name}`);
+console.log(`theme-init: copying themes/base → themes/${name}`);
 try {
   cpSync(DEFAULT_THEME, dest, { recursive: true });
 } catch (err) {
@@ -71,6 +71,6 @@ console.log('Next steps:');
 console.log(`  cd themes/${name} && pnpm install`);
 console.log(`  pnpm dev   # http://localhost:4321`);
 console.log('');
-console.log('Edit src/pages/* to replace the builtin pages, or add files');
-console.log('under src/builtin-overrides/ to selectively replace builtin');
+console.log('Edit src/pages/* to replace the base pages, or add files');
+console.log('under src/base-overrides/ to selectively replace base');
 console.log('layouts / components / styles.');

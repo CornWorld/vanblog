@@ -1,0 +1,61 @@
+<!--
+⛔ AGENT: DO NOT EDIT THIS BLOCK
+L0 CONTRACT - 前端契约变量（见 .snow/plan/migrate-vanblog-frontend-to-theme-palette.md §模板契约清单）
+页面: 时间轴
+路径: themes/vanblog/src/pages/timeline.astro
+契约变量:
+  - entries: TimelineEntry[] — 时间轴条目
+-->
+
+---
+export const prerender = false;
+
+import BaseLayout from '../layouts/BaseLayout.astro';
+import ErrorState from '../components/ErrorState.astro';
+import { safe } from '@vanblog/sdk';
+const pb = Astro.locals.pb;
+
+const { data: entries = [], error } = await safe(
+  () => pb.vanblog.timeline.list(),
+  'timeline'
+);
+---
+<BaseLayout title="时间轴" path="/timeline">
+  <h1 class="mb-8">时间轴</h1>
+
+  {error && <ErrorState />}
+
+  {!error && entries.length === 0 && (
+    <p class="py-12 text-center text-[var(--text-muted)]">暂无数据。</p>
+  )}
+
+  {!error && entries.length > 0 && (
+    <div class="space-y-8">
+      {entries.map(year => (
+        <section>
+          <h2 class="text-2xl mb-1">
+            {year.year}
+            <small class="text-[var(--text-muted)] font-normal ml-2">({year.count})</small>
+          </h2>
+          <div class="border-l-2 border-[var(--border)] pl-6 ml-1 space-y-4">
+            {year.months.map(m => (
+              <div>
+                <h3 class="text-sm text-[var(--text-muted)] mb-2">
+                  {year.year}.{String(m.month).padStart(2, '0')}
+                  <span class="ml-1">({m.count})</span>
+                </h3>
+                <ul class="space-y-1">
+                  {m.titles.map(t => (
+                    <li>
+                      <a href={`/posts/${t.id}`} class="hover:text-[var(--accent)]">{t.title}</a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </section>
+      ))}
+    </div>
+  )}
+</BaseLayout>

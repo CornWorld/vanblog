@@ -1,0 +1,42 @@
+<!--
+⛔ AGENT: DO NOT EDIT THIS BLOCK
+L0 CONTRACT - 前端契约变量（见 .snow/plan/migrate-vanblog-frontend-to-theme-palette.md §模板契约清单）
+页面: 标签索引
+路径: themes/vanblog/src/pages/tags/index.astro
+契约变量:
+  - tags: Tag[] — 全部标签
+-->
+
+---
+export const prerender = false;
+
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import ErrorState from '../../components/ErrorState.astro';
+import { safe } from '@vanblog/sdk';
+import type { Tag } from '@vanblog/sdk';
+const pb = Astro.locals.pb;
+
+const { data: tags = [], error } = await safe(
+  () => pb.collection('tags').getFullList<Tag>({ sort: 'name' }),
+  'tags'
+);
+---
+<BaseLayout title="标签" path="/tags">
+  <h1 class="mb-6">标签</h1>
+
+  {error && <ErrorState />}
+
+  {!error && tags.length === 0 && (
+    <p class="py-12 text-center text-[var(--text-muted)]">暂无标签。</p>
+  )}
+
+  {!error && tags.length > 0 && (
+    <div class="flex flex-wrap gap-2">
+      {tags.map(t => (
+        <a href={`/tags/${t.id}`} class="tag-badge">
+          #{t.name}
+        </a>
+      ))}
+    </div>
+  )}
+</BaseLayout>

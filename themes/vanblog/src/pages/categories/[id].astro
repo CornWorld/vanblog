@@ -1,0 +1,65 @@
+<!--
+⛔ AGENT: DO NOT EDIT THIS BLOCK
+L0 CONTRACT - 前端契约变量（见 .snow/plan/migrate-vanblog-frontend-to-theme-palette.md §模板契约清单）
+页面: 分类详情
+路径: themes/vanblog/src/pages/categories/[id].astro
+契约变量:
+  - category: Category — 当前分类
+  - posts: PostExpand[] — 该分类下的文章
+-->
+
+---
+export const prerender = false;
+
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import ErrorState from '../../components/ErrorState.astro';
+import { fmtDate, safe } from '@vanblog/sdk';
+import type { Category } from '@vanblog/sdk';
+const pb = Astro.locals.pb;
+
+const { id } = Astro.params;
+if (!id) return Astro.redirect('/404');
+
+let cat: Category;
+try {
+  cat = await pb.collection('categories').getOne<Category>(id);
+} catch {
+  return Astro.redirect('/404');
+}
+
+const { data: result } = await safe(
+  () => pb.vanblog.posts.listPublished(1, 100, { category: cat.name, sort: '-created' }),
+  'category'
+);
+const posts = result?.items ?? [];
+const error = !result;
+---
+<BaseLayout title={cat.name} path={`/categories/${id}`}>
+  <a href="/categories" class="text-sm text-[var(--text-muted)] hover:text-[var(--accent)] mb-4 inline-block">
+    ← 所有分类
+  </a>
+  <h1 class="mb-2">
+    {cat.name}
+    <span class="text-sm font-normal text-[var(--text-muted)] ml-2">[{cat.type}]</span>
+  </h1>
+
+  {error && <ErrorState />}
+
+  {!error && posts.length === 0 && (
+    <p class="py-12 text-center text-[var(--text-muted)]">该分类下暂无文章。</p>
+  )}
+
+  {!error && posts.length > 0 && (
+    <ul class="space-y-2 mt-6">
+      {posts.map(p => (
+        <li class="flex items-baseline gap-3">
+          <time class="text-sm text-[var(--text-muted)] whitespace-nowrap tabular-nums"
+                datetime={p.created}>
+            {fmtDate(p.created)}
+          </time>
+          <a href={`/posts/${p.id}`} class="hover:text-[var(--accent)]">{p.title}</a>
+        </li>
+      ))}
+    </ul>
+  )}
+</BaseLayout>

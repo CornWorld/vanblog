@@ -1,0 +1,65 @@
+<!--
+⛔ AGENT: DO NOT EDIT THIS BLOCK
+L0 CONTRACT - 前端契约变量（见 .snow/plan/migrate-vanblog-frontend-to-theme-palette.md §模板契约清单）
+页面: 标签详情
+路径: themes/vanblog/src/pages/tags/[id].astro
+契约变量:
+  - tag: Tag — 当前标签
+  - posts: PostExpand[] — 该标签下的文章
+-->
+
+---
+export const prerender = false;
+
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import ErrorState from '../../components/ErrorState.astro';
+import { fmtDate, safe } from '@vanblog/sdk';
+import type { Tag } from '@vanblog/sdk';
+const pb = Astro.locals.pb;
+
+const { id } = Astro.params;
+if (!id) return Astro.redirect('/404');
+
+let tag: Tag;
+try {
+  tag = await pb.collection('tags').getOne<Tag>(id);
+} catch {
+  return Astro.redirect('/404');
+}
+
+const { data: result } = await safe(
+  () => pb.vanblog.posts.listPublished(1, 100, { tag: tag.name, sort: '-created' }),
+  'tag'
+);
+const posts = result?.items ?? [];
+const error = !result;
+---
+<BaseLayout title={`#${tag.name}`} path={`/tags/${id}`}>
+  <a href="/tags" class="text-sm text-[var(--text-muted)] hover:text-[var(--accent)] mb-4 inline-block">
+    ← 所有标签
+  </a>
+  <h1 class="mb-2">#{tag.name}</h1>
+  {tag.description && (
+    <p class="text-[var(--text-muted)] mb-6">{tag.description}</p>
+  )}
+
+  {error && <ErrorState />}
+
+  {!error && posts.length === 0 && (
+    <p class="py-12 text-center text-[var(--text-muted)]">该标签下暂无文章。</p>
+  )}
+
+  {!error && posts.length > 0 && (
+    <ul class="space-y-2 mt-6">
+      {posts.map(p => (
+        <li class="flex items-baseline gap-3">
+          <time class="text-sm text-[var(--text-muted)] whitespace-nowrap tabular-nums"
+                datetime={p.created}>
+            {fmtDate(p.created)}
+          </time>
+          <a href={`/posts/${p.id}`} class="hover:text-[var(--accent)]">{p.title}</a>
+        </li>
+      ))}
+    </ul>
+  )}
+</BaseLayout>

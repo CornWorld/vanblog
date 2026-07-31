@@ -1,0 +1,35 @@
+---
+// base 主题 · 归档: 按年份分组列出文章。
+import BaseLayout from '@vanblog/base/layouts/BaseLayout.astro';
+import type { Post } from '@vanblog/sdk';
+const pb = Astro.locals.pb;
+const result = await pb.vanblog.posts.listPublished(1, 500, { sort: '-created' }).catch(() => null);
+const posts = result?.items ?? [];
+const byYear: Record<number, Post[]> = {};
+for (const post of posts) {
+  if (!post.created) continue;
+  const year = new Date(post.created.replace(' ', 'T')).getFullYear();
+  (byYear[year] ||= []).push(post);
+}
+const years = Object.keys(byYear).map(Number).sort((a, b) => b - a);
+---
+<BaseLayout title="归档" path="/archive">
+  <h1>归档</h1>
+  {years.length === 0 ? (
+    <p>暂无文章。</p>
+  ) : (
+    years.map((year) => (
+      <section>
+        <h2>{year} ({byYear[year].length})</h2>
+        <ul>
+          {byYear[year].map((post) => (
+            <li>
+              <a href={`/posts/${post.id}`}>{post.title}</a>
+              <small> · {post.created}</small>
+            </li>
+          ))}
+        </ul>
+      </section>
+    ))
+  )}
+</BaseLayout>

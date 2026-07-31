@@ -1,4 +1,4 @@
-// Shared Astro configuration for all themes (bare, default, minimal).
+// Shared Astro configuration for all themes (base, vanblog, user themes).
 //
 // Keeping the common config in a single module means a change (e.g. a new
 // cache rule, Vite option or server setting) only has to be made once instead
@@ -42,7 +42,7 @@ export function resolveThemeName(themeJsonUrl) {
  * Base Astro config shared by every theme. Theme-specific pieces (source
  * directories, builtin pack page layout) are passed in as parameters.
  */
-export function sharedAstroConfig({ themeName, themeSrcDir, mainAppSrcDir, builtinPackPage }) {
+export function sharedAstroConfig({ themeName, themeSrcDir, mainAppSrcDir, themePackPage }) {
   return defineConfig({
     output: 'server',
     base: `/themes/${themeName}/`,
@@ -99,7 +99,7 @@ export function sharedAstroConfig({ themeName, themeSrcDir, mainAppSrcDir, built
     integrations: [
       mdx(),
       themes({ themeSrcDir, mainAppSrcDir }),
-      packs({ themePage: builtinPackPage }),
+      packs({ themePage: themePackPage }),
     ],
   });
 }

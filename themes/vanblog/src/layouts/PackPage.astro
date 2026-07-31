@@ -1,0 +1,14 @@
+---
+// PackPage host: wraps pack routes (/p/<pack>) with the vanblog BaseLayout.
+import BaseLayout from './BaseLayout.astro';
+
+interface Props {
+  title: string;
+  description?: string;
+}
+
+const { title, description } = Astro.props;
+---
+<BaseLayout title={title} description={description} path={Astro.url.pathname}>
+  <slot />
+</BaseLayout>

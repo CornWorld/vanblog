@@ -1,0 +1,29 @@
+---
+// base 主题 · 分类详情: 该分类下的文章。
+import BaseLayout from '@vanblog/base/layouts/BaseLayout.astro';
+import type { Category } from '@vanblog/sdk';
+const pb = Astro.locals.pb;
+const { id } = Astro.params;
+if (!id) return Astro.redirect('/404');
+let cat: Category;
+try {
+  cat = await pb.collection('categories').getOne<Category>(id);
+} catch {
+  return Astro.redirect('/404');
+}
+const result = await pb.vanblog.posts.listPublished(1, 100, { category: cat.name, sort: '-created' }).catch(() => null);
+const posts = result?.items ?? [];
+---
+<BaseLayout title={cat.name} path={`/categories/${id}`}>
+  <p><a href="/categories">← 所有分类</a></p>
+  <h1>{cat.name}</h1>
+  {posts.length === 0 ? (
+    <p>该分类下暂无文章。</p>
+  ) : (
+    <ul>
+      {posts.map((p) => (
+        <li><a href={`/posts/${p.id}`}>{p.title}</a></li>
+      ))}
+    </ul>
+  )}
+</BaseLayout>

@@ -1,0 +1,56 @@
+---
+// base 主题 · 文章详情: 验证后端 Markdown 渲染能力。
+import BaseLayout from '@vanblog/base/layouts/BaseLayout.astro';
+import { renderMarkdown } from '@vanblog/base/lib/markdown/renderer';
+import type { Post } from '@vanblog/sdk';
+const pb = Astro.locals.pb;
+const { id } = Astro.params;
+if (!id) return Astro.redirect('/404');
+
+// 轻量 sanitize: 与平台层一致, 移除可执行元素 (存储型 XSS 防御)。
+function sanitizeHtml(html: string): string {
+  return html
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script\s*>/gi, '')
+    .replace(/<script\b[^>]*\/?>/gi, '')
+    .replace(/<iframe\b[^>]*>[\s\S]*?<\/iframe\s*>/gi, '')
+    .replace(/<iframe\b[^>]*\/?>/gi, '')
+    .replace(/<object\b[^>]*>[\s\S]*?<\/object\s*>/gi, '')
+    .replace(/<object\b[^>]*\/?>/gi, '')
+    .replace(/<embed\b[^>]*\/?>/gi, '')
+    .replace(/<base\b[^>]*\/?>/gi, '')
+    .replace(/<meta\b[^>]*\/?>/gi, '')
+    .replace(/\s+on[a-z][a-z0-9_]*\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '')
+    .replace(/(\s(?:href|src|xlink:href|action)\s*=\s*)(["'])\s*(?:javascript|vbscript)\s*:[^"'<]*\2/gi, '$1$2#')
+    .replace(/\s+srcdoc\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '');
+}
+
+let post: Post | null = null;
+let html = '';
+try {
+  post = await pb.collection('posts').getOne<Post>(id);
+  if (post.status !== 'published' || post.deleted) {
+    post = null;
+  }
+} catch {
+  post = null;
+}
+if (post) {
+  try {
+    const { code } = await renderMarkdown(post.content || '');
+    html = sanitizeHtml(code);
+  } catch {
+    html = '';
+  }
+}
+---
+<BaseLayout title={post?.title || '文章未找到'} post={post ?? undefined} path={`/posts/${id}`}>
+  {!post ? (
+    <p>文章不存在或未发布。</p>
+  ) : (
+    <article>
+      <h1>{post.title}</h1>
+      <p><small>{post.created}</small></p>
+      {html ? <div set:html={html} /> : <p>无内容。</p>}
+    </article>
+  )}
+</BaseLayout>

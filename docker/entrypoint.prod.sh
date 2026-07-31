@@ -78,7 +78,7 @@ PB_PID=$!
 wait_for "http://127.0.0.1:8090/api/health" "PocketBase" 30 || exit 1
 
 # 4. Start Theme Dispatcher (replaces direct Astro SSR)
-DEFAULT_THEME=$(cat /etc/vanblog/default-theme 2>/dev/null || echo "default")
+DEFAULT_THEME=$(cat /etc/vanblog/default-theme 2>/dev/null || echo "vanblog")
 echo "[vanblog] starting dispatcher (default theme: ${DEFAULT_THEME})"
 VANBLOG_THEMES_DIR=/var/lib/vanblog/themes \
 VANBLOG_DEFAULT_THEME=${DEFAULT_THEME} \

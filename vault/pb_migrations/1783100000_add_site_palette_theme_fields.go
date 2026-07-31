@@ -14,7 +14,8 @@ func init() {
 		// enumerate them at schema time. Empty value means "use the default
 		// palette baked into the active theme's tokens.css".
 		//
-		// `activeTheme` is also a TextField, defaulting to "default". The
+		// `activeTheme` is also a TextField, defaulting to "vanblog" (the flagship
+		// migrated theme; the minimal base theme is the documented fallback). The
 		// Dockerfile build-arg VANBLOG_ACTIVE_THEME selects which theme is
 		// compiled into the image, and entrypoint.prod.sh verifies that
 		// site.activeTheme matches the compiled-in theme on startup. When

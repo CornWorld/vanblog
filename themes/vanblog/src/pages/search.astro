@@ -1,0 +1,66 @@
+<!--
+⛔ AGENT: DO NOT EDIT THIS BLOCK
+L0 CONTRACT - 前端契约变量（见 .snow/plan/migrate-vanblog-frontend-to-theme-palette.md §模板契约清单）
+页面: 搜索
+路径: themes/vanblog/src/pages/search.astro
+契约变量:
+  - q: string — 搜索关键词
+  - results: SearchResult[] — 搜索结果
+-->
+
+---
+export const prerender = false;
+
+import BaseLayout from '../layouts/BaseLayout.astro';
+import ErrorState from '../components/ErrorState.astro';
+import { safe } from '@vanblog/sdk';
+const pb = Astro.locals.pb;
+
+const q = (Astro.url.searchParams.get('q') || '').trim();
+const searched = !!q;
+const { data: results = [], error } = searched
+  ? await safe(() => pb.vanblog.search.query(q, { limit: 30 }), 'search')
+  : { data: [], error: false };
+---
+<BaseLayout title="搜索" path="/search">
+  <h1 class="mb-6">搜索</h1>
+
+  <form method="get" action="/search" class="flex gap-3 mb-8">
+    <input
+      type="text"
+      name="q"
+      value={q}
+      placeholder="输入关键词…"
+      required
+      class="flex-1 min-w-0 px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+    />
+    <button type="submit" class="btn-primary">搜索</button>
+  </form>
+
+  {error && <ErrorState />}
+
+  {!error && searched && (
+    <p class="mb-4 text-[var(--text-muted)]">
+      关键词 "<strong class="text-[var(--text)]">{q}</strong>" 共 {results.length} 条结果。
+    </p>
+  )}
+
+  {!error && results.length > 0 && (
+    <ul class="space-y-3">
+      {results.map(r => (
+        <li class="card-post">
+          <a href={`/posts/${r.id}`} class="font-medium text-[var(--text)] hover:text-[var(--accent)] no-underline">
+            {r.title}
+          </a>
+          {r.path && (
+            <span class="ml-2 text-sm text-[var(--text-muted)]">{r.path}</span>
+          )}
+        </li>
+      ))}
+    </ul>
+  )}
+
+  {!error && searched && results.length === 0 && (
+    <p class="py-12 text-center text-[var(--text-muted)]">未找到匹配的文章。</p>
+  )}
+</BaseLayout>

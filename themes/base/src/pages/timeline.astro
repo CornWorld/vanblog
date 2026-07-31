@@ -1,0 +1,28 @@
+---
+// base 主题 · 时间轴: 验证 pb.vanblog.timeline.list()。
+import BaseLayout from '@vanblog/base/layouts/BaseLayout.astro';
+const pb = Astro.locals.pb;
+const entries = await pb.vanblog.timeline.list().catch(() => []);
+---
+<BaseLayout title="时间轴" path="/timeline">
+  <h1>时间轴</h1>
+  {entries.length === 0 ? (
+    <p>暂无数据。</p>
+  ) : (
+    entries.map((year) => (
+      <section>
+        <h2>{year.year} ({year.count})</h2>
+        {year.months.map((m) => (
+          <div>
+            <h3>{year.year}.{String(m.month).padStart(2, '0')} ({m.count})</h3>
+            <ul>
+              {m.titles.map((t) => (
+                <li><a href={`/posts/${t.id}`}>{t.title}</a></li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </section>
+    ))
+  )}
+</BaseLayout>

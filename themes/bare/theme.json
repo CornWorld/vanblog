@@ -1,9 +1,0 @@
-{
-  "name": "bare",
-  "label": "纯文本骨架",
-  "version": "0.1.0",
-  "author": "vanblog",
-  "description": "无样式的纯 HTML 结构主题，用于验证后端能力和 builtin-overrides 机制。布局源于 commit aac5f2b3 的前端骨架。",
-  "recommendedPalette": "default",
-  "paletteMigrationMode": "keep"
-}

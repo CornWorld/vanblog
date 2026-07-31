@@ -1,0 +1,19 @@
+---
+// base 主题 · 分类索引: 验证 pb.collection('categories')。
+import BaseLayout from '@vanblog/base/layouts/BaseLayout.astro';
+import type { Category } from '@vanblog/sdk';
+const pb = Astro.locals.pb;
+const categories = await pb.collection('categories').getFullList<Category>().catch(() => []);
+---
+<BaseLayout title="分类" path="/categories">
+  <h1>分类</h1>
+  {categories.length === 0 ? (
+    <p>暂无分类。</p>
+  ) : (
+    <ul>
+      {categories.map((c) => (
+        <li><a href={`/categories/${c.id}`}>{c.name}</a></li>
+      ))}
+    </ul>
+  )}
+</BaseLayout>

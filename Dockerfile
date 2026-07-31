@@ -64,16 +64,15 @@ COPY --from=models-build /build/runtime/core-schema/models.js /core/models.js
 RUN CGO_ENABLED=0 go build -o /pocketbase -ldflags="-s -w" .
 
 # --- Stage 4: Build Astro frontend + SDK ---
-# Each Vanblog theme is an independent Astro project that imports builtin
-# files via the `@vanblog/builtin/*` alias (resolved by
+# Each Vanblog theme is an independent Astro project that imports base
+# files via the `@vanblog/base/*` alias (resolved by
 # app/integrations/themes/index.mjs). The build must therefore run inside
-# the active theme directory — the default theme mirrors app/src/ via thin
-# re-export shells. VANBLOG_ACTIVE_THEME selects which theme gets compiled
-# into the prod image; entrypoint.prod.sh compares it against site.activeTheme
+# the active theme directory. VANBLOG_ACTIVE_THEME selects which theme gets
+# compiled into the prod image; entrypoint.prod.sh compares it against site.activeTheme
 # at startup so operators cannot silently serve a stale theme.
 FROM workspace-deps AS astro-build
 ARG NPM_MIRROR
-ARG VANBLOG_ACTIVE_THEME=default
+ARG VANBLOG_ACTIVE_THEME=vanblog
 
 COPY sdk/ ./sdk/
 COPY app/ ./app/
@@ -99,7 +98,7 @@ RUN for theme in themes/*/; do \
     done
 
 # Record the default theme so the prod entrypoint knows which one to start.
-ARG VANBLOG_ACTIVE_THEME=default
+ARG VANBLOG_ACTIVE_THEME=vanblog
 RUN echo "${VANBLOG_ACTIVE_THEME}" > /build/.default-theme
 
 # Record the build version (git commit + dirty flag) for cache invalidation.

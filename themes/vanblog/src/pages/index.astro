@@ -1,0 +1,70 @@
+<!--
+⛔ AGENT: DO NOT EDIT THIS BLOCK
+L0 CONTRACT - 前端契约变量（见 .snow/plan/migrate-vanblog-frontend-to-theme-palette.md §模板契约清单）
+页面: 首页
+路径: themes/vanblog/src/pages/index.astro
+契约变量:
+  - posts: PostExpand[] — 文章列表
+  - totalPages: number — 总页数
+  - page: number — 当前页码
+-->
+
+---
+export const prerender = false;
+
+import BaseLayout from '../layouts/BaseLayout.astro';
+import ArticleCard from '../components/ArticleCard.astro';
+import PageNav from '../components/PageNav.astro';
+import ErrorState from '../components/ErrorState.astro';
+import SiteStatsSummary from '../components/SiteStatsSummary.astro';
+import { safe, getPage } from '@vanblog/sdk';
+
+const pb = Astro.locals.pb;
+
+const perPage = 10;
+const page = getPage(Astro.url.searchParams);
+
+const { data: result, error: loadError } = await safe(
+  () => pb.vanblog.posts.listPublished(page, perPage, { expand: 'category,tags' }),
+  'index'
+);
+const posts = result?.items ?? [];
+const totalPages = result?.totalPages ?? 1;
+
+// Site stats — reuse totalItems from the paginated result instead of fetching
+// up to 500 full posts on every page load just to sum the counters.
+const postCount = result?.totalItems ?? posts.length;
+const categories = await safe(() => pb.collection('categories').getFullList(), 'categories');
+const categoryCount = categories.data?.length ?? 0;
+const tags = await safe(() => pb.collection('tags').getFullList(), 'tags');
+const tagCount = tags.data?.length ?? 0;
+const totalChars = posts.reduce((sum: number, p: any) => sum + (p.content?.length || 0), 0);
+const statsOk = !!(result && categories.data && tags.data);
+---
+<BaseLayout title="首页" path="/">
+  {statsOk && (
+    <SiteStatsSummary
+      postCount={postCount}
+      categoryCount={categoryCount}
+      tagCount={tagCount}
+      totalWords={totalChars}
+    />
+  )}
+  {
+    loadError ? (
+      <ErrorState />
+    ) : posts.length === 0 ? (
+      <p class="py-12 text-center text-[var(--text-muted)]">暂无文章。</p>
+    ) : (
+      <div class="space-y-6">
+        {posts.map((post) => (
+          <ArticleCard post={post} showExcerpt={true} />
+        ))}
+      </div>
+    )
+  }
+
+  {!loadError && totalPages > 1 && (
+    <PageNav page={page} totalPages={totalPages} baseUrl="/" />
+  )}
+</BaseLayout>

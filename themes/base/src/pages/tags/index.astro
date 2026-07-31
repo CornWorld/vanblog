@@ -1,0 +1,19 @@
+---
+// base 主题 · 标签索引: 验证 pb.collection('tags')。
+import BaseLayout from '@vanblog/base/layouts/BaseLayout.astro';
+import type { Tag } from '@vanblog/sdk';
+const pb = Astro.locals.pb;
+const tags = await pb.collection('tags').getFullList<Tag>().catch(() => []);
+---
+<BaseLayout title="标签" path="/tags">
+  <h1>标签</h1>
+  {tags.length === 0 ? (
+    <p>暂无标签。</p>
+  ) : (
+    <ul>
+      {tags.map((t) => (
+        <li><a href={`/tags/${t.id}`}>#{t.name}</a></li>
+      ))}
+    </ul>
+  )}
+</BaseLayout>

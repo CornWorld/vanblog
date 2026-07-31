@@ -6,7 +6,7 @@
  * Prerequisites:
  *   - Docker container running with dispatcher (batch 2)
  *   - PB accessible
- *   - Both themes (default + minimal) built and in the image
+ *   - Both themes (vanblog + base) built and in the image
  *
  * Usage:
  *   node scripts/test-theme-switch.mjs [baseUrl] [pbApiKey]
@@ -57,10 +57,10 @@ async function main() {
   });
 
   // 2. Check / (default theme) returns HTML with base-prefixed assets
-  await check('GET / returns HTML with /themes/default/ assets', async () => {
+  await check('GET / returns HTML with /themes/vanblog/ assets', async () => {
     const r = await fetch(`${BASE}/`);
     const text = await r.text();
-    if (!text.includes('/themes/default/_astro/') && !text.includes('/themes/default/static/')) {
+    if (!text.includes('/themes/vanblog/_astro/') && !text.includes('/themes/vanblog/static/')) {
       // Might be a redirect or no astro assets on homepage, at least check it's HTML
       if (!text.includes('<!DOCTYPE html>') && !text.includes('<html')) {
         throw new Error('response is not HTML');
@@ -76,14 +76,14 @@ async function main() {
       throw new Error(`expected >=2 themes, got ${j.themes?.length || 0}`);
     }
     const names = j.themes.map(t => t.name);
-    if (!names.includes('default') || !names.includes('minimal')) {
-      throw new Error(`expected 'default' and 'minimal', got: ${names.join(', ')}`);
+    if (!names.includes('base') || !names.includes('vanblog')) {
+      throw new Error(`expected 'base' and 'vanblog', got: ${names.join(', ')}`);
     }
   });
 
   // 4. Switch theme via PB API
   let siteId = null;
-  await check('Switch to minimal theme via PB API', async () => {
+  await check('Switch to base theme via PB API', async () => {
     // Find site record
     const r = await fetch(`${PB_URL}/api/collections/site/records?perPage=1`);
     const j = await r.json();
@@ -94,46 +94,46 @@ async function main() {
     const updateR = await fetch(`${PB_URL}/api/collections/site/records/${siteId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ activeTheme: 'minimal' }),
+      body: JSON.stringify({ activeTheme: 'base' }),
     });
     if (!updateR.ok) throw new Error(`PB update failed: ${updateR.status}`);
   });
 
   // 5. Wait for dispatcher to poll and switch (poll with timeout)
   console.log('\n  ⏳ Waiting for dispatcher to detect theme change...\n');
-  await check('Dispatcher switched to minimal theme', async () => {
+  await check('Dispatcher switched to base theme', async () => {
     const deadline = Date.now() + 15000;
     while (Date.now() < deadline) {
       const r = await fetch(`${BASE}/__dispatcher_health`);
       const j = await r.json();
-      if (j.activeTheme === 'minimal') return;
+      if (j.activeTheme === 'base') return;
       await new Promise(r => setTimeout(r, 500));
     }
-    throw new Error('timed out waiting for theme switch to minimal');
+    throw new Error('timed out waiting for theme switch to base');
   });
 
   // 7. Switch back to default (only if siteId was captured)
   if (siteId) {
-    await check('Switch back to default theme via PB API', async () => {
+    await check('Switch back to vanblog theme via PB API', async () => {
       const r = await fetch(`${PB_URL}/api/collections/site/records/${siteId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ activeTheme: 'default' }),
+        body: JSON.stringify({ activeTheme: 'vanblog' }),
       });
       if (!r.ok) throw new Error(`PB update failed: ${r.status}`);
     });
   }
 
   console.log('\n  ⏳ Waiting for dispatcher to revert...\n');
-  await check('Dispatcher reverted to default theme', async () => {
+  await check('Dispatcher reverted to vanblog theme', async () => {
     const deadline = Date.now() + 15000;
     while (Date.now() < deadline) {
       const r = await fetch(`${BASE}/__dispatcher_health`);
       const j = await r.json();
-      if (j.activeTheme === 'default') return;
+      if (j.activeTheme === 'vanblog') return;
       await new Promise(r => setTimeout(r, 500));
     }
-    throw new Error('timed out waiting for theme switch to default');
+    throw new Error('timed out waiting for theme switch to vanblog');
   });
 
   // Already verified above in the polling loop

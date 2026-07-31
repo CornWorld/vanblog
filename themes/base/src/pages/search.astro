@@ -1,0 +1,24 @@
+---
+// base 主题 · 搜索: 验证 pb.vanblog.search.query()。
+import BaseLayout from '@vanblog/base/layouts/BaseLayout.astro';
+const pb = Astro.locals.pb;
+const q = (Astro.url.searchParams.get('q') || '').trim();
+const searched = !!q;
+const results = searched ? await pb.vanblog.search.query(q, { limit: 30 }).catch(() => []) : [];
+---
+<BaseLayout title="搜索" path="/search">
+  <h1>搜索</h1>
+  <form method="get" action="/search">
+    <input type="text" name="q" value={q} required />
+    <button type="submit">搜索</button>
+  </form>
+  {searched && <p>关键词 "{q}" 共 {results.length} 条结果。</p>}
+  {results.length > 0 && (
+    <ul>
+      {results.map((r) => (
+        <li><a href={`/posts/${r.id}`}>{r.title}</a></li>
+      ))}
+    </ul>
+  )}
+  {searched && results.length === 0 && <p>未找到匹配的文章。</p>}
+</BaseLayout>

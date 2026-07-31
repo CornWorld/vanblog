@@ -1,0 +1,9 @@
+{
+  "name": "vanblog",
+  "label": "Vanblog Classic",
+  "version": "1.0.0",
+  "author": "vanblog",
+  "description": "mereithhh 的 vanblog 前端迁移主题: 完整视觉/信息架构/交互, 独立于 base 主题。",
+  "recommendedPalette": "default",
+  "paletteMigrationMode": "keep"
+}

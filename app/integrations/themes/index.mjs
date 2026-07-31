@@ -1,10 +1,10 @@
 // Vanblog themes integration (Spike 3 model).
 //
-// Each theme is an independent Astro project that imports builtin files via
-// the `@vanblog/builtin/*` alias. This integration resolves the alias to:
-//   1. `themes/<active>/src/builtin-overrides/<rel>` when the theme ships an
-//      override (for customising builtin layouts/components/styles), or
-//   2. `app/src/<rel>` (the canonical builtin source) as a fallback.
+// Each theme is an independent Astro project that imports base/platform files via
+// the `@vanblog/base/*` alias. This integration resolves the alias to:
+//   1. `themes/<active>/src/base-overrides/<rel>` when the theme ships an
+//      override (for customising base layouts/components/styles), or
+//   2. `app/src/<rel>` (the canonical platform (base) source) as a fallback.
 //
 // The integration also enforces a small set of contract paths that themes
 // are not allowed to override (admin pages, API endpoints, the markdown
@@ -20,16 +20,16 @@
 import { existsSync } from 'node:fs';
 import { join, normalize, relative, sep } from 'node:path';
 
-const BUILTIN_PREFIX = '@vanblog/builtin/';
+const BASE_PREFIX = '@vanblog/base/';
 
 // Paths under app/src/ that themes are forbidden from overriding via
-// `src/builtin-overrides/`. Each entry is a POSIX-style regex tested
+// `src/base-overrides/`. Each entry is a POSIX-style regex tested
 // against the alias suffix (e.g. `pages/admin/index.astro`).
 //
 // Why these paths are locked:
 //   - pages/admin/   : admin is a control plane, themes cannot change it
 //   - pages/api/     : API endpoints are part of the data layer
-//   - lib/           : markdown pipeline + helpers used by builtin pages
+//   - lib/           : markdown pipeline + helpers used by platform pages
 //   - loaders/       : Live Collection loaders feed built-in pages
 //   - live.config.ts : Live Collection registration
 //   - middleware.ts  : auth / pb client injection
@@ -47,15 +47,28 @@ function containsPath(parentDir, candidate) {
   return rel !== '' && !rel.startsWith('..' + sep) && !rel.startsWith('../');
 }
 
+// Extensions tried when an alias target has no explicit extension, e.g.
+// `@vanblog/base/lib/markdown/renderer` → renderer.ts. The override/base
+// lookup returns the file path directly to Vite, so we must resolve the
+// extension ourselves (Vite does not re-resolve plugin-returned ids).
+const RESOLVE_EXTS = ['', '.ts', '.tsx', '.js', '.mjs', '.astro', '.css'];
+
+function resolveWithExtension(base) {
+  for (const ext of RESOLVE_EXTS) {
+    if (existsSync(base + ext)) return base + ext;
+  }
+  return null;
+}
+
 // Extracted as a named export so the themes integration can be unit-tested
 // directly (see index.test.mjs) without spinning up a full Astro/Vite server.
-export function resolveBuiltinAlias(id, overridesDir, mainAppSrcDir, logger) {
-  if (!id.startsWith(BUILTIN_PREFIX)) return null;
-  const rel = id.slice(BUILTIN_PREFIX.length);
+export function resolveBaseAlias(id, overridesDir, mainAppSrcDir, logger) {
+  if (!id.startsWith(BASE_PREFIX)) return null;
+  const rel = id.slice(BASE_PREFIX.length);
   // Always normalise to POSIX-style, then lowercase, before the regex tests.
   // Lowercasing closes a case-sensitivity bypass on case-insensitive
   // filesystems (macOS/Windows default): a theme importing
-  // `@vanblog/builtin/Pages/Admin/index.astro` would otherwise slip past the
+  // `@vanblog/base/Pages/Admin/index.astro` would otherwise slip past the
   // all-lowercase FORBIDDEN_OVERRIDE_PATTERNS. The on-disk lookup keeps the
   // original case so legitimate mixed-case overrides still resolve on
   // case-sensitive filesystems.
@@ -63,28 +76,30 @@ export function resolveBuiltinAlias(id, overridesDir, mainAppSrcDir, logger) {
   const relLower = relPosix.toLowerCase();
 
   const overridePath = normalize(join(overridesDir, rel));
-  const overrideExists = containsPath(overridesDir, overridePath) && existsSync(overridePath);
+  const resolvedOverride =
+    containsPath(overridesDir, overridePath) ? resolveWithExtension(overridePath) : null;
 
   if (FORBIDDEN_OVERRIDE_PATTERNS.some((re) => re.test(relLower))) {
     // Fail closed: a theme that ships an override for a locked path
     // indicates a contract violation and must not silently fall back.
-    if (overrideExists) {
+    if (resolvedOverride) {
       const msg =
-        `[vanblog-themes] FORBIDDEN override: ${relPosix} is a locked builtin path ` +
+        `[vanblog-themes] FORBIDDEN override: ${relPosix} is a locked base path ` +
         '(admin / api / lib / loaders / live.config / middleware). ' +
-        'Themes cannot override this file. Remove it from src/builtin-overrides/.';
+        'Themes cannot override this file. Remove it from src/base-overrides/.';
       if (logger && typeof logger.error === 'function') logger.error(msg);
       throw new Error(msg);
     }
-    // No override present → fall through to builtin lookup so the alias
+    // No override present → fall through to base lookup so the alias
     // still resolves to the canonical file under app/src/.
   }
 
-  if (overrideExists) return overridePath;
+  if (resolvedOverride) return resolvedOverride;
 
-  const builtinPath = normalize(join(mainAppSrcDir, rel));
-  if (containsPath(mainAppSrcDir, builtinPath) && existsSync(builtinPath)) {
-    return builtinPath;
+  const basePath = normalize(join(mainAppSrcDir, rel));
+  if (containsPath(mainAppSrcDir, basePath)) {
+    const resolvedBase = resolveWithExtension(basePath);
+    if (resolvedBase) return resolvedBase;
   }
 
   // Returning null lets Vite/Astro surface the "module not found" error
@@ -102,22 +117,22 @@ export default function themesIntegration(options) {
 
   const themeSrcDir = options.themeSrcDir;
   const mainAppSrcDir = options.mainAppSrcDir;
-  const overridesDir = join(themeSrcDir, 'builtin-overrides');
+  const overridesDir = join(themeSrcDir, 'base-overrides');
 
   return {
     name: 'vanblog-themes',
     hooks: {
       'astro:config:setup': ({ updateConfig, logger }) => {
         logger.info(
-          `vanblog-themes: theme src=${themeSrcDir}, builtin src=${mainAppSrcDir}, overrides=${overridesDir}`,
+          `vanblog-themes: theme src=${themeSrcDir}, base src=${mainAppSrcDir}, overrides=${overridesDir}`,
         );
         updateConfig({
           vite: {
             plugins: [
               {
-                name: 'vanblog-builtin-resolver',
+                name: 'vanblog-base-resolver',
                 resolveId(id) {
-                  return resolveBuiltinAlias(id, overridesDir, mainAppSrcDir, logger);
+                  return resolveBaseAlias(id, overridesDir, mainAppSrcDir, logger);
                 },
               },
             ],
@@ -125,7 +140,7 @@ export default function themesIntegration(options) {
         });
       },
       // HMR is handled by Astro's standard file watcher because both the
-      // theme's `src/` and `src/builtin-overrides/` live inside the project
+      // theme's `src/` and `src/base-overrides/` live inside the project
       // root, and the main repo's `app/src/` is reachable via the alias
       // which Vite already watches for dependent modules.
     },

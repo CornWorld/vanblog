@@ -1,0 +1,142 @@
+---
+import '../styles/global.css';
+// KaTeX CSS — required to hide the MathML aria-hidden output that rehype-katex
+// generates alongside the visual HTML. Without this, both versions render and
+// the article displays duplicated math. Loaded globally (not just in editor)
+// because post content is rendered server-side via markdown pipeline.
+import 'katex/dist/katex.css';
+import { stripMarkdown } from '@vanblog/sdk';
+import { packs as packMetadata } from 'virtual:vanblog/packs';
+import { contributions as packContributions } from 'virtual:vanblog/pack-frontend';
+import type { Site, Post } from '@vanblog/sdk';
+
+import Nav from '../components/Nav.astro';
+import Footer from '../components/Footer.astro';
+import BackToTop from '../components/BackToTop.astro';
+
+interface Props {
+  title: string;
+  description?: string;
+  site?: Partial<Site>;
+  post?: Post;
+  path?: string; // e.g. "/posts/xxx"
+}
+
+const { title, description, site: siteProp, post, path } = Astro.props;
+const pb = Astro.locals.pb;
+
+// Fall back to site config from middleware (lazy-loaded from pb)
+const site = siteProp || await Astro.locals.getSite();
+
+// Auth state for nav
+const isLoggedIn = pb.authStore.isValid;
+
+const siteName = site?.siteName || 'Vanblog';
+const siteDesc = description || site?.siteDesc || '';
+const baseUrl = site?.baseUrl || '';
+
+// Canonical URL
+const canonicalURL = baseUrl && path ? `${baseUrl.replace(/\/$/, '')}${path}` : undefined;
+
+const desc = post ? stripMarkdown(post.content) || siteDesc : siteDesc;
+
+// JSON-LD structured data for articles
+const articleSchema = post ? {
+  '@context': 'https://schema.org',
+  '@type': 'Article',
+  headline: post.title,
+  datePublished: post.created,
+  dateModified: post.updated,
+  author: site?.author ? { '@type': 'Person', name: site.author } : undefined,
+  publisher: {
+    '@type': 'Organization',
+    name: siteName,
+  },
+  description: desc,
+  mainEntityOfPage: canonicalURL ? { '@type': 'WebPage', '@id': canonicalURL } : undefined,
+} : undefined;
+
+// JSON-LD for website
+const websiteSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'WebSite',
+  name: siteName,
+  description: siteDesc,
+  url: baseUrl || undefined,
+};
+
+// Escape `<` so user-controlled values can't break out of the JSON-LD `<script>`
+// block (JSON.stringify does not escape `</script>` sequences).
+const safeJsonLd = (obj: unknown) => JSON.stringify(obj).replace(/</g, '\\u003c');
+
+// Pack nav items are resolved at build time by the Astro Pack integration.
+const packNavItems = packMetadata.flatMap((pack) => pack.nav ? [pack.nav] : []);
+---
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width" />
+
+    <!-- Prevent FOUC: set dark class before paint -->
+    <script is:inline>
+      (() => {
+        const t = localStorage.getItem('vanblog-theme');
+        if (t === 'dark' || (!t && matchMedia('(prefers-color-scheme: dark)').matches)) {
+          document.documentElement.classList.add('dark');
+        }
+      })();
+    </script>
+
+    <!-- Core SEO -->
+    <title>{title} - {siteName}</title>
+    <meta name="description" content={desc} />
+    {canonicalURL && <link rel="canonical" href={canonicalURL} />}
+
+    <!-- Palette CSS (zero-build theme switch; see docs/agent-theme-architecture.md §4) -->
+    {site?.palette && (
+      <link rel="stylesheet" href={`/api/palette.css?v=${site.updated ?? ''}`} data-vanblog-palette />
+    )}
+
+    {packContributions.filter((item) => item.scope === 'public').flatMap((item) => item.styles).map((href) => (
+      <link rel="stylesheet" href={href} data-vanblog-pack-style />
+    ))}
+
+    <!-- OpenGraph (Facebook / WeChat / others) -->
+    <meta property="og:title" content={post?.title || title} />
+    <meta property="og:description" content={desc} />
+    <meta property="og:site_name" content={siteName} />
+    <meta property="og:type" content={post ? 'article' : 'website'} />
+    {canonicalURL && <meta property="og:url" content={canonicalURL} />}
+    {post && <meta property="article:published_time" content={post.created} />}
+    {post && <meta property="article:modified_time" content={post.updated} />}
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content={post?.title || title} />
+    <meta name="twitter:description" content={desc} />
+
+    <!-- RSS auto-discovery -->
+    <link rel="alternate" type="application/rss+xml" title={`${siteName} RSS`} href="/api/feed.xml" />
+    <link rel="alternate" type="application/atom+xml" title={`${siteName} Atom`} href="/api/atom.xml" />
+
+    <!-- Structured Data (JSON-LD) -->
+    {post ? (
+      <script is:inline type="application/ld+json" set:html={safeJsonLd(articleSchema)} />
+    ) : (
+      <script is:inline type="application/ld+json" set:html={safeJsonLd(websiteSchema)} />
+    )}
+  </head>
+  <body class="min-h-screen flex flex-col">
+    <Nav site={site} isLoggedIn={isLoggedIn} path={path ?? ''} packNavItems={packNavItems} />
+    <main class="flex-1 container-page py-8">
+      <slot />
+    </main>
+    <Footer site={site} />
+    <BackToTop />
+
+    {packContributions.filter((item) => item.scope === 'public').flatMap((item) => item.scripts).map((src) => (
+      <script is:inline type="module" src={src} data-vanblog-pack-script></script>
+    ))}
+  </body>
+</html>

@@ -1,0 +1,10 @@
+---
+// base 主题 · 404。
+import BaseLayout from '@vanblog/base/layouts/BaseLayout.astro';
+Astro.response.status = 404;
+---
+<BaseLayout title="页面未找到" path="/404">
+  <h1>404</h1>
+  <p>页面未找到。</p>
+  <p><a href="/">返回首页</a></p>
+</BaseLayout>

@@ -1,0 +1,23 @@
+---
+// base 主题 · 关于: 渲染 site.aboutContent。
+import BaseLayout from '@vanblog/base/layouts/BaseLayout.astro';
+import { renderMarkdown } from '@vanblog/base/lib/markdown/renderer';
+const site = await Astro.locals.getSite();
+const content = site?.aboutContent || '';
+let html = '';
+if (content.trim()) {
+  try {
+    const { code } = await renderMarkdown(content);
+    html = code;
+  } catch {
+    html = '';
+  }
+}
+---
+<BaseLayout title="关于" path="/about">
+  <h1>关于</h1>
+  {html ? <div set:html={html} /> : <p>暂无内容。</p>}
+  {site?.aboutUpdatedAt && (
+    <p><small>更新于 {new Date(site.aboutUpdatedAt).toLocaleDateString('zh-CN')}</small></p>
+  )}
+</BaseLayout>
