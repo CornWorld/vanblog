@@ -3,7 +3,7 @@ import { discoverPacks, loadPackMetadata, mergeLocalPacks, resolvePublicPages } 
 
 const appDirectory = new URL('../../', import.meta.url);
 const repositoryDirectory = new URL('../../../', import.meta.url);
-const builtinThemePage = fileURLToPath(new URL('src/layouts/PackPage.astro', appDirectory));
+const platformThemePage = fileURLToPath(new URL('src/layouts/PackPage.astro', appDirectory));
 const packsDirectory = fileURLToPath(new URL('packs', repositoryDirectory));
 // VANBLOG_PACKS_DIR mirrors the Go-side --packsDir flag so that local Pack
 // overrides take effect in Astro at the same time as they do in the Go runtime.
@@ -74,9 +74,9 @@ function packVirtualPlugin(metadata, packs, themePage) {
 
 export default function packsIntegration(options = {}) {
   // Themes supply their own PackPage host via the themePage option. When
-  // unset (e.g. running inside app/ as the default builtin build), we fall
+  // unset (e.g. running inside app/ as the platform build), we fall
   // back to app/src/layouts/PackPage.astro.
-  const themePage = options.themePage || builtinThemePage;
+  const themePage = options.themePage || platformThemePage;
   return {
     name: 'vanblog-packs',
     hooks: {

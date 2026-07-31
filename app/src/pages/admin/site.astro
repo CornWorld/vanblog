@@ -86,7 +86,7 @@ const boolField = (k: keyof Site, def = false): boolean => {
             .then(data => {
               const sel = document.getElementById('active-theme-select');
               if (!sel) return;
-              const current = sel.getAttribute('data-current') || 'default';
+              const current = sel.getAttribute('data-current') || 'vanblog';
               sel.innerHTML = '';
               (data.themes || []).forEach(t => {
                 const opt = document.createElement('option');
