@@ -51,8 +51,8 @@ wait_for() {
 cleanup() {
   echo "[vanblog] shutting down..."
   kill "$MONITOR_PID" 2>/dev/null || true
-  kill $PB_PID $DISPATCHER_PID $CADDY_PID 2>/dev/null || true
-  wait $PB_PID $DISPATCHER_PID $CADDY_PID 2>/dev/null || true
+  kill $PB_PID ${DISPATCHER_PID:-} $CADDY_PID 2>/dev/null || true
+  wait $PB_PID ${DISPATCHER_PID:-} $CADDY_PID 2>/dev/null || true
 }
 trap cleanup EXIT INT TERM
 
@@ -68,12 +68,12 @@ wait_for "http://127.0.0.1:2019/config/" "Caddy admin API" 30 || exit 1
 
 # 3. Start PocketBase
 echo "[vanblog] starting PocketBase..."
-PB_PACKS_FLAG=""
+set -- --http="$PB_HTTP" --dir="$PB_DATA" --coreSchemaPath=/core/models.js
 if [ -n "$VANBLOG_PACKS_DIR" ]; then
   echo "[vanblog] local Pack overrides: $VANBLOG_PACKS_DIR"
-  PB_PACKS_FLAG="--packsDir=$VANBLOG_PACKS_DIR"
+  set -- "$@" --packsDir="$VANBLOG_PACKS_DIR"
 fi
-vanblog serve --http=$PB_HTTP --dir=$PB_DATA --coreSchemaPath=/core/models.js $PB_PACKS_FLAG &
+vanblog serve "$@" &
 PB_PID=$!
 wait_for "http://127.0.0.1:8090/api/health" "PocketBase" 30 || exit 1
 

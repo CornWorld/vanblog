@@ -207,8 +207,10 @@ const TYPE_OPTIONS = ['proxy', 'redirect', 'rewrite', 'block', 'cache'];
     </>
   )}
 
+  <div id="routing-type-options" hidden data-type-options={JSON.stringify(TYPE_OPTIONS)} />
   <script>
     import { initRoutingEditor } from '../../lib/routing-editor.js';
-    initRoutingEditor({ TYPE_OPTIONS: ['proxy', 'redirect', 'rewrite', 'block', 'cache'] });
+    const typeOptionsEl = document.getElementById('routing-type-options');
+    initRoutingEditor({ TYPE_OPTIONS: JSON.parse(typeOptionsEl?.dataset.typeOptions ?? '[]') });
   </script>
 </AdminLayout>

@@ -63,7 +63,7 @@ if [ -n "$VANBLOG_PACKS_DIR" ]; then
   echo "[vanblog] local Pack overrides: $VANBLOG_PACKS_DIR"
   PB_PACKS_FLAG="--packsDir=$VANBLOG_PACKS_DIR"
 fi
-vanblog serve --http=$PB_HTTP --dir=$PB_DATA --hooksWatch --coreSchemaPath=/core/models.js $PB_PACKS_FLAG &
+vanblog serve --http=$PB_HTTP --dir=$PB_DATA --hooksWatch --coreSchemaPath=/core/models.js ${PB_PACKS_FLAG:+"$PB_PACKS_FLAG"} &
 PB_PID=$!
 wait_for "http://127.0.0.1:8090/api/health" "PocketBase" 30 || exit 1
 

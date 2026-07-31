@@ -50,12 +50,13 @@ const hasAbout = !!(site?.aboutContent && site.aboutContent.trim());
 </header>
 
 <!-- Search dialog overlay -->
-<div id="search-dialog-overlay" class="fixed inset-0 z-50 hidden" aria-hidden="true">
+<div id="search-dialog-overlay" class="fixed inset-0 z-50 hidden" role="dialog" aria-modal="true" aria-label="搜索" aria-hidden="true">
   <div class="fixed inset-0 bg-black/50" onclick="closeSearchDialog()"></div>
   <div class="fixed top-[15%] left-1/2 -translate-x-1/2 w-full max-w-lg px-4">
     <div class="bg-[var(--surface)] rounded-xl shadow-2xl border border-[var(--border)] p-4">
       <form action="/search" method="get" onsubmit="closeSearchDialog()">
         <input type="text" name="q" id="search-dialog-input" autofocus autocomplete="off"
+          aria-label="搜索关键词"
           placeholder="输入关键词搜索…"
           class="w-full px-4 py-3 text-lg bg-[var(--bg)] border border-[var(--border)] rounded-lg text-[var(--text)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)]" />
       </form>
@@ -96,17 +97,24 @@ const hasAbout = !!(site?.aboutContent && site.aboutContent.trim());
 
   /* ── 1. Headroom: scroll to hide/show nav ── */
   let lastScroll = 0;
+  let ticking = false;
   window.addEventListener(
     'scroll',
     () => {
-      if (!nav) return;
-      const cur = window.scrollY;
-      if (Math.abs(cur - lastScroll) < 8) return;
-      nav.style.transform =
-        cur > lastScroll && cur > 56
-          ? 'translateY(-100%)'
-          : '';
-      lastScroll = cur;
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        ticking = false;
+        if (!nav) return;
+        const cur = window.scrollY;
+        if (Math.abs(cur - lastScroll) >= 8) {
+          nav.style.transform =
+            cur > lastScroll && cur > 56
+              ? 'translateY(-100%)'
+              : '';
+          lastScroll = cur;
+        }
+      });
     },
     { passive: true },
   );

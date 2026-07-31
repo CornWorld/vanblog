@@ -44,8 +44,10 @@ Astro.cache.set(false);
       e.preventDefault();
       errEl.classList.add('hidden');
       const fd = new FormData(form as HTMLFormElement);
-      const pb = getClient();
-      if (!pb) {
+      let pb: ReturnType<typeof getClient>;
+      try {
+        pb = getClient();
+      } catch {
         errEl.textContent = '客户端未初始化，请刷新';
         errEl.classList.remove('hidden');
         return;

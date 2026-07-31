@@ -6,7 +6,7 @@ import type {
   MigrationResult,
   TrashEntry,
 } from "./types";
-import type { Post, PostExpand, RouteRule, Site } from "./models";
+import type { PostExpand, RouteRule, Site } from "./models";
 
 // PocketBase js-sdk's send() parses non-JSON responses into objects.
 // For feed/sitemap (XML) endpoints we use raw fetch to get the text.

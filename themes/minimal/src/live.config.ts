@@ -1,4 +1,4 @@
-// Default theme re-exports an empty collections object. The builtin
+// Minimal theme exports an empty collections object. The builtin
 // `pages/posts/[id].astro` falls back to direct PocketBase fetches when
 // `getLiveEntry('posts', ...)` misses, so omitting the live collection here
 // is safe — it just means the theme build skips the Astro content layer

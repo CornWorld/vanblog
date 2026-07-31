@@ -62,9 +62,22 @@ try {
   if (!outputSource.includes('exports.models')) {
     throw new Error('built schema artifact must expose exports.models');
   }
+  // Note: for stronger validation, the Go-side pack build command runs
+  // validation.ValidateModelSource after this script completes. When invoked
+  // standalone (e.g. Dockerfile), only this substring check guards the artifact.
 
-  renameSync(tempOutput, outputFile);
-  console.log(`pack schema build: wrote ${isAbsolute(outputFile) ? outputFile : resolve(outputFile)}`);
+  try {
+    renameSync(tempOutput, outputFile);
+  } catch (e) {
+    if (e.code === 'EXDEV') {
+      const { copyFileSync, unlinkSync } = await import('node:fs');
+      copyFileSync(tempOutput, outputFile);
+      unlinkSync(tempOutput);
+    } else {
+      throw e;
+    }
+  }
+  console.log(`pack schema build: wrote ${outputFile}`);
 } catch (error) {
   console.error(`pack schema build failed: ${error instanceof Error ? error.message : String(error)}`);
   process.exitCode = 1;

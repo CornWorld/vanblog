@@ -5,12 +5,17 @@ declare module "vanblog:theme" {
   export const Page: AstroComponentFactory;
 }
 
+// Shared base type for pack frontend contributions.
+interface PackFrontendContributionBase {
+  scope: "public";
+  styles: string[];
+  scripts: string[];
+}
+
 declare module "virtual:vanblog/pack-frontend" {
-  export interface PackFrontendContribution {
+  export interface PackFrontendContribution
+    extends PackFrontendContributionBase {
     name: string;
-    scope: "public";
-    styles: string[];
-    scripts: string[];
   }
   export const contributions: PackFrontendContribution[];
   export default contributions;
@@ -22,11 +27,7 @@ declare module "virtual:vanblog/packs" {
     page: string;
   }
 
-  export interface PackFrontendContribution {
-    scope: "public";
-    styles: string[];
-    scripts: string[];
-  }
+  export type { PackFrontendContributionBase as PackFrontendContribution };
 
   export interface PackMetadata {
     name: string;
@@ -50,7 +51,7 @@ declare namespace App {
 }
 
 interface Window {
-  vanblog: { pb: import("@vanblog/sdk").VanblogClient };
+  vanblog?: { pb: import("@vanblog/sdk").VanblogClient };
   __bytemdEditor:
     | {
         $on(

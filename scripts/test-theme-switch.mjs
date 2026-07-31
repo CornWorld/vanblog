@@ -18,6 +18,14 @@
 
 const BASE = process.argv[2] || 'http://127.0.0.1:4321';
 const PB_URL = process.env.PB_URL || 'http://127.0.0.1:8090';
+const PB_API_KEY = process.argv[3] || process.env.PB_API_KEY || '';
+
+// Helper to add auth headers when key is provided
+function pbHeaders() {
+  const h = { 'Content-Type': 'application/json' };
+  if (PB_API_KEY) h['Authorization'] = `Bearer ${PB_API_KEY}`;
+  return h;
+}
 
 let passed = 0;
 let failed = 0;
@@ -28,7 +36,8 @@ async function check(description, fn) {
     console.log(`  ✅ ${description}`);
     passed++;
   } catch (err) {
-    console.log(`  ❌ ${description}: ${err.message}`);
+    const msg = err instanceof Error ? err.message : String(err);
+    console.log(`  ❌ ${description}: ${msg}`);
     failed++;
   }
 }
@@ -90,39 +99,44 @@ async function main() {
     if (!updateR.ok) throw new Error(`PB update failed: ${updateR.status}`);
   });
 
-  // 5. Wait for dispatcher to poll and switch
-  console.log('\n  ⏳ Waiting 7s for dispatcher to detect theme change...\n');
-  await new Promise(r => setTimeout(r, 7000));
-
-  // 6. Verify dispatcher switched
+  // 5. Wait for dispatcher to poll and switch (poll with timeout)
+  console.log('\n  ⏳ Waiting for dispatcher to detect theme change...\n');
   await check('Dispatcher switched to minimal theme', async () => {
-    const r = await fetch(`${BASE}/__dispatcher_health`);
-    const j = await r.json();
-    if (j.activeTheme !== 'minimal') {
-      throw new Error(`expected activeTheme=minimal, got ${j.activeTheme}`);
+    const deadline = Date.now() + 15000;
+    while (Date.now() < deadline) {
+      const r = await fetch(`${BASE}/__dispatcher_health`);
+      const j = await r.json();
+      if (j.activeTheme === 'minimal') return;
+      await new Promise(r => setTimeout(r, 500));
     }
+    throw new Error('timed out waiting for theme switch to minimal');
   });
 
-  // 7. Switch back to default
-  await check('Switch back to default theme via PB API', async () => {
-    const r = await fetch(`${PB_URL}/api/collections/site/records/${siteId}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ activeTheme: 'default' }),
+  // 7. Switch back to default (only if siteId was captured)
+  if (siteId) {
+    await check('Switch back to default theme via PB API', async () => {
+      const r = await fetch(`${PB_URL}/api/collections/site/records/${siteId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ activeTheme: 'default' }),
+      });
+      if (!r.ok) throw new Error(`PB update failed: ${r.status}`);
     });
-    if (!r.ok) throw new Error(`PB update failed: ${r.status}`);
-  });
+  }
 
-  console.log('\n  ⏳ Waiting 7s for dispatcher to revert...\n');
-  await new Promise(r => setTimeout(r, 7000));
-
+  console.log('\n  ⏳ Waiting for dispatcher to revert...\n');
   await check('Dispatcher reverted to default theme', async () => {
-    const r = await fetch(`${BASE}/__dispatcher_health`);
-    const j = await r.json();
-    if (j.activeTheme !== 'default') {
-      throw new Error(`expected activeTheme=default, got ${j.activeTheme}`);
+    const deadline = Date.now() + 15000;
+    while (Date.now() < deadline) {
+      const r = await fetch(`${BASE}/__dispatcher_health`);
+      const j = await r.json();
+      if (j.activeTheme === 'default') return;
+      await new Promise(r => setTimeout(r, 500));
     }
+    throw new Error('timed out waiting for theme switch to default');
   });
+
+  // Already verified above in the polling loop
 
   // Summary
   console.log(`\n=== Results: ${passed} passed, ${failed} failed ===\n`);

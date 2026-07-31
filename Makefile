@@ -29,7 +29,7 @@ MODEL_SOURCES := $(wildcard sdk/src/models/*.ts)
 help:
 	@echo "Usage: make <target>"
 	@echo ""
-	@echo "  dev           Run both frontend (Astro) and backend (Go) in dev mode"
+	@echo "  dev           Start Astro dev server (Go backend runs separately via 'make dev-go')"
 	@echo "  dev-go        Run Go backend locally (builds models.js first if missing)"
 	@echo "  dev-astro     Start Astro dev server (pnpm dev)"
 	@echo "  build         Build all artifacts (models → Go binary → Astro)"
@@ -52,7 +52,7 @@ dev-go: runtime/core-schema/models.js
 dev-astro:
 	pnpm dev
 
-# Run both in parallel (requires two terminals recommended; this uses background)
+# Run Astro dev server; Go backend must be started separately (make dev-go).
 dev: dev-astro
 	@echo ""
 	@echo "ℹ Next: open another terminal and run 'make dev-go' to start the Go backend."
@@ -76,9 +76,11 @@ build: build-models build-go build-astro
 # --- Validation ---
 
 test:
-	cd vault && go test ./... -count=1
-	pnpm test:models:types
-	pnpm test:models:fixtures
+	@fail=0; \
+	(cd vault && go test ./... -count=1) || fail=1; \
+	pnpm test:models:types || fail=1; \
+	pnpm test:models:fixtures || fail=1; \
+	[ "$$fail" -eq 0 ] || { echo "✗ 部分测试套件失败（详见上方输出）"; exit 1; }
 
 vet:
 	cd vault && go vet ./...

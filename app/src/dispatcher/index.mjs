@@ -56,6 +56,7 @@ const MIME_TYPES = {
   '.woff2': 'font/woff2',
   '.ttf': 'font/ttf',
   '.eot': 'application/vnd.ms-fontobject',
+  '.mjs': 'text/javascript',
   '.map': 'application/json',
 };
 
@@ -283,7 +284,15 @@ function serveStaticFile(req, themeName, subPath, res) {
     return;
   }
 
-  createReadStream(filePath).pipe(res);
+  const stream = createReadStream(filePath);
+  stream.on('error', () => {
+    if (!res.headersSent) {
+      res.statusCode = 500;
+      res.setHeader('Content-Type', 'text/plain');
+    }
+    res.end();
+  });
+  stream.pipe(res);
 }
 
 // ============================================================
@@ -377,6 +386,8 @@ const server = createServer(async (req, res) => {
       res.statusCode = 500;
       res.setHeader('Content-Type', 'text/plain');
       res.end('dispatcher error');
+    } else {
+      res.destroy();
     }
   }
 });
@@ -390,6 +401,7 @@ const inFlightRequests = new Set();
 
 // Track in-flight requests for graceful shutdown
 server.on('request', (_req, res) => {
+  if (res.writableEnded) return;
   const done = () => { inFlightRequests.delete(done); };
   inFlightRequests.add(done);
   res.on('finish', done);
@@ -471,6 +483,10 @@ async function bootstrap() {
   // Start PB polling for runtime theme changes
   startPolling();
 
+  server.on('error', (err) => {
+    console.error(`[dispatcher] failed to listen on ${HOST}:${PORT}:`, err);
+    process.exit(1);
+  });
   server.listen(PORT, HOST, () => {
     console.log(`[dispatcher] listening on ${HOST}:${PORT}`);
   });

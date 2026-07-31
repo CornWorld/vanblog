@@ -31,13 +31,15 @@ const categories = await safe(() => pb.collection('categories').getFullList(), '
 const categoryCount = categories.data?.length ?? 0;
 const tags = await safe(() => pb.collection('tags').getFullList(), 'archive-tags');
 const tagCount = tags.data?.length ?? 0;
-const totalWords = posts.reduce((sum: number, p: any) => sum + (p.content?.length || 0), 0);
-const statsOk = !!(result && categories && tags);
+const totalChars = posts.reduce((sum: number, p: Post) => sum + (p.content?.length || 0), 0);
+const statsOk = !!(result && categories.data && tags.data);
 
 // Group by year
 const byYear: Record<number, Post[]> = {};
 for (const post of posts) {
-  const year = new Date((post.created || '').replace(' ', 'T')).getFullYear();
+  const created = post.created;
+  if (!created) continue;
+  const year = new Date(created.replace(' ', 'T')).getFullYear();
   if (!byYear[year]) byYear[year] = [];
   byYear[year].push(post);
 }
@@ -50,7 +52,7 @@ const years = Object.keys(byYear).map(Number).sort((a, b) => b - a);
       postCount={postCount}
       categoryCount={categoryCount}
       tagCount={tagCount}
-      totalWords={totalWords}
+      totalWords={totalChars}
     />
   )}
   {

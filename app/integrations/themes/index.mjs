@@ -47,6 +47,52 @@ function containsPath(parentDir, candidate) {
   return rel !== '' && !rel.startsWith('..' + sep) && !rel.startsWith('../');
 }
 
+// Extracted as a named export so the themes integration can be unit-tested
+// directly (see index.test.mjs) without spinning up a full Astro/Vite server.
+export function resolveBuiltinAlias(id, overridesDir, mainAppSrcDir, logger) {
+  if (!id.startsWith(BUILTIN_PREFIX)) return null;
+  const rel = id.slice(BUILTIN_PREFIX.length);
+  // Always normalise to POSIX-style, then lowercase, before the regex tests.
+  // Lowercasing closes a case-sensitivity bypass on case-insensitive
+  // filesystems (macOS/Windows default): a theme importing
+  // `@vanblog/builtin/Pages/Admin/index.astro` would otherwise slip past the
+  // all-lowercase FORBIDDEN_OVERRIDE_PATTERNS. The on-disk lookup keeps the
+  // original case so legitimate mixed-case overrides still resolve on
+  // case-sensitive filesystems.
+  const relPosix = rel.split(sep).join('/');
+  const relLower = relPosix.toLowerCase();
+
+  const overridePath = normalize(join(overridesDir, rel));
+  const overrideExists = containsPath(overridesDir, overridePath) && existsSync(overridePath);
+
+  if (FORBIDDEN_OVERRIDE_PATTERNS.some((re) => re.test(relLower))) {
+    // Fail closed: a theme that ships an override for a locked path
+    // indicates a contract violation and must not silently fall back.
+    if (overrideExists) {
+      const msg =
+        `[vanblog-themes] FORBIDDEN override: ${relPosix} is a locked builtin path ` +
+        '(admin / api / lib / loaders / live.config / middleware). ' +
+        'Themes cannot override this file. Remove it from src/builtin-overrides/.';
+      if (logger && typeof logger.error === 'function') logger.error(msg);
+      throw new Error(msg);
+    }
+    // No override present → fall through to builtin lookup so the alias
+    // still resolves to the canonical file under app/src/.
+  }
+
+  if (overrideExists) return overridePath;
+
+  const builtinPath = normalize(join(mainAppSrcDir, rel));
+  if (containsPath(mainAppSrcDir, builtinPath) && existsSync(builtinPath)) {
+    return builtinPath;
+  }
+
+  // Returning null lets Vite/Astro surface the "module not found" error
+  // with the original alias intact, which is much easier to debug than
+  // throwing here.
+  return null;
+}
+
 export default function themesIntegration(options) {
   if (!options || !options.themeSrcDir || !options.mainAppSrcDir) {
     throw new Error(
@@ -57,42 +103,6 @@ export default function themesIntegration(options) {
   const themeSrcDir = options.themeSrcDir;
   const mainAppSrcDir = options.mainAppSrcDir;
   const overridesDir = join(themeSrcDir, 'builtin-overrides');
-
-  function resolveBuiltinAlias(id) {
-    if (!id.startsWith(BUILTIN_PREFIX)) return null;
-    const rel = id.slice(BUILTIN_PREFIX.length);
-    // Always normalise to POSIX-style for the regex tests below.
-    const relPosix = rel.split(sep).join('/');
-
-    const overridePath = normalize(join(overridesDir, rel));
-    const overrideExists = containsPath(overridesDir, overridePath) && existsSync(overridePath);
-
-    if (FORBIDDEN_OVERRIDE_PATTERNS.some((re) => re.test(relPosix))) {
-      // Fail closed: a theme that ships an override for a locked path
-      // indicates a contract violation and must not silently fall back.
-      if (overrideExists) {
-        throw new Error(
-          `[vanblog-themes] FORBIDDEN override: ${relPosix} is a locked builtin path ` +
-            '(admin / api / lib / loaders / live.config / middleware). ' +
-            'Themes cannot override this file. Remove it from src/builtin-overrides/.',
-        );
-      }
-      // No override present → fall through to builtin lookup so the alias
-      // still resolves to the canonical file under app/src/.
-    }
-
-    if (overrideExists) return overridePath;
-
-    const builtinPath = normalize(join(mainAppSrcDir, rel));
-    if (containsPath(mainAppSrcDir, builtinPath) && existsSync(builtinPath)) {
-      return builtinPath;
-    }
-
-    // Returning null lets Vite/Astro surface the "module not found" error
-    // with the original alias intact, which is much easier to debug than
-    // throwing here.
-    return null;
-  }
 
   return {
     name: 'vanblog-themes',
@@ -107,7 +117,7 @@ export default function themesIntegration(options) {
               {
                 name: 'vanblog-builtin-resolver',
                 resolveId(id) {
-                  return resolveBuiltinAlias(id);
+                  return resolveBuiltinAlias(id, overridesDir, mainAppSrcDir, logger);
                 },
               },
             ],

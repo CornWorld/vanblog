@@ -17,7 +17,7 @@
 // After running, you can `cd themes/<new-theme-name> && pnpm dev` to start
 // hacking. Edit src/pages/* or src/builtin-overrides/* to customise.
 
-import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import process from 'node:process';
 
@@ -39,7 +39,12 @@ if (existsSync(dest)) fail(`themes/${name}/ already exists`);
 if (!existsSync(DEFAULT_THEME)) fail('themes/default/ missing — cannot scaffold');
 
 console.log(`theme-init: copying themes/default → themes/${name}`);
-cpSync(DEFAULT_THEME, dest, { recursive: true });
+try {
+  cpSync(DEFAULT_THEME, dest, { recursive: true });
+} catch (err) {
+  if (existsSync(dest)) rmSync(dest, { recursive: true, force: true });
+  fail(`copy failed: ${err.message}`);
+}
 
 // Drop artifacts that the workspace will rebuild.
 for (const sub of ['node_modules', 'dist', '.astro']) {
@@ -49,7 +54,12 @@ for (const sub of ['node_modules', 'dist', '.astro']) {
 
 // Rewrite theme.json: new name, derived label, drop screenshot if missing.
 const themeJsonPath = join(dest, 'theme.json');
-const themeJson = JSON.parse(readFileSync(themeJsonPath, 'utf8'));
+let themeJson;
+try {
+  themeJson = JSON.parse(readFileSync(themeJsonPath, 'utf8'));
+} catch (err) {
+  fail(`failed to parse ${themeJsonPath}: ${err.message}`);
+}
 themeJson.name = name;
 themeJson.label = name;
 if (!existsSync(join(dest, 'screenshot.png'))) delete themeJson.screenshot;

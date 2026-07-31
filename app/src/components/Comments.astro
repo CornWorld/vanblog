@@ -18,11 +18,15 @@ const { provider, config } = Astro.props;
     {provider === 'waline' && (
       <>
         <link href="https://unpkg.com/@waline/client@v3/dist/waline.css" rel="stylesheet" />
-        <div id="waline-container"></div>
-        <script is:inline type="module" data-server-url={String(config?.serverURL || '')}>
+        <div id="waline-container" data-server-url={String(config?.serverURL || '')}></div>
+        <script is:inline type="module">
           import { init } from 'https://unpkg.com/@waline/client@v3/dist/waline.js';
-          const serverURL = document.currentScript.dataset.serverUrl;
-          init({ el: '#waline-container', serverURL, path: window.location.pathname, dark: 'html.dark' });
+          // NOTE: `document.currentScript` is null inside ES modules, so the
+          // server URL is read from the container element instead.
+          const container = document.getElementById('waline-container');
+          if (container) {
+            init({ el: '#waline-container', serverURL: container.dataset.serverUrl, path: window.location.pathname, dark: 'html.dark' });
+          }
         </script>
       </>
     )}

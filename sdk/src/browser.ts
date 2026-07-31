@@ -2,6 +2,12 @@ import { createVanblogClient } from "./client";
 import type { CreateClientOptions } from "./client";
 import type { VanblogClient } from "./services";
 
+declare global {
+  interface Window {
+    vanblog?: { pb: VanblogClient };
+  }
+}
+
 // ── Internal singleton ────────────────────────────────────────────────────
 
 let _client: VanblogClient | null = null;
@@ -25,7 +31,7 @@ export function getClient(): VanblogClient {
  */
 export function createBrowserClient(opts?: CreateClientOptions): VanblogClient {
   return createVanblogClient({
-    url: "/",
+    url: "/", // Same-origin; PocketBase SDK internally appends /api/...
     ...opts,
   });
 }
@@ -56,7 +62,7 @@ export function initClient(): void {
   const pb = createBrowserClient();
   pb.authStore.loadFromCookie(document.cookie);
   _client = pb;
-  (self as any).vanblog = { pb };
+  window.vanblog = { pb };
 }
 
 // ── Logout ─────────────────────────────────────────────────────────────────
@@ -68,6 +74,15 @@ export function initClient(): void {
  * client SDK calls don't reuse a stale token before the redirect lands.
  */
 export function logout(redirectTo = "/"): void {
+  // Prevent open redirect: only allow relative paths or same-origin URLs
+  try {
+    const safe = new URL(redirectTo, window.location.origin);
+    if (safe.origin !== window.location.origin) {
+      redirectTo = "/";
+    }
+  } catch {
+    redirectTo = "/";
+  }
   document.cookie = "pb_auth=; Path=/; Max-Age=0; SameSite=Lax";
   try {
     localStorage.removeItem("pocketbase_auth");

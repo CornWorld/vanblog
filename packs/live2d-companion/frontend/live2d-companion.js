@@ -127,7 +127,10 @@ function loadWidgetScript() {
     };
 
     // Hard timeout: reject if the script itself never loads.
-    const hardTimeout = setTimeout(() => fail("CDN timeout"), 10000);
+    const hardTimeout = setTimeout(() => {
+      script.remove(); // prevent late-loading script from injecting orphaned widget
+      fail("CDN timeout");
+    }, 10000);
 
     script.onerror = () => {
       clearTimeout(hardTimeout);
@@ -174,7 +177,7 @@ function renderFallback(error) {
       el(
         "p",
         { className: `${NAMESPACE}__fallback-message` },
-        "看板娘加载失败，请检查网络连接"
+        "Failed to load companion widget. Please check your network connection."
       ),
       el(
         "button",
@@ -188,7 +191,7 @@ function renderFallback(error) {
             init();
           },
         },
-        "重新加载"
+        "Retry"
       ),
     ]
   );
@@ -197,7 +200,7 @@ function renderFallback(error) {
 
 // ─── Backend persistence ──────────────────────────────────────
 async function fetchConfigRecordId() {
-  const pb = self.vanblog.pb;
+  const pb = self.vanblog?.pb;
   if (!pb) return null;
   try {
     const record = await pb.collection(COLLECTION).getFirstListItem("1=1");

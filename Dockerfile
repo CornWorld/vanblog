@@ -53,12 +53,12 @@ WORKDIR /build
 # vault/go.mod has `replace github.com/CornWorld/caddyadmin => ../../caddyadmin`.
 # In Docker the build workspace is /build, so the replace target resolves to
 # /caddyadmin. Clone it there before go mod download runs.
-RUN git clone --depth=1 https://github.com/CornWorld/caddyadmin.git /caddyadmin
+ARG CADDYADMIN_VERSION=v0.1.0
+RUN git clone --depth=1 --branch ${CADDYADMIN_VERSION} https://github.com/CornWorld/caddyadmin.git /caddyadmin
 
 COPY vault/go.mod vault/go.sum ./
 RUN go mod download
 COPY vault/ ./
-COPY packs/ /packs/
 # The Go binary consumes this artifact at runtime; it is not compiled into the binary.
 COPY --from=models-build /build/runtime/core-schema/models.js /core/models.js
 RUN CGO_ENABLED=0 go build -o /pocketbase -ldflags="-s -w" .
@@ -94,7 +94,7 @@ RUN for theme in themes/*/; do \
       name=$(basename "$theme"); \
       if [ -f "$theme/astro.config.mjs" ]; then \
         echo "Building theme: $name"; \
-        (cd "$theme" && VANBLOG_THEME_NAME="$name" pnpm build) || exit 1; \
+        (cd "$theme" && VANBLOG_THEME_NAME="$name" pnpm build && echo "  ✓ $name built") || { echo "  ✗ $name build FAILED"; exit 1; }; \
       fi; \
     done
 

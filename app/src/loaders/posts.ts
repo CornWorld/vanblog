@@ -77,15 +77,15 @@ export function postLoader(): LiveLoader<
           });
 
         const entries = await Promise.all(
-          result.items.map(async (post) => {
+          result.items.map(async (post, idx) => {
             const content = normalizeMathDelimiters(post.content || "");
             const { code: html } = await renderMarkdown(content);
             return {
-              id: post.id ?? `post-${page}-${result.items.indexOf(post)}`,
+              id: post.id ?? `post-${page}-${idx}`,
               data: post,
               rendered: { html },
               cacheHint: {
-                tags: ["posts", ...(post.id ? [`post:${post.id}`] : [])],
+                tags: ["posts", `post:${post.id ?? `post-${page}-${idx}`}`],
                 lastModified: post.updated ? new Date(post.updated) : undefined,
               },
             };

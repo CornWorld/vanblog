@@ -17,7 +17,7 @@
 /* ── Tailwind v4 variant for `:not(.dark)` ──
    Useful to override global styles that target `.dark` ancestor so they
    don't leak into light mode. */
-@custom-variant not-dark (&:where(:not(.dark), :not(.dark) *));
+@custom-variant not-dark (&:not(:where(.dark, .dark *)));
 
 /* ── Dark mode: class-based (.dark on <html>) ── */
 @custom-variant dark (&:where(.dark, .dark *));

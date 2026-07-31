@@ -2,7 +2,7 @@
 // agent-safe (HTML/CSS only). All client-side logic: CRUD, validation,
 // health banner, audits feed, Caddy config preview.
 export function initRoutingEditor({ TYPE_OPTIONS }) {
-  const pb = self.vanblog.pb;
+  const pb = self.vanblog?.pb;
   const tbody = document.getElementById("rules-body");
   const status = document.getElementById("save-status");
   const allowlistEl = document.getElementById("allowlist");
@@ -286,9 +286,9 @@ export function initRoutingEditor({ TYPE_OPTIONS }) {
       "user";
     const data =
       layer === "full" ? renderCache.fullConfig : renderCache.userRoutes;
-    if (data == null) {
+    if (data === null || data === undefined) {
       renderOutput.textContent =
-        layer === "full" ? "（完整 config 不可用）" : "（无规则）";
+        layer === "full" ? "(完整 config 不可用)" : "(无规则)";
       return;
     }
     renderOutput.textContent = JSON.stringify(data, null, 2);

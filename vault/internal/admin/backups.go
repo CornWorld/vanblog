@@ -159,7 +159,7 @@ func (m *Manager) handleDeleteBackup(e *core.RequestEvent) error {
 	if validateBackupKey(key) != nil {
 		return e.BadRequestError("invalid backup key", "")
 	}
-	if active, _ := m.app.Store().Get(core.StoreKeyActiveBackup).(string); active == key {
+	if active, ok := m.app.Store().Get(core.StoreKeyActiveBackup).(string); ok && active == key {
 		return e.JSON(http.StatusConflict, map[string]string{"error": "backup is currently in use"})
 	}
 
@@ -193,22 +193,25 @@ func (m *Manager) handleRestoreBackup(e *core.RequestEvent) error {
 		return e.JSON(http.StatusConflict, map[string]string{"error": "another backup or restore operation is already running"})
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), backupListTimeout)
+	ctx, cancel := context.WithTimeout(e.Request.Context(), backupListTimeout)
+	defer cancel()
 	fsys, err := openBackupsFilesystem(m.app, ctx)
 	if err != nil {
-		cancel()
 		slog.Error("[backups] initialize restore filesystem", "err", err)
 		return e.InternalServerError("failed to load backup storage", nil)
 	}
-	existsErr := ensureBackupExists(fsys, key)
-	_ = fsys.Close()
-	cancel()
-	if existsErr != nil {
+	defer fsys.Close()
+	if err := ensureBackupExists(fsys, key); err != nil {
 		return e.NotFoundError("backup not found", "")
 	}
 
 	// Return before RestoreBackup replaces the process. This mirrors PB's native API.
 	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				slog.Error("[backups] restore panicked", "key", key, "panic", r)
+			}
+		}()
 		time.Sleep(time.Second)
 		ctx, cancel := context.WithTimeout(context.Background(), backupOperationTimeout)
 		defer cancel()

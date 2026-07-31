@@ -108,7 +108,7 @@ const isLoggedIn = Astro.locals.pb.authStore.isValid;
     <footer>
       <hr />
       <p>
-        {site?.copyrightAggreement || ''} {site?.author || ''}
+        {site?.copyrightAgreement || ''} {site?.author || ''}
         {site?.since && ` · since ${new Date(site.since).getFullYear()}`}
       </p>
       <p>Powered by Vanblog</p>

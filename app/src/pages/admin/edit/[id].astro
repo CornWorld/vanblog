@@ -128,7 +128,7 @@ const currentAuthorId: string = post.author || user.id;
     <button id="btn-publish" type="button">保存并发布</button>
     <a href="/admin">取消</a>
   </div>
-<script is:inline type="application/json" id="editor-data" set:html={JSON.stringify({ postId: isNew ? null : id, authorId: currentAuthorId })} />
+<script is:inline type="application/json" id="editor-data" set:html={JSON.stringify({ postId: isNew ? null : id, authorId: currentAuthorId }).replace(/<\//g, '<\\/')} />
 <script is:inline>
     const { postId, authorId } = JSON.parse(document.getElementById('editor-data').textContent);
     const save = async (publish) => {

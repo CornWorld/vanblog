@@ -49,6 +49,13 @@ function packVirtualPlugin(metadata, packs, themePage) {
         return `export const packs = ${JSON.stringify(metadata)};\nexport default packs;`;
       }
       if (id === resolvedFrontendVirtualId) {
+        // Watch the individual frontend contribution files so Vite invalidates
+        // the virtual `frontend` module when a specific style/script changes
+        // during development (seamless HMR without a manual refresh).
+        for (const item of frontend) {
+          for (const style of item.styles) this.addWatchFile(style.split('?')[0]);
+          for (const script of item.scripts) this.addWatchFile(script.split('?')[0]);
+        }
         const imports = frontend.flatMap((item, packIndex) => [
           ...item.styles.map((path, index) => `import style_${packIndex}_${index} from ${JSON.stringify(path)};`),
           ...item.scripts.map((path, index) => `import script_${packIndex}_${index} from ${JSON.stringify(path)};`),
@@ -74,14 +81,24 @@ export default function packsIntegration(options = {}) {
     name: 'vanblog-packs',
     hooks: {
       'astro:config:setup': ({ injectRoute, updateConfig }) => {
-        const packs = resolvePacks();
+        let packs;
+        try {
+          packs = resolvePacks();
+        } catch (err) {
+          throw new Error(`Failed to resolve packs: ${err.message}`);
+        }
         const pages = resolvePublicPages(packs.flatMap((pack) => pack.pages));
         const metadata = loadPackMetadata(packs);
         for (const page of pages) injectRoute({ pattern: page.pattern, entrypoint: page.entrypoint });
         updateConfig({ vite: { plugins: [packVirtualPlugin(metadata, packs, themePage)] } });
       },
       'astro:server:setup': ({ server }) => {
-        const packs = resolvePacks();
+        let packs;
+        try {
+          packs = resolvePacks();
+        } catch (err) {
+          throw new Error(`Failed to resolve packs: ${err.message}`);
+        }
         server.watcher.add([
           themePage,
           ...packs.flatMap((pack) => [

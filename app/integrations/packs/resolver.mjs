@@ -98,6 +98,13 @@ function readPackJson(path, directory) {
     if (typeof json.nav.href !== 'string' || json.nav.href.length === 0) {
       throw new Error(`Pack ${json.name} nav.href must be a non-empty string`);
     }
+    // Defense-in-depth: nav.href is always normalized to /p/<pack-name> in
+    // loadPackMetadata, but reject scheme- or protocol-relative URLs here so a
+    // future relaxation of that normalization cannot become a stored-XSS
+    // vector (e.g. `javascript:`, `data:`, or `//host`).
+    if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(json.nav.href) || json.nav.href.startsWith('//')) {
+      throw new Error(`Pack ${json.name} nav.href must be a same-origin path`);
+    }
   }
   if (json.frontend !== undefined) {
     // Structured validation of frontend styles/scripts paths happens in
@@ -115,8 +122,10 @@ export function loadPackMetadata(packs) {
     const frontend = resolveFrontendContribution(pack, pack.frontend);
     const title = typeof pack.title === 'string' && pack.title.length > 0 ? pack.title : pack.name;
     const route = `/p/${pack.name}`;
+    // Pack nav hrefs are always normalized to their public namespace so a
+    // pack.json cannot point navigation at an arbitrary URL.
     const nav = pack.nav && typeof pack.nav === 'object'
-      ? { label: typeof pack.nav.label === 'string' && pack.nav.label.length > 0 ? pack.nav.label : title, href: pack.nav.href === route ? pack.nav.href : route }
+      ? { label: typeof pack.nav.label === 'string' && pack.nav.label.length > 0 ? pack.nav.label : title, href: route }
       : null;
     return { name: pack.name, version: pack.version, title, nav, routes: pack.pages.map((page) => ({ pattern: `/p/${page.pack}`, page: page.page })), ...(frontend ? { frontend } : {}) };
   });

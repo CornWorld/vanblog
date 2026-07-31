@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/CornWorld/caddyadmin"
@@ -140,7 +141,7 @@ func loadBootstrapInputs(app core.App) (BuildOpts, []UserRule) {
 	if v := os.Getenv("VANBLOG_BUILD_VERSION"); v != "" {
 		opts.Version = v
 	} else if data, err := os.ReadFile("/etc/vanblog/build-version"); err == nil {
-		opts.Version = string(data)
+		opts.Version = strings.TrimSpace(string(data))
 	}
 
 	// VANBLOG_EMAIL is the Let's Encrypt registration email. It's the same

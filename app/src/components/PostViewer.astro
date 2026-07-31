@@ -6,6 +6,10 @@ export interface Props {
 const { html } = Astro.props;
 ---
 
+<div class="post-viewer">
+  <Fragment set:html={html} />
+</div>
+
 <script is:inline>
   (() => {
     // Image click zoom (lightweight modal)
@@ -17,6 +21,9 @@ const { html } = Astro.props;
     function openZoom(img) {
       if (modal) return;
       modal = document.createElement('div');
+      modal.setAttribute('role', 'dialog');
+      modal.setAttribute('aria-modal', 'true');
+      modal.setAttribute('aria-label', 'Image zoom');
       modal.className = 'medium-zoom';
       modal.style.cssText =
         'position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;' +
@@ -46,15 +53,14 @@ const { html } = Astro.props;
 
     viewer.addEventListener('click', (e) => {
       const target = e.target;
-      if (target.tagName === 'IMG' && target.closest('.post-viewer')) {
+      if (target.tagName === 'IMG') {
         openZoom(target);
       }
     });
   })();
 </script>
-
 <style>
-  .medium-zoom img {
+  :global(.medium-zoom) img {
     animation: zoom-fade-in 0.2s ease;
   }
   @keyframes zoom-fade-in {

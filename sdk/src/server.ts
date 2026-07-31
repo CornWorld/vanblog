@@ -1,6 +1,7 @@
 import { createVanblogClient, getDefaultVanblogURL } from "./client";
 import type { CreateClientOptions } from "./client";
 import type { VanblogClient } from "./services";
+import type { Site } from "./models";
 import { AUTH_COOKIE_OPTIONS } from "./cookie";
 
 // ── Types ──────────────────────────────────────────────────────────────
@@ -174,17 +175,23 @@ const DOWN_ERROR_HTML = `<!doctype html>
 
 // Check whether an error message looks like a network/connection failure
 // (PocketBase unreachable) vs a genuine code bug.
-function isConnectionError(msg: string): boolean {
+function isConnectionError(err: unknown): boolean {
+  const msg = String((err as any)?.message || err);
   const m = msg.toLowerCase();
+  const code = (err as any)?.code?.toLowerCase?.() || "";
   return (
     m.includes("econnrefused") ||
+    m.includes("econnreset") ||
     m.includes("fetch failed") ||
     m.includes("network error") ||
     m.includes("aborted") ||
     m.includes("timeout") ||
     m.includes("enotfound") ||
     m.includes("epipe") ||
-    m.includes("socket hang up")
+    m.includes("socket hang up") ||
+    code.startsWith("econn") ||
+    code.startsWith("ehost") ||
+    code === "und_err_connect_timeout"
   );
 }
 
@@ -202,12 +209,16 @@ export function createVanblogMiddleware(opts: VanblogMiddlewareOptions = {}) {
   const pbUrl = opts.pbUrl ?? getDefaultVanblogURL();
 
   // Lazy site config cache (lives for the process lifetime)
-  let cachedSite: any = null;
+  let cachedSite: Site | null = null;
   let siteFetchTime = 0;
   const SITE_CACHE_TTL = 60_000; // 1 min
 
   return async (
-    context: any,
+    context: {
+      request: Request;
+      locals: Record<string, any>;
+      redirect: (path: string) => Response;
+    },
     next: () => Promise<Response>
   ): Promise<Response> => {
     const url = new URL(context.request.url);
@@ -288,10 +299,9 @@ export function createVanblogMiddleware(opts: VanblogMiddlewareOptions = {}) {
     let response: Response;
     try {
       response = await next();
-    } catch (err: any) {
-      const msg = String(err?.message || err);
-      if (isConnectionError(msg)) {
-        console.error("[vanblog] PocketBase unreachable during render:", msg);
+    } catch (err: unknown) {
+      if (isConnectionError(err)) {
+        console.error("[vanblog] PocketBase unreachable during render:", err);
         return pbUnreachable();
       }
       throw err;

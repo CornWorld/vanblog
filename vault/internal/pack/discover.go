@@ -153,26 +153,31 @@ func snapshotLocal(root string) (fstest.MapFS, error) {
 			snapshot[resource] = &fstest.MapFile{Mode: fs.ModeDir | 0o755}
 			return nil
 		}
-		info, err := entry.Info()
+		f, err := os.Open(filename)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+		info, err := f.Stat()
 		if err != nil {
 			return err
 		}
 		if !info.Mode().IsRegular() {
 			return fmt.Errorf("resource %q is not a regular file", resource)
 		}
-		if info.Size() > maxLocalPackFileBytes {
-			return fmt.Errorf("resource %q exceeds %d bytes", resource, maxLocalPackFileBytes)
-		}
-		total += info.Size()
-		if total > maxLocalPackBytes {
-			return fmt.Errorf("local Pack exceeds %d bytes", maxLocalPackBytes)
-		}
-		data, err := os.ReadFile(filename)
+		// Cap the actual bytes read via a limit reader: a file swapped for a
+		// larger one between Stat and ReadAll can no longer force unbounded
+		// memory allocation (TOCTOU-safe size guard).
+		data, err := io.ReadAll(io.LimitReader(f, maxLocalPackFileBytes+1))
 		if err != nil {
 			return err
 		}
-		if int64(len(data)) != info.Size() {
-			return fmt.Errorf("resource %q changed while snapshotting", resource)
+		if int64(len(data)) > maxLocalPackFileBytes {
+			return fmt.Errorf("resource %q exceeds %d bytes", resource, maxLocalPackFileBytes)
+		}
+		total += int64(len(data))
+		if total > maxLocalPackBytes {
+			return fmt.Errorf("local Pack exceeds %d bytes", maxLocalPackBytes)
 		}
 		snapshot[resource] = &fstest.MapFile{Data: data, Mode: 0o644}
 		return nil

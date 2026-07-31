@@ -13,6 +13,15 @@ interface TocItem {
   level: number;
 }
 
+function decodeEntities(s: string): string {
+  return s
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'");
+}
+
 function extractHeadings(html: string): TocItem[] {
   const items: TocItem[] = [];
   const h2Re = /<h2[^>]*id="([^"]+)"[^>]*>([\s\S]*?)<\/h2>/gi;
@@ -20,12 +29,12 @@ function extractHeadings(html: string): TocItem[] {
   let match: RegExpExecArray | null;
 
   while ((match = h2Re.exec(html)) !== null) {
-    const text = match[2].replace(/<[^>]*>/g, '').trim();
+    const text = decodeEntities(match[2].replace(/<[^>]*>/g, '').trim());
     if (text) { items.push({ id: match[1], tag: 'h2', text, level: 1 }); }
   }
 
   while ((match = h3Re.exec(html)) !== null) {
-    const text = match[2].replace(/<[^>]*>/g, '').trim();
+    const text = decodeEntities(match[2].replace(/<[^>]*>/g, '').trim());
     if (text) { items.push({ id: match[1], tag: 'h3', text, level: 2 }); }
   }
 
@@ -46,7 +55,7 @@ const headings = extractHeadings(html);
         <ul class="toc-list">
           {headings.map((h) => (
             <li class={h.level === 1 ? 'toc-item--h2' : 'toc-item--h3'}>
-              <a href={`#${h.id}`} class="toc-link">{h.text}</a>
+              <a href={`#${encodeURIComponent(h.id)}`} class="toc-link">{h.text}</a>
             </li>
           ))}
         </ul>
@@ -73,7 +82,7 @@ const headings = extractHeadings(html);
     const headings = [];
     links.forEach((link) => {
       const id = link.getAttribute('href')?.slice(1);
-      if (id) { const el = document.getElementById(id); if (el) headings.push(el); }
+      if (id) { const el = document.getElementById(decodeURIComponent(id)); if (el) headings.push(el); }
     });
 
     if (headings.length === 0) return;

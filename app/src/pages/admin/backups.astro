@@ -103,8 +103,9 @@ function fmtBytes(bytes: number): string {
     }
 
     document.getElementById('btn-create-backup')?.addEventListener('click', async () => {
-      const pb = self.vanblog.pb;
-      if (!isAdmin || !pb) return alert('管理员登录已失效，请重新登录');
+      const vanblog = self.vanblog;
+      if (!isAdmin || !vanblog?.pb) return alert('管理员登录已失效，请重新登录');
+      const pb = vanblog.pb;
       setBusy(true, '正在创建备份，请勿关闭页面…');
       try {
         await pb.vanblog.backups.create();
@@ -169,6 +170,8 @@ function fmtBytes(bytes: number): string {
           await pb.vanblog.backups.restore(key);
         } catch (error) {
           console.warn('[backups] restore request interrupted:', error);
+          setBusy(false, '恢复请求失败：' + errorMessage(error));
+          return;
         }
         await waitForRestart();
       });

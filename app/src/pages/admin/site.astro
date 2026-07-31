@@ -66,7 +66,7 @@ const boolField = (k: keyof Site, def = false): boolean => {
         <label>作者</label><input name="author" value={field('author')} class="px-1.5 py-0.5" />
         <label>BaseURL</label><input name="baseUrl" value={field('baseUrl')} placeholder="https://example.com" class="px-1.5 py-0.5" />
         <label>Favicon URL</label><input name="favicon" value={field('favicon')} class="px-1.5 py-0.5" />
-        <label>版权</label><input name="copyrightAggreement" value={field('copyrightAggreement')} class="px-1.5 py-0.5" />
+        <label>版权</label><input name="copyrightAgreement" value={field('copyrightAgreement')} class="px-1.5 py-0.5" />
       </fieldset>
 
       <fieldset class="grid grid-cols-[160px_1fr] gap-2 items-center border border-[var(--border)] p-4">
@@ -210,7 +210,7 @@ const boolField = (k: keyof Site, def = false): boolean => {
     </form>
   )}
 
-  <script is:inline type="application/json" id="site-data" set:html={JSON.stringify({ siteId: id, commentsConfig: site?.commentsConfig || {} })} />
+  <script is:inline type="application/json" id="site-data" set:html={JSON.stringify({ siteId: id, commentsConfig: site?.commentsConfig || {} }).replace(/<\//g, '<\\/')} />
   <script is:inline>
     const { siteId, commentsConfig: commentsConfigJson } = JSON.parse(document.getElementById('site-data').textContent);
     const pb = self.vanblog.pb;
@@ -237,7 +237,8 @@ const boolField = (k: keyof Site, def = false): boolean => {
       try {
         const existingConfig = commentsConfigJson;
         if (existingConfig.serverURL) {
-          document.querySelector('[name="waline_serverURL"]')?.setAttribute('value', existingConfig.serverURL);
+          const w = document.querySelector('[name="waline_serverURL"]');
+          if (w) w.value = existingConfig.serverURL;
         }
         if (existingConfig.server) {
           const s = document.querySelector('[name="artalk_server"]'); if (s) s.value = existingConfig.server;
@@ -294,7 +295,7 @@ const boolField = (k: keyof Site, def = false): boolean => {
           author: fd.get('author'),
           baseUrl: fd.get('baseUrl'),
           favicon: fd.get('favicon'),
-          copyrightAggreement: fd.get('copyrightAggreement'),
+          copyrightAgreement: fd.get('copyrightAgreement'),
           palette: fd.get('palette'),
           activeTheme: fd.get('activeTheme'),
           defaultTheme: fd.get('defaultTheme'),

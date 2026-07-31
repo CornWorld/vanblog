@@ -26,6 +26,34 @@ import { renderMarkdown } from '../../lib/markdown/renderer';
 import { normalizeMathDelimiters } from '../../lib/markdown/normalizeMathDelimiters';
 import type { Post } from '@vanblog/sdk';
 
+/**
+ * Strip constructs that could execute scripts from rendered Markdown HTML
+ * before it is injected via set:html (stored-XSS defense). The markdown
+ * pipeline only emits safe elements, but authors can embed raw HTML in posts,
+ * which the pipeline passes through unchanged.
+ */
+function sanitizeHtml(html: string): string {
+  return html
+    // Remove executable/embedding elements (and their content).
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script\s*>/gi, '')
+    .replace(/<script\b[^>]*\/?>/gi, '')
+    .replace(/<iframe\b[^>]*>[\s\S]*?<\/iframe\s*>/gi, '')
+    .replace(/<iframe\b[^>]*\/?>/gi, '')
+    .replace(/<object\b[^>]*>[\s\S]*?<\/object\s*>/gi, '')
+    .replace(/<object\b[^>]*\/?>/gi, '')
+    .replace(/<embed\b[^>]*\/?>/gi, '')
+    .replace(/<base\b[^>]*\/?>/gi, '')
+    .replace(/<link\b[^>]*\/?>/gi, '')
+    .replace(/<meta\b[^>]*\/?>/gi, '')
+    // Strip event-handler attributes (never emitted by the markdown pipeline).
+    .replace(/\s+on[a-z][a-z0-9_]*\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '')
+    // Neutralize script-capable URL schemes in link/embed attributes.
+    .replace(/(\s(?:href|src|xlink:href|action)\s*=\s*)(["'])\s*(?:javascript|vbscript)\s*:[^"'<]*\2/gi, '$1$2#')
+    .replace(/(\s(?:href|src)\s*=\s*)(["'])data\s*:\s*text\s*\/\s*html[^"'<]*\2/gi, '$1$2#')
+    // Remove srcdoc (only meaningful on <iframe>; defense in depth).
+    .replace(/\s+srcdoc\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '');
+}
+
 const pb = Astro.locals.pb;
 const site = await Astro.locals.getSite();
 
@@ -99,9 +127,13 @@ if (!data) {
     }
   }
 }
+
+// Sanitize the rendered HTML before injecting it into the page.
+const safeHtml = html !== null ? sanitizeHtml(html) : null;
 ---
+
 <BaseLayout title={data?.title || '文章不存在'} post={data || undefined} path={`/posts/${id}`}>
-  {data && html !== null ? (
+  {data && safeHtml !== null ? (
     <Fragment>
       <article>
         <h1>{data.title}</h1>
@@ -110,14 +142,14 @@ if (!data) {
           {data.private && <span class="ml-2 text-[var(--text-muted)]">· 私有</span>}
           {data.status !== 'published' && <span class="ml-2 text-[var(--text-muted)]">· {data.status}</span>}
         </small></p>
-        <PostViewer html={html} />
+        <PostViewer html={safeHtml} />
         <CopyRight site={site} post={data} />
-        <Toc html={html} />
+        <Toc html={safeHtml} />
       </article>
       {data && <Reward site={site} />}
     </Fragment>
   ) : passwordError ? (
-    <div class="my-8 p-4 rounded-lg border border-red-300 bg-red-50 dark:border-red-700 dark:bg-red-900/20">
+    <div role="alert" class="my-8 p-4 rounded-lg border border-red-300 bg-red-50 dark:border-red-700 dark:bg-red-900/20">
       <p class="text-red-700 dark:text-red-300 text-sm">🔒 密码错误，请重试。</p>
       <p class="mt-2"><a href="/" class="text-[var(--accent)] text-sm">← 返回首页</a></p>
     </div>

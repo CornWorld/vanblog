@@ -65,6 +65,10 @@ const websiteSchema = {
   url: baseUrl || undefined,
 };
 
+// Escape `<` so user-controlled values can't break out of the JSON-LD `<script>`
+// block (JSON.stringify does not escape `</script>` sequences).
+const safeJsonLd = (obj: unknown) => JSON.stringify(obj).replace(/</g, '\\u003c');
+
 // Pack nav items are resolved at build time by the Astro Pack integration.
 const packNavItems = packMetadata.flatMap((pack) => pack.nav ? [pack.nav] : []);
 ---
@@ -118,9 +122,9 @@ const packNavItems = packMetadata.flatMap((pack) => pack.nav ? [pack.nav] : []);
 
     <!-- Structured Data (JSON-LD) -->
     {post ? (
-      <script is:inline type="application/ld+json" set:html={JSON.stringify(articleSchema)} />
+      <script is:inline type="application/ld+json" set:html={safeJsonLd(articleSchema)} />
     ) : (
-      <script is:inline type="application/ld+json" set:html={JSON.stringify(websiteSchema)} />
+      <script is:inline type="application/ld+json" set:html={safeJsonLd(websiteSchema)} />
     )}
   </head>
   <body class="min-h-screen flex flex-col">

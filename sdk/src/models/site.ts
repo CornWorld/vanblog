@@ -48,10 +48,10 @@ export const SiteSchema = SystemFieldsSchema.extend({
   customHtml: z.string().optional(),
   customScript: z.string().optional(),
   watermarkText: z.string().optional(),
-  enableWaterMark: z.boolean().optional(),
+  enableWatermark: z.boolean().optional(),
 
   // Copyright & about
-  copyrightAggreement: z.string().optional(),
+  copyrightAgreement: z.string().optional(),
   aboutContent: z.string().optional(),
   aboutUpdatedAt: IsoDateTimeSchema.optional(),
 

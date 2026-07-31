@@ -87,8 +87,9 @@ if (alreadySetup) {
         return;
       }
 
+      let r;
       try {
-        const r = await pb.vanblog.setup.complete({
+        r = await pb.vanblog.setup.complete({
           username: fd.get('username'),
           email: fd.get('email'),
           password: fd.get('password'),

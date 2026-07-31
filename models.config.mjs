@@ -14,6 +14,7 @@ export default defineConfig({
       external: [],
     },
     minify: false,
+    sourcemap: false,
     // This target is covered by the Goja compilation/runtime tests.
     target: 'es2020',
   },

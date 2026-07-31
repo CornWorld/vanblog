@@ -3,14 +3,16 @@ export interface Props {
   page: number;
   totalPages: number;
   baseUrl: string;
+  class?: string;
+  [key: string]: unknown;
 }
 
-const { page, totalPages, baseUrl } = Astro.props;
+const { page, totalPages, baseUrl, class: className, ...rest } = Astro.props;
 ---
 
-<nav class="flex justify-center gap-4 mt-10 pt-6 border-t border-[var(--border)]">
+<nav class:list={['flex justify-center gap-4 mt-10 pt-6 border-t border-[var(--border)]', className]} {...rest}>
   {page > 1 ? (
-    <a href={`${baseUrl}?page=${page - 1}`} class="btn-primary">← 上一页</a>
+    <a href={`${baseUrl}${baseUrl.includes('?') ? '&' : '?'}page=${page - 1}`} class="btn-primary">← 上一页</a>
   ) : (
     <span class="btn-primary opacity-50 cursor-not-allowed">← 上一页</span>
   )}
@@ -20,7 +22,7 @@ const { page, totalPages, baseUrl } = Astro.props;
   </span>
 
   {page < totalPages ? (
-    <a href={`${baseUrl}?page=${page + 1}`} class="btn-primary">下一页 →</a>
+    <a href={`${baseUrl}${baseUrl.includes('?') ? '&' : '?'}page=${page + 1}`} class="btn-primary">下一页 →</a>
   ) : (
     <span class="btn-primary opacity-50 cursor-not-allowed">下一页 →</span>
   )}

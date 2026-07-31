@@ -47,7 +47,7 @@ build_dev_image() {
   local root; root="$(project_root)"
   info "Building --target dev as ${image} ..."
   (cd "$root" && docker build --target dev -t "$image" \
-    --build-arg "BUILD_VERSION=$(build_version)" .)
+    --build-arg "BUILD_VERSION=$(build_version)" .) || { err "Docker build failed"; return 1; }
   ok "Image built: $image"
 }
 
@@ -105,7 +105,7 @@ check_endpoint() {
   local path="$1" desc="$2" expected="${3:-200}" port="${HOST_PORT:-8080}"
   local http_code
   http_code=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:${port}${path}")
-  if [ "$http_code" = "$expected" ] || [ "$http_code" = "302" ] || [ "$http_code" = "200" ]; then
+  if [ "$http_code" = "$expected" ]; then
     ok "$desc → $http_code"
   else
     warn "$desc returned $http_code (expected $expected)"
@@ -124,7 +124,7 @@ check_hooks_loaded() {
 # Print summary of URLs and credentials.
 # Usage: print_summary <host_port> [email] [password]
 print_summary() {
-  local port="$1" email="${2:-admin@test.com}" pass="${3:-password123}"
+  local port="$1" email="${2:-admin@test.com}" pass="${3:-${SUPERUSER_PASSWORD:-password123}}"
   echo ""
   echo -e "${GREEN}============================================================${NC}"
   echo -e "${GREEN}       Dev environment is ready!                            ${NC}"

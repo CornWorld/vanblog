@@ -22,7 +22,7 @@ const ssrData = { isAdmin, serverConfig };
 ---
 
 <Page title="Live2D 看板娘" description="全站 Live2D 看板娘插件">
-  <script type="application/json" id="l2d-ssr-data" set:html={JSON.stringify(ssrData)} />
+  <script type="application/json" id="l2d-ssr-data" set:html={JSON.stringify(ssrData).replace(/<\//g, '<\\/')} />
 
   <article class="prose max-w-none">
     <h1>Live2D 看板娘</h1>
@@ -47,9 +47,9 @@ const ssrData = { isAdmin, serverConfig };
       <form id="l2d-config-form" class="flex flex-col gap-4 max-w-2xl">
         <fieldset class="grid grid-cols-[160px_1fr] gap-2 items-center border border-[var(--border)] p-4">
           <legend>CDN 设置</legend>
-          <label>Widget CDN</label>
+          <label for="cfg-widgetPath">Widget CDN</label>
           <input name="widgetPath" id="cfg-widgetPath" class="px-1.5 py-0.5 text-sm" placeholder="https://fastly.jsdelivr.net/npm/live2d-widgets@1.0.1/dist/" />
-          <label>模型 API</label>
+          <label for="cfg-cdnPath">模型 API</label>
           <input name="cdnPath" id="cfg-cdnPath" class="px-1.5 py-0.5 text-sm" placeholder="https://fastly.jsdelivr.net/gh/fghrsh/live2d_api/" />
         </fieldset>
 
@@ -106,13 +106,13 @@ const ssrData = { isAdmin, serverConfig };
   import { initClient } from '@vanblog/sdk/browser';
   initClient();
 
-  const api = window.live2dCompanion;
+  const api = (window as any).live2dCompanion;
 
-  const configSection = document.getElementById('l2d-config');
-  const loginHint = document.getElementById('l2d-login-hint');
-  const badge = document.getElementById('config-badge');
-  const status = document.getElementById('l2d-config-status');
-  const preview = document.getElementById('l2d-config-preview');
+  const configSection = document.getElementById('l2d-config')!;
+  const loginHint = document.getElementById('l2d-login-hint')!;
+  const badge = document.getElementById('config-badge')!;
+  const status = document.getElementById('l2d-config-status')!;
+  const preview = document.getElementById('l2d-config-preview')!;
 
   const ssrRaw = document.getElementById('l2d-ssr-data')?.textContent || '{}';
   const ssrData = JSON.parse(ssrRaw);
@@ -124,15 +124,15 @@ const ssrData = { isAdmin, serverConfig };
     if (badge) badge.textContent = '（管理员）';
 
     const cfg = api.getConfig();
-    document.getElementById('cfg-widgetPath').value = cfg.widgetPath || '';
-    document.getElementById('cfg-cdnPath').value = cfg.cdnPath || '';
-    document.getElementById('cfg-modelId').value = cfg.modelId ?? 0;
-    document.getElementById('cfg-modelTexturesId').value = cfg.modelTexturesId ?? 0;
-    document.getElementById('cfg-minWidth').value = cfg.minWidth ?? 768;
+    (document.getElementById('cfg-widgetPath') as HTMLInputElement).value = cfg.widgetPath || '';
+    (document.getElementById('cfg-cdnPath') as HTMLInputElement).value = cfg.cdnPath || '';
+    (document.getElementById('cfg-modelId') as HTMLInputElement).value = String(cfg.modelId ?? 0);
+    (document.getElementById('cfg-modelTexturesId') as HTMLInputElement).value = String(cfg.modelTexturesId ?? 0);
+    (document.getElementById('cfg-minWidth') as HTMLInputElement).value = String(cfg.minWidth ?? 768);
 
     const allTools = ['hitokoto', 'switch-model', 'switch-texture', 'photo', 'info', 'quit'];
     for (const tool of allTools) {
-      const checkbox = document.querySelector(`[name="tool-${tool}"]`);
+      const checkbox = document.querySelector(`[name="tool-${tool}"]`) as HTMLInputElement | null;
       if (checkbox) checkbox.checked = (cfg.tools || []).includes(tool);
     }
 
@@ -141,21 +141,25 @@ const ssrData = { isAdmin, serverConfig };
     }
     updatePreview();
 
-    document.getElementById('l2d-config-form').addEventListener('submit', async (e) => {
+    const form = document.getElementById('l2d-config-form');
+    if (form) {
+      form.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const tools = allTools.filter(t => document.querySelector(`[name="tool-${t}"]`)?.checked);
+      const tools = allTools.filter(t => (document.querySelector(`[name="tool-${t}"]`) as HTMLInputElement | null)?.checked);
       const newConfig = {
-        widgetPath: document.getElementById('cfg-widgetPath').value.trim(),
-        cdnPath: document.getElementById('cfg-cdnPath').value.trim(),
-        modelId: parseInt(document.getElementById('cfg-modelId').value) || 0,
-        modelTexturesId: parseInt(document.getElementById('cfg-modelTexturesId').value) || 0,
-        minWidth: parseInt(document.getElementById('cfg-minWidth').value) || 0,
+        widgetPath: (document.getElementById('cfg-widgetPath') as HTMLInputElement).value.trim(),
+        cdnPath: (document.getElementById('cfg-cdnPath') as HTMLInputElement).value.trim(),
+        modelId: parseInt((document.getElementById('cfg-modelId') as HTMLInputElement).value) || 0,
+        modelTexturesId: parseInt((document.getElementById('cfg-modelTexturesId') as HTMLInputElement).value) || 0,
+        minWidth: parseInt((document.getElementById('cfg-minWidth') as HTMLInputElement).value) || 0,
         tools,
       };
       try {
         await api.saveConfig(newConfig);
         updatePreview();
         status.hidden = false;
+        status.classList.add('text-green-600');
+        status.classList.remove('text-red-600');
         status.textContent = '配置已保存。点击"重新加载看板娘"以应用。';
         setTimeout(() => { status.hidden = true; }, 3000);
       } catch (err) {
@@ -167,14 +171,15 @@ const ssrData = { isAdmin, serverConfig };
       }
     });
 
-    document.getElementById('l2d-config-reset').addEventListener('click', async () => {
+    document.getElementById('l2d-config-reset')!.addEventListener('click', async () => {
       try { await api.resetConfig(); } catch (err) { console.warn('[live2d-companion] resetConfig failed', err); }
       location.reload();
     });
 
-    document.getElementById('l2d-config-reload').addEventListener('click', () => {
+    document.getElementById('l2d-config-reload')!.addEventListener('click', () => {
       api.reload();
     });
+    }
   } else {
     loginHint.hidden = false;
   }

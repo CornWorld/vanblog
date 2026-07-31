@@ -58,10 +58,10 @@ const { data: trash = [] } = denied ? { data: [] } : await safe(
   <script is:inline>
     document.querySelectorAll('tr[data-id]').forEach((tr) => {
       const id = tr.dataset.id;
-      const pb = self.vanblog.pb;
 
       tr.querySelector('.btn-restore').addEventListener('click', async () => {
         if (!id || !confirm('恢复该文章？（deleted=false）')) return;
+        const pb = self.vanblog?.pb;
         if (!pb) return alert('未登录');
         try {
           await pb.vanblog.posts.restore(id);
@@ -76,6 +76,7 @@ const { data: trash = [] } = denied ? { data: [] } : await safe(
         purgeBtn.addEventListener('click', async () => {
           if (!id) return;
           if (!confirm('彻底删除？该操作不可撤销。')) return;
+          const pb = self.vanblog?.pb;
           if (!pb) return alert('未登录');
           try {
             await pb.vanblog.posts.purge(id);

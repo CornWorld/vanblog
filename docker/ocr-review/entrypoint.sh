@@ -13,7 +13,7 @@ mkdir -p "$REFS_DIR"
 PREV_HEAD=$(git rev-parse HEAD 2>/dev/null || echo "")
 
 echo "[ocr-review] $(date -u +%H:%M:%S) Pulling $GIT_REMOTE/$GIT_BRANCH..."
-git pull "$GIT_REMOTE" "$GIT_BRANCH" --ff-only 2>&1 || {
+git pull -- "$GIT_REMOTE" "$GIT_BRANCH" --ff-only 2>&1 || {
     echo "[ocr-review] $(date -u +%H:%M:%S) ⚠️  git pull failed (conflict? network?), using local HEAD"
 }
 
@@ -31,7 +31,7 @@ fi
 # ── Step 3: Check for source changes ─────────────────────────────
 CHANGES=$(git diff --name-only "$BASELINE"..HEAD 2>/dev/null | \
     grep -v '^\.snow/' | grep -v '^refs/' | grep -v 'node_modules/' | \
-    grep -v '\.md$' | wc -l | tr -d ' ')
+    grep -v '\.md$' | wc -l | tr -d ' ') || true
 
 if [ "${CHANGES:-0}" -eq 0 ]; then
     echo "[ocr-review] $(date -u +%H:%M:%S) No source changes, skipping."
@@ -44,6 +44,7 @@ TIMESTAMP=$(date -u +%Y%m%d-%H%M)
 OUTPUT_FILE="$REFS_DIR/review-${TIMESTAMP}.json"
 
 OCR_STDERR=$(mktemp)
+set +e
 ocr review \
     --from "$BASELINE" \
     --to HEAD \
@@ -53,6 +54,7 @@ ocr review \
     --timeout 15 \
     > "$OUTPUT_FILE" 2>"$OCR_STDERR"
 OCR_EXIT=$?
+set -e
 
 cat "$OCR_STDERR" >> "$REFS_DIR/review-debug.log" 2>/dev/null || true
 rm -f "$OCR_STDERR"
@@ -68,7 +70,9 @@ import json
 with open('$OUTPUT_FILE') as f:
     d = json.load(f)
 s = d.get('summary', {})
-print(f\"[ocr-review] $(date -u +%H:%M:%S) ✅ {s.get('comments','?')} issues, {s.get('total_tokens','?'):,} tokens in {s.get('elapsed','?')}\")
+tt = s.get('total_tokens')
+tt_str = f'{tt:,}' if isinstance(tt, (int, float)) else str(tt or '?')
+print(f\"[ocr-review] $(date -u +%H:%M:%S) ✅ {s.get('comments','?')} issues, {tt_str} tokens in {s.get('elapsed','?')}\")
 " 2>/dev/null || echo "[ocr-review] $(date -u +%H:%M:%S) ✅ Done → $OUTPUT_FILE"
 else
     echo "[ocr-review] $(date -u +%H:%M:%S) ❌ Failed"

@@ -1,15 +1,30 @@
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import test from 'node:test';
 import { discoverPacks, loadPackMetadata, mergeLocalPacks, resolvePublicPages } from './resolver.mjs';
 
 const bookmark = { pack: 'bookmarks', page: 'index', entrypoint: '/tmp/bookmarks/index.astro' };
+const tempDirs = [];
 
 function fixtureRoot() {
-  return mkdtempSync(join(tmpdir(), 'vanblog-packs-'));
+  const dir = mkdtempSync(join(tmpdir(), 'vanblog-packs-'));
+  tempDirs.push(dir);
+  return dir;
 }
+
+// Clean up temp fixtures created during the suite so repeated CI runs do not
+// accumulate disk usage under the OS temp directory.
+test.after(() => {
+  for (const dir of tempDirs) {
+    try {
+      rmSync(dir, { recursive: true, force: true });
+    } catch {
+      // Best-effort cleanup; a leftover fixture dir is harmless.
+    }
+  }
+});
 
 function writePack(root, name, identity = { name, version: '1.0.0' }) {
   const dir = join(root, name);
@@ -82,6 +97,26 @@ test('normalizes Pack nav href to its public namespace', () => {
   });
   const metadata = loadPackMetadata(discoverPacks(root));
   assert.equal(metadata[0].nav.href, '/p/bookmarks');
+});
+
+test('rejects nav.href with an unsafe URL scheme', () => {
+  const root = fixtureRoot();
+  writePack(root, 'alpha', {
+    name: 'alpha',
+    version: '1.0.0',
+    nav: { label: 'Alpha', href: 'javascript:alert(1)' },
+  });
+  assert.throws(() => discoverPacks(root), /same-origin/);
+});
+
+test('rejects protocol-relative nav.href', () => {
+  const root = fixtureRoot();
+  writePack(root, 'alpha', {
+    name: 'alpha',
+    version: '1.0.0',
+    nav: { label: 'Alpha', href: '//evil.example/x' },
+  });
+  assert.throws(() => discoverPacks(root), /same-origin/);
 });
 
 test('resolves the controlled bookmarks index route', () => {
@@ -248,7 +283,7 @@ test('mergeLocalPacks appends a brand-new local Pack not present in builtins', (
   assert.equal(resolved.find((pack) => pack.name === 'bookmarks').directory.startsWith(builtinRoot), true);
 });
 
-test('mergeLocalPacks rejects duplicate local Pack names', () => {
+test('mergeLocalPacks handles a single local pack without errors', () => {
   const localRoot = fixtureRoot();
   // discoverPacks enforces name==directory, so two identical names would need
   // two directories with the same name, which the filesystem rejects. This

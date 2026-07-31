@@ -38,7 +38,7 @@ func Validate(p Pack) error {
 		return fmt.Errorf("pack %q has no filesystem", p.Name)
 	}
 	if p.Source != Builtin && p.Source != Local {
-		return fmt.Errorf("pack %q has invalid source %d", p.Name, p.Source)
+		return fmt.Errorf("pack %q has invalid source %v", p.Name, p.Source)
 	}
 	return fs.WalkDir(p.FS, ".", func(path string, entry fs.DirEntry, walkErr error) error {
 		if walkErr != nil {

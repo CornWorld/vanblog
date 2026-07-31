@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"log/slog"
 	"os"
 	"path"
 	"path/filepath"
@@ -114,16 +115,14 @@ func stagePackHooks(p Pack, destination string) error {
 }
 
 func replaceDirectory(staged, destination string) error {
-	backupFile, err := os.CreateTemp(filepath.Dir(destination), ".hooks-backup-")
-	if err != nil {
-		return fmt.Errorf("reserve hooks backup name: %w", err)
-	}
-	backup := backupFile.Name()
-	if err := backupFile.Close(); err != nil {
-		return fmt.Errorf("close hooks backup reservation: %w", err)
-	}
-	if err := os.Remove(backup); err != nil {
-		return fmt.Errorf("release hooks backup reservation: %w", err)
+	// Reserve a deterministic backup path derived from the destination. Unlike
+	// a temp-file reservation (create → remove → rename into the freed name),
+	// no window exists in which a concurrent process could claim the path
+	// between reservation and use.
+	backup := filepath.Join(filepath.Dir(destination), ".hooks-backup-"+filepath.Base(destination))
+	// Clear any stale backup left behind by an interrupted previous run.
+	if err := os.RemoveAll(backup); err != nil {
+		return fmt.Errorf("clear stale hooks backup: %w", err)
 	}
 	hadOld := false
 	if _, err := os.Lstat(destination); err == nil {
@@ -143,8 +142,11 @@ func replaceDirectory(staged, destination string) error {
 		return fmt.Errorf("publish hooks staging: %w", err)
 	}
 	if hadOld {
+		// Best-effort cleanup: the hooks tree is already published. An orphaned
+		// backup directory is harmless if removal fails (e.g. permission issue,
+		// full filesystem), so it must not fail the staging operation.
 		if err := os.RemoveAll(backup); err != nil {
-			return fmt.Errorf("remove hooks staging backup: %w", err)
+			slog.Warn("[pack] hooks published but backup cleanup failed", "backup", backup, "err", err)
 		}
 	}
 	return nil

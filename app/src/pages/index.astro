@@ -31,16 +31,15 @@ const { data: result, error: loadError } = await safe(
 const posts = result?.items ?? [];
 const totalPages = result?.totalPages ?? 1;
 
-// Site stats
-const allPosts = await safe(() => pb.vanblog.posts.listPublished(1, 500), 'index-stats');
-const postCount = allPosts?.data?.totalItems ?? posts.length;
+// Site stats — reuse totalItems from the paginated result instead of fetching
+// up to 500 full posts on every page load just to sum the counters.
+const postCount = result?.totalItems ?? posts.length;
 const categories = await safe(() => pb.collection('categories').getFullList(), 'categories');
 const categoryCount = categories.data?.length ?? 0;
 const tags = await safe(() => pb.collection('tags').getFullList(), 'tags');
 const tagCount = tags.data?.length ?? 0;
-const statsPosts = allPosts?.data?.items ?? posts;
-const totalWords = statsPosts.reduce((sum: number, p: any) => sum + (p.content?.length || 0), 0);
-const statsOk = !!(allPosts?.data && categories && tags);
+const totalChars = posts.reduce((sum: number, p: any) => sum + (p.content?.length || 0), 0);
+const statsOk = !!(result && categories.data && tags.data);
 ---
 <BaseLayout title="首页" path="/">
   {statsOk && (
@@ -48,7 +47,7 @@ const statsOk = !!(allPosts?.data && categories && tags);
       postCount={postCount}
       categoryCount={categoryCount}
       tagCount={tagCount}
-      totalWords={totalWords}
+      totalWords={totalChars}
     />
   )}
   {

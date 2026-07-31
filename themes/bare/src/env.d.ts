@@ -1,5 +1,12 @@
 /// <reference path="../.astro/types.d.ts" />
 
+// Virtual module declarations for @vanblog/builtin imports.
+// The themes integration resolves these at build time via Vite aliases.
+declare module "@vanblog/builtin/*" {
+  const Component: import("astro").AstroComponentFactory;
+  export default Component;
+}
+
 declare module "vanblog:theme" {
   import type { AstroComponentFactory } from "astro/runtime/server/index.js";
   export const Page: AstroComponentFactory;
@@ -22,6 +29,8 @@ declare module "virtual:vanblog/packs" {
     page: string;
   }
 
+  // NOTE: This is intentionally a different shape from virtual:vanblog/pack-frontend's
+  // PackFrontendContribution because the 'name' is already available in PackMetadata.
   export interface PackFrontendContribution {
     scope: "public";
     styles: string[];

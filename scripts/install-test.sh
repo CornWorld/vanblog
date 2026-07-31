@@ -23,6 +23,7 @@ set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/lib/common.sh"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 # 交互检查点: VANBLOG_TEST_INTERACTIVE=0 可跳过
 interactive_pause() {
@@ -66,8 +67,18 @@ TEST_DIR=$(mktemp -d /tmp/vanblog-test-XXXXXX)
 export VANBLOG_BASE_PATH="$TEST_DIR"
 export VANBLOG_DATA_PATH="${VANBLOG_BASE_PATH}/data"
 export VANBLOG_SKIP_ROOT_CHECK=1  # 测试环境跳过 root 检查
-# 随机高位端口避免多实例冲突
-HTTP_PORT=$((18080 + RANDOM % 1000))
+# 随机高位端口避免多实例冲突,选择前验证端口空闲
+pick_free_port() {
+    local port
+    while : ; do
+        port=$((18080 + RANDOM % 1000))
+        if ! ss -tlnp 2>/dev/null | grep -q ":${port} "; then
+            echo "$port"
+            return 0
+        fi
+    done
+}
+HTTP_PORT=$(pick_free_port)
 HTTPS_PORT=$((HTTP_PORT + 363))
 TEST_EMAIL="test@vanblog.local"
 
@@ -95,14 +106,18 @@ fi
 blue ""
 blue "=== 阶段 1: 模拟首次安装（完整输出如下）==="
 
-# 模拟 stdin 输入序列（gum 由 ensure_gum 自动处理）：
+# 模拟 stdin 输入序列(gum 由 ensure_gum 自动处理)。
+# ⚠️ 耦合警告:下面的输入行必须与 vanblog.sh install 的交互提示顺序
+# 严格一一对应。如果 install 流程变更(增删提示或调序),必须同步更新此序列,
+# 否则测试将静默失效(向错误的问题输入错误的答案)。
+#
 #   1. 邮箱: test@vanblog.local
 #   2. HTTP 端口: (随机)
 #   3. HTTPS 端口: (随机)
-#   4. HTTP_ONLY 模式: y（测试无域名，避免 Caddy HTTPS 重定向）
-#   5. 暴露管理端口: n（默认）
-#   6. Caddy 日志级别: 回车（默认 warn）
-#   7. 返回主菜单: n（退出）
+#   4. HTTP_ONLY 模式: y(测试无域名,避免 Caddy HTTPS 重定向)
+#   5. 暴露管理端口: n(默认)
+#   6. Caddy 日志级别: 回车(默认 warn)
+#   7. 返回主菜单: n(退出)
 
 {
     echo "$TEST_EMAIL"
@@ -211,6 +226,10 @@ blue "=== 阶段 6: 维护模式 ==="
     echo "y"
     echo "n"
 } | bash "$VANBLOG_SH" maintenance 2>&1 | tail -3
+MAINT_EXIT=$?
+if [[ $MAINT_EXIT -ne 0 ]]; then
+    assert_fail "维护模式命令失败 (exit=$MAINT_EXIT)"
+fi
 
 MAINT_FILE="$VANBLOG_BASE_PATH/docker-compose.maintenance.yml"
 # 等待维护模式重启完成（down+up 需要时间）

@@ -126,9 +126,11 @@ ensure_gum() {
     if command -v apt-get >/dev/null 2>&1 && [[ $EUID -eq 0 ]]; then
         echo "📦 正在通过 apt 安装 gum..."
         mkdir -p /etc/apt/keyrings
-        curl -fsSL https://repo.charm.sh/apt/gpg.key | gpg --dearmor -o /etc/apt/keyrings/charm.gpg 2>/dev/null || true
-        echo "deb [signed-by=/etc/apt/keyrings/charm.gpg] https://repo.charm.sh/apt/ * *" > /etc/apt/sources.list.d/charm.list 2>/dev/null || true
-        apt-get update -qq && apt-get install -y -qq gum && echo "✓ gum 安装成功" && return 0
+        if curl -fsSL https://repo.charm.sh/apt/gpg.key | gpg --dearmor -o /etc/apt/keyrings/charm.gpg 2>/dev/null; then
+            [[ -f /etc/apt/sources.list.d/charm.list ]] || \
+                echo "deb [signed-by=/etc/apt/keyrings/charm.gpg] https://repo.charm.sh/apt/ * *" > /etc/apt/sources.list.d/charm.list
+            apt-get update -qq && apt-get install -y -qq gum && echo "✓ gum 安装成功" && return 0
+        fi
     fi
     if command -v dnf >/dev/null 2>&1 && [[ $EUID -eq 0 ]]; then
         echo "📦 正在通过 dnf 安装 gum..."
@@ -229,9 +231,9 @@ read_compose_env() {
               sed -E 's/.*VANBLOG_'"${key}"'[=:][[:space:]]*//;
                        s/[[:space:]]*$//; s/^"//; s/"$//')
     fi
-    # 回退：docker compose 不存在时用裸 grep（仅匹配 `- VAR=value` 格式）
-    [[ -n "$val" ]] || val=$(grep -E "^\s*-+\s*VANBLOG_${key}=" "$cf" 2>/dev/null | head -1 | \
-                             sed -E 's/.*VANBLOG_'"${key}"'=[[:space:]]*//; s/[[:space:]]*$//')
+    # 回退：docker compose 不存在时用裸 grep（匹配 `- VAR=value` 列表和 `VAR: value` 映射两种格式）
+    [[ -n "$val" ]] || val=$(grep -E "^\\s*(-+\\s*)?VANBLOG_${key}[=:]" "$cf" 2>/dev/null | head -1 | \
+                             sed -E 's/.*VANBLOG_'"${key}"'[=:][[:space:]]*//; s/[[:space:]]*$//; s/^"//; s/"$//')
     echo "$val"
 }
 
@@ -382,8 +384,13 @@ update_vanblog() {
     [[ $? -eq 0 ]] && gum_ok "更新成功" || gum_err "更新失败,请查看日志"
     before_show_menu
 }
+
 pack_cli() {
-    # 透传给容器内 vanblog pack CLI（挂载了持久化 packs 目录）
+    # 透传给容器内 vanblog pack CLI(挂载了持久化 packs 目录)
+    if [[ -z "$(dc ps -q vanblog 2>/dev/null)" ]]; then
+        gum_err "容器未运行,请先启动: ./vanblog.sh start"
+        return 1
+    fi
     dc exec vanblog vanblog pack --packsDir=/var/lib/vanblog/packs "$@"
 }
 diagnose_vanblog() {
@@ -427,7 +434,7 @@ backup_vanblog() {
     local name="vanblog-backup-$(date +%Y%m%d%H%M%S).tar.gz"
     cd "$VANBLOG_BASE_PATH" || exit 1
     if dc down >/dev/null 2>&1; then
-        gum_spin "压缩数据..." "tar czf $name data packs"
+        gum_spin "压缩数据..." "tar czf $name data"
         dc up -d >/dev/null 2>&1
         gum_ok "备份成功: ${VANBLOG_BASE_PATH}/${name}（含 pb_data、caddy_data、packs）"
     else
@@ -485,7 +492,8 @@ services:
       - "8080:8080"
 OVERRIDE
     gum_info "已生成维护覆盖文件, 重启中..."
-    dc down && dc up -d
+    dc -f docker-compose.yml -f docker-compose.maintenance.yml down && \
+    dc -f docker-compose.yml -f docker-compose.maintenance.yml up -d
     gum_ok "现在可通过 http://<你的IP>:8080/admin/ 修复配置"
     gum_warn "修复完成后运行 ./vanblog.sh restart（自动移除维护覆盖）"
     before_show_menu

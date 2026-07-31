@@ -115,6 +115,9 @@ func CreateFirstAdmin(app core.App, req SetupReq) error {
 	rec.Set("password", req.Password)
 	rec.Set("passwordConfirm", req.PasswordConfirm)
 
+	// Snapshot before save so we can distinguish "my record was saved (hook
+	// then failed)" from "a concurrent request's record now exists".
+	hadAdminBefore := HasAdmin(app)
 	if err := app.Save(rec); err != nil {
 		// PB 0.39 JSVM hooks (onRecordAfterCreateSuccess on "users") can fail
 		// with "Invalid module" — likely a Goja module resolution issue inside
@@ -122,7 +125,7 @@ func CreateFirstAdmin(app core.App, req SetupReq) error {
 		// hook error (PB saves before firing After*Success hooks).
 		// Check if the admin was actually saved; if so, continue to
 		// createSuperuser instead of aborting.
-		if !HasAdmin(app) {
+		if hadAdminBefore || !HasAdmin(app) {
 			return fmt.Errorf("bootstrap: failed to save admin record: %w", err)
 		}
 		slog.Warn("[bootstrap] admin record saved but hook reported error", "err", err)
@@ -213,11 +216,18 @@ func (m *Manager) handleComplete(e *core.RequestEvent) error {
 		if strings.Contains(err.Error(), "already exists") {
 			status = http.StatusConflict
 		}
-		// Return a safe, minimal message to the client. The traceId lets
-		// operators correlate this response with the detailed log line above.
+		// Return validation errors directly (they are user-safe); hide
+		// internal errors behind a generic message. The traceId lets
+		// operators correlate with the detailed log line above.
+		msg := "Setup failed. See server logs for details."
+		if strings.HasPrefix(err.Error(), "bootstrap: ") &&
+			!strings.Contains(err.Error(), "failed to save") &&
+			!strings.Contains(err.Error(), "collection not found") {
+			msg = strings.TrimPrefix(err.Error(), "bootstrap: ")
+		}
 		return e.JSON(status, map[string]any{
 			"ok":      false,
-			"error":   "Setup failed. See server logs for details.",
+			"error":   msg,
 			"traceId": traceID,
 		})
 	}
