@@ -40,6 +40,11 @@ caddy_data/
 # OCR review — 含真实 API key，不进仓库
 docker/ocr-review/ocr-config.json
 
+# Snow AI team 任务与审查临时产物（agent 生成的 review/task 中间文件，不进版本控制）
+.review/
+.snow-task-*.json
+*-task.json
+
 # IDE
 .DS_Store
 
