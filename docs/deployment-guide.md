@@ -141,7 +141,7 @@ Request → Caddy (:80/:443)
            ├── /_/          → PocketBase Admin UI
            ├── /themes/*    → Caddy file_server（主题静态：_astro immutable，稳定文件 must-revalidate）
            ├── /_astro/* + /emoji-data.json + /robots.txt → Caddy file_server（admin 静态）
-           └── /*           → dispatcher (:4321)
+           └── /*           → theme host (:4321)
                                 ├── /admin /login /setup → admin SSR（app/dist）
                                 └── 其余 → 激活主题 SSR
 ```

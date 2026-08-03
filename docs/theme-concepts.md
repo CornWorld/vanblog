@@ -17,7 +17,7 @@
 | 层            | 位置       | 内容                                                                                                              | 职责                                                            | 谁能改                |
 | ------------- | ---------- | ----------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- | --------------------- |
 | **L0 后端**   | `vault/`   | PocketBase + Go 业务层                                                                                            | 数据 / API / 权限                                               | vanblog 维护者        |
-| **L1 平台层** | `app/`     | `middleware.ts`、`lib/`、`loaders/`、`pages/api/`、`pages/admin/`、base 布局、`styles/`、dispatcher、integrations | 提供数据访问与渲染基础设施；提供 base 布局（纯布局 + 简单颜色） | vanblog 维护者        |
+| **L1 平台层** | `app/`     | `middleware.ts`、`lib/`、`loaders/`、`pages/api/`、`pages/admin/`、base 布局、`styles/`、theme host、integrations | 提供数据访问与渲染基础设施；提供 base 布局（纯布局 + 简单颜色） | vanblog 维护者        |
 | **L2 主题**   | `themes/*` | 每个主题 = 一个独立 Astro 项目                                                                                    | 定义站点的视觉 / 信息架构 / 交互                                | 任何人（含 AI agent） |
 
 - **平台层不是主题**。它不决定站点长什么样，只保证"能拿到数据、能渲染出页面骨架、admin 可用"。
@@ -41,7 +41,7 @@
 - 来源：**从 mereithhh 的 vanblog 项目（`packages/website`）迁移而来**，是"另一个项目迁移进来"的产品，与 base 是**两个独立概念**。
 - 定位：完整视觉 / 信息架构 / 交互的旗舰主题（NavBar、文章卡片、Toc、时间轴、赞赏、版权、统计等）。
 - **不继承 base 主题的布局**：自带 `layouts/BaseLayout.astro`、全套 `components/` 与 `pages/`。
-- 仅通过 `@vanblog/base/*` alias 引用平台层基础设施（`middleware`、`lib`、`pages/api`）。admin / login / setup 是**独立 admin SSR app**（`app/`，由 dispatcher 单独服务），主题不编译它们。
+- 仅通过 `@vanblog/base/*` alias 引用平台层基础设施（`middleware`、`lib`、`pages/api`）。admin / login / setup 是**独立 admin SSR app**（`app/`，由 theme host 单独服务），主题不编译它们。
 
 ## 4. "builtin" 退役与新旧命名对照
 
@@ -61,7 +61,7 @@ vanblog/
 │   │   ├── themes/               ← alias 机制：@vanblog/base/*（30 行 resolveId）
 │   │   └── packs/                ← Pack 路由注入
 │   └── src/
-│       ├── dispatcher/           ← 编排层：解析激活主题/admin 并转发；静态由 Caddy file_server 服务
+│       ├── theme-host/          ← 宿主进程：加载/缓存主题 handler，按路径路由到 admin 或激活主题；静态由 Caddy file_server 服务
 │       ├── layouts/
 │       │   ├── BaseLayout.astro  ← ★ base 布局（纯布局 + 简单颜色；admin 也用）
 │       │   ├── AdminLayout.astro ← admin 布局（extends base 布局）
@@ -108,7 +108,7 @@ vanblog/
 2. **主题必须自备入口**：每个主题的 `src/middleware.ts`、`src/live.config.ts`、`src/layouts/PackPage.astro` 是 Astro 项目硬性要求。
 3. **平台层提供 base 布局**：base 主题直接用；vanblog 主题自带布局，不继承。
 4. **主题引用平台层统一走 alias**：`@vanblog/base/<rel>`，禁止相对路径跨进 `app/src/`。
-5. **默认主题**：镜像内置主题在 Dockerfile 用 `ARG VANBLOG_ACTIVE_THEME` 选定；运行期由 dispatcher 按 `site.activeTheme` 切换，未设置/不可用时回退到默认主题。
+5. **默认主题**：镜像内置主题在 Dockerfile 用 `ARG VANBLOG_ACTIVE_THEME` 选定；运行期由 theme host 按 `site.activeTheme` 切换，未设置/不可用时回退到默认主题。
 
 ## 7. 心智模型（一句话记住）
 

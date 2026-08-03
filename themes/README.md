@@ -34,9 +34,9 @@
 - 通过 `@vanblog/base/*` alias 引用平台层（`app/src/`），由 `app/integrations/themes/index.mjs` 解析：
   1. 优先 `src/base-overrides/<rel>`（主题局部覆盖）
   2. fallback `app/src/<rel>`（平台层）
-- admin / login / setup 是**平台层 control plane**，由独立 admin SSR app（`app/`，产物 `app/dist`）服务，dispatcher 在 `/admin` `/login` `/setup` 特判转发，主题**不再编译**它们。`/api/revalidate` 仍是平台层端点，主题用薄壳 re-export（`@vanblog/base/pages/api/revalidate`）。
+- admin / login / setup 是**平台层 control plane**，由独立 admin SSR app（`app/`，产物 `app/dist`）服务，theme host 在 `/admin` `/login` `/setup` 特判转发，主题**不再编译**它们。`/api/revalidate` 仍是平台层端点，主题用薄壳 re-export（`@vanblog/base/pages/api/revalidate`）。
 - public 页面（首页/文章/...）**主题自有**，参考 `vanblog/` 的写法。
-- 运行期由 dispatcher 按 `site.activeTheme` 切换主题（`app/src/dispatcher/index.mjs`）。
+- 运行期由 theme host 按 `site.activeTheme` 切换主题（`app/src/theme-host/index.mjs`）。
 
 ## 新增主题
 

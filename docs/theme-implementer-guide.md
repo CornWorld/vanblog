@@ -426,7 +426,7 @@ theme 必须提供 `src/layouts/PackPage.astro`（或 `src/base-overrides/layout
 
 ### 6.3 Admin 页面（独立 admin SSR app，**不随主题编译**）
 
-admin / login / setup 是 control plane，由**独立的 admin SSR app**（`app/`，构建产物 `app/dist`）服务，dispatcher 在 `/admin`、`/login`、`/setup` 特判转发到该 app。**theme 不提供、也不覆盖 admin 页面**——它们甚至不存在于主题构建产物里，因此主题构建更轻。主题作者无需关心 admin 的实现与契约。
+admin / login / setup 是 control plane，由**独立的 admin SSR app**（`app/`，构建产物 `app/dist`）服务，theme host 在 `/admin`、`/login`、`/setup` 特判转发到该 app。**theme 不提供、也不覆盖 admin 页面**——它们甚至不存在于主题构建产物里，因此主题构建更轻。主题作者无需关心 admin 的实现与契约。
 
 ### 6.4 frontmatter 变量的标准消费模式
 
@@ -850,7 +850,7 @@ const packName = Astro.url.pathname.split('/')[2];  // '/p/bookmarks' -> 'bookma
 
 ### Q: 平台层加了新页面（比如新的 admin/api 端点），我的 theme 会自动有吗？
 
-**分两类**：public / API 端点（如 `/api/revalidate`）——theme 用 thin shell re-export `@vanblog/base/pages/api/...`，平台层加 API 端点后主题会自动带上。**admin / login / setup 不会随主题更新**——它们是独立 admin SSR app（`app/`），由 dispatcher 单独服务，与 theme 无关。
+**分两类**：public / API 端点（如 `/api/revalidate`）——theme 用 thin shell re-export `@vanblog/base/pages/api/...`，平台层加 API 端点后主题会自动带上。**admin / login / setup 不会随主题更新**——它们是独立 admin SSR app（`app/`），由 theme host 单独服务，与 theme 无关。
 
 **public 页面（首页/文章/归档/...）不是平台层的**，它们是主题自有的。要给站点加一个全新页面（比如 `photos`），直接在你的 theme 里写 `src/pages/photos.astro`，参考 `themes/vanblog` 的写法：
 
