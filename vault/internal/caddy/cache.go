@@ -2,7 +2,6 @@ package caddy
 
 import (
 	"fmt"
-	"maps"
 
 	"github.com/CornWorld/caddyadmin"
 )
@@ -20,53 +19,17 @@ const (
 	CacheImmutable = "public, max-age=31536000, immutable"
 	CacheDay       = "public, max-age=86400"
 	CacheHour      = "public, max-age=3600"
-	CacheNoStore   = "no-store"
+	// CacheStable is for stable-URL static assets (theme public/, emoji-data,
+	// robots.txt): cached briefly, then the browser must revalidate via the
+	// file_server ETag so content updates propagate without a URL change.
+	CacheStable  = "public, max-age=3600, must-revalidate"
+	CacheNoStore = "no-store"
 )
 
-// SystemCacheRules are vanblog's built-in cache rules, applied at bootstrap so
-// users get sensible caching out of the box. Users can override these via
-// site.routing using the same DSL (the user-provided rules are pushed after
-// these, so they take precedence via Caddy's first-match-wins semantics if
-// paths overlap — but more importantly, user rules with the same ID replace
-// the system ones via @id semantics).
-//
-// Version is a build identifier injected at Docker build time (e.g. git commit
-// or image creation timestamp). When non-empty it is included as a weak ETag
-// on cache rules so that re-deploying a new image invalidates the browser cache
-// even when hashed asset URLs remain the same.
-func SystemCacheRules(version string) []UserRule {
-	etag := ""
-	if version != "" {
-		etag = `W/"` + version + `"`
-	}
-	headers := map[string]string{"Cache-Control": CacheImmutable}
-	if etag != "" {
-		headers["ETag"] = etag
-	}
-	return []UserRule{
-		{
-			ID:      "vanblog-emoji-cache",
-			Type:    "cache",
-			From:    "/emoji-data.json",
-			Headers: cloneMap(headers),
-		},
-		{
-			ID:      "vanblog-themes-assets-cache",
-			Type:    "cache",
-			From:    "/themes/*",
-			Headers: cloneMap(headers),
-		},
-	}
-}
-
-// cloneMap returns a shallow copy of m so callers can mutate the copy without
-// affecting the original. SystemCacheRules shares a base headers map across
-// multiple rules; without cloning, later rule modifications would race.
-func cloneMap(m map[string]string) map[string]string {
-	c := make(map[string]string, len(m))
-	maps.Copy(c, m)
-	return c
-}
+// System cache rules were removed: static caching now lives in the Caddy
+// file_server routes built by buildStaticRoutes (content-hashed _astro →
+// immutable, stable files → must-revalidate). User cache rules (site.routing
+// type "cache") still go through translateCache below.
 
 // translateCache produces a reverse_proxy route to the Astro SSR server with
 // response header overrides applied at proxy time (header_down semantics).

@@ -159,6 +159,12 @@ func loadBootstrapInputs(app core.App) (BuildOpts, []UserRule) {
 	opts.HTTPOnly = os.Getenv("VANBLOG_HTTP_ONLY") == "1" ||
 		os.Getenv("VANBLOG_HTTP_ONLY") == "true"
 
+	// Where built themes and the standalone admin SSR live. The Go side must
+	// agree with the dispatcher so Caddy's file_server routes point at the same
+	// directories. BuildOpts.Defaults fills prod defaults when unset.
+	opts.ThemesDir = os.Getenv("VANBLOG_THEMES_DIR")
+	opts.AdminDistDir = os.Getenv("VANBLOG_ADMIN_DIST_DIR")
+
 	site, err := app.FindFirstRecordByFilter("site", "")
 	if err != nil || site == nil {
 		// Fresh install: no site record yet. System rules still apply.

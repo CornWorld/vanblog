@@ -44,6 +44,16 @@ type BuildOpts struct {
 	// terminate TLS at an external reverse proxy.
 	HTTPOnly bool `json:"-"`
 
+	// ThemesDir is where built themes live; each built theme has
+	// dist/server + dist/client. Caddy's file_server routes serve each
+	// theme's dist/client directly. Default "/var/lib/vanblog/themes".
+	ThemesDir string `json:"-"`
+
+	// AdminDistDir is the standalone admin SSR build (app/vanblog-app →
+	// app/dist). Its client assets are served at the root paths
+	// (/_astro/*, /emoji-data.json, /robots.txt). Default "/app/admin".
+	AdminDistDir string `json:"-"`
+
 	// Version is a build identifier (git commit + timestamp) injected at
 	// Docker build time. When non-empty, it is used as a fallback weak ETag
 	// on system cache rules so that re-deploying a new image invalidates
@@ -65,6 +75,12 @@ func (o *BuildOpts) Defaults() {
 		} else {
 			o.LogLevel = "WARN"
 		}
+	}
+	if o.ThemesDir == "" {
+		o.ThemesDir = "/var/lib/vanblog/themes"
+	}
+	if o.AdminDistDir == "" {
+		o.AdminDistDir = "/app/admin"
 	}
 	// Caddy uses zapcore levels which MUST be uppercase
 	// (DEBUG / INFO / WARN / ERROR / PANIC). A user may have set a lowercase
@@ -247,13 +263,16 @@ func BuildBootstrapConfig(opts BuildOpts) caddyadmin.Config {
 //  1. System API routes (vanblog-system-api, vanblog-system-pb-admin):
 //     `/api/*` and `/_/*` reverse-proxied to pb. These win first because
 //     they are the most specific reserved paths.
-//  2. System cache rules (SystemCacheRules translated): cache headers on
-//     long-lived static assets. They come before user rules so a user rule
-//     with the same @id replaces them via Caddy's stable-ID semantics.
+//  2. System static routes (buildStaticRoutes): Caddy file_server routes
+//     serving built static assets directly from disk, with two cache tiers
+//     (content-hashed _astro → immutable; stable files → must-revalidate).
+//     They come before user rules so they cannot be shadowed accidentally.
 //  3. User rules: translated via TranslateAll (which also runs SSRF +
 //     reserved-path validation). Any failure aborts the whole build.
 //  4. Fallback (vanblog-system-fallback): reverse_proxy to opts.AstroTarget.
 //     Catches everything not matched above.
+//
+// See static_routes.go for the static route model.
 //
 // The HTTP (:80) and management (:8080) servers mirror BuildBootstrapConfig.
 //
@@ -269,53 +288,10 @@ func BuildFullConfig(opts BuildOpts, userRules []UserRule) (caddyadmin.Config, e
 		return buildFullHTTPOnly(opts, userRules)
 	}
 
-	// Translate system cache rules + user rules together. TranslateAll
-	// enforces reserved-path and SSRF validation on every rule; a failure
-	// means the user config is unsafe and we refuse to produce a config at
-	// all (rather than silently dropping the bad rule).
-	combined := append(SystemCacheRules(opts.Version), userRules...)
-	rules, err := TranslateAll(combined, nil)
+	httpsRoutes, err := buildFullRouteTable(opts, userRules)
 	if err != nil {
 		return caddyadmin.Config{}, err
 	}
-
-	// HTTPS route order (see function doc):
-	//   1. system API + admin (hardcoded reserved paths)
-	//   2. translated cache+user rules (already in the right relative order:
-	//      cache rules first because SystemCacheRules is prepended above)
-	//   3. Astro fallback (terminal, catches everything else)
-	httpsRoutes := make([]caddyadmin.Route, 0, 2+len(rules)+1)
-	httpsRoutes = append(httpsRoutes,
-		caddyadmin.Route{
-			ID: systemAPIRouteID,
-			Match: []caddyadmin.MatchRule{{
-				Path: []string{"/api/*"},
-			}},
-			Handle: []caddyadmin.Handler{{
-				Handler:   "reverse_proxy",
-				Upstreams: []caddyadmin.Upstream{{Dial: pbAPIHost}},
-			}},
-		},
-		caddyadmin.Route{
-			ID: systemAdminRouteID,
-			Match: []caddyadmin.MatchRule{{
-				Path: []string{"/_/*"},
-			}},
-			Handle: []caddyadmin.Handler{{
-				Handler:   "reverse_proxy",
-				Upstreams: []caddyadmin.Upstream{{Dial: pbAPIHost}},
-			}},
-		},
-	)
-	httpsRoutes = append(httpsRoutes, rules...)
-	httpsRoutes = append(httpsRoutes, caddyadmin.Route{
-		ID: systemFallbackID,
-		// No Match → catch-all (terminal).
-		Handle: []caddyadmin.Handler{{
-			Handler:   "reverse_proxy",
-			Upstreams: []caddyadmin.Upstream{{Dial: opts.AstroTarget}},
-		}},
-	})
 
 	return caddyadmin.Config{
 		Admin: &caddyadmin.AdminConfig{
@@ -372,6 +348,50 @@ func BuildFullConfig(opts BuildOpts, userRules []UserRule) (caddyadmin.Config, e
 			TLS: buildTLSApp(opts.Email, opts.AllowedDomains),
 		},
 	}, nil
+}
+
+// buildFullRouteTable assembles the route table shared by the HTTPS and
+// HTTPOnly full configs:
+//  1. system API + PB admin (reserved paths)
+//  2. system static file_server routes (content-hashed _astro → immutable,
+//     stable files → must-revalidate)
+//  3. translated user rules (site.routing)
+//  4. Astro fallback (terminal, catches everything else)
+func buildFullRouteTable(opts BuildOpts, userRules []UserRule) ([]caddyadmin.Route, error) {
+	rules, err := TranslateAll(userRules, nil)
+	if err != nil {
+		return nil, err
+	}
+	routes := make([]caddyadmin.Route, 0, 3+len(rules)+1)
+	routes = append(routes,
+		caddyadmin.Route{
+			ID:    systemAPIRouteID,
+			Match: []caddyadmin.MatchRule{{Path: []string{"/api/*"}}},
+			Handle: []caddyadmin.Handler{{
+				Handler:   "reverse_proxy",
+				Upstreams: []caddyadmin.Upstream{{Dial: pbAPIHost}},
+			}},
+		},
+		caddyadmin.Route{
+			ID:    systemAdminRouteID,
+			Match: []caddyadmin.MatchRule{{Path: []string{"/_/*"}}},
+			Handle: []caddyadmin.Handler{{
+				Handler:   "reverse_proxy",
+				Upstreams: []caddyadmin.Upstream{{Dial: pbAPIHost}},
+			}},
+		},
+	)
+	routes = append(routes, buildStaticRoutes(opts)...)
+	routes = append(routes, rules...)
+	routes = append(routes, caddyadmin.Route{
+		ID: systemFallbackID,
+		// No Match → catch-all (terminal).
+		Handle: []caddyadmin.Handler{{
+			Handler:   "reverse_proxy",
+			Upstreams: []caddyadmin.Upstream{{Dial: opts.AstroTarget}},
+		}},
+	})
+	return routes, nil
 }
 
 // buildManagementServerRoutes returns the :8080 server definition shared by
@@ -511,43 +531,10 @@ func buildBootstrapHTTPOnly(opts BuildOpts) caddyadmin.Config {
 // route table on :80, no TLS app. Route order on srvPlain is identical to
 // the HTTPS path's srv_https ordering so user-facing behavior is unchanged.
 func buildFullHTTPOnly(opts BuildOpts, userRules []UserRule) (caddyadmin.Config, error) {
-	combined := append(SystemCacheRules(opts.Version), userRules...)
-	rules, err := TranslateAll(combined, nil)
+	httpsRoutes, err := buildFullRouteTable(opts, userRules)
 	if err != nil {
 		return caddyadmin.Config{}, err
 	}
-
-	httpsRoutes := make([]caddyadmin.Route, 0, 2+len(rules)+1)
-	httpsRoutes = append(httpsRoutes,
-		caddyadmin.Route{
-			ID: systemAPIRouteID,
-			Match: []caddyadmin.MatchRule{{
-				Path: []string{"/api/*"},
-			}},
-			Handle: []caddyadmin.Handler{{
-				Handler:   "reverse_proxy",
-				Upstreams: []caddyadmin.Upstream{{Dial: pbAPIHost}},
-			}},
-		},
-		caddyadmin.Route{
-			ID: systemAdminRouteID,
-			Match: []caddyadmin.MatchRule{{
-				Path: []string{"/_/*"},
-			}},
-			Handle: []caddyadmin.Handler{{
-				Handler:   "reverse_proxy",
-				Upstreams: []caddyadmin.Upstream{{Dial: pbAPIHost}},
-			}},
-		},
-	)
-	httpsRoutes = append(httpsRoutes, rules...)
-	httpsRoutes = append(httpsRoutes, caddyadmin.Route{
-		ID: systemFallbackID,
-		Handle: []caddyadmin.Handler{{
-			Handler:   "reverse_proxy",
-			Upstreams: []caddyadmin.Upstream{{Dial: opts.AstroTarget}},
-		}},
-	})
 
 	return caddyadmin.Config{
 		Admin: &caddyadmin.AdminConfig{

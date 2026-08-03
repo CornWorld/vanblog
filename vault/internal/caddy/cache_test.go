@@ -1,6 +1,7 @@
 package caddy
 
-// Tests for cache.go (SystemCacheRules + the "cache" UserRule type).
+// Tests for cache.go (the "cache" UserRule type). SystemCacheRules was removed —
+// static caching lives in the Caddy file_server routes built by buildStaticRoutes.
 
 import "testing"
 
@@ -46,28 +47,5 @@ func TestTranslate_Cache_NoHeaders(t *testing.T) {
 	rule := UserRule{ID: "empty-cache", Type: "cache", From: "/x"}
 	if _, err := Translate(rule); err == nil {
 		t.Fatal("expected error for cache rule without headers")
-	}
-}
-
-func TestSystemCacheRules_AppliesInTranslateAll(t *testing.T) {
-	rules := SystemCacheRules("")
-	if len(rules) == 0 {
-		t.Fatal("expected at least one system cache rule")
-	}
-
-	routes, err := TranslateAll(rules, nil)
-	if err != nil {
-		t.Fatalf("TranslateAll(system) failed: %v", err)
-	}
-	if len(routes) != len(rules) {
-		t.Fatalf("expected %d routes, got %d", len(rules), len(routes))
-	}
-
-	// Cache rules terminate (they own the reverse_proxy for the matched path),
-	// so we just sanity-check the handler kind.
-	for _, r := range routes {
-		if len(r.Handle) != 1 || r.Handle[0].Handler != "reverse_proxy" {
-			t.Errorf("system cache route %s should be reverse_proxy, got %+v", r.ID, r.Handle)
-		}
 	}
 }

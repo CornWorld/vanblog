@@ -10,6 +10,8 @@ package caddy
 import (
 	"encoding/json"
 	"net"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -183,6 +185,16 @@ func TestBuildBootstrapConfigServers(t *testing.T) {
 }
 
 func TestBuildFullConfig(t *testing.T) {
+	// Static dirs present so buildStaticRoutes emits the file_server routes.
+	admin := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(admin, "client"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	themes := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(themes, "base", "dist", "client"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+
 	userRules := []UserRule{{
 		ID:   "test-proxy",
 		Type: "proxy",
@@ -190,7 +202,7 @@ func TestBuildFullConfig(t *testing.T) {
 		To:   "http://127.0.0.1:3000",
 	}}
 
-	cfg, err := BuildFullConfig(BuildOpts{Email: "x@y.z"}, userRules)
+	cfg, err := BuildFullConfig(BuildOpts{Email: "x@y.z", AdminDistDir: admin, ThemesDir: themes}, userRules)
 	if err != nil {
 		t.Fatalf("BuildFullConfig: %v", err)
 	}
@@ -202,14 +214,17 @@ func TestBuildFullConfig(t *testing.T) {
 	}
 
 	// Expected order:
-	//   [0] vanblog-system-api          /api/*       → pb (8090)
-	//   [1] vanblog-system-pb-admin     /_/*         → pb (8090)
-	//   [2] vanblog-emoji-cache         /emoji-data  → Astro (4321, cache rule)
-	//   [3] vanblog-themes-assets-cache /themes/*    → Astro (4321, cache rule)
-	//   [4] test-proxy                  /my/*        → user upstream (3000)
-	//   [5] vanblog-system-fallback     (catch-all)  → Astro (4321)
-	if len(srvHTTPS) != 6 {
-		t.Fatalf("expected 6 routes on srv_https, got %d", len(srvHTTPS))
+	//   [0] vanblog-system-api                  /api/*               → pb (8090)
+	//   [1] vanblog-system-pb-admin             /_/*                 → pb (8090)
+	//   [2] vanblog-static-admin-astro          /_astro/*            → file_server (admin client)
+	//   [3] vanblog-static-admin-emoji          /emoji-data.json     → file_server (admin client)
+	//   [4] vanblog-static-admin-robots         /robots.txt          → file_server (admin client)
+	//   [5] vanblog-static-theme-base-astro     /themes/base/_astro/*→ file_server
+	//   [6] vanblog-static-theme-base           /themes/base/*       → file_server
+	//   [7] test-proxy                          /my/*                → user upstream (3000)
+	//   [8] vanblog-system-fallback             (catch-all)          → Astro (4321)
+	if len(srvHTTPS) != 9 {
+		t.Fatalf("expected 9 routes on srv_https, got %d", len(srvHTTPS))
 	}
 
 	// 1. System API.
@@ -228,45 +243,44 @@ func TestBuildFullConfig(t *testing.T) {
 		t.Errorf("[1] path mismatch: %v", matchPaths(srvHTTPS[1]))
 	}
 
-	// 3. System cache rules (emoji-data).
-	if srvHTTPS[2].ID != "vanblog-emoji-cache" {
-		t.Errorf("[2] expected emoji-cache, got %q", srvHTTPS[2].ID)
-	}
-	if srvHTTPS[2].Handle[0].Handler != "reverse_proxy" {
-		t.Errorf("[2] cache should be reverse_proxy, got %s", srvHTTPS[2].Handle[0].Handler)
-	}
-
-	// 4. Theme assets cache (/themes/*).
-	if srvHTTPS[3].ID != "vanblog-themes-assets-cache" {
-		t.Errorf("[3] expected themes-assets-cache, got %q", srvHTTPS[3].ID)
-	}
-	if matchPaths(srvHTTPS[3])[0] != "/themes/*" {
-		t.Errorf("[3] path mismatch: %v", matchPaths(srvHTTPS[3]))
-	}
-	if srvHTTPS[3].Handle[0].Upstreams[0].Dial != "127.0.0.1:4321" {
-		t.Errorf("[3] themes cache dial mismatch: %s", srvHTTPS[3].Handle[0].Upstreams[0].Dial)
-	}
-
-	// 5. User rule.
-	if srvHTTPS[4].ID != "test-proxy" {
-		t.Errorf("[4] expected user rule test-proxy, got %q", srvHTTPS[4].ID)
-	}
-	if matchPaths(srvHTTPS[4])[0] != "/my/*" {
-		t.Errorf("[4] path mismatch: %v", matchPaths(srvHTTPS[4]))
-	}
-	if srvHTTPS[4].Handle[0].Upstreams[0].Dial != "127.0.0.1:3000" {
-		t.Errorf("[4] user dial mismatch: %s", srvHTTPS[4].Handle[0].Upstreams[0].Dial)
+	// 3-7. System static file_server routes (admin first, then theme, with the
+	// content-hashed _astro route before the broad stable-file route).
+	for i, tc := range []struct{ id, path string }{
+		{"vanblog-static-admin-astro", "/_astro/*"},
+		{"vanblog-static-admin-emoji", "/emoji-data.json"},
+		{"vanblog-static-admin-robots", "/robots.txt"},
+		{"vanblog-static-theme-base-astro", "/themes/base/_astro/*"},
+		{"vanblog-static-theme-base", "/themes/base/*"},
+	} {
+		idx := 2 + i
+		if srvHTTPS[idx].ID != tc.id {
+			t.Errorf("[%d] expected %q, got %q", idx, tc.id, srvHTTPS[idx].ID)
+		}
+		if matchPaths(srvHTTPS[idx])[0] != tc.path {
+			t.Errorf("[%d] path mismatch: expected %s, got %v", idx, tc.path, matchPaths(srvHTTPS[idx]))
+		}
 	}
 
-	// 6. Fallback (no match → catch-all).
-	if srvHTTPS[5].ID != systemFallbackID {
-		t.Errorf("[5] expected fallback id %q, got %q", systemFallbackID, srvHTTPS[5].ID)
+	// 8. User rule.
+	if srvHTTPS[7].ID != "test-proxy" {
+		t.Errorf("[7] expected user rule test-proxy, got %q", srvHTTPS[7].ID)
 	}
-	if len(srvHTTPS[5].Match) != 0 {
-		t.Errorf("[5] fallback should have no match (catch-all), got %+v", srvHTTPS[5].Match)
+	if matchPaths(srvHTTPS[7])[0] != "/my/*" {
+		t.Errorf("[7] path mismatch: %v", matchPaths(srvHTTPS[7]))
 	}
-	if srvHTTPS[5].Handle[0].Upstreams[0].Dial != "127.0.0.1:4321" {
-		t.Errorf("[5] fallback dial mismatch: %s", srvHTTPS[5].Handle[0].Upstreams[0].Dial)
+	if srvHTTPS[7].Handle[0].Upstreams[0].Dial != "127.0.0.1:3000" {
+		t.Errorf("[7] user dial mismatch: %s", srvHTTPS[7].Handle[0].Upstreams[0].Dial)
+	}
+
+	// 9. Fallback (no match → catch-all).
+	if srvHTTPS[8].ID != systemFallbackID {
+		t.Errorf("[8] expected fallback id %q, got %q", systemFallbackID, srvHTTPS[8].ID)
+	}
+	if len(srvHTTPS[8].Match) != 0 {
+		t.Errorf("[8] fallback should have no match (catch-all), got %+v", srvHTTPS[8].Match)
+	}
+	if srvHTTPS[8].Handle[0].Upstreams[0].Dial != "127.0.0.1:4321" {
+		t.Errorf("[8] fallback dial mismatch: %s", srvHTTPS[8].Handle[0].Upstreams[0].Dial)
 	}
 }
 
