@@ -149,6 +149,9 @@ importers:
       astro:
         specifier: ^6.0.0
         version: 6.4.8(jiti@2.7.0)(lightningcss@1.32.0)(rollup@4.62.2)(yaml@2.9.0)
+      katex:
+        specifier: ^0.16.0
+        version: 0.16.47
       rehype-katex:
         specifier: ^7.0.1
         version: 7.0.1
@@ -173,24 +176,6 @@ importers:
       '@astrojs/node':
         specifier: ^10.0.0
         version: 10.1.4(astro@6.4.8(jiti@2.7.0)(lightningcss@1.32.0)(rollup@4.62.2)(yaml@2.9.0))
-      '@bytemd/plugin-frontmatter':
-        specifier: ^1.22.0
-        version: 1.22.0(bytemd@1.22.0)
-      '@bytemd/plugin-gfm':
-        specifier: ^1.22.0
-        version: 1.22.0(bytemd@1.22.0)
-      '@bytemd/plugin-highlight-ssr':
-        specifier: ^1.22.0
-        version: 1.22.0(bytemd@1.22.0)
-      '@bytemd/plugin-math-ssr':
-        specifier: ^1.22.0
-        version: 1.22.0(bytemd@1.22.0)
-      '@bytemd/plugin-medium-zoom':
-        specifier: ^1.22.0
-        version: 1.22.0(bytemd@1.22.0)
-      '@bytemd/plugin-mermaid':
-        specifier: ^1.22.0
-        version: 1.22.0(bytemd@1.22.0)
       '@tailwindcss/vite':
         specifier: ^4.3.2
         version: 4.3.2(vite@7.3.6(jiti@2.7.0)(lightningcss@1.32.0)(yaml@2.9.0))
@@ -200,12 +185,6 @@ importers:
       astro:
         specifier: ^6.0.0
         version: 6.4.8(jiti@2.7.0)(lightningcss@1.32.0)(rollup@4.62.2)(yaml@2.9.0)
-      bytemd:
-        specifier: ^1.22.0
-        version: 1.22.0
-      emoji-picker-element:
-        specifier: ^1.29.1
-        version: 1.29.1
       katex:
         specifier: ^0.16.0
         version: 0.16.47
