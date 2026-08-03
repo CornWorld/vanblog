@@ -81,19 +81,11 @@ export function sharedAstroConfig({ themeName, themeSrcDir, mainAppSrcDir, theme
         include: ['mermaid'],
       },
       build: {
+        // flowchart-elk (a mermaid renderer, ~1.4MB) legitimately exceeds the
+        // default warning threshold; it is lazy-loaded only for ```flowchart
+        // blocks. The old editor-vendor grouping (bytemd/katex/markdown-it)
+        // is gone — those deps moved to the standalone admin app.
         chunkSizeWarningLimit: 1500,
-        rollupOptions: {
-          output: {
-            manualChunks(id) {
-              if (id.includes('node_modules/bytemd') ||
-                  id.includes('node_modules/@bytemd') ||
-                  id.includes('node_modules/katex') ||
-                  id.includes('node_modules/markdown-it')) {
-                return 'editor-vendor';
-              }
-            },
-          },
-        },
       },
     },
     integrations: [
