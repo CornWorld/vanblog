@@ -5,7 +5,7 @@ go 1.26.5
 replace github.com/CornWorld/caddyadmin => ../../caddyadmin
 
 require (
-	github.com/CornWorld/caddyadmin v0.2.0
+	github.com/CornWorld/caddyadmin v0.3.0
 	github.com/brianvoe/gofakeit/v7 v7.15.0
 	github.com/dop251/goja v0.0.0-20260701091749-b07b74453ea9
 	github.com/pocketbase/dbx v1.12.0

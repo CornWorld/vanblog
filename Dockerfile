@@ -53,7 +53,7 @@ WORKDIR /build
 # vault/go.mod has `replace github.com/CornWorld/caddyadmin => ../../caddyadmin`.
 # In Docker the build workspace is /build, so the replace target resolves to
 # /caddyadmin. Clone it there before go mod download runs.
-ARG CADDYADMIN_VERSION=v0.1.0
+ARG CADDYADMIN_VERSION=v0.3.0
 RUN git clone --depth=1 --branch ${CADDYADMIN_VERSION} https://github.com/CornWorld/caddyadmin.git /caddyadmin
 
 COPY vault/go.mod vault/go.sum ./
