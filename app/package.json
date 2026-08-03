@@ -8,7 +8,8 @@
     "preview": "astro preview",
     "start": "node ./dist/server/entry.mjs",
     "test:e2e:cache": "node --test test/cache-e2e.test.mjs",
-    "test:packs": "node --test integrations/packs/resolver.test.mjs"
+    "test:packs": "node --test integrations/packs/resolver.test.mjs",
+    "test:lifecycle": "node --test test/lifecycle.test.mjs"
   },
   "dependencies": {
     "@astrojs/markdown-remark": "^7.2.0",
