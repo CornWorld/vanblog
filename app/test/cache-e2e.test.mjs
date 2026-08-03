@@ -1,29 +1,50 @@
 // End-to-end regression test for Astro 6 experimental.cache + revalidate.ts.
 //
-// Strategy: build the app, start the standalone node server, exercise the
-// cache lifecycle via plain HTTP. No pb backend required — index/archive
-// tolerate fetch failures and still render, which is enough to verify the
-// cache layer.
+// Public-page caching and /api/revalidate now live in the THEMES (admin was
+// extracted into its own standalone SSR app in app/, served via the dispatcher).
+// This test builds the `base` theme and exercises its cache lifecycle via plain
+// HTTP. No pb backend required — base/index and base/archive tolerate fetch
+// failures and still render, which is enough to verify the cache layer.
 //
-// Run: pnpm -C app build && node --test app/test/cache-e2e.test.mjs
+// Run: node --test app/test/cache-e2e.test.mjs
+// (the test builds themes/base itself)
 //
 // What this guards against:
 // - Astro 6 cache provider not configured → X-Astro-Cache header missing
 // - revalidate.ts silently no-op'ing (cache.invalidate broken / not called)
 // - External requests (X-Forwarded-For) bypassing the internal-only guard
 // - Empty body or missing fields returning wrong status
+// - Control-plane paths (/admin) never being cached
 
 import { describe, it, before, after } from "node:test";
 import assert from "node:assert/strict";
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
-const APP_DIR = join(__dirname, "..");
+const REPO_ROOT = join(__dirname, "..", "..");
+const THEME_DIR = join(REPO_ROOT, "themes", "base");
 const HOST = "127.0.0.1";
 const PORT = 4399; // avoid clashing with dev :4321
 const BASE = `http://${HOST}:${PORT}`;
+
+// Build the base theme. Admin no longer compiles into themes, so this is the
+// standalone public site the cache rules apply to.
+function buildTheme() {
+  const r = spawnSync(
+    "pnpm",
+    ["--filter", "@vanblog/theme-base", "build"],
+    {
+      cwd: REPO_ROOT,
+      encoding: "utf8",
+      env: { ...process.env, VANBLOG_THEME_NAME: "base" },
+    }
+  );
+  if (r.status !== 0) {
+    throw new Error(`theme build failed (exit ${r.status}):\n${r.stdout}\n${r.stderr}`);
+  }
+}
 
 /**
  * Wait until the server responds 200 on / (or timeout).
@@ -55,19 +76,19 @@ async function revalidate(body) {
   });
 }
 
-describe("astro cache e2e", { timeout: 120000 }, () => {
+describe("astro cache e2e (base theme)", { timeout: 120000 }, () => {
   let server;
 
   before(async () => {
-    // Astro reads HOST/PORT from env in standalone mode (see @astrojs/node).
+    buildTheme();
     server = spawn(
       "node",
-      [join(APP_DIR, "dist/server/entry.mjs")],
+      [join(THEME_DIR, "dist", "server", "entry.mjs")],
       {
-        cwd: APP_DIR,
-        env: { ...process.env, HOST, PORT },
+        cwd: THEME_DIR,
+        env: { ...process.env, HOST, PORT, THEME_HOST: HOST, THEME_PORT: String(PORT) },
         stdio: ["ignore", "pipe", "pipe"],
-      },
+      }
     );
     // Surface server logs if the test fails — invaluable for debugging.
     server.stdout.on("data", (d) => process.stdout.write(`[astro] ${d}`));
@@ -89,7 +110,6 @@ describe("astro cache e2e", { timeout: 120000 }, () => {
     await revalidate({ tags: ["posts"] });
     const miss = await getCacheHeader("/");
     const hit = await getCacheHeader("/");
-
     assert.equal(miss, "MISS", `expected MISS after purge, got "${miss}" (first=${first})`);
     assert.equal(hit, "HIT", `expected HIT on second request, got "${hit}"`);
   });
@@ -143,15 +163,16 @@ describe("astro cache e2e", { timeout: 120000 }, () => {
     assert.equal(r.status, 400);
   });
 
-  it("admin pages opt out — X-Astro-Cache absent on /admin", async () => {
-    // /admin redirects to /_/ when unauthenticated; we only care that
-    // it does NOT report a cache HIT (would mean personalized content leaked).
+  it("control-plane paths are not cached — /admin has no X-Astro-Cache", async () => {
+    // /admin now lives in the standalone admin SSR app (served by the
+    // dispatcher), so the theme responds via its middleware only. We only
+    // assert it never reports a cache HIT (would leak personalized content).
     const r = await fetch(BASE + "/admin", { redirect: "manual" });
     const cacheHeader = r.headers.get("x-astro-cache");
     assert.equal(
       cacheHeader,
       null,
-      `admin page must not be cached, got X-Astro-Cache: ${cacheHeader}`,
+      `admin path must not be cached, got X-Astro-Cache: ${cacheHeader}`
     );
   });
 });

@@ -14,11 +14,11 @@
 
 ## 1. 三层模型
 
-| 层 | 位置 | 内容 | 职责 | 谁能改 |
-|----|------|------|------|--------|
-| **L0 后端** | `vault/` | PocketBase + Go 业务层 | 数据 / API / 权限 | vanblog 维护者 |
-| **L1 平台层** | `app/` | `middleware.ts`、`lib/`、`loaders/`、`pages/api/`、`pages/admin/`、base 布局、`styles/`、dispatcher、integrations | 提供数据访问与渲染基础设施；提供 base 布局（纯布局 + 简单颜色） | vanblog 维护者 |
-| **L2 主题** | `themes/*` | 每个主题 = 一个独立 Astro 项目 | 定义站点的视觉 / 信息架构 / 交互 | 任何人（含 AI agent） |
+| 层            | 位置       | 内容                                                                                                              | 职责                                                            | 谁能改                |
+| ------------- | ---------- | ----------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- | --------------------- |
+| **L0 后端**   | `vault/`   | PocketBase + Go 业务层                                                                                            | 数据 / API / 权限                                               | vanblog 维护者        |
+| **L1 平台层** | `app/`     | `middleware.ts`、`lib/`、`loaders/`、`pages/api/`、`pages/admin/`、base 布局、`styles/`、dispatcher、integrations | 提供数据访问与渲染基础设施；提供 base 布局（纯布局 + 简单颜色） | vanblog 维护者        |
+| **L2 主题**   | `themes/*` | 每个主题 = 一个独立 Astro 项目                                                                                    | 定义站点的视觉 / 信息架构 / 交互                                | 任何人（含 AI agent） |
 
 - **平台层不是主题**。它不决定站点长什么样，只保证"能拿到数据、能渲染出页面骨架、admin 可用"。
 - **主题是独立 Astro 项目**。一个主题拥有自己的 `src/pages/`、`src/layouts/`、`src/components/`，通过 `@vanblog/base/*` alias 引用平台层基础设施。
@@ -41,16 +41,16 @@
 - 来源：**从 mereithhh 的 vanblog 项目（`packages/website`）迁移而来**，是"另一个项目迁移进来"的产品，与 base 是**两个独立概念**。
 - 定位：完整视觉 / 信息架构 / 交互的旗舰主题（NavBar、文章卡片、Toc、时间轴、赞赏、版权、统计等）。
 - **不继承 base 主题的布局**：自带 `layouts/BaseLayout.astro`、全套 `components/` 与 `pages/`。
-- 仅通过 `@vanblog/base/*` alias 引用平台层基础设施（`middleware`、`lib`、`pages/admin`、`pages/api`）。
+- 仅通过 `@vanblog/base/*` alias 引用平台层基础设施（`middleware`、`lib`、`pages/api`）。admin / login / setup 是**独立 admin SSR app**（`app/`，由 dispatcher 单独服务），主题不编译它们。
 
 ## 4. "builtin" 退役与新旧命名对照
 
-| 旧称呼 | 新称呼 | 说明 |
-|--------|--------|------|
-| `@vanblog/builtin/*` alias | `@vanblog/base/*` | 指向平台层（`app/src/<rel>`），先查主题的 `src/base-overrides/<rel>` |
-| `src/builtin-overrides/` | `src/base-overrides/` | 主题局部覆盖平台层内容的目录 |
-| "builtin 源头"（`app/src/`） | **平台层**（base 源头） | 只有基础设施 + base 布局，不含任何主题的视觉 |
-| `pack.Builtins` / `builtinPacksDir`（Go） | 不变 | Packs 的内置资源，与主题无关，维持原名 |
+| 旧称呼                                    | 新称呼                  | 说明                                                                 |
+| ----------------------------------------- | ----------------------- | -------------------------------------------------------------------- |
+| `@vanblog/builtin/*` alias                | `@vanblog/base/*`       | 指向平台层（`app/src/<rel>`），先查主题的 `src/base-overrides/<rel>` |
+| `src/builtin-overrides/`                  | `src/base-overrides/`   | 主题局部覆盖平台层内容的目录                                         |
+| "builtin 源头"（`app/src/`）              | **平台层**（base 源头） | 只有基础设施 + base 布局，不含任何主题的视觉                         |
+| `pack.Builtins` / `builtinPacksDir`（Go） | 不变                    | Packs 的内置资源，与主题无关，维持原名                               |
 
 ## 5. 目录结构（重构后）
 

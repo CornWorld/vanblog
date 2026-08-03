@@ -26,6 +26,12 @@ if [ "${VANBLOG_EMAIL}" = "admin@example.com" ] || [ -z "${VANBLOG_EMAIL}" ]; th
   echo "[vanblog]          Set VANBLOG_EMAIL in docker-compose.yml or -e VANBLOG_EMAIL=you@example.com"
 fi
 
+# Shared static-dir config. Go's Caddy config builder (vault/internal/caddy)
+# reads these to point file_server routes at the same dirs the dispatcher uses.
+# Defaults match prod; operators may override with custom mount points.
+export VANBLOG_THEMES_DIR="${VANBLOG_THEMES_DIR:-/var/lib/vanblog/themes}"
+export VANBLOG_ADMIN_DIST_DIR="${VANBLOG_ADMIN_DIST_DIR:-/app/admin}"
+
 echo "[vanblog] starting in PROD mode"
 echo "[vanblog] pb data: $PB_DATA"
 
@@ -82,6 +88,7 @@ DEFAULT_THEME=$(cat /etc/vanblog/default-theme 2>/dev/null || echo "vanblog")
 echo "[vanblog] starting dispatcher (default theme: ${DEFAULT_THEME})"
 VANBLOG_THEMES_DIR=/var/lib/vanblog/themes \
 VANBLOG_DEFAULT_THEME=${DEFAULT_THEME} \
+VANBLOG_ADMIN_DIST_DIR=/app/admin \
 PB_URL=http://127.0.0.1:8090 \
   node /app/dispatcher.mjs &
 DISPATCHER_PID=$!

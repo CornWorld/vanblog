@@ -5,11 +5,11 @@
 
 ## 三层模型（一句话）
 
-| 层 | 位置 | 职责 |
-|----|------|------|
-| **L0 后端** | `vault/` | 数据 / API / 权限（PocketBase + Go） |
-| **L1 平台层** | `app/` | 数据访问与渲染基础设施 + base 布局（纯布局 + 简单颜色）；admin / api 是平台层 |
-| **L2 主题** | `themes/*` | 站点的视觉 / 信息架构 / 交互（独立 Astro 项目） |
+| 层            | 位置       | 职责                                                                          |
+| ------------- | ---------- | ----------------------------------------------------------------------------- |
+| **L0 后端**   | `vault/`   | 数据 / API / 权限（PocketBase + Go）                                          |
+| **L1 平台层** | `app/`     | 数据访问与渲染基础设施 + base 布局（纯布局 + 简单颜色）；admin / api 是平台层 |
+| **L2 主题**   | `themes/*` | 站点的视觉 / 信息架构 / 交互（独立 Astro 项目）                               |
 
 `builtin` 一词已退役：旧 `@vanblog/builtin/*` → `@vanblog/base/*`，旧 `src/builtin-overrides/` → `src/base-overrides/`。
 
@@ -34,7 +34,7 @@
 - 通过 `@vanblog/base/*` alias 引用平台层（`app/src/`），由 `app/integrations/themes/index.mjs` 解析：
   1. 优先 `src/base-overrides/<rel>`（主题局部覆盖）
   2. fallback `app/src/<rel>`（平台层）
-- admin / api / login / setup 是**平台层页面**，主题用薄壳 re-export（`@vanblog/base/pages/admin/...` 等）。
+- admin / login / setup 是**平台层 control plane**，由独立 admin SSR app（`app/`，产物 `app/dist`）服务，dispatcher 在 `/admin` `/login` `/setup` 特判转发，主题**不再编译**它们。`/api/revalidate` 仍是平台层端点，主题用薄壳 re-export（`@vanblog/base/pages/api/revalidate`）。
 - public 页面（首页/文章/...）**主题自有**，参考 `vanblog/` 的写法。
 - 运行期由 dispatcher 按 `site.activeTheme` 切换主题（`app/src/dispatcher/index.mjs`）。
 

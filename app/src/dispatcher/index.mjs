@@ -1,15 +1,15 @@
 #!/usr/bin/env node
 
 // ============================================================
-// Theme Dispatcher — Single Node.js HTTP server that loads
-// and routes requests to the active Astro theme handler.
+// Theme Dispatcher — resolves the active render target (theme or admin
+// control plane) and forwards dynamic requests to it. Static assets are
+// served by Caddy file_server (see vault/internal/caddy/static_routes.go).
 // ============================================================
 
 import { createServer } from 'node:http';
-import { readdirSync, existsSync, readFileSync, createReadStream, statSync } from 'node:fs';
-import { join, extname } from 'node:path';
+import { readdirSync, existsSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { createHash } from 'node:crypto';
 
 // --- Configuration ---
 const THEMES_DIR = process.env.VANBLOG_THEMES_DIR || '/var/lib/vanblog/themes';
@@ -20,15 +20,10 @@ const HOST = process.env.HOST || '127.0.0.1';
 const MAX_LOADED_THEMES = 3;
 const POLL_INTERVAL_MS = 5000;
 
-// Build version injected at Docker build time (git commit + timestamp).
-// Used as a weak ETag fallback for static assets. When empty, the
-// per-file fileETag() from stat info is still available.
-const BUILD_VERSION = (() => {
-  if (process.env.VANBLOG_BUILD_VERSION) return process.env.VANBLOG_BUILD_VERSION;
-  try {
-    return readFileSync('/etc/vanblog/build-version', 'utf8').trim();
-  } catch { return ''; }
-})();
+// Directory of the standalone admin SSR build (the control plane, built from
+// app/ as vanblog-app). It is served independently of the active theme for
+// /admin, /login and /setup, and its hashed assets live at the root /_astro/.
+const ADMIN_DIST_DIR = process.env.VANBLOG_ADMIN_DIST_DIR || '/app/admin';
 
 // --- Types (JSDoc for clarity) ---
 /** @typedef {{ handler: Function, themeJson: object, loadedAt: number, refCount: number }} LoadedTheme */
@@ -38,27 +33,6 @@ const BUILD_VERSION = (() => {
 const registry = new Map();
 let activeThemeName = DEFAULT_THEME;
 const startTime = Date.now();
-
-// MIME types for static file serving
-const MIME_TYPES = {
-  '.html': 'text/html',
-  '.js': 'application/javascript',
-  '.css': 'text/css',
-  '.json': 'application/json',
-  '.png': 'image/png',
-  '.jpg': 'image/jpeg',
-  '.jpeg': 'image/jpeg',
-  '.gif': 'image/gif',
-  '.svg': 'image/svg+xml',
-  '.ico': 'image/x-icon',
-  '.webp': 'image/webp',
-  '.woff': 'font/woff',
-  '.woff2': 'font/woff2',
-  '.ttf': 'font/ttf',
-  '.eot': 'application/vnd.ms-fontobject',
-  '.mjs': 'text/javascript',
-  '.map': 'application/json',
-};
 
 // ============================================================
 // Theme Loading & Registry
@@ -134,6 +108,31 @@ async function getActiveHandler() {
   return t;
 }
 
+let adminHandler = null;
+
+/**
+ * Load the standalone admin SSR handler (built from app/ as vanblog-app).
+ * Returns null when the build is missing so callers can fall through to the
+ * active theme handler (preserves legacy behaviour for partial installs).
+ */
+async function getAdminHandler() {
+  if (adminHandler) return adminHandler;
+  const entryPath = pathToFileURL(join(ADMIN_DIST_DIR, 'server', 'entry.mjs')).href;
+  if (!existsSync(join(ADMIN_DIST_DIR, 'server', 'entry.mjs'))) {
+    console.warn(`[dispatcher] admin SSR entry not found at ${ADMIN_DIST_DIR}/server/entry.mjs`);
+    return null;
+  }
+  process.env.ASTRO_NODE_AUTOSTART = 'disabled';
+  const mod = await import(entryPath);
+  adminHandler = mod.handler || (mod.default && mod.default.handler);
+  if (!adminHandler) {
+    console.error('[dispatcher] admin SSR entry does not export a handler');
+    return null;
+  }
+  console.log(`[dispatcher] admin SSR loaded from ${ADMIN_DIST_DIR}`);
+  return adminHandler;
+}
+
 /**
  * Evict the least recently used cached theme (refCount=0, not active).
  */
@@ -185,114 +184,6 @@ async function switchTheme(newName) {
     console.error(`[dispatcher] FAILED to switch to '${newName}', staying on '${activeThemeName}':`, err);
     // Don't change activeThemeName, continue with the old one
   }
-}
-
-// ============================================================
-// Static File Serving
-// ============================================================
-
-/**
- * Compute a content-based ETag for a non-hashed static file.
- * SHA-256 is computed once per file and cached in-memory (the number of
- * `static/` files is always tiny — usually 0 or 1-2).
- *
- * For `_astro/` assets (content-hashed filenames) no ETag is needed:
- * the hash in the URL IS the content validator, and `immutable` cache
- * means the browser never sends conditional requests.
- *
- * @param {string} filePath
- * @returns {string}
- */
-const contentHashCache = new Map();
-function staticFileETag(filePath) {
-  let digest = contentHashCache.get(filePath);
-  if (!digest) {
-    digest = createHash('sha256').update(readFileSync(filePath)).digest('hex');
-    contentHashCache.set(filePath, digest);
-  }
-  const suffix = BUILD_VERSION ? `-${BUILD_VERSION}` : '';
-  return `"${digest}${suffix}"`;
-}
-
-/**
- * Serve a static file from theme dist/client/ directory.
- * Sets ETag (based on file size + mtime), Last-Modified, and responds
- * 304 Not Modified when the conditional request matches.
- *
- * Cache-Control behaviour differs by path:
- *   - `_astro/` assets have content-hashed filenames → `immutable` + 1 yr
- *   - `static/` files have stable URLs → short `max-age` + `must-revalidate`
- *   - All other paths → `no-cache` (safety default)
- *
- * @param {import('node:http').IncomingMessage} req
- * @param {string} themeName
- * @param {string} subPath
- * @param {import('node:http').ServerResponse} res
- */
-function serveStaticFile(req, themeName, subPath, res) {
-  // Decode URI and prevent directory traversal
-  const decodedPath = decodeURIComponent(subPath);
-  const clientDir = join(THEMES_DIR, themeName, 'dist', 'client');
-  const filePath = join(clientDir, decodedPath);
-
-  // Security: ensure the resolved path is within clientDir
-  if (!filePath.startsWith(clientDir)) {
-    res.statusCode = 403;
-    res.end('forbidden');
-    return;
-  }
-
-  let stats;
-  try {
-    stats = statSync(filePath);
-    if (stats.isDirectory()) {
-      res.statusCode = 404;
-      res.end('not found');
-      return;
-    }
-  } catch {
-    res.statusCode = 404;
-    res.end('not found');
-    return;
-  }
-
-  const ext = extname(filePath).toLowerCase();
-  const contentType = MIME_TYPES[ext] || 'application/octet-stream';
-
-  res.setHeader('Content-Type', contentType);
-  res.setHeader('Last-Modified', stats.mtime.toUTCString());
-
-  // _astro/ assets: content-hashed → immutable (URL changes when content does)
-  // static/ files:  stable URLs  → must-revalidate so ETag is checked
-  if (subPath.startsWith('_astro/')) {
-    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
-  } else {
-    // Non-hashed static file: compute ETag and check conditional request
-    const etag = staticFileETag(filePath);
-    res.setHeader('ETag', etag);
-    if (req.headers['if-none-match'] === etag) {
-      res.statusCode = 304;
-      res.end();
-      return;
-    }
-  }
-
-  const ifModifiedSince = req.headers['if-modified-since'];
-  if (ifModifiedSince && new Date(ifModifiedSince) >= stats.mtime) {
-    res.statusCode = 304;
-    res.end();
-    return;
-  }
-
-  const stream = createReadStream(filePath);
-  stream.on('error', () => {
-    if (!res.headersSent) {
-      res.statusCode = 500;
-      res.setHeader('Content-Type', 'text/plain');
-    }
-    res.end();
-  });
-  stream.pipe(res);
 }
 
 // ============================================================
@@ -354,22 +245,28 @@ const server = createServer(async (req, res) => {
       return;
     }
 
-    // --- Theme static assets ---
-    // /themes/<name>/static/<path> → serve from themes/<name>/dist/client/<path>
-    const staticMatch = url.match(/^\/themes\/([^/]+)\/static\/(.+)$/);
-    if (staticMatch) {
-      const [, themeName, subPath] = staticMatch;
-      serveStaticFile(req, themeName, subPath, res);
-      return;
-    }
+    // Static assets (/themes/*, /_astro/*, root files) are served by Caddy's
+    // file_server routes (vault/internal/caddy/static_routes.go) — the
+    // dispatcher only routes dynamic requests.
 
-    // Also handle /themes/<name>/_astro/<path> directly
-    // (Astro renders assets at /themes/<name>/_astro/ when base is set)
-    const astroStaticMatch = url.match(/^\/themes\/([^/]+)\/_astro\/(.+)$/);
-    if (astroStaticMatch) {
-      const [, themeName, subPath] = astroStaticMatch;
-      serveStaticFile(req, themeName, '_astro/' + subPath, res);
-      return;
+    // --- Control plane → standalone admin SSR app ---
+    // /admin, /login, /setup are platform-owned (never themed). The admin app
+    // is built with base "/", so its hashed assets are served at the root
+    // /_astro/ path below.
+    const pathname = url.split('?')[0];
+    if (
+      pathname === '/admin' ||
+      pathname.startsWith('/admin/') ||
+      pathname === '/login' ||
+      pathname === '/setup'
+    ) {
+      const admin = await getAdminHandler();
+      if (admin) {
+        await admin(req, res);
+        return;
+      }
+      // Admin build missing → fall through to the active theme handler, which
+      // returns its own 404 for /admin (legacy behaviour).
     }
 
     // --- All other requests → active theme handler ---

@@ -97,6 +97,11 @@ RUN for theme in themes/*/; do \
       fi; \
     done
 
+# Build the standalone admin SSR app (control plane). It is served by the
+# dispatcher for /admin, /login and /setup independently of the active theme,
+# so the admin code (editor, bytemd/katex/mermaid) is NOT compiled into themes.
+RUN pnpm --filter vanblog-app build
+
 # Record the default theme so the prod entrypoint knows which one to start.
 ARG VANBLOG_ACTIVE_THEME=vanblog
 RUN echo "${VANBLOG_ACTIVE_THEME}" > /build/.default-theme
@@ -141,6 +146,8 @@ COPY --from=astro-build /build/.build-version /etc/vanblog/build-version
 # No more symlink — the dispatcher (Phase B) or entrypoint reads default-theme.
 # Copy the theme dispatcher (ESM module, no compilation needed).
 COPY --from=astro-build /build/app/src/dispatcher/index.mjs /app/dispatcher.mjs
+# Copy the standalone admin SSR app (control plane, served via the dispatcher).
+COPY --from=astro-build /build/app/dist /app/admin
 
 # Copy core hooks and builtin Pack resources (with schema.js artifacts built in
 # the astro-build stage — the Go runtime reads schema.js from /packs/<name>/).
