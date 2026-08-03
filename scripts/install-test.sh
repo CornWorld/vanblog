@@ -168,7 +168,7 @@ interactive_pause "检查 compose 配置" "${COMPOSE_FILE}"
 # === 阶段 3: 等待服务就绪 ===
 
 blue ""
-blue "=== 阶段 3: 等待服务就绪（Caddy + PocketBase + Dispatcher）==="
+blue "=== 阶段 3: 等待服务就绪（Caddy + PocketBase + Theme Host）==="
 
 cd "$VANBLOG_BASE_PATH" || exit 1
 

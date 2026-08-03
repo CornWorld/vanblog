@@ -98,7 +98,7 @@ RUN for theme in themes/*/; do \
     done
 
 # Build the standalone admin SSR app (control plane). It is served by the
-# dispatcher for /admin, /login and /setup independently of the active theme,
+# theme host for /admin, /login and /setup independently of the active theme,
 # so the admin code (editor, bytemd/katex/mermaid) is NOT compiled into themes.
 RUN pnpm --filter vanblog-app build
 
@@ -141,9 +141,9 @@ COPY --from=astro-build /build /build
 COPY --from=astro-build /build/.default-theme /etc/vanblog/default-theme
 # Build version file for cache invalidation (weak ETag fallback).
 COPY --from=astro-build /build/.build-version /etc/vanblog/build-version
-# No more symlink — the dispatcher (Phase B) or entrypoint reads default-theme.
-# Copy the theme dispatcher (ESM module, no compilation needed).
-COPY --from=astro-build /build/app/src/dispatcher/index.mjs /app/dispatcher.mjs
+# No more symlink — the theme host (Phase B) or entrypoint reads default-theme.
+# Copy the theme host (ESM module, no compilation needed).
+COPY --from=astro-build /build/app/src/theme-host/index.mjs /app/theme-host.mjs
 # The standalone admin SSR app lives at /build/app/dist (part of the workspace
 # COPY above), so its runtime deps resolve via /build/node_modules like themes.
 # VANBLOG_ADMIN_DIST_DIR=/build/app/dist (see entrypoint.prod.sh + Go defaults).
@@ -165,8 +165,8 @@ COPY docker/bootstrap-http-only.json /etc/caddy/bootstrap-http-only.json
 COPY docker/entrypoint.prod.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
-# Create data directories + symlink themes to the path dispatcher expects.
-# astro-build emits /build/themes/<name>/dist/; dispatcher reads /var/lib/vanblog/themes/.
+# Create data directories + symlink themes to the path theme host expects.
+# astro-build emits /build/themes/<name>/dist/; theme host reads /var/lib/vanblog/themes/.
 RUN mkdir -p /pb_data /data/caddy /var/log /var/lib/vanblog && \
     ln -s /build/themes /var/lib/vanblog/themes
 

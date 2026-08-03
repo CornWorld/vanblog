@@ -120,7 +120,7 @@ func TestBuildStaticRoutes_AdminOnly(t *testing.T) {
 
 // TestManagementServerIncludesStaticRoutes guards the :8080 recovery port: it
 // must serve the same static file_server routes as the main site, otherwise
-// the Astro admin's /_astro/* assets 404 in recovery mode (the dispatcher no
+// the Astro admin's /_astro/* assets 404 in recovery mode (the theme host no
 // longer serves static).
 func TestManagementServerIncludesStaticRoutes(t *testing.T) {
 	opts := mkStaticFixture(t)

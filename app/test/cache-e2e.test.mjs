@@ -1,7 +1,7 @@
 // End-to-end regression test for Astro 6 experimental.cache + revalidate.ts.
 //
 // Public-page caching and /api/revalidate now live in the THEMES (admin was
-// extracted into its own standalone SSR app in app/, served via the dispatcher).
+// extracted into its own standalone SSR app in app/, served via the theme host).
 // This test builds the `base` theme and exercises its cache lifecycle via plain
 // HTTP. No pb backend required — base/index and base/archive tolerate fetch
 // failures and still render, which is enough to verify the cache layer.
@@ -165,7 +165,7 @@ describe("astro cache e2e (base theme)", { timeout: 120000 }, () => {
 
   it("control-plane paths are not cached — /admin has no X-Astro-Cache", async () => {
     // /admin now lives in the standalone admin SSR app (served by the
-    // dispatcher), so the theme responds via its middleware only. We only
+    // theme host), so the theme responds via its middleware only. We only
     // assert it never reports a cache HIT (would leak personalized content).
     const r = await fetch(BASE + "/admin", { redirect: "manual" });
     const cacheHeader = r.headers.get("x-astro-cache");

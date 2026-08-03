@@ -27,7 +27,7 @@ if [ "${VANBLOG_EMAIL}" = "admin@example.com" ] || [ -z "${VANBLOG_EMAIL}" ]; th
 fi
 
 # Shared static-dir config. Go's Caddy config builder (vault/internal/caddy)
-# reads these to point file_server routes at the same dirs the dispatcher uses.
+# reads these to point file_server routes at the same dirs the theme host uses.
 # Defaults match prod; operators may override with custom mount points.
 export VANBLOG_THEMES_DIR="${VANBLOG_THEMES_DIR:-/var/lib/vanblog/themes}"
 export VANBLOG_ADMIN_DIST_DIR="${VANBLOG_ADMIN_DIST_DIR:-/build/app/dist}"
@@ -57,8 +57,8 @@ wait_for() {
 cleanup() {
   echo "[vanblog] shutting down..."
   kill "$MONITOR_PID" 2>/dev/null || true
-  kill $PB_PID ${DISPATCHER_PID:-} $CADDY_PID 2>/dev/null || true
-  wait $PB_PID ${DISPATCHER_PID:-} $CADDY_PID 2>/dev/null || true
+  kill $PB_PID ${THEME_HOST_PID:-} $CADDY_PID 2>/dev/null || true
+  wait $PB_PID ${THEME_HOST_PID:-} $CADDY_PID 2>/dev/null || true
 }
 trap cleanup EXIT INT TERM
 
@@ -83,23 +83,23 @@ vanblog serve "$@" &
 PB_PID=$!
 wait_for "http://127.0.0.1:8090/api/health" "PocketBase" 30 || exit 1
 
-# 4. Start Theme Dispatcher (replaces direct Astro SSR)
+# 4. Start Theme Host (replaces direct Astro SSR)
 DEFAULT_THEME=$(cat /etc/vanblog/default-theme 2>/dev/null || echo "vanblog")
-echo "[vanblog] starting dispatcher (default theme: ${DEFAULT_THEME})"
+echo "[vanblog] starting theme host (default theme: ${DEFAULT_THEME})"
 VANBLOG_THEMES_DIR=/var/lib/vanblog/themes \
 VANBLOG_DEFAULT_THEME=${DEFAULT_THEME} \
 VANBLOG_ADMIN_DIST_DIR=/build/app/dist \
 PB_URL=http://127.0.0.1:8090 \
-  node /app/dispatcher.mjs &
-DISPATCHER_PID=$!
-wait_for "http://127.0.0.1:4321/__dispatcher_health" "Dispatcher" 30 || exit 1
+  node /app/theme-host.mjs &
+THEME_HOST_PID=$!
+wait_for "http://127.0.0.1:4321/__theme_host_health" "Theme Host" 30 || exit 1
 
 # 5. Background monitor: if any child crashes, kill the container
 monitor_children() {
   while true; do
     if ! kill -0 $CADDY_PID 2>/dev/null; then echo "[vanblog] FATAL: Caddy died"; exit 1; fi
     if ! kill -0 $PB_PID 2>/dev/null; then echo "[vanblog] FATAL: PocketBase died"; exit 1; fi
-    if ! kill -0 $DISPATCHER_PID 2>/dev/null; then echo "[vanblog] FATAL: Dispatcher died"; exit 1; fi
+    if ! kill -0 $THEME_HOST_PID 2>/dev/null; then echo "[vanblog] FATAL: Theme Host died"; exit 1; fi
     sleep 5
   done
 }

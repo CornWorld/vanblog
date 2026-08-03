@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 // ============================================================
-// Theme Dispatcher — resolves the active render target (theme or admin
+// Theme Host — resolves the active render target (theme or admin
 // control plane) and forwards dynamic requests to it. Static assets are
 // served by Caddy file_server (see vault/internal/caddy/static_routes.go).
 // ============================================================
@@ -100,7 +100,7 @@ async function loadTheme(name) {
 async function getActiveHandler() {
   let t = registry.get(activeThemeName);
   if (!t) {
-    console.log(`[dispatcher] loading theme: ${activeThemeName}`);
+    console.log(`[theme-host] loading theme: ${activeThemeName}`);
     t = await loadTheme(activeThemeName);
     registry.set(activeThemeName, t);
     evictLRU();
@@ -119,17 +119,17 @@ async function getAdminHandler() {
   if (adminHandler) return adminHandler;
   const entryPath = pathToFileURL(join(ADMIN_DIST_DIR, 'server', 'entry.mjs')).href;
   if (!existsSync(join(ADMIN_DIST_DIR, 'server', 'entry.mjs'))) {
-    console.warn(`[dispatcher] admin SSR entry not found at ${ADMIN_DIST_DIR}/server/entry.mjs`);
+    console.warn(`[theme-host] admin SSR entry not found at ${ADMIN_DIST_DIR}/server/entry.mjs`);
     return null;
   }
   process.env.ASTRO_NODE_AUTOSTART = 'disabled';
   const mod = await import(entryPath);
   adminHandler = mod.handler || (mod.default && mod.default.handler);
   if (!adminHandler) {
-    console.error('[dispatcher] admin SSR entry does not export a handler');
+    console.error('[theme-host] admin SSR entry does not export a handler');
     return null;
   }
-  console.log(`[dispatcher] admin SSR loaded from ${ADMIN_DIST_DIR}`);
+  console.log(`[theme-host] admin SSR loaded from ${ADMIN_DIST_DIR}`);
   return adminHandler;
 }
 
@@ -149,7 +149,7 @@ function evictLRU() {
     }
   }
   if (oldest) {
-    console.log(`[dispatcher] LRU evicting theme: ${oldest}`);
+    console.log(`[theme-host] LRU evicting theme: ${oldest}`);
     registry.delete(oldest);
   }
 }
@@ -166,11 +166,11 @@ async function switchTheme(newName) {
   // Validate: check the theme is available
   const available = listAvailableThemes();
   if (!available.includes(newName)) {
-    console.error(`[dispatcher] theme '${newName}' not available (available: ${available.join(', ')})`);
+    console.error(`[theme-host] theme '${newName}' not available (available: ${available.join(', ')})`);
     return;
   }
 
-  console.log(`[dispatcher] switching theme: ${activeThemeName} → ${newName}`);
+  console.log(`[theme-host] switching theme: ${activeThemeName} → ${newName}`);
   try {
     // Pre-load the new theme if not in registry
     if (!registry.has(newName)) {
@@ -179,9 +179,9 @@ async function switchTheme(newName) {
       evictLRU();
     }
     activeThemeName = newName;
-    console.log(`[dispatcher] theme switched to: ${newName}`);
+    console.log(`[theme-host] theme switched to: ${newName}`);
   } catch (err) {
-    console.error(`[dispatcher] FAILED to switch to '${newName}', staying on '${activeThemeName}':`, err);
+    console.error(`[theme-host] FAILED to switch to '${newName}', staying on '${activeThemeName}':`, err);
     // Don't change activeThemeName, continue with the old one
   }
 }
@@ -211,7 +211,7 @@ async function pollSiteChanges() {
 }
 
 function startPolling() {
-  console.log(`[dispatcher] starting PB polling (every ${POLL_INTERVAL_MS}ms)`);
+  console.log(`[theme-host] starting PB polling (every ${POLL_INTERVAL_MS}ms)`);
   pollTimer = setInterval(pollSiteChanges, POLL_INTERVAL_MS);
   pollTimer.unref();
 }
@@ -232,7 +232,7 @@ const server = createServer(async (req, res) => {
 
   try {
     // --- Health check (B4) ---
-    if (url === '/__dispatcher_health') {
+    if (url === '/__theme_host_health') {
       res.setHeader('Content-Type', 'application/json');
       const loaded = [...registry.keys()];
       res.end(JSON.stringify({
@@ -247,7 +247,7 @@ const server = createServer(async (req, res) => {
 
     // Static assets (/themes/*, /_astro/*, root files) are served by Caddy's
     // file_server routes (vault/internal/caddy/static_routes.go) — the
-    // dispatcher only routes dynamic requests.
+    // theme host only routes dynamic requests.
 
     // --- Control plane → standalone admin SSR app ---
     // /admin, /login, /setup are platform-owned (never themed). The admin app
@@ -278,11 +278,11 @@ const server = createServer(async (req, res) => {
       theme.refCount--;
     }
   } catch (err) {
-    console.error('[dispatcher] unhandled error:', err);
+    console.error('[theme-host] unhandled error:', err);
     if (!res.headersSent) {
       res.statusCode = 500;
       res.setHeader('Content-Type', 'text/plain');
-      res.end('dispatcher error');
+      res.end('theme host error');
     } else {
       res.destroy();
     }
@@ -310,12 +310,12 @@ server.on('request', (_req, res) => {
  * Graceful shutdown handler.
  */
 async function shutdown(signal) {
-  console.log(`[dispatcher] received ${signal}, shutting down gracefully...`);
+  console.log(`[theme-host] received ${signal}, shutting down gracefully...`);
   stopPolling();
 
   // Stop accepting new connections
   server.close(() => {
-    console.log('[dispatcher] server closed');
+    console.log('[theme-host] server closed');
     process.exit(0);
   });
 
@@ -329,7 +329,7 @@ async function shutdown(signal) {
   }
 
   if (inFlightRequests.size > 0) {
-    console.log(`[dispatcher] force exiting with ${inFlightRequests.size} in-flight requests`);
+    console.log(`[theme-host] force exiting with ${inFlightRequests.size} in-flight requests`);
   }
 
   process.exit(0);
@@ -343,11 +343,11 @@ process.on('SIGINT', () => shutdown('SIGINT'));
 // ============================================================
 
 process.on('unhandledRejection', (reason) => {
-  console.error('[dispatcher] unhandledRejection:', reason);
+  console.error('[theme-host] unhandledRejection:', reason);
 });
 
 process.on('uncaughtException', (err) => {
-  console.error('[dispatcher] uncaughtException:', err);
+  console.error('[theme-host] uncaughtException:', err);
   // Do NOT exit — this is intentional for production resilience.
   // The supervisor (entrypoint monitor) will restart the container if needed.
 });
@@ -358,9 +358,9 @@ process.on('uncaughtException', (err) => {
 
 async function bootstrap() {
   const available = listAvailableThemes();
-  console.log(`[dispatcher] themes dir: ${THEMES_DIR}`);
-  console.log(`[dispatcher] available themes: ${available.length > 0 ? available.join(', ') : '(none)'}`);
-  console.log(`[dispatcher] default theme: ${DEFAULT_THEME}`);
+  console.log(`[theme-host] themes dir: ${THEMES_DIR}`);
+  console.log(`[theme-host] available themes: ${available.length > 0 ? available.join(', ') : '(none)'}`);
+  console.log(`[theme-host] default theme: ${DEFAULT_THEME}`);
 
   // Try to fetch active theme from PB
   try {
@@ -370,26 +370,26 @@ async function bootstrap() {
       const pbTheme = j?.items?.[0]?.activeTheme;
       if (typeof pbTheme === 'string' && pbTheme && available.includes(pbTheme)) {
         activeThemeName = pbTheme;
-        console.log(`[dispatcher] PB reports active theme: ${activeThemeName}`);
+        console.log(`[theme-host] PB reports active theme: ${activeThemeName}`);
       }
     }
   } catch {
-    console.log(`[dispatcher] PB not reachable, using default theme: ${activeThemeName}`);
+    console.log(`[theme-host] PB not reachable, using default theme: ${activeThemeName}`);
   }
 
   // Start PB polling for runtime theme changes
   startPolling();
 
   server.on('error', (err) => {
-    console.error(`[dispatcher] failed to listen on ${HOST}:${PORT}:`, err);
+    console.error(`[theme-host] failed to listen on ${HOST}:${PORT}:`, err);
     process.exit(1);
   });
   server.listen(PORT, HOST, () => {
-    console.log(`[dispatcher] listening on ${HOST}:${PORT}`);
+    console.log(`[theme-host] listening on ${HOST}:${PORT}`);
   });
 }
 
 bootstrap().catch(err => {
-  console.error('[dispatcher] fatal bootstrap error:', err);
+  console.error('[theme-host] fatal bootstrap error:', err);
   process.exit(1);
 });

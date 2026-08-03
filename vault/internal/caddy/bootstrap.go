@@ -160,7 +160,7 @@ func loadBootstrapInputs(app core.App) (BuildOpts, []UserRule) {
 		os.Getenv("VANBLOG_HTTP_ONLY") == "true"
 
 	// Where built themes and the standalone admin SSR live. The Go side must
-	// agree with the dispatcher so Caddy's file_server routes point at the same
+	// agree with the theme host so Caddy's file_server routes point at the same
 	// directories. BuildOpts.Defaults fills prod defaults when unset.
 	opts.ThemesDir = os.Getenv("VANBLOG_THEMES_DIR")
 	opts.AdminDistDir = os.Getenv("VANBLOG_ADMIN_DIST_DIR")

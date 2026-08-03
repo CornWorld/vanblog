@@ -4,7 +4,7 @@
  * Theme Switch E2E Test
  *
  * Prerequisites:
- *   - Docker container running with dispatcher (batch 2)
+ *   - Docker container running with theme host (batch 2)
  *   - PB accessible
  *   - Both themes (vanblog + base) built and in the image
  *
@@ -47,9 +47,9 @@ async function main() {
   console.log(`Base URL: ${BASE}`);
   console.log(`PB URL:   ${PB_URL}\n`);
 
-  // 1. Check dispatcher health
-  await check('GET /__dispatcher_health returns 200', async () => {
-    const r = await fetch(`${BASE}/__dispatcher_health`);
+  // 1. Check theme host health
+  await check('GET /__theme_host_health returns 200', async () => {
+    const r = await fetch(`${BASE}/__theme_host_health`);
     if (r.status !== 200) throw new Error(`status ${r.status}`);
     const j = await r.json();
     if (!j.ok) throw new Error('health check not ok');
@@ -99,12 +99,12 @@ async function main() {
     if (!updateR.ok) throw new Error(`PB update failed: ${updateR.status}`);
   });
 
-  // 5. Wait for dispatcher to poll and switch (poll with timeout)
-  console.log('\n  ⏳ Waiting for dispatcher to detect theme change...\n');
-  await check('Dispatcher switched to base theme', async () => {
+  // 5. Wait for theme host to poll and switch (poll with timeout)
+  console.log('\n  ⏳ Waiting for theme host to detect theme change...\n');
+  await check('Theme Host switched to base theme', async () => {
     const deadline = Date.now() + 15000;
     while (Date.now() < deadline) {
-      const r = await fetch(`${BASE}/__dispatcher_health`);
+      const r = await fetch(`${BASE}/__theme_host_health`);
       const j = await r.json();
       if (j.activeTheme === 'base') return;
       await new Promise(r => setTimeout(r, 500));
@@ -124,11 +124,11 @@ async function main() {
     });
   }
 
-  console.log('\n  ⏳ Waiting for dispatcher to revert...\n');
-  await check('Dispatcher reverted to vanblog theme', async () => {
+  console.log('\n  ⏳ Waiting for theme host to revert...\n');
+  await check('Theme Host reverted to vanblog theme', async () => {
     const deadline = Date.now() + 15000;
     while (Date.now() < deadline) {
-      const r = await fetch(`${BASE}/__dispatcher_health`);
+      const r = await fetch(`${BASE}/__theme_host_health`);
       const j = await r.json();
       if (j.activeTheme === 'vanblog') return;
       await new Promise(r => setTimeout(r, 500));

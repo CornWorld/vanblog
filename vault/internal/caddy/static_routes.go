@@ -8,7 +8,7 @@ import (
 )
 
 // buildStaticRoutes returns the system-owned Caddy file_server routes that serve
-// built static assets directly from disk, taking the dispatcher out of the
+// built static assets directly from disk, taking the theme host out of the
 // static path entirely.
 //
 // Two cache tiers (the only two that make sense for Astro outputs):
