@@ -36,6 +36,10 @@ type Service struct {
 	// done closes the worker goroutine. nil for tests that construct a
 	// Service without calling NewWithURL (and thus never spawn a worker).
 	done chan struct{}
+
+	// themeWatcher auto-resyncs Caddy when the themes directory changes at
+	// runtime. nil in dev/skip-caddy mode or when the themes dir is absent.
+	themeWatcher *themeWatcher
 }
 
 // syncRequest is the envelope the actor accepts. Exactly one of apply/resync
@@ -87,18 +91,25 @@ func NewWithURL(app core.App, caddyAdminURL string) *Service {
 					slog.Error("[caddy] config push failed, staying in maintenance mode", "err", err)
 				}
 			}()
+			// Auto-resync Caddy when themes are added/removed at runtime so
+			// new /themes/<name>/ file_server routes appear without a manual
+			// reload. Skipped in dev/smoke (skip-caddy) mode.
+			s.themeWatcher = startThemeWatcher(s)
 		}
 		return se.Next()
 	})
 	return s
 }
 
-// Close terminates the syncWorker goroutine. pb's lifecycle doesn't need
-// this (process exit kills the goroutine), but tests must call it to avoid
-// leaking one goroutine per test case.
+// Close terminates the syncWorker goroutine and the theme watcher. pb's
+// lifecycle doesn't need this (process exit kills the goroutines), but tests
+// must call it to avoid leaking one goroutine per test case.
 func (s *Service) Close() {
 	if s.done != nil {
 		close(s.done)
+	}
+	if s.themeWatcher != nil {
+		s.themeWatcher.Close()
 	}
 }
 

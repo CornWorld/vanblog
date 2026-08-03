@@ -128,6 +128,7 @@ type mockAdmin struct {
 	mu                    sync.Mutex
 	loadFailuresRemaining int // number of /load (non-validate) calls left to fail
 	loadCalls             int // counts non-validate /load calls
+	lastConfig            []byte // body of the most recent non-validate /load call
 }
 
 func newMockCaddyAdmin(t *testing.T, failLoad int) (*httptest.Server, *mockAdmin) {
@@ -141,13 +142,16 @@ func newMockCaddyAdmin(t *testing.T, failLoad int) (*httptest.Server, *mockAdmin
 	})
 
 	mux.HandleFunc("/load", func(w http.ResponseWriter, r *http.Request) {
-		_, _ = io.Copy(io.Discard, r.Body)
+		body, _ := io.ReadAll(r.Body)
 		if r.URL.Query().Get("validate_only") == "true" {
 			w.WriteHeader(http.StatusOK)
 			return
 		}
 		m.mu.Lock()
 		m.loadCalls++
+		if len(body) > 0 {
+			m.lastConfig = append(m.lastConfig[:0], body...)
+		}
 		fail := m.loadFailuresRemaining > 0
 		if fail {
 			m.loadFailuresRemaining--

@@ -789,7 +789,7 @@ COPY --from=astro-build /build/.default-theme /etc/vanblog/default-theme
 
 运行时切换已由 **theme host** 实现（`app/src/theme-host/index.mjs`）：每 5s 轮询 PB `site.activeTheme`，变化后 `switchTheme()` 动态 import 新主题 handler。`/etc/vanblog/default-theme` 只作为启动 fallback，不阻塞运行时切换。
 
-**新增/删除主题**后，Caddy 的 `/themes/<name>/` file_server 静态路由不会自动更新（config-build 时枚举 themes 目录）——在后台「站点配置 → 外观」点「重新加载主题」，触发一次 Caddy 重扫（等价于 `POST /api/vanblog/themes/reload`）。
+**新增/删除主题**后，Caddy 的 `/themes/<name>/` file_server 静态路由在 config-build 时枚举——**prod 下 fsnotify 自动检测 themes 目录变化并触发重扫**（无需手动）。后台「站点配置 → 外观」的「重新加载主题」按钮（等价于 `POST /api/vanblog/themes/reload`）保留为手动兜底。
 
 ### 10.4 CI 建议
 
