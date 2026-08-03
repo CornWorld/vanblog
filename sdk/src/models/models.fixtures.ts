@@ -54,7 +54,6 @@ const valid = {
     detail: { after: ["rule-1"], custom: true },
   },
   bookmarks: { title: "VanBlog", url: "https://vanblog.example", owner: id },
-  moments: { content: "Hello, world!", author: id },
 } satisfies Record<keyof typeof models, unknown>;
 
 const invalid = {
@@ -71,7 +70,6 @@ const invalid = {
   visits: { date: "2026-07-10T00:00:00Z" },
   audits: { result: "unknown" },
   bookmarks: { title: "VanBlog", url: "not-a-url", owner: id },
-  moments: { content: "", author: id },
 } satisfies Record<keyof typeof models, unknown>;
 
 function assertAccepts(

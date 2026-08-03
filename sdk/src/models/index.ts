@@ -21,7 +21,6 @@ import { MediaSchema } from "./media";
 import { SiteSchema } from "./site";
 import { VisitSchema } from "./visits";
 import { AuditSchema } from "./audits";
-import { MomentSchema } from "./moments";
 import { BookmarkSchema } from "./bookmarks";
 
 export const models = {
@@ -34,6 +33,5 @@ export const models = {
   site: SiteSchema,
   visits: VisitSchema,
   audits: AuditSchema,
-  moments: MomentSchema,
   bookmarks: BookmarkSchema,
 } as const;

@@ -14,6 +14,7 @@ func loadSchema(b *testing.B) []namedProg {
 		{"core", "../../../runtime/core-schema/models.js"},
 		{"bookmarks", "../../../packs/bookmarks/schema.js"},
 		{"live2d-companion", "../../../packs/live2d-companion/schema.js"},
+		{"moments", "../../../packs/moments/schema.js"},
 	}
 	var out []namedProg
 	for _, e := range all {
