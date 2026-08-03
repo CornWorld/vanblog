@@ -118,6 +118,35 @@ func TestBuildStaticRoutes_AdminOnly(t *testing.T) {
 	}
 }
 
+// TestManagementServerIncludesStaticRoutes guards the :8080 recovery port: it
+// must serve the same static file_server routes as the main site, otherwise
+// the Astro admin's /_astro/* assets 404 in recovery mode (the dispatcher no
+// longer serves static).
+func TestManagementServerIncludesStaticRoutes(t *testing.T) {
+	opts := mkStaticFixture(t)
+	srv := buildManagementServerRoutes(opts)
+	if srv == nil || len(srv.Listen) != 1 || srv.Listen[0] != ":8080" {
+		t.Fatalf("unexpected mgmt server: %+v", srv)
+	}
+	// api + _/ + 7 static (admin 3 + theme 2×2) + fallback = 10.
+	if len(srv.Routes) != 10 {
+		t.Fatalf("expected 10 routes (2 pb + 7 static + fallback), got %d", len(srv.Routes))
+	}
+	// A static route is present and the fallback stays last.
+	found := false
+	for i, r := range srv.Routes {
+		if r.ID == "vanblog-static-admin-astro" {
+			found = true
+		}
+		if i == len(srv.Routes)-1 && (len(r.Handle) == 0 || r.Handle[0].Handler != "reverse_proxy") {
+			t.Errorf("last mgmt route should be the Astro fallback, got %+v", r)
+		}
+	}
+	if !found {
+		t.Error("srv_mgmt is missing the admin static (file_server) route")
+	}
+}
+
 // TestStaticRouteJSON pins the exact Caddy admin-API JSON a static route must
 // produce: a non-terminal `headers` handler setting Cache-Control, a non-terminal
 // `rewrite` handler stripping the theme prefix, then the terminal `file_server`

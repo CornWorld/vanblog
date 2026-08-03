@@ -13,6 +13,7 @@ chmod +x vanblog.sh
 脚本会引导你输入邮箱、端口,自动生成 `docker-compose.yml` 并启动。后续管理(重启、备份、更新)都通过同一个脚本。完整命令列表见 `./vanblog.sh help`。
 
 > **可选依赖 gum**:脚本检测到 [Charm gum](https://github.com/charmbracelet/gum) 会启用 TUI 模式(箭头选择 / 输入框 / 进度 spinner),否则自动 fallback 到 `read` 模式。安装:
+>
 > - macOS: `brew install gum`
 > - Linux: 参考 [gum README](https://github.com/charmbracelet/gum#installation)
 
@@ -59,20 +60,20 @@ VANBLOG_EMAIL=you@example.com docker compose up -d
 
 ### Volumes
 
-| Mount point | Purpose | Required |
-|---|---|---|
-| `/pb_data` | PocketBase database (SQLite) + uploaded files | **Yes** |
-| `/data/caddy` | Caddy TLS certificates + ACME state | Recommended |
+| Mount point   | Purpose                                       | Required    |
+| ------------- | --------------------------------------------- | ----------- |
+| `/pb_data`    | PocketBase database (SQLite) + uploaded files | **Yes**     |
+| `/data/caddy` | Caddy TLS certificates + ACME state           | Recommended |
 
 ### Ports
 
-| Port | Protocol | Purpose | Expose by default |
-|---|---|---|---|
-| `443` | HTTPS | Main site (on-demand TLS) | Yes |
-| `80` | HTTP | Redirect to HTTPS | Yes |
-| `8080` | HTTP | **Management fallback** (emergency access when TLS is broken) | No |
+| Port   | Protocol | Purpose                                                       | Expose by default |
+| ------ | -------- | ------------------------------------------------------------- | ----------------- |
+| `443`  | HTTPS    | Main site (on-demand TLS)                                     | Yes               |
+| `80`   | HTTP     | Redirect to HTTPS                                             | Yes               |
+| `8080` | HTTP     | **Management fallback** (emergency access when TLS is broken) | No                |
 
-**Management port (8080)**: Only exposes `/api/*`, `/admin/*`, and `/_/*` (pb Admin UI). The public frontend is NOT served. Use this when you're locked out due to TLS misconfiguration:
+**Management port (8080)**: Exposes `/api/*`, `/_/*`（pb Admin UI）和 `/admin/*`（Astro 管理后台，含其 `/_astro/*` 静态——Caddy file_server 同样挂在 :8080 上）。The public frontend is NOT served. Use this when you're locked out due to TLS misconfiguration:
 
 ```bash
 # Restart with management port mapped
@@ -102,11 +103,13 @@ docker run -d \
 ```
 
 设 `VANBLOG_HTTP_ONLY=1` 后:
+
 - 容器内 Caddy 只监听 `:80`,完全不配 TLS app,不再请求 Let's Encrypt 证书。
 - 外置反代必须传递 `X-Forwarded-Proto: https`(否则 Astro 生成的 canonical URL 会错为 `http://`)。
 - `/api/vanblog/tls/status` 自动降级返回 `onDemandTLS: false`。
 
 最小外置 Caddy 反代示例:
+
 ```caddyfile
 example.com {
     reverse_proxy vanblog:80
@@ -134,8 +137,11 @@ docker run -d \
 
 ```
 Request → Caddy (:80/:443)
-           ├── /api/*      → PocketBase (:8090)
-           ├── /static/*   → PocketBase (:8090)
-           ├── /_/         → PocketBase Admin UI
-           └── /*          → Astro SSG (/app/dist) or dev server (:4321)
+           ├── /api/*       → PocketBase (:8090)
+           ├── /_/          → PocketBase Admin UI
+           ├── /themes/*    → Caddy file_server（主题静态：_astro immutable，稳定文件 must-revalidate）
+           ├── /_astro/* + /emoji-data.json + /robots.txt → Caddy file_server（admin 静态）
+           └── /*           → dispatcher (:4321)
+                                ├── /admin /login /setup → admin SSR（app/dist）
+                                └── 其余 → 激活主题 SSR
 ```

@@ -61,7 +61,7 @@ vanblog/
 │   │   ├── themes/               ← alias 机制：@vanblog/base/*（30 行 resolveId）
 │   │   └── packs/                ← Pack 路由注入
 │   └── src/
-│       ├── dispatcher/           ← 主题 dispatcher（Node HTTP server）
+│       ├── dispatcher/           ← 编排层：解析激活主题/admin 并转发；静态由 Caddy file_server 服务
 │       ├── layouts/
 │       │   ├── BaseLayout.astro  ← ★ base 布局（纯布局 + 简单颜色；admin 也用）
 │       │   ├── AdminLayout.astro ← admin 布局（extends base 布局）

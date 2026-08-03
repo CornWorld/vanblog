@@ -248,7 +248,7 @@ func BuildBootstrapConfig(opts BuildOpts) caddyadmin.Config {
 							},
 						},
 					},
-					srvMgmt: buildManagementServerRoutes(opts.AstroTarget),
+					srvMgmt: buildManagementServerRoutes(opts),
 				},
 			},
 			TLS: buildTLSApp(opts.Email, opts.AllowedDomains),
@@ -342,7 +342,7 @@ func BuildFullConfig(opts BuildOpts, userRules []UserRule) (caddyadmin.Config, e
 							},
 						},
 					},
-					srvMgmt: buildManagementServerRoutes(opts.AstroTarget),
+					srvMgmt: buildManagementServerRoutes(opts),
 				},
 			},
 			TLS: buildTLSApp(opts.Email, opts.AllowedDomains),
@@ -396,35 +396,35 @@ func buildFullRouteTable(opts BuildOpts, userRules []UserRule) ([]caddyadmin.Rou
 
 // buildManagementServerRoutes returns the :8080 server definition shared by
 // both bootstrap and full configs. It proxies /api/* and /_/* to pb (so the
-// admin UI / API work even during maintenance mode) and everything else to
-// Astro.
-func buildManagementServerRoutes(astroTarget string) *caddyadmin.Server {
-	return &caddyadmin.Server{
-		Listen: []string{":8080"},
-		Routes: []caddyadmin.Route{
-			{
-				Match: []caddyadmin.MatchRule{{Path: []string{"/api/*"}}},
-				Handle: []caddyadmin.Handler{{
-					Handler:   "reverse_proxy",
-					Upstreams: []caddyadmin.Upstream{{Dial: pbAPIHost}},
-				}},
-			},
-			{
-				Match: []caddyadmin.MatchRule{{Path: []string{"/_/*"}}},
-				Handle: []caddyadmin.Handler{{
-					Handler:   "reverse_proxy",
-					Upstreams: []caddyadmin.Upstream{{Dial: pbAPIHost}},
-				}},
-			},
-			{
-				// Catch-all fallback to Astro.
-				Handle: []caddyadmin.Handler{{
-					Handler:   "reverse_proxy",
-					Upstreams: []caddyadmin.Upstream{{Dial: astroTarget}},
-				}},
-			},
+// admin UI / API work even during maintenance mode), serves the same static
+// file_server routes as the main site (so the Astro admin's /_astro/* assets
+// load in recovery mode), and everything else to Astro.
+func buildManagementServerRoutes(opts BuildOpts) *caddyadmin.Server {
+	routes := []caddyadmin.Route{
+		{
+			Match: []caddyadmin.MatchRule{{Path: []string{"/api/*"}}},
+			Handle: []caddyadmin.Handler{{
+				Handler:   "reverse_proxy",
+				Upstreams: []caddyadmin.Upstream{{Dial: pbAPIHost}},
+			}},
+		},
+		{
+			Match: []caddyadmin.MatchRule{{Path: []string{"/_/*"}}},
+			Handle: []caddyadmin.Handler{{
+				Handler:   "reverse_proxy",
+				Upstreams: []caddyadmin.Upstream{{Dial: pbAPIHost}},
+			}},
 		},
 	}
+	routes = append(routes, buildStaticRoutes(opts)...)
+	routes = append(routes, caddyadmin.Route{
+		// Catch-all fallback to Astro.
+		Handle: []caddyadmin.Handler{{
+			Handler:   "reverse_proxy",
+			Upstreams: []caddyadmin.Upstream{{Dial: opts.AstroTarget}},
+		}},
+	})
+	return &caddyadmin.Server{Listen: []string{":8080"}, Routes: routes}
 }
 
 // buildTLSApp returns the apps.tls subtree shared by both configs:
@@ -471,7 +471,7 @@ func buildPlainServers(opts BuildOpts, plainRoutes []caddyadmin.Route) map[strin
 			Listen: []string{":80"},
 			Routes: plainRoutes,
 		},
-		srvMgmt: buildManagementServerRoutes(opts.AstroTarget),
+		srvMgmt: buildManagementServerRoutes(opts),
 	}
 }
 

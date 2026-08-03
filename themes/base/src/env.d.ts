@@ -60,13 +60,4 @@ declare namespace App {
 
 interface Window {
   vanblog: { pb: import("@vanblog/sdk").VanblogClient };
-  __bytemdEditor:
-    | {
-        $on(
-          event: string,
-          cb: (e: { detail: { value: string } }) => void
-        ): void;
-        $set(props: { value: string }): void;
-      }
-    | undefined;
 }
