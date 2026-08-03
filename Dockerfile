@@ -142,8 +142,10 @@ COPY --from=astro-build /build/.default-theme /etc/vanblog/default-theme
 # Build version file for cache invalidation (weak ETag fallback).
 COPY --from=astro-build /build/.build-version /etc/vanblog/build-version
 # No more symlink — the theme host (Phase B) or entrypoint reads default-theme.
-# Copy the theme host (ESM module, no compilation needed).
+# Copy the theme host (ESM module, no compilation needed). index.mjs imports
+# ./core.mjs at runtime, so both must land side-by-side in /app/.
 COPY --from=astro-build /build/app/src/theme-host/index.mjs /app/theme-host.mjs
+COPY --from=astro-build /build/app/src/theme-host/core.mjs /app/core.mjs
 # The standalone admin SSR app lives at /build/app/dist (part of the workspace
 # COPY above), so its runtime deps resolve via /build/node_modules like themes.
 # VANBLOG_ADMIN_DIST_DIR=/build/app/dist (see entrypoint.prod.sh + Go defaults).
