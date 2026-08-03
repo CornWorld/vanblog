@@ -78,6 +78,11 @@ const boolField = (k: keyof Site, def = false): boolean => {
             <option value="default">default</option>
           </select>
           <small class="text-[var(--text-muted)]">切换立即生效（&lt;5s），无需重建镜像</small>
+          <div class="flex items-center gap-2">
+            <button type="button" id="theme-reload-btn" class="px-3 py-1 border border-[var(--border)] rounded w-fit">重新加载主题</button>
+            <span id="theme-reload-status" class="text-sm text-[var(--text-muted)]"></span>
+          </div>
+          <small class="text-[var(--text-muted)]">通过 ssh / 挂载方式放入新主题后，点「重新加载主题」让它的静态资源生效（无需重启容器）</small>
         </div>
 
         <script is:inline>
@@ -314,6 +319,28 @@ const boolField = (k: keyof Site, def = false): boolean => {
           alert('已保存');
         } catch (err) { alert('保存失败: ' + err.message); }
       });
+
+      // ── 重新加载主题：放入新主题后重扫 Caddy file_server 路由 ──
+      const reloadBtn = document.getElementById('theme-reload-btn');
+      const reloadStatus = document.getElementById('theme-reload-status');
+      if (reloadBtn) {
+        reloadBtn.addEventListener('click', async () => {
+          reloadBtn.disabled = true;
+          if (reloadStatus) reloadStatus.textContent = '重新加载中…';
+          try {
+            const res = await pb.vanblog.themes.reload();
+            if (res.error) {
+              if (reloadStatus) reloadStatus.textContent = '加载失败：' + res.error;
+            } else {
+              if (reloadStatus) reloadStatus.textContent = '已重新加载 ✓';
+            }
+          } catch (err) {
+            if (reloadStatus) reloadStatus.textContent = '加载失败：' + (err.message || err);
+          } finally {
+            reloadBtn.disabled = false;
+          }
+        });
+      }
     }
   </script>
 </AdminLayout>

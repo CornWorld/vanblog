@@ -107,6 +107,17 @@ export interface VanblogServices {
     delete(key: string): Promise<void>;
     restore(key: string): Promise<{ accepted: boolean; key: string }>;
   };
+  themes: {
+    // reload re-syncs Caddy after the themes directory changed at runtime
+    // (e.g. an operator dropped a new theme into VANBLOG_THEMES_DIR), so the
+    // file_server routes for the newly-added theme take effect without a
+    // container restart. Response shape matches routing.apply().
+    reload(): Promise<{
+      applied: boolean;
+      restart_needed: boolean;
+      error?: string;
+    }>;
+  };
   routing: {
     list(): Promise<{ rules: RouteRule[]; allowlist: string[] }>;
     // status returns the routing subsystem health: caddyLastError from site
@@ -303,6 +314,16 @@ export function createVanblogServices(pb: PocketBase): VanblogServices {
         pb.send(`/api/vanblog/backups/${encodeURIComponent(key)}/restore`, {
           method: "POST",
         }) as Promise<{ accepted: boolean; key: string }>,
+    },
+    themes: {
+      reload: () =>
+        pb.send("/api/vanblog/themes/reload", {
+          method: "POST",
+        }) as Promise<{
+          applied: boolean;
+          restart_needed: boolean;
+          error?: string;
+        }>,
     },
     routing: {
       list: () =>

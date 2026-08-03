@@ -41,6 +41,7 @@ func (s *Service) registerAdminRoutes(se *core.ServeEvent) {
 	se.Router.PUT("/api/vanblog/routing/rules", s.handleReplaceRules)
 	se.Router.POST("/api/vanblog/routing/validate", s.handleValidateRule)
 	se.Router.POST("/api/vanblog/routing/apply", s.handleApply)
+	se.Router.POST("/api/vanblog/themes/reload", s.handleThemeReload)
 }
 
 // requireAdmin mirrors internal/admin.requireAdmin — duplicated here to
@@ -313,6 +314,41 @@ func (s *Service) handleApply(e *core.RequestEvent) error {
 		"applied":        true,
 		"restart_needed": false,
 	})
+}
+
+// handleThemeReload is the admin-only trigger for re-syncing Caddy after the
+// themes directory changed at runtime (e.g. an operator dropped a new theme
+// folder into VANBLOG_THEMES_DIR). buildStaticRoutes enumerates the themes
+// dir at config-build time, so the file_server routes for a newly-added
+// theme only exist after a resync — this endpoint runs exactly that push.
+//
+// Response shape matches /api/vanblog/routing/apply: applied / restart_needed
+// / error, so the frontend can surface the outcome inline.
+func (s *Service) handleThemeReload(e *core.RequestEvent) error {
+	if !requireAdmin(e.Auth) {
+		return e.ForbiddenError("admin role required", "")
+	}
+	applied, restartNeeded, errMsg := s.reloadThemes()
+	return e.JSON(http.StatusOK, map[string]any{
+		"applied":        applied,
+		"restart_needed": restartNeeded,
+		"error":          errMsg,
+	})
+}
+
+// reloadThemes is the testable core of the reload endpoint: re-run
+// BootstrapSyncFromDB so Caddy re-enumerates the themes directory and emits
+// file_server routes for any newly-added theme. In skip-caddy mode it reports
+// restart_needed=true without touching Caddy (same escape hatch as handleApply).
+func (s *Service) reloadThemes() (applied, restartNeeded bool, errMsg string) {
+	if strings.EqualFold(os.Getenv("VANBLOG_SKIP_CADDY_SYNC"), "1") {
+		return false, true, "VANBLOG_SKIP_CADDY_SYNC=1：当前未连接 Caddy，跳过应用"
+	}
+	res := s.submit(syncRequest{resync: true})
+	if res.Error != "" {
+		return false, true, res.Error
+	}
+	return true, false, ""
 }
 
 // readRouting parses site.routing + site.routingAllowlist. Empty/missing

@@ -759,30 +759,37 @@ docker build \
 
 ### 10.2 Dockerfile 流程（已实现，仅供参考）
 
+> 注：下面为历史单主题构建流程，仅供理解。**当前实际流程**：Dockerfile 循环构建 `themes/*/` 全部主题，整体挂到 `/var/lib/vanblog/themes/`（`/build/themes` symlink）；`VANBLOG_ACTIVE_THEME`（默认 `vanblog`）只写入 `/etc/vanblog/default-theme` 作为启动 fallback。
+
 ```dockerfile
-ARG VANBLOG_ACTIVE_THEME=default
+ARG VANBLOG_ACTIVE_THEME=vanblog
 
 # astro-build stage
-COPY themes/${VANBLOG_ACTIVE_THEME}/ /build/theme/
-COPY app/ /build/app/        # integration + base 源头
-WORKDIR /build/theme
-RUN pnpm install && pnpm build
-# 输出 /build/themes/<active>/dist/
-RUN echo "${VANBLOG_ACTIVE_THEME}" > /build/.active-theme
+COPY themes/ ./themes/
+# 循环构建所有主题（而非只 build active）
+RUN for theme in themes/*/; do \
+      name=$(basename "$theme"); \
+      if [ -f "$theme/astro.config.mjs" ]; then \
+        (cd "$theme" && VANBLOG_THEME_NAME="$name" pnpm build) || exit 1; \
+      fi; \
+    done
+RUN echo "${VANBLOG_ACTIVE_THEME}" > /build/.default-theme
 
 # prod stage:
-COPY --from=astro-build /build/.active-theme /etc/vanblog/active-theme
-RUN ln -s "/build/themes/$(cat /etc/vanblog/active-theme)" /app
+COPY --from=astro-build /build/themes /var/lib/vanblog/themes
+COPY --from=astro-build /build/.default-theme /etc/vanblog/default-theme
 ```
 
 ### 10.3 切换主题
 
-| 模式     | 操作                                                 | 生效方式                                                                 |
-| -------- | ---------------------------------------------------- | ------------------------------------------------------------------------ |
-| **dev**  | admin 改 `site.activeTheme` → 保存 → 重启 dev server | alias 在启动时配置，重启才生效                                           |
-| **prod** | admin 改 `site.activeTheme` → 保存 → 重建镜像        | `docker build --build-arg VANBLOG_ACTIVE_THEME=<name> -t vanblog:prod .` |
+| 模式     | 操作                                                 | 生效方式                                                          |
+| -------- | ---------------------------------------------------- | ----------------------------------------------------------------- |
+| **dev**  | admin 改 `site.activeTheme` → 保存 → 重启 dev server | dev 直接跑 `astro dev`（单主题，无 theme host），重启才生效       |
+| **prod** | admin 改 `site.activeTheme` → 保存                   | theme host 每 5s 轮询 PB，检测到变化后热切换（<5s），无需重建镜像 |
 
-prod 不能运行时切换主题，因为 Astro 是编译时生成路由——切主题等于换一个 build 产物。entrypoint.prod.sh 启动时会读 `/etc/vanblog/active-theme` 校验与 `site.activeTheme` 一致，不一致会提示用户重建镜像。
+运行时切换已由 **theme host** 实现（`app/src/theme-host/index.mjs`）：每 5s 轮询 PB `site.activeTheme`，变化后 `switchTheme()` 动态 import 新主题 handler。`/etc/vanblog/default-theme` 只作为启动 fallback，不阻塞运行时切换。
+
+**新增/删除主题**后，Caddy 的 `/themes/<name>/` file_server 静态路由不会自动更新（config-build 时枚举 themes 目录）——在后台「站点配置 → 外观」点「重新加载主题」，触发一次 Caddy 重扫（等价于 `POST /api/vanblog/themes/reload`）。
 
 ### 10.4 CI 建议
 

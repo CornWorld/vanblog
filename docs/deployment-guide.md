@@ -145,3 +145,5 @@ Request → Caddy (:80/:443)
                                 ├── /admin /login /setup → admin SSR（app/dist）
                                 └── 其余 → 激活主题 SSR
 ```
+
+> **运行时新增主题**：把新主题（含 `dist/`）放进 `VANBLOG_THEMES_DIR` 后，Caddy 的 `/themes/<name>/` 静态路由不会自动出现（config-build 时枚举目录）——在后台「站点配置 → 外观」点「重新加载主题」（或调用 `POST /api/vanblog/themes/reload`），触发一次 Caddy 重扫。

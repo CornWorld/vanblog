@@ -502,3 +502,48 @@ func TestRenderConfig_SSRFSurfacesError(t *testing.T) {
 		t.Errorf("error path should omit fullConfig, got non-empty")
 	}
 }
+
+// --- theme reload endpoint core (reloadThemes) ---
+
+func TestReloadThemes_SkipCaddyMode(t *testing.T) {
+	withSkipCaddy(t, "1")
+	app := setupApp(t)
+	// No worker, no Caddy: reloadThemes short-circuits before submit().
+	svc := &Service{app: app}
+
+	applied, restartNeeded, errMsg := svc.reloadThemes()
+	if applied {
+		t.Errorf("skip-caddy mode: applied should be false, got true")
+	}
+	if !restartNeeded {
+		t.Errorf("skip-caddy mode: restart_needed should be true, got false")
+	}
+	if errMsg == "" {
+		t.Errorf("skip-caddy mode: expected informational error message, got empty")
+	}
+}
+
+func TestReloadThemes_PushesConfig(t *testing.T) {
+	withFastBackoffs(t)
+	app := setupApp(t)
+	srv, _ := newMockCaddyAdmin(t, 0) // 0 failures → first /load succeeds
+	svc := &Service{
+		app:           app,
+		caddyAdminURL: srv.URL,
+		syncCh:        make(chan syncRequest),
+		done:          make(chan struct{}),
+	}
+	go svc.runSyncWorker()
+	t.Cleanup(svc.Close)
+
+	applied, restartNeeded, errMsg := svc.reloadThemes()
+	if !applied {
+		t.Errorf("expected applied=true, got false (err=%q)", errMsg)
+	}
+	if restartNeeded {
+		t.Errorf("expected restart_needed=false, got true")
+	}
+	if errMsg != "" {
+		t.Errorf("expected empty error, got %q", errMsg)
+	}
+}
