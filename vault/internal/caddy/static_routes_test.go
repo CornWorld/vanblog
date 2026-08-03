@@ -57,6 +57,7 @@ func TestBuildStaticRoutes_Full(t *testing.T) {
 		if len(r.Match) != 1 || len(r.Match[0].Path) != 1 || r.Match[0].Path[0] != tc.path {
 			t.Errorf("%s: expected match %s, got %+v", tc.id, tc.path, r.Match)
 		}
+		// Admin URLs map 1:1 onto the client dir → no rewrite handler.
 		assertStaticHandle(t, r, filepath.Join(opts.AdminDistDir, "client"), "", tc.cache)
 	}
 
@@ -82,6 +83,7 @@ func TestBuildStaticRoutes_Full(t *testing.T) {
 
 		client := filepath.Join(opts.ThemesDir, name, "dist", "client")
 		prefix := "/themes/" + name
+		// Theme URLs carry the /themes/<name> prefix → a rewrite strips it.
 		assertStaticHandle(t, byID[astroID], client, prefix, CacheImmutable)
 		assertStaticHandle(t, byID[broadID], client, prefix, CacheStable)
 
@@ -117,15 +119,16 @@ func TestBuildStaticRoutes_AdminOnly(t *testing.T) {
 }
 
 // TestStaticRouteJSON pins the exact Caddy admin-API JSON a static route must
-// produce: a non-terminal `headers` handler setting Cache-Control, followed by
-// the terminal `file_server` handler with root + strip_path_prefix.
+// produce: a non-terminal `headers` handler setting Cache-Control, a non-terminal
+// `rewrite` handler stripping the theme prefix, then the terminal `file_server`
+// handler with root.
 func TestStaticRouteJSON(t *testing.T) {
 	r := staticFileRoute("r1", "/themes/base/_astro/*", "/var/lib/vanblog/themes/base/dist/client", "/themes/base", CacheImmutable)
 	b, err := json.Marshal(r)
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := `{"@id":"r1","match":[{"path":["/themes/base/_astro/*"]}],"handle":[{"handler":"headers","response":{"set":{"Cache-Control":["public, max-age=31536000, immutable"]}}},{"handler":"file_server","root":"/var/lib/vanblog/themes/base/dist/client","strip_path_prefix":"/themes/base"}]}`
+	want := `{"@id":"r1","match":[{"path":["/themes/base/_astro/*"]}],"handle":[{"handler":"headers","response":{"set":{"Cache-Control":["public, max-age=31536000, immutable"]}}},{"handler":"rewrite","strip_path_prefix":"/themes/base"},{"handler":"file_server","root":"/var/lib/vanblog/themes/base/dist/client"}]}`
 	if string(b) != want {
 		t.Fatalf("mismatch:\ngot:  %s\nwant: %s", b, want)
 	}
@@ -135,10 +138,15 @@ func TestStaticRouteJSON(t *testing.T) {
 
 func assertStaticHandle(t *testing.T, r caddyadmin.Route, root, strip, cache string) {
 	t.Helper()
-	if len(r.Handle) != 2 {
-		t.Fatalf("route %s: expected 2 handlers (headers + file_server), got %d", r.ID, len(r.Handle))
+	// headers (+ rewrite when strip is set) + file_server.
+	want := 2
+	if strip != "" {
+		want = 3
 	}
-	h0, h1 := r.Handle[0], r.Handle[1]
+	if len(r.Handle) != want {
+		t.Fatalf("route %s: expected %d handlers, got %d", r.ID, want, len(r.Handle))
+	}
+	h0 := r.Handle[0]
 	if h0.Handler != "headers" {
 		t.Errorf("route %s: handler[0] should be headers, got %s", r.ID, h0.Handler)
 	}
@@ -148,13 +156,23 @@ func assertStaticHandle(t *testing.T, r caddyadmin.Route, root, strip, cache str
 	if got := h0.Headers.Response.Set["Cache-Control"]; len(got) != 1 || got[0] != cache {
 		t.Errorf("route %s: expected Cache-Control=%q, got %v", r.ID, cache, got)
 	}
-	if h1.Handler != "file_server" {
-		t.Errorf("route %s: handler[1] should be file_server, got %s", r.ID, h1.Handler)
+	if strip != "" {
+		mid := r.Handle[1]
+		if mid.Handler != "rewrite" {
+			t.Errorf("route %s: handler[1] should be rewrite, got %s", r.ID, mid.Handler)
+		}
+		if mid.StripPathPrefix != strip {
+			t.Errorf("route %s: rewrite strip_path_prefix expected %q, got %q", r.ID, strip, mid.StripPathPrefix)
+		}
 	}
-	if h1.Root != root {
-		t.Errorf("route %s: expected root %q, got %q", r.ID, root, h1.Root)
+	last := r.Handle[len(r.Handle)-1]
+	if last.Handler != "file_server" {
+		t.Errorf("route %s: last handler should be file_server, got %s", r.ID, last.Handler)
 	}
-	if h1.StripPathPrefix != strip {
-		t.Errorf("route %s: expected strip_path_prefix %q, got %q", r.ID, strip, h1.StripPathPrefix)
+	if last.Root != root {
+		t.Errorf("route %s: expected root %q, got %q", r.ID, root, last.Root)
+	}
+	if last.StripPathPrefix != "" {
+		t.Errorf("route %s: file_server must not carry strip_path_prefix (it lives on rewrite now)", r.ID)
 	}
 }

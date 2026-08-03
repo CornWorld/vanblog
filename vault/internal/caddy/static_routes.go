@@ -59,28 +59,39 @@ func buildStaticRoutes(opts BuildOpts) []caddyadmin.Route {
 }
 
 // staticFileRoute builds one route whose handle applies a Cache-Control header
-// via a non-terminal `headers` handler, then serves the file via the terminal
-// `file_server` handler. stripPrefix is empty when the URL maps 1:1 onto the
-// client dir (admin app, base "/") and "/themes/<name>" for themes.
+// via a non-terminal `headers` handler, strips the theme prefix via a
+// non-terminal `rewrite` handler (only when stripPrefix is non-empty), then
+// serves the file via the terminal `file_server` handler.
+//
+// strip_path_prefix is a Caddy `rewrite` modifier — file_server has no such
+// field (the caddyadmin schema rejects it there). stripPrefix is empty when
+// the URL maps 1:1 onto the client dir (admin app, base "/") and
+// "/themes/<name>" for themes.
 func staticFileRoute(id, matchPath, clientDir, stripPrefix, cacheControl string) caddyadmin.Route {
-	return caddyadmin.Route{
-		ID:    id,
-		Match: []caddyadmin.MatchRule{{Path: []string{matchPath}}},
-		Handle: []caddyadmin.Handler{
-			{
-				Handler: "headers",
-				Headers: &caddyadmin.HeaderPolicy{
-					Response: &caddyadmin.HeaderOps{
-						Set: map[string][]string{"Cache-Control": {cacheControl}},
-					},
+	handle := []caddyadmin.Handler{
+		{
+			Handler: "headers",
+			Headers: &caddyadmin.HeaderPolicy{
+				Response: &caddyadmin.HeaderOps{
+					Set: map[string][]string{"Cache-Control": {cacheControl}},
 				},
 			},
-			{
-				Handler:         "file_server",
-				Root:            clientDir,
-				StripPathPrefix: stripPrefix,
-			},
 		},
+	}
+	if stripPrefix != "" {
+		handle = append(handle, caddyadmin.Handler{
+			Handler:         "rewrite",
+			StripPathPrefix: stripPrefix,
+		})
+	}
+	handle = append(handle, caddyadmin.Handler{
+		Handler: "file_server",
+		Root:    clientDir,
+	})
+	return caddyadmin.Route{
+		ID:     id,
+		Match:  []caddyadmin.MatchRule{{Path: []string{matchPath}}},
+		Handle: handle,
 	}
 }
 
