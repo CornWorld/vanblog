@@ -1,6 +1,8 @@
-# Theme Dispatcher 设计文档
+# Theme Host 设计文档
 
-> **状态**：**已实现**（2026-08）。核心模型落地：单进程 dispatcher 动态 import 主题 handler + 按 `site.activeTheme` 热切换。**静态服务已按设计演进为 Caddy file_server**（见 `vault/internal/caddy/static_routes.go`，不再是 dispatcher sirv）；admin 额外抽离为独立 SSR（`app/`，见 `docs/theme-concepts.md`）。本文档作为设计历史保留。
+> **⚠️ 命名变更（2026-08）**：本模块已从「dispatcher」改名为 **theme host**（`app/src/theme-host/index.mjs`，健康端点 `/__theme_host_health`）。它本质是托管多 theme handler 的轻量请求路由宿主，不是重型编排器。本文档（原 `theme-dispatcher-design.md`）与 `theme-host-execution-plan.md` 作为设计历史保留。
+
+> **状态**：**已实现**（2026-08）。核心模型落地：单进程 theme host 动态 import 主题 handler + 按 `site.activeTheme` 热切换。**静态服务已按设计演进为 Caddy file_server**（见 `vault/internal/caddy/static_routes.go`，不再是 theme host sirv）；admin 额外抽离为独立 SSR（`app/`，见 `docs/theme-concepts.md`）。本文档作为设计历史保留。
 > **前置阅读**：[`agent-theme-architecture.md`](./agent-theme-architecture.md)、[`theme-implementer-guide.md`](./theme-implementer-guide.md) > **目标**：定义「单进程多 theme handler」的运行模型，让 theme 切换从「重建镜像」降到「<5s 热切换」。
 
 ---
@@ -54,7 +56,7 @@
 └──────┬───────────────────────────────────────────────────────────────┘
        │
        ▼
-┌─ Dispatcher (single Node process on :4321) ──────────────────────────┐
+┌─ Theme Host (single Node process on :4321) ──────────────────────────┐
 │                                                                      │
 │   ┌──────────────────────────────────────────────────────────────┐   │
 │   │  Theme Registry (in-memory Map<name, LoadedTheme>)           │   │
@@ -82,14 +84,14 @@
 
 ### 3.1 目录布局（运行时）
 
-所有已安装的 theme 都放在宿主机的固定目录下，dispatcher 扫描：
+所有已安装的 theme 都放在宿主机的固定目录下，theme host 扫描：
 
 ```
 /var/lib/vanblog/themes/                  ← VANBLOG_THEMES_DIR
 ├── default/
 │   ├── theme.json
 │   └── dist/
-│       ├── entry.mjs                     ← dispatcher 动态 import 这个
+│       ├── entry.mjs                     ← theme host 动态 import 这个
 │       ├── server/
 │       └── client/
 │           └── _astro/                   ← caddy file_server 这里
@@ -114,11 +116,11 @@
   "recommendedPalette": "sepia", // 推荐搭配的 palette name（不强求存在）
   "recommendedDarkMode": "auto", // light | dark | auto（推荐 dark mode 默认值）
   "schemaVersion": 1, // 用于将来升级时的迁移判断
-  "vanblogCompatibility": "^1.0" // semver，dispatcher 拒绝加载不兼容的 theme
+  "vanblogCompatibility": "^1.0" // semver，theme host 拒绝加载不兼容的 theme
 }
 ```
 
-- `recommendedPalette` 只是**提示**——dispatcher 切换 theme 时如果当前 palette 跟新 theme 的推荐值不同，按用户配置的迁移策略处理（见 §6.2）。
+- `recommendedPalette` 只是**提示**——theme host 切换 theme 时如果当前 palette 跟新 theme 的推荐值不同，按用户配置的迁移策略处理（见 §6.2）。
 - 不强制要求 palette 在 `hooks/palettes/` 中实际存在——不存在的 palette 就是普通字符串，theme 自己负责优雅降级。
 
 ### 3.3 Theme 作者要做什么
@@ -163,11 +165,11 @@ export default defineConfig({
 
 ---
 
-## 4. Dispatcher 实现规范
+## 4. Theme Host 实现规范
 
 ### 4.1 接口
 
-dispatcher 是一个独立的 Node 进程，监听 `127.0.0.1:4321`。它的入口是 `app/src/dispatcher/index.ts`（新建）：
+theme host 是一个独立的 Node 进程，监听 `127.0.0.1:4321`。它的入口是 `app/src/theme-host/index.ts`（新建）：
 
 ```ts
 // 简化伪代码
@@ -255,9 +257,9 @@ async function handleThemeSwitch(newName: string) {
 
 | 场景                                       | 行为                                                             |
 | ------------------------------------------ | ---------------------------------------------------------------- |
-| `site.activeTheme` 指向不存在的 theme      | dispatcher 拒绝加载，**继续用当前 theme**，admin UI 显示红色警告 |
+| `site.activeTheme` 指向不存在的 theme      | theme host 拒绝加载，**继续用当前 theme**，admin UI 显示红色警告 |
 | theme dist 损坏（import 抛错）             | 同上，**不破坏当前服务**                                         |
-| theme handler 内部异常                     | dispatcher 不吞错，原样返回 500                                  |
+| theme handler 内部异常                     | theme host 不吞错，原样返回 500                                  |
 | PB 不可达（启动时读不到 site.activeTheme） | fallback 到 `VANBLOG_DEFAULT_THEME`（build-arg 写入）            |
 
 ### 4.3 启动顺序（新 entrypoint.prod.sh）
@@ -265,11 +267,11 @@ async function handleThemeSwitch(newName: string) {
 ```sh
 # 1. Caddy bootstrap
 # 2. PocketBase up
-# 3. Dispatcher up (replaces direct Astro server)
+# 3. Theme Host up (replaces direct Astro server)
 cd /app/dist
 VANBLOG_THEMES_DIR=/var/lib/vanblog/themes \
 ASTRO_NODE_AUTOSTART=disabled \
-node ./dispatcher/index.mjs &
+node ./theme-host/index.mjs &
 
 # 4. Caddy fallback route still → 127.0.0.1:4321
 #    New: caddy also serves /themes/<name>/static/* via file_server
@@ -305,11 +307,11 @@ node ./dispatcher/index.mjs &
 // 用 caddy 的 route 单条规则 + path_vars 捕获 name，然后 file_server
 // root = "/var/lib/vanblog/themes/{http.matchers.path.name}/dist/client/"
 //
-// 简化方案（MVP）：caddy 仍然 reverse_proxy static 给 dispatcher，
-// dispatcher 自己处理静态文件服务。Phase 2 再优化到 caddy 直供。
+// 简化方案（MVP）：caddy 仍然 reverse_proxy static 给 theme host，
+// theme host 自己处理静态文件服务。Phase 2 再优化到 caddy 直供。
 ```
 
-**MVP 决策**：静态资源**先走 dispatcher**（dispatcher 内部用 `sirv` 或 `send` 处理 `/themes/<name>/static/*`）。Phase 2 再让 caddy 直接 file_server（性能更好，但需要改 Go translator）。
+**MVP 决策**：静态资源**先走 theme host**（theme host 内部用 `sirv` 或 `send` 处理 `/themes/<name>/static/*`）。Phase 2 再让 caddy 直接 file_server（性能更好，但需要改 Go translator）。
 
 ### 5.3 未来优化（Phase 2）
 
@@ -481,8 +483,8 @@ theme 在自己的样式中**永远用 CSS 变量**，不要硬编码颜色：
 | 方式                       | 场景                         | 流程                                                                          |
 | -------------------------- | ---------------------------- | ----------------------------------------------------------------------------- |
 | **内置**                   | 镜像自带                     | `themes/` 目录在 Docker build 时 COPY 进 `/var/lib/vanblog/themes/`           |
-| **本地上传**               | 用户从 GitHub 下载 theme.zip | admin UI 上传 → 解压到 `VANBLOG_THEMES_DIR` → dispatcher 自动发现（fs watch） |
-| **Marketplace**（Phase 3） | 一键安装                     | admin UI 点「安装」→ 后台下载 → 解压 → dispatcher 发现                        |
+| **本地上传**               | 用户从 GitHub 下载 theme.zip | admin UI 上传 → 解压到 `VANBLOG_THEMES_DIR` → theme host 自动发现（fs watch） |
+| **Marketplace**（Phase 3） | 一键安装                     | admin UI 点「安装」→ 后台下载 → 解压 → theme host 发现                        |
 
 ### 8.2 生命周期
 
@@ -500,8 +502,8 @@ theme 在自己的样式中**永远用 CSS 变量**，不要硬编码颜色：
       └──────────── user re-activates ─────────┘
 ```
 
-- **installed**：theme 在磁盘上，但 dispatcher 没加载它的 handler
-- **loaded**：dispatcher 通过 `import()` 把 handler 载入内存
+- **installed**：theme 在磁盘上，但 theme host 没加载它的 handler
+- **loaded**：theme host 通过 `import()` 把 handler 载入内存
 - **evicted**：用户切到别的 theme，老 theme 在 5s drain 后从 registry 移除引用（GC 回收内存）
 
 ### 8.3 LRU 限制（防内存膨胀）
@@ -527,13 +529,13 @@ const MAX_LOADED_THEMES = 3;
 - [ ] Dockerfile 把 `themes/` 整体 COPY 到 `/var/lib/vanblog/themes/`（当前只 COPY 编译产物）
 - [x] ~~删除 `themes/default/` 里硬编码开发机路径的注释（误导）~~（该目录已被 base/vanblog 取代）
 
-### Phase 2（Dispatcher MVP，~3-5 天）—— 热切换核心能力
+### Phase 2（Theme Host MVP，~3-5 天）—— 热切换核心能力
 
 **目标**：用户改 `site.activeTheme` → 5s 内生效，无需重启容器。
 
-- [ ] 写 `app/src/dispatcher/index.ts`（~200 行）
-- [ ] entrypoint 启动 dispatcher 替代直接跑 Astro
-- [ ] PB hook 推送 site 变更给 dispatcher（或 dispatcher 订阅 PB realtime）
+- [ ] 写 `app/src/theme-host/index.ts`（~200 行）
+- [ ] entrypoint 启动 theme host 替代直接跑 Astro
+- [ ] PB hook 推送 site 变更给 theme host（或 theme host 订阅 PB realtime）
 - [ ] theme astro.config 增加 `base` + `assetsPrefix`
 - [ ] admin/site.astro UI 改造（单下拉 + 高级折叠）
 - [ ] 集成测试：切换 theme 不丢请求
@@ -557,25 +559,25 @@ const MAX_LOADED_THEMES = 3;
 | `import()` 失败（dist 损坏）      | 拒绝切换，保持当前 theme，admin 显示警告                            |
 | 资源路径前缀变化破坏 SEO          | 页面 HTML 路径不变（只有静态资源加前缀）；sitemap 仍正常            |
 | 老 bookmark 指向 `/_astro/foo.js` | 404，但用户切 theme 本就会换页面；可加 redirect 规则                |
-| theme 间状态共享（cookies 等）    | dispatcher 不持久化任何请求级状态；theme handler 内部用 locals 即可 |
+| theme 间状态共享（cookies 等）    | theme host 不持久化任何请求级状态；theme handler 内部用 locals 即可 |
 
 ### 10.2 开放问题
 
-1. **PB Realtime vs Polling**：dispatcher 怎么最快感知 `site.activeTheme` 变化？
+1. **PB Realtime vs Polling**：theme host 怎么最快感知 `site.activeTheme` 变化？
    - 倾向：PB Realtime subscribe（已存在），fallback 5s 轮询。
 2. **Theme 在 build 时如何拿到自己的 name？** `astro.config.mjs` 里硬编码？还是从环境变量读？
    - 倾向：`process.env.VANBLOG_THEME_NAME`，由 build 系统注入。
-3. **Dev 模式下 dispatcher 怎么工作？** dev server 没有 `dist/`。
-   - 倾向：dev 模式跳过 dispatcher，直接跑 `astro dev`（单 theme）。
+3. **Dev 模式下 theme host 怎么工作？** dev server 没有 `dist/`。
+   - 倾向：dev 模式跳过 theme host，直接跑 `astro dev`（单 theme）。
 4. **【P0】prerender 静态页面归属**：见 §13。
-5. **【P1】单进程崩溃半径**：一个 theme handler 抛 unhandled rejection 会拖崩整个 dispatcher（因为所有 handler 共用 Node 事件循环）。需要 `process.on('unhandledRejection')` + `uncaughtException` 全局兜底 + 健康探活。考虑是否要用 `worker_threads` 做进程内隔离。
+5. **【P1】单进程崩溃半径**：一个 theme handler 抛 unhandled rejection 会拖崩整个 theme host（因为所有 handler 共用 Node 事件循环）。需要 `process.on('unhandledRejection')` + `uncaughtException` 全局兜底 + 健康探活。考虑是否要用 `worker_threads` 做进程内隔离。
 6. **【P1】Pack 路由 + theme `base` 的冲突**：theme build 时 pack metadata 烧死在 chunks 里（`packVirtualPlugin`），新装 Pack 需所有 theme 重 build。`base: '/themes/<name>/'` 还会把 Pack 的 `/p/<name>` 路由也加上前缀，可能破坏 Pack URL 稳定性。**Phase 2 实施前必须 spike 验证**。
 7. **【P2】跨 theme session 共享**：cookie 按 domain 存，跨 theme 不丢。但每个 theme 的 `middleware.ts` 是独立 module instance，AsyncLocalStorage 也独立——认证状态能否跨 theme 正确传递需要实测。
-8. **【P2】Theme 上传安全模型**：dispatcher `import()` 一个 theme 的 entry.mjs = 信任它执行任意代码。Phase 3 必须：签名验证 / 官方 marketplace / 沙箱（vm2 已不可用，isolated-vm 复杂）。
+8. **【P2】Theme 上传安全模型**：theme host `import()` 一个 theme 的 entry.mjs = 信任它执行任意代码。Phase 3 必须：签名验证 / 官方 marketplace / 沙箱（vm2 已不可用，isolated-vm 复杂）。
 9. **【P3】多租户场景**：一个 vanblog 实例按 host 路由到不同 theme。当前设计假设单 site。明确「单 site 假设」写入契约，未来如需多租户再扩展。
-10. **【P0】Astro 版本升级**：所有已安装 theme 必须用 dispatcher 的 Astro 版本。dispatcher 加载时检查 `themeJson.vanblogCompatibility` semver，拒绝不兼容的 theme。
+10. **【P0】Astro 版本升级**：所有已安装 theme 必须用 theme host 的 Astro 版本。theme host 加载时检查 `themeJson.vanblogCompatibility` semver，拒绝不兼容的 theme。
 11. **【P3】可观测性**：metrics（每 theme 请求量、加载时间、内存占用）+ 日志格式（区分 theme）+ 健康检查端点契约。MVP 不致命，生产化前必须补。
-12. **【P0】Astro experimental.cache 与 dispatcher 的交互**：见 §13。
+12. **【P0】Astro experimental.cache 与 theme host 的交互**：见 §13。
 
 ---
 
@@ -588,9 +590,9 @@ const MAX_LOADED_THEMES = 3;
 | `hooks/palettes/`                                    | ✅ 不变，palette.css 端点继续工作                                               |
 | `app/integrations/themes/index.mjs`                  | ✅ 不变                                                                         |
 | `site.palette` / `site.activeTheme` 字段             | ✅ 不变，新增 `site.paletteMigrationMode`                                       |
-| `app/src/layouts/BaseLayout.astro`                   | 🟡 移除 `<link href="/api/palette.css">` 改为 dispatcher 注入（或保留，没问题） |
+| `app/src/layouts/BaseLayout.astro`                   | 🟡 移除 `<link href="/api/palette.css">` 改为 theme host 注入（或保留，没问题） |
 | `Dockerfile`                                         | 🟡 改 COPY 目标 + 改 entrypoint cd 路径                                         |
-| `docker/entrypoint.prod.sh`                          | 🟡 改启动命令（启动 dispatcher 而非 Astro 直接）                                |
+| `docker/entrypoint.prod.sh`                          | 🟡 改启动命令（启动 theme host 而非 Astro 直接）                                |
 | `vault/internal/caddy/config_builder.go`             | 🟡 MVP 不改，Phase 3 加 file_server 规则                                        |
 | `app/src/pages/api/themes.ts`                        | ✅ 不变，继续枚举磁盘上的 theme                                                 |
 | `app/src/pages/admin/site.astro`                     | 🟡 UI 改造                                                                      |
@@ -614,7 +616,7 @@ const MAX_LOADED_THEMES = 3;
 
 ---
 
-## 13. Astro experimental.cache 与 Theme Dispatcher 的交互
+## 13. Astro experimental.cache 与 Theme Host 的交互
 
 ### 13.1 前置澄清：vanblog 不是「纯 SSR」
 
@@ -642,11 +644,11 @@ experimental: {
 | stale 后请求（swr 窗口内）                    | **~1ms** | 立即返回旧缓存，后台异步重验证         |
 | PB hook 调 `/api/revalidate {tags:["posts"]}` | -        | 失效缓存，下次请求触发 MISS → 重新渲染 |
 
-**为什么不用 `prerender = true`**：vanblog 是动态内容站（用户随时发文、改配置、切 theme/palette），prerender 的 build 时数据快照会立刻过时，必须反复 `astro build` 才能更新——而 dispatcher 的整个设计目标是「不 rebuild」。SWR cache 在 99% 请求下达到 SSG 性能，同时保留实时性。
+**为什么不用 `prerender = true`**：vanblog 是动态内容站（用户随时发文、改配置、切 theme/palette），prerender 的 build 时数据快照会立刻过时，必须反复 `astro build` 才能更新——而 theme host 的整个设计目标是「不 rebuild」。SWR cache 在 99% 请求下达到 SSG 性能，同时保留实时性。
 
 ### 13.2 Theme 切换时的 cache 失效问题
 
-**核心问题**：dispatcher 切换 `site.activeTheme` 后，旧 theme 渲染的 HTML 仍在 `memoryCache()` 里。如果不清空，用户会看到：
+**核心问题**：theme host 切换 `site.activeTheme` 后，旧 theme 渲染的 HTML 仍在 `memoryCache()` 里。如果不清空，用户会看到：
 
 - HTML 是 default 的（旧缓存）
 - JS/CSS chunks 是 magazine 的（新 theme 资源 URL 自带 `/themes/magazine/` 前缀）
@@ -656,7 +658,7 @@ experimental: {
 
 | 方案                          | 实现                                                                           | 优点                                                        | 缺点                                                      |
 | ----------------------------- | ------------------------------------------------------------------------------ | ----------------------------------------------------------- | --------------------------------------------------------- |
-| **A. 进程重启**               | 切 theme = kill 老 SSR 进程，起新进程                                          | ✅ 天然清空所有内存状态（cache、module cache、connections） | ❌ 切换有 1-2s downtime；失去 dispatcher 的「热切换」价值 |
+| **A. 进程重启**               | 切 theme = kill 老 SSR 进程，起新进程                                          | ✅ 天然清空所有内存状态（cache、module cache、connections） | ❌ 切换有 1-2s downtime；失去 theme host 的「热切换」价值 |
 | **B. 全局 cache clear**       | `await context.cache.invalidate('*')` 或类似 API                               | ✅ 无 downtime                                              | ❌ 需要 Astro cache API 支持「全局失效」，可能不存在      |
 | **C. 按路由 tag 失效**        | 调 `invalidate({tags: ['posts','home','feed']})`                               | ✅ 精准，无 downtime                                        | ❌ 需要枚举所有 tag；漏一个就出问题                       |
 | **D. 按 theme name 命名空间** | 每个 theme 的 cache 隔离（如 `theme:default:posts` vs `theme:magazine:posts`） | ✅ 彻底隔离，切回来 hit 老缓存                              | ❌ Astro `memoryCache()` 不支持 namespacing；需 fork      |
@@ -678,7 +680,7 @@ experimental: {
 
 - `cache` LRUMap 实例是**闭包私有**，外部拿不到引用，无法直接 `.clear()`
 - `path` 失效是**字符串严格相等**比较，不支持 glob
-- 单进程 dispatcher 加载多个 theme handler 时，**每个 theme handler 都有自己的 `astro:cache` module instance**（因为 module URL 不同）→ 各自独立的 LRUMap → **天然隔离**
+- 单进程 theme host 加载多个 theme handler 时，**每个 theme handler 都有自己的 `astro:cache` module instance**（因为 module URL 不同）→ 各自独立的 LRUMap → **天然隔离**
 
 ### 13.5 方案 F：tag 自带 theme name（推荐）
 
@@ -704,7 +706,7 @@ export default defineConfig({
 });
 ```
 
-dispatcher 切换逻辑：
+theme host 切换逻辑：
 
 ```ts
 async function switchTheme(newName: string) {
@@ -721,12 +723,12 @@ async function switchTheme(newName: string) {
 
 - ✅ 利用 Astro 原生 tag 机制，**零 fork、零 hack**
 - ✅ 精准清空——只清旧 theme 的 entry，其他 theme 的缓存（如果同时 loaded）不受影响
-- ✅ Theme 作者无需关心——dispatcher build 时自动注入
+- ✅ Theme 作者无需关心——theme host build 时自动注入
 - ✅ admin、未 tag 的页面默认不缓存，不受影响
 
 **缺点 / 边缘**：
 
-- 🟡 Theme 代码里手动调 `Astro.cache.set({ tags: [...] })` 时，dispatcher 需要在 vite plugin 层自动 merge `theme:<name>` ——可做
+- 🟡 Theme 代码里手动调 `Astro.cache.set({ tags: [...] })` 时，theme host 需要在 vite plugin 层自动 merge `theme:<name>` ——可做
 - 🟡 实测：**如果每个 theme handler 有独立 module instance（独立 LRUMap），其实根本不需要 invalidate**——切 theme 后请求都走新 handler，新 handler 的 cache 是空的。需要 spike 确认。
 
 ### 13.6 重新评估：单进程多 handler 的 cache 隔离
@@ -743,10 +745,10 @@ const memoryProvider = (config) => {
 };
 ```
 
-**每个 `memoryCache()` 调用都创建独立的 LRUMap**。而在 dispatcher 模式下：
+**每个 `memoryCache()` 调用都创建独立的 LRUMap**。而在 theme host 模式下：
 
 ```
-dispatcher process
+theme host process
 ├─ import('themes/vanblog/dist/server/entry.mjs')
 │    └─ 内部 import 'astro/config' → 调用 memoryCache() → LRUMap #1
 └─ import('themes/magazine/dist/server/entry.mjs')
@@ -768,16 +770,16 @@ dispatcher process
 - 天然隔离，无需做任何事
 - 但意味着 ESM module instance 是 per-handler 的——这又会让 module unload 问题更严重
 
-**待验证**：写一个最小 spike，dispatcher 同时 import 两个 entry.mjs，看它们的 `options.cache` 引用是否相同。
+**待验证**：写一个最小 spike，theme host 同时 import 两个 entry.mjs，看它们的 `options.cache` 引用是否相同。
 
 ### 13.7 结论对方案 7 的影响
 
-cache 隔离问题**不是 dispatcher 的致命伤**——方案 F 可以解决。但还有以下未解问题叠加：
+cache 隔离问题**不是 theme host 的致命伤**——方案 F 可以解决。但还有以下未解问题叠加：
 
 | 问题                   | 严重性 | 是否已解                                                             |
 | ---------------------- | ------ | -------------------------------------------------------------------- |
 | cache 隔离             | 🟡 中  | 方案 F 可解（待 spike 确认是否真有问题）                             |
-| ESM module 无法 unload | 🟡 中  | 切换 N 次后内存累积；只能周期性重启 dispatcher                       |
+| ESM module 无法 unload | 🟡 中  | 切换 N 次后内存累积；只能周期性重启 theme host                       |
 | 单进程崩溃半径         | 🔴 高  | 一个 theme 抛 unhandled rejection 全挂；需要 worker_threads 或多进程 |
 | Pack 路由 + base 冲突  | 🔴 高  | 未 spike，可能是方案的致命问题                                       |
 
@@ -857,7 +859,7 @@ const resolve = async (specifier) => {
 | `base` 会改资源 URL 吗？                                          | ✅ 会。HTML 里的 `<script src>`、`<link href>` 都自动带 `/themes/<name>/_astro/` 前缀。                                             |
 | Pack URL `/p/bookmarks` 会变成 `/themes/vanblog/p/bookmarks` 吗？ | ❌ 不会。**Pattern 不变**，但请求时 Astro 会从 URL 里剥掉 base 前缀后再 match。                                                     |
 | 老 bookmark `/p/bookmarks`（无前缀）还能用吗？                    | ✅ 能。removeBase 对无前缀的 pathname 是 no-op。                                                                                    |
-| Caddy 需要特殊配置吗？                                            | 🟡 需要。Caddy 必须把 `/themes/<name>/*` 路由到 dispatcher，且 dispatcher 要把 base 前缀保留传给 Astro handler（不能 rewrite 掉）。 |
+| Caddy 需要特殊配置吗？                                            | 🟡 需要。Caddy 必须把 `/themes/<name>/*` 路由到 theme host，且 theme host 要把 base 前缀保留传给 Astro handler（不能 rewrite 掉）。 |
 
 ### 14.5 修正 §3.4 的资源 URL 表
 
@@ -866,15 +868,15 @@ const resolve = async (specifier) => {
 | 资源类型                            | URL 形式                                   | 说明                                         |
 | ----------------------------------- | ------------------------------------------ | -------------------------------------------- |
 | 页面 HTML                           | `/posts/123` 或 `/themes/<name>/posts/123` | 两种都 work（removeBase 兼容）               |
-| **建议统一**：所有页面 URL 不带前缀 | `/posts/123`                               | dispatcher 不给 HTML 加前缀，避免 SEO 双地址 |
+| **建议统一**：所有页面 URL 不带前缀 | `/posts/123`                               | theme host 不给 HTML 加前缀，避免 SEO 双地址 |
 | JS/CSS chunks                       | `/themes/<name>/_astro/foo.ABC.js`         | 自动带前缀，caddy file_server 直供           |
 | Public 静态资源                     | `/themes/<name>/favicon.ico`               | 自动带前缀                                   |
 | API                                 | `/api/posts`                               | **永远不带前缀**（admin/api 禁区）           |
 | Pack 页面 URL                       | `/p/bookmarks`                             | 不带前缀（路由 pattern 决定）                |
 
-### 14.6 dispatcher 的 URL 处理契约（明确）
+### 14.6 theme host 的 URL 处理契约（明确）
 
-dispatcher 接收到请求后：
+theme host 接收到请求后：
 
 ```ts
 // 1. 判断是否是 theme 静态资源
@@ -882,7 +884,7 @@ if (
   req.url.startsWith(`/themes/${name}/_astro/`) ||
   req.url.startsWith(`/themes/${name}/static/`)
 ) {
-  // 让 caddy file_server 处理，或 dispatcher 内部 sirv
+  // 让 caddy file_server 处理，或 theme host 内部 sirv
   return serveStatic(req, res, themesDir(name));
 }
 
@@ -892,7 +894,7 @@ if (
 return theme.handler(req, res);
 ```
 
-**关键**：dispatcher **不重写 URL**，让 Astro 自己处理 base。用户看到的 URL 永远是 `/posts/123`（caddy fallback 路由到 dispatcher，dispatcher 透传给 handler）。
+**关键**：theme host **不重写 URL**，让 Astro 自己处理 base。用户看到的 URL 永远是 `/posts/123`（caddy fallback 路由到 theme host，theme host 透传给 handler）。
 
 ### 14.7 对方案 7/8 的影响
 
@@ -900,7 +902,7 @@ return theme.handler(req, res);
 
 | 方案                        | 之前担忧                | 实测结论              |
 | --------------------------- | ----------------------- | --------------------- |
-| 方案 7（单进程 dispatcher） | Pack 路由会被 base 破坏 | ✅ 不会，pattern 不变 |
+| 方案 7（单进程 theme host） | Pack 路由会被 base 破坏 | ✅ 不会，pattern 不变 |
 | 方案 8（多进程 supervisor） | 同上                    | ✅ 同上               |
 
 **两个方案在「Pack + base」这点上没有差异**，都可以放心推进。
@@ -997,7 +999,7 @@ cacheB.get('foo') = undefined  ✅ 天然隔离
 
 ### 15.6 结论：方案 F 是多余的
 
-§13.5 设计的「theme name as tag」方案 **完全不需要**。dispatcher 切换 theme 时：
+§13.5 设计的「theme name as tag」方案 **完全不需要**。theme host 切换 theme 时：
 
 ```ts
 async function switchTheme(newName: string) {
@@ -1006,7 +1008,7 @@ async function switchTheme(newName: string) {
 }
 ```
 
-**dispatcher 不需要调任何 invalidate API，不需要改 theme.json schema 加 recommendedPalette 之外的 tag，不需要改 theme build 流程注入 tag。**
+**theme host 不需要调任何 invalidate API，不需要改 theme.json schema 加 recommendedPalette 之外的 tag，不需要改 theme build 流程注入 tag。**
 
 ### 15.7 更新方案 7/8 评判
 
@@ -1017,6 +1019,6 @@ async function switchTheme(newName: string) {
 | 单进程崩溃半径         | 🔴 高                      | 🔴 仍存在，是方案 7 唯一比方案 8 差的地方                             |
 | Pack + base 冲突       | 🔴 高                      | ✅ 不存在（§14 已证）                                                 |
 
-**天平倾斜**：方案 7（单进程 dispatcher）的 4 个主要担忧里，**3 个已解除**。剩下「单进程崩溃半径」是唯一明显劣势——但可以通过 `process.on('unhandledRejection')` + 健康探活 + 自动重启缓解（生产级 Node 服务标准操作）。
+**天平倾斜**：方案 7（单进程 theme host）的 4 个主要担忧里，**3 个已解除**。剩下「单进程崩溃半径」是唯一明显劣势——但可以通过 `process.on('unhandledRejection')` + 健康探活 + 自动重启缓解（生产级 Node 服务标准操作）。
 
 **新判断**：方案 7 vs 方案 8 的选择倾向**回到均势**，甚至方案 7 略胜（代码量更少、内存更省、切换更快）。

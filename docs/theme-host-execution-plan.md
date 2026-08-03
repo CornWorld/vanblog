@@ -1,8 +1,8 @@
-# 方案 7 执行计划（Theme Dispatcher）
+# 方案 7 执行计划（Theme Host）
 
 > **目标**：让 `site.activeTheme` 切换从「重建镜像」降到「<5s 热切换」。单 Node 进程 + ESM 动态 import 多个 theme handler。
 >
-> **前置阅读**：[`theme-dispatcher-design.md`](./theme-dispatcher-design.md)（完整设计 + spike 结论）
+> **前置阅读**：[`theme-host-design.md`](./theme-host-design.md)（完整设计 + spike 结论）
 >
 > **本文档是给 sub-agent 的执行说明书**。每个 step 是独立可委托的工作单元，含：改动文件、代码骨架、验收标准。
 
@@ -13,7 +13,7 @@
 | Phase | 目标 | 步骤数 | 预估工作量 |
 |---|---|---|---|
 | **Phase A** | 修复现有架构不一致，让 `site.activeTheme` 至少在重启后生效 | 3 步 | 0.5 天 |
-| **Phase B** | 实现 dispatcher 核心（单进程 + 动态 import + theme registry） | 4 步 | 1.5 天 |
+| **Phase B** | 实现 theme host 核心（单进程 + 动态 import + theme registry） | 4 步 | 1.5 天 |
 | **Phase C** | Theme build 流程改造（`base` / `assetsPrefix`）+ PB 字段 + SDK | 3 步 | 0.5 天 |
 | **Phase D** | Admin UI 改造 + palette 迁移策略 | 2 步 | 0.5 天 |
 | **Phase E** | 端到端测试 + 文档更新 | 2 步 | 0.5 天 |
@@ -78,7 +78,7 @@ COPY --from=astro-build /build/.default-theme /etc/vanblog/default-theme
 
 **代码骨架**（替换第 80-85 行）：
 ```sh
-# 4. Start Astro SSR server (default theme; dispatcher will replace this in Phase B)
+# 4. Start Astro SSR server (default theme; theme host will replace this in Phase B)
 DEFAULT_THEME=$(cat /etc/vanblog/default-theme 2>/dev/null || echo "default")
 THEME_DIR="/var/lib/vanblog/themes/${DEFAULT_THEME}/dist"
 
@@ -92,13 +92,13 @@ fi
 echo "[vanblog] starting Astro SSR server with theme: ${DEFAULT_THEME}"
 cd "${THEME_DIR}"
 HOST=127.0.0.1 PORT=4321 ASTRO_NODE_AUTOSTART=disabled node ./server/entry.mjs &
-# 注意：这里直接用 startServer 而非 handler，因为 Phase A 还没有 dispatcher
+# 注意：这里直接用 startServer 而非 handler，因为 Phase A 还没有 theme host
 HOST=127.0.0.1 PORT=4321 node -e "import('./server/entry.mjs').then(m => m.startServer())" &
 ```
 
-> **注意**：Phase A 的 entrypoint 启动方式跟 Phase B 不一样。Phase A 是 `startServer()`（自启动 http server），Phase B 改成 dispatcher 接管 http server，theme 只提供 handler。为了不让 Phase A 改两次，可以**直接跳到用 dispatcher**——见 Phase B Step B1。
+> **注意**：Phase A 的 entrypoint 启动方式跟 Phase B 不一样。Phase A 是 `startServer()`（自启动 http server），Phase B 改成 theme host 接管 http server，theme 只提供 handler。为了不让 Phase A 改两次，可以**直接跳到用 theme host**——见 Phase B Step B1。
 
-**简化方案**：Phase A 和 Phase B 合并实施。**跳过 Phase A 的 entrypoint 改动**，直接在 Phase B 实现完整的 dispatcher entrypoint。
+**简化方案**：Phase A 和 Phase B 合并实施。**跳过 Phase A 的 entrypoint 改动**，直接在 Phase B 实现完整的 theme host entrypoint。
 
 **验收（Phase A 只做 Dockerfile）**：
 - 镜像里所有 theme 的 dist 都存在
@@ -117,13 +117,13 @@ HOST=127.0.0.1 PORT=4321 node -e "import('./server/entry.mjs').then(m => m.start
 
 ---
 
-## Phase B：Dispatcher 核心
+## Phase B：Theme Host 核心
 
-> **目标**：实现 `app/src/dispatcher/index.ts`，单进程承载多个 theme handler，按 `site.activeTheme` 路由请求。
+> **目标**：实现 `app/src/theme-host/index.ts`，单进程承载多个 theme handler，按 `site.activeTheme` 路由请求。
 
-### Step B1：创建 dispatcher 模块
+### Step B1：创建 theme host 模块
 
-**新建文件**：`app/src/dispatcher/index.ts`
+**新建文件**：`app/src/theme-host/index.ts`
 
 **职责**：
 1. 监听 `127.0.0.1:4321`
@@ -135,10 +135,10 @@ HOST=127.0.0.1 PORT=4321 node -e "import('./server/entry.mjs').then(m => m.start
 7. `/themes/<name>/static/*` → 内部 sirv 服务 `themes/<name>/dist/client/`
 8. 订阅 PB realtime `site` record 变更，更新 activeThemeName
 
-**代码骨架**（伪代码，实施 agent 参考 `theme-dispatcher-design.md §4`）：
+**代码骨架**（伪代码，实施 agent 参考 `theme-host-design.md §4`）：
 
 ```ts
-// app/src/dispatcher/index.ts
+// app/src/theme-host/index.ts
 import { createServer, IncomingMessage, ServerResponse } from 'node:http';
 import { pathToFileURL } from 'node:url';
 import { join } from 'node:path';
@@ -208,7 +208,7 @@ function evictLRU() {
     }
   }
   if (oldest) {
-    console.log(`[dispatcher] LRU evicting theme: ${oldest}`);
+    console.log(`[theme host] LRU evicting theme: ${oldest}`);
     registry.delete(oldest);
   }
 }
@@ -225,7 +225,7 @@ async function getActiveHandler(): Promise<LoadedTheme> {
 
 async function switchTheme(newName: string) {
   if (newName === activeThemeName) return;
-  console.log(`[dispatcher] switching theme: ${activeThemeName} → ${newName}`);
+  console.log(`[theme host] switching theme: ${activeThemeName} → ${newName}`);
   try {
     // 预加载新 theme
     if (!registry.has(newName)) {
@@ -234,9 +234,9 @@ async function switchTheme(newName: string) {
       evictLRU();
     }
     activeThemeName = newName;
-    console.log(`[dispatcher] theme switched to: ${newName}`);
+    console.log(`[theme host] theme switched to: ${newName}`);
   } catch (err) {
-    console.error(`[dispatcher] FAILED to switch to '${newName}', staying on '${activeThemeName}':`, err);
+    console.error(`[theme host] FAILED to switch to '${newName}', staying on '${activeThemeName}':`, err);
     // 不改变 activeThemeName，继续用老 theme
   }
 }
@@ -278,39 +278,39 @@ const server = createServer(async (req, res) => {
       theme.refCount--;
     }
   } catch (err) {
-    console.error('[dispatcher] unhandled error:', err);
+    console.error('[theme host] unhandled error:', err);
     if (!res.headersSent) {
       res.statusCode = 500;
-      res.end('dispatcher error');
+      res.end('theme host error');
     }
   }
 });
 
 // 全局兜底：不退出进程
 process.on('unhandledRejection', (reason) => {
-  console.error('[dispatcher] unhandledRejection:', reason);
+  console.error('[theme host] unhandledRejection:', reason);
 });
 process.on('uncaughtException', (err) => {
-  console.error('[dispatcher] uncaughtException:', err);
+  console.error('[theme host] uncaughtException:', err);
   // 生产环境可以通知 supervisor 重启自己
 });
 
 // boot
 async function main() {
   activeThemeName = await bootstrapActiveTheme();
-  console.log(`[dispatcher] initial active theme: ${activeThemeName}`);
-  console.log(`[dispatcher] themes dir: ${THEMES_DIR}`);
-  console.log(`[dispatcher] available themes:`, readdirSync(THEMES_DIR).filter(n => existsSync(join(THEMES_DIR, n, 'dist', 'server', 'entry.mjs'))));
+  console.log(`[theme host] initial active theme: ${activeThemeName}`);
+  console.log(`[theme host] themes dir: ${THEMES_DIR}`);
+  console.log(`[theme host] available themes:`, readdirSync(THEMES_DIR).filter(n => existsSync(join(THEMES_DIR, n, 'dist', 'server', 'entry.mjs'))));
 
   subscribeSiteChanges();
 
   server.listen(PORT, HOST, () => {
-    console.log(`[dispatcher] listening on ${HOST}:${PORT}`);
+    console.log(`[theme host] listening on ${HOST}:${PORT}`);
   });
 }
 
 main().catch(err => {
-  console.error('[dispatcher] fatal:', err);
+  console.error('[theme host] fatal:', err);
   process.exit(1);
 });
 ```
@@ -325,55 +325,55 @@ main().catch(err => {
 
 ---
 
-### Step B2：Dispatcher 编译到 prod 镜像
+### Step B2：Theme Host 编译到 prod 镜像
 
 **改动文件**：`Dockerfile`、`docker/entrypoint.prod.sh`
 
 **Dockerfile 改动**：
-- astro-build stage 增加 `pnpm --filter vanblog-app build`（把 dispatcher 编译成 ESM）
-- prod stage COPY dispatcher 产物
+- astro-build stage 增加 `pnpm --filter vanblog-app build`（把 theme host 编译成 ESM）
+- prod stage COPY theme host 产物
 
-或者更简单：**dispatcher 不经过 Astro build**，它是一个独立的 Node 脚本，用 `tsx` 或 `ts-node` 直接运行（或预编译成 `.mjs`）。
+或者更简单：**theme host 不经过 Astro build**，它是一个独立的 Node 脚本，用 `tsx` 或 `ts-node` 直接运行（或预编译成 `.mjs`）。
 
-**推荐**：把 dispatcher 放在 `app/src/dispatcher/`，通过 `app/package.json` 的 `build` 脚本一起编译：
+**推荐**：把 theme host 放在 `app/src/theme-host/`，通过 `app/package.json` 的 `build` 脚本一起编译：
 
 ```json
 // app/package.json
 {
   "scripts": {
-    "build": "astro build && tsc --outDir dist-dispatcher --module esnext --moduleResolution bundler src/dispatcher/index.ts"
+    "build": "astro build && tsc --outDir dist-theme-host --module esnext --moduleResolution bundler src/theme-host/index.ts"
   }
 }
 ```
 
-或更简单：dispatcher 用 `.mjs` 写，直接 `node dispatcher.mjs`，无需编译。
+或更简单：theme host 用 `.mjs` 写，直接 `node theme-host.mjs`，无需编译。
 
 **entrypoint 改动**（替换 80-85 行）：
 ```sh
-# 4. Start dispatcher (replaces direct Astro SSR server)
+# 4. Start theme host (replaces direct Astro SSR server)
 DEFAULT_THEME=$(cat /etc/vanblog/default-theme 2>/dev/null || echo "default")
-echo "[vanblog] starting dispatcher (default theme: ${DEFAULT_THEME})"
+echo "[vanblog] starting theme host (default theme: ${DEFAULT_THEME})"
 cd /var/lib/vanblog
 VANBLOG_THEMES_DIR=/var/lib/vanblog/themes \
 VANBLOG_DEFAULT_THEME=${DEFAULT_THEME} \
 PB_URL=http://127.0.0.1:8090 \
-node /app/dist-dispatcher/dispatcher.mjs &
+node /app/dist-theme-host/theme-host.mjs &
 ASTRO_PID=$!
-wait_for "http://127.0.0.1:4321/" "Dispatcher" 30 || exit 1
+wait_for "http://127.0.0.1:4321/" "Theme Host" 30 || exit 1
 ```
 
 **验收**：
-- 镜像里 `/app/dist-dispatcher/dispatcher.mjs` 存在
-- entrypoint 启动后 dispatcher 监听 4321
+- 镜像里 `/app/dist-theme-host/theme-host.mjs` 存在
+- entrypoint 启动后 theme host 监听 4321
 - `curl http://localhost:4321/` 返回页面 HTML（而不是 502）
 
 ---
 
 ### Step B3：PB realtime 订阅（或轮询 fallback）
 
-**改动文件**：`app/src/dispatcher/index.ts`（Step B1 里留的占位）
+**改动文件**：`app/src/theme-host/index.ts`（Step B1 里留的占位）
 
-**职责**：dispatcher 启动后，监听 PB `site` collection 的 update 事件，当 `activeTheme` 字段变化时调 `switchTheme()`。
+**职责**：theme host 启动后，监听 PB `site` collection 的 update 事件，当 `activeTheme` 字段变化时调 `switchTheme()`。
 
 **两种实现（实施 agent 选一）**：
 
@@ -394,7 +394,7 @@ async function subscribeSiteChanges() {
   });
 
   eventSource.onerror = () => {
-    console.warn('[dispatcher] realtime disconnected, will retry in 5s');
+    console.warn('[theme host] realtime disconnected, will retry in 5s');
     setTimeout(subscribeSiteChanges, 5000);
   };
 }
@@ -422,17 +422,17 @@ async function pollSiteChanges() {
 ```
 
 **验收**：
-- 改 `site.activeTheme` → 5 秒内 dispatcher 日志输出 `switching theme`
+- 改 `site.activeTheme` → 5 秒内 theme host 日志输出 `switching theme`
 - 新 theme 的页面生效（curl 验证）
-- PB 重启时 dispatcher 不崩溃（自动重连/继续轮询）
+- PB 重启时 theme host 不崩溃（自动重连/继续轮询）
 
 ---
 
 ### Step B4：健康检查端点 + graceful shutdown
 
-**改动文件**：`app/src/dispatcher/index.ts`
+**改动文件**：`app/src/theme-host/index.ts`
 
-**健康检查**：dispatcher 增加一个 `/__dispatcher_health` 端点（在所有其他路由之前匹配），返回 JSON：
+**健康检查**：theme host 增加一个 `/__theme_host_health` 端点（在所有其他路由之前匹配），返回 JSON：
 ```json
 {
   "ok": true,
@@ -448,7 +448,7 @@ async function pollSiteChanges() {
 3. process.exit(0)
 
 **验收**：
-- `curl http://localhost:4321/__dispatcher_health` 返回 JSON
+- `curl http://localhost:4321/__theme_host_health` 返回 JSON
 - `kill -TERM <pid>` 后 10s 内进程退出，无泄漏
 
 ---
@@ -657,7 +657,7 @@ func init() {
 - `/admin/site` 渲染新外观 fieldset
 - 「活动主题」下拉自动列出所有已安装 theme
 - 展开高级选项能看到调色盘、暗色模式、迁移模式
-- 切换 theme 后点保存，页面提示「已保存」，5s 内 dispatcher 日志显示切换
+- 切换 theme 后点保存，页面提示「已保存」，5s 内 theme host 日志显示切换
 
 ---
 
@@ -713,7 +713,7 @@ func init() {
 2. `curl /` 返回 default theme 的 HTML（带 `/themes/default/_astro/`）
 3. `curl /api/themes` 返回 2 个 theme
 4. `curl -X POST /api/collections/site/records/<id> -d '{"activeTheme":"minimal"}'`（用 admin auth）
-5. 等 6 秒（dispatcher realtime + 切换）
+5. 等 6 秒（theme host realtime + 切换）
 6. `curl /` 返回 minimal theme 的 HTML（带 `/themes/minimal/_astro/`）
 7. `curl /themes/default/_astro/foo.js` 返回 200（静态资源仍可访问）
 8. `curl /themes/minimal/_astro/foo.js` 返回 200
@@ -736,12 +736,12 @@ func init() {
 **强烈建议按 A → C → B → D → E 顺序**（而非 B 先行）：
 
 1. **Phase A** 只改 Dockerfile，让所有 theme 的 dist 都进镜像，不影响现有功能
-2. **Phase C** 让 theme build 自带 base，这是 dispatcher 能工作的前提（否则资源 URL 冲突）
-3. **Phase B** 实现 dispatcher，此时 theme dist 已经正确
+2. **Phase C** 让 theme build 自带 base，这是 theme host 能工作的前提（否则资源 URL 冲突）
+3. **Phase B** 实现 theme host，此时 theme dist 已经正确
 4. **Phase D** admin UI，测试切换
 5. **Phase E** 端到端
 
-**理由**：C 的 base 配置是 B 的硬依赖。如果 B 先做，dispatcher 跑起来后资源 URL 还是 `/_astro/`，多 theme 切换会 404。
+**理由**：C 的 base 配置是 B 的硬依赖。如果 B 先做，theme host 跑起来后资源 URL 还是 `/_astro/`，多 theme 切换会 404。
 
 ---
 
@@ -750,7 +750,7 @@ func init() {
 | Phase | 回滚方法 |
 |---|---|
 | A | 改回 Dockerfile 单 theme build |
-| B | entrypoint 改回 `cd themes/default/dist && node server/entry.mjs`（直接 startServer，不用 dispatcher） |
+| B | entrypoint 改回 `cd themes/default/dist && node server/entry.mjs`（直接 startServer，不用 theme host） |
 | C | 删除 astro.config 的 base/assetsPrefix 两行 |
 | D | 改回 admin/site.astro 原 fieldset |
 | E | 无需回滚 |
@@ -765,7 +765,7 @@ func init() {
 |---|---|---|---|
 | A1 | general | 小 | 纯 Dockerfile |
 | A2/A3 | 跳过（合到 B2） | - | - |
-| B1 | general | 中 | dispatcher 核心，需参考 §4 |
+| B1 | general | 中 | theme host 核心，需参考 §4 |
 | B2 | general | 小 | entrypoint 改动 |
 | B3 | general | 小 | realtime 或轮询 |
 | B4 | general | 小 | 健康检查 + shutdown |
@@ -779,7 +779,7 @@ func init() {
 
 **推荐分 3 批委托**：
 - 批次 1：A1 + C1 + C2（让 theme build 自带 base，镜像含所有 theme）
-- 批次 2：B1 + B2 + B3 + B4（dispatcher 完整实现）
+- 批次 2：B1 + B2 + B3 + B4（theme host 完整实现）
 - 批次 3：C3 + D1 + D2 + E1 + E2（UI + 测试）
 
 ---
@@ -789,10 +789,10 @@ func init() {
 全部完成后，以下场景应该 work：
 
 1. ✅ `docker build` 镜像里包含 N 个 theme 的 dist
-2. ✅ 容器启动后 dispatcher 监听 4321，加载 default theme
+2. ✅ 容器启动后 theme host 监听 4321，加载 default theme
 3. ✅ admin `/admin/site` 选主题并保存
-4. ✅ 5 秒内 dispatcher 自动切换到新 theme
+4. ✅ 5 秒内 theme host 自动切换到新 theme
 5. ✅ 页面 HTML 资源 URL 带 `/themes/<name>/` 前缀
 6. ✅ 切换前后 Pack 路由 `/p/*` 正常工作
 7. ✅ 切换不影响 PB / API
-8. ✅ dispatcher 进程不崩溃（unhandled rejection 兜底）
+8. ✅ theme host 进程不崩溃（unhandled rejection 兜底）
