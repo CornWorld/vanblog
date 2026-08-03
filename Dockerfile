@@ -108,12 +108,10 @@ RUN echo "${VANBLOG_ACTIVE_THEME}" > /build/.default-theme
 
 # Record the build version (git commit + dirty flag) for cache invalidation.
 # Pass via --build-arg BUILD_VERSION=$(git describe --always --dirty --long).
-# When empty, no ETag is emitted — the file-based ETag from the dispatcher
-# still provides per-file conditional revalidation.
+# An empty value produces an empty file — the runtime treats it as "no ETag",
+# so a plain `docker build` (no BUILD_VERSION) still succeeds.
 ARG BUILD_VERSION=
-RUN if [ -n "${BUILD_VERSION}" ]; then \
-      printf '%s' "${BUILD_VERSION}" > /build/.build-version; \
-    fi
+RUN printf '%s' "${BUILD_VERSION}" > /build/.build-version
 
 # Build Pack schema artifacts (schema.ts -> schema.js) for any Pack that ships one.
 # The Go runtime reads schema.js from the Pack fs.FS to validate Pack-owned models.
@@ -146,8 +144,9 @@ COPY --from=astro-build /build/.build-version /etc/vanblog/build-version
 # No more symlink — the dispatcher (Phase B) or entrypoint reads default-theme.
 # Copy the theme dispatcher (ESM module, no compilation needed).
 COPY --from=astro-build /build/app/src/dispatcher/index.mjs /app/dispatcher.mjs
-# Copy the standalone admin SSR app (control plane, served via the dispatcher).
-COPY --from=astro-build /build/app/dist /app/admin
+# The standalone admin SSR app lives at /build/app/dist (part of the workspace
+# COPY above), so its runtime deps resolve via /build/node_modules like themes.
+# VANBLOG_ADMIN_DIST_DIR=/build/app/dist (see entrypoint.prod.sh + Go defaults).
 
 # Copy core hooks and builtin Pack resources (with schema.js artifacts built in
 # the astro-build stage — the Go runtime reads schema.js from /packs/<name>/).

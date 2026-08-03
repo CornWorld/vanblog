@@ -23,7 +23,7 @@ const POLL_INTERVAL_MS = 5000;
 // Directory of the standalone admin SSR build (the control plane, built from
 // app/ as vanblog-app). It is served independently of the active theme for
 // /admin, /login and /setup, and its hashed assets live at the root /_astro/.
-const ADMIN_DIST_DIR = process.env.VANBLOG_ADMIN_DIST_DIR || '/app/admin';
+const ADMIN_DIST_DIR = process.env.VANBLOG_ADMIN_DIST_DIR || '/build/app/dist';
 
 // --- Types (JSDoc for clarity) ---
 /** @typedef {{ handler: Function, themeJson: object, loadedAt: number, refCount: number }} LoadedTheme */

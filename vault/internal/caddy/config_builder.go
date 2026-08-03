@@ -51,7 +51,8 @@ type BuildOpts struct {
 
 	// AdminDistDir is the standalone admin SSR build (app/vanblog-app →
 	// app/dist). Its client assets are served at the root paths
-	// (/_astro/*, /emoji-data.json, /robots.txt). Default "/app/admin".
+	// (/_astro/*, /emoji-data.json, /robots.txt). Default "/build/app/dist"
+	// (inside the workspace so runtime deps resolve like themes).
 	AdminDistDir string `json:"-"`
 
 	// Version is a build identifier (git commit + timestamp) injected at
@@ -80,7 +81,7 @@ func (o *BuildOpts) Defaults() {
 		o.ThemesDir = "/var/lib/vanblog/themes"
 	}
 	if o.AdminDistDir == "" {
-		o.AdminDistDir = "/app/admin"
+		o.AdminDistDir = "/build/app/dist"
 	}
 	// Caddy uses zapcore levels which MUST be uppercase
 	// (DEBUG / INFO / WARN / ERROR / PANIC). A user may have set a lowercase
