@@ -3,7 +3,7 @@
 > **Status: ✅ 已执行（2026-07-31）—— 结构重构落地，概念文档见 [`docs/theme-concepts.md`](../docs/theme-concepts.md)**
 >
 > 本 plan 的**架构部分已实施完成**：`themes/base`（原 bare，minimal）与 `themes/vanblog`（原 app/src 视觉层迁出）已落地，`@vanblog/builtin/*` → `@vanblog/base/*` 改名完成，app/src 收缩为纯平台层。
-> 未完成的余量（palette 多套内置、MCP tools、admin 切换 UI）属后续独立任务，见 `docs/theme-dispatcher-design.md` 与本文档 Phase 5/6/7。
+> 未完成的余量（palette 多套内置、MCP tools、admin 切换 UI）属后续独立任务，见 `docs/theme-host-design.md` 与本文档 Phase 5/6/7。
 
 > 本 plan **取代** 旧版「custom/builtin 二分 + git submodule」方案（Spike 2）。
 > 新方向（Spike 3）：**theme 是独立 Astro 项目，通过 `@vanblog/builtin/*` alias 引用主仓库 builtin，theme 的 `src/builtin-overrides/` 可选覆盖**。30 行 integration 代码，零额外机制。

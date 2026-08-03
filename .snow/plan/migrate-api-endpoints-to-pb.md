@@ -2,7 +2,7 @@
 
 ## Context
 
-Caddy routes `/api/*` → PocketBase (127.0.0.1:8090), `/_/*` → PB, and `/*` → Astro dispatcher. This means all Astro `/api/*` endpoints are intercepted by PB and return 404 in production.
+Caddy routes `/api/*` → PocketBase (127.0.0.1:8090), `/_/*` → PB, and `/*` → Astro theme host. This means all Astro `/api/*` endpoints are intercepted by PB and return 404 in production.
 
 There are 7 Astro API endpoints in `app/src/pages/api/`. Three (feed/atom/sitemap) already have complete PB Go implementations. The remaining four need migration or retention.
 
@@ -22,7 +22,7 @@ There are 7 Astro API endpoints in `app/src/pages/api/`. Three (feed/atom/sitema
 
 ### Key Observation
 
-The `/api/revalidate` endpoint uses `context.cache.invalidate()` which is an Astro SSR runtime API. PB Go's `astro_revalidate.go` already calls the dispatcher directly at `ASTRO_URL` (default `http://127.0.0.1:4321`), bypassing Caddy. No change needed.
+The `/api/revalidate` endpoint uses `context.cache.invalidate()` which is an Astro SSR runtime API. PB Go's `astro_revalidate.go` already calls the theme host directly at `ASTRO_URL` (default `http://127.0.0.1:4321`), bypassing Caddy. No change needed.
 
 ### Affected Files
 
@@ -159,7 +159,7 @@ The `/api/revalidate` endpoint uses `context.cache.invalidate()` which is an Ast
 |------|--------|------------|
 | PALETTES_ROOT path differs between Astro and Go | palette.css 404 in prod | Use same resolution order: env var → CWD → fallback. Test with same binary location |
 | Deleting revalidate theme thin-shell by mistake | Cache invalidation broken for theme users | Explicitly check that `revalidate.ts` files remain after Phase 3 |
-| THEMES_ROOT path resolution differs | admin/site.astro theme picker empty | Use same `VANBLOG_THEMES_DIR` env var; dispatcher already sets this in prod |
+| THEMES_ROOT path resolution differs | admin/site.astro theme picker empty | Use same `VANBLOG_THEMES_DIR` env var; theme host already sets this in prod |
 | Go code can't access `hooks/palettes/` at runtime | palette endpoints 404 | Go binary runs from project root in dev; check CWD. In Docker, path must be configured via env var |
 
 ## Rollback Strategy
