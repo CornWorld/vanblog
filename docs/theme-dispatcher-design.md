@@ -1,6 +1,6 @@
 # Theme Dispatcher 设计文档
 
-> **状态**：设计提案，待 review
+> **状态**：**已实现**（2026-08）。核心模型落地：单进程 dispatcher 动态 import 主题 handler + 按 `site.activeTheme` 热切换。**静态服务已按设计演进为 Caddy file_server**（见 `vault/internal/caddy/static_routes.go`，不再是 dispatcher sirv）；admin 额外抽离为独立 SSR（`app/`，见 `docs/theme-concepts.md`）。本文档作为设计历史保留。
 > **前置阅读**：[`agent-theme-architecture.md`](./agent-theme-architecture.md)、[`theme-implementer-guide.md`](./theme-implementer-guide.md) > **目标**：定义「单进程多 theme handler」的运行模型，让 theme 切换从「重建镜像」降到「<5s 热切换」。
 
 ---
