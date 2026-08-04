@@ -5,7 +5,7 @@ import '../styles/global.css';
 // the article displays duplicated math. Loaded globally (not just in editor)
 // because post content is rendered server-side via markdown pipeline.
 import 'katex/dist/katex.css';
-import { stripMarkdown } from '@vanblog/sdk';
+import { safe, stripMarkdown, buildThemeInitScript, buildPaletteTypeMap, paletteCssUrl } from '@vanblog/sdk';
 import { packs as packMetadata } from 'virtual:vanblog/packs';
 import { contributions as packContributions } from 'virtual:vanblog/pack-frontend';
 import type { Site, Post } from '@vanblog/sdk';
@@ -71,6 +71,12 @@ const safeJsonLd = (obj: unknown) => JSON.stringify(obj).replace(/</g, '\\u003c'
 
 // Pack nav items are resolved at build time by the Astro Pack integration.
 const packNavItems = packMetadata.flatMap((pack) => pack.nav ? [pack.nav] : []);
+
+// Palette name→type map for theme init. Light/dark is decided by the active
+// palette's `type` (atomic palette model, VSCode-style), not by a user theme
+// mode. If the list can't be fetched, the init script safely falls back to light.
+const palettes = await safe(() => pb.vanblog.palettes.list(), 'palettes');
+const paletteTypeMap = buildPaletteTypeMap(palettes.data ?? []);
 ---
 <!doctype html>
 <html lang="zh-CN">
@@ -78,15 +84,15 @@ const packNavItems = packMetadata.flatMap((pack) => pack.nav ? [pack.nav] : []);
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width" />
 
-    <!-- Prevent FOUC: set dark class before paint -->
-    <script is:inline>
-      (() => {
-        const t = localStorage.getItem('vanblog-theme');
-        if (t === 'dark' || (!t && matchMedia('(prefers-color-scheme: dark)').matches)) {
-          document.documentElement.classList.add('dark');
-        }
-      })();
-    </script>
+    <!-- Prevent FOUC: apply effective palette (light/dark from palette type) + user preference before paint -->
+    <script
+      is:inline
+      set:html={buildThemeInitScript({
+        sitePalette: site?.palette,
+        siteUpdated: site?.updated,
+        palettes: paletteTypeMap,
+      })}
+    />
 
     <!-- Core SEO -->
     <title>{title} - {siteName}</title>
@@ -95,7 +101,7 @@ const packNavItems = packMetadata.flatMap((pack) => pack.nav ? [pack.nav] : []);
 
     <!-- Palette CSS (zero-build theme switch; see docs/agent-theme-architecture.md §4) -->
     {site?.palette && (
-      <link rel="stylesheet" href={`/api/palette.css?v=${site.updated ?? ''}`} data-vanblog-palette />
+      <link rel="stylesheet" href={paletteCssUrl(site?.palette, site?.updated)} data-vanblog-palette />
     )}
 
     {packContributions.filter((item) => item.scope === 'public').flatMap((item) => item.styles).map((href) => (

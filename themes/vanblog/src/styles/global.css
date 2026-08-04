@@ -313,3 +313,31 @@ article li {
 article hr {
   @apply my-8 border-[var(--border)];
 }
+
+/* ════════════════════════════════════════════════════════════════════════
+   Progressive color transition (palette/theme switching)
+   Active only while `html.theme-transition` is set — added by the SDK's
+   runWithTransition() CSS fallback (when the View Transitions API is
+   unavailable). Gives a layered feel: page chrome (header/footer/body)
+   transitions first, content cards/panels start slightly later.
+   Respects prefers-reduced-motion.
+   ════════════════════════════════════════════════════════════════════════ */
+@media (prefers-reduced-motion: no-preference) {
+  html.theme-transition body,
+  html.theme-transition header,
+  html.theme-transition footer,
+  html.theme-transition input,
+  html.theme-transition textarea,
+  html.theme-transition select,
+  html.theme-transition .card-post {
+    transition: background-color 0.45s ease, color 0.45s ease,
+      border-color 0.45s ease, fill 0.45s ease;
+  }
+  /* 层次：内容卡片/面板比页面骨架稍晚开始过渡 */
+  html.theme-transition .card-post,
+  html.theme-transition article,
+  html.theme-transition .post-viewer,
+  html.theme-transition .toc-wrapper {
+    transition-delay: 0.08s;
+  }
+}

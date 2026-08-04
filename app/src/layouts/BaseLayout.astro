@@ -13,7 +13,7 @@
 import '../styles/global.css';
 // KaTeX CSS: 编辑器/渲染链路需要 (admin/edit 的 ByteMdEditor 依赖)。
 import 'katex/dist/katex.css';
-import { stripMarkdown } from '@vanblog/sdk';
+import { stripMarkdown, safe, buildThemeInitScript, buildPaletteTypeMap, paletteCssUrl } from '@vanblog/sdk';
 import { packs as packMetadata } from 'virtual:vanblog/packs';
 import { contributions as packContributions } from 'virtual:vanblog/pack-frontend';
 import type { Site, Post } from '@vanblog/sdk';
@@ -38,6 +38,11 @@ const desc = post ? stripMarkdown(post.content) || siteDesc : siteDesc;
 const packNavItems = packMetadata.flatMap((pack) => pack.nav ? [pack.nav] : []);
 const hasAbout = !!(site?.aboutContent && site.aboutContent.trim());
 const isLoggedIn = Astro.locals.pb.authStore.isValid;
+
+// Palette name→type map for theme init. Light/dark is decided by the active
+// palette's `type` (atomic palette model, VSCode-style). Fallback to light on error.
+const palettes = await safe(() => Astro.locals.pb.vanblog.palettes.list(), 'palettes');
+const paletteTypeMap = buildPaletteTypeMap(palettes.data ?? []);
 ---
 <!doctype html>
 <html lang="zh-CN">
@@ -45,15 +50,15 @@ const isLoggedIn = Astro.locals.pb.authStore.isValid;
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width" />
 
-    <!-- Prevent FOUC: set dark class before paint -->
-    <script is:inline>
-      (() => {
-        const t = localStorage.getItem('vanblog-theme');
-        if (t === 'dark' || (!t && matchMedia('(prefers-color-scheme: dark)').matches)) {
-          document.documentElement.classList.add('dark');
-        }
-      })();
-    </script>
+    <!-- Prevent FOUC: apply effective palette (light/dark from palette type) + user preference before paint -->
+    <script
+      is:inline
+      set:html={buildThemeInitScript({
+        sitePalette: site?.palette,
+        siteUpdated: site?.updated,
+        palettes: paletteTypeMap,
+      })}
+    />
 
     <title>{title} - {siteName}</title>
     <meta name="description" content={desc} />
@@ -61,7 +66,7 @@ const isLoggedIn = Astro.locals.pb.authStore.isValid;
 
     <!-- Palette CSS (zero-build theme switch) -->
     {site?.palette && (
-      <link rel="stylesheet" href={`/api/palette.css?v=${site.updated ?? ''}`} data-vanblog-palette />
+      <link rel="stylesheet" href={paletteCssUrl(site?.palette, site?.updated)} data-vanblog-palette />
     )}
 
     {packContributions.filter((item) => item.scope === 'public').flatMap((item) => item.styles).map((href) => (

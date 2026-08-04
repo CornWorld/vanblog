@@ -7,6 +7,7 @@ import type {
   TrashEntry,
 } from "./types";
 import type { PostExpand, RouteRule, Site } from "./models";
+import type { PaletteMeta } from "./theme";
 
 // PocketBase js-sdk's send() parses non-JSON responses into objects.
 // For feed/sitemap (XML) endpoints we use raw fetch to get the text.
@@ -117,6 +118,10 @@ export interface VanblogServices {
       restart_needed: boolean;
       error?: string;
     }>;
+  };
+  palettes: {
+    /** List installed palettes (name / label / version / type). */
+    list(): Promise<PaletteMeta[]>;
   };
   routing: {
     list(): Promise<{ rules: RouteRule[]; allowlist: string[] }>;
@@ -324,6 +329,16 @@ export function createVanblogServices(pb: PocketBase): VanblogServices {
           restart_needed: boolean;
           error?: string;
         }>,
+    },
+    palettes: {
+      list: async () => {
+        const res = await (pb.send("/api/palettes", {
+          method: "GET",
+        }) as Promise<{
+          palettes?: PaletteMeta[];
+        }>);
+        return res.palettes ?? [];
+      },
     },
     routing: {
       list: () =>

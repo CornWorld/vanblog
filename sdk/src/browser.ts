@@ -92,3 +92,6 @@ export function logout(redirectTo = "/"): void {
   } catch (_) {}
   window.location.href = redirectTo;
 }
+
+// Theme & palette persistence helpers (see ./theme).
+export * from "./theme";

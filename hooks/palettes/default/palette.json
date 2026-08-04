@@ -1,8 +1,9 @@
 {
   "name": "default",
-  "label": "Vanblog 默认调色盘",
+  "label": "默认浅色",
+  "type": "light",
   "version": "1.0.0",
   "author": "vanblog",
-  "description": "官方默认配色，浅色 slate + 深色 navy，蓝色强调色",
-  "supports": ["light", "dark"]
+  "description": "官方默认浅色调色盘（slate 系，蓝色强调色）",
+  "aliases": ["default"]
 }

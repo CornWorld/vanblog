@@ -1,0 +1,15 @@
+/* ── Default Dark Palette (atomic, type: dark) ──
+ *   navy 系深色 + 蓝色强调色。
+ *   原子式调色盘：只覆盖 html.dark 作用域的暗色 --color-* token。
+ *   页面应用本调色盘时会给 <html> 加 dark class（暗色渲染）。
+ *   加载方式: site.palette="default-dark" → /api/palette.css
+ */
+
+html.dark {
+  --color-bg-dark: #0f172a;
+  --color-surface-dark: #1e293b;
+  --color-text-dark: #e2e8f0;
+  --color-text-muted-dark: #94a3b8;
+  --color-border-dark: #334155;
+  --color-accent-dark: #60a5fa;
+}

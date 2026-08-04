@@ -35,6 +35,7 @@ func servePalettes(e *core.RequestEvent) error {
 		Name    string `json:"name"`
 		Label   string `json:"label,omitempty"`
 		Version string `json:"version,omitempty"`
+		Type    string `json:"type,omitempty"` // "dark" | "light" (atomic palette light/dark category)
 	}
 
 	var palettes []paletteMeta
@@ -53,6 +54,9 @@ func servePalettes(e *core.RequestEvent) error {
 				if v, ok := raw["version"].(string); ok {
 					meta.Version = v
 				}
+				if v, ok := raw["type"].(string); ok {
+					meta.Type = v
+				}
 			}
 		}
 		palettes = append(palettes, meta)
@@ -65,12 +69,16 @@ func servePalettes(e *core.RequestEvent) error {
 
 func servePaletteCSS(app core.App) func(*core.RequestEvent) error {
 	return func(e *core.RequestEvent) error {
-		// Read site.palette from DB
-		records, err := app.FindRecordsByFilter("site", "1=1", "", 1, 0)
-		if err != nil || len(records) == 0 {
-			return e.String(http.StatusOK, "/* no site config */")
+		// User-level override via ?name= (persisted in localStorage by the SDK);
+		// otherwise fall back to the site.palette from the DB.
+		paletteName := e.Request.URL.Query().Get("name")
+		if paletteName == "" {
+			records, err := app.FindRecordsByFilter("site", "1=1", "", 1, 0)
+			if err != nil || len(records) == 0 {
+				return e.String(http.StatusOK, "/* no site config */")
+			}
+			paletteName = records[0].GetString("palette")
 		}
-		paletteName := records[0].GetString("palette")
 		if paletteName == "" {
 			return e.String(http.StatusOK, "/* no palette configured */")
 		}

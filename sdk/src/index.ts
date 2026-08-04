@@ -50,3 +50,6 @@ export { stripMarkdown } from "./services";
 
 // General utilities
 export { getPage, buildPageHref } from "./utils";
+
+// Theme & palette persistence helpers (browser-side, SSR-safe)
+export * from "./theme";

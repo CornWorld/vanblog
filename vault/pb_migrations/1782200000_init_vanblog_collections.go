@@ -252,7 +252,6 @@ func createSite(db core.App) error {
 
 	// 主题
 	col.Fields.Add(&core.SelectField{Name: "theme", Values: []string{"default", "minimal", "magazine", "custom"}})
-	col.Fields.Add(&core.SelectField{Name: "defaultTheme", Values: []string{"auto", "light", "dark"}})
 
 	// 评论
 	col.Fields.Add(&core.SelectField{Name: "commentsProvider", Values: []string{"disabled", "waline", "giscus", "artalk", "external"}})
@@ -379,7 +378,6 @@ func insertDefaultSite(db core.App) error {
 	// 标量字段默认值
 	record.Set("siteName", "")
 	record.Set("theme", "default")
-	record.Set("defaultTheme", "auto")
 	record.Set("commentsProvider", "disabled")
 	record.Set("enableWaterMark", false)
 	record.Set("httpsRedirect", true)

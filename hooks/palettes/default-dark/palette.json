@@ -1,0 +1,8 @@
+{
+  "name": "default-dark",
+  "label": "默认暗色",
+  "type": "dark",
+  "version": "1.0.0",
+  "author": "vanblog",
+  "description": "官方默认暗色调色盘（navy 系，蓝色强调色）"
+}

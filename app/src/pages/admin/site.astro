@@ -112,30 +112,25 @@ const boolField = (k: keyof Site, def = false): boolean => {
               <option value="default">default</option>
             </select>
             <script is:inline>
-              fetch('/api/palettes')
-                .then(r => r.json())
-                .then(data => {
+              (async () => {
+                const pb = self.vanblog?.pb;
+                if (!pb?.vanblog?.palettes) return; /* keep fallback "default" until client ready */
+                try {
+                  const list = await pb.vanblog.palettes.list();
                   const sel = document.getElementById('palette-select');
                   if (!sel) return;
                   const current = sel.getAttribute('data-current') || 'default';
                   sel.innerHTML = '';
-                  (data.palettes || []).forEach(p => {
+                  list.forEach(p => {
                     const opt = document.createElement('option');
                     opt.value = p.name;
-                    opt.textContent = p.label || p.name;
+                    opt.textContent = `${p.label || p.name} (${p.type || '?'})`;
                     if (p.name === current) opt.selected = true;
                     sel.appendChild(opt);
                   });
-                })
-                .catch(() => { /* keep fallback "default" */ });
+                } catch { /* keep fallback "default" */ }
+              })();
             </script>
-
-            <label>默认主题模式</label>
-            <select name="defaultTheme">
-              {['auto', 'light', 'dark'].map(t => (
-                <option value={t} selected={field('defaultTheme') === t}>{t}</option>
-              ))}
-            </select>
 
             <label>切换主题时调色盘</label>
             <select name="paletteMigrationMode">
@@ -303,7 +298,6 @@ const boolField = (k: keyof Site, def = false): boolean => {
           copyrightAgreement: fd.get('copyrightAgreement'),
           palette: fd.get('palette'),
           activeTheme: fd.get('activeTheme'),
-          defaultTheme: fd.get('defaultTheme'),
           paletteMigrationMode: fd.get('paletteMigrationMode'),
           commentsProvider: provider,
           commentsConfig: commentsConfig,
