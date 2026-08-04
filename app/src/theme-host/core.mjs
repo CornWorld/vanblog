@@ -54,6 +54,20 @@ export function createThemeHost(options = {}) {
   let adminHandler = null;
   const startTime = Date.now();
 
+  // --- Diagnostics (throttled warn) ---
+  // Some failure paths fire on every poll / request (e.g. PB down every 5s).
+  // A plain warn would spam logs, but a silent swallow hides real outages.
+  // Throttle: first failure warns immediately, then at most once per window.
+  /** @type {Map<string, number>} */
+  const lastWarnAt = new Map();
+  function throttledWarn(key, intervalMs, msg, ...rest) {
+    const now = Date.now();
+    if ((lastWarnAt.get(key) || 0) + intervalMs <= now) {
+      lastWarnAt.set(key, now);
+      console.warn(`[theme-host] ${msg}`, ...rest);
+    }
+  }
+
   // --- Theme loading & registry ---
 
   /**
@@ -65,7 +79,8 @@ export function createThemeHost(options = {}) {
       return readdirSync(themesDir).filter((name) =>
         existsSync(join(themesDir, name, 'dist', 'server', 'entry.mjs'))
       );
-    } catch {
+    } catch (err) {
+      throttledWarn('listThemes', 30_000, `cannot list themes dir ${themesDir}:`, err?.message ?? err);
       return [];
     }
   }
@@ -88,8 +103,13 @@ export function createThemeHost(options = {}) {
     if (existsSync(themeJsonPath)) {
       try {
         themeJson = JSON.parse(readFileSync(themeJsonPath, 'utf8'));
-      } catch {
-        /* ignore */
+      } catch (err) {
+        throttledWarn(
+          'themeJson',
+          30_000,
+          `theme '${name}' theme.json invalid, falling back to {name}:`,
+          err?.message ?? err
+        );
       }
     }
 
@@ -209,7 +229,10 @@ export function createThemeHost(options = {}) {
    */
   async function readActiveThemeFromPB() {
     const r = await fetchImpl(`${pbUrl}/api/collections/site/records?perPage=1`);
-    if (!r.ok) return null;
+    if (!r.ok) {
+      throttledWarn('pbRead', 30_000, `PB responded ${r.status} for site record, keeping current theme`);
+      return null;
+    }
     const j = await r.json();
     const name = j?.items?.[0]?.activeTheme;
     return typeof name === 'string' && name ? name : null;
@@ -229,8 +252,11 @@ export function createThemeHost(options = {}) {
         console.log(`[theme-host] PB reports active theme: ${activeThemeName}`);
         return activeThemeName;
       }
-    } catch {
-      console.log(`[theme-host] PB not reachable, using default theme: ${activeThemeName}`);
+    } catch (err) {
+      console.warn(
+        `[theme-host] PB not reachable at bootstrap, using default theme '${activeThemeName}':`,
+        err?.message ?? err
+      );
     }
     return activeThemeName;
   }
@@ -245,8 +271,10 @@ export function createThemeHost(options = {}) {
       if (newTheme && newTheme !== activeThemeName) {
         await switchTheme(newTheme);
       }
-    } catch {
-      // PB temporarily unreachable, skip this round.
+    } catch (err) {
+      // PB temporarily unreachable — throttled so a long outage surfaces
+      // without spamming one line per 5s poll.
+      throttledWarn('pbPoll', 30_000, 'PB poll failed (will keep retrying):', err?.message ?? err);
     }
   }
 

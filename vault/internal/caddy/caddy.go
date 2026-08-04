@@ -4,6 +4,7 @@
 package caddy
 
 import (
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -87,6 +88,11 @@ func NewWithURL(app core.App, caddyAdminURL string) *Service {
 			// Push config async — don't block OnServe while Caddy may be
 			// starting up. Retries with backoff in the background goroutine.
 			go func() {
+				defer func() {
+					if r := recover(); r != nil {
+						slog.Error("[caddy] config push goroutine recovered from panic", "panic", r)
+					}
+				}()
 				if err := s.pushConfigToAdminAPI(); err != nil {
 					slog.Error("[caddy] config push failed, staying in maintenance mode", "err", err)
 				}
@@ -124,16 +130,7 @@ func (s *Service) runSyncWorker() {
 		case <-s.done:
 			return
 		case req := <-s.syncCh:
-			var res replaceResult
-			switch {
-			case req.apply != nil:
-				res = s.applyRules(req.apply.rules, req.apply.allowlist)
-			case req.resync:
-				res = s.resyncFromDB()
-			default:
-				// Defensive — shouldn't happen; callers must set one.
-				res = replaceResult{Error: "internal: empty sync request"}
-			}
+			res := s.runSyncRequest(req)
 			// replyChan is buffered(1) so a slow / panicked caller can't
 			// block the worker. Send is non-blocking; we already know the
 			// buffer fits.
@@ -144,6 +141,30 @@ func (s *Service) runSyncWorker() {
 			}
 		}
 	}
+}
+
+// runSyncRequest executes one actor request, recovering from panics so a bug
+// in applyRules/resyncFromDB can never kill the single-writer goroutine. If it
+// died, every future submit() would block forever on the channel with no error
+// surface — a silent deadlock. Recovery converts the panic into a structured
+// error so the caller sees a failure instead of hanging.
+func (s *Service) runSyncRequest(req syncRequest) (res replaceResult) {
+	defer func() {
+		if r := recover(); r != nil {
+			slog.Error("[caddy] syncWorker recovered from panic", "panic", r)
+			res = replaceResult{Error: fmt.Sprintf("internal: sync worker panic: %v", r)}
+		}
+	}()
+	switch {
+	case req.apply != nil:
+		res = s.applyRules(req.apply.rules, req.apply.allowlist)
+	case req.resync:
+		res = s.resyncFromDB()
+	default:
+		// Defensive — shouldn't happen; callers must set one.
+		res = replaceResult{Error: "internal: empty sync request"}
+	}
+	return res
 }
 
 // submit sends a request to the worker and waits for the result. Used by

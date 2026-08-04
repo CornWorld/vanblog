@@ -105,6 +105,25 @@ function writeAdminDist(root) {
   );
 }
 
+// A theme whose dist throws at import time — simulates a corrupt/broken build.
+// The host must refuse to load it and stay on the current theme.
+function writeBrokenTheme(root, name) {
+  const dir = join(root, name);
+  const dist = join(dir, 'dist', 'server');
+  mkdirSync(dist, { recursive: true });
+  writeFileSync(join(dir, 'theme.json'), JSON.stringify({ name }));
+  writeFileSync(join(dist, 'entry.mjs'), ['throw new Error("broken dist");', ''].join('\n'));
+}
+
+// A theme whose entry.mjs exports no handler — must be rejected on load.
+function writeNoHandlerTheme(root, name) {
+  const dir = join(root, name);
+  const dist = join(dir, 'dist', 'server');
+  mkdirSync(dist, { recursive: true });
+  writeFileSync(join(dir, 'theme.json'), JSON.stringify({ name }));
+  writeFileSync(join(dist, 'entry.mjs'), ['export const nothing = 1;', ''].join('\n'));
+}
+
 // A standard fixture set: 3 themes (alpha/beta/gamma) + an admin build.
 function themeFixtureSet() {
   const themesDir = fixtureRoot('theme');
@@ -365,5 +384,127 @@ describe('pack + theme composition', () => {
     const resB = fakeRes();
     await host.handleRequest(fakeReq('/p/bookmarks'), resB);
     assert.match(resB.body, /\[BETA\]\/p\/bookmarks/, 'pack route survives switch to beta');
+  });
+});
+
+// ------------------------------------------------------------
+// D) Theme degradation / edge cases
+// ------------------------------------------------------------
+
+describe('theme degradation edge cases', () => {
+  it('a corrupt dist that throws at import is refused — stays on current theme', async () => {
+    const { themesDir } = themeFixtureSet();
+    writeBrokenTheme(themesDir, 'broken');
+    const host = createThemeHost({ themesDir, defaultTheme: 'alpha' });
+
+    // loadTheme rejects on the broken import.
+    await assert.rejects(() => host.loadTheme('broken'), /broken dist/);
+
+    // switchTheme refuses and keeps the current theme.
+    await host.switchTheme('broken');
+    assert.equal(host.registrySnapshot().activeTheme, 'alpha');
+    assert.ok(!host.registrySnapshot().loaded.includes('broken'));
+  });
+
+  it('a theme with no handler export is refused on switch', async () => {
+    const { themesDir } = themeFixtureSet();
+    writeNoHandlerTheme(themesDir, 'nohandler');
+    const host = createThemeHost({ themesDir, defaultTheme: 'alpha' });
+    await host.switchTheme('nohandler');
+    assert.equal(host.registrySnapshot().activeTheme, 'alpha');
+  });
+
+  it('invalid theme.json falls back to {name} metadata without blocking load', async () => {
+    const { themesDir } = themeFixtureSet();
+    const dir = join(themesDir, 'badjson');
+    const dist = join(dir, 'dist', 'server');
+    mkdirSync(dist, { recursive: true });
+    writeFileSync(join(dir, 'theme.json'), '{ not valid json'); // ← malformed
+    writeFileSync(
+      join(dist, 'entry.mjs'),
+      [
+        'export const handler = async (req, res) => {',
+        '  res.statusCode = 200;',
+        '  res.setHeader("Content-Type", "text/html");',
+        '  res.end("<html><body>[BADJSON]</body></html>");',
+        '};',
+        '',
+      ].join('\n')
+    );
+
+    const host = createThemeHost({ themesDir, defaultTheme: 'badjson' });
+    const loaded = await host.loadTheme('badjson');
+    // JSON.parse failed → metadata falls back to { name }.
+    assert.deepEqual(loaded.themeJson, { name: 'badjson' });
+    // The theme is still fully loadable and servable.
+    const res = fakeRes();
+    await host.handleRequest(fakeReq('/'), res);
+    assert.match(res.body, /\[BADJSON\]/);
+  });
+
+  it('a handler that throws returns 500 and the host keeps serving afterwards', async () => {
+    const { themesDir } = themeFixtureSet();
+    const dir = join(themesDir, 'explode');
+    const dist = join(dir, 'dist', 'server');
+    mkdirSync(dist, { recursive: true });
+    writeFileSync(join(dir, 'theme.json'), JSON.stringify({ name: 'explode' }));
+    writeFileSync(
+      join(dist, 'entry.mjs'),
+      ['export const handler = async () => { throw new Error("boom"); };', ''].join('\n')
+    );
+
+    const host = createThemeHost({ themesDir, defaultTheme: 'explode' });
+    const res = fakeRes();
+    await host.handleRequest(fakeReq('/'), res);
+    assert.equal(res.statusCode, 500);
+    assert.match(res.body, /theme host error/);
+
+    // Host stays alive — health still answers.
+    const health = fakeRes();
+    await host.handleRequest(fakeReq('/__theme_host_health'), health);
+    assert.equal(JSON.parse(health.body).ok, true);
+    assert.equal(JSON.parse(health.body).activeTheme, 'explode');
+  });
+
+  it('a missing theme.json still loads (metadata defaults to {name})', async () => {
+    const { themesDir } = themeFixtureSet();
+    const dir = join(themesDir, 'nometa');
+    const dist = join(dir, 'dist', 'server');
+    mkdirSync(dist, { recursive: true });
+    // No theme.json written at all.
+    writeFileSync(
+      join(dist, 'entry.mjs'),
+      [
+        'export const handler = async (req, res) => {',
+        '  res.statusCode = 200;',
+        '  res.end("ok");',
+        '};',
+        '',
+      ].join('\n')
+    );
+    const host = createThemeHost({ themesDir, defaultTheme: 'nometa' });
+    const loaded = await host.loadTheme('nometa');
+    assert.deepEqual(loaded.themeJson, { name: 'nometa' });
+  });
+
+  it('throttles repeated PB poll failures to a single warn (no log spam)', async () => {
+    const { themesDir } = themeFixtureSet();
+    const failingFetch = async () => {
+      throw new Error('ECONNREFUSED');
+    };
+    const host = createThemeHost({ themesDir, defaultTheme: 'alpha', fetchImpl: failingFetch });
+
+    const warns = [];
+    const origWarn = console.warn;
+    console.warn = (...args) => warns.push(args.join(' '));
+    try {
+      await host.pollSiteChanges(); // 1st failure → warns immediately
+      await host.pollSiteChanges(); // within the 30s window → throttled
+      await host.pollSiteChanges(); // still within the window → no warn
+    } finally {
+      console.warn = origWarn;
+    }
+    assert.equal(warns.length, 1, `expected exactly 1 throttled warn, got ${warns.length}: ${warns}`);
+    assert.match(warns[0], /PB poll failed/);
   });
 });

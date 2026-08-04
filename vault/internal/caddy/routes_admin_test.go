@@ -15,6 +15,7 @@ package caddy
 import (
 	"encoding/json"
 	"os"
+	"strings"
 	"testing"
 
 	_ "github.com/cornworld/vanblog/pb_migrations"
@@ -545,5 +546,29 @@ func TestReloadThemes_PushesConfig(t *testing.T) {
 	}
 	if errMsg != "" {
 		t.Errorf("expected empty error, got %q", errMsg)
+	}
+}
+
+// TestSyncWorker_RecoversFromPanic guards the actor's panic-recovery: a bug in
+// applyRules/resyncFromDB must never kill the single-writer goroutine, which
+// would silently deadlock every future submit() with no error surface.
+func TestSyncWorker_RecoversFromPanic(t *testing.T) {
+	// Nil app → applyRules panics (method call on nil core.App interface).
+	svc := &Service{}
+	svc.syncCh = make(chan syncRequest)
+	svc.done = make(chan struct{})
+	go svc.runSyncWorker()
+	t.Cleanup(svc.Close)
+
+	// First request panics inside the worker → recovered into a structured error.
+	res := svc.submit(syncRequest{apply: &applyPayload{}})
+	if !strings.Contains(res.Error, "panic") {
+		t.Fatalf("expected panic-recovery error mentioning 'panic', got %q", res.Error)
+	}
+
+	// The worker survives: a second submit returns instead of hanging forever.
+	res2 := svc.submit(syncRequest{apply: &applyPayload{}})
+	if !strings.Contains(res2.Error, "panic") {
+		t.Fatalf("worker did not survive the first panic (second submit got %q)", res2.Error)
 	}
 }

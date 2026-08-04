@@ -217,3 +217,48 @@ func TestThemeWatcher_CloseStopsResyncs(t *testing.T) {
 		t.Fatal("watcher kept resyncing after Close")
 	}
 }
+
+func TestThemeWatcher_StagedInstallSettlesWithRoute(t *testing.T) {
+	_, m, themesDir := newWatchTest(t)
+
+	// Stage 1: theme dir exists but has no dist/client yet (mid-install).
+	_ = os.MkdirAll(filepath.Join(themesDir, "staged"), 0o755)
+	if !waitFor(t, 5*time.Second, func() bool {
+		m.mu.Lock()
+		calls := m.loadCalls
+		m.mu.Unlock()
+		return calls > 0 // a resync happened, so "no route" below is meaningful
+	}) {
+		t.Fatal("no resync after creating a bare theme dir")
+	}
+	if configContainsRoute(m, "vanblog-static-theme-staged") {
+		t.Fatal("route emitted before dist/client existed")
+	}
+
+	// Stage 2: dist/client appears → the watcher (reconcile + resync) picks it
+	// up and the route appears. This is the realistic staged-install path.
+	_ = os.MkdirAll(filepath.Join(themesDir, "staged", "dist", "client"), 0o755)
+	if !waitFor(t, 5*time.Second, func() bool {
+		return configContainsRoute(m, "vanblog-static-theme-staged")
+	}) {
+		t.Fatal("route not emitted after dist/client appeared in a later stage")
+	}
+}
+
+func TestThemeWatcher_NonThemeDirIgnored(t *testing.T) {
+	_, m, themesDir := newWatchTest(t)
+
+	// A stray subdir without dist/ is not a theme — must never emit a route.
+	_ = os.MkdirAll(filepath.Join(themesDir, "notes"), 0o755)
+	if !waitFor(t, 5*time.Second, func() bool {
+		m.mu.Lock()
+		calls := m.loadCalls
+		m.mu.Unlock()
+		return calls > 0
+	}) {
+		t.Fatal("no resync after creating a stray dir")
+	}
+	if configContainsRoute(m, "vanblog-static-theme-notes") {
+		t.Fatal("non-theme directory emitted a static route")
+	}
+}

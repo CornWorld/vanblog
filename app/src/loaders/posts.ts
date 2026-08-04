@@ -49,8 +49,8 @@ export function postLoader(): LiveLoader<
             lastModified: post.updated ? new Date(post.updated) : undefined,
           },
         };
-      } catch {
-        console.warn("[posts] loadEntry failed");
+      } catch (err) {
+        console.warn("[posts] loadEntry failed", err);
         return undefined;
       }
     },
@@ -98,8 +98,8 @@ export function postLoader(): LiveLoader<
             tags: ["posts"],
           },
         };
-      } catch {
-        console.warn("[posts] loadCollection failed");
+      } catch (err) {
+        console.warn("[posts] loadCollection failed", err);
         return { entries: [] };
       }
     },

@@ -3,6 +3,7 @@ package theme
 import (
 	"cmp"
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -24,10 +25,13 @@ func serveThemes(e *core.RequestEvent) error {
 	if root == "" {
 		root = "/var/lib/vanblog/themes"
 	}
-
 	entries, err := os.ReadDir(root)
 	if err != nil {
-		return e.JSON(http.StatusOK, map[string]any{"themes": []any{}})
+		slog.Warn("[theme] cannot list themes dir", "dir", root, "err", err)
+		return e.JSON(http.StatusInternalServerError, map[string]any{
+			"error":  "cannot list themes directory",
+			"themes": []any{},
+		})
 	}
 
 	type themeMeta struct {

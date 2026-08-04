@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"sync"
 	"time"
 
 	"github.com/fsnotify/fsnotify"
@@ -64,6 +65,14 @@ func startThemeWatcher(s *Service) *themeWatcher {
 // the dir goes quiet, one resync is triggered.
 func (tw *themeWatcher) run() {
 	defer tw.watcher.Close()
+	defer func() {
+		if r := recover(); r != nil {
+			// Never let a single bad event take the watcher down — the
+			// supervisor (entrypoint) would restart the container, but a
+			// transient fsnotify hiccup shouldn't.
+			slog.Error("[caddy] theme watcher recovered from panic", "panic", r)
+		}
+	}()
 	var timer *time.Timer
 	var debounceC <-chan time.Time
 	for {
@@ -97,6 +106,11 @@ func (tw *themeWatcher) run() {
 // block event consumption. reloadThemes() guards skip-caddy mode internally.
 func (tw *themeWatcher) triggerResync() {
 	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				slog.Error("[caddy] theme watcher resync goroutine recovered from panic", "panic", r)
+			}
+		}()
 		applied, _, errMsg := tw.service.reloadThemes()
 		switch {
 		case errMsg != "":
@@ -112,6 +126,7 @@ func (tw *themeWatcher) triggerResync() {
 func (tw *themeWatcher) reconcile() {
 	entries, err := os.ReadDir(tw.themesDir)
 	if err != nil {
+		throttledSlogWarn.Warn("watchReconcile", "cannot read themes dir during reconcile", "dir", tw.themesDir, "err", err)
 		return
 	}
 	watched := tw.watcher.WatchList()
@@ -120,12 +135,41 @@ func (tw *themeWatcher) reconcile() {
 			continue
 		}
 		path := filepath.Join(tw.themesDir, e.Name())
-		if !slices.Contains(watched, path) {
-			if err := tw.watcher.Add(path); err == nil {
-				slog.Debug("[caddy] theme watcher: watching", "dir", path)
-			}
+		if slices.Contains(watched, path) {
+			continue
+		}
+		if err := tw.watcher.Add(path); err != nil {
+			throttledSlogWarn.Warn("watchAdd", "cannot watch theme subdir", "dir", path, "err", err)
+		} else {
+			slog.Debug("[caddy] theme watcher: watching", "dir", path)
 		}
 	}
+}
+
+// throttledSlogWarn logs a warn at most once per minute per key — reconcile
+// runs on every fsnotify event, so a persistently unwatchable dir must not
+// spam one line per event.
+var throttledSlogWarn = newThrottledSlog()
+
+type throttledSlog struct {
+	mu   sync.Mutex
+	last map[string]time.Time
+}
+
+func newThrottledSlog() *throttledSlog {
+	return &throttledSlog{last: make(map[string]time.Time)}
+}
+
+func (t *throttledSlog) Warn(key, msg string, kv ...any) {
+	t.mu.Lock()
+	now := time.Now()
+	if t.last[key].Add(time.Minute).After(now) {
+		t.mu.Unlock()
+		return
+	}
+	t.last[key] = now
+	t.mu.Unlock()
+	slog.Warn(msg, kv...)
 }
 
 // Close stops the watcher and releases fsnotify resources.

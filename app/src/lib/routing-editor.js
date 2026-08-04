@@ -64,7 +64,9 @@ export function initRoutingEditor({ TYPE_OPTIONS }) {
     let s;
     try {
       s = await pb.vanblog.routing.status();
-    } catch {
+    } catch (err) {
+      // Status is best-effort, but a silent swallow hides a broken routing API.
+      console.warn("[routing] refreshStatus failed:", err);
       return;
     }
     const banner = document.getElementById("health-banner");
@@ -111,7 +113,9 @@ export function initRoutingEditor({ TYPE_OPTIONS }) {
     let items;
     try {
       items = (await pb.vanblog.routing.audits()).items || [];
-    } catch {
+    } catch (err) {
+      // Audits are a nice-to-have panel; don't crash, but surface the failure.
+      console.warn("[routing] refreshAudits failed:", err);
       return;
     }
     const panel = document.getElementById("audit-panel");

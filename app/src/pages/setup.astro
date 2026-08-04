@@ -18,9 +18,10 @@ try {
   const probe = createVanblogClient({ url: Astro.locals.pbUrl });
   const status = await probe.vanblog.setup.status();
   alreadySetup = !status.bootstrap;
-} catch {
+} catch (err) {
   // If the status call fails (pb down, fresh install with no DB yet),
   // show the form anyway — let the operator try.
+  console.warn("[setup] setup status probe failed:", err);
 }
 if (alreadySetup) {
   return Astro.redirect('/login');
