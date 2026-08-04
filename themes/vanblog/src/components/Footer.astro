@@ -1,4 +1,5 @@
 ---
+import SocialLinks from './SocialLinks.astro';
 import type { Site } from '@vanblog/sdk';
 
 interface Props {
@@ -8,23 +9,68 @@ interface Props {
 const { site } = Astro.props;
 const siteName = site?.siteName || 'Vanblog';
 const beian = site?.beianNumber;
+const gaBeian = site?.gaBeianNumber;
+const gaBeianUrl = site?.gaBeianUrl;
+const gaBeianLogoUrl = site?.gaBeianLogoUrl;
+const socials = site?.socials ?? [];
+const since = site?.since;
 ---
-
 <footer class="border-t border-[var(--border)] py-8 text-sm text-[var(--text-muted)]">
-  <div class="container-page flex flex-col sm:flex-row justify-between gap-4">
-    <p>
-      &copy; {new Date().getFullYear()} {siteName}.
-      Powered by <a href="https://github.com/CornWorld/vanblog" class="underline">Vanblog</a>.
-      {beian && (
-        <span class="ml-2">
-          <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer" class="underline">{beian}</a>
-        </span>
-      )}
-    </p>
-    <p class="flex gap-4">
-      <a href="/api/feed.xml" class="hover:text-[var(--text)]">RSS</a>
-      <a href="/api/atom.xml" class="hover:text-[var(--text)]">Atom</a>
-      <a href="/api/sitemap.xml" class="hover:text-[var(--text)]">Sitemap</a>
-    </p>
+  <div class="container-page">
+    {socials.length > 0 && <SocialLinks socials={socials} />}
+
+    <div class="flex flex-col sm:flex-row justify-between gap-4 mt-4">
+      <p>
+        &copy; {new Date().getFullYear()} {siteName}.
+        Powered by <a href="https://github.com/CornWorld/vanblog" class="underline">Vanblog</a>.
+        {beian && (
+          <span class="ml-2">
+            <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer" class="underline">{beian}</a>
+          </span>
+        )}
+      </p>
+      <p class="flex gap-4">
+        <a href="/api/feed.xml" class="hover:text-[var(--text)]">RSS</a>
+        <a href="/api/atom.xml" class="hover:text-[var(--text)]">Atom</a>
+        <a href="/api/sitemap.xml" class="hover:text-[var(--text)]">Sitemap</a>
+      </p>
+    </div>
+
+    {gaBeian && (
+      <p class="mt-2 flex items-center justify-center gap-1">
+        {gaBeianLogoUrl && (
+          <img src={gaBeianLogoUrl} alt="公安备案 logo" width={16} height={16} class="inline" loading="lazy" />
+        )}
+        公安备案：
+        <a href={gaBeianUrl || '#'} target="_blank" rel="noopener noreferrer" class="underline">
+          {gaBeian}
+        </a>
+      </p>
+    )}
+
+    {since && (
+      <p class="mt-1 text-center">
+        本站居然运行了 <span id="running-time" data-since={since}>--</span>
+      </p>
+    )}
   </div>
 </footer>
+
+<script>
+  const runningEl = document.getElementById('running-time');
+  if (runningEl?.dataset.since) {
+    const since = new Date(runningEl.dataset.since).getTime();
+    if (!Number.isNaN(since)) {
+      const update = () => {
+        const diff = Math.max(0, Date.now() - since);
+        const days = Math.floor(diff / 86400000);
+        const hours = Math.floor((diff % 86400000) / 3600000);
+        const mins = Math.floor((diff % 3600000) / 60000);
+        const secs = Math.floor((diff % 60000) / 1000);
+        runningEl.textContent = `${days}天${hours}小时${mins}分${secs}秒`;
+      };
+      update();
+      setInterval(update, 1000);
+    }
+  }
+</script>

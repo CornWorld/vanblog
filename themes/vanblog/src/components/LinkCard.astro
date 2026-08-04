@@ -1,0 +1,41 @@
+---
+// Friend-link card (migrated from mereithhh vanblog website/components/LinkCard).
+// Logo/avatar + name + description. Opens in a new tab.
+import type { LinkItem } from '@vanblog/sdk';
+
+export interface Props {
+  link: LinkItem;
+}
+
+const { link } = Astro.props;
+const fallbackLetter = (link.name || '?').charAt(0);
+---
+
+<a
+  href={link.url}
+  target="_blank"
+  rel="noopener noreferrer"
+  class="card-post flex items-center gap-4 p-4 no-underline hover:-translate-y-1 transition-transform hover:shadow-md"
+>
+  {link.logo ? (
+    <img
+      src={link.logo}
+      alt={link.name}
+      width={48}
+      height={48}
+      loading="lazy"
+      class="w-12 h-12 rounded-full object-cover shrink-0"
+    />
+  ) : (
+    <span
+      class="w-12 h-12 rounded-full bg-[var(--border)] flex items-center justify-center text-xl text-[var(--text-muted)] shrink-0"
+      aria-hidden="true"
+    >
+      {fallbackLetter}
+    </span>
+  )}
+  <div class="min-w-0">
+    <p class="font-medium text-[var(--text)] truncate">{link.name}</p>
+    {link.desc && <p class="text-sm text-[var(--text-muted)] truncate">{link.desc}</p>}
+  </div>
+</a>

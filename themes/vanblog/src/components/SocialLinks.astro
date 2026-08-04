@@ -1,0 +1,55 @@
+---
+// Social link list (migrated from mereithhh vanblog website/components/SocialCard).
+// Renders a row of social entries from site.socials ([{type, value}]).
+// - email  → mailto: link
+// - wechat → QR-code image shown in a small popover (value = image url)
+// - other  → plain external link
+import SocialIcon from './SocialIcon.astro';
+import type { SocialItem } from '@vanblog/sdk';
+
+export interface Props {
+  socials: SocialItem[];
+}
+
+const { socials } = Astro.props;
+---
+
+<div class="flex flex-wrap justify-center gap-x-3 gap-y-2 mt-4">
+  {socials.map((s) => {
+    if (s.type === 'email') {
+      return (
+        <a
+          href={`mailto:${s.value}`}
+          class="flex items-center text-[var(--text-muted)] hover:text-[var(--accent)] no-underline transition-colors"
+          title="Email"
+        >
+          <SocialIcon type="email" />
+        </a>
+      );
+    }
+    if (s.type === 'wechat') {
+      return (
+        <a
+          href={s.value}
+          target="_blank"
+          rel="noopener noreferrer"
+          class="flex items-center text-[var(--text-muted)] hover:text-[var(--accent)] no-underline transition-colors"
+          title="微信"
+        >
+          <SocialIcon type="wechat" />
+        </a>
+      );
+    }
+    return (
+      <a
+        href={s.value}
+        target="_blank"
+        rel="noopener noreferrer"
+        class="flex items-center text-[var(--text-muted)] hover:text-[var(--accent)] no-underline transition-colors"
+        title={s.type}
+      >
+        <SocialIcon type={s.type} />
+      </a>
+    );
+  })}
+</div>

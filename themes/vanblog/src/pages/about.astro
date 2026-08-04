@@ -13,6 +13,8 @@ L0 CONTRACT - 前端契约变量（见 .snow/plan/migrate-vanblog-frontend-to-th
 export const prerender = false;
 
 import BaseLayout from '../layouts/BaseLayout.astro';
+import AuthorCard from '../components/AuthorCard.astro';
+import { safe } from '@vanblog/sdk';
 import { renderMarkdown } from '@vanblog/base/lib/markdown/renderer';
 
 Astro.cache.set(false);
@@ -25,6 +27,12 @@ const site = await Astro.locals.getSite();
 const content = site?.aboutContent || '';
 const updatedAt = site?.aboutUpdatedAt;
 
+// Author card stats
+const pb = Astro.locals.pb;
+const postCount = await safe(() => pb.vanblog.posts.listPublished(1, 1), 'about-posts');
+const categories = await safe(() => pb.collection('categories').getFullList(), 'about-categories');
+const tags = await safe(() => pb.collection('tags').getFullList(), 'about-tags');
+
 let html = '';
 if (content.trim()) {
   try {
@@ -35,8 +43,13 @@ if (content.trim()) {
   }
 }
 ---
-
 <BaseLayout title="关于" path="/about">
+  <AuthorCard
+    site={site}
+    postCount={postCount.data?.totalItems ?? 0}
+    categoryCount={categories.data?.length ?? 0}
+    tagCount={tags.data?.length ?? 0}
+  />
   <article>
     <h1>关于</h1>
     {html ? (

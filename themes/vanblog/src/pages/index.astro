@@ -40,6 +40,10 @@ const tags = await safe(() => pb.collection('tags').getFullList(), 'tags');
 const tagCount = tags.data?.length ?? 0;
 const totalChars = posts.reduce((sum: number, p: any) => sum + (p.content?.length || 0), 0);
 const statsOk = !!(result && categories.data && tags.data);
+
+// displayOptions (showExpirationReminder / openArticleLinksInNewWindow)
+const site = await Astro.locals.getSite();
+const displayOptions = site?.displayOptions;
 ---
 <BaseLayout title="首页" path="/">
   {statsOk && (
@@ -58,7 +62,12 @@ const statsOk = !!(result && categories.data && tags.data);
     ) : (
       <div class="space-y-6">
         {posts.map((post) => (
-          <ArticleCard post={post} showExcerpt={true} />
+          <ArticleCard
+            post={post}
+            showExcerpt={true}
+            showExpirationReminder={displayOptions?.showExpirationReminder !== false}
+            openInNewWindow={!!displayOptions?.openArticleLinksInNewWindow}
+          />
         ))}
       </div>
     )

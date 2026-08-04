@@ -134,7 +134,18 @@ const safeHtml = html !== null ? sanitizeHtml(html) : null;
   {data && safeHtml !== null ? (
     <Fragment>
       <article>
-        <h1>{data.title}</h1>
+        <h1>
+          {data.title}
+          {isAuthenticated(pb) && site?.displayOptions?.showEditButton !== false && (
+            <a
+              href={`/admin/edit/${id}`}
+              class="ml-3 text-sm font-normal text-[var(--text-muted)] hover:text-[var(--accent)] no-underline align-middle"
+              title="编辑文章"
+            >
+              ✏️ 编辑
+            </a>
+          )}
+        </h1>
         <p><small>
           发表于 {fmtDate(data.created)}
           {data.private && <span class="ml-2 text-[var(--text-muted)]">· 私有</span>}

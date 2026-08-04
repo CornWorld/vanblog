@@ -1,0 +1,54 @@
+---
+// Author card sidebar (migrated from mereithhh vanblog website/components/AuthorCard).
+// Avatar + name + description + stats (posts/categories/tags) + social links.
+// Rendered at the top of /about (and available for future sidebars).
+import SocialLinks from './SocialLinks.astro';
+import type { Site } from '@vanblog/sdk';
+
+export interface Props {
+  site: Partial<Site> | null;
+  postCount?: number;
+  categoryCount?: number;
+  tagCount?: number;
+}
+
+const { site, postCount = 0, categoryCount = 0, tagCount = 0 } = Astro.props;
+const author = site?.author || site?.siteName || 'Vanblog';
+const authorLogo = site?.authorLogo || site?.siteLogo;
+const authDesc = site?.authDesc || site?.siteDesc || '';
+const socials = site?.socials ?? [];
+---
+
+<div class="card-post mb-8">
+  <div class="flex flex-col items-center text-center">
+    {authorLogo && (
+      <img
+        src={authorLogo}
+        alt={author}
+        width={96}
+        height={96}
+        loading="lazy"
+        class="w-24 h-24 rounded-full object-cover mb-3"
+      />
+    )}
+    <div class="font-semibold text-lg text-[var(--text)]">{author}</div>
+    {authDesc && <p class="text-sm text-[var(--text-muted)] mt-1 max-w-xs">{authDesc}</p>}
+
+    <div class="flex justify-center gap-6 mt-4">
+      <a href="/timeline" class="no-underline group">
+        <div class="font-bold text-[var(--text)] group-hover:text-[var(--accent)]">{postCount}</div>
+        <div class="text-xs text-[var(--text-muted)]">日志</div>
+      </a>
+      <a href="/categories" class="no-underline group">
+        <div class="font-bold text-[var(--text)] group-hover:text-[var(--accent)]">{categoryCount}</div>
+        <div class="text-xs text-[var(--text-muted)]">分类</div>
+      </a>
+      <a href="/tags" class="no-underline group">
+        <div class="font-bold text-[var(--text)] group-hover:text-[var(--accent)]">{tagCount}</div>
+        <div class="text-xs text-[var(--text-muted)]">标签</div>
+      </a>
+    </div>
+
+    {socials.length > 0 && <SocialLinks socials={socials} />}
+  </div>
+</div>

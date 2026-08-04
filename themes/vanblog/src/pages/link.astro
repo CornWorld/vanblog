@@ -1,0 +1,56 @@
+<!--
+⛔ AGENT: DO NOT EDIT THIS BLOCK
+L0 CONTRACT - 前端契约变量（见 .snow/plan/migrate-vanblog-frontend-to-theme-palette.md §模板契约清单）
+页面: 友情链接（从 mereithhh 原版 link.tsx 迁移）
+路径: themes/vanblog/src/pages/link.astro
+契约变量:
+  - site: Site — 站点配置（site.links 数组）
+-->
+---
+export const prerender = false;
+
+import BaseLayout from '../layouts/BaseLayout.astro';
+import LinkCard from '../components/LinkCard.astro';
+
+const site = await Astro.locals.getSite();
+const links = site?.links ?? [];
+const siteName = site?.siteName || 'Vanblog';
+const siteDesc = site?.siteDesc;
+const baseUrl = site?.baseUrl || '';
+---
+<BaseLayout title="友情链接" path="/link">
+  <h1 class="mb-8">友情链接</h1>
+
+  {links.length === 0 ? (
+    <p class="py-12 text-center text-[var(--text-muted)]">暂无友链。</p>
+  ) : (
+    <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      {links.map((link) => (
+        <LinkCard link={link} />
+      ))}
+    </div>
+  )}
+
+  {/* 本站信息（供对方回加友链时填写） */}
+  <div class="card-post mt-8">
+    <h2 class="text-xl mb-4">本站信息</h2>
+    <ul class="space-y-2 text-sm text-[var(--text-muted)]">
+      <li>名称：{siteName}</li>
+      {siteDesc && <li>简介：{siteDesc}</li>}
+      {baseUrl && (
+        <li>
+          网址：
+          <a href={baseUrl} class="text-[var(--accent)]" target="_blank" rel="noopener noreferrer">
+            {baseUrl}
+          </a>
+        </li>
+      )}
+      {site?.authorLogo && (
+        <li class="flex items-center gap-2">
+          头像：
+          <img src={site.authorLogo} alt="logo" width={24} height={24} class="inline rounded-full" />
+        </li>
+      )}
+    </ul>
+  </div>
+</BaseLayout>
