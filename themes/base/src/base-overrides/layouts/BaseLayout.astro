@@ -13,10 +13,11 @@
 // - Nav / Footer / BackToTop 组件（用纯 HTML nav 替代）
 // - JSON-LD（非必需）
 
-import { stripMarkdown } from '@vanblog/sdk';
+import { safe, stripMarkdown, buildThemeInitScript, buildPaletteTypeMap, paletteCssUrl } from '@vanblog/sdk';
 import { packs as packMetadata } from 'virtual:vanblog/packs';
 import { contributions as packContributions } from 'virtual:vanblog/pack-frontend';
 import type { Site, Post } from '@vanblog/sdk';
+import themeMeta from '../../../theme.json';
 
 interface Props {
   title: string;
@@ -29,6 +30,10 @@ interface Props {
 const { title, description, site: siteProp, post, path } = Astro.props;
 const site = siteProp || await Astro.locals.getSite();
 
+// Effective site palette: site.palette first, else this theme's recommendedPalette.
+const recommendedPalette = (themeMeta as { recommendedPalette?: string })?.recommendedPalette || null;
+const effectivePalette = site?.palette || recommendedPalette;
+
 const siteName = site?.siteName || 'Vanblog';
 const siteDesc = description || site?.siteDesc || '';
 const baseUrl = site?.baseUrl || '';
@@ -37,7 +42,13 @@ const desc = post ? stripMarkdown(post.content) || siteDesc : siteDesc;
 
 const packNavItems = packMetadata.flatMap((pack) => pack.nav ? [pack.nav] : []);
 const hasAbout = !!(site?.aboutContent && site.aboutContent.trim());
-const isLoggedIn = Astro.locals.pb.authStore.isValid;
+const pb = Astro.locals.pb;
+const isLoggedIn = pb.authStore.isValid;
+
+// Palette init data: effective palette + name→type map (light/dark governed by the active palette's type)
+const paletteTypeMap = buildPaletteTypeMap(
+  (await safe(() => pb.vanblog.palettes.list(), 'palettes'))?.data ?? []
+);
 ---
 <!doctype html>
 <html lang="zh-CN">
@@ -45,23 +56,23 @@ const isLoggedIn = Astro.locals.pb.authStore.isValid;
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width" />
 
-    <!-- Prevent FOUC: set dark class before paint -->
-    <script is:inline>
-      (() => {
-        const t = localStorage.getItem('vanblog-theme');
-        if (t === 'dark' || (!t && matchMedia('(prefers-color-scheme: dark)').matches)) {
-          document.documentElement.classList.add('dark');
-        }
-      })();
-    </script>
+    <!-- Prevent FOUC: apply effective palette (light/dark from palette type) + user preference before paint -->
+    <script
+      is:inline
+      set:html={buildThemeInitScript({
+        sitePalette: effectivePalette,
+        siteUpdated: site?.updated,
+        palettes: paletteTypeMap,
+      })}
+    />
 
     <title>{title} - {siteName}</title>
     <meta name="description" content={desc} />
     {canonicalURL && <link rel="canonical" href={canonicalURL} />}
 
     <!-- Palette CSS (site-level config, theme should respect) -->
-    {site?.palette && (
-      <link rel="stylesheet" href={`/api/palette.css?v=${site.updated ?? ''}`} data-vanblog-palette />
+    {effectivePalette && (
+      <link rel="stylesheet" href={paletteCssUrl(effectivePalette, site?.updated)} data-vanblog-palette />
     )}
 
     {packContributions.filter((item) => item.scope === 'public').flatMap((item) => item.styles).map((href) => (

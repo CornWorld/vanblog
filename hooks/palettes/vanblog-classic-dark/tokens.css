@@ -1,0 +1,20 @@
+/* ── VanBlog Classic Dark Palette (atomic, type: dark) ──
+ * 复刻原 mereithhh vanblog 的 signature 暗色——暖灰深炭，不是蓝黑：
+ *   - 页面底 = #1d2025
+ *   - 卡片/导航 = #26282c
+ *   - 更深层级(hover) = #232428，最深 = #1b1c1f
+ *   - 文字 = rgb(158,158,158)，次文字 rgb(120,120,120)
+ *   - 强调色 = GitHub Dark 蓝 #58a6ff
+ * 原子式调色盘：只覆盖 html.dark 作用域的暗色 --color-* token。
+ * 页面应用本调色盘时会给 <html> 加 dark class（暗色渲染）。
+ * 加载方式: site.palette="vanblog-classic-dark" → /api/palette.css
+ */
+
+html.dark {
+  --color-bg-dark: #1d2025;
+  --color-surface-dark: #26282c;
+  --color-text-dark: rgb(158, 158, 158);
+  --color-text-muted-dark: rgb(120, 120, 120);
+  --color-border-dark: #30363d;
+  --color-accent-dark: #58a6ff;
+}

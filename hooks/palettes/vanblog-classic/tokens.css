@@ -1,0 +1,19 @@
+/* ── VanBlog Classic Light Palette (atomic, type: light) ──
+ * 复刻原 mereithhh vanblog 的浅色视觉：
+ *   - 页面底 = slate-100 (#f1f5f9)
+ *   - 卡片 = 纯白 + 阴影 0 2px 8px rgba(0,0,0,.15)
+ *   - 正文 = gray-700 (#374151)，次文字 gray-500 / gray-400
+ *   - 强调色 = mereithhh 蓝 #1772b4
+ * 原子式调色盘：只覆盖 :root 的亮色 --color-* token。
+ * 页面应用本调色盘时不会加 html.dark class（亮色渲染）。
+ * 加载方式: site.palette="vanblog-classic" → /api/palette.css
+ */
+
+:root {
+  --color-bg: #f1f5f9;
+  --color-surface: #ffffff;
+  --color-text: #374151;
+  --color-text-muted: #6b7280;
+  --color-border: #e5e7eb;
+  --color-accent: #1772b4;
+}

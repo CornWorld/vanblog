@@ -9,6 +9,7 @@ import { safe, stripMarkdown, buildThemeInitScript, buildPaletteTypeMap, palette
 import { packs as packMetadata } from 'virtual:vanblog/packs';
 import { contributions as packContributions } from 'virtual:vanblog/pack-frontend';
 import type { Site, Post } from '@vanblog/sdk';
+import themeMeta from '../../theme.json';
 
 import Nav from '../components/Nav.astro';
 import Footer from '../components/Footer.astro';
@@ -27,6 +28,10 @@ const pb = Astro.locals.pb;
 
 // Fall back to site config from middleware (lazy-loaded from pb)
 const site = siteProp || await Astro.locals.getSite();
+
+// Effective site palette: site.palette first, else this theme's recommendedPalette.
+const recommendedPalette = (themeMeta as { recommendedPalette?: string })?.recommendedPalette || null;
+const effectivePalette = site?.palette || recommendedPalette;
 
 // Auth state for nav
 const isLoggedIn = pb.authStore.isValid;
@@ -91,7 +96,7 @@ const paletteTypeMap = buildPaletteTypeMap(palettes.data ?? []);
     <script
       is:inline
       set:html={buildThemeInitScript({
-        sitePalette: site?.palette,
+        sitePalette: effectivePalette,
         siteUpdated: site?.updated,
         palettes: paletteTypeMap,
       })}
@@ -103,8 +108,8 @@ const paletteTypeMap = buildPaletteTypeMap(palettes.data ?? []);
     {canonicalURL && <link rel="canonical" href={canonicalURL} />}
 
     <!-- Palette CSS (zero-build theme switch; see docs/agent-theme-architecture.md §4) -->
-    {site?.palette && (
-      <link rel="stylesheet" href={paletteCssUrl(site?.palette, site?.updated)} data-vanblog-palette />
+    {effectivePalette && (
+      <link rel="stylesheet" href={paletteCssUrl(effectivePalette, site?.updated)} data-vanblog-palette />
     )}
 
     {packContributions.filter((item) => item.scope === 'public').flatMap((item) => item.styles).map((href) => (

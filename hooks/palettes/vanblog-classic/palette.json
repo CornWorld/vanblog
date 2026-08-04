@@ -1,0 +1,8 @@
+{
+  "name": "vanblog-classic",
+  "label": "VanBlog 经典",
+  "type": "light",
+  "version": "1.0.0",
+  "author": "vanblog",
+  "description": "原 mereithhh vanblog 经典视觉（浅灰底 + 纯白卡片 + 蓝色强调 #1772b4），含 GitHub 风格文章排版与五类提示容器"
+}

@@ -1,0 +1,396 @@
+/* ── VanBlog Classic 文章排版（github-markdown 风格）──
+ *
+ * 搬运自 refs/mereithhh-original/packages/website/styles/github-markdown.css，
+ * 重 scope 为 `article .post-viewer`（PostViewer.astro 输出 `<div class="post-viewer">`，
+ * 位于 posts/[id].astro 的 `<article>` 内）。特异性 0,1,2 可覆盖
+ * global.css 中通用的 `article p / article pre / ...`。
+ *
+ * 已精简：移除 octicon/anchor 图标、prettylights(pl-*) 语法高亮（新版用 shiki）、
+ * csv-data / frame / align / float / emoji 等 GitHub 私有 markdown 输出。
+ * 保留：标题层级、段落、引用、列表嵌套、表格斑马纹、行内/块级代码、kbd、
+ * 分割线、图片、脚注(footnotes)、任务清单(task-list)。
+ *
+ * 明暗变量分两套作用域（light = html:not(.dark)，dark = html.dark），
+ * 随调色盘自动翻转。
+ */
+
+/* ── 变量：浅色 ── */
+html:not(.dark) article .post-viewer {
+  color-scheme: light;
+  --color-prettylights-syntax-comment: #6e7781;
+  --color-prettylights-syntax-constant: #0550ae;
+  --color-prettylights-syntax-entity: #8250df;
+  --color-prettylights-syntax-storage-modifier-import: #24292f;
+  --color-prettylights-syntax-entity-tag: #116329;
+  --color-prettylights-syntax-keyword: #cf222e;
+  --color-prettylights-syntax-string: #0a3069;
+  --color-prettylights-syntax-variable: #953800;
+  --color-fg-default: rgb(55, 65, 81);
+  --color-fg-muted: #57606a;
+  --color-fg-subtle: #6e7781;
+  --color-canvas-default: #ffffff;
+  --color-canvas-subtle: #f6f8fa;
+  --color-border-default: #d0d7de;
+  --color-border-muted: hsla(210, 18%, 87%, 1);
+  --color-neutral-muted: rgba(175, 184, 193, 0.2);
+  --color-accent-fg: #0969da;
+  --color-accent-emphasis: #0969da;
+  --color-attention-subtle: #fff8c5;
+  --color-danger-fg: #cf222e;
+}
+
+/* ── 变量：暗色（mereithhh signature 暖灰深炭 + GitHub Dark 语法色）── */
+.dark article .post-viewer {
+  color-scheme: dark;
+  --color-prettylights-syntax-comment: #8b949e;
+  --color-prettylights-syntax-constant: #79c0ff;
+  --color-prettylights-syntax-entity: #d2a8ff;
+  --color-prettylights-syntax-storage-modifier-import: #c9d1d9;
+  --color-prettylights-syntax-entity-tag: #7ee787;
+  --color-prettylights-syntax-keyword: #ff7b72;
+  --color-prettylights-syntax-string: #a5d6ff;
+  --color-prettylights-syntax-variable: #ffa657;
+  --color-fg-default: rgb(158, 158, 158);
+  --color-fg-muted: rgb(120, 120, 120);
+  --color-fg-subtle: rgb(80, 80, 80);
+  --color-canvas-default: #26282c;
+  --color-canvas-subtle: rgb(30, 30, 30);
+  --color-border-default: #30363d;
+  --color-border-muted: #3e4145;
+  --color-neutral-muted: rgba(110, 118, 129, 0.4);
+  --color-accent-fg: #58a6ff;
+  --color-accent-emphasis: #1f6feb;
+  --color-attention-subtle: rgba(187, 128, 9, 0.15);
+  --color-danger-fg: #f85149;
+}
+
+/* ── 基础排版 ── */
+article .post-viewer {
+  -webkit-font-smoothing: antialiased;
+  -ms-text-size-adjust: 100%;
+  -webkit-text-size-adjust: 100%;
+  margin: 0;
+  color: var(--color-fg-default);
+  font-family: "Open Sans", "PingFang SC", "Hiragino Sans GB", "Microsoft Yahei",
+    "WenQuanYi Micro Hei", "Segoe UI Emoji", "Segoe UI Symbol", Helvetica, Arial,
+    -apple-system, system-ui, sans-serif;
+  font-weight: 400;
+  line-height: 1.75;
+  word-wrap: break-word;
+}
+
+article .post-viewer b,
+article .post-viewer strong {
+  font-weight: 600;
+}
+
+article .post-viewer dfn {
+  font-style: italic;
+}
+
+article .post-viewer mark {
+  background-color: var(--color-attention-subtle);
+  color: var(--color-fg-default);
+}
+
+article .post-viewer small {
+  font-size: 90%;
+}
+
+article .post-viewer sub,
+article .post-viewer sup {
+  font-size: 75%;
+  line-height: 0;
+  position: relative;
+  vertical-align: baseline;
+}
+article .post-viewer sub {
+  bottom: -0.25em;
+}
+article .post-viewer sup {
+  top: -0.5em;
+}
+
+article .post-viewer a {
+  background-color: transparent;
+  color: var(--color-accent-fg);
+  text-decoration: none;
+}
+article .post-viewer a:hover {
+  text-decoration: underline;
+}
+
+/* ── 标题 ── */
+article .post-viewer h1,
+article .post-viewer h2,
+article .post-viewer h3,
+article .post-viewer h4,
+article .post-viewer h5,
+article .post-viewer h6 {
+  margin-top: 24px;
+  margin-bottom: 16px;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+article .post-viewer h1 {
+  padding-bottom: 0.3em;
+  font-size: 1.4em;
+  border-bottom: 1px solid var(--color-border-muted);
+}
+article .post-viewer h2 {
+  padding-bottom: 0.3em;
+  font-size: 1.3em;
+  border-bottom: 1px solid var(--color-border-muted);
+}
+article .post-viewer h3 {
+  font-size: 1.15em;
+}
+article .post-viewer h4 {
+  font-size: 1em;
+}
+article .post-viewer h5 {
+  font-size: 0.875em;
+}
+article .post-viewer h6 {
+  font-size: 0.85em;
+  color: var(--color-fg-muted);
+}
+
+/* ── 段落 / 引用 ── */
+article .post-viewer p {
+  margin-top: 0;
+  margin-bottom: 10px;
+}
+
+article .post-viewer blockquote {
+  margin: 0;
+  padding: 0 1em;
+  color: var(--color-fg-muted);
+  border-left: 0.25em solid var(--color-border-default);
+}
+article .post-viewer blockquote > :first-child {
+  margin-top: 0;
+}
+article .post-viewer blockquote > :last-child {
+  margin-bottom: 0;
+}
+
+/* ── 列表 ── */
+article .post-viewer ul,
+article .post-viewer ol {
+  margin-top: 0;
+  margin-bottom: 0;
+  padding-left: 2em;
+}
+article .post-viewer ol ol,
+article .post-viewer ul ol {
+  list-style-type: lower-roman;
+}
+article .post-viewer ul ul ol,
+article .post-viewer ul ol ol,
+article .post-viewer ol ul ol,
+article .post-viewer ol ol ol {
+  list-style-type: lower-alpha;
+}
+article .post-viewer ul ul,
+article .post-viewer ul ol,
+article .post-viewer ol ol,
+article .post-viewer ol ul {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+article .post-viewer li + li {
+  margin-top: 0.25em;
+}
+article .post-viewer li > p {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+article .post-viewer ol {
+  list-style: decimal;
+}
+
+/* ── 表格 ── */
+article .post-viewer table {
+  border-spacing: 0;
+  border-collapse: collapse;
+  display: block;
+  max-width: 100%;
+  overflow: auto;
+}
+article .post-viewer td,
+article .post-viewer th {
+  padding: 6px 13px;
+  border: 1px solid var(--color-border-default);
+}
+article .post-viewer th {
+  font-weight: 600;
+}
+article .post-viewer tr {
+  background-color: var(--color-canvas-default);
+  border-top: 1px solid var(--color-border-muted);
+}
+article .post-viewer tr:nth-child(2n) {
+  background-color: var(--color-canvas-subtle);
+}
+article .post-viewer table img {
+  background-color: transparent;
+}
+
+/* ── 代码 / kbd ── */
+article .post-viewer code,
+article .post-viewer tt {
+  padding: 0.2em 0.4em;
+  margin: 0;
+  font-size: 85%;
+  font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas,
+    Liberation Mono, monospace;
+  background-color: var(--color-neutral-muted);
+  border-radius: 6px;
+}
+article .post-viewer code br,
+article .post-viewer tt br {
+  display: none;
+}
+
+article .post-viewer pre {
+  margin-top: 0;
+  margin-bottom: 0;
+  font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas,
+    Liberation Mono, monospace;
+  font-size: 12px;
+  word-wrap: normal;
+}
+article .post-viewer pre code,
+article .post-viewer pre tt {
+  display: inline;
+  max-width: auto;
+  padding: 0;
+  margin: 0;
+  overflow: visible;
+  line-height: inherit;
+  word-wrap: normal;
+  background-color: transparent;
+  border: 0;
+  font-size: 100%;
+}
+article .post-viewer pre > code {
+  padding: 0;
+  margin: 0;
+  word-break: normal;
+  white-space: pre;
+  background: transparent;
+  border: 0;
+}
+
+/* 代码块外壳（shiki 内联 style 只控制背景/前景色，结构样式在此） */
+article .post-viewer pre {
+  padding: 16px;
+  overflow: auto;
+  font-size: 85%;
+  line-height: 1.45;
+  background-color: var(--color-canvas-subtle);
+  border-radius: 6px;
+}
+article .post-viewer pre code.hljs {
+  background: inherit;
+}
+
+/* kbd */
+article .post-viewer kbd {
+  display: inline-block;
+  padding: 3px 5px;
+  font: 11px ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas,
+    Liberation Mono, monospace;
+  line-height: 10px;
+  color: var(--color-fg-default);
+  vertical-align: middle;
+  background-color: var(--color-canvas-subtle);
+  border: solid 1px var(--color-neutral-muted);
+  border-bottom-color: var(--color-neutral-muted);
+  border-radius: 6px;
+  box-shadow: inset 0 -1px 0 var(--color-neutral-muted);
+}
+
+/* ── 分割线 / 图片 / 详情 ── */
+article .post-viewer hr {
+  box-sizing: content-box;
+  overflow: hidden;
+  background: transparent;
+  border-bottom: 1px solid var(--color-border-muted);
+  height: 0.25em;
+  padding: 0;
+  margin: 24px 0;
+  background-color: var(--color-border-default);
+  border: 0;
+}
+
+article .post-viewer img {
+  border-style: none;
+  max-width: 100%;
+  box-sizing: content-box;
+  background-color: var(--color-canvas-default);
+}
+
+article .post-viewer details,
+article .post-viewer figcaption,
+article .post-viewer figure {
+  display: block;
+}
+article .post-viewer summary {
+  display: list-item;
+}
+article .post-viewer details summary {
+  cursor: pointer;
+}
+article .post-viewer [hidden] {
+  display: none !important;
+}
+
+/* ── 脚注 ── */
+article .post-viewer .footnotes {
+  font-size: 12px;
+  color: var(--color-fg-muted);
+  border-top: 1px solid var(--color-border-default);
+}
+article .post-viewer .footnotes ol {
+  padding-left: 16px;
+}
+article .post-viewer .footnotes li {
+  position: relative;
+}
+
+/* ── 任务清单 ── */
+article .post-viewer .task-list-item {
+  list-style-type: none;
+}
+article .post-viewer .task-list-item + .task-list-item {
+  margin-top: 3px;
+}
+article .post-viewer .task-list-item .handle {
+  display: none;
+}
+article .post-viewer .task-list-item-checkbox {
+  margin: 0 0.2em 0.25em -1.6em;
+  vertical-align: middle;
+}
+article .post-viewer .contains-task-list:dir(rtl) .task-list-item-checkbox {
+  margin: 0 -1.6em 0.25em 0.2em;
+}
+
+/* ── mermaid 容器底色（GitHub 风格）── */
+.dark article .post-viewer .language-mermaid {
+  background-color: #26282c;
+}
+article .post-viewer .language-mermaid {
+  background-color: white;
+}
+
+/* ── 首尾元素 margin 清除 ── */
+article .post-viewer > *:first-child {
+  margin-top: 0 !important;
+}
+article .post-viewer > *:last-child {
+  margin-bottom: 0 !important;
+}

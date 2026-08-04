@@ -22,17 +22,32 @@ export type PaletteMeta = {
 
 export const PALETTE_KEY = "vanblog-palette";
 
+/** Pseudo-palette name for "follow system": resolves to the site default palette + OS light/dark. */
+export const SYSTEM_PALETTE = "system";
+
 function hasStorage(): boolean {
   return typeof localStorage !== "undefined";
 }
 
+/** Detect OS-level dark preference. Fails safe to light when matchMedia is unavailable. */
+function systemPrefersDark(): boolean {
+  try {
+    return (
+      typeof matchMedia !== "undefined" &&
+      matchMedia("(prefers-color-scheme: dark)").matches
+    );
+  } catch {
+    return false;
+  }
+}
+
 // ── Palette (the user's only appearance preference) ────────────────────
 
-/** Read the persisted palette name. `default` / empty resolves to null (use site config). */
+/** Read the persisted palette name. `default` / `system` / empty resolve to null (use site config + system light/dark). */
 export function getPalette(): string | null {
   if (!hasStorage()) return null;
   const p = localStorage.getItem(PALETTE_KEY);
-  return p && p !== "default" ? p : null;
+  return p && p !== "default" && p !== SYSTEM_PALETTE ? p : null;
 }
 
 export function setPalette(name: string): void {
@@ -66,7 +81,11 @@ export function resolvePaletteName(
   sitePalette?: string | null
 ): string | null {
   const p =
-    userPreference && userPreference !== "default" ? userPreference : null;
+    userPreference &&
+    userPreference !== "default" &&
+    userPreference !== SYSTEM_PALETTE
+      ? userPreference
+      : null;
   if (p) return p;
   return sitePalette && sitePalette !== "default" ? sitePalette : null;
 }
@@ -119,10 +138,13 @@ export function applyPalette(
   opts: { sitePalette?: string | null; palettes?: PaletteMeta[] } = {}
 ): void {
   const { sitePalette, palettes = [] } = opts;
-  const isDefault = name === "default" || name === sitePalette;
-  if (isDefault) clearPalette();
+  const isSystem = name === SYSTEM_PALETTE || name === "default";
+  // system/default = no persisted preference: site palette + OS light/dark.
+  if (isSystem) clearPalette();
   else setPalette(name);
-  const dark = paletteIsDark(name, buildPaletteTypeMap(palettes));
+  const dark = isSystem
+    ? systemPrefersDark()
+    : paletteIsDark(name, buildPaletteTypeMap(palettes));
   runWithTransition(() => {
     const doc = typeof document !== "undefined" ? document : null;
     if (!doc) return;
@@ -134,7 +156,9 @@ export function applyPalette(
       "link[data-vanblog-palette]"
     );
     if (link) {
-      const base = paletteCssUrl(isDefault ? null : name, undefined);
+      // system → site default palette (or endpoint fallback); explicit → that palette.
+      const target = isSystem ? sitePalette || null : name;
+      const base = paletteCssUrl(target, undefined);
       const sep = base.includes("?") ? "&" : "?";
       link.href = `${base}${sep}v=${Date.now()}`;
     }
@@ -146,8 +170,12 @@ export function applyPalette(
 /**
  * Self-contained IIFE string for the `<head>` (cannot use imports):
  *  1. Resolves the effective palette (localStorage preference → site default).
- *  2. Adds `dark` to `<html>` before paint if the effective palette is `type: dark`.
+ *  2. Adds `dark` to `<html>` before paint:
+ *     - explicit palette → its `type` decides light/dark;
+ *     - no preference (or `system`/`default`) → follow OS `prefers-color-scheme`.
  *  3. Swaps `link[data-vanblog-palette]` to the effective palette.
+ * Fallbacks: matchMedia unavailable → light; unknown palette → light;
+ * no site palette → skip palette.css (built-in default), still follow system.
  * Injected by BaseLayout via `<script is:inline set:html={...} />`.
  */
 export function buildThemeInitScript(
@@ -162,12 +190,19 @@ export function buildThemeInitScript(
   const typeMapJson = JSON.stringify(palettes);
   return `(() => {
   var PK = ${JSON.stringify(PALETTE_KEY)};
+  var SYSMODE = ${JSON.stringify(SYSTEM_PALETTE)};
   var sitePal = ${JSON.stringify(sitePal ?? "")};
   var siteUpd = ${JSON.stringify(siteUpdated ?? "")};
   var types = ${typeMapJson};
+  function isSystemDark() {
+    try { return typeof matchMedia !== 'undefined' && matchMedia('(prefers-color-scheme: dark)').matches; }
+    catch (e) { return false; }
+  }
   var pal = localStorage.getItem(PK);
-  var name = (pal && pal !== 'default') ? pal : sitePal;
-  if (name && types[name] === 'dark') document.documentElement.classList.add('dark');
+  var hasUserPal = pal && pal !== 'default' && pal !== SYSMODE;
+  var name = hasUserPal ? pal : sitePal;
+  var dark = hasUserPal ? (types[pal] === 'dark') : isSystemDark();
+  if (dark) document.documentElement.classList.add('dark');
   if (name) {
     var link = document.querySelector('link[data-vanblog-palette]');
     if (link) {

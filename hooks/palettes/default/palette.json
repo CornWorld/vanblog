@@ -4,6 +4,5 @@
   "type": "light",
   "version": "1.0.0",
   "author": "vanblog",
-  "description": "官方默认浅色调色盘（slate 系，蓝色强调色）",
-  "aliases": ["default"]
+  "description": "官方默认浅色调色盘（slate 系，蓝色强调色）"
 }

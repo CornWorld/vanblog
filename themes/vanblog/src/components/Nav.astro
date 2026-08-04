@@ -195,7 +195,7 @@ const sitePalette = site?.palette || '';
 </div>
 
 <script>
-  import { getPalette, fetchPalettes, applyPalette } from '@vanblog/sdk/browser';
+  import { getPalette, fetchPalettes, applyPalette, SYSTEM_PALETTE } from '@vanblog/sdk/browser';
   import type { PaletteMeta } from '@vanblog/sdk/browser';
 
   const header = document.getElementById('vanblog-nav');
@@ -293,12 +293,22 @@ const sitePalette = site?.palette || '';
   }
   function renderPaletteList() {
     if (!paletteList) return;
-    const active = getPalette() || sitePalette || '';
+    const userPref = getPalette(); // null → following system (no persisted preference)
     paletteList.innerHTML = '';
+
+    // 跟随系统 (system mode): OS light/dark + site default palette
+    const sysBtn = document.createElement('button');
+    sysBtn.type = 'button';
+    const sysActive = !userPref;
+    sysBtn.className = `flex items-center justify-between px-2 py-1.5 rounded text-sm hover:bg-[var(--border)] ${sysActive ? 'text-[var(--accent)] font-medium' : 'text-[var(--text)]'}`;
+    sysBtn.innerHTML = `<span>🌓 跟随系统</span><span class="text-xs text-[var(--text-muted)]">自动</span>`;
+    sysBtn.addEventListener('click', () => selectPalette(SYSTEM_PALETTE));
+    paletteList.appendChild(sysBtn);
+
     palettes.forEach((p) => {
       const btn = document.createElement('button');
       btn.type = 'button';
-      const activeCls = p.name === active ? 'text-[var(--accent)] font-medium' : 'text-[var(--text)]';
+      const activeCls = p.name === userPref ? 'text-[var(--accent)] font-medium' : 'text-[var(--text)]';
       btn.className = `flex items-center justify-between px-2 py-1.5 rounded text-sm hover:bg-[var(--border)] ${activeCls}`;
       const typeLabel = p.type === 'dark' ? '🌙 暗色' : '☀️ 亮色';
       btn.innerHTML = `<span>${escapeHtml(p.label || p.name)}</span><span class="text-xs text-[var(--text-muted)]">${typeLabel}</span>`;
@@ -326,6 +336,18 @@ const sitePalette = site?.palette || '';
     }
   });
   renderPaletteList();
+
+  // Follow system live: in system mode (no persisted preference), react to OS light/dark changes.
+  if (typeof matchMedia !== 'undefined') {
+    const mq = matchMedia('(prefers-color-scheme: dark)');
+    const onSystemChange = () => {
+      if (!getPalette()) {
+        applyPalette(SYSTEM_PALETTE, { sitePalette: sitePalette || null, palettes });
+        renderPaletteList();
+      }
+    };
+    mq.addEventListener?.('change', onSystemChange);
+  }
 
   /* ── Logout ── */
   const logoutBtn = document.getElementById('logout-btn');

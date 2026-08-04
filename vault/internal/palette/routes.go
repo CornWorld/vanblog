@@ -70,14 +70,19 @@ func servePalettes(e *core.RequestEvent) error {
 func servePaletteCSS(app core.App) func(*core.RequestEvent) error {
 	return func(e *core.RequestEvent) error {
 		// User-level override via ?name= (persisted in localStorage by the SDK);
-		// otherwise fall back to the site.palette from the DB.
+		// otherwise fall back to the site.palette, then to the active theme's
+		// recommendedPalette from its theme.json.
 		paletteName := e.Request.URL.Query().Get("name")
 		if paletteName == "" {
 			records, err := app.FindRecordsByFilter("site", "1=1", "", 1, 0)
 			if err != nil || len(records) == 0 {
 				return e.String(http.StatusOK, "/* no site config */")
 			}
-			paletteName = records[0].GetString("palette")
+			rec := records[0]
+			paletteName = rec.GetString("palette")
+			if paletteName == "" {
+				paletteName = readRecommendedPalette(rec.GetString("activeTheme"))
+			}
 		}
 		if paletteName == "" {
 			return e.String(http.StatusOK, "/* no palette configured */")
@@ -99,7 +104,30 @@ func servePaletteCSS(app core.App) func(*core.RequestEvent) error {
 			result = append(result, data...)
 			result = append(result, '\n')
 		}
-
 		return e.Blob(http.StatusOK, "text/css; charset=utf-8", result)
 	}
+}
+
+// readRecommendedPalette returns the active theme's recommendedPalette from its
+// theme.json (VANBLOG_THEMES_DIR or /var/lib/vanblog/themes). Empty on any error.
+func readRecommendedPalette(activeTheme string) string {
+	if activeTheme == "" {
+		return ""
+	}
+	root := os.Getenv("VANBLOG_THEMES_DIR")
+	if root == "" {
+		root = "/var/lib/vanblog/themes"
+	}
+	data, err := os.ReadFile(filepath.Join(root, activeTheme, "theme.json"))
+	if err != nil {
+		return ""
+	}
+	var raw map[string]any
+	if json.Unmarshal(data, &raw) != nil {
+		return ""
+	}
+	if v, ok := raw["recommendedPalette"].(string); ok {
+		return v
+	}
+	return ""
 }
