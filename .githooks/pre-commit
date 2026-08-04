@@ -3,8 +3,15 @@
 
 set -e
 
-echo "→ go vet..."
-(cd vault && go vet ./...) || exit 1
+echo "→ go vet -all (strict)..."
+(cd vault && go vet -all ./...) || exit 1
+
+echo "→ staticcheck..."
+if command -v staticcheck >/dev/null 2>&1; then
+  (cd vault && staticcheck ./...) || exit 1
+else
+  echo "  (staticcheck 未安装,跳过 — 安装: go install honnef.co/go/tools/cmd/staticcheck@latest)"
+fi
 
 echo "→ astro check..."
 (cd app && npx astro check) || exit 1

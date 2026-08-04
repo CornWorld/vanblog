@@ -34,7 +34,7 @@ help:
 	@echo "  dev-astro     Start Astro dev server (pnpm dev)"
 	@echo "  build         Build all artifacts (models → Go binary → Astro)"
 	@echo "  test          Run all tests (Go tests + model type/fixture tests)"
-	@echo "  vet           Run go vet ./..."
+	@echo "  vet           Run go vet -all + staticcheck (strict static analysis)"
 	@echo "  docker        Build production Docker image (docker buildx)"
 	@echo "  clean         Remove all build artifacts"
 
@@ -82,8 +82,11 @@ test:
 	pnpm test:models:fixtures || fail=1; \
 	[ "$$fail" -eq 0 ] || { echo "✗ 部分测试套件失败（详见上方输出）"; exit 1; }
 
+# Strict static analysis gate: all vet analyzers + staticcheck (U1000/dead
+# code, style, deprecated usage). staticcheck install:
+#   go install honnef.co/go/tools/cmd/staticcheck@latest
 vet:
-	cd vault && go vet ./...
+	cd vault && go vet -all ./... && staticcheck ./...
 
 # --- Docker ---
 

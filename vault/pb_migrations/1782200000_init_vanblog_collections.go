@@ -45,9 +45,6 @@ func init() {
 	})
 }
 
-//go:fix inline
-func strPtr(s string) *string { return new(s) }
-
 // --- Collections ---
 
 func createTags(db core.App) error {
