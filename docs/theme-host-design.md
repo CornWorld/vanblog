@@ -450,12 +450,12 @@ theme 在自己的样式中**永远用 CSS 变量**，不要硬编码颜色：
     </select>
     <small>当前主题推荐：<strong>default</strong></small>
 
-    <label>暗色模式</label>
-    <select name="defaultTheme">
-      <option value="auto">跟随系统</option>
-      <option value="light">始终亮色</option>
-      <option value="dark">始终暗色</option>
-    </select>
+    <!-- 明暗由 palette 的 type 决定（原子调色盘）；旧 defaultTheme(auto/light/dark) 三态已移除。
+         访客端通过 Nav 的「跟随系统」system 伪 palette 覆盖站点明暗。 -->
+    <label>明暗</label>
+    <p class="muted">
+      由调色盘 type 决定；访客可在站点顶栏选「跟随系统」或具体调色盘。
+    </p>
 
     <label>切换主题时如何处理调色盘</label>
     <select name="paletteMigrationMode">

@@ -19,9 +19,9 @@ import { pathToFileURL } from 'node:url';
 
 /**
  * @typedef {object} ThemeHostOptions
- * @property {string} [themesDir]       Directory holding one subdir per theme.
- * @property {string} [defaultTheme]    Fallback active theme.
- * @property {string} [pbUrl]           PocketBase base URL for site.activeTheme.
+ * @property {string} [themesDir]          Directory holding one subdir per theme.
+ * @property {string} [defaultThemeName]   Fallback active theme name.
+ * @property {string} [pbUrl]              PocketBase base URL for site.activeTheme.
  * @property {number} [maxLoadedThemes] LRU cap for cached handlers.
  * @property {string} [adminDistDir]    Standalone admin SSR build dir.
  * @property {typeof fetch} [fetchImpl] Injectable fetch (tests inject a fake PB).
@@ -40,8 +40,8 @@ import { pathToFileURL } from 'node:url';
 export function createThemeHost(options = {}) {
   const themesDir =
     options.themesDir ?? process.env.VANBLOG_THEMES_DIR ?? '/var/lib/vanblog/themes';
-  const defaultTheme =
-    options.defaultTheme ?? process.env.VANBLOG_DEFAULT_THEME ?? 'vanblog';
+  const defaultThemeName =
+    options.defaultThemeName ?? process.env.VANBLOG_DEFAULT_THEME ?? 'vanblog';
   const pbUrl = options.pbUrl ?? process.env.PB_URL ?? 'http://127.0.0.1:8090';
   const maxLoadedThemes = options.maxLoadedThemes ?? 3;
   const adminDistDir =
@@ -50,7 +50,7 @@ export function createThemeHost(options = {}) {
 
   /** @type {Map<string, LoadedTheme>} */
   const registry = new Map();
-  let activeThemeName = defaultTheme;
+  let activeThemeName = defaultThemeName;
   let adminHandler = null;
   const startTime = Date.now();
 
@@ -364,9 +364,9 @@ export function createThemeHost(options = {}) {
     };
   }
 
-  /** @returns {{themesDir: string, defaultTheme: string, pbUrl: string, adminDistDir: string, maxLoadedThemes: number}} */
+  /** @returns {{themesDir: string, defaultThemeName: string, pbUrl: string, adminDistDir: string, maxLoadedThemes: number}} */
   function getConfig() {
-    return { themesDir, defaultTheme, pbUrl, adminDistDir, maxLoadedThemes };
+    return { themesDir, defaultThemeName, pbUrl, adminDistDir, maxLoadedThemes };
   }
 
   return {

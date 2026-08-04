@@ -8,7 +8,12 @@
 //     `type`. Picking a palette decides both the colors and the light/dark
 //     rendering, exactly like picking a Color Theme in VSCode.
 //   - `site.palette` is the site-wide default palette (fallback when the
-//     visitor has no localStorage preference).
+//     visitor has no localStorage preference), and a theme may additionally
+//     declare a `recommendedPalette` used when `site.palette` is unset.
+//   - The pseudo value `system` (SYSTEM_PALETTE) / no persisted preference
+//     follows the OS `prefers-color-scheme` for light/dark while keeping the
+//     site palette's colors; an explicit palette selection locks both colors
+//     and light/dark.
 
 export type PaletteType = "dark" | "light";
 

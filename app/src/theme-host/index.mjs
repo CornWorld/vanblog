@@ -113,7 +113,7 @@ async function bootstrap() {
   const available = host.listAvailableThemes();
   console.log(`[theme-host] themes dir: ${config.themesDir}`);
   console.log(`[theme-host] available themes: ${available.length > 0 ? available.join(', ') : '(none)'}`);
-  console.log(`[theme-host] default theme: ${config.defaultTheme}`);
+  console.log(`[theme-host] default theme: ${config.defaultThemeName}`);
 
   // Adopt PB's active theme when reachable, else fall back to the default.
   await host.bootstrapActiveTheme();

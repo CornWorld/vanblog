@@ -222,7 +222,7 @@ describe('pack lifecycle', () => {
 describe('theme lifecycle', () => {
   it('enumerates the installed themes', () => {
     const { themesDir } = themeFixtureSet();
-    const host = createThemeHost({ themesDir, defaultTheme: 'alpha' });
+    const host = createThemeHost({ themesDir, defaultThemeName: 'alpha' });
     assert.deepEqual(
       new Set(host.listAvailableThemes()),
       new Set(['alpha', 'beta', 'gamma'])
@@ -231,7 +231,7 @@ describe('theme lifecycle', () => {
 
   it('loads the active theme and serves a request', async () => {
     const { themesDir } = themeFixtureSet();
-    const host = createThemeHost({ themesDir, defaultTheme: 'alpha' });
+    const host = createThemeHost({ themesDir, defaultThemeName: 'alpha' });
     const res = fakeRes();
     await host.handleRequest(fakeReq('/'), res);
     assert.equal(res.statusCode, 200);
@@ -240,7 +240,7 @@ describe('theme lifecycle', () => {
 
   it('health endpoint reports active + loaded + available', async () => {
     const { themesDir } = themeFixtureSet();
-    const host = createThemeHost({ themesDir, defaultTheme: 'alpha' });
+    const host = createThemeHost({ themesDir, defaultThemeName: 'alpha' });
     await host.getActiveHandler(); // ensure alpha is loaded
     const res = fakeRes();
     await host.handleRequest(fakeReq('/__theme_host_health'), res);
@@ -253,7 +253,7 @@ describe('theme lifecycle', () => {
 
   it('hot-switches the active theme and serves the new theme', async () => {
     const { themesDir } = themeFixtureSet();
-    const host = createThemeHost({ themesDir, defaultTheme: 'alpha' });
+    const host = createThemeHost({ themesDir, defaultThemeName: 'alpha' });
     await host.switchTheme('beta');
     const res = fakeRes();
     await host.handleRequest(fakeReq('/'), res);
@@ -263,14 +263,14 @@ describe('theme lifecycle', () => {
 
   it('refuses to switch to a missing theme — stays on the current one', async () => {
     const { themesDir } = themeFixtureSet();
-    const host = createThemeHost({ themesDir, defaultTheme: 'alpha' });
+    const host = createThemeHost({ themesDir, defaultThemeName: 'alpha' });
     await host.switchTheme('nope');
     assert.equal(host.registrySnapshot().activeTheme, 'alpha');
   });
 
   it('switching back reuses the cached handler', async () => {
     const { themesDir } = themeFixtureSet();
-    const host = createThemeHost({ themesDir, defaultTheme: 'alpha' });
+    const host = createThemeHost({ themesDir, defaultThemeName: 'alpha' });
     await host.getActiveHandler();
     await host.switchTheme('beta');
     await host.switchTheme('alpha');
@@ -284,7 +284,7 @@ describe('theme lifecycle', () => {
   it('LRU eviction caps the number of loaded handlers', async () => {
     const { themesDir } = themeFixtureSet();
     writeTheme(themesDir, 'delta', 'DELTA'); // 4th theme forces an eviction
-    const host = createThemeHost({ themesDir, defaultTheme: 'alpha', maxLoadedThemes: 3 });
+    const host = createThemeHost({ themesDir, defaultThemeName: 'alpha', maxLoadedThemes: 3 });
     for (const name of ['beta', 'gamma', 'delta']) {
       await host.switchTheme(name);
     }
@@ -298,7 +298,7 @@ describe('theme lifecycle', () => {
     const { themesDir } = themeFixtureSet();
     const host = createThemeHost({
       themesDir,
-      defaultTheme: 'alpha',
+      defaultThemeName: 'alpha',
       fetchImpl: mockPBFetch('gamma'),
     });
     await host.pollSiteChanges();
@@ -312,7 +312,7 @@ describe('theme lifecycle', () => {
     const { themesDir } = themeFixtureSet();
     const withPB = createThemeHost({
       themesDir,
-      defaultTheme: 'alpha',
+      defaultThemeName: 'alpha',
       fetchImpl: mockPBFetch('gamma'),
     });
     await withPB.bootstrapActiveTheme();
@@ -320,7 +320,7 @@ describe('theme lifecycle', () => {
 
     const noPB = createThemeHost({
       themesDir,
-      defaultTheme: 'alpha',
+      defaultThemeName: 'alpha',
       fetchImpl: async () => ({ ok: false, json: async () => ({}) }),
     });
     await noPB.bootstrapActiveTheme();
@@ -329,7 +329,7 @@ describe('theme lifecycle', () => {
 
   it('admin paths route to the admin SSR handler', async () => {
     const { themesDir, adminDistDir } = themeFixtureSet();
-    const host = createThemeHost({ themesDir, defaultTheme: 'alpha', adminDistDir });
+    const host = createThemeHost({ themesDir, defaultThemeName: 'alpha', adminDistDir });
     for (const path of ['/admin', '/admin/site', '/login', '/setup']) {
       const res = fakeRes();
       await host.handleRequest(fakeReq(path), res);
@@ -341,7 +341,7 @@ describe('theme lifecycle', () => {
     const { themesDir } = themeFixtureSet();
     const host = createThemeHost({
       themesDir,
-      defaultTheme: 'alpha',
+      defaultThemeName: 'alpha',
       adminDistDir: join(themesDir, 'no-such-admin'),
     });
     const res = fakeRes();
@@ -351,7 +351,7 @@ describe('theme lifecycle', () => {
 
   it('non-admin page requests go to the active theme', async () => {
     const { themesDir, adminDistDir } = themeFixtureSet();
-    const host = createThemeHost({ themesDir, defaultTheme: 'alpha', adminDistDir });
+    const host = createThemeHost({ themesDir, defaultThemeName: 'alpha', adminDistDir });
     await host.switchTheme('beta');
     const res = fakeRes();
     await host.handleRequest(fakeReq('/posts/hello'), res);
@@ -374,7 +374,7 @@ describe('pack + theme composition', () => {
     assert.deepEqual(routes.map((r) => r.pattern), ['/p/bookmarks']);
 
     // Runtime: the active theme owns the pack route.
-    const host = createThemeHost({ themesDir, defaultTheme: 'alpha' });
+    const host = createThemeHost({ themesDir, defaultThemeName: 'alpha' });
     const resA = fakeRes();
     await host.handleRequest(fakeReq('/p/bookmarks'), resA);
     assert.match(resA.body, /\[ALPHA\]\/p\/bookmarks/, 'pack route served by alpha');
@@ -395,7 +395,7 @@ describe('theme degradation edge cases', () => {
   it('a corrupt dist that throws at import is refused — stays on current theme', async () => {
     const { themesDir } = themeFixtureSet();
     writeBrokenTheme(themesDir, 'broken');
-    const host = createThemeHost({ themesDir, defaultTheme: 'alpha' });
+    const host = createThemeHost({ themesDir, defaultThemeName: 'alpha' });
 
     // loadTheme rejects on the broken import.
     await assert.rejects(() => host.loadTheme('broken'), /broken dist/);
@@ -409,7 +409,7 @@ describe('theme degradation edge cases', () => {
   it('a theme with no handler export is refused on switch', async () => {
     const { themesDir } = themeFixtureSet();
     writeNoHandlerTheme(themesDir, 'nohandler');
-    const host = createThemeHost({ themesDir, defaultTheme: 'alpha' });
+    const host = createThemeHost({ themesDir, defaultThemeName: 'alpha' });
     await host.switchTheme('nohandler');
     assert.equal(host.registrySnapshot().activeTheme, 'alpha');
   });
@@ -432,7 +432,7 @@ describe('theme degradation edge cases', () => {
       ].join('\n')
     );
 
-    const host = createThemeHost({ themesDir, defaultTheme: 'badjson' });
+    const host = createThemeHost({ themesDir, defaultThemeName: 'badjson' });
     const loaded = await host.loadTheme('badjson');
     // JSON.parse failed → metadata falls back to { name }.
     assert.deepEqual(loaded.themeJson, { name: 'badjson' });
@@ -453,7 +453,7 @@ describe('theme degradation edge cases', () => {
       ['export const handler = async () => { throw new Error("boom"); };', ''].join('\n')
     );
 
-    const host = createThemeHost({ themesDir, defaultTheme: 'explode' });
+    const host = createThemeHost({ themesDir, defaultThemeName: 'explode' });
     const res = fakeRes();
     await host.handleRequest(fakeReq('/'), res);
     assert.equal(res.statusCode, 500);
@@ -482,7 +482,7 @@ describe('theme degradation edge cases', () => {
         '',
       ].join('\n')
     );
-    const host = createThemeHost({ themesDir, defaultTheme: 'nometa' });
+    const host = createThemeHost({ themesDir, defaultThemeName: 'nometa' });
     const loaded = await host.loadTheme('nometa');
     assert.deepEqual(loaded.themeJson, { name: 'nometa' });
   });
@@ -492,7 +492,7 @@ describe('theme degradation edge cases', () => {
     const failingFetch = async () => {
       throw new Error('ECONNREFUSED');
     };
-    const host = createThemeHost({ themesDir, defaultTheme: 'alpha', fetchImpl: failingFetch });
+    const host = createThemeHost({ themesDir, defaultThemeName: 'alpha', fetchImpl: failingFetch });
 
     const warns = [];
     const origWarn = console.warn;
