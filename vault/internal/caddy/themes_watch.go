@@ -60,17 +60,49 @@ func startThemeWatcher(s *Service) *themeWatcher {
 	return tw
 }
 
-// run consumes fsnotify events and debounces a resync. Any create/write/remove
-// in the themes dir (or inside a watched theme dir) (re)arms the debounce; when
-// the dir goes quiet, one resync is triggered.
+// run keeps the watcher alive. It runs the consume loop, and if the loop ever
+// dies — a recovered panic, or the fsnotify watcher closing under us — it
+// recreates the watcher and resumes. Auto-discovery must never silently stop:
+// a full container restart (PB + Caddy + theme host) for a background watcher
+// hiccup would be far worse than rebuilding just the watcher.
 func (tw *themeWatcher) run() {
+	for {
+		if tw.closed() {
+			return
+		}
+		tw.loop()
+		// loop() returned: Close, a closed watcher channel, or a recovered
+		// panic. Unless we're shutting down, rebuild and continue.
+		if tw.closed() {
+			return
+		}
+		slog.Error("[caddy] theme watcher loop ended unexpectedly; restarting")
+		if !tw.recreate() {
+			slog.Error("[caddy] theme watcher could not be recreated; auto-discovery stopped (manual reload endpoint still works)")
+			return
+		}
+		time.Sleep(time.Second) // backoff so a pathological loop can't spin
+	}
+}
+
+func (tw *themeWatcher) closed() bool {
+	select {
+	case <-tw.done:
+		return true
+	default:
+		return false
+	}
+}
+
+// loop consumes fsnotify events and debounces a resync. Any create/write/remove
+// in the themes dir (or inside a watched theme dir) (re)arms the debounce; when
+// the dir goes quiet, one resync is triggered. Returns on Close or when the
+// watcher's Events channel closes (recreate() in run() takes over).
+func (tw *themeWatcher) loop() {
 	defer tw.watcher.Close()
 	defer func() {
 		if r := recover(); r != nil {
-			// Never let a single bad event take the watcher down — the
-			// supervisor (entrypoint) would restart the container, but a
-			// transient fsnotify hiccup shouldn't.
-			slog.Error("[caddy] theme watcher recovered from panic", "panic", r)
+			slog.Error("[caddy] theme watcher loop recovered from panic", "panic", r)
 		}
 	}()
 	var timer *time.Timer
@@ -81,7 +113,7 @@ func (tw *themeWatcher) run() {
 			return
 		case _, ok := <-tw.watcher.Events:
 			if !ok {
-				return
+				return // watcher closed externally; run() recreates
 			}
 			// New theme dirs may have appeared — start watching them so events
 			// inside (e.g. dist/client appearing after a partial copy) count too.
@@ -99,6 +131,27 @@ func (tw *themeWatcher) run() {
 			tw.triggerResync()
 		}
 	}
+}
+
+// recreate builds a fresh fsnotify watcher over the themes dir and existing
+// theme subdirs so auto-discovery resumes after the loop died. Returns false
+// when the watcher can't be rebuilt (e.g. the themes dir was deleted) — the
+// caller then stops, leaving the manual reload endpoint as the fallback.
+func (tw *themeWatcher) recreate() bool {
+	w, err := fsnotify.NewWatcher()
+	if err != nil {
+		slog.Warn("[caddy] theme watcher recreate failed", "err", err)
+		return false
+	}
+	if err := w.Add(tw.themesDir); err != nil {
+		slog.Warn("[caddy] theme watcher recreate: cannot watch themes dir", "err", err)
+		_ = w.Close()
+		return false
+	}
+	tw.watcher = w
+	tw.reconcile()
+	slog.Info("[caddy] theme watcher recreated", "dir", tw.themesDir)
+	return true
 }
 
 // triggerResync pushes the current themes-dir state into Caddy. Runs off the
