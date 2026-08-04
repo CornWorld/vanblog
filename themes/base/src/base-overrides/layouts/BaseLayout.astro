@@ -34,6 +34,9 @@ const site = siteProp || await Astro.locals.getSite();
 const recommendedPalette = (themeMeta as { recommendedPalette?: string })?.recommendedPalette || null;
 const effectivePalette = site?.palette || recommendedPalette;
 
+// Default favicon: site.favicon or a minimal inline SVG (avoids /favicon.ico 404).
+const DEFAULT_FAVICON = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%231772b4'/%3E%3Ctext x='16' y='23' font-size='20' font-weight='bold' text-anchor='middle' fill='white' font-family='sans-serif'%3EV%3C/text%3E%3C/svg%3E";
+
 const siteName = site?.siteName || 'Vanblog';
 const siteDesc = description || site?.siteDesc || '';
 const baseUrl = site?.baseUrl || '';
@@ -66,6 +69,7 @@ const paletteTypeMap = buildPaletteTypeMap(
       })}
     />
 
+    <link rel="icon" href={site?.favicon || DEFAULT_FAVICON} />
     <title>{title} - {siteName}</title>
     <meta name="description" content={desc} />
     {canonicalURL && <link rel="canonical" href={canonicalURL} />}
