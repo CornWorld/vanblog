@@ -100,6 +100,11 @@ func (m *Manager) dedupeOnUpload(e *core.RecordEvent) error {
 // Async so the post save response isn't blocked on the scan.
 func (m *Manager) scanPostImages(e *core.RecordEvent) error {
 	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				slog.Error("[media] scan: recovered from panic", "post", e.Record.Id, "panic", r)
+			}
+		}()
 		if err := m.ScanArticleImages(e.Record.Id); err != nil {
 			slog.Warn("[media] scan: failed for post", "post", e.Record.Id, "err", err)
 		}
@@ -110,6 +115,11 @@ func (m *Manager) scanPostImages(e *core.RecordEvent) error {
 // reapplyS3Backend pushes site.s3Config into pb settings on site update,
 // so config changes take effect on the next upload without a restart.
 func (m *Manager) reapplyS3Backend() {
+	defer func() {
+		if r := recover(); r != nil {
+			slog.Error("[media] reapply S3 backend recovered from panic", "panic", r)
+		}
+	}()
 	if err := ApplyS3BackendToSettings(m.app); err != nil {
 		slog.Warn("[media] reapply S3 backend failed", "err", err)
 	}

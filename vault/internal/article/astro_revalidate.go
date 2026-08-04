@@ -16,6 +16,14 @@ import (
 // in-container Astro SSR in prod). Non-200 responses are logged but not
 // retried — Astro caches are eventually consistent via SWR.
 func revalidateAstroCache(tags []string) {
+	defer func() {
+		if r := recover(); r != nil {
+			// This runs on a goroutine per post edit / restore / purge. A panic
+			// would crash the whole process (Go has no global panic hook) and
+			// take the entire site down over a cache invalidation — never allow it.
+			slog.Error("[article] revalidate: recovered from panic", "panic", r)
+		}
+	}()
 	astroURL := os.Getenv("ASTRO_URL")
 	if astroURL == "" {
 		astroURL = "http://127.0.0.1:4321"
