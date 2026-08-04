@@ -86,7 +86,7 @@ test:
 # code, style, deprecated usage). staticcheck install:
 #   go install honnef.co/go/tools/cmd/staticcheck@latest
 vet:
-	cd vault && go vet -all ./... && staticcheck ./...
+	cd vault && go vet -all ./... && "$$(go env GOPATH)/bin/staticcheck" ./...
 
 # --- Docker ---
 

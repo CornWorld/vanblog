@@ -7,8 +7,13 @@ echo "→ go vet -all (strict)..."
 (cd vault && go vet -all ./...) || exit 1
 
 echo "→ staticcheck..."
-if command -v staticcheck >/dev/null 2>&1; then
-  (cd vault && staticcheck ./...) || exit 1
+SC_BIN="$(go env GOPATH)/bin/staticcheck"
+if [ -x "$SC_BIN" ] || command -v staticcheck >/dev/null 2>&1; then
+  if [ -x "$SC_BIN" ]; then
+    (cd vault && "$SC_BIN" ./...) || exit 1
+  else
+    (cd vault && staticcheck ./...) || exit 1
+  fi
 else
   echo "  (staticcheck 未安装,跳过 — 安装: go install honnef.co/go/tools/cmd/staticcheck@latest)"
 fi
