@@ -72,6 +72,9 @@ const safeJsonLd = (obj: unknown) => JSON.stringify(obj).replace(/</g, '\\u003c'
 // Pack nav items are resolved at build time by the Astro Pack integration.
 const packNavItems = packMetadata.flatMap((pack) => pack.nav ? [pack.nav] : []);
 
+// Categories for the nav sub-menu (migrated from original NavBar showSubMenu).
+const navCategories = await safe(() => pb.collection('categories').getFullList<{ id: string; name: string }>(), 'nav-categories');
+
 // Palette name→type map for theme init. Light/dark is decided by the active
 // palette's `type` (atomic palette model, VSCode-style), not by a user theme
 // mode. If the list can't be fetched, the init script safely falls back to light.
@@ -134,7 +137,12 @@ const paletteTypeMap = buildPaletteTypeMap(palettes.data ?? []);
     )}
   </head>
   <body class="min-h-screen flex flex-col">
-    <Nav site={site} isLoggedIn={isLoggedIn} path={path ?? ''} packNavItems={packNavItems} />
+    <Nav
+      site={site}
+      isLoggedIn={isLoggedIn}
+      packNavItems={packNavItems}
+      categories={navCategories.data ?? []}
+    />
     <main class="flex-1 container-page py-8">
       <slot />
     </main>

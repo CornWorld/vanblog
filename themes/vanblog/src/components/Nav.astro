@@ -1,38 +1,104 @@
 ---
 import type { Site } from '@vanblog/sdk';
 
+interface NavEntry {
+  label: string;
+  href: string;
+  external?: boolean;
+}
 
 interface Props {
   site: Partial<Site> | null;
   isLoggedIn: boolean;
-  path: string;
   /** Pack nav items resolved by the Astro Pack integration, passed from BaseLayout. */
   packNavItems?: { label: string; href: string }[];
+  /** Categories for the sub-menu row (migrated from original NavBar showSubMenu). */
+  categories?: { id: string; name: string }[];
 }
 
-const { site, isLoggedIn, path, packNavItems = [] } = Astro.props;
+const { site, isLoggedIn, packNavItems = [], categories = [] } = Astro.props;
 const siteName = site?.siteName || 'Vanblog';
 const hasAbout = !!(site?.aboutContent && site.aboutContent.trim());
+const hasLinks = (site?.links?.length ?? 0) > 0;
+
+// Custom nav (site.nav) wins over the default menu — matches the original
+// config-driven NavBar. "value" containing "http" is rendered as an external link.
+const customNav: NavEntry[] = (site?.nav ?? []).map((n) => ({
+  label: n.name,
+  href: n.value,
+  external: n.value.includes('http'),
+}));
+const defaultNav: NavEntry[] = [
+  { label: '首页', href: '/' },
+  { label: '归档', href: '/archive' },
+  { label: '时间轴', href: '/timeline' },
+  { label: '标签', href: '/tags' },
+  { label: '分类', href: '/categories' },
+  ...packNavItems.map((p) => ({ label: p.label, href: p.href })),
+  ...(hasLinks ? [{ label: '友链', href: '/link' }] : []),
+  ...(hasAbout ? [{ label: '关于', href: '/about' }] : []),
+];
+const nav = customNav.length > 0 ? customNav : defaultNav;
+
+// Header-left content (migrated from original displayOptions).
+const headerLeftContent = site?.displayOptions?.headerLeftContent || 'siteName';
+const siteLogo = site?.siteLogo;
+const siteLogoDark = site?.siteLogoDark;
+const sitePalette = site?.palette || '';
 ---
 
-<header class="sticky top-0 z-10 border-b border-[var(--border)] bg-[var(--surface)] backdrop-blur-sm">
+<header id="vanblog-nav" class="sticky top-0 z-10 border-b border-[var(--border)] bg-[var(--surface)] backdrop-blur-sm">
   <div class="container-page flex items-center justify-between h-14 gap-4">
-    <a href="/" class="font-bold text-lg text-[var(--text)] no-underline hover:opacity-80">
-      {siteName}
-    </a>
-    <nav class="flex items-center gap-1 sm:gap-2 text-sm text-[var(--text)]">
-      <a href="/" class="nav-link">首页</a>
-      <a href="/archive" class="nav-link">归档</a>
-      <a href="/timeline" class="nav-link">时间轴</a>
-      <a href="/tags" class="nav-link hidden sm:inline">标签</a>
-      <a href="/categories" class="nav-link hidden sm:inline">分类</a>
-      <button id="search-open-btn" type="button" class="nav-link cursor-pointer">搜索</button>
-      {packNavItems.map((item) => (
-        <a href={item.href} class="nav-link">{item.label}</a>
-      ))}
-      {hasAbout && (
-        <a href="/about" class="nav-link hidden sm:inline">关于</a>
+    <div class="flex items-center gap-1">
+      <!-- 移动端汉堡按钮 -->
+      <button
+        id="nav-hamburger"
+        type="button"
+        class="md:hidden nav-link cursor-pointer"
+        aria-label="打开菜单"
+        aria-expanded="false"
+      >
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+          <path d="M3 6h18M3 12h18M3 18h18" />
+        </svg>
+      </button>
+      {headerLeftContent === 'siteLogo' && siteLogo && (
+        <a href="/" class="hidden md:block shrink-0" aria-label={siteName}>
+          <img
+            src={siteLogo}
+            alt={siteName}
+            width={32}
+            height={32}
+            class="h-8 w-auto dark:hidden"
+          />
+          {siteLogoDark && (
+            <img
+              src={siteLogoDark}
+              alt={siteName}
+              width={32}
+              height={32}
+              class="h-8 w-auto hidden dark:block"
+            />
+          )}
+        </a>
       )}
+      <a href="/" class="font-bold text-lg text-[var(--text)] no-underline hover:opacity-80">
+        {siteName}
+      </a>
+    </div>
+
+    <nav class="hidden md:flex items-center gap-1 sm:gap-2 text-sm text-[var(--text)]">
+      {nav.map((item) =>
+        item.external ? (
+          <a href={item.href} target="_blank" rel="noopener noreferrer" class="nav-link">{item.label}</a>
+        ) : (
+          <a href={item.href} class="nav-link">{item.label}</a>
+        ),
+      )}
+    </nav>
+
+    <div class="flex items-center gap-1 text-sm text-[var(--text)]">
+      <button id="search-open-btn" type="button" class="nav-link cursor-pointer">搜索</button>
       {isLoggedIn ? (
         <a href="/admin" class="nav-link">管理</a>
       ) : (
@@ -41,20 +107,84 @@ const hasAbout = !!(site?.aboutContent && site.aboutContent.trim());
       {isLoggedIn && (
         <button id="logout-btn" type="button" class="nav-link" aria-label="退出登录" title="退出登录">退出</button>
       )}
-      <button id="darkmode-toggle" class="nav-link text-lg" aria-label="切换深色模式" title="切换深色/浅色模式">
-        <span class="dark:hidden">🌙</span>
-        <span class="hidden dark:inline">☀️</span>
-      </button>
-    </nav>
+      <div class="relative">
+        <button
+          id="palette-toggle"
+          type="button"
+          class="nav-link cursor-pointer text-lg"
+          aria-label="切换调色盘"
+          title="调色盘"
+          data-site-palette={sitePalette}
+        >
+          🎨
+        </button>
+        <div id="palette-panel" class="hidden absolute right-0 top-full mt-2 w-60 rounded-xl border border-[var(--border)] bg-[var(--surface)] shadow-2xl p-2 z-50">
+          <p class="px-2 py-1 text-xs text-[var(--text-muted)]">调色盘（选它即定明暗 + 配色）</p>
+          <div id="palette-list" class="flex flex-col gap-1"></div>
+        </div>
+      </div>
+    </div>
   </div>
+
+  <!-- 分类子菜单（原版 NavBar 第二行 showSubMenu） -->
+  {categories.length > 0 && (
+    <div class="hidden md:block border-t border-[var(--border)]">
+      <div class="container-page flex items-center h-9 gap-1 text-sm text-[var(--text-muted)] overflow-x-auto">
+        {categories.map((c) => (
+          <a href={`/categories/${c.id}`} class="nav-link whitespace-nowrap">{c.name}</a>
+        ))}
+      </div>
+    </div>
+  )}
 </header>
 
-<!-- Search dialog overlay -->
+<!-- 移动端抽屉菜单 -->
+<div id="nav-drawer" class="fixed inset-0 z-40 hidden md:hidden" role="dialog" aria-modal="true" aria-label="导航菜单" aria-hidden="true">
+  <div class="nav-drawer-backdrop fixed inset-0 bg-black/50"></div>
+  <div class="fixed left-0 top-0 bottom-0 w-64 bg-[var(--surface)] shadow-2xl border-r border-[var(--border)] p-4 overflow-y-auto">
+    <div class="flex items-center justify-between mb-4">
+      <a href="/" class="font-bold text-[var(--text)] no-underline">{siteName}</a>
+      <button id="nav-drawer-close" type="button" class="nav-link cursor-pointer" aria-label="关闭菜单">✕</button>
+    </div>
+
+    <nav class="flex flex-col gap-1 text-sm">
+      {nav.map((item) =>
+        item.external ? (
+          <a href={item.href} target="_blank" rel="noopener noreferrer" class="nav-link" data-drawer-close>{item.label}</a>
+        ) : (
+          <a href={item.href} class="nav-link" data-drawer-close>{item.label}</a>
+        ),
+      )}
+    </nav>
+
+    {categories.length > 0 && (
+      <div class="mt-4">
+        <p class="text-xs text-[var(--text-muted)] mb-2">分类</p>
+        <nav class="flex flex-col gap-1 text-sm">
+          {categories.map((c) => (
+            <a href={`/categories/${c.id}`} class="nav-link" data-drawer-close>{c.name}</a>
+          ))}
+        </nav>
+      </div>
+    )}
+
+    <div class="mt-6 pt-4 border-t border-[var(--border)] flex gap-2">
+      <a href="/search" class="btn-primary flex-1 justify-center" data-drawer-close>搜索</a>
+      {isLoggedIn ? (
+        <a href="/admin" class="nav-link border border-[var(--border)] rounded flex-1 text-center" data-drawer-close>管理</a>
+      ) : (
+        <a href="/login" class="nav-link border border-[var(--border)] rounded flex-1 text-center" data-drawer-close>登录</a>
+      )}
+    </div>
+  </div>
+</div>
+
+<!-- 搜索浮层 -->
 <div id="search-dialog-overlay" class="fixed inset-0 z-50 hidden" role="dialog" aria-modal="true" aria-label="搜索" aria-hidden="true">
-  <div class="fixed inset-0 bg-black/50" onclick="closeSearchDialog()"></div>
+  <div class="search-dialog-backdrop fixed inset-0 bg-black/50"></div>
   <div class="fixed top-[15%] left-1/2 -translate-x-1/2 w-full max-w-lg px-4">
     <div class="bg-[var(--surface)] rounded-xl shadow-2xl border border-[var(--border)] p-4">
-      <form action="/search" method="get" onsubmit="closeSearchDialog()">
+      <form id="search-dialog-form" action="/search" method="get">
         <input type="text" name="q" id="search-dialog-input" autofocus autocomplete="off"
           aria-label="搜索关键词"
           placeholder="输入关键词搜索…"
@@ -65,15 +195,41 @@ const hasAbout = !!(site?.aboutContent && site.aboutContent.trim());
 </div>
 
 <script>
-  const nav = document.currentScript?.closest('header');
-  const html = document.documentElement;
+  import { getPalette, fetchPalettes, applyPalette } from '@vanblog/sdk/browser';
+  import type { PaletteMeta } from '@vanblog/sdk/browser';
 
-  /* ── Search dialog helpers ── */
+  const header = document.getElementById('vanblog-nav');
+
+  /* ── Mobile drawer ── */
+  const drawer = document.getElementById('nav-drawer');
+  const hamburger = document.getElementById('nav-hamburger');
+  function openNavDrawer() {
+    if (!drawer) return;
+    drawer.classList.remove('hidden');
+    drawer.setAttribute('aria-hidden', 'false');
+    hamburger?.setAttribute('aria-expanded', 'true');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeNavDrawer() {
+    if (!drawer) return;
+    drawer.classList.add('hidden');
+    drawer.setAttribute('aria-hidden', 'true');
+    hamburger?.setAttribute('aria-expanded', 'false');
+    document.body.style.overflow = '';
+  }
+  hamburger?.addEventListener('click', () => {
+    drawer?.classList.contains('hidden') ? openNavDrawer() : closeNavDrawer();
+  });
+  document.getElementById('nav-drawer-close')?.addEventListener('click', closeNavDrawer);
+  drawer?.querySelector('.nav-drawer-backdrop')?.addEventListener('click', closeNavDrawer);
+  drawer?.querySelectorAll('[data-drawer-close]').forEach((el) => el.addEventListener('click', closeNavDrawer));
+
+  /* ── Search dialog ── */
+  const searchOverlay = document.getElementById('search-dialog-overlay');
   function openSearchDialog() {
-    const overlay = document.getElementById('search-dialog-overlay');
-    if (!overlay) return;
-    overlay.classList.remove('hidden');
-    overlay.setAttribute('aria-hidden', 'false');
+    if (!searchOverlay) return;
+    searchOverlay.classList.remove('hidden');
+    searchOverlay.setAttribute('aria-hidden', 'false');
     requestAnimationFrame(() => {
       const input = document.getElementById('search-dialog-input') as HTMLInputElement | null;
       input?.focus();
@@ -81,21 +237,20 @@ const hasAbout = !!(site?.aboutContent && site.aboutContent.trim());
     });
   }
   function closeSearchDialog() {
-    const overlay = document.getElementById('search-dialog-overlay');
-    if (!overlay) return;
-    overlay.classList.add('hidden');
-    overlay.setAttribute('aria-hidden', 'true');
+    if (!searchOverlay) return;
+    searchOverlay.classList.add('hidden');
+    searchOverlay.setAttribute('aria-hidden', 'true');
   }
+  searchOverlay?.querySelector('.search-dialog-backdrop')?.addEventListener('click', closeSearchDialog);
+  document.getElementById('search-dialog-form')?.addEventListener('submit', closeSearchDialog);
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
-      const overlay = document.getElementById('search-dialog-overlay');
-      if (overlay && !overlay.classList.contains('hidden')) {
-        closeSearchDialog();
-      }
+      if (searchOverlay && !searchOverlay.classList.contains('hidden')) closeSearchDialog();
+      if (drawer && !drawer.classList.contains('hidden')) closeNavDrawer();
     }
   });
 
-  /* ── 1. Headroom: scroll to hide/show nav ── */
+  /* ── Headroom: scroll to hide/show nav ── */
   let lastScroll = 0;
   let ticking = false;
   window.addEventListener(
@@ -105,10 +260,10 @@ const hasAbout = !!(site?.aboutContent && site.aboutContent.trim());
       ticking = true;
       requestAnimationFrame(() => {
         ticking = false;
-        if (!nav) return;
+        if (!header) return;
         const cur = window.scrollY;
         if (Math.abs(cur - lastScroll) >= 8) {
-          nav.style.transform =
+          header.style.transform =
             cur > lastScroll && cur > 56
               ? 'translateY(-100%)'
               : '';
@@ -119,30 +274,75 @@ const hasAbout = !!(site?.aboutContent && site.aboutContent.trim());
     { passive: true },
   );
 
-  /* ── 2. Theme toggle ── */
-  const themeBtn = document.getElementById('darkmode-toggle');
-  themeBtn?.addEventListener('click', () => {
-    html.classList.toggle('dark');
-    const isDark = html.classList.contains('dark');
-    localStorage.setItem('vanblog-theme', isDark ? 'dark' : 'light');
-    html.dispatchEvent(new CustomEvent('darkmodechange', { detail: { dark: isDark } }));
-  });
+  /* ── Palette switcher (atomic palette model: picking a palette decides light/dark too) ── */
+  const paletteBtn = document.getElementById('palette-toggle');
+  const palettePanel = document.getElementById('palette-panel');
+  const paletteList = document.getElementById('palette-list');
+  const sitePalette = (paletteBtn?.dataset.sitePalette || '') as string;
+  let palettes: PaletteMeta[] = [];
 
-  /* ── 3. Logout ── */
+  function escapeHtml(s: string): string {
+    return s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
+  }
+  function openPalette() {
+    palettePanel?.classList.remove('hidden');
+    loadPalettes();
+  }
+  function closePalette() {
+    palettePanel?.classList.add('hidden');
+  }
+  function renderPaletteList() {
+    if (!paletteList) return;
+    const active = getPalette() || sitePalette || '';
+    paletteList.innerHTML = '';
+    palettes.forEach((p) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      const activeCls = p.name === active ? 'text-[var(--accent)] font-medium' : 'text-[var(--text)]';
+      btn.className = `flex items-center justify-between px-2 py-1.5 rounded text-sm hover:bg-[var(--border)] ${activeCls}`;
+      const typeLabel = p.type === 'dark' ? '🌙 暗色' : '☀️ 亮色';
+      btn.innerHTML = `<span>${escapeHtml(p.label || p.name)}</span><span class="text-xs text-[var(--text-muted)]">${typeLabel}</span>`;
+      btn.addEventListener('click', () => selectPalette(p.name));
+      paletteList.appendChild(btn);
+    });
+  }
+  async function loadPalettes() {
+    palettes = await fetchPalettes();
+    renderPaletteList();
+  }
+  function selectPalette(name: string) {
+    // Delegate persistence + html.dark + palette.css link + progressive switch to the SDK.
+    applyPalette(name, { sitePalette: sitePalette || null, palettes });
+    renderPaletteList();
+    closePalette();
+  }
+  paletteBtn?.addEventListener('click', (e) => {
+    e.preventDefault();
+    palettePanel?.classList.contains('hidden') ? openPalette() : closePalette();
+  });
+  document.addEventListener('click', (e) => {
+    if (palettePanel && !palettePanel.classList.contains('hidden') && !paletteBtn?.contains(e.target as Node)) {
+      closePalette();
+    }
+  });
+  renderPaletteList();
+
+  /* ── Logout ── */
   const logoutBtn = document.getElementById('logout-btn');
   logoutBtn?.addEventListener('click', async () => {
     const { logout } = await import('@vanblog/sdk/browser');
     logout('/');
   });
 
-  /* ── 4. Ctrl+K → open search dialog ── */
+  /* ── Ctrl+K → open search dialog ── */
   document.addEventListener('keydown', (e) => {
     if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
       e.preventDefault();
       openSearchDialog();
     }
   });
-  /* ── 5. Search button click ── */
+
+  /* ── Search button click ── */
   document.getElementById('search-open-btn')?.addEventListener('click', (e) => {
     e.preventDefault();
     openSearchDialog();
