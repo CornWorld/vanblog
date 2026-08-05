@@ -14,7 +14,7 @@ const updatedDays = daysSince(updated);
 const showAlert = show && createdDays > 30;
 ---
 {showAlert && (
-  <div class="mb-3 px-3 py-2 rounded text-sm bg-yellow-50 text-yellow-800 border border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-300 dark:border-yellow-700/30">
+  <div class="mb-4 px-4 py-[15px] rounded-[4px] text-sm bg-[#fdf8ea] border-l-4 border-l-[#f0ad4e] text-[var(--text)] dark:bg-[rgb(30,30,30)] dark:border-l-[#30363d]">
     请注意，本文编写于 {createdDays} 天前，最后修改于 {updatedDays} 天前，其中某些信息可能已经过时。
   </div>
 )}

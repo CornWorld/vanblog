@@ -6,53 +6,63 @@ L0 CONTRACT - 前端契约变量（见 .snow/plan/migrate-vanblog-frontend-to-th
 契约变量:
   - categories: Category[] — 全部分类
 -->
-
 ---
 export const prerender = false;
 
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import AuthorCard from '../../components/AuthorCard.astro';
+import ArticleList from '../../components/ArticleList.astro';
 import ErrorState from '../../components/ErrorState.astro';
 import { safe } from '@vanblog/sdk';
-import type { Category } from '@vanblog/sdk';
+import type { PostExpand } from '@vanblog/sdk';
 import { getAuthorCardProps } from '../../lib/viewModel';
 const pb = Astro.locals.pb;
 
-const { data: cats = [], error } = await safe(
-  () => pb.collection('categories').getFullList<Category>({ sort: 'name' }),
-  'categories'
+const { data: result, error } = await safe(
+  () => pb.vanblog.posts.listPublished(1, 500, { expand: 'category', sort: '-created' }),
+  'categories-index'
 );
+const posts = result?.items ?? [];
+
 const site = await Astro.locals.getSite();
 const authorCard = await getAuthorCardProps(pb, site);
+
+// 原版 category.tsx：全站文章按分类归档（washArticlesByKey 按 category 分组）。
+const byCategory: Record<string, PostExpand[]> = {};
+for (const post of posts) {
+  const name = post.expand?.category?.name || '未分类';
+  if (!byCategory[name]) byCategory[name] = [];
+  byCategory[name].push(post);
+}
+const categoryNames = Object.keys(byCategory).sort((a, b) => a.localeCompare(b));
 ---
 <BaseLayout title="分类" path="/categories" sideBar>
-  <h1 class="mb-6">分类</h1>
+  <div class="card-post py-4 px-8 md:py-6 md:px-8">
+    <div class="text-2xl md:text-3xl text-[var(--text)] text-center">分类</div>
+    <div class="text-center text-sm text-[var(--text-muted)] mt-2 mb-4 font-light">
+      {authorCard.categoryNum} 分类 × {authorCard.postNum} 文章 × {authorCard.tagNum} 标签
+    </div>
 
-  {error && <ErrorState />}
-
-  {!error && cats.length === 0 && (
-    <p class="py-12 text-center text-[var(--text-muted)]">暂无分类。</p>
-  )}
-
-  {!error && cats.length > 0 && (
-    <ul class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-      {cats.map(c => (
-        <li>
-          <a href={`/categories/${c.id}`} class="card-post flex items-center gap-3 no-underline hover:border-[var(--accent)]">
-            <span class="font-medium text-[var(--text)]">{c.name}</span>
-            <span class="text-xs px-2 py-0.5 rounded bg-[var(--surface)] text-[var(--text-muted)]">
-              {c.type}
-            </span>
-            {c.private && (
-              <span class="text-xs px-2 py-0.5 rounded bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400">
-                私有
-              </span>
-            )}
-          </a>
-        </li>
-      ))}
-    </ul>
-  )}
+    {
+      error ? (
+        <ErrorState />
+      ) : posts.length === 0 ? (
+        <p class="py-8 text-center text-[var(--text-muted)]">暂无分类。</p>
+      ) : (
+        <div class="space-y-6">
+          {categoryNames.map((name) => (
+            <section>
+              <h2 class="text-xl font-semibold mb-2">
+                {name}
+                <small class="text-[var(--text-muted)] font-normal ml-2">({byCategory[name].length})</small>
+              </h2>
+              <ArticleList items={byCategory[name].map(p => ({ id: p.id, title: p.title, created: p.created }))} showYear />
+            </section>
+          ))}
+        </div>
+      )
+    }
+  </div>
 
   <Fragment slot="sideBar">
     <AuthorCard {...authorCard} />

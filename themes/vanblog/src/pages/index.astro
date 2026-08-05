@@ -41,6 +41,15 @@ const authorCard = await getAuthorCardProps(pb, site);
 // displayOptions（showExpirationReminder / openArticleLinksInNewWindow）
 const displayOptions = site?.displayOptions;
 
+// keywords = 文章 tag + 分类名 去重（原版 getArticlesKeyWord 语义）。
+const keywords = Array.from(
+  new Set(
+    posts.flatMap((p) =>
+      [p.expand?.category?.name, ...(p.expand?.tags ?? []).map((t) => t.name)].filter(Boolean),
+    ) as string[],
+  ),
+).join(',');
+
 // 首页概览：渲染真实 Markdown（原版 PostCard type="overview"，截到 <!-- more -->）。
 const overviews = await Promise.all(
   posts.map(async (post) => {
@@ -59,7 +68,7 @@ const overviews = await Promise.all(
 );
 ---
 
-<BaseLayout title="首页" path="/" sideBar keywords={posts.map((p) => p.title).slice(0, 12).join(',')}>
+<BaseLayout path="/" sideBar keywords={keywords}>
   {
     loadError ? (
       <ErrorState />

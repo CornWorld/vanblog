@@ -6,9 +6,11 @@ export interface Props {
   items: { id?: string; title: string; created?: string }[];
   /** 是否显示完整年份（YYYY-MM-DD），默认 MM-DD */
   showYear?: boolean;
+  /** 是否新窗口打开（displayOptions.openArticleLinksInNewWindow） */
+  openInNewWindow?: boolean;
 }
 
-const { items, showYear = false } = Astro.props;
+const { items, showYear = false, openInNewWindow = false } = Astro.props;
 
 function fmt(raw: string | undefined, withYear: boolean): string {
   const d = parseDate(raw);
@@ -22,7 +24,9 @@ function fmt(raw: string | undefined, withYear: boolean): string {
   <div class="space-y-0">
     {items.map((item) =>
       item.id ? (
-        <a href={`/posts/${encodeURIComponent(item.id)}`} class="no-underline group block">
+        <a href={`/posts/${encodeURIComponent(item.id)}`} class="no-underline group block"
+           target={openInNewWindow ? '_blank' : undefined}
+           rel={openInNewWindow ? 'noopener noreferrer' : undefined}>
           <div class="flex items-center border-b border-dashed border-[var(--border)] py-1 group-hover:border-[var(--text-muted)] cursor-pointer transition-colors">
             <div class="text-sm text-[var(--text-muted)] flex-shrink-0 group-hover:text-[var(--text)] tabular-nums">
               {fmt(item.created, showYear)}

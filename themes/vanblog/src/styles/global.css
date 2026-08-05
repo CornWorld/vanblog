@@ -340,6 +340,11 @@ article ul,
 article ol {
   @apply my-4 pl-6 space-y-1;
 }
+
+/* 锚点跳转时预留 sticky nav 高度（对应原版 TOC 点击 offsetTop-56 的平滑滚动） */
+article .post-viewer :is(h1, h2, h3, h4, h5, h6)[id] {
+  scroll-margin-top: 5rem;
+}
 article li {
   @apply leading-relaxed;
 }

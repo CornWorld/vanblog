@@ -22,7 +22,9 @@ import CopyRight from '../../components/CopyRight.astro';
 import ErrorNotice from '@vanblog/base/components/ErrorNotice.astro';
 import Comments from '../../components/Comments.astro';
 import Reward from '../../components/Reward.astro';
-import { isAuthenticated, fmtDate, safe } from '@vanblog/sdk';
+import TopPin from '../../components/TopPin.astro';
+import { isAuthenticated, safe } from '@vanblog/sdk';
+import { fmtDate } from '../../lib/dates';
 import { renderMarkdown } from '@vanblog/base/lib/markdown/renderer';
 import { normalizeMathDelimiters } from '@vanblog/base/lib/markdown/normalizeMathDelimiters';
 import type { Post } from '@vanblog/sdk';
@@ -107,22 +109,33 @@ const safeHtml = html !== null ? sanitizeHtml(html) : null;
 // 文章含 h2/h3 标题 → 侧栏渲染 Toc（原版 hasToc ? <Toc/> : null）。
 const hasToc = !!safeHtml && hasHeadings(safeHtml);
 
-// 上下篇（原版 PostBottom pre/next，按 -created 排序，newest first）。
+// 上下篇（原版 PostBottom pre/next）：按 created 前后各取 1 条，全库精确（无 100 篇上限）。
 let prePost: { id: string; title: string } | null = null;
 let nextPost: { id: string; title: string } | null = null;
-if (data) {
-  const { data: siblings } = await safe(
-    () => pb.vanblog.posts.listPublished(1, 100, { fields: 'id,title,created', sort: '-created' }),
-    'post-siblings'
+if (data?.created) {
+  const baseFilter = 'status = "published" && deleted = false';
+  // 更旧的（pre，左 `<`）：created < 本篇，取最近一条
+  const { data: older } = await safe(
+    () => pb.collection('posts').getList<Post>(1, 1, {
+      filter: `${baseFilter} && created < "${data.created}"`,
+      sort: '-created',
+      fields: 'id,title',
+    }),
+    'post-prev'
   );
-  const items = siblings?.items ?? [];
-  const idx = items.findIndex((p) => p.id === data.id);
-  if (idx >= 0) {
-    const next = items[idx - 1];
-    const prev = items[idx + 1];
-    if (next?.id) nextPost = { id: next.id, title: next.title }; // 更新的
-    if (prev?.id) prePost = { id: prev.id, title: prev.title }; // 更旧的
-  }
+  // 更新的（next，右 `>`）：created > 本篇，取最早一条
+  const { data: newer } = await safe(
+    () => pb.collection('posts').getList<Post>(1, 1, {
+      filter: `${baseFilter} && created > "${data.created}"`,
+      sort: 'created',
+      fields: 'id,title',
+    }),
+    'post-next'
+  );
+  const prev = older?.items?.[0];
+  const next = newer?.items?.[0];
+  if (prev?.id) prePost = { id: prev.id, title: prev.title };
+  if (next?.id) nextPost = { id: next.id, title: next.title };
 }
 
 // 标签名映射（data.tags 是 record id，需查 name 渲染）。
@@ -135,12 +148,25 @@ if (tagIds.length) {
   );
   tagMap = Object.fromEntries((tags ?? []).map((t) => [t.id, t.name]));
 }
+
+// 分类名（data.category 是 record id；keywords 需要 name）。
+let categoryName = '';
+if (data?.category) {
+  // 局部 const 收窄：data 是 let，属性访问不会被 TS 可靠收窄
+  const categoryId = data.category;
+  const { data: cat } = await safe(
+    () => pb.collection('categories').getOne<{ name: string }>(categoryId),
+    'post-category'
+  );
+  categoryName = cat?.name || '';
+}
 ---
 
-<BaseLayout title={data?.title || '文章不存在'} post={data || undefined} path={`/posts/${id}`} sideBar={hasToc} keywords={data ? [data.title, ...Object.values(tagMap)].filter(Boolean).join(',') : undefined}>
+<BaseLayout title={data?.title || '文章不存在'} post={data || undefined} path={`/posts/${id}`} sideBar={hasToc} keywords={data ? [data.title, categoryName, ...Object.values(tagMap)].filter(Boolean).join(',') : undefined}>
   {data && safeHtml !== null ? (
     <Fragment>
-      <div class="card-post">
+      <div class="card-post relative">
+        {data.top != 0 && <TopPin />}
         <article>
           <h1>
             {data.title}
@@ -158,7 +184,7 @@ if (tagIds.length) {
             发表于 {fmtDate(data.created)}
             {data.private && <span class="ml-2 text-[var(--text-muted)]">· 私有</span>}
             {data.status !== 'published' && <span class="ml-2 text-[var(--text-muted)]">· {data.status}</span>}
-            {data.visitedCount != null && <span class="ml-2 text-[var(--text-muted)]">· 阅读 {data.visitedCount}</span>}
+            {data.viewCount != null && <span class="ml-2 text-[var(--text-muted)]">· 阅读 {data.viewCount}</span>}
           </small></p>
           <ExpirationNotice
             created={data.created}
@@ -167,7 +193,7 @@ if (tagIds.length) {
           />
           <div class="lg:hidden"><TocMobile html={safeHtml} /></div>
           <PostViewer html={safeHtml} />
-          <CopyRight site={site} post={data} />
+          {site?.displayOptions?.showCopyRight !== false && <CopyRight site={site} post={data} />}
 
           {/* 标签 + 上下篇（原版 PostBottom） */}
           <div class="mt-6">
@@ -200,7 +226,15 @@ if (tagIds.length) {
           </div>
         </article>
       </div>
-      {data && <Reward site={site} />}
+      {site?.displayOptions?.showDonateButton !== false && data && <Reward site={site} />}
+
+      {/* 评论区 + 返回首页仅在文章加载成功时渲染（错误态不显示） */}
+      <hr />
+      <Comments
+        provider={site?.commentsProvider || 'disabled'}
+        config={site?.commentsConfig || null}
+      />
+      <p><a href="/">← 返回首页</a></p>
     </Fragment>
   ) : passwordError ? (
     <div role="alert" class="my-8 p-4 rounded-lg border border-red-300 bg-red-50 dark:border-red-700 dark:bg-red-900/20">
@@ -210,12 +244,6 @@ if (tagIds.length) {
   ) : (
     <ErrorNotice code="404" title="文章不存在" message="该文章可能已被删除、未发布，或你没有访问权限。" />
   )}
-  <hr />
-  <Comments
-    provider={site?.commentsProvider || 'disabled'}
-    config={site?.commentsConfig || null}
-  />
-  <p><a href="/">← 返回首页</a></p>
 
   {hasToc && (
     <Fragment slot="sideBar">

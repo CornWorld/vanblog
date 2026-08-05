@@ -23,7 +23,14 @@ const { data: entries = [], error } = await safe(
 );
 const site = await Astro.locals.getSite();
 const authorCard = await getAuthorCardProps(pb, site);
-const subtitle = `${authorCard.categoryNum} 分类 × ${authorCard.postNum} 文章 × ${authorCard.tagNum} 标签`;
+// 原版 wordTotal：全站已发布文章字数合计（platform 无 totalWordCount 字段，需现算）。
+// getFullList 受 ViewRule 约束，匿名仅能取到已发布+公开文章，与 listPublished 一致。
+const { data: wordPosts } = await safe(
+  () => pb.collection('posts').getFullList<{ content?: string }>({ fields: 'content' }),
+  'timeline-words',
+);
+const wordTotal = (wordPosts ?? []).reduce((sum, p) => sum + (p.content?.length || 0), 0);
+const subtitle = `${authorCard.categoryNum} 分类 × ${authorCard.postNum} 文章 × ${authorCard.tagNum} 标签 × ${wordTotal} 字`;
 ---
 <BaseLayout title="时间轴" path="/timeline" sideBar>
   {error ? (

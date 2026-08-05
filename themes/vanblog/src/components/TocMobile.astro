@@ -17,7 +17,7 @@ const headings = extractHeadings(html);
     <nav class="px-3 pb-3">
       <ul class="space-y-1">
         {headings.map((h) => (
-          <li class={h.level === 1 ? '' : 'pl-4'}>
+          <li style={{ paddingLeft: `${h.level * 1}rem` }}>
             <a href={`#${encodeURIComponent(h.id)}`} class="text-sm text-[var(--text-muted)] hover:text-[var(--accent)] no-underline">
               {h.text}
             </a>

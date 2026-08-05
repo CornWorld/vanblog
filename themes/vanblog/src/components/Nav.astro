@@ -47,6 +47,8 @@ const siteLogoDark = site?.siteLogoDark;
 const sitePalette = site?.palette || '';
 const subMenuOffset = site?.displayOptions?.subMenuOffset || 0;
 const showRSS = site?.displayOptions?.showRSS !== false;
+const showSubMenu = site?.displayOptions?.showSubMenu !== false;
+const showAdmin = site?.displayOptions?.showAdminButton !== false;
 ---
 
 <!--
@@ -162,8 +164,8 @@ const showRSS = site?.displayOptions?.showRSS !== false;
           </button>
         )}
 
-        <!-- 管理/登录（原版 AdminButton 图标，登录后额外保留退出按钮） -->
-        {isLoggedIn ? (
+        <!-- 管理/登录（原版 AdminButton 图标，受 showAdminButton 门控，登录后额外保留退出按钮） -->
+        {showAdmin && (isLoggedIn ? (
           <>
             <a href="/admin" target="_blank" rel="noopener noreferrer" title="管理后台" aria-label="管理后台"
                class="hidden md:flex items-center cursor-pointer hover:scale-125 transform transition-all mr-2 text-[var(--text-muted)] no-underline">
@@ -183,13 +185,13 @@ const showRSS = site?.displayOptions?.showRSS !== false;
           <a href="/login" class="hidden md:flex items-center cursor-pointer hover:scale-125 transform transition-all mr-4 text-sm text-[var(--text-muted)] no-underline">
             登录
           </a>
-        )}
+        ))}
       </div>
     </div>
   </div>
 
   <!-- 分类子菜单行（原版 showSubMenu 第二行 h-10） -->
-  {categories.length > 0 && (
+  {showSubMenu && categories.length > 0 && (
     <div class="h-10 items-center hidden md:flex border-b border-[var(--border)] overflow-hidden">
       <div class="mx-5 flex-shrink-0" style={{ width: 52 + subMenuOffset }}></div>
       <ul class="flex h-full items-center text-sm text-[var(--text-muted)] overflow-x-auto">
@@ -312,6 +314,7 @@ const showRSS = site?.displayOptions?.showRSS !== false;
     if (!searchOverlay) return;
     searchOverlay.classList.remove('hidden');
     searchOverlay.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden'; // 锁定背景滚动（原版 SearchCard 行为）
     requestAnimationFrame(() => {
       const input = document.getElementById('search-dialog-input') as HTMLInputElement | null;
       input?.focus();
@@ -322,6 +325,7 @@ const showRSS = site?.displayOptions?.showRSS !== false;
     if (!searchOverlay) return;
     searchOverlay.classList.add('hidden');
     searchOverlay.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
   }
   searchOverlay?.querySelector('.search-dialog-backdrop')?.addEventListener('click', closeSearchDialog);
   document.getElementById('search-dialog-form')?.addEventListener('submit', closeSearchDialog);
@@ -488,7 +492,8 @@ const showRSS = site?.displayOptions?.showRSS !== false;
       return;
     }
     try {
-      const { getClient } = await import('@vanblog/sdk/browser');
+      const { initClient, getClient } = await import('@vanblog/sdk/browser');
+      initClient(); // 公共页首次初始化浏览器客户端（幂等），否则 getClient() 抛错
       const results = await getClient().vanblog.search.query(q, { limit: 10 });
       if (q !== (searchInput?.value || '').trim()) return; // stale response
       if (!results.length) {

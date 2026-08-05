@@ -6,7 +6,8 @@ export interface Props {
 }
 
 const { site } = Astro.props;
-const hasReward = !!(site?.payWechat || site?.payAliPay);
+// 原版 Reward 要求 aliPay 非空才显示整块（仅微信配置时隐藏）。
+const hasReward = !!site?.payAliPay;
 ---
 {hasReward && (
   <div class="my-8 pt-6 border-t border-[var(--border)] text-center">

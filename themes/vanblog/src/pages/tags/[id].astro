@@ -18,8 +18,8 @@ import ErrorState from '../../components/ErrorState.astro';
 import { safe } from '@vanblog/sdk';
 import type { Tag } from '@vanblog/sdk';
 import { getAuthorCardProps } from '../../lib/viewModel';
-const pb = Astro.locals.pb;
 
+const pb = Astro.locals.pb;
 const { id } = Astro.params;
 if (!id) return Astro.redirect('/404');
 
@@ -31,34 +31,58 @@ try {
 }
 
 const { data: result } = await safe(
-  () => pb.vanblog.posts.listPublished(1, 100, { tag: tag.name, sort: '-created' }),
-  'tag'
+  // relation 字段存 record ID，必须用 tag.id 过滤（原版按 name，PB 语义不同）
+  () => pb.vanblog.posts.listPublished(1, 500, { tag: tag.id, sort: '-created' }),
+  'tag',
 );
 const posts = result?.items ?? [];
 const error = !result;
+const wordTotal = posts.reduce((sum, p) => sum + (p.content?.length || 0), 0);
 const site = await Astro.locals.getSite();
 const authorCard = await getAuthorCardProps(pb, site);
+const openInNewWindow = site?.displayOptions?.openArticleLinksInNewWindow === true;
+
+// 原版 washArticlesByKey：按年份分组，年份倒序，组内日期倒序（已按 -created 排序）
+const grouped = posts.reduce<Record<string, { id: string; title: string; created?: string }[]>>((acc, p) => {
+  if (!p.id) return acc;
+  const d = p.created ? new Date(p.created) : null;
+  if (!d || Number.isNaN(d.getTime())) return acc;
+  const year = String(d.getFullYear());
+  (acc[year] ||= []).push({ id: p.id, title: p.title, created: p.created });
+  return acc;
+}, {});
+const years = Object.keys(grouped).sort((a, b) => Number(b) - Number(a));
 ---
+
 <BaseLayout title={`#${tag.name}`} path={`/tags/${id}`} sideBar>
   <a href="/tags" class="text-sm text-[var(--text-muted)] hover:text-[var(--accent)] mb-4 inline-block">
     ← 所有标签
   </a>
-  <h1 class="mb-2">#{tag.name}</h1>
-  {tag.description && (
-    <p class="text-[var(--text-muted)] mb-6">{tag.description}</p>
-  )}
 
-  {error && <ErrorState />}
-
-  {!error && posts.length === 0 && (
-    <p class="py-12 text-center text-[var(--text-muted)]">该标签下暂无文章。</p>
-  )}
-
-  {!error && posts.length > 0 && (
-    <div class="mt-6">
-      <ArticleList items={posts.map(p => ({ id: p.id, title: p.title, created: p.created }))} showYear />
+  <div class="card-post py-4 px-8 md:py-6 md:px-8">
+    <div class="text-2xl text-[var(--text)] text-center">#{tag.name}</div>
+    <div class="text-center text-sm text-[var(--text-muted)] mt-2 mb-4 font-light">
+      {posts.length} 文章 × {wordTotal} 字
     </div>
-  )}
+    {tag.description && <p class="text-center text-[var(--text-muted)] mb-4">{tag.description}</p>}
+
+    {error ? (
+      <ErrorState />
+    ) : posts.length === 0 ? (
+      <p class="py-8 text-center text-[var(--text-muted)]">该标签下暂无文章。</p>
+    ) : (
+      <div class="space-y-3">
+        {years.map((year) => (
+          <details open>
+            <summary class="cursor-pointer text-sm font-semibold text-[var(--text-muted)] select-none list-none py-1">
+              {year}
+            </summary>
+            <ArticleList items={grouped[year]} showYear openInNewWindow={openInNewWindow} />
+          </details>
+        ))}
+      </div>
+    )}
+  </div>
 
   <Fragment slot="sideBar">
     <AuthorCard {...authorCard} />

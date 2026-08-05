@@ -1,0 +1,13 @@
+---
+// 404 内容卡（原版 Custom404）：支持 name 参数显示「此{name}不存在」。
+interface Props {
+  name?: string;
+}
+
+const { name = '页面' } = Astro.props;
+---
+<div class="card-post py-20 text-center">
+  <div class="text-6xl font-bold text-[var(--text-muted)] mb-4">404</div>
+  <p class="text-lg text-[var(--text-muted)] mb-8">此{name}不存在。</p>
+  <a href="/" class="ua ua-link text-base text-[var(--text-muted)] hover:text-[var(--text)]">返回主页</a>
+</div>

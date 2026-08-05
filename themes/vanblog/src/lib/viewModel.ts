@@ -24,18 +24,24 @@ export interface AuthorCardProps {
 
 /**
  * Build AuthorCard sidebar props: author identity + post/category/tag counts.
- * Same three metrics the original AuthorCardProps carried (postNum /
- * catelogNum / tagNum), sourced from the PB collections.
+ * - postNum / categoryNum 与口径同原版（发布文章总数 / 全量分类数）。
+ * - tagNum 按原版 `getTagsWithArticle(false)` 语义：只统计**已发布文章实际引用**的去重 tag，
+ *   排除 admin 单独创建但未被文章引用的「孤儿 tag」，避免数字虚高。
  */
 export async function getAuthorCardProps(
   pb: VanblogClient,
   site: Partial<Site> | null
 ): Promise<AuthorCardProps> {
-  const [posts, categories, tags] = await Promise.all([
+  const [posts, categories, tagsOnPosts] = await Promise.all([
     safe(() => pb.vanblog.posts.listPublished(1, 1, { fields: 'id' }), 'vm-posts'),
     safe(() => pb.collection('categories').getFullList({ fields: 'id' }), 'vm-categories'),
-    safe(() => pb.collection('tags').getFullList({ fields: 'id' }), 'vm-tags'),
+    safe(() => pb.vanblog.posts.listPublished(1, 500, { fields: 'tags' }), 'vm-tags'),
   ]);
+
+  const tagSet = new Set<string>();
+  for (const p of tagsOnPosts.data?.items ?? []) {
+    for (const t of p.tags ?? []) if (t) tagSet.add(t);
+  }
 
   return {
     author: site?.author || site?.siteName || 'Vanblog',
@@ -44,7 +50,7 @@ export async function getAuthorCardProps(
     logoDark: site?.authorLogoDark || site?.siteLogoDark || '',
     postNum: posts.data?.totalItems ?? 0,
     categoryNum: categories.data?.length ?? 0,
-    tagNum: tags.data?.length ?? 0,
+    tagNum: tagSet.size,
     socials: site?.socials ?? [],
     showRSS: site?.displayOptions?.showRSS !== false,
   };

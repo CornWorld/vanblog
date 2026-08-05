@@ -1,5 +1,4 @@
 ---
-import { fmtDate } from '@vanblog/sdk';
 import type { Site, Post } from '@vanblog/sdk';
 
 export interface Props {
@@ -27,24 +26,13 @@ const postUrl = `${base}${Astro.url.pathname}`;
         {site.author}
       </p>
     )}
-    {post.created && (
-      <p>
-        <span class="font-medium text-[var(--text)] mr-2">发布时间:</span>
-        {fmtDate(post.created)}
-      </p>
-    )}
-    {post.updated && post.updated !== post.created && (
-      <p>
-        <span class="font-medium text-[var(--text)] mr-2">最后更新:</span>
-        {fmtDate(post.updated)}
-      </p>
-    )}
     <p>
       <span class="font-medium text-[var(--text)] mr-2">本文链接:</span>
       <button
         id="copy-post-link"
         type="button"
         title="点击复制"
+        data-url={postUrl}
         class="cursor-pointer border-b border-transparent hover:border-[var(--text-muted)] break-all text-left transition-colors"
       >
         {postUrl}
@@ -63,10 +51,11 @@ const postUrl = `${base}${Astro.url.pathname}`;
   const copyBtn = document.getElementById('copy-post-link');
   copyBtn?.addEventListener('click', async () => {
     try {
-      await navigator.clipboard.writeText(copyBtn.textContent || location.href);
+      const url = copyBtn.dataset.url || location.href;
+      await navigator.clipboard.writeText(url);
       copyBtn.textContent = '已复制!';
       setTimeout(() => {
-        copyBtn.textContent = location.pathname;
+        copyBtn.textContent = url;
       }, 1500);
     } catch (err) {
       console.error('[copy-right] copy:', err);

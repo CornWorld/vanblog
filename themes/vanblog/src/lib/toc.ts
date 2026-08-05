@@ -5,16 +5,17 @@
 
 export interface TocItem {
   id: string;
-  tag: 'h2' | 'h3';
+  tag: "h1" | "h2" | "h3" | "h4";
   text: string;
+  /** 0 = h1，1 = h2，2 = h3，3 = h4 */
   level: number;
 }
 
 function decodeEntities(s: string): string {
   return s
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'");
 }
@@ -25,24 +26,22 @@ function decodeEntities(s: string): string {
  */
 export function extractHeadings(html: string): TocItem[] {
   const items: TocItem[] = [];
-  const h2Re = /<h2[^>]*id="([^"]+)"[^>]*>([\s\S]*?)<\/h2>/gi;
-  const h3Re = /<h3[^>]*id="([^"]+)"[^>]*>([\s\S]*?)<\/h3>/gi;
+  // 用 \bid= 词边界避免误匹配 data-id（属性顺序变化时仍可靠）。
+  // 覆盖 h1–h4（原版 parseNavStructure 支持 h1–h6，h5/h6 极罕见，取前四级）。
+  const re = /<(h[1-4])[^>]*\bid="([^"]+)"[^>]*>([\s\S]*?)<\/h[1-4]>/gi;
+  const levelMap: Record<string, number> = { h1: 0, h2: 1, h3: 2, h4: 3 };
   let match: RegExpExecArray | null;
 
-  while ((match = h2Re.exec(html)) !== null) {
-    const text = decodeEntities(match[2].replace(/<[^>]*>/g, '').trim());
-    if (text) items.push({ id: match[1], tag: 'h2', text, level: 1 });
-  }
-
-  while ((match = h3Re.exec(html)) !== null) {
-    const text = decodeEntities(match[2].replace(/<[^>]*>/g, '').trim());
-    if (text) items.push({ id: match[1], tag: 'h3', text, level: 2 });
+  while ((match = re.exec(html)) !== null) {
+    const tag = match[1] as TocItem["tag"];
+    const text = decodeEntities(match[3].replace(/<[^>]*>/g, "").trim());
+    if (text) items.push({ id: match[2], tag, text, level: levelMap[tag] });
   }
 
   return items;
 }
 
-/** 文章是否含可生成目录的标题（h2/h3 带 id）。 */
+/** 文章是否含可生成目录的标题（h1–h4 带 id）。 */
 export function hasHeadings(html: string): boolean {
-  return /<(h2|h3)[^>]*\bid=/.test(html);
+  return /<h[1-4][^>]*\bid=/.test(html);
 }

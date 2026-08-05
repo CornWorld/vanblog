@@ -1,9 +1,6 @@
 ---
 // Social link list (migrated from mereithhh vanblog website/components/SocialCard).
-// Renders a row of social entries from site.socials ([{type, value}]).
-// - email  → mailto: link
-// - wechat → QR-code image shown in a small popover (value = image url)
-// - other  → plain external link
+// Renders two-column grouped rows; wechat-dark is merged into wechat as its dark variant.
 import SocialIcon from './SocialIcon.astro';
 import type { SocialItem } from '@vanblog/sdk';
 
@@ -12,44 +9,38 @@ export interface Props {
 }
 
 const { socials } = Astro.props;
+
+// 原版 SocialCard 逻辑：过滤 wechat-dark，并入 wechat 的 dark 变体；每行两个
+const darkWechat = socials.find((s) => s.type === 'wechat-dark');
+const items = socials
+  .filter((s) => s.type !== 'wechat-dark')
+  .map((s) => (s.type === 'wechat' && darkWechat ? { ...s, dark: darkWechat.value } : s));
+const rows: (SocialItem & { dark?: string })[][] = [];
+for (let i = 0; i < items.length; i += 2) rows.push(items.slice(i, i + 2));
 ---
 
-<div class="flex flex-wrap justify-center gap-x-3 gap-y-2 mt-4">
-  {socials.map((s) => {
-    if (s.type === 'email') {
-      return (
-        <a
-          href={`mailto:${s.value}`}
-          class="flex items-center text-[var(--text-muted)] hover:text-[var(--accent)] no-underline transition-colors"
-          title="Email"
-        >
-          <SocialIcon type="email" />
-        </a>
-      );
-    }
-    if (s.type === 'wechat') {
-      return (
-        <a
-          href={s.value}
-          target="_blank"
-          rel="noopener noreferrer"
-          class="flex items-center text-[var(--text-muted)] hover:text-[var(--accent)] no-underline transition-colors"
-          title="微信"
-        >
-          <SocialIcon type="wechat" />
-        </a>
-      );
-    }
-    return (
-      <a
-        href={s.value}
-        target="_blank"
-        rel="noopener noreferrer"
-        class="flex items-center text-[var(--text-muted)] hover:text-[var(--accent)] no-underline transition-colors"
-        title={s.type}
-      >
-        <SocialIcon type={s.type} />
-      </a>
-    );
-  })}
-</div>
+{socials.length > 0 && (
+  <div class="mt-4 w-full flex flex-col items-center px-2">
+    {rows.map((row) => (
+      <div class="w-full flex flex-row justify-between items-center">
+        {[0, 1].map((idx) => {
+          const s = row[idx];
+          if (!s) return <div class="w-1/2 mb-1 mx-1"></div>;
+          const href = s.type === 'email' ? `mailto:${s.value}` : s.value;
+          const target = s.type === 'email' ? undefined : '_blank';
+          return (
+            <a
+              href={href}
+              target={target}
+              rel="noopener noreferrer"
+              class="w-1/2 mb-1 mx-1 flex items-center rounded-sm transition-all text-xs text-[var(--text-muted)] hover:bg-[var(--hover)] hover:text-[var(--text)] no-underline select-none cursor-pointer px-2 py-0.5"
+              title={s.type}
+            >
+              <SocialIcon type={s.type} size={16} />
+            </a>
+          );
+        })}
+      </div>
+    ))}
+  </div>
+)}

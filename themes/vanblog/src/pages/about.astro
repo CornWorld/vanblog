@@ -8,6 +8,7 @@ L0 CONTRACT - 前端契约变量（见 .snow/plan/migrate-vanblog-frontend-to-th
   - html: string — 渲染后的 Markdown 内容
   - updatedAt: string — 最后更新时间
 -->
+
 ---
 export const prerender = false;
 
@@ -24,12 +25,31 @@ Astro.cache.set(false);
 // whatever the admin wrote. Empty content → blank page rather than 404:
 // users commonly leave the field blank until they have something to say.
 const site = await Astro.locals.getSite();
-const content = site?.aboutContent || '';
-const updatedAt = site?.aboutUpdatedAt;
-
 const pb = Astro.locals.pb;
 // AuthorCard sidebar view model（原版 getPageProps → authorCardProps）。
 const authorCard = await getAuthorCardProps(pb, site);
+
+const raw = site?.aboutContent || '';
+const updatedAt = site?.aboutUpdatedAt;
+const rewards = site?.rewards ?? [];
+const showDonateInfo = site?.displayOptions?.showDonateInfo !== false;
+
+// 原版 about.tsx：showDonateInfo != "false" 且有捐赠记录时，
+// 在正文末尾追加「## 捐赠信息」表格。新平台无捐赠时间字段，故为两列表。
+const donateTable =
+  showDonateInfo && rewards.length > 0
+    ? [
+        '',
+        '## 捐赠信息',
+        '',
+        '| 捐赠人 | 捐赠金额 |',
+        '|---|---|',
+        ...rewards.map((r) => `|${r.name}|${r.value}|`),
+        '',
+      ].join('\n')
+    : '';
+
+const content = `${raw}${donateTable}`;
 
 let html = '';
 if (content.trim()) {
@@ -41,9 +61,10 @@ if (content.trim()) {
   }
 }
 ---
-<BaseLayout title="关于" path="/about" sideBar>
+
+<BaseLayout title="关于我" path="/about" sideBar>
   <article>
-    <h1>关于</h1>
+    <h1>关于我</h1>
     {html ? (
       <div class="post-viewer" set:html={html} />
     ) : (

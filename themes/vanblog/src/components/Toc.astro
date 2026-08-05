@@ -20,7 +20,7 @@ const headings = extractHeadings(html);
       <nav class="toc-nav mt-2">
         <ul class="toc-list">
           {headings.map((h) => (
-            <li class={h.level === 1 ? 'toc-item--h2' : 'toc-item--h3'}>
+            <li class="toc-item" style={{ paddingLeft: `${0.75 + h.level * 0.75}rem` }}>
               <a href={`#${encodeURIComponent(h.id)}`} class="toc-link">{h.text}</a>
             </li>
           ))}
