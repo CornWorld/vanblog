@@ -8,6 +8,8 @@ import (
 // Creates the `site_visits` collection backing the visits pack
 // (全站访问量 + 当前在线，复刻原版 mereithhh Viewer)。
 //
+// - visited: 总访问次数（持久化累计）
+// - sessions: JSON 字段，存 { sessionId: lastSeenMs } 心跳表，online = 活跃会话数
 // Counters are maintained by the pack hook (`routerAdd /api/packs/visits`),
 // which writes through $app directly and bypasses the records API. We keep
 // all CRUD rules empty (superuser-only) so visitors cannot tamper with the
@@ -21,7 +23,7 @@ func init() {
 
 		col := core.NewCollection(core.CollectionTypeBase, "site_visits")
 		col.Fields.Add(&core.NumberField{Name: "visited"})
-		col.Fields.Add(&core.NumberField{Name: "online"})
+		col.Fields.Add(&core.JSONField{Name: "sessions"})
 		col.Fields.Add(&core.AutodateField{Name: "created", OnCreate: true})
 		col.Fields.Add(&core.AutodateField{Name: "updated", OnCreate: true, OnUpdate: true})
 

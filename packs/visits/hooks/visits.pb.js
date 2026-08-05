@@ -5,60 +5,61 @@
 //   - action=ping：  仅登记会话心跳（保持 online 存活）
 // 返回 `{ ok, visited, online }`。
 //
-// online = 最近 60s 内有心跳的会话数（内存维护）；visited 持久化到
-// `site_visits` collection（单条记录，由 migration 创建）。
-const ONLINE_WINDOW_MS = 60 * 1000;
-const COLLECTION = "site_visits";
-
-const sessions = new Map(); // sessionId -> lastSeen (ms)
-
-function getRecord(app) {
-  const col = app.findCollectionByNameOrId(COLLECTION);
-  let record = null;
-  try {
-    record = app.findFirstRecordByFilter(col, "1=1");
-  } catch (e) {
-    // no record yet
-  }
-  if (!record) {
-    record = new Record(col);
-    record.set("visited", 0);
-    app.save(record);
-  }
-  return record;
-}
-
+// ⚠️ PocketBase JSVM 限制：.pb.js 的顶层 const/function 在 executor VM 中不可见
+// （routerAdd 回调被重新编译执行）。因此本 hook **不声明任何顶层变量**，
+// 全部状态（visited + sessions map）持久化在 `site_visits` 单条记录的 JSON 字段，
+// 回调内只用 PB 全局（$app / Record / c）。查询参数用 `c.request.url.query().get()`。
 routerAdd("GET", "/api/packs/visits", (c) => {
   const now = Date.now();
-  const session = c.queryParam("session") || "";
-  const action = c.queryParam("action") || "ping";
+  const q = c.request.url.query();
+  const session = (q.get("session") || "").trim();
+  const action = (q.get("action") || "ping").trim();
 
   let record;
   try {
-    record = getRecord($app);
+    const col = $app.findCollectionByNameOrId("site_visits");
+    try {
+      record = $app.findFirstRecordByFilter(col, "1=1");
+    } catch (e) {
+      record = null;
+    }
+    if (!record) {
+      record = new Record(col);
+      record.set("visited", 0);
+      record.set("sessions", {});
+      $app.save(record);
+    }
   } catch (err) {
     console.error("[visits] collection unavailable:", err);
     return c.json(500, { ok: false, error: "collection unavailable" });
   }
 
   let visited = record.getInt("visited");
+  let sessions = {};
+  try {
+    const raw = record.get("sessions");
+    if (raw && typeof raw === "object") sessions = raw;
+  } catch (e) {
+    sessions = {};
+  }
+
   if (action === "record" && session) {
     visited += 1;
     record.set("visited", visited);
-    try {
-      $app.save(record);
-    } catch (err) {
-      console.error("[visits] persist failed:", err);
-    }
+  }
+  if (session) sessions[session] = now;
+  // prune stale sessions（60s 窗口）
+  for (const id in sessions) {
+    if (now - sessions[id] > 60000) delete sessions[id];
+  }
+  record.set("sessions", sessions);
+  try {
+    $app.save(record);
+  } catch (err) {
+    console.error("[visits] persist failed:", err);
   }
 
-  if (session) sessions.set(session, now);
-  // prune stale sessions
-  for (const [id, ts] of sessions) {
-    if (now - ts > ONLINE_WINDOW_MS) sessions.delete(id);
-  }
-
-  return c.json(200, { ok: true, visited, online: sessions.size });
+  return c.json(200, { ok: true, visited, online: Object.keys(sessions).length });
 });
 
 console.log("[visits] Pack hook loaded");
