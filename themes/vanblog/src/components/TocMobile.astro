@@ -1,0 +1,29 @@
+---
+// 移动端目录（原版 TocMobile）：折叠面板，文章页移动端（侧栏隐藏时）使用。
+import { extractHeadings } from '../lib/toc';
+
+export interface Props {
+  html: string;
+}
+
+const { html } = Astro.props;
+const headings = extractHeadings(html);
+---
+{headings.length > 0 && (
+  <details class="toc-mobile mb-4 rounded-lg border border-[var(--border)] bg-[var(--surface)]">
+    <summary class="cursor-pointer text-sm font-semibold text-[var(--text-muted)] px-3 py-2 select-none list-none">
+      目录
+    </summary>
+    <nav class="px-3 pb-3">
+      <ul class="space-y-1">
+        {headings.map((h) => (
+          <li class={h.level === 1 ? '' : 'pl-4'}>
+            <a href={`#${encodeURIComponent(h.id)}`} class="text-sm text-[var(--text-muted)] hover:text-[var(--accent)] no-underline">
+              {h.text}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  </details>
+)}

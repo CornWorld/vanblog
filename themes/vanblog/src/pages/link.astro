@@ -11,14 +11,18 @@ export const prerender = false;
 
 import BaseLayout from '../layouts/BaseLayout.astro';
 import LinkCard from '../components/LinkCard.astro';
+import AuthorCard from '../components/AuthorCard.astro';
+import { getAuthorCardProps } from '../lib/viewModel';
 
+const pb = Astro.locals.pb;
 const site = await Astro.locals.getSite();
 const links = site?.links ?? [];
 const siteName = site?.siteName || 'Vanblog';
 const siteDesc = site?.siteDesc;
 const baseUrl = site?.baseUrl || '';
+const authorCard = await getAuthorCardProps(pb, site);
 ---
-<BaseLayout title="友情链接" path="/link">
+<BaseLayout title="友情链接" path="/link" sideBar>
   <h1 class="mb-8">友情链接</h1>
 
   {links.length === 0 ? (
@@ -53,4 +57,8 @@ const baseUrl = site?.baseUrl || '';
       )}
     </ul>
   </div>
+
+  <Fragment slot="sideBar">
+    <AuthorCard {...authorCard} />
+  </Fragment>
 </BaseLayout>

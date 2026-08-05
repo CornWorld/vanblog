@@ -1,29 +1,64 @@
 ---
+import { calPageItems } from '../lib/pagination';
+import type { PageItem } from '../lib/pagination';
+
 export interface Props {
   page: number;
   totalPages: number;
   baseUrl: string;
   class?: string;
-  [key: string]: unknown;
 }
 
-const { page, totalPages, baseUrl, class: className, ...rest } = Astro.props;
+const { page, totalPages, baseUrl, class: className } = Astro.props;
+const items = calPageItems({ current: page, totalPages, baseUrl });
+
+const baseCls =
+  'inline-flex justify-center items-center h-7 w-7 rounded text-sm transition-all no-underline select-none';
+const btnEnabledCls =
+  'bg-[var(--surface)] card-shadow text-[var(--text)] hover:bg-[var(--border)] cursor-pointer';
+const btnDisabledCls = 'opacity-40 cursor-not-allowed text-[var(--text-muted)]';
+const moreCls = 'text-[var(--text-muted)] hover:text-[var(--text)] cursor-pointer';
+const linkCls = 'bg-[var(--surface)] card-shadow text-[var(--text)] hover:bg-[var(--border)]';
+const curCls = 'bg-[var(--accent)] text-white';
 ---
-
-<nav class:list={['flex justify-center gap-4 mt-10 pt-6 border-t border-[var(--border)]', className]} {...rest}>
-  {page > 1 ? (
-    <a href={`${baseUrl}${baseUrl.includes('?') ? '&' : '?'}page=${page - 1}`} class="btn-primary">← 上一页</a>
-  ) : (
-    <span class="btn-primary opacity-50 cursor-not-allowed">← 上一页</span>
-  )}
-
-  <span class="flex items-center text-sm text-[var(--text-muted)]">
-    第 {page} / {totalPages} 页
-  </span>
-
-  {page < totalPages ? (
-    <a href={`${baseUrl}${baseUrl.includes('?') ? '&' : '?'}page=${page + 1}`} class="btn-primary">下一页 →</a>
-  ) : (
-    <span class="btn-primary opacity-50 cursor-not-allowed">下一页 →</span>
-  )}
+<nav class:list={['flex justify-center gap-1 mt-8 pt-6 border-t border-[var(--border)]', className]} aria-label="分页">
+  {
+    items.map((item: PageItem) => {
+      switch (item.type) {
+        case 'pre-btn':
+        case 'next-btn':
+          return (
+            <a href={item.href} class={`${baseCls} ${btnEnabledCls}`}>
+              {item.type === 'next-btn' ? '›' : '‹'}
+            </a>
+          );
+        case 'pre-btn-disable':
+        case 'next-btn-disable':
+          return (
+            <span class={`${baseCls} ${btnDisabledCls}`} aria-disabled="true">
+              {item.type === 'next-btn-disable' ? '›' : '‹'}
+            </span>
+          );
+        case 'pre-more':
+        case 'next-more':
+          return (
+            <a href={item.href} class={`${baseCls} ${moreCls}`} aria-label="更多页码">
+              •••
+            </a>
+          );
+        case 'link-cur':
+          return (
+            <span class={`${baseCls} ${curCls}`} aria-current="page">
+              {item.page}
+            </span>
+          );
+        default:
+          return (
+            <a href={item.href} class={`${baseCls} ${linkCls}`}>
+              {item.page}
+            </a>
+          );
+      }
+    })
+  }
 </nav>

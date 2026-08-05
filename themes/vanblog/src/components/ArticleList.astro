@@ -1,0 +1,38 @@
+---
+// 文章列表行（原版 ArticleList）：日期 + 标题的虚线行，供标签/分类/归档等复用。
+import { parseDate } from '@vanblog/sdk';
+
+export interface Props {
+  items: { id?: string; title: string; created?: string }[];
+  /** 是否显示完整年份（YYYY-MM-DD），默认 MM-DD */
+  showYear?: boolean;
+}
+
+const { items, showYear = false } = Astro.props;
+
+function fmt(raw: string | undefined, withYear: boolean): string {
+  const d = parseDate(raw);
+  if (!d) return '—';
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return withYear ? `${d.getFullYear()}-${mm}-${dd}` : `${mm}-${dd}`;
+}
+---
+{items.length > 0 && (
+  <div class="space-y-0">
+    {items.map((item) =>
+      item.id ? (
+        <a href={`/posts/${encodeURIComponent(item.id)}`} class="no-underline group block">
+          <div class="flex items-center border-b border-dashed border-[var(--border)] py-1 group-hover:border-[var(--text-muted)] cursor-pointer transition-colors">
+            <div class="text-sm text-[var(--text-muted)] flex-shrink-0 group-hover:text-[var(--text)] tabular-nums">
+              {fmt(item.created, showYear)}
+            </div>
+            <div class="ml-2 md:ml-4 text-base flex-grow overflow-hidden text-[var(--text)] group-hover:text-[var(--accent)] truncate">
+              {item.title}
+            </div>
+          </div>
+        </a>
+      ) : null,
+    )}
+  </div>
+)}

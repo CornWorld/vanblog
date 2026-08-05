@@ -9,33 +9,67 @@ export interface Props {
 
 const { site, post } = Astro.props;
 const hasPost = !!post;
+// 站点可配置站点级版权协议；文章可自定义（post.copyright 优先）。
+const copyright =
+  post?.copyright ||
+  (site?.copyrightAgreement
+    ? `本博客所有文章除特别声明外，均采用 ${site.copyrightAgreement} 许可协议。转载请注明出处！`
+    : '');
+// 本文链接 = baseUrl + 当前路径（原版 CopyRight 可点击复制）。
+const base = site?.baseUrl ? site.baseUrl.replace(/\/$/, '') : '';
+const postUrl = `${base}${Astro.url.pathname}`;
 ---
-
 {hasPost && (
-  <div class="mt-8 pt-6 border-t border-[var(--border)] text-sm text-[var(--text-muted)] space-y-1">
+  <div class="bg-[var(--surface-soft)] px-5 border-l-4 border-red-500 py-2 text-sm space-y-1 text-[var(--text-muted)] mt-4">
     {site?.author && (
       <p>
-        <span class="font-medium text-[var(--text)]">作者：</span>
+        <span class="font-medium text-[var(--text)] mr-2">本文作者:</span>
         {site.author}
       </p>
     )}
     {post.created && (
       <p>
-        <span class="font-medium text-[var(--text)]">发布时间：</span>
+        <span class="font-medium text-[var(--text)] mr-2">发布时间:</span>
         {fmtDate(post.created)}
       </p>
     )}
     {post.updated && post.updated !== post.created && (
       <p>
-        <span class="font-medium text-[var(--text)]">最后更新：</span>
+        <span class="font-medium text-[var(--text)] mr-2">最后更新:</span>
         {fmtDate(post.updated)}
       </p>
     )}
-    {site?.copyrightAgreement && (
-      <p class="mt-2 pt-2 border-t border-[var(--border)]">
-        <span class="font-medium text-[var(--text)]">版权协议：</span>
-        {site.copyrightAgreement}
+    <p>
+      <span class="font-medium text-[var(--text)] mr-2">本文链接:</span>
+      <button
+        id="copy-post-link"
+        type="button"
+        title="点击复制"
+        class="cursor-pointer border-b border-transparent hover:border-[var(--text-muted)] break-all text-left transition-colors"
+      >
+        {postUrl}
+      </button>
+    </p>
+    {copyright && (
+      <p>
+        <span class="font-medium text-[var(--text)] mr-2">版权声明:</span>
+        {copyright}
       </p>
     )}
   </div>
 )}
+
+<script>
+  const copyBtn = document.getElementById('copy-post-link');
+  copyBtn?.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(copyBtn.textContent || location.href);
+      copyBtn.textContent = '已复制!';
+      setTimeout(() => {
+        copyBtn.textContent = location.pathname;
+      }, 1500);
+    } catch (err) {
+      console.error('[copy-right] copy:', err);
+    }
+  });
+</script>

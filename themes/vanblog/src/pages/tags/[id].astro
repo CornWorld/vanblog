@@ -12,9 +12,12 @@ L0 CONTRACT - 前端契约变量（见 .snow/plan/migrate-vanblog-frontend-to-th
 export const prerender = false;
 
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import AuthorCard from '../../components/AuthorCard.astro';
+import ArticleList from '../../components/ArticleList.astro';
 import ErrorState from '../../components/ErrorState.astro';
-import { fmtDate, safe } from '@vanblog/sdk';
+import { safe } from '@vanblog/sdk';
 import type { Tag } from '@vanblog/sdk';
+import { getAuthorCardProps } from '../../lib/viewModel';
 const pb = Astro.locals.pb;
 
 const { id } = Astro.params;
@@ -33,8 +36,10 @@ const { data: result } = await safe(
 );
 const posts = result?.items ?? [];
 const error = !result;
+const site = await Astro.locals.getSite();
+const authorCard = await getAuthorCardProps(pb, site);
 ---
-<BaseLayout title={`#${tag.name}`} path={`/tags/${id}`}>
+<BaseLayout title={`#${tag.name}`} path={`/tags/${id}`} sideBar>
   <a href="/tags" class="text-sm text-[var(--text-muted)] hover:text-[var(--accent)] mb-4 inline-block">
     ← 所有标签
   </a>
@@ -50,16 +55,12 @@ const error = !result;
   )}
 
   {!error && posts.length > 0 && (
-    <ul class="space-y-2 mt-6">
-      {posts.map(p => (
-        <li class="flex items-baseline gap-3">
-          <time class="text-sm text-[var(--text-muted)] whitespace-nowrap tabular-nums"
-                datetime={p.created}>
-            {fmtDate(p.created)}
-          </time>
-          <a href={`/posts/${p.id}`} class="hover:text-[var(--accent)]">{p.title}</a>
-        </li>
-      ))}
-    </ul>
+    <div class="mt-6">
+      <ArticleList items={posts.map(p => ({ id: p.id, title: p.title, created: p.created }))} showYear />
+    </div>
   )}
+
+  <Fragment slot="sideBar">
+    <AuthorCard {...authorCard} />
+  </Fragment>
 </BaseLayout>

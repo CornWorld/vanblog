@@ -1,0 +1,20 @@
+---
+// 过期提醒（原版 AlertCard）：文章创建超过 30 天即提示「编写/修改天数」。
+import { daysSince } from '../lib/dates';
+
+interface Props {
+  created?: string;
+  updated?: string;
+  show?: boolean;
+}
+
+const { created, updated, show = true } = Astro.props;
+const createdDays = daysSince(created);
+const updatedDays = daysSince(updated);
+const showAlert = show && createdDays > 30;
+---
+{showAlert && (
+  <div class="mb-3 px-3 py-2 rounded text-sm bg-yellow-50 text-yellow-800 border border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-300 dark:border-yellow-700/30">
+    请注意，本文编写于 {createdDays} 天前，最后修改于 {updatedDays} 天前，其中某些信息可能已经过时。
+  </div>
+)}

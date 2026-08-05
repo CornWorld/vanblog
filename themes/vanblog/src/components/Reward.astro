@@ -6,35 +6,47 @@ export interface Props {
 }
 
 const { site } = Astro.props;
-const hasReward = site?.payWechat || site?.payAliPay;
+const hasReward = !!(site?.payWechat || site?.payAliPay);
 ---
-
 {hasReward && (
   <div class="my-8 pt-6 border-t border-[var(--border)] text-center">
-    <p class="text-sm text-[var(--text-muted)] mb-4">
-      如果觉得文章对你有帮助，欢迎请我喝杯咖啡 ☕️
-    </p>
-    <div class="flex justify-center gap-6">
-      {site?.payWechat && (
-        <div class="text-center">
-          <img
-            src={site.payWechat}
-            alt="微信赞赏"
-            class="w-32 h-32 rounded-lg border border-[var(--border)]"
-          />
-          <p class="text-xs text-[var(--text-muted)] mt-1">微信</p>
-        </div>
-      )}
-      {site?.payAliPay && (
-        <div class="text-center">
-          <img
-            src={site.payAliPay}
-            alt="支付宝赞赏"
-            class="w-32 h-32 rounded-lg border border-[var(--border)]"
-          />
-          <p class="text-xs text-[var(--text-muted)] mt-1">支付宝</p>
-        </div>
-      )}
+    <p class="text-sm text-[var(--text-muted)] mb-4">如果对你有用的话，可以打赏哦 ☕️</p>
+    <button
+      id="reward-toggle"
+      type="button"
+      aria-expanded="false"
+      class="text-sm md:text-base text-white bg-red-600 rounded px-4 select-none cursor-pointer hover:bg-red-400 py-1 transition-colors"
+    >
+      打赏
+    </button>
+    <div id="reward-qr" class="justify-center overflow-hidden transition-all" style={{ maxHeight: '0' }}>
+      <div class="flex justify-center gap-6 mt-4 mb-1">
+        {site?.payWechat && (
+          <div class="text-center">
+            <img src={site.payWechat} alt="微信赞赏" class="w-32 h-32 rounded-lg border border-[var(--border)] dark:hidden" />
+            {site.payWechatDark && <img src={site.payWechatDark} alt="微信赞赏" class="w-32 h-32 rounded-lg border border-[var(--border)] hidden dark:block" />}
+            <p class="text-xs text-[var(--text-muted)] mt-1">微信</p>
+          </div>
+        )}
+        {site?.payAliPay && (
+          <div class="text-center">
+            <img src={site.payAliPay} alt="支付宝赞赏" class="w-32 h-32 rounded-lg border border-[var(--border)] dark:hidden" />
+            {site.payAliPayDark && <img src={site.payAliPayDark} alt="支付宝赞赏" class="w-32 h-32 rounded-lg border border-[var(--border)] hidden dark:block" />}
+            <p class="text-xs text-[var(--text-muted)] mt-1">支付宝</p>
+          </div>
+        )}
+      </div>
     </div>
   </div>
 )}
+
+<script>
+  const btn = document.getElementById('reward-toggle');
+  const qr = document.getElementById('reward-qr');
+  btn?.addEventListener('click', () => {
+    if (!qr) return;
+    const open = qr.style.maxHeight !== '0px';
+    qr.style.maxHeight = open ? '0px' : '300px';
+    btn.setAttribute('aria-expanded', String(!open));
+  });
+</script>

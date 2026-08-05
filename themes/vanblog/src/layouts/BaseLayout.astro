@@ -18,12 +18,16 @@ import BackToTop from '../components/BackToTop.astro';
 interface Props {
   title: string;
   description?: string;
+  keywords?: string;
   site?: Partial<Site>;
   post?: Post;
   path?: string; // e.g. "/posts/xxx"
+  /** Render a right sidebar column (vanblog-sider, w-52, hidden below lg).
+   *  Content goes into the `sideBar` named slot — e.g. the AuthorCard. */
+  sideBar?: boolean;
 }
 
-const { title, description, site: siteProp, post, path } = Astro.props;
+const { title, description, keywords, site: siteProp, post, path, sideBar = false } = Astro.props;
 const pb = Astro.locals.pb;
 
 // Fall back to site config from middleware (lazy-loaded from pb)
@@ -111,6 +115,7 @@ const paletteTypeMap = buildPaletteTypeMap(palettes.data ?? []);
     <!-- Core SEO -->
     <title>{title} - {siteName}</title>
     <meta name="description" content={desc} />
+    {keywords && <meta name="keywords" content={keywords} />}
     {canonicalURL && <link rel="canonical" href={canonicalURL} />}
 
     <!-- Palette CSS (zero-build theme switch; see docs/agent-theme-architecture.md §4) -->
@@ -146,6 +151,21 @@ const paletteTypeMap = buildPaletteTypeMap(palettes.data ?? []);
     ) : (
       <script is:inline type="application/ld+json" set:html={safeJsonLd(websiteSchema)} />
     )}
+
+    <!-- Analytics（原版 BaiduAnalysis / gaAnalysis） -->
+    {site?.baiduAnalysisId && (
+      <script is:inline src={`https://hm.baidu.com/hm.js?${site.baiduAnalysisId}`} async />
+    )}
+    {site?.gaAnalysisId && (
+      <>
+        <script is:inline async src={`https://www.googletagmanager.com/gtag/js?id=${site.gaAnalysisId}`} />
+        <script is:inline set:html={`window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','${site.gaAnalysisId}');`} />
+      </>
+    )}
+
+    <!-- Custom head / CSS（原版 CustomLayout，站点后台自定义注入） -->
+    {site?.customHead && <Fragment set:html={site.customHead} />}
+    {site?.customCss && <style is:inline set:html={site.customCss} />}
   </head>
   <body class="min-h-screen flex flex-col">
     <Nav
@@ -154,14 +174,33 @@ const paletteTypeMap = buildPaletteTypeMap(palettes.data ?? []);
       packNavItems={packNavItems}
       categories={navCategories.data ?? []}
     />
-    <main class="flex-1 container-page py-8">
-      <slot />
-    </main>
+    {sideBar ? (
+      <main class="flex-1 py-8">
+        <div class="mx-auto max-w-5xl px-4 sm:px-6">
+          <div class="flex justify-center">
+            <div class="flex-shrink flex-grow min-w-0 w-full md:max-w-3xl vanblog-main">
+              <slot />
+            </div>
+            <div class="hidden lg:block flex-shrink-0 flex-grow-0 w-52 vanblog-sider">
+              <slot name="sideBar" />
+            </div>
+          </div>
+        </div>
+      </main>
+    ) : (
+      <main class="flex-1 container-page py-8">
+        <slot />
+      </main>
+    )}
     <Footer site={site} />
     <BackToTop />
 
     {packContributions.filter((item) => item.scope === 'public').flatMap((item) => item.scripts).map((src) => (
       <script is:inline type="module" src={src} data-vanblog-pack-script></script>
     ))}
+
+    <!-- Custom HTML / Script（原版 CustomLayout，站点后台自定义注入） -->
+    {site?.customHtml && <Fragment set:html={site.customHtml} />}
+    {site?.customScript && <script is:inline set:html={site.customScript} />}
   </body>
 </html>

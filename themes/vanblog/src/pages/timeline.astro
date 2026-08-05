@@ -11,51 +11,64 @@ L0 CONTRACT - 前端契约变量（见 .snow/plan/migrate-vanblog-frontend-to-th
 export const prerender = false;
 
 import BaseLayout from '../layouts/BaseLayout.astro';
+import AuthorCard from '../components/AuthorCard.astro';
 import ErrorState from '../components/ErrorState.astro';
 import { safe } from '@vanblog/sdk';
+import { getAuthorCardProps } from '../lib/viewModel';
 const pb = Astro.locals.pb;
 
 const { data: entries = [], error } = await safe(
   () => pb.vanblog.timeline.list(),
   'timeline'
 );
+const site = await Astro.locals.getSite();
+const authorCard = await getAuthorCardProps(pb, site);
+const subtitle = `${authorCard.categoryNum} 分类 × ${authorCard.postNum} 文章 × ${authorCard.tagNum} 标签`;
 ---
-<BaseLayout title="时间轴" path="/timeline">
-  <h1 class="mb-8">时间轴</h1>
+<BaseLayout title="时间轴" path="/timeline" sideBar>
+  {error ? (
+    <ErrorState />
+  ) : entries.length === 0 ? (
+    <div class="card-post py-16 text-center">
+      <p class="text-[var(--text-muted)]">暂无数据。</p>
+    </div>
+  ) : (
+    /* 原版时间线：白卡包裹 + 居中标题 + 统计副标题 */
+    <div class="card-post py-4 px-8 md:py-6 md:px-8">
+      <div class="text-2xl md:text-3xl text-[var(--text)] text-center">时间线</div>
+      <div class="text-center text-sm text-[var(--text-muted)] mt-2 mb-4 font-light">{subtitle}</div>
 
-  {error && <ErrorState />}
-
-  {!error && entries.length === 0 && (
-    <p class="py-12 text-center text-[var(--text-muted)]">暂无数据。</p>
-  )}
-
-  {!error && entries.length > 0 && (
-    <div class="space-y-8">
-      {entries.map(year => (
-        <section>
-          <h2 class="text-2xl mb-1">
-            {year.year}
-            <small class="text-[var(--text-muted)] font-normal ml-2">({year.count})</small>
-          </h2>
-          <div class="border-l-2 border-[var(--border)] pl-6 ml-1 space-y-4">
-            {year.months.map(m => (
-              <div>
-                <h3 class="text-sm text-[var(--text-muted)] mb-2">
-                  {year.year}.{String(m.month).padStart(2, '0')}
-                  <span class="ml-1">({m.count})</span>
-                </h3>
-                <ul class="space-y-1">
-                  {m.titles.map(t => (
-                    <li>
-                      <a href={`/posts/${t.id}`} class="hover:text-[var(--accent)]">{t.title}</a>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
-        </section>
-      ))}
+      <div class="flex flex-col mt-2 space-y-6">
+        {entries.map(year => (
+          <section>
+            <h2 class="text-xl font-semibold mb-1">
+              {year.year}
+              <small class="text-[var(--text-muted)] font-normal ml-2">({year.count})</small>
+            </h2>
+            <div class="border-l-2 border-[var(--border)] pl-6 ml-1 space-y-4">
+              {year.months.map(m => (
+                <div>
+                  <h3 class="text-sm text-[var(--text-muted)] mb-2">
+                    {year.year}.{String(m.month).padStart(2, '0')}
+                    <span class="ml-1">({m.count})</span>
+                  </h3>
+                  <ul class="space-y-1">
+                    {m.titles.map(t => (
+                      <li>
+                        <a href={`/posts/${t.id}`} class="hover:text-[var(--accent)]">{t.title}</a>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          </section>
+        ))}
+      </div>
     </div>
   )}
+
+  <Fragment slot="sideBar">
+    <AuthorCard {...authorCard} />
+  </Fragment>
 </BaseLayout>

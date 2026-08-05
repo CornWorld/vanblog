@@ -12,9 +12,10 @@ const { html } = Astro.props;
 
 <script is:inline>
   (() => {
-    // Image click zoom (lightweight modal)
+    // Image lazy-load (原版 ImageProvider 行为)
     const viewer = document.querySelector('.post-viewer');
     if (!viewer) return;
+    viewer.querySelectorAll('img:not([loading])').forEach((img) => img.setAttribute('loading', 'lazy'));
 
     let modal = null;
 

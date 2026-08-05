@@ -11,17 +11,21 @@ L0 CONTRACT - 前端契约变量（见 .snow/plan/migrate-vanblog-frontend-to-th
 export const prerender = false;
 
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import AuthorCard from '../../components/AuthorCard.astro';
 import ErrorState from '../../components/ErrorState.astro';
 import { safe } from '@vanblog/sdk';
 import type { Category } from '@vanblog/sdk';
+import { getAuthorCardProps } from '../../lib/viewModel';
 const pb = Astro.locals.pb;
 
 const { data: cats = [], error } = await safe(
   () => pb.collection('categories').getFullList<Category>({ sort: 'name' }),
   'categories'
 );
+const site = await Astro.locals.getSite();
+const authorCard = await getAuthorCardProps(pb, site);
 ---
-<BaseLayout title="分类" path="/categories">
+<BaseLayout title="分类" path="/categories" sideBar>
   <h1 class="mb-6">分类</h1>
 
   {error && <ErrorState />}
@@ -49,4 +53,8 @@ const { data: cats = [], error } = await safe(
       ))}
     </ul>
   )}
+
+  <Fragment slot="sideBar">
+    <AuthorCard {...authorCard} />
+  </Fragment>
 </BaseLayout>

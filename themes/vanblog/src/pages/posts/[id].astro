@@ -16,42 +16,18 @@ export const prerender = false;
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import PostViewer from '../../components/PostViewer.astro';
 import Toc from '../../components/Toc.astro';
+import TocMobile from '../../components/TocMobile.astro';
+import ExpirationNotice from '../../components/ExpirationNotice.astro';
 import CopyRight from '../../components/CopyRight.astro';
 import ErrorNotice from '@vanblog/base/components/ErrorNotice.astro';
 import Comments from '../../components/Comments.astro';
 import Reward from '../../components/Reward.astro';
-import { isAuthenticated, fmtDate } from '@vanblog/sdk';
+import { isAuthenticated, fmtDate, safe } from '@vanblog/sdk';
 import { renderMarkdown } from '@vanblog/base/lib/markdown/renderer';
 import { normalizeMathDelimiters } from '@vanblog/base/lib/markdown/normalizeMathDelimiters';
 import type { Post } from '@vanblog/sdk';
-
-/**
- * Strip constructs that could execute scripts from rendered Markdown HTML
- * before it is injected via set:html (stored-XSS defense). The markdown
- * pipeline only emits safe elements, but authors can embed raw HTML in posts,
- * which the pipeline passes through unchanged.
- */
-function sanitizeHtml(html: string): string {
-  return html
-    // Remove executable/embedding elements (and their content).
-    .replace(/<script\b[^>]*>[\s\S]*?<\/script\s*>/gi, '')
-    .replace(/<script\b[^>]*\/?>/gi, '')
-    .replace(/<iframe\b[^>]*>[\s\S]*?<\/iframe\s*>/gi, '')
-    .replace(/<iframe\b[^>]*\/?>/gi, '')
-    .replace(/<object\b[^>]*>[\s\S]*?<\/object\s*>/gi, '')
-    .replace(/<object\b[^>]*\/?>/gi, '')
-    .replace(/<embed\b[^>]*\/?>/gi, '')
-    .replace(/<base\b[^>]*\/?>/gi, '')
-    .replace(/<link\b[^>]*\/?>/gi, '')
-    .replace(/<meta\b[^>]*\/?>/gi, '')
-    // Strip event-handler attributes (never emitted by the markdown pipeline).
-    .replace(/\s+on[a-z][a-z0-9_]*\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '')
-    // Neutralize script-capable URL schemes in link/embed attributes.
-    .replace(/(\s(?:href|src|xlink:href|action)\s*=\s*)(["'])\s*(?:javascript|vbscript)\s*:[^"'<]*\2/gi, '$1$2#')
-    .replace(/(\s(?:href|src)\s*=\s*)(["'])data\s*:\s*text\s*\/\s*html[^"'<]*\2/gi, '$1$2#')
-    // Remove srcdoc (only meaningful on <iframe>; defense in depth).
-    .replace(/\s+srcdoc\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '');
-}
+import { sanitizeHtml } from '../../lib/sanitizeHtml';
+import { hasHeadings } from '../../lib/toc';
 
 const pb = Astro.locals.pb;
 const site = await Astro.locals.getSite();
@@ -125,36 +101,105 @@ if (!data) {
     }
   }
 }
-
 // Sanitize the rendered HTML before injecting it into the page.
 const safeHtml = html !== null ? sanitizeHtml(html) : null;
+
+// 文章含 h2/h3 标题 → 侧栏渲染 Toc（原版 hasToc ? <Toc/> : null）。
+const hasToc = !!safeHtml && hasHeadings(safeHtml);
+
+// 上下篇（原版 PostBottom pre/next，按 -created 排序，newest first）。
+let prePost: { id: string; title: string } | null = null;
+let nextPost: { id: string; title: string } | null = null;
+if (data) {
+  const { data: siblings } = await safe(
+    () => pb.vanblog.posts.listPublished(1, 100, { fields: 'id,title,created', sort: '-created' }),
+    'post-siblings'
+  );
+  const items = siblings?.items ?? [];
+  const idx = items.findIndex((p) => p.id === data.id);
+  if (idx >= 0) {
+    const next = items[idx - 1];
+    const prev = items[idx + 1];
+    if (next?.id) nextPost = { id: next.id, title: next.title }; // 更新的
+    if (prev?.id) prePost = { id: prev.id, title: prev.title }; // 更旧的
+  }
+}
+
+// 标签名映射（data.tags 是 record id，需查 name 渲染）。
+let tagMap: Record<string, string> = {};
+const tagIds = data?.tags ?? [];
+if (tagIds.length) {
+  const { data: tags } = await safe(
+    () => pb.collection('tags').getFullList<{ id: string; name: string }>(),
+    'post-tags'
+  );
+  tagMap = Object.fromEntries((tags ?? []).map((t) => [t.id, t.name]));
+}
 ---
 
-<BaseLayout title={data?.title || '文章不存在'} post={data || undefined} path={`/posts/${id}`}>
+<BaseLayout title={data?.title || '文章不存在'} post={data || undefined} path={`/posts/${id}`} sideBar={hasToc} keywords={data ? [data.title, ...Object.values(tagMap)].filter(Boolean).join(',') : undefined}>
   {data && safeHtml !== null ? (
     <Fragment>
-      <article>
-        <h1>
-          {data.title}
-          {isAuthenticated(pb) && site?.displayOptions?.showEditButton !== false && (
-            <a
-              href={`/admin/edit/${id}`}
-              class="ml-3 text-sm font-normal text-[var(--text-muted)] hover:text-[var(--accent)] no-underline align-middle"
-              title="编辑文章"
-            >
-              ✏️ 编辑
-            </a>
-          )}
-        </h1>
-        <p><small>
-          发表于 {fmtDate(data.created)}
-          {data.private && <span class="ml-2 text-[var(--text-muted)]">· 私有</span>}
-          {data.status !== 'published' && <span class="ml-2 text-[var(--text-muted)]">· {data.status}</span>}
-        </small></p>
-        <PostViewer html={safeHtml} />
-        <CopyRight site={site} post={data} />
-        <Toc html={safeHtml} />
-      </article>
+      <div class="card-post">
+        <article>
+          <h1>
+            {data.title}
+            {isAuthenticated(pb) && site?.displayOptions?.showEditButton !== false && (
+              <a
+                href={`/admin/edit/${id}`}
+                class="ml-3 text-sm font-normal text-[var(--text-muted)] hover:text-[var(--accent)] no-underline align-middle"
+                title="编辑文章"
+              >
+                ✏️ 编辑
+              </a>
+            )}
+          </h1>
+          <p><small>
+            发表于 {fmtDate(data.created)}
+            {data.private && <span class="ml-2 text-[var(--text-muted)]">· 私有</span>}
+            {data.status !== 'published' && <span class="ml-2 text-[var(--text-muted)]">· {data.status}</span>}
+            {data.visitedCount != null && <span class="ml-2 text-[var(--text-muted)]">· 阅读 {data.visitedCount}</span>}
+          </small></p>
+          <ExpirationNotice
+            created={data.created}
+            updated={data.updated}
+            show={site?.displayOptions?.showExpirationReminder !== false}
+          />
+          <div class="lg:hidden"><TocMobile html={safeHtml} /></div>
+          <PostViewer html={safeHtml} />
+          <CopyRight site={site} post={data} />
+
+          {/* 标签 + 上下篇（原版 PostBottom） */}
+          <div class="mt-6">
+            {tagIds.length > 0 && (
+              <div class="flex flex-wrap justify-center gap-x-3 gap-y-1 text-sm text-[var(--text-muted)] select-none mb-2">
+                {tagIds.map((tid) => tagMap[tid] && (
+                  <a href={`/tags/${tid}`} class="text-inherit no-underline border-b border-transparent hover:border-[var(--text-muted)]">
+                    {tagMap[tid]}
+                  </a>
+                ))}
+              </div>
+            )}
+            <hr class="border-[var(--border)]" />
+            <div class="flex justify-between text-sm mt-3 whitespace-nowrap overflow-hidden gap-4">
+              <div class="min-w-0 max-w-[50%] overflow-hidden text-ellipsis">
+                {prePost && (
+                  <a href={`/posts/${prePost.id}`} class="text-[var(--text-muted)] hover:text-[var(--text)] no-underline border-b border-dashed border-[var(--border)]">
+                    {`< ${prePost.title}`}
+                  </a>
+                )}
+              </div>
+              <div class="min-w-0 max-w-[50%] overflow-hidden text-ellipsis text-right">
+                {nextPost && (
+                  <a href={`/posts/${nextPost.id}`} class="text-[var(--text-muted)] hover:text-[var(--text)] no-underline border-b border-dashed border-[var(--border)]">
+                    {`${nextPost.title} >`}
+                  </a>
+                )}
+              </div>
+            </div>
+          </div>
+        </article>
+      </div>
       {data && <Reward site={site} />}
     </Fragment>
   ) : passwordError ? (
@@ -171,6 +216,12 @@ const safeHtml = html !== null ? sanitizeHtml(html) : null;
     config={site?.commentsConfig || null}
   />
   <p><a href="/">← 返回首页</a></p>
+
+  {hasToc && (
+    <Fragment slot="sideBar">
+      <Toc html={safeHtml} />
+    </Fragment>
+  )}
 </BaseLayout>
 
 <script>

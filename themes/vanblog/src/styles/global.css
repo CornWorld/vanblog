@@ -65,6 +65,8 @@
   --fill: var(--color-bg);
   --hover: var(--color-border);
   --accent: var(--color-accent);
+  /* mereithhh 签名卡片阴影（原版 .card-shadow / .card-shadow-dark） */
+  --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 html.dark {
   --bg: var(--color-bg-dark);
@@ -78,14 +80,18 @@ html.dark {
   --fill: var(--color-bg-dark);
   --hover: var(--color-border-dark);
   --accent: var(--color-accent-dark);
+  --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 /* ── Base layer ── */
 @layer base {
   html {
     @apply bg-[var(--bg)] text-[var(--text)] antialiased;
-    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
-      sans-serif;
+    /* mereithhh vanblog 原版字体栈（github-markdown.css）——列表/正文全局统一，
+       文章正文还会被 vanblog-classic palette 的 article .post-viewer 排版再覆盖。 */
+    font-family: "Open Sans", "PingFang SC", "Hiragino Sans GB",
+      "Microsoft Yahei", "WenQuanYi Micro Hei", "Segoe UI Emoji",
+      "Segoe UI Symbol", Helvetica, Arial, -apple-system, system-ui, sans-serif;
   }
 
   body {
@@ -182,8 +188,35 @@ html.dark {
   @apply inline-flex items-center px-4 py-2 rounded-lg font-medium text-sm transition-opacity bg-[var(--accent)] text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed;
 }
 
+@utility card-shadow {
+  /* 原版 mereithhh 签名阴影：暗色自动翻转（见 :root / html.dark --shadow-card） */
+  box-shadow: var(--shadow-card);
+}
+
+/* ── 导航菜单项下划线动画（原版 NavBar item.tsx 的 .ua） ── */
+.ua {
+  position: relative;
+  text-decoration: none;
+}
+.ua:before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 2px;
+  width: 0;
+  height: 2px;
+  background: var(--text-muted);
+  transition: all 0.3s;
+}
+.ua:hover:before {
+  width: 100%;
+  left: 0;
+  right: 0;
+}
+
 @utility card-post {
-  @apply rounded-lg border p-6 transition-shadow hover:shadow-md border-[var(--border)] bg-[var(--surface)];
+  @apply p-6 bg-[var(--surface)];
+  box-shadow: var(--shadow-card);
 }
 
 @utility tag-badge {

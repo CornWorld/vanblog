@@ -1,51 +1,17 @@
 ---
+import { extractHeadings } from '../lib/toc';
+
 export interface Props {
   html: string;
 }
 
 const { html } = Astro.props;
 
-// SSR: extract h2/h3 headings from rendered HTML
-interface TocItem {
-  id: string;
-  tag: 'h2' | 'h3';
-  text: string;
-  level: number;
-}
-
-function decodeEntities(s: string): string {
-  return s
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'");
-}
-
-function extractHeadings(html: string): TocItem[] {
-  const items: TocItem[] = [];
-  const h2Re = /<h2[^>]*id="([^"]+)"[^>]*>([\s\S]*?)<\/h2>/gi;
-  const h3Re = /<h3[^>]*id="([^"]+)"[^>]*>([\s\S]*?)<\/h3>/gi;
-  let match: RegExpExecArray | null;
-
-  while ((match = h2Re.exec(html)) !== null) {
-    const text = decodeEntities(match[2].replace(/<[^>]*>/g, '').trim());
-    if (text) { items.push({ id: match[1], tag: 'h2', text, level: 1 }); }
-  }
-
-  while ((match = h3Re.exec(html)) !== null) {
-    const text = decodeEntities(match[2].replace(/<[^>]*>/g, '').trim());
-    if (text) { items.push({ id: match[1], tag: 'h3', text, level: 2 }); }
-  }
-
-  return items;
-}
-
 const headings = extractHeadings(html);
 ---
 
 {headings.length > 0 && (
-  <aside class="toc-wrapper">
+  <aside class="toc-wrapper bg-[var(--surface)] card-shadow">
     <details class="toc-details" open>
       <summary class="toc-summary">
         <span class="text-sm font-semibold text-[var(--text-muted)]">目录</span>
@@ -114,6 +80,9 @@ const headings = extractHeadings(html);
   .toc-wrapper {
     position: sticky;
     top: 5rem;
+    background: var(--surface);
+    box-shadow: var(--shadow-card);
+    padding: 0.75rem 0.5rem;
   }
   .toc-summary {
     cursor: pointer;

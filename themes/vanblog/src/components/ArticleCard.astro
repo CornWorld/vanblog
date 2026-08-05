@@ -1,30 +1,29 @@
 ---
-import { stripMarkdown, fmtDate } from '@vanblog/sdk';
+import { fmtDate, stripMarkdown } from '@vanblog/sdk';
 import type { PostExpand } from '@vanblog/sdk';
+import ExpirationNotice from './ExpirationNotice.astro';
 
 export interface Props {
   post: PostExpand;
   showExcerpt?: boolean;
+  /** Pre-rendered, sanitized Markdown overview HTML. When provided the card
+   *  renders the real Markdown (up to `<!-- more -->`) like the original
+   *  PostCard type="overview" — plus a centered bordered 阅读全文 button. */
+  overviewHtml?: string;
   /** showExpirationReminder from site.displayOptions (default true). */
   showExpirationReminder?: boolean;
   /** openArticleLinksInNewWindow from site.displayOptions (default false). */
   openInNewWindow?: boolean;
 }
 
-const { post, showExcerpt = true, showExpirationReminder = true, openInNewWindow = false } = Astro.props;
+const { post, showExcerpt = true, overviewHtml, showExpirationReminder = true, openInNewWindow = false } = Astro.props;
 
-// ── Helpers ────────────────────────────────────────────────────────────────
-function yearsSince(raw: string | undefined | null): number {
-  if (!raw) return 0;
-  const d = new Date(raw.replace(' ', 'T'));
-  if (isNaN(d.getTime())) return 0;
-  return Math.floor((Date.now() - d.getTime()) / (365.25 * 24 * 60 * 60 * 1000));
-}
-
-const updatedYearsAgo = yearsSince(post.updated);
-const isExpired = updatedYearsAgo >= 1;
 const isPinned = (post.top ?? 0) > 0;
+// Plain-text excerpt fallback when no pre-rendered overview is supplied.
 const excerpt = stripMarkdown(post.content, 200);
+const postUrl = `/posts/${encodeURIComponent(post.id ?? '')}`;
+const readMoreBtnClass =
+  'inline-block dark:bg-[var(--surface)] dark:hover:bg-[var(--text-muted)] dark:hover:text-[var(--surface)] dark:border-[var(--text-muted)] dark:text-[var(--text-muted)] hover:bg-gray-800 hover:text-gray-50 border-2 border-gray-800 text-sm md:text-base text-gray-700 px-2 py-1 transition-all rounded';
 ---
 
 <article class="card-post relative">
@@ -33,17 +32,13 @@ const excerpt = stripMarkdown(post.content, 200);
     <span class="absolute top-2 left-2 text-lg" title="置顶">📌</span>
   )}
 
-  <!-- 过期提醒横幅（displayOptions.showExpirationReminder 控制） -->
-  {isExpired && showExpirationReminder !== false && (
-    <div class="mb-3 px-3 py-2 rounded text-sm bg-yellow-50 text-yellow-800 border border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-300 dark:border-yellow-700/30">
-      本文最后更新于 {updatedYearsAgo} 年前
-    </div>
-  )}
+  <!-- 过期提醒横幅（原版 AlertCard，创建超 30 天触发） -->
+  <ExpirationNotice created={post.created} updated={post.updated} show={showExpirationReminder !== false} />
 
   <!-- 文章标题 -->
   <h2 class="text-xl mb-2">
     <a
-      href={`/posts/${encodeURIComponent(post.id ?? '')}`}
+      href={postUrl}
       class="text-[var(--text)] hover:text-[var(--accent)] no-underline"
       target={openInNewWindow ? '_blank' : undefined}
       rel={openInNewWindow ? 'noopener noreferrer' : undefined}
@@ -86,7 +81,7 @@ const excerpt = stripMarkdown(post.content, 200);
   {post.private ? (
     <div class="my-4 p-4 rounded-lg border border-[var(--border)] bg-[var(--surface)]">
       <p class="text-sm text-[var(--text-muted)] mb-2">🔒 此文章需要密码才能访问</p>
-      <form class="flex gap-2" method="post" action={`/posts/${encodeURIComponent(post.id ?? '')}`}>
+      <form class="flex gap-2" method="post" action={postUrl}>
         <!-- TODO: Add CSRF token for added security against cross-site form submission -->
         <input
           type="password"
@@ -100,22 +95,30 @@ const excerpt = stripMarkdown(post.content, 200);
     </div>
   ) : (
     <>
-      <!-- 摘要 -->
-      {showExcerpt && excerpt && (
-        <p class="text-[var(--text-muted)] text-sm leading-relaxed">
-          {excerpt}
-        </p>
+      <!-- 首页概览：渲染真实 Markdown（原版 PostCard type="overview"，github-markdown 排版） -->
+      {overviewHtml ? (
+        <div class="post-viewer text-sm md:text-base mt-4 mx-2">
+          <Fragment set:html={overviewHtml} />
+        </div>
+      ) : (
+        <>
+          {showExcerpt && excerpt && (
+            <p class="text-[var(--text-muted)] text-sm leading-relaxed">
+              {excerpt}
+            </p>
+          )}
+        </>
       )}
 
-      <!-- 阅读全文链接 -->
-      <div class="mt-3">
+      <!-- 居中描边「阅读全文」按钮（原版 PostCard overview 底部按钮） -->
+      <div class="w-full flex justify-center mt-4">
         <a
-          href={`/posts/${encodeURIComponent(post.id ?? '')}`}
-          class="text-sm text-[var(--accent)] hover:underline"
+          href={postUrl}
+          class={readMoreBtnClass}
           target={openInNewWindow ? '_blank' : undefined}
           rel={openInNewWindow ? 'noopener noreferrer' : undefined}
         >
-          阅读全文 →
+          阅读全文
         </a>
       </div>
     </>

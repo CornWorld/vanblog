@@ -9,50 +9,66 @@ interface Props {
 const { site } = Astro.props;
 const siteName = site?.siteName || 'Vanblog';
 const beian = site?.beianNumber;
+const beianUrl = site?.beianUrl || 'https://beian.miit.gov.cn/';
 const gaBeian = site?.gaBeianNumber;
 const gaBeianUrl = site?.gaBeianUrl;
 const gaBeianLogoUrl = site?.gaBeianLogoUrl;
 const socials = site?.socials ?? [];
 const since = site?.since;
 ---
-<footer class="border-t border-[var(--border)] py-8 text-sm text-[var(--text-muted)]">
-  <div class="container-page">
-    {socials.length > 0 && <SocialLinks socials={socials} />}
 
-    <div class="flex flex-col sm:flex-row justify-between gap-4 mt-4">
+<!-- 原版 mereithhh Footer：居中堆叠，text-center text-sm，ICP 编号 / 公安备案 / 运行时间 / Powered By / © 区间 -->
+<footer class="border-t border-[var(--border)] text-center text-sm space-y-1 mt-8 md:mt-12 py-8 text-[var(--text-muted)]">
+  <div class="mx-auto max-w-5xl px-4 sm:px-6 space-y-1">
+    {socials.length > 0 && <div class="mb-2"><SocialLinks socials={socials} /></div>}
+
+    {beian && (
       <p>
-        &copy; {new Date().getFullYear()} {siteName}.
-        Powered by <a href="https://github.com/CornWorld/vanblog" class="underline">Vanblog</a>.
-        {beian && (
-          <span class="ml-2">
-            <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer" class="underline">{beian}</a>
-          </span>
-        )}
+        ICP 编号:&nbsp;
+        <a href={beianUrl} target="_blank" rel="noopener noreferrer"
+           class="hover:text-[var(--text)] underline-offset-2 hover:underline transition">
+          {beian}
+        </a>
       </p>
-      <p class="flex gap-4">
-        <a href="/api/feed.xml" class="hover:text-[var(--text)]">RSS</a>
-        <a href="/api/atom.xml" class="hover:text-[var(--text)]">Atom</a>
-        <a href="/api/sitemap.xml" class="hover:text-[var(--text)]">Sitemap</a>
-      </p>
-    </div>
+    )}
 
     {gaBeian && (
-      <p class="mt-2 flex items-center justify-center gap-1">
+      <p class="flex justify-center items-center gap-1">
+        公安备案:&nbsp;
         {gaBeianLogoUrl && (
-          <img src={gaBeianLogoUrl} alt="公安备案 logo" width={16} height={16} class="inline" loading="lazy" />
+          <img src={gaBeianLogoUrl} alt="公安备案 logo" width={20} height={20} loading="lazy" class="inline" />
         )}
-        公安备案：
-        <a href={gaBeianUrl || '#'} target="_blank" rel="noopener noreferrer" class="underline">
+        <a href={gaBeianUrl || '#'} target="_blank" rel="noopener noreferrer"
+           class="hover:text-[var(--text)] underline-offset-2 hover:underline transition">
           {gaBeian}
         </a>
       </p>
     )}
 
     {since && (
-      <p class="mt-1 text-center">
+      <p>
         本站居然运行了 <span id="running-time" data-since={since}>--</span>
       </p>
     )}
+
+    <p>
+      Powered By&nbsp;
+      <a href="https://github.com/CornWorld/vanblog" target="_blank" rel="noopener noreferrer"
+         class="hover:text-[var(--text)] transition ua ua-link">
+        VanBlog
+      </a>
+    </p>
+
+    {since && <p class="select-none">&copy; {new Date(since).getFullYear()} - {new Date().getFullYear()} {siteName}</p>}
+
+    <p class="flex justify-center gap-4 pt-1">
+      <a href="/api/feed.xml" class="hover:text-[var(--text)]">RSS</a>
+      <a href="/api/atom.xml" class="hover:text-[var(--text)]">Atom</a>
+      <a href="/api/sitemap.xml" class="hover:text-[var(--text)]">Sitemap</a>
+    </p>
+
+    {/* visits pack 挂载点（全站访问量 + 当前在线） */}
+    <div id="pack-visits" class="mt-1"></div>
   </div>
 </footer>
 
