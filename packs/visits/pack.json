@@ -1,0 +1,10 @@
+{
+  "name": "visits",
+  "version": "1.0.0",
+  "title": "访问统计",
+  "frontend": {
+    "scope": "public",
+    "styles": [],
+    "scripts": ["visits.js"]
+  }
+}
