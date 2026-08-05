@@ -26,7 +26,7 @@
 
 services:
   vanblog:
-    image: ghcr.io/cornworld/vanblog:prod
+    image: ghcr.io/cornworld/vanblog:prod-edge
     # 本地构建: build: { context: ., target: prod }
     restart: unless-stopped
     ports:

@@ -101,6 +101,14 @@ if [[ -n "$leftover" ]]; then
     docker rm -f $leftover 2>/dev/null || true
 fi
 
+# === 阶段 0: 确保本地有最新 ghcr 镜像 ===
+# install 的 compose up 默认复用本地缓存镜像；这里显式预拉最新构建。
+# 镜像较大，首次/更新时可能较慢 —— 明确提示，避免被误认为卡死。
+blue "正在拉取 ghcr prod-edge 镜像（较大，请稍候...）"
+docker pull ghcr.io/cornworld/vanblog:prod-edge >/dev/null 2>&1 && \
+    assert_ok "已拉取最新 ghcr prod-edge 镜像" || \
+    echo "⚠ 拉取 ghcr 镜像失败，将使用本地已有镜像（可能不是最新）"
+
 # === 阶段 1: 模拟首次安装 ===
 
 blue ""

@@ -16,8 +16,8 @@ VANBLOG_DATA_PATH="${VANBLOG_BASE_PATH}/data"
 VANBLOG_SCRIPT_VERSION="v1.2.0"
 
 # 镜像源(根据 CN 自动切换)
-DEFAULT_IMAGE="${VANBLOG_IMAGE:-ghcr.io/cornworld/vanblog:prod}"
-CN_IMAGE="${VANBLOG_CN_IMAGE:-registry.cn-beijing.aliyuncs.com/cornworld/vanblog:prod}"
+DEFAULT_IMAGE="${VANBLOG_IMAGE:-ghcr.io/cornworld/vanblog:prod-edge}"
+CN_IMAGE="${VANBLOG_CN_IMAGE:-registry.cn-beijing.aliyuncs.com/cornworld/vanblog:prod-edge}"
 
 export PATH=$PATH:/usr/local/bin:/opt/homebrew/bin
 
@@ -237,6 +237,50 @@ read_compose_env() {
     echo "$val"
 }
 
+# --- 镜像更新检测 ---
+
+# 读取 compose 中 vanblog 服务的镜像名（`docker compose config` 规范化解析，回退裸 grep）。
+compose_image() {
+    local cf="${VANBLOG_BASE_PATH}/docker-compose.yml"
+    if docker compose version >/dev/null 2>&1; then
+        (cd "$VANBLOG_BASE_PATH" && docker compose config 2>/dev/null) | \
+            grep -E "^\\s*image:" | head -1 | \
+            sed -E 's/.*image:[[:space:]]*//; s/[[:space:]]*$//'
+    else
+        grep -E "^\\s*image:" "$cf" 2>/dev/null | head -1 | \
+            sed -E 's/.*image:[[:space:]]*//; s/[[:space:]]*$//'
+    fi
+}
+
+# 本地是否已存在该镜像。
+has_local_image() {
+    [[ -n "$(docker images --format '{{.Repository}}:{{.Tag}}' "$1" 2>/dev/null | head -1)" ]]
+}
+
+# 远程是否有新镜像：比较 registry digest 与本地 digest。
+# registry 不可查（私有/断网/镜像源）→ 返回 1（保守：不误报，视为无更新）。
+has_image_update() {
+    local local_digest remote_digest
+    local_digest=$(docker images --digests --format '{{.Digest}}' "$1" 2>/dev/null | head -1)
+    remote_digest=$(docker manifest inspect "$1" >/dev/null 2>&1 && \
+        docker manifest inspect "$1" 2>/dev/null | tr ',' '\n' | grep '"digest"' | head -1 | \
+        sed -E 's/.*sha256:([a-f0-9]*).*/\1/')
+    [[ -n "$remote_digest" && "$remote_digest" != "$local_digest" ]]
+}
+
+# 检测到新镜像时提示用户选择；返回 0=用最新（拉取），1=保持现有/本地镜像。
+ask_image_update() {
+    local image="$1"
+    if [[ -z "$image" ]] || ! has_local_image "$image"; then
+        return 0  # 无镜像配置 / 首次安装 → 拉取最新（--pull always）
+    fi
+    if has_image_update "$image"; then
+        gum_warn "检测到新版本镜像: $image"
+        gum_ask "是否使用最新镜像?" y && return 0 || return 1
+    fi
+    return 1  # 已最新 / 无法检测远程（网络/registry 不可达）→ 保守用本地镜像，不强制 pull
+}
+
 # --- compose 调用 ---
 
 dc() {
@@ -303,8 +347,20 @@ install_vanblog() {
     config_compose
 
     gum_spin "启动 vanblog..." "true"
-    dc up -d
-    if [[ $? -eq 0 ]]; then
+    local image up_ok=1
+    image=$(compose_image)
+    if ask_image_update "$image"; then
+        # 用最新镜像；拉取失败（网络/registry 不可达）回退本地已有镜像
+        if dc up -d --pull always; then
+            up_ok=0
+        else
+            gum_warn "拉取最新镜像失败，回退使用本地已有镜像"
+            dc up -d && up_ok=0
+        fi
+    else
+        dc up -d && up_ok=0
+    fi
+    if [[ $up_ok -eq 0 ]]; then
         gum_ok "Vanblog 启动成功"
         gum_info "管理面板: http://<你的IP>:<http端口>/admin"
         gum_info "首次访问 /admin 时创建管理员账号"
@@ -380,8 +436,24 @@ restart_vanblog() {
 
 update_vanblog() {
     gum_info "更新 Vanblog"
-    dc pull && dc down && dc up -d
-    [[ $? -eq 0 ]] && gum_ok "更新成功" || gum_err "更新失败,请查看日志"
+    local image
+    image=$(compose_image)
+    if [[ -z "$image" ]]; then
+        gum_err "无法读取镜像配置（docker-compose.yml 缺失?）"
+        before_show_menu
+        return
+    fi
+    if has_local_image "$image" && has_image_update "$image"; then
+        gum_warn "检测到新版本镜像: $image"
+        if gum_ask "是否升级到最新版?" y; then
+            dc pull && dc down && dc up -d
+            [[ $? -eq 0 ]] && gum_ok "更新成功" || gum_err "更新失败,请查看日志"
+        else
+            gum_info "已取消升级，保持当前版本"
+        fi
+    else
+        gum_info "当前已是最新版本（或无法检测远程更新）"
+    fi
     before_show_menu
 }
 
