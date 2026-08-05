@@ -1,0 +1,23 @@
+name: Lint AGENTS.md
+
+on:
+  push:
+    paths:
+      - 'AGENTS.md'
+      - 'docs/**'
+      - 'scripts/lint-agents.sh'
+      - '.github/workflows/lint-agents.yml'
+  pull_request:
+    paths:
+      - 'AGENTS.md'
+      - 'docs/**'
+      - 'scripts/lint-agents.sh'
+
+jobs:
+  validate-references:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check paths referenced in AGENTS.md exist
+        run: bash scripts/lint-agents.sh

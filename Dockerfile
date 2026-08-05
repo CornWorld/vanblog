@@ -196,6 +196,11 @@ COPY packs/ /workspace/packs/
 COPY themes/ /workspace/themes/
 COPY scripts/ /workspace/scripts/
 COPY models.config.mjs /workspace/models.config.mjs
+# Agent knowledge layer: docs/ (live, version-synced) + AGENTS.md (navigation index).
+# Agents read these instead of relying on pre-baked Skills, so knowledge never
+# drifts from the code. See AGENTS.md for the contract.
+COPY docs/ /workspace/docs/
+COPY AGENTS.md /workspace/AGENTS.md
 
 WORKDIR /workspace
 RUN pnpm install --frozen-lockfile
