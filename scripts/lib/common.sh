@@ -1,7 +1,7 @@
 #!/bin/bash
 # ============================================================================
 # Vanblog Dev Scripts — Shared Library
-# Sourced by dev-test.sh, dev-reset.sh, and similar scripts.
+# Sourced by dev-up.sh, dev-verify.sh, and similar scripts.
 # ============================================================================
 
 # --- Color output ---
