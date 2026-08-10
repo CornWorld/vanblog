@@ -75,7 +75,7 @@ const overviews = await Promise.all(
     ) : posts.length === 0 ? (
       <p class="py-12 text-center text-[var(--text-muted)]">暂无文章。</p>
     ) : (
-      <div class="space-y-6">
+      <div class="space-y-2 md:space-y-4">
         {posts.map((post, i) => (
           <ArticleCard
             post={post}

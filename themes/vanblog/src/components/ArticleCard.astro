@@ -23,8 +23,9 @@ const isPinned = (post.top ?? 0) > 0;
 // Plain-text excerpt fallback when no pre-rendered overview is supplied.
 const excerpt = stripMarkdown(post.content, 200);
 const postUrl = `/posts/${encodeURIComponent(post.id ?? '')}`;
-const readMoreBtnClass =
-  'inline-block dark:bg-[var(--surface)] dark:hover:bg-[var(--text-muted)] dark:hover:text-[var(--surface)] dark:border-[var(--text-muted)] dark:text-[var(--text-muted)] hover:bg-gray-800 hover:text-gray-50 border-2 border-gray-800 text-sm md:text-base text-gray-700 px-2 py-1 transition-all rounded';
+const category = post.expand?.category;
+// 原版 SubTitle 的图标尺寸与颜色（用语义 token 自动跟随暗色）
+const iconClass = 'mr-1 text-[var(--text-muted)]';
 ---
 
 <article class="card-post relative">
@@ -36,92 +37,119 @@ const readMoreBtnClass =
   <!-- 过期提醒横幅（原版 AlertCard，创建超 30 天触发） -->
   <ExpirationNotice created={post.created} updated={post.updated} show={showExpirationReminder !== false} />
 
-  <!-- 文章标题 -->
-  <h2 class="text-xl mb-2">
+  {/* ── 标题（原版 PostCard/Title：居中 + 单行省略 + ua 下划线动画） ── */}
+  <div class="flex justify-center post-card-title mb-2 mt-2">
     <a
       href={postUrl}
-      class="text-[var(--text)] hover:text-[var(--accent)] no-underline"
+      class="block text-center px-5 ua ua-link"
+      style="width:90%"
+      title={post.title}
       target={openInNewWindow ? '_blank' : undefined}
       rel={openInNewWindow ? 'noopener noreferrer' : undefined}
     >
-      {post.title}
+      <div class="text-lg md:text-xl font-medium overflow-hidden text-ellipsis whitespace-nowrap text-[var(--text)]">
+        {post.title}
+      </div>
     </a>
-  </h2>
+  </div>
 
-  <!-- 元信息：日期 + 分类 -->
-  <div class="flex items-center gap-3 text-sm text-[var(--text-muted)] mb-3 flex-wrap">
+  {/* ── 副标题（原版 PostCard/SubTitle：居中 divide-x 图标行） ── */}
+  <div class="post-card-sub-title text-center text-xs md:text-sm divide-x divide-[var(--border)] text-[var(--text-muted)] flex flex-wrap justify-center items-center">
+    {/* 日期 + 日历图标 */}
     {post.created && (
-      <time datetime={post.created}>{fmtDate(post.created)}</time>
+      <span class="inline-flex px-2 items-center">
+        <svg class={iconClass} viewBox="0 0 1024 1024" width="16" height="16" fill="currentColor" aria-hidden="true">
+          <path d="M716 98h-48v-2c0-15-12-27-27-27s-27 12-27 27v2H410v-2c0-15-12-27-27-27s-27 12-27 27v2h-48c-50 0-90 40-90 90v648c0 50 40 90 90 90h408c50 0 90-40 90-90V188c0-50-40-90-90-90zm36 738c0 20-16 36-36 36H308c-20 0-36-16-36-36V188c0-20 16-36 36-36h48v18c0 15 12 27 27 27s27-12 27-27v-18h204v18c0 15 12 27 27 27s27-12 27-27v-18h48c20 0 36 16 36 36v648z"></path>
+          <path d="M720 384H304c-15 0-27 12-27 27s12 27 27 27h416c15 0 27-12 27-27s-12-27-27-27z"></path>
+        </svg>
+        <time datetime={post.created}>{fmtDate(post.created)}</time>
+      </span>
     )}
 
-    {post.expand?.category && (
-      <a href={`/categories/${post.category}`} class="text-[var(--accent)]">
-        {post.expand.category.name}
+    {/* 分类 + 文件夹图标（非 about 类型） */}
+    {category && (
+      <a
+        href={`/categories/${post.category}`}
+        class="inline-flex px-2 items-center group cursor-pointer hover:text-[var(--text)]"
+        target={openInNewWindow ? '_blank' : undefined}
+        rel={openInNewWindow ? 'noopener noreferrer' : undefined}
+      >
+        <svg class={iconClass} viewBox="0 0 1024 1024" width="16" height="16" fill="currentColor" aria-hidden="true">
+          <path d="M810.666667 213.333333h-277.333334l-67.413333-67.413333a52.693333 52.693333 0 0 0-37.12-15.36H213.333333c-35.413333 0-64 28.586667-64 64v608c0 35.413333 28.586667 64 64 64h597.333334c35.413333 0 64-28.586667 64-64V277.333333c0-35.413333-28.586667-64-64-64z m10.666666 589.013334c0 5.973333-4.693333 10.666667-10.666666 10.666666H213.333333c-5.973333 0-10.666667-4.693333-10.666666-10.666666V277.333333c0-5.973333 4.693333-10.666667 10.666666-10.666666h196.48l67.413334 67.413333a52.906667 52.906667 0 0 0 37.12 15.36H810.666667c5.973333 0 10.666667 4.693333 10.666666 10.666667v641.92z"></path>
+        </svg>
+        <span class="group-hover:font-medium">{category.name}</span>
       </a>
     )}
 
+    {/* 浏览量 + 眼睛图标 */}
+    {post.viewCount != null && (
+      <span class="inline-flex px-2 items-center">
+        <svg class={iconClass} viewBox="0 0 1024 1024" width="16" height="16" fill="currentColor" aria-hidden="true">
+          <path d="M942.2 486.2C847.4 286.5 704.1 186 512 186c-192.2 0-335.4 100.5-430.2 300.3-7.7 16.2-7.7 35.2 0 51.5C176.6 737.5 319.9 838 512 838c192.2 0 335.4-100.5 430.2-300.3 7.7-16.2 7.7-35 0-51.5zM512 766c-161.3 0-279.4-81.8-362.7-254C232.6 339.8 350.7 258 512 258c161.3 0 279.4 81.8 362.7 254C791.5 684.2 673.4 766 512 766z"></path>
+          <path d="M508 336c-97.2 0-176 78.8-176 176s78.8 176 176 176 176-78.8 176-176-78.8-176-176-176z m0 288c-61.9 0-112-50.1-112-112s50.1-112 112-112 112 50.1 112 112-50.1 112-112 112z"></path>
+        </svg>
+        <span>{post.viewCount}</span>
+      </span>
+    )}
+
+    {/* 私有锁标记 */}
     {post.private && (
-      <span class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border border-[var(--border)] text-[var(--text-muted)]" title="私有文章">
-        🔒 私有
+      <span class="inline-flex px-2 items-center" title="私有文章">
+        <svg class={iconClass} viewBox="0 0 1024 1024" width="16" height="16" fill="currentColor" aria-hidden="true">
+          <path d="M832 416h-32V288C800 171.9 706.1 78 590 78h-156C317.9 78 224 171.9 224 288v128h-32c-35.3 0-64 28.7-64 64v384c0 35.3 28.7 64 64 64h640c35.3 0 64-28.7 64-64V480c0-35.3-28.7-64-64-64z m-544-128c0-79.4 64.6-144 144-144h160c79.4 0 144 64.6 144 144v128H288V288z m544 576H192V480h640v384z"></path>
+          <path d="M512 592c-17.7 0-32 14.3-32 32v96c0 17.7 14.3 32 32 32s32-14.3 32-32v-96c0-17.7-14.3-32-32-32z"></path>
+        </svg>
+        <span>私有</span>
       </span>
     )}
   </div>
 
-  <!-- 标签列表 -->
-  {post.expand?.tags && post.expand.tags.length > 0 && (
-    <div class="flex flex-wrap gap-2 mb-3">
-      {post.expand.tags.map((tag) => (
-        <a href={`/tags/${tag.id}`} class="tag-badge">
-          #{tag.name}
-        </a>
-      ))}
-    </div>
-  )}
-
-  <!-- 加密锁：私有文章显示密码输入框 -->
+  {/* ── 正文（原版 text-sm md:text-base mt-4 mx-2 容器） ── */}
   {post.private ? (
-    <div class="my-4 p-4 rounded-lg border border-[var(--border)] bg-[var(--surface)]">
-      <p class="text-sm text-[var(--text-muted)] mb-2">🔒 此文章需要密码才能访问</p>
-      <form class="flex gap-2" method="post" action={postUrl}>
-        <!-- TODO: Add CSRF token for added security against cross-site form submission -->
-        <input
-          type="password"
-          name="password"
-          placeholder="输入文章密码..."
-          class="flex-1 min-w-0 px-3 py-2 text-sm rounded-lg"
-          required
-        />
-        <button type="submit" class="btn-primary text-sm">解锁</button>
-      </form>
+    <div class="text-sm md:text-base text-[var(--text-muted)] mt-4 mx-2">
+      <div class="my-4 p-4 rounded-lg border border-[var(--border)] bg-[var(--surface)]">
+        <p class="text-sm text-[var(--text-muted)] mb-2">🔒 此文章需要密码才能访问</p>
+        <form class="flex gap-2" method="post" action={postUrl}>
+          <!-- TODO: Add CSRF token for added security against cross-site form submission -->
+          <input
+            type="password"
+            name="password"
+            placeholder="输入文章密码..."
+            class="flex-1 min-w-0 px-3 py-2 text-sm rounded-lg"
+            required
+          />
+          <button type="submit" class="btn-primary text-sm">解锁</button>
+        </form>
+      </div>
     </div>
   ) : (
-    <>
-      <!-- 首页概览：渲染真实 Markdown（原版 PostCard type="overview"，github-markdown 排版） -->
+    <div class="text-sm md:text-base text-[var(--text)] mt-4 mx-2">
+      {/* 首页概览：渲染真实 Markdown（原版 PostCard type="overview"，github-markdown 排版） */}
       {overviewHtml ? (
-        <div class="post-viewer text-sm md:text-base mt-4 mx-2">
+        <div class="post-viewer">
           <Fragment set:html={overviewHtml} />
         </div>
       ) : (
         <>
           {showExcerpt && excerpt && (
-            <p class="text-[var(--text-muted)] text-sm leading-relaxed">
+            <p class="text-[var(--text-muted)] leading-relaxed">
               {excerpt}
             </p>
           )}
         </>
       )}
 
-      <!-- 居中描边「阅读全文」按钮（原版 PostCard overview 底部按钮） -->
+      {/* 居中描边「阅读全文」按钮（原版 PostCard overview 底部按钮） */}
       <div class="w-full flex justify-center mt-4">
         <a
           href={postUrl}
-          class={readMoreBtnClass}
+          class="border-2 border-[var(--text)] text-[var(--text)] px-2 py-1 transition-all rounded text-sm md:text-base hover:bg-[var(--text)] hover:text-[var(--surface)]"
           target={openInNewWindow ? '_blank' : undefined}
           rel={openInNewWindow ? 'noopener noreferrer' : undefined}
         >
           阅读全文
         </a>
       </div>
-    </>
+    </div>
   )}
 </article>

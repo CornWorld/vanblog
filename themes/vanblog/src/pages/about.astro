@@ -63,16 +63,25 @@ if (content.trim()) {
 ---
 
 <BaseLayout title="关于我" path="/about" sideBar>
-  <article>
-    <h1>关于我</h1>
-    {html ? (
-      <div class="post-viewer" set:html={html} />
-    ) : (
-      <p>暂无内容。</p>
-    )}
-    {updatedAt && (
-      <p><small>更新于 {new Date(updatedAt).toLocaleDateString('zh-CN')}</small></p>
-    )}
+  <article class="card-post relative">
+    {/* 原版 PostCard type="about"：居中标题 + 副标题（更新时间）+ 正文 */}
+    <div class="flex justify-center post-card-title mb-2 mt-2">
+      <div class="text-lg md:text-2xl font-medium text-[var(--text)] select-none">关于我</div>
+    </div>
+    <div class="text-center text-xs md:text-sm divide-x divide-[var(--border)] text-[var(--text-muted)] post-card-sub-title flex justify-center items-center">
+      {updatedAt && (
+        <span class="inline-flex px-2 items-center">
+          <time datetime={updatedAt}>更新于 {new Date(updatedAt).toLocaleDateString('zh-CN')}</time>
+        </span>
+      )}
+    </div>
+    <div class="text-sm md:text-base text-[var(--text)] mt-4 mx-2">
+      {html ? (
+        <div class="post-viewer" set:html={html} />
+      ) : (
+        <p class="text-[var(--text-muted)]">暂无内容。</p>
+      )}
+    </div>
   </article>
 
   <Fragment slot="sideBar">

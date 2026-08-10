@@ -180,12 +180,44 @@ if (data?.category) {
               </a>
             )}
           </h1>
-          <p><small>
-            发表于 {fmtDate(data.created)}
-            {data.private && <span class="ml-2 text-[var(--text-muted)]">· 私有</span>}
-            {data.status !== 'published' && <span class="ml-2 text-[var(--text-muted)]">· {data.status}</span>}
-            {data.viewCount != null && <span class="ml-2 text-[var(--text-muted)]">· 阅读 {data.viewCount}</span>}
-          </small></p>
+          <div class="text-center text-xs md:text-sm divide-x divide-[var(--border)] text-[var(--text-muted)] post-card-sub-title">
+            <span class="inline-flex px-2 items-center">
+              <svg class="mr-1 text-[var(--text-muted)]" width="16" height="16" viewBox="0 0 1024 1024" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                <path d="M832 128H704V96a32 32 0 0 0-64 0v32H384V96a32 32 0 0 0-64 0v32H192a64 64 0 0 0-64 64v640a64 64 0 0 0 64 64h640a64 64 0 0 0 64-64V192a64 64 0 0 0-64-64z m0 704H192V384h640v448zM192 320V192h128v32a32 32 0 0 0 64 0V192h256v32a32 32 0 0 0 64 0V192h128v128H192z"></path>
+              </svg>
+              {fmtDate(data.created)}
+            </span>
+            {categoryName && (
+              <span class="inline-flex px-2 items-center">
+                <svg class="mr-1 text-[var(--text-muted)]" width="16" height="16" viewBox="0 0 1024 1024" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M810.666667 85.333333a85.333333 85.333333 0 0 1 85.333333 85.333334v152.021333c36.821333 9.493333 64 42.88 64 82.645333v405.333334a128 128 0 0 1-128 128H192a128 128 0 0 1-128-128V298.666667a85.376 85.376 0 0 1 64-82.645334V170.666667a85.333333 85.333333 0 0 1 85.333333-85.333334h597.333334zM128.149333 296.170667L128 298.666667v512a64 64 0 0 0 60.245333 63.893333L192 874.666667h640a64 64 0 0 0 63.893333-60.245334L896 810.666667V405.333333a21.333333 21.333333 0 0 0-18.837333-21.184L874.666667 384H638.165333l-122.069333-101.717333a21.333333 21.333333 0 0 0-10.688-4.736l-2.986667-0.213334H149.333333a21.333333 21.333333 0 0 0-21.184 18.837334zM535.189333 213.333333l127.978667 106.666667H832V170.666667a21.333333 21.333333 0 0 0-18.837333-21.184L810.666667 149.333333H213.333333a21.333333 21.333333 0 0 0-21.184 18.837334L192 170.666667v42.666666h343.168z"></path>
+                </svg>
+                <a href={`/categories/${data.category}`} class="text-inherit no-underline hover:text-[var(--text)]">{categoryName}</a>
+              </span>
+            )}
+            {data.viewCount != null && (
+              <span class="inline-flex px-2 items-center">
+                <svg class="mr-1 text-[var(--text-muted)]" width="16" height="16" viewBox="0 0 1024 1024" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M942.2 486.2C847.4 286.5 704.1 186 512 186c-192.2 0-335.4 100.5-430.2 300.3-7.7 16.2-7.7 35.2 0 51.5C176.6 737.5 319.9 838 512 838c192.2 0 335.4-100.5 430.2-300.3 7.7-16.2 7.7-35 0-51.5zM512 766c-161.3 0-279.4-81.8-362.7-254C232.6 339.8 350.7 258 512 258c161.3 0 279.4 81.8 362.7 254C791.5 684.2 673.4 766 512 766z"></path>
+                  <path d="M508 336c-97.2 0-176 78.8-176 176s78.8 176 176 176 176-78.8 176-176-78.8-176-176-176z m0 288c-61.9 0-112-50.1-112-112s50.1-112 112-112 112 50.1 112 112-50.1 112-112 112z"></path>
+                </svg>
+                {data.viewCount}
+              </span>
+            )}
+            {data.private && (
+              <span class="inline-flex px-2 items-center">
+                <svg class="mr-1 text-[var(--text-muted)]" width="16" height="16" viewBox="0 0 1024 1024" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M800 384h-32V288C768 164.288 667.712 64 544 64h-64C356.288 64 256 164.288 256 288v96h-32a64 64 0 0 0-64 64v448a64 64 0 0 0 64 64h576a64 64 0 0 0 64-64V448a64 64 0 0 0-64-64zM320 288a160 160 0 0 1 160-160h64a160 160 0 0 1 160 160v96H320V288z m480 512H224V448h576v352zM480 640v96a32 32 0 0 0 64 0v-96a64 64 0 1 0-64 0z"></path>
+                </svg>
+                私有
+              </span>
+            )}
+          </div>
+          {data.status !== 'published' && (
+            <div class="text-center mt-1">
+              <span class="inline-block px-2 py-0.5 text-xs rounded bg-[var(--border)] text-[var(--text-muted)]">{data.status}</span>
+            </div>
+          )}
           <ExpirationNotice
             created={data.created}
             updated={data.updated}

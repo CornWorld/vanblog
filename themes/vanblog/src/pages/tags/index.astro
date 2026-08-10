@@ -26,21 +26,26 @@ const site = await Astro.locals.getSite();
 const authorCard = await getAuthorCardProps(pb, site);
 ---
 <BaseLayout title="标签" path="/tags" sideBar>
-  <h1 class="mb-6">标签</h1>
-
-  {error && <ErrorState />}
-
-  {!error && tags.length === 0 && (
-    <p class="py-12 text-center text-[var(--text-muted)]">暂无标签。</p>
-  )}
-
-  {!error && tags.length > 0 && (
-    <div class="flex flex-wrap gap-2">
-      {tags.map(t => (
-        <a href={`/tags/${t.id}`} class="tag-badge">
-          #{t.name}
-        </a>
-      ))}
+  {error ? (
+    <ErrorState />
+  ) : tags.length === 0 ? (
+    <div class="card-post py-16 text-center">
+      <p class="text-[var(--text-muted)]">暂无标签。</p>
+    </div>
+  ) : (
+    /* 原版 tag.tsx：白卡 card-shadow py-4 px-8 md:py-6 md:px-8 + 居中标题 + 纯文本标签云 */
+    <div class="card-post py-4 px-8 md:py-6 md:px-8">
+      <div class="text-lg md:text-xl text-[var(--text)]">标签</div>
+      <div class="flex flex-wrap mt-2">
+        {tags.map(t => (
+          <a
+            href={`/tags/${t.id}`}
+            class="my-2 text-[var(--text-muted)] block hover:text-[var(--text)] transform hover:scale-110 transition-all mr-5"
+          >
+            {t.name}
+          </a>
+        ))}
+      </div>
     </div>
   )}
 
