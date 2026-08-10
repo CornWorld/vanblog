@@ -201,7 +201,6 @@ COPY models.config.mjs /workspace/models.config.mjs
 # drifts from the code. See AGENTS.md for the contract.
 COPY docs/ /workspace/docs/
 COPY AGENTS.md /workspace/AGENTS.md
-
 WORKDIR /workspace
 RUN pnpm install --frozen-lockfile
 

@@ -1,7 +1,7 @@
 #!/bin/sh
 set -e
 
-# Dev entrypoint: PocketBase (API) + Astro dev server + Caddy (HTTPS + routing)
+# Dev entrypoint: PocketBase (API) + Theme Host (SSR frontend) + Caddy (HTTPS + routing)
 #
 # Caddy boots with bootstrap.json, then pb's OnBootstrap hook calls LoadConfig
 # via admin API to inject full routes. Entrypoint is PID 1, Caddy runs in background.
@@ -41,8 +41,8 @@ wait_for() {
 cleanup() {
   echo "[vanblog] shutting down..."
   kill "$MONITOR_PID" 2>/dev/null || true
-  kill $PB_PID $ASTRO_PID $CADDY_PID 2>/dev/null || true
-  wait $PB_PID $ASTRO_PID $CADDY_PID 2>/dev/null || true
+  kill $PB_PID $THEME_HOST_PID $CADDY_PID 2>/dev/null || true
+  wait $PB_PID $THEME_HOST_PID $CADDY_PID 2>/dev/null || true
 }
 trap cleanup EXIT INT TERM
 
@@ -90,19 +90,23 @@ EOF
 chmod 600 /etc/vanblog/agent.env
 echo "[vanblog] agent.env written to /etc/vanblog/agent.env (see AGENTS.md §环境)"
 
-# 4. Start Astro dev server (HMR)
-echo "[vanblog] starting Astro dev server..."
-cd /workspace
-  pnpm --filter vanblog-app dev -- --host 127.0.0.1 --port 4321 &
-ASTRO_PID=$!
-wait_for "http://127.0.0.1:4321/" "Astro SSR" 30 || exit 1
+# 4. Start Theme Host (loads active theme's SSR handler, routes /admin to app)
+DEFAULT_THEME=$(cat /etc/vanblog/default-theme 2>/dev/null || echo "vanblog")
+echo "[vanblog] starting theme host (default theme: ${DEFAULT_THEME})"
+VANBLOG_THEMES_DIR=/var/lib/vanblog/themes \
+VANBLOG_DEFAULT_THEME=${DEFAULT_THEME} \
+VANBLOG_ADMIN_DIST_DIR=/build/app/dist \
+PB_URL=http://127.0.0.1:8090 \
+  node /workspace/app/src/theme-host/index.mjs &
+THEME_HOST_PID=$!
+wait_for "http://127.0.0.1:4321/__theme_host_health" "Theme Host" 30 || exit 1
 
 # 5. Background monitor: if any child crashes, kill the container
 monitor_children() {
   while true; do
     if ! kill -0 $CADDY_PID 2>/dev/null; then echo "[vanblog] FATAL: Caddy died"; exit 1; fi
     if ! kill -0 $PB_PID 2>/dev/null; then echo "[vanblog] FATAL: PocketBase died"; exit 1; fi
-    if ! kill -0 $ASTRO_PID 2>/dev/null; then echo "[vanblog] FATAL: Astro died"; exit 1; fi
+    if ! kill -0 $THEME_HOST_PID 2>/dev/null; then echo "[vanblog] FATAL: Theme Host died"; exit 1; fi
     sleep 5
   done
 }
