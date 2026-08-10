@@ -84,6 +84,6 @@ func copyTree(source fs.FS, destination string) error {
 		if err != nil {
 			return err
 		}
-		return os.WriteFile(target, data, 0o644) //nolint:gosec // pack resources stay world-readable
+		return os.WriteFile(target, data, 0o600)
 	})
 }

@@ -6,7 +6,9 @@ package caddy
 // docs/architecture-layering.md §4.4 (Caddy Manager).
 
 import (
+	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -197,8 +199,13 @@ func loadBootstrapInputs(app core.App) (BuildOpts, []UserRule) {
 // installs have nowhere to persist and that's fine.
 func setCaddyLastError(app core.App, msg string) error {
 	site, err := app.FindFirstRecordByFilter("site", "")
-	if err != nil || site == nil {
-		return nil //nolint:nilerr // intentional: fresh install has no site row to persist to
+	if err != nil {
+		// Fresh installs have no site row yet — nowhere to persist, and that's
+		// fine. Any other lookup error is real and must propagate, not be swallowed.
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil
+		}
+		return err
 	}
 	site.Set("caddyLastError", msg)
 	return app.Save(site)

@@ -29,8 +29,8 @@ func setupApp(t *testing.T) core.App {
 func TestComputeSign(t *testing.T) {
 	data := []byte("hello world")
 	sign := ComputeSign(data)
-	if sign != "5eb63bbbe01eeed093cb22bb8f5acdc3" {
-		t.Errorf("sign = %q, want known MD5", sign)
+	if sign != "b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9" {
+		t.Errorf("sign = %q, want known SHA-256", sign)
 	}
 
 	// Same input → same sign

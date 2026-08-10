@@ -2,7 +2,7 @@
 package media
 
 import (
-	"crypto/md5" //nolint:gosec // dedup fingerprint, not used for security
+	"crypto/sha256"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -22,7 +22,7 @@ type Manager struct {
 //   - OnServe: push site.s3Config into pb settings so a fresh deploy with a
 //     pre-populated config (backup restore, image upgrade) routes uploads to
 //     S3 without requiring an admin to re-save the site record.
-//   - OnRecordAfterCreateSuccess("media"): compute MD5 sign, dedup against
+//   - OnRecordAfterCreateSuccess("media"): compute content-hash sign, dedup against
 //     existing records, delete the newer copy if a duplicate is found.
 //   - OnRecordAfterUpdateSuccess("site"): re-apply S3 backend so config edits
 //     take effect on the next upload without a restart.
@@ -47,9 +47,10 @@ func New(app core.App) *Manager {
 	return m
 }
 
-// dedupeOnUpload runs after a media record is created. Computes MD5 sign of
-// the uploaded file, persists it, then queries for an older record with the
-// same sign. If found, the newer record (the one just uploaded) is deleted.
+// dedupeOnUpload runs after a media record is created. Computes the content
+// hash sign of the uploaded file, persists it, then queries for an older
+// record with the same sign. If found, the newer record (the one just
+// uploaded) is deleted.
 //
 // Failures are logged but non-fatal — a missing dedup pass is preferable to
 // blocking an upload.
@@ -127,7 +128,7 @@ func (m *Manager) reapplyS3Backend() {
 	}
 }
 
-// CheckDuplicate looks up an existing media record by MD5 hash of file content.
+// CheckDuplicate looks up an existing media record by content-hash sign.
 // Returns the existing record if found, nil otherwise.
 //
 // This replaces the original static.provider.ts getOneBySign() behavior.
@@ -149,10 +150,10 @@ func (m *Manager) CheckDuplicate(fileContent []byte) (*core.Record, error) {
 	return record, nil
 }
 
-// ComputeSign returns the MD5 hash hex string of the given content.
+// ComputeSign returns the SHA-256 hash hex string of the given content.
 // This is used as the deduplication signature.
 func ComputeSign(content []byte) string {
-	h := md5.Sum(content) //nolint:gosec // dedup fingerprint, not used for security
+	h := sha256.Sum256(content)
 	return fmt.Sprintf("%x", h)
 }
 
