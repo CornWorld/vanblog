@@ -247,15 +247,16 @@ func (imp *Importer) importArticles(txApp core.App, articles []LegacyArticle, ca
 		// Determine status: hidden takes precedence, then private
 		// Private articles require password but are listed;
 		// Hidden articles are not listed at all
-		if a.Hidden {
+		switch {
+		case a.Hidden:
 			record.Set("status", "hidden")
-		} else if a.Private {
+		case a.Private:
 			record.Set("status", "published")
 			record.Set("private", true)
 			if a.Password != "" {
 				record.Set("password", a.Password)
 			}
-		} else {
+		default:
 			record.Set("status", "published")
 		}
 

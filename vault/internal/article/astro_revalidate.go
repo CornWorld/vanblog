@@ -2,6 +2,7 @@ package article
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"log/slog"
 	"net/http"
@@ -31,7 +32,15 @@ func revalidateAstroCache(tags []string) {
 
 	body, _ := json.Marshal(map[string][]string{"tags": tags})
 	client := &http.Client{Timeout: 5 * time.Second}
-	resp, err := client.Post(astroURL+"/api/revalidate", "application/json", bytes.NewReader(body))
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, astroURL+"/api/revalidate", bytes.NewReader(body))
+	if err != nil {
+		slog.Error("[article] revalidate: failed to build request", "url", astroURL, "err", err)
+		return
+	}
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := client.Do(req)
 	if err != nil {
 		slog.Error("[article] revalidate: failed to reach Astro", "url", astroURL, "err", err)
 		return

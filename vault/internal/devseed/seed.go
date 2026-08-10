@@ -23,7 +23,7 @@ func Seed(app core.App, postCount int) error {
 	}
 
 	// Deterministic but varied: seed changes per run but sequences are reproducible.
-	gofakeit.Seed(time.Now().UnixNano())
+	_ = gofakeit.Seed(time.Now().UnixNano())
 
 	catIDs := make(map[string]string)
 	tagIDs := make(map[string]string)

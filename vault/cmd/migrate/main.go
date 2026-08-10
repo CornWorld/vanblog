@@ -68,7 +68,8 @@ func main() {
 
 	if mongoURI == "" {
 		fmt.Printf("\n%s无法连接 MongoDB，退出。%s\n", red, reset)
-		os.Exit(1)
+		tempCleanup()
+		os.Exit(1) //nolint:gocritic // tempCleanup already ran above; remaining defers are context cancel only
 	}
 
 	dbName := prompt("数据库名", "vanblog")
@@ -135,27 +136,36 @@ func main() {
 			importURL := strings.TrimRight(targetURL, "/") + "/api/vanblog/migrate/import"
 			fmt.Printf("  → 正在导入到 %s ...\n", importURL)
 
-			resp, err := http.Post(importURL, "application/json", bytes.NewReader(jsonData))
+			req, err := http.NewRequestWithContext(ctx, http.MethodPost, importURL, bytes.NewReader(jsonData))
 			if err != nil {
-				fmt.Printf("  %s导入请求失败: %v%s\n", red, err, reset)
-				// Still write JSON to temp file so data isn't lost
+				// Shouldn't happen for a valid URL; keep data safe regardless.
+				fmt.Printf("  %s导入请求构造失败: %v%s\n", red, err, reset)
 				tmpFile := writeTempJSON(jsonData)
 				fmt.Printf("  %s数据已保存到: %s%s\n", yellow, tmpFile, reset)
 			} else {
-				defer resp.Body.Close()
-				body, _ := io.ReadAll(resp.Body)
-
-				var result migration.Result
-				if err := json.Unmarshal(body, &result); err == nil {
-					fmt.Printf("  %s✅ 导入完成：%d 篇文章、%d 个分类、%d 个标签、%d 个媒体%s\n",
-						green, result.Posts, result.Categories, result.Tags, result.Media, reset)
-					if len(result.Errors) > 0 {
-						for _, e := range result.Errors {
-							fmt.Printf("  %s⚠ %s%s\n", yellow, e, reset)
-						}
-					}
+				req.Header.Set("Content-Type", "application/json")
+				resp, err := http.DefaultClient.Do(req)
+				if err != nil {
+					fmt.Printf("  %s导入请求失败: %v%s\n", red, err, reset)
+					// Still write JSON to temp file so data isn't lost
+					tmpFile := writeTempJSON(jsonData)
+					fmt.Printf("  %s数据已保存到: %s%s\n", yellow, tmpFile, reset)
 				} else {
-					fmt.Printf("  %s响应 (%d): %s%s\n", green, resp.StatusCode, string(body), reset)
+					defer resp.Body.Close()
+					body, _ := io.ReadAll(resp.Body)
+
+					var result migration.Result
+					if err := json.Unmarshal(body, &result); err == nil {
+						fmt.Printf("  %s✅ 导入完成：%d 篇文章、%d 个分类、%d 个标签、%d 个媒体%s\n",
+							green, result.Posts, result.Categories, result.Tags, result.Media, reset)
+						if len(result.Errors) > 0 {
+							for _, e := range result.Errors {
+								fmt.Printf("  %s⚠ %s%s\n", yellow, e, reset)
+							}
+						}
+					} else {
+						fmt.Printf("  %s响应 (%d): %s%s\n", green, resp.StatusCode, string(body), reset)
+					}
 				}
 			}
 		} else {
@@ -361,11 +371,11 @@ func canDial(port int) bool {
 func startTempMongo(ctx context.Context, dataDir string) (uri string, cleanup func()) {
 	cleanup = func() {
 		fmt.Printf("  清理临时 MongoDB 容器...\n")
-		exec.Command("docker", "rm", "-f", "vanblog-migrate-mongo").Run()
+		_ = exec.Command("docker", "rm", "-f", "vanblog-migrate-mongo").Run()
 	}
 
 	// Remove any leftover container
-	exec.Command("docker", "rm", "-f", "vanblog-migrate-mongo").Run()
+	_ = exec.Command("docker", "rm", "-f", "vanblog-migrate-mongo").Run()
 
 	port := findFreePort()
 

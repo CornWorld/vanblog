@@ -199,18 +199,24 @@ func TestGetByCategory(t *testing.T) {
 	p1.Set("title", "In Tech")
 	p1.Set("status", "published")
 	p1.Set("category", cat.Id)
-	app.Save(p1)
+	if err := app.Save(p1); err != nil {
+		t.Fatal(err)
+	}
 
 	p2 := core.NewRecord(col)
 	p2.Set("title", "Also Tech")
 	p2.Set("status", "published")
 	p2.Set("category", cat.Id)
-	app.Save(p2)
+	if err := app.Save(p2); err != nil {
+		t.Fatal(err)
+	}
 
 	p3 := core.NewRecord(col)
 	p3.Set("title", "Not in Tech")
 	p3.Set("status", "published")
-	app.Save(p3)
+	if err := app.Save(p3); err != nil {
+		t.Fatal(err)
+	}
 
 	results, err := mgr.GetByCategory(cat.Id, 10, 0)
 	if err != nil {

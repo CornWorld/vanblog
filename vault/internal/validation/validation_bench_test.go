@@ -78,7 +78,7 @@ func BenchmarkValidationFreshVM(b *testing.B) {
 func BenchmarkValidationBase(b *testing.B) {
 	sources := loadSchema(b)
 	vm := goja.New()
-	vm.RunProgram(sources[len(sources)-1].prog) // last source = moments
+	_, _ = vm.RunProgram(sources[len(sources)-1].prog) // last source = moments; bench setup, ignore err
 	models := vm.Get("exports").ToObject(vm).Get("models").ToObject(vm)
 
 	b.ResetTimer()
@@ -181,7 +181,7 @@ func BenchmarkValidationPreAllocMiss(b *testing.B) {
 	warmed := make([]warmedVM, len(sources))
 	for i, src := range sources {
 		vm := goja.New()
-		vm.RunProgram(src.prog)
+		_, _ = vm.RunProgram(src.prog) // bench setup, ignore err
 		models := vm.Get("exports").ToObject(vm).Get("models").ToObject(vm)
 		warmed[i] = warmedVM{vm: vm, models: models}
 	}

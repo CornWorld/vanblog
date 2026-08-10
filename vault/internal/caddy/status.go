@@ -158,7 +158,7 @@ func GetTLSStatus(app core.App, caddyAdminURL string) (*TLSStatus, error) {
 	if err != nil {
 		// Caddy not reachable — return partial status
 		status.CaddyReachable = false
-		return status, nil
+		return status, nil //nolint:nilerr // intentional: partial status when Caddy unreachable
 	}
 	status.CaddyReachable = true
 
@@ -183,7 +183,7 @@ func GetTLSStatus(app core.App, caddyAdminURL string) (*TLSStatus, error) {
 	automated, err := client.GetAutocertDomains()
 	if err != nil {
 		// Non-fatal: return what we have
-		return status, nil
+		return status, nil //nolint:nilerr // intentional: non-fatal, return partial cert info
 	}
 
 	// 4. Build cert info with allowed status

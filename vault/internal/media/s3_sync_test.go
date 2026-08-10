@@ -99,7 +99,9 @@ func TestApplyS3BackendToSettings_ToggleOff(t *testing.T) {
 	onCfg := core.S3Config{Enabled: true, Bucket: "b", Region: "r", Endpoint: "https://e", AccessKey: "a", Secret: "s"}
 	raw, _ := json.Marshal(onCfg)
 	site.Set("s3Config", json.RawMessage(raw))
-	app.Save(site)
+	if err := app.Save(site); err != nil {
+		t.Fatal(err)
+	}
 	if err := ApplyS3BackendToSettings(app); err != nil {
 		t.Fatalf("enable: %v", err)
 	}
@@ -109,7 +111,9 @@ func TestApplyS3BackendToSettings_ToggleOff(t *testing.T) {
 
 	// Turn off.
 	site.Set("s3Config", json.RawMessage(`{"enabled":false}`))
-	app.Save(site)
+	if err := app.Save(site); err != nil {
+		t.Fatal(err)
+	}
 	if err := ApplyS3BackendToSettings(app); err != nil {
 		t.Fatalf("disable: %v", err)
 	}

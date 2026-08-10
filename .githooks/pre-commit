@@ -6,16 +6,16 @@ set -e
 echo "→ go vet -all (strict)..."
 (cd vault && go vet -all ./...) || exit 1
 
-echo "→ staticcheck..."
-SC_BIN="$(go env GOPATH)/bin/staticcheck"
-if [ -x "$SC_BIN" ] || command -v staticcheck >/dev/null 2>&1; then
-  if [ -x "$SC_BIN" ]; then
-    (cd vault && "$SC_BIN" ./...) || exit 1
+echo "→ golangci-lint..."
+GL_BIN="$(go env GOPATH)/bin/golangci-lint"
+if [ -x "$GL_BIN" ] || command -v golangci-lint >/dev/null 2>&1; then
+  if [ -x "$GL_BIN" ]; then
+    (cd vault && "$GL_BIN" run ./...) || exit 1
   else
-    (cd vault && staticcheck ./...) || exit 1
+    (cd vault && golangci-lint run ./...) || exit 1
   fi
 else
-  echo "  (staticcheck 未安装,跳过 — 安装: go install honnef.co/go/tools/cmd/staticcheck@latest)"
+  echo "  (golangci-lint 未安装,跳过 — 安装: go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest)"
 fi
 
 echo "→ astro check..."

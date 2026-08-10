@@ -19,7 +19,7 @@ func TestBuiltinOnly(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(resolved) != 3 || resolved[0].Name != "bookmarks" || resolved[0].Version != "1.0.0" || resolved[0].Source != Builtin {
+	if len(resolved) != 4 || resolved[0].Name != "bookmarks" || resolved[0].Version != "1.0.0" || resolved[0].Source != Builtin {
 		t.Fatalf("unexpected builtin packs: %#v", resolved)
 	}
 	if _, err := fs.ReadFile(resolved[0].FS, "pages/index.astro"); err != nil {
@@ -97,7 +97,7 @@ func TestLocalWholePackOverride(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(resolved) != 3 || resolved[0].Source != Local || resolved[0].Version != "2.0.0" {
+	if len(resolved) != 4 || resolved[0].Source != Local || resolved[0].Version != "2.0.0" {
 		t.Fatalf("unexpected resolution: %#v", resolved)
 	}
 	if _, err := fs.ReadFile(resolved[0].FS, "local.txt"); err != nil {

@@ -78,3 +78,25 @@ jobs:
           name: migrate-${{ matrix.goos }}-${{ matrix.goarch }}
           path: vault/bin/migrate-*
           retention-days: 7
+
+  # ── Lint Go backend (go vet -all + golangci-lint gate) ──
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version: stable
+          cache-dependency-path: vault/go.sum
+
+      - name: go vet -all
+        working-directory: vault
+        run: go vet -all ./...
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: v1.64.8
+          working-directory: vault
+          args: run ./...

@@ -198,7 +198,7 @@ func loadBootstrapInputs(app core.App) (BuildOpts, []UserRule) {
 func setCaddyLastError(app core.App, msg string) error {
 	site, err := app.FindFirstRecordByFilter("site", "")
 	if err != nil || site == nil {
-		return nil
+		return nil //nolint:nilerr // intentional: fresh install has no site row to persist to
 	}
 	site.Set("caddyLastError", msg)
 	return app.Save(site)

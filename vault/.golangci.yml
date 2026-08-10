@@ -1,0 +1,76 @@
+# golangci-lint configuration for the Go backend (vault/).
+#
+# Linter set: core correctness + real-bug finders.
+#   errcheck / govet / ineffassign / staticcheck / unused  — baseline correctness
+#   nilerr / gosec / unconvert / bodyclose / noctx / gocritic — real-bug & security
+#
+# Gate wiring:
+#   make vet  →  golangci-lint run ./...
+#   .githooks/pre-commit  →  golangci-lint run ./...
+#
+# Install: go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+# Run:     golangci-lint run ./...
+
+run:
+  timeout: 5m
+
+linters:
+  disable-all: true
+  enable:
+    # core correctness
+    - errcheck
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+    # real-bug finders / security
+    - nilerr
+    - gosec
+    - unconvert
+    - bodyclose
+    - noctx
+    - gocritic
+
+linters-settings:
+  gosec:
+    excludes:
+      # G115: int→uint overflow conversions are intentional where a
+      # non-negative timestamp/seed is guaranteed (e.g. dev seed).
+      - G115
+      # G301: dirs created 0755 for shared/web-served content — 0750 is too strict here.
+      - G301
+      # G304: config-driven file reads (theme/palette/pack paths) are the app's
+      # core and already path-escape validated. High false-positive rate.
+      - G304
+
+issues:
+  # golangci default exclusions (errcheck Close/Remove/Fprintf, os.Setenv, etc.)
+  # are applied — they filter universal noise, not real bugs.
+  max-per-linter: 0
+  max-same-issues: 0
+  exclude-rules:
+    # Locked schema migrations (AGENTS.md 禁区) — never modified by lint fixes.
+    - path: pb_migrations/
+      linters:
+        [
+          errcheck,
+          govet,
+          ineffassign,
+          staticcheck,
+          unused,
+          nilerr,
+          gosec,
+          unconvert,
+          bodyclose,
+          noctx,
+          gocritic,
+        ]
+    # Dev-only seed tool: math/rand for sample data is intentional.
+    - path: internal/devseed/
+      linters: [gosec]
+    # Migration CLI: subprocess/URL args are user-provided by design.
+    - path: cmd/migrate/
+      linters: [gosec]
+    # Test fixtures write temp files with 0644 — not sensitive.
+    - path: _test\.go
+      linters: [gosec]

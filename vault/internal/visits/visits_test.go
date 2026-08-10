@@ -59,11 +59,17 @@ func TestIncrement_ExistingPath(t *testing.T) {
 	mgr := New(app)
 
 	// First view
-	mgr.Increment("/page", "")
+	if err := mgr.Increment("/page", ""); err != nil {
+		t.Fatal(err)
+	}
 	// Second view
-	mgr.Increment("/page", "")
+	if err := mgr.Increment("/page", ""); err != nil {
+		t.Fatal(err)
+	}
 	// Third view
-	mgr.Increment("/page", "")
+	if err := mgr.Increment("/page", ""); err != nil {
+		t.Fatal(err)
+	}
 
 	records, _ := app.FindRecordsByFilter("visits", "path='/page'", "", 0, 0)
 	if len(records) != 1 {
@@ -81,8 +87,12 @@ func TestIncrement_WithPost(t *testing.T) {
 	post := createTestPost(t, app, "Test Post")
 
 	// Visit with post association
-	mgr.Increment("/test-post", post.Id)
-	mgr.Increment("/test-post", post.Id)
+	if err := mgr.Increment("/test-post", post.Id); err != nil {
+		t.Fatal(err)
+	}
+	if err := mgr.Increment("/test-post", post.Id); err != nil {
+		t.Fatal(err)
+	}
 
 	// Check post viewCount was incremented
 	updatedPost, _ := app.FindRecordById("posts", post.Id)
@@ -95,9 +105,15 @@ func TestIncrement_MultiplePaths(t *testing.T) {
 	app := setupApp(t)
 	mgr := New(app)
 
-	mgr.Increment("/page-a", "")
-	mgr.Increment("/page-a", "")
-	mgr.Increment("/page-b", "")
+	if err := mgr.Increment("/page-a", ""); err != nil {
+		t.Fatal(err)
+	}
+	if err := mgr.Increment("/page-a", ""); err != nil {
+		t.Fatal(err)
+	}
+	if err := mgr.Increment("/page-b", ""); err != nil {
+		t.Fatal(err)
+	}
 
 	records, _ := app.FindRecordsByFilter("visits", "", "", 0, 0)
 	if len(records) != 2 {
@@ -115,11 +131,17 @@ func TestGetTopPosts(t *testing.T) {
 
 	// Give them different view counts
 	p1.Set("viewCount", 100)
-	app.Save(p1)
+	if err := app.Save(p1); err != nil {
+		t.Fatal(err)
+	}
 	p2.Set("viewCount", 50)
-	app.Save(p2)
+	if err := app.Save(p2); err != nil {
+		t.Fatal(err)
+	}
 	p3.Set("viewCount", 10)
-	app.Save(p3)
+	if err := app.Save(p3); err != nil {
+		t.Fatal(err)
+	}
 
 	top, err := mgr.GetTopPosts(2)
 	if err != nil {
@@ -141,9 +163,15 @@ func TestAggregateDaily(t *testing.T) {
 	mgr := New(app)
 
 	// Create some per-path visits for today
-	mgr.Increment("/page-a", "")
-	mgr.Increment("/page-a", "")
-	mgr.Increment("/page-b", "")
+	if err := mgr.Increment("/page-a", ""); err != nil {
+		t.Fatal(err)
+	}
+	if err := mgr.Increment("/page-a", ""); err != nil {
+		t.Fatal(err)
+	}
+	if err := mgr.Increment("/page-b", ""); err != nil {
+		t.Fatal(err)
+	}
 
 	// Aggregate
 	if err := mgr.AggregateDaily(""); err != nil {

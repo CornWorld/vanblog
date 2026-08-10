@@ -118,7 +118,9 @@ func TestImport_PostsMerged(t *testing.T) {
 	app := setupApp(t)
 	imp := New(app)
 
-	imp.Import(sampleBackup())
+	if _, err := imp.Import(sampleBackup()); err != nil {
+		t.Fatal(err)
+	}
 
 	// Check published posts
 	pub, _ := app.FindRecordsByFilter("posts", "status='published'", "", 0, 0)
@@ -143,7 +145,9 @@ func TestImport_TagsRelation(t *testing.T) {
 	app := setupApp(t)
 	imp := New(app)
 
-	imp.Import(sampleBackup())
+	if _, err := imp.Import(sampleBackup()); err != nil {
+		t.Fatal(err)
+	}
 
 	// Find the "Hello World" post and check tags
 	post, err := app.FindFirstRecordByFilter("posts", "title='Hello World'")
@@ -173,7 +177,9 @@ func TestImport_CategoryRelation(t *testing.T) {
 	app := setupApp(t)
 	imp := New(app)
 
-	imp.Import(sampleBackup())
+	if _, err := imp.Import(sampleBackup()); err != nil {
+		t.Fatal(err)
+	}
 
 	post, _ := app.FindFirstRecordByFilter("posts", "title='Hello World'")
 	catID := post.GetString("category")
@@ -194,7 +200,9 @@ func TestImport_PicgoToS3(t *testing.T) {
 	app := setupApp(t)
 	imp := New(app)
 
-	imp.Import(sampleBackup())
+	if _, err := imp.Import(sampleBackup()); err != nil {
+		t.Fatal(err)
+	}
 
 	// Find the picgo media record
 	media, _ := app.FindRecordsByFilter("media", "sign='def456'", "", 0, 0)
@@ -213,7 +221,9 @@ func TestImport_ArchiveCreated(t *testing.T) {
 	app := setupApp(t)
 	imp := New(app)
 
-	imp.Import(sampleBackup())
+	if _, err := imp.Import(sampleBackup()); err != nil {
+		t.Fatal(err)
+	}
 
 	// Find the archive post
 	archive, err := app.FindFirstRecordByFilter("posts", "title~'迁移档案'")

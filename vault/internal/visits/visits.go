@@ -3,6 +3,7 @@ package visits
 
 import (
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/pocketbase/dbx"
@@ -93,7 +94,9 @@ func (m *Manager) IncrementPostView(postID string) {
 	}
 	current := post.GetInt("viewCount")
 	post.Set("viewCount", current+1)
-	m.app.Save(post)
+	if err := m.app.Save(post); err != nil {
+		slog.Warn("[visits] failed to bump post viewCount", "post", postID, "err", err)
+	}
 }
 
 // GetDailySummary returns aggregated stats for a specific date.

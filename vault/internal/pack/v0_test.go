@@ -74,7 +74,8 @@ func TestRuntimeLoadableV0AllowsLocalHooksAndBuiltinFrontend(t *testing.T) {
 	if len(warnings) != 0 {
 		t.Fatalf("unexpected warnings: %#v", warnings)
 	}
-	if len(loadable) != 4 {
+	// 4 builtins (incl. builtin bookmarks frontend) + 1 local hooks-only bookmarks = 5
+	if len(loadable) != 5 {
 		t.Fatalf("unexpected loadable packs: %#v", loadable)
 	}
 }

@@ -54,7 +54,9 @@ func TestCaptureAndList(t *testing.T) {
 	// Update post
 	post.Set("title", "Updated")
 	post.Set("content", "New content")
-	app.Save(post)
+	if err := app.Save(post); err != nil {
+		t.Fatal(err)
+	}
 
 	// List revisions
 	revs, err := mgr.List(post.Id, 10)
@@ -85,23 +87,35 @@ func TestMultipleCaptures(t *testing.T) {
 	post := createTestPost(t, app, "v1", "content1", "draft")
 
 	// v1 → v2
-	mgr.CaptureBeforeUpdate(post, ReasonAutoSave, "")
+	if err := mgr.CaptureBeforeUpdate(post, ReasonAutoSave, ""); err != nil {
+		t.Fatal(err)
+	}
 	post.Set("title", "v2")
 	post.Set("content", "content2")
-	app.Save(post)
+	if err := app.Save(post); err != nil {
+		t.Fatal(err)
+	}
 	time.Sleep(10 * time.Millisecond)
 
 	// v2 → v3
-	mgr.CaptureBeforeUpdate(post, ReasonAutoSave, "")
+	if err := mgr.CaptureBeforeUpdate(post, ReasonAutoSave, ""); err != nil {
+		t.Fatal(err)
+	}
 	post.Set("title", "v3")
 	post.Set("content", "content3")
-	app.Save(post)
+	if err := app.Save(post); err != nil {
+		t.Fatal(err)
+	}
 	time.Sleep(10 * time.Millisecond)
 
 	// v3 → published
-	mgr.CaptureBeforeUpdate(post, ReasonPublish, "")
+	if err := mgr.CaptureBeforeUpdate(post, ReasonPublish, ""); err != nil {
+		t.Fatal(err)
+	}
 	post.Set("status", "published")
-	app.Save(post)
+	if err := app.Save(post); err != nil {
+		t.Fatal(err)
+	}
 
 	revs, _ := mgr.List(post.Id, 10)
 	if len(revs) != 3 {
@@ -135,10 +149,14 @@ func TestRestore(t *testing.T) {
 	post := createTestPost(t, app, "v1", "original content", "published")
 
 	// Save a revision
-	mgr.CaptureBeforeUpdate(post, ReasonManual, "")
+	if err := mgr.CaptureBeforeUpdate(post, ReasonManual, ""); err != nil {
+		t.Fatal(err)
+	}
 	post.Set("title", "v2")
 	post.Set("content", "modified content")
-	app.Save(post)
+	if err := app.Save(post); err != nil {
+		t.Fatal(err)
+	}
 
 	// Verify current state is v2
 	current, _ := app.FindRecordById("posts", post.Id)
@@ -249,9 +267,13 @@ func TestCleanup(t *testing.T) {
 
 	// Create 5 revisions
 	for i := range 5 {
-		mgr.CaptureBeforeUpdate(post, ReasonAutoSave, "")
+		if err := mgr.CaptureBeforeUpdate(post, ReasonAutoSave, ""); err != nil {
+			t.Fatal(err)
+		}
 		post.Set("title", "v"+string(rune('0'+i+1)))
-		app.Save(post)
+		if err := app.Save(post); err != nil {
+			t.Fatal(err)
+		}
 		time.Sleep(10 * time.Millisecond)
 	}
 
@@ -282,7 +304,9 @@ func TestExtractSnapshot(t *testing.T) {
 	mgr := New(app)
 
 	post := createTestPost(t, app, "Test", "Body", "published")
-	mgr.CaptureBeforeUpdate(post, ReasonManual, "")
+	if err := mgr.CaptureBeforeUpdate(post, ReasonManual, ""); err != nil {
+		t.Fatal(err)
+	}
 
 	revs, _ := mgr.List(post.Id, 1)
 	if len(revs) == 0 {

@@ -17,7 +17,7 @@ func ReadFromMongo(ctx context.Context, uri, dbName string) (*LegacyBackup, erro
 	if err != nil {
 		return nil, fmt.Errorf("mongo connect: %w", err)
 	}
-	defer client.Disconnect(ctx)
+	defer func() { _ = client.Disconnect(ctx) }()
 
 	db := client.Database(dbName)
 

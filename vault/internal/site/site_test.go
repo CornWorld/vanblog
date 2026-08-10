@@ -49,7 +49,9 @@ func TestGetInfo(t *testing.T) {
 	siteRec.Set("siteDesc", "A test blog")
 	siteRec.Set("commentsProvider", "giscus")
 	siteRec.Set("allowedDomains", []string{"blog.example.com", "www.example.com"})
-	app.Save(siteRec)
+	if err := app.Save(siteRec); err != nil {
+		t.Fatal(err)
+	}
 
 	info, err := GetInfo(app)
 	if err != nil {

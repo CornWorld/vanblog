@@ -76,7 +76,7 @@ func copyCoreHooks(source, destination string) error {
 		if err != nil {
 			return err
 		}
-		return os.WriteFile(target, data, 0o644)
+		return os.WriteFile(target, data, 0o644) //nolint:gosec // pack resources stay world-readable
 	})
 }
 
@@ -107,7 +107,7 @@ func stagePackHooks(p Pack, destination string) error {
 			return fmt.Errorf("read pack %q hook %q: %w", p.Name, resource, err)
 		}
 		target := filepath.Join(destination, "pack--"+p.Name+"--"+entry.Name())
-		if err := os.WriteFile(target, data, 0o644); err != nil {
+		if err := os.WriteFile(target, data, 0o644); err != nil { //nolint:gosec // pack hooks stay world-readable
 			return fmt.Errorf("write pack %q hook %q: %w", p.Name, resource, err)
 		}
 	}

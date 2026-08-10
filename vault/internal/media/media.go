@@ -2,7 +2,7 @@
 package media
 
 import (
-	"crypto/md5"
+	"crypto/md5" //nolint:gosec // dedup fingerprint, not used for security
 	"database/sql"
 	"errors"
 	"fmt"
@@ -91,7 +91,9 @@ func (m *Manager) dedupeOnUpload(e *core.RecordEvent) error {
 		(existingCreated.Equal(recordCreated) && existing.Id < record.Id)
 	if keepExisting {
 		slog.Info("[media] dedup: duplicate deleted", "existing", existing.Id, "removed", record.Id)
-		m.app.Delete(record)
+		if err := m.app.Delete(record); err != nil {
+			slog.Warn("[media] dedup: failed to delete duplicate", "existing", existing.Id, "removed", record.Id, "err", err)
+		}
 	}
 	return nil
 }
@@ -150,7 +152,7 @@ func (m *Manager) CheckDuplicate(fileContent []byte) (*core.Record, error) {
 // ComputeSign returns the MD5 hash hex string of the given content.
 // This is used as the deduplication signature.
 func ComputeSign(content []byte) string {
-	h := md5.Sum(content)
+	h := md5.Sum(content) //nolint:gosec // dedup fingerprint, not used for security
 	return fmt.Sprintf("%x", h)
 }
 

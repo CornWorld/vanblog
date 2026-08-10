@@ -34,7 +34,7 @@ help:
 	@echo "  dev-astro     Start Astro dev server (pnpm dev)"
 	@echo "  build         Build all artifacts (models → Go binary → Astro)"
 	@echo "  test          Run all tests (Go tests + model type/fixture tests)"
-	@echo "  vet           Run go vet -all + staticcheck (strict static analysis)"
+	@echo "  vet           Run go vet -all + golangci-lint (strict static analysis)"
 	@echo "  docker        Build production Docker image (docker buildx)"
 	@echo "  clean         Remove all build artifacts"
 
@@ -82,11 +82,12 @@ test:
 	pnpm test:models:fixtures || fail=1; \
 	[ "$$fail" -eq 0 ] || { echo "✗ 部分测试套件失败（详见上方输出）"; exit 1; }
 
-# Strict static analysis gate: all vet analyzers + staticcheck (U1000/dead
-# code, style, deprecated usage). staticcheck install:
-#   go install honnef.co/go/tools/cmd/staticcheck@latest
+# Strict static analysis gate: all vet analyzers + golangci-lint (errcheck,
+# gosec, nilerr, noctx, gocritic, staticcheck, unused, ...). Linter set &
+# exclusions live in vault/.golangci.yml. golangci-lint install:
+#   go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
 vet:
-	cd vault && go vet -all ./... && "$$(go env GOPATH)/bin/staticcheck" ./...
+	cd vault && go vet -all ./... && "$$(go env GOPATH)/bin/golangci-lint" run ./...
 
 # --- Docker ---
 

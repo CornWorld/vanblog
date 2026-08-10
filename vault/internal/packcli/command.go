@@ -247,7 +247,7 @@ func NewCommand() *cobra.Command {
 			}
 			defer os.Remove(stagedPath)
 
-			buildCmd := exec.Command("node", builder, directory, stagedPath)
+			buildCmd := exec.Command("node", builder, directory, stagedPath) //nolint:gosec // G204: pack build runs node on the CLI-provided builder script
 			buildCmd.Stdout = cmd.OutOrStdout()
 			buildCmd.Stderr = cmd.ErrOrStderr()
 			if err := buildCmd.Run(); err != nil {
@@ -330,10 +330,14 @@ func promoteArtifactBundle(directory, stagedSchema, stagedMetadata string) error
 	// Crash recovery: if leftover .bak files exist from a previous killed
 	// promotion, restore them before attempting a new one.
 	if _, err := os.Stat(backupSchema); err == nil {
-		os.Rename(backupSchema, artifactPath)
+		if err := os.Rename(backupSchema, artifactPath); err != nil {
+			return fmt.Errorf("restore backup schema artifact: %w", err)
+		}
 	}
 	if _, err := os.Stat(backupMetadata); err == nil {
-		os.Rename(backupMetadata, metadataPath)
+		if err := os.Rename(backupMetadata, metadataPath); err != nil {
+			return fmt.Errorf("restore backup schema metadata: %w", err)
+		}
 	}
 
 	// Phase 1: backup existing files to .bak.
