@@ -187,6 +187,11 @@ FROM prod AS dev
 
 RUN apk add --no-cache npm git && npm install -g pnpm@latest-10
 
+# Pi coding agent — the "msys2 git-bash" equivalent: a minimal, zero-config
+# AI assistant pre-installed in the dev container. Default provider is
+# OpenCode Zen free models (no API key needed). See refs/agent-platform-selection.md.
+RUN npm install -g --ignore-scripts @earendil-works/pi-coding-agent
+
 # Keep the dev workspace layout identical to the source workspace so Astro can
 # resolve app/integrations, root packs/, themes/, and the workspace SDK consistently.
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc /workspace/
@@ -194,6 +199,7 @@ COPY sdk/ /workspace/sdk/
 COPY app/ /workspace/app/
 COPY packs/ /workspace/packs/
 COPY themes/ /workspace/themes/
+ARG CACHE_BUST
 COPY scripts/ /workspace/scripts/
 COPY models.config.mjs /workspace/models.config.mjs
 # Agent knowledge layer: docs/ (live, version-synced) + AGENTS.md (navigation index).
@@ -201,6 +207,11 @@ COPY models.config.mjs /workspace/models.config.mjs
 # drifts from the code. See AGENTS.md for the contract.
 COPY docs/ /workspace/docs/
 COPY AGENTS.md /workspace/AGENTS.md
+# Pi agent project config: skill package + model settings + init scripts.
+# Model is a placeholder — init-pi-config.mjs resolves a live Zen free model
+# at container startup (run from entrypoint.dev.sh).
+COPY .pi/ /workspace/.pi/
+COPY .agents/ /workspace/.agents/
 WORKDIR /workspace
 RUN pnpm install --frozen-lockfile
 

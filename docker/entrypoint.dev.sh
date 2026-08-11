@@ -41,8 +41,8 @@ wait_for() {
 cleanup() {
   echo "[vanblog] shutting down..."
   kill "$MONITOR_PID" 2>/dev/null || true
-  kill $PB_PID $THEME_HOST_PID $CADDY_PID 2>/dev/null || true
-  wait $PB_PID $THEME_HOST_PID $CADDY_PID 2>/dev/null || true
+  kill $PB_PID $THEME_HOST_PID $CADDY_PID $PI_RPC_PID 2>/dev/null || true
+  wait $PB_PID $THEME_HOST_PID $CADDY_PID $PI_RPC_PID 2>/dev/null || true
 }
 trap cleanup EXIT INT TERM
 
@@ -89,6 +89,18 @@ export VANBLOG_EMAIL=$AGENT_EMAIL
 EOF
 chmod 600 /etc/vanblog/agent.env
 echo "[vanblog] agent.env written to /etc/vanblog/agent.env (see AGENTS.md §环境)"
+
+# 3.6. Initialize pi coding agent config — resolve live Zen free model + write trust.
+# Fail-open: if init-pi-config fails (network down), pi still starts with
+# the hardcoded fallback model from .pi/settings.json.
+echo "[vanblog] initializing pi agent config..."
+node /workspace/scripts/init-pi-config.mjs || echo "[vanblog] pi config init skipped (will use fallback)"
+
+# 3.7. Start pi RPC server — HTTP bridge for programmatic pi access.
+# Listens on VANBLOG_PI_PORT (default 4329). POST /pi/rpc for streaming SSE.
+echo "[vanblog] starting pi RPC server..."
+node /workspace/scripts/pi-rpc-server.mjs &
+PI_RPC_PID=$!
 
 # 4. Start Theme Host (loads active theme's SSR handler, routes /admin to app)
 DEFAULT_THEME=$(cat /etc/vanblog/default-theme 2>/dev/null || echo "vanblog")
