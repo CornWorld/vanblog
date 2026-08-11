@@ -2,12 +2,10 @@
 /**
  * init-pi-config.mjs
  *
- * Runs at container startup to auto-configure pi:
- * 1. Resolve the current best OpenCode Zen free model (dynamic, no hardcode)
- * 2. Inject the resolved model into the /workspace/.pi/settings.json template
- *    (repo template holds user behavior prefs only; model is runtime-injected)
- * 3. Write pi global config: models.json (Zen provider via auth-stripping proxy),
- *    trust.json (auto-trust workspace), settings.json (sane defaults)
+ * Runs at container startup to:
+ * 1. Resolve the current best OpenCode Zen free model
+ * 2. Update .pi/settings.json with the resolved model
+ * 3. Create pi global trust configuration (auto-trust project in dev container)
  *
  * Called from docker/entrypoint.dev.sh after agent.env is written.
  */
@@ -37,7 +35,7 @@ try {
   resolvedModel = result.trim();
 } catch (err) {
   console.warn("[pi-init] model resolution failed, using fallback:", err.message);
-  resolvedModel = "zen/deepseek-v4-flash-free";
+  resolvedModel = "opencode/zen/deepseek-v4-flash-free";
 }
 
 if (!resolvedModel) {

@@ -1,4 +1,6 @@
 {
+  "model": "opencode/zen/deepseek-v4-flash-free",
+  "defaultModel": "opencode/zen/deepseek-v4-flash-free",
   "thinking": "low",
   "autoCompact": true,
   "autoCompactThreshold": 80
