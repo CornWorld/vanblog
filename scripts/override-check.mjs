@@ -5,8 +5,9 @@
 //   - 不做 git-range 分类引擎：不解析 commit 区间、不 blame、不区分 release
 //     边界。报告只回答一个问题——「我的 src/base-overrides/ 还匹配当前
 //     app/src 的 base 吗？」。
-//   - 不依赖 git 历史：纯静态字节对比 + frontmatter 块文本对比。任何
-//     checkout（shallow clone、无 .git 的产物镜像）都能跑。
+//   - 不依赖 git 历史：纯静态字节对比 + 契约面对比（Props 接口属性 ∪
+//     Astro.props 解构变量）。任何 checkout（shallow clone、无 .git 的产物
+//     镜像）都能跑。
 //   - 只报告、不当门禁：无论结果如何始终 exit 0，绝不做 CI contract-diff
 //     拦截。人工判断 REVIEW / ORPHANED。
 //
@@ -19,9 +20,10 @@
 //
 // 输出分组：
 //   ORPHANED — base 已删除该文件，override 成孤儿
-//   REVIEW   — 与 base 内容有差异，需人工过目；对 .astro/.ts/.tsx 且含
-//              frontmatter（首行 `---` 到第二个 `---`）的文件，若 frontmatter
-//              块文本与 base 不一致，额外标注「L0 frontmatter drift」
+//   REVIEW   — 与 base 内容有差异，需人工过目；对 .astro/.ts/.tsx 文件，比较
+//              契约面（Props 接口属性 ∪ Astro.props 解构变量）：仅当 base 侧
+//              契约变量在 override 侧缺失（如 base 新增 prop）才额外标注
+//              「L0 contract drift」，并在 detail 中列出缺失的契约变量名
 //   OK       — 与 base 完全一致，无需处理
 
 import { readFileSync, readdirSync, statSync } from 'node:fs';
@@ -70,18 +72,48 @@ function walk(dir, prefix = '') {
   return out;
 }
 
-/** File types whose frontmatter block is part of the L0 contract surface. */
+/** File types whose Props/Astro.props contract is part of the L0 surface. */
 const FRONTMATTER_SRC = /\.(astro|ts|tsx)$/;
 
 /**
- * Extract the frontmatter block (both `---` markers) if the file starts with
- * one, otherwise null. Only used for the L0 drift annotation.
+ * Extract property names from an `interface Props { ... }` block, e.g.
+ * `title: string;` → `title`, `site?: Partial<Site>;` → `site`. Returns []
+ * when the file has no Props interface.
  */
-function extractFrontmatter(text) {
-  if (!text.startsWith('---')) return null;
-  const second = text.indexOf('\n---');
-  if (second === -1) return null;
-  return text.slice(0, second + 4); // include the closing `---`
+function extractPropsNames(text) {
+  const m = text.match(/interface\s+Props\s*\{([^}]*)\}/s);
+  if (!m) return [];
+  const names = [];
+  for (const line of m[1].split('\n')) {
+    const pm = line.match(/^\s*([A-Za-z_$][\w$]*)\s*[?:]/);
+    if (pm) names.push(pm[1]);
+  }
+  return names;
+}
+
+/**
+ * Extract destructured variable names from `const { ... } = Astro.props;`,
+ * mapping aliases back to the prop key (`site: siteProp` → `site`). Returns []
+ * when the destructure is absent.
+ */
+function extractDestructuredNames(text) {
+  const m = text.match(/const\s*\{([^}]*)\}\s*=\s*Astro\.props\s*;/s);
+  if (!m) return [];
+  const names = [];
+  for (const part of m[1].split(',')) {
+    const key = part.split(':')[0].trim().match(/^[A-Za-z_$][\w$]*/);
+    if (key) names.push(key[0]);
+  }
+  return names;
+}
+
+/**
+ * L0 contract surface for a file: Props property names ∪ Astro.props
+ * destructured keys. Used to detect contract drift without being sensitive
+ * to unrelated textual differences.
+ */
+function extractContract(text) {
+  return new Set([...extractPropsNames(text), ...extractDestructuredNames(text)]);
 }
 
 /**
@@ -112,10 +144,11 @@ function classify(rel, overridePath, basePath) {
 
   let detail = '与 base 有差异，需人工过目';
   if (FRONTMATTER_SRC.test(rel)) {
-    const ov = extractFrontmatter(override.toString('utf8'));
-    const b = extractFrontmatter(base.toString('utf8'));
-    if (ov && b && ov !== b) {
-      detail += '｜L0 frontmatter drift（base 契约变量有变，务必核对）';
+    const baseContract = extractContract(base.toString('utf8'));
+    const overrideContract = extractContract(override.toString('utf8'));
+    const missing = [...baseContract].filter((name) => !overrideContract.has(name));
+    if (missing.length > 0) {
+      detail += `｜L0 contract drift（base 新增 prop: ${missing.join(', ')}）`;
     }
   }
   return { status: 'REVIEW', rel, detail };

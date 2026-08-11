@@ -1,0 +1,83 @@
+---
+// ============================================================
+// 共享 <head> partial —— 平台层 head 机制的单一来源。
+// ------------------------------------------------------------
+// 提取自 app/src/layouts/BaseLayout.astro 的 <head> 整块机制
+// （FOUC 脚本 / palette.css / canonical / OG / RSS / pack styles），
+// 供平台层 BaseLayout 与 themes/base 的 override 复用，保证渲染等价。
+//
+// 约定：
+//   - 平台 head 演进只需改这里，themes/base 的 override 自动传导；
+//   - pack scripts 不进 Head（它们位于各 layout 的 <body> 末尾，
+//     由 layout 自行渲染）；
+//   - favicon / sitePalette 均「传了才渲染」，由调用方决定。
+// ============================================================
+import { buildThemeInitScript, paletteCssUrl } from '@vanblog/sdk';
+import { contributions as packContributions } from 'virtual:vanblog/pack-frontend';
+
+interface Props {
+  title: string;
+  description?: string;
+  canonicalURL?: string;
+  siteName: string;
+  favicon?: string; // 传了才渲染 <link rel="icon">
+  sitePalette?: string | null; // 传了才渲染 palette.css link + FOUC sitePalette
+  siteUpdated?: string;
+  palettes?: Record<string, 'light' | 'dark'>;
+  ogTitle?: string; // 渲染 og:title，未传回退到 title
+  ogType?: 'article' | 'website'; // 渲染 og:type，默认 website
+}
+
+const {
+  title,
+  description = '',
+  canonicalURL,
+  siteName,
+  favicon,
+  sitePalette,
+  siteUpdated,
+  palettes,
+  ogTitle,
+  ogType = 'website',
+} = Astro.props;
+---
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width" />
+
+  <!-- Prevent FOUC: apply effective palette (light/dark from palette type) + user preference before paint -->
+  <script
+    is:inline
+    set:html={buildThemeInitScript({
+      sitePalette,
+      siteUpdated,
+      palettes,
+    })}
+  />
+
+  {favicon && <link rel="icon" href={favicon} />}
+  <title>{title} - {siteName}</title>
+  <meta name="description" content={description} />
+  {canonicalURL && <link rel="canonical" href={canonicalURL} />}
+
+  <!-- Palette CSS (zero-build theme switch) -->
+  {sitePalette && (
+    <link rel="stylesheet" href={paletteCssUrl(sitePalette, siteUpdated)} data-vanblog-palette />
+  )}
+
+  {packContributions.filter((item) => item.scope === 'public').flatMap((item) => item.styles).map((href) => (
+    <link rel="stylesheet" href={href} data-vanblog-pack-style />
+  ))}
+
+  <!-- OpenGraph -->
+  <meta property="og:title" content={ogTitle || title} />
+  <meta property="og:description" content={description} />
+  <meta property="og:site_name" content={siteName} />
+  <meta property="og:type" content={ogType} />
+  {canonicalURL && <meta property="og:url" content={canonicalURL} />}
+
+  <!-- RSS auto-discovery -->
+  <link rel="alternate" type="application/rss+xml" title={`${siteName} RSS`} href="/api/feed.xml" />
+  <link rel="alternate" type="application/atom+xml" title={`${siteName} Atom`} href="/api/atom.xml" />
+</head>

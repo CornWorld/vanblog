@@ -8,16 +8,21 @@
 // - canonical URL / SEO meta（从 builtin BaseLayout 继承）
 // - pack 贡献的 CSS/JS（site 级配置）
 //
+// ★ head 机制（FOUC / palette / OG / RSS / canonical / pack styles）继承自平台
+//   `app/src/layouts/partials/Head.astro`（经 `@vanblog/base/layouts/partials/Head.astro`），
+//   本文件只定制 body/nav/footer 与 favicon 兜底；平台 head 演进会自动传导，勿在此复制 head 逻辑。
+//
 // 去掉：
 // - Tailwind class
 // - Nav / Footer / BackToTop 组件（用纯 HTML nav 替代）
 // - JSON-LD（非必需）
 
-import { safe, stripMarkdown, buildThemeInitScript, buildPaletteTypeMap, paletteCssUrl } from '@vanblog/sdk';
+import { safe, stripMarkdown, buildPaletteTypeMap } from '@vanblog/sdk';
 import { packs as packMetadata } from 'virtual:vanblog/packs';
 import { contributions as packContributions } from 'virtual:vanblog/pack-frontend';
 import type { Site, Post } from '@vanblog/sdk';
 import themeMeta from '../../../theme.json';
+import Head from '@vanblog/base/layouts/partials/Head.astro';
 
 interface Props {
   title: string;
@@ -56,43 +61,18 @@ const paletteTypeMap = buildPaletteTypeMap(
 <!doctype html>
 <html lang="zh-CN">
   <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width" />
-
-    <!-- Prevent FOUC: apply effective palette (light/dark from palette type) + user preference before paint -->
-    <script
-      is:inline
-      set:html={buildThemeInitScript({
-        sitePalette: effectivePalette,
-        siteUpdated: site?.updated,
-        palettes: paletteTypeMap,
-      })}
+    <Head
+      title={title}
+      description={desc}
+      canonicalURL={canonicalURL}
+      siteName={siteName}
+      favicon={site?.favicon || DEFAULT_FAVICON}
+      sitePalette={effectivePalette}
+      siteUpdated={site?.updated}
+      palettes={paletteTypeMap}
+      ogTitle={post?.title || title}
+      ogType={post ? 'article' : 'website'}
     />
-
-    <link rel="icon" href={site?.favicon || DEFAULT_FAVICON} />
-    <title>{title} - {siteName}</title>
-    <meta name="description" content={desc} />
-    {canonicalURL && <link rel="canonical" href={canonicalURL} />}
-
-    <!-- Palette CSS (site-level config, theme should respect) -->
-    {effectivePalette && (
-      <link rel="stylesheet" href={paletteCssUrl(effectivePalette, site?.updated)} data-vanblog-palette />
-    )}
-
-    {packContributions.filter((item) => item.scope === 'public').flatMap((item) => item.styles).map((href) => (
-      <link rel="stylesheet" href={href} data-vanblog-pack-style />
-    ))}
-
-    <!-- OpenGraph -->
-    <meta property="og:title" content={post?.title || title} />
-    <meta property="og:description" content={desc} />
-    <meta property="og:site_name" content={siteName} />
-    <meta property="og:type" content={post ? 'article' : 'website'} />
-    {canonicalURL && <meta property="og:url" content={canonicalURL} />}
-
-    <!-- RSS auto-discovery -->
-    <link rel="alternate" type="application/rss+xml" title={`${siteName} RSS`} href="/api/feed.xml" />
-    <link rel="alternate" type="application/atom+xml" title={`${siteName} Atom`} href="/api/atom.xml" />
   </head>
   <body>
     <header>

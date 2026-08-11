@@ -13,10 +13,11 @@
 import '../styles/global.css';
 // KaTeX CSS: 编辑器/渲染链路需要 (admin/edit 的 ByteMdEditor 依赖)。
 import 'katex/dist/katex.css';
-import { stripMarkdown, safe, buildThemeInitScript, buildPaletteTypeMap, paletteCssUrl } from '@vanblog/sdk';
+import { stripMarkdown, safe, buildPaletteTypeMap } from '@vanblog/sdk';
 import { packs as packMetadata } from 'virtual:vanblog/packs';
 import { contributions as packContributions } from 'virtual:vanblog/pack-frontend';
 import type { Site, Post } from '@vanblog/sdk';
+import Head from './partials/Head.astro';
 
 interface Props {
   title: string;
@@ -47,42 +48,17 @@ const paletteTypeMap = buildPaletteTypeMap(palettes.data ?? []);
 <!doctype html>
 <html lang="zh-CN">
   <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width" />
-
-    <!-- Prevent FOUC: apply effective palette (light/dark from palette type) + user preference before paint -->
-    <script
-      is:inline
-      set:html={buildThemeInitScript({
-        sitePalette: site?.palette,
-        siteUpdated: site?.updated,
-        palettes: paletteTypeMap,
-      })}
+    <Head
+      title={title}
+      description={desc}
+      canonicalURL={canonicalURL}
+      siteName={siteName}
+      sitePalette={site?.palette}
+      siteUpdated={site?.updated}
+      palettes={paletteTypeMap}
+      ogTitle={post?.title || title}
+      ogType={post ? 'article' : 'website'}
     />
-
-    <title>{title} - {siteName}</title>
-    <meta name="description" content={desc} />
-    {canonicalURL && <link rel="canonical" href={canonicalURL} />}
-
-    <!-- Palette CSS (zero-build theme switch) -->
-    {site?.palette && (
-      <link rel="stylesheet" href={paletteCssUrl(site?.palette, site?.updated)} data-vanblog-palette />
-    )}
-
-    {packContributions.filter((item) => item.scope === 'public').flatMap((item) => item.styles).map((href) => (
-      <link rel="stylesheet" href={href} data-vanblog-pack-style />
-    ))}
-
-    <!-- OpenGraph -->
-    <meta property="og:title" content={post?.title || title} />
-    <meta property="og:description" content={desc} />
-    <meta property="og:site_name" content={siteName} />
-    <meta property="og:type" content={post ? 'article' : 'website'} />
-    {canonicalURL && <meta property="og:url" content={canonicalURL} />}
-
-    <!-- RSS auto-discovery -->
-    <link rel="alternate" type="application/rss+xml" title={`${siteName} RSS`} href="/api/feed.xml" />
-    <link rel="alternate" type="application/atom+xml" title={`${siteName} Atom`} href="/api/atom.xml" />
   </head>
   <body class="min-h-screen flex flex-col">
     <header class="border-b">
