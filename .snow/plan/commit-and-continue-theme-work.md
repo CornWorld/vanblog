@@ -6,14 +6,14 @@
 
 当前工作区有 6 个未提交文件（agent/pi 相关收尾）。但深入核查发现其中 **3 处是「清理过度」导致的回归**——把上一轮已验证的修复删掉了：
 
-| 文件 | 工作区改动 | 判定 |
-| --- | --- | --- |
-| `vault/main.go` | **删除了** `app.RootCmd.ParseFlags(os.Args[1:])` 修复（+注释） | ❌ **回归**。该修复正是上轮「隔离容器 vol 重测」验证的核心修复：PocketBase `New()` 会 eager parse flags，而 pack 解析块在 `app.Start()` 之前执行，没有强制再解析则 `--packsDir`/`--builtinPacksDir` 恒为空 → user pack 永不加载 |
-| `eslint.config.js` | **删除了** eb8c428a 刚加的 `scripts/**/*.mjs` Node globals 块（console/process/Buffer） | ❌ **回归**。`no-undef` 会让 `scripts/*.mjs` lint 报错 |
-| `vault/internal/agent/agent.go` | SSE 循环里 `w.Write(line)` 不再检查错误、不再 break | ⚠️ 轻微。断连客户端不再被提前检测（上游 pi 关闭后自然结束，实际影响有限） |
-| `.pi/settings.json` | 加 `model`/`defaultModel` = `opencode/zen/deepseek-v4-flash-free` | ✅ 安全（模型名统一） |
-| `scripts/init-pi-config.mjs` | fallback 模型名加 `opencode/` 前缀 | ✅ 安全（与 settings.json 对齐） |
-| `scripts/pi-rpc-server.mjs` | 命名 `_reject`→`reject`、空 catch 清理、`pending` 数组 | ✅ 安全（轻微清理） |
+| 文件                            | 工作区改动                                                                              | 判定                                                                                                                                                                                                                            |
+| ------------------------------- | --------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `vault/main.go`                 | **删除了** `app.RootCmd.ParseFlags(os.Args[1:])` 修复（+注释）                          | ❌ **回归**。该修复正是上轮「隔离容器 vol 重测」验证的核心修复：PocketBase `New()` 会 eager parse flags，而 pack 解析块在 `app.Start()` 之前执行，没有强制再解析则 `--packsDir`/`--builtinPacksDir` 恒为空 → user pack 永不加载 |
+| `eslint.config.js`              | **删除了** eb8c428a 刚加的 `scripts/**/*.mjs` Node globals 块（console/process/Buffer） | ❌ **回归**。`no-undef` 会让 `scripts/*.mjs` lint 报错                                                                                                                                                                          |
+| `vault/internal/agent/agent.go` | SSE 循环里 `w.Write(line)` 不再检查错误、不再 break                                     | ⚠️ 轻微。断连客户端不再被提前检测（上游 pi 关闭后自然结束，实际影响有限）                                                                                                                                                       |
+| `.pi/settings.json`             | 加 `model`/`defaultModel` = `opencode/zen/deepseek-v4-flash-free`                       | ✅ 安全（模型名统一）                                                                                                                                                                                                           |
+| `scripts/init-pi-config.mjs`    | fallback 模型名加 `opencode/` 前缀                                                      | ✅ 安全（与 settings.json 对齐）                                                                                                                                                                                                |
+| `scripts/pi-rpc-server.mjs`     | 命名 `_reject`→`reject`、空 catch 清理、`pending` 数组                                  | ✅ 安全（轻微清理）                                                                                                                                                                                                             |
 
 > `vault` 目录 `go build ./...` 已通过（语法 OK，回归是**运行时 flag 时序**问题，编译测不出）。
 
@@ -92,15 +92,55 @@
 
 ## Risks & Mitigations
 
-| 风险 | 影响 | 缓解 |
-| --- | --- | --- |
+| 风险                                         | 影响                           | 缓解                                           |
+| -------------------------------------------- | ------------------------------ | ---------------------------------------------- |
 | 直接 commit 会把 main.go/eslint 回归带进历史 | user pack 加载静默坏 + lint 红 | Phase A 先恢复回归再提交；提交前 git diff 复查 |
-| ParseFlags 恢复后再被「清理」 | 重复回归 | 恢复时保留明确注释说明时序原因；notebook 记录 |
-| palette 多套实现工作量大 | 战线拉长 | 按 schema 先做 2-3 套高质量，再补足到 4-5 |
-| upgrade_diff 又滑回重型 | 违背用户约束 | 只实现轻量静态对比，CI 门禁记为长期项不入代码 |
+| ParseFlags 恢复后再被「清理」                | 重复回归                       | 恢复时保留明确注释说明时序原因；notebook 记录  |
+| palette 多套实现工作量大                     | 战线拉长                       | 按 schema 先做 2-3 套高质量，再补足到 4-5      |
+| upgrade_diff 又滑回重型                      | 违背用户约束                   | 只实现轻量静态对比，CI 门禁记为长期项不入代码  |
 
 ## Rollback Strategy
 
 - 提交前：`git checkout -- <file>` 可丢弃任意文件改动；回归修复不涉及新文件。
 - 提交后：如需回滚 `git reset --soft HEAD~1` 退回提交前工作区状态。
 - MCP/palette 新文件：全部新增，删除即可回滚，不触碰既有平台层逻辑。
+
+---
+
+## Completion Summary
+
+**Status**: ✅ Completed（2026-08-11）
+**Phases**: 4/4
+
+### Results
+
+| Commit     | 内容                                                                                                                                                                                                                                                                                                           |
+| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `76b62425` | **Phase A** 修复 3 处「清理过度」回归并提交：恢复 `main.go` ParseFlags 修复（pack 加载核心）、`eslint.config.js` Node globals 块、`agent.go` SSE 断连 break；同时发现工作区其余「清理」（pi-rpc-server.mjs 空 catch、agent.go client.Post）本身破坏 lint（`no-empty`/`noctx`），一并回退；只提交模型名对齐改动 |
+| `6e935f86` | **Phase B** palette 从 4 → 8 套（midnight/catppuccin 家族 × light/dark）+ `hooks/palettes/README.md`（原子式调色盘模型文档）                                                                                                                                                                                   |
+| `57afde1d` | **Phase C** admin/site 外观升级为 ThemeCard/PaletteCard 卡片网格 + 「预览站点」同源 iframe（SDK applyPalette 即时预览，dev/prod 提示），不动 FOUC 关键路径                                                                                                                                                     |
+| `1c930937` | **Phase D** `vault/internal/mcp/` 6 个 admin-only 端点（read/list/write/pb_schema/pb_query/upgrade_diff）+ `scripts/upgrade-diff.mjs` 轻量静态对比 + SDK mcp 命名空间 + docs §11；`preview`/`build` 因依赖不存在 infra **记为后续**                                                                            |
+| `8e0dd0a1` | 本 plan 文档                                                                                                                                                                                                                                                                                                   |
+
+### Deviations
+
+- **原计划 Phase 5 hardcode 颜色 CI 门禁 → 不做**：现有 vanblog 主题 legit 含 24 处组件级颜色，严格门禁属过度工程且需大迁移；记录为后续决策（README 已注明）。
+- **原计划 Phase 7 的 `preview`/`build` MCP 工具 → 暂缓**：依赖不存在的 `/admin/preview` 端点与 dev 容器 build-to-staging infra；docs §11 标注为「后续实现」。
+- **upgrade_diff 按用户要求做轻**：单脚本静态对比（base-overrides vs 当前 app/src，无 git 历史、无 L0/L1/L2 分类引擎、无 CI contract-diff 门禁）；MCP 端为 ~10 行薄封装 exec。
+- **QA 复审修复**（合入前）：writeForbidden 补齐 `live.config.*`/`middleware.*`、pb_query 改 PB search provider（关系过滤 count 不再 500）、page 溢出钳制、symlink 逃逸防御、请求体限流、错误信息去敏感化。
+
+### Verification
+
+- [x] `go build ./...` / `go vet ./...` / `go test ./internal/mcp/...`（34+6 用例）全过
+- [x] golangci-lint（pre-commit gate，含 gosec）通过
+- [x] `npx astro check` 0 errors（仅 1 条既有非阻断 hint）
+- [x] `node --check` + eslint + 手动运行 `upgrade-diff.mjs` 通过
+- [x] QA agent 安全复审：PASS WITH CONCERNS → 4 个中危已修复
+- [x] 工作区干净，5 个 commit 落地
+
+### Follow-up
+
+- admin/theme「各需求方嵌入 + 多 profile」agent 入口（`docs/agent-design.md` §5.3 待办）
+- MCP `preview`/`build` 工具（待对应 infra 落地）
+- base-overrides hardcode 颜色 token 化迁移决策
+- `themes/vanblog/src/base-overrides/` 目前为空（默认视觉在主题自身 src）
