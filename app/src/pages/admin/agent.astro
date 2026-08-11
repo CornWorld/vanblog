@@ -1,0 +1,159 @@
+---
+export const prerender = false;
+
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import { getAuthUser } from '@vanblog/sdk';
+const pb = Astro.locals.pb;
+const isAdmin = getAuthUser(pb)?.role === 'admin';
+---
+
+<AdminLayout title="AI 助手">
+  <div class="flex items-center justify-between mb-4">
+    <div>
+      <h1 class="text-xl font-bold">🤖 AI 助手</h1>
+      <p class="text-sm text-[var(--text-muted)] mt-1">基于 VanBlog dev skill 的 AI 代理。可以帮你开发主题、迁移数据、升级或排查问题。</p>
+    </div>
+    <a href="/admin" class="text-sm underline">← 返回</a>
+  </div>
+
+  {!isAdmin ? (
+    <p>仅管理员可访问。</p>
+  ) : (
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <!-- 左栏：预设提示词 -->
+      <div class="lg:col-span-1 flex flex-col gap-3">
+        <h2 class="text-sm font-semibold text-[var(--text-muted)]">快捷任务</h2>
+        <button class="preset-btn text-left border border-[var(--border)] rounded p-3 hover:bg-[var(--surface)] transition" data-prompt="帮我看看当前站点的主题结构，并给出定制建议。阅读 docs/theme-concepts.md 和 docs/theme-implementer-guide.md 后回答。">
+          <span class="block font-semibold text-sm">🎨 主题定制建议</span>
+          <span class="block text-xs text-[var(--text-muted)] mt-1">了解主题结构，获取定制方向</span>
+        </button>
+        <button class="preset-btn text-left border border-[var(--border)] rounded p-3 hover:bg-[var(--surface)] transition" data-prompt="帮我写一个简单的 VanBlog pack，实现一个前端注入脚本。参考 packs/bookmarks/ 的结构。">
+          <span class="block font-semibold text-sm">🧩 开发一个 Pack</span>
+          <span class="block text-xs text-[var(--text-muted)] mt-1">从零写一个可扩展插件</span>
+        </button>
+        <button class="preset-btn text-left border border-[var(--border)] rounded p-3 hover:bg-[var(--surface)] transition" data-prompt="帮我检查当前 VanBlog 版本，并制定升级到最新版的步骤。阅读 docs/theme-host-design.md 了解主题加载机制后回答。">
+          <span class="block font-semibold text-sm">⬆️ 版本升级指南</span>
+          <span class="block text-xs text-[var(--text-muted)] mt-1">检查版本并给出升级步骤</span>
+        </button>
+        <button class="preset-btn text-left border border-[var(--border)] rounded p-3 hover:bg-[var(--surface)] transition" data-prompt="帮我排查当前博客的一个问题：请先列出你能访问的系统和日志，然后帮我定位。">
+          <span class="block font-semibold text-sm">🔍 故障排查</span>
+          <span class="block text-xs text-[var(--text-muted)] mt-1">定位并解决站点问题</span>
+        </button>
+        <button class="preset-btn text-left border border-[var(--border)] rounded p-3 hover:bg-[var(--surface)] transition" data-prompt="帮我优化这篇/这几篇文章：检查内容、语法和 SEO 标题，给出改进建议。">
+          <span class="block font-semibold text-sm">✍️ 文章优化</span>
+          <span class="block text-xs text-[var(--text-muted)] mt-1">内容、语法与 SEO 建议</span>
+        </button>
+        <button class="preset-btn text-left border border-[var(--border)] rounded p-3 hover:bg-[var(--surface)] transition" data-prompt="帮我分析当前站点的性能：检查是否有可优化的配置，并给出建议。阅读 docs/deployment-guide.md 后回答。">
+          <span class="block font-semibold text-sm">⚡ 性能与部署建议</span>
+          <span class="block text-xs text-[var(--text-muted)] mt-1">部署与性能优化</span>
+        </button>
+      </div>
+
+      <!-- 右栏：聊天窗口 -->
+      <div class="lg:col-span-2 flex flex-col border border-[var(--border)] rounded-lg overflow-hidden">
+        <div id="chat-log" class="flex-1 min-h-[320px] max-h-[50vh] overflow-y-auto p-4 bg-[var(--surface)] space-y-3">
+          <div class="text-sm text-[var(--text-muted)] text-center py-8">
+            点击左侧快捷任务，或在下方输入你的问题。<br/>Agent 会读取项目文档并给出回答。
+          </div>
+        </div>
+        <form id="chat-form" class="border-t border-[var(--border)] p-3 flex gap-2">
+          <textarea id="chat-input" rows="2" placeholder="输入你的问题…（例如：帮我写一个 pack）"
+            class="flex-1 resize-none border border-[var(--border)] rounded p-2 text-sm bg-transparent"></textarea>
+          <button type="submit" class="px-4 py-2 rounded border border-[var(--border)] text-sm font-semibold bg-[var(--surface)] hover:opacity-80">发送</button>
+        </form>
+      </div>
+    </div>
+  )}
+
+  <script>
+    const chatLog = document.getElementById('chat-log')!;
+    const form = document.getElementById('chat-form')!;
+    const input = document.getElementById('chat-input')! as HTMLTextAreaElement;
+
+    function addMessage(role: 'user' | 'assistant', text: string) {
+      const wrap = document.createElement('div');
+      wrap.className = role === 'user'
+        ? 'text-right'
+        : 'text-left';
+      const bubble = document.createElement('div');
+      bubble.className = role === 'user'
+        ? 'inline-block text-left max-w-[85%] bg-[var(--accent)] text-white rounded-lg px-3 py-2 text-sm'
+        : 'inline-block text-left max-w-[85%] bg-white dark:bg-gray-800 border border-[var(--border)] rounded-lg px-3 py-2 text-sm whitespace-pre-wrap';
+      bubble.textContent = text;
+      wrap.appendChild(bubble);
+      chatLog.appendChild(wrap);
+      chatLog.scrollTop = chatLog.scrollHeight;
+      return bubble;
+    }
+
+    async function send(message: string) {
+      // 移除占位提示
+      const placeholder = chatLog.querySelector('.text-center.py-8');
+      if (placeholder) placeholder.remove();
+
+      addMessage('user', message);
+      const assistantBubble = addMessage('assistant', '…');
+      assistantBubble.textContent = '';
+
+      try {
+        const resp = await fetch('/api/vanblog/agent/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message }),
+        });
+
+        if (!resp.ok) {
+          const err = await resp.json().catch(() => ({}));
+          assistantBubble.textContent = `❌ 请求失败 (${resp.status}): ${err.message || resp.statusText}`;
+          return;
+        }
+        if (!resp.body) throw new Error('No response body');
+
+        // 读取 SSE 流
+        const reader = resp.body.getReader();
+        const decoder = new TextDecoder();
+        let buf = '';
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buf += decoder.decode(value, { stream: true });
+          // SSE: data: {...}\n\n 分隔
+          const parts = buf.split('\n\n');
+          buf = parts.pop()!;
+          for (const part of parts) {
+            const line = part.trim();
+            if (!line.startsWith('data:')) continue;
+            try {
+              const evt = JSON.parse(line.slice(5).trim());
+              if (evt.assistantMessageEvent?.type === 'text_delta') {
+                assistantBubble.textContent += evt.assistantMessageEvent.delta;
+              } else if (evt.type === 'text_delta') {
+                assistantBubble.textContent += evt.delta;
+              } else if (evt.type === 'error') {
+                assistantBubble.textContent += `\n\n❌ ${evt.message || ''}`;
+              }
+            } catch { /* skip non-JSON */ }
+          }
+          chatLog.scrollTop = chatLog.scrollHeight;
+        }
+      } catch (err: any) {
+        assistantBubble.textContent = `❌ 连接错误: ${err.message}`;
+      }
+    }
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const msg = input.value.trim();
+      if (!msg) return;
+      input.value = '';
+      send(msg);
+    });
+
+    document.querySelectorAll<HTMLButtonElement>('.preset-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const prompt = btn.dataset.prompt;
+        if (prompt) send(prompt);
+      });
+    });
+  </script>
+</AdminLayout>
