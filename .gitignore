@@ -48,4 +48,14 @@ docker/ocr-review/ocr-config.json
 # IDE
 .DS_Store
 
+# IDE 本地缓存（desktop 话题状态等）
 .reasonix/
+
+# Pi agent runtime 产物（容器启动时由 init-pi-config.mjs 生成，不进版本控制）
+# 注意：.pi/settings.json 是有意提交的项目配置，需保留
+.pi/models.json
+.pi/agent/
+.pi/sessions/
+.pi/*.session
+.pi/*.history
+~/.pi/

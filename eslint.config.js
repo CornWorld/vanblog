@@ -72,4 +72,28 @@ export default [
       "no-empty": "off",
     },
   },
+  // Node scripts (scripts/*.mjs, root config) — shebang + Node globals.
+  // Without this, `console`/`process`/`Buffer` etc. trip no-undef because
+  // they are runtime globals provided by Node, not declared in this file.
+  {
+    files: ["scripts/**/*.mjs", "*.mjs", "models.config.mjs"],
+    languageOptions: {
+      globals: {
+        console: "readonly",
+        process: "readonly",
+        Buffer: "readonly",
+        setTimeout: "readonly",
+        clearTimeout: "readonly",
+        setInterval: "readonly",
+        clearInterval: "readonly",
+        __dirname: "readonly",
+        __filename: "readonly",
+        URL: "readonly",
+        fetch: "readonly",
+        AbortSignal: "readonly",
+        TextEncoder: "readonly",
+        TextDecoder: "readonly",
+      },
+    },
+  },
 ];
