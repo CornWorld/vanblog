@@ -3,6 +3,8 @@ export const prerender = false;
 
 import AdminLayout from '../../layouts/AdminLayout.astro';
 import ErrorNotice from '../../components/ErrorNotice.astro';
+import ThemeCard from '../../components/admin/ThemeCard.astro';
+import PaletteCard from '../../components/admin/PaletteCard.astro';
 import { requireAdmin, safe } from '@vanblog/sdk';
 import type { Site } from '@vanblog/sdk';
 const pb = Astro.locals.pb;
@@ -42,6 +44,23 @@ const boolField = (k: keyof Site, def = false): boolean => {
   const v = site?.[k];
   return v === undefined || v === null ? def : !!v;
 };
+
+// 外观：服务端并行拉取主题 / 调色盘列表（卡片 SSR 直出，避免客户端闪烁）。
+// GET /api/themes 返回 { themes: [{ name, label, ... }] }；palettes 走 SDK。
+const [themesRes, palettesRes] = await Promise.all([
+  safe(
+    async () =>
+      (await pb.send('/api/themes', { method: 'GET' })) as {
+        themes?: Array<{ name: string; label?: string }>;
+      },
+    'admin/site/themes'
+  ),
+  safe(() => pb.vanblog.palettes.list(), 'admin/site/palettes'),
+]);
+const themes = themesRes.data?.themes ?? [];
+const palettes = palettesRes.data ?? [];
+const currentTheme = field('activeTheme') || 'vanblog';
+const currentPalette = field('palette') || 'default';
 ---
 <AdminLayout title="站点配置">
   <h1>站点配置</h1>
@@ -73,11 +92,20 @@ const boolField = (k: keyof Site, def = false): boolean => {
         <legend>外观</legend>
 
         <label>活动主题</label>
-        <div class="col-span-2 flex flex-col gap-1">
-          <select name="activeTheme" id="active-theme-select" data-current={field('activeTheme')}>
-            <option value="default">default</option>
-          </select>
-          <small class="text-[var(--text-muted)]">切换立即生效（&lt;5s），无需重建镜像</small>
+        <div class="col-span-2 flex flex-col gap-2">
+          <input type="hidden" name="activeTheme" value={currentTheme} />
+          <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+            {themes.length === 0 ? (
+              <p class="text-sm text-[var(--text-muted)]">未加载到主题列表（后端 /api/themes 不可达？）</p>
+            ) : (
+              themes.map((t) => (
+                <ThemeCard name={t.name} label={t.label} active={t.name === currentTheme} />
+              ))
+            )}
+          </div>
+          <small class="text-[var(--text-muted)]">
+            {import.meta.env.DEV ? '保存后即时生效' : '保存后需重建容器/重新加载主题'}
+          </small>
           <div class="flex items-center gap-2">
             <button type="button" id="theme-reload-btn" class="px-3 py-1 border border-[var(--border)] rounded w-fit">重新加载主题</button>
             <span id="theme-reload-status" class="text-sm text-[var(--text-muted)]"></span>
@@ -85,52 +113,24 @@ const boolField = (k: keyof Site, def = false): boolean => {
           <small class="text-[var(--text-muted)]">通过 ssh / 挂载方式放入新主题后，点「重新加载主题」让它的静态资源生效（无需重启容器）</small>
         </div>
 
-        <script is:inline>
-          fetch('/api/themes')
-            .then(r => r.json())
-            .then(data => {
-              const sel = document.getElementById('active-theme-select');
-              if (!sel) return;
-              const current = sel.getAttribute('data-current') || 'vanblog';
-              sel.innerHTML = '';
-              (data.themes || []).forEach(t => {
-                const opt = document.createElement('option');
-                opt.value = t.name;
-                opt.textContent = t.label || t.name;
-                if (t.name === current) opt.selected = true;
-                sel.appendChild(opt);
-              });
-            });
-        </script>
-
         <details class="col-span-2 mt-2">
           <summary class="cursor-pointer text-sm text-[var(--text-muted)]">高级选项</summary>
           <div class="grid grid-cols-[160px_1fr] gap-2 items-center mt-2">
 
             <label>调色盘</label>
-            <select name="palette" id="palette-select" data-current={field('palette')}>
-              <option value="default">default</option>
-            </select>
-            <script is:inline>
-              (async () => {
-                const pb = self.vanblog?.pb;
-                if (!pb?.vanblog?.palettes) return; /* keep fallback "default" until client ready */
-                try {
-                  const list = await pb.vanblog.palettes.list();
-                  const sel = document.getElementById('palette-select');
-                  if (!sel) return;
-                  const current = sel.getAttribute('data-current') || 'default';
-                  sel.innerHTML = '';
-                  list.forEach(p => {
-                    const opt = document.createElement('option');
-                    opt.value = p.name;
-                    opt.textContent = `${p.label || p.name} (${p.type || '?'})`;
-                    if (p.name === current) opt.selected = true;
-                    sel.appendChild(opt);
-                  });
-                } catch { /* keep fallback "default" */ }
-              })();
-            </script>
+            <div class="flex flex-col gap-2">
+              <input type="hidden" name="palette" value={currentPalette} />
+              <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                {palettes.length === 0 ? (
+                  <p class="text-sm text-[var(--text-muted)]">未加载到调色盘列表（后端 /api/palettes 不可达？）</p>
+                ) : (
+                  palettes.map((p) => (
+                    <PaletteCard name={p.name} label={p.label} type={p.type} active={p.name === currentPalette} />
+                  ))
+                )}
+              </div>
+              <small class="text-[var(--text-muted)]">点击调色盘卡片即时预览（访客偏好 localStorage）；保存后写入站点默认调色盘</small>
+            </div>
 
             <label>切换主题时调色盘</label>
             <select name="paletteMigrationMode">
@@ -140,6 +140,12 @@ const boolField = (k: keyof Site, def = false): boolean => {
             </select>
 
           </div>
+        </details>
+
+        <details class="col-span-2 mt-2">
+          <summary class="cursor-pointer text-sm text-[var(--text-muted)]">预览站点</summary>
+          <p class="text-xs text-[var(--text-muted)] mb-2">实时预览站点首页。点击调色盘卡片后，预览 iframe 会即时反映所选调色盘（同源访客调色盘机制）。</p>
+          <iframe id="site-preview-frame" src="/" title="站点预览" class="w-full h-[600px] bg-white border border-[var(--border)] rounded"></iframe>
         </details>
       </fieldset>
 
@@ -211,6 +217,7 @@ const boolField = (k: keyof Site, def = false): boolean => {
   )}
 
   <script is:inline type="application/json" id="site-data" set:html={JSON.stringify({ siteId: id, commentsConfig: site?.commentsConfig || {} }).replace(/<\//g, '<\\/')} />
+  <script is:inline type="application/json" id="theme-preview-data" set:html={JSON.stringify({ sitePalette: field('palette'), palettes }).replace(/<\//g, '<\\/')} />
   <script is:inline>
     const { siteId, commentsConfig: commentsConfigJson } = JSON.parse(document.getElementById('site-data').textContent);
     const pb = self.vanblog.pb;
@@ -335,6 +342,99 @@ const boolField = (k: keyof Site, def = false): boolean => {
           }
         });
       }
+    }
+  </script>
+
+  <script>
+    import { applyPalette } from '@vanblog/sdk/browser';
+
+    // ── 外观卡片交互：主题 / 调色盘选择 + 即时预览 ──
+    function wireAppearanceCards() {
+      // 调色盘 / 站点默认数据（SSR 注入），供 applyPalette 判定明暗与站点默认调色盘
+      const previewEl = document.getElementById('theme-preview-data');
+      let sitePalette: string | null = null;
+      let palettes: Array<{ name: string; type?: 'dark' | 'light' }> = [];
+      if (previewEl) {
+        try {
+          const parsed = JSON.parse(previewEl.textContent || '{}');
+          sitePalette = parsed.sitePalette || null;
+          palettes = parsed.palettes ?? [];
+        } catch {
+          /* 解析失败按空处理 */
+        }
+      }
+
+      function setCardActive(selector: string, name: string) {
+        document.querySelectorAll<HTMLElement>(selector).forEach((card) => {
+          const on = card.dataset.name === name;
+          card.dataset.active = on ? 'true' : 'false';
+          card.setAttribute('aria-pressed', on ? 'true' : 'false');
+        });
+      }
+
+      // 主题卡片：仅标记选中（activeTheme 是站点级字段，保存后生效）
+      document.querySelectorAll<HTMLElement>('[data-theme-card]').forEach((card) => {
+        card.addEventListener('click', () => {
+          const name = card.dataset.name || '';
+          const input = document.querySelector<HTMLInputElement>('input[name="activeTheme"]');
+          if (input) input.value = name;
+          setCardActive('[data-theme-card]', name);
+        });
+      });
+
+      // 调色盘卡片：标记选中 + 即时预览（SDK applyPalette 写 localStorage + 换 palette.css link）
+      const previewFrame = document.getElementById('site-preview-frame') as HTMLIFrameElement | null;
+      document.querySelectorAll<HTMLElement>('[data-palette-card]').forEach((card) => {
+        card.addEventListener('click', () => {
+          const name = card.dataset.name || '';
+          const input = document.querySelector<HTMLInputElement>('input[name="palette"]');
+          if (input) input.value = name;
+          setCardActive('[data-palette-card]', name);
+          try {
+            applyPalette(name, { sitePalette, palettes });
+          } catch {
+            /* 预览失败忽略 */
+          }
+          // 同源 iframe 共享 localStorage：刷新预览 iframe 让其即时反映所选调色盘
+          if (previewFrame?.contentWindow) {
+            try {
+              previewFrame.contentWindow.location.reload();
+            } catch {
+              /* ignore */
+            }
+          }
+        });
+      });
+
+      // 轻量 swatch 加载：逐个 palette fetch palette.css，解析 6 个 --color-* 变量（失败保持占位色板）
+      document.querySelectorAll<HTMLElement>('[data-palette-card]').forEach((card) => {
+        const name = card.dataset.name || '';
+        const type = card.dataset.type;
+        const row = card.querySelector<HTMLElement>('[data-palette-swatches]');
+        if (!row || !name) return;
+        fetch(`/api/palette.css?name=${encodeURIComponent(name)}`)
+          .then((r) => (r.ok ? r.text() : ''))
+          .then((css) => {
+            if (!css) return;
+            const keys = ['bg', 'surface', 'text', 'text-muted', 'border', 'accent'];
+            const suffix = type === 'dark' ? '-dark' : '';
+            const colors = keys.map((k) => {
+              const m = css.match(new RegExp(`--color-${k}${suffix}\\s*:\\s*([^;]+);`));
+              return m ? m[1].trim() : null;
+            });
+            if (colors.every((c) => !c)) return;
+            row.innerHTML = colors
+              .map((c) => `<span class="flex-1 h-6" style="background-color:${c || 'transparent'}"></span>`)
+              .join('');
+          })
+          .catch(() => {});
+      });
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', wireAppearanceCards);
+    } else {
+      wireAppearanceCards();
     }
   </script>
 </AdminLayout>

@@ -1,0 +1,72 @@
+---
+// 调色盘选择卡片（admin/site「外观」→「高级选项」）。
+// onClick 仅作 API 形状声明（Astro 无法跨 SSR 传闭包），实际点击由父页面
+// 通过 `[data-palette-card]` 事件委托处理（见 site.astro 的脚本）。
+interface Props {
+  name: string;
+  label?: string;
+  type?: 'dark' | 'light';
+  active?: boolean;
+  /** [bg, surface, text, text-muted, border, accent]；未传时按 type 渲染占位明/暗色板 */
+  swatches?: string[];
+  onClick?: () => void;
+}
+
+const { name, label, type = 'light', active = false, swatches } = Astro.props;
+const display = label || name;
+
+// 占位色板：解析 palette.css 失败 / 未传 swatches 时，按明暗类型渲染默认色
+const fallbackSwatches =
+  type === 'dark'
+    ? ['#0f172a', '#1e293b', '#e2e8f0', '#94a3b8', '#334155', '#60a5fa']
+    : ['#fafafa', '#ffffff', '#1e293b', '#64748b', '#e2e8f0', '#2563eb'];
+const colors = swatches && swatches.length >= 6 ? swatches : fallbackSwatches;
+---
+
+<button
+  type="button"
+  class:list={[
+    'palette-card',
+    'relative flex flex-col items-stretch text-left rounded-lg overflow-hidden border bg-[var(--surface)] cursor-pointer transition',
+    'focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]',
+  ]}
+  data-palette-card
+  data-name={name}
+  data-type={type}
+  data-active={active ? 'true' : 'false'}
+  aria-pressed={active}
+  title={`调色盘：${display} (${type === 'dark' ? 'dark' : 'light'})`}
+>
+  <span class="palette-swatches flex gap-px bg-[var(--border)]" data-palette-swatches>
+    {colors.map((c) => (
+      <span class="flex-1 h-6" style={`background-color: ${c}`}></span>
+    ))}
+  </span>
+  <span class="px-2 py-1.5 text-sm truncate flex items-center gap-1">
+    <span class="truncate">{display}</span>
+    <span class="shrink-0 text-[var(--text-muted)]">{type === 'dark' ? '(dark)' : '(light)'}</span>
+    <span class="palette-card-badge shrink-0 text-[10px] leading-none px-1.5 py-1 rounded-full bg-[var(--accent)] text-white">
+      当前
+    </span>
+  </span>
+</button>
+
+<style>
+  .palette-card {
+    border-color: var(--border);
+  }
+  .palette-card:hover {
+    border-color: var(--text-muted);
+  }
+  .palette-card[data-active='true'] {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent);
+  }
+  .palette-card-badge {
+    opacity: 0;
+    transition: opacity 0.15s ease;
+  }
+  .palette-card[data-active='true'] .palette-card-badge {
+    opacity: 1;
+  }
+</style>

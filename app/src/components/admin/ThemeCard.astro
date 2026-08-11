@@ -1,0 +1,61 @@
+---
+// 主题选择卡片（admin/site「外观」字段集）。
+// 注意：Astro 组件无法跨 SSR 边界传递闭包，因此 onClick 仅作 API 形状声明，
+// 实际点击行为由父页面通过 `[data-theme-card]` 事件委托实现（见 site.astro 的脚本）。
+interface Props {
+  name: string;
+  label?: string;
+  active?: boolean;
+  onClick?: () => void;
+}
+
+const { name, label, active = false } = Astro.props;
+const display = label || name;
+const initial = (display || '?').trim().charAt(0).toUpperCase();
+---
+
+<button
+  type="button"
+  class:list={[
+    'theme-card',
+    'relative flex flex-col items-stretch text-left rounded-lg overflow-hidden border bg-[var(--surface)] cursor-pointer transition',
+    'focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]',
+  ]}
+  data-theme-card
+  data-name={name}
+  data-active={active ? 'true' : 'false'}
+  aria-pressed={active}
+  title={`主题：${display}`}
+>
+  <!-- 占位缩略图：纯色渐变块 + 主题名首字母。真实缩略图由 build 生成，这里不做截图机制。 -->
+  <span
+    class="theme-card-thumb relative flex items-center justify-center h-16 text-2xl font-bold text-[var(--accent)] select-none bg-linear-to-br from-[var(--bg)] via-[var(--surface)] to-[var(--border)]"
+    title="缩略图由 build 生成"
+  >
+    {initial}
+    <span class="theme-card-badge absolute top-1.5 right-1.5 text-[10px] leading-none px-1.5 py-1 rounded-full bg-[var(--accent)] text-white">
+      当前
+    </span>
+  </span>
+  <span class="px-2 py-1.5 text-sm truncate">{display}</span>
+</button>
+
+<style>
+  .theme-card {
+    border-color: var(--border);
+  }
+  .theme-card:hover {
+    border-color: var(--text-muted);
+  }
+  .theme-card[data-active='true'] {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent);
+  }
+  .theme-card-badge {
+    opacity: 0;
+    transition: opacity 0.15s ease;
+  }
+  .theme-card[data-active='true'] .theme-card-badge {
+    opacity: 1;
+  }
+</style>
