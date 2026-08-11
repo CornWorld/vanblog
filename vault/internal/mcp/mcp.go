@@ -33,11 +33,11 @@ const (
 	maxReadSize = 100 * 1024
 	// maxWriteSize caps a single write_file payload (defensive; admin-only).
 	maxWriteSize = 1 * 1024 * 1024
-	// upgradeDiffTimeout bounds the node subprocess run.
-	upgradeDiffTimeout = 30 * time.Second
+	// overrideCheckTimeout bounds the node subprocess run.
+	overrideCheckTimeout = 30 * time.Second
 
 	// rootEnv overrides the repo root used to anchor path resolution and the
-	// upgrade-diff subprocess. Defaults to os.Getwd() (dev container cwd =
+	// override-check subprocess. Defaults to os.Getwd() (dev container cwd =
 	// repo root).
 	rootEnv = "VANBLOG_MCP_ROOT"
 )
@@ -56,7 +56,7 @@ func New(app core.App) *Manager {
 		se.Router.POST("/api/vanblog/mcp/write_file", m.handleWriteFile)
 		se.Router.Any("/api/vanblog/mcp/pb_schema", m.handlePBSchema)
 		se.Router.Any("/api/vanblog/mcp/pb_query", m.handlePBQuery)
-		se.Router.GET("/api/vanblog/mcp/upgrade_diff", m.handleUpgradeDiff)
+		se.Router.GET("/api/vanblog/mcp/override_check", m.handleOverrideCheck)
 		return se.Next()
 	})
 	return m
@@ -375,11 +375,11 @@ func (m *Manager) handlePBQuery(e *core.RequestEvent) error {
 	})
 }
 
-// upgrade_diff (GET): ?theme=<name> → text/plain report.
+// override_check (GET): ?theme=<name> → text/plain report.
 //
-//	Runs `node scripts/upgrade-diff.mjs themes/<name> app/src` in the repo root.
+//	Runs `node scripts/override-check.mjs themes/<name> app/src` in the repo root.
 //	Invalid theme name → 400; exec failure → 500.
-func (m *Manager) handleUpgradeDiff(e *core.RequestEvent) error {
+func (m *Manager) handleOverrideCheck(e *core.RequestEvent) error {
 	if !isAdmin(e) {
 		return e.ForbiddenError("admin required", "")
 	}
@@ -394,11 +394,11 @@ func (m *Manager) handleUpgradeDiff(e *core.RequestEvent) error {
 		return e.JSON(http.StatusInternalServerError, map[string]any{"ok": false, "error": err.Error()})
 	}
 
-	ctx, cancel := context.WithTimeout(e.Request.Context(), upgradeDiffTimeout)
+	ctx, cancel := context.WithTimeout(e.Request.Context(), overrideCheckTimeout)
 	defer cancel()
 
 	//nolint:gosec // name is regex-validated ^[A-Za-z0-9_-]+$ above; fixed argv, no shell
-	cmd := exec.CommandContext(ctx, "node", "scripts/upgrade-diff.mjs", "themes/"+name, "app/src")
+	cmd := exec.CommandContext(ctx, "node", "scripts/override-check.mjs", "themes/"+name, "app/src")
 	cmd.Dir = root
 	out, err := cmd.CombinedOutput()
 	if err != nil {

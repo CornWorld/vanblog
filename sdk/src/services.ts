@@ -180,7 +180,7 @@ export interface VanblogServices {
     }>;
   };
   // mcp exposes admin-only MCP tool endpoints for theme/palette authoring
-  // (read/list/write files, PB schema/query introspection, upgrade_diff). All
+  // (read/list/write files, PB schema/query introspection, override_check). All
   // require an admin session; pb_query is strictly read-only. Paths must stay
   // inside the whitelist (themes/<name>/src, hooks/palettes/<name>).
   mcp: {
@@ -216,7 +216,7 @@ export interface VanblogServices {
       perPage: number;
       error?: string;
     }>;
-    upgradeDiff(theme: string): Promise<string>;
+    overrideCheck(theme: string): Promise<string>;
   };
 }
 
@@ -484,11 +484,11 @@ export function createVanblogServices(pb: PocketBase): VanblogServices {
           perPage: number;
           error?: string;
         }>,
-      // upgrade_diff returns text/plain, so raw fetch (like feed/sitemap) is
+      // override_check returns text/plain, so raw fetch (like feed/sitemap) is
       // used instead of pb.send (which parses JSON).
-      upgradeDiff: async (theme) => {
+      overrideCheck: async (theme) => {
         const url = pb.buildUrl(
-          `/api/vanblog/mcp/upgrade_diff?theme=${encodeURIComponent(theme)}`
+          `/api/vanblog/mcp/override_check?theme=${encodeURIComponent(theme)}`
         );
         const res = await fetch(url, {
           headers: pb.authStore?.token
@@ -497,7 +497,7 @@ export function createVanblogServices(pb: PocketBase): VanblogServices {
         });
         if (!res.ok)
           throw new Error(
-            `/api/vanblog/mcp/upgrade_diff returned ${res.status}`
+            `/api/vanblog/mcp/override_check returned ${res.status}`
           );
         return res.text();
       },

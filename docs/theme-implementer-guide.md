@@ -365,7 +365,7 @@ const { post, mode = 'list', variant = 'default' } = Astro.props;
 | **内部 helper 函数**  | `app/src/lib/markdown.ts` 内的私有函数                   | 无保证                              |
 | **组件嵌套结构**      | PostCard 是否包了 `<article>`；BaseLayout 是否含 `<nav>` | 无保证                              |
 
-**theme 该怎么用 L2**：**尽量别依赖**。如果你的 override 复制了 base 组件源码然后改 class 名，base 升级时你需要跑轻量 `upgrade_diff`（admin 的 MCP 端点 `GET /api/vanblog/mcp/upgrade_diff?theme=<name>`，或直接 `node scripts/upgrade-diff.mjs themes/<name>`，见 [§11](#11-mcp-tools)）看报告，手动适配。
+**theme 该怎么用 L2**：**尽量别依赖**。如果你的 override 复制了 base 组件源码然后改 class 名，base 升级时你需要跑轻量 `override_check`（admin 的 MCP 端点 `GET /api/vanblog/mcp/override_check?theme=<name>`，或直接 `node scripts/override-check.mjs themes/<name>`，见 [§11](#11-mcp-tools)）看报告，手动适配。
 
 ```astro
 ---
@@ -380,11 +380,11 @@ import '@vanblog/base/components/PostCard.astro';
 
 ### 5.4 升级时的破坏性判断
 
-| 你的 override 依赖的层                         | base 升级时                                   | 你需要做什么                                                |
-| ---------------------------------------------- | --------------------------------------------- | ----------------------------------------------------------- |
-| 只依赖 L0                                      | 不会炸                                        | 无需做事                                                    |
-| 依赖 L1（覆盖 base 组件，保留 props）          | 极少炸（除非 base 删了 prop，这违反 L1 契约） | 跑 `upgrade_diff` 看一眼（见 [§11](#11-mcp-tools)）         |
-| 依赖 L2（复制源码改 class、依赖内部 DOM 结构） | 可能炸                                        | 必须跑 `upgrade_diff` + 手动适配（见 [§11](#11-mcp-tools)） |
+| 你的 override 依赖的层                         | base 升级时                                   | 你需要做什么                                                  |
+| ---------------------------------------------- | --------------------------------------------- | ------------------------------------------------------------- |
+| 只依赖 L0                                      | 不会炸                                        | 无需做事                                                      |
+| 依赖 L1（覆盖 base 组件，保留 props）          | 极少炸（除非 base 删了 prop，这违反 L1 契约） | 跑 `override_check` 看一眼（见 [§11](#11-mcp-tools)）         |
+| 依赖 L2（复制源码改 class、依赖内部 DOM 结构） | 可能炸                                        | 必须跑 `override_check` + 手动适配（见 [§11](#11-mcp-tools)） |
 
 ---
 
@@ -513,10 +513,10 @@ theme 作者 pull 主仓库后，base 自动更新（alias 解析到新的 `app/
 cd /path/to/vanblog
 git pull origin main
 
-# 2. 在主仓库根目录跑轻量 upgrade_diff（静态对比，不依赖 git 历史）
-node scripts/upgrade-diff.mjs themes/my-theme app/src
+# 2. 在主仓库根目录跑轻量 override_check（静态对比，不依赖 git 历史）
+node scripts/override-check.mjs themes/my-theme app/src
 # 或通过 admin 的 MCP 端点（admin-only）：
-#   GET /api/vanblog/mcp/upgrade_diff?theme=my-theme
+#   GET /api/vanblog/mcp/override_check?theme=my-theme
 # 输出：ORPHANED / REVIEW / OK 分组报告；REVIEW 的 .astro/.ts/.tsx 若
 #       frontmatter 与 base 不一致，会额外标注 L0 frontmatter drift（见 §11）
 
@@ -528,7 +528,7 @@ pnpm build
 
 ### 8.2 手动 diff（不想跑脚本时）
 
-`node scripts/upgrade-diff.mjs` 已经是标准的本地方法；下面的 `find` + `diff` 仅在需要逐文件细看时兜底：
+`node scripts/override-check.mjs` 已经是标准的本地方法；下面的 `find` + `diff` 仅在需要逐文件细看时兜底：
 
 ```bash
 # 列出 theme 的所有 override 文件
@@ -829,21 +829,21 @@ jobs:
 
 Phase D 为 agent / 主题作者工具链提供了一组 **admin-only** 的 MCP 风格 HTTP 端点（全部挂在 `/api/vanblog/mcp/*`，非 admin 一律 403）。前端 SDK 封装在 `pb.vanblog.mcp.*`（`sdk/src/services.ts`）。路径锚点为仓库根（`VANBLOG_MCP_ROOT` 环境变量，空则取进程 cwd——dev 容器 cwd=仓库根）。Go 实现在 `vault/internal/mcp/`（`paths.go` 是纯函数白名单，`mcp.go` 是路由）。
 
-| 端点           | 方法 | 用途                                    | 请求                                  | 响应                                                            |
-| -------------- | ---- | --------------------------------------- | ------------------------------------- | --------------------------------------------------------------- |
-| `read_file`    | POST | 读文件                                  | `{"path": "themes/vanblog/src/..."}`  | `{ok, content, truncated?}`                                     |
-| `list_dir`     | POST | 列目录（按名字排序）                    | `{"path": "themes/vanblog/src/..."}`  | `{ok, entries:[{name,isDir}]}`                                  |
-| `write_file`   | POST | 写文件（自动建父目录）                  | `{"path": "...", "content": "..."}`   | `{ok}`                                                          |
-| `pb_schema`    | GET  | 取 PB collection schema（仅 GET）       | `?collection=<name>`                  | `{ok, collection:{name,type,fields,...}}`                       |
-| `pb_query`     | GET  | 只读查询 PB records（仅 GET，不写操作） | `?collection=&filter=&page=&perPage=` | `{ok, items, totalItems, totalPages, page, perPage}`            |
-| `upgrade_diff` | GET  | 跑轻量 upgrade-diff 报告（text/plain）  | `?theme=<name>`                       | `node scripts/upgrade-diff.mjs themes/<name> app/src` 的 stdout |
+| 端点             | 方法 | 用途                                     | 请求                                  | 响应                                                              |
+| ---------------- | ---- | ---------------------------------------- | ------------------------------------- | ----------------------------------------------------------------- |
+| `read_file`      | POST | 读文件                                   | `{"path": "themes/vanblog/src/..."}`  | `{ok, content, truncated?}`                                       |
+| `list_dir`       | POST | 列目录（按名字排序）                     | `{"path": "themes/vanblog/src/..."}`  | `{ok, entries:[{name,isDir}]}`                                    |
+| `write_file`     | POST | 写文件（自动建父目录）                   | `{"path": "...", "content": "..."}`   | `{ok}`                                                            |
+| `pb_schema`      | GET  | 取 PB collection schema（仅 GET）        | `?collection=<name>`                  | `{ok, collection:{name,type,fields,...}}`                         |
+| `pb_query`       | GET  | 只读查询 PB records（仅 GET，不写操作）  | `?collection=&filter=&page=&perPage=` | `{ok, items, totalItems, totalPages, page, perPage}`              |
+| `override_check` | GET  | 跑轻量 override-check 报告（text/plain） | `?theme=<name>`                       | `node scripts/override-check.mjs themes/<name> app/src` 的 stdout |
 
 ### 11.1 行为要点
 
 - **read_file**：文件不存在 404；路径非法/越界 403；文件 >100KB 截断并置 `truncated:true`。
 - **write_file**：越界/写禁区 403；自动创建父目录；单次 content 上限 1MB。
 - **pb_schema / pb_query 仅 GET**：其它方法返回 405。`pb_query` 严格只读，**不做任何写操作**；`filter` 缺省 `1=1`，`page` 缺省 1，`perPage` 缺省 30、上限 100。
-- **upgrade_diff**：`theme` 名必须匹配 `^[A-Za-z0-9_-]+$`（否则 400）；`node` 执行失败返回 500。脚本本身**始终 exit 0**（报告工具，不是门禁）。
+- **override_check**：`theme` 名必须匹配 `^[A-Za-z0-9_-]+$`（否则 400）；`node` 执行失败返回 500。脚本本身**始终 exit 0**（报告工具，不是门禁）。
 
 ### 11.2 路径白名单（安全关键）
 
@@ -922,7 +922,7 @@ import BaseLayout from '@vanblog/base/layouts/BaseLayout.astro';
 </BaseLayout>
 ```
 
-`upgrade_diff` 报告（`node scripts/upgrade-diff.mjs` 或 admin MCP 端点，见 [§11](#11-mcp-tools)）会把 base 已删除的文件标为 ORPHANED，把内容有差异的标为 REVIEW。
+`override_check` 报告（`node scripts/override-check.mjs` 或 admin MCP 端点，见 [§11](#11-mcp-tools)）会把 base 已删除的文件标为 ORPHANED，把内容有差异的标为 REVIEW。
 
 ---
 

@@ -119,7 +119,7 @@
 | `76b62425` | **Phase A** 修复 3 处「清理过度」回归并提交：恢复 `main.go` ParseFlags 修复（pack 加载核心）、`eslint.config.js` Node globals 块、`agent.go` SSE 断连 break；同时发现工作区其余「清理」（pi-rpc-server.mjs 空 catch、agent.go client.Post）本身破坏 lint（`no-empty`/`noctx`），一并回退；只提交模型名对齐改动 |
 | `6e935f86` | **Phase B** palette 从 4 → 8 套（midnight/catppuccin 家族 × light/dark）+ `hooks/palettes/README.md`（原子式调色盘模型文档）                                                                                                                                                                                   |
 | `57afde1d` | **Phase C** admin/site 外观升级为 ThemeCard/PaletteCard 卡片网格 + 「预览站点」同源 iframe（SDK applyPalette 即时预览，dev/prod 提示），不动 FOUC 关键路径                                                                                                                                                     |
-| `1c930937` | **Phase D** `vault/internal/mcp/` 6 个 admin-only 端点（read/list/write/pb_schema/pb_query/upgrade_diff）+ `scripts/upgrade-diff.mjs` 轻量静态对比 + SDK mcp 命名空间 + docs §11；`preview`/`build` 因依赖不存在 infra **记为后续**                                                                            |
+| `1c930937` | **Phase D** `vault/internal/mcp/` 6 个 admin-only 端点（read/list/write/pb_schema/pb_query/override_check）+ `scripts/override-check.mjs` 轻量静态对比 + SDK mcp 命名空间 + docs §11；`preview`/`build` 因依赖不存在 infra **记为后续**                                                                        |
 | `8e0dd0a1` | 本 plan 文档                                                                                                                                                                                                                                                                                                   |
 
 ### Deviations
@@ -127,6 +127,7 @@
 - **原计划 Phase 5 hardcode 颜色 CI 门禁 → 不做**：现有 vanblog 主题 legit 含 24 处组件级颜色，严格门禁属过度工程且需大迁移；记录为后续决策（README 已注明）。
 - **原计划 Phase 7 的 `preview`/`build` MCP 工具 → 暂缓**：依赖不存在的 `/admin/preview` 端点与 dev 容器 build-to-staging infra；docs §11 标注为「后续实现」。
 - **upgrade_diff 按用户要求做轻**：单脚本静态对比（base-overrides vs 当前 app/src，无 git 历史、无 L0/L1/L2 分类引擎、无 CI contract-diff 门禁）；MCP 端为 ~10 行薄封装 exec。
+- **更名 `upgrade_diff` → `override_check`**（用户提出）：原计划名是重型方案（git diff old..new）遗留；轻量版不感知升级、也不产出 diff，只做 override 状态分诊。端点 `/api/vanblog/mcp/override_check`、SDK `mcp.overrideCheck`、脚本 `override-check.mjs`、docs 全部同步。
 - **QA 复审修复**（合入前）：writeForbidden 补齐 `live.config.*`/`middleware.*`、pb_query 改 PB search provider（关系过滤 count 不再 500）、page 溢出钳制、symlink 逃逸防御、请求体限流、错误信息去敏感化。
 
 ### Verification
@@ -134,7 +135,7 @@
 - [x] `go build ./...` / `go vet ./...` / `go test ./internal/mcp/...`（34+6 用例）全过
 - [x] golangci-lint（pre-commit gate，含 gosec）通过
 - [x] `npx astro check` 0 errors（仅 1 条既有非阻断 hint）
-- [x] `node --check` + eslint + 手动运行 `upgrade-diff.mjs` 通过
+- [x] `node --check` + eslint + 手动运行 `override-check.mjs` 通过
 - [x] QA agent 安全复审：PASS WITH CONCERNS → 4 个中危已修复
 - [x] 工作区干净，5 个 commit 落地
 

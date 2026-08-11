@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// upgrade-diff.mjs — 轻量版「base 是否还匹配我的 override」静态报告。
+// override-check.mjs — 轻量版「base 是否还匹配我的 override」静态分诊。
 //
 // 轻量设计动机（Phase D）：
 //   - 不做 git-range 分类引擎：不解析 commit 区间、不 blame、不区分 release
@@ -10,8 +10,12 @@
 //   - 只报告、不当门禁：无论结果如何始终 exit 0，绝不做 CI contract-diff
 //     拦截。人工判断 REVIEW / ORPHANED。
 //
+// 命名说明：原计划名 upgrade_diff 是重型方案（git diff old..new）遗留；
+// 本工具不感知升级、也不产出 diff，只做 override 状态分诊，故更名
+// override_check（检查 override 是否适配当前 base）。
+//
 // 用法：
-//   node scripts/upgrade-diff.mjs [themeDir=themes/vanblog] [baseDir=app/src]
+//   node scripts/override-check.mjs [themeDir=themes/vanblog] [baseDir=app/src]
 //
 // 输出分组：
 //   ORPHANED — base 已删除该文件，override 成孤儿
@@ -121,7 +125,7 @@ function classify(rel, overridePath, basePath) {
 
 const overrides = walk(overridesRoot);
 
-console.log(`=== upgrade-diff：${overridesRoot} vs ${baseDir} ===`);
+console.log(`=== override-check：${overridesRoot} vs ${baseDir} ===`);
 console.log('');
 
 if (overrides.length === 0) {
