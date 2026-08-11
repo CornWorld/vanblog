@@ -19,6 +19,7 @@
 8. [升级流程](#8-升级流程)
 9. [完整最小 theme 示例](#9-完整最小-theme-示例)
 10. [Dockerfile build](#10-dockerfile-build)
+11. [MCP tools](#11-mcp-tools)
 
 ---
 
@@ -364,7 +365,7 @@ const { post, mode = 'list', variant = 'default' } = Astro.props;
 | **内部 helper 函数**  | `app/src/lib/markdown.ts` 内的私有函数                   | 无保证                              |
 | **组件嵌套结构**      | PostCard 是否包了 `<article>`；BaseLayout 是否含 `<nav>` | 无保证                              |
 
-**theme 该怎么用 L2**：**尽量别依赖**。如果你的 override 复制了 base 组件源码然后改 class 名，base 升级时你需要跑 `upgrade_diff` MCP 工具看 diff，手动适配。
+**theme 该怎么用 L2**：**尽量别依赖**。如果你的 override 复制了 base 组件源码然后改 class 名，base 升级时你需要跑轻量 `upgrade_diff`（admin 的 MCP 端点 `GET /api/vanblog/mcp/upgrade_diff?theme=<name>`，或直接 `node scripts/upgrade-diff.mjs themes/<name>`，见 [§11](#11-mcp-tools)）看报告，手动适配。
 
 ```astro
 ---
@@ -379,11 +380,11 @@ import '@vanblog/base/components/PostCard.astro';
 
 ### 5.4 升级时的破坏性判断
 
-| 你的 override 依赖的层                         | base 升级时                                   | 你需要做什么                     |
-| ---------------------------------------------- | --------------------------------------------- | -------------------------------- |
-| 只依赖 L0                                      | 不会炸                                        | 无需做事                         |
-| 依赖 L1（覆盖 base 组件，保留 props）          | 极少炸（除非 base 删了 prop，这违反 L1 契约） | 跑 `upgrade_diff` 看一眼         |
-| 依赖 L2（复制源码改 class、依赖内部 DOM 结构） | 可能炸                                        | 必须跑 `upgrade_diff` + 手动适配 |
+| 你的 override 依赖的层                         | base 升级时                                   | 你需要做什么                                                |
+| ---------------------------------------------- | --------------------------------------------- | ----------------------------------------------------------- |
+| 只依赖 L0                                      | 不会炸                                        | 无需做事                                                    |
+| 依赖 L1（覆盖 base 组件，保留 props）          | 极少炸（除非 base 删了 prop，这违反 L1 契约） | 跑 `upgrade_diff` 看一眼（见 [§11](#11-mcp-tools)）         |
+| 依赖 L2（复制源码改 class、依赖内部 DOM 结构） | 可能炸                                        | 必须跑 `upgrade_diff` + 手动适配（见 [§11](#11-mcp-tools)） |
 
 ---
 
@@ -512,10 +513,12 @@ theme 作者 pull 主仓库后，base 自动更新（alias 解析到新的 `app/
 cd /path/to/vanblog
 git pull origin main
 
-# 2. 进 theme 目录，跑 upgrade_diff（MCP 工具，或手动 diff）
-cd themes/my-theme
-# 通过 MCP 调用 upgrade_diff，扫描 src/base-overrides/ 与 app/src/ 的同名文件 diff
-# 输出：哪些 override 涉及 L0/L1 破坏性变更、哪些只是 L2 视觉差异
+# 2. 在主仓库根目录跑轻量 upgrade_diff（静态对比，不依赖 git 历史）
+node scripts/upgrade-diff.mjs themes/my-theme app/src
+# 或通过 admin 的 MCP 端点（admin-only）：
+#   GET /api/vanblog/mcp/upgrade_diff?theme=my-theme
+# 输出：ORPHANED / REVIEW / OK 分组报告；REVIEW 的 .astro/.ts/.tsx 若
+#       frontmatter 与 base 不一致，会额外标注 L0 frontmatter drift（见 §11）
 
 # 3. 根据 diff 报告修复（通常只需要改几个 class 名）
 # 4. dev 预览 + build 验证
@@ -523,7 +526,9 @@ pnpm dev
 pnpm build
 ```
 
-### 8.2 手动 diff（没有 MCP 工具时）
+### 8.2 手动 diff（不想跑脚本时）
+
+`node scripts/upgrade-diff.mjs` 已经是标准的本地方法；下面的 `find` + `diff` 仅在需要逐文件细看时兜底：
 
 ```bash
 # 列出 theme 的所有 override 文件
@@ -820,6 +825,52 @@ jobs:
 
 ---
 
+## 11. MCP tools
+
+Phase D 为 agent / 主题作者工具链提供了一组 **admin-only** 的 MCP 风格 HTTP 端点（全部挂在 `/api/vanblog/mcp/*`，非 admin 一律 403）。前端 SDK 封装在 `pb.vanblog.mcp.*`（`sdk/src/services.ts`）。路径锚点为仓库根（`VANBLOG_MCP_ROOT` 环境变量，空则取进程 cwd——dev 容器 cwd=仓库根）。Go 实现在 `vault/internal/mcp/`（`paths.go` 是纯函数白名单，`mcp.go` 是路由）。
+
+| 端点           | 方法 | 用途                                    | 请求                                  | 响应                                                            |
+| -------------- | ---- | --------------------------------------- | ------------------------------------- | --------------------------------------------------------------- |
+| `read_file`    | POST | 读文件                                  | `{"path": "themes/vanblog/src/..."}`  | `{ok, content, truncated?}`                                     |
+| `list_dir`     | POST | 列目录（按名字排序）                    | `{"path": "themes/vanblog/src/..."}`  | `{ok, entries:[{name,isDir}]}`                                  |
+| `write_file`   | POST | 写文件（自动建父目录）                  | `{"path": "...", "content": "..."}`   | `{ok}`                                                          |
+| `pb_schema`    | GET  | 取 PB collection schema（仅 GET）       | `?collection=<name>`                  | `{ok, collection:{name,type,fields,...}}`                       |
+| `pb_query`     | GET  | 只读查询 PB records（仅 GET，不写操作） | `?collection=&filter=&page=&perPage=` | `{ok, items, totalItems, totalPages, page, perPage}`            |
+| `upgrade_diff` | GET  | 跑轻量 upgrade-diff 报告（text/plain）  | `?theme=<name>`                       | `node scripts/upgrade-diff.mjs themes/<name> app/src` 的 stdout |
+
+### 11.1 行为要点
+
+- **read_file**：文件不存在 404；路径非法/越界 403；文件 >100KB 截断并置 `truncated:true`。
+- **write_file**：越界/写禁区 403；自动创建父目录；单次 content 上限 1MB。
+- **pb_schema / pb_query 仅 GET**：其它方法返回 405。`pb_query` 严格只读，**不做任何写操作**；`filter` 缺省 `1=1`，`page` 缺省 1，`perPage` 缺省 30、上限 100。
+- **upgrade_diff**：`theme` 名必须匹配 `^[A-Za-z0-9_-]+$`（否则 400）；`node` 执行失败返回 500。脚本本身**始终 exit 0**（报告工具，不是门禁）。
+
+### 11.2 路径白名单（安全关键）
+
+`read_file` / `list_dir` / `write_file` 的 `path` 必须是相对路径，并落在以下白名单子树内（纯函数 `resolveAllowed(root, rel, write)`，见 `vault/internal/mcp/paths_test.go`）：
+
+| 允许根                   | 说明                             |
+| ------------------------ | -------------------------------- |
+| `themes/<name>/src/`     | `<name>` 匹配 `^[A-Za-z0-9_-]+$` |
+| `hooks/palettes/<name>/` | 同上                             |
+
+**一律拒绝**（读和写都拒绝）：`app/`、`sdk/`、`vault/`、`docs/`、`scripts/`、`themes/*/app/`，以及根外、绝对路径、含 `..`/`\`/NUL/空段的路径。
+
+**写禁区**（`write_file` 拒绝；`read_file` 允许）：`themes/*/src/base-overrides/pages/admin/`、`.../pages/api/`、`.../lib/`、`.../loaders/`——与 [§7](#7-禁区列表) 的 FORBIDDEN override 禁区一致，MCP 不会绕过 integration 的 fail-closed 校验。
+
+### 11.3 admin-only
+
+所有端点都要求 admin（`e.Auth.GetString("role") == "admin"`），非 admin 返回 403。MCP 端点**绝不**公开暴露；用途是给 admin UI / agent 工具做 theme 与 palette 的检查与微调，不改变 `vault/`、`sdk/`、`docs/`、`scripts/` 等 control plane 内容。
+
+### 11.4 后续实现（本次未做）
+
+- **`preview`**：渲染 theme 的本地预览（依赖尚不存在的 dev-server infra）。
+- **`build`**：在容器内跑主题构建（依赖尚不存在的 build infra）。
+
+这两个工具本次只有文档说明，端点未注册。等对应基建就绪后再实现。
+
+---
+
 ## 附录：常见问题
 
 ### Q: theme 能加自己的 API 端点吗？
@@ -871,7 +922,7 @@ import BaseLayout from '@vanblog/base/layouts/BaseLayout.astro';
 </BaseLayout>
 ```
 
-`upgrade_diff` MCP 工具会列出平台层新增/变更的页面。
+`upgrade_diff` 报告（`node scripts/upgrade-diff.mjs` 或 admin MCP 端点，见 [§11](#11-mcp-tools)）会把 base 已删除的文件标为 ORPHANED，把内容有差异的标为 REVIEW。
 
 ---
 

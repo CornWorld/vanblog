@@ -179,6 +179,45 @@ export interface VanblogServices {
       error?: string;
     }>;
   };
+  // mcp exposes admin-only MCP tool endpoints for theme/palette authoring
+  // (read/list/write files, PB schema/query introspection, upgrade_diff). All
+  // require an admin session; pb_query is strictly read-only. Paths must stay
+  // inside the whitelist (themes/<name>/src, hooks/palettes/<name>).
+  mcp: {
+    readFile(path: string): Promise<{
+      ok: boolean;
+      content: string;
+      truncated?: boolean;
+      error?: string;
+    }>;
+    listDir(path: string): Promise<{
+      ok: boolean;
+      entries: { name: string; isDir: boolean }[];
+      error?: string;
+    }>;
+    writeFile(
+      path: string,
+      content: string
+    ): Promise<{ ok: boolean; error?: string }>;
+    pbSchema(collection: string): Promise<{
+      ok: boolean;
+      collection: Record<string, unknown>;
+      error?: string;
+    }>;
+    pbQuery(
+      collection: string,
+      opts?: { filter?: string; page?: number; perPage?: number }
+    ): Promise<{
+      ok: boolean;
+      items: Record<string, unknown>[];
+      totalItems: number;
+      totalPages: number;
+      page: number;
+      perPage: number;
+      error?: string;
+    }>;
+    upgradeDiff(theme: string): Promise<string>;
+  };
 }
 
 // A generic service namespace (for user-extended APIs)
@@ -392,6 +431,76 @@ export function createVanblogServices(pb: PocketBase): VanblogServices {
           restart_needed: boolean;
           error?: string;
         }>,
+    },
+    mcp: {
+      readFile: (path) =>
+        pb.send("/api/vanblog/mcp/read_file", {
+          method: "POST",
+          body: { path },
+        }) as Promise<{
+          ok: boolean;
+          content: string;
+          truncated?: boolean;
+          error?: string;
+        }>,
+      listDir: (path) =>
+        pb.send("/api/vanblog/mcp/list_dir", {
+          method: "POST",
+          body: { path },
+        }) as Promise<{
+          ok: boolean;
+          entries: { name: string; isDir: boolean }[];
+          error?: string;
+        }>,
+      writeFile: (path, content) =>
+        pb.send("/api/vanblog/mcp/write_file", {
+          method: "POST",
+          body: { path, content },
+        }) as Promise<{ ok: boolean; error?: string }>,
+      pbSchema: (collection) =>
+        pb.send("/api/vanblog/mcp/pb_schema", {
+          method: "GET",
+          params: { collection },
+        }) as Promise<{
+          ok: boolean;
+          collection: Record<string, unknown>;
+          error?: string;
+        }>,
+      pbQuery: (collection, opts = {}) =>
+        pb.send("/api/vanblog/mcp/pb_query", {
+          method: "GET",
+          params: {
+            collection,
+            ...(opts.filter ? { filter: opts.filter } : {}),
+            ...(opts.page ? { page: opts.page } : {}),
+            ...(opts.perPage ? { perPage: opts.perPage } : {}),
+          },
+        }) as Promise<{
+          ok: boolean;
+          items: Record<string, unknown>[];
+          totalItems: number;
+          totalPages: number;
+          page: number;
+          perPage: number;
+          error?: string;
+        }>,
+      // upgrade_diff returns text/plain, so raw fetch (like feed/sitemap) is
+      // used instead of pb.send (which parses JSON).
+      upgradeDiff: async (theme) => {
+        const url = pb.buildUrl(
+          `/api/vanblog/mcp/upgrade_diff?theme=${encodeURIComponent(theme)}`
+        );
+        const res = await fetch(url, {
+          headers: pb.authStore?.token
+            ? { Authorization: pb.authStore.token }
+            : undefined,
+        });
+        if (!res.ok)
+          throw new Error(
+            `/api/vanblog/mcp/upgrade_diff returned ${res.status}`
+          );
+        return res.text();
+      },
     },
   };
 }
