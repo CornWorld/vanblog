@@ -1,0 +1,16 @@
+/* ── Catppuccin Mocha (atomic, type: dark) ──
+ *   Catppuccin 官方深色方案（Mocha），base #1e1e2e 底 + 主题色 blue #89b4fa。
+ *   配色取自 https://catppuccin.com/ 官方 Mocha 色板。
+ *   原子式调色盘：只覆盖 html.dark 作用域的暗色 --color-* token。
+ *   页面应用本调色盘时会给 <html> 加 dark class（暗色渲染）。
+ *   加载方式: site.palette="catppuccin-dark" → /api/palette.css
+ */
+
+html.dark {
+  --color-bg-dark: #1e1e2e;
+  --color-surface-dark: #313244;
+  --color-text-dark: #cdd6f4;
+  --color-text-muted-dark: #a6adc8;
+  --color-border-dark: #45475a;
+  --color-accent-dark: #89b4fa;
+}

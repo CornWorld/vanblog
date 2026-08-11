@@ -1,0 +1,8 @@
+{
+  "name": "catppuccin-dark",
+  "label": "Catppuccin Mocha",
+  "type": "dark",
+  "version": "1.0.0",
+  "author": "vanblog",
+  "description": "Catppuccin 官方深色方案 Mocha（base #1e1e2e 底 + 主题色 blue #89b4fa），柔和低饱和的社区知名配色"
+}

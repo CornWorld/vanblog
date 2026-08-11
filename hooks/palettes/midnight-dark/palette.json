@@ -1,0 +1,8 @@
+{
+  "name": "midnight-dark",
+  "label": "午夜·暗 Midnight Dark",
+  "type": "dark",
+  "version": "1.0.0",
+  "author": "vanblog",
+  "description": "午夜家族 · 暗色（深蓝黑 #0f172a 底 + 靛蓝强调 #818cf8），现代暗色优先观感，参考 GitHub/shadcn 色感"
+}

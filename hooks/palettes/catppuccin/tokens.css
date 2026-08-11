@@ -1,0 +1,16 @@
+/* ── Catppuccin Latte (atomic, type: light) ──
+ *   Catppuccin 官方浅色方案（Latte），base #eff1f5 底 + 主题色 blue #1e66f5。
+ *   配色取自 https://catppuccin.com/ 官方 Latte 色板。
+ *   原子式调色盘：只覆盖 :root 的亮色 --color-* token。
+ *   页面应用本调色盘时不会加 html.dark class（亮色渲染）。
+ *   加载方式: site.palette="catppuccin" → /api/palette.css
+ */
+
+:root {
+  --color-bg: #eff1f5;
+  --color-surface: #e6e9ef;
+  --color-text: #4c4f69;
+  --color-text-muted: #6c6f85;
+  --color-border: #ccd0da;
+  --color-accent: #1e66f5;
+}

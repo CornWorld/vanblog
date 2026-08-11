@@ -1,0 +1,16 @@
+/* ── Midnight Light Palette (atomic, type: light) ──
+ *   午夜家族 · 亮色：浅 slate 底 + 靛蓝强调。
+ *   slate/indigo 系，参考 GitHub/shadcn 色感。
+ *   原子式调色盘：只覆盖 :root 的亮色 --color-* token。
+ *   页面应用本调色盘时不会加 html.dark class（亮色渲染）。
+ *   加载方式: site.palette="midnight" → /api/palette.css
+ */
+
+:root {
+  --color-bg: #f8fafc;
+  --color-surface: #ffffff;
+  --color-text: #0f172a;
+  --color-text-muted: #64748b;
+  --color-border: #e2e8f0;
+  --color-accent: #4f46e5;
+}
