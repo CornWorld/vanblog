@@ -15,6 +15,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/cornworld/vanblog/internal/admin"
+	"github.com/cornworld/vanblog/internal/agent"
 	"github.com/cornworld/vanblog/internal/article"
 	"github.com/cornworld/vanblog/internal/bootstrap"
 	"github.com/cornworld/vanblog/internal/caddy"
@@ -82,6 +83,13 @@ func main() {
 		os.Exit(1)
 	}
 	staging := filepath.Join(privateRuntimeDir, "pb_hooks")
+
+	// --- Force flag parsing for pack flags (packsDir / builtinPacksDir) ---
+	// PocketBase's New() runs eagerParseFlags before main.go registers its own
+	// persistent flags (below), so packsDir/builtinPacksDir stay "" here.
+	// Cobra allows repeated ParseFlags; this resolves our flags before the pack
+	// resolution block runs. app.Start() → Execute() will re-parse harmlessly.
+	_ = app.RootCmd.ParseFlags(os.Args[1:])
 
 	// --- Pack resolution and hook staging (before JSVM registration) ---
 	// jsvm.MustRegister calls registerHooks() immediately, which reads HooksDir.
@@ -220,6 +228,7 @@ func main() {
 	palette.New(app)
 	theme.New(app)
 	_ = caddy.New(app)
+	_ = agent.New(app)
 
 	// seed subcommand: populate dev database with sample data
 	seedCmd := &cobra.Command{
