@@ -56,6 +56,18 @@ node scripts/theme-init.mjs <name>   # 脚手架新主题
 - 数据迁移走 Go 层 `POST /api/vanblog/migrate/import`（body=JSON，限 100MB，事务）——见 `vault/internal/migration/`
 - 升级检查：对每个 `themes/<active>/src/base-overrides/<rel>` diff `app/src/<rel>`，按 L0/L1/L2 判断影响（L0 永远稳定、L1 可加不可减、L2 无保证）
 
+## 内置 Agent
+
+dev 容器预装 [pi coding agent](https://pi.dev)（`@earendil-works/pi-coding-agent`）。默认 LLM 走 **OpenCode Zen free 模型**（无需 API key，每次启动动态解析）。pi 启动时自动加载 `.agents/skills/vanblog/` 下的 dev skill。
+
+```bash
+# 在 dev 容器内直接使用:
+pi                    # 进入交互模式
+pi -p "帮我 review"   # 单次提问
+```
+
+模型解析脚本：`scripts/resolve-zen-free-models.mjs`。选型依据：`refs/agent-platform-selection.md`。
+
 ## Skill 作者
 
-Skill（`SKILL.md`）只写流程编排和检查清单，**不要抄 docs 内容**——领域知识一律 `read docs/<file>` 现场取。
+Skill（`SKILL.md`）只写流程编排和检查清单，**不要抄 docs 内容**——领域知识一律 `read docs/<file>` 现场取。参考 `.agents/skills/vanblog/SKILL.md` 作为标准模板。
