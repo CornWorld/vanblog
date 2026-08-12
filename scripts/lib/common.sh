@@ -59,16 +59,23 @@ stop_container() {
   docker rm "$name" 2>/dev/null || true
 }
 
-# Remove local pb_data and caddy_data directories.
+# Remove local pb_data and caddy_data directories, plus the dev data volumes
+# (dev is a prod substitute: it mounts the same volumes, so a reset must drop
+# them too, not just the legacy repo dirs).
 # Usage: clean_data_dir
 clean_data_dir() {
   local root; root="$(project_root)"
   info "Removing old pb_data and caddy_data..."
   rm -rf "$root/pb_data" "$root/caddy_data" 2>/dev/null || true
-  ok "Data directories cleaned"
+  for v in vanblog_dev_pb_data vanblog_dev_caddy_data vanblog_dev_themes_data vanblog_dev_pack_data; do
+    docker volume rm "$v" >/dev/null 2>&1 || true
+  done
+  ok "Data directories and dev volumes cleaned"
 }
 
-# Start a dev container with standard options.
+# Start a dev container with standard options. Dev is a prod substitute, so it
+# mounts the SAME data volumes as the prod compose (pb_data / caddy_data /
+# themes_data / pack_data) — no image symlinks, identical runtime layout.
 # Usage: start_dev_container <image_name> <container_name> <host_port> [email]
 start_dev_container() {
   local image="$1" name="$2" port="$3" email="${4:-test@example.com}"
@@ -77,6 +84,11 @@ start_dev_container() {
     -p "${port}:8080" \
     -e VANBLOG_HTTP_ONLY=1 \
     -e VANBLOG_EMAIL="$email" \
+    -e VANBLOG_PACKS_DIR=/var/lib/vanblog/packs \
+    -v vanblog_dev_pb_data:/pb_data \
+    -v vanblog_dev_caddy_data:/data/caddy \
+    -v vanblog_dev_themes_data:/var/lib/vanblog/themes \
+    -v vanblog_dev_pack_data:/var/lib/vanblog/packs \
     "$image"
   ok "Container started: $name"
   info "Waiting for initial bootstrap (Caddy + PocketBase + Astro)..."

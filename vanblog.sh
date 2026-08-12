@@ -301,7 +301,7 @@ write_compose() {
     local tls_env=""
     [[ "$http_only" = "true" ]] && tls_env="      - VANBLOG_HTTP_ONLY=1"
 
-    mkdir -p "${VANBLOG_DATA_PATH}/packs"
+    mkdir -p "${VANBLOG_DATA_PATH}/packs" "${VANBLOG_DATA_PATH}/themes"
 
     cat > "${VANBLOG_BASE_PATH}/docker-compose.yml" <<EOF
 # Vanblog 一键部署配置 — 由 vanblog.sh 自动生成
@@ -318,10 +318,12 @@ ${mgmt_block}
       - ${VANBLOG_DATA_PATH}/pb_data:/pb_data
       - ${VANBLOG_DATA_PATH}/caddy_data:/data/caddy
       - ${VANBLOG_DATA_PATH}/packs:/var/lib/vanblog/packs
+      - ${VANBLOG_DATA_PATH}/themes:/var/lib/vanblog/themes
     environment:
       - VANBLOG_EMAIL=${email}
       - VANBLOG_CADDY_LOG_LEVEL=${caddy_log_level}
       - VANBLOG_PACKS_DIR=/var/lib/vanblog/packs
+      - VANBLOG_THEMES_DIR=/var/lib/vanblog/themes
 ${tls_env}
 
 volumes: {}
@@ -595,6 +597,9 @@ Vanblog 一键管理脚本 ${VANBLOG_SCRIPT_VERSION}
   ./vanblog.sh pack plan      # 部署预检(只读)
   ./vanblog.sh pack inspect <name>  # 查看单个 Pack 详情
   ./vanblog.sh pack add <name>      # 添加 Pack 本地覆盖
+  ./vanblog.sh pack theme list     # 列出主题(内置[builtin] + 用户[user])
+  ./vanblog.sh pack theme install <dir|zip>  # 安装预构建主题到持久卷
+  ./vanblog.sh pack theme remove <name>      # 删除用户安装的主题
   ./vanblog.sh diagnose     # 诊断容器状态和资源使用
 
 自动依赖:

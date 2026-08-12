@@ -106,6 +106,7 @@ PI_RPC_PID=$!
 DEFAULT_THEME=$(cat /etc/vanblog/default-theme 2>/dev/null || echo "vanblog")
 echo "[vanblog] starting theme host (default theme: ${DEFAULT_THEME})"
 VANBLOG_THEMES_DIR=/var/lib/vanblog/themes \
+VANBLOG_THEMES_BUILTIN_DIR=/build/themes \
 VANBLOG_DEFAULT_THEME=${DEFAULT_THEME} \
 VANBLOG_ADMIN_DIST_DIR=/build/app/dist \
 PB_URL=http://127.0.0.1:8090 \

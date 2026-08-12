@@ -167,10 +167,11 @@ COPY docker/bootstrap-http-only.json /etc/caddy/bootstrap-http-only.json
 COPY docker/entrypoint.prod.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
-# Create data directories + symlink themes to the path theme host expects.
-# astro-build emits /build/themes/<name>/dist/; theme host reads /var/lib/vanblog/themes/.
-RUN mkdir -p /pb_data /data/caddy /var/log /var/lib/vanblog && \
-    ln -s /build/themes /var/lib/vanblog/themes
+# Create data directories. /var/lib/vanblog/themes is the USER themes volume
+# mount point (compose mounts themes_data there, persistent). Builtin themes
+# stay read-only at /build/themes and are resolved via VANBLOG_THEMES_BUILTIN_DIR.
+# NO symlink here — a symlink would shadow the mounted volume and break installs.
+RUN mkdir -p /pb_data /data/caddy /var/log /var/lib/vanblog
 
 ENV VANBLOG_MODE=prod
 # 80  = HTTP → redirect to HTTPS
@@ -186,6 +187,12 @@ ENTRYPOINT ["/entrypoint.sh"]
 FROM prod AS dev
 
 RUN apk add --no-cache npm git && npm install -g pnpm@latest-10
+
+# Dev inherits the prod layout (NO symlink at /var/lib/vanblog/themes).
+# It is a drop-in substitute for prod: the dev scripts mount the same data
+# volumes (pb_data / caddy_data / themes_data / pack_data), so user themes
+# land in the volume and builtin themes stay in /build/themes — identical to
+# prod, not a divergent "symlink points at builtin" hack.
 
 # Pi coding agent — the "msys2 git-bash" equivalent: a minimal, zero-config
 # AI assistant pre-installed in the dev container. Default provider is

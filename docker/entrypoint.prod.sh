@@ -30,6 +30,9 @@ fi
 # reads these to point file_server routes at the same dirs the theme host uses.
 # Defaults match prod; operators may override with custom mount points.
 export VANBLOG_THEMES_DIR="${VANBLOG_THEMES_DIR:-/var/lib/vanblog/themes}"
+# Builtin themes stay read-only in the image at /build/themes; the user themes
+# volume above is the writable overlay. Consumers merge both, user wins.
+export VANBLOG_THEMES_BUILTIN_DIR="${VANBLOG_THEMES_BUILTIN_DIR:-/build/themes}"
 export VANBLOG_ADMIN_DIST_DIR="${VANBLOG_ADMIN_DIST_DIR:-/build/app/dist}"
 
 echo "[vanblog] starting in PROD mode"
