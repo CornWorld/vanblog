@@ -764,7 +764,7 @@ docker build \
 
 ### 10.2 Dockerfile 流程（已实现，仅供参考）
 
-> 注：下面为历史单主题构建流程，仅供理解。**当前实际流程**：Dockerfile 循环构建 `themes/*/` 全部主题，整体挂到 `/var/lib/vanblog/themes/`（`/build/themes` symlink）；`VANBLOG_ACTIVE_THEME`（默认 `vanblog`）只写入 `/etc/vanblog/default-theme` 作为启动 fallback。
+> 注：下面为历史单主题构建流程，仅供理解。**当前实际流程**：Dockerfile 循环构建 `themes/*/` 全部主题；内置 themes 留在镜像 `/build/themes`（只读，`VANBLOG_THEMES_BUILTIN_DIR`），用户安装的主题落在持久卷 `/var/lib/vanblog/themes`（compose `themes_data`）；`VANBLOG_ACTIVE_THEME`（默认 `vanblog`）只写入 `/etc/vanblog/default-theme` 作为启动 fallback。
 
 ```dockerfile
 ARG VANBLOG_ACTIVE_THEME=vanblog
@@ -787,16 +787,31 @@ COPY --from=astro-build /build/.default-theme /etc/vanblog/default-theme
 
 ### 10.3 切换主题
 
-| 模式     | 操作                                                 | 生效方式                                                          |
-| -------- | ---------------------------------------------------- | ----------------------------------------------------------------- |
-| **dev**  | admin 改 `site.activeTheme` → 保存 → 重启 dev server | dev 直接跑 `astro dev`（单主题，无 theme host），重启才生效       |
-| **prod** | admin 改 `site.activeTheme` → 保存                   | theme host 每 5s 轮询 PB，检测到变化后热切换（<5s），无需重建镜像 |
+| 模式     | 操作                               | 生效方式                                                            |
+| -------- | ---------------------------------- | ------------------------------------------------------------------- |
+| **dev**  | admin 改 `site.activeTheme` → 保存 | dev 也跑 theme host（prod 布局 + 同款数据卷），热切换同 prod（<5s） |
+| **prod** | admin 改 `site.activeTheme` → 保存 | theme host 每 5s 轮询 PB，检测到变化后热切换（<5s），无需重建镜像   |
 
 运行时切换已由 **theme host** 实现（`app/src/theme-host/index.mjs`）：每 5s 轮询 PB `site.activeTheme`，变化后 `switchTheme()` 动态 import 新主题 handler。`/etc/vanblog/default-theme` 只作为启动 fallback，不阻塞运行时切换。
 
 **新增/删除主题**后，Caddy 的 `/themes/<name>/` file_server 静态路由在 config-build 时枚举——**prod 下 fsnotify 自动检测 themes 目录变化并触发重扫**（无需手动）。后台「站点配置 → 外观」的「重新加载主题」按钮（等价于 `POST /api/vanblog/themes/reload`）保留为手动兜底。
 
-### 10.4 CI 建议
+### 10.4 安装主题到站点（CLI）
+
+已运行站点（容器）里安装/管理主题走 **`vanblog.sh pack theme`**（并入 pack CLI，写持久卷）：
+
+```bash
+./vanblog.sh pack theme list                        # 内置[builtin] + 用户[user] 合并视图
+./vanblog.sh pack theme install ./my-theme-dist     # 安装预构建 theme（目录）
+./vanblog.sh pack theme install ./my-theme.zip      # 或 zip（支持外层包装文件夹）
+./vanblog.sh pack theme remove my-theme             # 删除用户主题（拒绝删内置/活动主题）
+```
+
+- **输入必须是预构建 dist**（含 `theme.json` + `dist/server/entry.mjs` + `dist/client/`）——`pnpm build` 后即满足；不做容器内 build。
+- 安装原子落盘到 `/var/lib/vanblog/themes`（持久卷），**Caddy themeWatcher 自动发现**，admin「外观」下拉随即出现新主题；在 admin `/admin/site` 把 `site.activeTheme` 切过去即热切换（<5s）。
+- 同名用户主题可覆盖内置主题（用户优先）。
+
+### 10.5 CI 建议
 
 在 theme 仓库的 CI 里加一个 build 检查：
 

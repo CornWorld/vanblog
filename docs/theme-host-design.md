@@ -480,11 +480,11 @@ theme 在自己的样式中**永远用 CSS 变量**，不要硬编码颜色：
 
 ### 8.1 安装方式（三选一）
 
-| 方式                       | 场景                         | 流程                                                                          |
-| -------------------------- | ---------------------------- | ----------------------------------------------------------------------------- |
-| **内置**                   | 镜像自带                     | `themes/` 目录在 Docker build 时 COPY 进 `/var/lib/vanblog/themes/`           |
-| **本地上传**               | 用户从 GitHub 下载 theme.zip | admin UI 上传 → 解压到 `VANBLOG_THEMES_DIR` → theme host 自动发现（fs watch） |
-| **Marketplace**（Phase 3） | 一键安装                     | admin UI 点「安装」→ 后台下载 → 解压 → theme host 发现                        |
+| 方式                    | 场景                          | 流程                                                                          |
+| ----------------------- | ----------------------------- | ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| **内置**                | 镜像自带                      | themes 构建产物留在镜像 `/build/themes`（只读，`VANBLOG_THEMES_BUILTIN_DIR`） |
+| **CLI 安装**            | 用户有预构建 theme（dir/zip） | `vanblog.sh pack theme install <dir                                           | zip>`→ 原子落盘到用户卷`/var/lib/vanblog/themes`（持久）→ themeWatcher 自动发现 |
+| **Marketplace**（远期） | 一键安装                      | 未实现；依赖 CLI 安装 + 用户卷，当前无分发渠道                                |
 
 ### 8.2 生命周期
 
@@ -525,27 +525,38 @@ const MAX_LOADED_THEMES = 3;
 
 **目标**：修复当前架构不一致，让 `site.activeTheme` 真的生效（但仍是「重启容器」级别切换）。
 
-- [ ] 修 `entrypoint.prod.sh:82`：从 `/app/dist` 改为读 `/etc/vanblog/active-theme`，`cd /var/lib/vanblog/themes/${active}/dist`
-- [ ] Dockerfile 把 `themes/` 整体 COPY 到 `/var/lib/vanblog/themes/`（当前只 COPY 编译产物）
+- [x] 修 `entrypoint.prod.sh:82`：从 `/app/dist` 改为读 `/etc/vanblog/active-theme`，`cd /var/lib/vanblog/themes/${active}/dist`（已实现：entrypoint 现直接启动 theme host，见 `docker/entrypoint.prod.sh` L86-95）
+- [x] Dockerfile 把 `themes/` 整体 COPY 到 `/var/lib/vanblog/themes/`（当前只 COPY 编译产物）（已实现：Dockerfile 循环 build 全部 theme；内置留在 `/build/themes`，用户卷 `/var/lib/vanblog/themes`，prod/dev 均无 symlink）
 - [x] ~~删除 `themes/default/` 里硬编码开发机路径的注释（误导）~~（该目录已被 base/vanblog 取代）
 
 ### Phase 2（Theme Host MVP，~3-5 天）—— 热切换核心能力
 
 **目标**：用户改 `site.activeTheme` → 5s 内生效，无需重启容器。
 
-- [ ] 写 `app/src/theme-host/index.ts`（~200 行）
-- [ ] entrypoint 启动 theme host 替代直接跑 Astro
-- [ ] PB hook 推送 site 变更给 theme host（或 theme host 订阅 PB realtime）
-- [ ] theme astro.config 增加 `base` + `assetsPrefix`
-- [ ] admin/site.astro UI 改造（单下拉 + 高级折叠）
-- [ ] 集成测试：切换 theme 不丢请求
+- [x] 写 `app/src/theme-host/index.ts`（~200 行）（已实现：`app/src/theme-host/index.mjs` + `core.mjs`，纯编排、零依赖、可测试）
+- [x] entrypoint 启动 theme host 替代直接跑 Astro（已实现：`docker/entrypoint.prod.sh` L86-95 + 健康端点 `/__theme_host_health`）
+- [x] PB hook 推送 site 变更给 theme host（或 theme host 订阅 PB realtime）（已实现：采用 5s 轮询方案，`app/src/theme-host/index.mjs` pollSiteChanges）
+- [x] theme astro.config 增加 `base` + `assetsPrefix`（已实现：收敛到 `themes/shared-config.mjs`，所有 theme 共用；Dockerfile 按 theme 注入 `VANBLOG_THEME_NAME`）
+- [x] admin/site.astro UI 改造（单下拉 + 高级折叠）（已实现：演进为卡牌式主题/调色盘选择器 + iframe 实时预览）
+- [x] 集成测试：切换 theme 不丢请求（已实现：`scripts/test-theme-switch.mjs` + `app/test/lifecycle.test.mjs`）
 
 ### Phase 3（生态完善，~1-2 周）
 
-- [ ] theme.zip 上传 + 解压 + 自动发现（fs watch）
-- [ ] palette migration 三种策略实现
-- [ ] caddy translator 增加 file_server 规则（静态资源零拷贝）
+- [x] theme 安装与持久化 — **CLI 实现**：`vanblog pack theme install/list/remove`（并入 pack CLI，复用 cobra + 原子 staged copy）；`/var/lib/vanblog/themes` 改为用户卷（compose `themes_data`）+ 内置/用户双目录合并（theme host / Caddy / theme / palette，用户优先）；自动发现 ✅ themeWatcher。admin UI 上传不做了（CLI 已覆盖）
+- [ ] palette migration 三种策略实现 — **部分实现**：字段 + UI + recommendedPalette fallback（silent 实质生效）✅；prompt confirm 未接线、去语义化（实时预览已取代，见状态说明）
+- [x] caddy translator 增加 file_server 规则（静态资源零拷贝）（已实现：`vault/internal/caddy/static_routes.go` + themeWatcher 自动 resync）
 - [ ] theme marketplace（远期）
+
+> **状态说明（2026-08-12 更新）**：Phase 1 + Phase 2 已全部实现。实现方式与计划存在偏差，均已在上面逐条标注：theme host 用 `.mjs`（`index.mjs` + `core.mjs`）而非 `.ts`；PB 变更用 5s 轮询而非 PB hook；base/assetsPrefix 收敛到 `themes/shared-config.mjs`；admin UI 演进为卡牌式选择器 + iframe 实时预览；静态资源移交 Caddy file_server（方向 B）。
+>
+> **Theme 安装与持久化（2026-08-12 落地）**：`/var/lib/vanblog/themes` 已改为**用户卷**（compose `themes_data`），不再是镜像 symlink（旧 symlink 是 `cafa300a` 的 P0 bugfix，非故意非持久）。内置 themes 固定在 `/build/themes`（`VANBLOG_THEMES_BUILTIN_DIR`）；4 处消费方（theme host / Caddy / theme / palette）统一「内置+用户合并，用户优先」。安装走 **`vanblog.sh pack theme install/list/remove`**（并入 pack CLI，未来可泛化为 `van` CLI）。
+>
+> Phase 3 处置（更新）：
+>
+> - **theme.zip 上传 → CLI 安装（已实现）** —— admin UI 上传去语义化；预构建 theme 用 `pack theme install <dir|zip>` 原子落盘到持久卷，themeWatcher 自动发现；`pack theme remove` 拒绝删内置/活动主题。
+> - **palette migration「prompt」** 去语义化 —— admin 已是卡牌选择器 + iframe 实时预览，保存前即可见效果，confirm() 无必要；保留 `paletteMigrationMode` 字段兼容。
+> - **theme marketplace** 保持远期，不实现（依赖上传能力）。
+> - **第二测试主题不新建** —— `themes/base` 即 minimal/兜底主题（theme.json 自述），`scripts/test-theme-switch.mjs` 已按 vanblog + base 双主题验证。
 
 ---
 
@@ -567,8 +578,8 @@ const MAX_LOADED_THEMES = 3;
    - 倾向：PB Realtime subscribe（已存在），fallback 5s 轮询。
 2. **Theme 在 build 时如何拿到自己的 name？** `astro.config.mjs` 里硬编码？还是从环境变量读？
    - 倾向：`process.env.VANBLOG_THEME_NAME`，由 build 系统注入。
-3. **Dev 模式下 theme host 怎么工作？** dev server 没有 `dist/`。
-   - 倾向：dev 模式跳过 theme host，直接跑 `astro dev`（单 theme）。
+3. **Dev 模式下 theme host 怎么工作？** ~~dev server 没有 `dist/`~~。
+   - **已解决（2026-08-12）**：dev 是 prod 平替 —— dev 镜像同样构建 theme dist（`/build/themes`），dev 容器挂同款数据卷并跑 theme host，热切换与 prod 一致（不再跳过 theme host 跑 `astro dev`）。
 4. **【P0】prerender 静态页面归属**：见 §13。
 5. **【P1】单进程崩溃半径**：一个 theme handler 抛 unhandled rejection 会拖崩整个 theme host（因为所有 handler 共用 Node 事件循环）。需要 `process.on('unhandledRejection')` + `uncaughtException` 全局兜底 + 健康探活。考虑是否要用 `worker_threads` 做进程内隔离。
 6. **【P1】Pack 路由 + theme `base` 的冲突**：theme build 时 pack metadata 烧死在 chunks 里（`packVirtualPlugin`），新装 Pack 需所有 theme 重 build。`base: '/themes/<name>/'` 还会把 Pack 的 `/p/<name>` 路由也加上前缀，可能破坏 Pack URL 稳定性。**Phase 2 实施前必须 spike 验证**。

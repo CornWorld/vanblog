@@ -7,6 +7,9 @@
  *   - Docker container running with theme host (batch 2)
  *   - PB accessible
  *   - Both themes (vanblog + base) built and in the image
+ *   - Note: 'base' is the minimal/fallback theme (its theme.json describes it
+ *     as "纯布局 + 简单颜色的 minimal 主题") — it doubles as the second theme
+ *     used to exercise hot-switching. No separate 'minimal' theme is needed.
  *
  * Usage:
  *   node scripts/test-theme-switch.mjs [baseUrl] [pbApiKey]
