@@ -314,6 +314,7 @@ func NewCommand() *cobra.Command {
 			return nil
 		},
 	})
+	addThemeCommand(root)
 	return root
 }
 
