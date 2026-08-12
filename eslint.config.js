@@ -16,7 +16,7 @@ export default [
       "@typescript-eslint/no-explicit-any": "off",
       "@typescript-eslint/no-unused-vars": [
         "warn",
-        { argsIgnorePattern: "^_" },
+        { argsIgnorePattern: "^_", caughtErrorsIgnorePattern: "^_" },
       ],
       // Frontmatter consts used only in JSX are picked up as "unused" by
       // TS but consumed by the Astro compiler.
@@ -37,7 +37,11 @@ export default [
   // (triple-slash local d.ts references, require/module.exports, empty catch
   // probes), so keep those rules relaxed only for PB hook files.
   {
-    files: ["vault/pb_hooks/**/*.js", "packs/*/hooks/**/*.pb.js"],
+    files: [
+      "vault/pb_hooks/**/*.js",
+      "packs/*/hooks/**/*.pb.js",
+      "packs/*/migrations/*.js",
+    ],
     languageOptions: {
       globals: {
         $app: "readonly",
@@ -64,6 +68,8 @@ export default [
         module: "readonly",
         Record: "readonly",
         Collection: "readonly",
+        migrate: "readonly",
+        unmarshal: "readonly",
       },
     },
     rules: {

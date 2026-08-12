@@ -154,8 +154,28 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Resolve and stage the user-defined JS migrations dir (if any) as "core",
+	// then stage every loadable Pack's migrations/*.js into the same flat dir.
+	// jsvm loads JS migrations from MigrationsDir at register time (below), so
+	// staging must complete first. A missing core dir is tolerated (Pack-only).
+	coreMigrationsDir := migrationsDir
+	if coreMigrationsDir == "" {
+		coreMigrationsDir = "pb_migrations"
+		if _, err := os.Stat(coreMigrationsDir); err != nil {
+			coreMigrationsDir = "/pb_migrations"
+		}
+	}
+	stagingMigrations := filepath.Join(privateRuntimeDir, "pb_migrations")
+	if packRuntimeDir != "" {
+		stagingMigrations = filepath.Join(packRuntimeDir, "pb_migrations")
+	}
+	if err := pack.StageMigrations(coreMigrationsDir, loadable, stagingMigrations); err != nil {
+		slog.Error("stage migrations", "err", err)
+		os.Exit(1)
+	}
+
 	jsvm.MustRegister(app, jsvm.Config{
-		MigrationsDir: migrationsDir,
+		MigrationsDir: stagingMigrations,
 		HooksDir:      staging,
 		HooksWatch:    hooksWatch,
 		HooksPoolSize: hooksPool,
@@ -247,6 +267,18 @@ func main() {
 	}
 	seedCmd.Flags().Int("count", 3, "number of posts to seed")
 	app.RootCmd.AddCommand(seedCmd)
+
+	// Pre-migration backup: before apis.Serve runs RunAllMigrations (which
+	// applies any new Go core or Pack JS migrations), snapshot the data dir if
+	// there are pending migrations. Best-effort disaster recovery on top of
+	// PocketBase's transactional migration runner.
+	app.OnBootstrap().BindFunc(func(e *core.BootstrapEvent) error {
+		if err := e.Next(); err != nil {
+			return err
+		}
+		pack.BackupBeforePendingMigrations(e.App)
+		return nil
+	})
 
 	if err := app.Start(); err != nil {
 		log.Fatal(err)
