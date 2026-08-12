@@ -3,10 +3,18 @@ package caddy
 import (
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
 
 	"github.com/CornWorld/caddyadmin"
 )
+
+// themeNamePattern is the accepted theme identifier shape — the same contract
+// the pack CLI (vault/internal/packcli/theme.go), the Go theme resolver and the
+// theme host (core.mjs) enforce. buildStaticRoutes skips names outside it so
+// route @ids and match paths can never contain Caddy path-matcher wildcards
+// (`*`, `?`), and so the static view matches the merged /api/themes view.
+var themeNamePattern = regexp.MustCompile(`^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$`)
 
 // buildStaticRoutes returns the system-owned Caddy file_server routes that serve
 // built static assets directly from disk, taking the theme host out of the
@@ -50,6 +58,11 @@ func buildStaticRoutes(opts BuildOpts) []caddyadmin.Route {
 		}
 		for _, e := range entries {
 			if !e.IsDir() {
+				continue
+			}
+			// Same name contract as the other consumers, so a dir outside the
+			// theme-name pattern can never inject `*`/`?` into the route match.
+			if !themeNamePattern.MatchString(e.Name()) {
 				continue
 			}
 			client := filepath.Join(root, e.Name(), "dist", "client")

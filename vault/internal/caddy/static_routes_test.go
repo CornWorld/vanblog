@@ -162,6 +162,31 @@ func TestBuildStaticRoutes_Full(t *testing.T) {
 	}
 }
 
+// TestBuildStaticRoutes_SkipsNonConformingNames verifies a directory whose name
+// falls outside the theme-name pattern (e.g. with Caddy path-matcher
+// characters) never emits file_server routes — matching the contract the pack
+// CLI, ResolveDir and the theme host enforce.
+func TestBuildStaticRoutes_SkipsNonConformingNames(t *testing.T) {
+	user := t.TempDir()
+	mkThemeClient(t, user, "ok-theme")
+	mkThemeClient(t, user, "Bad*Name") // non-conforming → must be skipped
+
+	routes := buildStaticRoutes(BuildOpts{
+		AdminDistDir:     filepath.Join(t.TempDir(), "no-admin"),
+		ThemesDir:        user,
+		BuiltinThemesDir: filepath.Join(t.TempDir(), "no-builtin"),
+	})
+
+	if len(routes) != 2 {
+		t.Fatalf("want exactly 2 routes (ok-theme only), got %d: %+v", len(routes), routes)
+	}
+	for _, r := range routes {
+		if strings.Contains(r.ID, "Bad") {
+			t.Errorf("non-conforming theme emitted route: %s", r.ID)
+		}
+	}
+}
+
 func TestBuildStaticRoutes_MissingDirs(t *testing.T) {
 	// No admin, no themes → no routes (fall through to Astro proxy).
 	opts := BuildOpts{

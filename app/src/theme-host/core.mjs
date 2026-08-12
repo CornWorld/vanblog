@@ -17,6 +17,14 @@ import { readdirSync, existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
+// themeNamePattern is the accepted theme identifier shape — the same contract
+// the pack CLI (vault/internal/packcli/theme.go) and the Go theme resolver
+// (vault/internal/theme/routes.go) enforce. Names are joined onto the themes
+// roots and their entry.mjs is executed via import(), so this guard prevents a
+// name with path separators / ".." from escaping the roots (defense in depth —
+// HTTP callers already gate through listAvailableThemes()).
+const themeNamePattern = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
+
 /**
  * @typedef {object} ThemeHostOptions
  * @property {string} [themesDir]          Directory holding one subdir per theme.
@@ -81,6 +89,7 @@ export function createThemeHost(options = {}) {
    * @returns {string|null}
    */
   function resolveThemeDir(name) {
+    if (!themeNamePattern.test(name)) return null;
     if (existsSync(join(themesDir, name, 'dist', 'server', 'entry.mjs'))) return themesDir;
     if (existsSync(join(builtinThemesDir, name, 'dist', 'server', 'entry.mjs'))) return builtinThemesDir;
     return null;
@@ -100,11 +109,14 @@ export function createThemeHost(options = {}) {
       try {
         entries = readdirSync(root);
       } catch (err) {
-        throttledWarn('listThemes', 30_000, `cannot list themes dir ${root}:`, err?.message ?? err);
+        // Per-root key so an outage in one source surfaces even when the other
+        // root already warned within the same window.
+        throttledWarn(`listThemes:${root}`, 30_000, `cannot list themes dir ${root}:`, err?.message ?? err);
         continue;
       }
       for (const name of entries) {
         if (seen.has(name)) continue;
+        if (!themeNamePattern.test(name)) continue;
         if (!existsSync(join(root, name, 'dist', 'server', 'entry.mjs'))) continue;
         seen.add(name);
         names.push(name);

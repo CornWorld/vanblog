@@ -6,9 +6,26 @@ import (
 	"testing"
 )
 
-// writeThemeMeta creates a minimal theme dir with a theme.json so ResolveDir
-// can find it.
+// writeThemeMeta creates a runnable theme dir (theme.json + dist/server/
+// entry.mjs) so ResolveDir can resolve it.
 func writeThemeMeta(t *testing.T, dir, name string) {
+	t.Helper()
+	root := filepath.Join(dir, name)
+	if err := os.MkdirAll(filepath.Join(root, "dist", "server"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "theme.json"), []byte(`{"name":"`+name+`"}`+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "dist", "server", "entry.mjs"), []byte("export const handler = async () => {}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// writePartialThemeMeta creates a dir with theme.json but NO built dist —
+// simulating an interrupted/broken install. It must not shadow a runnable
+// builtin for palette resolution.
+func writePartialThemeMeta(t *testing.T, dir, name string) {
 	t.Helper()
 	root := filepath.Join(dir, name)
 	if err := os.MkdirAll(root, 0o755); err != nil {
@@ -58,5 +75,27 @@ func TestResolveDir_RejectsInvalidNames(t *testing.T) {
 		if got := ResolveDir(name); got != "" {
 			t.Errorf("ResolveDir(%q): want empty, got %s", name, got)
 		}
+	}
+}
+
+// TestResolveDir_PartialUserDoesNotShadowBuiltin locks the eligibility
+// criterion: a user dir with only theme.json (no built dist/server/entry.mjs)
+// must NOT shadow a runnable builtin for palette resolution — ResolveDir and
+// serveThemes/theme-host share the same "runnable" test.
+func TestResolveDir_PartialUserDoesNotShadowBuiltin(t *testing.T) {
+	builtin := t.TempDir()
+	user := t.TempDir()
+	writeThemeMeta(t, builtin, "dup")        // runnable builtin
+	writePartialThemeMeta(t, user, "dup")    // broken user copy (theme.json only)
+	writePartialThemeMeta(t, user, "custom") // broken user-only theme
+
+	t.Setenv("VANBLOG_THEMES_DIR", user)
+	t.Setenv("VANBLOG_THEMES_BUILTIN_DIR", builtin)
+
+	if got := ResolveDir("dup"); got != filepath.Join(builtin, "dup") {
+		t.Errorf("dup: broken user copy must not shadow builtin; want %s, got %s", filepath.Join(builtin, "dup"), got)
+	}
+	if got := ResolveDir("custom"); got != "" {
+		t.Errorf("custom: partial user-only theme must not resolve; want empty, got %s", got)
 	}
 }

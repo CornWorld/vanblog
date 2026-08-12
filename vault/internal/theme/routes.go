@@ -55,7 +55,14 @@ func ResolveDir(name string) string {
 	dirs := roots()
 	for i := len(dirs) - 1; i >= 0; i-- {
 		dir := filepath.Join(dirs[i], name)
-		if _, err := os.Stat(filepath.Join(dir, "theme.json")); err == nil {
+		if _, err := os.Stat(filepath.Join(dir, "theme.json")); err != nil {
+			continue
+		}
+		// Only resolve themes that are actually runnable — the same criterion
+		// serveThemes and the theme host (core.mjs resolveThemeDir) use, so a
+		// partial user dir (theme.json without a built dist) never shadows a
+		// builtin for recommendedPalette.
+		if _, err := os.Stat(filepath.Join(dir, "dist", "server", "entry.mjs")); err == nil {
 			return dir
 		}
 	}
@@ -75,6 +82,11 @@ func serveThemes(e *core.RequestEvent) error {
 		}
 		for _, entry := range entries {
 			if !entry.IsDir() {
+				continue
+			}
+			// Same name contract as the pack CLI and ResolveDir, so the merged
+			// view never surfaces a theme that cannot be resolved/installed.
+			if !themeNamePattern.MatchString(entry.Name()) {
 				continue
 			}
 			if _, err := os.Stat(filepath.Join(root, entry.Name(), "dist", "server", "entry.mjs")); err != nil {
