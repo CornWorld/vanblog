@@ -20,18 +20,57 @@ func New(app core.App) {
 	})
 }
 
-func serveThemes(e *core.RequestEvent) error {
-	root := os.Getenv("VANBLOG_THEMES_DIR")
-	if root == "" {
-		root = "/var/lib/vanblog/themes"
+// roots returns the [builtin, user] themes directories in merge order — user is
+// last so a name collision resolves in its favour. Defaults mirror the
+// entrypoint env (VANBLOG_THEMES_DIR / VANBLOG_THEMES_BUILTIN_DIR).
+func roots() []string {
+	user := os.Getenv("VANBLOG_THEMES_DIR")
+	if user == "" {
+		user = "/var/lib/vanblog/themes"
 	}
-	entries, err := os.ReadDir(root)
-	if err != nil {
-		slog.Warn("[theme] cannot list themes dir", "dir", root, "err", err)
-		return e.JSON(http.StatusInternalServerError, map[string]any{
-			"error":  "cannot list themes directory",
-			"themes": []any{},
-		})
+	builtin := os.Getenv("VANBLOG_THEMES_BUILTIN_DIR")
+	if builtin == "" {
+		builtin = "/build/themes"
+	}
+	return []string{builtin, user}
+}
+
+// ResolveDir returns the directory holding the named theme (user wins), or ""
+// when the theme is absent from both roots. Shared by the theme and palette
+// routes so recommendedPalette reads the same merged view as /api/themes.
+func ResolveDir(name string) string {
+	if name == "" {
+		return ""
+	}
+	for _, root := range roots() {
+		dir := filepath.Join(root, name)
+		if _, err := os.Stat(filepath.Join(dir, "theme.json")); err == nil {
+			return dir
+		}
+	}
+	return ""
+}
+
+func serveThemes(e *core.RequestEvent) error {
+	// Merge builtin (image, read-only) + user (volume) themes; a user theme
+	// whose name collides with a builtin shadows it. Only themes that have a
+	// built dist/server/entry.mjs count as installable.
+	dirByName := map[string]string{}
+	for _, root := range roots() {
+		entries, err := os.ReadDir(root)
+		if err != nil {
+			slog.Warn("[theme] cannot list themes dir", "dir", root, "err", err)
+			continue
+		}
+		for _, entry := range entries {
+			if !entry.IsDir() {
+				continue
+			}
+			if _, err := os.Stat(filepath.Join(root, entry.Name(), "dist", "server", "entry.mjs")); err != nil {
+				continue
+			}
+			dirByName[entry.Name()] = filepath.Join(root, entry.Name()) // user (2nd) wins
+		}
 	}
 
 	type themeMeta struct {
@@ -46,16 +85,9 @@ func serveThemes(e *core.RequestEvent) error {
 	}
 
 	var themes []themeMeta
-	for _, entry := range entries {
-		if !entry.IsDir() {
-			continue
-		}
-		// Only include themes that have dist/server/entry.mjs
-		if _, err := os.Stat(filepath.Join(root, entry.Name(), "dist", "server", "entry.mjs")); err != nil {
-			continue
-		}
-		meta := themeMeta{Name: entry.Name()}
-		jsonPath := filepath.Join(root, entry.Name(), "theme.json")
+	for name, dir := range dirByName {
+		meta := themeMeta{Name: name}
+		jsonPath := filepath.Join(dir, "theme.json")
 		if data, err := os.ReadFile(jsonPath); err == nil {
 			var raw map[string]any
 			if json.Unmarshal(data, &raw) == nil {

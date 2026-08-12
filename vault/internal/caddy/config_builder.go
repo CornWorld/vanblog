@@ -44,10 +44,16 @@ type BuildOpts struct {
 	// terminate TLS at an external reverse proxy.
 	HTTPOnly bool `json:"-"`
 
-	// ThemesDir is where built themes live; each built theme has
-	// dist/server + dist/client. Caddy's file_server routes serve each
-	// theme's dist/client directly. Default "/var/lib/vanblog/themes".
+	// ThemesDir is the writable user-themes directory (a mounted volume at
+	// /var/lib/vanblog/themes by default). Each built theme has dist/server +
+	// dist/client. Caddy's file_server routes serve each theme's dist/client.
+	// Default "/var/lib/vanblog/themes".
 	ThemesDir string `json:"-"`
+	// BuiltinThemesDir is the read-only themes directory baked into the image
+	// (astro-build output under /build/themes). Runtime consumers merge the two
+	// roots (user wins on name collision) so operator-installed themes override
+	// or supplement the image's defaults. Default "/build/themes".
+	BuiltinThemesDir string `json:"-"`
 
 	// AdminDistDir is the standalone admin SSR build (app/vanblog-app →
 	// app/dist). Its client assets are served at the root paths
@@ -79,6 +85,9 @@ func (o *BuildOpts) Defaults() {
 	}
 	if o.ThemesDir == "" {
 		o.ThemesDir = "/var/lib/vanblog/themes"
+	}
+	if o.BuiltinThemesDir == "" {
+		o.BuiltinThemesDir = "/build/themes"
 	}
 	if o.AdminDistDir == "" {
 		o.AdminDistDir = "/build/app/dist"

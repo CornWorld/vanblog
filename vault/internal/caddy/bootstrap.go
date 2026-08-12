@@ -165,6 +165,7 @@ func loadBootstrapInputs(app core.App) (BuildOpts, []UserRule) {
 	// agree with the theme host so Caddy's file_server routes point at the same
 	// directories. BuildOpts.Defaults fills prod defaults when unset.
 	opts.ThemesDir = os.Getenv("VANBLOG_THEMES_DIR")
+	opts.BuiltinThemesDir = os.Getenv("VANBLOG_THEMES_BUILTIN_DIR")
 	opts.AdminDistDir = os.Getenv("VANBLOG_ADMIN_DIST_DIR")
 
 	site, err := app.FindFirstRecordByFilter("site", "")

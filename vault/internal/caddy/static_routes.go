@@ -3,6 +3,7 @@ package caddy
 import (
 	"os"
 	"path/filepath"
+	"slices"
 
 	"github.com/CornWorld/caddyadmin"
 )
@@ -34,19 +35,39 @@ func buildStaticRoutes(opts BuildOpts) []caddyadmin.Route {
 	}
 
 	// --- Per-theme static under /themes/<name>/ ---
-	entries, err := os.ReadDir(opts.ThemesDir)
-	if err != nil {
-		return routes
+	// Merge the builtin (image, read-only) + user (volume) roots: a user theme
+	// whose name collides with a builtin shadows it. Only themes whose
+	// dist/client dir exists emit file_server routes. Names are sorted so the
+	// generated config is deterministic across restarts.
+	clientByTheme := map[string]string{}
+	for _, root := range []string{opts.BuiltinThemesDir, opts.ThemesDir} {
+		if root == "" {
+			continue
+		}
+		entries, err := os.ReadDir(root)
+		if err != nil {
+			continue // missing/unreadable root (e.g. no builtin in some dev setups)
+		}
+		for _, e := range entries {
+			if !e.IsDir() {
+				continue
+			}
+			client := filepath.Join(root, e.Name(), "dist", "client")
+			if !dirExists(client) {
+				continue
+			}
+			// User dir is iterated after builtin, so a colliding user theme
+			// overwrites the builtin entry → user wins.
+			clientByTheme[e.Name()] = client
+		}
 	}
-	for _, e := range entries {
-		if !e.IsDir() {
-			continue
-		}
-		name := e.Name()
-		client := filepath.Join(opts.ThemesDir, name, "dist", "client")
-		if !dirExists(client) {
-			continue
-		}
+	names := make([]string, 0, len(clientByTheme))
+	for name := range clientByTheme {
+		names = append(names, name)
+	}
+	slices.Sort(names)
+	for _, name := range names {
+		client := clientByTheme[name]
 		prefix := "/themes/" + name
 		// Content-hashed route first — Caddy evaluates routes in order, so the
 		// specific /_astro/* route wins over the broad stable-file route below.

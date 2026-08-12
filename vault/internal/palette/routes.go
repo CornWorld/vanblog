@@ -9,6 +9,8 @@ import (
 	"slices"
 
 	"github.com/pocketbase/pocketbase/core"
+
+	"github.com/cornworld/vanblog/internal/theme"
 )
 
 // New registers palette-related routes on the PB server.
@@ -109,16 +111,17 @@ func servePaletteCSS(app core.App) func(*core.RequestEvent) error {
 }
 
 // readRecommendedPalette returns the active theme's recommendedPalette from its
-// theme.json (VANBLOG_THEMES_DIR or /var/lib/vanblog/themes). Empty on any error.
+// theme.json, resolved through the merged builtin+user view (user wins).
+// Empty on any error.
 func readRecommendedPalette(activeTheme string) string {
 	if activeTheme == "" {
 		return ""
 	}
-	root := os.Getenv("VANBLOG_THEMES_DIR")
-	if root == "" {
-		root = "/var/lib/vanblog/themes"
+	themeDir := theme.ResolveDir(activeTheme)
+	if themeDir == "" {
+		return ""
 	}
-	data, err := os.ReadFile(filepath.Join(root, activeTheme, "theme.json"))
+	data, err := os.ReadFile(filepath.Join(themeDir, "theme.json"))
 	if err != nil {
 		return ""
 	}
