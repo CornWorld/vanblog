@@ -3,7 +3,7 @@
 > **⚠️ 命名变更（2026-08）**：本模块已从「dispatcher」改名为 **theme host**（`app/src/theme-host/index.mjs`，健康端点 `/__theme_host_health`）。它本质是托管多 theme handler 的轻量请求路由宿主，不是重型编排器。本文档（原 `theme-dispatcher-design.md`）与 `theme-host-execution-plan.md` 作为设计历史保留。
 
 > **状态**：**已实现**（2026-08）。核心模型落地：单进程 theme host 动态 import 主题 handler + 按 `site.activeTheme` 热切换。**静态服务已按设计演进为 Caddy file_server**（见 `vault/internal/caddy/static_routes.go`，不再是 theme host sirv）；admin 额外抽离为独立 SSR（`app/`，见 `docs/theme-concepts.md`）。本文档作为设计历史保留。
-> **前置阅读**：[`agent-theme-architecture.md`](./agent-theme-architecture.md)、[`theme-implementer-guide.md`](./theme-implementer-guide.md) > **目标**：定义「单进程多 theme handler」的运行模型，让 theme 切换从「重建镜像」降到「<5s 热切换」。
+> **前置阅读**：[`theme-concepts.md`](./theme-concepts.md)、[`theme-implementer-guide.md`](./theme-implementer-guide.md) > **目标**：定义「单进程多 theme handler」的运行模型，让 theme 切换从「重建镜像」降到「<5s 热切换」。
 
 ---
 

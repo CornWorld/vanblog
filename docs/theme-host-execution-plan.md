@@ -779,7 +779,7 @@ func init() {
 **文档更新**：
 
 - `docs/theme-implementer-guide.md` §10.3 更新切换表格（dev/prod 都是「<5s 生效」）
-- `docs/agent-theme-architecture.md` 同步
+- `docs/theme-concepts.md` 同步(原 agent-theme-architecture 已并入)
 - `README.md` 如果提到 theme 切换需要 rebuild，更新
 
 **验收**：

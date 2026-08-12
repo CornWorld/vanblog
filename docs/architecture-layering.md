@@ -206,7 +206,7 @@ vault/
 JSVM 钩子直接使用 pb 原生全局 API
 (`$app`、`Record`、`onRecordAfterCreateSuccess`、`cronAdd` 等)，pb 的 jsvm 插件自动
 将这些 API 注入每个 executor VM。扩展系统从 Plugin 演进到 Pack 的完整历史见
-[`docs/plugin-to-pack-evolution.md`](./plugin-to-pack-evolution.md)。
+`vault/internal/pack/`(旧 Plugin 制已废弃;原独立演进文档已在 2026-08 文档合并中移除)。
 
 `pb_hooks/` 目录内容：
 
@@ -483,7 +483,7 @@ interface VanblogSite {
 }
 ```
 
-> 扩展系统从 Plugin 到 Pack 的完整演进分析见 [`docs/plugin-to-pack-evolution.md`](./plugin-to-pack-evolution.md)。
+> 扩展系统从 Plugin 到 Pack 的演进分析见 `vault/internal/pack/`(原独立文档已在 2026-08 文档合并中移除)。
 
 ---
 
