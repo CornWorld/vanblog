@@ -92,6 +92,24 @@ func TestValidateThemeDir(t *testing.T) {
 	if _, err := validateThemeDir(badName); err == nil {
 		t.Fatal("expected error for invalid theme name")
 	}
+
+	// dist/client as a regular FILE → rejected (Caddy needs a directory)
+	clientFile := filepath.Join(t.TempDir(), "clientFile")
+	if err := os.MkdirAll(filepath.Join(clientFile, "dist", "server"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(clientFile, "dist", "server", "entry.mjs"), []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(clientFile, "dist", "client"), []byte("not a dir"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(clientFile, "theme.json"), []byte(`{"name":"clientFile"}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := validateThemeDir(clientFile); err == nil {
+		t.Fatal("expected error for dist/client being a regular file")
+	}
 }
 
 func TestInstallTheme_AtomicAndCollision(t *testing.T) {

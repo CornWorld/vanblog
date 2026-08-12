@@ -200,8 +200,11 @@ func validateThemeDir(srcDir string) (string, error) {
 	if _, err := os.Stat(filepath.Join(srcDir, "dist", "server", "entry.mjs")); err != nil {
 		return "", fmt.Errorf("missing dist/server/entry.mjs — install a PRE-BUILT theme (run the theme build first)")
 	}
-	if _, err := os.Stat(filepath.Join(srcDir, "dist", "client")); err != nil {
-		return "", fmt.Errorf("missing dist/client dir")
+	// dist/client must be an actual DIRECTORY: Caddy's buildStaticRoutes only
+	// emits /themes/<name>/ file_server routes when dist/client is a dir, so a
+	// file here would validate but produce a theme whose assets 404.
+	if st, err := os.Stat(filepath.Join(srcDir, "dist", "client")); err != nil || !st.IsDir() {
+		return "", fmt.Errorf("dist/client must be a directory")
 	}
 	return meta.Name, nil
 }
@@ -274,9 +277,14 @@ func unzip(zipPath, dest string) error {
 		return err
 	}
 	defer r.Close()
-	// maxZipEntrySize guards against decompression bombs: a single archive
-	// entry may not expand beyond this many bytes (gosec G110).
-	const maxZipEntrySize = 1 << 30 // 1 GiB
+	// Decompression-bomb guards (gosec G110): maxZipEntrySize caps a single
+	// entry, and maxZipTotalSize caps the archive's cumulative uncompressed
+	// size so many small entries cannot exhaust the persistent themes volume.
+	const (
+		maxZipEntrySize = 1 << 30 // 1 GiB per entry
+		maxZipTotalSize = 2 << 30 // 2 GiB per archive
+	)
+	var totalSize int64
 	for _, f := range r.File {
 		name := f.Name
 		// Reject traversal / absolute entries up front so the path below can
@@ -323,6 +331,10 @@ func unzip(zipPath, dest string) error {
 		}
 		if n > maxZipEntrySize {
 			return fmt.Errorf("zip entry %q exceeds %d-byte limit (decompression bomb)", name, maxZipEntrySize)
+		}
+		totalSize += n
+		if totalSize > maxZipTotalSize {
+			return fmt.Errorf("zip archive exceeds %d-byte cumulative limit (decompression bomb)", maxZipTotalSize)
 		}
 	}
 	return nil
