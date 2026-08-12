@@ -40,6 +40,10 @@ import { pathToFileURL } from 'node:url';
 export function createThemeHost(options = {}) {
   const themesDir =
     options.themesDir ?? process.env.VANBLOG_THEMES_DIR ?? '/var/lib/vanblog/themes';
+  // Builtin themes baked into the image (read-only). Consumers merge both roots;
+  // the user themes dir (themesDir) wins on a name collision.
+  const builtinThemesDir =
+    options.builtinThemesDir ?? process.env.VANBLOG_THEMES_BUILTIN_DIR ?? '/build/themes';
   const defaultThemeName =
     options.defaultThemeName ?? process.env.VANBLOG_DEFAULT_THEME ?? 'vanblog';
   const pbUrl = options.pbUrl ?? process.env.PB_URL ?? 'http://127.0.0.1:8090';
@@ -71,18 +75,42 @@ export function createThemeHost(options = {}) {
   // --- Theme loading & registry ---
 
   /**
-   * List themes that have a built dist/server/entry.mjs.
+   * Resolve the root dir holding a built theme: the user themes dir first
+   * (wins on collision), then the image's builtin dir. Null when absent.
+   * @param {string} name
+   * @returns {string|null}
+   */
+  function resolveThemeDir(name) {
+    if (existsSync(join(themesDir, name, 'dist', 'server', 'entry.mjs'))) return themesDir;
+    if (existsSync(join(builtinThemesDir, name, 'dist', 'server', 'entry.mjs'))) return builtinThemesDir;
+    return null;
+  }
+
+  /**
+   * List themes that have a built dist/server/entry.mjs, merged from the user
+   * (volume) and builtin (image) roots. User dir is scanned first so it wins
+   * dedup on a name collision.
    * @returns {string[]}
    */
   function listAvailableThemes() {
-    try {
-      return readdirSync(themesDir).filter((name) =>
-        existsSync(join(themesDir, name, 'dist', 'server', 'entry.mjs'))
-      );
-    } catch (err) {
-      throttledWarn('listThemes', 30_000, `cannot list themes dir ${themesDir}:`, err?.message ?? err);
-      return [];
+    const seen = new Set();
+    const names = [];
+    for (const root of [themesDir, builtinThemesDir]) {
+      let entries;
+      try {
+        entries = readdirSync(root);
+      } catch (err) {
+        throttledWarn('listThemes', 30_000, `cannot list themes dir ${root}:`, err?.message ?? err);
+        continue;
+      }
+      for (const name of entries) {
+        if (seen.has(name)) continue;
+        if (!existsSync(join(root, name, 'dist', 'server', 'entry.mjs'))) continue;
+        seen.add(name);
+        names.push(name);
+      }
     }
+    return names;
   }
 
   /**
@@ -91,15 +119,15 @@ export function createThemeHost(options = {}) {
    * @returns {Promise<LoadedTheme>}
    */
   async function loadTheme(name) {
-    const distDir = join(themesDir, name, 'dist');
-    const entryPath = pathToFileURL(join(distDir, 'server', 'entry.mjs')).href;
-
-    if (!existsSync(join(distDir, 'server', 'entry.mjs'))) {
+    const themeDir = resolveThemeDir(name);
+    if (!themeDir) {
       throw new Error(`theme '${name}' entry.mjs not found`);
     }
+    const distDir = join(themeDir, name, 'dist');
+    const entryPath = pathToFileURL(join(distDir, 'server', 'entry.mjs')).href;
 
     let themeJson = { name };
-    const themeJsonPath = join(themesDir, name, 'theme.json');
+    const themeJsonPath = join(themeDir, name, 'theme.json');
     if (existsSync(themeJsonPath)) {
       try {
         themeJson = JSON.parse(readFileSync(themeJsonPath, 'utf8'));
