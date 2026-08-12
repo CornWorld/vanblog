@@ -7,10 +7,17 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
 
 	"github.com/pocketbase/pocketbase/core"
 )
+
+// themeNamePattern is the accepted theme identifier shape — the same contract
+// the pack CLI enforces (vault/internal/packcli/theme.go). ResolveDir validates
+// names against it before probing the filesystem, so a name containing path
+// separators or ".." segments can never escape the themes roots.
+var themeNamePattern = regexp.MustCompile(`^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$`)
 
 // New registers theme enumeration route on the PB server.
 func New(app core.App) {
@@ -39,11 +46,15 @@ func roots() []string {
 // when the theme is absent from both roots. Shared by the theme and palette
 // routes so recommendedPalette reads the same merged view as /api/themes.
 func ResolveDir(name string) string {
-	if name == "" {
+	if name == "" || !themeNamePattern.MatchString(name) {
 		return ""
 	}
-	for _, root := range roots() {
-		dir := filepath.Join(root, name)
+	// User root wins on a name collision, so scan roots() (=[builtin, user]) in
+	// reverse — this keeps the merge precedence identical to serveThemes, the
+	// theme host (core.mjs) and Caddy's buildStaticRoutes.
+	dirs := roots()
+	for i := len(dirs) - 1; i >= 0; i-- {
+		dir := filepath.Join(dirs[i], name)
 		if _, err := os.Stat(filepath.Join(dir, "theme.json")); err == nil {
 			return dir
 		}
