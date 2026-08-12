@@ -385,6 +385,12 @@ func removeTheme(name, userDir, builtinDir string) error {
 	if !themeNamePattern.MatchString(name) {
 		return fmt.Errorf("invalid theme name %q", name)
 	}
+	// If the user themes dir is (mis)configured to the builtin dir itself, the
+	// read-only guard below (which fires only on a stat MISS) would be bypassed
+	// and an image theme could be deleted — treat the whole dir as read-only.
+	if filepath.Clean(userDir) == filepath.Clean(builtinDir) {
+		return fmt.Errorf("user themes dir %s resolves to the builtin dir (read-only)", userDir)
+	}
 	userPath := filepath.Join(userDir, name)
 	if _, err := os.Stat(userPath); err != nil {
 		if _, builtinErr := os.Stat(filepath.Join(builtinDir, name)); builtinErr == nil {

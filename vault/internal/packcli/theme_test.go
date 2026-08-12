@@ -149,6 +149,10 @@ func TestRemoveTheme(t *testing.T) {
 	if err := removeTheme("builtin-only", user, builtin); err == nil {
 		t.Fatal("expected builtin refusal")
 	}
+	// userDir (mis)configured to the builtin dir → refuse everything.
+	if err := removeTheme("mine", builtin, builtin); err == nil {
+		t.Fatal("expected refusal when userDir resolves to the builtin dir")
+	}
 	// Not installed anywhere → error.
 	if err := removeTheme("nope", user, builtin); err == nil {
 		t.Fatal("expected not-installed error")
