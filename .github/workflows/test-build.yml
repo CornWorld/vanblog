@@ -10,6 +10,28 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
+  # ── Backend tests: go test ./... (fail fast, before Docker build) ──
+  # 注意:go test ./... 已在干净 checkout 验证可行 ——
+  #   · validation 测试用内联 fixture,不依赖生成的 runtime/core-schema/models.js
+  #   · S3 集成测试带 `//go:build integration`,正常 go test 自动跳过(无需 MinIO)
+  #   · vault/pb_migrations 新增迁移冒烟 + JSVM 审计钩子测试(真 gate,失败即拦)
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version: stable
+          cache-dependency-path: vault/go.sum
+
+      - name: go test ./...
+        working-directory: vault
+        env:
+          GOPROXY: direct
+          GONOSUMDB: "*"
+        run: go test ./...
+
   # ── Build Docker images (tagged with commit SHA) ──
   docker:
     runs-on: ubuntu-latest
