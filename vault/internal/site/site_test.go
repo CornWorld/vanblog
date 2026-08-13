@@ -47,7 +47,7 @@ func TestGetInfo(t *testing.T) {
 	siteRec.Set("baseUrl", "https://blog.example.com")
 	siteRec.Set("author", "Test Author")
 	siteRec.Set("siteDesc", "A test blog")
-	siteRec.Set("commentsProvider", "giscus")
+	siteRec.Set("commentsProvider", "artalk")
 	siteRec.Set("allowedDomains", []string{"blog.example.com", "www.example.com"})
 	if err := app.Save(siteRec); err != nil {
 		t.Fatal(err)
@@ -70,7 +70,7 @@ func TestGetInfo(t *testing.T) {
 	if info.Description != "A test blog" {
 		t.Errorf("Description = %q, want 'A test blog' (from siteDesc)", info.Description)
 	}
-	if info.CommentsProvider != "giscus" {
+	if info.CommentsProvider != "artalk" {
 		t.Errorf("CommentsProvider = %q", info.CommentsProvider)
 	}
 	if len(info.AllowedDomains) != 2 {

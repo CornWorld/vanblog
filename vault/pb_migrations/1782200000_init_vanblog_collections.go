@@ -254,8 +254,8 @@ func createSite(db core.App) error {
 	col.Fields.Add(&core.SelectField{Name: "theme", Values: []string{"default", "minimal", "magazine", "custom"}})
 
 	// 评论
-	col.Fields.Add(&core.SelectField{Name: "commentsProvider", Values: []string{"disabled", "waline", "giscus", "artalk", "external"}})
-	col.Fields.Add(&core.JSONField{Name: "commentsConfig"}) // provider 特有配置(giscus repo/waline url 等)
+	col.Fields.Add(&core.SelectField{Name: "commentsProvider", Values: []string{"disabled", "artalk", "external"}})
+	col.Fields.Add(&core.JSONField{Name: "commentsConfig"}) // provider 特有配置(artalk server/site 等)
 
 	// 统计
 	col.Fields.Add(&core.TextField{Name: "analyticsScript"})

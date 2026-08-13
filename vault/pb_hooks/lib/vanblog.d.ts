@@ -60,7 +60,7 @@ interface VanblogSite {
   baseUrl: string;
   palette: string;
   activeTheme: string;
-  commentsProvider: "disabled" | "waline" | "giscus" | "artalk" | "external";
+  commentsProvider: "disabled" | "artalk" | "external";
   revisionsEnabled: boolean;
   revisionsRetention: number;
   httpsRedirect: boolean;

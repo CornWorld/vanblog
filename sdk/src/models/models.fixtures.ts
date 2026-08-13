@@ -109,14 +109,7 @@ export function assertModelFixtures(): void {
 
   const commentFixtures = {
     disabled: {},
-    waline: { serverURL: "https://comments.example" },
     artalk: { server: "https://comments.example", site: "VanBlog" },
-    giscus: {
-      repo: "owner/repo",
-      repoId: "repo-id",
-      category: "General",
-      categoryId: "category-id",
-    },
     external: { customScript: "console.log('comments')" },
   } as const;
   for (const [provider, commentsConfig] of Object.entries(commentFixtures)) {
@@ -130,8 +123,8 @@ export function assertModelFixtures(): void {
     });
   }
   assertRejects("comments provider/config matrix", SiteSchema, {
-    commentsProvider: "waline",
-    commentsConfig: commentFixtures.giscus,
+    commentsProvider: "artalk",
+    commentsConfig: commentFixtures.external,
   });
   assertRejects("comments config null", SiteSchema, {
     commentsProvider: "disabled",

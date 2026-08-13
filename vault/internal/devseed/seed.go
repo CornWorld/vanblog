@@ -171,7 +171,7 @@ sequenceDiagram
 - [x] Go 后端 PocketBase 集成
 - [x] Astro Hybrid SSR 渲染
 - [x] ByteMD 编辑器
-- [ ] Waline 评论系统
+- [x] Artalk 评论系统
 - [ ] ARM 多架构支持
 
 ~~删除线~~ 和 **加粗** 以及 *斜体* 和 ` + "`" + `行内代码` + "`" + `。

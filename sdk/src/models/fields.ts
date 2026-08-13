@@ -56,36 +56,14 @@ export type MediaConfig = z.infer<typeof MediaConfigSchema>;
 
 export const CommentsProviderSchema = z.enum([
   "disabled",
-  "waline",
   "artalk",
-  "giscus",
   "external",
 ]);
 export const DisabledCommentsConfigSchema = z.object({}).strict();
-export const WalineConfigSchema = z
-  .object({ serverURL: z.string().min(1) })
-  .strict();
 export const ArtalkConfigSchema = z
   .object({
     server: z.string().min(1),
     site: z.string().optional(),
-  })
-  .strict();
-export const GiscusConfigSchema = z
-  .object({
-    repo: z.string().min(1),
-    repoId: z.string().min(1),
-    category: z.string().min(1),
-    categoryId: z.string().min(1),
-    theme: z
-      .enum([
-        "preferred_color_scheme",
-        "light",
-        "dark",
-        "light_tritanopia",
-        "dark_tritanopia",
-      ])
-      .optional(),
   })
   .strict();
 export const ExternalConfigSchema = z
@@ -93,17 +71,13 @@ export const ExternalConfigSchema = z
   .strict();
 export const CommentsProviderConfigSchemas = {
   disabled: DisabledCommentsConfigSchema,
-  waline: WalineConfigSchema,
   artalk: ArtalkConfigSchema,
-  giscus: GiscusConfigSchema,
   external: ExternalConfigSchema,
 } as const;
 // Consider using z.discriminatedUnion if a `provider` field is added to each config.
 export const CommentsConfigSchema = z.union([
   CommentsProviderConfigSchemas.disabled,
-  CommentsProviderConfigSchemas.waline,
   CommentsProviderConfigSchemas.artalk,
-  CommentsProviderConfigSchemas.giscus,
   CommentsProviderConfigSchemas.external,
 ]);
 export type CommentsConfig = z.infer<typeof CommentsConfigSchema>;
