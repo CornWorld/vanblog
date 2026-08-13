@@ -39,19 +39,45 @@ services:
       - caddy_data:/data/caddy
       - pack_data:/var/lib/vanblog/packs
       - themes_data:/var/lib/vanblog/themes
+      # Artalk 内置 sidecar 数据(启用 VANBLOG_ARTALK_ENABLED=1 时持久化评论):
+      - artalk_data:/data/artalk
     environment:
       - VANBLOG_EMAIL=${VANBLOG_EMAIL:-admin@example.com}
       - VANBLOG_CADDY_LOG_LEVEL=${VANBLOG_CADDY_LOG_LEVEL:-warn}
       - VANBLOG_PACKS_DIR=/var/lib/vanblog/packs
       - VANBLOG_THEMES_DIR=/var/lib/vanblog/themes
+      # --- Artalk 评论系统 ---
+      # 内置 sidecar(单容器,默认推荐):
+      # - VANBLOG_ARTALK_ENABLED=1
+      # 外部 Artalk 容器(compose 多容器,配合下面 artalk 服务):
+      # - VANBLOG_ARTALK_UPSTREAM=artalk:23366
       # HTTP_ONLY 模式:外置反代终止 TLS(取消注释即生效):
       # - VANBLOG_HTTP_ONLY=1
       # pb 内部地址(容器内 127.0.0.1,不需要改):
       # - ASTRO_URL=http://127.0.0.1:4321
       # - PB_URL=http://127.0.0.1:8090
 
+  # --- Artalk 评论系统(compose 多容器模式,可选)---
+  # 默认推荐内置 sidecar(vanblog 服务设 VANBLOG_ARTALK_ENABLED=1)。
+  # 若要 Artalk 独立容器(独立升级/解耦生命周期),取消下面注释,
+  # 并在 vanblog 服务里设 VANBLOG_ARTALK_UPSTREAM=artalk:23366。
+  # artalk:
+  #   image: artalk/artalk-go
+  #   restart: unless-stopped
+  #   environment:
+  #     - ATK_HOST=0.0.0.0
+  #     - ATK_PORT=23366
+  #     - ATK_LOCALE=zh-CN
+  #     - ATK_SITE_DEFAULT=VanBlog
+  #   volumes:
+  #     - artalk_data:/data
+  #   # 不暴露端口到公网,只被 vanblog 的 Caddy 反代:
+  #   # ports: ["23366:23366"]
+
 volumes:
   pb_data:
   caddy_data:
   pack_data:
   themes_data:
+  # Artalk 数据卷(内置 sidecar 挂到 vanblog,多容器挂到 artalk 服务):
+  artalk_data:

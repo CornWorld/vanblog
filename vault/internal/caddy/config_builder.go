@@ -66,6 +66,14 @@ type BuildOpts struct {
 	// on system cache rules so that re-deploying a new image invalidates
 	// browser caches even for URLs whose content hash hasn't changed.
 	Version string `json:"-"`
+
+	// ArtalkUpstream, when non-empty, emits a system route /comments/* →
+	// <ArtalkUpstream> with the /comments prefix stripped (Artalk has no
+	// base_path option and serves at root). For the in-container sidecar it's
+	// "127.0.0.1:23366" (set by VANBLOG_ARTALK_ENABLED=1). For an external
+	// Artalk container in a compose multi-service setup, set
+	// VANBLOG_ARTALK_UPSTREAM=artalk:23366.
+	ArtalkUpstream string `json:"-"`
 }
 
 // Defaults fills zero-value fields with sensible defaults.
@@ -135,6 +143,11 @@ const (
 	// Internal endpoints (trusted; bypass SSRF validation by design).
 	pbAPIHost = "127.0.0.1:8090"
 
+	// Artalk sidecar endpoint — trusted internal loopback (same SSRF-bypass
+	// reasoning as pbAPIHost). Only emitted when VANBLOG_ARTALK_ENABLED=1.
+	artalkAPIHost = "127.0.0.1:23366"
+	artalkPath    = "/comments"
+
 	// Server names — stable so tests and operators can reference them.
 	// IMPORTANT: docker/bootstrap.json uses srv_https / srv_http / srv_mgmt.
 	// Keeping the same names here lets GetTLSStatus probe the live config by
@@ -150,9 +163,10 @@ const (
 
 	// Stable @id values for system-managed routes. Users can override via
 	// site.routing using the same IDs (Caddy @id semantics).
-	systemAPIRouteID   = "vanblog-system-api"
-	systemAdminRouteID = "vanblog-system-pb-admin"
-	systemFallbackID   = "vanblog-system-fallback"
+	systemAPIRouteID    = "vanblog-system-api"
+	systemAdminRouteID  = "vanblog-system-pb-admin"
+	systemArtalkRouteID = "vanblog-system-artalk"
+	systemFallbackID    = "vanblog-system-fallback"
 
 	// Bootstrap-stage @id values. Prefixed `vanblog-bootstrap-*` to match
 	// docker/bootstrap.json (the static self-bootstrapping config) so that
@@ -391,6 +405,16 @@ func buildFullRouteTable(opts BuildOpts, userRules []UserRule) ([]caddyadmin.Rou
 			}},
 		},
 	)
+	if opts.ArtalkUpstream != "" {
+		routes = append(routes, caddyadmin.Route{
+			ID:    systemArtalkRouteID,
+			Match: []caddyadmin.MatchRule{{Path: []string{artalkPath + "/*"}}},
+			Handle: []caddyadmin.Handler{
+				{Handler: "rewrite", StripPathPrefix: artalkPath},
+				{Handler: "reverse_proxy", Upstreams: []caddyadmin.Upstream{{Dial: opts.ArtalkUpstream}}},
+			},
+		})
+	}
 	routes = append(routes, buildStaticRoutes(opts)...)
 	routes = append(routes, rules...)
 	routes = append(routes, caddyadmin.Route{

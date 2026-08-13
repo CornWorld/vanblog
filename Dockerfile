@@ -127,7 +127,19 @@ FROM alpine:3.21 AS prod
 WORKDIR /app
 
 # Install Caddy + Node.js (for Astro SSR) + ca-certificates
-RUN apk add --no-cache caddy nodejs ca-certificates tzdata
+RUN apk add --no-cache caddy nodejs ca-certificates tzdata curl
+
+# Artalk (self-hosted comment system) — optional sidecar, enabled at runtime
+# via VANBLOG_ARTALK_ENABLED=1. Downloaded at build time so the image is
+# reproducible. Override the version with --build-arg ARTALK_VERSION=vX.Y.Z.
+# NOTE: if Artalk changes its release asset naming, update the URL below.
+ARG ARTALK_VERSION=v2.10.0
+RUN mkdir -p /tmp/artalk && \
+    curl -fsSL "https://github.com/ArtalkJS/Artalk/releases/download/${ARTALK_VERSION}/artalk_${ARTALK_VERSION}_linux_amd64.tar.gz" -o /tmp/artalk/artalk.tar.gz && \
+    tar -xzf /tmp/artalk/artalk.tar.gz -C /tmp/artalk && \
+    find /tmp/artalk -type f -name 'artalk' -exec mv {} /usr/local/bin/artalk \; && \
+    chmod +x /usr/local/bin/artalk && \
+    rm -rf /tmp/artalk
 
 # Copy Go binary and the separately-built core schema artifact.
 COPY --from=go-build /pocketbase /usr/local/bin/vanblog
@@ -171,7 +183,7 @@ RUN chmod +x /entrypoint.sh
 # mount point (compose mounts themes_data there, persistent). Builtin themes
 # stay read-only at /build/themes and are resolved via VANBLOG_THEMES_BUILTIN_DIR.
 # NO symlink here — a symlink would shadow the mounted volume and break installs.
-RUN mkdir -p /pb_data /data/caddy /var/log /var/lib/vanblog
+RUN mkdir -p /pb_data /data/caddy /data/artalk /var/log /var/lib/vanblog
 
 ENV VANBLOG_MODE=prod
 # 80  = HTTP → redirect to HTTPS
@@ -179,7 +191,7 @@ ENV VANBLOG_MODE=prod
 # 8080 = management port (HTTP fallback)
 EXPOSE 80 443 8080
 
-VOLUME ["/pb_data", "/data/caddy"]
+VOLUME ["/pb_data", "/data/caddy", "/data/artalk"]
 
 ENTRYPOINT ["/entrypoint.sh"]
 

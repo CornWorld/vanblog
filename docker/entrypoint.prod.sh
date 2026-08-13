@@ -8,6 +8,7 @@ set -e
 
 PB_HTTP="127.0.0.1:8090"
 PB_DATA="${VANBLOG_DATA_DIR:-/pb_data}"
+ARTALK_PID=""
 
 # --- VANBLOG_HTTP_ONLY: pick the TLS-less bootstrap config when set ---
 # Operators terminate TLS at an external reverse proxy and forward plain
@@ -60,8 +61,8 @@ wait_for() {
 cleanup() {
   echo "[vanblog] shutting down..."
   kill "$MONITOR_PID" 2>/dev/null || true
-  kill $PB_PID ${THEME_HOST_PID:-} $CADDY_PID 2>/dev/null || true
-  wait $PB_PID ${THEME_HOST_PID:-} $CADDY_PID 2>/dev/null || true
+  kill $PB_PID ${THEME_HOST_PID:-} $CADDY_PID ${ARTALK_PID:-} 2>/dev/null || true
+  wait $PB_PID ${THEME_HOST_PID:-} $CADDY_PID ${ARTALK_PID:-} 2>/dev/null || true
 }
 trap cleanup EXIT INT TERM
 
@@ -86,6 +87,15 @@ vanblog serve "$@" &
 PB_PID=$!
 wait_for "http://127.0.0.1:8090/api/health" "PocketBase" 30 || exit 1
 
+# 3.5. Start Artalk comment sidecar (optional; enabled via VANBLOG_ARTALK_ENABLED=1)
+if [ "${VANBLOG_ARTALK_ENABLED}" = "1" ] || [ "${VANBLOG_ARTALK_ENABLED}" = "true" ]; then
+  echo "[vanblog] starting Artalk comment sidecar (port 23366)..."
+  mkdir -p /data/artalk
+  (cd /data/artalk && exec env ATK_HOST=127.0.0.1 ATK_PORT=23366 artalk server) &
+  ARTALK_PID=$!
+  wait_for "http://127.0.0.1:23366/" "Artalk" 30 || exit 1
+fi
+
 # 4. Start Theme Host (replaces direct Astro SSR)
 DEFAULT_THEME=$(cat /etc/vanblog/default-theme 2>/dev/null || echo "vanblog")
 echo "[vanblog] starting theme host (default theme: ${DEFAULT_THEME})"
@@ -103,6 +113,7 @@ monitor_children() {
     if ! kill -0 $CADDY_PID 2>/dev/null; then echo "[vanblog] FATAL: Caddy died"; exit 1; fi
     if ! kill -0 $PB_PID 2>/dev/null; then echo "[vanblog] FATAL: PocketBase died"; exit 1; fi
     if ! kill -0 $THEME_HOST_PID 2>/dev/null; then echo "[vanblog] FATAL: Theme Host died"; exit 1; fi
+    if [ -n "$ARTALK_PID" ] && ! kill -0 $ARTALK_PID 2>/dev/null; then echo "[vanblog] FATAL: Artalk died"; exit 1; fi
     sleep 5
   done
 }

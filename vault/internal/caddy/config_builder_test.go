@@ -284,6 +284,49 @@ func TestBuildFullConfig(t *testing.T) {
 	}
 }
 
+func TestBuildFullConfig_ArtalkUpstream(t *testing.T) {
+	// With ArtalkUpstream set, an /comments/* → upstream system route is emitted.
+	cfg, err := BuildFullConfig(BuildOpts{Email: "x@y.z", ArtalkUpstream: "127.0.0.1:23366"}, nil)
+	if err != nil {
+		t.Fatalf("BuildFullConfig: %v", err)
+	}
+	srvHTTPS := cfg.Apps.HTTP.Servers["srv_https"].Routes
+
+	found := false
+	for _, r := range srvHTTPS {
+		if r.ID != systemArtalkRouteID {
+			continue
+		}
+		found = true
+		if len(r.Handle) != 2 {
+			t.Errorf("artalk route should have 2 handlers (rewrite + reverse_proxy), got %d", len(r.Handle))
+		}
+		if r.Handle[0].Handler != "rewrite" || r.Handle[0].StripPathPrefix != "/comments" {
+			t.Errorf("artalk first handler should be rewrite strip /comments, got %+v", r.Handle[0])
+		}
+		if r.Handle[1].Handler != "reverse_proxy" || len(r.Handle[1].Upstreams) != 1 || r.Handle[1].Upstreams[0].Dial != "127.0.0.1:23366" {
+			t.Errorf("artalk second handler mismatch: %+v", r.Handle[1])
+		}
+		if matchPaths(r)[0] != "/comments/*" {
+			t.Errorf("artalk path mismatch: %v", matchPaths(r))
+		}
+	}
+	if !found {
+		t.Fatal("expected artalk system route when ArtalkUpstream is set")
+	}
+
+	// Without ArtalkUpstream, no artalk route is emitted.
+	cfg2, err := BuildFullConfig(BuildOpts{Email: "x@y.z"}, nil)
+	if err != nil {
+		t.Fatalf("BuildFullConfig: %v", err)
+	}
+	for _, r := range cfg2.Apps.HTTP.Servers["srv_https"].Routes {
+		if r.ID == systemArtalkRouteID {
+			t.Fatal("artalk route should not be emitted when ArtalkUpstream is empty")
+		}
+	}
+}
+
 // TestBuildFullConfigSSRFSafety asserts that every dial in the generated
 // config is inside DefaultAllowlist. This catches accidental injection of an
 // external dial into a system route (e.g. via a future refactor that lets
