@@ -52,7 +52,7 @@ func TestStageMigrationsNoCollisionAcrossPacks(t *testing.T) {
 
 func TestStageMigrationsRejectsDuplicateIdWithinPack(t *testing.T) {
 	p := migrationPack("dup", fstest.MapFS{
-		"pack.json":           {Data: []byte(`{"name":"dup","version":"1.0.0"}`)},
+		"pack.json":            {Data: []byte(`{"name":"dup","version":"1.0.0"}`)},
 		"migrations/0001_a.js": {Data: []byte("a")},
 		"migrations/0001_b.js": {Data: []byte("b")},
 	})
@@ -94,6 +94,22 @@ func TestStageMigrationsMissingCoreDirIsSkipped(t *testing.T) {
 	}
 }
 
+func TestStageMigrationsFallsBackWhenMigrationsDirEmpty(t *testing.T) {
+	p := migrationPack("fallback", fstest.MapFS{
+		"pack.json":              {Data: []byte(`{"name":"fallback","version":"1.0.0"}`)},
+		"migrations":             {Mode: fs.ModeDir},
+		"migration/0001_init.js": {Data: []byte("migrate((app)=>{})")},
+	})
+	destination := filepath.Join(t.TempDir(), "migrations")
+	if err := StageMigrations("", []Pack{p}, destination); err != nil {
+		t.Fatal(err)
+	}
+	got := diskTree(t, destination)
+	if got["pack--fallback--0001_init.js"] != "migrate((app)=>{})" {
+		t.Fatalf("fallback migration not staged: %v", got)
+	}
+}
+
 func TestStageMigrationsRejectsInvalidResources(t *testing.T) {
 	tests := map[string]fstest.MapFS{
 		"nested":  {"pack.json": {Data: []byte(`{"name":"nested","version":"1.0.0"}`)}, "migrations/sub/0001.js": {Data: []byte("x")}},
@@ -115,7 +131,7 @@ func TestStageMigrationsFailurePreservesOldState(t *testing.T) {
 	writeFile(t, filepath.Join(destination, "good.js"), "good")
 
 	bad := migrationPack("broken", fstest.MapFS{
-		"pack.json":           {Data: []byte(`{"name":"broken","version":"1.0.0"}`)},
+		"pack.json":            {Data: []byte(`{"name":"broken","version":"1.0.0"}`)},
 		"migrations/0001_a.js": {Data: []byte("a")},
 		"migrations/0001_b.js": {Data: []byte("b")},
 	})

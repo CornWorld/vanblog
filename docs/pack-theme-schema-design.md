@@ -118,22 +118,19 @@ packs/<name>/
     └── 0001_init.js
 ```
 
-`migrations/` 或 `migration/` 均可（与 `plan.go` 的 `migrationFiles()` 一致）。文件内格式为 PB 官方 JS 迁移（见 `vault/pb_migrations/1782707550_updated_users.js` 的写法）：
+`migrations/` 或 `migration/` 均可（与 `plan.go` 的 `migrationFiles()` 一致）。文件内格式为 PB 官方 JS 迁移（`migrate(up, down)`，见 `plugins/jsvm` 的 `registerMigrations` 绑定）：
 
 ```js
-/// <reference path="../pb_data/types.d.ts" />
 migrate(
   (app) => {
     // 幂等守卫：findCollectionByNameOrId 在「找不到」时抛异常（sql: no rows），
     // 不会返回 null，所以必须 try/catch。findCollectionsByFilter 未暴露给迁移 VM。
-    let exists = false;
     try {
       app.findCollectionByNameOrId("moments");
-      exists = true;
-    } catch (e) {
-      exists = false;
+      return; // 已存在（幂等）
+    } catch (_e) {
+      // 未找到，继续创建
     }
-    if (exists) return;
 
     const collection = new Collection({
       /* type/name/fields/rules */
@@ -141,18 +138,16 @@ migrate(
     return app.save(collection);
   },
   (app) => {
-    let collection = null;
     try {
-      collection = app.findCollectionByNameOrId("moments");
-    } catch (e) {
-      collection = null;
+      return app.delete(app.findCollectionByNameOrId("moments"));
+    } catch (_e) {
+      return; // 已删除
     }
-    if (collection) return app.delete(collection);
   }
 );
 ```
 
-> ⚠️ 实测（`vault/pb_migrations/packmigration_spike_test.go`）：`findCollectionByNameOrId` 找不到时抛 `sql: no rows in result set`，不是返回 null；`findCollectionsByFilter` 未暴露给 JS 迁移 VM。所以建表前判断「是否已存在」必须用 `try/catch`。
+> ⚠️ 实测（`vault/internal/pack/js_migration_test.go`）：`findCollectionByNameOrId` 找不到时抛 `sql: no rows in result set`，不是返回 null；`findCollectionsByFilter` 未暴露给 JS 迁移 VM。所以建表前判断「是否已存在」必须用 `try/catch`。
 
 ### 5.2 迁移文件名必须带数字 ID
 
@@ -222,7 +217,7 @@ apis.Serve()
 - `schema.ts`（Zod 校验）**保持不变**，仍是可选的 record 校验层。
 - `StageHooks` / `validation.RegisterWithSources` **保持不变**。
 - 新增 `StageMigrations` 与 `StageHooks` 平行，都在 `jsvm.MustRegister` 之前完成（`jsvm` 在注册时立即读 `MigrationsDir` 加载 JS 迁移）。
-- 校验（Zod）与 DDL（PB collection）之间仍可能漂移；短期靠文档约定，长期可考虑用 `/api/vanblog/schema`（`vault/internal/schema/schema.go`）反推类型生成 Zod，**但这是远期优化，不在本次范围**。
+- 校验（Zod）与 DDL（PB collection）是**两个正交关注点**：DDL 管「建表」，Zod 管「记录契约」（类型 + 客户端校验）。两者漂移是**低严重度的类型漂移**——不影响数据完整性，PB 字段校验兜底；**维持分离设计，不追求 codegen 消除漂移**。
 
 ---
 

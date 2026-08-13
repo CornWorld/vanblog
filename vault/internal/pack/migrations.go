@@ -175,6 +175,9 @@ func packMigrationFiles(p Pack) (string, []string, error) {
 			files = append(files, entry.Name())
 		}
 
+		if len(files) == 0 {
+			continue // empty dir; try the next one (e.g. migration/)
+		}
 		sort.Strings(files)
 		return dir, files, nil
 	}
