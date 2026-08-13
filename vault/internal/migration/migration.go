@@ -415,7 +415,10 @@ func (imp *Importer) createArchive(txApp core.App, backup *LegacyBackup) error {
 		Visit:   backup.Visit,
 		Setting: backup.Setting,
 	}
-	archiveJSON, _ := json.MarshalIndent(incompatible, "", "  ")
+	archiveJSON, err := json.MarshalIndent(incompatible, "", "  ")
+	if err != nil {
+		archiveJSON = []byte("{}")
+	}
 
 	// Build migration guide content
 	guide := fmt.Sprintf(`# 迁移档案
