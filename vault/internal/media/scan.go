@@ -6,9 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"regexp"
-	"strings"
 
+	"github.com/cornworld/vanblog/internal/mediaurl"
 	"github.com/pocketbase/pocketbase/core"
 )
 
@@ -30,7 +29,7 @@ func (m *Manager) ScanArticleImages(postID string) error {
 	}
 
 	// Extract all <img src="..."> URLs
-	urls := extractImgSrcs(content)
+	urls := mediaurl.ExtractImgSrcs(content)
 	if len(urls) == 0 {
 		return nil
 	}
@@ -42,7 +41,7 @@ func (m *Manager) ScanArticleImages(postID string) error {
 
 	for _, url := range urls {
 		// Skip pb-hosted images (they're already tracked)
-		if isInternalURL(url) {
+		if mediaurl.IsInternalURL(url) {
 			continue
 		}
 
@@ -78,37 +77,6 @@ func (m *Manager) ScanArticleImages(postID string) error {
 	return nil
 }
 
-// imgSrcPattern matches <img src="..."> and <img src='...'> tags.
-var imgSrcPattern = regexp.MustCompile(`<img[^>]+src=["']([^"']+)["']`)
-
-// extractImgSrcs returns all unique image URLs from HTML content.
-func extractImgSrcs(html string) []string {
-	matches := imgSrcPattern.FindAllStringSubmatch(html, -1)
-	seen := make(map[string]bool)
-	var urls []string
-	for _, m := range matches {
-		if len(m) >= 2 && !seen[m[1]] {
-			seen[m[1]] = true
-			urls = append(urls, m[1])
-		}
-	}
-	return urls
-}
-
-// internalURLPattern matches pb-served file URLs (api/files or static).
-var internalURLPattern = regexp.MustCompile(`^https?://[^/]+/(api/files|static)/`)
-
-// isInternalURL checks if a URL points to the vanblog instance itself
-// (relative path or localhost).
-func isInternalURL(url string) bool {
-	// Relative URLs (starts with / or ./ )
-	if strings.HasPrefix(url, "/") || strings.HasPrefix(url, "./") {
-		return true
-	}
-	// pb-served files
-	return internalURLPattern.MatchString(url)
-}
-
 // ReadFileContent reads the file content from a media record's FileField.
 // Used by the dedup hook to compute MD5 after upload.
 func (m *Manager) ReadFileContent(record *core.Record) ([]byte, error) {
@@ -133,3 +101,4 @@ func (m *Manager) ReadFileContent(record *core.Record) ([]byte, error) {
 
 	return io.ReadAll(r)
 }
+
