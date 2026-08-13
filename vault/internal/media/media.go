@@ -35,6 +35,7 @@ func New(app core.App) *Manager {
 			slog.Warn("[media] startup S3 sync failed", "err", err)
 		}
 		se.Router.DELETE("/api/vanblog/media/{id}", m.handleDelete)
+		se.Router.POST("/api/vanblog/posts/{id}/ingest-images", m.handleIngestImages)
 		return se.Next()
 	})
 	app.OnRecordAfterCreateSuccess("media").BindFunc(m.dedupeOnUpload)

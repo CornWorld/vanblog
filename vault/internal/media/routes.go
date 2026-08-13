@@ -48,3 +48,31 @@ func (m *Manager) handleDelete(e *core.RequestEvent) error {
 	}
 	return e.JSON(http.StatusOK, map[string]bool{"ok": true})
 }
+
+// handleIngestImages downloads all external image URLs in a post's content,
+// stores them locally as media records, and rewrites the content to reference
+// the new local URLs. Implements #434.
+//
+// POST /api/vanblog/posts/{id}/ingest-images
+// Response: { "ingested": N, "failed": M }
+func (m *Manager) handleIngestImages(e *core.RequestEvent) error {
+	if !canManageMedia(e.Auth) {
+		return e.ForbiddenError("admin or article:delete required", "")
+	}
+	id := e.Request.PathValue("id")
+	if id == "" {
+		return e.BadRequestError("missing path parameter {id}", "")
+	}
+	ingested, failed, err := m.IngestExternalImages(id)
+	if err != nil {
+		return e.JSON(http.StatusInternalServerError, map[string]any{
+			"error":     err.Error(),
+			"ingested":  ingested,
+			"failed":    failed,
+		})
+	}
+	return e.JSON(http.StatusOK, map[string]int{
+		"ingested": ingested,
+		"failed":   failed,
+	})
+}
