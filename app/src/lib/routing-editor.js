@@ -55,6 +55,7 @@ export function initRoutingEditor({ TYPE_OPTIONS }) {
       to: tr.querySelector(".f-to").value.trim(),
       code: Number(tr.querySelector(".f-code").value) || undefined,
       headers,
+      stripPathPrefix: tr.querySelector(".f-strip").value.trim() || undefined,
     };
   }
 
@@ -181,6 +182,7 @@ export function initRoutingEditor({ TYPE_OPTIONS }) {
       <td><input class="f-to w-full px-1 py-0.5 font-mono text-xs" placeholder="按类型变化"/></td>
       <td><input class="f-code w-full px-1 py-0.5" type="number" placeholder="301"/></td>
       <td><textarea class="f-headers w-full px-1 py-0.5 font-mono text-xs resize-y min-h-[28px]" rows="1" placeholder='{"X-Key":"v"}'></textarea></td>
+      <td><input class="f-strip w-full px-1 py-0.5 font-mono text-xs" placeholder="/prefix"/></td>
       <td class="flex gap-2"><button type="button" class="btn-test text-xs">试一下</button><button type="button" class="btn-del text-red-600 text-xs">删除</button></td>`;
     bindRow(tr);
     tbody.appendChild(tr);

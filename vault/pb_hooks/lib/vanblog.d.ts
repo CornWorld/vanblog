@@ -80,6 +80,7 @@ interface VanblogRouteRule {
   to: string;
   code?: number;
   headers?: Record<string, string>;
+  stripPathPrefix?: string;
 }
 
 interface VanblogNavItem {

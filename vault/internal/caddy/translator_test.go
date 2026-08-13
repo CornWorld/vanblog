@@ -31,6 +31,37 @@ func TestTranslate_Proxy(t *testing.T) {
 	}
 }
 
+func TestTranslate_Proxy_StripPathPrefix(t *testing.T) {
+	rule := UserRule{
+		ID:              "strip-proxy",
+		Type:            "proxy",
+		From:            "/comments/*",
+		To:              "http://127.0.0.1:23366",
+		StripPathPrefix: "/comments",
+	}
+
+	route, err := Translate(rule)
+	if err != nil {
+		t.Fatalf("Translate failed: %v", err)
+	}
+
+	if len(route.Handle) != 2 {
+		t.Fatalf("expected 2 handlers (rewrite + reverse_proxy), got %d", len(route.Handle))
+	}
+	if route.Handle[0].Handler != "rewrite" {
+		t.Errorf("expected first handler rewrite, got %s", route.Handle[0].Handler)
+	}
+	if route.Handle[0].StripPathPrefix != "/comments" {
+		t.Errorf("expected strip_path_prefix /comments, got %s", route.Handle[0].StripPathPrefix)
+	}
+	if route.Handle[1].Handler != "reverse_proxy" {
+		t.Errorf("expected second handler reverse_proxy, got %s", route.Handle[1].Handler)
+	}
+	if len(route.Handle[1].Upstreams) != 1 || route.Handle[1].Upstreams[0].Dial != "127.0.0.1:23366" {
+		t.Errorf("upstream mismatch: %+v", route.Handle[1].Upstreams)
+	}
+}
+
 func TestTranslate_Redirect(t *testing.T) {
 	rule := UserRule{
 		ID:   "old-blog",

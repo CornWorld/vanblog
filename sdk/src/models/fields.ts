@@ -151,6 +151,7 @@ export const RouteRuleSchema = z
     to: z.string(),
     code: z.number().optional(),
     headers: z.record(z.string(), z.string()).optional(),
+    stripPathPrefix: z.string().optional(),
   })
   .strict();
 export type RouteRule = z.infer<typeof RouteRuleSchema>;

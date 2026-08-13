@@ -33,6 +33,11 @@ type UserRule struct {
 
 	// Headers are custom HTTP headers to set on the proxy request.
 	Headers map[string]string `json:"headers,omitempty"`
+
+	// StripPathPrefix strips this prefix from the request path before the
+	// proxy forwards to the upstream (only meaningful for type=proxy). Maps to
+	// Caddy's rewrite handler strip_path_prefix, composed before reverse_proxy.
+	StripPathPrefix string `json:"stripPathPrefix,omitempty"`
 }
 
 // ReservedPaths are vanblog's own routes that user rules cannot override.
@@ -108,6 +113,19 @@ func translateProxy(rule UserRule) (caddyadmin.Route, error) {
 		}
 	}
 
+	handle := make([]caddyadmin.Handler, 0, 2)
+
+	// Optional strip path prefix: emit a rewrite handler before the proxy so
+	// the upstream sees the path with the prefix removed. reverse_proxy has no
+	// strip field in Caddy's JSON schema — this is the canonical
+	// rewrite(strip_path_prefix) + reverse_proxy composition.
+	if rule.StripPathPrefix != "" {
+		handle = append(handle, caddyadmin.Handler{
+			Handler:         "rewrite",
+			StripPathPrefix: rule.StripPathPrefix,
+		})
+	}
+
 	handler := caddyadmin.Handler{
 		Handler:   "reverse_proxy",
 		Upstreams: []caddyadmin.Upstream{{Dial: dial}},
@@ -122,10 +140,12 @@ func translateProxy(rule UserRule) (caddyadmin.Route, error) {
 		handler.Headers = &caddyadmin.HeaderPolicy{Request: reqHeaders}
 	}
 
+	handle = append(handle, handler)
+
 	return caddyadmin.Route{
 		ID:     rule.ID,
 		Match:  []caddyadmin.MatchRule{{Path: []string{rule.From}}},
-		Handle: []caddyadmin.Handler{handler},
+		Handle: handle,
 	}, nil
 }
 

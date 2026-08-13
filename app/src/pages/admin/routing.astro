@@ -138,6 +138,7 @@ const TYPE_OPTIONS = ['proxy', 'redirect', 'rewrite', 'block', 'cache'];
           <th class="w-56">To (目标)</th>
           <th class="w-20">Code</th>
           <th>Headers</th>
+          <th>Strip Path</th>
           <th class="w-24">操作</th>
         </tr>
       </thead>
@@ -156,6 +157,7 @@ const TYPE_OPTIONS = ['proxy', 'redirect', 'rewrite', 'block', 'cache'];
             <td>
               <textarea class="f-headers w-full px-1 py-0.5 font-mono text-xs resize-y min-h-[28px]" rows="1" placeholder='{"X-Key":"v"}' title='JSON 对象，键为 header 名，值为字符串或字符串数组。空着表示无自定义 header。'>{r.headers ? JSON.stringify(r.headers) : ''}</textarea>
             </td>
+            <td><input class="f-strip w-full px-1 py-0.5 font-mono text-xs" value={r.stripPathPrefix || ''} placeholder="/prefix" title="仅 proxy 类型生效：转发到上游前先剥离该路径前缀（Caddy rewrite strip_path_prefix）。留空则不剥离。" /></td>
             <td class="flex gap-2">
               <button type="button" class="btn-test text-xs">试一下</button>
               <button type="button" class="btn-del text-red-600 text-xs">删除</button>
