@@ -171,7 +171,7 @@ migrate(
 
 ### 6.2 备份先行
 
-执行任何 Pack 迁移前，调用 `app.CreateBackup(...)`。备份范围沿用 `plan.go` 已定义的 `BackupScopePocketBase`（`data.db, auxiliary.db, storage, pb_hooks, pb_migrations, pb_data.json`），S3 视为外部资源不纳入本地备份。
+执行任何 Pack 迁移前，调用 `app.CreateBackup(...)`。⚠️ `CreateBackup` **不接受自定义 scope**——它备份**整个 `pb_data` 目录**（只排除内部子目录 `backups`/`temp`/`notify`/`autocert`/`lostFound`）。`plan.go` 的 `BackupScopePocketBase` 只是诊断面里对「备份覆盖哪些关键数据」的**描述**，不是可配置过滤器。S3 视为外部资源不纳入本地备份。
 
 ### 6.3 执行机制（已按 PB 0.39.5 源码核实）
 
@@ -195,7 +195,7 @@ apis.Serve()
 
 「已应用」状态由 PB 的 `_migrations` 表（`file VARCHAR(255) PRIMARY KEY`）天然记录，幂等免费。
 
-唯一需要自研的是**备份先行**（PB runner 不自动备份）——执行 Pack 迁移前调 `app.CreateBackup(...)`，范围沿用 `BackupScopePocketBase`。若要支持「手动 `pack up` / 卸载 `down`」，再额外暴露命令行触发，但执行本身仍复用 `RunAllMigrations()`。
+唯一需要自研的是**备份先行**（PB runner 不自动备份）——执行 Pack 迁移前调 `app.CreateBackup(...)`，它备份**整个 `pb_data` 目录**（PB 不支持按清单挑备份）。「手动 `pack up` / 卸载 `down`」**不实现**（见 §11 P4），个人博客场景自动迁移够用；执行本身复用 `RunAllMigrations()`。
 
 ---
 
@@ -242,13 +242,13 @@ apis.Serve()
 
 ## 11. 分阶段实施计划
 
-| 阶段                      | 内容                                                                                      | 验收                                           |
-| ------------------------- | ----------------------------------------------------------------------------------------- | ---------------------------------------------- |
-| **P1（本设计确认后）** ✅ | `pack.StageMigrations` + 全局 ID 唯一性校验 + 单测（staging/冲突/幂等）                   | `go test ./internal/pack/...` 通过             |
-| **P2** ⏭️（无需自研）     | 迁移执行器：源码核实为 `jsvm` 加载 + `apis.Serve→RunAllMigrations()`，不重拾 `deploy.go`  | 新库启动后 4 个 Pack collection 由 JS 迁移建出 |
-| **P3** ✅                 | 把现有 4 个 Go migration 迁成 Pack `migrations/*.js`，处理老库兼容（已删除 4 个 Go 迁移） | 干净库（e2e）+ 老库（升级）两条测试通过        |
-| **P4** 🟡                 | 迁移前备份 ✅（`BackupBeforePendingMigrations`）；CLI `pack up <name>` 手动触发 ❌ 未做   | `vanblog pack up` 可手动触发迁移               |
-| **P5（远期）**            | Theme 泛化；`/api/vanblog/schema` 反推 Zod 类型                                           | —                                              |
+| 阶段                      | 内容                                                                                                                                      | 验收                                           |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
+| **P1（本设计确认后）** ✅ | `pack.StageMigrations` + 全局 ID 唯一性校验 + 单测（staging/冲突/幂等）                                                                   | `go test ./internal/pack/...` 通过             |
+| **P2** ⏭️（无需自研）     | 迁移执行器：源码核实为 `jsvm` 加载 + `apis.Serve→RunAllMigrations()`，不重拾 `deploy.go`                                                  | 新库启动后 4 个 Pack collection 由 JS 迁移建出 |
+| **P3** ✅                 | 把现有 4 个 Go migration 迁成 Pack `migrations/*.js`，处理老库兼容（已删除 4 个 Go 迁移）                                                 | 干净库（e2e）+ 老库（升级）两条测试通过        |
+| **P4** ✅                 | 迁移前备份 ✅（`BackupBeforePendingMigrations`）；CLI `pack up <name>` 手动触发 ❌ **不实现**（个人博客场景自动迁移够用，避免运维复杂度） | 自动迁移已由启动时 `RunAllMigrations()` 覆盖   |
+| **P5（远期）**            | Theme 泛化；`/api/vanblog/schema` 反推 Zod 类型                                                                                           | —                                              |
 
 ---
 

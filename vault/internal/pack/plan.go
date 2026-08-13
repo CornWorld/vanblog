@@ -10,7 +10,15 @@ import (
 
 const (
 	BackupStrategyPocketBase = "pocketbase-create-backup-before-migration"
-	BackupScopePocketBase    = "data.db, auxiliary.db, storage, pb_hooks, pb_migrations, pb_data.json"
+
+	// BackupScopePocketBase documents what a pre-migration backup covers.
+	// NOTE: PocketBase's CreateBackup does NOT accept a custom scope — it
+	// snapshots the entire pb_data directory, excluding only the internal
+	// backups/temp/notify/autocert/lostFound subdirectories. This constant is
+	// a diagnostic description for Plan.BackupScope, not a configurable
+	// filter. The real executor (BackupBeforePendingMigrations) calls
+	// app.CreateBackup, which always captures the whole pb_data dir.
+	BackupScopePocketBase = "entire pb_data dir (CreateBackup; excludes backups/temp/notify/autocert/lostFound)"
 )
 
 var migrationIDPattern = regexp.MustCompile(`(^|/)([0-9]{3,})[^/]*$`)
