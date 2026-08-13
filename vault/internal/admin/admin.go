@@ -41,6 +41,9 @@ func New(app core.App) *Manager {
 		se.Router.GET("/api/vanblog/backups/{key}/download", m.handleDownloadBackup)
 		se.Router.DELETE("/api/vanblog/backups/{key}", m.handleDeleteBackup)
 		se.Router.POST("/api/vanblog/backups/{key}/restore", m.handleRestoreBackup)
+
+		se.Router.GET("/api/vanblog/export/post/{id}", m.handleExportPost)
+		se.Router.GET("/api/vanblog/export/all", m.handleExportAll)
 		return se.Next()
 	})
 	return m
