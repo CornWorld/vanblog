@@ -44,10 +44,8 @@ export interface TLSStatus {
 }
 
 export interface MigrationResult {
+  /** Number of posts imported. */
   posts: number;
-  categories: number;
-  tags: number;
-  media: number;
-  archive: boolean;
+  /** Per-post import errors (non-fatal, import continues). */
   errors: string[];
 }
