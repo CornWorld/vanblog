@@ -401,6 +401,22 @@ func (imp *Importer) createArchive(txApp core.App, backup *LegacyBackup) error {
 		return err
 	}
 
+	// Marshal incompatible data that should be preserved for manual recovery.
+	incompatible := struct {
+		Meta    json.RawMessage `json:"meta,omitempty"`
+		User    json.RawMessage `json:"user,omitempty"`
+		Viewer  json.RawMessage `json:"viewer,omitempty"`
+		Visit   json.RawMessage `json:"visit,omitempty"`
+		Setting json.RawMessage `json:"setting,omitempty"`
+	}{
+		Meta:    backup.Meta,
+		User:    backup.User,
+		Viewer:  backup.Viewer,
+		Visit:   backup.Visit,
+		Setting: backup.Setting,
+	}
+	archiveJSON, _ := json.MarshalIndent(incompatible, "", "  ")
+
 	// Build migration guide content
 	guide := fmt.Sprintf(`# 迁移档案
 
@@ -415,6 +431,10 @@ func (imp *Importer) createArchive(txApp core.App, backup *LegacyBackup) error {
 - Static/Media: %d
 
 ## 不兼容数据(归档在 JSON 中)
+
+以下为原 Vanblog 中无法直接映射到新架构的数据（meta/user/viewer/visit/setting），已归档供手动恢复：
+
+%s
 
 - Pipeline 脚本: 已裁剪(新架构无对应概念)
 - picgo 配置: 已裁剪(改用 pb S3 provider)
@@ -432,7 +452,7 @@ func (imp *Importer) createArchive(txApp core.App, backup *LegacyBackup) error {
 
 完成迁移后可删除此文章。
 `, len(backup.Articles), len(backup.Drafts), len(backup.Categories),
-		len(backup.Tags), len(backup.Static))
+		len(backup.Tags), len(backup.Static), string(archiveJSON))
 
 	record := core.NewRecord(col)
 	record.Set("title", "[迁移档案] 原始数据归档")

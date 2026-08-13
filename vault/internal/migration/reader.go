@@ -2,6 +2,7 @@ package migration
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -71,6 +72,41 @@ func ReadFromMongo(ctx context.Context, uri, dbName string) (*LegacyBackup, erro
 		return nil, fmt.Errorf("read statics: %w", err)
 	}
 	backup.Static = statics
+
+	// Read meta (single doc)
+	meta, err := readSingleDocJSON(ctx, db, "metas")
+	if err != nil {
+		return nil, fmt.Errorf("read meta: %w", err)
+	}
+	backup.Meta = meta
+
+	// Read user (single doc)
+	user, err := readSingleDocJSON(ctx, db, "users")
+	if err != nil {
+		return nil, fmt.Errorf("read user: %w", err)
+	}
+	backup.User = user
+
+	// Read viewers (array)
+	viewer, err := readAllDocsJSON(ctx, db, "viewers")
+	if err != nil {
+		return nil, fmt.Errorf("read viewers: %w", err)
+	}
+	backup.Viewer = viewer
+
+	// Read visits (array)
+	visit, err := readAllDocsJSON(ctx, db, "visits")
+	if err != nil {
+		return nil, fmt.Errorf("read visits: %w", err)
+	}
+	backup.Visit = visit
+
+	// Read static setting (type=static, wrapped as {static: value})
+	setting, err := readStaticSetting(ctx, db)
+	if err != nil {
+		return nil, fmt.Errorf("read setting: %w", err)
+	}
+	backup.Setting = setting
 
 	return backup, nil
 }
@@ -306,4 +342,66 @@ func getDate(doc bson.M, key string) string {
 	default:
 		return ""
 	}
+}
+
+// readSingleDocJSON reads a single document from a collection as relaxed
+// extended JSON. Returns nil when the collection/document does not exist, so
+// a missing optional collection never fails the whole migration.
+func readSingleDocJSON(ctx context.Context, db *mongo.Database, coll string) (json.RawMessage, error) {
+	var doc bson.M
+	err := db.Collection(coll).FindOne(ctx, bson.M{}).Decode(&doc)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return marshalBSON(doc)
+}
+
+// readAllDocsJSON reads all documents from a collection as a JSON array.
+// Returns nil when the collection is empty.
+func readAllDocsJSON(ctx context.Context, db *mongo.Database, coll string) (json.RawMessage, error) {
+	cursor, err := db.Collection(coll).Find(ctx, bson.M{})
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var docs []bson.M
+	if err := cursor.All(ctx, &docs); err != nil {
+		return nil, err
+	}
+	if len(docs) == 0 {
+		return nil, nil
+	}
+	return marshalBSON(docs)
+}
+
+// readStaticSetting reads the static setting document (type=static) and wraps
+// its value as {"static": value}, matching the upstream export shape.
+func readStaticSetting(ctx context.Context, db *mongo.Database) (json.RawMessage, error) {
+	var doc bson.M
+	err := db.Collection("settings").FindOne(ctx, bson.M{"type": "static"}).Decode(&doc)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return nil, nil
+		}
+		return nil, err
+	}
+	value, ok := doc["value"]
+	if !ok || value == nil {
+		return nil, nil
+	}
+	return marshalBSON(bson.M{"static": value})
+}
+
+// marshalBSON converts a BSON value to relaxed extended JSON bytes, which is
+// stable and human-readable enough for the migration archive.
+func marshalBSON(v any) (json.RawMessage, error) {
+	data, err := bson.MarshalExtJSON(v, false, false)
+	if err != nil {
+		return nil, err
+	}
+	return json.RawMessage(data), nil
 }
