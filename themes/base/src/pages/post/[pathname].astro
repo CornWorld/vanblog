@@ -1,0 +1,31 @@
+---
+export const prerender = false;
+
+import BaseLayout from '@vanblog/base/layouts/BaseLayout.astro';
+import type { Post } from '@vanblog/sdk';
+
+const pb = Astro.locals.pb;
+const { pathname } = Astro.params;
+if (!pathname) return Astro.redirect('/404');
+
+// Look up the post by its custom pathname field.
+try {
+  const post = await pb.collection('posts').getFirstListItem<Post>(
+    `pathname="${pathname}" && deleted=false`,
+    { fields: 'id,status,private' }
+  );
+
+  // Only redirect for published, non-private posts — hidden/private posts
+  // should not be guessable via permalink.
+  if (post.status === 'published' && !post.private) {
+    return Astro.redirect(`/posts/${post.id}`, 301);
+  }
+} catch {
+  // Not found or not published — fall through to 404.
+}
+
+Astro.response.status = 404;
+---
+<BaseLayout title="文章不存在">
+  <p>文章不存在或未发布。</p>
+</BaseLayout>
