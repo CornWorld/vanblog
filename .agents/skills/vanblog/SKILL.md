@@ -1,6 +1,7 @@
 # VanBlog Dev Skill
 
 Use this skill when the user asks about:
+
 - Developing or customizing VanBlog themes
 - Upgrading or downgrading VanBlog versions
 - Migrating data from mereithhh/vanglog or other forks
@@ -10,10 +11,11 @@ Use this skill when the user asks about:
 ## Knowledge Layer
 
 **This file is orchestration only.** For domain knowledge, always read `docs/` live:
+
 - `docs/theme-concepts.md` — Theme system architecture, L0/L1/L2 contracts, overrides
 - `docs/theme-implementer-guide.md` — How to build a theme, contract levels
 - `docs/theme-host-design.md` — Theme host internals, loading mechanism
-- `docs/deployment-guide.md` — Deploying VanBlog
+- `docs/reference/deployment.md` — Deploying VanBlog (facts)
 - `docs/sdk-design.md` — VanBlog SDK architecture
 - `docs/architecture-layering.md` — Overall project layering
 
@@ -22,6 +24,7 @@ For environment, source `. /etc/vanblog/agent.env` for `PB_URL`, `ASTRO_URL`, `V
 ## Environment Setup
 
 Source the agent env file before any operation:
+
 ```bash
 . /etc/vanblog/agent.env
 ```

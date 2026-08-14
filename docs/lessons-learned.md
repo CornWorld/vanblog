@@ -94,7 +94,7 @@ migratecmd.MustRegister(app, app.RootCmd, migratecmd.Config{...})
 - `CGO_ENABLED=0 go build -ldflags="-s -w"` (静态链接 + 去符号表)
 - Alpine base (~7MB)
 - Caddy + nodejs + ca-certificates + tzdata
-- prod 实际包含 Node.js 并运行 Astro SSR server(见 `deployment-guide.md`),与早期"纯 SSG 无 Node"的设想不同
+  - prod 实际包含 Node.js 并运行 Astro SSR server(见 `reference/deployment.md`),与早期"纯 SSG 无 Node"的设想不同
 
 ---
 
