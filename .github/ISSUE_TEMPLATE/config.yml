@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 📖 使用文档
+    url: https://github.com/CornWorld/vanblog/blob/main/docs/README.md
+    about: 部署、配置、FAQ 请先查文档，很可能已有答案。
+  - name: 🚀 Demo 演示站
+    url: https://vanblog.corn.im
+    about: 在线体验（后台账号 demo / demo1234）。
+  - name: 🔒 安全漏洞
+    url: https://github.com/CornWorld/vanblog/security/advisories
+    about: 安全漏洞请通过私有渠道报告，不要开公开 Issue。
