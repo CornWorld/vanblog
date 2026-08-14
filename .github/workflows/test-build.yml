@@ -32,6 +32,20 @@ jobs:
           GONOSUMDB: "*"
         run: go test ./...
 
+  # ── Docs quality gate: duplicate-content check (doc-standard §6) ──
+  # 要求 S0=0、S1=0、单文件重复率 < 阈值。失败即拦截（doc-dup-check 退出码 1/2）。
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: doc-dup-check
+        run: node scripts/doc-dup-check.mjs
+
   # ── Build Docker images (tagged with commit SHA) ──
   docker:
     runs-on: ubuntu-latest
