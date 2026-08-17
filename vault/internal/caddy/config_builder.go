@@ -70,8 +70,8 @@ type BuildOpts struct {
 	// ArtalkUpstream, when non-empty, emits a system route /comments/* →
 	// <ArtalkUpstream> with the /comments prefix stripped (Artalk has no
 	// base_path option and serves at root). For the in-container sidecar it's
-	// "127.0.0.1:23366" (set by VANBLOG_ARTALK_ENABLED=1). For an external
-	// Artalk container in a compose multi-service setup, set
+	// "127.0.0.1:23366" when site.commentsProvider is artalk. For an
+	// external Artalk container in a compose multi-service setup, set
 	// VANBLOG_ARTALK_UPSTREAM=artalk:23366.
 	ArtalkUpstream string `json:"-"`
 }
@@ -143,8 +143,8 @@ const (
 	// Internal endpoints (trusted; bypass SSRF validation by design).
 	pbAPIHost = "127.0.0.1:8090"
 
-	// Artalk sidecar endpoint — trusted internal loopback (same SSRF-bypass
-	// reasoning as pbAPIHost). Only emitted when VANBLOG_ARTALK_ENABLED=1.
+	// Artalk endpoint — trusted internal loopback (same SSRF-bypass
+	// reasoning as pbAPIHost). Emitted only when site.commentsProvider=artalk.
 	artalkAPIHost = "127.0.0.1:23366"
 	artalkPath    = "/comments"
 

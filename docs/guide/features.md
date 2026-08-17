@@ -23,7 +23,7 @@
 ## 评论（Artalk）
 
 - 默认未启用。启用后前台文章页出现评论框（同源 `/comments`）。
-- 两种部署：内置 sidecar（`VANBLOG_ARTALK_ENABLED=1`，推荐）或外部容器（`VANBLOG_ARTALK_UPSTREAM`）。见 [配置参考](../reference/configuration.md)。
+- 选择 `prod-artalk` 镜像后，在首次 `/setup` 向导中选择是否启用内置 Artalk 并完成管理员初始化；`prod` 镜像不含内置 Artalk。也可通过 `VANBLOG_ARTALK_UPSTREAM` 接入外部 Artalk。
 
 ## 站点配置
 

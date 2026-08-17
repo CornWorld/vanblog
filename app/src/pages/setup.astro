@@ -62,6 +62,17 @@ if (alreadySetup) {
       <input name="passwordConfirm" type="password" required autocomplete="new-password" minlength="8"
              class="px-1.5 py-0.5" />
     </label>
+    <fieldset class="border p-3 mt-3">
+      <legend>评论系统（可选）</legend>
+      <label class="flex items-center gap-2"><input name="commentsProvider" type="radio" value="disabled" checked /> 不启用 Artalk</label>
+      <label class="flex items-center gap-2"><input name="commentsProvider" type="radio" value="artalk" /> 启用内置 Artalk</label>
+      <div id="artalk-setup" class="hidden flex flex-col gap-2 mt-2">
+        <input name="artalk_site" type="text" value="VanBlog" placeholder="Artalk Site 名" />
+        <input name="artalk_email" type="email" autocomplete="email" placeholder="Artalk 管理员邮箱" />
+        <input name="artalk_password" type="password" autocomplete="new-password" minlength="8" placeholder="Artalk 管理员密码（至少 8 位）" />
+        <input name="artalk_password_confirm" type="password" autocomplete="new-password" minlength="8" placeholder="确认 Artalk 管理员密码" />
+      </div>
+    </fieldset>
     <input type="hidden" name="back" value={back} />
     <button type="submit" class="self-start px-3 py-1">创建管理员</button>
     <p id="setup-error" class="text-red-600 text-sm hidden"></p>
@@ -73,6 +84,19 @@ if (alreadySetup) {
     const form = document.getElementById('setup-form');
     const errEl = document.getElementById('setup-error');
     const statusEl = document.getElementById('setup-status');
+    const artalkSetup = document.getElementById('artalk-setup');
+    const providerInputs = form.querySelectorAll('[name="commentsProvider"]');
+    const setupStatus = self.vanblog?.pb?.vanblog?.setup;
+    setupStatus?.status?.().then((status) => {
+      const artalk = form.querySelector('[value="artalk"]');
+      if (!status.capabilities?.artalk && artalk) {
+        artalk.disabled = true;
+        artalk.parentElement.title = '当前镜像不包含 Artalk，请使用 prod-artalk 镜像';
+      }
+    }).catch(() => {});
+    providerInputs.forEach((input) => input.addEventListener('change', () => {
+      artalkSetup.classList.toggle('hidden', input.checked && input.value === 'artalk');
+    }));
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -95,6 +119,13 @@ if (alreadySetup) {
           email: fd.get('email'),
           password: fd.get('password'),
           passwordConfirm: fd.get('passwordConfirm'),
+          comments: {
+            provider: fd.get('commentsProvider') || 'disabled',
+            artalkSite: fd.get('artalk_site') || 'VanBlog',
+            artalkEmail: fd.get('artalk_email') || '',
+            artalkPassword: fd.get('artalk_password') || '',
+            artalkPasswordConfirm: fd.get('artalk_password_confirm') || '',
+          },
         });
         if (r.ok) {
           statusEl.textContent = '✓ 管理员创建成功，正在跳转登录…';

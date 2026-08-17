@@ -161,18 +161,6 @@ func loadBootstrapInputs(app core.App) (BuildOpts, []UserRule) {
 	opts.HTTPOnly = os.Getenv("VANBLOG_HTTP_ONLY") == "1" ||
 		os.Getenv("VANBLOG_HTTP_ONLY") == "true"
 
-	// Artalk upstream. VANBLOG_ARTALK_ENABLED=1 enables the in-container
-	// sidecar (upstream 127.0.0.1:23366). VANBLOG_ARTALK_UPSTREAM overrides it
-	// for an external Artalk container (e.g. compose multi-service) at
-	// "artalk:23366". Empty means no /comments/* system route.
-	opts.ArtalkUpstream = os.Getenv("VANBLOG_ARTALK_UPSTREAM")
-	if opts.ArtalkUpstream == "" {
-		if os.Getenv("VANBLOG_ARTALK_ENABLED") == "1" ||
-			os.Getenv("VANBLOG_ARTALK_ENABLED") == "true" {
-			opts.ArtalkUpstream = artalkAPIHost
-		}
-	}
-
 	// Where built themes and the standalone admin SSR live. The Go side must
 	// agree with the theme host so Caddy's file_server routes point at the same
 	// directories. BuildOpts.Defaults fills prod defaults when unset.
@@ -187,6 +175,12 @@ func loadBootstrapInputs(app core.App) (BuildOpts, []UserRule) {
 	}
 
 	opts.AllowedDomains = site.GetStringSlice("allowedDomains")
+	if site.GetString("commentsProvider") == "artalk" {
+		opts.ArtalkUpstream = os.Getenv("VANBLOG_ARTALK_UPSTREAM")
+		if opts.ArtalkUpstream == "" {
+			opts.ArtalkUpstream = artalkAPIHost
+		}
+	}
 
 	// site.caddyLogLevel is optional. Defaults() will fill in WARN/INFO
 	// when this is empty. We DO NOT uppercase here — Defaults() does that.

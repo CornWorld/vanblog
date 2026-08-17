@@ -20,6 +20,7 @@
    ```
 
    脚本会：
+
    - 等待容器就绪
    - 创建 demo 管理员（`demo` / `demo1234`，密码 ≥8 位）
    - 把 `site.allowedDomains` 设为 `["vanblog.corn.im"]`（**关键**：setup 后空白名单 = TLS 拒绝签发，HTTPS 会 403）
@@ -45,4 +46,4 @@ cd $VANBLOG_BASE_PATH && docker compose down -v
 - **账号**：公开 `demo`/`demo1234`。若被改，重置时一并恢复（demo-setup.sh 只在无管理员时创建，重置后即重建）。
 - **主题/内容**：可自由折腾，反正会重置。别在 demo 上配真实 S3/邮箱。
 - **证书**：Let's Encrypt 按域名签发，`allowedDomains` 改了要同步 `vanblog.corn.im`。
-- **评论**：如需展示评论，给容器加 `VANBLOG_ARTALK_ENABLED=1` 环境变量后重启（见 [配置参考](../reference/configuration.md)）。
+- **评论**：如需展示评论，使用 `prod-artalk` 镜像并在 `/setup` 向导中启用 Artalk 后重启（见 [配置参考](../reference/configuration.md)）。

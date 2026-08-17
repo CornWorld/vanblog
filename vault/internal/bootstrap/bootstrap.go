@@ -27,22 +27,33 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/pocketbase/pocketbase/core"
 	"log/slog"
 	"net/http"
+	"os"
+	"os/exec"
+	"path/filepath"
 	"strings"
-
-	"github.com/pocketbase/pocketbase/core"
 )
 
 // SetupReq is the body of POST /api/vanblog/setup/complete. Username is
 // required; email + password are required. passwordConfirm is checked
 // server-side to catch typos (no other validation makes sense for a
 // bootstrap field).
+type SetupComments struct {
+	Provider              string `json:"provider"`
+	ArtalkSite            string `json:"artalkSite"`
+	ArtalkEmail           string `json:"artalkEmail"`
+	ArtalkPassword        string `json:"artalkPassword"`
+	ArtalkPasswordConfirm string `json:"artalkPasswordConfirm"`
+}
+
 type SetupReq struct {
-	Username        string `json:"username"`
-	Email           string `json:"email"`
-	Password        string `json:"password"`
-	PasswordConfirm string `json:"passwordConfirm"`
+	Username        string        `json:"username"`
+	Email           string        `json:"email"`
+	Password        string        `json:"password"`
+	PasswordConfirm string        `json:"passwordConfirm"`
+	Comments        SetupComments `json:"comments"`
 }
 
 // HasAdmin returns true iff at least one record in users has role=admin.
@@ -90,6 +101,25 @@ func CreateFirstAdmin(app core.App, req SetupReq) error {
 	if req.Password == "" {
 		return errors.New("bootstrap: password is required")
 	}
+	if req.Comments.Provider == "" {
+		req.Comments.Provider = "disabled"
+	}
+	if req.Comments.Provider == "artalk" {
+		if _, err := exec.LookPath("artalk"); err != nil {
+			return errors.New("bootstrap: this image does not include Artalk; use the prod-artalk image")
+		}
+		if strings.TrimSpace(req.Comments.ArtalkEmail) == "" {
+			return errors.New("bootstrap: Artalk email is required")
+		}
+		if req.Comments.ArtalkPassword == "" || req.Comments.ArtalkPassword != req.Comments.ArtalkPasswordConfirm {
+			return errors.New("bootstrap: Artalk password and confirmation do not match")
+		}
+		if len(req.Comments.ArtalkPassword) < 8 {
+			return errors.New("bootstrap: Artalk password must be at least 8 characters")
+		}
+	} else if req.Comments.Provider != "disabled" {
+		return errors.New("bootstrap: unsupported comments provider")
+	}
 	if req.Password != req.PasswordConfirm {
 		return errors.New("bootstrap: password and passwordConfirm do not match")
 	}
@@ -135,7 +165,59 @@ func CreateFirstAdmin(app core.App, req SetupReq) error {
 	if err := createSuperuser(app, email, req.Password); err != nil {
 		slog.Warn("[bootstrap] failed to create _superusers record", "err", err)
 	}
+	if err := configureComments(app, req, email); err != nil {
+		return err
+	}
 
+	return nil
+}
+
+func configureComments(app core.App, req SetupReq, adminEmail string) error {
+	site, err := app.FindFirstRecordByFilter("site", "")
+	if err != nil || site == nil {
+		return fmt.Errorf("bootstrap: site record not found: %w", err)
+	}
+	provider := req.Comments.Provider
+	if provider == "" {
+		provider = "disabled"
+	}
+	site.Set("commentsProvider", provider)
+	if provider == "artalk" {
+		server := "https://localhost/comments"
+		if baseURL := strings.TrimRight(site.GetString("baseUrl"), "/"); baseURL != "" {
+			server = baseURL + "/comments"
+		}
+		site.Set("commentsConfig", map[string]any{
+			"server": server,
+			"site":   strings.TrimSpace(req.Comments.ArtalkSite),
+		})
+		if err := initializeArtalk("/data/artalk", strings.TrimSpace(req.Comments.ArtalkEmail), req.Comments.ArtalkPassword, strings.TrimSpace(req.Comments.ArtalkSite)); err != nil {
+			return err
+		}
+	} else {
+		site.Set("commentsConfig", map[string]any{})
+	}
+	if err := app.Save(site); err != nil {
+		return fmt.Errorf("bootstrap: failed to save comments config: %w", err)
+	}
+	return nil
+}
+
+func initializeArtalk(dataDir, email, password, name string) error {
+	artalkDir := filepath.Join(dataDir, "artalk")
+	configPath := filepath.Join(artalkDir, "artalk.yml")
+	if err := os.MkdirAll(artalkDir, 0o755); err != nil {
+		return fmt.Errorf("bootstrap: create Artalk data directory: %w", err)
+	}
+	if _, err := os.Stat(configPath); os.IsNotExist(err) {
+		if out, err := exec.Command("artalk", "gen", "config", configPath).CombinedOutput(); err != nil {
+			return fmt.Errorf("bootstrap: generate Artalk config: %w (%s)", err, strings.TrimSpace(string(out)))
+		}
+	}
+	args := []string{"-c", configPath, "admin", "--name", name, "--email", email, "--password", password}
+	if out, err := exec.Command("artalk", args...).CombinedOutput(); err != nil {
+		return fmt.Errorf("bootstrap: initialize Artalk admin: %w (%s)", err, strings.TrimSpace(string(out)))
+	}
 	return nil
 }
 
@@ -171,6 +253,7 @@ func New(app core.App) *Manager {
 	m := &Manager{app: app}
 	app.OnServe().BindFunc(func(se *core.ServeEvent) error {
 		se.Router.GET("/api/vanblog/setup/status", m.handleStatus)
+		se.Router.GET("/api/vanblog/runtime/comments", m.handleRuntimeComments)
 		se.Router.POST("/api/vanblog/setup/complete", m.handleComplete)
 		return se.Next()
 	})
@@ -180,9 +263,22 @@ func New(app core.App) *Manager {
 // handleStatus exposes bootstrap mode so the UI can route to /setup when
 // needed. Public — bootstrap state is observable, that's the whole point.
 func (m *Manager) handleStatus(e *core.RequestEvent) error {
+	_, artalkErr := exec.LookPath("artalk")
 	return e.JSON(http.StatusOK, map[string]any{
-		"bootstrap": !HasAdmin(m.app),
+		"bootstrap":    !HasAdmin(m.app),
+		"capabilities": map[string]bool{"artalk": artalkErr == nil},
 	})
+}
+
+// handleRuntimeComments is an internal, local-only readiness probe used by
+// the container entrypoint. It intentionally exposes no credentials.
+func (m *Manager) handleRuntimeComments(e *core.RequestEvent) error {
+	site, err := m.app.FindFirstRecordByFilter("site", "")
+	provider := "disabled"
+	if err == nil && site != nil {
+		provider = site.GetString("commentsProvider")
+	}
+	return e.JSON(http.StatusOK, map[string]any{"provider": provider})
 }
 
 // handleComplete accepts the first-admin setup form. Refuses once any

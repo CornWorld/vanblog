@@ -45,7 +45,7 @@
 
 ### 评论不显示
 
-- 默认未启用 Artalk。启用：compose 里设 `VANBLOG_ARTALK_ENABLED=1`（内置 sidecar）或 `VANBLOG_ARTALK_UPSTREAM`（外部实例）。见 [配置参考](reference/configuration.md)。
+默认未启用 Artalk。使用 `prod-artalk` 镜像后，在首次 `/setup` 向导中选择是否启用；也可以通过 `VANBLOG_ARTALK_UPSTREAM` 接入外部实例。见 [配置参考](reference/configuration.md)。
 
 ### 图片上传不支持某些格式缩略图
 

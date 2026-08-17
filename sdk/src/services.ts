@@ -40,12 +40,22 @@ export interface VanblogServices {
   // admin exists yet; complete() claims the first admin slot. Refuses
   // once the system has at least one admin.
   setup: {
-    status(): Promise<{ bootstrap: boolean }>;
+    status(): Promise<{
+      bootstrap: boolean;
+      capabilities?: { artalk?: boolean };
+    }>;
     complete(req: {
       username: string;
       email: string;
       password: string;
       passwordConfirm: string;
+      comments?: {
+        provider: "disabled" | "artalk";
+        artalkSite?: string;
+        artalkEmail?: string;
+        artalkPassword?: string;
+        artalkPasswordConfirm?: string;
+      };
     }): Promise<{ ok: boolean; adminId?: string; error?: string }>;
   };
   feed: {
@@ -240,6 +250,7 @@ export function createVanblogServices(pb: PocketBase): VanblogServices {
       status: () =>
         pb.send("/api/vanblog/setup/status", { method: "GET" }) as Promise<{
           bootstrap: boolean;
+          capabilities?: { artalk?: boolean };
         }>,
       complete: (req) =>
         pb.send("/api/vanblog/setup/complete", {

@@ -87,13 +87,26 @@ vanblog serve "$@" &
 PB_PID=$!
 wait_for "http://127.0.0.1:8090/api/health" "PocketBase" 30 || exit 1
 
-# 3.5. Start Artalk comment sidecar (optional; enabled via VANBLOG_ARTALK_ENABLED=1)
-if [ "${VANBLOG_ARTALK_ENABLED}" = "1" ] || [ "${VANBLOG_ARTALK_ENABLED}" = "true" ]; then
-  echo "[vanblog] starting Artalk comment sidecar (port 23366)..."
-  mkdir -p /data/artalk
-  (cd /data/artalk && exec env ATK_HOST=127.0.0.1 ATK_PORT=23366 artalk server) &
-  ARTALK_PID=$!
-  wait_for "http://127.0.0.1:23366/" "Artalk" 30 || exit 1
+# 3.5. Start the bundled Artalk only when the persisted site provider is artalk.
+# The prod image may not contain the binary; prod-artalk does.
+if command -v artalk >/dev/null 2>&1; then
+  COMMENTS_PROVIDER=$(wget -q -O - -T 2 "http://127.0.0.1:8090/api/vanblog/runtime/comments" 2>/dev/null || echo '{"provider":"disabled"}')
+  case "$COMMENTS_PROVIDER" in
+    *'"provider":"artalk"'*)
+      echo "[vanblog] starting bundled Artalk (port 23366)..."
+      ARTALK_DIR="/data/artalk"
+      ARTALK_CONFIG="${ARTALK_DIR}/artalk.yml"
+      mkdir -p "$ARTALK_DIR"
+      if [ ! -f "$ARTALK_CONFIG" ]; then
+        echo "[vanblog] Artalk config not found, generating default: $ARTALK_CONFIG"
+        artalk gen config "$ARTALK_CONFIG"
+      fi
+      (cd "$ARTALK_DIR" && exec env ATK_HOST=127.0.0.1 ATK_PORT=23366 artalk -c "$ARTALK_CONFIG" server) &
+      ARTALK_PID=$!
+      wait_for "http://127.0.0.1:23366/" "Artalk" 30 || exit 1
+      ;;
+    *) echo "[vanblog] bundled Artalk is installed but disabled" ;;
+  esac
 fi
 
 # 4. Start Theme Host (replaces direct Astro SSR)

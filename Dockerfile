@@ -129,17 +129,10 @@ WORKDIR /app
 # Install Caddy + Node.js (for Astro SSR) + ca-certificates
 RUN apk add --no-cache caddy nodejs ca-certificates tzdata curl
 
-# Artalk (self-hosted comment system) — optional sidecar, enabled at runtime
-# via VANBLOG_ARTALK_ENABLED=1. Downloaded at build time so the image is
-# reproducible. Override the version with --build-arg ARTALK_VERSION=vX.Y.Z.
-# NOTE: if Artalk changes its release asset naming, update the URL below.
-ARG ARTALK_VERSION=v2.10.0
-RUN mkdir -p /tmp/artalk && \
-    curl -fsSL "https://github.com/ArtalkJS/Artalk/releases/download/${ARTALK_VERSION}/artalk_${ARTALK_VERSION}_linux_amd64.tar.gz" -o /tmp/artalk/artalk.tar.gz && \
-    tar -xzf /tmp/artalk/artalk.tar.gz -C /tmp/artalk && \
-    find /tmp/artalk -type f -name 'artalk' -exec mv {} /usr/local/bin/artalk \; && \
-    chmod +x /usr/local/bin/artalk && \
-    rm -rf /tmp/artalk
+# Artalk is provided by the separate prod-artalk target.
+# image intentionally has no Artalk binary; prod-artalk adds it below.
+
+
 
 # Copy Go binary and the separately-built core schema artifact.
 COPY --from=go-build /pocketbase /usr/local/bin/vanblog
@@ -195,7 +188,18 @@ VOLUME ["/pb_data", "/data/caddy", "/data/artalk"]
 
 ENTRYPOINT ["/entrypoint.sh"]
 
-# --- Stage 6: DEV image (extends prod + full Node toolchain + source) ---
+# --- Stage 6: PROD image with bundled Artalk capability ---
+FROM prod AS prod-artalk
+ARG ARTALK_VERSION=v2.10.0
+RUN apk add --no-cache curl && \
+    mkdir -p /tmp/artalk && \
+    curl -fsSL "https://github.com/ArtalkJS/Artalk/releases/download/${ARTALK_VERSION}/artalk_${ARTALK_VERSION}_linux_amd64.tar.gz" -o /tmp/artalk/artalk.tar.gz && \
+    tar -xzf /tmp/artalk/artalk.tar.gz -C /tmp/artalk && \
+    find /tmp/artalk -type f -name 'artalk' -exec mv {} /usr/local/bin/artalk \; && \
+    chmod +x /usr/local/bin/artalk && \
+    rm -rf /tmp/artalk
+
+# --- Stage 7: DEV image (plain prod capability) ---
 FROM prod AS dev
 
 RUN apk add --no-cache npm git && npm install -g pnpm@latest-10
@@ -241,4 +245,26 @@ RUN chmod +x /entrypoint.sh
 ENV VANBLOG_MODE=dev
 EXPOSE 80 443 4321 8080
 
+ENTRYPOINT ["/entrypoint.sh"]
+
+# Development image with bundled Artalk capability.
+FROM prod-artalk AS dev-artalk
+RUN apk add --no-cache npm git && npm install -g pnpm@latest-10
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc /workspace/
+COPY sdk/ /workspace/sdk/
+COPY app/ /workspace/app/
+COPY packs/ /workspace/packs/
+COPY themes/ /workspace/themes/
+COPY scripts/ /workspace/scripts/
+COPY models.config.mjs /workspace/models.config.mjs
+COPY docs/ /workspace/docs/
+COPY AGENTS.md /workspace/AGENTS.md
+COPY .pi/ /workspace/.pi/
+COPY .agents/ /workspace/.agents/
+WORKDIR /workspace
+RUN pnpm install --frozen-lockfile
+COPY docker/entrypoint.dev.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+ENV VANBLOG_MODE=dev
+EXPOSE 80 443 4321 8080
 ENTRYPOINT ["/entrypoint.sh"]

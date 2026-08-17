@@ -26,7 +26,8 @@
 
 services:
   vanblog:
-    image: ghcr.io/cornworld/vanblog:prod-edge
+    # 选择 prod(不含 Artalk) 或 prod-artalk(含 Artalk 能力，默认仍关闭):
+    image: ghcr.io/cornworld/vanblog:${VANBLOG_IMAGE_TAG:-prod}
     # 本地构建: build: { context: ., target: prod }
     restart: unless-stopped
     ports:
@@ -39,16 +40,21 @@ services:
       - caddy_data:/data/caddy
       - pack_data:/var/lib/vanblog/packs
       - themes_data:/var/lib/vanblog/themes
-      # Artalk 内置 sidecar 数据(启用 VANBLOG_ARTALK_ENABLED=1 时持久化评论):
+      # Artalk 数据(仅 prod-artalk 镜像启用内置 Artalk 时使用):
       - artalk_data:/data/artalk
+      # 若要自行维护配置文件，可取消注释(会覆盖自动生成):
+      # - ./artalk.yml:/data/artalk/artalk.yml:ro
     environment:
       - VANBLOG_EMAIL=${VANBLOG_EMAIL:-admin@example.com}
       - VANBLOG_CADDY_LOG_LEVEL=${VANBLOG_CADDY_LOG_LEVEL:-warn}
       - VANBLOG_PACKS_DIR=/var/lib/vanblog/packs
       - VANBLOG_THEMES_DIR=/var/lib/vanblog/themes
       # --- Artalk 评论系统 ---
-      # 内置 sidecar(单容器,默认推荐):
-      # - VANBLOG_ARTALK_ENABLED=1
+      # 选择 prod-artalk 后，在 /setup 向导中选择是否启用并填写 Artalk 账号。
+      # 这里只保留外部 Artalk upstream；它不负责启用状态:
+      # - VANBLOG_ARTALK_UPSTREAM=artalk:23366
+      # SSO 桥接开关(可选，默认关闭):
+      # - VANBLOG_COMMENTS_SSO_ENABLED=1
       # 外部 Artalk 容器(compose 多容器,配合下面 artalk 服务):
       # - VANBLOG_ARTALK_UPSTREAM=artalk:23366
       # HTTP_ONLY 模式:外置反代终止 TLS(取消注释即生效):
@@ -58,7 +64,7 @@ services:
       # - PB_URL=http://127.0.0.1:8090
 
   # --- Artalk 评论系统(compose 多容器模式,可选)---
-  # 默认推荐内置 sidecar(vanblog 服务设 VANBLOG_ARTALK_ENABLED=1)。
+  # 默认推荐 prod-artalk 镜像；是否启用内置 Artalk 在 /setup 向导中选择。
   # 若要 Artalk 独立容器(独立升级/解耦生命周期),取消下面注释,
   # 并在 vanblog 服务里设 VANBLOG_ARTALK_UPSTREAM=artalk:23366。
   # artalk:
