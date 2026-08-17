@@ -164,6 +164,7 @@ const currentPalette = field('palette') || 'default';
           <input name="artalk_server" placeholder="https://comment.example.com" class="px-1.5 py-0.5" />
           <label>Artalk Site 名</label>
           <input name="artalk_site" placeholder="VanBlog" class="px-1.5 py-0.5" />
+          <button type="button" id="comments-manage-btn" class="col-span-2 justify-self-start">打开评论管理（免二次登录）</button>
         </div>
         <div id="comments-config-external" class="comments-config-group col-span-2 grid grid-cols-subgrid gap-2" style="display:none">
           <label>自定义脚本 / HTML</label>
@@ -274,6 +275,35 @@ const currentPalette = field('palette') || 'default';
           alert('已保存');
         } catch (err) { alert('保存失败: ' + err.message); }
       });
+
+      // ── 评论 SSO：换票进 Artalk（免二次登录） ──
+      const manageBtn = document.getElementById('comments-manage-btn');
+      if (manageBtn) {
+        manageBtn.addEventListener('click', async () => {
+          const server = (document.querySelector('[name="artalk_server"]')?.value || '').replace(/\/+$/, '');
+          if (!server) { alert('请先填写 Artalk Server 并保存'); return; }
+          const authToken = pb.authStore?.token || '';
+          try {
+            const tokRes = await fetch('/api/vanblog/comments-sso/token', {
+              method: 'POST',
+              headers: authToken ? { 'Authorization': 'Bearer ' + authToken } : {},
+            });
+            if (!tokRes.ok) throw new Error('签发换票 token 失败');
+            const { token } = await tokRes.json();
+            const exRes = await fetch(`${server}/api/v2/sso/exchange`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ token }),
+            });
+            if (!exRes.ok) throw new Error('Artalk 换票失败');
+            const login = await exRes.json();
+            localStorage.setItem('ArtalkUser', JSON.stringify(login));
+            window.open('/', '_blank');
+          } catch (err) {
+            alert('评论管理登录失败：' + (err.message || err));
+          }
+        });
+      }
 
       // ── 重新加载主题：放入新主题后重扫 Caddy file_server 路由 ──
       const reloadBtn = document.getElementById('theme-reload-btn');
