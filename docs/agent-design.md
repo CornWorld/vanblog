@@ -3,11 +3,14 @@
 > **依据**:完整选型调研见 [`refs/agent-platform-selection.md`](../refs/agent-platform-selection.md)(调研/竞品对比,不进 docs);本文是**决策落地 + 现状实现**,供 agent 动手前读。
 >
 > **核心原则**:
+>
 > - **官方 agent = dev 容器 + pi + vanblog skill 包**(不自研 golang agent 引擎)
 > - **默认 LLM 走 OpenCode Zen free 模型**(0 API key、0 登录,启动时动态解析)
 > - **agent 入口是「各需求方嵌入」而非全局侧边栏主动入口**
 > - **支持多 profile sys prompt**(迁移/主题/pack/升级等场景各有专属提示词)
-> - **认证强度:仅 admin**(PB 是唯一认证边界,pi RPC 只监听 loopback)
+
+> - **认证强度:仅 admin**(PB 是唯一认证边界,Go 直接管理 pi 子进程)
+> - **session 由 PB 持久化元数据**(Go 只缓存运行时,pi 保存对话历史)
 
 ---
 
@@ -15,14 +18,15 @@
 
 VanBlog 的 dev 容器本质是「面向用户的可编程环境」。用户需要用 AI 完成四类任务:
 
-| 场景 | 用户诉求 |
-| --- | --- |
-| 开发新主题 / 微调已有内容 | 「帮我看主题结构,给定制建议」 |
-| 迁移 mereithh VanBlog 数据 | 「把旧站数据迁过来」 |
-| 升级 / 降级版本 | 「升级后帮我检查 override 是否适配」 |
-| 开发 Pack 扩展能力 | 「帮我写一个 PoW 防刷 pack」 |
+| 场景                       | 用户诉求                             |
+| -------------------------- | ------------------------------------ |
+| 开发新主题 / 微调已有内容  | 「帮我看主题结构,给定制建议」        |
+| 迁移 mereithh VanBlog 数据 | 「把旧站数据迁过来」                 |
+| 升级 / 降级版本            | 「升级后帮我检查 override 是否适配」 |
+| 开发 Pack 扩展能力         | 「帮我写一个 PoW 防刷 pack」         |
 
 用户画像分两类(参考 git-for-windows 的 msys2 模型):
+
 - **有 agent 环境的用户**(Claude Code / Snow CLI / Cursor)→ 自带完整 agent,只需领域能力
 - **没有 agent 环境的用户** → 需要一个「0 配置、开箱即用」的官方入口
 
@@ -30,13 +34,13 @@ VanBlog 的 dev 容器本质是「面向用户的可编程环境」。用户需�
 
 ## 2. 为什么是 pi(而非自研 / opencode)
 
-| 方案 | 结论 | 否决/入选原因 |
-| --- | --- | --- |
-| **自研 golang agent** | ❌ 放弃 | 完整 agent(tool-calling loop)与 Claude Code / Snow CLI 完全重复,且 LLM key 谁出无法自洽 |
-| **anomalyco/opencode** | ⚠️ 备选 | star 是 pi 的 2 倍,但内置权限系统 + 更重的插件体系,与「精简」冲突 |
-| gemini-cli / codex / qwen-code | ❌ 排除 | 模型绑定(各自厂商),违背「模型无关」 |
-| plandex / aider | ❌ 排除 | 无现代 skill/extension 生态 |
-| **earendil-works/pi** | ✅ 入选 | 极简核心(不占资源)、SKILL.md 原生、75+ provider 模型无关、容器即沙盒、RPC mode 可嵌入 |
+| 方案                           | 结论    | 否决/入选原因                                                                           |
+| ------------------------------ | ------- | --------------------------------------------------------------------------------------- |
+| **自研 golang agent**          | ❌ 放弃 | 完整 agent(tool-calling loop)与 Claude Code / Snow CLI 完全重复,且 LLM key 谁出无法自洽 |
+| **anomalyco/opencode**         | ⚠️ 备选 | star 是 pi 的 2 倍,但内置权限系统 + 更重的插件体系,与「精简」冲突                       |
+| gemini-cli / codex / qwen-code | ❌ 排除 | 模型绑定(各自厂商),违背「模型无关」                                                     |
+| plandex / aider                | ❌ 排除 | 无现代 skill/extension 生态                                                             |
+| **earendil-works/pi**          | ✅ 入选 | 极简核心(不占资源)、SKILL.md 原生、75+ provider 模型无关、容器即沙盒、RPC mode 可嵌入   |
 
 > pi 的三个决定性优势:① 极简 npm 包,dev 容器本有 node runtime,零额外开销;② Agent Skills 标准与 vanblog docs-driven 理念同构;③ `--mode rpc` 有官方嵌入方案,后续网页 UI 不是野路子。
 
@@ -51,11 +55,12 @@ VanBlog 的 dev 容器本质是「面向用户的可编程环境」。用户需�
 Zen free 模型**不能带任何 Authorization header**(任何 key 都返回 401),但 pi 的 openai-completions provider 只要配了 apiKey 就强制注入 header,且要求 apiKey 非空才暴露模型。**`authHeader: false` 是死字段,实测仍 401。**
 
 三方冲突:
+
 - pi 要求「必须有 key」→ 给了 key 就发 header
 - Zen 要求「绝不能有 key」→ 有 key 就 401
 - 无任何配置能解开
 
-**解法**:`pi-rpc-server.mjs` 内置一个 12 行反向代理,剥掉 Authorization header 再转发 Zen。pi 配假 key(满足 pi),baseUrl 指向本地 proxy(满足 Zen)。若未来 pi 去掉 apiKey 强制要求,proxy 可删。
+**解法**:`scripts/pi-zen-proxy.mjs` 提供一个独立的反向代理,剥掉 Authorization header 再转发 Zen。pi 配假 key(满足 pi),baseUrl 指向本地 proxy(满足 Zen)。若未来 pi 去掉 apiKey 强制要求,proxy 可删。
 
 ### 3.3 模型动态解析
 
@@ -88,14 +93,16 @@ Zen 模型列表**会轮换**(promo 模型下架)。模型名不能硬编码。`
 
 ```
 浏览器(admin UI) → PB /api/vanblog/agent/chat (admin-only 认证)
-  → pi RPC (127.0.0.1:4329, loopback 永不暴露公网)
-  → auth-stripping proxy (:4330, 剥 Authorization)
+  → Go agent manager
+  → 每个 PB session 独占一个 pi --mode rpc 子进程
+  → `scripts/pi-zen-proxy.mjs` (:4330, 剥 Authorization)
   → Zen free 模型
-  → SSE 流式返回 text_delta
+  → SSE 流式返回 pi 事件
 ```
 
 **关键安全设计**:
-- pi RPC 只监听 loopback,**PB 是唯一认证边界**——Caddy 无需新增规则(`/api/*` 已系统路由到 PB)
+
+- Go 只允许管理员访问 agent 路由,**PB 是唯一认证边界**——pi 子进程不暴露网络端口,Caddy 无需新增规则(`/api/*` 已系统路由到 PB)
 - `/api/vanblog/agent/chat` 校验 `e.Auth.GetString("role") == "admin"`,非 admin 返回 403
 - 不经 Caddy 直连 pi,避免「任何访客驱动你的 agent」风险
 
@@ -111,12 +118,12 @@ Zen 模型列表**会轮换**(promo 模型下架)。模型名不能硬编码。`
 
 ### 5.2 各需求方入口 + profile
 
-| 需求方页面 | 嵌入入口 | 对应 profile(system prompt) |
-| --- | --- | --- |
-| `/admin/migrate` | 「AI 迁移助手」 | `migration`:只谈数据迁移,读 docs 迁移章节 |
-| `/admin/themes`(如有) | 「AI 主题助手」 | `theme`:主题开发/定制/override 适配 |
-| `/admin/packs`(如有) | 「AI Pack 助手」 | `pack`:pack 结构/开发/前端注入 |
-| `/admin/agent` | 通用入口 | `general`:综合助手,可自由提问 |
+| 需求方页面            | 嵌入入口         | 对应 profile(system prompt)               |
+| --------------------- | ---------------- | ----------------------------------------- |
+| `/admin/migrate`      | 「AI 迁移助手」  | `migration`:只谈数据迁移,读 docs 迁移章节 |
+| `/admin/themes`(如有) | 「AI 主题助手」  | `theme`:主题开发/定制/override 适配       |
+| `/admin/packs`(如有)  | 「AI Pack 助手」 | `pack`:pack 结构/开发/前端注入            |
+| `/admin/agent`        | 通用入口         | `general`:综合助手,可自由提问             |
 
 **多 profile sys prompt** = 同一 chat 端点,不同预设 system prompt。实现上,`/api/vanblog/agent/chat` 的请求体增加可选 `profile` 字段,后端映射到对应 prompt 注入 pi 的首条上下文。preset 提示词(agent.astro 里的快捷任务)与 profile 一一对应。
 
@@ -129,16 +136,18 @@ Zen 模型列表**会轮换**(promo 模型下架)。模型名不能硬编码。`
 
 ## 6. 文件与命令
 
-| 文件 | 作用 |
-| --- | --- |
-| `scripts/resolve-zen-free-models.mjs` | 动态解析 Zen free 模型(启动时调用) |
-| `scripts/init-pi-config.mjs` | 写 pi 全局配置(models.json/trust/settings) |
-| `scripts/pi-rpc-server.mjs` | HTTP→pi RPC 桥 + auth-stripping proxy |
-| `scripts/test-pi-pack.sh` | E2E 测试:容器起 pi 创建 pack + 验证 |
-| `vault/internal/agent/agent.go` | PB `/api/vanblog/agent/chat`(admin-only + SSE) |
-| `app/src/pages/admin/agent.astro` | admin 聊天 UI |
-| `.agents/skills/vanblog/SKILL.md` | pi 加载的 dev skill(编排,指向 docs/) |
-| `.pi/settings.json` | pi 项目配置(Zen 模型占位符) |
+| 文件                                                      | 作用                                                          |
+| --------------------------------------------------------- | ------------------------------------------------------------- |
+| `scripts/resolve-zen-free-models.mjs`                     | 动态解析 Zen free 模型(启动时调用)                            |
+| `scripts/init-pi-config.mjs`                              | 写 pi 全局配置(models.json/trust/settings)                    |
+| `vault/internal/agent/agent.go`                           | PB session 元数据 + Go 直接管理 pi 原生 RPC 子进程 + SSE 透传 |
+| `scripts/test-agent-rpc.sh`                               | Go + pi 原生 RPC smoke/E2E 测试                               |
+| `scripts/pi-zen-proxy.mjs`                                | Zen auth-stripping proxy(:4330)                               |
+| `vault/pb_migrations/1783600000_create_agent_sessions.go` | agent_sessions collection                                     |
+| `vault/internal/agent/agent.go`                           | PB `/api/vanblog/agent/chat`(admin-only + SSE)                |
+| `app/src/pages/admin/agent.astro`                         | admin 聊天 UI                                                 |
+| `.agents/skills/vanblog/SKILL.md`                         | pi 加载的 dev skill(编排,指向 docs/)                          |
+| `.pi/settings.json`                                       | pi 项目配置(Zen 模型占位符)                                   |
 
 ```bash
 # dev 容器内直接用 pi
@@ -152,10 +161,10 @@ curl -X POST /api/vanblog/agent/chat -H 'Authorization: Bearer <token>' \
 
 ## 7. 已知限制与后续
 
-| 项目 | 状态 |
-| --- | --- |
-| Zen free 限流 | 分钟级限流,大 agentic 循环受影响;skill 编排的中小循环够用 |
-| Zen free context | 小于付费版;vanblog 单仓场景大概率够 |
-| 模型轮换 | 动态解析已规避 |
-| 多 profile | profile 字段已预留,各需求方嵌入待实现 |
-| pi `--no-session` | RPC 模式每次请求独立,不落盘 session history |
+| 项目             | 状态                                                           |
+| ---------------- | -------------------------------------------------------------- |
+| Zen free 限流    | 分钟级限流,大 agentic 循环受影响;skill 编排的中小循环够用      |
+| Zen free context | 小于付费版;vanblog 单仓场景大概率够                            |
+| 模型轮换         | 动态解析已规避                                                 |
+| 多 profile       | profile 字段已预留,各需求方嵌入待实现                          |
+| pi session       | PB `agent_sessions` 保存元数据,pi `--session-dir` 保存对话历史 |

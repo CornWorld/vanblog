@@ -21,8 +21,8 @@ func TestMigrationsCreateExpectedCollections(t *testing.T) {
 		t.Fatalf("RunAppMigrations: %v", err)
 	}
 
-	// 断言 9 个业务 collection 全部存在，且每个都有字段。
-	for _, name := range []string{"tags", "categories", "users", "posts", "revisions", "media", "site", "visits", "audits"} {
+	// 断言业务 collection 全部存在，且每个都有字段。
+	for _, name := range []string{"tags", "categories", "users", "posts", "revisions", "media", "site", "visits", "audits", "agent_sessions"} {
 		col, err := app.FindCollectionByNameOrId(name)
 		if err != nil {
 			t.Errorf("collection %s missing: %v", name, err)

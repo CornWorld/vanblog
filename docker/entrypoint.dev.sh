@@ -41,8 +41,8 @@ wait_for() {
 cleanup() {
   echo "[vanblog] shutting down..."
   kill "$MONITOR_PID" 2>/dev/null || true
-  kill $PB_PID $THEME_HOST_PID $CADDY_PID $PI_RPC_PID 2>/dev/null || true
-  wait $PB_PID $THEME_HOST_PID $CADDY_PID $PI_RPC_PID 2>/dev/null || true
+  kill $PB_PID $THEME_HOST_PID $CADDY_PID $PI_PROXY_PID 2>/dev/null || true
+  wait $PB_PID $THEME_HOST_PID $CADDY_PID $PI_PROXY_PID 2>/dev/null || true
 }
 trap cleanup EXIT INT TERM
 
@@ -96,11 +96,11 @@ echo "[vanblog] agent.env written to /etc/vanblog/agent.env (see AGENTS.md §环
 echo "[vanblog] initializing pi agent config..."
 node /workspace/scripts/init-pi-config.mjs || echo "[vanblog] pi config init skipped (will use fallback)"
 
-# 3.7. Start pi RPC server — HTTP bridge for programmatic pi access.
-# Listens on VANBLOG_PI_PORT (default 4329). POST /pi/rpc for streaming SSE.
-echo "[vanblog] starting pi RPC server..."
-node /workspace/scripts/pi-rpc-server.mjs &
-PI_RPC_PID=$!
+# 3.7. Start the Zen auth-stripping proxy used by pi's OpenCode Zen provider.
+# The Go agent manager starts one native pi RPC process per persisted session.
+echo "[vanblog] starting pi model proxy..."
+node /workspace/scripts/pi-zen-proxy.mjs &
+PI_PROXY_PID=$!
 
 # 4. Start Theme Host (loads active theme's SSR handler, routes /admin to app)
 DEFAULT_THEME=$(cat /etc/vanblog/default-theme 2>/dev/null || echo "vanblog")
@@ -120,6 +120,7 @@ monitor_children() {
     if ! kill -0 $CADDY_PID 2>/dev/null; then echo "[vanblog] FATAL: Caddy died"; exit 1; fi
     if ! kill -0 $PB_PID 2>/dev/null; then echo "[vanblog] FATAL: PocketBase died"; exit 1; fi
     if ! kill -0 $THEME_HOST_PID 2>/dev/null; then echo "[vanblog] FATAL: Theme Host died"; exit 1; fi
+    if ! kill -0 $PI_PROXY_PID 2>/dev/null; then echo "[vanblog] FATAL: pi model proxy died"; exit 1; fi
     sleep 5
   done
 }

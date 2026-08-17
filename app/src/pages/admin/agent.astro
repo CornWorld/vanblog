@@ -69,6 +69,8 @@ const isAdmin = getAuthUser(pb)?.role === 'admin';
     const chatLog = document.getElementById('chat-log')!;
     const form = document.getElementById('chat-form')!;
     const input = document.getElementById('chat-input')! as HTMLTextAreaElement;
+    const sessionStorageKey = 'vanblog-agent-session-id';
+    let sessionId = localStorage.getItem(sessionStorageKey) || '';
 
     function addMessage(role: 'user' | 'assistant', text: string) {
       const wrap = document.createElement('div');
@@ -99,13 +101,18 @@ const isAdmin = getAuthUser(pb)?.role === 'admin';
         const resp = await fetch('/api/vanblog/agent/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message }),
+          body: JSON.stringify({ message, ...(sessionId ? { sessionId } : {}) }),
         });
 
         if (!resp.ok) {
           const err = await resp.json().catch(() => ({}));
           assistantBubble.textContent = `❌ 请求失败 (${resp.status}): ${err.message || resp.statusText}`;
           return;
+        }
+        const returnedSessionId = resp.headers.get('X-Agent-Session-ID');
+        if (returnedSessionId) {
+          sessionId = returnedSessionId;
+          localStorage.setItem(sessionStorageKey, sessionId);
         }
         if (!resp.body) throw new Error('No response body');
 
