@@ -3,11 +3,8 @@ import { z } from "zod";
 export const RecordIdSchema = z.string().min(1);
 const PocketBaseDateTimeSchema = z
   .string()
-  .refine(
-    (value) =>
-      /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}(Z|[+-]\d{2}:\d{2})$/.test(
-        value
-      ),
+  .regex(
+    /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}(Z|[+-]\d{2}:\d{2})$/,
     "Invalid PocketBase datetime"
   );
 
