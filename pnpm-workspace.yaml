@@ -1,6 +1,7 @@
 packages:
   - "sdk"
   - "app"
+  - "lab"
   - "themes/*"
 
 onlyBuiltDependencies:
