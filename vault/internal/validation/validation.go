@@ -89,6 +89,11 @@ if (typeof globalThis.URL === "undefined") {
 }
 `
 
+// coreProgram holds the compiled core models.js artifact after registration.
+// It is used by ValidateSchema and CoreProgram for agent/CLI validation
+// outside the PB record validation path.
+var coreProgram *goja.Program
+
 func compileProgram(script string) (*goja.Program, error) {
 	return goja.Compile(
 		"models.js",
@@ -162,14 +167,17 @@ func validateModel(vm *goja.Runtime, models *goja.Object, collectionName string,
 	return fmt.Errorf("%s validation failed: %s", collectionName, formatIssues(vm, resultObj.Get("error")))
 }
 
-func formatIssues(vm *goja.Runtime, errValue goja.Value) string {
+// formatIssuesList extracts Zod safeParse error issues as a string slice.
+// Each element is "path: message". Returns nil when there are no issues
+// or the error value is unreadable.
+func formatIssuesList(vm *goja.Runtime, errValue goja.Value) []string {
 	if errValue == nil || goja.IsUndefined(errValue) || goja.IsNull(errValue) {
-		return "unknown validation error"
+		return nil
 	}
 
 	issues := errValue.ToObject(vm).Get("issues")
 	if issues == nil || goja.IsUndefined(issues) || goja.IsNull(issues) {
-		return "unknown validation error"
+		return nil
 	}
 
 	var messages []string
@@ -193,6 +201,11 @@ func formatIssues(vm *goja.Runtime, errValue goja.Value) string {
 			messages = append(messages, path+": "+message)
 		}
 	}
+	return messages
+}
+
+func formatIssues(vm *goja.Runtime, errValue goja.Value) string {
+	messages := formatIssuesList(vm, errValue)
 	if len(messages) == 0 {
 		return "unknown validation error"
 	}
@@ -373,6 +386,9 @@ func RegisterWithSources(app core.App, coreSource ModelSource, packs []NamedMode
 		if err != nil {
 			return fmt.Errorf("validation: %s: %w", name, err)
 		}
+		if name == "core" {
+			coreProgram = program
+		}
 		for _, key := range keys {
 			if owner, ok := claimed[key]; ok {
 				return fmt.Errorf("validation: model %q is declared by both %q and %q", key, owner, name)
@@ -464,4 +480,48 @@ func RegisterWithSource(app core.App, source ModelSource) error {
 		return errors.New("validation: model source is nil")
 	}
 	return RegisterWithSources(app, source, nil)
+}
+
+// ValidateSchema checks a payload against a named schema in the compiled
+// models bundle. Returns a list of "path: message" issues (empty = valid).
+// Unlike the PB record validation path, this is a pure function with no
+// side effects — it creates a fresh Goja VM per call, suitable for agent
+// tool validation and CLI use where throughput is low.
+func ValidateSchema(prog *goja.Program, schemaName string, payload any) ([]string, error) {
+	vm, models, err := loadModels(prog)
+	if err != nil {
+		return nil, fmt.Errorf("validation: failed to load models: %w", err)
+	}
+
+	model := models.Get(schemaName)
+	if model == nil || goja.IsUndefined(model) || goja.IsNull(model) {
+		return nil, fmt.Errorf("validation: schema %q is missing from models", schemaName)
+	}
+
+	parse, ok := goja.AssertFunction(model.ToObject(vm).Get("safeParse"))
+	if !ok {
+		return nil, fmt.Errorf("validation: schema %q is missing safeParse", schemaName)
+	}
+
+	result, err := parse(model, vm.ToValue(payload))
+	if err != nil {
+		return nil, fmt.Errorf("validation: safeParse error for %q: %w", schemaName, err)
+	}
+	if result == nil || goja.IsUndefined(result) || goja.IsNull(result) {
+		return nil, fmt.Errorf("validation: safeParse returned no result for %q", schemaName)
+	}
+
+	resultObj := result.ToObject(vm)
+	if resultObj.Get("success").ToBoolean() {
+		return nil, nil
+	}
+
+	return formatIssuesList(vm, resultObj.Get("error")), nil
+}
+
+// CoreProgram returns the compiled core models.js program, or nil if
+// RegisterWithSources has not been called yet. The returned program is
+// safe for concurrent reads but must not be mutated.
+func CoreProgram() *goja.Program {
+	return coreProgram
 }

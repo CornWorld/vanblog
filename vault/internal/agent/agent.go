@@ -16,6 +16,8 @@ import (
 	"time"
 
 	"github.com/pocketbase/pocketbase/core"
+
+	"github.com/cornworld/vanblog/internal/validation"
 )
 
 const (
@@ -48,6 +50,7 @@ func New(app core.App) *Manager {
 	m := &Manager{app: app, runtimes: make(map[string]*runtimeSession)}
 	app.OnServe().BindFunc(func(se *core.ServeEvent) error {
 		se.Router.POST("/api/vanblog/agent/chat", m.handleChat)
+		se.Router.POST("/api/vanblog/agent/validate", m.handleValidate)
 		return se.Next()
 	})
 	go m.cleanupLoop()
@@ -296,6 +299,46 @@ func (m *Manager) cleanup() {
 		}
 		_ = m.app.Delete(record)
 	}
+}
+
+type validateRequest struct {
+	SchemaName string `json:"schemaName"`
+	Payload    any    `json:"payload"`
+}
+
+func (m *Manager) handleValidate(e *core.RequestEvent) error {
+	if !isAdmin(e) {
+		return e.ForbiddenError("admin required", "")
+	}
+
+	var req validateRequest
+	if err := json.NewDecoder(e.Request.Body).Decode(&req); err != nil {
+		return e.BadRequestError("invalid JSON body", "")
+	}
+	if req.SchemaName == "" {
+		return e.BadRequestError("schemaName is required", "")
+	}
+
+	prog := validation.CoreProgram()
+	if prog == nil {
+		return e.JSON(http.StatusServiceUnavailable, map[string]any{
+			"valid":  false,
+			"issues": []string{"schema registry not initialized (core models not yet loaded)"},
+		})
+	}
+
+	issues, err := validation.ValidateSchema(prog, req.SchemaName, req.Payload)
+	if err != nil {
+		return e.JSON(http.StatusInternalServerError, map[string]any{
+			"valid":  false,
+			"issues": []string{err.Error()},
+		})
+	}
+
+	return e.JSON(http.StatusOK, map[string]any{
+		"valid":  len(issues) == 0,
+		"issues": issues,
+	})
 }
 
 func writeSSE(w io.Writer, value any) error {
