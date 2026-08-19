@@ -24,7 +24,7 @@ const PaletteMigrationModeSchema = z
 
 // ── Site schema ───────────────────────────────────────────────────────
 
-export const SiteSchema = SystemFieldsSchema.extend({
+const SiteFieldsSchema = SystemFieldsSchema.extend({
   // Core text fields
   siteName: z.string().optional(),
   siteDesc: z.string().optional(),
@@ -110,18 +110,36 @@ export const SiteSchema = SystemFieldsSchema.extend({
   rewards: z.array(RewardItemSchema).nullable().optional(),
   routing: z.array(RouteRuleSchema).nullable().optional(),
   routingAllowlist: z.array(z.string()).nullable().optional(),
-}).superRefine((site, context) => {
-  if (
-    site.commentsProvider &&
-    !CommentsProviderConfigSchemas[site.commentsProvider].safeParse(
-      site.commentsConfig
-    ).success
-  ) {
-    context.addIssue({
-      code: "custom",
-      path: ["commentsConfig"],
-      message: `Invalid ${site.commentsProvider} comments config`,
-    });
-  }
 });
+
+// Keep the two comment fields flat for the PocketBase record shape, while
+// expressing their cross-field contract as a data-only union. This avoids a
+// runtime superRefine callback so native schema exporters can validate it.
+const CommentsBindingSchema = z.union([
+  z
+    .object({
+      commentsProvider: z.literal("disabled"),
+      commentsConfig: CommentsProviderConfigSchemas.disabled,
+    })
+    .passthrough(),
+  z
+    .object({
+      commentsProvider: z.literal("artalk"),
+      commentsConfig: CommentsProviderConfigSchemas.artalk,
+    })
+    .passthrough(),
+  z
+    .object({
+      commentsProvider: z.literal("external"),
+      commentsConfig: CommentsProviderConfigSchemas.external,
+    })
+    .passthrough(),
+  z
+    .object({
+      commentsProvider: z.literal(undefined).optional(),
+    })
+    .passthrough(),
+]);
+
+export const SiteSchema = SiteFieldsSchema.and(CommentsBindingSchema);
 export type Site = z.infer<typeof SiteSchema>;
