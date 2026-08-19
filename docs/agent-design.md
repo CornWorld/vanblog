@@ -168,3 +168,87 @@ curl -X POST /api/vanblog/agent/chat -H 'Authorization: Bearer <token>' \
 | 模型轮换         | 动态解析已规避                                                 |
 | 多 profile       | profile 字段已预留,各需求方嵌入待实现                          |
 | pi session       | PB `agent_sessions` 保存元数据,pi `--session-dir` 保存对话历史 |
+
+## 8. 两层评价与 Artifact 存档
+
+Pi 生成 pack 的测试流程采用**两层评价** + **artifact 存档**架构,确保每次 agent 运行的结果可复现、可审计、可重新评估。
+
+### 8.1 架构
+
+```
+┌─ Layer 1: 现场生成 (test-pi-pack.sh) ──────────────────────────┐
+│  1. Build dev image (或 --no-build 跳过)                        │
+│  2. 启动 dev 容器,挂载空 user-packs 卷                          │
+│  3. 等待 PB 健康 + pi 就绪                                      │
+│  4. docker exec pi -p "<prompt>" --approve 现场创建 pack         │
+│  5. 存档: 复制 pack 产物 + 容器日志 + 转录文本到 artifact 目录   │
+│  6. 调用 evaluator 对 artifact 做第二层评价                      │
+│  7. 按 --cleanup/--keep-evidence 决定是否清理容器                │
+└──────────────────────────────────────────────────────────────────┘
+                        │
+                        ▼
+┌─ Layer 2: 独立评价 (evaluate-agent-pack.mjs) ───────────────────┐
+│  静态检查 (无需 Docker):                                          │
+│    • pack.json 存在、JSON 合法、name/version/frontend 字段正确     │
+│    • hooks/*.pb.js 存在,包含 challenge/verify 路由引用            │
+│    • frontend/pow-guard.js 存在,含 localStorage/overlay/cache    │
+│                                                                   │
+│  运行时检查 (启动临时 Docker 容器,挂载 artifact 只读):             │
+│    • PB 健康检查                                                  │
+│    • GET /api/vanblog/pow-guard/challenge → {challenge,difficulty}│
+│    • PoW 求解 (SHA-256 leading zeros, node crypto 实现)           │
+│    • 正样例: POST verify 正确 nonce → token                       │
+│    • 负样例: POST verify 错误 nonce → 拒绝                        │
+│    • 首页注入: GET / 含 pow-guard.js 脚本标签                     │
+│                                                                   │
+│  输出: score.json (status/score/static/runtime 清单)              │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+### 8.2 关键设计
+
+- **两层分离**:Layer 1 只管现场生成 + 存档;Layer 2 只看 artifact,不依赖 layer 1 的容器状态。可在任意时间对同一 artifact 重新运行 evaluator。
+- **Artifact 永远不删**:即使 pi 超时/失败,artifact 目录仍保留初始存档(transcript + container.log + 部分产物),evaluator 仍被调用并输出报告。
+- **AGENT_TIMEOUT**:pi 生成时设置 `AGENT_TIMEOUT` 环境变量(默认 300s),同时外部由 shell 脚本强制 kill 超时进程。超时后 artifact 不删除,转 evaluator。
+- **Evaluator 不崩溃**:对不完整的 artifact(缺少 pack.json 等)不会崩溃,而是输出 `status: "incomplete"` 的报告。
+- **Evaluator 不写提示词**:evaluator 的检查规则不出现在 pi prompt / env / argv 中,保证 pi 生成时不知道评价标准。
+
+### 8.3 Artifact 目录结构
+
+```
+.snow/artifacts/<run-id>/
+├── run.json          # 运行元数据:时间戳、镜像、参数、pi 状态
+├── artifact/         # 完整 pack 产物(从 user-packs 卷复制)
+│   └── pow-guard/
+│       ├── pack.json
+│       ├── hooks/pow-guard.pb.js
+│       └── frontend/pow-guard.js
+├── transcript        # pi 的标准输出/错误全文
+├── container.log     # docker logs 输出
+└── score.json        # evaluator 评分报告
+```
+
+### 8.4 文件
+
+| 文件                              | 作用                                         |
+| --------------------------------- | -------------------------------------------- |
+| `scripts/test-pi-pack.sh`         | Layer 1:现场生成 + 存档 + 调用 evaluator     |
+| `scripts/evaluate-agent-pack.mjs` | Layer 2:独立确定性 evaluator,输出 score.json |
+| `.snow/artifacts/`                | 存档目录(已加入 `.gitignore`)                |
+
+### 8.5 使用
+
+```bash
+# 完整测试
+./scripts/test-pi-pack.sh
+
+# 跳过 Docker 构建,保留容器和证据
+./scripts/test-pi-pack.sh --no-build --keep-evidence
+
+# 只对已有 artifact 运行 evaluator(不经过 layer 1)
+node scripts/evaluate-agent-pack.mjs \
+  --artifact-dir .snow/artifacts/pi-pack-20260818-090807/artifact \
+  --image vanblog:dev-test \
+  --port 8890 \
+  --report-dir .snow/artifacts/pi-pack-20260818-090807
+```

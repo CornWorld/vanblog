@@ -4,6 +4,7 @@
 # Snow AI 本地产出（代码笔记 / 快照 / 计划）
 .snow/notebook/
 .snow/plan/
+.snow/artifacts/
 
 # Astro 生成的本地缓存类型与设置
 app/.astro/
