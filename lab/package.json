@@ -1,0 +1,23 @@
+{
+  "name": "@vanblog/lab",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently -k -n api,web -c blue,green \"node server/artifacts-server.mjs\" \"vite\"",
+    "build": "vite build",
+    "preview": "vite preview",
+    "server": "node server/artifacts-server.mjs",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "solid-js": "^1.9.15"
+  },
+  "devDependencies": {
+    "vite-plugin-solid": "^2.11.14",
+    "concurrently": "^9.1.2",
+    "daisyui": "^5.0.0",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.6"
+  }
+}
