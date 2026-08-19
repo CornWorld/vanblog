@@ -197,6 +197,112 @@ const totalChars = docs.reduce((n, d) => n + d.totalChars, 0);
 const dupCharsTotal = blocks.reduce((n, b) => n + b.chars, 0);
 const globalRatio = totalChars ? dupCharsTotal / totalChars : 0;
 
+// ---------- Schema 事实抽取（只关注顶层 model schema） ----------
+const SCHEMA_DIR = join(projectRoot, "sdk/src/models");
+// 从 index.ts 读 models 映射: {tags: TagSchema, ...}
+const indexSource = readFileSync(join(SCHEMA_DIR, "index.ts"), "utf8");
+const modelSchemaNames = new Set();
+// 匹配 models = { xxx: SchemaName, ... }
+const MODEL_MAP_RE = /(\w+):\s+(\w+Schema)/g;
+for (const m of indexSource.matchAll(MODEL_MAP_RE)) {
+  modelSchemaNames.add(m[2]); // 加 SchemaName, 如 TagSchema
+}
+
+// 字段名: 匹配 XXXSchema = .extend({...}) 或 XXXSchema = z.object({...}) 里的 key
+const FIELD_RE = /^\s+(\w+):\s+(z\.|z\.array\(|z\.record\(|[\w.]+\.)/gm;
+// 枚举值: 匹配 z.enum([...]) 里的字符串字面量
+const ENUM_ITEM_RE = /"([^"]+)"(?=,\s*$|,\s*\/\/|,\s*\n|\s*\])/gm;
+// 枚举定义行: 定位 z.enum([...])
+const ENUM_BLOCK_RE = /z\.enum\(\[([\s\S]*?)\]\)/g;
+
+const schemaFields = new Set(); // 所有已知字段名
+const enumValues = new Map();   // value → [fieldName, ...]
+
+// 添加 SystemFieldsSchema 的字段（大多 model 继承它）
+function extractFieldsFromSchema(filePath, targetSchemaNames) {
+  const raw = readFileSync(filePath, "utf8");
+  const lines = raw.split("\n");
+  let inTarget = false;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    // 检查是否进入目标 schema 定义
+    const isTarget = [...targetSchemaNames].some((name) =>
+      line.includes(`export const ${name} =`)
+    );
+    if (isTarget) {
+      inTarget = true;
+      continue;
+    }
+    // 读到下一个 export 或文件结束则退出
+    if (inTarget && /^export const \w+ =/.test(line)) {
+      inTarget = false;
+      continue;
+    }
+    if (inTarget) {
+      const fm = line.match(FIELD_RE);
+      if (fm) schemaFields.add(fm[1]);
+    }
+  }
+}
+
+if (statSync(SCHEMA_DIR, { throwIfNoEntry: false })?.isDirectory()) {
+  for (const entry of readdirSync(SCHEMA_DIR)) {
+    if (entry.endsWith(".ts") && !entry.endsWith(".fixtures.ts")) {
+      const fp = join(SCHEMA_DIR, entry);
+      // 枚举值: 从所有文件提取（枚举可能在非 model 文件里）
+      const raw = readFileSync(fp, "utf8");
+      for (const block of raw.matchAll(ENUM_BLOCK_RE)) {
+        const inner = block[1];
+        for (const item of inner.matchAll(ENUM_ITEM_RE)) {
+          if (!enumValues.has(item[1])) enumValues.set(item[1], []);
+        }
+      }
+      // 字段名: 只从 model schema 定义提取
+      extractFieldsFromSchema(fp, modelSchemaNames);
+    }
+  }
+  // 单独处理 common.ts 的 SystemFieldsSchema（被大多数 model 继承）
+  extractFieldsFromSchema(join(SCHEMA_DIR, "common.ts"), new Set(["SystemFieldsSchema"]));
+}
+
+// ---------- S0 Schema 枚举值漂移检测 ----------
+// 核心: 枚举值是 schema 的原子事实, docs 中引用已移除的枚举值 = 严重错误
+// 字段名检查: 只在有明确 schema 表格上下文的文档中生效
+const schemaConflicts = [];
+
+// 枚举值漂移: 检查 docs 中引用的枚举值是否在 schema 中仍存在
+// 已知已移除的枚举值（保留以检测遗留引用）
+const REMOVED_ENUMS = new Set([
+  "waline",   // 2026-08 从 commentsProvider 移除
+  "giscus",   // 同上
+]);
+const enumRefs = []; // {value, file, context}
+
+for (const d of docs) {
+  const raw = readFileSync(d.file, "utf8");
+  // 找引号/反引号包围的枚举值引用
+  for (const [val] of enumValues) {
+    const escaped = val.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const re = new RegExp(`["'\`]${escaped}["'\`]`, "g");
+    for (const m of raw.matchAll(re)) {
+      enumRefs.push({ value: val, file: d.rel, match: m[0] });
+    }
+  }
+  // 检查已移除的枚举值
+  for (const val of REMOVED_ENUMS) {
+    const escaped = val.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const re = new RegExp(`["'\`]${escaped}["'\`]`, "gi");
+    for (const m of raw.matchAll(re)) {
+      schemaConflicts.push({
+        type: "removed_enum",
+        value: val,
+        file: d.rel,
+        action: "this enum value has been removed from the schema",
+      });
+    }
+  }
+}
+
 // ---------- S0 参数冲突检测 ----------
 const envVals = new Map(); // envName -> Map<value, Set<file>>
 const IMAGE_RE = /ghcr\.io\/cornworld\/vanblog:[^\s`]+/g;
@@ -234,7 +340,7 @@ for (const [name, byVal] of envVals) {
 }
 
 // ---------- 汇总 ----------
-const s0Count = envConflicts.length;
+const s0Count = envConflicts.length + schemaConflicts.length;
 const s1Blocks = blocks.filter((b) => b.sents >= MIN_BLOCK_SENTENCES);
 const failingFiles = fileRatios.filter((f) => f.ratio >= FAIL_RATIO);
 const warningFiles = fileRatios.filter((f) => f.ratio >= WARN_RATIO && f.ratio < FAIL_RATIO);
@@ -260,6 +366,25 @@ function humanReport() {
       for (const v of c.values) L.push(`      ${v.value} — ${v.files.join(", ")}`);
     }
   }
+  if (schemaConflicts.length) {
+    L.push("");
+    L.push(`S0 Schema 枚举值漂移 (${schemaConflicts.length}):`);
+    for (const c of schemaConflicts) {
+      L.push(`  ✗ ${c.file}: ${c.value} — ${c.action}`);
+    }
+  }
+  if (enumRefs.length) {
+    L.push("");
+    L.push(`枚举值引用统计 (${enumRefs.length} 处):`);
+    const byVal = new Map();
+    for (const r of enumRefs) {
+      if (!byVal.has(r.value)) byVal.set(r.value, new Set());
+      byVal.get(r.value).add(r.file);
+    }
+    for (const [val, files] of byVal) {
+      L.push(`  • ${val} → ${[...files].join(", ")}`);
+    }
+  }
   if (s1Blocks.length) {
     L.push("");
     L.push(`S1 重复块 Top ${Math.min(15, s1Blocks.length)}:`);
@@ -282,6 +407,8 @@ const report = jsonOut
         s1Blocks: s1Blocks.length,
         fileRatios,
         envConflicts,
+        schemaConflicts,
+        enumRefs,
         blocks: s1Blocks.slice(0, 50),
       },
       null,
