@@ -22,7 +22,7 @@ const ssrData = { isAdmin, serverConfig };
 ---
 
 <Page title="Live2D 看板娘" description="全站 Live2D 看板娘插件">
-  <script type="application/json" id="l2d-ssr-data" set:html={JSON.stringify(ssrData).replace(/<\//g, '<\\/')} />
+  <script is:inline type="application/json" id="l2d-ssr-data" set:html={JSON.stringify(ssrData).replace(/<\//g, '<\\/')} />
 
   <article class="prose max-w-none">
     <h1>Live2D 看板娘</h1>
