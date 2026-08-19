@@ -3,7 +3,7 @@
     "defaultTokenBudgetM": 2
   },
   "yoloMode": true,
-  "planMode": false,
+  "planMode": true,
   "vulnerabilityHuntingMode": false,
   "toolSearchEnabled": false,
   "hybridCompressEnabled": true,
