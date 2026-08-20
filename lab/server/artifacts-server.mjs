@@ -9,8 +9,8 @@
  *   GET /api/runs/:id                  → full run detail (run.json, score, metrics, closed note)
  *   GET /api/runs/:id/file?path=<rel>  → raw file content (transcript, log, session jsonl)
  *
- * UI: inline HTML page; Solid via esm CDN + htm (no build step).
- * Read-only: the server never writes or deletes artifacts.
+ * Frontend is served by the lab Vite dev server (see vite.config.ts proxy),
+ * which routes /api to this server. Read-only: never writes or deletes artifacts.
  */
 import { createServer } from "node:http";
 import { readdirSync, readFileSync, existsSync, statSync } from "node:fs";
@@ -114,17 +114,8 @@ const server = createServer((req, res) => {
     return json(res, 200, detail);
   }
 
-  if (url.pathname === "/") {
-    try {
-      res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
-      return res.end(readFileSync(UI_FILE, "utf8"));
-    } catch { return json(res, 500, { error: "ui file missing: " + UI_FILE }); }
-  }
   json(res, 404, { error: "not found" });
 });
-
-// UI is a plain HTML file in .agents/lab/ (agent-lab workspace)
-const UI_FILE = resolve(arg("--ui", join(PROJECT_ROOT, ".agents/lab/index.html")));
 
 server.listen(PORT, () => {
   console.log(`artifacts UI: http://127.0.0.1:${PORT}  (root: ${ROOT})`);
