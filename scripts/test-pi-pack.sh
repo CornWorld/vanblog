@@ -21,7 +21,7 @@
 #   ./scripts/test-pi-pack.sh --skip-eval             # skip evaluator
 #   ./scripts/test-pi-pack.sh --run-id <id>           # explicit run-id
 #   ./scripts/test-pi-pack.sh --agent-timeout <sec>   # pi timeout (default 300)
-#   ./scripts/test-pi-pack.sh --model <id>            # model id (default st/deepseek-v4-flash)
+#   ./scripts/test-pi-pack.sh --model <id>            # model id (default deepseek-v4-flash-0731:floor)
 #   ./scripts/test-pi-pack.sh --base-url <url>        # api base url (default http://host.docker.internal:8317/v1)
 #   ./scripts/test-pi-pack.sh --api-key <key>         # api key (default from AGENT_API_KEY env)
 #   ./scripts/test-pi-pack.sh --dry-run               # dry-run mode
@@ -43,9 +43,14 @@ TEST_TIMEOUT=120     # seconds to wait for container readiness
 AGENT_TIMEOUT=300    # seconds for pi agent to complete
 RUN_ID="pi-pack-$(date +%Y%m%d-%H%M%S)"
 
-# Model configuration — defaults to st/deepseek-v4-flash on host.docker.internal
+# Model configuration — defaults to deepseek/deepseek-v4-flash-0731:floor via CLIProxyAPI.
+# AGENT_MODEL is the FULL OpenRouter model id (":floor" is an OpenRouter variant suffix).
+# It carries a "deepseek/" namespace prefix that is PART OF THE MODEL ID, not a pi
+# provider. models.json reuses pi's built-in "openrouter" provider (baseUrl overridden
+# to CLIProxyAPI) and defines this one model; at runtime we pass --provider openrouter so
+# pi does not misread "deepseek" as a provider name.
 # AGENT_API_KEY is read from env (never written to files, logs, or run.json)
-AGENT_MODEL="${AGENT_MODEL:-st/deepseek-v4-flash}"
+AGENT_MODEL="${AGENT_MODEL:-deepseek/deepseek-v4-flash-0731:floor}"
 AGENT_BASE_URL="${AGENT_BASE_URL:-http://host.docker.internal:8317/v1}"
 AGENT_API_KEY="${AGENT_API_KEY:-}"
 # Keep the complete upstream model id unchanged for both pi and the API.
@@ -63,8 +68,10 @@ TRANSCRIPT_PATH="$ARTIFACTS_DIR/transcript"
 CONTAINER_LOG_PATH="$ARTIFACTS_DIR/container.log"
 RUN_JSON_PATH="$ARTIFACTS_DIR/run.json"
 SCORE_JSON_PATH="$ARTIFACTS_DIR/score.json"
-
 CONTAINER_USER_PACKS="/workspace/user-packs"
+CONTAINER_SESSION_DIR="/workspace/agent-session"
+PI_SESSION_ARCHIVE="$ARTIFACTS_DIR/pi-session"
+
 
 # pi prompt — minimal, no project background, just the WHAT.
 # Tells pi to create the pack in the user-packs dir (mounted volume).
@@ -120,6 +127,12 @@ done
 [[ -n "$AGENT_BASE_URL_OVERRIDE" ]] && AGENT_BASE_URL="$AGENT_BASE_URL_OVERRIDE"
 [[ -n "$AGENT_API_KEY_OVERRIDE" ]] && AGENT_API_KEY="$AGENT_API_KEY_OVERRIDE"
 
+# Recompute the pi model selector AFTER overrides are applied. It was captured
+# from the default at line 52, so without this a --model override would leave
+# pi using the stale default (e.g. st/deepseek-v4-flash) despite run.json
+# recording the intended model.
+PI_MODEL_SELECTOR="$AGENT_MODEL"
+
 # Recompute artifact paths with final run-id
 ARTIFACTS_DIR="$PROJECT_ROOT/.snow/artifacts/$RUN_ID"
 ARTIFACT_DIR="$ARTIFACTS_DIR/artifact"
@@ -127,6 +140,9 @@ TRANSCRIPT_PATH="$ARTIFACTS_DIR/transcript"
 CONTAINER_LOG_PATH="$ARTIFACTS_DIR/container.log"
 RUN_JSON_PATH="$ARTIFACTS_DIR/run.json"
 SCORE_JSON_PATH="$ARTIFACTS_DIR/score.json"
+CONTAINER_USER_PACKS="/workspace/user-packs"
+CONTAINER_SESSION_DIR="/workspace/agent-session"
+PI_SESSION_ARCHIVE="$ARTIFACTS_DIR/pi-session"
 
 # ── Cleanup trap ─────────────────────────────────────────────────
 cleanup() {
@@ -149,6 +165,12 @@ cleanup() {
     fi
   fi
   info "Artifacts saved at: $ARTIFACTS_DIR"
+  if [ -f "$ARTIFACTS_DIR/pi-session-files.txt" ]; then
+    detail "  pi-session/   — pi session JSONL archive"
+    detail "  pi-session-files.txt — session file inventory"
+    detail "  pi-session-sha256.txt — session archive hashes"
+  fi
+
   detail "  run.json       — run metadata"
   detail "  artifact/      — pack files (if created)"
   detail "  transcript     — pi agent output"
@@ -218,28 +240,35 @@ else
   pass "pi binary present"
 fi
 
-# ── Step 3.5: Override pi config for st/deepseek model ──────────
-step "Step 3.5: Configure pi agent for st model"
+# ── Step 3.5: Override pi config for the CLIProxyAPI-backed model ──
+step "Step 3.5: Configure pi agent for the CLIProxyAPI-backed model"
 if [ "$DRY_RUN" = true ]; then
   info "DRY RUN — skipping pi config override"
 else
   info "Configuring pi with model=$AGENT_MODEL baseUrl=$AGENT_BASE_URL"
 
-  # Write /root/.pi/agent/models.json with st provider (openai-completions)
+  # Reuse pi's built-in "openrouter" provider metadata (contextWindow/maxTokens/
+  # thinkingLevelMap etc.) and only override baseUrl + apiKey to point at the
+  # local CLIProxyAPI. The model id is OpenRouter's own ":floor" variant, which
+  # CLIProxyAPI now passes through unchanged. maxTokens is raised from pi's
+  # 16384 default so long reasoning output is not truncated.
   docker exec "$CONTAINER_NAME" sh -c \
     "mkdir -p /root/.pi/agent && cat > /root/.pi/agent/models.json << 'EOF_MODEL'
 {
   \"providers\": {
-    \"st\": {
-      \"api\": \"openai-completions\",
+    \"openrouter\": {
       \"baseUrl\": \"$AGENT_BASE_URL\",
       \"apiKey\": \"$AGENT_API_KEY\",
-      \"models\": [{ \"id\": \"$AGENT_MODEL\" }]
+      \"models\": [{
+        \"id\": \"$AGENT_MODEL\",
+        \"headers\": { \"User-Agent\": \"Pi (Vanblog)\" },
+        \"maxTokens\": 65536
+      }]
     }
   }
 }
 EOF_MODEL" || fail "Failed to write models.json"
-  pass "models.json written with st provider"
+  pass "models.json written with openrouter provider (baseUrl → CLIProxyAPI)"
 
   # Override /workspace/.pi/settings.json model/defaultModel.
   # Use environment variables inside the container to avoid host shell expansion
@@ -285,7 +314,7 @@ else
   ISOLATION_REMOVED=""
   ISOLATION_MISSING=""
 
-  # Files to remove from agent-visible workspace (only test infrastructure)
+  # Files to remove from agent-visible workspace (only test infrastructure).
   for f in \
     scripts/test-pi-pack.sh \
     scripts/evaluate-agent-pack.mjs \
@@ -317,6 +346,34 @@ else
   docker exec "$CONTAINER_NAME" sh -c \
     "sed -i '/init-pi-config/d' /entrypoint.sh 2>/dev/null || true"
 
+  # Also isolate /build/scripts/ — the dev image keeps a full copy of the test
+  # scripts at /build/scripts (absolute path, NOT under /workspace). pi reads
+  # this if not removed, leaking the expected solution + evaluator.
+  for bf in \
+    test-pi-pack.sh \
+    evaluate-agent-pack.mjs \
+    init-pi-config.mjs \
+    resolve-zen-free-models.mjs \
+    pi-zen-proxy.mjs \
+    lib/common.sh \
+    test-agent-rpc.sh \
+    test-theme-switch.mjs \
+    dev-verify.sh \
+    dev-up.sh \
+    demo-setup.sh \
+    install-test.sh \
+    doc-dup-check.mjs \
+    override-check.mjs \
+    pack-schema-build.mjs \
+    theme-init.mjs; do
+    if docker exec "$CONTAINER_NAME" test -e "/build/scripts/$bf" 2>/dev/null; then
+      docker exec "$CONTAINER_NAME" rm -rf "/build/scripts/$bf" 2>/dev/null && \
+        ISOLATION_REMOVED="$ISOLATION_REMOVED build/scripts/$bf"
+    else
+      ISOLATION_MISSING="$ISOLATION_MISSING build/scripts/$bf"
+    fi
+  done
+
   info "Isolation removed:${ISOLATION_REMOVED}"
   [ -n "$ISOLATION_MISSING" ] && info "Already absent:${ISOLATION_MISSING}"
 
@@ -337,6 +394,14 @@ else
       ISOLATION_PROBE_DETAIL="$ISOLATION_PROBE_DETAIL [REMOVED] $probe_path"
     fi
   done
+  # Also probe /build/scripts/test-pi-pack.sh (absolute path leak)
+  if docker exec "$CONTAINER_NAME" test -e "/build/scripts/test-pi-pack.sh" 2>/dev/null; then
+    ISOLATION_PROBE_PASSED=false
+    ISOLATION_PROBE_DETAIL="$ISOLATION_PROBE_DETAIL [STILL PRESENT] build/scripts/test-pi-pack.sh"
+    fail "Isolation probe: build/scripts/test-pi-pack.sh still present!"
+  else
+    ISOLATION_PROBE_DETAIL="$ISOLATION_PROBE_DETAIL [REMOVED] build/scripts/test-pi-pack.sh"
+  fi
 
   if [ "$ISOLATION_PROBE_PASSED" = true ]; then
     pass "Isolation probe: all test/evaluator paths removed from agent workspace"
@@ -355,11 +420,14 @@ if [ "$DRY_RUN" = false ]; then
     "mkdir -p /root/.pi/agent && cat > /root/.pi/agent/models.json << 'EOF_MODEL_FINAL'
 {
   \"providers\": {
-    \"st\": {
-      \"api\": \"openai-completions\",
+    \"openrouter\": {
       \"baseUrl\": \"$AGENT_BASE_URL\",
       \"apiKey\": \"$AGENT_API_KEY\",
-      \"models\": [{ \"id\": \"$AGENT_MODEL\" }]
+      \"models\": [{
+        \"id\": \"$AGENT_MODEL\",
+        \"headers\": { \"User-Agent\": \"Pi (Vanblog)\" },
+        \"maxTokens\": 65536
+      }]
     }
   }
 }
@@ -373,7 +441,7 @@ EOF_MODEL_FINAL" || fail "Failed to re-apply final models.json"
     cat "$TMP" > "$SETTINGS"
     rm -f "$TMP"
   ' || fail "Failed to re-apply final settings.json"
-  docker exec "$CONTAINER_NAME" sh -c 'test -f /root/.pi/agent/models.json && grep -q '"'"'st'"'"' /root/.pi/agent/models.json' \
+  docker exec "$CONTAINER_NAME" sh -c 'test -f /root/.pi/agent/models.json && grep -q '"'"'openrouter'"'"' /root/.pi/agent/models.json' \
     || fail "Final pi model config probe failed"
   pass "Final pi model config applied after isolation"
 fi
@@ -394,12 +462,14 @@ else
 
   # Run pi in background with external timeout enforcement.
   # Pass AGENT_TIMEOUT env so pi (if it honors it) can self-limit.
-  # Explicit --model flag ensures pi uses the configured st provider model.
-  # External timeout via docker exec background + kill.
+  # Explicit --provider openrouter (pi's built-in provider, baseUrl overridden to
+  # CLIProxyAPI) + bare --model id. The model id carries a "deepseek/" namespace
+  # that is part of the OpenRouter model id, so --provider must be given to stop
+  # pi from misreading "deepseek" as a provider. External timeout via docker exec.
   docker exec -i -w /workspace \
     "$CONTAINER_NAME" \
     env AGENT_TIMEOUT="$AGENT_TIMEOUT" \
-    pi -p "$PI_PROMPT" --provider st --model "$PI_MODEL_SELECTOR" --approve \
+    pi -p "$PI_PROMPT" --provider openrouter --model "$PI_MODEL_SELECTOR" --session-dir "$CONTAINER_SESSION_DIR" --approve \
     >"$TRANSCRIPT_PATH" 2>&1 &
   PI_PID=$!
 
@@ -441,6 +511,27 @@ else
   # Capture container logs
   docker logs "$CONTAINER_NAME" > "$CONTAINER_LOG_PATH" 2>&1
   pass "Container log saved: $CONTAINER_LOG_PATH"
+
+  # Archive pi session history before the container is removed.
+  mkdir -p "$PI_SESSION_ARCHIVE"
+  if docker exec "$CONTAINER_NAME" test -d "$CONTAINER_SESSION_DIR" 2>/dev/null; then
+    docker cp "$CONTAINER_NAME:$CONTAINER_SESSION_DIR/." "$PI_SESSION_ARCHIVE/" 2>/dev/null || true
+    find "$PI_SESSION_ARCHIVE" -type f -print | sort > "$ARTIFACTS_DIR/pi-session-files.txt" || true
+    find "$PI_SESSION_ARCHIVE" -type f -exec shasum -a 256 {} \; > "$ARTIFACTS_DIR/pi-session-sha256.txt" || true
+    pass "Pi session archived: $PI_SESSION_ARCHIVE"
+
+    # Derive quantitative metrics from session JSONL (deterministic, offline).
+    METRICS_JSON_PATH="$ARTIFACTS_DIR/session-metrics.json"
+    if node "$SCRIPT_DIR/extract-session-metrics.mjs" \
+      --session-dir "$PI_SESSION_ARCHIVE" \
+      --out "$METRICS_JSON_PATH" >/dev/null 2>&1; then
+      pass "Session metrics extracted: $METRICS_JSON_PATH"
+    else
+      info "Session metrics extraction failed (non-fatal; see manual run)"
+    fi
+  else
+    info "Pi session directory absent — no metrics to extract"
+  fi
 
   # Copy pack artifacts from user-packs volume
   if docker exec "$CONTAINER_NAME" test -d "$CONTAINER_USER_PACKS" 2>/dev/null; then
@@ -485,7 +576,11 @@ meta = {
     },
     'artifactDir': '$ARTIFACT_DIR',
     'transcriptPath': '$TRANSCRIPT_PATH',
-    'containerLogPath': '$CONTAINER_LOG_PATH'
+    'containerLogPath': '$CONTAINER_LOG_PATH',
+    'piSessionDir': '$CONTAINER_SESSION_DIR',
+    'piSessionArchive': '$PI_SESSION_ARCHIVE',
+    'piSessionFilesManifest': '$ARTIFACTS_DIR/pi-session-files.txt',
+    'piSessionSha256': '$ARTIFACTS_DIR/pi-session-sha256.txt'
 }
 with open('$RUN_JSON_PATH', 'w') as f:
     json.dump(meta, f, indent=2)
