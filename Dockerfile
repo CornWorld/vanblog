@@ -250,6 +250,7 @@ ENTRYPOINT ["/entrypoint.sh"]
 # Development image with bundled Artalk capability.
 FROM prod-artalk AS dev-artalk
 RUN apk add --no-cache npm git && npm install -g pnpm@latest-10
+RUN npm install -g --ignore-scripts @earendil-works/pi-coding-agent
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc /workspace/
 COPY sdk/ /workspace/sdk/
 COPY app/ /workspace/app/

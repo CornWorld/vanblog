@@ -40,7 +40,7 @@ IMAGE_TAG="vanblog:dev-test"
 CONTAINER_NAME="vanblog-pi-test-$$"
 HTTP_PORT="${TEST_PORT:-8880}"
 TEST_TIMEOUT=120     # seconds to wait for container readiness
-AGENT_TIMEOUT=300    # seconds for pi agent to complete
+AGENT_TIMEOUT=1800   # seconds for pi agent to complete (30 min)
 RUN_ID="pi-pack-$(date +%Y%m%d-%H%M%S)"
 
 # Model configuration — defaults to deepseek/deepseek-v4-flash-0731:floor via CLIProxyAPI.
@@ -77,7 +77,20 @@ PI_SESSION_ARCHIVE="$ARTIFACTS_DIR/pi-session"
 # Tells pi to create the pack in the user-packs dir (mounted volume).
 # DO NOT add evaluator rules, checklists, or exit criteria here.
 read -r -d '' PI_PROMPT <<'EOF' || true
-Create a new vanblog user pack called pow-guard inside /workspace/user-packs (NOT /workspace/packs — that is the builtin dir, do not touch it). The pack should inject a JavaScript file on all public pages that implements SHA-256 proof-of-work verification. The verification result must be cached in localStorage for 1 hour. The pack needs a PB hook with two endpoints: GET /api/vanblog/pow-guard/challenge (returns random challenge + difficulty) and POST /api/vanblog/pow-guard/verify (validates the nonce against SHA-256 hash with leading zeros, returns a stateless token). The frontend JS should show a full-screen overlay during verification and hide it once the token is cached. Create /workspace/user-packs/pow-guard/ with pack.json + hooks/ + frontend/.
+Create a vanblog user pack called pow-guard in /workspace/user-packs/pow-guard/.
+(NOT /workspace/packs/ — that is the builtin dir, do not touch it.)
+
+First, understand the pack format:
+1. Run `tree /workspace/docs/` to see the documentation structure
+2. Read docs/reference/packs.md for the pack format specification
+3. Read /workspace/packs/visits/ as a working example (pack.json, hooks/, frontend/)
+
+Then create the pack with:
+- pack.json — frontend script injection (scope: public)
+- hooks/<name>.pb.js — GET /api/vanblog/pow-guard/challenge (random challenge + difficulty) and POST /api/vanblog/pow-guard/verify (validate SHA-256 hash with leading zeros, return stateless token)
+- frontend/<name>.js — SHA-256 PoW, full-screen overlay during verification, localStorage cache for 1 hour
+
+Do NOT explore the architecture, test endpoints, or read source code.
 EOF
 
 # ── Color output ─────────────────────────────────────────────────
@@ -470,6 +483,7 @@ else
     "$CONTAINER_NAME" \
     env AGENT_TIMEOUT="$AGENT_TIMEOUT" \
     pi -p "$PI_PROMPT" --provider openrouter --model "$PI_MODEL_SELECTOR" --session-dir "$CONTAINER_SESSION_DIR" --approve \
+    --tools "read,edit,write,bash,grep,find,ls" \
     >"$TRANSCRIPT_PATH" 2>&1 &
   PI_PID=$!
 
