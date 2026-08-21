@@ -51,8 +51,6 @@ function runSummary(id, dir) {
   const run = safeReadJson(join(dir, "run.json")) || {};
   const score = safeReadJson(join(dir, "score.json")) || {};
   const metrics = safeReadJson(join(dir, "session-metrics.json"));
-  let size = 0;
-  try { size = statSync(dir).size; } catch {}
   return {
     id,
     state: existsSync(join(dir, ".closed")) ? "closed" : "open",
@@ -60,10 +58,8 @@ function runSummary(id, dir) {
     mtime: statSync(dir).mtime.toISOString(),
     model: run.agentModel,
     exitReason: run.piExitReason,
-    timedOut: run.piTimedOut,
-    isolationPassed: run.isolation?.probePassed,
     evalStatus: score.status,
-    evalScore: score.tally ? `${score.tally.passed}/${score.tally.total}` : null,
+    evalScore: score.score ? `${score.score.passed}/${score.score.total}` : null,
     requests: metrics?.agent?.modelRequestCount,
     toolCalls: metrics?.agent?.toolCallCount,
     tokens: metrics?.tokens?.totalTokens,
@@ -123,7 +119,6 @@ const server = createServer((req, res) => {
     const detail = runSummary(id, dir);
     detail.run = safeReadJson(join(dir, "run.json"));
     detail.score = safeReadJson(join(dir, "score.json"));
-    detail.metrics = safeReadJson(join(dir, "session-metrics.json"));
     try {
       detail.transcript = readFileSync(join(dir, "transcript"), "utf8").slice(0, 20000);
     } catch { detail.transcript = null; }

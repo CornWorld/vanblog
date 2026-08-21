@@ -124,6 +124,9 @@ importers:
 
   lab:
     dependencies:
+      '@solidjs/router':
+        specifier: ^1.0.0
+        version: 1.0.0(solid-js@1.9.15)
       solid-js:
         specifier: ^1.9.15
         version: 1.9.15
@@ -1064,6 +1067,11 @@ packages:
 
   '@shikijs/vscode-textmate@10.0.2':
     resolution: {integrity: sha512-83yeghZ2xxin3Nj8z1NMd/NCuca+gsYXswywDy5bHvwlWL8tpTQmzGeUuHd9FC3E/SBEMvzJRwWEOz5gGes9Qg==}
+
+  '@solidjs/router@1.0.0':
+    resolution: {integrity: sha512-cCSk1hvgCowiMa9bzzYWHiLu1U4E22+DfJe6/rOwAyECKrxc3jrd5QnoW3sDDJtW+e077cz/M67bPl3DqOBw1Q==}
+    peerDependencies:
+      solid-js: ^1.8.6
 
   '@tailwindcss/node@4.3.2':
     resolution: {integrity: sha512-yWP/sqEcBLaD8JuA6zNwxoYKr75qxTioYwlRwekj5Jr/I5GXnoJfjetH/psLUIv74cYTH2lBUEzBkinthoYcBg==}
@@ -4662,6 +4670,10 @@ snapshots:
       '@types/hast': 3.0.4
 
   '@shikijs/vscode-textmate@10.0.2': {}
+
+  '@solidjs/router@1.0.0(solid-js@1.9.15)':
+    dependencies:
+      solid-js: 1.9.15
 
   '@tailwindcss/node@4.3.2':
     dependencies:
