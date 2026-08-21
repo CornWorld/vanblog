@@ -104,6 +104,22 @@ const server = createServer((req, res) => {
       return res.end(readFileSync(p, "utf8"));
     }
 
+    // /api/runs/:id/session — raw session events (no pre-computed metrics needed)
+    if (parts[3] === "session") {
+      const sessionDir = join(dir, "pi-session");
+      if (!existsSync(sessionDir))
+        return json(res, 404, { error: "no session data" });
+      const events = [];
+      for (const f of readdirSync(sessionDir).filter((f) => f.endsWith(".jsonl")).sort()) {
+        for (const line of readFileSync(join(sessionDir, f), "utf8").split("\n")) {
+          const t = line.trim();
+          if (!t) continue;
+          try { events.push(JSON.parse(t)); } catch { /* skip truncated final line */ }
+        }
+      }
+      return json(res, 200, events);
+    }
+
     const detail = runSummary(id, dir);
     detail.run = safeReadJson(join(dir, "run.json"));
     detail.score = safeReadJson(join(dir, "score.json"));

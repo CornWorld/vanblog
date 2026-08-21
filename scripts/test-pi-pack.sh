@@ -534,15 +534,8 @@ else
     find "$PI_SESSION_ARCHIVE" -type f -exec shasum -a 256 {} \; > "$ARTIFACTS_DIR/pi-session-sha256.txt" || true
     pass "Pi session archived: $PI_SESSION_ARCHIVE"
 
-    # Derive quantitative metrics from session JSONL (deterministic, offline).
-    METRICS_JSON_PATH="$ARTIFACTS_DIR/session-metrics.json"
-    if node "$SCRIPT_DIR/extract-session-metrics.mjs" \
-      --session-dir "$PI_SESSION_ARCHIVE" \
-      --out "$METRICS_JSON_PATH" >/dev/null 2>&1; then
-      pass "Session metrics extracted: $METRICS_JSON_PATH"
-    else
-      info "Session metrics extraction failed (non-fatal; see manual run)"
-    fi
+    # Metrics are now computed client-side by the lab frontend from raw session JSONL.
+    # See lab/src/App.tsx — computeSessionMetrics().
   else
     info "Pi session directory absent — no metrics to extract"
   fi
